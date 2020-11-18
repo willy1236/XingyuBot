@@ -10,27 +10,29 @@ with open('command.json',mode='r',encoding='utf8') as jfile:
     comdata = json.load(jfile)
 
 class crass_chat(Cog_Extension):
-    #跨群聊天B4.0
-    @commands.command()
-    async def say(self,ctx,*,msg):
-        await ctx.message.delete()
-        #crass = ctx.channel
-        crass_chat = jdata['crass_chat']
-        send_channel = ctx.channel
+    #跨群聊天B5.0
+    @commands.Cog.listener()
+    async def on_message(self,msg):
+        if msg.author.bot == True:
+            return
 
-        embed=discord.Embed(description=f'{msg}',color=0x4aa0b5)
-        embed.set_author(name=f'{ctx.author.nick}',icon_url=f'{ctx.author.avatar_url}')
-        embed.set_footer(text=f'{ctx.author} | {ctx.guild}')
-
-        for b in crass_chat:
-            if b == send_channel:
-                for a in crass_chat:
-                    channel = self.bot.get_channel(a)
-                    await channel.send(embed=embed)
+        is_crass_chat = 0
+        for a in jdata['crass_chat']:
+            if msg.channel.id == a:
+                is_crass_chat = is_crass_chat +1
         
-        #channel = self.bot.get_channel(int(jdata['crass.chat_軟啦']))
-        #if channel != crass:
-        #    await channel.send(embed=embed)
+        if is_crass_chat >= 1:
+            await msg.delete()
+            crass_chat = jdata['crass_chat']
+
+            embed=discord.Embed(description=f'{msg.content}',color=0x4aa0b5)
+            embed.set_author(name=f'{msg.author.nick}',icon_url=f'{msg.author.avatar_url}')
+            embed.set_footer(text=f'{msg.author} | {msg.guild}')
+
+            for a in crass_chat:
+                channel = self.bot.get_channel(a)
+                await channel.send(embed=embed)
+
 
 def setup(bot):
     bot.add_cog(crass_chat(bot))

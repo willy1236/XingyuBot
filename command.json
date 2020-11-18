@@ -1,6 +1,8 @@
 {
-    "co.info":"vpn類\nvpn | vpn列表\nvpn01 | vpn使用教學",
-    "co.info.crass_chat":"crass_chat | 跨群聊天列表\n1.別人都在硬啦! 我偏偏要軟啦!!\n2.我就讚owob\n\n想在自己群加入此系統，可找機器人擁有者",
+    "co.info":"vpn類\nvpn | vpn列表\nvpn01 | vpn使用教學\n\n跨群聊天類\ncrass_chat | 跨群聊天列表",
+    "co.info.crass_chat":"crass_chat | 跨群聊天列表\n1.別人都在硬啦! 我偏偏要軟啦!!\n2.我就讚owob\n\n在跨群聊天頻道直接發送訊息即可\n想在自己群加入此系統，可找機器人擁有者",
     "co.info.vpn01":"vpn01 | vpn安裝教學\n1.下載Radmin(vpn)\nhttps://www.radmin-vpn.com/tw/\n2.選擇 加入網路 並輸入名稱及密碼(可輸入!!info vpn查詢)\n3.記得 改名 讓大家知道你是誰\n\nIP為 xx.xxx.xx.xxx:ooooo\nx:開地圖的人的IP(VPN的IP)\no:公開至區網時會顯示",
-    "co.info.vpn":"vpn | vpn列表\n名稱:willy1236_1 密:123456987 | willy的房間"
+    "co.info.vpn":"vpn | vpn列表\n名稱:willy1236_1 密:123456987 | willy的房間",
+
+    "co.comm":"info <內容> | 獲得相關資訊\nsay <訊息> | 跨群聊天\n\nBot擁有者專用類\nsend | 讓機器人發送特定訊息\nall_anno | 全伺服器公告"
 }

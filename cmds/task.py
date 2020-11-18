@@ -10,12 +10,12 @@ class task(Cog_Extension):
 
         self.counter = 0
 
-    #    async def interval():
-    #        await self.bot.wait_until_ready()
-    #        self.channel = self.bot.get_channel(566533708371329026)
-    #        while not self.bot.is_closed():
-    #            await self.channel.send("Hi I'm running!")
-    #            await asyncio.sleep(5) #單位:秒
+        async def interval():
+            await self.bot.wait_until_ready()
+            self.channel = self.bot.get_channel(566533708371329026)
+            while not self.bot.is_closed():
+                #await self.channel.send("Hi I'm running!")
+                await asyncio.sleep(5) #單位:秒
 
         async def time_task():
             await self.bot.wait_until_ready()
@@ -32,7 +32,7 @@ class task(Cog_Extension):
                     await asyncio.sleep(1)
                     pass
         
-        #self.bg_task = self.bot.loop.create_task(interval())
+        self.bg2_task = self.bot.loop.create_task(interval())
         self.bg_task = self.bot.loop.create_task(time_task())
 
     @commands.command()

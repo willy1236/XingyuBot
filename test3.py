@@ -9,7 +9,7 @@ with open('setting.json',mode='r',encoding='utf8') as jfile:
 with open('command.json',mode='r',encoding='utf8') as jfile:
     comdata = json.load(jfile)
 
-class event(Cog_Extension):
+class test3(Cog_Extension):
     @commands.command()
     async def a(self, ctx, msg):
         await ctx.send(jdata[f'{ctx.author.id}_test'])
@@ -31,6 +31,5 @@ class event(Cog_Extension):
         else:
             await ctx.send('no')
 
-
 def setup(bot):
-    bot.add_cog(event(bot))
+    bot.add_cog(test3(bot))

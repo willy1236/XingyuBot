@@ -8,6 +8,8 @@ intents = discord.Intents.default()
 intents.typing = False
 intents.presences = False
 intents.members = True
+intents.guilds = True
+intents.messages = True
 
 with open('setting.json',mode='r',encoding='utf8') as jfile:
     jdata = json.load(jfile)
@@ -28,21 +30,21 @@ async def on_ready():
 @commands.is_owner()
 async def load(ctx, extension):
     bot.load_extension(f'cmds.{extension}')
-    await ctx.sand(f'Loaded {extension} done')
+    await ctx.send(f'Loaded {extension} done')
 
 #unload
 @bot.command()
 @commands.is_owner()
 async def unload(ctx, extension):
     bot.unload_extension(f'cmds.{extension}')
-    await ctx.sand(f'Un - Loaded {extension} done')
+    await ctx.send(f'Un - Loaded {extension} done')
 
 #reload
 @bot.command()
 @commands.is_owner()
 async def reload(ctx, extension):
     bot.reload_extension(f'cmds.{extension}')
-    await ctx.sand(f'Re - Loaded {extension} done')
+    await ctx.send(f'Re - Loaded {extension} done')
 
 #send
 @bot.command()
@@ -50,6 +52,33 @@ async def reload(ctx, extension):
 async def send(ctx,*,msg):
     await ctx.message.delete()
     await ctx.send(msg)
+
+#dmsend
+@bot.command()
+@commands.is_owner()
+async def dmsend(ctx,channel:int,*,msg):
+    await ctx.message.delete()
+    user = bot.get_user(channel)
+    await user.send(msg)
+
+#csend
+@bot.command()
+@commands.is_owner()
+async def csend(ctx,channel:int,*,msg):
+    await ctx.message.delete()
+    channel = bot.get_get_channel(channel)
+    await channel.send(msg)
+
+#all_anno
+@bot.command()
+@commands.is_owner()
+async def all_anno(self,ctx,*,msg):
+    await ctx.message.delete()
+    all_anno = jdata['all_anno']
+
+    for b in all_anno:
+        channel = bot.get_channel(b)
+        await channel.send(msg)
 
 
 for filename in os.listdir('./cmds'):

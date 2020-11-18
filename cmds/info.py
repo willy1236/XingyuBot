@@ -24,5 +24,11 @@ class info(Cog_Extension):
         if arg == 'vpn01':
             await ctx.send(comdata['co.info.vpn01'])
 
+    @commands.command()
+    async def comm(self, ctx, arg):
+        if arg == 'help':
+            await ctx.send(comdata['co.comm'])
+
+
 def setup(bot):
     bot.add_cog(info(bot))
