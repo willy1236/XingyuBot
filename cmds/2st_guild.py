@@ -9,14 +9,13 @@ with open('setting.json',mode='r',encoding='utf8') as jfile:
 with open('command.json',mode='r',encoding='utf8') as jfile:
     comdata = json.load(jfile)
 
-class main_guild(Cog_Extension):
+class two_st_guild(Cog_Extension):
     @commands.command()
-    async def room(self,ctx):
-        print("1")
+    async def crroom(self,ctx):
         if ctx.guild.id == int(jdata['main_guild']):
             name = f'私人房間 {ctx.author.name}'
             guild = ctx.guild
-            category = discord.utils.get(guild.categories, id=768121309779197974)
+            category = discord.utils.get(guild.categories, id=613754532262051861)
 
             overwrites = {
             ctx.author: discord.PermissionOverwrite(manage_roles=True,manage_channels=True),
@@ -26,11 +25,7 @@ class main_guild(Cog_Extension):
             
             await guild.create_text_channel(name, overwrites=overwrites,category=category)
             await ctx.send(f'{ctx.author.mention} 頻道已創立!')
-            #ctx.author:discord.PermissionOverwrite(manage_roles=True,manage_channels=True)
 
-    @commands.command()
-    async def b(self,ctx):
-        print(categorier)
 
 def setup(bot):
-    bot.add_cog(main_guild(bot))
+    bot.add_cog(two_st_guild(bot))

@@ -3,6 +3,7 @@ from discord.ext import commands
 import json
 import random
 import os
+import datetime
 
 intents = discord.Intents.default()
 intents.typing = False
@@ -10,6 +11,7 @@ intents.presences = False
 intents.members = True
 intents.guilds = True
 intents.messages = True
+intents.voice_states = True
 
 with open('setting.json',mode='r',encoding='utf8') as jfile:
     jdata = json.load(jfile)
@@ -66,19 +68,30 @@ async def dmsend(ctx,channel:int,*,msg):
 @commands.is_owner()
 async def csend(ctx,channel:int,*,msg):
     await ctx.message.delete()
-    channel = bot.get_get_channel(channel)
+    channel = bot.get_channel(channel)
     await channel.send(msg)
 
 #all_anno
 @bot.command()
 @commands.is_owner()
-async def all_anno(self,ctx,*,msg):
+async def all_anno(ctx,*,msg):
     await ctx.message.delete()
     all_anno = jdata['all_anno']
 
+    embed=discord.Embed(description=f'{msg}',color=0x4aa0b5)
+    embed.set_footer(text='機器人全群公告')
+    
     for b in all_anno:
         channel = bot.get_channel(b)
-        await channel.send(msg)
+        await channel.send(embed=embed)
+
+#edit
+#@bot.command()
+#@commands.is_owner()
+#async def edit(ctx,msgID,*,msg):
+#    channel = bot.get_channel(686237849301156017)
+#    message = discord.utils.get(channel.history.message,id=int(msgID))
+#    await message.edit(content=msg)
 
 
 for filename in os.listdir('./cmds'):
