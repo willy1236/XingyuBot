@@ -26,11 +26,7 @@ class crass_chat(Cog_Extension):
             crass_chat = jdata['crass_chat']
 
             embed=discord.Embed(description=f'{msg.content}',color=0x4aa0b5)
-            if msg.author.nick == 'none':
-                embed.set_author(name=f'{msg.author.name}',icon_url=f'{msg.author.avatar_url}')
-            else:
-                embed.set_author(name=f'{msg.author.nick}',icon_url=f'{msg.author.avatar_url}')
-            embed.set_footer(text=f'{msg.author} | {msg.guild}')
+            embed.set_author(name=f'{msg.author.nick}',icon_url=f'{msg.author.avatar_url}')
             embed.set_footer(text=f'{msg.author} | {msg.guild}')
 
             for a in crass_chat:

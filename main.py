@@ -59,9 +59,15 @@ async def send(ctx,*,msg):
 @bot.command()
 @commands.is_owner()
 async def dmsend(ctx,channel:int,*,msg):
+    channel = bot.get_channel(channel)
+    await ctx.send(f'公會為 {channel.guild}')
+    if channel.guild != '':
+        await ctx.send('有工會')
     await ctx.message.delete()
     user = bot.get_user(channel)
     await user.send(msg)
+    
+
 
 #csend
 @bot.command()
@@ -69,7 +75,11 @@ async def dmsend(ctx,channel:int,*,msg):
 async def csend(ctx,channel:int,*,msg):
     await ctx.message.delete()
     channel = bot.get_channel(channel)
-    await channel.send(msg)
+    if channel.guild != '':
+        await channel.send(msg)
+    else:
+        user = bot.get_user(channel)
+        await user.send(msg)
 
 #all_anno
 @bot.command()
