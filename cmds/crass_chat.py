@@ -26,7 +26,7 @@ class crass_chat(Cog_Extension):
             crass_chat = jdata['crass_chat']
 
             embed=discord.Embed(description=f'{msg.content}',color=0x4aa0b5)
-            if msg.author.nick == 'none':
+            if msg.author.nick == 'None':
                 embed.set_author(name=f'{msg.author.name}',icon_url=f'{msg.author.avatar_url}')
             else:
                 embed.set_author(name=f'{msg.author.nick}',icon_url=f'{msg.author.avatar_url}')

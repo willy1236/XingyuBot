@@ -1,9 +1,9 @@
 import discord
 from discord.ext import commands
-import json
-import random
+import json, random, datetime, asyncio
 import os
-import datetime
+#import keep_alive
+
 
 intents = discord.Intents.default()
 intents.typing = False
@@ -109,6 +109,6 @@ for filename in os.listdir('./cmds'):
         bot.load_extension(f'cmds.{filename[:-3]}')
 
 
-
-#if __name__ == "__main__":
-bot.run(jdata['TOKEN'])
+#keep_alive.keep_alive()
+if __name__ == "__main__":
+    bot.run(jdata['TOKEN'])
