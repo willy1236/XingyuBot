@@ -25,27 +25,26 @@ jwsign = Counter(jwsign2)
 class sign(Cog_Extension):
     @commands.command()
     async def sign(self,ctx):
-        if ctx.guild.id == int(jdata['main_guild']):
-            has = 0 
-            for a in jdsign['sign']:
-                if int(ctx.author.id) == int(a):
-                    has = has+1
+        has_signed = 0 
+        for signed_id in jdsign['sign']:
+            if int(ctx.author.id) == int(signed_id):
+                has_signed = has_signed+1
            
-            if has == 0:
-                signer = str(f'{ctx.author.id}')
-                #日常
-                jdsign['sign'].append(f'{ctx.author.id}')
-                with open('daysignin.json',mode='w',encoding='utf8') as jfile:
-                    json.dump(jdsign,jfile,indent=4)
-                #週常
-                with open('weeksignin.json','w+',encoding='utf8') as jfile:
-                    jwsign[signer] = jwsign[signer]+1
-                    json.dump(jwsign,jfile)
-                
-                await ctx.send(f'{ctx.author.mention} 簽到完成!')
+        if has_signed == 0:
+            signer = str(f'{ctx.author.id}')
+            #日常
+            jdsign['sign'].append(f'{ctx.author.id}')
+            with open('daysignin.json',mode='w',encoding='utf8') as jfile:
+                json.dump(jdsign,jfile,indent=4)
+            #週常
+            with open('weeksignin.json','w+',encoding='utf8') as jfile:
+                jwsign[signer] = jwsign[signer]+1
+                json.dump(jwsign,jfile)
             
-            else:
-                await ctx.send(f'{ctx.author.mention} 已經簽到過了喔')             
+            await ctx.send(f'{ctx.author.mention} 簽到完成!')
+        
+        else:
+            await ctx.send(f'{ctx.author.mention} 已經簽到過了喔')             
     
     #@commands.Cog.listener()
     #async def on_voice_state_update(self,user, before, after):

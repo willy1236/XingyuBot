@@ -1,6 +1,5 @@
-import asyncio
+import json, asyncio
 from pyosu import OsuApi
-import json
 
 with open('setting.json',mode='r',encoding='utf8') as jfile:
     jdata = json.load(jfile)

@@ -17,8 +17,8 @@ class crass_chat(Cog_Extension):
             return
 
         is_crass_chat = 0
-        for a in jdata['crass_chat']:
-            if msg.channel.id == a:
+        for in_crass_chat_channel in jdata['crass_chat']:
+            if msg.channel.id == in_crass_chat_channel:
                 is_crass_chat = is_crass_chat +1
         
         if is_crass_chat >= 1:
@@ -33,8 +33,8 @@ class crass_chat(Cog_Extension):
             embed.set_footer(text=f'{msg.author} | {msg.guild}')
             embed.set_footer(text=f'{msg.author} | {msg.guild}')
 
-            for a in crass_chat:
-                channel = self.bot.get_channel(a)
+            for crass_channel_id in crass_chat:
+                channel = self.bot.get_channel(crass_channel_id)
                 await channel.send(embed=embed)
 
 

@@ -1,6 +1,5 @@
 {
     "TOKEN": "NTg5NzQ0NTQwMjQwMzE0MzY4.XQYIZw.hqR5-9xwHF992aJLe22e2ejzRBU",
-    "bep_TOKEN": "ODcwOTIzOTg1NTY5ODYxNjUy.YQT1Kw.FYmjl7jNv8YlvBCpnJ464g9-mwo",
     "test_channel": "566533708371329026",
     "say_channel": "640541440103153674",
     "time": "040000",
@@ -14,5 +13,15 @@
     ],
     "main_guild": "680755628603473922",
     "reaction_role.message": "768119787590516757",
-    "task_report":"870930710368780288"
+    "room_n": "1",
+    "test": [
+        "419131103836635136_test",
+        "419131103836635136_test",
+        "419131103836635136_test"
+    ],
+    "419131103836635136_test": "6",
+    "data": {
+        "a": "1",
+        "b": "2"
+    }
 }

@@ -9,7 +9,7 @@ with open('command.json',mode='r',encoding='utf8') as jfile:
 class moderation(Cog_Extension):
     #clean
     @commands.command()
-    @commands.is_owner()
+    @commands.has_permissions(manage_messages=True)
     async def clean(self,ctx,num:int):
         await ctx.channel.purge(limit=num+1)
 

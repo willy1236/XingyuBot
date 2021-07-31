@@ -6,7 +6,7 @@ import json, asyncio, datetime
 class task(Cog_Extension):
     def __init__(self,*args,**kwargs):
         super().__init__(*args,**kwargs)
-
+        
         async def time_task():
             await self.bot.wait_until_ready()
             while not self.bot.is_closed():
@@ -18,6 +18,9 @@ class task(Cog_Extension):
                     with open('daysignin.json',mode='w',encoding='utf8') as jfile2:
                         jdsign = {"sign":[]}
                         json.dump(jdsign,jfile2,indent=4)
+                    
+                    report = self.bot.get_channel(jdata['task_report'])
+                    await report.send('每日簽到已重置')
                     
                     await asyncio.sleep(1)
                 else:

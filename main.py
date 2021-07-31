@@ -25,7 +25,10 @@ bot = commands.Bot(command_prefix='!!',owner_id=419131103836635136,intents=inten
 @bot.event
 async def on_ready():
     print(">> Bot is online <<")
-    await bot.change_presence(activity=discord.Game(name='!!help 指令測試中'))
+    print(">> Bot online as",bot.user.name,"<<")
+    await bot.change_presence(activity=discord.Game(name='!!help'))
+
+bot.remove_command('help')
 
 #load
 @bot.command()
@@ -111,4 +114,4 @@ for filename in os.listdir('./cmds'):
 
 #keep_alive.keep_alive()
 if __name__ == "__main__":
-    bot.run(jdata['TOKEN'])
+    bot.run(jdata['bep_TOKEN'])
