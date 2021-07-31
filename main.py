@@ -94,8 +94,8 @@ async def all_anno(ctx,*,msg):
     embed=discord.Embed(description=f'{msg}',color=0x4aa0b5)
     embed.set_footer(text='機器人全群公告')
     
-    for b in all_anno:
-        channel = bot.get_channel(b)
+    for anno_channel in all_anno:
+        channel = bot.get_channel(anno_channel)
         await channel.send(embed=embed)
 
 #edit
@@ -105,6 +105,8 @@ async def all_anno(ctx,*,msg):
 #    channel = bot.get_channel(686237849301156017)
 #    message = discord.utils.get(channel.history.message,id=int(msgID))
 #    await message.edit(content=msg)
+
+
 
 
 for filename in os.listdir('./cmds'):

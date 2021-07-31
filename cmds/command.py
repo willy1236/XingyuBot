@@ -34,6 +34,8 @@ class info(Cog_Extension):
         embed = discord.Embed(title=bot_name, description="目前可使用的指令如下:", color=0xeee657)
         embed.add_field(name="!!info <內容/help>", value="獲得相關資訊", inline=False)
         embed.add_field(name="!!sign", value="每日簽到(更多功能敬請期待)", inline=False)
+        embed.add_field(name="!!lol <player> <玩家名稱>", value="查詢LOL戰績(更多功能敬請期待)", inline=False)
+        #embed.add_field(name="!!osu <player> <玩家名稱>", value="查詢Osu玩家(更多功能敬請期待)", inline=False)
         
 
         await ctx.send(embed=embed)
