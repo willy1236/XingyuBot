@@ -9,8 +9,8 @@ with open('setting.json',mode='r',encoding='utf8') as jfile:
 with open('command.json',mode='r',encoding='utf8') as jfile:
     comdata = json.load(jfile)
 
-class info(Cog_Extension):
-    # info
+class command(Cog_Extension):
+    # command
     @commands.command()
     async def info(self, ctx, arg):
         if arg == 'help':
@@ -46,8 +46,10 @@ class info(Cog_Extension):
         bot_name = self.bot.user.name
 
         embed = discord.Embed(title=bot_name, description="目前可使用的指令如下(onwer):", color=0xeee657)
-        embed.add_field(name="!!send <頻道ID> <內容>", value="發送指定訊息", inline=False)
+        embed.add_field(name="!!send <頻道ID/用戶ID/0> <內容>", value="發送指定訊息", inline=False)
         embed.add_field(name="!!all_anno <內容>", value="對所有伺服器進行公告", inline=False)
+        embed.add_field(name="!!edit <頻道ID> <訊息ID> <新訊息>", value="編輯訊息", inline=False)
+        embed.add_field(name="!!reaction <頻道ID> <訊息ID> <add/remove> <表情/表情ID>", value="添加/移除反應", inline=False)
         
         await ctx.send(embed=embed)
 
@@ -62,4 +64,4 @@ class info(Cog_Extension):
 
 
 def setup(bot):
-    bot.add_cog(info(bot))
+    bot.add_cog(command(bot))

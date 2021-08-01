@@ -3,17 +3,17 @@ from discord.ext import commands
 import json
 from core.classes import Cog_Extension
 
-with open('setting.json',mode='r',encoding='utf8') as jfile1:
-    jdata = json.load(jfile1)
+with open('setting.json',mode='r',encoding='utf8') as jfile:
+    jdata = json.load(jfile)
 
-with open('daysignin.json',mode='r',encoding='utf8') as jfile2:
-    jdsign = json.load(jfile2)
+with open('daysignin.json',mode='r',encoding='utf8') as jfile:
+    jdsign = json.load(jfile)
 
-with open('weeksignin.json',mode='r',encoding='utf8') as jfile3:
-    jwsign2 = json.load(jfile3)
+with open('weeksignin.json',mode='r',encoding='utf8') as jfile:
+    jwsign2 = json.load(jfile)
 
-with open('command.json',mode='r',encoding='utf8') as jfile4:
-    comdata = json.load(jfile4)
+with open('command.json',mode='r',encoding='utf8') as jfile:
+    comdata = json.load(jfile)
 
 #如果為第一次簽到 就先補0避免keyerror
 class Counter(dict):
@@ -31,9 +31,9 @@ class sign(Cog_Extension):
                 has_signed = has_signed+1
            
         if has_signed == 0:
-            signer = str(f'{ctx.author.id}')
+            signer = str(ctx.author.id)
             #日常
-            jdsign['sign'].append(f'{ctx.author.id}')
+            jdsign['sign'].append(ctx.author.id)
             with open('daysignin.json',mode='w',encoding='utf8') as jfile:
                 json.dump(jdsign,jfile,indent=4)
             #週常

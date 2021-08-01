@@ -1,3 +1,4 @@
+from asyncio.tasks import wait
 import discord
 from discord.ext import commands
 import json, random, datetime, asyncio
@@ -5,13 +6,13 @@ import os
 #import keep_alive
 
 
-intents = discord.Intents.default()
-intents.typing = False
-intents.presences = False
-intents.members = True
-intents.guilds = True
-intents.messages = True
-intents.voice_states = True
+intents = discord.Intents.all()
+#intents.typing = False
+#intents.presences = False
+#intents.members = True
+#intents.guilds = True
+#intents.messages = True
+#intents.voice_states = True
 
 with open('setting.json',mode='r',encoding='utf8') as jfile:
     jdata = json.load(jfile)
@@ -51,38 +52,20 @@ async def reload(ctx, extension):
     bot.reload_extension(f'cmds.{extension}')
     await ctx.send(f'Re - Loaded {extension} done')
 
+
 #send
 @bot.command()
 @commands.is_owner()
-async def send(ctx,*,msg):
+async def send(ctx,id:int,*,msg):
     await ctx.message.delete()
-    await ctx.send(msg)
-
-#dmsend
-@bot.command()
-@commands.is_owner()
-async def dmsend(ctx,channel:int,*,msg):
-    channel = bot.get_channel(channel)
-    await ctx.send(f'公會為 {channel.guild}')
-    if channel.guild != '':
-        await ctx.send('有工會')
-    await ctx.message.delete()
-    user = bot.get_user(channel)
-    await user.send(msg)
-    
-
-
-#csend
-@bot.command()
-@commands.is_owner()
-async def csend(ctx,channel:int,*,msg):
-    await ctx.message.delete()
-    channel = bot.get_channel(channel)
-    if channel.guild != '':
-        await channel.send(msg)
-    else:
-        user = bot.get_user(channel)
+    channel = bot.get_channel(id)
+    if id == 0:
+        await ctx.send(msg)
+    elif str(channel) == 'None':
+        user = bot.get_user(id)
         await user.send(msg)
+    else:
+        await channel.send(msg)
 
 #all_anno
 @bot.command()
@@ -99,14 +82,33 @@ async def all_anno(ctx,*,msg):
         await channel.send(embed=embed)
 
 #edit
-#@bot.command()
-#@commands.is_owner()
-#async def edit(ctx,msgID,*,msg):
-#    channel = bot.get_channel(686237849301156017)
-#    message = discord.utils.get(channel.history.message,id=int(msgID))
-#    await message.edit(content=msg)
+@bot.command()
+@commands.is_owner()
+async def edit(ctx,channel_ID:int,msgID:int,*,new_msg):
+    channel = bot.get_channel(channel_ID)
+    message = channel.get_partial_message(msgID)
+    await message.edit(content=new_msg)
+    await ctx.send(f'訊息編輯完成,{channel.mention}')
 
+#reaction
+@bot.command()
+@commands.is_owner()
+async def reaction(ctx,channel_ID:int,msgID:int,arg:str,*,emojiID):
+    channel = bot.get_channel(channel_ID)
+    message = channel.get_partial_message(msgID)
+    if type(emojiID) == int:
+        emoji = bot.get_emoji(emojiID)
+    else:
+        emoji = emojiID
 
+    if arg == 'add':
+        await message.add_reaction(emoji)
+        await ctx.send(f'反應添加完成,{channel.mention}')
+    elif arg == 'remove':
+        await message.remove_reaction(emoji,member=bot.user)
+        await ctx.send(f'反應移除完成,{channel.mention}')
+    else:
+        ctx.send('參數錯誤:請輸入正確參數(add/remove)')
 
 
 for filename in os.listdir('./cmds'):

@@ -2,7 +2,6 @@ import discord
 from discord.ext import commands
 import json
 from core.classes import Cog_Extension
-from cmds.command import info
 
 with open('setting.json',mode='r',encoding='utf8') as jfile:
     jdata = json.load(jfile)

@@ -10,6 +10,17 @@ with open('setting.json',mode='r',encoding='utf8') as jfile:
 with open('command.json',mode='r',encoding='utf8') as jfile:
     comdata = json.load(jfile)
 
+def player_search(player,url):
+    response = requests.get(url)
+    soup = BeautifulSoup(response.text, "html.parser")
+    results = soup.find_all("h1",class_="row")
+
+    for result in results:
+        if result.div.string == None:
+            result2 = str(result.div)[166:]
+            lvl = ''.join([x for x in result2 if x.isdigit()])
+            return lvl
+
 class lol(Cog_Extension):
 
     @commands.command()
@@ -18,18 +29,6 @@ class lol(Cog_Extension):
         if arg[0] == 'player':
             player = arg[1]
             url = 'https://lol.moa.tw/summoner/show/'+player
-
-            def player_search(player,url):
-                response = requests.get(url)
-                soup = BeautifulSoup(response.text, "html.parser")
-                results = soup.find_all("h1",class_="row")
-
-                for result in results:
-                    if result.div.string == None:
-                        result2 = str(result.div)[166:]
-                        lvl = ''.join([x for x in result2 if x.isdigit()])
-                        return lvl
-
             lvl = player_search(player,url)
 
             embed = discord.Embed(title="LOL玩家查詢", url=url, color=0xeee657)
