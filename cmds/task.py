@@ -15,7 +15,7 @@ class task(Cog_Extension):
         async def time_task():
             await self.bot.wait_until_ready()
             task_report_channel = self.bot.get_channel(jdata['task_report'])
-            event_channel = self.bot.get_channel(870936349023285268)
+            event_channel = self.bot.get_channel(643764975663448064)
             while not self.bot.is_closed():
                 now_time_hour = datetime.datetime.now().strftime('%H%M%S')
                 now_time_day = datetime.datetime.now().strftime('%Y%m%d')
