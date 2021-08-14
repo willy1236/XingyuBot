@@ -39,7 +39,7 @@ class sign(Cog_Extension):
             #週常
             with open('weeksignin.json','w+',encoding='utf8') as jfile:
                 jwsign[signer] = jwsign[signer]+1
-                json.dump(jwsign,jfile)
+                json.dump(jwsign,jfile,indent=4)
             
             await ctx.send(f'{ctx.author.mention} 簽到完成!')
         
