@@ -36,6 +36,8 @@ class command(Cog_Extension):
         embed.add_field(name="!!sign", value="每日簽到(更多功能敬請期待)", inline=False)
         embed.add_field(name="!!lol <player> <玩家名稱>", value="查詢LOL戰績(更多功能敬請期待)", inline=False)
         #embed.add_field(name="!!osu <player> <玩家名稱>", value="查詢Osu玩家(更多功能敬請期待)", inline=False)
+        embed.add_field(name="!!pt [用戶ID]", value="查詢Pt數", inline=False)
+        embed.add_field(name="!!pt give <用戶ID> <數量>", value="將Pt轉給指定用戶", inline=False)
         
 
         await ctx.send(embed=embed)
@@ -50,6 +52,7 @@ class command(Cog_Extension):
         embed.add_field(name="!!all_anno <內容>", value="對所有伺服器進行公告", inline=False)
         embed.add_field(name="!!edit <頻道ID> <訊息ID> <新訊息>", value="編輯訊息", inline=False)
         embed.add_field(name="!!reaction <頻道ID> <訊息ID> <add/remove> <表情/表情ID>", value="添加/移除反應", inline=False)
+        embed.add_field(name="!!ptset <用戶ID> <+/-/set> <數量>", value="更改指定用戶Pt數", inline=False)
         
         await ctx.send(embed=embed)
 
