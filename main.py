@@ -31,6 +31,21 @@ async def on_ready():
 
 bot.remove_command('help')
 
+
+def is_number(n):
+    try:  
+        float(n)
+        return True
+    except ValueError:
+        pass
+    try:
+        import unicodedata
+        unicodedata.numeric(n)
+        return True
+    except (TypeError, ValueError):
+        pass
+    return False
+
 #load
 @bot.command()
 @commands.is_owner()
@@ -61,7 +76,7 @@ async def send(ctx,id:int,*,msg):
     channel = bot.get_channel(id)
     if id == 0:
         await ctx.send(msg)
-    elif str(channel) == 'None':
+    elif channel == None:
         user = bot.get_user(id)
         await user.send(msg)
     else:
@@ -96,12 +111,16 @@ async def edit(ctx,channel_ID:int,msgID:int,*,new_msg):
 async def reaction(ctx,channel_ID:int,msgID:int,arg:str,*,emojiID):
     channel = bot.get_channel(channel_ID)
     message = channel.get_partial_message(msgID)
-    if type(emojiID) == int:
-        emoji = bot.get_emoji(emojiID)
+    print(is_number(emojiID),is_number(emojiID) == True)
+    if is_number(emojiID) == True:
+        emoji = bot.get_emoji(int(emojiID))
     else:
         emoji = emojiID
 
-    if arg == 'add':
+    if emoji == None:
+        await ctx.send(f'反應添加失敗:找不到表情符號',delete_after=5)
+        return
+    elif arg == 'add':
         await message.add_reaction(emoji)
         await ctx.send(f'反應添加完成,{channel.mention}')
     elif arg == 'remove':
@@ -118,4 +137,4 @@ for filename in os.listdir('./cmds'):
 
 #keep_alive.keep_alive()
 if __name__ == "__main__":
-    bot.run(jdata['bep_TOKEN'])
+    bot.run(jdata['Bep_TOKEN'])

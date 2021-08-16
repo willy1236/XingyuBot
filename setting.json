@@ -1,16 +1,16 @@
 {
     "TOKEN": "NTg5NzQ0NTQwMjQwMzE0MzY4.XQYIZw.hqR5-9xwHF992aJLe22e2ejzRBU",
-    "bep_TOKEN": "ODcwOTIzOTg1NTY5ODYxNjUy.YQT1Kw.FYmjl7jNv8YlvBCpnJ464g9-mwo",
+    "Bep_TOKEN": "ODcwOTIzOTg1NTY5ODYxNjUy.YQT1Kw.FYmjl7jNv8YlvBCpnJ464g9-mwo",
     "time": "040000",
     "crass_chat": [
         746321957535875164,
-        746984630539780177
+        746984630539780177,
+        876480208092422204
     ],
     "all_anno": [
         643764975663448064,
         686043277933543477
     ],
-    "main_guild": "680755628603473922",
     "mg.reaction_role.message": "768119787590516757",
     "task_report":"870930710368780288",
     "001_guild":613747262291443742

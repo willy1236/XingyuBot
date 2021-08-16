@@ -1,3 +1,4 @@
+from main import is_number
 import discord
 from discord.ext import commands
 import json
@@ -16,26 +17,23 @@ class crass_chat(Cog_Extension):
         if msg.author.bot == True:
             return
 
-        is_crass_chat = 0
-        for in_crass_chat_channel in jdata['crass_chat']:
-            if msg.channel.id == in_crass_chat_channel:
-                is_crass_chat = is_crass_chat +1
+        #for in_crass_chat_channel in jdata['crass_chat']:
+        #    if msg.channel.id == in_crass_chat_channel:
+        #        is_crass_chat = is_crass_chat +1
         
-        if is_crass_chat >= 1:
+        list = set(jdata['crass_chat'])
+        if msg.channel.id in list:
             await msg.delete()
             crass_chat = jdata['crass_chat']
 
             embed=discord.Embed(description=f'{msg.content}',color=0x4aa0b5)
-            if msg.author.nick == 'None':
-                embed.set_author(name=f'{msg.author.name}',icon_url=f'{msg.author.avatar_url}')
-            else:
-                embed.set_author(name=f'{msg.author.nick}',icon_url=f'{msg.author.avatar_url}')
-            embed.set_footer(text=f'{msg.author} | {msg.guild}')
-            embed.set_footer(text=f'{msg.author} | {msg.guild}')
+            embed.set_author(name=f'{msg.author}',icon_url=f'{msg.author.avatar_url}')
+            embed.set_footer(text=f'來自: {msg.guild}')
 
             for crass_channel_id in crass_chat:
                 channel = self.bot.get_channel(crass_channel_id)
-                await channel.send(embed=embed)
+                if channel != None:
+                    await channel.send(embed=embed)
 
 
 def setup(bot):
