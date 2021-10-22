@@ -6,9 +6,6 @@ from core.classes import Cog_Extension
 with open('setting.json',mode='r',encoding='utf8') as jfile:
     jdata = json.load(jfile)
 
-with open('command.json',mode='r',encoding='utf8') as jfile:
-    comdata = json.load(jfile)
-
 class main_guild(Cog_Extension):
     @commands.command()
     async def room(self,ctx):

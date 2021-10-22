@@ -32,7 +32,7 @@ class error(Cog_Extension):
         elif isinstance(error,commands.errors.CommandOnCooldown):
             await ctx.send(f'尚在冷卻:指令還在冷卻中\n在{int(error.retry_after)}秒後可再次使用')
         else:
-            await ctx.send(error)
+            await ctx.send('發生未知錯誤，請向機器人擁有者回報')
             print(error)
 
     #@info.error

@@ -51,8 +51,8 @@ class command(Cog_Extension):
         embed = discord.Embed(title=bot_name, description="目前可使用的指令如下(onwer):", color=0xeee657)
         embed.add_field(name="!!send <頻道ID/用戶ID/0> <內容>", value="發送指定訊息", inline=False)
         embed.add_field(name="!!all_anno <內容>", value="對所有伺服器進行公告", inline=False)
-        embed.add_field(name="!!edit <頻道ID> <訊息ID> <新訊息>", value="編輯訊息", inline=False)
-        embed.add_field(name="!!reaction <頻道ID> <訊息ID> <add/remove> <表情/表情ID>", value="添加/移除反應", inline=False)
+        embed.add_field(name="!!edit <訊息ID> <新訊息>", value="編輯訊息", inline=False)
+        embed.add_field(name="!!reaction <訊息ID> <add/remove> <表情/表情ID>", value="添加/移除反應", inline=False)
         embed.add_field(name="!!ptset <用戶ID> <+/-/set> <數量>", value="更改指定用戶Pt數", inline=False)
         embed.add_field(name="!!reset", value="簽到重置", inline=False)
         

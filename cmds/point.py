@@ -46,10 +46,13 @@ class point(Cog_Extension):
                 await ctx.message.delete()
                 await ctx.send(content='錯誤:沒找到用戶，請填入用戶ID',delete_after=5)
 
-        elif self.bot.get_user(int(arg[0])) != 'None':
+        elif self.bot.get_user(int(arg[0])) != None:
             user = self.bot.get_user(int(arg[0]))
             pt = check_point(ctx.author.id)
             await ctx.send(content=f'{user.name} 目前擁有 {pt} Pt點數', reference=ctx.message)
+
+        else:
+            await ctx.send(content='指令錯誤:請重新檢查指令', reference=ctx.message)
             
     
     @commands.is_owner()
@@ -68,7 +71,7 @@ class point(Cog_Extension):
                 pass
             json.dump(jpt,jfile,indent=4)
             
-        await ctx.send(f'設定成功:已將{user.mention}的Pt點數從 {pt_old} 設定為 {check_point(str(user.id))}')
+        await ctx.send(f'設定成功:已將{user.mention}的Pt點數從 {pt_old} 設定為 {check_point(user.id)}')
 
 def setup(bot):
     bot.add_cog(point(bot))

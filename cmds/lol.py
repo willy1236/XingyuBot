@@ -7,9 +7,6 @@ from bs4 import BeautifulSoup
 with open('setting.json',mode='r',encoding='utf8') as jfile:
     jdata = json.load(jfile)
 
-with open('command.json',mode='r',encoding='utf8') as jfile:
-    comdata = json.load(jfile)
-
 def player_search(player,url):
     response = requests.get(url)
     soup = BeautifulSoup(response.text, "html.parser")
