@@ -20,26 +20,12 @@ class task(Cog_Extension):
                 now_time_hour = datetime.datetime.now().strftime('%H%M%S')
                 now_time_day = datetime.datetime.now().strftime('%Y%m%d')
                 
-                if now_time_hour == jdata['time']:
+                if now_time_hour == '040000':
                     with open('sign_day.json',mode='w',encoding='utf8') as jfile:
                         reset = {"sign":[]}
                         json.dump(reset,jfile,indent=4)
 
                     await task_report_channel.send('簽到已重置')    
-                    await asyncio.sleep(1)
-                
-                elif now_time_day == '20210821' and now_time_hour == '000000' and jevent['guild_annual'] == 0:
-                    with open('event.json','w+',encoding='utf8') as jfile:
-                        jevent['guild_annual'] = 1
-                        json.dump(jevent,jfile,indent=4)
-                    await event_channel.send(jevent['guild_annual_message'])
-                    await asyncio.sleep(1)
-                
-                elif now_time_day == '20210821' and now_time_hour == '070000' and jevent['guild_annual2'] == 0:
-                    with open('event.json','w+',encoding='utf8') as jfile:
-                        jevent['guild_annual2'] = 1
-                        json.dump(jevent,jfile,indent=4)
-                    await event_channel.send(jevent['guild_annual_message2'])
                     await asyncio.sleep(1)
 
                 else:

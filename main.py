@@ -1,8 +1,8 @@
-from asyncio.tasks import wait
 import discord
 from discord.ext import commands
-import json, random, datetime, asyncio
-import os
+import json, random, datetime, asyncio, os
+
+from library import is_number
 #import keep_alive
 
 
@@ -32,19 +32,6 @@ async def on_ready():
 bot.remove_command('help')
 
 
-def is_number(n):
-    try:  
-        float(n)
-        return True
-    except ValueError:
-        pass
-    try:
-        import unicodedata
-        unicodedata.numeric(n)
-        return True
-    except (TypeError, ValueError):
-        pass
-    return False
 
 #load
 @bot.command()
@@ -128,6 +115,16 @@ async def reaction(ctx,channel_ID:int,msgID:int,arg:str,*,emojiID):
         await ctx.send(f'反應移除完成,{channel.mention}')
     else:
         ctx.send('參數錯誤:請輸入正確參數(add/remove)')
+
+@bot.command()
+@commands.is_owner()
+async def reset(ctx):
+    task_report_channel = bot.get_channel(jdata['task_report'])
+    with open('sign_day.json',mode='w',encoding='utf8') as jfile:
+        reset = {"sign":[]}
+        json.dump(reset,jfile,indent=4)
+
+    await task_report_channel.send('簽到已重置')
 
 
 for filename in os.listdir('./cmds'):

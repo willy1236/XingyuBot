@@ -1,4 +1,3 @@
-from main import is_number
 import discord
 from discord.ext import commands
 import json
@@ -14,15 +13,13 @@ class crass_chat(Cog_Extension):
     #跨群聊天B5.0
     @commands.Cog.listener()
     async def on_message(self,msg):
-        if msg.author.bot == True:
-            return
-
         #for in_crass_chat_channel in jdata['crass_chat']:
         #    if msg.channel.id == in_crass_chat_channel:
         #        is_crass_chat = is_crass_chat +1
-        
         list = set(jdata['crass_chat'])
-        if msg.channel.id in list:
+        if msg.author.bot == True:
+            return
+        elif msg.channel.id in list:
             await msg.delete()
             crass_chat = jdata['crass_chat']
 

@@ -1,39 +1,28 @@
 import discord
 from discord.ext import commands
 import json
+from library import Counter
 from core.classes import Cog_Extension
 
 with open('setting.json',mode='r',encoding='utf8') as jfile:
     jdata = json.load(jfile)
 
-with open('sign_day.json',mode='r',encoding='utf8') as jfile:
-    jdsign = json.load(jfile)
-
 with open('sign_week.json',mode='r',encoding='utf8') as jfile:
     jwsign2 = json.load(jfile)
+    jwsign = Counter(jwsign2)
 
 with open('point.json',mode='r',encoding='utf8') as jfile:
     jpt2 = json.load(jfile)
-
-#如果為第一次簽到 就先補0避免keyerror
-class Counter(dict):
-    def __missing__(self, key): 
-        return 0
-jwsign = Counter(jwsign2)
-jpt = Counter(jpt2)
+    jpt = Counter(jpt2)
 
 class sign(Cog_Extension):
     @commands.command()
     async def sign(self,ctx):
-        has_signed = 0 
-        for signed_id in jdsign['sign']:
-            if int(ctx.author.id) == int(signed_id):
-                has_signed = has_signed+1
-           
-        #list = set(jdsign['sign'])
-        #if int(ctx.author.id) in list:
+        with open('sign_day.json',mode='r',encoding='utf8') as jfile:
+            jdsign = json.load(jfile)
 
-        if has_signed == 0:
+        list = set(jdsign['sign'])
+        if not int(ctx.author.id) in list:
             signer = str(ctx.author.id)
             #日常
             jdsign['sign'].append(ctx.author.id)
@@ -44,7 +33,7 @@ class sign(Cog_Extension):
                 jwsign[signer] = jwsign[signer]+1
                 json.dump(jwsign,jfile,indent=4)
             
-            await ctx.send(f'{ctx.author.mention} 簽到完成!')
+            await ctx.send(f'{ctx.author.mention} 簽到完成!',delete_after=5)
             if ctx.guild.id == jdata['001_guild']:
                 with open('point.json',mode='w',encoding='utf8') as jfile:
                     jpt[signer] = jpt[signer]+1
