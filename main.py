@@ -20,7 +20,7 @@ with open('setting.json',mode='r',encoding='utf8') as jfile:
 with open('command.json',mode='r',encoding='utf8') as jfile:
     comdata = json.load(jfile)
 
-bot = commands.Bot(command_prefix='!!',owner_id=419131103836635136,intents=intents)
+bot = commands.Bot(command_prefix='!!',owner_id=419131103836635136,intents=intents,case_insensitive=True)
 
 #啟動
 @bot.event

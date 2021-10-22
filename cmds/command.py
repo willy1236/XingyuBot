@@ -28,6 +28,7 @@ class command(Cog_Extension):
             await ctx.send('參數錯誤，請輸入!!info help取得幫助')
 
     @commands.command()
+    @commands.cooldown(rate=1,per=3)
     async def help(self,ctx):
         bot_name = self.bot.user.name
 
@@ -53,6 +54,7 @@ class command(Cog_Extension):
         embed.add_field(name="!!edit <頻道ID> <訊息ID> <新訊息>", value="編輯訊息", inline=False)
         embed.add_field(name="!!reaction <頻道ID> <訊息ID> <add/remove> <表情/表情ID>", value="添加/移除反應", inline=False)
         embed.add_field(name="!!ptset <用戶ID> <+/-/set> <數量>", value="更改指定用戶Pt數", inline=False)
+        embed.add_field(name="!!reset", value="簽到重置", inline=False)
         
         await ctx.send(embed=embed)
 

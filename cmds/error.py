@@ -17,8 +17,20 @@ class error(Cog_Extension):
 
         if isinstance(error,commands.errors.MissingRequiredArgument):
             await ctx.send('遺失參數:缺少必要參數')
+            print("遺失參數:",error.param)
+        elif isinstance(error,commands.errors.ArgumentParsingError):
+            await ctx.send('參數錯誤:給予了錯誤參數')
+            print("錯誤參數:",error)
         elif isinstance(error,commands.errors.CommandNotFound):
             await ctx.send('沒找到指令:請確認指令是否輸入錯誤')
+        elif isinstance(error,commands.errors.MissingPermissions):
+            await ctx.send('缺少權限:你沒有權限來使用此指令')
+        elif isinstance(error,commands.errors.BotMissingPermissions):
+            await ctx.send('缺少權限:機器人沒有權限來使用此指令')
+        elif isinstance(error,commands.errors.NotOwner):
+            await ctx.send('缺少權限:你不是機器人擁有者')
+        elif isinstance(error,commands.errors.CommandOnCooldown):
+            await ctx.send(f'尚在冷卻:指令還在冷卻中\n在{int(error.retry_after)}秒後可再次使用')
         else:
             await ctx.send(error)
             print(error)

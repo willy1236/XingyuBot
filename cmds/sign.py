@@ -18,6 +18,7 @@ with open('point.json',mode='r',encoding='utf8') as jfile:
 class sign(Cog_Extension):
     @commands.command()
     async def sign(self,ctx):
+        await ctx.message.delete()
         with open('sign_day.json',mode='r',encoding='utf8') as jfile:
             jdsign = json.load(jfile)
 
@@ -41,7 +42,7 @@ class sign(Cog_Extension):
                 await ctx.send(content=f'{ctx.author.mention} 簽到完成:pt點數+1',delete_after=5)
 
         else:
-            await ctx.send(f'{ctx.author.mention} 已經簽到過了喔')
+            await ctx.send(f'{ctx.author.mention} 已經簽到過了喔',delete_after=5)
     
     #@commands.Cog.listener()
     #async def on_voice_state_update(self,user, before, after):

@@ -8,12 +8,6 @@ from core.classes import Cog_Extension
 with open('setting.json',mode='r',encoding='utf8') as jfile:
     jdata = json.load(jfile)
 
-with open('sign_day.json',mode='r',encoding='utf8') as jfile:
-    jdsign = json.load(jfile)
-
-with open('sign_week.json',mode='r',encoding='utf8') as jfile:
-    jwsign = json.load(jfile)
-
 with open('point.json',mode='r',encoding='utf8') as jfile:
     jpt2 = json.load(jfile)
     jpt = Counter(jpt2)
