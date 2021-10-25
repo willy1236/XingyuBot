@@ -120,6 +120,7 @@ async def reaction(ctx,msgID:int,arg:str,*,emojiID):
     else:
         ctx.send('參數錯誤:請輸入正確參數(add/remove)',delete_after=5)
 
+#reset
 @bot.command()
 @commands.is_owner()
 async def reset(ctx):
@@ -129,6 +130,12 @@ async def reset(ctx):
         json.dump(reset,jfile,indent=4)
 
     await task_report_channel.send('簽到已重置')
+
+#ping
+@bot.command()
+@commands.is_owner()
+async def ping(ctx):
+    await ctx.send(f'延遲為:{round(bot.latency*1000)} ms')
 
 
 for filename in os.listdir('./cmds'):

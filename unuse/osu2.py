@@ -8,9 +8,6 @@ from pyosu import OsuApi
 with open('setting.json',mode='r',encoding='utf8') as jfile:
     jdata = json.load(jfile)
 
-with open('command.json',mode='r',encoding='utf8') as jfile:
-    comdata = json.load(jfile)
-
 api = OsuApi('1e99d316fc8fb8e630fe92b4d7cb32701713d2d2')
 #async def main():
 #    bests = await api.get_user_bests('Renondedju')
