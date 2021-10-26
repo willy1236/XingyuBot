@@ -1,5 +1,11 @@
 import json
 
+
+#(*args) 傳入多個參數
+#(**kwargs) 傳入多個參數並轉變為dict
+#'value' in dict 偵測dict內是否有value
+#len(list) 查詢list內的個數
+
 def is_number(n):
     try:  
         float(n)

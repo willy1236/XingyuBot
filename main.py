@@ -123,17 +123,22 @@ async def reaction(ctx,msgID:int,arg:str,*,emojiID):
 #reset
 @bot.command()
 @commands.is_owner()
-async def reset(ctx):
-    task_report_channel = bot.get_channel(jdata['task_report'])
-    with open('sign_day.json',mode='w',encoding='utf8') as jfile:
-        reset = {"sign":[]}
-        json.dump(reset,jfile,indent=4)
+async def reset(ctx,*arg):
+    if arg == 'sign':
+        task_report_channel = bot.get_channel(jdata['task_report'])
+        with open('sign_day.json',mode='w',encoding='utf8') as jfile:
+            reset = {"sign":[]}
+            json.dump(reset,jfile,indent=4)
 
-    await task_report_channel.send('簽到已重置')
+        await task_report_channel.send('簽到已重置')
+    elif not arg:
+        for filename in os.listdir('./cmds'):
+            if filename.endswith('.py'):
+                bot.reload_extension(f'cmds.{filename[:-3]}')
+        await ctx.send('Re - Loaded all done')
 
 #ping
 @bot.command()
-@commands.is_owner()
 async def ping(ctx):
     await ctx.send(f'延遲為:{round(bot.latency*1000)} ms')
 
