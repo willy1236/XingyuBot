@@ -6,6 +6,12 @@ import json
 #'value' in dict 偵測dict內是否有value
 #len(list) 查詢list內的個數
 
+#json開啟法1
+#with open('.../XXX.json','r') as f:
+#    data= json.load(f)
+#json開啟法2
+#data = json.load(open('.../XXX.json','r'))
+
 def is_number(n):
     try:  
         float(n)
@@ -32,3 +38,7 @@ def check_point(menber):
 class Counter(dict):
     def __missing__(self,key): 
         return 0
+
+def message_update(message):
+    pass
+

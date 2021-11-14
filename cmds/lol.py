@@ -28,7 +28,7 @@ class lol(Cog_Extension):
             url = 'https://lol.moa.tw/summoner/show/'+player
             lvl = player_search(url)
 
-            embed = discord.Embed(title="LOL玩家查詢", url=url, color=0xeee657)
+            embed = discord.Embed(title="LOL玩家查詢", url=url, color=0xc4e9ff)
             embed.add_field(name="玩家名稱", value=player, inline=False)
             embed.add_field(name="等級", value=lvl, inline=False)
             embed.add_field(name="查詢戰績", value="LOL戰績網(lol.moa.tw)", inline=False)

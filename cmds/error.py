@@ -1,10 +1,6 @@
 import discord
 from discord.ext import commands
-import json
 from core.classes import Cog_Extension
-
-with open('setting.json',mode='r',encoding='utf8') as jfile:
-    jdata = json.load(jfile)
 
 
 class error(Cog_Extension):
@@ -28,7 +24,12 @@ class error(Cog_Extension):
         elif isinstance(error,commands.errors.NotOwner):
             await ctx.send('缺少權限:你不是機器人擁有者')
         elif isinstance(error,commands.errors.CommandOnCooldown):
-            await ctx.send(f'尚在冷卻:指令還在冷卻中\n在{int(error.retry_after)}秒後可再次使用')
+            await ctx.send(f'尚在冷卻:指令還在冷卻中(尚須{int(error.retry_after)}秒)')
+        
+        elif isinstance(error,commands.errors.DisabledCommand):
+            await ctx.send('禁用指令:此指令目前無法被使用')
+        elif isinstance(error,commands.errors.TooManyArguments):
+            await ctx.send('參數過多:給入過多參數')
         else:
             await ctx.send('發生未知錯誤，請向機器人擁有者回報')
             print(error)

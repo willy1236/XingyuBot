@@ -25,7 +25,7 @@ class lol(Cog_Extension):
             url = 'https://osu.ppy.sh/users/'+str(player.user_id)
             bot_name = self.bot.user.name
 
-            embed = discord.Embed(title=player.username, url=url, color=0xeee657)
+            embed = discord.Embed(title=player.username, url=url, color=0xc4e9ff)
             embed.add_field(name="等級", value=str(player.level), inline=True)
             embed.add_field(name="總遊玩次數", value=str(player.playcount), inline=True)
             embed.add_field(name="總pp數", value=str(player.pp_raw), inline=True)

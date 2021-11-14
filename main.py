@@ -17,7 +17,7 @@ intents = discord.Intents.all()
 with open('setting.json',mode='r',encoding='utf8') as jfile:
     jdata = json.load(jfile)
 
-bot = commands.Bot(command_prefix='!!',owner_id=419131103836635136,intents=intents,case_insensitive=True)
+bot = commands.Bot(command_prefix=commands.when_mentioned_or('!!'),owner_id=419131103836635136,intents=intents,case_insensitive=True)
 
 #啟動
 @bot.event
@@ -76,7 +76,7 @@ async def all_anno(ctx,*,msg):
     send_success = 0
 
     embed=discord.Embed(description=f'{msg}',color=0x4aa0b5)
-    embed.set_footer(text='機器人全群公告')
+    embed.set_footer(text='廣播電台 | 機器人全群公告')
     
     for anno_channel in all_anno:
         channel = bot.get_channel(anno_channel)
@@ -141,6 +141,28 @@ async def reset(ctx,*arg):
 @bot.command()
 async def ping(ctx):
     await ctx.send(f'延遲為:{round(bot.latency*1000)} ms')
+
+@bot.command()
+async def user(ctx,id):
+    user = await bot.fetch_user(id)
+    await ctx.send(user)
+
+
+# @bot.event
+# async def on_message(message):
+#     if message.content.startswith('$thumb'):
+#         channel = message.channel
+#         await channel.send('Send me that 👍 reaction, mate')
+
+#         def check(reaction, user):
+#             return user == message.author and str(reaction.emoji) == '👍'
+
+#         try:
+#             reaction, user = await bot.wait_for('reaction_add', timeout=60.0, check=check)
+#         except asyncio.TimeoutError:
+#             await channel.send('👎')
+#         else:
+#             await channel.send('👍')
 
 
 for filename in os.listdir('./cmds'):
