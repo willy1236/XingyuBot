@@ -4,8 +4,8 @@ import json
 from library import Counter
 from core.classes import Cog_Extension
 
-with open('setting.json',mode='r',encoding='utf8') as jfile:
-    jdata = json.load(jfile)
+
+jdata = json.load(open('setting.json',mode='r',encoding='utf8'))
 
 with open('sign_week.json',mode='r',encoding='utf8') as jfile:
     jwsign2 = json.load(jfile)
@@ -19,11 +19,10 @@ class sign(Cog_Extension):
     @commands.command()
     async def sign(self,ctx):
         await ctx.message.delete()
-        with open('sign_day.json',mode='r',encoding='utf8') as jfile:
-            jdsign = json.load(jfile)
-
+        jdsign = json.load(open('sign_day.json',mode='r',encoding='utf8'))
         list = set(jdsign['sign'])
-        if not int(ctx.author.id) in list:
+        
+        if not ctx.author.id in list:
             signer = str(ctx.author.id)
             #日常
             jdsign['sign'].append(ctx.author.id)

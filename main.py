@@ -14,8 +14,7 @@ intents = discord.Intents.all()
 #intents.messages = True
 #intents.voice_states = True
 
-with open('setting.json',mode='r',encoding='utf8') as jfile:
-    jdata = json.load(jfile)
+jdata = json.load(open('setting.json',mode='r',encoding='utf8'))
 
 bot = commands.Bot(command_prefix=commands.when_mentioned_or('!!'),owner_id=419131103836635136,intents=intents,case_insensitive=True)
 
@@ -64,8 +63,10 @@ async def send(ctx,id:int,*,msg):
     elif channel == None:
         user = bot.get_user(id)
         await user.send(msg)
+        await ctx.send(f'訊息發送成功',delete_after=5)
     else:
         await channel.send(msg)
+        await ctx.send(f'訊息發送成功',delete_after=5)
 
 #all_anno
 @bot.command()
@@ -98,7 +99,7 @@ async def edit(ctx,msgID:int,*,new_msg):
 #reaction
 @bot.command()
 @commands.is_owner()
-async def reaction(ctx,msgID:int,arg:str,*,emojiID):
+async def reaction(ctx,msgID:int,mod:str,*,emojiID):
     message = await ctx.fetch_message(msgID)
     channel = message.channel
     #message = channel.get_partial_message(msgID)
@@ -111,19 +112,19 @@ async def reaction(ctx,msgID:int,arg:str,*,emojiID):
     if emoji == None:
         await ctx.send(f'反應添加失敗:找不到表情符號',delete_after=5)
         return
-    elif arg == 'add':
+    elif mod == 'add':
         await message.add_reaction(emoji)
         await ctx.send(f'反應添加完成,{channel.mention}',delete_after=10)
-    elif arg == 'remove':
+    elif mod == 'remove':
         await message.remove_reaction(emoji,member=bot.user)
         await ctx.send(f'反應移除完成,{channel.mention}',delete_after=10)
     else:
-        ctx.send('參數錯誤:請輸入正確參數(add/remove)',delete_after=5)
+        ctx.send('參數錯誤:請輸入正確模式(add/remove)',delete_after=5)
 
 #reset
 @bot.command()
 @commands.is_owner()
-async def reset(ctx,*arg):
+async def reset(ctx,arg=None):
     if arg == 'sign':
         task_report_channel = bot.get_channel(jdata['task_report'])
         with open('sign_day.json',mode='w',encoding='utf8') as jfile:
@@ -135,7 +136,7 @@ async def reset(ctx,*arg):
         for filename in os.listdir('./cmds'):
             if filename.endswith('.py'):
                 bot.reload_extension(f'cmds.{filename[:-3]}')
-        await ctx.send('Re - Loaded all done')
+        await ctx.send('Re - Loaded all done',delete_after=5)
 
 #ping
 @bot.command()

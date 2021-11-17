@@ -1,5 +1,5 @@
 import json
-
+from discord.ext import commands
 
 #(*args) 傳入多個參數
 #(**kwargs) 傳入多個參數並轉變為dict
@@ -26,18 +26,32 @@ def is_number(n):
         pass
     return False
 
-def check_point(menber):
-    with open('point.json',mode='r',encoding='utf8') as jfile:
-        jpt2 = json.load(jfile)
-        jpt = Counter(jpt2)
+#menber_id:要檢測pt的用戶id(int,str形式皆可)
+def check_point(menber_id):
+    jpt = Counter(json.load(open('point.json',mode='r',encoding='utf8')))
     #json內資料格為str形式
-    pt = jpt[str(menber)]
+    pt = jpt[str(menber_id)]
     return pt
 
 #如果讀不到資料補0避免keyerror
 class Counter(dict):
     def __missing__(self,key): 
         return 0
+
+#arg:要檢測的內容(名稱#0000,id,mention...)
+async def user_who(ctx,arg):
+    try:
+        member = await commands.MemberConverter().convert(ctx,arg)
+    except commands.MemberNotFound:
+        member = None
+    return member
+
+async def user_who2(ctx,arg):
+    try:
+        user = await commands.UserConverter().convert(ctx,arg)
+    except commands.MemberNotFound:
+        user = None
+    return user
 
 def message_update(message):
     pass

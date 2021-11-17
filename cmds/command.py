@@ -1,6 +1,8 @@
 import discord
 from discord.ext import commands
-import json
+import json ,random
+
+from library import user_who
 from core.classes import Cog_Extension
 
 
@@ -10,7 +12,7 @@ jdata = json.load(open('setting.json','r',encoding='utf8'))
 class command(Cog_Extension):
     # command
     @commands.command()
-    async def info(self, ctx, arg):
+    async def info(self, ctx, arg='help'):
         if arg == 'help':
             await ctx.send("vpn類\nvpn | vpn列表\nvpn01 | vpn使用教學\n\n跨群聊天類\ncrass_chat | 跨群聊天列表\n\n共用類\nshare | 雲端共用資料夾資訊")
 
@@ -33,19 +35,31 @@ class command(Cog_Extension):
         bot_name = self.bot.user.name
 
         embed = discord.Embed(title=bot_name, description="目前可使用的指令如下:", color=0xc4e9ff)
+        embed.add_field(name="!!help <pt/game>", value="系列指令", inline=False)
         embed.add_field(name="!!info <內容/help>", value="獲得相關資訊", inline=False)
         embed.add_field(name="!!sign", value="每日簽到(更多功能敬請期待)", inline=False)
-        embed.add_field(name="!!lol <player> <玩家名稱>", value="查詢LOL戰績(更多功能敬請期待)", inline=False)
         #embed.add_field(name="!!osu <player> <玩家名稱>", value="查詢Osu玩家(更多功能敬請期待)", inline=False)
-        embed.add_field(name="!!pt [用戶ID]", value="查詢Pt數", inline=False)
-        embed.add_field(name="!!pt give <用戶ID> <數量>", value="將Pt轉給指定用戶", inline=False)
         embed.add_field(name="!!find <id>", value="搜尋指定用戶", inline=False)
         embed.add_field(name="!!feedback <內容>", value="傳送訊息給機器人擁有者", inline=False)
-        embed.add_field(name="!!game <遊戲> <資料>", value="設定你在資料庫內的遊戲名稱", inline=False)
-        
-
+        embed.add_field(name="!!role <用戶>", value="取得用戶的身分組數量(可批量輸入多個用戶)", inline=False)
+        embed.add_field(name="!!lottery [次數]", value="抽獎", inline=False)
         await ctx.send(embed=embed)
-    
+
+    @help.command()
+    async def pt(self,ctx):
+        embed = discord.Embed(description="Pt系列指令:", color=0xc4e9ff)
+        embed.add_field(name="!!pt [用戶]", value="查詢Pt數", inline=False)
+        embed.add_field(name="!!pt give <用戶> <數量>", value="將Pt轉給指定用戶", inline=False)
+        await ctx.send(embed=embed)
+
+    @help.command()
+    async def game(self,ctx):
+        embed = discord.Embed(description="Game系列指令:", color=0xc4e9ff)
+        embed.add_field(name="!!game <set> <遊戲> <資料>", value="設定你在資料庫內的遊戲名稱", inline=False)
+        embed.add_field(name="!!game <find> <用戶>", value="查詢用戶在資料庫內的遊戲名稱(未開放)", inline=False)
+        embed.add_field(name="!!lol <player> <玩家名稱>", value="查詢LOL戰績(更多功能敬請期待)", inline=False)
+        await ctx.send(embed=embed)
+
     @help.command()
     @commands.is_owner()
     async def owner(self,ctx):
@@ -58,7 +72,6 @@ class command(Cog_Extension):
         embed.add_field(name="!!reaction <訊息ID> <add/remove> <表情/表情ID>", value="添加/移除反應", inline=False)
         embed.add_field(name="!!ptset <用戶ID> <+/-/set> <數量>", value="更改指定用戶Pt數", inline=False)
         embed.add_field(name="!!reset", value="簽到重置", inline=False)
-        
         await ctx.send(embed=embed)
 
     @help.command()
@@ -67,7 +80,6 @@ class command(Cog_Extension):
 
         embed = discord.Embed(title=bot_name, description="目前可使用的指令如下(admin):", color=0xc4e9ff)
         embed.add_field(name="!!clean <數字>", value="清除訊息(需求管理訊息)", inline=False)
-        
         await ctx.send(embed=embed)
 
     @commands.command()
@@ -93,22 +105,64 @@ class command(Cog_Extension):
 
     @commands.command()
     @commands.cooldown(rate=1,per=10)
-    async def feedback(self,ctx,text):
+    async def feedback(self,ctx,*,msg):
+        await ctx.message.delete()
         user = ctx.author
         guild = ctx.guild
         channel = ctx.channel
         feedback_channel = self.bot.get_channel(jdata['feedback_channel'])
         embed = discord.Embed(color=0xc4e9ff)
-        embed.add_field(name='廣播電台 | 回饋訊息', value=text, inline=False)
+        embed.add_field(name='廣播電台 | 回饋訊息', value=msg, inline=False)
         embed.set_author(name=f'{user}',icon_url=f'{user.avatar_url}')
         embed.set_footer(text=f'來自: {guild}, {channel}')
-
         await feedback_channel.send(embed=embed)
+        await ctx.send('訊息已發送',delete_after=5)
 
     @commands.command(enabled=True)
-    async def test(self,ctx,user:commands.MemberConverter):
-        await ctx.send(user)
-        
+    async def test(self,ctx,arg=None):
+        user = await user_who(ctx,arg)
+        await ctx.send(f"{user or '沒有找到用戶'}")
+
+    @commands.command()
+    async def role(self,ctx,*user_list):
+        i = 0
+        role_ignore = [858566145156972554,901713612668813312,879587736128999454,613748153644220447,884082363859083305,613749564356427786,861812096777060352,889148839016169542,874628716385435719,858558233403719680,891644752666198047,896424834475638884,706794165094187038,619893837833306113]
+        while i < len(user_list):
+            user = await user_who(ctx,user_list[i])
+            if user != None:
+                l = 0
+                role_list = user.roles
+                while l < len(role_list):
+                    if role_list[l].id in role_ignore:
+                        role_list.remove(role_list[l])
+                    else:
+                        l = l+1
+                role_count = len(role_list)-1
+                await ctx.send(f'{user.name}擁有{role_count}個身分組')
+            i = i + 1
+
+    @commands.command()
+    async def lottery(self,ctx,times:int=1):
+        i=0
+        result={'six':0,'five':0,'four':0,'three':0}
+        async with ctx.typing():
+            while i < times:
+                choice =  random.randint(1,100)
+                if choice == 1:
+                    loot = '★★★★★★'
+                    result["six"] =result["six"]+1
+                elif choice >= 2 and choice <= 11:
+                    loot = '★★★★★'
+                    result["five"]=result["five"]+1
+                elif choice >= 12 and choice <= 41:
+                    loot = '★★★★'
+                    result["four"]=result["four"]+1
+                else:
+                    loot = '★★★'
+                    result["three"]=result["three"]+1
+                i =i+1
+            await ctx.send(f"抽卡結果:\n六星(1%):{result['six']} 五星(10%):{result['five']} 四星(30%):{result['four']}三星(59%):{result['three']}")
+
 
 def setup(bot):
     bot.add_cog(command(bot))

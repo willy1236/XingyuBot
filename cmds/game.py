@@ -1,10 +1,11 @@
 import discord
 from discord.ext import commands
 import json
+
+from library import user_who
 from core.classes import Cog_Extension
 
-with open('setting.json',mode='r',encoding='utf8') as jfile:
-    jdata = json.load(jfile)
+jdata = json.load(open('setting.json',mode='r',encoding='utf8'))
 
 with open('gamer_data.json',mode='r',encoding='utf8') as jfile:
     gdata = json.load(jfile)
@@ -13,24 +14,19 @@ games = ['steam','osu','apex','lol']
 class game(Cog_Extension):
     
     @commands.group(invoke_without_command=True)
-    async def game(self):
+    async def game(self,ctx):
         pass
         
     @game.command()
-    async def set(self,ctx,*arg):
+    async def set(self,ctx,game,data=None):
         if not str(ctx.author.id) in gdata:
             with open('gamer_data.json',mode='w',encoding='utf8') as jfile:
                 gdata[f'{ctx.author.id}'] = {}
                 json.dump(gdata,jfile,indent=4)
-            await ctx.send('偵測到資料庫內無使用者資料，已自動註冊')
+            await ctx.send('偵測到資料庫內無使用者資料，已自動註冊',delete_after=5)
 
-        if len(arg) >= 1 and arg[0] in games:
-            game = arg[0]
+        if game in games:
             user = str(ctx.author.id)
-            if len(arg) >= 2:
-                data = arg[1]
-            else:
-                data = None
 
             if not game in gdata[user]:
                 with open('gamer_data.json',mode='w',encoding='utf8') as jfile:
@@ -47,30 +43,25 @@ class game(Cog_Extension):
                     await ctx.send(f'已將{game}資料設定為 {data}')
                 json.dump(gdata,jfile,indent=4)
         
-        elif not len(arg) >=1:
-            await ctx.send('缺少參數:請輸入要設定的內容')
-        elif not arg[0] in games:
-            await ctx.send(f'遊戲錯誤:此遊戲目前未開放設定\n目前支援:{games}')
+        else:
+            await ctx.send(f'遊戲錯誤:此遊戲目前未開放設定\n目前支援:{games}',delete_after=10)
 
     @game.command()
-    async def find(self,ctx,*arg):
-        user:commands.MemberConverter = arg 
+    @commands.is_owner()
+    async def find(self,ctx,user):
+        user = await user_who(ctx,user)
         if user != None:
             data = {}
             for game in games:
-                print(data)
                 if game in gdata[f'{user.id}']:
                     data[game] = gdata[f'{user.id}'][game]
                 else:
                     data[game] = 'None'
 
-            
             embed = discord.Embed(title=user, color=0xc4e9ff)
             for game in games:
                 embed.add_field(name=game, value=data[game], inline=False)
             embed.set_thumbnail(url=user.avatar_url)
-        
-
             await ctx.send(embed=embed)
 
 
