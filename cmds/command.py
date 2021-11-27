@@ -2,15 +2,19 @@ import discord
 from discord.ext import commands
 import json ,random
 
-from library import user_who
+from library import Counter,find_user ,find_channel
 from core.classes import Cog_Extension
 
 
 jdata = json.load(open('setting.json','r',encoding='utf8'))
 
+jloot = Counter(json.load(open('lottery.json',mode='r',encoding='utf8')))
 
 class command(Cog_Extension):
-    # command
+    @commands.command(help='原始的help指令')
+    async def assist(self,ctx,arg):
+        await ctx.send_help(arg)
+
     @commands.command()
     async def info(self, ctx, arg='help'):
         if arg == 'help':
@@ -35,7 +39,7 @@ class command(Cog_Extension):
         bot_name = self.bot.user.name
 
         embed = discord.Embed(title=bot_name, description="目前可使用的指令如下:", color=0xc4e9ff)
-        embed.add_field(name="!!help <pt/game>", value="系列指令", inline=False)
+        embed.add_field(name="!!help <pt/game/set>", value="系列指令", inline=False)
         embed.add_field(name="!!info <內容/help>", value="獲得相關資訊", inline=False)
         embed.add_field(name="!!sign", value="每日簽到(更多功能敬請期待)", inline=False)
         #embed.add_field(name="!!osu <player> <玩家名稱>", value="查詢Osu玩家(更多功能敬請期待)", inline=False)
@@ -58,6 +62,13 @@ class command(Cog_Extension):
         embed.add_field(name="!!game <set> <遊戲> <資料>", value="設定你在資料庫內的遊戲名稱", inline=False)
         embed.add_field(name="!!game <find> <用戶>", value="查詢用戶在資料庫內的遊戲名稱(未開放)", inline=False)
         embed.add_field(name="!!lol <player> <玩家名稱>", value="查詢LOL戰績(更多功能敬請期待)", inline=False)
+        await ctx.send(embed=embed)
+
+    @help.command()
+    async def set(self,ctx):
+        embed = discord.Embed(description="Game系列指令:", color=0xc4e9ff)
+        embed.add_field(name="!!set <crass_chat> [頻道]", value="設定跨群聊天頻道", inline=False)
+        embed.add_field(name="!!set <all_anno> [頻道]", value="設定全群公告頻道", inline=False)
         await ctx.send(embed=embed)
 
     @help.command()
@@ -119,49 +130,150 @@ class command(Cog_Extension):
         await ctx.send('訊息已發送',delete_after=5)
 
     @commands.command(enabled=True)
-    async def test(self,ctx,arg=None):
-        user = await user_who(ctx,arg)
+    async def test(self,ctx,user=None):
+        user = await find_user(ctx,user)
         await ctx.send(f"{user or '沒有找到用戶'}")
 
-    @commands.command()
+    @commands.group(invoke_without_command=True)
     async def role(self,ctx,*user_list):
         i = 0
         role_ignore = [858566145156972554,901713612668813312,879587736128999454,613748153644220447,884082363859083305,613749564356427786,861812096777060352,889148839016169542,874628716385435719,858558233403719680,891644752666198047,896424834475638884,706794165094187038,619893837833306113]
         while i < len(user_list):
-            user = await user_who(ctx,user_list[i])
+            user = await find_user(ctx,user_list[i])
             if user != None:
                 l = 0
+                ignore_count = 0
                 role_list = user.roles
                 while l < len(role_list):
                     if role_list[l].id in role_ignore:
                         role_list.remove(role_list[l])
+                        ignore_count = ignore_count +1
                     else:
                         l = l+1
                 role_count = len(role_list)-1
-                await ctx.send(f'{user.name}擁有{role_count}個身分組')
+                
+                if ignore_count > 0:
+                    await ctx.send(f'{user.name}扣除{ignore_count}個後擁有{role_count}個身分組')
+                else:
+                    await ctx.send(f'{user.name}擁有{role_count}個身分組')
             i = i + 1
 
+    @role.command()
+    async def add(self,ctx,name,user=None):
+        user = await find_user(ctx,user)
+        permission = discord.Permissions.none()
+        new_role = await ctx.guild.create_role(name=name,permissions=permission)
+        if user != None:
+            await user.add_roles(new_role)
+            await ctx.message.add_reaction('✅')
+
+    @commands.group(invoke_without_command=True)
+    async def set(self,ctx):
+        pass
+
+    @set.command()
+    async def crass_chat(self,ctx,channel='remove'):
+        if channel != 'remove':
+            channel = await find_channel(ctx,channel)
+        channels = ctx.guild.channels
+        have = 0
+        for i in channels:
+            if i.id in jdata['crass_chat']:
+                have = have + 1
+        
+        if channel == 'remove':
+            with open('setting.json','w+',encoding='utf8') as f:
+                for i in channels:
+                    if i.id in jdata['crass_chat']:
+                        jdata['crass_chat'].remove(i.id)
+                json.dump(jdata, f,indent=4)
+                await ctx.send(f'設定完成，已移除跨群聊天頻道')
+
+        elif channel != None and have == 0:
+            with open('setting.json','w+',encoding='utf8') as f:
+                jdata['crass_chat'].append(channel.id)
+                json.dump(jdata, f,indent=4)
+                await ctx.send(f'設定完成，已將跨群聊天頻道設為{channel.mention}')
+
+        elif channel != None and have > 0:
+            with open('setting.json','w+',encoding='utf8') as f:
+                for i in channels:
+                    if i.id in jdata['crass_chat']:
+                        jdata['crass_chat'].remove(i.id)
+                jdata['crass_chat'].append(channel.id)
+                json.dump(jdata, f,indent=4)
+                await ctx.send(f'設定完成，已將跨群聊天頻道更新為{channel.mention}')
+
+    @set.command()
+    async def all_anno(self,ctx,channel='remove'):
+        if channel != 'remove':
+            channel = await find_channel(ctx,channel)
+        channels = ctx.guild.channels
+        have = 0
+        for i in channels:
+            if i.id in jdata['all_anno']:
+                have = have + 1
+        
+        if channel == 'remove':
+            with open('setting.json','w+',encoding='utf8') as f:
+                for i in channels:
+                    if i.id in jdata['all_anno']:
+                        jdata['all_anno'].remove(i.id)
+                json.dump(jdata, f,indent=4)
+                await ctx.send(f'設定完成，已移除全群公告頻道')
+
+        elif channel != None and have == 0:
+            with open('setting.json','w+',encoding='utf8') as f:
+                jdata['all_anno'].append(channel.id)
+                json.dump(jdata, f,indent=4)
+                await ctx.send(f'設定完成，已將全群公告頻道設為{channel.mention}')
+
+        elif channel != None and have > 0:
+            with open('setting.json','w+',encoding='utf8') as f:
+                for i in channels:
+                    if i.id in jdata['all_anno']:
+                        jdata['all_anno'].remove(i.id)
+                jdata['all_anno'].append(channel.id)
+                json.dump(jdata, f,indent=4)
+                await ctx.send(f'設定完成，已將全群公告頻道更新為{channel.mention}')
+        
+
+    
     @commands.command()
+    @commands.cooldown(rate=5,per=1)
     async def lottery(self,ctx,times:int=1):
+        if times > 1000:
+            await ctx.send('太多了拉，請填入少一點的數字')
+            return
         i=0
         result={'six':0,'five':0,'four':0,'three':0}
-        async with ctx.typing():
+        user_id = str(ctx.author.id)
+        six_list = []
+        with open('lottery.json',mode='w',encoding='utf8') as jfile:
             while i < times:
                 choice =  random.randint(1,100)
                 if choice == 1:
                     loot = '★★★★★★'
                     result["six"] =result["six"]+1
+                    jloot[user_id] = 0
+                    six_list.append(i+1)
                 elif choice >= 2 and choice <= 11:
                     loot = '★★★★★'
                     result["five"]=result["five"]+1
+                    jloot[user_id] = jloot[user_id]+1
                 elif choice >= 12 and choice <= 41:
                     loot = '★★★★'
                     result["four"]=result["four"]+1
+                    jloot[user_id] = jloot[user_id]+1
                 else:
                     loot = '★★★'
                     result["three"]=result["three"]+1
+                    jloot[user_id] = jloot[user_id]+1
                 i =i+1
-            await ctx.send(f"抽卡結果:\n六星(1%):{result['six']} 五星(10%):{result['five']} 四星(30%):{result['four']}三星(59%):{result['three']}")
+            json.dump(jloot,jfile,indent=4)
+        await ctx.send(f"抽卡結果:\n六星(1%):{result['six']} 五星(10%):{result['five']} 四星(30%):{result['four']} 三星(59%):{result['three']}\n未抽得六星次數:{jloot[user_id]}")
+        if len(six_list) > 0:
+            await ctx.send(f'六星在第幾抽出現:{six_list}')
 
 
 def setup(bot):

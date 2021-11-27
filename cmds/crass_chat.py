@@ -3,19 +3,13 @@ from discord.ext import commands
 import json
 from core.classes import Cog_Extension
 
-with open('setting.json',mode='r',encoding='utf8') as jfile:
-    jdata = json.load(jfile)
+jdata = json.load(open('setting.json',mode='r',encoding='utf8'))
 
 class crass_chat(Cog_Extension):
     #跨群聊天B5.1
     @commands.Cog.listener()
     async def on_message(self,msg):
-        #for in_crass_chat_channel in jdata['crass_chat']:
-        #    if msg.channel.id == in_crass_chat_channel:
-        #        is_crass_chat = is_crass_chat +1
-        if msg.author.bot == True:
-            return
-        elif msg.channel.id in set(jdata['crass_chat']):
+        if msg.channel.id in set(jdata['crass_chat']) and msg.author.bot == False:
             await msg.delete()
             crass_chat = jdata['crass_chat']
 

@@ -39,19 +39,35 @@ class Counter(dict):
         return 0
 
 #arg:要檢測的內容(名稱#0000,id,mention...)
-async def user_who(ctx,arg):
-    try:
-        member = await commands.MemberConverter().convert(ctx,arg)
-    except commands.MemberNotFound:
+async def find_user(ctx,arg):
+    if arg == None:
         member = None
+    else:
+        try:
+            member = await commands.MemberConverter().convert(ctx,arg)
+        except commands.MemberNotFound:
+            member = None
     return member
 
-async def user_who2(ctx,arg):
+async def find_channel(ctx,arg):
+    if arg == None:
+        channel = None
+    else:
+        try:
+            channel = await commands.TextChannelConverter().convert(ctx,arg)
+        except commands.ChannelNotFound:
+            channel = None
+    return channel
+
+async def find_user2(ctx,arg):
     try:
         user = await commands.UserConverter().convert(ctx,arg)
-    except commands.MemberNotFound:
+    except commands.UserNotFound:
         user = None
     return user
+
+class find():
+    pass
 
 def message_update(message):
     pass

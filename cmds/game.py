@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 import json
 
-from library import user_who
+from library import find_user
 from core.classes import Cog_Extension
 
 jdata = json.load(open('setting.json',mode='r',encoding='utf8'))
@@ -49,7 +49,7 @@ class game(Cog_Extension):
     @game.command()
     @commands.is_owner()
     async def find(self,ctx,user):
-        user = await user_who(ctx,user)
+        user = await find_user(ctx,user)
         if user != None:
             data = {}
             for game in games:

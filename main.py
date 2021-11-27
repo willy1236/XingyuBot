@@ -91,10 +91,9 @@ async def all_anno(ctx,*,msg):
 @commands.is_owner()
 async def edit(ctx,msgID:int,*,new_msg):
     message = await ctx.fetch_message(msgID)
-    channel = message.channel
     #message = channel.get_partial_message(msgID)
     await message.edit(content=new_msg)
-    await ctx.send(f'訊息編輯完成,{channel.mention}',delete_after=10)
+    await ctx.message.add_reaction('✅')
 
 #reaction
 @bot.command()
@@ -132,10 +131,12 @@ async def reset(ctx,arg=None):
             json.dump(reset,jfile,indent=4)
 
         await task_report_channel.send('簽到已重置')
+        await ctx.message.add_reaction('✅')
     elif not arg:
         for filename in os.listdir('./cmds'):
             if filename.endswith('.py'):
                 bot.reload_extension(f'cmds.{filename[:-3]}')
+        await ctx.message.delete()
         await ctx.send('Re - Loaded all done',delete_after=5)
 
 #ping
@@ -148,6 +149,49 @@ async def user(ctx,id):
     user = await bot.fetch_user(id)
     await ctx.send(user)
 
+@bot.command()
+@commands.is_owner()
+async def permission(ctx,guild_id:int):
+    guild = bot.get_guild(guild_id)
+    member = guild.get_member(ctx.bot.user.id)
+    permission = member.guild_permissions
+
+    embed = discord.Embed(title=guild.name, color=0xc4e9ff)
+    embed.add_field(name="管理員", value=permission.administrator, inline=True)
+    embed.add_field(name="管理頻道", value=permission.manage_channels, inline=True)
+    embed.add_field(name="管理公會", value=permission.manage_guild, inline=True)
+    embed.add_field(name="管理訊息", value=permission.manage_messages, inline=True)
+    embed.add_field(name="管理暱稱", value=permission.manage_nicknames, inline=True)
+    embed.add_field(name="管理身分組", value=permission.manage_roles, inline=True)
+    embed.add_field(name="管理webhook", value=permission.manage_webhooks, inline=True)
+    embed.add_field(name="管理表情符號", value=permission.manage_emojis, inline=True)
+    embed.add_field(name="踢出成員", value=permission.kick_members, inline=True)
+    embed.add_field(name="封鎖成員", value=permission.ban_members, inline=True)
+    embed.add_field(name="觀看審核日誌", value=permission.view_audit_log, inline=True)
+    # permission.create_instant_invite
+    # permission.add_reactions
+    # permission.priority_speaker
+    # permission.stream
+    # permission.read_messages
+    # permission.send_messages
+    # permission.send_tts_messages
+    # permission.embed_links
+    # permission.attach_files
+    # permission.read_message_history
+    # permission.mention_everyone
+    # permission.external_emojis
+    # permission.view_guild_insights
+    # permission.connect
+    # permission.speak
+    # permission.mute_members
+    # permission.deafen_members
+    # permission.move_members
+    # permission.use_voice_activation
+    # permission.change_nickname
+    # permission.use_slash_commands
+    # permission.request_to_speak
+    
+    await ctx.send(embed=embed)
 
 # @bot.event
 # async def on_message(message):

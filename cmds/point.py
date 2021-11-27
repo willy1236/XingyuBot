@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 import json
 from core.classes import Cog_Extension
-from library import Counter, check_point,user_who
+from library import Counter, check_point,find_user
 
 jdata = json.load(open('setting.json',mode='r',encoding='utf8'))
 
@@ -15,12 +15,12 @@ class point(Cog_Extension):
     async def point(self,ctx,user=None):
         if user == None:
             user = ctx.author
-            pt = check_point(str(user.id))
+            pt = check_point(user.id)
             await ctx.send(f'{user.mention} 你目前擁有 {pt} Pt點數', reference=ctx.message)
         else:
-            user = await user_who(ctx,user)
+            user = await find_user(ctx,user)
             if user != None:
-                pt = check_point(str(user.id))
+                pt = check_point(user.id)
                 await ctx.send(f'{user.name} 目前擁有 {pt} Pt點數', reference=ctx.message)
                 if user.bot:
                     await ctx.send('溫馨提醒:機器人是沒有點數的喔',delete_after=5)
@@ -29,7 +29,7 @@ class point(Cog_Extension):
             
     @point.command()
     async def give(self,ctx,give,amount:int):
-        given = await user_who(ctx,give)
+        given = await find_user(ctx,give)
         if not given is None:
                 giver = ctx.author
                 if amount <= 0:
@@ -57,9 +57,9 @@ class point(Cog_Extension):
     @commands.is_owner()
     @commands.command()
     async def ptset(self,ctx,user,mod,amount:int):
-        user = await user_who(ctx,user)
+        user = await find_user(ctx,user)
         mod_list = ['+','-','set']
-        if not user is None and mod in mod_list:
+        if user is not None and mod in mod_list:
             pt_old = check_point(user.id)
             with open('point.json',mode='w',encoding='utf8') as jfile:
                 if mod == '+':
