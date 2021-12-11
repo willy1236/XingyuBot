@@ -11,7 +11,7 @@ class event(Cog_Extension):
     async def a(self, ctx, msg):
         await ctx.send(jdata[f'{ctx.author.id}_test'])
         jdata[f'{ctx.author.id}_test'] = msg
-        with open('setting.json',mode='w',encoding='utf8') as jfile:
+        with open('setting.json',mode='r+',encoding='utf8') as jfile:
             json.dump(jdata,jfile,indent=4)
         await ctx.send(jdata[f'{ctx.author.id}_test'])
         
@@ -22,7 +22,7 @@ class event(Cog_Extension):
 
         if result == 0:
             jdata['test'].append(f'{ctx.author.id}_test')
-            with open('setting.json',mode='w',encoding='utf8') as jfile:
+            with open('setting.json',mode='r+',encoding='utf8') as jfile:
                 json.dump(jdata,jfile,indent=4)
         
         else:

@@ -12,6 +12,15 @@ from discord.ext import commands
 #json開啟法2
 #data = json.load(open('.../XXX.json','r'))
 
+#list
+#s3=s1&s2 # 交集︰取兩個集合中，相同的資料
+#s3=s1|s2 # 聯集︰取兩個合中的所有資料，但不重複取
+#s3=s1-s2 # 差集︰從 s1 中，減去和 s2 重疊的部分
+#s3=s1^s2 # 反交集︰取兩個集合中，重複的部分
+
+#s=set("Hello") # 把字串中的字母折拆成集合
+#dic={x:x*2 for x in [3,4,5]} # 從列表的資料中產生字典
+
 def is_number(n):
     try:  
         float(n)
@@ -58,6 +67,16 @@ async def find_channel(ctx,arg):
         except commands.ChannelNotFound:
             channel = None
     return channel
+
+async def find_role(ctx,arg):
+    if arg == None:
+        role = None
+    else:
+        try:
+            role = await commands.RoleConverter().convert(ctx,arg)
+        except commands.RoleNotFound:
+            role = None
+    return role
 
 async def find_user2(ctx,arg):
     try:

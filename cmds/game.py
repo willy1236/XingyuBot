@@ -20,7 +20,7 @@ class game(Cog_Extension):
     @game.command()
     async def set(self,ctx,game,data=None):
         if not str(ctx.author.id) in gdata:
-            with open('gamer_data.json',mode='w',encoding='utf8') as jfile:
+            with open('gamer_data.json',mode='r+',encoding='utf8') as jfile:
                 gdata[f'{ctx.author.id}'] = {}
                 json.dump(gdata,jfile,indent=4)
             await ctx.send('偵測到資料庫內無使用者資料，已自動註冊',delete_after=5)
@@ -29,12 +29,12 @@ class game(Cog_Extension):
             user = str(ctx.author.id)
 
             if not game in gdata[user]:
-                with open('gamer_data.json',mode='w',encoding='utf8') as jfile:
+                with open('gamer_data.json',mode='r+',encoding='utf8') as jfile:
                     gdata[user][game] = 'None'
                     json.dump(gdata,jfile,indent=4)
                 #await ctx.send('偵測到資料庫內無使用者資料，已自動補齊')
 
-            with open('gamer_data.json',mode='w',encoding='utf8') as jfile:
+            with open('gamer_data.json',mode='r+',encoding='utf8') as jfile:
                 if data == None:
                     gdata[user][game] = 'None'
                     await ctx.send(f'已重設{game}資料')

@@ -3,8 +3,7 @@ from discord.ext import commands
 import json
 from core.classes import Cog_Extension
 
-with open('setting.json',mode='r',encoding='utf8') as jfile:
-    jdata = json.load(jfile)
+jdata = json.load(open('setting.json',mode='r',encoding='utf8'))
 
 class reaction(Cog_Extension):
     @commands.Cog.listener()

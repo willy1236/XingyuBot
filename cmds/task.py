@@ -3,8 +3,8 @@ from discord.ext import commands
 from core.classes import Cog_Extension
 import json, asyncio, datetime
 
-with open('setting.json',mode='r',encoding='utf8') as jfile:
-    jdata = json.load(jfile)
+jdata = json.load(open('setting.json',mode='r',encoding='utf8'))
+
 with open('event.json',mode='r',encoding='utf8') as jfile:
     jevent = json.load(jfile)
 
@@ -21,7 +21,7 @@ class task(Cog_Extension):
                 now_time_day = datetime.datetime.now().strftime('%Y%m%d')
                 
                 if now_time_hour == '040000':
-                    with open('sign_day.json',mode='w',encoding='utf8') as jfile:
+                    with open('sign_day.json',mode='r+',encoding='utf8') as jfile:
                         reset = {"sign":[]}
                         json.dump(reset,jfile,indent=4)
 

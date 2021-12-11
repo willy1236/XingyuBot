@@ -1,14 +1,17 @@
 import discord
+from discord.errors import Forbidden, NotFound
 from discord.ext import commands
 import json ,random
 
-from library import Counter,find_user ,find_channel
+from library import Counter,find_user ,find_channel , find_role
 from core.classes import Cog_Extension
 
 
 jdata = json.load(open('setting.json','r',encoding='utf8'))
 
 jloot = Counter(json.load(open('lottery.json',mode='r',encoding='utf8')))
+
+role_ignore = [858566145156972554,901713612668813312,879587736128999454,613748153644220447,884082363859083305,613749564356427786,861812096777060352,889148839016169542,874628716385435719,858558233403719680,891644752666198047,896424834475638884,706794165094187038,619893837833306113,877934319249797120]
 
 class command(Cog_Extension):
     @commands.command(help='原始的help指令')
@@ -39,13 +42,12 @@ class command(Cog_Extension):
         bot_name = self.bot.user.name
 
         embed = discord.Embed(title=bot_name, description="目前可使用的指令如下:", color=0xc4e9ff)
-        embed.add_field(name="!!help <pt/game/set>", value="系列指令", inline=False)
+        embed.add_field(name="!!help <pt/game/set/role>", value="系列指令", inline=False)
         embed.add_field(name="!!info <內容/help>", value="獲得相關資訊", inline=False)
         embed.add_field(name="!!sign", value="每日簽到(更多功能敬請期待)", inline=False)
         #embed.add_field(name="!!osu <player> <玩家名稱>", value="查詢Osu玩家(更多功能敬請期待)", inline=False)
         embed.add_field(name="!!find <id>", value="搜尋指定用戶", inline=False)
         embed.add_field(name="!!feedback <內容>", value="傳送訊息給機器人擁有者", inline=False)
-        embed.add_field(name="!!role <用戶>", value="取得用戶的身分組數量(可批量輸入多個用戶)", inline=False)
         embed.add_field(name="!!lottery [次數]", value="抽獎", inline=False)
         await ctx.send(embed=embed)
 
@@ -72,6 +74,13 @@ class command(Cog_Extension):
         await ctx.send(embed=embed)
 
     @help.command()
+    async def role(self,ctx):
+        embed = discord.Embed(description="Game系列指令:", color=0xc4e9ff)
+        embed.add_field(name="!!role <用戶>", value="取得用戶的身分組數量(可批量輸入多個用戶)", inline=False)
+        embed.add_field(name="!!role add <名稱> [用戶]", value="取得用戶的身分組數量(可批量輸入多個用戶)", inline=False)
+        embed.add_field(name="!!role nick <名稱/顏色代碼>", value="更改稱號(顏色請輸入HEX格式)", inline=False)
+
+    @help.command()
     @commands.is_owner()
     async def owner(self,ctx):
         bot_name = self.bot.user.name
@@ -83,6 +92,7 @@ class command(Cog_Extension):
         embed.add_field(name="!!reaction <訊息ID> <add/remove> <表情/表情ID>", value="添加/移除反應", inline=False)
         embed.add_field(name="!!ptset <用戶ID> <+/-/set> <數量>", value="更改指定用戶Pt數", inline=False)
         embed.add_field(name="!!reset", value="簽到重置", inline=False)
+        embed.add_field(name="!!role ignore", value="取得計算身分組時扣掉的身分組", inline=False)
         await ctx.send(embed=embed)
 
     @help.command()
@@ -94,10 +104,10 @@ class command(Cog_Extension):
         await ctx.send(embed=embed)
 
     @commands.command()
-    async def find(self,ctx,user_id:int):
-        member = ctx.guild.get_member(user_id)
+    async def find(self,ctx,id:int):
+        member = ctx.guild.get_member(id)
         if member != None:
-            embed = discord.Embed(title=f'{member.name}#{member.discriminator}', description="此用戶的資訊如下", color=0xc4e9ff)
+            embed = discord.Embed(title=f'{member.name}#{member.discriminator}', description="ID:用戶(伺服器成員)", color=0xc4e9ff)
             embed.add_field(name="暱稱", value=member.nick, inline=False)
             embed.add_field(name="是否為機器人", value=member.bot, inline=False)
             embed.add_field(name="最高身分組", value=member.top_role.mention, inline=True)
@@ -105,14 +115,45 @@ class command(Cog_Extension):
             embed.add_field(name="帳號創建日期", value=member.created_at, inline=False)
             embed.set_thumbnail(url=member.avatar_url)
             await ctx.send(embed=embed)
-        else:
-            user = await self.bot.fetch_user(user_id)
-            embed = discord.Embed(title=f'{user.name}#{user.discriminator}', description="此用戶的資訊如下", color=0xc4e9ff)
+            return
+        try:
+            user = await self.bot.fetch_user(id)
+        except NotFound:
+            user = None
+        try:
+            channel = await self.bot.fetch_channel(id)
+        except (NotFound,Forbidden):
+            channel = None
+        try:
+            guild = await self.bot.fetch_guild(id)
+        except (NotFound,Forbidden):
+            guild = None
+            
+        if user != None:
+            embed = discord.Embed(title=f'{user.name}#{user.discriminator}', description="ID:用戶", color=0xc4e9ff)
             embed.add_field(name="是否為機器人", value=user.bot, inline=False)
             embed.add_field(name="是否為Discord官方", value=user.system, inline=False)
             embed.add_field(name="帳號創建日期", value=user.created_at, inline=False)
             embed.set_thumbnail(url=user.avatar_url)
-            await ctx.send(embed=embed)
+        elif channel != None:
+            embed = discord.Embed(title=channel.name, description="ID:頻道", color=0xc4e9ff)
+            embed.add_field(name="所屬類別", value=channel.category, inline=False)
+            embed.add_field(name="所屬公會", value=channel.guild, inline=False)
+            embed.add_field(name="創建時間", value=channel.created_at, inline=False)
+        elif guild != None:
+            embed = discord.Embed(title=guild.name, description="ID:公會", color=0xc4e9ff)
+            embed.add_field(name="公會擁有者", value=guild.owner, inline=False)
+            embed.add_field(name="創建時間", value=guild.created_at, inline=False)
+            embed.add_field(name="驗證等級", value=guild.verification_level, inline=False)
+            embed.add_field(name="成員數", value=len(guild.members), inline=False)
+            embed.add_field(name="文字頻道數", value=len(guild.text_channels), inline=False)
+            embed.add_field(name="語音頻道數", value=len(guild.voice_channels), inline=False)
+            embed.set_footer(text='數字可能因權限不足而有少算，敬請特別注意')
+            embed.set_thumbnail(url=guild.icon_url)
+        else:
+            await ctx.send('無法辨認此ID',delete_after=5)
+            return
+        await ctx.send(embed=embed)
 
     @commands.command()
     @commands.cooldown(rate=1,per=10)
@@ -129,7 +170,7 @@ class command(Cog_Extension):
         await feedback_channel.send(embed=embed)
         await ctx.send('訊息已發送',delete_after=5)
 
-    @commands.command(enabled=True)
+    @commands.command(enabled=False)
     async def test(self,ctx,user=None):
         user = await find_user(ctx,user)
         await ctx.send(f"{user or '沒有找到用戶'}")
@@ -137,7 +178,7 @@ class command(Cog_Extension):
     @commands.group(invoke_without_command=True)
     async def role(self,ctx,*user_list):
         i = 0
-        role_ignore = [858566145156972554,901713612668813312,879587736128999454,613748153644220447,884082363859083305,613749564356427786,861812096777060352,889148839016169542,874628716385435719,858558233403719680,891644752666198047,896424834475638884,706794165094187038,619893837833306113]
+        text = '身分組計算結果:\n'
         while i < len(user_list):
             user = await find_user(ctx,user_list[i])
             if user != None:
@@ -153,10 +194,11 @@ class command(Cog_Extension):
                 role_count = len(role_list)-1
                 
                 if ignore_count > 0:
-                    await ctx.send(f'{user.name}扣除{ignore_count}個後擁有{role_count}個身分組')
+                    text = text + f'\n{user.name}扣除{ignore_count}個後擁有{role_count}個身分組'
                 else:
-                    await ctx.send(f'{user.name}擁有{role_count}個身分組')
+                    text = text + f'\n{user.name}擁有{role_count}個身分組'
             i = i + 1
+        await ctx.send(text)
 
     @role.command()
     async def add(self,ctx,name,user=None):
@@ -166,6 +208,40 @@ class command(Cog_Extension):
         if user != None:
             await user.add_roles(new_role)
             await ctx.message.add_reaction('✅')
+
+    @role.command()
+    @commands.is_owner()
+    async def ignore(self,ctx,role='None'):
+        if role != 'None':
+            role = await find_role(ctx,role)
+
+        if ctx.guild.id == 613747262291443742:
+            if role == 'None':
+                text = '刪除清單:\n'
+                for i in role_ignore:
+                    text = text + ctx.guild.get_role(i).name + ','
+                await ctx.send(text)
+            # elif role.id in role_ignore and role != None:
+            #     role_ignore.remove(role.id)
+            #     await ctx.send(f'{role.name} 刪除完成',delete_after=5)
+            # elif role != None:
+            #     role_ignore.append(role.id)
+            #     await ctx.send(f'{role.name} 刪除完成',delete_after=5)
+
+    @role.command()
+    async def nick(self, ctx,arg):
+        user = ctx.author
+        role = user.roles[-1]
+        if role.name.startswith('稱號 | '):
+            if arg.startswith('#'):
+                await role.edit(colour=arg,reason='稱號:顏色改變')
+            else:
+                await role.edit(name=f'稱號 | {arg}',reason='稱號:名稱改變')
+            await ctx.send('稱號更改已完成')
+        else:
+            await ctx.send('錯誤:你沒有稱號可更改',delete_after=5)
+                
+
 
     @commands.group(invoke_without_command=True)
     async def set(self,ctx):
@@ -249,7 +325,7 @@ class command(Cog_Extension):
         result={'six':0,'five':0,'four':0,'three':0}
         user_id = str(ctx.author.id)
         six_list = []
-        with open('lottery.json',mode='w',encoding='utf8') as jfile:
+        with open('lottery.json',mode='r+',encoding='utf8') as jfile:
             while i < times:
                 choice =  random.randint(1,100)
                 if choice == 1:
@@ -275,6 +351,10 @@ class command(Cog_Extension):
         if len(six_list) > 0:
             await ctx.send(f'六星在第幾抽出現:{six_list}')
 
+    @commands.command()
+    async def test2(self, ctx):
+        #print(self.bot.command(name='lottery').__call__)
+        self.bot.command(name='lottery')
 
 def setup(bot):
     bot.add_cog(command(bot))

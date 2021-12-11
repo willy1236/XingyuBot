@@ -3,7 +3,6 @@ from discord.ext import commands
 import json, random, datetime, asyncio, os
 
 from library import is_number
-#import keep_alive
 
 
 intents = discord.Intents.all()
@@ -126,17 +125,17 @@ async def reaction(ctx,msgID:int,mod:str,*,emojiID):
 async def reset(ctx,arg=None):
     if arg == 'sign':
         task_report_channel = bot.get_channel(jdata['task_report'])
-        with open('sign_day.json',mode='w',encoding='utf8') as jfile:
+        with open('sign_day.json',mode='w+',encoding='utf8') as jfile:
             reset = {"sign":[]}
             json.dump(reset,jfile,indent=4)
 
         await task_report_channel.send('簽到已重置')
         await ctx.message.add_reaction('✅')
     elif not arg:
+        await ctx.message.delete()
         for filename in os.listdir('./cmds'):
             if filename.endswith('.py'):
                 bot.reload_extension(f'cmds.{filename[:-3]}')
-        await ctx.message.delete()
         await ctx.send('Re - Loaded all done',delete_after=5)
 
 #ping
@@ -214,7 +213,7 @@ for filename in os.listdir('./cmds'):
     if filename.endswith('.py'):
         bot.load_extension(f'cmds.{filename[:-3]}')
 
-
+#import keep_alive
 #keep_alive.keep_alive()
 if __name__ == "__main__":
-    bot.run(jdata['Bep_TOKEN'])
+    bot.run(jdata['TOKEN'])

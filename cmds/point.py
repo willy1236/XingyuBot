@@ -45,7 +45,7 @@ class point(Cog_Extension):
                     await ctx.message.delete()
                     await ctx.send(f'轉帳失敗:{ctx.author.mention}的Pt點數不足',delete_after=5)
                 else:
-                    with open('point.json',mode='w',encoding='utf8') as jfile:
+                    with open('point.json',mode='r+',encoding='utf8') as jfile:
                         jpt[str(given.id)] = check_point(given.id)+amount
                         jpt[str(giver.id)] = check_point(giver.id)-amount
                         json.dump(jpt,jfile,indent=4)
@@ -61,7 +61,7 @@ class point(Cog_Extension):
         mod_list = ['+','-','set']
         if user is not None and mod in mod_list:
             pt_old = check_point(user.id)
-            with open('point.json',mode='w',encoding='utf8') as jfile:
+            with open('point.json',mode='r+',encoding='utf8') as jfile:
                 if mod == '+':
                     jpt[str(user.id)] = check_point(user.id)+amount 
                 elif mod == '-':

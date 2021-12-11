@@ -46,7 +46,7 @@ class task(Cog_Extension):
         with open('setting.json',mode='r',encoding='utf8') as jfile:
             jdata = json.load(jfile)
         jdata['time'] = time
-        with open('setting.json',mode='w',encoding='utf8') as jfile:
+        with open('setting.json',mode='r+',encoding='utf8') as jfile:
             json.dump(jdata,jfile,indent=4)
 
 def setup(bot):
