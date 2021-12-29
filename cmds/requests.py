@@ -14,15 +14,15 @@ HEADERS = {
 url = 'https://forum.gamer.com.tw/B.php?bsn=18673'
 
 def get_article_url_list(url):
-    r = requests.get(url)
+    response = requests.get(url)
+    soup = BeautifulSoup(response.text, features='lxml')
     #載入失敗測試
-    if r.status_code != requests.codes.ok:
-        print('網頁載入失敗')
-        return
+    #if r.status_code != requests.codes.ok:
+    #    print('網頁載入失敗')
+    #    return
 
     #文章列表
     article_url_list = []
-    soup = BeautifulSoup(r.text, features='lxml')
     item_blocks = soup.select('table.b-list tr.b-list-item')
     for item_block in item_blocks:
         title_block = item_block.select_one('.b-list__main__title')
@@ -35,8 +35,9 @@ def get_article_url_list(url):
 class requests(Cog_Extension):
     @commands.command()
     async def url(self,ctx):
-        pass
-        
+        ctx.message.delete
+        output = get_article_url_list(url)
+        ctx.send(output,delete_after=5)
 
 def setup(bot):
     bot.add_cog(requests(bot))

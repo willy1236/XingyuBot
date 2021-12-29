@@ -1,21 +1,18 @@
 import discord
 from discord.errors import Forbidden, NotFound
 from discord.ext import commands
-import json ,random
+import json ,random,asyncio
 
-from library import Counter,find_user ,find_channel , find_role
+from library import Counter,find_user ,find_channel , find_role,converter
 from core.classes import Cog_Extension
 
 
 jdata = json.load(open('setting.json','r',encoding='utf8'))
-
-jloot = Counter(json.load(open('lottery.json',mode='r',encoding='utf8')))
-
 role_ignore = [858566145156972554,901713612668813312,879587736128999454,613748153644220447,884082363859083305,613749564356427786,861812096777060352,889148839016169542,874628716385435719,858558233403719680,891644752666198047,896424834475638884,706794165094187038,619893837833306113,877934319249797120]
 
 class command(Cog_Extension):
     @commands.command(help='原始的help指令')
-    async def assist(self,ctx,arg):
+    async def assist(self,ctx,arg='help'):
         await ctx.send_help(arg)
 
     @commands.command()
@@ -165,15 +162,10 @@ class command(Cog_Extension):
         feedback_channel = self.bot.get_channel(jdata['feedback_channel'])
         embed = discord.Embed(color=0xc4e9ff)
         embed.add_field(name='廣播電台 | 回饋訊息', value=msg, inline=False)
-        embed.set_author(name=f'{user}',icon_url=f'{user.avatar_url}')
+        embed.set_author(name=f'{user}\n({user.id})',icon_url=f'{user.avatar_url}')
         embed.set_footer(text=f'來自: {guild}, {channel}')
         await feedback_channel.send(embed=embed)
         await ctx.send('訊息已發送',delete_after=5)
-
-    @commands.command(enabled=False)
-    async def test(self,ctx,user=None):
-        user = await find_user(ctx,user)
-        await ctx.send(f"{user or '沒有找到用戶'}")
 
     @commands.group(invoke_without_command=True)
     async def role(self,ctx,*user_list):
@@ -325,36 +317,71 @@ class command(Cog_Extension):
         result={'six':0,'five':0,'four':0,'three':0}
         user_id = str(ctx.author.id)
         six_list = []
-        with open('lottery.json',mode='r+',encoding='utf8') as jfile:
-            while i < times:
-                choice =  random.randint(1,100)
-                if choice == 1:
-                    loot = '★★★★★★'
-                    result["six"] =result["six"]+1
-                    jloot[user_id] = 0
-                    six_list.append(i+1)
-                elif choice >= 2 and choice <= 11:
-                    loot = '★★★★★'
-                    result["five"]=result["five"]+1
-                    jloot[user_id] = jloot[user_id]+1
-                elif choice >= 12 and choice <= 41:
-                    loot = '★★★★'
-                    result["four"]=result["four"]+1
-                    jloot[user_id] = jloot[user_id]+1
+        six_list_100 = []
+        guaranteed = 100
+        jloot = Counter(json.load(open('lottery.json',mode='r',encoding='utf8')))
+            
+        while i < times:
+            choice =  random.randint(1,100)
+            if choice == 1 or jloot[user_id] >= guaranteed-1:
+                result["six"] =result["six"]+1
+                if jloot[user_id] >= guaranteed-1:
+                    six_list_100.append(i+1)
                 else:
-                    loot = '★★★'
-                    result["three"]=result["three"]+1
-                    jloot[user_id] = jloot[user_id]+1
-                i =i+1
+                    six_list.append(i+1)
+                jloot[user_id] = 0
+            elif choice >= 2 and choice <= 11:
+                result["five"]=result["five"]+1
+                jloot[user_id] = jloot[user_id]+1
+            elif choice >= 12 and choice <= 41:
+                result["four"]=result["four"]+1
+                jloot[user_id] = jloot[user_id]+1
+            else:
+                result["three"]=result["three"]+1
+                jloot[user_id] = jloot[user_id]+1
+            i =i+1
+        
+        with open('lottery.json',mode='w',encoding='utf8') as jfile:
             json.dump(jloot,jfile,indent=4)
-        await ctx.send(f"抽卡結果:\n六星(1%):{result['six']} 五星(10%):{result['five']} 四星(30%):{result['four']} 三星(59%):{result['three']}\n未抽得六星次數:{jloot[user_id]}")
+        text = f"抽卡結果:\n六星:{result['six']} 五星:{result['five']} 四星:{result['four']} 三星:{result['three']}\n未抽得六星次數:{jloot[user_id]}"
         if len(six_list) > 0:
-            await ctx.send(f'六星在第幾抽出現:{six_list}')
+            text = text + f'\n六星出現:{six_list}'
+        if len(six_list_100) > 0:
+            text = text + f'\n保底:{six_list_100}'
+        await ctx.send(text)
+        
 
     @commands.command()
-    async def test2(self, ctx):
+    async def test(self, ctx,arg):
         #print(self.bot.command(name='lottery').__call__)
-        self.bot.command(name='lottery')
+        #self.bot.command(name='lottery')
+        text = converter.time(arg)
+        await ctx.send(text)
+
+    
+    # @commands.command(enabled=False)
+    # async def test(self,ctx,user=None):
+    #     user = await find_user(ctx,user)
+    #     await ctx.send(f"{user or '沒有找到用戶'}")
+    
+    @commands.group()
+    async def bet(self,ctx,id,choice,money):
+        pass
+    
+    async def create(self, ctx,title,pink,blue,time):
+        sec = converter.time(time)
+        id = str(ctx.author.id)
+        embed = discord.Embed(title='賭盤', description=f'編號: {id}', color=0xc4e9ff)
+        embed.add_field(name='賭盤內容', value=title, inline=False)
+        embed.add_field(name="粉紅幫", value=pink, inline=False)
+        embed.add_field(name="藍藍幫", value=blue, inline=False)
+        await ctx.send(embed=embed)
+        await asyncio.sleep(delay=sec)
+        await ctx.send('下注時間結束')
+        
+
+        
+        
 
 def setup(bot):
     bot.add_cog(command(bot))

@@ -8,15 +8,15 @@ HEADERS = {
 #print(r.text)
 
 def get_article_url_list(url):
-    
+    response = requests.get(url)
     #載入失敗測試
-    if r.status_code != requests.codes.ok:
-        print('網頁載入失敗')
-        return
+    #if r.status_code != requests.codes.ok:
+    #    print('網頁載入失敗')
+    #    return
 
     #文章列表
     article_url_list = []
-    soup = BeautifulSoup(r.text, features='lxml')
+    soup = BeautifulSoup(response.text, features='lxml')
     item_blocks = soup.select('table.b-list tr.b-list-item')
     for item_block in item_blocks:
         title_block = item_block.select_one('.b-list__main__title')
@@ -29,6 +29,5 @@ def get_article_url_list(url):
 if __name__ == "__main__":
     #url=input()
     url = 'https://forum.gamer.com.tw/B.php?bsn=18673'
-    r = requests.get(url)    
     output = get_article_url_list(url)
     print(output)

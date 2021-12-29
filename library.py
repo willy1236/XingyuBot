@@ -21,6 +21,13 @@ from discord.ext import commands
 #s=set("Hello") # 把字串中的字母折拆成集合
 #dic={x:x*2 for x in [3,4,5]} # 從列表的資料中產生字典
 
+#str->list
+#i=0
+#text = []
+#while i< len(arg):
+#    text.append(arg[i])
+#    i=i+1
+
 def is_number(n):
     try:  
         float(n)
@@ -87,6 +94,29 @@ async def find_user2(ctx,arg):
 
 class find():
     pass
+
+class converter():
+    def time(arg:str):
+        #10s->1,0用str相加 s則轉換後用int相乘
+        dict = {'s':1,'m':60,'h':3600}
+        i=0
+        n=0
+        m='0'
+        while i < len(arg):
+            l = arg[i]
+            try:
+                int(l)
+                m=m+l
+            except ValueError:
+                try:
+                    m=int(m)
+                    n=n+(m*dict[l])
+                    m='0'
+                except KeyError:
+                    raise KeyError
+            i=i+1
+        return n
+        
 
 def message_update(message):
     pass
