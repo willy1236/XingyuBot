@@ -243,70 +243,45 @@ class command(Cog_Extension):
     async def crass_chat(self,ctx,channel='remove'):
         if channel != 'remove':
             channel = await find_channel(ctx,channel)
-        channels = ctx.guild.channels
-        have = 0
-        for i in channels:
-            if i.id in jdata['crass_chat']:
-                have = have + 1
+        guild = str(ctx.guild.id)
         
         if channel == 'remove':
-            with open('setting.json','w+',encoding='utf8') as f:
-                for i in channels:
-                    if i.id in jdata['crass_chat']:
-                        jdata['crass_chat'].remove(i.id)
-                json.dump(jdata, f,indent=4)
-                await ctx.send(f'設定完成，已移除跨群聊天頻道')
+            if guild in jdata['crass_chat']:
+                with open('setting.json','w+',encoding='utf8') as f:
+                    del jdata['crass_chat'][guild]
+                    json.dump(jdata,f,indent=4)
+                    await ctx.send(f'設定完成，已移除跨群聊天頻道')
+            else:
+                await ctx.send('此伺服器還沒有設定頻道喔')
 
-        elif channel != None and have == 0:
+        elif channel != None:
             with open('setting.json','w+',encoding='utf8') as f:
-                jdata['crass_chat'].append(channel.id)
-                json.dump(jdata, f,indent=4)
+                jdata['crass_chat'][guild] = channel.id
+                json.dump(jdata,f,indent=4)
                 await ctx.send(f'設定完成，已將跨群聊天頻道設為{channel.mention}')
-
-        elif channel != None and have > 0:
-            with open('setting.json','w+',encoding='utf8') as f:
-                for i in channels:
-                    if i.id in jdata['crass_chat']:
-                        jdata['crass_chat'].remove(i.id)
-                jdata['crass_chat'].append(channel.id)
-                json.dump(jdata, f,indent=4)
-                await ctx.send(f'設定完成，已將跨群聊天頻道更新為{channel.mention}')
 
     @set.command()
     async def all_anno(self,ctx,channel='remove'):
         if channel != 'remove':
             channel = await find_channel(ctx,channel)
-        channels = ctx.guild.channels
-        have = 0
-        for i in channels:
-            if i.id in jdata['all_anno']:
-                have = have + 1
+        guild = str(ctx.guild.id)
         
         if channel == 'remove':
-            with open('setting.json','w+',encoding='utf8') as f:
-                for i in channels:
-                    if i.id in jdata['all_anno']:
-                        jdata['all_anno'].remove(i.id)
-                json.dump(jdata, f,indent=4)
-                await ctx.send(f'設定完成，已移除全群公告頻道')
+            if guild in jdata['all_anno']:
+                with open('setting.json','w+',encoding='utf8') as f:
+                    del jdata['all_anno'][guild]
+                    json.dump(jdata,f,indent=4)
+                    await ctx.send(f'設定完成，已移除全群公告頻道')
+            else:
+                await ctx.send('此伺服器還沒有設定頻道喔')
 
-        elif channel != None and have == 0:
+        elif channel != None:
             with open('setting.json','w+',encoding='utf8') as f:
-                jdata['all_anno'].append(channel.id)
-                json.dump(jdata, f,indent=4)
+                jdata['all_anno'][guild] = channel.id
+                json.dump(jdata,f,indent=4)
                 await ctx.send(f'設定完成，已將全群公告頻道設為{channel.mention}')
-
-        elif channel != None and have > 0:
-            with open('setting.json','w+',encoding='utf8') as f:
-                for i in channels:
-                    if i.id in jdata['all_anno']:
-                        jdata['all_anno'].remove(i.id)
-                jdata['all_anno'].append(channel.id)
-                json.dump(jdata, f,indent=4)
-                await ctx.send(f'設定完成，已將全群公告頻道更新為{channel.mention}')
         
-
-    
+        
     @commands.command()
     @commands.cooldown(rate=5,per=1)
     async def lottery(self,ctx,times:int=1):

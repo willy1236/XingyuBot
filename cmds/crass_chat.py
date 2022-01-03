@@ -17,8 +17,8 @@ class crass_chat(Cog_Extension):
             embed.set_author(name=f'{msg.author}',icon_url=f'{msg.author.avatar_url}')
             embed.set_footer(text=f'來自: {msg.guild}')
 
-            for crass_channel_id in crass_chat:
-                channel = self.bot.get_channel(crass_channel_id)
+            for i in crass_chat:
+                channel = self.bot.get_channel(crass_chat[i])
                 if channel != None:
                     await channel.send(embed=embed)
 

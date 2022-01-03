@@ -75,11 +75,11 @@ async def all_anno(ctx,*,msg):
     all_anno = jdata['all_anno']
     send_success = 0
 
-    embed=discord.Embed(description=f'{msg}',color=0x4aa0b5)
+    embed=discord.Embed(title="Bot Radio Station",description=f'{msg}',color=0xc4e9ff)
     embed.set_footer(text='廣播電台 | 機器人全群公告')
     
-    for anno_channel in all_anno:
-        channel = bot.get_channel(anno_channel)
+    for i in all_anno:
+        channel = bot.get_channel(all_anno[i])
         if channel != None:
             await channel.send(embed=embed)
             send_success = send_success+1
@@ -216,4 +216,4 @@ for filename in os.listdir('./cmds'):
 #import keep_alive
 #keep_alive.keep_alive()
 if __name__ == "__main__":
-    bot.run(jdata['TOKEN'])
+    bot.run(jdata['Bep_TOKEN'])
