@@ -1,9 +1,7 @@
 import discord
 from discord.ext import commands
 import json, random, datetime, asyncio, os
-
 from library import is_number
-
 
 intents = discord.Intents.all()
 #intents.typing = False
@@ -13,9 +11,19 @@ intents = discord.Intents.all()
 #intents.messages = True
 #intents.voice_states = True
 
+#1:dc小幫手 2:Bep
+bot_code = 2
+
 jdata = json.load(open('setting.json',mode='r',encoding='utf8'))
 
-bot = commands.Bot(command_prefix=commands.when_mentioned_or('!!'),owner_id=419131103836635136,intents=intents,case_insensitive=True)
+if bot_code ==1:
+    bot = commands.Bot(command_prefix=commands.when_mentioned_or('!!'),owner_id=419131103836635136,intents=intents,case_insensitive=True)
+elif bot_code == 2:
+    bot = commands.Bot(command_prefix=commands.when_mentioned_or('b!'),owner_id=419131103836635136,intents=intents,case_insensitive=True)
+else:
+    raise ValueError("Invalid bot_code")
+
+bot.remove_command('help')
 
 #啟動
 @bot.event
@@ -24,10 +32,7 @@ async def on_ready():
     print(">> Bot online as",bot.user.name,"<<")
     print(">> Discord's version:",discord.__version__,"<<")
     await bot.change_presence(activity=discord.Game(name='!!help'))
-
-bot.remove_command('help')
-
-
+    
 
 #load
 @bot.command()
@@ -70,7 +75,7 @@ async def send(ctx,id:int,*,msg):
 #all_anno
 @bot.command()
 @commands.is_owner()
-async def all_anno(ctx,*,msg):
+async def anno(ctx,*,msg):
     await ctx.message.delete()
     all_anno = jdata['all_anno']
     send_success = 0
@@ -143,10 +148,6 @@ async def reset(ctx,arg=None):
 async def ping(ctx):
     await ctx.send(f'延遲為:{round(bot.latency*1000)} ms')
 
-@bot.command()
-async def user(ctx,id):
-    user = await bot.fetch_user(id)
-    await ctx.send(user)
 
 @bot.command()
 @commands.is_owner()
@@ -213,7 +214,11 @@ for filename in os.listdir('./cmds'):
     if filename.endswith('.py'):
         bot.load_extension(f'cmds.{filename[:-3]}')
 
-#import keep_alive
-#keep_alive.keep_alive()
+
 if __name__ == "__main__":
-    bot.run(jdata['Bep_TOKEN'])
+    if bot_code == 1:
+        import keep_alive
+        keep_alive.keep_alive()
+        bot.run(jdata['TOKEN'])
+    elif bot_code == 2:
+        bot.run(jdata['Bep_TOKEN'])

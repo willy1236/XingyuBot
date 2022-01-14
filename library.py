@@ -55,45 +55,43 @@ class Counter(dict):
         return 0
 
 #arg:要檢測的內容(名稱#0000,id,mention...)
-async def find_user(ctx,arg):
-    if arg == None:
-        member = None
-    else:
-        try:
-            member = await commands.MemberConverter().convert(ctx,arg)
-        except commands.MemberNotFound:
-            member = None
-    return member
-
-async def find_channel(ctx,arg):
-    if arg == None:
-        channel = None
-    else:
-        try:
-            channel = await commands.TextChannelConverter().convert(ctx,arg)
-        except commands.ChannelNotFound:
-            channel = None
-    return channel
-
-async def find_role(ctx,arg):
-    if arg == None:
-        role = None
-    else:
-        try:
-            role = await commands.RoleConverter().convert(ctx,arg)
-        except commands.RoleNotFound:
-            role = None
-    return role
-
-async def find_user2(ctx,arg):
-    try:
-        user = await commands.UserConverter().convert(ctx,arg)
-    except commands.UserNotFound:
-        user = None
-    return user
-
 class find():
-    pass
+    async def user(ctx,arg):
+        if arg == None:
+            member = None
+        else:
+            try:
+                member = await commands.MemberConverter().convert(ctx,arg)
+            except commands.MemberNotFound:
+                member = None
+        return member
+
+    async def channel(ctx,arg):
+        if arg == None:
+            channel = None
+        else:
+            try:
+                channel = await commands.TextChannelConverter().convert(ctx,arg)
+            except commands.ChannelNotFound:
+                channel = None
+        return channel
+
+    async def role(ctx,arg):
+        if arg == None:
+            role = None
+        else:
+            try:
+                role = await commands.RoleConverter().convert(ctx,arg)
+            except commands.RoleNotFound:
+                role = None
+        return role
+
+    async def user2(ctx,arg):
+        try:
+            user = await commands.UserConverter().convert(ctx,arg)
+        except commands.UserNotFound:
+            user = None
+        return user
 
 class converter():
     def time(arg:str):

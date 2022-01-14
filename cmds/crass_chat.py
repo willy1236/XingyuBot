@@ -3,15 +3,15 @@ from discord.ext import commands
 import json
 from core.classes import Cog_Extension
 
-jdata = json.load(open('setting.json',mode='r',encoding='utf8'))
+cdata = json.load(open('channel_settings.json',mode='r',encoding='utf8'))
 
 class crass_chat(Cog_Extension):
     #跨群聊天B5.1
     @commands.Cog.listener()
     async def on_message(self,msg):
-        if msg.channel.id in set(jdata['crass_chat']) and msg.author.bot == False:
+        if msg.channel.id in set(cdata['crass_chat']) and msg.author.bot == False:
             await msg.delete()
-            crass_chat = jdata['crass_chat']
+            crass_chat = cdata['crass_chat']
 
             embed=discord.Embed(description=f'{msg.content}',color=0x4aa0b5)
             embed.set_author(name=f'{msg.author}',icon_url=f'{msg.author.avatar_url}')

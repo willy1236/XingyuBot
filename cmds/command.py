@@ -3,7 +3,7 @@ from discord.errors import Forbidden, NotFound
 from discord.ext import commands
 import json ,random,asyncio
 
-from library import Counter,find_user ,find_channel , find_role,converter
+from library import Counter,find,converter
 from core.classes import Cog_Extension
 
 
@@ -31,7 +31,8 @@ class command(Cog_Extension):
             await ctx.send("雲端共用資料夾 | 94共用啦\n可以在這裡下載或共用檔案\n請洽威立以取得雲端權限")
         
         else:
-            await ctx.send('參數錯誤，請輸入!!info help取得幫助',delete_after=5)
+            raise commands.errors.ArgumentParsingError("info:參數錯誤")
+            #await ctx.send('參數錯誤，請輸入!!info help取得幫助',delete_after=5)
 
     @commands.group(invoke_without_command=True)
     @commands.cooldown(rate=1,per=3)
@@ -84,7 +85,7 @@ class command(Cog_Extension):
 
         embed = discord.Embed(title=bot_name, description="目前可使用的指令如下(onwer):", color=0xc4e9ff)
         embed.add_field(name="!!send <頻道ID/用戶ID/0> <內容>", value="發送指定訊息", inline=False)
-        embed.add_field(name="!!all_anno <內容>", value="對所有伺服器進行公告", inline=False)
+        embed.add_field(name="!!anno <內容>", value="對所有伺服器進行公告", inline=False)
         embed.add_field(name="!!edit <訊息ID> <新訊息>", value="編輯訊息", inline=False)
         embed.add_field(name="!!reaction <訊息ID> <add/remove> <表情/表情ID>", value="添加/移除反應", inline=False)
         embed.add_field(name="!!ptset <用戶ID> <+/-/set> <數量>", value="更改指定用戶Pt數", inline=False)
@@ -172,7 +173,7 @@ class command(Cog_Extension):
         i = 0
         text = '身分組計算結果:\n'
         while i < len(user_list):
-            user = await find_user(ctx,user_list[i])
+            user = await find.user(ctx,user_list[i])
             if user != None:
                 l = 0
                 ignore_count = 0
@@ -194,18 +195,19 @@ class command(Cog_Extension):
 
     @role.command()
     async def add(self,ctx,name,user=None):
-        user = await find_user(ctx,user)
+        user = await find.user(ctx,user)
         permission = discord.Permissions.none()
-        new_role = await ctx.guild.create_role(name=name,permissions=permission)
+        color = discord.Colour.random()
+        new_role = await ctx.guild.create_role(name=name,permissions=permission,color=color)
         if user != None:
             await user.add_roles(new_role)
-            await ctx.message.add_reaction('✅')
+        await ctx.message.add_reaction('✅')
 
     @role.command()
     @commands.is_owner()
     async def ignore(self,ctx,role='None'):
         if role != 'None':
-            role = await find_role(ctx,role)
+            role = await find.role(ctx,role)
 
         if ctx.guild.id == 613747262291443742:
             if role == 'None':
@@ -232,54 +234,6 @@ class command(Cog_Extension):
             await ctx.send('稱號更改已完成')
         else:
             await ctx.send('錯誤:你沒有稱號可更改',delete_after=5)
-                
-
-
-    @commands.group(invoke_without_command=True)
-    async def set(self,ctx):
-        pass
-
-    @set.command()
-    async def crass_chat(self,ctx,channel='remove'):
-        if channel != 'remove':
-            channel = await find_channel(ctx,channel)
-        guild = str(ctx.guild.id)
-        
-        if channel == 'remove':
-            if guild in jdata['crass_chat']:
-                with open('setting.json','w+',encoding='utf8') as f:
-                    del jdata['crass_chat'][guild]
-                    json.dump(jdata,f,indent=4)
-                    await ctx.send(f'設定完成，已移除跨群聊天頻道')
-            else:
-                await ctx.send('此伺服器還沒有設定頻道喔')
-
-        elif channel != None:
-            with open('setting.json','w+',encoding='utf8') as f:
-                jdata['crass_chat'][guild] = channel.id
-                json.dump(jdata,f,indent=4)
-                await ctx.send(f'設定完成，已將跨群聊天頻道設為{channel.mention}')
-
-    @set.command()
-    async def all_anno(self,ctx,channel='remove'):
-        if channel != 'remove':
-            channel = await find_channel(ctx,channel)
-        guild = str(ctx.guild.id)
-        
-        if channel == 'remove':
-            if guild in jdata['all_anno']:
-                with open('setting.json','w+',encoding='utf8') as f:
-                    del jdata['all_anno'][guild]
-                    json.dump(jdata,f,indent=4)
-                    await ctx.send(f'設定完成，已移除全群公告頻道')
-            else:
-                await ctx.send('此伺服器還沒有設定頻道喔')
-
-        elif channel != None:
-            with open('setting.json','w+',encoding='utf8') as f:
-                jdata['all_anno'][guild] = channel.id
-                json.dump(jdata,f,indent=4)
-                await ctx.send(f'設定完成，已將全群公告頻道設為{channel.mention}')
         
         
     @commands.command()
@@ -325,19 +279,6 @@ class command(Cog_Extension):
             text = text + f'\n保底:{six_list_100}'
         await ctx.send(text)
         
-
-    @commands.command()
-    async def test(self, ctx,arg):
-        #print(self.bot.command(name='lottery').__call__)
-        #self.bot.command(name='lottery')
-        text = converter.time(arg)
-        await ctx.send(text)
-
-    
-    # @commands.command(enabled=False)
-    # async def test(self,ctx,user=None):
-    #     user = await find_user(ctx,user)
-    #     await ctx.send(f"{user or '沒有找到用戶'}")
     
     @commands.group()
     async def bet(self,ctx,id,choice,money):

@@ -30,6 +30,9 @@ class error(Cog_Extension):
             await ctx.send('禁用指令:此指令目前無法被使用')
         elif isinstance(error,commands.errors.TooManyArguments):
             await ctx.send('參數過多:給入過多參數')
+        
+        elif isinstance(error,KeyError):
+            await ctx.send('參數缺失:發生KeyError錯誤')
         else:
             await ctx.send('發生未知錯誤，請向機器人擁有者回報')
             print(error)
@@ -38,11 +41,6 @@ class error(Cog_Extension):
     #async def info_error(self,ctx,error):
     #    if isinstance(error,commands.errors.MissingRequiredArgument):
     #        await ctx.send('遺失參數:輸入!!info help以取得參數')
-    
-    #@info.error
-    #async def comm_error(self,ctx,error):
-    #    if isinstance(error,commands.errors.MissingRequiredArgument):
-    #        await ctx.send('遺失參數:輸入!!comm help以取得參數')
 
 def setup(bot):
     bot.add_cog(error(bot))

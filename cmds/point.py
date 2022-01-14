@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 import json
 from core.classes import Cog_Extension
-from library import Counter, check_point,find_user
+from library import Counter, check_point,find
 
 jdata = json.load(open('setting.json',mode='r',encoding='utf8'))
 
@@ -18,7 +18,7 @@ class point(Cog_Extension):
             pt = check_point(user.id)
             await ctx.send(f'{user.mention} 你目前擁有 {pt} Pt點數', reference=ctx.message)
         else:
-            user = await find_user(ctx,user)
+            user = await find.user(ctx,user)
             if user != None:
                 pt = check_point(user.id)
                 await ctx.send(f'{user.name} 目前擁有 {pt} Pt點數', reference=ctx.message)
@@ -29,7 +29,7 @@ class point(Cog_Extension):
             
     @point.command()
     async def give(self,ctx,give,amount:int):
-        given = await find_user(ctx,give)
+        given = await find.user(ctx,give)
         if not given is None:
                 giver = ctx.author
                 if amount <= 0:
@@ -57,7 +57,7 @@ class point(Cog_Extension):
     @commands.is_owner()
     @commands.command()
     async def ptset(self,ctx,user,mod,amount:int):
-        user = await find_user(ctx,user)
+        user = await find.user(ctx,user)
         mod_list = ['+','-','set']
         if user is not None and mod in mod_list:
             pt_old = check_point(user.id)
