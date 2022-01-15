@@ -17,13 +17,11 @@ bot_code = 2
 jdata = json.load(open('setting.json',mode='r',encoding='utf8'))
 
 if bot_code ==1:
-    bot = commands.Bot(command_prefix=commands.when_mentioned_or('!!'),owner_id=419131103836635136,intents=intents,case_insensitive=True)
+    bot = commands.Bot(command_prefix=commands.when_mentioned_or('!!'),owner_id=419131103836635136,intents=intents,case_insensitive=True, help_command=None)
 elif bot_code == 2:
-    bot = commands.Bot(command_prefix=commands.when_mentioned_or('b!'),owner_id=419131103836635136,intents=intents,case_insensitive=True)
+    bot = commands.Bot(command_prefix=commands.when_mentioned_or('b!'),owner_id=419131103836635136,intents=intents,case_insensitive=True, help_command=None)
 else:
     raise ValueError("Invalid bot_code")
-
-bot.remove_command('help')
 
 #啟動
 @bot.event
