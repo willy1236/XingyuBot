@@ -21,10 +21,10 @@ class sign(Cog_Extension):
         await ctx.message.delete()
         jdsign = json.load(open('sign_day.json',mode='r',encoding='utf8'))
         
-        if ctx.author.id not in jdsign['sign']:
+        if ctx.author.id not in jdsign:
             signer = str(ctx.author.id)
             #日常
-            jdsign['sign'].append(ctx.author.id)
+            jdsign.append(ctx.author.id)
             with open('sign_day.json',mode='r+',encoding='utf8') as jfile:
                 json.dump(jdsign,jfile,indent=4)
             #週常
@@ -32,7 +32,7 @@ class sign(Cog_Extension):
                 jwsign[signer] = jwsign[signer]+1
                 json.dump(jwsign,jfile,indent=4)
             
-            if ctx.guild.id == jdata['001_guild']:
+            if ctx.guild.id == jdata['guild']['001']:
                 with open('point.json',mode='r+',encoding='utf8') as jfile:
                     jpt[signer] = jpt[signer]+1
                     json.dump(jpt,jfile,indent=4)

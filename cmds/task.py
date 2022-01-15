@@ -22,7 +22,7 @@ class task(Cog_Extension):
                 
                 if now_time_hour == '040000':
                     with open('sign_day.json',mode='r+',encoding='utf8') as jfile:
-                        reset = {"sign":[]}
+                        reset = []
                         json.dump(reset,jfile,indent=4)
 
                     await task_report_channel.send('簽到已重置')    

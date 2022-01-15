@@ -3,7 +3,7 @@ from discord.errors import Forbidden, NotFound
 from discord.ext import commands
 import json ,random,asyncio
 
-from library import Counter,find,converter
+from library import Counter,find,converter,random_color
 from core.classes import Cog_Extension
 
 
@@ -47,6 +47,7 @@ class command(Cog_Extension):
         embed.add_field(name="!!find <id>", value="搜尋指定用戶", inline=False)
         embed.add_field(name="!!feedback <內容>", value="傳送訊息給機器人擁有者", inline=False)
         embed.add_field(name="!!lottery [次數]", value="抽獎", inline=False)
+        embed.add_field(name="!!about", value="關於機器人的小資訊", inline=False)
         await ctx.send(embed=embed)
 
     @help.command()
@@ -181,23 +182,25 @@ class command(Cog_Extension):
                 while l < len(role_list):
                     if role_list[l].id in role_ignore:
                         role_list.remove(role_list[l])
-                        ignore_count = ignore_count +1
+                        ignore_count += 1
                     else:
-                        l = l+1
+                        l += 1
                 role_count = len(role_list)-1
                 
                 if ignore_count > 0:
                     text = text + f'\n{user.name}扣除{ignore_count}個後擁有{role_count}個身分組'
                 else:
                     text = text + f'\n{user.name}擁有{role_count}個身分組'
-            i = i + 1
+            i += 1
         await ctx.send(text)
 
     @role.command()
     async def add(self,ctx,name,user=None):
         user = await find.user(ctx,user)
         permission = discord.Permissions.none()
-        color = discord.Colour.random()
+        #color = discord.Colour.random()
+        r,g,b=random_color()
+        color = discord.Colour.from_rgb(r,g,b)
         new_role = await ctx.guild.create_role(name=name,permissions=permission,color=color)
         if user != None:
             await user.add_roles(new_role)
@@ -215,12 +218,6 @@ class command(Cog_Extension):
                 for i in role_ignore:
                     text = text + ctx.guild.get_role(i).name + ','
                 await ctx.send(text)
-            # elif role.id in role_ignore and role != None:
-            #     role_ignore.remove(role.id)
-            #     await ctx.send(f'{role.name} 刪除完成',delete_after=5)
-            # elif role != None:
-            #     role_ignore.append(role.id)
-            #     await ctx.send(f'{role.name} 刪除完成',delete_after=5)
 
     @role.command()
     async def nick(self, ctx,arg):
@@ -235,6 +232,9 @@ class command(Cog_Extension):
         else:
             await ctx.send('錯誤:你沒有稱號可更改',delete_after=5)
         
+    @commands.command()
+    async def about(self,ctx):
+        await ctx.send(f'目前我已服務了{len(self.bot.guilds)}個伺服器\n共包含了{len(self.bot.users)}位成員')
         
     @commands.command()
     @commands.cooldown(rate=5,per=1)
@@ -247,7 +247,7 @@ class command(Cog_Extension):
         user_id = str(ctx.author.id)
         six_list = []
         six_list_100 = []
-        guaranteed = 100
+        guaranteed = 300
         jloot = Counter(json.load(open('lottery.json',mode='r',encoding='utf8')))
             
         while i < times:

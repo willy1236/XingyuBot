@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 import json
 from core.classes import Cog_Extension
-from library import converter,find
+from library import *
 
 jdata = json.load(open('setting.json',mode='r',encoding='utf8'))
 
@@ -20,7 +20,27 @@ class debug(Cog_Extension):
     @commands.is_owner()
     async def debug(self,ctx,role):
         role = await find.role(ctx,role)
-        print(role.id,role.name,role.color,role.created_at)
+        dict = {}
+        dict[str(role.id)] = {}
+        dict[str(role.id)]['name']=role.name
+        dict[str(role.id)]['color']=role.color.to_rgb( )
+        dict[str(role.id)]['time']=role.created_at.strftime('%Y%m%d')
+        print(dict)
+
+    @commands.command()
+    @commands.is_owner()
+    async def debug2(self,ctx,*arg):
+        for i in arg:
+            role = await find.role(ctx,i)
+            r,g,b=random_color()
+            color = discord.Colour.from_rgb(r,g,b)
+            await role.edit(color=color)
+
+    @commands.command()
+    @commands.is_owner()
+    async def debug3(self,ctx):
+        print(random_color())
+
 
     @commands.command()
     async def test(self, ctx,arg):

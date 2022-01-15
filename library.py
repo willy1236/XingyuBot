@@ -1,4 +1,4 @@
-import json
+import json,random
 from discord.ext import commands
 
 #(*args) 傳入多個參數
@@ -31,16 +31,12 @@ from discord.ext import commands
 def is_number(n):
     try:  
         float(n)
-        return True
-    except ValueError:
-        pass
-    try:
         import unicodedata
         unicodedata.numeric(n)
         return True
     except (TypeError, ValueError):
-        pass
-    return False
+        return False
+    
 
 #menber_id:要檢測pt的用戶id(int,str形式皆可)
 def check_point(menber_id):
@@ -48,6 +44,12 @@ def check_point(menber_id):
     #json內資料格為str形式
     pt = jpt[str(menber_id)]
     return pt
+
+def random_color():
+    color = []
+    while len(color) < 3:        
+        color.append(random.choice(range(200)))
+    return color
 
 #如果讀不到資料補0避免keyerror
 class Counter(dict):
