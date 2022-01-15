@@ -3,7 +3,7 @@ from discord.errors import Forbidden, NotFound
 from discord.ext import commands
 import json ,random,asyncio
 
-from library import Counter,find,converter,random_color
+from library import Counter,find,converter,random_color,check_point
 from core.classes import Cog_Extension
 
 
@@ -40,7 +40,7 @@ class command(Cog_Extension):
         bot_name = self.bot.user.name
 
         embed = discord.Embed(title=bot_name, description="目前可使用的指令如下:", color=0xc4e9ff)
-        embed.add_field(name="!!help <pt/game/set/role>", value="系列指令", inline=False)
+        embed.add_field(name="!!help <pt/game/set/role/bet>", value="系列指令", inline=False)
         embed.add_field(name="!!info <內容/help>", value="獲得相關資訊", inline=False)
         embed.add_field(name="!!sign", value="每日簽到(更多功能敬請期待)", inline=False)
         #embed.add_field(name="!!osu <player> <玩家名稱>", value="查詢Osu玩家(更多功能敬請期待)", inline=False)
@@ -67,18 +67,27 @@ class command(Cog_Extension):
 
     @help.command()
     async def set(self,ctx):
-        embed = discord.Embed(description="Game系列指令:", color=0xc4e9ff)
+        embed = discord.Embed(description="Set系列指令:", color=0xc4e9ff)
         embed.add_field(name="!!set <crass_chat> [頻道]", value="設定跨群聊天頻道", inline=False)
         embed.add_field(name="!!set <all_anno> [頻道]", value="設定全群公告頻道", inline=False)
         await ctx.send(embed=embed)
 
     @help.command()
     async def role(self,ctx):
-        embed = discord.Embed(description="Game系列指令:", color=0xc4e9ff)
+        embed = discord.Embed(description="Role系列指令:", color=0xc4e9ff)
         embed.add_field(name="!!role <用戶>", value="取得用戶的身分組數量(可批量輸入多個用戶)", inline=False)
         embed.add_field(name="!!role add <名稱> [用戶]", value="取得用戶的身分組數量(可批量輸入多個用戶)", inline=False)
         embed.add_field(name="!!role nick <名稱/顏色代碼>", value="更改稱號(顏色請輸入HEX格式)", inline=False)
+        await ctx.send(embed=embed)
 
+    @help.command()
+    async def bet(self,ctx):
+        embed = discord.Embed(description="Bet系列指令:", color=0xc4e9ff)
+        embed.add_field(name="!!bet <賭盤ID> <blue/pink> <下注金額>", value="賭盤下注", inline=False)
+        embed.add_field(name="!!bet create <賭盤標題> <粉紅幫標題> <藍藍幫標題> <下注時間>", value="創建賭盤(時間格式為'10s''1m20s'等，不可超過600s)", inline=False)
+        embed.add_field(name="!!bet end <blue/pink>",value="結算賭盤",inline=False)
+        await ctx.send(embed=embed)
+    
     @help.command()
     @commands.is_owner()
     async def owner(self,ctx):
@@ -280,24 +289,109 @@ class command(Cog_Extension):
         await ctx.send(text)
         
     
-    @commands.group()
-    async def bet(self,ctx,id,choice,money):
-        pass
+    @commands.group(invoke_without_command=True)
+    async def bet(self,ctx,id,choice,money:int):
+        bet_data = Counter(json.load(open('bet.json',mode='r',encoding='utf8')))
+        money_now = check_point(ctx.author.id)
+        if id not in bet_data:
+            await ctx.send('編號錯誤:沒有此編號的賭盤喔')
+        elif bet_data[id]['Ison'] == 0:
+            await ctx.send('錯誤:此賭盤已經關閉了喔')
+        elif choice not in ['pink','blue']:
+            await ctx.send('選擇錯誤:我不知道你要選擇什麼')
+        elif money <= 0:
+            await ctx.send('金額錯誤:無法輸入小於1的數字')
+        elif money_now < money:
+            await ctx.send('金額錯誤:你沒有那麼多點數')
+        else:
+            jpt = Counter(json.load(open('point.json',mode='r',encoding='utf8')))
+            jpt[str(ctx.author.id)] -= money
+            with open("point.json",'w',encoding='utf8') as jfile:
+                json.dump(jpt,jfile,indent=4)
+            bet_data[id][choice]['member'][str(ctx.author.id)] += money
+            with open("bet.json",'w',encoding='utf8') as jfile:
+                json.dump(bet_data,jfile,indent=4)
+            
+            await ctx.send('下注完成!')
     
-    async def create(self, ctx,title,pink,blue,time):
-        sec = converter.time(time)
+    @bet.command()
+    async def create(self,ctx,title,pink,blue,time):
+        bet_data = json.load(open("bet.json",'r',encoding='utf8'))
         id = str(ctx.author.id)
+        sec = converter.time(time)
+        if id in bet_data:
+            await ctx.send('錯誤:你已經創建一個賭盤了喔')
+            return
+        elif sec > 600:
+            await ctx.send('錯誤:時間太長了喔')
+            return
+    
+        with open("bet.json",'w',encoding='utf8') as jfile:
+            data = {}
+            data['title'] = title
+            data['IsOn'] = 1
+            data['blue'] = {}
+            data['blue']['title'] = blue
+            data['blue']['member'] = {}
+            data['pink'] = {}
+            data['pink']['title'] = pink
+            data['pink']['member'] = {}
+            bet_data[id] = data
+            jfile.seek(0)
+            json.dump(bet_data,jfile,indent=4)
+        
         embed = discord.Embed(title='賭盤', description=f'編號: {id}', color=0xc4e9ff)
         embed.add_field(name='賭盤內容', value=title, inline=False)
         embed.add_field(name="粉紅幫", value=pink, inline=False)
         embed.add_field(name="藍藍幫", value=blue, inline=False)
         await ctx.send(embed=embed)
         await asyncio.sleep(delay=sec)
-        await ctx.send('下注時間結束')
+        await ctx.send(f'編號:{id}\n下注時間結束')
+        with open("bet.json",'w',encoding='utf8') as jfile:
+            bet_data[id]['IsOn'] = 0
+            json.dump(bet_data,jfile,indent=4)
         
-
-        
-        
-
+    @bet.command()
+    async def end(self,ctx,end):
+        #錯誤檢測
+        if end not in ['blue','pink']:
+            await ctx.send('結果錯誤:我不知道到底是誰獲勝了呢')
+            return
+        id = str(ctx.author.id)
+        bet_data = json.load(open('bet.json',mode='r',encoding='utf8'))
+        #計算雙方總點數
+        pink_total = 0
+        for i in bet_data[id]['pink']['member']:
+            pink_total += bet_data[id]['pink']['member'][i]
+        blue_total = 0
+        for i in bet_data[id]['blue']['member']:
+            blue_total += bet_data[id]['blue']['member'][i]
+        #獲勝者設定
+        if end == 'pink':
+            winner = bet_data[id]['pink']['member']
+        else:
+            winner = bet_data[id]['blue']['member']
+        #前置準備
+        if pink_total > blue_total:
+            mag = pink_total / blue_total
+        else:
+            mag = blue_total / pink_total
+        #點數計算
+        point = Counter(json.load(open('point.json',mode='r',encoding='utf8')))
+        for i in winner:
+            pt1 = winner[i] * (mag+1)
+            point[i] += int(pt1)
+        #更新資料庫
+        with open('point.json','w',encoding='utf8') as jfile:
+            json.dump(point,jfile,indent=4)
+        del bet_data[id]
+        with open("bet.json",'w',encoding='utf8') as jfile:
+            json.dump(bet_data,jfile,indent=4)
+        #結果公布
+        if end == 'pink':
+            await ctx.send(f'編號:{id}\n恭喜粉紅幫獲勝!')
+        else:
+            await ctx.send(f'編號:{id}\n恭喜藍藍幫獲勝!')
+            
 def setup(bot):
     bot.add_cog(command(bot))

@@ -12,6 +12,13 @@ from discord.ext import commands
 #json開啟法2
 #data = json.load(open('.../XXX.json','r'))
 
+#json寫入法
+#1.mode='r'讀一遍關掉，再mode='r+'或mode='w'開啟dump進去
+#2.mode='r+'開啟，先data = json.load(jfile)，最後用json.seek(0)後再dump
+
+#json mode
+#'r'=讀取 'w'=寫入(開啟檔案時會先清除內容) 'r+'=讀寫(開啟檔案時不會清除內容)
+
 #list
 #s3=s1&s2 # 交集︰取兩個集合中，相同的資料
 #s3=s1|s2 # 聯集︰取兩個合中的所有資料，但不重複取
