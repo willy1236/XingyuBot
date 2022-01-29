@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 import json
-from library import Counter
+from library import Counter,point
 from core.classes import Cog_Extension
 
 
@@ -33,9 +33,7 @@ class sign(Cog_Extension):
                 json.dump(jwsign,jfile,indent=4)
             
             if ctx.guild.id == jdata['guild']['001']:
-                with open('point.json',mode='r+',encoding='utf8') as jfile:
-                    jpt[signer] = jpt[signer]+1
-                    json.dump(jpt,jfile,indent=4)
+                point(signer).add(1)
                 await ctx.send(f'{ctx.author.mention} 簽到完成:pt點數+1',delete_after=5)
             else:
                 await ctx.send(f'{ctx.author.mention} 簽到完成!',delete_after=5)

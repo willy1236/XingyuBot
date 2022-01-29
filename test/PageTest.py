@@ -1,13 +1,13 @@
 import asyncio
 
 import discord
-from discord.ext import commands, pages
 from discord.commands import SlashCommandGroup
+from discord.ext import commands, pages
 from core.classes import Cog_Extension
 
 
-class PageTest(Cog_Extension):
-    def __init__(self, bot):
+class PageTest(commands.Cog):
+    def __init__(self,bot):
         self.bot = bot
         self.pages = [
             "Page 1",
@@ -23,15 +23,9 @@ class PageTest(Cog_Extension):
                 discord.Embed(title="Page Seven, Embed 2"),
             ],
         ]
-        self.pages[3].set_image(
-            url="https://c.tenor.com/pPKOYQpTO8AAAAAM/monkey-developer.gif"
-        )
-        self.pages[4].add_field(
-            name="Example Field", value="Example Value", inline=False
-        )
-        self.pages[4].add_field(
-            name="Another Example Field", value="Another Example Value", inline=False
-        )
+        self.pages[3].set_image(url="https://c.tenor.com/pPKOYQpTO8AAAAAM/monkey-developer.gif")
+        self.pages[4].add_field(name="Example Field", value="Example Value", inline=False)
+        self.pages[4].add_field(name="Another Example Field", value="Another Example Value", inline=False)
 
         self.more_pages = [
             "Second Page One",
@@ -109,6 +103,30 @@ class PageTest(Cog_Extension):
             show_indicator=True,
             use_default_buttons=False,
             custom_buttons=pagelist,
+            loop_pages=True,
+        )
+        await paginator.respond(ctx.interaction, ephemeral=False)
+
+    @pagetest.command(name="emoji_buttons")
+    async def pagetest_emoji_buttons(self, ctx: discord.ApplicationContext):
+        """Demonstrates using emojis for the paginator buttons instead of labels."""
+        page_buttons = [
+            pages.PaginatorButton(
+                "first", emoji="⏪", style=discord.ButtonStyle.green
+            ),
+            pages.PaginatorButton("prev", emoji="⬅", style=discord.ButtonStyle.green),
+            pages.PaginatorButton(
+                "page_indicator", style=discord.ButtonStyle.gray, disabled=True
+            ),
+            pages.PaginatorButton("next", emoji="➡", style=discord.ButtonStyle.green),
+            pages.PaginatorButton("last", emoji="⏩", style=discord.ButtonStyle.green),
+        ]
+        paginator = pages.Paginator(
+            pages=self.get_pages(),
+            show_disabled=True,
+            show_indicator=True,
+            use_default_buttons=False,
+            custom_buttons=page_buttons,
             loop_pages=True,
         )
         await paginator.respond(ctx.interaction, ephemeral=False)
@@ -244,7 +262,7 @@ class PageTest(Cog_Extension):
     async def pagetest_target(self, ctx: commands.Context):
         """Demonstrates sending the paginator to a different target than where it was invoked (prefix-command version)."""
         paginator = pages.Paginator(pages=self.get_pages())
-        await paginator.send(ctx, target=ctx.author, target_message="Paginator sent!")
+        await paginator.send(ctx, target=ctx.channel, target_message="Paginator sent!")
 
 
 def setup(bot):

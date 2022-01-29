@@ -3,7 +3,7 @@ from discord.errors import Forbidden, NotFound
 from discord.ext import commands
 import json ,random,asyncio
 
-from library import Counter,find,converter,random_color,check_point
+from library import Counter,find,converter,random_color,point
 from core.classes import Cog_Extension
 
 
@@ -80,10 +80,9 @@ class command(Cog_Extension):
 
     @commands.group(invoke_without_command=True)
     async def role(self,ctx,*user_list):
-        i = 0
         text = '身分組計算結果:\n'
-        while i < len(user_list):
-            user = await find.user(ctx,user_list[i])
+        for i in user_list:
+            user = await find.user(ctx,i)
             if user != None:
                 l = 0
                 ignore_count = 0
@@ -100,7 +99,6 @@ class command(Cog_Extension):
                     text = text + f'\n{user.name}扣除{ignore_count}個後擁有{role_count}個身分組'
                 else:
                     text = text + f'\n{user.name}擁有{role_count}個身分組'
-            i += 1
         await ctx.send(text)
 
     @role.command()
@@ -141,9 +139,17 @@ class command(Cog_Extension):
         else:
             await ctx.send('錯誤:你沒有稱號可更改',delete_after=5)
         
-    @commands.command()
+    @commands.group(invoke_without_command=True)
     async def about(self,ctx):
         await ctx.send(f'目前我已服務了{len(self.bot.guilds)}個伺服器\n共包含了{len(self.bot.users)}位成員')
+    
+    @about.command()
+    async def server(self,ctx):
+        text = ''
+        for i in self.bot.guilds:
+            text = text + i.name + ','
+        text = text[:-2]
+        await ctx.send(f'{text}')
         
     @commands.command()
     @commands.cooldown(rate=5,per=1)
@@ -192,7 +198,7 @@ class command(Cog_Extension):
     @commands.group(invoke_without_command=True)
     async def bet(self,ctx,id,choice,money:int):
         bet_data = Counter(json.load(open('bet.json',mode='r',encoding='utf8')))
-        money_now = check_point(ctx.author.id)
+        money_now = point(ctx.author.id).check
         if id not in bet_data:
             await ctx.send('編號錯誤:沒有此編號的賭盤喔')
         elif bet_data[id]['Ison'] == 0:
@@ -204,10 +210,7 @@ class command(Cog_Extension):
         elif money_now < money:
             await ctx.send('金額錯誤:你沒有那麼多點數')
         else:
-            jpt = Counter(json.load(open('point.json',mode='r',encoding='utf8')))
-            jpt[str(ctx.author.id)] -= money
-            with open("point.json",'w',encoding='utf8') as jfile:
-                json.dump(jpt,jfile,indent=4)
+            point(ctx.author.id).add(money*-1)
             bet_data[id][choice]['member'][str(ctx.author.id)] += money
             with open("bet.json",'w',encoding='utf8') as jfile:
                 json.dump(bet_data,jfile,indent=4)
@@ -277,13 +280,10 @@ class command(Cog_Extension):
         else:
             mag = blue_total / pink_total
         #點數計算
-        point = Counter(json.load(open('point.json',mode='r',encoding='utf8')))
         for i in winner:
             pt1 = winner[i] * (mag+1)
-            point[i] += int(pt1)
+            point(i).add(pt1)
         #更新資料庫
-        with open('point.json','w',encoding='utf8') as jfile:
-            json.dump(point,jfile,indent=4)
         del bet_data[id]
         with open("bet.json",'w',encoding='utf8') as jfile:
             json.dump(bet_data,jfile,indent=4)
@@ -292,6 +292,12 @@ class command(Cog_Extension):
             await ctx.send(f'編號:{id}\n恭喜粉紅幫獲勝!')
         else:
             await ctx.send(f'編號:{id}\n恭喜藍藍幫獲勝!')
+
+    @commands.command()
+    async def choice(self,ctx,*args):
+        result = random.choice(args)
+        await ctx.send(f'我選擇:{result}')
+
             
 def setup(bot):
     bot.add_cog(command(bot))

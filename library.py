@@ -35,6 +35,8 @@ from discord.ext import commands
 #    text.append(arg[i])
 #    i=i+1
 
+#async -> await
+
 def is_number(n):
     try:  
         float(n)
@@ -43,14 +45,6 @@ def is_number(n):
         return True
     except (TypeError, ValueError):
         return False
-    
-
-#menber_id:要檢測pt的用戶id(int,str形式皆可)
-def check_point(menber_id):
-    jpt = Counter(json.load(open('point.json',mode='r',encoding='utf8')))
-    #json內資料格為str形式
-    pt = jpt[str(menber_id)]
-    return pt
 
 def random_color():
     color = []
@@ -62,6 +56,27 @@ def random_color():
 class Counter(dict):
     def __missing__(self,key): 
         return 0
+
+class point():
+    def __init__(self,userID:str):
+        self.user = userID
+    
+    def check(self):
+        jpt = Counter(json.load(open('point.json',mode='r',encoding='utf8')))
+        pt = jpt[self.user] #json內資料格為str形式
+        return pt
+    
+    def set(self,amount:int):
+        jpt = Counter(json.load(open('point.json',mode='r',encoding='utf8')))
+        with open('point.json',mode='w',encoding='utf8') as jfile:
+            jpt[self.user] = amount
+            json.dump(jpt,jfile,indent=4)
+    
+    def add(self,amount:int):
+        jpt = Counter(json.load(open('point.json',mode='r',encoding='utf8')))
+        with open('point.json',mode='w',encoding='utf8') as jfile:
+            jpt[self.user] += amount
+            json.dump(jpt,jfile,indent=4)
 
 #arg:要檢測的內容(名稱#0000,id,mention...)
 class find():
@@ -102,26 +117,37 @@ class find():
             user = None
         return user
 
+    async def emoji(ctx,arg):
+        try:
+            emoji = await commands.EmojiConverter().convert(ctx,arg)
+        except commands.EmojiNotFound:
+            emoji = None
+        return emoji
+
+    async def guild(ctx,arg):
+        try:
+            guild = await commands.GuildConverter().convert(ctx,arg)
+        except commands.GuildNotFound:
+            guild = None
+        return guild
+
 class converter():
     def time(arg:str):
         #10s->1,0用str相加 s則轉換後用int相乘
         dict = {'s':1,'m':60,'h':3600}
-        i=0
         n=0
         m='0'
-        while i < len(arg):
-            l = arg[i]
+        for i in arg:
             try:
-                int(l)
-                m=m+l
+                int(i)
+                m=m+i
             except ValueError:
                 try:
                     m=int(m)
-                    n=n+(m*dict[l])
+                    n=n+(m*dict[i])
                     m='0'
                 except KeyError:
                     raise KeyError
-            i=i+1
         return n
         
 

@@ -38,7 +38,7 @@ class debug(Cog_Extension):
     @commands.command()
     @commands.is_owner()
     async def debug3(self,ctx):
-        print(self.bot.command(name=help).root_parent)
+        await ctx.send
 
 
     @commands.command()

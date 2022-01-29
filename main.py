@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 import json, random, datetime, asyncio, os
-from library import is_number
+from library import find
 
 intents = discord.Intents.all()
 #intents.typing = False
@@ -15,6 +15,7 @@ intents = discord.Intents.all()
 bot_code = 2
 
 jdata = json.load(open('setting.json',mode='r',encoding='utf8'))
+jcdata = json.load(open('channel_settings.json',mode='r',encoding='utf8'))
 
 if bot_code ==1:
     bot = commands.Bot(command_prefix=commands.when_mentioned_or('!!'),owner_id=419131103836635136,intents=intents,case_insensitive=True, help_command=None)
@@ -75,7 +76,7 @@ async def send(ctx,id:int,*,msg):
 @commands.is_owner()
 async def anno(ctx,*,msg):
     await ctx.message.delete()
-    all_anno = jdata['all_anno']
+    all_anno = jcdata['all_anno']
     send_success = 0
 
     embed=discord.Embed(title="Bot Radio Station",description=f'{msg}',color=0xc4e9ff)
@@ -104,11 +105,7 @@ async def reaction(ctx,msgID:int,mod:str,*,emojiID):
     message = await ctx.fetch_message(msgID)
     channel = message.channel
     #message = channel.get_partial_message(msgID)
-    #print(is_number(emojiID),is_number(emojiID) == True)
-    if is_number(emojiID) == True:
-        emoji = bot.get_emoji(int(emojiID))
-    else:
-        emoji = emojiID
+    emoji = find.emoji(emojiID)
 
     if emoji == None:
         await ctx.send(f'反應添加失敗:找不到表情符號',delete_after=5)
@@ -128,8 +125,8 @@ async def reaction(ctx,msgID:int,mod:str,*,emojiID):
 async def reset(ctx,arg=None):
     if arg == 'sign':
         task_report_channel = bot.get_channel(jdata['task_report'])
-        with open('sign_day.json',mode='w+',encoding='utf8') as jfile:
-            reset = {"sign":[]}
+        with open('sign_day.json',mode='w',encoding='utf8') as jfile:
+            reset = []
             json.dump(reset,jfile,indent=4)
 
         await task_report_channel.send('簽到已重置')
@@ -215,8 +212,11 @@ for filename in os.listdir('./cmds'):
 
 if __name__ == "__main__":
     if bot_code == 1:
-        import keep_alive
-        keep_alive.keep_alive()
+        try:
+            import keep_alive
+            keep_alive.keep_alive()
+        except:
+            pass
         bot.run(jdata['TOKEN'])
     elif bot_code == 2:
         bot.run(jdata['Bep_TOKEN'])

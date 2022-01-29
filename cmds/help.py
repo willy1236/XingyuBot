@@ -15,10 +15,10 @@ class help(Cog_Extension):
     @commands.command()
     async def info(self, ctx, arg='help'):
         if arg == 'help':
-            await ctx.send("vpn類\nvpn | vpn列表\nvpn01 | vpn使用教學\n\n跨群聊天類\ncrass_chat | 跨群聊天列表\n\n共用類\nshare | 雲端共用資料夾資訊")
+            await ctx.send("vpn類\nvpn | vpn列表\nvpn01 | vpn使用教學\n\n共用類\nshare | 雲端共用資料夾資訊")
 
-        elif arg == 'crass_chat':
-            await ctx.send("crass_chat | 跨群聊天列表\n1.別人都在硬啦! 我偏偏要軟啦!!\n2.我就讚owob\n\n在跨群聊天頻道直接發送訊息即可\n想在自己群加入此系統，可找機器人擁有者")
+        #elif arg == 'crass_chat':
+        #    await ctx.send("crass_chat | 跨群聊天列表\n1.別人都在硬啦! 我偏偏要軟啦!!\n2.我就讚owob\n\n在跨群聊天頻道直接發送訊息即可\n想在自己群加入此系統，可找機器人擁有者")
         
         elif arg == 'vpn':
             await ctx.send("vpn | vpn列表\n名稱:willy1236_1 密:123456987 | willy的房間")

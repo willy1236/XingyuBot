@@ -21,7 +21,7 @@ class task(Cog_Extension):
                 now_time_day = datetime.datetime.now().strftime('%Y%m%d')
                 
                 if now_time_hour == '040000':
-                    with open('sign_day.json',mode='r+',encoding='utf8') as jfile:
+                    with open('sign_day.json',mode='w',encoding='utf8') as jfile:
                         reset = []
                         json.dump(reset,jfile,indent=4)
 
