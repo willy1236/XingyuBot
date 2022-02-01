@@ -131,6 +131,12 @@ class find():
             guild = None
         return guild
 
+    async def role(ctx,arg):
+        try:
+            role = await commands.RoleConverter().convert(ctx,arg)
+        except commands.RoleNotFound:
+            role = None
+        return role
 class converter():
     def time(arg:str):
         #10s->1,0用str相加 s則轉換後用int相乘

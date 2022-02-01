@@ -24,7 +24,7 @@ class error(Cog_Extension):
         elif isinstance(error,commands.errors.NotOwner):
             await ctx.send('缺少權限:你不是機器人擁有者')
         elif isinstance(error,commands.errors.CommandOnCooldown):
-            await ctx.send(f'尚在冷卻:指令還在冷卻中(尚須{int(error.retry_after)}秒)')
+            await ctx.send(f'尚在冷卻:指令還在冷卻中(尚須{int(error.retry_after)}秒)',delete_after=5)
         
         elif isinstance(error,commands.errors.DisabledCommand):
             await ctx.send('禁用指令:此指令目前無法被使用')

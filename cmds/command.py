@@ -12,43 +12,42 @@ role_ignore = [858566145156972554,901713612668813312,879587736128999454,61374815
 
 class command(Cog_Extension):
     @commands.command()
-    async def find(self,ctx,id:int):
-        member = ctx.guild.get_member(id)
-        if member != None:
+    async def find(self,ctx,id):
+        success = 0
+        try:
+            member = find.user(ctx,id)
             embed = discord.Embed(title=f'{member.name}#{member.discriminator}', description="ID:用戶(伺服器成員)", color=0xc4e9ff)
             embed.add_field(name="暱稱", value=member.nick, inline=False)
             embed.add_field(name="是否為機器人", value=member.bot, inline=False)
             embed.add_field(name="最高身分組", value=member.top_role.mention, inline=True)
             embed.add_field(name="目前狀態", value=member.status, inline=True)
+            embed.add_field(name="是否為Discord官方", value=member.system, inline=False)
             embed.add_field(name="帳號創建日期", value=member.created_at, inline=False)
             embed.set_thumbnail(url=member.avatar_url)
-            await ctx.send(embed=embed)
-            return
-        try:
-            user = await self.bot.fetch_user(id)
+            success += 1
         except NotFound:
-            user = None
+            pass
         try:
-            channel = await self.bot.fetch_channel(id)
-        except (NotFound,Forbidden):
-            channel = None
-        try:
-            guild = await self.bot.fetch_guild(id)
-        except (NotFound,Forbidden):
-            guild = None
-            
-        if user != None:
+            user = find.user2(ctx,id)
             embed = discord.Embed(title=f'{user.name}#{user.discriminator}', description="ID:用戶", color=0xc4e9ff)
             embed.add_field(name="是否為機器人", value=user.bot, inline=False)
             embed.add_field(name="是否為Discord官方", value=user.system, inline=False)
             embed.add_field(name="帳號創建日期", value=user.created_at, inline=False)
             embed.set_thumbnail(url=user.avatar_url)
-        elif channel != None:
+            success += 1
+        except NotFound:
+            pass
+        try:
+            channel = find.channel(ctx,id)
             embed = discord.Embed(title=channel.name, description="ID:頻道", color=0xc4e9ff)
             embed.add_field(name="所屬類別", value=channel.category, inline=False)
             embed.add_field(name="所屬公會", value=channel.guild, inline=False)
             embed.add_field(name="創建時間", value=channel.created_at, inline=False)
-        elif guild != None:
+            success += 1
+        except (NotFound,Forbidden):
+            pass
+        try:
+            guild = find.guild(ctx,id)
             embed = discord.Embed(title=guild.name, description="ID:公會", color=0xc4e9ff)
             embed.add_field(name="公會擁有者", value=guild.owner, inline=False)
             embed.add_field(name="創建時間", value=guild.created_at, inline=False)
@@ -58,10 +57,15 @@ class command(Cog_Extension):
             embed.add_field(name="語音頻道數", value=len(guild.voice_channels), inline=False)
             embed.set_footer(text='數字可能因權限不足而有少算，敬請特別注意')
             embed.set_thumbnail(url=guild.icon_url)
+            success += 1
+        except (NotFound,Forbidden):
+            pass
+            
+        if success == 1:
+            await ctx.send(embed=embed)
         else:
             await ctx.send('無法辨認此ID',delete_after=5)
-            return
-        await ctx.send(embed=embed)
+            
 
     @commands.command()
     @commands.cooldown(rate=1,per=10)
@@ -74,9 +78,10 @@ class command(Cog_Extension):
         embed = discord.Embed(color=0xc4e9ff)
         embed.add_field(name='廣播電台 | 回饋訊息', value=msg, inline=False)
         embed.set_author(name=f'{user}\n({user.id})',icon_url=f'{user.avatar_url}')
-        embed.set_footer(text=f'來自: {guild}, {channel}')
+        embed.set_footer(text=f'來自: {guild},{channel}')
         await feedback_channel.send(embed=embed)
         await ctx.send('訊息已發送',delete_after=5)
+
 
     @commands.group(invoke_without_command=True)
     async def role(self,ctx,*user_list):
@@ -101,6 +106,7 @@ class command(Cog_Extension):
                     text = text + f'\n{user.name}擁有{role_count}個身分組'
         await ctx.send(text)
 
+
     @role.command()
     async def add(self,ctx,name,user=None):
         user = await find.user(ctx,user)
@@ -112,6 +118,7 @@ class command(Cog_Extension):
         if user != None:
             await user.add_roles(new_role)
         await ctx.message.add_reaction('✅')
+
 
     @role.command()
     @commands.is_owner()
@@ -126,6 +133,7 @@ class command(Cog_Extension):
                     text = text + ctx.guild.get_role(i).name + ','
                 await ctx.send(text)
 
+
     @role.command()
     async def nick(self, ctx,arg):
         user = ctx.author
@@ -138,21 +146,24 @@ class command(Cog_Extension):
             await ctx.send('稱號更改已完成')
         else:
             await ctx.send('錯誤:你沒有稱號可更改',delete_after=5)
-        
+    
+
     @commands.group(invoke_without_command=True)
     async def about(self,ctx):
         await ctx.send(f'目前我已服務了{len(self.bot.guilds)}個伺服器\n共包含了{len(self.bot.users)}位成員')
-    
+
+
     @about.command()
     async def server(self,ctx):
         text = ''
         for i in self.bot.guilds:
             text = text + i.name + ','
         text = text[:-2]
-        await ctx.send(f'{text}')
-        
+        await ctx.send(text)
+
+
     @commands.command()
-    @commands.cooldown(rate=5,per=1)
+    @commands.cooldown(rate=1,per=2)
     async def lottery(self,ctx,times:int=1):
         if times > 1000:
             await ctx.send('太多了拉，請填入少一點的數字')
@@ -193,8 +204,8 @@ class command(Cog_Extension):
         if len(six_list_100) > 0:
             text = text + f'\n保底:{six_list_100}'
         await ctx.send(text)
-        
-    
+
+
     @commands.group(invoke_without_command=True)
     async def bet(self,ctx,id,choice,money:int):
         bet_data = Counter(json.load(open('bet.json',mode='r',encoding='utf8')))
@@ -216,7 +227,8 @@ class command(Cog_Extension):
                 json.dump(bet_data,jfile,indent=4)
             
             await ctx.send('下注完成!')
-    
+
+
     @bet.command()
     async def create(self,ctx,title,pink,blue,time):
         bet_data = json.load(open("bet.json",'r',encoding='utf8'))
@@ -253,7 +265,8 @@ class command(Cog_Extension):
         with open("bet.json",'w',encoding='utf8') as jfile:
             bet_data[id]['IsOn'] = 0
             json.dump(bet_data,jfile,indent=4)
-        
+
+
     @bet.command()
     async def end(self,ctx,end):
         #錯誤檢測
@@ -293,11 +306,12 @@ class command(Cog_Extension):
         else:
             await ctx.send(f'編號:{id}\n恭喜藍藍幫獲勝!')
 
+
     @commands.command()
     async def choice(self,ctx,*args):
         result = random.choice(args)
         await ctx.send(f'我選擇:{result}')
 
-            
+
 def setup(bot):
     bot.add_cog(command(bot))

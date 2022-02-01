@@ -86,7 +86,7 @@ async def anno(ctx,*,msg):
         channel = bot.get_channel(all_anno[i])
         if channel != None:
             await channel.send(embed=embed)
-            send_success = send_success+1
+            send_success += 1
     await ctx.send(f'已向{send_success}個頻道發送公告',delete_after=5)
 
 #edit
@@ -109,7 +109,6 @@ async def reaction(ctx,msgID:int,mod:str,*,emojiID):
 
     if emoji == None:
         await ctx.send(f'反應添加失敗:找不到表情符號',delete_after=5)
-        return
     elif mod == 'add':
         await message.add_reaction(emoji)
         await ctx.send(f'反應添加完成,{channel.mention}',delete_after=10)

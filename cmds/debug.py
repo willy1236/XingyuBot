@@ -46,7 +46,12 @@ class debug(Cog_Extension):
         #print(self.bot.command(name='lottery').__call__)
         #self.bot.command(name='lottery')
         text = converter.time(arg)
-        await ctx.send(text)
+        msg = await ctx.respond(text)
+        print(msg)
+
+    #@commands.slash_command(guild_ids=[613747262291443742,566533708371329024])  # Not passing in guild_ids creates a global slash command (might take an hour to register).
+    #async def hi(self, ctx):
+    #    await ctx.respond("Hi, this is a global slash command from a cog!")
 
     
     # @commands.command(enabled=False)
