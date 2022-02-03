@@ -59,22 +59,22 @@ class Counter(dict):
 
 class point():
     def __init__(self,userID:str):
+        jpt = Counter(json.load(open('database/point.json',mode='r',encoding='utf8')))
         self.user = userID
+        self.pt = jpt
     
     def check(self):
-        jpt = Counter(json.load(open('point.json',mode='r',encoding='utf8')))
-        pt = jpt[self.user] #json內資料格為str形式
-        return pt
+        return self.pt
     
     def set(self,amount:int):
-        jpt = Counter(json.load(open('point.json',mode='r',encoding='utf8')))
-        with open('point.json',mode='w',encoding='utf8') as jfile:
+        jpt = Counter(json.load(open('database/point.json',mode='r',encoding='utf8')))
+        with open('database/point.json',mode='w',encoding='utf8') as jfile:
             jpt[self.user] = amount
             json.dump(jpt,jfile,indent=4)
     
     def add(self,amount:int):
-        jpt = Counter(json.load(open('point.json',mode='r',encoding='utf8')))
-        with open('point.json',mode='w',encoding='utf8') as jfile:
+        jpt = Counter(json.load(open('database/point.json',mode='r',encoding='utf8')))
+        with open('database/point.json',mode='w',encoding='utf8') as jfile:
             jpt[self.user] += amount
             json.dump(jpt,jfile,indent=4)
 

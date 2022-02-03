@@ -15,7 +15,8 @@ intents = discord.Intents.all()
 bot_code = 2
 
 jdata = json.load(open('setting.json',mode='r',encoding='utf8'))
-jcdata = json.load(open('channel_settings.json',mode='r',encoding='utf8'))
+cdata = json.load(open('database/channel_settings.json',mode='r',encoding='utf8'))
+picdata = json.load(open('database/picture.json',mode='r',encoding='utf8'))
 
 if bot_code ==1:
     bot = commands.Bot(command_prefix=commands.when_mentioned_or('!!'),owner_id=419131103836635136,intents=intents,case_insensitive=True, help_command=None)
@@ -75,19 +76,23 @@ async def send(ctx,id:int,*,msg):
 @bot.command()
 @commands.is_owner()
 async def anno(ctx,*,msg):
-    await ctx.message.delete()
-    all_anno = jcdata['all_anno']
     send_success = 0
+    send_msg = await ctx.send('訊息發送中...')
 
-    embed=discord.Embed(title="Bot Radio Station",description=f'{msg}',color=0xc4e9ff)
+    embed=discord.Embed(description=f'{msg}',color=0xc4e9ff)
+    embed.set_author(name="Bot Radio Station",icon_url=picdata['radio_001'])
     embed.set_footer(text='廣播電台 | 機器人全群公告')
     
-    for i in all_anno:
-        channel = bot.get_channel(all_anno[i])
+    for i in cdata['all_anno']:
+        channel = bot.get_channel(cdata['all_anno'][i])
         if channel != None:
-            await channel.send(embed=embed)
-            send_success += 1
-    await ctx.send(f'已向{send_success}個頻道發送公告',delete_after=5)
+            try:
+                await channel.send(embed=embed)
+                send_success += 1
+            except:
+                pass
+    await ctx.message.delete()
+    await send_msg.edit(f"已向{send_success}/{len(cdata['all_anno'])}個頻道發送公告",delete_after=5)
 
 #edit
 @bot.command()
@@ -124,7 +129,7 @@ async def reaction(ctx,msgID:int,mod:str,*,emojiID):
 async def reset(ctx,arg=None):
     if arg == 'sign':
         task_report_channel = bot.get_channel(jdata['task_report'])
-        with open('sign_day.json',mode='w',encoding='utf8') as jfile:
+        with open('database/sign_day.json',mode='w',encoding='utf8') as jfile:
             reset = []
             json.dump(reset,jfile,indent=4)
 

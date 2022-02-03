@@ -8,6 +8,7 @@ from core.classes import Cog_Extension
 
 
 jdata = json.load(open('setting.json','r',encoding='utf8'))
+picdata = json.load(open('database/picture.json',mode='r',encoding='utf8'))
 role_ignore = [858566145156972554,901713612668813312,879587736128999454,613748153644220447,884082363859083305,613749564356427786,861812096777060352,889148839016169542,874628716385435719,858558233403719680,891644752666198047,896424834475638884,706794165094187038,619893837833306113,877934319249797120]
 
 class command(Cog_Extension):
@@ -70,17 +71,18 @@ class command(Cog_Extension):
     @commands.command()
     @commands.cooldown(rate=1,per=10)
     async def feedback(self,ctx,*,msg):
-        await ctx.message.delete()
+        send_msg = await ctx.send('請稍後...',delete_after=5)
         user = ctx.author
         guild = ctx.guild
         channel = ctx.channel
         feedback_channel = self.bot.get_channel(jdata['feedback_channel'])
         embed = discord.Embed(color=0xc4e9ff)
         embed.add_field(name='廣播電台 | 回饋訊息', value=msg, inline=False)
-        embed.set_author(name=f'{user}\n({user.id})',icon_url=f'{user.avatar_url}')
+        embed.set_author(name=f'{user}\n({user.id})',icon_url=f'{user.avatar.url}')
         embed.set_footer(text=f'來自: {guild},{channel}')
         await feedback_channel.send(embed=embed)
-        await ctx.send('訊息已發送',delete_after=5)
+        await ctx.message.delete()
+        await send_msg.edit('訊息已發送',delete_after=5)
 
 
     @commands.group(invoke_without_command=True)
@@ -146,20 +148,6 @@ class command(Cog_Extension):
             await ctx.send('稱號更改已完成')
         else:
             await ctx.send('錯誤:你沒有稱號可更改',delete_after=5)
-    
-
-    @commands.group(invoke_without_command=True)
-    async def about(self,ctx):
-        await ctx.send(f'目前我已服務了{len(self.bot.guilds)}個伺服器\n共包含了{len(self.bot.users)}位成員')
-
-
-    @about.command()
-    async def server(self,ctx):
-        text = ''
-        for i in self.bot.guilds:
-            text = text + i.name + ','
-        text = text[:-2]
-        await ctx.send(text)
 
 
     @commands.command()
@@ -174,7 +162,7 @@ class command(Cog_Extension):
         six_list = []
         six_list_100 = []
         guaranteed = 300
-        jloot = Counter(json.load(open('lottery.json',mode='r',encoding='utf8')))
+        jloot = Counter(json.load(open('database/lottery.json',mode='r',encoding='utf8')))
             
         while i < times:
             choice =  random.randint(1,100)
@@ -196,19 +184,25 @@ class command(Cog_Extension):
                 jloot[user_id] = jloot[user_id]+1
             i =i+1
         
-        with open('lottery.json',mode='w',encoding='utf8') as jfile:
+        with open('database/lottery.json',mode='w',encoding='utf8') as jfile:
             json.dump(jloot,jfile,indent=4)
-        text = f"抽卡結果:\n六星:{result['six']} 五星:{result['five']} 四星:{result['four']} 三星:{result['three']}\n未抽得六星次數:{jloot[user_id]}"
+        embed=discord.Embed(color=0xc4e9ff)
+        embed.set_author(name="Lottery System",icon_url=picdata['lottery_001'])
+        embed.add_field(name='抽卡結果', value=f"六星:{result['six']} 五星:{result['five']} 四星:{result['four']} 三星:{result['three']}", inline=False)
+        #text = f"抽卡結果:\n六星:{result['six']} 五星:{result['five']} 四星:{result['four']} 三星:{result['three']}\n未抽得六星次數:{jloot[user_id]}"
+        embed.add_field(name='保底累積', value=jloot[user_id], inline=False)
         if len(six_list) > 0:
-            text = text + f'\n六星出現:{six_list}'
+            embed.add_field(name='六星出現', value=six_list, inline=False)
+            #text = text + f'\n六星出現:{six_list}'
         if len(six_list_100) > 0:
-            text = text + f'\n保底:{six_list_100}'
-        await ctx.send(text)
+            embed.add_field(name='保底', value=six_list_100, inline=False)
+            #text = text + f'\n保底:{six_list_100}'
+        await ctx.send(embed=embed)
 
 
     @commands.group(invoke_without_command=True)
     async def bet(self,ctx,id,choice,money:int):
-        bet_data = Counter(json.load(open('bet.json',mode='r',encoding='utf8')))
+        bet_data = Counter(json.load(open('database/bet.json',mode='r',encoding='utf8')))
         money_now = point(ctx.author.id).check
         if id not in bet_data:
             await ctx.send('編號錯誤:沒有此編號的賭盤喔')
@@ -223,7 +217,7 @@ class command(Cog_Extension):
         else:
             point(ctx.author.id).add(money*-1)
             bet_data[id][choice]['member'][str(ctx.author.id)] += money
-            with open("bet.json",'w',encoding='utf8') as jfile:
+            with open("database/bet.json",'w',encoding='utf8') as jfile:
                 json.dump(bet_data,jfile,indent=4)
             
             await ctx.send('下注完成!')
@@ -231,7 +225,7 @@ class command(Cog_Extension):
 
     @bet.command()
     async def create(self,ctx,title,pink,blue,time):
-        bet_data = json.load(open("bet.json",'r',encoding='utf8'))
+        bet_data = json.load(open("database/bet.json",'r',encoding='utf8'))
         id = str(ctx.author.id)
         sec = converter.time(time)
         if id in bet_data:
@@ -241,7 +235,7 @@ class command(Cog_Extension):
             await ctx.send('錯誤:時間太長了喔')
             return
     
-        with open("bet.json",'w',encoding='utf8') as jfile:
+        with open("database/bet.json",'w',encoding='utf8') as jfile:
             data = {}
             data['title'] = title
             data['IsOn'] = 1
@@ -262,7 +256,7 @@ class command(Cog_Extension):
         await ctx.send(embed=embed)
         await asyncio.sleep(delay=sec)
         await ctx.send(f'編號:{id}\n下注時間結束')
-        with open("bet.json",'w',encoding='utf8') as jfile:
+        with open("database/bet.json",'w',encoding='utf8') as jfile:
             bet_data[id]['IsOn'] = 0
             json.dump(bet_data,jfile,indent=4)
 
@@ -274,7 +268,7 @@ class command(Cog_Extension):
             await ctx.send('結果錯誤:我不知道到底是誰獲勝了呢')
             return
         id = str(ctx.author.id)
-        bet_data = json.load(open('bet.json',mode='r',encoding='utf8'))
+        bet_data = json.load(open('database/bet.json',mode='r',encoding='utf8'))
         #計算雙方總點數
         pink_total = 0
         for i in bet_data[id]['pink']['member']:
@@ -298,7 +292,7 @@ class command(Cog_Extension):
             point(i).add(pt1)
         #更新資料庫
         del bet_data[id]
-        with open("bet.json",'w',encoding='utf8') as jfile:
+        with open("database/bet.json",'w',encoding='utf8') as jfile:
             json.dump(bet_data,jfile,indent=4)
         #結果公布
         if end == 'pink':

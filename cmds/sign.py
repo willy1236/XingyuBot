@@ -7,28 +7,24 @@ from core.classes import Cog_Extension
 
 jdata = json.load(open('setting.json',mode='r',encoding='utf8'))
 
-with open('sign_week.json',mode='r',encoding='utf8') as jfile:
+with open('database/sign_week.json',mode='r',encoding='utf8') as jfile:
     jwsign2 = json.load(jfile)
     jwsign = Counter(jwsign2)
-
-with open('point.json',mode='r',encoding='utf8') as jfile:
-    jpt2 = json.load(jfile)
-    jpt = Counter(jpt2)
 
 class sign(Cog_Extension):
     @commands.command()
     async def sign(self,ctx):
         await ctx.message.delete()
-        jdsign = json.load(open('sign_day.json',mode='r',encoding='utf8'))
+        jdsign = json.load(open('database/sign_day.json',mode='r',encoding='utf8'))
         
         if ctx.author.id not in jdsign:
             signer = str(ctx.author.id)
             #日常
             jdsign.append(ctx.author.id)
-            with open('sign_day.json',mode='r+',encoding='utf8') as jfile:
+            with open('database/sign_day.json',mode='r+',encoding='utf8') as jfile:
                 json.dump(jdsign,jfile,indent=4)
             #週常
-            with open('sign_week.json','r+',encoding='utf8') as jfile:
+            with open('database/sign_week.json','r+',encoding='utf8') as jfile:
                 jwsign[signer] = jwsign[signer]+1
                 json.dump(jwsign,jfile,indent=4)
             

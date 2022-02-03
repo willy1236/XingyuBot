@@ -4,7 +4,7 @@ import json
 from core.classes import Cog_Extension
 
 jdata = json.load(open('setting.json',mode='r',encoding='utf8'))
-cdata = json.load(open('channel_settings.json',mode='r',encoding='utf8'))
+cdata = json.load(open('database/channel_settings.json',mode='r',encoding='utf8'))
 
 class event(Cog_Extension):
     #跨群聊天B5.1
