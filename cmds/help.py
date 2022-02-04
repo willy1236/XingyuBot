@@ -16,7 +16,7 @@ class help(Cog_Extension):
     @commands.group(invoke_without_command=True)
     async def about(self,ctx):
         embed = discord.Embed(description=f"你好~\n我是{self.bot.user.name}，是一個discord機器人喔~\n我的前輟是`!!`\n你可以輸入`!!help`來查看所有指令的用法\n\n希望我能在discord上幫助到你喔~", color=0xc4e9ff)
-        embed.set_author(name=self.bot.user.name,icon_url=self.bot.user.avatar.url)
+        embed.set_author(name=self.bot.user.name,icon_url=self.bot.user.display_avatar.url)
         await ctx.send(embed=embed)
 
 
@@ -33,7 +33,7 @@ class help(Cog_Extension):
     @commands.is_owner()
     async def count(self,ctx):
         embed = discord.Embed(description=f"依據目前的資料\n目前我已服務了{len(self.bot.guilds)}個伺服器\n共包含了{len(self.bot.users)}位成員喔~", color=0xc4e9ff)
-        embed.set_author(name=self.bot.user.name,icon_url=self.bot.user.avatar.url)
+        embed.set_author(name=self.bot.user.name,icon_url=self.bot.user.display_avatar.url)
         await ctx.send(embed=embed)
 
 
@@ -60,7 +60,7 @@ class help(Cog_Extension):
     # @commands.cooldown(rate=1,per=3)
     # async def help(self, ctx):
     #     embed = discord.Embed(title="help 指令", color=0xc4e9ff)
-    #     embed.set_author(name=self.bot.user.name,icon_url=self.bot.user.avatar.url)
+    #     embed.set_author(name=self.bot.user.name,icon_url=self.bot.user.display_avatar.url)
     #     embed.add_field(name="尋求幫助", value="```!!help [指令]```", inline=False)
     #     await ctx.send(embed=embed)
 
@@ -68,7 +68,7 @@ class help(Cog_Extension):
     @commands.cooldown(rate=1,per=3)
     async def help(self,ctx):
         embed = discord.Embed(description="目前可使用的指令如下:", color=0xc4e9ff)
-        embed.set_author(name=self.bot.user.name,icon_url=self.bot.user.avatar.url)
+        embed.set_author(name=self.bot.user.name,icon_url=self.bot.user.display_avatar.url)
         embed.add_field(name="!!help <系列指令>", value="查詢系列指令\n目前支援:admin,pt,game,set,role,bet", inline=False)
         embed.add_field(name="!!info <內容/help>", value="獲得相關資訊", inline=False)
         #embed.add_field(name="!!osu <player> <玩家名稱>", value="查詢Osu玩家(更多功能敬請期待)", inline=False)
@@ -82,7 +82,7 @@ class help(Cog_Extension):
     @help.command()
     async def use(self,ctx):
         embed = discord.Embed(title="使用指令",description=f"帶你了解基本的概念", color=0xc4e9ff)
-        embed.set_author(name=self.bot.user.name,icon_url=self.bot.user.avatar.url)
+        embed.set_author(name=self.bot.user.name,icon_url=self.bot.user.display_avatar.url)
         embed.add_field(name="指令使用:前輟指令", value="前輟+指令就可以使用了，例如`!!help`\n如果有參數，則需要把每個參數用空格隔開", inline=False)
         embed.add_field(name="括號", value="`<參數>`表示這個參數必填 `[參數]`表示不一定要填\n<參數1/參數2>為選擇一個參數填寫即可", inline=False)
         await ctx.send(embed=embed)
@@ -131,7 +131,7 @@ class help(Cog_Extension):
     @commands.is_owner()
     async def owner(self,ctx):
         embed = discord.Embed(description="目前可使用的指令如下(onwer):", color=0xc4e9ff)
-        embed.set_author(name=self.bot.user.name,icon_url=self.bot.user.avatar.url)
+        embed.set_author(name=self.bot.user.name,icon_url=self.bot.user.display_avatar.url)
         embed.add_field(name="!!send <頻道ID/用戶ID/0> <內容>", value="發送指定訊息", inline=False)
         embed.add_field(name="!!anno <內容>", value="對所有伺服器進行公告", inline=False)
         embed.add_field(name="!!edit <訊息ID> <新訊息>", value="編輯訊息", inline=False)
@@ -144,7 +144,7 @@ class help(Cog_Extension):
     @help.command()
     async def admin(self,ctx):
         embed = discord.Embed(description="目前可使用的指令如下(admin):", color=0xc4e9ff)
-        embed.set_author(name=self.bot.user.name,icon_url=self.bot.user.avatar.url)
+        embed.set_author(name=self.bot.user.name,icon_url=self.bot.user.display_avatar.url)
         embed.add_field(name="!!clean <數字>", value="清除訊息(需求管理訊息)", inline=False)
         await ctx.send(embed=embed)
 

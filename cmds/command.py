@@ -15,8 +15,8 @@ class command(Cog_Extension):
     @commands.command()
     async def find(self,ctx,id):
         success = 0
-        try:
-            member = find.user(ctx,id)
+        member = await find.user(ctx,id)
+        if member != None:
             embed = discord.Embed(title=f'{member.name}#{member.discriminator}', description="ID:用戶(伺服器成員)", color=0xc4e9ff)
             embed.add_field(name="暱稱", value=member.nick, inline=False)
             embed.add_field(name="是否為機器人", value=member.bot, inline=False)
@@ -24,31 +24,28 @@ class command(Cog_Extension):
             embed.add_field(name="目前狀態", value=member.status, inline=True)
             embed.add_field(name="是否為Discord官方", value=member.system, inline=False)
             embed.add_field(name="帳號創建日期", value=member.created_at, inline=False)
-            embed.set_thumbnail(url=member.avatar_url)
+            embed.set_thumbnail(url=member.display_avatar.url)
             success += 1
-        except NotFound:
-            pass
-        try:
-            user = find.user2(ctx,id)
+
+        user = await find.user2(ctx,id)
+        if user != None and member == None:
             embed = discord.Embed(title=f'{user.name}#{user.discriminator}', description="ID:用戶", color=0xc4e9ff)
             embed.add_field(name="是否為機器人", value=user.bot, inline=False)
             embed.add_field(name="是否為Discord官方", value=user.system, inline=False)
             embed.add_field(name="帳號創建日期", value=user.created_at, inline=False)
-            embed.set_thumbnail(url=user.avatar_url)
+            embed.set_thumbnail(url=user.display_avatar.url)
             success += 1
-        except NotFound:
-            pass
-        try:
-            channel = find.channel(ctx,id)
+
+        channel = await find.channel(ctx,id)
+        if channel != None:
             embed = discord.Embed(title=channel.name, description="ID:頻道", color=0xc4e9ff)
             embed.add_field(name="所屬類別", value=channel.category, inline=False)
             embed.add_field(name="所屬公會", value=channel.guild, inline=False)
             embed.add_field(name="創建時間", value=channel.created_at, inline=False)
             success += 1
-        except (NotFound,Forbidden):
-            pass
-        try:
-            guild = find.guild(ctx,id)
+        
+        guild = await find.guild(ctx,id)
+        if guild != None:
             embed = discord.Embed(title=guild.name, description="ID:公會", color=0xc4e9ff)
             embed.add_field(name="公會擁有者", value=guild.owner, inline=False)
             embed.add_field(name="創建時間", value=guild.created_at, inline=False)
@@ -59,11 +56,12 @@ class command(Cog_Extension):
             embed.set_footer(text='數字可能因權限不足而有少算，敬請特別注意')
             embed.set_thumbnail(url=guild.icon_url)
             success += 1
-        except (NotFound,Forbidden):
-            pass
             
         if success == 1:
             await ctx.send(embed=embed)
+        elif success > 1:
+            await find.report(self,ctx,f'find:id重複(出現{success}次)')
+            await ctx.send('出現錯誤，已自動向機器人擁有者回報')
         else:
             await ctx.send('無法辨認此ID',delete_after=5)
             
@@ -78,7 +76,7 @@ class command(Cog_Extension):
         feedback_channel = self.bot.get_channel(jdata['feedback_channel'])
         embed = discord.Embed(color=0xc4e9ff)
         embed.add_field(name='廣播電台 | 回饋訊息', value=msg, inline=False)
-        embed.set_author(name=f'{user}\n({user.id})',icon_url=f'{user.avatar.url}')
+        embed.set_author(name=f'{user}\n({user.id})',icon_url=f'{user.display_avatar.url}')
         embed.set_footer(text=f'來自: {guild},{channel}')
         await feedback_channel.send(embed=embed)
         await ctx.message.delete()
@@ -87,7 +85,8 @@ class command(Cog_Extension):
 
     @commands.group(invoke_without_command=True)
     async def role(self,ctx,*user_list):
-        text = '身分組計算結果:\n'
+        embed=discord.Embed(color=0xc4e9ff)
+        embed.set_author(name="身分組計算結果")
         for i in user_list:
             user = await find.user(ctx,i)
             if user != None:
@@ -102,11 +101,12 @@ class command(Cog_Extension):
                         l += 1
                 role_count = len(role_list)-1
                 
-                if ignore_count > 0:
-                    text = text + f'\n{user.name}扣除{ignore_count}個後擁有{role_count}個身分組'
-                else:
-                    text = text + f'\n{user.name}擁有{role_count}個身分組'
-        await ctx.send(text)
+                embed.add_field(name=user.name, value=f"{role_count}(-{ignore_count})", inline=False)
+                # if ignore_count > 0:
+                #     text = text + f'\n{user.name}扣除{ignore_count}個後擁有{role_count}個身分組'
+                # else:
+                #     text = text + f'\n{user.name}擁有{role_count}個身分組'
+        await ctx.send(embed=embed)
 
 
     @role.command()

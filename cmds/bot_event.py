@@ -7,14 +7,14 @@ jdata = json.load(open('setting.json',mode='r',encoding='utf8'))
 cdata = json.load(open('database/channel_settings.json',mode='r',encoding='utf8'))
 
 class event(Cog_Extension):
-    #跨群聊天B5.1
+    #跨群聊天Ver.1.0
     @commands.Cog.listener()
     async def on_message(self,msg):
         if msg.channel.id in cdata['crass_chat'] and msg.author.bot == False:
             await msg.delete()
 
             embed=discord.Embed(description=f'{msg.content}',color=0x4aa0b5)
-            embed.set_author(name=f'{msg.author}',icon_url=f'{msg.author.avatar_url}')
+            embed.set_author(name=f'{msg.author}',icon_url=f'{msg.author.display_avatar.url}')
             embed.set_footer(text=f'來自: {msg.guild}')
 
             for i in cdata['crass_chat']:

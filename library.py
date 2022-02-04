@@ -1,5 +1,6 @@
-import json,random
+import json,random,discord
 from discord.ext import commands
+from core.classes import Cog_Extension
 
 #(*args) 傳入多個參數
 #(**kwargs) 傳入多個參數並轉變為dict
@@ -79,7 +80,7 @@ class point():
             json.dump(jpt,jfile,indent=4)
 
 #arg:要檢測的內容(名稱#0000,id,mention...)
-class find():
+class find(Cog_Extension):
     async def user(ctx,arg):
         if arg == None:
             member = None
@@ -137,6 +138,18 @@ class find():
         except commands.RoleNotFound:
             role = None
         return role
+
+    async def report(self,ctx,arg:str):
+        jdata = json.load(open('setting.json',mode='r',encoding='utf8'))
+        channel = self.bot.get_channel(jdata['report_channel'])
+        embed=discord.Embed(color=0xc4e9ff)
+        embed.set_author(name="BRS | 錯誤回報")
+        embed.add_field(name='錯誤指令', value=arg, inline=True)
+        embed.add_field(name='使用者', value=f"{ctx.author}({ctx.author.id})", inline=False)
+        embed.add_field(name='發生頻道', value=ctx.channel, inline=True)
+        embed.add_field(name='發生群組', value=ctx.guild, inline=True)
+        await channel.send(embed=embed)
+
 class converter():
     def time(arg:str):
         #10s->1,0用str相加 s則轉換後用int相乘

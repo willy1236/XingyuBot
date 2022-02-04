@@ -209,8 +209,14 @@ async def permission(ctx,guild_id:int):
 #             await channel.send('👍')
 
 
+@bot.slash_command()
+async def hello(ctx, name: str = None):
+    name = name or ctx.author.name
+    await ctx.respond(f"Hello {name}!")
+
+
 for filename in os.listdir('./cmds'):
-    if filename.endswith('.py'):
+    if filename.endswith('.py') and filename not in ['task']:
         bot.load_extension(f'cmds.{filename[:-3]}')
 
 
