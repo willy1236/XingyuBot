@@ -43,11 +43,7 @@ class debug(Cog_Extension):
 
     @commands.command()
     async def test(self, ctx):
-        await find.report(self,ctx,'test')
-
-    @commands.slash_command()  # Not passing in guild_ids creates a global slash command (might take an hour to register).
-    async def hi(self, ctx):
-        await ctx.respond("Hi, this is a global slash command from a cog!")
+        await BRS.error(self,ctx,'test')
 
     
     # @commands.command(enabled=False)

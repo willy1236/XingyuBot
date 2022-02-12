@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands
-from library import find
+from library import find,BRS
 from core.classes import Cog_Extension
 
 
@@ -35,7 +35,7 @@ class error(Cog_Extension):
         elif isinstance(error,KeyError):
             await ctx.send('參數缺失:發生KeyError錯誤')
         else:
-            await find.report(self,ctx,error)
+            await BRS.error(self,ctx,error)
             await ctx.send('發生未知錯誤，請向機器人擁有者回報')
             print(error)
 

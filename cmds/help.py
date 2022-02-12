@@ -84,7 +84,7 @@ class help(Cog_Extension):
         embed = discord.Embed(title="使用指令",description=f"帶你了解基本的概念", color=0xc4e9ff)
         embed.set_author(name=self.bot.user.name,icon_url=self.bot.user.display_avatar.url)
         embed.add_field(name="指令使用:前輟指令", value="前輟+指令就可以使用了，例如`!!help`\n如果有參數，則需要把每個參數用空格隔開", inline=False)
-        embed.add_field(name="括號", value="`<參數>`表示這個參數必填 `[參數]`表示不一定要填\n<參數1/參數2>為選擇一個參數填寫即可", inline=False)
+        embed.add_field(name="括號", value="`<參數>`表示這個參數必填 `[參數]`表示不一定要填\n`<參數1/參數2>`為選擇一個參數填寫即可", inline=False)
         await ctx.send(embed=embed)
 
     @help.command()
@@ -139,6 +139,7 @@ class help(Cog_Extension):
         embed.add_field(name="!!ptset <用戶ID> <+/-/set> <數量>", value="更改指定用戶Pt數", inline=False)
         embed.add_field(name="!!reset", value="簽到重置", inline=False)
         embed.add_field(name="!!role ignore", value="取得計算身分組時扣掉的身分組", inline=False)
+        embed.add_field(name="!!about <server/count>", value="about系列指令", inline=False)
         await ctx.send(embed=embed)
 
     @help.command()

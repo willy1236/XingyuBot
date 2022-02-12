@@ -21,7 +21,7 @@ picdata = json.load(open('database/picture.json',mode='r',encoding='utf8'))
 if bot_code ==1:
     bot = commands.Bot(command_prefix=commands.when_mentioned_or('!!'),owner_id=419131103836635136,intents=intents,case_insensitive=True, help_command=None)
 elif bot_code == 2:
-    bot = commands.Bot(command_prefix=commands.when_mentioned_or('b!'),owner_id=419131103836635136,intents=intents,case_insensitive=True, help_command=None)
+    bot = commands.AutoShardedBot(shard_count=1,command_prefix=commands.when_mentioned_or('b!'),owner_id=419131103836635136,intents=intents,case_insensitive=True, help_command=None)
 else:
     raise ValueError("Invalid bot_code")
 
@@ -189,7 +189,6 @@ async def permission(ctx,guild_id:int):
     # permission.change_nickname
     # permission.use_slash_commands
     # permission.request_to_speak
-    
     await ctx.send(embed=embed)
 
 # @bot.event
@@ -216,7 +215,7 @@ async def hello(ctx, name: str = None):
 
 
 for filename in os.listdir('./cmds'):
-    if filename.endswith('.py') and filename not in ['task']:
+    if filename.endswith('.py'):
         bot.load_extension(f'cmds.{filename[:-3]}')
 
 

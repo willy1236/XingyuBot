@@ -3,7 +3,7 @@ from discord.errors import Forbidden, NotFound
 from discord.ext import commands
 import json ,random,asyncio
 
-from library import Counter,find,converter,random_color,point
+from library import Counter,find,converter,random_color,point,BRS
 from core.classes import Cog_Extension
 
 
@@ -60,7 +60,7 @@ class command(Cog_Extension):
         if success == 1:
             await ctx.send(embed=embed)
         elif success > 1:
-            await find.report(self,ctx,f'find:id重複(出現{success}次)')
+            await BRS.error(self,ctx,f'find:id重複(出現{success}次)')
             await ctx.send('出現錯誤，已自動向機器人擁有者回報')
         else:
             await ctx.send('無法辨認此ID',delete_after=5)

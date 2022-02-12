@@ -139,15 +139,27 @@ class find(Cog_Extension):
             role = None
         return role
 
-    async def report(self,ctx,arg:str):
+class BRS():
+    async def error(self,ctx,arg:str):
         jdata = json.load(open('setting.json',mode='r',encoding='utf8'))
         channel = self.bot.get_channel(jdata['report_channel'])
         embed=discord.Embed(color=0xc4e9ff)
         embed.set_author(name="BRS | 錯誤回報")
         embed.add_field(name='錯誤指令', value=arg, inline=True)
-        embed.add_field(name='使用者', value=f"{ctx.author}({ctx.author.id})", inline=False)
-        embed.add_field(name='發生頻道', value=ctx.channel, inline=True)
-        embed.add_field(name='發生群組', value=ctx.guild, inline=True)
+        embed.add_field(name='使用者', value=f"{ctx.author}\n{ctx.author.id}", inline=False)
+        embed.add_field(name='發生頻道', value=f'{ctx.channel}\n{ctx.channel.id}', inline=True)
+        embed.add_field(name='發生群組', value=f'{ctx.guild}\n{ctx.guild.id}', inline=True)
+        await channel.send(embed=embed)
+    
+    async def scam(self,msg):
+        jdata = json.load(open('setting.json',mode='r',encoding='utf8'))
+        channel = self.bot.get_channel(jdata['scam_channel'])
+        embed=discord.Embed(color=0xc4e9ff)
+        embed.set_author(name="BRS | 詐騙回報")
+        embed.add_field(name='詐騙訊息', value=msg.content, inline=True)
+        embed.add_field(name='發送者', value=f"{msg.author}\n{msg.author.id}", inline=False)
+        embed.add_field(name='發生頻道', value=f'{msg.channel}\n{msg.channel.id}', inline=True)
+        embed.add_field(name='發生群組', value=f'{msg.guild}\n{msg.guild.id}', inline=True)
         await channel.send(embed=embed)
 
 class converter():
