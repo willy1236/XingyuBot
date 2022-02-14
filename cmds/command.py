@@ -24,7 +24,7 @@ class command(Cog_Extension):
             embed.add_field(name="目前狀態", value=member.status, inline=True)
             embed.add_field(name="是否為Discord官方", value=member.system, inline=False)
             embed.add_field(name="帳號創建日期", value=member.created_at, inline=False)
-            embed.set_thumbnail(url=member.display_avatar.url)
+    #        embed.set_thumbnail(url=member.display_avatar.url)
             success += 1
 
         user = await find.user2(ctx,id)
@@ -33,7 +33,7 @@ class command(Cog_Extension):
             embed.add_field(name="是否為機器人", value=user.bot, inline=False)
             embed.add_field(name="是否為Discord官方", value=user.system, inline=False)
             embed.add_field(name="帳號創建日期", value=user.created_at, inline=False)
-            embed.set_thumbnail(url=user.display_avatar.url)
+    #        embed.set_thumbnail(url=user.display_avatar.url)
             success += 1
 
         channel = await find.channel(ctx,id)
@@ -76,7 +76,7 @@ class command(Cog_Extension):
         feedback_channel = self.bot.get_channel(jdata['feedback_channel'])
         embed = discord.Embed(color=0xc4e9ff)
         embed.add_field(name='廣播電台 | 回饋訊息', value=msg, inline=False)
-        embed.set_author(name=f'{user}\n({user.id})',icon_url=f'{user.display_avatar.url}')
+    #    embed.set_author(name=f'{user}\n({user.id})',icon_url=f'{user.display_avatar.url}')
         embed.set_footer(text=f'來自: {guild},{channel}')
         await feedback_channel.send(embed=embed)
         await ctx.message.delete()

@@ -15,7 +15,7 @@ class event(Cog_Extension):
             await msg.delete()
 
             embed=discord.Embed(description=f'{msg.content}',color=0x4aa0b5)
-            embed.set_author(name=f'{msg.author}',icon_url=f'{msg.author.display_avatar.url}')
+    #        embed.set_author(name=f'{msg.author}',icon_url=f'{msg.author.display_avatar.url}')
             embed.set_footer(text=f'來自: {msg.guild}')
 
             for i in cdata['crass_chat']:

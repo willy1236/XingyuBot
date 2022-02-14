@@ -97,8 +97,8 @@ async def anno(ctx,*,msg):
 #edit
 @bot.command()
 @commands.is_owner()
-async def edit(ctx,msgID:int,*,new_msg):
-    message = await ctx.fetch_message(msgID)
+async def edit(ctx,msgid:int,*,new_msg):
+    message = await ctx.fetch_message(msgid)
     #message = channel.get_partial_message(msgID)
     await message.edit(content=new_msg)
     await ctx.message.add_reaction('✅')
@@ -106,11 +106,11 @@ async def edit(ctx,msgID:int,*,new_msg):
 #reaction
 @bot.command()
 @commands.is_owner()
-async def reaction(ctx,msgID:int,mod:str,*,emojiID):
-    message = await ctx.fetch_message(msgID)
+async def reaction(ctx,msgid:int,mod:str,*,emojiid):
+    message = await ctx.fetch_message(msgid)
     channel = message.channel
     #message = channel.get_partial_message(msgID)
-    emoji = find.emoji(emojiID)
+    emoji = find.emoji(emojiid)
 
     if emoji == None:
         await ctx.send(f'反應添加失敗:找不到表情符號',delete_after=5)

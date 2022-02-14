@@ -89,7 +89,7 @@ class game(Cog_Extension):
             embed = discord.Embed(title=user, color=0xc4e9ff)
             for game in games:
                 embed.add_field(name=game, value=data[game], inline=False)
-            embed.set_thumbnail(url=user.display_avatar_url)
+    #        embed.set_thumbnail(url=user.display_avatar_url)
             await ctx.send(embed=embed)
 
 
