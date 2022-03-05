@@ -29,13 +29,6 @@ from core.classes import Cog_Extension
 #s=set("Hello") # 把字串中的字母折拆成集合
 #dic={x:x*2 for x in [3,4,5]} # 從列表的資料中產生字典
 
-#str->list
-#i=0
-#text = []
-#while i< len(arg):
-#    text.append(arg[i])
-#    i=i+1
-
 #async -> await
 
 def is_number(n):
@@ -58,22 +51,25 @@ class Counter(dict):
     def __missing__(self,key): 
         return 0
 
-class point():
-    def __init__(self,userID:str):
+class User():
+    def __init__(self,userid):
+        self.id = str(userid)
+        self.point = Point(self.id)
+        #self.name = qweqwe
+
+class Point():
+    def __init__(self,userid:str):
         jpt = Counter(json.load(open('database/point.json',mode='r',encoding='utf8')))
-        self.user = userID
-        self.pt = jpt
+        self.user = str(userid) #用戶
+        self.pt = jpt[self.user] #用戶擁有PT數
     
-    def check(self):
-        return self.pt
-    
-    def set(self,amount:int):
+    def set(self,amount:int): #設定用戶PT
         jpt = Counter(json.load(open('database/point.json',mode='r',encoding='utf8')))
         with open('database/point.json',mode='w',encoding='utf8') as jfile:
             jpt[self.user] = amount
             json.dump(jpt,jfile,indent=4)
     
-    def add(self,amount:int):
+    def add(self,amount:int): #增減用戶PT
         jpt = Counter(json.load(open('database/point.json',mode='r',encoding='utf8')))
         with open('database/point.json',mode='w',encoding='utf8') as jfile:
             jpt[self.user] += amount
@@ -161,6 +157,17 @@ class BRS():
         embed.add_field(name='發生頻道', value=f'{msg.channel}\n{msg.channel.id}', inline=True)
         embed.add_field(name='發生群組', value=f'{msg.guild}\n{msg.guild.id}', inline=True)
         await channel.send(embed=embed)
+
+    async def feedback(self,ctx,msg):
+        jdata = json.load(open('setting.json',mode='r',encoding='utf8'))
+        feedback_channel = self.bot.get_channel(jdata['feedback_channel'])
+        embed=discord.Embed(color=0xc4e9ff)
+        embed.set_author(name="BRS | 回饋訊息")
+        embed.add_field(name='訊息內容', value=msg, inline=True)
+        embed.add_field(name='發送者', value=f"{ctx.author}\n{ctx.author.id}", inline=False)
+        embed.add_field(name='來源頻道', value=f'{ctx.channel}\n{ctx.channel.id}', inline=True)
+        embed.add_field(name='來源群組', value=f'{ctx.guild}\n{ctx.guild.id}', inline=True)
+        await feedback_channel.send(embed=embed)
 
 class converter():
     def time(arg:str):

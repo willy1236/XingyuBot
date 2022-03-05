@@ -16,12 +16,15 @@ class error(Cog_Extension):
         elif isinstance(error,commands.errors.ArgumentParsingError):
             await ctx.send('參數錯誤:給予了錯誤參數')
             print("錯誤參數:",error)
+        elif isinstance(error,commands.errors.BadArgument):
+            await ctx.send('參數錯誤:找不到此參數')
         elif isinstance(error,commands.errors.CommandNotFound):
             await ctx.send('沒找到指令:請確認指令是否輸入錯誤')
         elif isinstance(error,commands.errors.MissingPermissions):
             await ctx.send('缺少權限:你沒有權限來使用此指令')
         elif isinstance(error,commands.errors.BotMissingPermissions):
             await ctx.send('缺少權限:機器人沒有權限來使用此指令')
+            print("缺少權限:",error.missing_permissions)
         elif isinstance(error,commands.errors.NotOwner):
             await ctx.send('缺少權限:你不是機器人擁有者')
         elif isinstance(error,commands.errors.CommandOnCooldown):
@@ -34,6 +37,11 @@ class error(Cog_Extension):
         
         elif isinstance(error,KeyError):
             await ctx.send('參數缺失:發生KeyError錯誤')
+
+        elif isinstance(error,discord.HTTPException):
+            await ctx.send(f'HTTP錯誤:{error.response.status}錯誤')
+            print(error.response.status,error.message)
+        
         else:
             await BRS.error(self,ctx,error)
             await ctx.send('發生未知錯誤，請向機器人擁有者回報')

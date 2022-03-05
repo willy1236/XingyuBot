@@ -3,13 +3,13 @@ from discord.errors import Forbidden, NotFound
 from discord.ext import commands
 import json ,random,asyncio
 
-from library import Counter,find,converter,random_color,point,BRS
+from library import Counter,find,converter,random_color,Point,BRS,User
 from core.classes import Cog_Extension
 
 
 jdata = json.load(open('setting.json','r',encoding='utf8'))
 picdata = json.load(open('database/picture.json',mode='r',encoding='utf8'))
-role_ignore = [858566145156972554,901713612668813312,879587736128999454,613748153644220447,884082363859083305,613749564356427786,861812096777060352,889148839016169542,874628716385435719,858558233403719680,891644752666198047,896424834475638884,706794165094187038,619893837833306113,877934319249797120]
+rsdata = Counter(json.load(open('database/role_save.json',mode='r',encoding='utf8')))
 
 class command(Cog_Extension):
     @commands.command()
@@ -17,28 +17,28 @@ class command(Cog_Extension):
         success = 0
         member = await find.user(ctx,id)
         if member != None:
-            embed = discord.Embed(title=f'{member.name}#{member.discriminator}', description="ID:用戶(伺服器成員)", color=0xc4e9ff)
+            embed = discord.Embed(title=f'{member.name}#{member.discriminator}', description="ID:用戶(伺服器成員)", color=jdata['embed_color'])
             embed.add_field(name="暱稱", value=member.nick, inline=False)
             embed.add_field(name="是否為機器人", value=member.bot, inline=False)
             embed.add_field(name="最高身分組", value=member.top_role.mention, inline=True)
             embed.add_field(name="目前狀態", value=member.status, inline=True)
             embed.add_field(name="是否為Discord官方", value=member.system, inline=False)
             embed.add_field(name="帳號創建日期", value=member.created_at, inline=False)
-    #        embed.set_thumbnail(url=member.display_avatar.url)
+            embed.set_thumbnail(url=member.display_avatar.url)
             success += 1
 
         user = await find.user2(ctx,id)
         if user != None and member == None:
-            embed = discord.Embed(title=f'{user.name}#{user.discriminator}', description="ID:用戶", color=0xc4e9ff)
+            embed = discord.Embed(title=f'{user.name}#{user.discriminator}', description="ID:用戶", color=jdata['embed_color'])
             embed.add_field(name="是否為機器人", value=user.bot, inline=False)
             embed.add_field(name="是否為Discord官方", value=user.system, inline=False)
             embed.add_field(name="帳號創建日期", value=user.created_at, inline=False)
-    #        embed.set_thumbnail(url=user.display_avatar.url)
+            embed.set_thumbnail(url=user.display_avatar.url)
             success += 1
 
         channel = await find.channel(ctx,id)
         if channel != None:
-            embed = discord.Embed(title=channel.name, description="ID:頻道", color=0xc4e9ff)
+            embed = discord.Embed(title=channel.name, description="ID:頻道", color=jdata['embed_color'])
             embed.add_field(name="所屬類別", value=channel.category, inline=False)
             embed.add_field(name="所屬公會", value=channel.guild, inline=False)
             embed.add_field(name="創建時間", value=channel.created_at, inline=False)
@@ -46,7 +46,7 @@ class command(Cog_Extension):
         
         guild = await find.guild(ctx,id)
         if guild != None:
-            embed = discord.Embed(title=guild.name, description="ID:公會", color=0xc4e9ff)
+            embed = discord.Embed(title=guild.name, description="ID:公會", color=jdata['embed_color'])
             embed.add_field(name="公會擁有者", value=guild.owner, inline=False)
             embed.add_field(name="創建時間", value=guild.created_at, inline=False)
             embed.add_field(name="驗證等級", value=guild.verification_level, inline=False)
@@ -69,39 +69,23 @@ class command(Cog_Extension):
     @commands.command()
     @commands.cooldown(rate=1,per=10)
     async def feedback(self,ctx,*,msg):
-        send_msg = await ctx.send('請稍後...',delete_after=5)
-        user = ctx.author
-        guild = ctx.guild
-        channel = ctx.channel
-        feedback_channel = self.bot.get_channel(jdata['feedback_channel'])
-        embed = discord.Embed(color=0xc4e9ff)
-        embed.add_field(name='廣播電台 | 回饋訊息', value=msg, inline=False)
-    #    embed.set_author(name=f'{user}\n({user.id})',icon_url=f'{user.display_avatar.url}')
-        embed.set_footer(text=f'來自: {guild},{channel}')
-        await feedback_channel.send(embed=embed)
+        send_msg = await ctx.send('請稍後...',delete_after=10)
+        await BRS.feedback(self,ctx,msg)
         await ctx.message.delete()
         await send_msg.edit('訊息已發送',delete_after=5)
 
 
     @commands.group(invoke_without_command=True)
     async def role(self,ctx,*user_list):
-        embed=discord.Embed(color=0xc4e9ff)
+        embed=discord.Embed(color=jdata['embed_color'])
         embed.set_author(name="身分組計算結果")
+        rsdata = Counter(json.load(open('database/role_save.json',mode='r',encoding='utf8')))
         for i in user_list:
             user = await find.user(ctx,i)
             if user != None:
-                l = 0
-                ignore_count = 0
-                role_list = user.roles
-                while l < len(role_list):
-                    if role_list[l].id in role_ignore:
-                        role_list.remove(role_list[l])
-                        ignore_count += 1
-                    else:
-                        l += 1
-                role_count = len(role_list)-1
-                
-                embed.add_field(name=user.name, value=f"{role_count}(-{ignore_count})", inline=False)
+                role_count = len(rsdata[str(user.id)])
+
+                embed.add_field(name=user.name, value=f"{role_count}", inline=False)
                 # if ignore_count > 0:
                 #     text = text + f'\n{user.name}扣除{ignore_count}個後擁有{role_count}個身分組'
                 # else:
@@ -118,22 +102,42 @@ class command(Cog_Extension):
         color = discord.Colour.from_rgb(r,g,b)
         new_role = await ctx.guild.create_role(name=name,permissions=permission,color=color)
         if user != None:
-            await user.add_roles(new_role)
+            await user.add_roles(new_role,reason='指令:加身分組')
+            await ctx.message.add_reaction('✔️')
         await ctx.message.add_reaction('✅')
 
 
     @role.command()
     @commands.is_owner()
-    async def ignore(self,ctx,role='None'):
-        if role != 'None':
-            role = await find.role(ctx,role)
-
-        if ctx.guild.id == 613747262291443742:
-            if role == 'None':
-                text = '刪除清單:\n'
-                for i in role_ignore:
-                    text = text + ctx.guild.get_role(i).name + ','
-                await ctx.send(text)
+    async def save(self,ctx,user):
+        def save_role(user):
+            dict = rsdata
+            roledata = dict[str(user.id)] or {}
+            for role in user.roles:
+                if role.id == 877934319249797120:
+                    break
+                if role.name == '@everyone':
+                    continue
+                if str(role.id) not in roledata:
+                    print(f'新增:{role.name}')
+                roledata[str(role.id)] = [role.name,role.color.to_rgb(),role.created_at.strftime('%Y%m%d')]
+                dict[str(user.id)] = roledata
+            with open('database/role_save.json',mode='w',encoding='utf8') as jfile:
+                json.dump(dict,jfile,indent=4)
+        
+        guild = self.bot.get_guild(jdata['guild']['001'])
+        add_role = guild.get_role(877934319249797120)
+        if user == 'all':
+            for user in add_role.members:
+                save_role(user)
+            await ctx.message.add_reaction('✅')
+        else:
+            user = await find.user(ctx,user)
+            if user != None and add_role in user.roles:
+                save_role(user)
+                await ctx.message.add_reaction('✅')
+            elif add_role not in user.roles:
+                ctx.send('錯誤:此用戶沒有"加身分組"')
 
 
     @role.command()
@@ -186,7 +190,7 @@ class command(Cog_Extension):
         
         with open('database/lottery.json',mode='w',encoding='utf8') as jfile:
             json.dump(jloot,jfile,indent=4)
-        embed=discord.Embed(color=0xc4e9ff)
+        embed=discord.Embed(color=jdata['embed_color'])
         embed.set_author(name="Lottery System",icon_url=picdata['lottery_001'])
         embed.add_field(name='抽卡結果', value=f"六星:{result['six']} 五星:{result['five']} 四星:{result['four']} 三星:{result['three']}", inline=False)
         #text = f"抽卡結果:\n六星:{result['six']} 五星:{result['five']} 四星:{result['four']} 三星:{result['three']}\n未抽得六星次數:{jloot[user_id]}"
@@ -203,7 +207,7 @@ class command(Cog_Extension):
     @commands.group(invoke_without_command=True)
     async def bet(self,ctx,id,choice,money:int):
         bet_data = Counter(json.load(open('database/bet.json',mode='r',encoding='utf8')))
-        money_now = point(ctx.author.id).check
+        money_now = Point(ctx.author.id).pt
         if id not in bet_data:
             await ctx.send('編號錯誤:沒有此編號的賭盤喔')
         elif bet_data[id]['Ison'] == 0:
@@ -215,7 +219,7 @@ class command(Cog_Extension):
         elif money_now < money:
             await ctx.send('金額錯誤:你沒有那麼多點數')
         else:
-            point(ctx.author.id).add(money*-1)
+            Point(ctx.author.id).add(money*-1)
             bet_data[id][choice]['member'][str(ctx.author.id)] += money
             with open("database/bet.json",'w',encoding='utf8') as jfile:
                 json.dump(bet_data,jfile,indent=4)
@@ -249,7 +253,7 @@ class command(Cog_Extension):
             jfile.seek(0)
             json.dump(bet_data,jfile,indent=4)
         
-        embed = discord.Embed(title='賭盤', description=f'編號: {id}', color=0xc4e9ff)
+        embed = discord.Embed(title='賭盤', description=f'編號: {id}', color=jdata['embed_color'])
         embed.add_field(name='賭盤內容', value=title, inline=False)
         embed.add_field(name="粉紅幫", value=pink, inline=False)
         embed.add_field(name="藍藍幫", value=blue, inline=False)
@@ -289,7 +293,7 @@ class command(Cog_Extension):
         #點數計算
         for i in winner:
             pt1 = winner[i] * (mag+1)
-            point(i).add(pt1)
+            Point(i).add(pt1)
         #更新資料庫
         del bet_data[id]
         with open("database/bet.json",'w',encoding='utf8') as jfile:
@@ -306,6 +310,18 @@ class command(Cog_Extension):
         result = random.choice(args)
         await ctx.send(f'我選擇:{result}')
 
+    @commands.command()
+    async def ui(self,ctx,user=None):
+        user_dc = await find.user(ctx,user) or ctx.author
+        user = User(user_dc.id)
+        embed = discord.Embed(title=user_dc, color=jdata['embed_color'])
+        embed.add_field(name='Pt點數',value=user.point.pt)
+        await ctx.send(embed=embed)
+
+    @commands.slash_command(description='向大家說哈瞜')
+    async def hello(ctx, name: str = None):
+        name = name or ctx.author.name
+        await ctx.respond(f"Hello {name}!")
 
 def setup(bot):
     bot.add_cog(command(bot))

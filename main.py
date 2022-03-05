@@ -17,6 +17,8 @@ bot_code = 2
 jdata = json.load(open('setting.json',mode='r',encoding='utf8'))
 cdata = json.load(open('database/channel_settings.json',mode='r',encoding='utf8'))
 picdata = json.load(open('database/picture.json',mode='r',encoding='utf8'))
+tokens = json.load(open('token_settings.json',mode='r',encoding='utf8'))
+
 
 if bot_code ==1:
     bot = commands.Bot(command_prefix=commands.when_mentioned_or('!!'),owner_id=419131103836635136,intents=intents,case_insensitive=True, help_command=None)
@@ -207,13 +209,6 @@ async def permission(ctx,guild_id:int):
 #         else:
 #             await channel.send('👍')
 
-
-@bot.slash_command()
-async def hello(ctx, name: str = None):
-    name = name or ctx.author.name
-    await ctx.respond(f"Hello {name}!")
-
-
 for filename in os.listdir('./cmds'):
     if filename.endswith('.py'):
         bot.load_extension(f'cmds.{filename[:-3]}')
@@ -226,6 +221,6 @@ if __name__ == "__main__":
             keep_alive.keep_alive()
         except:
             pass
-        bot.run(jdata['TOKEN'])
+        bot.run(tokens['Bot1'])
     elif bot_code == 2:
-        bot.run(jdata['Bep_TOKEN'])
+        bot.run(tokens['Bep'])
