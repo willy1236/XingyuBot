@@ -1,7 +1,7 @@
 import json,random,discord
 from discord.ext import commands
 from core.classes import Cog_Extension
-from lib.User import *
+
 #(*args) 傳入多個參數
 #(**kwargs) 傳入多個參數並轉變為dict
 #'value' in dict 偵測dict內是否有value
@@ -30,6 +30,9 @@ from lib.User import *
 #dic={x:x*2 for x in [3,4,5]} # 從列表的資料中產生字典
 
 #async -> await
+
+picdata = json.load(open('database/picture.json',mode='r',encoding='utf8'))
+jdata = json.load(open('setting.json',mode='r',encoding='utf8'))
 
 def is_number(n):
     try:  
@@ -112,38 +115,68 @@ class find(Cog_Extension):
         return role
 
 class BRS():
-    async def error(self,ctx,arg:str):
+    async def error(self,ctx,error:str):
         jdata = json.load(open('setting.json',mode='r',encoding='utf8'))
-        channel = self.bot.get_channel(jdata['report_channel'])
-        embed=discord.Embed(color=0xc4e9ff)
+        report_channel = self.bot.get_channel(jdata['report_channel'])
+        embed=BRS.simple()
         embed.set_author(name="BRS | 錯誤回報")
-        embed.add_field(name='錯誤指令', value=arg, inline=True)
+        embed.add_field(name='錯誤指令', value=error, inline=True)
         embed.add_field(name='使用者', value=f"{ctx.author}\n{ctx.author.id}", inline=False)
         embed.add_field(name='發生頻道', value=f'{ctx.channel}\n{ctx.channel.id}', inline=True)
         embed.add_field(name='發生群組', value=f'{ctx.guild}\n{ctx.guild.id}', inline=True)
-        await channel.send(embed=embed)
+        await report_channel.send(embed=embed)
     
     async def scam(self,msg):
         jdata = json.load(open('setting.json',mode='r',encoding='utf8'))
-        channel = self.bot.get_channel(jdata['scam_channel'])
-        embed=discord.Embed(color=0xc4e9ff)
+        scam_channel = self.bot.get_channel(jdata['scam_channel'])
+        embed=BRS.simple()
         embed.set_author(name="BRS | 詐騙回報")
         embed.add_field(name='詐騙訊息', value=msg.content, inline=True)
         embed.add_field(name='發送者', value=f"{msg.author}\n{msg.author.id}", inline=False)
         embed.add_field(name='發生頻道', value=f'{msg.channel}\n{msg.channel.id}', inline=True)
         embed.add_field(name='發生群組', value=f'{msg.guild}\n{msg.guild.id}', inline=True)
-        await channel.send(embed=embed)
+        await scam_channel.send(embed=embed)
 
     async def feedback(self,ctx,msg):
         jdata = json.load(open('setting.json',mode='r',encoding='utf8'))
         feedback_channel = self.bot.get_channel(jdata['feedback_channel'])
-        embed=discord.Embed(color=0xc4e9ff)
+        embed=BRS.simple()
         embed.set_author(name="BRS | 回饋訊息")
         embed.add_field(name='訊息內容', value=msg, inline=True)
         embed.add_field(name='發送者', value=f"{ctx.author}\n{ctx.author.id}", inline=False)
         embed.add_field(name='來源頻道', value=f'{ctx.channel}\n{ctx.channel.id}', inline=True)
         embed.add_field(name='來源群組', value=f'{ctx.guild}\n{ctx.guild.id}', inline=True)
         await feedback_channel.send(embed=embed)
+    
+    #全群公告
+    def all_anno(msg):
+        embed=discord.Embed(description=msg,color=0xc4e9ff)
+        embed.set_author(name="Bot Radio Station",icon_url=picdata['radio_001'])
+        embed.set_footer(text='廣播電台 | 機器人全群公告')
+        return embed
+
+    #基本:帶機器人名稱
+    def basic(self,description:str=discord.Embed.Empty,title:str=discord.Embed.Empty):
+        embed = discord.Embed(title=title,description=description, color=0xc4e9ff)
+        embed.set_author(name=self.bot.user.name,icon_url=self.bot.user.display_avatar.url)
+        return embed
+    
+    #簡易:不帶名稱
+    def simple(description:str=discord.Embed.Empty,title:str=discord.Embed.Empty):
+        embed = discord.Embed(title=title,description=description, color=0xc4e9ff)
+        return embed
+
+    #Bot Radio Station 格式
+    def brs():
+        embed = discord.Embed(color=0xc4e9ff)
+        embed.set_author(name="Bot Radio Station",icon_url=picdata['radio_001'])
+        return embed
+
+    #Lottery System格式
+    def lottery():
+        embed = discord.Embed(color=0xc4e9ff)
+        embed.set_author(name="Lottery System",icon_url=picdata['lottery_001'])
+        return embed
 
 class converter():
     def time(arg:str):

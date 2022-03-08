@@ -44,7 +44,7 @@ class error(Cog_Extension):
         
         else:
             await BRS.error(self,ctx,error)
-            await ctx.send('發生未知錯誤，請向機器人擁有者回報')
+            await ctx.send(f'發生錯誤\n```{error}```')
             print(error)
 
     #@info.error

@@ -1,5 +1,5 @@
 import json
-from library import *
+from library import find
 
 class Counter(dict):
     def __missing__(self,key): 
@@ -10,7 +10,10 @@ class User():
         udata = json.load(open('database/user_settings/basic.json','r',encoding='utf8'))
         self.id = str(userid)
         self.point = Point(self.id)
-        #self.name = qweqwe
+        if udata[self.id]["name"]:
+            self.name = udata[self.id]["name"]
+        else:
+            self.name = find.user(userid).name
 
 class Point():
     def __init__(self,userid:str):

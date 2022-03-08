@@ -3,9 +3,9 @@ from discord.errors import Forbidden, NotFound
 from discord.ext import commands
 import json ,random,asyncio
 
-from library import Counter,find,converter,random_color,Point,BRS,User
+from library import Counter,find,converter,random_color,BRS
 from core.classes import Cog_Extension
-
+from lib.user import *
 
 jdata = json.load(open('setting.json','r',encoding='utf8'))
 picdata = json.load(open('database/picture.json',mode='r',encoding='utf8'))
@@ -17,7 +17,7 @@ class command(Cog_Extension):
         success = 0
         member = await find.user(ctx,id)
         if member != None:
-            embed = discord.Embed(title=f'{member.name}#{member.discriminator}', description="ID:用戶(伺服器成員)", color=jdata['embed_color'])
+            embed = BRS.simple(title=f'{member.name}#{member.discriminator}', description="ID:用戶(伺服器成員)")
             embed.add_field(name="暱稱", value=member.nick, inline=False)
             embed.add_field(name="是否為機器人", value=member.bot, inline=False)
             embed.add_field(name="最高身分組", value=member.top_role.mention, inline=True)
@@ -29,7 +29,7 @@ class command(Cog_Extension):
 
         user = await find.user2(ctx,id)
         if user != None and member == None:
-            embed = discord.Embed(title=f'{user.name}#{user.discriminator}', description="ID:用戶", color=jdata['embed_color'])
+            embed = BRS.simple(title=f'{user.name}#{user.discriminator}', description="ID:用戶")
             embed.add_field(name="是否為機器人", value=user.bot, inline=False)
             embed.add_field(name="是否為Discord官方", value=user.system, inline=False)
             embed.add_field(name="帳號創建日期", value=user.created_at, inline=False)
@@ -38,7 +38,7 @@ class command(Cog_Extension):
 
         channel = await find.channel(ctx,id)
         if channel != None:
-            embed = discord.Embed(title=channel.name, description="ID:頻道", color=jdata['embed_color'])
+            embed = BRS.simple(title=channel.name, description="ID:頻道")
             embed.add_field(name="所屬類別", value=channel.category, inline=False)
             embed.add_field(name="所屬公會", value=channel.guild, inline=False)
             embed.add_field(name="創建時間", value=channel.created_at, inline=False)
@@ -46,7 +46,7 @@ class command(Cog_Extension):
         
         guild = await find.guild(ctx,id)
         if guild != None:
-            embed = discord.Embed(title=guild.name, description="ID:公會", color=jdata['embed_color'])
+            embed = BRS.simple(title=guild.name, description="ID:公會")
             embed.add_field(name="公會擁有者", value=guild.owner, inline=False)
             embed.add_field(name="創建時間", value=guild.created_at, inline=False)
             embed.add_field(name="驗證等級", value=guild.verification_level, inline=False)
@@ -54,7 +54,7 @@ class command(Cog_Extension):
             embed.add_field(name="文字頻道數", value=len(guild.text_channels), inline=False)
             embed.add_field(name="語音頻道數", value=len(guild.voice_channels), inline=False)
             embed.set_footer(text='數字可能因權限不足而有少算，敬請特別注意')
-            embed.set_thumbnail(url=guild.icon_url)
+            embed.set_thumbnail(url=guild.icon.url)
             success += 1
             
         if success == 1:
@@ -77,7 +77,7 @@ class command(Cog_Extension):
 
     @commands.group(invoke_without_command=True)
     async def role(self,ctx,*user_list):
-        embed=discord.Embed(color=jdata['embed_color'])
+        embed=BRS.simple()
         embed.set_author(name="身分組計算結果")
         rsdata = Counter(json.load(open('database/role_save.json',mode='r',encoding='utf8')))
         for i in user_list:
@@ -94,6 +94,7 @@ class command(Cog_Extension):
 
 
     @role.command()
+    @commands.cooldown(rate=1,per=5)
     async def add(self,ctx,name,user=None):
         user = await find.user(ctx,user)
         permission = discord.Permissions.none()
@@ -165,7 +166,7 @@ class command(Cog_Extension):
         user_id = str(ctx.author.id)
         six_list = []
         six_list_100 = []
-        guaranteed = 300
+        guaranteed = 100
         jloot = Counter(json.load(open('database/lottery.json',mode='r',encoding='utf8')))
             
         while i < times:
@@ -190,8 +191,7 @@ class command(Cog_Extension):
         
         with open('database/lottery.json',mode='w',encoding='utf8') as jfile:
             json.dump(jloot,jfile,indent=4)
-        embed=discord.Embed(color=jdata['embed_color'])
-        embed.set_author(name="Lottery System",icon_url=picdata['lottery_001'])
+        embed=BRS.lottery()
         embed.add_field(name='抽卡結果', value=f"六星:{result['six']} 五星:{result['five']} 四星:{result['four']} 三星:{result['three']}", inline=False)
         #text = f"抽卡結果:\n六星:{result['six']} 五星:{result['five']} 四星:{result['four']} 三星:{result['three']}\n未抽得六星次數:{jloot[user_id]}"
         embed.add_field(name='保底累積', value=jloot[user_id], inline=False)
@@ -253,7 +253,7 @@ class command(Cog_Extension):
             jfile.seek(0)
             json.dump(bet_data,jfile,indent=4)
         
-        embed = discord.Embed(title='賭盤', description=f'編號: {id}', color=jdata['embed_color'])
+        embed = BRS.simple(title='賭盤', description=f'編號: {id}')
         embed.add_field(name='賭盤內容', value=title, inline=False)
         embed.add_field(name="粉紅幫", value=pink, inline=False)
         embed.add_field(name="藍藍幫", value=blue, inline=False)
@@ -309,14 +309,6 @@ class command(Cog_Extension):
     async def choice(self,ctx,*args):
         result = random.choice(args)
         await ctx.send(f'我選擇:{result}')
-
-    @commands.command()
-    async def ui(self,ctx,user=None):
-        user_dc = await find.user(ctx,user) or ctx.author
-        user = User(user_dc.id)
-        embed = discord.Embed(title=user_dc, color=jdata['embed_color'])
-        embed.add_field(name='Pt點數',value=user.point.pt)
-        await ctx.send(embed=embed)
 
     @commands.slash_command(description='向大家說哈瞜')
     async def hello(ctx, name: str = None):

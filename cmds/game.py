@@ -31,7 +31,7 @@ class game(Cog_Extension):
             url = 'https://lol.moa.tw/summoner/show/'+player
             lvl = player_search(url) or '讀取失敗'
 
-            embed = discord.Embed(title="LOL玩家查詢", url=url, color=jdata['embed_color'])
+            embed = discord.Embed(title="LOL玩家查詢", url=url, color=0xc4e9ff)
             embed.add_field(name="玩家名稱", value=player, inline=False)
             embed.add_field(name="等級", value=lvl, inline=False)
             embed.add_field(name="查詢戰績", value="LOL戰績網(lol.moa.tw)", inline=False)
@@ -86,7 +86,7 @@ class game(Cog_Extension):
                 else:
                     data[game] = 'None'
 
-            embed = discord.Embed(title=user, color=jdata['embed_color'])
+            embed = discord.Embed(title=user, color=0xc4e9ff)
             for game in games:
                 embed.add_field(name=game, value=data[game], inline=False)
             embed.set_thumbnail(url=user.display_avatar.url)

@@ -1,7 +1,8 @@
+from shutil import ignore_patterns
 import discord
 from discord.ext import commands
 import json, random, datetime, asyncio, os
-from library import find
+from library import find,BRS
 
 intents = discord.Intents.all()
 #intents.typing = False
@@ -17,7 +18,12 @@ bot_code = 2
 jdata = json.load(open('setting.json',mode='r',encoding='utf8'))
 cdata = json.load(open('database/channel_settings.json',mode='r',encoding='utf8'))
 picdata = json.load(open('database/picture.json',mode='r',encoding='utf8'))
-tokens = json.load(open('token_settings.json',mode='r',encoding='utf8'))
+if bot_code == 1:
+    tokens = {}
+    tokens['Bot1'] = os.environ['Bot1']
+    tokens['Bep'] = os.environ['Bep']
+elif bot_code == 2:
+    tokens = json.load(open('token_settings.json',mode='r',encoding='utf8'))
 
 
 if bot_code ==1:
@@ -33,7 +39,7 @@ async def on_ready():
     print(">> Bot is online <<")
     print(">> Bot online as",bot.user.name,"<<")
     print(">> Discord's version:",discord.__version__,"<<")
-    await bot.change_presence(activity=discord.Game(name='!!help'))
+    await bot.change_presence(activity=discord.Game(name='!!help'),status=discord.Status.online)
     
 
 #load
@@ -81,9 +87,7 @@ async def anno(ctx,*,msg):
     send_success = 0
     send_msg = await ctx.send('訊息發送中...')
 
-    embed=discord.Embed(description=f'{msg}',color=0xc4e9ff)
-    embed.set_author(name="Bot Radio Station",icon_url=picdata['radio_001'])
-    embed.set_footer(text='廣播電台 | 機器人全群公告')
+    embed= BRS.all_anno(msg)
     
     for i in cdata['all_anno']:
         channel = bot.get_channel(cdata['all_anno'][i])
@@ -209,8 +213,9 @@ async def permission(ctx,guild_id:int):
 #         else:
 #             await channel.send('👍')
 
+ignore_py = ['music']
 for filename in os.listdir('./cmds'):
-    if filename.endswith('.py'):
+    if filename.endswith('.py') and filename[:-3] not in ignore_py:
         bot.load_extension(f'cmds.{filename[:-3]}')
 
 

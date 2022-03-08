@@ -2,7 +2,8 @@ import discord
 from discord.ext import commands
 import json
 from core.classes import Cog_Extension
-from library import find,Point
+from library import find,Counter
+from lib.user import Point
 
 jdata = json.load(open('setting.json',mode='r',encoding='utf8'))
 
@@ -67,8 +68,34 @@ class economy_system(Cog_Extension):
             await ctx.send(f'錯誤:找不到用戶或模式輸入錯誤',delete_after=5)
 
     @commands.command()
+    async def sign(self,ctx):
+        await ctx.message.delete()
+        jdsign = json.load(open('database/sign_day.json',mode='r',encoding='utf8'))
+        jwsign = Counter(json.load(open('database/sign_week.json',mode='r',encoding='utf8')))
+        
+        if ctx.author.id not in jdsign:
+            signer = str(ctx.author.id)
+            #日常
+            jdsign.append(ctx.author.id)
+            with open('database/sign_day.json',mode='w',encoding='utf8') as jfile:
+                json.dump(jdsign,jfile,indent=4)
+            #週常
+            with open('database/sign_week.json','w',encoding='utf8') as jfile:
+                jwsign[signer] = jwsign[signer]+1
+                json.dump(jwsign,jfile,indent=4)
+            
+            if ctx.guild.id == jdata['guild']['001']:
+                Point(signer).add(1)
+                await ctx.send(f'{ctx.author.mention} 簽到完成:pt點數+1',delete_after=5)
+            else:
+                await ctx.send(f'{ctx.author.mention} 簽到完成!',delete_after=5)
+
+        else:
+            await ctx.send(f'{ctx.author.mention} 已經簽到過了喔',delete_after=5)
+
+    @commands.command()
     async def shop(self,ctx):
-        embed=discord.Embed(color=jdata['embed_color'])
+        embed=discord.Embed(color=0xc4e9ff)
         embed.set_author(name="商城")
         await ctx.send(embed=embed)
 
