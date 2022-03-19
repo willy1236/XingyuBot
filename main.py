@@ -13,7 +13,7 @@ intents = discord.Intents.all()
 
 global bot_code
 #1:dc小幫手 2:Bep
-bot_code = 2
+bot_code = 1
 
 jdata = json.load(open('setting.json',mode='r',encoding='utf8'))
 cdata = json.load(open('database/channel_settings.json',mode='r',encoding='utf8'))
