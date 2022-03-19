@@ -231,6 +231,12 @@ if __name__ == "__main__":
             keep_alive.keep_alive()
         except:
             pass
-        bot.run(tokens['Bot1'])
+        try:
+            bot.run(tokens['Bot1'])
+        except discord.errors.LoginFailure:
+            print('機器人載入失敗')
     elif bot_code == 2:
-        bot.run(tokens['Bep'])
+        try:
+            bot.run(tokens['Bep'])
+        except discord.errors.LoginFailure:
+            print('機器人載入失敗')
