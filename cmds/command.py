@@ -125,7 +125,7 @@ class command(Cog_Extension):
                     continue
                 if str(role.id) not in roledata:
                     print(f'新增:{role.name}')
-                roledata[str(role.id)] = [role.name,role.color.to_rgb(),role.created_at.strftime('%Y%m%d')]
+                roledata[str(role.id)] = [role.name,role.created_at.strftime('%Y%m%d')]
                 dict[str(user.id)] = roledata
             with open('database/role_save.json',mode='w',encoding='utf8') as jfile:
                 json.dump(dict,jfile,indent=4)
