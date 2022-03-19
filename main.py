@@ -228,12 +228,11 @@ for filename in os.listdir('./cmds'):
 
 
 if __name__ == "__main__":
-    if bot_code == 1:
-        try:
-            import keep_alive
-            keep_alive.keep_alive()
-        except:
-            pass
+    try:
+        import keep_alive
+        keep_alive.keep_alive()
+    except:
+        pass
 
     try:
         bot.run(token)
