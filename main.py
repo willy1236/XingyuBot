@@ -11,19 +11,22 @@ intents = discord.Intents.all()
 #intents.messages = True
 #intents.voice_states = True
 
+bot_list={"1":"Bot1", "2":"Bep", "3":"Bot2"}
 global bot_code
 #1:dc小幫手 2:Bep
 bot_code = 2
+botuser = bot_list[str(bot_code)]
 
 jdata = json.load(open('setting.json',mode='r',encoding='utf8'))
 cdata = json.load(open('database/channel_settings.json',mode='r',encoding='utf8'))
 picdata = json.load(open('database/picture.json',mode='r',encoding='utf8'))
-if bot_code == 1:
-    tokens = {}
-    tokens['Bot1'] = os.environ['Bot1']
-    tokens['Bep'] = os.environ['Bep']
-elif bot_code == 2:
+
+try:
     tokens = json.load(open('token_settings.json',mode='r',encoding='utf8'))
+    token = tokens[botuser]
+except:
+    token = os.environ[botuser]
+
 
 
 if bot_code ==1:
@@ -231,12 +234,8 @@ if __name__ == "__main__":
             keep_alive.keep_alive()
         except:
             pass
-        try:
-            bot.run(tokens['Bot1'])
-        except discord.errors.LoginFailure:
-            print('機器人載入失敗')
-    elif bot_code == 2:
-        try:
-            bot.run(tokens['Bep'])
-        except discord.errors.LoginFailure:
-            print('機器人載入失敗')
+
+    try:
+        bot.run(token)
+    except discord.errors.LoginFailure:
+        print('發生錯誤:機器人登入失敗')
