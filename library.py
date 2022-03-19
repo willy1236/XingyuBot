@@ -61,7 +61,7 @@ class find(Cog_Extension):
             member = None
         else:
             try:
-                member = await commands.MemberConverter().convert(ctx,int(arg))
+                member = await commands.MemberConverter().convert(ctx,str(arg))
             except commands.MemberNotFound:
                 member = None
         return member
