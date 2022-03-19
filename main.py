@@ -14,7 +14,7 @@ intents = discord.Intents.all()
 bot_list={"1":"Bot1", "2":"Bep", "3":"Bot2"}
 global bot_code
 #1:dc小幫手 2:Bep
-bot_code = 2
+bot_code = 1
 botuser = bot_list[str(bot_code)]
 
 jdata = json.load(open('setting.json',mode='r',encoding='utf8'))
