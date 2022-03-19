@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 import json
-from lib.user import *
+from BotLib.user import *
 from core.classes import Cog_Extension
 from library import BRS
 
