@@ -1,0 +1,8 @@
+language="python3"
+run = """
+pip install py-cord[speed]==2.0.0b5
+python main.py
+"""
+
+[packager]
+ignoredPackages=["discord.py", "discord"]
