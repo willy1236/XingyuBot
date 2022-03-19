@@ -3,7 +3,7 @@ from discord.ext import commands
 import json
 from core.classes import Cog_Extension
 from library import find,Counter
-from lib.user import Point
+from BotLib.user import Point
 
 jdata = json.load(open('setting.json',mode='r',encoding='utf8'))
 
