@@ -8,6 +8,7 @@ from library import BRS
 jdata = json.load(open('setting.json',mode='r',encoding='utf8'))
 cdata = json.load(open('database/channel_settings.json',mode='r',encoding='utf8'))
 keywords = ['Free','免費','Nitro','premiums-nitro','discerd.gift','disceord.gift']
+voice_updata = False
 class event(Cog_Extension):
     #跨群聊天Ver.1.0
     @commands.Cog.listener()
@@ -42,7 +43,7 @@ class event(Cog_Extension):
 
     @commands.Cog.listener()
     async def on_voice_state_update(self,user, before, after):
-            if bot_code == 1:
+            if voice_updata:
                 NowTime = datetime.datetime.now()
                 if before.channel != None and after.channel != None and before.channel != after.channel:
                     embed=discord.Embed(description=f'{user.mention} 更換語音',color=0x4aa0b5,timestamp=NowTime)
