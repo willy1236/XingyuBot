@@ -56,60 +56,60 @@ class Counter(dict):
 
 #arg:要檢測的內容(名稱#0000,id,mention...)
 class find(Cog_Extension):
-    async def user(ctx,arg):
+    async def user(ctx,arg:str):
         if arg == None:
             member = None
         else:
             try:
-                member = await commands.MemberConverter().convert(ctx,arg)
+                member = await commands.MemberConverter().convert(ctx,int(arg))
             except commands.MemberNotFound:
                 member = None
         return member
 
-    async def channel(ctx,arg):
+    async def channel(ctx,arg:str):
         if arg == None:
             channel = None
         else:
             try:
-                channel = await commands.TextChannelConverter().convert(ctx,arg)
+                channel = await commands.TextChannelConverter().convert(ctx,str(arg))
             except commands.ChannelNotFound:
                 channel = None
         return channel
 
-    async def role(ctx,arg):
+    async def role(ctx,arg:str):
         if arg == None:
             role = None
         else:
             try:
-                role = await commands.RoleConverter().convert(ctx,arg)
+                role = await commands.RoleConverter().convert(ctx,str(arg))
             except commands.RoleNotFound:
                 role = None
         return role
 
-    async def user2(ctx,arg):
+    async def user2(ctx,arg:str):
         try:
-            user = await commands.UserConverter().convert(ctx,arg)
+            user = await commands.UserConverter().convert(ctx,str(arg))
         except commands.UserNotFound:
             user = None
         return user
 
-    async def emoji(ctx,arg):
+    async def emoji(ctx,arg:str):
         try:
-            emoji = await commands.EmojiConverter().convert(ctx,arg)
+            emoji = await commands.EmojiConverter().convert(ctx,str(arg))
         except commands.EmojiNotFound:
             emoji = None
         return emoji
 
-    async def guild(ctx,arg):
+    async def guild(ctx,arg:str):
         try:
-            guild = await commands.GuildConverter().convert(ctx,arg)
+            guild = await commands.GuildConverter().convert(ctx,str(arg))
         except commands.GuildNotFound:
             guild = None
         return guild
 
-    async def role(ctx,arg):
+    async def role(ctx,arg:str):
         try:
-            role = await commands.RoleConverter().convert(ctx,arg)
+            role = await commands.RoleConverter().convert(ctx,str(arg))
         except commands.RoleNotFound:
             role = None
         return role
@@ -120,7 +120,8 @@ class BRS():
         report_channel = self.bot.get_channel(jdata['report_channel'])
         embed=BRS.simple()
         embed.set_author(name="BRS | 錯誤回報")
-        embed.add_field(name='錯誤指令', value=error, inline=True)
+        embed.add_field(name='錯誤指令', value=f'```py\n{error}```', inline=True)
+        embed.add_field(name='使用指令', value=f'```{ctx.message.content}```', inline=False)
         embed.add_field(name='使用者', value=f"{ctx.author}\n{ctx.author.id}", inline=False)
         embed.add_field(name='發生頻道', value=f'{ctx.channel}\n{ctx.channel.id}', inline=True)
         embed.add_field(name='發生群組', value=f'{ctx.guild}\n{ctx.guild.id}', inline=True)

@@ -1,4 +1,3 @@
-from shutil import ignore_patterns
 import discord
 from discord.ext import commands
 import json, random, datetime, asyncio, os
@@ -12,6 +11,7 @@ intents = discord.Intents.all()
 #intents.messages = True
 #intents.voice_states = True
 
+global bot_code
 #1:dc小幫手 2:Bep
 bot_code = 2
 
@@ -153,6 +153,11 @@ async def reset(ctx,arg=None):
 async def ping(ctx):
     await ctx.send(f'延遲為:{round(bot.latency*1000)} ms')
 
+# @bot.command()
+# @commands.is_owner()
+# async def shutdown(ctx):
+#     await ctx.send('機器人關閉中...')
+#     await bot.close()
 
 @bot.command()
 @commands.is_owner()

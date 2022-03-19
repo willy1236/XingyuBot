@@ -77,6 +77,8 @@ class command(Cog_Extension):
 
     @commands.group(invoke_without_command=True)
     async def role(self,ctx,*user_list):
+        if 'default' in user_list:
+            user_list = (419131103836635136,528935362199027716,465831362168094730,539405949681795073,723435216244572160,490136735557222402)
         embed=BRS.simple()
         embed.set_author(name="身分組計算結果")
         rsdata = Counter(json.load(open('database/role_save.json',mode='r',encoding='utf8')))
@@ -95,15 +97,17 @@ class command(Cog_Extension):
 
     @role.command()
     @commands.cooldown(rate=1,per=5)
-    async def add(self,ctx,name,user=None):
-        user = await find.user(ctx,user)
+    async def add(self,ctx,name,*user_list):
         permission = discord.Permissions.none()
         #color = discord.Colour.random()
         r,g,b=random_color()
         color = discord.Colour.from_rgb(r,g,b)
         new_role = await ctx.guild.create_role(name=name,permissions=permission,color=color)
-        if user != None:
-            await user.add_roles(new_role,reason='指令:加身分組')
+        if user_list != []:
+            for user in user_list:
+                user = await find.user(ctx,user)
+                if user != None:
+                    await user.add_roles(new_role,reason='指令:加身分組')
             await ctx.message.add_reaction('✔️')
         await ctx.message.add_reaction('✅')
 

@@ -4,6 +4,7 @@ import json, datetime
 from core.classes import Cog_Extension
 from library import BRS
 
+
 jdata = json.load(open('setting.json',mode='r',encoding='utf8'))
 cdata = json.load(open('database/channel_settings.json',mode='r',encoding='utf8'))
 keywords = ['Free','免費','Nitro','premiums-nitro','discerd.gift','disceord.gift']
@@ -41,28 +42,29 @@ class event(Cog_Extension):
 
     @commands.Cog.listener()
     async def on_voice_state_update(self,user, before, after):
-            NowTime = datetime.datetime.now()
-            if before.channel != None and after.channel != None and before.channel != after.channel:
-                embed=discord.Embed(description=f'{user.mention} 更換語音',color=0x4aa0b5,timestamp=NowTime)
-            elif before.channel == None and after.channel != None:
-                embed=discord.Embed(description=f'{user.mention} 進入語音',color=0x4aa0b5,timestamp=NowTime)
-            elif before.channel != None and after.channel == None:
-                embed=discord.Embed(description=f'{user.mention} 離開語音',color=0x4aa0b5,timestamp=NowTime)
-            else:
-                return
-            embed.set_author(name=user,icon_url=user.display_avatar.url)
+            if bot_code == 1:
+                NowTime = datetime.datetime.now()
+                if before.channel != None and after.channel != None and before.channel != after.channel:
+                    embed=discord.Embed(description=f'{user.mention} 更換語音',color=0x4aa0b5,timestamp=NowTime)
+                elif before.channel == None and after.channel != None:
+                    embed=discord.Embed(description=f'{user.mention} 進入語音',color=0x4aa0b5,timestamp=NowTime)
+                elif before.channel != None and after.channel == None:
+                    embed=discord.Embed(description=f'{user.mention} 離開語音',color=0x4aa0b5,timestamp=NowTime)
+                else:
+                    return
+                embed.set_author(name=user,icon_url=user.display_avatar.url)
 
-            if before.channel:
-                embed.set_footer(text=before.channel.guild.name)
-            elif after.channel:
-                embed.set_footer(text=after.channel.guild.name)
-            
-            if before.channel != None:
-                embed.add_field(name='頻道', value=f'{before.channel.mention}', inline=False)
-            if after.channel != None:
-                embed.add_field(name='頻道', value=f'{after.channel.mention}', inline=False)
-            
-            await self.bot.get_channel(950039715879464970).send(embed=embed)
+                if before.channel:
+                    embed.set_footer(text=before.channel.guild.name)
+                elif after.channel:
+                    embed.set_footer(text=after.channel.guild.name)
+                
+                if before.channel != None:
+                    embed.add_field(name='頻道', value=f'{before.channel.mention}', inline=False)
+                if after.channel != None:
+                    embed.add_field(name='頻道', value=f'{after.channel.mention}', inline=False)
+                
+                await self.bot.get_channel(950039715879464970).send(embed=embed)
             
 
 def setup(bot):
