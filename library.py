@@ -49,13 +49,13 @@ def random_color():
         color.append(random.choice(range(200)))
     return color
 
-#如果讀不到資料補0避免keyerror
 class Counter(dict):
+    '''如果讀不到資料補0避免keyerror'''
     def __missing__(self,key): 
         return 0
 
-#arg:要檢測的內容(名稱#0000,id,mention...)
 class find(Cog_Extension):
+    '''arg:要檢測的內容(名稱#0000,id,mention...)'''
     async def user(ctx,arg:str):
         if arg == None:
             member = None
@@ -149,39 +149,40 @@ class BRS():
         embed.add_field(name='來源群組', value=f'{ctx.guild}\n{ctx.guild.id}', inline=True)
         await feedback_channel.send(embed=embed)
     
-    #全群公告
+
     def all_anno(msg):
+        '''全群公告'''
         embed=discord.Embed(description=msg,color=0xc4e9ff)
         embed.set_author(name="Bot Radio Station",icon_url=picdata['radio_001'])
         embed.set_footer(text='廣播電台 | 機器人全群公告')
         return embed
 
-    #基本:帶機器人名稱
     def basic(self,description:str=discord.Embed.Empty,title:str=discord.Embed.Empty):
+        '''基本:帶機器人名稱'''
         embed = discord.Embed(title=title,description=description, color=0xc4e9ff)
         embed.set_author(name=self.bot.user.name,icon_url=self.bot.user.display_avatar.url)
         return embed
     
-    #簡易:不帶名稱
     def simple(description:str=discord.Embed.Empty,title:str=discord.Embed.Empty):
+        '''簡易:不帶名稱'''
         embed = discord.Embed(title=title,description=description, color=0xc4e9ff)
         return embed
 
-    #Bot Radio Station 格式
     def brs():
+        '''Bot Radio Station 格式'''
         embed = discord.Embed(color=0xc4e9ff)
         embed.set_author(name="Bot Radio Station",icon_url=picdata['radio_001'])
         return embed
 
-    #Lottery System格式
     def lottery():
+        '''Lottery System格式'''
         embed = discord.Embed(color=0xc4e9ff)
         embed.set_author(name="Lottery System",icon_url=picdata['lottery_001'])
         return embed
 
 class converter():
     def time(arg:str):
-        #10s->1,0用str相加 s則轉換後用int相乘
+        '''10s->1,0用str相加 s則轉換後用int相乘'''
         dict = {'s':1,'m':60,'h':3600}
         n=0
         m='0'
