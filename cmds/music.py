@@ -54,7 +54,7 @@ class music(Cog_Extension):
                     with youtube_dl.YoutubeDL(YDL_OPTIONS) as ydl:
                         info = ydl.extract_info(player_list[guild.id][0], download=False)
                         url2 = info['formats'][0]['url']
-                        source = await discord.FFmpegOpusAudio.from_probe(url2, **FFMPEG_OPTIONS,executable="C:/ffmpeg/bin/ffmpeg.exe")
+                        source = await discord.FFmpegOpusAudio.from_probe(url2, **FFMPEG_OPTIONS)
                         vc.play(source)
                         vc.is_playing()
             else:
