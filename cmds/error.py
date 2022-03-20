@@ -43,7 +43,8 @@ class error(Cog_Extension):
             print(error.response.status,error.message)
         
         else:
-            await BRS.error(self,ctx,error)
+            if ctx.guild.id != 566533708371329024:
+                await BRS.error(self,ctx,error)
             await ctx.send(f'發生錯誤\n```{error}```')
             print(error)
 
