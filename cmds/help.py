@@ -66,7 +66,7 @@ class help(Cog_Extension):
     @commands.cooldown(rate=1,per=3)
     async def help(self,ctx):
         embed = BRS.basic(self,"目前可使用的指令如下:")
-        embed.add_field(name="!!help <系列指令>", value="查詢系列指令\n目前支援:admin,pt,game,set,role,bet", inline=False)
+        embed.add_field(name="!!help <系列指令>", value="查詢系列指令\n目前支援:admin,pt,game,set,role,bet,music", inline=False)
         embed.add_field(name="!!info <內容/help>", value="獲得相關資訊", inline=False)
         #embed.add_field(name="!!osu <player> <玩家名稱>", value="查詢Osu玩家(更多功能敬請期待)", inline=False)
         embed.add_field(name="!!feedback <內容>", value="傳送訊息給機器人擁有者", inline=False)
@@ -124,6 +124,25 @@ class help(Cog_Extension):
         embed.add_field(name="!!bet end <blue/pink>",value="結算賭盤",inline=False)
         await ctx.send(embed=embed)
     
+    @help.command()
+    async def music(self,ctx):
+        embed = BRS.simple("音樂(music) 指令:")
+        embed.add_field(name="!!play <歌曲>", value="播放歌曲\n別名:p", inline=False)
+        embed.add_field(name="!!queue", value="歌曲列表\n別名:q", inline=False)
+        embed.add_field(name="!!now", value="現在播放的歌曲\n別名:current,playing,np", inline=False)
+        embed.add_field(name="!!skip", value="投票跳過歌曲，需三個人才可跳過，點歌者可強制跳過\n別名:s", inline=False)
+        embed.add_field(name="!!pause", value="暫停播放\n別名:pa", inline=False)
+        embed.add_field(name="!!resume", value="繼續播放\n別名:re", inline=False)
+        embed.add_field(name="!!join", value="讓機器人加入你的語音", inline=False)
+        embed.add_field(name="!!summon [頻道]", value="讓機器人加入指定語音", inline=False)
+        embed.add_field(name="!!leave", value="讓機器人離開你的語音\n別名:disconnect,dc", inline=False)
+        embed.add_field(name="!!volume <音量>", value="設定音量", inline=False)
+        embed.add_field(name="!!stop", value="停止播放歌曲", inline=False)
+        embed.add_field(name="!!shuffle", value="隨機撥放\n別名:random,r", inline=False)
+        embed.add_field(name="!!loop", value="循環歌曲", inline=False)
+        embed.add_field(name="!!remove <歌曲位置>", value="移除歌曲\n別名:rm", inline=False)
+        await ctx.send(embed=embed)
+
     @help.command()
     @commands.is_owner()
     async def owner(self,ctx):
