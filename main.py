@@ -221,7 +221,7 @@ async def permission(ctx,guild_id:int):
 #         else:
 #             await channel.send('👍')
 
-ignore_py = []
+ignore_py = ['music1','music2']
 for filename in os.listdir('./cmds'):
     if filename.endswith('.py') and filename[:-3] not in ignore_py:
         bot.load_extension(f'cmds.{filename[:-3]}')
