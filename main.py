@@ -1,7 +1,7 @@
-import discord
+import discord,json, random, datetime, asyncio, os
 from discord.ext import commands
-import json, random, datetime, asyncio, os
 from library import find,BRS
+from BotLib.basic import Database
 
 intents = discord.Intents.all()
 #intents.typing = False
@@ -17,9 +17,9 @@ global bot_code
 bot_code = 2
 botuser = bot_list[str(bot_code)]
 
-jdata = json.load(open('setting.json',mode='r',encoding='utf8'))
-cdata = json.load(open('database/channel_settings.json',mode='r',encoding='utf8'))
-picdata = json.load(open('database/picture.json',mode='r',encoding='utf8'))
+jdata = Database().jdata
+cdata = Database().cdata
+picdata = Database().picdata
 
 try:
     tokens = json.load(open('token_settings.json',mode='r',encoding='utf8'))
@@ -138,9 +138,8 @@ async def reaction(ctx,msgid:int,mod:str,*,emojiid):
 async def reset(ctx,arg=None):
     if arg == 'sign':
         task_report_channel = bot.get_channel(jdata['task_report'])
-        with open('database/sign_day.json',mode='w',encoding='utf8') as jfile:
-            reset = []
-            json.dump(reset,jfile,indent=4)
+        reset = []
+        Database().write('jdsign',reset)
 
         await task_report_channel.send('簽到已重置')
         await ctx.message.add_reaction('✅')
@@ -221,7 +220,7 @@ async def permission(ctx,guild_id:int):
 #         else:
 #             await channel.send('👍')
 
-ignore_py = ['music1','music2']
+ignore_py = []
 for filename in os.listdir('./cmds'):
     if filename.endswith('.py') and filename[:-3] not in ignore_py:
         bot.load_extension(f'cmds.{filename[:-3]}')

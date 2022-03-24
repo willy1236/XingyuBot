@@ -1,14 +1,14 @@
-import discord
+import discord,json
 from discord.ext import commands
-import json
-from BotLib.user import *
 from core.classes import Cog_Extension
 from library import BRS
-
-jdata = json.load(open('setting.json',mode='r',encoding='utf8'))
+from BotLib.user import *
+from BotLib.basic import Database
 
 
 class user_set(Cog_Extension):
+    jdata = Database().jdata
+
     @commands.command()
     async def ui(self,ctx,user=None):
         user_dc = await find.user(ctx,user) or ctx.author

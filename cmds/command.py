@@ -8,11 +8,11 @@ from core.classes import Cog_Extension
 from BotLib.user import *
 from BotLib.basic import Database
 
-jdata = json.load(open('setting.json','r',encoding='utf8'))
-picdata = json.load(open('database/picture.json',mode='r',encoding='utf8'))
-rsdata = Counter(json.load(open('database/role_save.json',mode='r',encoding='utf8')))
-
 class command(Cog_Extension):
+    jdata = Database().jdata
+    picdata = Database().picdata
+    rsdata = Counter(json.load(open('database/role_save.json',mode='r',encoding='utf8')))
+
     @commands.command()
     async def find(self,ctx,id):
         success = 0
@@ -117,7 +117,7 @@ class command(Cog_Extension):
     @commands.is_owner()
     async def save(self,ctx,user):
         def save_role(user):
-            dict = rsdata
+            dict = self.rsdata
             roledata = dict[str(user.id)] or {}
             for role in user.roles:
                 if role.id == 877934319249797120:
@@ -131,7 +131,7 @@ class command(Cog_Extension):
             with open('database/role_save.json',mode='w',encoding='utf8') as jfile:
                 json.dump(dict,jfile,indent=4)
         
-        guild = self.bot.get_guild(jdata['guild']['001'])
+        guild = self.bot.get_guild(self.jdata['guild']['001'])
         add_role = guild.get_role(877934319249797120)
         if user == 'all':
             for user in add_role.members:
@@ -145,6 +145,21 @@ class command(Cog_Extension):
             elif add_role not in user.roles:
                 ctx.send('錯誤:此用戶沒有"加身分組"')
 
+    @commands.is_owner()
+    @role.command()
+    async def rsmove(self,ctx):
+        await self.save(ctx,'all')
+        asyncio.sleep(3)
+        for user in ctx.guild.get_role(877934319249797120).members:
+            print(user.name)
+            for role in user.roles:
+                if role.id == 877934319249797120:
+                    break
+                if role.name == '@everyone':
+                    continue
+                print(f'已移除:{role.name}')
+                await role.delete()
+        await ctx.message.add_reaction('✅')
 
     @role.command()
     async def nick(self, ctx,arg):
@@ -169,33 +184,31 @@ class command(Cog_Extension):
         i=0
         result={'six':0,'five':0,'four':0,'three':0}
         user_id = str(ctx.author.id)
-        six_list = []
-        six_list_100 = []
+        six_list = six_list_100 = []
         guaranteed = 100
-        jloot = Counter(json.load(open('database/lottery.json',mode='r',encoding='utf8')))
+        jloot = Database().jloot
             
         while i < times:
             choice =  random.randint(1,100)
             if choice == 1 or jloot[user_id] >= guaranteed-1:
-                result["six"] =result["six"]+1
+                result["six"] += 1
                 if jloot[user_id] >= guaranteed-1:
                     six_list_100.append(i+1)
                 else:
                     six_list.append(i+1)
                 jloot[user_id] = 0
             elif choice >= 2 and choice <= 11:
-                result["five"]=result["five"]+1
-                jloot[user_id] = jloot[user_id]+1
+                result["five"] += 1
+                jloot[user_id] += 1
             elif choice >= 12 and choice <= 41:
-                result["four"]=result["four"]+1
-                jloot[user_id] = jloot[user_id]+1
+                result["four"]+= 1
+                jloot[user_id] += 1
             else:
-                result["three"]=result["three"]+1
-                jloot[user_id] = jloot[user_id]+1
-            i =i+1
+                result["three"] += 1
+                jloot[user_id] += 1
+            i += 1
         
-        with open('database/lottery.json',mode='w',encoding='utf8') as jfile:
-            json.dump(jloot,jfile,indent=4)
+        Database.write(self,'jloot',jloot)
         embed=BRS.lottery()
         embed.add_field(name='抽卡結果', value=f"六星:{result['six']} 五星:{result['five']} 四星:{result['four']} 三星:{result['three']}", inline=False)
         #text = f"抽卡結果:\n六星:{result['six']} 五星:{result['five']} 四星:{result['four']} 三星:{result['three']}\n未抽得六星次數:{jloot[user_id]}"
@@ -211,7 +224,7 @@ class command(Cog_Extension):
 
     @commands.group(invoke_without_command=True)
     async def bet(self,ctx,id,choice,money:int):
-        bet_data = Counter(json.load(open('database/bet.json',mode='r',encoding='utf8')))
+        bet_data = Database().bet_data
         money_now = Point(ctx.author.id).pt
         if id not in bet_data:
             await ctx.send('編號錯誤:沒有此編號的賭盤喔')
@@ -226,15 +239,13 @@ class command(Cog_Extension):
         else:
             Point(ctx.author.id).add(money*-1)
             bet_data[id][choice]['member'][str(ctx.author.id)] += money
-            with open("database/bet.json",'w',encoding='utf8') as jfile:
-                json.dump(bet_data,jfile,indent=4)
-            
+            Database().write(self,'bet_data',bet_data)
             await ctx.send('下注完成!')
 
 
     @bet.command()
     async def create(self,ctx,title,pink,blue,time):
-        bet_data = json.load(open("database/bet.json",'r',encoding='utf8'))
+        bet_data = Database().bet_data
         id = str(ctx.author.id)
         sec = converter.time(time)
         if id in bet_data:
@@ -243,31 +254,30 @@ class command(Cog_Extension):
         elif sec > 600:
             await ctx.send('錯誤:時間太長了喔')
             return
-    
-        with open("database/bet.json",'w',encoding='utf8') as jfile:
-            data = {}
-            data['title'] = title
-            data['IsOn'] = 1
-            data['blue'] = {}
-            data['blue']['title'] = blue
-            data['blue']['member'] = {}
-            data['pink'] = {}
-            data['pink']['title'] = pink
-            data['pink']['member'] = {}
-            bet_data[id] = data
-            jfile.seek(0)
-            json.dump(bet_data,jfile,indent=4)
-        
+
+        data = {}
+        data['title'] = title
+        data['IsOn'] = 1
+        data['blue'] = {}
+        data['blue']['title'] = blue
+        data['blue']['member'] = {}
+        data['pink'] = {}
+        data['pink']['title'] = pink
+        data['pink']['member'] = {}
+        bet_data[id] = data        
+        Database().write(self,'bet_data',bet_data)
+            
         embed = BRS.simple(title='賭盤', description=f'編號: {id}')
         embed.add_field(name='賭盤內容', value=title, inline=False)
         embed.add_field(name="粉紅幫", value=pink, inline=False)
         embed.add_field(name="藍藍幫", value=blue, inline=False)
         await ctx.send(embed=embed)
         await asyncio.sleep(delay=sec)
+        
         await ctx.send(f'編號:{id}\n下注時間結束')
-        with open("database/bet.json",'w',encoding='utf8') as jfile:
-            bet_data[id]['IsOn'] = 0
-            json.dump(bet_data,jfile,indent=4)
+        bet_data = Database().bet_data
+        bet_data[id]['IsOn'] = 0
+        Database().write(self,'bet_data',bet_data)
 
 
     @bet.command()
@@ -277,7 +287,7 @@ class command(Cog_Extension):
             await ctx.send('結果錯誤:我不知道到底是誰獲勝了呢')
             return
         id = str(ctx.author.id)
-        bet_data = json.load(open('database/bet.json',mode='r',encoding='utf8'))
+        bet_data = Database().bet_data
         #計算雙方總點數
         pink_total = 0
         for i in bet_data[id]['pink']['member']:
@@ -301,8 +311,7 @@ class command(Cog_Extension):
             Point(i).add(pt1)
         #更新資料庫
         del bet_data[id]
-        with open("database/bet.json",'w',encoding='utf8') as jfile:
-            json.dump(bet_data,jfile,indent=4)
+        Database().write(self,'bet_data',bet_data)
         #結果公布
         if end == 'pink':
             await ctx.send(f'編號:{id}\n恭喜粉紅幫獲勝!')
