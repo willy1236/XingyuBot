@@ -282,6 +282,7 @@ class music(Cog_Extension):
 
         ctx.voice_state.voice = await destination.connect()
 
+    @commands.is_owner()
     @commands.command(name='summon')
     async def _summon(self, ctx: commands.Context, *, channel: discord.VoiceChannel = None):
         """Summons the bot to a voice channel.

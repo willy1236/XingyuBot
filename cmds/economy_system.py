@@ -4,13 +4,15 @@ import json
 from core.classes import Cog_Extension
 from library import find,Counter
 from BotLib.user import Point
+from BotLib.basic import Database
 
-jdata = json.load(open('setting.json',mode='r',encoding='utf8'))
+jdata = Database().jdata
 
 class economy_system(Cog_Extension):
     @commands.group(invoke_without_command=True,aliases=['pt'])
     async def point(self,ctx,user=None):
         if user == None:
+            user = ctx.author
             pt = Point(ctx.author.id).pt
             await ctx.send(f'{user.mention} 你目前擁有 {pt} Pt點數', reference=ctx.message)
         else:
