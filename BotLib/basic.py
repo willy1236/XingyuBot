@@ -14,7 +14,7 @@ class Database:
                 'jloot':'database/lottery.json',
                 'bet_data':'database/bet.json',
                 'gdata':'database/gamer_data.json',
-                'jdsing':'database/sign_day.json',
+                'jdsign':'database/sign_day.json',
                 'jwsign':'database/sign_week.json',
                 'jevent':'database/event.json'}
         self.jdata = json.load(open(self.dict['jdata'],mode='r',encoding='utf8'))
