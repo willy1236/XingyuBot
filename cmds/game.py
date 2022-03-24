@@ -2,8 +2,7 @@ import discord,json,requests
 from discord.ext import commands
 from bs4 import BeautifulSoup
 from core.classes import Cog_Extension
-from library import find
-from DiscordBot.library import BRS
+from library import find,BRS
 from BotLib.basic import Database
 
 def player_search(url):
