@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands
-from library import find,BRS
+from library import BRS
 from core.classes import Cog_Extension
 
 

@@ -3,10 +3,12 @@ from discord.ext import commands
 import json
 from core.classes import Cog_Extension
 from library import find
+from BotLib.basic import Database
 
-cdata = json.load(open("database/channel_settings.json", "r",encoding="utf-8"))
 
 class moderation(Cog_Extension):
+    cdata = Database().cdata
+    
     @commands.command()
     @commands.has_permissions(manage_messages=True)
     async def clean(self,ctx,num:int):
@@ -25,18 +27,16 @@ class moderation(Cog_Extension):
         guild = str(ctx.guild.id)
         
         if channel == 'remove':
-            if guild in cdata['crass_chat']:
-                with open('database/channel_settings.json','w+',encoding='utf8') as f:
-                    del cdata['crass_chat'][guild]
-                    json.dump(cdata,f,indent=4)
+            if guild in self.cdata['crass_chat']:
+                del self.cdata['crass_chat'][guild]
+                Database().write(self,'cdata',self.cdata)
                 await ctx.send(f'設定完成，已移除跨群聊天頻道')
             else:
                 await ctx.send('此伺服器還沒有設定頻道喔')
 
         elif channel != None:
-            with open('database/channel_settings.json','w+',encoding='utf8') as f:
-                cdata['crass_chat'][guild] = channel.id
-                json.dump(cdata,f,indent=4)
+            self.cdata['crass_chat'][guild] = channel.id
+            Database().write(self,'cdata',self.cdata)
             await ctx.send(f'設定完成，已將跨群聊天頻道設為{channel.mention}')
 
     @set.command()
@@ -47,18 +47,16 @@ class moderation(Cog_Extension):
         guild = str(ctx.guild.id)
         
         if channel == 'remove':
-            if guild in cdata['all_anno']:
-                with open('database/channel_settings.json','w+',encoding='utf8') as f:
-                    del cdata['all_anno'][guild]
-                    json.dump(cdata,f,indent=4)
+            if guild in self.cdata['all_anno']:
+                del self.cdata['all_anno'][guild]
+                Database().write(self,'cdata',self.cdata)
                 await ctx.send(f'設定完成，已移除全群公告頻道')
             else:
                 await ctx.send('此伺服器還沒有設定頻道喔')
 
         elif channel != None:
-            with open('database/channel_settings.json','w+',encoding='utf8') as f:
-                cdata['all_anno'][guild] = channel.id
-                json.dump(cdata,f,indent=4)
+            self.cdata['all_anno'][guild] = channel.id
+            Database().write(self,'cdata',self.cdata)
             await ctx.send(f'設定完成，已將全群公告頻道設為{channel.mention}')
 
 def setup(bot):

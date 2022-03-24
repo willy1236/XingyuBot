@@ -1,16 +1,10 @@
-import discord
+import discord,json,requests
 from discord.ext import commands
-import json,requests
 from bs4 import BeautifulSoup
 from core.classes import Cog_Extension
 from library import find
-
-jdata = json.load(open('setting.json',mode='r',encoding='utf8'))
-
-with open('database/gamer_data.json',mode='r',encoding='utf8') as jfile:
-    gdata = json.load(jfile)
-
-games = ['steam','osu','apex','lol']
+from DiscordBot.library import BRS
+from BotLib.basic import Database
 
 def player_search(url):
     response = requests.get(url)
@@ -24,6 +18,11 @@ def player_search(url):
             return lvl
 
 class game(Cog_Extension):
+    
+    jdata = Database().jdata
+    gdata = Database().gdata
+    games = ['steam','osu','apex','lol']
+
     @commands.command()
     async def lol(self,ctx,*arg):
         if arg[0] == 'player':
@@ -47,32 +46,28 @@ class game(Cog_Extension):
         
     @game.command()
     async def set(self,ctx,game,data=None):
-        if not str(ctx.author.id) in gdata:
-            with open('database/gamer_data.json',mode='r+',encoding='utf8') as jfile:
-                gdata[f'{ctx.author.id}'] = {}
-                json.dump(gdata,jfile,indent=4)
+        if not str(ctx.author.id) in self.gdata:
+            self.gdata[f'{ctx.author.id}'] = {}
+            Database().write(self,'gdata',self.gdata)
             await ctx.send('偵測到資料庫內無使用者資料，已自動註冊',delete_after=5)
 
-        if game in games:
+        if game in self.games:
             user = str(ctx.author.id)
 
-            if not game in gdata[user]:
-                with open('database/gamer_data.json',mode='r+',encoding='utf8') as jfile:
-                    gdata[user][game] = 'None'
-                    json.dump(gdata,jfile,indent=4)
+            if not game in self.gdata[user]:
+                self.gdata[user][game] = 'None'
                 #await ctx.send('偵測到資料庫內無使用者資料，已自動補齊')
 
-            with open('database/gamer_data.json',mode='r+',encoding='utf8') as jfile:
-                if data == None:
-                    gdata[user][game] = 'None'
-                    await ctx.send(f'已重設{game}資料')
-                else:
-                    gdata[user][game] = data
-                    await ctx.send(f'已將{game}資料設定為 {data}')
-                json.dump(gdata,jfile,indent=4)
+            if data == None:
+                self.gdata[user][game] = 'None'
+                await ctx.send(f'已重設{game}資料')
+            else:
+                self.gdata[user][game] = data
+                await ctx.send(f'已將{game}資料設定為 {data}')
+            Database().write(self,'gdata',self.gdata)
         
         else:
-            await ctx.send(f'遊戲錯誤:此遊戲目前未開放設定\n目前支援:{games}',delete_after=10)
+            await ctx.send(f'遊戲錯誤:此遊戲目前未開放設定\n目前支援:{self.games}',delete_after=10)
 
     @game.command()
     @commands.is_owner()
@@ -80,14 +75,14 @@ class game(Cog_Extension):
         user = await find.user(ctx,user)
         if user != None:
             data = {}
-            for game in games:
-                if game in gdata[f'{user.id}']:
-                    data[game] = gdata[f'{user.id}'][game]
+            for game in self.games:
+                if game in self.gdata[f'{user.id}']:
+                    data[game] = self.gdata[f'{user.id}'][game]
                 else:
                     data[game] = 'None'
 
-            embed = discord.Embed(title=user, color=0xc4e9ff)
-            for game in games:
+            embed = BRS.simple(title=user)
+            for game in self.games:
                 embed.add_field(name=game, value=data[game], inline=False)
             embed.set_thumbnail(url=user.display_avatar.url)
             await ctx.send(embed=embed)

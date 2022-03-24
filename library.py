@@ -21,6 +21,9 @@ from BotLib.basic import Database
 #json mode
 #'r'=讀取 'w'=寫入(開啟檔案時會先清除內容) 'r+'=讀寫(開啟檔案時不會清除內容)
 
+#jfile.seek(0)
+#指標移至檔案開頭
+
 #list
 #s3=s1&s2 # 交集︰取兩個集合中，相同的資料
 #s3=s1|s2 # 聯集︰取兩個合中的所有資料，但不重複取
@@ -168,13 +171,13 @@ class BRS():
         return embed
 
     def basic(self,description:str=discord.Embed.Empty,title:str=discord.Embed.Empty):
-        '''基本:帶機器人名稱'''
+        '''基本:作者帶機器人名稱'''
         embed = discord.Embed(title=title,description=description, color=0xc4e9ff)
         embed.set_author(name=self.bot.user.name,icon_url=self.bot.user.display_avatar.url)
         return embed
     
     def simple(description:str=discord.Embed.Empty,title:str=discord.Embed.Empty):
-        '''簡易:不帶名稱'''
+        '''簡易:不帶作者'''
         embed = discord.Embed(title=title,description=description, color=0xc4e9ff)
         return embed
 

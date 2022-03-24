@@ -1,11 +1,9 @@
-import discord
+import discord,json ,random,asyncio
 from discord.ext import commands,pages
-import json ,random,asyncio
-
 from core.classes import Cog_Extension
 from library import BRS
+from BotLib.basic import Database
 
-jdata = json.load(open('setting.json','r',encoding='utf8'))
 
 class help_page:
     async def music(ctx):
@@ -45,9 +43,9 @@ class help_page:
         # await paginator.send(ctx, target=ctx.channel)
 
 
-        
-
 class help(Cog_Extension):
+    jdata = Database().jdata
+    
     @commands.command(help='原始的help指令')
     async def assist(self,ctx,arg='help'):
         await ctx.send_help(arg)

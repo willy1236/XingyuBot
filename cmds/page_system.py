@@ -1,6 +1,4 @@
-import asyncio
-
-import discord
+import discord,asyncio
 from discord.commands import SlashCommandGroup
 from discord.ext import commands, pages
 from core.classes import Cog_Extension

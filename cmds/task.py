@@ -1,15 +1,13 @@
-import discord
+import discord,json, asyncio, datetime
 from discord.ext import commands
 from core.classes import Cog_Extension
-import json, asyncio, datetime
-
-jdata = json.load(open('setting.json',mode='r',encoding='utf8'))
-
-with open('database/event.json',mode='r',encoding='utf8') as jfile:
-    jevent = json.load(jfile)
+from BotLib.basic import Database
 
 class task(Cog_Extension):
     def __init__(self,*args,**kwargs):
+        jdata = Database().jdata
+        jevent = Database().jevent
+
         super().__init__(*args,**kwargs)
         
         async def time_task():
@@ -21,9 +19,8 @@ class task(Cog_Extension):
                 now_time_day = datetime.datetime.now().strftime('%Y%m%d')
                 
                 if now_time_hour == '040000':
-                    with open('database/sign_day.json',mode='w',encoding='utf8') as jfile:
-                        reset = []
-                        json.dump(reset,jfile,indent=4)
+                    reset = []
+                    Database().write(self,'jdsign',reset)
 
                     await task_report_channel.send('簽到已重置')    
                     await asyncio.sleep(1)
