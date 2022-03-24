@@ -58,7 +58,7 @@ class debug(Cog_Extension):
                 if role.name == '@everyone':
                     continue
                 print(f'已移除:{role.name}')
-                await role.remove()
+                await role.delete()
                 
 
     @commands.command()
