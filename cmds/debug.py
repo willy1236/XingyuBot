@@ -52,16 +52,13 @@ class debug(Cog_Extension):
     async def rsmove(self,ctx):
         for user in ctx.guild.get_role(877934319249797120).members:
             print(user.name)
-            start = 0
             for role in user.roles:
                 if role.id == 877934319249797120:
-                    start = 1
                     break
                 if role.name == '@everyone':
                     continue
-                if start == 1:
-                    print(f'已移除:{role.name}')
-                    await role.remove()
+                print(f'已移除:{role.name}')
+                await role.delete()
                 
 
     @commands.command()
