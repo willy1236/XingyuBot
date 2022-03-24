@@ -40,6 +40,8 @@ class event(Cog_Extension):
             await BRS.scam(self,message)
             await message.delete()
             await channel.send('已刪除一條疑似詐騙的訊息')
+        if type(message.channel) == discord.channel.DMChannel:
+            await BRS.dm(self,message)
 
     @commands.Cog.listener()
     async def on_voice_state_update(self,user, before, after):

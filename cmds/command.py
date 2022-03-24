@@ -6,6 +6,7 @@ import json ,random,asyncio
 from library import Counter,find,converter,random_color,BRS
 from core.classes import Cog_Extension
 from BotLib.user import *
+from BotLib.basic import Database
 
 jdata = json.load(open('setting.json','r',encoding='utf8'))
 picdata = json.load(open('database/picture.json',mode='r',encoding='utf8'))

@@ -1,6 +1,7 @@
 import json,random,discord
 from discord.ext import commands
 from core.classes import Cog_Extension
+from BotLib.basic import Database
 
 #(*args) 傳入多個參數
 #(**kwargs) 傳入多個參數並轉變為dict
@@ -31,7 +32,7 @@ from core.classes import Cog_Extension
 
 #async -> await
 
-picdata = json.load(open('database/picture.json',mode='r',encoding='utf8'))
+picdata = Database().picdata
 jdata = json.load(open('setting.json',mode='r',encoding='utf8'))
 
 def is_number(n):
@@ -148,6 +149,15 @@ class BRS():
         embed.add_field(name='來源頻道', value=f'{ctx.channel}\n{ctx.channel.id}', inline=True)
         embed.add_field(name='來源群組', value=f'{ctx.guild}\n{ctx.guild.id}', inline=True)
         await feedback_channel.send(embed=embed)
+
+    async def dm(self,msg):
+        jdata = json.load(open('setting.json',mode='r',encoding='utf8'))
+        dm_channel = self.bot.get_channel(jdata['dm_channel'])
+        embed=BRS.simple()
+        embed.set_author(name="BRS | 私人訊息")
+        embed.add_field(name='訊息內容', value=msg.content, inline=True)
+        embed.add_field(name='發送者', value=f"{msg.author}\n{msg.author.id}", inline=False)
+        await dm_channel.send(embed=embed)
     
 
     def all_anno(msg):

@@ -1,3 +1,6 @@
-import requests
-r = requests.get('https://api.github.com/events')
-print(r.text)
+class test:
+    def __init__(self):
+        return 1
+
+test1 = test()
+print(test1)
