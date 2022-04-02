@@ -181,32 +181,32 @@ class command(Cog_Extension):
         if times > 1000:
             await ctx.send('太多了拉，請填入少一點的數字')
             return
-        i=0
         result={'six':0,'five':0,'four':0,'three':0}
         user_id = str(ctx.author.id)
-        six_list = six_list_100 = []
+        six_list = []
+        six_list_100 = []
         guaranteed = 100
         jloot = Database().jloot
             
-        while i < times:
+        for i in range(1,times+1):
             choice =  random.randint(1,100)
             if choice == 1 or jloot[user_id] >= guaranteed-1:
                 result["six"] += 1
                 if jloot[user_id] >= guaranteed-1:
-                    six_list_100.append(i+1)
+                    six_list_100.append(i)
                 else:
-                    six_list.append(i+1)
+                    six_list.append(i)
                 jloot[user_id] = 0
-            elif choice >= 2 and choice <= 11:
-                result["five"] += 1
-                jloot[user_id] += 1
-            elif choice >= 12 and choice <= 41:
-                result["four"]+= 1
-                jloot[user_id] += 1
             else:
-                result["three"] += 1
-                jloot[user_id] += 1
-            i += 1
+                if choice >= 2 and choice <= 11:
+                    result["five"] += 1
+                    jloot[user_id] += 1
+                elif choice >= 12 and choice <= 41:
+                    result["four"]+= 1
+                    jloot[user_id] += 1
+                else:
+                    result["three"] += 1
+                    jloot[user_id] += 1
         
         Database().write('jloot',jloot)
         embed=BRS.lottery()
