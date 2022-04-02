@@ -79,10 +79,10 @@ class economy_system(Cog_Extension):
             signer = str(ctx.author.id)
             #日常
             jdsign.append(ctx.author.id)
-            Database().write(self,'jdsign',jdsign)
+            Database().write('jdsign',jdsign)
             #週常
             jwsign[signer] += 1
-            Database().write(self,'jwsign',jwsign)
+            Database().write('jwsign',jwsign)
             
             if ctx.guild.id == self.jdata['guild']['001']:
                 Point(signer).add(1)

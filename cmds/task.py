@@ -20,7 +20,7 @@ class task(Cog_Extension):
                 
                 if now_time_hour == '040000':
                     reset = []
-                    Database().write(self,'jdsign',reset)
+                    Database().write('jdsign',reset)
 
                     await task_report_channel.send('簽到已重置')    
                     await asyncio.sleep(1)

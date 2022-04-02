@@ -29,14 +29,14 @@ class moderation(Cog_Extension):
         if channel == 'remove':
             if guild in self.cdata['crass_chat']:
                 del self.cdata['crass_chat'][guild]
-                Database().write(self,'cdata',self.cdata)
+                Database().write('cdata',self.cdata)
                 await ctx.send(f'設定完成，已移除跨群聊天頻道')
             else:
                 await ctx.send('此伺服器還沒有設定頻道喔')
 
         elif channel != None:
             self.cdata['crass_chat'][guild] = channel.id
-            Database().write(self,'cdata',self.cdata)
+            Database().write('cdata',self.cdata)
             await ctx.send(f'設定完成，已將跨群聊天頻道設為{channel.mention}')
 
     @set.command()
@@ -49,14 +49,14 @@ class moderation(Cog_Extension):
         if channel == 'remove':
             if guild in self.cdata['all_anno']:
                 del self.cdata['all_anno'][guild]
-                Database().write(self,'cdata',self.cdata)
+                Database().write('cdata',self.cdata)
                 await ctx.send(f'設定完成，已移除全群公告頻道')
             else:
                 await ctx.send('此伺服器還沒有設定頻道喔')
 
         elif channel != None:
             self.cdata['all_anno'][guild] = channel.id
-            Database().write(self,'cdata',self.cdata)
+            Database().write('cdata',self.cdata)
             await ctx.send(f'設定完成，已將全群公告頻道設為{channel.mention}')
 
 def setup(bot):

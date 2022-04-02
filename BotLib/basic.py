@@ -29,7 +29,7 @@ class Database:
         self.jwsign = Counter(json.load(open(self.dict['jwsign'],mode='r',encoding='utf8')))
         self.jevent = Counter(json.load(open(self.dict['jevent'],mode='r',encoding='utf8')))
         
-    def write(self,file,data):
+    def write(self,file:str,data:dict):
         location = self.dict[file]
         with open(file=location,mode='w',encoding='utf8') as jfile:
             json.dump(data,jfile,indent=4)
