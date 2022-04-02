@@ -47,7 +47,7 @@ class game(Cog_Extension):
     async def set(self,ctx,game,data=None):
         if not str(ctx.author.id) in self.gdata:
             self.gdata[f'{ctx.author.id}'] = {}
-            Database().write(self,'gdata',self.gdata)
+            Database().write('gdata',self.gdata)
             await ctx.send('偵測到資料庫內無使用者資料，已自動註冊',delete_after=5)
 
         if game in self.games:
@@ -63,7 +63,7 @@ class game(Cog_Extension):
             else:
                 self.gdata[user][game] = data
                 await ctx.send(f'已將{game}資料設定為 {data}')
-            Database().write(self,'gdata',self.gdata)
+            Database().write('gdata',self.gdata)
         
         else:
             await ctx.send(f'遊戲錯誤:此遊戲目前未開放設定\n目前支援:{self.games}',delete_after=10)

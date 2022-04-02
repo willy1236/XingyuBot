@@ -208,7 +208,7 @@ class command(Cog_Extension):
                 jloot[user_id] += 1
             i += 1
         
-        Database.write(self,'jloot',jloot)
+        Database().write('jloot',jloot)
         embed=BRS.lottery()
         embed.add_field(name='抽卡結果', value=f"六星:{result['six']} 五星:{result['five']} 四星:{result['four']} 三星:{result['three']}", inline=False)
         #text = f"抽卡結果:\n六星:{result['six']} 五星:{result['five']} 四星:{result['four']} 三星:{result['three']}\n未抽得六星次數:{jloot[user_id]}"
@@ -239,7 +239,7 @@ class command(Cog_Extension):
         else:
             Point(ctx.author.id).add(money*-1)
             bet_data[id][choice]['member'][str(ctx.author.id)] += money
-            Database().write(self,'bet_data',bet_data)
+            Database().write('bet_data',bet_data)
             await ctx.send('下注完成!')
 
 
@@ -265,7 +265,7 @@ class command(Cog_Extension):
         data['pink']['title'] = pink
         data['pink']['member'] = {}
         bet_data[id] = data        
-        Database().write(self,'bet_data',bet_data)
+        Database().write('bet_data',bet_data)
             
         embed = BRS.simple(title='賭盤', description=f'編號: {id}')
         embed.add_field(name='賭盤內容', value=title, inline=False)
@@ -277,7 +277,7 @@ class command(Cog_Extension):
         await ctx.send(f'編號:{id}\n下注時間結束')
         bet_data = Database().bet_data
         bet_data[id]['IsOn'] = 0
-        Database().write(self,'bet_data',bet_data)
+        Database().write('bet_data',bet_data)
 
 
     @bet.command()
@@ -311,7 +311,7 @@ class command(Cog_Extension):
             Point(i).add(pt1)
         #更新資料庫
         del bet_data[id]
-        Database().write(self,'bet_data',bet_data)
+        Database().write('bet_data',bet_data)
         #結果公布
         if end == 'pink':
             await ctx.send(f'編號:{id}\n恭喜粉紅幫獲勝!')
