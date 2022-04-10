@@ -7,10 +7,6 @@ class Counter(dict):
 class Database:
     def __init__(self):
         """CWB = 中央氣象局"""
-        try:
-            self.tokens = json.load(open('token_settings.json',mode='r',encoding='utf8'))
-        except:
-            pass
         self.dict = {'jdata':'setting.json',
                 'cdata':'database/channel_settings.json',
                 'picdata':'database/picture.json',
@@ -36,9 +32,10 @@ class Database:
         self.jevent = Counter(json.load(open(self.dict['jevent'],mode='r',encoding='utf8')))
         self.redata = Counter(json.load(open(self.dict['rsdata'],mode='r',encoding='utf8')))
 
-        if self.tokens:
+        try:
+            self.tokens = json.load(open('token_settings.json',mode='r',encoding='utf8'))
             self.CWB_API = self.tokens['CWB_API']
-        else:
+        except:
             self.CWB_API = os.environ['CWB_API']
 
         
