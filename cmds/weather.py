@@ -6,10 +6,6 @@ from library import BRS
 from core.classes import Cog_Extension
 from BotLib.basic import Database
 
-
-r = requests.get('https://opendata.cwb.gov.tw/api/v1/rest/datastore/E-A0015-001?Authorization=CWB-68A93663-BED9-4D7E-9305-E42BC130F02D&limit=1&format=JSON')
-data = json.loads(r.text)
-
 class EarthquakeReport:
     def __init__(self,data):
         self.data = data
@@ -19,8 +15,8 @@ class EarthquakeReport:
         self.depth = data['records']['earthquake'][0]['earthquakeInfo']['depth']['value']
         self.location = data['records']['earthquake'][0]['earthquakeInfo']['epiCenter']['location']
 
-        
 
+        
 class weather(Cog_Extension):
     @commands.cooldown(rate=1,per=20)
     @commands.command()
