@@ -323,6 +323,7 @@ class command(Cog_Extension):
         result = random.choice(args)
         await ctx.send(f'我選擇:{result}')
 
+
     @commands.slash_command(description='向大家說哈瞜')
     async def hello(ctx, name: str = None):
         name = name or ctx.author.name
