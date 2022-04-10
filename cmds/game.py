@@ -17,8 +17,6 @@ def player_search(url):
             return lvl
 
 class game(Cog_Extension):
-    
-    jdata = Database().jdata
     gdata = Database().gdata
     games = ['steam','osu','apex','lol']
 

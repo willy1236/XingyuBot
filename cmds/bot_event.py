@@ -5,7 +5,6 @@ from library import BRS
 from BotLib.basic import Database
 
 class event(Cog_Extension):
-    jdata = Database().jdata
     cdata = Database().cdata
     keywords = ['Free','免費','Nitro','premiums-nitro','discerd.gift','disceord.gift']
     voice_updata = False

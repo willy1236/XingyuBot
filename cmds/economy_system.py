@@ -7,7 +7,6 @@ from BotLib.basic import Database
 
 
 class economy_system(Cog_Extension):
-    jdata = Database().jdata
 
     @commands.group(invoke_without_command=True,aliases=['pt'])
     async def point(self,ctx,user=None):

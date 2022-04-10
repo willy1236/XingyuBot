@@ -5,7 +5,6 @@ from BotLib.basic import Database
 
 class task(Cog_Extension):
     def __init__(self,*args,**kwargs):
-        jdata = Database().jdata
         jevent = Database().jevent
 
         super().__init__(*args,**kwargs)

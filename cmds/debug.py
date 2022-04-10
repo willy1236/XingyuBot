@@ -1,10 +1,9 @@
-import discord,json
+import discord,json,requests
 from discord.ext import commands
 from core.classes import Cog_Extension
 from library import *
 
 class debug(Cog_Extension):
-    jdata = json.load(open('setting.json',mode='r',encoding='utf8'))
     rsdata = Counter(json.load(open('database/role_save.json',mode='r',encoding='utf8')))
     
     @commands.command()
@@ -29,7 +28,8 @@ class debug(Cog_Extension):
 
     @commands.command()
     async def test(self, ctx):
-        await BRS.error(self,ctx,'test')
+        url = 123
+       
 
     
     # @commands.command(enabled=False)
