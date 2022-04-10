@@ -44,8 +44,6 @@ class help_page:
 
 
 class help(Cog_Extension):
-    jdata = Database().jdata
-    
     @commands.command(help='原始的help指令')
     async def assist(self,ctx,arg='help'):
         await ctx.send_help(arg)

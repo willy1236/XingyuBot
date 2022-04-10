@@ -7,8 +7,6 @@ from BotLib.basic import Database
 
 
 class user_set(Cog_Extension):
-    jdata = Database().jdata
-
     @commands.command()
     async def ui(self,ctx,user=None):
         user_dc = await find.user(ctx,user) or ctx.author

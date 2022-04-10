@@ -16,7 +16,8 @@ class Database:
                 'gdata':'database/gamer_data.json',
                 'jdsign':'database/sign_day.json',
                 'jwsign':'database/sign_week.json',
-                'jevent':'database/event.json'}
+                'jevent':'database/event.json',
+                'rsdata':'database/role_save.json'}
         self.jdata = json.load(open(self.dict['jdata'],mode='r',encoding='utf8'))
         self.cdata = json.load(open(self.dict['cdata'],mode='r',encoding='utf8'))
         self.picdata = json.load(open(self.dict['picdata'],mode='r',encoding='utf8'))
@@ -28,6 +29,7 @@ class Database:
         self.jdsign = json.load(open(self.dict['jdsign'],mode='r',encoding='utf8'))
         self.jwsign = Counter(json.load(open(self.dict['jwsign'],mode='r',encoding='utf8')))
         self.jevent = Counter(json.load(open(self.dict['jevent'],mode='r',encoding='utf8')))
+        self.redata = Counter(json.load(open(self.dict['rsdata'],mode='r',encoding='utf8')))
         
     def write(self,file:str,data:dict):
         location = self.dict[file]

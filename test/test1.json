@@ -1,0 +1,682 @@
+{
+    "success": "true",
+    "result": {
+      "resource_id": "E-A0015-001",
+      "fields": [
+        {
+          "id": "reportType",
+          "type": "String"
+        },
+        {
+          "id": "earthquakeNo",
+          "type": "Integer"
+        },
+        {
+          "id": "reportContent",
+          "type": "String"
+        },
+        {
+          "id": "reportColor",
+          "type": "String"
+        },
+        {
+          "id": "web",
+          "type": "String"
+        },
+        {
+          "id": "reportImageURI",
+          "type": "String"
+        },
+        {
+          "id": "originTime",
+          "type": "Timestamp"
+        },
+        {
+          "id": "waveImageURI",
+          "type": "String"
+        },
+        {
+          "id": "shakemapImageURI",
+          "type": "String"
+        },
+        {
+          "id": "unit",
+          "type": "String"
+        },
+        {
+          "id": "value",
+          "type": "Double"
+        },
+        {
+          "id": "magnitudeType",
+          "type": "String"
+        },
+        {
+          "id": "magnitudeValue",
+          "type": "Float"
+        },
+        {
+          "id": "source",
+          "type": "String"
+        },
+        {
+          "id": "areaDesc",
+          "type": "String"
+        },
+        {
+          "id": "areaName",
+          "type": "String"
+        },
+        {
+          "id": "infoStatus",
+          "type": "String"
+        },
+        {
+          "id": "stationName",
+          "type": "String"
+        },
+        {
+          "id": "stationCode",
+          "type": "String"
+        },
+        {
+          "id": "vComponent",
+          "type": "String"
+        },
+        {
+          "id": "nsComponent",
+          "type": "String"
+        },
+        {
+          "id": "ewComponent",
+          "type": "String"
+        },
+        {
+          "id": "intScaleValue",
+          "type": "String"
+        }
+      ]
+    },
+    "records": {
+      "datasetDescription": "地震報告",
+      "earthquake": [
+        {
+          "earthquakeNo": 111040,
+          "reportType": "地震報告",
+          "reportColor": "綠色",
+          "reportContent": "04/10-00:43臺灣南部海域發生規模5.0有感地震，最大震度屏東縣鵝鑾鼻3級。",
+          "reportImageURI": "https://scweb.cwb.gov.tw/webdata/OLDEQ/202204/2022041000435050040_H.png",
+          "reportRemark": "本報告係中央氣象局地震觀測網即時地震資料地震速報之結果。",
+          "web": "https://scweb.cwb.gov.tw/zh-tw/earthquake/details/2022041000435050040",
+          "shakemapImageURI": "https://scweb.cwb.gov.tw/webdata/drawTrace/plotContour/2022/2022040i.png",
+          "earthquakeInfo": {
+            "originTime": "2022-04-10 00:43:50",
+            "source": "中央氣象局",
+            "depth": {
+              "value": 29.7,
+              "unit": "公里"
+            },
+            "epiCenter": {
+              "location": "臺東縣政府南方  124.0  公里 (位於臺灣南部海域)",
+              "epiCenterLat": {
+                "value": 21.64,
+                "unit": "度"
+              },
+              "epiCenterLon": {
+                "unit": "度",
+                "value": 121.01
+              }
+            },
+            "magnitude": {
+              "magnitudeType": "芮氏規模",
+              "magnitudeValue": 5
+            }
+          },
+          "intensity": {
+            "shakingArea": [
+              {
+                "areaDesc": "臺南市地區",
+                "areaName": "臺南市",
+                "infoStatus": "observe",
+                "areaIntensity": {
+                  "value": 1,
+                  "unit": "級"
+                },
+                "eqStation": [
+                  {
+                    "stationName": "七股",
+                    "stationCode": "SCK",
+                    "infoStatus": "observe",
+                    "azimuth": {
+                      "value": 150.22,
+                      "unit": "度"
+                    },
+                    "distance": {
+                      "unit": "公里",
+                      "value": 192.2
+                    },
+                    "pga": {
+                      "ewComponent": 0.52,
+                      "nsComponent": 0.91,
+                      "vComponent": 0.28,
+                      "intScaleValue": 0.92,
+                      "unit": "gal"
+                    },
+                    "pgv": {
+                      "ewComponent": 0.02,
+                      "nsComponent": 0.03,
+                      "vComponent": 0.01,
+                      "intScaleValue": 0.03,
+                      "unit": "kine"
+                    },
+                    "stationIntensity": {
+                      "value": 1,
+                      "unit": "級"
+                    },
+                    "stationLat": {
+                      "value": 23.15,
+                      "unit": "度"
+                    },
+                    "stationLon": {
+                      "value": 120.09,
+                      "unit": "度"
+                    },
+                    "waveImageURI": "https://scweb.cwb.gov.tw/webdata/drawTrace/outcome/2022/2022040/1-SCK.gif"
+                  }
+                ]
+              },
+              {
+                "areaDesc": "最大震度2級地區",
+                "areaName": "臺東縣",
+                "areaIntensity": {
+                  "value": 2,
+                  "unit": "級"
+                },
+                "eqStation": []
+              },
+              {
+                "areaDesc": "最大震度3級地區",
+                "areaName": "屏東縣",
+                "areaIntensity": {
+                  "value": 3,
+                  "unit": "級"
+                },
+                "eqStation": []
+              },
+              {
+                "areaDesc": "最大震度1級地區",
+                "areaName": "臺南市",
+                "areaIntensity": {
+                  "value": 1,
+                  "unit": "級"
+                },
+                "eqStation": []
+              },
+              {
+                "areaDesc": "屏東縣地區",
+                "areaName": "屏東縣",
+                "infoStatus": "observe",
+                "areaIntensity": {
+                  "value": 3,
+                  "unit": "級"
+                },
+                "eqStation": [
+                  {
+                    "stationName": "鵝鑾鼻",
+                    "stationCode": "SEB",
+                    "infoStatus": "observe",
+                    "azimuth": {
+                      "value": 150.18,
+                      "unit": "度"
+                    },
+                    "distance": {
+                      "unit": "公里",
+                      "value": 32.99
+                    },
+                    "pga": {
+                      "ewComponent": 5.7,
+                      "nsComponent": 7.86,
+                      "vComponent": 3.67,
+                      "intScaleValue": 9.5,
+                      "unit": "gal"
+                    },
+                    "pgv": {
+                      "ewComponent": 0.34,
+                      "nsComponent": 0.51,
+                      "vComponent": 0.23,
+                      "intScaleValue": 0.55,
+                      "unit": "kine"
+                    },
+                    "stationIntensity": {
+                      "value": 3,
+                      "unit": "級"
+                    },
+                    "stationLat": {
+                      "value": 21.9,
+                      "unit": "度"
+                    },
+                    "stationLon": {
+                      "value": 120.86,
+                      "unit": "度"
+                    },
+                    "waveImageURI": "https://scweb.cwb.gov.tw/webdata/drawTrace/outcome/2022/2022040/3-SEB.gif"
+                  },
+                  {
+                    "stationName": "滿州",
+                    "stationCode": "SMS",
+                    "infoStatus": "observe",
+                    "azimuth": {
+                      "value": 156.42,
+                      "unit": "度"
+                    },
+                    "distance": {
+                      "unit": "公里",
+                      "value": 45.69
+                    },
+                    "pga": {
+                      "ewComponent": 6.42,
+                      "nsComponent": 6.34,
+                      "vComponent": 2.66,
+                      "intScaleValue": 8.44,
+                      "unit": "gal"
+                    },
+                    "pgv": {
+                      "ewComponent": 0.29,
+                      "nsComponent": 0.26,
+                      "vComponent": 0.11,
+                      "intScaleValue": 0.37,
+                      "unit": "kine"
+                    },
+                    "stationIntensity": {
+                      "value": 3,
+                      "unit": "級"
+                    },
+                    "stationLat": {
+                      "value": 22.02,
+                      "unit": "度"
+                    },
+                    "stationLon": {
+                      "value": 120.84,
+                      "unit": "度"
+                    },
+                    "waveImageURI": "https://scweb.cwb.gov.tw/webdata/drawTrace/outcome/2022/2022040/3-SMS.gif"
+                  },
+                  {
+                    "stationName": "墾丁",
+                    "stationCode": "TWK1",
+                    "infoStatus": "observe",
+                    "azimuth": {
+                      "value": 147.9,
+                      "unit": "度"
+                    },
+                    "distance": {
+                      "unit": "公里",
+                      "value": 38.93
+                    },
+                    "pga": {
+                      "ewComponent": 2.62,
+                      "nsComponent": 4.14,
+                      "vComponent": 1.48,
+                      "intScaleValue": 4.18,
+                      "unit": "gal"
+                    },
+                    "pgv": {
+                      "ewComponent": 0.19,
+                      "nsComponent": 0.2,
+                      "vComponent": 0.1,
+                      "intScaleValue": 0.25,
+                      "unit": "kine"
+                    },
+                    "stationIntensity": {
+                      "value": 2,
+                      "unit": "級"
+                    },
+                    "stationLat": {
+                      "value": 21.94,
+                      "unit": "度"
+                    },
+                    "stationLon": {
+                      "value": 120.81,
+                      "unit": "度"
+                    },
+                    "waveImageURI": "https://scweb.cwb.gov.tw/webdata/drawTrace/outcome/2022/2022040/2-TWK1.gif"
+                  },
+                  {
+                    "stationName": "南灣",
+                    "stationCode": "SNW",
+                    "infoStatus": "observe",
+                    "azimuth": {
+                      "value": 142.15,
+                      "unit": "度"
+                    },
+                    "distance": {
+                      "unit": "公里",
+                      "value": 44.52
+                    },
+                    "pga": {
+                      "ewComponent": 5.75,
+                      "nsComponent": 7.12,
+                      "vComponent": 3.34,
+                      "intScaleValue": 6.94,
+                      "unit": "gal"
+                    },
+                    "pgv": {
+                      "ewComponent": 0.34,
+                      "nsComponent": 0.39,
+                      "vComponent": 0.16,
+                      "intScaleValue": 0.41,
+                      "unit": "kine"
+                    },
+                    "stationIntensity": {
+                      "value": 2,
+                      "unit": "級"
+                    },
+                    "stationLat": {
+                      "value": 21.96,
+                      "unit": "度"
+                    },
+                    "stationLon": {
+                      "value": 120.75,
+                      "unit": "度"
+                    },
+                    "waveImageURI": "https://scweb.cwb.gov.tw/webdata/drawTrace/outcome/2022/2022040/2-SNW.gif"
+                  },
+                  {
+                    "stationName": "恆春",
+                    "stationCode": "HEN",
+                    "infoStatus": "observe",
+                    "azimuth": {
+                      "value": 145.34,
+                      "unit": "度"
+                    },
+                    "distance": {
+                      "unit": "公里",
+                      "value": 48.67
+                    },
+                    "pga": {
+                      "ewComponent": 6.02,
+                      "nsComponent": 6.29,
+                      "vComponent": 2.11,
+                      "intScaleValue": 7.46,
+                      "unit": "gal"
+                    },
+                    "pgv": {
+                      "ewComponent": 0.3,
+                      "nsComponent": 0.38,
+                      "vComponent": 0.14,
+                      "intScaleValue": 0.38,
+                      "unit": "kine"
+                    },
+                    "stationIntensity": {
+                      "value": 2,
+                      "unit": "級"
+                    },
+                    "stationLat": {
+                      "value": 22,
+                      "unit": "度"
+                    },
+                    "stationLon": {
+                      "value": 120.75,
+                      "unit": "度"
+                    },
+                    "waveImageURI": "https://scweb.cwb.gov.tw/webdata/drawTrace/outcome/2022/2022040/2-HEN.gif"
+                  },
+                  {
+                    "stationName": "獅子",
+                    "stationCode": "SLIU",
+                    "infoStatus": "observe",
+                    "azimuth": {
+                      "value": 160.76,
+                      "unit": "度"
+                    },
+                    "distance": {
+                      "unit": "公里",
+                      "value": 67.35
+                    },
+                    "pga": {
+                      "ewComponent": 2.59,
+                      "nsComponent": 1.99,
+                      "vComponent": 0.89,
+                      "intScaleValue": 2.85,
+                      "unit": "gal"
+                    },
+                    "pgv": {
+                      "ewComponent": 0.23,
+                      "nsComponent": 0.12,
+                      "vComponent": 0.05,
+                      "intScaleValue": 0.25,
+                      "unit": "kine"
+                    },
+                    "stationIntensity": {
+                      "value": 2,
+                      "unit": "級"
+                    },
+                    "stationLat": {
+                      "value": 22.22,
+                      "unit": "度"
+                    },
+                    "stationLon": {
+                      "value": 120.8,
+                      "unit": "度"
+                    },
+                    "waveImageURI": "https://scweb.cwb.gov.tw/webdata/drawTrace/outcome/2022/2022040/2-SLIU.gif"
+                  },
+                  {
+                    "stationName": "春日",
+                    "stationCode": "SCZ",
+                    "infoStatus": "observe",
+                    "azimuth": {
+                      "value": 153.74,
+                      "unit": "度"
+                    },
+                    "distance": {
+                      "unit": "公里",
+                      "value": 89.97
+                    },
+                    "pga": {
+                      "ewComponent": 0.94,
+                      "nsComponent": 0.8,
+                      "vComponent": 0.42,
+                      "intScaleValue": 1.04,
+                      "unit": "gal"
+                    },
+                    "pgv": {
+                      "ewComponent": 0.06,
+                      "nsComponent": 0.09,
+                      "vComponent": 0.06,
+                      "intScaleValue": 0.11,
+                      "unit": "kine"
+                    },
+                    "stationIntensity": {
+                      "value": 1,
+                      "unit": "級"
+                    },
+                    "stationLat": {
+                      "value": 22.37,
+                      "unit": "度"
+                    },
+                    "stationLon": {
+                      "value": 120.63,
+                      "unit": "度"
+                    },
+                    "waveImageURI": "https://scweb.cwb.gov.tw/webdata/drawTrace/outcome/2022/2022040/1-SCZ.gif"
+                  },
+                  {
+                    "stationName": "新埤",
+                    "stationCode": "SSP",
+                    "infoStatus": "observe",
+                    "azimuth": {
+                      "value": 153.74,
+                      "unit": "度"
+                    },
+                    "distance": {
+                      "unit": "公里",
+                      "value": 103.97
+                    },
+                    "pga": {
+                      "ewComponent": 1.38,
+                      "nsComponent": 1.26,
+                      "vComponent": 0.42,
+                      "intScaleValue": 1.41,
+                      "unit": "gal"
+                    },
+                    "pgv": {
+                      "ewComponent": 0.13,
+                      "nsComponent": 0.13,
+                      "vComponent": 0.06,
+                      "intScaleValue": 0.15,
+                      "unit": "kine"
+                    },
+                    "stationIntensity": {
+                      "value": 1,
+                      "unit": "級"
+                    },
+                    "stationLat": {
+                      "value": 22.48,
+                      "unit": "度"
+                    },
+                    "stationLon": {
+                      "value": 120.57,
+                      "unit": "度"
+                    },
+                    "waveImageURI": "https://scweb.cwb.gov.tw/webdata/drawTrace/outcome/2022/2022040/1-SSP.gif"
+                  }
+                ]
+              },
+              {
+                "areaDesc": "臺東縣地區",
+                "areaName": "臺東縣",
+                "infoStatus": "observe",
+                "areaIntensity": {
+                  "value": 2,
+                  "unit": "級"
+                },
+                "eqStation": [
+                  {
+                    "stationName": "蘭嶼",
+                    "stationCode": "LAY",
+                    "infoStatus": "observe",
+                    "azimuth": {
+                      "value": 232.13,
+                      "unit": "度"
+                    },
+                    "distance": {
+                      "unit": "公里",
+                      "value": 71.26
+                    },
+                    "pga": {
+                      "ewComponent": 3.33,
+                      "nsComponent": 4.45,
+                      "vComponent": 1.13,
+                      "intScaleValue": 4.42,
+                      "unit": "gal"
+                    },
+                    "pgv": {
+                      "ewComponent": 0.12,
+                      "nsComponent": 0.17,
+                      "vComponent": 0.03,
+                      "intScaleValue": 0.17,
+                      "unit": "kine"
+                    },
+                    "stationIntensity": {
+                      "value": 2,
+                      "unit": "級"
+                    },
+                    "stationLat": {
+                      "value": 22.04,
+                      "unit": "度"
+                    },
+                    "stationLon": {
+                      "value": 121.56,
+                      "unit": "度"
+                    },
+                    "waveImageURI": "https://scweb.cwb.gov.tw/webdata/drawTrace/outcome/2022/2022040/2-LAY.gif"
+                  },
+                  {
+                    "stationName": "大武",
+                    "stationCode": "TAWH",
+                    "infoStatus": "observe",
+                    "azimuth": {
+                      "value": 170.44,
+                      "unit": "度"
+                    },
+                    "distance": {
+                      "unit": "公里",
+                      "value": 78.38
+                    },
+                    "pga": {
+                      "ewComponent": 0.85,
+                      "nsComponent": 0.98,
+                      "vComponent": 1.19,
+                      "intScaleValue": 1.03,
+                      "unit": "gal"
+                    },
+                    "pgv": {
+                      "ewComponent": 0.05,
+                      "nsComponent": 0.06,
+                      "vComponent": 0.04,
+                      "intScaleValue": 0.07,
+                      "unit": "kine"
+                    },
+                    "stationIntensity": {
+                      "value": 1,
+                      "unit": "級"
+                    },
+                    "stationLat": {
+                      "value": 22.34,
+                      "unit": "度"
+                    },
+                    "stationLon": {
+                      "value": 120.89,
+                      "unit": "度"
+                    },
+                    "waveImageURI": "https://scweb.cwb.gov.tw/webdata/drawTrace/outcome/2022/2022040/1-TAWH.gif"
+                  },
+                  {
+                    "stationName": "達仁",
+                    "stationCode": "EAS",
+                    "infoStatus": "observe",
+                    "azimuth": {
+                      "value": 168.79,
+                      "unit": "度"
+                    },
+                    "distance": {
+                      "unit": "公里",
+                      "value": 83.58
+                    },
+                    "pga": {
+                      "ewComponent": 0.92,
+                      "nsComponent": 1.33,
+                      "vComponent": 1.02,
+                      "intScaleValue": 1.4,
+                      "unit": "gal"
+                    },
+                    "pgv": {
+                      "ewComponent": 0.1,
+                      "nsComponent": 0.08,
+                      "vComponent": 0.06,
+                      "intScaleValue": 0.1,
+                      "unit": "kine"
+                    },
+                    "stationIntensity": {
+                      "value": 1,
+                      "unit": "級"
+                    },
+                    "stationLat": {
+                      "value": 22.38,
+                      "unit": "度"
+                    },
+                    "stationLon": {
+                      "value": 120.86,
+                      "unit": "度"
+                    },
+                    "waveImageURI": "https://scweb.cwb.gov.tw/webdata/drawTrace/outcome/2022/2022040/1-EAS.gif"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }

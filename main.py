@@ -71,10 +71,10 @@ async def reload(ctx, extension):
 @bot.command()
 @commands.is_owner()
 async def send(ctx,id:int,*,msg):
-    await ctx.message.delete()
     channel = bot.get_channel(id)
     if id == 0:
         await ctx.send(msg)
+        await ctx.message.delete()
     elif channel == None:
         user = bot.get_user(id)
         await user.send(msg)

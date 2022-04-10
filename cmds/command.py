@@ -9,7 +9,6 @@ from BotLib.user import *
 from BotLib.basic import Database
 
 class command(Cog_Extension):
-    jdata = Database().jdata
     picdata = Database().picdata
     rsdata = Counter(json.load(open('database/role_save.json',mode='r',encoding='utf8')))
 
@@ -82,7 +81,7 @@ class command(Cog_Extension):
             user_list = (419131103836635136,528935362199027716,465831362168094730,539405949681795073,723435216244572160,490136735557222402)
         embed=BRS.simple()
         embed.set_author(name="身分組計算結果")
-        rsdata = Counter(json.load(open('database/role_save.json',mode='r',encoding='utf8')))
+        rsdata = Database().rsdata
         for i in user_list:
             user = await find.user(ctx,i)
             if user != None:
