@@ -4,11 +4,21 @@ from core.classes import Cog_Extension
 from library import BRS
 from BotLib.basic import Database
 
+class ScamChack:
+    def __init__(self,text:str):
+        self.text = text
+
+    def keyword(self):
+        self.keywords = ['Free','免費','Nitro','premiums-nitro','discerd.gift','disceord.gift']
+        if self.keywords in self.text:
+            return True
+        else:
+            return False
+
+
 class event(Cog_Extension):
     cdata = Database().cdata
-    keywords = ['Free','免費','Nitro','premiums-nitro','discerd.gift','disceord.gift']
     voice_updata = False
-    
     #跨群聊天Ver.1.0
     @commands.Cog.listener()
     async def on_message(self,msg):

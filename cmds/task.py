@@ -6,12 +6,13 @@ from BotLib.basic import Database
 class task(Cog_Extension):
     def __init__(self,*args,**kwargs):
         jevent = Database().jevent
+        jdata = Database().jdata
 
         super().__init__(*args,**kwargs)
         
         async def time_task():
             await self.bot.wait_until_ready()
-            task_report_channel = self.bot.get_channel(jdata['task_report'])
+            task_report_channel = self.bot.get_channel(self.jdata['task_report'])
             event_channel = self.bot.get_channel(643764975663448064)
             while not self.bot.is_closed():
                 now_time_hour = datetime.datetime.now().strftime('%H%M%S')
