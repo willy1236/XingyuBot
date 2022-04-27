@@ -14,6 +14,7 @@ class EarthquakeReport:
         self.originTime = data['records']['earthquake'][0]['earthquakeInfo']['originTime']
         self.depth = data['records']['earthquake'][0]['earthquakeInfo']['depth']['value']
         self.location = data['records']['earthquake'][0]['earthquakeInfo']['epiCenter']['location']
+        self.magnitude = data['records']['earthquake'][0]['earthquakeInfo']['magnitude']['magnitudeValue']
 
 
         
@@ -30,6 +31,7 @@ class weather(Cog_Extension):
         embed.add_field(name='發生時間',value=data.originTime)
         embed.add_field(name='震央',value=data.location)
         embed.add_field(name='震源深度',value=f'{data.depth} km')
+        embed.add_field(name='芮氏規模',value=f'{data.magnitude}')
         embed.set_image(url=data.reportImageURI)
         await msg.edit(content='查詢成功',embed=embed)
 

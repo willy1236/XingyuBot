@@ -176,9 +176,10 @@ class command(Cog_Extension):
 
     @commands.command()
     @commands.cooldown(rate=1,per=2)
-    async def lottery(self,ctx,times:int=1):
-        if times > 1000:
-            await ctx.send('太多了拉，請填入少一點的數字')
+    async def lottery(self,ctx,times):
+        times = round(float(times)) or 1
+        if times > 1000 or times <= 0:
+            await ctx.send('數字只能介於1~1000之間')
             return
         result={'six':0,'five':0,'four':0,'three':0}
         user_id = str(ctx.author.id)

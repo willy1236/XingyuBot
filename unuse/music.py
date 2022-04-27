@@ -70,7 +70,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
         data = await loop.run_in_executor(None, partial)
 
         if data is None:
-            raise YTDLError('無法找到 `{}` 的結果'.format(search))
+            raise YTDLError('Couldn\'t find anything that matches `{}`'.format(search))
 
         if 'entries' not in data:
             process_info = data
@@ -82,7 +82,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
                     break
 
             if process_info is None:
-                raise YTDLError('無法找到 `{}` 的結果'.format(search))
+                raise YTDLError('Couldn\'t find anything that matches `{}`'.format(search))
 
         webpage_url = process_info['webpage_url']
         partial = functools.partial(cls.ytdl.extract_info, webpage_url, download=False)
@@ -111,13 +111,13 @@ class YTDLSource(discord.PCMVolumeTransformer):
 
         duration = []
         if days > 0:
-            duration.append('{} 天'.format(days))
+            duration.append('{} days'.format(days))
         if hours > 0:
-            duration.append('{} 小時'.format(hours))
+            duration.append('{} hours'.format(hours))
         if minutes > 0:
-            duration.append('{} 分鐘'.format(minutes))
+            duration.append('{} minutes'.format(minutes))
         if seconds > 0:
-            duration.append('{} 秒'.format(seconds))
+            duration.append('{} seconds'.format(seconds))
 
         return ', '.join(duration)
 
@@ -129,13 +129,13 @@ class Song:
         self.requester = source.requester
 
     def create_embed(self):
-        embed = (discord.Embed(title='現在播放',
+        embed = (discord.Embed(title='Now playing',
                                description='```css\n{0.source.title}\n```'.format(self),
                                color=discord.Color.blurple())
-                 .add_field(name='長度', value=self.source.duration)
-                 .add_field(name='點歌者', value=self.requester.mention)
-                 .add_field(name='上傳者', value='[{0.source.uploader}]({0.source.uploader_url})'.format(self))
-                 .add_field(name='網址', value='[Click]({0.source.url})'.format(self))
+                 .add_field(name='Duration', value=self.source.duration)
+                 .add_field(name='Requested by', value=self.requester.mention)
+                 .add_field(name='Uploader', value='[{0.source.uploader}]({0.source.uploader_url})'.format(self))
+                 .add_field(name='URL', value='[Click]({0.source.url})'.format(self))
                  .set_thumbnail(url=self.source.thumbnail))
 
         return embed
@@ -261,7 +261,7 @@ class music(Cog_Extension):
 
     def cog_check(self, ctx: commands.Context):
         if not ctx.guild:
-            raise commands.NoPrivateMessage('這個指令不能在私人頻道中使用')
+            raise commands.NoPrivateMessage('This command can\'t be used in DM channels.')
 
         return True
 
@@ -269,7 +269,7 @@ class music(Cog_Extension):
         ctx.voice_state = self.get_voice_state(ctx)
 
     async def cog_command_error(self, ctx: commands.Context, error: commands.CommandError):
-        await ctx.send('錯誤發生: {}'.format(str(error)))
+        await ctx.send('An error occurred: {}'.format(str(error)))
 
     @commands.command(name='join', invoke_without_subcommand=True)
     async def _join(self, ctx: commands.Context):
@@ -290,7 +290,7 @@ class music(Cog_Extension):
         """
 
         if not channel and not ctx.author.voice:
-            raise VoiceError('你需要先加入一個語音頻道')
+            raise VoiceError('You are neither connected to a voice channel nor specified a channel to join.')
 
         destination = channel or ctx.author.voice.channel
         if ctx.voice_state.voice:
@@ -304,21 +304,20 @@ class music(Cog_Extension):
         """Clears the queue and leaves the voice channel."""
 
         if not ctx.voice_state.voice:
-            return await ctx.send('我沒有在任何頻道中')
+            return await ctx.send('Not connected to any voice channel.')
 
         await ctx.voice_state.stop()
         del self.voice_states[ctx.guild.id]
-        await ctx.message.add_reaction('👋')
 
     @commands.command(name='volume')
     async def _volume(self, ctx: commands.Context, *, volume: int):
         """Sets the volume of the player."""
 
         if not ctx.voice_state.is_playing:
-            return await ctx.send('沒有歌曲正在被播放')
+            return await ctx.send('Nothing being played at the moment.')
 
         if 0 > volume > 100:
-            return await ctx.send('音量須設定在0~100之間')
+            return await ctx.send('Volume must be between 0 and 100')
 
         ctx.voice_state.volume = volume / 100
         await ctx.send('Volume of the player set to {}%'.format(volume))
@@ -362,7 +361,7 @@ class music(Cog_Extension):
         """
 
         if not ctx.voice_state.is_playing:
-            return await ctx.send('沒有播放中的歌曲...')
+            return await ctx.send('Not playing any music right now...')
 
         voter = ctx.message.author
         if voter == ctx.voice_state.current.requester:
@@ -377,10 +376,10 @@ class music(Cog_Extension):
                 await ctx.message.add_reaction('⏭')
                 ctx.voice_state.skip()
             else:
-                await ctx.send('已完成跳過投票, 目前票數: **{}/3**'.format(total_votes))
+                await ctx.send('Skip vote added, currently at **{}/3**'.format(total_votes))
 
         else:
-            await ctx.send('你已經投票跳過這首歌了')
+            await ctx.send('You have already voted to skip this song.')
 
     @commands.command(name='queue',aliases=['q'])
     async def _queue(self, ctx: commands.Context, *, page: int = 1):
@@ -389,7 +388,7 @@ class music(Cog_Extension):
         """
 
         if len(ctx.voice_state.songs) == 0:
-            return await ctx.send('播放清單內沒有歌曲')
+            return await ctx.send('Empty queue.')
 
         items_per_page = 10
         pages = math.ceil(len(ctx.voice_state.songs) / items_per_page)
@@ -410,7 +409,7 @@ class music(Cog_Extension):
         """Shuffles the queue."""
 
         if len(ctx.voice_state.songs) == 0:
-            return await ctx.send('播放清單內沒有歌曲')
+            return await ctx.send('Empty queue.')
 
         ctx.voice_state.songs.shuffle()
         await ctx.message.add_reaction('✅')
@@ -420,7 +419,7 @@ class music(Cog_Extension):
         """Removes a song from the queue at a given index."""
 
         if len(ctx.voice_state.songs) == 0:
-            return await ctx.send('播放清單內沒有歌曲')
+            return await ctx.send('Empty queue.')
 
         ctx.voice_state.songs.remove(index - 1)
         await ctx.message.add_reaction('✅')
@@ -432,7 +431,7 @@ class music(Cog_Extension):
         """
 
         if not ctx.voice_state.is_playing:
-            return await ctx.send('沒有歌曲正在被播放')
+            return await ctx.send('Nothing being played at the moment.')
 
         # Inverse boolean value to loop and unloop.
         ctx.voice_state.loop = not ctx.voice_state.loop
@@ -459,16 +458,16 @@ class music(Cog_Extension):
                 song = Song(source)
 
                 await ctx.voice_state.songs.put(song)
-                await ctx.send('已加入歌曲 {}'.format(str(source)))
+                await ctx.send('Enqueued {}'.format(str(source)))
 
     @_join.before_invoke
     @_play.before_invoke
     async def ensure_voice_state(self, ctx: commands.Context):
         if not ctx.author.voice or not ctx.author.voice.channel:
-            raise commands.CommandError('你沒有在任何語音頻道')
+            raise commands.CommandError('You are not connected to any voice channel.')
 
         if ctx.voice_client:
             if ctx.voice_client.channel != ctx.author.voice.channel:
-                raise commands.CommandError('我已在語音頻道內')
+                raise commands.CommandError('Bot is already in a voice channel.')
 def setup(bot):
   bot.add_cog(music(bot))
