@@ -30,7 +30,7 @@ class Database:
         self.jdsign = json.load(open(self.dict['jdsign'],mode='r',encoding='utf8'))
         self.jwsign = Counter(json.load(open(self.dict['jwsign'],mode='r',encoding='utf8')))
         self.jevent = Counter(json.load(open(self.dict['jevent'],mode='r',encoding='utf8')))
-        self.redata = Counter(json.load(open(self.dict['rsdata'],mode='r',encoding='utf8')))
+        self.rsdata = Counter(json.load(open(self.dict['rsdata'],mode='r',encoding='utf8')))
 
         try:
             self.tokens = json.load(open('token_settings.json',mode='r',encoding='utf8'))
