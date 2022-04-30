@@ -7,6 +7,7 @@ from BotLib.basic import Database
 
 
 class economy_system(Cog_Extension):
+
     @commands.group(invoke_without_command=True,aliases=['pt'])
     async def point(self,ctx,user=None):
         if user == None:

@@ -36,7 +36,7 @@ from BotLib.basic import Database
 #async -> await
 
 picdata = Database().picdata
-jdata = Database().jdata
+jdata = json.load(open('setting.json',mode='r',encoding='utf8'))
 
 def is_number(n):
     try:  
