@@ -108,7 +108,6 @@ async def anno(ctx,*,msg):
 @commands.is_owner()
 async def edit(ctx,msgid:int,*,new_msg):
     message = await ctx.fetch_message(msgid)
-    #message = channel.get_partial_message(msgID)
     await message.edit(content=new_msg)
     await ctx.message.add_reaction('✅')
 
@@ -118,7 +117,6 @@ async def edit(ctx,msgid:int,*,new_msg):
 async def reaction(ctx,msgid:int,mod:str,*,emojiid):
     message = await ctx.fetch_message(msgid)
     channel = message.channel
-    #message = channel.get_partial_message(msgID)
     emoji = find.emoji(emojiid)
 
     if emoji == None:

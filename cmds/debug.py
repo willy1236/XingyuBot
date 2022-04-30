@@ -27,8 +27,8 @@ class debug(Cog_Extension):
                 
 
     @commands.command()
-    async def test(self, ctx):
-        url = 123
+    async def test(self, ctx,*arg):
+        print(arg,type(arg))
        
 
     
