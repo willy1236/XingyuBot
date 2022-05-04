@@ -35,10 +35,12 @@ class Database:
         try:
             self.tokens = json.load(open('token_settings.json',mode='r',encoding='utf8'))
             self.CWB_API = self.tokens['CWB_API']
-            self.osu_API = self.tokens['osu_API']
+            self.osu_API_id = self.tokens['osu_API_id']
+            self.osu_API_secret = self.tokens['osu_API_secret']
         except:
             self.CWB_API = os.environ['CWB_API']
-            self.osu_API = os.environ['osu_API']
+            self.osu_API_id = os.environ['osu_API_id']
+            self.osu_API_secret = os.environ['osu_API_secret']
 
     def write(self,file:str,data:dict):
         try:
