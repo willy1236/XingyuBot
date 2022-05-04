@@ -35,11 +35,15 @@ class Database:
         try:
             self.tokens = json.load(open('token_settings.json',mode='r',encoding='utf8'))
             self.CWB_API = self.tokens['CWB_API']
+            self.osu_API = self.tokens['osu_API']
         except:
             self.CWB_API = os.environ['CWB_API']
+            self.osu_API = os.environ['osu_API']
 
-        
     def write(self,file:str,data:dict):
-        location = self.dict[file]
-        with open(file=location,mode='w',encoding='utf8') as jfile:
-            json.dump(data,jfile,indent=4)
+        try:
+            location = self.dict[file]
+            with open(file=location,mode='w',encoding='utf8') as jfile:
+                json.dump(data,jfile,indent=4)
+        except:
+            raise KeyError("此項目沒有在資料庫中")

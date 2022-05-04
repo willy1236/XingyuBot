@@ -10,7 +10,7 @@ from BotLib.basic import Database
 
 class command(Cog_Extension):
     picdata = Database().picdata
-    rsdata = Counter(json.load(open('database/role_save.json',mode='r',encoding='utf8')))
+    rsdata = Database().rsdata
 
     @commands.command()
     async def find(self,ctx,id):

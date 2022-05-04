@@ -20,10 +20,12 @@ class Point():
         self.user = str(userid) #用戶
         self.pt = self.jpt[self.user] #用戶擁有PT數
     
-    def set(self,amount:int): #設定用戶PT
+    def set(self,amount:int):
+        """設定用戶PT"""
         self.jpt[self.user] = amount
         Database().write('jpt',self.jpt)
     
-    def add(self,amount:int): #增減用戶PT
+    def add(self,amount:int):
+        """增減用戶PT"""
         self.jpt[self.user] += amount
         Database().write('jpt',self.jpt)
