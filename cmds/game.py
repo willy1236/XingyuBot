@@ -21,8 +21,8 @@ API_URL = 'https://osu.ppy.sh/api/v2'
 TOKEN_URL = 'https://osu.ppy.sh/oauth/token'
 def get_osutoken():
     data = {
-        'client_id': Database().osu_API['id'],
-        'client_secret': Database().osu_API['secret'],
+        'client_id': Database().osu_API_id,
+        'client_secret': Database().osu_API_secret,
         'grant_type': 'client_credentials',
         'scope': 'public'
     }
