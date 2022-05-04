@@ -11,9 +11,7 @@ from BotLib.basic import Database
 
 class command(Cog_Extension):
     picdata = Database().picdata
-    rsdata = Counter(json.load(open('database/role_save.json',mode='r',encoding='utf8')))
-    
-    role_group = SlashCommandGroup("role", "身分組相關指令")
+    rsdata = Database().rsdata
 
     @commands.command()
     async def find(self,ctx,id):
@@ -78,11 +76,8 @@ class command(Cog_Extension):
         await send_msg.edit('訊息已發送',delete_after=5)
 
 
-    @role_group.command()
-    async def count(self,ctx,
-                    user_list:discord.Option(str,"用戶名稱")):
-        await ctx.defer()
-        user_list = user_list.split(' ')
+    @commands.group(invoke_without_command=True)
+    async def role(self,ctx,*user_list):
         if 'default' in user_list:
             user_list = (419131103836635136,528935362199027716,465831362168094730,539405949681795073,723435216244572160,490136735557222402)
         embed=BRS.simple()
@@ -90,7 +85,7 @@ class command(Cog_Extension):
         rsdata = Database().rsdata
         for i in user_list:
             user = await find.user(ctx,i)
-            if user != None and str(user.id) in rsdata:
+            if user != None:
                 role_count = len(rsdata[str(user.id)])
 
                 embed.add_field(name=user.name, value=f"{role_count}", inline=False)
@@ -98,14 +93,12 @@ class command(Cog_Extension):
                 #     text = text + f'\n{user.name}扣除{ignore_count}個後擁有{role_count}個身分組'
                 # else:
                 #     text = text + f'\n{user.name}擁有{role_count}個身分組'
-        await ctx.respond(embed=embed)
+        await ctx.send(embed=embed)
 
 
-
-    @role_group.command()
+    @role.command()
     @commands.cooldown(rate=1,per=5)
     async def add(self,ctx,name,*user_list):
-        await ctx.defer()
         permission = discord.Permissions.none()
         #color = discord.Colour.random()
         r,g,b=random_color()
@@ -120,8 +113,8 @@ class command(Cog_Extension):
         await ctx.message.add_reaction('✅')
 
 
+    @role.command()
     @commands.is_owner()
-    @role_group.command()
     async def save(self,ctx,user):
         def save_role(user):
             dict = self.rsdata
@@ -138,7 +131,6 @@ class command(Cog_Extension):
             with open('database/role_save.json',mode='w',encoding='utf8') as jfile:
                 json.dump(dict,jfile,indent=4)
         
-        await ctx.defer()
         guild = self.bot.get_guild(self.jdata['guild']['001'])
         add_role = guild.get_role(877934319249797120)
         if user == 'all':
@@ -151,12 +143,11 @@ class command(Cog_Extension):
                 save_role(user)
                 await ctx.message.add_reaction('✅')
             elif add_role not in user.roles:
-                ctx.respond('錯誤:此用戶沒有"加身分組"')
+                ctx.send('錯誤:此用戶沒有"加身分組"')
 
     @commands.is_owner()
-    @role_group.command()
+    @role.command()
     async def rsmove(self,ctx):
-        await ctx.defer()
         await self.save(ctx,'all')
         asyncio.sleep(3)
         for user in ctx.guild.get_role(877934319249797120).members:
@@ -170,9 +161,8 @@ class command(Cog_Extension):
                 await role.delete()
         await ctx.message.add_reaction('✅')
 
-    @role_group.command()
+    @role.command()
     async def nick(self, ctx,arg):
-        await ctx.defer()
         user = ctx.author
         role = user.roles[-1]
         if role.name.startswith('稱號 | '):
@@ -180,9 +170,9 @@ class command(Cog_Extension):
                 await role.edit(colour=arg,reason='稱號:顏色改變')
             else:
                 await role.edit(name=f'稱號 | {arg}',reason='稱號:名稱改變')
-            await ctx.respond('稱號更改已完成')
+            await ctx.send('稱號更改已完成')
         else:
-            await ctx.respond('錯誤:你沒有稱號可更改',delete_after=5)
+            await ctx.send('錯誤:你沒有稱號可更改',delete_after=5)
 
 
     @commands.command()
@@ -330,18 +320,16 @@ class command(Cog_Extension):
             await ctx.send(f'編號:{id}\n恭喜藍藍幫獲勝!')
 
 
-    @commands.slash_command(description='讓機器人選擇一個東西')
-    async def choice(self,ctx,
-                    options:discord.Option(str,"選項(可有多個 每個選項用空格分開)",required=True)):
-        result = random.choice(options)
-        await ctx.respond(f'我選擇:{result}')
+    @commands.command()
+    async def choice(self,ctx,*args):
+        result = random.choice(args)
+        await ctx.send(f'我選擇:{result}')
 
 
     @commands.slash_command(description='向大家說哈瞜')
-    async def hello(self,ctx, user_name:discord.Option(str, "輸入姓名", required=False)):
-        user_name = user_name or ctx.author.name
-        await ctx.respond(f"Hello {user_name}!")
-    
+    async def hello(ctx, name: str = None):
+        name = name or ctx.author.name
+        await ctx.respond(f"Hello {name}!")
 
 def setup(bot):
     bot.add_cog(command(bot))

@@ -1,6 +1,7 @@
 import discord,json,requests
 from discord.ext import commands
 from bs4 import BeautifulSoup
+
 from core.classes import Cog_Extension
 from library import find,BRS
 from BotLib.basic import Database
@@ -15,6 +16,38 @@ def player_search(url):
             result2 = str(result.div)[166:]
             lvl = ''.join([x for x in result2 if x.isdigit()])
             return lvl
+
+API_URL = 'https://osu.ppy.sh/api/v2'
+TOKEN_URL = 'https://osu.ppy.sh/oauth/token'
+def get_osutoken():
+    data = {
+        'client_id': Database().osu_API['id'],
+        'client_secret': Database().osu_API['secret'],
+        'grant_type': 'client_credentials',
+        'scope': 'public'
+    }
+    response = requests.post(TOKEN_URL, data=data)
+    return response.json().get('access_token')
+
+    
+def get_osuplayer(user):
+    token = get_osutoken()
+    headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': f'Bearer {token}'
+    }
+    response = requests.get(f'{API_URL}/users/{user}', headers=headers)
+    return response.json()
+
+class OsuPlayer():
+    def __init__(self,data):
+        self.username = data['username']
+        self.id = data['id']
+        self.global_rank = data['statistics']['global_rank']
+        self.pp = data['statistics']['pp']
+        self.avatar_url = data['avatar_url']
+
 
 class game(Cog_Extension):
     gdata = Database().gdata
@@ -84,7 +117,18 @@ class game(Cog_Extension):
             embed.set_thumbnail(url=user.display_avatar.url)
             await ctx.send(embed=embed)
 
-
+    @commands.command()
+    @commands.cooldown(rate=1,per=5)
+    async def osu(self,ctx,userid):
+        async with ctx.typing():
+            user = OsuPlayer(get_osuplayer(userid))
+            embed = BRS.simple("Osu玩家資訊")
+            embed.add_field(name="名稱",value=user.username)
+            embed.add_field(name="id",value=user.id)
+            embed.add_field(name="全球排名",value=user.global_rank)
+            embed.add_field(name="pp",value=user.pp)
+            embed.set_thumbnail(url=user.avatar_url)
+            await ctx.send(embed=embed)
 
 def setup(bot):
     bot.add_cog(game(bot))
