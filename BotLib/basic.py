@@ -6,7 +6,10 @@ class Counter(dict):
 
 class Database:
     def __init__(self):
-        """CWB = 中央氣象局"""
+        """
+        CWB = 中央氣象局\n
+        TRN = tracker.gg
+        """
         self.dict = {'jdata':'setting.json',
                 'cdata':'database/channel_settings.json',
                 'picdata':'database/picture.json',
@@ -37,10 +40,12 @@ class Database:
             self.CWB_API = self.tokens['CWB_API']
             self.osu_API_id = self.tokens['osu_API_id']
             self.osu_API_secret = self.tokens['osu_API_secret']
+            self.TRN_API = self.tokens['TRN_API']
         except:
             self.CWB_API = os.environ['CWB_API']
             self.osu_API_id = os.environ['osu_API_id']
             self.osu_API_secret = os.environ['osu_API_secret']
+            self.TRN_API = os.environ['TRN_API']
 
     def write(self,file:str,data:dict):
         try:
