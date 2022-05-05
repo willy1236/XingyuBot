@@ -102,9 +102,8 @@ class help(Cog_Extension):
     @commands.cooldown(rate=1,per=3)
     async def help(self,ctx):
         embed = BRS.basic(self,"目前可使用的指令如下:")
-        embed.add_field(name="!!help <系列指令>", value="查詢系列指令\n目前支援:admin,pt,game,set,role,bet,music", inline=False)
+        embed.add_field(name="!!help <系列指令>", value="查詢系列指令\n目前支援:admin,pt,game,set,role,bet,music,weather", inline=False)
         embed.add_field(name="!!info <內容/help>", value="獲得相關資訊", inline=False)
-        #embed.add_field(name="!!osu <player> <玩家名稱>", value="查詢Osu玩家(更多功能敬請期待)", inline=False)
         embed.add_field(name="!!feedback <內容>", value="傳送訊息給機器人擁有者", inline=False)
         embed.add_field(name="!!find <id>", value="搜尋指定ID", inline=False)
         embed.add_field(name="!!lottery [次數]", value="抽獎", inline=False)
@@ -135,6 +134,8 @@ class help(Cog_Extension):
         embed.add_field(name="!!game <set> <遊戲> <資料>", value="設定你在資料庫內的遊戲名稱", inline=False)
         embed.add_field(name="!!game <find> <用戶>", value="查詢用戶在資料庫內的遊戲名稱(未開放)", inline=False)
         embed.add_field(name="!!lol <player> <玩家名稱>", value="查詢LOL戰績(更多功能敬請期待)", inline=False)
+        embed.add_field(name="!!osu <玩家名/id>", value="查詢osu玩家", inline=False)
+        embed.add_field(name="!!apex <玩家名/id>", value="查詢apex玩家(未完成)", inline=False)
         await ctx.send(embed=embed)
 
     @help.command()
@@ -163,6 +164,13 @@ class help(Cog_Extension):
     @help.command()
     async def music(self,ctx):
         await help_page.music(ctx)
+
+    @help.command()
+    async def weather(self,ctx):
+        embed = BRS.simple("天氣(weather) 指令:")
+        embed.add_field(name="!!earthquake", value="查詢最新的顯著有感地震報告", inline=False)
+        embed.add_field(name="!!covid", value="查詢最新的台灣疫情\n(資料可能會有時間差，請注意資料日期)", inline=False)
+        await ctx.send(embed=embed)
 
     @help.command()
     @commands.is_owner()

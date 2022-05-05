@@ -40,6 +40,17 @@ def get_osuplayer(user):
     response = requests.get(f'{API_URL}/users/{user}', headers=headers)
     return response.json()
 
+def get_apexplayer(user):
+    headers = {
+        'TRN-Api-Key': Database().TRN_API,
+        'Accept': 'application/json',
+        'Accept-Encoding': 'gzip'
+    }
+    response = requests.get(f'https://public-api.tracker.gg/v2/apex/standard/profile/origin/{user}', headers=headers)
+    return response.json().get('data')
+
+
+
 class OsuPlayer():
     def __init__(self,data):
         self.username = data['username']
@@ -47,7 +58,13 @@ class OsuPlayer():
         self.global_rank = data['statistics']['global_rank']
         self.pp = data['statistics']['pp']
         self.avatar_url = data['avatar_url']
+        self.country = data['country']["code"]
+        self.is_online = data['is_online']
 
+class ApexPlayer():
+    def __init__(self,data):
+        self.username = data['platformInfo']['platformUserId']
+        self.platformSlug = data['platformInfo']['platformSlug']
 
 class game(Cog_Extension):
     gdata = Database().gdata
@@ -120,6 +137,7 @@ class game(Cog_Extension):
     @commands.command()
     @commands.cooldown(rate=1,per=5)
     async def osu(self,ctx,userid):
+        msg = await ctx.send('資料查詢中...')
         async with ctx.typing():
             user = OsuPlayer(get_osuplayer(userid))
             embed = BRS.simple("Osu玩家資訊")
@@ -127,8 +145,21 @@ class game(Cog_Extension):
             embed.add_field(name="id",value=user.id)
             embed.add_field(name="全球排名",value=user.global_rank)
             embed.add_field(name="pp",value=user.pp)
+            embed.add_field(name="國家",value=user.country)
+            embed.add_field(name="是否在線上",value=user.is_online)
             embed.set_thumbnail(url=user.avatar_url)
             await ctx.send(embed=embed)
+        await msg.edit(content='查詢成功',embed=embed)
+
+    @commands.command()
+    @commands.cooldown(rate=1,per=5)
+    async def apex(self,ctx,userid):
+        msg = await ctx.send('資料查詢中...')
+        user = ApexPlayer(get_apexplayer(userid))
+        embed = BRS.simple("Apex玩家資訊")
+        embed.add_field(name="名稱",value=user.username)
+        embed.add_field(name="平台",value=user.platformSlug)
+        await msg.edit(content='查詢成功',embed=embed)
 
 def setup(bot):
     bot.add_cog(game(bot))
