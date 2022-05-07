@@ -1,7 +1,7 @@
 import discord,json
 from discord.ext import commands
 from core.classes import Cog_Extension
-from library import find,Counter
+from library import find
 from BotLib.user import Point
 from BotLib.basic import Database
 
@@ -63,7 +63,7 @@ class economy_system(Cog_Extension):
                 pt.add(amount*-1)
             elif mod == 'set':
                 pt.set(amount)
-            pt_new = pt.pt
+            pt_new = Point(user.id).pt
             await ctx.send(f'設定成功:已將{user.mention}的Pt點數從 {pt_old} 設定為 {pt_new}')
         else:
             await ctx.send(f'錯誤:找不到用戶或模式輸入錯誤',delete_after=5)

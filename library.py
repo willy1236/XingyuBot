@@ -170,15 +170,15 @@ class BRS():
         embed.set_footer(text='廣播電台 | 機器人全群公告')
         return embed
 
-    def basic(self,description:str=discord.Embed.Empty,title:str=discord.Embed.Empty):
+    def basic(self,description:str=discord.Embed.Empty,title:str=discord.Embed.Empty,url=discord.Embed.Empty):
         '''基本:作者帶機器人名稱'''
-        embed = discord.Embed(title=title,description=description, color=0xc4e9ff)
+        embed = discord.Embed(title=title,description=description, color=0xc4e9ff,url=url)
         embed.set_author(name=self.bot.user.name,icon_url=self.bot.user.display_avatar.url)
         return embed
     
-    def simple(description:str=discord.Embed.Empty,title:str=discord.Embed.Empty):
+    def simple(description:str=discord.Embed.Empty,title:str=discord.Embed.Empty,url=discord.Embed.Empty):
         '''簡易:不帶作者'''
-        embed = discord.Embed(title=title,description=description, color=0xc4e9ff)
+        embed = discord.Embed(title=title,description=description, color=0xc4e9ff,url=url)
         return embed
 
     def brs():

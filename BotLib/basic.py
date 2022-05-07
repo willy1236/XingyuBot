@@ -10,18 +10,20 @@ class Database:
         CWB = 中央氣象局\n
         TRN = tracker.gg
         """
-        self.dict = {'jdata':'setting.json',
-                'cdata':'database/channel_settings.json',
-                'picdata':'database/picture.json',
-                'udata': 'database/user_settings/basic.json',
-                'jpt':'database/point.json',
-                'jloot':'database/lottery.json',
-                'bet_data':'database/bet.json',
-                'gdata':'database/gamer_data.json',
-                'jdsign':'database/sign_day.json',
-                'jwsign':'database/sign_week.json',
-                'jevent':'database/event.json',
-                'rsdata':'database/role_save.json'}
+        self.dict = {
+            'jdata':'setting.json',
+            'cdata':'database/channel_settings.json',
+            'picdata':'database/picture.json',
+            'udata': 'database/user_settings/basic.json',
+            'jpt':'database/point.json',
+            'jloot':'database/lottery.json',
+            'bet_data':'database/bet.json',
+            'gdata':'database/gamer_data.json',
+            'jdsign':'database/sign_day.json',
+            'jwsign':'database/sign_week.json',
+            'jevent':'database/event.json',
+            'rsdata':'database/role_save.json'
+            }
         self.jdata = json.load(open(self.dict['jdata'],mode='r',encoding='utf8'))
         self.cdata = json.load(open(self.dict['cdata'],mode='r',encoding='utf8'))
         self.picdata = json.load(open(self.dict['picdata'],mode='r',encoding='utf8'))
