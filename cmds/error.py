@@ -21,9 +21,9 @@ class error(Cog_Extension):
         elif isinstance(error,commands.errors.CommandNotFound):
             await ctx.send('沒找到指令:請確認指令是否輸入錯誤')
         elif isinstance(error,commands.errors.MissingPermissions):
-            await ctx.send('缺少權限:你沒有權限來使用此指令')
+            await ctx.send(f'缺少權限:你沒有權限來使用此指令\n缺少權限:{error.missing_permissions}')
         elif isinstance(error,commands.errors.BotMissingPermissions):
-            await ctx.send('缺少權限:機器人沒有權限來使用此指令')
+            await ctx.send(f'缺少權限:機器人沒有權限來使用此指令\n缺少權限:{error.missing_permissions}')
             print("缺少權限:",error.missing_permissions)
         elif isinstance(error,commands.errors.NotOwner):
             await ctx.send('缺少權限:你不是機器人擁有者')
@@ -47,11 +47,6 @@ class error(Cog_Extension):
                 await BRS.error(self,ctx,error)
             await ctx.send(f'發生錯誤\n```{error}```')
             print(error)
-
-    #@info.error
-    #async def info_error(self,ctx,error):
-    #    if isinstance(error,commands.errors.MissingRequiredArgument):
-    #        await ctx.send('遺失參數:輸入!!info help以取得參數')
 
 def setup(bot):
     bot.add_cog(error(bot))

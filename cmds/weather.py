@@ -9,12 +9,13 @@ from BotLib.basic import Database
 class EarthquakeReport:
     def __init__(self,data):
         self.data = data
-        self.earthquakeNo = data['records']['earthquake'][0]['earthquakeNo']
-        self.reportImageURI = data['records']['earthquake'][0]['reportImageURI']
-        self.originTime = data['records']['earthquake'][0]['earthquakeInfo']['originTime']
-        self.depth = data['records']['earthquake'][0]['earthquakeInfo']['depth']['value']
-        self.location = data['records']['earthquake'][0]['earthquakeInfo']['epiCenter']['location']
-        self.magnitude = data['records']['earthquake'][0]['earthquakeInfo']['magnitude']['magnitudeValue']
+        self.earthquakeNo = data['earthquake'][0]['earthquakeNo']
+        self.reportImageURI = data['earthquake'][0]['reportImageURI']
+        self.originTime = data['earthquake'][0]['earthquakeInfo']['originTime']
+        self.depth = data['earthquake'][0]['earthquakeInfo']['depth']['value']
+        self.location = data['earthquake'][0]['earthquakeInfo']['epiCenter']['location']
+        self.magnitude = data['earthquake'][0]['earthquakeInfo']['magnitude']['magnitudeValue']
+        self.reportColor = data['earthquake'][0]['reportColor']
 
 class Covid19Report:
     def __init__(self,data):
@@ -30,8 +31,7 @@ class weather(Cog_Extension):
     @commands.command()
     async def earthquake(self,ctx):
         msg = await ctx.send('資料查詢中...')
-        r = requests.get(f'https://opendata.cwb.gov.tw/api/v1/rest/datastore/E-A0015-001?Authorization={Database().CWB_API}&limit=1&format=JSON')
-        APIdata = json.loads(r.text)
+        APIdata = requests.get(f'https://opendata.cwb.gov.tw/api/v1/rest/datastore/E-A0015-001?Authorization={Database().CWB_API}&limit=1&format=JSON').json().get('records')
         data = EarthquakeReport(APIdata)
         
         embed = BRS.simple(f'編號第{data.earthquakeNo}號地震報告')
@@ -46,8 +46,8 @@ class weather(Cog_Extension):
     @commands.command()
     async def covid(self,ctx):
         msg = await ctx.send('資料查詢中...')
-        r = requests.get(f'https://covid-19.nchc.org.tw/api/covid19?CK=covid-19@nchc.org.tw&querydata=4001&limited=TWN')
-        APIdata = json.loads(r.text)[0]
+        r = requests.get(f'https://covid-19.nchc.org.tw/api/covid19?CK=covid-19@nchc.org.tw&querydata=4001&limited=TWN').json()
+        APIdata = r[0]
         data = Covid19Report(APIdata)
         
         embed = BRS.simple(f'{data.date} 台灣COVUD-19疫情')

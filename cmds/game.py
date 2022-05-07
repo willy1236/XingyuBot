@@ -5,6 +5,7 @@ from bs4 import BeautifulSoup
 from core.classes import Cog_Extension
 from library import find,BRS
 from BotLib.basic import Database
+from BotLib.gamedata import *
 
 def player_search(url):
     response = requests.get(url)
@@ -17,54 +18,6 @@ def player_search(url):
             lvl = ''.join([x for x in result2 if x.isdigit()])
             return lvl
 
-API_URL = 'https://osu.ppy.sh/api/v2'
-TOKEN_URL = 'https://osu.ppy.sh/oauth/token'
-def get_osutoken():
-    data = {
-        'client_id': Database().osu_API_id,
-        'client_secret': Database().osu_API_secret,
-        'grant_type': 'client_credentials',
-        'scope': 'public'
-    }
-    response = requests.post(TOKEN_URL, data=data)
-    return response.json().get('access_token')
-
-    
-def get_osuplayer(user):
-    token = get_osutoken()
-    headers = {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'Authorization': f'Bearer {token}'
-    }
-    response = requests.get(f'{API_URL}/users/{user}', headers=headers)
-    return response.json()
-
-def get_apexplayer(user):
-    headers = {
-        'TRN-Api-Key': Database().TRN_API,
-        'Accept': 'application/json',
-        'Accept-Encoding': 'gzip'
-    }
-    response = requests.get(f'https://public-api.tracker.gg/v2/apex/standard/profile/origin/{user}', headers=headers)
-    return response.json().get('data')
-
-
-
-class OsuPlayer():
-    def __init__(self,data):
-        self.username = data['username']
-        self.id = data['id']
-        self.global_rank = data['statistics']['global_rank']
-        self.pp = data['statistics']['pp']
-        self.avatar_url = data['avatar_url']
-        self.country = data['country']["code"]
-        self.is_online = data['is_online']
-
-class ApexPlayer():
-    def __init__(self,data):
-        self.username = data['platformInfo']['platformUserId']
-        self.platformSlug = data['platformInfo']['platformSlug']
 
 class game(Cog_Extension):
     gdata = Database().gdata
@@ -89,7 +42,7 @@ class game(Cog_Extension):
 
     @commands.group(invoke_without_command=True)
     async def game(self,ctx):
-        pass
+        raise commands.errors.ArgumentParsingError('game command')
         
     @game.command()
     async def set(self,ctx,game,data=None):
@@ -134,12 +87,12 @@ class game(Cog_Extension):
             embed.set_thumbnail(url=user.display_avatar.url)
             await ctx.send(embed=embed)
 
-    @commands.command()
-    @commands.cooldown(rate=1,per=5)
+    @commands.group(invoke_without_command=True)
+    @commands.cooldown(rate=1,per=1)
     async def osu(self,ctx,userid):
         msg = await ctx.send('資料查詢中...')
-        async with ctx.typing():
-            user = OsuPlayer(get_osuplayer(userid))
+        user = OsuData().get_player(userid)
+        if user != None:
             embed = BRS.simple("Osu玩家資訊")
             embed.add_field(name="名稱",value=user.username)
             embed.add_field(name="id",value=user.id)
@@ -148,14 +101,34 @@ class game(Cog_Extension):
             embed.add_field(name="國家",value=user.country)
             embed.add_field(name="是否在線上",value=user.is_online)
             embed.set_thumbnail(url=user.avatar_url)
-            await ctx.send(embed=embed)
-        await msg.edit(content='查詢成功',embed=embed)
+            await msg.edit(content='查詢成功',embed=embed)
+        else:
+            await msg.edit(content='查詢失敗:查無此ID',delete_after=5)
+
+    @osu.command()
+    @commands.cooldown(rate=1,per=1)
+    async def map(self,ctx,mapid):
+        msg = await ctx.send('資料查詢中...')
+        map = OsuData().get_beatmap(mapid)
+        if map != None:
+            embed = BRS.simple(title="Osu圖譜資訊")
+            embed.add_field(name="名稱",value=map.title)
+            embed.add_field(name="歌曲長度(秒)",value=map.time)
+            embed.add_field(name="模式",value=map.mode)
+            embed.add_field(name="圖譜狀態",value=map.status)
+            embed.add_field(name="圖譜id",value=map.id)
+            embed.add_field(name="圖譜組id",value=map.beatmapset_id)
+            embed.add_field(name='網址', value='[點我]({0})'.format(map.url))
+            embed.set_image(url=map.cover)
+            await msg.edit(content='查詢成功',embed=embed)
+        else:
+            await msg.edit(content='查詢失敗:查無此ID',delete_after=5)
 
     @commands.command()
-    @commands.cooldown(rate=1,per=5)
+    @commands.cooldown(rate=1,per=3)
     async def apex(self,ctx,userid):
         msg = await ctx.send('資料查詢中...')
-        user = ApexPlayer(get_apexplayer(userid))
+        user = ApexData().get_player(userid)
         embed = BRS.simple("Apex玩家資訊")
         embed.add_field(name="名稱",value=user.username)
         embed.add_field(name="平台",value=user.platformSlug)

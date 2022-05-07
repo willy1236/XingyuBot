@@ -17,7 +17,7 @@ class moderation(Cog_Extension):
 
     @commands.group(invoke_without_command=True)
     async def set(self,ctx):
-        ctx.send('參數錯誤:請輸入正確參數')
+        raise commands.errors.ArgumentParsingError('參數錯誤:請輸入正確參數')
 
     @set.command()
     @commands.has_permissions(manage_channels=True)
