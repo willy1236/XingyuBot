@@ -3,6 +3,23 @@ from discord.ext import commands
 from core.classes import Cog_Extension
 from library import *
 
+# Note that custom_ids can only be up to 100 characters long.
+class PersistentView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    @discord.ui.button(label="Green",style=discord.ButtonStyle.green,custom_id="persistent_view:green")
+    async def green(self, button: discord.ui.Button, interaction: discord.Interaction):
+        await interaction.response.send_message("This is green.", ephemeral=True)
+
+    @discord.ui.button(label="Red", style=discord.ButtonStyle.red, custom_id="persistent_view:red")
+    async def red(self, button: discord.ui.Button, interaction: discord.Interaction):
+        await interaction.response.send_message("This is red.", ephemeral=True)
+
+    @discord.ui.button(label="Grey", style=discord.ButtonStyle.grey, custom_id="persistent_view:grey")
+    async def grey(self, button: discord.ui.Button, interaction: discord.Interaction):
+        await interaction.response.send_message("This is grey.", ephemeral=True)
+
 class debug(Cog_Extension):
     rsdata = Counter(json.load(open('database/role_save.json',mode='r',encoding='utf8')))
     
@@ -29,7 +46,17 @@ class debug(Cog_Extension):
     @commands.command()
     async def test(self, ctx,*arg):
         print(arg,type(arg))
-       
+    
+    @commands.command()
+    @commands.is_owner()
+    async def prepare(self,ctx: commands.Context):
+        """Starts a persistent view."""
+        # In order for a persistent view to be listened to, it needs to be sent to an actual message.
+        # Call this method once just to store it somewhere.
+        # In a more complicated program you might fetch the message_id from a database for use later.
+        # However this is outside of the scope of this simple example.
+        await ctx.send("What's your favourite colour?", view=PersistentView())
+
 
     
     # @commands.command(enabled=False)

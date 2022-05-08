@@ -120,7 +120,7 @@ class find(Cog_Extension):
 
 class BRS():
     async def error(self,ctx,error:str):
-        jdata = json.load(open('setting.json',mode='r',encoding='utf8'))
+        jdata = Database().jdata
         report_channel = self.bot.get_channel(jdata['report_channel'])
         embed=BRS.simple()
         embed.set_author(name="BRS | 錯誤回報")
@@ -132,7 +132,7 @@ class BRS():
         await report_channel.send(embed=embed)
     
     async def scam(self,msg):
-        jdata = json.load(open('setting.json',mode='r',encoding='utf8'))
+        jdata = Database().jdata
         scam_channel = self.bot.get_channel(jdata['scam_channel'])
         embed=BRS.simple()
         embed.set_author(name="BRS | 詐騙回報")
@@ -143,7 +143,7 @@ class BRS():
         await scam_channel.send(embed=embed)
 
     async def feedback(self,ctx,msg):
-        jdata = json.load(open('setting.json',mode='r',encoding='utf8'))
+        jdata = Database().jdata
         feedback_channel = self.bot.get_channel(jdata['feedback_channel'])
         embed=BRS.simple()
         embed.set_author(name="BRS | 回饋訊息")
@@ -154,7 +154,7 @@ class BRS():
         await feedback_channel.send(embed=embed)
 
     async def dm(self,msg):
-        jdata = json.load(open('setting.json',mode='r',encoding='utf8'))
+        jdata = Database().jdata
         dm_channel = self.bot.get_channel(jdata['dm_channel'])
         embed=BRS.simple()
         embed.set_author(name="BRS | 私人訊息")
@@ -162,7 +162,6 @@ class BRS():
         embed.add_field(name='發送者', value=f"{msg.author}\n{msg.author.id}", inline=False)
         await dm_channel.send(embed=embed)
     
-
     def all_anno(msg):
         '''全群公告'''
         embed=discord.Embed(description=msg,color=0xc4e9ff)

@@ -70,7 +70,7 @@ class command(Cog_Extension):
     @commands.command()
     @commands.cooldown(rate=1,per=10)
     async def feedback(self,ctx,*,msg):
-        send_msg = await ctx.send('請稍後...',delete_after=10)
+        send_msg = await ctx.send('請稍後...')
         await BRS.feedback(self,ctx,msg)
         await ctx.message.delete()
         await send_msg.edit('訊息已發送',delete_after=5)
@@ -128,8 +128,7 @@ class command(Cog_Extension):
                     print(f'新增:{role.name}')
                 roledata[str(role.id)] = [role.name,role.created_at.strftime('%Y%m%d')]
                 dict[str(user.id)] = roledata
-            with open('database/role_save.json',mode='w',encoding='utf8') as jfile:
-                json.dump(dict,jfile,indent=4)
+            Database().write('rsdata',dict)
         
         guild = self.bot.get_guild(self.jdata['guild']['001'])
         add_role = guild.get_role(877934319249797120)
@@ -237,6 +236,8 @@ class command(Cog_Extension):
             await ctx.send('金額錯誤:無法輸入小於1的數字')
         elif money_now < money:
             await ctx.send('金額錯誤:你沒有那麼多點數')
+        elif id == str(ctx.author.id):
+            await ctx.send('錯誤:你不可以下注自己的賭盤')
         else:
             Point(ctx.author.id).add(money*-1)
             bet_data[id][choice]['member'][str(ctx.author.id)] += money
@@ -275,7 +276,7 @@ class command(Cog_Extension):
         await ctx.send(embed=embed)
         await asyncio.sleep(delay=sec)
         
-        await ctx.send(f'編號:{id}\n下注時間結束')
+        await ctx.send(f'編號{id}:\n下注時間結束')
         bet_data = Database().bet_data
         bet_data[id]['IsOn'] = 0
         Database().write('bet_data',bet_data)
@@ -289,6 +290,9 @@ class command(Cog_Extension):
             return
         id = str(ctx.author.id)
         bet_data = Database().bet_data
+        if not bet_data[id]['IsOn']:
+            await ctx.send('錯誤:此賭盤的開放下注時間尚未結束')
+            return
         #計算雙方總點數
         pink_total = 0
         for i in bet_data[id]['pink']['member']:
@@ -296,28 +300,42 @@ class command(Cog_Extension):
         blue_total = 0
         for i in bet_data[id]['blue']['member']:
             blue_total += bet_data[id]['blue']['member'][i]
-        #獲勝者設定
-        if end == 'pink':
-            winner = bet_data[id]['pink']['member']
+        #偵測是否兩邊皆有人下注
+        if blue_total and pink_total:
+            #獲勝者設定
+            if end == 'pink':
+                winner = bet_data[id]['pink']['member']
+            else:
+                winner = bet_data[id]['blue']['member']
+            #前置準備
+            if pink_total > blue_total:
+                mag = pink_total / blue_total
+            else:
+                mag = blue_total / pink_total
+            #結果公布
+            if end == 'pink':
+                await ctx.send(f'編號{id}:\n恭喜粉紅幫獲勝!')
+            else:
+                await ctx.send(f'編號{id}:\n恭喜藍藍幫獲勝!')
+            #點數計算
+            for i in winner:
+                pt1 = winner[i] * (mag+1)
+                Point(i).add(pt1)
+            
         else:
-            winner = bet_data[id]['blue']['member']
-        #前置準備
-        if pink_total > blue_total:
-            mag = pink_total / blue_total
-        else:
-            mag = blue_total / pink_total
-        #點數計算
-        for i in winner:
-            pt1 = winner[i] * (mag+1)
-            Point(i).add(pt1)
+            for i in bet_data[id]['blue']['member']:
+                user = await find.user(ctx,i)
+                id = str(user.id)
+                Point(id).add(bet_data[id]['blue']['member'][id])
+            
+            for i in bet_data[id]['pink']['member']:
+                user = await find.user(ctx,i)
+                id = str(user.id)
+                Point(id).add(bet_data[id]['pink']['member'][id])
+            await ctx.send(f'編號{id}:\n因為有一方沒有人選擇，所以此局平手，點數將歸還給所有人')
         #更新資料庫
         del bet_data[id]
         Database().write('bet_data',bet_data)
-        #結果公布
-        if end == 'pink':
-            await ctx.send(f'編號:{id}\n恭喜粉紅幫獲勝!')
-        else:
-            await ctx.send(f'編號:{id}\n恭喜藍藍幫獲勝!')
 
 
     @commands.command()

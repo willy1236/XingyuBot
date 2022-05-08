@@ -31,7 +31,7 @@ class Database:
         self.jpt = Counter(json.load(open(self.dict['jpt'],mode='r',encoding='utf8')))
         self.jloot = Counter(json.load(open(self.dict['jloot'],mode='r',encoding='utf8')))
         self.bet_data = Counter(json.load(open(self.dict['bet_data'],mode='r',encoding='utf8')))
-        self.gdata = json.load(open(self.dict['gdata'],'r',encoding='utf8'))
+        self.gdata = Counter(json.load(open(self.dict['gdata'],'r',encoding='utf8')))
         self.jdsign = json.load(open(self.dict['jdsign'],mode='r',encoding='utf8'))
         self.jwsign = Counter(json.load(open(self.dict['jwsign'],mode='r',encoding='utf8')))
         self.jevent = Counter(json.load(open(self.dict['jevent'],mode='r',encoding='utf8')))

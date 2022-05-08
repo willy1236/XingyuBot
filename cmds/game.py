@@ -55,11 +55,11 @@ class game(Cog_Extension):
             user = str(ctx.author.id)
 
             if not game in self.gdata[user]:
-                self.gdata[user][game] = 'None'
+                self.gdata[user][game] = None
                 #await ctx.send('偵測到資料庫內無使用者資料，已自動補齊')
 
             if data == None:
-                self.gdata[user][game] = 'None'
+                self.gdata[user][game] = None
                 await ctx.send(f'已重設{game}資料')
             else:
                 self.gdata[user][game] = data
@@ -70,27 +70,42 @@ class game(Cog_Extension):
             await ctx.send(f'遊戲錯誤:此遊戲目前未開放設定\n目前支援:{self.games}',delete_after=10)
 
     @game.command()
-    @commands.is_owner()
-    async def find(self,ctx,user):
-        user = await find.user(ctx,user)
-        if user != None:
-            data = {}
-            for game in self.games:
-                if game in self.gdata[f'{user.id}']:
-                    data[game] = self.gdata[f'{user.id}'][game]
-                else:
-                    data[game] = 'None'
+    async def find(self,ctx,user=None):
+        if user == None:
+            user = ctx.author
+        else:
+            user = await find.user(ctx,user)
+        if user == ctx.author or ctx.author.id == 419131103836635136:
+            if user != None and str(user.id) in self.gdata:
+                data = {}
+                for game in self.games:
+                    if game in self.gdata[str(user.id)]:
+                        data[game] = self.gdata[str(user.id)][game]
+                    else:
+                        data[game] = 'None'
 
-            embed = BRS.simple(title=user)
-            for game in self.games:
-                embed.add_field(name=game, value=data[game], inline=False)
-            embed.set_thumbnail(url=user.display_avatar.url)
-            await ctx.send(embed=embed)
+                embed = BRS.simple(title=user)
+                for game in self.games:
+                    embed.add_field(name=game, value=data[game], inline=False)
+                embed.set_thumbnail(url=user.display_avatar.url)
+                await ctx.send(embed=embed)
+            else:
+                await ctx.send('無法查詢此人的資料，可能是無此用戶或用戶尚未註冊資料庫',delete_after=5)
+        else:
+            await ctx.send('目前不開放查詢別人的資料喔',delete_after=5)
 
     @commands.group(invoke_without_command=True)
     @commands.cooldown(rate=1,per=1)
-    async def osu(self,ctx,userid):
+    async def osu(self,ctx,userid=None):
         msg = await ctx.send('資料查詢中...')
+        #資料庫調用
+        if not userid:
+            userid = Database().gdata[str(ctx.author.id)]['osu']
+        else:
+            dcuser = find.user2(ctx,userid)
+            if dcuser:
+                userid = Database().gdata[str(dcuser.id)]['osu']
+        
         user = OsuData().get_player(userid)
         if user != None:
             embed = BRS.simple("Osu玩家資訊")
@@ -114,10 +129,14 @@ class game(Cog_Extension):
             embed = BRS.simple(title="Osu圖譜資訊")
             embed.add_field(name="名稱",value=map.title)
             embed.add_field(name="歌曲長度(秒)",value=map.time)
+            embed.add_field(name="星數",value=map.star)
             embed.add_field(name="模式",value=map.mode)
+            embed.add_field(name="combo數",value=map.max_combo)
             embed.add_field(name="圖譜狀態",value=map.status)
             embed.add_field(name="圖譜id",value=map.id)
             embed.add_field(name="圖譜組id",value=map.beatmapset_id)
+            embed.add_field(name="通過率",value=map.pass_rate)
+            embed.add_field(name="BPM",value=map.bpm)
             embed.add_field(name='網址', value='[點我]({0})'.format(map.url))
             embed.set_image(url=map.cover)
             await msg.edit(content='查詢成功',embed=embed)
@@ -126,13 +145,24 @@ class game(Cog_Extension):
 
     @commands.command()
     @commands.cooldown(rate=1,per=3)
-    async def apex(self,ctx,userid):
+    async def apex(self,ctx,userid=None):
         msg = await ctx.send('資料查詢中...')
+        #資料庫調用
+        if not userid:
+            userid = Database().gdata[str(ctx.author.id)]['apex']
+        else:
+            dcuser = find.user2(ctx,userid)
+            if dcuser:
+                userid = Database().gdata[str(dcuser.id)]['apex']
+        
         user = ApexData().get_player(userid)
-        embed = BRS.simple("Apex玩家資訊")
-        embed.add_field(name="名稱",value=user.username)
-        embed.add_field(name="平台",value=user.platformSlug)
-        await msg.edit(content='查詢成功',embed=embed)
+        if user:
+            embed = BRS.simple("Apex玩家資訊")
+            embed.add_field(name="名稱",value=user.username)
+            embed.add_field(name="平台",value=user.platformSlug)
+            await msg.edit(content='查詢成功',embed=embed)
+        else:
+            await msg.edit(content='查詢失敗:查無此ID',delete_after=5)
 
 def setup(bot):
     bot.add_cog(game(bot))
