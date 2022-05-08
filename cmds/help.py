@@ -132,9 +132,10 @@ class help(Cog_Extension):
     async def game(self,ctx):
         embed = BRS.simple("遊戲(Game) 指令")
         embed.add_field(name="!!game <set> <遊戲> <資料>", value="設定你在資料庫內的遊戲名稱", inline=False)
-        embed.add_field(name="!!game <find> <用戶>", value="查詢用戶在資料庫內的遊戲名稱(未開放)", inline=False)
+        embed.add_field(name="!!game <find> <用戶>", value="查詢用戶在資料庫內的遊戲名稱(目前僅能查詢自己的資料)", inline=False)
         embed.add_field(name="!!lol <player> <玩家名稱>", value="查詢LOL戰績(更多功能敬請期待)", inline=False)
         embed.add_field(name="!!osu <玩家名/id>", value="查詢osu玩家", inline=False)
+        embed.add_field(name="!!osu <map> <圖譜id>", value="查詢osu圖譜", inline=False)
         embed.add_field(name="!!apex <玩家名/id>", value="查詢apex玩家(未完成)", inline=False)
         await ctx.send(embed=embed)
 

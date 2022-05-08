@@ -1,4 +1,4 @@
-import requests
+import requests,datetime
 from BotLib.basic import Database
 
 class OsuData():
@@ -58,6 +58,16 @@ class OsuBeatmap():
         self.time = data['total_length']
         self.title = data['beatmapset']['title']
         self.cover = data['beatmapset']['covers']['cover']
+        self.max_combo = data['max_combo']
+        self.pass_rate = round(data['passcount'] / data['playcount'],2)
+        self.checksum = data['checksum']
+        self.bpm = data['bpm']
+        self.star = data['difficulty_rating']
+        self.ar = data['ar']
+        self.cs = data['cs']
+        self.od = data['accuracy']
+        self.hp = data['drain']
+        self.version = data['version']
 
 class ApexData():
     def __init__(self):
@@ -68,10 +78,12 @@ class ApexData():
         }
     
     def get_player(self,user):
-        response = requests.get(f'https://public-api.tracker.gg/v2/apex/standard/profile/origin/{user}', headers=self.headers)
-        data = response.json().get('data')
-        return ApexPlayer(data)
-
+        if user:
+            response = requests.get(f'https://public-api.tracker.gg/v2/apex/standard/profile/origin/{user}', headers=self.headers)
+            data = response.json().get('data')
+            return ApexPlayer(data)
+        else:
+            return None
 
 class ApexPlayer():
     def __init__(self,data):

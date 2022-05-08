@@ -1,10 +1,6 @@
 import json
 from BotLib.basic import Database
-from library import find
-
-class Counter(dict):
-    def __missing__(self,key): 
-        return 0
+from library import find,Counter
 
 class User():
     def __init__(self,userid):
@@ -29,3 +25,6 @@ class Point():
         """增減用戶PT"""
         self.jpt[self.user] += amount
         Database().write('jpt',self.jpt)
+
+class pet():
+    pass

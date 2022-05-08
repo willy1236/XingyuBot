@@ -231,7 +231,7 @@ if __name__ == "__main__":
         import keep_alive
         keep_alive.keep_alive()
     except:
-        pass
+        print('>> keep_alive not activated <<')
 
     try:
         bot.run(token)
