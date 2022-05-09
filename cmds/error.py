@@ -29,8 +29,10 @@ class error(Cog_Extension):
             await ctx.send('缺少權限:你不是機器人擁有者',delete_after=5)
         elif isinstance(error,commands.errors.CommandOnCooldown):
             await ctx.send(f'尚在冷卻:指令還在冷卻中(尚須{int(error.retry_after)}秒)',delete_after=5)
-        elif isinstance(error,commands.errors.CommandInvokeError):
-            await ctx.send(f'指令調用時發生錯誤:{error.original}',delete_after=5)
+        # elif isinstance(error,commands.errors.CommandInvokeError):
+        #     await ctx.send(f'指令調用時發生錯誤:{error.original}',delete_after=5)
+        elif isinstance(error,discord.errors.Forbidden):
+            await BRS.error(self,ctx,error)
 
         elif isinstance(error,commands.errors.DisabledCommand):
             await ctx.send('禁用指令:此指令目前無法被使用',delete_after=5)

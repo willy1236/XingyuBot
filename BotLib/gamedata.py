@@ -59,7 +59,7 @@ class OsuBeatmap():
         self.title = data['beatmapset']['title']
         self.cover = data['beatmapset']['covers']['cover']
         self.max_combo = data['max_combo']
-        self.pass_rate = round(data['passcount'] / data['playcount'],2)
+        self.pass_rate = round(data['passcount'] / data['playcount'],3)
         self.checksum = data['checksum']
         self.bpm = data['bpm']
         self.star = data['difficulty_rating']
