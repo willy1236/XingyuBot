@@ -59,5 +59,25 @@ class moderation(Cog_Extension):
             Database().write('cdata',self.cdata)
             await ctx.send(f'設定完成，已將全群公告頻道設為{channel.mention}')
 
+    @set.command()
+    @commands.has_permissions(manage_channels=True)
+    async def earthquake(self,ctx,channel='remove'):
+        if channel != 'remove':
+            channel = await find.channel(ctx,channel)
+        guild = str(ctx.guild.id)
+        
+        if channel == 'remove':
+            if guild in self.cdata['earthquake']:
+                del self.cdata['earthquake'][guild]
+                Database().write('cdata',self.cdata)
+                await ctx.send(f'設定完成，已移除地震通知頻道')
+            else:
+                await ctx.send('此伺服器還沒有設定頻道喔')
+
+        elif channel != None:
+            self.cdata['earthquake'][guild] = channel.id
+            Database().write('cdata',self.cdata)
+            await ctx.send(f'設定完成，已將地震通知頻道設為{channel.mention}')
+
 def setup(bot):
     bot.add_cog(moderation(bot))

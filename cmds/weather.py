@@ -17,6 +17,19 @@ class EarthquakeReport:
         self.magnitude = data['earthquake'][0]['earthquakeInfo']['magnitude']['magnitudeValue']
         self.reportColor = data['earthquake'][0]['reportColor']
 
+    @staticmethod
+    def get_report():
+        APIdata = requests.get(f'https://opendata.cwb.gov.tw/api/v1/rest/datastore/E-A0015-001?Authorization={Database().CWB_API}&limit=1&format=JSON').json().get('records')
+        return EarthquakeReport(APIdata)
+        
+    @staticmethod
+    def get_report_auto(time):
+        APIdata = requests.get(f'https://opendata.cwb.gov.tw/api/v1/rest/datastore/E-A0015-001?Authorization={Database().CWB_API}&timeFrom={time}').json().get('records')
+        if APIdata == []:
+            return None
+        else:
+            return EarthquakeReport(APIdata)
+
 class Covid19Report:
     def __init__(self,data):
         self.date = data['a04']
@@ -31,8 +44,7 @@ class weather(Cog_Extension):
     @commands.command()
     async def earthquake(self,ctx):
         msg = await ctx.send('資料查詢中...')
-        APIdata = requests.get(f'https://opendata.cwb.gov.tw/api/v1/rest/datastore/E-A0015-001?Authorization={Database().CWB_API}&limit=1&format=JSON').json().get('records')
-        data = EarthquakeReport(APIdata)
+        data = EarthquakeReport.get_report()
         
         embed = BRS.simple(f'編號第{data.earthquakeNo}號地震報告')
         embed.add_field(name='發生時間',value=data.originTime)
