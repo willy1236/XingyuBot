@@ -37,7 +37,7 @@ class task(Cog_Extension):
                         embed.set_image(url=data.reportImageURI)
                         
                         time = datetime.datetime.strptime(data.originTime, "%Y-%m-%d %H:%M:%S")+datetime.timedelta(seconds=1)
-                        jdata['timefrom'] = time.strftime("%Y-%m-%d %H:%M:%S")
+                        jdata['timefrom'] = time.strftime("%Y-%m-%dT%H:%M:%S")
                         Database().write('jdata',jdata)
                         
                         ch_list = Database().cdata['earthquake']
