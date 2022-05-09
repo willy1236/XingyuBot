@@ -1,5 +1,6 @@
 import discord,json, asyncio, datetime
 from discord.ext import commands
+from DiscordBot.library import find
 from core.classes import Cog_Extension
 from BotLib.basic import Database
 from cmds.weather import EarthquakeReport
@@ -38,8 +39,11 @@ class task(Cog_Extension):
                         jdata['timefrom'] = data.originTime
                         Database().write('jdata',jdata)
                         
-                        for i in Database().cdata['earthquake']:
-                            await i.send(embed=embed)
+                        ch_list = Database().cdata['earthquake']
+                        for i in ch_list:
+                            channel = self.bot.get_channel(ch_list[i])
+                            if channel:
+                                await channel.send('地震報告',embed=embed)
                 
                 await asyncio.sleep(1)
         self.bg_task = self.bot.loop.create_task(time_task())
