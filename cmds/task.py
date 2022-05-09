@@ -1,10 +1,9 @@
 import discord,json, asyncio, datetime
 from discord.ext import commands
-from DiscordBot.library import find
 from core.classes import Cog_Extension
 from BotLib.basic import Database
 from cmds.weather import EarthquakeReport
-from library import BRS
+from library import BRS,find
 
 class task(Cog_Extension):
     def __init__(self,*args,**kwargs):
