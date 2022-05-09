@@ -35,7 +35,8 @@ class task(Cog_Extension):
                         embed.add_field(name='震源深度',value=f'{data.depth} km')
                         embed.add_field(name='芮氏規模',value=f'{data.magnitude}')
                         embed.set_image(url=data.reportImageURI)
-                        jdata['timefrom'] = data.originTime
+                        
+                        jdata['timefrom'] = datetime.strptime("data.originTime", "%Y-%m-%d %H:%M:%S")+datetime.timedelta(seconds=1)
                         Database().write('jdata',jdata)
                         
                         ch_list = Database().cdata['earthquake']
