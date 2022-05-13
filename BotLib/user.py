@@ -1,6 +1,6 @@
 import json
 from BotLib.basic import Database
-from library import find,Counter
+from library import find
 
 class User():
     def __init__(self,userid):

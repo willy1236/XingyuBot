@@ -1,4 +1,4 @@
-import json,random,discord
+import random,discord
 from discord.ext import commands
 from core.classes import Cog_Extension
 from BotLib.basic import Database
