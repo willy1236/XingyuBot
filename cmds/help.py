@@ -1,4 +1,4 @@
-import discord,json ,random,asyncio
+import discord
 from discord.ext import commands,pages
 from core.classes import Cog_Extension
 from library import BRS
@@ -6,42 +6,54 @@ from BotLib.basic import Database
 
 
 class help_page:
-    async def music(ctx):
-        embed = BRS.simple("音樂(music) 指令:")
-        embed.add_field(name="!!play <歌曲>", value="播放歌曲\n別名:p", inline=False)
-        embed.add_field(name="!!queue", value="歌曲列表\n別名:q", inline=False)
-        embed.add_field(name="!!now", value="現在播放的歌曲\n別名:current,playing,np", inline=False)
-        embed.add_field(name="!!skip", value="投票跳過歌曲，需三個人才可跳過，點歌者可強制跳過\n別名:s", inline=False)
-        embed.add_field(name="!!pause", value="暫停播放\n別名:pa", inline=False)
-        embed.add_field(name="!!resume", value="繼續播放\n別名:re", inline=False)
-        embed.add_field(name="!!join", value="讓機器人加入你的語音", inline=False)
-        embed.add_field(name="!!leave", value="讓機器人離開你的語音\n別名:disconnect,dc", inline=False)
-        embed.add_field(name="!!volume <音量>", value="設定音量", inline=False)
-        embed.add_field(name="!!stop", value="停止播放歌曲", inline=False)
-        embed.add_field(name="!!shuffle", value="隨機撥放\n別名:random,r", inline=False)
-        embed.add_field(name="!!loop", value="循環歌曲", inline=False)
-        embed.add_field(name="!!remove <歌曲位置>", value="移除歌曲\n別名:rm", inline=False)
-        await ctx.send(embed=embed)
-    # async def music(ctx):
-        # embed = BRS.simple("音樂(music) 指令:")
-        # page = [embed,embed]
-        # # page[0].add_field(name="!!play <歌曲>", value="播放歌曲\n別名:p", inline=False)
-        # # page[0].add_field(name="!!queue", value="歌曲列表\n別名:q", inline=False)
-        # # page[0].add_field(name="!!now", value="現在播放的歌曲\n別名:current,playing,np", inline=False)
-        # # page[0].add_field(name="!!skip", value="投票跳過歌曲，需三個人才可跳過，點歌者可強制跳過\n別名:s", inline=False)
-        # # page[0].add_field(name="!!pause", value="暫停播放\n別名:pa", inline=False)
-        # # page[0].add_field(name="!!resume", value="繼續播放\n別名:re", inline=False)
-        # # page[0].add_field(name="!!join", value="讓機器人加入你的語音", inline=False)
-        # # page[0].add_field(name="!!summon [頻道]", value="讓機器人加入指定語音", inline=False)
-        # # page[0].add_field(name="!!leave", value="讓機器人離開你的語音\n別名:disconnect,dc", inline=False)
-        # # page[0].add_field(name="!!volume <音量>", value="設定音量", inline=False)
-        # # page[1].add_field(name="!!stop", value="停止播放歌曲", inline=False)
-        # # page[1].add_field(name="!!shuffle", value="隨機撥放\n別名:random,r", inline=False)
-        # # page[1].add_field(name="!!loop", value="循環歌曲", inline=False)
-        # # page[1].add_field(name="!!remove <歌曲位置>", value="移除歌曲\n別名:rm", inline=False)
-        # paginator = pages.Paginator(pages=page, use_default_buttons=True)
-        # await paginator.send(ctx, target=ctx.channel)
+    def music():
+        page = [BRS.simple("音樂(music) 指令:"),BRS.simple("音樂(music) 指令:")]
+        page[0].add_field(name="!!play <歌曲>", value="播放歌曲\n別名:p", inline=False)
+        page[0].add_field(name="!!queue", value="歌曲列表\n別名:q", inline=False)
+        page[0].add_field(name="!!now", value="現在播放的歌曲\n別名:current,playing,np", inline=False)
+        page[0].add_field(name="!!skip", value="投票跳過歌曲，需三個人才可跳過，點歌者可強制跳過\n別名:s", inline=False)
+        page[0].add_field(name="!!pause", value="暫停播放\n別名:pa", inline=False)
+        page[0].add_field(name="!!resume", value="繼續播放\n別名:re", inline=False)
+        page[0].add_field(name="!!join", value="讓機器人加入你的語音", inline=False)
+        page[0].add_field(name="!!summon [頻道]", value="讓機器人加入指定語音", inline=False)
+        page[0].add_field(name="!!leave", value="讓機器人離開你的語音\n別名:disconnect,dc", inline=False)
+        page[0].add_field(name="!!volume <音量>", value="設定音量", inline=False)
+        page[1].add_field(name="!!stop", value="停止播放歌曲", inline=False)
+        page[1].add_field(name="!!shuffle", value="隨機撥放\n別名:random,r", inline=False)
+        page[1].add_field(name="!!loop", value="循環歌曲", inline=False)
+        page[1].add_field(name="!!remove <歌曲位置>", value="移除歌曲\n別名:rm", inline=False)
+        paginator = pages.Paginator(pages=page, use_default_buttons=True)
+        return paginator
 
+    def help():
+        pass
+    
+    def use():
+        pass
+    
+    def pt():
+        pass
+
+    def game():
+        pass
+    
+    def set():
+        pass
+    
+    def role():
+        pass
+    
+    def bet():
+        pass
+    
+    def weather():
+        pass
+    
+    def owner():
+        pass
+    
+    def admin():
+        pass
 
 class help(Cog_Extension):
     @commands.command(help='原始的help指令')
@@ -164,7 +176,10 @@ class help(Cog_Extension):
     
     @help.command()
     async def music(self,ctx):
-        await help_page.music(ctx)
+        #embed = help_page.music()
+        #await ctx.send(embed=embed)
+        paginator = help_page.music()
+        await paginator.send(ctx, target=ctx.channel)
 
     @help.command()
     async def weather(self,ctx):

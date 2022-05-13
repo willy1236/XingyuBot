@@ -1,4 +1,4 @@
-import discord,json,requests
+import discord,requests
 from discord.ext import commands
 from bs4 import BeautifulSoup
 
@@ -102,20 +102,12 @@ class game(Cog_Extension):
         if not userid:
             userid = Database().gdata[str(ctx.author.id)]['osu']
         else:
-            dcuser = find.user2(ctx,userid)
+            dcuser = await find.user2(ctx,userid)
             if dcuser:
                 userid = Database().gdata[str(dcuser.id)]['osu']
         
-        user = OsuData().get_player(userid)
-        if user != None:
-            embed = BRS.simple("Osu玩家資訊")
-            embed.add_field(name="名稱",value=user.username)
-            embed.add_field(name="id",value=user.id)
-            embed.add_field(name="全球排名",value=user.global_rank)
-            embed.add_field(name="pp",value=user.pp)
-            embed.add_field(name="國家",value=user.country)
-            embed.add_field(name="是否在線上",value=user.is_online)
-            embed.set_thumbnail(url=user.avatar_url)
+        embed = OsuData().get_player(userid).desplay
+        if embed:
             await msg.edit(content='查詢成功',embed=embed)
         else:
             await msg.edit(content='查詢失敗:查無此ID',delete_after=5)
@@ -124,21 +116,8 @@ class game(Cog_Extension):
     @commands.cooldown(rate=1,per=1)
     async def map(self,ctx,mapid):
         msg = await ctx.send('資料查詢中...')
-        map = OsuData().get_beatmap(mapid)
-        if map != None:
-            embed = BRS.simple(title="Osu圖譜資訊")
-            embed.add_field(name="名稱",value=map.title)
-            embed.add_field(name="歌曲長度(秒)",value=map.time)
-            embed.add_field(name="星數",value=map.star)
-            embed.add_field(name="模式",value=map.mode)
-            embed.add_field(name="combo數",value=map.max_combo)
-            embed.add_field(name="圖譜狀態",value=map.status)
-            embed.add_field(name="圖譜id",value=map.id)
-            embed.add_field(name="圖譜組id",value=map.beatmapset_id)
-            embed.add_field(name="通過率",value=map.pass_rate)
-            embed.add_field(name="BPM",value=map.bpm)
-            embed.add_field(name='網址', value='[點我]({0})'.format(map.url))
-            embed.set_image(url=map.cover)
+        embed = OsuData().get_beatmap(mapid).desplay
+        if embed:
             await msg.edit(content='查詢成功',embed=embed)
         else:
             await msg.edit(content='查詢失敗:查無此ID',delete_after=5)
@@ -151,15 +130,12 @@ class game(Cog_Extension):
         if not userid:
             userid = Database().gdata[str(ctx.author.id)]['apex']
         else:
-            dcuser = find.user2(ctx,userid)
+            dcuser = await find.user2(ctx,userid)
             if dcuser:
                 userid = Database().gdata[str(dcuser.id)]['apex']
         
-        user = ApexData().get_player(userid)
-        if user:
-            embed = BRS.simple("Apex玩家資訊")
-            embed.add_field(name="名稱",value=user.username)
-            embed.add_field(name="平台",value=user.platformSlug)
+        embed = ApexData().get_player(userid).embed
+        if embed:
             await msg.edit(content='查詢成功',embed=embed)
         else:
             await msg.edit(content='查詢失敗:查無此ID',delete_after=5)

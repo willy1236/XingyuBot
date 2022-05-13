@@ -4,7 +4,7 @@ from discord.ext import commands
 import json ,random,asyncio
 from discord.commands import SlashCommandGroup
 
-from library import Counter,find,converter,random_color,BRS
+from library import find,converter,random_color,BRS
 from core.classes import Cog_Extension
 from BotLib.user import *
 from BotLib.basic import Database
