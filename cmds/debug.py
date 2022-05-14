@@ -21,7 +21,7 @@ class PersistentView(discord.ui.View):
         await interaction.response.send_message("This is grey.", ephemeral=True)
 
 class debug(Cog_Extension):
-    rsdata = Counter(json.load(open('database/role_save.json',mode='r',encoding='utf8')))
+    rsdata = Database().rsdata
     
     @commands.command()
     @commands.is_owner()
