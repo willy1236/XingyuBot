@@ -65,7 +65,6 @@ class OsuBeatmap():
         return embed
 
 
-
 class ApexPlayer():
     def __init__(self,data):
         self.username = data['global']['name']
@@ -144,6 +143,7 @@ class ApexMapRotation():
         self.nowstart = datetime.datetime.strptime(data['current']['readableDate_start'],"%Y-%m-%d %H:%M:%S")+datetime.timedelta(hours=8)
         self.nowend = datetime.datetime.strptime(data['current']['readableDate_end'],"%Y-%m-%d %H:%M:%S")+datetime.timedelta(hours=8)
         self.remaining = data['current']['remainingTimer']
+        self.mapimage = data['current']['asset']
 
         self.nextmap = data["next"]['map']
         self.nextstart = datetime.datetime.strptime(data['next']['readableDate_start'],"%Y-%m-%d %H:%M:%S")+datetime.timedelta(hours=8)
@@ -160,11 +160,13 @@ class ApexMapRotation():
         embed.add_field(name="開始時間",value=self.nextstart)
         embed.add_field(name="結束時間",value=self.nextend)
         embed.add_field(name="目前地圖剩餘時間",value=self.remaining)
+        embed.set_image(url=self.mapimage)
         return embed
 
 class ApexStatus():
     def __init__(self,data):
         print(data)
+
 
 class OsuData():
     def __init__(self):
@@ -234,22 +236,19 @@ class ApexData():
     def __init__(self):
         pass
 
-    @staticmethod
+    
     def get_player(self,user):
         response = requests.get(f'https://api.mozambiquehe.re/bridge?auth={Database().apex_status_API}&player={user}&platform=PC').json()
         return ApexPlayer(response)
-
-    @staticmethod
+    
     def get_crafting():
         response = requests.get(f'https://api.mozambiquehe.re/crafting?auth={Database().apex_status_API}').json()
         return ApexCrafting(response)
-
-    @staticmethod
+    
     def get_map_rotation():
         response = requests.get(f'https://api.mozambiquehe.re/maprotation?auth={Database().apex_status_API}').json()
         return ApexMapRotation(response)
 
-    @staticmethod
     def get_status():
         response = requests.get(f'https://api.mozambiquehe.re/servers?auth={Database().apex_status_API}').json()
         return ApexStatus(response)
