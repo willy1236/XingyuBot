@@ -68,17 +68,103 @@ class OsuBeatmap():
 
 class ApexPlayer():
     def __init__(self,data):
-        self.username = data['platformInfo']['platformUserId']
-        self.platformSlug = data['platformInfo']['platformSlug']
+        self.username = data['global']['name']
+        self.id = data['global']['uid']
+        self.platform = data['global']['platform']
+        self.level = data['global']['level']
+        self.avatar = data['global']['avatar']
+        
+        self.rank = data['global']['rank']['rankName']
+        if data['global']['rank']['rankName'] != "Unranked":
+            self.rank += " "+str(data['global']['rank']['rankDiv'])
+        self.rank_score = data['global']['rank']['rankScore']
+        self.arena_rank = data['global']['arena']['rankName']
+        if data['global']['arena']['rankName'] != "Unranked":
+            self.arena_rank += " "+str(data['global']['arena']['rankDiv'])
+        self.arena_score = data['global']['arena']['rankScore']
+        
+        self.now_state =  data['realtime']['currentStateAsText']
 
         self.desplay = self.embed()
 
     def embed(self):
         embed = BRS.simple("Apex玩家資訊")
         embed.add_field(name="名稱",value=self.username)
-        embed.add_field(name="平台",value=self.platformSlug)
+        embed.add_field(name="id",value=self.id)
+        embed.add_field(name="平台",value=self.platform)
+        embed.add_field(name="等級",value=self.level)
+        embed.add_field(name="牌位階級",value=self.rank)
+        embed.add_field(name="牌位分數",value=self.rank_score)
+        embed.add_field(name="競技場牌位階級",value=self.arena_rank)
+        embed.add_field(name="競技場牌位分數",value=self.arena_score)
+        embed.add_field(name="目前狀態",value=self.now_state)
+        embed.set_image(url=self.avatar)
         return embed
 
+class ApexCrafting():
+    def __init__(self,data):
+        self.daily = data[0]
+        self.weekly = data[1]
+
+        self.daily_start = self.daily['startDate']
+        self.daily_end = self.daily['endDate']
+        self.item1 = self.daily['bundleContent'][0]
+        self.item1_cost = self.item1['cost']
+        self.item1_name = self.item1['itemType']['name']
+        self.item2 = self.daily['bundleContent'][1]
+        self.item2_cost = self.item2['cost']
+        self.item2_name = self.item2['itemType']['name']
+
+        self.weekly_start = self.weekly['startDate']
+        self.weekly_end = self.weekly['endDate']
+        self.item3 = self.weekly['bundleContent'][0]
+        self.item3_cost = self.item3['cost']
+        self.item3_name = self.item3['itemType']['name']
+        self.item4 = self.weekly['bundleContent'][1]
+        self.item4_cost = self.item4['cost']
+        self.item4_name = self.item4['itemType']['name']
+
+        self.desplay = self.embed()
+    
+    def embed(self):
+        embed = BRS.simple("Apex合成器內容")
+        embed.add_field(name="每日物品1",value=self.item1_name,inline=False)
+        embed.add_field(name="每日物品1價格",value=self.item1_cost,inline=False)
+        embed.add_field(name="每日物品2",value=self.item2_name,inline=False)
+        embed.add_field(name="每日物品2價格",value=self.item2_cost,inline=False)
+        embed.add_field(name="每週物品1",value=self.item3_name,inline=False)
+        embed.add_field(name="每週物品1價格",value=self.item3_cost,inline=False)
+        embed.add_field(name="每週物品2",value=self.item4_name,inline=False)
+        embed.add_field(name="每週物品2價格",value=self.item4_cost,inline=False)
+        return embed
+
+class ApexMapRotation():
+    def __init__(self,data):
+        self.nowmap = data["current"]['map']
+        self.nowstart = datetime.datetime.strptime(data['current']['readableDate_start'],"%Y-%m-%d %H:%M:%S")+datetime.timedelta(hours=8)
+        self.nowend = datetime.datetime.strptime(data['current']['readableDate_end'],"%Y-%m-%d %H:%M:%S")+datetime.timedelta(hours=8)
+        self.remaining = data['current']['remainingTimer']
+
+        self.nextmap = data["next"]['map']
+        self.nextstart = datetime.datetime.strptime(data['next']['readableDate_start'],"%Y-%m-%d %H:%M:%S")+datetime.timedelta(hours=8)
+        self.nextend = datetime.datetime.strptime(data['next']['readableDate_end'],"%Y-%m-%d %H:%M:%S")+datetime.timedelta(hours=8)
+
+        self.desplay = self.embed()
+
+    def embed(self):
+        embed = BRS.simple("Apex地圖輪替")
+        embed.add_field(name="目前地圖",value=self.nowmap)
+        embed.add_field(name="開始時間",value=self.nowstart)
+        embed.add_field(name="結束時間",value=self.nowend)
+        embed.add_field(name="下張地圖",value=self.nextmap)
+        embed.add_field(name="開始時間",value=self.nextstart)
+        embed.add_field(name="結束時間",value=self.nextend)
+        embed.add_field(name="目前地圖剩餘時間",value=self.remaining)
+        return embed
+
+class ApexStatus():
+    def __init__(self,data):
+        print(data)
 
 class OsuData():
     def __init__(self):
@@ -129,18 +215,41 @@ class OsuData():
             return embed
 
 
+# class ApexData():
+#     def __init__(self):
+#         self.headers = {
+#         'TRN-Api-Key': Database().TRN_API,
+#         'Accept': 'application/json',
+#         'Accept-Encoding': 'gzip'
+#         }
+    
+#     def get_player(self,user):
+#         if user:
+#             response = requests.get(f'https://public-api.tracker.gg/v2/apex/standard/profile/origin/{user}', headers=self.headers)
+#             data = response.json().get('data')
+#             return ApexPlayer(data)
+#         else:
+#             return None
 class ApexData():
     def __init__(self):
-        self.headers = {
-        'TRN-Api-Key': Database().TRN_API,
-        'Accept': 'application/json',
-        'Accept-Encoding': 'gzip'
-        }
-    
+        pass
+
+    @staticmethod
     def get_player(self,user):
-        if user:
-            response = requests.get(f'https://public-api.tracker.gg/v2/apex/standard/profile/origin/{user}', headers=self.headers)
-            data = response.json().get('data')
-            return ApexPlayer(data)
-        else:
-            return None
+        response = requests.get(f'https://api.mozambiquehe.re/bridge?auth={Database().apex_status_API}&player={user}&platform=PC').json()
+        return ApexPlayer(response)
+
+    @staticmethod
+    def get_crafting():
+        response = requests.get(f'https://api.mozambiquehe.re/crafting?auth={Database().apex_status_API}').json()
+        return ApexCrafting(response)
+
+    @staticmethod
+    def get_map_rotation():
+        response = requests.get(f'https://api.mozambiquehe.re/maprotation?auth={Database().apex_status_API}').json()
+        return ApexMapRotation(response)
+
+    @staticmethod
+    def get_status():
+        response = requests.get(f'https://api.mozambiquehe.re/servers?auth={Database().apex_status_API}').json()
+        return ApexStatus(response)

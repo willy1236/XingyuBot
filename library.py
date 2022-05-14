@@ -61,33 +61,33 @@ class Counter(dict):
 class find(Cog_Extension):
     '''arg:要檢測的內容(名稱#0000,id,mention...)'''
     async def user(ctx,arg:str):
-        if arg == None:
-            member = None
-        else:
+        if arg:
             try:
                 member = await commands.MemberConverter().convert(ctx,str(arg))
             except commands.MemberNotFound:
                 member = None
+        else:
+            member = None
         return member
 
     async def channel(ctx,arg:str):
-        if arg == None:
-            channel = None
-        else:
+        if arg:
             try:
                 channel = await commands.TextChannelConverter().convert(ctx,str(arg))
             except commands.ChannelNotFound:
                 channel = None
+        else:
+            channel = None
         return channel
 
     async def role(ctx,arg:str):
-        if arg == None:
-            role = None
-        else:
+        if arg:
             try:
                 role = await commands.RoleConverter().convert(ctx,str(arg))
             except commands.RoleNotFound:
                 role = None
+        else:
+            role = None
         return role
 
     async def user2(ctx,arg:str):

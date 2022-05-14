@@ -43,11 +43,13 @@ class Database:
             self.osu_API_id = self.tokens['osu_API_id']
             self.osu_API_secret = self.tokens['osu_API_secret']
             self.TRN_API = self.tokens['TRN_API']
+            self.apex_status_API = self.tokens['apex_status_API']
         except:
             self.CWB_API = os.environ['CWB_API']
             self.osu_API_id = os.environ['osu_API_id']
             self.osu_API_secret = os.environ['osu_API_secret']
             self.TRN_API = os.environ['TRN_API']
+            self.apex_status_API = os.environ['apex_status_API']
 
     def write(self,file:str,data:dict):
         try:

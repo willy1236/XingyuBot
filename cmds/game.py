@@ -122,7 +122,7 @@ class game(Cog_Extension):
         else:
             await msg.edit(content='查詢失敗:查無此ID',delete_after=5)
 
-    @commands.command()
+    @commands.group(invoke_without_command=True)
     @commands.cooldown(rate=1,per=3)
     async def apex(self,ctx,userid=None):
         msg = await ctx.send('資料查詢中...')
@@ -134,11 +134,32 @@ class game(Cog_Extension):
             if dcuser:
                 userid = Database().gdata[str(dcuser.id)]['apex']
         
-        embed = ApexData().get_player(userid).embed
+        embed = ApexData().get_player(userid).desplay
         if embed:
             await msg.edit(content='查詢成功',embed=embed)
         else:
             await msg.edit(content='查詢失敗:查無此ID',delete_after=5)
+
+    @apex.command()
+    @commands.cooldown(rate=1,per=3)
+    async def map(self,ctx):
+        msg = await ctx.send('資料查詢中...')
+        embed = ApexData.get_map_rotation().desplay
+        await msg.edit(content='查詢成功',embed=embed)
+
+    @apex.command()
+    @commands.cooldown(rate=1,per=3)
+    async def crafting(self,ctx):
+        msg = await ctx.send('資料查詢中...')
+        embed = ApexData.get_crafting().desplay
+        await msg.edit(content='查詢成功',embed=embed)
+
+    @apex.command(enabled=False)
+    @commands.cooldown(rate=1,per=3)
+    async def server(self,ctx):
+        msg = await ctx.send('資料查詢中...')
+        embed = ApexData.get_status().desplay
+        await msg.edit(content='查詢成功',embed=embed)
 
 def setup(bot):
     bot.add_cog(game(bot))
