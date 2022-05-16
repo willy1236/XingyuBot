@@ -161,5 +161,23 @@ class game(Cog_Extension):
         embed = ApexData.get_status().desplay
         await msg.edit(content='查詢成功',embed=embed)
 
+    @commands.group(invoke_without_command=True)
+    @commands.cooldown(rate=1,per=1)
+    async def DBD(self,ctx,userid=None):
+        msg = await ctx.send('資料查詢中...')
+        #資料庫調用
+        if not userid:
+            userid = Database().gdata[str(ctx.author.id)]['dbd']
+        else:
+            dcuser = await find.user2(ctx,userid)
+            if dcuser:
+                userid = Database().gdata[str(dcuser.id)]['dbd']
+        
+        embed = DBDData().get_player(userid).desplay
+        if embed:
+            await msg.edit(content='查詢成功',embed=embed)
+        else:
+            await msg.edit(content='查詢失敗:查無此ID',delete_after=5)
+
 def setup(bot):
     bot.add_cog(game(bot))

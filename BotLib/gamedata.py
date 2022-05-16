@@ -167,7 +167,23 @@ class ApexStatus():
     def __init__(self,data):
         print(data)
 
+class DBDPlayer():
+    def __init__(self,data):
+        self.steamid = data["steamid"]
+        self.bloodpoints = data["bloodpoints"]
+        self.survivor_rank = data["survivor_rank"]
+        self.killer_rank = data["killer_rank"]
 
+        self.desplay = self.embed()
+    
+    def embed(self):
+        embed = BRS.simple("DBD玩家資訊")
+        embed.add_field(name="steamID",value=self.steamid)
+        embed.add_field(name="血點數",value=self.bloodpoints)
+        embed.add_field(name="倖存者等級",value=self.survivor_rank)
+        embed.add_field(name="殺手等級",value=self.killer_rank)
+        return embed
+        
 class OsuData():
     def __init__(self):
         self.headers = self.get_osuheaders()
@@ -252,3 +268,11 @@ class ApexData():
     def get_status():
         response = requests.get(f'https://api.mozambiquehe.re/servers?auth={Database().apex_status_API}').json()
         return ApexStatus(response)
+
+class DBDData():
+    def __init__(self):
+        pass
+
+    def get_player(self,user):
+        response = requests.get(f'https://dbd.onteh.net.au/api/playerstats?steamid={user}').json()
+        return DBDPlayer(response)
