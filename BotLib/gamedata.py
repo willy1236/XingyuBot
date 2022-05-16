@@ -169,21 +169,70 @@ class ApexStatus():
 
 class DBDPlayer():
     def __init__(self,data):
-        self.steamid = data["steamid"]
+        #基本資料
+        self.id = data["steamid"]
+        self.name = SteamData().get_user(self.id).name
         self.bloodpoints = data["bloodpoints"]
         self.survivor_rank = data["survivor_rank"]
         self.killer_rank = data["killer_rank"]
+        self.killer_perfectgames = data["killer_perfectgames"]
+        self.evilwithintierup = data["evilwithintierup"]
+        
+        #遊戲表現類
+        self.cagesofatonement = data["cagesofatonement"]
+        self.condemned = data["condemned"]
+        self.sacrificed = data["sacrificed"]
+        self.dreamstate = data["dreamstate"]
+        self.rbtsplaced = data["rbtsplaced"]
+        
+        #命中、陷阱類
+        self.blinkattacks = data["blinkattacks"]
+        self.chainsawhits = data["chainsawhits"]
+        self.shocked = data["shocked"]
+        self.hatchetsthrown = data["hatchetsthrown"]
+        self.lacerations = data["lacerations"]
+        self.possessedchains = data["possessedchains"]
+        self.lethalrushhits = data["lethalrushhits"]
+        self.uncloakattacks = data["uncloakattacks"]
+        self.beartrapcatches = data["beartrapcatches"]
+        self.phantasmstriggered = data["phantasmstriggered"]
 
         self.desplay = self.embed()
     
     def embed(self):
         embed = BRS.simple("DBD玩家資訊")
-        embed.add_field(name="steamID",value=self.steamid)
+        embed.add_field(name="玩家名稱",value=self.name)
         embed.add_field(name="血點數",value=self.bloodpoints)
         embed.add_field(name="倖存者等級",value=self.survivor_rank)
         embed.add_field(name="殺手等級",value=self.killer_rank)
+        embed.add_field(name="升階次數",value=self.evilwithintierup)
+        embed.add_field(name="完美殺手場次",value=self.killer_perfectgames)
+
+        embed.add_field(name="勞改次數",value=self.cagesofatonement)
+        embed.add_field(name="詛咒次數",value=self.condemned)
+        embed.add_field(name="獻祭次數",value=self.sacrificed)
+        embed.add_field(name="送入夢境數",value=self.dreamstate)
+        embed.add_field(name="頭套安裝數",value=self.rbtsplaced)
+        
+        embed.add_field(name="鬼影步命中",value=self.blinkattacks)
+        embed.add_field(name="電鋸衝刺命中",value=self.chainsawhits)
+        embed.add_field(name="電擊命中",value=self.shocked)
+        embed.add_field(name="斧頭命中",value=self.hatchetsthrown)
+        embed.add_field(name="飛刀命中",value=self.lacerations)
+        embed.add_field(name="鎖鏈命中",value=self.possessedchains)
+        embed.add_field(name="致命衝刺命中",value=self.lethalrushhits)
+        embed.add_field(name="喪鐘襲擊",value=self.uncloakattacks)
+        embed.add_field(name="陷阱捕捉",value=self.beartrapcatches)
+        embed.add_field(name="汙泥陷阱觸發",value=self.phantasmstriggered)
         return embed
         
+class SteamUser():
+    def __init__(self,data):
+        self.steamid = data['steamid']
+        self.name = data['personaname']
+        self.profileurl = data['profileurl']
+        self.avatar = data['avatar']
+
 class OsuData():
     def __init__(self):
         self.headers = self.get_osuheaders()
@@ -276,3 +325,11 @@ class DBDData():
     def get_player(self,user):
         response = requests.get(f'https://dbd.onteh.net.au/api/playerstats?steamid={user}').json()
         return DBDPlayer(response)
+
+class SteamData():
+    def __init__(self):
+        pass
+
+    def get_user(self,user):
+        response = requests.get(f'https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key={Database().steam_api}&steamids={user}').json().get('response').get('players')[0]
+        return SteamUser(response)

@@ -20,8 +20,8 @@ def player_search(url):
 
 
 class game(Cog_Extension):
-    gdata = Database().gdata
-    games = ['steam','osu','apex','lol']
+    #0=未開放 1=開放自由填寫 2=需驗證
+    games = {'steam':2,'osu':1,'apex':1,'lol':1}
 
     @commands.command()
     async def lol(self,ctx,*arg):
@@ -46,31 +46,45 @@ class game(Cog_Extension):
         
     @game.command()
     async def set(self,ctx,game,data=None):
-        if not str(ctx.author.id) in self.gdata:
-            self.gdata[f'{ctx.author.id}'] = {}
-            Database().write('gdata',self.gdata)
+        gdata = Database().gdata
+        userid = str(ctx.author.id)
+        if not userid in gdata:
+            gdata[userid] = {}
+            Database().write('gdata',gdata)
             await ctx.send('偵測到資料庫內無使用者資料，已自動註冊',delete_after=5)
 
-        if game in self.games:
-            user = str(ctx.author.id)
-
-            if not game in self.gdata[user]:
-                self.gdata[user][game] = None
-                #await ctx.send('偵測到資料庫內無使用者資料，已自動補齊')
-
+        if game in self.games and self.games[game] != 0:
+            #清除該遊戲資料
             if data == None:
-                self.gdata[user][game] = None
+                gdata[userid][game] = None
                 await ctx.send(f'已重設{game}資料')
-            else:
-                self.gdata[user][game] = data
+                return
+            
+            #首次設定該遊戲
+            if not game in gdata[userid]:
+                    gdata[userid][game] = None
+
+            #依遊戲做設定
+            if self.games[game] == 1:
+                gdata[userid][game] = data
                 await ctx.send(f'已將{game}資料設定為 {data}')
-            Database().write('gdata',self.gdata)
-        
+                Database().write('gdata',gdata)
+            
+            elif self.games[game] == 2:
+                if game == 'steam':
+                    APIdata = SteamData().get_user(data)
+                    if APIdata:
+                        gdata[userid]['steam'] = {'id':APIdata.steamid,'name':APIdata.name}
+                        Database().write('gdata',gdata)
+                        await ctx.send(f'已將{game}資料設定為 {data}')
+                    else:
+                        await ctx.send(f'錯誤:找不到此用戶',delete_after=5)
         else:
-            await ctx.send(f'遊戲錯誤:此遊戲目前未開放設定\n目前支援:{self.games}',delete_after=10)
+            await ctx.send(f'遊戲錯誤:此遊戲目前未開放設定',delete_after=10)
 
     @game.command()
     async def find(self,ctx,user=None):
+        gdata = Database().gdata
         if user == None:
             user = ctx.author
         else:
@@ -167,11 +181,11 @@ class game(Cog_Extension):
         msg = await ctx.send('資料查詢中...')
         #資料庫調用
         if not userid:
-            userid = Database().gdata[str(ctx.author.id)]['dbd']
+            userid = Database().gdata[str(ctx.author.id)]['steam']['id']
         else:
             dcuser = await find.user2(ctx,userid)
             if dcuser:
-                userid = Database().gdata[str(dcuser.id)]['dbd']
+                userid = Database().gdata[str(dcuser.id)]['steam']['id']
         
         embed = DBDData().get_player(userid).desplay
         if embed:

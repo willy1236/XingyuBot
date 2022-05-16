@@ -39,17 +39,15 @@ class Database:
 
         try:
             self.tokens = json.load(open('token_settings.json',mode='r',encoding='utf8'))
-            self.CWB_API = self.tokens['CWB_API']
-            self.osu_API_id = self.tokens['osu_API_id']
-            self.osu_API_secret = self.tokens['osu_API_secret']
-            self.TRN_API = self.tokens['TRN_API']
-            self.apex_status_API = self.tokens['apex_status_API']
         except:
-            self.CWB_API = os.environ['CWB_API']
-            self.osu_API_id = os.environ['osu_API_id']
-            self.osu_API_secret = os.environ['osu_API_secret']
-            self.TRN_API = os.environ['TRN_API']
-            self.apex_status_API = os.environ['apex_status_API']
+            self.tokens = os.environ
+
+        self.CWB_API = self.tokens['CWB_API']
+        self.osu_API_id = self.tokens['osu_API_id']
+        self.osu_API_secret = self.tokens['osu_API_secret']
+        self.TRN_API = self.tokens['TRN_API']
+        self.apex_status_API = self.tokens['apex_status_API']
+        self.steam_api = self.tokens['steam_api']
 
     def write(self,file:str,data:dict):
         try:
