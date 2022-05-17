@@ -323,8 +323,11 @@ class DBDData():
         pass
 
     def get_player(self,user):
-        response = requests.get(f'https://dbd.onteh.net.au/api/playerstats?steamid={user}').json()
-        return DBDPlayer(response)
+        try:
+            response = requests.get(f'https://dbd.onteh.net.au/api/playerstats?steamid={user}').json()
+            return DBDPlayer(response)
+        except:
+            return None
 
 class SteamData():
     def __init__(self):
