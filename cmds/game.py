@@ -76,7 +76,7 @@ class game(Cog_Extension):
                     if APIdata:
                         gdata[userid]['steam'] = {'id':APIdata.steamid,'name':APIdata.name}
                         Database().write('gdata',gdata)
-                        await ctx.send(f'已將{game}資料設定為 {data}')
+                        await ctx.send(f'已將{game}資料設定為 {APIdata.name}')
                     else:
                         await ctx.send(f'錯誤:找不到此用戶',delete_after=5)
         else:
@@ -87,16 +87,24 @@ class game(Cog_Extension):
         gdata = Database().gdata
         if user == None:
             user = ctx.author
+            userid = str(user.id)
         else:
-            user = await find.user(ctx,user)
+            user = await find.user2(ctx,user)
+            if user:
+                userid = str(user.id)
+                
+        
         if user == ctx.author or ctx.author.id == 419131103836635136:
-            if user != None and str(user.id) in self.gdata:
+            if user and userid in gdata:
                 data = {}
                 for game in self.games:
-                    if game in self.gdata[str(user.id)]:
-                        data[game] = self.gdata[str(user.id)][game]
+                    if game in gdata[userid]:
+                        if 'name' in gdata[userid][game]:
+                            data[game] = f"{gdata[userid][game]['name']}\n({gdata[userid][game]['id']})"
+                        else:
+                            data[game] = gdata[userid][game]
                     else:
-                        data[game] = 'None'
+                        data[game] = None
 
                 embed = BRS.simple(title=user)
                 for game in self.games:
@@ -187,11 +195,28 @@ class game(Cog_Extension):
             if dcuser:
                 userid = Database().gdata[str(dcuser.id)]['steam']['id']
         
-        embed = DBDData().get_player(userid).desplay
+        player = DBDData().get_player(userid)
+        if player:
+            await msg.edit(content='查詢成功',embed=player.desplay)
+        else:
+            await msg.edit(content='查詢失敗:查無此ID或個人資料設定私人',delete_after=5)
+
+    @commands.group(invoke_without_command=True)
+    @commands.cooldown(rate=1,per=1)
+    async def steam(self,ctx,userid=None):
+        msg = await ctx.send('資料查詢中...')
+        #資料庫調用
+        if not userid:
+            userid = Database().gdata[str(ctx.author.id)]['steam']['id']
+        else:
+            dcuser = await find.user2(ctx,userid)
+            if dcuser:
+                userid = Database().gdata[str(dcuser.id)]['steam']['id']
+        
+        embed = SteamData().get_user(userid).desplay
         if embed:
             await msg.edit(content='查詢成功',embed=embed)
         else:
             await msg.edit(content='查詢失敗:查無此ID',delete_after=5)
-
 def setup(bot):
     bot.add_cog(game(bot))
