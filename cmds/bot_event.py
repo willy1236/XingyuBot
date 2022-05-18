@@ -2,7 +2,7 @@ import discord,datetime
 from discord.ext import commands
 from core.classes import Cog_Extension
 from library import BRS
-from BotLib.basic import Database
+from BotLib.database import Database
 
 class ScamChack:
     def __init__(self,text:str):

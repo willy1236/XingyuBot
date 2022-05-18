@@ -1,6 +1,6 @@
 language="python3"
 run = """
-pip install py-cord[speed]==2.0.0b7
+pip install py-cord[speed]==2.0.0rc1
 pip install py-cord[voice]
 python main.py
 """

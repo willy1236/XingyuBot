@@ -1,7 +1,8 @@
 import random,discord
 from discord.ext import commands
 from core.classes import Cog_Extension
-from BotLib.basic import Database
+from BotLib.database import Database
+from BotLib.basic import BotEmbed
 
 #(*args) 傳入多個參數
 #(**kwargs) 傳入多個參數並轉變為dict
@@ -122,7 +123,7 @@ class BRS():
     async def error(self,ctx,error:str):
         jdata = Database().jdata
         report_channel = self.bot.get_channel(jdata['report_channel'])
-        embed=BRS.simple()
+        embed=BotEmbed.simple()
         embed.set_author(name="BRS | 錯誤回報")
         embed.add_field(name='錯誤指令', value=f'```py\n{error}```', inline=True)
         embed.add_field(name='使用指令', value=f'```{ctx.message.content}```', inline=False)
@@ -134,7 +135,7 @@ class BRS():
     async def scam(self,msg):
         jdata = Database().jdata
         scam_channel = self.bot.get_channel(jdata['scam_channel'])
-        embed=BRS.simple()
+        embed=BotEmbed.simple()
         embed.set_author(name="BRS | 詐騙回報")
         embed.add_field(name='詐騙訊息', value=msg.content, inline=True)
         embed.add_field(name='發送者', value=f"{msg.author}\n{msg.author.id}", inline=False)
@@ -145,7 +146,7 @@ class BRS():
     async def feedback(self,ctx,msg):
         jdata = Database().jdata
         feedback_channel = self.bot.get_channel(jdata['feedback_channel'])
-        embed=BRS.simple()
+        embed=BotEmbed.simple()
         embed.set_author(name="BRS | 回饋訊息")
         embed.add_field(name='訊息內容', value=msg, inline=True)
         embed.add_field(name='發送者', value=f"{ctx.author}\n{ctx.author.id}", inline=False)
@@ -156,41 +157,11 @@ class BRS():
     async def dm(self,msg):
         jdata = Database().jdata
         dm_channel = self.bot.get_channel(jdata['dm_channel'])
-        embed=BRS.simple()
+        embed=BotEmbed.simple()
         embed.set_author(name="BRS | 私人訊息")
         embed.add_field(name='訊息內容', value=msg.content, inline=True)
         embed.add_field(name='發送者', value=f"{msg.author}\n{msg.author.id}", inline=False)
         await dm_channel.send(embed=embed)
-    
-    def all_anno(msg):
-        '''全群公告'''
-        embed=discord.Embed(description=msg,color=0xc4e9ff)
-        embed.set_author(name="Bot Radio Station",icon_url=picdata['radio_001'])
-        embed.set_footer(text='廣播電台 | 機器人全群公告')
-        return embed
-
-    def basic(self,description:str=discord.Embed.Empty,title:str=discord.Embed.Empty,url=discord.Embed.Empty):
-        '''基本:作者帶機器人名稱'''
-        embed = discord.Embed(title=title,description=description, color=0xc4e9ff,url=url)
-        embed.set_author(name=self.bot.user.name,icon_url=self.bot.user.display_avatar.url)
-        return embed
-    
-    def simple(description:str=discord.Embed.Empty,title:str=discord.Embed.Empty,url=discord.Embed.Empty):
-        '''簡易:不帶作者'''
-        embed = discord.Embed(title=title,description=description, color=0xc4e9ff,url=url)
-        return embed
-
-    def brs():
-        '''Bot Radio Station 格式'''
-        embed = discord.Embed(color=0xc4e9ff)
-        embed.set_author(name="Bot Radio Station",icon_url=picdata['radio_001'])
-        return embed
-
-    def lottery():
-        '''Lottery System格式'''
-        embed = discord.Embed(color=0xc4e9ff)
-        embed.set_author(name="Lottery System",icon_url=picdata['lottery_001'])
-        return embed
 
 class converter():
     def time(arg:str):

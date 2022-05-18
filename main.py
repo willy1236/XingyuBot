@@ -1,39 +1,40 @@
-import discord,json, random, datetime, asyncio, os
+import discord, os
 from discord.ext import commands
-from library import find,BRS
-from BotLib.basic import Database
+from BotLib.database import Database
 
 bot_list={"1":"Bot1", "2":"Bep", "3":"Bot2"}
-global bot_code
-#1:dc小幫手 2:Bep
+#1:dc小幫手 2:Bep 3:RO
 bot_code = 1
 botuser = bot_list[str(bot_code)]
 
 jdata = Database().jdata
 picdata = Database().picdata
-
-try:
-    tokens = json.load(open('token_settings.json',mode='r',encoding='utf8'))
-    token = tokens[botuser]
-except:
-    token = os.environ[botuser]
+token = Database().tokens[botuser]
 
 
 if bot_code ==1:
     bot = commands.Bot(
-            command_prefix=commands.when_mentioned_or('!!'),
-            owner_id=419131103836635136,
-            intents=discord.Intents.all(),
-            case_insensitive=True, 
-            help_command=None)
+        command_prefix=commands.when_mentioned_or('!!'),
+        owner_id=419131103836635136,
+        intents=discord.Intents.all(),
+        case_insensitive=True, 
+        help_command=None
+    )
 elif bot_code == 2:
     bot = commands.AutoShardedBot(
-            shard_count=1,
-            command_prefix=commands.when_mentioned_or('b!'),
-            owner_id=419131103836635136,
-            intents=discord.Intents.all(),
-            case_insensitive=True, 
-            help_command=None)
+        shard_count=1,
+        command_prefix=commands.when_mentioned_or('b!'),
+        owner_id=419131103836635136,
+        intents=discord.Intents.all(),
+        case_insensitive=True, 
+        help_command=None,
+        debug_guild = []
+    )
+elif bot_code == 3:
+    bot = discord.Bot(
+        owner_id=419131103836635136,
+        debug_guild = []
+    )
 else:
     raise ValueError("Invalid bot_code")
 

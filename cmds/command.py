@@ -1,12 +1,14 @@
 import discord
 from discord.errors import Forbidden, NotFound
 from discord.ext import commands
-import json ,random,asyncio
+import random,asyncio
+from discord.commands import SlashCommandGroup
 
 from library import find,converter,random_color,BRS
 from core.classes import Cog_Extension
 from BotLib.user import *
-from BotLib.basic import Database
+from BotLib.database import Database
+from BotLib.basic import BotEmbed
 
 class command(Cog_Extension):
     picdata = Database().picdata
@@ -17,7 +19,7 @@ class command(Cog_Extension):
         success = 0
         member = await find.user(ctx,id)
         if member != None:
-            embed = BRS.simple(title=f'{member.name}#{member.discriminator}', description="ID:用戶(伺服器成員)")
+            embed = BotEmbed.simple(title=f'{member.name}#{member.discriminator}', description="ID:用戶(伺服器成員)")
             embed.add_field(name="暱稱", value=member.nick, inline=False)
             embed.add_field(name="是否為機器人", value=member.bot, inline=False)
             embed.add_field(name="最高身分組", value=member.top_role.mention, inline=True)
@@ -29,7 +31,7 @@ class command(Cog_Extension):
 
         user = await find.user2(ctx,id)
         if user != None and member == None:
-            embed = BRS.simple(title=f'{user.name}#{user.discriminator}', description="ID:用戶")
+            embed = BotEmbed.simple(title=f'{user.name}#{user.discriminator}', description="ID:用戶")
             embed.add_field(name="是否為機器人", value=user.bot, inline=False)
             embed.add_field(name="是否為Discord官方", value=user.system, inline=False)
             embed.add_field(name="帳號創建日期", value=user.created_at, inline=False)
@@ -38,7 +40,7 @@ class command(Cog_Extension):
 
         channel = await find.channel(ctx,id)
         if channel != None:
-            embed = BRS.simple(title=channel.name, description="ID:頻道")
+            embed = BotEmbed.simple(title=channel.name, description="ID:頻道")
             embed.add_field(name="所屬類別", value=channel.category, inline=False)
             embed.add_field(name="所屬公會", value=channel.guild, inline=False)
             embed.add_field(name="創建時間", value=channel.created_at, inline=False)
@@ -46,7 +48,7 @@ class command(Cog_Extension):
         
         guild = await find.guild(ctx,id)
         if guild != None:
-            embed = BRS.simple(title=guild.name, description="ID:公會")
+            embed = BotEmbed.simple(title=guild.name, description="ID:公會")
             embed.add_field(name="公會擁有者", value=guild.owner, inline=False)
             embed.add_field(name="創建時間", value=guild.created_at, inline=False)
             embed.add_field(name="驗證等級", value=guild.verification_level, inline=False)
@@ -79,7 +81,7 @@ class command(Cog_Extension):
     async def role(self,ctx,*user_list):
         if 'default' in user_list:
             user_list = (419131103836635136,528935362199027716,465831362168094730,539405949681795073,723435216244572160,490136735557222402)
-        embed=BRS.simple()
+        embed=BotEmbed.simple()
         embed.set_author(name="身分組計算結果")
         rsdata = Database().rsdata
         for i in user_list:
@@ -208,16 +210,13 @@ class command(Cog_Extension):
                     jloot[user_id] += 1
         
         Database().write('jloot',jloot)
-        embed=BRS.lottery()
+        embed=BotEmbed.lottery()
         embed.add_field(name='抽卡結果', value=f"六星:{result['six']} 五星:{result['five']} 四星:{result['four']} 三星:{result['three']}", inline=False)
-        #text = f"抽卡結果:\n六星:{result['six']} 五星:{result['five']} 四星:{result['four']} 三星:{result['three']}\n未抽得六星次數:{jloot[user_id]}"
         embed.add_field(name='保底累積', value=jloot[user_id], inline=False)
         if len(six_list) > 0:
             embed.add_field(name='六星出現', value=six_list, inline=False)
-            #text = text + f'\n六星出現:{six_list}'
         if len(six_list_100) > 0:
             embed.add_field(name='保底', value=six_list_100, inline=False)
-            #text = text + f'\n保底:{six_list_100}'
         await ctx.send(embed=embed)
 
 
@@ -268,7 +267,7 @@ class command(Cog_Extension):
         bet_data[id] = data        
         Database().write('bet_data',bet_data)
             
-        embed = BRS.simple(title='賭盤', description=f'編號: {id}')
+        embed = BotEmbed.simple(title='賭盤', description=f'編號: {id}')
         embed.add_field(name='賭盤內容', value=title, inline=False)
         embed.add_field(name="粉紅幫", value=pink, inline=False)
         embed.add_field(name="藍藍幫", value=blue, inline=False)
@@ -345,6 +344,7 @@ class command(Cog_Extension):
 
     @commands.slash_command(description='向大家說哈瞜')
     async def hello(ctx, name: str = None):
+        await ctx.defer()
         name = name or ctx.author.name
         await ctx.respond(f"Hello {name}!")
 

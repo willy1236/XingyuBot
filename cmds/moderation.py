@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 from core.classes import Cog_Extension
 from library import find
-from BotLib.basic import Database
+from BotLib.database import Database
 
 
 class moderation(Cog_Extension):
