@@ -1,6 +1,6 @@
 import requests,datetime
-from BotLib.basic import Database
-from library import BRS
+from BotLib.database import Database
+from BotLib.basic import BotEmbed
 
 class OsuPlayer():
     def __init__(self,data):
@@ -15,7 +15,7 @@ class OsuPlayer():
         self.desplay = self.embed()
 
     def embed(self):
-        embed = BRS.simple("Osu玩家資訊")
+        embed = BotEmbed.simple("Osu玩家資訊")
         embed.add_field(name="名稱",value=self.username)
         embed.add_field(name="id",value=self.id)
         embed.add_field(name="全球排名",value=self.global_rank)
@@ -49,7 +49,7 @@ class OsuBeatmap():
         self.desplay = self.embed()
 
     def embed(self):
-        embed = BRS.simple(title="Osu圖譜資訊")
+        embed = BotEmbed.simple(title="Osu圖譜資訊")
         embed.add_field(name="名稱",value=self.title)
         embed.add_field(name="歌曲長度(秒)",value=self.time)
         embed.add_field(name="星數",value=self.star)
@@ -87,7 +87,7 @@ class ApexPlayer():
         self.desplay = self.embed()
 
     def embed(self):
-        embed = BRS.simple("Apex玩家資訊")
+        embed = BotEmbed.simple("Apex玩家資訊")
         embed.add_field(name="名稱",value=self.username)
         embed.add_field(name="id",value=self.id)
         embed.add_field(name="平台",value=self.platform)
@@ -126,7 +126,7 @@ class ApexCrafting():
         self.desplay = self.embed()
     
     def embed(self):
-        embed = BRS.simple("Apex合成器內容")
+        embed = BotEmbed.simple("Apex合成器內容")
         embed.add_field(name="每日物品1",value=self.item1_name,inline=False)
         embed.add_field(name="每日物品1價格",value=self.item1_cost,inline=False)
         embed.add_field(name="每日物品2",value=self.item2_name,inline=False)
@@ -152,7 +152,7 @@ class ApexMapRotation():
         self.desplay = self.embed()
 
     def embed(self):
-        embed = BRS.simple("Apex地圖輪替")
+        embed = BotEmbed.simple("Apex地圖輪替")
         embed.add_field(name="目前地圖",value=self.nowmap)
         embed.add_field(name="開始時間",value=self.nowstart)
         embed.add_field(name="結束時間",value=self.nowend)
@@ -200,7 +200,7 @@ class DBDPlayer():
         self.desplay = self.embed()
     
     def embed(self):
-        embed = BRS.simple("DBD玩家資訊")
+        embed = BotEmbed.simple("DBD玩家資訊")
         embed.add_field(name="玩家名稱",value=self.name)
         embed.add_field(name="血點數",value=self.bloodpoints)
         embed.add_field(name="倖存者等級",value=self.survivor_rank)
@@ -271,7 +271,7 @@ class OsuData():
             return None
 
     def player_desplay(user:OsuPlayer):
-            embed = BRS.simple("Osu玩家資訊")
+            embed = BotEmbed.simple("Osu玩家資訊")
             embed.add_field(name="名稱",value=user.username)
             embed.add_field(name="id",value=user.id)
             embed.add_field(name="全球排名",value=user.global_rank)
@@ -280,7 +280,6 @@ class OsuData():
             embed.add_field(name="是否在線上",value=user.is_online)
             embed.set_thumbnail(url=user.avatar_url)
             return embed
-
 
 # class ApexData():
 #     def __init__(self):

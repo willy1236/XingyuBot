@@ -1,14 +1,22 @@
-import json
-from BotLib.basic import Database
 from library import find
+from BotLib.database import Database
+from BotLib.basic import BotEmbed
 
 class User():
     def __init__(self,userid):
-        udata = Database().udata
+        udata = Database().udata['id']
         self.id = str(userid)
         self.point = Point(self.id)
-        self.name = udata[self.id]["name"] or find.user(userid).name
-            
+        self.name = udata["name"] or find.user(userid).name
+        
+        self.desplay = self.embed()
+        pass
+        self.weapon = udata['weapon']
+
+    def embed(self):
+        embed = BotEmbed.simple(title=self.name)
+        embed.add_field(name='Pt點數',value=self.point.pt)
+        return embed
 
 class Point():
     def __init__(self,userid:str):

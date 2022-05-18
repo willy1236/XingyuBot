@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands
-from BotLib.basic import Database
+from BotLib.database import Database
 
 class Cog_Extension(commands.Cog):
     def __init__(self, bot):

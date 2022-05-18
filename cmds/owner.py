@@ -4,7 +4,7 @@ from discord.ext import commands
 from library import find,BRS
 from core.classes import Cog_Extension
 from BotLib.user import *
-from BotLib.basic import Database
+from BotLib.database import Database
 
 class owner(Cog_Extension):
     cdata = Database().cdata
@@ -32,7 +32,7 @@ class owner(Cog_Extension):
         send_success = 0
         send_msg = await ctx.send('訊息發送中...')
 
-        embed= BRS.all_anno(msg)
+        embed= BotEmbed.all_anno(msg)
         
         for i in self.cdata['all_anno']:
             channel = self.bot.get_channel(self.cdata['all_anno'][i])

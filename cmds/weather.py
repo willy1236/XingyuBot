@@ -2,9 +2,10 @@ import discord
 from discord.ext import commands
 import requests
 
-from library import BRS
 from core.classes import Cog_Extension
-from BotLib.basic import Database
+from BotLib.database import Database
+from BotLib.basic import BotEmbed
+
 
 class EarthquakeReport:
     def __init__(self,data):
@@ -19,7 +20,7 @@ class EarthquakeReport:
         self.desplay = self.embed()
 
     def embed(self):
-        embed = BRS.simple(f'編號第{self.earthquakeNo}號地震報告')
+        embed = BotEmbed.simple(f'編號第{self.earthquakeNo}號地震報告')
         embed.add_field(name='發生時間',value=self.originTime)
         embed.add_field(name='震央',value=self.location)
         embed.add_field(name='震源深度',value=f'{self.depth} km')
@@ -54,7 +55,7 @@ class Covid19Report:
         self.desplay = self.embed()
 
     def embed(self):
-        embed = BRS.simple(f'{self.date} 台灣COVUD-19疫情')
+        embed = BotEmbed.simple(f'{self.date} 台灣COVUD-19疫情')
         embed.add_field(name='新增確診',value=self.diagnosed_new)
         embed.add_field(name='總確診數',value=self.diagnosed_total)
         embed.add_field(name='新增死亡',value=self.death_new)
@@ -82,7 +83,7 @@ class weather(Cog_Extension):
             await msg.edit(content='查詢失敗',delete_after=5)
     
     @commands.cooldown(rate=1,per=15)
-    @commands.command()
+    @commands.command(enable=True)
     async def covid(self,ctx):
         msg = await ctx.send('資料查詢中...')
         embed = Covid19Report.get_covid19().desplay

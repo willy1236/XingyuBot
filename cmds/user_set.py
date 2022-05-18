@@ -1,9 +1,7 @@
-import discord,json
 from discord.ext import commands
 from core.classes import Cog_Extension
-from library import BRS
 from BotLib.user import *
-from BotLib.basic import Database
+from BotLib.database import Database
 
 
 class user_set(Cog_Extension):
@@ -11,8 +9,7 @@ class user_set(Cog_Extension):
     async def ui(self,ctx,user=None):
         user_dc = await find.user(ctx,user) or ctx.author
         user = User(user_dc.id)
-        embed = BRS.simple(title=user_dc)
-        embed.add_field(name='Pt點數',value=user.point.pt)
+        embed = user.desplay
         await ctx.send(embed=embed)
 
 def setup(bot):

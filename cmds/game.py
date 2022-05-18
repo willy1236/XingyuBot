@@ -3,9 +3,10 @@ from discord.ext import commands
 from bs4 import BeautifulSoup
 
 from core.classes import Cog_Extension
-from library import find,BRS
-from BotLib.basic import Database
+from library import find
+from BotLib.database import Database
 from BotLib.gamedata import *
+from BotLib.basic import BotEmbed
 
 def player_search(url):
     response = requests.get(url)
@@ -106,7 +107,7 @@ class game(Cog_Extension):
                     else:
                         data[game] = None
 
-                embed = BRS.simple(title=user)
+                embed = BotEmbed.simple(title=user)
                 for game in self.games:
                     embed.add_field(name=game, value=data[game], inline=False)
                 embed.set_thumbnail(url=user.display_avatar.url)
