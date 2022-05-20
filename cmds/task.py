@@ -4,6 +4,7 @@ from discord.ext import commands,tasks
 from cmds.weather import EarthquakeReport
 from core.classes import Cog_Extension
 from BotLib.database import Database
+from BotLib.gamedata import ApexData
 
 class task(Cog_Extension):
     def __init__(self,*args,**kwargs):
@@ -16,6 +17,8 @@ class task(Cog_Extension):
     async def on_ready(self):
         self.sign_reset.start()
         self.earthquake_check.start()
+        self.apex_crafting_update.start()
+        self.apex_map_update.start()
     
     
     @tasks.loop(time=time(hour=00,minute=0,second=0,tzinfo=tz))
@@ -42,6 +45,42 @@ class task(Cog_Extension):
                 if channel:
                     await channel.send('地震報告',embed=embed)
 
+    @tasks.loop(time=time(hour=1,minute=5,second=0,tzinfo=tz))
+    async def apex_crafting_update(self):
+        cdata = Database().cdata
+        embed = ApexData.get_crafting().desplay
+        for i in cdata["apex_crafting"]:
+            channel = self.bot.get_channel(cdata["apex_crafting"][i])
+            id = channel.last_message_id
+            if id:
+                msg = await channel.fetch_message(id)
+            else:
+                msg = None
+
+            if msg and msg.author == self.bot.user:
+                await msg.edit(embed=embed)
+            else:
+                await channel.send(embed=embed)
+            await asyncio.sleep(1)
+
+    #@tasks.loop(time=time(minute=0,second=0,tzinfo=tz))
+    @tasks.loop(count=1)
+    async def apex_map_update(self):
+        cdata = Database().cdata
+        embed = ApexData.get_map_rotation().desplay
+        for i in cdata["apex_map"]:
+            channel = self.bot.get_channel(cdata["apex_map"][i])
+            id = channel.last_message_id
+            if id:
+                msg = await channel.fetch_message(id)
+            else:
+                msg = None
+
+            if msg and msg.author == self.bot.user:
+                await msg.edit(embed=embed)
+            else:
+                await channel.send(embed=embed)
+            await asyncio.sleep(1)
 
     def get_time(tz):
         zt = datetime.now().astimezone(tz)

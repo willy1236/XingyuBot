@@ -77,6 +77,46 @@ class moderation(Cog_Extension):
             self.cdata['earthquake'][guild] = channel.id
             Database().write('cdata',self.cdata)
             await ctx.send(f'設定完成，已將地震通知頻道設為{channel.mention}')
+        
+    @set.command()
+    @commands.has_permissions(manage_channels=True)
+    async def apex_crafting(self,ctx,channel='remove'):
+        if channel != 'remove':
+            channel = await find.channel(ctx,channel)
+        guild = str(ctx.guild.id)
+        
+        if channel == 'remove':
+            if guild in self.cdata['apex_crafting']:
+                del self.cdata['apex_crafting'][guild]
+                Database().write('cdata',self.cdata)
+                await ctx.send(f'設定完成，已移除地震通知頻道')
+            else:
+                await ctx.send('此伺服器還沒有設定頻道喔')
+
+        elif channel != None:
+            self.cdata['apex_crafting'][guild] = channel.id
+            Database().write('cdata',self.cdata)
+            await ctx.send(f'設定完成，已將Apex合成器內容頻道設為{channel.mention}')
+
+    @set.command()
+    @commands.has_permissions(manage_channels=True)
+    async def apex_map(self,ctx,channel='remove'):
+        if channel != 'remove':
+            channel = await find.channel(ctx,channel)
+        guild = str(ctx.guild.id)
+        
+        if channel == 'remove':
+            if guild in self.cdata['apex_map']:
+                del self.cdata['apex_map'][guild]
+                Database().write('cdata',self.cdata)
+                await ctx.send(f'設定完成，已移除地震通知頻道')
+            else:
+                await ctx.send('此伺服器還沒有設定頻道喔')
+
+        elif channel != None:
+            self.cdata['apex_map'][guild] = channel.id
+            Database().write('cdata',self.cdata)
+            await ctx.send(f'設定完成，已將Apex地圖輪轉頻道設為{channel.mention}')
 
 def setup(bot):
     bot.add_cog(moderation(bot))

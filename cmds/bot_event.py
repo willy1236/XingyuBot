@@ -7,10 +7,11 @@ from BotLib.database import Database
 class ScamChack:
     def __init__(self,text:str):
         self.text = text
+        self.keyword =self.__keyword()
 
-    def keyword(self):
-        self.keywords = ['Free','免費','Nitro','premiums-nitro','discerd.gift','disceord.gift']
-        if self.keywords in self.text:
+    def __keyword(self):
+        keywords = ['Free','免費','Nitro','premiums-nitro','discerd.gift','disceord.gift']
+        if keywords in self.text:
             return True
         else:
             return False
@@ -44,7 +45,7 @@ class event(Cog_Extension):
         #    pass
         #if message.mention_everyone == True:
         #    await message.reply('你tag所有人了')
-        if ('@everyone' in message.content or message.mention_everyone) and message.content in self.keywords:
+        if ('@everyone' in message.content or message.mention_everyone) and ScamChack(message.content).keyword:
             channel = self.bot.get_channel(message.channel.id)
             await BRS.scam(self,message)
             await message.delete()

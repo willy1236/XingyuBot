@@ -45,7 +45,10 @@ class debug(Cog_Extension):
 
     @commands.command()
     async def test(self, ctx,*arg):
-        print(arg,type(arg))
+        channel = self.bot.get_channel(566533708371329026)
+        id = channel.last_message_id
+        msg = await channel.fetch_message(id)
+        print(msg.author)
     
     @commands.command()
     @commands.is_owner()

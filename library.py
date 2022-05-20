@@ -48,10 +48,12 @@ def is_number(n):
     except (TypeError, ValueError):
         return False
 
-def random_color():
+def random_color(max=255):
+    if max > 255:
+        raise ValueError("max must below 255")
     color = []
     while len(color) < 3:        
-        color.append(random.choice(range(200)))
+        color.append(random.choice(range(max)))
     return color
 
 class Counter(dict):
