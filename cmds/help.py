@@ -158,6 +158,8 @@ class help(Cog_Extension):
         embed = BotEmbed.simple("設定(Set) 指令:")
         embed.add_field(name="!!set <crass_chat> [頻道]", value="設定跨群聊天頻道", inline=False)
         embed.add_field(name="!!set <all_anno> [頻道]", value="設定全群公告頻道", inline=False)
+        embed.add_field(name="!!set <apex_crafting> [頻道]", value="設定apex合成器內容頻道", inline=False)
+        embed.add_field(name="!!set <apex_map> [頻道]", value="設定apex地圖輪替頻道", inline=False)
         await ctx.send(embed=embed)
 
     @help.command()

@@ -63,9 +63,9 @@ class task(Cog_Extension):
                 msg = None
 
             if msg and msg.author == self.bot.user:
-                await msg.edit(embed=embed)
+                await msg.edit('Apex合成台內容自動更新資料',embed=embed)
             else:
-                await channel.send(embed=embed)
+                await channel.send('Apex合成台內容自動更新資料',embed=embed)
             await asyncio.sleep(1)
     
     @tasks.loop(time=time(hour=__get_next_hour(),minute=0,second=0,tzinfo=tz))
@@ -81,9 +81,9 @@ class task(Cog_Extension):
                 msg = None
 
             if msg and msg.author == self.bot.user:
-                await msg.edit(embed=embed)
+                await msg.edit('Apex地圖輪替自動更新資料',embed=embed)
             else:
-                await channel.send(embed=embed)
+                await channel.send('Apex地圖輪替自動更新資料',embed=embed)
             await asyncio.sleep(1)
 
     def get_time(tz):
