@@ -20,6 +20,11 @@ class task(Cog_Extension):
         self.apex_crafting_update.start()
         self.apex_map_update.start()
     
+    def __get_next_hour():
+        tz = timezone(timedelta(hours=+8))
+        time = datetime.now(tz=tz)+timedelta(hours=1)
+        return time.hour
+    
     
     @tasks.loop(time=time(hour=00,minute=0,second=0,tzinfo=tz))
     async def sign_reset(self):
@@ -62,8 +67,8 @@ class task(Cog_Extension):
             else:
                 await channel.send(embed=embed)
             await asyncio.sleep(1)
-
-    @tasks.loop(time=time(minute=0,second=0,tzinfo=tz))
+    
+    @tasks.loop(time=time(hour=__get_next_hour(),minute=0,second=0,tzinfo=tz))
     async def apex_map_update(self):
         cdata = Database().cdata
         embed = ApexData.get_map_rotation().desplay
