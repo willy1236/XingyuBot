@@ -2,7 +2,9 @@ import discord,json,requests
 from discord.ext import commands
 from core.classes import Cog_Extension
 from library import *
+from datetime import datetime, timezone, timedelta,time
 
+tz = timezone(timedelta(hours=+8))
 # Note that custom_ids can only be up to 100 characters long.
 class PersistentView(discord.ui.View):
     def __init__(self):
@@ -45,10 +47,7 @@ class debug(Cog_Extension):
 
     @commands.command()
     async def test(self, ctx,*arg):
-        channel = self.bot.get_channel(566533708371329026)
-        id = channel.last_message_id
-        msg = await channel.fetch_message(id)
-        print(msg.author)
+        print(time(minute=5,second=0,tzinfo=tz))
     
     @commands.command()
     @commands.is_owner()
