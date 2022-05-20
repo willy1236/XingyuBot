@@ -88,12 +88,7 @@ class command(Cog_Extension):
             user = await find.user(ctx,i)
             if user != None:
                 role_count = len(rsdata[str(user.id)])
-
                 embed.add_field(name=user.name, value=f"{role_count}", inline=False)
-                # if ignore_count > 0:
-                #     text = text + f'\n{user.name}扣除{ignore_count}個後擁有{role_count}個身分組'
-                # else:
-                #     text = text + f'\n{user.name}擁有{role_count}個身分組'
         await ctx.send(embed=embed)
 
 
@@ -101,8 +96,7 @@ class command(Cog_Extension):
     @commands.cooldown(rate=1,per=5)
     async def add(self,ctx,name,*user_list):
         permission = discord.Permissions.none()
-        #color = discord.Colour.random()
-        r,g,b=random_color()
+        r,g,b=random_color(200)
         color = discord.Colour.from_rgb(r,g,b)
         new_role = await ctx.guild.create_role(name=name,permissions=permission,color=color)
         if user_list != []:

@@ -91,12 +91,6 @@ async def reset(ctx,arg=None):
 async def ping(ctx):
     await ctx.send(f'延遲為:{round(bot.latency*1000)} ms')
 
-# @bot.command()
-# @commands.is_owner()
-# async def shutdown(ctx):
-#     await ctx.send('機器人關閉中...')
-#     await bot.close()
-
 ignore_py = []
 for filename in os.listdir('./cmds'):
     if filename.endswith('.py') and filename[:-3] not in ignore_py:

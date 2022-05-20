@@ -3,7 +3,7 @@ from discord.ext import commands
 from bs4 import BeautifulSoup
 
 from core.classes import Cog_Extension
-from library import find
+from library import find    
 from BotLib.database import Database
 from BotLib.gamedata import *
 from BotLib.basic import BotEmbed
@@ -86,7 +86,7 @@ class game(Cog_Extension):
     @game.command()
     async def find(self,ctx,user=None):
         gdata = Database().gdata
-        if user == None:
+        if not user:
             user = ctx.author
             userid = str(user.id)
         else:
@@ -129,9 +129,9 @@ class game(Cog_Extension):
             if dcuser:
                 userid = Database().gdata[str(dcuser.id)]['osu']
         
-        embed = OsuData().get_player(userid).desplay
-        if embed:
-            await msg.edit(content='查詢成功',embed=embed)
+        player = OsuData().get_player(userid)
+        if player:
+            await msg.edit(content='查詢成功',embed=player.desplay)
         else:
             await msg.edit(content='查詢失敗:查無此ID',delete_after=5)
 
@@ -157,9 +157,9 @@ class game(Cog_Extension):
             if dcuser:
                 userid = Database().gdata[str(dcuser.id)]['apex']
         
-        embed = ApexData().get_player(userid).desplay
-        if embed:
-            await msg.edit(content='查詢成功',embed=embed)
+        player = ApexData().get_player(userid)
+        if player:
+            await msg.edit(content='查詢成功',embed=player.desplay)
         else:
             await msg.edit(content='查詢失敗:查無此ID',delete_after=5)
 
@@ -214,9 +214,9 @@ class game(Cog_Extension):
             if dcuser:
                 userid = Database().gdata[str(dcuser.id)]['steam']['id']
         
-        embed = SteamData().get_user(userid).desplay
-        if embed:
-            await msg.edit(content='查詢成功',embed=embed)
+        user = SteamData().get_user(userid)
+        if user:
+            await msg.edit(content='查詢成功',embed=user.desplay)
         else:
             await msg.edit(content='查詢失敗:查無此ID',delete_after=5)
 def setup(bot):

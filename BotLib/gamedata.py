@@ -110,31 +110,49 @@ class ApexCrafting():
         self.item1 = self.daily['bundleContent'][0]
         self.item1_cost = self.item1['cost']
         self.item1_name = self.item1['itemType']['name']
+        self.item1_id = self.item1['item']
         self.item2 = self.daily['bundleContent'][1]
         self.item2_cost = self.item2['cost']
         self.item2_name = self.item2['itemType']['name']
+        self.item2_id = self.item2['item']
 
         self.weekly_start = self.weekly['startDate']
         self.weekly_end = self.weekly['endDate']
         self.item3 = self.weekly['bundleContent'][0]
         self.item3_cost = self.item3['cost']
         self.item3_name = self.item3['itemType']['name']
+        self.item3_id = self.item3['item']
         self.item4 = self.weekly['bundleContent'][1]
         self.item4_cost = self.item4['cost']
         self.item4_name = self.item4['itemType']['name']
+        self.item4_id = self.item4['item']
 
         self.desplay = self.embed()
     
     def embed(self):
         embed = BotEmbed.simple("Apex合成器內容")
-        embed.add_field(name="每日物品1",value=self.item1_name,inline=False)
+        dict = {
+            "extended_light_mag":"紫色輕型彈匣",
+            "backpack":"紫色背包",
+            "helmet":"紫色頭盔",
+            "optic_cq_hcog_bruiser":"2倍鏡"
+        }
+        item_name = []
+        item_name.append(dict.get(self.item1_name,self.item1_name))
+        item_name.append(dict.get(self.item2_name,self.item2_name))
+        item_name.append(dict.get(self.item3_name,self.item3_name))
+        item_name.append(dict.get(self.item4_name,self.item4_name))
+
+        embed.add_field(name="每日物品1",value=item_name[0],inline=False)
         embed.add_field(name="每日物品1價格",value=self.item1_cost,inline=False)
-        embed.add_field(name="每日物品2",value=self.item2_name,inline=False)
+        embed.add_field(name="每日物品2",value=item_name[1],inline=False)
         embed.add_field(name="每日物品2價格",value=self.item2_cost,inline=False)
-        embed.add_field(name="每週物品1",value=self.item3_name,inline=False)
+        embed.add_field(name="每週物品1",value=item_name[2],inline=False)
         embed.add_field(name="每週物品1價格",value=self.item3_cost,inline=False)
-        embed.add_field(name="每週物品2",value=self.item4_name,inline=False)
+        embed.add_field(name="每週物品2",value=item_name[3],inline=False)
         embed.add_field(name="每週物品2價格",value=self.item4_cost,inline=False)
+        embed.timestamp = datetime.datetime.now()
+        embed.set_footer(text='更新時間')
         return embed
 
 class ApexMapRotation():
@@ -152,15 +170,22 @@ class ApexMapRotation():
         self.desplay = self.embed()
 
     def embed(self):
+        dict = {
+            "Storm Point":"風暴點",
+            "Olympus":"奧林匹斯",
+            "World's Edge":"世界邊緣"
+        }
         embed = BotEmbed.simple("Apex地圖輪替")
-        embed.add_field(name="目前地圖",value=self.nowmap)
+        embed.add_field(name="目前地圖",value=dict.get(self.nowmap,self.nowmap))
         embed.add_field(name="開始時間",value=self.nowstart)
         embed.add_field(name="結束時間",value=self.nowend)
-        embed.add_field(name="下張地圖",value=self.nextmap)
+        embed.add_field(name="下張地圖",value=dict.get(self.nextmap,self.nextmap))
         embed.add_field(name="開始時間",value=self.nextstart)
         embed.add_field(name="結束時間",value=self.nextend)
         embed.add_field(name="目前地圖剩餘時間",value=self.remaining)
         embed.set_image(url=self.mapimage)
+        embed.timestamp = datetime.datetime.now()
+        embed.set_footer(text='更新時間')
         return embed
 
 class ApexStatus():
@@ -300,10 +325,12 @@ class ApexData():
     def __init__(self):
         pass
 
-    
     def get_player(self,user):
-        response = requests.get(f'https://api.mozambiquehe.re/bridge?auth={Database().apex_status_API}&player={user}&platform=PC').json()
-        return ApexPlayer(response)
+        try:
+            response = requests.get(f'https://api.mozambiquehe.re/bridge?auth={Database().apex_status_API}&player={user}&platform=PC').json()
+            return ApexPlayer(response)
+        except:
+            return None
     
     def get_crafting():
         response = requests.get(f'https://api.mozambiquehe.re/crafting?auth={Database().apex_status_API}').json()
