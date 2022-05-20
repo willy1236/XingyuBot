@@ -63,8 +63,7 @@ class task(Cog_Extension):
                 await channel.send(embed=embed)
             await asyncio.sleep(1)
 
-    #@tasks.loop(time=time(minute=0,second=0,tzinfo=tz))
-    @tasks.loop(count=1)
+    @tasks.loop(time=time(minute=0,second=0,tzinfo=tz))
     async def apex_map_update(self):
         cdata = Database().cdata
         embed = ApexData.get_map_rotation().desplay
