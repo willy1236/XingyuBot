@@ -19,20 +19,17 @@ class task(Cog_Extension):
         self.earthquake_check.start()
         self.apex_crafting_update.start()
         self.apex_map_update.start()
-    
-    def __get_next_hour():
+        
+
+    def __loop_half_hour():
         tz = timezone(timedelta(hours=+8))
-        time = datetime.now(tz=tz)+timedelta(hours=1)
-        return time.hour
-    
-    def __get_next_half_minute():
-        tz = timezone(timedelta(hours=+8))
-        time = datetime.now(tz=tz).minute
-        if time >= 0 and time <30:
-            return 30
+        now_time = datetime.now(tz=tz)
+        if now_time.minute >= 0 and now_time.minute <30:
+            next_time = time(hour=now_time.hour, minute=30,second=0,tzinfo=tz)
         else:
-            return 0
-    
+            next_time = time(hour=now_time.hour+timedelta(hours=1), minute=0,second=0,tzinfo=tz)
+        return next_time
+
     @tasks.loop(time=time(hour=00,minute=0,second=0,tzinfo=tz))
     async def sign_reset(self):
         task_report_channel = self.bot.get_channel(self.jdata['task_report'])
@@ -75,7 +72,7 @@ class task(Cog_Extension):
                 await channel.send('Apex合成台內容自動更新資料',embed=embed)
             await asyncio.sleep(1)
     
-    @tasks.loop(time=time(hour=__get_next_hour(),minute=__get_next_half_minute(),second=0,tzinfo=tz))
+    @tasks.loop(time=__loop_half_hour())
     async def apex_map_update(self):
         cdata = Database().cdata
         embed = ApexData.get_map_rotation().desplay
