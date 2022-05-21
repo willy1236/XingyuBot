@@ -4,13 +4,12 @@ from BotLib.user import *
 from BotLib.database import Database
 
 
-class user_set(Cog_Extension):
+class user_system(Cog_Extension):
     @commands.command()
     async def ui(self,ctx,user=None):
         user_dc = await find.user(ctx,user) or ctx.author
         user = User(user_dc.id)
-        embed = user.desplay
-        await ctx.send(embed=embed)
+        await ctx.send(embed=user.desplay)
 
 def setup(bot):
-    bot.add_cog(user_set(bot))
+    bot.add_cog(user_system(bot))
