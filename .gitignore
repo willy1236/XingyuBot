@@ -1,6 +1,3 @@
 *.pyc
-examples
-picture
 token_settings.json
 database
-setting.json

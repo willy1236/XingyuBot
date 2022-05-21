@@ -11,7 +11,7 @@ class Database:
         TRN = tracker.gg
         """
         self.dict = {
-            'jdata':'setting.json',
+            'jdata':'database/setting.json',
             'cdata':'database/channel_settings.json',
             'picdata':'database/picture.json',
             'udata': 'database/user_settings/basic.json',
