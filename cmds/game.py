@@ -75,7 +75,7 @@ class game(Cog_Extension):
                 if game == 'steam':
                     APIdata = SteamData().get_user(data)
                     if APIdata:
-                        gdata[userid]['steam'] = {'id':APIdata.steamid,'name':APIdata.name}
+                        gdata[userid]['steam'] = {'id':APIdata.id,'name':APIdata.name}
                         Database().write('gdata',gdata)
                         await ctx.send(f'已將{game}資料設定為 {APIdata.name}')
                     else:

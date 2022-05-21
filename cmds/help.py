@@ -1,4 +1,3 @@
-import discord
 from discord.ext import commands,pages
 from core.classes import Cog_Extension
 from BotLib.basic import BotEmbed
@@ -150,7 +149,7 @@ class help(Cog_Extension):
         embed.add_field(name="!!apex <玩家名/id>", value="查詢apex玩家", inline=False)
         embed.add_field(name="!!apex map", value="查詢apex地圖輪替", inline=False)
         embed.add_field(name="!!apex creafting", value="查詢apex合成台內容", inline=False)
-        embed.add_field(name="!!dbd <steamID>", value="查詢DBD玩家", inline=False)
+        embed.add_field(name="!!dbd <id>", value="查詢DBD玩家", inline=False)
         await ctx.send(embed=embed)
 
     @help.command()

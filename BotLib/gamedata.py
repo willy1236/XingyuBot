@@ -135,7 +135,9 @@ class ApexCrafting():
             "extended_light_mag":"紫色輕型彈匣",
             "backpack":"紫色背包",
             "helmet":"紫色頭盔",
-            "optic_cq_hcog_bruiser":"2倍鏡"
+            "optic_cq_hcog_bruiser":"2倍鏡",
+            "optic_hcog_ranger":"3倍鏡",
+            "shatter_caps":"粉碎蓋"
         }
         item_name = []
         item_name.append(dict.get(self.item1_name,self.item1_name))
@@ -195,7 +197,7 @@ class ApexStatus():
 class DBDPlayer():
     def __init__(self,data):
         #基本資料
-        self.id = data["steamid"]
+        self.id = data["id"]
         self.name = SteamData().get_user(self.id).name
         self.bloodpoints = data["bloodpoints"]
         self.survivor_rank = data["survivor_rank"]
@@ -253,10 +255,19 @@ class DBDPlayer():
         
 class SteamUser():
     def __init__(self,data):
-        self.steamid = data['steamid']
+        self.id = data['steamid']
         self.name = data['personaname']
         self.profileurl = data['profileurl']
         self.avatar = data['avatar']
+        self.desplay = self.embed()
+    
+    def embed(self):
+        embed = BotEmbed.simple("Stean用戶資訊")
+        embed.add_field(name="用戶名稱",value=self.name)
+        embed.add_field(name="用戶id",value=self.id)
+        embed.add_field(name="個人檔案連結",value='[點我]({0})'.format(self.profileurl))
+        embed.set_thumbnail(url=self.avatar)
+        return embed
 
 class OsuData():
     def __init__(self):
@@ -294,17 +305,6 @@ class OsuData():
             return OsuBeatmap(response)
         else:
             return None
-
-    def player_desplay(user:OsuPlayer):
-            embed = BotEmbed.simple("Osu玩家資訊")
-            embed.add_field(name="名稱",value=user.username)
-            embed.add_field(name="id",value=user.id)
-            embed.add_field(name="全球排名",value=user.global_rank)
-            embed.add_field(name="pp",value=user.pp)
-            embed.add_field(name="國家",value=user.country)
-            embed.add_field(name="是否在線上",value=user.is_online)
-            embed.set_thumbnail(url=user.avatar_url)
-            return embed
 
 # class ApexData():
 #     def __init__(self):
@@ -350,7 +350,7 @@ class DBDData():
 
     def get_player(self,user):
         try:
-            response = requests.get(f'https://dbd.onteh.net.au/api/playerstats?steamid={user}').json()
+            response = requests.get(f'https://dbd.onteh.net.au/api/playerstats?id={user}').json()
             return DBDPlayer(response)
         except:
             return None
@@ -360,5 +360,5 @@ class SteamData():
         pass
 
     def get_user(self,user):
-        response = requests.get(f'https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key={Database().steam_api}&steamids={user}').json().get('response').get('players')[0]
+        response = requests.get(f'https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key={Database().steam_api}&ids={user}').json().get('response').get('players')[0]
         return SteamUser(response)

@@ -44,16 +44,25 @@ class debug(Cog_Extension):
         dict[str(role.id)]['time']=role.created_at.strftime('%Y%m%d')
         print(dict)
                 
+    @commands.command()
+    @commands.is_owner()
+    async def rq(self):
+        url = f''
+        headers ={
+
+        }
+
+        response = requests.get(url, headers=headers).json()
+        print(response)
 
     @commands.command()
-    async def test(self, ctx,*arg):
-            channel = self.bot.get_channel(974332240236511234)
-            try:
-                id = channel.last_message_id
-                msg = await channel.fetch_message(id)
-            except:
-                msg = None
-            print(msg)
+    @commands.is_owner()
+    async def test(self, ctx,times):
+            times = round(float(times))
+            if times > 1000 or times <= 0:
+                print('數字只能介於1~1000之間')
+            else:
+                print(times)
     
     @commands.command()
     @commands.is_owner()
