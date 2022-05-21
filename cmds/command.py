@@ -171,8 +171,11 @@ class command(Cog_Extension):
 
     @commands.command()
     @commands.cooldown(rate=1,per=2)
-    async def lottery(self,ctx,times):
-        times = round(float(times)) or 1
+    async def lottery(self,ctx,times=None):
+        if times:
+            times = round(float(times))
+        else:
+            times = 1
         if times > 1000 or times <= 0:
             await ctx.send('數字只能介於1~1000之間')
             return
