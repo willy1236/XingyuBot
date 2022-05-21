@@ -47,7 +47,13 @@ class debug(Cog_Extension):
 
     @commands.command()
     async def test(self, ctx,*arg):
-        print(time(minute=5,second=0,tzinfo=tz))
+            channel = self.bot.get_channel(974332240236511234)
+            try:
+                id = channel.last_message_id
+                msg = await channel.fetch_message(id)
+            except:
+                msg = None
+            print(msg)
     
     @commands.command()
     @commands.is_owner()
