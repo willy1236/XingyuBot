@@ -73,6 +73,8 @@ class ApexPlayer():
         self.level = data['global']['level']
         self.avatar = data['global']['avatar']
         
+        self.bans = data['global']['bans']
+
         self.rank = data['global']['rank']['rankName']
         if data['global']['rank']['rankName'] != "Unranked":
             self.rank += " "+str(data['global']['rank']['rankDiv'])
@@ -97,6 +99,10 @@ class ApexPlayer():
         embed.add_field(name="競技場牌位階級",value=self.arena_rank)
         embed.add_field(name="競技場牌位分數",value=self.arena_score)
         embed.add_field(name="目前狀態",value=self.now_state)
+        if self.bans['isActive']:
+            embed.add_field(name="目前ban狀態",value=self.bans['remainingSeconds'])
+        else:
+            embed.add_field(name="目前ban狀態",value=self.bans['isActive'])
         embed.set_image(url=self.avatar)
         return embed
 
@@ -321,6 +327,7 @@ class OsuData():
 #             return ApexPlayer(data)
 #         else:
 #             return None
+
 class ApexData():
     def __init__(self):
         pass

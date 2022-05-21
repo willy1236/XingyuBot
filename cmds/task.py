@@ -25,6 +25,13 @@ class task(Cog_Extension):
         time = datetime.now(tz=tz)+timedelta(hours=1)
         return time.hour
     
+    def __get_next_half_minute():
+        tz = timezone(timedelta(hours=+8))
+        time = datetime.now(tz=tz).minute
+        if time >= 0 and time <30:
+            return 30
+        else:
+            return 0
     
     @tasks.loop(time=time(hour=00,minute=0,second=0,tzinfo=tz))
     async def sign_reset(self):
@@ -68,7 +75,7 @@ class task(Cog_Extension):
                 await channel.send('Apex合成台內容自動更新資料',embed=embed)
             await asyncio.sleep(1)
     
-    @tasks.loop(time=time(hour=__get_next_hour(),minute=0,second=0,tzinfo=tz))
+    @tasks.loop(time=time(hour=__get_next_hour(),minute=__get_next_half_minute(),second=0,tzinfo=tz))
     async def apex_map_update(self):
         cdata = Database().cdata
         embed = ApexData.get_map_rotation().desplay

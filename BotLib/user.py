@@ -4,10 +4,10 @@ from BotLib.basic import BotEmbed
 
 class User():
     def __init__(self,userid):
-        udata = Database().udata['id']
+        udata = Database().udata
         self.id = str(userid)
         self.point = Point(self.id)
-        self.name = udata["name"] or find.user(userid).name
+        self.name = udata[self.id].get('name',find.user(userid).name)
         
         self.desplay = self.embed()
         pass
@@ -17,6 +17,11 @@ class User():
         embed = BotEmbed.simple(title=self.name)
         embed.add_field(name='Pt點數',value=self.point.pt)
         return embed
+
+    def setup(id):
+        udata = Database().udata
+        udata[id] = {}
+        Database().write('udata',udata)
 
 class Point():
     def __init__(self,userid:str):
