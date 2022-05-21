@@ -38,7 +38,7 @@ class Database:
         self.rsdata = Counter(json.load(open(self.dict['rsdata'],mode='r',encoding='utf8')))
 
         try:
-            self.tokens = json.load(open('token_settings.json',mode='r',encoding='utf8'))
+            self.tokens = json.load(open('database/token_settings.json',mode='r',encoding='utf8'))
         except:
             self.tokens = os.environ
 
