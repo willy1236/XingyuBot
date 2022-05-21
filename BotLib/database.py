@@ -56,3 +56,14 @@ class Database:
                 json.dump(data,jfile,indent=4)
         except:
             raise KeyError("此項目沒有在資料庫中")
+
+    @staticmethod
+    def get_gamedata(user_id:str,game:str):
+        gdata = Database().gdata
+        try:
+            data = gdata[user_id][game]
+            if game in ['steam']:
+                data = data['id']
+            return data
+        except:
+            return None

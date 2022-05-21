@@ -264,7 +264,7 @@ class SteamUser():
         self.id = data['steamid']
         self.name = data['personaname']
         self.profileurl = data['profileurl']
-        self.avatar = data['avatar']
+        self.avatar = data['avatarfull']
         self.desplay = self.embed()
     
     def embed(self):
@@ -367,5 +367,9 @@ class SteamData():
         pass
 
     def get_user(self,user):
-        response = requests.get(f'https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key={Database().steam_api}&ids={user}').json().get('response').get('players')[0]
-        return SteamUser(response)
+        response = requests.get(f'https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key={Database().steam_api}&steamids={user}')
+        if response.status_code == 200:
+            APIdata = response.json().get('response').get('players')[0]
+            return SteamUser(APIdata)
+        else:
+            return None

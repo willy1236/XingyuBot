@@ -46,24 +46,20 @@ class debug(Cog_Extension):
                 
     @commands.command()
     @commands.is_owner()
-    async def rq(self):
-        url = f''
+    async def rq(self,ctx):
+        url = f'https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key={Database().steam_api}&ids=willy1236owo'
         headers ={
 
         }
 
-        response = requests.get(url, headers=headers).json()
+        response = requests.get(url, headers=headers)
         print(response)
 
     @commands.command()
     @commands.is_owner()
-    async def test(self, ctx,times):
-            times = round(float(times))
-            if times > 1000 or times <= 0:
-                print('數字只能介於1~1000之間')
-            else:
-                print(times)
-    
+    async def test(self, ctx,arg):
+        dcuser = find.user2(arg=arg)
+        print(dcuser)
     @commands.command()
     @commands.is_owner()
     async def prepare(self,ctx: commands.Context):

@@ -123,11 +123,15 @@ class game(Cog_Extension):
         msg = await ctx.send('資料查詢中...')
         #資料庫調用
         if not userid:
-            userid = Database().gdata[str(ctx.author.id)]['osu']
+            userid = Database.get_gamedata(userid,'osu')
         else:
             dcuser = await find.user2(ctx,userid)
             if dcuser:
-                userid = Database().gdata[str(dcuser.id)]['osu']
+                userid = Database.get_gamedata(dcuser.id,'osu')
+        
+        if not userid:
+            await msg.edit(content='查詢失敗:用戶尚未註冊資料庫',delete_after=5)
+            return
         
         player = OsuData().get_player(userid)
         if player:
@@ -151,11 +155,15 @@ class game(Cog_Extension):
         msg = await ctx.send('資料查詢中...')
         #資料庫調用
         if not userid:
-            userid = Database().gdata[str(ctx.author.id)]['apex']
+            userid = Database.get_gamedata(userid,'apex')
         else:
             dcuser = await find.user2(ctx,userid)
             if dcuser:
-                userid = Database().gdata[str(dcuser.id)]['apex']
+                userid = Database.get_gamedata(dcuser.id,'apex')
+        
+        if not userid:
+            await msg.edit(content='查詢失敗:用戶尚未註冊資料庫',delete_after=5)
+            return
         
         player = ApexData().get_player(userid)
         if player:
@@ -190,11 +198,15 @@ class game(Cog_Extension):
         msg = await ctx.send('資料查詢中...')
         #資料庫調用
         if not userid:
-            userid = Database().gdata[str(ctx.author.id)]['steam']['id']
+            userid = Database.get_gamedata(userid,'steam')
         else:
             dcuser = await find.user2(ctx,userid)
             if dcuser:
-                userid = Database().gdata[str(dcuser.id)]['steam']['id']
+                userid = Database.get_gamedata(dcuser.id,'steam')
+        
+        if not userid:
+            await msg.edit(content='查詢失敗:用戶尚未註冊資料庫',delete_after=5)
+            return
         
         player = DBDData().get_player(userid)
         if player:
@@ -208,12 +220,16 @@ class game(Cog_Extension):
         msg = await ctx.send('資料查詢中...')
         #資料庫調用
         if not userid:
-            userid = Database().gdata[str(ctx.author.id)]['steam']['id']
+            userid = Database.get_gamedata(userid,'steam')
         else:
             dcuser = await find.user2(ctx,userid)
             if dcuser:
-                userid = Database().gdata[str(dcuser.id)]['steam']['id']
+                userid = Database.get_gamedata(dcuser.id,'steam')
         
+        if not userid:
+            await msg.edit(content='查詢失敗:用戶尚未註冊資料庫',delete_after=5)
+            return
+
         user = SteamData().get_user(userid)
         if user:
             await msg.edit(content='查詢成功',embed=user.desplay)
