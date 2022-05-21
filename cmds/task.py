@@ -56,10 +56,10 @@ class task(Cog_Extension):
         embed = ApexData.get_crafting().desplay
         for i in cdata["apex_crafting"]:
             channel = self.bot.get_channel(cdata["apex_crafting"][i])
-            id = channel.last_message_id
-            if id:
+            try:
+                id = channel.last_message_id
                 msg = await channel.fetch_message(id)
-            else:
+            except:
                 msg = None
 
             if msg and msg.author == self.bot.user:
@@ -68,16 +68,17 @@ class task(Cog_Extension):
                 await channel.send('Apex合成台內容自動更新資料',embed=embed)
             await asyncio.sleep(1)
     
-    @tasks.loop(time=time(hour=__get_next_hour(),minute=0,second=0,tzinfo=tz))
+    #@tasks.loop(time=time(hour=__get_next_hour(),minute=0,second=0,tzinfo=tz))
+    @tasks.loop(count=1)
     async def apex_map_update(self):
         cdata = Database().cdata
         embed = ApexData.get_map_rotation().desplay
         for i in cdata["apex_map"]:
             channel = self.bot.get_channel(cdata["apex_map"][i])
-            id = channel.last_message_id
-            if id:
+            try:
+                id = channel.last_message_id
                 msg = await channel.fetch_message(id)
-            else:
+            except:
                 msg = None
 
             if msg and msg.author == self.bot.user:
