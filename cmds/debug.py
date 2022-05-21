@@ -1,5 +1,5 @@
 import discord,json,requests
-from discord.ext import commands
+from discord.ext import commands,tasks
 from core.classes import Cog_Extension
 from library import *
 from datetime import datetime, timezone, timedelta,time
@@ -60,6 +60,17 @@ class debug(Cog_Extension):
     async def test(self, ctx,arg):
         dcuser = find.user2(arg=arg)
         print(dcuser)
+    
+    @commands.command()
+    @commands.is_owner()
+    async def task(self, ctx,arg):
+        task = tasks.Loop.get_task(arg)
+        print(task)
+        if task:
+            ctx.send(task.is_running())
+        else:
+            ctx.send('Not found')
+
     @commands.command()
     @commands.is_owner()
     async def prepare(self,ctx: commands.Context):

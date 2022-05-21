@@ -20,12 +20,12 @@ class task(Cog_Extension):
         self.apex_crafting_update.start()
         self.apex_map_update.start()
     
-    def _get_next_hour():
+    def __get_next_hour():
         tz = timezone(timedelta(hours=+8))
         time = datetime.now(tz=tz)+timedelta(hours=1)
         return time.hour
     
-    def _get_next_half_minute():
+    def __get_next_half_minute():
         tz = timezone(timedelta(hours=+8))
         time = datetime.now(tz=tz).minute
         if time >= 0 and time <30:
@@ -75,7 +75,7 @@ class task(Cog_Extension):
                 await channel.send('Apex合成台內容自動更新資料',embed=embed)
             await asyncio.sleep(1)
     
-    @tasks.loop(time=time(hour=_get_next_hour(),minute=_get_next_half_minute(),second=0,tzinfo=tz))
+    @tasks.loop(time=time(hour=__get_next_hour(),minute=__get_next_half_minute(),second=0,tzinfo=tz))
     async def apex_map_update(self):
         cdata = Database().cdata
         embed = ApexData.get_map_rotation().desplay
