@@ -15,22 +15,32 @@ class task(Cog_Extension):
     
     @commands.Cog.listener()
     async def on_ready(self):
-        self.sign_reset.start()
-        self.earthquake_check.start()
-        self.apex_crafting_update.start()
-        self.apex_map_update.start()
-        
+        if self.bot.user.id == 419131103836635136:
+            self.sign_reset.start()
+            self.earthquake_check.start()
+            self.apex_crafting_update.start()
+            self.apex_map_update.start()
+            self.restart_all.start()
 
-    def __loop_half_hour():
-        tz = timezone(timedelta(hours=+8))
-        now_time = datetime.now(tz=tz)
-        if now_time.minute >= 0 and now_time.minute <30:
-            next_time = time(hour=now_time.hour, minute=30,second=0,tzinfo=tz)
-        else:
-            next_time = time(hour=now_time.hour+timedelta(hours=1), minute=0,second=0,tzinfo=tz)
-        return next_time
+    @commands.command()
+    async def updete_task(self,ctx,task):
+        if task == 'apex_map_update':
+            await self.apex_map_update.__call__()
+            await ctx.message.add_reaction('✅')
+        if task == 'apex_crafting_update':
+            await self.apex_crafting_update.__call__()
+            await ctx.message.add_reaction('✅')
+        if task == 'earthquake_check':
+            await self.earthquake_check.__call__()
+            await ctx.message.add_reaction('✅')
 
-    @tasks.loop(time=time(hour=00,minute=0,second=0,tzinfo=tz))
+    @tasks.loop(time=time(hour=4, minute=0,second=0,tzinfo=tz))
+    async def restart_all(self):
+        print("restart")
+        self.earthquake_check.restart()
+        self.apex_map_update.restart()
+
+    @tasks.loop(time=time(hour=4,minute=0,second=0,tzinfo=tz))
     async def sign_reset(self):
         task_report_channel = self.bot.get_channel(self.jdata['task_report'])
         reset = []
@@ -72,7 +82,7 @@ class task(Cog_Extension):
                 await channel.send('Apex合成台內容自動更新資料',embed=embed)
             await asyncio.sleep(1)
     
-    @tasks.loop(time=__loop_half_hour())
+    @tasks.loop(minutes=15)
     async def apex_map_update(self):
         cdata = Database().cdata
         embed = ApexData.get_map_rotation().desplay
@@ -89,17 +99,7 @@ class task(Cog_Extension):
             else:
                 await channel.send('Apex地圖輪替自動更新資料',embed=embed)
             await asyncio.sleep(1)
-
-    def get_time(tz):
-        zt = datetime.now().astimezone(tz)
-        zt = zt+timedelta(seconds=20)
-        now_time = time(hour=zt.hour, minute=zt.minute, second=zt.second,tzinfo=tz)
-        return now_time
-    now_time = get_time(tz)
-
-    @tasks.loop(time=now_time)
-    async def test_task(self):
-        print('task_worked')
+        
 
     @tasks.loop(seconds=1)
     async def time_task(self):
