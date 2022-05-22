@@ -15,7 +15,7 @@ class task(Cog_Extension):
     
     @commands.Cog.listener()
     async def on_ready(self):
-        if self.bot.user.id == 419131103836635136:
+        if self.bot.user.id == 589744540240314368:
             self.sign_reset.start()
             self.earthquake_check.start()
             self.apex_crafting_update.start()
