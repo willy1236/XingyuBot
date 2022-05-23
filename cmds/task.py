@@ -92,6 +92,7 @@ class task(Cog_Extension):
     
     @tasks.loop(time=__gettime_15min())
     async def apex_map_update(self):
+        await asyncio.sleep(1)
         cdata = Database().cdata
         embed = ApexData.get_map_rotation().desplay
         for i in cdata["apex_map"]:
@@ -106,8 +107,9 @@ class task(Cog_Extension):
                 await msg.edit('Apex地圖輪替自動更新資料',embed=embed)
             else:
                 await channel.send('Apex地圖輪替自動更新資料',embed=embed)
-            self.apex_map_update.change_interval(time=task.__gettime_15min())
-            await asyncio.sleep(1)
+            await asyncio.sleep(0.5)
+        self.apex_map_update.change_interval(time=task.__gettime_15min())
+        await asyncio.sleep(1)
         
 
     @tasks.loop(seconds=1)
