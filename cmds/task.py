@@ -20,7 +20,20 @@ class task(Cog_Extension):
             self.earthquake_check.start()
             self.apex_crafting_update.start()
             self.apex_map_update.start()
-            self.restart_all.start()
+
+    @staticmethod
+    def __gettime_15min():
+        tz = timezone(timedelta(hours=+8))
+        now = datetime.now(tz=tz)
+        if now.minute >= 0 and now.minute<15:
+            return time(hour=now.hour,minute=15,second=0,tzinfo=tz)
+        elif now.minute >= 15 and now.minute <30:
+            return time(hour=now.hour,minute=30,second=0,tzinfo=tz)
+        elif now.minute >= 30 and now.minute <45:
+            return time(hour=now.hour,minute=45,second=0,tzinfo=tz)
+        elif now.minute >= 45 and now.minute <60:
+            next = now + timedelta(hours=1)
+            return time(hour=next.hour,minute=0,second=0,tzinfo=tz)
 
     @commands.command()
     async def updete_task(self,ctx,task):
@@ -34,18 +47,13 @@ class task(Cog_Extension):
             await self.earthquake_check.__call__()
             await ctx.message.add_reaction('✅')
 
-    @tasks.loop(time=time(hour=4, minute=0,second=0,tzinfo=tz))
-    async def restart_all(self):
-        print("restart")
-        self.earthquake_check.restart()
-        self.apex_map_update.restart()
-
     @tasks.loop(time=time(hour=4,minute=0,second=0,tzinfo=tz))
     async def sign_reset(self):
         task_report_channel = self.bot.get_channel(self.jdata['task_report'])
         reset = []
         Database().write('jdsign',reset)
         await task_report_channel.send('簽到已重置')
+        asyncio.sleep(1)
 
     @tasks.loop(minutes=5)
     async def earthquake_check(self):
@@ -82,7 +90,7 @@ class task(Cog_Extension):
                 await channel.send('Apex合成台內容自動更新資料',embed=embed)
             await asyncio.sleep(1)
     
-    @tasks.loop(minutes=15)
+    @tasks.loop(time=__gettime_15min())
     async def apex_map_update(self):
         cdata = Database().cdata
         embed = ApexData.get_map_rotation().desplay
@@ -98,6 +106,7 @@ class task(Cog_Extension):
                 await msg.edit('Apex地圖輪替自動更新資料',embed=embed)
             else:
                 await channel.send('Apex地圖輪替自動更新資料',embed=embed)
+            self.apex_map_update.change_interval(time=self.__gettime_15min())
             await asyncio.sleep(1)
         
 
