@@ -143,7 +143,11 @@ class ApexCrafting():
             "helmet":"紫色頭盔",
             "optic_cq_hcog_bruiser":"2倍鏡",
             "optic_hcog_ranger":"3倍鏡",
-            "shatter_caps":"粉碎蓋"
+            "shatter_caps":"粉碎蓋",
+            "extended_energy_mag":"紫色能量彈匣",
+            "optic_digital_threat":"1x數位威脅",
+            "knockdown_shield":"紫色擊倒護盾",
+            "mobile_respawn_beacon":"行動重生台"
         }
         item_name = []
         item_name.append(dict.get(self.item1_name,self.item1_name))

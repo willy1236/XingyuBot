@@ -21,7 +21,7 @@ class task(Cog_Extension):
             self.apex_crafting_update.start()
             self.apex_map_update.start()
 
-    @staticmethod
+
     def __gettime_15min():
         tz = timezone(timedelta(hours=+8))
         now = datetime.now(tz=tz)
@@ -106,7 +106,7 @@ class task(Cog_Extension):
                 await msg.edit('Apex地圖輪替自動更新資料',embed=embed)
             else:
                 await channel.send('Apex地圖輪替自動更新資料',embed=embed)
-            self.apex_map_update.change_interval(time=self.__gettime_15min())
+            self.apex_map_update.change_interval(time=task.__gettime_15min())
             await asyncio.sleep(1)
         
 
