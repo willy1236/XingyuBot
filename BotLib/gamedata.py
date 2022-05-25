@@ -147,7 +147,11 @@ class ApexCrafting():
             "extended_energy_mag":"紫色能量彈匣",
             "optic_digital_threat":"1x數位威脅",
             "knockdown_shield":"紫色擊倒護盾",
-            "mobile_respawn_beacon":"行動重生台"
+            "mobile_respawn_beacon":"行動重生台",
+            "shotgun_bolt":"紫色霰彈槍栓",
+            "hammerpoint_rounds":"椎點彈藥",
+            "extended_heavy_mag":"紫色重型彈匣",
+            "optic_hcog_bruiser":"optic_hcog_bruiser"
         }
         item_name = []
         item_name.append(dict.get(self.item1_name,self.item1_name))

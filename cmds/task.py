@@ -1,4 +1,4 @@
-import discord, asyncio, datetime
+import asyncio, datetime
 from datetime import datetime, timezone, timedelta,time
 from discord.ext import commands,tasks
 from cmds.weather import EarthquakeReport
@@ -35,6 +35,14 @@ class task(Cog_Extension):
             next = now + timedelta(hours=1)
             return time(hour=next.hour,minute=0,second=0,tzinfo=tz)
 
+    def __gettime_0400():
+        tz = timezone(timedelta(hours=+8))
+        return time(hour=4,minute=0,second=0,tzinfo=tz)
+
+    def __gettime_0105():
+        tz = timezone(timedelta(hours=+8))
+        return time(hour=4,minute=0,second=0,tzinfo=tz)
+
     @commands.command()
     async def updete_task(self,ctx,task):
         if task == 'apex_map_update':
@@ -47,12 +55,13 @@ class task(Cog_Extension):
             await self.earthquake_check.__call__()
             await ctx.message.add_reaction('✅')
 
-    @tasks.loop(time=time(hour=4,minute=0,second=0,tzinfo=tz))
+    @tasks.loop(time=__gettime_0400())
     async def sign_reset(self):
         task_report_channel = self.bot.get_channel(self.jdata['task_report'])
         reset = []
         Database().write('jdsign',reset)
         await task_report_channel.send('簽到已重置')
+        self.sign_reset.change_interval(time=task.__gettime_0400())
         asyncio.sleep(1)
 
     @tasks.loop(minutes=5)
@@ -71,8 +80,9 @@ class task(Cog_Extension):
                 channel = self.bot.get_channel(ch_list[i])
                 if channel:
                     await channel.send('地震報告',embed=embed)
+                    await asyncio.sleep(0.5)
 
-    @tasks.loop(time=time(hour=1,minute=5,second=0,tzinfo=tz))
+    @tasks.loop(time=__gettime_0105())
     async def apex_crafting_update(self):
         cdata = Database().cdata
         embed = ApexData.get_crafting().desplay
@@ -88,7 +98,9 @@ class task(Cog_Extension):
                 await msg.edit('Apex合成台內容自動更新資料',embed=embed)
             else:
                 await channel.send('Apex合成台內容自動更新資料',embed=embed)
-            await asyncio.sleep(1)
+            await asyncio.sleep(0.5)
+        self.apex_crafting_update.change_interval(time=task.__gettime_0105())
+        await asyncio.sleep(1)
     
     @tasks.loop(time=__gettime_15min())
     async def apex_map_update(self):
@@ -110,7 +122,6 @@ class task(Cog_Extension):
             await asyncio.sleep(0.5)
         self.apex_map_update.change_interval(time=task.__gettime_15min())
         await asyncio.sleep(1)
-        
 
     @tasks.loop(seconds=1)
     async def time_task(self):
