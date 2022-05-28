@@ -1,3 +1,4 @@
+from msilib import text
 from discord.ext import commands,pages
 from core.classes import Cog_Extension
 from BotLib.basic import BotEmbed
@@ -84,21 +85,26 @@ class help(Cog_Extension):
     @commands.command()
     async def info(self, ctx, arg='help'):
         if arg == 'help':
-            await ctx.send("vpn類\nvpn | vpn列表\nvpn01 | vpn使用教學\n\n共用類\nshare | 雲端共用資料夾資訊")
+            text = "總表 | info可用選項\n指令用法:!!info <參數>\nvpn類\nvpn | vpn列表\nvpn01 | vpn使用教學\n\nminecraft類\nmc | minecraft總表\nmc01 | minecraft資料夾\nmc02 | 如何裝模組\n\n共用類\nshare | 雲端共用資料夾資訊"
 
-        #elif arg == 'crass_chat':
-        #    await ctx.send("crass_chat | 跨群聊天列表\n1.別人都在硬啦! 我偏偏要軟啦!!\n2.我就讚owob\n\n在跨群聊天頻道直接發送訊息即可\n想在自己群加入此系統，可找機器人擁有者")
-        
         elif arg == 'vpn':
-            await ctx.send("vpn | vpn列表\n名稱:willy1236_1 密:123456987 | willy的房間")
+            text = "vpn | vpn列表\n名稱:willy1236_1 密:123456987 | willy的房間"
         elif arg == 'vpn01':
-            await ctx.send("vpn01 | vpn安裝教學\n1.下載Radmin(vpn)\nhttps://www.radmin-vpn.com/tw/\n2.選擇 加入網路 並輸入名稱及密碼(可輸入!!info vpn查詢)\n3.記得 改名 讓大家知道你是誰\n\nIP為 xx.xxx.xx.xxx:ooooo\nx:開地圖的人的IP(VPN的IP)\no:公開至區網時會顯示")
+            text = "vpn01 | vpn安裝教學\n1.下載Radmin(vpn)\nhttps://www.radmin-vpn.com/tw/\n2.選擇 加入網路 並輸入名稱及密碼(可輸入!!info vpn查詢)\n3.記得 改名 讓大家知道你是誰\n\nIP為 xx.xxx.xx.xxx:ooooo\nx:開地圖的人的IP(VPN的IP)\no:公開至區網時會顯示"
         elif arg == 'share':
-            await ctx.send("雲端共用資料夾 | 94共用啦\n可以在這裡下載或共用檔案\n請洽威立以取得雲端權限")
+            text = "雲端共用資料夾 | 94共用啦\n可以在這裡下載或共用檔案\n請洽威立以取得雲端權限"
+
+        elif arg == 'mc':
+            text = "總表 | mc可用選項\nmc01 | minecraft資料夾\nmc02 | 如何裝模"
+        elif arg == 'mc01':
+            text = "mc01 | minecraft資料夾\n資料夾開啟方式\n法1:\n在minecraft的選項中開啟 資源包\n選擇 開啟資料包資料夾\n法2:\n按下Ctrl+r 輸入 %AppData% 按確認\n選擇.minecraft\n\n資料夾名稱\nsaves 單人地圖存檔\nresourcepacks 資源包存檔\nscreenshots F2截圖圖片"
+        elif arg == 'mc02':
+            text = "mc02 | 如何裝模組\n被你發現我還沒打內容了w\n既然你這麼想知道的話\nhttps://youtu.be/8gYBo_vcZFs"
         
         else:
             raise commands.errors.ArgumentParsingError("info:參數錯誤")
             #await ctx.send('參數錯誤，請輸入!!info help取得幫助',delete_after=5)
+        await ctx.send(text)
 
     # @commands.group(invoke_without_command=True)
     # @commands.cooldown(rate=1,per=3)

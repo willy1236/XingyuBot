@@ -22,8 +22,9 @@ class Database:
             'jdsign':'database/sign_day.json',
             'jwsign':'database/sign_week.json',
             'jevent':'database/event.json',
-            'rsdata':'database/role_save.json'
-            }
+            'rsdata':'database/role_save.json',
+            'jpet' : 'database/user_settings/pet.json'
+        }
         self.jdata = json.load(open(self.dict['jdata'],mode='r',encoding='utf8'))
         self.cdata = json.load(open(self.dict['cdata'],mode='r',encoding='utf8'))
         self.picdata = json.load(open(self.dict['picdata'],mode='r',encoding='utf8'))
@@ -36,6 +37,7 @@ class Database:
         self.jwsign = Counter(json.load(open(self.dict['jwsign'],mode='r',encoding='utf8')))
         self.jevent = Counter(json.load(open(self.dict['jevent'],mode='r',encoding='utf8')))
         self.rsdata = Counter(json.load(open(self.dict['rsdata'],mode='r',encoding='utf8')))
+        self.jpet = json.load(open(self.dict['jpet'],mode='r',encoding='utf8'))
 
         try:
             self.tokens = json.load(open('database/token_settings.json',mode='r',encoding='utf8'))

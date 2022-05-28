@@ -61,8 +61,9 @@ class task(Cog_Extension):
         reset = []
         Database().write('jdsign',reset)
         await task_report_channel.send('簽到已重置')
-        self.sign_reset.change_interval(time=task.__gettime_0400())
-        asyncio.sleep(1)
+        self.sign_reset.stop()
+        asyncio.sleep(60)
+        self.sign_reset.start()
 
     @tasks.loop(minutes=5)
     async def earthquake_check(self):
@@ -99,8 +100,9 @@ class task(Cog_Extension):
             else:
                 await channel.send('Apex合成台內容自動更新資料',embed=embed)
             await asyncio.sleep(0.5)
-        self.apex_crafting_update.change_interval(time=task.__gettime_0105())
-        await asyncio.sleep(1)
+        self.apex_crafting_update.stop()
+        await asyncio.sleep(60)
+        self.apex_crafting_update.start()
     
     @tasks.loop(time=__gettime_15min())
     async def apex_map_update(self):

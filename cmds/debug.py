@@ -47,7 +47,7 @@ class debug(Cog_Extension):
     @commands.command()
     @commands.is_owner()
     async def rq(self,ctx):
-        url = f'https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key={Database().steam_api}&ids=willy1236owo'
+        url = f'https://api.mozambiquehe.re/crafting?auth={Database().apex_status_API}'
         headers ={
 
         }

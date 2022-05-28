@@ -71,7 +71,7 @@ class economy_system(Cog_Extension):
     async def sign(self,ctx):
         await ctx.message.delete()
         jdsign = Database().jdsign
-        jwsign = Database().jwsign
+        #jwsign = Database().jwsign
         
         if ctx.author.id not in jdsign:
             signer = str(ctx.author.id)
@@ -79,8 +79,8 @@ class economy_system(Cog_Extension):
             jdsign.append(ctx.author.id)
             Database().write('jdsign',jdsign)
             #週常
-            jwsign[signer] += 1
-            Database().write('jwsign',jwsign)
+            #jwsign[signer] += 1
+            #Database().write('jwsign',jwsign)
             
             if ctx.guild.id == self.jdata['guild']['001']:
                 Point(signer).add(1)

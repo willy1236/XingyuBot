@@ -1,16 +1,17 @@
-from library import find
 from BotLib.database import Database
 from BotLib.basic import BotEmbed
 
 class User():
-    def __init__(self,userid):
+    def __init__(self,userid,dcname=None):
         udata = Database().udata
         self.id = str(userid)
         self.point = Point(self.id)
-        self.name = udata[self.id].get('name',find.user(userid).name)
+        if not self.id in udata:
+            udata[self.id] = {}
+        self.name = udata[self.id].get('name',dcname)
         
         self.desplay = self.embed()
-        pass
+        return
         self.weapon = udata['weapon']
 
     def embed(self):
@@ -40,4 +41,17 @@ class Point():
         Database().write('jpt',self.jpt)
 
 class pet():
-    pass
+    def __init__(self):
+        self.name = None
+        self.species = None
+        self.owner = None
+        return
+
+    def setup(user):
+        jpet = Database().jpet
+        jpet[user] = {
+            "name": None,
+            "species" : None,
+            "owner": user
+        }
+        Database().write('jpet',jpet)

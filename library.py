@@ -1,4 +1,4 @@
-import random,discord
+import random
 from discord.ext import commands
 from core.classes import Cog_Extension
 from BotLib.database import Database
@@ -170,7 +170,7 @@ class converter():
         '''10s->1,0用str相加 s則轉換後用int相乘'''
         dict = {'s':1,'m':60,'h':3600}
         n=0
-        m='0'
+        m=''
         for i in arg:
             try:
                 int(i)
@@ -179,12 +179,7 @@ class converter():
                 try:
                     m=int(m)
                     n=n+(m*dict[i])
-                    m='0'
+                    m=''
                 except KeyError:
                     raise KeyError
         return n
-        
-
-def message_update(message):
-    pass
-
