@@ -85,6 +85,10 @@ class ApexPlayer():
         self.arena_score = data['global']['arena']['rankScore']
         
         self.now_state =  data['realtime']['currentStateAsText']
+        
+        self.legends_selected_name = data['legends']['selected']['LegendName']
+        self.legends_selected_tacker = data['legends']['selected']['data']
+        self.legends_selected_banner = data['legends']['selected']['ImgAssets']['banner']
 
         self.desplay = self.embed()
 
@@ -103,7 +107,8 @@ class ApexPlayer():
             embed.add_field(name="目前ban狀態",value=self.bans['remainingSeconds'])
         else:
             embed.add_field(name="目前ban狀態",value=self.bans['isActive'])
-        embed.set_image(url=self.avatar)
+        embed.add_field(name="目前選擇角色",value=self.legends_selected_name)
+        embed.set_image(url=self.legends_selected_banner)
         return embed
 
 class ApexCrafting():
@@ -151,7 +156,9 @@ class ApexCrafting():
             "shotgun_bolt":"紫色霰彈槍栓",
             "hammerpoint_rounds":"椎點彈藥",
             "extended_heavy_mag":"紫色重型彈匣",
-            "optic_hcog_bruiser":"optic_hcog_bruiser"
+            "optic_hcog_bruiser":"optic_hcog_bruiser",
+            "boosted_loader":"動能供應器",
+            "optic_variable_aog":"2-4倍鏡"
         }
         item_name = []
         item_name.append(dict.get(self.item1_name,self.item1_name))
@@ -283,6 +290,10 @@ class SteamUser():
         embed.set_thumbnail(url=self.avatar)
         return embed
 
+
+
+
+
 class OsuData():
     def __init__(self):
         self.headers = self.get_osuheaders()
@@ -342,21 +353,29 @@ class ApexData():
 
     def get_player(self,user):
         try:
-            response = requests.get(f'https://api.mozambiquehe.re/bridge?auth={Database().apex_status_API}&player={user}&platform=PC').json()
+            params={
+                'auth':Database().apex_status_API,
+                'player':user,
+                'platform':'PC'
+            }
+            response = requests.get(f'https://api.mozambiquehe.re/bridge',params=params).json()
             return ApexPlayer(response)
         except:
             return None
     
     def get_crafting():
-        response = requests.get(f'https://api.mozambiquehe.re/crafting?auth={Database().apex_status_API}').json()
+        params={'auth':Database().apex_status_API}
+        response = requests.get(f'https://api.mozambiquehe.re/crafting',params=params).json()
         return ApexCrafting(response)
     
     def get_map_rotation():
-        response = requests.get(f'https://api.mozambiquehe.re/maprotation?auth={Database().apex_status_API}').json()
+        params={'auth':Database().apex_status_API}
+        response = requests.get(f'https://api.mozambiquehe.re/maprotation',params=params).json()
         return ApexMapRotation(response)
 
     def get_status():
-        response = requests.get(f'https://api.mozambiquehe.re/servers?auth={Database().apex_status_API}').json()
+        params={'auth':Database().apex_status_API}
+        response = requests.get(f'https://api.mozambiquehe.re/servers',params=params).json()
         return ApexStatus(response)
 
 class DBDData():
@@ -365,7 +384,8 @@ class DBDData():
 
     def get_player(self,user):
         try:
-            response = requests.get(f'https://dbd.onteh.net.au/api/playerstats?id={user}').json()
+            params = {'user':user}
+            response = requests.get(f'https://dbd.onteh.net.au/api/playerstats', params=params).json()
             return DBDPlayer(response)
         except:
             return None
@@ -375,7 +395,11 @@ class SteamData():
         pass
 
     def get_user(self,user):
-        response = requests.get(f'https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key={Database().steam_api}&steamids={user}')
+        params = {
+            'key':Database().steam_api,
+            'steamids':user
+        }
+        response = requests.get(f'https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/',params=params)
         if response.status_code == 200:
             APIdata = response.json().get('response').get('players')[0]
             return SteamUser(APIdata)

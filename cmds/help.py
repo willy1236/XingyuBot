@@ -1,4 +1,3 @@
-from msilib import text
 from discord.ext import commands,pages
 from core.classes import Cog_Extension
 from BotLib.basic import BotEmbed
@@ -118,13 +117,12 @@ class help(Cog_Extension):
     @commands.cooldown(rate=1,per=3)
     async def help(self,ctx):
         embed = BotEmbed.basic(self,"目前可使用的指令如下:")
-        embed.add_field(name="!!help <系列指令>", value="查詢系列指令\n目前支援:admin,pt,game,set,role,bet,music,weather", inline=False)
+        embed.add_field(name="!!help <系列指令>", value="查詢系列指令\n目前支援:use,admin,pt,game,set,role,bet,music,weather", inline=False)
         embed.add_field(name="!!info <內容/help>", value="獲得相關資訊", inline=False)
         embed.add_field(name="!!feedback <內容>", value="傳送訊息給機器人擁有者", inline=False)
         embed.add_field(name="!!find <id>", value="搜尋指定ID", inline=False)
         embed.add_field(name="!!lottery [次數]", value="抽獎", inline=False)
         embed.add_field(name="!!about", value="關於機器人的小資訊", inline=False)
-        embed.add_field(name="!!help use", value="如何使用指令", inline=False)
         embed.add_field(name="!!ui", value="關於你自己(敬請期待)", inline=False)
         await ctx.send(embed=embed)
 

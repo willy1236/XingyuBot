@@ -8,7 +8,7 @@ from BotLib.gamedata import ApexData
 
 class task(Cog_Extension):
     def __init__(self,*args,**kwargs):
-        #jevent = Database().jevent
+        self.jdata = Database().jdata
         super().__init__(*args,**kwargs)
         #await self.bot.wait_until_ready()
     tz = timezone(timedelta(hours=+8))
@@ -62,7 +62,7 @@ class task(Cog_Extension):
         Database().write('jdsign',reset)
         await task_report_channel.send('簽到已重置')
         self.sign_reset.stop()
-        asyncio.sleep(60)
+        asyncio.sleep(10)
         self.sign_reset.start()
 
     @tasks.loop(minutes=5)
@@ -101,7 +101,7 @@ class task(Cog_Extension):
                 await channel.send('Apex合成台內容自動更新資料',embed=embed)
             await asyncio.sleep(0.5)
         self.apex_crafting_update.stop()
-        await asyncio.sleep(60)
+        await asyncio.sleep(10)
         self.apex_crafting_update.start()
     
     @tasks.loop(time=__gettime_15min())

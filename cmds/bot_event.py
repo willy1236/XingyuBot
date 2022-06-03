@@ -11,7 +11,7 @@ class ScamChack:
 
     def __keyword(self):
         keywords = ['Free','免費','Nitro','premiums-nitro','discerd.gift','disceord.gift']
-        if keywords in self.text:
+        if self.text in keywords:
             return True
         else:
             return False
@@ -45,11 +45,18 @@ class event(Cog_Extension):
         #    pass
         #if message.mention_everyone == True:
         #    await message.reply('你tag所有人了')
-        if ('@everyone' in message.content or message.mention_everyone) and ScamChack(message.content).keyword:
+        ScamChack = False
+        for i in ['Free','free','FREE']:
+            if i in message.content:
+                for j in ['Nitro','nitro','NITRO']:
+                    if j in message.content:
+                        ScamChack = True
+        
+        if ScamChack:
             channel = self.bot.get_channel(message.channel.id)
             await BRS.scam(self,message)
-            await message.delete()
-            await channel.send('已刪除一條疑似詐騙的訊息')
+            #await message.delete()
+            await channel.send('溫馨提醒:這可能是有關詐騙的訊息\n若要點擊連結請先確認是否安全',reference=message)
         if type(message.channel) == discord.channel.DMChannel:
             await BRS.dm(self,message)
 
