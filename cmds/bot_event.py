@@ -1,3 +1,4 @@
+import random
 import discord,datetime
 from discord.ext import commands
 from core.classes import Cog_Extension
@@ -46,11 +47,8 @@ class event(Cog_Extension):
         #if message.mention_everyone == True:
         #    await message.reply('你tag所有人了')
         ScamChack = False
-        for i in ['Free','free','FREE']:
-            if i in message.content:
-                for j in ['Nitro','nitro','NITRO']:
-                    if j in message.content:
-                        ScamChack = True
+        if 'free' in message.content.lower() and 'nitro' in message.content.lower():
+            ScamChack = True
         
         if ScamChack:
             channel = self.bot.get_channel(message.channel.id)
@@ -59,6 +57,24 @@ class event(Cog_Extension):
             await channel.send('溫馨提醒:這可能是有關詐騙的訊息\n若要點擊連結請先確認是否安全',reference=message)
         if type(message.channel) == discord.channel.DMChannel:
             await BRS.dm(self,message)
+
+    @commands.Cog.listener()
+    async def on_raw_reaction_add(self, payload):
+        if payload.message_id == 640679249245634635:
+            if str(payload.emoji) == '🍍':
+                channel = self.bot.get_channel(706810474326655026)
+                user = self.bot.get_user(payload.user_id)
+                await channel.set_permissions(user,view_channel=True,reason='身分組選擇:加入')
+
+    @commands.Cog.listener()
+    async def on_raw_reaction_remove(self, payload):
+        if payload.message_id == 640679249245634635:
+            if str(payload.emoji) == '🍍':
+                channel = self.bot.get_channel(706810474326655026)
+                user = self.bot.get_user(payload.user_id)
+                await channel.set_permissions(user,overwrite=None,reason='身分組選擇:退出')
+                    
+
 
     @commands.Cog.listener()
     async def on_voice_state_update(self,user, before, after):

@@ -125,7 +125,8 @@ class command(Cog_Extension):
                 dict[str(user.id)] = roledata
             Database().write('rsdata',dict)
         
-        guild = self.bot.get_guild(self.jdata['guild']['001'])
+        jdata = Database().jdata
+        guild = self.bot.get_guild(jdata['guild']['001'])
         add_role = guild.get_role(877934319249797120)
         if user == 'all':
             for user in add_role.members:

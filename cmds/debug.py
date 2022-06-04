@@ -1,4 +1,4 @@
-import discord,json,requests
+import discord,json,requests,asyncio
 from discord.ext import commands,tasks
 from core.classes import Cog_Extension
 from library import *
@@ -80,12 +80,21 @@ class debug(Cog_Extension):
         # In a more complicated program you might fetch the message_id from a database for use later.
         # However this is outside of the scope of this simple example.
         await ctx.send("What's your favourite colour?", view=PersistentView())
-
-
     
-    # @commands.command(enabled=False)
-    # async def test(self,ctx,user=None):
-    #     user = await find.user(ctx,user)
-    #     await ctx.send(f"{user or '沒有找到用戶'}")
+    @commands.command()
+    @commands.is_owner()
+    async def derole(self,ctx: commands.Context):
+        role = self.bot.get_guild(613747262291443742).get_role(706794165094187038)
+        channel = self.bot.get_channel(706810474326655026)
+        permission = discord.Permissions(view_channel=True)
+        #overwrites = {}
+        for user in role.members:
+            #overwrites[user] = discord.PermissionOverwrite(view_channel=True)    
+            await channel.set_permissions(user,view_channel=True)
+            await asyncio.sleep(0.5)
+        await ctx.message.add_reaction('✅')
+
+
+
 def setup(bot):
     bot.add_cog(debug(bot))
