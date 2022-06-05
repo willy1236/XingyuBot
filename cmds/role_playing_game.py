@@ -5,7 +5,8 @@ from BotLib.basic import BotEmbed
 
 class role_playing_game(Cog_Extension):
     picdata = Database().picdata
-    rsdata = Database().rsdata
+    jdata = Database().jdata
+    
 
 
 def setup(bot):

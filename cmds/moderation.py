@@ -118,5 +118,25 @@ class moderation(Cog_Extension):
             Database().write('cdata',self.cdata)
             await ctx.send(f'設定完成，已將Apex地圖輪轉頻道設為{channel.mention}')
 
+    @set.command()
+    @commands.has_permissions(manage_channels=True)
+    async def covid_update(self,ctx,channel='remove'):
+        if channel != 'remove':
+            channel = await find.channel(ctx,channel)
+        guild = str(ctx.guild.id)
+        
+        if channel == 'remove':
+            if guild in self.cdata['covid_update']:
+                del self.cdata['covid_update'][guild]
+                Database().write('cdata',self.cdata)
+                await ctx.send(f'設定完成，已移除疫情通知頻道')
+            else:
+                await ctx.send('此伺服器還沒有設定頻道喔')
+
+        elif channel != None:
+            self.cdata['covid_update'][guild] = channel.id
+            Database().write('cdata',self.cdata)
+            await ctx.send(f'設定完成，已將疫情通知頻道設為{channel.mention}')
+
 def setup(bot):
     bot.add_cog(moderation(bot))

@@ -5,6 +5,7 @@ from cmds.weather import EarthquakeReport
 from core.classes import Cog_Extension
 from BotLib.database import Database
 from BotLib.gamedata import ApexData
+from cmds.weather import Covid19Report
 
 class task(Cog_Extension):
     def __init__(self,*args,**kwargs):
@@ -20,6 +21,7 @@ class task(Cog_Extension):
             self.earthquake_check.start()
             self.apex_crafting_update.start()
             self.apex_map_update.start()
+            self.covid_update.start()
 
 
     def __gettime_15min():
@@ -41,10 +43,14 @@ class task(Cog_Extension):
 
     def __gettime_0105():
         tz = timezone(timedelta(hours=+8))
-        return time(hour=4,minute=0,second=0,tzinfo=tz)
+        return time(hour=1,minute=5,second=0,tzinfo=tz)
+
+    def __gettime_1430():
+        tz = timezone(timedelta(hours=+8))
+        return time(hour=14,minute=30,second=0,tzinfo=tz)
 
     @commands.command()
-    async def updete_task(self,ctx,task):
+    async def update_task(self,ctx,task):
         if task == 'apex_map_update':
             await self.apex_map_update.__call__()
             await ctx.message.add_reaction('✅')
@@ -53,6 +59,9 @@ class task(Cog_Extension):
             await ctx.message.add_reaction('✅')
         if task == 'earthquake_check':
             await self.earthquake_check.__call__()
+            await ctx.message.add_reaction('✅')
+        if task == 'covid_update':
+            await self.covid_update.__call__()
             await ctx.message.add_reaction('✅')
 
     @tasks.loop(time=__gettime_0400())
@@ -82,6 +91,28 @@ class task(Cog_Extension):
                 if channel:
                     await channel.send('地震報告',embed=embed)
                     await asyncio.sleep(0.5)
+        
+    @tasks.loop(time=__gettime_1430())
+    async def covid_update(self):
+        cdata = Database().cdata
+        embed = Covid19Report.get_covid19().desplay
+        for i in cdata["covid_update"]:
+            channel = self.bot.get_channel(cdata["covid_update"][i])
+            try:
+                id = channel.last_message_id
+                msg = await channel.fetch_message(id)
+            except:
+                msg = None
+
+            if msg and msg.author == self.bot.user:
+                await msg.edit('Covid 疫情資訊',embed=embed)
+            else:
+                await channel.send('Covid 疫情資訊',embed=embed)
+            await asyncio.sleep(0.5)
+        self.covid_update.stop()
+        await asyncio.sleep(10)
+        self.covid_update.start()
+
 
     @tasks.loop(time=__gettime_0105())
     async def apex_crafting_update(self):

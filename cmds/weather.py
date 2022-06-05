@@ -1,3 +1,4 @@
+from bs4 import BeautifulSoup
 import discord
 from discord.ext import commands
 import requests
@@ -47,29 +48,51 @@ class EarthquakeReport:
 
 class Covid19Report:
     def __init__(self,data):
-        self.date = data['a04']
-        self.diagnosed_total = data['a05']
-        self.diagnosed_new = data['a06']
-        self.death_total = data['a08']
-        self.death_new = data['a09']
+        self.time = data['time']
+        self.total = data['total']
+        self.new = data['new']
+        self.local = data['local']
+        self.outside = data['outside']
+        self.dead =data['dead']
         self.desplay = self.embed()
 
     def embed(self):
-        embed = BotEmbed.simple(f'{self.date} 台灣COVUD-19疫情')
-        embed.add_field(name='新增確診',value=self.diagnosed_new)
-        embed.add_field(name='總確診數',value=self.diagnosed_total)
-        embed.add_field(name='新增死亡',value=self.death_new)
-        embed.add_field(name='總死亡數',value=self.death_total)
+        embed = BotEmbed.simple(f'台灣COVUD-19疫情')
+        embed.add_field(name='新增確診',value=self.new)
+        embed.add_field(name='本土病例',value=self.local)
+        embed.add_field(name='境外移入',value=self.outside)
+        embed.add_field(name='總確診數',value=self.total)
+        embed.add_field(name='新增死亡',value=self.dead)
+        embed.set_footer(text=self.time)
         #embed.set_image(url=data.reportImageURI)
         return embed
 
+    # @staticmethod
+    # def get_covid19():
+    #     APIdata = requests.get(f'https://covid-19.nchc.org.tw/api/covid19?CK=covid-19@nchc.org.tw&querydata=4001&limited=TWN').json()[0]
+    #     if APIdata:
+    #         return Covid19Report(APIdata)
+    #     else:
+    #         return None
+
+
     @staticmethod
     def get_covid19():
-        APIdata = requests.get(f'https://covid-19.nchc.org.tw/api/covid19?CK=covid-19@nchc.org.tw&querydata=4001&limited=TWN').json()[0]
-        if APIdata:
-            return Covid19Report(APIdata)
-        else:
-            return None
+        r = requests.get(f'https://news.campaign.yahoo.com.tw/2019-nCoV/index.php')
+        soup = BeautifulSoup(r.text, "html.parser")
+        results = soup.find_all("section",class_="secTaiwan")
+        r2 = results[0].select_one('div',class_="content").select('div',class_="list")
+        r3 = r2[2].dl.select('div')
+
+        dict = {
+            "time": r2[1].text,
+            "total": r3[1].text,
+            "new":r3[3].text,
+            "local":r3[5].text,
+            "outside":r3[7].text,
+            "dead":r3[9].text
+        }
+        return Covid19Report(dict)
 
 class weather(Cog_Extension):
     @commands.cooldown(rate=1,per=20)

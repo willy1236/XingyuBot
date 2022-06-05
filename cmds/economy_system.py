@@ -72,7 +72,8 @@ class economy_system(Cog_Extension):
         await ctx.message.delete()
         jdsign = Database().jdsign
         #jwsign = Database().jwsign
-        
+        jdata = Database().jdata
+
         if ctx.author.id not in jdsign:
             signer = str(ctx.author.id)
             #日常
@@ -82,7 +83,7 @@ class economy_system(Cog_Extension):
             #jwsign[signer] += 1
             #Database().write('jwsign',jwsign)
             
-            if ctx.guild.id == self.jdata['guild']['001']:
+            if ctx.guild.id == jdata['guild']['001']:
                 Point(signer).add(1)
                 await ctx.send(f'{ctx.author.mention} 簽到完成:pt點數+1',delete_after=5)
             else:
