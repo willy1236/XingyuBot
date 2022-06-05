@@ -346,5 +346,59 @@ class command(Cog_Extension):
         name = name or ctx.author.name
         await ctx.respond(f"Hello {name}!")
 
+
+    @commands.command()
+    async def ma(self,ctx,argAl,argAw,argAn,argBl,argBw,argBn):
+        argAl = int(argAl)
+        argAw = int(argAw)
+        argAn = argAn.split()
+        
+        argBl = int(argBl)
+        argBw = int(argBl)
+        argBn = argBn.split()
+
+        def setup(l:int,w:int,n:list):
+            j = 0
+            X = []
+            X2 = []
+            for i in n:
+                j+=1
+                X2.append(i)
+                if j == w:
+                    X.append(X2)
+                    j = 0
+                    X2 = []
+            return X
+
+        A = setup(argAl,argAw,argAn)
+        B = setup(argBl,argBw,argBn)
+
+        #l*w l*w
+        if argAw == argBl:
+            C = []
+            Cl = argAl
+            Cw = argBw
+
+            for i in range(1,Cl+1):
+                C2 = []
+                for j in range(1,Cw+1):
+                    C3 = 0
+                    for k in range(1,argAw+1):
+                        #print(f'{int(A[j-1][k-1])} * {int(B[k-1][i-1])}={int(A[j-1][k-1]) * int(B[k-1][i-1])}')
+                        #print(C3)
+                        C3 += int(A[j-1][k-1]) * int(B[k-1][i-1])
+                    C2.append(C3)
+                C.append(C2)
+            
+            embed = BotEmbed.simple('矩陣乘法')
+            embed.add_field(name='A矩陣',value=f'{A}, {argAl}x{argAw}')
+            embed.add_field(name='B矩陣',value=f'{B}, {argAl}x{argBw}')
+            embed.add_field(name='AXB矩陣(C矩陣)',value=f'{C}, {Cl}x{Cw}')
+            await ctx.send(embed=embed)
+
+        else:
+            await ctx.send('A B矩陣無法相乘')
+
+
 def setup(bot):
     bot.add_cog(command(bot))
