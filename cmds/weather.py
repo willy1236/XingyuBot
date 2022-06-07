@@ -30,8 +30,11 @@ class EarthquakeReport:
         return embed
     
     @staticmethod
-    def get_report():
-        APIdata = requests.get(f'https://opendata.cwb.gov.tw/api/v1/rest/datastore/E-A0015-001?Authorization={Database().CWB_API}&limit=1').json().get('records').get('earthquake')
+    def get_report(significant=False):
+        if significant:
+            APIdata = requests.get(f'https://opendata.cwb.gov.tw/api/v1/rest/datastore/E-A0015-001?Authorization={Database().CWB_API}&limit=1').json().get('records').get('earthquake')
+        else:
+            APIdata = requests.get(f'https://opendata.cwb.gov.tw/api/v1/rest/datastore/E-A0016-001?Authorization={Database().CWB_API}&limit=1').json().get('records').get('earthquake')
         if APIdata:
             return EarthquakeReport(APIdata[0])
         else:
@@ -39,7 +42,7 @@ class EarthquakeReport:
         
     @staticmethod
     def get_report_auto(time):
-        APIdata = requests.get(f'https://opendata.cwb.gov.tw/api/v1/rest/datastore/E-A0015-001?Authorization={Database().CWB_API}&timeFrom={time}').json().get('records').get('earthquake')
+        APIdata = requests.get(f'https://opendata.cwb.gov.tw/api/v1/rest/datastore/E-A0016-001?Authorization={Database().CWB_API}&timeFrom={time}').json().get('records').get('earthquake')
         if APIdata:
             return EarthquakeReport(APIdata[0])
         else:
