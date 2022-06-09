@@ -4,6 +4,7 @@ from discord.ext import commands
 from core.classes import Cog_Extension
 from library import BRS
 from BotLib.database import Database
+from BotLib.basic import BotEmbed
 
 class ScamChack:
     def __init__(self,text:str):
@@ -24,7 +25,7 @@ class event(Cog_Extension):
     #跨群聊天Ver.1.0
     @commands.Cog.listener()
     async def on_message(self,msg):
-        if msg.channel.id in self.cdata['crass_chat'] and msg.author.bot == False:
+        if msg.channel.id in self.cdata['crass_chat'] and not msg.author.bot:
             await msg.delete()
 
             embed=discord.Embed(description=f'{msg.content}',color=0x4aa0b5)
@@ -42,8 +43,16 @@ class event(Cog_Extension):
 
     @commands.Cog.listener()
     async def on_message(self, message):
-        #if message.content == '小幫手':
-        #    pass
+        dict = {
+            '抹茶粉':'由威立冠名贊助撥出~',
+            '消費':'那你好像也是頂級消費者喔'
+        }
+        if message.content in dict:
+            await message.reply(dict[message.content])
+        if message.content == '小幫手' or message.content== f'<@{self.bot.user.id}>':
+            embed = BotEmbed.basic(self,f"你好~\n我是{self.bot.user.name}，是一個discord機器人喔~\n我的前輟是`!!`\n你可以輸入`!!help`來查看所有指令的用法\n\n希望我能在discord上幫助到你喔~")
+            await message.reply(embed=embed)
+        
         #if message.mention_everyone == True:
         #    await message.reply('你tag所有人了')
         ScamChack = False
@@ -51,10 +60,10 @@ class event(Cog_Extension):
             ScamChack = True
         
         if ScamChack:
-            channel = self.bot.get_channel(message.channel.id)
             await BRS.scam(self,message)
             #await message.delete()
-            await channel.send('溫馨提醒:這可能是有關詐騙的訊息\n若要點擊連結請先確認是否安全',reference=message)
+            await message.reply('溫馨提醒:這可能是有關詐騙的訊息\n點擊連結前請先確認是否安全')
+        
         if type(message.channel) == discord.channel.DMChannel:
             await BRS.dm(self,message)
 
@@ -80,11 +89,11 @@ class event(Cog_Extension):
     async def on_voice_state_update(self,user, before, after):
             if self.voice_updata:
                 NowTime = datetime.datetime.now()
-                if before.channel != None and after.channel != None and before.channel != after.channel:
+                if before.channel and after.channel and before.channel != after.channel:
                     embed=discord.Embed(description=f'{user.mention} 更換語音',color=0x4aa0b5,timestamp=NowTime)
-                elif before.channel == None and after.channel != None:
+                elif not before.channel and after.channel:
                     embed=discord.Embed(description=f'{user.mention} 進入語音',color=0x4aa0b5,timestamp=NowTime)
-                elif before.channel != None and after.channel == None:
+                elif before.channel and not after.channel:
                     embed=discord.Embed(description=f'{user.mention} 離開語音',color=0x4aa0b5,timestamp=NowTime)
                 else:
                     return
@@ -95,9 +104,9 @@ class event(Cog_Extension):
                 elif after.channel:
                     embed.set_footer(text=after.channel.guild.name)
                 
-                if before.channel != None:
+                if before.channel:
                     embed.add_field(name='頻道', value=f'{before.channel.mention}', inline=False)
-                if after.channel != None:
+                if after.channel:
                     embed.add_field(name='頻道', value=f'{after.channel.mention}', inline=False)
                 
                 await self.bot.get_channel(950039715879464970).send(embed=embed)

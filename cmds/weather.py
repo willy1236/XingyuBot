@@ -1,7 +1,6 @@
-from bs4 import BeautifulSoup
-import discord
-from discord.ext import commands
 import requests
+from bs4 import BeautifulSoup
+from discord.ext import commands
 
 from core.classes import Cog_Extension
 from BotLib.database import Database
@@ -67,7 +66,6 @@ class Covid19Report:
         embed.add_field(name='總確診數',value=self.total)
         embed.add_field(name='新增死亡',value=self.dead)
         embed.set_footer(text=self.time)
-        #embed.set_image(url=data.reportImageURI)
         return embed
 
     # @staticmethod

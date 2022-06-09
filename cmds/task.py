@@ -74,7 +74,7 @@ class task(Cog_Extension):
         asyncio.sleep(10)
         self.sign_reset.start()
 
-    @tasks.loop(minutes=5)
+    @tasks.loop(minutes=1)
     async def earthquake_check(self):
         jdata = Database().jdata
         timefrom = jdata['timefrom']

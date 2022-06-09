@@ -18,7 +18,7 @@ class command(Cog_Extension):
     async def find(self,ctx,id):
         success = 0
         member = await find.user(ctx,id)
-        if member != None:
+        if member:
             embed = BotEmbed.simple(title=f'{member.name}#{member.discriminator}', description="ID:用戶(伺服器成員)")
             embed.add_field(name="暱稱", value=member.nick, inline=False)
             embed.add_field(name="是否為機器人", value=member.bot, inline=False)
@@ -30,7 +30,7 @@ class command(Cog_Extension):
             success += 1
 
         user = await find.user2(ctx,id)
-        if user != None and member == None:
+        if user and not member:
             embed = BotEmbed.simple(title=f'{user.name}#{user.discriminator}', description="ID:用戶")
             embed.add_field(name="是否為機器人", value=user.bot, inline=False)
             embed.add_field(name="是否為Discord官方", value=user.system, inline=False)
@@ -39,7 +39,7 @@ class command(Cog_Extension):
             success += 1
 
         channel = await find.channel(ctx,id)
-        if channel != None:
+        if channel:
             embed = BotEmbed.simple(title=channel.name, description="ID:頻道")
             embed.add_field(name="所屬類別", value=channel.category, inline=False)
             embed.add_field(name="所屬公會", value=channel.guild, inline=False)
@@ -47,7 +47,7 @@ class command(Cog_Extension):
             success += 1
         
         guild = await find.guild(ctx,id)
-        if guild != None:
+        if guild:
             embed = BotEmbed.simple(title=guild.name, description="ID:公會")
             embed.add_field(name="公會擁有者", value=guild.owner, inline=False)
             embed.add_field(name="創建時間", value=guild.created_at, inline=False)
@@ -81,12 +81,11 @@ class command(Cog_Extension):
     async def role(self,ctx,*user_list):
         if 'default' in user_list:
             user_list = (419131103836635136,528935362199027716,465831362168094730,539405949681795073,723435216244572160,490136735557222402)
-        embed=BotEmbed.simple()
-        embed.set_author(name="身分組計算結果")
+        embed=BotEmbed.general("身分組計算結果")
         rsdata = Database().rsdata
         for i in user_list:
             user = await find.user(ctx,i)
-            if user != None:
+            if user:
                 role_count = len(rsdata[str(user.id)])
                 embed.add_field(name=user.name, value=f"{role_count}", inline=False)
         await ctx.send(embed=embed)
@@ -102,7 +101,7 @@ class command(Cog_Extension):
         if user_list != []:
             for user in user_list:
                 user = await find.user(ctx,user)
-                if user != None:
+                if user:
                     await user.add_roles(new_role,reason='指令:加身分組')
             await ctx.message.add_reaction('✔️')
         await ctx.message.add_reaction('✅')
@@ -113,7 +112,7 @@ class command(Cog_Extension):
     async def save(self,ctx,user):
         def save_role(user):
             dict = self.rsdata
-            roledata = dict[str(user.id)] or {}
+            roledata = dict.get(str(user.id),{})
             for role in user.roles:
                 if role.id == 877934319249797120:
                     break
@@ -354,7 +353,7 @@ class command(Cog_Extension):
         argAn = argAn.split()
         
         argBl = int(argBl)
-        argBw = int(argBl)
+        argBw = int(argBw)
         argBn = argBn.split()
 
         def setup(l:int,w:int,n:list):
@@ -374,7 +373,13 @@ class command(Cog_Extension):
         B = setup(argBl,argBw,argBn)
 
         #l*w l*w
-        if argAw == argBl:
+        if argAw != argBl:
+            await ctx.send('A B矩陣無法相乘')
+        elif argAl*argAw != len(argAn):
+            await ctx.send('A矩陣格式不對')
+        elif argBl*argBw != len(argBn):
+            await ctx.send('B矩陣格式不對')
+        else:
             C = []
             Cl = argAl
             Cw = argBw
@@ -386,19 +391,19 @@ class command(Cog_Extension):
                     for k in range(1,argAw+1):
                         #print(f'{int(A[j-1][k-1])} * {int(B[k-1][i-1])}={int(A[j-1][k-1]) * int(B[k-1][i-1])}')
                         #print(C3)
-                        C3 += int(A[j-1][k-1]) * int(B[k-1][i-1])
+                        C3 += int(A[i-1][k-1]) * int(B[k-1][j-1])
                     C2.append(C3)
                 C.append(C2)
             
             embed = BotEmbed.simple('矩陣乘法')
             embed.add_field(name='A矩陣',value=f'{A}, {argAl}x{argAw}')
-            embed.add_field(name='B矩陣',value=f'{B}, {argAl}x{argBw}')
+            embed.add_field(name='B矩陣',value=f'{B}, {argBl}x{argBw}')
             embed.add_field(name='AXB矩陣(C矩陣)',value=f'{C}, {Cl}x{Cw}')
             await ctx.send(embed=embed)
 
-        else:
-            await ctx.send('A B矩陣無法相乘')
-
+    @commands.command()
+    async def roll(self,ctx):
+        await ctx.send('你是想打role嗎 請不要像某人一樣打錯好嗎',reference=ctx.message)
 
 def setup(bot):
     bot.add_cog(command(bot))

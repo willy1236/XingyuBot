@@ -6,8 +6,10 @@ from core.classes import Cog_Extension
 from async_timeout import timeout
 
 class VoiceError(Exception):
+    print('VoiceError')
     pass
 class YTDLError(Exception):
+    print('YTDLError')
     pass
 
 # Silence useless bug reports messages

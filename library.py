@@ -62,7 +62,7 @@ class Counter(dict):
         return 0
 
 class find(Cog_Extension):
-    '''arg:要檢測的內容(名稱#0000,id,mention...)'''
+    '''arg=要檢測的內容(名稱#0000,id,mention...)'''
     async def user(ctx,arg:str):
         if arg:
             try:
@@ -174,7 +174,7 @@ class converter():
         for i in arg:
             try:
                 int(i)
-                m=m+i
+                m+=i
             except ValueError:
                 try:
                     m=int(m)

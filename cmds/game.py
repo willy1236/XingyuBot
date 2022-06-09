@@ -43,7 +43,7 @@ class game(Cog_Extension):
 
     @commands.group(invoke_without_command=True)
     async def game(self,ctx):
-        raise commands.errors.ArgumentParsingError('game command')
+        raise commands.errors.ArgumentParsingError('沒有輸入其他參數')
         
     @game.command()
     async def set(self,ctx,game,data=None):
@@ -56,7 +56,7 @@ class game(Cog_Extension):
 
         if game in self.games and self.games[game] != 0:
             #清除該遊戲資料
-            if data == None:
+            if not data:
                 gdata[userid][game] = None
                 await ctx.send(f'已重設{game}資料')
                 return

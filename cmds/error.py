@@ -14,7 +14,7 @@ class error(Cog_Extension):
             await ctx.send(f'遺失參數:遺失 {error.param} 參數')
             print("遺失參數:",error.param)
         elif isinstance(error,commands.errors.ArgumentParsingError):
-            await ctx.send('參數錯誤:給予了錯誤參數')
+            await ctx.send(f'參數錯誤:{error}')
             print("錯誤參數:",error)
         elif isinstance(error,commands.errors.BadArgument):
             await ctx.send('參數錯誤:找不到此參數')

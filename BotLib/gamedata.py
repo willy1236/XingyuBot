@@ -351,12 +351,12 @@ class ApexData():
     def __init__(self):
         pass
 
-    def get_player(self,user):
+    def get_player(self,user,platform='PC'):
         try:
             params={
                 'auth':Database().apex_status_API,
                 'player':user,
-                'platform':'PC'
+                'platform':platform
             }
             response = requests.get(f'https://api.mozambiquehe.re/bridge',params=params).json()
             return ApexPlayer(response)

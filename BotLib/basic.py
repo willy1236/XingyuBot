@@ -21,6 +21,12 @@ class BotEmbed:
         embed = discord.Embed(title=title,description=description, color=0xc4e9ff,url=url)
         return embed
 
+    def general(name:str,icon_url:str=discord.Embed.Empty,url:str=discord.Embed.Empty):
+        '''普通:自訂作者'''
+        embed = discord.Embed(color=0xc4e9ff)
+        embed.set_author(name=name,icon_url=icon_url,url=url)
+        return embed
+
     def brs():
         '''Bot Radio Station 格式'''
         picdata = Database().picdata

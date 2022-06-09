@@ -101,7 +101,7 @@ class help(Cog_Extension):
             text = "mc02 | 如何裝模組\n被你發現我還沒打內容了w\n既然你這麼想知道的話\nhttps://youtu.be/8gYBo_vcZFs"
         
         else:
-            raise commands.errors.ArgumentParsingError("info:參數錯誤")
+            raise commands.errors.ArgumentParsingError("查無資訊")
             #await ctx.send('參數錯誤，請輸入!!info help取得幫助',delete_after=5)
         await ctx.send(text)
 
@@ -117,7 +117,7 @@ class help(Cog_Extension):
     @commands.cooldown(rate=1,per=3)
     async def help(self,ctx):
         embed = BotEmbed.basic(self,"目前可使用的指令如下:")
-        embed.add_field(name="!!help <系列指令>", value="查詢系列指令\n目前支援:use,admin,pt,game,set,role,bet,music,weather", inline=False)
+        embed.add_field(name="!!help <系列指令>", value="查詢系列指令\n目前支援:use,admin,pt,game,set,role,bet,music,weather,math", inline=False)
         embed.add_field(name="!!info <內容/help>", value="獲得相關資訊", inline=False)
         embed.add_field(name="!!feedback <內容>", value="傳送訊息給機器人擁有者", inline=False)
         embed.add_field(name="!!find <id>", value="搜尋指定ID", inline=False)
@@ -192,7 +192,13 @@ class help(Cog_Extension):
     async def weather(self,ctx):
         embed = BotEmbed.simple("天氣(weather) 指令:")
         embed.add_field(name="!!earthquake", value="查詢最新的顯著有感地震報告", inline=False)
-        embed.add_field(name="!!covid", value="查詢最新的台灣疫情\n(資料可能會有時間差，請注意資料日期)", inline=False)
+        embed.add_field(name="!!covid", value="查詢最新的台灣疫情", inline=False)
+        await ctx.send(embed=embed)
+
+    @help.command()
+    async def math(self,ctx):
+        embed = BotEmbed.simple("數學(math) 指令:")
+        embed.add_field(name="!!ma <A列數> <A行數>  <A> <B列數> <B行數> <B>", value='A*B矩陣乘法\n矩陣打法 : "數字1 數字2.... "\n前後加引號 每個數字用空格隔開 數字順序為 一列數字打完 再打下一列數字', inline=False)
         await ctx.send(embed=embed)
 
     @help.command()

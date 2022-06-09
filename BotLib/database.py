@@ -29,7 +29,7 @@ class Database:
         self.cdata = json.load(open(self.dict['cdata'],mode='r',encoding='utf8'))
         self.picdata = json.load(open(self.dict['picdata'],mode='r',encoding='utf8'))
         self.udata = json.load(open(self.dict['udata'],'r',encoding='utf8'))
-        self.jpt = Counter(json.load(open(self.dict['jpt'],mode='r',encoding='utf8')))
+        self.jpt = json.load(open(self.dict['jpt'],mode='r',encoding='utf8'))
         self.jloot = Counter(json.load(open(self.dict['jloot'],mode='r',encoding='utf8')))
         self.bet_data = Counter(json.load(open(self.dict['bet_data'],mode='r',encoding='utf8')))
         self.gdata = Counter(json.load(open(self.dict['gdata'],'r',encoding='utf8')))

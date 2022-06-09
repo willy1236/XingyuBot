@@ -2,14 +2,17 @@ from BotLib.database import Database
 from BotLib.basic import BotEmbed
 
 class User():
-    def __init__(self,userid,dcname=None):
+    '''基本用戶資料'''
+    def __init__(self,userid:str,dcname=None):
         udata = Database().udata
         self.id = str(userid)
-        self.point = Point(self.id)
         if not self.id in udata:
-            udata[self.id] = {}
-        self.name = udata[self.id].get('name',dcname)
+            self.setup()
         
+        self.point = Point(self.id)
+        self.name = udata[self.id].get('name',dcname)
+        self.hp = udata[self.id].get('hp',None)
+
         self.desplay = self.embed()
         return
         self.weapon = udata['weapon']
@@ -19,17 +22,26 @@ class User():
         embed.add_field(name='Pt點數',value=self.point.pt)
         return embed
 
-    def setup(id):
+    def setup(self):
         udata = Database().udata
-        udata[id] = {}
+        udata[self.id] = {}
         Database().write('udata',udata)
 
 class Point():
+    '''用戶pt點數'''
     def __init__(self,userid:str):
-        self.jpt = Database().jpt
+        jpt = Database().jpt
         self.user = str(userid) #用戶
+        if self.user not in jpt:
+            self.setup()
+        
         self.pt = self.jpt[self.user] #用戶擁有PT數
     
+    def setup(self):
+        jpt = Database().jpt
+        jpt[self.user] = {}
+        Database().write('jpt',jpt)
+
     def set(self,amount:int):
         """設定用戶PT"""
         self.jpt[self.user] = amount
@@ -55,3 +67,11 @@ class pet():
             "owner": user
         }
         Database().write('jpet',jpet)
+
+class Weapon:
+    def __init__(self):
+        pass
+
+class Armor:
+    def __init__(self):
+        pass
