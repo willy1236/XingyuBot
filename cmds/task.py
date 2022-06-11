@@ -47,7 +47,11 @@ class task(Cog_Extension):
 
     def __gettime_1430():
         tz = timezone(timedelta(hours=+8))
-        return time(hour=14,minute=30,second=0,tzinfo=tz)
+        now = datetime.now(tz=tz)
+        if now.hour == 14 and now.minute >= 30 and now.second < 45:
+            return time(hour=14,minute=30,second=0,tzinfo=tz)
+        else:
+            return time(hour=14,minute=45,second=0,tzinfo=tz)
 
     @commands.command()
     async def update_task(self,ctx,task):

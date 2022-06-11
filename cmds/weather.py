@@ -41,11 +41,16 @@ class EarthquakeReport:
         
     @staticmethod
     def get_report_auto(time):
-        APIdata = requests.get(f'https://opendata.cwb.gov.tw/api/v1/rest/datastore/E-A0016-001?Authorization={Database().CWB_API}&timeFrom={time}').json().get('records').get('earthquake')
+        APIdata = requests.get(f'https://opendata.cwb.gov.tw/api/v1/rest/datastore/E-A0015-001?Authorization={Database().CWB_API}&timeFrom={time}').json().get('records').get('earthquake')
+        
         if APIdata:
             return EarthquakeReport(APIdata[0])
         else:
-            return None
+            APIdata = requests.get(f'https://opendata.cwb.gov.tw/api/v1/rest/datastore/E-A0016-001?Authorization={Database().CWB_API}&timeFrom={time}').json().get('records').get('earthquake')
+            if APIdata:
+                return EarthquakeReport(APIdata[0])
+            else:
+                return None
         
 
 class Covid19Report:
