@@ -270,8 +270,8 @@ class music(Cog_Extension):
     async def cog_before_invoke(self, ctx: commands.Context):
         ctx.voice_state = self.get_voice_state(ctx)
 
-    async def cog_command_error(self, ctx: commands.Context, error: commands.CommandError):
-        await ctx.send('錯誤發生: {}'.format(str(error)))
+    #async def cog_command_error(self, ctx: commands.Context, error: commands.CommandError):
+    #    await ctx.send('錯誤發生: {}'.format(str(error)))
 
     @commands.command(name='join', invoke_without_subcommand=True)
     async def _join(self, ctx: commands.Context):
@@ -438,6 +438,7 @@ class music(Cog_Extension):
 
         # Inverse boolean value to loop and unloop.
         ctx.voice_state.loop = not ctx.voice_state.loop
+        await ctx.send(f'循環已被設定成 {ctx.voice_state.loop}')
         await ctx.message.add_reaction('✅')
 
     @commands.command(name='play',aliases=['p'])

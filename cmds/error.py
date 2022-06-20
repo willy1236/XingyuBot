@@ -3,6 +3,9 @@ from discord.ext import commands
 from library import BRS
 from core.classes import Cog_Extension
 
+dict = {
+    'manage_channels':'管理頻道'
+}
 
 class error(Cog_Extension):
     @commands.Cog.listener()
@@ -21,9 +24,15 @@ class error(Cog_Extension):
         elif isinstance(error,commands.errors.CommandNotFound):
             await ctx.send('沒找到指令:請確認指令是否輸入錯誤')
         elif isinstance(error,commands.errors.MissingPermissions):
-            await ctx.send(f'缺少權限:你沒有權限來使用此指令\n缺少權限:{error.missing_permissions}')
+            text = ''
+            for i in error.missing_permissions:
+                text += (dict.get(i,i) + ',')
+            await ctx.send(f'缺少權限:你沒有權限來使用此指令\n缺少權限:{text[:-1]}')
         elif isinstance(error,commands.errors.BotMissingPermissions):
-            await ctx.send(f'缺少權限:機器人沒有權限來使用此指令\n缺少權限:{error.missing_permissions}')
+            text = ''
+            for i in error.missing_permissions:
+                text += (dict.get(i,i) + ',')
+            await ctx.send(f'缺少權限:機器人沒有權限來使用此指令\n缺少權限:{text[:-1]}')
             print("缺少權限:",error.missing_permissions)
         elif isinstance(error,commands.errors.NotOwner):
             await ctx.send('缺少權限:你不是機器人擁有者',delete_after=5)

@@ -79,7 +79,7 @@ class debug(Cog_Extension):
         # Call this method once just to store it somewhere.
         # In a more complicated program you might fetch the message_id from a database for use later.
         # However this is outside of the scope of this simple example.
-        await ctx.send("What's your favourite colour?", view=PersistentView())
+        await ctx.send("What's your favourite colour?", view=PersistentView(self))
     
     @commands.command()
     @commands.is_owner()

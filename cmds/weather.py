@@ -1,4 +1,4 @@
-import requests
+import requests,discord
 from bs4 import BeautifulSoup
 from discord.ext import commands
 
@@ -10,21 +10,32 @@ from BotLib.basic import BotEmbed
 class EarthquakeReport:
     def __init__(self,data):
         self.data = data
-        self.earthquakeNo = data['earthquakeNo']
+        self.earthquakeNo = str(data['earthquakeNo'])
         self.reportImageURI = data['reportImageURI']
         self.originTime = data['earthquakeInfo']['originTime']
         self.depth = data['earthquakeInfo']['depth']['value']
         self.location = data['earthquakeInfo']['epiCenter']['location']
         self.magnitude = data['earthquakeInfo']['magnitude']['magnitudeValue']
         self.reportColor = data['reportColor']
+        self.reportContent = data['reportContent']
         self.desplay = self.embed()
 
     def embed(self):
-        embed = BotEmbed.simple(f'編號第{self.earthquakeNo}號地震報告')
+        if self.reportColor == "綠色":
+            embed = discord.Embed(description=self.reportContent,color=0x00BB00)
+        elif self.reportColor == "橙色":
+            embed = discord.Embed(description=self.reportContent,color=0xF75000)
+        else:
+            embed = discord.Embed(description=self.reportContent,color=0xEA0000)
+        
+        if self.earthquakeNo[3:] == "000":
+            embed.add_field(name='地震編號',value=f'{self.earthquakeNo}（小規模）')
+        else:
+            embed.add_field(name='地震編號',value=f'{self.earthquakeNo}')
         embed.add_field(name='發生時間',value=self.originTime)
-        embed.add_field(name='震央',value=self.location)
         embed.add_field(name='震源深度',value=f'{self.depth} km')
         embed.add_field(name='芮氏規模',value=f'{self.magnitude}')
+        embed.add_field(name='震央',value=self.location,inline=False)
         embed.set_image(url=self.reportImageURI)
         return embed
     
