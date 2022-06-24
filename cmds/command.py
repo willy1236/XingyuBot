@@ -173,13 +173,16 @@ class command(Cog_Extension):
     @commands.cooldown(rate=1,per=2)
     async def lottery(self,ctx,times=None):
         if times:
-            times = round(float(times))
+            try:
+                times = round(float(times))
+            except ValueError:
+                raise commands.errors.ArgumentParsingError('只能輸入介於1~1000之間的數字')
         else:
             times = 1
         if times > 1000 or times <= 0:
-            await ctx.send('數字只能介於1~1000之間')
-            return
-        result={'six':0,'five':0,'four':0,'three':0}
+            raise commands.errors.ArgumentParsingError('數字只能介於1~1000之間')
+        
+        result = {'six':0,'five':0,'four':0,'three':0}
         user_id = str(ctx.author.id)
         six_list = []
         six_list_100 = []
@@ -340,7 +343,7 @@ class command(Cog_Extension):
 
 
     @commands.slash_command(description='向大家說哈瞜')
-    async def hello(ctx, name: str = None):
+    async def hello(self,ctx, name: str = None):
         await ctx.defer()
         name = name or ctx.author.name
         await ctx.respond(f"Hello {name}!")

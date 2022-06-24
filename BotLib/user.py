@@ -30,17 +30,15 @@ class User():
 class Point():
     '''用戶pt點數'''
     def __init__(self,userid:str):
-        jpt = Database().jpt
+        self.jpt = Database().jpt
         self.user = str(userid) #用戶
-        if self.user not in jpt:
+        if self.user not in self.jpt:
             self.setup()
-        
         self.pt = self.jpt[self.user] #用戶擁有PT數
     
     def setup(self):
-        jpt = Database().jpt
-        jpt[self.user] = {}
-        Database().write('jpt',jpt)
+        self.jpt[self.user] = 0
+        Database().write('jpt',self.jpt)
 
     def set(self,amount:int):
         """設定用戶PT"""

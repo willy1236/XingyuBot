@@ -28,7 +28,7 @@ elif bot_code == 2:
         intents=discord.Intents.all(),
         case_insensitive=True, 
         help_command=None,
-        debug_guild = []
+        debug_guild = [566533708371329024]
     )
 elif bot_code == 3:
     bot = discord.Bot(
