@@ -91,6 +91,14 @@ async def reset(ctx,arg=None):
 async def ping(ctx):
     await ctx.send(f'延遲為:{round(bot.latency*1000)} ms')
 
+@bot.command()
+async def jset(ctx,option,value):
+    db = Database()
+    jdata = db.jdata
+    jdata[option] = value
+    db.write('jdata',jdata)
+    await ctx.send(f'已將{option} 設為 {value}')
+
 ignore_py = []
 for filename in os.listdir('./cmds'):
     if filename.endswith('.py') and filename[:-3] not in ignore_py:

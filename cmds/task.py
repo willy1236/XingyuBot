@@ -80,16 +80,17 @@ class task(Cog_Extension):
 
     @tasks.loop(minutes=1)
     async def earthquake_check(self):
-        jdata = Database().jdata
-        timefrom = jdata['timefrom']
+        db = Database()
+        jdata = db.jdata
+        timefrom = db.bdata['timefrom']
         data = EarthquakeReport.get_report_auto(timefrom)
         if data:
             embed = data.desplay
             time = datetime.strptime(data.originTime, "%Y-%m-%d %H:%M:%S")+timedelta(seconds=1)
             jdata['timefrom'] = time.strftime("%Y-%m-%dT%H:%M:%S")
-            Database().write('jdata',jdata)
+            db.write('jdata',jdata)
             
-            ch_list = Database().cdata['earthquake']
+            ch_list = db.cdata['earthquake']
             for i in ch_list:
                 channel = self.bot.get_channel(ch_list[i])
                 if channel:
