@@ -24,7 +24,7 @@ class Database:
             'jevent':'database/event.json',
             'rsdata':'database/role_save.json',
             'jpet' : 'database/user_settings/pet.json',
-            'bdata' : 'database/bot_settings'
+            'bdata' : 'database/bot_settings.json'
         }
         self.jdata = json.load(open(self.dict['jdata'],mode='r',encoding='utf8'))
         self.cdata = json.load(open(self.dict['cdata'],mode='r',encoding='utf8'))
