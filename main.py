@@ -92,6 +92,7 @@ async def ping(ctx):
     await ctx.send(f'延遲為:{round(bot.latency*1000)} ms')
 
 @bot.command()
+@commands.is_owner()
 async def jset(ctx,option,value):
     db = Database()
     jdata = db.jdata

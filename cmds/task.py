@@ -81,14 +81,14 @@ class task(Cog_Extension):
     @tasks.loop(minutes=1)
     async def earthquake_check(self):
         db = Database()
-        jdata = db.jdata
-        timefrom = db.bdata['timefrom']
+        bdata = db.bdata
+        timefrom = bdata['timefrom']
         data = EarthquakeReport.get_report_auto(timefrom)
         if data:
             embed = data.desplay
             time = datetime.strptime(data.originTime, "%Y-%m-%d %H:%M:%S")+timedelta(seconds=1)
-            jdata['timefrom'] = time.strftime("%Y-%m-%dT%H:%M:%S")
-            db.write('jdata',jdata)
+            bdata['timefrom'] = time.strftime("%Y-%m-%dT%H:%M:%S")
+            db.write('bdata',bdata)
             
             ch_list = db.cdata['earthquake']
             for i in ch_list:

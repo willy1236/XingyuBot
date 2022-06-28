@@ -214,6 +214,7 @@ class help(Cog_Extension):
         embed.add_field(name="!!role save <用戶/all>", value="儲存身分組", inline=False)
         embed.add_field(name="!!about <server/count>", value="about系列指令", inline=False)
         embed.add_field(name="!!updete_task <task>", value="task更新", inline=False)
+        embed.add_field(name="!!jset <option> <value>", value="設定jdata數值", inline=False)
         await ctx.send(embed=embed)
 
     @help.command()
