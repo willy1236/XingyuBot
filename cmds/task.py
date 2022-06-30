@@ -75,7 +75,7 @@ class task(Cog_Extension):
         Database().write('jdsign',reset)
         await task_report_channel.send('簽到已重置')
         self.sign_reset.stop()
-        asyncio.sleep(10)
+        await asyncio.sleep(10)
         self.sign_reset.start()
 
     @tasks.loop(minutes=1)

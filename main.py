@@ -7,9 +7,10 @@ bot_list={"1":"Bot1", "2":"Bep", "3":"Bot2"}
 bot_code = 2
 botuser = bot_list[str(bot_code)]
 
-jdata = Database().jdata
-picdata = Database().picdata
-token = Database().tokens[botuser]
+db = Database()
+jdata = db.jdata
+picdata = db.picdata
+token = db.tokens[botuser]
 
 
 if bot_code ==1:
