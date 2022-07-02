@@ -78,7 +78,7 @@ class task(Cog_Extension):
         await task_report_channel.send('簽到已重置')
         self.sign_reset.stop()
 
-    @sign_reset.after_loop()
+    @sign_reset.after_loop
     async def sign_reset_after(self):
         await asyncio.sleep(10)
         self.sign_reset.start()
@@ -141,7 +141,7 @@ class task(Cog_Extension):
                 await asyncio.sleep(0.5)
         self.apex_crafting_update.stop()
 
-    @apex_crafting_update.after_loop()
+    @apex_crafting_update.after_loop
     async def apex_map_update_after(self):
         await asyncio.sleep(10)
         self.apex_crafting_update.start()
@@ -169,7 +169,7 @@ class task(Cog_Extension):
             await asyncio.sleep(1)
         self.apex_map_update.stop()
 
-    @apex_map_update.after_loop()
+    @apex_map_update.after_loop
     async def apex_map_update_after(self):
         await asyncio.sleep(10)
         self.apex_map_update.start()
