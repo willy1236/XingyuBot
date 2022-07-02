@@ -16,7 +16,7 @@ class OsuPlayer():
         self.desplay = self.embed()
 
     def embed(self):
-        embed = BotEmbed.simple("Osu玩家資訊",url=self.url)
+        embed = BotEmbed.general("Osu玩家資訊",url=self.url)
         embed.add_field(name="名稱",value=self.username)
         embed.add_field(name="id",value=self.id)
         embed.add_field(name="全球排名",value=self.global_rank)
