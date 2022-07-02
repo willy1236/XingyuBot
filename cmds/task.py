@@ -53,6 +53,8 @@ class task(Cog_Extension):
         else:
             return time(hour=14,minute=45,second=0,tzinfo=tz)
 
+
+    
     @commands.command()
     async def update_task(self,ctx,task):
         if task == 'apex_map_update':
@@ -74,6 +76,12 @@ class task(Cog_Extension):
         reset = []
         Database().write('jdsign',reset)
         await task_report_channel.send('簽到已重置')
+        self.sign_reset.stop()
+
+    @sign_reset.after_loop()
+    async def sign_reset_after(self):
+        await asyncio.sleep(10)
+        self.sign_reset.start()
 
     @tasks.loop(minutes=1)
     async def earthquake_check(self):
@@ -116,41 +124,55 @@ class task(Cog_Extension):
     @tasks.loop(time=__gettime_0105())
     async def apex_crafting_update(self):
         cdata = Database().cdata
-        embed = ApexData.get_crafting().desplay
-        for i in cdata["apex_crafting"]:
-            channel = self.bot.get_channel(cdata["apex_crafting"][i])
-            try:
-                id = channel.last_message_id
-                msg = await channel.fetch_message(id)
-            except:
-                msg = None
+        crafting = ApexData.get_crafting()
+        if crafting:
+            for i in cdata["apex_crafting"]:
+                channel = self.bot.get_channel(cdata["apex_crafting"][i])
+                try:
+                    id = channel.last_message_id
+                    msg = await channel.fetch_message(id)
+                except:
+                    msg = None
 
-            if msg and msg.author == self.bot.user:
-                await msg.edit('Apex合成台內容自動更新資料',embed=embed)
-            else:
-                await channel.send('Apex合成台內容自動更新資料',embed=embed)
-            await asyncio.sleep(0.5)
+                if msg and msg.author == self.bot.user:
+                    await msg.edit('Apex合成台內容自動更新資料',embed=crafting.embed)
+                else:
+                    await channel.send('Apex合成台內容自動更新資料',embed=crafting.embed)
+                await asyncio.sleep(0.5)
+        self.apex_crafting_update.stop()
+
+    @apex_crafting_update.after_loop()
+    async def apex_map_update_after(self):
+        await asyncio.sleep(10)
+        self.apex_crafting_update.start()
+
     
     @tasks.loop(time=__gettime_15min())
     async def apex_map_update(self):
-        await asyncio.sleep(1)
         cdata = Database().cdata
-        embed = ApexData.get_map_rotation().desplay
-        for i in cdata["apex_map"]:
-            channel = self.bot.get_channel(cdata["apex_map"][i])
-            try:
-                id = channel.last_message_id
-                msg = await channel.fetch_message(id)
-            except:
-                msg = None
+        map = ApexData.get_map_rotation()
+        if map:
+            for i in cdata["apex_map"]:
+                channel = self.bot.get_channel(cdata["apex_map"][i])
+                try:
+                    id = channel.last_message_id
+                    msg = await channel.fetch_message(id)
+                except:
+                    msg = None
 
-            if msg and msg.author == self.bot.user:
-                await msg.edit('Apex地圖輪替自動更新資料',embed=embed)
-            else:
-                await channel.send('Apex地圖輪替自動更新資料',embed=embed)
-            await asyncio.sleep(0.5)
-        self.apex_map_update.change_interval(time=task.__gettime_15min())
-        await asyncio.sleep(1)
+                if msg and msg.author == self.bot.user:
+                    await msg.edit('Apex地圖輪替自動更新資料',embed=map.embed)
+                else:
+                    await channel.send('Apex地圖輪替自動更新資料',embed=map.embed)
+                await asyncio.sleep(0.5)
+            self.apex_map_update.change_interval(time=task.__gettime_15min())
+            await asyncio.sleep(1)
+        self.apex_map_update.stop()
+
+    @apex_map_update.after_loop()
+    async def apex_map_update_after(self):
+        await asyncio.sleep(10)
+        self.apex_map_update.start()
 
     @tasks.loop(seconds=1)
     async def time_task(self):

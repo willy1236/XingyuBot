@@ -11,11 +11,12 @@ class OsuPlayer():
         self.avatar_url = data['avatar_url']
         self.country = data['country']["code"]
         self.is_online = data['is_online']
+        self.url = f'https://osu.ppy.sh/users/{self.id}'
 
         self.desplay = self.embed()
 
     def embed(self):
-        embed = BotEmbed.simple("Osu玩家資訊")
+        embed = BotEmbed.simple("Osu玩家資訊",url=self.url)
         embed.add_field(name="名稱",value=self.username)
         embed.add_field(name="id",value=self.id)
         embed.add_field(name="全球排名",value=self.global_rank)
@@ -113,6 +114,8 @@ class ApexPlayer():
 
 class ApexCrafting():
     def __init__(self,data):
+        if not data:
+            return None
         self.daily = data[0]
         self.weekly = data[1]
 
@@ -180,6 +183,8 @@ class ApexCrafting():
 
 class ApexMapRotation():
     def __init__(self,data):
+        if not data:
+            return None
         self.nowmap = data["current"]['map']
         self.nowstart = datetime.datetime.strptime(data['current']['readableDate_start'],"%Y-%m-%d %H:%M:%S")+datetime.timedelta(hours=8)
         self.nowend = datetime.datetime.strptime(data['current']['readableDate_end'],"%Y-%m-%d %H:%M:%S")+datetime.timedelta(hours=8)
