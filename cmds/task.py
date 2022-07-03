@@ -135,9 +135,9 @@ class task(Cog_Extension):
                     msg = None
 
                 if msg and msg.author == self.bot.user:
-                    await msg.edit('Apex合成台內容自動更新資料',embed=crafting.embed)
+                    await msg.edit('Apex合成台內容自動更新資料',embed=crafting.desplay)
                 else:
-                    await channel.send('Apex合成台內容自動更新資料',embed=crafting.embed)
+                    await channel.send('Apex合成台內容自動更新資料',embed=crafting.desplay)
                 await asyncio.sleep(0.5)
         self.apex_crafting_update.stop()
 
@@ -161,9 +161,9 @@ class task(Cog_Extension):
                     msg = None
 
                 if msg and msg.author == self.bot.user:
-                    await msg.edit('Apex地圖輪替自動更新資料',embed=map.embed)
+                    await msg.edit('Apex地圖輪替自動更新資料',embed=map.desplay)
                 else:
-                    await channel.send('Apex地圖輪替自動更新資料',embed=map.embed)
+                    await channel.send('Apex地圖輪替自動更新資料',embed=map.desplay)
                 await asyncio.sleep(0.5)
             self.apex_map_update.change_interval(time=task.__gettime_15min())
             await asyncio.sleep(1)
