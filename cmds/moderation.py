@@ -22,7 +22,7 @@ class moderation(Cog_Extension):
             'all_anno':'全群公告',
             'earthquake':'地震通知',
             'apex_crafting':'Apex合成物品更新',
-            'Apex_map':'apex地圖輪替',
+            'apex_map':'apex地圖輪替',
             'covid_update':'台灣每日疫情通知'
         }
         if set_type not in dict:
