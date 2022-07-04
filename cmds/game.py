@@ -123,7 +123,7 @@ class game(Cog_Extension):
         msg = await ctx.send('資料查詢中...')
         #資料庫調用
         if not userid:
-            userid = Database.get_gamedata(userid,'osu')
+            userid = Database.get_gamedata(ctx.author.id,'osu')
         else:
             dcuser = await find.user2(ctx,userid)
             if dcuser:
@@ -155,7 +155,7 @@ class game(Cog_Extension):
         msg = await ctx.send('資料查詢中...')
         #資料庫調用
         if not userid:
-            userid = Database.get_gamedata(userid,'apex')
+            userid = Database.get_gamedata(ctx.author.id,'apex')
         else:
             dcuser = await find.user2(ctx,userid)
             if dcuser:
@@ -198,7 +198,7 @@ class game(Cog_Extension):
         msg = await ctx.send('資料查詢中...')
         #資料庫調用
         if not userid:
-            userid = Database.get_gamedata(userid,'steam')
+            userid = Database.get_gamedata(ctx.author.id,'steam')
         else:
             dcuser = await find.user2(ctx,userid)
             if dcuser:
@@ -220,7 +220,7 @@ class game(Cog_Extension):
         msg = await ctx.send('資料查詢中...')
         #資料庫調用
         if not userid:
-            userid = Database.get_gamedata(userid,'steam')
+            userid = Database.get_gamedata(ctx.author.id,'steam')
         else:
             dcuser = await find.user2(ctx,userid)
             if dcuser:

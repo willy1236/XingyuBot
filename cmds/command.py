@@ -101,8 +101,10 @@ class command(Cog_Extension):
         if user_list != []:
             for user in user_list:
                 user = await find.user(ctx,user)
-                if user:
+                if user and user != self.bot.user:
                     await user.add_roles(new_role,reason='指令:加身分組')
+                elif user == self.bot.user:
+                    await ctx.send("請不要加我身分組好嗎")
             await ctx.message.add_reaction('✔️')
         await ctx.message.add_reaction('✅')
 
