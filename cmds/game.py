@@ -122,12 +122,8 @@ class game(Cog_Extension):
     async def osu(self,ctx,userid=None):
         msg = await ctx.send('資料查詢中...')
         #資料庫調用
-        if not userid:
-            userid = Database.get_gamedata(ctx.author.id,'osu')
-        else:
-            dcuser = await find.user2(ctx,userid)
-            if dcuser:
-                userid = Database.get_gamedata(dcuser.id,'osu')
+        userid = userid or ctx.author.id
+        userid = await Database.get_gamedata(userid,'osu',ctx)
         
         if not userid:
             await msg.edit(content='查詢失敗:用戶尚未註冊資料庫',delete_after=5)
@@ -154,12 +150,8 @@ class game(Cog_Extension):
     async def apex(self,ctx,userid=None):
         msg = await ctx.send('資料查詢中...')
         #資料庫調用
-        if not userid:
-            userid = Database.get_gamedata(ctx.author.id,'apex')
-        else:
-            dcuser = await find.user2(ctx,userid)
-            if dcuser:
-                userid = Database.get_gamedata(dcuser.id,'apex')
+        userid = userid or ctx.author.id
+        userid = await Database.get_gamedata(userid,'apex',ctx)
         
         if not userid:
             await msg.edit(content='查詢失敗:用戶尚未註冊資料庫',delete_after=5)
@@ -197,12 +189,8 @@ class game(Cog_Extension):
     async def DBD(self,ctx,userid=None):
         msg = await ctx.send('資料查詢中...')
         #資料庫調用
-        if not userid:
-            userid = Database.get_gamedata(ctx.author.id,'steam')
-        else:
-            dcuser = await find.user2(ctx,userid)
-            if dcuser:
-                userid = Database.get_gamedata(dcuser.id,'steam')
+        userid = userid or ctx.author.id
+        userid = await Database.get_gamedata(userid,'steam',ctx)
         
         if not userid:
             await msg.edit(content='查詢失敗:用戶尚未註冊資料庫',delete_after=5)
@@ -219,12 +207,8 @@ class game(Cog_Extension):
     async def steam(self,ctx,userid=None):
         msg = await ctx.send('資料查詢中...')
         #資料庫調用
-        if not userid:
-            userid = Database.get_gamedata(ctx.author.id,'steam')
-        else:
-            dcuser = await find.user2(ctx,userid)
-            if dcuser:
-                userid = Database.get_gamedata(dcuser.id,'steam')
+        userid = userid or ctx.author.id
+        userid = await Database.get_gamedata(userid,'steam',ctx)
         
         if not userid:
             await msg.edit(content='查詢失敗:用戶尚未註冊資料庫',delete_after=5)

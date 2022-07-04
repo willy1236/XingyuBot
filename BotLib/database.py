@@ -1,8 +1,17 @@
 import json,os
 
+from discord.ext import commands
+
 class Counter(dict):
     def __missing__(self,key):
         return 0
+
+async def find_user(ctx,arg:str):
+        try:
+            user = await commands.UserConverter().convert(ctx,str(arg))
+        except commands.UserNotFound:
+            user = None
+        return user
 
 class Database:
     def __init__(self):
@@ -62,8 +71,22 @@ class Database:
             raise KeyError("此項目沒有在資料庫中")
 
     @staticmethod
-    def get_gamedata(user_id:str,game:str):
+    async def get_gamedata(user_id:str,game:str,ctx: commands.context=None):
+        """查詢資料庫中的玩家資訊，若輸入dc用戶則需傳入ctx\n
+        dcuser and in database -> 資料庫資料\n
+        dcuser and not in database -> None\n
+        not dcuser -> user_id(原資料輸出)"""
         gdata = Database().gdata
+        
+        if ctx:
+            dcuser = await find_user(ctx,user_id)
+            if dcuser:
+                user_id = str(dcuser.id)
+            else:
+                return user_id
+        else:
+            user_id = str(user_id)
+
         try:
             data = gdata[str(user_id)][game]
             if game in ['steam']:

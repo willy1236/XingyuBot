@@ -1,4 +1,5 @@
-import requests,datetime
+import requests
+from datetime import datetime, timezone, timedelta
 from BotLib.database import Database
 from BotLib.basic import BotEmbed
 
@@ -7,10 +8,18 @@ class OsuPlayer():
         self.username = data['username']
         self.id = data['id']
         self.global_rank = data['statistics']['global_rank']
+        self.country_rank = data['statistics']['country_rank']
         self.pp = data['statistics']['pp']
         self.avatar_url = data['avatar_url']
         self.country = data['country']["code"]
         self.is_online = data['is_online']
+        self.level = data['statistics']['level']['current']
+        self.max_level = data['statistics']['level']['progress']
+        self.max_combo = data['statistics']['maximum_combo']
+        #self.last_visit = datetime.datetime.strptime(data['last_visit'],"%Y-%m-%dT%H:%M:%S%Z")
+        self.oragin_last_visit = datetime.strptime(data['last_visit'],"%Y-%m-%dT%H:%M:%S%z")
+        self.e8_last_visit = self.oragin_last_visit + timedelta(hours = 8)
+        self.last_visit = self.e8_last_visit.strftime('%Y-%m-%d %H:%M:%S')
         self.url = f'https://osu.ppy.sh/users/{self.id}'
 
         self.desplay = self.embed()
@@ -20,9 +29,15 @@ class OsuPlayer():
         embed.add_field(name="名稱",value=self.username)
         embed.add_field(name="id",value=self.id)
         embed.add_field(name="全球排名",value=self.global_rank)
+        embed.add_field(name="地區排名",value=self.country_rank)
         embed.add_field(name="pp",value=self.pp)
         embed.add_field(name="國家",value=self.country)
-        embed.add_field(name="是否在線上",value=self.is_online)
+        embed.add_field(name="等級",value=f'{self.level}({self.max_level}%)')
+        embed.add_field(name="最多連擊數",value=self.max_combo)
+        if self.is_online:
+            embed.add_field(name="最後線上",value='Online')
+        else:
+            embed.add_field(name="最後線上",value=self.last_visit)
         embed.set_thumbnail(url=self.avatar_url)
         return embed
 
