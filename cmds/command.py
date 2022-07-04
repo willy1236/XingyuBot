@@ -105,6 +105,8 @@ class command(Cog_Extension):
                     await user.add_roles(new_role,reason='指令:加身分組')
                 elif user == self.bot.user:
                     await ctx.send("請不要加我身分組好嗎")
+                elif user.bot:
+                    await ctx.send("請不要加機器人身分組好嗎")
             await ctx.message.add_reaction('✔️')
         await ctx.message.add_reaction('✅')
 
