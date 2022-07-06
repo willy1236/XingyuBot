@@ -192,7 +192,7 @@ class ApexCrafting():
         embed.add_field(name="每週物品1價格",value=self.item3_cost,inline=False)
         embed.add_field(name="每週物品2",value=item_name[3],inline=False)
         embed.add_field(name="每週物品2價格",value=self.item4_cost,inline=False)
-        embed.timestamp = datetime.datetime.now()
+        embed.timestamp = datetime.now()
         embed.set_footer(text='更新時間')
         return embed
 
@@ -201,14 +201,14 @@ class ApexMapRotation():
         if not data:
             return None
         self.nowmap = data["current"]['map']
-        self.nowstart = datetime.datetime.strptime(data['current']['readableDate_start'],"%Y-%m-%d %H:%M:%S")+datetime.timedelta(hours=8)
-        self.nowend = datetime.datetime.strptime(data['current']['readableDate_end'],"%Y-%m-%d %H:%M:%S")+datetime.timedelta(hours=8)
+        self.nowstart = datetime.strptime(data['current']['readableDate_start'],"%Y-%m-%d %H:%M:%S")+timedelta(hours=8)
+        self.nowend = datetime.strptime(data['current']['readableDate_end'],"%Y-%m-%d %H:%M:%S")+timedelta(hours=8)
         self.remaining = data['current']['remainingTimer']
         self.mapimage = data['current']['asset']
 
         self.nextmap = data["next"]['map']
-        self.nextstart = datetime.datetime.strptime(data['next']['readableDate_start'],"%Y-%m-%d %H:%M:%S")+datetime.timedelta(hours=8)
-        self.nextend = datetime.datetime.strptime(data['next']['readableDate_end'],"%Y-%m-%d %H:%M:%S")+datetime.timedelta(hours=8)
+        self.nextstart = datetime.strptime(data['next']['readableDate_start'],"%Y-%m-%d %H:%M:%S")+timedelta(hours=8)
+        self.nextend = datetime.strptime(data['next']['readableDate_end'],"%Y-%m-%d %H:%M:%S")+timedelta(hours=8)
 
         self.desplay = self.embed()
 
@@ -227,7 +227,7 @@ class ApexMapRotation():
         embed.add_field(name="結束時間",value=self.nextend)
         embed.add_field(name="目前地圖剩餘時間",value=self.remaining)
         embed.set_image(url=self.mapimage)
-        embed.timestamp = datetime.datetime.now()
+        embed.timestamp = datetime.now()
         embed.set_footer(text='更新時間')
         return embed
 
