@@ -269,7 +269,7 @@ class music(Cog_Extension):
 
         await player.queue.put(source)
 
-    @commands.command(name='pause', description="pauses music")
+    @commands.command(name='pause', aliases=['pa'], description="pauses music")
     async def pause_(self, ctx):
         """Pause the currently playing song."""
         vc = ctx.voice_client
@@ -283,7 +283,7 @@ class music(Cog_Extension):
         vc.pause()
         await ctx.send("Paused ⏸️")
 
-    @commands.command(name='resume', description="resumes music")
+    @commands.command(name='resume', aliases=['re'], description="resumes music")
     async def resume_(self, ctx):
         """Resume the currently paused song."""
         vc = ctx.voice_client
@@ -297,7 +297,7 @@ class music(Cog_Extension):
         vc.resume()
         await ctx.send("Resuming ⏯️")
 
-    @commands.command(name='skip', description="skips to next song in queue")
+    @commands.command(name='skip', aliases=['s'], description="skips to next song in queue")
     async def skip_(self, ctx):
         """Skip the song."""
         vc = ctx.voice_client

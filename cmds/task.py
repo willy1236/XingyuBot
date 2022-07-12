@@ -56,7 +56,7 @@ class task(Cog_Extension):
 
     
     @commands.command()
-    async def update_task(self,ctx,task):
+    async def task(self,ctx,task):
         if task == 'apex_map_update':
             await self.apex_map_update.__call__()
             await ctx.message.add_reaction('✅')
