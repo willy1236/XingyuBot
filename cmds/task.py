@@ -56,17 +56,17 @@ class task(Cog_Extension):
 
     
     @commands.command()
-    async def task(self,ctx,task):
-        if task == 'apex_map_update':
+    async def task(self,ctx,task_name):
+        if task_name == 'apex_map_update':
             await self.apex_map_update.__call__()
             await ctx.message.add_reaction('✅')
-        if task == 'apex_crafting_update':
+        if task_name == 'apex_crafting_update':
             await self.apex_crafting_update.__call__()
             await ctx.message.add_reaction('✅')
-        if task == 'earthquake_check':
+        if task_name == 'earthquake_check':
             await self.earthquake_check.__call__()
             await ctx.message.add_reaction('✅')
-        if task == 'covid_update':
+        if task_name == 'covid_update':
             await self.covid_update.__call__()
             await ctx.message.add_reaction('✅')
 
