@@ -346,13 +346,6 @@ class command(Cog_Extension):
         await ctx.send(f'我選擇:{result}')
 
 
-    @commands.slash_command(description='向大家說哈瞜')
-    async def hello(self,ctx, name: str = None):
-        await ctx.defer()
-        name = name or ctx.author.name
-        await ctx.respond(f"Hello {name}!")
-
-
     @commands.command()
     async def ma(self,ctx,argAl,argAw,argAn,argBl,argBw,argBn):
         argAl = int(argAl)
