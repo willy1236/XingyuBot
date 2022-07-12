@@ -63,7 +63,7 @@ class debug(Cog_Extension):
     
     @commands.command()
     @commands.is_owner()
-    async def task(self, ctx,arg):
+    async def task_test(self, ctx,arg):
         task = tasks.Loop.get_task(arg)
         print(task)
         if task:
