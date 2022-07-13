@@ -28,9 +28,9 @@ elif bot_code == 2:
         owner_id=419131103836635136,
         intents=discord.Intents.all(),
         case_insensitive=True, 
-        help_command=None,
-        debug_guild = [566533708371329024]
+        help_command=None
     )
+    #只有discord.Bot才有debug_guild
 elif bot_code == 3:
     bot = discord.Bot(
         owner_id=419131103836635136,

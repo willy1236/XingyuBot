@@ -12,7 +12,7 @@ class slash(Cog_Extension):
     picdata = Database().picdata
     rsdata = Database().rsdata
 
-    role = SlashCommandGroup("role", "身分組管理指令")
+    role = SlashCommandGroup("role", "身分組管理指令",guild_only=True)
 
     @role.command(description='加身分組')
     @commands.cooldown(rate=1,per=5)
@@ -44,7 +44,7 @@ class slash(Cog_Extension):
                 all_user += f' {user.mention}'
             await ctx.respond(f"已添加 {new_role.name} 給{all_user}")
         else:
-            await ctx.respond(f"添加完成，已創建 {new_role.name} 身分組")
+            await ctx.respond(f"已創建 {new_role.name} 身分組")
 
 
     @commands.slash_command(description='向大家說哈瞜')
