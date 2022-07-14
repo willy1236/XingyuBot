@@ -4,7 +4,7 @@ from discord.ext import commands,tasks
 from cmds.weather import EarthquakeReport
 from core.classes import Cog_Extension
 from BotLib.database import Database
-from BotLib.gamedata import ApexData
+from BotLib.gamelib import ApexData
 from cmds.weather import Covid19Report
 
 class task(Cog_Extension):
@@ -24,7 +24,7 @@ class task(Cog_Extension):
             self.covid_update.start()
 
 
-    def __gettime_15min():
+    def ㄝ__gettime_15min():
         tz = timezone(timedelta(hours=+8))
         now = datetime.now(tz=tz)
         if now.minute >= 0 and now.minute<15:

@@ -1,7 +1,7 @@
 import discord,json,requests,asyncio
 from discord.ext import commands,tasks
 from core.classes import Cog_Extension
-from library import *
+from BotLib.funtions import *
 from datetime import datetime, timezone, timedelta,time
 
 tz = timezone(timedelta(hours=+8))

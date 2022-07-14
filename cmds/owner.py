@@ -1,9 +1,9 @@
 import discord
 from discord.ext import commands
 
-from library import find,BRS
+from BotLib.funtions import find,BRS
 from core.classes import Cog_Extension
-from BotLib.user import *
+from BotLib.userlib import *
 from BotLib.database import Database
 
 class owner(Cog_Extension):

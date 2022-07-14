@@ -1,8 +1,7 @@
-import random
 import discord,datetime
 from discord.ext import commands
 from core.classes import Cog_Extension
-from library import BRS
+from BotLib.funtions import BRS
 from BotLib.database import Database
 from BotLib.basic import BotEmbed
 

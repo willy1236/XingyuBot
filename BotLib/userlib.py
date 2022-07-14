@@ -4,7 +4,10 @@ from BotLib.basic import BotEmbed
 class User():
     '''基本用戶資料'''
     def __init__(self,userid:str,dcname=None):
-        udata = Database().udata
+        db = Database()
+        udata = db.udata
+        jbag = db.jbag
+        jpet = db.jpet
         self.id = str(userid)
         if not self.id in udata:
             self.setup()
@@ -12,20 +15,31 @@ class User():
         self.point = Point(self.id)
         self.name = udata[self.id].get('name',dcname)
         self.hp = udata[self.id].get('hp',None)
+        self.weapon = udata[self.id].get('weapon',None)
 
+        self.bag = jbag.get(self.id,None)
+        self.pet = jpet.get(self.id,None)
+        
         self.desplay = self.embed()
-        return
-        self.weapon = udata['weapon']
 
     def embed(self):
-        embed = BotEmbed.simple(title=self.name)
+        embed = BotEmbed.general(name=self.name)
         embed.add_field(name='Pt點數',value=self.point.pt)
+        embed.add_field(name='武器',value=self.weapon)
+        if self.pet:
+            embed.add_field(name='寵物',value=self.pet['name'])
+        else:
+            embed.add_field(name='寵物',value='無')
         return embed
 
     def setup(self):
         udata = Database().udata
         udata[self.id] = {}
         Database().write('udata',udata)
+
+    def get_bag(self):
+        dict = {}
+        pass
 
 class Point():
     '''用戶pt點數'''
@@ -50,7 +64,7 @@ class Point():
         self.jpt[self.user] += amount
         Database().write('jpt',self.jpt)
 
-class pet():
+class Pet():
     def __init__(self):
         self.name = None
         self.species = None

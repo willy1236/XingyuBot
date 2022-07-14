@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands
-from library import BRS
+from BotLib.funtions import BRS
 from core.classes import Cog_Extension
 
 dict = {
@@ -47,6 +47,9 @@ class error(Cog_Extension):
             await ctx.send('禁用指令:此指令目前無法被使用',delete_after=5)
         elif isinstance(error,commands.errors.TooManyArguments):
             await ctx.send('參數過多:給入過多參數')
+
+        elif isinstance(error,commands.errors.MemberNotFound):
+            await ctx.send('找不到用戶:無此用戶或輸入錯誤')
 
         elif isinstance(error,discord.HTTPException):
             await ctx.send(f'HTTP錯誤:{error.response.status}錯誤')

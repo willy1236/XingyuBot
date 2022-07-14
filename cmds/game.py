@@ -1,11 +1,12 @@
+from cgitb import enable
 import discord,requests
 from discord.ext import commands
 from bs4 import BeautifulSoup
 
 from core.classes import Cog_Extension
-from library import find    
+from BotLib.funtions import find    
 from BotLib.database import Database
-from BotLib.gamedata import *
+from BotLib.gamelib import *
 from BotLib.basic import BotEmbed
 
 def player_search(url):
@@ -184,7 +185,7 @@ class game(Cog_Extension):
         embed = ApexData.get_status().desplay
         await msg.edit(content='查詢成功',embed=embed)
 
-    @commands.group(invoke_without_command=True)
+    @commands.group(invoke_without_command=True,enabled=False)
     @commands.cooldown(rate=1,per=1)
     async def DBD(self,ctx,userid=None):
         msg = await ctx.send('資料查詢中...')

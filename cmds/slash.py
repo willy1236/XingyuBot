@@ -3,7 +3,7 @@ from discord.ext import commands
 import random,asyncio
 from discord.commands import SlashCommandGroup
 
-from library import find,converter,random_color,BRS
+from BotLib.funtions import find,converter,random_color,BRS
 from core.classes import Cog_Extension
 from BotLib.database import Database
 from BotLib.basic import BotEmbed
@@ -12,7 +12,7 @@ class slash(Cog_Extension):
     picdata = Database().picdata
     rsdata = Database().rsdata
 
-    role = SlashCommandGroup("role", "身分組管理指令",guild_only=True)
+    role = SlashCommandGroup("role", "身分組管理指令",guild_only=True,guild_ids=[566533708371329024])
 
     @role.command(description='加身分組')
     @commands.cooldown(rate=1,per=5)

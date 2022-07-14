@@ -33,7 +33,8 @@ class Database:
             'jevent':'database/event.json',
             'rsdata':'database/role_save.json',
             'jpet' : 'database/user_settings/pet.json',
-            'bdata' : 'database/bot_settings.json'
+            'bdata' : 'database/bot_settings.json',
+            'jbag' : 'database/user_settings/bag.json'
         }
         self.jdata = json.load(open(self.dict['jdata'],mode='r',encoding='utf8'))
         self.cdata = json.load(open(self.dict['cdata'],mode='r',encoding='utf8'))
@@ -49,6 +50,7 @@ class Database:
         self.rsdata = Counter(json.load(open(self.dict['rsdata'],mode='r',encoding='utf8')))
         self.jpet = json.load(open(self.dict['jpet'],mode='r',encoding='utf8'))
         self.bdata = json.load(open(self.dict['bdata'],mode='r',encoding='utf8'))
+        self.jbag = json.load(open(self.dict['jbag'],mode='r',encoding='utf8'))
 
         try:
             self.tokens = json.load(open('database/token_settings.json',mode='r',encoding='utf8'))
@@ -69,6 +71,25 @@ class Database:
                 json.dump(data,jfile,indent=4)
         except:
             raise KeyError("此項目沒有在資料庫中")
+
+    def get_token(self,webname:str):
+        """獲取相關api的tokens\n
+        支援CWB_API,osu(id,secret),TRN,apex,steam\n"""
+        dict = {
+            "CWB_API":'CWB_API',
+            'osu':'osu',
+            'TRN':'TRN_API',
+            'apex':'apex_status_API',
+            'steam':'steam_api'}
+        if webname in dict:
+            if webname == 'osu':
+                return (self.tokens['osu_API_id'],self.tokens['osu_API_secret'])
+            else:
+                name = dict[webname]
+                return self.tokens[name]
+    
+    def get_data(self,data_file):
+        pass
 
     @staticmethod
     async def get_gamedata(user_id:str,game:str,ctx: commands.context=None):

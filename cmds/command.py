@@ -4,9 +4,9 @@ from discord.ext import commands
 import random,asyncio
 from discord.commands import SlashCommandGroup
 
-from library import find,converter,random_color,BRS
+from BotLib.funtions import find,converter,random_color,BRS
 from core.classes import Cog_Extension
-from BotLib.user import *
+from BotLib.userlib import *
 from BotLib.database import Database
 from BotLib.basic import BotEmbed
 

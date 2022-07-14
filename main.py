@@ -5,12 +5,11 @@ from BotLib.database import Database
 bot_list={"1":"Bot1", "2":"Bep", "3":"Bot2"}
 #1:dc小幫手 2:Bep 3:RO
 bot_code = 2
-botuser = bot_list[str(bot_code)]
 
 db = Database()
 jdata = db.jdata
 picdata = db.picdata
-token = db.tokens[botuser]
+token = db.tokens[bot_list[str(bot_code)]]
 
 
 if bot_code ==1:
@@ -34,7 +33,7 @@ elif bot_code == 2:
 elif bot_code == 3:
     bot = discord.Bot(
         owner_id=419131103836635136,
-        debug_guild = []
+        debug_guild = [566533708371329024]
     )
 else:
     raise ValueError("Invalid bot_code")
@@ -102,10 +101,14 @@ async def jset(ctx,option,value):
     await ctx.send(f'已將{option} 設為 {value}')
 
 ignore_py = []
-for filename in os.listdir('./cmds'):
-    if filename.endswith('.py') and filename[:-3] not in ignore_py:
-        bot.load_extension(f'cmds.{filename[:-3]}')
-
+if bot_code == 3:
+    for filename in os.listdir('./slash_cmds'):
+        if filename.endswith('.py') and filename[:-3] not in ignore_py:
+            bot.load_extension(f'cmds.{filename[:-3]}')
+else:
+    for filename in os.listdir('./cmds'):
+        if filename.endswith('.py') and filename[:-3] not in ignore_py:
+            bot.load_extension(f'cmds.{filename[:-3]}')
 
 if __name__ == "__main__":
     try:

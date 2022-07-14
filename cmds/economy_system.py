@@ -1,8 +1,8 @@
 import discord,asyncio,random
 from discord.ext import commands
 from core.classes import Cog_Extension
-from library import find
-from BotLib.user import Point
+from BotLib.funtions import find
+from BotLib.userlib import Point
 from BotLib.database import Database
 
 
