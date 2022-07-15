@@ -1,11 +1,11 @@
 import asyncio, datetime
 from datetime import datetime, timezone, timedelta,time
 from discord.ext import commands,tasks
-from cmds.weather import EarthquakeReport
+
+from cmds.weather import EarthquakeReport,Covid19Report,Forecast
 from core.classes import Cog_Extension
 from BotLib.database import Database
 from BotLib.gamelib import ApexData
-from cmds.weather import Covid19Report
 
 class task(Cog_Extension):
     def __init__(self,*args,**kwargs):
@@ -22,9 +22,10 @@ class task(Cog_Extension):
             self.apex_crafting_update.start()
             self.apex_map_update.start()
             self.covid_update.start()
+            self.forecast_update.start()
 
 
-    def ㄝ__gettime_15min():
+    def __gettime_15min():
         tz = timezone(timedelta(hours=+8))
         now = datetime.now(tz=tz)
         if now.minute >= 0 and now.minute<15:
@@ -36,6 +37,13 @@ class task(Cog_Extension):
         elif now.minute >= 45 and now.minute <60:
             next = now + timedelta(hours=1)
             return time(hour=next.hour,minute=0,second=0,tzinfo=tz)
+
+    def __gettime_3hr():
+        tz = timezone(timedelta(hours=+8))
+        now = datetime.now(tz=tz)
+        next = now + timedelta(hours=3)
+        return time(hour=next.hour,minute=0,second=0,tzinfo=tz)
+        
 
     def __gettime_0400():
         tz = timezone(timedelta(hours=+8))
@@ -68,6 +76,9 @@ class task(Cog_Extension):
             await ctx.message.add_reaction('✅')
         if task_name == 'covid_update':
             await self.covid_update.__call__()
+            await ctx.message.add_reaction('✅')
+        if task_name == 'forecast_update':
+            await self.forecast_update.__call__()
             await ctx.message.add_reaction('✅')
 
     @tasks.loop(time=__gettime_0400())
@@ -173,7 +184,28 @@ class task(Cog_Extension):
     async def apex_map_update_after(self):
         await asyncio.sleep(10)
         self.apex_map_update.start()
+    
+    @tasks.loop(time=__gettime_3hr())
+    async def forecast_update(self):
+        cdata = Database().cdata
+        forecast = Forecast.get_report()
+        if forecast:
+            for i in cdata["forecast"]:
+                channel = self.bot.get_channel(cdata["forecast"][i])
+                try:
+                    id = channel.last_message_id
+                    msg = await channel.fetch_message(id)
+                except:
+                    msg = None
 
+                if msg and msg.author == self.bot.user:
+                    await msg.edit('台灣各縣市天氣預報',embed=forecast.desplay)
+                else:
+                    await channel.send('台灣各縣市天氣預報',embed=forecast.desplay)
+                await asyncio.sleep(0.5)
+        self.apex_map_update.change_interval(time=task.__gettime_12hr())
+        await asyncio.sleep(1)
+    
     @tasks.loop(seconds=1)
     async def time_task(self):
         now_time_hour = datetime.now().strftime('%H%M%S')

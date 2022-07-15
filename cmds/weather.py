@@ -1,4 +1,4 @@
-import requests,discord
+import requests,discord,datetime
 from bs4 import BeautifulSoup
 from discord.ext import commands
 
@@ -111,6 +111,49 @@ class Covid19Report:
         }
         return Covid19Report(dict)
 
+
+class Forecast:
+    def __init__(self,data):
+        all_data = data['records']['location']
+        self.list = []
+        self.timestart = all_data[0]['weatherElement'][4]['time'][0]['startTime']
+        self.timeend = all_data[0]['weatherElement'][4]['time'][0]['endTime']
+        for pos in all_data:
+            name = pos['locationName']
+            Wx = pos['weatherElement'][0]['time'][0]['parameter']['parameterName']
+            minT = pos['weatherElement'][2]['time'][0]['parameter']['parameterName']
+            Cl = pos['weatherElement'][3]['time'][0]['parameter']['parameterName']
+            maxT = pos['weatherElement'][4]['time'][0]['parameter']['parameterName']
+            
+            dict = {
+                "name":name,
+                "Wx":Wx,
+                "minT":minT,
+                "Cl":Cl,
+                "maxT":maxT
+            }
+            self.list.append(dict)
+        self.desplay = self.embed()
+
+    def embed(self):
+        embed = BotEmbed.general('天氣預報')
+        for data in self.list:
+            text = f"{data['Wx']}\n高低溫:{data['maxT']}/{data['minT']}\n{data['Cl']}"
+            embed.add_field(name=data['name'],value=text)
+        embed.timestamp = datetime.datetime.now()
+        embed.set_footer(text=f'時間為{self.timestart}至{self.timeend}')
+        return embed
+
+    @staticmethod
+    def get_report():
+        APIdata = requests.get(f'https://opendata.cwb.gov.tw/api/v1/rest/datastore//F-C0032-001?Authorization={Database().CWB_API}').json()
+        if APIdata:
+            return Forecast(APIdata)
+        else:
+            return None
+            
+
+
 class weather(Cog_Extension):
     @commands.cooldown(rate=1,per=20)
     @commands.command()
@@ -131,6 +174,15 @@ class weather(Cog_Extension):
             await msg.edit(content='查詢成功',embed=embed)
         else:
             await msg.edit(content='查詢失敗',delete_after=5)
-
+    
+    @commands.cooldown(rate=1,per=15)
+    @commands.command(enable=True)
+    async def forecast(self,ctx):
+        msg = await ctx.send('資料查詢中...')
+        embed = Forecast.get_report().desplay
+        if embed:
+            await msg.edit(content='查詢成功',embed=embed)
+        else:
+            await msg.edit(content='查詢失敗',delete_after=5)
 def setup(bot):
     bot.add_cog(weather(bot))

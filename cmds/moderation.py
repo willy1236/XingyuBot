@@ -23,7 +23,8 @@ class moderation(Cog_Extension):
             'earthquake':'地震通知',
             'apex_crafting':'Apex合成物品更新',
             'apex_map':'apex地圖輪替',
-            'covid_update':'台灣每日疫情通知'
+            'covid_update':'台灣每日疫情通知',
+            'forecast':'台灣各縣市天氣預報'
         }
         if set_type not in dict:
             raise commands.errors.ArgumentParsingError('所選類別功能尚未加入')
