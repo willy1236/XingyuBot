@@ -203,7 +203,7 @@ class task(Cog_Extension):
                 else:
                     await channel.send('台灣各縣市天氣預報',embed=forecast.desplay)
                 await asyncio.sleep(0.5)
-        self.apex_map_update.change_interval(time=task.__gettime_12hr())
+        self.apex_map_update.change_interval(time=task.__gettime_3hr())
         await asyncio.sleep(1)
     
     @tasks.loop(seconds=1)
