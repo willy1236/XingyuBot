@@ -31,6 +31,8 @@ class moderation(Cog_Extension):
         if channel != 'remove':
             channel = await find.channel(ctx,channel)
         guild = str(ctx.guild.id)
+        if set_type not in self.cdata:
+            self.cdata[set_type]={}
         
         if channel == 'remove':
             if guild in self.cdata[set_type]:
