@@ -100,7 +100,7 @@ async def jset(ctx,option,value):
     db.write('jdata',jdata)
     await ctx.send(f'已將{option} 設為 {value}')
 
-ignore_py = ['role_playing_game']
+ignore_py = []
 if bot_code == 3:
     for filename in os.listdir('./slash_cmds'):
         if filename.endswith('.py') and filename[:-3] not in ignore_py:

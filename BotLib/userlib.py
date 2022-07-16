@@ -1,20 +1,24 @@
+import random
+from re import A
+from unittest import result
 from BotLib.database import Database
 from BotLib.basic import BotEmbed
 
 class User():
     '''基本用戶資料'''
     def __init__(self,userid:str,dcname=None):
-        db = Database()
-        udata = db.udata
-        jbag = db.jbag
-        jpet = db.jpet
+        self.db = Database()
+        udata = self.db.udata
+        jbag = self.db.jbag
+        jpet = self.db.jpet
+
         self.id = str(userid)
         if not self.id in udata:
             self.setup()
         
         self.point = Point(self.id)
         self.name = udata[self.id].get('name',dcname)
-        self.hp = udata[self.id].get('hp',None)
+        self.hp = udata[self.id].get('hp',10)
         self.weapon = udata[self.id].get('weapon',None)
 
         self.bag = jbag.get(self.id,None)
@@ -25,7 +29,7 @@ class User():
     def embed(self):
         embed = BotEmbed.general(name=self.name)
         embed.add_field(name='Pt點數',value=self.point.pt)
-        embed.add_field(name='武器',value=self.weapon)
+        embed.add_field(name='生命值',value=self.hp)
         if self.pet:
             embed.add_field(name='寵物',value=self.pet['name'])
         else:
@@ -33,13 +37,51 @@ class User():
         return embed
 
     def setup(self):
-        udata = Database().udata
+        udata = self.db.udata
         udata[self.id] = {}
-        Database().write('udata',udata)
+        self.db.write('udata',udata)
 
     def get_bag(self):
         dict = {}
         pass
+
+    def advance(self):
+        udata = self.db.udata
+        dict = udata[self.id].get('advance',{})
+        if 'times' in dict:
+            dict['times'] +=1
+        else:
+            dict['times'] =1
+
+        rd = random.randint(1,100)
+        if rd >=1 and rd <=70:
+            result = f"第{dict['times']}次冒險\n沒事發生"
+        elif rd >= 71 and rd <=100:
+            attecked = 1
+            self.hp_add(attecked*-1)
+            result = f"第{dict['times']}次冒險\n遇到怪物:你扣了{attecked}滴 還剩下{self.hp-attecked}生命值"
+        
+        if dict['times'] == 10:
+            del udata[self.id]['advance']
+            result += '\n冒險結束'
+        else:
+            udata[self.id]['advance'] = dict
+
+        if self.hp <=0:
+            self.hp_set(10)
+            result += '\n你在冒險中死掉了 但因為此功能還在開發 你可以直接滿血復活'
+        self.db.write('udata',udata)
+        return result
+
+    def hp_add(self,amount:int):
+        udata = self.db.udata
+        udata[self.id]['hp'] = self.hp+amount
+        self.db.write('udata',udata)
+
+    def hp_set(self,amount:int):
+        udata = self.db.udata
+        udata[self.id]['hp'] = amount
+        self.db.write('udata',udata)
 
 class Point():
     '''用戶pt點數'''
