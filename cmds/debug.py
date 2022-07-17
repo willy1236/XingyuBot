@@ -23,8 +23,9 @@ class PersistentView(discord.ui.View):
         await interaction.response.send_message("This is grey.", ephemeral=True)
 
 class debug(Cog_Extension):
-    rsdata = Database().rsdata
-    
+    db = Database()
+    rsdata = db.rsdata
+
     @commands.command()
     @commands.is_owner()
     async def embed(self,ctx,msg):

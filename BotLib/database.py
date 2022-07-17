@@ -34,7 +34,8 @@ class Database:
             'rsdata':'database/role_save.json',
             'jpet' : 'database/user_settings/pet.json',
             'bdata' : 'database/bot_settings.json',
-            'jbag' : 'database/user_settings/bag.json'
+            'jbag' : 'database/user_settings/bag.json',
+            'cache' : 'database/cache.json'
         }
         self.jdata = json.load(open(self.dict['jdata'],mode='r',encoding='utf8'))
         self.cdata = json.load(open(self.dict['cdata'],mode='r',encoding='utf8'))
@@ -51,6 +52,7 @@ class Database:
         self.jpet = json.load(open(self.dict['jpet'],mode='r',encoding='utf8'))
         self.bdata = json.load(open(self.dict['bdata'],mode='r',encoding='utf8'))
         self.jbag = json.load(open(self.dict['jbag'],mode='r',encoding='utf8'))
+        self.cache = json.load(open(self.dict['cache'],mode='r',encoding='utf8'))
 
         try:
             self.tokens = json.load(open('database/token_settings.json',mode='r',encoding='utf8'))

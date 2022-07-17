@@ -1,4 +1,5 @@
 import asyncio, datetime,discord,requests
+from functools import cache
 from datetime import datetime, timezone, timedelta,time
 from discord.ext import commands,tasks
 
@@ -216,6 +217,9 @@ class task(Cog_Extension):
     async def twitch(self):
         db = Database()
         id,secret = db.get_token('twitch')
+        cache = db.cache
+        followed = ["rainteaorwhatever"]
+
         def get_token():
             APIURL = "https://id.twitch.tv/oauth2/token"
             headers = {"Content-Type": "application/x-www-form-urlencoded"}
@@ -233,31 +237,38 @@ class task(Cog_Extension):
             'Client-Id':id
         }
         params = {
-            "user_login" : "rainteaorwhatever",
+            "user_login" : followed,
             "first":1
         }
         r= requests.get(URL, params=params,headers=headers).json()
-        if r['data']:
-            data = r['data'][0]
+        
+        dict = {}
+        for user in followed:
+            dict[user] = False
 
-            time = datetime.strptime(data['started_at'],'%Y-%m-%dT%H:%M:%SZ')
-            time = time.strftime('%Y/%m/%d %H:%M:%S')
-            embed = discord.Embed(
-                title=data['title'],
-                url=f"https://www.twitch.tv/{data['user_login']}",
-                description=f"{data['game_name']}",
-                color=0x6441a5,
-                timestamp = datetime.now()
-                )
-            embed.set_author(name=f"{data['user_name']} 開台啦！")
-            thumbnail = data['thumbnail_url']
-            thumbnail = thumbnail.replace('{width}','1280')
-            thumbnail = thumbnail.replace('{height}','1024')
-            embed.set_image(url=thumbnail)
-            embed.set_footer(text=f"開始於{time}")
-            
-            channel = self.bot.get_channel(986230549192519720)
-            await channel.send(embed=embed)
+        for data in r['data']:
+            if not cache['twitch'].get(user,False):
+                dict[user] = True
+                time = datetime.strptime(data['started_at'],'%Y-%m-%dT%H:%M:%SZ')
+                time = time.strftime('%Y/%m/%d %H:%M:%S')
+                embed = discord.Embed(
+                    title=data['title'],
+                    url=f"https://www.twitch.tv/{data['user_login']}",
+                    description=f"{data['game_name']}",
+                    color=0x6441a5,
+                    timestamp = datetime.now()
+                    )
+                embed.set_author(name=f"{data['user_name']} 開台啦！")
+                thumbnail = data['thumbnail_url']
+                thumbnail = thumbnail.replace('{width}','1280')
+                thumbnail = thumbnail.replace('{height}','1024')
+                embed.set_image(url=thumbnail)
+                embed.set_footer(text=f"開始於{time}")
+                
+                channel = self.bot.get_channel(986230549192519720)
+                await channel.send(embed=embed)
+        cache['twitch'] = dict
+        db.write('cache',cache)
 
 def setup(bot):
     bot.add_cog(task(bot))
