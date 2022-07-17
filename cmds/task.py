@@ -1,4 +1,4 @@
-import asyncio, datetime
+import asyncio, datetime,discord,requests
 from datetime import datetime, timezone, timedelta,time
 from discord.ext import commands,tasks
 
@@ -23,6 +23,7 @@ class task(Cog_Extension):
             self.apex_map_update.start()
             self.covid_update.start()
             self.forecast_update.start()
+            self.twitch.start()
 
 
     def __gettime_15min():
@@ -65,19 +66,19 @@ class task(Cog_Extension):
     
     @commands.command()
     async def task(self,ctx,task_name):
-        if task_name == 'apex_map_update':
+        if task_name == 'apex_map_update' or task_name == 'all':
             await self.apex_map_update.__call__()
             await ctx.message.add_reaction('✅')
-        if task_name == 'apex_crafting_update':
+        if task_name == 'apex_crafting_update' or task_name == 'all':
             await self.apex_crafting_update.__call__()
             await ctx.message.add_reaction('✅')
-        if task_name == 'earthquake_check':
+        if task_name == 'earthquake_check' or task_name == 'all':
             await self.earthquake_check.__call__()
             await ctx.message.add_reaction('✅')
-        if task_name == 'covid_update':
+        if task_name == 'covid_update' or task_name == 'all':
             await self.covid_update.__call__()
             await ctx.message.add_reaction('✅')
-        if task_name == 'forecast_update':
+        if task_name == 'forecast_update' or task_name == 'all':
             await self.forecast_update.__call__()
             await ctx.message.add_reaction('✅')
 
@@ -210,6 +211,53 @@ class task(Cog_Extension):
     async def time_task(self):
         now_time_hour = datetime.now().strftime('%H%M%S')
         #now_time_day = datetime.datetime.now().strftime('%Y%m%d')
+    
+    @tasks.loop(minutes=1)
+    async def twitch(self):
+        db = Database()
+        id,secret = db.get_token('twitch')
+        def get_token():
+            APIURL = "https://id.twitch.tv/oauth2/token"
+            headers = {"Content-Type": "application/x-www-form-urlencoded"}
+            params = {
+                'client_id':id,
+                'client_secret':secret,
+                'grant_type':'client_credentials'
+                }
+            tokens= requests.post(APIURL, params=params).json()
+            return tokens['access_token']
+
+        URL ='https://api.twitch.tv/helix/streams'
+        headers = {
+            'Authorization': f"Bearer {get_token()}",
+            'Client-Id':id
+        }
+        params = {
+            "user_login" : "rainteaorwhatever",
+            "first":1
+        }
+        r= requests.get(URL, params=params,headers=headers).json()
+        if r['data']:
+            data = r['data'][0]
+
+            time = datetime.strptime(data['started_at'],'%Y-%m-%dT%H:%M:%SZ')
+            time = time.strftime('%Y/%m/%d %H:%M:%S')
+            embed = discord.Embed(
+                title=data['title'],
+                url=f"https://www.twitch.tv/{data['user_login']}",
+                description=f"{data['game_name']}",
+                color=0x6441a5,
+                timestamp = datetime.now()
+                )
+            embed.set_author(name=f"{data['user_name']} 開台啦！")
+            thumbnail = data['thumbnail_url']
+            thumbnail = thumbnail.replace('{width}','1280')
+            thumbnail = thumbnail.replace('{height}','1024')
+            embed.set_image(url=thumbnail)
+            embed.set_footer(text=f"開始於{time}")
+            
+            channel = self.bot.get_channel(986230549192519720)
+            await channel.send(embed=embed)
 
 def setup(bot):
     bot.add_cog(task(bot))

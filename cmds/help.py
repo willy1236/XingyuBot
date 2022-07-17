@@ -221,7 +221,7 @@ class help(Cog_Extension):
         embed.add_field(name="!!pet [用戶]", value='查詢寵物', inline=False)
         embed.add_field(name="!!pet add <物種> <名稱>", value='領養寵物\n可用物種:shark,dog,cat,fox', inline=False)
         embed.add_field(name="!!pet remove", value='放生寵物', inline=False)
-        embed.add_field(name="!!advance", value='執行一次冒險', inline=False)
+        embed.add_field(name="!!advance", value='進行冒險', inline=False)
         embed.set_footer(text="輸入!!help user查詢指令用法")
         await ctx.send(embed=embed)
 

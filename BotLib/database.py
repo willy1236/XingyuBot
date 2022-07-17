@@ -74,16 +74,20 @@ class Database:
 
     def get_token(self,webname:str):
         """獲取相關api的tokens\n
-        支援CWB_API,osu(id,secret),TRN,apex,steam\n"""
+        支援CWB_API,osu(id,secret),TRN,apex,steam,twitch(id,secret)"""
         dict = {
             "CWB_API":'CWB_API',
             'osu':'osu',
             'TRN':'TRN_API',
             'apex':'apex_status_API',
-            'steam':'steam_api'}
+            'steam':'steam_api',
+            'twitch':'twitch'
+            }
         if webname in dict:
             if webname == 'osu':
                 return (self.tokens['osu_API_id'],self.tokens['osu_API_secret'])
+            if webname == 'twitch':
+                return (self.tokens['twitch_api_id'],self.tokens['twitch_api_secret'])
             else:
                 name = dict[webname]
                 return self.tokens[name]
