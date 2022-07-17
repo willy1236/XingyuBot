@@ -17,7 +17,6 @@ class RPGbutton1(discord.ui.View):
 
 class role_playing_game(Cog_Extension):
     @commands.command()
-    @commands.is_owner()
     async def advance(self,ctx):
         await ctx.send(view=RPGbutton1())
     
