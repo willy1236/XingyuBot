@@ -1,6 +1,4 @@
 import random
-from re import A
-from unittest import result
 from BotLib.database import Database
 from BotLib.basic import BotEmbed
 
@@ -20,6 +18,7 @@ class User():
         self.name = udata[self.id].get('name',dcname)
         self.hp = udata[self.id].get('hp',10)
         self.weapon = udata[self.id].get('weapon',None)
+        self.att = udata[self.id].get('att',1)
 
         self.bag = jbag.get(self.id,None)
         self.pet = jpet.get(self.id,None)
@@ -45,6 +44,18 @@ class User():
         dict = {}
         pass
 
+    def add_bag(self,items:list):
+        jbag = self.db.jbag
+        ubag = jbag.get(self.id,{})
+        for i in items:
+            if i in ubag:
+                ubag[i] += 1
+            else:
+                ubag[i] = 1
+        
+        jbag[self.id] = ubag
+        self.db.write('jbag',jbag)
+
     def advance(self):
         udata = self.db.udata
         dict = udata[self.id].get('advance',{})
@@ -57,19 +68,15 @@ class User():
         if rd >=1 and rd <=70:
             result = f"第{dict['times']}次冒險\n沒事發生"
         elif rd >= 71 and rd <=100:
-            attecked = 1
-            self.hp_add(attecked*-1)
-            result = f"第{dict['times']}次冒險\n遇到怪物:你扣了{attecked}滴 還剩下{self.hp-attecked}生命值"
+            result = f"第{dict['times']}次冒險：遇到怪物\n"
+            result += Monster(random.choice(["001","002"])).battle(self)
         
-        if dict['times'] == 10:
+        if dict['times'] >= 10:
             del udata[self.id]['advance']
-            result += '\n冒險結束'
+            result += '冒險結束'
         else:
             udata[self.id]['advance'] = dict
 
-        if self.hp <=0:
-            self.hp_set(10)
-            result += '\n你在冒險中死掉了 但因為此功能還在開發 你可以直接滿血復活'
         self.db.write('udata',udata)
         return result
 
@@ -121,6 +128,37 @@ class Pet():
             "owner": user
         }
         Database().write('jpet',jpet)
+
+class Monster:
+    def __init__(self,name):
+        self.db = Database()
+        self.data = self.db.monster_basic[name]
+        
+        self.name = name
+        self.hp = self.data["hp"]
+        self.att = self.data["att"]
+
+    def battle(self, player:User):
+        text = ""
+        while self.hp > 0 and player.hp > 0:
+            self.hp -= player.att
+            if self.hp <= 0:
+                text += f"擊倒怪物 你還剩下{player.hp}滴\n"
+                if "loot" in self.data:
+                    loot = random.choices(self.data["loot"][0],weights=self.data["loot"][1],k=self.data["loot"][2])
+                    player.add_bag(loot)
+                    text += f"獲得道具！\n"
+                break
+
+            player.hp -= self.att
+            player.hp_set(player.hp)
+            if player.hp <= 0:
+                text += "被怪物擊倒\n"
+                player.hp_set(10)
+                text += '你在冒險中死掉了 但因為此功能還在開發 你可以直接滿血復活\n'
+            else:
+                text += f"怪物剩下{self.hp}(-{player.att})滴 你還剩下{player.hp}(-{self.att})滴 戰鬥繼續\n"
+        return text
 
 class Weapon:
     def __init__(self):

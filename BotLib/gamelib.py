@@ -184,14 +184,10 @@ class ApexCrafting():
         item_name.append(dict.get(self.item3_name,self.item3_name))
         item_name.append(dict.get(self.item4_name,self.item4_name))
 
-        embed.add_field(name="每日物品1",value=item_name[0],inline=False)
-        embed.add_field(name="每日物品1價格",value=self.item1_cost,inline=False)
-        embed.add_field(name="每日物品2",value=item_name[1],inline=False)
-        embed.add_field(name="每日物品2價格",value=self.item2_cost,inline=False)
-        embed.add_field(name="每週物品1",value=item_name[2],inline=False)
-        embed.add_field(name="每週物品1價格",value=self.item3_cost,inline=False)
-        embed.add_field(name="每週物品2",value=item_name[3],inline=False)
-        embed.add_field(name="每週物品2價格",value=self.item4_cost,inline=False)
+        embed.add_field(name="每日物品1",value=f"{item_name[0]} {self.item1_cost}",inline=False)
+        embed.add_field(name="每日物品2",value=f"{item_name[1]} {self.item2_cost}",inline=False)
+        embed.add_field(name="每週物品1",value=f"{item_name[2]} {self.item3_cost}",inline=False)
+        embed.add_field(name="每週物品2",value=f"{item_name[3]} {self.item4_cost}",inline=False)
         embed.timestamp = datetime.now()
         embed.set_footer(text='更新時間')
         return embed

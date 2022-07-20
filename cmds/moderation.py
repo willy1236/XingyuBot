@@ -24,7 +24,8 @@ class moderation(Cog_Extension):
             'apex_crafting':'Apex合成物品更新',
             'apex_map':'apex地圖輪替',
             'covid_update':'台灣每日疫情通知',
-            'forecast':'台灣各縣市天氣預報'
+            'forecast':'台灣各縣市天氣預報',
+            'bot':'機器人更新通知'
         }
         if set_type not in dict:
             raise commands.errors.ArgumentParsingError('所選類別功能尚未加入')

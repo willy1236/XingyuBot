@@ -44,7 +44,7 @@ async def on_ready():
     print(">> Bot is online <<")
     print(">> Bot online as",bot.user.name,"<<")
     print(">> Discord's version:",discord.__version__,"<<")
-    await bot.change_presence(activity=discord.Game(name='!!help'),status=discord.Status.online)
+    await bot.change_presence(activity=discord.Game(name=jdata.get("activity","!!help")),status=discord.Status.online)
     
 
 #load

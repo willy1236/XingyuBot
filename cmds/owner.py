@@ -1,14 +1,13 @@
 import discord
 from discord.ext import commands
 
-from BotLib.funtions import find,BRS
+from BotLib.funtions import find
 from core.classes import Cog_Extension
-from BotLib.userlib import *
+from BotLib.basic import BotEmbed
 from BotLib.database import Database
 
 class owner(Cog_Extension):
     cdata = Database().cdata
-    
     #send
     @commands.command()
     @commands.is_owner()
@@ -44,6 +43,26 @@ class owner(Cog_Extension):
                     pass
         await ctx.message.delete()
         await send_msg.edit(f"已向{send_success}/{len(self.cdata['all_anno'])}個頻道發送公告",delete_after=5)
+
+    #bot_update
+    @commands.command()
+    @commands.is_owner()
+    async def bupdate(self,ctx,*,msg):
+        send_success = 0
+        send_msg = await ctx.send('訊息發送中...')
+
+        embed= BotEmbed.bot_update(msg)
+        
+        for i in self.cdata['bot']:
+            channel = self.bot.get_channel(self.cdata['bot'][i])
+            if channel != None:
+                try:
+                    await channel.send(embed=embed)
+                    send_success += 1
+                except:
+                    pass
+        await ctx.message.delete()
+        await send_msg.edit(f"已向{send_success}/{len(self.cdata['bot'])}個頻道發送公告",delete_after=5)
 
     #edit
     @commands.command()
@@ -130,6 +149,5 @@ class owner(Cog_Extension):
 #             await channel.send('👎')
 #         else:
 #             await channel.send('👍')
-
 def setup(bot):
     bot.add_cog(owner(bot))

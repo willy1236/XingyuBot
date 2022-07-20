@@ -20,6 +20,8 @@ class help_page:
         page[1].add_field(name="!!shuffle", value="隨機撥放\n別名:random,r", inline=False)
         page[1].add_field(name="!!loop", value="循環歌曲", inline=False)
         page[1].add_field(name="!!remove <歌曲位置>", value="移除歌曲\n別名:rm", inline=False)
+        page[0].set_footer(text="目前音樂系統有bug 若要使用可用 %p <網址> 進行播歌")
+        page[1].set_footer(text="目前音樂系統有bug 若要使用可用 %p <網址> 進行播歌")
         paginator = pages.Paginator(pages=page, use_default_buttons=True)
         return paginator
 
@@ -131,7 +133,7 @@ class help(Cog_Extension):
         embed = BotEmbed.basic(self,"帶你了解基本的概念","使用指令")
         embed.add_field(name="指令使用:前輟指令", value="前輟+指令就可以使用了，例如`!!help`\n如果有參數，則需要把每個參數用空格隔開", inline=False)
         embed.add_field(name="指令使用:斜槓指令", value="打上/後，會有dc的提示幫助你`\n如果有參數，在輸入過程中都有提示", inline=False)
-        embed.add_field(name="括號", value="`<參數>`表示這個參數必填 `[參數]`表示不一定要填\n`<參數1/參數2>`為選擇一個參數填寫即可", inline=False)
+        embed.add_field(name="括號", value="`<參數>`表示這個參數必填 `[參數]`表示不一定要填\n`<參數1/參數2>`為選擇一個參數填寫即可\n範例：", inline=False)
         embed.set_footer(text="輸入!!help user查詢指令用法")
         await ctx.send(embed=embed)
 
@@ -170,6 +172,7 @@ class help(Cog_Extension):
         embed.add_field(name="!!set <earthquake> [頻道]", value="設定地震通知頻道", inline=False)
         embed.add_field(name="!!set <covid_update> [頻道]", value="設定台灣疫情通知頻道", inline=False)
         embed.add_field(name="!!set <forecast> [頻道]", value="設定台灣各縣市天氣預報頻道", inline=False)
+        embed.add_field(name="!!set <bot> [頻道]", value="設定機器人更新通知頻道", inline=False)
         embed.set_footer(text="輸入!!help user查詢指令用法")
         await ctx.send(embed=embed)
 
@@ -231,6 +234,7 @@ class help(Cog_Extension):
         embed = BotEmbed.basic(self,"目前可使用的指令如下(onwer):")
         embed.add_field(name="!!send <頻道ID/用戶ID/0> <內容>", value="發送指定訊息", inline=False)
         embed.add_field(name="!!anno <內容>", value="對所有伺服器進行公告", inline=False)
+        embed.add_field(name="!!bupdate <內容>", value="對所有伺服器發送機器人更新", inline=False)
         embed.add_field(name="!!edit <訊息ID> <新訊息>", value="編輯訊息", inline=False)
         embed.add_field(name="!!reaction <訊息ID> <add/remove> <表情/表情ID>", value="添加/移除反應", inline=False)
         embed.add_field(name="!!ptset <用戶ID> <+/-/set> <數量>", value="更改指定用戶Pt數", inline=False)

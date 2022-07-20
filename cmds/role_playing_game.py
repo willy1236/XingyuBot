@@ -8,7 +8,7 @@ from BotLib.basic import BotEmbed
 from BotLib.funtions import find
 
 class RPGbutton1(discord.ui.View):
-    @discord.ui.button(label="按我進行一次冒險",style=discord.ButtonStyle.green)
+    @discord.ui.button(label="按我進行冒險",style=discord.ButtonStyle.green)
     async def button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
         user = User(interaction.user.id)
         result = user.advance()

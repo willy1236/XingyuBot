@@ -2,7 +2,8 @@ import discord
 from BotLib.database import Database
 
 class BotEmbed:
-    def all_anno(msg):
+    @staticmethod
+    def all_anno(msg:str):
         '''全群公告'''
         picdata = Database().picdata
         embed=discord.Embed(description=msg,color=0xc4e9ff)
@@ -39,6 +40,15 @@ class BotEmbed:
         picdata = Database().picdata
         embed = discord.Embed(color=0xc4e9ff)
         embed.set_author(name="Lottery System",icon_url=picdata['lottery_001'])
+        return embed
+    
+    @staticmethod
+    def bot_update(msg:str):
+        '''Bot Update格式'''
+        picdata = Database().picdata
+        embed = discord.Embed(description=msg,color=0xc4e9ff)
+        embed.set_author(name="Bot Radio Station",icon_url=picdata['radio_001'])
+        embed.set_footer(text='廣播電台 | 機器人更新通知')
         return embed
 
 class Stronghold:

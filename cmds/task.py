@@ -1,5 +1,4 @@
 import asyncio, datetime,discord,requests
-from functools import cache
 from datetime import datetime, timezone, timedelta,time
 from discord.ext import commands,tasks
 
