@@ -165,6 +165,28 @@ class BRS():
         embed.add_field(name='發送者', value=f"{msg.author}\n{msg.author.id}", inline=False)
         await dm_channel.send(embed=embed)
 
+    async def mentioned(self,msg):
+        jdata = Database().jdata
+        dm_channel = self.bot.get_channel(jdata['mentioned_channel'])
+        embed=BotEmbed.simple()
+        embed.set_author(name="BRS | 提及訊息")
+        embed.add_field(name='訊息內容', value=msg.content, inline=True)
+        embed.add_field(name='發送者', value=f"{msg.author}\n{msg.author.id}", inline=False)
+        embed.add_field(name='來源頻道', value=f'{msg.channel}\n{msg.channel.id}', inline=True)
+        embed.add_field(name='來源群組', value=f'{msg.guild}\n{msg.guild.id}', inline=True)
+        await dm_channel.send(embed=embed)
+    
+    async def mention_everyone(self,msg):
+        jdata = Database().jdata
+        dm_channel = self.bot.get_channel(jdata['mention_everyone_channel'])
+        embed=BotEmbed.simple()
+        embed.set_author(name="BRS | 提及所有人訊息")
+        embed.add_field(name='訊息內容', value=msg.content, inline=True)
+        embed.add_field(name='發送者', value=f"{msg.author}\n{msg.author.id}", inline=False)
+        embed.add_field(name='來源頻道', value=f'{msg.channel}\n{msg.channel.id}', inline=True)
+        embed.add_field(name='來源群組', value=f'{msg.guild}\n{msg.guild.id}', inline=True)
+        await dm_channel.send(embed=embed)
+
 class converter():
     def time(arg:str):
         '''10s->1,0用str相加 s則轉換後用int相乘'''

@@ -46,14 +46,16 @@ class event(Cog_Extension):
             '抹茶粉':'由威立冠名贊助撥出~',
             '消費':'那你好像也是頂級消費者喔'
         }
-        if message.content in dict:
+        if message.content in dict and self.bot.user.id == 589744540240314368:
             await message.reply(dict[message.content])
         if message.content == '小幫手' or message.content== f'<@{self.bot.user.id}>':
             embed = BotEmbed.basic(self,f"你好~\n我是{self.bot.user.name}，是一個discord機器人喔~\n我的前輟是`!!`\n你可以輸入`!!help`來查看所有指令的用法\n\n希望我能在discord上幫助到你喔~")
             await message.reply(embed=embed)
+        if self.bot.user in message.mentions:
+            await BRS.mentioned(self,message)
+        if message.mention_everyone == True:
+            await BRS.mention_everyone(self,message)
         
-        #if message.mention_everyone == True:
-        #    await message.reply('你tag所有人了')
         ScamChack = False
         if 'free' in message.content.lower() and 'nitro' in message.content.lower():
             ScamChack = True
