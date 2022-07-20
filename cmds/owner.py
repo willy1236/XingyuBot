@@ -7,7 +7,6 @@ from BotLib.basic import BotEmbed
 from BotLib.database import Database
 
 class owner(Cog_Extension):
-    cdata = Database().cdata
     #send
     @commands.command()
     @commands.is_owner()
@@ -28,13 +27,14 @@ class owner(Cog_Extension):
     @commands.command()
     @commands.is_owner()
     async def anno(self,ctx,*,msg):
+        cdata = Database().cdata
         send_success = 0
         send_msg = await ctx.send('訊息發送中...')
 
         embed= BotEmbed.all_anno(msg)
         
-        for i in self.cdata['all_anno']:
-            channel = self.bot.get_channel(self.cdata['all_anno'][i])
+        for i in cdata['all_anno']:
+            channel = self.bot.get_channel(cdata['all_anno'][i])
             if channel != None:
                 try:
                     await channel.send(embed=embed)
@@ -42,19 +42,20 @@ class owner(Cog_Extension):
                 except:
                     pass
         await ctx.message.delete()
-        await send_msg.edit(f"已向{send_success}/{len(self.cdata['all_anno'])}個頻道發送公告",delete_after=5)
+        await send_msg.edit(f"已向{send_success}/{len(cdata['all_anno'])}個頻道發送公告",delete_after=5)
 
     #bot_update
     @commands.command()
     @commands.is_owner()
     async def bupdate(self,ctx,*,msg):
+        cdata = Database().cdata
         send_success = 0
         send_msg = await ctx.send('訊息發送中...')
 
         embed= BotEmbed.bot_update(msg)
         
-        for i in self.cdata['bot']:
-            channel = self.bot.get_channel(self.cdata['bot'][i])
+        for i in cdata['bot']:
+            channel = self.bot.get_channel(cdata['bot'][i])
             if channel != None:
                 try:
                     await channel.send(embed=embed)
@@ -62,7 +63,7 @@ class owner(Cog_Extension):
                 except:
                     pass
         await ctx.message.delete()
-        await send_msg.edit(f"已向{send_success}/{len(self.cdata['bot'])}個頻道發送公告",delete_after=5)
+        await send_msg.edit(f"已向{send_success}/{len(cdata['bot'])}個頻道發送公告",delete_after=5)
 
     #edit
     @commands.command()
