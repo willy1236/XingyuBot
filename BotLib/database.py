@@ -33,7 +33,6 @@ class Database:
             'jevent':'database/bot_settings/event.json',
             'rsdata':'database/role_save.json',
             'jpet' : 'database/user_settings/pet.json',
-            'bdata' : 'database/bot_settings.json',
             'jbag' : 'database/user_settings/bag.json',
             'cache' : 'database/cache.json',
             'monster_basic':'database/RPG_settings/monster_basic.json',
@@ -51,7 +50,6 @@ class Database:
         self.jevent = Counter(json.load(open(self.dict['jevent'],mode='r',encoding='utf8')))
         self.rsdata = Counter(json.load(open(self.dict['rsdata'],mode='r',encoding='utf8')))
         self.jpet = json.load(open(self.dict['jpet'],mode='r',encoding='utf8'))
-        self.bdata = json.load(open(self.dict['bdata'],mode='r',encoding='utf8'))
         self.jbag = json.load(open(self.dict['jbag'],mode='r',encoding='utf8'))
         self.cache = json.load(open(self.dict['cache'],mode='r',encoding='utf8'))
         self.monster_basic = json.load(open(self.dict['monster_basic'],mode='r',encoding='utf8'))

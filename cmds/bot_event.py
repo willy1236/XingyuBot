@@ -19,26 +19,22 @@ class ScamChack:
 
 
 class event(Cog_Extension):
-    cdata = Database().cdata
     voice_updata = False
     #跨群聊天Ver.1.0
     @commands.Cog.listener()
     async def on_message(self,msg):
-        if msg.channel.id in self.cdata['crass_chat'] and not msg.author.bot:
+        cdata = Database().cdata['crass_chat']
+        if msg.channel.id in cdata and not msg.author.bot:
             await msg.delete()
 
-            embed=discord.Embed(description=f'{msg.content}',color=0x4aa0b5)
-            embed.set_author(name=f'{msg.author}',icon_url=f'{msg.author.display_avatar.url}')
+            embed=discord.Embed(description=msg.content,color=0x4aa0b5)
+            embed.set_author(name=msg.author,icon_url=msg.author.display_avatar.url)
             embed.set_footer(text=f'來自: {msg.guild}')
 
-            for i in self.cdata['crass_chat']:
+            for i in cdata:
                 channel = self.bot.get_channel(i)
-                if channel != None:
+                if channel:
                     await channel.send(embed=embed)
-
-    # @commands.Cog.listener()
-    # async def send_bot_help():
-    #     return
 
     @commands.Cog.listener()
     async def on_message(self, message):
@@ -46,25 +42,28 @@ class event(Cog_Extension):
             '抹茶粉':'由威立冠名贊助撥出~',
             '消費':'那你好像也是頂級消費者喔'
         }
+        #關鍵字觸發
         if message.content in dict and self.bot.user.id == 589744540240314368:
             await message.reply(dict[message.content])
-        if message.content == '小幫手' or message.content== f'<@{self.bot.user.id}>':
+        #介紹
+        if message.content == '小幫手' or message.content == f'<@{self.bot.user.id}>':
             embed = BotEmbed.basic(self,f"你好~\n我是{self.bot.user.name}，是一個discord機器人喔~\n我的前輟是`!!`\n你可以輸入`!!help`來查看所有指令的用法\n\n希望我能在discord上幫助到你喔~")
             await message.reply(embed=embed)
+        #被提及回報
         if self.bot.user in message.mentions:
             await BRS.mentioned(self,message)
-        if message.mention_everyone == True:
+        #被提及所有人回報
+        if message.mention_everyone:
             await BRS.mention_everyone(self,message)
-        
+        #詐騙檢查
         ScamChack = False
         if 'free' in message.content.lower() and 'nitro' in message.content.lower():
             ScamChack = True
         
         if ScamChack:
             await BRS.scam(self,message)
-            #await message.delete()
             await message.reply('溫馨提醒:這可能是有關詐騙的訊息\n點擊連結前請先確認是否安全')
-        
+        #私人訊息回報
         if type(message.channel) == discord.channel.DMChannel:
             await BRS.dm(self,message)
 
@@ -84,8 +83,6 @@ class event(Cog_Extension):
                 user = self.bot.get_user(payload.user_id)
                 await channel.set_permissions(user,overwrite=None,reason='身分組選擇:退出')
                     
-
-
     @commands.Cog.listener()
     async def on_voice_state_update(self,user, before, after):
             if self.voice_updata:

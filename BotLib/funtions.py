@@ -37,7 +37,6 @@ from BotLib.basic import BotEmbed
 #async -> await
 
 picdata = Database().picdata
-jdata = Database().jdata
 
 def is_number(n):
     try:  
