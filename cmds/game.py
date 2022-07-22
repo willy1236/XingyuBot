@@ -48,11 +48,12 @@ class game(Cog_Extension):
         
     @game.command()
     async def set(self,ctx,game,data=None):
-        gdata = Database().gdata
+        db = Database()
+        gdata = db.gdata
         userid = str(ctx.author.id)
         if not userid in gdata:
             gdata[userid] = {}
-            Database().write('gdata',gdata)
+            db.write('gdata',gdata)
             await ctx.send('偵測到資料庫內無使用者資料，已自動註冊',delete_after=5)
 
         if game in self.games and self.games[game] != 0:
@@ -70,14 +71,14 @@ class game(Cog_Extension):
             if self.games[game] == 1:
                 gdata[userid][game] = data
                 await ctx.send(f'已將{game}資料設定為 {data}')
-                Database().write('gdata',gdata)
+                db.write('gdata',gdata)
             
             elif self.games[game] == 2:
                 if game == 'steam':
                     APIdata = SteamData().get_user(data)
                     if APIdata:
                         gdata[userid]['steam'] = {'id':APIdata.id,'name':APIdata.name}
-                        Database().write('gdata',gdata)
+                        db.write('gdata',gdata)
                         await ctx.send(f'已將{game}資料設定為 {APIdata.name}')
                     else:
                         await ctx.send(f'錯誤:找不到此用戶',delete_after=5)

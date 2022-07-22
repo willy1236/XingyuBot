@@ -129,7 +129,7 @@ class ApexPlayer():
 
 class ApexCrafting():
     def __init__(self,data):
-        if not data:
+        if "Error" in data:
             return None
         self.daily = data[0]
         self.weekly = data[1]
@@ -176,7 +176,8 @@ class ApexCrafting():
             "extended_heavy_mag":"紫色重型彈匣",
             "optic_hcog_bruiser":"optic_hcog_bruiser",
             "boosted_loader":"動能供應器",
-            "optic_variable_aog":"2-4倍鏡"
+            "optic_variable_aog":"2-4倍鏡",
+            "standard_stock":"紫色槍托"
         }
         item_name = []
         item_name.append(dict.get(self.item1_name,self.item1_name))
@@ -194,7 +195,7 @@ class ApexCrafting():
 
 class ApexMapRotation():
     def __init__(self,data):
-        if not data:
+        if "Error" in data:
             return None
         self.nowmap = data["current"]['map']
         self.nowstart = datetime.strptime(data['current']['readableDate_start'],"%Y-%m-%d %H:%M:%S")+timedelta(hours=8)
