@@ -24,6 +24,8 @@ class task(Cog_Extension):
             self.covid_update.start()
             self.forecast_update.start()
             self.twitch.start()
+        if self.bot.user.id == 870923985569861652:
+            pass
 
 
     def __gettime_15min():
@@ -88,6 +90,7 @@ class task(Cog_Extension):
         reset = []
         Database().write('jdsign',reset)
         await task_report_channel.send('簽到已重置')
+        await asyncio.sleep(1)
         #self.sign_reset.stop()
 
     # @sign_reset.after_loop
@@ -131,6 +134,7 @@ class task(Cog_Extension):
             else:
                 await channel.send('Covid 疫情資訊',embed=embed)
             await asyncio.sleep(0.5)
+        await asyncio.sleep(1)
 
 
     @tasks.loop(time=__gettime_0105())
@@ -151,6 +155,7 @@ class task(Cog_Extension):
                 else:
                     await channel.send('Apex合成台內容自動更新資料',embed=crafting.desplay)
                 await asyncio.sleep(0.5)
+        await asyncio.sleep(1)
         #self.apex_crafting_update.stop()
 
     # @apex_crafting_update.after_loop
@@ -246,8 +251,9 @@ class task(Cog_Extension):
             dict[user] = False
 
         for data in r['data']:
+            user = data['user_login']
+            dict[user] = True
             if not cache['twitch'].get(user,False):
-                dict[user] = True
                 time = datetime.strptime(data['started_at'],'%Y-%m-%dT%H:%M:%SZ')
                 time = time.strftime('%Y/%m/%d %H:%M:%S')
                 embed = discord.Embed(
@@ -266,6 +272,7 @@ class task(Cog_Extension):
                 
                 channel = self.bot.get_channel(986230549192519720)
                 await channel.send(embed=embed)
+                
         cache['twitch'] = dict
         db.write('cache',cache)
 
