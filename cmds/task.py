@@ -32,14 +32,14 @@ class task(Cog_Extension):
         tz = timezone(timedelta(hours=+8))
         now = datetime.now(tz=tz)
         if now.minute >= 0 and now.minute<15:
-            return time(hour=now.hour,minute=15,second=0,tzinfo=tz)
+            return time(hour=now.hour,minute=15,second=2,tzinfo=tz)
         elif now.minute >= 15 and now.minute <30:
-            return time(hour=now.hour,minute=30,second=0,tzinfo=tz)
+            return time(hour=now.hour,minute=30,second=2,tzinfo=tz)
         elif now.minute >= 30 and now.minute <45:
-            return time(hour=now.hour,minute=45,second=0,tzinfo=tz)
+            return time(hour=now.hour,minute=45,second=2,tzinfo=tz)
         elif now.minute >= 45 and now.minute <60:
             next = now + timedelta(hours=1)
-            return time(hour=next.hour,minute=0,second=0,tzinfo=tz)
+            return time(hour=next.hour,minute=0,second=2,tzinfo=tz)
 
     def __gettime_3hr():
         tz = timezone(timedelta(hours=+8))
@@ -271,7 +271,9 @@ class task(Cog_Extension):
                 embed.set_footer(text=f"開始於{time}")
                 
                 channel = self.bot.get_channel(986230549192519720)
-                await channel.send(embed=embed)
+                guild = self.bot.get_guild(613747262291443742)
+                role = guild.get_role(1000680995307143218)
+                await channel.send(f'{role.mention} 開台啦~',embed=embed)
                 
         cache['twitch'] = dict
         db.write('cache',cache)

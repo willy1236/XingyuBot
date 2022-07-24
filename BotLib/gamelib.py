@@ -177,7 +177,9 @@ class ApexCrafting():
             "optic_hcog_bruiser":"optic_hcog_bruiser",
             "boosted_loader":"動能供應器",
             "optic_variable_aog":"2-4倍鏡",
-            "standard_stock":"紫色槍托"
+            "standard_stock":"紫色槍托",
+            "turbocharger":"渦輪增壓器",
+            "barrel_stabilizer":"barrel_stabilizer" 
         }
         item_name = []
         item_name.append(dict.get(self.item1_name,self.item1_name))

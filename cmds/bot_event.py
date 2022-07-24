@@ -67,21 +67,21 @@ class event(Cog_Extension):
         if type(message.channel) == discord.channel.DMChannel:
             await BRS.dm(self,message)
 
-    @commands.Cog.listener()
-    async def on_raw_reaction_add(self, payload):
-        if payload.message_id == 640679249245634635:
-            if str(payload.emoji) == '🍍':
-                channel = self.bot.get_channel(706810474326655026)
-                user = self.bot.get_user(payload.user_id)
-                await channel.set_permissions(user,view_channel=True,reason='身分組選擇:加入')
+    # @commands.Cog.listener()
+    # async def on_raw_reaction_add(self, payload):
+    #     if payload.message_id == 640679249245634635:
+    #         if str(payload.emoji) == '🍍':
+    #             channel = self.bot.get_channel(706810474326655026)
+    #             user = self.bot.get_user(payload.user_id)
+    #             await channel.set_permissions(user,view_channel=True,reason='身分組選擇:加入')
 
-    @commands.Cog.listener()
-    async def on_raw_reaction_remove(self, payload):
-        if payload.message_id == 640679249245634635:
-            if str(payload.emoji) == '🍍':
-                channel = self.bot.get_channel(706810474326655026)
-                user = self.bot.get_user(payload.user_id)
-                await channel.set_permissions(user,overwrite=None,reason='身分組選擇:退出')
+    # @commands.Cog.listener()
+    # async def on_raw_reaction_remove(self, payload):
+    #     if payload.message_id == 640679249245634635:
+    #         if str(payload.emoji) == '🍍':
+    #             channel = self.bot.get_channel(706810474326655026)
+    #             user = self.bot.get_user(payload.user_id)
+    #             await channel.set_permissions(user,overwrite=None,reason='身分組選擇:退出')
                     
     @commands.Cog.listener()
     async def on_voice_state_update(self,user, before, after):

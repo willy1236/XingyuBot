@@ -1,6 +1,7 @@
 import discord, os
 from discord.ext import commands
 from BotLib.database import Database
+from cmds.command import Reactbutton1
 
 bot_list={"1":"Bot1", "2":"Bep", "3":"Bot2"}
 #1:dc小幫手 2:Bep 3:RO
@@ -45,6 +46,7 @@ async def on_ready():
     print(">> Bot online as",bot.user.name,"<<")
     print(">> Discord's version:",discord.__version__,"<<")
     await bot.change_presence(activity=discord.Game(name=jdata.get("activity","!!help")),status=discord.Status.online)
+    bot.add_view(Reactbutton1())
     
 
 #load
