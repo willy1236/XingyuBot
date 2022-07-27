@@ -2,7 +2,7 @@ import asyncio, datetime,discord,requests
 from datetime import datetime, timezone, timedelta,time
 from discord.ext import commands,tasks
 
-from cmds.weather import EarthquakeReport,Covid19Report,Forecast
+from BotLib.weatherlib import *
 from core.classes import Cog_Extension
 from BotLib.database import Database
 from BotLib.gamelib import ApexData
@@ -91,12 +91,12 @@ class task(Cog_Extension):
         Database().write('jdsign',reset)
         await task_report_channel.send('簽到已重置')
         await asyncio.sleep(1)
-        #self.sign_reset.stop()
+        self.sign_reset.stop()
 
-    # @sign_reset.after_loop
-    # async def sign_reset_after(self):
-    #     await asyncio.sleep(10)
-    #     self.sign_reset.start()
+    @sign_reset.after_loop
+    async def sign_reset_after(self):
+        await asyncio.sleep(10)
+        self.sign_reset.start()
 
     @tasks.loop(minutes=1)
     async def earthquake_check(self):
