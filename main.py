@@ -46,6 +46,14 @@ async def on_ready():
     print(">> Bot online as",bot.user.name,"<<")
     print(">> Discord's version:",discord.__version__,"<<")
     await bot.change_presence(activity=discord.Game(name=jdata.get("activity","!!help")),status=discord.Status.online)
+    # cogs = ""
+    # for i in bot.cogs:
+    #     cogs += f"{i} "
+    # print(">> Cogs:",cogs,"<<")
+    if len(os.listdir('./cmds'))-len(ignore_py)-1 == len(bot.cogs):
+        print(">> Cogs all loaded <<")
+    else:
+        print(f">> Cogs not all loaded, {len(bot.cogs)}/{len(os.listdir('./cmds'))-len(ignore_py)-1} loaded<<")
     bot.add_view(Reactbutton1())
     
 
