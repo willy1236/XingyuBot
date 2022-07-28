@@ -5,7 +5,7 @@ from cmds.command import Reactbutton1
 
 bot_list={"1":"Bot1", "2":"Bep", "3":"Bot2"}
 #1:dc小幫手 2:Bep 3:RO
-bot_code = 1
+bot_code = 2
 
 db = Database()
 jdata = db.jdata
