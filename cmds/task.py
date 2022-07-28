@@ -1,4 +1,4 @@
-import asyncio, datetime,discord,requests
+import asyncio,discord,requests
 from datetime import datetime, timezone, timedelta,time
 from discord.ext import commands,tasks
 
@@ -19,9 +19,9 @@ class task(Cog_Extension):
             self.sign_reset.start()
             self.earthquake_check.start()
             self.apex_crafting_update.start()
-            self.apex_map_update.start()
-            self.covid_update.start()
-            self.forecast_update.start()
+            #self.apex_map_update.start()
+            #self.covid_update.start()
+            #self.forecast_update.start()
             self.twitch.start()
         if self.bot.user.id == 870923985569861652:
             pass
@@ -105,7 +105,7 @@ class task(Cog_Extension):
         data = EarthquakeReport.get_report_auto(timefrom)
         if data:
             embed = data.desplay
-            time = datetime.strptime(data.originTime, "%Y-%m-%d %H:%M:%S")+timedelta(seconds=1)
+            time = datetime.datetime.strptime(data.originTime, "%Y-%m-%d %H:%M:%S")+timedelta(seconds=1)
             cache['timefrom'] = time.strftime("%Y-%m-%dT%H:%M:%S")
             db.write('cache',cache)
             
