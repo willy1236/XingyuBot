@@ -19,9 +19,9 @@ class task(Cog_Extension):
             self.sign_reset.start()
             self.earthquake_check.start()
             self.apex_crafting_update.start()
-            #self.apex_map_update.start()
-            #self.covid_update.start()
-            #self.forecast_update.start()
+            self.apex_map_update.start()
+            self.covid_update.start()
+            self.forecast_update.start()
             self.twitch.start()
         if self.bot.user.id == 870923985569861652:
             pass
@@ -29,7 +29,7 @@ class task(Cog_Extension):
 
     def __gettime_15min():
         tz = timezone(timedelta(hours=+8))
-        now = datetime.now(tz=tz)
+        now = datetime.datetime.now(tz=tz)
         if now.minute >= 0 and now.minute<15:
             return time(hour=now.hour,minute=15,second=2,tzinfo=tz)
         elif now.minute >= 15 and now.minute <30:
@@ -42,7 +42,7 @@ class task(Cog_Extension):
 
     def __gettime_3hr():
         tz = timezone(timedelta(hours=+8))
-        now = datetime.now(tz=tz)
+        now = datetime.datetime.now(tz=tz)
         next = now + timedelta(hours=3)
         return time(hour=next.hour,minute=0,second=0,tzinfo=tz)
         
@@ -57,7 +57,7 @@ class task(Cog_Extension):
 
     def __gettime_1430():
         tz = timezone(timedelta(hours=+8))
-        now = datetime.now(tz=tz)
+        now = datetime.datetime.now(tz=tz)
         if now.hour == 14 and now.minute >= 30 and now.second < 45:
             return time(hour=14,minute=30,second=0,tzinfo=tz)
         else:
@@ -89,7 +89,7 @@ class task(Cog_Extension):
         task_report_channel = self.bot.get_channel(db.jdata['task_report'])
         db.write('jdsign',[])
         await task_report_channel.send('簽到已重置')
-        await asyncio.sleep(1)
+        await asyncio.sleep(10)
         self.sign_reset.stop()
 
     @sign_reset.after_loop
@@ -116,25 +116,25 @@ class task(Cog_Extension):
                     await channel.send('地震報告',embed=embed)
                     await asyncio.sleep(0.5)
         
-    # @tasks.loop(time=__gettime_1430())
-    # async def covid_update(self):
-    #     cdata = Database().cdata
-    #     CovidReport = Covid19Report.get_covid19()
-    #     if CovidReport:
-    #         for i in cdata["covid_update"]:
-    #             channel = self.bot.get_channel(cdata["covid_update"][i])
-    #             try:
-    #                 id = channel.last_message_id
-    #                 msg = await channel.fetch_message(id)
-    #             except:
-    #                 msg = None
+    @tasks.loop(time=__gettime_1430())
+    async def covid_update(self):
+        cdata = Database().cdata
+        CovidReport = Covid19Report.get_covid19()
+        if CovidReport:
+            for i in cdata["covid_update"]:
+                channel = self.bot.get_channel(cdata["covid_update"][i])
+                try:
+                    id = channel.last_message_id
+                    msg = await channel.fetch_message(id)
+                except:
+                    msg = None
 
-    #             if msg and msg.author == self.bot.user:
-    #                 await msg.edit('Covid 疫情資訊',embed=CovidReport.desplay)
-    #             else:
-    #                 await channel.send('Covid 疫情資訊',embed=CovidReport.desplay)
-    #             await asyncio.sleep(0.5)
-    #     await asyncio.sleep(1)
+                if msg and msg.author == self.bot.user:
+                    await msg.edit('Covid 疫情資訊',embed=CovidReport.desplay)
+                else:
+                    await channel.send('Covid 疫情資訊',embed=CovidReport.desplay)
+                await asyncio.sleep(0.5)
+        await asyncio.sleep(10)
 
 
     @tasks.loop(time=__gettime_0105())
@@ -155,7 +155,7 @@ class task(Cog_Extension):
                 else:
                     await channel.send('Apex合成台內容自動更新資料',embed=crafting.desplay)
                 await asyncio.sleep(0.5)
-        await asyncio.sleep(1)
+        await asyncio.sleep(10)
         #self.apex_crafting_update.stop()
 
     # @apex_crafting_update.after_loop
@@ -164,53 +164,53 @@ class task(Cog_Extension):
     #     self.apex_crafting_update.start()
 
     
-    # @tasks.loop(time=__gettime_15min())
-    # async def apex_map_update(self):
-    #     cdata = Database().cdata
-    #     map = ApexData.get_map_rotation()
-    #     if map:
-    #         for i in cdata["apex_map"]:
-    #             channel = self.bot.get_channel(cdata["apex_map"][i])
-    #             try:
-    #                 id = channel.last_message_id
-    #                 msg = await channel.fetch_message(id)
-    #             except:
-    #                 msg = None
+    @tasks.loop(time=__gettime_15min())
+    async def apex_map_update(self):
+        cdata = Database().cdata
+        map = ApexData.get_map_rotation()
+        if map:
+            for i in cdata["apex_map"]:
+                channel = self.bot.get_channel(cdata["apex_map"][i])
+                try:
+                    id = channel.last_message_id
+                    msg = await channel.fetch_message(id)
+                except:
+                    msg = None
 
-    #             if msg and msg.author == self.bot.user:
-    #                 await msg.edit('Apex地圖輪替自動更新資料',embed=map.desplay)
-    #             else:
-    #                 await channel.send('Apex地圖輪替自動更新資料',embed=map.desplay)
-    #             await asyncio.sleep(0.5)
-    #     self.apex_map_update.change_interval(time=task.__gettime_15min())
-    #     await asyncio.sleep(1)
-    #     #self.apex_map_update.stop()
+                if msg and msg.author == self.bot.user:
+                    await msg.edit('Apex地圖輪替自動更新資料',embed=map.desplay)
+                else:
+                    await channel.send('Apex地圖輪替自動更新資料',embed=map.desplay)
+                await asyncio.sleep(0.5)
+        self.apex_map_update.change_interval(time=task.__gettime_15min())
+        await asyncio.sleep(10)
+        #self.apex_map_update.stop()
 
     # # @apex_map_update.after_loop
     # # async def apex_map_update_after(self):
     # #     await asyncio.sleep(10)
     # #     self.apex_map_update.start()
     
-    # @tasks.loop(time=__gettime_3hr())
-    # async def forecast_update(self):
-    #     cdata = Database().cdata
-    #     forecast = Forecast.get_report()
-    #     if forecast:
-    #         for i in cdata["forecast"]:
-    #             channel = self.bot.get_channel(cdata["forecast"][i])
-    #             try:
-    #                 id = channel.last_message_id
-    #                 msg = await channel.fetch_message(id)
-    #             except:
-    #                 msg = None
+    @tasks.loop(time=__gettime_3hr())
+    async def forecast_update(self):
+        cdata = Database().cdata
+        forecast = Forecast.get_report()
+        if forecast:
+            for i in cdata["forecast"]:
+                channel = self.bot.get_channel(cdata["forecast"][i])
+                try:
+                    id = channel.last_message_id
+                    msg = await channel.fetch_message(id)
+                except:
+                    msg = None
 
-    #             if msg and msg.author == self.bot.user:
-    #                 await msg.edit('台灣各縣市天氣預報',embed=forecast.desplay)
-    #             else:
-    #                 await channel.send('台灣各縣市天氣預報',embed=forecast.desplay)
-    #             await asyncio.sleep(0.5)
-    #     self.forecast_update.change_interval(time=task.__gettime_3hr())
-    #     await asyncio.sleep(1)
+                if msg and msg.author == self.bot.user:
+                    await msg.edit('台灣各縣市天氣預報',embed=forecast.desplay)
+                else:
+                    await channel.send('台灣各縣市天氣預報',embed=forecast.desplay)
+                await asyncio.sleep(0.5)
+        self.forecast_update.change_interval(time=task.__gettime_3hr())
+        await asyncio.sleep(10)
     
     # @tasks.loop(seconds=1)
     # async def time_task(self):
