@@ -133,7 +133,7 @@ class game(Cog_Extension):
         
         player = OsuData().get_player(userid)
         if player:
-            await msg.edit(content='查詢成功',embed=player.desplay)
+            await msg.edit(content='查詢成功',embed=player.desplay())
         else:
             await msg.edit(content='查詢失敗:查無此ID',delete_after=5)
 
@@ -141,7 +141,7 @@ class game(Cog_Extension):
     @commands.cooldown(rate=1,per=1)
     async def map(self,ctx,mapid):
         msg = await ctx.send('資料查詢中...')
-        embed = OsuData().get_beatmap(mapid).desplay
+        embed = OsuData().get_beatmap(mapid).desplay()
         if embed:
             await msg.edit(content='查詢成功',embed=embed)
         else:
@@ -161,7 +161,7 @@ class game(Cog_Extension):
         
         player = ApexData().get_player(userid)
         if player:
-            await msg.edit(content='查詢成功',embed=player.desplay)
+            await msg.edit(content='查詢成功',embed=player.desplay())
         else:
             await msg.edit(content='查詢失敗:查無此ID',delete_after=5)
 
@@ -169,21 +169,21 @@ class game(Cog_Extension):
     @commands.cooldown(rate=1,per=3)
     async def map(self,ctx):
         msg = await ctx.send('資料查詢中...')
-        embed = ApexData.get_map_rotation().desplay
+        embed = ApexData.get_map_rotation().desplay()
         await msg.edit(content='查詢成功',embed=embed)
 
     @apex.command()
     @commands.cooldown(rate=1,per=3)
     async def crafting(self,ctx):
         msg = await ctx.send('資料查詢中...')
-        embed = ApexData.get_crafting().desplay
+        embed = ApexData.get_crafting().desplay()
         await msg.edit(content='查詢成功',embed=embed)
 
     @apex.command(enabled=False)
     @commands.cooldown(rate=1,per=3)
     async def server(self,ctx):
         msg = await ctx.send('資料查詢中...')
-        embed = ApexData.get_status().desplay
+        embed = ApexData.get_status().desplay()
         await msg.edit(content='查詢成功',embed=embed)
 
     @commands.group(invoke_without_command=True,enabled=False)
@@ -200,7 +200,7 @@ class game(Cog_Extension):
         
         player = DBDData().get_player(userid)
         if player:
-            await msg.edit(content='查詢成功',embed=player.desplay)
+            await msg.edit(content='查詢成功',embed=player.desplay())
         else:
             await msg.edit(content='查詢失敗:查無此ID或個人資料設定私人',delete_after=5)
 
@@ -218,7 +218,7 @@ class game(Cog_Extension):
 
         user = SteamData().get_user(userid)
         if user:
-            await msg.edit(content='查詢成功',embed=user.desplay)
+            await msg.edit(content='查詢成功',embed=user.desplay())
         else:
             await msg.edit(content='查詢失敗:查無此ID',delete_after=5)
 def setup(bot):

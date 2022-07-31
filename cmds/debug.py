@@ -1,8 +1,11 @@
 import discord,json,requests,asyncio
+from datetime import datetime, timezone, timedelta,time
 from discord.ext import commands,tasks
+
 from core.classes import Cog_Extension
 from BotLib.funtions import *
-from datetime import datetime, timezone, timedelta,time
+from BotLib.userlib import *
+
 
 tz = timezone(timedelta(hours=+8))
 # Note that custom_ids can only be up to 100 characters long.
@@ -58,9 +61,11 @@ class debug(Cog_Extension):
 
     @commands.command()
     @commands.is_owner()
-    async def test(self, ctx,arg):
-        dcuser = find.user2(arg=arg)
-        print(dcuser)
+    async def test(self, ctx):
+        #dcuser = find.user2(arg=arg)
+        #print(dcuser)
+        pt = User(ctx.author.id).point
+        #print(pt)
     
     @commands.command()
     @commands.is_owner()

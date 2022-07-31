@@ -15,9 +15,8 @@ class EarthquakeReport:
         self.magnitude = data['earthquakeInfo']['magnitude']['magnitudeValue']
         self.reportColor = data['reportColor']
         self.reportContent = data['reportContent']
-        self.desplay = self.embed()
 
-    def embed(self):
+    def desplay(self):
         if self.reportColor == "綠色":
             embed = discord.Embed(description=self.reportContent,color=0x00BB00)
         elif self.reportColor == "橙色":
@@ -69,9 +68,8 @@ class Covid19Report:
         self.local = data['local']
         self.outside = data['outside']
         self.dead =data['dead']
-        self.desplay = self.embed()
 
-    def embed(self):
+    def desplay(self):
         embed = BotEmbed.simple(f'台灣COVUD-19疫情')
         embed.add_field(name='新增確診',value=self.new)
         embed.add_field(name='本土病例',value=self.local)
@@ -120,9 +118,8 @@ class Forecast:
                 "maxT":maxT
             }
             self.forecast_all.append(forecast_one)
-        self.desplay = self.embed()
 
-    def embed(self):
+    def desplay(self):
         embed = BotEmbed.general('天氣預報')
         for data in self.forecast_all:
             text = f"{data['Wx']}\n高低溫:{data['maxT']}/{data['minT']}\n{data['Cl']}"

@@ -8,7 +8,6 @@ class User():
         self.db = Database()
         udata = self.db.udata
         jbag = self.db.jbag
-        jpet = self.db.jpet
 
         self.id = str(userid)
         if not self.id in udata:
@@ -21,16 +20,14 @@ class User():
         self.att = udata[self.id].get('att',1)
 
         self.bag = jbag.get(self.id,None)
-        self.pet = jpet.get(self.id,None)
-        
-        self.desplay = self.embed()
+        self.pet = Pet(self.id)
 
-    def embed(self):
+    def desplay(self):
         embed = BotEmbed.general(name=self.name)
         embed.add_field(name='Pt點數',value=self.point.pt)
         embed.add_field(name='生命值',value=self.hp)
-        if self.pet:
-            embed.add_field(name='寵物',value=self.pet['name'])
+        if self.pet.has_pet:
+            embed.add_field(name='寵物',value=self.pet.name)
         else:
             embed.add_field(name='寵物',value='無')
         return embed
@@ -99,6 +96,9 @@ class Point():
             self.setup()
         self.pt = self.jpt[self.user] #用戶擁有PT數
     
+    def __repr__(self):
+        return str(self.pt)
+
     def setup(self):
         self.jpt[self.user] = 0
         Database().write('jpt',self.jpt)
@@ -114,20 +114,31 @@ class Point():
         Database().write('jpt',self.jpt)
 
 class Pet():
-    def __init__(self):
-        self.name = None
-        self.species = None
-        self.owner = None
-        return
+    def __init__(self,user:str):
+        self.db = Database()
+        self.jpet = self.db.jpet
+        self.user = str(user)
+        data = self.jpet.get(str(user),None)
+        if data:
+            self.has_pet = True
+            self.name = data['name']
+            self.species = data['species']
+        else:
+            self.has_pet = False
 
-    def setup(user):
-        jpet = Database().jpet
+    @staticmethod
+    def add_pet(user,name,species):
+        db = Database()
+        jpet = db.jpet
         jpet[user] = {
-            "name": None,
-            "species" : None,
-            "owner": user
+            "name": name,
+            "species" : species,
         }
-        Database().write('jpet',jpet)
+        db.write('jpet',jpet)
+    
+    def remove_pet(self):
+        del self.jpet[self.owner]
+        self.db.write('jpet',self.jpet)
 
 class Monster:
     def __init__(self,name):

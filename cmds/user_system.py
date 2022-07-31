@@ -13,7 +13,7 @@ class user_system(Cog_Extension):
     async def ui(self,ctx,user=None):
         user_dc = await find.user(ctx,user) or ctx.author
         user = User(user_dc.id,user_dc.name)
-        await ctx.send(embed=user.desplay)
+        await ctx.send(embed=user.desplay())
 
     @commands.command()
     async def bag(self,ctx,user=None):
@@ -32,22 +32,22 @@ class user_system(Cog_Extension):
     @commands.group(invoke_without_command=True)
     async def pet(self,ctx,user=None):
         user_dc = await find.user(ctx,user) or ctx.author
-        user = User(user_dc.id)
-        if user.pet:
+        pet = Pet(user_dc.id)
+        if pet.has_pet:
             embed = BotEmbed.general(f'{ctx.author.name} 的寵物')
-            embed.add_field(name='寵物名',value=user.pet['name'])
-            embed.add_field(name='寵物物種',value=user.pet['type'])
+            embed.add_field(name='寵物名',value=pet.name)
+            embed.add_field(name='寵物物種',value=pet.species)
             await ctx.send(embed=embed)
         else:
             await ctx.send('用戶沒有認養寵物')
     
     @pet.command()
-    async def add(self,ctx,type,name):
+    async def add(self,ctx,species,name):
         user = User(ctx.author.id)
         if user.pet:
             await ctx.send('你已經有寵物了')
             return
-        if type not in ['shark','dog','cat','fox']:
+        if species not in ['shark','dog','cat','fox']:
             await ctx.send('沒有該物種的寵物喔')    
             return
         
@@ -68,7 +68,11 @@ class user_system(Cog_Extension):
                 return m.content == 'y' and m.author == ctx.author
             except:
                 return False
-        
+        user = User(ctx.author.id)
+        if user.pet:
+            await ctx.send('你沒有寵物')
+            return
+
         try:
             await ctx.send('你真的確定要放生寵物嗎?(輸入y確定)')
             msg = await self.bot.wait_for('message', check=check,timeout=60)

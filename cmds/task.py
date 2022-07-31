@@ -104,7 +104,7 @@ class task(Cog_Extension):
         timefrom = cache['timefrom']
         data = EarthquakeReport.get_report_auto(timefrom)
         if data:
-            embed = data.desplay
+            embed = data.desplay()
             time = datetime.datetime.strptime(data.originTime, "%Y-%m-%d %H:%M:%S")+timedelta(seconds=1)
             cache['timefrom'] = time.strftime("%Y-%m-%dT%H:%M:%S")
             db.write('cache',cache)
@@ -130,9 +130,9 @@ class task(Cog_Extension):
                     msg = None
 
                 if msg and msg.author == self.bot.user:
-                    await msg.edit('Covid 疫情資訊',embed=CovidReport.desplay)
+                    await msg.edit('Covid 疫情資訊',embed=CovidReport.desplay())
                 else:
-                    await channel.send('Covid 疫情資訊',embed=CovidReport.desplay)
+                    await channel.send('Covid 疫情資訊',embed=CovidReport.desplay())
                 await asyncio.sleep(0.5)
         await asyncio.sleep(10)
 
@@ -151,9 +151,9 @@ class task(Cog_Extension):
                     msg = None
 
                 if msg and msg.author == self.bot.user:
-                    await msg.edit('Apex合成台內容自動更新資料',embed=crafting.desplay)
+                    await msg.edit('Apex合成台內容自動更新資料',embed=crafting.desplay())
                 else:
-                    await channel.send('Apex合成台內容自動更新資料',embed=crafting.desplay)
+                    await channel.send('Apex合成台內容自動更新資料',embed=crafting.desplay())
                 await asyncio.sleep(0.5)
         await asyncio.sleep(10)
         #self.apex_crafting_update.stop()
@@ -178,9 +178,9 @@ class task(Cog_Extension):
                     msg = None
 
                 if msg and msg.author == self.bot.user:
-                    await msg.edit('Apex地圖輪替自動更新資料',embed=map.desplay)
+                    await msg.edit('Apex地圖輪替自動更新資料',embed=map.desplay())
                 else:
-                    await channel.send('Apex地圖輪替自動更新資料',embed=map.desplay)
+                    await channel.send('Apex地圖輪替自動更新資料',embed=map.desplay())
                 await asyncio.sleep(0.5)
         self.apex_map_update.change_interval(time=task.__gettime_15min())
         await asyncio.sleep(10)
@@ -205,9 +205,9 @@ class task(Cog_Extension):
                     msg = None
 
                 if msg and msg.author == self.bot.user:
-                    await msg.edit('台灣各縣市天氣預報',embed=forecast.desplay)
+                    await msg.edit('台灣各縣市天氣預報',embed=forecast.desplay())
                 else:
-                    await channel.send('台灣各縣市天氣預報',embed=forecast.desplay)
+                    await channel.send('台灣各縣市天氣預報',embed=forecast.desplay())
                 await asyncio.sleep(0.5)
         self.forecast_update.change_interval(time=task.__gettime_3hr())
         await asyncio.sleep(10)
@@ -254,14 +254,14 @@ class task(Cog_Extension):
             user = data['user_login']
             dict[user] = True
             if not cache['twitch'].get(user,False):
-                time = datetime.strptime(data['started_at'],'%Y-%m-%dT%H:%M:%SZ')
+                time = datetime.datetime.strptime(data['started_at'],'%Y-%m-%dT%H:%M:%SZ')
                 time = time.strftime('%Y/%m/%d %H:%M:%S')
                 embed = discord.Embed(
                     title=data['title'],
                     url=f"https://www.twitch.tv/{data['user_login']}",
                     description=f"{data['game_name']}",
                     color=0x6441a5,
-                    timestamp = datetime.now()
+                    timestamp = datetime.datetime.now()
                     )
                 embed.set_author(name=f"{data['user_name']} 開台啦！")
                 thumbnail = data['thumbnail_url']

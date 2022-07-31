@@ -8,7 +8,7 @@ class weather(Cog_Extension):
     @commands.command()
     async def earthquake(self,ctx):
         msg = await ctx.send('資料查詢中...')
-        embed = EarthquakeReport.get_report().desplay
+        embed = EarthquakeReport.get_report().desplay()
         if embed:
             await msg.edit(content='查詢成功',embed=embed)
         else:
@@ -18,7 +18,7 @@ class weather(Cog_Extension):
     @commands.command(enable=True)
     async def covid(self,ctx):
         msg = await ctx.send('資料查詢中...')
-        embed = Covid19Report.get_covid19().desplay
+        embed = Covid19Report.get_covid19().desplay()
         if embed:
             await msg.edit(content='查詢成功',embed=embed)
         else:
@@ -28,7 +28,7 @@ class weather(Cog_Extension):
     @commands.command(enable=True)
     async def forecast(self,ctx):
         msg = await ctx.send('資料查詢中...')
-        embed = Forecast.get_report().desplay
+        embed = Forecast.get_report().desplay()
         if embed:
             await msg.edit(content='查詢成功',embed=embed)
         else:
