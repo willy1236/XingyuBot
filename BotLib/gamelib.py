@@ -189,12 +189,9 @@ class ApexCrafting():
 
 class ApexMapRotation():
     def __init__(self,data):
-        if "Error" in data:
+        if "Error" in data or not data:
             return None
-        try:
-            self.nowmap = data["current"]['map']
-        except TypeError:
-            print(data)
+        self.nowmap = data["current"]['map']
         self.nowstart = datetime.strptime(data['current']['readableDate_start'],"%Y-%m-%d %H:%M:%S")+timedelta(hours=8)
         self.nowend = datetime.strptime(data['current']['readableDate_end'],"%Y-%m-%d %H:%M:%S")+timedelta(hours=8)
         self.remaining = data['current']['remainingTimer']
@@ -230,8 +227,8 @@ class ApexStatus():
 class DBDPlayer():
     def __init__(self,data):
         #基本資料
-        self.id = data["id"]
-        self.name = SteamData().get_user(self.id).name
+        self.steamid = data["steamid"]
+        self.name = SteamData().get_user(self.steamid).name
         self.bloodpoints = data["bloodpoints"]
         self.survivor_rank = data["survivor_rank"]
         self.killer_rank = data["killer_rank"]
@@ -391,10 +388,10 @@ class DBDData():
     def __init__(self):
         pass
 
-    def get_player(self,user):
+    def get_player(self,steamid):
         try:
-            params = {'user':user}
-            response = requests.get(f'https://dbd.onteh.net.au/api/playerstats', params=params).json()
+            params = {'steamid':steamid}
+            response = requests.get(f'https://dbd.tricky.lol/api/playerstats', params=params).json()
             return DBDPlayer(response)
         except:
             return None

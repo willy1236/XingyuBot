@@ -186,7 +186,7 @@ class game(Cog_Extension):
         embed = ApexData.get_status().desplay()
         await msg.edit(content='查詢成功',embed=embed)
 
-    @commands.group(invoke_without_command=True,enabled=False)
+    @commands.group(invoke_without_command=True,enabled=True)
     @commands.cooldown(rate=1,per=1)
     async def DBD(self,ctx,userid=None):
         msg = await ctx.send('資料查詢中...')
