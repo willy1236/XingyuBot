@@ -22,9 +22,7 @@ class OsuPlayer():
         self.last_visit = self.e8_last_visit.strftime('%Y-%m-%d %H:%M:%S')
         self.url = f'https://osu.ppy.sh/users/{self.id}'
 
-        self.desplay = self.embed()
-
-    def embed(self):
+    def desplay(self):
         embed = BotEmbed.general("Osu玩家資訊",url=self.url)
         embed.add_field(name="名稱",value=self.username)
         embed.add_field(name="id",value=self.id)
@@ -62,9 +60,7 @@ class OsuBeatmap():
         self.hp = data['drain']
         self.version = data['version']
 
-        self.desplay = self.embed()
-
-    def embed(self):
+    def desplay(self):
         embed = BotEmbed.simple(title="Osu圖譜資訊")
         embed.add_field(name="名稱",value=self.title)
         embed.add_field(name="歌曲長度(秒)",value=self.time)
@@ -106,9 +102,7 @@ class ApexPlayer():
         self.legends_selected_tacker = data['legends']['selected']['data']
         self.legends_selected_banner = data['legends']['selected']['ImgAssets']['banner']
 
-        self.desplay = self.embed()
-
-    def embed(self):
+    def desplay(self):
         embed = BotEmbed.simple("Apex玩家資訊")
         embed.add_field(name="名稱",value=self.username)
         embed.add_field(name="id",value=self.id)
@@ -155,10 +149,8 @@ class ApexCrafting():
         self.item4_cost = self.item4['cost']
         self.item4_name = self.item4['itemType']['name']
         self.item4_id = self.item4['item']
-
-        self.desplay = self.embed()
     
-    def embed(self):
+    def desplay(self):
         embed = BotEmbed.simple("Apex合成器內容")
         dict = {
             "extended_light_mag":"紫色輕型彈匣",
@@ -199,7 +191,10 @@ class ApexMapRotation():
     def __init__(self,data):
         if "Error" in data:
             return None
-        self.nowmap = data["current"]['map']
+        try:
+            self.nowmap = data["current"]['map']
+        except TypeError:
+            print(data)
         self.nowstart = datetime.strptime(data['current']['readableDate_start'],"%Y-%m-%d %H:%M:%S")+timedelta(hours=8)
         self.nowend = datetime.strptime(data['current']['readableDate_end'],"%Y-%m-%d %H:%M:%S")+timedelta(hours=8)
         self.remaining = data['current']['remainingTimer']
@@ -209,9 +204,7 @@ class ApexMapRotation():
         self.nextstart = datetime.strptime(data['next']['readableDate_start'],"%Y-%m-%d %H:%M:%S")+timedelta(hours=8)
         self.nextend = datetime.strptime(data['next']['readableDate_end'],"%Y-%m-%d %H:%M:%S")+timedelta(hours=8)
 
-        self.desplay = self.embed()
-
-    def embed(self):
+    def desplay(self):
         dict = {
             "Storm Point":"風暴點",
             "Olympus":"奧林匹斯",
@@ -264,9 +257,7 @@ class DBDPlayer():
         self.beartrapcatches = data["beartrapcatches"]
         self.phantasmstriggered = data["phantasmstriggered"]
 
-        self.desplay = self.embed()
-    
-    def embed(self):
+    def desplay(self):
         embed = BotEmbed.simple("DBD玩家資訊")
         embed.add_field(name="玩家名稱",value=self.name)
         embed.add_field(name="血點數",value=self.bloodpoints)
@@ -299,9 +290,8 @@ class SteamUser():
         self.name = data['personaname']
         self.profileurl = data['profileurl']
         self.avatar = data['avatarfull']
-        self.desplay = self.embed()
     
-    def embed(self):
+    def desplay(self):
         embed = BotEmbed.simple("Stean用戶資訊")
         embed.add_field(name="用戶名稱",value=self.name)
         embed.add_field(name="用戶id",value=self.id)
