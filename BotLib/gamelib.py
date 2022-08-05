@@ -123,8 +123,6 @@ class ApexPlayer():
 
 class ApexCrafting():
     def __init__(self,data):
-        if "Error" in data:
-            return None
         self.daily = data[0]
         self.weekly = data[1]
 
@@ -189,8 +187,6 @@ class ApexCrafting():
 
 class ApexMapRotation():
     def __init__(self,data):
-        if "Error" in data or not data:
-            return None
         self.nowmap = data["current"]['map']
         self.nowstart = datetime.strptime(data['current']['readableDate_start'],"%Y-%m-%d %H:%M:%S")+timedelta(hours=8)
         self.nowend = datetime.strptime(data['current']['readableDate_end'],"%Y-%m-%d %H:%M:%S")+timedelta(hours=8)
@@ -372,12 +368,18 @@ class ApexData():
     def get_crafting():
         params={'auth':Database().apex_status_API}
         response = requests.get(f'https://api.mozambiquehe.re/crafting',params=params).json()
-        return ApexCrafting(response)
+        if "Error" in response or not response:
+            return None
+        else:
+            return ApexCrafting(response)
     
     def get_map_rotation():
         params={'auth':Database().apex_status_API}
         response = requests.get(f'https://api.mozambiquehe.re/maprotation',params=params).json()
-        return ApexMapRotation(response)
+        if "Error" in response or not response:
+            return None
+        else:    
+            return ApexMapRotation(response)
 
     def get_status():
         params={'auth':Database().apex_status_API}
