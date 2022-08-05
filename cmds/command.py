@@ -1,7 +1,7 @@
+import discord,random,asyncio,requests,math
 from datetime import datetime
-import discord,random,asyncio,requests
 from discord.errors import Forbidden, NotFound
-from discord.ext import commands
+from discord.ext import commands,pages
 from discord.commands import SlashCommandGroup
 
 from BotLib.funtions import find,converter,random_color,BRS
@@ -231,6 +231,33 @@ class command(Cog_Extension):
         else:
             await ctx.send('錯誤:你沒有稱號可更改',delete_after=5)
 
+    @role.command()
+    async def record(self, ctx,arg=None):
+        user = await find.user(ctx,arg) or ctx.author
+        db = Database()
+        rsdata = db.rsdata
+        if str(user.id) in rsdata:
+            id = str(user.id)
+            page = []
+            i = 0
+            page_now = 0
+            page.append(BotEmbed.simple(f"{user.name} 身分組紀錄"))
+            for role in rsdata[id]:
+                if i >= 10:
+                    page.append(BotEmbed.simple(f"{user.name} 身分組紀錄"))
+                    i = 0
+                    page_now += 1
+                name = rsdata[id][role][0]
+                time = rsdata[id][role][1]
+                page[page_now].add_field(name=name, value=time, inline=False)
+                i += 1
+
+            
+            paginator = pages.Paginator(pages=page, use_default_buttons=True)
+            await paginator.send(ctx, target=ctx.channel)
+            
+        else:
+            raise commands.errors.ArgumentParsingError('沒有此用戶的紀錄')
 
     @commands.command()
     @commands.cooldown(rate=1,per=2)
