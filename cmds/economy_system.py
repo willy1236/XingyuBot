@@ -2,7 +2,7 @@ import discord,asyncio,random
 from discord.ext import commands
 from core.classes import Cog_Extension
 from BotLib.funtions import find
-from BotLib.userlib import Point
+from BotLib.userlib import Point,Rcoin
 from BotLib.database import Database
 
 
@@ -62,24 +62,28 @@ class economy_system(Cog_Extension):
 
     @commands.command()
     async def sign(self,ctx):
-        jdsign = Database().jdsign
+        db = Database()
+        jdsign = db.jdsign
         #jwsign = Database().jwsign
-        jdata = Database().jdata
+        jdata = db.jdata
         signer = str(ctx.author.id)
         
         if signer not in jdsign:    
             #日常
             jdsign.append(signer)
-            Database().write('jdsign',jdsign)
+            db.write('jdsign',jdsign)
             #週常
             #jwsign[signer] += 1
             #Database().write('jwsign',jwsign)
             
+            #Rcoin
+            rcoin_add = random.randint(3,5)
+            Rcoin(signer).add(rcoin_add)
             if ctx.guild.id == jdata['guild']['001']:
                 Point(signer).add(1)
-                await ctx.send(f'{ctx.author.mention} 簽到完成! pt點數+1',delete_after=5)
+                await ctx.send(f'{ctx.author.mention} 簽到完成! pt點數+1 Rcoin+{rcoin_add}',delete_after=5)
             else:
-                await ctx.send(f'{ctx.author.mention} 簽到完成!',delete_after=5)
+                await ctx.send(f'{ctx.author.mention} 簽到完成! Rcoin+{rcoin_add}',delete_after=5)
         else:
             await ctx.send(f'{ctx.author.mention} 已經簽到過了喔',delete_after=5)
 

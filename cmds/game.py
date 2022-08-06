@@ -1,4 +1,3 @@
-from cgitb import enable
 import discord,requests
 from discord.ext import commands
 from bs4 import BeautifulSoup

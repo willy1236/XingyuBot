@@ -82,12 +82,17 @@ class command(Cog_Extension):
             user = ctx.guild.get_member(user.id)
             embed = BotEmbed.simple(title=f'{user.name}#{user.discriminator}', description="ID:用戶(伺服器成員)")
             embed.add_field(name="暱稱", value=user.nick, inline=False)
-            embed.add_field(name="是否為機器人", value=user.bot, inline=False)
             embed.add_field(name="最高身分組", value=user.top_role.mention, inline=True)
-            embed.add_field(name="目前狀態", value=user.status, inline=True)
-            embed.add_field(name="是否為Discord官方", value=user.system, inline=False)
+            embed.add_field(name="目前狀態", value=user.raw_status, inline=True)
+            if user.activity:
+                embed.add_field(name="目前活動", value=user.activity, inline=True)
+            embed.add_field(name="是否為機器人", value=user.bot, inline=False)
+            embed.add_field(name="是否為Discord官方", value=user.system, inline=True)
+            embed.add_field(name="是否被禁言", value=user.timed_out, inline=True)
+            embed.add_field(name="加入群組日期", value=user.joined_at, inline=False)
             embed.add_field(name="帳號創建日期", value=user.created_at, inline=False)
             embed.set_thumbnail(url=user.display_avatar.url)
+            embed.set_footer(text=f"id:{user.id}")
             success += 1
         elif user:
             embed = BotEmbed.simple(title=f'{user.name}#{user.discriminator}', description="ID:用戶")
@@ -264,13 +269,14 @@ class command(Cog_Extension):
     async def lottery(self,ctx,times=None):
         if times:
             try:
-                times = round(float(times))
+                times = int(times)
+                if times > 1000 or times <= 0:
+                    raise commands.errors.ArgumentParsingError('數字只能為介於1~1000之間的整數')
             except ValueError:
-                raise commands.errors.ArgumentParsingError('只能輸入介於1~1000之間的數字')
+                raise commands.errors.ArgumentParsingError('只能輸入介於1~1000之間的整數')
+            
         else:
             times = 1
-        if times > 1000 or times <= 0:
-            raise commands.errors.ArgumentParsingError('數字只能介於1~1000之間')
         
         result = {'six':0,'five':0,'four':0,'three':0}
         user_id = str(ctx.author.id)

@@ -1,4 +1,4 @@
-import json,os
+import json,os,mysql.connector
 
 from discord.ext import commands
 
@@ -36,6 +36,7 @@ class Database:
             'jbag' : 'database/user_settings/bag.json',
             'cache' : 'database/cache.json',
             'monster_basic':'database/RPG_settings/monster_basic.json',
+            'jRcoin':'database/user_settings/rcoin.json',
         }
         self.jdata = json.load(open(self.dict['jdata'],mode='r',encoding='utf8'))
         self.cdata = json.load(open(self.dict['cdata'],mode='r',encoding='utf8'))
@@ -53,6 +54,7 @@ class Database:
         self.jbag = json.load(open(self.dict['jbag'],mode='r',encoding='utf8'))
         self.cache = json.load(open(self.dict['cache'],mode='r',encoding='utf8'))
         self.monster_basic = json.load(open(self.dict['monster_basic'],mode='r',encoding='utf8'))
+        self.jRcoin = json.load(open(self.dict['jRcoin'],mode='r',encoding='utf8'))
 
         try:
             self.tokens = json.load(open('database/token_settings.json',mode='r',encoding='utf8'))
@@ -121,3 +123,29 @@ class Database:
             return data
         except:
             return None
+
+class GameDatabase():
+    pass
+
+class SQLDatabase():
+    def __init__(self,**settings):
+        '''settings = {"host": "","port": ,"user": "","password": "","db": "","charset": ""}'''
+        #建立連線
+        self.connection = mysql.connector.connect(**settings)
+        self.cursor = self.connection.cursor(dictionary=True)
+    
+    def set_data(self):
+        db = "database"
+        self.cursor.execute(f"USE `{db}`;")
+        self.cursor.execute("INSERT INTO `user_data` VALUES(1, NULL)")
+        self.connection.commit()
+
+    def get_data(self):
+        db = "database"
+        self.cursor.execute(f"USE `{db}`;")
+        self.cursor.execute('SELECT * FROM `user_data` WHERE id =%s;',("1",))
+        #self.cursor.execute('SELECT * FROM `user_data`;')
+        
+        records = self.cursor.fetchall()
+        for r in records:
+             print(r)

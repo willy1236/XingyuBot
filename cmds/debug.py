@@ -100,6 +100,10 @@ class debug(Cog_Extension):
             await asyncio.sleep(0.5)
         await ctx.message.add_reaction('✅')
 
+    @commands.command()
+    @commands.is_owner()
+    async def sqltest(self,ctx):
+        self.sqldb.get_data()
 
 
 def setup(bot):

@@ -5,26 +5,39 @@ from BotLib.basic import BotEmbed
 class User():
     '''基本用戶資料'''
     def __init__(self,userid:str,dcname=None):
+        '''hp:生命 atk:攻擊 def:防禦\n
+        DEX=Dexterity敏捷\n
+        STR=Strength力量\n
+        INT=Intelligence智力\n
+        LUK=Lucky幸運'''
+        #資料庫
         self.db = Database()
         udata = self.db.udata
         jbag = self.db.jbag
-
+        
+        #初始設定
         self.id = str(userid)
         if not self.id in udata:
             self.setup()
         
+        #基本資料
         self.point = Point(self.id)
         self.name = udata[self.id].get('name',dcname)
-        self.hp = udata[self.id].get('hp',10)
         self.weapon = udata[self.id].get('weapon',None)
-        self.att = udata[self.id].get('att',1)
+        self.rcoin = Rcoin(self.id)
+        
+        #RPG數值
+        self.hp = udata[self.id].get('hp',10)
+        self.atk = udata[self.id].get('atk',1)
 
+        #其他相關
         self.bag = jbag.get(self.id,None)
         self.pet = Pet(self.id)
 
     def desplay(self):
         embed = BotEmbed.general(name=self.name)
-        embed.add_field(name='Pt點數',value=self.point.pt)
+        embed.add_field(name='Pt點數',value=self.point)
+        embed.add_field(name='Rcoin',value=self.rcoin)
         embed.add_field(name='生命值',value=self.hp)
         if self.pet.has_pet:
             embed.add_field(name='寵物',value=self.pet.name)
@@ -59,18 +72,22 @@ class User():
         if 'times' in dict:
             dict['times'] +=1
         else:
-            dict['times'] =1
+            if int(self.rcoin) <= 0:
+                return "你的Rcoin不足 至少需要1Rcoin才能冒險"
+            else:
+                dict['times'] =1
+                self.rcoin.add(-1)
 
         rd = random.randint(1,100)
         if rd >=1 and rd <=70:
-            result = f"第{dict['times']}次冒險\n沒事發生"
+            result = f"第{dict['times']}次冒險：沒事發生"
         elif rd >= 71 and rd <=100:
             result = f"第{dict['times']}次冒險：遇到怪物\n"
             result += Monster(random.choice(["001","002"])).battle(self)
         
         if dict['times'] >= 10:
             del udata[self.id]['advance']
-            result += '冒險結束'
+            result += '\n冒險結束'
         else:
             udata[self.id]['advance'] = dict
 
@@ -90,7 +107,8 @@ class User():
 class Point():
     '''用戶pt點數'''
     def __init__(self,userid:str):
-        self.jpt = Database().jpt
+        self.db = Database()
+        self.jpt = self.db.jpt
         self.user = str(userid) #用戶
         if self.user not in self.jpt:
             self.setup()
@@ -99,19 +117,52 @@ class Point():
     def __repr__(self):
         return str(self.pt)
 
+    def __int__(self):
+        return self.pt
+
     def setup(self):
         self.jpt[self.user] = 0
-        Database().write('jpt',self.jpt)
+        self.db.write('jpt',self.jpt)
 
     def set(self,amount:int):
         """設定用戶PT"""
         self.jpt[self.user] = amount
-        Database().write('jpt',self.jpt)
+        self.db.write('jpt',self.jpt)
     
     def add(self,amount:int):
         """增減用戶PT"""
         self.jpt[self.user] += amount
-        Database().write('jpt',self.jpt)
+        self.db.write('jpt',self.jpt)
+    
+class Rcoin:
+    def __init__(self,userid:str):
+        self.db = Database()
+        self.jRcoin = self.db.jRcoin
+        self.user = str(userid)
+        if self.user not in self.jRcoin:
+            self.setup()
+        self.rcoin = self.jRcoin[self.user]
+
+    def __repr__(self):
+        return str(self.rcoin)
+
+    def __int__(self):
+        return self.rcoin
+
+    def setup(self):
+        self.jRcoin[self.user] = 0
+        self.db.write('jRcoin',self.jRcoin)
+
+    def set(self,amount:int):
+        """設定用戶Rcoin"""
+        self.jRcoin[self.user] = amount
+        self.db.write('jRcoin',self.jRcoin)
+    
+    def add(self,amount:int):
+        """增減用戶Rcoin"""
+        self.jRcoin[self.user] += amount
+        self.db.write('jRcoin',self.jRcoin)
+
 
 class Pet():
     def __init__(self,user:str):
@@ -147,28 +198,38 @@ class Monster:
         
         self.name = name
         self.hp = self.data["hp"]
-        self.att = self.data["att"]
+        self.atk = self.data["atk"]
 
     def battle(self, player:User):
+        '''玩家與怪物戰鬥\n
+        player:要戰鬥的玩家'''
         text = ""
+        #戰鬥到一方倒下
         while self.hp > 0 and player.hp > 0:
-            self.hp -= player.att
+            #玩家先攻
+            self.hp -= player.atk
+            #怪物被擊倒
             if self.hp <= 0:
-                text += f"擊倒怪物 你還剩下{player.hp}滴\n"
+                text += f"擊倒怪物 你還剩下{player.hp}滴"
                 if "loot" in self.data:
                     loot = random.choices(self.data["loot"][0],weights=self.data["loot"][1],k=self.data["loot"][2])
                     player.add_bag(loot)
-                    text += f"獲得道具！\n"
+                    text += f"\n獲得道具！"
+                player.rcoin.add(1)
+                text += f"\nRcoin+1"
                 break
-
-            player.hp -= self.att
+            
+            #怪物後攻
+            player.hp -= self.atk
             player.hp_set(player.hp)
+            #玩家被擊倒
             if player.hp <= 0:
                 text += "被怪物擊倒\n"
                 player.hp_set(10)
-                text += '你在冒險中死掉了 但因為此功能還在開發 你可以直接滿血復活\n'
+                text += '你在冒險中死掉了 但因為此功能還在開發 你可以直接滿血復活'
+            #沒有被擊倒
             else:
-                text += f"怪物剩下{self.hp}(-{player.att})滴 你還剩下{player.hp}(-{self.att})滴 戰鬥繼續\n"
+                text += f"怪物剩下{self.hp}(-{player.atk})滴 你還剩下{player.hp}(-{self.atk})滴 戰鬥繼續\n"
         return text
 
 class Weapon:

@@ -1,5 +1,6 @@
 import discord, os
 from discord.ext import commands
+
 from BotLib.database import Database
 from cmds.command import Reactbutton1
 
@@ -101,6 +102,7 @@ async def reset(ctx,arg=None):
 async def ping(ctx):
     await ctx.send(f'延遲為:{round(bot.latency*1000)} ms')
 
+#jset
 @bot.command()
 @commands.is_owner()
 async def jset(ctx,option,value):
