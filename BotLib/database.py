@@ -78,7 +78,8 @@ class Database:
 
     def get_token(self,webname:str):
         """獲取相關api的tokens\n
-        支援CWB_API,osu(id,secret),TRN,apex,steam,twitch(id,secret)"""
+        支援CWB_API,osu(id,secret),TRN,apex,steam,twitch(id,secret)
+        """
         dict = {
             "CWB_API":'CWB_API',
             'osu':'osu',
@@ -104,7 +105,8 @@ class Database:
         """查詢資料庫中的玩家資訊，若輸入dc用戶則需傳入ctx\n
         dcuser and in database -> 資料庫資料\n
         dcuser and not in database -> None\n
-        not dcuser -> user_id(原資料輸出)"""
+        not dcuser -> user_id(原資料輸出)
+        """
         gdata = Database().gdata
         
         if ctx:
@@ -129,12 +131,33 @@ class GameDatabase():
 
 class SQLDatabase():
     def __init__(self,**settings):
-        '''settings = {"host": "","port": ,"user": "","password": "","db": "","charset": ""}'''
+        '''MySQL 資料庫連接\n
+        settings = {"host": "","port": ,"user": "","password": "","db": "","charset": ""}
+        '''
         #建立連線
         self.connection = mysql.connector.connect(**settings)
         self.cursor = self.connection.cursor(dictionary=True)
     
-    def set_data(self):
+    def user_setup(self,id:str,name:str='NULL'):
+        db = "database"
+        self.cursor.execute(f"USE `{db}`;")
+        self.cursor.execute(f"INSERT INTO `user_data` VALUES({str(id)},{name})")
+        self.connection.commit()
+
+    def get_user(self,id:str):
+        db = "database"
+        self.cursor.execute(f"USE `{db}`;")
+        self.cursor.execute('SELECT * FROM `user_data` WHERE id = %s;',(str(id),))
+        records = self.cursor.fetchone()
+        return records
+
+    def remove_user(self,id:str):
+        db = "database"
+        self.cursor.execute(f"USE `{db}`;")
+        self.cursor.execute("DELETE FROM `user_data` WHERE `id` = %s;",(str(id),))
+        self.connection.commit()
+
+    def add_data(self):
         db = "database"
         self.cursor.execute(f"USE `{db}`;")
         self.cursor.execute("INSERT INTO `user_data` VALUES(1, NULL)")
@@ -143,9 +166,15 @@ class SQLDatabase():
     def get_data(self):
         db = "database"
         self.cursor.execute(f"USE `{db}`;")
-        self.cursor.execute('SELECT * FROM `user_data` WHERE id =%s;',("1",))
+        self.cursor.execute('SELECT * FROM `user_data` WHERE id = %s;',("1",))
         #self.cursor.execute('SELECT * FROM `user_data`;')
         
         records = self.cursor.fetchall()
         for r in records:
              print(r)
+    
+    def remove_data(self):
+        db = "database"
+        self.cursor.execute(f"USE `{db}`;")
+        self.cursor.execute('DELETE FROM `user_data` WHERE `id` = %s;',("3",))
+        self.connection.commit()

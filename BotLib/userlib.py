@@ -22,12 +22,14 @@ class User():
         
         #基本資料
         self.point = Point(self.id)
+        self.rcoin = Rcoin(self.id)
         self.name = udata[self.id].get('name',dcname)
         self.weapon = udata[self.id].get('weapon',None)
-        self.rcoin = Rcoin(self.id)
         
         #RPG數值
         self.hp = udata[self.id].get('hp',10)
+        #if not "atk" in udata[self.id]:
+        #    self.RPG_setup()
         self.atk = udata[self.id].get('atk',1)
 
         #其他相關
@@ -48,6 +50,11 @@ class User():
     def setup(self):
         udata = self.db.udata
         udata[self.id] = {}
+        self.db.write('udata',udata)
+    
+    def RPG_setup(self):
+        udata = self.db.udata
+        udata[self.id].get('atk',1)
         self.db.write('udata',udata)
 
     def get_bag(self):
@@ -169,7 +176,7 @@ class Pet():
         self.db = Database()
         self.jpet = self.db.jpet
         self.user = str(user)
-        data = self.jpet.get(str(user),None)
+        data = self.jpet.get(self.user,None)
         if data:
             self.has_pet = True
             self.name = data['name']
@@ -177,18 +184,31 @@ class Pet():
         else:
             self.has_pet = False
 
-    @staticmethod
-    def add_pet(user,name,species):
-        db = Database()
-        jpet = db.jpet
-        jpet[user] = {
-            "name": name,
-            "species" : species,
+    def add_pet(self,name,species):
+        #ts = translate
+        ts = {
+            'shark':'鯊魚',
+            'dog':'狗',
+            'cat':'貓',
+            'fox':'狐狸',
+            'wolf':'狼',
+            'rabbit':'兔子'
         }
-        db.write('jpet',jpet)
+        if species in ts:
+            dict = {
+                "name": name,
+                "species" : species,
+            }
+            self.jpet[self.user] = dict
+            self.db.write('jpet',self.jpet)
+
+            list = [name,ts.get(species,species)]
+            return list
+        else:
+            raise ValueError('Invalid species')
     
     def remove_pet(self):
-        del self.jpet[self.owner]
+        del self.jpet[self.user]
         self.db.write('jpet',self.jpet)
 
 class Monster:
@@ -234,8 +254,13 @@ class Monster:
 
 class Weapon:
     def __init__(self):
-        pass
+        self.name = None
+        self.id = None
+        self.atk = None
 
 class Armor:
     def __init__(self):
         pass
+
+class Item():
+    pass

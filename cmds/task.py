@@ -265,8 +265,8 @@ class task(Cog_Extension):
                     )
                 embed.set_author(name=f"{data['user_name']} 開台啦！")
                 thumbnail = data['thumbnail_url']
-                thumbnail = thumbnail.replace('{width}','1280')
-                thumbnail = thumbnail.replace('{height}','1024')
+                thumbnail = thumbnail.replace('{width}','960')
+                thumbnail = thumbnail.replace('{height}','540')
                 embed.set_image(url=thumbnail)
                 embed.set_footer(text=f"開始於{time}")
                 

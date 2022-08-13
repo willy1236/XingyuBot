@@ -1,5 +1,4 @@
 import asyncio
-from discord import Embed
 from discord.ext import commands
 from core.classes import Cog_Extension
 
@@ -43,23 +42,12 @@ class user_system(Cog_Extension):
     
     @pet.command()
     async def add(self,ctx,species,name):
-        user = User(ctx.author.id)
-        if user.pet:
+        pet = User(ctx.author.id).pet
+        if pet.has_pet:
             await ctx.send('你已經有寵物了')
             return
-        if species not in ['shark','dog','cat','fox']:
-            await ctx.send('沒有該物種的寵物喔')    
-            return
-        
-        db = Database()
-        jpet = db.jpet
-        pet = {
-            'name' : name,
-            'type' : type
-        }
-        jpet[str(user.id)] = pet
-        db.write('jpet',jpet)
-        await ctx.send(f'你收養了一隻名叫 {name} 的{type}!')
+        list = pet.add_pet(name,species)
+        await ctx.send(f"你收養了一隻名叫 {list[0]} 的{list[1]}!")
 
     @pet.command()
     async def remove(self,ctx):
@@ -68,8 +56,8 @@ class user_system(Cog_Extension):
                 return m.content == 'y' and m.author == ctx.author
             except:
                 return False
-        user = User(ctx.author.id)
-        if user.pet:
+        pet = User(ctx.author.id).pet
+        if not pet.has_pet:
             await ctx.send('你沒有寵物')
             return
 
@@ -77,10 +65,7 @@ class user_system(Cog_Extension):
             await ctx.send('你真的確定要放生寵物嗎?(輸入y確定)')
             msg = await self.bot.wait_for('message', check=check,timeout=60)
             if msg.content == 'y':
-                db = Database()
-                jpet = db.jpet
-                del jpet[str(ctx.author.id)]
-                db.write('jpet',jpet)
+                pet.remove_pet()
                 await ctx.send('寵物已放生')
             else:
                 await ctx.send(f'取消放生寵物')

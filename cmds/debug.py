@@ -103,8 +103,14 @@ class debug(Cog_Extension):
     @commands.command()
     @commands.is_owner()
     async def sqltest(self,ctx):
-        self.sqldb.get_data()
+        self.sqldb.user_setup(ctx.author.id)
+        print('done')
 
+    @commands.command()
+    @commands.is_owner()
+    async def sqltest2(self,ctx):
+        user = self.sqldb.get_user(ctx.author.id)
+        print(user)
 
 def setup(bot):
     bot.add_cog(debug(bot))

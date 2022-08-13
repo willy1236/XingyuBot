@@ -150,7 +150,7 @@ class ApexCrafting():
     
     def desplay(self):
         embed = BotEmbed.simple("Apex合成器內容")
-        dict = {
+        tl = {
             "extended_light_mag":"紫色輕型彈匣",
             "backpack":"紫色背包",
             "helmet":"紫色頭盔",
@@ -169,13 +169,14 @@ class ApexCrafting():
             "optic_variable_aog":"2-4倍鏡",
             "standard_stock":"紫色槍托",
             "turbocharger":"渦輪增壓器",
-            "barrel_stabilizer":"barrel_stabilizer" 
+            "barrel_stabilizer":"barrel_stabilizer",
+            'laser_sight':'雷射瞄準鏡'
         }
         item_name = []
-        item_name.append(dict.get(self.item1_name,self.item1_name))
-        item_name.append(dict.get(self.item2_name,self.item2_name))
-        item_name.append(dict.get(self.item3_name,self.item3_name))
-        item_name.append(dict.get(self.item4_name,self.item4_name))
+        item_name.append(tl.get(self.item1_name,self.item1_name))
+        item_name.append(tl.get(self.item2_name,self.item2_name))
+        item_name.append(tl.get(self.item3_name,self.item3_name))
+        item_name.append(tl.get(self.item4_name,self.item4_name))
 
         embed.add_field(name="每日物品1",value=f"{item_name[0]} {self.item1_cost}",inline=False)
         embed.add_field(name="每日物品2",value=f"{item_name[1]} {self.item2_cost}",inline=False)
@@ -198,16 +199,17 @@ class ApexMapRotation():
         self.nextend = datetime.strptime(data['next']['readableDate_end'],"%Y-%m-%d %H:%M:%S")+timedelta(hours=8)
 
     def desplay(self):
-        dict = {
+        tl = {
             "Storm Point":"風暴點",
             "Olympus":"奧林匹斯",
-            "World's Edge":"世界邊緣"
+            "World's Edge":"世界邊緣",
+            "Kings Canyon":"王者峽谷"
         }
         embed = BotEmbed.simple("Apex地圖輪替")
-        embed.add_field(name="目前地圖",value=dict.get(self.nowmap,self.nowmap))
+        embed.add_field(name="目前地圖",value=tl.get(self.nowmap,self.nowmap))
         embed.add_field(name="開始時間",value=self.nowstart)
         embed.add_field(name="結束時間",value=self.nowend)
-        embed.add_field(name="下張地圖",value=dict.get(self.nextmap,self.nextmap))
+        embed.add_field(name="下張地圖",value=tl.get(self.nextmap,self.nextmap))
         embed.add_field(name="開始時間",value=self.nextstart)
         embed.add_field(name="結束時間",value=self.nextend)
         embed.add_field(name="目前地圖剩餘時間",value=self.remaining)
