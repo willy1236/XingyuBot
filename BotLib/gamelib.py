@@ -170,7 +170,9 @@ class ApexCrafting():
             "standard_stock":"紫色槍托",
             "turbocharger":"渦輪增壓器",
             "barrel_stabilizer":"barrel_stabilizer",
-            'laser_sight':'雷射瞄準鏡'
+            'laser_sight':'雷射瞄準鏡',
+            'optic_variable_sniper':'4~8x狙擊倍鏡',
+            'extended_sniper_mag':'紫色狙擊彈匣'
         }
         item_name = []
         item_name.append(tl.get(self.item1_name,self.item1_name))

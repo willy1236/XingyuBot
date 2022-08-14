@@ -11,9 +11,9 @@ class User():
         INT=Intelligence智力\n
         LUK=Lucky幸運'''
         #資料庫
-        self.db = Database()
-        udata = self.db.udata
-        jbag = self.db.jbag
+        self.__db = Database()
+        udata = self.__db.udata
+        jbag = self.__db.jbag
         
         #初始設定
         self.id = str(userid)
@@ -48,21 +48,21 @@ class User():
         return embed
 
     def setup(self):
-        udata = self.db.udata
+        udata = self.__db.udata
         udata[self.id] = {}
-        self.db.write('udata',udata)
+        self.__db.write('udata',udata)
     
     def RPG_setup(self):
-        udata = self.db.udata
+        udata = self.__db.udata
         udata[self.id].get('atk',1)
-        self.db.write('udata',udata)
+        self.__db.write('udata',udata)
 
     def get_bag(self):
         dict = {}
         pass
 
     def add_bag(self,items:list):
-        jbag = self.db.jbag
+        jbag = self.__db.jbag
         ubag = jbag.get(self.id,{})
         for i in items:
             if i in ubag:
@@ -71,10 +71,10 @@ class User():
                 ubag[i] = 1
         
         jbag[self.id] = ubag
-        self.db.write('jbag',jbag)
+        self.__db.write('jbag',jbag)
 
     def advance(self):
-        udata = self.db.udata
+        udata = self.__db.udata
         dict = udata[self.id].get('advance',{})
         if 'times' in dict:
             dict['times'] +=1
@@ -98,28 +98,28 @@ class User():
         else:
             udata[self.id]['advance'] = dict
 
-        self.db.write('udata',udata)
+        self.__db.write('udata',udata)
         return result
 
     def hp_add(self,amount:int):
-        udata = self.db.udata
+        udata = self.__db.udata
         udata[self.id]['hp'] = self.hp+amount
-        self.db.write('udata',udata)
+        self.__db.write('udata',udata)
 
     def hp_set(self,amount:int):
-        udata = self.db.udata
+        udata = self.__db.udata
         udata[self.id]['hp'] = amount
-        self.db.write('udata',udata)
+        self.__db.write('udata',udata)
 
 class Point():
     '''用戶pt點數'''
     def __init__(self,userid:str):
-        self.db = Database()
-        self.jpt = self.db.jpt
+        self.__db = Database()
+        jpt = self.__db.jpt
         self.user = str(userid) #用戶
-        if self.user not in self.jpt:
+        if self.user not in jpt:
             self.setup()
-        self.pt = self.jpt[self.user] #用戶擁有PT數
+        self.pt = jpt[self.user] #用戶擁有PT數
     
     def __repr__(self):
         return str(self.pt)
@@ -128,27 +128,30 @@ class Point():
         return self.pt
 
     def setup(self):
-        self.jpt[self.user] = 0
-        self.db.write('jpt',self.jpt)
+        jpt = self.__db.jpt
+        jpt[self.user] = 0
+        self.__db.write('jpt',jpt)
 
     def set(self,amount:int):
         """設定用戶PT"""
-        self.jpt[self.user] = amount
-        self.db.write('jpt',self.jpt)
+        jpt = self.__db.jpt
+        jpt[self.user] = amount
+        self.__db.write('jpt',jpt)
     
     def add(self,amount:int):
         """增減用戶PT"""
-        self.jpt[self.user] += amount
-        self.db.write('jpt',self.jpt)
+        jpt = self.__db.jpt
+        jpt[self.user] += amount
+        self.__db.write('jpt',jpt)
     
 class Rcoin:
     def __init__(self,userid:str):
-        self.db = Database()
-        self.jRcoin = self.db.jRcoin
+        self.__db = Database()
+        jRcoin = self.__db.jRcoin
         self.user = str(userid)
-        if self.user not in self.jRcoin:
+        if self.user not in jRcoin:
             self.setup()
-        self.rcoin = self.jRcoin[self.user]
+        self.rcoin = jRcoin[self.user]
 
     def __repr__(self):
         return str(self.rcoin)
@@ -157,26 +160,29 @@ class Rcoin:
         return self.rcoin
 
     def setup(self):
-        self.jRcoin[self.user] = 0
-        self.db.write('jRcoin',self.jRcoin)
+        jRcoin = self.__db.jRcoin
+        jRcoin[self.user] = 0
+        self.__db.write('jRcoin',jRcoin)
 
     def set(self,amount:int):
         """設定用戶Rcoin"""
-        self.jRcoin[self.user] = amount
-        self.db.write('jRcoin',self.jRcoin)
+        jRcoin = self.__db.jRcoin
+        jRcoin[self.user] = amount
+        self.__db.write('jRcoin',jRcoin)
     
     def add(self,amount:int):
         """增減用戶Rcoin"""
-        self.jRcoin[self.user] += amount
-        self.db.write('jRcoin',self.jRcoin)
+        jRcoin = self.__db.jRcoin
+        jRcoin[self.user] += amount
+        self.__db.write('jRcoin',jRcoin)
 
 
 class Pet():
     def __init__(self,user:str):
-        self.db = Database()
-        self.jpet = self.db.jpet
+        self.__db = Database()
+        jpet = self.__db.jpet
         self.user = str(user)
-        data = self.jpet.get(self.user,None)
+        data = jpet.get(self.user,None)
         if data:
             self.has_pet = True
             self.name = data['name']
@@ -185,6 +191,7 @@ class Pet():
             self.has_pet = False
 
     def add_pet(self,name,species):
+        jpet = self.__db.jpet
         #ts = translate
         ts = {
             'shark':'鯊魚',
@@ -199,8 +206,8 @@ class Pet():
                 "name": name,
                 "species" : species,
             }
-            self.jpet[self.user] = dict
-            self.db.write('jpet',self.jpet)
+            jpet[self.user] = dict
+            self.__db.write('jpet',jpet)
 
             list = [name,ts.get(species,species)]
             return list
@@ -208,13 +215,14 @@ class Pet():
             raise ValueError('Invalid species')
     
     def remove_pet(self):
-        del self.jpet[self.user]
-        self.db.write('jpet',self.jpet)
+        jpet = self.__db.jpet
+        del jpet[self.user]
+        self.__db.write('jpet',jpet)
 
 class Monster:
     def __init__(self,name):
-        self.db = Database()
-        self.data = self.db.monster_basic[name]
+        self.__db = Database()
+        self.data = self.__db.monster_basic[name]
         
         self.name = name
         self.hp = self.data["hp"]
