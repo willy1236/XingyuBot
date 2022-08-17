@@ -19,45 +19,46 @@ class Database:
         CWB = 中央氣象局\n
         TRN = tracker.gg
         """
-        self.dict = {
-            'jdata':'database/setting.json',
-            'cdata':'database/channel_settings.json',
-            'picdata':'database/bot_settings/picture.json',
-            'udata': 'database/user_settings/basic.json',
-            'jpt':'database/user_settings/point.json',
-            'jloot':'database/lottery.json',
-            'bet_data':'database/bet.json',
-            'gdata':'database/gamer_data.json',
-            'jdsign':'database/sign_day.json',
-            'jwsign':'database/sign_week.json',
-            'jevent':'database/bot_settings/event.json',
-            'rsdata':'database/role_save.json',
-            'jpet' : 'database/user_settings/pet.json',
-            'jbag' : 'database/user_settings/bag.json',
-            'cache' : 'database/cache.json',
-            'monster_basic':'database/RPG_settings/monster_basic.json',
-            'jRcoin':'database/user_settings/rcoin.json',
+        location = "database"
+        self.__dict = {
+            'jdata': f'{location}/setting.json',
+            'cdata': f'{location}/channel_settings.json',
+            'picdata': f'{location}/bot_settings/picture.json',
+            'udata': f'{location}/user_settings/basic.json',
+            'jpt': f'{location}/user_settings/point.json',
+            'jloot': f'{location}/lottery.json',
+            'bet_data': f'{location}/bet.json',
+            'gdata': f'{location}/gamer_data.json',
+            'jdsign': f'{location}/sign_day.json',
+            'jwsign': f'{location}/sign_week.json',
+            'jevent': f'{location}/bot_settings/event.json',
+            'rsdata': f'{location}/role_save.json',
+            'jpet': f'{location}/user_settings/pet.json',
+            'jbag': f'{location}/user_settings/bag.json',
+            'cache': f'{location}/cache.json',
+            'monster_basic': f'{location}/RPG_settings/monster_basic.json',
+            'jRcoin': f'{location}/user_settings/rcoin.json',
         }
-        self.jdata = json.load(open(self.dict['jdata'],mode='r',encoding='utf8'))
-        self.cdata = json.load(open(self.dict['cdata'],mode='r',encoding='utf8'))
-        self.picdata = json.load(open(self.dict['picdata'],mode='r',encoding='utf8'))
-        self.udata = json.load(open(self.dict['udata'],'r',encoding='utf8'))
-        self.jpt = json.load(open(self.dict['jpt'],mode='r',encoding='utf8'))
-        self.jloot = Counter(json.load(open(self.dict['jloot'],mode='r',encoding='utf8')))
-        self.bet_data = Counter(json.load(open(self.dict['bet_data'],mode='r',encoding='utf8')))
-        self.gdata = json.load(open(self.dict['gdata'],'r',encoding='utf8'))
-        self.jdsign = json.load(open(self.dict['jdsign'],mode='r',encoding='utf8'))
-        self.jwsign = Counter(json.load(open(self.dict['jwsign'],mode='r',encoding='utf8')))
-        self.jevent = Counter(json.load(open(self.dict['jevent'],mode='r',encoding='utf8')))
-        self.rsdata = Counter(json.load(open(self.dict['rsdata'],mode='r',encoding='utf8')))
-        self.jpet = json.load(open(self.dict['jpet'],mode='r',encoding='utf8'))
-        self.jbag = json.load(open(self.dict['jbag'],mode='r',encoding='utf8'))
-        self.cache = json.load(open(self.dict['cache'],mode='r',encoding='utf8'))
-        self.monster_basic = json.load(open(self.dict['monster_basic'],mode='r',encoding='utf8'))
-        self.jRcoin = json.load(open(self.dict['jRcoin'],mode='r',encoding='utf8'))
+        self.jdata = json.load(open(self.__dict['jdata'],mode='r',encoding='utf8'))
+        self.cdata = json.load(open(self.__dict['cdata'],mode='r',encoding='utf8'))
+        self.picdata = json.load(open(self.__dict['picdata'],mode='r',encoding='utf8'))
+        self.udata = json.load(open(self.__dict['udata'],'r',encoding='utf8'))
+        self.jpt = json.load(open(self.__dict['jpt'],mode='r',encoding='utf8'))
+        self.jloot = Counter(json.load(open(self.__dict['jloot'],mode='r',encoding='utf8')))
+        self.bet_data = Counter(json.load(open(self.__dict['bet_data'],mode='r',encoding='utf8')))
+        self.gdata = json.load(open(self.__dict['gdata'],'r',encoding='utf8'))
+        self.jdsign = json.load(open(self.__dict['jdsign'],mode='r',encoding='utf8'))
+        self.jwsign = Counter(json.load(open(self.__dict['jwsign'],mode='r',encoding='utf8')))
+        self.jevent = Counter(json.load(open(self.__dict['jevent'],mode='r',encoding='utf8')))
+        self.rsdata = Counter(json.load(open(self.__dict['rsdata'],mode='r',encoding='utf8')))
+        self.jpet = json.load(open(self.__dict['jpet'],mode='r',encoding='utf8'))
+        self.jbag = json.load(open(self.__dict['jbag'],mode='r',encoding='utf8'))
+        self.cache = json.load(open(self.__dict['cache'],mode='r',encoding='utf8'))
+        self.monster_basic = json.load(open(self.__dict['monster_basic'],mode='r',encoding='utf8'))
+        self.jRcoin = json.load(open(self.__dict['jRcoin'],mode='r',encoding='utf8'))
 
         try:
-            self.tokens = json.load(open('database/token_settings.json',mode='r',encoding='utf8'))
+            self.tokens = json.load(open(f'{location}/token_settings.json',mode='r',encoding='utf8'))
         except:
             self.tokens = os.environ
 
@@ -70,7 +71,7 @@ class Database:
 
     def write(self,file:str,data:dict):
         try:
-            location = self.dict[file]
+            location = self.__dict[file]
             with open(file=location,mode='w',encoding='utf8') as jfile:
                 json.dump(data,jfile,indent=4)
         except:
@@ -101,7 +102,7 @@ class Database:
         pass
 
     @staticmethod
-    async def get_gamedata(user_id:str,game:str,ctx: commands.context=None):
+    async def get_gamedata(user_id:str, game:str, ctx:commands.context=None):
         """查詢資料庫中的玩家資訊，若輸入dc用戶則需傳入ctx\n
         dcuser and in database -> 資料庫資料\n
         dcuser and not in database -> None\n
@@ -157,10 +158,9 @@ class SQLDatabase():
         self.cursor.execute("DELETE FROM `user_data` WHERE `id` = %s;",(str(id),))
         self.connection.commit()
 
-    def add_data(self):
-        db = "database"
+    def add_data(self,table:str,value:tuple,db="database"):
         self.cursor.execute(f"USE `{db}`;")
-        self.cursor.execute("INSERT INTO `user_data` VALUES(1, NULL)")
+        self.cursor.execute(f"INSERT INTO `{table}` VALUES(%s)",value)
         self.connection.commit()
 
     def get_data(self):

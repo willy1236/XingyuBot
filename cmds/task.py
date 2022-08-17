@@ -254,7 +254,7 @@ class task(Cog_Extension):
             user = data['user_login']
             dict[user] = True
             if not cache['twitch'].get(user,False):
-                time = datetime.datetime.strptime(data['started_at'],'%Y-%m-%dT%H:%M:%SZ')
+                time = datetime.datetime.strptime(data['started_at'],'%Y-%m-%dT%H:%M:%SZ')+datetime.timedelta(hours=8)
                 time = time.strftime('%Y/%m/%d %H:%M:%S')
                 embed = discord.Embed(
                     title=data['title'],

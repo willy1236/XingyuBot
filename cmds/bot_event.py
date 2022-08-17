@@ -17,9 +17,9 @@ class ScamChack:
         else:
             return False
 
+voice_updata = Database().jdata.get('voice_updata',False)
 
 class event(Cog_Extension):
-    voice_updata = False
     #跨群聊天Ver.1.0
     @commands.Cog.listener()
     async def on_message(self,msg):
@@ -84,8 +84,21 @@ class event(Cog_Extension):
     #             await channel.set_permissions(user,overwrite=None,reason='身分組選擇:退出')
                     
     @commands.Cog.listener()
-    async def on_voice_state_update(self,user, before, after):
-            if self.voice_updata:
+    async def on_voice_state_update(self,user, before:discord.VoiceState, after:discord.VoiceState):
+            def check(before, after):
+                if before.channel:
+                    guild = before.channel.guild.id
+                elif after.channel:
+                    guild = after.channel.guild.id
+                else:
+                    guild = None
+
+                if guild and guild == 613747262291443742:
+                    return True
+                else:
+                    return False
+
+            if voice_updata and self.bot.user.id == 589744540240314368 and check(before,after):
                 NowTime = datetime.datetime.now()
                 if before.channel and after.channel and before.channel != after.channel:
                     embed=discord.Embed(description=f'{user.mention} 更換語音',color=0x4aa0b5,timestamp=NowTime)
@@ -102,12 +115,14 @@ class event(Cog_Extension):
                 elif after.channel:
                     embed.set_footer(text=after.channel.guild.name)
                 
-                if before.channel:
+                if before.channel and after.channel:
+                    embed.add_field(name='頻道', value=f'{before.channel.mention}->{after.channel.mention}', inline=False)
+                elif before.channel:
                     embed.add_field(name='頻道', value=f'{before.channel.mention}', inline=False)
-                if after.channel:
+                elif after.channel:
                     embed.add_field(name='頻道', value=f'{after.channel.mention}', inline=False)
                 
-                await self.bot.get_channel(950039715879464970).send(embed=embed)
+                await self.bot.get_channel(631498685250797570).send(embed=embed)
             
 
 def setup(bot):

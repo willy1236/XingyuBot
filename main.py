@@ -1,20 +1,22 @@
 import discord, os
 from discord.ext import commands
+from threading import Thread
 
 from BotLib.database import Database
 from cmds.command import Reactbutton1
 
-bot_list={"1":"Bot1", "2":"Bep", "3":"Bot2"}
-#1:dc小幫手 2:Bep 3:RO
-bot_code = 2
-
 db = Database()
 jdata = db.jdata
 picdata = db.picdata
-token = db.tokens[bot_list[str(bot_code)]]
 
 
-if bot_code ==1:
+#Bot1:dc小幫手, Bep:Bep, Bot2:RO
+bot_code = 'Bep'
+token = db.tokens[bot_code]
+
+start_website = jdata.get('start_website',False)
+
+if bot_code == 'Bot1':
     bot = commands.Bot(
         command_prefix=commands.when_mentioned_or('!!'),
         owner_id=419131103836635136,
@@ -22,7 +24,7 @@ if bot_code ==1:
         case_insensitive=True, 
         help_command=None
     )
-elif bot_code == 2:
+elif bot_code == 'Bep':
     bot = commands.AutoShardedBot(
         shard_count=1,
         command_prefix=commands.when_mentioned_or('b!'),
@@ -32,7 +34,7 @@ elif bot_code == 2:
         help_command=None
     )
     #只有discord.Bot才有debug_guild
-elif bot_code == 3:
+elif bot_code == 'Bot2':
     bot = discord.Bot(
         owner_id=419131103836635136,
         debug_guild = [566533708371329024]
@@ -123,13 +125,18 @@ else:
             bot.load_extension(f'cmds.{filename[:-3]}')
 
 if __name__ == "__main__":
-    try:
-        import keep_alive
-        keep_alive.keep_alive()
-    except:
-        print('>> keep_alive not activated <<')
+    if start_website:
+        try:
+            import bot_website
+            server = Thread(target=bot_website.run)
+            server.start()
+            print('>> website: online <<')
+        except:
+            print('>> website: offline <<')
+    else:
+        print('>> website: off <<')
 
     try:
         bot.run(token)
     except discord.errors.LoginFailure:
-        print('發生錯誤:機器人登入失敗')
+        print('>> Bot: Login failed <<')

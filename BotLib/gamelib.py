@@ -302,19 +302,19 @@ class SteamUser():
 
 class OsuData():
     def __init__(self):
-        self.headers = self.get_osuheaders()
-        self.API_URL = 'https://osu.ppy.sh/api/v2'
+        self.__headers = self.get_osuheaders()
+        self.__API_URL = 'https://osu.ppy.sh/api/v2'
+        self.__TOKEN_URL = 'https://osu.ppy.sh/oauth/token'
+        self.__db = Database()
 
-    @staticmethod
-    def get_osuheaders():
+    def get_osuheaders(self):
         data = {
-            'client_id': Database().osu_API_id,
-            'client_secret': Database().osu_API_secret,
+            'client_id': self.__db.osu_API_id,
+            'client_secret': self.__db.osu_API_secret,
             'grant_type': 'client_credentials',
             'scope': 'public'
         }
-        TOKEN_URL = 'https://osu.ppy.sh/oauth/token'
-        response = requests.post(TOKEN_URL, data=data)
+        response = requests.post(self.__TOKEN_URL, data=data)
         token = response.json().get('access_token')
         headers = {
             'Content-Type': 'application/json',
@@ -324,34 +324,19 @@ class OsuData():
         return headers
 
     def get_player(self,user):
-        response = requests.get(f'{self.API_URL}/users/{user}', headers=self.headers).json()
+        response = requests.get(f'{self.__API_URL}/users/{user}', headers=self.__headers).json()
         if 'error' not in response:
             return OsuPlayer(response)
         else:
             return None
 
     def get_beatmap(self,map):
-        response = requests.get(f'{self.API_URL}/beatmaps/{map}', headers=self.headers).json()
+        response = requests.get(f'{self.__API_URL}/beatmaps/{map}', headers=self.__headers).json()
         if 'error' not in response:
             return OsuBeatmap(response)
         else:
             return None
 
-# class ApexData():
-#     def __init__(self):
-#         self.headers = {
-#         'TRN-Api-Key': Database().TRN_API,
-#         'Accept': 'application/json',
-#         'Accept-Encoding': 'gzip'
-#         }
-    
-#     def get_player(self,user):
-#         if user:
-#             response = requests.get(f'https://public-api.tracker.gg/v2/apex/standard/profile/origin/{user}', headers=self.headers)
-#             data = response.json().get('data')
-#             return ApexPlayer(data)
-#         else:
-#             return None
 
 class ApexData():
     def __init__(self):
@@ -412,7 +397,7 @@ class SteamData():
             'steamids':user
         }
         response = requests.get(f'https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/',params=params)
-        if response.status_code == 200:
+        if response.status_code == 200 and response.json().get('response').get('players'):
             APIdata = response.json().get('response').get('players')[0]
             return SteamUser(APIdata)
         else:
