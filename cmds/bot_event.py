@@ -1,4 +1,4 @@
-import discord,datetime
+import discord,datetime,requests
 from discord.ext import commands
 from core.classes import Cog_Extension
 from BotLib.funtions import BRS
@@ -57,12 +57,20 @@ class event(Cog_Extension):
             await BRS.mention_everyone(self,message)
         #詐騙檢查
         ScamChack = False
-        if 'free' in message.content.lower() and 'nitro' in message.content.lower():
-            ScamChack = True
-        
+        if self.bot.user.id == 589744540240314368:
+            if 'free' in message.content.lower() and 'nitro' in message.content.lower():
+                ScamChack = True
+            else:
+                url = "https://spen.tk/api/v1/isMaliciousTerm"
+                r = requests.get(url,params={'text':message.content}).json()
+                if r.get('hasMatch',False):
+                    ScamChack = True
+                    matches = r.get('matches',None)
+
         if ScamChack:
-            await BRS.scam(self,message)
-            await message.reply('溫馨提醒:這可能是有關詐騙的訊息\n點擊連結前請先確認是否安全')
+            await BRS.scam(self,message,matches)
+            await message.delete()
+            await message.channel.send('疑似為詐騙訊息，已自動刪除')
         #私人訊息回報
         if type(message.channel) == discord.channel.DMChannel:
             await BRS.dm(self,message)

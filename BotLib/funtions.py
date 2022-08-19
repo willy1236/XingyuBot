@@ -132,7 +132,7 @@ class BRS():
         embed.add_field(name='發生群組', value=f'{ctx.guild}\n{ctx.guild.id}', inline=True)
         await report_channel.send(embed=embed)
     
-    async def scam(self,msg):
+    async def scam(self,msg,Matchs=None):
         jdata = Database().jdata
         scam_channel = self.bot.get_channel(jdata['scam_channel'])
         embed=BotEmbed.general(name="BRS | 詐騙回報")
@@ -140,6 +140,8 @@ class BRS():
         embed.add_field(name='發送者', value=f"{msg.author}\n{msg.author.id}", inline=False)
         embed.add_field(name='發生頻道', value=f'{msg.channel}\n{msg.channel.id}', inline=True)
         embed.add_field(name='發生群組', value=f'{msg.guild}\n{msg.guild.id}', inline=True)
+        if Matchs:
+            embed.add_field(name='關鍵字', value=Matchs, inline=True)
         await scam_channel.send(embed=embed)
 
     async def feedback(self,ctx,msg):
