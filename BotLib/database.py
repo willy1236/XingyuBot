@@ -38,6 +38,7 @@ class Database:
             'cache': f'{location}/cache.json',
             'monster_basic': f'{location}/RPG_settings/monster_basic.json',
             'jRcoin': f'{location}/user_settings/rcoin.json',
+            'jhoyo': f'{location}/game_settings/hoyo.json',
         }
         self.jdata = json.load(open(self.__dict['jdata'],mode='r',encoding='utf8'))
         self.cdata = json.load(open(self.__dict['cdata'],mode='r',encoding='utf8'))
@@ -56,6 +57,7 @@ class Database:
         self.cache = json.load(open(self.__dict['cache'],mode='r',encoding='utf8'))
         self.monster_basic = json.load(open(self.__dict['monster_basic'],mode='r',encoding='utf8'))
         self.jRcoin = json.load(open(self.__dict['jRcoin'],mode='r',encoding='utf8'))
+        self.jhoyo = json.load(open(self.__dict['jhoyo'],mode='r',encoding='utf8'))
 
         try:
             self.tokens = json.load(open(f'{location}/token_settings.json',mode='r',encoding='utf8'))

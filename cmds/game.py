@@ -220,5 +220,62 @@ class game(Cog_Extension):
             await msg.edit(content='查詢成功',embed=user.desplay())
         else:
             await msg.edit(content='查詢失敗:查無此ID',delete_after=5)
+
+    @commands.group(invoke_without_command=True)
+    @commands.cooldown(rate=1,per=1)
+    async def hoyo(self,ctx):
+        embed = BotEmbed.simple("原神(hoyo) 指令")
+        embed.add_field(name="!!hoyo set <ltuid> <ltoken>", value="設定cookies(需先設定才能使用其他功能)", inline=False)
+        embed.add_field(name="!!hoyo help", value="如何取得設定cookies", inline=False)
+        embed.add_field(name="!!hoyo diary", value="取得每月原石來源統計", inline=False)
+        await ctx.send(embed=embed)
+
+    @hoyo.command()
+    @commands.cooldown(rate=1,per=1)
+    async def help(self,ctx):
+        embed = BotEmbed.simple("1.前往 https://www.hoyolab.com/ 並登入\n2.複製以下代碼```script:d=document.cookie; c=d.includes('account_id') || alert('過期或無效的Cookie,請先登出帳號再重新登入!'); c && document.write(d)```\n3.在網址列打上java後直接貼上複製的代碼\n4.找到`ltuid=`跟`ltoken=`並複製其中的內容\n5.使用指令 !!hoyo set <ltuid> <ltoken>")
+        await ctx.send(embed=embed)
+
+    @hoyo.command()
+    @commands.cooldown(rate=1,per=1)
+    async def set(self,ctx,ltuid,ltoken):
+        await ctx.message.delete()
+        db = Database()
+        jhoyo = db.jhoyo
+        dict = {
+            'ltuid': ltuid,
+            'ltoken': ltoken,
+        }
+        jhoyo[str(ctx.author.id)] = dict
+        db.write('jhoyo',jhoyo)
+        await ctx.send(f'{ctx.author.mention} 設定完成')
+
+    @hoyo.command()
+    @commands.cooldown(rate=1,per=1)
+    async def diary(self,ctx):
+        db = Database()
+        jhoyo = db.jhoyo
+        cookies = jhoyo.get(str(ctx.author.id),None)
+        if not cookies:
+            raise commands.errors.ArgumentParsingError("沒有設定cookies")
+        client = genshin.Client(cookies)
+        diary = await client.get_diary()
+
+        ts = {
+            'Events':'活動',
+            'Adventure':'冒險',
+            'Mail':'郵件',
+            'Daily Activity':'每日任務',
+            'Quests':'一般任務',
+            'Other':'其他',
+            'Spiral Abyss':'深境螺旋',
+        }
+        embed = BotEmbed.simple(title=f'本月總計：{diary.data.current_primogems} 顆原石')
+        for category in diary.data.categories:
+            name = category.name
+            embed.add_field(name=ts.get(name,name),value=f'{category.amount}({category.percentage}%)')
+        await ctx.send(ctx.author.mention,embed=embed)
+
+    
 def setup(bot):
     bot.add_cog(game(bot))

@@ -1,4 +1,4 @@
-import requests
+import requests,genshin
 from datetime import datetime, timezone, timedelta
 from BotLib.database import Database
 from BotLib.basic import BotEmbed
@@ -402,3 +402,10 @@ class SteamData():
             return SteamUser(APIdata)
         else:
             return None
+
+class hoyodata():
+    def __init__(self,dcid):
+        cookies = {}
+        self.__client = genshin.Client(cookies)
+
+    
