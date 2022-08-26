@@ -114,11 +114,5 @@ class economy_system(Cog_Extension):
         except asyncio.TimeoutError:
             await channel.send(f'{ctx.author.mention} 時間超過了')
 
-    @commands.command()
-    async def shop(self,ctx):
-        embed=discord.Embed(color=0xc4e9ff)
-        embed.set_author(name="商城")
-        await ctx.send(embed=embed)
-
 def setup(bot):
     bot.add_cog(economy_system(bot))

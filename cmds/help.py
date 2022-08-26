@@ -3,70 +3,16 @@ from core.classes import Cog_Extension
 from BotLib.basic import BotEmbed
 
 
-class help_page:
-    def music():
-        page = [BotEmbed.simple("音樂(music) 指令:"),BotEmbed.simple("音樂(music) 指令:")]
-        page[0].add_field(name="!!play <歌曲>", value="播放歌曲\n別名:p", inline=False)
-        page[0].add_field(name="!!queue", value="歌曲列表\n別名:q", inline=False)
-        page[0].add_field(name="!!now", value="現在播放的歌曲\n別名:current,playing,np", inline=False)
-        page[0].add_field(name="!!skip", value="投票跳過歌曲，需三個人才可跳過，點歌者可強制跳過\n別名:s", inline=False)
-        page[0].add_field(name="!!pause", value="暫停播放\n別名:pa", inline=False)
-        page[0].add_field(name="!!resume", value="繼續播放\n別名:re", inline=False)
-        page[0].add_field(name="!!join", value="讓機器人加入你的語音", inline=False)
-        page[0].add_field(name="!!summon [頻道]", value="讓機器人加入指定語音", inline=False)
-        page[0].add_field(name="!!leave", value="讓機器人離開你的語音\n別名:disconnect,dc", inline=False)
-        page[0].add_field(name="!!volume <音量>", value="設定音量", inline=False)
-        page[1].add_field(name="!!stop", value="停止播放歌曲", inline=False)
-        page[1].add_field(name="!!shuffle", value="隨機撥放\n別名:random,r", inline=False)
-        page[1].add_field(name="!!loop", value="循環歌曲", inline=False)
-        page[1].add_field(name="!!remove <歌曲位置>", value="移除歌曲\n別名:rm", inline=False)
-        page[0].set_footer(text="目前音樂系統有bug 若要使用可用 %p <網址> 進行播歌")
-        page[1].set_footer(text="目前音樂系統有bug 若要使用可用 %p <網址> 進行播歌")
-        paginator = pages.Paginator(pages=page, use_default_buttons=True)
-        return paginator
-
-    def help():
-        pass
-    
-    def use():
-        pass
-    
-    def pt():
-        pass
-
-    def game():
-        pass
-    
-    def set():
-        pass
-    
-    def role():
-        pass
-    
-    def bet():
-        pass
-    
-    def weather():
-        pass
-    
-    def owner():
-        pass
-    
-    def admin():
-        pass
-
 class help(Cog_Extension):
     @commands.command(help='原始的help指令')
     async def assist(self,ctx,arg='help'):
         await ctx.send_help(arg)
-
 
     @commands.group(invoke_without_command=True)
     async def about(self,ctx):
         embed = BotEmbed.basic(self,f"你好~我是{self.bot.user.name}，是一個discord機器人喔~\n我的前輟是`!!`\n你可以輸入`!!help`來查看所有指令的用法\n\n希望我能在discord上幫助到你喔~\n有任何建議與需求可以使用`!!feedback`指令")
         embed.set_footer(text="此機器人由 威立#6445 負責維護")
         await ctx.send(embed=embed)
-
 
     @about.command()
     async def server(self,ctx):
@@ -75,14 +21,12 @@ class help(Cog_Extension):
             text = text + i.name + ','
         text = text[:-2]
         await ctx.send(text)
-    
-    
+
     @about.command()
     @commands.is_owner()
     async def count(self,ctx):
         embed = BotEmbed.basic(self,f"依據目前的資料\n目前我已服務了{len(self.bot.guilds)}個伺服器\n共包含了{len(self.bot.users)}位成員喔~")
         await ctx.send(embed=embed)
-
 
     @commands.command()
     async def info(self, ctx, arg='help'):
@@ -120,7 +64,7 @@ class help(Cog_Extension):
     @commands.cooldown(rate=1,per=3)
     async def help(self,ctx):
         embed = BotEmbed.basic(self,"目前可使用的指令如下:")
-        embed.add_field(name="!!help <系列指令>", value="查詢系列指令\n目前支援:use,admin,pt,game,set,role,bet,music,weather,math,user", inline=False)
+        embed.add_field(name="!!help <系列指令>", value="查詢系列指令\n目前支援:use,admin,pt,game,set,role,bet,music,weather,math,user,twitch", inline=False)
         embed.add_field(name="!!info <內容/help>", value="獲得相關資訊", inline=False)
         embed.add_field(name="!!feedback <內容>", value="傳送訊息給機器人擁有者", inline=False)
         embed.add_field(name="!!find <id>", value="搜尋指定ID", inline=False)
@@ -167,14 +111,14 @@ class help(Cog_Extension):
     @help.command()
     async def set(self,ctx):
         embed = BotEmbed.simple("設定(Set) 指令:")
-        embed.add_field(name="!!set <crass_chat> [頻道]", value="設定跨群聊天頻道", inline=False)
-        embed.add_field(name="!!set <all_anno> [頻道]", value="設定全群公告頻道", inline=False)
-        embed.add_field(name="!!set <apex_crafting> [頻道]", value="設定apex合成器內容頻道", inline=False)
-        embed.add_field(name="!!set <apex_map> [頻道]", value="設定apex地圖輪替頻道", inline=False)
-        embed.add_field(name="!!set <earthquake> [頻道]", value="設定地震通知頻道", inline=False)
-        embed.add_field(name="!!set <covid_update> [頻道]", value="設定台灣疫情通知頻道", inline=False)
-        embed.add_field(name="!!set <forecast> [頻道]", value="設定台灣各縣市天氣預報頻道", inline=False)
-        embed.add_field(name="!!set <bot> [頻道]", value="設定機器人更新通知頻道", inline=False)
+        embed.add_field(name="!!set crass_chat [頻道]", value="設定跨群聊天頻道", inline=False)
+        embed.add_field(name="!!set all_anno [頻道]", value="設定全群公告頻道", inline=False)
+        embed.add_field(name="!!set apex_crafting [頻道]", value="設定apex合成器內容頻道", inline=False)
+        embed.add_field(name="!!set apex_map [頻道]", value="設定apex地圖輪替頻道", inline=False)
+        embed.add_field(name="!!set earthquake [頻道]", value="設定地震通知頻道", inline=False)
+        embed.add_field(name="!!set covid_update [頻道]", value="設定台灣疫情通知頻道", inline=False)
+        embed.add_field(name="!!set forecast [頻道]", value="設定台灣各縣市天氣預報頻道", inline=False)
+        embed.add_field(name="!!set bot [頻道]", value="設定機器人更新通知頻道", inline=False)
         embed.set_footer(text="輸入!!help user查詢指令用法")
         await ctx.send(embed=embed)
 
@@ -200,7 +144,22 @@ class help(Cog_Extension):
     async def music(self,ctx):
         #embed = help_page.music()
         #await ctx.send(embed=embed)
-        paginator = help_page.music()
+        page = [BotEmbed.simple("音樂(music) 指令:"),BotEmbed.simple("音樂(music) 指令:")]
+        page[0].add_field(name="!!play <歌曲>", value="播放歌曲\n別名:p", inline=False)
+        page[0].add_field(name="!!queue", value="歌曲列表\n別名:q", inline=False)
+        page[0].add_field(name="!!now", value="現在播放的歌曲\n別名:current,playing,np", inline=False)
+        page[0].add_field(name="!!skip", value="投票跳過歌曲，需三個人才可跳過，點歌者可強制跳過\n別名:s", inline=False)
+        page[0].add_field(name="!!pause", value="暫停播放\n別名:pa", inline=False)
+        page[0].add_field(name="!!resume", value="繼續播放\n別名:re", inline=False)
+        page[0].add_field(name="!!join", value="讓機器人加入你的語音", inline=False)
+        page[0].add_field(name="!!summon [頻道]", value="讓機器人加入指定語音", inline=False)
+        page[0].add_field(name="!!leave", value="讓機器人離開你的語音\n別名:disconnect,dc", inline=False)
+        page[0].add_field(name="!!volume <音量>", value="設定音量", inline=False)
+        page[1].add_field(name="!!stop", value="停止播放歌曲", inline=False)
+        #page[1].add_field(name="!!shuffle", value="隨機撥放\n別名:random,r", inline=False)
+        #page[1].add_field(name="!!loop", value="循環歌曲", inline=False)
+        page[1].add_field(name="!!remove <歌曲位置>", value="移除歌曲\n別名:rm", inline=False)
+        paginator = pages.Paginator(pages=page, use_default_buttons=True)
         await paginator.send(ctx, target=ctx.channel)
 
     @help.command()
@@ -227,6 +186,15 @@ class help(Cog_Extension):
         embed.add_field(name="!!pet add <物種> <名稱>", value='領養寵物\n可用物種:shark,dog,cat,fox', inline=False)
         embed.add_field(name="!!pet remove", value='放生寵物', inline=False)
         embed.add_field(name="!!advance", value='進行冒險', inline=False)
+        embed.set_footer(text="輸入!!help user查詢指令用法")
+        await ctx.send(embed=embed)
+
+    @help.command()
+    async def twitch(self,ctx):
+        embed = BotEmbed.simple("圖奇(twitch) 指令:")
+        embed.add_field(name="!!twitch <twitch用戶> <頻道> <身分組>", value="設定twitch的開台通知", inline=False)
+        embed.add_field(name="!!twitch remove <twitch用戶>", value="移除twitch的開台通知", inline=False)
+        embed.add_field(name="!!twitch notice <twitch用戶>", value="檢查twitch的開台通知頻道", inline=False)
         embed.set_footer(text="輸入!!help user查詢指令用法")
         await ctx.send(embed=embed)
 

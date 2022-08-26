@@ -50,6 +50,3 @@ class BotEmbed:
         embed.set_author(name="Bot Radio Station",icon_url=picdata['radio_001'])
         embed.set_footer(text='廣播電台 | 機器人更新通知')
         return embed
-
-class Stronghold:
-    pass

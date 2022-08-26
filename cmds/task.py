@@ -6,6 +6,7 @@ from BotLib.weatherlib import *
 from core.classes import Cog_Extension
 from BotLib.database import Database
 from BotLib.gamelib import ApexData
+from BotLib.communitylib import Twitch
 
 class task(Cog_Extension):
     def __init__(self,*args,**kwargs):
@@ -22,7 +23,7 @@ class task(Cog_Extension):
             self.apex_map_update.start()
             self.covid_update.start()
             self.forecast_update.start()
-            self.twitch.start()
+        self.twitch.start()
         if self.bot.user.id == 870923985569861652:
             pass
 
@@ -220,62 +221,27 @@ class task(Cog_Extension):
     @tasks.loop(minutes=1)
     async def twitch(self):
         db = Database()
-        id,secret = db.get_token('twitch')
         cache = db.cache
-        followed = ["rainteaorwhatever"]
+        jtwitch = db.jtwitch
+        users = jtwitch['users']
 
-        def get_token():
-            APIURL = "https://id.twitch.tv/oauth2/token"
-            headers = {"Content-Type": "application/x-www-form-urlencoded"}
-            params = {
-                'client_id':id,
-                'client_secret':secret,
-                'grant_type':'client_credentials'
-                }
-            tokens= requests.post(APIURL, params=params).json()
-            return tokens['access_token']
-
-        URL ='https://api.twitch.tv/helix/streams'
-        headers = {
-            'Authorization': f"Bearer {get_token()}",
-            'Client-Id':id
-        }
-        params = {
-            "user_login" : followed,
-            "first":1
-        }
-        r= requests.get(URL, params=params,headers=headers).json()
+        data = Twitch().get_live(users)
         
-        dict = {}
-        for user in followed:
-            dict[user] = False
-
-        for data in r['data']:
-            user = data['user_login']
-            dict[user] = True
-            if not cache['twitch'].get(user,False):
-                time = datetime.datetime.strptime(data['started_at'],'%Y-%m-%dT%H:%M:%SZ')+datetime.timedelta(hours=8)
-                time = time.strftime('%Y/%m/%d %H:%M:%S')
-                embed = discord.Embed(
-                    title=data['title'],
-                    url=f"https://www.twitch.tv/{data['user_login']}",
-                    description=f"{data['game_name']}",
-                    color=0x6441a5,
-                    timestamp = datetime.datetime.now()
-                    )
-                embed.set_author(name=f"{data['user_name']} 開台啦！")
-                thumbnail = data['thumbnail_url']
-                thumbnail = thumbnail.replace('{width}','960')
-                thumbnail = thumbnail.replace('{height}','540')
-                embed.set_image(url=thumbnail)
-                embed.set_footer(text=f"開始於{time}")
+        for username in data:
+            if data[username] and not cache['twitch'].get(username,False):
+                cache['twitch'][username] = True
+                embed = data[username]
+                guilds = jtwitch['channel'][username]
+                for guildid in guilds:
+                    guild = self.bot.get_guild(int(guildid))
+                    channel = self.bot.get_channel(int(jtwitch['channel'][username][guildid]))
+                    role = guild.get_role(int(jtwitch['role'][username][guildid]))
+                    if channel:
+                        await channel.send(f'{role.mention} 開台啦~',embed=embed)
+                    await asyncio.sleep(1)
+            elif not data[username] and cache['twitch'].get(username,False):
+                cache['twitch'][username] = False
                 
-                channel = self.bot.get_channel(986230549192519720)
-                guild = self.bot.get_guild(613747262291443742)
-                role = guild.get_role(1000680995307143218)
-                await channel.send(f'{role.mention} 開台啦~',embed=embed)
-                
-        cache['twitch'] = dict
         db.write('cache',cache)
 
 def setup(bot):

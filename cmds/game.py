@@ -1,4 +1,4 @@
-import discord,requests
+import discord,requests,genshin
 from discord.ext import commands
 from bs4 import BeautifulSoup
 
@@ -276,6 +276,48 @@ class game(Cog_Extension):
             embed.add_field(name=ts.get(name,name),value=f'{category.amount}({category.percentage}%)')
         await ctx.send(ctx.author.mention,embed=embed)
 
-    
+    @hoyo.command()
+    @commands.cooldown(rate=1,per=1)
+    async def find(self,ctx,hoyolab_name):
+        db = Database()
+        jhoyo = db.jhoyo
+        cookies = jhoyo.get(str(ctx.author.id),None)
+        if not cookies:
+            raise commands.errors.ArgumentParsingError("沒有設定cookies")
+        client = genshin.Client(cookies)
+        
+        hoyolab_user = None
+        users = await client.search_users(hoyolab_name)
+        for user in users:
+            if user.nickname == hoyolab_name:
+                hoyolab_user = user
+                break
+        #print(user.hoyolab_uid)
+        if hoyolab_user:    
+            try:
+                cards = await client.get_record_cards(user.hoyolab_uid)
+                for card in cards:
+                    #print(card.uid, card.level, card.nickname)
+                    #活躍天數days_active 獲得角色數characters 成就達成數achievements 深境螺旋spiral_abyss
+                    if card.game == genshin.types.Game.GENSHIN:
+                    #    print(card.data[0].value,card.data[1].value,card.data[2].value,card.data[3].value)
+                        embed = BotEmbed.simple(title=card.nickname)
+                        embed.add_field(name="HoYOLab UID",value=hoyolab_user.hoyolab_uid)
+                        embed.add_field(name="角色UID",value=card.uid)
+                        embed.add_field(name="活躍天數",value=card.data[0].value)
+                        embed.add_field(name="獲得角色數",value=card.data[1].value)
+                        embed.add_field(name="成就達成數",value=card.data[2].value)
+                        embed.add_field(name="深境螺旋",value=card.data[3].value)
+                        await ctx.send(embed=embed)
+
+                    
+            except genshin.errors.DataNotPublic:
+                if e.retcode == 10102:
+                    await ctx.send('用戶資訊未公開')
+            except genshin.errors.GenshinException as e:
+                await ctx.send(e)
+        else:
+            await ctx.send('用戶未找到')
+
 def setup(bot):
     bot.add_cog(game(bot))

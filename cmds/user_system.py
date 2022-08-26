@@ -1,4 +1,4 @@
-import asyncio
+import asyncio,discord
 from discord.ext import commands
 from core.classes import Cog_Extension
 
@@ -71,6 +71,32 @@ class user_system(Cog_Extension):
                 await ctx.send(f'取消放生寵物')
         except asyncio.TimeoutError:
             await ctx.send(f'{ctx.author.name} 超時自動取消放生')
+
+    @commands.group(invoke_without_command=True)
+    async def shop(self,ctx):
+        embed = discord.Embed(color=0xc4e9ff)
+        embed.set_author(name="商城")
+        embed.add_field(name="[1] 石頭",value='$1')
+        await ctx.send(embed=embed)
+
+    @shop.command()
+    async def buy(self,ctx,id,amount:int):
+        if id == '1':
+            user = User(ctx.author.id)
+            if int(user.rcoin) >= 1 * amount:
+                db = Database()
+                jbag = db.jbag
+                if jbag[str(ctx.author.id)]['stone']:
+                    jbag[str(ctx.author.id)]['stone'] += amount
+                else:
+                    jbag[str(ctx.author.id)]['stone'] = amount
+                db.write('jbag',jbag)
+                user.rcoin.add(-1 * 1 * amount)
+                await ctx.send('購買已完成')
+            else:
+                raise commands.errors.ArgumentParsingError('你的錢不購買此商品')
+        else:
+            raise commands.errors.ArgumentParsingError('沒有此商品')
 
 def setup(bot):
     bot.add_cog(user_system(bot))
