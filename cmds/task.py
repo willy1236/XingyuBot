@@ -23,7 +23,7 @@ class task(Cog_Extension):
             self.apex_map_update.start()
             self.covid_update.start()
             self.forecast_update.start()
-        self.twitch.start()
+            self.twitch.start()
         if self.bot.user.id == 870923985569861652:
             pass
 
