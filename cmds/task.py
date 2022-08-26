@@ -225,24 +225,25 @@ class task(Cog_Extension):
         jtwitch = db.jtwitch
         users = jtwitch['users']
 
-        data = Twitch().get_live(users)
-        
-        for username in data:
-            if data[username] and not cache['twitch'].get(username,False):
-                cache['twitch'][username] = True
-                embed = data[username]
-                guilds = jtwitch['channel'][username]
-                for guildid in guilds:
-                    guild = self.bot.get_guild(int(guildid))
-                    channel = self.bot.get_channel(int(jtwitch['channel'][username][guildid]))
-                    role = guild.get_role(int(jtwitch['role'][username][guildid]))
-                    if channel:
-                        await channel.send(f'{role.mention} 開台啦~',embed=embed)
-                    await asyncio.sleep(1)
-            elif not data[username] and cache['twitch'].get(username,False):
-                cache['twitch'][username] = False
+        if users:
+            data = Twitch().get_live(users)
+            
+            for username in data:
+                if data[username] and not cache['twitch'].get(username,False):
+                    cache['twitch'][username] = True
+                    embed = data[username]
+                    guilds = jtwitch['channel'][username]
+                    for guildid in guilds:
+                        guild = self.bot.get_guild(int(guildid))
+                        channel = self.bot.get_channel(int(jtwitch['channel'][username][guildid]))
+                        role = guild.get_role(int(jtwitch['role'][username][guildid]))
+                        if channel:
+                            await channel.send(f'{role.mention} 開台啦~',embed=embed)
+                        await asyncio.sleep(1)
+                elif not data[username] and cache['twitch'].get(username,False):
+                    cache['twitch'][username] = False
                 
-        db.write('cache',cache)
+            db.write('cache',cache)
 
 def setup(bot):
     bot.add_cog(task(bot))
