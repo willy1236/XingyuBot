@@ -285,7 +285,7 @@ class game(Cog_Extension):
         if not cookies:
             raise commands.errors.ArgumentParsingError("沒有設定cookies")
         client = genshin.Client(cookies)
-        
+
         hoyolab_user = None
         users = await client.search_users(hoyolab_name)
         for user in users:

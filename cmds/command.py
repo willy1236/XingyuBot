@@ -1,5 +1,4 @@
-import discord,random,asyncio,requests,math
-from datetime import datetime
+import discord,random,asyncio,math,datetime
 from discord.errors import Forbidden, NotFound
 from discord.ext import commands,pages
 from discord.commands import SlashCommandGroup
@@ -48,19 +47,30 @@ class Reactbutton1(discord.ui.View):
             await user.add_roles(role)
             await interaction.response.send_message(content="綜合遊戲區 已給予",ephemeral=True)
         
-    @discord.ui.button(label="遊戲狂熱者",custom_id="Reactbutton1-4",row=2,style=discord.ButtonStyle.secondary)
-    async def button_callback4(self, button: discord.ui.Button, interaction: discord.Interaction):
-        role = interaction.guild.get_role(858558233403719680)
+    # @discord.ui.button(label="遊戲狂熱者",custom_id="Reactbutton1-4",row=2,style=discord.ButtonStyle.secondary)
+    # async def button_callback4(self, button: discord.ui.Button, interaction: discord.Interaction):
+    #     role = interaction.guild.get_role(858558233403719680)
+    #     user = interaction.user
+    #     bot = interaction.client
+    #     channel = bot.get_channel(706810474326655026)
+    #     if user in channel.overwrites:
+    #         user = interaction.user
+    #         await channel.set_permissions(user,view_channel=None,reason='身分組選擇:移除')
+    #         await interaction.response.send_message(content="遊戲狂熱區 已移除權限",ephemeral=True)
+    #     else:
+    #         await channel.set_permissions(user,view_channel=True,reason='身分組選擇:加入')
+    #         await interaction.response.send_message(content="遊戲狂熱區 已給予權限",ephemeral=True)
+    
+    @discord.ui.button(label="VT&實況區",custom_id="Reactbutton1-4",row=1,style=discord.ButtonStyle.primary)
+    async def button_callback3(self, button: discord.ui.Button, interaction: discord.Interaction):
+        role = interaction.guild.get_role(1012754715123134524)
         user = interaction.user
-        bot = interaction.client
-        channel = bot.get_channel(706810474326655026)
-        if user in channel.overwrites:
-            user = interaction.user
-            await channel.set_permissions(user,view_channel=None,reason='身分組選擇:移除')
-            await interaction.response.send_message(content="遊戲狂熱區 已移除權限",ephemeral=True)
+        if role in user.roles:
+            await user.remove_roles(role)
+            await interaction.response.send_message(content="VT&實況區 已移除",ephemeral=True)
         else:
-            await channel.set_permissions(user,view_channel=True,reason='身分組選擇:加入')
-            await interaction.response.send_message(content="遊戲狂熱區 已給予權限",ephemeral=True)
+            await user.add_roles(role)
+            await interaction.response.send_message(content="VT&實況區 已給予",ephemeral=True)
 
 class command(Cog_Extension):
     picdata = Database().picdata

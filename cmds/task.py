@@ -157,12 +157,12 @@ class task(Cog_Extension):
                     await channel.send('Apex合成台內容自動更新資料',embed=crafting.desplay())
                 await asyncio.sleep(0.5)
         await asyncio.sleep(10)
-        #self.apex_crafting_update.stop()
+        self.apex_crafting_update.stop()
 
-    # @apex_crafting_update.after_loop
-    # async def apex_map_update_after(self):
-    #     await asyncio.sleep(10)
-    #     self.apex_crafting_update.start()
+    @apex_crafting_update.after_loop
+    async def apex_map_update_after(self):
+        await asyncio.sleep(10)
+        self.apex_crafting_update.start()
 
     
     @tasks.loop(time=__gettime_15min())
@@ -187,10 +187,10 @@ class task(Cog_Extension):
         await asyncio.sleep(10)
         #self.apex_map_update.stop()
 
-    # # @apex_map_update.after_loop
-    # # async def apex_map_update_after(self):
-    # #     await asyncio.sleep(10)
-    # #     self.apex_map_update.start()
+    # @apex_map_update.after_loop
+    # async def apex_map_update_after(self):
+    #     await asyncio.sleep(10)
+    #     self.apex_map_update.start()
     
     @tasks.loop(time=__gettime_3hr())
     async def forecast_update(self):
