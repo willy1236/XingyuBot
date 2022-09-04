@@ -72,7 +72,7 @@ class event(Cog_Extension):
             await message.delete()
             await message.channel.send('疑似為詐騙訊息，已自動刪除')
         #私人訊息回報
-        if type(message.channel) == discord.channel.DMChannel:
+        if isinstance(message.channel,discord.channel.DMChannel):
             await BRS.dm(self,message)
 
     # @commands.Cog.listener()

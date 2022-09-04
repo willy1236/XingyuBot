@@ -83,7 +83,7 @@ class Database:
 
     def get_token(self,webname:str):
         """獲取相關api的tokens\n
-        支援CWB_API,osu(id,secret),TRN,apex,steam,twitch(id,secret)
+        支援CWB_API,osu(id,secret),TRN,apex,steam,twitch(id,secret),youtube
         """
         dict = {
             "CWB_API":'CWB_API',
@@ -91,7 +91,8 @@ class Database:
             'TRN':'TRN_API',
             'apex':'apex_status_API',
             'steam':'steam_api',
-            'twitch':'twitch'
+            'twitch':'twitch',
+            'youtube':'youtube_api'
             }
         if webname in dict:
             if webname == 'osu':

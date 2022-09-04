@@ -1,11 +1,9 @@
-import discord,json,requests,asyncio
+import discord,asyncio
 from datetime import datetime, timezone, timedelta,time
 from discord.ext import commands,tasks
 
 from core.classes import Cog_Extension
 from BotLib.funtions import *
-from BotLib.userlib import *
-
 
 tz = timezone(timedelta(hours=+8))
 # Note that custom_ids can only be up to 100 characters long.
@@ -34,7 +32,6 @@ class debug(Cog_Extension):
     async def embed(self,ctx,msg):
         embed=discord.Embed(title="Bot Radio Station",description=f'{msg}',color=0xc4e9ff)
         embed.set_footer(text='廣播電台 | 機器人全群公告')
-        
         await ctx.send(embed=embed)
 
     @commands.command()
@@ -47,25 +44,6 @@ class debug(Cog_Extension):
         dict[str(role.id)]['color']=role.color.to_rgb()
         dict[str(role.id)]['time']=role.created_at.strftime('%Y%m%d')
         print(dict)
-                
-    @commands.command()
-    @commands.is_owner()
-    async def rq(self,ctx):
-        url = f'https://api.mozambiquehe.re/crafting?auth={Database().apex_status_API}'
-        headers ={
-
-        }
-
-        response = requests.get(url, headers=headers)
-        print(response)
-
-    @commands.command()
-    @commands.is_owner()
-    async def test(self, ctx):
-        #dcuser = find.user2(arg=arg)
-        #print(dcuser)
-        pt = User(ctx.author.id).point
-        #print(pt)
     
     @commands.command()
     @commands.is_owner()
@@ -99,18 +77,6 @@ class debug(Cog_Extension):
             await channel.set_permissions(user,view_channel=True)
             await asyncio.sleep(0.5)
         await ctx.message.add_reaction('✅')
-
-    @commands.command()
-    @commands.is_owner()
-    async def sqltest(self,ctx):
-        self.sqldb.user_setup(ctx.author.id)
-        print('done')
-
-    @commands.command()
-    @commands.is_owner()
-    async def sqltest2(self,ctx):
-        user = self.sqldb.get_user(ctx.author.id)
-        print(user)
 
 def setup(bot):
     bot.add_cog(debug(bot))

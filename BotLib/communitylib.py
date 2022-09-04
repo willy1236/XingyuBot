@@ -32,12 +32,13 @@ class Twitch:
             "user_login": users,
             "first": 1
         }
-        r = requests.get(URL, params=params,headers=self.__headers).json()
+        r = requests.get(URL, params=params,headers=self.__headers)
+        apidata = r.json()
         dict = {}
         for user in users:
             dict[user] = None
 
-        for data in r['data']:
+        for data in apidata['data']:
             user = data['user_login']
             time = datetime.datetime.strptime(data['started_at'],'%Y-%m-%dT%H:%M:%SZ')+datetime.timedelta(hours=8)
             time = time.strftime('%Y/%m/%d %H:%M:%S')
@@ -61,3 +62,56 @@ class Twitch:
 
 class Twitter:
     pass
+
+class Youtube:
+    def __init__(self):
+        self.__db = Database()
+        self.__token = self.__db.get_token('youtube')
+        self.__headers = {
+        'Authorization': f'Bearer {self.__token}',
+        'Accept': 'application/json'
+        }
+
+    def get_channel_id(self,channel_name:str):
+        params = {
+            'key': self.__token,
+            'forUsername': channel_name,
+            'part': 'id',
+            'maxResults':1
+        }
+        r = requests.get('https://youtube.googleapis.com/youtube/v3/channels',params=params)
+        if r.status_code == 200:
+            print(r)
+            print(r.json())
+        else:
+            print(r.text)
+            print(r.status_code)
+
+    def get_channel_content(self,channel_name:str):
+        params = {
+            'key': self.__token,
+            'forUsername': channel_name,
+            'part': 'contentDetails,snippet',
+            'maxResults':1
+        }
+        r = requests.get('https://youtube.googleapis.com/youtube/v3/channels',params=params)
+        if r.status_code == 200:
+            print(r)
+            print(r.json())
+        else:
+            print(r.text)
+            print(r.status_code)
+
+    def get_channelsection(self,channel_id:str):
+        params = {
+            'key': self.__token,
+            'channelId': channel_id,
+            'part': 'contentDetails'
+        }
+        r = requests.get('https://www.googleapis.com/youtube/v3/channelSections',params=params)
+        if r.status_code == 200:
+            print(r)
+            print(r.json())
+        else:
+            print(r.text)
+            print(r.status_code)
