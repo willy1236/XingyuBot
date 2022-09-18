@@ -18,7 +18,7 @@ start_website = jdata.get('start_website',False)
 
 if bot_code == 'Bot1':
     bot = commands.Bot(
-        command_prefix=commands.when_mentioned_or('!!'),
+        command_prefix='!!',
         owner_id=419131103836635136,
         intents=discord.Intents.all(),
         case_insensitive=True, 
@@ -27,7 +27,8 @@ if bot_code == 'Bot1':
 elif bot_code == 'Bep':
     bot = commands.AutoShardedBot(
         shard_count=1,
-        command_prefix=commands.when_mentioned_or('b!'),
+        #command_prefix=commands.when_mentioned_or('b!'),
+        command_prefix='b!',
         owner_id=419131103836635136,
         intents=discord.Intents.all(),
         case_insensitive=True, 
