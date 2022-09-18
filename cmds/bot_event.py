@@ -19,6 +19,11 @@ class ScamChack:
 
 voice_updata = Database().jdata.get('voice_updata',False)
 
+voice_list = {
+    613747262291443742: 631498685250797570,
+    726790741103476746: 1021072271277834250
+}
+
 class event(Cog_Extension):
     #跨群聊天Ver.1.0
     @commands.Cog.listener()
@@ -101,12 +106,14 @@ class event(Cog_Extension):
                 else:
                     guild = None
 
-                if guild and guild == 613747262291443742:
-                    return True
+                if guild and (guild == 613747262291443742 or guild == 726790741103476746):
+                    return guild
                 else:
                     return False
 
-            if voice_updata and self.bot.user.id == 589744540240314368 and check(before,after):
+            guildid = check(before,after)
+
+            if voice_updata and self.bot.user.id == 589744540240314368 and guildid:
                 NowTime = datetime.datetime.now()
                 if before.channel and after.channel and before.channel != after.channel:
                     embed=discord.Embed(description=f'{user.mention} 更換語音',color=0x4aa0b5,timestamp=NowTime)
@@ -130,7 +137,7 @@ class event(Cog_Extension):
                 elif after.channel:
                     embed.add_field(name='頻道', value=f'{after.channel.mention}', inline=False)
                 
-                await self.bot.get_channel(631498685250797570).send(embed=embed)
+                await self.bot.get_channel(voice_list.get(guildid)).send(embed=embed)
             
 
 def setup(bot):
