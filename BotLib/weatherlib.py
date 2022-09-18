@@ -42,14 +42,12 @@ class EarthquakeReport:
     @staticmethod
     def get_report(significant=False):
         if significant:
-            auto_type = 'E-A0015-001'
             APIdata = requests.get(f'https://opendata.cwb.gov.tw/api/v1/rest/datastore/E-A0015-001?Authorization={Database().CWB_API}&limit=1').json().get('records').get('earthquake')
         else:
-            auto_type = 'E-A0016-001'
             APIdata = requests.get(f'https://opendata.cwb.gov.tw/api/v1/rest/datastore/E-A0016-001?Authorization={Database().CWB_API}&limit=1').json().get('records').get('earthquake')
         
         if APIdata:
-            return EarthquakeReport(APIdata[0],auto_type=auto_type)
+            return EarthquakeReport(APIdata[0])
         else:
             return None
         
@@ -58,12 +56,12 @@ class EarthquakeReport:
         APIdata = requests.get(f'https://opendata.cwb.gov.tw/api/v1/rest/datastore/E-A0015-001?Authorization={Database().CWB_API}&timeFrom={time}')
         data = APIdata.json().get('records').get('earthquake')
         if data:
-            return EarthquakeReport(data[0])
+            return EarthquakeReport(data[0],auto_type='E-A0015-001')
         else:
             APIdata = requests.get(f'https://opendata.cwb.gov.tw/api/v1/rest/datastore/E-A0016-001?Authorization={Database().CWB_API}&timeFrom={time}')
             data = APIdata.json().get('records').get('earthquake')
             if data:
-                return EarthquakeReport(data[0])
+                return EarthquakeReport(data[0],auto_type='E-A0016-001')
             else:
                 return None
         
