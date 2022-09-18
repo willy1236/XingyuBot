@@ -24,7 +24,7 @@ class User():
         self.point = Point(self.id)
         self.rcoin = Rcoin(self.id)
         self.name = udata[self.id].get('name',dcname)
-        self.weapon = udata[self.id].get('weapon',None)
+        self.weapon = udata[self.id].get('weapon')
         
         #RPG數值
         self.hp = udata[self.id].get('hp',10)
@@ -33,7 +33,7 @@ class User():
         self.atk = udata[self.id].get('atk',1)
 
         #其他相關
-        self.bag = jbag.get(self.id,None)
+        self.bag = jbag.get(self.id)
         self.pet = Pet(self.id)
 
     def desplay(self):
@@ -182,7 +182,7 @@ class Pet():
         self.__db = Database()
         jpet = self.__db.jpet
         self.user = str(user)
-        data = jpet.get(self.user,None)
+        data = jpet.get(self.user)
         if data:
             self.has_pet = True
             self.name = data['name']

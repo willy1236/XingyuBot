@@ -5,10 +5,12 @@ from BotLib.basic import BotEmbed
 from BotLib.database import Database
 
 class EarthquakeReport:
-    def __init__(self,data):
+    def __init__(self,data,auto_type=None):
         self.data = data
+        self.auto_type = auto_type
         self.earthquakeNo = str(data['earthquakeNo'])
         self.reportImageURI = data['reportImageURI']
+        self.web = data['web']
         self.originTime = data['earthquakeInfo']['originTime']
         self.depth = data['earthquakeInfo']['depth']['value']
         self.location = data['earthquakeInfo']['epiCenter']['location']
@@ -21,6 +23,8 @@ class EarthquakeReport:
             embed = discord.Embed(description=self.reportContent,color=0x00BB00)
         elif self.reportColor == "橙色":
             embed = discord.Embed(description=self.reportContent,color=0xF75000)
+        elif self.reportColor == "黃色":
+            embed = discord.Embed(description=self.reportContent,color=0xFFFF37)
         else:
             embed = discord.Embed(description=self.reportContent,color=0xEA0000)
         
@@ -38,24 +42,28 @@ class EarthquakeReport:
     @staticmethod
     def get_report(significant=False):
         if significant:
+            auto_type = 'E-A0015-001'
             APIdata = requests.get(f'https://opendata.cwb.gov.tw/api/v1/rest/datastore/E-A0015-001?Authorization={Database().CWB_API}&limit=1').json().get('records').get('earthquake')
         else:
+            auto_type = 'E-A0016-001'
             APIdata = requests.get(f'https://opendata.cwb.gov.tw/api/v1/rest/datastore/E-A0016-001?Authorization={Database().CWB_API}&limit=1').json().get('records').get('earthquake')
+        
         if APIdata:
-            return EarthquakeReport(APIdata[0])
+            return EarthquakeReport(APIdata[0],auto_type=auto_type)
         else:
             return None
         
     @staticmethod
     def get_report_auto(time):
-        APIdata = requests.get(f'https://opendata.cwb.gov.tw/api/v1/rest/datastore/E-A0015-001?Authorization={Database().CWB_API}&timeFrom={time}').json().get('records').get('earthquake')
-        
-        if APIdata:
-            return EarthquakeReport(APIdata[0])
+        APIdata = requests.get(f'https://opendata.cwb.gov.tw/api/v1/rest/datastore/E-A0015-001?Authorization={Database().CWB_API}&timeFrom={time}')
+        data = APIdata.json().get('records').get('earthquake')
+        if data:
+            return EarthquakeReport(data[0])
         else:
-            APIdata = requests.get(f'https://opendata.cwb.gov.tw/api/v1/rest/datastore/E-A0016-001?Authorization={Database().CWB_API}&timeFrom={time}').json().get('records').get('earthquake')
-            if APIdata:
-                return EarthquakeReport(APIdata[0])
+            APIdata = requests.get(f'https://opendata.cwb.gov.tw/api/v1/rest/datastore/E-A0016-001?Authorization={Database().CWB_API}&timeFrom={time}')
+            data = APIdata.json().get('records').get('earthquake')
+            if data:
+                return EarthquakeReport(data[0])
             else:
                 return None
         

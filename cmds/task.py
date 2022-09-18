@@ -1,4 +1,4 @@
-import asyncio,discord,requests
+import asyncio,discord
 from datetime import datetime, timezone, timedelta,time
 from discord.ext import commands,tasks
 
@@ -111,10 +111,17 @@ class task(Cog_Extension):
             db.write('cache',cache)
             
             ch_list = db.cdata['earthquake']
+            if data.auto_type == 'E-A0015-001':
+                text = '顯著有感地震報告'
+            elif data.auto_type == 'E-A0016-001':
+                text = '小區域地震報告'
+            else:
+                text = '地震報告'
+            
             for i in ch_list:
                 channel = self.bot.get_channel(ch_list[i])
                 if channel:
-                    await channel.send('地震報告',embed=embed)
+                    await channel.send(text,embed=embed)
                     await asyncio.sleep(0.5)
         
     @tasks.loop(time=__gettime_1430())
