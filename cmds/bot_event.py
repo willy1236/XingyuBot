@@ -24,6 +24,10 @@ voice_list = {
     726790741103476746: 1021072271277834250
 }
 
+member_list = {
+    613747262291443742: 613747262291443744
+}
+
 class event(Cog_Extension):
     #跨群聊天Ver.1.0
     @commands.Cog.listener()
@@ -106,7 +110,7 @@ class event(Cog_Extension):
                 else:
                     guild = None
 
-                if guild and (guild == 613747262291443742 or guild == 726790741103476746):
+                if guild in voice_list:
                     return guild
                 else:
                     return False
@@ -138,7 +142,13 @@ class event(Cog_Extension):
                     embed.add_field(name='頻道', value=f'{after.channel.mention}', inline=False)
                 
                 await self.bot.get_channel(voice_list.get(guildid)).send(embed=embed)
-            
+
+    @commands.Cog.listener()
+    async def on_member_remove(self, member):
+        guildid = member.guild.id
+        if guildid in member_list and self.bot.user.id == 589744540240314368:
+            text = f'{member.mention} ({member.name}#{member.discriminator}) 離開了我們'
+            await self.bot.get_channel(member_list.get(guildid)).send(text)
 
 def setup(bot):
     bot.add_cog(event(bot))
