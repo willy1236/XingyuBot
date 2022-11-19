@@ -1,5 +1,5 @@
 import discord
-from discord.ext import commands
+from discord.ext import commands,pages
 import random,asyncio
 from discord.commands import SlashCommandGroup
 
@@ -13,6 +13,20 @@ class slash(Cog_Extension):
     rsdata = Database().rsdata
 
     role = SlashCommandGroup("role", "身分組管理指令",guild_only=True,guild_ids=[566533708371329024])
+
+    @role.command(description='查詢身分組數')
+    async def count(self,ctx,user_list:discord.Option(str,required=False,name='要查詢的用戶',description='多個用戶請用空格隔開，或可輸入default查詢常用人選')):
+        await ctx.defer()
+        if 'default' in user_list:
+            user_list = (419131103836635136,528935362199027716,465831362168094730,539405949681795073,723435216244572160,490136735557222402)
+        embed=BotEmbed.general("身分組計算結果")
+        rsdata = Database().rsdata
+        for i in user_list:
+            user = await find.user(ctx,i)
+            if user:
+                role_count = len(rsdata[str(user.id)])
+                embed.add_field(name=user.name, value=f"{role_count}", inline=False)
+        await ctx.respond(embed=embed)
 
     @role.command(description='加身分組')
     @commands.cooldown(rate=1,per=5)
@@ -68,6 +82,7 @@ class slash(Cog_Extension):
                 dict[str(user.id)] = roledata
             Database().write('rsdata',dict)
         
+        await ctx.defer()
         jdata = Database().jdata
         guild = self.bot.get_guild(jdata['guild']['001'])
         add_role = guild.get_role(877934319249797120)
@@ -82,6 +97,64 @@ class slash(Cog_Extension):
                 await ctx.respond('身分組儲存完成',delete_after=5)
             elif add_role not in user.roles:
                 await ctx.respond('錯誤:此用戶沒有"加身分組"')
+
+    @role.command(description='清除身分組')
+    @commands.is_owner()
+    async def rsmove(self,ctx):
+        await ctx.defer()
+        for user in ctx.guild.get_role(877934319249797120).members:
+            print(user.name)
+            for role in user.roles:
+                if role.id == 877934319249797120:
+                    break
+                if role.name == '@everyone':
+                    continue
+                print(f'已移除:{role.name}')
+                await role.delete()
+                asyncio.sleep(0.5)
+        await ctx.respond('身分組清理完成',delete_after=5)
+
+    @role.command(description='更改暱稱')
+    async def nick(self, ctx, arg:discord.Option(str,name='欲更改的內容',description='可輸入新暱稱或輸入以#開頭的6位顏色代碼')):
+        await ctx.defer()
+        user = ctx.author
+        role = user.roles[-1]
+        if role.name.startswith('稱號 | '):
+            if arg.startswith('#'):
+                await role.edit(colour=arg,reason='稱號:顏色改變')
+            else:
+                await role.edit(name=f'稱號 | {arg}',reason='稱號:名稱改變')
+            await ctx.respond('暱稱更改完成',delete_after=5)
+        else:
+            await ctx.respond(f'錯誤:{ctx.author.mention}沒有稱號可更改',delete_after=5)
+
+    @role.command(description='身分組紀錄')
+    async def record(self, ctx, user:discord.Option(discord.Member,name='欲查詢的成員',description='可不輸入以查詢自己',default=None)):
+        await ctx.defer()
+        user = user or ctx.author
+        db = Database()
+        rsdata = db.rsdata
+        if str(user.id) in rsdata:
+            id = str(user.id)
+            page = []
+            i = 0
+            page_now = 0
+            page.append(BotEmbed.simple(f"{user.name} 身分組紀錄"))
+            for role in rsdata[id]:
+                if i >= 10:
+                    page.append(BotEmbed.simple(f"{user.name} 身分組紀錄"))
+                    i = 0
+                    page_now += 1
+                name = rsdata[id][role][0]
+                time = rsdata[id][role][1]
+                page[page_now].add_field(name=name, value=time, inline=False)
+                i += 1
+
+            paginator = pages.Paginator(pages=page, use_default_buttons=True)
+            await paginator.respond(ctx.interaction, ephemeral=False)
+            
+        else:
+            raise commands.errors.ArgumentParsingError('沒有此用戶的紀錄')
 
     @commands.slash_command(description='向大家說哈瞜')
     async def hello(self,ctx, name: str = None):
@@ -117,6 +190,12 @@ class slash(Cog_Extension):
         await ctx.defer()
         await BRS.feedback(self,ctx,text)
         await ctx.respond(f"訊息已發送!",ephemeral=True,delete_after=3)
+
+    @commands.slash_command(description='讓機器人選擇一樣東西',guild_ids=[566533708371329024])
+    async def choice(self,ctx,args:discord.Option(str,required=False,name='選項',description='多個選項請用空格隔開')):
+        args = args.split()
+        result = random.choice(args)
+        await ctx.respond(f'我選擇:{result}')
 
 def setup(bot):
     bot.add_cog(slash(bot))

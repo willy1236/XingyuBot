@@ -140,106 +140,7 @@ class command(Cog_Extension):
             await ctx.send('出現錯誤，已自動向機器人擁有者回報')
         else:
             await ctx.send('無法辨認此ID',delete_after=5)
-            
 
-    @commands.command()
-    @commands.cooldown(rate=1,per=10)
-    async def feedback(self,ctx,*,msg):
-        send_msg = await ctx.send('請稍後...')
-        await BRS.feedback(self,ctx,msg)
-        await ctx.message.delete()
-        await send_msg.edit('訊息已發送',delete_after=5)
-
-
-    @commands.group(invoke_without_command=True)
-    async def role(self,ctx,*user_list):
-        if 'default' in user_list:
-            user_list = (419131103836635136,528935362199027716,465831362168094730,539405949681795073,723435216244572160,490136735557222402)
-        embed=BotEmbed.general("身分組計算結果")
-        rsdata = Database().rsdata
-        for i in user_list:
-            user = await find.user(ctx,i)
-            if user:
-                role_count = len(rsdata[str(user.id)])
-                embed.add_field(name=user.name, value=f"{role_count}", inline=False)
-        await ctx.send(embed=embed)
-
-
-    @role.command()
-    @commands.cooldown(rate=1,per=5)
-    async def add(self,ctx,name,*user_list):
-        permission = discord.Permissions.none()
-        r,g,b=random_color(200)
-        color = discord.Colour.from_rgb(r,g,b)
-        new_role = await ctx.guild.create_role(name=name,permissions=permission,color=color)
-        if user_list != []:
-            for user in user_list:
-                user = await find.user(ctx,user)
-                if user and user != self.bot.user:
-                    await user.add_roles(new_role,reason='指令:加身分組')
-                elif user == self.bot.user:
-                    await ctx.send("請不要加我身分組好嗎")
-                elif user.bot:
-                    await ctx.send("請不要加機器人身分組好嗎")
-            await ctx.message.add_reaction('✔️')
-        await ctx.message.add_reaction('✅')
-
-    @commands.is_owner()
-    @role.command()
-    async def rsmove(self,ctx):
-        await self.save(ctx,'all')
-        asyncio.sleep(3)
-        for user in ctx.guild.get_role(877934319249797120).members:
-            print(user.name)
-            for role in user.roles:
-                if role.id == 877934319249797120:
-                    break
-                if role.name == '@everyone':
-                    continue
-                print(f'已移除:{role.name}')
-                await role.delete()
-        await ctx.message.add_reaction('✅')
-
-    @role.command()
-    async def nick(self, ctx,arg):
-        user = ctx.author
-        role = user.roles[-1]
-        if role.name.startswith('稱號 | '):
-            if arg.startswith('#'):
-                await role.edit(colour=arg,reason='稱號:顏色改變')
-            else:
-                await role.edit(name=f'稱號 | {arg}',reason='稱號:名稱改變')
-            await ctx.send('稱號更改已完成')
-        else:
-            await ctx.send('錯誤:你沒有稱號可更改',delete_after=5)
-
-    @role.command()
-    async def record(self, ctx,arg=None):
-        user = await find.user(ctx,arg) or ctx.author
-        db = Database()
-        rsdata = db.rsdata
-        if str(user.id) in rsdata:
-            id = str(user.id)
-            page = []
-            i = 0
-            page_now = 0
-            page.append(BotEmbed.simple(f"{user.name} 身分組紀錄"))
-            for role in rsdata[id]:
-                if i >= 10:
-                    page.append(BotEmbed.simple(f"{user.name} 身分組紀錄"))
-                    i = 0
-                    page_now += 1
-                name = rsdata[id][role][0]
-                time = rsdata[id][role][1]
-                page[page_now].add_field(name=name, value=time, inline=False)
-                i += 1
-
-            
-            paginator = pages.Paginator(pages=page, use_default_buttons=True)
-            await paginator.send(ctx, target=ctx.channel)
-            
-        else:
-            raise commands.errors.ArgumentParsingError('沒有此用戶的紀錄')
 
     @commands.command()
     @commands.cooldown(rate=1,per=2)
@@ -407,12 +308,6 @@ class command(Cog_Extension):
         #更新資料庫
         del bet_data[id]
         Database().write('bet_data',bet_data)
-
-
-    @commands.command()
-    async def choice(self,ctx,*args):
-        result = random.choice(args)
-        await ctx.send(f'我選擇:{result}')
 
 
     @commands.command()
