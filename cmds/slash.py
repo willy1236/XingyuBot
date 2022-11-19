@@ -47,6 +47,42 @@ class slash(Cog_Extension):
             await ctx.respond(f"已創建 {new_role.name} 身分組")
 
 
+    @role.command(description='儲存身分組')
+    @commands.cooldown(rate=1,per=5)
+    @commands.is_owner()
+    async def save(self,
+                    ctx:discord.ApplicationContext,
+                    user:discord.Option(str,name='用戶名',description='輸入all可儲存所有身分組')
+                    ):
+        def save_role(user):
+            dict = self.rsdata
+            roledata = dict.get(str(user.id),{})
+            for role in user.roles:
+                if role.id == 877934319249797120:
+                    break
+                if role.name == '@everyone':
+                    continue
+                if str(role.id) not in roledata:
+                    print(f'新增:{role.name}')
+                roledata[str(role.id)] = [role.name,role.created_at.strftime('%Y%m%d')]
+                dict[str(user.id)] = roledata
+            Database().write('rsdata',dict)
+        
+        jdata = Database().jdata
+        guild = self.bot.get_guild(jdata['guild']['001'])
+        add_role = guild.get_role(877934319249797120)
+        if user == 'all':
+            for user in add_role.members:
+                save_role(user)
+            await ctx.respond('身分組儲存完成',delete_after=5)
+        else:
+            user = await find.user(ctx,user)
+            if user != None and add_role in user.roles:
+                save_role(user)
+                await ctx.respond('身分組儲存完成',delete_after=5)
+            elif add_role not in user.roles:
+                await ctx.respond('錯誤:此用戶沒有"加身分組"')
+
     @commands.slash_command(description='向大家說哈瞜')
     async def hello(self,ctx, name: str = None):
         await ctx.defer()
@@ -71,6 +107,16 @@ class slash(Cog_Extension):
         embed.set_thumbnail(url=user.display_avatar.url)
         embed.set_footer(text=f"id:{user.id}")
         await ctx.respond(embed=embed)
+
+    @commands.slash_command(description='傳送訊息給伺服器擁有者')
+    @commands.cooldown(rate=1,per=10)
+    async def feedback( self,
+                        ctx:discord.ApplicationContext,
+                        text:discord.Option(str,name='訊息',description='要傳送的訊息內容'),
+                        ):
+        await ctx.defer()
+        await BRS.feedback(self,ctx,text)
+        await ctx.respond(f"訊息已發送!",ephemeral=True,delete_after=3)
 
 def setup(bot):
     bot.add_cog(slash(bot))

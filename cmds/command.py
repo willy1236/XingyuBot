@@ -184,39 +184,6 @@ class command(Cog_Extension):
             await ctx.message.add_reaction('✔️')
         await ctx.message.add_reaction('✅')
 
-
-    @role.command()
-    @commands.is_owner()
-    async def save(self,ctx,user):
-        def save_role(user):
-            dict = self.rsdata
-            roledata = dict.get(str(user.id),{})
-            for role in user.roles:
-                if role.id == 877934319249797120:
-                    break
-                if role.name == '@everyone':
-                    continue
-                if str(role.id) not in roledata:
-                    print(f'新增:{role.name}')
-                roledata[str(role.id)] = [role.name,role.created_at.strftime('%Y%m%d')]
-                dict[str(user.id)] = roledata
-            Database().write('rsdata',dict)
-        
-        jdata = Database().jdata
-        guild = self.bot.get_guild(jdata['guild']['001'])
-        add_role = guild.get_role(877934319249797120)
-        if user == 'all':
-            for user in add_role.members:
-                save_role(user)
-            await ctx.message.add_reaction('✅')
-        else:
-            user = await find.user(ctx,user)
-            if user != None and add_role in user.roles:
-                save_role(user)
-                await ctx.message.add_reaction('✅')
-            elif add_role not in user.roles:
-                ctx.send('錯誤:此用戶沒有"加身分組"')
-
     @commands.is_owner()
     @role.command()
     async def rsmove(self,ctx):
