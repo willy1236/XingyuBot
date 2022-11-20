@@ -26,13 +26,13 @@ class error(Cog_Extension):
         elif isinstance(error,commands.errors.MissingPermissions):
             text = ''
             for i in error.missing_permissions:
-                text += (dict.get(i,i) + ',')
-            await ctx.send(f'缺少權限:你沒有權限來使用此指令\n缺少權限:{text[:-1]}')
+                text = ','.join(dict.get(i,i))
+            await ctx.send(f'缺少權限:你沒有權限來使用此指令\n缺少權限:{text}')
         elif isinstance(error,commands.errors.BotMissingPermissions):
             text = ''
             for i in error.missing_permissions:
-                text += (dict.get(i,i) + ',')
-            await ctx.send(f'缺少權限:機器人沒有權限來使用此指令\n缺少權限:{text[:-1]}')
+                text = ','.join(dict.get(i,i))
+            await ctx.send(f'缺少權限:機器人沒有權限來使用此指令\n缺少權限:{text}')
             print("缺少權限:",error.missing_permissions)
         elif isinstance(error,commands.errors.NotOwner):
             await ctx.send('缺少權限:你不是機器人擁有者',delete_after=5)
@@ -60,6 +60,13 @@ class error(Cog_Extension):
                 await BRS.error(self,ctx,error)
             await ctx.send(f'發生錯誤\n```{error}```')
             print(error,type(error))
+
+    @commands.Cog.listener()
+    async def on_application_command_error(self, ctx: discord.ApplicationContext, error: discord.DiscordException):
+        if isinstance(error, commands.CommandOnCooldown):
+            await ctx.respond(f'尚在冷卻:指令還在冷卻中(尚須{int(error.retry_after)}秒)',ephemeral=True)
+        elif isinstance(error,commands.errors.NotOwner):
+            await ctx.respond('缺少權限:你不是機器人擁有者',ephemeral=True)
 
 def setup(bot):
     bot.add_cog(error(bot))

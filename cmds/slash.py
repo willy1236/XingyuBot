@@ -33,7 +33,7 @@ class slash(Cog_Extension):
     async def add(self,
                 ctx:discord.ApplicationContext,
                 name:discord.Option(str,name='身分組名',description='新身分組名稱'),
-                user_list:discord.Option(str,required=False,name='要加身份組的用戶',description='多個用戶請用空格隔開，若無則留空')
+                user_list:discord.Option(str,required=False,name='要加身份組的用戶',description='多個用戶請用空格隔開')
                 ):
         await ctx.defer()
         permission = discord.Permissions.none()
@@ -48,10 +48,12 @@ class slash(Cog_Extension):
                 if user and user != self.bot.user:
                     await user.add_roles(new_role,reason='指令:加身分組')
                     added_role.append(user)
+                    print(added_role)
                 elif user == self.bot.user:
-                    await ctx.send("請不要加我身分組好嗎")
-                elif user.bot:
-                    await ctx.send("請不要加機器人身分組好嗎")
+                    await ctx.respond("請不要加我身分組好嗎")
+                elif user and user.bot:
+                    await ctx.respond("請不要加機器人身分組好嗎")
+        
         if added_role != []:
             all_user = ''
             for user in added_role:
@@ -69,8 +71,8 @@ class slash(Cog_Extension):
                     user:discord.Option(str,name='用戶名',description='輸入all可儲存所有身分組')
                     ):
         def save_role(user):
-            dict = self.rsdata
-            roledata = dict.get(str(user.id),{})
+            rsdata = self.rsdata
+            roledata = rsdata.get(str(user.id),{})
             for role in user.roles:
                 if role.id == 877934319249797120:
                     break
@@ -79,8 +81,8 @@ class slash(Cog_Extension):
                 if str(role.id) not in roledata:
                     print(f'新增:{role.name}')
                 roledata[str(role.id)] = [role.name,role.created_at.strftime('%Y%m%d')]
-                dict[str(user.id)] = roledata
-            Database().write('rsdata',dict)
+                rsdata[str(user.id)] = roledata
+            Database().write('rsdata',rsdata)
         
         await ctx.defer()
         jdata = Database().jdata
@@ -179,7 +181,7 @@ class slash(Cog_Extension):
         embed.add_field(name="帳號創建日期", value=user.created_at, inline=False)
         embed.set_thumbnail(url=user.display_avatar.url)
         embed.set_footer(text=f"id:{user.id}")
-        await ctx.respond(embed=embed)
+        await ctx.respond(embed=embed,ephemeral=True)
 
     @commands.slash_command(description='傳送訊息給伺服器擁有者',guild_ids=[566533708371329024])
     @commands.cooldown(rate=1,per=10)
@@ -190,6 +192,10 @@ class slash(Cog_Extension):
         await ctx.defer()
         await BRS.feedback(self,ctx,text)
         await ctx.respond(f"訊息已發送!",ephemeral=True,delete_after=3)
+
+    @staticmethod
+    def Autocomplete(self: discord.AutocompleteContext):
+        return ['test']
 
     @commands.slash_command(description='讓機器人選擇一樣東西',guild_ids=[566533708371329024])
     async def choice(self,ctx,args:discord.Option(str,required=False,name='選項',description='多個選項請用空格隔開')):
