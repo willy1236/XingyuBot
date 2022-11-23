@@ -21,6 +21,7 @@ class Database:
         """
         location = "database"
         self.__dict = {
+            'jdict': f'dict.json',
             'jdata': f'{location}/setting.json',
             'cdata': f'{location}/channel_settings.json',
             'picdata': f'{location}/bot_settings/picture.json',
@@ -41,6 +42,7 @@ class Database:
             'jhoyo': f'{location}/game_settings/hoyo.json',
             'jtwitch': f'{location}/community_settings/twitch.json',
         }
+        self.jdict = json.load(open(self.__dict['jdict'],mode='r',encoding='utf8'))
         self.jdata = json.load(open(self.__dict['jdata'],mode='r',encoding='utf8'))
         self.cdata = json.load(open(self.__dict['cdata'],mode='r',encoding='utf8'))
         self.picdata = json.load(open(self.__dict['picdata'],mode='r',encoding='utf8'))

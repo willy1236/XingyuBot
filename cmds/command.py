@@ -142,20 +142,9 @@ class command(Cog_Extension):
             await ctx.send('無法辨認此ID',delete_after=5)
 
 
-    @commands.command()
+    @commands.slash_command(description='抽卡試手氣',guild_ids=[566533708371329024])
     @commands.cooldown(rate=1,per=2)
-    async def lottery(self,ctx,times=None):
-        if times:
-            try:
-                times = int(times)
-                if times > 1000 or times <= 0:
-                    raise commands.errors.ArgumentParsingError('數字只能為介於1~1000之間的整數')
-            except ValueError:
-                raise commands.errors.ArgumentParsingError('只能輸入介於1~1000之間的整數')
-            
-        else:
-            times = 1
-        
+    async def lottery(self,ctx,times:discord.Option(int,name='抽卡次數',description='可輸入1~1000的整數',default=1,min_value=1,max_value=1000)):
         result = {'six':0,'five':0,'four':0,'three':0}
         user_id = str(ctx.author.id)
         six_list = []
@@ -168,9 +157,9 @@ class command(Cog_Extension):
             if choice == 1 or jloot[user_id] >= guaranteed-1:
                 result["six"] += 1
                 if jloot[user_id] >= guaranteed-1:
-                    six_list_100.append(i)
+                    six_list_100.append(str(i))
                 else:
-                    six_list.append(i)
+                    six_list.append(str(i))
                 jloot[user_id] = 0
             else:
                 if choice >= 2 and choice <= 11:
@@ -188,10 +177,10 @@ class command(Cog_Extension):
         embed.add_field(name='抽卡結果', value=f"六星:{result['six']} 五星:{result['five']} 四星:{result['four']} 三星:{result['three']}", inline=False)
         embed.add_field(name='保底累積', value=jloot[user_id], inline=False)
         if len(six_list) > 0:
-            embed.add_field(name='六星出現', value=six_list, inline=False)
+            embed.add_field(name='六星出現', value=','.join(six_list), inline=False)
         if len(six_list_100) > 0:
-            embed.add_field(name='保底', value=six_list_100, inline=False)
-        await ctx.send(embed=embed)
+            embed.add_field(name='保底', value=','.join(six_list_100), inline=False)
+        await ctx.respond(embed=embed)
 
 
     @commands.group(invoke_without_command=True)
@@ -364,10 +353,6 @@ class command(Cog_Extension):
             embed.add_field(name='B矩陣',value=f'{B}, {argBl}x{argBw}')
             embed.add_field(name='AXB矩陣(C矩陣)',value=f'{C}, {Cl}x{Cw}')
             await ctx.send(embed=embed)
-
-    @commands.command()
-    async def roll(self,ctx):
-        await ctx.send('你是想打role嗎 請不要像某人一樣打錯好嗎',reference=ctx.message)
 
     @commands.group(invoke_without_command=True)
     async def twitch(self,ctx,twitch_user,channel:int,role:int):

@@ -24,14 +24,16 @@ class error(Cog_Extension):
         elif isinstance(error,commands.errors.CommandNotFound):
             await ctx.send('沒找到指令:請確認指令是否輸入錯誤')
         elif isinstance(error,commands.errors.MissingPermissions):
-            text = ''
+            permissions = []
             for i in error.missing_permissions:
-                text = ','.join(dict.get(i,i))
+                permissions.append(dict.get(i,i))    
+            text = ','.join(permissions)
             await ctx.send(f'缺少權限:你沒有權限來使用此指令\n缺少權限:{text}')
         elif isinstance(error,commands.errors.BotMissingPermissions):
-            text = ''
+            permissions = []
             for i in error.missing_permissions:
-                text = ','.join(dict.get(i,i))
+                permissions.append(dict.get(i,i))    
+            text = ','.join(permissions)
             await ctx.send(f'缺少權限:機器人沒有權限來使用此指令\n缺少權限:{text}')
             print("缺少權限:",error.missing_permissions)
         elif isinstance(error,commands.errors.NotOwner):
@@ -67,6 +69,24 @@ class error(Cog_Extension):
             await ctx.respond(f'尚在冷卻:指令還在冷卻中(尚須{int(error.retry_after)}秒)',ephemeral=True)
         elif isinstance(error,commands.errors.NotOwner):
             await ctx.respond('缺少權限:你不是機器人擁有者',ephemeral=True)
+        elif isinstance(error,commands.errors.MissingPermissions):
+            permissions = []
+            for i in error.missing_permissions:
+                permissions.append(dict.get(i,i))    
+            text = ','.join(permissions)
+            await ctx.respond(f'缺少權限:你沒有權限來使用此指令\n缺少權限:{text}',ephemeral=True)
+        elif isinstance(error,commands.errors.BotMissingPermissions):
+            permissions = []
+            for i in error.missing_permissions:
+                permissions.append(dict.get(i,i))    
+            text = ','.join(permissions)
+            await ctx.respond(f'缺少權限:機器人沒有權限來使用此指令\n缺少權限:{text}',ephemeral=True)
+
+        else:
+            if ctx.guild.id != 566533708371329024:
+                await BRS.error(self,ctx,error)
+            await ctx.respond(f'發生錯誤\n```{error}```',ephemeral=True)
+            print(error,type(error))
 
 def setup(bot):
     bot.add_cog(error(bot))
