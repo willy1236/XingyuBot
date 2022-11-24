@@ -17,11 +17,12 @@ token = db.tokens[bot_code]
 start_website = jdata.get('start_website',False)
 
 if bot_code == 'Bot1':
-    bot = commands.Bot(
-        command_prefix='!!',
+    #commands.Bot
+    bot = discord.Bot(
+        #command_prefix='!!',
         owner_id=419131103836635136,
         intents=discord.Intents.all(),
-        case_insensitive=True, 
+        #case_insensitive=True, 
         help_command=None
     )
 elif bot_code == 'Bep':
