@@ -25,14 +25,15 @@ if bot_code == 'Bot1':
         help_command=None
     )
 elif bot_code == 'Bep':
-    bot = commands.AutoShardedBot(
-        shard_count=1,
+    bot = discord.Bot(
+        #shard_count=1,
         #command_prefix=commands.when_mentioned_or('b!'),
-        command_prefix='b!',
+        #command_prefix='b!',
         owner_id=419131103836635136,
         intents=discord.Intents.all(),
-        case_insensitive=True, 
-        help_command=None
+        #case_insensitive=True, 
+        help_command=None,
+        debug_guilds = [566533708371329024]
     )
     #只有discord.Bot才有debug_guild
 elif bot_code == 'Bot2':
@@ -49,7 +50,7 @@ async def on_ready():
     #print(">> Bot is online <<")
     print(">> Bot online as",bot.user.name,"<<")
     print(">> Discord's version:",discord.__version__,"<<")
-    await bot.change_presence(activity=discord.Game(name=jdata.get("activity","!!help")),status=discord.Status.online)
+    await bot.change_presence(activity=discord.Game(name=jdata.get("activity","/help")),status=discord.Status.online)
     # cogs = ""
     # for i in bot.cogs:
     #     cogs += f"{i} "

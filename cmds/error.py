@@ -4,7 +4,8 @@ from BotLib.funtions import BRS
 from core.classes import Cog_Extension
 
 dict = {
-    'manage_channels':'管理頻道'
+    'manage_channels':'管理頻道',
+    'moderate_members':'禁言成員'
 }
 
 class error(Cog_Extension):

@@ -66,23 +66,23 @@ class task(Cog_Extension):
 
 
     
-    @commands.command()
-    async def task(self,ctx,task_name):
-        if task_name == 'apex_map_update' or task_name == 'all':
-            await self.apex_map_update.__call__()
-            await ctx.message.add_reaction('✅')
-        if task_name == 'apex_crafting_update' or task_name == 'all':
-            await self.apex_crafting_update.__call__()
-            await ctx.message.add_reaction('✅')
-        if task_name == 'earthquake_check' or task_name == 'all':
-            await self.earthquake_check.__call__()
-            await ctx.message.add_reaction('✅')
-        if task_name == 'covid_update' or task_name == 'all':
-            await self.covid_update.__call__()
-            await ctx.message.add_reaction('✅')
-        if task_name == 'forecast_update' or task_name == 'all':
-            await self.forecast_update.__call__()
-            await ctx.message.add_reaction('✅')
+    # @commands.command()
+    # async def task(self,ctx,task_name):
+    #     if task_name == 'apex_map_update' or task_name == 'all':
+    #         await self.apex_map_update.__call__()
+    #         await ctx.message.add_reaction('✅')
+    #     if task_name == 'apex_crafting_update' or task_name == 'all':
+    #         await self.apex_crafting_update.__call__()
+    #         await ctx.message.add_reaction('✅')
+    #     if task_name == 'earthquake_check' or task_name == 'all':
+    #         await self.earthquake_check.__call__()
+    #         await ctx.message.add_reaction('✅')
+    #     if task_name == 'covid_update' or task_name == 'all':
+    #         await self.covid_update.__call__()
+    #         await ctx.message.add_reaction('✅')
+    #     if task_name == 'forecast_update' or task_name == 'all':
+    #         await self.forecast_update.__call__()
+    #         await ctx.message.add_reaction('✅')
 
     @tasks.loop(time=__gettime_0400())
     async def sign_reset(self):

@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands,pages
-import random,asyncio
+import random,asyncio,datetime
 from discord.commands import SlashCommandGroup
 
 from BotLib.funtions import find,converter,random_color,BRS
@@ -12,7 +12,7 @@ class slash(Cog_Extension):
     picdata = Database().picdata
     rsdata = Database().rsdata
 
-    role = SlashCommandGroup("role", "身分組管理指令",guild_only=True,guild_ids=[566533708371329024])
+    role = SlashCommandGroup("role", "身分組管理指令")
 
     @role.command(description='查詢身分組數')
     async def count(self,ctx,user_list:discord.Option(str,required=False,name='要查詢的用戶',description='多個用戶請用空格隔開，或可輸入default查詢常用人選')):
@@ -165,7 +165,7 @@ class slash(Cog_Extension):
         await ctx.respond(f"Hello {name}!")
 
 
-    @commands.user_command(guild_ids=[566533708371329024])  # create a user command for the supplied guilds
+    @commands.user_command()  # create a user command for the supplied guilds
     async def whois(self,ctx, member: discord.Member):  # user commands return the member
         user = member
         embed = BotEmbed.simple(title=f'{user.name}#{user.discriminator}', description="ID:用戶(伺服器成員)")
@@ -183,7 +183,14 @@ class slash(Cog_Extension):
         embed.set_footer(text=f"id:{user.id}")
         await ctx.respond(embed=embed,ephemeral=True)
 
-    @commands.slash_command(description='傳送訊息給伺服器擁有者',guild_ids=[566533708371329024])
+    @commands.user_command(name="禁言10秒")
+    @commands.has_permissions(moderate_members=True)
+    async def timeout_10s(self,ctx, member: discord.Member):
+        time = datetime.timedelta(seconds=10)
+        await member.timeout_for(time,reason="指令：禁言10秒")
+        await ctx.respond(f"已禁言{member.mention} 10秒",ephemeral=True)
+
+    @commands.slash_command(description='傳送訊息給伺服器擁有者')
     @commands.cooldown(rate=1,per=10)
     async def feedback( self,
                         ctx:discord.ApplicationContext,
@@ -197,7 +204,7 @@ class slash(Cog_Extension):
     def Autocomplete(self: discord.AutocompleteContext):
         return ['test']
 
-    @commands.slash_command(description='讓機器人選擇一樣東西',guild_ids=[566533708371329024])
+    @commands.slash_command(description='讓機器人選擇一樣東西')
     async def choice(self,ctx,args:discord.Option(str,required=False,name='選項',description='多個選項請用空格隔開')):
         args = args.split()
         result = random.choice(args)

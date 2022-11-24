@@ -8,5 +8,11 @@
         "台灣每日疫情通知":"covid_update",
         "台灣各縣市天氣預報":"forecast",
         "機器人更新通知":"bot"
+    },
+    "game_set_option" :{
+        "Steam":"steam",
+        "Osu":"osu",
+        "Apex":"apex",
+        "League of Legends":"lol"
     }
 }
