@@ -76,6 +76,8 @@ class command(Cog_Extension):
     picdata = Database().picdata
     rsdata = Database().rsdata
 
+    twitch = SlashCommandGroup("twitch", "Twitch相關指令")
+
     # @commands.command()
     # @commands.is_owner()
     # async def react(self,ctx,chaid,msgid):
@@ -142,7 +144,7 @@ class command(Cog_Extension):
     #         await ctx.send('無法辨認此ID',delete_after=5)
 
 
-    @commands.slash_command(description='抽卡試手氣',guild_ids=[566533708371329024])
+    @commands.slash_command(description='抽卡試手氣')
     @commands.cooldown(rate=1,per=2)
     async def lottery(self,ctx,times:discord.Option(int,name='抽卡次數',description='可輸入1~1000的整數',default=1,min_value=1,max_value=1000)):
         result = {'six':0,'five':0,'four':0,'three':0}
@@ -354,58 +356,61 @@ class command(Cog_Extension):
     #         embed.add_field(name='AXB矩陣(C矩陣)',value=f'{C}, {Cl}x{Cw}')
     #         await ctx.send(embed=embed)
 
-    # @commands.group(invoke_without_command=True)
-    # async def twitch(self,ctx,twitch_user,channel:int,role:int):
-    #     db = Database()
-    #     jtwitch = db.jtwitch
-    #     channel = await find.channel(ctx,channel)
-    #     if not channel:
-    #         print(1)
-    #         raise commands.errors.ArgumentParsingError('沒找到頻道')
+    @twitch.command(description='設置twitch開台通知')
+    async def set(self,
+                ctx,
+                twitch_user:discord.Option(str,required=True,name='twitch用戶',description='當此用戶開台時會發送通知'),
+                channel:discord.Option(discord.TextChannel,required=True,name='頻道',description='通知發送頻道'),
+                role:discord.Option(discord.Role,required=True,name='身分組',description='發送通知時tag的身分組')
+                ):
+        db = Database()
+        jtwitch = db.jtwitch
+        channel = await find.channel(ctx,channel)
+        if not channel:
+            raise commands.errors.ArgumentParsingError('沒找到頻道')
 
-    #     role = await find.role(ctx,role)
-    #     if not role:
-    #         print(2)
-    #         raise commands.errors.ArgumentParsingError('沒找到身分組')            
+        role = await find.role(ctx,role)
+        if not role:
+            raise commands.errors.ArgumentParsingError('沒找到身分組')            
 
-    #     if twitch_user not in jtwitch['users']:
-    #         jtwitch['users'].append(twitch_user)
-    #         jtwitch['role'][twitch_user] = {}
-    #         jtwitch['channel'][twitch_user] = {}
+        if twitch_user not in jtwitch['users']:
+            jtwitch['users'].append(twitch_user)
+            jtwitch['role'][twitch_user] = {}
+            jtwitch['channel'][twitch_user] = {}
 
-    #     jtwitch['role'][twitch_user][str(ctx.guild.id)] = str(role.id)
-    #     jtwitch['channel'][twitch_user][str(ctx.guild.id)] = str(channel.id)
+        jtwitch['role'][twitch_user][str(ctx.guild.id)] = str(role.id)
+        jtwitch['channel'][twitch_user][str(ctx.guild.id)] = str(channel.id)
 
-    #     db.write('jtwitch',jtwitch)
-    #     await ctx.send(f'設定成功：{twitch_user}的開台通知將會發送在{channel.mention}並會通知{role.mention}')
+        db.write('jtwitch',jtwitch)
+        await ctx.respond(f'設定成功：{twitch_user}的開台通知將會發送在{channel.mention}並會通知{role.mention}')
 
-    # @twitch.command()
-    # async def remove(self,ctx,twitch_user):
-    #     db = Database()
-    #     jtwitch = db.jtwitch
-    #     if twitch_user in jtwitch['users'] and str(ctx.guild.id) in jtwitch['channel'][twitch_user]:
-    #         jtwitch['users'].remove(twitch_user)
-    #         del jtwitch['role'][twitch_user][str(ctx.guild.id)]
-    #         if not jtwitch['role'][twitch_user]:
-    #             del jtwitch['role'][twitch_user]
+    @twitch.command(description='移除twitch開台通知')
+    async def remove(self,ctx,twitch_user:discord.Option(str,required=True,name='twitch用戶')):
+        db = Database()
+        jtwitch = db.jtwitch
+        if twitch_user in jtwitch['users'] and str(ctx.guild.id) in jtwitch['channel'][twitch_user]:
+            jtwitch['users'].remove(twitch_user)
+            del jtwitch['role'][twitch_user][str(ctx.guild.id)]
+            if not jtwitch['role'][twitch_user]:
+                del jtwitch['role'][twitch_user]
 
-    #         del jtwitch['channel'][twitch_user][str(ctx.guild.id)]
-    #         if not jtwitch['channel'][twitch_user]:
-    #             del jtwitch['channel'][twitch_user]
-    #         db.write('jtwitch',jtwitch)
-    #         await ctx.send(f'已移除 {twitch_user} 的開台通知')
-    #     else:
-    #         await ctx.send(f'{twitch_user} 還沒有被設定通知')
+            del jtwitch['channel'][twitch_user][str(ctx.guild.id)]
+            if not jtwitch['channel'][twitch_user]:
+                del jtwitch['channel'][twitch_user]
+            db.write('jtwitch',jtwitch)
+            await ctx.respond(f'已移除 {twitch_user} 的開台通知')
+        else:
+            await ctx.respond(f'{twitch_user} 還沒有被設定通知')
 
-    # @twitch.command()
-    # async def notice(self,ctx,twitch_user):
-    #     db = Database()
-    #     jtwitch = db.jtwitch
-    #     if twitch_user in jtwitch['users'] and str(ctx.guild.id) in jtwitch['channel'][twitch_user]:
-    #         channel = self.bot.get_channel(int(jtwitch['channel'][twitch_user][str(ctx.guild.id)]))
-    #         await ctx.send(f'{twitch_user} 的開台通知在 {channel.mention}')
-    #     else:
-    #         await ctx.send(f'{twitch_user} 在此群組沒有設開台通知')
+    @twitch.command(description='確認twitch開台通知')
+    async def notice(self,ctx,twitch_user:discord.Option(str,required=True,name='twitch用戶')):
+        db = Database()
+        jtwitch = db.jtwitch
+        if twitch_user in jtwitch['users'] and str(ctx.guild.id) in jtwitch['channel'][twitch_user]:
+            channel = self.bot.get_channel(int(jtwitch['channel'][twitch_user][str(ctx.guild.id)]))
+            await ctx.respond(f'{twitch_user} 的開台通知在 {channel.mention}')
+        else:
+            await ctx.respond(f'{twitch_user} 在此群組沒有設開台通知')
 
 def setup(bot):
     bot.add_cog(command(bot))

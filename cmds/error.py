@@ -83,6 +83,9 @@ class error(Cog_Extension):
             text = ','.join(permissions)
             await ctx.respond(f'缺少權限:機器人沒有權限來使用此指令\n缺少權限:{text}',ephemeral=True)
 
+        elif isinstance(error,commands.errors.ArgumentParsingError):
+            await ctx.respond(f'參數錯誤:{error}')
+
         else:
             if ctx.guild.id != 566533708371329024:
                 await BRS.error(self,ctx,error)

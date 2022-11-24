@@ -66,7 +66,7 @@ class event(Cog_Extension):
             await BRS.mention_everyone(self,message)
         #詐騙檢查
         ScamChack = False
-        if self.bot.user.id == 589744540240314368:
+        if self.bot.user.id == 589744540240314368 and message.mention_everyone:
             if 'free' in message.content.lower() and 'nitro' in message.content.lower():
                 ScamChack = True
             else:
