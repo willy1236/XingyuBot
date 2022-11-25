@@ -6,54 +6,49 @@ from core.classes import Cog_Extension
 from BotLib.basic import BotEmbed
 from BotLib.database import Database
 
+main_guild = [566533708371329024]
 class owner(Cog_Extension):
     #send
-    @commands.command()
+    @commands.slash_command(description='發送訊息',guild_id=main_guild)
     @commands.is_owner()
     async def send(self,ctx,id:int,*,msg):
         channel = self.bot.get_channel(id)
-        if id == 0:
-            await ctx.send(msg)
-            await ctx.message.delete()
-        elif channel == None:
+        if not channel:
             user = self.bot.get_user(id)
             await user.send(msg)
-            await ctx.send(f'訊息發送成功',delete_after=5)
+            await ctx.respond(f'訊息發送成功',delete_after=5)
         else:
             await channel.send(msg)
-            await ctx.send(f'訊息發送成功',delete_after=5)
+            await ctx.respond(f'訊息發送成功',delete_after=5)
 
     #all_anno
-    @commands.command()
+    @commands.slash_command(description='全群公告',guild_id=main_guild)
     @commands.is_owner()
     async def anno(self,ctx,*,msg):
+        await ctx.defer()
         cdata = Database().cdata
         send_success = 0
-        send_msg = await ctx.send('訊息發送中...')
 
-        embed= BotEmbed.all_anno(msg)
-        
+        embed = BotEmbed.all_anno(msg)
         for i in cdata['all_anno']:
             channel = self.bot.get_channel(cdata['all_anno'][i])
-            if channel != None:
+            if channel:
                 try:
                     await channel.send(embed=embed)
                     send_success += 1
                 except:
                     pass
-        await ctx.message.delete()
-        await send_msg.edit(f"已向{send_success}/{len(cdata['all_anno'])}個頻道發送公告",delete_after=5)
+
+        await ctx.respond(f"已向{send_success}/{len(cdata['all_anno'])}個頻道發送公告")
 
     #bot_update
-    @commands.command()
+    @commands.slash_command(description='機器人更新通知',guild_id=main_guild)
     @commands.is_owner()
     async def bupdate(self,ctx,*,msg):
         cdata = Database().cdata
         send_success = 0
-        send_msg = await ctx.send('訊息發送中...')
 
         embed= BotEmbed.bot_update(msg)
-        
         for i in cdata['bot']:
             channel = self.bot.get_channel(cdata['bot'][i])
             if channel != None:
@@ -62,37 +57,37 @@ class owner(Cog_Extension):
                     send_success += 1
                 except:
                     pass
-        await ctx.message.delete()
-        await send_msg.edit(f"已向{send_success}/{len(cdata['bot'])}個頻道發送公告",delete_after=5)
 
-    #edit
-    @commands.command()
-    @commands.is_owner()
-    async def edit(self,ctx,msgid:int,*,new_msg):
-        message = await ctx.fetch_message(msgid)
-        await message.edit(content=new_msg)
-        await ctx.message.add_reaction('✅')
+        await ctx.respond(f"已向{send_success}/{len(cdata['bot'])}個頻道發送公告")
 
-    #reaction
-    @commands.command()
-    @commands.is_owner()
-    async def reaction(self,ctx,msgid:int,mod:str,*,emojiid):
-        message = await ctx.fetch_message(msgid)
-        channel = message.channel
-        emoji = find.emoji(emojiid)
+    # #edit
+    # @commands.slash_command(description='編輯訊息',guild_id=main_guild)
+    # @commands.is_owner()
+    # async def edit(self,ctx,msgid:int,*,new_msg):
+    #     message = await ctx.fetch_message(msgid)
+    #     await message.edit(content=new_msg)
+    #     await ctx.message.add_reaction('✅')
 
-        if emoji == None:
-            await ctx.send(f'反應添加失敗:找不到表情符號',delete_after=5)
-        elif mod == 'add':
-            await message.add_reaction(emoji)
-            await ctx.send(f'反應添加完成,{channel.mention}',delete_after=10)
-        elif mod == 'remove':
-            await message.remove_reaction(emoji,member=self.bot.user)
-            await ctx.send(f'反應移除完成,{channel.mention}',delete_after=10)
-        else:
-            ctx.send('參數錯誤:請輸入正確模式(add/remove)',delete_after=5)
+    # #reaction
+    # @commands.slash_command(description='反應訊息',guild_id=main_guild)
+    # @commands.is_owner()
+    # async def reaction(self,ctx,msgid:int,mod:str,*,emojiid):
+    #     message = await ctx.fetch_message(msgid)
+    #     channel = message.channel
+    #     emoji = find.emoji(emojiid)
 
-    @commands.command()
+    #     if emoji == None:
+    #         await ctx.send(f'反應添加失敗:找不到表情符號',delete_after=5)
+    #     elif mod == 'add':
+    #         await message.add_reaction(emoji)
+    #         await ctx.send(f'反應添加完成,{channel.mention}',delete_after=10)
+    #     elif mod == 'remove':
+    #         await message.remove_reaction(emoji,member=self.bot.user)
+    #         await ctx.send(f'反應移除完成,{channel.mention}',delete_after=10)
+    #     else:
+    #         ctx.send('參數錯誤:請輸入正確模式(add/remove)',delete_after=5)
+
+    @commands.slash_command(description='權限檢查',guild_id=main_guild)
     @commands.is_owner()
     async def permission(self,ctx,guild_id:int):
         guild = self.bot.get_guild(guild_id)
@@ -133,7 +128,7 @@ class owner(Cog_Extension):
         # permission.change_nickname
         # permission.use_slash_commands
         # permission.request_to_speak
-        await ctx.send(embed=embed)
+        await ctx.respond(embed=embed)
 
 # @bot.event
 # async def on_message(message):

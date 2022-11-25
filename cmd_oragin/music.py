@@ -209,7 +209,7 @@ class music(Cog_Extension):
         return player
 
     @commands.is_owner()
-    @commands.command(name='join', aliases=['connect', 'j'], description="connects to voice")
+    @commands.slash_command(name='join',description='讓機器人加入語音')
     async def connect_(self, ctx, *, channel: discord.VoiceChannel=None):
         """Connect to voice.
         Parameters
@@ -245,7 +245,7 @@ class music(Cog_Extension):
             await ctx.message.add_reaction('👍')
         await ctx.send(f'**Joined `{channel}`**')
 
-    @commands.command(name='play', aliases=['sing','p'], description="streams music")
+    @commands.slash_command(name='play',description='撥放音樂')
     async def play_(self, ctx, *, search: str):
         """Request a song and add it to the queue.
         This command attempts to join a valid voice channel if the bot is not already in one.
@@ -270,7 +270,7 @@ class music(Cog_Extension):
 
         await player.queue.put(source)
 
-    @commands.command(name='pause', aliases=['pa'], description="pauses music")
+    @commands.slash_command(name='pause',description='暫停音樂')
     async def pause_(self, ctx):
         """Pause the currently playing song."""
         vc = ctx.voice_client
@@ -284,7 +284,7 @@ class music(Cog_Extension):
         vc.pause()
         await ctx.send("Paused ⏸️")
 
-    @commands.command(name='resume', aliases=['re'], description="resumes music")
+    @commands.slash_command(name='resume',description='繼續撥放音樂')
     async def resume_(self, ctx):
         """Resume the currently paused song."""
         vc = ctx.voice_client
@@ -298,7 +298,7 @@ class music(Cog_Extension):
         vc.resume()
         await ctx.send("Resuming ⏯️")
 
-    @commands.command(name='skip', aliases=['s'], description="skips to next song in queue")
+    @commands.slash_command(name='skip',description='跳過音樂')
     async def skip_(self, ctx):
         """Skip the song."""
         vc = ctx.voice_client
@@ -314,7 +314,7 @@ class music(Cog_Extension):
 
         vc.stop()
     
-    @commands.command(name='remove', aliases=['rm', 'rem'], description="removes specified song from queue")
+    @commands.slash_command(name='remove',description='移除音樂')
     async def remove_(self, ctx, pos : int=None):
         """Removes specified song from queue"""
 
@@ -337,7 +337,7 @@ class music(Cog_Extension):
                 embed = discord.Embed(title="", description=f'Could not find a track for "{pos}"', color=discord.Color.green())
                 await ctx.send(embed=embed)
     
-    @commands.command(name='clear', aliases=['clr', 'cl', 'cr'], description="clears entire queue")
+    @commands.slash_command(name='clear',description='清空歌單並離開')
     async def clear_(self, ctx):
         """Deletes entire queue of upcoming songs."""
 
@@ -351,7 +351,7 @@ class music(Cog_Extension):
         player.queue._queue.clear()
         await ctx.send('💣 **Cleared**')
 
-    @commands.command(name='queue', aliases=['q', 'playlist', 'que'], description="shows the queue")
+    @commands.slash_command(name='queue',description='顯示播放清單')
     async def queue_info(self, ctx):
         """Retrieve a basic queue of upcoming songs."""
         vc = ctx.voice_client
@@ -384,7 +384,7 @@ class music(Cog_Extension):
 
         await ctx.send(embed=embed)
 
-    @commands.command(name='np', aliases=['song', 'current', 'currentsong', 'playing'], description="shows the current playing song")
+    @commands.slash_command(name='nowplaying',description='現正撥放')
     async def now_playing_(self, ctx):
         """Display information about the currently playing song."""
         vc = ctx.voice_client
@@ -412,7 +412,7 @@ class music(Cog_Extension):
         embed.set_author(icon_url=self.bot.user.avatar.url, name=f"Now Playing 🎶")
         await ctx.send(embed=embed)
 
-    @commands.command(name='volume', aliases=['vol', 'v'], description="changes Kermit's volume")
+    @commands.slash_command(name='volume',description='調整機器人音量')
     async def change_volume(self, ctx, *, vol: float=None):
         """Change the player volume.
         Parameters
@@ -443,7 +443,7 @@ class music(Cog_Extension):
         embed = discord.Embed(title="", description=f'**`{ctx.author}`** set the volume to **{vol}%**', color=discord.Color.green())
         await ctx.send(embed=embed)
 
-    @commands.command(name='leave', aliases=["stop", "dc", "disconnect", "bye"], description="stops music and disconnects from voice")
+    @commands.slash_command(name='disconnect',description='讓機器人離開語音')
     async def leave_(self, ctx):
         """Stop the currently playing song and destroy the player.
         !Warning!
