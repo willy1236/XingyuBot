@@ -126,7 +126,8 @@ class BRS():
         report_channel = self.bot.get_channel(jdata['report_channel'])
         embed=BotEmbed.general(name="BRS | 錯誤回報")
         embed.add_field(name='錯誤指令', value=f'```py\n{error}```', inline=True)
-        embed.add_field(name='使用指令', value=f'```{ctx.message.content}```', inline=False)
+        if ctx.message:
+            embed.add_field(name='使用指令', value=f'```{ctx.message.content}```', inline=False)
         embed.add_field(name='使用者', value=f"{ctx.author}\n{ctx.author.id}", inline=False)
         embed.add_field(name='發生頻道', value=f'{ctx.channel}\n{ctx.channel.id}', inline=True)
         embed.add_field(name='發生群組', value=f'{ctx.guild}\n{ctx.guild.id}', inline=True)

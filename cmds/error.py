@@ -89,7 +89,7 @@ class error(Cog_Extension):
         else:
             if ctx.guild.id != 566533708371329024:
                 await BRS.error(self,ctx,error)
-            await ctx.respond(f'發生錯誤\n```{error}```',ephemeral=True)
+            await ctx.respond(f'發生錯誤\n```{error.original}```',ephemeral=True)
             print(error,type(error))
 
 def setup(bot):
