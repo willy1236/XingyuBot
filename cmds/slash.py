@@ -48,7 +48,6 @@ class slash(Cog_Extension):
                 if user and user != self.bot.user:
                     await user.add_roles(new_role,reason='指令:加身分組')
                     added_role.append(user)
-                    print(added_role)
                 elif user == self.bot.user:
                     await ctx.respond("請不要加我身分組好嗎")
                 elif user and user.bot:
