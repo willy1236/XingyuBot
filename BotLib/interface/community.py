@@ -15,8 +15,8 @@ class Twitch(CommunityInterface):
         #headers = {"Content-Type": "application/x-www-form-urlencoded"}
         tokens = self.db.get_token('twitch')
         params = {
-            'client_id':self.token[0],
-            'client_secret':self.token[1],
+            'client_id':tokens[0],
+            'client_secret':tokens[1],
             'grant_type':'client_credentials'
             }
 
