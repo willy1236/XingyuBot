@@ -7,6 +7,7 @@ class CommunityInterface():
 
 class Twitch(CommunityInterface):
     def __init__(self):
+        self.db = JsonDatabase()
         self.__headers = self.__get_twitch_token()
 
     def __get_twitch_token(self):

@@ -44,10 +44,11 @@ class EarthquakeReport(WeatherInterface):
     
     @staticmethod
     def get_report(significant=False):
+        auth = JsonDatabase().get_token('CWB_API')
         if significant:
-            APIdata = requests.get(f'https://opendata.cwb.gov.tw/api/v1/rest/datastore/E-A0015-001?Authorization={JsonDatabase().CWB_API}&limit=1').json().get('records').get('earthquake')
+            APIdata = requests.get(f'https://opendata.cwb.gov.tw/api/v1/rest/datastore/E-A0015-001?Authorization={auth}&limit=1').json().get('records').get('earthquake')
         else:
-            APIdata = requests.get(f'https://opendata.cwb.gov.tw/api/v1/rest/datastore/E-A0016-001?Authorization={JsonDatabase().CWB_API}&limit=1').json().get('records').get('earthquake')
+            APIdata = requests.get(f'https://opendata.cwb.gov.tw/api/v1/rest/datastore/E-A0016-001?Authorization={auth}&limit=1').json().get('records').get('earthquake')
         
         if APIdata:
             return EarthquakeReport(APIdata[0])
@@ -56,12 +57,13 @@ class EarthquakeReport(WeatherInterface):
         
     @staticmethod
     def get_report_auto(time):
-        APIdata = requests.get(f'https://opendata.cwb.gov.tw/api/v1/rest/datastore/E-A0015-001?Authorization={JsonDatabase().CWB_API}&timeFrom={time}')
+        auth = JsonDatabase().get_token('CWB_API')
+        APIdata = requests.get(f'https://opendata.cwb.gov.tw/api/v1/rest/datastore/E-A0015-001?Authorization={auth}&timeFrom={time}')
         data = APIdata.json().get('records').get('earthquake')
         if data:
             return EarthquakeReport(data[0],auto_type='E-A0015-001')
         else:
-            APIdata = requests.get(f'https://opendata.cwb.gov.tw/api/v1/rest/datastore/E-A0016-001?Authorization={JsonDatabase().CWB_API}&timeFrom={time}')
+            APIdata = requests.get(f'https://opendata.cwb.gov.tw/api/v1/rest/datastore/E-A0016-001?Authorization={auth}&timeFrom={time}')
             data = APIdata.json().get('records').get('earthquake')
             if data:
                 return EarthquakeReport(data[0],auto_type='E-A0016-001')

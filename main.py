@@ -11,7 +11,7 @@ picdata = db.picdata
 
 
 #Bot1:dc小幫手, Bep:Bep, Bot2:RO
-bot_code = 'Bep'
+bot_code = 'Bot1'
 token = db.tokens.get(bot_code)
 
 start_website = jdata.get('start_website',False)
