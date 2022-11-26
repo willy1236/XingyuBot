@@ -86,7 +86,7 @@ class task(Cog_Extension):
 
     @tasks.loop(time=__gettime_0400())
     async def sign_reset(self):
-        db = Database()
+        db = JsonDatabase()
         task_report_channel = self.bot.get_channel(db.jdata['task_report'])
         db.write('jdsign',[])
         await task_report_channel.send('簽到已重置')
@@ -100,7 +100,7 @@ class task(Cog_Extension):
 
     @tasks.loop(minutes=1)
     async def earthquake_check(self):
-        db = Database()
+        db = JsonDatabase()
         cache = db.cache
         timefrom = cache['timefrom']
         data = EarthquakeReport.get_report_auto(timefrom)
@@ -126,7 +126,7 @@ class task(Cog_Extension):
         
     @tasks.loop(time=__gettime_1430())
     async def covid_update(self):
-        cdata = Database().cdata
+        cdata = JsonDatabase().cdata
         CovidReport = Covid19Report.get_covid19()
         if CovidReport:
             for i in cdata["covid_update"]:
@@ -147,7 +147,7 @@ class task(Cog_Extension):
 
     @tasks.loop(time=__gettime_0105())
     async def apex_crafting_update(self):
-        cdata = Database().cdata
+        cdata = JsonDatabase().cdata
         crafting = ApexInterface().get_crafting()
         if crafting:
             for i in cdata["apex_crafting"]:
@@ -174,7 +174,7 @@ class task(Cog_Extension):
     
     @tasks.loop(time=__gettime_15min())
     async def apex_map_update(self):
-        cdata = Database().cdata
+        cdata = JsonDatabase().cdata
         map = ApexInterface().get_map_rotation()
         if map:
             for i in cdata["apex_map"]:
@@ -201,7 +201,7 @@ class task(Cog_Extension):
     
     @tasks.loop(time=__gettime_3hr())
     async def forecast_update(self):
-        cdata = Database().cdata
+        cdata = JsonDatabase().cdata
         forecast = Forecast.get_report()
         if forecast:
             for i in cdata["forecast"]:
@@ -227,7 +227,7 @@ class task(Cog_Extension):
     
     @tasks.loop(minutes=1)
     async def twitch(self):
-        db = Database()
+        db = JsonDatabase()
         cache = db.cache
         jtwitch = db.jtwitch
         users = jtwitch['users']
