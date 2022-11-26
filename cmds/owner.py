@@ -9,7 +9,7 @@ from BotLib.database import Database
 main_guild = [566533708371329024]
 class owner(Cog_Extension):
     #send
-    @commands.slash_command(description='發送訊息',guild_id=main_guild)
+    @commands.slash_command(description='發送訊息',guild_ids=main_guild)
     @commands.is_owner()
     async def send(self,ctx,id:int,*,msg):
         channel = self.bot.get_channel(id)
@@ -22,7 +22,7 @@ class owner(Cog_Extension):
             await ctx.respond(f'訊息發送成功',delete_after=5)
 
     #all_anno
-    @commands.slash_command(description='全群公告',guild_id=main_guild)
+    @commands.slash_command(description='全群公告',guild_ids=main_guild)
     @commands.is_owner()
     async def anno(self,ctx,*,msg):
         await ctx.defer()
@@ -42,7 +42,7 @@ class owner(Cog_Extension):
         await ctx.respond(f"已向{send_success}/{len(cdata['all_anno'])}個頻道發送公告")
 
     #bot_update
-    @commands.slash_command(description='機器人更新通知',guild_id=main_guild)
+    @commands.slash_command(description='機器人更新通知',guild_ids=main_guild)
     @commands.is_owner()
     async def bupdate(self,ctx,*,msg):
         cdata = Database().cdata
@@ -61,7 +61,7 @@ class owner(Cog_Extension):
         await ctx.respond(f"已向{send_success}/{len(cdata['bot'])}個頻道發送公告")
 
     # #edit
-    # @commands.slash_command(description='編輯訊息',guild_id=main_guild)
+    # @commands.slash_command(description='編輯訊息',guild_ids=main_guild)
     # @commands.is_owner()
     # async def edit(self,ctx,msgid:int,*,new_msg):
     #     message = await ctx.fetch_message(msgid)
@@ -69,7 +69,7 @@ class owner(Cog_Extension):
     #     await ctx.message.add_reaction('✅')
 
     # #reaction
-    # @commands.slash_command(description='反應訊息',guild_id=main_guild)
+    # @commands.slash_command(description='反應訊息',guild_ids=main_guild)
     # @commands.is_owner()
     # async def reaction(self,ctx,msgid:int,mod:str,*,emojiid):
     #     message = await ctx.fetch_message(msgid)
@@ -87,7 +87,7 @@ class owner(Cog_Extension):
     #     else:
     #         ctx.send('參數錯誤:請輸入正確模式(add/remove)',delete_after=5)
 
-    @commands.slash_command(description='權限檢查',guild_id=main_guild)
+    @commands.slash_command(description='權限檢查',guild_ids=main_guild)
     @commands.is_owner()
     async def permission(self,ctx,guild_id:int):
         guild = self.bot.get_guild(guild_id)
