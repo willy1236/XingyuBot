@@ -5,85 +5,15 @@ from discord.commands import SlashCommandGroup
 
 from BotLib.funtions import find,converter,random_color,BRS
 from core.classes import Cog_Extension
-from BotLib.userlib import *
-from BotLib.database import Database
+from BotLib.interface.user import *
+from BotLib.database import JsonDatabase
 from BotLib.basic import BotEmbed
 
-class Reactbutton1(discord.ui.View):
-    def __init__(self):
-        super().__init__(timeout=None)
-    
-    @discord.ui.button(label="音樂DJ",custom_id="Reactbutton1-1",row=1,style=discord.ButtonStyle.primary)
-    async def button_callback1(self, button: discord.ui.Button, interaction: discord.Interaction):
-        #bot = interaction.client
-        role = interaction.guild.get_role(619893837833306113)
-        user = interaction.user
-        if role in user.roles:
-            await user.remove_roles(role)
-            await interaction.response.send_message(content="音樂DJ 已移除",ephemeral=True)
-        else:
-            await user.add_roles(role)
-            await interaction.response.send_message(content="音樂DJ 已給予",ephemeral=True)
-
-    @discord.ui.button(label="抹茶人，我的超人",custom_id="Reactbutton1-2",row=1,style=discord.ButtonStyle.primary)
-    async def button_callback2(self, button: discord.ui.Button, interaction: discord.Interaction):
-        role = interaction.guild.get_role(1000680995307143218)
-        user = interaction.user
-        if role in user.roles:
-            await user.remove_roles(role)
-            await interaction.response.send_message(content="抹茶人，我的超人 已移除",ephemeral=True)
-        else:
-            await user.add_roles(role)
-            await interaction.response.send_message(content="抹茶人，我的超人 已給予",ephemeral=True)
-
-    @discord.ui.button(label="綜合遊戲區",custom_id="Reactbutton1-3",row=1,style=discord.ButtonStyle.primary)
-    async def button_callback3(self, button: discord.ui.Button, interaction: discord.Interaction):
-        role = interaction.guild.get_role(858558233403719680)
-        user = interaction.user
-        if role in user.roles:
-            await user.remove_roles(role)
-            await interaction.response.send_message(content="綜合遊戲區 已移除",ephemeral=True)
-        else:
-            await user.add_roles(role)
-            await interaction.response.send_message(content="綜合遊戲區 已給予",ephemeral=True)
-        
-    # @discord.ui.button(label="遊戲狂熱者",custom_id="Reactbutton1-4",row=2,style=discord.ButtonStyle.secondary)
-    # async def button_callback4(self, button: discord.ui.Button, interaction: discord.Interaction):
-    #     role = interaction.guild.get_role(858558233403719680)
-    #     user = interaction.user
-    #     bot = interaction.client
-    #     channel = bot.get_channel(706810474326655026)
-    #     if user in channel.overwrites:
-    #         user = interaction.user
-    #         await channel.set_permissions(user,view_channel=None,reason='身分組選擇:移除')
-    #         await interaction.response.send_message(content="遊戲狂熱區 已移除權限",ephemeral=True)
-    #     else:
-    #         await channel.set_permissions(user,view_channel=True,reason='身分組選擇:加入')
-    #         await interaction.response.send_message(content="遊戲狂熱區 已給予權限",ephemeral=True)
-    
-    @discord.ui.button(label="VT&實況區",custom_id="Reactbutton1-4",row=1,style=discord.ButtonStyle.primary)
-    async def button_callback3(self, button: discord.ui.Button, interaction: discord.Interaction):
-        role = interaction.guild.get_role(1012754715123134524)
-        user = interaction.user
-        if role in user.roles:
-            await user.remove_roles(role)
-            await interaction.response.send_message(content="VT&實況區 已移除",ephemeral=True)
-        else:
-            await user.add_roles(role)
-            await interaction.response.send_message(content="VT&實況區 已給予",ephemeral=True)
-
 class command(Cog_Extension):
-    picdata = Database().picdata
-    rsdata = Database().rsdata
+    picdata = JsonDatabase().picdata
+    rsdata = JsonDatabase().rsdata
 
     twitch = SlashCommandGroup("twitch", "Twitch相關指令")
-
-    # @commands.command()
-    # @commands.is_owner()
-    # async def react(self,ctx,chaid,msgid):
-    #     channel = await self.bot.fetch_channel(chaid)
-    #     message = await channel.fetch_message(msgid)
-    #     await message.edit('請點擊按鈕獲得權限',view=Reactbutton1())
 
     # @commands.command()
     # @commands.cooldown(rate=1,per=3)

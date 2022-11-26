@@ -1,9 +1,19 @@
 import json,os,mysql.connector
 
-class Database:
-    pass
+from discord.ext import commands
 
-class JsonDatabase(Database):
+class Counter(dict):
+    def __missing__(self,key):
+        return 0
+
+async def find_user(ctx,arg:str):
+        try:
+            user = await commands.UserConverter().convert(ctx,str(arg))
+        except commands.UserNotFound:
+            user = None
+        return user
+
+class Database:
     def __init__(self):
         """
         CWB = 中央氣象局\n
@@ -38,13 +48,13 @@ class JsonDatabase(Database):
         self.picdata = json.load(open(self.__dict['picdata'],mode='r',encoding='utf8'))
         self.udata = json.load(open(self.__dict['udata'],'r',encoding='utf8'))
         self.jpt = json.load(open(self.__dict['jpt'],mode='r',encoding='utf8'))
-        self.jloot = json.load(open(self.__dict['jloot'],mode='r',encoding='utf8'))
-        self.bet_data = json.load(open(self.__dict['bet_data'],mode='r',encoding='utf8'))
+        self.jloot = Counter(json.load(open(self.__dict['jloot'],mode='r',encoding='utf8')))
+        self.bet_data = Counter(json.load(open(self.__dict['bet_data'],mode='r',encoding='utf8')))
         self.gdata = json.load(open(self.__dict['gdata'],'r',encoding='utf8'))
         self.jdsign = json.load(open(self.__dict['jdsign'],mode='r',encoding='utf8'))
-        self.jwsign = json.load(open(self.__dict['jwsign'],mode='r',encoding='utf8'))
-        self.jevent = json.load(open(self.__dict['jevent'],mode='r',encoding='utf8'))
-        self.rsdata = json.load(open(self.__dict['rsdata'],mode='r',encoding='utf8'))
+        self.jwsign = Counter(json.load(open(self.__dict['jwsign'],mode='r',encoding='utf8')))
+        self.jevent = Counter(json.load(open(self.__dict['jevent'],mode='r',encoding='utf8')))
+        self.rsdata = Counter(json.load(open(self.__dict['rsdata'],mode='r',encoding='utf8')))
         self.jpet = json.load(open(self.__dict['jpet'],mode='r',encoding='utf8'))
         self.jbag = json.load(open(self.__dict['jbag'],mode='r',encoding='utf8'))
         self.cache = json.load(open(self.__dict['cache'],mode='r',encoding='utf8'))
@@ -57,6 +67,13 @@ class JsonDatabase(Database):
             self.tokens = json.load(open(f'{location}/token_settings.json',mode='r',encoding='utf8'))
         except:
             self.tokens = os.environ
+
+        self.CWB_API = self.tokens['CWB_API']
+        self.osu_API_id = self.tokens['osu_API_id']
+        self.osu_API_secret = self.tokens['osu_API_secret']
+        self.TRN_API = self.tokens['TRN_API']
+        self.apex_status_API = self.tokens['apex_status_API']
+        self.steam_api = self.tokens['steam_api']
 
     def write(self,file:str,data:dict):
         try:
@@ -87,10 +104,40 @@ class JsonDatabase(Database):
             else:
                 name = dict[webname]
                 return self.tokens[name]
+    
+    def get_data(self,data_file):
+        pass
 
+    @staticmethod
+    async def get_gamedata(user_id:str, game:str, ctx:commands.context=None):
+        """查詢資料庫中的玩家資訊，若輸入dc用戶則需傳入ctx\n
+        dcuser and in database -> 資料庫資料\n
+        dcuser and not in database -> None\n
+        not dcuser -> user_id(原資料輸出)
+        """
+        gdata = Database().gdata
         
-            
-class MySQLDatabase(Database):
+        if ctx:
+            dcuser = await find_user(ctx,user_id)
+            if dcuser:
+                user_id = str(dcuser.id)
+            else:
+                return user_id
+        else:
+            user_id = str(user_id)
+
+        try:
+            data = gdata[str(user_id)][game]
+            if game in ['steam']:
+                data = data['id']
+            return data
+        except:
+            return None
+
+class GameDatabase():
+    pass
+
+class SQLDatabase():
     def __init__(self,**settings):
         '''MySQL 資料庫連接\n
         settings = {"host": "","port": ,"user": "","password": "","db": "","charset": ""}
@@ -123,21 +170,18 @@ class MySQLDatabase(Database):
         self.cursor.execute(f"INSERT INTO `{table}` VALUES(%s)",value)
         self.connection.commit()
 
-    def get_data(self,table:str):
+    def get_data(self):
         db = "database"
         self.cursor.execute(f"USE `{db}`;")
-        self.cursor.execute(f'SELECT * FROM `{table}` WHERE id = %s;',("1",))
+        self.cursor.execute('SELECT * FROM `user_data` WHERE id = %s;',("1",))
         #self.cursor.execute('SELECT * FROM `user_data`;')
         
         records = self.cursor.fetchall()
         for r in records:
              print(r)
     
-    def remove_data(self,table:str):
+    def remove_data(self):
         db = "database"
         self.cursor.execute(f"USE `{db}`;")
-        self.cursor.execute(f'DELETE FROM `{table}` WHERE `id` = %s;',("3",))
+        self.cursor.execute('DELETE FROM `user_data` WHERE `id` = %s;',("3",))
         self.connection.commit()
-
-class GameDatabase(Database):
-    pass

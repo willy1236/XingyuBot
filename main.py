@@ -2,41 +2,40 @@ import discord, os
 from discord.ext import commands
 from threading import Thread
 
-from BotLib.database import Database
-from cmds.command import Reactbutton1
+from BotLib.database import JsonDatabase
+from BotLib.ui_element.button import *
 
-db = Database()
+db = JsonDatabase()
 jdata = db.jdata
 picdata = db.picdata
 
 
 #Bot1:dc小幫手, Bep:Bep, Bot2:RO
 bot_code = 'Bep'
-token = db.tokens[bot_code]
+token = db.tokens.get(bot_code)
 
 start_website = jdata.get('start_website',False)
 
+#commands.Bot
+#shard_count=1,
+#command_prefix=commands.when_mentioned_or('b!'),
+#command_prefix='b!',
+#case_insensitive=True,
+#只有discord.Bot才有debug_guild
+
 if bot_code == 'Bot1':
-    #commands.Bot
     bot = discord.Bot(
-        #command_prefix='!!',
         owner_id=419131103836635136,
         intents=discord.Intents.all(),
-        #case_insensitive=True, 
         help_command=None
     )
 elif bot_code == 'Bep':
     bot = discord.Bot(
-        #shard_count=1,
-        #command_prefix=commands.when_mentioned_or('b!'),
-        #command_prefix='b!',
         owner_id=419131103836635136,
         intents=discord.Intents.all(),
-        #case_insensitive=True, 
         help_command=None,
         debug_guilds = [566533708371329024]
     )
-    #只有discord.Bot才有debug_guild
 elif bot_code == 'Bot2':
     bot = discord.Bot(
         owner_id=419131103836635136,
@@ -60,7 +59,7 @@ async def on_ready():
         print(">> Cogs all loaded <<")
     else:
         print(f">> Cogs not all loaded, {len(bot.cogs)}/{len(os.listdir('./cmds'))-len(ignore_py)-1} loaded<<")
-    bot.add_view(Reactbutton1())
+    bot.add_view(ReactRole_button())
     
 
 #load
@@ -84,24 +83,6 @@ async def reload(ctx, extension):
     bot.reload_extension(f'cmds.{extension}')
     await ctx.send(f'Re - Loaded {extension} done')
 
-#reset
-@bot.command()
-@commands.is_owner()
-async def reset(ctx,arg=None):
-    if arg == 'sign':
-        task_report_channel = bot.get_channel(jdata['task_report'])
-        reset = []
-        Database().write('jdsign',reset)
-
-        await task_report_channel.send('簽到已重置')
-        await ctx.message.add_reaction('✅')
-    elif not arg:
-        await ctx.message.delete()
-        for filename in os.listdir('./cmds'):
-            if filename.endswith('.py'):
-                bot.reload_extension(f'cmds.{filename[:-3]}')
-        await ctx.send('Re - Loaded all done',delete_after=5)
-
 #ping
 @bot.command()
 async def ping(ctx):
@@ -111,21 +92,16 @@ async def ping(ctx):
 @bot.command()
 @commands.is_owner()
 async def jset(ctx,option,value):
-    db = Database()
+    db = JsonDatabase()
     jdata = db.jdata
     jdata[option] = value
     db.write('jdata',jdata)
     await ctx.send(f'已將{option} 設為 {value}')
 
 ignore_py = []
-if bot_code == 3:
-    for filename in os.listdir('./slash_cmds'):
-        if filename.endswith('.py') and filename[:-3] not in ignore_py:
-            bot.load_extension(f'cmds.{filename[:-3]}')
-else:
-    for filename in os.listdir('./cmds'):
-        if filename.endswith('.py') and filename[:-3] not in ignore_py:
-            bot.load_extension(f'cmds.{filename[:-3]}')
+for filename in os.listdir('./cmds'):
+    if filename.endswith('.py') and filename[:-3] not in ignore_py:
+        bot.load_extension(f'cmds.{filename[:-3]}')
 
 if __name__ == "__main__":
     if start_website:

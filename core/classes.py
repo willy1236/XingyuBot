@@ -1,9 +1,9 @@
 from discord.ext import commands
-from BotLib.database import SQLDatabase,Database
+from BotLib.database import MySQLDatabase,JsonDatabase
 
 
-SQLsettings = Database().jdata["SQLsettings"]
-sqldb = SQLDatabase(**SQLsettings)
+SQLsettings = JsonDatabase().jdata["SQLsettings"]
+sqldb = MySQLDatabase(**SQLsettings)
 
 class Cog_Extension(commands.Cog):
     def __init__(self, bot):

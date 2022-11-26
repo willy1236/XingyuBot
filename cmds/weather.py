@@ -1,7 +1,7 @@
 from discord.ext import commands
 
 from core.classes import Cog_Extension
-from BotLib.weatherlib import *
+from BotLib.interface.weather import *
 
 class weather(Cog_Extension):
     @commands.cooldown(rate=1,per=20)

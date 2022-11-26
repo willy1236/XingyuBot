@@ -1,7 +1,7 @@
 import random
 from discord.ext import commands
 from core.classes import Cog_Extension
-from BotLib.database import Database
+from BotLib.database import JsonDatabase
 from BotLib.basic import BotEmbed
 
 #(*args) 傳入多個參數->list
@@ -36,7 +36,7 @@ from BotLib.basic import BotEmbed
 
 #async -> await
 
-picdata = Database().picdata
+picdata = JsonDatabase().picdata
 
 def is_number(n):
     try:  
@@ -122,7 +122,7 @@ class find(Cog_Extension):
 
 class BRS():
     async def error(self,ctx,error:str):
-        jdata = Database().jdata
+        jdata = JsonDatabase().jdata
         report_channel = self.bot.get_channel(jdata['report_channel'])
         embed=BotEmbed.general(name="BRS | 錯誤回報")
         embed.add_field(name='錯誤指令', value=f'```py\n{error}```', inline=True)
@@ -134,7 +134,7 @@ class BRS():
         await report_channel.send(embed=embed)
     
     async def scam(self,msg,Matchs=None):
-        jdata = Database().jdata
+        jdata = JsonDatabase().jdata
         scam_channel = self.bot.get_channel(jdata['scam_channel'])
         embed=BotEmbed.general(name="BRS | 詐騙回報")
         embed.add_field(name='詐騙訊息', value=msg.content, inline=True)
@@ -146,7 +146,7 @@ class BRS():
         await scam_channel.send(embed=embed)
 
     async def feedback(self,ctx,msg):
-        jdata = Database().jdata
+        jdata = JsonDatabase().jdata
         feedback_channel = self.bot.get_channel(jdata['feedback_channel'])
         embed=BotEmbed.general(name="BRS | 回饋訊息")
         embed.add_field(name='訊息內容', value=msg, inline=True)
@@ -156,7 +156,7 @@ class BRS():
         await feedback_channel.send(embed=embed)
 
     async def dm(self,msg):
-        jdata = Database().jdata
+        jdata = JsonDatabase().jdata
         dm_channel = self.bot.get_channel(jdata['dm_channel'])
         embed=BotEmbed.general(name="BRS | 私人訊息")
         embed.add_field(name='訊息內容', value=msg.content, inline=True)
@@ -164,7 +164,7 @@ class BRS():
         await dm_channel.send(embed=embed)
 
     async def mentioned(self,msg):
-        jdata = Database().jdata
+        jdata = JsonDatabase().jdata
         dm_channel = self.bot.get_channel(jdata['mentioned_channel'])
         embed=BotEmbed.general(name="BRS | 提及訊息")
         embed.add_field(name='訊息內容', value=msg.content, inline=True)
@@ -174,7 +174,7 @@ class BRS():
         await dm_channel.send(embed=embed)
     
     async def mention_everyone(self,msg):
-        jdata = Database().jdata
+        jdata = JsonDatabase().jdata
         dm_channel = self.bot.get_channel(jdata['mention_everyone_channel'])
         embed=BotEmbed.general(name="BRS | 提及所有人訊息")
         embed.add_field(name='訊息內容', value=msg.content, inline=True)

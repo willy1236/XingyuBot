@@ -3,11 +3,11 @@ from discord.ext import commands
 from discord.commands import SlashCommandGroup
 from core.classes import Cog_Extension
 from BotLib.funtions import find
-from BotLib.userlib import Point,Rcoin
-from BotLib.database import Database
+from BotLib.interface.user import Point,Rcoin
+from BotLib.database import JsonDatabase
 
 
-class economy_system(Cog_Extension):
+class system_economy(Cog_Extension):
     point = SlashCommandGroup("point", "Pt點數相關指令")
 
     @point.command(description='查詢Pt點數')
@@ -63,7 +63,7 @@ class economy_system(Cog_Extension):
 
     @commands.slash_command(description='簽到')
     async def sign(self,ctx):
-        db = Database()
+        db = JsonDatabase()
         jdsign = db.jdsign
         #jwsign = Database().jwsign
         jdata = db.jdata
@@ -116,4 +116,4 @@ class economy_system(Cog_Extension):
             await channel.send(f'{ctx.author.mention} 時間超過了')
 
 def setup(bot):
-    bot.add_cog(economy_system(bot))
+    bot.add_cog(system_economy(bot))

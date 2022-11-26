@@ -2,7 +2,7 @@ import discord,datetime,requests
 from discord.ext import commands
 from core.classes import Cog_Extension
 from BotLib.funtions import BRS
-from BotLib.database import Database
+from BotLib.database import JsonDatabase
 from BotLib.basic import BotEmbed
 
 class ScamChack:
@@ -17,7 +17,7 @@ class ScamChack:
         else:
             return False
 
-voice_updata = Database().jdata.get('voice_updata',False)
+voice_updata = JsonDatabase().jdata.get('voice_updata',False)
 
 voice_list = {
     613747262291443742: 631498685250797570,
@@ -32,7 +32,7 @@ class event(Cog_Extension):
     #跨群聊天Ver.1.0
     @commands.Cog.listener()
     async def on_message(self,msg):
-        cdata = Database().cdata['crass_chat']
+        cdata = JsonDatabase().cdata['crass_chat']
         if msg.channel.id in cdata and not msg.author.bot:
             await msg.delete()
 
@@ -56,7 +56,7 @@ class event(Cog_Extension):
             await message.reply(dict[message.content])
         #介紹
         if message.content == '小幫手' or message.content == f'<@{self.bot.user.id}>':
-            embed = BotEmbed.basic(self,f"你好~\n我是{self.bot.user.name}，是一個discord機器人喔~\n我的前輟是`!!`\n你可以輸入`!!help`來查看所有指令的用法\n\n希望我能在discord上幫助到你喔~")
+            embed = BotEmbed.basic(self,f"你好~\n我是{self.bot.user.name}，是一個discord機器人喔~\n你可以輸入`/help`來查看所有指令的用法\n\n希望我能在discord上幫助到你喔~")
             await message.reply(embed=embed)
         #被提及回報
         if self.bot.user in message.mentions:

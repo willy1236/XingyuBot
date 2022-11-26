@@ -3,24 +3,24 @@ from discord.ext import commands,pages
 import random,asyncio,datetime
 from discord.commands import SlashCommandGroup
 
-from BotLib.funtions import find,converter,random_color,BRS
+from BotLib.funtions import find,random_color,BRS
 from core.classes import Cog_Extension
-from BotLib.database import Database
+from BotLib.database import JsonDatabase
 from BotLib.basic import BotEmbed
 
 class slash(Cog_Extension):
-    picdata = Database().picdata
-    rsdata = Database().rsdata
+    picdata = JsonDatabase().picdata
+    rsdata = JsonDatabase().rsdata
 
     role = SlashCommandGroup("role", "身分組管理指令")
-
+    
     @role.command(description='查詢身分組數')
     async def count(self,ctx,user_list:discord.Option(str,required=False,name='要查詢的用戶',description='多個用戶請用空格隔開，或可輸入default查詢常用人選')):
         await ctx.defer()
         if 'default' in user_list:
             user_list = (419131103836635136,528935362199027716,465831362168094730,539405949681795073,723435216244572160,490136735557222402)
         embed=BotEmbed.general("身分組計算結果")
-        rsdata = Database().rsdata
+        rsdata = JsonDatabase().rsdata
         for i in user_list:
             user = await find.user(ctx,i)
             if user:
@@ -81,10 +81,10 @@ class slash(Cog_Extension):
                     print(f'新增:{role.name}')
                 roledata[str(role.id)] = [role.name,role.created_at.strftime('%Y%m%d')]
                 rsdata[str(user.id)] = roledata
-            Database().write('rsdata',rsdata)
+            JsonDatabase().write('rsdata',rsdata)
         
         await ctx.defer()
-        jdata = Database().jdata
+        jdata = JsonDatabase().jdata
         guild = self.bot.get_guild(jdata['guild']['001'])
         add_role = guild.get_role(877934319249797120)
         if user == 'all':
@@ -133,7 +133,7 @@ class slash(Cog_Extension):
     async def record(self, ctx, user:discord.Option(discord.Member,name='欲查詢的成員',description='可不輸入以查詢自己',default=None)):
         await ctx.defer()
         user = user or ctx.author
-        db = Database()
+        db = JsonDatabase()
         rsdata = db.rsdata
         if str(user.id) in rsdata:
             id = str(user.id)
@@ -182,12 +182,12 @@ class slash(Cog_Extension):
         embed.set_footer(text=f"id:{user.id}")
         await ctx.respond(embed=embed,ephemeral=True)
 
-    @commands.user_command(name="禁言10秒")
+    @commands.user_command(name="禁言15秒")
     @commands.has_permissions(moderate_members=True)
     async def timeout_10s(self,ctx, member: discord.Member):
-        time = datetime.timedelta(seconds=10)
-        await member.timeout_for(time,reason="指令：禁言10秒")
-        await ctx.respond(f"已禁言{member.mention} 10秒",ephemeral=True)
+        time = datetime.timedelta(seconds=15)
+        await member.timeout_for(time,reason="指令：禁言15秒")
+        await ctx.respond(f"已禁言{member.mention} 15秒",ephemeral=True)
 
     @commands.slash_command(description='傳送訊息給伺服器擁有者')
     @commands.cooldown(rate=1,per=10)

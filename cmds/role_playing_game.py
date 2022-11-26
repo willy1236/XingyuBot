@@ -2,7 +2,7 @@ import discord
 from core.classes import Cog_Extension
 from discord.ext import commands
 
-from BotLib.userlib import *
+from BotLib.interface.user import *
 from BotLib.database import Database
 from BotLib.basic import BotEmbed
 from BotLib.funtions import find

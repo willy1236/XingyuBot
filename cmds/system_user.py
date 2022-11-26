@@ -3,12 +3,11 @@ from discord.ext import commands
 from core.classes import Cog_Extension
 from discord.commands import SlashCommandGroup
 
-from BotLib.userlib import *
-from BotLib.database import Database
+from BotLib.interface.user import *
 from BotLib.funtions import find
 from BotLib.basic import BotEmbed
 
-class user_system(Cog_Extension):
+class system_user(Cog_Extension):
     
     pet = SlashCommandGroup("pet", "寵物相關指令")
     shop = SlashCommandGroup("shop", "商店相關指令")
@@ -112,4 +111,4 @@ class user_system(Cog_Extension):
             raise commands.errors.ArgumentParsingError('沒有此商品')
 
 def setup(bot):
-    bot.add_cog(user_system(bot))
+    bot.add_cog(system_user(bot))

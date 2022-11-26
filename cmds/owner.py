@@ -1,13 +1,26 @@
-import discord
+import discord,os
 from discord.ext import commands
 
 from BotLib.funtions import find
 from core.classes import Cog_Extension
 from BotLib.basic import BotEmbed
-from BotLib.database import Database
+from BotLib.database import JsonDatabase
+
+from BotLib.ui_element.button import ReactRole_button
 
 main_guild = [566533708371329024]
 class owner(Cog_Extension):
+    #change_presence
+    @commands.slash_command(description='更換bot狀態',guild_ids=main_guild)
+    @commands.is_owner()
+    async def statue(self,ctx,statue):
+        db = JsonDatabase()
+        jdata = db.jdata
+        jdata['activity'] = statue
+        await self.bot.change_presence(activity=discord.Game(name=jdata.get("activity","/help")),status=discord.Status.online)
+        db.write('jdata',jdata)
+        await ctx.respond(f'狀態更改完成',delete_after=5)
+
     #send
     @commands.slash_command(description='發送訊息',guild_ids=main_guild)
     @commands.is_owner()
@@ -26,7 +39,7 @@ class owner(Cog_Extension):
     @commands.is_owner()
     async def anno(self,ctx,*,msg):
         await ctx.defer()
-        cdata = Database().cdata
+        cdata = JsonDatabase().cdata
         send_success = 0
 
         embed = BotEmbed.all_anno(msg)
@@ -45,7 +58,7 @@ class owner(Cog_Extension):
     @commands.slash_command(description='機器人更新通知',guild_ids=main_guild)
     @commands.is_owner()
     async def bupdate(self,ctx,*,msg):
-        cdata = Database().cdata
+        cdata = JsonDatabase().cdata
         send_success = 0
 
         embed= BotEmbed.bot_update(msg)
@@ -129,6 +142,32 @@ class owner(Cog_Extension):
         # permission.use_slash_commands
         # permission.request_to_speak
         await ctx.respond(embed=embed)
+
+    @commands.slash_command(guild_ids=main_guild)
+    @commands.is_owner()
+    async def react(self,ctx,chaid,msgid):
+        channel = await self.bot.fetch_channel(chaid)
+        message = await channel.fetch_message(msgid)
+        await message.edit('請點擊按鈕獲得權限',view=ReactRole_button())
+        await ctx.respond('訊息已發送')
+
+    #reset
+    @commands.slash_command(description='資料重置',guild_ids=main_guild)
+    @commands.is_owner()
+    async def reset(self,ctx,arg=None):
+        if arg == 'sign':
+            db = JsonDatabase()
+            task_report_channel = self.bot.get_channel(db.jdata['task_report'])
+            reset = []
+            db.write('jdsign',reset)
+
+            await task_report_channel.send('簽到已重置')
+            await ctx.respond('簽到已重置',delete_after=5)
+        elif not arg:
+            for filename in os.listdir('./cmds'):
+                if filename.endswith('.py'):
+                    self.bot.reload_extension(f'cmds.{filename[:-3]}')
+            await ctx.respond('Re - Loaded all done',delete_after=5)
 
 # @bot.event
 # async def on_message(message):

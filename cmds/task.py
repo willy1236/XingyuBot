@@ -2,11 +2,11 @@ import asyncio,discord
 from datetime import datetime, timezone, timedelta,time
 from discord.ext import commands,tasks
 
-from BotLib.weatherlib import *
 from core.classes import Cog_Extension
-from BotLib.database import Database
-from BotLib.gamelib import ApexData
-from BotLib.communitylib import Twitch
+from BotLib.database import JsonDatabase
+from BotLib.interface.weather import *
+from BotLib.interface.game import ApexInterface
+from BotLib.interface.community import Twitch
 
 class task(Cog_Extension):
     def __init__(self,*args,**kwargs):
@@ -148,7 +148,7 @@ class task(Cog_Extension):
     @tasks.loop(time=__gettime_0105())
     async def apex_crafting_update(self):
         cdata = Database().cdata
-        crafting = ApexData.get_crafting()
+        crafting = ApexInterface().get_crafting()
         if crafting:
             for i in cdata["apex_crafting"]:
                 channel = self.bot.get_channel(cdata["apex_crafting"][i])
@@ -175,7 +175,7 @@ class task(Cog_Extension):
     @tasks.loop(time=__gettime_15min())
     async def apex_map_update(self):
         cdata = Database().cdata
-        map = ApexData.get_map_rotation()
+        map = ApexInterface().get_map_rotation()
         if map:
             for i in cdata["apex_map"]:
                 channel = self.bot.get_channel(cdata["apex_map"][i])
