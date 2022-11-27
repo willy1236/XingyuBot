@@ -3,11 +3,11 @@ from discord.errors import Forbidden, NotFound
 from discord.ext import commands,pages
 from discord.commands import SlashCommandGroup
 
-from BotLib.funtions import find,converter,random_color,BRS
+from BotLib.funtions import find,converter,random_color
 from core.classes import Cog_Extension
 from BotLib.interface.user import *
 from BotLib.database import JsonDatabase
-from BotLib.basic import BotEmbed
+from BotLib.basic import BotEmbed,BRS
 
 class command(Cog_Extension):
     picdata = JsonDatabase().picdata

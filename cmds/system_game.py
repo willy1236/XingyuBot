@@ -84,7 +84,7 @@ class system_game(Cog_Extension):
                 ctx,
                 user:discord.Option(discord.Member,name='用戶',description='要查詢的用戶',default=None)
                 ):
-        gdata = self.db.gdata
+        gdata = JsonDatabase().gdata
         user = user or ctx.author
         userid = str(user.id)
         
@@ -130,7 +130,7 @@ class system_game(Cog_Extension):
                 ):
         #資料庫調用
         userid = userid or ctx.author.id
-        userid = await self.db.get_gamedata(userid,'osu',ctx)
+        userid = await JsonDatabase.get_gamedata(userid,'osu',ctx)
         
         if not userid:
             await ctx.respond('查詢失敗:用戶尚未註冊資料庫',ephemeral=True)
@@ -157,7 +157,7 @@ class system_game(Cog_Extension):
     @apex.command(description='查詢Apex玩家資料')
     @commands.cooldown(rate=1,per=3)
     async def user(self,
-                ctx,
+                ctx:discord.ApplicationContext,
                 userid:discord.Option(str,name='用戶',description='要查詢的用戶，可輸入遊戲名稱或dc名稱',default=None)
                 ):
         #資料庫調用

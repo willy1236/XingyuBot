@@ -11,14 +11,15 @@ class GameInterface():
 
 class OsuInterface(GameInterface):
     def __init__(self):
+        super().__init__()
         self.__headers = self.get_osuheaders()
         self.__API_URL = 'https://osu.ppy.sh/api/v2'
 
     def get_osuheaders(self):
-        ous_token = self.__db.get_token('osu')
+        ous_token = self.db.get_token('osu')
         data = {
-            'client_id': ous_token['id'],
-            'client_secret': ous_token['secret'],
+            'client_id': ous_token[0],
+            'client_secret': ous_token[1],
             'grant_type': 'client_credentials',
             'scope': 'public'
         }
@@ -50,6 +51,7 @@ class OsuInterface(GameInterface):
 
 class ApexInterface(GameInterface):
     def __init__(self):
+        super().__init__()
         self.auth = self.db.get_token('apex')
         self.apiURL = 'https://api.mozambiquehe.re'
 
@@ -89,6 +91,7 @@ class ApexInterface(GameInterface):
 
 class SteamInterface(GameInterface):
     def __init__(self):
+        super().__init__()
         self.key = self.db.get_token('steam')
 
     def get_user(self,user):
@@ -106,15 +109,15 @@ class SteamInterface(GameInterface):
 
 class DBDInterface(SteamInterface):
     def __init__(self):
-        pass
+        super().__init__()
 
     def get_player(self,steamid):
         user = SteamInterface().get_user(steamid)
         if user:
             params = {'steamid':user.id}
-            response = requests.get('https://dbd.tricky.lol/api/playerstats', params=params).json()
+            response = requests.get('https://dbd.tricky.lol/api/playerstats', params=params)
             if response.status_code == 200:
-                return DBDPlayer(response,user.name)
+                return DBDPlayer(response.json(),user.name)
             else:
                 return None
         else:
@@ -123,5 +126,6 @@ class DBDInterface(SteamInterface):
 
 class hoyoInterface(GameInterface):
     def __init__(self,dcid):
+        super().__init__()
         cookies = {}
         self.__client = genshin.Client(cookies) 

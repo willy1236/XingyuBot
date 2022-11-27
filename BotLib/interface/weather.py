@@ -141,7 +141,8 @@ class Forecast(WeatherInterface):
 
     @staticmethod
     def get_report():
-        APIdata = requests.get(f'https://opendata.cwb.gov.tw/api/v1/rest/datastore//F-C0032-001?Authorization={JsonDatabase().CWB_API}').json()
+        auth = JsonDatabase().get_token('CWB_API')
+        APIdata = requests.get(f'https://opendata.cwb.gov.tw/api/v1/rest/datastore//F-C0032-001?Authorization={auth}').json()
         if APIdata:
             return Forecast(APIdata)
         else:

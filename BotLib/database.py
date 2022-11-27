@@ -1,4 +1,5 @@
-import json,os,mysql.connector
+import json,os,mysql.connector,discord
+from BotLib.funtions import find
 
 class Database:
     pass
@@ -87,6 +88,32 @@ class JsonDatabase(Database):
             else:
                 name = dict[webname]
                 return self.tokens[name]
+
+    @staticmethod
+    async def get_gamedata(user_id:str, game:str, ctx:discord.ApplicationContext=None):
+        """查詢資料庫中的玩家資訊，若輸入dc用戶則需傳入ctx\n
+        dcuser and in database -> 資料庫資料\n
+        dcuser and not in database -> None\n
+        not dcuser -> user_id(原資料輸出)
+        """
+        gdata = JsonDatabase().gdata
+        
+        if ctx:
+            dcuser = await find.user2(ctx,user_id)
+            if dcuser:
+                user_id = str(dcuser.id)
+            else:
+                return user_id
+        else:
+            user_id = str(user_id)
+
+        try:
+            data = gdata[str(user_id)][game]
+            if game in ['steam']:
+                data = data['id']
+            return data
+        except:
+            return None
 
         
             

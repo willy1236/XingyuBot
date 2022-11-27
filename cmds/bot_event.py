@@ -1,9 +1,8 @@
 import discord,datetime,requests
 from discord.ext import commands
 from core.classes import Cog_Extension
-from BotLib.funtions import BRS
+from BotLib.basic import BotEmbed,BRS
 from BotLib.database import JsonDatabase
-from BotLib.basic import BotEmbed
 
 class ScamChack:
     def __init__(self,text:str):

@@ -3,10 +3,10 @@ from discord.ext import commands,pages
 import random,asyncio,datetime
 from discord.commands import SlashCommandGroup
 
-from BotLib.funtions import find,random_color,BRS
+from BotLib.funtions import find,random_color
 from core.classes import Cog_Extension
 from BotLib.database import JsonDatabase
-from BotLib.basic import BotEmbed
+from BotLib.basic import BotEmbed,BRS
 
 class slash(Cog_Extension):
     picdata = JsonDatabase().picdata

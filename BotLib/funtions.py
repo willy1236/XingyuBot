@@ -1,8 +1,5 @@
 import random
 from discord.ext import commands
-from core.classes import Cog_Extension
-from BotLib.database import JsonDatabase
-from BotLib.basic import BotEmbed
 
 #(*args) 傳入多個參數->list
 #(**kwargs) 傳入多個參數->dict
@@ -36,8 +33,6 @@ from BotLib.basic import BotEmbed
 
 #async -> await
 
-picdata = JsonDatabase().picdata
-
 def is_number(n):
     try:  
         float(n)
@@ -60,7 +55,7 @@ class Counter(dict):
     def __missing__(self,key): 
         return 0
 
-class find(Cog_Extension):
+class find():
     '''arg=要檢測的內容(名稱#0000,id,mention...)'''
     async def user(ctx,arg:str):
         if arg:
@@ -119,69 +114,6 @@ class find(Cog_Extension):
         except commands.RoleNotFound:
             role = None
         return role
-
-class BRS():
-    async def error(self,ctx,error:str):
-        jdata = JsonDatabase().jdata
-        report_channel = self.bot.get_channel(jdata['report_channel'])
-        embed=BotEmbed.general(name="BRS | 錯誤回報")
-        embed.add_field(name='錯誤指令', value=f'```py\n{error}```', inline=True)
-        if ctx.message:
-            embed.add_field(name='使用指令', value=f'```{ctx.message.content}```', inline=False)
-        embed.add_field(name='使用者', value=f"{ctx.author}\n{ctx.author.id}", inline=False)
-        embed.add_field(name='發生頻道', value=f'{ctx.channel}\n{ctx.channel.id}', inline=True)
-        embed.add_field(name='發生群組', value=f'{ctx.guild}\n{ctx.guild.id}', inline=True)
-        await report_channel.send(embed=embed)
-    
-    async def scam(self,msg,Matchs=None):
-        jdata = JsonDatabase().jdata
-        scam_channel = self.bot.get_channel(jdata['scam_channel'])
-        embed=BotEmbed.general(name="BRS | 詐騙回報")
-        embed.add_field(name='詐騙訊息', value=msg.content, inline=True)
-        embed.add_field(name='發送者', value=f"{msg.author}\n{msg.author.id}", inline=False)
-        embed.add_field(name='發生頻道', value=f'{msg.channel}\n{msg.channel.id}', inline=True)
-        embed.add_field(name='發生群組', value=f'{msg.guild}\n{msg.guild.id}', inline=True)
-        if Matchs:
-            embed.add_field(name='關鍵字', value=Matchs, inline=True)
-        await scam_channel.send(embed=embed)
-
-    async def feedback(self,ctx,msg):
-        jdata = JsonDatabase().jdata
-        feedback_channel = self.bot.get_channel(jdata['feedback_channel'])
-        embed=BotEmbed.general(name="BRS | 回饋訊息")
-        embed.add_field(name='訊息內容', value=msg, inline=True)
-        embed.add_field(name='發送者', value=f"{ctx.author}\n{ctx.author.id}", inline=False)
-        embed.add_field(name='來源頻道', value=f'{ctx.channel}\n{ctx.channel.id}', inline=True)
-        embed.add_field(name='來源群組', value=f'{ctx.guild}\n{ctx.guild.id}', inline=True)
-        await feedback_channel.send(embed=embed)
-
-    async def dm(self,msg):
-        jdata = JsonDatabase().jdata
-        dm_channel = self.bot.get_channel(jdata['dm_channel'])
-        embed=BotEmbed.general(name="BRS | 私人訊息")
-        embed.add_field(name='訊息內容', value=msg.content, inline=True)
-        embed.add_field(name='發送者', value=f"{msg.author}\n{msg.author.id}", inline=False)
-        await dm_channel.send(embed=embed)
-
-    async def mentioned(self,msg):
-        jdata = JsonDatabase().jdata
-        dm_channel = self.bot.get_channel(jdata['mentioned_channel'])
-        embed=BotEmbed.general(name="BRS | 提及訊息")
-        embed.add_field(name='訊息內容', value=msg.content, inline=True)
-        embed.add_field(name='發送者', value=f"{msg.author}\n{msg.author.id}", inline=False)
-        embed.add_field(name='來源頻道', value=f'{msg.channel}\n{msg.channel.id}', inline=True)
-        embed.add_field(name='來源群組', value=f'{msg.guild}\n{msg.guild.id}', inline=True)
-        await dm_channel.send(embed=embed)
-    
-    async def mention_everyone(self,msg):
-        jdata = JsonDatabase().jdata
-        dm_channel = self.bot.get_channel(jdata['mention_everyone_channel'])
-        embed=BotEmbed.general(name="BRS | 提及所有人訊息")
-        embed.add_field(name='訊息內容', value=msg.content, inline=True)
-        embed.add_field(name='發送者', value=f"{msg.author}\n{msg.author.id}", inline=False)
-        embed.add_field(name='來源頻道', value=f'{msg.channel}\n{msg.channel.id}', inline=True)
-        embed.add_field(name='來源群組', value=f'{msg.guild}\n{msg.guild.id}', inline=True)
-        await dm_channel.send(embed=embed)
 
 class converter():
     def time(arg:str):

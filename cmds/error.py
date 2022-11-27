@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands
-from BotLib.funtions import BRS
+from BotLib.basic import BRS
 from core.classes import Cog_Extension
 
 dict = {
