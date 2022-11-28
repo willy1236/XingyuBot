@@ -7,7 +7,7 @@ class CommunityInterface():
 
 class Twitch(CommunityInterface):
     def __init__(self):
-        self.db = JsonDatabase()
+        super().__init__()
         self.__headers = self.__get_twitch_token()
 
     def __get_twitch_token(self):
@@ -69,6 +69,7 @@ class Twitter:
 
 class Youtube(CommunityInterface):
     def __init__(self):
+        super().__init__()
         self.__token = self.db.get_token('youtube')
         self.__headers = {
         'Authorization': f'Bearer {self.__token}',

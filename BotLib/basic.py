@@ -93,7 +93,10 @@ class BRS():
         dm_channel = self.bot.get_channel(jdata['dm_channel'])
         embed=BotEmbed.general(name="BRS | 私人訊息")
         embed.add_field(name='訊息內容', value=msg.content, inline=True)
-        embed.add_field(name='發送者', value=f"{msg.author}\n{msg.author.id}", inline=False)
+        if msg.channel.recipient:
+            embed.add_field(name='發送者', value=f"{msg.author}->{msg.channel.recipient}\n{msg.author.id}->{msg.channel.recipient.id}", inline=False)
+        else:
+            embed.add_field(name='發送者', value=f"{msg.author}\n{msg.author.id}", inline=False)
         await dm_channel.send(embed=embed)
 
     async def mentioned(self,msg):

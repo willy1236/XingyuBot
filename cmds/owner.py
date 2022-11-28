@@ -24,7 +24,8 @@ class owner(Cog_Extension):
     #send
     @commands.slash_command(description='發送訊息',guild_ids=main_guild)
     @commands.is_owner()
-    async def send(self,ctx,id:int,*,msg):
+    async def send(self,ctx,id,msg):
+        id = int(id)
         channel = self.bot.get_channel(id)
         if not channel:
             user = self.bot.get_user(id)
@@ -37,7 +38,7 @@ class owner(Cog_Extension):
     #all_anno
     @commands.slash_command(description='全群公告',guild_ids=main_guild)
     @commands.is_owner()
-    async def anno(self,ctx,*,msg):
+    async def anno(self,ctx,msg):
         await ctx.defer()
         cdata = JsonDatabase().cdata
         send_success = 0
@@ -57,7 +58,7 @@ class owner(Cog_Extension):
     #bot_update
     @commands.slash_command(description='機器人更新通知',guild_ids=main_guild)
     @commands.is_owner()
-    async def bupdate(self,ctx,*,msg):
+    async def bupdate(self,ctx,msg):
         cdata = JsonDatabase().cdata
         send_success = 0
 
@@ -102,7 +103,8 @@ class owner(Cog_Extension):
 
     @commands.slash_command(description='權限檢查',guild_ids=main_guild)
     @commands.is_owner()
-    async def permission(self,ctx,guild_id:int):
+    async def permission(self,ctx,guild_id):
+        guild_id = int(guild_id)
         guild = self.bot.get_guild(guild_id)
         member = guild.get_member(ctx.bot.user.id)
         permission = member.guild_permissions
@@ -145,7 +147,7 @@ class owner(Cog_Extension):
 
     @commands.slash_command(guild_ids=main_guild)
     @commands.is_owner()
-    async def react(self,ctx,chaid,msgid):
+    async def reaction_role(self,ctx,chaid,msgid):
         channel = await self.bot.fetch_channel(chaid)
         message = await channel.fetch_message(msgid)
         await message.edit('請點擊按鈕獲得權限',view=ReactRole_button())

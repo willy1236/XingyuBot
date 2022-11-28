@@ -86,10 +86,13 @@ class error(Cog_Extension):
         elif isinstance(error,commands.errors.ArgumentParsingError):
             await ctx.respond(f'參數錯誤:{error}')
 
+        elif isinstance(error,discord.ApplicationCommandInvokeError):
+            await ctx.respond(f'指令調用時發生錯誤：{error.original}',ephemeral=True)
+        
         else:
             if ctx.guild.id != 566533708371329024:
                 await BRS.error(self,ctx,error)
-            await ctx.respond(f'發生錯誤\n```{error.original}```',ephemeral=True)
+            await ctx.respond(f'發生未知錯誤\n```{error.original}```',ephemeral=True)
             print(error,type(error))
 
 def setup(bot):
