@@ -225,7 +225,7 @@ class task(Cog_Extension):
     #     now_time_hour = datetime.now().strftime('%H%M%S')
     #     #now_time_day = datetime.datetime.now().strftime('%Y%m%d')
     
-    @tasks.loop(minutes=1)
+    @tasks.loop(minutes=2)
     async def twitch(self):
         db = JsonDatabase()
         cache = db.cache

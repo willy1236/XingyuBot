@@ -16,7 +16,8 @@ class ScamChack:
         else:
             return False
 
-voice_updata = JsonDatabase().jdata.get('voice_updata',False)
+db = JsonDatabase()
+voice_updata = db.jdata.get('voice_updata',False)
 
 voice_list = {
     613747262291443742: 631498685250797570,

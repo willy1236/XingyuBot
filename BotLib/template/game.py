@@ -1,5 +1,8 @@
 from datetime import datetime,timedelta
 from BotLib.basic import BotEmbed
+from BotLib.database import JsonDatabase
+
+jdict = JsonDatabase().jdict
 
 class OsuPlayer():
     def __init__(self,data):
@@ -77,14 +80,15 @@ class OsuBeatmap():
 
 class ApexPlayer():
     def __init__(self,data):
+        #basic information
         self.username = data['global']['name']
         self.id = data['global']['uid']
         self.platform = data['global']['platform']
         self.level = data['global']['level']
         self.avatar = data['global']['avatar']
-        
+        #bans
         self.bans = data['global']['bans']
-
+        #rank
         self.rank = data['global']['rank']['rankName']
         if data['global']['rank']['rankName'] != "Unranked":
             self.rank += " "+str(data['global']['rank']['rankDiv'])
@@ -93,9 +97,9 @@ class ApexPlayer():
         if data['global']['arena']['rankName'] != "Unranked":
             self.arena_rank += " "+str(data['global']['arena']['rankDiv'])
         self.arena_score = data['global']['arena']['rankScore']
-        
+        #state
         self.now_state =  data['realtime']['currentStateAsText']
-        
+        #selected
         self.legends_selected_name = data['legends']['selected']['LegendName']
         self.legends_selected_tacker = data['legends']['selected']['data']
         self.legends_selected_banner = data['legends']['selected']['ImgAssets']['banner']
@@ -148,32 +152,7 @@ class ApexCrafting():
     
     def desplay(self):
         embed = BotEmbed.simple("Apex合成器內容")
-        tl = {
-            "extended_light_mag":"紫色輕型彈匣",
-            "backpack":"紫色背包",
-            "helmet":"紫色頭盔",
-            "optic_cq_hcog_bruiser":"2倍鏡",
-            "optic_hcog_ranger":"3倍鏡",
-            "shatter_caps":"粉碎蓋",
-            "extended_energy_mag":"紫色能量彈匣",
-            "optic_digital_threat":"1x數位威脅",
-            "knockdown_shield":"紫色擊倒護盾",
-            "mobile_respawn_beacon":"行動重生台",
-            "shotgun_bolt":"紫色霰彈槍栓",
-            "hammerpoint_rounds":"椎點彈藥",
-            "extended_heavy_mag":"紫色重型彈匣",
-            "optic_hcog_bruiser":"optic_hcog_bruiser",
-            "boosted_loader":"動能供應器",
-            "optic_variable_aog":"2-4倍鏡",
-            "standard_stock":"紫色槍托",
-            "turbocharger":"渦輪增壓器",
-            "barrel_stabilizer":"barrel_stabilizer",
-            'laser_sight':'雷射瞄準鏡',
-            'optic_variable_sniper':'4~8x狙擊倍鏡',
-            'extended_sniper_mag':'紫色狙擊彈匣',
-            'double_tap':'雙擊板機',
-            'sniper_stock':'狙擊槍托'
-        }
+        tl = jdict['ApexCraftingItem']
         item_name = []
         item_name.append(tl.get(self.item1_name,self.item1_name))
         item_name.append(tl.get(self.item2_name,self.item2_name))
@@ -201,12 +180,7 @@ class ApexMapRotation():
         self.nextend = datetime.strptime(data['next']['readableDate_end'],"%Y-%m-%d %H:%M:%S")+timedelta(hours=8)
 
     def desplay(self):
-        tl = {
-            "Storm Point":"風暴點",
-            "Olympus":"奧林匹斯",
-            "World's Edge":"世界邊緣",
-            "Kings Canyon":"王者峽谷"
-        }
+        tl = jdict['ApexMap']
         embed = BotEmbed.simple("Apex地圖輪替")
         embed.add_field(name="目前地圖",value=tl.get(self.nowmap,self.nowmap))
         embed.add_field(name="開始時間",value=self.nowstart)

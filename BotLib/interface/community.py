@@ -8,9 +8,9 @@ class CommunityInterface():
 class Twitch(CommunityInterface):
     def __init__(self):
         super().__init__()
-        self.__headers = self.__get_twitch_token()
+        self.__headers = self.__get_headers()
 
-    def __get_twitch_token(self):
+    def __get_headers(self):
         APIURL = "https://id.twitch.tv/oauth2/token"
         #headers = {"Content-Type": "application/x-www-form-urlencoded"}
         tokens = self.db.get_token('twitch')
@@ -50,7 +50,7 @@ class Twitch(CommunityInterface):
             embed = discord.Embed(
                 title=data['title'],
                 url=f"https://www.twitch.tv/{data['user_login']}",
-                description=f"{data['game_name']}",
+                description=data['game_name'],
                 color=0x6441a5,
                 timestamp = datetime.datetime.now()
                 )
@@ -72,8 +72,8 @@ class Youtube(CommunityInterface):
         super().__init__()
         self.__token = self.db.get_token('youtube')
         self.__headers = {
-        'Authorization': f'Bearer {self.__token}',
-        'Accept': 'application/json'
+            'Authorization': f'Bearer {self.__token}',
+            'Accept': 'application/json'
         }
 
     def get_channel_id(self,channel_name:str):

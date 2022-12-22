@@ -42,9 +42,9 @@ def is_number(n):
     except (TypeError, ValueError):
         return False
 
-def random_color(max=255):
-    if max > 255:
-        raise ValueError("max must below 255")
+def random_color(max=256):
+    if max > 256:
+        raise ValueError("max must below 256")
     color = []
     while len(color) < 3:        
         color.append(random.choice(range(max)))

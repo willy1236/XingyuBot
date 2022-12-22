@@ -7,8 +7,6 @@ from BotLib.ui_element.button import *
 
 db = JsonDatabase()
 jdata = db.jdata
-picdata = db.picdata
-
 
 #Bot1:dc小幫手, Bep:Bep, Bot2:RO
 bot_code = 'Bep'

@@ -82,7 +82,8 @@ class command(Cog_Extension):
         six_list = []
         six_list_100 = []
         guaranteed = 100
-        jloot = Database().jloot
+        db = JsonDatabase()
+        jloot = db.jloot
             
         for i in range(1,times+1):
             choice =  random.randint(1,100)
@@ -104,7 +105,7 @@ class command(Cog_Extension):
                     result["three"] += 1
                     jloot[user_id] += 1
         
-        Database().write('jloot',jloot)
+        db.write('jloot',jloot)
         embed=BotEmbed.lottery()
         embed.add_field(name='抽卡結果', value=f"六星:{result['six']} 五星:{result['five']} 四星:{result['four']} 三星:{result['three']}", inline=False)
         embed.add_field(name='保底累積', value=jloot[user_id], inline=False)
@@ -293,15 +294,8 @@ class command(Cog_Extension):
                 channel:discord.Option(discord.TextChannel,required=True,name='頻道',description='通知發送頻道'),
                 role:discord.Option(discord.Role,required=True,name='身分組',description='發送通知時tag的身分組')
                 ):
-        db = Database()
+        db = JsonDatabase()
         jtwitch = db.jtwitch
-        channel = await find.channel(ctx,channel)
-        if not channel:
-            raise commands.errors.ArgumentParsingError('沒找到頻道')
-
-        role = await find.role(ctx,role)
-        if not role:
-            raise commands.errors.ArgumentParsingError('沒找到身分組')            
 
         if twitch_user not in jtwitch['users']:
             jtwitch['users'].append(twitch_user)
@@ -316,7 +310,7 @@ class command(Cog_Extension):
 
     @twitch.command(description='移除twitch開台通知')
     async def remove(self,ctx,twitch_user:discord.Option(str,required=True,name='twitch用戶')):
-        db = Database()
+        db = JsonDatabase()
         jtwitch = db.jtwitch
         if twitch_user in jtwitch['users'] and str(ctx.guild.id) in jtwitch['channel'][twitch_user]:
             jtwitch['users'].remove(twitch_user)
@@ -334,7 +328,7 @@ class command(Cog_Extension):
 
     @twitch.command(description='確認twitch開台通知')
     async def notice(self,ctx,twitch_user:discord.Option(str,required=True,name='twitch用戶')):
-        db = Database()
+        db = JsonDatabase()
         jtwitch = db.jtwitch
         if twitch_user in jtwitch['users'] and str(ctx.guild.id) in jtwitch['channel'][twitch_user]:
             channel = self.bot.get_channel(int(jtwitch['channel'][twitch_user][str(ctx.guild.id)]))

@@ -2,20 +2,18 @@ import requests,genshin
 from BotLib.database import JsonDatabase
 from BotLib.template.game import *
 
-db = JsonDatabase()
-
 class GameInterface():
     def __init__(self):
-        self.db = db
+        self.db = JsonDatabase()
 
 
 class OsuInterface(GameInterface):
     def __init__(self):
         super().__init__()
-        self.__headers = self.get_osuheaders()
+        self.__headers = self.get_headers()
         self.__API_URL = 'https://osu.ppy.sh/api/v2'
 
-    def get_osuheaders(self):
+    def get_headers(self):
         ous_token = self.db.get_token('osu')
         data = {
             'client_id': ous_token[0],

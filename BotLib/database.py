@@ -11,11 +11,12 @@ class JsonDatabase(Database):
         TRN = tracker.gg
         """
         location = "database"
+        data_location = "data"
         self.__dict = {
             'jdict': f'dict.json',
             'jdata': f'{location}/setting.json',
             'cdata': f'{location}/channel_settings.json',
-            'picdata': f'{location}/bot_settings/picture.json',
+            'picdata': f'{data_location}/bot_settings/picture.json',
             'udata': f'{location}/user_settings/basic.json',
             'jpt': f'{location}/user_settings/point.json',
             'jloot': f'{location}/lottery.json',
@@ -28,7 +29,7 @@ class JsonDatabase(Database):
             'jpet': f'{location}/user_settings/pet.json',
             'jbag': f'{location}/user_settings/bag.json',
             'cache': f'{location}/cache.json',
-            'monster_basic': f'{location}/RPG_settings/monster_basic.json',
+            'monster_basic': f'{data_location}/RPG_settings/monster_basic.json',
             'jRcoin': f'{location}/user_settings/rcoin.json',
             'jhoyo': f'{location}/game_settings/hoyo.json',
             'jtwitch': f'{location}/community_settings/twitch.json',
@@ -145,7 +146,7 @@ class MySQLDatabase(Database):
         self.cursor.execute("DELETE FROM `user_data` WHERE `id` = %s;",(str(id),))
         self.connection.commit()
 
-    def add_data(self,table:str,value:tuple,db="database"):
+    def add_data(self,table:str,*value,db="database"):
         self.cursor.execute(f"USE `{db}`;")
         self.cursor.execute(f"INSERT INTO `{table}` VALUES(%s)",value)
         self.connection.commit()
@@ -160,10 +161,11 @@ class MySQLDatabase(Database):
         for r in records:
              print(r)
     
-    def remove_data(self,table:str):
+    def remove_data(self,table:str,*value):
         db = "database"
         self.cursor.execute(f"USE `{db}`;")
-        self.cursor.execute(f'DELETE FROM `{table}` WHERE `id` = %s;',("3",))
+        #self.cursor.execute(f'DELETE FROM `{table}` WHERE `id` = %s;',("3",))
+        self.cursor.execute(f'DELETE FROM `{table}` WHERE `id` = %s;',value)
         self.connection.commit()
 
 class GameDatabase(Database):

@@ -1,7 +1,6 @@
 import discord,os
 from discord.ext import commands
 
-from BotLib.funtions import find
 from core.classes import Cog_Extension
 from BotLib.basic import BotEmbed
 from BotLib.database import JsonDatabase
