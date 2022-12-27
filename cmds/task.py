@@ -233,7 +233,7 @@ class task(Cog_Extension):
         users = jtwitch['users']
 
         if users:
-            data = Twitch().get_live(users)
+            data = Twitch().get_lives(users)
             
             for username in data:
                 if data[username] and not cache['twitch'].get(username,False):
@@ -245,7 +245,7 @@ class task(Cog_Extension):
                         channel = self.bot.get_channel(int(jtwitch['channel'][username][guildid]))
                         role = guild.get_role(int(jtwitch['role'][username][guildid]))
                         if channel:
-                            await channel.send(f'{role.mention} 開台啦~',embed=embed)
+                            await channel.send(f'{role.mention or None} 開台啦~',embed=embed)
                         await asyncio.sleep(1)
                 elif not data[username] and cache['twitch'].get(username,False):
                     cache['twitch'][username] = False

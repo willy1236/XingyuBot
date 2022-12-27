@@ -12,8 +12,8 @@ jdata = db.jdata
 bot_code = 'Bep'
 token = db.tokens.get(bot_code)
 
-start_website = jdata.get('start_website',False)
-
+start_website = jdata.get('start_website')
+auto_update = jdata.get('auto_update')
 #commands.Bot
 #shard_count=1,
 #command_prefix=commands.when_mentioned_or('b!'),
@@ -102,6 +102,9 @@ for filename in os.listdir('./cmds'):
         bot.load_extension(f'cmds.{filename[:-3]}')
 
 if __name__ == "__main__":
+    if bot_code == 'Bot1' and auto_update:
+        os.system('python update.py')
+            
     if start_website:
         try:
             import bot_website

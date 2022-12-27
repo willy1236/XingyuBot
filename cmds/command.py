@@ -14,6 +14,7 @@ class command(Cog_Extension):
     rsdata = JsonDatabase().rsdata
 
     twitch = SlashCommandGroup("twitch", "Twitch相關指令")
+    bet = SlashCommandGroup("twitch", "賭盤相關指令")
 
     # @commands.command()
     # @commands.cooldown(rate=1,per=3)
@@ -292,7 +293,7 @@ class command(Cog_Extension):
                 ctx,
                 twitch_user:discord.Option(str,required=True,name='twitch用戶',description='當此用戶開台時會發送通知'),
                 channel:discord.Option(discord.TextChannel,required=True,name='頻道',description='通知發送頻道'),
-                role:discord.Option(discord.Role,required=True,name='身分組',description='發送通知時tag的身分組')
+                role:discord.Option(discord.Role,required=False,name='身分組',description='發送通知時tag的身分組')
                 ):
         db = JsonDatabase()
         jtwitch = db.jtwitch
@@ -302,11 +303,14 @@ class command(Cog_Extension):
             jtwitch['role'][twitch_user] = {}
             jtwitch['channel'][twitch_user] = {}
 
-        jtwitch['role'][twitch_user][str(ctx.guild.id)] = str(role.id)
+        jtwitch['role'][twitch_user][str(ctx.guild.id)] = str(role.id) or None
         jtwitch['channel'][twitch_user][str(ctx.guild.id)] = str(channel.id)
 
         db.write('jtwitch',jtwitch)
-        await ctx.respond(f'設定成功：{twitch_user}的開台通知將會發送在{channel.mention}並會通知{role.mention}')
+        if role:
+            await ctx.respond(f'設定成功：{twitch_user}的開台通知將會發送在{channel.mention}並會通知{role.mention}')
+        else:
+            await ctx.respond(f'設定成功：{twitch_user}的開台通知將會發送在{channel.mention}')
 
     @twitch.command(description='移除twitch開台通知')
     async def remove(self,ctx,twitch_user:discord.Option(str,required=True,name='twitch用戶')):

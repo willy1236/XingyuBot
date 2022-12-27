@@ -13,7 +13,7 @@ class JsonDatabase(Database):
         location = "database"
         data_location = "data"
         self.__dict = {
-            'jdict': f'dict.json',
+            'jdict': f'{data_location}/dict.json',
             'jdata': f'{location}/setting.json',
             'cdata': f'{location}/channel_settings.json',
             'picdata': f'{data_location}/bot_settings/picture.json',

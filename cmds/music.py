@@ -71,7 +71,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
             data = data['entries'][0]
 
         embed = discord.Embed(title="", description=f"Queued [{data['title']}]({data['webpage_url']}) [{ctx.author.mention}]", color=discord.Color.green())
-        await ctx.send(embed=embed)
+        await ctx.respond(embed=embed)
 
         if download:
             source = ytdl.prepare_filename(data)
@@ -137,7 +137,7 @@ class MusicPlayer:
                 try:
                     source = await YTDLSource.regather_stream(source, loop=self.bot.loop)
                 except Exception as e:
-                    await self._channel.send(f'There was an error processing your song.\n'
+                    await self._channel.respond(f'There was an error processing your song.\n'
                                              f'```css\n[{e}]\n```')
                     continue
 
@@ -146,7 +146,7 @@ class MusicPlayer:
 
             self._guild.voice_client.play(source, after=lambda _: self.bot.loop.call_soon_threadsafe(self.next.set))
             embed = discord.Embed(title="Now playing", description=f"[{source.title}]({source.web_url}) [{source.requester.mention}]", color=discord.Color.green())
-            self.np = await self._channel.send(embed=embed)
+            self.np = await self._channel.respond(embed=embed)
             await self.next.wait()
 
             # Make sure the FFmpeg process is cleaned up.
@@ -188,11 +188,11 @@ class music(Cog_Extension):
         """A local error handler for all errors arising from commands in this cog."""
         if isinstance(error, commands.NoPrivateMessage):
             try:
-                return await ctx.send('This command can not be used in Private Messages.')
+                return await ctx.respond('This command can not be used in Private Messages.')
             except discord.HTTPException:
                 pass
         elif isinstance(error, InvalidVoiceChannel):
-            await ctx.send('Error connecting to Voice Channel. '
+            await ctx.respond('Error connecting to Voice Channel. '
                            'Please make sure you are in a valid channel or provide me with one')
 
         print('Ignoring exception in command {}:'.format(ctx.command), file=sys.stderr)
@@ -224,7 +224,7 @@ class music(Cog_Extension):
                 channel = ctx.author.voice.channel
             except AttributeError:
                 embed = discord.Embed(title="", description="No channel to join. Please call `,join` from a voice channel.", color=discord.Color.green())
-                await ctx.send(embed=embed)
+                await ctx.respond(embed=embed)
                 raise InvalidVoiceChannel('No channel to join. Please either specify a valid channel or join one.')
 
         vc = ctx.voice_client
@@ -243,7 +243,7 @@ class music(Cog_Extension):
                 raise VoiceConnectionError(f'Connecting to channel: <{channel}> timed out.')
         if (random.randint(0, 1) == 0):
             await ctx.message.add_reaction('👍')
-        await ctx.send(f'**Joined `{channel}`**')
+        await ctx.respond(f'**Joined `{channel}`**')
 
     @commands.slash_command(name='play',description='撥放音樂')
     async def play_(self, ctx, *, search: str):
@@ -277,12 +277,12 @@ class music(Cog_Extension):
 
         if not vc or not vc.is_playing():
             embed = discord.Embed(title="", description="I am currently not playing anything", color=discord.Color.green())
-            return await ctx.send(embed=embed)
+            return await ctx.respond(embed=embed)
         elif vc.is_paused():
             return
 
         vc.pause()
-        await ctx.send("Paused ⏸️")
+        await ctx.respond("Paused ⏸️")
 
     @commands.slash_command(name='resume',description='繼續撥放音樂')
     async def resume_(self, ctx):
@@ -291,12 +291,12 @@ class music(Cog_Extension):
 
         if not vc or not vc.is_connected():
             embed = discord.Embed(title="", description="I'm not connected to a voice channel", color=discord.Color.green())
-            return await ctx.send(embed=embed)
+            return await ctx.respond(embed=embed)
         elif not vc.is_paused():
             return
 
         vc.resume()
-        await ctx.send("Resuming ⏯️")
+        await ctx.respond("Resuming ⏯️")
 
     @commands.slash_command(name='skip',description='跳過音樂')
     async def skip_(self, ctx):
@@ -305,7 +305,7 @@ class music(Cog_Extension):
 
         if not vc or not vc.is_connected():
             embed = discord.Embed(title="", description="I'm not connected to a voice channel", color=discord.Color.green())
-            return await ctx.send(embed=embed)
+            return await ctx.respond(embed=embed)
 
         if vc.is_paused():
             pass
@@ -322,7 +322,7 @@ class music(Cog_Extension):
 
         if not vc or not vc.is_connected():
             embed = discord.Embed(title="", description="I'm not connected to a voice channel", color=discord.Color.green())
-            return await ctx.send(embed=embed)
+            return await ctx.respond(embed=embed)
 
         player = self.get_player(ctx)
         if pos == None:
@@ -332,10 +332,10 @@ class music(Cog_Extension):
                 s = player.queue._queue[pos-1]
                 del player.queue._queue[pos-1]
                 embed = discord.Embed(title="", description=f"Removed [{s['title']}]({s['webpage_url']}) [{s['requester'].mention}]", color=discord.Color.green())
-                await ctx.send(embed=embed)
+                await ctx.respond(embed=embed)
             except:
                 embed = discord.Embed(title="", description=f'Could not find a track for "{pos}"', color=discord.Color.green())
-                await ctx.send(embed=embed)
+                await ctx.respond(embed=embed)
     
     @commands.slash_command(name='clear',description='清空歌單並離開')
     async def clear_(self, ctx):
@@ -345,11 +345,11 @@ class music(Cog_Extension):
 
         if not vc or not vc.is_connected():
             embed = discord.Embed(title="", description="I'm not connected to a voice channel", color=discord.Color.green())
-            return await ctx.send(embed=embed)
+            return await ctx.respond(embed=embed)
 
         player = self.get_player(ctx)
         player.queue._queue.clear()
-        await ctx.send('💣 **Cleared**')
+        await ctx.respond('💣 **Cleared**')
 
     @commands.slash_command(name='queue',description='顯示播放清單')
     async def queue_info(self, ctx):
@@ -358,12 +358,12 @@ class music(Cog_Extension):
 
         if not vc or not vc.is_connected():
             embed = discord.Embed(title="", description="I'm not connected to a voice channel", color=discord.Color.green())
-            return await ctx.send(embed=embed)
+            return await ctx.respond(embed=embed)
 
         player = self.get_player(ctx)
         if player.queue.empty():
             embed = discord.Embed(title="", description="queue is empty", color=discord.Color.green())
-            return await ctx.send(embed=embed)
+            return await ctx.respond(embed=embed)
 
         seconds = vc.source.duration % (24 * 3600) 
         hour = seconds // 3600
@@ -382,7 +382,7 @@ class music(Cog_Extension):
         embed = discord.Embed(title=f'Queue for {ctx.guild.name}', description=fmt, color=discord.Color.green())
         embed.set_footer(text=f"{ctx.author.display_name}", icon_url=ctx.author.avatar.url)
 
-        await ctx.send(embed=embed)
+        await ctx.respond(embed=embed)
 
     @commands.slash_command(name='nowplaying',description='現正撥放')
     async def now_playing_(self, ctx):
@@ -391,12 +391,12 @@ class music(Cog_Extension):
 
         if not vc or not vc.is_connected():
             embed = discord.Embed(title="", description="I'm not connected to a voice channel", color=discord.Color.green())
-            return await ctx.send(embed=embed)
+            return await ctx.respond(embed=embed)
 
         player = self.get_player(ctx)
         if not player.current:
             embed = discord.Embed(title="", description="I am currently not playing anything", color=discord.Color.green())
-            return await ctx.send(embed=embed)
+            return await ctx.respond(embed=embed)
         
         seconds = vc.source.duration % (24 * 3600) 
         hour = seconds // 3600
@@ -410,7 +410,7 @@ class music(Cog_Extension):
 
         embed = discord.Embed(title="", description=f"[{vc.source.title}]({vc.source.web_url}) [{vc.source.requester.mention}] | `{duration}`", color=discord.Color.green())
         embed.set_author(icon_url=self.bot.user.avatar.url, name=f"Now Playing 🎶")
-        await ctx.send(embed=embed)
+        await ctx.respond(embed=embed)
 
     @commands.slash_command(name='volume',description='調整機器人音量')
     async def change_volume(self, ctx, *, vol: float=None):
@@ -424,15 +424,15 @@ class music(Cog_Extension):
 
         if not vc or not vc.is_connected():
             embed = discord.Embed(title="", description="I am not currently connected to voice", color=discord.Color.green())
-            return await ctx.send(embed=embed)
+            return await ctx.respond(embed=embed)
         
         if not vol:
             embed = discord.Embed(title="", description=f"🔊 **{(vc.source.volume)*100}%**", color=discord.Color.green())
-            return await ctx.send(embed=embed)
+            return await ctx.respond(embed=embed)
 
         if not 0 < vol < 101:
             embed = discord.Embed(title="", description="Please enter a value between 1 and 100", color=discord.Color.green())
-            return await ctx.send(embed=embed)
+            return await ctx.respond(embed=embed)
 
         player = self.get_player(ctx)
 
@@ -441,7 +441,7 @@ class music(Cog_Extension):
 
         player.volume = vol / 100
         embed = discord.Embed(title="", description=f'**`{ctx.author}`** set the volume to **{vol}%**', color=discord.Color.green())
-        await ctx.send(embed=embed)
+        await ctx.respond(embed=embed)
 
     @commands.slash_command(name='disconnect',description='讓機器人離開語音')
     async def leave_(self, ctx):
@@ -453,11 +453,11 @@ class music(Cog_Extension):
 
         if not vc or not vc.is_connected():
             embed = discord.Embed(title="", description="I'm not connected to a voice channel", color=discord.Color.green())
-            return await ctx.send(embed=embed)
+            return await ctx.respond(embed=embed)
 
         if (random.randint(0, 1) == 0):
             await ctx.message.add_reaction('👋')
-        await ctx.send('**Successfully disconnected**')
+        await ctx.respond('**Successfully disconnected**')
 
         await self.cleanup(ctx.guild)
 
