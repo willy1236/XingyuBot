@@ -96,11 +96,6 @@ async def jset(ctx,option,value):
     db.write('jdata',jdata)
     await ctx.send(f'已將{option} 設為 {value}')
 
-ignore_py = []
-for filename in os.listdir('./cmds'):
-    if filename.endswith('.py') and filename[:-3] not in ignore_py:
-        bot.load_extension(f'cmds.{filename[:-3]}')
-
 if __name__ == "__main__":
     if bot_code == 'Bot1' and auto_update:
         os.system('python update.py')
@@ -117,6 +112,11 @@ if __name__ == "__main__":
         print('>> website: off <<')
 
     try:
+        ignore_py = []
+        for filename in os.listdir('./cmds'):
+            if filename.endswith('.py') and filename[:-3] not in ignore_py:
+                bot.load_extension(f'cmds.{filename[:-3]}')
+        
         bot.run(token)
     except discord.errors.LoginFailure:
         print('>> Bot: Login failed <<')
