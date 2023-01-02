@@ -23,12 +23,13 @@ class PersistentView(discord.ui.View):
         await interaction.response.send_message("This is grey.", ephemeral=True)
 
 class debug(Cog_Extension):
-
-    @commands.slash_command(description='測試指令')
-    async def test(self,ctx,game,name):
-        id = str(ctx.author.id)
-        r = self.sqldb.add_game_data(id,game,name)
-        await ctx.respond(f'done')
+    pass
+    # @commands.slash_command(description='測試指令')
+    # async def test(self,ctx,game,name):
+    #     id = str(ctx.author.id)
+    #     r = self.sqldb.add_game_data(id,game,name)
+    #     await ctx.respond(f'done')
+    
     # @commands.command()
     # @commands.is_owner()
     # async def embed(self,ctx,msg):
