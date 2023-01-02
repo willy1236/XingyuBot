@@ -1,6 +1,6 @@
 import requests,datetime,discord
 from BotLib.database import JsonDatabase
-from BotLib.template.community import TwitchStream
+from BotLib.model.community import TwitchStream
 
 class CommunityInterface():
     def __init__(self):

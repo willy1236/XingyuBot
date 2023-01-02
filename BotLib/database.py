@@ -1,7 +1,11 @@
 import json,os,mysql.connector,discord
+from discord.ext import commands
 from BotLib.funtions import find
+from mysql.connector.errors import Error as sqlerror
+from pydantic import BaseModel
 
-class Database:
+
+class Database():
     pass
 
 class JsonDatabase(Database):
@@ -89,6 +93,8 @@ class JsonDatabase(Database):
             else:
                 name = dict[webname]
                 return self.tokens[name]
+        else:
+            raise ValueError('無此API token')
 
     @staticmethod
     async def get_gamedata(user_id:str, game:str, ctx:discord.ApplicationContext=None):
@@ -151,6 +157,11 @@ class MySQLDatabase(Database):
         self.cursor.execute(f"INSERT INTO `{table}` VALUES(%s)",value)
         self.connection.commit()
 
+    def replace_data(self,table:str,*value,db="database"):
+        self.cursor.execute(f"USE `{db}`;")
+        self.cursor.execute(f"REPLACE INTO `{table}` VALUES(%s)",value)
+        self.connection.commit()
+
     def get_data(self,table:str):
         db = "database"
         self.cursor.execute(f"USE `{db}`;")
@@ -167,6 +178,25 @@ class MySQLDatabase(Database):
         #self.cursor.execute(f'DELETE FROM `{table}` WHERE `id` = %s;',("3",))
         self.cursor.execute(f'DELETE FROM `{table}` WHERE `id` = %s;',value)
         self.connection.commit()
+
+    def set_game_data(self,user_id:str,game:str,player_name:str=None,player_id:str=None):
+        self.cursor.execute(f"USE `database`;")
+        self.cursor.execute(f"REPLACE INTO `game_data` VALUES(%s,%s,%s,%s)",(user_id,game,player_name,player_id))
+        self.connection.commit()
+
+    def remove_game_data(self,user_id:str,game:str):
+        self.cursor.execute(f"USE `database`;")
+        self.cursor.execute(f"DELETE FROM `game_data` WHERE `id` = %s AND `game` = %s;",(user_id,game))
+        self.connection.commit()
+
+    def get_game_data(self,user_id:str,game:str=None):
+        self.cursor.execute(f"USE `database`;")
+        if game:
+            self.cursor.execute(f"SELECT * FROM `game_data` WHERE `id` = %s AND `game` = %s;",(user_id,game))
+        else:
+            self.cursor.execute(f"SELECT * FROM `game_data` WHERE `id` = %s;",(user_id,))
+        records = self.cursor.fetchall()
+        return records
 
 class GameDatabase(Database):
     pass

@@ -14,7 +14,7 @@ class command(Cog_Extension):
     rsdata = JsonDatabase().rsdata
 
     twitch = SlashCommandGroup("twitch", "Twitch相關指令")
-    bet = SlashCommandGroup("twitch", "賭盤相關指令")
+    bet = SlashCommandGroup("bet", "賭盤相關指令")
 
     # @commands.command()
     # @commands.cooldown(rate=1,per=3)

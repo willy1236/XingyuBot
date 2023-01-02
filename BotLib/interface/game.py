@@ -1,6 +1,6 @@
 import requests,genshin
 from BotLib.database import JsonDatabase
-from BotLib.template.game import *
+from BotLib.model.game import *
 
 class GameInterface():
     def __init__(self):

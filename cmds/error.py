@@ -88,6 +88,7 @@ class error(Cog_Extension):
 
         elif isinstance(error,discord.ApplicationCommandInvokeError):
             await ctx.respond(f'指令調用時發生錯誤：{error.original}',ephemeral=True)
+            print(error,type(error))
         
         else:
             if ctx.guild.id != 566533708371329024:

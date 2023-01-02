@@ -22,6 +22,7 @@ def player_search(url):
 
 db = JsonDatabase()
 jdict = db.jdict
+
 set_option = []
 for name,value in jdict['game_set_option'].items():
     set_option.append(discord.OptionChoice(name=name,value=value))
@@ -41,43 +42,31 @@ class system_game(Cog_Extension):
         
     @game.command(description='設定遊戲資料')
     async def set(self,
-                ctx,
-                game:discord.Option(str,name='遊戲',description='要設定的遊戲',required=True,choices=set_option),
-                data:discord.Option(str,name='資料',description='要設定的資料',default=None)
-                ):
-        gdata = self.db.gdata
-        userid = str(ctx.author.id)
-        if not userid in gdata:
-            gdata[userid] = {}
-            self.db.write('gdata',gdata)
-            await ctx.send('偵測到資料庫內無使用者資料，已自動註冊',delete_after=5)
-
-        need_verify = ['steam']
-        #清除該遊戲資料
-        if not data:
-            gdata[userid][game] = None
-            await ctx.send(f'已重設{game}資料')
-            return
-        
-        #首次設定該遊戲
-        if not game in gdata[userid]:
-                gdata[userid][game] = None
-
-        #依遊戲做設定
-        if game in need_verify:
-            if game == 'steam':
-                APIdata = SteamInterface().get_user(data)
-                if APIdata:
-                    gdata[userid]['steam'] = {'id':APIdata.id,'name':APIdata.name}
-                    db.write('gdata',gdata)
-                    await ctx.respond(f'已將{game}資料設定為 {APIdata.name}')
-                else:
-                    await ctx.respond(f'錯誤:找不到此用戶',ephemeral=True)
-
+                  ctx,
+                  game:discord.Option(str,name='遊戲',description='要設定的遊戲',required=True,choices=set_option),
+                  value:discord.Option(str,name='資料',description='要設定的資料，留空以移除資料',default=None)):
+        id = str(ctx.author.id)
+        if value:
+            need_verify = ['steam']
+            if game in need_verify:
+                if game == 'steam':
+                    APIdata = SteamInterface().get_user(value)
+                    if APIdata:
+                        player_id = APIdata.id,
+                        player_name = APIdata.name
+                    else:
+                        await ctx.respond(f'錯誤:找不到此用戶',ephemeral=True)
+                        return
+            
+            else:            
+                player_name = value
+                player_id = None
+            
+            self.sqldb.set_game_data(id,game,player_name,player_id)
+            await ctx.respond(f'已將{game}資料設定為 {player_name}')
         else:
-            gdata[userid][game] = data
-            db.write('gdata',gdata)
-            await ctx.respond(f'已將{game}資料設定為 {data}')
+            self.sqldb.remove_game_data(id,game)
+            await ctx.respond(f'已將{game}資料移除')
 
     @game.command(description='查詢遊戲資料')
     async def find(self,
@@ -89,19 +78,18 @@ class system_game(Cog_Extension):
         userid = str(user.id)
         
         if user == ctx.author or ctx.author.id == 419131103836635136:
-            if user and userid in gdata:
+            record = self.sqldb.get_game_data(userid)
+            if record:
                 data = {}
-                for game in self.games:
-                    if game in gdata[userid]:
-                        if 'name' in gdata[userid][game]:
-                            data[game] = f"{gdata[userid][game]['name']}\n({gdata[userid][game]['id']})"
-                        else:
-                            data[game] = gdata[userid][game]
+                for r in record:
+                    game = r['game']
+                    if r['player_id']:
+                        data[game] = f"{r['player_name']}({r['player_id']})"
                     else:
-                        data[game] = None
+                        data[game] = r['player_name']
 
                 embed = BotEmbed.simple(title=user)
-                for game in self.games:
+                for game in data:
                     embed.add_field(name=game, value=data[game], inline=False)
                 embed.set_thumbnail(url=user.display_avatar.url)
                 await ctx.respond(embed=embed)

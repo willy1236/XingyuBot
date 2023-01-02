@@ -1,6 +1,5 @@
 import discord
 from BotLib.database import JsonDatabase
-from core.classes import Cog_Extension
 
 class BotEmbed:
     @staticmethod
