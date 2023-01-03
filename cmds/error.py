@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 from BotLib.basic import BRS
 from core.classes import Cog_Extension
+from mysql.connector.errors import Error as sqlerror
 
 dict = {
     'manage_channels':'管理頻道',
@@ -87,8 +88,13 @@ class error(Cog_Extension):
             await ctx.respond(f'參數錯誤:{error}')
 
         elif isinstance(error,discord.ApplicationCommandInvokeError):
-            await ctx.respond(f'指令調用時發生錯誤：{error.original}',ephemeral=True)
-            print(error,type(error))
+            if isinstance(error.original,sqlerror) and error.original.errno == 1452:
+                id = str(ctx.author.id)
+                self.sqldb.set_user(id)
+                await ctx.respond(f'首次使用已完成註冊，請再使用一次指令',ephemeral=True)
+            else:
+                await ctx.respond(f'指令調用時發生錯誤：{error.original}',ephemeral=True)
+                print(error,type(error))
         
         else:
             if ctx.guild.id != 566533708371329024:

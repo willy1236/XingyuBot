@@ -86,16 +86,6 @@ async def reload(ctx, extension):
 async def ping(ctx):
     await ctx.send(f'延遲為:{round(bot.latency*1000)} ms')
 
-#jset
-@bot.command()
-@commands.is_owner()
-async def jset(ctx,option,value):
-    db = JsonDatabase()
-    jdata = db.jdata
-    jdata[option] = value
-    db.write('jdata',jdata)
-    await ctx.send(f'已將{option} 設為 {value}')
-
 if __name__ == "__main__":
     if bot_code == 'Bot1' and auto_update:
         os.system('python update.py')

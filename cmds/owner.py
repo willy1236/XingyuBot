@@ -2,7 +2,7 @@ import discord,os
 from discord.ext import commands
 
 from core.classes import Cog_Extension
-from BotLib.basic import BotEmbed
+from BotLib.basic import BotEmbed,BRS
 from BotLib.database import JsonDatabase
 
 from BotLib.ui_element.button import ReactRole_button
@@ -28,7 +28,8 @@ class owner(Cog_Extension):
         channel = self.bot.get_channel(id)
         if not channel:
             user = self.bot.get_user(id)
-            await user.send(msg)
+            message = await user.send(msg)
+            await BRS.dm(self,message)
             await ctx.respond(f'訊息發送成功',delete_after=5)
         else:
             await channel.send(msg)
@@ -185,5 +186,15 @@ class owner(Cog_Extension):
 #             await channel.send('👎')
 #         else:
 #             await channel.send('👍')
+
+    #jset
+    @commands.slash_command(guild_ids=main_guild)
+    @commands.is_owner()
+    async def jset(ctx,option,value):
+        db = JsonDatabase()
+        jdata = db.jdata
+        jdata[option] = value
+        db.write('jdata',jdata)
+        await ctx.send(f'已將{option} 設為 {value}')
 def setup(bot):
     bot.add_cog(owner(bot))

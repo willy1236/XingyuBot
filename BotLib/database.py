@@ -1,7 +1,5 @@
 import json,os,mysql.connector,discord
-from discord.ext import commands
 from BotLib.funtions import find
-from mysql.connector.errors import Error as sqlerror
 from pydantic import BaseModel
 
 
@@ -132,25 +130,6 @@ class MySQLDatabase(Database):
         #建立連線
         self.connection = mysql.connector.connect(**settings)
         self.cursor = self.connection.cursor(dictionary=True)
-    
-    def user_setup(self,id:str,name:str='NULL'):
-        db = "database"
-        self.cursor.execute(f"USE `{db}`;")
-        self.cursor.execute(f"INSERT INTO `user_data` VALUES({str(id)},{name})")
-        self.connection.commit()
-
-    def get_user(self,id:str):
-        db = "database"
-        self.cursor.execute(f"USE `{db}`;")
-        self.cursor.execute('SELECT * FROM `user_data` WHERE id = %s;',(str(id),))
-        records = self.cursor.fetchone()
-        return records
-
-    def remove_user(self,id:str):
-        db = "database"
-        self.cursor.execute(f"USE `{db}`;")
-        self.cursor.execute("DELETE FROM `user_data` WHERE `id` = %s;",(str(id),))
-        self.connection.commit()
 
     def add_data(self,table:str,*value,db="database"):
         self.cursor.execute(f"USE `{db}`;")
@@ -179,9 +158,27 @@ class MySQLDatabase(Database):
         self.cursor.execute(f'DELETE FROM `{table}` WHERE `id` = %s;',value)
         self.connection.commit()
 
+    def set_user(self,id:str,name:str=None):
+        self.cursor.execute(f"USE `database`;")
+        self.cursor.execute(f"INSERT INTO `user_data` VALUES(%s,%s);",(id,name))
+        self.connection.commit()
+
+    def get_user(self,id:str):
+        db = "database"
+        self.cursor.execute(f"USE `{db}`;")
+        self.cursor.execute('SELECT * FROM `user_data` WHERE id = %s;',(str(id),))
+        records = self.cursor.fetchone()
+        return records
+
+    def remove_user(self,id:str):
+        db = "database"
+        self.cursor.execute(f"USE `{db}`;")
+        self.cursor.execute("DELETE FROM `user_data` WHERE `id` = %s;",(str(id),))
+        self.connection.commit()
+    
     def set_game_data(self,user_id:str,game:str,player_name:str=None,player_id:str=None):
         self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f"REPLACE INTO `game_data` VALUES(%s,%s,%s,%s)",(user_id,game,player_name,player_id))
+        self.cursor.execute(f"REPLACE INTO `game_data` VALUES(%s,%s,%s,%s);",(user_id,game,player_name,player_id))
         self.connection.commit()
 
     def remove_game_data(self,user_id:str,game:str):
