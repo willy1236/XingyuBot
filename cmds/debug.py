@@ -25,10 +25,10 @@ class PersistentView(discord.ui.View):
 class debug(Cog_Extension):
     pass
     # @commands.slash_command(description='測試指令')
-    # async def test(self,ctx,game,name):
+    # async def test(self,ctx,ids):
     #     id = str(ctx.author.id)
-    #     r = self.sqldb.add_game_data(id,game,name)
-    #     await ctx.respond(f'done')
+    #     r = self.sqldb.get_role_save(ids.split())
+    #     await ctx.respond(f'done {r}')
     
     # @commands.command()
     # @commands.is_owner()

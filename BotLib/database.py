@@ -158,6 +158,7 @@ class MySQLDatabase(Database):
         self.cursor.execute(f'DELETE FROM `{table}` WHERE `id` = %s;',value)
         self.connection.commit()
 
+
     def set_user(self,id:str,name:str=None):
         self.cursor.execute(f"USE `database`;")
         self.cursor.execute(f"INSERT INTO `user_data` VALUES(%s,%s);",(id,name))
@@ -194,6 +195,23 @@ class MySQLDatabase(Database):
             self.cursor.execute(f"SELECT * FROM `game_data` WHERE `id` = %s;",(user_id,))
         records = self.cursor.fetchall()
         return records
+
+    def get_role_save(self,id:str):
+        self.cursor.execute(f"USE `database`;")
+        self.cursor.execute(f'SELECT * FROM `role_save` WHERE user_id = %s;',(id,))
+        records = self.cursor.fetchall()
+        return records
+
+    def get_role_save_count(self,id:str):
+        self.cursor.execute(f"USE `database`;")
+        self.cursor.execute(f'SELECT COUNT(user_id) FROM `role_save` WHERE user_id = %s;',(id,))
+        records = self.cursor.fetchall()
+        return records
+
+    def add_role_save(self,user_id:str,role_id:str,role_name:str,time:str):
+        self.cursor.execute(f"USE `database`;")
+        self.cursor.execute(f"INSERT INTO `role_save` VALUES(%s,%s,%s,%s)",(user_id,role_id,role_name,time))
+        self.connection.commit()
 
 class GameDatabase(Database):
     pass
