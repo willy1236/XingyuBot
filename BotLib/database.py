@@ -48,7 +48,7 @@ class JsonDatabase(Database):
         self.jdsign = json.load(open(self.__dict['jdsign'],mode='r',encoding='utf8'))
         self.jwsign = json.load(open(self.__dict['jwsign'],mode='r',encoding='utf8'))
         self.jevent = json.load(open(self.__dict['jevent'],mode='r',encoding='utf8'))
-        self.rsdata = json.load(open(self.__dict['rsdata'],mode='r',encoding='utf8'))
+        #self.rsdata = json.load(open(self.__dict['rsdata'],mode='r',encoding='utf8'))
         self.jpet = json.load(open(self.__dict['jpet'],mode='r',encoding='utf8'))
         self.jbag = json.load(open(self.__dict['jbag'],mode='r',encoding='utf8'))
         self.cache = json.load(open(self.__dict['cache'],mode='r',encoding='utf8'))
@@ -198,7 +198,7 @@ class MySQLDatabase(Database):
 
     def get_role_save(self,id:str):
         self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f'SELECT * FROM `role_save` WHERE user_id = %s;',(id,))
+        self.cursor.execute(f'SELECT * FROM `role_save` WHERE user_id = %s ORDER BY `time` DESC;',(id,))
         records = self.cursor.fetchall()
         return records
 

@@ -13,7 +13,7 @@ from mysql.connector.errors import Error as sqlerror
 
 class command(Cog_Extension):
     picdata = JsonDatabase().picdata
-    rsdata = JsonDatabase().rsdata
+    #rsdata = JsonDatabase().rsdata
 
     twitch = SlashCommandGroup("twitch", "Twitch相關指令")
     bet = SlashCommandGroup("bet", "賭盤相關指令")
@@ -201,25 +201,23 @@ class command(Cog_Extension):
             await ctx.respond(f'錯誤:{ctx.author.mention}沒有稱號可更改',delete_after=5)
 
     @role.command(description='身分組紀錄')
-    async def record(self, ctx, user:discord.Option(discord.Member,name='欲查詢的成員',description='可不輸入以查詢自己',default=None)):
+    async def record(self, ctx, user:discord.Option(discord.Member,name='欲查詢的成員',description='留空以查詢自己',default=None)):
         await ctx.defer()
         user = user or ctx.author
-        db = JsonDatabase()
-        rsdata = db.rsdata
-        if str(user.id) in rsdata:
-            id = str(user.id)
+        record = self.sqldb.get_role_save(str(user.id))
+        if record:
             page = []
             i = 0
             page_now = 0
             page.append(BotEmbed.simple(f"{user.name} 身分組紀錄"))
-            for role in rsdata[id]:
+            for data in record:
                 if i >= 10:
                     page.append(BotEmbed.simple(f"{user.name} 身分組紀錄"))
                     i = 0
                     page_now += 1
-                name = rsdata[id][role][0]
-                time = rsdata[id][role][1]
-                page[page_now].add_field(name=name, value=time, inline=False)
+                role_name = data['role_name']
+                time = data['time']
+                page[page_now].add_field(name=role_name, value=time, inline=False)
                 i += 1
 
             paginator = pages.Paginator(pages=page, use_default_buttons=True)
