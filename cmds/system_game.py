@@ -73,7 +73,6 @@ class system_game(Cog_Extension):
                 ctx,
                 user:discord.Option(discord.Member,name='用戶',description='要查詢的用戶',default=None)
                 ):
-        gdata = JsonDatabase().gdata
         user = user or ctx.author
         userid = str(user.id)
         
@@ -98,17 +97,25 @@ class system_game(Cog_Extension):
         else:
             await ctx.respond('目前不開放查詢別人的資料喔',ephemeral=True)
 
+    # @lol.command(description='查詢League of Legends用戶資料')
+    # async def user(self,ctx,userid:discord.Option(str,name='用戶',description='要查詢的用戶')):
+    #     url = 'https://lol.moa.tw/summoner/show/'+userid
+    #     lvl = player_search(url) or '讀取失敗'
+
+    #     embed = discord.Embed(title="LOL玩家查詢", url=url, color=0xc4e9ff)
+    #     embed.add_field(name="玩家名稱", value=userid, inline=False)
+    #     embed.add_field(name="等級", value=lvl, inline=False)
+    #     embed.add_field(name="查詢戰績", value="LOL戰績網(lol.moa.tw)", inline=False)
+    #     embed.set_thumbnail(url='https://i.imgur.com/B0TMreW.png')
+    #     await ctx.respond(embed=embed)
+
     @lol.command(description='查詢League of Legends用戶資料')
     async def user(self,ctx,userid:discord.Option(str,name='用戶',description='要查詢的用戶')):
-        url = 'https://lol.moa.tw/summoner/show/'+userid
-        lvl = player_search(url) or '讀取失敗'
-
-        embed = discord.Embed(title="LOL玩家查詢", url=url, color=0xc4e9ff)
-        embed.add_field(name="玩家名稱", value=userid, inline=False)
-        embed.add_field(name="等級", value=lvl, inline=False)
-        embed.add_field(name="查詢戰績", value="LOL戰績網(lol.moa.tw)", inline=False)
-        embed.set_thumbnail(url='https://i.imgur.com/B0TMreW.png')
-        await ctx.respond(embed=embed)
+        player = RiotInterface().get_lolplayer(userid)
+        if player:
+            await ctx.respond('查詢成功',embed=player.desplay())
+        else:
+            await ctx.respond('查詢失敗:查無此ID',ephemeral=True)
 
     @osu.command(description='查詢Osu用戶資料')
     @commands.cooldown(rate=1,per=1)
@@ -238,27 +245,28 @@ class system_game(Cog_Extension):
     @hoyo.command(description='設定cookies')
     @commands.cooldown(rate=1,per=1)
     async def set(self,
-                ctx,
-                ltuid:discord.Option(str,name='ltuid',required=True)
-                ,ltoken:discord.Option(str,name='ltoken',required=True)
-                ):
+                  ctx,
+                  ltuid:discord.Option(str,name='ltuid',required=True),
+                  ltoken:discord.Option(str,name='ltoken',required=True)):
         await ctx.message.delete()
-        db = JsonDatabase()
-        jhoyo = db.jhoyo
-        dict = {
-            'ltuid': ltuid,
-            'ltoken': ltoken,
-        }
-        jhoyo[str(ctx.author.id)] = dict
-        db.write('jhoyo',jhoyo)
+        # db = JsonDatabase()
+        # jhoyo = db.jhoyo
+        # dict = {
+        #     'ltuid': ltuid,
+        #     'ltoken': ltoken,
+        # }
+        # jhoyo[str(ctx.author.id)] = dict
+        # db.write('jhoyo',jhoyo)
+        self.sqldb.set_hoyo_cookies(str(ctx.author.id),ltuid,ltoken)
         await ctx.respond(f'{ctx.author.mention} 設定完成')
 
     @hoyo.command(description='取得每月原石來源統計')
     @commands.cooldown(rate=1,per=1)
     async def diary(self,ctx):
-        db = JsonDatabase()
-        jhoyo = db.jhoyo
-        cookies = jhoyo.get(str(ctx.author.id),None)
+        # db = JsonDatabase()
+        # jhoyo = db.jhoyo
+        # cookies = jhoyo.get(str(ctx.author.id))
+        cookies = self.sqldb.get_user(str(ctx.author.id),'game_hoyo_cookies')
         if not cookies:
             raise commands.errors.ArgumentParsingError("沒有設定cookies")
         client = genshin.Client(cookies)
@@ -281,13 +289,12 @@ class system_game(Cog_Extension):
 
     @hoyo.command(description='尋找用戶')
     @commands.cooldown(rate=1,per=1)
-    async def find(self,
-                ctx,
-                hoyolab_name:discord.Option(str,name='hoyolab名稱',description='要查詢的用戶',default=None)
-                ):
-        db = JsonDatabase()
-        jhoyo = db.jhoyo
-        cookies = jhoyo.get(str(ctx.author.id),None)
+    async def find(self,ctx,
+                   hoyolab_name:discord.Option(str,name='hoyolab名稱',description='要查詢的用戶',default=None)):
+        # db = JsonDatabase()
+        # jhoyo = db.jhoyo
+        # cookies = jhoyo.get(str(ctx.author.id),None)
+        cookies = self.sqldb.get_user(str(ctx.author.id),'game_hoyo_cookies')
         if not cookies:
             raise commands.errors.ArgumentParsingError("沒有設定cookies")
         client = genshin.Client(cookies)

@@ -235,33 +235,40 @@ class command(Cog_Extension):
         six_list = []
         six_list_100 = []
         guaranteed = 100
-        db = JsonDatabase()
-        jloot = db.jloot
+        #db = JsonDatabase()
+        #jloot = db.jloot
+        data = self.sqldb.get_user(user_id,'user_lottery')
+        if data:
+            user_guaranteed = data['guaranteed']
+        else:
+            user_guaranteed = 0
             
-        for i in range(1,times+1):
+        for i in range(times):
             choice =  random.randint(1,100)
-            if choice == 1 or jloot[user_id] >= guaranteed-1:
+            if choice == 1:
                 result["six"] += 1
-                if jloot[user_id] >= guaranteed-1:
-                    six_list_100.append(str(i))
-                else:
-                    six_list.append(str(i))
-                jloot[user_id] = 0
+                six_list.append(str(i+1))
+                user_guaranteed = 0
+            elif user_guaranteed >= guaranteed-1:
+                result["six"] += 1
+                six_list_100.append(str(i+1))
+                user_guaranteed = 0
+
+            elif choice >= 2 and choice <= 11:
+                result["five"] += 1
+                user_guaranteed += 1
+            elif choice >= 12 and choice <= 41:
+                result["four"]+= 1
+                user_guaranteed += 1
             else:
-                if choice >= 2 and choice <= 11:
-                    result["five"] += 1
-                    jloot[user_id] += 1
-                elif choice >= 12 and choice <= 41:
-                    result["four"]+= 1
-                    jloot[user_id] += 1
-                else:
-                    result["three"] += 1
-                    jloot[user_id] += 1
+                result["three"] += 1
+                user_guaranteed += 1
         
-        db.write('jloot',jloot)
+        #db.write('jloot',jloot)
+        self.sqldb.update_userdata(user_id,'user_lottery','guaranteed',user_guaranteed)
         embed=BotEmbed.lottery()
         embed.add_field(name='抽卡結果', value=f"六星:{result['six']} 五星:{result['five']} 四星:{result['four']} 三星:{result['three']}", inline=False)
-        embed.add_field(name='保底累積', value=jloot[user_id], inline=False)
+        embed.add_field(name='保底累積', value=user_guaranteed, inline=False)
         if len(six_list) > 0:
             embed.add_field(name='六星出現', value=','.join(six_list), inline=False)
         if len(six_list_100) > 0:

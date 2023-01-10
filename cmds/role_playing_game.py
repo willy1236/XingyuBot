@@ -18,8 +18,9 @@ class RPGbutton1(discord.ui.View):
 class role_playing_game(Cog_Extension):
     @commands.slash_command(description='進行冒險（開發中）')
     async def advance(self,ctx):
+        await ctx.respond('敬請期待',ephemeral=False)
+        return
         await ctx.respond(view=RPGbutton1())
-    
 
 def setup(bot):
     bot.add_cog(role_playing_game(bot))

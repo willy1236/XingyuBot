@@ -7,6 +7,20 @@ class GameInterface():
         self.db = JsonDatabase()
 
 
+class RiotInterface(GameInterface):
+    def __init__(self):
+        super().__init__()
+        self.key = self.db.get_token('riot')
+
+    def get_lolplayer(self,userid):
+        params = {'api_key':self.key}
+        r = requests.get(f'https://tw2.api.riotgames.com/lol/summoner/v4/summoners/by-name/{userid}',params=params)
+        if r.status_code == 200:
+            return LOLPlayer(r.json())
+        else:
+            return None
+            
+    
 class OsuInterface(GameInterface):
     def __init__(self):
         super().__init__()

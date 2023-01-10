@@ -1,6 +1,7 @@
-import json,os,mysql.connector,discord
+import json,os,mysql.connector,discord,datetime
 from BotLib.funtions import find
 from pydantic import BaseModel
+from mysql.connector.errors import Error as sqlerror
 
 
 class Database():
@@ -42,11 +43,11 @@ class JsonDatabase(Database):
         self.picdata = json.load(open(self.__dict['picdata'],mode='r',encoding='utf8'))
         self.udata = json.load(open(self.__dict['udata'],'r',encoding='utf8'))
         self.jpt = json.load(open(self.__dict['jpt'],mode='r',encoding='utf8'))
-        self.jloot = json.load(open(self.__dict['jloot'],mode='r',encoding='utf8'))
+        #self.jloot = json.load(open(self.__dict['jloot'],mode='r',encoding='utf8'))
         self.bet_data = json.load(open(self.__dict['bet_data'],mode='r',encoding='utf8'))
-        self.gdata = json.load(open(self.__dict['gdata'],'r',encoding='utf8'))
-        self.jdsign = json.load(open(self.__dict['jdsign'],mode='r',encoding='utf8'))
-        self.jwsign = json.load(open(self.__dict['jwsign'],mode='r',encoding='utf8'))
+        #self.gdata = json.load(open(self.__dict['gdata'],'r',encoding='utf8'))
+        #self.jdsign = json.load(open(self.__dict['jdsign'],mode='r',encoding='utf8'))
+        #self.jwsign = json.load(open(self.__dict['jwsign'],mode='r',encoding='utf8'))
         self.jevent = json.load(open(self.__dict['jevent'],mode='r',encoding='utf8'))
         #self.rsdata = json.load(open(self.__dict['rsdata'],mode='r',encoding='utf8'))
         self.jpet = json.load(open(self.__dict['jpet'],mode='r',encoding='utf8'))
@@ -54,7 +55,7 @@ class JsonDatabase(Database):
         self.cache = json.load(open(self.__dict['cache'],mode='r',encoding='utf8'))
         self.monster_basic = json.load(open(self.__dict['monster_basic'],mode='r',encoding='utf8'))
         self.jRcoin = json.load(open(self.__dict['jRcoin'],mode='r',encoding='utf8'))
-        self.jhoyo = json.load(open(self.__dict['jhoyo'],mode='r',encoding='utf8'))
+        #self.jhoyo = json.load(open(self.__dict['jhoyo'],mode='r',encoding='utf8'))
         self.jtwitch = json.load(open(self.__dict['jtwitch'],mode='r',encoding='utf8'))
 
         try:
@@ -72,25 +73,21 @@ class JsonDatabase(Database):
 
     def get_token(self,webname:str):
         """獲取相關api的tokens\n
-        支援CWB_API,osu(id,secret),TRN,apex,steam,twitch(id,secret),youtube
+        支援CWB_API,osu(id,secret),TRN,apex,steam,twitch(id,secret),youtube,riot
         """
         dict = {
             "CWB_API":'CWB_API',
-            'osu':'osu',
+            'osu':'osu_api',
             'TRN':'TRN_API',
             'apex':'apex_status_API',
             'steam':'steam_api',
-            'twitch':'twitch',
-            'youtube':'youtube_api'
+            'twitch':'twitch_api',
+            'youtube':'youtube_api',
+            'riot':"riot_api"
             }
         if webname in dict:
-            if webname == 'osu':
-                return (self.tokens['osu_API_id'],self.tokens['osu_API_secret'])
-            if webname == 'twitch':
-                return (self.tokens['twitch_api_id'],self.tokens['twitch_api_secret'])
-            else:
-                name = dict[webname]
-                return self.tokens[name]
+            name = dict[webname]
+            return self.tokens[name]
         else:
             raise ValueError('無此API token')
 
@@ -150,6 +147,9 @@ class MySQLDatabase(Database):
         records = self.cursor.fetchall()
         for r in records:
              print(r)
+
+    def truncate_table(self,table:str):
+        self.cursor.execute(f"TRUNCATE TABLE `{table}`;")
     
     def remove_data(self,table:str,*value):
         db = "database"
@@ -164,10 +164,14 @@ class MySQLDatabase(Database):
         self.cursor.execute(f"INSERT INTO `user_data` VALUES(%s,%s);",(id,name))
         self.connection.commit()
 
-    def get_user(self,id:str):
-        db = "database"
-        self.cursor.execute(f"USE `{db}`;")
-        self.cursor.execute('SELECT * FROM `user_data` WHERE id = %s;',(str(id),))
+    def update_userdata(self,user_id:str,table:str,column:str,value):
+        self.cursor.execute(f"USE `database`;")
+        self.cursor.execute(f"INSERT INTO `{table}` SET user_id = {user_id}, {column} = {value} ON DUPLICATE KEY UPDATE user_id = {user_id}, {column} = {value};")
+        self.connection.commit()
+
+    def get_user(self,user_id:str,table:str='user_data'):
+        self.cursor.execute(f"USE `database`;")
+        self.cursor.execute(f'SELECT * FROM `{table}` WHERE user_id = %s;',(str(user_id),))
         records = self.cursor.fetchone()
         return records
 
@@ -202,9 +206,9 @@ class MySQLDatabase(Database):
         records = self.cursor.fetchall()
         return records
 
-    def get_role_save_count(self,id:str):
+    def get_role_save_count(self,user_id:str):
         self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f'SELECT COUNT(user_id) FROM `role_save` WHERE user_id = %s;',(id,))
+        self.cursor.execute(f'SELECT COUNT(user_id) FROM `role_save` WHERE user_id = %s;',(user_id,))
         records = self.cursor.fetchall()
         return records
 
@@ -213,5 +217,57 @@ class MySQLDatabase(Database):
         self.cursor.execute(f"INSERT INTO `role_save` VALUES(%s,%s,%s,%s)",(user_id,role_id,role_name,time))
         self.connection.commit()
 
-class GameDatabase(Database):
-    pass
+    def get_point(self,user_id:str):
+        self.cursor.execute(f"USE `database`;")
+        self.cursor.execute(f'SELECT * FROM `user_point` WHERE user_id = %s;',(user_id,))
+        records = self.cursor.fetchone()
+        return records
+
+    def getif_point(self,user_id:str,point:int):
+        self.cursor.execute(f"USE `database`;")
+        self.cursor.execute(f'SELECT * FROM `user_point` WHERE user_id = %s, point = %s;',(user_id,point))
+        records = self.cursor.fetchone()
+        return records
+
+    def give_point(self,giver_id:str,given_id:str,amount:int):
+        self.cursor.execute(f"USE `database`;")
+        self.cursor.execute(f'SELECT * FROM `user_point` WHERE user_id = %s AND point >= %s;',(giver_id,amount))
+        records = self.cursor.fetchone()
+        if records:
+            self.cursor.execute(f"UPDATE `user_point` SET point = point - %s WHERE user_id = %s;",(amount,giver_id))
+            self.cursor.execute(f"INSERT INTO `user_point` SET user_id = %s, point = %s ON DUPLICATE KEY UPDATE user_id = %s, point = point + %s",(given_id,amount,given_id,amount))
+            self.connection.commit()
+            #self.cursor.execute(f"UPDATE `user_point` SET `point` = REPLACE(`欄位名`, '要被取代的欄位值', '取代後的欄位值') WHERE `欄位名` LIKE '%欄位值%';",(giver_id,amount))
+            return 0
+        else:
+            return 1
+
+    def update_point(self,mod,user_id:str,amount:int):
+        self.cursor.execute(f"USE `database`;")
+        if mod == 'set':
+            self.cursor.execute(f"REPLACE INTO `game_data`(user_id,point) VALUES(%s,%s);",(user_id,amount))
+        elif mod == 'add':
+            self.cursor.execute(f"UPDATE `user_point` SET point = point + %s WHERE user_id = %s;",(amount,user_id))
+        self.connection.commit()
+    
+    def user_sign(self,user_id:str):
+        try:
+            time = datetime.datetime.now()
+            self.cursor.execute(f"USE `database`;")
+            self.cursor.execute(f"INSERT INTO `user_sign` VALUES(%s,%s)",(user_id,time))
+            self.connection.commit()
+        except sqlerror as e:
+            if e.errno == 1062:
+                return 1
+            else:
+                raise
+
+    def sign_add_coin(self,user_id:str,point:int,Rcoin:int):
+        self.cursor.execute(f"USE `database`;")
+        self.cursor.execute(f"INSERT INTO `user_point` SET user_id = %s, point = %s,rcoin = %s ON DUPLICATE KEY UPDATE user_id = %s, point = point + %s,rcoin = %s",(user_id,point,Rcoin,user_id,point,Rcoin))
+        self.connection.commit()
+
+    def set_hoyo_cookies(self,user_id:str,ltuid:str,ltoken:str):
+        self.cursor.execute(f"USE `database`;")
+        self.cursor.execute(f"INSERT INTO `game_hoyo_cookies` SET user_id = {user_id}, ltuid = {ltuid}, ltoken = {ltoken} ON DUPLICATE KEY UPDATE user_id = {user_id}, ltuid = {ltuid}, ltoken = {ltoken}")
+        self.connection.commit()

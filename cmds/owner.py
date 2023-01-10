@@ -160,8 +160,7 @@ class owner(Cog_Extension):
         if arg == 'sign':
             db = JsonDatabase()
             task_report_channel = self.bot.get_channel(db.jdata['task_report'])
-            reset = []
-            db.write('jdsign',reset)
+            self.sqldb.truncate_table('user_sign')
 
             await task_report_channel.send('簽到已重置')
             await ctx.respond('簽到已重置',delete_after=5)

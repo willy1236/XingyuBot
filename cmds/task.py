@@ -88,7 +88,8 @@ class task(Cog_Extension):
     async def sign_reset(self):
         db = JsonDatabase()
         task_report_channel = self.bot.get_channel(db.jdata['task_report'])
-        db.write('jdsign',[])
+        #db.write('jdsign',[])
+        self.sqldb.truncate_table('user_sign')
         await task_report_channel.send('簽到已重置')
         await asyncio.sleep(10)
         self.sign_reset.stop()

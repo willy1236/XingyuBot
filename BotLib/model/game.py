@@ -4,6 +4,20 @@ from BotLib.database import JsonDatabase
 
 jdict = JsonDatabase().jdict
 
+class LOLPlayer():
+    def __init__(self,data):
+        self.name = data['name']
+        self.accountid = data['accountId']
+        self.summonerLevel = data['summonerLevel']
+
+    def desplay(self):
+        embed = BotEmbed.general("LOL玩家資訊",url=self.url)
+        embed.add_field(name="玩家名稱", value=self.name, inline=False)
+        #embed.add_field(name="帳號ID", value=data['accountId'], inline=False)
+        embed.add_field(name="召喚師等級", value=self.summonerLevel, inline=False)
+        embed.set_thumbnail(url='https://i.imgur.com/B0TMreW.png')
+        return embed
+
 class OsuPlayer():
     def __init__(self,data):
         self.username = data['username']

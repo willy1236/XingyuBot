@@ -4,7 +4,6 @@ from core.classes import Cog_Extension
 from discord.commands import SlashCommandGroup
 
 from BotLib.interface.user import *
-from BotLib.funtions import find
 from BotLib.basic import BotEmbed
 
 class system_user(Cog_Extension):
