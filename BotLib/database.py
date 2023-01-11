@@ -117,7 +117,7 @@ class MySQLDatabase():
 
     def getif_point(self,user_id:str,point:int):
         self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f'SELECT * FROM `user_point` WHERE user_id = %s, point = %s;',(user_id,point))
+        self.cursor.execute(f'SELECT `user_id` FROM `user_point` WHERE user_id = %s AND point >= %s;',(user_id,point))
         records = self.cursor.fetchone()
         return records
 

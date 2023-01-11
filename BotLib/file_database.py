@@ -35,7 +35,7 @@ class JsonDatabase:
         self.jdata = json.load(open(self.__dict['jdata'],mode='r',encoding='utf8'))
         self.cdata = json.load(open(self.__dict['cdata'],mode='r',encoding='utf8'))
         self.picdata = json.load(open(self.__dict['picdata'],mode='r',encoding='utf8'))
-        self.udata = json.load(open(self.__dict['udata'],'r',encoding='utf8'))
+        #self.udata = json.load(open(self.__dict['udata'],'r',encoding='utf8'))
         #self.jpt = json.load(open(self.__dict['jpt'],mode='r',encoding='utf8'))
         #self.jloot = json.load(open(self.__dict['jloot'],mode='r',encoding='utf8'))
         self.bet_data = json.load(open(self.__dict['bet_data'],mode='r',encoding='utf8'))
