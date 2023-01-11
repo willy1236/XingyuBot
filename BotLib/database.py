@@ -34,6 +34,7 @@ class MySQLDatabase():
              print(r)
 
     def truncate_table(self,table:str):
+        self.cursor.execute(f"USE `database`;")
         self.cursor.execute(f"TRUNCATE TABLE `{table}`;")
     
     def remove_data(self,table:str,*value):
