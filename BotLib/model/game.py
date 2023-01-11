@@ -1,6 +1,6 @@
 from datetime import datetime,timedelta
 from BotLib.basic import BotEmbed
-from BotLib.database import JsonDatabase
+from BotLib.file_database import JsonDatabase
 
 jdict = JsonDatabase().jdict
 

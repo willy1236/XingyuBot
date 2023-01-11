@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 from core.classes import Cog_Extension
-from BotLib.database import JsonDatabase
+from BotLib.file_database import JsonDatabase
 
 jdict = JsonDatabase().jdict
 option = []

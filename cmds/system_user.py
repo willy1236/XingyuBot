@@ -14,11 +14,15 @@ class system_user(Cog_Extension):
     @commands.slash_command(description='查看用戶資訊（開發中）')
     async def ui(self,ctx,user_dc:discord.Option(discord.Member,name='用戶',description='可不輸入以查詢自己',default=None)):
         user_dc = user_dc or ctx.author
-        user = User(user_dc.id,user_dc.name)
-        await ctx.respond(embed=user.desplay())
+        user = self.sqldb.get_user(str(user_dc.id))
+        embed = user.desplay()
+        embed.set_author(name=user_dc.name,icon_url=user_dc.avatar)
+        await ctx.respond(embed=embed)
 
     @commands.slash_command(description='查看背包（開發中）')
     async def bag(self,ctx,user_dc:discord.Option(discord.Member,name='用戶',description='可不輸入以查詢自己',default=None)):
+        await ctx.respond('敬請期待')
+        return
         user_dc = user_dc or ctx.author
         user = User(user_dc.id,user_dc.name)
         embed = BotEmbed.general('你的包包')
@@ -33,6 +37,8 @@ class system_user(Cog_Extension):
 
     @pet.command(description='查看寵物資訊')
     async def check(self,ctx,user_dc:discord.Option(discord.Member,name='用戶',description='可不輸入以查詢自己',default=None)):
+        await ctx.respond('敬請期待')
+        return
         user_dc = user_dc or ctx.author
         pet = Pet(user_dc.id)
         if pet.has_pet:
@@ -44,11 +50,11 @@ class system_user(Cog_Extension):
             await ctx.respond('用戶沒有認養寵物')
     
     @pet.command(description='認養寵物')
-    async def add(self,
-                ctx,
-                species:discord.Option(str,name='物種',description='想認養的寵物物種（目前僅開放部分物種）'),
-                name:discord.Option(str,name='寵物名',description='')
-                ):
+    async def add(self,ctx,
+                  species:discord.Option(str,name='物種',description='想認養的寵物物種（目前僅開放部分物種）'),
+                  name:discord.Option(str,name='寵物名',description='')):
+        await ctx.respond('敬請期待')
+        return
         pet = User(ctx.author.id).pet
         if pet.has_pet:
             await ctx.respond('你已經有寵物了')
@@ -58,6 +64,8 @@ class system_user(Cog_Extension):
 
     @pet.command(description='放生寵物')
     async def remove(self,ctx):
+        await ctx.respond('敬請期待')
+        return
         def check(m):
             try:
                 return m.content == 'y' and m.author == ctx.author
@@ -87,11 +95,11 @@ class system_user(Cog_Extension):
         await ctx.respond(embed=embed)
 
     @shop.command(description='購買物品（開發中）')
-    async def buy(self,
-                ctx,
-                id:discord.Option(str,name='商品id',description='想購買的商品'),
-                amount:discord.Option(int,name='數量',description='')
-                ):
+    async def buy(self,ctx,
+                  id:discord.Option(str,name='商品id',description='想購買的商品'),
+                  amount:discord.Option(int,name='數量',description='')):
+        await ctx.respond('敬請期待')
+        return
         if id == '1':
             user = User(ctx.author.id)
             if int(user.rcoin) >= 1 * amount:

@@ -2,7 +2,7 @@ import requests,datetime,discord
 from bs4 import BeautifulSoup
 
 from BotLib.basic import BotEmbed
-from BotLib.database import JsonDatabase
+from BotLib.file_database import JsonDatabase
 
 class WeatherInterface():
     pass

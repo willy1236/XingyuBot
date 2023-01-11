@@ -1,5 +1,6 @@
 from discord.ext import commands
-from BotLib.database import MySQLDatabase,JsonDatabase
+from BotLib.database import MySQLDatabase
+from BotLib.file_database import JsonDatabase
 
 jdata = JsonDatabase().jdata
 SQL_connection = jdata.get('SQL_connection')

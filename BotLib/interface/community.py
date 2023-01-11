@@ -1,5 +1,5 @@
 import requests,datetime,discord
-from BotLib.database import JsonDatabase
+from BotLib.file_database import JsonDatabase
 from BotLib.model.community import TwitchStream
 
 class CommunityInterface():

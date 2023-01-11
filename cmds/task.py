@@ -3,7 +3,7 @@ from datetime import datetime, timezone, timedelta,time
 from discord.ext import commands,tasks
 
 from core.classes import Cog_Extension
-from BotLib.database import JsonDatabase
+from BotLib.file_database import JsonDatabase
 from BotLib.interface.weather import *
 from BotLib.interface.game import ApexInterface
 from BotLib.interface.community import Twitch

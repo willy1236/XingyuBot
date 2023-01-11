@@ -1,5 +1,5 @@
 import requests,genshin
-from BotLib.database import JsonDatabase
+from BotLib.file_database import JsonDatabase
 from BotLib.model.game import *
 
 class GameInterface():

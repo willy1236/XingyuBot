@@ -5,7 +5,7 @@ from discord.commands import SlashCommandGroup
 
 from core.classes import Cog_Extension
 from BotLib.funtions import find
-from BotLib.database import JsonDatabase
+from BotLib.file_database import JsonDatabase
 from BotLib.interface.game import *
 from BotLib.basic import BotEmbed
 
@@ -266,7 +266,7 @@ class system_game(Cog_Extension):
         # db = JsonDatabase()
         # jhoyo = db.jhoyo
         # cookies = jhoyo.get(str(ctx.author.id))
-        cookies = self.sqldb.get_user(str(ctx.author.id),'game_hoyo_cookies')
+        cookies = self.sqldb.get_userdata(str(ctx.author.id),'game_hoyo_cookies')
         if not cookies:
             raise commands.errors.ArgumentParsingError("沒有設定cookies")
         client = genshin.Client(cookies)
@@ -294,7 +294,7 @@ class system_game(Cog_Extension):
         # db = JsonDatabase()
         # jhoyo = db.jhoyo
         # cookies = jhoyo.get(str(ctx.author.id),None)
-        cookies = self.sqldb.get_user(str(ctx.author.id),'game_hoyo_cookies')
+        cookies = self.sqldb.get_userdata(str(ctx.author.id),'game_hoyo_cookies')
         if not cookies:
             raise commands.errors.ArgumentParsingError("沒有設定cookies")
         client = genshin.Client(cookies)

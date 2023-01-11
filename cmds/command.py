@@ -6,7 +6,7 @@ from discord.commands import SlashCommandGroup
 from BotLib.funtions import find,converter,random_color
 from core.classes import Cog_Extension
 from BotLib.interface.user import *
-from BotLib.database import JsonDatabase
+from BotLib.file_database import JsonDatabase
 from BotLib.basic import BotEmbed,BRS
 
 from mysql.connector.errors import Error as sqlerror
@@ -237,7 +237,7 @@ class command(Cog_Extension):
         guaranteed = 100
         #db = JsonDatabase()
         #jloot = db.jloot
-        data = self.sqldb.get_user(user_id,'user_lottery')
+        data = self.sqldb.get_userdata(user_id,'user_lottery')
         if data:
             user_guaranteed = data['guaranteed']
         else:

@@ -2,7 +2,7 @@ import discord, os
 from discord.ext import commands
 from threading import Thread
 
-from BotLib.database import JsonDatabase
+from BotLib.file_database import JsonDatabase
 from BotLib.ui_element.button import *
 
 db = JsonDatabase()

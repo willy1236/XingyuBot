@@ -2,124 +2,9 @@ import json,os,mysql.connector,discord,datetime
 from BotLib.funtions import find
 from pydantic import BaseModel
 from mysql.connector.errors import Error as sqlerror
-
-
-class Database():
-    pass
-
-class JsonDatabase(Database):
-    def __init__(self):
-        """
-        CWB = 中央氣象局\n
-        TRN = tracker.gg
-        """
-        location = "database"
-        data_location = "data"
-        self.__dict = {
-            'jdict': f'{data_location}/dict.json',
-            'jdata': f'{location}/setting.json',
-            'cdata': f'{location}/channel_settings.json',
-            'picdata': f'{data_location}/bot_settings/picture.json',
-            'udata': f'{location}/user_settings/basic.json',
-            'jpt': f'{location}/user_settings/point.json',
-            'jloot': f'{location}/lottery.json',
-            'bet_data': f'{location}/bet.json',
-            'gdata': f'{location}/gamer_data.json',
-            'jdsign': f'{location}/sign_day.json',
-            'jwsign': f'{location}/sign_week.json',
-            'jevent': f'{location}/bot_settings/event.json',
-            'rsdata': f'{location}/role_save.json',
-            'jpet': f'{location}/user_settings/pet.json',
-            'jbag': f'{location}/user_settings/bag.json',
-            'cache': f'{location}/cache.json',
-            'monster_basic': f'{data_location}/RPG_settings/monster_basic.json',
-            'jRcoin': f'{location}/user_settings/rcoin.json',
-            'jhoyo': f'{location}/game_settings/hoyo.json',
-            'jtwitch': f'{location}/community_settings/twitch.json',
-        }
-        self.jdict = json.load(open(self.__dict['jdict'],mode='r',encoding='utf8'))
-        self.jdata = json.load(open(self.__dict['jdata'],mode='r',encoding='utf8'))
-        self.cdata = json.load(open(self.__dict['cdata'],mode='r',encoding='utf8'))
-        self.picdata = json.load(open(self.__dict['picdata'],mode='r',encoding='utf8'))
-        self.udata = json.load(open(self.__dict['udata'],'r',encoding='utf8'))
-        self.jpt = json.load(open(self.__dict['jpt'],mode='r',encoding='utf8'))
-        #self.jloot = json.load(open(self.__dict['jloot'],mode='r',encoding='utf8'))
-        self.bet_data = json.load(open(self.__dict['bet_data'],mode='r',encoding='utf8'))
-        #self.gdata = json.load(open(self.__dict['gdata'],'r',encoding='utf8'))
-        #self.jdsign = json.load(open(self.__dict['jdsign'],mode='r',encoding='utf8'))
-        #self.jwsign = json.load(open(self.__dict['jwsign'],mode='r',encoding='utf8'))
-        self.jevent = json.load(open(self.__dict['jevent'],mode='r',encoding='utf8'))
-        #self.rsdata = json.load(open(self.__dict['rsdata'],mode='r',encoding='utf8'))
-        self.jpet = json.load(open(self.__dict['jpet'],mode='r',encoding='utf8'))
-        self.jbag = json.load(open(self.__dict['jbag'],mode='r',encoding='utf8'))
-        self.cache = json.load(open(self.__dict['cache'],mode='r',encoding='utf8'))
-        self.monster_basic = json.load(open(self.__dict['monster_basic'],mode='r',encoding='utf8'))
-        self.jRcoin = json.load(open(self.__dict['jRcoin'],mode='r',encoding='utf8'))
-        #self.jhoyo = json.load(open(self.__dict['jhoyo'],mode='r',encoding='utf8'))
-        self.jtwitch = json.load(open(self.__dict['jtwitch'],mode='r',encoding='utf8'))
-
-        try:
-            self.tokens = json.load(open(f'{location}/token_settings.json',mode='r',encoding='utf8'))
-        except:
-            self.tokens = os.environ
-
-    def write(self,file:str,data:dict):
-        try:
-            location = self.__dict[file]
-            with open(file=location,mode='w',encoding='utf8') as jfile:
-                json.dump(data,jfile,indent=4)
-        except:
-            raise KeyError("此項目沒有在資料庫中")
-
-    def get_token(self,webname:str):
-        """獲取相關api的tokens\n
-        支援CWB_API,osu(id,secret),TRN,apex,steam,twitch(id,secret),youtube,riot
-        """
-        dict = {
-            "CWB_API":'CWB_API',
-            'osu':'osu_api',
-            'TRN':'TRN_API',
-            'apex':'apex_status_API',
-            'steam':'steam_api',
-            'twitch':'twitch_api',
-            'youtube':'youtube_api',
-            'riot':"riot_api"
-            }
-        if webname in dict:
-            name = dict[webname]
-            return self.tokens[name]
-        else:
-            raise ValueError('無此API token')
-
-    @staticmethod
-    async def get_gamedata(user_id:str, game:str, ctx:discord.ApplicationContext=None):
-        """查詢資料庫中的玩家資訊，若輸入dc用戶則需傳入ctx\n
-        dcuser and in database -> 資料庫資料\n
-        dcuser and not in database -> None\n
-        not dcuser -> user_id(原資料輸出)
-        """
-        gdata = JsonDatabase().gdata
-        
-        if ctx:
-            dcuser = await find.user2(ctx,user_id)
-            if dcuser:
-                user_id = str(dcuser.id)
-            else:
-                return user_id
-        else:
-            user_id = str(user_id)
-
-        try:
-            data = gdata[str(user_id)][game]
-            if game in ['steam']:
-                data = data['id']
-            return data
-        except:
-            return None
-
-        
-            
-class MySQLDatabase(Database):
+from BotLib.interface.user import User
+       
+class MySQLDatabase():
     def __init__(self,**settings):
         '''MySQL 資料庫連接\n
         settings = {"host": "","port": ,"user": "","password": "","db": "","charset": ""}
@@ -159,21 +44,27 @@ class MySQLDatabase(Database):
         self.connection.commit()
 
 
-    def set_user(self,id:str,name:str=None):
-        self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f"INSERT INTO `user_data` VALUES(%s,%s);",(id,name))
-        self.connection.commit()
-
     def update_userdata(self,user_id:str,table:str,column:str,value):
         self.cursor.execute(f"USE `database`;")
         self.cursor.execute(f"INSERT INTO `{table}` SET user_id = {user_id}, {column} = {value} ON DUPLICATE KEY UPDATE user_id = {user_id}, {column} = {value};")
         self.connection.commit()
 
-    def get_user(self,user_id:str,table:str='user_data'):
+    def get_userdata(self,user_id:str,table:str='user_data'):
         self.cursor.execute(f"USE `database`;")
         self.cursor.execute(f'SELECT * FROM `{table}` WHERE user_id = %s;',(str(user_id),))
         records = self.cursor.fetchone()
         return records
+
+    def get_user(self,user_id:str):
+        self.cursor.execute(f"USE `database`;")
+        self.cursor.execute(f'SELECT * FROM `user_data`,`user_point` WHERE user_data.user_id = %s;',(str(user_id),))
+        record = self.cursor.fetchone()
+        return User(self,record)
+
+    def set_user(self,id:str,name:str=None):
+        self.cursor.execute(f"USE `database`;")
+        self.cursor.execute(f"INSERT INTO `user_data` VALUES(%s,%s);",(id,name))
+        self.connection.commit()
 
     def remove_user(self,id:str):
         db = "database"
@@ -271,3 +162,9 @@ class MySQLDatabase(Database):
         self.cursor.execute(f"USE `database`;")
         self.cursor.execute(f"INSERT INTO `game_hoyo_cookies` SET user_id = {user_id}, ltuid = {ltuid}, ltoken = {ltoken} ON DUPLICATE KEY UPDATE user_id = {user_id}, ltuid = {ltuid}, ltoken = {ltoken}")
         self.connection.commit()
+
+    def set_channel_notice(self):
+        pass
+
+    def get_channel_notice(self):
+        pass

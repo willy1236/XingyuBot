@@ -3,7 +3,7 @@ from discord.ext import commands
 
 from core.classes import Cog_Extension
 from BotLib.basic import BotEmbed,BRS
-from BotLib.database import JsonDatabase
+from BotLib.file_database import JsonDatabase
 
 from BotLib.ui_element.button import ReactRole_button
 

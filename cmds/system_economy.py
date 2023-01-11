@@ -3,18 +3,16 @@ from discord.ext import commands
 from discord.commands import SlashCommandGroup
 from core.classes import Cog_Extension
 from BotLib.funtions import find
-from BotLib.interface.user import Point,Rcoin
-from BotLib.database import JsonDatabase
+#from BotLib.interface.user import Point,Rcoin
+from BotLib.file_database import JsonDatabase
 
 
 class system_economy(Cog_Extension):
     point = SlashCommandGroup("point", "Pt點數相關指令")
 
     @point.command(description='查詢Pt點數')
-    async def check(self,
-                    ctx,
-                    user:discord.Option(discord.Member,name='成員',description='欲查詢的成員，留空以查詢自己',default=None)
-                    ):
+    async def check(self,ctx,
+                    user:discord.Option(discord.Member,name='成員',description='欲查詢的成員，留空以查詢自己',default=None)):
         user = user or ctx.author
         records = self.sqldb.get_point(str(user.id))
         pt = records['point'] or 0
@@ -23,11 +21,9 @@ class system_economy(Cog_Extension):
             await ctx.send('但是為什麼你要查詢機器人的點數呢?',delete_after=5)
 
     @point.command(description='轉移Pt點數')
-    async def give(self,
-                ctx,
-                given:discord.Option(discord.Member,name='成員',description='欲轉給的成員',required=True),
-                amount:discord.Option(int,name='點數',description='',min_value=1,required=True)
-                ):
+    async def give(self,ctx,
+                   given:discord.Option(discord.Member,name='成員',description='欲轉給的成員',required=True),
+                   amount:discord.Option(int,name='點數',description='',min_value=1,required=True)):
         giver = ctx.author
         if given == giver:
             await ctx.respond(f'轉帳失敗:無法轉帳給自己',ephemeral=True)
@@ -46,12 +42,10 @@ class system_economy(Cog_Extension):
     
     @commands.is_owner()
     @point.command(description='設定Pt點數')
-    async def set(self,
-                ctx,
-                user:discord.Option(discord.Member,name='成員',description='欲調整的成員',required=True),
-                mod:discord.Option(str,name='模式',description='add,set',required=True),
-                amount:discord.Option(int,name='點數',description='',required=True)
-                ):
+    async def set(self,ctx,
+                  user:discord.Option(discord.Member,name='成員',description='欲調整的成員',required=True),
+                  mod:discord.Option(str,name='模式',description='add,set',required=True),
+                  amount:discord.Option(int,name='點數',description='',required=True)):
         mod_list = ['add','set']
         if user and mod in mod_list:
             self.sqldb.update_point(mod,str(user.id),amount)
