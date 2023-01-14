@@ -3,7 +3,7 @@ from discord.errors import Forbidden, NotFound
 from discord.ext import commands,pages
 from discord.commands import SlashCommandGroup
 
-from BotLib.funtions import find,converter,random_color
+from bothelper.funtions import find,converter,random_color
 from core.classes import Cog_Extension
 from bothelper.interface.user import *
 from bothelper import Jsondb

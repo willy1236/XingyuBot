@@ -4,7 +4,7 @@ from discord.ext import commands
 from core.classes import Cog_Extension
 from bothelper import BotEmbed,BRS,Jsondb
 
-from BotLib.ui_element.button import ReactRole_button
+from bothelper.ui_element.button import ReactRole_button
 
 main_guild = [566533708371329024]
 class owner(Cog_Extension):

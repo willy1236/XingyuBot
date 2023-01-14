@@ -2,7 +2,7 @@ import discord, os
 from discord.ext import commands
 from threading import Thread
 
-from BotLib.ui_element.button import *
+from bothelper.ui_element.button import *
 from bothelper import Jsondb
 
 

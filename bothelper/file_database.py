@@ -1,5 +1,5 @@
 import json,discord,os
-from BotLib.funtions import find
+from bothelper.funtions import find
 
 class JsonDatabase():
     def __init__(self):

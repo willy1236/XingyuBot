@@ -1,5 +1,5 @@
 import json,os,mysql.connector,discord,datetime
-from BotLib.funtions import find
+from bothelper.funtions import find
 from pydantic import BaseModel
 from mysql.connector.errors import Error as sqlerror
 from bothelper.interface.user import User
