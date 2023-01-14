@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands
-from BotLib.basic import BRS
+from bothelper.basic import BRS
 from core.classes import Cog_Extension
 from mysql.connector.errors import Error as sqlerror
 

@@ -2,9 +2,8 @@ import discord
 from core.classes import Cog_Extension
 from discord.ext import commands
 
-from BotLib.interface.user import *
-from BotLib.basic import BotEmbed
-from BotLib.funtions import find
+from bothelper.interface.user import *
+from bothelper import BotEmbed,find
 
 class RPGbutton1(discord.ui.View):
     @discord.ui.button(label="按我進行冒險",style=discord.ButtonStyle.green)

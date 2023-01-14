@@ -4,23 +4,21 @@ from bs4 import BeautifulSoup
 from discord.commands import SlashCommandGroup
 
 from core.classes import Cog_Extension
-from BotLib.funtions import find
-from BotLib.file_database import JsonDatabase
-from BotLib.interface.game import *
-from BotLib.basic import BotEmbed
+from bothelper import find,BotEmbed,Jsondb
+from bothelper.interface.game import *
 
-def player_search(url):
-    response = requests.get(url)
-    soup = BeautifulSoup(response.text, "html.parser")
-    results = soup.find_all("h1",class_="row")
+# def player_search(url):
+#     response = requests.get(url)
+#     soup = BeautifulSoup(response.text, "html.parser")
+#     results = soup.find_all("h1",class_="row")
 
-    for result in results:
-        if result.div.string == None:
-            result2 = str(result.div)[166:]
-            lvl = ''.join([x for x in result2 if x.isdigit()])
-            return lvl
+#     for result in results:
+#         if result.div.string == None:
+#             result2 = str(result.div)[166:]
+#             lvl = ''.join([x for x in result2 if x.isdigit()])
+#             return lvl
 
-db = JsonDatabase()
+db = Jsondb
 jdict = db.jdict
 
 set_option = []
@@ -125,7 +123,7 @@ class system_game(Cog_Extension):
                 ):
         #資料庫調用
         userid = userid or ctx.author.id
-        userid = await JsonDatabase.get_gamedata(userid,'osu',ctx)
+        userid = await Jsondb.get_gamedata(userid,'osu',ctx)
         
         if not userid:
             await ctx.respond('查詢失敗:用戶尚未註冊資料庫',ephemeral=True)
@@ -157,7 +155,7 @@ class system_game(Cog_Extension):
                 ):
         #資料庫調用
         userid = userid or ctx.author.id
-        userid = await JsonDatabase.get_gamedata(userid,'apex',ctx)
+        userid = await Jsondb.get_gamedata(userid,'apex',ctx)
         
         if not userid:
             await ctx.respond(content='查詢失敗:用戶尚未註冊資料庫',delete_after=5)
@@ -195,7 +193,7 @@ class system_game(Cog_Extension):
                 ):
         #資料庫調用
         userid = userid or ctx.author.id
-        userid = await JsonDatabase.get_gamedata(userid,'steam',ctx)
+        userid = await Jsondb.get_gamedata(userid,'steam',ctx)
         
         if not userid:
             await ctx.respond(content='查詢失敗:用戶尚未註冊資料庫',ephemeral=True)
@@ -215,7 +213,7 @@ class system_game(Cog_Extension):
                 ):
         #資料庫調用
         userid = userid or ctx.author.id
-        userid = await JsonDatabase.get_gamedata(userid,'steam',ctx)
+        userid = await Jsondb.get_gamedata(userid,'steam',ctx)
         
         if not userid:
             await ctx.respond(content='查詢失敗:用戶尚未註冊資料庫',ephemeral=True)
@@ -249,7 +247,7 @@ class system_game(Cog_Extension):
                   ltuid:discord.Option(str,name='ltuid',required=True),
                   ltoken:discord.Option(str,name='ltoken',required=True)):
         await ctx.message.delete()
-        # db = JsonDatabase()
+        # db = bothelper.Jsondb
         # jhoyo = db.jhoyo
         # dict = {
         #     'ltuid': ltuid,
@@ -263,7 +261,7 @@ class system_game(Cog_Extension):
     @hoyo.command(description='取得每月原石來源統計')
     @commands.cooldown(rate=1,per=1)
     async def diary(self,ctx):
-        # db = JsonDatabase()
+        # db = bothelper.Jsondb
         # jhoyo = db.jhoyo
         # cookies = jhoyo.get(str(ctx.author.id))
         cookies = self.sqldb.get_userdata(str(ctx.author.id),'game_hoyo_cookies')
@@ -291,7 +289,7 @@ class system_game(Cog_Extension):
     @commands.cooldown(rate=1,per=1)
     async def find(self,ctx,
                    hoyolab_name:discord.Option(str,name='hoyolab名稱',description='要查詢的用戶',default=None)):
-        # db = JsonDatabase()
+        # db = bothelper.Jsondb
         # jhoyo = db.jhoyo
         # cookies = jhoyo.get(str(ctx.author.id),None)
         cookies = self.sqldb.get_userdata(str(ctx.author.id),'game_hoyo_cookies')

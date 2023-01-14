@@ -2,15 +2,15 @@ import discord, os
 from discord.ext import commands
 from threading import Thread
 
-from BotLib.file_database import JsonDatabase
 from BotLib.ui_element.button import *
+from bothelper import Jsondb
 
-db = JsonDatabase()
-jdata = db.jdata
+
+jdata = Jsondb.jdata
 
 #Bot1:dc小幫手, Bep:Bep, Bot2:RO
 bot_code = 'Bep'
-token = db.tokens.get(bot_code)
+token = Jsondb.tokens.get(bot_code)
 
 start_website = jdata.get('start_website')
 auto_update = jdata.get('auto_update')

@@ -1,15 +1,20 @@
 import requests,datetime,discord
-from BotLib.database import Database
+from bothelper import JsonDatabase
+from bothelper.model.community import *
 
-class Twitch:
+class CommunityInterface():
     def __init__(self):
-        self.__db = Database()
-        self.__headers = self.__get_twitch_token()
+        self.db = JsonDatabase()
 
-    def __get_twitch_token(self):
+class Twitch(CommunityInterface):
+    def __init__(self):
+        super().__init__()
+        self.__headers = self.__get_headers()
+
+    def __get_headers(self):
         APIURL = "https://id.twitch.tv/oauth2/token"
         #headers = {"Content-Type": "application/x-www-form-urlencoded"}
-        tokens = self.__db.get_token('twitch')
+        tokens = self.db.get_token('twitch')
         params = {
             'client_id':tokens[0],
             'client_secret':tokens[1],
@@ -23,7 +28,7 @@ class Twitch:
         }
         return headers
 
-    def get_live(self,users:list):
+    def get_lives(self,users:list):
         """取得twitch用戶的直播資訊（若無直播則為空）\n
         字典內格式 -> username: embed | None
         """
@@ -39,37 +44,20 @@ class Twitch:
             dict[user] = None
 
         for data in apidata['data']:
-            user = data['user_login']
-            time = datetime.datetime.strptime(data['started_at'],'%Y-%m-%dT%H:%M:%SZ')+datetime.timedelta(hours=8)
-            time = time.strftime('%Y/%m/%d %H:%M:%S')
-            
-            embed = discord.Embed(
-                title=data['title'],
-                url=f"https://www.twitch.tv/{data['user_login']}",
-                description=f"{data['game_name']}",
-                color=0x6441a5,
-                timestamp = datetime.datetime.now()
-                )
-            embed.set_author(name=f"{data['user_name']} 開台啦！")
-            thumbnail = data['thumbnail_url']
-            thumbnail = thumbnail.replace('{width}','960')
-            thumbnail = thumbnail.replace('{height}','540')
-            embed.set_image(url=thumbnail)
-            embed.set_footer(text=f"開始於{time}")
-            dict[user] = embed
+            dict[user] = TwitchStream(data).display
         
         return dict
 
-class Twitter:
+class TwitterInterface:
     pass
 
-class Youtube:
+class YoutubeInterface(CommunityInterface):
     def __init__(self):
-        self.__db = Database()
-        self.__token = self.__db.get_token('youtube')
+        super().__init__()
+        self.__token = self.db.get_token('youtube')
         self.__headers = {
-        'Authorization': f'Bearer {self.__token}',
-        'Accept': 'application/json'
+            'Authorization': f'Bearer {self.__token}',
+            'Accept': 'application/json'
         }
 
     def get_channel_id(self,channel_name:str):

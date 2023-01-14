@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands,pages
 from core.classes import Cog_Extension
-from BotLib.basic import BotEmbed
+from bothelper import BotEmbed
 from discord.commands import SlashCommandGroup
 
 option_info = []

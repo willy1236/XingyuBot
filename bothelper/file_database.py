@@ -1,7 +1,7 @@
 import json,discord,os
 from BotLib.funtions import find
 
-class JsonDatabase:
+class JsonDatabase():
     def __init__(self):
         """
         CWB = 中央氣象局\n
@@ -67,7 +67,7 @@ class JsonDatabase:
 
     def get_token(self,webname:str):
         """獲取相關api的tokens\n
-        支援CWB_API,osu(id,secret),TRN,apex,steam,twitch(id,secret),youtube,riot
+        支援CWB_API,osu(id,secret),TRN,apex,steam,twitch(id,secret),youtube,riot,openai
         """
         dict = {
             "CWB_API":'CWB_API',
@@ -77,7 +77,8 @@ class JsonDatabase:
             'steam':'steam_api',
             'twitch':'twitch_api',
             'youtube':'youtube_api',
-            'riot':"riot_api"
+            'riot':"riot_api",
+            'openai':'openai_api'
             }
         if webname in dict:
             name = dict[webname]

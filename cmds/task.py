@@ -3,10 +3,10 @@ from datetime import datetime, timezone, timedelta,time
 from discord.ext import commands,tasks
 
 from core.classes import Cog_Extension
-from BotLib.file_database import JsonDatabase
-from BotLib.interface.weather import *
-from BotLib.interface.game import ApexInterface
-from BotLib.interface.community import Twitch
+import bothelper
+from bothelper.interface.weather import *
+from bothelper.interface.game import ApexInterface
+from bothelper.interface.community import Twitch
 
 class task(Cog_Extension):
     def __init__(self,*args,**kwargs):
@@ -86,7 +86,7 @@ class task(Cog_Extension):
 
     @tasks.loop(time=__gettime_0400())
     async def sign_reset(self):
-        db = JsonDatabase()
+        db = bothelper.Jsondb
         task_report_channel = self.bot.get_channel(db.jdata['task_report'])
         #db.write('jdsign',[])
         self.sqldb.truncate_table('user_sign')
@@ -101,7 +101,7 @@ class task(Cog_Extension):
 
     @tasks.loop(minutes=1)
     async def earthquake_check(self):
-        db = JsonDatabase()
+        db = bothelper.Jsondb
         cache = db.cache
         timefrom = cache['timefrom']
         data = EarthquakeReport.get_report_auto(timefrom)
@@ -127,7 +127,7 @@ class task(Cog_Extension):
         
     @tasks.loop(time=__gettime_1430())
     async def covid_update(self):
-        cdata = JsonDatabase().cdata
+        cdata = bothelper.Jsondb.cdata
         CovidReport = Covid19Report.get_covid19()
         if CovidReport:
             for i in cdata["covid_update"]:
@@ -148,7 +148,7 @@ class task(Cog_Extension):
 
     @tasks.loop(time=__gettime_0105())
     async def apex_crafting_update(self):
-        cdata = JsonDatabase().cdata
+        cdata = bothelper.Jsondb.cdata
         crafting = ApexInterface().get_crafting()
         if crafting:
             for i in cdata["apex_crafting"]:
@@ -175,7 +175,7 @@ class task(Cog_Extension):
     
     @tasks.loop(time=__gettime_15min())
     async def apex_map_update(self):
-        cdata = JsonDatabase().cdata
+        cdata = bothelper.Jsondb.cdata
         map = ApexInterface().get_map_rotation()
         if map:
             for i in cdata["apex_map"]:
@@ -202,7 +202,7 @@ class task(Cog_Extension):
     
     @tasks.loop(time=__gettime_3hr())
     async def forecast_update(self):
-        cdata = JsonDatabase().cdata
+        cdata = bothelper.Jsondb.cdata
         forecast = Forecast.get_report()
         if forecast:
             for i in cdata["forecast"]:
@@ -228,7 +228,7 @@ class task(Cog_Extension):
     
     @tasks.loop(minutes=2)
     async def twitch(self):
-        db = JsonDatabase()
+        db = bothelper.Jsondb
         cache = db.cache
         jtwitch = db.jtwitch
         users = jtwitch['users']

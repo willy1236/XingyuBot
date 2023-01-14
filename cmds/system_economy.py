@@ -2,9 +2,8 @@ import discord,asyncio,random
 from discord.ext import commands
 from discord.commands import SlashCommandGroup
 from core.classes import Cog_Extension
-from BotLib.funtions import find
+from bothelper import find
 #from BotLib.interface.user import Point,Rcoin
-from BotLib.file_database import JsonDatabase
 
 
 class system_economy(Cog_Extension):
@@ -55,7 +54,7 @@ class system_economy(Cog_Extension):
 
     @commands.slash_command(description='簽到')
     async def sign(self,ctx):
-        # db = JsonDatabase()
+        # db = bothelper.Jsondb
         # jdsign = db.jdsign
         # #jwsign = Database().jwsign
         # jdata = db.jdata

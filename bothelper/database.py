@@ -2,7 +2,7 @@ import json,os,mysql.connector,discord,datetime
 from BotLib.funtions import find
 from pydantic import BaseModel
 from mysql.connector.errors import Error as sqlerror
-from BotLib.interface.user import User
+from bothelper.interface.user import User
        
 class MySQLDatabase():
     def __init__(self,**settings):
@@ -12,6 +12,7 @@ class MySQLDatabase():
         #建立連線
         self.connection = mysql.connector.connect(**settings)
         self.cursor = self.connection.cursor(dictionary=True)
+        self.connection.get_server_info()
 
     def add_data(self,table:str,*value,db="database"):
         self.cursor.execute(f"USE `{db}`;")
@@ -68,8 +69,7 @@ class MySQLDatabase():
         self.connection.commit()
 
     def remove_user(self,id:str):
-        db = "database"
-        self.cursor.execute(f"USE `{db}`;")
+        self.cursor.execute(f"USE `database`;")
         self.cursor.execute("DELETE FROM `user_data` WHERE `id` = %s;",(str(id),))
         self.connection.commit()
     

@@ -2,8 +2,7 @@ import discord,os
 from discord.ext import commands
 
 from core.classes import Cog_Extension
-from BotLib.basic import BotEmbed,BRS
-from BotLib.file_database import JsonDatabase
+from bothelper import BotEmbed,BRS,Jsondb
 
 from BotLib.ui_element.button import ReactRole_button
 
@@ -13,7 +12,7 @@ class owner(Cog_Extension):
     @commands.slash_command(description='更換bot狀態',guild_ids=main_guild)
     @commands.is_owner()
     async def statue(self,ctx,statue):
-        db = JsonDatabase()
+        db = Jsondb
         jdata = db.jdata
         jdata['activity'] = statue
         await self.bot.change_presence(activity=discord.Game(name=jdata.get("activity","/help")),status=discord.Status.online)
@@ -40,7 +39,7 @@ class owner(Cog_Extension):
     @commands.is_owner()
     async def anno(self,ctx,msg):
         await ctx.defer()
-        cdata = JsonDatabase().cdata
+        cdata = Jsondb.cdata
         send_success = 0
 
         embed = BotEmbed.all_anno(msg)
@@ -59,7 +58,7 @@ class owner(Cog_Extension):
     @commands.slash_command(description='機器人更新通知',guild_ids=main_guild)
     @commands.is_owner()
     async def bupdate(self,ctx,msg):
-        cdata = JsonDatabase().cdata
+        cdata = Jsondb.cdata
         send_success = 0
 
         embed= BotEmbed.bot_update(msg)
@@ -158,7 +157,7 @@ class owner(Cog_Extension):
     @commands.is_owner()
     async def reset(self,ctx,arg=None):
         if arg == 'sign':
-            db = JsonDatabase()
+            db = Jsondb
             task_report_channel = self.bot.get_channel(db.jdata['task_report'])
             self.sqldb.truncate_table('user_sign')
 
@@ -190,7 +189,7 @@ class owner(Cog_Extension):
     @commands.slash_command(guild_ids=main_guild)
     @commands.is_owner()
     async def jset(ctx,option,value):
-        db = JsonDatabase()
+        db = Jsondb
         jdata = db.jdata
         jdata[option] = value
         db.write('jdata',jdata)

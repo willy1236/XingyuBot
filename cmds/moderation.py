@@ -1,15 +1,15 @@
 import discord
 from discord.ext import commands
 from core.classes import Cog_Extension
-from BotLib.file_database import JsonDatabase
+from bothelper import Jsondb
 
-jdict = JsonDatabase().jdict
+jdict = Jsondb.jdict
 option = []
 for name,value in jdict['channel_set_option'].items():
     option.append(discord.OptionChoice(name=name,value=value))
 
 class moderation(Cog_Extension):
-    cdata = JsonDatabase().cdata
+    cdata = Jsondb.cdata
     
     @commands.slash_command(description='清理訊息')
     @commands.has_permissions(manage_messages=True)
@@ -30,12 +30,12 @@ class moderation(Cog_Extension):
         
         if channel:
             self.cdata[set_type][guild] = channel.id
-            JsonDatabase().write('cdata',self.cdata)
+            Jsondb.write('cdata',self.cdata)
             await ctx.respond(f'設定完成，已將{set_type}頻道設為{channel.mention}')
         else:
             if guild in self.cdata[set_type]:
                 del self.cdata[set_type][guild]
-                JsonDatabase().write('cdata',self.cdata)
+                Jsondb.write('cdata',self.cdata)
                 await ctx.respond(f'設定完成，已移除{set_type}頻道')
             else:
                 await ctx.respond('此伺服器還沒有設定頻道喔')

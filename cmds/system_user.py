@@ -3,8 +3,8 @@ from discord.ext import commands
 from core.classes import Cog_Extension
 from discord.commands import SlashCommandGroup
 
-from BotLib.interface.user import *
-from BotLib.basic import BotEmbed
+from bothelper.interface.user import *
+from bothelper import BotEmbed
 
 class system_user(Cog_Extension):
     

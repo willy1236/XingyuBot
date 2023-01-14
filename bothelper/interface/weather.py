@@ -1,8 +1,7 @@
 import requests,datetime,discord
 from bs4 import BeautifulSoup
 
-from BotLib.basic import BotEmbed
-from BotLib.file_database import JsonDatabase
+from bothelper import BotEmbed,JsonDatabase
 
 class WeatherInterface():
     pass

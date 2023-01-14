@@ -5,15 +5,14 @@ from discord.commands import SlashCommandGroup
 
 from BotLib.funtions import find,converter,random_color
 from core.classes import Cog_Extension
-from BotLib.interface.user import *
-from BotLib.file_database import JsonDatabase
-from BotLib.basic import BotEmbed,BRS
+from bothelper.interface.user import *
+from bothelper import Jsondb
 
 from mysql.connector.errors import Error as sqlerror
 
 class command(Cog_Extension):
-    picdata = JsonDatabase().picdata
-    #rsdata = JsonDatabase().rsdata
+    picdata = Jsondb.picdata
+    #rsdata = bothelper.Jsondb.rsdata
 
     twitch = SlashCommandGroup("twitch", "Twitch相關指令")
     bet = SlashCommandGroup("bet", "賭盤相關指令")
@@ -155,7 +154,7 @@ class command(Cog_Extension):
 
         
         await ctx.defer()
-        jdata = JsonDatabase().jdata
+        jdata = bothelper.Jsondb.jdata
         guild = self.bot.get_guild(jdata['guild']['001'])
         add_role = guild.get_role(877934319249797120)
         if user == 'all':
@@ -235,7 +234,7 @@ class command(Cog_Extension):
         six_list = []
         six_list_100 = []
         guaranteed = 100
-        #db = JsonDatabase()
+        #db = bothelper.Jsondb
         #jloot = db.jloot
         data = self.sqldb.get_userdata(user_id,'user_lottery')
         if data:
@@ -454,7 +453,7 @@ class command(Cog_Extension):
                 channel:discord.Option(discord.TextChannel,required=True,name='頻道',description='通知發送頻道'),
                 role:discord.Option(discord.Role,required=False,name='身分組',description='發送通知時tag的身分組')
                 ):
-        db = JsonDatabase()
+        db = bothelper.Jsondb
         jtwitch = db.jtwitch
 
         if twitch_user not in jtwitch['users']:
@@ -473,7 +472,7 @@ class command(Cog_Extension):
 
     @twitch.command(description='移除twitch開台通知')
     async def remove(self,ctx,twitch_user:discord.Option(str,required=True,name='twitch用戶')):
-        db = JsonDatabase()
+        db = bothelper.Jsondb
         jtwitch = db.jtwitch
         if twitch_user in jtwitch['users'] and str(ctx.guild.id) in jtwitch['channel'][twitch_user]:
             jtwitch['users'].remove(twitch_user)
@@ -491,7 +490,7 @@ class command(Cog_Extension):
 
     @twitch.command(description='確認twitch開台通知')
     async def notice(self,ctx,twitch_user:discord.Option(str,required=True,name='twitch用戶')):
-        db = JsonDatabase()
+        db = bothelper.Jsondb
         jtwitch = db.jtwitch
         if twitch_user in jtwitch['users'] and str(ctx.guild.id) in jtwitch['channel'][twitch_user]:
             channel = self.bot.get_channel(int(jtwitch['channel'][twitch_user][str(ctx.guild.id)]))

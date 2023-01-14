@@ -1,7 +1,22 @@
-import requests,genshin
-from datetime import datetime, timezone, timedelta
-from BotLib.database import Database
-from BotLib.basic import BotEmbed
+from datetime import datetime,timedelta
+from bothelper.basic import BotEmbed
+from bothelper.file_database import JsonDatabase
+
+jdict = JsonDatabase().jdict
+
+class LOLPlayer():
+    def __init__(self,data):
+        self.name = data['name']
+        self.accountid = data['accountId']
+        self.summonerLevel = data['summonerLevel']
+
+    def desplay(self):
+        embed = BotEmbed.general("LOL玩家資訊",url=self.url)
+        embed.add_field(name="玩家名稱", value=self.name, inline=False)
+        #embed.add_field(name="帳號ID", value=data['accountId'], inline=False)
+        embed.add_field(name="召喚師等級", value=self.summonerLevel, inline=False)
+        embed.set_thumbnail(url='https://i.imgur.com/B0TMreW.png')
+        return embed
 
 class OsuPlayer():
     def __init__(self,data):
@@ -79,14 +94,15 @@ class OsuBeatmap():
 
 class ApexPlayer():
     def __init__(self,data):
+        #basic information
         self.username = data['global']['name']
         self.id = data['global']['uid']
         self.platform = data['global']['platform']
         self.level = data['global']['level']
         self.avatar = data['global']['avatar']
-        
+        #bans
         self.bans = data['global']['bans']
-
+        #rank
         self.rank = data['global']['rank']['rankName']
         if data['global']['rank']['rankName'] != "Unranked":
             self.rank += " "+str(data['global']['rank']['rankDiv'])
@@ -95,9 +111,9 @@ class ApexPlayer():
         if data['global']['arena']['rankName'] != "Unranked":
             self.arena_rank += " "+str(data['global']['arena']['rankDiv'])
         self.arena_score = data['global']['arena']['rankScore']
-        
+        #state
         self.now_state =  data['realtime']['currentStateAsText']
-        
+        #selected
         self.legends_selected_name = data['legends']['selected']['LegendName']
         self.legends_selected_tacker = data['legends']['selected']['data']
         self.legends_selected_banner = data['legends']['selected']['ImgAssets']['banner']
@@ -150,32 +166,7 @@ class ApexCrafting():
     
     def desplay(self):
         embed = BotEmbed.simple("Apex合成器內容")
-        tl = {
-            "extended_light_mag":"紫色輕型彈匣",
-            "backpack":"紫色背包",
-            "helmet":"紫色頭盔",
-            "optic_cq_hcog_bruiser":"2倍鏡",
-            "optic_hcog_ranger":"3倍鏡",
-            "shatter_caps":"粉碎蓋",
-            "extended_energy_mag":"紫色能量彈匣",
-            "optic_digital_threat":"1x數位威脅",
-            "knockdown_shield":"紫色擊倒護盾",
-            "mobile_respawn_beacon":"行動重生台",
-            "shotgun_bolt":"紫色霰彈槍栓",
-            "hammerpoint_rounds":"椎點彈藥",
-            "extended_heavy_mag":"紫色重型彈匣",
-            "optic_hcog_bruiser":"optic_hcog_bruiser",
-            "boosted_loader":"動能供應器",
-            "optic_variable_aog":"2-4倍鏡",
-            "standard_stock":"紫色槍托",
-            "turbocharger":"渦輪增壓器",
-            "barrel_stabilizer":"barrel_stabilizer",
-            'laser_sight':'雷射瞄準鏡',
-            'optic_variable_sniper':'4~8x狙擊倍鏡',
-            'extended_sniper_mag':'紫色狙擊彈匣',
-            'double_tap':'雙擊板機',
-            'sniper_stock':'狙擊槍托'
-        }
+        tl = jdict['ApexCraftingItem']
         item_name = []
         item_name.append(tl.get(self.item1_name,self.item1_name))
         item_name.append(tl.get(self.item2_name,self.item2_name))
@@ -203,12 +194,7 @@ class ApexMapRotation():
         self.nextend = datetime.strptime(data['next']['readableDate_end'],"%Y-%m-%d %H:%M:%S")+timedelta(hours=8)
 
     def desplay(self):
-        tl = {
-            "Storm Point":"風暴點",
-            "Olympus":"奧林匹斯",
-            "World's Edge":"世界邊緣",
-            "Kings Canyon":"王者峽谷"
-        }
+        tl = jdict['ApexMap']
         embed = BotEmbed.simple("Apex地圖輪替")
         embed.add_field(name="目前地圖",value=tl.get(self.nowmap,self.nowmap))
         embed.add_field(name="開始時間",value=self.nowstart)
@@ -226,11 +212,26 @@ class ApexStatus():
     def __init__(self,data):
         print(data)
 
-class DBDPlayer():
+class SteamUser():
     def __init__(self,data):
+        self.id = data['steamid']
+        self.name = data['personaname']
+        self.profileurl = data['profileurl']
+        self.avatar = data['avatarfull']
+    
+    def desplay(self):
+        embed = BotEmbed.simple("Stean用戶資訊")
+        embed.add_field(name="用戶名稱",value=self.name)
+        embed.add_field(name="用戶id",value=self.id)
+        embed.add_field(name="個人檔案連結",value='[點我]({0})'.format(self.profileurl))
+        embed.set_thumbnail(url=self.avatar)
+        return embed
+
+class DBDPlayer(SteamUser):
+    def __init__(self,data,name=None):
         #基本資料
         self.steamid = data["steamid"]
-        self.name = SteamData().get_user(self.steamid).name
+        self.name = name
         self.bloodpoints = data["bloodpoints"]
         self.survivor_rank = data["survivor_rank"]
         self.killer_rank = data["killer_rank"]
@@ -282,132 +283,3 @@ class DBDPlayer():
         embed.add_field(name="陷阱捕捉",value=self.beartrapcatches)
         embed.add_field(name="汙泥陷阱觸發",value=self.phantasmstriggered)
         return embed
-        
-class SteamUser():
-    def __init__(self,data):
-        self.id = data['steamid']
-        self.name = data['personaname']
-        self.profileurl = data['profileurl']
-        self.avatar = data['avatarfull']
-    
-    def desplay(self):
-        embed = BotEmbed.simple("Stean用戶資訊")
-        embed.add_field(name="用戶名稱",value=self.name)
-        embed.add_field(name="用戶id",value=self.id)
-        embed.add_field(name="個人檔案連結",value='[點我]({0})'.format(self.profileurl))
-        embed.set_thumbnail(url=self.avatar)
-        return embed
-
-
-
-
-
-class OsuData():
-    def __init__(self):
-        self.__headers = self.get_osuheaders()
-        self.__API_URL = 'https://osu.ppy.sh/api/v2'
-        self.__TOKEN_URL = 'https://osu.ppy.sh/oauth/token'
-        self.__db = Database()
-
-    def get_osuheaders(self):
-        data = {
-            'client_id': self.__db.osu_API_id,
-            'client_secret': self.__db.osu_API_secret,
-            'grant_type': 'client_credentials',
-            'scope': 'public'
-        }
-        response = requests.post(self.__TOKEN_URL, data=data)
-        token = response.json().get('access_token')
-        headers = {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'Authorization': f'Bearer {token}'
-        }
-        return headers
-
-    def get_player(self,user):
-        response = requests.get(f'{self.__API_URL}/users/{user}', headers=self.__headers).json()
-        if 'error' not in response:
-            return OsuPlayer(response)
-        else:
-            return None
-
-    def get_beatmap(self,map):
-        response = requests.get(f'{self.__API_URL}/beatmaps/{map}', headers=self.__headers).json()
-        if 'error' not in response:
-            return OsuBeatmap(response)
-        else:
-            return None
-
-
-class ApexData():
-    def __init__(self):
-        pass
-
-    def get_player(self,user,platform='PC'):
-        try:
-            params={
-                'auth':Database().apex_status_API,
-                'player':user,
-                'platform':platform
-            }
-            response = requests.get(f'https://api.mozambiquehe.re/bridge',params=params).json()
-            return ApexPlayer(response)
-        except:
-            return None
-    
-    def get_crafting():
-        params={'auth':Database().apex_status_API}
-        response = requests.get(f'https://api.mozambiquehe.re/crafting',params=params).json()
-        if "Error" in response or not response:
-            return None
-        else:
-            return ApexCrafting(response)
-    
-    def get_map_rotation():
-        params={'auth':Database().apex_status_API}
-        response = requests.get(f'https://api.mozambiquehe.re/maprotation',params=params).json()
-        if "Error" in response or not response:
-            return None
-        else:    
-            return ApexMapRotation(response)
-
-    def get_status():
-        params={'auth':Database().apex_status_API}
-        response = requests.get(f'https://api.mozambiquehe.re/servers',params=params).json()
-        return ApexStatus(response)
-
-class DBDData():
-    def __init__(self):
-        pass
-
-    def get_player(self,steamid):
-        try:
-            params = {'steamid':steamid}
-            response = requests.get(f'https://dbd.tricky.lol/api/playerstats', params=params).json()
-            return DBDPlayer(response)
-        except:
-            return None
-
-class SteamData():
-    def __init__(self):
-        pass
-
-    def get_user(self,user):
-        params = {
-            'key':Database().steam_api,
-            'steamids':user
-        }
-        response = requests.get(f'https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/',params=params)
-        if response.status_code == 200 and response.json().get('response').get('players'):
-            APIdata = response.json().get('response').get('players')[0]
-            return SteamUser(APIdata)
-        else:
-            return None
-
-class hoyodata():
-    def __init__(self,dcid):
-        cookies = {}
-        self.__client = genshin.Client(cookies)
-
-    

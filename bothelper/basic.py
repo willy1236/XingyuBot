@@ -1,5 +1,5 @@
 import discord
-from BotLib.file_database import JsonDatabase
+from .file_database import JsonDatabase
 
 class BotEmbed:
     @staticmethod

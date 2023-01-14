@@ -1,6 +1,6 @@
 import requests,genshin
-from BotLib.file_database import JsonDatabase
-from BotLib.model.game import *
+from bothelper import JsonDatabase
+from bothelper.model.game import *
 
 class GameInterface():
     def __init__(self):
@@ -18,6 +18,7 @@ class RiotInterface(GameInterface):
         if r.status_code == 200:
             return LOLPlayer(r.json())
         else:
+            print('lol_player:',r.text)
             return None
             
     

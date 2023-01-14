@@ -1,14 +1,13 @@
 from discord.ext import commands
-from BotLib.database import MySQLDatabase
-from BotLib.file_database import JsonDatabase
+import bothelper
 
-jdata = JsonDatabase().jdata
+jdata = bothelper.Jsondb.jdata
 SQL_connection = jdata.get('SQL_connection')
 
 if SQL_connection:
     try:    
         SQLsettings = jdata["SQLsettings"]
-        sqldb = MySQLDatabase(**SQLsettings)
+        sqldb = bothelper.MySQLDatabase(**SQLsettings)
         print('>> SQL connect: on <<')
     except:
         print('>> SQL connect: offline <<')
