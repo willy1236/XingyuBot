@@ -8,4 +8,6 @@ from .basic import *
 
 
 Jsondb = JsonDatabase()
-#sqldb = MySQLDatabase()
+settings = Jsondb.get('SQL_connection')
+if settings:
+    sqldb = MySQLDatabase(**settings)

@@ -19,26 +19,23 @@ class moderation(Cog_Extension):
 
     @commands.slash_command(description='設定通知頻道')
     @commands.has_permissions(manage_channels=True)
-    async def set(self,
-                ctx,
-                set_type:discord.Option(str,name='通知類型',description='要接收的通知類型',required=True,choices=option),
-                channel:discord.Option(discord.abc.GuildChannel,name='頻道',description='要接收通知的頻道',default=None)
-                ):
-        guild = str(ctx.guild.id)
-        if set_type not in self.cdata:
-            self.cdata[set_type]={}
+    async def set(self,ctx:discord.ApplicationContext,
+                  set_type:discord.Option(str,name='通知類型',description='要接收的通知類型',required=True,choices=option),
+                  channel:discord.Option(discord.abc.GuildChannel,name='頻道',description='要接收通知的頻道',default=None),
+                  role:discord.Option(discord.Role,required=False,name='身分組',description='發送通知時tag的身分組',default=None)):
+        guildid = ctx.guild.id
         
         if channel:
-            self.cdata[set_type][guild] = channel.id
-            Jsondb.write('cdata',self.cdata)
+            if role:
+                roleid = role.id
+            else:
+                roleid = None
+            self.sqldb.set_notice_channel(guildid,set_type,channel.id,roleid)
             await ctx.respond(f'設定完成，已將{set_type}頻道設為{channel.mention}')
         else:
-            if guild in self.cdata[set_type]:
-                del self.cdata[set_type][guild]
-                Jsondb.write('cdata',self.cdata)
-                await ctx.respond(f'設定完成，已移除{set_type}頻道')
-            else:
-                await ctx.respond('此伺服器還沒有設定頻道喔')
+            self.sqldb.remove_notice_channel(guildid,set_type)
+            await ctx.respond(f'設定完成，已移除{set_type}頻道')
+            #await ctx.respond('此伺服器還沒有設定頻道喔')
 
 def setup(bot):
     bot.add_cog(moderation(bot))

@@ -25,10 +25,10 @@ class PersistentView(discord.ui.View):
 
 class debug(Cog_Extension):
     pass
-    # @commands.slash_command(description='測試指令')
-    # async def test(self,ctx,id):
-    #     user = self.sqldb.get_user(id).get_point()
-    #     await ctx.respond(f'done {user}')
+    @commands.slash_command(description='測試指令')
+    async def test(self,ctx):
+        user = self.sqldb.get_notice_community_guild('twitch','123')
+        await ctx.respond(f'done {user}')
     
     # @commands.command()
     # @commands.is_owner()

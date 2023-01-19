@@ -33,10 +33,6 @@ class MySQLDatabase():
         records = self.cursor.fetchall()
         for r in records:
              print(r)
-
-    def truncate_table(self,table:str):
-        self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f"TRUNCATE TABLE `{table}`;")
     
     def remove_data(self,table:str,*value):
         db = "database"
@@ -44,6 +40,11 @@ class MySQLDatabase():
         #self.cursor.execute(f'DELETE FROM `{table}` WHERE `id` = %s;',("3",))
         self.cursor.execute(f'DELETE FROM `{table}` WHERE `id` = %s;',value)
         self.connection.commit()
+
+    def truncate_table(self,table:str):
+        self.cursor.execute(f"USE `database`;")
+        self.cursor.execute(f"TRUNCATE TABLE `{table}`;")
+
 
 
     def update_userdata(self,user_id:str,table:str,column:str,value):
@@ -164,8 +165,49 @@ class MySQLDatabase():
         self.cursor.execute(f"INSERT INTO `game_hoyo_cookies` SET user_id = {user_id}, ltuid = {ltuid}, ltoken = {ltoken} ON DUPLICATE KEY UPDATE user_id = {user_id}, ltuid = {ltuid}, ltoken = {ltoken}")
         self.connection.commit()
 
-    def set_channel_notice(self):
-        pass
+    def set_notice_channel(self,guild_id:int,notice_type:str,channel_id:int,role_id:int=None):    
+        self.cursor.execute(f"USE `database`;")
+        self.cursor.execute(f"INSERT INTO `notice_channel` VALUES(%s,%s,%s,%s) ON DUPLICATE KEY UPDATE `guild_id` = %s, `notice_type` = %s, `channel_id` = %s, `role_id` = %s",(guild_id,notice_type,channel_id,role_id,guild_id,notice_type,channel_id,role_id))
+        self.connection.commit()
 
-    def get_channel_notice(self):
-        pass
+    def remove_notice_channel(self,guild_id:int,notice_type:str):
+        self.cursor.execute(f"USE `database`;")
+        self.cursor.execute(f'DELETE FROM `notice_channel` WHERE `guild_id` = %s AND `notice_type` = %s;',(guild_id,notice_type))
+        self.connection.commit()
+
+    def get_notice_channel(self,notice_type:str):
+        self.cursor.execute(f"USE `database`;")
+        self.cursor.execute(f'SELECT * FROM `notice_channel` WHERE notice_type = %s;',(notice_type,))
+        records = self.cursor.fetchall()
+        return records
+
+    def set_notice_community(self,notice_type:str,notice_name:str,guild_id:int,channel_id:int,role_id:int=None):
+        self.cursor.execute(f"USE `database`;")
+        self.cursor.execute(f"INSERT INTO `notice_community` VALUES(%s,%s,%s,%s,%s) ON DUPLICATE KEY UPDATE `notice_type` = %s, `notice_name` = %s, `guild_id` = %s, `channel_id` = %s, `role_id` = %s",(notice_type,notice_name,guild_id,channel_id,role_id,notice_type,notice_name,guild_id,channel_id,role_id))
+        self.connection.commit()
+
+    def remove_notice_community(self,notice_type:str,notice_name:str,guild_id:int):
+        self.cursor.execute(f"USE `database`;")
+        self.cursor.execute(f'DELETE FROM `notice_community` WHERE `notice_type` = %s AND `notice_name` = %s AND `guild_id` = %s;',(notice_type,notice_name,guild_id))
+        self.connection.commit()
+
+    def get_notice_community(self,notice_type:str):
+        self.cursor.execute(f"USE `database`;")
+        self.cursor.execute(f'SELECT * FROM `notice_community` WHERE `notice_type` = %s;',(notice_type,))
+        records = self.cursor.fetchall()
+        return records
+    
+    def get_notice_community_guild(self,notice_type:str,notice_name:str):
+        self.cursor.execute(f"USE `database`;")
+        self.cursor.execute(f'SELECT `guild_id`,`channel_id`,`role_id` FROM `notice_community` WHERE `notice_type` = %s AND `notice_name` = %s;',(notice_type,notice_name))
+        records = self.cursor.fetchall()
+        dict = {}
+        for i in records:
+            dict[i['guild_id']] = [i['channel_id'],i['role_id']]
+        return dict
+
+    def get_notice_community_userlist(self,notice_type:str):
+        self.cursor.execute(f"USE `database`;")
+        self.cursor.execute(f'SELECT DISTINCT `notice_name` FROM `notice_community` WHERE `notice_type` = %s;',(notice_type,))
+        records = self.cursor.fetchall()
+        return records

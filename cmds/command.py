@@ -6,7 +6,7 @@ from discord.commands import SlashCommandGroup
 from bothelper.funtions import find,converter,random_color
 from core.classes import Cog_Extension
 from bothelper.interface.user import *
-from bothelper import Jsondb
+from bothelper import Jsondb,BRS
 
 from mysql.connector.errors import Error as sqlerror
 
@@ -154,7 +154,7 @@ class command(Cog_Extension):
 
         
         await ctx.defer()
-        jdata = bothelper.Jsondb.jdata
+        jdata = Jsondb.jdata
         guild = self.bot.get_guild(jdata['guild']['001'])
         add_role = guild.get_role(877934319249797120)
         if user == 'all':
@@ -447,24 +447,18 @@ class command(Cog_Extension):
     #         await ctx.send(embed=embed)
 
     @twitch.command(description='設置twitch開台通知')
-    async def set(self,
-                ctx,
-                twitch_user:discord.Option(str,required=True,name='twitch用戶',description='當此用戶開台時會發送通知'),
-                channel:discord.Option(discord.TextChannel,required=True,name='頻道',description='通知發送頻道'),
-                role:discord.Option(discord.Role,required=False,name='身分組',description='發送通知時tag的身分組')
-                ):
-        db = bothelper.Jsondb
-        jtwitch = db.jtwitch
-
-        if twitch_user not in jtwitch['users']:
-            jtwitch['users'].append(twitch_user)
-            jtwitch['role'][twitch_user] = {}
-            jtwitch['channel'][twitch_user] = {}
-
-        jtwitch['role'][twitch_user][str(ctx.guild.id)] = str(role.id) or None
-        jtwitch['channel'][twitch_user][str(ctx.guild.id)] = str(channel.id)
-
-        db.write('jtwitch',jtwitch)
+    async def set(self,ctx,
+                  twitch_user:discord.Option(str,required=True,name='twitch用戶',description='當此用戶開台時會發送通知'),
+                  channel:discord.Option(discord.TextChannel,required=True,name='頻道',description='通知發送頻道'),
+                  role:discord.Option(discord.Role,required=False,default=None,name='身分組',description='發送通知時tag的身分組')):
+        guildid = ctx.guild.id
+        channelid = channel.id
+        if role:
+            roleid = role.id
+        else:
+            roleid = None
+        
+        self.sqldb.set_notice_community('twitch',twitch_user,guildid,channelid,roleid)
         if role:
             await ctx.respond(f'設定成功：{twitch_user}的開台通知將會發送在{channel.mention}並會通知{role.mention}')
         else:
@@ -472,31 +466,22 @@ class command(Cog_Extension):
 
     @twitch.command(description='移除twitch開台通知')
     async def remove(self,ctx,twitch_user:discord.Option(str,required=True,name='twitch用戶')):
-        db = bothelper.Jsondb
-        jtwitch = db.jtwitch
-        if twitch_user in jtwitch['users'] and str(ctx.guild.id) in jtwitch['channel'][twitch_user]:
-            jtwitch['users'].remove(twitch_user)
-            del jtwitch['role'][twitch_user][str(ctx.guild.id)]
-            if not jtwitch['role'][twitch_user]:
-                del jtwitch['role'][twitch_user]
-
-            del jtwitch['channel'][twitch_user][str(ctx.guild.id)]
-            if not jtwitch['channel'][twitch_user]:
-                del jtwitch['channel'][twitch_user]
-            db.write('jtwitch',jtwitch)
-            await ctx.respond(f'已移除 {twitch_user} 的開台通知')
-        else:
-            await ctx.respond(f'{twitch_user} 還沒有被設定通知')
+        guildid = ctx.guild.id
+        
+        self.sqldb.remove_notice_community('twitch',twitch_user,guildid)
+        await ctx.respond(f'已移除 {twitch_user} 的開台通知')
+        #await ctx.respond(f'{twitch_user} 還沒有被設定通知')
 
     @twitch.command(description='確認twitch開台通知')
     async def notice(self,ctx,twitch_user:discord.Option(str,required=True,name='twitch用戶')):
-        db = bothelper.Jsondb
-        jtwitch = db.jtwitch
-        if twitch_user in jtwitch['users'] and str(ctx.guild.id) in jtwitch['channel'][twitch_user]:
-            channel = self.bot.get_channel(int(jtwitch['channel'][twitch_user][str(ctx.guild.id)]))
-            await ctx.respond(f'{twitch_user} 的開台通知在 {channel.mention}')
+        guildid = ctx.guild.id
+        
+        record = self.sqldb.get_notice_community_user('twitch',twitch_user,guildid)
+        if record:
+            channel = self.bot.get_channel(record[0]['channel_id'])
+            await ctx.respond(f'TwitchID: {twitch_user} 的開台通知在 {channel.mention}')
         else:
-            await ctx.respond(f'{twitch_user} 在此群組沒有設開台通知')
+            await ctx.respond(f'TwitchID: {twitch_user} 在此群組沒有設開台通知')
 
     @commands.slash_command(description='向大家說哈瞜')
     async def hello(self,ctx, name: str = None):

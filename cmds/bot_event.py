@@ -1,7 +1,7 @@
 import discord,datetime,requests
 from discord.ext import commands
 from core.classes import Cog_Extension
-from bothelper import Jsondb
+from bothelper import Jsondb,BotEmbed,BRS
 
 class ScamChack:
     def __init__(self,text:str):
@@ -31,7 +31,7 @@ class event(Cog_Extension):
     #跨群聊天Ver.1.0
     @commands.Cog.listener()
     async def on_message(self,msg):
-        cdata = bothelper.Jsondb.cdata['crass_chat']
+        cdata = Jsondb.cdata['crass_chat']
         if msg.channel.id in cdata and not msg.author.bot:
             await msg.delete()
 
@@ -55,14 +55,14 @@ class event(Cog_Extension):
             await message.reply(dict[message.content])
         #介紹
         if message.content == '小幫手' or message.content == f'<@{self.bot.user.id}>':
-            embed = bothelper.BotEmbed.basic(self,f"你好~\n我是{self.bot.user.name}，是一個discord機器人喔~\n你可以輸入`/help`來查看所有指令的用法\n\n希望我能在discord上幫助到你喔~")
+            embed = BotEmbed.basic(self,f"你好~\n我是{self.bot.user.name}，是一個discord機器人喔~\n你可以輸入`/help`來查看所有指令的用法\n\n希望我能在discord上幫助到你喔~")
             await message.reply(embed=embed)
         #被提及回報
         if self.bot.user in message.mentions:
-            await bothelper.BRS.mentioned(self,message)
+            await BRS.mentioned(self,message)
         #被提及所有人回報
         if message.mention_everyone:
-            await bothelper.BRS.mention_everyone(self,message)
+            await BRS.mention_everyone(self,message)
         #詐騙檢查
         ScamChack = False
         if self.bot.user.id == 589744540240314368 and message.mention_everyone:
@@ -76,12 +76,12 @@ class event(Cog_Extension):
                     matches = r.get('matches',None)
 
         if ScamChack:
-            await bothelper.BRS.scam(self,message,matches)
+            await BRS.scam(self,message,matches)
             await message.delete()
             await message.channel.send('疑似為詐騙訊息，已自動刪除')
         #私人訊息回報
         if isinstance(message.channel,discord.channel.DMChannel) and message.author != self.bot.user:
-            await bothelper.BRS.dm(self,message)
+            await BRS.dm(self,message)
 
     # @commands.Cog.listener()
     # async def on_raw_reaction_add(self, payload):

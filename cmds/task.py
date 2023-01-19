@@ -110,8 +110,7 @@ class task(Cog_Extension):
             time = datetime.datetime.strptime(data.originTime, "%Y-%m-%d %H:%M:%S")+timedelta(seconds=1)
             cache['timefrom'] = time.strftime("%Y-%m-%dT%H:%M:%S")
             db.write('cache',cache)
-            
-            ch_list = db.cdata['earthquake']
+
             if data.auto_type == 'E-A0015-001':
                 text = '顯著有感地震報告'
             elif data.auto_type == 'E-A0016-001':
@@ -119,19 +118,26 @@ class task(Cog_Extension):
             else:
                 text = '地震報告'
             
-            for i in ch_list:
-                channel = self.bot.get_channel(ch_list[i])
+            records = self.sqldb.get_notice_channel('earthquake')
+            for i in records:
+                channel = self.bot.get_channel(i['channel_id'])
                 if channel:
+                    if i.get('role_id'):
+                        try:
+                            role = self.bot.get_guild(i['guild_id']).get_role(i['role_id'])
+                            text += f' {role.mention}'
+                        except:
+                            pass
                     await channel.send(text,embed=embed)
                     await asyncio.sleep(0.5)
         
     @tasks.loop(time=__gettime_1430())
     async def covid_update(self):
-        cdata = bothelper.Jsondb.cdata
         CovidReport = Covid19Report.get_covid19()
         if CovidReport:
-            for i in cdata["covid_update"]:
-                channel = self.bot.get_channel(cdata["covid_update"][i])
+            records = self.sqldb.get_notice_channel('covid_update')
+            for i in records:
+                channel = self.bot.get_channel(i["channel_id"])
                 try:
                     id = channel.last_message_id
                     msg = await channel.fetch_message(id)
@@ -148,11 +154,11 @@ class task(Cog_Extension):
 
     @tasks.loop(time=__gettime_0105())
     async def apex_crafting_update(self):
-        cdata = bothelper.Jsondb.cdata
         crafting = ApexInterface().get_crafting()
         if crafting:
-            for i in cdata["apex_crafting"]:
-                channel = self.bot.get_channel(cdata["apex_crafting"][i])
+            records = self.sqldb.get_notice_channel('apex_crafting')
+            for i in records:
+                channel = self.bot.get_channel(i['channel_id'])
                 try:
                     id = channel.last_message_id
                     msg = await channel.fetch_message(id)
@@ -175,11 +181,11 @@ class task(Cog_Extension):
     
     @tasks.loop(time=__gettime_15min())
     async def apex_map_update(self):
-        cdata = bothelper.Jsondb.cdata
         map = ApexInterface().get_map_rotation()
         if map:
-            for i in cdata["apex_map"]:
-                channel = self.bot.get_channel(cdata["apex_map"][i])
+            records = self.sqldb.get_notice_channel('apex_map')
+            for i in records:
+                channel = self.bot.get_channel(i['channel_id'])
                 try:
                     id = channel.last_message_id
                     msg = await channel.fetch_message(id)
@@ -202,11 +208,11 @@ class task(Cog_Extension):
     
     @tasks.loop(time=__gettime_3hr())
     async def forecast_update(self):
-        cdata = bothelper.Jsondb.cdata
         forecast = Forecast.get_report()
         if forecast:
-            for i in cdata["forecast"]:
-                channel = self.bot.get_channel(cdata["forecast"][i])
+            records = self.sqldb.get_notice_channel('forecast')
+            for i in records:
+                channel = self.bot.get_channel(i['channel_id'])
                 try:
                     id = channel.last_message_id
                     msg = await channel.fetch_message(id)
@@ -230,28 +236,27 @@ class task(Cog_Extension):
     async def twitch(self):
         db = bothelper.Jsondb
         cache = db.cache
-        jtwitch = db.jtwitch
-        users = jtwitch['users']
-
-        if users:
-            data = Twitch().get_lives(users)
+        users = self.sqldb.get_notice_community_userlist('twitch')
+        if not users:
+            return
+        
+        data = Twitch().get_lives(users)
+        for username in data:
+            if data[username] and not cache['twitch'].get(username,False):
+                cache['twitch'][username] = True
+                embed = data[username]
+                guilds = self.sqldb.get_notice_community_guild('twitch',username)
+                for guild in guilds:
+                    guild = self.bot.get_guild(guild)
+                    channel = self.bot.get_channel(guilds['guild'][0])
+                    role = guild.get_role(guilds['guild'][1])
+                    if channel:
+                        await channel.send(f'{role.mention or None} 開台啦~',embed=embed)
+                    await asyncio.sleep(1)
+            elif not data[username] and cache['twitch'].get(username,False):
+                cache['twitch'][username] = False
             
-            for username in data:
-                if data[username] and not cache['twitch'].get(username,False):
-                    cache['twitch'][username] = True
-                    embed = data[username]
-                    guilds = jtwitch['channel'][username]
-                    for guildid in guilds:
-                        guild = self.bot.get_guild(int(guildid))
-                        channel = self.bot.get_channel(int(jtwitch['channel'][username][guildid]))
-                        role = guild.get_role(int(jtwitch['role'][username][guildid]))
-                        if channel:
-                            await channel.send(f'{role.mention or None} 開台啦~',embed=embed)
-                        await asyncio.sleep(1)
-                elif not data[username] and cache['twitch'].get(username,False):
-                    cache['twitch'][username] = False
-                
-            db.write('cache',cache)
+        db.write('cache',cache)
 
 def setup(bot):
     bot.add_cog(task(bot))
