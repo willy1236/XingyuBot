@@ -9,7 +9,7 @@ for name,value in jdict['channel_set_option'].items():
     option.append(discord.OptionChoice(name=name,value=value))
 
 class moderation(Cog_Extension):
-    cdata = Jsondb.cdata
+    #cdata = Jsondb.cdata
     
     @commands.slash_command(description='清理訊息')
     @commands.has_permissions(manage_messages=True)

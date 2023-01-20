@@ -210,4 +210,7 @@ class MySQLDatabase():
         self.cursor.execute(f"USE `database`;")
         self.cursor.execute(f'SELECT DISTINCT `notice_name` FROM `notice_community` WHERE `notice_type` = %s;',(notice_type,))
         records = self.cursor.fetchall()
-        return records
+        list = []
+        for i in records:
+            list.append(i.values())
+        return list
