@@ -57,5 +57,9 @@
         "Quests": "一般任務",
         "Other": "其他",
         "Spiral Abyss": "深境螺旋"
+    },
+    "bet_option":{
+        "藍藍幫":"blue",
+        "粉紅幫":"pink"
     }
 }

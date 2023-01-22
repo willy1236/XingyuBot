@@ -53,7 +53,7 @@ class JsonDatabase():
         #self.jtwitch = json.load(open(self.__dict['jtwitch'],mode='r',encoding='utf8'))
 
         try:
-            self.tokens = json.load(open(f'{location}/token_settings.json',mode='r',encoding='utf8'))
+            self.tokens = json.load(open(f'{location}/token.json',mode='r',encoding='utf8'))
         except:
             self.tokens = os.environ
 

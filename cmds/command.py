@@ -10,6 +10,14 @@ from bothelper import Jsondb,BRS
 
 from mysql.connector.errors import Error as sqlerror
 
+db = Jsondb
+jdict = db.jdict
+
+bet_option = []
+for name,value in jdict['bet_option'].items():
+    bet_option.append(discord.OptionChoice(name=name,value=value))
+
+
 class command(Cog_Extension):
     picdata = Jsondb.picdata
     #rsdata = bothelper.Jsondb.rsdata
@@ -87,7 +95,6 @@ class command(Cog_Extension):
             user_list = user_list.split()
         
         embed=BotEmbed.general("身分組計算結果")
-
         for i in user_list:
             user = await find.user(ctx,i)
             if user:
@@ -275,120 +282,108 @@ class command(Cog_Extension):
         await ctx.respond(embed=embed)
 
 
-    # @commands.group(invoke_without_command=True)
-    # async def bet(self,ctx,id,choice,money:int):
-    #     bet_data = Database().bet_data
-    #     money_now = Point(ctx.author.id).pt
-    #     if id not in bet_data:
-    #         await ctx.send('編號錯誤:沒有此編號的賭盤喔')
-    #     elif bet_data[id]['Ison'] == 0:
-    #         await ctx.send('錯誤:此賭盤已經關閉了喔')
-    #     elif choice not in ['pink','blue']:
-    #         await ctx.send('選擇錯誤:我不知道你要選擇什麼')
-    #     elif money <= 0:
-    #         await ctx.send('金額錯誤:無法輸入小於1的數字')
-    #     elif money_now < money:
-    #         await ctx.send('金額錯誤:你沒有那麼多點數')
-    #     elif id == str(ctx.author.id):
-    #         await ctx.send('錯誤:你不可以下注自己的賭盤')
-    #     else:
-    #         Point(ctx.author.id).add(money*-1)
-    #         bet_data[id][choice]['member'][str(ctx.author.id)] += money
-    #         Database().write('bet_data',bet_data)
-    #         await ctx.send('下注完成!')
-
-
-    # @bet.command()
-    # async def create(self,ctx,title,pink,blue,time):
-    #     bet_data = Database().bet_data
-    #     id = str(ctx.author.id)
-    #     sec = converter.time(time)
-    #     if id in bet_data:
-    #         await ctx.send('錯誤:你已經創建一個賭盤了喔')
-    #         return
-    #     elif sec > 600:
-    #         await ctx.send('錯誤:時間太長了喔')
-    #         return
-
-    #     data = {}
-    #     data['title'] = title
-    #     data['IsOn'] = 1
-    #     data['blue'] = {}
-    #     data['blue']['title'] = blue
-    #     data['blue']['member'] = {}
-    #     data['pink'] = {}
-    #     data['pink']['title'] = pink
-    #     data['pink']['member'] = {}
-    #     bet_data[id] = data        
-    #     Database().write('bet_data',bet_data)
-            
-    #     embed = BotEmbed.simple(title='賭盤', description=f'編號: {id}')
-    #     embed.add_field(name='賭盤內容', value=title, inline=False)
-    #     embed.add_field(name="粉紅幫", value=pink, inline=False)
-    #     embed.add_field(name="藍藍幫", value=blue, inline=False)
-    #     await ctx.send(embed=embed)
-    #     await asyncio.sleep(delay=sec)
+    @bet.command(description='賭盤下注')
+    async def place(self,ctx,
+                    bet_id:discord.Option(str,name='賭盤',description='',required=True),
+                    choice:discord.Option(str,name='下注顏色',description='',required=True,choices=bet_option),
+                    money:discord.Option(int,name='下注點數',description='',required=True,min_value=1)):
+        if bet_id == ctx.author.id:
+            await ctx.respond('錯誤：你不可以下注自己的賭盤',ephemeral=True)
+            return
         
-    #     await ctx.send(f'編號{id}:\n下注時間結束')
-    #     bet_data = Database().bet_data
-    #     bet_data[id]['IsOn'] = 0
-    #     Database().write('bet_data',bet_data)
+        bet = self.sqldb.get_bet_data(bet_id)
+        if not bet:
+            await ctx.respond('編號錯誤：沒有此編號的賭盤喔',ephemeral=True)
+            return
+        elif not bet['Ison']:
+            await ctx.respond('錯誤：此賭盤已經關閉了喔',ephemeral=True)
+            return
+        
+        user_data = self.sqldb.get_point(str(ctx.author.id))
+
+        if user_data['point'] < money:
+            await ctx.respond('點數錯誤：你沒有那麼多點數',ephemeral=True)
+            return
+
+        self.sqldb.update_point('add',str(ctx.author.id),money*-1)
+        self.sqldb.place_bet(bet_id,choice,money)
+        await ctx.respond('下注完成!')
 
 
-    # @bet.command()
-    # async def end(self,ctx,end):
-    #     #錯誤檢測
-    #     if end not in ['blue','pink']:
-    #         await ctx.send('結果錯誤:我不知道到底是誰獲勝了呢')
-    #         return
-    #     id = str(ctx.author.id)
-    #     bet_data = Database().bet_data
-    #     if not bet_data[id]['IsOn']:
-    #         await ctx.send('錯誤:此賭盤的開放下注時間尚未結束')
-    #         return
-    #     #計算雙方總點數
-    #     pink_total = 0
-    #     for i in bet_data[id]['pink']['member']:
-    #         pink_total += bet_data[id]['pink']['member'][i]
-    #     blue_total = 0
-    #     for i in bet_data[id]['blue']['member']:
-    #         blue_total += bet_data[id]['blue']['member'][i]
-    #     #偵測是否兩邊皆有人下注
-    #     if blue_total and pink_total:
-    #         #獲勝者設定
-    #         if end == 'pink':
-    #             winner = bet_data[id]['pink']['member']
-    #         else:
-    #             winner = bet_data[id]['blue']['member']
-    #         #前置準備
-    #         if pink_total > blue_total:
-    #             mag = pink_total / blue_total
-    #         else:
-    #             mag = blue_total / pink_total
-    #         #結果公布
-    #         if end == 'pink':
-    #             await ctx.send(f'編號{id}:\n恭喜粉紅幫獲勝!')
-    #         else:
-    #             await ctx.send(f'編號{id}:\n恭喜藍藍幫獲勝!')
-    #         #點數計算
-    #         for i in winner:
-    #             pt1 = winner[i] * (mag+1)
-    #             Point(i).add(pt1)
+    @bet.command(description='創建賭盤')
+    async def create(self,ctx,
+                     title:discord.Option(str,name='賭盤標題',description='',required=True),
+                     pink:discord.Option(str,name='粉紅幫標題',description='',required=True),
+                     blue:discord.Option(str,name='藍藍幫標題',description='',required=True),
+                     time:discord.Option(int,name='賭盤開放時間',description='',required=True,min_value=10,max_value=600)):
+        bet_id = str(ctx.author.id)
+        # sec = converter.time(time)
+        bet = self.sqldb.get_bet_data(bet_id)
+        if bet:
+            await ctx.respond('錯誤：你已經創建一個賭盤了喔',ephemeral=True)
+            return
+        # elif time > 600:
+        #     await ctx.send('錯誤:時間太長了喔')
+        #     return
+
+        self.sqldb.create_bet(bet_id,title,pink,blue)
             
-    #     else:
-    #         for i in bet_data[id]['blue']['member']:
-    #             user = await find.user(ctx,i)
-    #             id = str(user.id)
-    #             Point(id).add(bet_data[id]['blue']['member'][id])
+        embed = BotEmbed.simple(title='賭盤', description=f'編號: {bet_id}')
+        embed.add_field(name='賭盤內容', value=title, inline=False)
+        embed.add_field(name="粉紅幫", value=pink, inline=False)
+        embed.add_field(name="藍藍幫", value=blue, inline=False)
+        await ctx.respond(embed=embed)
+        await asyncio.sleep(delay=time)
+        
+        await ctx.send(f'編號{bet_id}：下注時間結束')
+        self.sqldb.update_bet(bet_id)
+
+
+    @bet.command(description='結束賭盤')
+    async def end(self,ctx,end:discord.Option(str,name='獲勝下注顏色',description='',required=True,choices=bet_option)):
+        bet_id = str(ctx.author.id)
+        #錯誤檢測
+        bet = self.sqldb.get_bet_data(bet_id)
+        if bet['IsOn']:
+            await ctx.respond('錯誤：此賭盤的開放下注時間尚未結束',ephemeral=True)
+            return
+        
+        #計算雙方總點數
+        total = self.sqldb.get_bet_total(bet_id)
+        
+        #偵測是否兩邊皆有人下注
+        if total[0] and total[1]:
+            #獲勝者設定
+            winners = self.sqldb.get_bet_winner(bet_id,end)
+            #前置準備
+            pink_total = total[0]
+            blue_total = total[1]
+            if pink_total > blue_total:
+                mag = pink_total / blue_total
+            else:
+                mag = blue_total / pink_total
+            #結果公布
+            if end == 'pink':
+                await ctx.respond(f'編號{bet_id}：恭喜粉紅幫獲勝!')
+            elif end == 'blue':
+                await ctx.respond(f'編號{bet_id}：恭喜藍藍幫獲勝!')
+            #點數計算
+            for i in winners:
+                pt_add = i['money'] * (mag+1)
+                self.sqldb.update_point('add',i['user_id'],pt_add)
             
-    #         for i in bet_data[id]['pink']['member']:
-    #             user = await find.user(ctx,i)
-    #             id = str(user.id)
-    #             Point(id).add(bet_data[id]['pink']['member'][id])
-    #         await ctx.send(f'編號{id}:\n因為有一方沒有人選擇，所以此局平手，點數將歸還給所有人')
-    #     #更新資料庫
-    #     del bet_data[id]
-    #     Database().write('bet_data',bet_data)
+        else:
+            users = self.sqldb.get_bet_winner(bet_id,'blue')
+            for i in users:
+                self.sqldb.update_point('add',i['user_id'],i['money'])
+            
+            users = self.sqldb.get_bet_winner(bet_id,'pink')
+            for i in users:
+                self.sqldb.update_point('add',i['user_id'],i['money'])
+            await ctx.respond(f'編號{bet_id}：因為有一方沒有人選擇，所以此局平手，點數將歸還給所有人')
+        
+        #更新資料庫
+        self.sqldb.remove_bet(bet_id)
 
 
     # @commands.command()

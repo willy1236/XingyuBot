@@ -27,8 +27,8 @@ class debug(Cog_Extension):
     pass
     @commands.slash_command(description='測試指令')
     async def test(self,ctx):
-        user = self.sqldb.get_notice_community_guild('twitch','123')
-        await ctx.respond(f'done {user}')
+        data = self.sqldb.get_bet_total(1)
+        await ctx.respond(f'done {data}')
     
     # @commands.command()
     # @commands.is_owner()

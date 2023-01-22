@@ -22,17 +22,18 @@ class owner(Cog_Extension):
     #send
     @commands.slash_command(description='發送訊息',guild_ids=main_guild)
     @commands.is_owner()
-    async def send(self,ctx,id,msg):
-        id = int(id)
+    async def send(self,ctx,
+                   id:discord.Option(int,required=True,name='頻道id',description=''),
+                   msg:discord.Option(str,required=True,name='訊息',description='')):
         channel = self.bot.get_channel(id)
         if not channel:
             user = self.bot.get_user(id)
             message = await user.send(msg)
             await BRS.dm(self,message)
-            await ctx.respond(f'訊息發送成功',delete_after=5)
+            await ctx.respond(f'訊息發送成功',delete_after=5,ephemeral=True)
         else:
             await channel.send(msg)
-            await ctx.respond(f'訊息發送成功',delete_after=5)
+            await ctx.respond(f'訊息發送成功',delete_after=5,ephemeral=True)
 
     #all_anno
     @commands.slash_command(description='全群公告',guild_ids=main_guild)

@@ -214,3 +214,44 @@ class MySQLDatabase():
         for i in records:
             list.append(i.values())
         return list
+
+    def get_bet_data(self,bet_id:int):
+        self.cursor.execute(f"USE `database`;")
+        self.cursor.execute(f'SELECT `bet_id`,`IsOn` FROM `bet_data` WHERE `bet_id` = %s;',(bet_id,))
+        records = self.cursor.fetchone()
+        return records
+
+    def place_bet(self,bet_id:int,choice:str,money:int):
+        self.cursor.execute(f"USE `database`;")
+        self.cursor.execute(f'INSERT INTO `user_bet` VALUES(%s,%s,%s);',(bet_id,choice,money))
+        self.connection.commit()
+
+    def create_bet(self,bet_id:int,title:str,pink:str,blue:str):
+        self.cursor.execute(f"USE `database`;")
+        self.cursor.execute(f'INSERT INTO `bet_data` VALUES(%s,%s,%s,%s,%s);',(bet_id,title,pink,blue,True))
+        self.connection.commit()
+
+    def update_bet(self,bet_id:int):
+        self.cursor.execute(f"USE `database`;")
+        self.cursor.execute(f"UPDATE `bet_data` SET IsOn = %s WHERE bet_id = %s;",(False,bet_id))
+        self.connection.commit()
+
+    def get_bet_total(self,bet_id:int):
+        self.cursor.execute(f"USE `database`;")
+        self.cursor.execute(f'SELECT SUM(money) FROM `user_bet` WHERE `bet_id` = %s AND `choice` = %s;',(bet_id,'pink'))
+        total_pink = self.cursor.fetchone()
+        self.cursor.execute(f'SELECT SUM(money) FROM `user_bet` WHERE `bet_id` = %s AND `choice` = %s;',(bet_id,'blue'))
+        total_blue = self.cursor.fetchone()
+        return [int(total_pink['SUM(money)'] or 0),int(total_blue['SUM(money)'] or 0)]
+
+    def get_bet_winner(self,bet_id:int,winner:str):
+        self.cursor.execute(f"USE `database`;")
+        self.cursor.execute(f'SELECT * FROM `user_bet` WHERE `bet_id` = %s AND `choice` = %s;',(bet_id,winner))
+        records = self.cursor.fetchall()
+        return records
+
+    def remove_bet(self,bet_id:int):
+        self.cursor.execute(f"USE `database`;")
+        self.cursor.execute(f'DELETE FROM `user_bet` WHERE `bet_id` = %s;',(bet_id,))
+        self.cursor.execute(f'DELETE FROM `bet_data` WHERE `bet_id` = %s;',(bet_id,))
+        self.connection.commit()
