@@ -25,10 +25,10 @@ class PersistentView(discord.ui.View):
 
 class debug(Cog_Extension):
     pass
-    @commands.slash_command(description='測試指令')
-    async def test(self,ctx):
-        data = self.sqldb.get_bet_total(1)
-        await ctx.respond(f'done {data}')
+    # @commands.slash_command(description='測試指令')
+    # async def test(self,ctx):
+    #     data = self.sqldb.get_bet_total(1)
+    #     await ctx.respond(f'done {data}')
     
     # @commands.command()
     # @commands.is_owner()
