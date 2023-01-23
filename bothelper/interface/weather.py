@@ -10,15 +10,15 @@ class EarthquakeReport(WeatherInterface):
     def __init__(self,data,auto_type=None):
         self.data = data
         self.auto_type = auto_type
-        self.earthquakeNo = str(data['earthquakeNo'])
-        self.reportImageURI = data['reportImageURI']
-        self.web = data['web']
-        self.originTime = data['earthquakeInfo']['originTime']
-        self.depth = data['earthquakeInfo']['depth']['value']
-        self.location = data['earthquakeInfo']['epiCenter']['location']
-        self.magnitude = data['earthquakeInfo']['magnitude']['magnitudeValue']
-        self.reportColor = data['reportColor']
-        self.reportContent = data['reportContent']
+        self.earthquakeNo = str(data['EarthquakeNo'])
+        self.reportImageURI = data['ReportImageURI']
+        self.web = data['Web']
+        self.originTime = data['EarthquakeInfo']['OriginTime']
+        self.depth = data['EarthquakeInfo']['FocalDepth']
+        self.location = data['EarthquakeInfo']['Epicenter']['Location']
+        self.magnitude = data['EarthquakeInfo']['EarthquakeMagnitude']['MagnitudeValue']
+        self.reportColor = data['ReportColor']
+        self.reportContent = data['ReportContent']
 
     def desplay(self):
         if self.reportColor == "綠色":
@@ -45,9 +45,9 @@ class EarthquakeReport(WeatherInterface):
     def get_report(significant=False):
         auth = JsonDatabase().get_token('CWB_API')
         if significant:
-            APIdata = requests.get(f'https://opendata.cwb.gov.tw/api/v1/rest/datastore/E-A0015-001?Authorization={auth}&limit=1').json().get('records').get('earthquake')
+            APIdata = requests.get(f'https://opendata.cwb.gov.tw/api/v1/rest/datastore/E-A0015-001?Authorization={auth}&limit=1').json().get('records').get('Earthquake')[0]
         else:
-            APIdata = requests.get(f'https://opendata.cwb.gov.tw/api/v1/rest/datastore/E-A0016-001?Authorization={auth}&limit=1').json().get('records').get('earthquake')
+            APIdata = requests.get(f'https://opendata.cwb.gov.tw/api/v1/rest/datastore/E-A0016-001?Authorization={auth}&limit=1').json().get('records').get('Earthquake')[0]
         
         if APIdata:
             return EarthquakeReport(APIdata[0])
@@ -58,12 +58,12 @@ class EarthquakeReport(WeatherInterface):
     def get_report_auto(time):
         auth = JsonDatabase().get_token('CWB_API')
         APIdata = requests.get(f'https://opendata.cwb.gov.tw/api/v1/rest/datastore/E-A0015-001?Authorization={auth}&timeFrom={time}')
-        data = APIdata.json().get('records').get('earthquake')
+        data = APIdata.json().get('records').get('Earthquake')[0]
         if data:
             return EarthquakeReport(data[0],auto_type='E-A0015-001')
         else:
             APIdata = requests.get(f'https://opendata.cwb.gov.tw/api/v1/rest/datastore/E-A0016-001?Authorization={auth}&timeFrom={time}')
-            data = APIdata.json().get('records').get('earthquake')
+            data = APIdata.json().get('records').get('Earthquake')[0]
             if data:
                 return EarthquakeReport(data[0],auto_type='E-A0016-001')
             else:
