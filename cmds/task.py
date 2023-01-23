@@ -88,7 +88,6 @@ class task(Cog_Extension):
     async def sign_reset(self):
         db = bothelper.Jsondb
         task_report_channel = self.bot.get_channel(db.jdata['task_report'])
-        #db.write('jdsign',[])
         self.sqldb.truncate_table('user_sign')
         await task_report_channel.send('簽到已重置')
         await asyncio.sleep(10)
@@ -104,7 +103,7 @@ class task(Cog_Extension):
         db = bothelper.Jsondb
         cache = db.cache
         timefrom = cache['timefrom']
-        data = EarthquakeReport.get_report_auto(timefrom)
+        data = CWBInterface().get_report_auto(timefrom)
         if data:
             embed = data.desplay()
             time = datetime.datetime.strptime(data.originTime, "%Y-%m-%d %H:%M:%S")+timedelta(seconds=1)
@@ -133,7 +132,7 @@ class task(Cog_Extension):
         
     @tasks.loop(time=__gettime_1430())
     async def covid_update(self):
-        CovidReport = Covid19Report.get_covid19()
+        CovidReport = Covid19Interface.get_covid19()
         if CovidReport:
             records = self.sqldb.get_notice_channel('covid_update')
             for i in records:
@@ -208,7 +207,7 @@ class task(Cog_Extension):
     
     @tasks.loop(time=__gettime_3hr())
     async def forecast_update(self):
-        forecast = Forecast.get_report()
+        forecast = CWBInterface().get_forecast()
         if forecast:
             records = self.sqldb.get_notice_channel('forecast')
             for i in records:

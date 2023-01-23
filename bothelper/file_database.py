@@ -67,10 +67,10 @@ class JsonDatabase():
 
     def get_token(self,webname:str):
         """獲取相關api的tokens\n
-        支援CWB_API,osu(id,secret),TRN,apex,steam,twitch(id,secret),youtube,riot,openai
+        支援CWB_api,osu(id,secret),TRN,apex,steam,twitch(id,secret),youtube,riot,openai
         """
         dict = {
-            "CWB_API":'CWB_API',
+            "CWB_api":'CWB_api',
             'osu':'osu_api',
             'TRN':'TRN_API',
             'apex':'apex_status_API',
