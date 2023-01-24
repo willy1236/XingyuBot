@@ -10,17 +10,44 @@ class GameInterface():
 class RiotInterface(GameInterface):
     def __init__(self):
         super().__init__()
+        self.url = 'https://tw2.api.riotgames.com'
+        self.url_sea = 'https://sea.api.riotgames.com'
         self.key = self.db.get_token('riot')
 
     def get_lolplayer(self,userid):
-        params = {'api_key':self.key}
-        r = requests.get(f'https://tw2.api.riotgames.com/lol/summoner/v4/summoners/by-name/{userid}',params=params)
+        params = {
+            'api_key':self.key
+            }
+        r = requests.get(f'{self.url}/lol/summoner/v4/summoners/by-name/{userid}',params=params)
         if r.status_code == 200:
             return LOLPlayer(r.json())
         else:
             print('lol_player:',r.text)
             return None
-            
+
+    def get_lol_player_match(self,puuid,count=5) -> list[str]:
+        params = {
+            'api_key':self.key,
+            'start':0,
+            'count':count
+            }
+        r = requests.get(f'{self.url_sea}/lol/match/v5/matches/by-puuid/{puuid}/ids',params=params)
+        if r.status_code == 200:
+            return r.json()
+        else:
+            print('lol_player_match:',r.text)
+            return None
+
+    def get_lol_match(self,matchId):
+        params = {
+            'api_key':self.key
+            }
+        r = requests.get(f'{self.url_sea}/lol/match/v5/matches/{matchId}',params=params)
+        if r.status_code == 200:
+            return LOLMatch(r.json())
+        else:
+            print('lol_match:',r.text)
+            return None
     
 class OsuInterface(GameInterface):
     def __init__(self):

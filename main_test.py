@@ -2,6 +2,7 @@ import requests
 import xml.etree.ElementTree as ET
 import bothelper
 from bothelper.interface.weather import EarthquakeReport
+from bothelper.interface.game import RiotInterface
 
 Jsondb = bothelper.Jsondb
 
@@ -15,8 +16,8 @@ Jsondb = bothelper.Jsondb
 # r = twitch.get_lives([''])
 # print(r)
 
-token = Jsondb.get_token('CWB_api')
-time = '2023-01-03T05:46:45'
-APIdata = requests.get(f'https://opendata.cwb.gov.tw/api/v1/rest/datastore/E-A0016-001?Authorization={token}&timeFrom={time}')
-data = APIdata.json().get('records').get('Earthquake')[0]
-print(EarthquakeReport(data))
+# token = Jsondb.get_token('CWB_api')
+# time = '2023-01-03T05:46:45'
+# APIdata = requests.get(f'https://opendata.cwb.gov.tw/api/v1/rest/datastore/E-A0016-001?Authorization={token}&timeFrom={time}')
+# data = APIdata.json().get('records').get('Earthquake')[0]
+# print(EarthquakeReport(data))

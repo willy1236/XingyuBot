@@ -1,22 +1,175 @@
 from datetime import datetime,timedelta
 from bothelper.basic import BotEmbed
-from bothelper.file_database import JsonDatabase
+from bothelper import Jsondb
 
-jdict = JsonDatabase().jdict
+jdict = Jsondb.jdict
+lol_jdict = Jsondb.lol_jdict
 
 class LOLPlayer():
     def __init__(self,data):
+        print(data)
         self.name = data['name']
+        self.summoner = data['id']
         self.accountid = data['accountId']
+        self.puuid = data['puuid']
         self.summonerLevel = data['summonerLevel']
 
     def desplay(self):
-        embed = BotEmbed.general("LOL玩家資訊",url=self.url)
+        embed = BotEmbed.general("LOL玩家資訊")
         embed.add_field(name="玩家名稱", value=self.name, inline=False)
-        #embed.add_field(name="帳號ID", value=data['accountId'], inline=False)
         embed.add_field(name="召喚師等級", value=self.summonerLevel, inline=False)
+        embed.add_field(name="帳號ID", value=self.accountid, inline=False)
+        embed.add_field(name="召喚師ID", value=self.summoner, inline=False)
+        embed.add_field(name="puuid", value=self.puuid, inline=False)
         embed.set_thumbnail(url='https://i.imgur.com/B0TMreW.png')
         return embed
+
+class LOLPlayerInMatch():
+    def __init__(self,data):
+        #self.participantId = data['participantId']
+        #self.profileIcon = data['profileIcon']
+        #self.puuid = data['puuid']
+        #self.summonerId = data['summonerId']
+        self.summonerLevel = data['summonerLevel']
+        self.summonerName = data['summonerName']
+
+        self.assists = data['assists']
+        self.deaths = data['deaths']
+        self.kills = data['kills']
+        self.lane = data['lane']
+        self.visionScore = data['visionScore']
+
+        self.doubleKills = data['doubleKills']
+        self.tripleKills = data['tripleKills']
+        self.quadraKills = data['quadraKills']
+        self.pentaKills = data['pentaKills']
+        self.largestMultiKill = data['largestMultiKill']
+        
+        self.dragonKills = data['dragonKills']
+        self.baronKills = data['baronKills']
+
+        self.championId = data['championId']
+        self.championName = data['championName']
+        self.champLevel = data['champLevel']
+        
+        self.totalDamageDealt = data['totalDamageDealt']
+        self.totalDamageTaken = data['totalDamageTaken']
+        self.totalHeal = data['totalHeal']
+        self.totalTimeCCDealt = data['totalTimeCCDealt']
+
+        self.enemyMissingPings = data['enemyMissingPings']
+
+        self.firstBloodKill = data['firstBloodKill']
+        #self.firstBloodAssist = data['firstBloodAssist']
+        self.firstTowerKill = data['firstTowerKill']
+        #self.firstTowerAssist = data['firstTowerAssist']
+
+        self.gameEndedInEarlySurrender = data['gameEndedInEarlySurrender']
+        self.gameEndedInSurrender = data['gameEndedInSurrender']
+        #self.teamEarlySurrendered = data['teamEarlySurrendered']
+        self.goldEarned = data['goldEarned']
+        self.goldSpent = data['goldSpent']
+
+        #self.items = [ data['item0'],data['item1'],data['item2'],data['item3'],data['item4'],data['item5'],data['item6'] ]
+
+    def desplay(self):
+        text = f'`{self.summonerName}(LV. {self.summonerLevel})`\n'
+        name = lol_jdict['champion'].get(self.championName) or self.championName
+        text += f'{name}(LV. {self.champLevel})\n'
+        lane = lol_jdict['road'].get(self.lane) or self.lane
+        text += f'{lane} 視野分：{self.visionScore}\n'
+        text += f'{self.kills}/{self.deaths}/{self.assists} KDA: {round((self.kills+self.assists)/self.deaths,2)}\n'
+        text += f'連殺：{self.doubleKills}/{self.tripleKills}/{self.quadraKills}/{self.pentaKills} 最大{self.largestMultiKill}\n'
+        text += f'輸出/承受/治療/CC：\n{self.totalDamageDealt}/{self.totalDamageTaken}/{self.totalHeal}/{self.totalTimeCCDealt}\n'
+        text += f'經濟/花費：{self.goldEarned}/{self.goldSpent}\n'
+        text += f'Ping問號燈：{self.enemyMissingPings}\n'
+
+        if self.firstBloodKill and self.firstTowerKill:
+            text += f'首殺+首塔🔪 '
+        elif self.firstBloodKill:
+            text += f'首殺🔪 '
+        elif self.firstTowerKill:
+            text += f'首塔🔪 '
+
+        if self.gameEndedInEarlySurrender:
+            text += f'提早投降🏳️'
+        elif self.gameEndedInSurrender:
+            text += f'投降🏳️'
+        text += '\n'
+        
+        return text
+
+class LOLTeamInMatch():
+    def __init__(self,data):
+        #100 = blue, 200 = red
+        self.teamId = data['teamId']
+        self.win = data['win']
+        self.bans = data['bans']
+        
+        self.baronKill = data['objectives']['baron']['kills']
+        self.dragonKill = data['objectives']['dragon']['kills']
+        #riftHerald = 預示者
+        self.riftHeraldKill = data['objectives']['riftHerald']['kills']
+        
+        self.championKill = data['objectives']['champion']['kills']
+        #inhibitor = 水晶兵營
+        self.inhibitorKill = data['objectives']['inhibitor']['kills']
+        self.towerKill = data['objectives']['tower']['kills']
+
+
+class LOLMatch():
+    def __init__(self,data):
+        self.matchId = data['metadata']['matchId']
+
+        self.gameStartTimestamp = data['info']['gameStartTimestamp']
+        self.gameDuration = data['info']['gameDuration']
+        self.gameEndTimestamp = data['info']['gameEndTimestamp']
+
+        self.gameId = data['info']['gameId']
+        self.gameMode = data['info']['gameMode']
+        self.gameVersion = data['info']['gameVersion']
+        self.mapId = data['info']['mapId']
+        self.platformId = data['info']['platformId']
+        self.tournamentCode = data['info']['tournamentCode']
+
+        self.participants = data['info']['participants']
+        self.teams = data['info']['teams']
+
+        self.players = []
+        for i in self.participants:
+            self.players.append(LOLPlayerInMatch(i))
+
+        self.team = []
+        for i in self.teams:
+            self.team.append(LOLTeamInMatch(i))
+    
+    def desplay(self):
+        embed = BotEmbed.general("LOL對戰")
+        gamemode = lol_jdict['mod'].get(self.gameMode) or self.gameMode
+        embed.add_field(name="遊戲模式", value=gamemode, inline=False)
+        embed.add_field(name="遊戲ID", value=self.gameId, inline=False)
+        #embed.add_field(name="遊戲版本", value=self.gameVersion, inline=False)
+        blue = ''
+        red = ''
+        i = 0
+        for player in self.players:
+            if i < 5:
+                blue += player.desplay() + '\n'
+                if i != 4:
+                    blue += '\n'
+            else:
+                red += player.desplay() + '\n'
+                if i != 9:
+                    red += '\n'
+            i+=1
+        if self.team[0].win:
+            embed.add_field(name="藍方👑", value=blue, inline=True)
+            embed.add_field(name="紅方", value=red, inline=True)
+        else:
+            embed.add_field(name="藍方", value=blue, inline=True)
+            embed.add_field(name="紅方👑", value=red, inline=True)
+        return embed
+
 
 class OsuPlayer():
     def __init__(self,data):

@@ -10,6 +10,7 @@ class JsonDatabase():
         location = "database"
         data_location = "data"
         self.__dict = {
+            'lol_jdict': f'{data_location}/lol_dict.json',
             'jdict': f'{data_location}/dict.json',
             'jdata': f'{location}/setting.json',
             'cdata': f'{location}/channel_settings.json',
@@ -31,6 +32,7 @@ class JsonDatabase():
             'jhoyo': f'{location}/game_settings/hoyo.json',
             'jtwitch': f'{location}/community_settings/twitch.json',
         }
+        self.lol_jdict = json.load(open(self.__dict['lol_jdict'],mode='r',encoding='utf8'))
         self.jdict = json.load(open(self.__dict['jdict'],mode='r',encoding='utf8'))
         self.jdata = json.load(open(self.__dict['jdata'],mode='r',encoding='utf8'))
         #self.cdata = json.load(open(self.__dict['cdata'],mode='r',encoding='utf8'))

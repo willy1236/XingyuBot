@@ -115,6 +115,33 @@ class system_game(Cog_Extension):
         else:
             await ctx.respond('查詢失敗:查無此ID',ephemeral=True)
 
+    @lol.command(description='查詢League of Legends對戰資料')
+    async def match(self,ctx,matchid:discord.Option(str,name='對戰',description='要查詢的對戰')):
+        match = RiotInterface().get_lol_match(matchid)
+        if match:
+            await ctx.respond('查詢成功',embed=match.desplay())
+        else:
+            await ctx.respond('查詢失敗:查無此ID',ephemeral=True)
+
+    @lol.command(description='查詢最近一次的League of Legends對戰')
+    async def playermatch(self,ctx,userid:discord.Option(str,name='用戶',description='要查詢的用戶')):
+        player = RiotInterface().get_lolplayer(userid)
+        if not player:
+            await ctx.respond('查詢失敗:查無此玩家ID',ephemeral=True)
+            return
+        
+        match_list = RiotInterface().get_lol_player_match(player.puuid,1)
+        if not match_list:
+            await ctx.respond('查詢失敗:此玩家查無對戰紀錄',ephemeral=True)
+            return
+        
+        match = RiotInterface().get_lol_match(match_list[0])
+        if match:
+            await ctx.respond('查詢成功',embed=match.desplay())
+        else:
+            await ctx.respond('查詢失敗：出現未知錯誤',ephemeral=True)
+            
+
     @osu.command(description='查詢Osu用戶資料')
     @commands.cooldown(rate=1,per=1)
     async def user(self,

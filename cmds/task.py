@@ -18,6 +18,15 @@ class task(Cog_Extension):
     @commands.Cog.listener()
     async def on_ready(self):
         if self.bot.user.id == 589744540240314368:
+            schedule.every().day.at("04:00").do(self.sign_reset,self)
+            schedule.every().day.at("14:30").do(self.covid_update,self)
+            schedule.every().day.at("01:05").do(self.apex_crafting_update,self)
+            schedule.every().hours.at("00:00").do(self.apex_map_update,self)
+            schedule.every().hours.at("15:00").do(self.apex_map_update,self)
+            schedule.every().hours.at("30:00").do(self.apex_map_update,self)
+            schedule.every().hours.at("45:00").do(self.apex_map_update,self)
+            schedule.every(3).hours.at("00:00").do(self.forecast_update,self)
+
             self.task_timer.start()
             self.earthquake_check.start()
             self.twitch.start()
@@ -46,7 +55,6 @@ class task(Cog_Extension):
     async def task_timer(self):
         schedule.run_pending()
     
-    @schedule.repeat(schedule.every().day.at("04:00"))
     async def sign_reset(self):
         db = bothelper.Jsondb
         task_report_channel = self.bot.get_channel(db.jdata['task_report'])
@@ -86,7 +94,7 @@ class task(Cog_Extension):
                     await channel.send(text,embed=embed)
                     await asyncio.sleep(0.5)
 
-    @schedule.repeat(schedule.every().day.at("14:30"))
+    
     async def covid_update(self):
         CovidReport = Covid19Interface.get_covid19()
         if CovidReport:
@@ -106,7 +114,7 @@ class task(Cog_Extension):
                 await asyncio.sleep(0.5)
         await asyncio.sleep(10)
 
-    @schedule.repeat(schedule.every().day.at("01:05"))
+    
     async def apex_crafting_update(self):
         crafting = ApexInterface().get_crafting()
         if crafting:
@@ -127,12 +135,7 @@ class task(Cog_Extension):
         await asyncio.sleep(10)
         self.apex_crafting_update.stop()
 
-    @schedule.repeat(schedule.every().hours.at("00:00"))
-    @schedule.repeat(schedule.every().hours.at("15:00"))
-    @schedule.repeat(schedule.every().hours.at("30:00"))
-    @schedule.repeat(schedule.every().hours.at("45:00"))
     async def apex_map_update(self):
-        print(1)
         map = ApexInterface().get_map_rotation()
         if map:
             records = self.sqldb.get_notice_channel('apex_map')
@@ -152,7 +155,7 @@ class task(Cog_Extension):
         self.apex_map_update.change_interval(time=task.__gettime_15min())
         await asyncio.sleep(10)
     
-    @schedule.repeat(schedule.every(3).hours.at("00:00"))
+    
     async def forecast_update(self):
         forecast = CWBInterface().get_forecast()
         if forecast:
