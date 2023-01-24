@@ -32,16 +32,17 @@ class CWBInterface(WeatherInterface):
     def get_report_auto(self,timeFrom):
         params = {
             'Authorization': self.auth,
-            'timeFrom': timeFrom
+            'timeFrom': timeFrom,
+            'limit': 1
         }
         APIdata = requests.get(f'{self.url}/E-A0015-001',params=params)
-        data = APIdata.json().get('records').get('Earthquake')[0]
+        data = APIdata.json().get('records').get('Earthquake')
         if data:
             return EarthquakeReport(data[0],auto_type='E-A0015-001')
         else:
             time.sleep(1)
             APIdata = requests.get(f'{self.url}/E-A0016-001',params=params)
-            data = APIdata.json().get('records').get('Earthquake')[0]
+            data = APIdata.json().get('records').get('Earthquake')
             if data:
                 return EarthquakeReport(data[0],auto_type='E-A0016-001')
             else:
