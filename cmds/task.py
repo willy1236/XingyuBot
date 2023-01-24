@@ -1,6 +1,7 @@
-import asyncio,discord
+import asyncio,discord,schedule
 from datetime import datetime, timezone, timedelta,time
 from discord.ext import commands,tasks
+from threading import Thread
 
 from core.classes import Cog_Extension
 import bothelper
@@ -17,55 +18,12 @@ class task(Cog_Extension):
     @commands.Cog.listener()
     async def on_ready(self):
         if self.bot.user.id == 589744540240314368:
-            self.sign_reset.start()
+            self.task_timer.start()
             self.earthquake_check.start()
-            self.apex_crafting_update.start()
-            self.apex_map_update.start()
-            self.covid_update.start()
-            self.forecast_update.start()
             self.twitch.start()
         if self.bot.user.id == 870923985569861652:
             pass
 
-
-    def __gettime_15min():
-        tz = timezone(timedelta(hours=+8))
-        now = datetime.datetime.now(tz=tz)
-        if now.minute >= 0 and now.minute<15:
-            return time(hour=now.hour,minute=15,second=2,tzinfo=tz)
-        elif now.minute >= 15 and now.minute <30:
-            return time(hour=now.hour,minute=30,second=2,tzinfo=tz)
-        elif now.minute >= 30 and now.minute <45:
-            return time(hour=now.hour,minute=45,second=2,tzinfo=tz)
-        elif now.minute >= 45 and now.minute <60:
-            next = now + timedelta(hours=1)
-            return time(hour=next.hour,minute=0,second=2,tzinfo=tz)
-
-    def __gettime_3hr():
-        tz = timezone(timedelta(hours=+8))
-        now = datetime.datetime.now(tz=tz)
-        next = now + timedelta(hours=3)
-        return time(hour=next.hour,minute=0,second=0,tzinfo=tz)
-        
-
-    def __gettime_0400():
-        tz = timezone(timedelta(hours=+8))
-        return time(hour=4,minute=0,second=0,tzinfo=tz)
-
-    def __gettime_0105():
-        tz = timezone(timedelta(hours=+8))
-        return time(hour=1,minute=5,second=0,tzinfo=tz)
-
-    def __gettime_1430():
-        tz = timezone(timedelta(hours=+8))
-        now = datetime.datetime.now(tz=tz)
-        if now.hour == 14 and now.minute >= 30 and now.second < 45:
-            return time(hour=14,minute=30,second=0,tzinfo=tz)
-        else:
-            return time(hour=14,minute=45,second=0,tzinfo=tz)
-
-
-    
     # @commands.command()
     # async def task(self,ctx,task_name):
     #     if task_name == 'apex_map_update' or task_name == 'all':
@@ -83,20 +41,18 @@ class task(Cog_Extension):
     #     if task_name == 'forecast_update' or task_name == 'all':
     #         await self.forecast_update.__call__()
     #         await ctx.message.add_reaction('✅')
-
-    @tasks.loop(time=__gettime_0400())
+    
+    @tasks.loop(seconds=1)
+    async def task_timer(self):
+        schedule.run_pending()
+    
+    @schedule.repeat(schedule.every().day.at("04:00"))
     async def sign_reset(self):
         db = bothelper.Jsondb
         task_report_channel = self.bot.get_channel(db.jdata['task_report'])
         self.sqldb.truncate_table('user_sign')
         await task_report_channel.send('簽到已重置')
         await asyncio.sleep(10)
-        self.sign_reset.stop()
-
-    @sign_reset.after_loop
-    async def sign_reset_after(self):
-        await asyncio.sleep(10)
-        self.sign_reset.start()
 
     @tasks.loop(minutes=1)
     async def earthquake_check(self):
@@ -129,8 +85,8 @@ class task(Cog_Extension):
                             pass
                     await channel.send(text,embed=embed)
                     await asyncio.sleep(0.5)
-        
-    @tasks.loop(time=__gettime_1430())
+
+    @schedule.repeat(schedule.every().day.at("14:30"))
     async def covid_update(self):
         CovidReport = Covid19Interface.get_covid19()
         if CovidReport:
@@ -150,8 +106,7 @@ class task(Cog_Extension):
                 await asyncio.sleep(0.5)
         await asyncio.sleep(10)
 
-
-    @tasks.loop(time=__gettime_0105())
+    @schedule.repeat(schedule.every().day.at("01:05"))
     async def apex_crafting_update(self):
         crafting = ApexInterface().get_crafting()
         if crafting:
@@ -172,14 +127,12 @@ class task(Cog_Extension):
         await asyncio.sleep(10)
         self.apex_crafting_update.stop()
 
-    @apex_crafting_update.after_loop
-    async def apex_map_update_after(self):
-        await asyncio.sleep(10)
-        self.apex_crafting_update.start()
-
-    
-    @tasks.loop(time=__gettime_15min())
+    @schedule.repeat(schedule.every().hours.at("00:00"))
+    @schedule.repeat(schedule.every().hours.at("15:00"))
+    @schedule.repeat(schedule.every().hours.at("30:00"))
+    @schedule.repeat(schedule.every().hours.at("45:00"))
     async def apex_map_update(self):
+        print(1)
         map = ApexInterface().get_map_rotation()
         if map:
             records = self.sqldb.get_notice_channel('apex_map')
@@ -198,14 +151,8 @@ class task(Cog_Extension):
                 await asyncio.sleep(0.5)
         self.apex_map_update.change_interval(time=task.__gettime_15min())
         await asyncio.sleep(10)
-        #self.apex_map_update.stop()
-
-    # @apex_map_update.after_loop
-    # async def apex_map_update_after(self):
-    #     await asyncio.sleep(10)
-    #     self.apex_map_update.start()
     
-    @tasks.loop(time=__gettime_3hr())
+    @schedule.repeat(schedule.every(3).hours.at("00:00"))
     async def forecast_update(self):
         forecast = CWBInterface().get_forecast()
         if forecast:
