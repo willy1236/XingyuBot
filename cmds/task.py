@@ -16,14 +16,14 @@ class task(Cog_Extension):
     @commands.Cog.listener()
     async def on_ready(self):
         if self.bot.user.id == 589744540240314368:
-            schedule.every().day.at("04:00").do(self.sign_reset,self)
-            schedule.every().day.at("14:30").do(self.covid_update,self)
-            schedule.every().day.at("01:05").do(self.apex_crafting_update,self)
-            schedule.every().hours.at("00:00").do(self.apex_map_update,self)
-            schedule.every().hours.at("15:00").do(self.apex_map_update,self)
-            schedule.every().hours.at("30:00").do(self.apex_map_update,self)
-            schedule.every().hours.at("45:00").do(self.apex_map_update,self)
-            schedule.every(3).hours.at("00:00").do(self.forecast_update,self)
+            schedule.every().day.at("04:00").do(self.sign_reset)
+            schedule.every().day.at("14:30").do(self.covid_update)
+            schedule.every().day.at("01:05").do(self.apex_crafting_update)
+            schedule.every().hours.at("00:00").do(self.apex_map_update)
+            schedule.every().hours.at("15:00").do(self.apex_map_update)
+            schedule.every().hours.at("30:00").do(self.apex_map_update)
+            schedule.every().hours.at("45:00").do(self.apex_map_update)
+            schedule.every(3).hours.at("00:00").do(self.forecast_update)
 
             self.task_timer.start()
             self.earthquake_check.start()

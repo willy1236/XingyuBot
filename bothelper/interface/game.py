@@ -52,7 +52,7 @@ class OsuInterface(GameInterface):
     def __init__(self):
         super().__init__()
         self.__headers = self.get_headers()
-        self.__API_URL = 'https://osu.ppy.sh/api/v2'
+        self.__url = 'https://osu.ppy.sh/api/v2'
 
     def get_headers(self):
         ous_token = self.db.get_token('osu')
@@ -73,7 +73,7 @@ class OsuInterface(GameInterface):
 
     def get_player(self,userid:str):
         '''獲取Osu玩家資訊'''
-        response = requests.get(f'{self.__API_URL}/users/{userid}', headers=self.__headers).json()
+        response = requests.get(f'{self.__url}/users/{userid}', headers=self.__headers).json()
         if 'error' not in response:
             return OsuPlayer(response)
         else:
@@ -81,7 +81,7 @@ class OsuInterface(GameInterface):
 
     def get_beatmap(self,beatmapid:str):
         '''獲取Osu圖譜資訊'''
-        response = requests.get(f'{self.__API_URL}/beatmaps/{beatmapid}', headers=self.__headers).json()
+        response = requests.get(f'{self.__url}/beatmaps/{beatmapid}', headers=self.__headers).json()
         if 'error' not in response:
             return OsuBeatmap(response)
         else:
@@ -92,23 +92,23 @@ class ApexInterface(GameInterface):
     def __init__(self):
         super().__init__()
         self.auth = self.db.get_token('apex')
-        self.apiURL = 'https://api.mozambiquehe.re'
+        self.url = 'https://api.mozambiquehe.re'
 
-    def get_player(self,user:str,platform:str='PC'):
+    def get_player(self,username:str,platform:str='PC'):
         try:
             params={
                 'auth':self.auth,
-                'player':user,
+                'player':username,
                 'platform':platform
             }
-            response = requests.get(f'{self.apiURL}/bridge',params=params).json()
+            response = requests.get(f'{self.url}/bridge',params=params).json()
             return ApexPlayer(response)
         except:
             return None
     
     def get_crafting(self):
         params={'auth':self.auth}
-        response = requests.get(f'{self.apiURL}/crafting',params=params).json()
+        response = requests.get(f'{self.url}/crafting',params=params).json()
         if "Error" in response or not response:
             return None
         else:
@@ -116,15 +116,15 @@ class ApexInterface(GameInterface):
     
     def get_map_rotation(self):
         params={'auth':self.auth}
-        response = requests.get(f'{self.apiURL}/maprotation',params=params).json()
+        response = requests.get(f'{self.url}/maprotation',params=params).json()
         if "Error" in response or not response:
             return None
         else:    
             return ApexMapRotation(response)
 
     def get_server_status(self):
-        params={'auth':self.auth.apex_status_API}
-        response = requests.get(f'{self.apiURL}/servers',params=params).json()
+        params={'auth':self.auth}
+        response = requests.get(f'{self.url}/servers',params=params).json()
         return ApexStatus(response)
 
 
@@ -133,10 +133,10 @@ class SteamInterface(GameInterface):
         super().__init__()
         self.key = self.db.get_token('steam')
 
-    def get_user(self,user):
+    def get_user(self,userid):
         params = {
             'key':self.key,
-            'steamids':user
+            'steamids':userid
         }
         response = requests.get('https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/',params=params)
         if response.status_code == 200 and response.json().get('response').get('players'):

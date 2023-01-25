@@ -25,9 +25,6 @@ for name,value in jdict['game_set_option'].items():
 
 
 class system_game(Cog_Extension):
-    #0=未開放 1=開放自由填寫 2=需驗證
-    games = {'steam':2,'osu':1,'apex':1,'lol':1}
-
     game = SlashCommandGroup("game", "遊戲資訊相關指令")
     lol = SlashCommandGroup("lol", "League of Legends相關指令")
     osu = SlashCommandGroup("osu", "Osu相關指令")
@@ -52,8 +49,8 @@ class system_game(Cog_Extension):
         account_id = None
         other_id = None
 
-        need_verify = ['steam','lol','apex']
-        if game not in need_verify:
+        unneed_verify = []
+        if game in unneed_verify:
             player_name = value
         
         elif game == 'steam':
@@ -78,6 +75,15 @@ class system_game(Cog_Extension):
 
         elif game == 'apex':
             APIdata = ApexInterface().get_player(value)
+            if APIdata:
+                player_name = APIdata.name
+                player_id = APIdata.id
+            else:
+                await ctx.respond(f'錯誤:找不到此用戶',ephemeral=True)
+                return
+
+        elif game == 'osu':
+            APIdata = OsuInterface().get_player(value)
             if APIdata:
                 player_name = APIdata.name
                 player_id = APIdata.id
@@ -146,15 +152,15 @@ class system_game(Cog_Extension):
     #     await ctx.respond(embed=embed)
 
     @lol.command(description='查詢League of Legends用戶資料')
-    async def user(self,ctx,userid:discord.Option(str,name='用戶',description='要查詢的用戶')):
-        player = RiotInterface().get_lolplayer(userid)
+    async def user(self,ctx,username:discord.Option(str,name='用戶名稱',description='要查詢的用戶')):
+        player = RiotInterface().get_lolplayer(username)
         if player:
             await ctx.respond('查詢成功',embed=player.desplay())
         else:
             await ctx.respond('查詢失敗:查無此ID',ephemeral=True)
 
     @lol.command(description='查詢League of Legends對戰資料')
-    async def match(self,ctx,matchid:discord.Option(str,name='對戰',description='要查詢的對戰')):
+    async def match(self,ctx,matchid:discord.Option(str,name='對戰id',description='要查詢的對戰')):
         match = RiotInterface().get_lol_match(matchid)
         if match:
             await ctx.respond('查詢成功',embed=match.desplay())
@@ -162,10 +168,10 @@ class system_game(Cog_Extension):
             await ctx.respond('查詢失敗:查無此ID',ephemeral=True)
 
     @lol.command(description='查詢最近一次的League of Legends對戰')
-    async def playermatch(self,ctx,userid:discord.Option(str,name='用戶',description='要查詢的用戶')):
-        player = RiotInterface().get_lolplayer(userid)
+    async def playermatch(self,ctx,username:discord.Option(str,name='用戶名稱',description='要查詢的用戶')):
+        player = RiotInterface().get_lolplayer(username)
         if not player:
-            await ctx.respond('查詢失敗:查無此玩家ID',ephemeral=True)
+            await ctx.respond('查詢失敗:查無此玩家',ephemeral=True)
             return
         
         match_list = RiotInterface().get_lol_player_match(player.puuid,1)
@@ -182,51 +188,30 @@ class system_game(Cog_Extension):
 
     @osu.command(description='查詢Osu用戶資料')
     @commands.cooldown(rate=1,per=1)
-    async def user(self,
-                ctx,
-                userid:discord.Option(str,name='用戶',description='要查詢的用戶，可輸入遊戲名稱或dc名稱',default=None)
-                ):
-        #資料庫調用
-        userid = userid or ctx.author.id
-        userid = await Jsondb.get_gamedata(userid,'osu',ctx)
-        
-        if not userid:
-            await ctx.respond('查詢失敗:用戶尚未註冊資料庫',ephemeral=True)
-            return
-        
-        player = OsuInterface().get_player(userid)
+    async def user(self,ctx,
+                   username:discord.Option(str,name='玩家名稱',description='要查詢的玩家',default=None)):
+        player = OsuInterface().get_player(username)
         if player:
             await ctx.respond('查詢成功',embed=player.desplay())
         else:
-            await ctx.respond('查詢失敗:查無此ID',ephemeral=True)
+            await ctx.respond('查詢失敗:查無此玩家',ephemeral=True)
 
     @osu.command(description='查詢Osu圖譜資料')
     @commands.cooldown(rate=1,per=1)
-    async def map(self,
-                ctx,
-                mapid:discord.Option(str,name='圖譜id',description='要查詢的圖譜ID',default=None)
-                ):
-        embed = OsuInterface().get_beatmap(mapid).desplay()
-        if embed:
-            await ctx.respond('查詢成功',embed=embed)
+    async def map(self,ctx,
+                  mapid:discord.Option(str,name='圖譜id',description='要查詢的圖譜ID',default=None)):
+        map = OsuInterface().get_beatmap(mapid)
+        if map:
+            await ctx.respond('查詢成功',embed=map.desplay())
         else:
-            await ctx.respond('查詢失敗:查無此ID',ephemeral=True)
+            await ctx.respond('查詢失敗:查無此圖譜',ephemeral=True)
 
     @apex.command(description='查詢Apex玩家資料')
     @commands.cooldown(rate=1,per=3)
     async def user(self,
-                ctx:discord.ApplicationContext,
-                userid:discord.Option(str,name='用戶',description='要查詢的用戶，可輸入遊戲名稱或dc名稱',default=None)
-                ):
-        #資料庫調用
-        userid = userid or ctx.author.id
-        userid = await Jsondb.get_gamedata(userid,'apex',ctx)
-        
-        if not userid:
-            await ctx.respond(content='查詢失敗:用戶尚未註冊資料庫',delete_after=5)
-            return
-        
-        player = ApexInterface().get_player(userid)
+                   ctx:discord.ApplicationContext,
+                   username:discord.Option(str,name='玩家名稱',description='要查詢的玩家',default=None)):
+        player = ApexInterface().get_player(username)
         if player:
             await ctx.respond(content='查詢成功',embed=player.desplay())
         else:
@@ -252,18 +237,8 @@ class system_game(Cog_Extension):
 
     @dbd.command(description='查詢Dead by daylight玩家資料')
     @commands.cooldown(rate=1,per=1)
-    async def user(self,
-                ctx,
-                userid:discord.Option(str,name='用戶',description='要查詢的用戶，可輸入遊戲名稱或dc名稱',default=None)
-                ):
-        #資料庫調用
-        userid = userid or ctx.author.id
-        userid = await Jsondb.get_gamedata(userid,'steam',ctx)
-        
-        if not userid:
-            await ctx.respond(content='查詢失敗:用戶尚未註冊資料庫',ephemeral=True)
-            return
-        
+    async def user(self,ctx,
+                   userid:discord.Option(str,name='steamid',description='要查詢的玩家id',default=None)):        
         player = DBDInterface().get_player(userid)
         if player:
             await ctx.respond(content='查詢成功',embed=player.desplay())
@@ -272,18 +247,8 @@ class system_game(Cog_Extension):
 
     @steam.command(description='查詢Steam用戶資料')
     @commands.cooldown(rate=1,per=1)
-    async def user(self,
-                ctx,
-                userid:discord.Option(str,name='用戶',description='要查詢的用戶，可輸入遊戲名稱或dc名稱',default=None)
-                ):
-        #資料庫調用
-        userid = userid or ctx.author.id
-        userid = await Jsondb.get_gamedata(userid,'steam',ctx)
-        
-        if not userid:
-            await ctx.respond(content='查詢失敗:用戶尚未註冊資料庫',ephemeral=True)
-            return
-
+    async def user(self,ctx,
+                userid:discord.Option(str,name='用戶id',description='要查詢的用戶',default=None)):
         user = SteamInterface().get_user(userid)
         if user:
             await ctx.respond(content='查詢成功',embed=user.desplay())
@@ -307,8 +272,7 @@ class system_game(Cog_Extension):
 
     @hoyo.command(description='設定cookies')
     @commands.cooldown(rate=1,per=1)
-    async def set(self,
-                  ctx,
+    async def set(self,ctx,
                   ltuid:discord.Option(str,name='ltuid',required=True),
                   ltoken:discord.Option(str,name='ltoken',required=True)):
         await ctx.message.delete()

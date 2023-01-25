@@ -173,7 +173,7 @@ class LOLMatch():
 
 class OsuPlayer():
     def __init__(self,data):
-        self.username = data['username']
+        self.name = data['username']
         self.id = data['id']
         self.global_rank = data['statistics']['global_rank']
         self.country_rank = data['statistics']['country_rank']
@@ -192,7 +192,7 @@ class OsuPlayer():
 
     def desplay(self):
         embed = BotEmbed.general("Osu玩家資訊",url=self.url)
-        embed.add_field(name="名稱",value=self.username)
+        embed.add_field(name="名稱",value=self.name)
         embed.add_field(name="id",value=self.id)
         embed.add_field(name="全球排名",value=self.global_rank)
         embed.add_field(name="地區排名",value=self.country_rank)
