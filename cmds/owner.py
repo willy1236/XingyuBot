@@ -12,11 +12,10 @@ class owner(Cog_Extension):
     @commands.slash_command(description='更換bot狀態',guild_ids=main_guild)
     @commands.is_owner()
     async def statue(self,ctx,statue):
-        db = Jsondb
-        jdata = db.jdata
+        jdata = Jsondb.jdata
         jdata['activity'] = statue
         await self.bot.change_presence(activity=discord.Game(name=jdata.get("activity","/help")),status=discord.Status.online)
-        db.write('jdata',jdata)
+        Jsondb.write('jdata',jdata)
         await ctx.respond(f'狀態更改完成',delete_after=5)
 
     #send
@@ -158,8 +157,7 @@ class owner(Cog_Extension):
     @commands.is_owner()
     async def reset(self,ctx,arg=None):
         if arg == 'sign':
-            db = Jsondb
-            task_report_channel = self.bot.get_channel(db.jdata['task_report'])
+            task_report_channel = self.bot.get_channel(Jsondb.jdata['task_report'])
             self.sqldb.truncate_table('user_sign')
 
             await task_report_channel.send('簽到已重置')
@@ -190,10 +188,9 @@ class owner(Cog_Extension):
     @commands.slash_command(guild_ids=main_guild)
     @commands.is_owner()
     async def jset(ctx,option,value):
-        db = Jsondb
-        jdata = db.jdata
+        jdata = Jsondb.jdata
         jdata[option] = value
-        db.write('jdata',jdata)
+        Jsondb.write('jdata',jdata)
         await ctx.send(f'已將{option} 設為 {value}')
 def setup(bot):
     bot.add_cog(owner(bot))

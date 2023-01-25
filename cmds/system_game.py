@@ -1,10 +1,9 @@
-import discord,requests,genshin
+import discord,genshin
 from discord.ext import commands
-from bs4 import BeautifulSoup
 from discord.commands import SlashCommandGroup
 
 from core.classes import Cog_Extension
-from bothelper import find,BotEmbed,Jsondb
+from bothelper import BotEmbed,Jsondb
 from bothelper.interface.game import *
 
 # def player_search(url):
@@ -18,8 +17,7 @@ from bothelper.interface.game import *
 #             lvl = ''.join([x for x in result2 if x.isdigit()])
 #             return lvl
 
-db = Jsondb
-jdict = db.jdict
+jdict = Jsondb.jdict
 
 set_option = []
 for name,value in jdict['game_set_option'].items():
@@ -39,61 +37,101 @@ class system_game(Cog_Extension):
     hoyo = SlashCommandGroup("hoyo", "MiHaYo相關指令")
         
     @game.command(description='設定遊戲資料')
-    async def set(self,
-                  ctx,
+    async def set(self,ctx,
                   game:discord.Option(str,name='遊戲',description='要設定的遊戲',required=True,choices=set_option),
                   value:discord.Option(str,name='資料',description='要設定的資料，留空以移除資料',default=None)):
+        await ctx.defer()
         id = str(ctx.author.id)
-        if value:
-            need_verify = ['steam']
-            if game in need_verify:
-                if game == 'steam':
-                    APIdata = SteamInterface().get_user(value)
-                    if APIdata:
-                        player_id = APIdata.id,
-                        player_name = APIdata.name
-                    else:
-                        await ctx.respond(f'錯誤:找不到此用戶',ephemeral=True)
-                        return
-            
-            else:            
-                player_name = value
-                player_id = None
-            
-            self.sqldb.set_game_data(id,game,player_name,player_id)
-            await ctx.respond(f'已將{game}資料設定為 {player_name}')
-        else:
+        if not value:
             self.sqldb.remove_game_data(id,game)
             await ctx.respond(f'已將{game}資料移除')
+            return
+
+        player_name = None
+        player_id = None
+        account_id = None
+        other_id = None
+
+        need_verify = ['steam','lol','apex']
+        if game not in need_verify:
+            player_name = value
+        
+        elif game == 'steam':
+            APIdata = SteamInterface().get_user(value)
+            if APIdata:
+                player_name = APIdata.name
+                player_id = APIdata.id,
+            else:
+                await ctx.respond(f'錯誤:找不到此用戶',ephemeral=True)
+                return
+        
+        elif game == 'lol':
+            APIdata = RiotInterface().get_lolplayer(value)
+            if APIdata:
+                player_name = APIdata.name
+                player_id = APIdata.summonerid
+                account_id = APIdata.accountid
+                other_id = APIdata.puuid
+            else:
+                await ctx.respond(f'錯誤:找不到此用戶',ephemeral=True)
+                return
+
+        elif game == 'apex':
+            APIdata = ApexInterface().get_player(value)
+            if APIdata:
+                player_name = APIdata.name
+                player_id = APIdata.id
+            else:
+                await ctx.respond(f'錯誤:找不到此用戶',ephemeral=True)
+                return
+
+        self.sqldb.set_game_data(id,game,player_name,player_id,account_id,other_id)
+        await ctx.respond(f'已將{game}資料設定為 {player_name}')
+            
 
     @game.command(description='查詢遊戲資料')
-    async def find(self,
-                ctx,
-                user:discord.Option(discord.Member,name='用戶',description='要查詢的用戶',default=None)
-                ):
+    async def find(self,ctx,
+                   user:discord.Option(discord.Member,name='用戶',description='要查詢的用戶',default=None),
+                   game:discord.Option(str,name='遊戲',description='若輸入此欄，將會用資料庫的資查詢玩家',default=None,choices=set_option)):
+        await ctx.defer()
         user = user or ctx.author
         userid = str(user.id)
         
-        if user == ctx.author or ctx.author.id == 419131103836635136:
-            record = self.sqldb.get_game_data(userid)
-            if record:
-                data = {}
-                for r in record:
-                    game = r['game']
-                    if r['player_id']:
-                        data[game] = f"{r['player_name']}({r['player_id']})"
-                    else:
-                        data[game] = r['player_name']
-
-                embed = BotEmbed.simple(title=user)
-                for game in data:
-                    embed.add_field(name=game, value=data[game], inline=False)
-                embed.set_thumbnail(url=user.display_avatar.url)
-                await ctx.respond(embed=embed)
+        if game:
+            dbdata = self.sqldb.get_game_data(userid,game)
+            if game == 'steam':
+                APIdata = SteamInterface().get_user(dbdata['player_id'])
+            elif game == 'osu':
+                APIdata = OsuInterface().get_player(dbdata['player_name'])
+            elif game == 'apex':
+                APIdata = ApexInterface().get_player(dbdata['player_name'])
+            elif game == 'lol':
+                APIdata = RiotInterface().get_user(dbdata['player_name'])
+            
+            if APIdata:
+                await ctx.respond(f'查詢成功',embed=APIdata.desplay())
             else:
-                await ctx.respond('無法查詢此人的資料，可能是用戶尚未註冊資料庫',ephemeral=True)
-        else:
+                await ctx.respond(f'錯誤:找不到此用戶',ephemeral=True)
+            return
+
+        if not (user == ctx.author or ctx.author.id == 419131103836635136):
             await ctx.respond('目前不開放查詢別人的資料喔',ephemeral=True)
+            return
+            
+        record = self.sqldb.get_game_data(userid)
+        if record:
+            data = {}
+            for r in record:
+                game = r['game']
+                data[game] = r['player_name']
+
+            embed = BotEmbed.simple(title=user)
+            for game in data:
+                embed.add_field(name=game, value=data[game], inline=False)
+            embed.set_thumbnail(url=user.display_avatar.url)
+            await ctx.respond(embed=embed)
+        else:
+            await ctx.respond('無法查詢此人的資料，可能是用戶尚未註冊資料庫',ephemeral=True)
 
     # @lol.command(description='查詢League of Legends用戶資料')
     # async def user(self,ctx,userid:discord.Option(str,name='用戶',description='要查詢的用戶')):

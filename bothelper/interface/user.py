@@ -1,5 +1,5 @@
 import random
-from bothelper.file_database import JsonDatabase
+from bothelper.database import JsonDatabase
 from bothelper.basic import BotEmbed
 
 class User():

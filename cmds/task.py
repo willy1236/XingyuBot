@@ -1,13 +1,11 @@
 import asyncio,discord,schedule
-from datetime import datetime, timezone, timedelta,time
+from datetime import datetime, timezone, timedelta
 from discord.ext import commands,tasks
-from threading import Thread
 
 from core.classes import Cog_Extension
-import bothelper
-from bothelper.interface.weather import *
-from bothelper.interface.game import ApexInterface
-from bothelper.interface.community import Twitch
+from bothelper import Jsondb
+from bothelper.interface import *
+
 
 class task(Cog_Extension):
     def __init__(self,*args,**kwargs):
@@ -56,23 +54,21 @@ class task(Cog_Extension):
         schedule.run_pending()
     
     async def sign_reset(self):
-        db = bothelper.Jsondb
-        task_report_channel = self.bot.get_channel(db.jdata['task_report'])
+        task_report_channel = self.bot.get_channel(Jsondb.jdata['task_report'])
         self.sqldb.truncate_table('user_sign')
         await task_report_channel.send('簽到已重置')
         await asyncio.sleep(10)
 
     @tasks.loop(minutes=1)
     async def earthquake_check(self):
-        db = bothelper.Jsondb
-        cache = db.cache
+        cache = Jsondb.cache
         timefrom = cache['timefrom']
         data = CWBInterface().get_report_auto(timefrom)
         if data:
             embed = data.desplay()
             time = datetime.datetime.strptime(data.originTime, "%Y-%m-%d %H:%M:%S")+timedelta(seconds=1)
             cache['timefrom'] = time.strftime("%Y-%m-%dT%H:%M:%S")
-            db.write('cache',cache)
+            Jsondb.write('cache',cache)
 
             if data.auto_type == 'E-A0015-001':
                 text = '顯著有感地震報告'
@@ -183,8 +179,7 @@ class task(Cog_Extension):
     
     @tasks.loop(minutes=2)
     async def twitch(self):
-        db = bothelper.Jsondb
-        cache = db.cache
+        cache = Jsondb.cache
         users = self.sqldb.get_notice_community_userlist('twitch')
         if not users:
             return
@@ -205,7 +200,7 @@ class task(Cog_Extension):
             elif not data[username] and cache['twitch'].get(username,False):
                 cache['twitch'][username] = False
             
-        db.write('cache',cache)
+        Jsondb.write('cache',cache)
 
 def setup(bot):
     bot.add_cog(task(bot))

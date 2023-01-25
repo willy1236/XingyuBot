@@ -6,12 +6,11 @@ from bothelper.ui_element.button import *
 from bothelper import Jsondb
 
 
-jdata = Jsondb.jdata
-
 #Bot1:dc小幫手, Bep:Bep, Bot2:RO
 bot_code = 'Bep'
 token = Jsondb.tokens.get(bot_code)
 
+jdata = Jsondb.jdata
 start_website = jdata.get('start_website')
 auto_update = jdata.get('auto_update')
 #commands.Bot
@@ -53,10 +52,10 @@ async def on_ready():
     # for i in bot.cogs:
     #     cogs += f"{i} "
     # print(">> Cogs:",cogs,"<<")
-    if len(os.listdir('./cmds'))-len(ignore_py)-1 == len(bot.cogs):
+    if len(os.listdir('./cmds'))-1 == len(bot.cogs):
         print(">> Cogs all loaded <<")
     else:
-        print(f">> Cogs not all loaded, {len(bot.cogs)}/{len(os.listdir('./cmds'))-len(ignore_py)-1} loaded<<")
+        print(f">> Cogs not all loaded, {len(bot.cogs)}/{len(os.listdir('./cmds'))} loaded<<")
     bot.add_view(ReactRole_button())
     
 
@@ -102,11 +101,10 @@ if __name__ == "__main__":
         print('>> website: off <<')
 
     try:
-        ignore_py = []
         for filename in os.listdir('./cmds'):
-            if filename.endswith('.py') and filename[:-3] not in ignore_py:
+            if filename.endswith('.py'):
                 bot.load_extension(f'cmds.{filename[:-3]}')
-        
+
         bot.run(token)
     except discord.errors.LoginFailure:
         print('>> Bot: Login failed <<')

@@ -1,4 +1,4 @@
-import os,discord
+import discord
 import openai
 from core.classes import Cog_Extension
 from discord.ext import commands

@@ -1,5 +1,5 @@
-import requests,datetime,discord
-from bothelper import JsonDatabase
+import requests,datetime
+from bothelper.database import JsonDatabase
 from bothelper.model.community import *
 
 class CommunityInterface():

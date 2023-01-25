@@ -1,6 +1,15 @@
+from .community import *
+from .game import *
+from .weather import *
+
 __all__ =[
-    "community",
-    "game",
-    "user",
-    "weather",
+    'Twitch',
+    'RiotInterface',
+    'OsuInterface',
+    'ApexInterface',
+    'SteamInterface',
+    'DBDInterface',
+    'hoyoInterface',
+    'CWBInterface',
+    'Covid19Interface',
 ]

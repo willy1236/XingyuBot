@@ -10,8 +10,7 @@ from bothelper import Jsondb,BRS
 
 from mysql.connector.errors import Error as sqlerror
 
-db = Jsondb
-jdict = db.jdict
+jdict = Jsondb.jdict
 
 bet_option = []
 for name,value in jdict['bet_option'].items():

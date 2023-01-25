@@ -1,11 +1,10 @@
 import requests,genshin
-from bothelper import JsonDatabase
+from bothelper.database import JsonDatabase
 from bothelper.model.game import *
 
 class GameInterface():
     def __init__(self):
         self.db = JsonDatabase()
-
 
 class RiotInterface(GameInterface):
     def __init__(self):
@@ -82,7 +81,7 @@ class OsuInterface(GameInterface):
 
     def get_beatmap(self,beatmapid:str):
         '''獲取Osu圖譜資訊'''
-        response = requests.get(f'{self.__API_URL}/beatmaps/{map}', headers=self.__headers).json()
+        response = requests.get(f'{self.__API_URL}/beatmaps/{beatmapid}', headers=self.__headers).json()
         if 'error' not in response:
             return OsuBeatmap(response)
         else:

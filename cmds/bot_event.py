@@ -15,8 +15,7 @@ class ScamChack:
         else:
             return False
 
-db = Jsondb
-voice_updata = db.jdata.get('voice_updata',False)
+voice_updata = Jsondb.jdata.get('voice_updata',False)
 
 voice_list = {
     613747262291443742: 631498685250797570,
@@ -66,7 +65,8 @@ class event(Cog_Extension):
         #詐騙檢查
         ScamChack = False
         if self.bot.user.id == 589744540240314368 and message.mention_everyone:
-            if 'free' in message.content.lower() and 'nitro' in message.content.lower():
+            text = message.content.lower()
+            if 'free' in text and 'nitro' in text:
                 ScamChack = True
             else:
                 url = "https://spen.tk/api/v1/isMaliciousTerm"

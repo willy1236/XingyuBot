@@ -1,7 +1,7 @@
 import requests,time
 from bs4 import BeautifulSoup
 
-from bothelper import JsonDatabase
+from bothelper.database import JsonDatabase
 from bothelper.model.weather import *
 
 class WeatherInterface():

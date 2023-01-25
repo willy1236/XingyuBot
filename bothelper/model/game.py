@@ -1,15 +1,15 @@
 from datetime import datetime,timedelta
 from bothelper.basic import BotEmbed
-from bothelper import Jsondb
+from bothelper.database import JsonDatabase
 
+Jsondb = JsonDatabase()
 jdict = Jsondb.jdict
 lol_jdict = Jsondb.lol_jdict
 
 class LOLPlayer():
     def __init__(self,data):
-        print(data)
         self.name = data['name']
-        self.summoner = data['id']
+        self.summonerid = data['id']
         self.accountid = data['accountId']
         self.puuid = data['puuid']
         self.summonerLevel = data['summonerLevel']
@@ -19,7 +19,7 @@ class LOLPlayer():
         embed.add_field(name="玩家名稱", value=self.name, inline=False)
         embed.add_field(name="召喚師等級", value=self.summonerLevel, inline=False)
         embed.add_field(name="帳號ID", value=self.accountid, inline=False)
-        embed.add_field(name="召喚師ID", value=self.summoner, inline=False)
+        embed.add_field(name="召喚師ID", value=self.summonerid, inline=False)
         embed.add_field(name="puuid", value=self.puuid, inline=False)
         embed.set_thumbnail(url='https://i.imgur.com/B0TMreW.png')
         return embed
@@ -147,18 +147,18 @@ class LOLMatch():
         embed = BotEmbed.general("LOL對戰")
         gamemode = lol_jdict['mod'].get(self.gameMode) or self.gameMode
         embed.add_field(name="遊戲模式", value=gamemode, inline=False)
-        embed.add_field(name="遊戲ID", value=self.gameId, inline=False)
+        embed.add_field(name="對戰ID", value=self.matchId, inline=False)
         #embed.add_field(name="遊戲版本", value=self.gameVersion, inline=False)
         blue = ''
         red = ''
         i = 0
         for player in self.players:
             if i < 5:
-                blue += player.desplay() + '\n'
+                blue += player.desplay()
                 if i != 4:
                     blue += '\n'
             else:
-                red += player.desplay() + '\n'
+                red += player.desplay()
                 if i != 9:
                     red += '\n'
             i+=1
@@ -248,7 +248,7 @@ class OsuBeatmap():
 class ApexPlayer():
     def __init__(self,data):
         #basic information
-        self.username = data['global']['name']
+        self.name = data['global']['name']
         self.id = data['global']['uid']
         self.platform = data['global']['platform']
         self.level = data['global']['level']
@@ -273,7 +273,7 @@ class ApexPlayer():
 
     def desplay(self):
         embed = BotEmbed.simple("Apex玩家資訊")
-        embed.add_field(name="名稱",value=self.username)
+        embed.add_field(name="名稱",value=self.name)
         embed.add_field(name="id",value=self.id)
         embed.add_field(name="平台",value=self.platform)
         embed.add_field(name="等級",value=self.level)

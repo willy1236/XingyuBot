@@ -11,13 +11,3 @@ Jsondb = bothelper.Jsondb
 # r = requests.get(url)
 # with open('test.xml','w',encoding='utf-8') as f:
 #     f.write(r.text)
-
-# twitch = Twitch()
-# r = twitch.get_lives([''])
-# print(r)
-
-# token = Jsondb.get_token('CWB_api')
-# time = '2023-01-03T05:46:45'
-# APIdata = requests.get(f'https://opendata.cwb.gov.tw/api/v1/rest/datastore/E-A0016-001?Authorization={token}&timeFrom={time}')
-# data = APIdata.json().get('records').get('Earthquake')[0]
-# print(EarthquakeReport(data))
