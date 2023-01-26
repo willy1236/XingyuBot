@@ -27,7 +27,7 @@ dict = {
     'bet':'bet',
     'music':'music',
     'weather':'weather',
-    'math':'math',
+    # 'math':'math',
     'user':'user',
     'twitch':'twitch',
     'admin':'admin',
@@ -100,7 +100,7 @@ class help(Cog_Extension):
             embed.add_field(name="!!help <系列指令>", value="查詢系列指令\n目前支援:use,admin,pt,game,set,role,bet,music,weather,math,user,twitch", inline=False)
             embed.add_field(name="!!info <內容/help>", value="獲得相關資訊", inline=False)
             embed.add_field(name="!!feedback <內容>", value="傳送訊息給機器人擁有者", inline=False)
-            embed.add_field(name="!!find <id>", value="搜尋指定ID", inline=False)
+            #embed.add_field(name="!!find <id>", value="搜尋指定ID", inline=False)
             embed.add_field(name="!!lottery [次數]", value="抽獎", inline=False)
             embed.add_field(name="!!about", value="關於機器人的小資訊", inline=False)
             embed.set_footer(text="輸入!!help user查詢指令用法")
@@ -110,7 +110,7 @@ class help(Cog_Extension):
             embed.add_field(name="指令使用:前輟指令", value="前輟+指令就可以使用了，例如`!!help`\n如果有參數，則需要把每個參數用空格隔開", inline=False)
             embed.add_field(name="指令使用:斜槓指令", value="打上/後，會有dc的提示幫助你`\n如果有參數，在輸入過程中都有提示", inline=False)
             embed.add_field(name="括號", value="`<參數>`表示這個參數必填 `[參數]`表示不一定要填\n`<參數1/參數2>`為選擇一個參數填寫即可\n範例：", inline=False)
-            embed.set_footer(text="輸入!!help user查詢指令用法")
+            embed.set_footer(text="輸入!!help use查詢指令用法")
             await ctx.respond(embed=embed)
         elif arg == 'pt':
             embed = BotEmbed.simple("點數系統(Pt) 指令")
@@ -118,21 +118,21 @@ class help(Cog_Extension):
             embed.add_field(name="!!pt give <用戶> <數量>", value="將Pt轉給指定用戶", inline=False)
             embed.add_field(name="!!sign", value="每日簽到", inline=False)
             embed.add_field(name="!!shop", value="商城(敬請期待)", inline=False)
-            embed.set_footer(text="輸入!!help user查詢指令用法")
+            embed.set_footer(text="輸入!!help use查詢指令用法")
             await ctx.respond(embed=embed)
         elif arg == 'game':
             embed = BotEmbed.simple("遊戲(Game) 指令")
-            embed.add_field(name="!!game <set> <遊戲> <資料>", value="設定你在資料庫內的遊戲名稱\n目前支援:steam,lol,osu,apex(pc版)", inline=False)
-            embed.add_field(name="!!game <find> <用戶>", value="查詢用戶在資料庫內的遊戲名稱(目前僅能查詢自己的資料)", inline=False)
-            embed.add_field(name="!!lol <player> <玩家名稱>", value="查詢LOL戰績(更多功能敬請期待)", inline=False)
-            embed.add_field(name="!!osu <玩家名/id>", value="查詢osu玩家", inline=False)
-            embed.add_field(name="!!osu <map> <圖譜id>", value="查詢osu圖譜", inline=False)
-            embed.add_field(name="!!apex <玩家名/id>", value="查詢apex玩家", inline=False)
+            embed.add_field(name="!!game set <遊戲> <資料>", value="設定你在資料庫內的遊戲名稱\n目前支援:steam,lol,osu,apex(pc版)", inline=False)
+            embed.add_field(name="!!game find [用戶] [遊戲]", value="查詢用戶在資料庫內的遊戲名稱(目前僅能查詢自己的資料)", inline=False)
+            embed.add_field(name="!!lol player <玩家名稱>", value="查詢LOL戰績(更多功能敬請期待)", inline=False)
+            embed.add_field(name="!!osu player <玩家名/id>", value="查詢osu玩家", inline=False)
+            embed.add_field(name="!!osu map <圖譜id>", value="查詢osu圖譜", inline=False)
+            embed.add_field(name="!!apex player <玩家名/id>", value="查詢apex玩家", inline=False)
             embed.add_field(name="!!apex map", value="查詢apex地圖輪替", inline=False)
             embed.add_field(name="!!apex creafting", value="查詢apex合成台內容", inline=False)
-            embed.add_field(name="!!dbd <id>", value="查詢DBD玩家", inline=False)
+            embed.add_field(name="!!dbd player <id>", value="查詢DBD玩家", inline=False)
             embed.add_field(name="!!hoyo", value="查詢原神相關指令", inline=False)
-            embed.set_footer(text="輸入!!help user查詢指令用法")
+            embed.set_footer(text="輸入!!help use查詢指令用法")
             await ctx.respond(embed=embed)
         elif arg == 'set':
             embed = BotEmbed.simple("設定(Set) 指令:")
@@ -144,21 +144,21 @@ class help(Cog_Extension):
             embed.add_field(name="!!set covid_update [頻道]", value="設定台灣疫情通知頻道", inline=False)
             embed.add_field(name="!!set forecast [頻道]", value="設定台灣各縣市天氣預報頻道", inline=False)
             embed.add_field(name="!!set bot [頻道]", value="設定機器人更新通知頻道", inline=False)
-            embed.set_footer(text="輸入!!help user查詢指令用法")
+            embed.set_footer(text="輸入!!help use查詢指令用法")
             await ctx.respond(embed=embed)
         elif arg == 'role':
             embed = BotEmbed.simple("身分組(Role) 指令:")
-            embed.add_field(name="!!role <用戶>", value="取得用戶的身分組數量(可批量輸入多個用戶)", inline=False)
+            embed.add_field(name="!!role count <用戶>", value="取得用戶的身分組數量(可批量輸入多個用戶)", inline=False)
             embed.add_field(name="!!role add <名稱> [用戶]", value="取得用戶的身分組數量(可批量輸入多個用戶)", inline=False)
             embed.add_field(name="!!role nick <名稱/顏色代碼>", value="更改稱號(顏色請輸入HEX格式)", inline=False)
-            embed.set_footer(text="輸入!!help user查詢指令用法")
+            embed.set_footer(text="輸入!!help use查詢指令用法")
             await ctx.respond(embed=embed)
         elif arg == 'bet':
             embed = BotEmbed.simple("賭盤(Bet) 指令:")
             embed.add_field(name="!!bet <賭盤ID> <blue/pink> <下注金額>", value="賭盤下注", inline=False)
             embed.add_field(name="!!bet create <賭盤標題> <粉紅幫標題> <藍藍幫標題> <下注時間>", value="創建賭盤(時間格式為'10s''1m20s'等，不可超過600s)", inline=False)
             embed.add_field(name="!!bet end <blue/pink>",value="結算賭盤",inline=False)
-            embed.set_footer(text="輸入!!help user查詢指令用法")
+            embed.set_footer(text="輸入!!help use查詢指令用法")
             await ctx.respond(embed=embed)
         elif arg == 'music':
             page = [BotEmbed.simple("音樂(music) 指令:"),BotEmbed.simple("音樂(music) 指令:")]
@@ -183,13 +183,14 @@ class help(Cog_Extension):
             embed = BotEmbed.simple("天氣(weather) 指令:")
             embed.add_field(name="!!earthquake", value="查詢最新的顯著有感地震報告", inline=False)
             embed.add_field(name="!!covid", value="查詢最新的台灣疫情", inline=False)
-            embed.set_footer(text="輸入!!help user查詢指令用法")
+            embed.add_field(name="!!forecast ", value="查詢天氣預報", inline=False)
+            embed.set_footer(text="輸入!!help use查詢指令用法")
             await ctx.respond(embed=embed)
-        elif arg == 'math':
-            embed = BotEmbed.simple("數學(math) 指令:")
-            embed.add_field(name="!!ma <A列數> <A行數>  <A> <B列數> <B行數> <B>", value='A*B矩陣乘法\n矩陣打法 : "數字1 數字2.... "\n前後加引號 每個數字用空格隔開 數字順序為 一列數字打完 再打下一列數字', inline=False)
-            embed.set_footer(text="輸入!!help user查詢指令用法")
-            await ctx.respond(embed=embed)
+        # elif arg == 'math':
+        #     embed = BotEmbed.simple("數學(math) 指令:")
+        #     embed.add_field(name="!!ma <A列數> <A行數>  <A> <B列數> <B行數> <B>", value='A*B矩陣乘法\n矩陣打法 : "數字1 數字2.... "\n前後加引號 每個數字用空格隔開 數字順序為 一列數字打完 再打下一列數字', inline=False)
+        #     embed.set_footer(text="輸入!!help use查詢指令用法")
+        #     await ctx.respond(embed=embed)
         elif arg == 'user':
             embed = BotEmbed.simple("用戶(user) 指令:")
             embed.add_field(name="!!ui", value="關於你自己", inline=False)
@@ -198,19 +199,19 @@ class help(Cog_Extension):
             embed.add_field(name="!!pet add <物種> <名稱>", value='領養寵物\n可用物種:shark,dog,cat,fox', inline=False)
             embed.add_field(name="!!pet remove", value='放生寵物', inline=False)
             embed.add_field(name="!!advance", value='進行冒險', inline=False)
-            embed.set_footer(text="輸入!!help user查詢指令用法")
+            embed.set_footer(text="輸入!!help use查詢指令用法")
             await ctx.respond(embed=embed)
         elif arg == 'twitch':
             embed = BotEmbed.simple("圖奇(twitch) 指令:")
-            embed.add_field(name="!!twitch <twitch用戶> <頻道> <身分組>", value="設定twitch的開台通知", inline=False)
+            embed.add_field(name="!!twitch set <twitch用戶> <頻道> [身分組]", value="設定twitch的開台通知", inline=False)
             embed.add_field(name="!!twitch remove <twitch用戶>", value="移除twitch的開台通知", inline=False)
             embed.add_field(name="!!twitch notice <twitch用戶>", value="檢查twitch的開台通知頻道", inline=False)
-            embed.set_footer(text="輸入!!help user查詢指令用法")
+            embed.set_footer(text="輸入!!help use查詢指令用法")
             await ctx.respond(embed=embed)
         elif arg == 'admin':
             embed = BotEmbed.basic(self,"目前可使用的指令如下(admin):")
             embed.add_field(name="!!clean <數字>", value="清除訊息(需求管理訊息)", inline=False)
-            embed.set_footer(text="輸入!!help user查詢指令用法")
+            embed.set_footer(text="輸入!!help use查詢指令用法")
             await ctx.respond(embed=embed)
     
     @commands.slash_command(description='owner幫助指令')
@@ -228,7 +229,7 @@ class help(Cog_Extension):
         embed.add_field(name="!!about <server/count>", value="about系列指令", inline=False)
         embed.add_field(name="!!updete_task <task>", value="task更新", inline=False)
         embed.add_field(name="!!jset <option> <value>", value="設定jdata數值", inline=False)
-        embed.set_footer(text="輸入!!help user查詢指令用法")
+        embed.set_footer(text="輸入!!help use查詢指令用法")
         await ctx.respond(embed=embed)
 
 

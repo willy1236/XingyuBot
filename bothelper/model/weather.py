@@ -5,7 +5,6 @@ from bothelper.basic import BotEmbed
 
 class EarthquakeReport():
     def __init__(self,data,auto_type=None):
-        self.data = data
         self.auto_type = auto_type
         self.earthquakeNo = str(data['EarthquakeNo'])
         self.reportImageURI = data['ReportImageURI']
@@ -19,13 +18,13 @@ class EarthquakeReport():
 
     def desplay(self):
         if self.reportColor == "綠色":
-            embed = discord.Embed(description=self.reportContent,color=0x00BB00)
+            embed = discord.Embed(title='地震報告',description=self.reportContent,color=0x00BB00,url=self.web)
         elif self.reportColor == "橙色":
-            embed = discord.Embed(description=self.reportContent,color=0xF75000)
+            embed = discord.Embed(title='地震報告',description=self.reportContent,color=0xF75000,url=self.web)
         elif self.reportColor == "黃色":
-            embed = discord.Embed(description=self.reportContent,color=0xFFFF37)
+            embed = discord.Embed(title='地震報告',description=self.reportContent,color=0xFFFF37,url=self.web)
         else:
-            embed = discord.Embed(description=self.reportContent,color=0xEA0000)
+            embed = discord.Embed(title='地震報告',description=self.reportContent,color=0xEA0000,url=self.web)
         
         if self.earthquakeNo[3:] == "000":
             embed.add_field(name='地震編號',value=f'{self.earthquakeNo}（小規模）')

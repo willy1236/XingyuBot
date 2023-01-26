@@ -73,6 +73,8 @@ class MySQLDatabase():
         self.cursor.execute("DELETE FROM `user_data` WHERE `id` = %s;",(str(id),))
         self.connection.commit()
 
+
+
     def check_user_game_data(self,id:str):
         self.cursor.execute(f"USE `database`;")
         self.cursor.execute(f'SELECT * FROM `game_data` WHERE user_id = %s;',(str(id),))
@@ -102,6 +104,8 @@ class MySQLDatabase():
             records = self.cursor.fetchall()
         return records
 
+
+
     def get_role_save(self,id:str):
         self.cursor.execute(f"USE `database`;")
         self.cursor.execute(f'SELECT * FROM `role_save` WHERE user_id = %s ORDER BY `time` DESC;',(id,))
@@ -118,6 +122,8 @@ class MySQLDatabase():
         self.cursor.execute(f"USE `database`;")
         self.cursor.execute(f"INSERT INTO `role_save` VALUES(%s,%s,%s,%s)",(user_id,role_id,role_name,time))
         self.connection.commit()
+
+
 
     def get_point(self,user_id:str):
         self.cursor.execute(f"USE `database`;")
@@ -151,7 +157,9 @@ class MySQLDatabase():
         elif mod == 'add':
             self.cursor.execute(f"UPDATE `user_point` SET point = point + %s WHERE user_id = %s;",(amount,user_id))
         self.connection.commit()
-    
+
+
+
     def user_sign(self,user_id:str):
         try:
             time = datetime.datetime.now()
@@ -169,10 +177,14 @@ class MySQLDatabase():
         self.cursor.execute(f"INSERT INTO `user_point` SET user_id = %s, point = %s,rcoin = %s ON DUPLICATE KEY UPDATE user_id = %s, point = point + %s,rcoin = %s",(user_id,point,Rcoin,user_id,point,Rcoin))
         self.connection.commit()
 
+
+
     def set_hoyo_cookies(self,user_id:str,ltuid:str,ltoken:str):
         self.cursor.execute(f"USE `database`;")
         self.cursor.execute(f"INSERT INTO `game_hoyo_cookies` SET user_id = {user_id}, ltuid = {ltuid}, ltoken = {ltoken} ON DUPLICATE KEY UPDATE user_id = {user_id}, ltuid = {ltuid}, ltoken = {ltoken}")
         self.connection.commit()
+
+
 
     def set_notice_channel(self,guild_id:int,notice_type:str,channel_id:int,role_id:int=None):    
         self.cursor.execute(f"USE `database`;")
@@ -189,6 +201,8 @@ class MySQLDatabase():
         self.cursor.execute(f'SELECT * FROM `notice_channel` WHERE notice_type = %s;',(notice_type,))
         records = self.cursor.fetchall()
         return records
+
+
 
     def set_notice_community(self,notice_type:str,notice_name:str,guild_id:int,channel_id:int,role_id:int=None):
         self.cursor.execute(f"USE `database`;")
@@ -223,6 +237,8 @@ class MySQLDatabase():
         for i in records:
             list.append(i.values())
         return list
+
+
 
     def get_bet_data(self,bet_id:int):
         self.cursor.execute(f"USE `database`;")

@@ -3,33 +3,34 @@ import json,os
 class JsonDatabase():
     def __init__(self):
         """
-        CWB = 中央氣象局\n
+        CWB = 中央氣象局
+
         TRN = tracker.gg
         """
-        location = "database"
-        data_location = "data"
+        self.location = "database"
+        self.data_location = "data"
         self.__dict = {
-            'lol_jdict': f'{data_location}/lol_dict.json',
-            'jdict': f'{data_location}/dict.json',
-            'jdata': f'{location}/setting.json',
-            'cdata': f'{location}/channel_settings.json',
-            'picdata': f'{data_location}/bot_settings/picture.json',
-            'udata': f'{location}/user_settings/basic.json',
-            'jpt': f'{location}/user_settings/point.json',
-            'jloot': f'{location}/lottery.json',
-            'bet_data': f'{location}/bet.json',
-            'gdata': f'{location}/gamer_data.json',
-            'jdsign': f'{location}/sign_day.json',
-            'jwsign': f'{location}/sign_week.json',
-            'jevent': f'{location}/bot_settings/event.json',
-            'rsdata': f'{location}/role_save.json',
-            'jpet': f'{location}/user_settings/pet.json',
-            'jbag': f'{location}/user_settings/bag.json',
-            'cache': f'{location}/cache.json',
-            'monster_basic': f'{data_location}/RPG_settings/monster_basic.json',
-            'jRcoin': f'{location}/user_settings/rcoin.json',
-            'jhoyo': f'{location}/game_settings/hoyo.json',
-            'jtwitch': f'{location}/community_settings/twitch.json',
+            'lol_jdict': f'{self.data_location}/lol_dict.json',
+            'jdict': f'{self.data_location}/dict.json',
+            'jdata': f'{self.location}/setting.json',
+            'cdata': f'{self.location}/channel_settings.json',
+            'picdata': f'{self.data_location}/bot_settings/picture.json',
+            'udata': f'{self.location}/user_settings/basic.json',
+            'jpt': f'{self.location}/user_settings/point.json',
+            'jloot': f'{self.location}/lottery.json',
+            'bet_data': f'{self.location}/bet.json',
+            'gdata': f'{self.location}/gamer_data.json',
+            'jdsign': f'{self.location}/sign_day.json',
+            'jwsign': f'{self.location}/sign_week.json',
+            'jevent': f'{self.location}/bot_settings/event.json',
+            'rsdata': f'{self.location}/role_save.json',
+            'jpet': f'{self.location}/user_settings/pet.json',
+            'jbag': f'{self.location}/user_settings/bag.json',
+            'cache': f'{self.location}/cache.json',
+            'monster_basic': f'{self.data_location}/RPG_settings/monster_basic.json',
+            'jRcoin': f'{self.location}/user_settings/rcoin.json',
+            'jhoyo': f'{self.location}/game_settings/hoyo.json',
+            'jtwitch': f'{self.location}/community_settings/twitch.json',
         }
         self.lol_jdict = json.load(open(self.__dict['lol_jdict'],mode='r',encoding='utf8'))
         self.jdict = json.load(open(self.__dict['jdict'],mode='r',encoding='utf8'))
@@ -52,11 +53,7 @@ class JsonDatabase():
         #self.jRcoin = json.load(open(self.__dict['jRcoin'],mode='r',encoding='utf8'))
         #self.jhoyo = json.load(open(self.__dict['jhoyo'],mode='r',encoding='utf8'))
         #self.jtwitch = json.load(open(self.__dict['jtwitch'],mode='r',encoding='utf8'))
-
-        try:
-            self.tokens = json.load(open(f'{location}/token.json',mode='r',encoding='utf8'))
-        except:
-            self.tokens = os.environ
+        self.tokens = json.load(open(f'{self.location}/token.json',mode='r',encoding='utf8'))
 
     def write(self,file:str,data:dict):
         try:
@@ -67,9 +64,11 @@ class JsonDatabase():
             raise KeyError("此項目沒有在資料庫中")
 
     def get_token(self,webname:str):
-        """獲取相關api的tokens\n
+        """獲取相關api的tokens
+
         支援CWB_api,osu(id,secret),TRN,apex,steam,twitch(id,secret),youtube,riot,openai
         """
+        
         dict = {
             "CWB_api":'CWB_api',
             'osu':'osu_api',

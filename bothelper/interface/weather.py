@@ -25,7 +25,7 @@ class CWBInterface(WeatherInterface):
             APIdata = requests.get(f'{self.url}/E-A0016-001',params=params).json().get('records').get('Earthquake')[0]
         
         if APIdata:
-            return EarthquakeReport(APIdata[0])
+            return EarthquakeReport(APIdata)
         else:
             return None
 
