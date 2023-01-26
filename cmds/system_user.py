@@ -4,10 +4,15 @@ from core.classes import Cog_Extension
 from discord.commands import SlashCommandGroup
 
 from bothelper.interface.user import *
-from bothelper import BotEmbed
+from bothelper import BotEmbed,Jsondb
+from bothelper.ui_element.button import Delete_Pet_button
+
+jdict = Jsondb.jdict
+option = []
+for name,value in jdict['pet_option'].items():
+    option.append(discord.OptionChoice(name=name,value=value))
 
 class system_user(Cog_Extension):
-    
     pet = SlashCommandGroup("pet", "寵物相關指令")
     shop = SlashCommandGroup("shop", "商店相關指令")
 
@@ -37,53 +42,46 @@ class system_user(Cog_Extension):
 
     @pet.command(description='查看寵物資訊')
     async def check(self,ctx,user_dc:discord.Option(discord.Member,name='用戶',description='可不輸入以查詢自己',default=None)):
-        await ctx.respond('敬請期待')
-        return
         user_dc = user_dc or ctx.author
-        pet = Pet(user_dc.id)
-        if pet.has_pet:
-            embed = BotEmbed.general(f'{ctx.author.name} 的寵物')
-            embed.add_field(name='寵物名',value=pet.name)
-            embed.add_field(name='寵物物種',value=pet.species)
+        pet = self.sqldb.get_user_pet(str(user_dc.id))
+        if pet:
+            embed = pet.desplay()
+            embed.title = f'{ctx.author.name} 的寵物'
             await ctx.respond(embed=embed)
         else:
             await ctx.respond('用戶沒有認養寵物')
     
     @pet.command(description='認養寵物')
     async def add(self,ctx,
-                  species:discord.Option(str,name='物種',description='想認養的寵物物種（目前僅開放部分物種）'),
-                  name:discord.Option(str,name='寵物名',description='')):
-        await ctx.respond('敬請期待')
-        return
-        pet = User(ctx.author.id).pet
-        if pet.has_pet:
+                  species:discord.Option(str,name='物種',description='想認養的寵物物種',choices=option),
+                  name:discord.Option(str,name='寵物名',description='想幫寵物取的名子')):
+        r = self.sqldb.create_user_pet(str(ctx.author.id),species,name)
+        if r:
             await ctx.respond('你已經有寵物了')
-            return
-        list = pet.add_pet(name,species)
-        await ctx.respond(f"你收養了一隻名叫 {list[0]} 的{list[1]}!")
-
+        else:
+            await ctx.respond(f"你收養了一隻名叫 {name} 的{list(filter(lambda x: jdict['pet_option'][x]==species,jdict['pet_option']))[0]}!")
+    
     @pet.command(description='放生寵物')
     async def remove(self,ctx):
-        await ctx.respond('敬請期待')
-        return
-        def check(m):
-            try:
-                return m.content == 'y' and m.author == ctx.author
-            except:
-                return False
-        pet = User(ctx.author.id).pet
-        if not pet.has_pet:
+        # def check(m):
+        #     try:
+        #         return m.content == 'y' and m.author == ctx.author
+        #     except:
+        #         return False
+        
+        pet = self.sqldb.get_user_pet(str(ctx.author.id))
+        if not pet:
             await ctx.respond('你沒有寵物')
             return
 
         try:
-            await ctx.send('你真的確定要放生寵物嗎?(輸入y確定)')
-            msg = await self.bot.wait_for('message', check=check,timeout=60)
-            if msg.content == 'y':
-                pet.remove_pet()
-                await ctx.respond('寵物已放生')
-            else:
-                await ctx.send(f'取消放生寵物')
+            await ctx.respond('你真的確定要放生寵物嗎?',view=Delete_Pet_button())
+            # msg = await self.bot.wait_for('message', check=check,timeout=60)
+            # if msg.content == 'y':
+            #     self.sqldb.delete_user_pet(str(ctx.author.id))
+            #     await res.message.edit('寵物已放生')
+            # else:
+            #     await ctx.send(f'取消放生寵物')
         except asyncio.TimeoutError:
             await ctx.respond(f'{ctx.author.name} 超時自動取消放生')
 

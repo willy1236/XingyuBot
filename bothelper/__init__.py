@@ -20,3 +20,5 @@ if SQL_connection and settings:
     sqldb = MySQLDatabase(**settings)
 else:
     sqldb = None
+
+assert isinstance(sqldb,MySQLDatabase),'sqldb is None'

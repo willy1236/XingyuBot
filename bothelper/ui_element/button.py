@@ -1,4 +1,5 @@
 import discord
+from bothelper import sqldb
 
 class ReactRole_button(discord.ui.View):
     def __init__(self):
@@ -62,3 +63,14 @@ class ReactRole_button(discord.ui.View):
         else:
             await user.add_roles(role)
             await interaction.response.send_message(content="VT&實況區 已給予",ephemeral=True)
+
+class Delete_Pet_button(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=30)
+
+    @discord.ui.button(label="放生寵物",style=discord.ButtonStyle.danger)
+    async def button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
+        user = interaction.user
+        sqldb.delete_user_pet(str(user.id))
+        button.disabled = True
+        await interaction.response.edit_message(content="寵物已放生",view=self)

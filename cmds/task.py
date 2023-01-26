@@ -60,7 +60,7 @@ class task(Cog_Extension):
         data = CWBInterface().get_report_auto(timefrom)
         if data:
             embed = data.desplay()
-            time = datetime.datetime.strptime(data.originTime, "%Y-%m-%d %H:%M:%S")+timedelta(seconds=1)
+            time = datetime.strptime(data.originTime, "%Y-%m-%d %H:%M:%S")+timedelta(seconds=1)
             cache['timefrom'] = time.strftime("%Y-%m-%dT%H:%M:%S")
             Jsondb.write('cache',cache)
 

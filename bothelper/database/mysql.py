@@ -1,7 +1,7 @@
 import mysql.connector,datetime
 from pydantic import BaseModel
 from mysql.connector.errors import Error as sqlerror
-from bothelper.interface.user import User
+from bothelper.interface.user import User,Pet
        
 class MySQLDatabase():
     def __init__(self,**settings):
@@ -61,7 +61,7 @@ class MySQLDatabase():
         self.cursor.execute(f"USE `database`;")
         self.cursor.execute(f'SELECT * FROM `user_data`,`user_point` WHERE user_data.user_id = %s;',(str(user_id),))
         record = self.cursor.fetchone()
-        return User(self,record)
+        return User(record)
 
     def set_user(self,id:str,name:str=None):
         self.cursor.execute(f"USE `database`;")
@@ -279,4 +279,29 @@ class MySQLDatabase():
         self.cursor.execute(f"USE `database`;")
         self.cursor.execute(f'DELETE FROM `user_bet` WHERE `bet_id` = %s;',(bet_id,))
         self.cursor.execute(f'DELETE FROM `bet_data` WHERE `bet_id` = %s;',(bet_id,))
+        self.connection.commit()
+
+    def get_user_pet(self,user_id:str):
+        self.cursor.execute(f"USE `database`;")
+        self.cursor.execute(f'SELECT * FROM `user_pet` WHERE `user_id` = %s;',(user_id,))
+        records = self.cursor.fetchone()
+        if records:
+            return Pet(records)
+        else:
+            return None
+
+    def create_user_pet(self,user_id:str,pet_species:str,pet_name:str):
+        try:
+            self.cursor.execute(f"USE `database`;")
+            self.cursor.execute(f'INSERT INTO `user_pet` VALUES(%s,%s,%s);',(user_id,pet_species,pet_name))
+            self.connection.commit()
+        except sqlerror as e:
+            if e.errno == 1062:
+                return '已擁有寵物'
+            else:
+                raise
+
+    def delete_user_pet(self,user_id:str):
+        self.cursor.execute(f"USE `database`;")
+        self.cursor.execute(f'DELETE FROM `user_pet` WHERE user_id = %s;',(user_id,))
         self.connection.commit()

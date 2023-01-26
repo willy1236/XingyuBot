@@ -4,14 +4,13 @@ from bothelper.basic import BotEmbed
 
 class User():
     '''基本用戶資料'''
-    def __init__(self,database,data):
+    def __init__(self,data):
         '''hp:生命 atk:攻擊 def:防禦\n
         DEX=Dexterity敏捷\n
         STR=Strength力量\n
         INT=Intelligence智力\n
         LUK=Lucky幸運'''
         #資料庫
-        self.sqldb = database
         self.id = data['user_id']
         self.name = data['name']
         self.point = data['point']
@@ -183,18 +182,17 @@ class User():
 #         self.__db.write('jRcoin',jRcoin)
 
 
-# class Pet():
-#     def __init__(self,user:str):
-#         self.__db = JsonDatabase()
-#         jpet = self.__db.jpet
-#         self.user = str(user)
-#         data = jpet.get(self.user)
-#         if data:
-#             self.has_pet = True
-#             self.name = data['name']
-#             self.species = data['species']
-#         else:
-#             self.has_pet = False
+class Pet():
+    def __init__(self,data):
+        self.user_id = data['user_id']
+        self.species = data['pet_species']
+        self.name = data['pet_name']
+
+    def desplay(self):
+        embed = BotEmbed.general(f'寵物資訊')
+        embed.add_field(name='寵物名',value=self.name)
+        embed.add_field(name='寵物物種',value=self.species)
+        return embed
 
 #     def add_pet(self,name,species):
 #         jpet = self.__db.jpet

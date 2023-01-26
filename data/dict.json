@@ -61,5 +61,12 @@
     "bet_option":{
         "藍藍幫":"blue",
         "粉紅幫":"pink"
+    },
+    "pet_option":{
+        "鯊魚":"shark",
+        "狗狗":"dog",
+        "貓貓":"cat",
+        "狐狸":"fox",
+        "狼":"wolf"
     }
 }

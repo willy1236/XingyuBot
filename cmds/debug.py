@@ -23,12 +23,31 @@ class PersistentView(discord.ui.View):
     async def grey(self, button: discord.ui.Button, interaction: discord.Interaction):
         await interaction.response.send_message("This is grey.", ephemeral=True)
 
+class MyModal(discord.ui.Modal):
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+
+        self.add_item(discord.ui.InputText(label="Short Input"))
+        self.add_item(discord.ui.InputText(label="Long Input", style=discord.InputTextStyle.long))
+
+    async def callback(self, interaction: discord.Interaction):
+        embed = discord.Embed(title="Modal Results")
+        embed.add_field(name="Short Input", value=self.children[0].value)
+        embed.add_field(name="Long Input", value=self.children[1].value)
+        await interaction.response.send_message(embeds=[embed])
+
 class debug(Cog_Extension):
     pass
     # @commands.slash_command(description='測試指令')
     # async def test(self,ctx):
     #     data = self.sqldb.get_bet_total(1)
     #     await ctx.respond(f'done {data}')
+
+    # @commands.slash_command()
+    # async def modal_slash(self,ctx: discord.ApplicationContext):
+    #     """Shows an example of a modal dialog being invoked from a slash command."""
+    #     modal = MyModal(title="Modal via Slash Command")
+    #     await ctx.send_modal(modal)
     
     # @commands.command()
     # @commands.is_owner()

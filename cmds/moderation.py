@@ -9,8 +9,6 @@ for name,value in jdict['channel_set_option'].items():
     option.append(discord.OptionChoice(name=name,value=value))
 
 class moderation(Cog_Extension):
-    #cdata = Jsondb.cdata
-    
     @commands.slash_command(description='清理訊息')
     @commands.has_permissions(manage_messages=True)
     async def clean(self,ctx,num:discord.Option(int,name='數量',description='要清理的訊息數',required=True)):
