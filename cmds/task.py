@@ -1,11 +1,12 @@
-import asyncio,discord,schedule
+import asyncio,discord
+from apscheduler.schedulers.blocking import BlockingScheduler
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from datetime import datetime, timezone, timedelta
 from discord.ext import commands,tasks
 
 from core.classes import Cog_Extension
 from bothelper import Jsondb
 from bothelper.interface import *
-
 
 class task(Cog_Extension):
     def __init__(self,*args,**kwargs):
@@ -16,16 +17,13 @@ class task(Cog_Extension):
     @commands.Cog.listener()
     async def on_ready(self):
         if self.bot.user.id == 589744540240314368:
-            schedule.every().day.at("04:00").do(await self.sign_reset)
-            schedule.every().day.at("14:30").do(await self.covid_update)
-            schedule.every().day.at("01:05").do(await self.apex_crafting_update)
-            schedule.every().hours.at("00:00").do(await self.apex_map_update)
-            schedule.every().hours.at("15:00").do(await self.apex_map_update)
-            schedule.every().hours.at("30:00").do(await self.apex_map_update)
-            schedule.every().hours.at("45:00").do(await self.apex_map_update)
-            schedule.every(3).hours.at("00:00").do(await self.forecast_update)
-
-            self.task_timer.start()
+            scheduler = AsyncIOScheduler()
+            scheduler.add_job(self.sign_reset,'cron',hour=4,minute=0,second=0)
+            scheduler.add_job(self.covid_update,'cron',hour=14,minute='30,40',second=0)
+            scheduler.add_job(self.apex_crafting_update,'cron',hour=1,minute=5,second=0)
+            scheduler.add_job(self.apex_map_update,'cron',minute='00,15,30,45',second=0)
+            scheduler.add_job(self.forecast_update,'cron',hour=19,minute='00,03,06,09,12,15,18,21',second=1)
+            
             self.earthquake_check.start()
             self.twitch.start()
         if self.bot.user.id == 870923985569861652:
@@ -48,11 +46,7 @@ class task(Cog_Extension):
     #     if task_name == 'forecast_update' or task_name == 'all':
     #         await self.forecast_update.__call__()
     #         await ctx.message.add_reaction('✅')
-    
-    @tasks.loop(seconds=1)
-    async def task_timer(self):
-        schedule.run_pending()
-    
+
     async def sign_reset(self):
         task_report_channel = self.bot.get_channel(Jsondb.jdata['task_report'])
         self.sqldb.truncate_table('user_sign')
@@ -89,7 +83,6 @@ class task(Cog_Extension):
                             pass
                     await channel.send(text,embed=embed)
                     await asyncio.sleep(0.5)
-
     
     async def covid_update(self):
         CovidReport = Covid19Interface.get_covid19()

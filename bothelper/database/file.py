@@ -68,7 +68,6 @@ class JsonDatabase():
 
         支援CWB_api,osu(id,secret),TRN,apex,steam,twitch(id,secret),youtube,riot,openai
         """
-        
         dict = {
             "CWB_api":'CWB_api',
             'osu':'osu_api',
