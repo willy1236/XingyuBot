@@ -16,9 +16,14 @@ Jsondb = JsonDatabase()
 settings = Jsondb.jdata.get('SQLsettings')
 SQL_connection = Jsondb.jdata.get('SQL_connection')
 
-if SQL_connection and settings:
+try:
     sqldb = MySQLDatabase(**settings)
-else:
+except:
     sqldb = None
 
 assert isinstance(sqldb,MySQLDatabase),'sqldb is None'
+
+__all__ = [
+    'Jsondb',
+    'sqldb',
+]

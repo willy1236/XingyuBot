@@ -1,3 +1,4 @@
+import discord
 from discord.ext import commands
 import bothelper
 
@@ -15,7 +16,7 @@ else:
     print('>> SQL connect: off <<')
 
 class Cog_Extension(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot:discord.Bot):
         self.bot = bot
         try:
             self.sqldb = sqldb

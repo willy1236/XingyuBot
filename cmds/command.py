@@ -156,6 +156,7 @@ class command(Cog_Extension):
                     if e.errno == 1062:
                         pass
                     else:
+                        print(f'儲存身分組時發生錯誤：{role.name}')
                         raise
 
         

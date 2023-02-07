@@ -2,9 +2,14 @@ import discord,os
 from discord.ext import commands
 
 from core.classes import Cog_Extension
-from bothelper import BotEmbed,BRS,Jsondb
+from bothelper import BotEmbed,BRS,Jsondb,sqldb
 
 from bothelper.ui_element.button import ReactRole_button
+
+class SendMessageModal(discord.ui.Modal):
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.add_item(discord.ui.InputText(label="要傳送的訊息", style=discord.InputTextStyle.long))
 
 main_guild = [566533708371329024]
 class owner(Cog_Extension):
@@ -22,29 +27,34 @@ class owner(Cog_Extension):
     @commands.slash_command(description='發送訊息',guild_ids=main_guild)
     @commands.is_owner()
     async def send(self,ctx,
-                   id:discord.Option(int,required=True,name='頻道id',description=''),
-                   msg:discord.Option(str,required=True,name='訊息',description='')):
+                   id:discord.Option(str,required=True,name='頻道id',description=''),
+                   msg:discord.Option(str,required=True,name='訊息',description='')):      
+        #modal = SendMessageModal(title="發送訊息")
+        #await ctx.send_modal(modal)
+        #msg = modal.children[0].value
+        await ctx.defer()
+        id = int(id)
         channel = self.bot.get_channel(id)
-        if not channel:
+        if channel:
+            await channel.send(msg)
+        else:
             user = self.bot.get_user(id)
             message = await user.send(msg)
             await BRS.dm(self,message)
-            await ctx.respond(f'訊息發送成功',delete_after=5,ephemeral=True)
-        else:
-            await channel.send(msg)
-            await ctx.respond(f'訊息發送成功',delete_after=5,ephemeral=True)
+        await ctx.respond(f'訊息發送成功',delete_after=5,ephemeral=True)
 
     #all_anno
     @commands.slash_command(description='全群公告',guild_ids=main_guild)
     @commands.is_owner()
     async def anno(self,ctx,msg):
         await ctx.defer()
-        cdata = Jsondb.cdata
         send_success = 0
 
+        channels = sqldb.get_notice_channel('all_anno')
+
         embed = BotEmbed.all_anno(msg)
-        for i in cdata['all_anno']:
-            channel = self.bot.get_channel(cdata['all_anno'][i])
+        for i in channels:
+            channel = self.bot.get_channel(i['channel_id'])
             if channel:
                 try:
                     await channel.send(embed=embed)
@@ -52,33 +62,35 @@ class owner(Cog_Extension):
                 except:
                     pass
 
-        await ctx.respond(f"已向{send_success}/{len(cdata['all_anno'])}個頻道發送公告")
+        await ctx.respond(f"已向{send_success}/{len(channels)}個頻道發送公告")
 
     #bot_update
     @commands.slash_command(description='機器人更新通知',guild_ids=main_guild)
     @commands.is_owner()
     async def bupdate(self,ctx,msg):
-        cdata = Jsondb.cdata
         send_success = 0
+        channels = sqldb.get_notice_channel('bot')
 
-        embed= BotEmbed.bot_update(msg)
-        for i in cdata['bot']:
-            channel = self.bot.get_channel(cdata['bot'][i])
-            if channel != None:
+        embed = BotEmbed.bot_update(msg)
+        for i in channels:
+            channel = self.bot.get_channel(i['channel_id'])
+            if channel:
                 try:
                     await channel.send(embed=embed)
                     send_success += 1
                 except:
                     pass
 
-        await ctx.respond(f"已向{send_success}/{len(cdata['bot'])}個頻道發送公告")
+        await ctx.respond(f"已向{send_success}/{len(channels)}個頻道發送公告")
 
-    # #edit
-    # @commands.slash_command(description='編輯訊息',guild_ids=main_guild)
-    # @commands.is_owner()
-    # async def edit(self,ctx,msgid:int,*,new_msg):
-    #     message = await ctx.fetch_message(msgid)
-    #     await message.edit(content=new_msg)
+    #edit
+    @commands.slash_command(description='編輯訊息',guild_ids=main_guild)
+    @commands.is_owner()
+    async def edit(self,ctx,msgid:str,new_msg):
+        await ctx.defer()
+        message = await ctx.fetch_message(int(msgid))
+        await message.edit(content=new_msg)
+        await ctx.respond(f'訊息修改成功',delete_after=5,ephemeral=True)
     #     await ctx.message.add_reaction('✅')
 
     # #reaction
@@ -156,6 +168,7 @@ class owner(Cog_Extension):
     @commands.slash_command(description='資料重置',guild_ids=main_guild)
     @commands.is_owner()
     async def reset(self,ctx,arg=None):
+        await ctx.defer()
         if arg == 'sign':
             task_report_channel = self.bot.get_channel(Jsondb.jdata['task_report'])
             self.sqldb.truncate_table('user_sign')
@@ -192,5 +205,6 @@ class owner(Cog_Extension):
         jdata[option] = value
         Jsondb.write('jdata',jdata)
         await ctx.send(f'已將{option} 設為 {value}')
+
 def setup(bot):
     bot.add_cog(owner(bot))

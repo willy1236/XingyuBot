@@ -1,4 +1,4 @@
-import asyncio,discord
+import discord
 from discord.ext import commands
 from core.classes import Cog_Extension
 from discord.commands import SlashCommandGroup
@@ -73,17 +73,17 @@ class system_user(Cog_Extension):
         if not pet:
             await ctx.respond('你沒有寵物')
             return
-
-        try:
-            await ctx.respond('你真的確定要放生寵物嗎?',view=Delete_Pet_button())
-            # msg = await self.bot.wait_for('message', check=check,timeout=60)
-            # if msg.content == 'y':
-            #     self.sqldb.delete_user_pet(str(ctx.author.id))
-            #     await res.message.edit('寵物已放生')
-            # else:
-            #     await ctx.send(f'取消放生寵物')
-        except asyncio.TimeoutError:
-            await ctx.respond(f'{ctx.author.name} 超時自動取消放生')
+        await ctx.respond('你真的確定要放生寵物嗎?',view=Delete_Pet_button())
+        # try:
+            
+        #     # msg = await self.bot.wait_for('message', check=check,timeout=60)
+        #     # if msg.content == 'y':
+        #     #     self.sqldb.delete_user_pet(str(ctx.author.id))
+        #     #     await res.message.edit('寵物已放生')
+        #     # else:
+        #     #     await ctx.send(f'取消放生寵物')
+        # except asyncio.TimeoutError:
+        #     await ctx.respond(f'{ctx.author.name} 超時自動取消放生')
 
     @shop.command(description='打開商店列表（開發中）')
     async def list(self,ctx):

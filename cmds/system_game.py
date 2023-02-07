@@ -112,7 +112,7 @@ class system_game(Cog_Extension):
             elif game == 'apex':
                 APIdata = ApexInterface().get_player(dbdata['player_name'])
             elif game == 'lol':
-                APIdata = RiotInterface().get_user(dbdata['player_name'])
+                APIdata = RiotInterface().get_lolplayer(dbdata['player_name'])
             
             if APIdata:
                 await ctx.respond(f'查詢成功',embed=APIdata.desplay())
@@ -275,7 +275,7 @@ class system_game(Cog_Extension):
     async def set(self,ctx,
                   ltuid:discord.Option(str,name='ltuid',required=True),
                   ltoken:discord.Option(str,name='ltoken',required=True)):
-        await ctx.message.delete()
+        #await ctx.message.delete()
         # db = bothelper.Jsondb
         # jhoyo = db.jhoyo
         # dict = {
@@ -285,7 +285,7 @@ class system_game(Cog_Extension):
         # jhoyo[str(ctx.author.id)] = dict
         # db.write('jhoyo',jhoyo)
         self.sqldb.set_hoyo_cookies(str(ctx.author.id),ltuid,ltoken)
-        await ctx.respond(f'{ctx.author.mention} 設定完成')
+        await ctx.respond(f'{ctx.author.mention} 設定完成',ephemeral=True)
 
     @hoyo.command(description='取得每月原石來源統計')
     @commands.cooldown(rate=1,per=1)
