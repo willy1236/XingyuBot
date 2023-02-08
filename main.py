@@ -7,10 +7,9 @@ from bothelper import Jsondb
 
 
 #Bot1:dc小幫手, Bep:Bep, Bot2:RO
-bot_code = 'Bep'
-token = Jsondb.tokens.get(bot_code)
-
 jdata = Jsondb.jdata
+bot_code = jdata.get('bot_code')
+token = Jsondb.tokens.get(bot_code)
 start_website = jdata.get('start_website')
 auto_update = jdata.get('auto_update')
 #commands.Bot

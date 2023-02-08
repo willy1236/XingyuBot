@@ -22,8 +22,9 @@ class task(Cog_Extension):
             scheduler.add_job(self.covid_update,'cron',hour=14,minute='30,40',second=0)
             scheduler.add_job(self.apex_crafting_update,'cron',hour=1,minute=5,second=0)
             scheduler.add_job(self.apex_map_update,'cron',minute='00,15,30,45',second=0)
-            scheduler.add_job(self.forecast_update,'cron',hour=19,minute='00,03,06,09,12,15,18,21',second=1)
+            scheduler.add_job(self.forecast_update,'cron',hour='00,03,06,09,12,15,18,21',minute=0,second=1)
             
+            scheduler.start()
             self.earthquake_check.start()
             self.twitch.start()
         if self.bot.user.id == 870923985569861652:
@@ -122,7 +123,7 @@ class task(Cog_Extension):
                     await channel.send('Apex合成台內容自動更新資料',embed=crafting.desplay())
                 await asyncio.sleep(0.5)
         await asyncio.sleep(10)
-        self.apex_crafting_update.stop()
+        #self.apex_crafting_update.stop()
 
     async def apex_map_update(self):
         map = ApexInterface().get_map_rotation()
@@ -141,7 +142,7 @@ class task(Cog_Extension):
                 else:
                     await channel.send('Apex地圖輪替自動更新資料',embed=map.desplay())
                 await asyncio.sleep(0.5)
-        self.apex_map_update.change_interval(time=task.__gettime_15min())
+        #self.apex_map_update.change_interval(time=task.__gettime_15min())
         await asyncio.sleep(10)
     
     
@@ -162,7 +163,7 @@ class task(Cog_Extension):
                 else:
                     await channel.send('台灣各縣市天氣預報',embed=forecast.desplay())
                 await asyncio.sleep(0.5)
-        self.forecast_update.change_interval(time=task.__gettime_3hr())
+        #self.forecast_update.change_interval(time=task.__gettime_3hr())
         await asyncio.sleep(10)
     
     # @tasks.loop(seconds=1)
