@@ -163,7 +163,7 @@ class music(Cog_Extension):
 
     #     await ctx.send(f"Now playing: {player.title}")
 
-    @commands.slash_command()
+    @commands.slash_command(description='播放音樂')
     async def play(self, ctx: discord.ApplicationContext, url: str):
         """Streams from a url (same as yt, but doesn't predownload)"""
         await ctx.defer()
@@ -200,7 +200,7 @@ class music(Cog_Extension):
         else:
             await ctx.respond(f"**{song_count}** 首歌已加入歌單")
 
-    @commands.slash_command()
+    @commands.slash_command(description='跳過歌曲')
     async def skip(self, ctx: discord.ApplicationContext):
         guildid = str(ctx.guild.id)
         player = guild_playing[guildid]
@@ -222,7 +222,7 @@ class music(Cog_Extension):
                 raise discord.ApplicationCommandError("你必須要跟機器人在同一頻道才能使用指令")
 
 
-    @commands.slash_command()
+    @commands.slash_command(description='調整音量')
     async def volume(self, ctx: discord.ApplicationContext, volume: int):
         """Changes the player's volume"""
 
@@ -232,20 +232,20 @@ class music(Cog_Extension):
         ctx.voice_client.source.volume = volume / 100
         await ctx.send(f"音量設定為 {volume}%")
 
-    @commands.slash_command()
+    @commands.slash_command(description='停止播放')
     async def stop(self, ctx: discord.ApplicationContext):
         """Stops and disconnects the bot from voice"""
 
         await ctx.voice_client.disconnect(force=True)
         await ctx.respond(f"再見啦~")
 
-    @commands.slash_command()
+    @commands.slash_command(description='現在播放')
     async def nowplaying(self,ctx):
         song = PlayList.get(str(ctx.guild.id))
         embed = BotEmbed.simple(title="現在播放", description=f"[{song.title}]({song.url}) [{song.requester.mention}]")
         await ctx.respond(embed=embed)
 
-    @commands.slash_command()
+    @commands.slash_command(description='歌單')
     async def queue(self,ctx):
         playlist = PlayList.get_fulllist(str(ctx.guild.id))
         if playlist:
