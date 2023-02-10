@@ -24,9 +24,9 @@ class BotEmbed:
         embed = discord.Embed(title=title,description=description, color=0xc4e9ff,url=url)
         return embed
 
-    def general(name:str,icon_url:str=discord.Embed.Empty,url:str=discord.Embed.Empty):
+    def general(name:str,icon_url:str=discord.Embed.Empty,url:str=discord.Embed.Empty,title:str=discord.Embed.Empty,description:str=discord.Embed.Empty):
         '''普通:自訂作者'''
-        embed = discord.Embed(color=0xc4e9ff)
+        embed = discord.Embed(title=title,description=description,color=0xc4e9ff)
         embed.set_author(name=name,icon_url=icon_url,url=url)
         return embed
 
@@ -118,3 +118,10 @@ class BRS():
         embed.add_field(name='來源頻道', value=f'{msg.channel}\n{msg.channel.id}', inline=True)
         embed.add_field(name='來源群組', value=f'{msg.guild}\n{msg.guild.id}', inline=True)
         await dm_channel.send(embed=embed)
+
+class ChoiceList:
+    def set(option_name):
+        list = []
+        for name,value in Jsondb.jdict[option_name].items():
+            list.append(discord.OptionChoice(name=name,value=value))
+        return list

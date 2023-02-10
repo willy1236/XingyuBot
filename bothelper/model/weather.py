@@ -1,6 +1,6 @@
 import datetime,discord
 
-from bothelper.basic import BotEmbed
+from bothelper.utility import BotEmbed
 
 
 class EarthquakeReport():

@@ -1,5 +1,5 @@
 from datetime import datetime,timedelta
-from bothelper.basic import BotEmbed
+from bothelper.utility import BotEmbed
 from bothelper.database import JsonDatabase
 
 Jsondb = JsonDatabase()

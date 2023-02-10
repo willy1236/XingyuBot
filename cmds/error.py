@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands
-from bothelper.basic import BRS
+from bothelper.utility import BRS
 from core.classes import Cog_Extension
 from mysql.connector.errors import Error as sqlerror
 
@@ -86,7 +86,7 @@ class error(Cog_Extension):
 
         elif isinstance(error,commands.errors.ArgumentParsingError):
             await ctx.respond(f'參數錯誤:{error}')
-
+        
         elif isinstance(error,discord.ApplicationCommandInvokeError):
             if isinstance(error.original,sqlerror) and error.original.errno == 1452:
                 id = str(ctx.author.id)
@@ -95,7 +95,8 @@ class error(Cog_Extension):
             else:
                 await ctx.respond(f'指令調用時發生錯誤：{error.original}',ephemeral=True)
                 print(error,type(error))
-        
+        elif isinstance(error,discord.ApplicationCommandError):
+            await ctx.respond(f'{error}',ephemeral=True)
         else:
             if ctx.guild.id != 566533708371329024:
                 await BRS.error(self,ctx,error)

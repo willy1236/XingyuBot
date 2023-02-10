@@ -63,26 +63,26 @@ async def on_ready():
 @commands.is_owner()
 async def load(ctx, extension):
     bot.load_extension(f'cmds.{extension}')
-    await ctx.send(f'Loaded {extension} done')
+    await ctx.respond(f'Loaded {extension} done')
 
 #unload
 @bot.command()
 @commands.is_owner()
 async def unload(ctx, extension):
     bot.unload_extension(f'cmds.{extension}')
-    await ctx.send(f'Un - Loaded {extension} done')
+    await ctx.respond(f'Un - Loaded {extension} done')
 
 #reload
 @bot.command()
 @commands.is_owner()
 async def reload(ctx, extension):
     bot.reload_extension(f'cmds.{extension}')
-    await ctx.send(f'Re - Loaded {extension} done')
+    await ctx.respond(f'Re - Loaded {extension} done')
 
 #ping
 @bot.command()
 async def ping(ctx):
-    await ctx.send(f'延遲為:{round(bot.latency*1000)} ms')
+    await ctx.respond(f'延遲為:{round(bot.latency*1000)} ms')
 
 if __name__ == "__main__":
     if bot_code == 'Bot1' and auto_update:

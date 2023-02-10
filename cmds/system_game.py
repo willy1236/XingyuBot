@@ -3,7 +3,7 @@ from discord.ext import commands
 from discord.commands import SlashCommandGroup
 
 from core.classes import Cog_Extension
-from bothelper import BotEmbed,Jsondb
+from bothelper import BotEmbed,Jsondb,ChoiceList
 from bothelper.interface.game import *
 
 # def player_search(url):
@@ -19,10 +19,7 @@ from bothelper.interface.game import *
 
 jdict = Jsondb.jdict
 
-set_option = []
-for name,value in jdict['game_set_option'].items():
-    set_option.append(discord.OptionChoice(name=name,value=value))
-
+set_option = ChoiceList.set('game_set_option')
 
 class system_game(Cog_Extension):
     game = SlashCommandGroup("game", "遊戲資訊相關指令")
@@ -293,71 +290,167 @@ class system_game(Cog_Extension):
         # db = bothelper.Jsondb
         # jhoyo = db.jhoyo
         # cookies = jhoyo.get(str(ctx.author.id))
+        await ctx.defer()
         cookies = self.sqldb.get_userdata(str(ctx.author.id),'game_hoyo_cookies')
         if not cookies:
             raise commands.errors.ArgumentParsingError("沒有設定cookies")
-        client = genshin.Client(cookies)
+        client = genshin.Client(cookies,lang='zh-tw')
         diary = await client.get_diary()
 
-        ts = {
-            'Events':'活動',
-            'Adventure':'冒險',
-            'Mail':'郵件',
-            'Daily Activity':'每日任務',
-            'Quests':'一般任務',
-            'Other':'其他',
-            'Spiral Abyss':'深境螺旋',
-        }
-        embed = BotEmbed.simple(title=f'本月總計：{diary.data.current_primogems} 顆原石')
+        # ts = {
+        #     'Events':'活動',
+        #     'Adventure':'冒險',
+        #     'Mail':'郵件',
+        #     'Daily Activity':'每日任務',
+        #     'Quests':'一般任務',
+        #     'Other':'其他',
+        #     'Spiral Abyss':'深境螺旋',
+        # }
+        embed_list = []
+        primogems_gap = diary.data.current_primogems - diary.data.last_primogems
+        if primogems_gap > 0:
+            embed = BotEmbed.simple(title=f'本月總計：{diary.data.current_primogems} 顆原石',description=f'比上個月多{primogems_gap}顆')
+        elif primogems_gap < 0:
+            embed = BotEmbed.simple(title=f'本月總計：{diary.data.current_primogems} 顆原石',description=f'比上個月少{primogems_gap*-1}顆')
+        else:
+            embed = BotEmbed.simple(title=f'本月總計：{diary.data.current_primogems} 顆原石',description=f'與上個月相同')
         for category in diary.data.categories:
             name = category.name
-            embed.add_field(name=ts.get(name,name),value=f'{category.amount}({category.percentage}%)')
-        await ctx.respond(ctx.author.mention,embed=embed)
+            embed.add_field(name=name,value=f'{category.amount}({category.percentage}%)')
+        embed_list.append(embed)
+        
+        mora_gap = diary.data.current_mora - diary.data.last_mora
+        if primogems_gap > 0:
+            embed = BotEmbed.simple(title=f'本月總計：{diary.data.current_mora} 個摩拉',description=f'比上個月多{mora_gap}個')
+        elif primogems_gap < 0:
+            embed = BotEmbed.simple(title=f'本月總計：{diary.data.current_mora} 個摩拉',description=f'比上個月少{mora_gap*-1}個')
+        else:
+            embed = BotEmbed.simple(title=f'本月總計：{diary.data.current_mora} 個摩拉',description=f'與上個月相同')
+        embed_list.append(embed)
 
-    @hoyo.command(description='尋找用戶')
+        await ctx.respond(ctx.author.mention,embeds=embed_list)
+
+    @hoyo.command(description='尋找HoYOLab用戶')
     @commands.cooldown(rate=1,per=1)
-    async def find(self,ctx,
+    async def hoyolab(self,ctx,
                    hoyolab_name:discord.Option(str,name='hoyolab名稱',description='要查詢的用戶',default=None)):
         # db = bothelper.Jsondb
         # jhoyo = db.jhoyo
         # cookies = jhoyo.get(str(ctx.author.id),None)
+        await ctx.defer()
         cookies = self.sqldb.get_userdata(str(ctx.author.id),'game_hoyo_cookies')
         if not cookies:
             raise commands.errors.ArgumentParsingError("沒有設定cookies")
-        client = genshin.Client(cookies)
+        client = genshin.Client(cookies,lang='zh-tw')
 
         hoyolab_user = None
         users = await client.search_users(hoyolab_name)
+        #print(users)
         for user in users:
             if user.nickname == hoyolab_name:
                 hoyolab_user = user
                 break
         #print(user.hoyolab_uid)
-        if hoyolab_user:    
+
+
+        #自己搜不到自己
+        if hoyolab_user:
             try:
-                cards = await client.get_record_cards(user.hoyolab_uid)
+                cards = await client.get_record_cards(user.hoyolab_id)
+                embed_list= []
                 for card in cards:
                     #print(card.uid, card.level, card.nickname)
                     #活躍天數days_active 獲得角色數characters 成就達成數achievements 深境螺旋spiral_abyss
                     if card.game == genshin.types.Game.GENSHIN:
                     #    print(card.data[0].value,card.data[1].value,card.data[2].value,card.data[3].value)
-                        embed = BotEmbed.simple(title=card.nickname)
-                        embed.add_field(name="HoYOLab UID",value=hoyolab_user.hoyolab_uid)
+                        embed = BotEmbed.simple(title=f'{card.nickname}(LV.{card.level})')
+                        embed.add_field(name="HoYOLab UID",value=hoyolab_user.hoyolab_id)
                         embed.add_field(name="角色UID",value=card.uid)
                         embed.add_field(name="活躍天數",value=card.data[0].value)
                         embed.add_field(name="獲得角色數",value=card.data[1].value)
                         embed.add_field(name="成就達成數",value=card.data[2].value)
                         embed.add_field(name="深境螺旋",value=card.data[3].value)
-                        await ctx.respond(embed=embed)
+                        embed_list.append(embed)
+                    await ctx.respond(embeds=embed_list)
 
                     
             except genshin.errors.DataNotPublic:
-                if e.retcode == 10102:
-                    await ctx.respond('用戶資訊未公開')
+                #if e.retcode == 10102:
+                await ctx.respond('用戶資訊未公開')
             except genshin.errors.GenshinException as e:
-                await ctx.respond(e)
+                await ctx.respond(e.msg)
         else:
-            await ctx.respond('用戶未找到')
+            hoyolab_user = await client.get_hoyolab_user()
+            if hoyolab_user:
+                #print(hoyolab_user)
+                accounts = await client.get_game_accounts()
+
+                embed = BotEmbed.general(name=f"{hoyolab_user.nickname}(LV.{hoyolab_user.level.level})",
+                                         icon_url=hoyolab_user.icon,
+                                         url=f"https://www.hoyolab.com/accountCenter/postList?id={hoyolab_user.hoyolab_id}",
+                                         description=hoyolab_user.introduction)
+                embed.add_field(name="HoYOLab ID",value=hoyolab_user.hoyolab_id)
+                for account in accounts:
+                    if account.game == genshin.types.Game.GENSHIN:
+                        embed.add_field(name=f"{account.nickname}(原神)",value=f'{account.server_name} {account.uid} LV.{account.level}',inline=False)
+                    elif account.game == genshin.types.Game.HONKAI:
+                        embed.add_field(name=f"{account.nickname}(崩壞3rd)",value=f'{account.server_name} {account.uid} LV.{account.level}',inline=False)
+                embed.set_image(url=hoyolab_user.bg_url)
+                await ctx.respond(embed=embed)
+            else:
+                await ctx.respond('用戶未找到')
+
+    @hoyo.command(description='尋找原神用戶')
+    @commands.cooldown(rate=1,per=1)
+    async def user(self,ctx,
+                   genshin_id:discord.Option(str,name='原神uid',description='要查詢的用戶',default=None)):
+        # db = bothelper.Jsondb
+        # jhoyo = db.jhoyo
+        # cookies = jhoyo.get(str(ctx.author.id),None)
+        await ctx.defer()
+        cookies = self.sqldb.get_userdata(str(ctx.author.id),'game_hoyo_cookies')
+        if not cookies:
+            raise commands.errors.ArgumentParsingError("沒有設定cookies")
+        client = genshin.Client(cookies,lang='zh-tw')
+
+        user = await client.get_genshin_user(genshin_id)
+        #print(user.characters)
+        #print(user.info)
+        #print(user.stats)
+        embed = BotEmbed.simple(title=f'{user.info.nickname}({user.info.server})')
+        embed.add_field(name="等級",value=user.info.level)
+        embed.add_field(name="成就",value=user.stats.achievements)
+        embed.add_field(name="活躍天數",value=user.stats.days_active)
+        embed.add_field(name="角色",value=user.stats.characters)
+        embed.add_field(name="本期深淵",value=user.stats.spiral_abyss)
+        embed.set_image(url=user.info.icon)
+        await ctx.respond(embed=embed)
+
+    # @hoyo.command(description='角色展示櫃')
+    # @commands.cooldown(rate=1,per=1)
+    # async def character(self,ctx,
+    #                genshin_id:discord.Option(str,name='原神uid',description='要查詢的用戶',default=None)):
+    #     cookies = self.sqldb.get_userdata(str(ctx.author.id),'game_hoyo_cookies')
+    #     if not cookies:
+    #         raise commands.errors.ArgumentParsingError("沒有設定cookies")
+    #     client = genshin.Client(cookies,lang='zh-tw')
+    #     #user = await client.get_genshin_user(genshin_id)
+    #     characters = await client.set_top_genshin_characters(uid=genshin_id)
+    #     for i in characters:
+    #         print(i)
+    #     await ctx.respond('done')
+
+    @hoyo.command(description='測試')
+    @commands.cooldown(rate=1,per=1)
+    async def test(self,ctx,
+                   hoyolab_uid:discord.Option(str,name='hoyolab_uid',description='要查詢的用戶',default=None)):
+        cookies = self.sqldb.get_userdata(str(ctx.author.id),'game_hoyo_cookies')
+        if not cookies:
+            raise commands.errors.ArgumentParsingError("沒有設定cookies")
+        client = genshin.Client(cookies,lang='zh-tw')
+        r = await client.get_record_card(hoyolab_uid)
+        print(r)
+        await ctx.respond('done')
 
 def setup(bot):
     bot.add_cog(system_game(bot))

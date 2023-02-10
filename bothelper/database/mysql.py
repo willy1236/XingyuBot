@@ -181,7 +181,7 @@ class MySQLDatabase():
 
     def set_hoyo_cookies(self,user_id:str,ltuid:str,ltoken:str):
         self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f"INSERT INTO `game_hoyo_cookies` SET user_id = {user_id}, ltuid = {ltuid}, ltoken = {ltoken} ON DUPLICATE KEY UPDATE user_id = {user_id}, ltuid = {ltuid}, ltoken = {ltoken}")
+        self.cursor.execute(f"INSERT INTO `game_hoyo_cookies` VALUES(%s,%s,%s) ON DUPLICATE KEY UPDATE `user_id` = %s, `ltuid` = %s, `ltoken` = %s",(user_id,ltuid,ltoken,user_id,ltuid,ltoken))
         self.connection.commit()
 
 

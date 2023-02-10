@@ -1,6 +1,6 @@
 import random
 from bothelper.database import JsonDatabase
-from bothelper.basic import BotEmbed
+from bothelper.utility import BotEmbed
 
 class User():
     '''基本用戶資料'''

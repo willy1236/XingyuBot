@@ -4,13 +4,11 @@ from core.classes import Cog_Extension
 from discord.commands import SlashCommandGroup
 
 from bothelper.interface.user import *
-from bothelper import BotEmbed,Jsondb
+from bothelper import BotEmbed,Jsondb,ChoiceList
 from bothelper.ui_element.button import Delete_Pet_button
 
 jdict = Jsondb.jdict
-option = []
-for name,value in jdict['pet_option'].items():
-    option.append(discord.OptionChoice(name=name,value=value))
+option = ChoiceList.set('pet_option')
 
 class system_user(Cog_Extension):
     pet = SlashCommandGroup("pet", "寵物相關指令")

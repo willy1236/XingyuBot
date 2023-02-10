@@ -54,7 +54,7 @@ class event(Cog_Extension):
             await message.reply(dict[message.content])
         #介紹
         if message.content == '小幫手' or message.content == f'<@{self.bot.user.id}>':
-            embed = BotEmbed.basic(self,f"你好~\n我是{self.bot.user.name}，是一個discord機器人喔~\n你可以輸入`/help`來查看所有指令的用法\n\n希望我能在discord上幫助到你喔~")
+            embed = BotEmbed.utility(self,f"你好~\n我是{self.bot.user.name}，是一個discord機器人喔~\n你可以輸入`/help`來查看所有指令的用法\n\n希望我能在discord上幫助到你喔~")
             await message.reply(embed=embed)
         #被提及回報
         if self.bot.user in message.mentions:

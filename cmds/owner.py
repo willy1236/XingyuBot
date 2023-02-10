@@ -204,7 +204,7 @@ class owner(Cog_Extension):
         jdata = Jsondb.jdata
         jdata[option] = value
         Jsondb.write('jdata',jdata)
-        await ctx.send(f'已將{option} 設為 {value}')
+        await ctx.respond(f'已將{option} 設為 {value}')
 
 def setup(bot):
     bot.add_cog(owner(bot))

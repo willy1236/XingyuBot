@@ -1,10 +1,9 @@
-import requests
+import requests,genshin
 import xml.etree.ElementTree as ET
 import bothelper
 from bothelper.interface.weather import EarthquakeReport
 from bothelper.interface.game import RiotInterface
-
-Jsondb = bothelper.Jsondb
+from bothelper import Jsondb,sqldb
 
 # id ='UCgJR1i4QQ7O3yyrFROP_HvQ'
 # url = f"https://www.youtube.com/feeds/videos.xml?channel_id={id}"

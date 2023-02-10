@@ -59,13 +59,13 @@ class JsonDatabase():
         try:
             location = self.__dict[file]
             with open(file=location,mode='w',encoding='utf8') as jfile:
-                json.dump(data,jfile,indent=4)
+                json.dump(data,jfile,indent=4,ensure_ascii=False)
         except:
             raise KeyError("此項目沒有在資料庫中")
 
     def get_token(self,webname:str):
         """獲取相關api的tokens
-
+        
         支援CWB_api,osu(id,secret),TRN,apex,steam,twitch(id,secret),youtube,riot,openai
         """
         dict = {

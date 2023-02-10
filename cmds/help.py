@@ -42,7 +42,7 @@ class help(Cog_Extension):
 
     @commands.slash_command(description='關於機器人')
     async def about(self,ctx):
-        embed = BotEmbed.basic(self,f"你好~我是{self.bot.user.name}，是一個discord機器人喔~\n你可以輸入`/help`來查看所有指令的用法\n\n希望我能在discord上幫助到你喔~\n有任何建議與需求可以使用`/feedback`指令")
+        embed = BotEmbed.utility(self,f"你好~我是{self.bot.user.name}，是一個discord機器人喔~\n你可以輸入`/help`來查看所有指令的用法\n\n希望我能在discord上幫助到你喔~\n有任何建議與需求可以使用`/feedback`指令")
         embed.set_footer(text="此機器人由 威立#6445 負責維護")
         await ctx.respond(embed=embed)
 
@@ -57,7 +57,7 @@ class help(Cog_Extension):
     @commands.slash_command(description='機器人統計')
     @commands.is_owner()
     async def count(self,ctx):
-        embed = BotEmbed.basic(self,f"依據目前的資料\n目前我已服務了{len(self.bot.guilds)}個伺服器\n共包含了{len(self.bot.users)}位成員喔~")
+        embed = BotEmbed.utility(self,f"依據目前的資料\n目前我已服務了{len(self.bot.guilds)}個伺服器\n共包含了{len(self.bot.users)}位成員喔~")
         await ctx.respond(embed=embed)
 
     @commands.slash_command(description='一些資訊')
@@ -96,7 +96,7 @@ class help(Cog_Extension):
     @commands.cooldown(rate=1,per=3)
     async def help_overview(self,ctx,arg:discord.Option(str,name='選項',description='',default='help',choices=option_help,required=False)):
         if arg == 'help':
-            embed = BotEmbed.basic(self,"目前可使用的指令如下:")
+            embed = BotEmbed.utility(self,"目前可使用的指令如下:")
             embed.add_field(name="!!help <系列指令>", value="查詢系列指令\n目前支援:use,admin,pt,game,set,role,bet,music,weather,math,user,twitch", inline=False)
             embed.add_field(name="!!info <內容/help>", value="獲得相關資訊", inline=False)
             embed.add_field(name="!!feedback <內容>", value="傳送訊息給機器人擁有者", inline=False)
@@ -106,7 +106,7 @@ class help(Cog_Extension):
             embed.set_footer(text="輸入!!help user查詢指令用法")
             await ctx.respond(embed=embed)
         elif arg == 'use':
-            embed = BotEmbed.basic(self,"帶你了解基本的概念","使用指令")
+            embed = BotEmbed.utility(self,"帶你了解基本的概念","使用指令")
             embed.add_field(name="指令使用:前輟指令", value="前輟+指令就可以使用了，例如`!!help`\n如果有參數，則需要把每個參數用空格隔開", inline=False)
             embed.add_field(name="指令使用:斜槓指令", value="打上/後，會有dc的提示幫助你`\n如果有參數，在輸入過程中都有提示", inline=False)
             embed.add_field(name="括號", value="`<參數>`表示這個參數必填 `[參數]`表示不一定要填\n`<參數1/參數2>`為選擇一個參數填寫即可\n範例：", inline=False)
@@ -209,7 +209,7 @@ class help(Cog_Extension):
             embed.set_footer(text="輸入!!help use查詢指令用法")
             await ctx.respond(embed=embed)
         elif arg == 'admin':
-            embed = BotEmbed.basic(self,"目前可使用的指令如下(admin):")
+            embed = BotEmbed.utility(self,"目前可使用的指令如下(admin):")
             embed.add_field(name="!!clean <數字>", value="清除訊息(需求管理訊息)", inline=False)
             embed.set_footer(text="輸入!!help use查詢指令用法")
             await ctx.respond(embed=embed)
@@ -217,7 +217,7 @@ class help(Cog_Extension):
     @commands.slash_command(description='owner幫助指令')
     @commands.is_owner()
     async def help_owner(self,ctx):
-        embed = BotEmbed.basic(self,"目前可使用的指令如下(onwer):")
+        embed = BotEmbed.utility(self,"目前可使用的指令如下(onwer):")
         embed.add_field(name="!!send <頻道ID/用戶ID/0> <內容>", value="發送指定訊息", inline=False)
         embed.add_field(name="!!anno <內容>", value="對所有伺服器進行公告", inline=False)
         embed.add_field(name="!!bupdate <內容>", value="對所有伺服器發送機器人更新", inline=False)
