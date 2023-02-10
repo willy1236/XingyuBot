@@ -129,7 +129,7 @@ class PlayList():
 guild_playing = {}
 bot_playlist = {}
 
-class music_test(Cog_Extension):
+class music(Cog_Extension):
 
     @commands.slash_command()
     async def join(self, ctx: discord.ApplicationContext, channel: discord.VoiceChannel):
@@ -270,6 +270,6 @@ class music_test(Cog_Extension):
             await ctx.respond("歌單裡空無一物")
 
 def setup(bot):
-    bot.add_cog(music_test(bot))
+    bot.add_cog(music(bot))
 
     
