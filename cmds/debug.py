@@ -4,6 +4,7 @@ from discord.ext import commands,tasks
 
 from core.classes import Cog_Extension
 from bothelper import Jsondb
+from bothelper.errors import *
 
 tz = timezone(timedelta(hours=+8))
 # Note that custom_ids can only be up to 100 characters long.
@@ -40,7 +41,7 @@ class debug(Cog_Extension):
     pass
     # @commands.slash_command(description='測試指令')
     # async def test(self,ctx):
-    #     data = self.sqldb.get_bet_total(1)
+    #     raise MysqlError1()
     #     await ctx.respond(f'done {data}')
 
     # @commands.slash_command()

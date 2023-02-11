@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 from bothelper.utility import BRS
+from bothelper.errors import *
 from core.classes import Cog_Extension
 from mysql.connector.errors import Error as sqlerror
 
@@ -92,6 +93,9 @@ class error(Cog_Extension):
                 id = str(ctx.author.id)
                 self.sqldb.set_user(id)
                 await ctx.respond(f'首次使用已完成註冊，請再使用一次指令',ephemeral=True)
+
+            elif isinstance(error.original,HelperException):
+                await ctx.respond(f'{error.original}',ephemeral=True)
             else:
                 await ctx.respond(f'指令調用時發生錯誤：{error.original}',ephemeral=True)
                 print(error,type(error))
