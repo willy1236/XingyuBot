@@ -476,7 +476,7 @@ class command(Cog_Extension):
     
     @commands.user_command(name="不想理你生態區",guild_ids=[613747262291443742])
     @commands.has_permissions(moderate_members=True)
-    async def timeout_10s(self,ctx, member: discord.Member):
+    async def user_command2(self,ctx, member: discord.Member):
         await ctx.respond(f"開始執行",ephemeral=True)
         channel = self.bot.get_channel(613760923668185121)
         for i in range(20):
