@@ -3,6 +3,20 @@ import datetime,discord
 class TwitchUser():
     pass
 
+class TwitchUser():
+    def __init__(self,data):
+        self.id = data.get("id")
+        self.login = data.get("login")
+        self.display_name = data.get("display_name")
+        self.type = data.get("type")
+        self.broadcaster_type = data.get("broadcaster_type")
+        self.description = data.get("description")
+        self.profile_image_url = data.get("profile_image_url")
+        self.offline_image_url = data.get("offline_image_url")
+        self.view_count = data.get("view_count")
+        self.email = data.get("email")
+        self.created_at = data.get("created_at")
+
 class TwitchStream():
     def __init__(self,data):
         self.id = data.get('id')
@@ -18,7 +32,7 @@ class TwitchStream():
         self.starttime = (datetime.datetime.strptime(data.get('started_at'),'%Y-%m-%dT%H:%M:%SZ')+datetime.timedelta(hours=8)).strftime('%Y/%m/%d %H:%M:%S')
         self.tags = data.get('tags')
         self.url = f"https://www.twitch.tv/{self.user}"
-        
+
         self.display = self.embed()
 
     def embed(self):

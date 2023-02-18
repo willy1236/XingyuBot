@@ -4,6 +4,7 @@ from bothelper.utility import BRS
 from bothelper.errors import *
 from core.classes import Cog_Extension
 from mysql.connector.errors import Error as sqlerror
+from bothelper import log
 
 dict = {
     'manage_channels':'管理頻道',
@@ -98,14 +99,14 @@ class error(Cog_Extension):
                 await ctx.respond(f'{error.original}',ephemeral=True)
             else:
                 await ctx.respond(f'指令調用時發生錯誤：{error.original}',ephemeral=True)
-                print(error,type(error))
+                log.error(f'{error},{type(error)},{type(error.original)}')
         elif isinstance(error,discord.ApplicationCommandError):
             await ctx.respond(f'{error}',ephemeral=True)
         else:
             if ctx.guild.id != 566533708371329024:
                 await BRS.error(self,ctx,error)
             await ctx.respond(f'發生未知錯誤\n```{error.original}```',ephemeral=True)
-            print(error,type(error))
+            log.error(f'{error},{type(error)}')
 
 def setup(bot):
     bot.add_cog(error(bot))

@@ -48,6 +48,20 @@ class Twitch(CommunityInterface):
         
         return dict
 
+    def get_user(self,username:str):
+        """取得Twitch用戶"""
+        URL = 'https://api.twitch.tv/helix/users'
+        params = {
+            "user_login": username,
+            "first": 1
+        }
+        r = requests.get(URL, params=params,headers=self.__headers)
+        apidata = r.json()
+        if apidata['data']:
+            return TwitchUser(apidata)
+        else:
+            return None
+
 class TwitterInterface:
     pass
 
@@ -97,6 +111,23 @@ class YoutubeInterface(CommunityInterface):
             'part': 'contentDetails'
         }
         r = requests.get('https://www.googleapis.com/youtube/v3/channelSections',params=params)
+        if r.status_code == 200:
+            print(r)
+            print(r.json())
+        else:
+            print(r.text)
+            print(r.status_code)
+
+    def get_streams(self,channel_ids:list):
+        print(','.join(channel_ids))
+        params ={
+            'key': self.__token,
+            'part': 'snippet',
+            'channelId': ','.join(channel_ids),
+            'eventType':'live',
+            'type': 'video'
+        }
+        r = requests.get('https://www.googleapis.com/youtube/v3/search',params=params)
         if r.status_code == 200:
             print(r)
             print(r.json())

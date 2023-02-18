@@ -87,6 +87,14 @@ class OsuInterface(GameInterface):
         else:
             return None
 
+    def get_multiplayer(self,room,playlist):
+        '''獲取Osu多人遊戲資訊（未完成）'''
+        r = requests.get(f'{self.__url}/rooms/{room}/playlist/{playlist}/scores',headers=self.__headers)
+        if r.status_code == 200:
+            return OsuMultiplayer(r.json())
+        else:
+            return None
+
 
 class ApexInterface(GameInterface):
     def __init__(self):

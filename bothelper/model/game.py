@@ -244,6 +244,10 @@ class OsuBeatmap():
         embed.set_image(url=self.cover)
         return embed
 
+class OsuMultiplayer:
+    def __init__(self,data):
+        print(data)
+
 
 class ApexPlayer():
     def __init__(self,data):

@@ -42,7 +42,7 @@ class help(Cog_Extension):
 
     @commands.slash_command(description='關於機器人')
     async def about(self,ctx):
-        embed = BotEmbed.utility(self,f"你好~我是{self.bot.user.name}，是一個discord機器人喔~\n你可以輸入`/help`來查看所有指令的用法\n\n希望我能在discord上幫助到你喔~\n有任何建議與需求可以使用`/feedback`指令")
+        embed = BotEmbed.basic(self,f"你好~我是{self.bot.user.name}，是一個discord機器人喔~\n你可以輸入`/help`來查看所有指令的用法\n\n希望我能在discord上幫助到你喔~\n有任何建議與需求可以使用`/feedback`指令")
         embed.set_footer(text="此機器人由 威立#6445 負責維護")
         await ctx.respond(embed=embed)
 
@@ -57,7 +57,7 @@ class help(Cog_Extension):
     @commands.slash_command(description='機器人統計')
     @commands.is_owner()
     async def count(self,ctx):
-        embed = BotEmbed.utility(self,f"依據目前的資料\n目前我已服務了{len(self.bot.guilds)}個伺服器\n共包含了{len(self.bot.users)}位成員喔~")
+        embed = BotEmbed.basic(self,f"依據目前的資料\n目前我已服務了{len(self.bot.guilds)}個伺服器\n共包含了{len(self.bot.users)}位成員喔~")
         await ctx.respond(embed=embed)
 
     @commands.slash_command(description='一些資訊')

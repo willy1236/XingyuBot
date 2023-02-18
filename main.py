@@ -3,8 +3,7 @@ from discord.ext import commands
 from threading import Thread
 
 from bothelper.ui_element.button import *
-from bothelper import Jsondb
-
+from bothelper import Jsondb,log
 
 #Bot1:dc小幫手, Bep:Bep, Bot2:RO
 jdata = Jsondb.jdata
@@ -44,18 +43,19 @@ else:
 @bot.event
 async def on_ready():
     #print(">> Bot is online <<")
-    print(">> Bot online as",bot.user.name,"<<")
-    print(">> Discord's version:",discord.__version__,"<<")
+    log.info(f">> Bot online as {bot.user.name} <<")
+    log.info(f">> Discord's version:{discord.__version__} <<")
     await bot.change_presence(activity=discord.Game(name=jdata.get("activity","/help")),status=discord.Status.online)
     # cogs = ""
     # for i in bot.cogs:
     #     cogs += f"{i} "
     # print(">> Cogs:",cogs,"<<")
     if len(os.listdir('./cmds'))-1 == len(bot.cogs):
-        print(">> Cogs all loaded <<")
+        log.info(">> Cogs all loaded <<")
     else:
-        print(f">> Cogs not all loaded, {len(bot.cogs)}/{len(os.listdir('./cmds'))} loaded<<")
-    bot.add_view(ReactRole_button())
+        log.warning(f">> Cogs not all loaded, {len(bot.cogs)}/{len(os.listdir('./cmds'))} loaded<<")
+    if bot_code == 'Bot1':
+        bot.add_view(ReactRole_button())
     
 
 #load
@@ -93,11 +93,11 @@ if __name__ == "__main__":
             import bot_website
             server = Thread(target=bot_website.run)
             server.start()
-            print('>> website: online <<')
+            log.info('>> website: online <<')
         except:
-            print('>> website: offline <<')
+            log.info('>> website: offline <<')
     else:
-        print('>> website: off <<')
+        log.info('>> website: off <<')
 
     try:
         for filename in os.listdir('./cmds'):
@@ -106,4 +106,6 @@ if __name__ == "__main__":
 
         bot.run(token)
     except discord.errors.LoginFailure:
-        print('>> Bot: Login failed <<')
+        log.error('>> Bot: Login failed <<')
+    except Exception as e:
+        log.error(e)

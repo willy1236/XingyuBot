@@ -1,4 +1,4 @@
-import discord,random,asyncio,math,datetime
+import discord,random,asyncio,math,datetime,openai
 from discord.errors import Forbidden, NotFound
 from discord.ext import commands,pages
 from discord.commands import SlashCommandGroup
@@ -6,10 +6,11 @@ from discord.commands import SlashCommandGroup
 from bothelper.funtions import find,converter,random_color
 from core.classes import Cog_Extension
 from bothelper.interface.user import *
-from bothelper import Jsondb,BRS
+from bothelper import Jsondb,BRS,log
 
 from mysql.connector.errors import Error as sqlerror
 
+openai.api_key = Jsondb.get_token('openai')
 jdict = Jsondb.jdict
 
 bet_option = []
@@ -20,8 +21,7 @@ for name,value in jdict['bet_option'].items():
 class command(Cog_Extension):
     picdata = Jsondb.picdata
     #rsdata = bothelper.Jsondb.rsdata
-
-    twitch = SlashCommandGroup("twitch", "Twitch相關指令")
+    
     bet = SlashCommandGroup("bet", "賭盤相關指令")
     role = SlashCommandGroup("role", "身分組管理指令")
 
@@ -151,12 +151,12 @@ class command(Cog_Extension):
                 try:
                     #1062
                     self.sqldb.add_role_save(user_id,str(role.id),role.name,role.created_at.strftime('%Y%m%d'))
-                    print(f'新增:{role.name}')
+                    log.info(f'新增:{role.name}')
                 except sqlerror as e:
                     if e.errno == 1062:
                         pass
                     else:
-                        print(f'儲存身分組時發生錯誤：{role.name}')
+                        log.info(f'儲存身分組時發生錯誤：{role.name}')
                         raise
 
         
@@ -181,15 +181,15 @@ class command(Cog_Extension):
     async def rsmove(self,ctx):
         await ctx.defer()
         for user in ctx.guild.get_role(877934319249797120).members:
-            print(user.name)
+            log.info(user.name)
             for role in user.roles:
                 if role.id == 877934319249797120:
                     break
                 if role.name == '@everyone':
                     continue
-                print(f'已移除:{role.name}')
+                log.info(f'已移除:{role.name}')
                 await role.delete()
-                asyncio.sleep(0.5)
+                await asyncio.sleep(0.5)
         await ctx.respond('身分組清理完成',delete_after=5)
 
     @role.command(description='更改暱稱')
@@ -441,48 +441,13 @@ class command(Cog_Extension):
     #         embed.add_field(name='AXB矩陣(C矩陣)',value=f'{C}, {Cl}x{Cw}')
     #         await ctx.send(embed=embed)
 
-    @twitch.command(description='設置twitch開台通知')
-    async def set(self,ctx,
-                  twitch_user:discord.Option(str,required=True,name='twitch用戶',description='當此用戶開台時會發送通知'),
-                  channel:discord.Option(discord.TextChannel,required=True,name='頻道',description='通知發送頻道'),
-                  role:discord.Option(discord.Role,required=False,default=None,name='身分組',description='發送通知時tag的身分組')):
-        guildid = ctx.guild.id
-        channelid = channel.id
-        if role:
-            roleid = role.id
-        else:
-            roleid = None
-        
-        self.sqldb.set_notice_community('twitch',twitch_user,guildid,channelid,roleid)
-        if role:
-            await ctx.respond(f'設定成功：{twitch_user}的開台通知將會發送在{channel.mention}並會通知{role.mention}')
-        else:
-            await ctx.respond(f'設定成功：{twitch_user}的開台通知將會發送在{channel.mention}')
+    
 
-    @twitch.command(description='移除twitch開台通知')
-    async def remove(self,ctx,twitch_user:discord.Option(str,required=True,name='twitch用戶')):
-        guildid = ctx.guild.id
-        
-        self.sqldb.remove_notice_community('twitch',twitch_user,guildid)
-        await ctx.respond(f'已移除 {twitch_user} 的開台通知')
-        #await ctx.respond(f'{twitch_user} 還沒有被設定通知')
-
-    @twitch.command(description='確認twitch開台通知')
-    async def notice(self,ctx,twitch_user:discord.Option(str,required=True,name='twitch用戶')):
-        guildid = ctx.guild.id
-        
-        record = self.sqldb.get_notice_community_user('twitch',twitch_user,guildid)
-        if record:
-            channel = self.bot.get_channel(record[0]['channel_id'])
-            await ctx.respond(f'TwitchID: {twitch_user} 的開台通知在 {channel.mention}')
-        else:
-            await ctx.respond(f'TwitchID: {twitch_user} 在此群組沒有設開台通知')
-
-    @commands.slash_command(description='向大家說哈瞜')
-    async def hello(self,ctx, name: str = None):
-        await ctx.defer()
-        name = name or ctx.author.name
-        await ctx.respond(f"Hello {name}!")
+    # @commands.slash_command(description='向大家說哈瞜')
+    # async def hello(self,ctx, name: str = None):
+    #     await ctx.defer()
+    #     name = name or ctx.author.name
+    #     await ctx.respond(f"Hello {name}!")
 
     @commands.user_command()  # create a user command for the supplied guilds
     async def whois(self,ctx, member: discord.Member):  # user commands return the member
@@ -508,13 +473,22 @@ class command(Cog_Extension):
         time = datetime.timedelta(seconds=15)
         await member.timeout_for(time,reason="指令：禁言15秒")
         await ctx.respond(f"已禁言{member.mention} 15秒",ephemeral=True)
+    
+    @commands.user_command(name="不想理你生態區",guild_ids=[613747262291443742])
+    @commands.has_permissions(moderate_members=True)
+    async def timeout_10s(self,ctx, member: discord.Member):
+        await ctx.respond(f"開始執行",ephemeral=True)
+        channel = self.bot.get_channel(613760923668185121)
+        for i in range(20):
+            if member.voice and member.voice.channel != 613760923668185121:
+                member.move_to(channel)
+            await asyncio.sleep(0.5)
 
     @commands.slash_command(description='傳送訊息給伺服器擁有者')
     @commands.cooldown(rate=1,per=10)
-    async def feedback( self,
-                        ctx:discord.ApplicationContext,
-                        text:discord.Option(str,name='訊息',description='要傳送的訊息內容'),
-                        ):
+    async def feedback(self,
+                       ctx:discord.ApplicationContext,
+                       text:discord.Option(str,name='訊息',description='要傳送的訊息內容')):
         await ctx.defer()
         await BRS.feedback(self,ctx,text)
         await ctx.respond(f"訊息已發送!",ephemeral=True,delete_after=3)
@@ -528,6 +502,23 @@ class command(Cog_Extension):
         args = args.split()
         result = random.choice(args)
         await ctx.respond(f'我選擇:{result}')
+
+    @commands.cooldown(rate=1,per=5)
+    @commands.slash_command(description='既然ChatGPT那麼紅，那為何不試試看跟AI聊天呢?')
+    async def chat(self,ctx,content:discord.Option(str,name='訊息',description='要傳送的訊息內容')):
+        await ctx.defer()
+        response = openai.Completion.create(
+            model="text-davinci-003",
+            prompt=content,
+            temperature=0.9,
+            max_tokens=500,
+            top_p=1,
+            frequency_penalty=0.0,
+            presence_penalty=0.6,
+            stop=[" Human:", " AI:"]
+        )
+        text = response['choices'][0]['text']
+        await ctx.respond(text)
 
 def setup(bot):
     bot.add_cog(command(bot))

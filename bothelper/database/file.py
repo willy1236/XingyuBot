@@ -7,8 +7,8 @@ class JsonDatabase():
 
         TRN = tracker.gg
         """
-        self.location = "database"
-        self.data_location = "data"
+        self.location = "./database"
+        self.data_location = "./data"
         self.__dict = {
             'lol_jdict': f'{self.data_location}/lol_dict.json',
             'jdict': f'{self.data_location}/dict.json',

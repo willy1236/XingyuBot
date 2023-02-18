@@ -1,3 +1,4 @@
 *.pyc
 token.json
 database/*
+logs

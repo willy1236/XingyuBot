@@ -18,8 +18,9 @@ from bothelper.interface.game import *
 #             return lvl
 
 jdict = Jsondb.jdict
-
 set_option = ChoiceList.set('game_set_option')
+
+main_guild = [566533708371329024]
 
 class system_game(Cog_Extension):
     game = SlashCommandGroup("game", "遊戲資訊相關指令")
@@ -118,7 +119,7 @@ class system_game(Cog_Extension):
             return
 
         if not (user == ctx.author or ctx.author.id == 419131103836635136):
-            await ctx.respond('目前不開放查詢別人的資料喔',ephemeral=True)
+            await ctx.respond('目前不開放查詢別人的綜合資料喔',ephemeral=True)
             return
             
         record = self.sqldb.get_game_data(userid)
@@ -426,21 +427,31 @@ class system_game(Cog_Extension):
         embed.set_image(url=user.info.icon)
         await ctx.respond(embed=embed)
 
-    # @hoyo.command(description='角色展示櫃')
-    # @commands.cooldown(rate=1,per=1)
-    # async def character(self,ctx,
-    #                genshin_id:discord.Option(str,name='原神uid',description='要查詢的用戶',default=None)):
-    #     cookies = self.sqldb.get_userdata(str(ctx.author.id),'game_hoyo_cookies')
-    #     if not cookies:
-    #         raise commands.errors.ArgumentParsingError("沒有設定cookies")
-    #     client = genshin.Client(cookies,lang='zh-tw')
-    #     #user = await client.get_genshin_user(genshin_id)
-    #     characters = await client.set_top_genshin_characters(uid=genshin_id)
-    #     for i in characters:
-    #         print(i)
-    #     await ctx.respond('done')
+    @hoyo.command(description='尋找崩壞3rd用戶')
+    @commands.cooldown(rate=1,per=1)
+    async def honkai(self,ctx,
+                   honkai_id:discord.Option(str,name='崩壞uid',description='要查詢的用戶',default=None)):
+        # db = bothelper.Jsondb
+        # jhoyo = db.jhoyo
+        # cookies = jhoyo.get(str(ctx.author.id),None)
+        await ctx.defer()
+        cookies = self.sqldb.get_userdata(str(ctx.author.id),'game_hoyo_cookies')
+        if not cookies:
+            raise commands.errors.ArgumentParsingError("沒有設定cookies")
+        client = genshin.Client(cookies,lang='zh-tw')
 
-    @hoyo.command(description='測試')
+        user = await client.get_honkai_user(int(honkai_id))
+        #print(user.characters)
+        #print(user.info)
+        #print(user.stats)
+        print(user)
+        embed = BotEmbed.simple(title=f'{user.info.nickname}({user.info.server})')
+        embed.add_field(name="等級",value=user.info.level)
+        embed.add_field(name="成就",value=user.stats.achievements)
+        embed.set_image(url=user.info.icon)
+        await ctx.respond(embed=embed)
+
+    @hoyo.command(description='測試',guild_ids=main_guild)
     @commands.cooldown(rate=1,per=1)
     async def test(self,ctx,
                    hoyolab_uid:discord.Option(str,name='hoyolab_uid',description='要查詢的用戶',default=None)):

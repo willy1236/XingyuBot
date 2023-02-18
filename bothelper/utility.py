@@ -54,6 +54,7 @@ class BotEmbed:
 
 
 class BRS():
+    @staticmethod
     async def error(self,ctx,error:str):
         jdata = Jsondb.jdata
         report_channel = self.bot.get_channel(jdata['report_channel'])
@@ -66,6 +67,7 @@ class BRS():
         embed.add_field(name='發生群組', value=f'{ctx.guild}\n{ctx.guild.id}', inline=True)
         await report_channel.send(embed=embed)
     
+    @staticmethod
     async def scam(self,msg,Matchs=None):
         jdata = Jsondb.jdata
         scam_channel = self.bot.get_channel(jdata['scam_channel'])
@@ -78,6 +80,7 @@ class BRS():
             embed.add_field(name='關鍵字', value=Matchs, inline=True)
         await scam_channel.send(embed=embed)
 
+    @staticmethod
     async def feedback(self,ctx,msg):
         jdata = Jsondb.jdata
         feedback_channel = self.bot.get_channel(jdata['feedback_channel'])
@@ -88,6 +91,7 @@ class BRS():
         embed.add_field(name='來源群組', value=f'{ctx.guild}\n{ctx.guild.id}', inline=True)
         await feedback_channel.send(embed=embed)
 
+    @staticmethod
     async def dm(self,msg):
         jdata = Jsondb.jdata
         dm_channel = self.bot.get_channel(jdata['dm_channel'])
@@ -99,6 +103,7 @@ class BRS():
             embed.add_field(name='發送者', value=f"{msg.author}\n{msg.author.id}", inline=False)
         await dm_channel.send(embed=embed)
 
+    @staticmethod
     async def mentioned(self,msg):
         jdata = Jsondb.jdata
         dm_channel = self.bot.get_channel(jdata['mentioned_channel'])
@@ -109,6 +114,7 @@ class BRS():
         embed.add_field(name='來源群組', value=f'{msg.guild}\n{msg.guild.id}', inline=True)
         await dm_channel.send(embed=embed)
     
+    @staticmethod
     async def mention_everyone(self,msg):
         jdata = Jsondb.jdata
         dm_channel = self.bot.get_channel(jdata['mention_everyone_channel'])

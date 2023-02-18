@@ -36,7 +36,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
         self.url = data.get("url")
 
     @classmethod
-    async def from_url(self, url, *, loop=None, stream=False):
+    async def from_url(self, url, *, loop=None, stream=False, volume: float = 0.5):
         loop = loop or asyncio.get_event_loop()
         data = await loop.run_in_executor(None, lambda: ytdl.extract_info(url, download=not stream))
 
@@ -45,7 +45,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
             data = data["entries"][0]
 
         filename = data["url"] if stream else ytdl.prepare_filename(data)    
-        return self(discord.FFmpegPCMAudio(filename, **ffmpeg_options), data=data)
+        return self(discord.FFmpegPCMAudio(filename, **ffmpeg_options), data=data,volume=volume)
 
 
 class Player():
@@ -72,9 +72,7 @@ class Player():
                 await asyncio.sleep(15)
                 if not self.vc.is_playing():
                     #print('stop')
-                    await self.ctx.send("歌曲播放完畢 掰掰~")
-                    await self.vc.disconnect()
-                    del guild_playing[str(self.ctx.guild.id)]
+                    await self.stop()
 
 
     def after(self,*arg):
@@ -88,6 +86,10 @@ class Player():
     def skip_song(self):
         self.vc.stop()
 
+    async def stop(self):
+        await self.ctx.send("歌曲播放完畢 掰掰~")
+        await self.vc.disconnect()
+        del guild_playing[str(self.ctx.guild.id)]
 
 class Song:
     def __init__(self,url:str,title:str,requester:discord.Member=None):
@@ -204,21 +206,22 @@ class music(Cog_Extension):
         player.skip_song()
         await ctx.respond(f"歌曲已跳過")
 
-    @commands.slash_command(description='調整音量')
-    async def volume(self, ctx: discord.ApplicationContext, volume: int):
-        """Changes the player's volume"""
+    # @commands.slash_command(description='調整音量')
+    # async def volume(self, ctx: discord.ApplicationContext, volume: int):
+    #     """Changes the player's volume"""
 
-        if not ctx.voice_client:
-            return await ctx.send("我沒有連接到語音頻道")
+    #     if not ctx.voice_client:
+    #         return await ctx.send("我沒有連接到語音頻道")
 
-        ctx.voice_client.source.volume = volume / 100
-        await ctx.send(f"音量設定為 {volume}%")
+    #     ctx.voice_client.source.volume = volume / 100
+    #     await ctx.send(f"音量設定為 {volume}%")
 
     @commands.slash_command(description='停止播放')
     async def stop(self, ctx: discord.ApplicationContext):
         """Stops and disconnects the bot from voice"""
 
         await ctx.voice_client.disconnect(force=True)
+        del guild_playing[str(self.ctx.guild.id)]
         await ctx.respond(f"再見啦~")
 
     @commands.slash_command(description='現在播放')
@@ -244,14 +247,14 @@ class music(Cog_Extension):
                     count = 0
                     page_count += 1
 
-            paginator = pages.Paginator(pages=page, use_default_buttons=True)
+            paginator = pages.Paginator(pages=page, use_default_buttons=True,loop_pages=True)
             await paginator.respond(ctx.interaction, ephemeral=False)
         else:
             await ctx.respond("歌單裡空無一物")
 
     @play.before_invoke
     @skip.before_invoke
-    @volume.before_invoke
+    #@volume.before_invoke
     @stop.before_invoke
     @nowplaying.before_invoke
     @queue.before_invoke
