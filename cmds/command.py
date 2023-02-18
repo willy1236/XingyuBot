@@ -480,8 +480,8 @@ class command(Cog_Extension):
         await ctx.respond(f"開始執行",ephemeral=True)
         channel = self.bot.get_channel(613760923668185121)
         for i in range(20):
-            if member.voice and member.voice.channel != 613760923668185121:
-                member.move_to(channel)
+            if member.voice and member.voice.channel != channel:
+                await member.move_to(channel)
             await asyncio.sleep(0.5)
 
     @commands.slash_command(description='傳送訊息給伺服器擁有者')
