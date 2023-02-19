@@ -1,3 +1,7 @@
+'''
+資料庫相關
+'''
+
 from .file import *
 from .mysql import *
 

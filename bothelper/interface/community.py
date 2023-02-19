@@ -7,6 +7,9 @@ class CommunityInterface():
         self.db = JsonDatabase()
 
 class Twitch(CommunityInterface):
+    '''
+    與Twitch api交互相關
+    '''
     def __init__(self):
         super().__init__()
         self.__headers = self.__get_headers()
@@ -29,8 +32,14 @@ class Twitch(CommunityInterface):
         return headers
 
     def get_lives(self,users:list):
-        """取得twitch用戶的直播資訊（若無直播則為空）\n
-        字典內格式 -> username: embed | None
+        """
+        取得twitch用戶的直播資訊
+        
+        Args:
+            users: list of users
+
+        Returns:
+            dict: {username: embed | None（如果無正在直播）}
         """
         URL = 'https://api.twitch.tv/helix/streams'
         params = {
@@ -49,16 +58,21 @@ class Twitch(CommunityInterface):
         return dict
 
     def get_user(self,username:str):
-        """取得Twitch用戶"""
+        """
+        取得Twitch用戶
+        
+        Args:
+            username: 用戶名稱（user_login）
+        """
         URL = 'https://api.twitch.tv/helix/users'
         params = {
-            "user_login": username,
+            "login": username,
             "first": 1
         }
         r = requests.get(URL, params=params,headers=self.__headers)
         apidata = r.json()
-        if apidata['data']:
-            return TwitchUser(apidata)
+        if apidata.get('data'):
+            return TwitchUser(apidata['data'][0])
         else:
             return None
 

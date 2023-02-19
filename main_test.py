@@ -19,5 +19,6 @@ from bothelper.interface.community import YoutubeInterface,Twitch
 # for i in channel_names:
 #     r = interface.get_channel_id(i)
 
-Twitch().get_user('rainteaorwhatever')
+r =Twitch().get_user('rainteaorwhatever')
+print(r.login)
 #interface.get_streams(channel_ids)

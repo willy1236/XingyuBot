@@ -11,6 +11,7 @@ bot_code = jdata.get('bot_code')
 token = Jsondb.tokens.get(bot_code)
 start_website = jdata.get('start_website')
 auto_update = jdata.get('auto_update')
+debug_guild = jdata.get('debug_guild')
 #commands.Bot
 #shard_count=1,
 #command_prefix=commands.when_mentioned_or('b!'),
@@ -29,12 +30,12 @@ elif bot_code == 'Bep':
         owner_id=419131103836635136,
         intents=discord.Intents.all(),
         help_command=None,
-        debug_guilds = [566533708371329024]
+        debug_guilds = debug_guild
     )
 elif bot_code == 'Bot2':
     bot = discord.Bot(
         owner_id=419131103836635136,
-        debug_guild = [566533708371329024]
+        debug_guilds = debug_guild
     )
 else:
     raise ValueError("Invalid bot_code")

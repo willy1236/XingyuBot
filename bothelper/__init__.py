@@ -1,12 +1,11 @@
-'''Discord機器人用lib庫
+'''
+Discord機器人用lib庫
 '''
 
 #from . import model
 from . import interface
 from .database import *
 
-#from .database import *
-#from .file_database import *
 from .utility import *
 from .funtions import *
 from .logger import create_logger
@@ -35,4 +34,6 @@ __all__ = [
     'Jsondb',
     'sqldb',
     'log',
+    'BotEmbed',
+    'interface',
 ]
