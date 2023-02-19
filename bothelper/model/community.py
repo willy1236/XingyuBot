@@ -20,7 +20,7 @@ class TwitchUser():
 class TwitchStream():
     def __init__(self,data):
         self.id = data.get('id')
-        self.user = data.get('user_login')
+        self.user_login = data.get('user_login')
         self.username = data.get('user_name')
         
         self.game_id = data.get('game_id')
@@ -31,11 +31,9 @@ class TwitchStream():
         self.thumbnail_url = data.get('thumbnail_url').replace('{width}','960').replace('{height}','540')
         self.starttime = (datetime.datetime.strptime(data.get('started_at'),'%Y-%m-%dT%H:%M:%SZ')+datetime.timedelta(hours=8)).strftime('%Y/%m/%d %H:%M:%S')
         self.tags = data.get('tags')
-        self.url = f"https://www.twitch.tv/{self.user}"
+        self.url = f"https://www.twitch.tv/{self.user_login}"
 
-        self.display = self.embed()
-
-    def embed(self):
+    def desplay(self):
         embed = discord.Embed(
             title=self.title,
             url=self.url,

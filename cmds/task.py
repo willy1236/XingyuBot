@@ -179,20 +179,23 @@ class task(Cog_Extension):
             return
         
         data = Twitch().get_lives(users)
-        for username in data:
-            if data[username] and not cache['twitch'].get(username,False):
-                cache['twitch'][username] = True
-                embed = data[username]
-                guilds = self.sqldb.get_notice_community_guild('twitch',username)
-                for guild in guilds:
-                    guild = self.bot.get_guild(guild)
-                    channel = self.bot.get_channel(guilds['guild'][0])
-                    role = guild.get_role(guilds['guild'][1])
+        for user in users:
+            if data[user] and not cache['twitch'].get(user,False):
+                cache['twitch'][user] = True
+                embed = data[user].desplay()
+                guilds = self.sqldb.get_notice_community_guild('twitch',user)
+                for guildid in guilds:
+                    guild = self.bot.get_guild(guildid)
+                    channel = self.bot.get_channel(guilds[guildid][0])
+                    role = guild.get_role(guilds[guildid][1])
                     if channel:
-                        await channel.send(f'{role.mention or None} 開台啦~',embed=embed)
+                        if role:
+                            await channel.send(f'{role.mention} 開台啦~',embed=embed)
+                        else:
+                            await channel.send(f'開台啦~',embed=embed)
                     await asyncio.sleep(1)
-            elif not data[username] and cache['twitch'].get(username,False):
-                cache['twitch'][username] = False
+            elif not data[user] and cache['twitch'].get(user,False):
+                cache['twitch'][user] = False
             
         Jsondb.write('cache',cache)
 

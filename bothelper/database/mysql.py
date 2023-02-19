@@ -235,7 +235,7 @@ class MySQLDatabase():
         records = self.cursor.fetchall()
         list = []
         for i in records:
-            list.append(i.values())
+            list.append(i.get('notice_name'))
         return list
 
 

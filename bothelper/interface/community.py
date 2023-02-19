@@ -39,7 +39,7 @@ class Twitch(CommunityInterface):
             users: list of users
 
         Returns:
-            dict: {username: embed | None（如果無正在直播）}
+            dict: {username: TwitchStream | None（如果無正在直播）}
         """
         URL = 'https://api.twitch.tv/helix/streams'
         params = {
@@ -53,7 +53,7 @@ class Twitch(CommunityInterface):
             dict[user] = None
 
         for data in apidata['data']:
-            dict[user] = TwitchStream(data).display
+            dict[data.get('user_login')] = TwitchStream(data)
         
         return dict
 
