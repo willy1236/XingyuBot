@@ -46,17 +46,18 @@ def random_color(max=256):
     if max > 256:
         raise ValueError("max must below 256")
     color = []
-    while len(color) < 3:        
+    while len(color) < 3:
         color.append(random.choice(range(max)))
     return color
 
 class Counter(dict):
     '''如果讀不到資料補0避免keyerror'''
-    def __missing__(self,key): 
+    def __missing__(self,key):
         return 0
 
 class find():
     '''arg=要檢測的內容(名稱#0000,id,mention...)'''
+    @staticmethod
     async def user(ctx,arg:str):
         if arg:
             try:
@@ -67,6 +68,7 @@ class find():
             member = None
         return member
 
+    @staticmethod
     async def channel(ctx,arg:str):
         if arg:
             try:
@@ -77,6 +79,7 @@ class find():
             channel = None
         return channel
 
+    @staticmethod
     async def role(ctx,arg:str):
         if arg:
             try:
@@ -87,6 +90,7 @@ class find():
             role = None
         return role
 
+    @staticmethod
     async def user2(ctx,arg:str):
         try:
             user = await commands.UserConverter().convert(ctx,str(arg))
@@ -94,6 +98,7 @@ class find():
             user = None
         return user
 
+    @staticmethod
     async def emoji(ctx,arg:str):
         try:
             emoji = await commands.EmojiConverter().convert(ctx,str(arg))
@@ -101,6 +106,7 @@ class find():
             emoji = None
         return emoji
 
+    @staticmethod
     async def guild(ctx,arg:str):
         try:
             guild = await commands.GuildConverter().convert(ctx,str(arg))
@@ -108,6 +114,7 @@ class find():
             guild = None
         return guild
 
+    @staticmethod
     async def role(ctx,arg:str):
         try:
             role = await commands.RoleConverter().convert(ctx,str(arg))

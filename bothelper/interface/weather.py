@@ -1,12 +1,12 @@
 import requests,time
 from bs4 import BeautifulSoup
 
-from bothelper.database import JsonDatabase
+from bothelper.database import Jsondb
 from bothelper.model.weather import *
 
 class WeatherInterface():
     def __init__(self):
-        self.db = JsonDatabase()
+        self.db = Jsondb
 
 class CWBInterface(WeatherInterface):
     def __init__(self):

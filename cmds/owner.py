@@ -1,4 +1,4 @@
-import discord,os
+import discord,os,mcrcon
 from discord.ext import commands
 
 from core.classes import Cog_Extension
@@ -205,6 +205,20 @@ class owner(Cog_Extension):
         jdata[option] = value
         Jsondb.write('jdata',jdata)
         await ctx.respond(f'已將{option} 設為 {value}')
+
+
+    @commands.slash_command(description='使用mc伺服器指令',guild_ids=main_guild)
+    @commands.is_owner()
+    async def mccommand(ctx,command):
+        settings = Jsondb.jdata.get('mc_server')
+        host = settings.get('host')
+        port = settings.get('port')
+        password = settings.get('password')
+        with mcrcon.MCRcon(host, password, port) as rcon:
+            response = rcon.command(command)
+            await ctx.respond(response)
+
+
 
 def setup(bot):
     bot.add_cog(owner(bot))

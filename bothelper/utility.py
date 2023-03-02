@@ -1,7 +1,5 @@
 import discord
-from bothelper.database import JsonDatabase
-
-Jsondb = JsonDatabase()
+from bothelper.database import Jsondb
 
 class BotEmbed:
     @staticmethod

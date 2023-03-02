@@ -1,5 +1,1 @@
-__all__ =[
-    "community",
-    "game",
-    "weather",
-]
+'''函式庫相關model'''

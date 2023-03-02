@@ -3,24 +3,19 @@ from discord.errors import Forbidden, NotFound
 from discord.ext import commands,pages
 from discord.commands import SlashCommandGroup
 
-from bothelper.funtions import find,converter,random_color
 from core.classes import Cog_Extension
-from bothelper.interface.user import *
-from bothelper import Jsondb,BRS,log
+from bothelper import Jsondb,BRS,log,BotEmbed
+from bothelper.funtions import find,random_color
+from bothelper.utility import ChoiceList
 
 from mysql.connector.errors import Error as sqlerror
 
 openai.api_key = Jsondb.get_token('openai')
-jdict = Jsondb.jdict
-
-bet_option = []
-for name,value in jdict['bet_option'].items():
-    bet_option.append(discord.OptionChoice(name=name,value=value))
+bet_option = ChoiceList.set('bet_option')
 
 
 class command(Cog_Extension):
     picdata = Jsondb.picdata
-    #rsdata = bothelper.Jsondb.rsdata
     
     bet = SlashCommandGroup("bet", "賭盤相關指令")
     role = SlashCommandGroup("role", "身分組管理指令")
@@ -93,7 +88,7 @@ class command(Cog_Extension):
         else:
             user_list = user_list.split()
         
-        embed=BotEmbed.general("身分組計算結果")
+        embed = BotEmbed.general("身分組計算結果")
         for i in user_list:
             user = await find.user(ctx,i)
             if user:
@@ -126,7 +121,7 @@ class command(Cog_Extension):
                 elif user and user.bot:
                     await ctx.respond("請不要加機器人身分組好嗎")
         
-        if added_role != []:
+        if added_role:
             all_user = ''
             for user in added_role:
                 all_user += f' {user.mention}'
@@ -383,65 +378,7 @@ class command(Cog_Extension):
             await ctx.respond(f'編號{bet_id}：因為有一方沒有人選擇，所以此局平手，點數將歸還給所有人')
         
         #更新資料庫
-        self.sqldb.remove_bet(bet_id)
-
-
-    # @commands.command()
-    # async def ma(self,ctx,argAl,argAw,argAn,argBl,argBw,argBn):
-    #     argAl = int(argAl)
-    #     argAw = int(argAw)
-    #     argAn = argAn.split()
-        
-    #     argBl = int(argBl)
-    #     argBw = int(argBw)
-    #     argBn = argBn.split()
-
-    #     def setup(l:int,w:int,n:list):
-    #         j = 0
-    #         X = []
-    #         X2 = []
-    #         for i in n:
-    #             j+=1
-    #             X2.append(i)
-    #             if j == w:
-    #                 X.append(X2)
-    #                 j = 0
-    #                 X2 = []
-    #         return X
-
-    #     A = setup(argAl,argAw,argAn)
-    #     B = setup(argBl,argBw,argBn)
-
-    #     #l*w l*w
-    #     if argAw != argBl:
-    #         await ctx.send('A B矩陣無法相乘')
-    #     elif argAl*argAw != len(argAn):
-    #         await ctx.send('A矩陣格式不對')
-    #     elif argBl*argBw != len(argBn):
-    #         await ctx.send('B矩陣格式不對')
-    #     else:
-    #         C = []
-    #         Cl = argAl
-    #         Cw = argBw
-
-    #         for i in range(1,Cl+1):
-    #             C2 = []
-    #             for j in range(1,Cw+1):
-    #                 C3 = 0
-    #                 for k in range(1,argAw+1):
-    #                     #print(f'{int(A[j-1][k-1])} * {int(B[k-1][i-1])}={int(A[j-1][k-1]) * int(B[k-1][i-1])}')
-    #                     #print(C3)
-    #                     C3 += int(A[i-1][k-1]) * int(B[k-1][j-1])
-    #                 C2.append(C3)
-    #             C.append(C2)
-            
-    #         embed = BotEmbed.simple('矩陣乘法')
-    #         embed.add_field(name='A矩陣',value=f'{A}, {argAl}x{argAw}')
-    #         embed.add_field(name='B矩陣',value=f'{B}, {argBl}x{argBw}')
-    #         embed.add_field(name='AXB矩陣(C矩陣)',value=f'{C}, {Cl}x{Cw}')
-    #         await ctx.send(embed=embed)
-
-    
+        self.sqldb.remove_bet(bet_id)    
 
     # @commands.slash_command(description='向大家說哈瞜')
     # async def hello(self,ctx, name: str = None):

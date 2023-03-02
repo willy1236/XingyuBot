@@ -45,3 +45,32 @@ class TwitchStream():
         embed.set_image(url=self.thumbnail_url)
         embed.set_footer(text=f"開始於{self.starttime}")
         return embed
+
+class YoutubeChannel:
+    def __init__(self,data):
+        self.id = data.get('id')
+        
+        self.title = data.get('snippet').get('title')
+        self.description = data.get('snippet').get('description')
+        self.customUrl = data.get('snippet').get('customUrl')
+        self.publishedAt = data.get('snippet').get('publishedAt')
+        
+        self.thumbnails_default = data.get('snippet').get('thumbnails').get('default').get('url')
+        self.thumbnails_medium = data.get('snippet').get('thumbnails').get('medium').get('url')
+        self.thumbnails_high = data.get('snippet').get('thumbnails').get('high').get('url')
+
+        self.viewCount = data.get('statistics').get('viewCount')
+        self.subscriberCount = data.get('statistics').get('subscriberCount')
+        self.hiddenSubscriberCount = data.get('statistics').get('hiddenSubscriberCount')
+        self.videoCount = data.get('statistics').get('videoCount')
+
+class YouTubeStream:
+    def __init__(self,data):
+        self.publishedAt = data.get('snippet').get('publishedAt')
+        self.channelId = data.get('snippet').get('channelId')
+        self.title = data.get('snippet').get('title')
+        self.description = data.get('snippet').get('description')
+
+        self.thumbnails_default = data.get('snippet').get('thumbnails').get('default').get('url')
+        self.thumbnails_medium = data.get('snippet').get('thumbnails').get('medium').get('url')
+        self.thumbnails_high = data.get('snippet').get('thumbnails').get('high').get('url')

@@ -1,10 +1,10 @@
-import requests,datetime
-from bothelper.database import JsonDatabase
+import requests
+from bothelper.database import Jsondb
 from bothelper.model.community import *
 
 class CommunityInterface():
     def __init__(self):
-        self.db = JsonDatabase()
+        self.db = Jsondb
 
 class Twitch(CommunityInterface):
     '''
@@ -15,6 +15,7 @@ class Twitch(CommunityInterface):
         self.__headers = self.__get_headers()
 
     def __get_headers(self):
+        #客戶端憑據僅能使用APIw
         APIURL = "https://id.twitch.tv/oauth2/token"
         #headers = {"Content-Type": "application/x-www-form-urlencoded"}
         tokens = self.db.get_token('twitch')
@@ -103,20 +104,20 @@ class YoutubeInterface(CommunityInterface):
             print(r.text)
             print(r.status_code)
 
-    def get_channel_content(self,channel_name:str):
+    def get_channel_content(self,channel_id:str):
+        '''獲取Youtube頻道資訊'''
         params = {
             'key': self.__token,
-            'forUsername': channel_name,
-            'part': 'contentDetails,snippet',
+            'id':channel_id,
+            #'forUsername': channel_name,
+            'part': 'statistics,snippet',
             'maxResults':1
         }
         r = requests.get('https://youtube.googleapis.com/youtube/v3/channels',params=params)
         if r.status_code == 200:
-            print(r)
-            print(r.json())
+            return YoutubeChannel(r.json().get('items')[0])
         else:
-            print(r.text)
-            print(r.status_code)
+            return None
 
     def get_channelsection(self,channel_id:str):
         params = {
@@ -148,3 +149,20 @@ class YoutubeInterface(CommunityInterface):
         else:
             print(r.text)
             print(r.status_code)
+
+    def get_stream(self,channel_id:str):
+        '''取得Youtube直播資訊（若無正在直播則回傳None）'''
+        params ={
+            'key': self.__token,
+            'part': 'snippet',
+            'channelId': channel_id,
+            'eventType':'live',
+            'type': 'video'
+        }
+        r = requests.get('https://www.googleapis.com/youtube/v3/search',params=params)
+        if r.status_code == 200 and r.json()['items']:
+            return YouTubeStream(r.json()['items'][0])
+        else:
+            print(r.text)
+            print(r.status_code)
+            return None

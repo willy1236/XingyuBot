@@ -5,9 +5,11 @@
 from .community import *
 from .game import *
 from .weather import *
+from .user import *
 
 __all__ =[
     'Twitch',
+    'YoutubeInterface',
     'RiotInterface',
     'OsuInterface',
     'ApexInterface',
@@ -16,4 +18,5 @@ __all__ =[
     'hoyoInterface',
     'CWBInterface',
     'Covid19Interface',
+    'UserClient',
 ]

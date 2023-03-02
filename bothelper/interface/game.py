@@ -1,10 +1,10 @@
 import requests,genshin
-from bothelper.database import JsonDatabase
+from bothelper.database import Jsondb
 from bothelper.model.game import *
 
 class GameInterface():
     def __init__(self):
-        self.db = JsonDatabase()
+        self.db = Jsondb
 
 class RiotInterface(GameInterface):
     def __init__(self):

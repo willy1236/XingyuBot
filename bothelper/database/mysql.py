@@ -1,7 +1,6 @@
 import mysql.connector,datetime
 from pydantic import BaseModel
 from mysql.connector.errors import Error as sqlerror
-from bothelper.interface.user import User,Pet
        
 class MySQLDatabase():
     def __init__(self,**settings):
@@ -13,6 +12,7 @@ class MySQLDatabase():
         self.cursor = self.connection.cursor(dictionary=True)
         self.connection.get_server_info()
 
+    @classmethod
     def add_data(self,table:str,*value,db="database"):
         self.cursor.execute(f"USE `{db}`;")
         self.cursor.execute(f"INSERT INTO `{table}` VALUES(%s)",value)
@@ -45,7 +45,7 @@ class MySQLDatabase():
         self.cursor.execute(f"TRUNCATE TABLE `{table}`;")
 
 
-
+    # 用戶資料類
     def update_userdata(self,user_id:str,table:str,column:str,value):
         self.cursor.execute(f"USE `database`;")
         self.cursor.execute(f"INSERT INTO `{table}` SET user_id = {user_id}, {column} = {value} ON DUPLICATE KEY UPDATE user_id = {user_id}, {column} = {value};")
@@ -57,11 +57,16 @@ class MySQLDatabase():
         records = self.cursor.fetchone()
         return records
 
+    def remove_userdata(self,user_id:str,table:str='user_data'):
+        self.cursor.execute(f"USE `database`;")
+        self.cursor.execute(f"DELETE FROM `{table}` WHERE `user_id` = %s;",(str(user_id),))
+        self.connection.commit()
+
     def get_user(self,user_id:str):
         self.cursor.execute(f"USE `database`;")
         self.cursor.execute(f'SELECT * FROM `user_data`,`user_point` WHERE user_data.user_id = %s;',(str(user_id),))
         record = self.cursor.fetchone()
-        return User(record)
+        return record
 
     def set_user(self,id:str,name:str=None):
         self.cursor.execute(f"USE `database`;")
@@ -74,7 +79,7 @@ class MySQLDatabase():
         self.connection.commit()
 
 
-
+    # 遊戲資料類
     def check_user_game_data(self,id:str):
         self.cursor.execute(f"USE `database`;")
         self.cursor.execute(f'SELECT * FROM `game_data` WHERE user_id = %s;',(str(id),))
@@ -105,7 +110,7 @@ class MySQLDatabase():
         return records
 
 
-
+    # 身分組類
     def get_role_save(self,id:str):
         self.cursor.execute(f"USE `database`;")
         self.cursor.execute(f'SELECT * FROM `role_save` WHERE user_id = %s ORDER BY `time` DESC;',(id,))
@@ -124,7 +129,7 @@ class MySQLDatabase():
         self.connection.commit()
 
 
-
+    # 貨幣類
     def get_point(self,user_id:str):
         self.cursor.execute(f"USE `database`;")
         self.cursor.execute(f'SELECT * FROM `user_point` WHERE user_id = %s;',(user_id,))
@@ -156,10 +161,22 @@ class MySQLDatabase():
             self.cursor.execute(f"REPLACE INTO `game_data`(user_id,point) VALUES(%s,%s);",(user_id,amount))
         elif mod == 'add':
             self.cursor.execute(f"UPDATE `user_point` SET point = point + %s WHERE user_id = %s;",(amount,user_id))
+        else:
+            raise ValueError("mod must be 'set' or 'add'")
+        self.connection.commit()
+
+    def update_rcoin(self,user_id:str,mod,amount:int):
+        self.cursor.execute(f"USE `database`;")
+        if mod == 'set':
+            self.cursor.execute(f"REPLACE INTO `game_data`(user_id,rcoin) VALUES(%s,%s);",(user_id,amount))
+        elif mod == 'add':
+            self.cursor.execute(f"UPDATE `user_point` SET rcoin = rcoin + %s WHERE user_id = %s;",(amount,user_id))
+        else:
+            raise ValueError("mod must be 'set' or 'add'")
         self.connection.commit()
 
 
-
+    # 簽到類
     def user_sign(self,user_id:str):
         try:
             time = datetime.datetime.now()
@@ -178,14 +195,13 @@ class MySQLDatabase():
         self.connection.commit()
 
 
-
     def set_hoyo_cookies(self,user_id:str,ltuid:str,ltoken:str):
         self.cursor.execute(f"USE `database`;")
         self.cursor.execute(f"INSERT INTO `game_hoyo_cookies` VALUES(%s,%s,%s) ON DUPLICATE KEY UPDATE `user_id` = %s, `ltuid` = %s, `ltoken` = %s",(user_id,ltuid,ltoken,user_id,ltuid,ltoken))
         self.connection.commit()
 
 
-
+    # 通知頻道類
     def set_notice_channel(self,guild_id:int,notice_type:str,channel_id:int,role_id:int=None):    
         self.cursor.execute(f"USE `database`;")
         self.cursor.execute(f"INSERT INTO `notice_channel` VALUES(%s,%s,%s,%s) ON DUPLICATE KEY UPDATE `guild_id` = %s, `notice_type` = %s, `channel_id` = %s, `role_id` = %s",(guild_id,notice_type,channel_id,role_id,guild_id,notice_type,channel_id,role_id))
@@ -201,7 +217,6 @@ class MySQLDatabase():
         self.cursor.execute(f'SELECT * FROM `notice_channel` WHERE notice_type = %s;',(notice_type,))
         records = self.cursor.fetchall()
         return records
-
 
 
     def set_notice_community(self,notice_type:str,notice_name:str,guild_id:int,channel_id:int,role_id:int=None):
@@ -239,7 +254,7 @@ class MySQLDatabase():
         return list
 
 
-
+    # 賭盤類
     def get_bet_data(self,bet_id:int):
         self.cursor.execute(f"USE `database`;")
         self.cursor.execute(f'SELECT `bet_id`,`IsOn` FROM `bet_data` WHERE `bet_id` = %s;',(bet_id,))
@@ -281,12 +296,13 @@ class MySQLDatabase():
         self.cursor.execute(f'DELETE FROM `bet_data` WHERE `bet_id` = %s;',(bet_id,))
         self.connection.commit()
 
+    # 寵物類
     def get_user_pet(self,user_id:str):
         self.cursor.execute(f"USE `database`;")
         self.cursor.execute(f'SELECT * FROM `user_pet` WHERE `user_id` = %s;',(user_id,))
         records = self.cursor.fetchone()
         if records:
-            return Pet(records)
+            return records
         else:
             return None
 
@@ -305,3 +321,27 @@ class MySQLDatabase():
         self.cursor.execute(f"USE `database`;")
         self.cursor.execute(f'DELETE FROM `user_pet` WHERE user_id = %s;',(user_id,))
         self.connection.commit()
+
+    # RPG類
+    def get_rpguser(self,user_id:str):
+        self.cursor.execute(f"USE `database`;")
+        self.cursor.execute(f'SELECT * FROM `rpg_user`,`rpg_advance`,`user_point` WHERE rpg_user.user_id = %s;',(str(user_id),))
+        records = self.cursor.fetchone()
+        if records:
+            return records
+        else:
+            return None
+
+    def set_rpguser(self,user_id:str):
+        self.cursor.execute(f"USE `database`;")
+        self.cursor.execute(f"INSERT INTO `rpg_user` VALUES(%s);",(user_id,))
+        self.connection.commit()
+    
+    def get_monster(self,monster_id:int):
+        self.cursor.execute(f"USE `database`;")
+        self.cursor.execute(f'SELECT * FROM `rpg_monster` WHERE `monster_id` = %s;',(monster_id,))
+        records = self.cursor.fetchone()
+        if records:
+            return records
+        else:
+            raise ValueError('monster_id is None')

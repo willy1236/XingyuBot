@@ -1,4 +1,4 @@
-import json,os
+import json
 
 class JsonDatabase():
     def __init__(self):
