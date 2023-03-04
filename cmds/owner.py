@@ -1,8 +1,9 @@
-import discord,os,mcrcon
+import discord,os,mcrcon,asyncio
 from discord.ext import commands
+from discord.commands import SlashCommandGroup
 
 from core.classes import Cog_Extension
-from bothelper import BotEmbed,BRS,Jsondb,sqldb
+from bothelper import BotEmbed,BRS,Jsondb,sqldb,twitch_bot
 
 from bothelper.ui_element.button import ReactRole_button
 
@@ -13,6 +14,9 @@ class SendMessageModal(discord.ui.Modal):
 
 main_guild = [566533708371329024]
 class owner(Cog_Extension):
+    
+    twitch_chatbot = SlashCommandGroup("twitch_chatbot", "twitch機器人相關指令",guild_ids=main_guild)
+    
     #change_presence
     @commands.slash_command(description='更換bot狀態',guild_ids=main_guild)
     @commands.is_owner()
@@ -48,6 +52,19 @@ class owner(Cog_Extension):
     @commands.is_owner()
     async def anno(self,ctx,msg):
         await ctx.defer()
+
+        msg = await ctx.respond('請輸入要發送的訊息')
+
+        def check(m):
+            return m.author == ctx.author
+
+        try:
+            m = await self.bot.wait_for('message', timeout=60.0, check=check)
+        except asyncio.TimeoutError:
+            await msg.edit('全群公告：超時',delete_after=5)
+            return
+        text = m.content
+
         send_success = 0
 
         channels = sqldb.get_notice_channel('all_anno')
@@ -67,11 +84,24 @@ class owner(Cog_Extension):
     #bot_update
     @commands.slash_command(description='機器人更新通知',guild_ids=main_guild)
     @commands.is_owner()
-    async def bupdate(self,ctx,msg):
+    async def bupdate(self,ctx):
+        msg = await ctx.respond('請輸入要發送的訊息')
+
+        def check(m):
+            return m.author == ctx.author
+
+        try:
+            m = await self.bot.wait_for('message', timeout=60.0, check=check)
+        except asyncio.TimeoutError:
+            await msg.edit('更新通知：超時',delete_after=5)
+            return
+
+        text = m.content
+        
         send_success = 0
         channels = sqldb.get_notice_channel('bot')
 
-        embed = BotEmbed.bot_update(msg)
+        embed = BotEmbed.bot_update(text)
         for i in channels:
             channel = self.bot.get_channel(i['channel_id'])
             if channel:
@@ -81,7 +111,7 @@ class owner(Cog_Extension):
                 except:
                     pass
 
-        await ctx.respond(f"已向{send_success}/{len(channels)}個頻道發送公告")
+        await msg.edit(f"已向{send_success}/{len(channels)}個頻道發送公告")
 
     #edit
     @commands.slash_command(description='編輯訊息',guild_ids=main_guild)
@@ -200,7 +230,7 @@ class owner(Cog_Extension):
     #jset
     @commands.slash_command(guild_ids=main_guild)
     @commands.is_owner()
-    async def jset(ctx,option,value):
+    async def jset(self,ctx,option,value):
         jdata = Jsondb.jdata
         jdata[option] = value
         Jsondb.write('jdata',jdata)
@@ -209,7 +239,7 @@ class owner(Cog_Extension):
 
     @commands.slash_command(description='使用mc伺服器指令',guild_ids=main_guild)
     @commands.is_owner()
-    async def mccommand(ctx,command):
+    async def mccommand(self,ctx,command):
         settings = Jsondb.jdata.get('mc_server')
         host = settings.get('host')
         port = settings.get('port')
@@ -218,6 +248,37 @@ class owner(Cog_Extension):
             response = rcon.command(command)
             await ctx.respond(response)
 
+    @twitch_chatbot.command(description='加入Twitch頻道',guild_ids=main_guild)
+    @commands.is_owner()
+    async def join(self,ctx,twitch_user):
+        channel = twitch_bot.get_channel(twitch_user)
+        if channel:
+            initial = Jsondb.cache.get('twitch_initial_channels')
+            initial.append(channel)
+
+            await twitch_bot.join_channels((twitch_user,))
+            await ctx.respond(f'加入 {twitch_user}')
+        else:
+            await ctx.respond(f'錯誤：找不到 {twitch_user}')
+    
+    @twitch_chatbot.command(description='離開Twitch頻道',guild_ids=main_guild)
+    @commands.is_owner()
+    async def leave(self,ctx,twitch_user):
+        channel = twitch_bot.get_channel(twitch_user)
+        if channel:
+            initial = Jsondb.cache.get('twitch_initial_channels')
+            initial.remove(channel)
+            
+            await twitch_bot.part_channels((twitch_user,))
+            await ctx.respond(f'離開 {twitch_user}')
+        else:
+            await ctx.respond(f'錯誤：找不到 {twitch_user}')
+
+    @twitch_chatbot.command(description='發送消息到指定Twitch頻道',guild_ids=main_guild)
+    @commands.is_owner()
+    async def send(self,ctx,twitch_user,context):
+        await twitch_bot.get_channel(twitch_user).send(context)
+        await ctx.respond(f'已發送 {twitch_user}: {context}')
 
 
 def setup(bot):

@@ -1,9 +1,9 @@
-import discord, os
+import discord, os,asyncio
 from discord.ext import commands
 from threading import Thread
 
 from bothelper.ui_element.button import *
-from bothelper import Jsondb,log
+from bothelper import Jsondb,log,twitch_bot
 
 #Bot1:dc小幫手, Bep:Bep, Bot2:RO
 jdata = Jsondb.jdata
@@ -85,6 +85,17 @@ async def reload(ctx, extension):
 async def ping(ctx):
     await ctx.respond(f'延遲為:{round(bot.latency*1000)} ms')
 
+for filename in os.listdir('./cmds'):
+    if filename.endswith('.py'):
+        bot.load_extension(f'cmds.{filename[:-3]}')
+
+# try:
+#     await bot.run(token)
+# except discord.errors.LoginFailure:
+#     log.error('>> Bot: Login failed <<')
+# except Exception as e:
+#     log.error(e)
+
 if __name__ == "__main__":
     if bot_code == 'Bot1' and auto_update:
         os.system('python update.py')
@@ -100,13 +111,32 @@ if __name__ == "__main__":
     else:
         log.info('>> website: off <<')
 
-    try:
-        for filename in os.listdir('./cmds'):
-            if filename.endswith('.py'):
-                bot.load_extension(f'cmds.{filename[:-3]}')
+    if twitch_bot:
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(twitch_bot.connect())
+    
+    bot.run(token)
 
-        bot.run(token)
-    except discord.errors.LoginFailure:
-        log.error('>> Bot: Login failed <<')
-    except Exception as e:
-        log.error(e)
+# def run_twitch_bot(loop):
+#     asyncio.set_event_loop(loop)
+#     loop.run_until_complete(twitch_bot.run())
+#     log.info('>> twitch_bot: on <<')
+#     #loop.run_until_complete(server_twitch_bot())
+
+# def run_discord_bot(loop):
+#     asyncio.set_event_loop(loop)
+#     loop.run_until_complete(bot.start(token))
+
+# loop1 = asyncio.new_event_loop()
+# loop2 = asyncio.new_event_loop()
+
+# thread1 = Thread(target=run_twitch_bot, args=(loop1,))
+# thread2 = Thread(target=run_discord_bot, args=(loop2,))
+
+# thread1.start()
+# thread2.start()
+
+# thread1.join()
+# thread2.join()
+
+

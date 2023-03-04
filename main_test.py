@@ -1,4 +1,4 @@
-import requests,genshin
+import requests,genshin,asyncio
 import xml.etree.ElementTree as ET
 import bothelper
 from bothelper.interface.weather import EarthquakeReport
@@ -25,5 +25,5 @@ from bothelper.interface.user import RPGUser
 # r =Twitch().get_user('rainteaorwhatever')
 # print(r.login)
 #interface.get_streams(channel_ids)
-user = RPGUser()
-print(user.id)
+#user = RPGUser()
+#print(user.id)

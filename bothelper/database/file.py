@@ -66,7 +66,7 @@ class JsonDatabase():
     def get_token(self,webname:str):
         """獲取相關api的tokens
         
-        支援CWB_api,osu(id,secret),TRN,apex,steam,twitch(id,secret),youtube,riot,openai
+        支援CWB_api,osu(id,secret),TRN,apex,steam,twitch(id,secret),twitch_chatbot,youtube,riot,openai
         """
         dict = {
             "CWB_api":'CWB_api',
@@ -77,7 +77,8 @@ class JsonDatabase():
             'twitch':'twitch_api',
             'youtube':'youtube_api',
             'riot':"riot_api",
-            'openai':'openai_api'
+            'openai':'openai_api',
+            'twitch_chatbot':'twitch_chatbot'
             }
         if webname in dict:
             name = dict[webname]

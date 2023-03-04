@@ -15,6 +15,10 @@ from .logger import create_logger
 file_log = Jsondb.jdata.get('file_log')
 log = create_logger('./logs',file_log)
 
+if Jsondb.jdata.get('twitch_bot'):
+    from .twitch_chatbot import twitch_bot
+else:
+    twitch_bot = None
 
 __all__ = [
     'Jsondb',
@@ -22,4 +26,5 @@ __all__ = [
     'log',
     'BotEmbed',
     'interface',
+    'twitch_bot',
 ]
