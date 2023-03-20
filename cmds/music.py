@@ -21,6 +21,7 @@ ytdl_format_options = {
     "no_warnings": True,
     "default_search": "auto",
     "source_address": "0.0.0.0",  # Bind to ipv4 since ipv6 addresses cause issues at certain times
+    'extractor_retries': 'auto',
 }
 
 ffmpeg_options = {"options": "-vn"}
@@ -221,7 +222,7 @@ class music(Cog_Extension):
         """Stops and disconnects the bot from voice"""
 
         await ctx.voice_client.disconnect(force=True)
-        del guild_playing[str(self.ctx.guild.id)]
+        del guild_playing[str(ctx.guild.id)]
         await ctx.respond(f"再見啦~")
 
     @commands.slash_command(description='現在播放')
