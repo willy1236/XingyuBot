@@ -19,7 +19,7 @@ class task(Cog_Extension):
         if self.bot.user.id == 589744540240314368:
             scheduler = AsyncIOScheduler()
             scheduler.add_job(self.sign_reset,'cron',hour=4,minute=0,second=0)
-            scheduler.add_job(self.covid_update,'cron',hour=14,minute='30,40',second=0)
+            #scheduler.add_job(self.covid_update,'cron',hour=14,minute='30,40',second=0)
             scheduler.add_job(self.apex_crafting_update,'cron',hour=1,minute=5,second=0)
             scheduler.add_job(self.apex_map_update,'cron',minute='00,15,30,45',second=1)
             scheduler.add_job(self.forecast_update,'cron',hour='00,03,06,09,12,15,18,21',minute=0,second=1)
@@ -180,7 +180,9 @@ class task(Cog_Extension):
         
         data = Twitch().get_lives(users)
         for user in users:
-            if data[user] and not cache['twitch'].get(user):
+            user_cache = cache['twitch'].get(user)
+            
+            if data[user] and not user_cache:
                 cache['twitch'][user] = True
                 embed = data[user].desplay()
                 guilds = self.sqldb.get_notice_community_guild('twitch',user)
@@ -194,7 +196,7 @@ class task(Cog_Extension):
                         else:
                             await channel.send(f'開台啦~',embed=embed)
                         await asyncio.sleep(0.5)
-            elif not data[user] and cache['twitch'].get(user):
+            elif not data[user] and user_cache:
                 #cache['twitch'][user] = False
                 del cache['twitch'][user]
             
