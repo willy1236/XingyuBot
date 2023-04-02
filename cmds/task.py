@@ -1,4 +1,4 @@
-import asyncio,discord
+import asyncio,discord,os,threading
 from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from datetime import datetime, timezone, timedelta
@@ -7,6 +7,9 @@ from discord.ext import commands,tasks
 from core.classes import Cog_Extension
 from bothelper import Jsondb
 from bothelper.interface import *
+
+jdata = Jsondb.jdata
+start_website = jdata.get('start_website')
 
 class task(Cog_Extension):
     def __init__(self,*args,**kwargs):
@@ -23,7 +26,10 @@ class task(Cog_Extension):
             scheduler.add_job(self.apex_crafting_update,'cron',hour=1,minute=5,second=0)
             scheduler.add_job(self.apex_map_update,'cron',minute='00,15,30,45',second=1)
             scheduler.add_job(self.forecast_update,'cron',hour='00,03,06,09,12,15,18,21',minute=0,second=1)
-            
+            if start_website:
+                self.lt_start()
+                scheduler.add_job(self.lt_start,'cron',hour=4,minute=15,second=0)
+
             scheduler.start()
             self.earthquake_check.start()
             self.twitch.start()
@@ -201,6 +207,16 @@ class task(Cog_Extension):
                 del cache['twitch'][user]
             
         Jsondb.write('cache',cache)
+
+    def lt_start(self):
+        def start():
+            os.system('lt --port 14000 --subdomain willy1236 --max-sockets 10 --local-host 127.0.0.1')
+        
+        try:
+            server = threading.Thread(target=start)
+            server.start()
+        except RuntimeError:
+            pass
 
 def setup(bot):
     bot.add_cog(task(bot))

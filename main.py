@@ -89,21 +89,17 @@ for filename in os.listdir('./cmds'):
     if filename.endswith('.py'):
         bot.load_extension(f'cmds.{filename[:-3]}')
 
-# try:
-#     await bot.run(token)
-# except discord.errors.LoginFailure:
-#     log.error('>> Bot: Login failed <<')
-# except Exception as e:
-#     log.error(e)
 
 if __name__ == "__main__":
     if bot_code == 'Bot1' and auto_update:
         os.system('python update.py')
             
     if start_website:
+        def run_website():
+            os.system('uvicorn bot_website:app')
+
         try:
-            import bot_website
-            server = Thread(target=bot_website.run)
+            server = Thread(target=run_website)
             server.start()
             log.info('>> website: online <<')
         except:
@@ -115,7 +111,12 @@ if __name__ == "__main__":
         loop = asyncio.get_event_loop()
         loop.run_until_complete(twitch_bot.connect())
     
-    bot.run(token)
+    try:
+        bot.run(token)
+    except discord.errors.LoginFailure:
+        log.error('>> Bot: Login failed <<')
+    except Exception as e:
+        log.error(e)
 
 # def run_twitch_bot(loop):
 #     asyncio.set_event_loop(loop)
