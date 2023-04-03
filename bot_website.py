@@ -6,17 +6,23 @@ from fastapi.responses import HTMLResponse
 app = FastAPI()
 
 @app.route('/')
-def main():
-	return 'test',200
+def main(request:Request):
+    r = HTMLResponse(
+        content='test'
+    )
+    return r
 
 @app.route('/keep_alive')
-def keep_alive():
-	return 'Bot is aLive!',200
+def keep_alive(request:Request):
+    r = HTMLResponse(
+        content='Bot is aLive!'
+    )
+    return r
 
 @app.route('/twitch_eventsub',methods=['POST'])
-def twitch_eventsub():
+def twitch_eventsub(request:Request):
     try:
-        if Request.method == "POST":
+        if request.method == "POST":
             data = Request.json()
             challenge = data['challenge']
             print('status:',data['subscription']['status'])

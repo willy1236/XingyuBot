@@ -96,7 +96,7 @@ if __name__ == "__main__":
             
     if start_website:
         def run_website():
-            os.system('uvicorn bot_website:app')
+            os.system('uvicorn bot_website:app  --port 14000')
 
         try:
             server = Thread(target=run_website)
