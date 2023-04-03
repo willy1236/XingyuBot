@@ -1,4 +1,4 @@
-import asyncio,discord,os,threading
+import asyncio,discord,os,threading,time
 from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from datetime import datetime, timezone, timedelta
@@ -10,6 +10,19 @@ from bothelper.interface import *
 
 jdata = Jsondb.jdata
 start_website = jdata.get('start_website')
+
+class ltThread(threading.Thread):
+    def __init__(self):
+        super().__init__()
+        self._stop_event = threading.Event()
+
+    def stop(self):
+        self._stop_event.set()
+
+    def run(self):
+        print("Starting ltThread")
+        os.system('lt --port 14000 --subdomain willy1236 --max-sockets 10 --local-host 127.0.0.1 --max-https-sockets 86395')
+        print("Finished ltThread")
 
 class task(Cog_Extension):
     def __init__(self,*args,**kwargs):
@@ -209,14 +222,13 @@ class task(Cog_Extension):
         Jsondb.write('cache',cache)
 
     def lt_start(self):
-        def start():
-            os.system('lt --port 14000 --subdomain willy1236 --max-sockets 10 --local-host 127.0.0.1')
-        
         try:
-            server = threading.Thread(target=start)
+            server = ltThread()
             server.start()
         except RuntimeError:
-            pass
+            server.stop()
+            time.sleep(1)
+            server.start()
 
 def setup(bot):
     bot.add_cog(task(bot))

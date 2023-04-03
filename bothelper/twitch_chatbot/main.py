@@ -5,6 +5,7 @@ from bothelper.database import Jsondb
 tokens = Jsondb.get_token('twitch_chatbot')
 initial_channels = Jsondb.cache.get('twitch_initial_channels')
 
+
 class Bot(commands.Bot):
     def __init__(self):
         super().__init__(token=tokens.get('token'), prefix='!!', initial_channels=initial_channels,client_id=tokens.get('id'),nick='bot')
@@ -17,25 +18,6 @@ class Bot(commands.Bot):
 
     async def event_reconnect(self):
         print(f'reconnect as | {self.nick}')
-    
-    async def event_usernotice_subscription(self,metadata):
-        print('event_usernotice_subscription')
-        print(metadata)
-
-    async def event_userstate(self,user):
-        print('event_userstate')
-        print(user)
-
-    async def event_raw_usernotice(self,channel: twitchio.Channel, tags: dict):
-        print(channel,tags)
-
-    async def event_usernotice_subscription(self,user, channel, sub_info):
-        print(f'{user} subscribed to {channel} with a {sub_info["tier"]} tier sub!')
-        await channel.send(f'Thank you for subscribing, {user}!')
-
-    async def event_follow(self,user, channel):
-        print(f'{user} followed {channel}!')
-        await channel.send(f'Thank you for following, {user}!')
 
     @commands.command()
     async def hi(self, ctx: commands.Context):

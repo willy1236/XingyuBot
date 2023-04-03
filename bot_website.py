@@ -14,9 +14,7 @@ def main(request:Request):
 
 @app.route('/keep_alive')
 def keep_alive(request:Request):
-    r = HTMLResponse(
-        content='Bot is aLive!'
-    )
+    r = HTMLResponse(content='Bot is aLive!')
     return r
 
 @app.route('/twitch_eventsub',methods=['POST'])
@@ -41,10 +39,18 @@ def twitch_eventsub(request:Request):
         print("[Warning] Error:", e)
         return "Server error", 400
     
-@app.route('/youtube_push',methods=['POST'])
+@app.route('/youtube_push',methods=['POST',"GET"])
 def youtube_push(request:Request):
-     print(request)
-     return 200
+    params = dict(request.query_params)
+    print(params)
+    if 'hub.challenge' in params:
+        r = HTMLResponse(
+            content=params['hub.challenge']
+        )
+        return r    
+    else:
+        r = HTMLResponse()
+        return r
      
     
 @app.get('/book/{book_id}')
@@ -65,4 +71,8 @@ def run():
 
 if __name__ == '__main__':
     #os.system('uvicorn bot_website:app --reload')
+    from cmds.task import ltThread
+    server = ltThread()
+    server.start()
+
     run()
