@@ -1,23 +1,21 @@
 import os,time
-from fastapi import FastAPI
+from fastapi import FastAPI,BackgroundTasks
 from fastapi.requests import Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse,JSONResponse,PlainTextResponse
+import xml.etree.ElementTree as ET
 
 app = FastAPI()
 
 @app.route('/')
 def main(request:Request):
-    r = HTMLResponse(
-        content='test'
-    )
-    return r
+    return HTMLResponse('test')
 
 @app.route('/keep_alive')
 def keep_alive(request:Request):
     r = HTMLResponse(content='Bot is aLive!')
     return r
 
-@app.route('/twitch_eventsub',methods=['POST'])
+@app.post('/twitch_eventsub',response_class=PlainTextResponse)
 def twitch_eventsub(request:Request):
     try:
         if request.method == "POST":
@@ -39,21 +37,37 @@ def twitch_eventsub(request:Request):
         print("[Warning] Error:", e)
         return "Server error", 400
     
+def get_yt_push(content):
+    tree = ET.parse(content)
+    root = tree.getroot()
+
+    result = {}
+    result['id'] = root.find('id').text
+    result['videoId'] = root.find('yt:videoId', root.nsmap).text
+    result['channelId'] = root.find('yt:channelId', root.nsmap).text
+    result['title'] = root.find('title').text
+    result['link'] = root.find('link').get('href')
+    result['author'] = root.find('author/name').text
+    result['author_uri'] = root.find('author/uri').text
+    result['published'] = root.find('published').text
+    result['updated'] = root.find('updated').text
+
+    print(result)
+
 @app.route('/youtube_push',methods=['POST',"GET"])
-def youtube_push(request:Request):
-    params = dict(request.query_params)
-    print(params)
-    if 'hub.challenge' in params:
-        r = HTMLResponse(
-            content=params['hub.challenge']
-        )
-        return r    
+def youtube_push(request:Request,background_task: BackgroundTasks):
+    if request.method == "POST":
+        background_task.add_task(get_yt_push,request.body)
+        return HTMLResponse('OK')
     else:
-        r = HTMLResponse()
-        return r
-     
-    
-@app.get('/book/{book_id}')
+        params = dict(request.query_params)
+        print(params)
+        if 'hub.challenge' in params:
+            return HTMLResponse(content=params['hub.challenge'])  
+        else:
+            return HTMLResponse()
+
+@app.get('/book/{book_id}',response_class=JSONResponse)
 def get_book_by_id(book_id: int):
     return {
         'book_id': book_id
