@@ -61,7 +61,7 @@ def youtube_push_get(request:Request):
     if 'hub.challenge' in params:
         return HTMLResponse(content=params['hub.challenge'])  
     else:
-        return HTMLResponse()
+        return HTMLResponse('OK')
 
 @app.post('/youtube_push')
 def youtube_push_post(request:Request,background_task: BackgroundTasks):

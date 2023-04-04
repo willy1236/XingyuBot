@@ -82,8 +82,9 @@ class Delete_Add_Role_button(discord.ui.View):
         self.role = role
 
     async def on_timeout(self):
-        self.clear_items()
-        await self.message.edit(view=self)
+        if self.message:
+            self.clear_items()
+            await self.message.edit(view=self)
 
     @discord.ui.button(label="刪除身分組",style=discord.ButtonStyle.danger)
     async def button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):

@@ -40,11 +40,14 @@ class system_community(Cog_Extension):
     @twitch.command(description='確認twitch開台通知')
     async def notice(self,ctx,twitch_user:discord.Option(str,required=True,name='twitch用戶')):
         guildid = ctx.guild.id
-        
         record = self.sqldb.get_notice_community_user('twitch',twitch_user,guildid)
         if record:
             channel = self.bot.get_channel(record[0]['channel_id'])
-            await ctx.respond(f'TwitchID: {twitch_user} 的開台通知在 {channel.mention}')
+            role = channel.guild.get_role(record[0]['role_id'])
+            if role:
+                await ctx.respond(f'TwitchID: {twitch_user} 的開台通知在 {channel.mention} 並通知 {role.mention}')
+            else:
+                await ctx.respond(f'TwitchID: {twitch_user} 的開台通知在 {channel.mention}')
         else:
             await ctx.respond(f'TwitchID: {twitch_user} 在此群組沒有設開台通知')
 

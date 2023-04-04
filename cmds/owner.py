@@ -50,9 +50,8 @@ class owner(Cog_Extension):
     #all_anno
     @commands.slash_command(description='全群公告',guild_ids=main_guild)
     @commands.is_owner()
-    async def anno(self,ctx:discord.ApplicationContext,msg):
+    async def anno(self,ctx:discord.ApplicationContext):
         await ctx.defer()
-
         msg = await ctx.respond('請輸入要發送的訊息')
 
         def check(m):
@@ -61,12 +60,10 @@ class owner(Cog_Extension):
         try:
             m = await self.bot.wait_for('message', timeout=60.0, check=check)
         except asyncio.TimeoutError:
-            await msg.message.edit('全群公告：超時',delete_after=5)
+            await msg.edit('全群公告：超時',delete_after=5)
             return
         text = m.content
-
         send_success = 0
-
         channels = sqldb.get_notice_channel('all_anno')
 
         embed = BotEmbed.all_anno(text)
@@ -79,7 +76,7 @@ class owner(Cog_Extension):
                 except:
                     pass
 
-        await msg.message.edit(f"已向{send_success}/{len(channels)}個頻道發送公告")
+        await msg.edit(f"已向{send_success}/{len(channels)}個頻道發送公告")
 
     #bot_update
     @commands.slash_command(description='機器人更新通知',guild_ids=main_guild)
@@ -93,7 +90,7 @@ class owner(Cog_Extension):
         try:
             m = await self.bot.wait_for('message', timeout=60.0, check=check)
         except asyncio.TimeoutError:
-            await msg.message.edit('更新通知：超時',delete_after=5)
+            await msg.edit('更新通知：超時',delete_after=5)
             return
 
         text = m.content
@@ -111,7 +108,7 @@ class owner(Cog_Extension):
                 except:
                     pass
 
-        await msg.message.edit(f"已向{send_success}/{len(channels)}個頻道發送公告")
+        await msg.edit(f"已向{send_success}/{len(channels)}個頻道發送公告")
 
     #edit
     @commands.slash_command(description='編輯訊息',guild_ids=main_guild)
