@@ -13,16 +13,27 @@ start_website = jdata.get('start_website')
 
 class ltThread(threading.Thread):
     def __init__(self):
-        super().__init__()
-        self._stop_event = threading.Event()
+        super().__init__(name='ltThread')
+        #self._stop_event = threading.Event()
+        self.process = None
 
     def stop(self):
-        self._stop_event.set()
+        print("stopping ltThread")
+        #self._stop_event.set()
+        self.process.terminate()
+        self.process.wait()
+        self.join()
+        print("stop ltThread")
 
     def run(self):
         print("Starting ltThread")
-        os.system('lt --port 14000 --subdomain willy1236 --max-sockets 10 --local-host 127.0.0.1 --max-https-sockets 86395')
+        os.system('lt --port 14000 --subdomain willy1236 --max-sockets 10 --local-host 127.0.0.1 --max-https-sockets 55')
+        #cmd = [ "cmd","/c",'lt', '--port', '14000', '--subdomain', 'willy1236', '--max-sockets', '10', '--local-host', '127.0.0.1', '--max-https-sockets', '86395']
+        #cmd = ["cmd","/c","echo", "Hello, World!"]
+        #self.process = psutil.Popen(cmd)
+        #self.process.wait()
         print("Finished ltThread")
+
 
 class task(Cog_Extension):
     def __init__(self,*args,**kwargs):
@@ -34,14 +45,15 @@ class task(Cog_Extension):
     async def on_ready(self):
         if self.bot.user.id == 589744540240314368:
             scheduler = AsyncIOScheduler()
-            scheduler.add_job(self.sign_reset,'cron',hour=4,minute=0,second=0)
+            scheduler.add_job(self.sign_reset,'cron',hour=4,minute=0,second=0,jitter=3)
             #scheduler.add_job(self.covid_update,'cron',hour=14,minute='30,40',second=0)
-            scheduler.add_job(self.apex_crafting_update,'cron',hour=1,minute=5,second=0)
-            scheduler.add_job(self.apex_map_update,'cron',minute='00,15,30,45',second=1)
-            scheduler.add_job(self.forecast_update,'cron',hour='00,03,06,09,12,15,18,21',minute=0,second=1)
+            scheduler.add_job(self.apex_crafting_update,'cron',hour=1,minute=5,second=0,jitter=3)
+            scheduler.add_job(self.apex_map_update,'cron',minute='00,15,30,45',second=1,jitter=3)
+            scheduler.add_job(self.forecast_update,'cron',hour='00,03,06,09,12,15,18,21',minute=0,second=1,jitter=3)
             if start_website:
-                self.lt_start()
-                scheduler.add_job(self.lt_start,'cron',hour=4,minute=15,second=0)
+                server = ltThread()
+                server.start()
+                scheduler.add_job(self.lt_start,'interval',minutes=10,args=[server],jitter=3)
 
             scheduler.start()
             self.earthquake_check.start()
@@ -221,13 +233,8 @@ class task(Cog_Extension):
             
         Jsondb.write('cache',cache)
 
-    def lt_start(self):
-        try:
-            server = ltThread()
-            server.start()
-        except RuntimeError:
-            server.stop()
-            time.sleep(1)
+    async def lt_start(self,server:ltThread):
+        if not server.is_alive():
             server.start()
 
 def setup(bot):
