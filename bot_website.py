@@ -10,7 +10,7 @@ app = FastAPI()
 def main(request:Request):
     return HTMLResponse('test')
 
-@app.route('/keep_alive')
+@app.route('/keep_alive',methods=['GET'])
 def keep_alive(request:Request):
     r = HTMLResponse(content='Bot is aLive!')
     return r
@@ -54,18 +54,19 @@ def get_yt_push(content):
 
     print(result)
 
-@app.route('/youtube_push',methods=['POST',"GET"])
-def youtube_push(request:Request,background_task: BackgroundTasks):
-    if request.method == "POST":
-        background_task.add_task(get_yt_push,request.body)
-        return HTMLResponse('OK')
+@app.get('/youtube_push')
+def youtube_push_get(request:Request):
+    params = dict(request.query_params)
+    print(params)
+    if 'hub.challenge' in params:
+        return HTMLResponse(content=params['hub.challenge'])  
     else:
-        params = dict(request.query_params)
-        print(params)
-        if 'hub.challenge' in params:
-            return HTMLResponse(content=params['hub.challenge'])  
-        else:
-            return HTMLResponse()
+        return HTMLResponse()
+
+@app.post('/youtube_push')
+def youtube_push_post(request:Request,background_task: BackgroundTasks):
+    background_task.add_task(get_yt_push,request.body)
+    return HTMLResponse('OK')
 
 @app.get('/book/{book_id}',response_class=JSONResponse)
 def get_book_by_id(book_id: int):
