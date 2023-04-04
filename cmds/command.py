@@ -129,7 +129,8 @@ class command(Cog_Extension):
             view = Delete_Add_Role_button(new_role)
             view.message = await ctx.respond(f"已添加 {new_role.name} 給{all_user}",view=view)
         else:
-            await ctx.respond(f"已創建 {new_role.name} 身分組")
+            view = Delete_Add_Role_button(new_role)
+            view.message = await ctx.respond(f"已創建 {new_role.name} 身分組")
 
 
     @role.command(description='儲存身分組')
