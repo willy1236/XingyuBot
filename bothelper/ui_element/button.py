@@ -75,3 +75,20 @@ class Delete_Pet_button(discord.ui.View):
         sqldb.delete_user_pet(str(user.id))
         button.disabled = True
         await interaction.response.edit_message(content="寵物已放生",view=self)
+
+class Delete_Add_Role_button(discord.ui.View):
+    def __init__(self,role):
+        super().__init__(timeout=2)
+        self.role = role
+
+    async def on_timeout(self):
+        self.clear_items()
+        await self.message.edit(view=self)
+
+    @discord.ui.button(label="刪除身分組",style=discord.ButtonStyle.danger)
+    async def button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
+        role = self.role
+        await role.delete()
+        self.clear_items()
+        #await interaction.message.edit(view=self)
+        await interaction.message.delete()

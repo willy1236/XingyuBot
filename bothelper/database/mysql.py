@@ -244,6 +244,12 @@ class MySQLDatabase():
             dict[i['guild_id']] = [i['channel_id'],i['role_id']]
         return dict
 
+    def get_notice_community_user(self,notice_type:str,notice_name:str,guild_id:str):
+        self.cursor.execute(f"USE `database`;")
+        self.cursor.execute(f'SELECT `channel_id`,`role_id` FROM `notice_community` WHERE `notice_type` = %s AND `notice_name` = %s AND `guild_id` = %s;',(notice_type,notice_name,guild_id))
+        records = self.cursor.fetchall()
+        return records
+
     def get_notice_community_userlist(self,notice_type:str):
         self.cursor.execute(f"USE `database`;")
         self.cursor.execute(f'SELECT DISTINCT `notice_name` FROM `notice_community` WHERE `notice_type` = %s;',(notice_type,))

@@ -7,6 +7,7 @@ from core.classes import Cog_Extension
 from bothelper import Jsondb,BRS,log,BotEmbed
 from bothelper.funtions import find,random_color
 from bothelper.utility import ChoiceList
+from bothelper.ui_element.button import Delete_Add_Role_button
 
 from mysql.connector.errors import Error as sqlerror
 
@@ -125,7 +126,8 @@ class command(Cog_Extension):
             all_user = ''
             for user in added_role:
                 all_user += f' {user.mention}'
-            await ctx.respond(f"已添加 {new_role.name} 給{all_user}")
+            view = Delete_Add_Role_button(new_role)
+            view.message = await ctx.respond(f"已添加 {new_role.name} 給{all_user}",view=view)
         else:
             await ctx.respond(f"已創建 {new_role.name} 身分組")
 
