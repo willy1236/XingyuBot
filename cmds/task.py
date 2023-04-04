@@ -27,7 +27,7 @@ class ltThread(threading.Thread):
 
     def run(self):
         print("Starting ltThread")
-        os.system('lt --port 14000 --subdomain willy1236 --max-sockets 10 --local-host 127.0.0.1 --max-https-sockets 55')
+        os.system('lt --port 14000 --subdomain willy1236 --max-sockets 10 --local-host 127.0.0.1 --max-https-sockets 86395')
         #cmd = [ "cmd","/c",'lt', '--port', '14000', '--subdomain', 'willy1236', '--max-sockets', '10', '--local-host', '127.0.0.1', '--max-https-sockets', '86395']
         #cmd = ["cmd","/c","echo", "Hello, World!"]
         #self.process = psutil.Popen(cmd)
@@ -53,7 +53,7 @@ class task(Cog_Extension):
             if start_website:
                 server = ltThread()
                 server.start()
-                scheduler.add_job(self.lt_start,'interval',minutes=10,args=[server],jitter=3)
+                scheduler.add_job(self.lt_start,'interval',minutes=10,args=[server],jitter=10)
 
             scheduler.start()
             self.earthquake_check.start()
