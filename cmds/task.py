@@ -14,26 +14,21 @@ start_website = jdata.get('start_website')
 class ltThread(threading.Thread):
     def __init__(self):
         super().__init__(name='ltThread')
-        #self._stop_event = threading.Event()
-        self.process = None
+        self._stop_event = threading.Event()
 
     def stop(self):
-        print("stopping ltThread")
-        #self._stop_event.set()
-        self.process.terminate()
-        self.process.wait()
-        self.join()
-        print("stop ltThread")
+        self._stop_event.set()
 
     def run(self):
-        print("Starting ltThread")
-        os.system('lt --port 14000 --subdomain willy1236 --max-sockets 10 --local-host 127.0.0.1 --max-https-sockets 86395')
-        #cmd = [ "cmd","/c",'lt', '--port', '14000', '--subdomain', 'willy1236', '--max-sockets', '10', '--local-host', '127.0.0.1', '--max-https-sockets', '86395']
-        #cmd = ["cmd","/c","echo", "Hello, World!"]
-        #self.process = psutil.Popen(cmd)
-        #self.process.wait()
-        print("Finished ltThread")
-
+        while not self._stop_event.is_set():
+            print("Starting ltThread")
+            os.system('lt --port 14000 --subdomain willy1236 --max-sockets 10 --local-host 127.0.0.1 --max-https-sockets 86395')
+            #cmd = [ "cmd","/c",'lt', '--port', '14000', '--subdomain', 'willy1236', '--max-sockets', '10', '--local-host', '127.0.0.1', '--max-https-sockets', '86395']
+            #cmd = ["cmd","/c","echo", "Hello, World!"]
+            #self.process = psutil.Popen(cmd)
+            #self.process.wait()
+            print("Finished ltThread")
+            time.sleep(5)
 
 class task(Cog_Extension):
     def __init__(self,*args,**kwargs):
@@ -53,7 +48,6 @@ class task(Cog_Extension):
             if start_website:
                 server = ltThread()
                 server.start()
-                scheduler.add_job(self.lt_start,'interval',minutes=10,args=[server],jitter=10)
 
             scheduler.start()
             self.earthquake_check.start()
@@ -232,10 +226,6 @@ class task(Cog_Extension):
                 del cache['twitch'][user]
             
         Jsondb.write('cache',cache)
-
-    async def lt_start(self,server:ltThread):
-        if not server.is_alive():
-            server.start()
 
 def setup(bot):
     bot.add_cog(task(bot))
