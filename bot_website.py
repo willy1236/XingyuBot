@@ -91,6 +91,7 @@ def youtube_push_get(request:Request):
 
 @app.post('/youtube_push')
 def youtube_push_post(request:Request,background_task: BackgroundTasks):
+    print(request.body)
     background_task.add_task(get_yt_push,request.body)
     return HTMLResponse('OK')
 
