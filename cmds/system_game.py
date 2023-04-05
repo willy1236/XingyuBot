@@ -1,6 +1,7 @@
 import discord,genshin
 from discord.ext import commands
 from discord.commands import SlashCommandGroup
+from datetime import timedelta
 
 from core.classes import Cog_Extension
 from bothelper import BotEmbed,Jsondb,ChoiceList
@@ -20,7 +21,7 @@ from bothelper.interface.game import *
 jdict = Jsondb.jdict
 set_option = ChoiceList.set('game_set_option')
 
-main_guild = [566533708371329024]
+debug_guild = Jsondb.jdata.get('debug_guild')
 
 class system_game(Cog_Extension):
     game = SlashCommandGroup("game", "遊戲資訊相關指令")
@@ -334,7 +335,7 @@ class system_game(Cog_Extension):
     @hoyo.command(description='尋找HoYOLab用戶')
     @commands.cooldown(rate=1,per=1)
     async def hoyolab(self,ctx,
-                   hoyolab_name:discord.Option(str,name='hoyolab名稱',description='要查詢的用戶',default=None)):
+                   hoyolab_name:discord.Option(str,name='hoyolab名稱',description='要查詢的用戶')):
         # db = bothelper.Jsondb
         # jhoyo = db.jhoyo
         # cookies = jhoyo.get(str(ctx.author.id),None)
@@ -352,7 +353,6 @@ class system_game(Cog_Extension):
                 hoyolab_user = user
                 break
         #print(user.hoyolab_uid)
-
 
         #自己搜不到自己
         if hoyolab_user:
@@ -374,7 +374,6 @@ class system_game(Cog_Extension):
                         embed_list.append(embed)
                     await ctx.respond(embeds=embed_list)
 
-                    
             except genshin.errors.DataNotPublic:
                 #if e.retcode == 10102:
                 await ctx.respond('用戶資訊未公開')
@@ -403,7 +402,7 @@ class system_game(Cog_Extension):
 
     @hoyo.command(description='尋找原神用戶')
     @commands.cooldown(rate=1,per=1)
-    async def user(self,ctx,
+    async def genshin(self,ctx,
                    genshin_id:discord.Option(str,name='原神uid',description='要查詢的用戶',default=None)):
         # db = bothelper.Jsondb
         # jhoyo = db.jhoyo
@@ -444,14 +443,46 @@ class system_game(Cog_Extension):
         #print(user.characters)
         #print(user.info)
         #print(user.stats)
-        print(user)
+        #print(user)
         embed = BotEmbed.simple(title=f'{user.info.nickname}({user.info.server})')
         embed.add_field(name="等級",value=user.info.level)
         embed.add_field(name="成就",value=user.stats.achievements)
         embed.set_image(url=user.info.icon)
         await ctx.respond(embed=embed)
 
-    @hoyo.command(description='測試',guild_ids=main_guild)
+    @hoyo.command(description='查詢深境螺旋')
+    @commands.cooldown(rate=1,per=1)
+    async def spiral_abyss(self,ctx,
+                           genshin_id:discord.Option(str,name='原神uid',description='要查詢的用戶',default=None),
+                           previous:discord.Option(bool,name='是否查詢上期紀錄',description='',default=False)):
+        await ctx.defer()
+        cookies = self.sqldb.get_userdata(str(ctx.author.id),'game_hoyo_cookies')
+        if not cookies:
+            raise commands.errors.ArgumentParsingError("沒有設定cookies")
+        client = genshin.Client(cookies,lang='zh-tw')
+        
+        try:
+            r_user = await client.get_genshin_user(genshin_id)
+            r_spiral_abyss = await client.get_genshin_spiral_abyss(genshin_id,previous=previous)
+        except genshin.errors.DataNotPublic:
+            await ctx.respond('用戶資訊未公開')
+            return
+        
+        start_time = (r_spiral_abyss.start_time+timedelta(hours=8)).strftime("%Y/%m/%d")
+        end_time = (r_spiral_abyss.end_time+timedelta(hours=8)).strftime("%Y/%m/%d")
+        
+        embed = BotEmbed.simple(description=f"第{r_spiral_abyss.season}期 {start_time} 至 {end_time}")
+        if r_user:
+            embed.title=f"{r_user.info.nickname} 的深境螺旋紀錄"
+        else:
+            embed.title=f"深境螺旋紀錄"
+        embed.add_field(name="最深層數",value=r_spiral_abyss.max_floor)
+        embed.add_field(name="總星數",value=r_spiral_abyss.total_stars)
+        
+        print(r_spiral_abyss)
+        await ctx.respond(embed=embed)
+
+    @hoyo.command(description='測試',guild_ids=debug_guild)
     @commands.cooldown(rate=1,per=1)
     async def test(self,ctx,
                    hoyolab_uid:discord.Option(str,name='hoyolab_uid',description='要查詢的用戶',default=None)):
@@ -459,7 +490,7 @@ class system_game(Cog_Extension):
         if not cookies:
             raise commands.errors.ArgumentParsingError("沒有設定cookies")
         client = genshin.Client(cookies,lang='zh-tw')
-        r = await client.get_record_card(hoyolab_uid)
+        r = await client.get_genshin_spiral_abyss(hoyolab_uid)
         print(r)
         await ctx.respond('done')
 

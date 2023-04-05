@@ -1,39 +1,13 @@
 import discord
 from discord.ext import commands,pages
 from core.classes import Cog_Extension
-from bothelper import BotEmbed
 from discord.commands import SlashCommandGroup
+from bothelper import BotEmbed
+from bothelper.utility import ChoiceList
 
-option_info = []
-dict = {
-    '總表':'help',
-    'vpn | vpn列表':'vpn',
-    'vpn | vpn安裝教學':'vpn01',
-    'share | 雲端共用資料夾':'share',
-    'mc | mc總表':'mc',
-    'mc | minecraft資料夾':'mc01',
-    'mc | 如何裝模組':'mc02'
-    }
-for name,value in dict.items():
-    option_info.append(discord.OptionChoice(name=name,value=value))
 
-option_help = []
-dict = {
-    'use':'use',
-    'pt':'pt',
-    'game':'game',
-    'set':'set',
-    'role':'role',
-    'bet':'bet',
-    'music':'music',
-    'weather':'weather',
-    # 'math':'math',
-    'user':'user',
-    'twitch':'twitch',
-    'admin':'admin',
-    }
-for name,value in dict.items():
-    option_help.append(discord.OptionChoice(name=name,value=value))
+info_option = ChoiceList.set('info_option')
+help_option = ChoiceList.set('help_option')
 
 class help(Cog_Extension):
     # @commands.command(help='原始的help指令')
@@ -46,22 +20,19 @@ class help(Cog_Extension):
         embed.set_footer(text="此機器人由 威立#6445 負責維護")
         await ctx.respond(embed=embed)
 
-    # @about.command()
-    # async def server(self,ctx):
-    #     text = ''
-    #     for i in self.bot.guilds:
-    #         text = text + i.name + ','
-    #     text = text[:-2]
-    #     await ctx.send(text)
-
     @commands.slash_command(description='機器人統計')
     @commands.is_owner()
-    async def count(self,ctx):
+    async def count(self,ctx,guild:discord.Option(bool,name='是否列出伺服器')):
         embed = BotEmbed.basic(self,f"依據目前的資料\n目前我已服務了{len(self.bot.guilds)}個伺服器\n共包含了{len(self.bot.users)}位成員喔~")
-        await ctx.respond(embed=embed)
+        if guild:
+            name_list = []
+            for i in self.bot.guilds:
+                name_list.append(i.name)
+            embed2 = BotEmbed.simple(','.join(name_list))
+        await ctx.respond(embeds=[embed,embed2])
 
     @commands.slash_command(description='一些資訊')
-    async def info(self, ctx, arg:discord.Option(str,name='選項',description='',choices=option_info)):
+    async def info(self, ctx, arg:discord.Option(str,name='選項',description='',choices=info_option)):
         if arg == 'help':
             text = "總表 | info可用選項\n指令用法:!!info <參數>\nvpn類\nvpn | vpn列表\nvpn01 | vpn使用教學\n\nminecraft類\nmc | minecraft總表\nmc01 | minecraft資料夾\nmc02 | 如何裝模組\n\n共用類\nshare | 雲端共用資料夾資訊"
 
@@ -94,19 +65,20 @@ class help(Cog_Extension):
     
     @commands.slash_command(name='help',description='幫助指令')
     @commands.cooldown(rate=1,per=3)
-    async def help_overview(self,ctx,arg:discord.Option(str,name='選項',description='',default='help',choices=option_help,required=False)):
+    async def help_overview(self,ctx,arg:discord.Option(str,name='選項',description='',default='help',choices=help_option,required=False)):
         if arg == 'help':
-            embed = BotEmbed.utility(self,"目前可使用的指令如下:")
-            embed.add_field(name="!!help <系列指令>", value="查詢系列指令\n目前支援:use,admin,pt,game,set,role,bet,music,weather,math,user,twitch", inline=False)
+            embed = BotEmbed.basic(self,"目前可使用的指令如下:")
+            embed.add_field(name="!!help <系列指令>", value="查詢系列指令", inline=False)
             embed.add_field(name="!!info <內容/help>", value="獲得相關資訊", inline=False)
             embed.add_field(name="!!feedback <內容>", value="傳送訊息給機器人擁有者", inline=False)
             #embed.add_field(name="!!find <id>", value="搜尋指定ID", inline=False)
-            embed.add_field(name="!!lottery [次數]", value="抽獎", inline=False)
+            embed.add_field(name="!!lottery [次數]", value="抽獎試手氣", inline=False)
+            embed.add_field(name="!!set", value="設定自動通知", inline=False)
             embed.add_field(name="!!about", value="關於機器人的小資訊", inline=False)
             embed.set_footer(text="輸入!!help user查詢指令用法")
             await ctx.respond(embed=embed)
         elif arg == 'use':
-            embed = BotEmbed.utility(self,"帶你了解基本的概念","使用指令")
+            embed = BotEmbed.basic(self,"帶你了解基本的概念","使用指令")
             embed.add_field(name="指令使用:前輟指令", value="前輟+指令就可以使用了，例如`!!help`\n如果有參數，則需要把每個參數用空格隔開", inline=False)
             embed.add_field(name="指令使用:斜槓指令", value="打上/後，會有dc的提示幫助你`\n如果有參數，在輸入過程中都有提示", inline=False)
             embed.add_field(name="括號", value="`<參數>`表示這個參數必填 `[參數]`表示不一定要填\n`<參數1/參數2>`為選擇一個參數填寫即可\n範例：", inline=False)
@@ -162,20 +134,21 @@ class help(Cog_Extension):
             await ctx.respond(embed=embed)
         elif arg == 'music':
             page = [BotEmbed.simple("音樂(music) 指令:"),BotEmbed.simple("音樂(music) 指令:")]
-            page[0].add_field(name="!!play <歌曲>", value="播放歌曲\n別名:p", inline=False)
-            page[0].add_field(name="!!queue", value="歌曲列表\n別名:q", inline=False)
-            page[0].add_field(name="!!now", value="現在播放的歌曲\n別名:current,playing,np", inline=False)
-            page[0].add_field(name="!!skip", value="投票跳過歌曲，需三個人才可跳過，點歌者可強制跳過\n別名:s", inline=False)
-            page[0].add_field(name="!!pause", value="暫停播放\n別名:pa", inline=False)
-            page[0].add_field(name="!!resume", value="繼續播放\n別名:re", inline=False)
+            page[0].add_field(name="!!play <歌曲>", value="播放歌曲", inline=False)
+            page[0].add_field(name="!!queue", value="歌曲列表", inline=False)
+            page[0].add_field(name="!!nowplaying", value="現在播放的歌曲", inline=False)
+            #page[0].add_field(name="!!skip", value="投票跳過歌曲，需三個人才可跳過，點歌者可強制跳過", inline=False)
+            page[0].add_field(name="!!skip", value="跳過歌曲", inline=False)
+            #page[0].add_field(name="!!pause", value="暫停播放", inline=False)
+            #page[0].add_field(name="!!resume", value="繼續播放", inline=False)
             page[0].add_field(name="!!join", value="讓機器人加入你的語音", inline=False)
-            page[0].add_field(name="!!summon [頻道]", value="讓機器人加入指定語音", inline=False)
-            page[0].add_field(name="!!leave", value="讓機器人離開你的語音\n別名:disconnect,dc", inline=False)
-            page[0].add_field(name="!!volume <音量>", value="設定音量", inline=False)
+            #page[0].add_field(name="!!summon [頻道]", value="讓機器人加入指定語音", inline=False)
+            #page[0].add_field(name="!!leave", value="讓機器人離開你的語音\n別名:disconnect,dc", inline=False)
+            #page[0].add_field(name="!!volume <音量>", value="設定音量", inline=False)
             page[1].add_field(name="!!stop", value="停止播放歌曲", inline=False)
             #page[1].add_field(name="!!shuffle", value="隨機撥放\n別名:random,r", inline=False)
             #page[1].add_field(name="!!loop", value="循環歌曲", inline=False)
-            page[1].add_field(name="!!remove <歌曲位置>", value="移除歌曲\n別名:rm", inline=False)
+            #page[1].add_field(name="!!remove <歌曲位置>", value="移除歌曲\n別名:rm", inline=False)
             paginator = pages.Paginator(pages=page, use_default_buttons=True)
             #await paginator.send(ctx, target=ctx.channel)
             await paginator.respond(ctx.interaction, ephemeral=False)
@@ -217,7 +190,7 @@ class help(Cog_Extension):
     @commands.slash_command(description='owner幫助指令')
     @commands.is_owner()
     async def help_owner(self,ctx):
-        embed = BotEmbed.utility(self,"目前可使用的指令如下(onwer):")
+        embed = BotEmbed.basic(self,"目前可使用的指令如下(onwer):")
         embed.add_field(name="!!send <頻道ID/用戶ID/0> <內容>", value="發送指定訊息", inline=False)
         embed.add_field(name="!!anno <內容>", value="對所有伺服器進行公告", inline=False)
         embed.add_field(name="!!bupdate <內容>", value="對所有伺服器發送機器人更新", inline=False)

@@ -68,5 +68,27 @@
         "貓貓":"cat",
         "狐狸":"fox",
         "狼":"wolf"
+    },
+    "info_option": {
+        "總表":"help",
+        "vpn | vpn列表":"vpn",
+        "vpn | vpn安裝教學":"vpn01",
+        "share | 雲端共用資料夾":"share",
+        "mc | mc總表":"mc",
+        "mc | minecraft資料夾":"mc01",
+        "mc | 如何裝模組":"mc02"
+    },
+    "help_option": {
+        "use":"use",
+        "pt":"pt",
+        "game":"game",
+        "set":"set",
+        "role":"role",
+        "bet":"bet",
+        "music":"music",
+        "weather":"weather",
+        "user":"user",
+        "twitch":"twitch",
+        "admin":"admin"
     }
 }

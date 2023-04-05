@@ -1,4 +1,4 @@
-import discord,datetime,requests
+import discord,datetime
 from discord.ext import commands
 from core.classes import Cog_Extension
 from bothelper import Jsondb,BotEmbed,BRS
@@ -63,22 +63,22 @@ class event(Cog_Extension):
         if message.mention_everyone:
             await BRS.mention_everyone(self,message)
         #詐騙檢查
-        ScamChack = False
-        if self.bot.user.id == 589744540240314368 and message.mention_everyone:
-            text = message.content.lower()
-            if 'free' in text and 'nitro' in text:
-                ScamChack = True
-            else:
-                url = "https://spen.tk/api/v1/isMaliciousTerm"
-                r = requests.get(url,params={'text':message.content}).json()
-                if r.get('hasMatch',False):
-                    ScamChack = True
-                    matches = r.get('matches',None)
+        # ScamChack = False
+        # if self.bot.user.id == 589744540240314368 and message.mention_everyone:
+        #     text = message.content.lower()
+        #     if 'free' in text and 'nitro' in text:
+        #         ScamChack = True
+        #     else:
+        #         url = "https://spen.tk/api/v1/isMaliciousTerm"
+        #         r = requests.get(url,params={'text':message.content}).json()
+        #         if r.get('hasMatch',False):
+        #             ScamChack = True
+        #             matches = r.get('matches',None)
 
-        if ScamChack:
-            await BRS.scam(self,message,matches)
-            await message.delete()
-            await message.channel.send('疑似為詐騙訊息，已自動刪除')
+        # if ScamChack:
+        #     await BRS.scam(self,message,matches)
+        #     await message.delete()
+        #     await message.channel.send('疑似為詐騙訊息，已自動刪除')
         #私人訊息回報
         if isinstance(message.channel,discord.channel.DMChannel) and message.author != self.bot.user:
             await BRS.dm(self,message)

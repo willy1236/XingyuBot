@@ -8,17 +8,18 @@ from bothelper import BotEmbed,BRS,Jsondb,sqldb,twitch_bot
 from bothelper.ui_element.button import ReactRole_button
 
 class SendMessageModal(discord.ui.Modal):
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.add_item(discord.ui.InputText(label="要傳送的訊息", style=discord.InputTextStyle.long))
 
-main_guild = [566533708371329024]
+debug_guild = Jsondb.jdata.get('debug_guild')
+
 class owner(Cog_Extension):
     
-    twitch_chatbot = SlashCommandGroup("twitch_chatbot", "twitch機器人相關指令",guild_ids=main_guild)
+    twitch_chatbot = SlashCommandGroup("twitch_chatbot", "twitch機器人相關指令",guild_ids=debug_guild)
     
     #change_presence
-    @commands.slash_command(description='更換bot狀態',guild_ids=main_guild)
+    @commands.slash_command(description='更換bot狀態',guild_ids=debug_guild)
     @commands.is_owner()
     async def statue(self,ctx,statue):
         jdata = Jsondb.jdata
@@ -28,7 +29,7 @@ class owner(Cog_Extension):
         await ctx.respond(f'狀態更改完成',delete_after=5)
 
     #send
-    @commands.slash_command(description='發送訊息',guild_ids=main_guild)
+    @commands.slash_command(description='發送訊息',guild_ids=debug_guild)
     @commands.is_owner()
     async def send(self,ctx,
                    id:discord.Option(str,required=True,name='頻道id',description=''),
@@ -48,7 +49,7 @@ class owner(Cog_Extension):
         await ctx.respond(f'訊息發送成功',delete_after=5,ephemeral=True)
 
     #all_anno
-    @commands.slash_command(description='全群公告',guild_ids=main_guild)
+    @commands.slash_command(description='全群公告',guild_ids=debug_guild)
     @commands.is_owner()
     async def anno(self,ctx:discord.ApplicationContext):
         await ctx.defer()
@@ -79,7 +80,7 @@ class owner(Cog_Extension):
         await msg.edit(f"已向{send_success}/{len(channels)}個頻道發送公告")
 
     #bot_update
-    @commands.slash_command(description='機器人更新通知',guild_ids=main_guild)
+    @commands.slash_command(description='機器人更新通知',guild_ids=debug_guild)
     @commands.is_owner()
     async def bupdate(self,ctx:discord.ApplicationContext):
         msg = await ctx.respond('請輸入要發送的訊息')
@@ -111,7 +112,7 @@ class owner(Cog_Extension):
         await msg.edit(f"已向{send_success}/{len(channels)}個頻道發送公告")
 
     #edit
-    @commands.slash_command(description='編輯訊息',guild_ids=main_guild)
+    @commands.slash_command(description='編輯訊息',guild_ids=debug_guild)
     @commands.is_owner()
     async def edit(self,ctx,msgid:str,new_msg):
         await ctx.defer()
@@ -139,7 +140,7 @@ class owner(Cog_Extension):
     #     else:
     #         ctx.send('參數錯誤:請輸入正確模式(add/remove)',delete_after=5)
 
-    @commands.slash_command(description='權限檢查',guild_ids=main_guild)
+    @commands.slash_command(description='權限檢查',guild_ids=debug_guild)
     @commands.is_owner()
     async def permission(self,ctx,guild_id):
         guild_id = int(guild_id)
@@ -183,7 +184,7 @@ class owner(Cog_Extension):
         # permission.request_to_speak
         await ctx.respond(embed=embed)
 
-    @commands.slash_command(guild_ids=main_guild)
+    @commands.slash_command(guild_ids=debug_guild)
     @commands.is_owner()
     async def reaction_role(self,ctx,chaid,msgid):
         channel = await self.bot.fetch_channel(chaid)
@@ -192,7 +193,7 @@ class owner(Cog_Extension):
         await ctx.respond('訊息已發送')
 
     #reset
-    @commands.slash_command(description='資料重置',guild_ids=main_guild)
+    @commands.slash_command(description='資料重置',guild_ids=debug_guild)
     @commands.is_owner()
     async def reset(self,ctx,arg=None):
         await ctx.defer()
@@ -224,17 +225,17 @@ class owner(Cog_Extension):
 #         else:
 #             await channel.send('👍')
 
-    #jset
-    @commands.slash_command(guild_ids=main_guild)
-    @commands.is_owner()
-    async def jset(self,ctx,option,value):
-        jdata = Jsondb.jdata
-        jdata[option] = value
-        Jsondb.write('jdata',jdata)
-        await ctx.respond(f'已將{option} 設為 {value}')
+    # #jset
+    # @commands.slash_command(guild_ids=debug_guild)
+    # @commands.is_owner()
+    # async def jset(self,ctx,option,value):
+    #     jdata = Jsondb.jdata
+    #     jdata[option] = value
+    #     Jsondb.write('jdata',jdata)
+    #     await ctx.respond(f'已將{option} 設為 {value}')
 
 
-    @commands.slash_command(description='使用mc伺服器指令',guild_ids=main_guild)
+    @commands.slash_command(description='使用mc伺服器指令',guild_ids=debug_guild)
     @commands.is_owner()
     async def mccommand(self,ctx,command):
         settings = Jsondb.jdata.get('mc_server')
@@ -245,7 +246,7 @@ class owner(Cog_Extension):
             response = rcon.command(command)
             await ctx.respond(response)
 
-    @twitch_chatbot.command(description='加入Twitch頻道',guild_ids=main_guild)
+    @twitch_chatbot.command(description='加入Twitch頻道',guild_ids=debug_guild)
     @commands.is_owner()
     async def join(self,ctx,twitch_user):
         channel = twitch_bot.get_channel(twitch_user)
@@ -259,7 +260,7 @@ class owner(Cog_Extension):
         else:
             await ctx.respond(f'錯誤：找不到 {twitch_user}')
     
-    @twitch_chatbot.command(description='離開Twitch頻道',guild_ids=main_guild)
+    @twitch_chatbot.command(description='離開Twitch頻道',guild_ids=debug_guild)
     @commands.is_owner()
     async def leave(self,ctx,twitch_user):
         channel = twitch_bot.get_channel(twitch_user)
@@ -273,7 +274,7 @@ class owner(Cog_Extension):
         else:
             await ctx.respond(f'錯誤：找不到 {twitch_user}')
 
-    @twitch_chatbot.command(description='發送消息到指定Twitch頻道',guild_ids=main_guild)
+    @twitch_chatbot.command(description='發送消息到指定Twitch頻道',guild_ids=debug_guild)
     @commands.is_owner()
     async def send(self,ctx,twitch_user,context):
         await twitch_bot.get_channel(twitch_user).send(context)

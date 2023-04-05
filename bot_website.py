@@ -38,20 +38,46 @@ def twitch_eventsub(request:Request):
         return "Server error", 400
     
 def get_yt_push(content):
+    # 解析XML文件
     tree = ET.parse(content)
     root = tree.getroot()
 
+    # 创建一个空字典来存储结果
     result = {}
-    result['id'] = root.find('id').text
-    result['videoId'] = root.find('yt:videoId', root.nsmap).text
-    result['channelId'] = root.find('yt:channelId', root.nsmap).text
-    result['title'] = root.find('title').text
-    result['link'] = root.find('link').get('href')
-    result['author'] = root.find('author/name').text
-    result['author_uri'] = root.find('author/uri').text
-    result['published'] = root.find('published').text
-    result['updated'] = root.find('updated').text
 
+    # 判断是否为已删除条目
+    if 'deleted-entry' in root.tag:
+        # 获取删除的视频ID和删除的时间并添加到字典中
+        result['deleted_videoId'] = root.get('ref').split(':')[-1]
+        result['deleted_time'] = root.get('when')
+
+        # 如果有一个<by>元素，获取作者信息并添加到字典中
+        by_elem = root.find('at:by', root.nsmap)
+        if by_elem is not None:
+            result['author'] = by_elem.find('name').text
+            result['author_uri'] = by_elem.find('uri').text
+    else:
+        # 获取视频ID、频道ID和视频标题，并添加到字典中
+        video_id_elem = root.find('yt:videoId', root.nsmap)
+        result['video_id'] = video_id_elem.text
+        channel_id_elem = root.find('yt:channelId', root.nsmap)
+        result['channel_id'] = channel_id_elem.text
+        title_elem = root.find('title')
+        result['title'] = title_elem.text
+
+        # 如果有一个<author>元素，获取作者信息并添加到字典中
+        author_elem = root.find('author')
+        if author_elem is not None:
+            result['author'] = author_elem.find('name').text
+            result['author_uri'] = author_elem.find('uri').text
+
+        # 获取发布时间和更新时间，并添加到字典中
+        published_elem = root.find('published')
+        result['published'] = published_elem.text
+        updated_elem = root.find('updated')
+        result['updated'] = updated_elem.text
+
+    # 输出结果
     print(result)
 
 @app.get('/youtube_push')
