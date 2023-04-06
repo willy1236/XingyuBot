@@ -39,8 +39,9 @@ def twitch_eventsub(request:Request):
     
 def get_yt_push(content):
     # 解析XML文件
-    tree = ET.parse(content)
-    root = tree.getroot()
+    # tree = ET.parse(content)
+    # root = tree.getroot()
+    root = ET.fromstring(content)
 
     # 创建一个空字典来存储结果
     result = {}
@@ -90,9 +91,10 @@ def youtube_push_get(request:Request):
         return HTMLResponse('OK')
 
 @app.post('/youtube_push')
-def youtube_push_post(request:Request,background_task: BackgroundTasks):
-    print(request.body)
-    background_task.add_task(get_yt_push,request.body)
+async def youtube_push_post(request:Request,background_task: BackgroundTasks):
+    print(request.headers)
+    print(request.body().decode('utf-8'))
+    background_task.add_task(get_yt_push,request.body().decode('utf-8'))
     return HTMLResponse('OK')
 
 @app.get('/book/{book_id}',response_class=JSONResponse)

@@ -5,7 +5,7 @@ from datetime import datetime, timezone, timedelta
 from discord.ext import commands,tasks
 
 from core.classes import Cog_Extension
-from bothelper import Jsondb
+from bothelper import Jsondb,log
 from bothelper.interface import *
 
 jdata = Jsondb.jdata
@@ -21,13 +21,13 @@ class ltThread(threading.Thread):
 
     def run(self):
         while not self._stop_event.is_set():
-            print("Starting ltThread")
+            log.info("Starting ltThread")
             os.system('lt --port 14000 --subdomain willy1236 --max-sockets 10 --local-host 127.0.0.1 --max-https-sockets 86395')
             #cmd = [ "cmd","/c",'lt', '--port', '14000', '--subdomain', 'willy1236', '--max-sockets', '10', '--local-host', '127.0.0.1', '--max-https-sockets', '86395']
             #cmd = ["cmd","/c","echo", "Hello, World!"]
             #self.process = psutil.Popen(cmd)
             #self.process.wait()
-            print("Finished ltThread")
+            log.info("Finished ltThread")
             time.sleep(5)
 
 class task(Cog_Extension):

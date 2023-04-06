@@ -39,7 +39,7 @@ class help(Cog_Extension):
         elif arg == 'vpn':
             text = "vpn | vpn列表\n名稱:willy1236_1 密:123456987 | willy的房間"
         elif arg == 'vpn01':
-            text = "vpn01 | vpn安裝教學\n1.下載Radmin(vpn)\nhttps://www.radmin-vpn.com/tw/\n2.選擇 加入網路 並輸入名稱及密碼(可輸入!!info vpn查詢)\n3.記得 改名 讓大家知道你是誰\n\nIP為 xx.xxx.xx.xxx:ooooo\nx:開地圖的人的IP(VPN的IP)\no:公開至區網時會顯示"
+            text = "vpn01 | vpn安裝教學\n1.下載Radmin(vpn)\nhttps://www.radmin-vpn.com/tw/\n2.選擇 加入網路 並輸入名稱及密碼(可輸入/info vpn查詢)\n3.記得 改名 讓大家知道你是誰\n\nIP依據開伺服器的方式不同分為\n區域網: xx.xxx.xx.xxx:ooooo\n伺服器: xx.xxx.xx.xxx\nx:開地圖的人的IP(VPN的IP)\no:公開至區網時會顯示的連接阜數字"
         elif arg == 'share':
             text = "雲端共用資料夾 | 94共用啦\n可以在這裡下載或共用檔案\n請洽威立以取得雲端權限"
 
