@@ -41,44 +41,25 @@ def get_yt_push(content):
     # 解析XML文件
     # tree = ET.parse(content)
     # root = tree.getroot()
+    print(content)
     root = ET.fromstring(content)
 
     # 创建一个空字典来存储结果
     result = {}
 
-    # 判断是否为已删除条目
-    if 'deleted-entry' in root.tag:
-        # 获取删除的视频ID和删除的时间并添加到字典中
-        result['deleted_videoId'] = root.get('ref').split(':')[-1]
-        result['deleted_time'] = root.get('when')
+    # 解析entry元素並存入字典中
+    entry = root.find('{http://www.w3.org/2005/Atom}entry')
+    result['id'] = entry.find('{http://www.w3.org/2005/Atom}id').text
+    result['videoId'] = entry.find('{http://www.youtube.com/xml/schemas/2015}videoId').text
+    result['channelId'] = entry.find('{http://www.youtube.com/xml/schemas/2015}channelId').text
+    result['title'] = entry.find('{http://www.w3.org/2005/Atom}title').text
+    result['link'] = entry.find('{http://www.w3.org/2005/Atom}link').attrib['href']
+    result['author_name'] = entry.find('{http://www.w3.org/2005/Atom}author/{http://www.w3.org/2005/Atom}name').text
+    result['author_uri'] = entry.find('{http://www.w3.org/2005/Atom}author/{http://www.w3.org/2005/Atom}uri').text
+    result['published'] = entry.find('{http://www.w3.org/2005/Atom}published').text
+    result['updated'] = entry.find('{http://www.w3.org/2005/Atom}updated').text
 
-        # 如果有一个<by>元素，获取作者信息并添加到字典中
-        by_elem = root.find('at:by', root.nsmap)
-        if by_elem is not None:
-            result['author'] = by_elem.find('name').text
-            result['author_uri'] = by_elem.find('uri').text
-    else:
-        # 获取视频ID、频道ID和视频标题，并添加到字典中
-        video_id_elem = root.find('yt:videoId', root.nsmap)
-        result['video_id'] = video_id_elem.text
-        channel_id_elem = root.find('yt:channelId', root.nsmap)
-        result['channel_id'] = channel_id_elem.text
-        title_elem = root.find('title')
-        result['title'] = title_elem.text
-
-        # 如果有一个<author>元素，获取作者信息并添加到字典中
-        author_elem = root.find('author')
-        if author_elem is not None:
-            result['author'] = author_elem.find('name').text
-            result['author_uri'] = author_elem.find('uri').text
-
-        # 获取发布时间和更新时间，并添加到字典中
-        published_elem = root.find('published')
-        result['published'] = published_elem.text
-        updated_elem = root.find('updated')
-        result['updated'] = updated_elem.text
-
-    # 输出结果
+    # 輸出結果
     print(result)
 
 @app.get('/youtube_push')
@@ -92,9 +73,10 @@ def youtube_push_get(request:Request):
 
 @app.post('/youtube_push')
 async def youtube_push_post(request:Request,background_task: BackgroundTasks):
-    print(request.headers)
-    print(request.body().decode('utf-8'))
-    background_task.add_task(get_yt_push,request.body().decode('utf-8'))
+    body = await request.body()
+    body = body.decode('UTF-8')
+    print(body)
+    background_task.add_task(get_yt_push,body)
     return HTMLResponse('OK')
 
 @app.get('/book/{book_id}',response_class=JSONResponse)
