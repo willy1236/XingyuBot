@@ -143,6 +143,21 @@ class event(Cog_Extension):
                 await self.bot.get_channel(voice_list.get(guildid)).send(embed=embed)
 
     @commands.Cog.listener()
+    async def on_voice_state_update(self,user:discord.Member, before:discord.VoiceState, after:discord.VoiceState):
+        lobby = self.bot.get_channel(955475420042629140)
+        if after.channel == lobby:
+            guild = after.channel.guild
+            category = lobby.category
+            #permission = discord.Permissions.advanced()
+            #permission.manage_channels = True
+            #overwrites = discord.PermissionOverwrite({user:permission})
+            overwrites = {
+            user: discord.PermissionOverwrite(manage_channels=True,manage_roles=True)
+            }
+            new_channel = await guild.create_voice_channel(name=f'{user.name}的頻道', reason='語音分流',category=category,overwrites=overwrites)
+            await user.move_to(new_channel)
+
+    @commands.Cog.listener()
     async def on_member_remove(self, member):
         guildid = member.guild.id
         if guildid in member_list and self.bot.user.id == 589744540240314368:

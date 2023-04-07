@@ -47,7 +47,8 @@
         "extended_sniper_mag": "紫色狙擊彈匣",
         "double_tap": "雙擊板機",
         "sniper_stock": "狙擊槍托",
-        "anvil_receiver": "鐵砧機匣"
+        "anvil_receiver": "鐵砧機匣",
+        "skullpiercer_rifling":"穿顱者"
     },
     "genshin": {
         "Events": "活動",
