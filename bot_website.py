@@ -4,6 +4,9 @@ from fastapi.requests import Request
 from fastapi.responses import HTMLResponse,JSONResponse,PlainTextResponse
 import xml.etree.ElementTree as ET
 
+from main import bot
+from bothelper.model.push import Youtube_Push
+
 app = FastAPI()
 
 @app.route('/')
@@ -37,7 +40,7 @@ def twitch_eventsub(request:Request):
         print("[Warning] Error:", e)
         return "Server error", 400
     
-def get_yt_push(content):
+async def get_yt_push(content):
     # 解析XML文件
     # tree = ET.parse(content)
     # root = tree.getroot()
@@ -61,6 +64,10 @@ def get_yt_push(content):
 
     # 輸出結果
     print(result)
+    #{'id': 'yt:video:L3pnOeAea80', 'videoId': 'L3pnOeAea80', 'channelId': 'UCbh7KHPMgYGgpISdbF6l0Kw', 'title': '【輕聲細語】全肯定。溫柔。哄睡。🌼 #瑪格麗特諾爾絲 #箱箱TheBox', 'link': 'https://www.youtube.com/watch?v=L3pnOeAea80', 'author_name': '瑪格麗特 · 諾爾絲 / Margaret North【箱箱The Box所屬】', 'author_uri': 'https://www.youtube.com/channel/UCbh7KHPMgYGgpISdbF6l0Kw', 'published': '2023-04-07T17:15:34+00:00', 'updated': '2023-04-07T17:15:56.88236001+00:00'}
+    embed = Youtube_Push(result).desplay()
+    channel = bot.get_channel(566533708371329026)
+    await channel.send(embed=embed)
 
 @app.get('/youtube_push')
 def youtube_push_get(request:Request):

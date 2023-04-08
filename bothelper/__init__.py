@@ -27,4 +27,5 @@ __all__ = [
     'BotEmbed',
     'interface',
     'twitch_bot',
+    'ChoiceList',
 ]
