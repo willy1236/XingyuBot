@@ -493,8 +493,8 @@ class system_game(Cog_Extension):
             if text:
                 embed.add_field(name=i,value=text)
 
-
-        print(r_spiral_abyss)
+        #r_spiral_abyss.floors
+        #print(r_spiral_abyss)
         await ctx.respond(embed=embed)
 
     @hoyo.command(description='測試',guild_ids=debug_guild)
