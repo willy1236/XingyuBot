@@ -13,7 +13,7 @@ class Youtube_Push:
         self.author_name = data.get('author_name')
         self.author_url = data.get('author_uri')
         self.published = datetime.datetime.fromisoformat(data.get('published')).replace(tzinfo=tz)
-        self.updated = datetime.datetime.fromisoformat(data.get('updated')).replace(tzinfo=tz)
+        self.updated = datetime.datetime.strptime(data.get('updated'),'%Y-%m-%dT%H:%M:%S.%f%z').replace(tzinfo=tz)
         
     def desplay(self):
         embed = BotEmbed.simple(title=self.title,

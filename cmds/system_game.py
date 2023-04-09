@@ -471,14 +471,29 @@ class system_game(Cog_Extension):
         start_time = (r_spiral_abyss.start_time+timedelta(hours=8)).strftime("%Y/%m/%d")
         end_time = (r_spiral_abyss.end_time+timedelta(hours=8)).strftime("%Y/%m/%d")
         
-        embed = BotEmbed.simple(description=f"第{r_spiral_abyss.season}期 {start_time} 至 {end_time}")
+        embed = BotEmbed.simple(description=f"第{r_spiral_abyss.season}期 {start_time} 至 {end_time}\n挑戰{r_spiral_abyss.total_battles}場中獲勝{r_spiral_abyss.total_wins}場，最深至{r_spiral_abyss.max_floor}層，共獲得{r_spiral_abyss.total_stars}顆星")
         if r_user:
             embed.title=f"{r_user.info.nickname} 的深境螺旋紀錄"
         else:
             embed.title=f"深境螺旋紀錄"
-        embed.add_field(name="最深層數",value=r_spiral_abyss.max_floor)
-        embed.add_field(name="總星數",value=r_spiral_abyss.total_stars)
         
+        ranks = r_spiral_abyss.ranks
+        dict = {
+            "角色：最多上場":ranks.most_played,
+            "角色：最多擊殺": ranks.most_kills,
+            "角色：最痛一擊": ranks.strongest_strike,
+            "角色：最多承傷": ranks.most_damage_taken,
+            "角色：最多技能使用": ranks.most_skills_used,
+            "角色：最多大招使用": ranks.most_bursts_used
+        }
+        for i in dict:
+            text = ''
+            for j in dict[i]:
+                text += f'{j.name} {j.value}\n'
+            if text:
+                embed.add_field(name=i,value=text)
+
+
         print(r_spiral_abyss)
         await ctx.respond(embed=embed)
 
