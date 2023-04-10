@@ -1,4 +1,4 @@
-import os,time
+import os,time,threading
 from fastapi import FastAPI,BackgroundTasks
 from fastapi.requests import Request
 from fastapi.responses import HTMLResponse,JSONResponse,PlainTextResponse
@@ -6,6 +6,7 @@ import xml.etree.ElementTree as ET
 
 from main import bot
 from bothelper.model.push import Youtube_Push
+from bothelper import log
 
 app = FastAPI()
 
@@ -102,9 +103,27 @@ def run():
     import uvicorn
     uvicorn.run(app,host='127.0.0.1',port=14000)
 
+class ltThread(threading.Thread):
+    def __init__(self):
+        super().__init__(name='ltThread')
+        self._stop_event = threading.Event()
+
+    def stop(self):
+        self._stop_event.set()
+
+    def run(self):
+        while not self._stop_event.is_set():
+            log.info("Starting ltThread")
+            os.system('lt --port 14000 --subdomain willy1236 --max-sockets 10 --local-host 127.0.0.1 --max-https-sockets 86395')
+            #cmd = [ "cmd","/c",'lt', '--port', '14000', '--subdomain', 'willy1236', '--max-sockets', '10', '--local-host', '127.0.0.1', '--max-https-sockets', '86395']
+            #cmd = ["cmd","/c","echo", "Hello, World!"]
+            #self.process = psutil.Popen(cmd)
+            #self.process.wait()
+            log.info("Finished ltThread")
+            time.sleep(5)
+
 if __name__ == '__main__':
     #os.system('uvicorn bot_website:app --reload')
-    from cmds.task import ltThread
     server = ltThread()
     server.start()
 

@@ -5,30 +5,8 @@ from datetime import datetime, timezone, timedelta
 from discord.ext import commands,tasks
 
 from core.classes import Cog_Extension
-from bothelper import Jsondb,log
+from bothelper import Jsondb
 from bothelper.interface import *
-
-jdata = Jsondb.jdata
-start_website = jdata.get('start_website')
-
-class ltThread(threading.Thread):
-    def __init__(self):
-        super().__init__(name='ltThread')
-        self._stop_event = threading.Event()
-
-    def stop(self):
-        self._stop_event.set()
-
-    def run(self):
-        while not self._stop_event.is_set():
-            log.info("Starting ltThread")
-            os.system('lt --port 14000 --subdomain willy1236 --max-sockets 10 --local-host 127.0.0.1 --max-https-sockets 86395')
-            #cmd = [ "cmd","/c",'lt', '--port', '14000', '--subdomain', 'willy1236', '--max-sockets', '10', '--local-host', '127.0.0.1', '--max-https-sockets', '86395']
-            #cmd = ["cmd","/c","echo", "Hello, World!"]
-            #self.process = psutil.Popen(cmd)
-            #self.process.wait()
-            log.info("Finished ltThread")
-            time.sleep(5)
 
 class task(Cog_Extension):
     def __init__(self,*args,**kwargs):
@@ -45,9 +23,6 @@ class task(Cog_Extension):
             scheduler.add_job(self.apex_crafting_update,'cron',hour=1,minute=5,second=0,jitter=3)
             scheduler.add_job(self.apex_map_update,'cron',minute='00,15,30,45',second=1,jitter=3)
             scheduler.add_job(self.forecast_update,'cron',hour='00,03,06,09,12,15,18,21',minute=0,second=1,jitter=3)
-            if start_website:
-                server = ltThread()
-                server.start()
 
             scheduler.start()
             self.earthquake_check.start()
