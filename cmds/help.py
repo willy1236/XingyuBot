@@ -139,7 +139,7 @@ class help(Cog_Extension):
             page[0].add_field(name="!!nowplaying", value="現在播放的歌曲", inline=False)
             #page[0].add_field(name="!!skip", value="投票跳過歌曲，需三個人才可跳過，點歌者可強制跳過", inline=False)
             page[0].add_field(name="!!skip", value="跳過歌曲", inline=False)
-            #page[0].add_field(name="!!pause", value="暫停播放", inline=False)
+            page[0].add_field(name="!!pause", value="暫停/繼續播放", inline=False)
             #page[0].add_field(name="!!resume", value="繼續播放", inline=False)
             page[0].add_field(name="!!join", value="讓機器人加入你的語音", inline=False)
             #page[0].add_field(name="!!summon [頻道]", value="讓機器人加入指定語音", inline=False)

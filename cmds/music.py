@@ -253,6 +253,15 @@ class music(Cog_Extension):
         else:
             await ctx.respond("歌單裡空無一物")
 
+    @commands.slash_command(description='暫停/繼續播放歌曲')
+    async def pause(self, ctx: discord.ApplicationContext):
+        if not ctx.voice_client.is_paused():
+            await ctx.voice_client.pause()
+            await ctx.respond(f"歌曲已暫停⏸️")
+        else:
+            await ctx.voice_client.resume()
+            await ctx.respond(f"歌曲已繼續▶️")
+
     @play.before_invoke
     @skip.before_invoke
     #@volume.before_invoke
@@ -261,6 +270,7 @@ class music(Cog_Extension):
     @queue.before_invoke
     #@yt.before_invoke
     #@localplay.before_invoke
+    @pause.before_invoke
     async def ensure_voice(self, ctx: discord.ApplicationContext):
         if not ctx.voice_client:
             if ctx.author.voice:
