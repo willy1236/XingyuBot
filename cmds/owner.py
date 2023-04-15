@@ -280,6 +280,13 @@ class owner(Cog_Extension):
         await twitch_bot.get_channel(twitch_user).send(context)
         await ctx.respond(f'已發送到 {twitch_user}: {context}')
 
+    
+    @commands.slash_command(description='機器人面板',guild_ids=debug_guild)
+    @commands.is_owner()
+    async def panel(self,ctx):
+        embed = BotEmbed.basic(self,f'伺服器總數：{len(self.bot.guilds)}\n成員：{len(self.bot.users)}')
+        await ctx.respond(f'',embed=embed)
+
 
 def setup(bot):
     bot.add_cog(owner(bot))

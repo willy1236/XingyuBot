@@ -231,6 +231,7 @@ class system_game(Cog_Extension):
     @apex.command(description='查詢Apex伺服器資料',enabled=False)
     @commands.cooldown(rate=1,per=3)
     async def server(self,ctx):
+        return await ctx.respond(content='暫未開放')        
         embed = ApexInterface().get_server_status().desplay()
         await ctx.respond(content='查詢成功',embed=embed)
 

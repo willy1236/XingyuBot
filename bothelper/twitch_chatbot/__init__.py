@@ -1,6 +1,6 @@
-from .main import Bot
+from .main import bot
 
-twitch_bot = Bot()
+twitch_bot = bot
 
 __all__= [
     'twitch_bot',

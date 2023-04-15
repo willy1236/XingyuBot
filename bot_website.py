@@ -75,7 +75,6 @@ async def get_yt_push(content):
 @app.get('/youtube_push')
 def youtube_push_get(request:Request):
     params = dict(request.query_params)
-    print(params)
     if 'hub.challenge' in params:
         return HTMLResponse(content=params['hub.challenge'])  
     else:
