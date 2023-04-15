@@ -256,7 +256,7 @@ class owner(Cog_Extension):
             await ctx.respond(f'找不到 {twitch_user} 但仍加入')
 
             cache = Jsondb.cache
-            cache.get('twitch_initial_channels').append(channel)
+            cache.get('twitch_initial_channels').append(twitch_user)
             Jsondb.write('cache',cache)
 
             await twitch_bot.join_channels((twitch_user,))
@@ -267,7 +267,7 @@ class owner(Cog_Extension):
     async def leave(self,ctx,twitch_user):
         cache = Jsondb.cache
         if twitch_user in cache.get('twitch_initial_channels'):
-            cache.get('twitch_initial_channels').remove(channel)
+            cache.get('twitch_initial_channels').remove(twitch_user)
             Jsondb.write('cache',cache)
             await twitch_bot.part_channels((twitch_user,))
             await ctx.respond(f'離開 {twitch_user}')
