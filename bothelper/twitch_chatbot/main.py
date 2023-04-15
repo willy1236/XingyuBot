@@ -45,7 +45,7 @@ class Bot(commands.Bot):
             #print(message.content)
             dict = {
                 'content': message.content,
-                'name': message.author.name
+                'username': message.author.name
             }
             requests.post(url,data=dict)
             #await bot.handle_commands(message)
@@ -58,11 +58,19 @@ loop.create_task(bot.__ainit__())
 
 
 @esbot.event()
-async def event_eventsub_notification_follow(payload: eventsub.ChannelFollowData) -> None:
+async def event_eventsub_notification_follow(payload: eventsub.ChannelFollowData):
     print('Received event!')
     #channel = bot.get_channel('channel')
     print(f'{payload.data.user.name} followed woohoo!')
     #await channel.send(f'{payload.data.user.name} followed woohoo!')
+
+@esbot.event()
+async def event_eventsub_notification_subscription(event: eventsub.ChannelSubscribeData):
+    print(f'感謝 {event.user.name} 的{event.tier}等訂閱')
+
+@esbot.event()
+async def event_eventsub_notification_raid(event: twitchio.Channel):
+    print(f'醬肉警報！{event.name}')
 
 if __name__ == '__main__':
     bot.run()

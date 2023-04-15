@@ -83,7 +83,7 @@ class event(Cog_Extension):
         if isinstance(message.channel,discord.channel.DMChannel) and message.author != self.bot.user:
             await BRS.dm(self,message)
             return
-        if message.channel.id == 1096717312297533510 and message.author != self.bot.user:
+        if message.channel.id == 1096717312297533510 and not message.author.bot:
             print(message.author)
             # channel = twitch_bot.get_channel('sakagawa_0309')
             # await channel.send(f'{message}')
