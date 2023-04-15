@@ -1,7 +1,6 @@
-import twitchio,secrets
+import twitchio,secrets,requests
 from twitchio.ext import commands,eventsub
 from bothelper.database import Jsondb
-from main import bot as discord_bot
 
 tokens = Jsondb.get_token('twitch_chatbot')
 initial_channels = Jsondb.cache.get('twitch_initial_channels')
@@ -12,7 +11,6 @@ esclient = eventsub.EventSubClient(esbot,webhook_secret=secrets.token_hex(12),ca
 class Bot(commands.Bot):
     def __init__(self):
         super().__init__(token=tokens.get('token'), prefix='!!', initial_channels=initial_channels,client_id=tokens.get('id'),nick='bot')
-        self.channel = discord_bot.get_channel(1096717312297533510)
         #self.loop.run_until_complete(bot.__ainit__())
 
     async def __ainit__(self):
@@ -43,7 +41,10 @@ class Bot(commands.Bot):
     async def event_message(self,message:twitchio.Message):
         if hasattr(message.author, 'name'):
             #print(message.content)
-            self.channel.send(message.content)
+            dict = {
+                'content': message.content
+            }
+            requests.post('https://discord.com/api/webhooks/1096734339284349018/Jdk5nSQ2PMY1UPVVxIHbYiLxvHWZmhFk5yfxiCDwp7bSJI8SLORCNxnxjxAmHFcCn3Pi',data=dict)
             #await bot.handle_commands(message)
 
 bot = Bot()
