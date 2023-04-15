@@ -8,6 +8,8 @@ initial_channels = Jsondb.cache.get('twitch_initial_channels')
 esbot = commands.Bot.from_client_credentials(client_id=tokens.get('id'),client_secret=tokens.get('secret'))
 esclient = eventsub.EventSubClient(esbot,webhook_secret=secrets.token_hex(12),callback_route='https://willy1236.loca.lt/twitch_eventsub')
 
+url = 'https://discord.com/api/webhooks/1096734339284349018/Jdk5nSQ2PMY1UPVVxIHbYiLxvHWZmhFk5yfxiCDwp7bSJI8SLORCNxnxjxAmHFcCn3Pi'
+
 class Bot(commands.Bot):
     def __init__(self):
         super().__init__(token=tokens.get('token'), prefix='!!', initial_channels=initial_channels,client_id=tokens.get('id'),nick='bot')
@@ -42,9 +44,10 @@ class Bot(commands.Bot):
         if hasattr(message.author, 'name'):
             #print(message.content)
             dict = {
-                'content': message.content
+                'content': message.content,
+                'name': message.author.name
             }
-            requests.post('https://discord.com/api/webhooks/1096734339284349018/Jdk5nSQ2PMY1UPVVxIHbYiLxvHWZmhFk5yfxiCDwp7bSJI8SLORCNxnxjxAmHFcCn3Pi',data=dict)
+            requests.post(url,data=dict)
             #await bot.handle_commands(message)
 
 bot = Bot()

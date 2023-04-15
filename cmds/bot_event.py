@@ -1,7 +1,7 @@
 import discord,datetime
 from discord.ext import commands
 from core.classes import Cog_Extension
-from bothelper import Jsondb,BotEmbed,BRS
+from bothelper import Jsondb,BotEmbed,BRS,twitch_bot
 
 class ScamChack:
     def __init__(self,text:str):
@@ -82,6 +82,12 @@ class event(Cog_Extension):
         #私人訊息回報
         if isinstance(message.channel,discord.channel.DMChannel) and message.author != self.bot.user:
             await BRS.dm(self,message)
+            return
+        if message.channel.id == 1096717312297533510 and message.author != self.bot.user:
+            print(message.author)
+            # channel = twitch_bot.get_channel('sakagawa_0309')
+            # await channel.send(f'{message}')
+
 
     # @commands.Cog.listener()
     # async def on_raw_reaction_add(self, payload):
