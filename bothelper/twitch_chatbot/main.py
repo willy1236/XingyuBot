@@ -1,4 +1,4 @@
-import twitchio,secrets,requests
+import twitchio,secrets,requests,asyncio
 from twitchio.ext import commands,eventsub
 from bothelper.database import Jsondb
 
@@ -11,10 +11,10 @@ esclient = eventsub.EventSubClient(esbot,webhook_secret=secrets.token_hex(12),ca
 class Bot(commands.Bot):
     def __init__(self):
         super().__init__(token=tokens.get('token'), prefix='!!', initial_channels=initial_channels,client_id=tokens.get('id'),nick='bot')
-        #self.loop.run_until_complete(bot.__ainit__())
+        #self.loop.run_until_complete(self.__ainit__())
 
     async def __ainit__(self):
-        self.loop.create_task(esclient.listen(port=14000))
+        #self.loop.create_task(esclient.listen(port=14000))
 
         try:
             await esclient.subscribe_channel_follows_v2(broadcaster='sakagawa_0309', moderator='helper_chatbot')
@@ -48,7 +48,11 @@ class Bot(commands.Bot):
             #await bot.handle_commands(message)
 
 bot = Bot()
-bot.loop.run_until_complete(bot.__ainit__())
+loop = asyncio.get_event_loop()
+#loop.run_until_complete(bot.__ainit__())
+#asyncio.run(bot.__ainit__())
+loop.create_task(bot.__ainit__())
+
 
 @esbot.event()
 async def event_eventsub_notification_follow(payload: eventsub.ChannelFollowData) -> None:
