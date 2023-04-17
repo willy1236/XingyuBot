@@ -78,7 +78,7 @@ class Delete_Pet_button(discord.ui.View):
 
 class Delete_Add_Role_button(discord.ui.View):
     def __init__(self,role):
-        super().__init__(timeout=10)
+        super().__init__(timeout=20)
         self.role = role
 
     async def on_timeout(self):

@@ -8,7 +8,7 @@ initial_channels = Jsondb.cache.get('twitch_initial_channels')
 esbot = commands.Bot.from_client_credentials(client_id=tokens.get('id'),client_secret=tokens.get('secret'))
 esclient = eventsub.EventSubClient(esbot,webhook_secret=secrets.token_hex(12),callback_route='https://willy1236.loca.lt/twitch_eventsub')
 
-url = 'https://discord.com/api/webhooks/1096824468497780869/0-eiSCVcIqnOTCycloXzbhvge5PUYsmi-oD1r0nrrd8Y0guxTahIMoNZmZgLtAsdxdMm'
+url = Jsondb.jdata.get('twitch_chat_webhook')
 
 class Bot(commands.Bot):
     def __init__(self):

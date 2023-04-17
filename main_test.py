@@ -29,7 +29,17 @@ from bothelper.model.push import Youtube_Push
 #user = RPGUser()
 #print(user.id)
 
-data = {'id': 'yt:video:L3pnOeAea80', 'videoId': 'L3pnOeAea80', 'channelId': 'UCbh7KHPMgYGgpISdbF6l0Kw', 'title': '【輕聲細語】全肯定。溫柔。哄睡。🌼 #瑪格麗特諾爾絲 #箱箱TheBox', 'link': 'https://www.youtube.com/watch?v=L3pnOeAea80', 'author_name': '瑪格麗特 · 諾爾絲 / Margaret North【箱箱The Box所屬】', 'author_uri': 'https://www.youtube.com/channel/UCbh7KHPMgYGgpISdbF6l0Kw', 'published': '2023-04-07T17:15:34+00:00', 'updated': '2023-04-07T17:15:56.88236001+00:00'}
+# data = {'id': 'yt:video:L3pnOeAea80', 'videoId': 'L3pnOeAea80', 'channelId': 'UCbh7KHPMgYGgpISdbF6l0Kw', 'title': '【輕聲細語】全肯定。溫柔。哄睡。🌼 #瑪格麗特諾爾絲 #箱箱TheBox', 'link': 'https://www.youtube.com/watch?v=L3pnOeAea80', 'author_name': '瑪格麗特 · 諾爾絲 / Margaret North【箱箱The Box所屬】', 'author_uri': 'https://www.youtube.com/channel/UCbh7KHPMgYGgpISdbF6l0Kw', 'published': '2023-04-07T17:15:34+00:00', 'updated': '2023-04-07T17:15:56.88236001+00:00'}
 
-r = Youtube_Push(data)
-print(r.published)
+# r = Youtube_Push(data)
+# print(r.published)
+
+from datetime import datetime,timezone,timedelta
+
+tz = timezone(timedelta(hours=8))
+date_string = '2023-04-17T23:00:14.123456789+00:00'
+date_format = '%Y-%m-%dT%H:%M:%S.%f'
+date = datetime.strptime(date_string[:-10], date_format).replace(tzinfo=tz)
+date = date + timedelta(hours=8)
+print(date)
+
