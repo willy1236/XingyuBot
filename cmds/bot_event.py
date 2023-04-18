@@ -125,8 +125,7 @@ class event(Cog_Extension):
                 return
            
             guildid = check(before,after)
-            if voice_updata and  guildid:
-                print(3)
+            if voice_updata and guildid:
                 NowTime = datetime.datetime.now()
                 if before.channel and after.channel and before.channel != after.channel:
                     embed=discord.Embed(description=f'{user.mention} 更換語音',color=0x4aa0b5,timestamp=NowTime)

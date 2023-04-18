@@ -30,24 +30,6 @@ class task(Cog_Extension):
         if self.bot.user.id == 870923985569861652:
             pass
 
-    # @commands.command()
-    # async def task(self,ctx,task_name):
-    #     if task_name == 'apex_map_update' or task_name == 'all':
-    #         await self.apex_map_update.__call__()
-    #         await ctx.message.add_reaction('✅')
-    #     if task_name == 'apex_crafting_update' or task_name == 'all':
-    #         await self.apex_crafting_update.__call__()
-    #         await ctx.message.add_reaction('✅')
-    #     if task_name == 'earthquake_check' or task_name == 'all':
-    #         await self.earthquake_check.__call__()
-    #         await ctx.message.add_reaction('✅')
-    #     if task_name == 'covid_update' or task_name == 'all':
-    #         await self.covid_update.__call__()
-    #         await ctx.message.add_reaction('✅')
-    #     if task_name == 'forecast_update' or task_name == 'all':
-    #         await self.forecast_update.__call__()
-    #         await ctx.message.add_reaction('✅')
-
     async def sign_reset(self):
         task_report_channel = self.bot.get_channel(Jsondb.jdata['task_report'])
         self.sqldb.truncate_table('user_sign')

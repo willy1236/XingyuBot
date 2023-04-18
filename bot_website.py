@@ -126,5 +126,4 @@ if __name__ == '__main__':
     #os.system('uvicorn bot_website:app --reload')
     server = ltThread()
     server.start()
-
     run()
