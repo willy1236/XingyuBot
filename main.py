@@ -1,4 +1,4 @@
-import discord, os,asyncio
+import discord, os,asyncio,time
 from discord.ext import commands
 from threading import Thread
 
@@ -56,7 +56,8 @@ async def on_ready():
     else:
         log.warning(f">> Cogs not all loaded, {len(bot.cogs)}/{len(os.listdir('./cmds'))} loaded<<")
     if bot_code == 'Bot1':
-        bot.add_view(ReactRole_button())
+        #bot.add_view(ReactRole_button())
+        pass
     
 
 #load
@@ -101,11 +102,13 @@ if __name__ == "__main__":
         from bot_website import ltThread
         ltserver = ltThread()
         ltserver.start()
+        time.sleep(2)
 
         try:
             server = Thread(target=run_website)
             server.start()
             log.info('>> website: online <<')
+            time.sleep(2)
         except:
             log.info('>> website: offline <<')
     else:
@@ -113,7 +116,9 @@ if __name__ == "__main__":
 
     if twitch_bot:
         loop = asyncio.get_event_loop()
-        loop.run_until_complete(twitch_bot.connect())
+        #loop.run_until_complete(twitch_bot.connect())
+        loop.create_task(twitch_bot.connect())
+        time.sleep(2)
     
     try:
         bot.run(token)

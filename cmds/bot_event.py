@@ -25,8 +25,9 @@ voice_list = {
 member_list = {
     613747262291443742: 613747262291443744
 }
+lobby_channel_id = 955475420042629140
 
-class event(Cog_Extension):
+class event(Cog_Extension):    
     #跨群聊天Ver.1.0
     @commands.Cog.listener()
     async def on_message(self,msg):
@@ -54,7 +55,7 @@ class event(Cog_Extension):
             await message.reply(dict[message.content])
         #介紹
         if message.content == '小幫手' or message.content == f'<@{self.bot.user.id}>':
-            embed = BotEmbed.utility(self,f"你好~\n我是{self.bot.user.name}，是一個discord機器人喔~\n你可以輸入`/help`來查看所有指令的用法\n\n希望我能在discord上幫助到你喔~")
+            embed = BotEmbed.basic(self,f"你好~\n我是{self.bot.user.name}，是一個discord機器人喔~\n你可以輸入`/help`來查看所有指令的用法\n\n希望我能在discord上幫助到你喔~")
             await message.reply(embed=embed)
         #被提及回報
         if self.bot.user in message.mentions:
@@ -120,9 +121,12 @@ class event(Cog_Extension):
                 else:
                     return False
 
+            if self.bot.user.id != 589744540240314368:
+                return
+           
             guildid = check(before,after)
-
-            if voice_updata and self.bot.user.id == 589744540240314368 and guildid:
+            if voice_updata and  guildid:
+                print(3)
                 NowTime = datetime.datetime.now()
                 if before.channel and after.channel and before.channel != after.channel:
                     embed=discord.Embed(description=f'{user.mention} 更換語音',color=0x4aa0b5,timestamp=NowTime)
@@ -148,20 +152,18 @@ class event(Cog_Extension):
                 
                 await self.bot.get_channel(voice_list.get(guildid)).send(embed=embed)
 
-    @commands.Cog.listener()
-    async def on_voice_state_update(self,user:discord.Member, before:discord.VoiceState, after:discord.VoiceState):
-        lobby = self.bot.get_channel(955475420042629140)
-        if after.channel == lobby:
-            guild = after.channel.guild
-            category = lobby.category
-            #permission = discord.Permissions.advanced()
-            #permission.manage_channels = True
-            #overwrites = discord.PermissionOverwrite({user:permission})
-            overwrites = {
-            user: discord.PermissionOverwrite(manage_channels=True,manage_roles=True)
-            }
-            new_channel = await guild.create_voice_channel(name=f'{user.name}的頻道', reason='語音分流',category=category,overwrites=overwrites)
-            await user.move_to(new_channel)
+            if after.channel and after.channel.id == lobby_channel_id:
+                guild = after.channel.guild
+                category = self.bot.get_channel(lobby_channel_id).category
+                #permission = discord.Permissions.advanced()
+                #permission.manage_channels = True
+                #overwrites = discord.PermissionOverwrite({user:permission})
+                overwrites = {
+                user: discord.PermissionOverwrite(manage_channels=True,manage_roles=True)
+                }
+                new_channel = await guild.create_voice_channel(name=f'{user.name}的頻道', reason='語音分流',category=category,overwrites=overwrites)
+                await user.move_to(new_channel)
+
 
     @commands.Cog.listener()
     async def on_member_remove(self, member):
