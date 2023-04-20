@@ -18,7 +18,7 @@ class Youtube_Push:
         
     def desplay(self):
         embed = BotEmbed.simple(title=self.title,
-                                url=self.url,
+                                url=self.link,
                                 description=f'[{self.author_name}]({self.author_url})')
         return embed
 
