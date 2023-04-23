@@ -43,12 +43,13 @@ class Bot(commands.Bot):
     async def event_message(self,message:twitchio.Message):
         if hasattr(message.author, 'name'):
             #print(message.content)
-            dict = {
-                'content': message.content,
-                'username': message.author.name
-            }
-            requests.post(url,data=dict)
+            # dict = {
+            #     'content': message.content,
+            #     'username': message.author.name
+            # }
+            #requests.post(url,data=dict)
             #await bot.handle_commands(message)
+            pass
 
 bot = Bot()
 loop = asyncio.get_event_loop()

@@ -11,9 +11,23 @@ for name,value in jdict['channel_set_option'].items():
 class moderation(Cog_Extension):
     @commands.slash_command(description='清理訊息')
     @commands.has_permissions(manage_messages=True)
-    async def clean(self,ctx,num:discord.Option(int,name='數量',description='要清理的訊息數',required=True)):
-        await ctx.channel.purge(limit=num+1)
-        await ctx.respond(content=f'清除完成，清除了{num}則訊息',delete_after=5)
+    async def clean(self,
+                    ctx:discord.ApplicationContext,
+                    num:discord.Option(int,name='數量',description='要清理的訊息數，與訊息id擇一提供',required=False),
+                    message_id:discord.Option(str,name='訊息id',description='如果提供，將刪除比此訊息更新的所有訊息',required=False)):
+        if message_id:
+            message = await ctx.channel.fetch_message(int(message_id))
+            if message:
+                time = message.created_at
+                await ctx.channel.purge(after=time)
+                await ctx.respond(content=f'清除完成',delete_after=5)
+            return
+
+        if num:
+            await ctx.channel.purge(limit=num)
+            await ctx.respond(content=f'清除完成，清除了{num}則訊息',delete_after=5)
+        else:
+            await ctx.respond(content=f'沒有提供任何訊息，所以沒有清除任何內容',delete_after=5)
 
     @commands.slash_command(description='設定通知頻道')
     @commands.has_permissions(manage_channels=True)
