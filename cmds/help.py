@@ -44,7 +44,7 @@ class help(Cog_Extension):
             text = "雲端共用資料夾 | 94共用啦\n可以在這裡下載或共用檔案\n請洽威立以取得雲端權限"
 
         elif arg == 'mc':
-            text = "總表 | mc可用選項\nmc01 | minecraft資料夾\nmc02 | 如何裝模"
+            text = "總表 | mc可用選項\nmc01 | minecraft資料夾\nmc02 | 如何裝模組"
         elif arg == 'mc01':
             text = "mc01 | minecraft資料夾\n資料夾開啟方式\n法1:\n在minecraft的選項中開啟 資源包\n選擇 開啟資料包資料夾\n法2:\n按下Ctrl+r 輸入 %AppData% 按確認\n選擇.minecraft\n\n資料夾名稱\nsaves 單人地圖存檔\nresourcepacks 資源包存檔\nscreenshots F2截圖圖片"
         elif arg == 'mc02':

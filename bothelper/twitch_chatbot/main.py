@@ -20,6 +20,7 @@ class Bot(commands.Bot):
 
         try:
             await esclient.subscribe_channel_follows_v2(broadcaster='sakagawa_0309', moderator='helper_chatbot')
+            await esclient.subscribe_channel_prediction_begin(broadcaster='sakagawa_0309')
         except twitchio.HTTPException:
             pass
 
@@ -72,6 +73,10 @@ async def event_eventsub_notification_subscription(event: eventsub.ChannelSubscr
 @esbot.event()
 async def event_eventsub_notification_raid(event: twitchio.Channel):
     print(f'醬肉警報！{event.name}')
+
+@esbot.event()
+async def event_eventsub_notification_prediction_begin(event: eventsub.PredictionBeginProgressData):
+    print(f'預測開始：{event.title}')
 
 if __name__ == '__main__':
     bot.run()

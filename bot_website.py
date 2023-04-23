@@ -65,11 +65,12 @@ async def get_yt_push(content):
 
     # 輸出結果
     print(result)
-    print(1)
     embed = Youtube_Push(result).desplay()
     channel = bot.get_channel(566533708371329026)
-    await channel.send(embed=embed)
-    print(2)
+    if channel:
+        await channel.send(embed=embed)
+    else:
+        print('Channel not found.')
 
 @app.get('/youtube_push')
 def youtube_push_get(request:Request):
