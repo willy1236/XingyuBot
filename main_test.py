@@ -33,13 +33,3 @@ from bothelper.model.push import Youtube_Push
 
 # r = Youtube_Push(data)
 # print(r.published)
-
-from datetime import datetime,timezone,timedelta
-
-tz = timezone(timedelta(hours=8))
-date_string = '2023-04-17T23:00:14.123456789+00:00'
-date_format = '%Y-%m-%dT%H:%M:%S.%f'
-date = datetime.strptime(date_string[:-10], date_format).replace(tzinfo=tz)
-date = date + timedelta(hours=8)
-print(date)
-

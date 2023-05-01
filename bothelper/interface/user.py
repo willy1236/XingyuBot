@@ -22,3 +22,11 @@ class UserClient:
         data = sqldb.get_user_pet(user_id)
         if data:
             return Pet(data)
+        
+    @staticmethod
+    def get_monster(monster_id):
+        data = sqldb.get_monster(monster_id)
+        if data:
+            return Monster(data)
+        else:
+            raise ValueError('monster_id is None')

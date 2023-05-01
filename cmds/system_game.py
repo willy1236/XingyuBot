@@ -20,6 +20,10 @@ from bothelper.interface.game import *
 
 jdict = Jsondb.jdict
 set_option = ChoiceList.set('game_set_option')
+hoyo_game_option = [
+    discord.OptionChoice(name='原神',value=genshin.Game.GENSHIN),
+    discord.OptionChoice(name='崩壞3rd',value=genshin.Game.HONKAI)
+]
 
 debug_guild = Jsondb.jdata.get('debug_guild')
 
@@ -273,19 +277,15 @@ class system_game(Cog_Extension):
     @hoyo.command(description='設定cookies')
     @commands.cooldown(rate=1,per=1)
     async def set(self,ctx,
-                  ltuid:discord.Option(str,name='ltuid',required=True),
-                  ltoken:discord.Option(str,name='ltoken',required=True)):
-        #await ctx.message.delete()
-        # db = bothelper.Jsondb
-        # jhoyo = db.jhoyo
-        # dict = {
-        #     'ltuid': ltuid,
-        #     'ltoken': ltoken,
-        # }
-        # jhoyo[str(ctx.author.id)] = dict
-        # db.write('jhoyo',jhoyo)
-        self.sqldb.set_hoyo_cookies(str(ctx.author.id),ltuid,ltoken)
-        await ctx.respond(f'{ctx.author.mention} 設定完成',ephemeral=True)
+                  ltuid:discord.Option(str,name='ltuid',required=False),
+                  ltoken:discord.Option(str,name='ltoken',required=False),
+                  remove:discord.Option(bool,name='若要移除資料請設為true',default=False)):
+        if not remove:
+            self.sqldb.set_hoyo_cookies(str(ctx.author.id),ltuid,ltoken)
+            await ctx.respond(f'{ctx.author.mention} 設定完成',ephemeral=True)
+        else:
+            self.sqldb.remove_hoyo_cookies(str(ctx.author.id))
+            await ctx.respond(f'{ctx.author.mention} cookies移除完成',ephemeral=True)
 
     @hoyo.command(description='取得每月原石來源統計')
     @commands.cooldown(rate=1,per=1)
@@ -300,15 +300,6 @@ class system_game(Cog_Extension):
         client = genshin.Client(cookies,lang='zh-tw')
         diary = await client.get_diary()
 
-        # ts = {
-        #     'Events':'活動',
-        #     'Adventure':'冒險',
-        #     'Mail':'郵件',
-        #     'Daily Activity':'每日任務',
-        #     'Quests':'一般任務',
-        #     'Other':'其他',
-        #     'Spiral Abyss':'深境螺旋',
-        # }
         embed_list = []
         primogems_gap = diary.data.current_primogems - diary.data.last_primogems
         if primogems_gap > 0:
@@ -498,6 +489,36 @@ class system_game(Cog_Extension):
         #print(r_spiral_abyss)
         await ctx.respond(embed=embed)
 
+    @hoyo.command(description='兌換禮包碼')
+    @commands.cooldown(rate=1,per=1)
+    async def code(self,ctx,
+                   code:discord.Option(str,name='禮包碼',description='要兌換的禮包碼',default=None),
+                   uid:discord.Option(str,name='uid',description='要兌換的用戶',default=None),
+                   game:discord.Option(str,name='遊戲',description='要兌換的遊戲',default=None,choices=hoyo_game_option)):
+        cookies = self.sqldb.get_userdata(str(ctx.author.id),'game_hoyo_cookies')
+        if not cookies:
+            raise commands.errors.ArgumentParsingError("沒有設定cookies")
+        client = genshin.Client(cookies,lang='zh-tw')
+        await client.redeem_code(code,uid)  
+        await ctx.respond('兌換已完成')
+
+    @hoyo.command(description='簽到設定（尚未測試可能有bug）')
+    @commands.cooldown(rate=1,per=1)
+    async def reward(self,ctx,
+                   game:discord.Option(str,name='遊戲',description='要簽到的遊戲',default=None,choices=hoyo_game_option),
+                   need_mention:discord.Option(bool,name='成功簽到時是否要tag提醒',default=True),
+                   remove:discord.Option(bool,name='若要移除資料請設為true',default=False)):
+        cookies = self.sqldb.get_userdata(str(ctx.author.id),'game_hoyo_cookies')
+        if not cookies:
+            raise commands.errors.ArgumentParsingError("沒有設定cookies")
+        if not remove:
+            self.sqldb.add_hoyo_reward(ctx.author.id,game,ctx.channel.id,need_mention)
+            await ctx.respond('設定已完成')
+        else:
+            self.sqldb.remove_hoyo_reward(ctx.author.id)
+            await ctx.respond('設定已移除')
+        
+    
     @hoyo.command(description='測試',guild_ids=debug_guild)
     @commands.cooldown(rate=1,per=1)
     async def test(self,ctx,

@@ -279,6 +279,15 @@ class command(Cog_Extension):
             embed.add_field(name='保底', value=','.join(six_list_100), inline=False)
         await ctx.respond(embed=embed)
 
+    @commands.slash_command(description='TRPG擲骰')
+    async def dice(self,ctx,
+                   dice_n:discord.Option(int,name='骰子數',description='總共擲幾顆骰子，預設為1',default=1,min_value=1),
+                   dice:discord.Option(int,name='面骰',description='骰子為幾面骰，預設為100',default=100,min_value=1)):
+        sum = 0
+        for i in range(dice_n):
+            sum += random.randint(1,dice)
+        await ctx.respond(f'{dice_n}d{dice} 結果： {sum}')
+
 
     @bet.command(description='賭盤下注')
     async def place(self,ctx,

@@ -98,16 +98,19 @@ class RPGUser(User):
         self.atk = data.get('user_atk')
         self.pt = data.get('point')
         self.rcoin = data.get('rcoin')
-        self.advance_times = data.get('advance_times')
+        self.work_code = data.get('work_code')
 
+    
+    
     def advance(self) -> str:
         '''
         進行冒險
         
         Return: str（以文字輸出冒險結果）
         '''
-        times = (self.advance_times or 0) + 1
-
+        data = sqldb.get_advance(self.id)
+        times = data.get('advance_times',0) + 1
+        
         if times == 1:
             if self.rcoin <= 0:
                 return "你的Rcoin不足 至少需要1Rcoin才能冒險"
@@ -121,13 +124,29 @@ class RPGUser(User):
             result = f"第{times}次冒險：遇到怪物\n"
             result += Monster.get_monster(random.choice([1,2])).battle(self)
         
-        if times >= 10:
+        if times >= 5 and random.randint(0,100) <= times*5:
             sqldb.remove_userdata(self.id,'rpg_advance')
             result += '\n冒險結束'
         else:
             sqldb.update_userdata(self.id,'rpg_advance','advance_times',times)
 
         return result
+    
+    def work(self) -> str:
+        '''
+        進行工作
+        
+        Return: str（以文字輸出冒險結果）
+        '''
+        if not self.work_code:
+            return '你還沒有選擇職業'
+        
+        rd = random.randint(1,100)
+        if self.work_code == 1 and rd >= 50:
+            sqldb.update_bag(self.id,'1',1)
+            return '工作完成，獲得：麵包x1'
+        else:
+            return '工作完成，但沒有獲得東西'
 
 # class Point():
 #     '''用戶pt點數'''
@@ -242,24 +261,19 @@ class Monster:
         self.name = data.get('monster_name')
         self.hp = data.get('monster_hp')
         self.atk = data.get('monster_atk')
-
-    @staticmethod
-    def get_monster(monster_id):
-        data = sqldb.get_monster(monster_id)
-        if data:
-            return Monster(data)
     
     def battle(self, player:RPGUser):
         '''玩家與怪物戰鬥\n
         player:要戰鬥的玩家'''
         text = ""
+        player_hp_reduce = 0
         #戰鬥到一方倒下
         while self.hp > 0 and player.hp > 0:
             #玩家先攻
             self.hp -= player.atk
             #怪物被擊倒
             if self.hp <= 0:
-                text += f"擊倒怪物 你還剩下{player.hp}滴"
+                text += f"擊倒怪物 扣除{player_hp_reduce}滴後你還剩下 {player.hp} HP"
                 # if "loot" in self.data:
                 #     loot = random.choices(self.data["loot"][0],weights=self.data["loot"][1],k=self.data["loot"][2])
                 #     player.add_bag(loot)
@@ -270,6 +284,7 @@ class Monster:
             
             #怪物後攻
             player.hp -= self.atk
+            player_hp_reduce += self.atk
             #玩家被擊倒
             if player.hp <= 0:
                 text += "被怪物擊倒\n"
@@ -282,6 +297,7 @@ class Monster:
         #結束儲存資料
         sqldb.update_userdata(player.id, 'rpg_user','user_hp',player.hp)
         return text
+        
 
 # class Weapon:
 #     def __init__(self):

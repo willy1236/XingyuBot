@@ -50,6 +50,9 @@ class help(Cog_Extension):
         elif arg == 'mc02':
             text = "mc02 | 如何裝模組\n被你發現我還沒打內容了w\n既然你這麼想知道的話\nhttps://youtu.be/8gYBo_vcZFs"
         
+        elif arg == "trpg01":
+            test = "https://trpgline.com/zh-TW/admin\n房間管理->參與房間->輸入房號與密碼"
+        
         else:
             raise commands.errors.ArgumentParsingError("查無資訊")
             #await ctx.send('參數錯誤，請輸入!!info help取得幫助',delete_after=5)

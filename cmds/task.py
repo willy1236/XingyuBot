@@ -1,11 +1,11 @@
-import asyncio,discord,os,threading,time
+import asyncio,discord,genshin
 from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from datetime import datetime, timezone, timedelta
 from discord.ext import commands,tasks
 
 from core.classes import Cog_Extension
-from bothelper import Jsondb
+from bothelper import Jsondb,sqldb
 from bothelper.interface import *
 
 class task(Cog_Extension):
@@ -23,6 +23,7 @@ class task(Cog_Extension):
             scheduler.add_job(self.apex_crafting_update,'cron',hour=1,minute=5,second=0,jitter=3)
             scheduler.add_job(self.apex_map_update,'cron',minute='00,15,30,45',second=1,jitter=3)
             scheduler.add_job(self.forecast_update,'cron',hour='00,03,06,09,12,15,18,21',minute=0,second=1,jitter=3)
+            scheduler.add_job(self.auto_hoyo_reward,'cron',hour=19,minute=0,second=1,jitter=3)
 
             scheduler.start()
             self.earthquake_check.start()
@@ -32,7 +33,7 @@ class task(Cog_Extension):
 
     async def sign_reset(self):
         task_report_channel = self.bot.get_channel(Jsondb.jdata['task_report'])
-        self.sqldb.truncate_table('user_sign')
+        sqldb.truncate_table('user_sign')
         await task_report_channel.send('簽到已重置')
         #await asyncio.sleep(10)
 
@@ -183,6 +184,30 @@ class task(Cog_Extension):
                 del cache['twitch'][user]
             
         Jsondb.write('cache',cache)
+
+    async def auto_hoyo_reward(self):
+        list = sqldb.get_hoyo_reward()
+        for user in list:
+            if not user.get("ltuid") or not user.get("ltoken"):
+                raise commands.errors.ArgumentParsingError("沒有設定cookies")
+            cookies = {
+                "ltuid": user["ltuid"],
+                "ltoken": user["ltoken"]
+            }
+            client = genshin.Client(cookies,lang='zh-tw')
+            user_id = user['user_id']
+            game = user['game']
+            uid = user['uid']
+            channel_id = user['channel_id']
+
+            reward = await client.claim_daily_reward(game=game,reward=True)
+            user_dc = self.bot.get_user(int(user_id))
+            channel = self.bot.get_channel(int(channel_id))
+            if channel and user['need_mention']:
+                channel.send(f'{user_dc.mention} 簽到完成！獲得{reward.name}x{reward.amount}')
+            elif channel and not user['need_mention']:
+                channel.send(f'{user_dc.name} 簽到完成！獲得{reward.name}x{reward.amount}')
+            asyncio.sleep(3)
 
 def setup(bot):
     bot.add_cog(task(bot))

@@ -77,7 +77,8 @@
         "share | 雲端共用資料夾":"share",
         "mc | mc總表":"mc",
         "mc | minecraft資料夾":"mc01",
-        "mc | 如何裝模組":"mc02"
+        "mc | 如何裝模組":"mc02",
+        "trpg | 參加房間": "trpg01"
     },
     "help_option": {
         "use":"use",

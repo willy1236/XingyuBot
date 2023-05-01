@@ -84,10 +84,7 @@ class MySQLDatabase():
         self.cursor.execute(f"USE `database`;")
         self.cursor.execute(f'SELECT * FROM `game_data` WHERE user_id = %s;',(str(id),))
         records = self.cursor.fetchone()
-        if records:
-            return records
-        else:
-            return id
+        return records or id
     
     def set_game_data(self,user_id:str,game:str,player_name:str=None,player_id:str=None,account_id:str=None,other_id:str=None):
         self.cursor.execute(f"USE `database`;")
@@ -200,6 +197,26 @@ class MySQLDatabase():
         self.cursor.execute(f"INSERT INTO `game_hoyo_cookies` VALUES(%s,%s,%s) ON DUPLICATE KEY UPDATE `user_id` = %s, `ltuid` = %s, `ltoken` = %s",(user_id,ltuid,ltoken,user_id,ltuid,ltoken))
         self.connection.commit()
 
+    def remove_hoyo_cookies(self,user_id:str):
+        self.cursor.execute(f"USE `database`;")
+        self.cursor.execute(f"DELETE FROM `game_hoyo_cookies` WHERE user_id = {user_id}")
+        self.connection.commit()
+
+    def get_hoyo_reward(self):
+        self.cursor.execute(f"USE `database`;")
+        self.cursor.execute(f'SELECT * FROM `game_hoyo_reward` LEFT JOIN `game_hoyo_cookies` ON game_hoyo_reward.user_id = game_hoyo_cookies.user_id WHERE game_hoyo_reward.user_id IS NOT NULL;')
+        records = self.cursor.fetchall()
+        return records
+    
+    def add_hoyo_reward(self,user_id:str,game:str,channel_id:str,need_mention:bool,uid:str=None):
+        self.cursor.execute(f"USE `database`;")
+        self.cursor.execute(f"INSERT INTO `game_hoyo_reward` VALUES(%s,%s,%s,%s,%s)",(user_id,game,uid,channel_id,need_mention))
+        self.connection.commit()
+
+    def remove_hoyo_reward(self,user_id:str):
+        self.cursor.execute(f"USE `database`;")
+        self.cursor.execute(f"DELETE FROM `game_hoyo_cookies` WHERE user_id = {user_id}")
+        self.connection.commit()
 
     # 通知頻道類
     def set_notice_channel(self,guild_id:int,notice_type:str,channel_id:int,role_id:int=None):    
@@ -307,10 +324,7 @@ class MySQLDatabase():
         self.cursor.execute(f"USE `database`;")
         self.cursor.execute(f'SELECT * FROM `user_pet` WHERE `user_id` = %s;',(user_id,))
         records = self.cursor.fetchone()
-        if records:
-            return records
-        else:
-            return None
+        return records
 
     def create_user_pet(self,user_id:str,pet_species:str,pet_name:str):
         try:
@@ -331,23 +345,64 @@ class MySQLDatabase():
     # RPG類
     def get_rpguser(self,user_id:str):
         self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f'SELECT * FROM `rpg_user`,`rpg_advance`,`user_point` WHERE rpg_user.user_id = %s;',(str(user_id),))
+        self.cursor.execute(f'SELECT * FROM `rpg_user`,`user_point` WHERE rpg_user.user_id = %s;',(str(user_id),))
         records = self.cursor.fetchone()
-        if records:
-            return records
-        else:
-            return None
+        return records
 
     def set_rpguser(self,user_id:str):
         self.cursor.execute(f"USE `database`;")
         self.cursor.execute(f"INSERT INTO `rpg_user` VALUES(%s);",(user_id,))
         self.connection.commit()
     
-    def get_monster(self,monster_id:int):
-        self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f'SELECT * FROM `rpg_monster` WHERE `monster_id` = %s;',(monster_id,))
+    def get_monster(self,monster_id:str):
+        self.cursor.execute(f'SELECT * FROM `checklist_database`.`rpg_monster` WHERE `monster_id` = %s;',(monster_id,))
         records = self.cursor.fetchone()
-        if records:
-            return records
+        return records
+    
+    def get_advance(self,user_id:str):
+        self.cursor.execute(f"USE `database`;")
+        self.cursor.execute(f'SELECT * FROM `rpg_advance` WHERE user_id = %s;',(str(user_id),))
+        records = self.cursor.fetchone()
+        return records or {}
+
+    def get_bag(self,user_id:str,item_id:str=None):
+        self.cursor.execute(f"USE `database`;")
+        if item_id:
+            self.cursor.execute(f"SELECT * FROM `rpg_user_bag` WHERE user_id = {user_id} AND item_id = {item_id};")
+            records = self.cursor.fetchone()
         else:
-            raise ValueError('monster_id is None')
+            self.cursor.execute(f"SELECT item_id,amount FROM `rpg_user_bag` WHERE user_id = {user_id};")
+            records = self.cursor.fetchall()
+        return records
+    
+    def get_bag_desplay(self,user_id:str):
+        # data = self.get_bag(str(user_id))
+        # self.cursor.execute(f"USE `checklist_database`;")
+        # bag_list = []
+        # for item in data:
+        #     self.cursor.execute(f"SELECT name FROM `rpg_item` WHERE item_id = {item['item_id']};")
+        #     records = self.cursor.fetchone()
+        #     bag_list.append((records['name'],item['amount']))
+
+        # return bag_list
+        
+        self.cursor.execute(f"SELECT rpg_item.item_id,name,amount FROM `database`.`rpg_user_bag`,`checklist_database`.`rpg_item` WHERE user_id = {user_id};")
+        records = self.cursor.fetchall()
+        return records
+
+    def update_bag(self,user_id:str,item_id:str,amount:int):
+        self.cursor.execute(f"USE `database`;")
+        self.cursor.execute(f"INSERT INTO `rpg_user_bag` SET user_id = {user_id}, item_id = {item_id}, amount = {amount} ON DUPLICATE KEY UPDATE amount = amount + {amount};")
+        self.connection.commit()
+
+    def remove_bag(self,user_id:str,item_id:str,amount:int):
+        r = self.get_bag(user_id,item_id)
+        if r['amount'] < amount:
+            raise ValueError('此物品數量不足')
+        
+        self.cursor.execute(f"USE `database`;")
+        if r['amount'] == amount:
+            self.cursor.execute(f"DELETE FROM `rpg_user_bag` WHERE `user_id` = %s AND `item_id` = %s;",(user_id,item_id))
+        else:
+            self.cursor.execute(f'UPDATE `rpg_user_bag` SET `user_id` = {user_id}, `item_id` = {item_id}, amount = amount - {amount}')
+        self.connection.commit()
