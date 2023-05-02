@@ -194,19 +194,24 @@ class task(Cog_Extension):
                 "ltuid": user["ltuid"],
                 "ltoken": user["ltoken"]
             }
-            client = genshin.Client(cookies,lang='zh-tw')
-            user_id = user['user_id']
-            game = user['game']
-            uid = user['uid']
-            channel_id = user['channel_id']
+            try:
+                client = genshin.Client(cookies,lang='zh-tw')
+                user_id = user['user_id']
+                game = user['game']
+                channel_id = user['channel_id']
 
-            reward = await client.claim_daily_reward(game=game,reward=True)
-            user_dc = self.bot.get_user(int(user_id))
-            channel = self.bot.get_channel(int(channel_id))
-            if channel and user['need_mention']:
-                channel.send(f'{user_dc.mention} 簽到完成！獲得{reward.name}x{reward.amount}')
-            elif channel and not user['need_mention']:
-                await channel.send(f'{user_dc.name} 簽到完成！獲得{reward.name}x{reward.amount}')
+                reward = await client.claim_daily_reward(game=game,reward=True)
+                user_dc = self.bot.get_user(int(user_id))
+                channel = self.bot.get_channel(int(channel_id))
+                if channel and user['need_mention']:
+                    await channel.send(f'{user_dc.mention} 簽到完成！獲得{reward.name}x{reward.amount}')
+                elif channel and not user['need_mention']:
+                    await channel.send(f'{user_dc.name} 簽到完成！獲得{reward.name}x{reward.amount}')
+            except Exception as e:
+                user_dc = self.bot.get_user(int(user_id))
+                channel = self.bot.get_channel(int(channel_id))
+                await channel.send(f'{user_dc.mention} 簽到時發生錯誤：{e}')
+            
             await asyncio.sleep(3)
 
 def setup(bot):
