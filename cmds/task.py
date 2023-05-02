@@ -206,8 +206,8 @@ class task(Cog_Extension):
             if channel and user['need_mention']:
                 channel.send(f'{user_dc.mention} 簽到完成！獲得{reward.name}x{reward.amount}')
             elif channel and not user['need_mention']:
-                channel.send(f'{user_dc.name} 簽到完成！獲得{reward.name}x{reward.amount}')
-            asyncio.sleep(3)
+                await channel.send(f'{user_dc.name} 簽到完成！獲得{reward.name}x{reward.amount}')
+            await asyncio.sleep(3)
 
 def setup(bot):
     bot.add_cog(task(bot))
