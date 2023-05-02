@@ -1,6 +1,5 @@
 import discord
 from core.classes import Cog_Extension
-from discord.ext import commands
 from discord.commands import SlashCommandGroup
 from bothelper.interface.community import Twitch
 

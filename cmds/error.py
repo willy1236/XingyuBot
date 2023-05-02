@@ -1,10 +1,9 @@
 import discord
 from discord.ext import commands
-from bothelper.utility import BRS
 from bothelper.errors import *
 from core.classes import Cog_Extension
 from mysql.connector.errors import Error as sqlerror
-from bothelper import log
+from bothelper import log,BRS
 
 dict = {
     'manage_channels':'管理頻道',
@@ -12,6 +11,50 @@ dict = {
 }
 
 class error(Cog_Extension):
+    @commands.Cog.listener()
+    async def on_application_command_error(self, ctx: discord.ApplicationContext, error: discord.DiscordException):
+        if isinstance(error, commands.CommandOnCooldown):
+            await ctx.respond(f'尚在冷卻:指令還在冷卻中(尚須{int(error.retry_after)}秒)',ephemeral=True)
+        elif isinstance(error,commands.errors.NotOwner):
+            await ctx.respond('缺少權限:你不是機器人擁有者',ephemeral=True)
+        elif isinstance(error,commands.errors.MissingPermissions):
+            permissions = []
+            for i in error.missing_permissions:
+                permissions.append(dict.get(i,i))    
+            text = ','.join(permissions)
+            await ctx.respond(f'缺少權限:你沒有權限來使用此指令\n缺少權限:{text}',ephemeral=True)
+        elif isinstance(error,commands.errors.BotMissingPermissions):
+            permissions = []
+            for i in error.missing_permissions:
+                permissions.append(dict.get(i,i))    
+            text = ','.join(permissions)
+            await ctx.respond(f'缺少權限:機器人沒有權限來使用此指令\n缺少權限:{text}',ephemeral=True)
+
+        elif isinstance(error,commands.errors.ArgumentParsingError):
+            await ctx.respond(f'參數錯誤:{error}')
+        
+        elif isinstance(error,discord.ApplicationCommandInvokeError):
+            if isinstance(error.original,sqlerror) and error.original.errno == 1452:
+                id = str(ctx.author.id)
+                self.sqldb.set_user(id)
+                await ctx.respond(f'首次使用已完成註冊，請再使用一次指令',ephemeral=True)
+
+            elif isinstance(error.original,HelperException):
+                await ctx.respond(f'{error.original}',ephemeral=True)
+            else:
+                await ctx.respond(f'指令調用時發生錯誤：{error.original}',ephemeral=True)
+                if ctx.guild.id != 566533708371329024:
+                    await BRS.error(self,ctx,error)
+                log.error(f'{error},{type(error)},{type(error.original)}')
+        
+        elif isinstance(error,discord.ApplicationCommandError):
+            await ctx.respond(f'{error}',ephemeral=True)
+        else:
+            if ctx.guild.id != 566533708371329024:
+                await BRS.error(self,ctx,error)
+            await ctx.respond(f'發生未知錯誤\n```{error.original}```',ephemeral=True)
+            log.error(f'{error},{type(error)}')
+
     # @commands.Cog.listener()
     # async def on_command_error(self,ctx,error):
     #     if hasattr(ctx.command,'on_error'):
@@ -66,49 +109,5 @@ class error(Cog_Extension):
     #             await BRS.error(self,ctx,error)
     #         await ctx.send(f'發生錯誤\n```{error}```')
     #         print(error,type(error))
-
-    @commands.Cog.listener()
-    async def on_application_command_error(self, ctx: discord.ApplicationContext, error: discord.DiscordException):
-        if isinstance(error, commands.CommandOnCooldown):
-            await ctx.respond(f'尚在冷卻:指令還在冷卻中(尚須{int(error.retry_after)}秒)',ephemeral=True)
-        elif isinstance(error,commands.errors.NotOwner):
-            await ctx.respond('缺少權限:你不是機器人擁有者',ephemeral=True)
-        elif isinstance(error,commands.errors.MissingPermissions):
-            permissions = []
-            for i in error.missing_permissions:
-                permissions.append(dict.get(i,i))    
-            text = ','.join(permissions)
-            await ctx.respond(f'缺少權限:你沒有權限來使用此指令\n缺少權限:{text}',ephemeral=True)
-        elif isinstance(error,commands.errors.BotMissingPermissions):
-            permissions = []
-            for i in error.missing_permissions:
-                permissions.append(dict.get(i,i))    
-            text = ','.join(permissions)
-            await ctx.respond(f'缺少權限:機器人沒有權限來使用此指令\n缺少權限:{text}',ephemeral=True)
-
-        elif isinstance(error,commands.errors.ArgumentParsingError):
-            await ctx.respond(f'參數錯誤:{error}')
-        
-        elif isinstance(error,discord.ApplicationCommandInvokeError):
-            if isinstance(error.original,sqlerror) and error.original.errno == 1452:
-                id = str(ctx.author.id)
-                self.sqldb.set_user(id)
-                await ctx.respond(f'首次使用已完成註冊，請再使用一次指令',ephemeral=True)
-
-            elif isinstance(error.original,HelperException):
-                await ctx.respond(f'{error.original}',ephemeral=True)
-            else:
-                await ctx.respond(f'指令調用時發生錯誤：{error.original}',ephemeral=True)
-                if ctx.guild.id != 566533708371329024:
-                    await BRS.error(self,ctx,error)
-                log.error(f'{error},{type(error)},{type(error.original)}')
-        elif isinstance(error,discord.ApplicationCommandError):
-            await ctx.respond(f'{error}',ephemeral=True)
-        else:
-            if ctx.guild.id != 566533708371329024:
-                await BRS.error(self,ctx,error)
-            await ctx.respond(f'發生未知錯誤\n```{error.original}```',ephemeral=True)
-            log.error(f'{error},{type(error)}')
-
 def setup(bot):
     bot.add_cog(error(bot))

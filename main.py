@@ -105,7 +105,7 @@ if __name__ == "__main__":
         time.sleep(2)
 
         try:
-            server = Thread(target=run_website)
+            server = Thread(target=run_website,name='bot_website')
             server.start()
             log.info('>> website: online <<')
             time.sleep(2)
@@ -126,27 +126,3 @@ if __name__ == "__main__":
         log.error('>> Bot: Login failed <<')
     except Exception as e:
         log.error(e)
-
-# def run_twitch_bot(loop):
-#     asyncio.set_event_loop(loop)
-#     loop.run_until_complete(twitch_bot.run())
-#     log.info('>> twitch_bot: on <<')
-#     #loop.run_until_complete(server_twitch_bot())
-
-# def run_discord_bot(loop):
-#     asyncio.set_event_loop(loop)
-#     loop.run_until_complete(bot.start(token))
-
-# loop1 = asyncio.new_event_loop()
-# loop2 = asyncio.new_event_loop()
-
-# thread1 = Thread(target=run_twitch_bot, args=(loop1,))
-# thread2 = Thread(target=run_discord_bot, args=(loop2,))
-
-# thread1.start()
-# thread2.start()
-
-# thread1.join()
-# thread2.join()
-
-

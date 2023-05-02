@@ -6,6 +6,7 @@ Discord機器人用lib庫
 from . import interface
 #from . import database
 from .database import Jsondb,sqldb,JsonDatabase
+from .interface import UserClient
 
 from .utility import BotEmbed,BRS,ChoiceList
 from .funtions import *
@@ -28,4 +29,5 @@ __all__ = [
     'interface',
     'twitch_bot',
     'ChoiceList',
+    'UserClient',
 ]

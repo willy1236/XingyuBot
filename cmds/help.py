@@ -10,10 +10,6 @@ info_option = ChoiceList.set('info_option')
 help_option = ChoiceList.set('help_option')
 
 class help(Cog_Extension):
-    # @commands.command(help='原始的help指令')
-    # async def assist(self,ctx,arg='help'):
-    #     await ctx.send_help(arg)
-
     @commands.slash_command(description='關於機器人')
     async def about(self,ctx):
         embed = BotEmbed.basic(self,f"你好~我是{self.bot.user.name}，是一個discord機器人喔~\n你可以輸入`/help`來查看所有指令的用法\n\n希望我能在discord上幫助到你喔~\n有任何建議與需求可以使用`/feedback`指令")
@@ -51,7 +47,7 @@ class help(Cog_Extension):
             text = "mc02 | 如何裝模組\n被你發現我還沒打內容了w\n既然你這麼想知道的話\nhttps://youtu.be/8gYBo_vcZFs"
         
         elif arg == "trpg01":
-            test = "https://trpgline.com/zh-TW/admin\n房間管理->參與房間->輸入房號與密碼"
+            text = "https://trpgline.com/zh-TW/admin\n房間管理->參與房間->輸入房號與密碼"
         
         else:
             raise commands.errors.ArgumentParsingError("查無資訊")
@@ -148,7 +144,7 @@ class help(Cog_Extension):
             #page[0].add_field(name="!!summon [頻道]", value="讓機器人加入指定語音", inline=False)
             #page[0].add_field(name="!!leave", value="讓機器人離開你的語音\n別名:disconnect,dc", inline=False)
             #page[0].add_field(name="!!volume <音量>", value="設定音量", inline=False)
-            page[1].add_field(name="!!stop", value="停止播放歌曲", inline=False)
+            page[0].add_field(name="!!stop", value="停止播放歌曲", inline=False)
             #page[1].add_field(name="!!shuffle", value="隨機撥放\n別名:random,r", inline=False)
             #page[1].add_field(name="!!loop", value="循環歌曲", inline=False)
             #page[1].add_field(name="!!remove <歌曲位置>", value="移除歌曲\n別名:rm", inline=False)
@@ -195,15 +191,15 @@ class help(Cog_Extension):
     async def help_owner(self,ctx):
         embed = BotEmbed.basic(self,"目前可使用的指令如下(onwer):")
         embed.add_field(name="!!send <頻道ID/用戶ID/0> <內容>", value="發送指定訊息", inline=False)
-        embed.add_field(name="!!anno <內容>", value="對所有伺服器進行公告", inline=False)
-        embed.add_field(name="!!bupdate <內容>", value="對所有伺服器發送機器人更新", inline=False)
+        embed.add_field(name="!!anno", value="對所有伺服器進行公告", inline=False)
+        embed.add_field(name="!!bupdate", value="對所有伺服器發送機器人更新", inline=False)
         embed.add_field(name="!!edit <訊息ID> <新訊息>", value="編輯訊息", inline=False)
         embed.add_field(name="!!reaction <訊息ID> <add/remove> <表情/表情ID>", value="添加/移除反應", inline=False)
         embed.add_field(name="!!ptset <用戶ID> <+/-/set> <數量>", value="更改指定用戶Pt數", inline=False)
         embed.add_field(name="!!reset", value="簽到重置", inline=False)
         embed.add_field(name="!!role save <用戶/all>", value="儲存身分組", inline=False)
         embed.add_field(name="!!about <server/count>", value="about系列指令", inline=False)
-        embed.add_field(name="!!jset <option> <value>", value="設定jdata數值", inline=False)
+        #embed.add_field(name="!!jset <option> <value>", value="設定jdata數值", inline=False)
         embed.set_footer(text="輸入!!help use查詢指令用法")
         await ctx.respond(embed=embed)
 

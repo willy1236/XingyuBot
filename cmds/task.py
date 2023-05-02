@@ -212,7 +212,7 @@ class task(Cog_Extension):
                 channel = self.bot.get_channel(int(channel_id))
                 await channel.send(f'{user_dc.mention} 簽到時發生錯誤：{e}')
             
-            await asyncio.sleep(3)
+            await asyncio.sleep(30)
 
 def setup(bot):
     bot.add_cog(task(bot))

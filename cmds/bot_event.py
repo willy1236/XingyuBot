@@ -1,7 +1,7 @@
 import discord,datetime
 from discord.ext import commands
 from core.classes import Cog_Extension
-from bothelper import Jsondb,BotEmbed,BRS,twitch_bot
+from bothelper import Jsondb,BotEmbed,BRS
 
 class ScamChack:
     def __init__(self,text:str):
@@ -25,7 +25,13 @@ voice_list = {
 member_list = {
     613747262291443742: 613747262291443744
 }
+
 lobby_channel_id = 955475420042629140
+
+keywords = {
+    '抹茶粉':'由威立冠名贊助撥出~',
+    '消費':'那你好像也是頂級消費者喔'
+}
 
 class event(Cog_Extension):    
     #跨群聊天Ver.1.0
@@ -46,13 +52,9 @@ class event(Cog_Extension):
 
     @commands.Cog.listener()
     async def on_message(self, message):
-        dict = {
-            '抹茶粉':'由威立冠名贊助撥出~',
-            '消費':'那你好像也是頂級消費者喔'
-        }
         #關鍵字觸發
-        if message.content in dict and self.bot.user.id == 589744540240314368:
-            await message.reply(dict[message.content])
+        if message.content in keywords and self.bot.user.id == 589744540240314368:
+            await message.reply(keywords[message.content])
         #介紹
         if message.content == '小幫手' or message.content == f'<@{self.bot.user.id}>':
             embed = BotEmbed.basic(self,f"你好~\n我是{self.bot.user.name}，是一個discord機器人喔~\n你可以輸入`/help`來查看所有指令的用法\n\n希望我能在discord上幫助到你喔~")
@@ -84,10 +86,6 @@ class event(Cog_Extension):
         if isinstance(message.channel,discord.channel.DMChannel) and message.author != self.bot.user:
             await BRS.dm(self,message)
             return
-        if message.channel.id == 1096717312297533510 and not message.author.bot:
-            print(message.author)
-            # channel = twitch_bot.get_channel('sakagawa_0309')
-            # await channel.send(f'{message}')
 
 
     # @commands.Cog.listener()

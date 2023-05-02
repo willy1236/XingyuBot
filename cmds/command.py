@@ -1,12 +1,11 @@
-import discord,random,asyncio,math,datetime,openai
+import discord,random,asyncio,datetime,openai
 from discord.errors import Forbidden, NotFound
 from discord.ext import commands,pages
 from discord.commands import SlashCommandGroup
 
 from core.classes import Cog_Extension
-from bothelper import Jsondb,BRS,log,BotEmbed
+from bothelper import Jsondb,BRS,log,BotEmbed,ChoiceList
 from bothelper.funtions import find,random_color
-from bothelper.utility import ChoiceList
 from bothelper.ui_element.button import Delete_Add_Role_button
 
 from mysql.connector.errors import Error as sqlerror
@@ -14,9 +13,10 @@ from mysql.connector.errors import Error as sqlerror
 openai.api_key = Jsondb.get_token('openai')
 bet_option = ChoiceList.set('bet_option')
 
+jdata = Jsondb.jdata
 
 class command(Cog_Extension):
-    picdata = Jsondb.picdata
+    
     
     bet = SlashCommandGroup("bet", "賭盤相關指令")
     role = SlashCommandGroup("role", "身分組管理指令")
@@ -159,8 +159,7 @@ class command(Cog_Extension):
 
         
         await ctx.defer()
-        jdata = Jsondb.jdata
-        guild = self.bot.get_guild(jdata['guild']['001'])
+        guild = self.bot.get_guild(jdata['main_guild'][0])
         add_role = guild.get_role(877934319249797120)
         if user == 'all':
             for user in add_role.members:
@@ -324,14 +323,10 @@ class command(Cog_Extension):
                      blue:discord.Option(str,name='藍藍幫標題',description='',required=True),
                      time:discord.Option(int,name='賭盤開放時間',description='',required=True,min_value=10,max_value=600)):
         bet_id = str(ctx.author.id)
-        # sec = converter.time(time)
         bet = self.sqldb.get_bet_data(bet_id)
         if bet:
             await ctx.respond('錯誤：你已經創建一個賭盤了喔',ephemeral=True)
             return
-        # elif time > 600:
-        #     await ctx.send('錯誤:時間太長了喔')
-        #     return
 
         self.sqldb.create_bet(bet_id,title,pink,blue)
             
@@ -392,12 +387,6 @@ class command(Cog_Extension):
         #更新資料庫
         self.sqldb.remove_bet(bet_id)    
 
-    # @commands.slash_command(description='向大家說哈瞜')
-    # async def hello(self,ctx, name: str = None):
-    #     await ctx.defer()
-    #     name = name or ctx.author.name
-    #     await ctx.respond(f"Hello {name}!")
-
     @commands.user_command()  # create a user command for the supplied guilds
     async def whois(self,ctx, member: discord.Member):  # user commands return the member
         user = member
@@ -423,7 +412,7 @@ class command(Cog_Extension):
         await member.timeout_for(time,reason="指令：禁言15秒")
         await ctx.respond(f"已禁言{member.mention} 15秒",ephemeral=True)
     
-    @commands.user_command(name="不想理你生態區",guild_ids=[613747262291443742])
+    @commands.user_command(name="不想理你生態區",guild_ids=jdata['main_guild'])
     @commands.has_permissions(moderate_members=True)
     async def user_command2(self,ctx, member: discord.Member):
         await ctx.respond(f"開始執行",ephemeral=True)
@@ -447,7 +436,7 @@ class command(Cog_Extension):
         return ['test']
 
     @commands.slash_command(description='讓機器人選擇一樣東西')
-    async def choice(self,ctx,args:discord.Option(str,required=False,name='選項',description='多個選項請用空格隔開')):
+    async def choice(self,ctx,args:discord.Option(str,name='選項',description='多個選項請用空格隔開')):
         args = args.split()
         result = random.choice(args)
         await ctx.respond(f'我選擇:{result}')

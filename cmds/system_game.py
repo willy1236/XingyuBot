@@ -495,8 +495,7 @@ class system_game(Cog_Extension):
     @commands.cooldown(rate=1,per=1)
     async def code(self,ctx,
                    code:discord.Option(str,name='禮包碼',description='要兌換的禮包碼',default=None),
-                   uid:discord.Option(str,name='uid',description='要兌換的用戶',default=None),
-                   game:discord.Option(str,name='遊戲',description='要兌換的遊戲',default=None,choices=hoyo_game_option)):
+                   uid:discord.Option(str,name='uid',description='要兌換的用戶',default=None)):
         cookies = self.sqldb.get_userdata(str(ctx.author.id),'game_hoyo_cookies')
         if not cookies:
             raise commands.errors.ArgumentParsingError("沒有設定cookies")

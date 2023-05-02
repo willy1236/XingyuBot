@@ -2,7 +2,6 @@ import discord,asyncio,random
 from discord.ext import commands
 from discord.commands import SlashCommandGroup
 from core.classes import Cog_Extension
-from bothelper import find
 #from BotLib.interface.user import Point,Rcoin
 
 

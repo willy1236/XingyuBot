@@ -136,7 +136,7 @@ class RPGUser(User):
         '''
         進行工作
         
-        Return: str（以文字輸出冒險結果）
+        Return: str（以文字輸出工作結果）
         '''
         if not self.work_code:
             return '你還沒有選擇職業'

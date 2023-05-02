@@ -61,7 +61,7 @@ class owner(Cog_Extension):
         try:
             m = await self.bot.wait_for('message', timeout=60.0, check=check)
         except asyncio.TimeoutError:
-            await msg.edit('全群公告：超時',delete_after=5)
+            await msg.message.edit('全群公告：超時',delete_after=5)
             return
         text = m.content
         send_success = 0
@@ -77,7 +77,7 @@ class owner(Cog_Extension):
                 except:
                     pass
 
-        await msg.edit(f"已向{send_success}/{len(channels)}個頻道發送公告")
+        await msg.message.edit(f"已向{send_success}/{len(channels)}個頻道發送公告")
 
     #bot_update
     @commands.slash_command(description='機器人更新通知',guild_ids=debug_guild)
@@ -91,7 +91,7 @@ class owner(Cog_Extension):
         try:
             m = await self.bot.wait_for('message', timeout=60.0, check=check)
         except asyncio.TimeoutError:
-            await msg.edit('更新通知：超時',delete_after=5)
+            await msg.message.edit('更新通知：超時',delete_after=5)
             return
 
         text = m.content
@@ -109,7 +109,7 @@ class owner(Cog_Extension):
                 except:
                     pass
 
-        await msg.edit(f"已向{send_success}/{len(channels)}個頻道發送公告")
+        await msg.message.edit(f"已向{send_success}/{len(channels)}個頻道發送公告")
 
     #edit
     @commands.slash_command(description='編輯訊息',guild_ids=debug_guild)
@@ -157,9 +157,13 @@ class owner(Cog_Extension):
         embed.add_field(name="管理身分組", value=permission.manage_roles, inline=True)
         embed.add_field(name="管理webhook", value=permission.manage_webhooks, inline=True)
         embed.add_field(name="管理表情符號", value=permission.manage_emojis, inline=True)
+        embed.add_field(name="管理討論串", value=permission.manage_threads, inline=True)
+        embed.add_field(name="管理活動", value=permission.manage_events, inline=True)
         embed.add_field(name="踢出成員", value=permission.kick_members, inline=True)
         embed.add_field(name="封鎖成員", value=permission.ban_members, inline=True)
+        embed.add_field(name="禁言成員", value=permission.moderate_members, inline=True)
         embed.add_field(name="觀看審核日誌", value=permission.view_audit_log, inline=True)
+        
         # permission.create_instant_invite
         # permission.add_reactions
         # permission.priority_speaker
