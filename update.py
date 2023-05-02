@@ -13,3 +13,4 @@ except Exception as e:
 
 print('自更新模組：Close in 3 seconds...')
 time.sleep(3)
+exit()

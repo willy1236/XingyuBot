@@ -22,7 +22,9 @@ jdict = Jsondb.jdict
 set_option = ChoiceList.set('game_set_option')
 hoyo_game_option = [
     discord.OptionChoice(name='原神',value=genshin.Game.GENSHIN),
-    discord.OptionChoice(name='崩壞3rd',value=genshin.Game.HONKAI)
+    discord.OptionChoice(name='崩壞3rd',value=genshin.Game.HONKAI),
+    discord.OptionChoice(name='崩壞：星穹軌道',value='hkrpg')
+    
 ]
 
 debug_guild = Jsondb.jdata.get('debug_guild')
@@ -502,7 +504,7 @@ class system_game(Cog_Extension):
         await client.redeem_code(code,uid)  
         await ctx.respond('兌換已完成')
 
-    @hoyo.command(description='簽到設定（尚未測試可能有bug）')
+    @hoyo.command(description='簽到設定（多個遊戲請個別設定）（尚未測試可能有bug）')
     @commands.cooldown(rate=1,per=1)
     async def reward(self,ctx,
                    game:discord.Option(str,name='遊戲',description='要簽到的遊戲',default=None,choices=hoyo_game_option),

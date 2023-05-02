@@ -175,7 +175,7 @@ class RPGUser(User):
 #         jpt[self.user] = amount
 #         self.__db.write('jpt',jpt)
     
-#     def add(self,amount:int):
+#     def add(self,amount:int):yy
 #         """增減用戶PT"""
 #         jpt = self.__db.jpt
 #         jpt[self.user] += amount
