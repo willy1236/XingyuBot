@@ -210,7 +210,7 @@ class MySQLDatabase():
     
     def add_hoyo_reward(self,user_id:str,game:str,channel_id:str,need_mention:bool):
         self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f"INSERT INTO `game_hoyo_reward` VALUES(%s,%s,%s,%s) ON DUPLICATE KEY UPDATE `game` = {game}, `channel_id` = {channel_id}, `need_mention` = {need_mention}",(user_id,game,channel_id,need_mention))
+        self.cursor.execute(f"INSERT INTO `game_hoyo_reward` VALUES(%s,%s,%s,%s) ON DUPLICATE KEY UPDATE `channel_id` = {channel_id}, `need_mention` = {need_mention}",(user_id,game,channel_id,need_mention))
         self.connection.commit()
 
     def remove_hoyo_reward(self,user_id:str):
