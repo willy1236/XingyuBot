@@ -326,7 +326,7 @@ class system_game(Cog_Extension):
 
         await ctx.respond(ctx.author.mention,embeds=embed_list)
 
-    @hoyo.command(description='尋找HoYOLab用戶')
+    @hoyo.command(description='尋找HoYoLab用戶')
     @commands.cooldown(rate=1,per=1)
     async def hoyolab(self,ctx,
                    hoyolab_name:discord.Option(str,name='hoyolab名稱',description='要查詢的用戶')):

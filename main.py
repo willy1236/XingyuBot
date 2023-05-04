@@ -93,7 +93,7 @@ for filename in os.listdir('./cmds'):
 
 if __name__ == "__main__":
     if bot_code == 'Bot1' and auto_update:
-        os.system('python update.py')
+        os.system('python ./app/update.py')
             
     if start_website:
         def run_website():
