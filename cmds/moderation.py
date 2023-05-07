@@ -14,7 +14,8 @@ class moderation(Cog_Extension):
     async def clean(self,
                     ctx:discord.ApplicationContext,
                     num:discord.Option(int,name='數量',description='要清理的訊息數，與訊息id擇一提供',required=False),
-                    message_id:discord.Option(str,name='訊息id',description='如果提供，將刪除比此訊息更新的所有訊息',required=False)):
+                    message_id:discord.Option(str,name='訊息id',description='如果提供，將刪除比此訊息更新的所有訊息（該訊息不會被刪）',required=False)):
+        await ctx.defer()
         if message_id:
             message = await ctx.channel.fetch_message(int(message_id))
             if message:
