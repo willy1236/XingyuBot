@@ -78,7 +78,8 @@
         "mc | mc總表":"mc",
         "mc | minecraft資料夾":"mc01",
         "mc | 如何裝模組":"mc02",
-        "trpg | 參加房間": "trpg01"
+        "trpg | 參加房間": "trpg01",
+        "trpg | 放入角色": "trpg02"
     },
     "help_option": {
         "use":"use",

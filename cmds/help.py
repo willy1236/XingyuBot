@@ -48,6 +48,8 @@ class help(Cog_Extension):
         
         elif arg == "trpg01":
             text = "https://trpgline.com/zh-TW/admin\n房間管理->參與房間->輸入房號與密碼"
+        elif arg == "trpg02":
+            text = "左邊五個按鈕 選擇物件控制台 -> 點+ -> 新物件 -> 收藏夾 -> 選擇角色匯入物件\n右方點擊自己的齒輪 -> 操作角色 -> 選擇角色 -> 最後將角色拖到地圖上"
         
         else:
             raise commands.errors.ArgumentParsingError("查無資訊")
