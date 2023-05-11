@@ -261,20 +261,13 @@ class system_game(Cog_Extension):
         else:
             await ctx.respond(content='查詢失敗:查無此ID',ephemeral=True)
 
-    # @commands.command()
-    # @commands.cooldown(rate=1,per=1)
-    # async def hoyohelp(self,ctx):
-    #     embed = BotEmbed.simple("原神(hoyo) 指令")
-    #     embed.add_field(name="!!hoyo set <ltuid> <ltoken>", value="設定cookies(需先設定才能使用其他功能)", inline=False)
-    #     embed.add_field(name="!!hoyo help", value="如何取得設定cookies", inline=False)
-    #     embed.add_field(name="!!hoyo diary", value="取得每月原石來源統計", inline=False)
-    #     await ctx.send(embed=embed)
 
     @hoyo.command(description='如何設定cookies(需先設定才能使用其他功能)')
     @commands.cooldown(rate=1,per=1)
     async def help(self,ctx):
         embed = BotEmbed.simple("1.前往 https://www.hoyolab.com/ 並登入\n2.複製以下代碼```script:d=document.cookie; c=d.includes('account_id') || alert('過期或無效的Cookie,請先登出帳號再重新登入!'); c && document.write(d)```\n3.在網址列打上java後直接貼上複製的代碼\n4.找到`ltuid=`跟`ltoken=`並複製其中的內容\n5.使用指令 /hoyo set <ltuid> <ltoken>")
-        await ctx.respond(embed=embed)
+        embed2 = BotEmbed.simple("擁有此cookie將可以使機器人以登入帳號的身分瀏覽與操作hoyolab的相關功能，但無法用於登入遊戲與改變遊戲中所持有的內容。\n若對此功能有疑慮，可隨時終止使用，cookie也可以隨時刪除，但米哈遊沒有官方正式API，故若不提供cookie將會無法使用相關功能。")
+        await ctx.respond(embeds=[embed,embed2])
 
     @hoyo.command(description='設定cookies')
     @commands.cooldown(rate=1,per=1)
@@ -298,7 +291,7 @@ class system_game(Cog_Extension):
         await ctx.defer()
         cookies = self.sqldb.get_userdata(str(ctx.author.id),'game_hoyo_cookies')
         if not cookies:
-            raise commands.errors.ArgumentParsingError("沒有設定cookies")
+            raise commands.errors.ArgumentParsingError("沒有設定cookies或已過期")
         client = genshin.Client(cookies,lang='zh-tw')
         diary = await client.get_diary()
 
@@ -336,7 +329,7 @@ class system_game(Cog_Extension):
         await ctx.defer()
         cookies = self.sqldb.get_userdata(str(ctx.author.id),'game_hoyo_cookies')
         if not cookies:
-            raise commands.errors.ArgumentParsingError("沒有設定cookies")
+            raise commands.errors.ArgumentParsingError("沒有設定cookies或已過期")
         client = genshin.Client(cookies,lang='zh-tw')
 
         hoyolab_user = None
@@ -404,7 +397,7 @@ class system_game(Cog_Extension):
         await ctx.defer()
         cookies = self.sqldb.get_userdata(str(ctx.author.id),'game_hoyo_cookies')
         if not cookies:
-            raise commands.errors.ArgumentParsingError("沒有設定cookies")
+            raise commands.errors.ArgumentParsingError("沒有設定cookies或已過期")
         client = genshin.Client(cookies,lang='zh-tw')
 
         user = await client.get_genshin_user(genshin_id)
@@ -430,7 +423,7 @@ class system_game(Cog_Extension):
         await ctx.defer()
         cookies = self.sqldb.get_userdata(str(ctx.author.id),'game_hoyo_cookies')
         if not cookies:
-            raise commands.errors.ArgumentParsingError("沒有設定cookies")
+            raise commands.errors.ArgumentParsingError("沒有設定cookies或已過期")
         client = genshin.Client(cookies,lang='zh-tw')
 
         user = await client.get_honkai_user(int(honkai_id))
@@ -452,7 +445,7 @@ class system_game(Cog_Extension):
         await ctx.defer()
         cookies = self.sqldb.get_userdata(str(ctx.author.id),'game_hoyo_cookies')
         if not cookies:
-            raise commands.errors.ArgumentParsingError("沒有設定cookies")
+            raise commands.errors.ArgumentParsingError("沒有設定cookies或已過期")
         client = genshin.Client(cookies,lang='zh-tw')
         
         try:
@@ -494,11 +487,11 @@ class system_game(Cog_Extension):
     @hoyo.command(description='兌換禮包碼')
     @commands.cooldown(rate=1,per=1)
     async def code(self,ctx,
-                   code:discord.Option(str,name='禮包碼',description='要兌換的禮包碼',default=None),
-                   uid:discord.Option(str,name='uid',description='要兌換的用戶',default=None)):
+                   code:discord.Option(str,name='禮包碼',description='要兌換的禮包碼'),
+                   uid:discord.Option(str,name='uid',description='要兌換的用戶')):
         cookies = self.sqldb.get_userdata(str(ctx.author.id),'game_hoyo_cookies')
         if not cookies:
-            raise commands.errors.ArgumentParsingError("沒有設定cookies")
+            raise commands.errors.ArgumentParsingError("沒有設定cookies或已過期")
         client = genshin.Client(cookies,lang='zh-tw')
         await client.redeem_code(code,uid)  
         await ctx.respond('兌換已完成')
@@ -506,12 +499,12 @@ class system_game(Cog_Extension):
     @hoyo.command(description='簽到設定（多個遊戲請個別設定）（尚未測試可能有bug）')
     @commands.cooldown(rate=1,per=1)
     async def reward(self,ctx,
-                   game:discord.Option(str,name='遊戲',description='要簽到的遊戲',default=None,choices=hoyo_game_option),
+                   game:discord.Option(str,name='遊戲',description='要簽到的遊戲',choices=hoyo_game_option),
                    need_mention:discord.Option(bool,name='成功簽到時是否要tag提醒',default=True),
                    remove:discord.Option(bool,name='若要移除資料請設為true',default=False)):
         cookies = self.sqldb.get_userdata(str(ctx.author.id),'game_hoyo_cookies')
         if not cookies:
-            raise commands.errors.ArgumentParsingError("沒有設定cookies")
+            raise commands.errors.ArgumentParsingError("沒有設定cookies或已過期")
         if not remove:
             self.sqldb.add_hoyo_reward(ctx.author.id,game,ctx.channel.id,need_mention)
             await ctx.respond('設定已完成')

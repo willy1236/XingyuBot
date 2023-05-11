@@ -188,8 +188,12 @@ class task(Cog_Extension):
     async def auto_hoyo_reward(self):
         list = sqldb.get_hoyo_reward()
         for user in list:
+            user_dc = self.bot.get_user(int(user_id))
+            channel = self.bot.get_channel(int(channel_id))
+
             if not user.get("ltuid") or not user.get("ltoken"):
-                raise commands.errors.ArgumentParsingError("沒有設定cookies")
+                await channel.send(f'{user_dc.mention} 沒有設定cookies或已過期')
+                raise commands.errors.ArgumentParsingError("沒有設定cookies或已過期")
             cookies = {
                 "ltuid": user["ltuid"],
                 "ltoken": user["ltoken"]
@@ -201,8 +205,6 @@ class task(Cog_Extension):
                 channel_id = user['channel_id']
 
                 reward = await client.claim_daily_reward(game=game,reward=True)
-                user_dc = self.bot.get_user(int(user_id))
-                channel = self.bot.get_channel(int(channel_id))
                 if channel and user['need_mention']:
                     await channel.send(f'{user_dc.mention} 簽到完成！獲得{reward.name}x{reward.amount}')
                 elif channel and not user['need_mention']:
