@@ -20,7 +20,7 @@ class error(Cog_Extension):
         elif isinstance(error,commands.errors.MissingPermissions):
             permissions = []
             for i in error.missing_permissions:
-                permissions.append(dict.get(i,i))    
+                permissions.append(dict.get(i,i))
             text = ','.join(permissions)
             await ctx.respond(f'缺少權限:你沒有權限來使用此指令\n缺少權限:{text}',ephemeral=True)
         elif isinstance(error,commands.errors.BotMissingPermissions):
