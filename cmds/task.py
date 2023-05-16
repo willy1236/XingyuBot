@@ -196,7 +196,8 @@ class task(Cog_Extension):
 
             if not cookies:
                 await channel.send(f'{user_dc.mention} 沒有設定cookies或已過期')
-                raise commands.errors.ArgumentParsingError("沒有設定cookies或已過期")
+                #raise commands.errors.ArgumentParsingError("沒有設定cookies或已過期")
+                continue
 
             try:
                 client = genshin.Client(cookies,lang='zh-tw')
