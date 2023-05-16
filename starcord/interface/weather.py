@@ -1,8 +1,8 @@
 import requests,time
 from bs4 import BeautifulSoup
 
-from bothelper.database import Jsondb
-from bothelper.model.weather import *
+from starcord.database import Jsondb
+from starcord.model.weather import *
 
 class WeatherInterface():
     def __init__(self):

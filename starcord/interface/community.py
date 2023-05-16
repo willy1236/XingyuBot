@@ -1,6 +1,6 @@
 import requests
-from bothelper.database import Jsondb
-from bothelper.model.community import *
+from starcord.database import Jsondb
+from starcord.model.community import *
 
 class CommunityInterface():
     def __init__(self):

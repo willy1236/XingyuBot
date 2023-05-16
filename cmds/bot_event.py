@@ -1,7 +1,7 @@
 import discord,datetime
 from discord.ext import commands
 from core.classes import Cog_Extension
-from bothelper import Jsondb,BotEmbed,BRS
+from starcord import Jsondb,BotEmbed,BRS
 
 class ScamChack:
     def __init__(self,text:str):

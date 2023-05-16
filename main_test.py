@@ -1,2 +1,2 @@
 import requests,genshin,asyncio
-import bothelper
+import starcord

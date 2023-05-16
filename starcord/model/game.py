@@ -1,6 +1,6 @@
 from datetime import datetime,timedelta
-from bothelper.utility import BotEmbed
-from bothelper.database import JsonDatabase
+from starcord.utility import BotEmbed
+from starcord.database import JsonDatabase
 
 Jsondb = JsonDatabase()
 jdict = Jsondb.jdict

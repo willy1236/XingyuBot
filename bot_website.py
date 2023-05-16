@@ -5,8 +5,8 @@ from fastapi.responses import HTMLResponse,JSONResponse,PlainTextResponse
 import xml.etree.ElementTree as ET
 
 from main import bot
-from bothelper.model.push import Youtube_Push
-from bothelper import log
+from starcord.model.push import Youtube_Push
+from starcord import log
 
 app = FastAPI()
 

@@ -1,5 +1,5 @@
-from bothelper.database import sqldb
-from bothelper.model.user import *
+from starcord.database import sqldb
+from starcord.model.user import *
 
 class UserClient:
     def __init__(self):

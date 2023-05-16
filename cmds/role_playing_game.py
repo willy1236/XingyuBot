@@ -2,7 +2,7 @@ import discord
 from core.classes import Cog_Extension
 from discord.ext import commands
 
-from bothelper import BotEmbed,sqldb,UserClient
+from starcord import BotEmbed,sqldb,UserClient
 
 class RPGbutton1(discord.ui.View):
     def __init__(self,userid):

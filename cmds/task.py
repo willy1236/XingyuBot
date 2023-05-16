@@ -5,8 +5,8 @@ from datetime import datetime, timezone, timedelta
 from discord.ext import commands,tasks
 
 from core.classes import Cog_Extension
-from bothelper import Jsondb,sqldb
-from bothelper.interface import *
+from starcord import Jsondb,sqldb
+from starcord.interface import *
 
 class task(Cog_Extension):
     def __init__(self,*args,**kwargs):
@@ -190,14 +190,12 @@ class task(Cog_Extension):
         for user in list:
             user_dc = self.bot.get_or_fetch_user(int(user_id))
             channel = self.bot.get_channel(int(channel_id))
+            cookies = self.sqldb.get_userdata(str(user_dc.id),'game_hoyo_cookies')
 
-            if not user.get("ltuid") or not user.get("ltoken"):
+            if not cookies:
                 await channel.send(f'{user_dc.mention} 沒有設定cookies或已過期')
                 raise commands.errors.ArgumentParsingError("沒有設定cookies或已過期")
-            cookies = {
-                "ltuid": user["ltuid"],
-                "ltoken": user["ltoken"]
-            }
+
             try:
                 client = genshin.Client(cookies,lang='zh-tw')
                 user_id = user['user_id']

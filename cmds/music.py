@@ -2,8 +2,8 @@ import discord,asyncio,youtube_dl,time
 from discord.ext import commands,pages
 
 from core.classes import Cog_Extension
-from bothelper import Jsondb,BotEmbed
-from bothelper.errors import *
+from starcord import Jsondb,BotEmbed
+from starcord.errors import *
 
 # Suppress noise about console usage from errors
 youtube_dl.utils.bug_reports_message = lambda: ""

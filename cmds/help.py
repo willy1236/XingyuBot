@@ -2,8 +2,8 @@ import discord
 from discord.ext import commands,pages
 from core.classes import Cog_Extension
 from discord.commands import SlashCommandGroup
-from bothelper import BotEmbed
-from bothelper.utility import ChoiceList
+from starcord import BotEmbed
+from starcord.utility import ChoiceList
 
 
 info_option = ChoiceList.set('info_option')

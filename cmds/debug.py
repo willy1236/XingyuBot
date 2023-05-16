@@ -3,8 +3,8 @@ from datetime import datetime, timezone, timedelta,time
 from discord.ext import commands,tasks
 
 from core.classes import Cog_Extension
-from bothelper import Jsondb
-from bothelper.errors import *
+from starcord import Jsondb
+from starcord.errors import *
 
 tz = timezone(timedelta(hours=+8))
 # Note that custom_ids can only be up to 100 characters long.

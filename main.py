@@ -2,8 +2,8 @@ import discord, os,asyncio,time
 from discord.ext import commands
 from threading import Thread
 
-from bothelper.ui_element.button import *
-from bothelper import Jsondb,log,twitch_bot
+from starcord.ui_element.button import *
+from starcord import Jsondb,log,twitch_bot
 
 #Bot1:dc小幫手, Bep:Bep, Bot2:RO
 jdata = Jsondb.jdata

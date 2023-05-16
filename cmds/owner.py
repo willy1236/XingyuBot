@@ -3,9 +3,9 @@ from discord.ext import commands
 from discord.commands import SlashCommandGroup
 
 from core.classes import Cog_Extension
-from bothelper import BotEmbed,BRS,Jsondb,sqldb,twitch_bot
+from starcord import BotEmbed,BRS,Jsondb,sqldb,twitch_bot
 
-from bothelper.ui_element.button import ReactRole_button
+from starcord.ui_element.button import ReactRole_button
 
 class SendMessageModal(discord.ui.Modal):
     def __init__(self, *args, **kwargs):

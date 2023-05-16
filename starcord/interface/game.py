@@ -1,6 +1,6 @@
 import requests,genshin
-from bothelper.database import Jsondb
-from bothelper.model.game import *
+from starcord.database import Jsondb
+from starcord.model.game import *
 
 class GameInterface():
     def __init__(self):

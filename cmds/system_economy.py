@@ -53,7 +53,7 @@ class system_economy(Cog_Extension):
 
     @commands.slash_command(description='簽到')
     async def sign(self,ctx):
-        # db = bothelper.Jsondb
+        # db = starcord.Jsondb
         # jdsign = db.jdsign
         # #jwsign = Database().jwsign
         # jdata = db.jdata

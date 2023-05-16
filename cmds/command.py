@@ -4,9 +4,9 @@ from discord.ext import commands,pages
 from discord.commands import SlashCommandGroup
 
 from core.classes import Cog_Extension
-from bothelper import Jsondb,BRS,log,BotEmbed,ChoiceList
-from bothelper.funtions import find,random_color
-from bothelper.ui_element.button import Delete_Add_Role_button
+from starcord import Jsondb,BRS,log,BotEmbed,ChoiceList
+from starcord.funtions import find,random_color
+from starcord.ui_element.button import Delete_Add_Role_button
 
 from mysql.connector.errors import Error as sqlerror
 
@@ -238,7 +238,7 @@ class command(Cog_Extension):
         six_list = []
         six_list_100 = []
         guaranteed = 100
-        #db = bothelper.Jsondb
+        #db = starcord.Jsondb
         #jloot = db.jloot
         data = self.sqldb.get_userdata(user_id,'user_lottery')
         if data:

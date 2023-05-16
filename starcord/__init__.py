@@ -1,5 +1,5 @@
 '''
-Discord機器人用lib庫
+Discord機器人"星羽"用libary
 '''
 
 #from . import model

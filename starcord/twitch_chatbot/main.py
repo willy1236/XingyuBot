@@ -1,6 +1,6 @@
 import twitchio,secrets,requests,asyncio
 from twitchio.ext import commands,eventsub
-from bothelper.database import Jsondb
+from starcord.database import Jsondb
 
 tokens = Jsondb.get_token('twitch_chatbot')
 initial_channels = Jsondb.cache.get('twitch_initial_channels')

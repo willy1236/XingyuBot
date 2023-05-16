@@ -1,6 +1,6 @@
 import random
-from bothelper.utility import BotEmbed
-from bothelper.database import sqldb
+from starcord.utility import BotEmbed
+from starcord.database import sqldb
 
 class User():
     '''基本用戶資料'''

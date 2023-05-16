@@ -1,5 +1,5 @@
 import discord
-from bothelper.database import sqldb
+from starcord.database import sqldb
 
 class ReactRole_button(discord.ui.View):
     def __init__(self):

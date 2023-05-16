@@ -204,7 +204,8 @@ class MySQLDatabase():
 
     def get_hoyo_reward(self):
         self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f'SELECT * FROM `game_hoyo_reward` LEFT JOIN `game_hoyo_cookies` ON game_hoyo_reward.user_id = game_hoyo_cookies.user_id WHERE game_hoyo_reward.user_id IS NOT NULL;')
+        #self.cursor.execute(f'SELECT * FROM `game_hoyo_reward` LEFT JOIN `game_hoyo_cookies` ON game_hoyo_reward.user_id = game_hoyo_cookies.user_id WHERE game_hoyo_reward.user_id IS NOT NULL;')
+        self.cursor.execute(f'SELECT * FROM `game_hoyo_reward`;')
         records = self.cursor.fetchall()
         return records
     

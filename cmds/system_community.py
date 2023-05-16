@@ -1,7 +1,7 @@
 import discord
 from core.classes import Cog_Extension
 from discord.commands import SlashCommandGroup
-from bothelper.interface.community import Twitch
+from starcord.interface.community import Twitch
 
 class system_community(Cog_Extension):
     twitch = SlashCommandGroup("twitch", "Twitch相關指令")

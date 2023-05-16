@@ -3,9 +3,9 @@ from discord.ext import commands
 from core.classes import Cog_Extension
 from discord.commands import SlashCommandGroup
 
-from bothelper.interface.user import *
-from bothelper import BotEmbed,Jsondb,ChoiceList
-from bothelper.ui_element.button import Delete_Pet_button
+from starcord.interface.user import *
+from starcord import BotEmbed,Jsondb,ChoiceList
+from starcord.ui_element.button import Delete_Pet_button
 
 jdict = Jsondb.jdict
 option = ChoiceList.set('pet_option')

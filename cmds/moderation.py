@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 from core.classes import Cog_Extension
-from bothelper import Jsondb
+from starcord import Jsondb
 
 jdict = Jsondb.jdict
 option = []

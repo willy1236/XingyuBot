@@ -4,8 +4,8 @@ from discord.commands import SlashCommandGroup
 from datetime import timedelta
 
 from core.classes import Cog_Extension
-from bothelper import BotEmbed,Jsondb,ChoiceList
-from bothelper.interface.game import *
+from starcord import BotEmbed,Jsondb,ChoiceList
+from starcord.interface.game import *
 
 # def player_search(url):
 #     response = requests.get(url)
@@ -285,7 +285,7 @@ class system_game(Cog_Extension):
     @hoyo.command(description='取得每月原石來源統計')
     @commands.cooldown(rate=1,per=1)
     async def diary(self,ctx):
-        # db = bothelper.Jsondb
+        # db = starcord.Jsondb
         # jhoyo = db.jhoyo
         # cookies = jhoyo.get(str(ctx.author.id))
         await ctx.defer()
@@ -323,7 +323,7 @@ class system_game(Cog_Extension):
     @commands.cooldown(rate=1,per=1)
     async def hoyolab(self,ctx,
                    hoyolab_name:discord.Option(str,name='hoyolab名稱',description='要查詢的用戶')):
-        # db = bothelper.Jsondb
+        # db = starcord.Jsondb
         # jhoyo = db.jhoyo
         # cookies = jhoyo.get(str(ctx.author.id),None)
         await ctx.defer()
@@ -391,7 +391,7 @@ class system_game(Cog_Extension):
     @commands.cooldown(rate=1,per=1)
     async def genshin(self,ctx,
                    genshin_id:discord.Option(str,name='原神uid',description='要查詢的用戶',default=None)):
-        # db = bothelper.Jsondb
+        # db = starcord.Jsondb
         # jhoyo = db.jhoyo
         # cookies = jhoyo.get(str(ctx.author.id),None)
         await ctx.defer()
@@ -417,7 +417,7 @@ class system_game(Cog_Extension):
     @commands.cooldown(rate=1,per=1)
     async def honkai(self,ctx,
                    honkai_id:discord.Option(str,name='崩壞uid',description='要查詢的用戶',default=None)):
-        # db = bothelper.Jsondb
+        # db = starcord.Jsondb
         # jhoyo = db.jhoyo
         # cookies = jhoyo.get(str(ctx.author.id),None)
         await ctx.defer()

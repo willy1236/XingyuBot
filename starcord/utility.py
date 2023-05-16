@@ -1,5 +1,5 @@
 import discord
-from bothelper.database import Jsondb
+from starcord.database import Jsondb
 
 class BotEmbed:
     @staticmethod

@@ -1,9 +1,9 @@
 import discord
 from discord.ext import commands
-from bothelper.errors import *
+from starcord.errors import *
 from core.classes import Cog_Extension
 from mysql.connector.errors import Error as sqlerror
-from bothelper import log,BRS
+from starcord import log,BRS
 
 dict = {
     'manage_channels':'管理頻道',
