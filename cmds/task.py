@@ -189,7 +189,7 @@ class task(Cog_Extension):
         list = sqldb.get_hoyo_reward()
         for user in list:
             user_id = user['user_id']
-            user_dc = self.bot.get_or_fetch_user(int(user_id))
+            user_dc = self.bot.get_user(int(user_id))
             channel_id = user['channel_id']
             channel = self.bot.get_channel(int(channel_id))
             cookies = self.sqldb.get_userdata(str(user_id),'game_hoyo_cookies')
