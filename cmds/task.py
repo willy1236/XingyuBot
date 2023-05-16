@@ -192,7 +192,7 @@ class task(Cog_Extension):
             user_dc = self.bot.get_or_fetch_user(int(user_id))
             channel_id = user['channel_id']
             channel = self.bot.get_channel(int(channel_id))
-            cookies = self.sqldb.get_userdata(str(user_dc.id),'game_hoyo_cookies')
+            cookies = self.sqldb.get_userdata(str(user_id),'game_hoyo_cookies')
 
             if not cookies:
                 await channel.send(f'{user_dc.mention} 沒有設定cookies或已過期')
