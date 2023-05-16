@@ -188,7 +188,9 @@ class task(Cog_Extension):
     async def auto_hoyo_reward(self):
         list = sqldb.get_hoyo_reward()
         for user in list:
+            user_id = user['user_id']
             user_dc = self.bot.get_or_fetch_user(int(user_id))
+            channel_id = user['channel_id']
             channel = self.bot.get_channel(int(channel_id))
             cookies = self.sqldb.get_userdata(str(user_dc.id),'game_hoyo_cookies')
 
@@ -198,9 +200,7 @@ class task(Cog_Extension):
 
             try:
                 client = genshin.Client(cookies,lang='zh-tw')
-                user_id = user['user_id']
                 game = user['game']
-                channel_id = user['channel_id']
 
                 reward = await client.claim_daily_reward(game=game,reward=True)
                 if channel and user['need_mention']:
