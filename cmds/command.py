@@ -445,6 +445,8 @@ class command(Cog_Extension):
     @commands.slash_command(description='既然ChatGPT那麼紅，那為何不試試看跟AI聊天呢?')
     async def chat(self,ctx,content:discord.Option(str,name='訊息',description='要傳送的訊息內容')):
         await ctx.defer()
+        await ctx.respond('目前聊天的額度已過期，故無法使用此指令，敬請期待未來更新')
+
         response = openai.Completion.create(
             model="text-davinci-003",
             prompt=content,

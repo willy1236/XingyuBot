@@ -209,8 +209,6 @@ class task(Cog_Extension):
                 elif channel and not user['need_mention']:
                     await channel.send(f'{user_dc.name} 簽到完成！獲得{reward.name}x{reward.amount}')
             except Exception as e:
-                user_dc = self.bot.get_user(int(user_id))
-                channel = self.bot.get_channel(int(channel_id))
                 await channel.send(f'{user_dc.mention} 簽到時發生錯誤：{e}')
             
             await asyncio.sleep(30)

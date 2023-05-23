@@ -7,3 +7,4 @@ pip install --upgrade GitPython
 pip install  --upgrade APScheduler
 pip install  --upgrade fastapi uvicorn
 pip install  --upgrade mcrcon
+pause

@@ -484,7 +484,7 @@ class system_game(Cog_Extension):
         #print(r_spiral_abyss)
         await ctx.respond(embed=embed)
 
-    @hoyo.command(description='兌換禮包碼')
+    @hoyo.command(description='兌換原神禮包碼')
     @commands.cooldown(rate=1,per=1)
     async def code(self,ctx,
                    code:discord.Option(str,name='禮包碼',description='要兌換的禮包碼'),
@@ -496,7 +496,7 @@ class system_game(Cog_Extension):
         await client.redeem_code(code,uid)  
         await ctx.respond('兌換已完成')
 
-    @hoyo.command(description='簽到設定（多個遊戲請個別設定）（尚未測試可能有bug）')
+    @hoyo.command(description='簽到設定（多個遊戲請個別設定）（尚在測試可能有bug）')
     @commands.cooldown(rate=1,per=1)
     async def reward(self,ctx,
                    game:discord.Option(str,name='遊戲',description='要簽到的遊戲',choices=hoyo_game_option),
