@@ -4,13 +4,13 @@ Discord機器人"星羽"用libary
 
 #from . import model
 from . import interface
-#from . import database
 from .database import Jsondb,sqldb,JsonDatabase
 from .interface import UserClient
 
 from .utility import BotEmbed,BRS,ChoiceList
 from .funtions import *
 from .logger import create_logger
+from .errors import StarException
 
 
 file_log = Jsondb.jdata.get('file_log')
@@ -30,4 +30,5 @@ __all__ = [
     'twitch_bot',
     'ChoiceList',
     'UserClient',
+    'StarException',
 ]

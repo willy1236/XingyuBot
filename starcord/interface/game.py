@@ -51,10 +51,10 @@ class RiotInterface(GameInterface):
 class OsuInterface(GameInterface):
     def __init__(self):
         super().__init__()
-        self.__headers = self.get_headers()
-        self.__url = 'https://osu.ppy.sh/api/v2'
+        self._headers = self._get_headers()
+        self._url = 'https://osu.ppy.sh/api/v2'
 
-    def get_headers(self):
+    def _get_headers(self):
         ous_token = self.db.get_token('osu')
         data = {
             'client_id': ous_token[0],
@@ -62,8 +62,8 @@ class OsuInterface(GameInterface):
             'grant_type': 'client_credentials',
             'scope': 'public'
         }
-        response = requests.post('https://osu.ppy.sh/oauth/token', data=data)
-        token = response.json().get('access_token')
+        r = requests.post('https://osu.ppy.sh/oauth/token', data=data)
+        token = r.json().get('access_token')
         headers = {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
@@ -73,7 +73,7 @@ class OsuInterface(GameInterface):
 
     def get_player(self,userid:str):
         '''獲取Osu玩家資訊'''
-        response = requests.get(f'{self.__url}/users/{userid}', headers=self.__headers).json()
+        response = requests.get(f'{self._url}/users/{userid}', headers=self._headers).json()
         if 'error' not in response:
             return OsuPlayer(response)
         else:
@@ -81,7 +81,7 @@ class OsuInterface(GameInterface):
 
     def get_beatmap(self,beatmapid:str):
         '''獲取Osu圖譜資訊'''
-        response = requests.get(f'{self.__url}/beatmaps/{beatmapid}', headers=self.__headers).json()
+        response = requests.get(f'{self.__url}/beatmaps/{beatmapid}', headers=self._headers).json()
         if 'error' not in response:
             return OsuBeatmap(response)
         else:
@@ -89,7 +89,7 @@ class OsuInterface(GameInterface):
 
     def get_multiplayer(self,room,playlist):
         '''獲取Osu多人遊戲資訊（未完成）'''
-        r = requests.get(f'{self.__url}/rooms/{room}/playlist/{playlist}/scores',headers=self.__headers)
+        r = requests.get(f'{self.__url}/rooms/{room}/playlist/{playlist}/scores',headers=self._headers)
         if r.status_code == 200:
             return OsuMultiplayer(r.json())
         else:

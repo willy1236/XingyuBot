@@ -7,6 +7,7 @@ from starcord import Jsondb
 from starcord.errors import *
 
 tz = timezone(timedelta(hours=+8))
+
 # Note that custom_ids can only be up to 100 characters long.
 class PersistentView(discord.ui.View):
     def __init__(self):
@@ -25,7 +26,7 @@ class PersistentView(discord.ui.View):
         await interaction.response.send_message("This is grey.", ephemeral=True)
 
 class MyModal(discord.ui.Modal):
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.add_item(discord.ui.InputText(label="Short Input"))
@@ -41,7 +42,7 @@ class debug(Cog_Extension):
     pass
     # @commands.slash_command(description='測試指令')
     # async def test(self,ctx):
-    #     raise MysqlError1()
+    #     raise StarException('test')
     #     await ctx.respond(f'done {data}')
 
     # @commands.slash_command()

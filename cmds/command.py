@@ -110,6 +110,7 @@ class command(Cog_Extension):
         color = discord.Colour.from_rgb(r,g,b)
         new_role = await ctx.guild.create_role(name=name,permissions=permission,color=color)
         added_role = []
+        
         if user_list:
             user_list = user_list.split()
             for user in user_list:
@@ -154,10 +155,9 @@ class command(Cog_Extension):
                     if e.errno == 1062:
                         pass
                     else:
-                        log.info(f'儲存身分組時發生錯誤：{role.name}')
+                        log.warning(f'儲存身分組時發生錯誤：{role.name}')
                         raise
 
-        
         await ctx.defer()
         guild = self.bot.get_guild(jdata['main_guild'][0])
         add_role = guild.get_role(877934319249797120)
@@ -405,12 +405,12 @@ class command(Cog_Extension):
         embed.set_footer(text=f"id:{user.id}")
         await ctx.respond(embed=embed,ephemeral=True)
 
-    @commands.user_command(name="禁言15秒")
+    @commands.user_command(name="禁言10秒")
     @commands.has_permissions(moderate_members=True)
     async def timeout_10s(self,ctx, member: discord.Member):
-        time = datetime.timedelta(seconds=15)
-        await member.timeout_for(time,reason="指令：禁言15秒")
-        await ctx.respond(f"已禁言{member.mention} 15秒",ephemeral=True)
+        time = datetime.timedelta(seconds=10)
+        await member.timeout_for(time,reason="指令：禁言10秒")
+        await ctx.respond(f"已禁言{member.mention} 10秒",ephemeral=True)
     
     @commands.user_command(name="不想理你生態區",guild_ids=jdata['main_guild'])
     @commands.has_permissions(moderate_members=True)

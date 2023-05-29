@@ -8,7 +8,7 @@ from .weather import *
 from .user import *
 
 __all__ =[
-    'Twitch',
+    'TwitchAPI',
     'YoutubeInterface',
     'RiotInterface',
     'OsuInterface',

@@ -6,6 +6,7 @@ from datetime import timedelta
 from core.classes import Cog_Extension
 from starcord import BotEmbed,Jsondb,ChoiceList
 from starcord.interface.game import *
+from starcord.type.game import Database_Game
 
 # def player_search(url):
 #     response = requests.get(url)
@@ -18,7 +19,6 @@ from starcord.interface.game import *
 #             lvl = ''.join([x for x in result2 if x.isdigit()])
 #             return lvl
 
-jdict = Jsondb.jdict
 set_option = ChoiceList.set('game_set_option')
 hoyo_game_option = [
     discord.OptionChoice(name='原神',value=genshin.Game.GENSHIN),
@@ -58,7 +58,7 @@ class system_game(Cog_Extension):
         if game in unneed_verify:
             player_name = value
         
-        elif game == 'steam':
+        elif game == Database_Game.STEAM:
             APIdata = SteamInterface().get_user(value)
             if APIdata:
                 player_name = APIdata.name
@@ -67,7 +67,7 @@ class system_game(Cog_Extension):
                 await ctx.respond(f'錯誤:找不到此用戶',ephemeral=True)
                 return
         
-        elif game == 'lol':
+        elif game == Database_Game.LOL:
             APIdata = RiotInterface().get_lolplayer(value)
             if APIdata:
                 player_name = APIdata.name
@@ -78,7 +78,7 @@ class system_game(Cog_Extension):
                 await ctx.respond(f'錯誤:找不到此用戶',ephemeral=True)
                 return
 
-        elif game == 'apex':
+        elif game == Database_Game.APEX:
             APIdata = ApexInterface().get_player(value)
             if APIdata:
                 player_name = APIdata.name
@@ -87,7 +87,7 @@ class system_game(Cog_Extension):
                 await ctx.respond(f'錯誤:找不到此用戶',ephemeral=True)
                 return
 
-        elif game == 'osu':
+        elif game == Database_Game.OSU:
             APIdata = OsuInterface().get_player(value)
             if APIdata:
                 player_name = APIdata.name
@@ -110,13 +110,13 @@ class system_game(Cog_Extension):
         
         if game:
             dbdata = self.sqldb.get_game_data(userid,game)
-            if game == 'steam':
+            if game == Database_Game.STEAM:
                 APIdata = SteamInterface().get_user(dbdata['player_id'])
-            elif game == 'osu':
+            elif game == Database_Game.OSU:
                 APIdata = OsuInterface().get_player(dbdata['player_name'])
-            elif game == 'apex':
+            elif game == Database_Game.APEX:
                 APIdata = ApexInterface().get_player(dbdata['player_name'])
-            elif game == 'lol':
+            elif game == Database_Game.LOL:
                 APIdata = RiotInterface().get_lolplayer(dbdata['player_name'])
             
             if APIdata:
@@ -285,9 +285,6 @@ class system_game(Cog_Extension):
     @hoyo.command(description='取得每月原石來源統計')
     @commands.cooldown(rate=1,per=1)
     async def diary(self,ctx):
-        # db = starcord.Jsondb
-        # jhoyo = db.jhoyo
-        # cookies = jhoyo.get(str(ctx.author.id))
         await ctx.defer()
         cookies = self.sqldb.get_userdata(str(ctx.author.id),'game_hoyo_cookies')
         if not cookies:
@@ -323,9 +320,6 @@ class system_game(Cog_Extension):
     @commands.cooldown(rate=1,per=1)
     async def hoyolab(self,ctx,
                    hoyolab_name:discord.Option(str,name='hoyolab名稱',description='要查詢的用戶')):
-        # db = starcord.Jsondb
-        # jhoyo = db.jhoyo
-        # cookies = jhoyo.get(str(ctx.author.id),None)
         await ctx.defer()
         cookies = self.sqldb.get_userdata(str(ctx.author.id),'game_hoyo_cookies')
         if not cookies:
@@ -391,9 +385,6 @@ class system_game(Cog_Extension):
     @commands.cooldown(rate=1,per=1)
     async def genshin(self,ctx,
                    genshin_id:discord.Option(str,name='原神uid',description='要查詢的用戶',default=None)):
-        # db = starcord.Jsondb
-        # jhoyo = db.jhoyo
-        # cookies = jhoyo.get(str(ctx.author.id),None)
         await ctx.defer()
         cookies = self.sqldb.get_userdata(str(ctx.author.id),'game_hoyo_cookies')
         if not cookies:
@@ -417,9 +408,6 @@ class system_game(Cog_Extension):
     @commands.cooldown(rate=1,per=1)
     async def honkai(self,ctx,
                    honkai_id:discord.Option(str,name='崩壞uid',description='要查詢的用戶',default=None)):
-        # db = starcord.Jsondb
-        # jhoyo = db.jhoyo
-        # cookies = jhoyo.get(str(ctx.author.id),None)
         await ctx.defer()
         cookies = self.sqldb.get_userdata(str(ctx.author.id),'game_hoyo_cookies')
         if not cookies:

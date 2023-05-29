@@ -19,14 +19,18 @@ voice_updata = Jsondb.jdata.get('voice_updata',False)
 
 voice_list = {
     613747262291443742: 631498685250797570,
-    726790741103476746: 1021072271277834250
+    726790741103476746: 1021072271277834250,
+    1112602989924995106: 1112603854895329381
 }
 
 member_list = {
     613747262291443742: 613747262291443744
 }
 
-lobby_channel_id = 955475420042629140
+lobby_list = [
+    955475420042629140,
+    1112602990939996225,
+]
 
 keywords = {
     '抹茶粉':'由威立冠名贊助撥出~',
@@ -149,9 +153,9 @@ class event(Cog_Extension):
                 
                 await self.bot.get_channel(voice_list.get(guildid)).send(embed=embed)
 
-            if after.channel and after.channel.id == lobby_channel_id:
+            if after.channel and after.channel.id in lobby_list:
                 guild = after.channel.guild
-                category = self.bot.get_channel(lobby_channel_id).category
+                category = self.bot.get_channel(after.channel.id).category
                 #permission = discord.Permissions.advanced()
                 #permission.manage_channels = True
                 #overwrites = discord.PermissionOverwrite({user:permission})

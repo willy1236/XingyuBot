@@ -93,5 +93,9 @@
         "user":"user",
         "twitch":"twitch",
         "admin":"admin"
+    },
+    "permissions": {
+        "manage_channels":"管理頻道",
+        "moderate_members":"禁言成員"
     }
 }

@@ -1,14 +1,11 @@
 import discord
 from discord.ext import commands
-from starcord.errors import *
 from core.classes import Cog_Extension
 from mysql.connector.errors import Error as sqlerror
-from starcord import log,BRS
+from starcord.errors import *
+from starcord import log,BRS,Jsondb,sqldb
 
-dict = {
-    'manage_channels':'管理頻道',
-    'moderate_members':'禁言成員'
-}
+permissions_tl = Jsondb.jdict.get('permissions')
 
 class error(Cog_Extension):
     @commands.Cog.listener()
@@ -20,27 +17,28 @@ class error(Cog_Extension):
         elif isinstance(error,commands.errors.MissingPermissions):
             permissions = []
             for i in error.missing_permissions:
-                permissions.append(dict.get(i,i))
+                permissions.append(permissions_tl.get(i,i))
             text = ','.join(permissions)
-            await ctx.respond(f'缺少權限:你沒有權限來使用此指令\n缺少權限:{text}',ephemeral=True)
+            await ctx.respond(f'缺少權限:你沒有權限來使用此指令\n缺少權限：{text}',ephemeral=True)
         elif isinstance(error,commands.errors.BotMissingPermissions):
             permissions = []
             for i in error.missing_permissions:
-                permissions.append(dict.get(i,i))    
+                permissions.append(permissions_tl.get(i,i))    
             text = ','.join(permissions)
-            await ctx.respond(f'缺少權限:機器人沒有權限來使用此指令\n缺少權限:{text}',ephemeral=True)
+            await ctx.respond(f'缺少權限:機器人沒有權限來使用此指令\n缺少權限：{text}',ephemeral=True)
 
         elif isinstance(error,commands.errors.ArgumentParsingError):
             await ctx.respond(f'參數錯誤:{error}')
         
         elif isinstance(error,discord.ApplicationCommandInvokeError):
-            if isinstance(error.original,sqlerror) and error.original.errno == 1452:
+            if isinstance(error.original,StarException):
+                await ctx.respond(str(error.original),ephemeral=True)
+
+            elif isinstance(error.original,sqlerror) and error.original.errno == 1452:
                 id = str(ctx.author.id)
-                self.sqldb.set_user(id)
+                sqldb.set_user(id)
                 await ctx.respond(f'首次使用已完成註冊，請再使用一次指令',ephemeral=True)
 
-            elif isinstance(error.original,HelperException):
-                await ctx.respond(f'{error.original}',ephemeral=True)
             else:
                 await ctx.respond(f'指令調用時發生錯誤：{error.original}',ephemeral=True)
                 if ctx.guild.id != 566533708371329024:

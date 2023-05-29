@@ -127,8 +127,7 @@ class task(Cog_Extension):
                 await asyncio.sleep(0.5)
         #self.apex_map_update.change_interval(time=task.__gettime_15min())
         #await asyncio.sleep(10)
-    
-    
+
     async def forecast_update(self):
         forecast = CWBInterface().get_forecast()
         if forecast:
@@ -148,20 +147,20 @@ class task(Cog_Extension):
                 await asyncio.sleep(0.5)
         #self.forecast_update.change_interval(time=task.__gettime_3hr())
         #await asyncio.sleep(10)
-    
+
     # @tasks.loop(seconds=1)
     # async def time_task(self):
     #     now_time_hour = datetime.now().strftime('%H%M%S')
     #     #now_time_day = datetime.datetime.now().strftime('%Y%m%d')
-    
+
     @tasks.loop(minutes=2)
     async def twitch(self):
         cache = Jsondb.cache
         users = self.sqldb.get_notice_community_userlist('twitch')
         if not users:
             return
-        
-        data = Twitch().get_lives(users)
+
+        data = TwitchAPI().get_lives(users)
         for user in users:
             user_cache = cache['twitch'].get(user)
             
@@ -182,7 +181,7 @@ class task(Cog_Extension):
             elif not data[user] and user_cache:
                 #cache['twitch'][user] = False
                 del cache['twitch'][user]
-            
+
         Jsondb.write('cache',cache)
 
     async def auto_hoyo_reward(self):

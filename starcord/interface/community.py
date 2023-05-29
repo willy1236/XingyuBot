@@ -6,7 +6,7 @@ class CommunityInterface():
     def __init__(self):
         self.db = Jsondb
 
-class Twitch(CommunityInterface):
+class TwitchAPI(CommunityInterface):
     '''
     與Twitch api交互相關
     '''
@@ -15,7 +15,7 @@ class Twitch(CommunityInterface):
         self.__headers = self.__get_headers()
 
     def __get_headers(self):
-        #客戶端憑據僅能使用APIw
+        #客戶端憑據僅能使用API
         APIURL = "https://id.twitch.tv/oauth2/token"
         #headers = {"Content-Type": "application/x-www-form-urlencoded"}
         tokens = self.db.get_token('twitch')

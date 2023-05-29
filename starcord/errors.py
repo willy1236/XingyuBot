@@ -1,8 +1,8 @@
-class HelperException(Exception):
-    '通用錯誤: 1000'
+class StarException(Exception):
+    "starcord original error: 1000"
     def __init__(self,
+                 message: str = 'Starcord Original exception',
                  code: int = 1000,
-                 message: str = 'Original exception',
                  original = None):
         
         self.code = code
@@ -16,13 +16,12 @@ class HelperException(Exception):
         return f'[{self.code}] {self.message}'
 
 
-class CommandError(HelperException):
-    "Command error: 1100"
+class CommandError(StarException):
+    "Command original error: 1100"
 
 
-
-class MysqlError(HelperException):
-    "MySQL error: 1200"
+class MysqlError(StarException):
+    "MySQL original error: 1200"
 
 class MysqlError01(MysqlError):
     def __init__(self):
@@ -30,9 +29,8 @@ class MysqlError01(MysqlError):
         self.message = '新增的資料已存在'
 
 
-
-class VoiceError(HelperException):
-    "Voice error: 1300"
+class VoiceError(StarException):
+    "Voice original error: 1300"
 
 class VoiceError01(VoiceError):
     "Voice error while using command: 1301"
