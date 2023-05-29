@@ -19,12 +19,12 @@ voice_updata = Jsondb.jdata.get('voice_updata',False)
 
 voice_list = {
     613747262291443742: 631498685250797570,
-    726790741103476746: 1021072271277834250,
-    1112602989924995106: 1112603854895329381
+    726790741103476746: 1021072271277834250
 }
 
 member_list = {
-    613747262291443742: 613747262291443744
+    613747262291443742: 613747262291443744,
+    1112602989924995106: 1112603854895329381
 }
 
 lobby_list = [
@@ -155,7 +155,7 @@ class event(Cog_Extension):
 
             if after.channel and after.channel.id in lobby_list:
                 guild = after.channel.guild
-                category = self.bot.get_channel(after.channel.id).category
+                category = after.channel.category
                 #permission = discord.Permissions.advanced()
                 #permission.manage_channels = True
                 #overwrites = discord.PermissionOverwrite({user:permission})
