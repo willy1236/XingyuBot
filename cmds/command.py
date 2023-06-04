@@ -489,12 +489,15 @@ class command(Cog_Extension):
             dbdata = self.sqldb.get_busy(date_str)
             list = ["早上","下午","晚上"]
             for j in dbdata:
-                if j['time'] == "1":
-                    list.remove("早上")
-                if j['time'] == "2":
-                    list.remove("下午")
-                if j['time'] == "3":
-                    list.remove("晚上")
+                try:
+                    if j['time'] == "1":
+                        list.remove("早上")
+                    if j['time'] == "2":
+                        list.remove("下午")
+                    if j['time'] == "3":
+                        list.remove("晚上")
+                except ValueError:
+                    pass
 
             text += f"{date_str}: {','.join(list)}\n"
             date_now += datetime.timedelta(days=1)
