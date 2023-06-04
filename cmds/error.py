@@ -28,7 +28,7 @@ class error(Cog_Extension):
             await ctx.respond(f'缺少權限:機器人沒有權限來使用此指令\n缺少權限：{text}',ephemeral=True)
 
         elif isinstance(error,commands.errors.ArgumentParsingError):
-            await ctx.respond(f'參數錯誤:{error}')
+            await ctx.respond(f'參數錯誤:{error}',ephemeral=True)
         
         elif isinstance(error,discord.ApplicationCommandInvokeError):
             if isinstance(error.original,StarException):
@@ -40,7 +40,7 @@ class error(Cog_Extension):
                 await ctx.respond(f'首次使用已完成註冊，請再使用一次指令',ephemeral=True)
 
             else:
-                await ctx.respond(f'指令調用時發生錯誤：{error.original}',ephemeral=True)
+                await ctx.respond(f'指令調用時發生錯誤：```py\n{error.original}```',ephemeral=True)
                 if ctx.guild.id != 566533708371329024:
                     await BRS.error(self,ctx,error)
                 log.error(f'{error},{type(error)},{type(error.original)}')

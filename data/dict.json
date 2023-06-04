@@ -97,5 +97,10 @@
     "permissions": {
         "manage_channels":"管理頻道",
         "moderate_members":"禁言成員"
+    },
+    "busy_time_option": {
+        "早上":"1",
+        "下午":"2",
+        "晚上":"3"
     }
 }

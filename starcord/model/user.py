@@ -1,10 +1,18 @@
 import random
 from starcord.utility import BotEmbed
 from starcord.database import sqldb
+from starcord.type.user import PetType
+from typing import TYPE_CHECKING
 
 class User():
-    '''基本用戶資料'''
-    def __init__(self,data):
+    '''基本用戶'''
+    if TYPE_CHECKING:
+        id: str | int
+        name: str
+        point: int
+        rcoin: int
+
+    def __init__(self,data:dict):
         #資料庫
         self.id = data['user_id']
         self.name = data['name']
@@ -87,20 +95,21 @@ class User():
 
 class RPGUser(User):
     '''RPG遊戲用戶'''
+    if TYPE_CHECKING:
+        hp: int
+        atk: int
+        work_code: int
+    
     def __init__(self,data):
         '''hp:生命 atk:攻擊 def:防禦\n
         DEX=Dexterity敏捷\n
         STR=Strength力量\n
         INT=Intelligence智力\n
         LUK=Lucky幸運'''
-        self.id = data.get('user_id')
         self.hp = data.get('user_hp')
         self.atk = data.get('user_atk')
-        self.pt = data.get('point')
-        self.rcoin = data.get('rcoin')
         self.work_code = data.get('work_code')
 
-    
     
     def advance(self) -> str:
         '''
@@ -215,6 +224,13 @@ class RPGUser(User):
 
 
 class Pet():
+    if TYPE_CHECKING:
+        user_id: str
+        species: str
+        name: str
+        hp: int
+        food: int
+
     def __init__(self,data):
         self.user_id = data['user_id']
         self.species = data['pet_species']
@@ -256,7 +272,13 @@ class Pet():
 #         self.__db.write('jpet',jpet)
 
 class Monster:
-    def __init__(self,data):        
+    if TYPE_CHECKING:
+        id: str
+        name: str
+        hp: int
+        atk: int
+
+    def __init__(self,data):
         self.id = data.get('monster_id')
         self.name = data.get('monster_name')
         self.hp = data.get('monster_hp')

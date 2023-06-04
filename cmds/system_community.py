@@ -2,6 +2,7 @@ import discord
 from core.classes import Cog_Extension
 from discord.commands import SlashCommandGroup
 from starcord.interface.community import TwitchAPI
+from starcord import sqldb
 
 class system_community(Cog_Extension):
     twitch = SlashCommandGroup("twitch", "Twitch相關指令")
@@ -20,7 +21,7 @@ class system_community(Cog_Extension):
         
         user = TwitchAPI().get_user(twitch_user)
         if user:
-            self.sqldb.set_notice_community('twitch',twitch_user,guildid,channelid,roleid)
+            sqldb.set_notice_community('twitch',twitch_user,guildid,channelid,roleid)
             if role:
                 await ctx.respond(f'設定成功：{user.display_name}({user.login})的開台通知將會發送在{channel.mention}並會通知{role.mention}')
             else:
@@ -30,13 +31,13 @@ class system_community(Cog_Extension):
 
     @twitch.command(description='移除twitch開台通知')
     async def remove(self,ctx,twitch_user:discord.Option(str,required=True,name='twitch用戶')):
-        self.sqldb.remove_notice_community('twitch',twitch_user,ctx.guild.id)
+        sqldb.remove_notice_community('twitch',twitch_user,ctx.guild.id)
         await ctx.respond(f'已移除 {twitch_user} 的開台通知')
 
     @twitch.command(description='確認twitch開台通知')
     async def notice(self,ctx,twitch_user:discord.Option(str,required=True,name='twitch用戶')):
         guildid = ctx.guild.id
-        record = self.sqldb.get_notice_community_user('twitch',twitch_user,guildid)
+        record = sqldb.get_notice_community_user('twitch',twitch_user,guildid)
         if record:
             channel = self.bot.get_channel(record[0]['channel_id'])
             role = channel.guild.get_role(record[0]['role_id'])

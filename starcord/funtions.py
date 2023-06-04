@@ -42,12 +42,12 @@ def is_number(n):
     except (TypeError, ValueError):
         return False
 
-def random_color(max=256):
-    if max > 256:
+def random_color(max=255):
+    if max > 255:
         raise ValueError("max must below 256")
     color = []
-    while len(color) < 3:
-        color.append(random.choice(range(max)))
+    for i in range(3):
+        color.append(random.randint(0,max))
     return color
 
 class Counter(dict):
@@ -55,7 +55,7 @@ class Counter(dict):
     def __missing__(self,key):
         return 0
 
-class find():
+class find:
     '''arg=要檢測的內容(名稱#0000,id,mention...)'''
     @staticmethod
     async def user(ctx,arg:str):

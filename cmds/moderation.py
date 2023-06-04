@@ -18,7 +18,7 @@ class moderation(Cog_Extension):
             if message:
                 time = message.created_at
                 await ctx.channel.purge(after=time)
-                await ctx.respond(content=f'清除完成',delete_after=5)
+                await ctx.send(content=f'清除完成',delete_after=5)
             else:
                 await ctx.respond(content=f'沒有找到此訊息',ephemeral=True)
 

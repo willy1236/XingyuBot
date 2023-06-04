@@ -229,16 +229,6 @@ class owner(Cog_Extension):
 #         else:
 #             await channel.send('👍')
 
-    # #jset
-    # @commands.slash_command(guild_ids=debug_guild)
-    # @commands.is_owner()
-    # async def jset(self,ctx,option,value):
-    #     jdata = Jsondb.jdata
-    #     jdata[option] = value
-    #     Jsondb.write('jdata',jdata)
-    #     await ctx.respond(f'已將{option} 設為 {value}')
-
-
     @commands.slash_command(description='使用mc伺服器指令',guild_ids=debug_guild)
     @commands.is_owner()
     async def mccommand(self,ctx,command):
@@ -283,13 +273,22 @@ class owner(Cog_Extension):
     async def send(self,ctx,twitch_user,context):
         await twitch_bot.get_channel(twitch_user).send(context)
         await ctx.respond(f'已發送到 {twitch_user}: {context}')
-
     
     @commands.slash_command(description='機器人面板',guild_ids=debug_guild)
     @commands.is_owner()
-    async def panel(self,ctx):
+    async def panel(self,ctx,guild:discord.Option(bool,name='是否列出伺服器')):
+        embed_list = []
         embed = BotEmbed.basic(self,f'伺服器總數：{len(self.bot.guilds)}\n成員：{len(self.bot.users)}')
-        await ctx.respond(f'',embed=embed)
+        embed_list.append(embed)
+        
+        if guild:
+            name_list = []
+            for i in self.bot.guilds:
+                name_list.append(i.name)
+            embed = BotEmbed.simple(','.join(name_list),'伺服器列表')
+            embed_list.append(embed)
+
+        await ctx.respond(f'',embeds=embed_list)
 
 
 def setup(bot):

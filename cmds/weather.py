@@ -29,5 +29,6 @@ class weather(Cog_Extension):
             await ctx.respond('查詢成功',embed=report.desplay())
         else:
             await ctx.respond('查詢失敗',delete_after=5)
+
 def setup(bot):
     bot.add_cog(weather(bot))

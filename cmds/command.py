@@ -7,19 +7,21 @@ from core.classes import Cog_Extension
 from starcord import Jsondb,BRS,log,BotEmbed,ChoiceList
 from starcord.funtions import find,random_color
 from starcord.ui_element.button import Delete_Add_Role_button
+from starcord.errors import CommandError
 
 from mysql.connector.errors import Error as sqlerror
 
 openai.api_key = Jsondb.get_token('openai')
 bet_option = ChoiceList.set('bet_option')
+busy_time_option = ChoiceList.set('busy_time_option')
 
 jdata = Jsondb.jdata
 
 class command(Cog_Extension):
-    
-    
+
     bet = SlashCommandGroup("bet", "賭盤相關指令")
     role = SlashCommandGroup("role", "身分組管理指令")
+    busytime = SlashCommandGroup("busytime", "指令")
 
     # @commands.command()
     # @commands.cooldown(rate=1,per=3)
@@ -106,7 +108,7 @@ class command(Cog_Extension):
                   user_list:discord.Option(str,required=False,name='要加身份組的用戶',description='多個用戶請用空格隔開')):
         await ctx.defer()
         permission = discord.Permissions.none()
-        r,g,b=random_color(200)
+        r,g,b = random_color(200)
         color = discord.Colour.from_rgb(r,g,b)
         new_role = await ctx.guild.create_role(name=name,permissions=permission,color=color)
         added_role = []
@@ -131,7 +133,7 @@ class command(Cog_Extension):
             view.message = await ctx.respond(f"已添加 {new_role.name} 給{all_user}",view=view)
         else:
             view = Delete_Add_Role_button(new_role)
-            view.message = await ctx.respond(f"已創建 {new_role.name} 身分組")
+            view.message = await ctx.respond(f"已創建 {new_role.name} 身分組",view=view)
 
 
     @role.command(description='儲存身分組')
@@ -232,14 +234,12 @@ class command(Cog_Extension):
 
     @commands.slash_command(description='抽卡試手氣')
     @commands.cooldown(rate=1,per=2)
-    async def lottery(self,ctx,times:discord.Option(int,name='抽卡次數',description='可輸入1~1000的整數',default=1,min_value=1,max_value=1000)):
+    async def draw(self,ctx,times:discord.Option(int,name='抽卡次數',description='可輸入1~1000的整數',default=1,min_value=1,max_value=1000)):
         result = {'six':0,'five':0,'four':0,'three':0}
         user_id = str(ctx.author.id)
         six_list = []
         six_list_100 = []
         guaranteed = 100
-        #db = starcord.Jsondb
-        #jloot = db.jloot
         data = self.sqldb.get_userdata(user_id,'user_lottery')
         if data:
             user_guaranteed = data['guaranteed']
@@ -266,16 +266,15 @@ class command(Cog_Extension):
             else:
                 result["three"] += 1
                 user_guaranteed += 1
-        
-        #db.write('jloot',jloot)
+
         self.sqldb.update_userdata(user_id,'user_lottery','guaranteed',user_guaranteed)
         embed=BotEmbed.lottery()
-        embed.add_field(name='抽卡結果', value=f"六星:{result['six']} 五星:{result['five']} 四星:{result['four']} 三星:{result['three']}", inline=False)
+        embed.add_field(name='抽卡結果', value=f"六星x{result['six']} 五星x{result['five']} 四星x{result['four']} 三星x{result['three']}", inline=False)
         embed.add_field(name='保底累積', value=user_guaranteed, inline=False)
         if len(six_list) > 0:
             embed.add_field(name='六星出現', value=','.join(six_list), inline=False)
         if len(six_list_100) > 0:
-            embed.add_field(name='保底', value=','.join(six_list_100), inline=False)
+            embed.add_field(name='保底六星', value=','.join(six_list_100), inline=False)
         await ctx.respond(embed=embed)
 
     @commands.slash_command(description='TRPG擲骰')
@@ -441,12 +440,11 @@ class command(Cog_Extension):
         result = random.choice(args)
         await ctx.respond(f'我選擇:{result}')
 
-    @commands.cooldown(rate=1,per=5)
+    @commands.cooldown(rate=1,per=50)
     @commands.slash_command(description='既然ChatGPT那麼紅，那為何不試試看跟AI聊天呢?')
-    async def chat(self,ctx,content:discord.Option(str,name='訊息',description='要傳送的訊息內容')):
+    async def chat(self,ctx:discord.ApplicationContext,content:discord.Option(str,name='訊息',description='要傳送的訊息內容')):
         await ctx.defer()
-        await ctx.respond('目前聊天的額度已過期，故無法使用此指令，敬請期待未來更新')
-
+        raise CommandError('目前聊天的額度已過期，故無法使用此指令，敬請期待未來更新')
         response = openai.Completion.create(
             model="text-davinci-003",
             prompt=content,
@@ -459,6 +457,50 @@ class command(Cog_Extension):
         )
         text = response['choices'][0]['text']
         await ctx.respond(text)
+
+    @busytime.command(description='新增沒空時間')
+    async def add(self,ctx,
+                  date:discord.Option(str,name='日期',description='請輸入四位數日期 如6/4請輸入0604'),
+                  time:discord.Option(str,name='時間',description='',choices=busy_time_option)):
+        datetime.datetime.strptime(date,"%m%d")
+        self.sqldb.add_busy(str(ctx.author.id), date,time)
+        await ctx.respond('設定完成')
+
+    @busytime.command(description='移除沒空時間')
+    async def remove(self,ctx,
+                  date:discord.Option(str,name='日期',description='請輸入四位數日期 如6/4請輸入0604'),
+                  time:discord.Option(str,name='時間',description='',choices=busy_time_option)):
+        datetime.datetime.strptime(date,"%m%d")
+        self.sqldb.remove_busy(str(ctx.author.id), date,time)
+        await ctx.respond('移除完成')
+
+    @busytime.command(description='確認沒空時間')
+    async def check(self,ctx,
+                  date:discord.Option(str,name='日期',description='請輸入四位數日期 如6/4請輸入0604 留空查詢現在時間',required=False),
+                  days:discord.Option(int,name='連續天數',description='想查詢的天數 預設為5',default=5,min_value=1,max_value=30)):
+        if date:
+            date_now = datetime.datetime.strptime(date,"%m%d")
+        else:    
+            date_now = datetime.datetime.now()
+        text = ""
+        
+        for i in range(days):
+            date_str = date_now.strftime("%m%d")
+            dbdata = self.sqldb.get_busy(date_str)
+            list = ["早上","下午","晚上"]
+            for j in dbdata:
+                if j['time'] == "1":
+                    list.remove("早上")
+                if j['time'] == "2":
+                    list.remove("下午")
+                if j['time'] == "3":
+                    list.remove("晚上")
+
+            text += f"{date_str}: {','.join(list)}\n"
+            date_now += datetime.timedelta(days=1)
+
+        embed = BotEmbed.simple(text,'目前有空時間')
+        await ctx.respond(embed=embed)
 
 def setup(bot):
     bot.add_cog(command(bot))

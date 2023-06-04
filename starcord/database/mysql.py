@@ -175,6 +175,7 @@ class MySQLDatabase():
 
     # 簽到類
     def user_sign(self,user_id:str):
+        '''新增簽到資料'''
         try:
             time = datetime.datetime.now()
             self.cursor.execute(f"USE `database`;")
@@ -188,7 +189,7 @@ class MySQLDatabase():
 
     def sign_add_coin(self,user_id:str,point:int,Rcoin:int):
         self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f"INSERT INTO `user_point` SET user_id = %s, point = %s,rcoin = %s ON DUPLICATE KEY UPDATE user_id = %s, point = point + %s,rcoin = %s",(user_id,point,Rcoin,user_id,point,Rcoin))
+        self.cursor.execute(f"INSERT INTO `user_point` SET user_id = %s, point = %s,rcoin = %s ON DUPLICATE KEY UPDATE point = point + %s, rcoin = rcoin + %s",(user_id,point,Rcoin,point,Rcoin))
         self.connection.commit()
 
 
@@ -334,7 +335,7 @@ class MySQLDatabase():
             self.connection.commit()
         except sqlerror as e:
             if e.errno == 1062:
-                return '已擁有寵物'
+                return '你已經擁有寵物了'
             else:
                 raise
 
@@ -407,3 +408,19 @@ class MySQLDatabase():
         else:
             self.cursor.execute(f'UPDATE `rpg_user_bag` SET `user_id` = {user_id}, `item_id` = {item_id}, amount = amount - {amount}')
         self.connection.commit()
+
+
+    def add_busy(self, user_id, date, time):
+        self.cursor.execute(f"USE `database`;")
+        self.cursor.execute(f"INSERT INTO `busy_time` VALUES(%s,%s,%s);",(user_id,date,time))
+        self.connection.commit()
+
+    def remove_busy(self, user_id, date, time):
+        self.cursor.execute(f"USE `database`;")
+        self.cursor.execute(f"DELETE FROM `busy_time` WHERE `user_id` = %s AND `date` = %s AND `time` = %s;",(user_id,date,time))
+        self.connection.commit()
+
+    def get_busy(self,date):
+        self.cursor.execute(f"SELECT * FROM `database`.`busy_time` WHERE date = {date};")
+        records = self.cursor.fetchall()
+        return records

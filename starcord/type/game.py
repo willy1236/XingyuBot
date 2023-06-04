@@ -1,6 +1,6 @@
 from enum import Enum
 
-class Database_Game(Enum):
+class DatabaseGame(Enum):
     STEAM = 'steam'
     LOL = 'lol'
     APEX = 'apex'

@@ -1,9 +1,9 @@
 class StarException(Exception):
     "starcord original error: 1000"
     def __init__(self,
-                 message: str = 'Starcord Original exception',
+                 message: str = 'A exception occurred',
                  code: int = 1000,
-                 original = None):
+                 original:Exception = None):
         
         self.code = code
         self.message = message
@@ -18,7 +18,10 @@ class StarException(Exception):
 
 class CommandError(StarException):
     "Command original error: 1100"
-
+    def __init__(self,
+                 message: str = 'A command exception occurred'):
+        self.code = 1100
+        self.message = message
 
 class MysqlError(StarException):
     "MySQL original error: 1200"

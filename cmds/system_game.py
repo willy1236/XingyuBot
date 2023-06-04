@@ -6,7 +6,7 @@ from datetime import timedelta
 from core.classes import Cog_Extension
 from starcord import BotEmbed,Jsondb,ChoiceList
 from starcord.interface.game import *
-from starcord.type.game import Database_Game
+from starcord.type.game import DatabaseGame
 
 # def player_search(url):
 #     response = requests.get(url)
@@ -24,7 +24,6 @@ hoyo_game_option = [
     discord.OptionChoice(name='原神',value=genshin.Game.GENSHIN),
     discord.OptionChoice(name='崩壞3rd',value=genshin.Game.HONKAI),
     discord.OptionChoice(name='崩壞：星穹軌道',value='hkrpg')
-    
 ]
 
 debug_guild = Jsondb.jdata.get('debug_guild')
@@ -58,7 +57,7 @@ class system_game(Cog_Extension):
         if game in unneed_verify:
             player_name = value
         
-        elif game == Database_Game.STEAM:
+        elif game == DatabaseGame.STEAM:
             APIdata = SteamInterface().get_user(value)
             if APIdata:
                 player_name = APIdata.name
@@ -67,7 +66,7 @@ class system_game(Cog_Extension):
                 await ctx.respond(f'錯誤:找不到此用戶',ephemeral=True)
                 return
         
-        elif game == Database_Game.LOL:
+        elif game == DatabaseGame.LOL:
             APIdata = RiotInterface().get_lolplayer(value)
             if APIdata:
                 player_name = APIdata.name
@@ -78,7 +77,7 @@ class system_game(Cog_Extension):
                 await ctx.respond(f'錯誤:找不到此用戶',ephemeral=True)
                 return
 
-        elif game == Database_Game.APEX:
+        elif game == DatabaseGame.APEX:
             APIdata = ApexInterface().get_player(value)
             if APIdata:
                 player_name = APIdata.name
@@ -87,7 +86,7 @@ class system_game(Cog_Extension):
                 await ctx.respond(f'錯誤:找不到此用戶',ephemeral=True)
                 return
 
-        elif game == Database_Game.OSU:
+        elif game == DatabaseGame.OSU:
             APIdata = OsuInterface().get_player(value)
             if APIdata:
                 player_name = APIdata.name
@@ -110,13 +109,13 @@ class system_game(Cog_Extension):
         
         if game:
             dbdata = self.sqldb.get_game_data(userid,game)
-            if game == Database_Game.STEAM:
+            if game == DatabaseGame.STEAM:
                 APIdata = SteamInterface().get_user(dbdata['player_id'])
-            elif game == Database_Game.OSU:
+            elif game == DatabaseGame.OSU:
                 APIdata = OsuInterface().get_player(dbdata['player_name'])
-            elif game == Database_Game.APEX:
+            elif game == DatabaseGame.APEX:
                 APIdata = ApexInterface().get_player(dbdata['player_name'])
-            elif game == Database_Game.LOL:
+            elif game == DatabaseGame.LOL:
                 APIdata = RiotInterface().get_lolplayer(dbdata['player_name'])
             
             if APIdata:

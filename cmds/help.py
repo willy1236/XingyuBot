@@ -2,8 +2,7 @@ import discord
 from discord.ext import commands,pages
 from core.classes import Cog_Extension
 from discord.commands import SlashCommandGroup
-from starcord import BotEmbed
-from starcord.utility import ChoiceList
+from starcord import BotEmbed,ChoiceList
 
 
 info_option = ChoiceList.set('info_option')
@@ -15,17 +14,6 @@ class help(Cog_Extension):
         embed = BotEmbed.basic(self,f"你好~我是{self.bot.user.name}，是一個discord機器人喔~\n你可以輸入`/help`來查看所有指令的用法\n\n希望我能在discord上幫助到你喔~\n有任何建議與需求可以使用`/feedback`指令")
         embed.set_footer(text="此機器人由 威立#6445 負責維護")
         await ctx.respond(embed=embed)
-
-    @commands.slash_command(description='機器人統計')
-    @commands.is_owner()
-    async def count(self,ctx,guild:discord.Option(bool,name='是否列出伺服器')):
-        embed = BotEmbed.basic(self,f"依據目前的資料\n目前我已服務了{len(self.bot.guilds)}個伺服器\n共包含了{len(self.bot.users)}位成員喔~")
-        if guild:
-            name_list = []
-            for i in self.bot.guilds:
-                name_list.append(i.name)
-            embed2 = BotEmbed.simple(','.join(name_list))
-        await ctx.respond(embeds=[embed,embed2])
 
     @commands.slash_command(description='一些資訊')
     async def info(self, ctx, arg:discord.Option(str,name='選項',description='',choices=info_option)):
@@ -73,7 +61,7 @@ class help(Cog_Extension):
             embed.add_field(name="!!info <內容/help>", value="獲得相關資訊", inline=False)
             embed.add_field(name="!!feedback <內容>", value="傳送訊息給機器人擁有者", inline=False)
             #embed.add_field(name="!!find <id>", value="搜尋指定ID", inline=False)
-            embed.add_field(name="!!lottery [次數]", value="抽獎試手氣", inline=False)
+            embed.add_field(name="!!draw [次數]", value="抽獎試手氣", inline=False)
             embed.add_field(name="!!set", value="設定自動通知", inline=False)
             embed.add_field(name="!!about", value="關於機器人的小資訊", inline=False)
             embed.set_footer(text="輸入!!help user查詢指令用法")

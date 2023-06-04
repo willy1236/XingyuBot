@@ -19,11 +19,10 @@ class task(Cog_Extension):
         if self.bot.user.id == 589744540240314368:
             scheduler = AsyncIOScheduler()
             scheduler.add_job(self.sign_reset,'cron',hour=4,minute=0,second=0,jitter=60)
-            #scheduler.add_job(self.covid_update,'cron',hour=14,minute='30,40',second=0)
             scheduler.add_job(self.apex_crafting_update,'cron',hour=1,minute=5,second=0,jitter=60)
             scheduler.add_job(self.apex_map_update,'cron',minute='00,15,30,45',second=1,jitter=60)
             scheduler.add_job(self.forecast_update,'cron',hour='00,03,06,09,12,15,18,21',minute=0,second=1,jitter=60)
-            scheduler.add_job(self.auto_hoyo_reward,'cron',hour=19,minute=0,second=1,jitter=60)
+            scheduler.add_job(self.auto_hoyo_reward,'cron',hour=19,minute=0,second=0,jitter=60)
 
             scheduler.start()
             self.earthquake_check.start()
@@ -35,7 +34,6 @@ class task(Cog_Extension):
         task_report_channel = self.bot.get_channel(Jsondb.jdata['task_report'])
         sqldb.truncate_table('user_sign')
         await task_report_channel.send('簽到已重置')
-        #await asyncio.sleep(10)
 
     @tasks.loop(minutes=1)
     async def earthquake_check(self):
@@ -85,9 +83,8 @@ class task(Cog_Extension):
                 else:
                     await channel.send('Covid 疫情資訊',embed=CovidReport.desplay())
                 await asyncio.sleep(0.5)
-        #await asyncio.sleep(10)
 
-    
+
     async def apex_crafting_update(self):
         crafting = ApexInterface().get_crafting()
         if crafting:
@@ -105,8 +102,6 @@ class task(Cog_Extension):
                 else:
                     await channel.send('Apex合成台內容自動更新資料',embed=crafting.desplay())
                 await asyncio.sleep(0.5)
-        #await asyncio.sleep(10)
-        #self.apex_crafting_update.stop()
 
     async def apex_map_update(self):
         map = ApexInterface().get_map_rotation()
@@ -125,8 +120,6 @@ class task(Cog_Extension):
                 else:
                     await channel.send('Apex地圖輪替自動更新資料',embed=map.desplay())
                 await asyncio.sleep(0.5)
-        #self.apex_map_update.change_interval(time=task.__gettime_15min())
-        #await asyncio.sleep(10)
 
     async def forecast_update(self):
         forecast = CWBInterface().get_forecast()
@@ -145,8 +138,6 @@ class task(Cog_Extension):
                 else:
                     await channel.send('台灣各縣市天氣預報',embed=forecast.desplay())
                 await asyncio.sleep(0.5)
-        #self.forecast_update.change_interval(time=task.__gettime_3hr())
-        #await asyncio.sleep(10)
 
     # @tasks.loop(seconds=1)
     # async def time_task(self):

@@ -4,7 +4,7 @@ from core.classes import Cog_Extension
 from discord.commands import SlashCommandGroup
 
 from starcord.interface.user import *
-from starcord import BotEmbed,Jsondb,ChoiceList
+from starcord import BotEmbed,Jsondb,ChoiceList,sqldb,UserClient
 from starcord.ui_element.button import Delete_Pet_button
 
 jdict = Jsondb.jdict
@@ -17,7 +17,7 @@ class system_user(Cog_Extension):
     @pet.command(description='查看寵物資訊')
     async def check(self,ctx,user_dc:discord.Option(discord.Member,name='用戶',description='可不輸入以查詢自己',default=None)):
         user_dc = user_dc or ctx.author
-        pet = self.sqldb.get_user_pet(str(user_dc.id))
+        pet = UserClient.get_pet(str(user_dc.id))
         if pet:
             embed = pet.desplay()
             embed.title = f'{ctx.author.name} 的寵物'
@@ -29,9 +29,9 @@ class system_user(Cog_Extension):
     async def add(self,ctx,
                   species:discord.Option(str,name='物種',description='想認養的寵物物種',choices=option),
                   name:discord.Option(str,name='寵物名',description='想幫寵物取的名子')):
-        r = self.sqldb.create_user_pet(str(ctx.author.id),species,name)
+        r = sqldb.create_user_pet(str(ctx.author.id),species,name)
         if r:
-            await ctx.respond('你已經有寵物了')
+            await ctx.respond(r)
         else:
             await ctx.respond(f"你收養了一隻名叫 {name} 的{list(filter(lambda x: jdict['pet_option'][x]==species,jdict['pet_option']))[0]}!")
     
@@ -43,7 +43,7 @@ class system_user(Cog_Extension):
         #     except:
         #         return False
         
-        pet = self.sqldb.get_user_pet(str(ctx.author.id))
+        pet = UserClient.get_pet(str(ctx.author.id))
         if not pet:
             await ctx.respond('你沒有寵物')
             return

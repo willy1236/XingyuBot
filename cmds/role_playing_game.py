@@ -1,6 +1,7 @@
 import discord
 from core.classes import Cog_Extension
 from discord.ext import commands
+from discord.commands import SlashCommandGroup
 
 from starcord import BotEmbed,sqldb,UserClient
 
@@ -32,6 +33,8 @@ class RPGbutton2(discord.ui.View):
             await interaction.response.edit_message(content=result)
 
 class role_playing_game(Cog_Extension):
+    #work = SlashCommandGroup("work", "工作相關指令")
+    
     @commands.slash_command(description='進行冒險（開發中）')
     async def advance(self,ctx):
         # await ctx.respond('敬請期待',ephemeral=False)
