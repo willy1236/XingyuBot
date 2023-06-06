@@ -8,6 +8,7 @@ set_option = ChoiceList.set('channel_set_option')
 class moderation(Cog_Extension):
     @commands.slash_command(description='清理訊息')
     @commands.has_permissions(manage_messages=True)
+    @commands.guild_only()
     async def clean(self,
                     ctx:discord.ApplicationContext,
                     num:discord.Option(int,name='數量',description='要清理的訊息數，與訊息id擇一提供',required=False),
@@ -30,6 +31,7 @@ class moderation(Cog_Extension):
 
     @commands.slash_command(description='設定通知頻道')
     @commands.has_permissions(manage_channels=True)
+    @commands.guild_only()
     async def set(self,ctx:discord.ApplicationContext,
                   set_type:discord.Option(str,name='通知類型',description='要接收的通知類型',required=True,choices=set_option),
                   channel:discord.Option(discord.abc.GuildChannel,name='頻道',description='要接收通知的頻道',default=None),

@@ -12,6 +12,19 @@ class SendMessageModal(discord.ui.Modal):
         super().__init__(*args, **kwargs)
         self.add_item(discord.ui.InputText(label="要傳送的訊息", style=discord.InputTextStyle.long))
 
+class BotPanel(discord.ui.View):
+    def __init__(self,bot):
+        super().__init__()
+        self.bot = bot
+    
+    @discord.ui.button(label="伺服器列表",row=1,style=discord.ButtonStyle.primary)
+    async def button_callback1(self, button: discord.ui.Button, interaction: discord.Interaction):
+        name_list = []
+        for i in self.bot.guilds:
+            name_list.append(i.name)
+        embed = BotEmbed.simple(','.join(name_list),'伺服器列表')
+        await interaction.response.send_message(content="",ephemeral=False,embed=embed)
+
 debug_guild = Jsondb.jdata.get('debug_guild')
 
 class owner(Cog_Extension):
@@ -288,7 +301,7 @@ class owner(Cog_Extension):
             embed = BotEmbed.simple(','.join(name_list),'伺服器列表')
             embed_list.append(embed)
 
-        await ctx.respond(f'',embeds=embed_list)
+        await ctx.respond(f'',embeds=embed_list,view=BotPanel(self.bot))
 
 
 def setup(bot):

@@ -30,6 +30,9 @@ class error(Cog_Extension):
         elif isinstance(error,commands.errors.ArgumentParsingError):
             await ctx.respond(f'參數錯誤:{error}',ephemeral=True)
         
+        elif isinstance(error,commands.errors.NoPrivateMessage):
+            await ctx.respond(f'此指令不可在DM中使用',ephemeral=True)
+        
         elif isinstance(error,discord.ApplicationCommandInvokeError):
             if isinstance(error.original,StarException):
                 await ctx.respond(str(error.original),ephemeral=True)
@@ -41,14 +44,14 @@ class error(Cog_Extension):
 
             else:
                 await ctx.respond(f'指令調用時發生錯誤：```py\n{error.original}```',ephemeral=True)
-                if ctx.guild.id != 566533708371329024:
+                if not ctx.guild or ctx.guild.id != 566533708371329024:
                     await BRS.error(self,ctx,error)
                 log.error(f'{error},{type(error)},{type(error.original)}')
         
         elif isinstance(error,discord.ApplicationCommandError):
             await ctx.respond(f'{error}',ephemeral=True)
         else:
-            if ctx.guild.id != 566533708371329024:
+            if not ctx.guild or ctx.guild.id != 566533708371329024:
                 await BRS.error(self,ctx,error)
             await ctx.respond(f'發生未知錯誤\n```{error.original}```',ephemeral=True)
             log.error(f'{error},{type(error)}')

@@ -440,23 +440,23 @@ class command(Cog_Extension):
         result = random.choice(args)
         await ctx.respond(f'我選擇:{result}')
 
-    @commands.cooldown(rate=1,per=50)
-    @commands.slash_command(description='既然ChatGPT那麼紅，那為何不試試看跟AI聊天呢?')
-    async def chat(self,ctx:discord.ApplicationContext,content:discord.Option(str,name='訊息',description='要傳送的訊息內容')):
-        await ctx.defer()
-        raise CommandError('目前聊天的額度已過期，故無法使用此指令，敬請期待未來更新')
-        response = openai.Completion.create(
-            model="text-davinci-003",
-            prompt=content,
-            temperature=0.9,
-            max_tokens=500,
-            top_p=1,
-            frequency_penalty=0.0,
-            presence_penalty=0.6,
-            stop=[" Human:", " AI:"]
-        )
-        text = response['choices'][0]['text']
-        await ctx.respond(text)
+    # @commands.cooldown(rate=1,per=50)
+    # @commands.slash_command(description='既然ChatGPT那麼紅，那為何不試試看跟AI聊天呢?')
+    # async def chat(self,ctx:discord.ApplicationContext,content:discord.Option(str,name='訊息',description='要傳送的訊息內容')):
+    #     await ctx.defer()
+    #     raise CommandError('目前聊天的額度已過期，故無法使用此指令，敬請期待未來更新')
+    #     response = openai.Completion.create(
+    #         model="text-davinci-003",
+    #         prompt=content,
+    #         temperature=0.9,
+    #         max_tokens=500,
+    #         top_p=1,
+    #         frequency_penalty=0.0,
+    #         presence_penalty=0.6,
+    #         stop=[" Human:", " AI:"]
+    #     )
+    #     text = response['choices'][0]['text']
+    #     await ctx.respond(text)
 
     @busytime.command(description='新增沒空時間')
     async def add(self,ctx,
