@@ -21,7 +21,7 @@ class help(Cog_Extension):
             text = "總表 | info可用選項\n指令用法:!!info <參數>\nvpn類\nvpn | vpn列表\nvpn01 | vpn使用教學\n\nminecraft類\nmc | minecraft總表\nmc01 | minecraft資料夾\nmc02 | 如何裝模組\n\n共用類\nshare | 雲端共用資料夾資訊"
 
         elif arg == 'vpn':
-            text = "vpn | vpn列表\nRadmin VPN\n名稱:willy1236_1 密:123456987 | willy的房間\nzerotier\nID:b15644912ed8306b | willy的房間"
+            text = "vpn | vpn列表\nRadmin VPN\n名稱:willy1236_1 密:123456987 | willy的房間\nzerotier\nID:b15644912ed8306b | willy的房間\nID:17d709436c5b2934 | 辣ㄆMinecraft專用"
         elif arg == 'vpn01':
             text = "vpn01 | vpn安裝教學\nwindow版\n1.下載Radmin(vpn)\nhttps://www.radmin-vpn.com/tw/\n2.選擇 加入網路 並輸入名稱及密碼(可輸入/info vpn查詢)\n3.記得 改名 讓大家知道你是誰\n\nMacOS版\n下載zerotier並安裝\nhttps://www.zerotier.com/download/\n2.右下角小工具中找到zerotier並右鍵點擊\n3.選擇Join New Network\n4.輸入房間ID\n\nIP依據開伺服器的方式不同分為\n區域網: xx.xxx.xx.xxx:ooooo\n伺服器: xx.xxx.xx.xxx\nx:開地圖的人的IP(VPN的IP)\no:公開至區網時會顯示的連接阜數字"
         elif arg == 'share':
