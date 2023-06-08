@@ -124,7 +124,7 @@ class ApexInterface(GameInterface):
     
     def get_map_rotation(self):
         params={'auth':self.auth}
-        r = requests.get(f'{self.url}/maprotation',params=params).json()
+        r = requests.get(f'{self.url}/maprotation',params=params)
         if r.status_code == 200:
             return ApexMapRotation(r.json())
         else:
@@ -132,8 +132,8 @@ class ApexInterface(GameInterface):
 
     def get_server_status(self):
         params={'auth':self.auth}
-        response = requests.get(f'{self.url}/servers',params=params).json()
-        return ApexStatus(response)
+        r = requests.get(f'{self.url}/servers',params=params)
+        return ApexStatus(r.json())
 
 
 class SteamInterface(GameInterface):

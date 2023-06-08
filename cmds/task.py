@@ -1,4 +1,4 @@
-import asyncio,discord,genshin
+import asyncio,discord,genshin,logging
 from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from datetime import datetime, timezone, timedelta
@@ -7,6 +7,14 @@ from discord.ext import commands,tasks
 from core.classes import Cog_Extension
 from starcord import Jsondb,sqldb
 from starcord.interface import *
+
+
+apsc_log = logging.getLogger('apscheduler')
+formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s')
+consoleHandler = logging.StreamHandler()
+consoleHandler.setLevel(logging.WARNING)
+consoleHandler.setFormatter(formatter)
+apsc_log.addHandler(consoleHandler)
 
 class task(Cog_Extension):
     def __init__(self,*args,**kwargs):
