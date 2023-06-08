@@ -47,7 +47,7 @@ class BotUpdateModal(discord.ui.Modal):
         embed.set_author(name="機器人更新通知",icon_url=picdata['radio_001'])
         embed.set_footer(text='Bot Radio System')
         send_success = 0
-        channels = sqldb.get_notice_channel('all_anno')
+        channels = sqldb.get_notice_channel('bot')
 
         for i in channels:
             channel = interaction.client.get_channel(i['channel_id'])
