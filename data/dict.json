@@ -1,12 +1,12 @@
 {
     "channel_set_option": {
-        "跨群聊天": "crass_chat",
         "全群公告": "all_anno",
+        "機器人更新通知": "bot",
         "地震通知": "earthquake",
+        "台灣各縣市天氣預報": "forecast",
         "Apex合成物品更新": "apex_crafting",
         "Apex地圖輪替": "apex_map",
-        "台灣各縣市天氣預報": "forecast",
-        "機器人更新通知": "bot"
+        "跨群聊天": "crass_chat"
     },
     "game_set_option": {
         "Steam": "steam",
@@ -74,7 +74,6 @@
         "vpn | vpn列表":"vpn",
         "vpn | vpn安裝教學":"vpn01",
         "share | 雲端共用資料夾":"share",
-        "mc | mc總表":"mc",
         "mc | minecraft資料夾":"mc01",
         "mc | 如何裝模組":"mc02",
         "trpg | 參加房間": "trpg01",

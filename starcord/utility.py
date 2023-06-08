@@ -21,22 +21,13 @@ class BotEmbed:
         embed = discord.Embed(title=title,description=description,color=0xc4e9ff)
         embed.set_author(name=name,icon_url=icon_url,url=url)
         return embed
-    
-    @staticmethod
-    def all_anno(msg:str):
-        '''全群公告'''
-        picdata = Jsondb.picdata
-        embed=discord.Embed(description=msg,color=0xc4e9ff)
-        embed.set_author(name="Bot Radio Station",icon_url=picdata['radio_001'])
-        embed.set_footer(text='廣播電台 | 機器人全群公告')
-        return embed
 
     @staticmethod
     def brs():
-        '''Bot Radio Station 格式'''
+        '''Bot Radio System 格式'''
         picdata = Jsondb.picdata
         embed = discord.Embed(color=0xc4e9ff)
-        embed.set_author(name="Bot Radio Station",icon_url=picdata['radio_001'])
+        embed.set_author(name="Bot Radio System",icon_url=picdata['radio_001'])
         return embed
 
     @staticmethod
@@ -45,15 +36,6 @@ class BotEmbed:
         picdata = Jsondb.picdata
         embed = discord.Embed(color=0xc4e9ff)
         embed.set_author(name="Lottery System",icon_url=picdata['lottery_001'])
-        return embed
-
-    @staticmethod
-    def bot_update(msg:str):
-        '''Bot Update格式'''
-        picdata = Jsondb.picdata
-        embed = discord.Embed(description=msg,color=0xc4e9ff)
-        embed.set_author(name="Bot Radio Station",icon_url=picdata['radio_001'])
-        embed.set_footer(text='廣播電台 | 機器人更新通知')
         return embed
 
 

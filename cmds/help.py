@@ -96,7 +96,7 @@ class help(Cog_Extension):
             embed.set_footer(text="輸入/help use查詢指令用法")
             await ctx.respond(embed=embed)
         elif arg == 'set':
-            embed = BotEmbed.simple("設定(Set) 指令","設定機器人自動通知\n記得將機器人的訊息保持在頻道的最新訊息，以免機器人找不到訊息而重複發送")
+            embed = BotEmbed.simple("設定(Set) 指令","設定機器人自動通知\n若為定時通知，記得將機器人的訊息保持在頻道的最新訊息，以免機器人找不到訊息而重複發送")
             embed.add_field(name="/set crass_chat [頻道]", value="設定跨群聊天頻道", inline=False)
             embed.add_field(name="/set all_anno [頻道]", value="設定全群公告頻道", inline=False)
             embed.add_field(name="/set apex_crafting [頻道]", value="設定apex合成器內容頻道", inline=False)

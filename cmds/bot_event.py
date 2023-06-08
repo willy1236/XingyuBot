@@ -1,7 +1,7 @@
 import discord,datetime
 from discord.ext import commands
 from core.classes import Cog_Extension
-from starcord import Jsondb,BotEmbed,BRS
+from starcord import Jsondb,BotEmbed,BRS,sqldb
 
 class ScamChack:
     def __init__(self,text:str):
@@ -15,7 +15,7 @@ class ScamChack:
         else:
             return False
 
-voice_updata = Jsondb.jdata.get('voice_updata',False)
+voice_updata = Jsondb.jdata.get('voice_updata')
 
 voice_list = {
     613747262291443742: 631498685250797570,
@@ -37,38 +37,36 @@ keywords = {
     '消費':'那你好像也是頂級消費者喔'
 }
 
+dbdate = sqldb.get_notice_channel('crass_chat')
+crass_chat_channels = []
+for i in dbdate:
+    crass_chat_channels.append(i['channel_id'])
+
 class event(Cog_Extension):    
-    #跨群聊天Ver.1.0
     @commands.Cog.listener()
-    async def on_message(self,msg):
-        cdata = Jsondb.cdata['crass_chat']
-        if msg.channel.id in cdata and not msg.author.bot:
-            await msg.delete()
-
-            embed=discord.Embed(description=msg.content,color=0x4aa0b5)
-            embed.set_author(name=msg.author,icon_url=msg.author.display_avatar.url)
-            embed.set_footer(text=f'來自: {msg.guild}')
-
-            for i in cdata:
-                channel = self.bot.get_channel(i)
-                if channel:
-                    await channel.send(embed=embed)
-
-    @commands.Cog.listener()
-    async def on_message(self, message):
-        #關鍵字觸發
-        if message.content in keywords and self.bot.user.id == 589744540240314368:
-            await message.reply(keywords[message.content])
-        #介紹
-        if message.content == '小幫手' or message.content == f'<@{self.bot.user.id}>':
-            embed = BotEmbed.basic(self,description=f"你好~\n我是{self.bot.user.name}，是一個discord機器人喔~\n你可以輸入`/help`來查看所有指令的用法\n\n希望我能在discord上幫助到你喔~")
-            await message.reply(embed=embed)
+    async def on_message(self, message: discord.Message):
         #被提及回報
         if self.bot.user in message.mentions:
             await BRS.mentioned(self,message)
         #被提及所有人回報
         if message.mention_everyone:
             await BRS.mention_everyone(self,message)
+        
+        #私人訊息回報
+        if isinstance(message.channel,discord.channel.DMChannel) and message.author != self.bot.user:
+            await BRS.dm(self,message)
+            return
+
+        #關鍵字觸發
+        if message.content in keywords and self.bot.user.id == 589744540240314368:
+            await message.reply(keywords[message.content])
+            return
+        #介紹
+        if message.content == '小幫手' or message.content == f'<@{self.bot.user.id}>':
+            embed = BotEmbed.basic(self,description=f"你好~\n我是{self.bot.user.name}，是一個discord機器人喔~\n你可以輸入`/help`來查看所有指令的用法\n\n希望我能在discord上幫助到你喔~")
+            await message.reply(embed=embed)
+            return
+
         #詐騙檢查
         # ScamChack = False
         # if self.bot.user.id == 589744540240314368 and message.mention_everyone:
@@ -86,9 +84,19 @@ class event(Cog_Extension):
         #     await BRS.scam(self,message,matches)
         #     await message.delete()
         #     await message.channel.send('疑似為詐騙訊息，已自動刪除')
-        #私人訊息回報
-        if isinstance(message.channel,discord.channel.DMChannel) and message.author != self.bot.user:
-            await BRS.dm(self,message)
+
+        #跨群聊天Ver.1.0
+        if not message.author.bot and message.channel.id in crass_chat_channels:
+            await message.delete()
+
+            embed=discord.Embed(description=message.content,color=0x4aa0b5)
+            embed.set_author(name=message.author,icon_url=message.author.display_avatar.url)
+            embed.set_footer(text=f'來自: {message.guild}')
+
+            for i in crass_chat_channels:
+                channel = self.bot.get_channel(i)
+                if channel:
+                    await channel.send(embed=embed)
             return
 
 

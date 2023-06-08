@@ -58,6 +58,7 @@ class JsonDatabase():
     def write(self,file:str,data:dict):
         try:
             location = self.__dict[file]
+            setattr(self,file,data)
             with open(file=location,mode='w',encoding='utf8') as jfile:
                 json.dump(data,jfile,indent=4,ensure_ascii=False)
         except:
@@ -85,6 +86,16 @@ class JsonDatabase():
             return self.tokens[name]
         else:
             raise ValueError('無此API token')
+        
+    def read_cache(self,key):
+        """讀取cache的指定資料"""
+        return self.cache.get(key)
+    
+    def write_cache(self,key,value):
+        """將指定資料寫入cache並更新內容"""
+        with open(f'{self.location}/cache.json','w',encoding="utf-8") as jfile:
+            self.cache[key] = value
+            json.dump(self.cache,jfile,indent=4,ensure_ascii=False)
 
     # @staticmethod
     # async def get_gamedata(user_id:str, game:str, ctx:discord.ApplicationContext=None):

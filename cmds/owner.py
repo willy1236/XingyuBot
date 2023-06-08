@@ -1,4 +1,4 @@
-import discord,os,mcrcon,asyncio
+import discord,os,mcrcon,datetime
 from discord.ext import commands
 from discord.commands import SlashCommandGroup
 
@@ -11,6 +11,54 @@ class SendMessageModal(discord.ui.Modal):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.add_item(discord.ui.InputText(label="要傳送的訊息", style=discord.InputTextStyle.long))
+
+class AnnoModal(discord.ui.Modal):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.add_item(discord.ui.InputText(label="要傳送的公告", style=discord.InputTextStyle.long))
+
+    async def callback(self, interaction: discord.Interaction):
+        picdata = Jsondb.picdata
+        embed = discord.Embed(description=self.children[0].value,color=0xc4e9ff,timestamp=datetime.datetime.now())
+        embed.set_author(name="機器人全群公告",icon_url=picdata['radio_001'])
+        embed.set_footer(text='Bot Radio System')
+        send_success = 0
+        channels = sqldb.get_notice_channel('all_anno')
+
+        for i in channels:
+            channel = interaction.client.get_channel(i['channel_id'])
+            if channel:
+                try:
+                    await channel.send(embed=embed)
+                    send_success += 1
+                except:
+                    pass
+
+        await interaction.response.send_message(f"已向{send_success}/{len(channels)}個頻道發送公告")
+
+class BotUpdateModal(discord.ui.Modal):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.add_item(discord.ui.InputText(label="要傳送的更新訊息", style=discord.InputTextStyle.long))
+
+    async def callback(self, interaction: discord.Interaction):
+        picdata = Jsondb.picdata
+        embed = discord.Embed(description=self.children[0].value,color=0xc4e9ff,timestamp=datetime.datetime.now())
+        embed.set_author(name="機器人更新通知",icon_url=picdata['radio_001'])
+        embed.set_footer(text='Bot Radio System')
+        send_success = 0
+        channels = sqldb.get_notice_channel('all_anno')
+
+        for i in channels:
+            channel = interaction.client.get_channel(i['channel_id'])
+            if channel:
+                try:
+                    await channel.send(embed=embed)
+                    send_success += 1
+                except:
+                    pass
+
+        await interaction.response.send_message(f"已向{send_success}/{len(channels)}個頻道發送公告")
 
 class BotPanel(discord.ui.View):
     def __init__(self,bot):
@@ -65,64 +113,17 @@ class owner(Cog_Extension):
     @commands.slash_command(description='全群公告',guild_ids=debug_guild)
     @commands.is_owner()
     async def anno(self,ctx:discord.ApplicationContext):
-        await ctx.defer()
-        msg = await ctx.respond('請輸入要發送的訊息')
-
-        def check(m):
-            return m.author == ctx.author
-
-        try:
-            m = await self.bot.wait_for('message', timeout=60.0, check=check)
-        except asyncio.TimeoutError:
-            await msg.message.edit('全群公告：超時',delete_after=5)
-            return
-        text = m.content
-        send_success = 0
-        channels = sqldb.get_notice_channel('all_anno')
-
-        embed = BotEmbed.all_anno(text)
-        for i in channels:
-            channel = self.bot.get_channel(i['channel_id'])
-            if channel:
-                try:
-                    await channel.send(embed=embed)
-                    send_success += 1
-                except:
-                    pass
-
-        await msg.message.edit(f"已向{send_success}/{len(channels)}個頻道發送公告")
+        modal = AnnoModal(title="全群公告")
+        await ctx.send_modal(modal)
+        await modal.wait()
 
     #bot_update
     @commands.slash_command(description='機器人更新通知',guild_ids=debug_guild)
     @commands.is_owner()
-    async def bupdate(self,ctx:discord.ApplicationContext):
-        msg = await ctx.respond('請輸入要發送的訊息')
-
-        def check(m):
-            return m.author == ctx.author
-
-        try:
-            m = await self.bot.wait_for('message', timeout=60.0, check=check)
-        except asyncio.TimeoutError:
-            await msg.message.edit('更新通知：超時',delete_after=5)
-            return
-
-        text = m.content
-        
-        send_success = 0
-        channels = sqldb.get_notice_channel('bot')
-
-        embed = BotEmbed.bot_update(text)
-        for i in channels:
-            channel = self.bot.get_channel(i['channel_id'])
-            if channel:
-                try:
-                    await channel.send(embed=embed)
-                    send_success += 1
-                except:
-                    pass
-
-        await msg.message.edit(f"已向{send_success}/{len(channels)}個頻道發送公告")
+    async def botupdate(self,ctx:discord.ApplicationContext):
+        modal = BotUpdateModal(title="機器人更新")
+        await ctx.send_modal(modal)
+        await modal.wait()
 
     #edit
     @commands.slash_command(description='編輯訊息',guild_ids=debug_guild)

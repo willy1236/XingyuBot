@@ -45,14 +45,12 @@ class task(Cog_Extension):
 
     @tasks.loop(minutes=1)
     async def earthquake_check(self):
-        cache = Jsondb.cache
-        timefrom = cache['timefrom']
+        timefrom = Jsondb.read_cache('timefrom')
         data = CWBInterface().get_report_auto(timefrom)
         if data:
             embed = data.desplay()
             time = datetime.strptime(data.originTime, "%Y-%m-%d %H:%M:%S")+timedelta(seconds=1)
-            cache['timefrom'] = time.strftime("%Y-%m-%dT%H:%M:%S")
-            Jsondb.write('cache',cache)
+            Jsondb.write_cache('timefrom',time.strftime("%Y-%m-%dT%H:%M:%S"))
 
             if data.auto_type == 'E-A0015-001':
                 text = '顯著有感地震報告'
