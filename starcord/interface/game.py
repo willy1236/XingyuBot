@@ -103,32 +103,32 @@ class ApexInterface(GameInterface):
         self.url = 'https://api.mozambiquehe.re'
 
     def get_player(self,username:str,platform:str='PC'):
-        try:
-            params={
-                'auth':self.auth,
-                'player':username,
-                'platform':platform
-            }
-            response = requests.get(f'{self.url}/bridge',params=params).json()
-            return ApexPlayer(response)
-        except:
+        params={
+            'auth':self.auth,
+            'player':username,
+            'platform':platform
+        }
+        r = requests.get(f'{self.url}/bridge',params=params)
+        if r.status_code == 200:
+            return ApexPlayer(r.json())
+        else:
             return None
     
     def get_crafting(self):
         params={'auth':self.auth}
-        response = requests.get(f'{self.url}/crafting',params=params).json()
-        if "Error" in response or not response:
-            return None
+        r = requests.get(f'{self.url}/crafting',params=params)
+        if r.status_code == 200:
+            return ApexCrafting(r.json())
         else:
-            return ApexCrafting(response)
+            return None
     
     def get_map_rotation(self):
         params={'auth':self.auth}
-        response = requests.get(f'{self.url}/maprotation',params=params).json()
-        if "Error" in response or not response:
-            return None
-        else:    
-            return ApexMapRotation(response)
+        r = requests.get(f'{self.url}/maprotation',params=params).json()
+        if r.status_code == 200:
+            return ApexMapRotation(r.json())
+        else:
+            return None  
 
     def get_server_status(self):
         params={'auth':self.auth}
