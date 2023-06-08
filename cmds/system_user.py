@@ -20,7 +20,7 @@ class system_user(Cog_Extension):
         pet = UserClient.get_pet(str(user_dc.id))
         if pet:
             embed = pet.desplay()
-            embed.title = f'{ctx.author.name} 的寵物'
+            embed.title = f'{user_dc.name} 的寵物'
             await ctx.respond(embed=embed)
         else:
             await ctx.respond('用戶沒有認養寵物')

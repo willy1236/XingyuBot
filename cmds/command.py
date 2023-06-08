@@ -527,7 +527,7 @@ class command(Cog_Extension):
             text += f"{date_str}: {','.join(list)}\n"
             date_now += datetime.timedelta(days=1)
 
-        embed = BotEmbed.simple(text,'目前有空時間')
+        embed = BotEmbed.simple('目前有空時間',text)
         await ctx.respond(embed=embed)
 
 def setup(bot):

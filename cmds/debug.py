@@ -45,11 +45,11 @@ class debug(Cog_Extension):
     #     raise StarException('test')
     #     await ctx.respond(f'done {data}')
 
-    @commands.slash_command()
-    async def modal_slash(self,ctx: discord.ApplicationContext):
-        """Shows an example of a modal dialog being invoked from a slash command."""
-        modal = MyModal(title="Modal Slash Command")
-        await ctx.send_modal(modal)
+    # @commands.slash_command()
+    # async def modal_slash(self,ctx: discord.ApplicationContext):
+    #     """Shows an example of a modal dialog being invoked from a slash command."""
+    #     modal = MyModal(title="Modal Slash Command")
+    #     await ctx.send_modal(modal)
     
     # @commands.command()
     # @commands.is_owner()
