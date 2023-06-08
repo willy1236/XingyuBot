@@ -59,7 +59,7 @@ class role_playing_game(Cog_Extension):
     async def bag(self,ctx,user_dc:discord.Option(discord.Member,name='用戶',description='留空以查詢自己',default=None)):
         user_dc = user_dc or ctx.author
         data = sqldb.get_bag_desplay(user_dc.id)
-        embed = BotEmbed.general(f'{user_dc.name}的包包')
+        embed = BotEmbed.simple(f'{user_dc.name}的包包')
         if data:
             text = ""
             for item in data:

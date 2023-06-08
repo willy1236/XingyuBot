@@ -91,7 +91,7 @@ class command(Cog_Extension):
         else:
             user_list = user_list.split()
         
-        embed = BotEmbed.general("身分組計算結果")
+        embed = BotEmbed.simple("身分組計算結果")
         for i in user_list:
             user = await find.user(ctx,i)
             if user:
@@ -425,7 +425,7 @@ class command(Cog_Extension):
     @commands.cooldown(rate=1,per=10)
     async def feedback(self,
                        ctx:discord.ApplicationContext,
-                       text:discord.Option(str,name='訊息',description='要傳送的訊息內容')):
+                       text:discord.Option(str,name='訊息',description='要傳送的訊息內容，歡迎提供各項建議')):
         await ctx.defer()
         await BRS.feedback(self,ctx,text)
         await ctx.respond(f"訊息已發送!",ephemeral=True,delete_after=3)

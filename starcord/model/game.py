@@ -15,7 +15,7 @@ class LOLPlayer():
         self.summonerLevel = data['summonerLevel']
 
     def desplay(self):
-        embed = BotEmbed.general("LOL玩家資訊")
+        embed = BotEmbed.simple("LOL玩家資訊")
         embed.add_field(name="玩家名稱", value=self.name, inline=False)
         embed.add_field(name="召喚師等級", value=self.summonerLevel, inline=False)
         embed.add_field(name="帳號ID", value=self.accountid, inline=False)
@@ -144,7 +144,7 @@ class LOLMatch():
             self.team.append(LOLTeamInMatch(i))
     
     def desplay(self):
-        embed = BotEmbed.general("LOL對戰")
+        embed = BotEmbed.simple("LOL對戰")
         gamemode = lol_jdict['mod'].get(self.gameMode) or self.gameMode
         embed.add_field(name="遊戲模式", value=gamemode, inline=False)
         embed.add_field(name="對戰ID", value=self.matchId, inline=False)

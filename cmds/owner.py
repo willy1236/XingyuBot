@@ -22,7 +22,7 @@ class BotPanel(discord.ui.View):
         name_list = []
         for i in self.bot.guilds:
             name_list.append(i.name)
-        embed = BotEmbed.simple(','.join(name_list),'伺服器列表')
+        embed = BotEmbed.simple('伺服器列表',','.join(name_list))
         await interaction.response.send_message(content="",ephemeral=False,embed=embed)
 
 debug_guild = Jsondb.jdata.get('debug_guild')
@@ -291,17 +291,26 @@ class owner(Cog_Extension):
     @commands.is_owner()
     async def panel(self,ctx,guild:discord.Option(bool,name='是否列出伺服器')):
         embed_list = []
-        embed = BotEmbed.basic(self,f'伺服器總數：{len(self.bot.guilds)}\n成員：{len(self.bot.users)}')
+        embed = BotEmbed.basic(self,description=f'伺服器總數：{len(self.bot.guilds)}\n成員：{len(self.bot.users)}')
         embed_list.append(embed)
         
         if guild:
             name_list = []
             for i in self.bot.guilds:
                 name_list.append(i.name)
-            embed = BotEmbed.simple(','.join(name_list),'伺服器列表')
+            embed = BotEmbed.simple('伺服器列表',','.join(name_list))
             embed_list.append(embed)
 
         await ctx.respond(f'',embeds=embed_list,view=BotPanel(self.bot))
+
+    @commands.slash_command(description='獲取指令',guild_ids=debug_guild)
+    @commands.is_owner()
+    async def getcommand(self,ctx,name:discord.Option(str,name='指令名稱')):
+        data = self.bot.get_application_command(name)
+        if data:
+            await ctx.respond(embed=BotEmbed.simple(data.name,data.id))
+        else:
+            await ctx.respond(embed=BotEmbed.simple('指令未找到'))
 
 
 def setup(bot):

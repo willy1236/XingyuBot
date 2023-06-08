@@ -265,8 +265,8 @@ class system_game(Cog_Extension):
     @hoyo.command(description='如何設定cookies(需先設定才能使用其他功能)')
     @commands.cooldown(rate=1,per=1)
     async def help(self,ctx):
-        embed = BotEmbed.simple("1.前往 https://www.hoyolab.com/ 並登入\n2.複製以下代碼```script:d=document.cookie; c=d.includes('account_id') || alert('過期或無效的Cookie,請先登出帳號再重新登入!'); c && document.write(d)```\n3.在網址列打上java後直接貼上複製的代碼\n4.找到`ltuid=`跟`ltoken=`並複製其中的內容\n5.使用指令 /hoyo set <ltuid> <ltoken>")
-        embed2 = BotEmbed.simple("擁有此cookie將可以使機器人以登入帳號的身分瀏覽與操作hoyolab的相關功能，但無法用於登入遊戲與改變遊戲中所持有的內容。\n若對此功能有疑慮，可隨時終止使用，cookie也可以隨時刪除，但米哈遊沒有官方正式API，故若不提供cookie將會無法使用相關功能。")
+        embed = BotEmbed.simple(description="1.前往 https://www.hoyolab.com/ 並登入\n2.複製以下代碼```script:d=document.cookie; c=d.includes('account_id') || alert('過期或無效的Cookie,請先登出帳號再重新登入!'); c && document.write(d)```\n3.在網址列打上java後直接貼上複製的代碼\n4.找到`ltuid=`跟`ltoken=`並複製其中的內容\n5.使用指令 /hoyo set <ltuid> <ltoken>")
+        embed2 = BotEmbed.simple(description="擁有此cookie將可以使機器人以登入帳號的身分瀏覽與操作hoyolab的相關功能，但無法用於登入遊戲與改變遊戲中所持有的內容。\n若對此功能有疑慮，可隨時終止使用，cookie也可以隨時刪除，但米哈遊沒有官方正式API，故若不提供cookie將會無法使用相關功能。")
         await ctx.respond(embeds=[embed,embed2])
 
     @hoyo.command(description='設定cookies')

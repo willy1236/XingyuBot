@@ -81,17 +81,17 @@
         "trpg | 放入角色": "trpg02"
     },
     "help_option": {
-        "use":"use",
-        "pt":"pt",
-        "game":"game",
-        "set":"set",
-        "role":"role",
-        "bet":"bet",
-        "music":"music",
-        "weather":"weather",
-        "user":"user",
-        "twitch":"twitch",
-        "admin":"admin"
+        "使用指令教學（use）":"use",
+        "通知系統（set）":"set",
+        "音樂系統（music）":"music",
+        "點數系統（pt）":"pt",
+        "遊戲查詢系統（game）":"game",
+        "身分組系統（role）":"role",
+        "賭盤系統（bet）":"bet",
+        "天氣系統（weather）":"weather",
+        "用戶系統（user）":"user",
+        "twitch相關（twitch）":"twitch",
+        "管理員指令（admin）":"admin"
     },
     "permissions": {
         "manage_channels":"管理頻道",

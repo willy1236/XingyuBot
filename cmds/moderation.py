@@ -45,7 +45,7 @@ class moderation(Cog_Extension):
                 roleid = None
             self.sqldb.set_notice_channel(guildid,set_type,channel.id,roleid)
             await ctx.respond(f'設定完成，已將 {set_type} 頻道設為 {channel.mention}')
-            await ctx.send(embed=BotEmbed.simple('請將機器人的訊息保持在此頻道的最新訊息，以免機器人找不到訊息而重複發送','溫馨提醒'),delete_after=10)
+            await ctx.send(embed=BotEmbed.simple('溫馨提醒','請將機器人的訊息保持在此頻道的最新訊息，以免機器人找不到訊息而重複發送'),delete_after=10)
         else:
             self.sqldb.remove_notice_channel(guildid,set_type)
             await ctx.respond(f'設定完成，已移除 {set_type} 頻道')
