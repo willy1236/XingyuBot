@@ -109,6 +109,7 @@ class system_game(Cog_Extension):
         
         if game:
             dbdata = self.sqldb.get_game_data(userid,game)
+            game = DatabaseGame(game)
             if game == DatabaseGame.STEAM:
                 APIdata = SteamInterface().get_user(dbdata['player_id'])
             elif game == DatabaseGame.OSU:
@@ -214,7 +215,7 @@ class system_game(Cog_Extension):
     @commands.cooldown(rate=1,per=3)
     async def user(self,
                    ctx:discord.ApplicationContext,
-                   username:discord.Option(str,name='玩家名稱',description='要查詢的玩家',default=None)):
+                   username:discord.Option(str,name='玩家名稱',description='要查詢的玩家')):
         player = ApexInterface().get_player(username)
         if player:
             await ctx.respond(content='查詢成功',embed=player.desplay())
@@ -233,12 +234,12 @@ class system_game(Cog_Extension):
         embed = ApexInterface().get_crafting().desplay()
         await ctx.respond(content='查詢成功',embed=embed)
 
-    @apex.command(description='查詢Apex伺服器資料',enabled=False)
-    @commands.cooldown(rate=1,per=3)
-    async def server(self,ctx):
-        return await ctx.respond(content='暫未開放')        
-        embed = ApexInterface().get_server_status().desplay()
-        await ctx.respond(content='查詢成功',embed=embed)
+    # @apex.command(description='查詢Apex伺服器資料',enabled=False)
+    # @commands.cooldown(rate=1,per=3)
+    # async def server(self,ctx):
+    #     return await ctx.respond(content='暫未開放')
+    #     embed = ApexInterface().get_server_status().desplay()
+    #     await ctx.respond(content='查詢成功',embed=embed)
 
     @dbd.command(description='查詢Dead by daylight玩家資料')
     @commands.cooldown(rate=1,per=1)

@@ -133,7 +133,10 @@ class ApexInterface(GameInterface):
     def get_server_status(self):
         params={'auth':self.auth}
         r = requests.get(f'{self.url}/servers',params=params)
-        return ApexStatus(r.json())
+        if r.status_code == 200:
+            return ApexStatus(r.json())
+        else:
+            return None
 
 
 class SteamInterface(GameInterface):

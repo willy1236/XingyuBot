@@ -367,7 +367,13 @@ class ApexMapRotation():
 
 class ApexStatus():
     def __init__(self,data):
-        print(data)
+        for i in data:
+            print(i)
+            for j in data[i]:
+                print(j)
+
+    def desplay(self):
+        pass
 
 class SteamUser():
     def __init__(self,data):
