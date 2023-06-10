@@ -330,7 +330,7 @@ class MySQLDatabase():
     def create_user_pet(self,user_id:str,pet_species:str,pet_name:str):
         try:
             self.cursor.execute(f"USE `database`;")
-            self.cursor.execute(f'INSERT INTO `user_pet` VALUES(%s,%s,%s);',(user_id,pet_species,pet_name))
+            self.cursor.execute(f'INSERT INTO `user_pet` VALUES(%s,%s,%s,%s);',(user_id,pet_species,pet_name,20))
             self.connection.commit()
         except sqlerror as e:
             if e.errno == 1062:

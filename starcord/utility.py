@@ -16,7 +16,7 @@ class BotEmbed:
         return embed
 
     @staticmethod
-    def general(name:str,icon_url:str=discord.Embed.Empty,url:str=discord.Embed.Empty,title:str=discord.Embed.Empty,description:str=discord.Embed.Empty):
+    def general(name:str=discord.Embed.Empty,icon_url:str=discord.Embed.Empty,url:str=discord.Embed.Empty,title:str=discord.Embed.Empty,description:str=discord.Embed.Empty):
         '''普通:自訂作者'''
         embed = discord.Embed(title=title,description=description,color=0xc4e9ff)
         embed.set_author(name=name,icon_url=icon_url,url=url)

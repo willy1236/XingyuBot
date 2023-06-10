@@ -231,11 +231,13 @@ class Pet():
         self.user_id = data['user_id']
         self.species = data['pet_species']
         self.name = data['pet_name']
+        self.food = data.get('food')
 
     def desplay(self):
-        embed = BotEmbed.general(f'寵物資訊')
+        embed = BotEmbed.simple()
         embed.add_field(name='寵物名',value=self.name)
         embed.add_field(name='寵物物種',value=self.species)
+        embed.add_field(name='飽食度',value=self.food)
         return embed
 
 #     def add_pet(self,name,species):

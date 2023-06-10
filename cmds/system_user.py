@@ -23,7 +23,8 @@ class system_user(Cog_Extension):
             embed.title = f'{user_dc.name} 的寵物'
             await ctx.respond(embed=embed)
         else:
-            await ctx.respond('用戶沒有認養寵物')
+            embed = BotEmbed.simple(f'{user_dc.name} 的寵物','用戶沒有認養寵物')
+            await ctx.respond(embed=embed)
     
     @pet.command(description='認養寵物')
     async def add(self,ctx,
