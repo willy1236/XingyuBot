@@ -22,9 +22,14 @@ voice_list = {
     726790741103476746: 1021072271277834250
 }
 
-member_list = {
+member_leave_list = {
     613747262291443742: 613747262291443744,
     1112602989924995106: 1112603854895329381
+}
+
+
+member_join_list = {
+
 }
 
 lobby_list = [
@@ -37,33 +42,34 @@ keywords = {
     '消費':'那你好像也是頂級消費者喔'
 }
 
-dbdate = sqldb.get_notice_channel('crass_chat')
+dbdata = sqldb.get_notice_channel('crass_chat')
 crass_chat_channels = []
-for i in dbdate:
+for i in dbdata:
     crass_chat_channels.append(i['channel_id'])
 
 class event(Cog_Extension):    
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
         #被提及回報
-        if self.bot.user in message.mentions:
-            await BRS.mentioned(self,message)
+        if self.bot.user in message.mentions and not self.bot.is_owner(message.author):
+            await BRS.mentioned(self.bot,message)
         #被提及所有人回報
         if message.mention_everyone:
-            await BRS.mention_everyone(self,message)
+            await BRS.mention_everyone(self.bot,message)
         
         #私人訊息回報
         if isinstance(message.channel,discord.channel.DMChannel) and message.author != self.bot.user:
-            await BRS.dm(self,message)
+            await BRS.dm(self.bot,message)
             return
 
         #關鍵字觸發
-        if message.content in keywords and self.bot.user.id == 589744540240314368:
-            await message.reply(keywords[message.content])
-            return
+        # if message.content in keywords and self.bot.user.id == 589744540240314368:
+        #     await message.reply(keywords[message.content])
+        #     return
         #介紹
-        if message.content == '小幫手' or message.content == f'<@{self.bot.user.id}>':
-            embed = BotEmbed.basic(self,description=f"你好~\n我是{self.bot.user.name}，是一個discord機器人喔~\n你可以輸入`/help`來查看所有指令的用法\n\n希望我能在discord上幫助到你喔~")
+        if message.content == self.bot.user.mention:
+            embed = BotEmbed.basic(self.bot,description=f"你好~我是{self.bot.user.name}，是一個discord機器人喔~\n你可以輸入 </help:1067700245015834638> 來查看所有指令的用法\n\n希望我能在discord上幫助到你喔~\n有任何建議與需求可以使用 </feedback:1067700244848058386> 指令")
+            embed.set_footer(text="此機器人由 威立#6445 負責維護")
             await message.reply(embed=embed)
             return
 
@@ -117,7 +123,7 @@ class event(Cog_Extension):
     #             await channel.set_permissions(user,overwrite=None,reason='身分組選擇:退出')
                     
     @commands.Cog.listener()
-    async def on_voice_state_update(self,user, before:discord.VoiceState, after:discord.VoiceState):
+    async def on_voice_state_update(self,user:discord.Member, before:discord.VoiceState, after:discord.VoiceState):
             def check(before, after):
                 if before.channel:
                     guild = before.channel.guild.id
@@ -175,11 +181,22 @@ class event(Cog_Extension):
 
 
     @commands.Cog.listener()
-    async def on_member_remove(self, member):
+    async def on_member_remove(self, member:discord.Member):
+        if self.bot.user.id != 589744540240314368:
+            return
         guildid = member.guild.id
-        if guildid in member_list and self.bot.user.id == 589744540240314368:
+        if guildid in member_leave_list:
             text = f'{member.mention} ({member.name}#{member.discriminator}) 離開了我們'
-            await self.bot.get_channel(member_list.get(guildid)).send(text)
+            await self.bot.get_channel(member_leave_list[guildid]).send(text)
+
+    @commands.Cog.listener()
+    async def on_member_join(self, member:discord.Member):
+        if self.bot.user.id != 589744540240314368:
+            return
+        guildid = member.guild.id
+        if guildid in member_join_list:
+            text = f'{member.mention} ({member.name}#{member.discriminator}) 加入了我們'
+            await self.bot.get_channel(member_join_list[guildid]).send(text)
 
 def setup(bot):
     bot.add_cog(event(bot))

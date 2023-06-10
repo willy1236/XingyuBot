@@ -49,55 +49,77 @@ class YTDLSource(discord.PCMVolumeTransformer):
         return self(discord.FFmpegPCMAudio(filename, **ffmpeg_options), data=data,volume=volume)
 
 
-class Player():
-    def __init__(self,vc:discord.ApplicationContext.voice_client,ctx:discord.ApplicationContext,loop):
-        self.vc = vc
-        self.ctx = ctx
-        self.loop = loop
-
-    async def play_next(self,*arg):
-            #print('play_next')
-            song = PlayList.get(str(self.ctx.guild.id))
-            if song:
-                try:
-                    #print(song.title)
-                    source = await YTDLSource.from_url(song.url, stream=True)
-                    #, loop=self.bot.loop
-                    
-                    embed = BotEmbed.simple(title="現在播放", description=f"[{song.title}]({song.url}) [{song.requester.mention}]")
-                    await self.ctx.send(embed=embed)
-                    self.vc.play(source, after=self.after)
-                except Exception as e:
-                    raise VoiceError02(e)
-            else:
-                await asyncio.sleep(15)
-                if not self.vc.is_playing():
-                    #print('stop')
-                    await self.stop()
-
-
-    def after(self,*arg):
-        guildid = str(self.ctx.guild.id)
-        PlayList.done(guildid)
-        self.vc.stop()
-        time.sleep(1)
-        #使用既有的bot協程
-        asyncio.run_coroutine_threadsafe(self.play_next(),self.loop)
-
-    def skip_song(self):
-        self.vc.stop()
-
-    async def stop(self):
-        await self.ctx.send("歌曲播放完畢 掰掰~")
-        await self.vc.disconnect()
-        del guild_playing[str(self.ctx.guild.id)]
-
 class Song:
     def __init__(self,url:str,title:str,requester:discord.Member=None):
         self.url = url
         self.title = title
         self.requester = requester
 
+class MusicPlayer():
+    def __init__(self,vc:discord.ApplicationContext.voice_client,ctx:discord.ApplicationContext,loop):
+        self.vc = vc
+        self.ctx = ctx
+        self.loop = loop
+        self.playlist = []
+        self.songloop = False
+        self.volume = 0.5
+
+    async def play_next(self,*arg):
+            #print('play_next')
+            song = self.get_first_song()
+            #print(self.playlist,arg)
+            try:
+                #print(song.title)
+                source = await YTDLSource.from_url(song.url, stream=True,volume=self.volume)
+                #, loop=self.bot.loop
+                
+                embed = BotEmbed.simple(title="現在播放", description=f"[{song.title}]({song.url}) [{song.requester.mention}]")
+                await self.ctx.send(embed=embed)
+                #print(f"play1")
+                self.vc.play(source, after=self.after)
+                #print(f"play2")
+            except Exception as e:
+                raise VoiceError02(e)
+
+    def after(self,error):
+        #print(f"after")
+        self.play_conpleted()
+        if error:
+            raise VoiceError02(error)
+        time.sleep(2)
+        if self.playlist:
+            #使用既有的bot協程
+            asyncio.run_coroutine_threadsafe(self.play_next(),self.loop)
+        else:
+            asyncio.run_coroutine_threadsafe(self.wait_to_leave(),self.loop)
+
+    async def wait_to_leave(self):
+        #print('wait2')
+        await asyncio.sleep(15)
+        if not self.vc.is_playing():
+            #print('stop')
+            await self.stop()
+
+    def skip_song(self):
+        self.vc.stop()
+
+    async def stop(self):
+        await self.vc.disconnect()
+        del guild_playing[str(self.ctx.guild.id)]
+        await self.ctx.send("歌曲播放完畢 掰掰~")
+
+    def add_song(self,song:Song):
+        self.playlist.append(song)
+    
+    def get_first_song(self) -> Song:
+        return self.playlist[0]
+
+    def play_conpleted(self):
+        self.playlist.pop(0)
+        self.vc.stop()
+
+    def get_full_playlist(self) -> list[Song]:
+        return self.playlist
 
 class PlayList:
     @staticmethod
@@ -127,6 +149,9 @@ class PlayList:
 
 
 guild_playing = {}
+def get_player(guildid:str) -> MusicPlayer:
+    return guild_playing[guildid]
+
 bot_playlist = {}
 
 class music(Cog_Extension):
@@ -177,23 +202,26 @@ class music(Cog_Extension):
         else:
             song_data_list = [ results ]
 
+        #播放器設定
+        player = guild_playing.get(guildid)
+        if not player:
+            player = MusicPlayer(vc,ctx,self.bot.loop)
+            guild_playing[guildid] = player
+        
         song_count = 0
-        for result in song_data_list:
-            try:
+        try:
+            for result in song_data_list:
                 title = result['title']
-                if guildid in guild_playing and vc:
-                    #print('in')
-                    PlayList.add(guildid,Song(url,title,ctx.author))
-                    
-                else:
-                    #print('not in')
-                    PlayList.add(guildid,Song(url,title,ctx.author))
-                    player = Player(vc,ctx,self.bot.loop)
-                    guild_playing[guildid] = player
-                    await player.play_next()
+
+                song = Song(url,title,ctx.author)
+                player.add_song(song)
                 song_count += 1
-            except:
-                pass
+
+            if not vc.is_playing():
+                await asyncio.sleep(2)
+                await player.play_next()
+        except Exception as e:
+            raise VoiceError01(e)
 
         if song_count == 1:
             await ctx.respond(f"加入歌單: {results['title']}")
@@ -203,7 +231,7 @@ class music(Cog_Extension):
     @commands.slash_command(description='跳過歌曲')
     async def skip(self, ctx: discord.ApplicationContext):
         guildid = str(ctx.guild.id)
-        player = guild_playing[guildid]
+        player = get_player(guildid)
         player.skip_song()
         await ctx.respond(f"歌曲已跳過")
 
@@ -227,13 +255,15 @@ class music(Cog_Extension):
 
     @commands.slash_command(description='現在播放')
     async def nowplaying(self,ctx: discord.ApplicationContext):
-        song = PlayList.get(str(ctx.guild.id))
+        player = get_player(str(ctx.guild.id))
+        song = player.get_first_song()
         embed = BotEmbed.simple(title="現在播放", description=f"[{song.title}]({song.url}) [{song.requester.mention}]")
         await ctx.respond(embed=embed)
 
     @commands.slash_command(description='歌單')
     async def queue(self,ctx: discord.ApplicationContext):
-        playlist = PlayList.get_fulllist(str(ctx.guild.id))
+        player = get_player(str(ctx.guild.id))
+        playlist = player.get_full_playlist()
         if playlist:
             count = 0
             page_count = 0
@@ -276,10 +306,10 @@ class music(Cog_Extension):
             if ctx.author.voice:
                 await ctx.author.voice.channel.connect()
             else:
-                raise VoiceError01("請先連接到一個語音頻道")
+                raise discord.ApplicationCommandInvokeError(VoiceError01("請先連接到一個語音頻道"))
         else:
             if not ctx.author.voice or ctx.voice_client.channel != ctx.author.voice.channel:
-                raise VoiceError01("你必須要跟機器人在同一頻道才能使用指令")
+                raise discord.ApplicationCommandInvokeError(VoiceError01("你必須要跟機器人在同一頻道才能使用指令"))
 
 def setup(bot):
     bot.add_cog(music(bot))

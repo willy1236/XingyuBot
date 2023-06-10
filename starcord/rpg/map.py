@@ -60,12 +60,11 @@ def is_reachable(area):
 
 # 測試程式碼
 def sunmon_area(l,w):
-    print('sun')
     area = None
     while not area:
         area = generate_area(l, w)
         reachable = is_reachable(area)
         if not reachable:
             area = None
-        print(not area)
+
     return area

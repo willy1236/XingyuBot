@@ -3,10 +3,10 @@ from starcord.database import Jsondb
 
 class BotEmbed:
     @staticmethod
-    def basic(self,title:str=discord.Embed.Empty,description:str=discord.Embed.Empty,url=discord.Embed.Empty):
+    def basic(bot,title:str=discord.Embed.Empty,description:str=discord.Embed.Empty,url=discord.Embed.Empty):
         '''基本:作者帶機器人名稱'''
         embed = discord.Embed(title=title,description=description, color=0xc4e9ff,url=url)
-        embed.set_author(name=self.bot.user.name,icon_url=self.bot.user.display_avatar.url)
+        embed.set_author(name=bot.user.name,icon_url=bot.user.display_avatar.url)
         return embed
     
     @staticmethod
@@ -78,9 +78,9 @@ class BRS():
         await feedback_channel.send(embed=embed)
 
     @staticmethod
-    async def dm(self,msg):
+    async def dm(bot,msg):
         jdata = Jsondb.jdata
-        dm_channel = self.bot.get_channel(jdata['dm_channel'])
+        dm_channel = bot.get_channel(jdata['dm_channel'])
         embed=BotEmbed.general(name="BRS | 私人訊息")
         embed.add_field(name='訊息內容', value=msg.content, inline=True)
         if msg.channel.recipient:
@@ -90,9 +90,9 @@ class BRS():
         await dm_channel.send(embed=embed)
 
     @staticmethod
-    async def mentioned(self,msg):
+    async def mentioned(bot,msg):
         jdata = Jsondb.jdata
-        dm_channel = self.bot.get_channel(jdata['mentioned_channel'])
+        dm_channel = bot.get_channel(jdata['mentioned_channel'])
         embed=BotEmbed.general(name="BRS | 提及訊息")
         embed.add_field(name='訊息內容', value=msg.content, inline=True)
         embed.add_field(name='發送者', value=f"{msg.author}\n{msg.author.id}", inline=False)
@@ -101,9 +101,9 @@ class BRS():
         await dm_channel.send(embed=embed)
     
     @staticmethod
-    async def mention_everyone(self,msg):
+    async def mention_everyone(bot,msg):
         jdata = Jsondb.jdata
-        dm_channel = self.bot.get_channel(jdata['mention_everyone_channel'])
+        dm_channel = bot.get_channel(jdata['mention_everyone_channel'])
         embed=BotEmbed.general(name="BRS | 提及所有人訊息")
         embed.add_field(name='訊息內容', value=msg.content, inline=True)
         embed.add_field(name='發送者', value=f"{msg.author}\n{msg.author.id}", inline=False)

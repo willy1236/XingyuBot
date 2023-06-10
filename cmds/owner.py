@@ -292,7 +292,7 @@ class owner(Cog_Extension):
     @commands.is_owner()
     async def panel(self,ctx,guild:discord.Option(bool,name='是否列出伺服器')):
         embed_list = []
-        embed = BotEmbed.basic(self,description=f'伺服器總數：{len(self.bot.guilds)}\n成員：{len(self.bot.users)}')
+        embed = BotEmbed.basic(self.bot,description=f'伺服器總數：{len(self.bot.guilds)}\n成員：{len(self.bot.users)}')
         embed_list.append(embed)
         
         if guild:
