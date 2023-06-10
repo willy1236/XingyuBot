@@ -18,9 +18,6 @@ class User():
         self.name = data['name']
         self.point = data['point']
         self.rcoin = data['rcoin']
-        # self.__db = JsonDatabase()
-        # udata = self.__db.udata
-        # jbag = self.__db.jbag
         
         #初始設定
         # self.id = str(userid)
@@ -42,7 +39,6 @@ class User():
         #其他相關
         # self.bag = jbag.get(self.id)
         # self.pet = Pet(self.id)
-
 
     def desplay(self):
         embed = BotEmbed.general(name=self.name)

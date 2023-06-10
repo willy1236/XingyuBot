@@ -6,7 +6,7 @@ from starcord.type.user import PetType
 
 # text = 'osu'
 # print(text in dir(DatabaseGame))
-print(PetType.CAT.value)
+print(PetType('cat'))
 
 # class SpeakingState(Enum):
 #     """Speaking state"""

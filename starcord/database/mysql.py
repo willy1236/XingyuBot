@@ -148,14 +148,13 @@ class MySQLDatabase():
             self.cursor.execute(f"INSERT INTO `user_point` SET user_id = %s, point = %s ON DUPLICATE KEY UPDATE user_id = %s, point = point + %s",(given_id,amount,given_id,amount))
             self.connection.commit()
             #self.cursor.execute(f"UPDATE `user_point` SET `point` = REPLACE(`欄位名`, '要被取代的欄位值', '取代後的欄位值') WHERE `欄位名` LIKE '%欄位值%';",(giver_id,amount))
-            return 0
         else:
             return 1
 
     def update_point(self,mod,user_id:str,amount:int):
         self.cursor.execute(f"USE `database`;")
         if mod == 'set':
-            self.cursor.execute(f"REPLACE INTO `game_data`(user_id,point) VALUES(%s,%s);",(user_id,amount))
+            self.cursor.execute(f"REPLACE INTO `user_point`(user_id,point) VALUES(%s,%s);",(user_id,amount))
         elif mod == 'add':
             self.cursor.execute(f"UPDATE `user_point` SET point = point + %s WHERE user_id = %s;",(amount,user_id))
         else:
@@ -165,7 +164,7 @@ class MySQLDatabase():
     def update_rcoin(self,user_id:str,mod,amount:int):
         self.cursor.execute(f"USE `database`;")
         if mod == 'set':
-            self.cursor.execute(f"REPLACE INTO `game_data`(user_id,rcoin) VALUES(%s,%s);",(user_id,amount))
+            self.cursor.execute(f"REPLACE INTO `user_point`(user_id,rcoin) VALUES(%s,%s);",(user_id,amount))
         elif mod == 'add':
             self.cursor.execute(f"UPDATE `user_point` SET rcoin = rcoin + %s WHERE user_id = %s;",(amount,user_id))
         else:
@@ -183,7 +182,7 @@ class MySQLDatabase():
             self.connection.commit()
         except sqlerror as e:
             if e.errno == 1062:
-                return 1
+                return '已經簽到過了喔'
             else:
                 raise
 

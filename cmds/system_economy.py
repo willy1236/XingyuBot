@@ -52,15 +52,14 @@ class system_economy(Cog_Extension):
     async def sign(self,ctx):
         signer = str(ctx.author.id)
 
-        code = sqldb.user_sign(signer)
-        if not code:
+        r = sqldb.user_sign(signer)
+        if not r:
             point_add  = random.randint(1,2)
             rcoin_add = random.randint(3,5)
             sqldb.sign_add_coin(signer,point_add,rcoin_add)
             await ctx.respond(f'{ctx.author.mention} 簽到完成! pt點數+{point_add} Rcoin+{rcoin_add}')
-        #可用enum改寫
-        elif code == 1:
-            await ctx.respond(f'{ctx.author.mention} 已經簽到過了喔')
+        else:
+            await ctx.respond(f'{ctx.author.mention} {r}')
 
     @commands.slash_command(description='猜數字遊戲')
     async def guess(self,ctx):
