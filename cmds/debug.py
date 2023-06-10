@@ -42,11 +42,17 @@ class MyModal(discord.ui.Modal):
         embed.add_field(name="Long Input", value=self.children[1].value)
         await interaction.response.send_message(embeds=[embed])
 
+map_dict = {
+    "0": "⬛",
+    "1": "◻️",
+    "2": "🟨"
+}
+
 class RPG_advanture_panel(discord.ui.View):
     def __init__(self):
         super().__init__()
-        self.map_l = 15
-        self.map_w = 15
+        self.map_l = 14
+        self.map_w = 14
         self.area = sunmon_area(self.map_l,self.map_w)
         self.player_x = 0
         self.player_y = 0
@@ -54,8 +60,14 @@ class RPG_advanture_panel(discord.ui.View):
         
     def map_display(self):
         self.text = ''
-        area_display = copy.deepcopy(self.area)
-        area_display[self.player_y][self.player_x] = '2'
+        #area_display = copy.deepcopy(self.area)
+        area_display = []
+        for i in self.area:
+            row = []
+            for j in i:
+                row.append(map_dict.get(j))
+            area_display.append(row)
+        area_display[self.player_y][self.player_x] = map_dict.get('2')
         for i in area_display:
             self.text += " ".join(i) + '\n'
         return self.text
@@ -72,7 +84,11 @@ class RPG_advanture_panel(discord.ui.View):
     async def down(self, button: discord.ui.Button, interaction: discord.Interaction):
         if self.player_y != self.map_l-1 and self.area[self.player_y+1][self.player_x] == '0':
             self.player_y += 1
-            await interaction.response.edit_message(content=self.map_display(),view=self)
+            if self.player_x == self.map_w-1 and self.player_y == self.map_l-1:
+                self.disable_all_items()
+                await interaction.response.edit_message(content=f'恭喜完成~\n{self.map_display()}',view=self)
+            else:
+                await interaction.response.edit_message(content=self.map_display(),view=self)
         else:
             await interaction.response.edit_message(content=self.text,view=self)
 
@@ -88,7 +104,11 @@ class RPG_advanture_panel(discord.ui.View):
     async def right(self, button: discord.ui.Button, interaction: discord.Interaction):
         if self.player_x != self.map_w-1 and self.area[self.player_y][self.player_x+1] == '0':
             self.player_x += 1
-            await interaction.response.edit_message(content=self.map_display(),view=self)
+            if self.player_x == self.map_w-1 and self.player_y == self.map_l-1:
+                self.disable_all_items()
+                await interaction.response.edit_message(content=f'恭喜完成~\n{self.map_display()}',view=self)
+            else:
+                await interaction.response.edit_message(content=self.map_display(),view=self)
         else:
             await interaction.response.edit_message(content=self.text,view=self)
 

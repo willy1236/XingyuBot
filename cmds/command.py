@@ -502,7 +502,7 @@ class command(Cog_Extension):
     @busytime.command(description='確認沒空時間')
     async def check(self,ctx,
                   date:discord.Option(str,name='日期',description='請輸入四位數日期 如6/4請輸入0604 留空查詢現在時間',required=False),
-                  days:discord.Option(int,name='連續天數',description='想查詢的天數 預設為5',default=5,min_value=1,max_value=365)):
+                  days:discord.Option(int,name='連續天數',description='想查詢的天數 預設為7',default=7,min_value=1,max_value=270)):
         if date:
             date_now = datetime.datetime.strptime(date,"%m%d")
         else:    
