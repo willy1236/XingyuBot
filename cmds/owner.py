@@ -69,8 +69,8 @@ class BotPanel(discord.ui.View):
     async def button_callback1(self, button: discord.ui.Button, interaction: discord.Interaction):
         name_list = []
         for i in self.bot.guilds:
-            name_list.append(i.name)
-        embed = BotEmbed.simple('伺服器列表',','.join(name_list))
+            name_list.append(f'{i.name}（{i.id}）')
+        embed = BotEmbed.simple('伺服器列表','\n'.join(name_list))
         await interaction.response.send_message(content="",ephemeral=False,embed=embed)
 
 debug_guild = Jsondb.jdata.get('debug_guild')
@@ -290,17 +290,10 @@ class owner(Cog_Extension):
     
     @commands.slash_command(description='機器人面板',guild_ids=debug_guild)
     @commands.is_owner()
-    async def panel(self,ctx,guild:discord.Option(bool,name='是否列出伺服器')):
+    async def panel(self,ctx):
         embed_list = []
         embed = BotEmbed.basic(self.bot,description=f'伺服器總數：{len(self.bot.guilds)}\n成員：{len(self.bot.users)}')
         embed_list.append(embed)
-        
-        if guild:
-            name_list = []
-            for i in self.bot.guilds:
-                name_list.append(i.name)
-            embed = BotEmbed.simple('伺服器列表',','.join(name_list))
-            embed_list.append(embed)
 
         await ctx.respond(f'',embeds=embed_list,view=BotPanel(self.bot))
 

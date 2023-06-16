@@ -192,20 +192,18 @@ class task(Cog_Extension):
 
             if not cookies:
                 await channel.send(f'{user_dc.mention} 沒有設定cookies或已過期')
-                #raise commands.errors.ArgumentParsingError("沒有設定cookies或已過期")
-                continue
+            else:
+                try:
+                    client = genshin.Client(cookies,lang='zh-tw')
+                    game = user['game']
 
-            try:
-                client = genshin.Client(cookies,lang='zh-tw')
-                game = user['game']
-
-                reward = await client.claim_daily_reward(game=game,reward=True)
-                if channel and user['need_mention']:
-                    await channel.send(f'{user_dc.mention} 簽到完成！獲得{reward.name}x{reward.amount}')
-                elif channel and not user['need_mention']:
-                    await channel.send(f'{user_dc.name} 簽到完成！獲得{reward.name}x{reward.amount}')
-            except Exception as e:
-                await channel.send(f'{user_dc.mention} 簽到時發生錯誤：{e}')
+                    reward = await client.claim_daily_reward(game=game,reward=True)
+                    if channel and user['need_mention']:
+                        await channel.send(f'{user_dc.mention} 簽到完成！獲得{reward.name}x{reward.amount}')
+                    elif channel and not user['need_mention']:
+                        await channel.send(f'{user_dc.name} 簽到完成！獲得{reward.name}x{reward.amount}')
+                except Exception as e:
+                    await channel.send(f'{user_dc.mention} 簽到時發生錯誤：{e}')
             
             await asyncio.sleep(30)
 
