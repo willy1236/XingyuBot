@@ -490,15 +490,16 @@ class system_game(Cog_Extension):
                    game:discord.Option(str,name='遊戲',description='要簽到的遊戲',choices=hoyo_game_option),
                    need_mention:discord.Option(bool,name='成功簽到時是否要tag提醒',default=True),
                    remove:discord.Option(bool,name='若要移除資料請設為true',default=False)):
+        if remove:
+            self.sqldb.remove_hoyo_reward(ctx.author.id)
+            await ctx.respond('設定已移除')
+            return
+        
         cookies = self.sqldb.get_userdata(str(ctx.author.id),'game_hoyo_cookies')
         if not cookies:
             raise commands.errors.ArgumentParsingError("沒有設定cookies或已過期")
-        if not remove:
-            self.sqldb.add_hoyo_reward(ctx.author.id,game,ctx.channel.id,need_mention)
-            await ctx.respond('設定已完成')
-        else:
-            self.sqldb.remove_hoyo_reward(ctx.author.id)
-            await ctx.respond('設定已移除')
+        self.sqldb.add_hoyo_reward(ctx.author.id,game,ctx.channel.id,need_mention)
+        await ctx.respond('設定已完成')
         
     
     @hoyo.command(description='測試',guild_ids=debug_guild)

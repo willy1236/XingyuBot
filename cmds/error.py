@@ -43,9 +43,10 @@ class error(Cog_Extension):
                 await ctx.respond(f'首次使用已完成註冊，請再使用一次指令',ephemeral=True)
 
             else:
-                await ctx.respond(f'指令調用時發生錯誤：```py\n{error.original}```',ephemeral=True)
+                await ctx.respond(f'指令調用時發生錯誤，已自動回報：```py\n{error.original}```',ephemeral=True)
                 if not ctx.guild or ctx.guild.id != 566533708371329024:
                     await BRS.error(self,ctx,error)
+
                 log.error(f'{error},{type(error)},{type(error.original)}')
         
         elif isinstance(error,discord.ApplicationCommandError):
