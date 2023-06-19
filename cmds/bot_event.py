@@ -51,7 +51,7 @@ class event(Cog_Extension):
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
         #被提及回報
-        if self.bot.user in message.mentions and not self.bot.is_owner(message.author):
+        if self.bot.user in message.mentions and not await self.bot.is_owner(message.author):
             await BRS.mentioned(self.bot,message)
         #被提及所有人回報
         if message.mention_everyone:
