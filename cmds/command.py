@@ -530,5 +530,15 @@ class command(Cog_Extension):
         embed = BotEmbed.simple('目前有空時間',text)
         await ctx.respond(embed=embed)
 
+    @busytime.command(description='統計沒空時間')
+    async def statistics(self,ctx):
+        user_list = self.bot.get_guild(613747262291443742).get_role(1097455657428471918).members
+        text = ''
+        for i in user_list:
+            dbdata = self.sqldb.get_statistics_busy(str(i.id))
+            text += f'{i.mention}: {dbdata.get("count(user_id)")}\n'
+        embed = BotEmbed.simple('總計',text)
+        await ctx.respond(embed=embed)
+
 def setup(bot):
     bot.add_cog(command(bot))

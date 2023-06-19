@@ -13,8 +13,11 @@ class system_economy(Cog_Extension):
     async def check(self,ctx,
                     user:discord.Option(discord.Member,name='成員',description='欲查詢的成員，留空以查詢自己',default=None)):
         user = user or ctx.author
-        records = sqldb.get_point(str(user.id))
-        pt = records['point'] or 0
+        dbdata = sqldb.get_point(str(user.id))
+        if dbdata:
+            pt = dbdata.get('point')
+        else:
+            pt = 0
         await ctx.respond(f'{user.mention} 目前擁有 {pt} Pt點數')
         if user.bot:
             await ctx.send('但是為什麼你要查詢機器人的點數呢?',delete_after=5)

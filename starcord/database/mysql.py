@@ -423,3 +423,8 @@ class MySQLDatabase():
         self.cursor.execute(f"SELECT * FROM `database`.`busy_time` WHERE date = {date};")
         records = self.cursor.fetchall()
         return records
+    
+    def get_statistics_busy(self,user_id:str):
+        self.cursor.execute(f"SELECT count(user_id) FROM `database`.`busy_time` WHERE `user_id` = {user_id};")
+        records = self.cursor.fetchone()
+        return records
