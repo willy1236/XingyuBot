@@ -8,6 +8,7 @@ set_option = ChoiceList.set('channel_set_option')
 class moderation(Cog_Extension):
     @commands.slash_command(description='清理訊息')
     @commands.has_permissions(manage_messages=True)
+    @commands.bot_has_guild_permissions(manage_messages=True)
     @commands.guild_only()
     async def clean(self,
                     ctx:discord.ApplicationContext,

@@ -101,6 +101,7 @@ class command(Cog_Extension):
         await ctx.respond(embed=embed)
 
     @role.command(description='加身分組')
+    @commands.bot_has_permissions(manage_roles=True)
     @commands.cooldown(rate=1,per=5)
     async def add(self,
                   ctx:discord.ApplicationContext,
@@ -192,6 +193,7 @@ class command(Cog_Extension):
         await ctx.respond('身分組清理完成',delete_after=5)
 
     @role.command(description='更改暱稱')
+    @commands.bot_has_permissions(manage_roles=True)
     async def nick(self, ctx, arg:discord.Option(str,name='欲更改的內容',description='可輸入新暱稱或輸入以#開頭的6位顏色代碼')):
         await ctx.defer()
         user = ctx.author
@@ -406,6 +408,7 @@ class command(Cog_Extension):
 
     @commands.user_command(name="禁言10秒")
     @commands.has_permissions(moderate_members=True)
+    @commands.bot_has_permissions(moderate_members=True)
     async def timeout_10s(self,ctx, member: discord.Member):
         time = datetime.timedelta(seconds=10)
         await member.timeout_for(time,reason="指令：禁言10秒")
