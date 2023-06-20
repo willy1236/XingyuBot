@@ -306,6 +306,27 @@ class owner(Cog_Extension):
         else:
             await ctx.respond(embed=BotEmbed.simple('指令未找到'))
 
+    @commands.slash_command(description='獲取指定伺服器與主伺服器的共通成員',guild_ids=debug_guild)
+    @commands.is_owner()
+    async def findmember(self,ctx,guildid:discord.Option(str,name='伺服器id')):
+        guild = self.bot.get_guild(int(guildid))
+        guild_main = self.bot.get_guild(613747262291443742)
+        if not guild:
+            await ctx.respond("公會未找到")
+            return
+        if guild == guild_main:
+            await ctx.respond("公會重複")
+            return
+
+        member = guild.members
+        member_main = guild_main.members
+        common_member = [element for element in member if element in member_main]
+        common_member_display = []
+        for member in common_member:
+            common_member_display.append(f"{member.mention} ({member.id})")
+        
+        embed = BotEmbed.simple(f"{guild.name} 的共通成員","\n".join(common_member_display))
+        await ctx.respond(embed=embed)
 
 def setup(bot):
     bot.add_cog(owner(bot))

@@ -95,7 +95,8 @@
     },
     "permissions": {
         "manage_channels":"管理頻道",
-        "moderate_members":"禁言成員"
+        "moderate_members":"禁言成員",
+        "manage_roles": "管理身分組"
     },
     "busy_time_option": {
         "早上":"1",
