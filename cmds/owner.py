@@ -18,6 +18,7 @@ class AnnoModal(discord.ui.Modal):
         self.add_item(discord.ui.InputText(label="要傳送的公告", style=discord.InputTextStyle.long))
 
     async def callback(self, interaction: discord.Interaction):
+        msg = await interaction.response.send_message(f"訊息發送中..")
         picdata = Jsondb.picdata
         embed = discord.Embed(description=self.children[0].value,color=0xc4e9ff,timestamp=datetime.datetime.now())
         embed.set_author(name="機器人全群公告",icon_url=picdata['radio_001'])
@@ -34,7 +35,7 @@ class AnnoModal(discord.ui.Modal):
                 except:
                     pass
 
-        await interaction.response.send_message(f"已向{send_success}/{len(channels)}個頻道發送公告")
+        await msg.edit_original_response(content=f"已向{send_success}/{len(channels)}個頻道發送公告")
 
 class BotUpdateModal(discord.ui.Modal):
     def __init__(self, *args, **kwargs):
@@ -42,6 +43,7 @@ class BotUpdateModal(discord.ui.Modal):
         self.add_item(discord.ui.InputText(label="要傳送的更新訊息", style=discord.InputTextStyle.long))
 
     async def callback(self, interaction: discord.Interaction):
+        msg = await interaction.response.send_message(f"訊息發送中..")
         picdata = Jsondb.picdata
         embed = discord.Embed(description=self.children[0].value,color=0xc4e9ff,timestamp=datetime.datetime.now())
         embed.set_author(name="機器人更新通知",icon_url=picdata['radio_001'])
@@ -57,8 +59,8 @@ class BotUpdateModal(discord.ui.Modal):
                     send_success += 1
                 except:
                     pass
-
-        await interaction.response.send_message(f"已向{send_success}/{len(channels)}個頻道發送公告")
+        
+        await msg.edit_original_response(content=f"已向{send_success}/{len(channels)}個頻道發送公告")
 
 class BotPanel(discord.ui.View):
     def __init__(self,bot):
