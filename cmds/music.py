@@ -115,36 +115,37 @@ class MusicPlayer():
         return self.playlist[0]
 
     def play_conpleted(self):
-        self.playlist.pop(0)
+        if not self.songloop:
+            self.playlist.pop(0)
         self.vc.stop()
 
     def get_full_playlist(self) -> list[Song]:
         return self.playlist
 
-class PlayList:
-    @staticmethod
-    def add(guildid:str,song:Song):
-        if guildid in bot_playlist:
-            bot_playlist[guildid].append(song)
-        else:
-            bot_playlist[guildid] = [ song ]
+# class PlayList:
+#     @staticmethod
+#     def add(guildid:str,song:Song):
+#         if guildid in bot_playlist:
+#             bot_playlist[guildid].append(song)
+#         else:
+#             bot_playlist[guildid] = [ song ]
     
-    @staticmethod
-    def done(guildid:str):
-        del bot_playlist[guildid][0]
-        if not bot_playlist[guildid]:
-            del bot_playlist[guildid]
+#     @staticmethod
+#     def done(guildid:str):
+#         del bot_playlist[guildid][0]
+#         if not bot_playlist[guildid]:
+#             del bot_playlist[guildid]
 
-    @staticmethod
-    def get(guildid:str,index=0) -> Song | None:
-        try:
-            return bot_playlist[guildid][index]
-        except KeyError:
-            return None
+#     @staticmethod
+#     def get(guildid:str,index=0) -> Song | None:
+#         try:
+#             return bot_playlist[guildid][index]
+#         except KeyError:
+#             return None
 
-    @staticmethod
-    def get_fulllist(guildid:str) -> list[Song]:
-        return bot_playlist[guildid]
+#     @staticmethod
+#     def get_fulllist(guildid:str) -> list[Song]:
+#         return bot_playlist[guildid]
         
 
 
@@ -292,6 +293,15 @@ class music(Cog_Extension):
             await ctx.voice_client.resume()
             await ctx.respond(f"歌曲已繼續▶️")
 
+    @commands.slash_command(description='循環/取消循環歌曲')
+    async def loop(self, ctx: discord.ApplicationContext):
+        player = get_player(str(ctx.guild.id))
+        player.songloop = not player.songloop
+        if player.songloop:
+            await ctx.respond(f"循環已開啟🔂")
+        else:
+            await ctx.respond(f"循環已關閉")
+
     @play.before_invoke
     @skip.before_invoke
     #@volume.before_invoke
@@ -301,6 +311,7 @@ class music(Cog_Extension):
     #@yt.before_invoke
     #@localplay.before_invoke
     @pause.before_invoke
+    @loop.before_invoke
     async def ensure_voice(self, ctx: discord.ApplicationContext):
         if not ctx.voice_client:
             if ctx.author.voice:

@@ -428,3 +428,21 @@ class MySQLDatabase():
         self.cursor.execute(f"SELECT count(user_id) FROM `database`.`busy_time` WHERE `user_id` = {user_id};")
         records = self.cursor.fetchone()
         return records
+    
+    def add_warning(self,user_id:str,moderate_type:str,moderate_user:str,create_guild:str,create_time:datetime.datetime,reason:str=None):
+        self.cursor.execute(f"INSERT INTO `database`.`user_moderate` VALUES(%s,%s,%s,%s,%s,%s,%s);",(None,user_id,moderate_type,moderate_user,create_guild,create_time,reason))
+        self.connection.commit()
+
+    def get_warning(self,warning_id:int):
+        self.cursor.execute(f"SELECT * FROM `database`.`user_moderate` WHERE `warning_id` = {warning_id};")
+        records = self.cursor.fetchone()
+        return records
+    
+    def get_warnings(self,user_id:str):
+        self.cursor.execute(f"SELECT * FROM `database`.`user_moderate` WHERE `user_id` = {user_id};")
+        records = self.cursor.fetchall()
+        return records
+    
+    def remove_warning(self,warning_id:int):
+        self.cursor.execute(f"DELETE FROM `database`.`user_moderate` WHERE warning_id = {warning_id};")
+        self.connection.commit()
