@@ -74,7 +74,7 @@ class moderation(Cog_Extension):
                       user:discord.Option(discord.User,name='用戶',description='要查詢的用戶',required=True)):
         time = datetime.datetime.now()
         dbdata = self.sqldb.get_warnings(str(user.id))
-        embed = BotEmbed.general(f'{user.name} 的警告單列表',user.display_avatar.url)
+        embed = BotEmbed.general(f'{user.name} 的警告單列表（共{len(dbdata)}筆）',user.display_avatar.url)
         for i in dbdata:
             moderate_user = self.bot.get_user(int(i['moderate_user']))
             guild = self.bot.get_guild(int(i['create_guild']))
