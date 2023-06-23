@@ -59,7 +59,7 @@ class moderation(Cog_Extension):
     @commands.guild_only()
     async def add(self,ctx,
                       user:discord.Option(discord.User,name='用戶',description='要接收的通知類型',required=True),
-                      reason:discord.Option(str,name='原因',description='',default=None)):
+                      reason:discord.Option(str,name='原因',description='限100字內',default=None)):
         time = datetime.datetime.now()
         moderate_user = str(ctx.author.id)
         self.sqldb.add_warning(str(user.id),'warning',moderate_user,str(ctx.guild.id),time,reason)
@@ -101,7 +101,7 @@ class moderation(Cog_Extension):
     @commands.has_permissions(kick_members=True)
     @commands.guild_only()
     async def remove(self,ctx,
-                     warning_id:discord.Option(str,name='警告編號',description='要查詢的警告',required=True)):
+                     warning_id:discord.Option(str,name='警告編號',description='要移除的警告',required=True)):
         dbdata = self.sqldb.get_warning(int(warning_id))
         is_owner = await self.bot.is_owner(ctx.author)
         if dbdata:
