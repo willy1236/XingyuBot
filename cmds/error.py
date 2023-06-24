@@ -31,7 +31,7 @@ class error(Cog_Extension):
             await ctx.respond(f'參數錯誤:{error}',ephemeral=True)
         
         elif isinstance(error,commands.errors.NoPrivateMessage):
-            await ctx.respond(f'此指令不可在DM中使用',ephemeral=True)
+            await ctx.respond(f'錯誤：此指令不可在DM中使用',ephemeral=True)
         
         elif isinstance(error,discord.ApplicationCommandInvokeError):
             if isinstance(error.original,StarException):
@@ -42,6 +42,9 @@ class error(Cog_Extension):
                 sqldb.set_user(id)
                 await ctx.respond(f'首次使用已完成註冊，請再使用一次指令',ephemeral=True)
 
+            elif isinstance(error.original,sqlerror) and error.original.errno == 1062:
+                id = str(ctx.author.id)
+                await ctx.respond(f'錯誤：資料重複新增',ephemeral=True)
             else:
                 await ctx.respond(f'指令調用時發生錯誤，已自動回報：```py\n{error.original}```',ephemeral=True)
                 if not ctx.guild or ctx.guild.id != 566533708371329024:
