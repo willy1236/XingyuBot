@@ -71,6 +71,8 @@ class task(Cog_Extension):
                             pass
                     await channel.send(text,embed=embed)
                     await asyncio.sleep(0.5)
+                else:
+                    print(f"earthquake_check: {i['guild_id']}/{i['channel_id']}")
     
     async def covid_update(self):
         CovidReport = Covid19Interface.get_covid19()
@@ -97,17 +99,21 @@ class task(Cog_Extension):
             records = self.sqldb.get_notice_channel('apex_crafting')
             for i in records:
                 channel = self.bot.get_channel(i['channel_id'])
-                try:
-                    id = channel.last_message_id
-                    msg = await channel.fetch_message(id)
-                except:
-                    msg = None
+                if channel:
+                    try:
+                        id = channel.last_message_id
+                        msg = await channel.fetch_message(id)
+                    except:
+                        msg = None
 
-                if msg and msg.author == self.bot.user:
-                    await msg.edit('Apex合成台內容自動更新資料',embed=crafting.desplay())
+                    if msg and msg.author == self.bot.user:
+                        await msg.edit('Apex合成台內容自動更新資料',embed=crafting.desplay())
+                    else:
+                        await channel.send('Apex合成台內容自動更新資料',embed=crafting.desplay())
+                    await asyncio.sleep(0.5)
+                
                 else:
-                    await channel.send('Apex合成台內容自動更新資料',embed=crafting.desplay())
-                await asyncio.sleep(0.5)
+                    print(f"apex_crafting_update: {i['guild_id']}/{i['channel_id']}")
 
     async def apex_map_update(self):
         map = ApexInterface().get_map_rotation()
@@ -115,17 +121,21 @@ class task(Cog_Extension):
             records = self.sqldb.get_notice_channel('apex_map')
             for i in records:
                 channel = self.bot.get_channel(i['channel_id'])
-                try:
-                    id = channel.last_message_id
-                    msg = await channel.fetch_message(id)
-                except:
-                    msg = None
+                if channel:
+                    try:
+                        id = channel.last_message_id
+                        msg = await channel.fetch_message(id)
+                    except:
+                        msg = None
 
-                if msg and msg.author == self.bot.user:
-                    await msg.edit('Apex地圖輪替自動更新資料',embed=map.desplay())
+                    if msg and msg.author == self.bot.user:
+                        await msg.edit('Apex地圖輪替自動更新資料',embed=map.desplay())
+                    else:
+                        await channel.send('Apex地圖輪替自動更新資料',embed=map.desplay())
+                    await asyncio.sleep(0.5)
+                
                 else:
-                    await channel.send('Apex地圖輪替自動更新資料',embed=map.desplay())
-                await asyncio.sleep(0.5)
+                    print(f"apex_map_update: {i['guild_id']}/{i['channel_id']}")
 
     async def forecast_update(self):
         forecast = CWBInterface().get_forecast()
@@ -133,17 +143,21 @@ class task(Cog_Extension):
             records = self.sqldb.get_notice_channel('forecast')
             for i in records:
                 channel = self.bot.get_channel(i['channel_id'])
-                try:
-                    id = channel.last_message_id
-                    msg = await channel.fetch_message(id)
-                except:
-                    msg = None
+                if channel:
+                    try:
+                        id = channel.last_message_id
+                        msg = await channel.fetch_message(id)
+                    except:
+                        msg = None
 
-                if msg and msg.author == self.bot.user:
-                    await msg.edit('台灣各縣市天氣預報',embed=forecast.desplay())
+                    if msg and msg.author == self.bot.user:
+                        await msg.edit('台灣各縣市天氣預報',embed=forecast.desplay())
+                    else:
+                        await channel.send('台灣各縣市天氣預報',embed=forecast.desplay())
+                    await asyncio.sleep(0.5)
+                
                 else:
-                    await channel.send('台灣各縣市天氣預報',embed=forecast.desplay())
-                await asyncio.sleep(0.5)
+                    print(f"forecast_update: {i['guild_id']}/{i['channel_id']}")
 
     # @tasks.loop(seconds=1)
     # async def time_task(self):
@@ -175,6 +189,8 @@ class task(Cog_Extension):
                         else:
                             await channel.send(f'開台啦~',embed=embed)
                         await asyncio.sleep(0.5)
+                    else:
+                        print(f"twitch: {i['guild_id']}/{i['channel_id']}")
             elif not data[user] and user_cache:
                 #cache['twitch'][user] = False
                 del cache['twitch'][user]
@@ -189,7 +205,8 @@ class task(Cog_Extension):
             channel_id = user['channel_id']
             channel = self.bot.get_channel(int(channel_id))
             cookies = self.sqldb.get_userdata(str(user_id),'game_hoyo_cookies')
-
+            if not channel:
+                print(f"auto_hoyo_reward: {user_id}/{channel_id}")
             if not cookies:
                 await channel.send(f'{user_dc.mention} 沒有設定cookies或已過期')
             else:

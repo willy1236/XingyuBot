@@ -60,6 +60,14 @@ class moderation(Cog_Extension):
     async def add(self,ctx,
                       user:discord.Option(discord.User,name='用戶',description='要接收的通知類型',required=True),
                       reason:discord.Option(str,name='原因',description='限100字內',default=None)):
+        is_owner = await self.bot.is_owner(ctx.author)
+        if not user in ctx.guild.members and not is_owner:
+            await ctx.respond("只能警告在伺服器內的成員")
+            return
+        if user.bot:
+            await ctx.respond("不能警告機器人")
+            return
+
         time = datetime.datetime.now()
         moderate_user = str(ctx.author.id)
         self.sqldb.add_warning(str(user.id),'warning',moderate_user,str(ctx.guild.id),time,reason)
