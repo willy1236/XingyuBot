@@ -23,7 +23,7 @@ set_option = ChoiceList.set('game_set_option')
 hoyo_game_option = [
     discord.OptionChoice(name='原神',value=genshin.Game.GENSHIN),
     discord.OptionChoice(name='崩壞3rd',value=genshin.Game.HONKAI),
-    discord.OptionChoice(name='崩壞：星穹軌道',value='hkrpg')
+    discord.OptionChoice(name='崩壞：星穹軌道',value=genshin.Game.STARRAIL)
 ]
 
 debug_guild = Jsondb.jdata.get('debug_guild')

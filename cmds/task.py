@@ -190,7 +190,7 @@ class task(Cog_Extension):
                             await channel.send(f'開台啦~',embed=embed)
                         await asyncio.sleep(0.5)
                     else:
-                        print(f"twitch: {i['guild_id']}/{i['channel_id']}")
+                        print(f"twitch: {guild.id}/{channel.id}")
             elif not data[user] and user_cache:
                 #cache['twitch'][user] = False
                 del cache['twitch'][user]
@@ -212,7 +212,7 @@ class task(Cog_Extension):
             else:
                 try:
                     client = genshin.Client(cookies,lang='zh-tw')
-                    game = user['game']
+                    game = genshin.Game(user['game'])
 
                     reward = await client.claim_daily_reward(game=game,reward=True)
                     if channel and user['need_mention']:

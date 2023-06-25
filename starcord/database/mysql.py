@@ -216,7 +216,7 @@ class MySQLDatabase():
 
     def remove_hoyo_reward(self,user_id:str):
         self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f"DELETE FROM `game_hoyo_cookies` WHERE user_id = {user_id}")
+        self.cursor.execute(f"DELETE FROM `game_hoyo_reward` WHERE user_id = {user_id}")
         self.connection.commit()
 
     # 通知頻道類
@@ -408,7 +408,7 @@ class MySQLDatabase():
             self.cursor.execute(f'UPDATE `rpg_user_bag` SET `user_id` = {user_id}, `item_id` = {item_id}, amount = amount - {amount}')
         self.connection.commit()
 
-
+    #忙碌時間類
     def add_busy(self, user_id, date, time):
         self.cursor.execute(f"USE `database`;")
         self.cursor.execute(f"INSERT INTO `busy_time` VALUES(%s,%s,%s);",(user_id,date,time))
@@ -429,6 +429,7 @@ class MySQLDatabase():
         records = self.cursor.fetchone()
         return records
     
+    #警告類
     def add_warning(self,user_id:str,moderate_type:str,moderate_user:str,create_guild:str,create_time:datetime.datetime,reason:str=None):
         self.cursor.execute(f"INSERT INTO `database`.`user_moderate` VALUES(%s,%s,%s,%s,%s,%s,%s);",(None,user_id,moderate_type,moderate_user,create_guild,create_time,reason))
         self.connection.commit()
