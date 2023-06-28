@@ -39,7 +39,7 @@ class moderation(Cog_Extension):
     async def set(self,ctx:discord.ApplicationContext,
                   set_type:discord.Option(str,name='通知類型',description='要接收的通知類型',required=True,choices=set_option),
                   channel:discord.Option(discord.abc.GuildChannel,name='頻道',description='要接收通知的頻道',default=None),
-                  role:discord.Option(discord.Role,required=False,name='身分組',description='發送通知時tag的身分組',default=None)):
+                  role:discord.Option(discord.Role,required=False,name='身分組',description='發送通知時tag的身分組，若為定時通知則不會tag',default=None)):
         guildid = ctx.guild.id
         
         if channel:
