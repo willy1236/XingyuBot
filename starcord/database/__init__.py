@@ -1,5 +1,5 @@
 '''
-資料庫相關
+資料庫操作與管理
 '''
 
 from .file import *
@@ -17,13 +17,14 @@ if SQL_connection:
         print(('>> SQL connect: on <<'))
     except:
         #log.warning('>> SQL connect: offline <<')
+        sqldb = None
         print('>> SQL connect: offline <<')
 else:
     #log.info('>> SQL connect: off <<')
     print('>> SQL connect: off <<')
 
 
-assert isinstance(sqldb,MySQLDatabase),'sqldb is None'
+#assert isinstance(sqldb,MySQLDatabase),'sqldb is None'
 
 __all__ = [
     'JsonDatabase',

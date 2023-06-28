@@ -7,53 +7,34 @@ class JsonDatabase():
 
         TRN = tracker.gg
         """
-        self.location = "./database"
+        self.db_location = "./database"
         self.data_location = "./data"
         self.__dict = {
             'lol_jdict': f'{self.data_location}/lol_dict.json',
             'jdict': f'{self.data_location}/dict.json',
-            'jdata': f'{self.location}/setting.json',
-            'cdata': f'{self.location}/channel_settings.json',
+            'jdata': f'{self.db_location}/setting.json',
+            #'cdata': f'{self.location}/channel_settings.json',
             'picdata': f'{self.data_location}/bot_settings/picture.json',
-            'udata': f'{self.location}/user_settings/basic.json',
-            'jpt': f'{self.location}/user_settings/point.json',
-            'jloot': f'{self.location}/lottery.json',
-            'bet_data': f'{self.location}/bet.json',
-            'gdata': f'{self.location}/gamer_data.json',
-            'jdsign': f'{self.location}/sign_day.json',
-            'jwsign': f'{self.location}/sign_week.json',
-            'jevent': f'{self.location}/bot_settings/event.json',
-            'rsdata': f'{self.location}/role_save.json',
-            'jpet': f'{self.location}/user_settings/pet.json',
-            'jbag': f'{self.location}/user_settings/bag.json',
-            'cache': f'{self.location}/cache.json',
-            'monster_basic': f'{self.data_location}/RPG_settings/monster_basic.json',
-            'jRcoin': f'{self.location}/user_settings/rcoin.json',
-            'jhoyo': f'{self.location}/game_settings/hoyo.json',
-            'jtwitch': f'{self.location}/community_settings/twitch.json',
+            #'udata': f'{self.location}/user_settings/basic.json',
+            #'jpt': f'{self.location}/user_settings/point.json',
+            #'jloot': f'{self.location}/lottery.json',
+            #'bet_data': f'{self.location}/bet.json',
+            #'gdata': f'{self.location}/gamer_data.json',
+            #'jdsign': f'{self.location}/sign_day.json',
+            #'jwsign': f'{self.location}/sign_week.json',
+            #'jevent': f'{self.location}/bot_settings/event.json',
+            #'rsdata': f'{self.location}/role_save.json',
+            #'jpet': f'{self.location}/user_settings/pet.json',
+            #'jbag': f'{self.location}/user_settings/bag.json',
+            'cache': f'{self.db_location}/cache.json',
+            #'monster_basic': f'{self.data_location}/RPG_settings/monster_basic.json',
+            #'jRcoin': f'{self.location}/user_settings/rcoin.json',
+            #'jhoyo': f'{self.location}/game_settings/hoyo.json',
+            #'jtwitch': f'{self.location}/community_settings/twitch.json',
+            'tokens': f'{self.db_location}/token.json'
         }
-        self.lol_jdict = json.load(open(self.__dict['lol_jdict'],mode='r',encoding='utf8'))
-        self.jdict = json.load(open(self.__dict['jdict'],mode='r',encoding='utf8'))
-        self.jdata = json.load(open(self.__dict['jdata'],mode='r',encoding='utf8'))
-        #self.cdata = json.load(open(self.__dict['cdata'],mode='r',encoding='utf8'))
-        self.picdata = json.load(open(self.__dict['picdata'],mode='r',encoding='utf8'))
-        #self.udata = json.load(open(self.__dict['udata'],'r',encoding='utf8'))
-        #self.jpt = json.load(open(self.__dict['jpt'],mode='r',encoding='utf8'))
-        #self.jloot = json.load(open(self.__dict['jloot'],mode='r',encoding='utf8'))
-        #self.bet_data = json.load(open(self.__dict['bet_data'],mode='r',encoding='utf8'))
-        #self.gdata = json.load(open(self.__dict['gdata'],'r',encoding='utf8'))
-        #self.jdsign = json.load(open(self.__dict['jdsign'],mode='r',encoding='utf8'))
-        #self.jwsign = json.load(open(self.__dict['jwsign'],mode='r',encoding='utf8'))
-        #self.jevent = json.load(open(self.__dict['jevent'],mode='r',encoding='utf8'))
-        #self.rsdata = json.load(open(self.__dict['rsdata'],mode='r',encoding='utf8'))
-        #self.jpet = json.load(open(self.__dict['jpet'],mode='r',encoding='utf8'))
-        #self.jbag = json.load(open(self.__dict['jbag'],mode='r',encoding='utf8'))
-        self.cache = json.load(open(self.__dict['cache'],mode='r',encoding='utf8'))
-        #self.monster_basic = json.load(open(self.__dict['monster_basic'],mode='r',encoding='utf8'))
-        #self.jRcoin = json.load(open(self.__dict['jRcoin'],mode='r',encoding='utf8'))
-        #self.jhoyo = json.load(open(self.__dict['jhoyo'],mode='r',encoding='utf8'))
-        #self.jtwitch = json.load(open(self.__dict['jtwitch'],mode='r',encoding='utf8'))
-        self.tokens = json.load(open(f'{self.location}/token.json',mode='r',encoding='utf8'))
+        for file in self.__dict:
+            setattr(self, file,json.load(open(self.__dict[file],mode='r',encoding='utf8')))
 
     def write(self,file:str,data:dict):
         try:
