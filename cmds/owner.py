@@ -8,9 +8,18 @@ from starcord import BotEmbed,BRS,Jsondb,sqldb,twitch_bot
 from starcord.ui_element.button import ReactRole_button
 
 class SendMessageModal(discord.ui.Modal):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, channel, is_dm, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.add_item(discord.ui.InputText(label="要傳送的訊息", style=discord.InputTextStyle.long))
+        self.channel = channel
+        self.is_dm = is_dm
+    
+    async def callback(self, interaction: discord.Interaction):
+        message = await self.channel.send(self.children[0].value)
+        await interaction.response.send_message(f'訊息發送成功',delete_after=5,ephemeral=True)
+        if self.is_dm:
+            await BRS.dm(interaction.client,message)
+
 
 class AnnoModal(discord.ui.Modal):
     def __init__(self, *args, **kwargs):
@@ -106,22 +115,26 @@ class owner(Cog_Extension):
     #send
     @commands.slash_command(description='發送訊息',guild_ids=debug_guild)
     @commands.is_owner()
-    async def send(self,ctx,
-                   id:discord.Option(str,required=True,name='頻道id',description=''),
-                   msg:discord.Option(str,required=True,name='訊息',description='')):      
+    async def sendmesssage(self,ctx,
+                   id:discord.Option(str,required=True,name='頻道id',description='')):      
         #modal = SendMessageModal(title="發送訊息")
         #await ctx.send_modal(modal)
         #msg = modal.children[0].value
-        await ctx.defer()
+        #await ctx.defer()
         id = int(id)
         channel = self.bot.get_channel(id)
         if channel:
-            await channel.send(msg)
+            modal = SendMessageModal(title="發送訊息(頻道)",channel=channel,is_dm=False)
         else:
             user = self.bot.get_user(id)
-            message = await user.send(msg)
-            await BRS.dm(self,message)
-        await ctx.respond(f'訊息發送成功',delete_after=5,ephemeral=True)
+            if user:
+                modal = SendMessageModal(title="發送訊息(私訊)",channel=channel,is_dm=True)
+            else:
+                await ctx.respond(f'找不到此ID',ephemeral=True)
+                return
+
+        await ctx.send_modal(modal)
+        await modal.wait()
 
     #all_anno
     @commands.slash_command(description='全群公告',guild_ids=debug_guild)
@@ -326,10 +339,10 @@ class owner(Cog_Extension):
         guild = self.bot.get_guild(int(guildid))
         guild_main = self.bot.get_guild(613747262291443742)
         if not guild:
-            await ctx.respond("公會未找到")
+            await ctx.respond("伺服器未找到")
             return
         if guild == guild_main:
-            await ctx.respond("公會重複")
+            await ctx.respond("伺服器重複")
             return
 
         member = guild.members
@@ -341,6 +354,65 @@ class owner(Cog_Extension):
         
         embed = BotEmbed.simple(f"{guild.name} 的共通成員","\n".join(common_member_display))
         await ctx.respond(embed=embed)
+
+    @commands.slash_command(description='尋找id對象',guild_ids=debug_guild)
+    @commands.cooldown(rate=1,per=3)
+    async def find(self,ctx,id:discord.Option(str,name='id')):
+        success = 0
+        id = int(id)
+        user = await self.bot.get_or_fetch_user(id)
+        if user and user in ctx.guild.members:
+            user = ctx.guild.get_member(user.id)
+            embed = BotEmbed.simple(title=f'{user.name}#{user.discriminator}', description="ID:用戶(伺服器成員)")
+            embed.add_field(name="暱稱", value=user.nick, inline=False)
+            embed.add_field(name="最高身分組", value=user.top_role.mention, inline=True)
+            embed.add_field(name="目前狀態", value=user.raw_status, inline=True)
+            if user.activity:
+                embed.add_field(name="目前活動", value=user.activity, inline=True)
+            embed.add_field(name="是否為機器人", value=user.bot, inline=False)
+            embed.add_field(name="是否為Discord官方", value=user.system, inline=True)
+            embed.add_field(name="是否被禁言", value=user.timed_out, inline=True)
+            embed.add_field(name="加入群組日期", value=user.joined_at, inline=False)
+            embed.add_field(name="帳號創建日期", value=user.created_at, inline=False)
+            embed.set_thumbnail(url=user.display_avatar.url)
+            embed.set_footer(text=f"id:{user.id}")
+            success += 1
+        elif user:
+            embed = BotEmbed.simple(title=f'{user.name}#{user.discriminator}', description="ID:用戶")
+            embed.add_field(name="是否為機器人", value=user.bot, inline=False)
+            embed.add_field(name="是否為Discord官方", value=user.system, inline=False)
+            embed.add_field(name="帳號創建日期", value=user.created_at, inline=False)
+            embed.set_thumbnail(url=user.display_avatar.url)
+            success += 1
+
+        channel = self.bot.get_channel(id)
+        if channel:
+            embed = BotEmbed.simple(title=channel.name, description="ID:頻道")
+            embed.add_field(name="所屬類別", value=channel.category, inline=False)
+            embed.add_field(name="所屬公會", value=channel.guild, inline=False)
+            embed.add_field(name="創建時間", value=channel.created_at, inline=False)
+            success += 1
+        
+        guild = self.bot.get_guild(id)
+        if guild:
+            embed = BotEmbed.simple(title=guild.name, description="ID:公會")
+            embed.add_field(name="公會擁有者", value=guild.owner, inline=False)
+            embed.add_field(name="創建時間", value=guild.created_at, inline=False)
+            embed.add_field(name="驗證等級", value=guild.verification_level, inline=False)
+            embed.add_field(name="成員數", value=len(guild.members), inline=False)
+            embed.add_field(name="文字頻道數", value=len(guild.text_channels), inline=False)
+            embed.add_field(name="語音頻道數", value=len(guild.voice_channels), inline=False)
+            embed.set_footer(text='頻道數可能因權限不足而有少算，敬請特別注意')
+            embed.set_thumbnail(url=guild.icon.url)
+            success += 1
+            
+        if success == 1:
+            await ctx.respond(embed=embed)
+        elif success > 1:
+            await BRS.error(self,ctx,f'find:id重複(出現{success}次)')
+            await ctx.respond('出現錯誤，已自動向機器人擁有者回報')
+        else:
+            await ctx.respond('無法辨認此ID',delete_after=5)
 
 def setup(bot):
     bot.add_cog(owner(bot))

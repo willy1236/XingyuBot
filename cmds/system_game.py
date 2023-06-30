@@ -102,7 +102,7 @@ class system_game(Cog_Extension):
     @game.command(description='查詢遊戲資料')
     async def find(self,ctx,
                    user:discord.Option(discord.Member,name='用戶',description='要查詢的用戶',default=None),
-                   game:discord.Option(str,name='遊戲',description='若輸入此欄，將會用資料庫的資查詢玩家',default=None,choices=set_option)):
+                   game:discord.Option(str,name='遊戲',description='若輸入此欄，將會用資料庫的資料查詢玩家',default=None,choices=set_option)):
         await ctx.defer()
         user = user or ctx.author
         userid = str(user.id)

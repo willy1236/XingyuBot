@@ -1,6 +1,15 @@
 import json
+from typing import TYPE_CHECKING
 
 class JsonDatabase():
+    if TYPE_CHECKING:
+        lol_jdict: dict
+        jdict: dict
+        jdata: dict
+        picdata: dict
+        cache: dict
+        tokens: dict
+    
     def __init__(self):
         """
         CWB = 中央氣象局
@@ -74,7 +83,7 @@ class JsonDatabase():
     
     def write_cache(self,key,value):
         """將指定資料寫入cache並更新內容"""
-        with open(f'{self.location}/cache.json','w',encoding="utf-8") as jfile:
+        with open(f'{self.db_location}/cache.json','w',encoding="utf-8") as jfile:
             self.cache[key] = value
             json.dump(self.cache,jfile,indent=4,ensure_ascii=False)
 

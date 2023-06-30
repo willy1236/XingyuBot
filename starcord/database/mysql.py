@@ -186,7 +186,7 @@ class MySQLDatabase():
             else:
                 raise
 
-    def sign_add_coin(self,user_id:str,point:int,Rcoin:int):
+    def sign_add_coin(self,user_id:str,point:int=0,Rcoin:int=0):
         self.cursor.execute(f"USE `database`;")
         self.cursor.execute(f"INSERT INTO `user_point` SET user_id = %s, point = %s,rcoin = %s ON DUPLICATE KEY UPDATE point = point + %s, rcoin = rcoin + %s",(user_id,point,Rcoin,point,Rcoin))
         self.connection.commit()
@@ -356,7 +356,7 @@ class MySQLDatabase():
         self.connection.commit()
     
     def get_monster(self,monster_id:str):
-        self.cursor.execute(f'SELECT * FROM `checklist_database`.`rpg_monster` WHERE `monster_id` = %s;',(monster_id,))
+        self.cursor.execute(f'SELECT * FROM `checklist`.`rpg_monster` WHERE `monster_id` = %s;',(monster_id,))
         records = self.cursor.fetchone()
         return records
     
@@ -378,7 +378,7 @@ class MySQLDatabase():
     
     def get_bag_desplay(self,user_id:str):
         # data = self.get_bag(str(user_id))
-        # self.cursor.execute(f"USE `checklist_database`;")
+        # self.cursor.execute(f"USE `checklist`;")
         # bag_list = []
         # for item in data:
         #     self.cursor.execute(f"SELECT name FROM `rpg_item` WHERE item_id = {item['item_id']};")
@@ -387,7 +387,7 @@ class MySQLDatabase():
 
         # return bag_list
         
-        self.cursor.execute(f"SELECT rpg_item.item_id,name,amount FROM `database`.`rpg_user_bag`,`checklist_database`.`rpg_item` WHERE user_id = {user_id};")
+        self.cursor.execute(f"SELECT rpg_item.item_id,name,amount FROM `database`.`rpg_user_bag`,`checklist`.`rpg_item` WHERE user_id = {user_id};")
         records = self.cursor.fetchall()
         return records
 

@@ -57,10 +57,11 @@ class system_economy(Cog_Extension):
 
         r = sqldb.user_sign(signer)
         if not r:
-            point_add  = random.randint(1,2)
-            rcoin_add = random.randint(3,5)
+            point_add  = random.randint(1,5)
+            rcoin_add = 0   # random.randint(3,5)
             sqldb.sign_add_coin(signer,point_add,rcoin_add)
-            await ctx.respond(f'{ctx.author.mention} 簽到完成! pt點數+{point_add} Rcoin+{rcoin_add}')
+            #await ctx.respond(f'{ctx.author.mention} 簽到完成! pt點數+{point_add} Rcoin+{rcoin_add}')
+            await ctx.respond(f'{ctx.author.mention} 簽到完成! pt點數+{point_add}')
         else:
             await ctx.respond(f'{ctx.author.mention} {r}')
 

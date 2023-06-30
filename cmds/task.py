@@ -77,7 +77,7 @@ class task(Cog_Extension):
     async def covid_update(self):
         CovidReport = Covid19Interface.get_covid19()
         if CovidReport:
-            records = self.sqldb.get_notice_channel('covid_update')
+            records = sqldb.get_notice_channel('covid_update')
             for i in records:
                 channel = self.bot.get_channel(i["channel_id"])
                 try:
@@ -96,7 +96,7 @@ class task(Cog_Extension):
     async def apex_crafting_update(self):
         crafting = ApexInterface().get_crafting()
         if crafting:
-            records = self.sqldb.get_notice_channel('apex_crafting')
+            records = sqldb.get_notice_channel('apex_crafting')
             for i in records:
                 channel = self.bot.get_channel(i['channel_id'])
                 if channel:
@@ -118,7 +118,7 @@ class task(Cog_Extension):
     async def apex_map_update(self):
         map = ApexInterface().get_map_rotation()
         if map:
-            records = self.sqldb.get_notice_channel('apex_map')
+            records = sqldb.get_notice_channel('apex_map')
             for i in records:
                 channel = self.bot.get_channel(i['channel_id'])
                 if channel:
@@ -140,7 +140,7 @@ class task(Cog_Extension):
     async def forecast_update(self):
         forecast = CWBInterface().get_forecast()
         if forecast:
-            records = self.sqldb.get_notice_channel('forecast')
+            records = sqldb.get_notice_channel('forecast')
             for i in records:
                 channel = self.bot.get_channel(i['channel_id'])
                 if channel:
@@ -166,19 +166,18 @@ class task(Cog_Extension):
 
     @tasks.loop(minutes=2)
     async def twitch(self):
-        cache = Jsondb.cache
-        users = self.sqldb.get_notice_community_userlist('twitch')
+        users = sqldb.get_notice_community_userlist('twitch')
         if not users:
             return
-
+        twitch_cache = Jsondb.read_cache('twitch')
         data = TwitchAPI().get_lives(users)
         for user in users:
-            user_cache = cache['twitch'].get(user)
+            user_cache = twitch_cache.get(user)
             
             if data[user] and not user_cache:
-                cache['twitch'][user] = True
+                twitch_cache[user] = True
                 embed = data[user].desplay()
-                guilds = self.sqldb.get_notice_community_guild('twitch',user)
+                guilds = sqldb.get_notice_community_guild('twitch',user)
                 for guildid in guilds:
                     guild = self.bot.get_guild(guildid)
                     channel = self.bot.get_channel(guilds[guildid][0])
@@ -193,9 +192,9 @@ class task(Cog_Extension):
                         print(f"twitch: {guild.id}/{channel.id}")
             elif not data[user] and user_cache:
                 #cache['twitch'][user] = False
-                del cache['twitch'][user]
+                del twitch_cache[user]
 
-        Jsondb.write('cache',cache)
+        Jsondb.write_cache('twitch',twitch_cache)
 
     async def auto_hoyo_reward(self):
         list = sqldb.get_hoyo_reward()

@@ -23,64 +23,6 @@ class command(Cog_Extension):
     role = SlashCommandGroup("role", "身分組管理指令")
     busytime = SlashCommandGroup("busytime", "指令")
 
-    # @commands.command()
-    # @commands.cooldown(rate=1,per=3)
-    # async def find(self,ctx,id):
-    #     success = 0
-    #     user = await self.bot.get_or_fetch_user(id)
-    #     if user and user in ctx.guild.members:
-    #         user = ctx.guild.get_member(user.id)
-    #         embed = BotEmbed.simple(title=f'{user.name}#{user.discriminator}', description="ID:用戶(伺服器成員)")
-    #         embed.add_field(name="暱稱", value=user.nick, inline=False)
-    #         embed.add_field(name="最高身分組", value=user.top_role.mention, inline=True)
-    #         embed.add_field(name="目前狀態", value=user.raw_status, inline=True)
-    #         if user.activity:
-    #             embed.add_field(name="目前活動", value=user.activity, inline=True)
-    #         embed.add_field(name="是否為機器人", value=user.bot, inline=False)
-    #         embed.add_field(name="是否為Discord官方", value=user.system, inline=True)
-    #         embed.add_field(name="是否被禁言", value=user.timed_out, inline=True)
-    #         embed.add_field(name="加入群組日期", value=user.joined_at, inline=False)
-    #         embed.add_field(name="帳號創建日期", value=user.created_at, inline=False)
-    #         embed.set_thumbnail(url=user.display_avatar.url)
-    #         embed.set_footer(text=f"id:{user.id}")
-    #         success += 1
-    #     elif user:
-    #         embed = BotEmbed.simple(title=f'{user.name}#{user.discriminator}', description="ID:用戶")
-    #         embed.add_field(name="是否為機器人", value=user.bot, inline=False)
-    #         embed.add_field(name="是否為Discord官方", value=user.system, inline=False)
-    #         embed.add_field(name="帳號創建日期", value=user.created_at, inline=False)
-    #         embed.set_thumbnail(url=user.display_avatar.url)
-    #         success += 1
-
-    #     channel = self.bot.get_channel(id)
-    #     if channel:
-    #         embed = BotEmbed.simple(title=channel.name, description="ID:頻道")
-    #         embed.add_field(name="所屬類別", value=channel.category, inline=False)
-    #         embed.add_field(name="所屬公會", value=channel.guild, inline=False)
-    #         embed.add_field(name="創建時間", value=channel.created_at, inline=False)
-    #         success += 1
-        
-    #     guild = self.bot.get_guild(id)
-    #     if guild:
-    #         embed = BotEmbed.simple(title=guild.name, description="ID:公會")
-    #         embed.add_field(name="公會擁有者", value=guild.owner, inline=False)
-    #         embed.add_field(name="創建時間", value=guild.created_at, inline=False)
-    #         embed.add_field(name="驗證等級", value=guild.verification_level, inline=False)
-    #         embed.add_field(name="成員數", value=len(guild.members), inline=False)
-    #         embed.add_field(name="文字頻道數", value=len(guild.text_channels), inline=False)
-    #         embed.add_field(name="語音頻道數", value=len(guild.voice_channels), inline=False)
-    #         embed.set_footer(text='數字可能因權限不足而有少算，敬請特別注意')
-    #         embed.set_thumbnail(url=guild.icon.url)
-    #         success += 1
-            
-    #     if success == 1:
-    #         await ctx.send(embed=embed)
-    #     elif success > 1:
-    #         await BRS.error(self,ctx,f'find:id重複(出現{success}次)')
-    #         await ctx.send('出現錯誤，已自動向機器人擁有者回報')
-    #     else:
-    #         await ctx.send('無法辨認此ID',delete_after=5)
-
     @role.command(description='查詢身分組數')
     async def count(self,ctx,user_list:discord.Option(str,required=False,name='要查詢的用戶',description='多個用戶請用空格隔開，或可輸入default查詢常用人選')):
         await ctx.defer()
@@ -234,7 +176,7 @@ class command(Cog_Extension):
             raise commands.errors.ArgumentParsingError('沒有此用戶的紀錄')
 
 
-    @commands.slash_command(description='抽卡試手氣')
+    @commands.slash_command(description='抽抽試手氣')
     @commands.cooldown(rate=1,per=2)
     async def draw(self,ctx,times:discord.Option(int,name='抽卡次數',description='可輸入1~1000的整數',default=1,min_value=1,max_value=1000)):
         result = {'six':0,'five':0,'four':0,'three':0}
