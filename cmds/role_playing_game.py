@@ -1,36 +1,9 @@
-import discord
+import discord,asyncio,random
 from core.classes import Cog_Extension
 from discord.ext import commands
 from discord.commands import SlashCommandGroup
-
-from starcord import BotEmbed,sqldb,UserClient
-
-class RPGbutton1(discord.ui.View):
-    def __init__(self,userid):
-        super().__init__()
-        self.userid = userid
-
-    @discord.ui.button(label="按我進行冒險",style=discord.ButtonStyle.green)
-    async def button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
-        if interaction.user.id == self.userid:
-            user = UserClient.get_rpguser(interaction.user.id)
-            result = user.advance()
-
-            await interaction.response.edit_message(content=result)
-            #await interaction.response.send_message(content=result, ephemeral=False)
-
-class RPGbutton2(discord.ui.View):
-    def __init__(self,userid):
-        super().__init__()
-        self.userid = userid
-
-    @discord.ui.button(label="按我進行工作",style=discord.ButtonStyle.green)
-    async def button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
-        if interaction.user.id == self.userid:
-            user = UserClient.get_rpguser(interaction.user.id)
-            result = user.work()
-
-            await interaction.response.edit_message(content=result)
+from starcord import sqldb,BotEmbed
+from starcord.ui_element.RPGbutton import RPGbutton1,RPGbutton2
 
 class role_playing_game(Cog_Extension):
     #work = SlashCommandGroup("work", "工作相關指令")

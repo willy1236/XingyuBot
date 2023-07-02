@@ -34,4 +34,4 @@ class UserClient:
         if data:
             return Monster(data)
         else:
-            raise ValueError('monster_id is None')
+            raise ValueError('monster_id not found.')
