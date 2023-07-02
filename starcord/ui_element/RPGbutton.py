@@ -28,7 +28,10 @@ class RPGbutton1(discord.ui.View):
         
         if times == 1:
             if player.rcoin <= 0:
-                return "你的Rcoin不足 至少需要1Rcoin才能冒險"
+                await interaction.edit_original_response(content="你的Rcoin不足 至少需要1Rcoin才能冒險\n但因為目前為開發階段 那我就送你一些Rcoin吧")
+                sqldb.update_rcoin(player.id,'add',100)
+                return
+                
 
             sqldb.update_rcoin(player.id,'add',-1)
 
