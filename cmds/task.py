@@ -32,8 +32,9 @@ class task(Cog_Extension):
             scheduler.add_job(self.forecast_update,'cron',hour='00,03,06,09,12,15,18,21',minute=0,second=1,jitter=60)
             scheduler.add_job(self.auto_hoyo_reward,'cron',hour=19,minute=0,second=0,jitter=60)
 
+            scheduler.add_job(self.earthquake_check,'interval',minute=1)
+
             scheduler.start()
-            self.earthquake_check.start()
             self.twitch.start()
         if self.bot.user.id == 870923985569861652:
             pass
@@ -43,7 +44,6 @@ class task(Cog_Extension):
         sqldb.truncate_table('user_sign')
         await task_report_channel.send('簽到已重置')
 
-    @tasks.loop(minutes=1)
     async def earthquake_check(self):
         timefrom = Jsondb.read_cache('timefrom')
         data = CWBInterface().get_report_auto(timefrom)
@@ -59,7 +59,7 @@ class task(Cog_Extension):
             else:
                 text = '地震報告'
             
-            records = self.sqldb.get_notice_channel('earthquake')
+            records = sqldb.get_notice_channel('earthquake')
             for i in records:
                 channel = self.bot.get_channel(i['channel_id'])
                 if channel:
