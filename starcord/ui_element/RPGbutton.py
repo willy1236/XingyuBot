@@ -1,8 +1,7 @@
 import discord,random,asyncio
 from starcord.utility import BotEmbed
 from starcord.database import sqldb
-from starcord.interface.user import UserClient
-from starcord.model.user import RPGUser,Monster
+from starcord.clients.user import UserClient,RPGUser,Monster
 
 class RPGbutton1(discord.ui.View):
     def __init__(self,userid):

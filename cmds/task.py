@@ -6,7 +6,7 @@ from discord.ext import commands,tasks
 
 from core.classes import Cog_Extension
 from starcord import Jsondb,sqldb
-from starcord.interface import *
+from starcord.clients import *
 
 
 apsc_log = logging.getLogger('apscheduler')

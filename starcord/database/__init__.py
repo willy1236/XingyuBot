@@ -14,7 +14,7 @@ if SQL_connection:
     try:    
         sqldb = MySQLDatabase(**SQLsettings)
         #log.info('>> SQL connect: on <<')
-        print(('>> SQL connect: on <<'))
+        print('>> SQL connect: on <<')
     except:
         #log.warning('>> SQL connect: offline <<')
         sqldb = None

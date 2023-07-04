@@ -1,8 +1,43 @@
-import random,discord
-from starcord.utility import BotEmbed
-from starcord.database import sqldb
-from starcord.type.user import PetType
+import discord,random
 from typing import TYPE_CHECKING
+from starcord.database import sqldb
+from starcord.utility import BotEmbed
+
+class UserClient:
+    """有關用戶調用之端口"""
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def get_user(user_id:str):
+        """取得基本用戶"""
+        data = sqldb.get_user(user_id)
+        if data:
+            return User(data)
+
+    @staticmethod
+    def get_rpguser(user_id:str):
+        """取得RPG用戶"""
+        data = sqldb.get_rpguser(user_id)
+        if data:
+            return RPGUser(data)
+    
+    @staticmethod
+    def get_pet(user_id:str):
+        """取得寵物"""
+        data = sqldb.get_user_pet(user_id)
+        if data:
+            return Pet(data)
+        
+    @staticmethod
+    def get_monster(monster_id:str):
+        """取得怪物"""
+        data = sqldb.get_monster(monster_id)
+        if data:
+            return Monster(data)
+        else:
+            raise ValueError('monster_id not found.')
+
 
 class User():
     '''基本用戶'''
@@ -166,123 +201,7 @@ class RPGUser(User):
             return '工作完成，獲得：麵包x1'
         else:
             return '工作完成，但沒有獲得東西'
-
-# class Point():
-#     '''用戶pt點數'''
-#     def __init__(self,userid:str):
-#         self.__db = JsonDatabase()
-#         jpt = self.__db.jpt
-#         self.user = str(userid) #用戶
-#         if self.user not in jpt:
-#             self.setup()
-#         self.pt = jpt[self.user] #用戶擁有PT數
-    
-#     def __repr__(self):
-#         return str(self.pt)
-
-#     def __int__(self):
-#         return self.pt
-
-#     def setup(self):
-#         jpt = self.__db.jpt
-#         jpt[self.user] = 0
-#         self.__db.write('jpt',jpt)
-
-#     def set(self,amount:int):
-#         """設定用戶PT"""
-#         jpt = self.__db.jpt
-#         jpt[self.user] = amount
-#         self.__db.write('jpt',jpt)
-    
-#     def add(self,amount:int):yy
-#         """增減用戶PT"""
-#         jpt = self.__db.jpt
-#         jpt[self.user] += amount
-#         self.__db.write('jpt',jpt)
-    
-# class Rcoin:
-#     def __init__(self,userid:str):
-#         self.__db = JsonDatabase()
-#         jRcoin = self.__db.jRcoin
-#         self.user = str(userid)
-#         if self.user not in jRcoin:
-#             self.setup()
-#         self.rcoin = jRcoin[self.user]
-
-#     def __repr__(self):
-#         return str(self.rcoin)
-
-#     def __int__(self):
-#         return self.rcoin
-
-#     def setup(self):
-#         jRcoin = self.__db.jRcoin
-#         jRcoin[self.user] = 0
-#         self.__db.write('jRcoin',jRcoin)
-
-#     def set(self,amount:int):
-#         """設定用戶Rcoin"""
-#         jRcoin = self.__db.jRcoin
-#         jRcoin[self.user] = amount
-#         self.__db.write('jRcoin',jRcoin)
-    
-#     def add(self,amount:int):
-#         """增減用戶Rcoin"""
-#         jRcoin = self.__db.jRcoin
-#         jRcoin[self.user] += amount
-#         self.__db.write('jRcoin',jRcoin)
-
-
-class Pet():
-    if TYPE_CHECKING:
-        user_id: str
-        species: str
-        name: str
-        hp: int
-        food: int
-
-    def __init__(self,data):
-        self.user_id = data['user_id']
-        self.species = data['pet_species']
-        self.name = data['pet_name']
-        self.food = data.get('food')
-
-    def desplay(self):
-        embed = BotEmbed.simple()
-        embed.add_field(name='寵物名',value=self.name)
-        embed.add_field(name='寵物物種',value=self.species)
-        embed.add_field(name='飽食度',value=self.food)
-        return embed
-
-#     def add_pet(self,name,species):
-#         jpet = self.__db.jpet
-#         #ts = translate
-#         ts = {
-#             'shark':'鯊魚',
-#             'dog':'狗',
-#             'cat':'貓',
-#             'fox':'狐狸',
-#             'wolf':'狼',
-#             'rabbit':'兔子'
-#         }
-#         if species in ts:
-#             dict = {
-#                 "name": name,
-#                 "species" : species,
-#             }
-#             jpet[self.user] = dict
-#             self.__db.write('jpet',jpet)
-
-#             list = [name,ts.get(species,species)]
-#             return list
-#         else:
-#             raise ValueError('Invalid species')
-    
-#     def remove_pet(self):
-#         jpet = self.__db.jpet
-#         del jpet[self.user]
-#         self.__db.write('jpet',jpet)
-
+        
 class Monster:
     if TYPE_CHECKING:
         id: str
@@ -366,17 +285,24 @@ class Monster:
         #結束儲存資料
         sqldb.update_userdata(player.id, 'rpg_user','user_hp',player.hp)
         return embed
-        
+    
+class Pet():
+    if TYPE_CHECKING:
+        user_id: str
+        species: str
+        name: str
+        hp: int
+        food: int
 
-# class Weapon:
-#     def __init__(self):
-#         self.name = None
-#         self.id = None
-#         self.atk = None
+    def __init__(self,data):
+        self.user_id = data['user_id']
+        self.species = data['pet_species']
+        self.name = data['pet_name']
+        self.food = data.get('food')
 
-# class Armor:
-#     def __init__(self):
-#         pass
-
-# class Item():
-#     pass
+    def desplay(self):
+        embed = BotEmbed.simple()
+        embed.add_field(name='寵物名',value=self.name)
+        embed.add_field(name='寵物物種',value=self.species)
+        embed.add_field(name='飽食度',value=self.food)
+        return embed

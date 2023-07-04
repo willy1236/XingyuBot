@@ -1,6 +1,6 @@
 from discord.ext import commands
 from core.classes import Cog_Extension
-from starcord.interface.weather import *
+from starcord.clients.weather import *
 
 class weather(Cog_Extension):
     @commands.cooldown(rate=1,per=20)

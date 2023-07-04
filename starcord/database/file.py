@@ -1,4 +1,4 @@
-import json
+import json,os
 from typing import TYPE_CHECKING
 
 class JsonDatabase():
@@ -17,13 +17,12 @@ class JsonDatabase():
         TRN = tracker.gg
         """
         self.db_location = "./database"
-        self.data_location = "./data"
         self.__dict = {
-            'lol_jdict': f'{self.data_location}/lol_dict.json',
-            'jdict': f'{self.data_location}/dict.json',
+            'lol_jdict': f'{self.db_location}/lol_dict.json',
+            'jdict': f'{self.db_location}/dict.json',
             'jdata': f'{self.db_location}/setting.json',
             #'cdata': f'{self.location}/channel_settings.json',
-            'picdata': f'{self.data_location}/bot_settings/picture.json',
+            'picdata': f'{self.db_location}/picture.json',
             #'udata': f'{self.location}/user_settings/basic.json',
             #'jpt': f'{self.location}/user_settings/point.json',
             #'jloot': f'{self.location}/lottery.json',
@@ -43,7 +42,12 @@ class JsonDatabase():
             'tokens': f'{self.db_location}/token.json'
         }
         for file in self.__dict:
+            if not os.path.isfile(self.__dict[file]):
+                with open(self.__dict[file],'w',encoding='utf-8') as jfile:
+                    json.dump({},jfile,indent=4)
+                    print(f">> Created json file: {file} <<")
             setattr(self, file,json.load(open(self.__dict[file],mode='r',encoding='utf8')))
+
 
     def write(self,file:str,data:dict):
         try:

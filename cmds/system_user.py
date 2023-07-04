@@ -3,7 +3,7 @@ from discord.ext import commands
 from core.classes import Cog_Extension
 from discord.commands import SlashCommandGroup
 
-from starcord.interface.user import *
+from starcord.clients.user import *
 from starcord import BotEmbed,Jsondb,ChoiceList,sqldb,UserClient
 from starcord.ui_element.button import Delete_Pet_button
 

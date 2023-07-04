@@ -1,4 +1,6 @@
 *.pyc
 token.json
-database/*
+database/token.json
+database/cache.json
+database/setting.json
 logs

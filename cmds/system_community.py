@@ -1,7 +1,7 @@
 import discord
 from core.classes import Cog_Extension
 from discord.commands import SlashCommandGroup
-from starcord.interface.community import TwitchAPI
+from starcord.clients import TwitchAPI
 from starcord import sqldb
 
 class system_community(Cog_Extension):

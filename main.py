@@ -111,8 +111,6 @@ if __name__ == "__main__":
             time.sleep(2)
         except:
             log.info('>> website: offline <<')
-    else:
-        log.info('>> website: off <<')
 
     if twitch_bot:
         loop = asyncio.get_event_loop()
