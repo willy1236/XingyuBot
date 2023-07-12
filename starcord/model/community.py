@@ -1,10 +1,7 @@
 import datetime,discord
 
 class TwitchUser():
-    pass
-
-class TwitchUser():
-    def __init__(self,data):
+    def __init__(self,data:dict):
         self.id = data.get("id")
         self.login = data.get("login")
         self.display_name = data.get("display_name")
@@ -16,9 +13,25 @@ class TwitchUser():
         self.view_count = data.get("view_count")
         self.email = data.get("email")
         self.created_at = data.get("created_at")
+        self.url = f"https://www.twitch.tv/{self.login}"
+
+    def desplay(self):
+        embed = discord.Embed(
+            title=self.display_name,
+            url=self.url,
+            description=self.description,
+            color=0x6441a5,
+            timestamp = datetime.datetime.now()
+            )
+        embed.set_image(url=self.offline_image_url)
+        embed.set_author(name=self.login,icon_url=self.profile_image_url)
+        embed.add_field(name="觀看數",value=self.view_count)
+        embed.add_field(name="頻道創建日期",value=self.created_at)
+        embed.add_field(name="聯絡郵件",value=self.email)
+        return embed
 
 class TwitchStream():
-    def __init__(self,data):
+    def __init__(self,data:dict):
         self.id = data.get('id')
         self.user_login = data.get('user_login')
         self.username = data.get('user_name')
@@ -47,7 +60,7 @@ class TwitchStream():
         return embed
 
 class YoutubeChannel:
-    def __init__(self,data):
+    def __init__(self,data:dict):
         self.id = data.get('id')
         
         self.title = data.get('snippet').get('title')
@@ -65,7 +78,7 @@ class YoutubeChannel:
         self.videoCount = data.get('statistics').get('videoCount')
 
 class YouTubeStream:
-    def __init__(self,data):
+    def __init__(self,data:dict):
         self.publishedAt = data.get('snippet').get('publishedAt')
         self.channelId = data.get('snippet').get('channelId')
         self.title = data.get('snippet').get('title')

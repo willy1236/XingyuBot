@@ -40,8 +40,8 @@ class task(Cog_Extension):
             pass
 
     async def sign_reset(self):
-        task_report_channel = self.bot.get_channel(Jsondb.jdata['task_report'])
         sqldb.truncate_table('user_sign')
+        task_report_channel = self.bot.get_channel(Jsondb.jdata['task_report'])
         await task_report_channel.send('簽到已重置')
 
     async def earthquake_check(self):
@@ -73,25 +73,6 @@ class task(Cog_Extension):
                     await asyncio.sleep(0.5)
                 else:
                     print(f"earthquake_check: {i['guild_id']}/{i['channel_id']}")
-    
-    async def covid_update(self):
-        CovidReport = Covid19Interface.get_covid19()
-        if CovidReport:
-            records = sqldb.get_notice_channel('covid_update')
-            for i in records:
-                channel = self.bot.get_channel(i["channel_id"])
-                try:
-                    id = channel.last_message_id
-                    msg = await channel.fetch_message(id)
-                except:
-                    msg = None
-
-                if msg and msg.author == self.bot.user:
-                    await msg.edit('Covid 疫情資訊',embed=CovidReport.desplay())
-                else:
-                    await channel.send('Covid 疫情資訊',embed=CovidReport.desplay())
-                await asyncio.sleep(0.5)
-
 
     async def apex_crafting_update(self):
         crafting = ApexInterface().get_crafting()
@@ -158,11 +139,6 @@ class task(Cog_Extension):
                 
                 else:
                     print(f"forecast_update: {i['guild_id']}/{i['channel_id']}")
-
-    # @tasks.loop(seconds=1)
-    # async def time_task(self):
-    #     now_time_hour = datetime.now().strftime('%H%M%S')
-    #     #now_time_day = datetime.datetime.now().strftime('%Y%m%d')
 
     @tasks.loop(minutes=2)
     async def twitch(self):

@@ -72,7 +72,7 @@ class LOLPlayerInMatch():
 
         #self.items = [ data['item0'],data['item1'],data['item2'],data['item3'],data['item4'],data['item5'],data['item6'] ]
 
-    def desplay(self):
+    def desplaytext(self):
         text = f'`{self.summonerName}(LV. {self.summonerLevel})`\n'
         name = lol_jdict['champion'].get(self.championName) or self.championName
         text += f'{name}(LV. {self.champLevel})\n'
@@ -135,7 +135,7 @@ class LOLMatch():
         self.participants = data['info']['participants']
         self.teams = data['info']['teams']
 
-        self.players = []
+        self.players:list[LOLPlayerInMatch] = []
         for i in self.participants:
             self.players.append(LOLPlayerInMatch(i))
 
@@ -154,11 +154,11 @@ class LOLMatch():
         i = 0
         for player in self.players:
             if i < 5:
-                blue += player.desplay()
+                blue += player.desplaytext()
                 if i != 4:
                     blue += '\n'
             else:
-                red += player.desplay()
+                red += player.desplaytext()
                 if i != 9:
                     red += '\n'
             i+=1
@@ -273,7 +273,7 @@ class ApexPlayer():
         #selected
         self.legends_selected_name = data['legends']['selected']['LegendName']
         self.legends_selected_tacker = data['legends']['selected']['data']
-        self.legends_selected_banner = data['legends']['selected']['ImgAssets']['banner']
+        self.legends_selected_banner = data['legends']['selected']['ImgAssets']['banner'].replace(" ","%20")
 
     def desplay(self):
         embed = BotEmbed.simple("Apex玩家資訊")

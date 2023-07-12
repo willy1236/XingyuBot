@@ -3,29 +3,28 @@ from starcord.database import Jsondb
 from starcord.model.community import *
 
 class CommunityInterface():
-    def __init__(self):
-        self.db = Jsondb
+    """社群資料交互"""
 
 class TwitchAPI(CommunityInterface):
     '''
     與Twitch api交互相關
     '''
     def __init__(self):
-        super().__init__()
         self.__headers = self.__get_headers()
+        self.url = "https://api.twitch.tv/helix"
 
     def __get_headers(self):
         #客戶端憑據僅能使用API
-        APIURL = "https://id.twitch.tv/oauth2/token"
+        TOKENURL = "https://id.twitch.tv/oauth2/token"
         #headers = {"Content-Type": "application/x-www-form-urlencoded"}
-        tokens = self.db.get_token('twitch')
+        tokens = Jsondb.get_token('twitch')
         params = {
             'client_id':tokens[0],
             'client_secret':tokens[1],
             'grant_type':'client_credentials'
             }
 
-        r = requests.post(APIURL, params=params).json()
+        r = requests.post(TOKENURL, params=params).json()
         headers = {
             'Authorization': f"Bearer {r['access_token']}",
             'Client-Id':tokens[0]
@@ -42,12 +41,11 @@ class TwitchAPI(CommunityInterface):
         Returns:
             dict: {username: TwitchStream | None（如果無正在直播）}
         """
-        URL = 'https://api.twitch.tv/helix/streams'
         params = {
             "user_login": users,
             "first": 1
         }
-        r = requests.get(URL, params=params,headers=self.__headers)
+        r = requests.get(f"{self.url}/streams", params=params,headers=self.__headers)
         apidata = r.json()
         dict = {}
         for user in users:
@@ -65,12 +63,11 @@ class TwitchAPI(CommunityInterface):
         Args:
             username: 用戶名稱（user_login）
         """
-        URL = 'https://api.twitch.tv/helix/users'
         params = {
             "login": username,
             "first": 1
         }
-        r = requests.get(URL, params=params,headers=self.__headers)
+        r = requests.get(f"{self.url}/users", params=params,headers=self.__headers)
         apidata = r.json()
         if apidata.get('data'):
             return TwitchUser(apidata['data'][0])
@@ -80,10 +77,9 @@ class TwitchAPI(CommunityInterface):
 class TwitterInterface:
     pass
 
-class YoutubeInterface(CommunityInterface):
+class YoutubeAPI(CommunityInterface):
     def __init__(self):
-        super().__init__()
-        self.__token = self.db.get_token('youtube')
+        self.__token = Jsondb.get_token('youtube')
         self.__headers = {
             'Authorization': f'Bearer {self.__token}',
             'Accept': 'application/json'
@@ -98,8 +94,13 @@ class YoutubeInterface(CommunityInterface):
         }
         r = requests.get('https://youtube.googleapis.com/youtube/v3/channels',params=params)
         if r.status_code == 200:
-            print(r)
-            print(r.json())
+            data = r.json()
+            print(data)
+            if data['pageInfo']['totalResults']:
+                print(data["pageInfo"])
+            else:
+                return None
+                
         else:
             print(r.text)
             print(r.status_code)

@@ -357,7 +357,7 @@ class owner(Cog_Extension):
 
     @commands.slash_command(description='尋找id對象',guild_ids=debug_guild)
     @commands.cooldown(rate=1,per=3)
-    async def find(self,ctx,id:discord.Option(str,name='id')):
+    async def find(self,ctx,id:discord.Option(str,name='id'),guildid:discord.Option(str,name='guildid',required=False)):
         success = 0
         id = int(id)
         user = await self.bot.get_or_fetch_user(id)
@@ -395,8 +395,8 @@ class owner(Cog_Extension):
         
         guild = self.bot.get_guild(id)
         if guild:
-            embed = BotEmbed.simple(title=guild.name, description="ID:公會")
-            embed.add_field(name="公會擁有者", value=guild.owner, inline=False)
+            embed = BotEmbed.simple(title=guild.name, description="ID:伺服器")
+            embed.add_field(name="伺服器擁有者", value=guild.owner, inline=False)
             embed.add_field(name="創建時間", value=guild.created_at, inline=False)
             embed.add_field(name="驗證等級", value=guild.verification_level, inline=False)
             embed.add_field(name="成員數", value=len(guild.members), inline=False)
@@ -405,6 +405,19 @@ class owner(Cog_Extension):
             embed.set_footer(text='頻道數可能因權限不足而有少算，敬請特別注意')
             embed.set_thumbnail(url=guild.icon.url)
             success += 1
+
+        if guildid:
+            guildid = int(guildid)
+            guild = self.bot.get_guild(guildid)
+            role = guild.get_role(id)
+            if role:
+                embed = BotEmbed.simple(title=role.name, description="ID:身分組")
+                embed.add_field(name="所屬伺服器", value=role.guild, inline=False)
+                embed.add_field(name="創建時間", value=role.created_at, inline=False)
+                embed.add_field(name="所屬層級位置", value=role.position, inline=False)
+                embed.add_field(name="顏色", value=role.color, inline=False)
+                embed.set_thumbnail(url=role.icon)
+                success += 1
             
         if success == 1:
             await ctx.respond(embed=embed)

@@ -5,3 +5,4 @@ class DatabaseGame(Enum):
     LOL = 'lol'
     APEX = 'apex'
     OSU = 'osu'
+    GENSHIN = "genshin"

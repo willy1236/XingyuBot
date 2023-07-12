@@ -151,7 +151,10 @@ class event(Cog_Extension):
                     embed=discord.Embed(description=f'{user.mention} 離開語音',color=0x4aa0b5,timestamp=NowTime)
                 else:
                     return
-                embed.set_author(name=user,icon_url=user.display_avatar.url)
+                if user.discriminator:
+                    embed.set_author(name=user,icon_url=user.display_avatar.url)
+                else:
+                    embed.set_author(name=user.name,icon_url=user.display_avatar.url)
 
                 if before.channel:
                     embed.set_footer(text=before.channel.guild.name)

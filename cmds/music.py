@@ -1,8 +1,8 @@
-import discord,asyncio,youtube_dl,time
+import discord,asyncio,youtube_dl,time,random
 from discord.ext import commands,pages
 
 from core.classes import Cog_Extension
-from starcord import Jsondb,BotEmbed
+from starcord import BotEmbed
 from starcord.errors import *
 
 # Suppress noise about console usage from errors
@@ -17,7 +17,7 @@ ytdl_format_options = {
     "nocheckcertificate": True,
     "ignoreerrors": False,
     "logtostderr": False,
-    "quiet": True,
+    "quiet": False,
     "no_warnings": True,
     "default_search": "auto",
     "source_address": "0.0.0.0",  # Bind to ipv4 since ipv6 addresses cause issues at certain times
@@ -63,10 +63,11 @@ class MusicPlayer():
         self.playlist = []
         self.songloop = False
         self.volume = 0.5
+        self.nowplaying:Song = None
 
     async def play_next(self,*arg):
             #print('play_next')
-            song = self.get_first_song()
+            song = self.start_first_song()
             #print(self.playlist,arg)
             try:
                 #print(song.title)
@@ -111,43 +112,20 @@ class MusicPlayer():
     def add_song(self,song:Song):
         self.playlist.append(song)
     
-    def get_first_song(self) -> Song:
-        return self.playlist[0]
+    def start_first_song(self) -> Song:
+        if not self.songloop:
+            self.nowplaying = self.playlist[0]
+            self.playlist.pop(0)
+        return self.nowplaying
 
     def play_conpleted(self):
-        if not self.songloop:
-            self.playlist.pop(0)
         self.vc.stop()
 
     def get_full_playlist(self) -> list[Song]:
         return self.playlist
 
-# class PlayList:
-#     @staticmethod
-#     def add(guildid:str,song:Song):
-#         if guildid in bot_playlist:
-#             bot_playlist[guildid].append(song)
-#         else:
-#             bot_playlist[guildid] = [ song ]
-    
-#     @staticmethod
-#     def done(guildid:str):
-#         del bot_playlist[guildid][0]
-#         if not bot_playlist[guildid]:
-#             del bot_playlist[guildid]
-
-#     @staticmethod
-#     def get(guildid:str,index=0) -> Song | None:
-#         try:
-#             return bot_playlist[guildid][index]
-#         except KeyError:
-#             return None
-
-#     @staticmethod
-#     def get_fulllist(guildid:str) -> list[Song]:
-#         return bot_playlist[guildid]
-        
-
+    def shuffle(self):
+        random.shuffle(self.playlist)
 
 guild_playing = {}
 def get_player(guildid:str) -> MusicPlayer:
@@ -257,7 +235,7 @@ class music(Cog_Extension):
     @commands.slash_command(description='現在播放')
     async def nowplaying(self,ctx: discord.ApplicationContext):
         player = get_player(str(ctx.guild.id))
-        song = player.get_first_song()
+        song = player.nowplaying
         embed = BotEmbed.simple(title="現在播放", description=f"[{song.title}]({song.url}) [{song.requester.mention}]")
         await ctx.respond(embed=embed)
 
@@ -302,6 +280,11 @@ class music(Cog_Extension):
         else:
             await ctx.respond(f"循環已關閉")
 
+    @commands.slash_command(description='洗牌歌曲')
+    async def shuffle(self, ctx: discord.ApplicationContext):
+        player = get_player(str(ctx.guild.id))
+        player.shuffle()
+        await ctx.respond(f"歌單已隨機🔀")
     @play.before_invoke
     @skip.before_invoke
     #@volume.before_invoke
@@ -312,6 +295,7 @@ class music(Cog_Extension):
     #@localplay.before_invoke
     @pause.before_invoke
     @loop.before_invoke
+    @shuffle.before_invoke
     async def ensure_voice(self, ctx: discord.ApplicationContext):
         if not ctx.voice_client:
             if ctx.author.voice:

@@ -202,6 +202,13 @@ class RPGUser(User):
         else:
             return '工作完成，但沒有獲得東西'
         
+class GameUser(User):
+    def __init__(self,data:dict):
+        super().__init__(data)
+    
+    def get_gamedata(self,game:str):
+        pass
+
 class Monster:
     if TYPE_CHECKING:
         id: str

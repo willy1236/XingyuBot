@@ -79,7 +79,11 @@ class JsonDatabase():
             name = dict[webname]
             return self.tokens[name]
         else:
-            raise ValueError('無此API token')
+            token =  self.tokens[webname]
+            if token:
+                return token
+            else:
+                raise ValueError('無此API token')
         
     def read_cache(self,key):
         """讀取cache的指定資料"""

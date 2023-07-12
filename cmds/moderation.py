@@ -23,7 +23,7 @@ class moderation(Cog_Extension):
             if message:
                 time = message.created_at
                 await ctx.channel.purge(after=time)
-                await ctx.send(content=f'清除完成',delete_after=5)
+                await ctx.respond(content=f'清除完成',delete_after=5)
             else:
                 await ctx.respond(content=f'沒有找到此訊息',ephemeral=True)
 
@@ -58,8 +58,8 @@ class moderation(Cog_Extension):
     @commands.has_permissions(kick_members=True)
     @commands.guild_only()
     async def add(self,ctx,
-                      user:discord.Option(discord.User,name='用戶',description='要接收的通知類型',required=True),
-                      reason:discord.Option(str,name='原因',description='限100字內',default=None)):
+                      user:discord.Option(discord.User,name='用戶',description='要給予警告的用戶',required=True),
+                      reason:discord.Option(str,name='原因',description='限100字內')):
         is_owner = await self.bot.is_owner(ctx.author)
         if not user in ctx.guild.members and not is_owner:
             await ctx.respond("只能警告在伺服器內的成員")
@@ -80,7 +80,6 @@ class moderation(Cog_Extension):
     @commands.guild_only()
     async def list(self,ctx,
                       user:discord.Option(discord.User,name='用戶',description='要查詢的用戶',required=True)):
-        time = datetime.datetime.now()
         dbdata = self.sqldb.get_warnings(str(user.id))
         embed = BotEmbed.general(f'{user.name} 的警告單列表（共{len(dbdata)}筆）',user.display_avatar.url)
         for i in dbdata:

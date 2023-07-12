@@ -80,11 +80,11 @@ class MySQLDatabase():
 
 
     # 遊戲資料類
-    def check_user_game_data(self,id:str):
+    def check_user_game_data(self,user_id:str):
         self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f'SELECT * FROM `game_data` WHERE user_id = %s;',(str(id),))
+        self.cursor.execute(f'SELECT * FROM `game_data` WHERE user_id = %s;',(str(user_id),))
         records = self.cursor.fetchone()
-        return records or id
+        return records or user_id
     
     def set_game_data(self,user_id:str,game:str,player_name:str=None,player_id:str=None,account_id:str=None,other_id:str=None):
         self.cursor.execute(f"USE `database`;")
@@ -191,10 +191,10 @@ class MySQLDatabase():
         self.cursor.execute(f"INSERT INTO `user_point` SET user_id = %s, point = %s,rcoin = %s ON DUPLICATE KEY UPDATE point = point + %s, rcoin = rcoin + %s",(user_id,point,Rcoin,point,Rcoin))
         self.connection.commit()
 
-
-    def set_hoyo_cookies(self,user_id:str,ltuid:str,ltoken:str):
+    # hoyolib
+    def set_hoyo_cookies(self,user_id:str,ltuid:str,ltoken:str,cookie_token:str):
         self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f"INSERT INTO `game_hoyo_cookies` VALUES(%s,%s,%s) ON DUPLICATE KEY UPDATE `user_id` = %s, `ltuid` = %s, `ltoken` = %s",(user_id,ltuid,ltoken,user_id,ltuid,ltoken))
+        self.cursor.execute(f"INSERT INTO `game_hoyo_cookies` VALUES(%s,%s,%s,%s) ON DUPLICATE KEY UPDATE `user_id` = %s, `ltuid` = %s, `ltoken` = %s, `cookie_token` = %s",(user_id,ltuid,ltoken,cookie_token,user_id,ltuid,ltoken,cookie_token))
         self.connection.commit()
 
     def remove_hoyo_cookies(self,user_id:str):

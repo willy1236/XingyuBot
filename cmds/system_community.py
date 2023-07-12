@@ -1,12 +1,12 @@
 import discord
 from core.classes import Cog_Extension
 from discord.commands import SlashCommandGroup
-from starcord.clients import TwitchAPI
+from starcord.clients import TwitchAPI,YoutubeAPI
 from starcord import sqldb
 
 class system_community(Cog_Extension):
     twitch = SlashCommandGroup("twitch", "Twitch相關指令")
-    
+    youtube = SlashCommandGroup("youtube", "youtube相關指令")
     @twitch.command(description='設置twitch開台通知')
     async def set(self,ctx,
                   twitch_user:discord.Option(str,required=True,name='twitch用戶',description='當此用戶開台時會發送通知'),
@@ -47,6 +47,28 @@ class system_community(Cog_Extension):
                 await ctx.respond(f'TwitchID: {twitch_user} 的開台通知在 {channel.mention}')
         else:
             await ctx.respond(f'TwitchID: {twitch_user} 在此群組沒有設開台通知')
+    
+    @twitch.command(description='取得twitch頻道的相關資訊')
+    async def user(self,ctx,twitch_username:discord.Option(str,required=True,name='twitch用戶')):
+        user = TwitchAPI().get_user(twitch_username)
+        if user:
+            await ctx.respond(embed=user.desplay())
+        else:
+            await ctx.respond("查詢失敗",ephemeral=True)
+
+    @youtube.command(description='取得youtube頻道的相關資訊（未完成）')
+    async def channel(self,ctx,youtube_username:discord.Option(str,required=True,name='youtube頻道')):
+        ytapi = YoutubeAPI()
+        channelid = ytapi.get_channel_id(youtube_username)
+        if channelid:
+            channel = ytapi.get_channel_content(channelid)
+        else:
+            channel = None
+        
+        if channel:
+            await ctx.respond("查詢成功")
+        else:
+            await ctx.respond("查詢失敗",ephemeral=True)
 
 def setup(bot):
     bot.add_cog(system_community(bot))

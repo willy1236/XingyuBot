@@ -13,11 +13,11 @@ class RiotInterface(GameInterface):
         self.url_sea = 'https://sea.api.riotgames.com'
         self.key = self.db.get_token('riot')
 
-    def get_lolplayer(self,userid):
+    def get_lolplayer(self,username):
         params = {
             'api_key':self.key
             }
-        r = requests.get(f'{self.url}/lol/summoner/v4/summoners/by-name/{userid}',params=params)
+        r = requests.get(f'{self.url}/lol/summoner/v4/summoners/by-name/{username}',params=params)
         if r.status_code == 200:
             return LOLPlayer(r.json())
         else:

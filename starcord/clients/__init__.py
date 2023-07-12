@@ -9,14 +9,14 @@ from .user import *
 
 __all__ =[
     'TwitchAPI',
-    'YoutubeInterface',
+    'YoutubeAPI',
     'RiotInterface',
     'OsuInterface',
     'ApexInterface',
     'SteamInterface',
     'DBDInterface',
     'hoyoInterface',
-    'CWBInterface',
-    'Covid19Interface',
+    'CWBClient',
+    'Covid19Client',
     'UserClient',
 ]

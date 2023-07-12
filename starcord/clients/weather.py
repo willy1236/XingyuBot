@@ -4,17 +4,16 @@ from bs4 import BeautifulSoup
 from starcord.database import Jsondb
 from starcord.model.weather import *
 
-class WeatherInterface():
-    def __init__(self):
-        self.db = Jsondb
+class WeatherClient():
+    """天氣資料交互"""
 
-class CWBInterface(WeatherInterface):
+class CWBClient(WeatherClient):
     def __init__(self):
         super().__init__()
-        self.auth = self.db.get_token('CWB_api')
+        self.auth = Jsondb.get_token('CWB_api')
         self.url = 'https://opendata.cwb.gov.tw/api/v1/rest/datastore'
 
-    def get_report(self,significant=False):
+    def get_earthquake_report(self,significant=False):
         params = {
             'Authorization': self.auth,
             'limit': 1
@@ -29,7 +28,7 @@ class CWBInterface(WeatherInterface):
         else:
             return None
 
-    def get_report_auto(self,timeFrom):
+    def get_earthquake_report_auto(self,timeFrom=None):
         params = {
             'Authorization': self.auth,
             'timeFrom': timeFrom,
@@ -59,7 +58,7 @@ class CWBInterface(WeatherInterface):
             return None
         
 
-class Covid19Interface(WeatherInterface):
+class Covid19Client(WeatherClient):
     def get_covid19():
         r = requests.get(f'https://news.campaign.yahoo.com.tw/2019-nCoV/index.php')
         soup = BeautifulSoup(r.text, "html.parser")

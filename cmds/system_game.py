@@ -1,4 +1,4 @@
-import discord,genshin
+import discord,genshin,re,asyncio
 from discord.ext import commands
 from discord.commands import SlashCommandGroup
 from datetime import timedelta
@@ -27,6 +27,7 @@ hoyo_game_option = [
 ]
 
 debug_guild = Jsondb.jdata.get('debug_guild')
+jdata = Jsondb.jdata
 
 class system_game(Cog_Extension):
     game = SlashCommandGroup("game", "遊戲資訊相關指令")
@@ -53,6 +54,7 @@ class system_game(Cog_Extension):
         account_id = None
         other_id = None
 
+        game = DatabaseGame(game)
         unneed_verify = []
         if game in unneed_verify:
             player_name = value
@@ -95,8 +97,8 @@ class system_game(Cog_Extension):
                 await ctx.respond(f'錯誤:找不到此用戶',ephemeral=True)
                 return
 
-        self.sqldb.set_game_data(id,game,player_name,player_id,account_id,other_id)
-        await ctx.respond(f'已將{game}資料設定為 {player_name}')
+        self.sqldb.set_game_data(id,game.value,player_name,player_id,account_id,other_id)
+        await ctx.respond(f'已將用戶的 {game.name} 資料設定為 {player_name}')
             
 
     @game.command(description='查詢遊戲資料')
@@ -109,36 +111,36 @@ class system_game(Cog_Extension):
         
         if game:
             dbdata = self.sqldb.get_game_data(userid,game)
-            game = DatabaseGame(game)
-            if game == DatabaseGame.STEAM:
-                APIdata = SteamInterface().get_user(dbdata['player_id'])
-            elif game == DatabaseGame.OSU:
-                APIdata = OsuInterface().get_player(dbdata['player_name'])
-            elif game == DatabaseGame.APEX:
-                APIdata = ApexInterface().get_player(dbdata['player_name'])
-            elif game == DatabaseGame.LOL:
-                APIdata = RiotInterface().get_lolplayer(dbdata['player_name'])
-            
+            if dbdata:
+                game = DatabaseGame(game)
+                if game == DatabaseGame.STEAM:
+                    APIdata = SteamInterface().get_user(dbdata['player_id'])
+                elif game == DatabaseGame.OSU:
+                    APIdata = OsuInterface().get_player(dbdata['player_name'])
+                elif game == DatabaseGame.APEX:
+                    APIdata = ApexInterface().get_player(dbdata['player_name'])
+                elif game == DatabaseGame.LOL:
+                    APIdata = RiotInterface().get_lolplayer(dbdata['player_name'])
+            else:
+                await ctx.respond(f'錯誤:資料庫中查無資料',ephemeral=True)
+
             if APIdata:
                 await ctx.respond(f'查詢成功',embed=APIdata.desplay())
             else:
                 await ctx.respond(f'錯誤:找不到此用戶',ephemeral=True)
             return
 
-        if not (user == ctx.author or ctx.author.id == 419131103836635136):
+        if not (user == ctx.author or self.bot.is_owner(ctx.author)):
             await ctx.respond('目前不開放查詢別人的綜合資料喔',ephemeral=True)
             return
             
         record = self.sqldb.get_game_data(userid)
         if record:
-            data = {}
+            embed = BotEmbed.simple(title=user)
             for r in record:
                 game = r['game']
-                data[game] = r['player_name']
-
-            embed = BotEmbed.simple(title=user)
-            for game in data:
-                embed.add_field(name=game, value=data[game], inline=False)
+                name = r['player_name']
+                embed.add_field(name=game, value=name, inline=False)
             embed.set_thumbnail(url=user.display_avatar.url)
             await ctx.respond(embed=embed)
         else:
@@ -173,13 +175,21 @@ class system_game(Cog_Extension):
             await ctx.respond('查詢失敗:查無此ID',ephemeral=True)
 
     @lol.command(description='查詢最近一次的League of Legends對戰')
-    async def playermatch(self,ctx,username:discord.Option(str,name='用戶名稱',description='要查詢的用戶')):
-        player = RiotInterface().get_lolplayer(username)
-        if not player:
-            await ctx.respond('查詢失敗:查無此玩家',ephemeral=True)
-            return
+    async def playermatch(self,ctx,username:discord.Option(str,name='用戶名稱',description='要查詢的用戶，留空則使用資料庫查詢',required=False)):
+        if not username:
+            dbdata = self.sqldb.get_game_data(str(ctx.author.id),DatabaseGame.LOL.value)
+            if not dbdata:
+                await ctx.respond('查詢失敗:沒有登入資料庫的資料',ephemeral=True)
+                return
+            puuid = dbdata['puuid']
+        else:
+            player = RiotInterface().get_lolplayer(username)
+            if not player:
+                await ctx.respond('查詢失敗:查無此玩家',ephemeral=True)
+                return
+            puuid = player.puuid
         
-        match_list = RiotInterface().get_lol_player_match(player.puuid,1)
+        match_list = RiotInterface().get_lol_player_match(puuid,1)
         if not match_list:
             await ctx.respond('查詢失敗:此玩家查無對戰紀錄',ephemeral=True)
             return
@@ -265,7 +275,7 @@ class system_game(Cog_Extension):
     @hoyo.command(description='如何設定cookies(需先設定才能使用其他功能)')
     @commands.cooldown(rate=1,per=1)
     async def help(self,ctx):
-        embed = BotEmbed.simple(description="1.前往 https://www.hoyolab.com/ 並登入\n2.複製以下代碼```script:d=document.cookie; c=d.includes('account_id') || alert('過期或無效的Cookie,請先登出帳號再重新登入!'); c && document.write(d)```\n3.在網址列打上java後直接貼上複製的代碼\n4.找到`ltuid=`跟`ltoken=`並複製其中的內容\n5.使用指令 /hoyo set <ltuid> <ltoken>")
+        embed = BotEmbed.simple(description="1.前往 https://www.hoyolab.com/ 並登入\n2.複製以下代碼```script:d=document.cookie; c=d.includes('account_id') || alert('過期或無效的Cookie,請先登出帳號再重新登入!'); c && document.write(d)```\n3.在網址列打上java後直接貼上複製的代碼\n4.找到`ltuid=`跟`ltoken=`並複製其中的內容\n5.使用指令 </hoyo set:1045323352421711947>")
         embed2 = BotEmbed.simple(description="擁有此cookie將可以使機器人以登入帳號的身分瀏覽與操作hoyolab的相關功能，但無法用於登入遊戲與改變遊戲中所持有的內容。\n若對此功能有疑慮，可隨時終止使用，cookie也可以隨時刪除，但米哈遊沒有官方正式API，故若不提供cookie將會無法使用相關功能。")
         await ctx.respond(embeds=[embed,embed2])
 
@@ -274,12 +284,17 @@ class system_game(Cog_Extension):
     async def set(self,ctx,
                   ltuid:discord.Option(str,name='ltuid',required=False),
                   ltoken:discord.Option(str,name='ltoken',required=False),
+                  uid:discord.Option(str,name='uid',description="非必填 輸入後能在使用某些功能時自動套用 若輸入過可跳過",required=False),
+                  #cookie_token:discord.Option(str,name='cookie_token',description="非必填 輸入後才能使用更多功能 如兌換序號",required=False,default=None),
                   remove:discord.Option(bool,name='若要移除資料請設為true',default=False)):
         if not remove:
-            self.sqldb.set_hoyo_cookies(str(ctx.author.id),ltuid,ltoken)
+            self.sqldb.set_hoyo_cookies(str(ctx.author.id),ltuid,ltoken,None)
+            if uid:
+                self.sqldb.set_game_data(str(ctx.author.id),DatabaseGame.GENSHIN.value,player_id=uid)
             await ctx.respond(f'{ctx.author.mention} 設定完成',ephemeral=True)
         else:
             self.sqldb.remove_hoyo_cookies(str(ctx.author.id))
+            self.sqldb.remove_game_data(str(ctx.author.id),DatabaseGame.GENSHIN.value)
             await ctx.respond(f'{ctx.author.mention} cookies移除完成',ephemeral=True)
 
     @hoyo.command(description='取得每月原石來源統計')
@@ -472,16 +487,17 @@ class system_game(Cog_Extension):
         #print(r_spiral_abyss)
         await ctx.respond(embed=embed)
 
-    @hoyo.command(description='兌換原神禮包碼')
+    @hoyo.command(description='兌換禮包碼')
     @commands.cooldown(rate=1,per=1)
     async def code(self,ctx,
+                   game:discord.Option(str,name='遊戲',description='要簽到的遊戲',choices=hoyo_game_option),
                    code:discord.Option(str,name='禮包碼',description='要兌換的禮包碼'),
                    uid:discord.Option(str,name='uid',description='要兌換的用戶')):
         cookies = self.sqldb.get_userdata(str(ctx.author.id),'game_hoyo_cookies')
         if not cookies:
             raise commands.errors.ArgumentParsingError("沒有設定cookies或已過期")
         client = genshin.Client(cookies,lang='zh-tw')
-        await client.redeem_code(code,uid)  
+        await client.redeem_code(code,uid,game=game)  
         await ctx.respond('兌換已完成')
 
     @hoyo.command(description='簽到設定（多個遊戲請個別設定）（尚在測試可能有bug）')
@@ -513,6 +529,37 @@ class system_game(Cog_Extension):
         r = await client.get_genshin_spiral_abyss(hoyolab_uid)
         print(r)
         await ctx.respond('done')
+
+    @commands.message_command(name="兌換原神序號",guild_ids=debug_guild)
+    async def exchange_code_genshin(self,ctx,message:discord.Message):
+        textline = message.content.splitlines()
+        p = re.compile(r'[0-9A-Z]{10,}')
+        code_list = []
+        for i in textline:
+            code = p.match(i)
+            if code and code not in code_list:
+                code_list.append(code.group())
+        
+        if code_list:
+            codetext = ""
+            for i in code_list:
+                codetext+=f"\n[{i}](https://genshin.hoyoverse.com/zh-tw/gift?code={i})"
+            await ctx.respond(f"找到以下兌換碼{codetext}\n若有設定cookie及uid則將自動兌換",ephemeral=True)
+
+    #         cookies = self.sqldb.get_userdata(str(ctx.author.id),'game_hoyo_cookies')
+    #         dbdata = self.sqldb.get_game_data(str(ctx.author.id),DatabaseGame.GENSHIN.value)
+    #         if not cookies:
+    #             await ctx.send("沒有設定cookies或已過期")
+    #             return
+    #         if dbdata:
+    #             client = genshin.Client(cookies,lang='zh-tw')
+    #             uid = dbdata['player_id']
+    #             for code in code_list:
+    #                 await client.redeem_code(code,uid,game=genshin.Game.GENSHIN)
+    #                 asyncio.sleep(3)
+    #             await ctx.send('兌換已完成')
+        else:
+            await ctx.respond(f"沒有找到兌換碼",ephemeral=True)
 
 def setup(bot):
     bot.add_cog(system_game(bot))
