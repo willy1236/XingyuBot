@@ -46,7 +46,7 @@ class task(Cog_Extension):
 
     async def earthquake_check(self):
         timefrom = Jsondb.read_cache('timefrom')
-        data = CWBClient().get_report_auto(timefrom)
+        data = CWBClient().get_earthquake_report_auto(timefrom)
         if data:
             embed = data.desplay()
             time = datetime.strptime(data.originTime, "%Y-%m-%d %H:%M:%S")+timedelta(seconds=1)
