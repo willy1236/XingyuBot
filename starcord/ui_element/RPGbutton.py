@@ -61,8 +61,6 @@ class RPGbutton1(discord.ui.View):
             await view.battle(interaction,self)
             
 
-
-
 class RPGbutton2(discord.ui.View):
     def __init__(self,userid):
         super().__init__()
@@ -145,15 +143,11 @@ class RPGbutton3(discord.ui.View):
             self.enable_all_items()
             if monster.hp <= 0 or player.hp <= 0:
                 #結束儲存資料
-                print(1)
                 sqldb.update_userdata(player.id, 'rpg_user','user_hp',player.hp)
                 await interaction.edit_original_response(embeds=self.embed_list,view=RPGbutton1(player.id))
             else:
                 await interaction.edit_original_response(embeds=self.embed_list,view=self)
             self.attck = None
-
-        
-        
 
 
     @discord.ui.button(label="普通攻擊",style=discord.ButtonStyle.green)

@@ -47,8 +47,7 @@ class User():
         point: int
         rcoin: int
 
-    def __init__(self,data:dict):
-        #資料庫
+    def __init__(self,**data):
         self.id = data.get('user_id')
         self.name = data.get('name')
         self.point = data.get('point')
@@ -148,43 +147,43 @@ class RPGUser(User):
         self.work_code = data.get('work_code')
 
     
-    def advance(self) -> list[discord.Embed]:
-        '''
-        進行冒險
+    # def advance(self) -> list[discord.Embed]:
+    #     '''
+    #     進行冒險
         
-        Return: list[discord.Embed]（輸出冒險結果）
-        '''
-        data = sqldb.get_advance(self.id)
-        times = data.get('advance_times',0) + 1
+    #     Return: list[discord.Embed]（輸出冒險結果）
+    #     '''
+    #     data = sqldb.get_advance(self.id)
+    #     times = data.get('advance_times',0) + 1
         
-        if times == 1:
-            if self.rcoin <= 0:
-                return "你的Rcoin不足 至少需要1Rcoin才能冒險"
+    #     if times == 1:
+    #         if self.rcoin <= 0:
+    #             return "你的Rcoin不足 至少需要1Rcoin才能冒險"
 
-            sqldb.update_rcoin(self.id,'add',-1)
+    #         sqldb.update_rcoin(self.id,'add',-1)
 
-        embed = BotEmbed.simple()
-        list = [embed]
-        rd = random.randint(71,100)
-        if rd >=1 and rd <=70:
-            embed.title = f"第{times}次冒險"
-            embed.description = "沒事發生"
-        elif rd >= 71 and rd <=100:
-            embed.title = f"第{times}次冒險"
-            embed.description = "遇到怪物"
-            monster = Monster.get_monster(random.randint(1,2))
-            embed2 = monster.battle(self)
-            list.append(embed2)
+    #     embed = BotEmbed.simple()
+    #     list = [embed]
+    #     rd = random.randint(71,100)
+    #     if rd >=1 and rd <=70:
+    #         embed.title = f"第{times}次冒險"
+    #         embed.description = "沒事發生"
+    #     elif rd >= 71 and rd <=100:
+    #         embed.title = f"第{times}次冒險"
+    #         embed.description = "遇到怪物"
+    #         monster = Monster.get_monster(random.randint(1,2))
+    #         embed2 = monster.battle(self)
+    #         list.append(embed2)
 
-            embed = BotEmbed.simple(f"遭遇戰鬥：{self.name}")
-            view = RPGbutton3(self,monster,embed)
-        if times >= 5 and random.randint(0,100) <= times*5:
-            sqldb.remove_userdata(self.id,'rpg_advance')
-            embed.description += '，冒險結束'
-        else:
-            sqldb.update_userdata(self.id,'rpg_advance','advance_times',times)
+    #         embed = BotEmbed.simple(f"遭遇戰鬥：{self.name}")
+    #         view = RPGbutton3(self,monster,embed)
+    #     if times >= 5 and random.randint(0,100) <= times*5:
+    #         sqldb.remove_userdata(self.id,'rpg_advance')
+    #         embed.description += '，冒險結束'
+    #     else:
+    #         sqldb.update_userdata(self.id,'rpg_advance','advance_times',times)
 
-        return list
+    #     return list
     
     def work(self) -> str:
         '''
@@ -234,64 +233,64 @@ class Monster:
             raise ValueError('monster_id not found.')
 
 
-    def battle(self, player:RPGUser):
-        '''玩家與怪物戰鬥\n
-        player:要戰鬥的玩家'''
-        player_hp_reduce = 0
-        battle_round = 0
-        embed = BotEmbed.simple(f"遭遇戰鬥：{self.name}")
-        #戰鬥到一方倒下
-        while self.hp > 0 and player.hp > 0:
-            text = ""
-            battle_round += 1
-            #造成的傷害總和
-            damage_player = 0
-            damage_monster = 0
+    # def battle(self, player:RPGUser):
+    #     '''玩家與怪物戰鬥\n
+    #     player:要戰鬥的玩家'''
+    #     player_hp_reduce = 0
+    #     battle_round = 0
+    #     embed = BotEmbed.simple(f"遭遇戰鬥：{self.name}")
+    #     #戰鬥到一方倒下
+    #     while self.hp > 0 and player.hp > 0:
+    #         text = ""
+    #         battle_round += 1
+    #         #造成的傷害總和
+    #         damage_player = 0
+    #         damage_monster = 0
             
-            #玩家先攻
-            if random.randint(1,100) < player.hrt:
-                damage_player = player.atk
-                self.hp -= damage_player
-                text += "玩家：普通攻擊 "
-                #怪物被擊倒
-                if self.hp <= 0:
-                    text += f"\n擊倒怪物 扣除{player_hp_reduce}滴後你還剩下 {player.hp} HP"
-                    # if "loot" in self.data:
-                    #     loot = random.choices(self.data["loot"][0],weights=self.data["loot"][1],k=self.data["loot"][2])
-                    #     player.add_bag(loot)
-                    #     text += f"\n獲得道具！"
-                    sqldb.update_rcoin(player.id, 'add',1)
-                    text += f"\nRcoin+1"
-            else:
-                text += "玩家：未命中 "
+    #         #玩家先攻
+    #         if random.randint(1,100) < player.hrt:
+    #             damage_player = player.atk
+    #             self.hp -= damage_player
+    #             text += "玩家：普通攻擊 "
+    #             #怪物被擊倒
+    #             if self.hp <= 0:
+    #                 text += f"\n擊倒怪物 扣除{player_hp_reduce}滴後你還剩下 {player.hp} HP"
+    #                 # if "loot" in self.data:
+    #                 #     loot = random.choices(self.data["loot"][0],weights=self.data["loot"][1],k=self.data["loot"][2])
+    #                 #     player.add_bag(loot)
+    #                 #     text += f"\n獲得道具！"
+    #                 sqldb.update_rcoin(player.id, 'add',1)
+    #                 text += f"\nRcoin+1"
+    #         else:
+    #             text += "玩家：未命中 "
             
-            #怪物後攻
-            if self.hp > 0:
-                if random.randint(1,100) < self.hrt:
-                    damage_monster = self.atk
-                    player.hp -= damage_monster
-                    player_hp_reduce += damage_monster
-                    text += "怪物：普通攻擊"
-                else:
-                    text += "怪物：未命中"
+    #         #怪物後攻
+    #         if self.hp > 0:
+    #             if random.randint(1,100) < self.hrt:
+    #                 damage_monster = self.atk
+    #                 player.hp -= damage_monster
+    #                 player_hp_reduce += damage_monster
+    #                 text += "怪物：普通攻擊"
+    #             else:
+    #                 text += "怪物：未命中"
 
-                if damage_player == 0:
-                    damage_player = "未命中"
-                if damage_monster == 0:
-                    damage_monster = "未命中"
-                text += f"\n剩餘HP： 怪物{self.hp}(-{damage_player}) 玩家{player.hp}(-{damage_monster})\n"
+    #             if damage_player == 0:
+    #                 damage_player = "未命中"
+    #             if damage_monster == 0:
+    #                 damage_monster = "未命中"
+    #             text += f"\n剩餘HP： 怪物{self.hp}(-{damage_player}) 玩家{player.hp}(-{damage_monster})\n"
                 
-                #玩家被擊倒
-                if player.hp <= 0:
-                    text += "被怪物擊倒\n"
-                    player.hp = 10
-                    text += '你在冒險中死掉了 但因為目前仍在開發階段 你可以直接滿血復活\n'
+    #             #玩家被擊倒
+    #             if player.hp <= 0:
+    #                 text += "被怪物擊倒\n"
+    #                 player.hp = 10
+    #                 text += '你在冒險中死掉了 但因為目前仍在開發階段 你可以直接滿血復活\n'
             
-            embed.add_field(name=f"\n第{battle_round}回合\n",value=text,inline=False)
+    #         embed.add_field(name=f"\n第{battle_round}回合\n",value=text,inline=False)
             
-        #結束儲存資料
-        sqldb.update_userdata(player.id, 'rpg_user','user_hp',player.hp)
-        return embed
+    #     #結束儲存資料
+    #     sqldb.update_userdata(player.id, 'rpg_user','user_hp',player.hp)
+    #     return embed
     
 class Pet():
     if TYPE_CHECKING:
