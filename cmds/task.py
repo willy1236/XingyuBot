@@ -46,7 +46,7 @@ class task(Cog_Extension):
 
     async def earthquake_check(self):
         timefrom = Jsondb.read_cache('timefrom')
-        data = CWBInterface().get_report_auto(timefrom)
+        data = CWBClient().get_report_auto(timefrom)
         if data:
             embed = data.desplay()
             time = datetime.strptime(data.originTime, "%Y-%m-%d %H:%M:%S")+timedelta(seconds=1)
@@ -119,7 +119,7 @@ class task(Cog_Extension):
                     print(f"apex_map_update: {i['guild_id']}/{i['channel_id']}")
 
     async def forecast_update(self):
-        forecast = CWBInterface().get_forecast()
+        forecast = CWBClient().get_forecast()
         if forecast:
             records = sqldb.get_notice_channel('forecast')
             for i in records:
