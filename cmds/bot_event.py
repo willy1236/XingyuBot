@@ -132,7 +132,7 @@ class event(Cog_Extension):
                 else:
                     guildid = None
 
-                if guild in voice_list:
+                if guildid in voice_list:
                     return guildid
                 else:
                     return False
