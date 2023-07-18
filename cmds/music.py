@@ -24,7 +24,10 @@ ytdl_format_options = {
     'extractor_retries': 'auto',
 }
 
-ffmpeg_options = {"options": "-vn"}
+ffmpeg_options = {
+    'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
+    "options": "-vn"
+}
 
 ytdl = youtube_dl.YoutubeDL(ytdl_format_options)
 

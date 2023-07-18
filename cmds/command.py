@@ -366,7 +366,7 @@ class command(Cog_Extension):
                 await member.move_to(channel)
             await asyncio.sleep(0.5)
 
-    @commands.slash_command(description='傳送訊息給伺服器擁有者')
+    @commands.slash_command(description='傳送訊息給機器人擁有者')
     @commands.cooldown(rate=1,per=10)
     async def feedback(self,
                        ctx:discord.ApplicationContext,

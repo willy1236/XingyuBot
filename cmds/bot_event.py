@@ -54,7 +54,7 @@ class event(Cog_Extension):
         if self.bot.user in message.mentions and not await self.bot.is_owner(message.author):
             await BRS.mentioned(self.bot,message)
         #被提及所有人回報
-        if message.mention_everyone:
+        if message.mention_everyone and not await self.bot.is_owner(message.author):
             await BRS.mention_everyone(self.bot,message)
         
         #私人訊息回報
@@ -126,14 +126,14 @@ class event(Cog_Extension):
     async def on_voice_state_update(self,user:discord.Member, before:discord.VoiceState, after:discord.VoiceState):
             def check(before, after):
                 if before.channel:
-                    guild = before.channel.guild.id
+                    guildid = before.channel.guild.id
                 elif after.channel:
-                    guild = after.channel.guild.id
+                    guildid = after.channel.guild.id
                 else:
-                    guild = None
+                    guildid = None
 
                 if guild in voice_list:
-                    return guild
+                    return guildid
                 else:
                     return False
 
@@ -151,10 +151,10 @@ class event(Cog_Extension):
                     embed=discord.Embed(description=f'{user.mention} 離開語音',color=0x4aa0b5,timestamp=NowTime)
                 else:
                     return
-                if user.discriminator:
-                    embed.set_author(name=user,icon_url=user.display_avatar.url)
-                else:
+                if user.discriminator == "0":
                     embed.set_author(name=user.name,icon_url=user.display_avatar.url)
+                else:
+                    embed.set_author(name=user,icon_url=user.display_avatar.url)
 
                 if before.channel:
                     embed.set_footer(text=before.channel.guild.name)
@@ -182,7 +182,7 @@ class event(Cog_Extension):
                 new_channel = await guild.create_voice_channel(name=f'{user.name}的頻道', reason='語音分流',category=category,overwrites=overwrites)
                 await user.move_to(new_channel)
 
-            if after.suppress and after.channel and user.get_role(1126820808761819197) and after.channel.category.id == 1097158160709591130 and type(after.channel) == discord.StageChannel:
+            if after.suppress and after.channel and (user.get_role(1126820808761819197) or user.get_role(1130849778264195104)) and after.channel.category.id == 1097158160709591130 and type(after.channel) == discord.StageChannel:
                 await user.request_to_speak()
 
     @commands.Cog.listener()
