@@ -121,22 +121,3 @@ class find:
         except commands.RoleNotFound:
             role = None
         return role
-
-class converter():
-    def time(arg:str):
-        '''10s->1,0用str相加 s則轉換後用int相乘'''
-        dict = {'s':1,'m':60,'h':3600}
-        n=0
-        m=''
-        for i in arg:
-            try:
-                int(i)
-                m+=i
-            except ValueError:
-                try:
-                    m=int(m)
-                    n=n+(m*dict[i])
-                    m=''
-                except KeyError:
-                    raise KeyError
-        return n

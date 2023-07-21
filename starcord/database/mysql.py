@@ -230,12 +230,23 @@ class MySQLDatabase():
         self.cursor.execute(f'DELETE FROM `notice_channel` WHERE `guild_id` = %s AND `notice_type` = %s;',(guild_id,notice_type))
         self.connection.commit()
 
-    def get_notice_channel(self,notice_type:str):
+    def get_notice_channel_by_type(self,notice_type:str):
         self.cursor.execute(f"USE `database`;")
         self.cursor.execute(f'SELECT * FROM `notice_channel` WHERE notice_type = %s;',(notice_type,))
         records = self.cursor.fetchall()
         return records
 
+    def get_notice_channel(self,guild_id:str,notice_type:str):
+            self.cursor.execute(f"USE `database`;")
+            self.cursor.execute(f'SELECT * FROM `notice_channel` WHERE guild_id = %s AND notice_type = %s;',(guild_id,notice_type))
+            records = self.cursor.fetchone()
+            return records
+    
+    def get_all_notice_channel(self,guild_id:str):
+        self.cursor.execute(f"USE `database`;")
+        self.cursor.execute(f'SELECT * FROM `notice_channel` WHERE guild_id = %s;',(guild_id,))
+        records = self.cursor.fetchall()
+        return records
 
     def set_notice_community(self,notice_type:str,notice_name:str,guild_id:int,channel_id:int,role_id:int=None):
         self.cursor.execute(f"USE `database`;")
@@ -430,8 +441,8 @@ class MySQLDatabase():
         return records
     
     #警告類
-    def add_warning(self,user_id:str,moderate_type:str,moderate_user:str,create_guild:str,create_time:datetime.datetime,reason:str=None):
-        self.cursor.execute(f"INSERT INTO `database`.`user_moderate` VALUES(%s,%s,%s,%s,%s,%s,%s);",(None,user_id,moderate_type,moderate_user,create_guild,create_time,reason))
+    def add_warning(self,user_id:str,moderate_type:str,moderate_user:str,create_guild:str,create_time:datetime.datetime,reason:str=None,last_time:str=None):
+        self.cursor.execute(f"INSERT INTO `database`.`user_moderate` VALUES(%s,%s,%s,%s,%s,%s,%s,%s);",(None,user_id,moderate_type,moderate_user,create_guild,create_time,reason,last_time))
         self.connection.commit()
 
     def get_warning(self,warning_id:int):

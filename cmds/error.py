@@ -26,7 +26,7 @@ class error(Cog_Extension):
             for i in error.missing_permissions:
                 permissions.append(permissions_tl.get(i,i))    
             text = ','.join(permissions)
-            await ctx.respond(f'缺少權限:機器人沒有權限來使用此指令\n缺少權限: {text}',ephemeral=True)
+            await ctx.respond(f'缺少權限:我沒有權限來使用此指令\n缺少權限: {text}',ephemeral=True)
 
         elif isinstance(error,commands.errors.NoPrivateMessage):
             await ctx.respond(f'頻道錯誤：此指令不可在DM中使用',ephemeral=True)
@@ -36,6 +36,9 @@ class error(Cog_Extension):
                 await ctx.respond(error.original,ephemeral=True)
                 if error.original.original_message:
                     await BRS.error(self.bot,ctx,f"{error.original} ({error.original.original_message})")
+
+            elif isinstance(error.original,discord.errors.Forbidden):
+                await ctx.respond(f'錯誤：我缺少權限執行這項操作，可能為我的身分組位階較低或缺少必要權限導致',ephemeral=True)
 
             elif isinstance(error.original,sqlerror) and error.original.errno == 1062:
                 await ctx.respond(f'錯誤：資料重複新增',ephemeral=True)

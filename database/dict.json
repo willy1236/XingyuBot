@@ -6,7 +6,17 @@
         "台灣各縣市天氣預報": "forecast",
         "Apex合成物品更新": "apex_crafting",
         "Apex地圖輪替": "apex_map",
-        "跨群聊天": "crass_chat"
+        "管理員專用頻道": "mod"
+    },
+    "channel_set_tl": {
+        "all_anno": "全群公告",
+        "bot": "機器人更新通知",
+        "earthquake": "地震通知",
+        "forecast": "台灣各縣市天氣預報",
+        "apex_crafting": "Apex合成物品更新",
+        "apex_map": "Apex地圖輪替",
+        "crass_chat": "跨群聊天",
+        "mod":"管理員專用頻道"
     },
     "game_set_option": {
         "Steam": "steam",
@@ -82,7 +92,7 @@
     },
     "help_option": {
         "使用指令教學（use）":"use",
-        "通知系統（set）":"set",
+        "通知系統（channel）":"channel",
         "音樂系統（music）":"music",
         "點數系統（pt）":"pt",
         "遊戲查詢系統（game）":"game",

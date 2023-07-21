@@ -1,9 +1,9 @@
-import discord
+import discord,datetime
 from starcord.database import Jsondb
 
 class BotEmbed:
     @staticmethod
-    def basic(bot,title:str=discord.Embed.Empty,description:str=discord.Embed.Empty,url=discord.Embed.Empty):
+    def basic(bot:discord.Bot,title:str=discord.Embed.Empty,description:str=discord.Embed.Empty,url=discord.Embed.Empty):
         '''基本:作者帶機器人名稱'''
         embed = discord.Embed(title=title,description=description, color=0xc4e9ff,url=url)
         embed.set_author(name=bot.user.name,icon_url=bot.user.display_avatar.url)
@@ -118,3 +118,45 @@ class ChoiceList:
         for name,value in Jsondb.jdict[option_name].items():
             list.append(discord.OptionChoice(name=name,value=value))
         return list
+
+class converter():
+    def time_to_sec(arg:str):
+        '''10s->1,0用str相加 s則轉換後用int相乘'''
+        dict = {'s':1,'m':60,'h':3600}
+        n=0
+        m=''
+        for i in arg:
+            try:
+                int(i)
+                m+=i
+            except ValueError:
+                try:
+                    m=int(m)
+                    n=n+(m*dict[i])
+                    m=''
+                except KeyError:
+                    raise KeyError
+        return n
+    
+    def time_to_datetime(arg:str): 
+        m = ""
+        days = 0
+        hours = 0
+        minutes = 0
+        seconds = 0
+        for i in arg:
+            try:
+                int(i)
+                m+=i
+            except ValueError:
+                m=int(m)
+                if i == "d":
+                    days = m
+                elif i == "h":
+                    hours = m
+                elif i == "m":
+                    minutes = m
+                elif i == "s":
+                    seconds = m
+                m=''
+        return datetime.timedelta(days=days,hours=hours,minutes=minutes,seconds=seconds)

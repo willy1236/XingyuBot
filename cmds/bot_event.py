@@ -42,10 +42,12 @@ keywords = {
     '消費':'那你好像也是頂級消費者喔'
 }
 
-dbdata = sqldb.get_notice_channel('crass_chat')
+dbdata = sqldb.get_notice_channel_by_type('crass_chat')
 crass_chat_channels = []
 for i in dbdata:
     crass_chat_channels.append(i['channel_id'])
+
+debug_mode = Jsondb.jdata.get("debug_mode",True)
 
 class event(Cog_Extension):    
     @commands.Cog.listener()
@@ -137,7 +139,7 @@ class event(Cog_Extension):
                 else:
                     return False
 
-            if self.bot.user.id != 589744540240314368:
+            if debug_mode:
                 return
            
             guildid = check(before,after)
@@ -187,7 +189,7 @@ class event(Cog_Extension):
 
     @commands.Cog.listener()
     async def on_member_remove(self, member:discord.Member):
-        if self.bot.user.id != 589744540240314368:
+        if debug_mode:
             return
         guildid = member.guild.id
         if guildid in member_leave_list:
@@ -196,12 +198,25 @@ class event(Cog_Extension):
 
     @commands.Cog.listener()
     async def on_member_join(self, member:discord.Member):
-        if self.bot.user.id != 589744540240314368:
+        if debug_mode:
             return
         guildid = member.guild.id
         if guildid in member_join_list:
             text = f'{member.mention} ({member.name}#{member.discriminator}) 加入了我們'
             await self.bot.get_channel(member_join_list[guildid]).send(text)
+
+        notice_data = self.sqldb.get_notice_channel(str(member.guild.id),"mod")
+        mod_channel_id = notice_data['channel_id']
+        #role_id = notice_data['role_id']
+        if mod_channel_id:
+            dbdata = self.sqldb.get_warnings(str(member.id))
+            #if role_id:
+            #    role = member.guild.get_role(role_id)
+
+            if dbdata:
+                channel = self.bot.get_channel(mod_channel_id)
+                channel.send(f"新成員{member.mention}({member.id}) 共有 {len(dbdata)} 個紀錄")
+
 
 def setup(bot):
     bot.add_cog(event(bot))

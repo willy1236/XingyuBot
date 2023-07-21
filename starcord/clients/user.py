@@ -38,6 +38,8 @@ class UserClient:
         else:
             raise ValueError('monster_id not found.')
 
+class WarningClient:
+    """警告系統調用端口"""
 
 class User():
     '''基本用戶'''

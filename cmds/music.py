@@ -211,6 +211,7 @@ class music(Cog_Extension):
     async def skip(self, ctx: discord.ApplicationContext):
         guildid = str(ctx.guild.id)
         player = get_player(guildid)
+        #if player.nowplaying.requester == ctx.author:
         player.skip_song()
         await ctx.respond(f"歌曲已跳過")
 

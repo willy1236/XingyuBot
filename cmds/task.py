@@ -24,7 +24,7 @@ class task(Cog_Extension):
     
     @commands.Cog.listener()
     async def on_ready(self):
-        if not Jsondb.jdata.get("debug_mode"):
+        if not Jsondb.jdata.get("debug_mode",True):
             scheduler = AsyncIOScheduler()
             scheduler.add_job(self.sign_reset,'cron',hour=4,minute=0,second=0,jitter=30,misfire_grace_time=60)
             scheduler.add_job(self.apex_crafting_update,'cron',hour=1,minute=5,second=0,jitter=30,misfire_grace_time=60)
@@ -59,7 +59,7 @@ class task(Cog_Extension):
             else:
                 text = '地震報告'
             
-            records = sqldb.get_notice_channel('earthquake')
+            records = sqldb.get_notice_channel_by_type('earthquake')
             for i in records:
                 channel = self.bot.get_channel(i['channel_id'])
                 if channel:
@@ -77,7 +77,7 @@ class task(Cog_Extension):
     async def apex_crafting_update(self):
         crafting = ApexInterface().get_crafting()
         if crafting:
-            records = sqldb.get_notice_channel('apex_crafting')
+            records = sqldb.get_notice_channel_by_type('apex_crafting')
             for i in records:
                 channel = self.bot.get_channel(i['channel_id'])
                 if channel:
@@ -99,7 +99,7 @@ class task(Cog_Extension):
     async def apex_map_update(self):
         map = ApexInterface().get_map_rotation()
         if map:
-            records = sqldb.get_notice_channel('apex_map')
+            records = sqldb.get_notice_channel_by_type('apex_map')
             for i in records:
                 channel = self.bot.get_channel(i['channel_id'])
                 if channel:
@@ -121,7 +121,7 @@ class task(Cog_Extension):
     async def forecast_update(self):
         forecast = CWBClient().get_forecast()
         if forecast:
-            records = sqldb.get_notice_channel('forecast')
+            records = sqldb.get_notice_channel_by_type('forecast')
             for i in records:
                 channel = self.bot.get_channel(i['channel_id'])
                 if channel:
