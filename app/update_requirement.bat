@@ -1,10 +1,12 @@
-pip install --upgrade requests
-pip install --upgrade beautifulsoup4
-pip install --upgrade youtube-dl
-pip install --upgrade mysql-connector-python
-pip install --upgrade genshin
-pip install --upgrade GitPython
-pip install  --upgrade APScheduler
-pip install  --upgrade fastapi uvicorn
-pip install  --upgrade mcrcon
-pause
+py -m pip install --upgrade py-cord
+py -m pip install --upgrade requests
+py -m pip install --upgrade beautifulsoup4
+py -m pip install --upgrade youtube-dl
+py -m pip install --upgrade mysql-connector-python
+py -m pip install --upgrade genshin
+py -m pip install --upgrade GitPython
+py -m pip install  --upgrade APScheduler
+py -m pip install  --upgrade fastapi uvicorn
+py -m pip install  --upgrade mcrcon
+py -m pip install  --upgrade twitchio
+pause "更新已完成，請按任意鍵繼續"

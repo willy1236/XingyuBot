@@ -3,7 +3,7 @@ from discord.ext import commands
 from discord.commands import SlashCommandGroup
 
 from core.classes import Cog_Extension
-from starcord import BotEmbed,BRS,Jsondb,sqldb,twitch_bot
+from starcord import BotEmbed,BRS,Jsondb,sqldb
 
 from starcord.ui_element.button import ReactRole_button
 
@@ -99,7 +99,6 @@ class BotPanel(discord.ui.View):
 debug_guild = Jsondb.jdata.get('debug_guild')
 
 class owner(Cog_Extension):
-    
     twitch_chatbot = SlashCommandGroup("twitch_chatbot", "twitch機器人相關指令",guild_ids=debug_guild)
     
     #change_presence
@@ -281,48 +280,48 @@ class owner(Cog_Extension):
             response = rcon.command(command)
             await ctx.respond(response)
 
-    @twitch_chatbot.command(description='加入Twitch頻道',guild_ids=debug_guild)
-    @commands.is_owner()
-    async def join(self,ctx,twitch_user):
-        channel = twitch_bot.get_channel(twitch_user)
-        if channel:
-            await ctx.respond(f'加入 {twitch_user}')
-        else:
-            await ctx.respond(f'找不到 {twitch_user} 但仍加入')
+    # @twitch_chatbot.command(description='加入Twitch頻道',guild_ids=debug_guild)
+    # @commands.is_owner()
+    # async def join(self,ctx,twitch_user):
+    #     channel = twitch_bot.get_channel(twitch_user)
+    #     if channel:
+    #         await ctx.respond(f'加入 {twitch_user}')
+    #     else:
+    #         await ctx.respond(f'找不到 {twitch_user} 但仍加入')
 
-            cache = Jsondb.cache
-            cache.get('twitch_initial_channels').append(twitch_user)
-            Jsondb.write('cache',cache)
+    #         cache = Jsondb.cache
+    #         cache.get('twitch_initial_channels').append(twitch_user)
+    #         Jsondb.write('cache',cache)
 
-            await twitch_bot.join_channels((twitch_user,))
+    #         await twitch_bot.join_channels((twitch_user,))
             
     
-    @twitch_chatbot.command(description='離開Twitch頻道',guild_ids=debug_guild)
-    @commands.is_owner()
-    async def leave(self,ctx,twitch_user):
-        cache = Jsondb.cache
-        if twitch_user in cache.get('twitch_initial_channels'):
-            cache.get('twitch_initial_channels').remove(twitch_user)
-            Jsondb.write('cache',cache)
-            await twitch_bot.part_channels((twitch_user,))
-            await ctx.respond(f'離開 {twitch_user}')
-        else:
-            await ctx.respond(f'錯誤：未加入 {twitch_user}')
+    # @twitch_chatbot.command(description='離開Twitch頻道',guild_ids=debug_guild)
+    # @commands.is_owner()
+    # async def leave(self,ctx,twitch_user):
+    #     cache = Jsondb.cache
+    #     if twitch_user in cache.get('twitch_initial_channels'):
+    #         cache.get('twitch_initial_channels').remove(twitch_user)
+    #         Jsondb.write('cache',cache)
+    #         await twitch_bot.part_channels((twitch_user,))
+    #         await ctx.respond(f'離開 {twitch_user}')
+    #     else:
+    #         await ctx.respond(f'錯誤：未加入 {twitch_user}')
 
-    @twitch_chatbot.command(description='發送消息到指定Twitch頻道',guild_ids=debug_guild)
-    @commands.is_owner()
-    async def send(self,ctx,twitch_user,context):
-        await twitch_bot.get_channel(twitch_user).send(context)
-        await ctx.respond(f'已發送到 {twitch_user}: {context}')
+    # @twitch_chatbot.command(description='發送消息到指定Twitch頻道',guild_ids=debug_guild)
+    # @commands.is_owner()
+    # async def send(self,ctx,twitch_user,context):
+    #     await twitch_bot.get_channel(twitch_user).send(context)
+    #     await ctx.respond(f'已發送到 {twitch_user}: {context}')
     
-    @commands.slash_command(description='機器人面板',guild_ids=debug_guild)
-    @commands.is_owner()
-    async def panel(self,ctx):
-        embed_list = []
-        embed = BotEmbed.basic(self.bot,description=f'伺服器總數：{len(self.bot.guilds)}\n成員：{len(self.bot.users)}')
-        embed_list.append(embed)
+    # @commands.slash_command(description='機器人面板',guild_ids=debug_guild)
+    # @commands.is_owner()
+    # async def panel(self,ctx):
+    #     embed_list = []
+    #     embed = BotEmbed.basic(self.bot,description=f'伺服器總數：{len(self.bot.guilds)}\n成員：{len(self.bot.users)}')
+    #     embed_list.append(embed)
 
-        await ctx.respond(f'',embeds=embed_list,view=BotPanel(self.bot))
+    #     await ctx.respond(f'',embeds=embed_list,view=BotPanel(self.bot))
 
     @commands.slash_command(description='獲取指令',guild_ids=debug_guild)
     @commands.is_owner()

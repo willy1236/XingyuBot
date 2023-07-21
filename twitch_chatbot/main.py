@@ -1,5 +1,7 @@
-import twitchio,secrets,requests,asyncio
+import twitchio,secrets,requests,asyncio,importlib,sys
 from twitchio.ext import commands,eventsub
+
+sys.path.append('../')
 from starcord.database import Jsondb
 
 tokens = Jsondb.get_token('twitch_chatbot')
@@ -12,7 +14,7 @@ url = Jsondb.jdata.get('twitch_chat_webhook')
 
 class Bot(commands.Bot):
     def __init__(self):
-        super().__init__(token=tokens.get('token'), prefix='!!', initial_channels=initial_channels,client_id=tokens.get('id'),nick='bot')
+        super().__init__(token=tokens.get('token'), prefix='!!', initial_channels=['sakagawa_0309'],client_id=tokens.get('id'),nick='bot')
         #self.loop.run_until_complete(self.__ainit__())
 
     async def __ainit__(self):
@@ -21,6 +23,7 @@ class Bot(commands.Bot):
         try:
             await esclient.subscribe_channel_follows_v2(broadcaster='sakagawa_0309', moderator='helper_chatbot')
             await esclient.subscribe_channel_prediction_begin(broadcaster='sakagawa_0309')
+            await esclient.subscribe_channel_points_redeemed(broadcaster='sakagawa_0309')
         except twitchio.HTTPException:
             pass
 
@@ -28,6 +31,7 @@ class Bot(commands.Bot):
     async def event_ready(self):
         print(f'Logged in as | {self.nick}')
         print(f'User id is | {self.user_id}')
+        print(f'Channel is | {self.connected_channels}')
         #await bot.connected_channels[0].send('...')
 
     async def event_reconnect(self):
@@ -63,7 +67,7 @@ loop.create_task(bot.__ainit__())
 async def event_eventsub_notification_follow(payload: eventsub.ChannelFollowData):
     print('Received event!')
     #channel = bot.get_channel('channel')
-    print(f'{payload.data.user.name} followed woohoo!')
+    print(f'{payload.user.name} followed woohoo!')
     #await channel.send(f'{payload.data.user.name} followed woohoo!')
 
 @esbot.event()

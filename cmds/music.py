@@ -17,7 +17,7 @@ ytdl_format_options = {
     "nocheckcertificate": True,
     "ignoreerrors": False,
     "logtostderr": False,
-    "quiet": False,
+    "quiet": True,
     "no_warnings": True,
     "default_search": "auto",
     "source_address": "0.0.0.0",  # Bind to ipv4 since ipv6 addresses cause issues at certain times
@@ -48,7 +48,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
             # Takes the first item from a playlist
             data = data["entries"][0]
 
-        filename = data["url"] if stream else ytdl.prepare_filename(data)    
+        filename = data["url"] if stream else ytdl.prepare_filename(data)
         return self(discord.FFmpegPCMAudio(filename, **ffmpeg_options), data=data,volume=volume)
 
 
@@ -138,14 +138,15 @@ bot_playlist = {}
 
 class music(Cog_Extension):
 
-    @commands.slash_command()
+    @commands.slash_command(description='讓機器人加入語音頻道')
+    @commands.guild_only()
     async def join(self, ctx: discord.ApplicationContext, channel: discord.VoiceChannel):
         """Joins a voice channel"""
-
         if ctx.voice_client:
-            return await ctx.voice_client.move_to(channel)
-
-        await channel.connect()
+            await ctx.voice_client.move_to(channel)
+        else:
+            await channel.connect()
+        await ctx.respond(f"我來到了 {channel.name}")
 
     # @commands.slash_command()
     # async def localplay(self, ctx: discord.ApplicationContext, query: str):
@@ -158,27 +159,20 @@ class music(Cog_Extension):
 
     #     await ctx.send(f"Now playing: {query}")
 
-    # @commands.slash_command()
-    # async def yt(self, ctx: discord.ApplicationContext, url: str):
-    #     """Plays from a url (almost anything youtube_dl supports)"""
-
-    #     async with ctx.typing():
-    #         player = await YTDLSource.from_url(url, loop=self.bot.loop)
-    #         ctx.voice_client.play(
-    #             player, after=lambda e: print(f"Player error: {e}") if e else None
-    #         )
-
-    #     await ctx.send(f"Now playing: {player.title}")
-
     @commands.slash_command(description='播放音樂')
+    @commands.guild_only()
     async def play(self, ctx: discord.ApplicationContext, url: str):
-        """Streams from a url (same as yt, but doesn't predownload)"""
         await ctx.defer()
         guildid =str(ctx.guild.id)
         vc = ctx.voice_client
 
-        results = ytdl.extract_info(url,download=False)
-        #print(results)
+        #抓取歌曲
+        try:
+            results = ytdl.extract_info(url,download=False)
+        except youtube_dl.utils.DownloadError as e:
+            raise MusicCommandError("不受支援的連結，請重新檢查網址是否正確")
+
+        #區分歌單與單首歌曲
         if "entries" in results:
             song_data_list = results["entries"]
         else:
@@ -190,6 +184,7 @@ class music(Cog_Extension):
             player = MusicPlayer(vc,ctx,self.bot.loop)
             guild_playing[guildid] = player
         
+        #把歌曲放入清單
         song_count = 0
         try:
             for result in song_data_list:
@@ -203,14 +198,16 @@ class music(Cog_Extension):
                 await asyncio.sleep(2)
                 await player.play_next()
         except Exception as e:
-            raise VoiceError01(e)
+            raise MusicCommandError(e)
 
+        #回應
         if song_count == 1:
             await ctx.respond(f"加入歌單: {results['title']}")
         else:
             await ctx.respond(f"**{song_count}** 首歌已加入歌單")
 
     @commands.slash_command(description='跳過歌曲')
+    @commands.guild_only()
     async def skip(self, ctx: discord.ApplicationContext):
         guildid = str(ctx.guild.id)
         player = get_player(guildid)
@@ -227,15 +224,18 @@ class music(Cog_Extension):
     #     ctx.voice_client.source.volume = volume / 100
     #     await ctx.send(f"音量設定為 {volume}%")
 
-    @commands.slash_command(description='停止播放')
+    @commands.slash_command(description='停止播放並離開頻道')
+    @commands.guild_only()
     async def stop(self, ctx: discord.ApplicationContext):
         """Stops and disconnects the bot from voice"""
-
+        guildid = str(ctx.guild.id)
         await ctx.voice_client.disconnect(force=True)
-        del guild_playing[str(ctx.guild.id)]
+        if guild_playing[guildid]:
+            del guild_playing[guildid]
         await ctx.respond(f"再見啦~")
 
     @commands.slash_command(description='現在播放')
+    @commands.guild_only()
     async def nowplaying(self,ctx: discord.ApplicationContext):
         player = get_player(str(ctx.guild.id))
         song = player.nowplaying
@@ -243,6 +243,7 @@ class music(Cog_Extension):
         await ctx.respond(embed=embed)
 
     @commands.slash_command(description='歌單')
+    @commands.guild_only()
     async def queue(self,ctx: discord.ApplicationContext):
         player = get_player(str(ctx.guild.id))
         playlist = player.get_full_playlist()
@@ -266,6 +267,7 @@ class music(Cog_Extension):
             await ctx.respond("歌單裡空無一物")
 
     @commands.slash_command(description='暫停/繼續播放歌曲')
+    @commands.guild_only()
     async def pause(self, ctx: discord.ApplicationContext):
         if not ctx.voice_client.is_paused():
             await ctx.voice_client.pause()
@@ -275,6 +277,7 @@ class music(Cog_Extension):
             await ctx.respond(f"歌曲已繼續▶️")
 
     @commands.slash_command(description='循環/取消循環歌曲')
+    @commands.guild_only()
     async def loop(self, ctx: discord.ApplicationContext):
         player = get_player(str(ctx.guild.id))
         player.songloop = not player.songloop
@@ -284,10 +287,12 @@ class music(Cog_Extension):
             await ctx.respond(f"循環已關閉")
 
     @commands.slash_command(description='洗牌歌曲')
+    @commands.guild_only()
     async def shuffle(self, ctx: discord.ApplicationContext):
         player = get_player(str(ctx.guild.id))
         player.shuffle()
         await ctx.respond(f"歌單已隨機🔀")
+
     @play.before_invoke
     @skip.before_invoke
     #@volume.before_invoke
@@ -304,10 +309,10 @@ class music(Cog_Extension):
             if ctx.author.voice:
                 await ctx.author.voice.channel.connect()
             else:
-                raise discord.ApplicationCommandInvokeError(VoiceError01("請先連接到一個語音頻道"))
+                raise discord.ApplicationCommandInvokeError(MusicCommandError("請先連接到一個語音頻道"))
         else:
             if not ctx.author.voice or ctx.voice_client.channel != ctx.author.voice.channel:
-                raise discord.ApplicationCommandInvokeError(VoiceError01("你必須要跟機器人在同一頻道才能使用指令"))
+                raise discord.ApplicationCommandInvokeError(MusicCommandError("你必須要跟機器人在同一頻道才能使用指令"))
 
 def setup(bot):
     bot.add_cog(music(bot))

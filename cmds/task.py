@@ -24,7 +24,7 @@ class task(Cog_Extension):
     
     @commands.Cog.listener()
     async def on_ready(self):
-        if self.bot.user.id == 589744540240314368:
+        if not Jsondb.jdata.get("debug_mode"):
             scheduler = AsyncIOScheduler()
             scheduler.add_job(self.sign_reset,'cron',hour=4,minute=0,second=0,jitter=30,misfire_grace_time=60)
             scheduler.add_job(self.apex_crafting_update,'cron',hour=1,minute=5,second=0,jitter=30,misfire_grace_time=60)
@@ -36,7 +36,7 @@ class task(Cog_Extension):
 
             scheduler.start()
             self.twitch.start()
-        if self.bot.user.id == 870923985569861652:
+        else:
             pass
 
     async def sign_reset(self):

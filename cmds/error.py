@@ -6,6 +6,7 @@ from starcord.errors import *
 from starcord import log,BRS,Jsondb,sqldb
 
 permissions_tl = Jsondb.jdict.get('permissions')
+debug_guild = Jsondb.jdata.get('debug_guild')
 
 class error(Cog_Extension):
     @commands.Cog.listener()
@@ -27,36 +28,34 @@ class error(Cog_Extension):
             text = ','.join(permissions)
             await ctx.respond(f'缺少權限:機器人沒有權限來使用此指令\n缺少權限: {text}',ephemeral=True)
 
-        elif isinstance(error,commands.errors.ArgumentParsingError):
-            await ctx.respond(f'參數錯誤:{error}',ephemeral=True)
-        
         elif isinstance(error,commands.errors.NoPrivateMessage):
-            await ctx.respond(f'錯誤：此指令不可在DM中使用',ephemeral=True)
+            await ctx.respond(f'頻道錯誤：此指令不可在DM中使用',ephemeral=True)
         
         elif isinstance(error,discord.ApplicationCommandInvokeError):
             if isinstance(error.original,StarException):
-                await ctx.respond(str(error.original),ephemeral=True)
-
-            elif isinstance(error.original,sqlerror) and error.original.errno == 1452:
-                id = str(ctx.author.id)
-                sqldb.set_user(id)
-                await ctx.respond(f'首次使用已完成註冊，請再使用一次指令',ephemeral=True)
+                await ctx.respond(error.original,ephemeral=True)
+                if error.original.original_message:
+                    await BRS.error(self.bot,ctx,f"{error.original} ({error.original.original_message})")
 
             elif isinstance(error.original,sqlerror) and error.original.errno == 1062:
-                id = str(ctx.author.id)
                 await ctx.respond(f'錯誤：資料重複新增',ephemeral=True)
+            
             else:
                 await ctx.respond(f'指令調用時發生錯誤，已自動回報：```py\n{error.original}```',ephemeral=True)
-                if not ctx.guild or ctx.guild.id != 566533708371329024:
-                    await BRS.error(self,ctx,error)
+                if not ctx.guild or ctx.guild.id not in debug_guild:
+                    await BRS.error(self.bot,ctx,error)
 
                 log.error(f'{error},{type(error)},{type(error.original)}')
         
         elif isinstance(error,discord.ApplicationCommandError):
             await ctx.respond(f'{error}',ephemeral=True)
+        
+        elif isinstance(error,commands.errors.ArgumentParsingError):
+            await ctx.respond(f'參數錯誤:{error}',ephemeral=True)
+        
         else:
-            if not ctx.guild or ctx.guild.id != 566533708371329024:
-                await BRS.error(self,ctx,error)
+            if not ctx.guild or ctx.guild.id not in debug_guild:
+                await BRS.error(self.bot,ctx,error)
             await ctx.respond(f'發生未知錯誤\n```{error.original}```',ephemeral=True)
             log.error(f'{error},{type(error)}')
 
@@ -114,5 +113,6 @@ class error(Cog_Extension):
     #             await BRS.error(self,ctx,error)
     #         await ctx.send(f'發生錯誤\n```{error}```')
     #         print(error,type(error))
+
 def setup(bot):
     bot.add_cog(error(bot))

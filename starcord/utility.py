@@ -41,9 +41,9 @@ class BotEmbed:
 
 class BRS():
     @staticmethod
-    async def error(self,ctx,error:str):
+    async def error(bot,ctx,error:str):
         jdata = Jsondb.jdata
-        report_channel = self.bot.get_channel(jdata['report_channel'])
+        report_channel = bot.get_channel(jdata['report_channel'])
         embed=BotEmbed.general(name="BRS | 錯誤回報")
         embed.add_field(name='錯誤訊息', value=f'```py\n{error}```', inline=True)
         if ctx.command:

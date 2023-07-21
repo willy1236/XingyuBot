@@ -182,7 +182,7 @@ class event(Cog_Extension):
                 new_channel = await guild.create_voice_channel(name=f'{user.name}的頻道', reason='語音分流',category=category,overwrites=overwrites)
                 await user.move_to(new_channel)
 
-            if after.suppress and after.channel and (user.get_role(1126820808761819197) or user.get_role(1130849778264195104)) and after.channel.category.id == 1097158160709591130 and type(after.channel) == discord.StageChannel:
+            if after.suppress and after.channel and (user.get_role(1126820808761819197) or user.get_role(1130849778264195104)) and after.channel.category.id == 1097158160709591130:
                 await user.request_to_speak()
 
     @commands.Cog.listener()

@@ -117,7 +117,7 @@ class MySQLDatabase():
     def get_role_save_count(self,user_id:str):
         self.cursor.execute(f"USE `database`;")
         self.cursor.execute(f'SELECT COUNT(user_id) FROM `role_save` WHERE user_id = %s;',(user_id,))
-        records = self.cursor.fetchall()
+        records = self.cursor.fetchone()
         return records
 
     def add_role_save(self,user_id:str,role_id:str,role_name:str,time:str):

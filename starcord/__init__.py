@@ -16,10 +16,10 @@ from .client import StarClient
 file_log = Jsondb.jdata.get('file_log')
 log = create_logger('./logs',file_log)
 
-if Jsondb.jdata.get('twitch_bot'):
-    from .clients.twitch_chatbot import twitch_bot
-else:
-    twitch_bot = None
+# if Jsondb.jdata.get('twitch_bot'):
+#     from .clients.twitch_chatbot import twitch_bot
+# else:
+#     twitch_bot = None
 
 sclient = StarClient()
 
@@ -29,7 +29,7 @@ __all__ = [
     'log',
     'BotEmbed',
     'clients',
-    'twitch_bot',
+    #'twitch_bot',
     'ChoiceList',
     'UserClient',
     'StarException',

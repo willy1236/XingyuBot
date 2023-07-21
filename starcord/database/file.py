@@ -41,6 +41,9 @@ class JsonDatabase():
             #'jtwitch': f'{self.location}/community_settings/twitch.json',
             'tokens': f'{self.db_location}/token.json'
         }
+        if not os.path.isdir(self.db_location):
+            os.mkdir(self.db_location)
+        
         for file in self.__dict:
             if not os.path.isfile(self.__dict[file]):
                 with open(self.__dict[file],'w',encoding='utf-8') as jfile:

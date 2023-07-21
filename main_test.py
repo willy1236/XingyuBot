@@ -3,10 +3,11 @@ import starcord
 from starcord.type.game import DatabaseGame
 from enum import Enum
 from starcord.type.user import PetType
+from starcord.clients import NotionAPI
 
 # text = 'osu'
 # print(text in dir(DatabaseGame))
-print(PetType('cat'))
+#print(PetType('cat'))
 
 # class SpeakingState(Enum):
 #     """Speaking state"""
@@ -49,3 +50,4 @@ print(PetType('cat'))
 # print(obj.city)  # 輸出：New York
 # print(obj.country)  # 這行會引發AttributeError
 
+NotionAPI().search("")

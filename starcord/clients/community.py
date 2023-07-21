@@ -1,6 +1,7 @@
 import requests
 from starcord.database import Jsondb
 from starcord.model.community import *
+from starcord.errors import Forbidden
 
 class CommunityInterface():
     """社群資料交互"""
@@ -24,22 +25,22 @@ class TwitchAPI(CommunityInterface):
             'grant_type':'client_credentials'
             }
 
-        r = requests.post(TOKENURL, params=params).json()
-        headers = {
-            'Authorization': f"Bearer {r['access_token']}",
-            'Client-Id':tokens[0]
-        }
-        return headers
+        r = requests.post(TOKENURL, params=params)
+        apidata = r.json()
+        if r.status_code == 200:
+            headers = {
+                'Authorization': f"Bearer {apidata['access_token']}",
+                'Client-Id':tokens[0]
+            }
+            return headers
+        else:
+            raise Forbidden(f"在讀取Twitch API時發生錯誤",f"[{r.status_code}] {apidata['message']}")
 
     def get_lives(self,users:list):
         """
         取得twitch用戶的直播資訊
-        
-        Args:
-            users: list of users
-
-        Returns:
-            dict: {username: TwitchStream | None（如果無正在直播）}
+        :param users: list of users
+        :return: dict: {username: TwitchStream | None（如果無正在直播）}
         """
         params = {
             "user_login": users,
@@ -59,9 +60,7 @@ class TwitchAPI(CommunityInterface):
     def get_user(self,username:str):
         """
         取得Twitch用戶
-        
-        Args:
-            username: 用戶名稱（user_login）
+        :param username: 用戶名稱（user_login）
         """
         params = {
             "login": username,
@@ -167,3 +166,44 @@ class YoutubeAPI(CommunityInterface):
             print(r.text)
             print(r.status_code)
             return None
+        
+class NotionAPI(CommunityInterface):
+    def __init__(self):
+        self.headers = self._get_headers()
+        self.url = "https://api.notion.com/v1"
+
+    def _get_headers(self):
+        token = Jsondb.get_token("notion_api")
+        return {
+            "Authorization": f"Bearer {token}",
+            "Notion-Version": "2022-06-28",
+            "Content-Type": "application/json"
+        }
+    
+    def get_page(self,page_id:str):
+        r = requests.get(f"{self.url}/pages/{page_id}",headers=self.headers)
+        apidata = r.json()
+        if r.status_code == 200:
+            print(apidata)
+        else:
+            print(apidata['message'])
+    
+    def get_block(self,block_id:str):
+        r = requests.get(f"{self.url}/blocks/{block_id}",headers=self.headers)
+        apidata = r.json()
+        if r.status_code == 200:
+            print(apidata)
+        else:
+            print(apidata['message'])
+    
+    def search(self,title:str):
+        """search by title"""
+        data = {
+            "query": title
+        }
+        r = requests.post(f"{self.url}/search",json=data,headers=self.headers)
+        apidata = r.json()
+        if r.status_code == 200:
+            print(apidata)
+        else:
+            print(apidata['message'])

@@ -10,6 +10,7 @@ from .user import *
 __all__ =[
     'TwitchAPI',
     'YoutubeAPI',
+    'NotionAPI',
     'RiotInterface',
     'OsuInterface',
     'ApexInterface',

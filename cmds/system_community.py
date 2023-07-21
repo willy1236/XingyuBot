@@ -54,7 +54,7 @@ class system_community(Cog_Extension):
         if user:
             await ctx.respond(embed=user.desplay())
         else:
-            await ctx.respond("查詢失敗",ephemeral=True)
+            await ctx.respond(f"查詢不到用戶：{twitch_username}",ephemeral=True)
 
     @youtube.command(description='取得youtube頻道的相關資訊（未完成）')
     async def channel(self,ctx,youtube_username:discord.Option(str,required=True,name='youtube頻道')):

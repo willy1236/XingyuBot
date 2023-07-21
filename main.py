@@ -3,13 +3,13 @@ from discord.ext import commands
 from threading import Thread
 
 from starcord.ui_element.button import *
-from starcord import Jsondb,log,twitch_bot
+from starcord import Jsondb,log
 
 #Bot1:dc小幫手, Bep:Bep, Bot2:RO
 jdata = Jsondb.jdata
 bot_code = jdata.get('bot_code')
 token = Jsondb.get_token(bot_code)
-start_website = jdata.get('start_website')
+api_website = jdata.get('api_website')
 auto_update = jdata.get('auto_update')
 debug_guild = jdata.get('debug_guild')
 #commands.Bot
@@ -95,7 +95,7 @@ if __name__ == "__main__":
     if bot_code == 'Bot1' and auto_update:
         os.system('python ./app/update.py')
             
-    if start_website:
+    if api_website:
         def run_website():
             os.system('uvicorn bot_website:app --port 14000')
 
@@ -112,11 +112,11 @@ if __name__ == "__main__":
         except:
             log.info('>> website: offline <<')
 
-    if twitch_bot:
-        loop = asyncio.get_event_loop()
-        #loop.run_until_complete(twitch_bot.connect())
-        loop.create_task(twitch_bot.connect())
-        time.sleep(2)
+    # if twitch_bot:
+    #     loop = asyncio.get_event_loop()
+    #     #loop.run_until_complete(twitch_bot.connect())
+    #     loop.create_task(twitch_bot.connect())
+    #     time.sleep(2)
     
     try:
         bot.run(token)

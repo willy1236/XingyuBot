@@ -4,3 +4,4 @@ database/token.json
 database/cache.json
 database/setting.json
 logs
+twitch_chatbot/database/
