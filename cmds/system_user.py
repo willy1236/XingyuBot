@@ -34,7 +34,7 @@ class system_user(Cog_Extension):
         if r:
             await ctx.respond(r)
         else:
-            await ctx.respond(f"你收養了一隻名叫 {name} 的{list(filter(lambda x: jdict['pet_option'][x]==species,jdict['pet_option']))[0]}!")
+            await ctx.respond(f"你收養了一隻名叫 {name} 的{ChoiceList.get_tw(species,'pet_option')}!")
     
     @pet.command(description='放生寵物')
     async def remove(self,ctx):

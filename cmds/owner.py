@@ -154,7 +154,7 @@ class owner(Cog_Extension):
     #edit
     @commands.slash_command(description='編輯訊息',guild_ids=debug_guild)
     @commands.is_owner()
-    async def edit(self,ctx,msgid:str,new_msg):
+    async def editmessage(self,ctx,msgid:str,new_msg):
         await ctx.defer()
         message = await ctx.fetch_message(int(msgid))
         await message.edit(content=new_msg)
@@ -228,30 +228,30 @@ class owner(Cog_Extension):
         # permission.request_to_speak
         await ctx.respond(embed=embed)
 
-    @commands.slash_command(guild_ids=debug_guild)
-    @commands.is_owner()
-    async def reaction_role(self,ctx,chaid,msgid):
-        channel = await self.bot.fetch_channel(chaid)
-        message = await channel.fetch_message(msgid)
-        await message.edit('請點擊按鈕獲得權限',view=ReactRole_button())
-        await ctx.respond('訊息已發送')
+    # @commands.slash_command(guild_ids=debug_guild)
+    # @commands.is_owner()
+    # async def reaction_role(self,ctx,chaid,msgid):
+    #     channel = await self.bot.fetch_channel(chaid)
+    #     message = await channel.fetch_message(msgid)
+    #     await message.edit('請點擊按鈕獲得權限',view=ReactRole_button())
+    #     await ctx.respond('訊息已發送')
 
-    #reset
-    @commands.slash_command(description='資料重置',guild_ids=debug_guild)
-    @commands.is_owner()
-    async def reset(self,ctx,arg=None):
-        await ctx.defer()
-        if arg == 'sign':
-            task_report_channel = self.bot.get_channel(Jsondb.jdata['task_report'])
-            self.sqldb.truncate_table('user_sign')
+    # #reset
+    # @commands.slash_command(description='資料重置',guild_ids=debug_guild)
+    # @commands.is_owner()
+    # async def reset(self,ctx,arg=None):
+    #     await ctx.defer()
+    #     if arg == 'sign':
+    #         task_report_channel = self.bot.get_channel(Jsondb.jdata['task_report'])
+    #         self.sqldb.truncate_table('user_sign')
 
-            await task_report_channel.send('簽到已重置')
-            await ctx.respond('簽到已重置',delete_after=5)
-        elif not arg:
-            for filename in os.listdir('./cmds'):
-                if filename.endswith('.py'):
-                    self.bot.reload_extension(f'cmds.{filename[:-3]}')
-            await ctx.respond('Re - Loaded all done',delete_after=5)
+    #         await task_report_channel.send('簽到已重置')
+    #         await ctx.respond('簽到已重置',delete_after=5)
+    #     elif not arg:
+    #         for filename in os.listdir('./cmds'):
+    #             if filename.endswith('.py'):
+    #                 self.bot.reload_extension(f'cmds.{filename[:-3]}')
+    #         await ctx.respond('Re - Loaded all done',delete_after=5)
 
 # @bot.event
 # async def on_message(message):
@@ -314,14 +314,14 @@ class owner(Cog_Extension):
     #     await twitch_bot.get_channel(twitch_user).send(context)
     #     await ctx.respond(f'已發送到 {twitch_user}: {context}')
     
-    # @commands.slash_command(description='機器人面板',guild_ids=debug_guild)
-    # @commands.is_owner()
-    # async def panel(self,ctx):
-    #     embed_list = []
-    #     embed = BotEmbed.basic(self.bot,description=f'伺服器總數：{len(self.bot.guilds)}\n成員：{len(self.bot.users)}')
-    #     embed_list.append(embed)
+    @commands.slash_command(description='機器人面板',guild_ids=debug_guild)
+    @commands.is_owner()
+    async def panel(self,ctx):
+        embed_list = []
+        embed = BotEmbed.basic(self.bot,description=f'伺服器總數：{len(self.bot.guilds)}\n成員：{len(self.bot.users)}')
+        embed_list.append(embed)
 
-    #     await ctx.respond(f'',embeds=embed_list,view=BotPanel(self.bot))
+        await ctx.respond(f'',embeds=embed_list,view=BotPanel(self.bot))
 
     @commands.slash_command(description='獲取指令',guild_ids=debug_guild)
     @commands.is_owner()

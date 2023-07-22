@@ -1,6 +1,6 @@
 import discord,asyncio,youtube_dl,time,random
 from discord.ext import commands,pages
-
+from typing import TYPE_CHECKING
 from core.classes import Cog_Extension
 from starcord import BotEmbed
 from starcord.errors import *
@@ -59,14 +59,23 @@ class Song:
         self.requester = requester
 
 class MusicPlayer():
-    def __init__(self,vc:discord.ApplicationContext.voice_client,ctx:discord.ApplicationContext,loop):
+    if TYPE_CHECKING:
+        vc: discord.VoiceClient
+        ctx: discord.ApplicationContext
+        loop: asyncio.AbstractEventLoop
+        playlist: list[Song]
+        songloop: bool
+        volume: float
+        nowplaying: Song
+
+    def __init__(self,vc:discord.VoiceClient,ctx:discord.ApplicationContext,loop):
         self.vc = vc
         self.ctx = ctx
         self.loop = loop
         self.playlist = []
         self.songloop = False
         self.volume = 0.5
-        self.nowplaying:Song = None
+        self.nowplaying = None
 
     async def play_next(self,*arg):
             #print('play_next')
@@ -300,7 +309,6 @@ class music(Cog_Extension):
     @stop.before_invoke
     @nowplaying.before_invoke
     @queue.before_invoke
-    #@yt.before_invoke
     #@localplay.before_invoke
     @pause.before_invoke
     @loop.before_invoke

@@ -46,15 +46,16 @@ async def on_ready():
     #print(">> Bot is online <<")
     log.info(f">> Bot online as {bot.user.name} <<")
     log.info(f">> Discord's version:{discord.__version__} <<")
-    await bot.change_presence(activity=discord.Game(name=jdata.get("activity","/help")),status=discord.Status.online)
-    # cogs = ""
-    # for i in bot.cogs:
-    #     cogs += f"{i} "
-    # print(">> Cogs:",cogs,"<<")
+    if jdata.get('debug_mode',True):
+        await bot.change_presence(activity=discord.Game(name="開發模式啟用中"),status=discord.Status.dnd)
+    else:
+        await bot.change_presence(activity=discord.Game(name=jdata.get("activity","/help")),status=discord.Status.online)
+
     if len(os.listdir('./cmds'))-1 == len(bot.cogs):
         log.info(">> Cogs all loaded <<")
     else:
         log.warning(f">> Cogs not all loaded, {len(bot.cogs)}/{len(os.listdir('./cmds'))} loaded<<")
+    
     if bot_code == 'Bot1':
         #bot.add_view(ReactRole_button())
         pass

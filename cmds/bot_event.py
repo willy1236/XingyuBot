@@ -2,6 +2,7 @@ import discord,datetime
 from discord.ext import commands
 from core.classes import Cog_Extension
 from starcord import Jsondb,BotEmbed,BRS,sqldb
+#from .moderation import voice_lobby_list
 
 class ScamChack:
     def __init__(self,text:str):
@@ -15,8 +16,6 @@ class ScamChack:
         else:
             return False
 
-voice_updata = Jsondb.jdata.get('voice_updata')
-
 voice_list = {
     613747262291443742: 631498685250797570,
     726790741103476746: 1021072271277834250
@@ -27,14 +26,12 @@ member_leave_list = {
     1112602989924995106: 1112603854895329381
 }
 
-
 member_join_list = {
 
 }
 
-lobby_list = [
-    955475420042629140,
-    1112602990939996225,
+voice_lobby_list = [
+    955475420042629140,0
 ]
 
 keywords = {
@@ -42,11 +39,12 @@ keywords = {
     '消費':'那你好像也是頂級消費者喔'
 }
 
-dbdata = sqldb.get_notice_channel_by_type('crass_chat')
-crass_chat_channels = []
-for i in dbdata:
-    crass_chat_channels.append(i['channel_id'])
+# dbdata = sqldb.get_notice_channel_by_type('crass_chat')
+# crass_chat_channels = []
+# for i in dbdata:
+#     crass_chat_channels.append(i['channel_id'])
 
+voice_updata = Jsondb.jdata.get('voice_updata')
 debug_mode = Jsondb.jdata.get("debug_mode",True)
 
 class event(Cog_Extension):    
@@ -94,18 +92,18 @@ class event(Cog_Extension):
         #     await message.channel.send('疑似為詐騙訊息，已自動刪除')
 
         #跨群聊天Ver.1.0
-        if not message.author.bot and message.channel.id in crass_chat_channels:
-            await message.delete()
+        # if not message.author.bot and message.channel.id in crass_chat_channels:
+        #     await message.delete()
 
-            embed=discord.Embed(description=message.content,color=0x4aa0b5)
-            embed.set_author(name=message.author,icon_url=message.author.display_avatar.url)
-            embed.set_footer(text=f'來自: {message.guild}')
+        #     embed=discord.Embed(description=message.content,color=0x4aa0b5)
+        #     embed.set_author(name=message.author,icon_url=message.author.display_avatar.url)
+        #     embed.set_footer(text=f'來自: {message.guild}')
 
-            for i in crass_chat_channels:
-                channel = self.bot.get_channel(i)
-                if channel:
-                    await channel.send(embed=embed)
-            return
+        #     for i in crass_chat_channels:
+        #         channel = self.bot.get_channel(i)
+        #         if channel:
+        #             await channel.send(embed=embed)
+        #     return
 
 
     # @commands.Cog.listener()
@@ -140,8 +138,9 @@ class event(Cog_Extension):
                     return False
 
             if debug_mode:
-                return
+               return
            
+           #語音進出紀錄
             guildid = check(before,after)
             if voice_updata and guildid:
                 NowTime = datetime.datetime.now()
@@ -153,15 +152,10 @@ class event(Cog_Extension):
                     embed=discord.Embed(description=f'{user.mention} 離開語音',color=0x4aa0b5,timestamp=NowTime)
                 else:
                     return
-                if user.discriminator == "0":
-                    embed.set_author(name=user.name,icon_url=user.display_avatar.url)
-                else:
-                    embed.set_author(name=user,icon_url=user.display_avatar.url)
-
-                if before.channel:
-                    embed.set_footer(text=before.channel.guild.name)
-                elif after.channel:
-                    embed.set_footer(text=after.channel.guild.name)
+                
+                username = user.name if user.discriminator == "0" else user
+                embed.set_author(name=username,icon_url=user.display_avatar.url)
+                embed.set_footer(text=self.bot.get_guild(guildid).name)
                 
                 if before.channel and after.channel:
                     embed.add_field(name='頻道', value=f'{before.channel.mention}->{after.channel.mention}', inline=False)
@@ -172,7 +166,8 @@ class event(Cog_Extension):
                 
                 await self.bot.get_channel(voice_list.get(guildid)).send(embed=embed)
 
-            if after.channel and after.channel.id in lobby_list:
+            #動態語音
+            if not before.channel and after.channel and after.channel.id in voice_lobby_list:
                 guild = after.channel.guild
                 category = after.channel.category
                 #permission = discord.Permissions.advanced()
@@ -184,29 +179,41 @@ class event(Cog_Extension):
                 new_channel = await guild.create_voice_channel(name=f'{user.name}的頻道', reason='語音分流',category=category,overwrites=overwrites)
                 await user.move_to(new_channel)
 
-            if after.suppress and after.channel and (user.get_role(1126820808761819197) or user.get_role(1130849778264195104)) and after.channel.category.id == 1097158160709591130:
+            #舞台發言
+            if after.suppress and after.channel and after.channel.category.id == 1097158160709591130 and (user.get_role(1126820808761819197) or user.get_role(1130849778264195104)):
                 await user.request_to_speak()
 
     @commands.Cog.listener()
     async def on_member_remove(self, member:discord.Member):
         if debug_mode:
             return
-        guildid = member.guild.id
-        if guildid in member_leave_list:
-            text = f'{member.mention} ({member.name}#{member.discriminator}) 離開了我們'
-            await self.bot.get_channel(member_leave_list[guildid]).send(text)
+        
+        #離開通知
+        guildid = str(member.guild.id)
+        dbdata = sqldb.get_notice_channel(guildid,"member_leave")
+
+        if dbdata:
+            username = member.name if member.discriminator == "0" else f"{member.name}#{member.discriminator}"
+            text = f'{member.mention} ({username}) 離開了我們'
+            await self.bot.get_channel(int(dbdata["channel_id"])).send(text)
 
     @commands.Cog.listener()
     async def on_member_join(self, member:discord.Member):
         if debug_mode:
             return
-        guildid = member.guild.id
-        if guildid in member_join_list:
-            text = f'{member.mention} ({member.name}#{member.discriminator}) 加入了我們'
-            await self.bot.get_channel(member_join_list[guildid]).send(text)
+        
+        #加入通知
+        guildid = str(member.guild.id)
+        dbdata = sqldb.get_notice_channel(guildid,"member_join")
 
-        notice_data = self.sqldb.get_notice_channel(str(member.guild.id),"mod")
-        mod_channel_id = notice_data['channel_id']
+        if dbdata:
+            username = member.name if member.discriminator == "0" else f"{member.name}#{member.discriminator}"
+            text = f'{member.mention} ({username}) 加入了我們'
+            await self.bot.get_channel(int(dbdata["channel_id"])).send(text)
+
+        #警告系統：管理員通知
+        notice_data = self.sqldb.get_notice_channel(guildid,"mod")
+        mod_channel_id = notice_data.get('channel_id')
         #role_id = notice_data['role_id']
         if mod_channel_id:
             dbdata = self.sqldb.get_warnings(str(member.id))
@@ -217,6 +224,15 @@ class event(Cog_Extension):
                 channel = self.bot.get_channel(mod_channel_id)
                 channel.send(f"新成員{member.mention}({member.id}) 共有 {len(dbdata)} 個紀錄")
 
+    @commands.Cog.listener()
+    async def on_guild_join(self, guild:discord.Guild):
+        report_channel = self.bot.get_channel(Jsondb.jdata['report_channel'])
+        await report_channel.send(f"公會異動：我加入了 {guild.name} ({guild.id})")
+
+    @commands.Cog.listener()
+    async def on_guild_remove(self, guild:discord.Guild):
+        report_channel = self.bot.get_channel(Jsondb.jdata['report_channel'])
+        await report_channel.send(f"公會異動：我離開了 {guild.name} ({guild.id})")
 
 def setup(bot):
     bot.add_cog(event(bot))

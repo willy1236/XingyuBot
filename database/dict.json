@@ -1,28 +1,24 @@
 {
+
     "channel_set_option": {
-        "全群公告": "all_anno",
-        "機器人更新通知": "bot",
-        "地震通知": "earthquake",
-        "台灣各縣市天氣預報": "forecast",
-        "Apex合成物品更新": "apex_crafting",
-        "Apex地圖輪替": "apex_map",
-        "管理員專用頻道": "mod"
-    },
-    "channel_set_tl": {
-        "all_anno": "全群公告",
-        "bot": "機器人更新通知",
-        "earthquake": "地震通知",
-        "forecast": "台灣各縣市天氣預報",
-        "apex_crafting": "Apex合成物品更新",
-        "apex_map": "Apex地圖輪替",
-        "crass_chat": "跨群聊天",
-        "mod":"管理員專用頻道"
+        "zh-TW":{
+            "all_anno": "全群公告",
+            "bot": "機器人更新通知",
+            "earthquake": "地震通知",
+            "forecast": "台灣各縣市天氣預報",
+            "apex_crafting": "Apex合成物品更新",
+            "apex_map": "Apex地圖輪替",
+            "crass_chat": "跨群聊天",
+            "mod":"管理員專用頻道",
+            "member_join": "成員加入",
+            "member_leave": "成員離開"
+        }
     },
     "game_set_option": {
-        "Steam": "steam",
-        "Osu": "osu",
-        "Apex": "apex",
-        "League of Legends": "lol"
+        "steam": "Steam",
+        "osu": "Osu",
+        "apex": "Apex",
+        "lol": "League of Legends"
     },
     "ApexMap": {
         "Storm Point": "風暴點",
@@ -69,39 +65,39 @@
         "Spiral Abyss": "深境螺旋"
     },
     "bet_option":{
-        "藍藍幫":"blue",
-        "粉紅幫":"pink"
+        "blue": "藍藍幫",
+        "pink": "粉紅幫"
     },
     "pet_option":{
-        "鯊魚":"shark",
-        "狗狗":"dog",
-        "貓貓":"cat",
-        "狐狸":"fox",
-        "狼":"wolf",
-        "青蛙":"frog"
+        "shark":"鯊魚",
+        "dog":"狗狗",
+        "cat":"貓貓",
+        "fox":"狐狸",
+        "wolf":"狼",
+        "frog":"青蛙"
     },
     "info_option": {
-        "總表":"help",
-        "vpn | vpn列表":"vpn",
-        "vpn | vpn安裝教學":"vpn01",
-        "share | 雲端共用資料夾":"share",
-        "mc | minecraft資料夾":"mc01",
-        "mc | 如何裝模組":"mc02",
-        "trpg | 參加房間": "trpg01",
-        "trpg | 放入角色": "trpg02"
+        "help": "總表",
+        "vpn": "vpn | vpn列表",
+        "vpn01": "vpn | vpn安裝教學",
+        "share": "share | 雲端共用資料夾",
+        "mc01": "mc | minecraft資料夾",
+        "mc02": "mc | 如何裝模組",
+        "trpg01": "trpg | 參加房間",
+        "trpg02": "trpg | 放入角色"
     },
     "help_option": {
-        "使用指令教學（use）":"use",
-        "通知系統（channel）":"channel",
-        "音樂系統（music）":"music",
-        "點數系統（pt）":"pt",
-        "遊戲查詢系統（game）":"game",
-        "身分組系統（role）":"role",
-        "賭盤系統（bet）":"bet",
-        "天氣系統（weather）":"weather",
-        "用戶系統（user）":"user",
-        "twitch相關（twitch）":"twitch",
-        "管理員指令（admin）":"admin"
+        "use": "使用指令教學（use）",
+        "channel": "通知系統（channel）",
+        "music": "音樂系統（music）",
+        "pt": "點數系統（pt）",
+        "game": "遊戲查詢系統（game）",
+        "role": "身分組系統（role）",
+        "bet": "賭盤系統（bet）",
+        "weather": "天氣系統（weather）",
+        "user": "用戶系統（user）",
+        "twitch": "twitch相關（twitch）",
+        "admin": "管理員指令（admin）"
     },
     "permissions": {
         "manage_channels":"管理頻道",
@@ -109,8 +105,8 @@
         "manage_roles": "管理身分組"
     },
     "busy_time_option": {
-        "早上":"1",
-        "下午":"2",
-        "晚上":"3"
+        "1": "早上",
+        "2": "下午",
+        "3": "晚上"
     }
 }

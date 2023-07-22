@@ -42,8 +42,7 @@ class BotEmbed:
 class BRS():
     @staticmethod
     async def error(bot,ctx,error:str):
-        jdata = Jsondb.jdata
-        report_channel = bot.get_channel(jdata['report_channel'])
+        error_report = bot.get_channel(Jsondb.jdata['error_report'])
         embed=BotEmbed.general(name="BRS | 錯誤回報")
         embed.add_field(name='錯誤訊息', value=f'```py\n{error}```', inline=True)
         if ctx.command:
@@ -52,12 +51,11 @@ class BRS():
         embed.add_field(name='使用者', value=f"{ctx.author}\n{ctx.author.id}", inline=False)
         embed.add_field(name='發生頻道', value=f'{ctx.channel}\n{ctx.channel.id}', inline=True)
         embed.add_field(name='發生群組', value=f'{ctx.guild}\n{ctx.guild.id}', inline=True)
-        await report_channel.send(embed=embed)
+        await error_report.send(embed=embed)
 
     @staticmethod
     async def scam(self,msg,Matchs=None):
-        jdata = Jsondb.jdata
-        scam_channel = self.bot.get_channel(jdata['scam_channel'])
+        scam_channel = self.bot.get_channel(Jsondb.jdata['scam_channel'])
         embed=BotEmbed.general(name="BRS | 詐騙回報")
         embed.add_field(name='詐騙訊息', value=msg.content, inline=True)
         embed.add_field(name='發送者', value=f"{msg.author}\n{msg.author.id}", inline=False)
@@ -69,8 +67,7 @@ class BRS():
 
     @staticmethod
     async def feedback(self,ctx,msg):
-        jdata = Jsondb.jdata
-        feedback_channel = self.bot.get_channel(jdata['feedback_channel'])
+        feedback_channel = self.bot.get_channel(Jsondb.jdata['feedback_channel'])
         embed=BotEmbed.general(name="BRS | 回饋訊息")
         embed.add_field(name='訊息內容', value=msg, inline=True)
         embed.add_field(name='發送者', value=f"{ctx.author}\n{ctx.author.id}", inline=False)
@@ -80,8 +77,7 @@ class BRS():
 
     @staticmethod
     async def dm(bot,msg):
-        jdata = Jsondb.jdata
-        dm_channel = bot.get_channel(jdata['dm_channel'])
+        dm_channel = bot.get_channel(Jsondb.jdata['dm_channel'])
         embed=BotEmbed.general(name="BRS | 私人訊息")
         embed.add_field(name='訊息內容', value=msg.content, inline=True)
         if msg.channel.recipient:
@@ -92,8 +88,7 @@ class BRS():
 
     @staticmethod
     async def mentioned(bot,msg):
-        jdata = Jsondb.jdata
-        dm_channel = bot.get_channel(jdata['mentioned_channel'])
+        dm_channel = bot.get_channel(Jsondb.jdata['mentioned_channel'])
         embed=BotEmbed.general(name="BRS | 提及訊息")
         embed.add_field(name='訊息內容', value=msg.content, inline=True)
         embed.add_field(name='發送者', value=f"{msg.author}\n{msg.author.id}", inline=False)
@@ -103,8 +98,7 @@ class BRS():
     
     @staticmethod
     async def mention_everyone(bot,msg):
-        jdata = Jsondb.jdata
-        dm_channel = bot.get_channel(jdata['mention_everyone_channel'])
+        dm_channel = bot.get_channel(Jsondb.jdata['mention_everyone_channel'])
         embed=BotEmbed.general(name="BRS | 提及所有人訊息")
         embed.add_field(name='訊息內容', value=msg.content, inline=True)
         embed.add_field(name='發送者', value=f"{msg.author}\n{msg.author.id}", inline=False)
@@ -112,12 +106,37 @@ class BRS():
         embed.add_field(name='來源群組', value=f'{msg.guild}\n{msg.guild.id}', inline=True)
         await dm_channel.send(embed=embed)
 
-class ChoiceList:
-    def set(option_name):
+class ChoiceList():
+    @staticmethod
+    def set(option_name,lcode:str="zh-TW"):
         list = []
-        for name,value in Jsondb.jdict[option_name].items():
-            list.append(discord.OptionChoice(name=name,value=value))
+        if Jsondb.jdict[option_name].get(lcode):
+            for value,name in Jsondb.jdict[option_name][lcode].items():
+                list.append(discord.OptionChoice(name=name,value=value))
+            return list
+        else:
+            for value,name in Jsondb.jdict[option_name].items():
+                list.append(discord.OptionChoice(name=name,value=value))
+            return list
+    
+    @staticmethod
+    def set_with_localizations(option_name):
+        list = []
+        for option in Jsondb.jdict[option_name]['zh-TW']:
+            dict = {}
+            for lcode in Jsondb.jdict[option_name]:
+                value = option
+                name = Jsondb.jdict[option_name][lcode][value]
+                dict[lcode] = name
+            list.append(discord.OptionChoice(name=name,value=value,name_localizations=dict))
         return list
+
+    @staticmethod
+    def get_tw(value,option_name):
+        if Jsondb.jdict[option_name]["zh-TW"]:
+            return Jsondb.jdict[option_name]["zh-TW"].get(value,value)
+        else:
+            return Jsondb.jdict[option_name].get(value,value)
 
 class converter():
     def time_to_sec(arg:str):

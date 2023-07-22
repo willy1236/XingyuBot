@@ -2,11 +2,12 @@ import discord
 from core.classes import Cog_Extension
 from discord.commands import SlashCommandGroup
 from starcord.clients import TwitchAPI,YoutubeAPI
-from starcord import sqldb
+from starcord import sqldb,BotEmbed
 
 class system_community(Cog_Extension):
     twitch = SlashCommandGroup("twitch", "Twitch相關指令")
     youtube = SlashCommandGroup("youtube", "youtube相關指令")
+    
     @twitch.command(description='設置twitch開台通知')
     async def set(self,ctx,
                   twitch_user:discord.Option(str,required=True,name='twitch用戶',description='當此用戶開台時會發送通知'),
@@ -48,6 +49,30 @@ class system_community(Cog_Extension):
         else:
             await ctx.respond(f'TwitchID: {twitch_user} 在此群組沒有設開台通知')
     
+    @twitch.command(description='確認群組內所有的twitch開台通知')
+    async def list(self,ctx):
+        guildid = str(ctx.guild.id)
+        embed = BotEmbed.general("twitch開台通知",ctx.guild.icon.url if ctx.guild.icon else discord.Embed.Empty)
+        dbdata = sqldb.get_notice_community_list('twitch',guildid)
+        for data in dbdata:
+            notice_name = data['notice_name']
+            channel_id = data['channel_id']
+            role_id = data['role_id']
+            
+            channel = self.bot.get_channel(int(channel_id))
+            if role_id:
+                role = ctx.guild.get_role(int(role_id))
+            else:
+                role = None
+
+            text = "找不到頻道"
+            if channel:
+                text = channel.mention
+                if role:
+                    text += f" {role.mention}"
+            embed.add_field(name=notice_name, value=text)
+        await ctx.respond(embed=embed)
+
     @twitch.command(description='取得twitch頻道的相關資訊')
     async def user(self,ctx,twitch_username:discord.Option(str,required=True,name='twitch用戶')):
         user = TwitchAPI().get_user(twitch_username)

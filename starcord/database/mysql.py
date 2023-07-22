@@ -149,7 +149,7 @@ class MySQLDatabase():
             self.connection.commit()
             #self.cursor.execute(f"UPDATE `user_point` SET `point` = REPLACE(`欄位名`, '要被取代的欄位值', '取代後的欄位值') WHERE `欄位名` LIKE '%欄位值%';",(giver_id,amount))
         else:
-            return 1
+            return "點數不足"
 
     def update_point(self,mod,user_id:str,amount:int):
         self.cursor.execute(f"USE `database`;")
@@ -288,6 +288,11 @@ class MySQLDatabase():
             list.append(i.get('notice_name'))
         return list
 
+    def get_notice_community_list(self,notice_type:str,guild_id:str):
+        self.cursor.execute(f"USE `database`;")
+        self.cursor.execute(f'SELECT * FROM `notice_community` WHERE `notice_type` = %s AND `guild_id` = %s;',(notice_type,guild_id))
+        records = self.cursor.fetchall()
+        return records
 
     # 賭盤類
     def get_bet_data(self,bet_id:int):

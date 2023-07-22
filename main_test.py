@@ -49,5 +49,4 @@ from starcord.clients import NotionAPI
 # print(obj.age)   # 輸出：25
 # print(obj.city)  # 輸出：New York
 # print(obj.country)  # 這行會引發AttributeError
-
 NotionAPI().search("")
