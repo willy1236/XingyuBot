@@ -169,7 +169,7 @@ class moderation(Cog_Extension):
     @commands.has_permissions(moderate_members=True)
     @commands.bot_has_permissions(moderate_members=True)
     @commands.guild_only()
-    async def timeout(self,ctx,
+    async def timeout(self,ctx:discord.ApplicationContext,
                       user:discord.Option(discord.Member,name='用戶',description='要禁言的用戶',required=True),
                       time_last:discord.Option(str,name='時長',description='格式為30s、1h20m等，支援天(d)、小時(h)、分鐘(m)、秒(s)',required=True),
                       reason:discord.Option(str,name='原因',description='限100字內',required=False),
@@ -192,7 +192,7 @@ class moderation(Cog_Extension):
     @commands.has_permissions(kick_members=True)
     @commands.bot_has_permissions(kick_members=True)
     @commands.guild_only()
-    async def kick(self,ctx,
+    async def kick(self,ctx:discord.ApplicationContext,
                       user:discord.Option(discord.Member,name='用戶',description='要踢除的用戶',required=True),
                       reason:discord.Option(str,name='原因',description='限100字內',required=False),
                       add_record:discord.Option(bool,name='是否要將此紀錄存入警告系統',description='將紀錄存入警告系統供其他群組檢視',default=False)):
@@ -213,14 +213,14 @@ class moderation(Cog_Extension):
     @commands.has_permissions(ban_members=True)
     @commands.bot_has_permissions(ban_members=True)
     @commands.guild_only()
-    async def ban(self,ctx,
+    async def ban(self,ctx:discord.ApplicationContext,
                       user:discord.Option(discord.Member,name='用戶',description='要停權的用戶',required=True),
                       reason:discord.Option(str,name='原因',description='限100字內',required=True),
                       add_record:discord.Option(bool,name='是否要將此紀錄存入警告系統',description='將紀錄存入警告系統供其他群組檢視',default=False),
-                      delete_message_seconds:discord.Option(int,name='刪除指定秒數內訊息',description='若提供，將刪除用戶指定秒數內的所有訊息',default=None,min_value=1),
+                      #delete_message_seconds:discord.Option(int,name='刪除指定秒數內訊息',description='若提供，將刪除用戶指定秒數內的所有訊息',default=None,min_value=1),
                       delete_message_days:discord.Option(int,name='刪除指定天數內訊息',description='若提供，將刪除用戶指定天數內的所有訊息',default=None,min_value=1,max_value=7)):
         await ctx.defer()
-        await user.ban(reason=reason,delete_message_seconds=delete_message_seconds,delete_message_days=delete_message_days)
+        await user.ban(reason=reason,delete_message_days=delete_message_days)
         
         moderate_user = str(ctx.user.id)
         create_time = datetime.datetime.now()

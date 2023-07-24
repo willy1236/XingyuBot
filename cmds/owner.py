@@ -421,10 +421,9 @@ class owner(Cog_Extension):
         if success == 1:
             await ctx.respond(embed=embed)
         elif success > 1:
-            await BRS.error(self,ctx,f'find:id重複(出現{success}次)')
-            await ctx.respond('出現錯誤，已自動向機器人擁有者回報')
+            await ctx.respond(f'find:id重複(出現{success}次)')
         else:
-            await ctx.respond('無法辨認此ID',delete_after=5)
+            await ctx.respond('無法辨認此ID')
 
 def setup(bot):
     bot.add_cog(owner(bot))

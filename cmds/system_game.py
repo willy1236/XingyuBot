@@ -297,7 +297,7 @@ class system_game(Cog_Extension):
             self.sqldb.remove_game_data(str(ctx.author.id),DatabaseGame.GENSHIN.value)
             await ctx.respond(f'{ctx.author.mention} cookies移除完成',ephemeral=True)
 
-    @hoyo.command(description='取得每月原石來源統計')
+    @hoyo.command(description='取得每月原石來源統計（原神）')
     @commands.cooldown(rate=1,per=1)
     async def diary(self,ctx):
         await ctx.defer()
@@ -310,11 +310,12 @@ class system_game(Cog_Extension):
         embed_list = []
         primogems_gap = diary.data.current_primogems - diary.data.last_primogems
         if primogems_gap > 0:
-            embed = BotEmbed.simple(title=f'本月總計：{diary.data.current_primogems} 顆原石',description=f'比上個月多{primogems_gap}顆')
+            text = f'比上個月多{primogems_gap}顆'
         elif primogems_gap < 0:
-            embed = BotEmbed.simple(title=f'本月總計：{diary.data.current_primogems} 顆原石',description=f'比上個月少{primogems_gap*-1}顆')
+            text = f'比上個月少{primogems_gap*-1}顆'
         else:
-            embed = BotEmbed.simple(title=f'本月總計：{diary.data.current_primogems} 顆原石',description=f'與上個月相同')
+            text = f'與上個月相同'
+        embed = BotEmbed.simple(title=f'本月總計：{diary.data.current_primogems} 顆原石',description=text)
         for category in diary.data.categories:
             name = category.name
             embed.add_field(name=name,value=f'{category.amount}({category.percentage}%)')
@@ -322,11 +323,12 @@ class system_game(Cog_Extension):
         
         mora_gap = diary.data.current_mora - diary.data.last_mora
         if primogems_gap > 0:
-            embed = BotEmbed.simple(title=f'本月總計：{diary.data.current_mora} 個摩拉',description=f'比上個月多{mora_gap}個')
+            text = f'比上個月多{mora_gap}個'
         elif primogems_gap < 0:
-            embed = BotEmbed.simple(title=f'本月總計：{diary.data.current_mora} 個摩拉',description=f'比上個月少{mora_gap*-1}個')
+            text = f'比上個月少{mora_gap*-1}個'
         else:
-            embed = BotEmbed.simple(title=f'本月總計：{diary.data.current_mora} 個摩拉',description=f'與上個月相同')
+            text = f'與上個月相同'
+        embed = BotEmbed.simple(title=f'本月總計：{diary.data.current_mora} 個摩拉',description=text)
         embed_list.append(embed)
 
         await ctx.respond(ctx.author.mention,embeds=embed_list)
@@ -493,7 +495,11 @@ class system_game(Cog_Extension):
                    game:discord.Option(str,name='遊戲',description='要簽到的遊戲',choices=hoyo_game_option),
                    code:discord.Option(str,name='禮包碼',description='要兌換的禮包碼'),
                    uid:discord.Option(str,name='uid',description='要兌換的用戶')):
-        cookies = self.sqldb.get_userdata(str(ctx.author.id),'game_hoyo_cookies')
+        if not jdata.get("debug_mode"):
+            cookies = self.sqldb.get_userdata(str(ctx.author.id),'game_hoyo_cookies')
+        else:
+            cookies = genshin.utility.get_browser_cookies("chrome")
+
         if not cookies:
             raise commands.errors.ArgumentParsingError("沒有設定cookies或已過期")
         client = genshin.Client(cookies,lang='zh-tw')
@@ -530,7 +536,7 @@ class system_game(Cog_Extension):
         print(r)
         await ctx.respond('done')
 
-    @commands.message_command(name="兌換原神序號",guild_ids=debug_guild)
+    @commands.message_command(name="尋找序號",guild_ids=debug_guild)
     async def exchange_code_genshin(self,ctx,message:discord.Message):
         textline = message.content.splitlines()
         p = re.compile(r'[0-9A-Z]{10,}')
@@ -544,7 +550,8 @@ class system_game(Cog_Extension):
             codetext = ""
             for i in code_list:
                 codetext+=f"\n[{i}](https://genshin.hoyoverse.com/zh-tw/gift?code={i})"
-            await ctx.respond(f"找到以下兌換碼{codetext}\n若有設定cookie及uid則將自動兌換",ephemeral=True)
+            #await ctx.respond(f"找到以下兌換碼{codetext}\n若有設定cookie及uid則將自動兌換",ephemeral=True)
+            await ctx.respond(f"找到以下兌換碼{codetext}",ephemeral=True)
 
     #         cookies = self.sqldb.get_userdata(str(ctx.author.id),'game_hoyo_cookies')
     #         dbdata = self.sqldb.get_game_data(str(ctx.author.id),DatabaseGame.GENSHIN.value)

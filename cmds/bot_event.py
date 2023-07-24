@@ -180,7 +180,7 @@ class event(Cog_Extension):
                 await user.move_to(new_channel)
 
             #舞台發言
-            if after.suppress and after.channel and after.channel.category.id == 1097158160709591130 and (user.get_role(1126820808761819197) or user.get_role(1130849778264195104)):
+            if after.suppress and after.channel and after.channel.category and after.channel.category.id == 1097158160709591130 and (user.get_role(1126820808761819197) or user.get_role(1130849778264195104)):
                 await user.request_to_speak()
 
     @commands.Cog.listener()

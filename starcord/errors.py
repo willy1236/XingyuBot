@@ -1,20 +1,28 @@
+# class StarException(Exception):
+#     "starcord original error: 1000"
+#     def __init__(self,
+#                  message: str = None,
+#                  code: int = None,
+#                  original:Exception = None,
+#                  original_message: str = None):
+#         self.code = code or 1000
+#         self.message = message or 'A Exception occurred.'
+#         self.original = original
+#         self.original_message = original_message
+    
+
 class StarException(Exception):
-    "starcord original error: 1000"
-    def __init__(self,
-                 message: str = 'A exception occurred',
-                 code: int = 1000,
-                 original:Exception = None,
-                 original_message: str = None):
-        """
-        :param message: 錯誤訊息
-        :param code: 錯誤代碼
-        :param original: 原始錯誤
-        :param original_message: 原始錯誤提供的訊息，如果提供，將會使機器人自動回報
-        """
-        self.code = code
-        self.message = message
-        self.original = original
-        self.original_message = original_message
+    """
+    starcord original error: 1000
+    :param message: 錯誤訊息
+    :param code: 錯誤代碼
+    :param original: 原始錯誤
+    :param original_message: 原始錯誤提供的訊息，如果提供，將會使機器人自動回報
+    """
+    code = 1000
+    message = 'A Exception occurred.'
+    original = None
+    original_message = None
     
     def __repr__(self):
         if self.original_message:
@@ -25,25 +33,23 @@ class StarException(Exception):
     def __str__(self):
         return f'[{self.code}] {self.message}'
 
-
 class CommandError(StarException):
     "Command original error: 1100"
-    def __init__(self,
-                 message: str = 'A command exception occurred'):
-        self.code = 1100
-        self.message = message
+    code = 1100
+    message = 'A command exception occurred'
 
 class MysqlError(StarException):
     "MySQL original error: 1200"
+    code = 1200
 
 class MysqlError01(MysqlError):
-    def __init__(self):
-        self.code = 1201
-        self.message = '新增的資料已存在'
+    code = 1201
+    message = '新增的資料已存在'
 
 
 class VoiceError(StarException):
     "Voice original error: 1300"
+    code = 1300
 
 class MusicCommandError(VoiceError):
     "Voice error while using command: 1301"
@@ -59,6 +65,7 @@ class VoiceError02(VoiceError):
 
 class RequestError(StarException):
     "Request original error: 1400"
+    code = 1400
 
 class Forbidden(RequestError):
     """Forbidden from request: 1401"""

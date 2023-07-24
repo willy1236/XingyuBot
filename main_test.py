@@ -1,9 +1,8 @@
 import requests,genshin,asyncio,discord
 import starcord
-from starcord.type.game import DatabaseGame
 from enum import Enum
-from starcord.type.user import PetType
 from starcord.clients import NotionAPI
+from starcord.errors import test
 
 # text = 'osu'
 # print(text in dir(DatabaseGame))
@@ -49,4 +48,4 @@ from starcord.clients import NotionAPI
 # print(obj.age)   # 輸出：25
 # print(obj.city)  # 輸出：New York
 # print(obj.country)  # 這行會引發AttributeError
-NotionAPI().search("")
+#NotionAPI().search("")

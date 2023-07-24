@@ -9,4 +9,4 @@ py -m pip install  --upgrade APScheduler
 py -m pip install  --upgrade fastapi uvicorn
 py -m pip install  --upgrade mcrcon
 py -m pip install  --upgrade twitchio
-pause "更新已完成，請按任意鍵繼續"
+pause "Update is done."
