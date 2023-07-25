@@ -2,7 +2,7 @@ import requests,genshin,asyncio,discord
 import starcord
 from enum import Enum
 from starcord.clients import NotionAPI
-from starcord.errors import test
+from starcord.clients.http import JsonStorageAPI
 
 # text = 'osu'
 # print(text in dir(DatabaseGame))
@@ -49,3 +49,7 @@ from starcord.errors import test
 # print(obj.city)  # 輸出：New York
 # print(obj.country)  # 這行會引發AttributeError
 #NotionAPI().search("")
+
+data = {"test": "1"}
+#JsonStorageAPI().put(data=data)
+JsonStorageAPI().append_data(data=data)
