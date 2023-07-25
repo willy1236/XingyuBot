@@ -6,4 +6,4 @@
 - 經濟系統、寵物系統、類似Twitch實況的預測
 - 使用Mysql作為資料庫
 
-[[使用素材]](\docs\material.md)
+[[使用素材]](/docs/material.md)
