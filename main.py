@@ -1,4 +1,4 @@
-import discord, os,asyncio,time
+import discord, os,time
 from discord.ext import commands
 from threading import Thread
 
@@ -12,12 +12,12 @@ token = Jsondb.get_token(bot_code)
 api_website = jdata.get('api_website')
 auto_update = jdata.get('auto_update')
 debug_guild = jdata.get('debug_guild')
+debug_mode = jdata.get('debug_mode',True)
 #commands.Bot
 #shard_count=1,
 #command_prefix=commands.when_mentioned_or('b!'),
 #command_prefix='b!',
 #case_insensitive=True,
-#只有discord.Bot才有debug_guild
 
 if bot_code == 'Bot1':
     bot = discord.Bot(
@@ -93,7 +93,7 @@ for filename in os.listdir('./cmds'):
 
 
 if __name__ == "__main__":
-    if bot_code == 'Bot1' and auto_update:
+    if not debug_mode and auto_update:
         os.system('python ./app/update.py')
             
     if api_website:

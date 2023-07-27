@@ -32,9 +32,11 @@ class UserClient:
     @staticmethod
     def get_monster(monster_id:str):
         """取得怪物"""
-        data = sqldb.get_monster(monster_id)
-        if data:
-            return Monster(data)
+        cursor = sqldb.cursor
+        cursor.execute(f'SELECT * FROM `checklist`.`rpg_monster` WHERE `monster_id` = %s;',(monster_id,))
+        dbdata = cursor.fetchone()
+        if dbdata:
+            return Monster(dbdata)
         else:
             raise ValueError('monster_id not found.')
 

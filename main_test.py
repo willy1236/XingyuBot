@@ -1,12 +1,9 @@
 import requests,genshin,asyncio,discord
-import starcord
 from enum import Enum
+#from pydantic import BaseModel
 from starcord.clients import NotionAPI
 from starcord.clients.http import JsonStorageAPI
-
-# text = 'osu'
-# print(text in dir(DatabaseGame))
-#print(PetType('cat'))
+from starcord.clients.community import YoutubeAPI
 
 # class SpeakingState(Enum):
 #     """Speaking state"""
@@ -50,6 +47,5 @@ from starcord.clients.http import JsonStorageAPI
 # print(obj.country)  # 這行會引發AttributeError
 #NotionAPI().search("")
 
-data = {"test": "1"}
-#JsonStorageAPI().put(data=data)
-JsonStorageAPI().append_data(data=data)
+#data = {"test": "1"}
+# JsonStorageAPI().append_data(data=data)

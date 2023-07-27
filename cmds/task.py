@@ -140,7 +140,7 @@ class task(Cog_Extension):
                 else:
                     print(f"forecast_update: {i['guild_id']}/{i['channel_id']}")
 
-    @tasks.loop(minutes=2)
+    @tasks.loop(minutes=3)
     async def twitch(self):
         users = sqldb.get_notice_community_userlist('twitch')
         if not users:

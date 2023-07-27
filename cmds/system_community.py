@@ -81,17 +81,12 @@ class system_community(Cog_Extension):
         else:
             await ctx.respond(f"查詢不到用戶：{twitch_username}",ephemeral=True)
 
-    @youtube.command(description='取得youtube頻道的相關資訊（未完成）')
-    async def channel(self,ctx,youtube_username:discord.Option(str,required=True,name='youtube頻道')):
+    @youtube.command(description='取得youtube頻道的相關資訊')
+    async def channel(self,ctx,youtube_id:discord.Option(str,required=True,name='youtube頻道id')):
         ytapi = YoutubeAPI()
-        channelid = ytapi.get_channel_id(youtube_username)
-        if channelid:
-            channel = ytapi.get_channel_content(channelid)
-        else:
-            channel = None
-        
+        channel = ytapi.get_channel_content(youtube_id)
         if channel:
-            await ctx.respond("查詢成功")
+            await ctx.respond("查詢成功",embed=channel.desplay())
         else:
             await ctx.respond("查詢失敗",ephemeral=True)
 

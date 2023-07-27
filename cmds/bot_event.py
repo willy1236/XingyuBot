@@ -21,17 +21,8 @@ voice_list = {
     726790741103476746: 1021072271277834250
 }
 
-member_leave_list = {
-    613747262291443742: 613747262291443744,
-    1112602989924995106: 1112603854895329381
-}
-
-member_join_list = {
-
-}
-
 voice_lobby_list = [
-    955475420042629140,0
+    955475420042629140
 ]
 
 keywords = {
@@ -212,8 +203,8 @@ class event(Cog_Extension):
             await self.bot.get_channel(int(dbdata["channel_id"])).send(text)
 
         #警告系統：管理員通知
-        notice_data = self.sqldb.get_notice_channel(guildid,"mod")
-        mod_channel_id = notice_data.get('channel_id')
+        notice_data = sqldb.get_notice_channel(guildid,"mod")
+        mod_channel_id = notice_data.get('channel_id') if notice_data else None
         #role_id = notice_data['role_id']
         if mod_channel_id:
             dbdata = self.sqldb.get_warnings(str(member.id))

@@ -1,4 +1,4 @@
-import json,os
+import json,os,csv
 from typing import TYPE_CHECKING
 
 class JsonDatabase():
@@ -9,20 +9,31 @@ class JsonDatabase():
         picdata: dict
         cache: dict
         tokens: dict
-    
-    def __init__(self):
+
+    __slots__ = [
+        "_db_location",
+        "_dict",
+        "lol_jdict",
+        "jdict",
+        "jdata",
+        "picdata",
+        "cache",
+        "tokens",
+    ]
+
+    def __init__(self,create_file=True):
         """
         CWB = 中央氣象局
 
         TRN = tracker.gg
         """
-        self.db_location = "./database"
-        self.__dict = {
-            'lol_jdict': f'{self.db_location}/lol_dict.json',
-            'jdict': f'{self.db_location}/dict.json',
-            'jdata': f'{self.db_location}/setting.json',
+        self._db_location = "./database"
+        self._dict = {
+            'lol_jdict': f'{self._db_location}/lol_dict.json',
+            'jdict': f'{self._db_location}/dict.json',
+            'jdata': f'{self._db_location}/setting.json',
             #'cdata': f'{self.location}/channel_settings.json',
-            'picdata': f'{self.db_location}/picture.json',
+            'picdata': f'{self._db_location}/picture.json',
             #'udata': f'{self.location}/user_settings/basic.json',
             #'jpt': f'{self.location}/user_settings/point.json',
             #'jloot': f'{self.location}/lottery.json',
@@ -34,27 +45,29 @@ class JsonDatabase():
             #'rsdata': f'{self.location}/role_save.json',
             #'jpet': f'{self.location}/user_settings/pet.json',
             #'jbag': f'{self.location}/user_settings/bag.json',
-            'cache': f'{self.db_location}/cache.json',
+            'cache': f'{self._db_location}/cache.json',
             #'monster_basic': f'{self.data_location}/RPG_settings/monster_basic.json',
             #'jRcoin': f'{self.location}/user_settings/rcoin.json',
             #'jhoyo': f'{self.location}/game_settings/hoyo.json',
             #'jtwitch': f'{self.location}/community_settings/twitch.json',
-            'tokens': f'{self.db_location}/token.json'
+            'tokens': f'{self._db_location}/token.json'
         }
-        if not os.path.isdir(self.db_location):
-            os.mkdir(self.db_location)
+        if not os.path.isdir(self._db_location):
+            os.mkdir(self._db_location)
         
-        for file in self.__dict:
-            if not os.path.isfile(self.__dict[file]):
-                with open(self.__dict[file],'w',encoding='utf-8') as jfile:
+        for file in self._dict:
+            if not os.path.isfile(self._dict[file]):
+                if not create_file:
+                    continue
+                with open(self._dict[file],'w',encoding='utf-8') as jfile:
                     json.dump({},jfile,indent=4)
                     print(f">> Created json file: {file} <<")
-            setattr(self, file,json.load(open(self.__dict[file],mode='r',encoding='utf8')))
+            setattr(self, file,json.load(open(self.  _dict[file],mode='r',encoding='utf8')))
 
 
     def write(self,file:str,data:dict):
         try:
-            location = self.__dict[file]
+            location = self._dict[file]
             setattr(self,file,data)
             with open(file=location,mode='w',encoding='utf8') as jfile:
                 json.dump(data,jfile,indent=4,ensure_ascii=False)
@@ -94,7 +107,7 @@ class JsonDatabase():
     
     def write_cache(self,key,value):
         """將指定資料寫入cache並更新內容"""
-        with open(f'{self.db_location}/cache.json','w',encoding="utf-8") as jfile:
+        with open(f'{self._db_location}/cache.json','w',encoding="utf-8") as jfile:
             self.cache[key] = value
             json.dump(self.cache,jfile,indent=4,ensure_ascii=False)
 
@@ -125,7 +138,34 @@ class JsonDatabase():
     #         return None
 
 class CsvDatabase:
-    pass
+    def __init__(self):
+        pass
+
+    def read_data_to_list(self,path):
+        with open(f'{path}.csv', 'r') as csvfile:
+            csvReader = csv.reader(csvfile)
+            data = list(csvReader)
+        for row in data:
+            print(row)
+        return data
+    
+    def read_data_to_dict_reader(self,path):
+        with open(f'{path}.csv', 'r') as csvfile:
+            csvReader = csv.DictReader(csvfile)
+        for row in csvReader:
+                print(row)
+        return csvReader
+    
+    def write_data(self,path,data:list):
+        with open(f'{path}.csv', 'r', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(data)
+
+    def write_data_with_dict_writer(self,path,field:list,data:dict):
+        with open(f'{path}.csv', 'r', newline='') as csvfile:
+            dictWriter = csv.DictWriter(csvfile, fieldnames = field)
+            dictWriter.writeheader()
+            dictWriter.writerow(data)
 
 class XmlDatabase:
     pass

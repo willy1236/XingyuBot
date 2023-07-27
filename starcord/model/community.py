@@ -1,4 +1,5 @@
 import datetime,discord
+from starcord.utility import BotEmbed
 
 class TwitchUser():
     def __init__(self,data:dict):
@@ -76,6 +77,15 @@ class YoutubeChannel:
         self.subscriberCount = data.get('statistics').get('subscriberCount')
         self.hiddenSubscriberCount = data.get('statistics').get('hiddenSubscriberCount')
         self.videoCount = data.get('statistics').get('videoCount')
+
+    def desplay(self):
+        embed = BotEmbed.simple(self.title, self.description,f"https://www.youtube.com/{self.customUrl}")
+        embed.set_image(url=self.thumbnails_default)
+        embed.add_field(name="頻道創建時間",value=self.publishedAt)
+        embed.add_field(name="訂閱數",value=self.subscriberCount)
+        embed.add_field(name="觀看數",value=self.viewCount)
+        embed.add_field(name="影片數",value=self.videoCount)
+        return embed
 
 class YouTubeStream:
     def __init__(self,data:dict):

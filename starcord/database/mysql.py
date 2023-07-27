@@ -1,5 +1,4 @@
 import mysql.connector,datetime
-from pydantic import BaseModel
 from mysql.connector.errors import Error as sqlerror
        
 class MySQLDatabase():
@@ -11,7 +10,7 @@ class MySQLDatabase():
         self.connection = mysql.connector.connect(**settings)
         self.cursor = self.connection.cursor(dictionary=True)
         self.connection.get_server_info()
-
+        
     @classmethod
     def add_data(self,table:str,*value,db="database"):
         self.cursor.execute(f"USE `{db}`;")
@@ -370,11 +369,6 @@ class MySQLDatabase():
         self.cursor.execute(f"USE `database`;")
         self.cursor.execute(f"INSERT INTO `rpg_user` VALUES(%s);",(user_id,))
         self.connection.commit()
-    
-    def get_monster(self,monster_id:str):
-        self.cursor.execute(f'SELECT * FROM `checklist`.`rpg_monster` WHERE `monster_id` = %s;',(monster_id,))
-        records = self.cursor.fetchone()
-        return records
     
     def get_advance(self,user_id:str):
         self.cursor.execute(f"USE `database`;")

@@ -92,7 +92,7 @@ class YoutubeAPI(CommunityInterface):
             'maxResults':1
         }
         r = requests.get('https://youtube.googleapis.com/youtube/v3/channels',params=params)
-        if r.status_code == 200:
+        if r.ok:
             data = r.json()
             print(data)
             if data['pageInfo']['totalResults']:
@@ -114,7 +114,7 @@ class YoutubeAPI(CommunityInterface):
             'maxResults':1
         }
         r = requests.get('https://youtube.googleapis.com/youtube/v3/channels',params=params)
-        if r.status_code == 200:
+        if r.ok:
             return YoutubeChannel(r.json().get('items')[0])
         else:
             return None
