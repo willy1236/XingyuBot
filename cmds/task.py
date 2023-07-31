@@ -31,6 +31,7 @@ class task(Cog_Extension):
             scheduler.add_job(self.apex_map_update,'cron',minute='00,15,30,45',second=1,jitter=30,misfire_grace_time=60)
             scheduler.add_job(self.forecast_update,'cron',hour='00,03,06,09,12,15,18,21',minute=0,second=1,jitter=30,misfire_grace_time=60)
             scheduler.add_job(self.auto_hoyo_reward,'cron',hour=19,minute=0,second=0,jitter=30,misfire_grace_time=60)
+            #scheduler.add_job(self.update_channel_dict,'cron',hour='*',minute="0,30",second=0,jitter=30,misfire_grace_time=60)
 
             scheduler.add_job(self.earthquake_check,'interval',minutes=1,jitter=30,misfire_grace_time=40)
 
@@ -46,7 +47,12 @@ class task(Cog_Extension):
 
     async def earthquake_check(self):
         timefrom = Jsondb.read_cache('timefrom')
-        data = CWBClient().get_earthquake_report_auto(timefrom)
+        try:
+            data = CWBClient().get_earthquake_report_auto(timefrom)
+        except TimeoutError:
+            print("earthquake_check timeout.")
+            return
+        
         if data:
             embed = data.desplay()
             time = datetime.strptime(data.originTime, "%Y-%m-%d %H:%M:%S")+timedelta(seconds=1)
@@ -198,6 +204,20 @@ class task(Cog_Extension):
                     await channel.send(f'{user_dc.mention} 簽到時發生錯誤：{e}')
             
             await asyncio.sleep(30)
+
+    async def update_channel_dict(self):
+        global channel_dict
+        channel_dict = {}
+        notice_type = []
+        for type in notice_type:
+            dbdata = sqldb.get_notice_channel_by_type(type)
+            dict = {}
+            for data in dbdata:
+                guildid = data['guild_id']
+                channelid = data['channel_id']
+                roleid = data['role_id']
+                dict[guildid] = [channelid, roleid]
+            channel_dict[type] = dict
 
 def setup(bot):
     bot.add_cog(task(bot))

@@ -15,11 +15,8 @@ class system_community(Cog_Extension):
                   role:discord.Option(discord.Role,required=False,default=None,name='身分組',description='發送通知時tag的身分組')):
         guildid = ctx.guild.id
         channelid = channel.id
-        if role:
-            roleid = role.id
-        else:
-            roleid = None
-        
+        roleid = role.id if role else None
+
         user = TwitchAPI().get_user(twitch_user)
         if user:
             sqldb.set_notice_community('twitch',twitch_user,guildid,channelid,roleid)
@@ -32,7 +29,8 @@ class system_community(Cog_Extension):
 
     @twitch.command(description='移除twitch開台通知')
     async def remove(self,ctx,twitch_user:discord.Option(str,required=True,name='twitch用戶')):
-        sqldb.remove_notice_community('twitch',twitch_user,ctx.guild.id)
+        guildid = ctx.guild.id
+        sqldb.remove_notice_community('twitch',twitch_user,guildid)
         await ctx.respond(f'已移除 {twitch_user} 的開台通知')
 
     @twitch.command(description='確認twitch開台通知')
@@ -51,7 +49,7 @@ class system_community(Cog_Extension):
     
     @twitch.command(description='確認群組內所有的twitch開台通知')
     async def list(self,ctx):
-        guildid = str(ctx.guild.id)
+        guildid = ctx.guild.id
         embed = BotEmbed.general("twitch開台通知",ctx.guild.icon.url if ctx.guild.icon else discord.Embed.Empty)
         dbdata = sqldb.get_notice_community_list('twitch',guildid)
         for data in dbdata:
@@ -59,9 +57,9 @@ class system_community(Cog_Extension):
             channel_id = data['channel_id']
             role_id = data['role_id']
             
-            channel = self.bot.get_channel(int(channel_id))
+            channel = self.bot.get_channel(channel_id)
             if role_id:
-                role = ctx.guild.get_role(int(role_id))
+                role = ctx.guild.get_role(role_id)
             else:
                 role = None
 

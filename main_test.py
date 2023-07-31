@@ -1,4 +1,4 @@
-import requests,genshin,asyncio,discord
+import requests,genshin,asyncio,discord,secrets
 from enum import Enum
 #from pydantic import BaseModel
 from starcord.clients import NotionAPI

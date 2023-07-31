@@ -19,6 +19,7 @@ uvicorn = "^0.23.1"
 mcrcon = "^0.7.0"
 twitchio = "^2.6.0"
 beautifulsoup4 = "^4.12.2"
+pymongo = "^4.4.1"
 
 
 [build-system]
