@@ -67,15 +67,16 @@ class event(Cog_Extension):
         if message.guild and message.guild.id == 613747262291443742 and not message.author.bot:
             p = re.compile(r'貢丸|贡丸|Meatball',re.IGNORECASE)
             result = p.search(message.content)
+            print(result)
             if result:
                 try:
-                    await message.author.timeout_for(datetime.timedelta(seconds=60),"打出貢丸相關詞彙")
                     await message.delete(reason="打出貢丸相關詞彙")
-                    await message.channel.send(f"{message.author} 貢丸很危險 不要打貢丸知道嗎")
+                    await message.author.timeout_for(duration=datetime.timedelta(seconds=60),reason="打出貢丸相關詞彙")
+                    await message.channel.send(f"{message.author.mention} 貢丸很危險 不要打貢丸知道嗎")
                     channel = self.bot.get_channel(877495919879286824)
-                    await channel.send(f"{message.author.mention} 打出了：{message.content}",allowed_mentions=False)
-                except:
-                    pass
+                    await channel.send(f"{message.author.name} 打出了：{message.content}")
+                except Exception as e:
+                    print(e)
             
 
         #詐騙檢查
