@@ -58,20 +58,20 @@ class CWBClient(WeatherClient):
             return None
         
 
-class Covid19Client(WeatherClient):
-    def get_covid19():
-        r = requests.get(f'https://news.campaign.yahoo.com.tw/2019-nCoV/index.php')
-        soup = BeautifulSoup(r.text, "html.parser")
-        results = soup.find_all("section",class_="secTaiwan")
-        r2 = results[0].select_one('div',class_="content").select('div',class_="list")
-        r3 = r2[2].dl.select('div')
+# class Covid19Client(WeatherClient):
+#     def get_covid19():
+#         r = requests.get(f'https://news.campaign.yahoo.com.tw/2019-nCoV/index.php')
+#         soup = BeautifulSoup(r.text, "html.parser")
+#         results = soup.find_all("section",class_="secTaiwan")
+#         r2 = results[0].select_one('div',class_="content").select('div',class_="list")
+#         r3 = r2[2].dl.select('div')
 
-        dict = {
-            "time": r2[1].text,
-            "total": r3[1].text,
-            "new":r3[3].text,
-            "local":r3[5].text,
-            "outside":r3[7].text,
-            "dead":r3[9].text
-        }
-        return Covid19Report(dict)
+#         dict = {
+#             "time": r2[1].text,
+#             "total": r3[1].text,
+#             "new":r3[3].text,
+#             "local":r3[5].text,
+#             "outside":r3[7].text,
+#             "dead":r3[9].text
+#         }
+#         return Covid19Report(dict)

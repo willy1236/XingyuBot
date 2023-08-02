@@ -1,4 +1,4 @@
-import discord,datetime
+import discord,datetime,re
 from discord.ext import commands
 from core.classes import Cog_Extension
 from starcord import Jsondb,BotEmbed,BRS,sqldb
@@ -49,7 +49,7 @@ class event(Cog_Extension):
             await BRS.mention_everyone(self.bot,message)
         
         #私人訊息回報
-        if isinstance(message.channel,discord.channel.DMChannel) and message.author != self.bot.user:
+        if isinstance(message.channel,discord.DMChannel) and message.author != self.bot.user:
             await BRS.dm(self.bot,message)
             return
 
@@ -59,10 +59,24 @@ class event(Cog_Extension):
         #     return
         #介紹
         if message.content == self.bot.user.mention:
-            embed = BotEmbed.basic(self.bot,description=f"你好~我是{self.bot.user.name}，是一個discord機器人喔~\n你可以輸入 </help:1067700245015834638> 來查看所有指令的用法\n\n希望我能在discord上幫助到你喔~\n有任何建議與需求可以使用 </feedback:1067700244848058386> 指令")
+            embed = BotEmbed.basic(self.bot,description=f"你好~我是 dc小幫手，是一個discord機器人喔~\n你可以輸入 </help:1067700245015834638> 來查看所有指令的用法\n\n希望我能在discord上幫助到你喔~\n有任何建議與需求可以使用 </feedback:1067700244848058386> 指令")
             embed.set_footer(text="此機器人由 威立 負責維護")
             await message.reply(embed=embed)
             return
+        
+        if message.guild and message.guild.id == 613747262291443742 and not message.author.bot:
+            p = re.compile(r'貢丸|贡丸|Meatball',re.IGNORECASE)
+            result = p.search(message.content)
+            if result:
+                try:
+                    await message.author.timeout_for(datetime.timedelta(seconds=60),"打出貢丸相關詞彙")
+                    await message.delete("打出貢丸相關詞彙")
+                    await message.channel.send(f"{message.author} 貢丸很危險 不要打貢丸知道嗎")
+                    channel = self.bot.get_channel(877495919879286824)
+                    await channel.send(f"{message.author} 打出了：{message.content}")
+                except:
+                    pass
+            
 
         #詐騙檢查
         # ScamChack = False
@@ -186,7 +200,7 @@ class event(Cog_Extension):
         if dbdata:
             username = member.name if member.discriminator == "0" else f"{member.name}#{member.discriminator}"
             text = f'{member.mention} ({username}) 離開了我們'
-            await self.bot.get_channel(int(dbdata["channel_id"])).send(text)
+            await self.bot.get_channel(dbdata["channel_id"]).send(text)
 
     @commands.Cog.listener()
     async def on_member_join(self, member:discord.Member):

@@ -34,6 +34,7 @@ class task(Cog_Extension):
             #scheduler.add_job(self.update_channel_dict,'cron',hour='*',minute="0,30",second=0,jitter=30,misfire_grace_time=60)
 
             scheduler.add_job(self.earthquake_check,'interval',minutes=1,jitter=30,misfire_grace_time=40)
+            #scheduler.add_job(self.get_mongodb_data,'interval',minutes=3,jitter=30,misfire_grace_time=40)
 
             scheduler.start()
             self.twitch.start()
@@ -218,6 +219,9 @@ class task(Cog_Extension):
                 roleid = data['role_id']
                 dict[guildid] = [channelid, roleid]
             channel_dict[type] = dict
+
+    async def get_mongodb_data(self):
+        pass
 
 def setup(bot):
     bot.add_cog(task(bot))
