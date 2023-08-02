@@ -18,6 +18,5 @@ __all__ =[
     'DBDInterface',
     'hoyoInterface',
     'CWBClient',
-    'Covid19Client',
     'UserClient',
 ]

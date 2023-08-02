@@ -3,6 +3,7 @@ from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from datetime import datetime, timezone, timedelta
 from discord.ext import commands,tasks
+from requests.exceptions import ConnectTimeout
 
 from core.classes import Cog_Extension
 from starcord import Jsondb,sqldb
@@ -50,7 +51,7 @@ class task(Cog_Extension):
         timefrom = Jsondb.read_cache('timefrom')
         try:
             data = CWBClient().get_earthquake_report_auto(timefrom)
-        except TimeoutError:
+        except ConnectTimeout:
             print("earthquake_check timeout.")
             return
         

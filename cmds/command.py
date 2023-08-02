@@ -16,6 +16,7 @@ bet_option = ChoiceList.set('bet_option')
 busy_time_option = ChoiceList.set('busy_time_option')
 
 jdata = Jsondb.jdata
+main_guild = Jsondb.jdata.get('main_guild')
 
 class command(Cog_Extension):
 
@@ -484,6 +485,23 @@ class command(Cog_Extension):
             text += f'{i.mention}: {dbdata.get("count(user_id)")}\n'
         embed = BotEmbed.simple('總計',text)
         await ctx.respond(embed=embed)
+
+    @commands.user_command(name="辣味貢丸一周年",guild_ids=main_guild)
+    @commands.bot_has_permissions(moderate_members=True)
+    async def meatball(self,ctx, member: discord.Member):
+        time = datetime.timedelta(seconds=60)
+        await member.timeout_for(time,reason="辣味貢丸一周年")
+        await member.edit(nick="我是辣味貢丸")
+        role = member.guild.get_role(1136338119835254946)
+        await member.add_roles(role)
+        
+        await ctx.respond(f"辣味貢丸大禮包~",ephemeral=True)
+        channel = self.bot.get_channel(640541440103153674)
+        await channel.send(f"{member.mention}收到了一份貢丸大禮包")
+
+        admin_role = member.get_role(613748153644220447)
+        if admin_role:
+            await member.remove_roles(admin_role)
 
 def setup(bot):
     bot.add_cog(command(bot))

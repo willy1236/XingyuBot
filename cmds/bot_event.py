@@ -70,10 +70,10 @@ class event(Cog_Extension):
             if result:
                 try:
                     await message.author.timeout_for(datetime.timedelta(seconds=60),"打出貢丸相關詞彙")
-                    await message.delete("打出貢丸相關詞彙")
+                    await message.delete(reason="打出貢丸相關詞彙")
                     await message.channel.send(f"{message.author} 貢丸很危險 不要打貢丸知道嗎")
                     channel = self.bot.get_channel(877495919879286824)
-                    await channel.send(f"{message.author} 打出了：{message.content}")
+                    await channel.send(f"{message.author.mention} 打出了：{message.content}",allowed_mentions=False)
                 except:
                     pass
             
