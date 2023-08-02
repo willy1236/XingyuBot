@@ -67,7 +67,6 @@ class event(Cog_Extension):
         if message.guild and message.guild.id == 613747262291443742 and not message.author.bot:
             p = re.compile(r'貢丸|贡丸|Meatball',re.IGNORECASE)
             result = p.search(message.content)
-            print(result)
             if result:
                 try:
                     await message.delete(reason="打出貢丸相關詞彙")
