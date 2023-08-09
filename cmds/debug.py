@@ -1,8 +1,6 @@
 import discord,asyncio
-from datetime import datetime, timezone, timedelta,time
+from datetime import datetime, timezone, timedelta
 from discord.ext import commands,tasks
-from ctypes import CDLL
-import copy
 
 from core.classes import Cog_Extension
 from starcord import Jsondb
@@ -125,34 +123,6 @@ class debug(Cog_Extension):
     #     """Shows an example of a modal dialog being invoked from a slash command."""
     #     modal = MyModal(title="Modal Slash Command")
     #     await ctx.send_modal(modal)
-    
-    # @commands.command()
-    # @commands.is_owner()
-    # async def embed(self,ctx,msg):
-    #     embed=discord.Embed(title="Bot Radio Station",description=f'{msg}',color=0xc4e9ff)
-    #     embed.set_footer(text='廣播電台 | 機器人全群公告')
-    #     await ctx.send(embed=embed)
-
-    # @commands.command()
-    # @commands.is_owner()
-    # async def debug(self,ctx,role):
-    #     role = await find.role(ctx,role)
-    #     dict = {}
-    #     dict[str(role.id)] = {}
-    #     dict[str(role.id)]['name']=role.name
-    #     dict[str(role.id)]['color']=role.color.to_rgb()
-    #     dict[str(role.id)]['time']=role.created_at.strftime('%Y%m%d')
-    #     print(dict)
-    
-    # @commands.command()
-    # @commands.is_owner()
-    # async def task_test(self, ctx,arg):
-    #     task = tasks.Loop.get_task(arg)
-    #     print(task)
-    #     if task:
-    #         ctx.send(task.is_running())
-    #     else:
-    #         ctx.send('Not found')
 
     # @commands.command()
     # @commands.is_owner()

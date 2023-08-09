@@ -4,7 +4,7 @@ Discord機器人"星羽"用libary
 
 #from . import model
 from . import clients
-from .database import Jsondb,sqldb
+from .database import Jsondb,sqldb,mongedb
 from .clients import UserClient
 
 from .utility import BotEmbed,BRS,ChoiceList
@@ -34,4 +34,5 @@ __all__ = [
     'UserClient',
     'StarException',
     'sclient',
+    'mongedb',
 ]

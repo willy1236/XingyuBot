@@ -13,15 +13,21 @@ class LOLPlayer():
         self.accountid = data['accountId']
         self.puuid = data['puuid']
         self.summonerLevel = data['summonerLevel']
+        self.profileIconId = data['profileIconId']
 
     def desplay(self):
-        embed = BotEmbed.simple("LOL玩家資訊")
-        embed.add_field(name="玩家名稱", value=self.name, inline=False)
+        embed = BotEmbed.general(self.name)
+        #embed.add_field(name="玩家名稱", value=self.name, inline=False)
         embed.add_field(name="召喚師等級", value=self.summonerLevel, inline=False)
         embed.add_field(name="帳號ID", value=self.accountid, inline=False)
         embed.add_field(name="召喚師ID", value=self.summonerid, inline=False)
         embed.add_field(name="puuid", value=self.puuid, inline=False)
-        embed.set_thumbnail(url='https://i.imgur.com/B0TMreW.png')
+        try:
+            embed.set_thumbnail(url=f'https://ddragon.leagueoflegends.com/cdn/13.15.1/img/profileicon/{self.profileIconId}.png')
+        except:
+            embed.set_thumbnail(url='https://i.imgur.com/B0TMreW.png')
+        embed.set_footer(text="puuid是全球唯一的ID，不隨帳號移動地區而改變")
+        
         return embed
 
 class LOLPlayerInMatch():
@@ -38,12 +44,15 @@ class LOLPlayerInMatch():
         self.kills = data['kills']
         self.lane = data['lane']
         self.visionScore = data['visionScore']
+        self.role = data['role']
+        self.kda = round((self.kills+self.assists)/self.deaths,2) if self.deaths > 0 else (self.kills+self.assists)
 
         self.doubleKills = data['doubleKills']
         self.tripleKills = data['tripleKills']
         self.quadraKills = data['quadraKills']
         self.pentaKills = data['pentaKills']
         self.largestMultiKill = data['largestMultiKill']
+        self.soloKills = data['challenges']['soloKills']
         
         self.dragonKills = data['dragonKills']
         self.baronKills = data['baronKills']
@@ -53,6 +62,7 @@ class LOLPlayerInMatch():
         self.champLevel = data['champLevel']
         
         self.totalDamageDealt = data['totalDamageDealt']
+        self.totalDamageDealtToChampions = data['totalDamageDealtToChampions']
         self.totalDamageTaken = data['totalDamageTaken']
         self.totalHeal = data['totalHeal']
         self.totalTimeCCDealt = data['totalTimeCCDealt']
@@ -69,7 +79,18 @@ class LOLPlayerInMatch():
         #self.teamEarlySurrendered = data['teamEarlySurrendered']
         self.goldEarned = data['goldEarned']
         self.goldSpent = data['goldSpent']
+        self.totalMinionsKilled = data['totalMinionsKilled']
+        self.laneMinionsFirst10Minutes = data['challenges']['laneMinionsFirst10Minutes']
+        self.jungleCsBefore10Minutes = round(data['challenges']['jungleCsBefore10Minutes'])
+        self.AllMinionsBefore10Minutes =self.laneMinionsFirst10Minutes + self.jungleCsBefore10Minutes *10
+        self.bountyGold = data['challenges']['bountyGold']
 
+        self.damagePerMinute = data['challenges']['damagePerMinute']
+        self.damageTakenOnTeamPercentage = round(data['challenges']['damageTakenOnTeamPercentage']*100,1)
+        self.goldPerMinute = round(data['challenges']['goldPerMinute'])
+
+        self.teamDamagePercentage = round(data['challenges']['teamDamagePercentage']*100,1)
+        self.visionScorePerMinute = round(data['challenges']['visionScorePerMinute'],2)
         #self.items = [ data['item0'],data['item1'],data['item2'],data['item3'],data['item4'],data['item5'],data['item6'] ]
 
     def desplaytext(self):
@@ -77,11 +98,19 @@ class LOLPlayerInMatch():
         name = lol_jdict['champion'].get(self.championName) or self.championName
         text += f'{name}(LV. {self.champLevel})\n'
         lane = lol_jdict['road'].get(self.lane) or self.lane
-        text += f'{lane} 視野分：{self.visionScore}\n'
-        text += f'{self.kills}/{self.deaths}/{self.assists} KDA: {round((self.kills+self.assists)/self.deaths,2)}\n'
-        text += f'連殺：{self.doubleKills}/{self.tripleKills}/{self.quadraKills}/{self.pentaKills} 最大{self.largestMultiKill}\n'
-        text += f'輸出/承受/治療/CC：\n{self.totalDamageDealt}/{self.totalDamageTaken}/{self.totalHeal}/{self.totalTimeCCDealt}\n'
-        text += f'經濟/花費：{self.goldEarned}/{self.goldSpent}\n'
+        if self.role != "NONE":
+            lane +=f" {self.role}"
+        text += f'{lane}\n'
+        text += f'{self.kills}/{self.deaths}/{self.assists} KDA: {self.kda} solokill：{self.soloKills}\n'
+        text += f'視野分：{self.visionScore} ({self.visionScorePerMinute}/min)\n'
+        text += f'連殺：{self.doubleKills}/{self.tripleKills}/{self.quadraKills}/{self.pentaKills}\n'
+        text += f'輸出：{self.totalDamageDealtToChampions} ({self.teamDamagePercentage}%)\n'
+        text += f'承受：{self.totalDamageTaken} ({self.damageTakenOnTeamPercentage}%)\n'
+        #text += f'治療/CC：{self.totalHeal}/{self.totalTimeCCDealt}\n'
+        text += f'經濟：{self.goldEarned} ({self.goldPerMinute}/min)\n'
+        text += f'吃兵/前10分鐘：{self.totalMinionsKilled}/{self.AllMinionsBefore10Minutes}\n'
+        text += f'小龍/巴龍：{self.dragonKills}/{self.baronKills}\n'
+        text += f'個人賞金：{self.bountyGold}\n'
         text += f'Ping問號燈：{self.enemyMissingPings}\n'
 
         if self.firstBloodKill and self.firstTowerKill:

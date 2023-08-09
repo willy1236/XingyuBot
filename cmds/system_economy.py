@@ -36,7 +36,7 @@ class system_economy(Cog_Extension):
                 await ctx.respond(f'{ctx.author.mention}：{code}',ephemeral=True)
     
     @commands.is_owner()
-    @point.command(description='設定Pt點數',guild_ids=debug_guild)
+    @point.command(description='設定PT點數',guild_ids=debug_guild)
     async def set(self,ctx,
                   user:discord.Option(discord.User,name='成員',description='欲調整的成員',required=True),
                   mod:discord.Option(str,name='模式',description='add,set',required=True,choices=['add','set']),

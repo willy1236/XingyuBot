@@ -38,6 +38,11 @@ class CommandError(StarException):
     code = 1100
     message = 'A command exception occurred'
 
+class ClientError(CommandError):
+    def __init__(self,message=None,original_message=None):
+        self.code = 1101
+        self.message = '調用API時發生錯誤：' + message
+
 class MysqlError(StarException):
     "MySQL original error: 1200"
     code = 1200

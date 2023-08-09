@@ -103,10 +103,6 @@ async def read_item(request: Request, id: str):
     return html_file
 
 
-def run():
-    import uvicorn
-    uvicorn.run(app,host='127.0.0.1',port=14000)
-
 class ltThread(threading.Thread):
     def __init__(self):
         super().__init__(name='ltThread')
@@ -126,8 +122,19 @@ class ltThread(threading.Thread):
             log.info("Finished ltThread")
             time.sleep(5)
 
+class WebsiteThread(threading.Thread):
+    def __init__(self):
+        super().__init__(name='WebsiteThread')
+        self._stop_event = threading.Event()
+
+    def run(self):
+        import uvicorn
+        uvicorn.run(app,host='127.0.0.1',port=14000)
+        #os.system('uvicorn bot_website:app --port 14000')
+
 if __name__ == '__main__':
     #os.system('uvicorn bot_website:app --reload')
     server = ltThread()
     server.start()
-    run()
+    web = WebsiteThread()
+    web.start()

@@ -4,18 +4,6 @@ from core.classes import Cog_Extension
 from starcord import Jsondb,BotEmbed,BRS,sqldb
 #from .moderation import voice_lobby_list
 
-class ScamChack:
-    def __init__(self,text:str):
-        self.text = text
-        self.keyword =self.__keyword()
-
-    def __keyword(self):
-        keywords = ['Free','免費','Nitro','premiums-nitro','discerd.gift','disceord.gift']
-        if self.text in keywords:
-            return True
-        else:
-            return False
-
 voice_list = {
     613747262291443742: 631498685250797570,
     726790741103476746: 1021072271277834250
@@ -57,6 +45,7 @@ class event(Cog_Extension):
         # if message.content in keywords and self.bot.user.id == 589744540240314368:
         #     await message.reply(keywords[message.content])
         #     return
+
         #介紹
         if message.content == self.bot.user.mention:
             embed = BotEmbed.basic(self.bot,description=f"你好~我是 dc小幫手，是一個discord機器人喔~\n你可以輸入 </help:1067700245015834638> 來查看所有指令的用法\n\n希望我能在discord上幫助到你喔~\n有任何建議與需求可以使用 </feedback:1067700244848058386> 指令")
@@ -76,25 +65,6 @@ class event(Cog_Extension):
                     await channel.send(f"{message.author.name} 打出了：{message.content}")
                 except Exception as e:
                     print(e)
-            
-
-        #詐騙檢查
-        # ScamChack = False
-        # if self.bot.user.id == 589744540240314368 and message.mention_everyone:
-        #     text = message.content.lower()
-        #     if 'free' in text and 'nitro' in text:
-        #         ScamChack = True
-        #     else:
-        #         url = "https://spen.tk/api/v1/isMaliciousTerm"
-        #         r = requests.get(url,params={'text':message.content}).json()
-        #         if r.get('hasMatch',False):
-        #             ScamChack = True
-        #             matches = r.get('matches',None)
-
-        # if ScamChack:
-        #     await BRS.scam(self,message,matches)
-        #     await message.delete()
-        #     await message.channel.send('疑似為詐騙訊息，已自動刪除')
 
         #跨群聊天Ver.1.0
         # if not message.author.bot and message.channel.id in crass_chat_channels:
@@ -109,7 +79,6 @@ class event(Cog_Extension):
         #         if channel:
         #             await channel.send(embed=embed)
         #     return
-
 
     # @commands.Cog.listener()
     # async def on_raw_reaction_add(self, payload):

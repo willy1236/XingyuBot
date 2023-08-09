@@ -1,8 +1,8 @@
-import discord,asyncio,random
+import discord,asyncio,random,datetime
 from core.classes import Cog_Extension
 from discord.ext import commands
 from discord.commands import SlashCommandGroup
-from starcord import sqldb,BotEmbed
+from starcord import sqldb,BotEmbed,UserClient
 from starcord.ui_element.RPGbutton import RPGbutton1,RPGbutton2
 
 class role_playing_game(Cog_Extension):
@@ -12,23 +12,25 @@ class role_playing_game(Cog_Extension):
     async def advance(self,ctx):
         # await ctx.respond('敬請期待',ephemeral=False)
         # return
-        await ctx.respond(view=RPGbutton1(ctx.user.id))
+        await ctx.respond(view=RPGbutton1(ctx.author.id))
 
     @commands.slash_command(description='進行工作（開發中）')
     async def work(self,ctx):
-        # await ctx.respond('敬請期待',ephemeral=False)
-        # return
-        await ctx.respond(view=RPGbutton2(ctx.user.id))
+        dbdata = sqldb.get_activities(ctx.author.id)
+        if dbdata.get("work_date") == datetime.date.today():
+            await ctx.respond("今天已經工作過了")
+            return    
+        await ctx.respond(view=RPGbutton2(ctx.author.id))
 
     @commands.slash_command(description='查看用戶資訊（開發中）')
     async def ui(self,ctx,user_dc:discord.Option(discord.Member,name='用戶',description='留空以查詢自己',default=None)):
         user_dc = user_dc or ctx.author
-        user = self.sqldb.get_user(str(user_dc.id))
+        user = UserClient.get_user(user_dc.id)
         embed = user.desplay()
         embed.set_author(name=user_dc.name,icon_url=user_dc.avatar)
         await ctx.respond(embed=embed)
 
-    @commands.slash_command(description='查看背包')
+    @commands.slash_command(description='查看背包（開發中）')
     async def bag(self,ctx,user_dc:discord.Option(discord.Member,name='用戶',description='留空以查詢自己',default=None)):
         user_dc = user_dc or ctx.author
         data = sqldb.get_bag_desplay(user_dc.id)

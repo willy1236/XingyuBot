@@ -79,7 +79,7 @@ class YoutubeChannel:
         self.videoCount = data.get('statistics').get('videoCount')
 
     def desplay(self):
-        embed = BotEmbed.simple(self.title, self.description,f"https://www.youtube.com/{self.customUrl}")
+        embed = BotEmbed.simple(self.title, self.description,f"https://www.youtube.com/channel/{self.id}")
         embed.set_image(url=self.thumbnails_default)
         embed.add_field(name="頻道創建時間",value=self.publishedAt)
         embed.add_field(name="訂閱數",value=self.subscriberCount)

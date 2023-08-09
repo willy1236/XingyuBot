@@ -1,52 +1,59 @@
 import requests,genshin
 from starcord.database import Jsondb
 from starcord.model.game import *
-
+from starcord.errors import ClientError
 class GameInterface():
     def __init__(self):
         self.db = Jsondb
 
-class RiotInterface(GameInterface):
+class RiotClient(GameInterface):
     def __init__(self):
         super().__init__()
         self.url = 'https://tw2.api.riotgames.com'
         self.url_sea = 'https://sea.api.riotgames.com'
-        self.key = self.db.get_token('riot')
+        self.key = Jsondb.get_token('riot')
 
-    def get_lolplayer(self,username):
+    def get_player_byname(self,username):
         params = {
             'api_key':self.key
             }
         r = requests.get(f'{self.url}/lol/summoner/v4/summoners/by-name/{username}',params=params)
-        if r.status_code == 200:
+        if r.ok:
             return LOLPlayer(r.json())
         else:
-            print('lol_player:',r.text)
-            return None
+            raise ClientError("lol_player",r.text)
+        
+    def get_player_bypuuid(self,puuid):
+        params = {
+            'api_key':self.key
+            }
+        r = requests.get(f'{self.url}/lol/summoner/v4/summoners/by-puuid/{puuid}',params=params)
+        if r.ok:
+            return LOLPlayer(r.json())
+        else:
+            raise ClientError("lol_player",r.text)
 
-    def get_lol_player_match(self,puuid,count=5) -> list[str]:
+    def get_player_matchs(self,puuid,count=5) -> list[str]:
         params = {
             'api_key':self.key,
             'start':0,
             'count':count
             }
         r = requests.get(f'{self.url_sea}/lol/match/v5/matches/by-puuid/{puuid}/ids',params=params)
-        if r.status_code == 200:
+        if r.ok:
             return r.json()
         else:
-            print('lol_player_match:',r.text)
-            return None
+            raise ClientError("lol_player_match",r.text)
 
-    def get_lol_match(self,matchId):
+    def get_match(self,matchId):
         params = {
             'api_key':self.key
             }
         r = requests.get(f'{self.url_sea}/lol/match/v5/matches/{matchId}',params=params)
-        if r.status_code == 200:
+        if r.ok:
             return LOLMatch(r.json())
         else:
-            print('lol_match:',r.text)
-            return None
+            raise ClientError("lol_match",r.text)
     
 class OsuInterface(GameInterface):
     def __init__(self):

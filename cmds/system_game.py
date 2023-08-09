@@ -69,7 +69,7 @@ class system_game(Cog_Extension):
                 return
         
         elif game == DatabaseGame.LOL:
-            APIdata = RiotInterface().get_lolplayer(value)
+            APIdata = RiotClient().get_player_byname(value)
             if APIdata:
                 player_name = APIdata.name
                 player_id = APIdata.summonerid
@@ -120,7 +120,7 @@ class system_game(Cog_Extension):
                 elif game == DatabaseGame.APEX:
                     APIdata = ApexInterface().get_player(dbdata['player_name'])
                 elif game == DatabaseGame.LOL:
-                    APIdata = RiotInterface().get_lolplayer(dbdata['player_name'])
+                    APIdata = RiotClient().get_player_bypuuid(dbdata['other_id'])
             else:
                 await ctx.respond(f'錯誤:資料庫中查無資料',ephemeral=True)
 
@@ -160,7 +160,7 @@ class system_game(Cog_Extension):
 
     @lol.command(description='查詢League of Legends用戶資料')
     async def user(self,ctx,username:discord.Option(str,name='用戶名稱',description='要查詢的用戶')):
-        player = RiotInterface().get_lolplayer(username)
+        player = RiotClient().get_player_byname(username)
         if player:
             await ctx.respond('查詢成功',embed=player.desplay())
         else:
@@ -168,7 +168,7 @@ class system_game(Cog_Extension):
 
     @lol.command(description='查詢League of Legends對戰資料')
     async def match(self,ctx,matchid:discord.Option(str,name='對戰id',description='要查詢的對戰')):
-        match = RiotInterface().get_lol_match(matchid)
+        match = RiotClient().get_match(matchid)
         if match:
             await ctx.respond('查詢成功',embed=match.desplay())
         else:
@@ -176,25 +176,26 @@ class system_game(Cog_Extension):
 
     @lol.command(description='查詢最近一次的League of Legends對戰')
     async def playermatch(self,ctx,username:discord.Option(str,name='用戶名稱',description='要查詢的用戶，留空則使用資料庫查詢',required=False)):
+        rclient = RiotClient()
         if not username:
-            dbdata = self.sqldb.get_game_data(str(ctx.author.id),DatabaseGame.LOL.value)
+            dbdata = self.sqldb.get_game_data(ctx.author.id,DatabaseGame.LOL.value)
             if not dbdata:
                 await ctx.respond('查詢失敗:沒有登入資料庫的資料',ephemeral=True)
                 return
-            puuid = dbdata['puuid']
+            puuid = dbdata['other_id']
         else:
-            player = RiotInterface().get_lolplayer(username)
+            player = rclient.get_player_byname(username)
             if not player:
                 await ctx.respond('查詢失敗:查無此玩家',ephemeral=True)
                 return
             puuid = player.puuid
         
-        match_list = RiotInterface().get_lol_player_match(puuid,1)
+        match_list = rclient.get_player_matchs(puuid,1)
         if not match_list:
             await ctx.respond('查詢失敗:此玩家查無對戰紀錄',ephemeral=True)
             return
         
-        match = RiotInterface().get_lol_match(match_list[0])
+        match = rclient.get_match(match_list[0])
         if match:
             await ctx.respond('查詢成功',embed=match.desplay())
         else:
@@ -390,9 +391,10 @@ class system_game(Cog_Extension):
                 embed.add_field(name="HoYOLab ID",value=hoyolab_user.hoyolab_id)
                 for account in accounts:
                     if account.game == genshin.types.Game.GENSHIN:
-                        embed.add_field(name=f"{account.nickname}(原神)",value=f'{account.server_name} {account.uid} LV.{account.level}',inline=False)
+                        gamename = "原神"
                     elif account.game == genshin.types.Game.HONKAI:
-                        embed.add_field(name=f"{account.nickname}(崩壞3rd)",value=f'{account.server_name} {account.uid} LV.{account.level}',inline=False)
+                        gamename = "崩壞3rd"
+                    embed.add_field(name=f"{account.nickname}({gamename})",value=f'{account.server_name} {account.uid} LV.{account.level}',inline=False)
                 embed.set_image(url=hoyolab_user.bg_url)
                 await ctx.respond(embed=embed)
             else:

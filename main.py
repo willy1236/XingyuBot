@@ -45,9 +45,10 @@ else:
 async def on_ready():
     #print(">> Bot is online <<")
     log.info(f">> Bot online as {bot.user.name} <<")
-    log.info(f">> Discord's version:{discord.__version__} <<")
+    log.info(f">> Discord's version: {discord.__version__} <<")
     if jdata.get('debug_mode',True):
         await bot.change_presence(activity=discord.Game(name="開發模式啟用中"),status=discord.Status.dnd)
+        log.info(f">> Development mode: On <<")
     else:
         await bot.change_presence(activity=discord.Game(name=jdata.get("activity","/help")),status=discord.Status.online)
 
@@ -97,21 +98,18 @@ if __name__ == "__main__":
         os.system('python ./app/update.py')
             
     if api_website:
-        def run_website():
-            os.system('uvicorn bot_website:app --port 14000')
-
-        from bot_website import ltThread
+        from .app.bot_website import ltThread,WebsiteThread
         ltserver = ltThread()
         ltserver.start()
         time.sleep(2)
 
         try:
-            server = Thread(target=run_website,name='bot_website')
+            server = WebsiteThread()
             server.start()
             log.info('>> website: online <<')
-            time.sleep(2)
         except:
             log.info('>> website: offline <<')
+        time.sleep(2)
 
     # if twitch_bot:
     #     loop = asyncio.get_event_loop()

@@ -22,7 +22,7 @@ class RPGbutton1(discord.ui.View):
 
     async def advance(self,player:RPGUser,interaction: discord.Interaction):
         '''進行冒險'''
-        data = sqldb.get_advance(player.id)
+        data = sqldb.get_activities(player.id)
         times = data.get('advance_times',0) + 1
         
         if times == 1:
@@ -42,20 +42,20 @@ class RPGbutton1(discord.ui.View):
             embed.description = "沒事發生"
 
             if times >= 5 and random.randint(0,100) <= times*5:
-                sqldb.remove_userdata(player.id,'rpg_advance')
+                sqldb.update_userdata(player.id,'rpg_activities','advance_times',0)
                 embed.description += '，冒險結束'
             else:
-                sqldb.update_userdata(player.id,'rpg_advance','advance_times',times)
+                sqldb.update_userdata(player.id,'rpg_activities','advance_times',times)
             
             await interaction.edit_original_response(embeds=list,view=self)
         
         elif rd >= 71 and rd <=100:
             embed.title = f"第{times}次冒險"
             embed.description = "遇到怪物"
-            monster = Monster.get_monster(random.randint(1,2))
+            monster = UserClient.get_monster(random.randint(1,2))
             embed2 = BotEmbed.simple(f"遭遇戰鬥：{monster.name}")
             list.append(embed2)
-            sqldb.update_userdata(player.id,'rpg_advance','advance_times',times)
+            sqldb.update_userdata(player.id,'rpg_activities','advance_times',times)
             view = RPGbutton3(player,monster,list)
             await interaction.edit_original_response(embeds=list,view=view)
             await view.battle(interaction,self)
@@ -69,9 +69,10 @@ class RPGbutton2(discord.ui.View):
     @discord.ui.button(label="按我進行工作",style=discord.ButtonStyle.green)
     async def button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
         if interaction.user.id == self.userid:
-            user = UserClient.get_rpguser(str(interaction.user.id))
+            user = UserClient.get_rpguser(interaction.user.id)
+            print(1)
             result = user.work()
-
+            print(2)
             await interaction.response.edit_message(content=result)
 
 class RPGbutton3(discord.ui.View):

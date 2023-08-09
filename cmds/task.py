@@ -6,7 +6,7 @@ from discord.ext import commands,tasks
 from requests.exceptions import ConnectTimeout
 
 from core.classes import Cog_Extension
-from starcord import Jsondb,sqldb
+from starcord import Jsondb,sqldb,mongedb
 from starcord.clients import *
 
 
@@ -27,7 +27,7 @@ class task(Cog_Extension):
     async def on_ready(self):
         if not Jsondb.jdata.get("debug_mode",True):
             scheduler = AsyncIOScheduler()
-            scheduler.add_job(self.sign_reset,'cron',hour=4,minute=0,second=0,jitter=30,misfire_grace_time=60)
+            #scheduler.add_job(self.sign_reset,'cron',hour=4,minute=0,second=0,jitter=30,misfire_grace_time=60)
             scheduler.add_job(self.apex_crafting_update,'cron',hour=1,minute=5,second=0,jitter=30,misfire_grace_time=60)
             scheduler.add_job(self.apex_map_update,'cron',minute='00,15,30,45',second=1,jitter=30,misfire_grace_time=60)
             scheduler.add_job(self.forecast_update,'cron',hour='00,03,06,09,12,15,18,21',minute=0,second=1,jitter=30,misfire_grace_time=60)
@@ -35,7 +35,7 @@ class task(Cog_Extension):
             #scheduler.add_job(self.update_channel_dict,'cron',hour='*',minute="0,30",second=0,jitter=30,misfire_grace_time=60)
 
             scheduler.add_job(self.earthquake_check,'interval',minutes=1,jitter=30,misfire_grace_time=40)
-            #scheduler.add_job(self.get_mongodb_data,'interval',minutes=3,jitter=30,misfire_grace_time=40)
+            scheduler.add_job(self.get_mongodb_data,'interval',minutes=3,jitter=30,misfire_grace_time=40)
 
             scheduler.start()
             self.twitch.start()
@@ -222,7 +222,11 @@ class task(Cog_Extension):
             channel_dict[type] = dict
 
     async def get_mongodb_data(self):
+        dbdata = mongedb.get_apidata()
+
+    async def update_pubsubhubbub_data(self):
         pass
+
 
 def setup(bot):
     bot.add_cog(task(bot))

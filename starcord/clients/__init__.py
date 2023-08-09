@@ -11,7 +11,7 @@ __all__ =[
     'TwitchAPI',
     'YoutubeAPI',
     'NotionAPI',
-    'RiotInterface',
+    'RiotClient',
     'OsuInterface',
     'ApexInterface',
     'SteamInterface',

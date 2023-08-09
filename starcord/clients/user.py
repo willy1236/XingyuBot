@@ -1,4 +1,4 @@
-import discord,random
+import random,datetime,time
 from typing import TYPE_CHECKING
 from starcord.database import sqldb
 from starcord.utility import BotEmbed
@@ -46,16 +46,18 @@ class WarningClient:
 class User():
     '''基本用戶'''
     if TYPE_CHECKING:
-        id: str
+        id: int
         name: str
         point: int
         rcoin: int
+        max_sign_consecutive_days: int
 
-    def __init__(self,**data):
+    def __init__(self,data:dict):
         self.id = data.get('user_id')
         self.name = data.get('name')
         self.point = data.get('point')
         self.rcoin = data.get('rcoin')
+        self.max_sign_consecutive_days = data.get('max_sign_consecutive_days',0)
         
         #初始設定
         # self.id = str(userid)
@@ -80,14 +82,22 @@ class User():
 
     def desplay(self):
         embed = BotEmbed.general(name=self.name)
-        embed.add_field(name='Pt點數',value=self.point)
+        embed.add_field(name='PT點數',value=self.point)
         embed.add_field(name='Rcoin',value=self.rcoin)
+        embed.add_field(name='連續簽到最高天數',value=self.max_sign_consecutive_days)
+        embed.add_field(name='遊戲資料',value="/game find")
+        embed.add_field(name='寵物',value="/pet check",inline=False)
         # embed.add_field(name='生命值',value=self.hp)
         # if self.pet.has_pet:
         #     embed.add_field(name='寵物',value=self.pet.name)
         # else:
         #     embed.add_field(name='寵物',value='無')
         return embed
+
+    def get_pet(self):
+        """等同於 UserClient.get_pet()"""
+        dbdata = UserClient.get_pet(self.id)
+        return dbdata
 
     # def setup(self):
     #     udata = self.__db.udata
@@ -133,7 +143,7 @@ class RPGUser(User):
         hp: int
         atk: int
         hrt: int
-        work_code: int
+        career_id: int
     
     def __init__(self,data):
         """
@@ -148,7 +158,7 @@ class RPGUser(User):
         self.hp = data.get('user_hp')
         self.atk = data.get('user_atk')
         self.hrt = data.get('hrt',60)
-        self.work_code = data.get('work_code')
+        self.career_id = data.get('career_id')
 
     
     # def advance(self) -> list[discord.Embed]:
@@ -182,10 +192,10 @@ class RPGUser(User):
     #         embed = BotEmbed.simple(f"遭遇戰鬥：{self.name}")
     #         view = RPGbutton3(self,monster,embed)
     #     if times >= 5 and random.randint(0,100) <= times*5:
-    #         sqldb.remove_userdata(self.id,'rpg_advance')
+    #         sqldb.remove_userdata(self.id,'rpg_activities')
     #         embed.description += '，冒險結束'
     #     else:
-    #         sqldb.update_userdata(self.id,'rpg_advance','advance_times',times)
+    #         sqldb.update_userdata(self.id,'rpg_activities','advance_times',times)
 
     #     return list
     
@@ -195,15 +205,25 @@ class RPGUser(User):
         
         Return: str（以文字輸出工作結果）
         '''
-        if not self.work_code:
+        if not self.career_id:
             return '你還沒有選擇職業'
         
         rd = random.randint(1,100)
-        if self.work_code == 1 and rd >= 50:
-            sqldb.update_bag(self.id,'1',1)
-            return '工作完成，獲得：麵包x1'
+        if self.career_id == 1 and rd >= 50:
+            sqldb.update_bag(self.id,1,1)
+            text = '工作完成，獲得：小麥x1'
+        elif self.career_id == 2 and rd >= 50:
+            sqldb.update_bag(self.id,2,1)
+            text = '工作完成，獲得：鐵礦x1'
+        #elif self.career_id == 3 and rd >= 50:
+        #    return '工作完成，獲得：麵包x1'
+        #elif self.career_id == 4 and rd >= 50:
+        #    return '工作完成，獲得：麵包x1'
         else:
-            return '工作完成，但沒有獲得東西'
+            text = '工作完成，但沒有獲得東西'
+        time.sleep(0.5)
+        sqldb.update_userdata(self.id,"rpg_activities","work_date",datetime.date.today().isoformat())
+        return text
         
 class GameUser(User):
     def __init__(self,data:dict):
