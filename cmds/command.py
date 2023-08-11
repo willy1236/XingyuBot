@@ -1,4 +1,4 @@
-import discord,random,asyncio,datetime,openai
+import discord,random,asyncio,datetime
 from discord.errors import Forbidden, NotFound
 from discord.ext import commands,pages
 from discord.commands import SlashCommandGroup
@@ -11,7 +11,7 @@ from starcord.errors import CommandError
 
 from mysql.connector.errors import Error as sqlerror
 
-openai.api_key = Jsondb.get_token('openai')
+#openai.api_key = Jsondb.get_token('openai')
 bet_option = ChoiceList.set('bet_option')
 busy_time_option = ChoiceList.set('busy_time_option')
 

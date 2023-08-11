@@ -1,4 +1,4 @@
-import requests,genshin
+import requests
 from starcord.database import Jsondb
 from starcord.model.game import *
 from starcord.errors import ClientError
