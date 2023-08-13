@@ -12,6 +12,7 @@ SQL_connection = Jsondb.jdata.get('SQL_connection')
 file_log = Jsondb.jdata.get('file_log')
 Mongedb_connection = Jsondb.jdata.get('Mongedb_connection')
 
+csvdb = CsvDatabase()
 
 def create_sqldb(SQL_connection:bool) -> MySQLDatabase:
     if SQL_connection:

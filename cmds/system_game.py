@@ -195,25 +195,30 @@ class system_game(Cog_Extension):
     async def masteries(self,ctx,username:discord.Option(str,name='召喚師名稱',description='要查詢的用戶，留空則使用資料庫查詢',required=False)):
         rclient = RiotClient()
         player = rclient.get_player_data(username,ctx.author.id if not username else None)
+        if not player:
+            await ctx.respond('查詢失敗：查無此玩家',ephemeral=True)
+            return
         
         masteries_list = rclient.get_summoner_masteries(player.summonerid)
-        if masteries_list:
-            embed = BotEmbed.simple(f"{player.name}的專精英雄")
-            for data in masteries_list:
-                text = ""
-                text += f"專精等級： {data.championLevel}\n"
-                text += f"專精分數： {data.championPoints}\n"
-                if data.championLevel < 5:
-                    text += f"距離專精等級提升： {data.championPointsUntilNextLevel}\n"
-                elif data.championLevel == 5 or data.championLevel == 6:
-                    text += f"專精代幣獲取數： {data.tokensEarned}\n"
-                text += f"是否取得寶箱： {data.chestGranted}\n"
-                text += f"上次遊玩： {datetime.fromtimestamp(data.lastPlayTime/1000).isoformat(sep=' ')}\n"
-                champion_name = csvdb.get_row_by_column_value(csvdb.lol_champion,"champion_id",data.championId)
-                embed.add_field(name=champion_name.loc["name_tw"] if not champion_name.empty else f"ID: {data.championId}",value=text,inline=False)
-            await ctx.respond('查詢成功',embed=embed)
-        else:
+        if not masteries_list:
             await ctx.respond('查詢失敗：此玩家查無專精資料',ephemeral=True)
+        
+        embed = BotEmbed.simple(f"{player.name} 專精英雄")
+        for data in masteries_list:
+            text = ""
+            text += f"專精等級： {data.championLevel}\n"
+            text += f"專精分數： {data.championPoints}\n"
+            if data.championLevel < 5:
+                text += f"距離專精等級提升： {data.championPointsUntilNextLevel}\n"
+            elif data.championLevel == 5 or data.championLevel == 6:
+                text += f"專精代幣獲取數： {data.tokensEarned}\n"
+            text += f"是否取得寶箱： {data.chestGranted}\n"
+            #text += f"上次遊玩： {datetime.fromtimestamp(data.lastPlayTime/1000).isoformat(sep=' ')}\n"
+            text += f"上次遊玩： <t:{int(data.lastPlayTime/1000)}>\n"
+            champion_name = csvdb.get_row_by_column_value(csvdb.lol_champion,"champion_id",data.championId)
+            embed.add_field(name=champion_name.loc["name_tw"] if not champion_name.empty else f"ID: {data.championId}",value=text,inline=False)
+        await ctx.respond('查詢成功',embed=embed)
+            
 
     @osu.command(description='查詢Osu用戶資料')
     @commands.cooldown(rate=1,per=1)

@@ -1,9 +1,7 @@
 from datetime import datetime,timedelta
 from starcord.utility import BotEmbed
-from starcord.database import JsonDatabase,CsvDatabase
+from starcord.database import Jsondb,csvdb
 
-Jsondb = JsonDatabase()
-csvdb = CsvDatabase()
 jdict = Jsondb.jdict
 lol_jdict = Jsondb.lol_jdict
 
