@@ -194,7 +194,7 @@ class system_game(Cog_Extension):
     @lol.command(description='查詢League of Legends專精英雄')
     async def masteries(self,ctx,username:discord.Option(str,name='召喚師名稱',description='要查詢的用戶，留空則使用資料庫查詢',required=False)):
         rclient = RiotClient()
-        player = rclient.get_player_data(username,ctx.author.id)
+        player = rclient.get_player_data(username,ctx.author.id if not username else None)
         
         masteries_list = rclient.get_summoner_masteries(player.summonerid)
         if masteries_list:
