@@ -16,7 +16,6 @@ __all__ =[
     'ApexInterface',
     'SteamInterface',
     'DBDInterface',
-    'hoyoInterface',
     'CWBClient',
     'UserClient',
 ]

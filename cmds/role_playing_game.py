@@ -9,21 +9,21 @@ class role_playing_game(Cog_Extension):
     #work = SlashCommandGroup("work", "工作相關指令")
     
     @commands.slash_command(description='進行冒險（開發中）')
-    async def advance(self,ctx):
+    async def advance(self,ctx:discord.ApplicationContext):
         # await ctx.respond('敬請期待',ephemeral=False)
         # return
         await ctx.respond(view=RPGbutton1(ctx.author.id))
 
     @commands.slash_command(description='進行工作（開發中）')
-    async def work(self,ctx):
+    async def work(self,ctx:discord.ApplicationContext):
         dbdata = sqldb.get_activities(ctx.author.id)
         if dbdata.get("work_date") == datetime.date.today():
             await ctx.respond("今天已經工作過了")
-            return    
+        
         await ctx.respond(view=RPGbutton2(ctx.author.id))
 
-    @commands.slash_command(description='查看用戶資訊（開發中）')
-    async def ui(self,ctx,user_dc:discord.Option(discord.Member,name='用戶',description='留空以查詢自己',default=None)):
+    @commands.slash_command(description='查看用戶資訊')
+    async def ui(self,ctx:discord.ApplicationContext,user_dc:discord.Option(discord.Member,name='用戶',description='留空以查詢自己',default=None)):
         user_dc = user_dc or ctx.author
         user = UserClient.get_user(user_dc.id)
         embed = user.desplay()
@@ -31,7 +31,7 @@ class role_playing_game(Cog_Extension):
         await ctx.respond(embed=embed)
 
     @commands.slash_command(description='查看背包（開發中）')
-    async def bag(self,ctx,user_dc:discord.Option(discord.Member,name='用戶',description='留空以查詢自己',default=None)):
+    async def bag(self,ctx:discord.ApplicationContext,user_dc:discord.Option(discord.Member,name='用戶',description='留空以查詢自己',default=None)):
         user_dc = user_dc or ctx.author
         data = sqldb.get_bag_desplay(user_dc.id)
         embed = BotEmbed.simple(f'{user_dc.name}的包包')

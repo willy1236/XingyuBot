@@ -70,9 +70,7 @@ class RPGbutton2(discord.ui.View):
     async def button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
         if interaction.user.id == self.userid:
             user = UserClient.get_rpguser(interaction.user.id)
-            print(1)
             result = user.work()
-            print(2)
             await interaction.response.edit_message(content=result)
 
 class RPGbutton3(discord.ui.View):

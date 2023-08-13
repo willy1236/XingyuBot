@@ -379,6 +379,7 @@ class MySQLDatabase():
         self.cursor.execute(f"USE `database`;")
         self.cursor.execute(f'SELECT * FROM `rpg_activities` WHERE user_id = %s;',(user_id,))
         records = self.cursor.fetchone()
+        print(records)
         return records or {}
 
     def get_bag(self,user_id:int,item_id:str=None):
@@ -407,8 +408,7 @@ class MySQLDatabase():
         return records
 
     def update_bag(self,user_id:int,item_id:int,amount:int):
-        self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f"INSERT INTO `rpg_user_bag` SET user_id = {user_id}, item_id = {item_id}, amount = {amount} ON DUPLICATE KEY UPDATE amount = amount + {amount};")
+        self.cursor.execute(f"INSERT INTO `database`.`rpg_user_bag` SET user_id = {user_id}, item_id = {item_id}, amount = {amount} ON DUPLICATE KEY UPDATE amount = amount + {amount};")
         self.connection.commit()
 
     def remove_bag(self,user_id:int,item_id:int,amount:int):

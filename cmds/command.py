@@ -42,7 +42,7 @@ class command(Cog_Extension):
                 record = self.sqldb.get_role_save_count(id)
                 embed.add_field(name=user.name, value=record['COUNT(user_id)'], inline=False)
         await ctx.respond(embed=embed)
-
+ 
     @role.command(description='加身分組')
     @commands.bot_has_permissions(manage_roles=True)
     @commands.cooldown(rate=1,per=5)

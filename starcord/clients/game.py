@@ -1,5 +1,5 @@
 import requests
-from starcord.database import Jsondb
+from starcord.database import Jsondb,sqldb
 from starcord.model.game import *
 from starcord.errors import ClientError
 class GameInterface():
@@ -9,51 +9,87 @@ class GameInterface():
 class RiotClient(GameInterface):
     def __init__(self):
         super().__init__()
-        self.url = 'https://tw2.api.riotgames.com'
+        self.url_tw2 = 'https://tw2.api.riotgames.com'
         self.url_sea = 'https://sea.api.riotgames.com'
         self.key = Jsondb.get_token('riot')
+        self.headers = {
+            'X-Riot-Token':self.key
+        }
+
+    def get_player_data(self,summoner_name=None,discord_id=None):
+        """
+        從資料庫取得資料，若沒有則從API取得
+        :param summoner_name: 召喚師名稱
+        :param discord_id: 若提供則先查詢資料庫
+        """
+        if discord_id:
+            dbdata = sqldb.get_game_data(discord_id,"lol")
+            if dbdata:
+                return PartialLOLPlayer(dbdata)
+        
+        if summoner_name:
+            return self.get_player_byname(summoner_name)
+
 
     def get_player_byname(self,username):
-        params = {
-            'api_key':self.key
-            }
-        r = requests.get(f'{self.url}/lol/summoner/v4/summoners/by-name/{username}',params=params)
+        r = requests.get(f'{self.url_tw2}/lol/summoner/v4/summoners/by-name/{username}',headers=self.headers)
         if r.ok:
             return LOLPlayer(r.json())
+        elif r.status_code == 404:
+            return None
         else:
-            raise ClientError("lol_player",r.text)
+            raise ClientError("lol_player_byname",r.text)
         
     def get_player_bypuuid(self,puuid):
-        params = {
-            'api_key':self.key
-            }
-        r = requests.get(f'{self.url}/lol/summoner/v4/summoners/by-puuid/{puuid}',params=params)
+        r = requests.get(f'{self.url_tw2}/lol/summoner/v4/summoners/by-puuid/{puuid}',headers=self.headers)
         if r.ok:
             return LOLPlayer(r.json())
+        elif r.status_code == 404:
+            return None        
         else:
-            raise ClientError("lol_player",r.text)
+            raise ClientError("lol_player_bypuuid",r.text)
 
     def get_player_matchs(self,puuid,count=5) -> list[str]:
         params = {
-            'api_key':self.key,
             'start':0,
             'count':count
             }
-        r = requests.get(f'{self.url_sea}/lol/match/v5/matches/by-puuid/{puuid}/ids',params=params)
+        r = requests.get(f'{self.url_sea}/lol/match/v5/matches/by-puuid/{puuid}/ids',params=params,headers=self.headers)
         if r.ok:
             return r.json()
         else:
             raise ClientError("lol_player_match",r.text)
 
     def get_match(self,matchId):
-        params = {
-            'api_key':self.key
-            }
-        r = requests.get(f'{self.url_sea}/lol/match/v5/matches/{matchId}',params=params)
+        r = requests.get(f'{self.url_sea}/lol/match/v5/matches/{matchId}',headers=self.headers)
         if r.ok:
             return LOLMatch(r.json())
         else:
             raise ClientError("lol_match",r.text)
+        
+    def get_summoner_masteries(self,summoner_id) -> list[LOLChampionMasteries | None]:
+        params = {
+            'count':5
+            }
+        r = requests.get(f'{self.url_tw2}/lol/champion-mastery/v4/champion-masteries/by-summoner/{summoner_id}/top',params=params,headers=self.headers)
+        if r.ok:
+            masteries_list = []
+            for data in r.json():
+                masteries_list.append(LOLChampionMasteries(data))
+            return masteries_list
+        elif r.status_code == 404:
+            return []
+        else:
+            raise ClientError("lol_summoner_masteries",r.text)
+    
+    def get_summoner_active_match(self,summoner_id):
+        r = requests.get(f'{self.url_tw2}/lol/spectator/v4/active-games/by-summoner/{summoner_id}',headers=self.headers)
+        if r.ok:
+            return r.json()
+        elif r.status_code == 404:
+            return None
+        else:
+            raise ClientError(f"lol_summoner_active_match:{r.text}")
     
 class OsuInterface(GameInterface):
     def __init__(self):
@@ -116,7 +152,7 @@ class ApexInterface(GameInterface):
             'platform':platform
         }
         r = requests.get(f'{self.url}/bridge',params=params)
-        if r.status_code == 200:
+        if r.ok:
             return ApexPlayer(r.json())
         else:
             return None
@@ -124,7 +160,7 @@ class ApexInterface(GameInterface):
     def get_crafting(self):
         params={'auth':self.auth}
         r = requests.get(f'{self.url}/crafting',params=params)
-        if r.status_code == 200:
+        if r.ok:
             return ApexCrafting(r.json())
         else:
             return None
@@ -132,7 +168,7 @@ class ApexInterface(GameInterface):
     def get_map_rotation(self):
         params={'auth':self.auth}
         r = requests.get(f'{self.url}/maprotation',params=params)
-        if r.status_code == 200:
+        if r.ok:
             return ApexMapRotation(r.json())
         else:
             return None  
@@ -140,7 +176,7 @@ class ApexInterface(GameInterface):
     def get_server_status(self):
         params={'auth':self.auth}
         r = requests.get(f'{self.url}/servers',params=params)
-        if r.status_code == 200:
+        if r.ok:
             return ApexStatus(r.json())
         else:
             return None
@@ -181,8 +217,8 @@ class DBDInterface(SteamInterface):
             return None
 
 
-class hoyoInterface(GameInterface):
-    def __init__(self,dcid):
-        super().__init__()
-        cookies = {}
-        self.__client = genshin.Client(cookies) 
+# class hoyoInterface(GameInterface):
+#     def __init__(self,dcid):
+#         super().__init__()
+#         cookies = {}
+#         self.__client = genshin.Client(cookies) 

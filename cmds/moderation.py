@@ -28,7 +28,7 @@ class moderation(Cog_Extension):
     async def clean(self,
                     ctx:discord.ApplicationContext,
                     num:discord.Option(int,name='數量',description='要清理的訊息數，與訊息id擇一提供',required=False),
-                    message_id:discord.Option(str,name='訊息id',description='如果提供，將刪除比此訊息更新的所有訊息（該訊息不會被刪）',required=False)):
+                    message_id:discord.Option(str,name='訊息id',description='如果提供，將刪除比此訊息更新的所有訊息（該訊息本身不會被刪）',required=False)):
         await ctx.defer()
         if message_id:
             message = await ctx.channel.fetch_message(int(message_id))
@@ -74,9 +74,9 @@ class moderation(Cog_Extension):
             channel_id = data['channel_id']
             role_id = data['role_id']
             
-            channel = self.bot.get_channel(int(channel_id))
+            channel = self.bot.get_channel(channel_id)
             if role_id:
-                role = ctx.guild.get_role(int(role_id))
+                role = ctx.guild.get_role(role_id)
             else:
                 role = None
 
@@ -91,7 +91,7 @@ class moderation(Cog_Extension):
     #@channel_notify.command(description='設定動態語音頻道')
     
     @warning.command(description='給予用戶警告，此警告將會連動至其他群組')
-    @commands.has_permissions(kick_members=True)
+    @commands.has_permissions(manage_messages=True)
     @commands.guild_only()
     async def add(self,ctx,
                       user:discord.Option(discord.User,name='用戶',description='要給予警告的用戶',required=True),
@@ -105,8 +105,8 @@ class moderation(Cog_Extension):
             return
 
         time = datetime.datetime.now()
-        moderate_user = str(ctx.author.id)
-        sqldb.add_warning(str(user.id),'warning',moderate_user,str(ctx.guild.id),time,reason,None)
+        moderate_user = ctx.author.id
+        sqldb.add_warning(user.id,'warning',moderate_user,ctx.guild.id,time,reason,None)
         embed = BotEmbed.general(f'{user.name} 的警告單',user.display_avatar.url,description=f"{user.mention}：{reason}")
         embed.add_field(name="執行人員",value=ctx.author.mention)
         embed.timestamp = time
@@ -116,11 +116,11 @@ class moderation(Cog_Extension):
     @commands.guild_only()
     async def list(self,ctx,
                       user:discord.Option(discord.User,name='用戶',description='要查詢的用戶',required=True)):
-        dbdata = sqldb.get_warnings(str(user.id))
+        dbdata = sqldb.get_warnings(user.id)
         embed = BotEmbed.general(f'{user.name} 的警告單列表（共{len(dbdata)}筆）',user.display_avatar.url)
         for i in dbdata:
-            moderate_user = self.bot.get_user(int(i['moderate_user']))
-            guild = self.bot.get_guild(int(i['create_guild']))
+            moderate_user = self.bot.get_user(i['moderate_user'])
+            guild = self.bot.get_guild(i['create_guild'])
             time_str = i['create_time']
             moderate_type = i['moderate_type']
             last_time = i['last_time']
@@ -135,9 +135,9 @@ class moderation(Cog_Extension):
                       warning_id:discord.Option(str,name='警告編號',description='要查詢的警告',required=True)):
         dbdata = sqldb.get_warning(int(warning_id))
         if dbdata:
-            user = self.bot.get_user(int(dbdata['user_id']))
-            moderate_user = self.bot.get_user(int(dbdata['moderate_user']))
-            guild = self.bot.get_guild(int(dbdata['create_guild']))
+            user = self.bot.get_user(dbdata['user_id'])
+            moderate_user = self.bot.get_user(dbdata['moderate_user'])
+            guild = self.bot.get_guild(dbdata['create_guild'])
             time_str = dbdata['create_time']
             moderate_type = dbdata['moderate_type']
             last_time = dbdata['last_time']
@@ -156,7 +156,7 @@ class moderation(Cog_Extension):
         dbdata = sqldb.get_warning(int(warning_id))
         is_owner = await self.bot.is_owner(ctx.author)
         if dbdata:
-            guild = self.bot.get_guild(int(dbdata['create_guild']))
+            guild = self.bot.get_guild(dbdata['create_guild'])
             if not guild == ctx.guild and not is_owner:
                 await ctx.respond("不能移除非此伺服器發出的警告")
                 return
@@ -178,10 +178,10 @@ class moderation(Cog_Extension):
         time = converter.time_to_datetime(time_last)
         await user.timeout_for(time,reason=reason)
         
-        moderate_user = str(ctx.user.id)
+        moderate_user = ctx.user.id
         create_time = datetime.datetime.now()
-        if add_record:
-            sqldb.add_warning(str(user.id),'timeout',moderate_user,str(ctx.guild.id),create_time,reason,time_last)
+        if add_record and not user.bot:
+            sqldb.add_warning(user.id,'timeout',moderate_user,ctx.guild.id,create_time,reason,time_last)
         
         embed = BotEmbed.general(f'{user.name} 已被禁言',user.display_avatar.url,description=f"{user.mention}：{reason}")
         embed.add_field(name="執行人員",value=ctx.author.mention)
@@ -199,10 +199,10 @@ class moderation(Cog_Extension):
         await ctx.defer()
         await user.kick(reason=reason)
         
-        moderate_user = str(ctx.user.id)
+        moderate_user = ctx.user.id
         create_time = datetime.datetime.now()
-        if add_record:
-            sqldb.add_warning(str(user.id),'kick',moderate_user,str(ctx.guild.id),create_time,reason,None)
+        if add_record and not user.bot:
+            sqldb.add_warning(user.id,'kick',moderate_user,ctx.guild.id,create_time,reason,None)
         
         embed = BotEmbed.general(f'{user.name} 已被踢除',user.display_avatar.url,description=f"{user.mention}：{reason}")
         embed.add_field(name="執行人員",value=ctx.author.mention)
@@ -222,10 +222,10 @@ class moderation(Cog_Extension):
         await ctx.defer()
         await user.ban(reason=reason,delete_message_days=delete_message_days)
         
-        moderate_user = str(ctx.user.id)
+        moderate_user = ctx.user.id
         create_time = datetime.datetime.now()
-        if add_record:
-            sqldb.add_warning(str(user.id),'ban',moderate_user,str(ctx.guild.id),create_time,reason,None)
+        if add_record and not user.bot:
+            sqldb.add_warning(user.id,'ban',moderate_user,ctx.guild.id,create_time,reason,None)
         
         embed = BotEmbed.general(f'{user.name} 已被停權',user.display_avatar.url,description=f"{user.mention}：{reason}")
         embed.add_field(name="執行人員",value=ctx.author.mention)

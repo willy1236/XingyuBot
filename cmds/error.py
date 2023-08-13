@@ -7,6 +7,7 @@ from starcord import log,BRS,Jsondb,sqldb
 
 permissions_tl = Jsondb.jdict.get('permissions')
 debug_guild = Jsondb.jdata.get('debug_guild')
+debug_mode = Jsondb.jdata.get('debug_mode')
 
 class error(Cog_Extension):
     @commands.Cog.listener()
@@ -35,7 +36,10 @@ class error(Cog_Extension):
             if isinstance(error.original,StarException):
                 await ctx.respond(error.original,ephemeral=True)
                 if error.original.original_message:
-                    await BRS.error(self.bot,ctx,f"{error.original} ({error.original.original_message})")
+                    if debug_mode:
+                        log.error(f'{error},{error.original.original_message},{type(error.original)}')
+                    else:
+                        await BRS.error(self.bot,ctx,f"{error.original} ({error.original.original_message})")
 
             elif isinstance(error.original,discord.errors.Forbidden):
                 await ctx.respond(f'錯誤：我缺少權限執行這項操作，可能為我的身分組位階較低或缺少必要權限導致',ephemeral=True)

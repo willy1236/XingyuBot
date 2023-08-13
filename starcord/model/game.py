@@ -1,19 +1,20 @@
 from datetime import datetime,timedelta
 from starcord.utility import BotEmbed
-from starcord.database import JsonDatabase
+from starcord.database import JsonDatabase,CsvDatabase
 
 Jsondb = JsonDatabase()
+csvdb = CsvDatabase()
 jdict = Jsondb.jdict
 lol_jdict = Jsondb.lol_jdict
 
 class LOLPlayer():
     def __init__(self,data):
-        self.name = data['name']
-        self.summonerid = data['id']
-        self.accountid = data['accountId']
-        self.puuid = data['puuid']
-        self.summonerLevel = data['summonerLevel']
-        self.profileIconId = data['profileIconId']
+        self.name = data.get('name')
+        self.summonerid = data.get('id')
+        self.accountid = data.get('accountId')
+        self.puuid = data.get('puuid')
+        self.summonerLevel = data.get('summonerLevel')
+        self.profileIconId = data.get('profileIconId')
 
     def desplay(self):
         embed = BotEmbed.general(self.name)
@@ -29,6 +30,15 @@ class LOLPlayer():
         embed.set_footer(text="puuid是全球唯一的ID，不隨帳號移動地區而改變")
         
         return embed
+
+class PartialLOLPlayer(LOLPlayer):
+    def __init__(self,data):
+        super().__init__(data)
+        self.discord_id = data.get('user_id')
+        self.name = data.get('player_name')
+        self.summonerid = data.get('player_id')
+        self.accountid = data.get('account_id')
+        self.puuid = data.get('other_id')
 
 class LOLPlayerInMatch():
     def __init__(self,data):
@@ -95,7 +105,8 @@ class LOLPlayerInMatch():
 
     def desplaytext(self):
         text = f'`{self.summonerName}(LV. {self.summonerLevel})`\n'
-        name = lol_jdict['champion'].get(self.championName) or self.championName
+        name_csv = csvdb.get_row_by_column_value(csvdb.lol_champion,"name_en",self.championName)
+        name = name_csv.loc["name_tw"] if not name_csv.empty else self.championName
         text += f'{name}(LV. {self.champLevel})\n'
         lane = lol_jdict['road'].get(self.lane) or self.lane
         if self.role != "NONE":
@@ -198,6 +209,18 @@ class LOLMatch():
             embed.add_field(name="藍方", value=blue, inline=True)
             embed.add_field(name="紅方👑", value=red, inline=True)
         return embed
+    
+class LOLChampionMasteries:
+    def __init__(self,data):
+        #unused:puuid, summonerId
+        self.championId = data['championId']
+        self.championLevel = data['championLevel']
+        self.championPoints = data['championPoints']
+        self.lastPlayTime = data['lastPlayTime']
+        self.championPointsSinceLastLevel = data['championPointsSinceLastLevel']
+        self.championPointsUntilNextLevel = data['championPointsUntilNextLevel']
+        self.chestGranted = data['chestGranted']
+        self.tokensEarned = data['tokensEarned']
 
 
 class OsuPlayer():
@@ -369,15 +392,18 @@ class ApexCrafting():
 
 class ApexMapRotation():
     def __init__(self,data):
-        self.nowmap = data["current"]['map']
-        self.nowstart = datetime.strptime(data['current']['readableDate_start'],"%Y-%m-%d %H:%M:%S")+timedelta(hours=8)
-        self.nowend = datetime.strptime(data['current']['readableDate_end'],"%Y-%m-%d %H:%M:%S")+timedelta(hours=8)
-        self.remaining = data['current']['remainingTimer']
-        self.mapimage = data['current']['asset']
+        try:
+            self.nowmap = data["current"]['map']
+            self.nowstart = datetime.strptime(data['current']['readableDate_start'],"%Y-%m-%d %H:%M:%S")+timedelta(hours=8)
+            self.nowend = datetime.strptime(data['current']['readableDate_end'],"%Y-%m-%d %H:%M:%S")+timedelta(hours=8)
+            self.remaining = data['current']['remainingTimer']
+            self.mapimage = data['current']['asset']
 
-        self.nextmap = data["next"]['map']
-        self.nextstart = datetime.strptime(data['next']['readableDate_start'],"%Y-%m-%d %H:%M:%S")+timedelta(hours=8)
-        self.nextend = datetime.strptime(data['next']['readableDate_end'],"%Y-%m-%d %H:%M:%S")+timedelta(hours=8)
+            self.nextmap = data["next"]['map']
+            self.nextstart = datetime.strptime(data['next']['readableDate_start'],"%Y-%m-%d %H:%M:%S")+timedelta(hours=8)
+            self.nextend = datetime.strptime(data['next']['readableDate_end'],"%Y-%m-%d %H:%M:%S")+timedelta(hours=8)
+        except TypeError:
+            print(data)
 
     def desplay(self):
         tl = jdict['ApexMap']

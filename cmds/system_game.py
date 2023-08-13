@@ -1,7 +1,7 @@
 import discord,genshin,re,asyncio
 from discord.ext import commands
 from discord.commands import SlashCommandGroup
-from datetime import timedelta
+from datetime import timedelta,datetime
 
 from core.classes import Cog_Extension
 from starcord import BotEmbed,Jsondb,ChoiceList
@@ -175,20 +175,10 @@ class system_game(Cog_Extension):
             await ctx.respond('查詢失敗:查無此ID',ephemeral=True)
 
     @lol.command(description='查詢最近一次的League of Legends對戰')
-    async def playermatch(self,ctx,username:discord.Option(str,name='用戶名稱',description='要查詢的用戶，留空則使用資料庫查詢',required=False)):
+    async def playermatch(self,ctx,username:discord.Option(str,name='召喚師名稱',description='要查詢的用戶，留空則使用資料庫查詢',required=False)):
         rclient = RiotClient()
-        if not username:
-            dbdata = self.sqldb.get_game_data(ctx.author.id,DatabaseGame.LOL.value)
-            if not dbdata:
-                await ctx.respond('查詢失敗:沒有登入資料庫的資料',ephemeral=True)
-                return
-            puuid = dbdata['other_id']
-        else:
-            player = rclient.get_player_byname(username)
-            if not player:
-                await ctx.respond('查詢失敗:查無此玩家',ephemeral=True)
-                return
-            puuid = player.puuid
+        player = rclient.get_player_data(username,ctx.author.id)
+        puuid = player.puuid
         
         match_list = rclient.get_player_matchs(puuid,1)
         if not match_list:
@@ -200,7 +190,30 @@ class system_game(Cog_Extension):
             await ctx.respond('查詢成功',embed=match.desplay())
         else:
             await ctx.respond('查詢失敗：出現未知錯誤',ephemeral=True)
-            
+
+    @lol.command(description='查詢League of Legends專精英雄')
+    async def masteries(self,ctx,username:discord.Option(str,name='召喚師名稱',description='要查詢的用戶，留空則使用資料庫查詢',required=False)):
+        rclient = RiotClient()
+        player = rclient.get_player_data(username,ctx.author.id)
+        
+        masteries_list = rclient.get_summoner_masteries(player.summonerid)
+        if masteries_list:
+            embed = BotEmbed.simple(f"{player.name}的專精英雄")
+            for data in masteries_list:
+                text = ""
+                text += f"專精等級： {data.championLevel}\n"
+                text += f"專精分數： {data.championPoints}\n"
+                if data.championLevel < 5:
+                    text += f"距離專精等級提升： {data.championPointsUntilNextLevel}\n"
+                elif data.championLevel == 5 or data.championLevel == 6:
+                    text += f"專精代幣獲取數： {data.tokensEarned}\n"
+                text += f"是否取得寶箱： {data.chestGranted}\n"
+                text += f"上次遊玩： {datetime.fromtimestamp(data.lastPlayTime/1000).isoformat(sep=' ')}\n"
+                champion_name = csvdb.get_row_by_column_value(csvdb.lol_champion,"champion_id",data.championId)
+                embed.add_field(name=champion_name.loc["name_tw"] if not champion_name.empty else f"ID: {data.championId}",value=text,inline=False)
+            await ctx.respond('查詢成功',embed=embed)
+        else:
+            await ctx.respond('查詢失敗：此玩家查無專精資料',ephemeral=True)
 
     @osu.command(description='查詢Osu用戶資料')
     @commands.cooldown(rate=1,per=1)

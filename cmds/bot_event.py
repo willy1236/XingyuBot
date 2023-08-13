@@ -53,7 +53,7 @@ class event(Cog_Extension):
             await message.reply(embed=embed)
             return
         
-        if message.guild and message.guild.id == 613747262291443742 and not message.author.bot:
+        if message.guild and message.guild.id == 613747262291443742 and not message.author.bot and not self.bot.is_owner(message.author):
             p = re.compile(r'貢丸|贡丸|Meatball',re.IGNORECASE)
             result = p.search(message.content)
             if result:

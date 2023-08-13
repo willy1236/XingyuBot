@@ -1,25 +1,8 @@
 import requests,genshin,asyncio,discord,secrets
 from enum import Enum
 #from pydantic import BaseModel
-from starcord.clients import NotionAPI
-from starcord.clients.http import JsonStorageAPI
-from starcord.clients.community import YoutubeAPI
-
-# class SpeakingState(Enum):
-#     """Speaking state"""
-
-#     none = 0
-#     voice = 1
-#     soundshare = 2
-#     priority = 4
-
-#     def __str__(self):
-#         return self.name
-
-#     def __int__(self):
-#         return self.value
-    
-# print(str(SpeakingState.voice))
+from starcord.clients import RiotClient
+from starcord.database.file import CsvDatabase
 
 # class MyClass:
 #     def __init__(self, data_dict):
@@ -49,3 +32,9 @@ from starcord.clients.community import YoutubeAPI
 
 #data = {"test": "1"}
 # JsonStorageAPI().append_data(data=data)
+
+r = RiotClient().get_summoner_masteries("")
+print(r)
+# db = CsvDatabase()
+# r = db.get_row_by_column_value(db.lol_champion,"name_tw","凱莎")
+# print(r.loc["name_en"])
