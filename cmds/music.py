@@ -4,7 +4,8 @@ from typing import TYPE_CHECKING
 from core.classes import Cog_Extension
 from starcord import BotEmbed
 from starcord.errors import *
-import yt_dlp as youtube_dl
+#import yt_dlp as youtube_dl
+import youtube_dl
 
 # Suppress noise about console usage from errors
 youtube_dl.utils.bug_reports_message = lambda: ""
@@ -36,7 +37,6 @@ ytdl = youtube_dl.YoutubeDL(ytdl_format_options)
 class YTDLSource(discord.PCMVolumeTransformer):
     def __init__(self, source: discord.AudioSource, *, data: dict, volume: float = 0.5):
         super().__init__(source, volume)
-        self.data = data
         self.title = data.get("title")
         self.url = data.get("url")
 
