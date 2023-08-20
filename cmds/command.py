@@ -405,12 +405,13 @@ class command(Cog_Extension):
     #     await ctx.respond(text)
 
     @busytime.command(description='新增沒空時間')
-    async def add(self,ctx,
+    async def add(self,
+                  ctx:discord.ApplicationContext,
                   date:discord.Option(str,name='日期',description='6/4請輸入0604 6/5~6/8請輸入0605~0608 以此類推'),
                   time:discord.Option(str,name='時間',description='',choices=busy_time_option)):
         if len(date) == 4:
             datetime.datetime.strptime(date,"%m%d")
-            self.sqldb.add_busy(str(ctx.author.id),date,time)
+            self.sqldb.add_busy(ctx.author.id,date,time)
             await ctx.respond('設定完成')
         elif len(date) == 9:
             date1_str = date[0:4]
@@ -426,12 +427,13 @@ class command(Cog_Extension):
 
 
     @busytime.command(description='移除沒空時間')
-    async def remove(self,ctx,
-                  date:discord.Option(str,name='日期',description='6/4請輸入0604 6/5~6/8請輸入0605~0608 以此類推'),
-                  time:discord.Option(str,name='時間',description='',choices=busy_time_option)):
+    async def remove(self,
+                     ctx:discord.ApplicationContext,
+                     date:discord.Option(str,name='日期',description='6/4請輸入0604 6/5~6/8請輸入0605~0608 以此類推'),
+                     time:discord.Option(str,name='時間',description='',choices=busy_time_option)):
         if len(date) == 4:
             datetime.datetime.strptime(date,"%m%d")
-            self.sqldb.remove_busy(str(ctx.author.id), date,time)
+            self.sqldb.remove_busy(ctx.author.id, date,time)
             await ctx.respond('移除完成')
         elif len(date) == 9:
             date1_str = date[0:4]
@@ -446,15 +448,16 @@ class command(Cog_Extension):
             await ctx.respond('設定完成')
 
     @busytime.command(description='確認沒空時間')
-    async def check(self,ctx,
-                  date:discord.Option(str,name='日期',description='請輸入四位數日期 如6/4請輸入0604 留空查詢現在時間',required=False),
-                  days:discord.Option(int,name='連續天數',description='想查詢的天數 預設為7',default=7,min_value=1,max_value=270)):
+    async def check(self,
+                    ctx:discord.ApplicationContext,
+                    date:discord.Option(str,name='日期',description='請輸入四位數日期 如6/4請輸入0604 留空查詢現在時間',required=False),
+                    days:discord.Option(int,name='連續天數',description='想查詢的天數 預設為7',default=7,min_value=1,max_value=270)):
         if date:
             date_now = datetime.datetime.strptime(date,"%m%d")
-        else:    
+        else:
             date_now = datetime.datetime.now()
         text = ""
-        
+
         for i in range(days):
             date_str = date_now.strftime("%m%d")
             dbdata = self.sqldb.get_busy(date_str)
@@ -481,7 +484,7 @@ class command(Cog_Extension):
         user_list = self.bot.get_guild(613747262291443742).get_role(1097455657428471918).members
         text = ''
         for i in user_list:
-            dbdata = self.sqldb.get_statistics_busy(str(i.id))
+            dbdata = self.sqldb.get_statistics_busy(i.id)
             text += f'{i.mention}: {dbdata.get("count(user_id)")}\n'
         embed = BotEmbed.simple('總計',text)
         await ctx.respond(embed=embed)

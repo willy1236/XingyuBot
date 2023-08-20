@@ -169,7 +169,9 @@ class ApexInterface(GameInterface):
         params={'auth':self.auth}
         r = requests.get(f'{self.url}/maprotation',params=params)
         if r.ok:
-            return ApexMapRotation(r.json())
+            apidata = r.json()
+            if apidata:
+                return ApexMapRotation(apidata)
         else:
             return None  
 

@@ -63,7 +63,7 @@ class MusicCommandError(VoiceError):
         self.code = 1301
         self.message = message
 
-class VoiceError02(VoiceError):
+class MusicPlayingError(VoiceError):
     "Voice error while play_next: 1302"
     def __init__(self,message=None):
         self.code = 1302

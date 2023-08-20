@@ -92,13 +92,13 @@ class MusicPlayer():
                 self.vc.play(source, after=self.after)
                 #print(f"play2")
             except Exception as e:
-                raise VoiceError02(e)
+                raise MusicPlayingError(str(e))
 
     def after(self,error):
         #print(f"after")
         self.play_conpleted()
         if error:
-            raise VoiceError02(error)
+            raise MusicPlayingError(error)
         time.sleep(2)
         if self.playlist:
             #使用既有的bot協程
@@ -206,6 +206,8 @@ class music(Cog_Extension):
             if not vc.is_playing():
                 await asyncio.sleep(2)
                 await player.play_next()
+        except MusicPlayingError:
+            raise
         except Exception as e:
             raise MusicCommandError(e)
 
@@ -316,7 +318,10 @@ class music(Cog_Extension):
     async def ensure_voice(self, ctx: discord.ApplicationContext):
         if not ctx.voice_client:
             if ctx.author.voice:
-                await ctx.author.voice.channel.connect()
+                try:
+                    await ctx.author.voice.channel.connect()
+                except Exception as e:
+                    print(e)
             else:
                 raise discord.ApplicationCommandInvokeError(MusicCommandError("請先連接到一個語音頻道"))
         else:

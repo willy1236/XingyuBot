@@ -47,3 +47,8 @@ class PetType(Enum):
     #     obj._value_ = value
     #     obj.extra = extra
     #     return obj
+
+class BusyTime(Enum):
+    早上 = 1
+    下午 = 2
+    晚上 = 3
