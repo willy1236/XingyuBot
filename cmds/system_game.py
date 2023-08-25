@@ -218,7 +218,21 @@ class system_game(Cog_Extension):
             champion_name = csvdb.get_row_by_column_value(csvdb.lol_champion,"champion_id",data.championId)
             embed.add_field(name=champion_name.loc["name_tw"] if not champion_name.empty else f"ID: {data.championId}",value=text,inline=False)
         await ctx.respond('查詢成功',embed=embed)
-            
+
+    @lol.command(description='查詢League of Legends的玩家積分資訊')
+    async def rank(self,ctx,username:discord.Option(str,name='召喚師名稱',description='要查詢的用戶，留空則使用資料庫查詢',required=False)):
+        rclient = RiotClient()
+        player = rclient.get_player_data(username,ctx.author.id if not username else None)
+        if not player:
+            await ctx.respond('查詢失敗：查無此玩家',ephemeral=True)
+            return
+        
+        rank_data = rclient.get_summoner_rank(player.summonerid)
+        if rank_data:
+            embed_list = [rank.desplay() for rank in rank_data]
+        else:
+            embed_list = [BotEmbed.simple(f"{player.name} 本季未進行過積分對戰")]
+        await ctx.respond('查詢成功',embeds=embed_list)
 
     @osu.command(description='查詢Osu用戶資料')
     @commands.cooldown(rate=1,per=1)

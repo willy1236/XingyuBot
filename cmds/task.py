@@ -1,5 +1,5 @@
 import asyncio,discord,genshin,logging
-from apscheduler.schedulers.blocking import BlockingScheduler
+#from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from datetime import datetime, timezone, timedelta
 from discord.ext import commands,tasks
@@ -21,7 +21,7 @@ class task(Cog_Extension):
     def __init__(self,*args,**kwargs):
         super().__init__(*args,**kwargs)
         #await self.bot.wait_until_ready()
-    tz = timezone(timedelta(hours=+8))
+    tz = timezone(timedelta(hours=8))
     
     @commands.Cog.listener()
     async def on_ready(self):
@@ -187,7 +187,7 @@ class task(Cog_Extension):
             user_dc = self.bot.get_user(int(user_id))
             channel_id = user['channel_id']
             channel = self.bot.get_channel(int(channel_id))
-            cookies = self.sqldb.get_userdata(str(user_id),'game_hoyo_cookies')
+            cookies = self.sqldb.get_userdata(user_id,'game_hoyo_cookies')
             if not channel:
                 print(f"auto_hoyo_reward: {user_id}/{channel_id}")
             if not cookies:

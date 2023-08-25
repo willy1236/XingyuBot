@@ -1,4 +1,4 @@
-import requests,genshin,asyncio,discord,secrets
+import requests,genshin,asyncio,discord,secrets,time
 from enum import Enum
 #from pydantic import BaseModel
 from starcord.clients import RiotClient
@@ -12,29 +12,33 @@ from starcord.database.file import CsvDatabase
 # class MyClass:
 #     __slots__ = ['name', 'age', 'city']
 
-#     def __init__(self, data_dict):
-#         for key, value in data_dict.items():
-#             if key in self.__slots__:
-#                 setattr(self, key, value)
-
-# # 創建一個字典
-# data = {"name": "John", "age": 25, "city": "New York", "country": "USA"}
-
-# # 創建一個類的實例並將字典內容設置為屬性
-# obj = MyClass(data)
-
-# # 訪問類的屬性
-# print(obj.name)  # 輸出：John
-# print(obj.age)   # 輸出：25
-# print(obj.city)  # 輸出：New York
-# print(obj.country)  # 這行會引發AttributeError
-#NotionAPI().search("")
-
 #data = {"test": "1"}
 # JsonStorageAPI().append_data(data=data)
+db = CsvDatabase()
 
-r = RiotClient().get_summoner_masteries("")
-print(r)
+rclient = RiotClient()
+player = rclient.get_player_byname("")
+match_list = rclient.get_player_matchs(player.puuid,3)
+kda_avg = 0
+i = 0
+for match_id in match_list:
+    match = rclient.get_match(match_id)
+    print(match.gameMode)
+    if match.gameMode != "CLASSIC":
+        continue
+    
+    i += 1
+    player_im = match.get_player_in_match(player.name)
+    
+    championName = db.get_row_by_column_value(db.lol_champion,"name_en",player_im.championName)
+    print(f"第{i}場：{championName.loc['name_tw']} {player_im.lane} KDA {player_im.kda}")
+    kda_avg += player_im.kda
+    time.sleep(1)
+
+kda_avg = round(kda_avg / 5, 2)
+
+print(f"Avg. {kda_avg}")
+
 # db = CsvDatabase()
 # r = db.get_row_by_column_value(db.lol_champion,"name_tw","凱莎")
 # print(r.loc["name_en"])

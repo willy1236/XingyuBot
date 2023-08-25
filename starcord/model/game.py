@@ -43,7 +43,7 @@ class LOLPlayerInMatch():
         #self.participantId = data['participantId']
         #self.profileIcon = data['profileIcon']
         #self.puuid = data['puuid']
-        #self.summonerId = data['summonerId']
+        self.summonerId = data['summonerId']
         self.summonerLevel = data['summonerLevel']
         self.summonerName = data['summonerName']
 
@@ -53,7 +53,8 @@ class LOLPlayerInMatch():
         self.lane = data['lane']
         self.visionScore = data['visionScore']
         self.role = data['role']
-        self.kda = round((self.kills+self.assists)/self.deaths,2) if self.deaths > 0 else (self.kills+self.assists)
+        self.kda = round((self.kills + self.assists) / self.deaths, 2) if self.deaths > 0 else (self.kills + self.assists)
+        self.win = data['win']
 
         self.doubleKills = data['doubleKills']
         self.tripleKills = data['tripleKills']
@@ -90,15 +91,15 @@ class LOLPlayerInMatch():
         self.totalMinionsKilled = data['totalMinionsKilled']
         self.laneMinionsFirst10Minutes = data['challenges']['laneMinionsFirst10Minutes']
         self.jungleCsBefore10Minutes = round(data['challenges']['jungleCsBefore10Minutes'])
-        self.AllMinionsBefore10Minutes =self.laneMinionsFirst10Minutes + self.jungleCsBefore10Minutes *10
+        self.AllMinionsBefore10Minutes =self.laneMinionsFirst10Minutes + self.jungleCsBefore10Minutes * 10
         self.bountyGold = data['challenges']['bountyGold']
 
         self.damagePerMinute = data['challenges']['damagePerMinute']
-        self.damageTakenOnTeamPercentage = round(data['challenges']['damageTakenOnTeamPercentage']*100,1)
+        self.damageTakenOnTeamPercentage = round(data['challenges']['damageTakenOnTeamPercentage'] * 100, 1)
         self.goldPerMinute = round(data['challenges']['goldPerMinute'])
 
-        self.teamDamagePercentage = round(data['challenges']['teamDamagePercentage']*100,1)
-        self.visionScorePerMinute = round(data['challenges']['visionScorePerMinute'],2)
+        self.teamDamagePercentage = round(data['challenges']['teamDamagePercentage'] * 100, 1)
+        self.visionScorePerMinute = round(data['challenges']['visionScorePerMinute'], 2)
         #self.items = [ data['item0'],data['item1'],data['item2'],data['item3'],data['item4'],data['item5'],data['item6'] ]
 
     def desplaytext(self):
@@ -173,13 +174,8 @@ class LOLMatch():
         self.participants = data['info']['participants']
         self.teams = data['info']['teams']
 
-        self.players:list[LOLPlayerInMatch] = []
-        for i in self.participants:
-            self.players.append(LOLPlayerInMatch(i))
-
-        self.team = []
-        for i in self.teams:
-            self.team.append(LOLTeamInMatch(i))
+        self.players = [LOLPlayerInMatch(i) for i in self.participants]
+        self.team = [LOLTeamInMatch(i) for i in self.teams]
     
     def desplay(self):
         embed = BotEmbed.simple("LOL對戰")
@@ -208,6 +204,11 @@ class LOLMatch():
             embed.add_field(name="紅方👑", value=red, inline=True)
         return embed
     
+    def get_player_in_match(self,playername):
+        for player in self.players:
+            if player.summonerName == playername:
+                return player
+    
 class LOLChampionMasteries:
     def __init__(self,data):
         #unused:puuid, summonerId
@@ -220,6 +221,28 @@ class LOLChampionMasteries:
         self.chestGranted = data['chestGranted']
         self.tokensEarned = data['tokensEarned']
 
+class LOLPlayerRank(LOLPlayer):
+    def __init__(self,data):
+        super().__init__(data)
+        self.leagueId = data.get("leagueId")
+        self.queueType = data.get("queueType")
+        self.tier = data.get("tier")
+        self.rank = data.get("rank")
+        self.leaguePoints = data.get("leaguePoints")
+        self.wins = data.get("wins")
+        self.losses = data.get("losses")
+        self.veteran = data.get("veteran")
+        self.inactive = data.get("inactive")
+        self.freshBlood = data.get("freshBlood")
+        self.hotStreak = data.get("hotStreak")
+
+    def desplay(self):
+        embed = BotEmbed.simple(self.queueType)
+        embed.add_field(name="牌位", value=f"{self.tier} {self.rank}", inline=False)
+        embed.add_field(name="聯盟分數", value=self.leaguePoints, inline=False)
+        embed.add_field(name="勝敗", value=f"{self.wins}/{self.losses} {(round(self.wins / (self.wins + self.losses),3)) * 100}%", inline=False)
+
+        return embed
 
 class OsuPlayer():
     def __init__(self,data):

@@ -73,10 +73,7 @@ class RiotClient(GameInterface):
             }
         r = requests.get(f'{self.url_tw2}/lol/champion-mastery/v4/champion-masteries/by-summoner/{summoner_id}/top',params=params,headers=self.headers)
         if r.ok:
-            masteries_list = []
-            for data in r.json():
-                masteries_list.append(LOLChampionMasteries(data))
-            return masteries_list
+            return [LOLChampionMasteries(data) for data in r.json()]
         elif r.status_code == 404:
             return []
         else:
@@ -90,6 +87,15 @@ class RiotClient(GameInterface):
             return None
         else:
             raise ClientError(f"lol_summoner_active_match:{r.text}")
+        
+    def get_summoner_rank(self,summoner_id):
+        r = requests.get(f'{self.url_tw2}/lol/league/v4/entries/by-summoner/{summoner_id}',headers=self.headers)
+        if r.ok:
+            return [LOLPlayerRank(data) for data in r.json()]
+        elif r.status_code == 404:
+            return []
+        else:
+            raise ClientError(f"get_summoner_rank:{r.text}")
     
 class OsuInterface(GameInterface):
     def __init__(self):

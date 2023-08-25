@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING
 from core.classes import Cog_Extension
 from starcord import BotEmbed
 from starcord.errors import *
-#import yt_dlp as youtube_dl
 import youtube_dl
 
 # Suppress noise about console usage from errors
@@ -19,7 +18,7 @@ ytdl_format_options = {
     "nocheckcertificate": True,
     "ignoreerrors": False,
     "logtostderr": False,
-    "quiet": True,
+    "quiet": False,
     "no_warnings": True,
     "default_search": "auto",
     "source_address": "0.0.0.0",  # Bind to ipv4 since ipv6 addresses cause issues at certain times
@@ -71,7 +70,8 @@ class MusicPlayer():
 
     def __init__(self,vc:discord.VoiceClient,ctx:discord.ApplicationContext,loop):
         self.vc = vc
-        self.ctx = ctx
+        self.channel = ctx.channel
+        self.guildid = str(ctx.guild.id)
         self.loop = loop
         self.playlist = []
         self.songloop = False
@@ -88,7 +88,7 @@ class MusicPlayer():
                 #, loop=self.bot.loop
                 
                 embed = BotEmbed.simple(title="現在播放", description=f"[{song.title}]({song.url}) [{song.requester.mention}]")
-                await self.ctx.send(embed=embed)
+                await self.channel.send(embed=embed)
                 #print(f"play1")
                 self.vc.play(source, after=self.after)
                 #print(f"play2")
@@ -110,7 +110,7 @@ class MusicPlayer():
     async def wait_to_leave(self):
         #print('wait2')
         await asyncio.sleep(15)
-        if not self.vc.is_playing():
+        if self.vc and not self.vc.is_playing():
             #print('stop')
             await self.stop()
 
@@ -119,8 +119,8 @@ class MusicPlayer():
 
     async def stop(self):
         await self.vc.disconnect()
-        del guild_playing[str(self.ctx.guild.id)]
-        await self.ctx.send("歌曲播放完畢 掰掰~")
+        del guild_playing[self.guildid]
+        await self.channel.send("歌曲播放完畢 掰掰~")
 
     def add_song(self,song:Song):
         self.playlist.append(song)
@@ -143,8 +143,6 @@ class MusicPlayer():
 guild_playing = {}
 def get_player(guildid:str) -> MusicPlayer:
     return guild_playing[guildid]
-
-bot_playlist = {}
 
 class music(Cog_Extension):
 
@@ -320,7 +318,8 @@ class music(Cog_Extension):
         if not ctx.voice_client:
             if ctx.author.voice:
                 try:
-                    await ctx.author.voice.channel.connect()
+                    print(ctx.author.voice.channel)
+                    await ctx.author.voice.channel.connect(timeout=10,reconnect=False)
                 except Exception as e:
                     print(e)
             else:

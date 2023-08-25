@@ -489,6 +489,17 @@ class command(Cog_Extension):
         embed = BotEmbed.simple('總計',text)
         await ctx.respond(embed=embed)
 
+    @busytime.command(description='創建活動',guild_ids=main_guild)
+    async def event(self,ctx,
+                    date:discord.Option(str,name='時間',description='請輸入四位數日期+四位數時間 如8/25 14:00請輸入08251400')):
+        guild = self.bot.get_guild(613747262291443742)
+        date_now = datetime.datetime.strptime(date,"%m%d%H%M")
+        
+        event = await guild.create_scheduled_event(name="【第二屆線上TRPG】正式場第二場-鉛毒之果",start_time=date_now,location="https://trpgline.com/zh-TW/admin")
+        await ctx.respond(f"{event.name} 已建立完成")
+        channel = self.bot.get_channel(1097158403358478486)
+        await channel.send(f"{event.name}：{event.url}")
+
     @commands.user_command(name="辣味貢丸一周年",guild_ids=main_guild)
     @commands.bot_has_permissions(moderate_members=True)
     async def meatball(self,ctx, member: discord.Member):
