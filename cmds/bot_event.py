@@ -88,19 +88,6 @@ class event(Cog_Extension):
                     
     @commands.Cog.listener()
     async def on_voice_state_update(self,user:discord.Member, before:discord.VoiceState, after:discord.VoiceState):
-            def check(before, after):
-                if before.channel:
-                    guildid = before.channel.guild.id
-                elif after.channel:
-                    guildid = after.channel.guild.id
-                else:
-                    guildid = None
-
-                if guildid in Jsondb.get_channel_dict("voice_log"):
-                    return guildid
-                else:
-                    return False
-
             def get_guildid(before, after):
                 if before.channel:
                     return before.channel.guild.id
@@ -113,8 +100,8 @@ class event(Cog_Extension):
                return
 
            #語音進出紀錄
-            guildid = check(before,after)
-            if voice_updata and guildid:
+            guildid = get_guildid(before,after)
+            if voice_updata and guildid in Jsondb.get_channel_dict("voice_log"):
                 NowTime = datetime.datetime.now()
                 if before.channel and after.channel and before.channel != after.channel:
                     embed=discord.Embed(description=f'{user.mention} 更換語音',color=0x4aa0b5,timestamp=NowTime)
@@ -139,7 +126,6 @@ class event(Cog_Extension):
                 await self.bot.get_channel(voice_list.get(guildid)).send(embed=embed)
             
             dynamic_voice_dict = Jsondb.get_channel_dict("dynamic_voice")
-            guildid = get_guildid(before,after)
             #動態語音
             if guildid in dynamic_voice_dict:
                 if after.channel and after.channel.id == dynamic_voice_dict[guildid][0]:
