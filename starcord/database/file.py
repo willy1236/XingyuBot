@@ -122,8 +122,8 @@ class JsonDatabase():
     def get_channel_dict(self,channel_type:str=None):
         return self.channel_dict.get(channel_type) if channel_type else self.channel_dict
     
-    def set_channel_dict(self,data):
-        self.channel_dict = data
+    def set_channel_dict(self,key,data):
+        self.channel_dict[key] = data
 
     def getif_dynamic_voice(self,channel_id):
         return channel_id if channel_id in self.dynamic_voice_list else None

@@ -96,7 +96,7 @@ class event(Cog_Extension):
                 else:
                     guildid = None
 
-                if guildid in voice_list:
+                if guildid in Jsondb.get_channel_dict("voice_log"):
                     return guildid
                 else:
                     return False

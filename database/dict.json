@@ -12,7 +12,8 @@
             "mod":"管理員專用頻道",
             "member_join": "成員加入",
             "member_leave": "成員離開",
-            "dynamic_voice": "動態語音"
+            "dynamic_voice": "動態語音",
+            "voice_log": "語音進出紀錄"
         }
     },
     "game_set_option": {

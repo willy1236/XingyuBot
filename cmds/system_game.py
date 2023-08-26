@@ -6,7 +6,7 @@ from datetime import timedelta,datetime
 from core.classes import Cog_Extension
 from starcord import BotEmbed,Jsondb,ChoiceList
 from starcord.clients.game import *
-from starcord.type.game import DatabaseGame
+from starcord.types.game import DatabaseGame
 
 # def player_search(url):
 #     response = requests.get(url)

@@ -215,26 +215,26 @@ class task(Cog_Extension):
                     await channel.send(f'{user_dc.mention} 簽到時發生錯誤：{e}')
             
             await asyncio.sleep(30)
-    
-    async def update_channel_dict(self):
-        channel_dict = {}
-        notice_type = ["dynamic_voice"]
-        for type in notice_type:
-            dbdata = sqldb.get_notice_channel_by_type(type)
-            dict = {}
-            for data in dbdata:
-                guildid = data['guild_id']
-                channelid = data['channel_id']
-                roleid = data['role_id']
-                dict[guildid] = [channelid, roleid]
-            channel_dict[type] = dict
-        Jsondb.set_channel_dict(channel_dict)
 
     async def get_mongodb_data(self):
         dbdata = mongedb.get_apidata()
 
     async def update_pubsubhubbub_data(self):
         pass
+    
+async def update_channel_dict(notice_type=None):
+    notice_type = notice_type or ["dynamic_voice","voice_log"]
+    #channel_dict = {}
+    for type in notice_type:
+        dbdata = sqldb.get_notice_channel_by_type(type)
+        dict = {}
+        for data in dbdata:
+            guildid = data['guild_id']
+            channelid = data['channel_id']
+            roleid = data['role_id']
+            dict[guildid] = [channelid, roleid]
+        #channel_dict[type] = dict
+        Jsondb.set_channel_dict(type, dict)
 
 
 def setup(bot):
