@@ -6,16 +6,7 @@ from starcord import ChoiceList,BotEmbed,Jsondb,sqldb
 from starcord.utility import converter
 
 set_option = ChoiceList.set('channel_set_option')
-
-# def update_dict():
-#     global voice_lobby_list
-#     voice_lobby_list = []
-#     dbdata = sqldb.get_notice_channel_by_type("voice_lobby")
-#     for data in dbdata:
-#         voice_lobby_list.append(data["channel_id"])
-
-
-# update_dict()
+debug_guild = Jsondb.jdata['debug_guild']
 
 class moderation(Cog_Extension):
     warning = SlashCommandGroup("warning", "警告相關指令")
@@ -142,7 +133,12 @@ class moderation(Cog_Extension):
             last_time = i['last_time']
             if last_time:
                 moderate_type += f" {last_time}"
-            embed.add_field(name=f"編號: {i['warning_id']} ({moderate_type})",value=f"{guild.name}/{moderate_user.mention}\n{i['reason']}\n{time_str}")
+            
+            name = f"編號: {i['warning_id']} ({moderate_type})"
+            value = f"{guild.name}/{moderate_user.mention}\n{i['reason']}\n{time_str}"
+            if guild.id in debug_guild:
+                value += "\n機器人擁有者官方給予"
+            embed.add_field(name=name,value=value)
         await ctx.respond(embed=embed)
 
     @warning.command(description='獲取指定警告')
@@ -159,7 +155,12 @@ class moderation(Cog_Extension):
             last_time = dbdata['last_time']
             if last_time:
                 moderate_type += f" {last_time}"
-            embed = BotEmbed.general(f'{user.name} 的警告單',user.display_avatar.url,description=f"編號:{warning_id} ({moderate_type})\n被警告用戶：{user.mention}\n管理員：{guild.name}/{moderate_user.mention}\n原因：{dbdata['reason']}\n時間：{time_str}")
+            
+            name = f'{user.name} 的警告單'
+            description = f"編號:{warning_id} ({moderate_type})\n被警告用戶：{user.mention}\n管理員：{guild.name}/{moderate_user.mention}\n原因：{dbdata['reason']}\n時間：{time_str}"
+            if guild.id in debug_guild:
+                description += "\n機器人擁有者官方給予"
+            embed = BotEmbed.general(name=name,icon_url=user.display_avatar.url,description=description)
             await ctx.respond(embed=embed)
         else:
             await ctx.respond("查無此警告單")

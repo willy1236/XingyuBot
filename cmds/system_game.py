@@ -234,6 +234,32 @@ class system_game(Cog_Extension):
             embed_list = [BotEmbed.simple(f"{player.name} 本季未進行過積分對戰")]
         await ctx.respond('查詢成功',embeds=embed_list)
 
+    @lol.command(description='查詢最近的League of Legends對戰ID（僅取得ID，需另行用查詢對戰內容）')
+    async def recentmatches(self,ctx,username:discord.Option(str,name='召喚師名稱',description='要查詢的用戶，留空則使用資料庫查詢',required=False)):
+        rclient = RiotClient()
+        player = rclient.get_player_data(username,ctx.author.id if not username else None)
+        puuid = player.puuid
+        
+        match_list = rclient.get_player_matchs(puuid,20)
+        if not match_list:
+            await ctx.respond('查詢失敗:此玩家查無對戰紀錄',ephemeral=True)
+            return
+        
+        embed = BotEmbed.simple(f"{player.name} 的近期對戰","此排序由新到舊\n" + "\n".join(match_list))
+        await ctx.respond('查詢成功',embed=embed)
+
+    @lol.command(description='查詢正在進行的League of Legends對戰（無法查詢聯盟戰棋）')
+    async def activematches(self,ctx,username:discord.Option(str,name='召喚師名稱',description='要查詢的用戶，留空則使用資料庫查詢',required=False)):
+        rclient = RiotClient()
+        player = rclient.get_player_data(username,ctx.author.id if not username else None)
+        
+        active_match = rclient.get_summoner_active_match(player.summonerid)
+        if not active_match:
+            await ctx.respond('查詢失敗:此玩家沒有進行中的對戰',ephemeral=True)
+            return
+        
+        await ctx.respond('查詢成功',embed=active_match.desplay())
+
     @osu.command(description='查詢Osu用戶資料')
     @commands.cooldown(rate=1,per=1)
     async def user(self,ctx,

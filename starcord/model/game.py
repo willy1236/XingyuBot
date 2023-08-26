@@ -182,7 +182,7 @@ class LOLMatch():
         gamemode = lol_jdict['mod'].get(self.gameMode) or self.gameMode
         embed.add_field(name="遊戲模式", value=gamemode, inline=False)
         embed.add_field(name="對戰ID", value=self.matchId, inline=False)
-        #embed.add_field(name="遊戲版本", value=self.gameVersion, inline=False)
+        embed.add_field(name="遊戲版本", value=self.gameVersion, inline=False)
         blue = ''
         red = ''
         i = 0
@@ -209,9 +209,10 @@ class LOLMatch():
             if player.summonerName == playername:
                 return player
     
-class LOLChampionMasteries:
+class LOLChampionMasteries(LOLPlayer):
     def __init__(self,data):
         #unused:puuid, summonerId
+        super().__init__(data)
         self.championId = data['championId']
         self.championLevel = data['championLevel']
         self.championPoints = data['championPoints']
@@ -243,6 +244,93 @@ class LOLPlayerRank(LOLPlayer):
         embed.add_field(name="勝敗", value=f"{self.wins}/{self.losses} {(round(self.wins / (self.wins + self.losses),3)) * 100}%", inline=False)
 
         return embed
+
+class LOLActiveMatch:
+    def __init__(self,data):
+        self.gameId = data.get("gameId")
+        self.mapId = data.get("mapId")
+        self.gameMode = data.get("gameMode")
+        self.gameType = data.get("gameType")
+        self.participants = [LOLLActiveMatchPlayer(i) for i in data.get("participants")]
+        self.platformId = data.get("platformId")
+        self.bannedChampions = [LOLBanChampion(i) for i in data.get("bannedChampions")]
+        self.gameStartTime = data.get("gameStartTime")
+        self.gameLength = data.get("gameLength")
+    
+    def desplay(self):
+        embed = BotEmbed.simple("LOL對戰")
+        gamemode = lol_jdict['mod'].get(self.gameMode) or self.gameMode
+        embed.add_field(name="遊戲模式", value=gamemode, inline=False)
+        embed.add_field(name="開始時間", value=f"<t:{str(self.gameStartTime)[:-3]}>", inline=False)
+        print(self.gameLength)
+        if self.gameLength <= 0:
+            time = "尚未開始"
+        else:
+            minutes = str(self.gameLength // 60)
+            seconds = str(self.gameLength % 60)
+            time = f"{minutes}:{seconds}"
+        embed.add_field(name="遊戲時長", value=time, inline=False)
+        
+        if self.bannedChampions:
+            ban_champions = [ban_champion.name for ban_champion in self.bannedChampions]
+            embed.add_field(name="禁用角色", value=" ".join(ban_champions), inline=False)
+        blue = ''
+        red = ''
+        i = 0
+        for player in self.participants:
+            if i < 5:
+                blue += player.desplaytext()
+                if i != 4:
+                    blue += '\n'
+            else:
+                red += player.desplaytext()
+                if i != 9:
+                    red += '\n'
+            i+=1
+        embed.add_field(name="藍方", value=blue, inline=True)
+        embed.add_field(name="紅方", value=red, inline=True)
+        return embed
+
+class LOLLActiveMatchPlayer:
+    def __init__(self,data):
+        self.teamId = data.get("teamId")
+        self.spell1Id = data.get("spell1Id")
+        self.spell2Id = data.get("spell2Id")
+        self.championId = data.get("championId")
+        self.profileIconId = data.get("profileIconId")
+        self.summonerName = data.get("summonerName")
+        self.bot = data.get("bot")
+        self.summonerId = data.get("summonerId")
+        
+        self.perks = data.get("perks")
+        self.mainperk = self.perks.get("perkIds")[0]
+        self.perkStyle = self.perks.get("perkStyle")
+        self.perkSubStyle = self.perks.get("perkSubStyle")
+
+    def desplaytext(self):
+        text = f'`{self.summonerName}`\n'
+        name_csv = csvdb.get_row_by_column_value(csvdb.lol_champion,"champion_id",self.championId)
+        name = name_csv.loc["name_tw"] if not name_csv.empty else self.championId
+        if not self.bot:
+            text += f'{name}\n'
+        else:
+            text += f'{name}（機器人）\n'
+
+        text += f'召喚師技能：{lol_jdict["summoner_spell"].get(str(self.spell1Id))}/{lol_jdict["summoner_spell"].get(str(self.spell2Id))}\n'
+        text += f'主符文：{lol_jdict["runes"].get(str(self.perkStyle))}/{lol_jdict["runes"].get(str(self.mainperk))}\n'
+        text += f'副符文：{lol_jdict["runes"].get(str(self.perkSubStyle))}\n'
+        text += '\n'
+        
+        return text
+
+class LOLBanChampion:
+    def __init__(self,data):
+        self.championId = data.get("championId")
+        self.teamId = data.get("teamId")
+        self.pickTurn = data.get("pickTurn")
+        name_csv = csvdb.get_row_by_column_value(csvdb.lol_champion,"champion_id",self.championId)
+        name = name_csv.loc["name_tw"] if not name_csv.empty else str(self.championId)
+        self.name = name
 
 class OsuPlayer():
     def __init__(self,data):

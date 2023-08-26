@@ -3,11 +3,6 @@ from discord.ext import commands
 from core.classes import Cog_Extension
 from starcord import Jsondb,BotEmbed,BRS,sqldb
 
-voice_list = {
-    613747262291443742: 631498685250797570,
-    726790741103476746: 1021072271277834250
-}
-
 keywords = {
     '抹茶粉':'由威立冠名贊助撥出~',
     '消費':'那你好像也是頂級消費者喔'
@@ -99,34 +94,36 @@ class event(Cog_Extension):
             if debug_mode:
                return
 
-           #語音進出紀錄
             guildid = get_guildid(before,after)
-            if voice_updata and guildid in Jsondb.get_channel_dict("voice_log"):
-                NowTime = datetime.datetime.now()
-                if before.channel and after.channel and before.channel != after.channel:
-                    embed=discord.Embed(description=f'{user.mention} 更換語音',color=0x4aa0b5,timestamp=NowTime)
-                elif not before.channel and after.channel:
-                    embed=discord.Embed(description=f'{user.mention} 進入語音',color=0x4aa0b5,timestamp=NowTime)
-                elif before.channel and not after.channel:
-                    embed=discord.Embed(description=f'{user.mention} 離開語音',color=0x4aa0b5,timestamp=NowTime)
-                else:
-                    return
-                
-                username = user.name if user.discriminator == "0" else user
-                embed.set_author(name=username,icon_url=user.display_avatar.url)
-                embed.set_footer(text=self.bot.get_guild(guildid).name)
-                
-                if before.channel and after.channel:
-                    embed.add_field(name='頻道', value=f'{before.channel.mention}->{after.channel.mention}', inline=False)
-                elif before.channel:
-                    embed.add_field(name='頻道', value=f'{before.channel.mention}', inline=False)
-                elif after.channel:
-                    embed.add_field(name='頻道', value=f'{after.channel.mention}', inline=False)
-                
-                await self.bot.get_channel(voice_list.get(guildid)).send(embed=embed)
+            #語音進出紀錄
+            if voice_updata:
+                voice_log_dict = Jsondb.get_channel_dict("voice_log")
+                if guildid in voice_log_dict:
+                    NowTime = datetime.datetime.now()
+                    if before.channel and after.channel and before.channel != after.channel:
+                        embed=discord.Embed(description=f'{user.mention} 更換語音',color=0x4aa0b5,timestamp=NowTime)
+                    elif not before.channel and after.channel:
+                        embed=discord.Embed(description=f'{user.mention} 進入語音',color=0x4aa0b5,timestamp=NowTime)
+                    elif before.channel and not after.channel:
+                        embed=discord.Embed(description=f'{user.mention} 離開語音',color=0x4aa0b5,timestamp=NowTime)
+                    else:
+                        return
+                    
+                    username = user.name if user.discriminator == "0" else user
+                    embed.set_author(name=username,icon_url=user.display_avatar.url)
+                    embed.set_footer(text=self.bot.get_guild(guildid).name)
+                    
+                    if before.channel and after.channel:
+                        embed.add_field(name='頻道', value=f'{before.channel.mention}->{after.channel.mention}', inline=False)
+                    elif before.channel:
+                        embed.add_field(name='頻道', value=f'{before.channel.mention}', inline=False)
+                    elif after.channel:
+                        embed.add_field(name='頻道', value=f'{after.channel.mention}', inline=False)
+                    
+                    await self.bot.get_channel(voice_log_dict.get(guildid)[0]).send(embed=embed)
             
-            dynamic_voice_dict = Jsondb.get_channel_dict("dynamic_voice")
             #動態語音
+            dynamic_voice_dict = Jsondb.get_channel_dict("dynamic_voice")
             if guildid in dynamic_voice_dict:
                 if after.channel and after.channel.id == dynamic_voice_dict[guildid][0]:
                     guild = after.channel.guild
@@ -158,7 +155,7 @@ class event(Cog_Extension):
             return
         
         #離開通知
-        guildid = str(member.guild.id)
+        guildid = member.guild.id
         dbdata = sqldb.get_notice_channel(guildid,"member_leave")
 
         if dbdata:
@@ -172,7 +169,7 @@ class event(Cog_Extension):
             return
         
         #加入通知
-        guildid = str(member.guild.id)
+        guildid = member.guild.id
         dbdata = sqldb.get_notice_channel(guildid,"member_join")
 
         if dbdata:

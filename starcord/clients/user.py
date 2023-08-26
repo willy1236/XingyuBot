@@ -9,23 +9,23 @@ class UserClient:
         pass
 
     @staticmethod
-    def get_user(user_id:str):
+    def get_user(discord_id:str):
         """取得基本用戶"""
-        data = sqldb.get_user(user_id)
+        data = sqldb.get_user(discord_id)
         if data:
             return User(data)
 
     @staticmethod
-    def get_rpguser(user_id:str):
+    def get_rpguser(discord_id:str):
         """取得RPG用戶"""
-        data = sqldb.get_rpguser(user_id)
+        data = sqldb.get_rpguser(discord_id)
         if data:
             return RPGUser(data)
     
     @staticmethod
-    def get_pet(user_id:str):
+    def get_pet(discord_id:str):
         """取得寵物"""
-        data = sqldb.get_user_pet(user_id)
+        data = sqldb.get_user_pet(discord_id)
         if data:
             return Pet(data)
         
@@ -39,9 +39,6 @@ class UserClient:
             return Monster(dbdata)
         else:
             raise ValueError('monster_id not found.')
-
-class WarningClient:
-    """警告系統調用端口"""
 
 class User():
     '''基本用戶'''

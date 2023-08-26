@@ -119,7 +119,7 @@ class MySQLDatabase():
         records = self.cursor.fetchone()
         return records
 
-    def add_role_save(self,user_id:int,role_id:str,role_name:str,time:str):
+    def add_role_save(self,user_id:int,role_id:str,role_name:str,time:datetime.date):
         self.cursor.execute(f"USE `database`;")
         self.cursor.execute(f"INSERT INTO `role_save` VALUES(%s,%s,%s,%s)",(user_id,role_id,role_name,time))
         self.connection.commit()

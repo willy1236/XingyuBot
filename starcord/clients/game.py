@@ -82,7 +82,7 @@ class RiotClient(GameInterface):
     def get_summoner_active_match(self,summoner_id):
         r = requests.get(f'{self.url_tw2}/lol/spectator/v4/active-games/by-summoner/{summoner_id}',headers=self.headers)
         if r.ok:
-            return r.json()
+            return LOLActiveMatch(r.json())
         elif r.status_code == 404:
             return None
         else:

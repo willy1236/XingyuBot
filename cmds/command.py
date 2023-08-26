@@ -38,7 +38,7 @@ class command(Cog_Extension):
         for i in user_list:
             user = await find.user(ctx,i)
             if user:
-                id = str(user.id)
+                id = user.id
                 record = self.sqldb.get_role_save_count(id)
                 embed.add_field(name=user.name, value=record['COUNT(user_id)'], inline=False)
         await ctx.respond(embed=embed)
@@ -55,7 +55,7 @@ class command(Cog_Extension):
         r,g,b = random_color(200)
         color = discord.Colour.from_rgb(r,g,b)
         new_role = await ctx.guild.create_role(name=name,permissions=permission,color=color)
-        added_role = []
+        added_user = []
         
         if user_list:
             user_list = user_list.split()
@@ -63,20 +63,16 @@ class command(Cog_Extension):
                 user = await find.user(ctx,user)
                 if user and user != self.bot.user:
                     await user.add_roles(new_role,reason='指令:加身分組')
-                    added_role.append(user)
+                    added_user.append(user.mention)
                 elif user == self.bot.user:
                     await ctx.respond("請不要加我身分組好嗎")
                 elif user and user.bot:
                     await ctx.respond("請不要加機器人身分組好嗎")
         
-        if added_role:
-            all_user = ''
-            for user in added_role:
-                all_user += f' {user.mention}'
-            view = Delete_Add_Role_button(new_role)
-            view.message = await ctx.respond(f"已添加 {new_role.name} 給{all_user}",view=view)
+        view = Delete_Add_Role_button(new_role)
+        if added_user:
+            view.message = await ctx.respond(f"已添加 {new_role.name} 給{' '.join(added_user)}",view=view)
         else:
-            view = Delete_Add_Role_button(new_role)
             view.message = await ctx.respond(f"已創建 {new_role.name} 身分組",view=view)
 
 
@@ -86,7 +82,7 @@ class command(Cog_Extension):
     async def save(self,
                    ctx:discord.ApplicationContext,
                    user:discord.Option(str,name='用戶名',description='輸入all可儲存所有身分組')):
-        def save_role(user):
+        def save_role(user:discord.Member):
             user_id = user.id
             for role in user.roles:
                 if role.id == 877934319249797120:
@@ -95,7 +91,7 @@ class command(Cog_Extension):
                     continue
                 try:
                     #1062
-                    self.sqldb.add_role_save(user_id,str(role.id),role.name,role.created_at.strftime('%Y%m%d'))
+                    self.sqldb.add_role_save(user_id,role.id,role.name,role.created_at.date())
                     log.info(f'新增:{role.name}')
                 except sqlerror as e:
                     if e.errno == 1062:
@@ -154,12 +150,11 @@ class command(Cog_Extension):
     async def record(self, ctx, user:discord.Option(discord.Member,name='欲查詢的成員',description='留空以查詢自己',default=None)):
         await ctx.defer()
         user = user or ctx.author
-        record = self.sqldb.get_role_save(str(user.id))
+        record = self.sqldb.get_role_save(user.id)
         if record:
             page = []
-            i = 0
-            page_now = 0
-            page.append(BotEmbed.simple(f"{user.name} 身分組紀錄"))
+            i = 10
+            page_now = -1
             for data in record:
                 if i >= 10:
                     page.append(BotEmbed.simple(f"{user.name} 身分組紀錄"))

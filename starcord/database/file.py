@@ -67,7 +67,7 @@ class JsonDatabase():
                 with open(self._dict[file],'w',encoding='utf-8') as jfile:
                     json.dump({},jfile,indent=4)
                     print(f">> Created json file: {file} <<")
-            setattr(self, file,json.load(open(self.  _dict[file],mode='r',encoding='utf8')))
+            setattr(self, file,json.load(open(self._dict[file],mode='r',encoding='utf8')))
 
         self.channel_dict = {}
         self.dynamic_voice_list = []
