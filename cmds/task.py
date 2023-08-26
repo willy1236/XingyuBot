@@ -38,7 +38,7 @@ class task(Cog_Extension):
             scheduler.add_job(self.earthquake_check,'interval',minutes=1,jitter=30,misfire_grace_time=40)
             #scheduler.add_job(self.get_mongodb_data,'interval',minutes=3,jitter=30,misfire_grace_time=40)
 
-            scheduler.add_job(self.update_channel_dict,"date")
+            scheduler.add_job(update_channel_dict,"date")
 
             dynamic_voice_data = sqldb.get_all_dynamic_voice()
             list = []
