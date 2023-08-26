@@ -57,17 +57,33 @@ class moderation(Cog_Extension):
         if channel:
             roleid = role.id if role else None
             sqldb.set_notice_channel(guildid,notice_type,channel.id,roleid)
-            await ctx.respond(f'設定完成，已將 {ChoiceList.get_tw(notice_type,"channel_set_option")} 頻道設為 {channel.mention}')
+            await ctx.respond(f'設定完成，已將 {ChoiceList.get_tw(notice_type,"channel_set_option")} 頻道設定在 {channel.mention}')
             await ctx.send(embed=BotEmbed.simple('溫馨提醒','若為定時通知，請將機器人的訊息保持在此頻道的最新訊息，以免機器人找不到訊息而重複發送'),delete_after=10)
         else:
             sqldb.remove_notice_channel(guildid,notice_type)
             await ctx.respond(f'設定完成，已移除 {notice_type} 頻道')
 
+    @channel_notify.command(description='設定動態語音頻道')
+    @commands.has_permissions(manage_channels=True)
+    @commands.guild_only()
+    async def voice(self,ctx:discord.ApplicationContext,
+                    channel:discord.Option(discord.VoiceChannel,name='頻道',description='動態語音頻道',default=None)):
+        if channel:
+            sqldb.set_notice_channel(ctx.guild.id,"dynamic_voice",channel.id)
+            await ctx.respond(f'設定完成，已將 {channel.mention} 設定為動態語音頻道')
+        else:
+            sqldb.remove_notice_channel(ctx.guild.id,"dynamic_voice")
+            await ctx.respond(f'設定完成，已移除 動態語音 頻道')
+        
+        from .task import scheduler,task
+        time = datetime.datetime.now() + datetime.timedelta(seconds=2)
+        scheduler.add_job(task.update_channel_dict,"date",run_date=time)
+    
     @channel_notify.command(description='查看通知設定的頻道')
     @commands.has_permissions(manage_channels=True)
     @commands.guild_only()
     async def list(self,ctx:discord.ApplicationContext):
-        dbdata = sqldb.get_all_notice_channel(str(ctx.guild.id))
+        dbdata = sqldb.get_all_notice_channel(ctx.guild.id)
         embed = BotEmbed.general("通知頻道",ctx.guild.icon.url if ctx.guild.icon else discord.Embed.Empty)
         for data in dbdata:
             notice_type = data['notice_type']
@@ -75,10 +91,7 @@ class moderation(Cog_Extension):
             role_id = data['role_id']
             
             channel = self.bot.get_channel(channel_id)
-            if role_id:
-                role = ctx.guild.get_role(role_id)
-            else:
-                role = None
+            role = ctx.guild.get_role(role_id) if role_id else None
 
             text = "找不到頻道"
             if channel:
@@ -87,8 +100,7 @@ class moderation(Cog_Extension):
                     text += f" {role.mention}"
             embed.add_field(name=ChoiceList.get_tw(notice_type,"channel_set_option"), value=text)
         await ctx.respond(embed=embed)
-
-    #@channel_notify.command(description='設定動態語音頻道')
+        
     
     @warning.command(description='給予用戶警告，此警告將會連動至其他群組')
     @commands.has_permissions(manage_messages=True)

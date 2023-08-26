@@ -491,11 +491,19 @@ class command(Cog_Extension):
 
     @busytime.command(description='創建活動',guild_ids=main_guild)
     async def event(self,ctx,
-                    date:discord.Option(str,name='時間',description='請輸入四位數日期+四位數時間 如8/25 14:00請輸入08251400')):
+                    date:discord.Option(str,name='時間',description='請輸入四位數日期+四位數時間 如8/25 14:00請輸入08251400'),
+                    during:discord.Option(int,name='活動持續天數',description='活動將持續幾天',default=1,min_value=1,max_value=31)):
         guild = self.bot.get_guild(613747262291443742)
-        date_now = datetime.datetime.strptime(date,"%m%d%H%M")
         
-        event = await guild.create_scheduled_event(name="【第二屆線上TRPG】正式場第二場-鉛毒之果",start_time=date_now,location="https://trpgline.com/zh-TW/admin")
+        today = datetime.datetime.today()
+        date += str(today.year)
+        start_time = datetime.datetime.strptime(date,"%m%d%H%M%Y")
+        if start_time < today:
+            date += str(today.year + 1)
+            start_time = datetime.datetime.strptime(date,"%m%d%H%M%Y")
+        end_time = datetime.datetime(start_time.year,start_time.month,start_time.day,0,0,0) + datetime.timedelta(days=during)
+        
+        event = await guild.create_scheduled_event(name="【第二屆線上TRPG】正式場第二場-鉛毒之果",start_time=start_time,end_time=end_time,location="https://trpgline.com/zh-TW/admin")
         await ctx.respond(f"{event.name} 已建立完成")
         channel = self.bot.get_channel(1097158403358478486)
         await channel.send(f"{event.name}：{event.url}")

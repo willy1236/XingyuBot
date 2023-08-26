@@ -251,6 +251,22 @@ class MySQLDatabase():
         self.cursor.execute(f'SELECT * FROM `notice_channel` WHERE guild_id = %s;',(guild_id,))
         records = self.cursor.fetchall()
         return records
+    
+    def set_dynamic_voice(self,channel_id,discord_id,guild_id,created_at=None):
+        self.cursor.execute(f"USE `database`;")
+        self.cursor.execute(f"INSERT INTO `dynamic_channel` VALUES(%s,%s,%s,%s)",(channel_id,discord_id,guild_id,created_at))
+        self.connection.commit()
+
+    def remove_dynamic_voice(self,channel_id):
+        self.cursor.execute(f"USE `database`;")
+        self.cursor.execute(f"DELETE FROM `dynamic_channel` WHERE `channel_id` = %s",(channel_id,))
+        self.connection.commit()
+
+    def get_all_dynamic_voice(self):
+        self.cursor.execute(f"USE `database`;")
+        self.cursor.execute(f'SELECT `channel_id` FROM `dynamic_channel`;')
+        records = self.cursor.fetchall()
+        return records
 
     def set_notice_community(self,notice_type:str,notice_name:str,guild_id:int,channel_id:int,role_id:int=None):
         self.cursor.execute(f"USE `database`;")

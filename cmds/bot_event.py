@@ -2,31 +2,21 @@ import discord,datetime,re
 from discord.ext import commands
 from core.classes import Cog_Extension
 from starcord import Jsondb,BotEmbed,BRS,sqldb
-#from .moderation import voice_lobby_list
 
 voice_list = {
     613747262291443742: 631498685250797570,
     726790741103476746: 1021072271277834250
 }
 
-voice_lobby_list = [
-    955475420042629140
-]
-
 keywords = {
     '抹茶粉':'由威立冠名贊助撥出~',
     '消費':'那你好像也是頂級消費者喔'
 }
 
-# dbdata = sqldb.get_notice_channel_by_type('crass_chat')
-# crass_chat_channels = []
-# for i in dbdata:
-#     crass_chat_channels.append(i['channel_id'])
-
 voice_updata = Jsondb.jdata.get('voice_updata')
 debug_mode = Jsondb.jdata.get("debug_mode",True)
 
-class event(Cog_Extension):    
+class event(Cog_Extension):
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
         #被提及回報
@@ -111,9 +101,17 @@ class event(Cog_Extension):
                 else:
                     return False
 
+            def get_guildid(before, after):
+                if before.channel:
+                    return before.channel.guild.id
+                elif after.channel:
+                    return after.channel.guild.id
+                else:
+                    return None
+
             if debug_mode:
                return
-           
+
            #語音進出紀錄
             guildid = check(before,after)
             if voice_updata and guildid:
@@ -139,19 +137,30 @@ class event(Cog_Extension):
                     embed.add_field(name='頻道', value=f'{after.channel.mention}', inline=False)
                 
                 await self.bot.get_channel(voice_list.get(guildid)).send(embed=embed)
-
+            
+            dynamic_voice_dict = Jsondb.get_channel_dict("dynamic_voice")
+            guildid = get_guildid(before,after)
             #動態語音
-            if not before.channel and after.channel and after.channel.id in voice_lobby_list:
-                guild = after.channel.guild
-                category = after.channel.category
-                #permission = discord.Permissions.advanced()
-                #permission.manage_channels = True
-                #overwrites = discord.PermissionOverwrite({user:permission})
-                overwrites = {
-                user: discord.PermissionOverwrite(manage_channels=True,manage_roles=True)
-                }
-                new_channel = await guild.create_voice_channel(name=f'{user.name}的頻道', reason='語音分流',category=category,overwrites=overwrites)
-                await user.move_to(new_channel)
+            if guildid in dynamic_voice_dict:
+                if after.channel and after.channel.id == dynamic_voice_dict[guildid][0]:
+                    guild = after.channel.guild
+                    category = after.channel.category
+                    #permission = discord.Permissions.advanced()
+                    #permission.manage_channels = True
+                    #overwrites = discord.PermissionOverwrite({user:permission})
+                    overwrites = {
+                    user: discord.PermissionOverwrite(manage_channels=True,manage_roles=True)
+                    }
+                    new_channel = await guild.create_voice_channel(name=f'{user.name}的頻道', reason='動態語音：新增',category=category,overwrites=overwrites)
+                    sqldb.set_dynamic_voice(new_channel.id,user.id,guild.id,None)
+                    Jsondb.update_dynamic_voice(new_channel_id=new_channel.id)
+                    await user.move_to(new_channel)
+
+                elif before.channel and not after.channel and Jsondb.getif_dynamic_voice(before.channel.id) and not before.channel.members:
+                    await before.channel.delete(reason="動態語音：移除")
+                    sqldb.remove_dynamic_voice(before.channel.id)
+                    Jsondb.update_dynamic_voice(remove_channel_id=before.channel.id)
+                
 
             #舞台發言
             if after.suppress and after.channel and after.channel.category and after.channel.category.id == 1097158160709591130 and (user.get_role(1126820808761819197) or user.get_role(1130849778264195104)):

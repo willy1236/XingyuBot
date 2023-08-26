@@ -1,4 +1,4 @@
-import asyncio,discord,genshin,logging
+import asyncio,discord,genshin,logging,queue
 #from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from datetime import datetime, timezone, timedelta
@@ -26,6 +26,7 @@ class task(Cog_Extension):
     @commands.Cog.listener()
     async def on_ready(self):
         if not Jsondb.jdata.get("debug_mode",True):
+            global scheduler
             scheduler = AsyncIOScheduler()
             #scheduler.add_job(self.sign_reset,'cron',hour=4,minute=0,second=0,jitter=30,misfire_grace_time=60)
             scheduler.add_job(self.apex_crafting_update,'cron',hour=1,minute=5,second=0,jitter=30,misfire_grace_time=60)
@@ -36,6 +37,14 @@ class task(Cog_Extension):
 
             scheduler.add_job(self.earthquake_check,'interval',minutes=1,jitter=30,misfire_grace_time=40)
             #scheduler.add_job(self.get_mongodb_data,'interval',minutes=3,jitter=30,misfire_grace_time=40)
+
+            scheduler.add_job(self.update_channel_dict,"date")
+
+            dynamic_voice_data = sqldb.get_all_dynamic_voice()
+            list = []
+            for data in dynamic_voice_data:
+                list.append(data["channel_id"])
+            Jsondb.set_dynamic_voice(list)
 
             scheduler.start()
             self.twitch.start()
@@ -206,11 +215,10 @@ class task(Cog_Extension):
                     await channel.send(f'{user_dc.mention} 簽到時發生錯誤：{e}')
             
             await asyncio.sleep(30)
-
+    
     async def update_channel_dict(self):
-        global channel_dict
         channel_dict = {}
-        notice_type = []
+        notice_type = ["dynamic_voice"]
         for type in notice_type:
             dbdata = sqldb.get_notice_channel_by_type(type)
             dict = {}
@@ -220,6 +228,7 @@ class task(Cog_Extension):
                 roleid = data['role_id']
                 dict[guildid] = [channelid, roleid]
             channel_dict[type] = dict
+        Jsondb.set_channel_dict(channel_dict)
 
     async def get_mongodb_data(self):
         dbdata = mongedb.get_apidata()

@@ -1,4 +1,4 @@
-import requests,genshin,asyncio,discord,secrets,time
+import requests,genshin,asyncio,discord,secrets,time,datetime
 from enum import Enum
 #from pydantic import BaseModel
 from starcord.clients import RiotClient

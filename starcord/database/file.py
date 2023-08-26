@@ -10,6 +10,8 @@ class JsonDatabase():
         picdata: dict
         cache: dict
         tokens: dict
+        channel_dict: dict
+        dynamic_voice_list: list
 
     __slots__ = [
         "_db_location",
@@ -20,6 +22,8 @@ class JsonDatabase():
         "picdata",
         "cache",
         "tokens",
+        "channel_dict",
+        "dynamic_voice_list",
     ]
 
     def __init__(self,create_file=True):
@@ -64,6 +68,9 @@ class JsonDatabase():
                     json.dump({},jfile,indent=4)
                     print(f">> Created json file: {file} <<")
             setattr(self, file,json.load(open(self.  _dict[file],mode='r',encoding='utf8')))
+
+        self.channel_dict = {}
+        self.dynamic_voice_list = []
 
 
     def write(self,file:str,data:dict):
@@ -111,6 +118,25 @@ class JsonDatabase():
         with open(f'{self._db_location}/cache.json','w',encoding="utf-8") as jfile:
             self.cache[key] = value
             json.dump(self.cache,jfile,indent=4,ensure_ascii=False)
+
+    def get_channel_dict(self,channel_type:str=None):
+        return self.channel_dict.get(channel_type) if channel_type else self.channel_dict
+    
+    def set_channel_dict(self,data):
+        self.channel_dict = data
+
+    def getif_dynamic_voice(self,channel_id):
+        return channel_id if channel_id in self.dynamic_voice_list else None
+    
+    def update_dynamic_voice(self,new_channel_id=None,remove_channel_id=None):
+        if new_channel_id:
+            self.dynamic_voice_list.append(new_channel_id)
+        if remove_channel_id:
+            self.dynamic_voice_list.remove(remove_channel_id)
+
+    def set_dynamic_voice(self,data:list):
+        self.dynamic_voice_list = data
+        
 
     # @staticmethod
     # async def get_gamedata(user_id:str, game:str, ctx:discord.ApplicationContext=None):
