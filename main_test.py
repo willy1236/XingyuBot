@@ -38,9 +38,7 @@ from starcord.database.file import CsvDatabase
 # kda_avg = round(kda_avg / 5, 2)
 
 # print(f"Avg. {kda_avg}")
-from starcord.clients import ApexInterface
-map = ApexInterface().get_raw_map_rotation()
-print(map)
+
 # db = CsvDatabase()
 # r = db.get_row_by_column_value(db.lol_champion,"name_tw","凱莎")
 # print(r.loc["name_en"])

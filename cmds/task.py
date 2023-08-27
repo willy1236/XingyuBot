@@ -30,7 +30,7 @@ class task(Cog_Extension):
             scheduler = AsyncIOScheduler()
             #scheduler.add_job(self.sign_reset,'cron',hour=4,minute=0,second=0,jitter=30,misfire_grace_time=60)
             scheduler.add_job(self.apex_info_update,'cron',hour=1,minute=5,second=0,jitter=30,misfire_grace_time=60)
-            scheduler.add_job(self.apex_map_update,'cron',minute='00,15,30,45',second=1,jitter=30,misfire_grace_time=60)
+            scheduler.add_job(self.apex_crafting_update,'cron',minute='00,15,30,45',second=1,jitter=30,misfire_grace_time=60)
             scheduler.add_job(self.forecast_update,'cron',hour='00,03,06,09,12,15,18,21',minute=0,second=1,jitter=30,misfire_grace_time=60)
             scheduler.add_job(self.auto_hoyo_reward,'cron',hour=19,minute=0,second=0,jitter=30,misfire_grace_time=60)
             #scheduler.add_job(self.update_channel_dict,'cron',hour='*',minute="0,30",second=0,jitter=30,misfire_grace_time=60)
@@ -93,13 +93,13 @@ class task(Cog_Extension):
 
     async def apex_info_update(self):
         aclient = ApexInterface()
-        crafting = aclient.get_crafting()
-        map = aclient.get_map_rotation_from_chche()
-        if crafting:
+        map = aclient.get_map_rotation()
+        crafting = aclient.get_crafting_from_chche()
+        if map:
             embed_list = []
-            if map:
-                embed_list.append(map.desplay())
-            embed_list.append(crafting.desplay())
+            if crafting:
+                embed_list.append(crafting.desplay())
+            embed_list.append(map.desplay())
             
             records = sqldb.get_notice_channel_by_type('apex_info')
             for i in records:
@@ -120,16 +120,16 @@ class task(Cog_Extension):
                 else:
                     print(f"apex_info_update: {i['guild_id']}/{i['channel_id']}")
 
-    async def apex_map_update(self):
+    async def apex_crafting_update(self):
         today = date.today()
-        apex_map = Jsondb.read_cache("apex_map")
-        if not apex_map or apex_map.get("date") != today.isoformat():
-            map = ApexInterface().get_raw_map_rotation()
-            apex_map = {
+        apex_crafting = Jsondb.read_cache("apex_crafting")
+        if not apex_crafting or apex_crafting.get("date") != today.isoformat():
+            apex_crafting = ApexInterface().get_raw_crafting()
+            apex_crafting_dict = {
                 "date": today.isoformat(),
-                "data": map
+                "data": apex_crafting[0:2]
             }
-            Jsondb.write_cache("apex_map",apex_map)
+            Jsondb.write_cache("apex_crafting",apex_crafting_dict)
         
 
 
