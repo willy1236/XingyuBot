@@ -179,7 +179,20 @@ class ApexInterface(GameInterface):
             if apidata:
                 return ApexMapRotation(apidata)
         else:
-            return None  
+            return None
+    
+    def get_raw_map_rotation(self) -> dict | None:
+        params={'auth':self.auth}
+        r = requests.get(f'{self.url}/maprotation',params=params)
+        if r.ok:
+            return r.json()
+        else:
+            return None
+        
+    def get_map_rotation_from_chche(self):
+        apex_map = Jsondb.read_cache("apex_map")
+        if apex_map:
+            return ApexMapRotation(apex_map['data'])
 
     def get_server_status(self):
         params={'auth':self.auth}

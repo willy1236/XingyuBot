@@ -1,7 +1,7 @@
 import asyncio,discord,genshin,logging,queue
 #from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone, timedelta,date
 from discord.ext import commands,tasks
 from requests.exceptions import ConnectTimeout
 
@@ -91,10 +91,17 @@ class task(Cog_Extension):
                 else:
                     print(f"earthquake_check: {i['guild_id']}/{i['channel_id']}")
 
-    async def apex_crafting_update(self):
-        crafting = ApexInterface().get_crafting()
+    async def apex_info_update(self):
+        aclient = ApexInterface()
+        crafting = aclient.get_crafting()
+        map = aclient.get_map_rotation_from_chche()
         if crafting:
-            records = sqldb.get_notice_channel_by_type('apex_crafting')
+            embed_list = []
+            if map:
+                embed_list.append(map.desplay())
+            embed_list.append(crafting.desplay())
+            
+            records = sqldb.get_notice_channel_by_type('apex_info')
             for i in records:
                 channel = self.bot.get_channel(i['channel_id'])
                 if channel:
@@ -105,35 +112,26 @@ class task(Cog_Extension):
                         msg = None
 
                     if msg and msg.author == self.bot.user:
-                        await msg.edit('Apex合成台內容自動更新資料',embed=crafting.desplay())
+                        await msg.edit('Apex資訊自動更新資料',embeds=embed_list)
                     else:
-                        await channel.send('Apex合成台內容自動更新資料',embed=crafting.desplay())
+                        await channel.send('Apex資訊內容自動更新資料',embeds=embed_list)
                     await asyncio.sleep(0.5)
                 
                 else:
-                    print(f"apex_crafting_update: {i['guild_id']}/{i['channel_id']}")
+                    print(f"apex_info_update: {i['guild_id']}/{i['channel_id']}")
 
     async def apex_map_update(self):
-        map = ApexInterface().get_map_rotation()
-        if map:
-            records = sqldb.get_notice_channel_by_type('apex_map')
-            for i in records:
-                channel = self.bot.get_channel(i['channel_id'])
-                if channel:
-                    try:
-                        id = channel.last_message_id
-                        msg = await channel.fetch_message(id)
-                    except:
-                        msg = None
+        today = date.today()
+        apex_map = Jsondb.read_cache("apex_map")
+        if not apex_map or apex_map.get("date") != today.isoformat():
+            map = ApexInterface().get_raw_map_rotation()
+            apex_map = {
+                "date": today.isoformat(),
+                "data": map
+            }
+            Jsondb.write_cache("apex_map",apex_map)
+        
 
-                    if msg and msg.author == self.bot.user:
-                        await msg.edit('Apex地圖輪替自動更新資料',embed=map.desplay())
-                    else:
-                        await channel.send('Apex地圖輪替自動更新資料',embed=map.desplay())
-                    await asyncio.sleep(0.5)
-                
-                else:
-                    print(f"apex_map_update: {i['guild_id']}/{i['channel_id']}")
 
     async def forecast_update(self):
         forecast = CWBClient().get_forecast()

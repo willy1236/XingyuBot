@@ -3,6 +3,7 @@
         "Aatrox": "厄薩斯",
         "Ahri": "阿璃",
         "Akali": "阿卡莉",
+        "Akshan": "埃可尚",
         "Alistar": "亞歷斯塔",
         "Amumu": "阿姆姆",
         "Anivia": "艾妮維亞",
@@ -12,6 +13,7 @@
         "AurelionSol": "翱銳龍獸",
         "Azir": "阿祈爾",
         "Bard": "巴德",
+        "Belveth": "貝爾薇斯",
         "Blitzcrank": "布里茨",
         "Brand": "布蘭德",
         "Braum": "布郎姆",
@@ -37,6 +39,7 @@
         "Gnar": "吶兒",
         "Gragas": "古拉格斯",
         "Graves": "葛雷夫",
+        "Gwen": "關",
         "Hecarim": "赫克林",
         "Heimerdinger": "漢默丁格",
         "Illaoi": "伊羅旖",
@@ -61,9 +64,11 @@
         "Kindred": "鏡爪",
         "Kled": "克雷德",
         "KogMaw": "寇格魔",
+        "KSante": "卡桑帝",
         "Leblanc": "勒布朗",
         "LeeSin": "李星",
         "Leona": "雷歐娜",
+        "Lillia": "莉莉亞",
         "Lissandra": "麗珊卓",
         "Lucian": "路西恩",
         "Lulu": "露璐",
@@ -72,15 +77,18 @@
         "Malzahar": "馬爾札哈",
         "Maokai": "茂凱",
         "MasterYi": "易大師",
+        "Milio": "米里歐",
         "MissFortune": "好運姐",
         "MonkeyKing": "悟空",
         "Mordekaiser": "魔鬥凱薩",
         "Morgana": "魔甘娜",
+        "Naafiri": "娜菲芮",
         "Nami": "娜米",
         "Nasus": "納瑟斯",
         "Nautilus": "納帝魯斯",
         "Neeko": "妮可",
         "Nidalee": "奈德麗",
+        "Nilah": "淣菈",
         "Nocturne": "夜曲",
         "Nunu": "努努和威朗普",
         "Olaf": "歐拉夫",
@@ -94,13 +102,17 @@
         "Rakan": "銳空",
         "Rammus": "拉姆斯",
         "RekSai": "雷珂煞",
+        "Rell": "銳兒",
+        "Renata": "睿娜妲．格萊斯克",
         "Renekton": "雷尼克頓",
         "Rengar": "雷葛爾",
         "Riven": "雷玟",
         "Rumble": "藍寶",
         "Ryze": "雷茲",
+        "Samira": "煞蜜拉",
         "Sejuani": "史瓦妮",
         "Senna": "姍娜",
+        "Seraphine": "瑟菈紛",
         "Sett": "賽特",
         "Shaco": "薩科",
         "Shen": "慎",
@@ -131,7 +143,9 @@
         "Vayne": "汎",
         "Veigar": "維迦",
         "Velkoz": "威寇茲",
+        "Vex": "薇可絲",
         "Vi": "菲艾",
+        "Viego": "維爾戈",
         "Viktor": "維克特",
         "Vladimir": "弗拉迪米爾",
         "Volibear": "弗力貝爾",
@@ -140,37 +154,41 @@
         "Xerath": "齊勒斯",
         "XinZhao": "趙信",
         "Yasuo": "犽宿",
+        "Yone": "犽凝",
         "Yorick": "約瑞科",
         "Yuumi": "悠咪",
         "Zac": "札克",
         "Zed": "劫",
+        "Zeri": "婕莉",
         "Ziggs": "希格斯",
         "Zilean": "極靈",
         "Zoe": "柔依",
         "Zyra": "枷蘿"
     },
-    "road":{
-        "BOTTOM":"下路",
-        "TOP":"上路",
-        "JUNGLE":"打野",
-        "MIDDLE":"中路"
+    "road": {
+        "BOTTOM": "下路",
+        "TOP": "上路",
+        "JUNGLE": "打野",
+        "MIDDLE": "中路"
     },
-    "mod":{
-        "URF":"阿福快打（URF）",
-        "ARAM":"隨機單中（ARAM）",
-        "CLASSIC":"經典對戰（CLASSIC）"
+    "mod": {
+        "URF": "阿福快打（URF）",
+        "ARAM": "隨機單中（ARAM）",
+        "CLASSIC": "經典對戰（CLASSIC）"
     },
-    "type":{
-        "URF":"阿福快打（URF）",
-        "ARAM":"隨機單中（ARAM）",
+    "type": {
+        "URF": "阿福快打（URF）",
+        "ARAM": "隨機單中（ARAM）",
         "MATCHED_GAME": "積分對戰（MATCHED_GAME）"
     },
-    "map":{
-        "11":"召喚峽谷",
-        "12":"咆嘯深淵",
-        "22":"聯盟戰棋"
+    "map": {
+        "11": "召喚峽谷",
+        "12": "咆嘯深淵",
+        "21": "閃電急戰",
+        "22": "聯盟戰棋",
+        "30": "競技場"
     },
-    "summoner_spell":{
+    "summoner_spell": {
         "21": "光盾",
         "1": "淨化",
         "14": "點燃",
@@ -186,7 +204,7 @@
         "32": "標記",
         "12": "傳送"
     },
-    "runes":{
+    "runes": {
         "8100": "征服",
         "8112": "死亡電刑",
         "8124": "掠食者",

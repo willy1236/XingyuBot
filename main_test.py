@@ -14,31 +14,33 @@ from starcord.database.file import CsvDatabase
 
 #data = {"test": "1"}
 # JsonStorageAPI().append_data(data=data)
-db = CsvDatabase()
+# db = CsvDatabase()
 
-rclient = RiotClient()
-player = rclient.get_player_byname("")
-match_list = rclient.get_player_matchs(player.puuid,3)
-kda_avg = 0
-i = 0
-for match_id in match_list:
-    match = rclient.get_match(match_id)
-    print(match.gameMode)
-    if match.gameMode != "CLASSIC":
-        continue
+# rclient = RiotClient()
+# player = rclient.get_player_byname("")
+# match_list = rclient.get_player_matchs(player.puuid,3)
+# kda_avg = 0
+# i = 0
+# for match_id in match_list:
+#     match = rclient.get_match(match_id)
+#     print(match.gameMode)
+#     if match.gameMode != "CLASSIC":
+#         continue
     
-    i += 1
-    player_im = match.get_player_in_match(player.name)
+#     i += 1
+#     player_im = match.get_player_in_match(player.name)
     
-    championName = db.get_row_by_column_value(db.lol_champion,"name_en",player_im.championName)
-    print(f"第{i}場：{championName.loc['name_tw']} {player_im.lane} KDA {player_im.kda}")
-    kda_avg += player_im.kda
-    time.sleep(1)
+#     championName = db.get_row_by_column_value(db.lol_champion,"name_en",player_im.championName)
+#     print(f"第{i}場：{championName.loc['name_tw']} {player_im.lane} KDA {player_im.kda}")
+#     kda_avg += player_im.kda
+#     time.sleep(1)
 
-kda_avg = round(kda_avg / 5, 2)
+# kda_avg = round(kda_avg / 5, 2)
 
-print(f"Avg. {kda_avg}")
-
+# print(f"Avg. {kda_avg}")
+from starcord.clients import ApexInterface
+map = ApexInterface().get_raw_map_rotation()
+print(map)
 # db = CsvDatabase()
 # r = db.get_row_by_column_value(db.lol_champion,"name_tw","凱莎")
 # print(r.loc["name_en"])

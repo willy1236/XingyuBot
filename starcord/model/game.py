@@ -255,18 +255,17 @@ class LOLActiveMatch:
         self.mapId = data.get("mapId")
         self.gameMode = data.get("gameMode")
         self.gameType = data.get("gameType")
-        self.participants = [LOLLActiveMatchPlayer(i) for i in data.get("participants")]
         self.platformId = data.get("platformId")
-        self.bannedChampions = [LOLBanChampion(i) for i in data.get("bannedChampions")]
         self.gameStartTime = data.get("gameStartTime")
         self.gameLength = data.get("gameLength")
+        self.participants = [LOLLActiveMatchPlayer(i) for i in data.get("participants")]
+        self.bannedChampions = [LOLBanChampion(i) for i in data.get("bannedChampions")]
     
     def desplay(self):
         embed = BotEmbed.simple("LOL對戰")
         gamemode = lol_jdict['mod'].get(self.gameMode) or self.gameMode
         embed.add_field(name="遊戲模式", value=gamemode, inline=False)
         embed.add_field(name="開始時間", value=f"<t:{str(self.gameStartTime)[:-3]}>", inline=False)
-        print(self.gameLength)
         if self.gameLength <= 0:
             time = "尚未開始"
         else:
@@ -327,6 +326,13 @@ class LOLLActiveMatchPlayer:
         return text
 
 class LOLBanChampion:
+    __slots__= [
+        "championId",
+        "teamId",
+        "pickTurn",
+        "name",
+    ]
+
     def __init__(self,data):
         self.championId = data.get("championId")
         self.teamId = data.get("teamId")
@@ -506,14 +512,14 @@ class ApexMapRotation():
     def __init__(self,data):
         try:
             self.nowmap = data["current"]['map']
-            self.nowstart = datetime.strptime(data['current']['readableDate_start'],"%Y-%m-%d %H:%M:%S")+timedelta(hours=8)
-            self.nowend = datetime.strptime(data['current']['readableDate_end'],"%Y-%m-%d %H:%M:%S")+timedelta(hours=8)
+            self.nowstart = datetime.strptime(data['current']['readableDate_start'],"%Y-%m-%d %H:%M:%S") + timedelta(hours=8)
+            self.nowend = datetime.strptime(data['current']['readableDate_end'],"%Y-%m-%d %H:%M:%S") + timedelta(hours=8)
             self.remaining = data['current']['remainingTimer']
             self.mapimage = data['current']['asset']
 
             self.nextmap = data["next"]['map']
-            self.nextstart = datetime.strptime(data['next']['readableDate_start'],"%Y-%m-%d %H:%M:%S")+timedelta(hours=8)
-            self.nextend = datetime.strptime(data['next']['readableDate_end'],"%Y-%m-%d %H:%M:%S")+timedelta(hours=8)
+            self.nextstart = datetime.strptime(data['next']['readableDate_start'],"%Y-%m-%d %H:%M:%S") + timedelta(hours=8)
+            self.nextend = datetime.strptime(data['next']['readableDate_end'],"%Y-%m-%d %H:%M:%S") + timedelta(hours=8)
         except TypeError:
             print(data)
 
