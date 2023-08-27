@@ -84,7 +84,7 @@ class help(Cog_Extension):
             embed = BotEmbed.simple("遊戲(Game) 指令","可查詢遊戲資料")
             embed.add_field(name="/game set <遊戲> [資料]", value="設定遊戲名稱到資料庫中，設定後可在使用部分指令時讓機器人自動幫你輸入", inline=False)
             embed.add_field(name="/game find [用戶] [遊戲]", value="查詢用戶在資料庫內的遊戲名稱(目前僅能查詢自己的資料)", inline=False)
-            embed.add_field(name="/lol player <玩家名稱>", value="查詢LOL玩家", inline=False)
+            embed.add_field(name="/lol", value="LOL相關指令", inline=False)
             embed.add_field(name="/osu player <玩家名/id>", value="查詢osu玩家", inline=False)
             embed.add_field(name="/osu map <圖譜id>", value="查詢osu圖譜", inline=False)
             embed.add_field(name="/apex player <玩家名/id>", value="查詢apex玩家", inline=False)
@@ -98,7 +98,8 @@ class help(Cog_Extension):
             embed = BotEmbed.simple("通知設定(Channel) 指令","設定機器人自動通知\n若為定時通知，記得將機器人的訊息保持在頻道的最新訊息，以免機器人找不到訊息而重複發送")
             embed.add_field(name="/channel set", value="設定自動通知", inline=False)
             embed.add_field(name="/channel list", value="確認通知設定的頻道", inline=False)
-            embed.add_field(name="通知選項", value="- 全群公告：機器人的綜合通知\n- 機器人更新通知：告訴你機器人更新了什麼\n- Apex合成器輪替/地圖輪替：(定時通知)\n- 地震通知/天氣預報(定時通知)：中央氣象局發布的地震報告與天氣預報\n- 管理員專用：新成員若有警告紀錄則會發訊息通知\n- 成員加入/離開：讓機器人告訴大家成員進出", inline=False)
+            embed.add_field(name="/channel voice", value="設定動態語音", inline=False)
+            embed.add_field(name="通知選項", value="- 全群公告：機器人的綜合通知\n- 機器人更新通知：告訴你機器人更新了什麼\n- Apex合成器與地圖輪替：(定時通知)\n- 地震通知/天氣預報(定時通知)：中央氣象局發布的地震報告與天氣預報\n- 管理員專用：新成員若有警告紀錄則會發訊息通知\n- 成員加入/離開：讓機器人告訴大家成員進出\n- 語音進出紀錄：紀錄伺服器內的語音進出", inline=False)
             embed.set_footer(text="輸入/help use查詢指令用法")
             await ctx.respond(embed=embed)
         elif arg == 'role':
