@@ -183,6 +183,10 @@ class LOLMatch():
         embed.add_field(name="遊戲模式", value=gamemode, inline=False)
         embed.add_field(name="對戰ID", value=self.matchId, inline=False)
         embed.add_field(name="遊戲版本", value=self.gameVersion, inline=False)
+        minutes = str(self.gameDuration // 60)
+        seconds = str(self.gameDuration % 60)
+        time = f"{minutes}:{seconds}"
+        embed.add_field(name="遊戲時長", value=time, inline=False)
         blue = ''
         red = ''
         i = 0
@@ -319,7 +323,6 @@ class LOLLActiveMatchPlayer:
         text += f'召喚師技能：{lol_jdict["summoner_spell"].get(str(self.spell1Id))}/{lol_jdict["summoner_spell"].get(str(self.spell2Id))}\n'
         text += f'主符文：{lol_jdict["runes"].get(str(self.perkStyle))}/{lol_jdict["runes"].get(str(self.mainperk))}\n'
         text += f'副符文：{lol_jdict["runes"].get(str(self.perkSubStyle))}\n'
-        text += '\n'
         
         return text
 
