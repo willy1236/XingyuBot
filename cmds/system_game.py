@@ -178,6 +178,9 @@ class system_game(Cog_Extension):
     async def playermatch(self,ctx,username:discord.Option(str,name='召喚師名稱',description='要查詢的用戶，留空則使用資料庫查詢',required=False)):
         rclient = RiotClient()
         player = rclient.get_player_data(username,ctx.author.id)
+        if not player:
+            await ctx.respond('查詢失敗：查無此玩家',ephemeral=True)
+            return
         puuid = player.puuid
         
         match_list = rclient.get_player_matchs(puuid,1)
@@ -238,6 +241,9 @@ class system_game(Cog_Extension):
     async def recentmatches(self,ctx,username:discord.Option(str,name='召喚師名稱',description='要查詢的用戶，留空則使用資料庫查詢',required=False)):
         rclient = RiotClient()
         player = rclient.get_player_data(username,ctx.author.id if not username else None)
+        if not player:
+            await ctx.respond('查詢失敗：查無此玩家',ephemeral=True)
+            return
         puuid = player.puuid
         
         match_list = rclient.get_player_matchs(puuid,20)
@@ -252,6 +258,9 @@ class system_game(Cog_Extension):
     async def activematches(self,ctx,username:discord.Option(str,name='召喚師名稱',description='要查詢的用戶，留空則使用資料庫查詢',required=False)):
         rclient = RiotClient()
         player = rclient.get_player_data(username,ctx.author.id if not username else None)
+        if not player:
+            await ctx.respond('查詢失敗：查無此玩家',ephemeral=True)
+            return
         
         active_match = rclient.get_summoner_active_match(player.summonerid)
         if not active_match:
