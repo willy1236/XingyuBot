@@ -72,7 +72,6 @@ class JsonDatabase():
                 setattr(self, file,json.load(jfile))
 
         self.channel_dict = {}
-        self.dynamic_voice_list = []
 
 
     def write(self,file:str,data:dict):
@@ -121,20 +120,21 @@ class JsonDatabase():
             self.cache[key] = value
             json.dump(self.cache,jfile,indent=4,ensure_ascii=False)
 
-    def get_channel_dict(self,channel_type:str=None):
+    def get_channel_dict(self,channel_type:str=None) -> dict | list | None:
         return self.channel_dict.get(channel_type) if channel_type else self.channel_dict
     
     def set_channel_dict(self,key,data):
         self.channel_dict[key] = data
 
     def getif_dynamic_voice(self,channel_id):
-        return channel_id if channel_id in self.dynamic_voice_list else None
+        return channel_id if channel_id in self.channel_dict['dynamic_voice_room'] else None
     
-    def update_dynamic_voice(self,new_channel_id=None,remove_channel_id=None):
-        if new_channel_id:
-            self.dynamic_voice_list.append(new_channel_id)
-        if remove_channel_id:
-            self.dynamic_voice_list.remove(remove_channel_id)
+    def update_channel_dict(self,channel_type,new_data=None,remove_data=None):
+        if type(self.channel_dict[channel_type]) == list:
+            if new_data:
+                self.channel_dict[channel_type].append(new_data)
+            if remove_data:
+                self.channel_dict[channel_type].remove(remove_data)
 
     def set_dynamic_voice(self,data:list):
         self.dynamic_voice_list = data

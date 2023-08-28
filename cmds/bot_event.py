@@ -1,7 +1,7 @@
 import discord,datetime,re
 from discord.ext import commands
 from core.classes import Cog_Extension
-from starcord import Jsondb,BotEmbed,BRS,sqldb
+from starcord import Jsondb,BotEmbed,BRS,sqldb,nclient
 
 keywords = {
     '抹茶粉':'由威立冠名贊助撥出~',
@@ -123,8 +123,9 @@ class event(Cog_Extension):
                     await self.bot.get_channel(voice_log_dict.get(guildid)[0]).send(embed=embed)
             
             #動態語音
-            dynamic_voice_dict = Jsondb.get_channel_dict("dynamic_voice")
+            dynamic_voice_dict = nclient.get_notice_dict("dynamic_voice")
             if guildid in dynamic_voice_dict:
+                #新增
                 if after.channel and after.channel.id == dynamic_voice_dict[guildid][0]:
                     guild = after.channel.guild
                     category = after.channel.category
@@ -136,14 +137,14 @@ class event(Cog_Extension):
                     }
                     new_channel = await guild.create_voice_channel(name=f'{user.name}的頻道', reason='動態語音：新增',category=category,overwrites=overwrites)
                     sqldb.set_dynamic_voice(new_channel.id,user.id,guild.id,None)
-                    Jsondb.update_dynamic_voice(new_channel_id=new_channel.id)
+                    nclient.set_lsit_in_notice_dict("dynamic_voice_room",new_channel_id=new_channel.id)
                     await user.move_to(new_channel)
 
-                elif before.channel and not after.channel and Jsondb.getif_dynamic_voice(before.channel.id) and not before.channel.members:
+                #移除
+                elif before.channel and not after.channel and nclient.getif_dynamic_voice_room(before.channel.id) and not before.channel.members:
                     await before.channel.delete(reason="動態語音：移除")
                     sqldb.remove_dynamic_voice(before.channel.id)
-                    Jsondb.update_dynamic_voice(remove_channel_id=before.channel.id)
-                
+                    nclient.set_lsit_in_notice_dict("dynamic_voice_room",remove_channel_id=before.channel.id)
 
             #舞台發言
             if after.suppress and after.channel and after.channel.category and after.channel.category.id == 1097158160709591130 and (user.get_role(1126820808761819197) or user.get_role(1130849778264195104)):

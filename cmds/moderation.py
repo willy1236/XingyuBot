@@ -2,7 +2,7 @@ import discord,datetime
 from discord.ext import commands
 from discord.commands import SlashCommandGroup
 from core.classes import Cog_Extension
-from starcord import ChoiceList,BotEmbed,Jsondb,sqldb
+from starcord import ChoiceList,BotEmbed,Jsondb,sqldb,nclient
 from starcord.utility import converter
 
 set_option = ChoiceList.set('channel_set_option')
@@ -51,9 +51,9 @@ class moderation(Cog_Extension):
             await ctx.respond(f'設定完成，已將 {ChoiceList.get_tw(notice_type,"channel_set_option")} 頻道設定在 {channel.mention}')
             await ctx.send(embed=BotEmbed.simple('溫馨提醒','若為定時通知，請將機器人的訊息保持在此頻道的最新訊息，以免機器人找不到訊息而重複發送'),delete_after=10)
             if notice_type in ["voice_log"]:
-                from .task import scheduler,update_channel_dict
+                from .task import scheduler
                 time = datetime.datetime.now() + datetime.timedelta(seconds=1)
-                scheduler.add_job(update_channel_dict,"date",run_date=time,args=[notice_type])
+                scheduler.add_job(nclient.init_NoticeClient,"date",run_date=time,args=[notice_type])
         else:
             sqldb.remove_notice_channel(guildid,notice_type)
             await ctx.respond(f'設定完成，已移除 {notice_type} 頻道')
@@ -70,9 +70,9 @@ class moderation(Cog_Extension):
             sqldb.remove_notice_channel(ctx.guild.id,"dynamic_voice")
             await ctx.respond(f'設定完成，已移除 動態語音 頻道')
         
-        from .task import scheduler,update_channel_dict
+        from .task import scheduler
         time = datetime.datetime.now() + datetime.timedelta(seconds=1)
-        scheduler.add_job(update_channel_dict,"date",run_date=time,args=["dynamic_voice"])
+        scheduler.add_job(nclient.init_NoticeClient,"date",run_date=time,args=["dynamic_voice","dynamic_voice_room"])
     
     @channel_notify.command(description='查看通知設定的頻道')
     @commands.has_permissions(manage_channels=True)

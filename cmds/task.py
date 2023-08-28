@@ -6,7 +6,7 @@ from discord.ext import commands,tasks
 from requests.exceptions import ConnectTimeout
 
 from core.classes import Cog_Extension
-from starcord import Jsondb,sqldb,mongedb
+from starcord import Jsondb,sqldb,mongedb,nclient
 from starcord.clients import *
 
 
@@ -38,8 +38,7 @@ class task(Cog_Extension):
             scheduler.add_job(self.earthquake_check,'interval',minutes=1,jitter=30,misfire_grace_time=40)
             #scheduler.add_job(self.get_mongodb_data,'interval',minutes=3,jitter=30,misfire_grace_time=40)
 
-            scheduler.add_job(update_channel_dict,"date")
-            scheduler.add_job(update_channel_dict_list,"date")
+            scheduler.add_job(nclient.init_NoticeClient,"date")
 
             dynamic_voice_data = sqldb.get_all_dynamic_voice()
             list = []
@@ -219,34 +218,6 @@ class task(Cog_Extension):
 
     async def update_pubsubhubbub_data(self):
         pass
-    
-async def update_channel_dict(notice_type=None):
-    if notice_type:
-        notice_type = [ notice_type ]
-    else:
-        notice_type = ["dynamic_voice","voice_log"]
-    #channel_dict = {}
-    for type in notice_type:
-        dbdata = sqldb.get_notice_channel_by_type(type)
-        dict = {}
-        for data in dbdata:
-            guildid = data['guild_id']
-            channelid = data['channel_id']
-            roleid = data['role_id']
-            dict[guildid] = [channelid, roleid]
-        #channel_dict[type] = dict
-        Jsondb.set_channel_dict(type, dict)
-
-async def update_channel_dict_list(notice_type=None):
-    if notice_type:
-        notice_type = [ notice_type ]
-    else:
-        notice_type = ["twitch"]
-    
-    for type in notice_type:
-        if type == "twitch":
-            dbdata = sqldb.get_notice_community_userlist(type)
-            Jsondb.set_channel_dict(type, dbdata)
 
 
 def setup(bot):
