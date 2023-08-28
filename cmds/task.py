@@ -150,7 +150,7 @@ class task(Cog_Extension):
 
     @tasks.loop(minutes=3)
     async def twitch(self):
-        users = Jsondb.get_channel_dict("twitch")
+        users = nclient.get_notice_dict("twitch")
         if not users:
             return
         twitch_cache = Jsondb.read_cache('twitch')
