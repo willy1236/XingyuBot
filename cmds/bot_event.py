@@ -100,25 +100,31 @@ class event(Cog_Extension):
                 voice_log_dict = nclient.get_notice_dict("voice_log")
                 if guildid in voice_log_dict:
                     NowTime = datetime.datetime.now()
+                    before_text = ""
+                    after_text = ""
+                    if before.channel:
+                        before_text = before.channel.mention if not nclient.getif_dynamic_voice_room(before.channel.id) else before.channel.name + ' (動態語音)'
+                    if after.channel:
+                        after_text = after.channel.mention if not nclient.getif_dynamic_voice_room(after.channel.id) else after.channel.name + ' (動態語音)'
+                    
                     if before.channel and after.channel and before.channel != after.channel:
                         embed=discord.Embed(description=f'{user.mention} 更換語音',color=0x4aa0b5,timestamp=NowTime)
-                    elif not before.channel and after.channel:
+                        embed.add_field(name='頻道', value=f'{before_text}->{after_text}', inline=False)
+                    
+                    elif not before.channel:
                         embed=discord.Embed(description=f'{user.mention} 進入語音',color=0x4aa0b5,timestamp=NowTime)
-                    elif before.channel and not after.channel:
+                        embed.add_field(name='頻道', value=f'{after_text}', inline=False)
+                    
+                    elif not after.channel:
                         embed=discord.Embed(description=f'{user.mention} 離開語音',color=0x4aa0b5,timestamp=NowTime)
+                        embed.add_field(name='頻道', value=f'{before_text}', inline=False)
+                    
                     else:
                         return
                     
                     username = user.name if user.discriminator == "0" else user
                     embed.set_author(name=username,icon_url=user.display_avatar.url)
                     embed.set_footer(text=self.bot.get_guild(guildid).name)
-                    
-                    if before.channel and after.channel:
-                        embed.add_field(name='頻道', value=f'{before.channel.mention}->{after.channel.mention}', inline=False)
-                    elif before.channel:
-                        embed.add_field(name='頻道', value=f'{before.channel.mention}', inline=False)
-                    elif after.channel:
-                        embed.add_field(name='頻道', value=f'{after.channel.mention}', inline=False)
                     
                     await self.bot.get_channel(voice_log_dict.get(guildid)[0]).send(embed=embed)
             
