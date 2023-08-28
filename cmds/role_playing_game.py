@@ -26,9 +26,7 @@ class role_playing_game(Cog_Extension):
     async def ui(self,ctx:discord.ApplicationContext,user_dc:discord.Option(discord.Member,name='用戶',description='留空以查詢自己',default=None)):
         user_dc = user_dc or ctx.author
         user = UserClient.get_user(user_dc.id)
-        embed = user.desplay()
-        embed.set_author(name=user_dc.name,icon_url=user_dc.avatar)
-        await ctx.respond(embed=embed)
+        await ctx.respond(embed=user.desplay())
 
     @commands.slash_command(description='查看背包（開發中）')
     async def bag(self,ctx:discord.ApplicationContext,user_dc:discord.Option(discord.Member,name='用戶',description='留空以查詢自己',default=None)):

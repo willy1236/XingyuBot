@@ -404,21 +404,25 @@ class command(Cog_Extension):
                   ctx:discord.ApplicationContext,
                   date:discord.Option(str,name='日期',description='6/4請輸入0604 6/5~6/8請輸入0605~0608 以此類推'),
                   time:discord.Option(str,name='時間',description='',choices=busy_time_option)):
-        if len(date) == 4:
-            datetime.datetime.strptime(date,"%m%d")
-            self.sqldb.add_busy(ctx.author.id,date,time)
-            await ctx.respond('設定完成')
-        elif len(date) == 9:
-            date1_str = date[0:4]
-            date2_str = date[5:9]
-            date1 = datetime.datetime.strptime(date1_str,"%m%d")
-            date2 = datetime.datetime.strptime(date2_str,"%m%d")
-
-            for i in range((date2 - date1).days + 1):
-                date_str = date1.strftime("%m%d")
-                self.sqldb.add_busy(str(ctx.author.id),date_str,time)
-                date1 += datetime.timedelta(days=1)
-            await ctx.respond('設定完成')
+        try:
+            if len(date) == 4:
+                datetime.datetime.strptime(date,"%m%d")
+                self.sqldb.add_busy(ctx.author.id,date,time)
+                await ctx.respond('設定完成')
+            elif len(date) == 9:
+                date1_str = date[0:4]
+                date2_str = date[5:9]
+                date1 = datetime.datetime.strptime(date1_str,"%m%d")
+                date2 = datetime.datetime.strptime(date2_str,"%m%d")
+        except ValueError:
+            await ctx.respond('錯誤：日期格式錯誤')
+            return
+            
+        for i in range((date2 - date1).days + 1):
+            date_str = date1.strftime("%m%d")
+            self.sqldb.add_busy(str(ctx.author.id),date_str,time)
+            date1 += datetime.timedelta(days=1)
+        await ctx.respond('設定完成')
 
 
     @busytime.command(description='移除沒空時間')
@@ -426,21 +430,25 @@ class command(Cog_Extension):
                      ctx:discord.ApplicationContext,
                      date:discord.Option(str,name='日期',description='6/4請輸入0604 6/5~6/8請輸入0605~0608 以此類推'),
                      time:discord.Option(str,name='時間',description='',choices=busy_time_option)):
-        if len(date) == 4:
-            datetime.datetime.strptime(date,"%m%d")
-            self.sqldb.remove_busy(ctx.author.id, date,time)
-            await ctx.respond('移除完成')
-        elif len(date) == 9:
-            date1_str = date[0:4]
-            date2_str = date[5:9]
-            date1 = datetime.datetime.strptime(date1_str,"%m%d")
-            date2 = datetime.datetime.strptime(date2_str,"%m%d")
-
-            for i in range((date2 - date1).days + 1):
-                date_str = date1.strftime("%m%d")
-                self.sqldb.remove_busy(str(ctx.author.id),date_str,time)
-                date1 += datetime.timedelta(days=1)
-            await ctx.respond('設定完成')
+        try:
+            if len(date) == 4:
+                datetime.datetime.strptime(date,"%m%d")
+                self.sqldb.remove_busy(ctx.author.id, date,time)
+                await ctx.respond('移除完成')
+            elif len(date) == 9:
+                date1_str = date[0:4]
+                date2_str = date[5:9]
+                date1 = datetime.datetime.strptime(date1_str,"%m%d")
+                date2 = datetime.datetime.strptime(date2_str,"%m%d")
+        except ValueError:
+            await ctx.respond('錯誤：日期格式錯誤')
+            return
+        
+        for i in range((date2 - date1).days + 1):
+            date_str = date1.strftime("%m%d")
+            self.sqldb.remove_busy(str(ctx.author.id),date_str,time)
+            date1 += datetime.timedelta(days=1)
+        await ctx.respond('設定完成')
 
     @busytime.command(description='確認沒空時間')
     async def check(self,

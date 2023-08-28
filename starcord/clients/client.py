@@ -1,3 +1,6 @@
+class StarClient:
+    """星羽客戶端"""
+
 class WarningClient:
     """警告系統調用端口"""
 

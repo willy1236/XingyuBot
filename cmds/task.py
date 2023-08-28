@@ -1,4 +1,4 @@
-import asyncio,discord,genshin,logging,queue
+import asyncio,discord,genshin,logging
 #from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from datetime import datetime, timezone, timedelta,date
@@ -39,6 +39,7 @@ class task(Cog_Extension):
             #scheduler.add_job(self.get_mongodb_data,'interval',minutes=3,jitter=30,misfire_grace_time=40)
 
             scheduler.add_job(update_channel_dict,"date")
+            scheduler.add_job(update_channel_dict_list,"date")
 
             dynamic_voice_data = sqldb.get_all_dynamic_voice()
             list = []
@@ -130,7 +131,6 @@ class task(Cog_Extension):
                 "data": apex_crafting[0:2]
             }
             Jsondb.write_cache("apex_crafting",apex_crafting_dict)
-        
 
 
     async def forecast_update(self):
@@ -157,7 +157,7 @@ class task(Cog_Extension):
 
     @tasks.loop(minutes=3)
     async def twitch(self):
-        users = sqldb.get_notice_community_userlist('twitch')
+        users = Jsondb.get_channel_dict("twitch")
         if not users:
             return
         twitch_cache = Jsondb.read_cache('twitch')
@@ -221,7 +221,10 @@ class task(Cog_Extension):
         pass
     
 async def update_channel_dict(notice_type=None):
-    notice_type = notice_type or ["dynamic_voice","voice_log"]
+    if notice_type:
+        notice_type = [ notice_type ]
+    else:
+        notice_type = ["dynamic_voice","voice_log"]
     #channel_dict = {}
     for type in notice_type:
         dbdata = sqldb.get_notice_channel_by_type(type)
@@ -233,6 +236,17 @@ async def update_channel_dict(notice_type=None):
             dict[guildid] = [channelid, roleid]
         #channel_dict[type] = dict
         Jsondb.set_channel_dict(type, dict)
+
+async def update_channel_dict_list(notice_type=None):
+    if notice_type:
+        notice_type = [ notice_type ]
+    else:
+        notice_type = ["twitch"]
+    
+    for type in notice_type:
+        if type == "twitch":
+            dbdata = sqldb.get_notice_community_userlist(type)
+            Jsondb.set_channel_dict(type, dbdata)
 
 
 def setup(bot):

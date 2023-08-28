@@ -1,4 +1,4 @@
-import random,datetime,time
+import random,datetime,time,discord
 from typing import TYPE_CHECKING
 from starcord.database import sqldb
 from starcord.utility import BotEmbed
@@ -9,11 +9,11 @@ class UserClient:
         pass
 
     @staticmethod
-    def get_user(discord_id:str):
+    def get_user(discord_id:str,user_dc:discord.User=None):
         """取得基本用戶"""
         data = sqldb.get_user(discord_id)
         if data:
-            return User(data)
+            return User(data,user_dc)
 
     @staticmethod
     def get_rpguser(discord_id:str):
@@ -43,13 +43,15 @@ class UserClient:
 class User():
     '''基本用戶'''
     if TYPE_CHECKING:
+        user_dc: discord.User
         id: int
         name: str
         point: int
         rcoin: int
         max_sign_consecutive_days: int
 
-    def __init__(self,data:dict):
+    def __init__(self,data:dict,user_dc=None):
+        self.user_dc = user_dc
         self.id = data.get('user_id')
         self.name = data.get('name')
         self.point = data.get('point')
@@ -89,6 +91,8 @@ class User():
         #     embed.add_field(name='寵物',value=self.pet.name)
         # else:
         #     embed.add_field(name='寵物',value='無')
+        if self.user_dc:
+            embed.set_author(name=self.user_dc.name,icon_url=self.user_dc.avatar)
         return embed
 
     def get_pet(self):

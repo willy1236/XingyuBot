@@ -471,42 +471,36 @@ class ApexCrafting():
 
         self.daily_start = self.daily['startDate']
         self.daily_end = self.daily['endDate']
-        self.item1 = self.daily['bundleContent'][0]
-        self.item1_cost = self.item1['cost']
-        self.item1_name = self.item1['itemType']['name']
-        self.item1_id = self.item1['item']
-        self.item2 = self.daily['bundleContent'][1]
-        self.item2_cost = self.item2['cost']
-        self.item2_name = self.item2['itemType']['name']
-        self.item2_id = self.item2['item']
+        self.daily_item = [ApexCraftingItem(i) for i in self.daily['bundleContent']]
 
         self.weekly_start = self.weekly['startDate']
         self.weekly_end = self.weekly['endDate']
-        self.item3 = self.weekly['bundleContent'][0]
-        self.item3_cost = self.item3['cost']
-        self.item3_name = self.item3['itemType']['name']
-        self.item3_id = self.item3['item']
-        self.item4 = self.weekly['bundleContent'][1]
-        self.item4_cost = self.item4['cost']
-        self.item4_name = self.item4['itemType']['name']
-        self.item4_id = self.item4['item']
+        self.weekly_item = [ApexCraftingItem(i) for i in self.weekly['bundleContent']]
     
     def desplay(self):
         embed = BotEmbed.simple("Apex合成器內容")
-        tl = jdict['ApexCraftingItem']
-        item_name = []
-        item_name.append(tl.get(self.item1_name,self.item1_name))
-        item_name.append(tl.get(self.item2_name,self.item2_name))
-        item_name.append(tl.get(self.item3_name,self.item3_name))
-        item_name.append(tl.get(self.item4_name,self.item4_name))
-
-        embed.add_field(name="每日物品1",value=f"{item_name[0]} {self.item1_cost}",inline=False)
-        embed.add_field(name="每日物品2",value=f"{item_name[1]} {self.item2_cost}",inline=False)
-        embed.add_field(name="每週物品1",value=f"{item_name[2]} {self.item3_cost}",inline=False)
-        embed.add_field(name="每週物品2",value=f"{item_name[3]} {self.item4_cost}",inline=False)
+        text = ""
+        for item in self.daily_item:
+            text += f"{item.name_tw} {item.cost}\n"
+        embed.add_field(name="每日物品",value=text[:-2],inline=False)
+        
+        text = ""
+        for item in self.weekly_item:
+            text += f"{item.name_tw} {item.cost}\n"
+        embed.add_field(name="每週物品",value=text[:-2],inline=False)
         embed.timestamp = datetime.now()
         embed.set_footer(text='更新時間')
         return embed
+
+class ApexCraftingItem():
+    def __init__(self,data):
+        self.id = data.get('item')
+        self.cost = data.get('cost')
+        self.name = data.get('itemType').get('name')
+        self.name_tw = jdict['ApexCraftingItem'].get(self.name,self.name)
+        # self.rarity = data.get('itemType').get('rarity')
+        # self.asset = data.get('itemType').get('asset')
+        # self.rarityHex = data.get('itemType').get('rarityHex')
 
 class ApexMapRotation():
     def __init__(self,data):

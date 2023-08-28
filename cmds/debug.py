@@ -113,11 +113,16 @@ class RPG_advanture_panel(discord.ui.View):
 class debug(Cog_Extension):
     pass
     @commands.slash_command(description='測試指令')
-    async def test(self,ctx):
+    async def test(self,ctx:discord.ApplicationContext):
         await ctx.defer()
         view = RPG_advanture_panel()
         await ctx.respond(view.map_display(),view=view)
-
+        
+        # channel = self.bot.get_channel(566533708371329026)
+        # botuser = ctx.guild.get_member(self.bot.user.id)
+        # Permission = channel.permissions_for(botuser)
+        # await ctx.respond((Permission.send_messages and Permission.embed_links))
+    
     # @commands.slash_command()
     # async def modal_slash(self,ctx: discord.ApplicationContext):
     #     """Shows an example of a modal dialog being invoked from a slash command."""
