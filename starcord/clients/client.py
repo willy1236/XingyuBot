@@ -69,7 +69,7 @@ class NoticeClient:
     
     def getif_dynamic_voice_room(self,channel_id):
         """確認頻道是否為動態語音房"""
-        return channel_id if channel_id in self.channel_dict['dynamic_voice_room'] else None
+        return channel_id if channel_id in self.notice_dict['dynamic_voice_room'] else None
 
 class StarClient(
     NoticeClient
