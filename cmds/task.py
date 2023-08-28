@@ -40,12 +40,6 @@ class task(Cog_Extension):
 
             scheduler.add_job(nclient.init_NoticeClient,"date")
 
-            dynamic_voice_data = sqldb.get_all_dynamic_voice()
-            list = []
-            for data in dynamic_voice_data:
-                list.append(data["channel_id"])
-            Jsondb.set_dynamic_voice(list)
-
             scheduler.start()
             self.twitch.start()
         else:
