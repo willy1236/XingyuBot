@@ -266,7 +266,10 @@ class MySQLDatabase():
         self.cursor.execute(f"USE `database`;")
         self.cursor.execute(f'SELECT `channel_id` FROM `dynamic_channel`;')
         records = self.cursor.fetchall()
-        return records
+        list = []
+        for data in records:
+            list.append(data['channel_id'])
+        return list
 
     def set_notice_community(self,notice_type:str,notice_name:str,guild_id:int,channel_id:int,role_id:int=None):
         self.cursor.execute(f"USE `database`;")

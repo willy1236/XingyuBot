@@ -63,10 +63,7 @@ class NoticeClient:
                     dbdata = sqldb.get_notice_community_userlist(type)
                     self.notice_dict[type] = dbdata
                 elif type == "dynamic_voice_room":
-                    dbdata = sqldb.get_all_dynamic_voice(type)
-                    list = []
-                    for data in dbdata:
-                        list.append(data['channel_id'])
+                    dbdata = sqldb.get_all_dynamic_voice()
                     self.notice_dict[type] = dbdata
 
     
