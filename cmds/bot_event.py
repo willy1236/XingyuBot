@@ -97,7 +97,7 @@ class event(Cog_Extension):
             guildid = get_guildid(before,after)
             #語音進出紀錄
             if voice_updata:
-                voice_log_dict = Jsondb.get_channel_dict("voice_log")
+                voice_log_dict = nclient.get_notice_dict("voice_log")
                 if guildid in voice_log_dict:
                     NowTime = datetime.datetime.now()
                     if before.channel and after.channel and before.channel != after.channel:
