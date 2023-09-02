@@ -85,5 +85,5 @@ class Forecast():
             text = f"{data['Wx']}\n高低溫:{data['maxT']}/{data['minT']}\n{data['Cl']}"
             embed.add_field(name=data['name'],value=text)
         embed.timestamp = datetime.datetime.now()
-        embed.set_footer(text=f'時間為{self.timestart}至{self.timeend}')
+        embed.set_footer(text=f'{self.timestart}至{self.timeend}')
         return embed

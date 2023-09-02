@@ -50,8 +50,20 @@ class event(Cog_Extension):
                     await channel.send(f"{message.author.name} 打出了：{message.content}")
                 except Exception as e:
                     print(e)
-
-        #跨群聊天Ver.1.0
+        
+            #洗頻防治
+            spam_count = 0
+            async for past_message in message.channel.history(limit=6,oldest_first=True,after=datetime.datetime.now()-datetime.timedelta(seconds=10)):
+                #if past_message.author == message.author and past_message.content == message.content:
+                if past_message.author == message.author:
+                    spam_count += 1
+            
+            if spam_count >= 5 and not message.author.timed_out:
+                await message.author.timeout_for(duration=datetime.timedelta(seconds=60),reason="發送多次重複訊息")
+                await message.channel.purge(limit=5)
+                await message.channel.send(f"{message.author.mention} 請不要發送重複訊息")
+                
+            #跨群聊天Ver.1.0
         # if not message.author.bot and message.channel.id in crass_chat_channels:
         #     await message.delete()
 

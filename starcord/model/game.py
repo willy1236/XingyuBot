@@ -482,12 +482,12 @@ class ApexCrafting():
         text = ""
         for item in self.daily_item:
             text += f"{item.name_tw} {item.cost}\n"
-        embed.add_field(name="每日物品",value=text[:-2],inline=False)
+        embed.add_field(name="每日物品",value=text[:-1],inline=False)
         
         text = ""
         for item in self.weekly_item:
             text += f"{item.name_tw} {item.cost}\n"
-        embed.add_field(name="每週物品",value=text[:-2],inline=False)
+        embed.add_field(name="每週物品",value=text[:-1],inline=False)
         embed.timestamp = datetime.now()
         embed.set_footer(text='更新時間')
         return embed

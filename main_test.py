@@ -1,7 +1,7 @@
 import requests,genshin,asyncio,discord,secrets,time,datetime
 from enum import Enum
 #from pydantic import BaseModel
-from starcord.clients import RiotClient
+from starcord.clients import RiotClient,StarClient
 from starcord.database.file import CsvDatabase
 
 # class MyClass:
@@ -47,6 +47,7 @@ def test(*arg):
         print(i)
 
 test()
+
 # db = CsvDatabase()
 # r = db.get_row_by_column_value(db.lol_champion,"name_tw","凱莎")
 # print(r.loc["name_en"])

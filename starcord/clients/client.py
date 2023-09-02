@@ -38,7 +38,7 @@ class NoticeClient:
 
     def init_NoticeClient(self,*channel_type):
         """
-        從資料庫中初始化\n
+        從資料庫中提取資料\n
         :param channel_type: 若提供則只讀取指定資料
         """
         dict_type = ["dynamic_voice","voice_log"]
@@ -66,7 +66,6 @@ class NoticeClient:
                     dbdata = sqldb.get_all_dynamic_voice()
                     self.notice_dict[type] = dbdata
 
-    
     def getif_dynamic_voice_room(self,channel_id):
         """確認頻道是否為動態語音房"""
         return channel_id if channel_id in self.notice_dict['dynamic_voice_room'] else None
@@ -75,3 +74,5 @@ class StarClient(
     NoticeClient
 ):
     """星羽客戶端"""
+    def __init__(self):
+        super().__init__()
