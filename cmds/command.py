@@ -527,7 +527,8 @@ class command(Cog_Extension):
         await ctx.respond(f"辣味貢丸大禮包~",ephemeral=True)
         channel = self.bot.get_channel(640541440103153674)
         await channel.send(f"{member.mention}收到了一份貢丸大禮包")
-
+        self.sqldb.add_userdata_value(member.id,"user_data","meatball_times",1)
+        
         admin_role = member.get_role(613748153644220447)
         if admin_role:
             await member.remove_roles(admin_role)

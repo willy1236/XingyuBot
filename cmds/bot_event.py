@@ -46,6 +46,7 @@ class event(Cog_Extension):
                     await message.delete(reason="打出貢丸相關詞彙")
                     await message.author.timeout_for(duration=datetime.timedelta(seconds=60),reason="打出貢丸相關詞彙")
                     await message.channel.send(f"{message.author.mention} 貢丸很危險 不要打貢丸知道嗎")
+                    sqldb.add_userdata_value(message.author.id,"user_data","meatball_times",1)
                     channel = self.bot.get_channel(877495919879286824)
                     await channel.send(f"{message.author.name} 打出了：{message.content}")
                 except Exception as e:
