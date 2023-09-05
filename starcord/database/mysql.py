@@ -78,7 +78,7 @@ class MySQLDatabase():
         self.connection.commit()
         
     def add_userdata_value(self,user_id:int,table:str,column:str,value):
-        self.cursor.execute(f"INSERT INTO `{table}` SET user_id = {user_id}, {column} = {value} ON DUPLICATE KEY UPDATE `{table}` SET `{column}` = `{column}` + `{value}`;")
+        self.cursor.execute(f"INSERT INTO `{table}` SET user_id = {user_id}, {column} = {value} ON DUPLICATE KEY UPDATE `{column}` = `{column}` + {value};")
         self.connection.commit()
 
     # 遊戲資料類
