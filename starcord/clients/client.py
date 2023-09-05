@@ -9,10 +9,16 @@ class BatClient:
 class GameClient:
     """遊戲查詢系統"""
 
+class PollClient:
+    """todo:投票系統"""
+
+class GiveawayClient:
+    """todo:抽獎系統"""
+
 class NoticeClient:
     """
     通知頻道系統\n
-    :attr notice_dict: 存放各通知的頻道資料
+    :attr notice_dict: 緩存各通知的頻道資料
     """
     def __init__(self):
         self.notice_dict = {}

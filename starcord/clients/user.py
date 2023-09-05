@@ -48,7 +48,8 @@ class User():
         name: str
         point: int
         rcoin: int
-        max_sign_consecutive_days: int
+        max_sign_consecutive_days: int | None
+        meatball_times: int | None
 
     def __init__(self,data:dict,user_dc=None):
         self.user_dc = user_dc
@@ -57,6 +58,7 @@ class User():
         self.point = data.get('point')
         self.rcoin = data.get('rcoin')
         self.max_sign_consecutive_days = data.get('max_sign_consecutive_days',0)
+        self.meatball_times = data.get('meatball_times',0)
         
         #初始設定
         # self.id = str(userid)
@@ -84,7 +86,9 @@ class User():
         embed.add_field(name='PT點數',value=self.point)
         embed.add_field(name='Rcoin',value=self.rcoin)
         embed.add_field(name='連續簽到最高天數',value=self.max_sign_consecutive_days)
-        embed.add_field(name='遊戲資料',value="/game find")
+        if self.meatball_times:
+            embed.add_field(name='貢丸次數',value=self.meatball_times)
+        embed.add_field(name='遊戲資料',value="/game find",inline=False)
         embed.add_field(name='寵物',value="/pet check",inline=False)
         # embed.add_field(name='生命值',value=self.hp)
         # if self.pet.has_pet:
