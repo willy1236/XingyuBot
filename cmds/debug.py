@@ -3,7 +3,7 @@ from datetime import datetime, timezone, timedelta
 from discord.ext import commands,tasks
 
 from core.classes import Cog_Extension
-from starcord import Jsondb
+from starcord import Jsondb,UserClient
 from starcord.errors import *
 from starcord.types.game import DatabaseGame
 from starcord.rpg.map import sunmon_area

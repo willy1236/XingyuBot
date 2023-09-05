@@ -64,8 +64,8 @@ class MySQLDatabase():
     def get_user(self,user_id:int):
         self.cursor.execute(f"USE `database`;")
         self.cursor.execute(f'SELECT * FROM `user_data`,`user_point` WHERE `user_data`.`user_id` = %s;',(str(user_id),))
-        record = self.cursor.fetchone()
-        return record
+        record = self.cursor.fetchall()
+        return record[0]
 
     def set_user(self,id:str,name:str=None):
         self.cursor.execute(f"USE `database`;")
@@ -78,7 +78,8 @@ class MySQLDatabase():
         self.connection.commit()
         
     def add_userdata_value(self,user_id:int,table:str,column:str,value):
-        self.cursor.execute(f"INSERT INTO `{table}` SET user_id = {user_id}, {column} = {value} ON DUPLICATE KEY UPDATE `user_id` = {user_id}, `{column}` = `{column}` + {value};")
+        self.cursor.execute(f"USE `database`;")
+        self.cursor.execute(f"INSERT INTO `{table}` SET user_id = {user_id}, {column} = {str(value)} ON DUPLICATE KEY UPDATE `user_id` = {user_id}, `{column}` = CASE WHEN `{column}` IS NOT NULL THEN `{column}` + {value} ELSE {value} END;")
         self.connection.commit()
 
     # 遊戲資料類
