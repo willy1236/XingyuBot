@@ -25,7 +25,7 @@ class role_playing_game(Cog_Extension):
     @commands.slash_command(description='查看用戶資訊')
     async def ui(self,ctx:discord.ApplicationContext,user_dc:discord.Option(discord.Member,name='用戶',description='留空以查詢自己',default=None)):
         user_dc = user_dc or ctx.author
-        user = UserClient.get_user(user_dc.id)
+        user = UserClient.get_user(user_dc.id,user_dc)
         await ctx.respond(embed=user.desplay())
 
     @commands.slash_command(description='查看背包（開發中）')
