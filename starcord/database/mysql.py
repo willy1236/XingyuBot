@@ -63,7 +63,7 @@ class MySQLDatabase():
 
     def get_user(self,user_id:int):
         self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f'SELECT * FROM `user_data`,`user_point` WHERE `user_data`.`user_id` = %s;',(str(user_id),))
+        self.cursor.execute(f'SELECT * FROM `user_data` LEFT JOIN `user_point` ON `user_data`.`user_id` =  `user_point`.`user_id` WHERE `user_data`.`user_id` = %s;',(str(user_id),))
         record = self.cursor.fetchall()
         if record:
             return record[0]
