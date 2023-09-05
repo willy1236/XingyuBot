@@ -65,7 +65,8 @@ class MySQLDatabase():
         self.cursor.execute(f"USE `database`;")
         self.cursor.execute(f'SELECT * FROM `user_data`,`user_point` WHERE `user_data`.`user_id` = %s;',(str(user_id),))
         record = self.cursor.fetchall()
-        return record[0]
+        if record:
+            return record[0]
 
     def set_user(self,id:str,name:str=None):
         self.cursor.execute(f"USE `database`;")
