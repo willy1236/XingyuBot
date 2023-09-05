@@ -82,7 +82,7 @@ class User():
         # self.pet = Pet(self.id)
 
     def desplay(self):
-        embed = BotEmbed.general(name=self.user_dc.name if self.user_dc else self.name,icon_url=self.user_dc.avatar if self.user_dc else None)
+        embed = BotEmbed.general(name=self.user_dc.name if self.user_dc else self.name,icon_url=self.user_dc.avatar if self.user_dc else discord.Embed.Empty)
         embed.add_field(name='PT點數',value=self.point)
         embed.add_field(name='Rcoin',value=self.rcoin)
         embed.add_field(name='連續簽到最高天數',value=self.max_sign_consecutive_days)
