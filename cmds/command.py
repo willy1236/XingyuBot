@@ -540,8 +540,8 @@ class command(Cog_Extension):
                      title:discord.Option(str,name='標題',description='投票標題，限45字內'),
                      options:discord.Option(str,name='選項',description='投票選項，最多輸入10項，每個選項請用英文,隔開')):
         options = options.split(",")
-        if len(options) > 10:
-            await ctx.respond(f"錯誤：投票選項超過10項",ephemeral=True)
+        if len(options) > 10 or len(options) < 2:
+            await ctx.respond(f"錯誤：投票選項超過10項或小於2項",ephemeral=True)
             return
         
         poll_id = self.sqldb.add_poll(title,ctx.author.id,datetime.datetime.now(),None,ctx.guild.id)
