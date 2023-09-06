@@ -3,7 +3,8 @@ from discord.ext import commands
 from threading import Thread
 
 from starcord.ui_element.button import *
-from starcord import Jsondb,log
+from starcord.ui_element.view import *
+from starcord import Jsondb,log,sqldb
 
 #Bot1:dc小幫手, Bep:Bep, Bot2:RO
 jdata = Jsondb.jdata
@@ -58,8 +59,14 @@ async def on_ready():
         log.warning(f">> Cogs not all loaded, {len(bot.cogs)}/{len(os.listdir('./cmds'))} loaded<<")
     
     if bot_code == 'Bot1':
-        #bot.add_view(ReactRole_button())
-        pass
+        dbdata = sqldb.get_all_active_polls()
+        now = datetime.datetime.now()
+        for poll in dbdata:
+            if now - poll['created_at'] > datetime.timedelta(days=14):
+                #sqldb.remove_poll(poll['poll_id'])
+                sqldb.update_poll(poll['poll_id'],"is_on",0)
+            else:
+                bot.add_view(PollView(poll['poll_id']),message_id=poll['message_id'])
     
 
 #load

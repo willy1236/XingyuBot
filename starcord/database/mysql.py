@@ -42,49 +42,42 @@ class MySQLDatabase():
         self.cursor.execute(f"TRUNCATE TABLE `{table}`;")
 
     # 用戶資料類
-    def update_userdata(self,discord_id:int,table:str,column:str,value):
+    def set_userdata(self,discord_id:int,table:str,column:str,value):
+        """設定或更新用戶資料（只要PK為discord_id的皆可）"""
         self.cursor.execute(f"USE `database`;")
         self.cursor.execute(f"INSERT INTO `{table}` SET discord_id = {discord_id}, {column} = {value} ON DUPLICATE KEY UPDATE discord_id = {discord_id}, {column} = {value};")
         self.connection.commit()
 
     def get_userdata(self,discord_id:int,table:str='user_data'):
+        """取得用戶資料（只要PK為discord_id的皆可）"""
         self.cursor.execute(f"USE `database`;")
         self.cursor.execute(f'SELECT * FROM `{table}` WHERE discord_id = %s;',(discord_id,))
-        records = self.cursor.fetchone()
-        return records
+        records = self.cursor.fetchall()
+        if records:
+            return records[0]
 
     def remove_userdata(self,discord_id:int,table:str='user_data'):
+        """移除用戶資料（只要PK為discord_id的皆可）"""
         self.cursor.execute(f"USE `database`;")
         self.cursor.execute(f"DELETE FROM `{table}` WHERE `discord_id` = %s;",(discord_id,))
         self.connection.commit()
 
+    def add_userdata_value(self,discord_id:int,table:str,column:str,value):
+        """增加用戶數值資料的值（只要PK為discord_id的皆可）"""
+        self.cursor.execute(f"USE `database`;")
+        self.cursor.execute(f"INSERT INTO `{table}` SET discord_id = {discord_id}, {column} = {value} ON DUPLICATE KEY UPDATE `discord_id` = {discord_id}, `{column}` = CASE WHEN `{column}` IS NOT NULL THEN `{column}` + {value} ELSE {value} END;")
+        self.connection.commit()
+
     def get_user(self,discord_id:int):
         self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f'SELECT * FROM `user_data` LEFT JOIN `user_point` ON `user_data`.`discord_id` =  `user_point`.`discord_id` WHERE `user_data`.`discord_id` = %s;',(discord_id,))
+        self.cursor.execute(f'SELECT * FROM `user_data` LEFT JOIN `user_point` ON `user_data`.`discord_id` = `user_point`.`discord_id` WHERE `user_data`.`discord_id` = %s;',(discord_id,))
         record = self.cursor.fetchall()
         if record:
             return record[0]
 
-    def set_user(self,id:str,name:str=None):
-        self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f"INSERT INTO `user_data` VALUES(%s,%s);",(id,name))
-        self.connection.commit()
-
-    def remove_user(self,id:str):
-        self.cursor.execute(f"USE `database`;")
-        self.cursor.execute("DELETE FROM `user_data` WHERE `id` = %s;",(str(id),))
-        self.connection.commit()
-        
-    def add_userdata_value(self,discord_id:int,table:str,column:str,value):
-        self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f"INSERT INTO `{table}` SET discord_id = {discord_id}, {column} = {str(value)} ON DUPLICATE KEY UPDATE `discord_id` = {discord_id}, `{column}` = CASE WHEN `{column}` IS NOT NULL THEN `{column}` + {value} ELSE {value} END;")
-        self.connection.commit()
-
     # 遊戲資料類
     def check_user_game_data(self,discord_id:int):
-        self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f'SELECT * FROM `game_data` WHERE discord_id = %s;',(str(discord_id),))
-        records = self.cursor.fetchone()
+        records = self.get_userdata(discord_id,"game_data")
         return records or discord_id
     
     def set_game_data(self,discord_id:int,game:str,player_name:str=None,player_id:str=None,account_id:str=None,other_id:str=None):
@@ -94,16 +87,16 @@ class MySQLDatabase():
 
     def remove_game_data(self,discord_id:int,game:str):
         self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f"DELETE FROM `game_data` WHERE `id` = %s AND `game` = %s;",(discord_id,game))
+        self.cursor.execute(f"DELETE FROM `game_data` WHERE `discord_id` = %s AND `game` = %s;",(discord_id,game))
         self.connection.commit()
 
     def get_game_data(self,discord_id:int,game:str=None):
         self.cursor.execute(f"USE `database`;")
         if game:
-            self.cursor.execute(f"SELECT * FROM `game_data` WHERE `id` = %s AND `game` = %s;",(discord_id,game))
+            self.cursor.execute(f"SELECT * FROM `game_data` WHERE `discord_id` = %s AND `game` = %s;",(discord_id,game))
             records = self.cursor.fetchone()
         else:
-            self.cursor.execute(f"SELECT * FROM `game_data` WHERE `id` = %s;",(discord_id,))
+            self.cursor.execute(f"SELECT * FROM `game_data` WHERE `discord_id` = %s;",(discord_id,))
             records = self.cursor.fetchall()
         return records
 
@@ -469,6 +462,7 @@ class MySQLDatabase():
     def add_warning(self,discord_id:int,moderate_type:str,moderate_user:str,create_guild:str,create_time:datetime.datetime,reason:str=None,last_time:str=None):
         self.cursor.execute(f"INSERT INTO `database`.`user_moderate` VALUES(%s,%s,%s,%s,%s,%s,%s,%s);",(None,discord_id,moderate_type,moderate_user,create_guild,create_time,reason,last_time))
         self.connection.commit()
+        return self.cursor.lastrowid
 
     def get_warning(self,warning_id:int):
         self.cursor.execute(f"SELECT * FROM `database`.`user_moderate` WHERE `warning_id` = {warning_id};")
@@ -483,3 +477,65 @@ class MySQLDatabase():
     def remove_warning(self,warning_id:int):
         self.cursor.execute(f"DELETE FROM `database`.`user_moderate` WHERE warning_id = {warning_id};")
         self.connection.commit()
+
+    #投票類
+    def add_poll(self,title:str,created_user:int,created_at:datetime,message_id,guild_id):
+        self.cursor.execute(f"INSERT INTO `database`.`poll_data` VALUES(%s,%s,%s,%s,%s,%s,%s);",(None,title,created_user,created_at,True,message_id,guild_id))
+        self.connection.commit()
+        return self.cursor.lastrowid
+    
+    def remove_poll(self,poll_id:int):
+        self.cursor.execute(f"DELETE FROM `database`.`poll_data` WHERE `poll_id` = {poll_id};")
+        self.cursor.execute(f"DELETE FROM `database`.`user_poll` WHERE `poll_id` = {poll_id};")
+        self.cursor.execute(f"DELETE FROM `database`.`poll_options` WHERE `poll_id` = {poll_id};")
+        self.connection.commit()
+
+    def get_poll(self,poll_id:int):
+        self.cursor.execute(f"SELECT * FROM `database`.`poll_data` WHERE `poll_id` = {poll_id};")
+        records = self.cursor.fetchall()
+        return records[0]
+    
+    def update_poll(self,poll_id:int,column:str,value):
+        self.cursor.execute(f"UPDATE `database`.`poll_data` SET {column} = %s WHERE `poll_id` = %s;",(value,poll_id))
+        self.connection.commit()
+
+    def get_all_active_polls(self):
+        self.cursor.execute(f"SELECT * FROM `database`.`poll_data` WHERE `is_on` = 1;")
+        records = self.cursor.fetchall()
+        return records
+
+    def get_poll_options(self,poll_id:int):
+        self.cursor.execute(f"SELECT * FROM `database`.`poll_options` WHERE `poll_id` = {poll_id};")
+        records = self.cursor.fetchall()
+        return records
+
+    def add_poll_option(self,poll_id:int,options:list):
+        list = []
+        count = 0
+        for option in options:
+            count += 1
+            list.append([poll_id, count, option])
+        self.cursor.executemany(f"INSERT INTO `database`.`poll_options` VALUES(%s,%s,%s);",list)
+        self.connection.commit()
+
+    def add_user_poll(self,poll_id:int,discord_id:int,vote_option:int,vote_at:datetime):
+        self.cursor.execute(f"INSERT INTO `database`.`user_poll` VALUES(%s,%s,%s,%s) ON DUPLICATE KEY UPDATE `vote_option` = %s, `vote_at` = %s;",(poll_id,discord_id,vote_option,vote_at,vote_option,vote_at))
+        self.connection.commit()
+    
+    def remove_user_poll(self,poll_id:int,discord_id:int):
+        self.cursor.execute(f"DELETE FROM `database`.`user_poll` WHERE `poll_id` = {poll_id} AND `discord_id` = {discord_id};")
+        self.connection.commit()
+    
+    def get_users_poll(self,poll_id:int):
+        self.cursor.execute(f"SELECT * FROM `database`.`user_poll` WHERE poll_id = {poll_id};")
+        records = self.cursor.fetchall()
+        return records
+    
+    def get_poll_vote_count(self,poll_id:int):
+        self.cursor.execute(f"SELECT vote_option,COUNT(*) as count FROM  `database`.`user_poll` WHERE `poll_id` = {poll_id} GROUP BY vote_option;")
+        records = self.cursor.fetchall()
+        dict = {}
+        if records:
+            for i in records:
+                dict[str(i["vote_option"])] = i["count"]
+        return dict

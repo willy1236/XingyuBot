@@ -7,6 +7,7 @@ from core.classes import Cog_Extension
 from starcord import Jsondb,BRS,log,BotEmbed,ChoiceList
 from starcord.funtions import find,random_color
 from starcord.ui_element.button import Delete_Add_Role_button
+from starcord.ui_element.view import PollView
 from starcord.errors import CommandError
 
 from mysql.connector.errors import Error as sqlerror
@@ -22,7 +23,8 @@ class command(Cog_Extension):
 
     bet = SlashCommandGroup("bet", "賭盤相關指令")
     role = SlashCommandGroup("role", "身分組管理指令")
-    busytime = SlashCommandGroup("busytime", "指令")
+    busytime = SlashCommandGroup("busytime", "忙碌時間統計指令")
+    poll = SlashCommandGroup("poll", "投票相關指令")
 
     @role.command(description='查詢身分組數')
     async def count(self,ctx,user_list:discord.Option(str,required=False,name='要查詢的用戶',description='多個用戶請用空格隔開，或可輸入default查詢常用人選')):
@@ -529,9 +531,26 @@ class command(Cog_Extension):
         await channel.send(f"{member.mention}收到了一份貢丸大禮包")
         self.sqldb.add_userdata_value(member.id,"user_data","meatball_times",1)
         
-        admin_role = member.get_role(613748153644220447)
-        if admin_role:
-            await member.remove_roles(admin_role)
+        # admin_role = member.get_role(613748153644220447)
+        # if admin_role:
+        #     await member.remove_roles(admin_role)
+
+    @poll.command(description='創建投票',guild_ids=main_guild)
+    async def create(self,ctx,
+                     title:discord.Option(str,name='標題',description='投票標題，限45字內'),
+                     options:discord.Option(str,name='選項',description='投票選項，最多輸入10項，每個選項請用英文,隔開')):
+        options = options.split(",")
+        if len(options) > 10:
+            await ctx.respond(f"錯誤：投票選項超過10項",ephemeral=True)
+            return
+        
+        poll_id = self.sqldb.add_poll(title,ctx.author.id,datetime.datetime.now(),None,ctx.guild.id)
+        self.sqldb.add_poll_option(poll_id,options)
+        
+        view = PollView(poll_id)
+        embed = BotEmbed.general(name=ctx.author.name,icon_url=ctx.author.avatar.url,title=title,description=f"投票ID：{poll_id}")
+        message = await ctx.respond(embed=embed,view=view)
+        self.sqldb.update_poll(poll_id,"message_id",message.id)
 
 def setup(bot):
     bot.add_cog(command(bot))

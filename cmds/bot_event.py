@@ -54,10 +54,13 @@ class event(Cog_Extension):
         
             #洗頻防治
             spam_count = 0
-            async for past_message in message.channel.history(limit=6,oldest_first=True,after=datetime.datetime.now()-datetime.timedelta(seconds=10)):
-                #if past_message.author == message.author and past_message.content == message.content:
-                if past_message.author == message.author:
-                    spam_count += 1
+            try:
+                async for past_message in message.channel.history(limit=6,oldest_first=True,after=datetime.datetime.now()-datetime.timedelta(seconds=10)):
+                    #if past_message.author == message.author and past_message.content == message.content:
+                    if past_message.author == message.author:
+                        spam_count += 1
+            except discord.errors.Forbidden:
+                pass
             
             if spam_count >= 5 and not message.author.timed_out:
                 await message.author.timeout_for(duration=datetime.timedelta(seconds=60),reason="發送多次重複訊息")
