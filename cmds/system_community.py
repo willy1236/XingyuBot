@@ -2,7 +2,7 @@ import discord,datetime
 from core.classes import Cog_Extension
 from discord.commands import SlashCommandGroup
 from starcord.clients import TwitchAPI,YoutubeAPI
-from starcord import sqldb,BotEmbed
+from starcord import sqldb,BotEmbed,nclient
 
 class system_community(Cog_Extension):
     twitch = SlashCommandGroup("twitch", "Twitch相關指令")
@@ -25,9 +25,9 @@ class system_community(Cog_Extension):
             else:
                 await ctx.respond(f'設定成功：{user.display_name}({user.login})的開台通知將會發送在{channel.mention}')
                 
-            from .task import scheduler,update_channel_dict_list
+            from .task import scheduler
             time = datetime.datetime.now() + datetime.timedelta(seconds=1)
-            scheduler.add_job(update_channel_dict_list,"date",run_date=time,args=["twitch"])
+            scheduler.add_job(nclient.init_NoticeClient,"date",run_date=time,args=["twitch"])
         else:
             await ctx.respond(f'錯誤：找不到用戶{twitch_user}')
 
@@ -37,9 +37,9 @@ class system_community(Cog_Extension):
         sqldb.remove_notice_community('twitch',twitch_user,guildid)
         await ctx.respond(f'已移除 {twitch_user} 的開台通知')
         
-        from .task import scheduler,update_channel_dict_list
+        from .task import scheduler
         time = datetime.datetime.now() + datetime.timedelta(seconds=1)
-        scheduler.add_job(update_channel_dict_list,"date",run_date=time,args=["twitch"])
+        scheduler.add_job(nclient.init_NoticeClient,"date",run_date=time,args=["twitch"])
 
     @twitch.command(description='確認twitch開台通知')
     async def notice(self,ctx,twitch_user:discord.Option(str,required=True,name='twitch用戶')):
