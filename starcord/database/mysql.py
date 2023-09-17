@@ -1,6 +1,6 @@
 import mysql.connector,datetime
 from mysql.connector.errors import Error as sqlerror
-from starcord.types import DBGame
+from starcord.types import DBGame,Coins
 
 class MySQLDatabase():
     def __init__(self,**settings):
@@ -124,22 +124,31 @@ class MySQLDatabase():
 
 
     # 貨幣類
-    def get_point(self,discord_id:int):
+    def get_scoin(self,discord_id:int) -> int:
+        """取得用戶星幣數"""
         self.cursor.execute(f"USE `database`;")
         self.cursor.execute(f'SELECT * FROM `user_point` WHERE discord_id = %s;',(discord_id,))
-        records = self.cursor.fetchone()
-        return records
+        records = self.cursor.fetchall()
+        if records:
+            return records[0].get("scoin",0)
 
-    def getif_point(self,discord_id:int,point:int):
+    def getif_scoin(self,discord_id:int,point:int) -> int | None:
+        """取得星幣足夠的用戶
+        :return: 若足夠則回傳傳入的discord_id
+        """
         self.cursor.execute(f"USE `database`;")
         self.cursor.execute(f'SELECT `discord_id` FROM `user_point` WHERE discord_id = %s AND point >= %s;',(discord_id,point))
-        records = self.cursor.fetchone()
-        return records
+        records = self.cursor.fetchall()
+        if records:
+            return records[0].get("discord_id")
 
-    def give_point(self,giver_id:str,given_id:str,amount:int):
-        self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f'SELECT * FROM `user_point` WHERE discord_id = %s AND point >= %s;',(giver_id,amount))
-        records = self.cursor.fetchone()
+    def transfer_scoin(self,giver_id:int,given_id:int,amount:int):
+        """轉移星幣
+        :param giver_id: 給予點數者
+        :param given_id: 被給予點數者
+        :param amount: 轉移的點數數量
+        """
+        records = self.getif_scoin(giver_id,amount)
         if records:
             self.cursor.execute(f"UPDATE `user_point` SET point = point - %s WHERE discord_id = %s;",(amount,giver_id))
             self.cursor.execute(f"INSERT INTO `user_point` SET discord_id = %s, point = %s ON DUPLICATE KEY UPDATE discord_id = %s, point = point + %s",(given_id,amount,given_id,amount))
@@ -148,26 +157,17 @@ class MySQLDatabase():
         else:
             return "點數不足"
 
-    def update_point(self,mod,discord_id:str,amount:int):
+    def update_coins(self,discord_id:str,mod,coin_type:Coins,amount:int):
+        """更改用戶的點數數量"""
+        coin_type = Coins(coin_type)
         self.cursor.execute(f"USE `database`;")
         if mod == 'set':
-            self.cursor.execute(f"REPLACE INTO `user_point`(discord_id,point) VALUES(%s,%s);",(discord_id,amount))
+            self.cursor.execute(f"REPLACE INTO `user_point`(discord_id,{coin_type.value}) VALUES(%s,%s);",(discord_id,amount))
         elif mod == 'add':
-            self.cursor.execute(f"UPDATE `user_point` SET point = point + %s WHERE discord_id = %s;",(amount,discord_id))
+            self.cursor.execute(f"UPDATE `user_point` SET {coin_type.value} = {coin_type.value} + %s WHERE discord_id = %s;",(amount,discord_id))
         else:
             raise ValueError("mod must be 'set' or 'add'")
         self.connection.commit()
-
-    def update_rcoin(self,discord_id:int,mod,amount:int):
-        self.cursor.execute(f"USE `database`;")
-        if mod == 'set':
-            self.cursor.execute(f"REPLACE INTO `user_point`(discord_id,rcoin) VALUES(%s,%s);",(discord_id,amount))
-        elif mod == 'add':
-            self.cursor.execute(f"UPDATE `user_point` SET rcoin = rcoin + %s WHERE discord_id = %s;",(amount,discord_id))
-        else:
-            raise ValueError("mod must be 'set' or 'add'")
-        self.connection.commit()
-
 
     # 簽到類
     def user_sign(self,discord_id:int):
@@ -188,10 +188,12 @@ class MySQLDatabase():
         self.cursor.execute(f"UPDATE `user_data` AS `data` JOIN `user_sign` AS `sign` ON `data`.`discord_id` = `sign`.`discord_id` SET `data`.`max_sign_consecutive_days` = `sign`.`consecutive_days` WHERE `sign`.`discord_id` = {discord_id} AND (`data`.`max_sign_consecutive_days` < `sign`.`consecutive_days` OR `data`.`max_sign_consecutive_days` IS NULL);")
         self.connection.commit()
 
-    def sign_add_coin(self,discord_id:int,point:int=0,Rcoin:int=0):
+    def sign_add_coin(self,discord_id:int,scoin:int=0,Rcoin:int=0):
+        """簽到獎勵點數"""
         self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f"INSERT INTO `user_point` SET discord_id = %s, point = %s,rcoin = %s ON DUPLICATE KEY UPDATE point = point + %s, rcoin = rcoin + %s",(discord_id,point,Rcoin,point,Rcoin))
+        self.cursor.execute(f"INSERT INTO `user_point` SET discord_id = %s, scoin = %s,rcoin = %s ON DUPLICATE KEY UPDATE scoin = scoin + %s, rcoin = rcoin + %s",(discord_id,scoin,Rcoin,scoin,Rcoin))
         self.connection.commit()
+
 
     # hoyolib
     def set_hoyo_cookies(self,discord_id:int,ltuid:str,ltoken:str,cookie_token:str):
@@ -222,7 +224,7 @@ class MySQLDatabase():
         self.connection.commit()
 
     # 通知頻道類
-    def set_notice_channel(self,guild_id:int,notice_type:str,channel_id:int,role_id:int=None):    
+    def set_notice_channel(self,guild_id:int,notice_type:str,channel_id:int,role_id:int=None):
         self.cursor.execute(f"USE `database`;")
         self.cursor.execute(f"INSERT INTO `notice_channel` VALUES(%s,%s,%s,%s) ON DUPLICATE KEY UPDATE `guild_id` = %s, `notice_type` = %s, `channel_id` = %s, `role_id` = %s",(guild_id,notice_type,channel_id,role_id,guild_id,notice_type,channel_id,role_id))
         self.connection.commit()

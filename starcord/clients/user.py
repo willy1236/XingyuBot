@@ -2,9 +2,11 @@ import random,datetime,time,discord
 from typing import TYPE_CHECKING
 from starcord.database import sqldb
 from starcord.utility import BotEmbed
+from starcord.types import DBGame,Coins
+from .client import GameClient,PointClient
 
 class UserClient:
-    """有關用戶調用之端口"""
+    """用戶系統"""
     def __init__(self):
         pass
 
@@ -44,45 +46,26 @@ class User():
     '''基本用戶'''
     if TYPE_CHECKING:
         user_dc: discord.User
-        id: int
+        discord_id: int
         name: str
         point: int
         rcoin: int
-        max_sign_consecutive_days: int | None
+        max_sign_consecutive_days: int
         meatball_times: int | None
 
     def __init__(self,data:dict,user_dc=None):
         self.user_dc = user_dc
-        self.id = data.get('user_id')
+        self.discord_id = data.get('discord_id')
         self.name = data.get('name')
-        self.point = data.get('point')
-        self.rcoin = data.get('rcoin')
-        self.max_sign_consecutive_days = data.get('max_sign_consecutive_days',0)
-        self.meatball_times = data.get('meatball_times',0)
-        
-        #初始設定
-        # self.id = str(userid)
-        # if not self.id in udata:
-        #     self.setup()
-        
-        #基本資料
-        # self.point = Point(self.id)
-        # self.rcoin = Rcoin(self.id)
-        # self.name = udata[self.id].get('name',dcname)
-        # self.weapon = udata[self.id].get('weapon')
-        
-        #RPG數值
-        # self.hp = udata[self.id].get('hp',10)
-        # #if not "atk" in udata[self.id]:
-        # #    self.RPG_setup()
-        # self.atk = udata[self.id].get('atk',1)
-
-        #其他相關
-        # self.bag = jbag.get(self.id)
-        # self.pet = Pet(self.id)
+        self.scoin = data.get('scoin') or 0
+        self.point = data.get('point') or 0
+        self.rcoin = data.get('rcoin') or 0
+        self.max_sign_consecutive_days = data.get('max_sign_consecutive_days') or 0
+        self.meatball_times = data.get('meatball_times')
 
     def desplay(self):
         embed = BotEmbed.general(name=self.user_dc.name if self.user_dc else self.name,icon_url=self.user_dc.avatar if self.user_dc else discord.Embed.Empty)
+        embed.add_field(name='星幣⭐',value=self.scoin)
         embed.add_field(name='PT點數',value=self.point)
         embed.add_field(name='Rcoin',value=self.rcoin)
         embed.add_field(name='連續簽到最高天數',value=self.max_sign_consecutive_days)
@@ -101,44 +84,22 @@ class User():
         """等同於 UserClient.get_pet()"""
         dbdata = UserClient.get_pet(self.id)
         return dbdata
-
-    # def setup(self):
-    #     udata = self.__db.udata
-    #     udata[self.id] = {}
-    #     self.__db.write('udata',udata)
     
-    # def RPG_setup(self):
-    #     udata = self.__db.udata
-    #     udata[self.id].get('atk',1)
-    #     self.__db.write('udata',udata)
-
-    # def get_bag(self):
-    #     dict = {}
-    #     pass
-
-    # def add_bag(self,items:list):
-    #     jbag = self.__db.jbag
-    #     ubag = jbag.get(self.id,{})
-    #     for i in items:
-    #         if i in ubag:
-    #             ubag[i] += 1
-    #         else:
-    #             ubag[i] = 1
-        
-    #     jbag[self.id] = ubag
-    #     self.__db.write('jbag',jbag)
-
+    def get_game(self,game:DBGame=None):
+        """等同於GameClient.get_user_game()"""
+        player_data = GameClient().get_user_game(self.discord_id,game)
+        return player_data
     
-
-    # def hp_add(self,amount:int):
-    #     udata = self.__db.udata
-    #     udata[self.id]['hp'] = self.hp+amount
-    #     self.__db.write('udata',udata)
-
-    # def hp_set(self,amount:int):
-    #     udata = self.__db.udata
-    #     udata[self.id]['hp'] = amount
-    #     self.__db.write('udata',udata)
+    def get_scoin(self,force_refresh=False):
+        """取得星幣數
+        :param force_refresh: 若是則刷新現有資料
+        """
+        if force_refresh or not hasattr(self,'scoin'):
+            self.scoin = PointClient().get_scoin(self.discord_id)
+        return self.scoin
+    
+    def update_coins(self,mod,coin_type:Coins,amount:int):
+        sqldb.update_coins(self.discord_id,mod,coin_type,amount)
 
 class RPGUser(User):
     '''RPG遊戲用戶'''

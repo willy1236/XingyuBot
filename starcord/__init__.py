@@ -2,7 +2,6 @@
 Discord機器人"星羽"用libary
 '''
 
-#from . import model
 from . import clients
 from .database import Jsondb,sqldb,mongedb
 from .clients import UserClient,NoticeClient,StarClient
@@ -25,7 +24,7 @@ log = create_logger('./logs',file_log,log_level)
 #     twitch_bot = None
 
 nclient = NoticeClient()
-#sclient = StarClient()
+sclient = StarClient()
 
 __all__ = [
     'Jsondb',
@@ -39,4 +38,5 @@ __all__ = [
     'StarException',
     'mongedb',
     'nclient',
+    'sclient',
 ]

@@ -11,6 +11,7 @@ from .user import *
 __all__ =[
     'NoticeClient',
     'GameClient',
+    'PointClient',
     'StarClient',
     'TwitchAPI',
     'YoutubeAPI',

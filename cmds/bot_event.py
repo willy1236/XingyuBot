@@ -159,14 +159,14 @@ class event(Cog_Extension):
                     }
                     new_channel = await guild.create_voice_channel(name=f'{user.name}的頻道', reason='動態語音：新增',category=category,overwrites=overwrites)
                     sqldb.set_dynamic_voice(new_channel.id,user.id,guild.id,None)
-                    nclient.set_lsit_in_notice_dict("dynamic_voice_room",new_data=new_channel.id)
+                    nclient.set_list_in_notice_dict("dynamic_voice_room",new_data=new_channel.id)
                     await user.move_to(new_channel)
 
                 #移除
                 elif before.channel and not after.channel and nclient.getif_dynamic_voice_room(before.channel.id) and not before.channel.members:
                     await before.channel.delete(reason="動態語音：移除")
                     sqldb.remove_dynamic_voice(before.channel.id)
-                    nclient.set_lsit_in_notice_dict("dynamic_voice_room",remove_data=before.channel.id)
+                    nclient.set_list_in_notice_dict("dynamic_voice_room",remove_data=before.channel.id)
 
             #舞台發言
             if after.suppress and after.channel and after.channel.category and after.channel.category.id == 1097158160709591130 and (user.get_role(1126820808761819197) or user.get_role(1130849778264195104)):

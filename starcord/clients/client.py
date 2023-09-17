@@ -1,6 +1,7 @@
+import random
 from starcord.database import sqldb
 from starcord.models.model import GameInfoPage,GameInfo
-from starcord.types import DBGame
+from starcord.types import DBGame,Coins
 from starcord.clients.game import *
 
 class WarningClient:
@@ -45,6 +46,37 @@ class GameClient:
 
 class PointClient:
     """點數系統"""
+    def get_scoin(self,discord_id):
+        """取得用戶星幣數"""
+        return sqldb.get_scoin(discord_id)
+    
+    def getif_scoin(self,discord_id,amount):
+        """取得星幣足夠的用戶
+        :return: 若足夠則回傳傳入的discord_id
+        """
+        return sqldb.getif_scoin(discord_id,amount)
+    
+    def transfer_scoin(self,giver_id:int,given_id:int,amount:int):
+        """轉移星幣
+        :param giver_id: 給予點數者
+        :param given_id: 被給予點數者
+        :param amount: 轉移的點數數量
+        """
+        return sqldb.transfer_scoin(giver_id,given_id,amount)
+    
+    def update_coins(self,discord_id:str,mod,coin_type:Coins,amount:int):
+        """更改用戶的各項點數數量"""
+        sqldb.update_coins(discord_id,mod,coin_type,amount)
+
+    def daily_sign(self,discord_id):
+        """每日簽到"""
+        code = sqldb.user_sign(discord_id)
+        if code:
+            return code
+        scoin_add  = random.randint(1,5)
+        rcoin_add = 0   # random.randint(3,5)
+        sqldb.sign_add_coin(discord_id,scoin_add,rcoin_add)
+        return [scoin_add, rcoin_add]
 
 class PollClient:
     """投票系統"""
@@ -54,7 +86,9 @@ class GiveawayClient:
 
 class NoticeClient:
     """
-    通知頻道系統\n
+    ### 通知頻道系統
+    由notice_dict進行緩存，使得讀取資料時可不用每次都讀取資料庫
+
     :attr notice_dict: 緩存各通知的頻道資料
     """
     def __init__(self):
@@ -68,7 +102,7 @@ class NoticeClient:
         """設定notice_dict資料(dict)"""
         self.notice_dict[channel_type] = data
     
-    def set_lsit_in_notice_dict(self,channel_type,new_data=None,remove_data=None):
+    def set_list_in_notice_dict(self,channel_type,new_data=None,remove_data=None):
         """更新notice_dict資料(list)"""
         dict_data = self.notice_dict[channel_type]
         if type(dict_data) != list:
@@ -115,7 +149,8 @@ class NoticeClient:
 
 class StarClient(
     NoticeClient,
-    GameClient
+    GameClient,
+    PointClient
 ):
     """整合各項系統的星羽客戶端"""
     def __init__(self):

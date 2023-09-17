@@ -52,3 +52,8 @@ class BusyTime(Enum):
     早上 = 1
     下午 = 2
     晚上 = 3
+
+class Coins(Enum):
+    POINT = "point"
+    RCOIN = "rcoin"
+    SCOIN = "scoin"

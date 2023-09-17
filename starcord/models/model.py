@@ -39,6 +39,7 @@ class GameInfoPage:
         for d in self.data:
             game = d.game.value
             name = d.player_name
-            embed.add_field(name=game, value=name, inline=False)
+            if name:
+                embed.add_field(name=game, value=name, inline=False)
         
         return embed
