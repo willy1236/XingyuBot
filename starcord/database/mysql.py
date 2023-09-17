@@ -1,6 +1,7 @@
 import mysql.connector,datetime
 from mysql.connector.errors import Error as sqlerror
-       
+from starcord.types import DBGame
+
 class MySQLDatabase():
     def __init__(self,**settings):
         '''MySQL 資料庫連接\n
@@ -76,24 +77,26 @@ class MySQLDatabase():
             return record[0]
 
     # 遊戲資料類
-    def check_user_game_data(self,discord_id:int):
-        records = self.get_userdata(discord_id,"game_data")
-        return records or discord_id
-    
-    def set_game_data(self,discord_id:int,game:str,player_name:str=None,player_id:str=None,account_id:str=None,other_id:str=None):
+    def set_game_data(self,discord_id:int,game:DBGame,player_name:str=None,player_id:str=None,account_id:str=None,other_id:str=None):
+        """設定遊戲資料"""
+        game = DBGame(game)
         self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f"REPLACE INTO `game_data` VALUES(%s,%s,%s,%s,%s,%s);",(discord_id,game,player_name,player_id,account_id,other_id))
+        self.cursor.execute(f"REPLACE INTO `game_data` VALUES(%s,%s,%s,%s,%s,%s);",(discord_id,game.value,player_name,player_id,account_id,other_id))
         self.connection.commit()
 
-    def remove_game_data(self,discord_id:int,game:str):
+    def remove_game_data(self,discord_id:int,game:DBGame):
+        """移除遊戲資料"""
+        game = DBGame(game)
         self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f"DELETE FROM `game_data` WHERE `discord_id` = %s AND `game` = %s;",(discord_id,game))
+        self.cursor.execute(f"DELETE FROM `game_data` WHERE `discord_id` = %s AND `game` = %s;",(discord_id,game.value))
         self.connection.commit()
 
-    def get_game_data(self,discord_id:int,game:str=None):
+    def get_game_data(self,discord_id:int,game:DBGame=None):
+        """獲取遊戲資料"""
         self.cursor.execute(f"USE `database`;")
         if game:
-            self.cursor.execute(f"SELECT * FROM `game_data` WHERE `discord_id` = %s AND `game` = %s;",(discord_id,game))
+            game = DBGame(game)
+            self.cursor.execute(f"SELECT * FROM `game_data` WHERE `discord_id` = %s AND `game` = %s;",(discord_id,game.value))
             records = self.cursor.fetchone()
         else:
             self.cursor.execute(f"SELECT * FROM `game_data` WHERE `discord_id` = %s;",(discord_id,))
@@ -102,9 +105,9 @@ class MySQLDatabase():
 
 
     # 身分組類
-    def get_role_save(self,id:str):
+    def get_role_save(self,discord_id:int):
         self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f'SELECT * FROM `role_save` WHERE discord_id = %s ORDER BY `time` DESC;',(id,))
+        self.cursor.execute(f'SELECT * FROM `role_save` WHERE discord_id = %s ORDER BY `time` DESC;',(discord_id,))
         records = self.cursor.fetchall()
         return records
 

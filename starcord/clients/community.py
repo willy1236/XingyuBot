@@ -1,6 +1,6 @@
 import requests
 from starcord.database import Jsondb
-from starcord.model.community import *
+from starcord.models.community import *
 from starcord.errors import Forbidden
 
 class CommunityInterface():

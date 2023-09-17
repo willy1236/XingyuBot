@@ -14,7 +14,7 @@ class LOLPlayer():
         self.summonerLevel = data.get('summonerLevel')
         self.profileIconId = data.get('profileIconId')
 
-    def desplay(self):
+    def desplay(self,dc_user=None):
         embed = BotEmbed.general(self.name)
         #embed.add_field(name="玩家名稱", value=self.name, inline=False)
         embed.add_field(name="召喚師等級", value=self.summonerLevel, inline=False)
@@ -360,7 +360,7 @@ class OsuPlayer():
         self.last_visit = self.e8_last_visit.strftime('%Y-%m-%d %H:%M:%S')
         self.url = f'https://osu.ppy.sh/users/{self.id}'
 
-    def desplay(self):
+    def desplay(self,dc_user=None):
         embed = BotEmbed.general("Osu玩家資訊",url=self.url)
         embed.add_field(name="名稱",value=self.name)
         embed.add_field(name="id",value=self.id)
@@ -445,7 +445,7 @@ class ApexPlayer():
         self.legends_selected_tacker = data['legends']['selected']['data']
         self.legends_selected_banner = data['legends']['selected']['ImgAssets']['banner'].replace(" ","%20")
 
-    def desplay(self):
+    def desplay(self,dc_user=None):
         embed = BotEmbed.simple("Apex玩家資訊")
         embed.add_field(name="名稱",value=self.name)
         embed.add_field(name="id",value=self.id)
@@ -549,7 +549,7 @@ class SteamUser():
         self.profileurl = data['profileurl']
         self.avatar = data['avatarfull']
     
-    def desplay(self):
+    def desplay(self,dc_user=None):
         embed = BotEmbed.simple("Stean用戶資訊")
         embed.add_field(name="用戶名稱",value=self.name)
         embed.add_field(name="用戶id",value=self.id)

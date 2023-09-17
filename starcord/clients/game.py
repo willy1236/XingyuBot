@@ -1,6 +1,6 @@
 import requests
 from starcord.database import Jsondb,sqldb
-from starcord.model.game import *
+from starcord.models.game import *
 from starcord.errors import ClientError
 class GameInterface():
     def __init__(self):

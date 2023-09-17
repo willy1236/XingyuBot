@@ -5,7 +5,7 @@ from discord.ext import commands,tasks
 from core.classes import Cog_Extension
 from starcord import Jsondb,UserClient
 from starcord.errors import *
-from starcord.types.game import DatabaseGame
+from starcord.types.game import DBGame
 from starcord.rpg.map import sunmon_area
 
 tz = timezone(timedelta(hours=+8))

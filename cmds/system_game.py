@@ -4,9 +4,10 @@ from discord.commands import SlashCommandGroup
 from datetime import timedelta,datetime
 
 from core.classes import Cog_Extension
-from starcord import BotEmbed,Jsondb,ChoiceList
+from starcord import BotEmbed,Jsondb,ChoiceList,sqldb
 from starcord.clients.game import *
-from starcord.types.game import DatabaseGame
+from starcord.clients import GameClient
+from starcord.types import DBGame
 
 # def player_search(url):
 #     response = requests.get(url)
@@ -54,12 +55,12 @@ class system_game(Cog_Extension):
         account_id = None
         other_id = None
 
-        game = DatabaseGame(game)
+        game = DBGame(game)
         unneed_verify = []
         if game in unneed_verify:
             player_name = value
         
-        elif game == DatabaseGame.STEAM:
+        elif game == DBGame.STEAM:
             APIdata = SteamInterface().get_user(value)
             if APIdata:
                 player_name = APIdata.name
@@ -68,7 +69,7 @@ class system_game(Cog_Extension):
                 await ctx.respond(f'錯誤:找不到此用戶',ephemeral=True)
                 return
         
-        elif game == DatabaseGame.LOL:
+        elif game == DBGame.LOL:
             APIdata = RiotClient().get_player_byname(value)
             if APIdata:
                 player_name = APIdata.name
@@ -79,7 +80,7 @@ class system_game(Cog_Extension):
                 await ctx.respond(f'錯誤:找不到此用戶',ephemeral=True)
                 return
 
-        elif game == DatabaseGame.APEX:
+        elif game == DBGame.APEX:
             APIdata = ApexInterface().get_player(value)
             if APIdata:
                 player_name = APIdata.name
@@ -88,7 +89,7 @@ class system_game(Cog_Extension):
                 await ctx.respond(f'錯誤:找不到此用戶',ephemeral=True)
                 return
 
-        elif game == DatabaseGame.OSU:
+        elif game == DBGame.OSU:
             APIdata = OsuInterface().get_player(value)
             if APIdata:
                 player_name = APIdata.name
@@ -109,42 +110,16 @@ class system_game(Cog_Extension):
         user = user or ctx.author
         userid = str(user.id)
         
-        if game:
-            dbdata = self.sqldb.get_game_data(userid,game)
-            if dbdata:
-                game = DatabaseGame(game)
-                if game == DatabaseGame.STEAM:
-                    APIdata = SteamInterface().get_user(dbdata['player_id'])
-                elif game == DatabaseGame.OSU:
-                    APIdata = OsuInterface().get_player(dbdata['player_name'])
-                elif game == DatabaseGame.APEX:
-                    APIdata = ApexInterface().get_player(dbdata['player_name'])
-                elif game == DatabaseGame.LOL:
-                    APIdata = RiotClient().get_player_bypuuid(dbdata['other_id'])
-            else:
-                await ctx.respond(f'錯誤:資料庫中查無資料',ephemeral=True)
-
-            if APIdata:
-                await ctx.respond(f'查詢成功',embed=APIdata.desplay())
-            else:
-                await ctx.respond(f'錯誤:找不到此用戶',ephemeral=True)
-            return
-
-        if not (user == ctx.author or self.bot.is_owner(ctx.author)):
+        if not game and not (user == ctx.author or self.bot.is_owner(ctx.author)):
             await ctx.respond('目前不開放查詢別人的綜合資料喔',ephemeral=True)
             return
-            
-        record = self.sqldb.get_game_data(userid)
-        if record:
-            embed = BotEmbed.simple(title=user)
-            for r in record:
-                game = r['game']
-                name = r['player_name']
-                embed.add_field(name=game, value=name, inline=False)
-            embed.set_thumbnail(url=user.display_avatar.url)
-            await ctx.respond(embed=embed)
+        
+        player_data = GameClient().get_user_game(userid)
+
+        if player_data:
+            await ctx.respond(f'查詢成功',embed=player_data.desplay(user))
         else:
-            await ctx.respond('無法查詢此人的資料，可能是用戶尚未註冊資料庫',ephemeral=True)
+            await ctx.respond(f'錯誤:找不到此用戶',ephemeral=True)
 
     # @lol.command(description='查詢League of Legends用戶資料')
     # async def user(self,ctx,userid:discord.Option(str,name='用戶',description='要查詢的用戶')):
@@ -358,11 +333,11 @@ class system_game(Cog_Extension):
         if not remove:
             self.sqldb.set_hoyo_cookies(str(ctx.author.id),ltuid,ltoken,None)
             if uid:
-                self.sqldb.set_game_data(str(ctx.author.id),DatabaseGame.GENSHIN.value,player_id=uid)
+                self.sqldb.set_game_data(str(ctx.author.id),DBGame.GENSHIN.value,player_id=uid)
             await ctx.respond(f'{ctx.author.mention} 設定完成',ephemeral=True)
         else:
             self.sqldb.remove_hoyo_cookies(str(ctx.author.id))
-            self.sqldb.remove_game_data(str(ctx.author.id),DatabaseGame.GENSHIN.value)
+            self.sqldb.remove_game_data(str(ctx.author.id),DBGame.GENSHIN.value)
             await ctx.respond(f'{ctx.author.mention} cookies移除完成',ephemeral=True)
 
     @hoyo.command(description='取得每月原石來源統計（原神）')

@@ -2,6 +2,7 @@ import requests,genshin,asyncio,discord,secrets,time,datetime
 from enum import Enum
 #from pydantic import BaseModel
 from starcord.clients import RiotClient,StarClient
+from starcord.types import DBGame
 from starcord.database.file import CsvDatabase
 
 # class MyClass:
@@ -38,15 +39,6 @@ from starcord.database.file import CsvDatabase
 # kda_avg = round(kda_avg / 5, 2)
 
 # print(f"Avg. {kda_avg}")
-def test(*arg):
-    arg = arg or [1,2,3]
-    if not arg:
-        print("NOT")
-    print(arg)
-    for i in arg:
-        print(i)
-
-test()
 
 # db = CsvDatabase()
 # r = db.get_row_by_column_value(db.lol_champion,"name_tw","凱莎")

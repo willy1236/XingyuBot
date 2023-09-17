@@ -1,4 +1,7 @@
 from starcord.database import sqldb
+from starcord.models.model import GameInfoPage,GameInfo
+from starcord.types import DBGame
+from starcord.clients.game import *
 
 class WarningClient:
     """警告系統"""
@@ -8,9 +11,43 @@ class BatClient:
 
 class GameClient:
     """遊戲查詢系統"""
+    def get_user_game(self,discord_id,game:DBGame=None):
+        """取得遊戲資料
+        :param discord_id: 要查詢的用戶
+        :param game: 提供將只查詢指定遊戲內容
+        """
+        dbdata = sqldb.get_game_data(discord_id,game)
+        if not dbdata:
+            return
+        
+        if game:
+            game = DBGame(game)
+            APIdata = None
+            if game == DBGame.STEAM:
+                APIdata = SteamInterface().get_user(dbdata['player_id'])
+            elif game == DBGame.OSU:
+                APIdata = OsuInterface().get_player(dbdata['player_name'])
+            elif game == DBGame.APEX:
+                APIdata = ApexInterface().get_player(dbdata['player_name'])
+            elif game == DBGame.LOL:
+                APIdata = RiotClient().get_player_bypuuid(dbdata['other_id'])
+            return APIdata
+        else:
+            return GameInfoPage(dbdata)
+        
+    def set_game_data(self,discord_id:int,game:DBGame,player_name:str=None,player_id:str=None,account_id:str=None,other_id:str=None):
+        """設定遊戲資料"""
+        sqldb.set_game_data(discord_id,game,player_name,player_id,account_id,other_id)
+
+    def remove_game_data(self,discord_id:int,game:DBGame):
+        """移除遊戲資料"""
+        sqldb.remove_game_data(discord_id,game)
+
+class PointClient:
+    """點數系統"""
 
 class PollClient:
-    """todo:投票系統"""
+    """投票系統"""
 
 class GiveawayClient:
     """todo:抽獎系統"""
@@ -77,8 +114,9 @@ class NoticeClient:
         return channel_id if channel_id in self.notice_dict['dynamic_voice_room'] else None
 
 class StarClient(
-    NoticeClient
+    NoticeClient,
+    GameClient
 ):
-    """星羽客戶端"""
+    """整合各項系統的星羽客戶端"""
     def __init__(self):
         super().__init__()

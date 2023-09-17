@@ -10,6 +10,8 @@ from .user import *
 
 __all__ =[
     'NoticeClient',
+    'GameClient',
+    'StarClient',
     'TwitchAPI',
     'YoutubeAPI',
     'NotionAPI',

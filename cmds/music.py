@@ -2,7 +2,7 @@ import discord,asyncio,time,random
 from discord.ext import commands,pages
 from typing import TYPE_CHECKING
 from core.classes import Cog_Extension
-from starcord import BotEmbed
+from starcord import BotEmbed,log
 from starcord.errors import *
 import youtube_dl
 
@@ -141,8 +141,8 @@ class MusicPlayer():
         random.shuffle(self.playlist)
 
 guild_playing = {}
-def get_player(guildid:str) -> MusicPlayer:
-    return guild_playing[guildid]
+def get_player(guildid:str) -> MusicPlayer | None:
+    return guild_playing.get(str(guildid))
 
 class music(Cog_Extension):
 
@@ -241,14 +241,14 @@ class music(Cog_Extension):
         """Stops and disconnects the bot from voice"""
         guildid = str(ctx.guild.id)
         await ctx.voice_client.disconnect(force=True)
-        if guild_playing[guildid]:
+        if guild_playing.get(guildid):
             del guild_playing[guildid]
         await ctx.respond(f"再見啦~")
 
     @commands.slash_command(description='現在播放')
     @commands.guild_only()
     async def nowplaying(self,ctx: discord.ApplicationContext):
-        player = get_player(str(ctx.guild.id))
+        player = get_player(ctx.guild.id)
         song = player.nowplaying
         embed = BotEmbed.simple(title="現在播放", description=f"[{song.title}]({song.url}) [{song.requester.mention}]")
         await ctx.respond(embed=embed)
@@ -256,7 +256,7 @@ class music(Cog_Extension):
     @commands.slash_command(description='歌單')
     @commands.guild_only()
     async def queue(self,ctx: discord.ApplicationContext):
-        player = get_player(str(ctx.guild.id))
+        player = get_player(ctx.guild.id)
         playlist = player.get_full_playlist()
         if playlist:
             count = 0
@@ -290,7 +290,7 @@ class music(Cog_Extension):
     @commands.slash_command(description='循環/取消循環歌曲')
     @commands.guild_only()
     async def loop(self, ctx: discord.ApplicationContext):
-        player = get_player(str(ctx.guild.id))
+        player = get_player(ctx.guild.id)
         player.songloop = not player.songloop
         if player.songloop:
             await ctx.respond(f"循環已開啟🔂")
@@ -300,7 +300,7 @@ class music(Cog_Extension):
     @commands.slash_command(description='洗牌歌曲')
     @commands.guild_only()
     async def shuffle(self, ctx: discord.ApplicationContext):
-        player = get_player(str(ctx.guild.id))
+        player = get_player(ctx.guild.id)
         player.shuffle()
         await ctx.respond(f"歌單已隨機🔀")
 
@@ -318,7 +318,6 @@ class music(Cog_Extension):
         if not ctx.voice_client:
             if ctx.author.voice:
                 try:
-                    print(ctx.author.voice.channel)
                     await ctx.author.voice.channel.connect(timeout=10,reconnect=False)
                 except Exception as e:
                     print(e)

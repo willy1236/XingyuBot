@@ -59,6 +59,7 @@ async def on_ready():
         log.warning(f">> Cogs not all loaded, {len(bot.cogs)}/{len(os.listdir('./cmds'))} loaded<<")
     
     if bot_code == 'Bot1':
+        #將超過14天的投票自動關閉
         dbdata = sqldb.get_all_active_polls()
         now = datetime.datetime.now()
         for poll in dbdata:
