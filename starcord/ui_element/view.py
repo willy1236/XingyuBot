@@ -1,6 +1,7 @@
-import discord,datetime
+import discord,datetime,matplotlib,io
 from starcord.database import sqldb
 from starcord.utility import BotEmbed
+import matplotlib.pyplot as plt
 
 class PollOptionButton(discord.ui.Button):
     def __init__(self,label,poll_id,option_id,custom_id):
@@ -34,13 +35,44 @@ class PollView(discord.ui.View):
             options_data = sqldb.get_poll_options(self.poll_id)
 
             text = ""
+            labels = []
+            sizes = []
             for option in options_data:
                 name = option['option_name']
                 id = option['option_id']
-                text += f"{name}： {dbdata.get(str(id),0)}票\n"
+                count = dbdata.get(str(id),0)
+                text += f"{name}： {count}票\n"
+
+                if count > 0:
+                    labels.append(name)
+                    sizes.append(count)
+
+            #圖表製作
+            def data_string(s,d):
+                t = int(round(s/100.*sum(d)))     # 透過百分比反推原本的數值
+                return f'{t}\n（{s:.1f}%）'
+
+            # 字形
+            matplotlib.rc('font', family='Microsoft JhengHei')
+
+            # 設置顏色
+            colors = ['gold', 'yellowgreen', 'lightcoral', 'lightskyblue']
+
+            # 設置圓餅圖的突出顯示
+            #explode = (0.1, 0, 0, 0)  # 將第一塊突出顯示
+        
+            # 繪製圓餅圖
+            plt.pie(sizes, labels=labels, colors=colors, autopct=lambda i: data_string(i,sizes), shadow=False, startangle=140)
+
+            # 添加標題
+            plt.title(polldata['title'])
+
+            image_buffer = io.BytesIO()
+            plt.savefig(image_buffer, format='png', dpi=200, bbox_inches='tight')
+            image_buffer.seek(0)
 
             embed = BotEmbed.simple(polldata["title"],description=f'投票ID：{self.poll_id}\n{text}')
-            await interaction.response.edit_message(embed=embed,view=self)
+            await interaction.response.edit_message(embed=embed,view=self,file=discord.File(image_buffer,filename="pie.png"))
         else:
             await interaction.response.send_message(f"錯誤：只有投票發起人才能結算",ephemeral=True)
 
