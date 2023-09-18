@@ -257,7 +257,6 @@ class NoticeClient:
         return records
 
 class StarClient(
-    UserClient,
     NoticeClient,
     GameClient,
     PointClient
