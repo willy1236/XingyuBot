@@ -3,7 +3,6 @@ from starcord.database import sqldb
 from starcord.models.model import GameInfoPage
 from starcord.types import DBGame,Coins
 from .game import *
-from .user import UserClient
 
 class WarningClient:
     """警告系統"""
