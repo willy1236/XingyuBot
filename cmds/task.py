@@ -6,7 +6,7 @@ from discord.ext import commands,tasks
 from requests.exceptions import ConnectTimeout
 
 from core.classes import Cog_Extension
-from starcord import Jsondb,sqldb,mongedb,nclient
+from starcord import Jsondb,sqldb,mongedb,sclient
 from starcord.clients import *
 
 
@@ -38,17 +38,17 @@ class task(Cog_Extension):
             scheduler.add_job(self.earthquake_check,'interval',minutes=1,jitter=30,misfire_grace_time=40)
             #scheduler.add_job(self.get_mongodb_data,'interval',minutes=3,jitter=30,misfire_grace_time=40)
 
-            scheduler.add_job(nclient.init_NoticeClient,"date")
+            scheduler.add_job(sclient.init_NoticeClient,"date")
 
             scheduler.start()
             self.twitch.start()
         else:
             pass
 
-    async def sign_reset(self):
-        sqldb.truncate_table('user_sign')
-        task_report_channel = self.bot.get_channel(Jsondb.jdata['task_report'])
-        await task_report_channel.send('簽到已重置')
+    # async def sign_reset(self):
+    #     sqldb.truncate_table('user_sign')
+    #     task_report_channel = self.bot.get_channel(Jsondb.jdata['task_report'])
+    #     await task_report_channel.send('簽到已重置')
 
     async def earthquake_check(self):
         timefrom = Jsondb.read_cache('timefrom')
@@ -70,7 +70,7 @@ class task(Cog_Extension):
             else:
                 text = '地震報告'
             
-            records = sqldb.get_notice_channel_by_type('earthquake')
+            records = sclient.get_notice_channel_by_type('earthquake')
             for i in records:
                 channel = self.bot.get_channel(i['channel_id'])
                 if channel:
@@ -129,7 +129,7 @@ class task(Cog_Extension):
     async def forecast_update(self):
         forecast = CWBClient().get_forecast()
         if forecast:
-            records = sqldb.get_notice_channel_by_type('forecast')
+            records = sclient.get_notice_channel_by_type('forecast')
             for i in records:
                 channel = self.bot.get_channel(i['channel_id'])
                 if channel:
@@ -150,7 +150,7 @@ class task(Cog_Extension):
 
     @tasks.loop(minutes=3)
     async def twitch(self):
-        users = nclient.get_notice_dict("twitch")
+        users = sclient.get_notice_dict("twitch")
         if not users:
             return
         twitch_cache = Jsondb.read_cache('twitch')
@@ -161,7 +161,7 @@ class task(Cog_Extension):
             if data[user] and not user_cache:
                 twitch_cache[user] = True
                 embed = data[user].desplay()
-                guilds = sqldb.get_notice_community_guild('twitch',user)
+                guilds = sclient.get_notice_community_guild('twitch',user)
                 for guildid in guilds:
                     guild = self.bot.get_guild(guildid)
                     channel = self.bot.get_channel(guilds[guildid][0])
@@ -187,7 +187,7 @@ class task(Cog_Extension):
             user_dc = self.bot.get_user(int(user_id))
             channel_id = user['channel_id']
             channel = self.bot.get_channel(int(channel_id))
-            cookies = self.sqldb.get_userdata(user_id,'game_hoyo_cookies')
+            cookies = sqldb.get_userdata(user_id,'game_hoyo_cookies')
             if not channel:
                 print(f"auto_hoyo_reward: {user_id}/{channel_id}")
             if not cookies:

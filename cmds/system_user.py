@@ -18,13 +18,8 @@ class system_user(Cog_Extension):
     async def check(self,ctx,user_dc:discord.Option(discord.Member,name='用戶',description='可不輸入以查詢自己',default=None)):
         user_dc = user_dc or ctx.author
         pet = UserClient.get_pet(user_dc.id)
-        if pet:
-            embed = pet.desplay()
-            embed.title = f'{user_dc.name} 的寵物'
-            await ctx.respond(embed=embed)
-        else:
-            embed = BotEmbed.simple(f'{user_dc.name} 的寵物','用戶沒有認養寵物')
-            await ctx.respond(embed=embed)
+        embed = pet.desplay(user_dc) if pet else BotEmbed.simple(f'{user_dc.name} 的寵物','用戶沒有認養寵物')
+        await ctx.respond(embed=embed)
     
     @pet.command(description='認養寵物')
     async def add(self,ctx,

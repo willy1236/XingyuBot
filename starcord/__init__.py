@@ -23,7 +23,6 @@ log = create_logger('./logs',file_log,log_level)
 # else:
 #     twitch_bot = None
 
-nclient = NoticeClient()
 sclient = StarClient()
 
 __all__ = [
@@ -37,6 +36,5 @@ __all__ = [
     'UserClient',
     'StarException',
     'mongedb',
-    'nclient',
     'sclient',
 ]

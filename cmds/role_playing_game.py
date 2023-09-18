@@ -26,7 +26,9 @@ class role_playing_game(Cog_Extension):
     async def ui(self,ctx:discord.ApplicationContext,user_dc:discord.Option(discord.Member,name='用戶',description='留空以查詢自己',default=None)):
         user_dc = user_dc or ctx.author
         user = UserClient.get_user(user_dc.id,user_dc)
-        await ctx.respond(embed=user.desplay())
+        pet = user.get_pet()
+        pet_embed = pet.desplay() if pet else BotEmbed.simple(f'{user_dc.name} 的寵物','用戶沒有認養寵物')
+        await ctx.respond(embeds=[user.desplay(), pet_embed])
 
     @commands.slash_command(description='查看背包（開發中）')
     async def bag(self,ctx:discord.ApplicationContext,user_dc:discord.Option(discord.Member,name='用戶',description='留空以查詢自己',default=None)):

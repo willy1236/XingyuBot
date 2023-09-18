@@ -42,7 +42,7 @@ class system_economy(Cog_Extension):
                   user:discord.Option(discord.User,name='成員',description='欲調整的成員',required=True),
                   mod:discord.Option(str,name='模式',description='add,set',required=True,choices=['add','set']),
                   amount:discord.Option(int,name='點數',description='',required=True)):
-        PointClient().update_coins(user.id,mod,Coins.SCOIN,amount)
+        sclient.update_coins(user.id,mod,Coins.SCOIN,amount)
         await ctx.respond(f'設定成功：已更改{user.mention}的星幣')
 
     @commands.slash_command(description='簽到')

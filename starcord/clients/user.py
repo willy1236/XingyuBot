@@ -42,6 +42,28 @@ class UserClient:
         else:
             raise ValueError('monster_id not found.')
 
+class Pet():
+    if TYPE_CHECKING:
+        discord_id: str
+        species: str
+        name: str
+        hp: int
+        food: int
+
+    def __init__(self,data):
+        self.discord_id = data['discord_id']
+        self.species = data['pet_species']
+        self.name = data['pet_name']
+        self.food = data.get('food')
+
+    def desplay(self,user_dc:discord.User=None):
+        title = f'{user_dc.name} 的寵物' if user_dc else "寵物資訊"
+        embed = BotEmbed.simple(title)
+        embed.add_field(name='寵物名',value=self.name)
+        embed.add_field(name='寵物物種',value=self.species)
+        embed.add_field(name='飽食度',value=self.food)
+        return embed
+
 class User():
     '''基本用戶'''
     if TYPE_CHECKING:
@@ -52,6 +74,7 @@ class User():
         rcoin: int
         max_sign_consecutive_days: int
         meatball_times: int | None
+        pet :Pet | None
 
     def __init__(self,data:dict,user_dc=None):
         self.user_dc = user_dc
@@ -64,7 +87,7 @@ class User():
         self.meatball_times = data.get('meatball_times')
 
     def desplay(self):
-        embed = BotEmbed.general(name=self.user_dc.name if self.user_dc else self.name,icon_url=self.user_dc.avatar if self.user_dc else discord.Embed.Empty)
+        embed = BotEmbed.general(name=self.user_dc.name if self.user_dc else self.name, icon_url=self.user_dc.avatar if self.user_dc else discord.Embed.Empty)
         embed.add_field(name='星幣⭐',value=self.scoin)
         embed.add_field(name='PT點數',value=self.point)
         embed.add_field(name='Rcoin',value=self.rcoin)
@@ -72,7 +95,7 @@ class User():
         if self.meatball_times:
             embed.add_field(name='貢丸次數',value=self.meatball_times)
         embed.add_field(name='遊戲資料',value="/game find",inline=False)
-        embed.add_field(name='寵物',value="/pet check",inline=False)
+        #embed.add_field(name='寵物',value="/pet check",inline=False)
         # embed.add_field(name='生命值',value=self.hp)
         # if self.pet.has_pet:
         #     embed.add_field(name='寵物',value=self.pet.name)
@@ -82,8 +105,8 @@ class User():
 
     def get_pet(self):
         """等同於 UserClient.get_pet()"""
-        dbdata = UserClient.get_pet(self.id)
-        return dbdata
+        self.pet = UserClient.get_pet(self.discord_id)
+        return self.pet
     
     def get_game(self,game:DBGame=None):
         """等同於GameClient.get_user_game()"""
@@ -279,24 +302,3 @@ class Monster:
     #     #結束儲存資料
     #     sqldb.update_userdata(player.id, 'rpg_user','user_hp',player.hp)
     #     return embed
-    
-class Pet():
-    if TYPE_CHECKING:
-        user_id: str
-        species: str
-        name: str
-        hp: int
-        food: int
-
-    def __init__(self,data):
-        self.user_id = data['user_id']
-        self.species = data['pet_species']
-        self.name = data['pet_name']
-        self.food = data.get('food')
-
-    def desplay(self):
-        embed = BotEmbed.simple()
-        embed.add_field(name='寵物名',value=self.name)
-        embed.add_field(name='寵物物種',value=self.species)
-        embed.add_field(name='飽食度',value=self.food)
-        return embed
