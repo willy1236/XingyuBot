@@ -158,14 +158,14 @@ class event(Cog_Extension):
                     user: discord.PermissionOverwrite(manage_channels=True,manage_roles=True)
                     }
                     new_channel = await guild.create_voice_channel(name=f'{user.name}的頻道', reason='動態語音：新增',category=category,overwrites=overwrites)
-                    sqldb.set_dynamic_voice(new_channel.id,user.id,guild.id,None)
+                    sclient.set_dynamic_voice(new_channel.id,user.id,guild.id,None)
                     sclient.set_list_in_notice_dict("dynamic_voice_room",new_data=new_channel.id)
                     await user.move_to(new_channel)
 
                 #移除
                 elif before.channel and not after.channel and sclient.getif_dynamic_voice_room(before.channel.id) and not before.channel.members:
                     await before.channel.delete(reason="動態語音：移除")
-                    sqldb.remove_dynamic_voice(before.channel.id)
+                    sclient.remove_dynamic_voice(before.channel.id)
                     sclient.set_list_in_notice_dict("dynamic_voice_room",remove_data=before.channel.id)
 
             #舞台發言
@@ -179,7 +179,7 @@ class event(Cog_Extension):
         
         #離開通知
         guildid = member.guild.id
-        dbdata = sqldb.get_notice_channel(guildid,"member_leave")
+        dbdata = sclient.get_notice_channel(guildid,"member_leave")
 
         if dbdata:
             username = member.name if member.discriminator == "0" else f"{member.name}#{member.discriminator}"
@@ -193,7 +193,7 @@ class event(Cog_Extension):
         
         #加入通知
         guildid = member.guild.id
-        dbdata = sqldb.get_notice_channel(guildid,"member_join")
+        dbdata = sclient.get_notice_channel(guildid,"member_join")
 
         if dbdata:
             username = member.name if member.discriminator == "0" else f"{member.name}#{member.discriminator}"
@@ -201,7 +201,7 @@ class event(Cog_Extension):
             await self.bot.get_channel(int(dbdata["channel_id"])).send(text)
 
         #警告系統：管理員通知
-        notice_data = sqldb.get_notice_channel(guildid,"mod")
+        notice_data = sclient.get_notice_channel(guildid,"mod")
         mod_channel_id = notice_data.get('channel_id') if notice_data else None
         #role_id = notice_data['role_id']
         if mod_channel_id:
