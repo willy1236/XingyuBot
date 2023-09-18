@@ -113,7 +113,7 @@ class MySQLDatabase():
 
     def get_role_save_count(self,discord_id:int):
         self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f'SELECT COUNT(discord_id) FROM `role_save` WHERE discord_id = %s;',(discord_id,))
+        self.cursor.execute(f'SELECT COUNT(*) FROM `role_save` WHERE discord_id = %s;',(discord_id,))
         records = self.cursor.fetchone()
         return records
 
@@ -126,11 +126,9 @@ class MySQLDatabase():
     # 貨幣類
     def get_scoin(self,discord_id:int) -> int:
         """取得用戶星幣數"""
-        self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f'SELECT * FROM `user_point` WHERE discord_id = %s;',(discord_id,))
-        records = self.cursor.fetchall()
+        records = self.get_userdata(discord_id,"user_point")
         if records:
-            return records[0].get("scoin",0)
+            return records.get("scoin",0)
 
     def getif_scoin(self,discord_id:int,point:int) -> int | None:
         """取得星幣足夠的用戶
@@ -269,9 +267,7 @@ class MySQLDatabase():
 
     # 寵物類
     def get_user_pet(self,discord_id:int):
-        self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f'SELECT * FROM `user_pet` WHERE `discord_id` = %s;',(discord_id,))
-        records = self.cursor.fetchone()
+        records = self.get_userdata(discord_id,"user_pet")
         return records
 
     def create_user_pet(self,discord_id:int,pet_species:str,pet_name:str):
@@ -286,12 +282,10 @@ class MySQLDatabase():
                 raise
 
     def delete_user_pet(self,discord_id:int):
-        self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f'DELETE FROM `user_pet` WHERE discord_id = %s;',(discord_id,))
-        self.connection.commit()
+        self.remove_userdata(discord_id,"user_pet")
 
     # RPG類
-    def get_rpguser(self,discord_id:int):
+    def get_rpguser(self,discord_id:int):   
         self.cursor.execute(f"USE `database`;")
         self.cursor.execute(f'SELECT * FROM `rpg_user`,`user_point` WHERE rpg_user.discord_id = %s;',(discord_id,))
         records = self.cursor.fetchone()
@@ -303,10 +297,7 @@ class MySQLDatabase():
         self.connection.commit()
     
     def get_activities(self,discord_id:int):
-        self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f'SELECT * FROM `rpg_activities` WHERE discord_id = %s;',(discord_id,))
-        records = self.cursor.fetchone()
-        print(records)
+        records = self.get_userdata(discord_id,"rpg_activities")
         return records or {}
 
     def get_bag(self,discord_id:int,item_id:str=None):
@@ -367,7 +358,7 @@ class MySQLDatabase():
         return records
     
     def get_statistics_busy(self,discord_id:int):
-        self.cursor.execute(f"SELECT count(discord_id) FROM `database`.`busy_time` WHERE `discord_id` = {discord_id};")
+        self.cursor.execute(f"SELECT count(*) FROM `database`.`busy_time` WHERE `discord_id` = {discord_id};")
         records = self.cursor.fetchone()
         return records
     

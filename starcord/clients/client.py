@@ -1,8 +1,9 @@
 import random
 from starcord.database import sqldb
-from starcord.models.model import GameInfoPage,GameInfo
+from starcord.models.model import GameInfoPage
 from starcord.types import DBGame,Coins
-from starcord.clients.game import *
+from .game import *
+from .user import UserClient
 
 class WarningClient:
     """警告系統"""
@@ -219,7 +220,7 @@ class NoticeClient:
         """取得社群通知（依據社群）"""
         sqldb.cursor.execute(f"USE `database`;")
         sqldb.cursor.execute(f'SELECT * FROM `notice_community` WHERE `notice_type` = %s;',(notice_type,))
-        records = self.cursor.fetchall()
+        records = sqldb.cursor.fetchall()
         return records
     
     def get_notice_community_guild(self,notice_type:str,notice_name:str):
@@ -257,6 +258,7 @@ class NoticeClient:
         return records
 
 class StarClient(
+    UserClient,
     NoticeClient,
     GameClient,
     PointClient
