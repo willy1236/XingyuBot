@@ -125,7 +125,7 @@ class NoticeClient:
         for type in init_list:
             
             if type in dict_type:
-                dbdata = sqldb.get_notice_channel_by_type(type)
+                dbdata = self.get_notice_channel_by_type(type)
                 dict = {}
                 for data in dbdata:
                     guildid = data['guild_id']
@@ -137,10 +137,10 @@ class NoticeClient:
             
             elif type in list_type:
                 if type == "twitch":
-                    dbdata = sqldb.get_notice_community_userlist(type)
+                    dbdata = self.get_notice_community_userlist(type)
                     self.notice_dict[type] = dbdata
                 elif type == "dynamic_voice_room":
-                    dbdata = sqldb.get_all_dynamic_voice()
+                    dbdata = self.get_all_dynamic_voice()
                     self.notice_dict[type] = dbdata
 
     def getif_dynamic_voice_room(self,channel_id):
