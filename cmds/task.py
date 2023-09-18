@@ -95,7 +95,7 @@ class task(Cog_Extension):
                 embed_list.append(crafting.desplay())
             embed_list.append(map.desplay())
             
-            records = sqldb.get_notice_channel_by_type('apex_info')
+            records = sclient.get_notice_channel_by_type('apex_info')
             for i in records:
                 channel = self.bot.get_channel(i['channel_id'])
                 if channel:
