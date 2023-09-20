@@ -49,7 +49,7 @@ class MySQLDatabase():
         self.cursor.execute(f"INSERT INTO `{table}` SET discord_id = {discord_id}, {column} = {value} ON DUPLICATE KEY UPDATE discord_id = {discord_id}, {column} = {value};")
         self.connection.commit()
 
-    def get_userdata(self,discord_id:int,table:str='user_data'):
+    def get_userdata(self,discord_id:int,table:str='user_discord'):
         """取得用戶資料（只要PK為discord_id的皆可）"""
         self.cursor.execute(f"USE `database`;")
         self.cursor.execute(f'SELECT * FROM `{table}` WHERE discord_id = %s;',(discord_id,))
@@ -57,7 +57,7 @@ class MySQLDatabase():
         if records:
             return records[0]
 
-    def remove_userdata(self,discord_id:int,table:str='user_data'):
+    def remove_userdata(self,discord_id:int,table:str='user_discord'):
         """移除用戶資料（只要PK為discord_id的皆可）"""
         self.cursor.execute(f"USE `database`;")
         self.cursor.execute(f"DELETE FROM `{table}` WHERE `discord_id` = %s;",(discord_id,))
@@ -71,7 +71,7 @@ class MySQLDatabase():
 
     def get_user(self,discord_id:int):
         self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f'SELECT * FROM `user_data` LEFT JOIN `user_point` ON `user_data`.`discord_id` = `user_point`.`discord_id` WHERE `user_data`.`discord_id` = %s;',(discord_id,))
+        self.cursor.execute(f'SELECT * FROM `user_discord` LEFT JOIN `user_point` ON `user_discord`.`discord_id` = `user_point`.`discord_id` WHERE `user_discord`.`discord_id` = %s;',(discord_id,))
         record = self.cursor.fetchall()
         if record:
             return record[0]
@@ -183,7 +183,7 @@ class MySQLDatabase():
         #更新最後簽到日期+計算連續簽到
         self.cursor.execute(f"INSERT INTO `user_sign` VALUES(%s,%s,%s) ON DUPLICATE KEY UPDATE `consecutive_days` = CASE WHEN `date` = %s THEN `consecutive_days` + 1 ELSE 1 END, `date` = %s;",(discord_id,time,1,yesterday.isoformat(),time))
         #更新最大連續簽到日
-        self.cursor.execute(f"UPDATE `user_data` AS `data` JOIN `user_sign` AS `sign` ON `data`.`discord_id` = `sign`.`discord_id` SET `data`.`max_sign_consecutive_days` = `sign`.`consecutive_days` WHERE `sign`.`discord_id` = {discord_id} AND (`data`.`max_sign_consecutive_days` < `sign`.`consecutive_days` OR `data`.`max_sign_consecutive_days` IS NULL);")
+        self.cursor.execute(f"UPDATE `user_discord` AS `data` JOIN `user_sign` AS `sign` ON `data`.`discord_id` = `sign`.`discord_id` SET `data`.`max_sign_consecutive_days` = `sign`.`consecutive_days` WHERE `sign`.`discord_id` = {discord_id} AND (`data`.`max_sign_consecutive_days` < `sign`.`consecutive_days` OR `data`.`max_sign_consecutive_days` IS NULL);")
         self.connection.commit()
 
     def sign_add_coin(self,discord_id:int,scoin:int=0,Rcoin:int=0):

@@ -46,7 +46,7 @@ class event(Cog_Extension):
                     await message.delete(reason="打出貢丸相關詞彙")
                     await message.author.timeout_for(duration=datetime.timedelta(seconds=60),reason="打出貢丸相關詞彙")
                     await message.channel.send(f"{message.author.mention} 貢丸很危險 不要打貢丸知道嗎")
-                    sqldb.add_userdata_value(message.author.id,"user_data","meatball_times",1)
+                    sqldb.add_userdata_value(message.author.id,"user_discord","meatball_times",1)
                     channel = self.bot.get_channel(877495919879286824)
                     await channel.send(f"{message.author.name} 打出了：{message.content}")
                 except Exception as e:
@@ -205,7 +205,7 @@ class event(Cog_Extension):
         mod_channel_id = notice_data.get('channel_id') if notice_data else None
         #role_id = notice_data['role_id']
         if mod_channel_id:
-            dbdata = self.sqldb.get_warnings(str(member.id))
+            dbdata = self.sqldb.get_warnings(member.id)
             #if role_id:
             #    role = member.guild.get_role(role_id)
 
