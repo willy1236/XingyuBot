@@ -111,11 +111,12 @@ class MySQLDatabase():
         records = self.cursor.fetchall()
         return records
 
-    def get_role_save_count(self,discord_id:int):
+    def get_role_save_count(self,discord_id:int) -> int | None:
         self.cursor.execute(f"USE `database`;")
         self.cursor.execute(f'SELECT COUNT(*) FROM `role_save` WHERE discord_id = %s;',(discord_id,))
-        records = self.cursor.fetchone()
-        return records
+        records = self.cursor.fetchall()
+        if records:
+            return records[0][['COUNT(*)']]
 
     def add_role_save(self,discord_id:int,role_id:str,role_name:str,time:datetime.date):
         self.cursor.execute(f"USE `database`;")
