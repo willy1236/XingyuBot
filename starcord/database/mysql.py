@@ -41,7 +41,7 @@ class MySQLDatabase():
     def truncate_table(self,table:str):
         self.cursor.execute(f"USE `database`;")
         self.cursor.execute(f"TRUNCATE TABLE `{table}`;")
-
+    
     # 用戶資料類
     def set_userdata(self,discord_id:int,table:str,column:str,value):
         """設定或更新用戶資料（只要PK為discord_id的皆可）"""
@@ -116,7 +116,7 @@ class MySQLDatabase():
         self.cursor.execute(f'SELECT COUNT(*) FROM `role_save` WHERE discord_id = %s;',(discord_id,))
         records = self.cursor.fetchall()
         if records:
-            return records[0][['COUNT(*)']]
+            return records[0]['COUNT(*)']
 
     def add_role_save(self,discord_id:int,role_id:str,role_name:str,time:datetime.date):
         self.cursor.execute(f"USE `database`;")
