@@ -15,6 +15,7 @@ __all__ =[
     'StarClient',
     'TwitchAPI',
     'YoutubeAPI',
+    'GoogleCloud',
     'NotionAPI',
     'RiotClient',
     'OsuInterface',

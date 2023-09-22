@@ -75,6 +75,11 @@ class MySQLDatabase():
         record = self.cursor.fetchall()
         if record:
             return record[0]
+        
+    def set_staruser_data(self,discord_id:int,emailAddress=None,drive_share_id=None):
+        self.cursor.execute(f"USE `database`;")
+        self.cursor.execute(f"INSERT INTO `user_data` SET `discord_id` = %s, `email` = %s, `drive_share_id` = %s ON DUPLICATE KEY UPDATE `email` = %s, `drive_share_id` = %s;",(discord_id,emailAddress,drive_share_id,emailAddress,drive_share_id))
+        self.connection.commit()
 
     # 遊戲資料類
     def set_game_data(self,discord_id:int,game:DBGame,player_name:str=None,player_id:str=None,account_id:str=None,other_id:str=None):

@@ -1,4 +1,4 @@
-import discord,random,asyncio,datetime
+import discord,random,asyncio,datetime,re
 from discord.errors import Forbidden, NotFound
 from discord.ext import commands,pages
 from discord.commands import SlashCommandGroup
@@ -9,6 +9,7 @@ from starcord.funtions import find,random_color
 from starcord.ui_element.button import Delete_Add_Role_button
 from starcord.ui_element.view import PollView
 from starcord.errors import CommandError
+from starcord.clients import GoogleCloud
 
 from mysql.connector.errors import Error as sqlerror
 
@@ -551,6 +552,32 @@ class command(Cog_Extension):
         embed = BotEmbed.general(name=ctx.author.name,icon_url=ctx.author.avatar.url,title=title,description=f"投票ID：{poll_id}")
         message = await ctx.respond(embed=embed,view=view)
         self.sqldb.update_poll(poll_id,"message_id",message.id)
+
+    @commands.slash_command(description='共用「94共用啦」雲端資料夾',guild_ids=main_guild)
+    async def drive(self,ctx,email:discord.Option(str,name='gmail帳戶',description='要使用的Gmail帳戶，留空已移除資料',required=False)):
+        await ctx.defer()
+        data = self.sqldb.get_userdata(ctx.author.id,"user_data")
+        if not email:
+            if data and data.get("email"):
+                GoogleCloud().remove_file_permissions("1bDtsLbOi5crIOkWUZbQmPq3dXUbwWEan",data.get("drive_share_id"))
+                self.sqldb.set_userdata(ctx.author.id,"user_data","email",None)
+                self.sqldb.set_userdata(ctx.author.id,"user_data","drive_share_id",None)
+            else:
+                await ctx.respond(f"{ctx.author.mention}：此帳號沒有設定過google帳戶")
+                return
+        
+        if data and data.get("drive_share_id"):
+            await ctx.respond(f"{ctx.author.mention}：此帳號已經共用雲端資料夾了")
+            return
+        
+        r = re.compile(r"@gmail.com")
+        if not r.search(email):
+            await ctx.respond(f"{ctx.author.mention}：Gmail格式錯誤")
+            return
+        
+        google_data = GoogleCloud().add_file_permissions("1bDtsLbOi5crIOkWUZbQmPq3dXUbwWEan",email)
+        self.sqldb.set_staruser_data(ctx.author.id,email,google_data.get("id"))
+        await ctx.respond(f"{ctx.author.mention}：已與 {email} 共用雲端資料夾")
 
 def setup(bot):
     bot.add_cog(command(bot))

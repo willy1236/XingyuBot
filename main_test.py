@@ -4,6 +4,7 @@ from enum import Enum
 from starcord.clients import RiotClient,StarClient
 from starcord.types import DBGame
 from starcord.database.file import CsvDatabase
+from starcord import sqldb
 
 # class MyClass:
 #     def __init__(self, data_dict):
@@ -43,3 +44,5 @@ from starcord.database.file import CsvDatabase
 # db = CsvDatabase()
 # r = db.get_row_by_column_value(db.lol_champion,"name_tw","凱莎")
 # print(r.loc["name_en"])
+
+sqldb.set_staruser_data(419131103836635136,"willyjiang@gmail.com","123abc")
