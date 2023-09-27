@@ -12,14 +12,6 @@ voice_updata = Jsondb.jdata.get('voice_updata')
 debug_mode = Jsondb.jdata.get("debug_mode",True)
 main_guild = Jsondb.jdata.get('main_guild',[])
 
-def get_guildid(before, after):
-    if before.channel:
-        return before.channel.guild.id
-    elif after.channel:
-        return after.channel.guild.id
-    else:
-        return None
-
 class event(Cog_Extension):
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
@@ -109,42 +101,50 @@ class event(Cog_Extension):
                     
     @commands.Cog.listener()
     async def on_voice_state_update(self,user:discord.Member, before:discord.VoiceState, after:discord.VoiceState):
-            if debug_mode:
-               return
+        def get_guildid(before, after):
+            if before.channel:
+                return before.channel.guild.id
+            elif after.channel:
+                return after.channel.guild.id
+            else:
+                return None
 
-            guildid = get_guildid(before,after)
-            #語音進出紀錄
-            if voice_updata:
-                voice_log_dict = sclient.get_notice_dict("voice_log")
-                if guildid in voice_log_dict:
-                    NowTime = datetime.datetime.now()
-                    before_text = ""
-                    after_text = ""
-                    if before.channel:
-                        before_text = before.channel.mention if not sclient.getif_dynamic_voice_room(before.channel.id) else before.channel.name + ' (動態語音)'
-                    if after.channel:
-                        after_text = after.channel.mention if not sclient.getif_dynamic_voice_room(after.channel.id) else after.channel.name + ' (動態語音)'
-                    
-                    if before.channel and after.channel and before.channel != after.channel:
-                        embed=discord.Embed(description=f'{user.mention} 更換語音',color=0x4aa0b5,timestamp=NowTime)
-                        embed.add_field(name='頻道', value=f'{before_text}->{after_text}', inline=False)
-                    
-                    elif not before.channel:
-                        embed=discord.Embed(description=f'{user.mention} 進入語音',color=0x4aa0b5,timestamp=NowTime)
-                        embed.add_field(name='頻道', value=f'{after_text}', inline=False)
-                    
-                    elif not after.channel:
-                        embed=discord.Embed(description=f'{user.mention} 離開語音',color=0x4aa0b5,timestamp=NowTime)
-                        embed.add_field(name='頻道', value=f'{before_text}', inline=False)
-                    
-                    else:
-                        return
-                    
-                    username = user.name if user.discriminator == "0" else user
-                    embed.set_author(name=username,icon_url=user.display_avatar.url)
-                    embed.set_footer(text=self.bot.get_guild(guildid).name)
-                    
-                    await self.bot.get_channel(voice_log_dict.get(guildid)[0]).send(embed=embed)
+        if debug_mode:
+            return
+
+        guildid = get_guildid(before,after)
+        #語音進出紀錄
+        if voice_updata:
+            voice_log_dict = sclient.get_notice_dict("voice_log")
+            if guildid in voice_log_dict:
+                NowTime = datetime.datetime.now()
+                before_text = ""
+                after_text = ""
+                if before.channel:
+                    before_text = before.channel.mention if not sclient.getif_dynamic_voice_room(before.channel.id) else before.channel.name + ' (動態語音)'
+                if after.channel:
+                    after_text = after.channel.mention if not sclient.getif_dynamic_voice_room(after.channel.id) else after.channel.name + ' (動態語音)'
+                
+                if before.channel and after.channel and before.channel != after.channel:
+                    embed=discord.Embed(description=f'{user.mention} 更換語音',color=0x4aa0b5,timestamp=NowTime)
+                    embed.add_field(name='頻道', value=f'{before_text}->{after_text}', inline=False)
+                
+                elif not before.channel:
+                    embed=discord.Embed(description=f'{user.mention} 進入語音',color=0x4aa0b5,timestamp=NowTime)
+                    embed.add_field(name='頻道', value=f'{after_text}', inline=False)
+                
+                elif not after.channel:
+                    embed=discord.Embed(description=f'{user.mention} 離開語音',color=0x4aa0b5,timestamp=NowTime)
+                    embed.add_field(name='頻道', value=f'{before_text}', inline=False)
+                
+                else:
+                    return
+                
+                username = user.name if user.discriminator == "0" else user
+                embed.set_author(name=username,icon_url=user.display_avatar.url)
+                embed.set_footer(text=self.bot.get_guild(guildid).name)
+                
+                await self.bot.get_channel(voice_log_dict.get(guildid)[0]).send(embed=embed)
             
             #動態語音
             dynamic_voice_dict = sclient.get_notice_dict("dynamic_voice")
@@ -227,7 +227,7 @@ class event(Cog_Extension):
 
     @commands.Cog.listener()
     async def on_member_update(self,before:discord.Member, after:discord.Member):
-        guildid = get_guildid(before, after)
+        guildid = after.guild.id
         if guildid in main_guild and before.nick != after.nick:
             p1 = re.compile(r"貢丸")
             p2 = re.compile(r"冠宇")
