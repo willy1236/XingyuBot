@@ -239,7 +239,7 @@ class event(Cog_Extension):
             else:
                 role1 = member.get_role(1136338119835254946)
                 if role1:
-                    member.remove_roles(role1)
+                    await member.remove_roles(role1)
             
             if p2.search(nick):
                 role2 = after.guild.get_role(1145762872685764639)
@@ -247,6 +247,6 @@ class event(Cog_Extension):
             else:
                 role2 = member.get_role(1145762872685764639)
                 if role2:
-                    member.remove_roles(role2)
+                    await member.remove_roles(role2)
 def setup(bot):
     bot.add_cog(event(bot))
