@@ -228,15 +228,24 @@ class event(Cog_Extension):
     @commands.Cog.listener()
     async def on_member_update(self,before:discord.Member, after:discord.Member):
         guildid = after.guild.id
-        if guildid in main_guild and before.nick != after.nick:
+        member = after
+        if guildid in main_guild and after.nick and before.nick != after.nick:
             p1 = re.compile(r"貢丸")
             p2 = re.compile(r"冠宇")
-            if p1.search(after.nick):
+            if p1.search(member.nick):
                 role1 = after.guild.get_role(1136338119835254946)
-                await after.add_roles(role1)
-            if p2.search(after.nick):
+                await member.add_roles(role1)
+            else:
+                role1 = member.get_role(1136338119835254946)
+                if role1:
+                    member.remove_roles(role1)
+            
+            if p2.search(member.nick):
                 role2 = after.guild.get_role(1145762872685764639)
-                await after.add_roles(role2)
-
+                await member.add_roles(role2)
+            else:
+                role2 = member.get_role(1145762872685764639)
+                if role2:
+                    member.remove_roles(role2)
 def setup(bot):
     bot.add_cog(event(bot))
