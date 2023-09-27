@@ -10,15 +10,25 @@ keywords = {
 
 voice_updata = Jsondb.jdata.get('voice_updata')
 debug_mode = Jsondb.jdata.get("debug_mode",True)
+main_guild = Jsondb.jdata.get('main_guild',[])
+
+def get_guildid(before, after):
+    if before.channel:
+        return before.channel.guild.id
+    elif after.channel:
+        return after.channel.guild.id
+    else:
+        return None
 
 class event(Cog_Extension):
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
+        is_owner = await self.bot.is_owner(message.author)
         #被提及回報
-        if self.bot.user in message.mentions and not await self.bot.is_owner(message.author):
+        if self.bot.user in message.mentions and not is_owner:
             await BRS.mentioned(self.bot,message)
         #被提及所有人回報
-        if message.mention_everyone and not await self.bot.is_owner(message.author):
+        if message.mention_everyone and not is_owner:
             await BRS.mention_everyone(self.bot,message)
         
         #私人訊息回報
@@ -38,7 +48,7 @@ class event(Cog_Extension):
             await message.reply(embed=embed)
             return
         
-        if message.guild and message.guild.id == 613747262291443742 and not message.author.bot and not await self.bot.is_owner(message.author):
+        if message.guild and message.guild.id == 613747262291443742 and not message.author.bot and not is_owner:
             p = re.compile(r'貢丸|贡丸|Meatball',re.IGNORECASE)
             result = p.search(message.content)
             if result:
@@ -52,7 +62,7 @@ class event(Cog_Extension):
                 except Exception as e:
                     print(e)
         
-            #洗頻防治
+            #洗頻防制
             spam_count = 0
             try:
                 async for past_message in message.channel.history(limit=6,oldest_first=True,after=datetime.datetime.now()-datetime.timedelta(seconds=10)):
@@ -99,14 +109,6 @@ class event(Cog_Extension):
                     
     @commands.Cog.listener()
     async def on_voice_state_update(self,user:discord.Member, before:discord.VoiceState, after:discord.VoiceState):
-            def get_guildid(before, after):
-                if before.channel:
-                    return before.channel.guild.id
-                elif after.channel:
-                    return after.channel.guild.id
-                else:
-                    return None
-
             if debug_mode:
                return
 
@@ -222,6 +224,19 @@ class event(Cog_Extension):
     async def on_guild_remove(self, guild:discord.Guild):
         report_channel = self.bot.get_channel(Jsondb.jdata['report_channel'])
         await report_channel.send(f"公會異動：我離開了 {guild.name} ({guild.id})")
+
+    @commands.Cog.listener()
+    async def on_member_update(self,before:discord.Member, after:discord.Member):
+        guildid = get_guildid(before, after)
+        if guildid in main_guild and before.nick != after.nick:
+            p1 = re.compile(r"貢丸")
+            p2 = re.compile(r"冠宇")
+            if p1.search(after.nick):
+                role1 = after.guild.get_role(1136338119835254946)
+                await after.add_roles(role1)
+            if p2.search(after.nick):
+                role2 = after.guild.get_role(1145762872685764639)
+                await after.add_roles(role2)
 
 def setup(bot):
     bot.add_cog(event(bot))

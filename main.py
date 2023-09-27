@@ -100,6 +100,8 @@ for filename in os.listdir('./cmds'):
     if filename.endswith('.py'):
         bot.load_extension(f'cmds.{filename[:-3]}')
 
+class SatrPlatform():
+    pass
 
 if __name__ == "__main__":
     if not debug_mode and auto_update:
