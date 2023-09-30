@@ -193,6 +193,10 @@ class moderation(Cog_Extension):
                       add_record:discord.Option(bool,name='是否要將此紀錄存入警告系統',description='將紀錄存入警告系統供其他群組檢視',default=False)):
         await ctx.defer()
         time = converter.time_to_datetime(time_last)
+        if not time or time > datetime.timedelta(days=7) :
+            await ctx.respond(f"錯誤：時間格式錯誤（不得超過7天）")
+            return
+        
         await user.timeout_for(time,reason=reason)
         
         moderate_user = ctx.user.id
@@ -200,8 +204,10 @@ class moderation(Cog_Extension):
         if add_record and not user.bot:
             sqldb.add_warning(user.id,'timeout',moderate_user,ctx.guild.id,create_time,reason,time_last)
         
+        timestamp = int((create_time+time).timestamp())
         embed = BotEmbed.general(f'{user.name} 已被禁言',user.display_avatar.url,description=f"{user.mention}：{reason}")
         embed.add_field(name="執行人員",value=ctx.author.mention)
+        embed.add_field(name="結束時間",value=f"<t:{timestamp}>（{time_last}）")
         embed.timestamp = create_time
         await ctx.respond(embed=embed)
 
