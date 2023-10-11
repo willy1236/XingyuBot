@@ -89,3 +89,18 @@ class PollView(discord.ui.View):
 
         embed = BotEmbed.simple("目前票數",description=f'投票ID：{self.poll_id}\n{text}')
         await interaction.response.send_message(embed=embed,ephemeral=True)
+
+    @discord.ui.button(label="取消投票",custom_id="vote_canenl",style=discord.ButtonStyle.primary)
+    async def result_button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
+        sqldb.remove_user_poll(self.poll_id, interaction.user.id)
+        await interaction.response.send_message(f"{interaction.user.mention} 已取消投票",ephemeral=True)
+
+    @discord.ui.button(label="目前選擇˙",custom_id="vote_canenl",style=discord.ButtonStyle.primary)
+    async def result_button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
+        data = sqldb.get_user_poll(self.poll_id, interaction.user.id)
+        if data:
+            vote_option = data['vote_option']
+            options_data = sqldb.get_poll_option(self.poll_id,vote_option)
+            await interaction.response.send_message(f"{interaction.user.mention} 投給 {options_data['option_name']}",ephemeral=True)
+        else:
+            await interaction.response.send_message(f"{interaction.user.mention} 沒有投給任何選項",ephemeral=True)

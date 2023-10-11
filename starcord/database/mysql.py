@@ -419,6 +419,12 @@ class MySQLDatabase():
         records = self.cursor.fetchall()
         return records
 
+    def get_poll_option(self,poll_id:int,option_id:int):
+        self.cursor.execute(f"SELECT * FROM `database`.`poll_options` WHERE `poll_id` = {poll_id} AND `option_id` = {option_id};")
+        records = self.cursor.fetchall()
+        if records:
+            return records[0]
+
     def add_poll_option(self,poll_id:int,options:list):
         list = []
         count = 0
@@ -435,6 +441,12 @@ class MySQLDatabase():
     def remove_user_poll(self,poll_id:int,discord_id:int):
         self.cursor.execute(f"DELETE FROM `database`.`user_poll` WHERE `poll_id` = {poll_id} AND `discord_id` = {discord_id};")
         self.connection.commit()
+    
+    def get_user_poll(self,poll_id:int,discord_id:int):
+        self.cursor.execute(f"SELECT * FROM `database`.`user_poll` WHERE poll_id = {poll_id} AND `discord_id` = {discord_id};")
+        records = self.cursor.fetchall()
+        if records:
+            return records[0]
     
     def get_users_poll(self,poll_id:int):
         self.cursor.execute(f"SELECT * FROM `database`.`user_poll` WHERE poll_id = {poll_id};")
