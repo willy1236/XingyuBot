@@ -72,7 +72,7 @@ class command(Cog_Extension):
                 elif user and user.bot:
                     await ctx.respond("請不要加機器人身分組好嗎")
         
-        view = Delete_Add_Role_button(new_role)
+        view = Delete_Add_Role_button(new_role,ctx.author)
         if added_user:
             view.message = await ctx.respond(f"已添加 {new_role.name} 給{' '.join(added_user)}",view=view)
         else:
