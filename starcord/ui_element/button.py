@@ -95,3 +95,5 @@ class Delete_Add_Role_button(discord.ui.View):
             self.clear_items()
             #await interaction.message.edit(view=self)
             await interaction.message.delete()
+        else:
+            await interaction.response.send_message(content="只有使用此指令的用戶可以刪除",ephemeral=True)
