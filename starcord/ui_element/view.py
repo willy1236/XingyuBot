@@ -91,12 +91,12 @@ class PollView(discord.ui.View):
         await interaction.response.send_message(embed=embed,ephemeral=True)
 
     @discord.ui.button(label="取消投票",custom_id="vote_canenl",style=discord.ButtonStyle.primary)
-    async def result_button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
+    async def canenl_button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
         sqldb.remove_user_poll(self.poll_id, interaction.user.id)
         await interaction.response.send_message(f"{interaction.user.mention} 已取消投票",ephemeral=True)
 
-    @discord.ui.button(label="目前選擇˙",custom_id="vote_canenl",style=discord.ButtonStyle.primary)
-    async def result_button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
+    @discord.ui.button(label="目前選擇",custom_id="vote_now",style=discord.ButtonStyle.primary)
+    async def now_button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
         data = sqldb.get_user_poll(self.poll_id, interaction.user.id)
         if data:
             vote_option = data['vote_option']
