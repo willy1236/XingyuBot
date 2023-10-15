@@ -4,7 +4,6 @@ from discord.enums import ButtonStyle
 from discord.partial_emoji import PartialEmoji
 from starcord.database import sqldb
 from starcord.utility import BotEmbed
-import matplotlib.pyplot as plt
 
 class PollOptionButton(discord.ui.Button):
     def __init__(self,label,poll_id,option_id,custom_id):
@@ -45,6 +44,8 @@ class PollEndButton(discord.ui.Button):
                     labels.append(name)
                     sizes.append(count)
 
+            import matplotlib.pyplot as plt
+            fig, ax = plt.subplots()
             #圖表製作
             def data_string(s,d):
                 t = int(round(s/100.*sum(d)))     # 透過百分比反推原本的數值
@@ -60,10 +61,12 @@ class PollEndButton(discord.ui.Button):
             #explode = (0.1, 0, 0, 0)  # 將第一塊突出顯示
         
             # 繪製圓餅圖
-            plt.pie(sizes, labels=labels, colors=colors, autopct=lambda i: data_string(i,sizes), shadow=False, startangle=140)
+            ax.pie(sizes, labels=labels, colors=colors, autopct=lambda i: data_string(i,sizes), shadow=False, startangle=140)
+            #plt.pie()
 
             # 添加標題
-            plt.title(polldata['title'])
+            ax.set_title(polldata['title'])
+            #plt.title()
 
             image_buffer = io.BytesIO()
             plt.savefig(image_buffer, format='png', dpi=200, bbox_inches='tight')
@@ -131,4 +134,3 @@ class PollView(discord.ui.View):
         for option in dbdata:
             custom_id = f"poll_{poll_id}_{option['option_id']}"
             self.add_item(PollOptionButton(label=option['option_name'],poll_id=poll_id, option_id=option['option_id'],custom_id=custom_id))
-
