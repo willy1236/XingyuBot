@@ -1,4 +1,7 @@
 import discord,datetime,matplotlib,io
+from discord.emoji import Emoji
+from discord.enums import ButtonStyle
+from discord.partial_emoji import PartialEmoji
 from starcord.database import sqldb
 from starcord.utility import BotEmbed
 import matplotlib.pyplot as plt
@@ -13,21 +16,16 @@ class PollOptionButton(discord.ui.Button):
         sqldb.add_user_poll(self.poll_id,interaction.user.id,self.option_id,datetime.datetime.now())
         await interaction.response.send_message(f"{interaction.user.mention} 已投票給 {self.label}",ephemeral=True)
     
-
-class PollView(discord.ui.View):
-    def __init__(self,poll_id):
-        super().__init__(timeout=None)
+class PollEndButton(discord.ui.Button):
+    def __init__(self,poll_id,created_id):
+        super().__init__(label="結算投票",custom_id=f"end_poll_{poll_id}",style=discord.ButtonStyle.danger)
         self.poll_id = poll_id
-        self.created_id = sqldb.get_poll(poll_id)['created_user']
-        dbdata = sqldb.get_poll_options(poll_id)
-        for option in dbdata:
-            custom_id = f"poll_{option['option_id']}"
-            self.add_item(PollOptionButton(label=option['option_name'],poll_id=poll_id, option_id=option['option_id'],custom_id=custom_id))
+        self.created_id = created_id
 
-    @discord.ui.button(label="結算投票",custom_id="end_poll",style=discord.ButtonStyle.danger)
-    async def end_button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
+    async def callback(self,interaction):
         if interaction.user.id == self.created_id:
-            self.disable_all_items()
+            view:PollView = self.view
+            view.disable_all_items()
             sqldb.update_poll(self.poll_id,"is_on",0)
             
             polldata = sqldb.get_poll(self.poll_id)
@@ -72,12 +70,16 @@ class PollView(discord.ui.View):
             image_buffer.seek(0)
 
             embed = BotEmbed.simple(polldata["title"],description=f'投票ID：{self.poll_id}\n{text}')
-            await interaction.response.edit_message(embed=embed,view=self,file=discord.File(image_buffer,filename="pie.png"))
+            await interaction.response.edit_message(embed=embed,view=view,file=discord.File(image_buffer,filename="pie.png"))
         else:
             await interaction.response.send_message(f"錯誤：只有投票發起人才能結算",ephemeral=True)
+            
+class PollResultButton(discord.ui.Button):
+    def __init__(self,poll_id):
+        super().__init__(label="查看結果",custom_id=f"poll_result_{poll_id}",style=discord.ButtonStyle.primary)
+        self.poll_id = poll_id
 
-    @discord.ui.button(label="查看結果",custom_id="poll_result",style=discord.ButtonStyle.primary)
-    async def result_button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
+    async def callback(self,interaction):
         dbdata = sqldb.get_poll_vote_count(self.poll_id)
         options_data = sqldb.get_poll_options(self.poll_id)
 
@@ -90,13 +92,21 @@ class PollView(discord.ui.View):
         embed = BotEmbed.simple("目前票數",description=f'投票ID：{self.poll_id}\n{text}')
         await interaction.response.send_message(embed=embed,ephemeral=True)
 
-    @discord.ui.button(label="取消投票",custom_id="vote_canenl",style=discord.ButtonStyle.primary)
-    async def canenl_button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
+class PollCanenlButton(discord.ui.Button):
+    def __init__(self,poll_id):
+        super().__init__(label="取消投票",custom_id=f"vote_canenl_{poll_id}",style=discord.ButtonStyle.primary)
+        self.poll_id = poll_id
+
+    async def callback(self,interaction):
         sqldb.remove_user_poll(self.poll_id, interaction.user.id)
         await interaction.response.send_message(f"{interaction.user.mention} 已取消投票",ephemeral=True)
 
-    @discord.ui.button(label="目前選擇",custom_id="vote_now",style=discord.ButtonStyle.primary)
-    async def now_button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
+class PollNowButton(discord.ui.Button):
+    def __init__(self,poll_id):
+        super().__init__(label="目前選擇",custom_id=f"vote_now_{poll_id}",style=discord.ButtonStyle.primary)
+        self.poll_id = poll_id
+    
+    async def callback(self,interaction):
         data = sqldb.get_user_poll(self.poll_id, interaction.user.id)
         if data:
             vote_option = data['vote_option']
@@ -104,3 +114,21 @@ class PollView(discord.ui.View):
             await interaction.response.send_message(f"{interaction.user.mention} 投給 {options_data['option_name']}",ephemeral=True)
         else:
             await interaction.response.send_message(f"{interaction.user.mention} 沒有投給任何選項",ephemeral=True)
+
+class PollView(discord.ui.View):
+    def __init__(self,poll_id):
+        super().__init__(timeout=None)
+        self.poll_id = poll_id
+        self.created_id = sqldb.get_poll(poll_id)['created_user']
+        
+        self.add_item(PollEndButton(poll_id,self.created_id))
+        self.add_item(PollResultButton(poll_id))
+        self.add_item(PollCanenlButton(poll_id))
+        self.add_item(PollNowButton(poll_id))
+
+        
+        dbdata = sqldb.get_poll_options(poll_id)
+        for option in dbdata:
+            custom_id = f"poll_{poll_id}_{option['option_id']}"
+            self.add_item(PollOptionButton(label=option['option_name'],poll_id=poll_id, option_id=option['option_id'],custom_id=custom_id))
+
