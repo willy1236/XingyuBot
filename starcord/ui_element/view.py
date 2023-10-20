@@ -1,7 +1,4 @@
 import discord,datetime,matplotlib,io
-from discord.emoji import Emoji
-from discord.enums import ButtonStyle
-from discord.partial_emoji import PartialEmoji
 from starcord.database import sqldb
 from starcord.utility import BotEmbed
 

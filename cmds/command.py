@@ -26,6 +26,7 @@ class command(Cog_Extension):
     role = SlashCommandGroup("role", "身分組管理指令")
     busytime = SlashCommandGroup("busytime", "忙碌時間統計指令")
     poll = SlashCommandGroup("poll", "投票相關指令")
+    election = SlashCommandGroup("election", "選舉相關指令",guild_ids=main_guild)
 
     @role.command(description='查詢身分組數')
     async def count(self,ctx,user_list:discord.Option(str,required=False,name='要查詢的用戶',description='多個用戶請用空格隔開，或可輸入default查詢常用人選')):
