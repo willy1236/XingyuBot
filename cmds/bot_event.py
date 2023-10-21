@@ -251,7 +251,7 @@ class event(Cog_Extension):
 
     @commands.Cog.listener()
     async def on_presence_update(self,before:discord.Member, after:discord.Member):
-        if after.guild.id in main_guild and not after.bot and after.activity and after.voice.channel:
+        if after.guild.id in main_guild and not after.bot and after.activity and after.voice:
             if after.activity.name == "Overwatch 2" and after.voice.channel.id != 703617778095095958:
                 channel = self.bot.get_channel(703617778095095958)
                 await after.move_to(channel)
