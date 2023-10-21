@@ -205,7 +205,7 @@ class NoticeClient:
 
     def get_all_dynamic_voice(self):
         """取得目前所有的動態語音"""
-        return self.get_all_dynamic_voice()
+        return sqldb.get_all_dynamic_voice()
 
     def set_notice_community(self,notice_type:str,notice_name:str,guild_id:int,channel_id:int,role_id:int=None):
         """設定社群通知"""
