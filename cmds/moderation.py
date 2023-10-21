@@ -40,23 +40,23 @@ class moderation(Cog_Extension):
     @commands.has_permissions(manage_channels=True)
     @commands.guild_only()
     async def set(self,ctx:discord.ApplicationContext,
-                  notice_type:discord.Option(str,name='通知類型',description='要接收的通知類型',required=True,choices=set_option),
+                  notify_type:discord.Option(str,name='通知類型',description='要接收的通知類型',required=True,choices=set_option),
                   channel:discord.Option(discord.abc.GuildChannel,name='頻道',description='要接收通知的頻道',default=None),
                   role:discord.Option(discord.Role,required=False,name='身分組',description='發送通知時tag的身分組，定時通知與部分通知不會tag',default=None)):
         guildid = ctx.guild.id
         
         if channel:
             roleid = role.id if role else None
-            sclient.set_notice_channel(guildid,notice_type,channel.id,roleid)
-            await ctx.respond(f'設定完成，已將 {ChoiceList.get_tw(notice_type,"channel_set_option")} 頻道設定在 {channel.mention}')
+            sclient.set_notice_channel(guildid,notify_type,channel.id,roleid)
+            await ctx.respond(f'設定完成，已將 {ChoiceList.get_tw(notify_type,"channel_set_option")} 頻道設定在 {channel.mention}')
             await ctx.send(embed=BotEmbed.simple('溫馨提醒','若為定時通知，請將機器人的訊息保持在此頻道的最新訊息，以免機器人找不到訊息而重複發送'),delete_after=10)
-            if notice_type in ["voice_log"]:
+            if notify_type in ["voice_log"]:
                 from .task import scheduler
                 time = datetime.datetime.now() + datetime.timedelta(seconds=1)
-                scheduler.add_job(sclient.init_NoticeClient,"date",run_date=time,args=[notice_type])
+                scheduler.add_job(sclient.init_NoticeClient,"date",run_date=time,args=[notify_type])
         else:
-            sclient.remove_notice_channel(guildid,notice_type)
-            await ctx.respond(f'設定完成，已移除 {notice_type} 頻道')
+            sclient.remove_notice_channel(guildid,notify_type)
+            await ctx.respond(f'設定完成，已移除 {notify_type} 頻道')
 
     @channel_notify.command(description='設定動態語音頻道')
     @commands.has_permissions(manage_channels=True)
@@ -81,7 +81,7 @@ class moderation(Cog_Extension):
         dbdata = sclient.get_all_notice_channel(ctx.guild.id)
         embed = BotEmbed.general("通知頻道",ctx.guild.icon.url if ctx.guild.icon else discord.Embed.Empty)
         for data in dbdata:
-            notice_type = data['notice_type']
+            notify_type = data['notify_type']
             channel_id = data['channel_id']
             role_id = data['role_id']
             
@@ -93,7 +93,7 @@ class moderation(Cog_Extension):
                 text = channel.mention
                 if role:
                     text += f" {role.mention}"
-            embed.add_field(name=ChoiceList.get_tw(notice_type,"channel_set_option"), value=text)
+            embed.add_field(name=ChoiceList.get_tw(notify_type,"channel_set_option"), value=text)
         await ctx.respond(embed=embed)
         
     

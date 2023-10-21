@@ -61,7 +61,7 @@ class system_community(Cog_Extension):
         embed = BotEmbed.general("twitch開台通知",ctx.guild.icon.url if ctx.guild.icon else discord.Embed.Empty)
         dbdata = sclient.get_notice_community_list('twitch',guildid)
         for data in dbdata:
-            notice_name = data['notice_name']
+            notify_name = data['notify_name']
             channel_id = data['channel_id']
             role_id = data['role_id']
             
@@ -76,7 +76,7 @@ class system_community(Cog_Extension):
                 text = channel.mention
                 if role:
                     text += f" {role.mention}"
-            embed.add_field(name=notice_name, value=text)
+            embed.add_field(name=notify_name, value=text)
         await ctx.respond(embed=embed)
 
     @twitch.command(description='取得twitch頻道的相關資訊')
