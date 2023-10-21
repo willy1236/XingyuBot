@@ -2,7 +2,7 @@ import discord,asyncio,random,datetime
 from core.classes import Cog_Extension
 from discord.ext import commands
 from discord.commands import SlashCommandGroup
-from starcord import sqldb,BotEmbed,UserClient
+from starcord import sqldb,BotEmbed,sclient
 from starcord.ui_element.RPGbutton import RPGbutton1,RPGbutton2
 
 class role_playing_game(Cog_Extension):
@@ -25,10 +25,10 @@ class role_playing_game(Cog_Extension):
     @commands.slash_command(description='查看用戶資訊')
     async def ui(self,ctx:discord.ApplicationContext,user_dc:discord.Option(discord.Member,name='用戶',description='留空以查詢自己',default=None)):
         user_dc = user_dc or ctx.author
-        user = UserClient.get_user(user_dc.id,user_dc)
+        user = sclient.get_dcuser(user_dc.id,user_dc)
         if not user:
             sqldb.create_user(user_dc.id)
-            user = UserClient.get_user(user_dc.id,user_dc)
+            user = sclient.get_dcuser(user_dc.id,user_dc)
 
         pet = user.get_pet()
         pet_embed = pet.desplay() if pet else BotEmbed.simple(f'{user_dc.name} 的寵物','用戶沒有認養寵物')

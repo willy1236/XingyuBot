@@ -1,8 +1,36 @@
-import random
+import random,discord
 from starcord.database import sqldb
 from starcord.models.model import GameInfoPage
+from starcord.models.user import *
 from starcord.types import DBGame,Coins
 from .game import *
+
+class UserClient:
+    """用戶系統"""
+    @staticmethod
+    def get_rpguser(discord_id:str):
+        """取得RPG用戶"""
+        data = sqldb.get_rpguser(discord_id)
+        if data:
+            return RPGUser(data)
+    
+    @staticmethod
+    def get_pet(discord_id:str):
+        """取得寵物"""
+        data = sqldb.get_user_pet(discord_id)
+        if data:
+            return Pet(data)
+    
+    @staticmethod
+    def get_monster(monster_id:str):
+        """取得怪物"""
+        cursor = sqldb.cursor
+        cursor.execute(f'SELECT * FROM `checklist`.`rpg_monster` WHERE `monster_id` = %s;',(monster_id,))
+        dbdata = cursor.fetchone()
+        if dbdata:
+            return Monster(dbdata)
+        else:
+            raise ValueError('monster_id not found.')
 
 class WarningClient:
     """警告系統"""
@@ -257,6 +285,7 @@ class NoticeClient:
         return records
 
 class StarClient(
+    UserClient,
     NoticeClient,
     GameClient,
     PointClient
@@ -264,3 +293,9 @@ class StarClient(
     """整合各項系統的星羽客戶端"""
     def __init__(self):
         super().__init__()
+
+    def get_dcuser(self,discord_id:str,user_dc:discord.User=None):
+        """取得discord用戶"""
+        data = sqldb.get_dcuser(discord_id)
+        if data:
+            return DiscordUser(data,self,user_dc)

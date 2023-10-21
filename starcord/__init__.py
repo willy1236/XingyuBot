@@ -4,7 +4,7 @@ Discord機器人"星羽"用libary
 
 from . import clients
 from .database import Jsondb,sqldb,mongedb
-from .clients import UserClient,NoticeClient,StarClient
+from .clients import StarClient
 
 from .utility import BotEmbed,BRS,ChoiceList
 from .funtions import *
@@ -33,7 +33,6 @@ __all__ = [
     'clients',
     #'twitch_bot',
     'ChoiceList',
-    'UserClient',
     'StarException',
     'mongedb',
     'sclient',

@@ -13,7 +13,7 @@ class RPGbutton1(discord.ui.View):
         button.disabled = True
         await interaction.response.edit_message(view=self)
         button.disabled = False
-        if str(interaction.user.id) == self.userid:
+        if interaction.user.id == self.userid:
             user = UserClient.get_rpguser(self.userid)
             result = await self.advance(user,interaction)
         else:

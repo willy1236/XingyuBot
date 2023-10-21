@@ -17,7 +17,7 @@ csvdb = CsvDatabase()
 def create_sqldb(SQL_connection:bool) -> MySQLDatabase:
     if SQL_connection:
         try:
-            sqldb = MySQLDatabase(**SQLsettings)
+            sqldb = MySQLDatabase(SQLsettings)
             #log.info('>> SQL connect: on <<')
             print('>> MySQL connect: on <<')
         except:

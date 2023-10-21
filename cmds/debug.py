@@ -4,7 +4,7 @@ from discord.ext import commands,tasks
 import matplotlib.pyplot as plt
 
 from core.classes import Cog_Extension
-from starcord import Jsondb,UserClient
+from starcord import Jsondb
 from starcord.errors import *
 from starcord.types.game import DBGame
 from starcord.rpg.map import sunmon_area

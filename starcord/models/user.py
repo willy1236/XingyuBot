@@ -1,46 +1,7 @@
-import random,datetime,time,discord
+import random,time,datetime,discord
 from typing import TYPE_CHECKING
-from starcord.database import sqldb
 from starcord.utility import BotEmbed
 from starcord.types import DBGame,Coins
-from .client import GameClient,PointClient
-
-class UserClient:
-    """用戶系統"""
-    def __init__(self):
-        pass
-
-    @staticmethod
-    def get_user(discord_id:str,user_dc:discord.User=None):
-        """取得基本用戶"""
-        data = sqldb.get_user(discord_id)
-        if data:
-            return User(data,user_dc)
-
-    @staticmethod
-    def get_rpguser(discord_id:str):
-        """取得RPG用戶"""
-        data = sqldb.get_rpguser(discord_id)
-        if data:
-            return RPGUser(data)
-    
-    @staticmethod
-    def get_pet(discord_id:str):
-        """取得寵物"""
-        data = sqldb.get_user_pet(discord_id)
-        if data:
-            return Pet(data)
-        
-    @staticmethod
-    def get_monster(monster_id:str):
-        """取得怪物"""
-        cursor = sqldb.cursor
-        cursor.execute(f'SELECT * FROM `checklist`.`rpg_monster` WHERE `monster_id` = %s;',(monster_id,))
-        dbdata = cursor.fetchone()
-        if dbdata:
-            return Monster(dbdata)
-        else:
-            raise ValueError('monster_id not found.')
 
 class Pet():
     if TYPE_CHECKING:
@@ -64,9 +25,11 @@ class Pet():
         embed.add_field(name='飽食度',value=self.food)
         return embed
 
-class User():
+class DiscordUser():
     '''基本用戶'''
     if TYPE_CHECKING:
+        from starcord.clients.client import StarClient
+        sclient: StarClient
         user_dc: discord.User
         discord_id: int
         name: str
@@ -76,7 +39,8 @@ class User():
         meatball_times: int | None
         pet :Pet | None
 
-    def __init__(self,data:dict,user_dc=None):
+    def __init__(self,data:dict,sclient,user_dc=None):
+        self.sclient = sclient
         self.user_dc = user_dc
         self.discord_id = data.get('discord_id')
         self.name = data.get('name')
@@ -105,12 +69,12 @@ class User():
 
     def get_pet(self):
         """等同於 UserClient.get_pet()"""
-        self.pet = UserClient.get_pet(self.discord_id)
+        self.pet = self.sclient.get_pet(self.discord_id)
         return self.pet
     
     def get_game(self,game:DBGame=None):
         """等同於GameClient.get_user_game()"""
-        player_data = GameClient().get_user_game(self.discord_id,game)
+        player_data = self.sclient.get_user_game(self.discord_id,game)
         return player_data
     
     def get_scoin(self,force_refresh=False):
@@ -118,13 +82,13 @@ class User():
         :param force_refresh: 若是則刷新現有資料
         """
         if force_refresh or not hasattr(self,'scoin'):
-            self.scoin = PointClient().get_scoin(self.discord_id)
+            self.scoin = self.sclient.get_scoin(self.discord_id)
         return self.scoin
     
     def update_coins(self,mod,coin_type:Coins,amount:int):
-        sqldb.update_coins(self.discord_id,mod,coin_type,amount)
+        self.sclient.update_coins(self.discord_id,mod,coin_type,amount)
 
-class RPGUser(User):
+class RPGUser(DiscordUser):
     '''RPG遊戲用戶'''
     if TYPE_CHECKING:
         hp: int
@@ -186,33 +150,33 @@ class RPGUser(User):
 
     #     return list
     
-    def work(self) -> str:
-        '''
-        進行工作
+    # def work(self) -> str:
+    #     '''
+    #     進行工作
         
-        Return: str（以文字輸出工作結果）
-        '''
-        if not self.career_id:
-            return '你還沒有選擇職業'
+    #     Return: str（以文字輸出工作結果）
+    #     '''
+    #     if not self.career_id:
+    #         return '你還沒有選擇職業'
         
-        rd = random.randint(1,100)
-        if self.career_id == 1 and rd >= 50:
-            sqldb.update_bag(self.id,1,1)
-            text = '工作完成，獲得：小麥x1'
-        elif self.career_id == 2 and rd >= 50:
-            sqldb.update_bag(self.id,2,1)
-            text = '工作完成，獲得：鐵礦x1'
-        #elif self.career_id == 3 and rd >= 50:
-        #    return '工作完成，獲得：麵包x1'
-        #elif self.career_id == 4 and rd >= 50:
-        #    return '工作完成，獲得：麵包x1'
-        else:
-            text = '工作完成，但沒有獲得東西'
-        time.sleep(0.5)
-        sqldb.update_userdata(self.id,"rpg_activities","work_date",datetime.date.today().isoformat())
-        return text
+    #     rd = random.randint(1,100)
+    #     if self.career_id == 1 and rd >= 50:
+    #         sqldb.update_bag(self.id,1,1)
+    #         text = '工作完成，獲得：小麥x1'
+    #     elif self.career_id == 2 and rd >= 50:
+    #         sqldb.update_bag(self.id,2,1)
+    #         text = '工作完成，獲得：鐵礦x1'
+    #     #elif self.career_id == 3 and rd >= 50:
+    #     #    return '工作完成，獲得：麵包x1'
+    #     #elif self.career_id == 4 and rd >= 50:
+    #     #    return '工作完成，獲得：麵包x1'
+    #     else:
+    #         text = '工作完成，但沒有獲得東西'
+    #     time.sleep(0.5)
+    #     sqldb.update_userdata(self.id,"rpg_activities","work_date",datetime.date.today().isoformat())
+    #     return text
         
-class GameUser(User):
+class GameUser(DiscordUser):
     def __init__(self,data:dict):
         super().__init__(data)
     
@@ -233,15 +197,6 @@ class Monster:
         self.hp = data.get('monster_hp')
         self.atk = data.get('monster_atk')
         self.hrt = data.get('hrt')
-    
-    @staticmethod
-    def get_monster(monster_id:str):
-        """取得怪物"""
-        data = sqldb.get_monster(monster_id)
-        if data:
-            return Monster(data)
-        else:
-            raise ValueError('monster_id not found.')
 
 
     # def battle(self, player:RPGUser):
