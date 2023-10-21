@@ -572,6 +572,7 @@ class MySQLPollSystem(MySQLBaseModel):
 
 class MySQLDatabase(
     MySQLUserSystem,
+    MySQLNotifySystem,
     MySQLGameSystem,
     MySQLRoleSaveSystem,
     MySQLCurrencySystem,

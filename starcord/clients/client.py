@@ -177,112 +177,63 @@ class NoticeClient:
     
     def set_notice_channel(self,guild_id:int,notice_type:str,channel_id:int,role_id:int=None):
         """設定自動通知頻道"""
-        sqldb.cursor.execute(f"USE `database`;")
-        sqldb.cursor.execute(f"INSERT INTO `notice_channel` VALUES(%s,%s,%s,%s) ON DUPLICATE KEY UPDATE `guild_id` = %s, `notice_type` = %s, `channel_id` = %s, `role_id` = %s",(guild_id,notice_type,channel_id,role_id,guild_id,notice_type,channel_id,role_id))
-        sqldb.connection.commit()
+        sqldb.set_notify_channel(guild_id,notice_type,channel_id,role_id)
 
     def remove_notice_channel(self,guild_id:int,notice_type:str):
         """移除自動通知頻道"""
-        sqldb.cursor.execute(f"USE `database`;")
-        sqldb.cursor.execute(f'DELETE FROM `notice_channel` WHERE `guild_id` = %s AND `notice_type` = %s;',(guild_id,notice_type))
-        sqldb.connection.commit()
+        sqldb.remove_notify_channel(guild_id,notice_type)
 
     def get_notice_channel_by_type(self,notice_type:str):
         """取得自動通知頻道（依據通知種類）"""
-        sqldb.cursor.execute(f"USE `database`;")
-        sqldb.cursor.execute(f'SELECT * FROM `notice_channel` WHERE notice_type = %s;',(notice_type,))
-        records = sqldb.cursor.fetchall()
-        return records
+        return sqldb.get_notify_channel_by_type(notice_type)
 
     def get_notice_channel(self,guild_id:str,notice_type:str):
         """取得自動通知頻道"""
-        sqldb.cursor.execute(f"USE `database`;")
-        sqldb.cursor.execute(f'SELECT * FROM `notice_channel` WHERE guild_id = %s AND notice_type = %s;',(guild_id,notice_type))
-        records = sqldb.cursor.fetchall()
-        if records:
-            return records[0]
+        return sqldb.get_notify_channel(guild_id,notice_type)
     
     def get_all_notice_channel(self,guild_id:str):
         """取得伺服器的所有自動通知頻道"""
-        sqldb.cursor.execute(f"USE `database`;")
-        sqldb.cursor.execute(f'SELECT * FROM `notice_channel` WHERE guild_id = %s;',(guild_id,))
-        records = sqldb.cursor.fetchall()
-        return records
+        return sqldb.get_all_notify_channel(guild_id)
     
     def set_dynamic_voice(self,channel_id,discord_id,guild_id,created_at=None):
         """設定動態語音"""
-        sqldb.cursor.execute(f"USE `database`;")
-        sqldb.cursor.execute(f"INSERT INTO `dynamic_channel` VALUES(%s,%s,%s,%s)",(channel_id,discord_id,guild_id,created_at))
-        sqldb.connection.commit()
+        sqldb.set_dynamic_voice(channel_id,discord_id,guild_id,created_at)
 
     def remove_dynamic_voice(self,channel_id):
         """移除動態語音"""
-        sqldb.cursor.execute(f"USE `database`;")
-        sqldb.cursor.execute(f"DELETE FROM `dynamic_channel` WHERE `channel_id` = %s",(channel_id,))
-        sqldb.connection.commit()
+        sqldb.remove_dynamic_voice(channel_id)
 
     def get_all_dynamic_voice(self):
         """取得目前所有的動態語音"""
-        sqldb.cursor.execute(f"USE `database`;")
-        sqldb.cursor.execute(f'SELECT `channel_id` FROM `dynamic_channel`;')
-        records = sqldb.cursor.fetchall()
-        list = []
-        for data in records:
-            list.append(data['channel_id'])
-        return list
+        return self.get_all_dynamic_voice()
 
     def set_notice_community(self,notice_type:str,notice_name:str,guild_id:int,channel_id:int,role_id:int=None):
         """設定社群通知"""
-        sqldb.cursor.execute(f"USE `database`;")
-        sqldb.cursor.execute(f"INSERT INTO `notice_community` VALUES(%s,%s,%s,%s,%s) ON DUPLICATE KEY UPDATE `notice_type` = %s, `notice_name` = %s, `guild_id` = %s, `channel_id` = %s, `role_id` = %s",(notice_type,notice_name,guild_id,channel_id,role_id,notice_type,notice_name,guild_id,channel_id,role_id))
-        sqldb.connection.commit()
+        sqldb.set_notify_community(notice_type,notice_name,guild_id,channel_id,role_id)
 
     def remove_notice_community(self,notice_type:str,notice_name:str,guild_id:int):
         """移除社群通知"""
-        sqldb.cursor.execute(f"USE `database`;")
-        sqldb.cursor.execute(f'DELETE FROM `notice_community` WHERE `notice_type` = %s AND `notice_name` = %s AND `guild_id` = %s;',(notice_type,notice_name,guild_id))
-        sqldb.connection.commit()
+        sqldb.remove_notify_community(notice_type,notice_name,guild_id)
 
     def get_notice_community(self,notice_type:str):
         """取得社群通知（依據社群）"""
-        sqldb.cursor.execute(f"USE `database`;")
-        sqldb.cursor.execute(f'SELECT * FROM `notice_community` WHERE `notice_type` = %s;',(notice_type,))
-        records = sqldb.cursor.fetchall()
-        return records
+        return sqldb.get_notify_community(notice_type)
     
     def get_notice_community_guild(self,notice_type:str,notice_name:str):
         """取得指定的所有社群通知"""
-        sqldb.cursor.execute(f"USE `database`;")
-        sqldb.cursor.execute(f'SELECT `guild_id`,`channel_id`,`role_id` FROM `notice_community` WHERE `notice_type` = %s AND `notice_name` = %s;',(notice_type,notice_name))
-        records = sqldb.cursor.fetchall()
-        dict = {}
-        for i in records:
-            dict[i['guild_id']] = [i['channel_id'],i['role_id']]
-        return dict
+        return sqldb.get_notify_community_guild(notice_type,notice_name)
 
     def get_notice_community_user(self,notice_type:str,notice_name:str,guild_id:int):
         """取得伺服器內的指定社群通知"""
-        sqldb.cursor.execute(f"USE `database`;")
-        sqldb.cursor.execute(f'SELECT `channel_id`,`role_id` FROM `notice_community` WHERE `notice_type` = %s AND `notice_name` = %s AND `guild_id` = %s;',(notice_type,notice_name,guild_id))
-        records = sqldb.cursor.fetchall()
-        return records
+        return sqldb.get_notify_community_user(notice_type,notice_name,guild_id)
 
     def get_notice_community_userlist(self,notice_type:str):
         """取得指定類型的社群通知清單"""
-        sqldb.cursor.execute(f"USE `database`;")
-        sqldb.cursor.execute(f'SELECT DISTINCT `notice_name` FROM `notice_community` WHERE `notice_type` = %s;',(notice_type,))
-        records = sqldb.cursor.fetchall()
-        list = []
-        for i in records:
-            list.append(i.get('notice_name'))
-        return list
+        return sqldb.get_notify_community_userlist(notice_type)
 
     def get_notice_community_list(self,notice_type:str,guild_id:int):
         """取得伺服器內指定種類的所有通知"""
-        sqldb.cursor.execute(f"USE `database`;")
-        sqldb.cursor.execute(f'SELECT * FROM `notice_community` WHERE `notice_type` = %s AND `guild_id` = %s;',(notice_type,guild_id))
-        records = sqldb.cursor.fetchall()
-        return records
+        return sqldb.get_notify_community_list(notice_type, guild_id)
 
 class StarClient(
     UserClient,
