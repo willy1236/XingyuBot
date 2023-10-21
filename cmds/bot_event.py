@@ -248,5 +248,12 @@ class event(Cog_Extension):
                 role2 = member.get_role(1145762872685764639)
                 if role2:
                     await member.remove_roles(role2)
+
+    @commands.Cog.listener()
+    async def on_presence_update(self,before:discord.Member, after:discord.Member):
+        if after.guild.id in main_guild and after.activity.name == "Overwatch 2" and after.voice.channel and after.voice.channel.id != 703617778095095958:
+            channel = self.bot.get_channel(703617778095095958)
+            await after.move_to(channel)
+
 def setup(bot):
     bot.add_cog(event(bot))
