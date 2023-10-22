@@ -53,7 +53,7 @@ class DiscordUser():
         self.main_account_id = data.get('main_account')
 
     def desplay(self,bot:discord.Bot=None):
-        embed = BotEmbed.general(name=self.user_dc.name if self.user_dc else self.name, icon_url=self.user_dc.avatar if self.user_dc else discord.Embed.Empty)
+        embed = BotEmbed.general(name=self.user_dc.name if self.user_dc else self.name, icon_url=self.user_dc.avatar.url if self.user_dc.avatar else discord.Embed.Empty)
         if bot and self.main_account_id:
             main_account = bot.get_user(self.main_account_id) or self.main_account_id
             embed.description = f"{main_account.mention} 的小帳"
