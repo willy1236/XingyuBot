@@ -4,7 +4,7 @@ from discord.commands import SlashCommandGroup
 from datetime import timedelta,datetime
 
 from core.classes import Cog_Extension
-from starcord import BotEmbed,Jsondb,ChoiceList,sqldb
+from starcord import BotEmbed,Jsondb,ChoiceList,sqldb,sclient
 from starcord.clients.game import *
 from starcord.clients import GameClient
 from starcord.types import DBGame
@@ -114,7 +114,7 @@ class system_game(Cog_Extension):
             await ctx.respond('目前不開放查詢別人的綜合資料喔',ephemeral=True)
             return
         
-        player_data = GameClient().get_user_game(userid)
+        player_data = sclient.get_user_game(userid)
 
         if player_data:
             await ctx.respond(f'查詢成功',embed=player_data.desplay(user))

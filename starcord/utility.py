@@ -54,16 +54,11 @@ class BRS():
         await error_report.send(embed=embed)
 
     @staticmethod
-    async def scam(self,msg,Matchs=None):
-        scam_channel = self.bot.get_channel(Jsondb.jdata['scam_channel'])
-        embed=BotEmbed.general(name="BRS | 詐騙回報")
-        embed.add_field(name='詐騙訊息', value=msg.content, inline=True)
-        embed.add_field(name='發送者', value=f"{msg.author}\n{msg.author.id}", inline=False)
-        embed.add_field(name='發生頻道', value=f'{msg.channel}\n{msg.channel.id}', inline=True)
-        embed.add_field(name='發生群組', value=f'{msg.guild}\n{msg.guild.id}', inline=True)
-        if Matchs:
-            embed.add_field(name='關鍵字', value=Matchs, inline=True)
-        await scam_channel.send(embed=embed)
+    async def report(bot,msg):
+        report_channel = bot.get_channel(Jsondb.jdata['report_channel'])
+        embed=BotEmbed.general(name="BRS | 回報訊息")
+        embed.add_field(name='訊息', value=msg, inline=True)
+        await report_channel.send(embed=embed)
 
     @staticmethod
     async def feedback(self,ctx,msg):

@@ -3,7 +3,6 @@ from discord.ext import commands
 from discord.commands import SlashCommandGroup
 from core.classes import Cog_Extension
 from starcord import Jsondb,sclient
-from starcord.clients import PointClient
 from starcord.types import Coins
 
 debug_guild = Jsondb.jdata.get('debug_guild')
@@ -47,7 +46,7 @@ class system_economy(Cog_Extension):
 
     @commands.slash_command(description='簽到')
     async def sign(self,ctx):
-        code = PointClient().daily_sign(ctx.author.id)
+        code = sclient.daily_sign(ctx.author.id)
         if type(code) == list:
             await ctx.respond(f'{ctx.author.mention} 簽到完成! 星幣⭐+{code[0]}')
         else:

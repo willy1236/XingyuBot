@@ -31,6 +31,10 @@ class UserClient:
             return Monster(dbdata)
         else:
             raise ValueError('monster_id not found.')
+    
+    # @staticmethod
+    # def get_alternate_account(discord_id):
+    #     return sqldb.get_alternate_account(discord_id)
 
 class WarningClient:
     """警告系統"""
@@ -244,9 +248,10 @@ class StarClient(
     """整合各項系統的星羽客戶端"""
     def __init__(self):
         super().__init__()
+        self.sqldb = sqldb
 
-    def get_dcuser(self,discord_id:str,user_dc:discord.User=None):
+    def get_dcuser(self,discord_id:str,full=False,user_dc:discord.User=None):
         """取得discord用戶"""
-        data = sqldb.get_dcuser(discord_id)
+        data = sqldb.get_dcuser(discord_id,full)
         if data:
             return DiscordUser(data,self,user_dc)

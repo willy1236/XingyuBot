@@ -79,17 +79,32 @@ class MySQLUserSystem(MySQLBaseModel):
     def get_user(self,discord_id:int):
         """取得基本用戶"""
 
-    def get_dcuser(self,discord_id:int):
+    def get_dcuser(self,discord_id:int,full=False):
         self.cursor.execute(f"USE `stardb_user`;")
-        self.cursor.execute(f'SELECT * FROM `user_discord` LEFT JOIN `user_point` ON `user_discord`.`discord_id` = `user_point`.`discord_id` WHERE `user_discord`.`discord_id` = %s;',(discord_id,))
+        if full:
+            self.cursor.execute(f'SELECT * FROM `user_discord` LEFT JOIN `user_point` ON `user_discord`.`discord_id` = `user_point`.`discord_id` LEFT JOIN `user_account` ON `user_discord`.`discord_id` = `user_account`.`alternate_account` WHERE `user_discord`.`discord_id` = %s;',(discord_id,))
+        else:
+            self.cursor.execute(f'SELECT * FROM `user_discord` WHERE `discord_id` = %s;',(discord_id,))
         record = self.cursor.fetchall()
         if record:
             return record[0]
-        
+
     def set_staruser_data(self,discord_id:int,emailAddress=None,drive_share_id=None):
         self.cursor.execute(f"USE `stardb_user`;")
         self.cursor.execute(f"INSERT INTO `user_data` SET `discord_id` = %s, `email` = %s, `drive_share_id` = %s ON DUPLICATE KEY UPDATE `email` = %s, `drive_share_id` = %s;",(discord_id,emailAddress,drive_share_id,emailAddress,drive_share_id))
         self.connection.commit()
+    
+    def get_main_account(self,alternate_account):
+        self.cursor.execute(f"USE `stardb_user`;")
+        self.cursor.execute(f'SELECT * FROM `user_account` WHERE `alternate_account` = %s;',(alternate_account,))
+        record = self.cursor.fetchall()
+        if record:
+            return record[0]
+        
+    def get_alternate_account(self,discord_id):
+        self.cursor.execute(f"USE `stardb_user`;")
+        self.cursor.execute(f'SELECT * FROM `user_account` WHERE `main_account` = %s;',(discord_id,))
+        return self.cursor.fetchall()
 
 class MySQLNotifySystem(MySQLBaseModel):
     def set_notify_channel(self,guild_id:int,notify_type:str,channel_id:int,role_id:int=None):

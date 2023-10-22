@@ -37,7 +37,8 @@ class DiscordUser():
         rcoin: int
         max_sign_consecutive_days: int
         meatball_times: int | None
-        pet :Pet | None
+        pet: Pet | None
+        main_account_id: int | None
 
     def __init__(self,data:dict,sclient,user_dc=None):
         self.sclient = sclient
@@ -49,9 +50,13 @@ class DiscordUser():
         self.rcoin = data.get('rcoin') or 0
         self.max_sign_consecutive_days = data.get('max_sign_consecutive_days') or 0
         self.meatball_times = data.get('meatball_times')
+        self.main_account_id = data.get('main_account')
 
-    def desplay(self):
+    def desplay(self,bot:discord.Bot=None):
         embed = BotEmbed.general(name=self.user_dc.name if self.user_dc else self.name, icon_url=self.user_dc.avatar if self.user_dc else discord.Embed.Empty)
+        if bot and self.main_account_id:
+            main_account = bot.get_user(self.main_account_id) or self.main_account_id
+            embed.description = f"{main_account.mention} 的小帳"
         embed.add_field(name='星幣⭐',value=self.scoin)
         embed.add_field(name='PT點數',value=self.point)
         embed.add_field(name='Rcoin',value=self.rcoin)
@@ -87,6 +92,12 @@ class DiscordUser():
     
     def update_coins(self,mod,coin_type:Coins,amount:int):
         self.sclient.update_coins(self.discord_id,mod,coin_type,amount)
+
+    def get_alternate_account(self):
+        return self.sclient.sqldb.get_alternate_account(self.discord_id)
+    
+    def get_main_account(self):
+        return self.sclient.sqldb.get_main_account(self.discord_id)
 
 class RPGUser(DiscordUser):
     '''RPG遊戲用戶'''
