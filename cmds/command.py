@@ -540,17 +540,18 @@ class command(Cog_Extension):
     @poll.command(description='創建投票',guild_ids=main_guild)
     async def create(self,ctx,
                      title:discord.Option(str,name='標題',description='投票標題，限45字內'),
-                     options:discord.Option(str,name='選項',description='投票選項，最多輸入10項，每個選項請用英文,隔開')):
+                     options:discord.Option(str,name='選項',description='投票選項，最多輸入10項，每個選項請用英文,隔開'),
+                     alternate_account_can_vote:discord.Option(bool,name='小帳是否算有效票',description='預設為true',default=True)):
         options = options.split(",")
         if len(options) > 10 or len(options) < 2:
             await ctx.respond(f"錯誤：投票選項超過10項或小於2項",ephemeral=True)
             return
         
-        poll_id = self.sqldb.add_poll(title,ctx.author.id,datetime.datetime.now(),None,ctx.guild.id)
+        poll_id = self.sqldb.add_poll(title,ctx.author.id,datetime.datetime.now(),None,ctx.guild.id,alternate_account_can_vote)
         self.sqldb.add_poll_option(poll_id,options)
         
         view = PollView(poll_id)
-        embed = BotEmbed.general(name=ctx.author.name,icon_url=ctx.author.avatar.url,title=title,description=f"投票ID：{poll_id}")
+        embed = BotEmbed.general(name=ctx.author.name,icon_url=ctx.author.avatar.url,title=title,description=f"投票ID：{poll_id}\n- 小帳是否算有效票：{alternate_account_can_vote}")
         message = await ctx.respond(embed=embed,view=view)
         self.sqldb.update_poll(poll_id,"message_id",message.id)
 

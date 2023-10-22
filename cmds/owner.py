@@ -367,7 +367,7 @@ class owner(Cog_Extension):
             embed.add_field(name="最高身分組", value=user.top_role.mention, inline=True)
             embed.add_field(name="目前狀態", value=user.raw_status, inline=True)
             if user.activity:
-                embed.add_field(name="目前活動", value=user.activity, inline=True)
+                embed.add_field(name="目前活動", value=user.activity.name, inline=True)
             embed.add_field(name="是否為機器人", value=user.bot, inline=False)
             embed.add_field(name="是否為Discord官方", value=user.system, inline=True)
             embed.add_field(name="是否被禁言", value=user.timed_out, inline=True)

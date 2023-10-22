@@ -25,7 +25,7 @@ class PollEndButton(discord.ui.Button):
             sqldb.update_poll(self.poll_id,"is_on",0)
             
             polldata = sqldb.get_poll(self.poll_id)
-            dbdata = sqldb.get_poll_vote_count(self.poll_id)
+            dbdata = sqldb.get_poll_vote_count(self.poll_id,not view.alternate_account_can_vote)
             options_data = sqldb.get_poll_options(self.poll_id)
 
             text = ""
@@ -80,7 +80,8 @@ class PollResultButton(discord.ui.Button):
         self.poll_id = poll_id
 
     async def callback(self,interaction):
-        dbdata = sqldb.get_poll_vote_count(self.poll_id)
+        view:PollView = self.view
+        dbdata = sqldb.get_poll_vote_count(self.poll_id, not view.alternate_account_can_vote)
         options_data = sqldb.get_poll_options(self.poll_id)
 
         text = ""
@@ -119,7 +120,9 @@ class PollView(discord.ui.View):
     def __init__(self,poll_id):
         super().__init__(timeout=None)
         self.poll_id = poll_id
-        self.created_id = sqldb.get_poll(poll_id)['created_user']
+        poll_data = sqldb.get_poll(poll_id)
+        self.created_id = poll_data['created_user']
+        self.alternate_account_can_vote:bool = poll_data['alternate_account_can_vote']
         
         self.add_item(PollEndButton(poll_id,self.created_id))
         self.add_item(PollResultButton(poll_id))
