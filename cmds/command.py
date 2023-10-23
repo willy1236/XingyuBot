@@ -4,18 +4,20 @@ from discord.ext import commands,pages
 from discord.commands import SlashCommandGroup
 
 from core.classes import Cog_Extension
-from starcord import Jsondb,BRS,log,BotEmbed,ChoiceList
+from starcord import Jsondb,BRS,log,BotEmbed,ChoiceList,sqldb
 from starcord.funtions import find,random_color
 from starcord.ui_element.button import Delete_Add_Role_button
 from starcord.ui_element.view import PollView
 from starcord.errors import CommandError
 from starcord.clients import GoogleCloud
+from starcord.types import Position
 
 from mysql.connector.errors import Error as sqlerror
 
 #openai.api_key = Jsondb.get_token('openai')
 bet_option = ChoiceList.set('bet_option')
 busy_time_option = ChoiceList.set('busy_time_option')
+position_option = ChoiceList.set('position_option')
 
 jdata = Jsondb.jdata
 main_guild = Jsondb.jdata.get('main_guild')
@@ -580,6 +582,72 @@ class command(Cog_Extension):
         google_data = GoogleCloud().add_file_permissions("1bDtsLbOi5crIOkWUZbQmPq3dXUbwWEan",email)
         self.sqldb.set_staruser_data(ctx.author.id,email,google_data.get("id"))
         await ctx.respond(f"{ctx.author.mention}：已與 {email} 共用雲端資料夾")
+
+    @election.command(description='加入選舉')
+    async def join(self, ctx, position:discord.Option(str,name='職位',description='要競選的職位',choices=position_option)):
+        sqldb.add_election(ctx.author.id,2,position)
+        await ctx.respond(f"{ctx.author.mention}：完成競選報名")
+
+    @election.command(description='離開選舉')
+    async def leave(self, ctx):
+        sqldb.remove_election(ctx.author.id,2)
+        await ctx.respond(f"{ctx.author.mention}：完成競選退出")
+
+    @election.command(description='候選人名單')
+    @commands.is_owner()
+    async def format(self, ctx):
+        await ctx.defer()
+        session = 2
+        data = sqldb.get_election_full_by_session(session)
+        result = {
+            "president": [],
+            "legislative_president": [],
+            "executive_president": []
+        }
+        
+        for i in data:
+            user = self.bot.get_user(i['discord_id'])
+            print(result)
+            if user:
+                party_name = i['party_name'] or "無黨籍"
+                result[i['position']].append(f"{user.mention} （{party_name}）")
+            
+        embed = BotEmbed.simple(f"第{session}屆中央選舉名單")
+        
+        for position_name in result:
+            text = ""
+            count = 0
+            for i in result[position_name]:
+                count += 1
+                text += f"{count}. {i}\n"
+            embed.add_field(name=Jsondb.jdict['position_option'].get(position_name),value=text,inline=False)
+
+        await ctx.respond(embed=embed)
+
+    @election.command(description='開始投票')
+    @commands.is_owner()
+    async def start(self,ctx:discord.ApplicationContext):
+        await ctx.defer()
+        session = 2
+
+        count_data = sqldb.get_election_count(session)
+        for position_data in count_data:
+            if position_data['count'] > 0:
+                position_name = Jsondb.jdict['position_option'].get(position_data['position'])
+                title = f"第{session}屆中央選舉：{position_name}"
+                options = []
+                for i in range(1,position_data['count'] + 1):
+                    options.append(f"{i}號")
+
+                poll_id = self.sqldb.add_poll(title,ctx.author.id,datetime.datetime.now(),None,ctx.guild.id,False)
+                self.sqldb.add_poll_option(poll_id,options)
+            
+                view = PollView(poll_id)
+                embed = BotEmbed.general(name=ctx.author.name,icon_url=ctx.author.avatar.url,title=title,description=f"投票ID：{poll_id}\n- 小帳是否算有效票：False")
+                message = await ctx.send(embed=embed,view=view)
+                self.sqldb.update_poll(poll_id,"message_id",message.id)
+                await asyncio.sleep(1)
+        await ctx.respond(f"第{session}屆中央選舉投票創建完成")
 
 def setup(bot):
     bot.add_cog(command(bot))

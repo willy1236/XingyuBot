@@ -108,5 +108,11 @@
         "1": "早上",
         "2": "下午",
         "3": "晚上"
+    },
+    "position_option": {
+        "president": "總統",
+        "legislative_president": "立法院長",
+        "executive_president": "行政院長"
+        
     }
 }

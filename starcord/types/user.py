@@ -57,3 +57,8 @@ class Coins(Enum):
     POINT = "point"
     RCOIN = "rcoin"
     SCOIN = "scoin"
+
+class Position(Enum):
+    PRESIDENT= "president"
+    EXECUTIVE_PRESIDENT  = "executive_president"
+    LEGISLATIVE_PRESIDENT  = "legislative_president"

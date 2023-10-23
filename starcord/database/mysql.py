@@ -1,6 +1,6 @@
 import mysql.connector,datetime
 from mysql.connector.errors import Error as sqlerror
-from starcord.types import DBGame,Coins
+from starcord.types import DBGame,Coins, Position
 
 class MySQLBaseModel(object):
     """MySQL資料庫基本模型"""
@@ -591,6 +591,37 @@ class MySQLPollSystem(MySQLBaseModel):
             for i in records:
                 dict[str(i["vote_option"])] = i["count"]
         return dict
+    
+class MYSQLElectionSystem(MySQLBaseModel):
+    def add_election(self,discord_id:int,session:int,position):
+        position = Position(position)
+        self.cursor.execute(f"INSERT INTO `database`.`candidate_list` VALUES(%s,%s,%s);",(discord_id,session,position.value))
+        self.connection.commit()
+
+    def remove_election(self,discord_id:int,session:int):
+        self.cursor.execute(f"DELETE FROM `database`.`candidate_list` WHERE `discord_id` = %s AND `session` = %s;",(discord_id,session))
+        self.connection.commit()
+
+    def get_election_by_session(self,session:int):
+        self.cursor.execute(f"SELECT * FROM `database`.`candidate_list` WHERE session = {session};")
+        records = self.cursor.fetchall()
+        return records
+    
+    def get_election_full_by_session(self,session:int):
+        self.cursor.execute(f"SELECT `candidate_list`.discord_id, session, position, `user_party`.party_id, party_name FROM `database`.`candidate_list` LEFT JOIN `stardb_user`.`user_party` ON `candidate_list`.discord_id = `user_party`.discord_id LEFT JOIN `database`.`party_data` ON `user_party`.party_id = `party_data`.party_id WHERE session = {session};")
+        records = self.cursor.fetchall()
+        return records
+
+    def get_election_by_session_position(self,session:int,position=str):
+        position = Position(position)
+        self.cursor.execute(f"SELECT * FROM `database`.`candidate_list` WHERE session = {session} AND position = {position.value};")
+        records = self.cursor.fetchall()
+        return records
+    
+    def get_election_count(self,session:int):
+        self.cursor.execute(f"SELECT position,count(*) AS count FROM `database`.`candidate_list` WHERE session = {session} GROUP BY position;")
+        records = self.cursor.fetchall()
+        return records
 
 class MySQLDatabase(
     MySQLUserSystem,
@@ -605,5 +636,6 @@ class MySQLDatabase(
     MySQLBusyTimeSystem,
     MySQLWarningSystem,
     MySQLPollSystem,
+    MYSQLElectionSystem,
 ):
     """Mysql操作"""
