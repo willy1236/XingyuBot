@@ -1,8 +1,10 @@
 import random,discord
+from regex import P
 from starcord.database import sqldb
 from starcord.models.model import GameInfoPage
 from starcord.models.user import *
 from starcord.types import DBGame,Coins
+from starcord.ui_element.view import PollView
 from .game import *
 
 class UserClient:
@@ -112,6 +114,13 @@ class PointClient:
 
 class PollClient:
     """投票系統"""
+    def create_poll(self, title:str, options:list, creator_id:int, guild_id:int, alternate_account_can_vote=True):
+        poll_id = sqldb.add_poll(title,creator_id,datetime.datetime.now(),None,guild_id,alternate_account_can_vote)
+        sqldb.add_poll_option(poll_id,options)
+        
+        view = PollView(poll_id)
+        embed = BotEmbed.general(title=title,description=f"投票ID：{poll_id}\n- 小帳是否算有效票：{alternate_account_can_vote}")
+        return view, embed
 
 class GiveawayClient:
     """todo:抽獎系統"""
@@ -243,7 +252,8 @@ class StarClient(
     UserClient,
     NoticeClient,
     GameClient,
-    PointClient
+    PointClient,
+    PollClient,
 ):
     """整合各項系統的星羽客戶端"""
     def __init__(self):

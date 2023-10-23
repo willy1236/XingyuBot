@@ -4,7 +4,8 @@ from discord.ext import commands,pages
 from discord.commands import SlashCommandGroup
 
 from core.classes import Cog_Extension
-from starcord import Jsondb,BRS,log,BotEmbed,ChoiceList,sqldb
+from starcord import Jsondb,BRS,log,BotEmbed,ChoiceList,sqldb,sclient
+from starcord.clients.client import StarClient
 from starcord.funtions import find,random_color
 from starcord.ui_element.button import Delete_Add_Role_button
 from starcord.ui_element.view import PollView
@@ -549,13 +550,10 @@ class command(Cog_Extension):
             await ctx.respond(f"錯誤：投票選項超過10項或小於2項",ephemeral=True)
             return
         
-        poll_id = self.sqldb.add_poll(title,ctx.author.id,datetime.datetime.now(),None,ctx.guild.id,alternate_account_can_vote)
-        self.sqldb.add_poll_option(poll_id,options)
-        
-        view = PollView(poll_id)
-        embed = BotEmbed.general(name=ctx.author.name,icon_url=ctx.author.avatar.url,title=title,description=f"投票ID：{poll_id}\n- 小帳是否算有效票：{alternate_account_can_vote}")
+        view,embed = sclient.create_poll(title,options,ctx.author.id,ctx.guild.id,alternate_account_can_vote)
+        embed.set_author(name=ctx.author.name,icon_url=ctx.author.avatar.url)
         message = await ctx.respond(embed=embed,view=view)
-        self.sqldb.update_poll(poll_id,"message_id",message.id)
+        self.sqldb.update_poll(view.poll_id,"message_id",message.id)
 
     @commands.slash_command(description='共用「94共用啦」雲端資料夾',guild_ids=main_guild)
     async def drive(self,ctx,email:discord.Option(str,name='gmail帳戶',description='要使用的Gmail帳戶，留空已移除資料',required=False)):
@@ -641,13 +639,10 @@ class command(Cog_Extension):
                 for i in range(1,position_data['count'] + 1):
                     options.append(f"{i}號")
 
-                poll_id = self.sqldb.add_poll(title,ctx.author.id,datetime.datetime.now(),None,ctx.guild.id,False)
-                self.sqldb.add_poll_option(poll_id,options)
-            
-                view = PollView(poll_id)
-                embed = BotEmbed.general(name=ctx.author.name,icon_url=ctx.author.avatar.url,title=title,description=f"投票ID：{poll_id}\n- 小帳是否算有效票：False")
+                view, embed = sclient.create_poll(title,options,ctx.author.id,ctx.guild.id,False)
+
                 message = await ctx.send(embed=embed,view=view)
-                self.sqldb.update_poll(poll_id,"message_id",message.id)
+                self.sqldb.update_poll(view.poll_id,"message_id",message.id)
                 await asyncio.sleep(1)
         await ctx.respond(f"第{session}屆中央選舉投票創建完成")
 
