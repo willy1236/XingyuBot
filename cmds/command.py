@@ -610,7 +610,6 @@ class command(Cog_Extension):
         
         for i in data:
             user = self.bot.get_user(i['discord_id'])
-            print(result)
             if user:
                 party_name = i['party_name'] or "無黨籍"
                 result[i['position']].append(f"{user.mention} （{party_name}）")
