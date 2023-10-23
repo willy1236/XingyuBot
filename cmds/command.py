@@ -584,9 +584,12 @@ class command(Cog_Extension):
         await ctx.respond(f"{ctx.author.mention}：已與 {email} 共用雲端資料夾")
 
     @election.command(description='加入選舉')
-    async def join(self, ctx, position:discord.Option(str,name='職位',description='要競選的職位',choices=position_option)):
-        sqldb.add_election(ctx.author.id,2,position)
-        await ctx.respond(f"{ctx.author.mention}：完成競選報名")
+    async def join(self, ctx,
+                   position:discord.Option(str,name='職位',description='要競選的職位',choices=position_option),
+                   user_dc:discord.Option(discord.Member,name='成員',description='要競選的成員（此選項供政黨代表一次性報名用）',required=False)):
+        user_dc = user_dc or ctx.author
+        sqldb.add_election(user_dc.id,2,position)
+        await ctx.respond(f"{user_dc.mention}：完成競選報名 {Jsondb.jdict['position_option'].get(position)}")
 
     @election.command(description='離開選舉')
     async def leave(self, ctx):
