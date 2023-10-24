@@ -1,5 +1,4 @@
 import random,discord
-from regex import P
 from starcord.database import sqldb
 from starcord.models.model import GameInfoPage
 from starcord.models.user import *
