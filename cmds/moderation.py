@@ -145,23 +145,9 @@ class moderation(Cog_Extension):
     @commands.guild_only()
     async def get(self,ctx,
                       warning_id:discord.Option(str,name='警告編號',description='要查詢的警告',required=True)):
-        dbdata = sqldb.get_warning(int(warning_id))
-        if dbdata:
-            user = self.bot.get_user(dbdata['user_id'])
-            moderate_user = self.bot.get_user(dbdata['moderate_user'])
-            guild = self.bot.get_guild(dbdata['create_guild'])
-            time_str = dbdata['create_time']
-            moderate_type = dbdata['moderate_type']
-            last_time = dbdata['last_time']
-            if last_time:
-                moderate_type += f" {last_time}"
-            
-            name = f'{user.name} 的警告單'
-            description = f"編號:{warning_id} ({moderate_type})\n被警告用戶：{user.mention}\n管理員：{guild.name}/{moderate_user.mention}\n原因：{dbdata['reason']}\n時間：{time_str}"
-            if guild.id in debug_guild:
-                description += "\n機器人擁有者官方給予"
-            embed = BotEmbed.general(name=name,icon_url=user.display_avatar.url,description=description)
-            await ctx.respond(embed=embed)
+        sheet = sclient.get_warning(int(warning_id))
+        if sheet:
+            await ctx.respond(embed=sheet.display(self.bot))
         else:
             await ctx.respond("查無此警告單")
 

@@ -75,6 +75,10 @@ class MySQLUserSystem(MySQLBaseModel):
         self.cursor.execute(f"USE `stardb_user`;")
         self.cursor.execute(f"INSERT INTO `user_discord` SET discord_id = {discord_id};")
         self.connection.commit()
+        self.cursor.execute(f'SELECT * FROM `user_discord` WHERE `discord_id` = %s;',(discord_id,))
+        record = self.cursor.fetchall()
+        if record:
+            return record[0]
 
     def get_user(self,discord_id:int):
         """取得基本用戶"""
@@ -94,6 +98,13 @@ class MySQLUserSystem(MySQLBaseModel):
         self.cursor.execute(f"INSERT INTO `user_data` SET `discord_id` = %s, `email` = %s, `drive_share_id` = %s ON DUPLICATE KEY UPDATE `email` = %s, `drive_share_id` = %s;",(discord_id,emailAddress,drive_share_id,emailAddress,drive_share_id))
         self.connection.commit()
     
+    def get_partial_dcuser(self,discord_id:int,column:str):
+        self.cursor.execute(f"USE `stardb_user`;")
+        self.cursor.execute(f'SELECT discord_id,%s FROM `user_discord` WHERE `discord_id` = %s;',(column,discord_id))
+        record = self.cursor.fetchall()
+        if record:
+            return record[0]
+
     def get_main_account(self,alternate_account):
         self.cursor.execute(f"USE `stardb_user`;")
         self.cursor.execute(f'SELECT * FROM `user_account` WHERE `alternate_account` = %s;',(alternate_account,))

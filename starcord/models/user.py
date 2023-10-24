@@ -2,6 +2,7 @@ import random,time,datetime,discord
 from typing import TYPE_CHECKING
 from starcord.utility import BotEmbed
 from starcord.types import DBGame,Coins
+from starcord.database import Jsondb
 
 class Pet():
     if TYPE_CHECKING:
@@ -24,9 +25,11 @@ class Pet():
         embed.add_field(name='寵物物種',value=self.species)
         embed.add_field(name='飽食度',value=self.food)
         return embed
+class User:
+    """基本用戶"""
 
 class DiscordUser():
-    '''基本用戶'''
+    """Discord用戶"""
     if TYPE_CHECKING:
         from starcord.clients.client import StarClient
         sclient: StarClient
@@ -37,6 +40,7 @@ class DiscordUser():
         rcoin: int
         max_sign_consecutive_days: int
         meatball_times: int | None
+        guaranteed: int | None
         pet: Pet | None
         main_account_id: int | None
 
@@ -48,6 +52,7 @@ class DiscordUser():
         self.scoin = data.get('scoin') or 0
         self.point = data.get('point') or 0
         self.rcoin = data.get('rcoin') or 0
+        self.guaranteed = data.get('guaranteed')
         self.max_sign_consecutive_days = data.get('max_sign_consecutive_days') or 0
         self.meatball_times = data.get('meatball_times')
         self.main_account_id = data.get('main_account')
@@ -98,6 +103,9 @@ class DiscordUser():
     
     def get_main_account(self):
         return self.sclient.sqldb.get_main_account(self.discord_id)
+    
+    def update_data(self,table:str,column:str,value):
+        self.sclient.sqldb.set_userdata(self.discord_id,table,column,value)
 
 class RPGUser(DiscordUser):
     '''RPG遊戲用戶'''
@@ -187,6 +195,11 @@ class RPGUser(DiscordUser):
     #     sqldb.update_userdata(self.id,"rpg_activities","work_date",datetime.date.today().isoformat())
     #     return text
         
+class PartialUser(DiscordUser):
+    """只含有特定資料的用戶"""
+    def __init__(self,data:dict,sclient=None):
+        super().__init__(data,sclient)
+
 class GameUser(DiscordUser):
     def __init__(self,data:dict):
         super().__init__(data)
@@ -268,3 +281,46 @@ class Monster:
     #     #結束儲存資料
     #     sqldb.update_userdata(player.id, 'rpg_user','user_hp',player.hp)
     #     return embed
+
+class WarningSheet:
+    if TYPE_CHECKING:
+        from starcord.clients.client import StarClient
+        sclient: StarClient
+        warning_id: int
+        discord_id: int
+        moderate_user_id: int
+        guild_id: int
+        create_time: datetime.datetime
+        moderate_type: str
+        reason: str
+        last_time: str
+        officially_given: bool
+        bot_given: bool
+    
+    def __init__(self,data:dict,sclient=None):
+        self.sclient = sclient
+        self.warning_id = data.get("warning_id")
+        self.discord_id = data.get("discord_id")
+        self.moderate_user_id = data.get("moderate_user")
+        self.guild_id = data.get("create_guild")
+        self.create_time = data.get("create_time")
+        self.moderate_type = data.get("moderate_type")
+        self.reason = data.get("reason")
+        self.last_time = data.get("last_time")
+        self.bot_given = data.get("bot_given")
+
+    @property
+    def officially_given(self):
+        return self.guild_id in Jsondb.jdata["debug_guild"]
+    
+    def display(self,bot:discord.Bot):
+        user = bot.get_user(self.discord_id)
+        moderate_user = bot.get_user(self.moderate_user_id)
+        guild = bot.get_guild(self.guild_id)
+        
+        name = f'{user.name} 的警告單'
+        description = f"**編號:{self.warning_id} ({self.moderate_type})**\n被警告用戶：{user.mention}\n管理員：{guild.name}/{moderate_user.mention}\n原因：{self.reason}\n時間：{self.create_time}"
+        if self.officially_given:
+            description += "\n機器人官方給予"
+        embed = BotEmbed.general(name=name,icon_url=user.display_avatar.url,description=description)
+        return embed

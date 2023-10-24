@@ -187,11 +187,9 @@ class command(Cog_Extension):
         six_list = []
         six_list_100 = []
         guaranteed = 100
-        data = self.sqldb.get_userdata(user_id,'user_lottery')
-        if data:
-            user_guaranteed = data['guaranteed']
-        else:
-            user_guaranteed = 0
+        
+        dbuser = sclient.get_partial_dcuser(user_id,"guaranteed")
+        user_guaranteed = dbuser.guaranteed or 0
             
         for i in range(times):
             choice =  random.randint(1,100)
@@ -214,13 +212,14 @@ class command(Cog_Extension):
                 result["three"] += 1
                 user_guaranteed += 1
 
-        self.sqldb.update_userdata(user_id,'user_lottery','guaranteed',user_guaranteed)
+        
+        dbuser.update_data('user_discord','guaranteed',user_guaranteed)
         embed=BotEmbed.lottery()
         embed.add_field(name='抽卡結果', value=f"六星x{result['six']} 五星x{result['five']} 四星x{result['four']} 三星x{result['three']}", inline=False)
         embed.add_field(name='保底累積', value=user_guaranteed, inline=False)
-        if len(six_list) > 0:
+        if six_list:
             embed.add_field(name='六星出現', value=','.join(six_list), inline=False)
-        if len(six_list_100) > 0:
+        if six_list_100:
             embed.add_field(name='保底六星', value=','.join(six_list_100), inline=False)
         await ctx.respond(embed=embed)
 

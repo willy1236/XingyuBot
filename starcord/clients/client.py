@@ -112,6 +112,13 @@ class PointClient:
         sqldb.sign_add_coin(discord_id,scoin_add,rcoin_add)
         return [scoin_add, rcoin_add]
 
+class WarningClient:
+    """警告系統"""
+    
+    @staticmethod
+    def get_warnings(discord_id:int):
+        return sqldb.get_warnings(discord_id)
+
 class PollClient:
     """投票系統"""
     def create_poll(self, title:str, options:list, creator_id:int, guild_id:int, alternate_account_can_vote=True):
@@ -250,10 +257,11 @@ class NoticeClient:
 
 class StarClient(
     UserClient,
-    NoticeClient,
     GameClient,
     PointClient,
+    WarningClient,
     PollClient,
+    NoticeClient,
 ):
     """整合各項系統的星羽客戶端"""
     def __init__(self):
@@ -265,3 +273,16 @@ class StarClient(
         data = sqldb.get_dcuser(discord_id,full)
         if data:
             return DiscordUser(data,self,user_dc)
+        
+    def get_partial_dcuser(self,discord_id:int,column:str):
+        """取得僅包含特定欄位資料的discord用戶"""
+        dbdata = sqldb.get_partial_dcuser(discord_id,column)
+        if dbdata:
+            return PartialUser(dbdata,self)
+        else:
+            return PartialUser(sqldb.create_user(discord_id),self)
+        
+    def get_warning(self,warning_id:int):
+        dbdata = sqldb.get_warning(warning_id)
+        if dbdata:
+            return WarningSheet(dbdata,self)
