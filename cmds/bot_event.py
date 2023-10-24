@@ -1,4 +1,4 @@
-import discord,datetime,re
+import discord,datetime,re,asyncio
 from discord.ext import commands
 from core.classes import Cog_Extension
 from starcord import Jsondb,BotEmbed,BRS,sqldb,sclient
@@ -11,6 +11,13 @@ keywords = {
 voice_updata = Jsondb.jdata.get('voice_updata')
 debug_mode = Jsondb.jdata.get("debug_mode",True)
 main_guild = Jsondb.jdata.get('main_guild',[])
+
+def get_playing_ow2(member:discord.Member):
+    for activity in member.activities:
+        if activity.name == "Overwatch 2" and member.voice.channel.id != 703617778095095958:
+            return True
+        
+    return False
 
 class event(Cog_Extension):
     @commands.Cog.listener()
@@ -251,11 +258,13 @@ class event(Cog_Extension):
 
     @commands.Cog.listener()
     async def on_presence_update(self,before:discord.Member, after:discord.Member):
-        if after.guild.id in main_guild and not after.bot and after.activity and after.voice:
-            for activity in after.activities:
-                if activity.name == "Overwatch 2" and after.voice.channel.id != 703617778095095958:
-                    channel = self.bot.get_channel(703617778095095958)
-                    await after.move_to(channel)
+        if after.guild.id in main_guild and not after.bot and after.activities and after.voice:
+            if get_playing_ow2(after):
+                channel = self.bot.get_channel(703617778095095958)
+                for member in after.voice.channel.members:
+                    if get_playing_ow2(member):
+                        await member.move_to(channel)
+                        asyncio.sleep(0.5)
 
 def setup(bot):
     bot.add_cog(event(bot))
