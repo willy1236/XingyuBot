@@ -264,7 +264,7 @@ class event(Cog_Extension):
                 for member in after.voice.channel.members:
                     if get_playing_ow2(member):
                         await member.move_to(channel)
-                        asyncio.sleep(0.5)
+                        await asyncio.sleep(0.5)
 
 def setup(bot):
     bot.add_cog(event(bot))
