@@ -266,7 +266,7 @@ class event(Cog_Extension):
                     if get_playing_ow2(member):
                         list.append(member)
                 
-                if len(list) >= 2:
+                if len(list) >= 2 or (len(channel.voice.members) >= 2 and list):
                     for member in list:
                         await member.move_to(channel)
                         await asyncio.sleep(0.5)
