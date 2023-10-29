@@ -324,3 +324,28 @@ class WarningSheet:
             description += "\n機器人官方給予"
         embed = BotEmbed.general(name=name,icon_url=user.display_avatar.url,description=description)
         return embed
+    
+    def display_embed_field(self,bot:discord.Bot):
+            moderate_user = bot.get_user(self.moderate_user_id)
+            guild = bot.get_guild(self.guild_id)
+            name = f"編號: {self.warning_id} ({self.moderate_type})"
+            value = f"{guild.name}/{moderate_user.mention}\n{self.reason}\n{self.create_time}"
+            if self.officially_given:
+                value += "\n機器人官方給予"
+
+            return name, value
+    
+    def remove(self):
+        self.sclient.remove_warning(self.warning_id)
+
+class WarningList():
+    def __init__(self,data:dict,sclient=None):
+        self.datalist = [WarningSheet(i,sclient) for i in data]
+
+    def display(self,bot:discord.Bot):
+        user = bot.get_user(self.datalist[0].discord_id)
+        embed = BotEmbed.general(f'{user.name} 的警告單列表（共{len(self.datalist)}筆）',user.display_avatar.url)
+        for i in self.datalist:
+            name, value = i.display_embed_field(bot)
+            embed.add_field(name=name,value=value)
+        return embed

@@ -5,6 +5,7 @@ from starcord.models.user import *
 from starcord.types import DBGame,Coins
 from starcord.ui_element.view import PollView
 from .game import *
+from datetime import datetime
 
 class UserClient:
     """用戶系統"""
@@ -39,6 +40,10 @@ class UserClient:
 
 class WarningClient:
     """警告系統"""
+    @staticmethod
+    def remove_warning(warning_id:int):
+        sqldb.remove_warning(warning_id)
+
 
 class BatClient:
     """賭盤系統"""
@@ -111,17 +116,10 @@ class PointClient:
         sqldb.sign_add_coin(discord_id,scoin_add,rcoin_add)
         return [scoin_add, rcoin_add]
 
-class WarningClient:
-    """警告系統"""
-    
-    @staticmethod
-    def get_warnings(discord_id:int):
-        return sqldb.get_warnings(discord_id)
-
 class PollClient:
     """投票系統"""
     def create_poll(self, title:str, options:list, creator_id:int, guild_id:int, alternate_account_can_vote=True):
-        poll_id = sqldb.add_poll(title,creator_id,datetime.datetime.now(),None,guild_id,alternate_account_can_vote)
+        poll_id = sqldb.add_poll(title,creator_id,datetime.now(),None,guild_id,alternate_account_can_vote)
         sqldb.add_poll_option(poll_id,options)
         
         view = PollView(poll_id)
@@ -282,6 +280,13 @@ class StarClient(
             return PartialUser(sqldb.create_user(discord_id),self)
         
     def get_warning(self,warning_id:int):
+        """取得警告單"""
         dbdata = sqldb.get_warning(warning_id)
         if dbdata:
             return WarningSheet(dbdata,self)
+        
+    def get_warnings(self,discord_id:int):
+        """取得用戶完整警告列表"""
+        dbdata = sqldb.get_warnings(discord_id)
+        if dbdata:
+            return WarningList(dbdata)
