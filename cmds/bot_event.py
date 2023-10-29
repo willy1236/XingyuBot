@@ -48,7 +48,7 @@ class event(Cog_Extension):
             return
         
         if message.guild and message.guild.id == 613747262291443742 and not message.author.bot and not is_owner:
-            p = re.compile(r'貢丸|贡丸|Meatball',re.IGNORECASE)
+            p = re.compile(r"(?:貢丸|贡丸|Meatball)(?!殲滅黨)",re.IGNORECASE)
             result = p.search(message.content)
             if result:
                 try:
