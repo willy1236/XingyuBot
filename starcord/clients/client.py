@@ -41,6 +41,10 @@ class UserClient:
 class WarningClient:
     """警告系統"""
     @staticmethod
+    def add_warning(discord_id:int,moderate_type:str,moderate_user:int,create_guild:int,create_time:datetime,reason:str=None,last_time:str=None):
+        return sqldb.add_warning(discord_id, moderate_type,moderate_user,create_guild,create_time,reason,last_time)
+    
+    @staticmethod
     def remove_warning(warning_id:int):
         sqldb.remove_warning(warning_id)
 

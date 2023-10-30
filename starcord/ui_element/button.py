@@ -78,14 +78,16 @@ class Delete_Pet_button(discord.ui.View):
 
 class Delete_Add_Role_button(discord.ui.View):
     def __init__(self,role,creater):
-        super().__init__(timeout=20)
+        super().__init__(timeout=30)
         self.role = role
         self.creater = creater
 
     async def on_timeout(self):
-        if self.message:
+        try:
             self.clear_items()
             await self.message.edit(view=self)
+        except discord.errors.NotFound:
+            pass
 
     @discord.ui.button(label="刪除身分組",style=discord.ButtonStyle.danger)
     async def button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):

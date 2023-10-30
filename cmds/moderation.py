@@ -113,7 +113,7 @@ class moderation(Cog_Extension):
 
         time = datetime.datetime.now()
         moderate_user = ctx.author.id
-        sqldb.add_warning(user.id,'warning',moderate_user,ctx.guild.id,time,reason,None)
+        sclient.add_warning(user.id,'warning',moderate_user,ctx.guild.id,time,reason,None)
         embed = BotEmbed.general(f'{user.name} 的警告單',user.display_avatar.url,description=f"{user.mention}：{reason}")
         embed.add_field(name="執行人員",value=ctx.author.mention)
         embed.timestamp = time

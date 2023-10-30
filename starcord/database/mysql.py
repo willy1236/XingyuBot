@@ -504,7 +504,7 @@ class MySQLBusyTimeSystem(MySQLBaseModel):
         return records
 
 class MySQLWarningSystem(MySQLBaseModel):
-    def add_warning(self,discord_id:int,moderate_type:str,moderate_user:str,create_guild:str,create_time:datetime.datetime,reason:str=None,last_time:str=None):
+    def add_warning(self,discord_id:int,moderate_type:str,moderate_user:int,create_guild:int,create_time:datetime.datetime,reason:str=None,last_time:str=None):
         self.cursor.execute(f"INSERT INTO `stardb_user`.`user_moderate` VALUES(%s,%s,%s,%s,%s,%s,%s,%s);",(None,discord_id,moderate_type,moderate_user,create_guild,create_time,reason,last_time))
         self.connection.commit()
         return self.cursor.lastrowid
