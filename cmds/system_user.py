@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 from core.classes import Cog_Extension
 from discord.commands import SlashCommandGroup
-from starcord import BotEmbed,Jsondb,ChoiceList,sqldb,sclient
+from starcord import BotEmbed,Jsondb,ChoiceList,sclient
 from starcord.ui_element.button import Delete_Pet_button
 
 jdict = Jsondb.jdict
@@ -23,7 +23,7 @@ class system_user(Cog_Extension):
     async def add(self,ctx,
                   species:discord.Option(str,name='物種',description='想認養的寵物物種',choices=option),
                   name:discord.Option(str,name='寵物名',description='想幫寵物取的名子')):
-        r = sqldb.create_user_pet(ctx.author.id,species,name)
+        r = sclient.create_user_pet(ctx.author.id,species,name)
         if r:
             await ctx.respond(r)
         else:

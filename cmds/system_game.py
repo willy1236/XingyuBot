@@ -4,9 +4,8 @@ from discord.commands import SlashCommandGroup
 from datetime import timedelta,datetime
 
 from core.classes import Cog_Extension
-from starcord import BotEmbed,Jsondb,ChoiceList,sqldb,sclient
-from starcord.clients.game import *
-from starcord.clients import GameClient
+from starcord import BotEmbed,Jsondb,csvdb,ChoiceList,sclient
+from starcord.DataExtractor import *
 from starcord.types import DBGame
 
 # def player_search(url):
@@ -46,7 +45,7 @@ class system_game(Cog_Extension):
         await ctx.defer()
         id = str(ctx.author.id)
         if not value:
-            self.sqldb.remove_game_data(id,game)
+            sclient.remove_game_data(id,game)
             await ctx.respond(f'已將{game}資料移除')
             return
 
@@ -98,7 +97,7 @@ class system_game(Cog_Extension):
                 await ctx.respond(f'錯誤:找不到此用戶',ephemeral=True)
                 return
 
-        self.sqldb.set_game_data(id,game.value,player_name,player_id,account_id,other_id)
+        sclient.set_game_data(id,game.value,player_name,player_id,account_id,other_id)
         await ctx.respond(f'已將用戶的 {game.name} 資料設定為 {player_name}')
             
 
@@ -108,7 +107,7 @@ class system_game(Cog_Extension):
                    game:discord.Option(str,name='遊戲',description='若輸入此欄，將會用資料庫的資料查詢玩家',default=None,choices=set_option)):
         await ctx.defer()
         user = user or ctx.author
-        userid = str(user.id)
+        userid = user.id
         
         if not game and not (user == ctx.author or self.bot.is_owner(ctx.author)):
             await ctx.respond('目前不開放查詢別人的綜合資料喔',ephemeral=True)

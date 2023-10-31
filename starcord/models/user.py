@@ -1,8 +1,8 @@
 import random,time,datetime,discord
 from typing import TYPE_CHECKING
-from starcord.utility import BotEmbed
+from starcord.utilities.utility import BotEmbed
 from starcord.types import DBGame,Coins
-from starcord.database import Jsondb
+from starcord.FileDatabase import Jsondb
 
 class Pet():
     if TYPE_CHECKING:
@@ -31,8 +31,8 @@ class User:
 class DiscordUser():
     """Discord用戶"""
     if TYPE_CHECKING:
-        from starcord.clients.client import StarClient
-        sclient: StarClient
+        from starcord.DataExtractor import MySQLDatabase
+        sqldb: MySQLDatabase
         user_dc: discord.User
         discord_id: int
         name: str
@@ -44,8 +44,8 @@ class DiscordUser():
         pet: Pet | None
         main_account_id: int | None
 
-    def __init__(self,data:dict,sclient,user_dc=None):
-        self.sclient = sclient
+    def __init__(self,data:dict,sqldb,user_dc=None):
+        self.sqldb = sqldb
         self.user_dc = user_dc
         self.discord_id = data.get('discord_id')
         self.name = data.get('name')
@@ -68,7 +68,7 @@ class DiscordUser():
         embed.add_field(name='連續簽到最高天數',value=self.max_sign_consecutive_days)
         if self.meatball_times:
             embed.add_field(name='貢丸次數',value=self.meatball_times)
-        embed.add_field(name='遊戲資料',value="/game find",inline=False)
+        #embed.add_field(name='遊戲資料',value="/game find",inline=False)
         #embed.add_field(name='寵物',value="/pet check",inline=False)
         # embed.add_field(name='生命值',value=self.hp)
         # if self.pet.has_pet:
@@ -79,12 +79,12 @@ class DiscordUser():
 
     def get_pet(self):
         """等同於 UserClient.get_pet()"""
-        self.pet = self.sclient.get_pet(self.discord_id)
+        self.pet = self.sqldb.get_pet(self.discord_id)
         return self.pet
     
     def get_game(self,game:DBGame=None):
         """等同於GameClient.get_user_game()"""
-        player_data = self.sclient.get_user_game(self.discord_id,game)
+        player_data = self.sqldb.get_game_data(self.discord_id,game)
         return player_data
     
     def get_scoin(self,force_refresh=False):
@@ -92,20 +92,20 @@ class DiscordUser():
         :param force_refresh: 若是則刷新現有資料
         """
         if force_refresh or not hasattr(self,'scoin'):
-            self.scoin = self.sclient.get_scoin(self.discord_id)
+            self.scoin = self.sqldb.get_scoin(self.discord_id)
         return self.scoin
     
     def update_coins(self,mod,coin_type:Coins,amount:int):
-        self.sclient.update_coins(self.discord_id,mod,coin_type,amount)
+        self.sqldb.update_coins(self.discord_id,mod,coin_type,amount)
 
     def get_alternate_account(self):
-        return self.sclient.sqldb.get_alternate_account(self.discord_id)
+        return self.sqldb.get_alternate_account(self.discord_id)
     
     def get_main_account(self):
-        return self.sclient.sqldb.get_main_account(self.discord_id)
+        return self.sqldb.get_main_account(self.discord_id)
     
     def update_data(self,table:str,column:str,value):
-        self.sclient.sqldb.set_userdata(self.discord_id,table,column,value)
+        self.sqldb.set_userdata(self.discord_id,table,column,value)
 
 class RPGUser(DiscordUser):
     '''RPG遊戲用戶'''
@@ -284,8 +284,8 @@ class Monster:
 
 class WarningSheet:
     if TYPE_CHECKING:
-        from starcord.clients.client import StarClient
-        sclient: StarClient
+        from starcord.DataExtractor import MySQLDatabase
+        sqldb: MySQLDatabase
         warning_id: int
         discord_id: int
         moderate_user_id: int
@@ -297,8 +297,8 @@ class WarningSheet:
         officially_given: bool
         bot_given: bool
     
-    def __init__(self,data:dict,sclient=None):
-        self.sclient = sclient
+    def __init__(self,data:dict,sqldb=None):
+        self.sqldb = sqldb
         self.warning_id = data.get("warning_id")
         self.discord_id = data.get("discord_id")
         self.moderate_user_id = data.get("moderate_user")
@@ -336,11 +336,11 @@ class WarningSheet:
             return name, value
     
     def remove(self):
-        self.sclient.remove_warning(self.warning_id)
+        self.sqldb.remove_warning(self.warning_id)
 
 class WarningList():
-    def __init__(self,data:dict,sclient=None):
-        self.datalist = [WarningSheet(i,sclient) for i in data]
+    def __init__(self,data:dict,sqldb=None):
+        self.datalist = [WarningSheet(i,sqldb) for i in data]
 
     def display(self,bot:discord.Bot):
         user = bot.get_user(self.datalist[0].discord_id)

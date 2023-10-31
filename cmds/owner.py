@@ -3,7 +3,7 @@ from discord.ext import commands
 from discord.commands import SlashCommandGroup
 
 from core.classes import Cog_Extension
-from starcord import BotEmbed,BRS,Jsondb,sqldb
+from starcord import BotEmbed,BRS,Jsondb,sclient
 
 from starcord.ui_element.button import ReactRole_button
 
@@ -33,7 +33,7 @@ class AnnoModal(discord.ui.Modal):
         embed.set_author(name="機器人全群公告",icon_url=picdata['radio_001'])
         embed.set_footer(text='Bot Radio System')
         send_success = 0
-        channels = sqldb.get_notify_channel_by_type('all_anno')
+        channels = sclient.get_notify_channel_by_type('all_anno')
 
         for i in channels:
             channel = interaction.client.get_channel(i['channel_id'])
@@ -64,7 +64,7 @@ class BotUpdateModal(discord.ui.Modal):
         embed.set_author(name="機器人更新通知",icon_url=picdata['radio_001'])
         embed.set_footer(text='Bot Radio System')
         send_success = 0
-        channels = sqldb.get_notify_channel_by_type('bot')
+        channels = sclient.get_notify_channel_by_type('bot')
 
         for i in channels:
             channel = interaction.client.get_channel(i['channel_id'])

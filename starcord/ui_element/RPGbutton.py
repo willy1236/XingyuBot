@@ -1,8 +1,8 @@
 import discord,random,asyncio
-from starcord.utility import BotEmbed
-from starcord.database import sqldb
-from starcord.clients import UserClient
+from starcord.utilities.utility import BotEmbed
+from starcord.DataExtractor import sclient
 from starcord.models.user import RPGUser,Monster
+from starcord.types import Coins
 
 class RPGbutton1(discord.ui.View):
     def __init__(self,userid):
@@ -15,7 +15,7 @@ class RPGbutton1(discord.ui.View):
         await interaction.response.edit_message(view=self)
         button.disabled = False
         if interaction.user.id == self.userid:
-            user = UserClient.get_rpguser(self.userid)
+            user = sclient.get_rpguser(self.userid)
             result = await self.advance(user,interaction)
         else:
             await interaction.edit_original_response(content="請不要點選其他人的按鈕",view=self)
@@ -23,17 +23,17 @@ class RPGbutton1(discord.ui.View):
 
     async def advance(self,player:RPGUser,interaction: discord.Interaction):
         '''進行冒險'''
-        data = sqldb.get_activities(player.id)
+        data = sclient.get_activities(player.id)
         times = data.get('advance_times',0) + 1
         
         if times == 1:
             if player.rcoin <= 0:
                 await interaction.edit_original_response(content="你的Rcoin不足 至少需要1Rcoin才能冒險\n但因為目前為開發階段 那我就送你一些Rcoin吧")
-                sqldb.update_rcoin(player.id,'add',100)
+                sclient.update_coins(player.id,"add",Coins.RCOIN,100)
                 return
                 
 
-            sqldb.update_rcoin(player.id,'add',-1)
+            sclient.update_coins(player.id,"add",Coins.RCOIN,-1)
 
         embed = BotEmbed.simple()
         list = [embed]
@@ -43,20 +43,20 @@ class RPGbutton1(discord.ui.View):
             embed.description = "沒事發生"
 
             if times >= 5 and random.randint(0,100) <= times*5:
-                sqldb.update_userdata(player.id,'rpg_activities','advance_times',0)
+                sclient.set_userdata(player.id,'rpg_activities','advance_times',0)
                 embed.description += '，冒險結束'
             else:
-                sqldb.update_userdata(player.id,'rpg_activities','advance_times',times)
+                sclient.set_userdata(player.id,'rpg_activities','advance_times',times)
             
             await interaction.edit_original_response(embeds=list,view=self)
         
         elif rd >= 71 and rd <=100:
             embed.title = f"第{times}次冒險"
             embed.description = "遇到怪物"
-            monster = UserClient.get_monster(random.randint(1,2))
+            monster = sclient.get_monster(random.randint(1,2))
             embed2 = BotEmbed.simple(f"遭遇戰鬥：{monster.name}")
             list.append(embed2)
-            sqldb.update_userdata(player.id,'rpg_activities','advance_times',times)
+            sclient.set_userdata(player.id,'rpg_activities','advance_times',times)
             view = RPGbutton3(player,monster,list)
             await interaction.edit_original_response(embeds=list,view=view)
             await view.battle(interaction,self)
@@ -70,7 +70,7 @@ class RPGbutton2(discord.ui.View):
     @discord.ui.button(label="按我進行工作",style=discord.ButtonStyle.green)
     async def button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
         if interaction.user.id == self.userid:
-            user = UserClient.get_rpguser(interaction.user.id)
+            user = sclient.get_rpguser(interaction.user.id)
             result = user.work()
             await interaction.response.edit_message(content=result)
 
@@ -112,7 +112,7 @@ class RPGbutton3(discord.ui.View):
                     #     loot = random.choices(self.data["loot"][0],weights=self.data["loot"][1],k=self.data["loot"][2])
                     #     player.add_bag(loot)
                     #     text += f"\n獲得道具！"
-                    sqldb.update_rcoin(player.id, 'add',1)
+                    sclient.update_coins(player.id,"add",Coins.RCOIN,1)
                     text += f"\nRcoin+1"
             else:
                 text += "玩家：未命中 "
@@ -143,7 +143,7 @@ class RPGbutton3(discord.ui.View):
             self.enable_all_items()
             if monster.hp <= 0 or player.hp <= 0:
                 #結束儲存資料
-                sqldb.update_userdata(player.id, 'rpg_user','user_hp',player.hp)
+                sclient.set_userdata(player.id, 'rpg_user','user_hp',player.hp)
                 await interaction.edit_original_response(embeds=self.embed_list,view=RPGbutton1(player.id))
             else:
                 await interaction.edit_original_response(embeds=self.embed_list,view=self)

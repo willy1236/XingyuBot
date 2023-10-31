@@ -1,7 +1,7 @@
 import discord,datetime
 from core.classes import Cog_Extension
 from discord.commands import SlashCommandGroup
-from starcord.clients import TwitchAPI,YoutubeAPI
+from starcord.DataExtractor import TwitchAPI,YoutubeAPI
 from starcord import BotEmbed,sclient
 
 class system_community(Cog_Extension):
@@ -19,7 +19,7 @@ class system_community(Cog_Extension):
 
         user = TwitchAPI().get_user(twitch_user)
         if user:
-            sclient.set_notice_community('twitch',twitch_user,guildid,channelid,roleid)
+            sclient.set_notify_community('twitch',twitch_user,guildid,channelid,roleid)
             if role:
                 await ctx.respond(f'設定成功：{user.display_name}({user.login})的開台通知將會發送在{channel.mention}並會通知{role.mention}')
             else:
@@ -34,7 +34,7 @@ class system_community(Cog_Extension):
     @twitch.command(description='移除twitch開台通知')
     async def remove(self,ctx,twitch_user:discord.Option(str,required=True,name='twitch用戶')):
         guildid = ctx.guild.id
-        sclient.remove_notice_community('twitch',twitch_user,guildid)
+        sclient.remove_notify_community('twitch',twitch_user,guildid)
         await ctx.respond(f'已移除 {twitch_user} 的開台通知')
         
         from .task import scheduler
@@ -44,7 +44,7 @@ class system_community(Cog_Extension):
     @twitch.command(description='確認twitch開台通知')
     async def notice(self,ctx,twitch_user:discord.Option(str,required=True,name='twitch用戶')):
         guildid = ctx.guild.id
-        record = sclient.get_notice_community_user('twitch',twitch_user,guildid)
+        record = sclient.get_notify_community_user('twitch',twitch_user,guildid)
         if record:
             channel = self.bot.get_channel(record[0]['channel_id'])
             role = channel.guild.get_role(record[0]['role_id'])
@@ -59,7 +59,7 @@ class system_community(Cog_Extension):
     async def list(self,ctx):
         guildid = ctx.guild.id
         embed = BotEmbed.general("twitch開台通知",ctx.guild.icon.url if ctx.guild.icon else discord.Embed.Empty)
-        dbdata = sclient.get_notice_community_list('twitch',guildid)
+        dbdata = sclient.get_notify_community_list('twitch',guildid)
         for data in dbdata:
             notify_name = data['notify_name']
             channel_id = data['channel_id']

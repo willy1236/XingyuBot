@@ -1,6 +1,6 @@
 import discord,datetime,matplotlib,io
-from starcord.database import sqldb
-from starcord.utility import BotEmbed
+from typing import TYPE_CHECKING
+from starcord.utilities.utility import BotEmbed
 
 class PollOptionButton(discord.ui.Button):
     def __init__(self,label,poll_id,option_id,custom_id):
@@ -9,7 +9,8 @@ class PollOptionButton(discord.ui.Button):
         self.option_id = option_id
     
     async def callback(self,interaction):
-        sqldb.add_user_poll(self.poll_id,interaction.user.id,self.option_id,datetime.datetime.now())
+        view:PollView = self.view
+        view.sqldb.add_user_poll(self.poll_id,interaction.user.id,self.option_id,datetime.datetime.now())
         await interaction.response.send_message(f"{interaction.user.mention} 已投票給 {self.label}",ephemeral=True)
     
 class PollEndButton(discord.ui.Button):
@@ -22,11 +23,11 @@ class PollEndButton(discord.ui.Button):
         if interaction.user.id == self.created_id:
             view:PollView = self.view
             view.disable_all_items()
-            sqldb.update_poll(self.poll_id,"is_on",0)
+            view.sqldb.update_poll(self.poll_id,"is_on",0)
             
-            polldata = sqldb.get_poll(self.poll_id)
-            dbdata = sqldb.get_poll_vote_count(self.poll_id,not view.alternate_account_can_vote)
-            options_data = sqldb.get_poll_options(self.poll_id)
+            polldata = view.sqldb.get_poll(self.poll_id)
+            dbdata = view.sqldb.get_poll_vote_count(self.poll_id,not view.alternate_account_can_vote)
+            options_data = view.sqldb.get_poll_options(self.poll_id)
 
             text = ""
             labels = []
@@ -81,8 +82,8 @@ class PollResultButton(discord.ui.Button):
 
     async def callback(self,interaction):
         view:PollView = self.view
-        dbdata = sqldb.get_poll_vote_count(self.poll_id, not view.alternate_account_can_vote)
-        options_data = sqldb.get_poll_options(self.poll_id)
+        dbdata = view.sqldb.get_poll_vote_count(self.poll_id, not view.alternate_account_can_vote)
+        options_data = view.sqldb.get_poll_options(self.poll_id)
 
         text = ""
         for option in options_data:
@@ -99,7 +100,8 @@ class PollCanenlButton(discord.ui.Button):
         self.poll_id = poll_id
 
     async def callback(self,interaction):
-        sqldb.remove_user_poll(self.poll_id, interaction.user.id)
+        view:PollView = self.view
+        view.sqldb.remove_user_poll(self.poll_id, interaction.user.id)
         await interaction.response.send_message(f"{interaction.user.mention} 已取消投票",ephemeral=True)
 
 class PollNowButton(discord.ui.Button):
@@ -108,21 +110,30 @@ class PollNowButton(discord.ui.Button):
         self.poll_id = poll_id
     
     async def callback(self,interaction):
-        data = sqldb.get_user_poll(self.poll_id, interaction.user.id)
+        view:PollView = self.view
+        data = view.sqldb.get_user_poll(self.poll_id, interaction.user.id)
         if data:
             vote_option = data['vote_option']
-            options_data = sqldb.get_poll_option(self.poll_id,vote_option)
+            options_data = view.sqldb.get_poll_option(self.poll_id,vote_option)
             await interaction.response.send_message(f"{interaction.user.mention} 投給 {options_data['option_name']}",ephemeral=True)
         else:
             await interaction.response.send_message(f"{interaction.user.mention} 沒有投給任何選項",ephemeral=True)
 
 class PollView(discord.ui.View):
-    def __init__(self,poll_id):
+    if TYPE_CHECKING:
+        from starcord.DataExtractor import MySQLDatabase
+        poll_id: int
+        sqldb: MySQLDatabase
+        created_id: int
+        alternate_account_can_vote: bool
+    
+    def __init__(self,poll_id,sqldb=None):
         super().__init__(timeout=None)
         self.poll_id = poll_id
-        poll_data = sqldb.get_poll(poll_id)
+        self.sqldb = sqldb
+        poll_data = self.sqldb.get_poll(poll_id)
         self.created_id = poll_data['created_user']
-        self.alternate_account_can_vote:bool = poll_data['alternate_account_can_vote']
+        self.alternate_account_can_vote = poll_data['alternate_account_can_vote']
         
         self.add_item(PollEndButton(poll_id,self.created_id))
         self.add_item(PollResultButton(poll_id))

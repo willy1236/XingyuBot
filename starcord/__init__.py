@@ -2,13 +2,12 @@
 Discord機器人"星羽"用libary
 '''
 
-from . import clients
-from .database import Jsondb,sqldb,mongedb
-from .clients import StarClient
+from .FileDatabase import Jsondb,csvdb
+from .DataExtractor import sclient
 
-from .utility import BotEmbed,BRS,ChoiceList
-from .funtions import *
-from .logger import create_logger
+from .utilities.utility import BotEmbed,BRS,ChoiceList
+from .utilities.funtions import *
+from .utilities.logger import create_logger
 from .errors import StarException
 
 file_log = Jsondb.jdata.get('file_log')
@@ -23,14 +22,11 @@ log = create_logger('./logs',file_log,log_level)
 # else:
 #     twitch_bot = None
 
-sclient = StarClient()
-
 __all__ = [
     'Jsondb',
-    'sqldb',
+    'csvdb',
     'log',
     'BotEmbed',
-    'clients',
     #'twitch_bot',
     'ChoiceList',
     'StarException',

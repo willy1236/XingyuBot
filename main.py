@@ -2,9 +2,9 @@ import discord, os,time
 from discord.ext import commands
 from threading import Thread
 
+from starcord import Jsondb,log,sclient
 from starcord.ui_element.button import *
 from starcord.ui_element.view import *
-from starcord import Jsondb,log,sqldb
 
 #Bot1:dc小幫手, Bep:Bep, Bot2:RO
 jdata = Jsondb.jdata
@@ -60,12 +60,12 @@ async def on_ready():
     
     if bot_code == 'Bot1':
         #將超過14天的投票自動關閉
-        dbdata = sqldb.get_all_active_polls()
+        dbdata = sclient.get_all_active_polls()
         now = datetime.datetime.now()
         for poll in dbdata:
             if now - poll['created_at'] > datetime.timedelta(days=14):
                 #sqldb.remove_poll(poll['poll_id'])
-                sqldb.update_poll(poll['poll_id'],"is_on",0)
+                sclient.update_poll(poll['poll_id'],"is_on",0)
             else:
                 bot.add_view(PollView(poll['poll_id']),message_id=poll['message_id'])
     

@@ -1,5 +1,5 @@
 import datetime,discord
-from starcord.utility import BotEmbed
+from starcord.utilities.utility import BotEmbed
 
 class TwitchUser():
     def __init__(self,data:dict):

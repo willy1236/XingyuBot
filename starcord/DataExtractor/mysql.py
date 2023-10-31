@@ -1,15 +1,18 @@
-import mysql.connector,datetime
+import mysql.connector,datetime,discord
 from mysql.connector.errors import Error as sqlerror
 from starcord.types import DBGame,Coins, Position
+from starcord.models.user import *
+from starcord.models.model import GameInfoPage
 
 class MySQLBaseModel(object):
     """MySQL資料庫基本模型"""
-    def __init__(self,settings:dict):
+    def __init__(self,*args,**kwargs):
         '''MySQL 資料庫連接\n
         settings = {"host": "","port": ,"user": "","password": "","db": "","charset": ""}
         '''
+        
         #建立連線
-        self.connection = mysql.connector.connect(**settings)
+        self.connection = mysql.connector.connect(**kwargs['mysql_settings'])
         self.cursor = self.connection.cursor(dictionary=True)
         self.connection.get_server_info()
 
@@ -74,36 +77,36 @@ class MySQLUserSystem(MySQLBaseModel):
     def create_user(self,discord_id:int):
         self.cursor.execute(f"USE `stardb_user`;")
         self.cursor.execute(f"INSERT INTO `user_discord` SET discord_id = {discord_id};")
+        self.cursor.execute(f"INSERT INTO `user_point` SET discord_id = {discord_id};")
         self.connection.commit()
         self.cursor.execute(f'SELECT * FROM `user_discord` WHERE `discord_id` = %s;',(discord_id,))
         record = self.cursor.fetchall()
         if record:
-            return record[0]
+            return PartialUser(record[0])
 
     def get_user(self,discord_id:int):
         """取得基本用戶"""
 
-    def get_dcuser(self,discord_id:int,full=False):
+    def get_dcuser(self,discord_id:int,full=False,user_dc:discord.User=None):
+        """取得discord用戶"""
         self.cursor.execute(f"USE `stardb_user`;")
         if full:
             self.cursor.execute(f'SELECT * FROM `user_discord` LEFT JOIN `user_point` ON `user_discord`.`discord_id` = `user_point`.`discord_id` LEFT JOIN `user_account` ON `user_discord`.`discord_id` = `user_account`.`alternate_account` WHERE `user_discord`.`discord_id` = %s;',(discord_id,))
         else:
             self.cursor.execute(f'SELECT * FROM `user_discord` WHERE `discord_id` = %s;',(discord_id,))
         record = self.cursor.fetchall()
+        print(record)
         if record:
-            return record[0]
-
-    def set_staruser_data(self,discord_id:int,emailAddress=None,drive_share_id=None):
-        self.cursor.execute(f"USE `stardb_user`;")
-        self.cursor.execute(f"INSERT INTO `user_data` SET `discord_id` = %s, `email` = %s, `drive_share_id` = %s ON DUPLICATE KEY UPDATE `email` = %s, `drive_share_id` = %s;",(discord_id,emailAddress,drive_share_id,emailAddress,drive_share_id))
-        self.connection.commit()
+            return DiscordUser(record[0],self,user_dc)
     
     def get_partial_dcuser(self,discord_id:int,column:str):
         self.cursor.execute(f"USE `stardb_user`;")
         self.cursor.execute(f'SELECT discord_id,%s FROM `user_discord` WHERE `discord_id` = %s;',(column,discord_id))
         record = self.cursor.fetchall()
         if record:
-            return record[0]
+            return PartialUser(record[0],self)
+        else:
+            return PartialUser(self.create_user(discord_id),self)
 
     def get_main_account(self,alternate_account):
         self.cursor.execute(f"USE `stardb_user`;")
@@ -116,6 +119,11 @@ class MySQLUserSystem(MySQLBaseModel):
         self.cursor.execute(f"USE `stardb_user`;")
         self.cursor.execute(f'SELECT * FROM `user_account` WHERE `main_account` = %s;',(discord_id,))
         return self.cursor.fetchall()
+    
+    def set_staruser_data(self,discord_id:int,emailAddress=None,drive_share_id=None):
+        self.cursor.execute(f"USE `stardb_user`;")
+        self.cursor.execute(f"INSERT INTO `user_data` SET `discord_id` = %s, `email` = %s, `drive_share_id` = %s ON DUPLICATE KEY UPDATE `email` = %s, `drive_share_id` = %s;",(discord_id,emailAddress,drive_share_id,emailAddress,drive_share_id))
+        self.connection.commit()
 
 class MySQLNotifySystem(MySQLBaseModel):
     def set_notify_channel(self,guild_id:int,notify_type:str,channel_id:int,role_id:int=None):
@@ -244,10 +252,14 @@ class MySQLGameSystem(MySQLBaseModel):
         if game:
             game = DBGame(game)
             self.cursor.execute(f"SELECT * FROM `game_data` WHERE `discord_id` = %s AND `game` = %s;",(discord_id,game.value))
-            records = self.cursor.fetchone()
+            records = self.cursor.fetchall()
+            if records:
+                records = records[0]
         else:
             self.cursor.execute(f"SELECT * FROM `game_data` WHERE `discord_id` = %s;",(discord_id,))
             records = self.cursor.fetchall()
+            if records:
+                records = GameInfoPage(records)
         return records
 
 class MySQLRoleSaveSystem(MySQLBaseModel):
@@ -407,9 +419,11 @@ class MySQLBetSystem(MySQLBaseModel):
         self.connection.commit()
 
 class MySQLPetSystem(MySQLBaseModel):
-    def get_user_pet(self,discord_id:int):
+    def get_pet(self,discord_id:int):
+        """取得寵物"""
         records = self.get_userdata(discord_id,"user_pet")
-        return records
+        if records:
+            return Pet(records)
 
     def create_user_pet(self,discord_id:int,pet_species:str,pet_name:str):
         try:
@@ -427,10 +441,21 @@ class MySQLPetSystem(MySQLBaseModel):
 
 class MySQLRPGSystem(MySQLBaseModel):
     def get_rpguser(self,discord_id:int):   
+        """取得RPG用戶"""
         self.cursor.execute(f"USE `stardb_user`;")
         self.cursor.execute(f'SELECT * FROM `rpg_user`,`user_point` WHERE rpg_user.discord_id = %s;',(discord_id,))
-        records = self.cursor.fetchone()
-        return records
+        records = self.cursor.fetchall()
+        if records:
+            return RPGUser(records[0])
+
+    def get_monster(self,monster_id:str):
+        """取得怪物"""
+        self.cursor.execute(f'SELECT * FROM `checklist`.`rpg_monster` WHERE `monster_id` = %s;',(monster_id,))
+        records = self.cursor.fetchall()
+        if records:
+            return Monster(records[0])
+        else:
+            raise ValueError('monster_id not found.')
 
     def set_rpguser(self,discord_id:int):
         self.cursor.execute(f"USE `stardb_user`;")
@@ -504,22 +529,29 @@ class MySQLBusyTimeSystem(MySQLBaseModel):
         return records
 
 class MySQLWarningSystem(MySQLBaseModel):
-    def add_warning(self,discord_id:int,moderate_type:str,moderate_user:int,create_guild:int,create_time:datetime.datetime,reason:str=None,last_time:str=None):
+    def add_warning(self,discord_id:int,moderate_type:str,moderate_user:int,create_guild:int,create_time:datetime.datetime,reason:str=None,last_time:str=None) -> int:
+        """給予用戶警告\n
+        returns: 新增的warning_id
+        """
         self.cursor.execute(f"INSERT INTO `stardb_user`.`user_moderate` VALUES(%s,%s,%s,%s,%s,%s,%s,%s);",(None,discord_id,moderate_type,moderate_user,create_guild,create_time,reason,last_time))
         self.connection.commit()
         return self.cursor.lastrowid
 
     def get_warning(self,warning_id:int):
+        """取得警告單"""
         self.cursor.execute(f"SELECT * FROM `stardb_user`.`user_moderate` WHERE `warning_id` = {warning_id};")
-        records = self.cursor.fetchone()
-        return records
+        records = self.cursor.fetchall()
+        if records:
+            return WarningSheet(records,self)
     
     def get_warnings(self,discord_id:int):
+        """取得用戶的警告列表"""
         self.cursor.execute(f"SELECT * FROM `stardb_user`.`user_moderate` WHERE `discord_id` = {discord_id};")
         records = self.cursor.fetchall()
-        return records
+        return WarningList(records,self)
     
     def remove_warning(self,warning_id:int):
+        """移除用戶警告"""
         self.cursor.execute(f"DELETE FROM `stardb_user`.`user_moderate` WHERE warning_id = {warning_id};")
         self.connection.commit()
 

@@ -4,13 +4,13 @@ from discord.ext import commands,pages
 from discord.commands import SlashCommandGroup
 
 from core.classes import Cog_Extension
-from starcord import Jsondb,BRS,log,BotEmbed,ChoiceList,sqldb,sclient
-from starcord.clients.client import StarClient
-from starcord.funtions import find,random_color
+from starcord import Jsondb,BRS,log,BotEmbed,ChoiceList,sclient
+from starcord.DataExtractor.client import StarClient
+from starcord.utilities.funtions import find,random_color
 from starcord.ui_element.button import Delete_Add_Role_button
 from starcord.ui_element.view import PollView
 from starcord.errors import CommandError
-from starcord.clients import GoogleCloud
+from starcord.DataExtractor import GoogleCloud
 from starcord.types import Position
 
 from mysql.connector.errors import Error as sqlerror
@@ -46,7 +46,7 @@ class command(Cog_Extension):
             user = await find.user(ctx,i)
             if user:
                 id = user.id
-                record = self.sqldb.get_role_save_count(id)
+                record = sclient.get_role_save_count(id)
                 embed.add_field(name=user.name, value=record, inline=False)
         await ctx.respond(embed=embed)
  
@@ -69,7 +69,7 @@ class command(Cog_Extension):
             for user in user_list:
                 user = await find.user(ctx,user)
                 if user and user != self.bot.user:
-                    dbdata = sqldb.get_main_account(user.id)
+                    dbdata = sclient.get_main_account(user.id)
                     if dbdata:
                         user = ctx.guild.get_member(dbdata['main_account'])
                     await user.add_roles(new_role,reason='指令:加身分組')
@@ -101,7 +101,7 @@ class command(Cog_Extension):
                     continue
                 try:
                     #1062
-                    self.sqldb.add_role_save(user_id,role.id,role.name,role.created_at.date())
+                    sclient.add_role_save(user_id,role.id,role.name,role.created_at.date())
                     log.info(f'新增:{role.name}')
                 except sqlerror as e:
                     if e.errno == 1062:
@@ -160,7 +160,7 @@ class command(Cog_Extension):
     async def record(self, ctx, user:discord.Option(discord.Member,name='欲查詢的成員',description='留空以查詢自己',default=None)):
         await ctx.defer()
         user = user or ctx.author
-        record = self.sqldb.get_role_save(user.id)
+        record = sclient.get_role_save(user.id)
         if record:
             page = []
             i = 10
@@ -245,7 +245,7 @@ class command(Cog_Extension):
             await ctx.respond('錯誤：你不可以下注自己的賭盤',ephemeral=True)
             return
         
-        bet = self.sqldb.get_bet_data(bet_id)
+        bet = sclient.get_bet_data(bet_id)
         if not bet:
             await ctx.respond('編號錯誤：沒有此編號的賭盤喔',ephemeral=True)
             return
@@ -253,14 +253,14 @@ class command(Cog_Extension):
             await ctx.respond('錯誤：此賭盤已經關閉了喔',ephemeral=True)
             return
         
-        user_data = self.sqldb.get_point(str(ctx.author.id))
+        user_data = sclient.get_point(str(ctx.author.id))
 
         if user_data['point'] < money:
             await ctx.respond('點數錯誤：你沒有那麼多點數',ephemeral=True)
             return
 
-        self.sqldb.update_point('add',str(ctx.author.id),money*-1)
-        self.sqldb.place_bet(bet_id,choice,money)
+        sclient.update_point('add',str(ctx.author.id),money*-1)
+        sclient.place_bet(bet_id,choice,money)
         await ctx.respond('下注完成!')
 
 
@@ -271,12 +271,12 @@ class command(Cog_Extension):
                      blue:discord.Option(str,name='藍藍幫標題',description='',required=True),
                      time:discord.Option(int,name='賭盤開放時間',description='',required=True,min_value=10,max_value=600)):
         bet_id = str(ctx.author.id)
-        bet = self.sqldb.get_bet_data(bet_id)
+        bet = sclient.get_bet_data(bet_id)
         if bet:
             await ctx.respond('錯誤：你已經創建一個賭盤了喔',ephemeral=True)
             return
 
-        self.sqldb.create_bet(bet_id,title,pink,blue)
+        sclient.create_bet(bet_id,title,pink,blue)
             
         embed = BotEmbed.simple(title='賭盤', description=f'編號: {bet_id}')
         embed.add_field(name='賭盤內容', value=title, inline=False)
@@ -286,25 +286,25 @@ class command(Cog_Extension):
         await asyncio.sleep(delay=time)
         
         await ctx.send(f'編號{bet_id}：下注時間結束')
-        self.sqldb.update_bet(bet_id)
+        sclient.update_bet(bet_id)
 
 
     @bet.command(description='結束賭盤')
     async def end(self,ctx,end:discord.Option(str,name='獲勝下注顏色',description='',required=True,choices=bet_option)):
         bet_id = str(ctx.author.id)
         #錯誤檢測
-        bet = self.sqldb.get_bet_data(bet_id)
+        bet = sclient.get_bet_data(bet_id)
         if bet['IsOn']:
             await ctx.respond('錯誤：此賭盤的開放下注時間尚未結束',ephemeral=True)
             return
         
         #計算雙方總點數
-        total = self.sqldb.get_bet_total(bet_id)
+        total = sclient.get_bet_total(bet_id)
         
         #偵測是否兩邊皆有人下注
         if total[0] and total[1]:
             #獲勝者設定
-            winners = self.sqldb.get_bet_winner(bet_id,end)
+            winners = sclient.get_bet_winner(bet_id,end)
             #前置準備
             pink_total = total[0]
             blue_total = total[1]
@@ -320,20 +320,20 @@ class command(Cog_Extension):
             #點數計算
             for i in winners:
                 pt_add = i['money'] * (mag+1)
-                self.sqldb.update_point('add',i['user_id'],pt_add)
+                sclient.update_point('add',i['user_id'],pt_add)
             
         else:
-            users = self.sqldb.get_bet_winner(bet_id,'blue')
+            users = sclient.get_bet_winner(bet_id,'blue')
             for i in users:
-                self.sqldb.update_point('add',i['user_id'],i['money'])
+                sclient.update_point('add',i['user_id'],i['money'])
             
-            users = self.sqldb.get_bet_winner(bet_id,'pink')
+            users = sclient.get_bet_winner(bet_id,'pink')
             for i in users:
-                self.sqldb.update_point('add',i['user_id'],i['money'])
+                sclient.update_point('add',i['user_id'],i['money'])
             await ctx.respond(f'編號{bet_id}：因為有一方沒有人選擇，所以此局平手，點數將歸還給所有人')
         
         #更新資料庫
-        self.sqldb.remove_bet(bet_id)    
+        sclient.remove_bet(bet_id)    
 
     @commands.user_command()  # create a user command for the supplied guilds
     async def whois(self,ctx, member: discord.Member):  # user commands return the member
@@ -416,7 +416,7 @@ class command(Cog_Extension):
         try:
             if len(date) == 4:
                 datetime.datetime.strptime(date,"%m%d")
-                self.sqldb.add_busy(ctx.author.id,date,time)
+                sclient.add_busy(ctx.author.id,date,time)
                 await ctx.respond('設定完成')
             elif len(date) == 9:
                 date1_str = date[0:4]
@@ -429,7 +429,7 @@ class command(Cog_Extension):
             
         for i in range((date2 - date1).days + 1):
             date_str = date1.strftime("%m%d")
-            self.sqldb.add_busy(str(ctx.author.id),date_str,time)
+            sclient.add_busy(str(ctx.author.id),date_str,time)
             date1 += datetime.timedelta(days=1)
         await ctx.respond('設定完成')
 
@@ -442,7 +442,7 @@ class command(Cog_Extension):
         try:
             if len(date) == 4:
                 datetime.datetime.strptime(date,"%m%d")
-                self.sqldb.remove_busy(ctx.author.id, date,time)
+                sclient.remove_busy(ctx.author.id, date,time)
                 await ctx.respond('移除完成')
             elif len(date) == 9:
                 date1_str = date[0:4]
@@ -455,7 +455,7 @@ class command(Cog_Extension):
         
         for i in range((date2 - date1).days + 1):
             date_str = date1.strftime("%m%d")
-            self.sqldb.remove_busy(str(ctx.author.id),date_str,time)
+            sclient.remove_busy(str(ctx.author.id),date_str,time)
             date1 += datetime.timedelta(days=1)
         await ctx.respond('設定完成')
 
@@ -472,7 +472,7 @@ class command(Cog_Extension):
 
         for i in range(days):
             date_str = date_now.strftime("%m%d")
-            dbdata = self.sqldb.get_busy(date_str)
+            dbdata = sclient.get_busy(date_str)
             list = ["早上","下午","晚上"]
             for j in dbdata:
                 try:
@@ -496,7 +496,7 @@ class command(Cog_Extension):
         user_list = self.bot.get_guild(613747262291443742).get_role(1097455657428471918).members
         text = ''
         for i in user_list:
-            dbdata = self.sqldb.get_statistics_busy(i.id)
+            dbdata = sclient.get_statistics_busy(i.id)
             text += f'{i.mention}: {dbdata.get("count(user_id)")}\n'
         embed = BotEmbed.simple('總計',text)
         await ctx.respond(embed=embed)
@@ -536,7 +536,7 @@ class command(Cog_Extension):
         await ctx.respond(f"辣味貢丸大禮包~",ephemeral=True)
         channel = self.bot.get_channel(640541440103153674)
         await channel.send(f"{member.mention}收到了一份貢丸大禮包")
-        self.sqldb.add_userdata_value(member.id,"user_discord","meatball_times",1)
+        sclient.add_userdata_value(member.id,"user_discord","meatball_times",1)
         
         # admin_role = member.get_role(613748153644220447)
         # if admin_role:
@@ -555,17 +555,17 @@ class command(Cog_Extension):
         view,embed = sclient.create_poll(title,options,ctx.author.id,ctx.guild.id,alternate_account_can_vote)
         embed.set_author(name=ctx.author.name,icon_url=ctx.author.avatar.url)
         message = await ctx.respond(embed=embed,view=view)
-        self.sqldb.update_poll(view.poll_id,"message_id",message.id)
+        sclient.update_poll(view.poll_id,"message_id",message.id)
 
     @commands.slash_command(description='共用「94共用啦」雲端資料夾',guild_ids=main_guild)
     async def drive(self,ctx,email:discord.Option(str,name='gmail帳戶',description='要使用的Gmail帳戶，留空已移除資料',required=False)):
         await ctx.defer()
-        data = self.sqldb.get_userdata(ctx.author.id,"user_data")
+        data = sclient.get_userdata(ctx.author.id,"user_data")
         if not email:
             if data and data.get("email"):
                 GoogleCloud().remove_file_permissions("1bDtsLbOi5crIOkWUZbQmPq3dXUbwWEan",data.get("drive_share_id"))
-                self.sqldb.set_userdata(ctx.author.id,"user_data","email",None)
-                self.sqldb.set_userdata(ctx.author.id,"user_data","drive_share_id",None)
+                sclient.set_userdata(ctx.author.id,"user_data","email",None)
+                sclient.set_userdata(ctx.author.id,"user_data","drive_share_id",None)
             else:
                 await ctx.respond(f"{ctx.author.mention}：此帳號沒有設定過google帳戶")
                 return
@@ -580,7 +580,7 @@ class command(Cog_Extension):
             return
         
         google_data = GoogleCloud().add_file_permissions("1bDtsLbOi5crIOkWUZbQmPq3dXUbwWEan",email)
-        self.sqldb.set_staruser_data(ctx.author.id,email,google_data.get("id"))
+        sclient.set_staruser_data(ctx.author.id,email,google_data.get("id"))
         await ctx.respond(f"{ctx.author.mention}：已與 {email} 共用雲端資料夾")
 
     @election.command(description='加入選舉')
@@ -588,12 +588,12 @@ class command(Cog_Extension):
                    position:discord.Option(str,name='職位',description='要競選的職位',choices=position_option),
                    user_dc:discord.Option(discord.Member,name='成員',description='要競選的成員（此選項供政黨代表一次性報名用）',required=False)):
         user_dc = user_dc or ctx.author
-        sqldb.add_election(user_dc.id,2,position)
+        sclient.add_election(user_dc.id,2,position)
         await ctx.respond(f"{user_dc.mention}：完成競選報名 {Jsondb.jdict['position_option'].get(position)}")
 
     @election.command(description='離開選舉')
     async def leave(self, ctx):
-        sqldb.remove_election(ctx.author.id,2)
+        sclient.remove_election(ctx.author.id,2)
         await ctx.respond(f"{ctx.author.mention}：完成競選退出")
 
     @election.command(description='候選人名單')
@@ -601,7 +601,7 @@ class command(Cog_Extension):
     async def format(self, ctx):
         await ctx.defer()
         session = 2
-        data = sqldb.get_election_full_by_session(session)
+        data = sclient.get_election_full_by_session(session)
         result = {
             "president": [],
             "legislative_president": [],
@@ -632,7 +632,7 @@ class command(Cog_Extension):
         await ctx.defer()
         session = 2
 
-        count_data = sqldb.get_election_count(session)
+        count_data = sclient.get_election_count(session)
         for position_data in count_data:
             if position_data['count'] > 0:
                 position_name = Jsondb.jdict['position_option'].get(position_data['position'])
@@ -644,7 +644,7 @@ class command(Cog_Extension):
                 view, embed = sclient.create_poll(title,options,ctx.author.id,ctx.guild.id,False)
 
                 message = await ctx.send(embed=embed,view=view)
-                self.sqldb.update_poll(view.poll_id,"message_id",message.id)
+                sclient.update_poll(view.poll_id,"message_id",message.id)
                 await asyncio.sleep(1)
         await ctx.respond(f"第{session}屆中央選舉投票創建完成")
 

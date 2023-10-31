@@ -1,5 +1,5 @@
 import requests,os.path
-from starcord.database import Jsondb
+from starcord.FileDatabase import Jsondb
 from starcord.models.community import *
 from starcord.errors import Forbidden
 

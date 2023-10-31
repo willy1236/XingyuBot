@@ -1,5 +1,5 @@
 from datetime import datetime,timezone,timedelta
-from starcord.utility import BotEmbed
+from starcord.utilities.utility import BotEmbed
 
 class Youtube_Push:
     def __init__(self,data:dict):

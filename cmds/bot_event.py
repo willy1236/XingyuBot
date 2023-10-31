@@ -1,7 +1,7 @@
 import discord,datetime,re,asyncio
 from discord.ext import commands
 from core.classes import Cog_Extension
-from starcord import Jsondb,BotEmbed,BRS,sqldb,sclient
+from starcord import Jsondb,BotEmbed,BRS,sclient
 
 keywords = {
     '抹茶粉':'由威立冠名贊助撥出~',
@@ -55,7 +55,7 @@ class event(Cog_Extension):
                     await message.delete(reason="打出貢丸相關詞彙")
                     await message.author.timeout_for(duration=datetime.timedelta(seconds=60),reason="打出貢丸相關詞彙")
                     await message.channel.send(f"{message.author.mention} 貢丸很危險 不要打貢丸知道嗎")
-                    sqldb.add_userdata_value(message.author.id,"user_discord","meatball_times",1)
+                    sclient.add_userdata_value(message.author.id,"user_discord","meatball_times",1)
                     channel = self.bot.get_channel(877495919879286824)
                     await channel.send(f"{message.author.name} 打出了：{message.content}")
                 except Exception as e:
@@ -188,7 +188,7 @@ class event(Cog_Extension):
         
         #離開通知
         guildid = member.guild.id
-        dbdata = sclient.get_notice_channel(guildid,"member_leave")
+        dbdata = sclient.get_notify_channel(guildid,"member_leave")
 
         if dbdata:
             username = member.name if member.discriminator == "0" else f"{member.name}#{member.discriminator}"
@@ -202,7 +202,7 @@ class event(Cog_Extension):
         
         #加入通知
         guildid = member.guild.id
-        dbdata = sclient.get_notice_channel(guildid,"member_join")
+        dbdata = sclient.get_notify_channel(guildid,"member_join")
 
         if dbdata:
             username = member.name if member.discriminator == "0" else f"{member.name}#{member.discriminator}"
@@ -210,11 +210,11 @@ class event(Cog_Extension):
             await self.bot.get_channel(int(dbdata["channel_id"])).send(text)
 
         #警告系統：管理員通知
-        notice_data = sclient.get_notice_channel(guildid,"mod")
+        notice_data = sclient.get_notify_channel(guildid,"mod")
         mod_channel_id = notice_data.get('channel_id') if notice_data else None
         #role_id = notice_data['role_id']
         if mod_channel_id:
-            dbdata = self.sqldb.get_warnings(member.id)
+            dbdata = sclient.get_warnings(member.id)
             #if role_id:
             #    role = member.guild.get_role(role_id)
 

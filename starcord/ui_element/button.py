@@ -1,5 +1,5 @@
 import discord
-from starcord.database import sqldb
+from starcord.DataExtractor import sclient
 
 class ReactRole_button(discord.ui.View):
     def __init__(self):
@@ -72,7 +72,7 @@ class Delete_Pet_button(discord.ui.View):
     @discord.ui.button(label="放生寵物",style=discord.ButtonStyle.danger)
     async def button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
         user = interaction.user
-        sqldb.delete_user_pet(str(user.id))
+        sclient.delete_user_pet(str(user.id))
         button.disabled = True
         await interaction.response.edit_message(content="寵物已放生",view=self)
 

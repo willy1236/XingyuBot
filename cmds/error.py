@@ -3,7 +3,7 @@ from discord.ext import commands
 from core.classes import Cog_Extension
 from mysql.connector.errors import Error as sqlerror
 from starcord.errors import *
-from starcord import log,BRS,Jsondb,sqldb
+from starcord import log,BRS,Jsondb
 
 permissions_tl = Jsondb.jdict.get('permissions')
 debug_guild = Jsondb.jdata.get('debug_guild')

@@ -1,7 +1,8 @@
 import requests
-from starcord.database import Jsondb,sqldb
+from starcord.FileDatabase import Jsondb
 from starcord.models.game import *
 from starcord.errors import ClientError
+
 class GameInterface():
     def __init__(self):
         self.db = Jsondb
@@ -15,20 +16,6 @@ class RiotClient(GameInterface):
         self.headers = {
             'X-Riot-Token':self.key
         }
-
-    def get_player_data(self,summoner_name=None,discord_id=None):
-        """
-        從資料庫取得資料，若沒有則從API取得
-        :param summoner_name: 召喚師名稱
-        :param discord_id: 若提供則先查詢資料庫
-        """
-        if discord_id:
-            dbdata = sqldb.get_game_data(discord_id,"lol")
-            if dbdata:
-                return PartialLOLPlayer(dbdata)
-        
-        if summoner_name:
-            return self.get_player_byname(summoner_name)
 
 
     def get_player_byname(self,username):

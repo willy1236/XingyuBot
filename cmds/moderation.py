@@ -2,8 +2,8 @@ import discord,datetime
 from discord.ext import commands
 from discord.commands import SlashCommandGroup
 from core.classes import Cog_Extension
-from starcord import ChoiceList,BotEmbed,Jsondb,sqldb,sclient
-from starcord.utility import converter
+from starcord import ChoiceList,BotEmbed,Jsondb,sclient
+from starcord.utilities.utility import converter
 
 set_option = ChoiceList.set('channel_set_option')
 debug_guild = Jsondb.jdata['debug_guild']
@@ -123,23 +123,8 @@ class moderation(Cog_Extension):
     @commands.guild_only()
     async def list(self,ctx,
                       user:discord.Option(discord.User,name='用戶',description='要查詢的用戶',required=True)):
-        dbdata = sqldb.get_warnings(user.id)
-        embed = BotEmbed.general(f'{user.name} 的警告單列表（共{len(dbdata)}筆）',user.display_avatar.url)
-        for i in dbdata:
-            moderate_user = self.bot.get_user(i['moderate_user'])
-            guild = self.bot.get_guild(i['create_guild'])
-            time_str = i['create_time']
-            moderate_type = i['moderate_type']
-            last_time = i['last_time']
-            if last_time:
-                moderate_type += f" {last_time}"
-            
-            name = f"編號: {i['warning_id']} ({moderate_type})"
-            value = f"{guild.name}/{moderate_user.mention}\n{i['reason']}\n{time_str}"
-            if guild.id in debug_guild:
-                value += "\n機器人擁有者官方給予"
-            embed.add_field(name=name,value=value)
-        await ctx.respond(embed=embed)
+        dbdata = sclient.get_warnings(user.id)
+        await ctx.respond(embed=dbdata.display(self.bot))
 
     @warning.command(description='獲取指定警告')
     @commands.guild_only()
@@ -156,14 +141,14 @@ class moderation(Cog_Extension):
     @commands.guild_only()
     async def remove(self,ctx,
                      warning_id:discord.Option(str,name='警告編號',description='要移除的警告',required=True)):
-        dbdata = sqldb.get_warning(int(warning_id))
+        dbdata = sclient.get_warning(int(warning_id))
         is_owner = await self.bot.is_owner(ctx.author)
         if dbdata:
             guild = self.bot.get_guild(dbdata['create_guild'])
             if not guild == ctx.guild and not is_owner:
                 await ctx.respond("不能移除非此伺服器發出的警告")
                 return
-            sqldb.remove_warning(int(warning_id))
+            sclient.remove_warning(int(warning_id))
             await ctx.respond(f"已移除編號:{warning_id}的警告")
         else:
             await ctx.respond("查無此警告單")
@@ -188,7 +173,7 @@ class moderation(Cog_Extension):
         moderate_user = ctx.user.id
         create_time = datetime.datetime.now()
         if add_record and not user.bot:
-            sqldb.add_warning(user.id,'timeout',moderate_user,ctx.guild.id,create_time,reason,time_last)
+            sclient.add_warning(user.id,'timeout',moderate_user,ctx.guild.id,create_time,reason,time_last)
         
         timestamp = int((create_time+time).timestamp())
         embed = BotEmbed.general(f'{user.name} 已被禁言',user.display_avatar.url,description=f"{user.mention}：{reason}")
@@ -211,7 +196,7 @@ class moderation(Cog_Extension):
         moderate_user = ctx.user.id
         create_time = datetime.datetime.now()
         if add_record and not user.bot:
-            sqldb.add_warning(user.id,'kick',moderate_user,ctx.guild.id,create_time,reason,None)
+            sclient.add_warning(user.id,'kick',moderate_user,ctx.guild.id,create_time,reason,None)
         
         embed = BotEmbed.general(f'{user.name} 已被踢除',user.display_avatar.url,description=f"{user.mention}：{reason}")
         embed.add_field(name="執行人員",value=ctx.author.mention)
@@ -234,7 +219,7 @@ class moderation(Cog_Extension):
         moderate_user = ctx.user.id
         create_time = datetime.datetime.now()
         if add_record and not user.bot:
-            sqldb.add_warning(user.id,'ban',moderate_user,ctx.guild.id,create_time,reason,None)
+            sclient.add_warning(user.id,'ban',moderate_user,ctx.guild.id,create_time,reason,None)
         
         embed = BotEmbed.general(f'{user.name} 已被停權',user.display_avatar.url,description=f"{user.mention}：{reason}")
         embed.add_field(name="執行人員",value=ctx.author.mention)

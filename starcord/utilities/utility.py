@@ -1,5 +1,5 @@
 import discord,datetime
-from starcord.database import Jsondb
+from starcord.FileDatabase import Jsondb
 
 class BotEmbed:
     @staticmethod

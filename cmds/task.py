@@ -6,8 +6,8 @@ from discord.ext import commands,tasks
 from requests.exceptions import ConnectTimeout
 
 from core.classes import Cog_Extension
-from starcord import Jsondb,sqldb,mongedb,sclient
-from starcord.clients import *
+from starcord import Jsondb,sclient
+from starcord.DataExtractor import *
 
 
 apsc_log = logging.getLogger('apscheduler')
@@ -181,13 +181,13 @@ class task(Cog_Extension):
         Jsondb.write_cache('twitch',twitch_cache)
 
     async def auto_hoyo_reward(self):
-        list = sqldb.get_hoyo_reward()
+        list = sclient.get_hoyo_reward()
         for user in list:
             user_id = user['user_id']
             user_dc = self.bot.get_user(int(user_id))
             channel_id = user['channel_id']
             channel = self.bot.get_channel(int(channel_id))
-            cookies = sqldb.get_userdata(user_id,'game_hoyo_cookies')
+            cookies = sclient.get_userdata(user_id,'game_hoyo_cookies')
             if not channel:
                 print(f"auto_hoyo_reward: {user_id}/{channel_id}")
             if not cookies:
@@ -207,8 +207,8 @@ class task(Cog_Extension):
             
             await asyncio.sleep(30)
 
-    async def get_mongodb_data(self):
-        dbdata = mongedb.get_apidata()
+    # async def get_mongodb_data(self):
+    #     dbdata = mongedb.get_apidata()
 
     async def update_pubsubhubbub_data(self):
         pass

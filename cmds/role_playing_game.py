@@ -2,8 +2,9 @@ import discord,asyncio,random,datetime
 from core.classes import Cog_Extension
 from discord.ext import commands
 from discord.commands import SlashCommandGroup
-from starcord import sqldb,BotEmbed,sclient
+from starcord import BotEmbed,sclient
 from starcord.ui_element.RPGbutton import RPGbutton1,RPGbutton2
+from starcord.models.model import GameInfoPage
 
 class role_playing_game(Cog_Extension):
     #work = SlashCommandGroup("work", "工作相關指令")
@@ -16,7 +17,7 @@ class role_playing_game(Cog_Extension):
 
     @commands.slash_command(description='進行工作（開發中）')
     async def work(self,ctx:discord.ApplicationContext):
-        dbdata = sqldb.get_activities(ctx.author.id)
+        dbdata = sclient.get_activities(ctx.author.id)
         if dbdata.get("work_date") == datetime.date.today():
             await ctx.respond("今天已經工作過了")
         
@@ -27,17 +28,20 @@ class role_playing_game(Cog_Extension):
         user_dc = user_dc or ctx.author
         user = sclient.get_dcuser(user_dc.id,True,user_dc)
         if not user:
-            sqldb.create_user(user_dc.id)
+            sclient.create_user(user_dc.id)
             user = sclient.get_dcuser(user_dc.id,True,user_dc)
 
         pet = user.get_pet()
+        print(user.discord_id)
+        game = user.get_game()
         pet_embed = pet.desplay() if pet else BotEmbed.simple(f'{user_dc.name} 的寵物','用戶沒有認養寵物')
-        await ctx.respond(embeds=[user.desplay(self.bot), pet_embed])
+        game_embed = game.desplay(user_dc) if game else GameInfoPage().desplay(user_dc)
+        await ctx.respond(embeds=[user.desplay(self.bot), pet_embed, game_embed])
 
     @commands.slash_command(description='查看背包（開發中）')
     async def bag(self,ctx:discord.ApplicationContext,user_dc:discord.Option(discord.Member,name='用戶',description='留空以查詢自己',default=None)):
         user_dc = user_dc or ctx.author
-        data = sqldb.get_bag_desplay(user_dc.id)
+        data = sclient.get_bag_desplay(user_dc.id)
         embed = BotEmbed.simple(f'{user_dc.name}的包包')
         if data:
             text = ""

@@ -1,5 +1,5 @@
 import requests
-from starcord.database import Jsondb
+from starcord.FileDatabase import Jsondb
 
 class JsonStorageAPI:
     """https://www.jsonstorage.net/"""
