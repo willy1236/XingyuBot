@@ -47,8 +47,8 @@ class GameInfoPage:
     
 class WarningSheet:
     if TYPE_CHECKING:
-        from starcord.DataExtractor.client import StarClient
-        sclient: StarClient
+        from starcord.DataExtractor import MySQLDatabase
+        sqldb: MySQLDatabase
         warning_id: int
         discord_id: int
         moderate_user_id: int
@@ -57,11 +57,12 @@ class WarningSheet:
         moderate_type: str
         reason: str
         last_time: str
+        guild_only: bool
         officially_given: bool
         bot_given: bool
     
-    def __init__(self,data:dict,sclient=None):
-        self.sclient = sclient
+    def __init__(self,data:dict,sqldb=None):
+        self.sqldb = sqldb
         self.warning_id = data.get("warning_id")
         self.discord_id = data.get("discord_id")
         self.moderate_user_id = data.get("moderate_user")
@@ -70,6 +71,7 @@ class WarningSheet:
         self.moderate_type = data.get("moderate_type")
         self.reason = data.get("reason")
         self.last_time = data.get("last_time")
+        self.guild_only = data.get("guild_only")
         self.bot_given = data.get("bot_given")
 
     @property
@@ -85,5 +87,34 @@ class WarningSheet:
         description = f"**編號:{self.warning_id} ({self.moderate_type})**\n被警告用戶：{user.mention}\n管理員：{guild.name}/{moderate_user.mention}\n原因：{self.reason}\n時間：{self.create_time}"
         if self.officially_given:
             description += "\n機器人官方給予"
+        if self.guild_only:
+            description += "\n伺服器區域警告"
         embed = BotEmbed.general(name=name,icon_url=user.display_avatar.url,description=description)
+        return embed
+    
+    def display_embed_field(self,bot:discord.Bot):
+            moderate_user = bot.get_user(self.moderate_user_id)
+            guild = bot.get_guild(self.guild_id)
+            name = f"編號: {self.warning_id} ({self.moderate_type})"
+            value = f"{guild.name}/{moderate_user.mention}\n{self.reason}\n{self.create_time}"
+            if self.officially_given:
+                value += "\n機器人官方給予"
+            if self.guild_only:
+                value += "\n伺服器區域警告"
+            return name, value
+    
+    def remove(self):
+        self.sqldb.remove_warning(self.warning_id)
+
+class WarningList():
+    def __init__(self,data:dict,discord_id:int,sqldb=None):
+        self.datalist = [WarningSheet(i,sqldb) for i in data]
+        self.discord_id = discord_id
+
+    def display(self,bot:discord.Bot):
+        user = bot.get_user(self.discord_id)
+        embed = BotEmbed.general(f'{user.name} 的警告單列表（共{len(self.datalist)}筆）',user.display_avatar.url)
+        for i in self.datalist:
+            name, value = i.display_embed_field(bot)
+            embed.add_field(name=name,value=value)
         return embed

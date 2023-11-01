@@ -2,7 +2,7 @@ import mysql.connector,datetime,discord
 from mysql.connector.errors import Error as sqlerror
 from starcord.types import DBGame,Coins, Position
 from starcord.models.user import *
-from starcord.models.model import GameInfoPage
+from starcord.models.model import *
 
 class MySQLBaseModel(object):
     """MySQL資料庫基本模型"""
@@ -95,7 +95,6 @@ class MySQLUserSystem(MySQLBaseModel):
         else:
             self.cursor.execute(f'SELECT * FROM `user_discord` WHERE `discord_id` = %s;',(discord_id,))
         record = self.cursor.fetchall()
-        print(record)
         if record:
             return DiscordUser(record[0],self,user_dc)
     
@@ -529,11 +528,11 @@ class MySQLBusyTimeSystem(MySQLBaseModel):
         return records
 
 class MySQLWarningSystem(MySQLBaseModel):
-    def add_warning(self,discord_id:int,moderate_type:str,moderate_user:int,create_guild:int,create_time:datetime.datetime,reason:str=None,last_time:str=None) -> int:
+    def add_warning(self,discord_id:int,moderate_type:str,moderate_user:int,create_guild:int,create_time:datetime.datetime,reason:str=None,last_time:str=None,guild_only=True) -> int:
         """給予用戶警告\n
         returns: 新增的warning_id
         """
-        self.cursor.execute(f"INSERT INTO `stardb_user`.`user_moderate` VALUES(%s,%s,%s,%s,%s,%s,%s,%s);",(None,discord_id,moderate_type,moderate_user,create_guild,create_time,reason,last_time))
+        self.cursor.execute(f"INSERT INTO `stardb_user`.`user_moderate` VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s);",(None,discord_id,moderate_type,moderate_user,create_guild,create_time,reason,last_time,guild_only))
         self.connection.commit()
         return self.cursor.lastrowid
 
@@ -544,11 +543,16 @@ class MySQLWarningSystem(MySQLBaseModel):
         if records:
             return WarningSheet(records,self)
     
-    def get_warnings(self,discord_id:int):
-        """取得用戶的警告列表"""
-        self.cursor.execute(f"SELECT * FROM `stardb_user`.`user_moderate` WHERE `discord_id` = {discord_id};")
+    def get_warnings(self,discord_id:int,guild_id:int=None):
+        """取得用戶的警告列表
+        :param guild_id: 若給予，則同時查詢該伺服器的紀錄
+        """
+        if guild_id:
+            self.cursor.execute(f"SELECT * FROM `stardb_user`.`user_moderate` WHERE `discord_id` = {discord_id} AND `create_guild` = {guild_id};")
+        else:
+            self.cursor.execute(f"SELECT * FROM `stardb_user`.`user_moderate` WHERE `discord_id` = {discord_id} AND `guild_only` = false;")
         records = self.cursor.fetchall()
-        return WarningList(records,self)
+        return WarningList(records,discord_id,self)
     
     def remove_warning(self,warning_id:int):
         """移除用戶警告"""
@@ -662,7 +666,7 @@ class MYSQLElectionSystem(MySQLBaseModel):
         return records
     
     def get_election_count(self,session:int):
-        self.cursor.execute(f"SELECT position,count(*) AS count FROM `database`.`candidate_list` WHERE session = {session} GROUP BY position;")
+        self.cursor.execute(f"SELECT position,count(*) AS count FROM `database`.`candidate_list` WHERE session = {session} GROUP BY position ORDER BY `position`;")
         records = self.cursor.fetchall()
         return records
 

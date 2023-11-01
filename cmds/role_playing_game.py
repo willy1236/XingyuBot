@@ -32,9 +32,8 @@ class role_playing_game(Cog_Extension):
             user = sclient.get_dcuser(user_dc.id,True,user_dc)
 
         pet = user.get_pet()
-        print(user.discord_id)
         game = user.get_game()
-        pet_embed = pet.desplay() if pet else BotEmbed.simple(f'{user_dc.name} 的寵物','用戶沒有認養寵物')
+        pet_embed = pet.desplay(user_dc) if pet else BotEmbed.simple(f'{user_dc.name} 的寵物','用戶沒有認養寵物')
         game_embed = game.desplay(user_dc) if game else GameInfoPage().desplay(user_dc)
         await ctx.respond(embeds=[user.desplay(self.bot), pet_embed, game_embed])
 

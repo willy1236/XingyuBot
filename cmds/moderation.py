@@ -97,12 +97,13 @@ class moderation(Cog_Extension):
         await ctx.respond(embed=embed)
         
     
-    @warning.command(description='給予用戶警告，此警告將會連動至其他群組')
+    @warning.command(description='給予用戶警告，此警告可連動至其他群組')
     @commands.has_permissions(manage_messages=True)
     @commands.guild_only()
     async def add(self,ctx,
                       user:discord.Option(discord.User,name='用戶',description='要給予警告的用戶',required=True),
-                      reason:discord.Option(str,name='原因',description='限100字內')):
+                      reason:discord.Option(str,name='原因',description='限100字內'),
+                      add_record:discord.Option(bool,name='是否要將此紀錄存入警告系統',description='將紀錄存入警告系統供其他群組檢視',default=False)):
         is_owner = await self.bot.is_owner(ctx.author)
         if not user in ctx.guild.members and not is_owner:
             await ctx.respond("只能警告在伺服器內的成員")
@@ -113,17 +114,20 @@ class moderation(Cog_Extension):
 
         time = datetime.datetime.now()
         moderate_user = ctx.author.id
-        sclient.add_warning(user.id,'warning',moderate_user,ctx.guild.id,time,reason,None)
-        embed = BotEmbed.general(f'{user.name} 的警告單',user.display_avatar.url,description=f"{user.mention}：{reason}")
+        warning_id = sclient.add_warning(user.id,'warning',moderate_user,ctx.guild.id,time,reason,None,not add_record)
+        embed = BotEmbed.general(f'{user.name} 已被警告',user.display_avatar.url,description=f"{user.mention}：{reason}")
         embed.add_field(name="執行人員",value=ctx.author.mention)
+        embed.add_field(name="存入跨群警告系統",value=add_record)
         embed.timestamp = time
+        embed.set_footer(text=f"編號 {warning_id}")
         await ctx.respond(embed=embed)
     
     @warning.command(description='獲取用戶的所有警告')
     @commands.guild_only()
     async def list(self,ctx,
-                      user:discord.Option(discord.User,name='用戶',description='要查詢的用戶',required=True)):
-        dbdata = sclient.get_warnings(user.id)
+                      user:discord.Option(discord.User,name='用戶',description='要查詢的用戶',required=True),
+                      guild_only:discord.Option(bool,name='查詢是否包含伺服器區域警告',description='預設為True',default=True)):
+        dbdata = sclient.get_warnings(user.id,ctx.guild.id if guild_only else None)
         await ctx.respond(embed=dbdata.display(self.bot))
 
     @warning.command(description='獲取指定警告')

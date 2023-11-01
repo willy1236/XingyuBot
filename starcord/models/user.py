@@ -1,6 +1,6 @@
 import random,time,datetime,discord
 from typing import TYPE_CHECKING
-from starcord.utilities.utility import BotEmbed
+from starcord.utilities.utility import BotEmbed,ChoiceList
 from starcord.types import DBGame,Coins
 from starcord.FileDatabase import Jsondb
 
@@ -19,12 +19,14 @@ class Pet():
         self.food = data.get('food')
 
     def desplay(self,user_dc:discord.User=None):
-        title = f'{user_dc.name} 的寵物' if user_dc else "寵物資訊"
-        embed = BotEmbed.simple(title)
-        embed.add_field(name='寵物名',value=self.name)
-        embed.add_field(name='寵物物種',value=self.species)
+        title = self.name
+        description = f'{user_dc.name} 的寵物' if user_dc else "寵物資訊"
+        embed = BotEmbed.simple(title,description)
+        #embed.add_field(name='寵物名',value=self.name)
+        embed.add_field(name='寵物物種',value=ChoiceList.get_tw(self.species,"pet_option"))
         embed.add_field(name='飽食度',value=self.food)
         return embed
+
 class User:
     """基本用戶"""
 
@@ -281,71 +283,3 @@ class Monster:
     #     #結束儲存資料
     #     sqldb.update_userdata(player.id, 'rpg_user','user_hp',player.hp)
     #     return embed
-
-class WarningSheet:
-    if TYPE_CHECKING:
-        from starcord.DataExtractor import MySQLDatabase
-        sqldb: MySQLDatabase
-        warning_id: int
-        discord_id: int
-        moderate_user_id: int
-        guild_id: int
-        create_time: datetime.datetime
-        moderate_type: str
-        reason: str
-        last_time: str
-        officially_given: bool
-        bot_given: bool
-    
-    def __init__(self,data:dict,sqldb=None):
-        self.sqldb = sqldb
-        self.warning_id = data.get("warning_id")
-        self.discord_id = data.get("discord_id")
-        self.moderate_user_id = data.get("moderate_user")
-        self.guild_id = data.get("create_guild")
-        self.create_time = data.get("create_time")
-        self.moderate_type = data.get("moderate_type")
-        self.reason = data.get("reason")
-        self.last_time = data.get("last_time")
-        self.bot_given = data.get("bot_given")
-
-    @property
-    def officially_given(self):
-        return self.guild_id in Jsondb.jdata["debug_guild"]
-    
-    def display(self,bot:discord.Bot):
-        user = bot.get_user(self.discord_id)
-        moderate_user = bot.get_user(self.moderate_user_id)
-        guild = bot.get_guild(self.guild_id)
-        
-        name = f'{user.name} 的警告單'
-        description = f"**編號:{self.warning_id} ({self.moderate_type})**\n被警告用戶：{user.mention}\n管理員：{guild.name}/{moderate_user.mention}\n原因：{self.reason}\n時間：{self.create_time}"
-        if self.officially_given:
-            description += "\n機器人官方給予"
-        embed = BotEmbed.general(name=name,icon_url=user.display_avatar.url,description=description)
-        return embed
-    
-    def display_embed_field(self,bot:discord.Bot):
-            moderate_user = bot.get_user(self.moderate_user_id)
-            guild = bot.get_guild(self.guild_id)
-            name = f"編號: {self.warning_id} ({self.moderate_type})"
-            value = f"{guild.name}/{moderate_user.mention}\n{self.reason}\n{self.create_time}"
-            if self.officially_given:
-                value += "\n機器人官方給予"
-
-            return name, value
-    
-    def remove(self):
-        self.sqldb.remove_warning(self.warning_id)
-
-class WarningList():
-    def __init__(self,data:dict,sqldb=None):
-        self.datalist = [WarningSheet(i,sqldb) for i in data]
-
-    def display(self,bot:discord.Bot):
-        user = bot.get_user(self.datalist[0].discord_id)
-        embed = BotEmbed.general(f'{user.name} 的警告單列表（共{len(self.datalist)}筆）',user.display_avatar.url)
-        for i in self.datalist:
-            name, value = i.display_embed_field(bot)
-            embed.add_field(name=name,value=value)
-        return embed
