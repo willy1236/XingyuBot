@@ -70,7 +70,7 @@ class task(Cog_Extension):
             else:
                 text = '地震報告'
             
-            records = sclient.get_notice_channel_by_type('earthquake')
+            records = sclient.get_notify_channel_by_type('earthquake')
             for i in records:
                 channel = self.bot.get_channel(i['channel_id'])
                 if channel:
@@ -95,7 +95,7 @@ class task(Cog_Extension):
                 embed_list.append(crafting.desplay())
             embed_list.append(map.desplay())
             
-            records = sclient.get_notice_channel_by_type('apex_info')
+            records = sclient.get_notify_channel_by_type('apex_info')
             for i in records:
                 channel = self.bot.get_channel(i['channel_id'])
                 if channel:
@@ -129,7 +129,7 @@ class task(Cog_Extension):
     async def forecast_update(self):
         forecast = CWBClient().get_forecast()
         if forecast:
-            records = sclient.get_notice_channel_by_type('forecast')
+            records = sclient.get_notify_channel_by_type('forecast')
             for i in records:
                 channel = self.bot.get_channel(i['channel_id'])
                 if channel:
@@ -161,7 +161,7 @@ class task(Cog_Extension):
             if data[user] and not user_cache:
                 twitch_cache[user] = True
                 embed = data[user].desplay()
-                guilds = sclient.get_notice_community_guild('twitch',user)
+                guilds = sclient.get_notify_community_guild('twitch',user)
                 for guildid in guilds:
                     guild = self.bot.get_guild(guildid)
                     channel = self.bot.get_channel(guilds[guildid][0])
