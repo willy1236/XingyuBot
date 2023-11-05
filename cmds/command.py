@@ -69,9 +69,12 @@ class command(Cog_Extension):
             for user in user_list:
                 user = await find.user(ctx,user)
                 if user and user != self.bot.user:
-                    dbdata = sclient.get_main_account(user.id)
-                    if dbdata:
-                        user = ctx.guild.get_member(dbdata['main_account'])
+                    try:
+                        dbdata = sclient.get_main_account(user.id)
+                        if dbdata:
+                            user = ctx.guild.get_member(dbdata['main_account'])
+                    except sqlerror:
+                        pass
                     await user.add_roles(new_role,reason='指令:加身分組')
                     added_user.append(user.mention)
                 elif user == self.bot.user:
