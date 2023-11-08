@@ -1,5 +1,4 @@
 import discord,genshin,re,asyncio
-from flask import views
 from discord.ext import commands
 from discord.commands import SlashCommandGroup
 from datetime import timedelta,datetime
