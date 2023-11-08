@@ -1,4 +1,5 @@
 import discord,genshin,re,asyncio
+from flask import views
 from discord.ext import commands
 from discord.commands import SlashCommandGroup
 from datetime import timedelta,datetime
@@ -7,6 +8,7 @@ from core.classes import Cog_Extension
 from starcord import BotEmbed,Jsondb,csvdb,ChoiceList,sclient
 from starcord.DataExtractor import *
 from starcord.types import DBGame
+from starcord.ui_element.view import GameView
 
 # def player_search(url):
 #     response = requests.get(url)
@@ -101,8 +103,20 @@ class system_game(Cog_Extension):
         await ctx.respond(f'已將用戶的 {game.name} 資料設定為 {player_name}')
             
 
+    @game.command(description='揪團找人')
+    async def find(self,
+                   ctx:discord.ApplicationContext,
+                   number_all:discord.Option(int,name='人數',description=''),
+                   game_option:discord.Option(str,name='遊戲',description='',choices=set_option),
+                   message:discord.Option(str,name='要留下的訊息',description='',default=None),
+                   number_now:discord.Option(int,name='現有人數',description='預設為1',default=1)):
+        game = DBGame(game_option)
+        creator = ctx.author
+        view = GameView(creator,game,number_all,number_now,message)
+        await ctx.respond(embed=view.embed,view=view)
+    
     @game.command(description='查詢遊戲資料')
-    async def find(self,ctx,
+    async def player(self,ctx,
                    user:discord.Option(discord.Member,name='用戶',description='要查詢的用戶',default=None),
                    game:discord.Option(str,name='遊戲',description='若輸入此欄，將會用資料庫的資料查詢玩家',default=None,choices=set_option)):
         await ctx.defer()

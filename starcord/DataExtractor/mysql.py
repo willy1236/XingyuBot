@@ -560,8 +560,8 @@ class MySQLWarningSystem(MySQLBaseModel):
         self.connection.commit()
 
 class MySQLPollSystem(MySQLBaseModel):
-    def add_poll(self,title:str,created_user:int,created_at:datetime,message_id,guild_id,alternate_account_can_vote=True):
-        self.cursor.execute(f"INSERT INTO `database`.`poll_data` VALUES(%s,%s,%s,%s,%s,%s,%s,%s);",(None,title,created_user,created_at,True,message_id,guild_id,alternate_account_can_vote))
+    def add_poll(self,title:str,created_user:int,created_at:datetime,message_id,guild_id,alternate_account_can_vote=True,show_name=False):
+        self.cursor.execute(f"INSERT INTO `database`.`poll_data` VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s);",(None,title,created_user,created_at,True,message_id,guild_id,alternate_account_can_vote,show_name))
         self.connection.commit()
         return self.cursor.lastrowid
     
@@ -619,19 +619,19 @@ class MySQLPollSystem(MySQLBaseModel):
         if records:
             return records[0]
     
-    def get_users_poll(self,poll_id:int,exclude_alternatives_accounts=False):
-        if exclude_alternatives_accounts:
-            self.cursor.execute(f"SELECT * FROM `stardb_user`.`user_poll` LEFT JOIN `stardb_user`.`user_account` ON `user_poll`.discord_id = `user_account`.alternate_account WHERE poll_id = {poll_id} AND alternate_account IS NULL;")
-        else:
+    def get_users_poll(self,poll_id:int,include_alternatives_accounts=True):
+        if include_alternatives_accounts:
             self.cursor.execute(f"SELECT * FROM `stardb_user`.`user_poll` WHERE poll_id = {poll_id};")
+        else:
+            self.cursor.execute(f"SELECT * FROM `stardb_user`.`user_poll` LEFT JOIN `stardb_user`.`user_account` ON `user_poll`.discord_id = `user_account`.alternate_account WHERE poll_id = {poll_id} AND alternate_account IS NULL;")
         records = self.cursor.fetchall()
         return records
     
-    def get_poll_vote_count(self,poll_id:int,exclude_alternatives_accounts=False):
-        if exclude_alternatives_accounts:
-            self.cursor.execute(f"SELECT vote_option,COUNT(*) as count FROM `stardb_user`.`user_poll` LEFT JOIN `stardb_user`.`user_account` ON `user_poll`.discord_id = `user_account`.alternate_account WHERE poll_id = {poll_id} AND alternate_account IS NULL GROUP BY vote_option;")
+    def get_poll_vote_count(self,poll_id:int,include_alternatives_accounts=True):
+        if include_alternatives_accounts:
+            self.cursor.execute(f"SELECT vote_option,COUNT(*) as count FROM `stardb_user`.`user_poll` WHERE `poll_id` = {poll_id} GROUP BY vote_option;")
         else:
-            self.cursor.execute(f"SELECT vote_option,COUNT(*) as count FROM  `stardb_user`.`user_poll` WHERE `poll_id` = {poll_id} GROUP BY vote_option;")
+            self.cursor.execute(f"SELECT vote_option,COUNT(*) as count FROM `stardb_user`.`user_poll` LEFT JOIN `stardb_user`.`user_account` ON `user_poll`.discord_id = `user_account`.alternate_account WHERE poll_id = {poll_id} AND alternate_account IS NULL GROUP BY vote_option;")
         records = self.cursor.fetchall()
         dict = {}
         if records:

@@ -65,12 +65,12 @@ class PointClient(MySQLDatabase):
 
 class PollClient(MySQLDatabase):
     """投票系統"""
-    def create_poll(self, title:str, options:list, creator_id:int, guild_id:int, alternate_account_can_vote=True):
-        poll_id = self.add_poll(title,creator_id,datetime.now(),None,guild_id,alternate_account_can_vote)
+    def create_poll(self, title:str, options:list, creator_id:int, guild_id:int, alternate_account_can_vote=True,show_name=False):
+        poll_id = self.add_poll(title,creator_id,datetime.now(),None,guild_id,alternate_account_can_vote,show_name)
         self.add_poll_option(poll_id,options)
         
         view = PollView(poll_id,self)
-        embed = BotEmbed.general(title=title,description=f"投票ID：{poll_id}\n- 小帳是否算有效票：{alternate_account_can_vote}",name="投票系統")
+        embed = BotEmbed.general(name="投票系統",title=title,description=f"投票ID：{poll_id}\n- 小帳是否算有效票：{alternate_account_can_vote}\n- 結果顯示用戶名：{show_name}")
         return view, embed
 
 class GiveawayClient(MySQLDatabase):

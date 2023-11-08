@@ -549,13 +549,14 @@ class command(Cog_Extension):
     async def create(self,ctx,
                      title:discord.Option(str,name='標題',description='投票標題，限45字內'),
                      options:discord.Option(str,name='選項',description='投票選項，最多輸入10項，每個選項請用英文,隔開'),
-                     alternate_account_can_vote:discord.Option(bool,name='小帳是否算有效票',description='預設為true',default=True)):
+                     alternate_account_can_vote:discord.Option(bool,name='小帳是否算有效票',description='預設為true',default=True),
+                     show_name:discord.Option(bool,name='投票結果是否顯示用戶名',description='預設為false，若投票人數多建議關閉',default=False)):
         options = options.split(",")
         if len(options) > 10 or len(options) < 2:
             await ctx.respond(f"錯誤：投票選項超過10項或小於2項",ephemeral=True)
             return
         
-        view,embed = sclient.create_poll(title,options,ctx.author.id,ctx.guild.id,alternate_account_can_vote)
+        view,embed = sclient.create_poll(title,options,ctx.author.id,ctx.guild.id,alternate_account_can_vote,show_name)
         embed.set_author(name=ctx.author.name,icon_url=ctx.author.avatar.url)
         message = await ctx.respond(embed=embed,view=view)
         sclient.update_poll(view.poll_id,"message_id",message.id)
@@ -603,7 +604,7 @@ class command(Cog_Extension):
     @commands.is_owner()
     async def format(self, ctx):
         await ctx.defer()
-        session = 2
+        session = 3
         data = sclient.get_election_full_by_session(session)
         result = {
             "president": [],

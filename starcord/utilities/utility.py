@@ -12,13 +12,13 @@ class BotEmbed:
     @staticmethod
     def simple(title:str=discord.Embed.Empty,description:str=discord.Embed.Empty,url=discord.Embed.Empty):
         '''簡易:不帶作者'''
-        embed = discord.Embed(title=title,description=description, color=0xc4e9ff,url=url)
+        embed = discord.Embed(title=title,description=description or discord.Embed.Empty, color=0xc4e9ff,url=url)
         return embed
 
     @staticmethod
     def general(name:str=discord.Embed.Empty,icon_url:str=discord.Embed.Empty,url:str=discord.Embed.Empty,title:str=discord.Embed.Empty,description:str=discord.Embed.Empty):
         '''普通:自訂作者'''
-        embed = discord.Embed(title=title,description=description,color=0xc4e9ff)
+        embed = discord.Embed(title=title,description=description or discord.Embed.Empty,color=0xc4e9ff)
         embed.set_author(name=name,icon_url=icon_url,url=url)
         return embed
 

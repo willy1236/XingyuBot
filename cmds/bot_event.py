@@ -258,7 +258,7 @@ class event(Cog_Extension):
 
     @commands.Cog.listener()
     async def on_presence_update(self,before:discord.Member, after:discord.Member):
-        if after.guild.id in main_guild and not after.bot and after.activities and after.voice:
+        if not after.bot and after.guild.id in main_guild  and after.activities and after.voice:
             if get_playing_ow2(after):
                 list = []
                 channel = self.bot.get_channel(703617778095095958)

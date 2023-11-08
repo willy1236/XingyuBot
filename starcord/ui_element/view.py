@@ -26,8 +26,21 @@ class PollEndButton(discord.ui.Button):
             view.sqldb.update_poll(self.poll_id,"is_on",0)
             
             polldata = view.sqldb.get_poll(self.poll_id)
-            dbdata = view.sqldb.get_poll_vote_count(self.poll_id,not view.alternate_account_can_vote)
+            dbdata = view.sqldb.get_poll_vote_count(self.poll_id,view.alternate_account_can_vote)
             options_data = view.sqldb.get_poll_options(self.poll_id)
+
+            if view.show_name:
+                user_vote_data = view.sqldb.get_users_poll(self.poll_id,view.alternate_account_can_vote)
+                user_vote_list = {}
+                for i in range(1,len(options_data) + 1):
+                    user_vote_list[str(i)] = [] 
+
+            for i in user_vote_data:
+                discord_id = i["discord_id"]
+                vote_option = i["vote_option"]
+                user = interaction.guild.get_member(discord_id)
+                username = user.mention if user else discord_id
+                user_vote_list[str(vote_option)].append(username)
 
             text = ""
             labels = []
@@ -37,6 +50,9 @@ class PollEndButton(discord.ui.Button):
                 id = option['option_id']
                 count = dbdata.get(str(id),0)
                 text += f"{name}： {count}票\n"
+
+                if view.show_name:
+                    text += ",".join(user_vote_list[str(id)]) + "\n"
 
                 if count > 0:
                     labels.append(name)
@@ -81,15 +97,30 @@ class PollResultButton(discord.ui.Button):
         self.poll_id = poll_id
 
     async def callback(self,interaction):
-        view:PollView = self.view
-        dbdata = view.sqldb.get_poll_vote_count(self.poll_id, not view.alternate_account_can_vote)
+        view:PollView = self.view    
+        dbdata = view.sqldb.get_poll_vote_count(self.poll_id, view.alternate_account_can_vote)
         options_data = view.sqldb.get_poll_options(self.poll_id)
+
+        if view.show_name:
+            user_vote_data = view.sqldb.get_users_poll(self.poll_id,view.alternate_account_can_vote)
+            user_vote_list = {}
+            for i in range(1,len(options_data) + 1):
+                user_vote_list[str(i)] = [] 
+
+            for i in user_vote_data:
+                discord_id = i["discord_id"]
+                vote_option = i["vote_option"]
+                user = interaction.guild.get_member(discord_id)
+                username = user.mention if user else discord_id
+                user_vote_list[str(vote_option)].append(username)
 
         text = ""
         for option in options_data:
             name = option['option_name']
             id = option['option_id']
             text += f"{name}： {dbdata.get(str(id),0)}票\n"
+            if view.show_name:
+                text += ",".join(user_vote_list[str(id)]) + "\n"
 
         embed = BotEmbed.simple("目前票數",description=f'投票ID：{self.poll_id}\n{text}')
         await interaction.response.send_message(embed=embed,ephemeral=True)
@@ -126,6 +157,7 @@ class PollView(discord.ui.View):
         sqldb: MySQLDatabase
         created_id: int
         alternate_account_can_vote: bool
+        show_name: bool
     
     def __init__(self,poll_id,sqldb=None):
         super().__init__(timeout=None)
@@ -134,6 +166,7 @@ class PollView(discord.ui.View):
         poll_data = self.sqldb.get_poll(poll_id)
         self.created_id = poll_data['created_user']
         self.alternate_account_can_vote = poll_data['alternate_account_can_vote']
+        self.show_name = poll_data['show_name']
         
         self.add_item(PollEndButton(poll_id,self.created_id))
         self.add_item(PollResultButton(poll_id))
@@ -145,3 +178,47 @@ class PollView(discord.ui.View):
         for option in dbdata:
             custom_id = f"poll_{poll_id}_{option['option_id']}"
             self.add_item(PollOptionButton(label=option['option_name'],poll_id=poll_id, option_id=option['option_id'],custom_id=custom_id))
+
+class GameView(discord.ui.View):
+    def __init__(self,creator,game,number_all,number_now,message):
+        super().__init__()
+        self.creator = creator
+        self.game = game
+        self.number_all = number_all
+        self.number_now = number_now
+        self.message = message
+        self.embed = self.create_embed()
+        self.participant = [self.creator]
+
+    def create_embed(self):
+        embed = BotEmbed.general(f"{self.creator.name} 正在揪團",self.creator.avatar.url,description=self.message)
+        embed.add_field(name="主揪",value=self.creator.mention,inline=False)
+        embed.add_field(name="遊戲",value=self.game.value)
+        embed.add_field(name="人數",value=f"{self.number_now}/{self.number_all}")
+        return embed
+    
+    @discord.ui.button(label="我要加入",style=discord.ButtonStyle.green)
+    async def button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
+        if self.number_now < self.number_all and interaction.user not in self.participant:
+            self.number_now += 1
+            await interaction.response.edit_message(embed = self.create_embed(),view=self)
+            await interaction.channel.send(f"{interaction.user.mention} 加入遊戲!")
+        elif interaction.user.id in self.participant:
+            await interaction.response.send_message(f"{interaction.user.mention} 你已經參加此揪團了!",ephemeral=True)
+        else:
+            await interaction.response.send_message(f"{interaction.user.mention} 很抱歉 揪團已經滿了!",ephemeral=True)
+
+    @discord.ui.button(label="揪團名單",style=discord.ButtonStyle.secondary)
+    async def button2_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
+        list = [user.mention for user in self.participant]
+        text = ",".join(list)
+        await interaction.response.send_message(f"目前揪團名單:\n{text}",ephemeral=True)
+
+    @discord.ui.button(label="結束揪團",style=discord.ButtonStyle.danger)
+    async def button3_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
+        if interaction.user == self.creator:
+            self.disable_all_items()
+            await interaction.response.edit_message(view=self)
+
+        else:
+            await interaction.response.send_message(f"{interaction.user.mention} 你不是主揪",ephemeral=True)
