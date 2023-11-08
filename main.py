@@ -67,7 +67,7 @@ async def on_ready():
                 #sqldb.remove_poll(poll['poll_id'])
                 sclient.update_poll(poll['poll_id'],"is_on",0)
             else:
-                bot.add_view(PollView(poll['poll_id']),message_id=poll['message_id'])
+                bot.add_view(PollView(poll['poll_id']),sclient,message_id=poll['message_id'])
     
 
 #load
