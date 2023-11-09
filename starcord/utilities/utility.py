@@ -82,9 +82,9 @@ class BRS():
         await dm_channel.send(embed=embed)
 
     @staticmethod
-    async def mentioned(bot,msg):
+    async def mentioned(bot,msg:discord.Message):
         dm_channel = bot.get_channel(Jsondb.jdata['mentioned_channel'])
-        embed=BotEmbed.general(name="BRS | 提及訊息")
+        embed=BotEmbed.general(name="BRS | 提及訊息",description=f"https://discord.com/channels/{msg.guild.id}/{msg.channel.id}/{msg.id}")
         embed.add_field(name='訊息內容', value=msg.content, inline=True)
         embed.add_field(name='發送者', value=f"{msg.author}\n{msg.author.id}", inline=False)
         embed.add_field(name='來源頻道', value=f'{msg.channel}\n{msg.channel.id}', inline=True)
@@ -92,9 +92,9 @@ class BRS():
         await dm_channel.send(embed=embed)
     
     @staticmethod
-    async def mention_everyone(bot,msg):
+    async def mention_everyone(bot,msg:discord.Message):
         dm_channel = bot.get_channel(Jsondb.jdata['mention_everyone_channel'])
-        embed=BotEmbed.general(name="BRS | 提及所有人訊息")
+        embed=BotEmbed.general(name="BRS | 提及所有人訊息",description=f"https://discord.com/channels/{msg.guild.id}/{msg.channel.id}/{msg.id}")
         embed.add_field(name='訊息內容', value=msg.content, inline=True)
         embed.add_field(name='發送者', value=f"{msg.author}\n{msg.author.id}", inline=False)
         embed.add_field(name='來源頻道', value=f'{msg.channel}\n{msg.channel.id}', inline=True)

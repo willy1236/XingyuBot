@@ -592,12 +592,12 @@ class command(Cog_Extension):
                    position:discord.Option(str,name='職位',description='要競選的職位',choices=position_option),
                    user_dc:discord.Option(discord.Member,name='成員',description='要競選的成員（此選項供政黨代表一次性報名用）',required=False)):
         user_dc = user_dc or ctx.author
-        sclient.add_election(user_dc.id,2,position)
+        sclient.add_election(user_dc.id,3,position)
         await ctx.respond(f"{user_dc.mention}：完成競選報名 {Jsondb.jdict['position_option'].get(position)}")
 
     @election.command(description='離開選舉')
     async def leave(self, ctx):
-        sclient.remove_election(ctx.author.id,2)
+        sclient.remove_election(ctx.author.id,3)
         await ctx.respond(f"{ctx.author.mention}：完成競選退出")
 
     @election.command(description='候選人名單')
@@ -634,7 +634,7 @@ class command(Cog_Extension):
     @commands.is_owner()
     async def start(self,ctx:discord.ApplicationContext):
         await ctx.defer()
-        session = 2
+        session = 3
 
         count_data = sclient.get_election_count(session)
         for position_data in count_data:
