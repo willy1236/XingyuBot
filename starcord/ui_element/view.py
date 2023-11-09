@@ -67,6 +67,7 @@ class PollEndButton(discord.ui.Button):
 
             # 字形
             matplotlib.rc('font', family='Microsoft JhengHei')
+            matplotlib.rcParams["font.sans-serif"] = ["Microsoft JhengHei"]
 
             # 設置顏色
             colors = ['gold', 'yellowgreen', 'lightcoral', 'lightskyblue']
