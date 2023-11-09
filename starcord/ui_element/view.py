@@ -35,12 +35,12 @@ class PollEndButton(discord.ui.Button):
                 for i in range(1,len(options_data) + 1):
                     user_vote_list[str(i)] = [] 
 
-            for i in user_vote_data:
-                discord_id = i["discord_id"]
-                vote_option = i["vote_option"]
-                user = interaction.guild.get_member(discord_id)
-                username = user.mention if user else discord_id
-                user_vote_list[str(vote_option)].append(username)
+                for i in user_vote_data:
+                    discord_id = i["discord_id"]
+                    vote_option = i["vote_option"]
+                    user = interaction.guild.get_member(discord_id)
+                    username = user.mention if user else discord_id
+                    user_vote_list[str(vote_option)].append(username)
 
             text = ""
             labels = []
