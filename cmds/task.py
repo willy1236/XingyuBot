@@ -153,7 +153,7 @@ class task(Cog_Extension):
         users = sclient.get_notice_dict("twitch")
         if not users:
             return
-        twitch_cache = Jsondb.read_cache('twitch')
+        twitch_cache = Jsondb.read_cache('twitch') or {}
         data = TwitchAPI().get_lives(users)
         for user in users:
             user_cache = twitch_cache.get(user)
