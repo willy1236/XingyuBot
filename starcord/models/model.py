@@ -111,6 +111,9 @@ class WarningList():
         self.datalist = [WarningSheet(i,sqldb) for i in data]
         self.discord_id = discord_id
 
+    def __len__(self):
+        return len(self.datalist)
+    
     def display(self,bot:discord.Bot):
         user = bot.get_user(self.discord_id)
         embed = BotEmbed.general(f'{user.name} 的警告單列表（共{len(self.datalist)}筆）',user.display_avatar.url)
