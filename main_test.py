@@ -1,20 +1,6 @@
-import requests,genshin,asyncio,discord,secrets,time,datetime,starcord
+import requests,genshin,asyncio,discord,secrets,starcord
 from bs4 import BeautifulSoup
-from enum import Enum
 #from pydantic import BaseModel
-from starcord.types import DBGame
-
-# class MyClass:
-#     def __init__(self, data_dict):
-#         for key, value in data_dict.items():
-#             setattr(self, key, value)
-
-# class MyClass:
-#     __slots__ = ['name', 'age', 'city']
-
-#data = {"test": "1"}
-# JsonStorageAPI().append_data(data=data)
-# db = CsvDatabase()
 
 # rclient = RiotClient()
 # player = rclient.get_player_byname("")
@@ -42,17 +28,18 @@ from starcord.types import DBGame
 # db = CsvDatabase()
 # r = db.get_row_by_column_value(db.lol_champion,"name_tw","凱莎")
 # print(r.loc["name_en"])
+
 import asyncio,aiohttp,webbrowser,requests,json,os
 from aiohttp import web
 from aiohttp.web_runner import GracefulExit
-
 
 class DiscordAPI:
 	def __init__(self):
 		self.API_ENDPOINT = 'https://discord.com/api/v10'
 		self.TOKEN_ENDPOINT = "https://discord.com/api/oauth2/token"
-		self.CLIENT_ID = '870923985569861652'
-		self.CLIENT_SECRET = 'ehPikYTLlb4w4GPpd6OojVJRj4t6RH3i'
+		self.AUTH_URL = "https://discord.com/api/oauth2/authorize?client_id=870923985569861652&redirect_uri=http%3A%2F%2Flocalhost%3A500%2Fcallback&response_type=code&scope=identify"
+		self.CLIENT_ID = ''
+		self.CLIENT_SECRET = ''
 		self.REDIRECT_URI = 'http://localhost:500/callback'
 		self.access_token = None
 		self.refresh_token = None
@@ -65,6 +52,7 @@ class DiscordAPI:
 
 		with open("oauth_tokens.json", "r") as oauth_tokens:
 				jtoken = json.load(oauth_tokens)
+				#可依實際狀況更改此處
 				self.access_token = jtoken.get('access_token')
 				self.refresh_token = jtoken.get('refresh_token')
 
@@ -92,8 +80,7 @@ class DiscordAPI:
 			#print("will shutdown now")
 			raise GracefulExit()
 
-		auth_URL = "https://discord.com/api/oauth2/authorize?client_id=870923985569861652&redirect_uri=http%3A%2F%2Flocalhost%3A500%2Fcallback&response_type=code&scope=identify"
-		webbrowser.open(auth_URL)
+		webbrowser.open(self.AUTH_URL)
 
 		app = web.Application()
 		app.router.add_get('/callback', callback)

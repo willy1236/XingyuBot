@@ -1,8 +1,13 @@
+from tkinter import N
 import mysql.connector,datetime,discord
 from mysql.connector.errors import Error as sqlerror
+from numpy import record
 from starcord.types import DBGame,Coins, Position
 from starcord.models.user import *
 from starcord.models.model import *
+
+def create_id():
+    return 'SELECT idNumber FROM ( SELECT CONCAT("U-", LPAD(FLOOR(RAND()*1000000), 6, 0)) as idNumber) AS generated_ids WHERE NOT EXISTS ( SELECT 1 FROM stardb_user.user_data WHERE user_id = generated_ids.idNumber);'
 
 class MySQLBaseModel(object):
     """MySQL資料庫基本模型"""
@@ -74,7 +79,28 @@ class MySQLBaseModel(object):
 
 class MySQLUserSystem(MySQLBaseModel):
     """用戶資料系統"""
-    def create_user(self,discord_id:int):
+    def create_user(self,discord_id:int=None):
+        self.cursor.execute(f"USE `stardb_user`;")
+        error = True
+
+        while error:
+            try:
+                user_id = create_id()
+                if discord_id:
+                    operation = f"INSERT INTO `user_data` SET user_id = ({user_id}), discord_id = {discord_id};"
+                else:
+                    operation = f"INSERT INTO `user_data` SET user_id = ({user_id});"
+                self.cursor.execute(operation)
+                error = False
+            except sqlerror as e:
+                if e.errno == 1062:
+                    pass
+                else:
+                    raise
+        
+        return self.get_user(user_id)
+    
+    def create_discord_user(self,discord_id:int):
         self.cursor.execute(f"USE `stardb_user`;")
         self.cursor.execute(f"INSERT INTO `user_discord` SET discord_id = {discord_id};")
         self.cursor.execute(f"INSERT INTO `user_point` SET discord_id = {discord_id};")
@@ -84,8 +110,12 @@ class MySQLUserSystem(MySQLBaseModel):
         if record:
             return PartialUser(record[0])
 
-    def get_user(self,discord_id:int):
+    def get_user(self,user_id:int):
         """取得基本用戶"""
+        self.cursor.execute(f'SELECT * FROM `user_data` WHERE `user_id` = %s;',(user_id,))
+        record = self.cursor.fetchall()
+        if record:
+            return record[0]
 
     def get_dcuser(self,discord_id:int,full=False,user_dc:discord.User=None):
         """取得discord用戶"""
@@ -105,7 +135,7 @@ class MySQLUserSystem(MySQLBaseModel):
         if record:
             return PartialUser(record[0],self)
         else:
-            return PartialUser(self.create_user(discord_id),self)
+            return PartialUser(self.create_discord_user(discord_id),self)
 
     def get_main_account(self,alternate_account):
         self.cursor.execute(f"USE `stardb_user`;")

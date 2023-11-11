@@ -3,10 +3,10 @@ from discord.ext import commands
 from core.classes import Cog_Extension
 from starcord import Jsondb,BotEmbed,BRS,sclient
 
-keywords = {
-    '抹茶粉':'由威立冠名贊助撥出~',
-    '消費':'那你好像也是頂級消費者喔'
-}
+# keywords = {
+#     '抹茶粉':'由威立冠名贊助撥出~',
+#     '消費':'那你好像也是頂級消費者喔'
+# }
 
 voice_updata = Jsondb.jdata.get('voice_updata')
 debug_mode = Jsondb.jdata.get("debug_mode",True)
@@ -237,16 +237,16 @@ class event(Cog_Extension):
         guildid = after.guild.id
         member = after
         if guildid in main_guild and (after.nick and before.nick != after.nick) or not after.nick:
-            p1 = re.compile(r"貢丸")
+            # p1 = re.compile(r"貢丸")
             p2 = re.compile(r"冠宇")
             nick = after.nick or ""
-            if p1.search(nick):
-                role1 = after.guild.get_role(1136338119835254946)
-                await member.add_roles(role1)
-            else:
-                role1 = member.get_role(1136338119835254946)
-                if role1:
-                    await member.remove_roles(role1)
+            # if p1.search(nick):
+            #     role1 = after.guild.get_role(1136338119835254946)
+            #     await member.add_roles(role1)
+            # else:
+            #     role1 = member.get_role(1136338119835254946)
+            #     if role1:
+            #         await member.remove_roles(role1)
             
             if p2.search(nick):
                 role2 = after.guild.get_role(1145762872685764639)

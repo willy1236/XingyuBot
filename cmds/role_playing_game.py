@@ -28,7 +28,7 @@ class role_playing_game(Cog_Extension):
         user_dc = user_dc or ctx.author
         user = sclient.get_dcuser(user_dc.id,True,user_dc)
         if not user:
-            sclient.create_user(user_dc.id)
+            sclient.create_discord_user(user_dc.id)
             user = sclient.get_dcuser(user_dc.id,True,user_dc)
 
         pet = user.get_pet()

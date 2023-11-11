@@ -44,7 +44,6 @@ else:
 #啟動
 @bot.event
 async def on_ready():
-    #print(">> Bot is online <<")
     log.info(f">> Bot online as {bot.user.name} <<")
     log.info(f">> Discord's version: {discord.__version__} <<")
     if jdata.get('debug_mode',True):
