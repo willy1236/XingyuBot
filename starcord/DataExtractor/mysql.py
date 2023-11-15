@@ -294,7 +294,7 @@ class MySQLGameSystem(MySQLBaseModel):
 class MySQLRoleSaveSystem(MySQLBaseModel):
     def get_role_save(self,discord_id:int):
         self.cursor.execute(f"USE `stardb_user`;")
-        self.cursor.execute(f'SELECT * FROM `role_save` WHERE discord_id = %s ORDER BY `time` DESC;',(discord_id,))
+        self.cursor.execute(f'SELECT * FROM `role_save` WHERE discord_id = %s ORDER BY `time`,`role_id` DESC;',(discord_id,))
         records = self.cursor.fetchall()
         return records
 

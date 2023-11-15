@@ -47,7 +47,7 @@ class moderation(Cog_Extension):
         
         if channel:
             roleid = role.id if role else None
-            sclient.set_notice_channel(guildid,notify_type,channel.id,roleid)
+            sclient.set_notify_channel(guildid,notify_type,channel.id,roleid)
             await ctx.respond(f'設定完成，已將 {ChoiceList.get_tw(notify_type,"channel_set_option")} 頻道設定在 {channel.mention}')
             await ctx.send(embed=BotEmbed.simple('溫馨提醒','若為定時通知，請將機器人的訊息保持在此頻道的最新訊息，以免機器人找不到訊息而重複發送'),delete_after=10)
             if notify_type in ["voice_log"]:
@@ -64,10 +64,10 @@ class moderation(Cog_Extension):
     async def voice(self,ctx:discord.ApplicationContext,
                     channel:discord.Option(discord.VoiceChannel,name='頻道',description='動態語音頻道',default=None)):
         if channel:
-            sclient.set_notice_channel(ctx.guild.id,"dynamic_voice",channel.id)
+            sclient.set_notify_channel(ctx.guild.id,"dynamic_voice",channel.id)
             await ctx.respond(f'設定完成，已將 {channel.mention} 設定為動態語音頻道')
         else:
-            sclient.remove_notice_channel(ctx.guild.id,"dynamic_voice")
+            sclient.remove_notify_channel(ctx.guild.id,"dynamic_voice")
             await ctx.respond(f'設定完成，已移除 動態語音 頻道')
         
         from .task import scheduler
@@ -78,7 +78,7 @@ class moderation(Cog_Extension):
     @commands.has_permissions(manage_channels=True)
     @commands.guild_only()
     async def list(self,ctx:discord.ApplicationContext):
-        dbdata = sclient.get_all_notice_channel(ctx.guild.id)
+        dbdata = sclient.get_all_notify_channel(ctx.guild.id)
         embed = BotEmbed.general("通知頻道",ctx.guild.icon.url if ctx.guild.icon else discord.Embed.Empty)
         for data in dbdata:
             notify_type = data['notify_type']
