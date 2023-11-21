@@ -2,6 +2,7 @@ import discord,random,asyncio,datetime,re
 from discord.errors import Forbidden, NotFound
 from discord.ext import commands,pages
 from discord.commands import SlashCommandGroup
+from flask import views
 
 from core.classes import Cog_Extension
 from starcord import Jsondb,BRS,log,BotEmbed,ChoiceList,sclient
@@ -556,10 +557,22 @@ class command(Cog_Extension):
             await ctx.respond(f"錯誤：投票選項超過10項或小於2項",ephemeral=True)
             return
         
-        view,embed = sclient.create_poll(title,options,ctx.author.id,ctx.guild.id,alternate_account_can_vote,show_name)
+        view = sclient.create_poll(title,options,ctx.author.id,ctx.guild.id,alternate_account_can_vote,show_name)
+        embed = view.display()
         embed.set_author(name=ctx.author.name,icon_url=ctx.author.avatar.url)
         message = await ctx.respond(embed=embed,view=view)
         sclient.update_poll(view.poll_id,"message_id",message.id)
+
+    @commands.is_owner()
+    @poll.command(description='重新創建投票介面',guild_ids=main_guild)
+    async def view(self,ctx,
+                   poll_id:discord.Option(int,name='投票id',description='')):
+        dbdata = sclient.get_poll(poll_id)
+        if dbdata:
+            view = PollView(dbdata['poll_id'],sqldb=sclient)
+            await ctx.respond(view=view,embed=view.display())
+        else:
+            await ctx.respond("錯誤：查無此ID")
 
     @commands.slash_command(description='共用「94共用啦」雲端資料夾',guild_ids=main_guild)
     async def drive(self,ctx,email:discord.Option(str,name='gmail帳戶',description='要使用的Gmail帳戶，留空已移除資料',required=False)):
@@ -645,9 +658,9 @@ class command(Cog_Extension):
                 for i in range(1,position_data['count'] + 1):
                     options.append(f"{i}號")
 
-                view, embed = sclient.create_poll(title,options,ctx.author.id,ctx.guild.id,False)
+                view = sclient.create_poll(title,options,ctx.author.id,ctx.guild.id,False)
 
-                message = await ctx.send(embed=embed,view=view)
+                message = await ctx.send(embed=view.display(),view=view)
                 sclient.update_poll(view.poll_id,"message_id",message.id)
                 await asyncio.sleep(1)
         await ctx.respond(f"第{session}屆中央選舉投票創建完成")

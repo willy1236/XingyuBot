@@ -70,8 +70,7 @@ class PollClient(MySQLDatabase):
         self.add_poll_option(poll_id,options)
         
         view = PollView(poll_id,self)
-        embed = BotEmbed.general(name="投票系統",title=title,description=f"投票ID：{poll_id}\n- 小帳是否算有效票：{alternate_account_can_vote}\n- 結果顯示用戶名：{show_name}")
-        return view, embed
+        return view
 
 class GiveawayClient(MySQLDatabase):
     """todo:抽獎系統"""

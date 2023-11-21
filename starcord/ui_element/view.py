@@ -165,9 +165,10 @@ class PollView(discord.ui.View):
         self.poll_id = poll_id
         self.sqldb = sqldb
         poll_data = self.sqldb.get_poll(poll_id)
+        self.title = poll_data['title']
         self.created_id = poll_data['created_user']
-        self.alternate_account_can_vote = poll_data['alternate_account_can_vote']
-        self.show_name = poll_data['show_name']
+        self.alternate_account_can_vote = bool(poll_data['alternate_account_can_vote'])
+        self.show_name = bool(poll_data['show_name'])
         
         self.add_item(PollEndButton(poll_id,self.created_id))
         self.add_item(PollResultButton(poll_id))
@@ -179,6 +180,10 @@ class PollView(discord.ui.View):
         for option in dbdata:
             custom_id = f"poll_{poll_id}_{option['option_id']}"
             self.add_item(PollOptionButton(label=option['option_name'],poll_id=poll_id, option_id=option['option_id'],custom_id=custom_id))
+
+    def display(self):
+        embed = BotEmbed.general(name="投票系統",title=self.title,description=f"投票ID：{self.poll_id}\n- 小帳是否算有效票：{self.alternate_account_can_vote}\n- 結果顯示用戶名：{self.show_name}")
+        return embed
 
 class GameView(discord.ui.View):
     def __init__(self,creator,game,number_all,number_now,message):

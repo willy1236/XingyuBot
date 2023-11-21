@@ -74,7 +74,8 @@
         "cat":"貓貓",
         "fox":"狐狸",
         "wolf":"狼",
-        "frog":"青蛙"
+        "frog":"青蛙",
+        "rabbit":"兔子"
     },
     "info_option": {
         "help": "總表",
