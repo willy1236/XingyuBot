@@ -256,20 +256,20 @@ class event(Cog_Extension):
                 if role2:
                     await member.remove_roles(role2)
 
-    @commands.Cog.listener()
-    async def on_presence_update(self,before:discord.Member, after:discord.Member):
-        if not after.bot and after.guild.id in main_guild  and after.activities and after.voice:
-            if get_playing_ow2(after):
-                list = []
-                channel = self.bot.get_channel(703617778095095958)
-                for member in after.voice.channel.members:
-                    if get_playing_ow2(member):
-                        list.append(member)
+    # @commands.Cog.listener()
+    # async def on_presence_update(self,before:discord.Member, after:discord.Member):
+    #     if not after.bot and after.guild.id in main_guild  and after.activities and after.voice:
+    #         if get_playing_ow2(after):
+    #             list = []
+    #             channel = self.bot.get_channel(703617778095095958)
+    #             for member in after.voice.channel.members:
+    #                 if get_playing_ow2(member):
+    #                     list.append(member)
                 
-                if len(list) >= 2 or (len(channel.members) >= 2 and list):
-                    for member in list:
-                        await member.move_to(channel)
-                        await asyncio.sleep(0.5)
+    #             if len(list) >= 2 or (len(channel.members) >= 2 and list):
+    #                 for member in list:
+    #                     await member.move_to(channel)
+    #                     await asyncio.sleep(0.5)
 
 def setup(bot):
     bot.add_cog(event(bot))
