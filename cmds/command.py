@@ -2,7 +2,6 @@ import discord,random,asyncio,datetime,re
 from discord.errors import Forbidden, NotFound
 from discord.ext import commands,pages
 from discord.commands import SlashCommandGroup
-from flask import views
 
 from core.classes import Cog_Extension
 from starcord import Jsondb,BRS,log,BotEmbed,ChoiceList,sclient
