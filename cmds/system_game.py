@@ -164,7 +164,7 @@ class system_game(Cog_Extension):
     @lol.command(description='查詢最近一次的League of Legends對戰')
     async def playermatch(self,ctx,username:discord.Option(str,name='召喚師名稱',description='要查詢的用戶，留空則使用資料庫查詢',required=False)):
         rclient = RiotClient()
-        player = rclient.get_player_data(username,ctx.author.id)
+        player = sclient.get_player_data(username,ctx.author.id)
         if not player:
             await ctx.respond('查詢失敗：查無此玩家',ephemeral=True)
             return
@@ -184,7 +184,7 @@ class system_game(Cog_Extension):
     @lol.command(description='查詢League of Legends專精英雄')
     async def masteries(self,ctx,username:discord.Option(str,name='召喚師名稱',description='要查詢的用戶，留空則使用資料庫查詢',required=False)):
         rclient = RiotClient()
-        player = rclient.get_player_data(username,ctx.author.id if not username else None)
+        player = sclient.get_player_data(username,ctx.author.id if not username else None)
         if not player:
             await ctx.respond('查詢失敗：查無此玩家',ephemeral=True)
             return
@@ -212,7 +212,7 @@ class system_game(Cog_Extension):
     @lol.command(description='查詢League of Legends的玩家積分資訊')
     async def rank(self,ctx,username:discord.Option(str,name='召喚師名稱',description='要查詢的用戶，留空則使用資料庫查詢',required=False)):
         rclient = RiotClient()
-        player = rclient.get_player_data(username,ctx.author.id if not username else None)
+        player = sclient.get_player_data(username,ctx.author.id if not username else None)
         if not player:
             await ctx.respond('查詢失敗：查無此玩家',ephemeral=True)
             return

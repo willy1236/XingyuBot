@@ -21,6 +21,12 @@ class BotEmbed:
         embed = discord.Embed(title=title,description=description or discord.Embed.Empty,color=0xc4e9ff)
         embed.set_author(name=name,icon_url=icon_url,url=url)
         return embed
+    
+    @staticmethod
+    def rpg(title:str=discord.Embed.Empty,description:str=discord.Embed.Empty):
+        embed = discord.Embed(title=title,description=description or discord.Embed.Empty, color=0xc4e9ff)
+        embed.set_footer(text= "RPG系統（開發版） | 開發時期所有東西皆有可能重置")
+        return embed
 
     @staticmethod
     def brs():

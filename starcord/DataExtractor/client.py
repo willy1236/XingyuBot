@@ -1,5 +1,6 @@
 import random,discord
-from starcord.DataExtractor import *
+from starcord.DataExtractor.game import RiotClient,SteamInterface,OsuInterface,ApexInterface
+from starcord.DataExtractor import MySQLDatabase
 from starcord.models.model import GameInfoPage
 from starcord.models.user import *
 from starcord.models.game import PartialLOLPlayer
@@ -48,7 +49,9 @@ class GameClient(MySQLDatabase):
                 return PartialLOLPlayer(dbdata)
         
         if summoner_name:
-            return RiotClient().get_player_byname(summoner_name)
+            rclient = RiotClient()
+            player = rclient.get_player_byname(summoner_name)
+            return player
 
 class PointClient(MySQLDatabase):
     """點數系統"""

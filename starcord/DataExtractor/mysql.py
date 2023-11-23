@@ -349,7 +349,7 @@ class MySQLCurrencySystem(MySQLBaseModel):
         if mod == 'set':
             self.cursor.execute(f"REPLACE INTO `user_point`(discord_id,{coin_type.value}) VALUES(%s,%s);",(discord_id,amount))
         elif mod == 'add':
-            self.cursor.execute(f"UPDATE `user_point` SET {coin_type.value} = {coin_type.value} + %s WHERE discord_id = %s;",(amount,discord_id))
+            self.cursor.execute(f"UPDATE `user_point` SET {coin_type.value} = CASE WHEN `{coin_type.value}` IS NULL THEN {amount} ELSE {coin_type.value} + {amount} END WHERE discord_id = %s;",(discord_id,))
         else:
             raise ValueError("mod must be 'set' or 'add'")
         self.connection.commit()
@@ -535,6 +535,16 @@ class MySQLRPGSystem(MySQLBaseModel):
         else:
             self.cursor.execute(f'UPDATE `rpg_user_bag` SET `discord_id` = {discord_id}, `item_id` = {item_id}, amount = amount - {amount}')
         self.connection.commit()
+
+    def user_work(self,discord_id:int):
+        self.cursor.execute(f"USE `stardb_user`;")
+        self.cursor.execute(f"SELECT * FROM `user_work` WHERE `discord_id` = {discord_id} AND `last_work` > NOW() - INTERVAL 12 HOUR;")
+        records = self.cursor.fetchall()
+        if records:
+            return records[0]
+        else:
+            self.cursor.execute(f'REPLACE INTO `user_work` SET `discord_id` = {discord_id}, `last_work` = NOW();')
+            self.connection.commit()
 
 class MySQLBusyTimeSystem(MySQLBaseModel):
     def add_busy(self, discord_id, date, time):
