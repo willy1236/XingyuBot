@@ -61,7 +61,7 @@ class PointClient(MySQLDatabase):
         code = self.user_sign(discord_id)
         if code:
             return code
-        scoin_add  = random.randint(1,5)
+        scoin_add  = random.randint(5,10)
         rcoin_add = 0   # random.randint(3,5)
         self.sign_add_coin(discord_id,scoin_add,rcoin_add)
         return [scoin_add, rcoin_add]
