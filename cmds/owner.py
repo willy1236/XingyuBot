@@ -415,7 +415,8 @@ class owner(Cog_Extension):
                 embed.add_field(name="創建時間", value=role.created_at, inline=False)
                 embed.add_field(name="所屬層級位置", value=role.position, inline=False)
                 embed.add_field(name="顏色", value=role.color, inline=False)
-                embed.set_thumbnail(url=role.icon)
+                if role.icon:
+                    embed.set_thumbnail(url=role.icon.url)
                 success += 1
             
         if success == 1:
