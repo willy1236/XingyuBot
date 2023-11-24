@@ -12,6 +12,9 @@ voice_updata = Jsondb.jdata.get('voice_updata')
 debug_mode = Jsondb.jdata.get("debug_mode",True)
 main_guild = Jsondb.jdata.get('main_guild',[])
 
+def check_event_stage(vc:discord.VoiceState):
+    return vc.channel and vc.channel.category and vc.channel.category.id == 1097158160709591130
+
 def get_playing_ow2(member:discord.Member):
     for activity in member.activities:
         if activity.name == "Overwatch 2" and member.voice.channel.id != 703617778095095958:
@@ -68,7 +71,7 @@ class event(Cog_Extension):
                     #if past_message.author == message.author and past_message.content == message.content:
                     if past_message.author == message.author:
                         spam_count += 1
-            except discord.errors.Forbidden:
+            except (discord.errors.Forbidden, AttributeError):
                 pass
             
             if spam_count >= 5 and not message.author.timed_out:
@@ -178,8 +181,28 @@ class event(Cog_Extension):
                     sclient.set_list_in_notice_dict("dynamic_voice_room",remove_data=before.channel.id)
 
             #舞台發言
-            if after.suppress and after.channel and after.channel.category and after.channel.category.id == 1097158160709591130 and (user.get_role(1126820808761819197) or user.get_role(1130849778264195104)):
-                await user.request_to_speak()
+            if check_event_stage(before) or check_event_stage(after):
+                kp_user = self.bot.get_user(419131103836635136)
+                #調查員、特許證舞台發言
+                if after.suppress and after.channel and ( user.get_role(1126820808761819197) or (user.get_role(1130849778264195104) and not kp_user in after.channel.members) ):
+                    await user.request_to_speak()
+                    await asyncio.sleep(0.5)
+
+                if user == kp_user and before.channel != after.channel:
+                    if after.channel:
+                        for member in after.channel.members:
+                            print("after",member,member.voice.suppress)
+                            if not member.voice.suppress and member.get_role(1130849778264195104):
+                                print("after","true",member)
+                                await member.edit(suppress=True)
+                                await asyncio.sleep(0.5)
+
+                    if before.channel:
+                        for member in before.channel.members:
+                            print("before",member)
+                            if member.voice.suppress and member.get_role(1130849778264195104):
+                                await member.request_to_speak()
+                                await asyncio.sleep(0.5)
 
     @commands.Cog.listener()
     async def on_member_remove(self, member:discord.Member):
