@@ -46,7 +46,12 @@ class system_economy(Cog_Extension):
 
     @commands.slash_command(description='簽到')
     async def sign(self,ctx):
-        code = sclient.daily_sign(ctx.author.id)
+        user = sclient.get_dcuser(ctx.author.id,True,ctx.author)
+        if not user:
+            sclient.create_discord_user(ctx.author.id)
+            user = sclient.get_dcuser(ctx.author.id,True,ctx.author)
+
+        code = sclient.daily_sign(user.id)
         if type(code) == list:
             await ctx.respond(f'{ctx.author.mention} 簽到完成! 星幣⭐+{code[0]}')
         else:
