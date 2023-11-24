@@ -182,7 +182,7 @@ class event(Cog_Extension):
 
             #舞台發言
             if check_event_stage(before) or check_event_stage(after):
-                kp_user = self.bot.get_user(419131103836635136)
+                kp_user = self.bot.get_user(713748326377455676)
                 #調查員、特許證舞台發言
                 if after.suppress and after.channel and ( user.get_role(1126820808761819197) or (user.get_role(1130849778264195104) and not kp_user in after.channel.members) ):
                     await user.request_to_speak()
