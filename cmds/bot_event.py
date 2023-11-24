@@ -191,15 +191,12 @@ class event(Cog_Extension):
                 if user == kp_user and before.channel != after.channel:
                     if after.channel:
                         for member in after.channel.members:
-                            print("after",member,member.voice.suppress)
                             if not member.voice.suppress and member.get_role(1130849778264195104):
-                                print("after","true",member)
                                 await member.edit(suppress=True)
                                 await asyncio.sleep(0.5)
 
                     if before.channel:
                         for member in before.channel.members:
-                            print("before",member)
                             if member.voice.suppress and member.get_role(1130849778264195104):
                                 await member.request_to_speak()
                                 await asyncio.sleep(0.5)
