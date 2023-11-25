@@ -51,7 +51,7 @@ class system_economy(Cog_Extension):
             sclient.create_discord_user(ctx.author.id)
             user = sclient.get_dcuser(ctx.author.id,True,ctx.author)
 
-        code = sclient.daily_sign(user.id)
+        code = sclient.daily_sign(user.discord_id)
         if type(code) == list:
             await ctx.respond(f'{ctx.author.mention} 簽到完成! 星幣⭐+{code[0]}')
         else:
