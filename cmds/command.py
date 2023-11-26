@@ -676,9 +676,12 @@ class command(Cog_Extension):
         await ctx.respond(f"第{session}屆中央選舉投票創建完成")
 
         timezone = datetime.timezone(datetime.timedelta(hours=8))
-        start_time = datetime.datetime.now(timezone) + datetime.timedelta(seconds=10)
-        end_time = datetime.datetime(start_time.year,start_time.month,start_time.day,20,0,0,tzinfo=timezone)
-
+        start_time = datetime.datetime.now(timezone)
+        if start_time.hour < 20:
+            end_time = datetime.datetime(start_time.year,start_time.month,start_time.day,20,0,0,tzinfo=timezone)
+        else:
+            end_time = start_time + datetime.timedelta(days=1)
+            
         event = await ctx.guild.create_scheduled_event(name="【快樂營中央選舉】第三屆",start_time=start_time,end_time=end_time,location="#🏛中央投票所")
 
     @party.command(description='加入政黨')
