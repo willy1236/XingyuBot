@@ -554,8 +554,8 @@ class command(Cog_Extension):
                      alternate_account_can_vote:discord.Option(bool,name='小帳是否算有效票',description='預設為true',default=True),
                      show_name:discord.Option(bool,name='投票結果是否顯示用戶名',description='預設為false，若投票人數多建議關閉',default=False)):
         options = options.split(",")
-        if len(options) > 10 or len(options) < 2:
-            await ctx.respond(f"錯誤：投票選項超過10項或小於2項",ephemeral=True)
+        if len(options) > 10 or len(options) < 1:
+            await ctx.respond(f"錯誤：投票選項超過10項或小於1項",ephemeral=True)
             return
         
         view = sclient.create_poll(title,options,ctx.author.id,ctx.guild.id,alternate_account_can_vote,show_name)
@@ -674,6 +674,12 @@ class command(Cog_Extension):
                 sclient.update_poll(view.poll_id,"message_id",message.id)
                 await asyncio.sleep(1)
         await ctx.respond(f"第{session}屆中央選舉投票創建完成")
+
+        timezone = datetime.timezone(datetime.timedelta(hours=8))
+        start_time = datetime.datetime.now(timezone)
+        end_time = datetime.datetime(start_time.year,start_time.month,start_time.day,20,0,0,tzinfo=timezone)
+
+        event = await ctx.guild.create_scheduled_event(name="【快樂營中央選舉】第三屆",start_time=start_time,end_time=end_time,location="#🏛中央投票所")
 
     @party.command(description='加入政黨')
     async def join(self,ctx:discord.ApplicationContext,
