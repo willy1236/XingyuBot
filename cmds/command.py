@@ -682,7 +682,7 @@ class command(Cog_Extension):
         else:
             end_time = start_time + datetime.timedelta(days=1)
             
-        event = await ctx.guild.create_scheduled_event(name="【快樂營中央選舉】第三屆",start_time=start_time,end_time=end_time,location="#🏛中央投票所")
+        event = await ctx.guild.create_scheduled_event(name="【快樂營中央選舉】投票階段",start_time=start_time,end_time=end_time,location="<#1160459117270405222>")
 
     @party.command(description='加入政黨')
     async def join(self,ctx:discord.ApplicationContext,
