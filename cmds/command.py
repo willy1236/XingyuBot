@@ -684,7 +684,7 @@ class command(Cog_Extension):
             role_id = dbdata["role_id"]
             role = ctx.guild.get_role(role_id)
             if role:
-                ctx.author.add_roles(role)
+                await ctx.author.add_roles(role)
         except:
             pass
 
@@ -699,7 +699,7 @@ class command(Cog_Extension):
             role_id = dbdata["role_id"]
             role = ctx.author.get_role(role_id)
             if role:
-                ctx.author.remove_roles(role)
+                await ctx.author.remove_roles(role)
         except:
             pass
 
