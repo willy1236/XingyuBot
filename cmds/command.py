@@ -617,19 +617,26 @@ class command(Cog_Extension):
     async def format(self, ctx):
         await ctx.defer()
         session = 3
-        data = sclient.get_election_full_by_session(session)
+        dbdata = sclient.get_election_full_by_session(session)
         result = {
-            "president": [],
-            "legislative_president": [],
-            "executive_president": []
+            "president": {},
+            "legislative_president": {},
+            "executive_president": {}
         }
         
-        for i in data:
+        for i in dbdata:
+            discord_id = i['discord_id']
+            party_name = i['party_name'] or "無黨籍"
+            position = i['position']
+            
             user = self.bot.get_user(i['discord_id'])
             if user:
-                party_name = i['party_name'] or "無黨籍"
-                result[i['position']].append(f"{user.mention} （{party_name}）")
+                if discord_id in result[position]:
+                    result[position][discord_id][1].append(party_name)
+                else:
+                    result[position][discord_id] = [user.mention, [party_name]]
             
+            f"{user.mention} （{party_name}）"
         embed = BotEmbed.simple(f"第{session}屆中央選舉名單")
         
         for position_name in result:
@@ -637,7 +644,9 @@ class command(Cog_Extension):
             count = 0
             for i in result[position_name]:
                 count += 1
-                text += f"{count}. {i}\n"
+                user_mention = result[position_name][i][0]
+                party_name = ",".join(result[position_name][i][1])
+                text += f"{count}. {user_mention} （{party_name}）\n"
             embed.add_field(name=Jsondb.jdict['position_option'].get(position_name),value=text,inline=False)
 
         await ctx.respond(embed=embed)
