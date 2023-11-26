@@ -19,6 +19,7 @@ from mysql.connector.errors import Error as sqlerror
 bet_option = ChoiceList.set('bet_option')
 busy_time_option = ChoiceList.set('busy_time_option')
 position_option = ChoiceList.set('position_option')
+party_option = ChoiceList.set('party_option')
 
 jdata = Jsondb.jdata
 main_guild = Jsondb.jdata.get('main_guild')
@@ -30,6 +31,7 @@ class command(Cog_Extension):
     busytime = SlashCommandGroup("busytime", "忙碌時間統計指令")
     poll = SlashCommandGroup("poll", "投票相關指令")
     election = SlashCommandGroup("election", "選舉相關指令",guild_ids=main_guild)
+    party = SlashCommandGroup("party", "政黨相關指令",guild_ids=main_guild)
 
     @role.command(description='查詢身分組數')
     async def count(self,ctx,user_list:discord.Option(str,required=False,name='要查詢的用戶',description='多個用戶請用空格隔開，或可輸入default查詢常用人選')):
@@ -672,6 +674,45 @@ class command(Cog_Extension):
                 sclient.update_poll(view.poll_id,"message_id",message.id)
                 await asyncio.sleep(1)
         await ctx.respond(f"第{session}屆中央選舉投票創建完成")
+
+    @party.command(description='加入政黨')
+    async def join(self,ctx:discord.ApplicationContext,
+                    party_id:discord.Option(int,name='政黨',description='要參加的政黨',choices=party_option)):
+        sclient.join_party(ctx.author.id,party_id)
+        try:
+            dbdata = sclient.get_party_data(party_id)
+            role_id = dbdata["role_id"]
+            role = ctx.guild.get_role(role_id)
+            if role:
+                ctx.author.add_roles(role)
+        except:
+            pass
+
+        await ctx.respond(f"{ctx.author.mention} 已加入政黨 {ChoiceList.get_tw(str(party_id),'party_option')}")
+
+    @party.command(description='離開政黨')
+    async def leave(self,ctx:discord.ApplicationContext,
+                    party_id:discord.Option(int,name='政黨',description='要參加的政黨',choices=party_option)):
+        sclient.leave_party(ctx.author.id,party_id)
+        try:
+            dbdata = sclient.get_party_data(party_id)
+            role_id = dbdata["role_id"]
+            role = ctx.author.get_role(role_id)
+            if role:
+                ctx.author.remove_roles(role)
+        except:
+            pass
+
+        await ctx.respond(f"{ctx.author.mention} 已退出政黨 {ChoiceList.get_tw(str(party_id),'party_option')}")
+
+    @party.command(description='政黨列表')
+    async def list(self,ctx:discord.ApplicationContext):
+        dbdata = sclient.get_all_party_data()
+        embed = BotEmbed.simple("政黨統計")
+        for party in dbdata:
+            embed.add_field(name=party["party_name"], value=f"政黨ID：{party['party_id']}\n政黨人數：{party['count']}")
+        await ctx.respond(embed=embed)
+
 
 def setup(bot):
     bot.add_cog(command(bot))

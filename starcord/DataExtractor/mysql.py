@@ -709,6 +709,25 @@ class MYSQLElectionSystem(MySQLBaseModel):
         self.cursor.execute(f"SELECT position,count(*) AS count FROM `database`.`candidate_list` WHERE session = {session} GROUP BY position ORDER BY `position`;")
         records = self.cursor.fetchall()
         return records
+    
+    def join_party(self,discord_id:int,party_id:int):
+        self.cursor.execute(f"INSERT INTO `stardb_user`.`user_party` VALUES(%s,%s);",(discord_id,party_id))
+        self.connection.commit()
+
+    def leave_party(self,discord_id:int,party_id:int):
+        self.cursor.execute(f"DELETE FROM `stardb_user`.`user_party` WHERE `discord_id` = %s AND `party_id` = %s;",(discord_id,party_id))
+        self.connection.commit()
+
+    def get_all_party_data(self):
+        self.cursor.execute(f"SELECT `party_data`.*,count(*) AS count FROM `stardb_user`.`user_party` LEFT JOIN `database`.`party_data` ON user_party.party_id = party_data.party_id GROUP BY `party_id` ORDER BY `party_id`")
+        records = self.cursor.fetchall()
+        return records
+    
+    def get_party_data(self,party_id:int):
+        self.cursor.execute(f"SELECT * FROM `database`.`party_data` WHERE `party_id` = {party_id};")
+        records = self.cursor.fetchall()
+        if records:
+            return records[0]
 
 class MySQLDatabase(
     MySQLUserSystem,
