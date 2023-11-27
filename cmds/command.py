@@ -612,7 +612,7 @@ class command(Cog_Extension):
             dbdata = sclient.get_user_party(user_dc.id)
             joined_party = [party_data.get("party_id") for party_data in dbdata] if dbdata else []
             if not party_id in joined_party:
-                await ctx.respond(f"{user_dc.mention}：你沒有參加 {Jsondb.jdict['party_option'].get(party_option)}")
+                await ctx.respond(f"{user_dc.mention}：你沒有參加 {Jsondb.jdict['party_option'].get(party_id)}")
                 return
 
         sclient.add_election(user_dc.id,3,position,party_id)
@@ -620,7 +620,7 @@ class command(Cog_Extension):
 
     @election.command(description='離開選舉')
     async def leave(self, ctx, 
-                    position:discord.Option(str,name='職位',description='要競選的職位',choices=position_option)):
+                    position:discord.Option(str,name='職位',description='要退選的職位',choices=position_option)):
         sclient.remove_election(ctx.author.id,3,position)
         
         text = f"{ctx.author.mention}：完成競選退出"
