@@ -604,15 +604,29 @@ class command(Cog_Extension):
     @election.command(description='加入選舉')
     async def join(self, ctx,
                    position:discord.Option(str,name='職位',description='要競選的職位',choices=position_option),
-                   user_dc:discord.Option(discord.Member,name='成員',description='要競選的成員（此選項供政黨代表一次性報名用）',required=False)):
+                   user_dc:discord.Option(discord.Member,name='成員',description='要競選的成員（此選項供政黨代表一次性報名用）',required=False),
+                   party_id:discord.Option(int,name='代表政黨',description='如果有多個政黨，可選擇要代表的政黨',default=None,choices=party_option)):
         user_dc = user_dc or ctx.author
-        sclient.add_election(user_dc.id,3,position)
+
+        if party_id:
+            dbdata = sclient.get_user_party(user_dc.id)
+            joined_party = [party_data.get("party_id") for party_data in dbdata] if dbdata else []
+            if not party_id in joined_party:
+                await ctx.respond(f"{user_dc.mention}：你沒有參加 {Jsondb.jdict['party_option'].get(party_option)}")
+                return
+
+        sclient.add_election(user_dc.id,3,position,party_id)
         await ctx.respond(f"{user_dc.mention}：完成競選報名 {Jsondb.jdict['position_option'].get(position)}")
 
     @election.command(description='離開選舉')
-    async def leave(self, ctx):
-        sclient.remove_election(ctx.author.id,3)
-        await ctx.respond(f"{ctx.author.mention}：完成競選退出")
+    async def leave(self, ctx, 
+                    position:discord.Option(str,name='職位',description='要競選的職位',choices=position_option)):
+        sclient.remove_election(ctx.author.id,3,position)
+        
+        text = f"{ctx.author.mention}：完成競選退出"
+        if position:
+            text += " " + Jsondb.jdict['position_option'].get(position)
+        await ctx.respond(text)
 
     @election.command(description='候選人名單')
     @commands.is_owner()
@@ -631,14 +645,13 @@ class command(Cog_Extension):
             party_name = i['party_name'] or "無黨籍"
             position = i['position']
             
-            user = self.bot.get_user(i['discord_id'])
+            user = self.bot.get_user(discord_id)
             if user:
                 if discord_id in result[position]:
                     result[position][discord_id][1].append(party_name)
                 else:
                     result[position][discord_id] = [user.mention, [party_name]]
-            
-            f"{user.mention} （{party_name}）"
+
         embed = BotEmbed.simple(f"第{session}屆中央選舉名單")
         
         for position_name in result:

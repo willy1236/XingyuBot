@@ -10,7 +10,6 @@ option = ChoiceList.set('pet_option')
 
 class system_user(Cog_Extension):
     pet = SlashCommandGroup("pet", "寵物相關指令")
-    shop = SlashCommandGroup("shop", "商店相關指令")
 
     @pet.command(description='查看寵物資訊')
     async def check(self,ctx,user_dc:discord.Option(discord.Member,name='用戶',description='可不輸入以查詢自己',default=None)):
@@ -37,13 +36,6 @@ class system_user(Cog_Extension):
             return
         await ctx.respond('你真的確定要放生寵物嗎?',view=Delete_Pet_button())
             
-
-    @shop.command(description='打開商店列表（開發中）',)
-    async def list(self,ctx):
-        embed = discord.Embed(color=0xc4e9ff)
-        embed.set_author(name="商城")
-        embed.add_field(name="[1] 稱號(僅限Felis catus快樂營)",value='$10')
-        await ctx.respond(embed=embed)
 
     # @shop.command(description='購買物品（開發中）')
     # async def buy(self,ctx,

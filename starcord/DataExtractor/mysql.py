@@ -377,6 +377,12 @@ class MySQLCurrencySystem(MySQLBaseModel):
         self.cursor.execute(f"USE `stardb_user`;")
         self.cursor.execute(f"INSERT INTO `user_point` SET discord_id = %s, scoin = %s,rcoin = %s ON DUPLICATE KEY UPDATE scoin = scoin + %s, rcoin = rcoin + %s",(discord_id,scoin,Rcoin,scoin,Rcoin))
         self.connection.commit()
+    
+    def get_scoin_shop_item(self,item_id:int):
+        self.cursor.execute(f"SELECT * FROM `checklist`.`scoin_shop` WHERE `item_id` = {item_id};")
+        record = self.cursor.fetchall()
+        if record:
+            return ShopItem(record[0])
 
 class MySQLHoYoLabSystem(MySQLBaseModel):
     def set_hoyo_cookies(self,discord_id:int,ltuid:str,ltoken:str,cookie_token:str):
@@ -680,13 +686,17 @@ class MySQLPollSystem(MySQLBaseModel):
         return dict
     
 class MYSQLElectionSystem(MySQLBaseModel):
-    def add_election(self,discord_id:int,session:int,position):
+    def add_election(self,discord_id:int,session:int,position,represent_party_id:int=None):
         position = Position(position)
-        self.cursor.execute(f"INSERT INTO `database`.`candidate_list` VALUES(%s,%s,%s);",(discord_id,session,position.value))
+        self.cursor.execute(f"INSERT INTO `database`.`candidate_list` VALUES(%s,%s,%s,%s);",(discord_id,session,position.value,represent_party_id))
         self.connection.commit()
 
-    def remove_election(self,discord_id:int,session:int):
-        self.cursor.execute(f"DELETE FROM `database`.`candidate_list` WHERE `discord_id` = %s AND `session` = %s;",(discord_id,session))
+    def remove_election(self,discord_id:int,session:int,position=None):
+        if position:
+            position = Position(position)
+            self.cursor.execute(f"DELETE FROM `database`.`candidate_list` WHERE `discord_id` = %s AND `session` = %s AND `position` = %s;",(discord_id,session,position.value))
+        else:
+            self.cursor.execute(f"DELETE FROM `database`.`candidate_list` WHERE `discord_id` = %s AND `session` = %s;",(discord_id,session))
         self.connection.commit()
 
     def get_election_by_session(self,session:int):
@@ -695,9 +705,8 @@ class MYSQLElectionSystem(MySQLBaseModel):
         return records
     
     def get_election_full_by_session(self,session:int):
-        self.cursor.execute(f"SELECT `candidate_list`.discord_id, session, position, `user_party`.party_id, party_name FROM `database`.`candidate_list` LEFT JOIN `stardb_user`.`user_party` ON `candidate_list`.discord_id = `user_party`.discord_id LEFT JOIN `database`.`party_data` ON `user_party`.party_id = `party_data`.party_id WHERE session = {session};")
-        records = self.cursor.fetchall()
-        return records
+        self.cursor.execute(f"SELECT cl.discord_id,cl.session,cl.position,COALESCE(cl.represent_party_id, up.party_id) AS party_id,pd.party_name FROM `database`.`candidate_list` cl JOIN `stardb_user`.`user_party` up ON cl.discord_id = up.discord_id LEFT JOIN `database`.`party_data` pd ON COALESCE(cl.represent_party_id, up.party_id) = pd.party_id WHERE session = {session};")
+        return self.cursor.fetchall()
 
     def get_election_by_session_position(self,session:int,position=str):
         position = Position(position)
@@ -720,6 +729,11 @@ class MYSQLElectionSystem(MySQLBaseModel):
 
     def get_all_party_data(self):
         self.cursor.execute(f"SELECT `party_data`.*,count(*) AS count FROM `stardb_user`.`user_party` LEFT JOIN `database`.`party_data` ON user_party.party_id = party_data.party_id GROUP BY `party_id` ORDER BY `party_id`")
+        records = self.cursor.fetchall()
+        return records
+    
+    def get_user_party(self,discord_id:int):
+        self.cursor.execute(f"SELECT `user_party`.discord_id,`party_data`.* FROM `stardb_user`.`user_party` LEFT JOIN `database`.`party_data` ON user_party.party_id = party_data.party_id WHERE `discord_id` = {discord_id}")
         records = self.cursor.fetchall()
         return records
     

@@ -121,3 +121,9 @@ class WarningList():
             name, value = i.display_embed_field(bot)
             embed.add_field(name=name,value=value)
         return embed
+    
+class ShopItem():
+    def __init__(self,data:dict):
+        self.item_id = data.get('item_id')
+        self.name = data.get('name')
+        self.price = data.get('price')

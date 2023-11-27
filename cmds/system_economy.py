@@ -4,11 +4,13 @@ from discord.commands import SlashCommandGroup
 from core.classes import Cog_Extension
 from starcord import Jsondb,sclient
 from starcord.types import Coins
+from starcord.utilities.utility import BotEmbed
 
 debug_guild = Jsondb.jdata.get('debug_guild')
 
 class system_economy(Cog_Extension):
     point = SlashCommandGroup("point", "PT點數相關指令")
+    shop = SlashCommandGroup("shop", "商店相關指令")
 
     @point.command(description='查詢擁有的星幣數')
     async def check(self,ctx,
@@ -85,6 +87,27 @@ class system_economy(Cog_Extension):
                 await channel.send(f'可惜了 答案是 {n}',reference=msg)
         except asyncio.TimeoutError:
             await channel.send(f'{ctx.author.mention} 時間超過了')
+
+    @shop.command(description='打開商店列表（開發中）')
+    async def list(self,ctx):
+        embed = BotEmbed.general(name="商城")
+        #embed.add_field(name="[1] 稱號(僅限Felis catus快樂營)",value='$10')
+        embed.add_field(name="[1] 石頭",value='$10')
+        await ctx.respond(embed=embed)
+    
+    @shop.command(description='購買商店物品（開發中）')
+    async def buy(self,ctx,item_id):
+        item = sclient.get_scoin_shop_item(item_id)
+        if not item:
+            await ctx.respond(f"{ctx.author.mention}：商店沒有賣這個喔")
+            return
+        
+        buyer_id = sclient.getif_scoin(ctx.author.id,item.price)
+        if buyer_id:
+            sclient.update_bag(ctx.author.id,item.item_id,1)
+            await ctx.respond(f"{ctx.author.mention}：已購買 {item.name} * 1")
+        else:
+            await ctx.respond(f"{ctx.author.mention}：星幣不足")
 
 def setup(bot):
     bot.add_cog(system_economy(bot))
