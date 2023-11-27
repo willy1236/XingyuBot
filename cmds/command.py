@@ -612,7 +612,7 @@ class command(Cog_Extension):
             dbdata = sclient.get_user_party(user_dc.id)
             joined_party = [party_data.get("party_id") for party_data in dbdata] if dbdata else []
             if not party_id in joined_party:
-                await ctx.respond(f"{user_dc.mention}：你沒有參加 {Jsondb.jdict['party_option'].get(party_id)}")
+                await ctx.respond(f"{user_dc.mention}：你沒有參加 {Jsondb.jdict['party_option'].get(str(party_id))}")
                 return
 
         sclient.add_election(user_dc.id,3,position,party_id)
