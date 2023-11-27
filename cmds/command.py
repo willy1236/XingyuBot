@@ -648,7 +648,8 @@ class command(Cog_Extension):
             user = self.bot.get_user(discord_id)
             if user:
                 if discord_id in result[position]:
-                    result[position][discord_id][1].append(party_name)
+                    if not party_name in result[position][discord_id][1]:
+                        result[position][discord_id][1].append(party_name)
                 else:
                     result[position][discord_id] = [user.mention, [party_name]]
 
