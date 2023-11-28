@@ -126,6 +126,7 @@ class RPGUser(DiscordUser):
         LUK=Lucky幸運\n
         HRT=Hit rate命中率
         """
+        print(self,data,*args,**kwargs)
         super().__init__(data,*args,**kwargs)
         self.hp = data.get('user_hp')
         self.atk = data.get('user_atk')

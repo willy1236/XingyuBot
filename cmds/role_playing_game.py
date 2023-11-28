@@ -29,10 +29,9 @@ class role_playing_game(Cog_Extension):
         if not rpguser.career_id:
             await ctx.respond(embed=BotEmbed.rpg("工作結果",f"你現在是無業游民，請選擇職業再工作"))
             return
-
+        
         now = datetime.datetime.now()
         dbdata = sclient.get_work(rpguser.discord_id)
-        print(dbdata)
         last_work = dbdata.get("last_work")
         if last_work and now - last_work < datetime.timedelta(hours=11):
             next_work = int((last_work + datetime.timedelta(hours=11)).timestamp())

@@ -476,14 +476,15 @@ class MySQLRPGSystem(MySQLBaseModel):
     def get_rpguser(self,discord_id:int):   
         """取得RPG用戶"""
         self.cursor.execute(f"USE `stardb_user`;")
-        self.cursor.execute(f'SELECT * FROM `rpg_user`,`user_point` WHERE rpg_user.discord_id = %s;',(discord_id,))
+        #self.cursor.execute(f'SELECT * FROM `rpg_user` LEFT JOIN `user_point`ON `rpg_user`.discord_id = `user_point`.discord_id WHERE rpg_user.discord_id = %s;',(discord_id,))
+        self.cursor.execute(f'SELECT * FROM `rpg_user` WHERE discord_id = %s;',(discord_id,))
         records = self.cursor.fetchall()
         if records:
             return RPGUser(records[0],self)
         else:
             self.cursor.execute(f'INSERT INTO `rpg_user` SET `discord_id` = %s;',(discord_id,))
             self.connection.commit()
-            self.cursor.execute(f'SELECT * FROM `rpg_user`,`user_point` WHERE rpg_user.discord_id = %s;',(discord_id,))
+            self.cursor.execute(f'SELECT * FROM `rpg_user` LEFT JOIN `user_point`ON `rpg_user`.discord_id = `user_point`.discord_id WHERE rpg_user.discord_id = %s;',(discord_id,))
             return RPGUser(self.cursor.fetchall()[0],self)
 
     def get_monster(self,monster_id:str):
