@@ -4,8 +4,8 @@ from discord.commands import SlashCommandGroup
 
 from core.classes import Cog_Extension
 from starcord import BotEmbed,BRS,Jsondb,sclient
-
 from starcord.ui_element.button import ReactRole_button
+from starcord.utilities.utility import converter
 
 class SendMessageModal(discord.ui.Modal):
     def __init__(self, channel, is_dm, *args, **kwargs):
@@ -425,6 +425,34 @@ class owner(Cog_Extension):
             await ctx.respond(f'find:id重複(出現{success}次)')
         else:
             await ctx.respond('無法辨認此ID')
+
+    @commands.slash_command(description='以機器人禁言用戶')
+    @commands.bot_has_permissions(moderate_members=True)
+    @commands.is_owner()
+    async def timeout_bot(self,ctx:discord.ApplicationContext,
+                      channelid:discord.Option(str,name='頻道',description='要發送警告單的頻道',required=True),
+                      user:discord.Option(discord.Member,name='用戶',description='要禁言的用戶',required=True),
+                      time_last:discord.Option(str,name='時長',description='格式為30s、1h20m等，支援天(d)、小時(h)、分鐘(m)、秒(s)',required=True),
+                      reason:discord.Option(str,name='原因',description='限100字內',required=False)):
+        await ctx.defer()
+        time = converter.time_to_datetime(time_last)
+        channel = self.bot.get_channel(int(channelid))
+        if not time or time > datetime.timedelta(days=7) :
+            await ctx.respond(f"錯誤：時間格式錯誤（不得超過7天）")
+            return
+        
+        await user.timeout_for(time,reason=reason)
+        
+        moderate_user = self.bot.user
+        create_time = datetime.datetime.now()
+        
+        timestamp = int((create_time+time).timestamp())
+        embed = BotEmbed.general(f'{user.name} 已被禁言',user.display_avatar.url,description=f"{user.mention}：{reason}")
+        embed.add_field(name="執行人員",value=moderate_user.mention)
+        embed.add_field(name="結束時間",value=f"<t:{timestamp}>（{time_last}）")
+        embed.timestamp = create_time
+        msg = await channel.send(embed=embed)
+        await ctx.respond(msg.jump_url)
 
 def setup(bot):
     bot.add_cog(owner(bot))
