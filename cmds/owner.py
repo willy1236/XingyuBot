@@ -431,7 +431,7 @@ class owner(Cog_Extension):
     @commands.is_owner()
     async def timeout_bot(self,ctx:discord.ApplicationContext,
                       channelid:discord.Option(str,name='頻道',description='要發送警告單的頻道',required=True),
-                      user:discord.Option(discord.Member,name='用戶',description='要禁言的用戶',required=True),
+                      userid:discord.Option(str,name='用戶',description='要禁言的用戶',required=True),
                       time_last:discord.Option(str,name='時長',description='格式為30s、1h20m等，支援天(d)、小時(h)、分鐘(m)、秒(s)',required=True),
                       reason:discord.Option(str,name='原因',description='限100字內',required=False)):
         await ctx.defer()
@@ -441,6 +441,7 @@ class owner(Cog_Extension):
             await ctx.respond(f"錯誤：時間格式錯誤（不得超過7天）")
             return
         
+        user = channel.guild.get_member(int(userid))
         await user.timeout_for(time,reason=reason)
         
         moderate_user = self.bot.user
