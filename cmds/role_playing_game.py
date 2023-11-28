@@ -41,7 +41,7 @@ class role_playing_game(Cog_Extension):
             reward_item_id = dbdata.get("reward_item_id")
             reward_item_name = dbdata.get("item_name")
             if reward_item_id:
-                reward_item_get = random.randint(1,5)
+                reward_item_get = random.randint(0,5)
                 sclient.update_bag(rpguser.discord_id,reward_item_id,reward_item_get)
                 
                 embed = BotEmbed.rpg("工作結果",f"你勤奮的工作，獲得 {reward_item_name} * {reward_item_get}\n下次工作時間：<t:{next_work}>")
