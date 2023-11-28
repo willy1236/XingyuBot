@@ -426,7 +426,7 @@ class owner(Cog_Extension):
         else:
             await ctx.respond('無法辨認此ID')
 
-    @commands.slash_command(description='以機器人禁言用戶')
+    @commands.slash_command(description='以機器人禁言用戶',guild_ids=debug_guild)
     @commands.bot_has_permissions(moderate_members=True)
     @commands.is_owner()
     async def timeout_bot(self,ctx:discord.ApplicationContext,
