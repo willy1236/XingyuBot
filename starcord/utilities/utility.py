@@ -3,8 +3,8 @@ from starcord.FileDatabase import Jsondb
 
 class BotEmbed:
     @staticmethod
-    def basic(bot:discord.Bot,title:str=discord.Embed.Empty,description:str=discord.Embed.Empty,url=discord.Embed.Empty):
-        '''基本:作者帶機器人名稱'''
+    def bot(bot:discord.Bot,title:str=discord.Embed.Empty,description:str=discord.Embed.Empty,url=discord.Embed.Empty):
+        '''機器人 格式'''
         embed = discord.Embed(title=title,description=description, color=0xc4e9ff,url=url)
         embed.set_author(name=bot.user.name,icon_url=bot.user.display_avatar.url)
         return embed
@@ -24,6 +24,7 @@ class BotEmbed:
     
     @staticmethod
     def rpg(title:str=discord.Embed.Empty,description:str=discord.Embed.Empty):
+        """RPG系統 格式"""
         embed = discord.Embed(title=title,description=description or discord.Embed.Empty, color=0xc4e9ff)
         embed.set_footer(text= "RPG系統（開發版） | 開發時期所有東西皆有可能重置")
         return embed
@@ -42,6 +43,14 @@ class BotEmbed:
         picdata = Jsondb.picdata
         embed = discord.Embed(color=0xc4e9ff)
         embed.set_author(name="Lottery System",icon_url=picdata['lottery_001'])
+        return embed
+    
+    @staticmethod
+    def star_radio():
+        '''星系電台 格式'''
+        picdata = Jsondb.picdata
+        embed = discord.Embed(color=0xc4e9ff)
+        embed.set_author(name="Star Rd.",icon_url=picdata['radio_001'])
         return embed
 
 
@@ -135,9 +144,9 @@ class ChoiceList():
     @staticmethod
     def get_tw(value,option_name):
         if Jsondb.jdict[option_name].get("zh-TW"):
-            return Jsondb.jdict[option_name]["zh-TW"].get(value,value)
+            return Jsondb.jdict[option_name]["zh-TW"].get(str(value),value)
         else:
-            return Jsondb.jdict[option_name].get(value,value)
+            return Jsondb.jdict[option_name].get(str(value),value)
 
 class converter():
     def time_to_sec(arg:str):

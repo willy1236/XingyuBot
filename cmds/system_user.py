@@ -2,11 +2,10 @@ import discord
 from discord.ext import commands
 from core.classes import Cog_Extension
 from discord.commands import SlashCommandGroup
-from starcord import BotEmbed,Jsondb,ChoiceList,sclient
+from starcord import BotEmbed,ChoiceList,sclient
 from starcord.ui_element.button import Delete_Pet_button
 
-jdict = Jsondb.jdict
-option = ChoiceList.set('pet_option')
+pet_option = ChoiceList.set('pet_option')
 
 class system_user(Cog_Extension):
     pet = SlashCommandGroup("pet", "寵物相關指令")
@@ -20,7 +19,7 @@ class system_user(Cog_Extension):
     
     @pet.command(description='認養寵物')
     async def add(self,ctx,
-                  species:discord.Option(str,name='物種',description='想認養的寵物物種',choices=option),
+                  species:discord.Option(str,name='物種',description='想認養的寵物物種',choices=pet_option),
                   name:discord.Option(str,name='寵物名',description='想幫寵物取的名子')):
         r = sclient.create_user_pet(ctx.author.id,species,name)
         if r:
@@ -35,30 +34,6 @@ class system_user(Cog_Extension):
             await ctx.respond('你沒有寵物')
             return
         await ctx.respond('你真的確定要放生寵物嗎?',view=Delete_Pet_button())
-            
-
-    # @shop.command(description='購買物品（開發中）')
-    # async def buy(self,ctx,
-    #               id:discord.Option(str,name='商品id',description='想購買的商品'),
-    #               amount:discord.Option(int,name='數量',description='')):
-    #     await ctx.respond('敬請期待')
-    #     return
-    #     if id == '1':
-    #         user = User(ctx.author.id)
-    #         if int(user.rcoin) >= 1 * amount:
-    #             db = Database()
-    #             jbag = db.jbag
-    #             if jbag[str(ctx.author.id)]['stone']:   
-    #                 jbag[str(ctx.author.id)]['stone'] += amount
-    #             else:
-    #                 jbag[str(ctx.author.id)]['stone'] = amount
-    #             db.write('jbag',jbag)
-    #             user.rcoin.add(-1 * 1 * amount)
-    #             await ctx.respond('購買已完成')
-    #         else:
-    #             raise commands.errors.ArgumentParsingError('你的錢不購買此商品')
-    #     else:
-    #         raise commands.errors.ArgumentParsingError('沒有此商品')
 
 def setup(bot):
     bot.add_cog(system_user(bot))

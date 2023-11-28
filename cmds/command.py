@@ -2,18 +2,16 @@ import discord,random,asyncio,datetime,re
 from discord.errors import Forbidden, NotFound
 from discord.ext import commands,pages
 from discord.commands import SlashCommandGroup
+from mysql.connector.errors import Error as sqlerror
 
 from core.classes import Cog_Extension
 from starcord import Jsondb,BRS,log,BotEmbed,ChoiceList,sclient
-from starcord.DataExtractor.client import StarClient
 from starcord.utilities.funtions import find,random_color
 from starcord.ui_element.button import Delete_Add_Role_button
 from starcord.ui_element.view import PollView
 from starcord.errors import CommandError
 from starcord.DataExtractor import GoogleCloud
-from starcord.types import Position
 
-from mysql.connector.errors import Error as sqlerror
 
 #openai.api_key = Jsondb.get_token('openai')
 bet_option = ChoiceList.set('bet_option')
@@ -21,7 +19,6 @@ busy_time_option = ChoiceList.set('busy_time_option')
 position_option = ChoiceList.set('position_option')
 party_option = ChoiceList.set('party_option')
 
-jdata = Jsondb.jdata
 main_guild = Jsondb.jdata.get('main_guild')
 
 class command(Cog_Extension):
@@ -116,7 +113,7 @@ class command(Cog_Extension):
                         raise
 
         await ctx.defer()
-        guild = self.bot.get_guild(jdata['main_guild'][0])
+        guild = self.bot.get_guild(main_guild[0])
         add_role = guild.get_role(877934319249797120)
         if user == 'all':
             for user in add_role.members:
@@ -366,7 +363,7 @@ class command(Cog_Extension):
         await member.timeout_for(time,reason="指令：禁言10秒")
         await ctx.respond(f"已禁言{member.mention} 10秒",ephemeral=True)
     
-    @commands.user_command(name="不想理你生態區",guild_ids=jdata['main_guild'])
+    @commands.user_command(name="不想理你生態區",guild_ids=main_guild)
     @commands.has_permissions(moderate_members=True)
     async def user_command2(self,ctx, member: discord.Member):
         await ctx.respond(f"開始執行",ephemeral=True)
@@ -576,7 +573,7 @@ class command(Cog_Extension):
             await ctx.respond("錯誤：查無此ID")
 
     @commands.slash_command(description='共用「94共用啦」雲端資料夾',guild_ids=main_guild)
-    async def drive(self,ctx,email:discord.Option(str,name='gmail帳戶',description='要使用的Gmail帳戶，留空已移除資料',required=False)):
+    async def drive(self,ctx,email:discord.Option(str,name='gmail帳戶',description='要使用的Gmail帳戶，留空以移除資料',required=False)):
         await ctx.defer()
         data = sclient.get_userdata(ctx.author.id,"user_data")
         if not email:
@@ -663,7 +660,7 @@ class command(Cog_Extension):
                 user_mention = result[position_name][i][0]
                 party_name = ",".join(result[position_name][i][1])
                 text += f"{count}. {user_mention} （{party_name}）\n"
-            embed.add_field(name=Jsondb.jdict['position_option'].get(position_name),value=text,inline=False)
+            embed.add_field(name=Jsondb.get_jdict('position_option',position_name),value=text,inline=False)
 
         await ctx.respond(embed=embed)
 
@@ -676,7 +673,7 @@ class command(Cog_Extension):
         count_data = sclient.get_election_count(session)
         for position_data in count_data:
             if position_data['count'] > 0:
-                position_name = Jsondb.jdict['position_option'].get(position_data['position'])
+                position_name = Jsondb.get_jdict('position_option',position_data['position'])
                 title = f"第{session}屆中央選舉：{position_name}"
                 options = []
                 for i in range(1,position_data['count'] + 1):
@@ -711,7 +708,7 @@ class command(Cog_Extension):
         except:
             pass
 
-        await ctx.respond(f"{ctx.author.mention} 已加入政黨 {ChoiceList.get_tw(str(party_id),'party_option')}")
+        await ctx.respond(f"{ctx.author.mention} 已加入政黨 {ChoiceList.get_tw(party_id,'party_option')}")
 
     @party.command(description='離開政黨')
     async def leave(self,ctx:discord.ApplicationContext,
@@ -726,7 +723,7 @@ class command(Cog_Extension):
         except:
             pass
 
-        await ctx.respond(f"{ctx.author.mention} 已退出政黨 {ChoiceList.get_tw(str(party_id),'party_option')}")
+        await ctx.respond(f"{ctx.author.mention} 已退出政黨 {ChoiceList.get_tw(party_id,'party_option')}")
 
     @party.command(description='政黨列表')
     async def list(self,ctx:discord.ApplicationContext):

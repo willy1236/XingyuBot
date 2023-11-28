@@ -1,7 +1,5 @@
-from tkinter import N
 import mysql.connector,datetime,discord
 from mysql.connector.errors import Error as sqlerror
-from numpy import record
 from starcord.types import DBGame,Coins, Position
 from starcord.models.user import *
 from starcord.models.model import *
@@ -317,12 +315,12 @@ class MySQLCurrencySystem(MySQLBaseModel):
         if records:
             return records.get("scoin",0)
 
-    def getif_scoin(self,discord_id:int,point:int) -> int | None:
+    def getif_scoin(self,discord_id:int,scoin:int) -> int | None:
         """取得星幣足夠的用戶
         :return: 若足夠則回傳傳入的discord_id
         """
         self.cursor.execute(f"USE `stardb_user`;")
-        self.cursor.execute(f'SELECT `discord_id` FROM `user_point` WHERE discord_id = %s AND point >= %s;',(discord_id,point))
+        self.cursor.execute(f'SELECT `discord_id` FROM `user_point` WHERE discord_id = %s AND scoin >= %s;',(discord_id,scoin))
         records = self.cursor.fetchall()
         if records:
             return records[0].get("discord_id")
@@ -335,8 +333,8 @@ class MySQLCurrencySystem(MySQLBaseModel):
         """
         records = self.getif_scoin(giver_id,amount)
         if records:
-            self.cursor.execute(f"UPDATE `user_point` SET point = point - %s WHERE discord_id = %s;",(amount,giver_id))
-            self.cursor.execute(f"INSERT INTO `user_point` SET discord_id = %s, point = %s ON DUPLICATE KEY UPDATE discord_id = %s, point = point + %s",(given_id,amount,given_id,amount))
+            self.cursor.execute(f"UPDATE `user_point` SET scoin = scoin - %s WHERE discord_id = %s;",(amount,giver_id))
+            self.cursor.execute(f"INSERT INTO `user_point` SET discord_id = %s, scoin = %s ON DUPLICATE KEY UPDATE discord_id = %s, scoin = scoin + %s",(given_id,amount,given_id,amount))
             self.connection.commit()
             #self.cursor.execute(f"UPDATE `user_point` SET `point` = REPLACE(`欄位名`, '要被取代的欄位值', '取代後的欄位值') WHERE `欄位名` LIKE '%欄位值%';",(giver_id,amount))
         else:
@@ -379,7 +377,7 @@ class MySQLCurrencySystem(MySQLBaseModel):
         self.connection.commit()
     
     def get_scoin_shop_item(self,item_id:int):
-        self.cursor.execute(f"SELECT * FROM `checklist`.`scoin_shop` WHERE `item_id` = {item_id};")
+        self.cursor.execute(f"SELECT * FROM `stardb_idbase`.`scoin_shop` WHERE `item_id` = {item_id};")
         record = self.cursor.fetchall()
         if record:
             return ShopItem(record[0])
@@ -481,11 +479,16 @@ class MySQLRPGSystem(MySQLBaseModel):
         self.cursor.execute(f'SELECT * FROM `rpg_user`,`user_point` WHERE rpg_user.discord_id = %s;',(discord_id,))
         records = self.cursor.fetchall()
         if records:
-            return RPGUser(records[0])
+            return RPGUser(records[0],self)
+        else:
+            self.cursor.execute(f'INSERT INTO `rpg_user` SET `discord_id` = %s;',(discord_id,))
+            self.connection.commit()
+            self.cursor.execute(f'SELECT * FROM `rpg_user`,`user_point` WHERE rpg_user.discord_id = %s;',(discord_id,))
+            return RPGUser(self.cursor.fetchall()[0],self)
 
     def get_monster(self,monster_id:str):
         """取得怪物"""
-        self.cursor.execute(f'SELECT * FROM `checklist`.`rpg_monster` WHERE `monster_id` = %s;',(monster_id,))
+        self.cursor.execute(f'SELECT * FROM `stardb_idbase`.`rpg_monster` WHERE `monster_id` = %s;',(monster_id,))
         records = self.cursor.fetchall()
         if records:
             return Monster(records[0])
@@ -513,7 +516,7 @@ class MySQLRPGSystem(MySQLBaseModel):
     
     def get_bag_desplay(self,discord_id:int):
         # data = self.get_bag(str(discord_id))
-        # self.cursor.execute(f"USE `checklist`;")
+        # self.cursor.execute(f"USE `stardb_idbase`;")
         # bag_list = []
         # for item in data:
         #     self.cursor.execute(f"SELECT name FROM `rpg_item` WHERE item_id = {item['item_id']};")
@@ -521,8 +524,8 @@ class MySQLRPGSystem(MySQLBaseModel):
         #     bag_list.append((records['name'],item['amount']))
 
         # return bag_list
-        self.cursor.execute(f"SELECT rpg_item.item_id,name,amount FROM `stardb_user`.`rpg_user_bag` JOIN `checklist`.`rpg_item` ON rpg_user_bag.item_id = rpg_item.item_id WHERE discord_id = {discord_id};")
-        #self.cursor.execute(f"SELECT rpg_item.item_id,name,amount FROM `database`.`rpg_user_bag`,`checklist`.`rpg_item` WHERE discord_id = {discord_id};")
+        self.cursor.execute(f"SELECT rpg_item.item_id,item_name,amount FROM `stardb_user`.`rpg_user_bag` JOIN `stardb_idbase`.`rpg_item` ON rpg_user_bag.item_id = rpg_item.item_id WHERE discord_id = {discord_id};")
+        #self.cursor.execute(f"SELECT rpg_item.item_id,name,amount FROM `database`.`rpg_user_bag`,`stardb_idbase`.`rpg_item` WHERE discord_id = {discord_id};")
         records = self.cursor.fetchall()
         return records
 
@@ -542,15 +545,23 @@ class MySQLRPGSystem(MySQLBaseModel):
             self.cursor.execute(f'UPDATE `rpg_user_bag` SET `discord_id` = {discord_id}, `item_id` = {item_id}, amount = amount - {amount}')
         self.connection.commit()
 
-    def user_work(self,discord_id:int):
+    def get_work(self,discord_id:int):
         self.cursor.execute(f"USE `stardb_user`;")
-        self.cursor.execute(f"SELECT * FROM `user_work` WHERE `discord_id` = {discord_id} AND `last_work` > NOW() - INTERVAL 12 HOUR;")
+        #self.cursor.execute(f"SELECT * FROM `rpg_user` LEFT JOIN `stardb_idbase`.`rpg_career` ON `rpg_user`.career_id = `rpg_career`.career_id LEFT JOIN `stardb_idbase`.`rpg_item` ON `rpg_career`.reward_item_id = `rpg_item`.item_id WHERE `discord_id` = {discord_id} AND `last_work` > NOW() - INTERVAL 12 HOUR;")
+        self.cursor.execute(f"SELECT * FROM `rpg_user` LEFT JOIN `stardb_idbase`.`rpg_career` ON `rpg_user`.career_id = `rpg_career`.career_id LEFT JOIN `stardb_idbase`.`rpg_item` ON `rpg_career`.reward_item_id = `rpg_item`.item_id WHERE `discord_id` = {discord_id};")
         records = self.cursor.fetchall()
         if records:
             return records[0]
-        else:
-            self.cursor.execute(f'REPLACE INTO `user_work` SET `discord_id` = {discord_id}, `last_work` = NOW();')
-            self.connection.commit()
+    
+    def refresh_work(self,discord_id:int):
+        self.cursor.execute(f'UPDATE `rpg_user` SET `last_work` = NOW() WHERE `discord_id` = {discord_id};')
+        self.connection.commit()
+
+    def set_rpguser_data(self,discord_id:int,column:str,value):
+        """設定或更新RPG用戶資料"""
+        self.cursor.execute(f"USE `stardb_user`;")
+        self.cursor.execute(f"INSERT INTO `rpg_user` SET discord_id = {discord_id}, {column} = {value} ON DUPLICATE KEY UPDATE discord_id = {discord_id}, {column} = {value};")
+        self.connection.commit()
 
 class MySQLBusyTimeSystem(MySQLBaseModel):
     def add_busy(self, discord_id, date, time):

@@ -117,7 +117,7 @@ class RPGUser(DiscordUser):
         hrt: int
         career_id: int
     
-    def __init__(self,data):
+    def __init__(self,data,*args,**kwargs):
         """
         hp:生命 atk:攻擊 def:防禦\n
         DEX=Dexterity敏捷\n
@@ -126,7 +126,7 @@ class RPGUser(DiscordUser):
         LUK=Lucky幸運\n
         HRT=Hit rate命中率
         """
-        super().__init__(data)
+        super().__init__(data,*args,**kwargs)
         self.hp = data.get('user_hp')
         self.atk = data.get('user_atk')
         self.hrt = data.get('hrt',60)

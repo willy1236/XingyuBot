@@ -318,7 +318,7 @@ class owner(Cog_Extension):
     @commands.is_owner()
     async def panel(self,ctx):
         embed_list = []
-        embed = BotEmbed.basic(self.bot,description=f'伺服器總數：{len(self.bot.guilds)}\n成員：{len(self.bot.users)}')
+        embed = BotEmbed.bot(self.bot,description=f'伺服器總數：{len(self.bot.guilds)}\n成員：{len(self.bot.users)}')
         embed_list.append(embed)
 
         await ctx.respond(f'',embeds=embed_list,view=BotPanel(self.bot))

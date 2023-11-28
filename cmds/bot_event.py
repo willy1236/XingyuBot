@@ -45,7 +45,7 @@ class event(Cog_Extension):
 
         #介紹
         if message.content == self.bot.user.mention:
-            embed = BotEmbed.basic(self.bot,description=f"你好~我是 dc小幫手，是一個discord機器人喔~\n你可以輸入 </help:1067700245015834638> 來查看所有指令的用法\n\n希望我能在discord上幫助到你喔~\n有任何建議與需求可以使用 </feedback:1067700244848058386> 指令")
+            embed = BotEmbed.bot(self.bot,description=f"你好~我是 dc小幫手，是一個discord機器人喔~\n你可以輸入 </help:1067700245015834638> 來查看所有指令的用法\n\n希望我能在discord上幫助到你喔~\n有任何建議與需求可以使用 </feedback:1067700244848058386> 指令")
             embed.set_footer(text="此機器人由 威立 負責維護")
             await message.reply(embed=embed)
             return

@@ -13,7 +13,7 @@ class JsonDatabase():
         dynamic_voice_list: list
 
     __slots__ = [
-        "_db_location",
+        "_DBPATH",
         "_dict",
         "lol_jdict",
         "jdict",
@@ -29,13 +29,13 @@ class JsonDatabase():
 
         TRN = tracker.gg
         """
-        self._db_location = "./database"
+        self._DBPATH = "./database"
         self._dict = {
-            'lol_jdict': f'{self._db_location}/lol_dict.json',
-            'jdict': f'{self._db_location}/dict.json',
-            'jdata': f'{self._db_location}/setting.json',
+            'lol_jdict': f'{self._DBPATH}/lol_dict.json',
+            'jdict': f'{self._DBPATH}/dict.json',
+            'jdata': f'{self._DBPATH}/setting.json',
             #'cdata': f'{self.location}/channel_settings.json',
-            'picdata': f'{self._db_location}/picture.json',
+            'picdata': f'{self._DBPATH}/picture.json',
             #'udata': f'{self.location}/user_settings/basic.json',
             #'jpt': f'{self.location}/user_settings/point.json',
             #'jloot': f'{self.location}/lottery.json',
@@ -47,15 +47,15 @@ class JsonDatabase():
             #'rsdata': f'{self.location}/role_save.json',
             #'jpet': f'{self.location}/user_settings/pet.json',
             #'jbag': f'{self.location}/user_settings/bag.json',
-            'cache': f'{self._db_location}/cache.json',
+            'cache': f'{self._DBPATH}/cache.json',
             #'monster_basic': f'{self.data_location}/RPG_settings/monster_basic.json',
             #'jRcoin': f'{self.location}/user_settings/rcoin.json',
             #'jhoyo': f'{self.location}/game_settings/hoyo.json',
             #'jtwitch': f'{self.location}/community_settings/twitch.json',
-            'tokens': f'{self._db_location}/token.json'
+            'tokens': f'{self._DBPATH}/token.json'
         }
-        if not os.path.isdir(self._db_location):
-            os.mkdir(self._db_location)
+        if not os.path.isdir(self._DBPATH):
+            os.mkdir(self._DBPATH)
         
         for file in self._dict:
             if not os.path.isfile(self._dict[file]):
@@ -111,9 +111,13 @@ class JsonDatabase():
     
     def write_cache(self,key,value):
         """將指定資料寫入cache並更新內容"""
-        with open(f'{self._db_location}/cache.json','w',encoding="utf-8") as jfile:
+        with open(f'{self._DBPATH}/cache.json','w',encoding="utf-8") as jfile:
             self.cache[key] = value
             json.dump(self.cache,jfile,indent=4,ensure_ascii=False)
+
+    def get_jdict(self,key,value):
+        """取得jdict資料"""
+        return self[key].get(value,value)
         
 
     # @staticmethod

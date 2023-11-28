@@ -1,12 +1,10 @@
 import random,discord
-from starcord.DataExtractor.game import RiotClient,SteamInterface,OsuInterface,ApexInterface
-from starcord.DataExtractor import MySQLDatabase
-from starcord.models.model import GameInfoPage
-from starcord.models.user import *
-from starcord.models.game import PartialLOLPlayer
-from starcord.types import DBGame,Coins
-from starcord.ui_element.view import PollView
 from datetime import datetime
+from .game import RiotClient,SteamInterface,OsuInterface,ApexInterface
+from .mysql import MySQLDatabase
+from starcord.models import *
+from starcord.types import DBGame
+from starcord.ui_element.view import PollView
 
 class BatClient(MySQLDatabase):
     """賭盤系統"""

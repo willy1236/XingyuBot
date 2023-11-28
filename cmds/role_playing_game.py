@@ -2,13 +2,15 @@ import discord,asyncio,random,datetime
 from core.classes import Cog_Extension
 from discord.ext import commands
 from discord.commands import SlashCommandGroup
-from starcord import BotEmbed,sclient
+from starcord import BotEmbed,sclient,ChoiceList
 from starcord.ui_element.RPGbutton import RPGbutton1,RPGbutton2
-from starcord.models.model import GameInfoPage
+from starcord.models import GameInfoPage
 from starcord.types import Coins
 
+rpgcareer_option = ChoiceList.set("rpgcareer_option")
+
 class role_playing_game(Cog_Extension):
-    #work = SlashCommandGroup("work", "工作相關指令")
+    work = SlashCommandGroup("work", "工作相關指令")
     
     @commands.slash_command(description='進行冒險（開發中）')
     async def advance(self,ctx:discord.ApplicationContext):
@@ -16,23 +18,46 @@ class role_playing_game(Cog_Extension):
         # return
         await ctx.respond(view=RPGbutton1(ctx.author.id))
 
-    @commands.slash_command(description='進行工作（開發中）')
-    async def work(self,ctx:discord.ApplicationContext):
+    @work.command(description='進行工作（開發中）')
+    async def start(self,ctx:discord.ApplicationContext):
         # dbdata = sclient.get_activities(ctx.author.id)
         # if dbdata.get("work_date") == datetime.date.today():
         #     await ctx.respond("今天已經工作過了")
         
         # await ctx.respond(view=RPGbutton2(ctx.author.id))
-        dbdata = sclient.user_work(ctx.author.id)
-        if dbdata:
-            next_work = int((dbdata.get("last_work") + datetime.timedelta(hours=11)).timestamp())
+        rpguser = sclient.get_rpguser(ctx.author.id)
+        if not rpguser.career_id:
+            await ctx.respond(embed=BotEmbed.rpg("工作結果",f"你現在是無業游民，請選擇職業再工作"))
+            return
+
+        now = datetime.datetime.now()
+        dbdata = sclient.get_work(rpguser.discord_id)
+        print(dbdata)
+        last_work = dbdata.get("last_work")
+        if last_work and now - last_work < datetime.timedelta(hours=11):
+            next_work = int((last_work + datetime.timedelta(hours=11)).timestamp())
             embed = BotEmbed.rpg("工作結果",f"你已經工作過了，請等到 <t:{next_work}> 再繼續工作")
         else:
-            next_work = int((datetime.datetime.now() + datetime.timedelta(hours=11)).timestamp())
-            scoin_add = random.randint(5,25)
-            sclient.update_coins(ctx.author.id, "add", Coins.SCOIN, scoin_add)
-            embed = BotEmbed.rpg("工作結果",f"你勤奮的打工，獲得 {scoin_add} 星幣\n下次工作時間：<t:{next_work}>")
+            next_work = int((now + datetime.timedelta(hours=11)).timestamp())
+            reward_item_id = dbdata.get("reward_item_id")
+            reward_item_name = dbdata.get("item_name")
+            if reward_item_id:
+                reward_item_get = random.randint(1,5)
+                sclient.update_bag(rpguser.discord_id,reward_item_id,reward_item_get)
+                
+                embed = BotEmbed.rpg("工作結果",f"你勤奮的工作，獲得 {reward_item_name} * {reward_item_get}\n下次工作時間：<t:{next_work}>")
+            else:
+                embed = BotEmbed.rpg("工作結果",f"你勤奮的打工\n下次工作時間：<t:{next_work}>")
+            
+            sclient.refresh_work(rpguser.discord_id)
+        
+        await ctx.respond(embed=embed)
 
+    @work.command(description='選擇職業（開發中）')
+    async def career(self,ctx:discord.ApplicationContext,
+                    career_id:discord.Option(int,name='工作職業',description='',choices=rpgcareer_option,default=None)):
+        sclient.set_rpguser_data(ctx.author.id,"career_id",career_id)
+        embed = BotEmbed.rpg("工作職業",f"已選擇職業 {ChoiceList.get_tw(career_id,'rpgcareer_option')}" if career_id else "你成為無業遊民了")
         await ctx.respond(embed=embed)
 
     @commands.slash_command(description='查看用戶資訊')
@@ -57,7 +82,7 @@ class role_playing_game(Cog_Extension):
         if data:
             text = ""
             for item in data:
-                text += f"{item['name']} x{item['amount']}\n"
+                text += f"{item['item_name']} x{item['amount']}\n"
             embed.add_field(name='一般物品',value=text)
         else:
             embed.add_field(name='一般物品',value='背包空無一物')
