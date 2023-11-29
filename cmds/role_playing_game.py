@@ -40,11 +40,24 @@ class role_playing_game(Cog_Extension):
             next_work = int((now + datetime.timedelta(hours=11)).timestamp())
             reward_item_id = dbdata.get("reward_item_id")
             reward_item_name = dbdata.get("item_name")
+            reward_item_min = dbdata.get("reward_item_min",0)
+            reward_item_max = dbdata.get("reward_item_max",0)
+            
             if reward_item_id:
-                reward_item_get = random.randint(0,5)
+                reward_item_get = random.randint(reward_item_min,reward_item_max)
+                hard_woring_rate = (reward_item_get - reward_item_min) / (reward_item_max - reward_item_min) if reward_item_max != 0 else 0
                 sclient.update_bag(rpguser.discord_id,reward_item_id,reward_item_get)
                 
-                embed = BotEmbed.rpg("工作結果",f"你勤奮的工作，獲得 {reward_item_name} * {reward_item_get}\n下次工作時間：<t:{next_work}>")
+                if hard_woring_rate <= 0.25:
+                    work_text = "你工作時出了點狀況"
+                elif hard_woring_rate > 0.25 and hard_woring_rate <= 0.5:
+                    work_text = "你心不在焉的工作"
+                elif hard_woring_rate < 0.5 and hard_woring_rate <= 0.75:
+                    work_text = "你普普通通的工作"
+                else:
+                    work_text = "你一人承擔多份工作"
+
+                embed = BotEmbed.rpg("工作結果",f"{work_text}，獲得 {reward_item_name} * {reward_item_get}\n下次工作時間：<t:{next_work}>")
             else:
                 embed = BotEmbed.rpg("工作結果",f"你勤奮的打工\n下次工作時間：<t:{next_work}>")
             
