@@ -48,14 +48,18 @@ class role_playing_game(Cog_Extension):
                 hard_woring_rate = (reward_item_get - reward_item_min) / (reward_item_max - reward_item_min) if reward_item_max != 0 else 0
                 sclient.update_bag(rpguser.discord_id,reward_item_id,reward_item_get)
                 
-                if hard_woring_rate <= 0.25:
+                if hard_woring_rate == 0:
                     work_text = "你工作時出了點狀況"
+                elif hard_woring_rate <= 0.25:
+                    work_text = "你隨便做完了工作"
                 elif hard_woring_rate > 0.25 and hard_woring_rate <= 0.5:
                     work_text = "你心不在焉的工作"
                 elif hard_woring_rate < 0.5 and hard_woring_rate <= 0.75:
                     work_text = "你普普通通的工作"
+                elif hard_woring_rate != 1:
+                    work_text = "你勤奮的完成工作"
                 else:
-                    work_text = "你一人承擔多份工作"
+                    work_text = "你一人承擔所有工作"
 
                 embed = BotEmbed.rpg("工作結果",f"{work_text}，獲得 {reward_item_name} * {reward_item_get}\n下次工作時間：<t:{next_work}>")
             else:
