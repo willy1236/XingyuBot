@@ -11,7 +11,7 @@ rpgcareer_option = ChoiceList.set("rpgcareer_option")
 
 class role_playing_game(Cog_Extension):
     work = SlashCommandGroup("work", "工作相關指令")
-    rpgshop = SlashCommandGroup("rpgshop", "RPG商店相關指令")
+    rpgshop = SlashCommandGroup("rpgshop", "rpg商店相關指令")
     
     @commands.slash_command(description='進行冒險（開發中）')
     async def advance(self,ctx:discord.ApplicationContext):
