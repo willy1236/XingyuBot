@@ -66,8 +66,8 @@ class PointClient(MySQLDatabase):
 
 class PollClient(MySQLDatabase):
     """投票系統"""
-    def create_poll(self, title:str, options:list, creator_id:int, guild_id:int, alternate_account_can_vote=True,show_name=False):
-        poll_id = self.add_poll(title,creator_id,datetime.now(),None,guild_id,alternate_account_can_vote,show_name)
+    def create_poll(self, title:str, options:list, creator_id:int, guild_id:int, alternate_account_can_vote=True,show_name=False,check_results_in_advance=True,results_only_initiator=False):
+        poll_id = self.add_poll(title,creator_id,datetime.now(),None,guild_id,alternate_account_can_vote,show_name,check_results_in_advance,results_only_initiator)
         self.add_poll_option(poll_id,options)
         
         view = PollView(poll_id,self)

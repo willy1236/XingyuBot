@@ -118,8 +118,8 @@ class debug(Cog_Extension):
     async def test(self,ctx:discord.ApplicationContext):
         #await ctx.defer()
         
-        sclient.rpg_shop_daily()
-        await ctx.respond("done")
+        user = sclient.get_dcuser(ctx.user.id)
+        await ctx.respond(user.scoin)
 
     @commands.slash_command(description='地圖生成測試')
     async def maptest(self,ctx:discord.ApplicationContext):

@@ -309,11 +309,12 @@ class MySQLRoleSaveSystem(MySQLBaseModel):
         self.connection.commit()
 
 class MySQLCurrencySystem(MySQLBaseModel):
-    def get_scoin(self,discord_id:int) -> int:
-        """取得用戶星幣數"""
+    def get_coin(self,discord_id:int,coin:Coins=Coins.SCOIN) -> int:
+        """取得用戶擁有的貨幣數"""
         records = self.get_userdata(discord_id,"user_point")
         if records:
-            return records.get("scoin",0)
+            coin = Coins(coin)
+            return records.get(coin.value,0)
 
     def getif_coin(self,discord_id:int,amount:int,coin:Coins=Coins.SCOIN) -> int | None:
         """取得指定貨幣足夠的用戶
@@ -584,13 +585,13 @@ class MySQLRPGSystem(MySQLBaseModel):
         
     def update_rpg_shop_inventory(self,shop_item_id:int,item_inventory_add:int):
         self.cursor.execute(f"UPDATE `database`.`rpg_shop` SET `item_inventory` = item_inventory + {item_inventory_add} WHERE `shop_item_id` = {shop_item_id};")
-        self.cursor.execute(f"UPDATE `database`.`rpg_shop` SET `item_price` = item_inital_price * pow(0.98,item_inventory - item_inital_inventory) WHERE `shop_item_id` = {shop_item_id};")
+        self.cursor.execute(f"UPDATE `database`.`rpg_shop` SET `item_price` = item_inital_price * pow(0.97,item_inventory - item_inital_inventory) WHERE `shop_item_id` = {shop_item_id};")
         self.connection.commit()
 
     def rpg_shop_daily(self):
         self.cursor.execute(f"UPDATE `database`.`rpg_shop` SET `item_inventory` = item_inventory - item_inital_inventory * (item_inventory / item_inital_inventory * FLOOR(RAND()*76+25) / 100 );")
         self.cursor.execute(f"UPDATE `database`.`rpg_shop` SET `item_inventory` = item_inital_inventory WHERE item_inventory <= item_inital_inventory;")
-        self.cursor.execute(f"UPDATE `database`.`rpg_shop` SET `item_price` =  item_inital_price * pow(0.98,item_inventory - item_inital_inventory);")
+        self.cursor.execute(f"UPDATE `database`.`rpg_shop` SET `item_price` =  item_inital_price * pow(0.97,item_inventory - item_inital_inventory);")
         self.connection.commit()
         
 
@@ -648,8 +649,8 @@ class MySQLWarningSystem(MySQLBaseModel):
         self.connection.commit()
 
 class MySQLPollSystem(MySQLBaseModel):
-    def add_poll(self,title:str,created_user:int,created_at:datetime,message_id,guild_id,alternate_account_can_vote=True,show_name=False):
-        self.cursor.execute(f"INSERT INTO `database`.`poll_data` VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s);",(None,title,created_user,created_at,True,message_id,guild_id,alternate_account_can_vote,show_name))
+    def add_poll(self,title:str,created_user:int,created_at:datetime,message_id,guild_id,alternate_account_can_vote=True,show_name=False,check_results_in_advance=True,results_only_initiator=False):
+        self.cursor.execute(f"INSERT INTO `database`.`poll_data` VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);",(None,title,created_user,created_at,True,message_id,guild_id,alternate_account_can_vote,show_name,check_results_in_advance,results_only_initiator))
         self.connection.commit()
         return self.cursor.lastrowid
     

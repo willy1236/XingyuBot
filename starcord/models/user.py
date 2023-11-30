@@ -51,14 +51,32 @@ class DiscordUser():
         self.user_dc = user_dc
         self.discord_id = data.get('discord_id')
         self.name = data.get('name')
-        self.scoin = data.get('scoin') or 0
-        self.point = data.get('point') or 0
-        self.rcoin = data.get('rcoin') or 0
+        self._scoin = data.get('scoin') or 0
+        self._point = data.get('point') or 0
+        self._rcoin = data.get('rcoin') or 0
         self.guaranteed = data.get('guaranteed')
         self.max_sign_consecutive_days = data.get('max_sign_consecutive_days') or 0
         self.meatball_times = data.get('meatball_times')
         self.main_account_id = data.get('main_account')
 
+    @property
+    def scoin(self):
+        if not self._scoin:
+            self._scoin = self.sqldb.get_coin(self.discord_id) or 0
+        return self._scoin
+    
+    @property
+    def point(self):
+        if not self._point:
+            self._point = self.sqldb.get_coin(self.discord_id,Coins.POINT) or 0
+        return self._point
+    
+    @property
+    def rcoin(self):
+        if not self._rcoin:
+            self._rcoin = self.sqldb.get_coin(self.discord_id,Coins.POINT) or 0
+        return self._rcoin
+    
     def desplay(self,bot:discord.Bot=None):
         embed = BotEmbed.general(name=self.user_dc.name if self.user_dc else self.name, icon_url=self.user_dc.avatar.url if self.user_dc.avatar else discord.Embed.Empty)
         if bot and self.main_account_id:

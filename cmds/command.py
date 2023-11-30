@@ -544,25 +544,27 @@ class command(Cog_Extension):
         # if admin_role:
         #     await member.remove_roles(admin_role)
 
-    @poll.command(description='創建投票',guild_ids=main_guild)
+    @poll.command(description='創建投票')
     async def create(self,ctx,
                      title:discord.Option(str,name='標題',description='投票標題，限45字內'),
                      options:discord.Option(str,name='選項',description='投票選項，最多輸入10項，每個選項請用英文,隔開'),
                      alternate_account_can_vote:discord.Option(bool,name='小帳是否算有效票',description='預設為true',default=True),
-                     show_name:discord.Option(bool,name='投票結果是否顯示用戶名',description='預設為false，若投票人數多建議關閉',default=False)):
+                     show_name:discord.Option(bool,name='投票結果是否顯示用戶名',description='預設為false，若投票人數多建議關閉',default=False),
+                     check_results_in_advance:discord.Option(bool,name='是否能預先查看結果',description='預設為true',default=True),
+                     results_only_initiator:discord.Option(bool,name='僅限發起人能看到結果',description='預設為false',default=False)):
         options = options.split(",")
         if len(options) > 10 or len(options) < 1:
             await ctx.respond(f"錯誤：投票選項超過10項或小於1項",ephemeral=True)
             return
         
-        view = sclient.create_poll(title,options,ctx.author.id,ctx.guild.id,alternate_account_can_vote,show_name)
+        view = sclient.create_poll(title,options,ctx.author.id,ctx.guild.id,alternate_account_can_vote,show_name,check_results_in_advance,results_only_initiator)
         embed = view.display()
         embed.set_author(name=ctx.author.name,icon_url=ctx.author.avatar.url)
         message = await ctx.respond(embed=embed,view=view)
         sclient.update_poll(view.poll_id,"message_id",message.id)
 
     @commands.is_owner()
-    @poll.command(description='重新創建投票介面',guild_ids=main_guild)
+    @poll.command(description='重新創建投票介面')
     async def view(self,ctx,
                    poll_id:discord.Option(int,name='投票id',description='')):
         dbdata = sclient.get_poll(poll_id)

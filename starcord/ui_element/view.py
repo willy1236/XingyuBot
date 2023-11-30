@@ -99,32 +99,36 @@ class PollResultButton(discord.ui.Button):
 
     async def callback(self,interaction):
         view:PollView = self.view    
-        dbdata = view.sqldb.get_poll_vote_count(self.poll_id, view.alternate_account_can_vote)
-        options_data = view.sqldb.get_poll_options(self.poll_id)
+        if not view.results_only_initiator:
+            dbdata = view.sqldb.get_poll_vote_count(self.poll_id, view.alternate_account_can_vote)
+            options_data = view.sqldb.get_poll_options(self.poll_id)
 
-        if view.show_name:
-            user_vote_data = view.sqldb.get_users_poll(self.poll_id,view.alternate_account_can_vote)
-            user_vote_list = {}
-            for i in range(1,len(options_data) + 1):
-                user_vote_list[str(i)] = [] 
-
-            for i in user_vote_data:
-                discord_id = i["discord_id"]
-                vote_option = i["vote_option"]
-                user = interaction.guild.get_member(discord_id)
-                username = user.mention if user else discord_id
-                user_vote_list[str(vote_option)].append(username)
-
-        text = ""
-        for option in options_data:
-            name = option['option_name']
-            id = option['option_id']
-            text += f"{name}： {dbdata.get(str(id),0)}票\n"
             if view.show_name:
-                text += ",".join(user_vote_list[str(id)]) + "\n"
+                user_vote_data = view.sqldb.get_users_poll(self.poll_id,view.alternate_account_can_vote)
+                user_vote_list = {}
+                for i in range(1,len(options_data) + 1):
+                    user_vote_list[str(i)] = [] 
 
-        embed = BotEmbed.simple("目前票數",description=f'投票ID：{self.poll_id}\n{text}')
-        await interaction.response.send_message(embed=embed,ephemeral=True)
+                for i in user_vote_data:
+                    discord_id = i["discord_id"]
+                    vote_option = i["vote_option"]
+                    user = interaction.guild.get_member(discord_id)
+                    username = user.mention if user else discord_id
+                    user_vote_list[str(vote_option)].append(username)
+
+            text = ""
+            for option in options_data:
+                name = option['option_name']
+                id = option['option_id']
+                text += f"{name}： {dbdata.get(str(id),0)}票\n"
+                if view.show_name:
+                    text += ",".join(user_vote_list[str(id)]) + "\n"
+
+            embed = BotEmbed.simple("目前票數",description=f'投票ID：{self.poll_id}\n{text}')
+            await interaction.response.send_message(embed=embed,ephemeral=True)
+
+        else:
+            await interaction.response.send_message(f"錯誤：此投票只有發起人才能查看結果",ephemeral=True)
 
 class PollCanenlButton(discord.ui.Button):
     def __init__(self,poll_id):
@@ -159,6 +163,8 @@ class PollView(discord.ui.View):
         created_id: int
         alternate_account_can_vote: bool
         show_name: bool
+        check_results_in_advance: bool
+        results_only_initiator: bool
     
     def __init__(self,poll_id,sqldb=None):
         super().__init__(timeout=None)
@@ -169,9 +175,12 @@ class PollView(discord.ui.View):
         self.created_id = poll_data['created_user']
         self.alternate_account_can_vote = bool(poll_data['alternate_account_can_vote'])
         self.show_name = bool(poll_data['show_name'])
+        self.check_results_in_advance = bool(poll_data['check_results_in_advance'])
+        self.results_only_initiator = bool(poll_data['results_only_initiator'])
         
         self.add_item(PollEndButton(poll_id,self.created_id))
-        self.add_item(PollResultButton(poll_id))
+        if self.check_results_in_advance:
+            self.add_item(PollResultButton(poll_id))
         self.add_item(PollCanenlButton(poll_id))
         self.add_item(PollNowButton(poll_id))
 
@@ -182,7 +191,7 @@ class PollView(discord.ui.View):
             self.add_item(PollOptionButton(label=option['option_name'],poll_id=poll_id, option_id=option['option_id'],custom_id=custom_id))
 
     def display(self):
-        embed = BotEmbed.general(name="投票系統",title=self.title,description=f"投票ID：{self.poll_id}\n- 小帳是否算有效票：{self.alternate_account_can_vote}\n- 結果顯示用戶名：{self.show_name}")
+        embed = BotEmbed.general(name="投票系統",title=self.title,description=f"投票ID：{self.poll_id}\n- 小帳是否算有效票：{self.alternate_account_can_vote}\n- 結果顯示用戶名：{self.show_name}\n- 只有發起人能查看結果：{self.check_results_in_advance}")
         return embed
 
 class GameView(discord.ui.View):
