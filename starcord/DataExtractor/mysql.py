@@ -315,12 +315,13 @@ class MySQLCurrencySystem(MySQLBaseModel):
         if records:
             return records.get("scoin",0)
 
-    def getif_scoin(self,discord_id:int,scoin:int) -> int | None:
-        """取得星幣足夠的用戶
+    def getif_coin(self,discord_id:int,amount:int,coin:Coins=Coins.SCOIN) -> int | None:
+        """取得指定貨幣足夠的用戶
         :return: 若足夠則回傳傳入的discord_id
         """
+        coin = Coins(coin)
         self.cursor.execute(f"USE `stardb_user`;")
-        self.cursor.execute(f'SELECT `discord_id` FROM `user_point` WHERE discord_id = %s AND scoin >= %s;',(discord_id,scoin))
+        self.cursor.execute(f'SELECT `discord_id` FROM `user_point` WHERE discord_id = %s AND %s >= %s;',(discord_id,coin,amount))
         records = self.cursor.fetchall()
         if records:
             return records[0].get("discord_id")
@@ -331,7 +332,7 @@ class MySQLCurrencySystem(MySQLBaseModel):
         :param given_id: 被給予點數者
         :param amount: 轉移的點數數量
         """
-        records = self.getif_scoin(giver_id,amount)
+        records = self.getif_coin(giver_id,amount)
         if records:
             self.cursor.execute(f"UPDATE `user_point` SET scoin = scoin - %s WHERE discord_id = %s;",(amount,giver_id))
             self.cursor.execute(f"INSERT INTO `user_point` SET discord_id = %s, scoin = %s ON DUPLICATE KEY UPDATE discord_id = %s, scoin = scoin + %s",(given_id,amount,given_id,amount))
@@ -509,10 +510,9 @@ class MySQLRPGSystem(MySQLBaseModel):
         self.cursor.execute(f"USE `stardb_user`;")
         if item_id:
             self.cursor.execute(f"SELECT * FROM `rpg_user_bag` WHERE discord_id = {discord_id} AND item_id = {item_id};")
-            records = self.cursor.fetchone()
         else:
             self.cursor.execute(f"SELECT item_id,amount FROM `rpg_user_bag` WHERE discord_id = {discord_id};")
-            records = self.cursor.fetchall()
+        records = self.cursor.fetchall()
         return records
     
     def get_bag_desplay(self,discord_id:int):
@@ -530,20 +530,26 @@ class MySQLRPGSystem(MySQLBaseModel):
         records = self.cursor.fetchall()
         return records
 
+    def getif_bag(self,discord_id:int,item_id:int,amount:int):
+        self.cursor.execute(f"SELECT * FROM `stardb_user`.`rpg_user_bag` WHERE discord_id = {discord_id} AND item_id = {item_id} AND amount >= {amount};")
+        records = self.cursor.fetchall()
+        if records:
+            return records
+
     def update_bag(self,discord_id:int,item_id:int,amount:int):
         self.cursor.execute(f"INSERT INTO `stardb_user`.`rpg_user_bag` SET discord_id = {discord_id}, item_id = {item_id}, amount = {amount} ON DUPLICATE KEY UPDATE amount = amount + {amount};")
         self.connection.commit()
 
     def remove_bag(self,discord_id:int,item_id:int,amount:int):
         r = self.get_bag(discord_id,item_id)
-        if r['amount'] < amount:
+        if r[0]['amount'] < amount:
             raise ValueError('此物品數量不足')
         
         self.cursor.execute(f"USE `stardb_user`;")
-        if r['amount'] == amount:
+        if r[0]['amount'] == amount:
             self.cursor.execute(f"DELETE FROM `rpg_user_bag` WHERE `discord_id` = %s AND `item_id` = %s;",(discord_id,item_id))
         else:
-            self.cursor.execute(f'UPDATE `rpg_user_bag` SET `discord_id` = {discord_id}, `item_id` = {item_id}, amount = amount - {amount}')
+            self.cursor.execute(f'UPDATE `rpg_user_bag` SET amount = amount - {amount} WHERE `discord_id` = {discord_id} AND `item_id` = {item_id}')
         self.connection.commit()
 
     def get_work(self,discord_id:int):
@@ -563,6 +569,30 @@ class MySQLRPGSystem(MySQLBaseModel):
         self.cursor.execute(f"USE `stardb_user`;")
         self.cursor.execute(f"INSERT INTO `rpg_user` SET discord_id = {discord_id}, {column} = {value} ON DUPLICATE KEY UPDATE discord_id = {discord_id}, {column} = {value};")
         self.connection.commit()
+
+    def get_rpg_shop_list(self):
+        self.cursor.execute(f"USE `database`;")
+        self.cursor.execute(f"SELECT * FROM `rpg_shop` LEFT JOIN `stardb_idbase`.`rpg_item` ON `rpg_shop`.item_id = `rpg_item`.item_id;")
+        records = self.cursor.fetchall()
+        return records
+    
+    def get_rpg_shop_item(self,shop_item_id:int):
+        self.cursor.execute(f"SELECT * FROM `database`.`rpg_shop` LEFT JOIN `stardb_idbase`.`rpg_item` ON `rpg_shop`.item_id = `rpg_item`.item_id WHERE `shop_item_id` = {shop_item_id};")
+        record = self.cursor.fetchall()
+        if record:
+            return ShopItem(record[0])
+        
+    def update_rpg_shop_inventory(self,shop_item_id:int,item_inventory_add:int):
+        self.cursor.execute(f"UPDATE `database`.`rpg_shop` SET `item_inventory` = item_inventory + {item_inventory_add} WHERE `shop_item_id` = {shop_item_id};")
+        self.cursor.execute(f"UPDATE `database`.`rpg_shop` SET `item_price` = item_inital_price * pow(0.98,item_inventory - item_inital_inventory) WHERE `shop_item_id` = {shop_item_id};")
+        self.connection.commit()
+
+    def rpg_shop_daily(self):
+        self.cursor.execute(f"UPDATE `database`.`rpg_shop` SET `item_inventory` = item_inventory - item_inital_inventory * (item_inventory / item_inital_inventory * FLOOR(RAND()*76+25) / 100 );")
+        self.cursor.execute(f"UPDATE `database`.`rpg_shop` SET `item_inventory` = item_inital_inventory WHERE item_inventory <= item_inital_inventory;")
+        self.cursor.execute(f"UPDATE `database`.`rpg_shop` SET `item_price` =  item_inital_price * pow(0.98,item_inventory - item_inital_inventory);")
+        self.connection.commit()
+        
 
 class MySQLBusyTimeSystem(MySQLBaseModel):
     def add_busy(self, discord_id, date, time):

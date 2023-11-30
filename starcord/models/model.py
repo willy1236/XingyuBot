@@ -125,5 +125,6 @@ class WarningList():
 class ShopItem():
     def __init__(self,data:dict):
         self.item_id = data.get('item_id')
-        self.name = data.get('name')
-        self.price = data.get('price')
+        self.shop_item_id = data.get('shop_item_id')
+        self.name = data.get('item_name')
+        self.price = data.get('item_price')

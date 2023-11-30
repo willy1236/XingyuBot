@@ -11,6 +11,7 @@ rpgcareer_option = ChoiceList.set("rpgcareer_option")
 
 class role_playing_game(Cog_Extension):
     work = SlashCommandGroup("work", "工作相關指令")
+    rpgshop = SlashCommandGroup("rpgshop", "RPG商店相關指令")
     
     @commands.slash_command(description='進行冒險（開發中）')
     async def advance(self,ctx:discord.ApplicationContext):
@@ -103,6 +104,46 @@ class role_playing_game(Cog_Extension):
         else:
             embed.add_field(name='一般物品',value='背包空無一物')
         await ctx.respond(embed=embed)
+
+    @rpgshop.command(description='查看RPG商店（開發中）')
+    async def list(self,ctx):
+        dbdata = sclient.get_rpg_shop_list()
+        embed = BotEmbed.general(name="RPG商城")
+        for i in dbdata:
+            embed.add_field(name=f"[{i['shop_item_id']}] {i['item_name']}",value=f"${i['item_price']}")
+        await ctx.respond(embed=embed)
+
+    @rpgshop.command(description='售出物品給RPG商店（開發中）')
+    async def sell(self,ctx,
+                   item_id:discord.Option(int,name='商品id',description='要售出的商品'),
+                   amount:discord.Option(int,name='數量',description='要售出的數量',default=1,min_value=1)):
+        item = sclient.get_rpg_shop_item(item_id)
+        if not item:
+            await ctx.respond(f"{ctx.author.mention}：商店不買這個喔")
+            return
+        
+        seller_id = sclient.getif_bag(ctx.author.id,item.item_id,amount)
+        if seller_id:
+            sclient.update_bag(ctx.author.id,item.item_id,amount*-1)
+            sclient.update_coins(ctx.author.id,"add",Coins.RCOIN,item.price * amount)
+            sclient.update_rpg_shop_inventory(item.shop_item_id,amount)
+            await ctx.respond(f"{ctx.author.mention}：已售出 {item.name} * {amount}")
+        else:
+            await ctx.respond(f"{ctx.author.mention}：你的東西數量不夠喔")
+
+    # @rpgshop.command(description='購買RPG商店物品（開發中）')
+    # async def buy(self,ctx,item_id):
+    #     item = sclient.get_scoin_shop_item(item_id)
+    #     if not item:
+    #         await ctx.respond(f"{ctx.author.mention}：商店沒有賣這個喔")
+    #         return
+        
+    #     buyer_id = sclient.getif_coin(ctx.author.id,item.price,Coins.RCOIN)
+    #     if buyer_id:
+    #         sclient.update_bag(ctx.author.id,item.item_id,1)
+    #         await ctx.respond(f"{ctx.author.mention}：已購買 {item.name} * 1")
+    #     else:
+    #         await ctx.respond(f"{ctx.author.mention}：Rcoin不足")
 
 def setup(bot):
     bot.add_cog(role_playing_game(bot))

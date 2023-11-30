@@ -62,7 +62,7 @@ class system_economy(Cog_Extension):
     async def guess(self,ctx):
         channel = ctx.channel
         userid = ctx.author.id
-        r = sclient.getif_scoin(userid,2)
+        r = sclient.getif_coin(userid,2)
         if not r:
             await ctx.respond('你的PT點不足喔 需要2點才能遊玩')
             return
@@ -101,7 +101,7 @@ class system_economy(Cog_Extension):
             await ctx.respond(f"{ctx.author.mention}：商店沒有賣這個喔")
             return
         
-        buyer_id = sclient.getif_scoin(ctx.author.id,item.price)
+        buyer_id = sclient.getif_coin(ctx.author.id,item.price)
         if buyer_id:
             sclient.update_bag(ctx.author.id,item.item_id,1)
             await ctx.respond(f"{ctx.author.mention}：已購買 {item.name} * 1")

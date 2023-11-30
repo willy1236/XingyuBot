@@ -33,6 +33,7 @@ class task(Cog_Extension):
             scheduler.add_job(self.apex_crafting_update,'cron',hour=1,minute=5,second=0,jitter=30,misfire_grace_time=60)
             scheduler.add_job(self.forecast_update,'cron',hour='00,03,06,09,12,15,18,21',minute=0,second=1,jitter=30,misfire_grace_time=60)
             scheduler.add_job(self.auto_hoyo_reward,'cron',hour=19,minute=0,second=0,jitter=30,misfire_grace_time=60)
+            scheduler.add_job(self.update_rpgshop_data,'cron',hour=0,minute=0,second=0,jitter=30,misfire_grace_time=60)
             #scheduler.add_job(self.update_channel_dict,'cron',hour='*',minute="0,30",second=0,jitter=30,misfire_grace_time=60)
 
             scheduler.add_job(self.earthquake_check,'interval',minutes=1,jitter=30,misfire_grace_time=40)
@@ -213,6 +214,8 @@ class task(Cog_Extension):
     async def update_pubsubhubbub_data(self):
         pass
 
+    async def update_rpgshop_data(self):
+        sclient.rpg_shop_daily()
 
 def setup(bot):
     bot.add_cog(task(bot))

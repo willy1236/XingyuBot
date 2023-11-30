@@ -4,7 +4,7 @@ from discord.ext import commands,tasks
 import matplotlib.pyplot as plt
 
 from core.classes import Cog_Extension
-from starcord import Jsondb
+from starcord import Jsondb,sclient
 from starcord.errors import *
 from starcord.types.game import DBGame
 from starcord.rpg.map import sunmon_area
@@ -116,35 +116,10 @@ class debug(Cog_Extension):
     @commands.is_owner()
     @commands.slash_command(description='測試指令')
     async def test(self,ctx:discord.ApplicationContext):
-        await ctx.defer()
+        #await ctx.defer()
         
-        def data_string(s,d):
-            t = int(round(s/100.*sum(d)))     # 透過百分比反推原本的數值
-            return f'{t}\n（{s:.1f}%）'
-
-        # 字形
-        matplotlib.rc('font', family='Microsoft JhengHei')
-        # 資料
-        labels = ['A', 'B', 'C', 'D']
-        sizes = [1, 3, 2, 5]  # 各部分的百分比
-
-        # 設置顏色
-        colors = ['gold', 'yellowgreen', 'lightcoral', 'lightskyblue']
-
-        # 設置圓餅圖的突出顯示
-        #explode = (0.1, 0, 0, 0)  # 將第一塊突出顯示
-    
-        # 繪製圓餅圖
-        plt.pie(sizes, labels=labels, colors=colors, autopct=lambda i: data_string(i,sizes), shadow=False, startangle=140)
-
-        # 添加標題
-        plt.title('圓餅圖範例')
-
-        image_buffer = io.BytesIO()
-        plt.savefig(image_buffer, format='png', dpi=200, bbox_inches='tight')
-        image_buffer.seek(0)
-
-        await ctx.respond(file=discord.File(image_buffer,filename="pie.png"))
+        sclient.rpg_shop_daily()
+        await ctx.respond("done")
 
     @commands.slash_command(description='地圖生成測試')
     async def maptest(self,ctx:discord.ApplicationContext):
