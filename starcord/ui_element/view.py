@@ -11,19 +11,21 @@ class PollOptionButton(discord.ui.Button):
     
     async def callback(self,interaction):
         view:PollView = self.view
-        can_vote = True
+        can_vote = False
+        have_only_role = False
         vote_magnification = 1
         if view.role_dict:
             for roleid in view.role_dict:
                 if view.role_dict[roleid][0] == 1:
+                    have_only_role = True
                     role = interaction.user.get_role(roleid)
-                    if not role:
-                        can_vote = False
+                    if role:
+                        can_vote = True
 
                 if view.role_dict[roleid][1] > vote_magnification:
                     vote_magnification = view.role_dict[roleid][1]
         
-        if can_vote:
+        if have_only_role and can_vote:
             view.sqldb.add_user_poll(self.poll_id,interaction.user.id,self.option_id,datetime.datetime.now(),vote_magnification)
             await interaction.response.send_message(f"{interaction.user.mention} 已投票給 {self.label} {vote_magnification} 票",ephemeral=True)
         else:
