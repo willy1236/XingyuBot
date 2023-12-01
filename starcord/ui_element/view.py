@@ -158,15 +158,15 @@ class PollView(discord.ui.View):
     @property
     def role_dict(self):
         dbdata = self.sqldb.get_poll_role(self.poll_id)
+        dict = {}
         if dbdata:
-            dict = {}
             for data in dbdata:
                 role_id = data['role_id']
                 role_type = data['role_type']
                 role_magnification = data['role_magnification']
                 dict[role_id] = [role_type,role_magnification]
-            return dict
-
+        return dict
+        
     def display(self,ctx:discord.ApplicationContext):
         only_role_list = []
         role_magification_list = []
