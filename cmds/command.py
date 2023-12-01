@@ -1,3 +1,4 @@
+from tkinter import N
 import discord,random,asyncio,datetime,re
 from discord.errors import Forbidden, NotFound
 from discord.ext import commands,pages
@@ -539,10 +540,15 @@ class command(Cog_Extension):
         channel = self.bot.get_channel(640541440103153674)
         await channel.send(f"{member.mention}收到了一份貢丸大禮包")
         sclient.add_userdata_value(member.id,"user_discord","meatball_times",1)
+
+    @commands.user_command(name="摃殘",guild_ids=main_guild)
+    async def bonk(self,ctx:discord.ApplicationContext, member: discord.Member):
+        if not ctx.user.get_role(1178151415403790478):
+            await ctx.respond(f"你不是台中摃殘黨員",ephemeral=True)
+            return
         
-        # admin_role = member.get_role(613748153644220447)
-        # if admin_role:
-        #     await member.remove_roles(admin_role)
+        member.timeout_for(duration=datetime.timedelta(seconds=10),reason="bonk")
+        await ctx.respond(f"{member.mention}：bonk")
 
     @poll.command(description='創建投票')
     async def create(self,ctx,
@@ -573,6 +579,11 @@ class command(Cog_Extension):
             await ctx.respond(view=view,embed=view.display())
         else:
             await ctx.respond("錯誤：查無此ID")
+
+    # @commands.is_owner()
+    # @poll.command(description='取得投票結果')
+    # async def result(self,ctx,
+    #                poll_id:discord.Option(int,name='投票id',description='')):
 
     @commands.slash_command(description='共用「94共用啦」雲端資料夾',guild_ids=main_guild)
     async def drive(self,ctx,email:discord.Option(str,name='gmail帳戶',description='要使用的Gmail帳戶，留空以移除資料',required=False)):
@@ -695,7 +706,7 @@ class command(Cog_Extension):
         else:
             end_time = start_time + datetime.timedelta(days=1)
             
-        event = await ctx.guild.create_scheduled_event(name="【快樂營中央選舉】投票階段",start_time=start_time,end_time=end_time,location="<#1160459117270405222>")
+        event = await ctx.guild.create_scheduled_event(name="【快樂營中央選舉】投票階段",start_time=start_time,end_time=end_time,location="<#1163127708839071827>")
 
     @party.command(description='加入政黨')
     async def join(self,ctx:discord.ApplicationContext,
