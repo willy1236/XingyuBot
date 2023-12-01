@@ -191,7 +191,7 @@ class PollView(discord.ui.View):
             self.add_item(PollOptionButton(label=option['option_name'],poll_id=poll_id, option_id=option['option_id'],custom_id=custom_id))
 
     def display(self):
-        embed = BotEmbed.general(name="投票系統",title=self.title,description=f"投票ID：{self.poll_id}\n- 小帳是否算有效票：{self.alternate_account_can_vote}\n- 結果顯示用戶名：{self.show_name}\n- 只有發起人能查看結果：{self.check_results_in_advance}")
+        embed = BotEmbed.general(name="投票系統",title=self.title,description=f"投票ID：{self.poll_id}\n- 小帳是否算有效票：{self.alternate_account_can_vote}\n- 結果顯示用戶名：{self.show_name}\n- 只有發起人能查看結果：{self.results_only_initiator}")
         return embed
 
 class GameView(discord.ui.View):
