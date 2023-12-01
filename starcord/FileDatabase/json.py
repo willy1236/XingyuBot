@@ -117,7 +117,7 @@ class JsonDatabase():
 
     def get_jdict(self,key,value):
         """取得jdict資料"""
-        return self[key].get(value,value)
+        return self.jdict[key].get(value,value)
         
 
     # @staticmethod
