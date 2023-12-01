@@ -694,8 +694,8 @@ class MySQLPollSystem(MySQLBaseModel):
         self.cursor.executemany(f"INSERT INTO `database`.`poll_options` VALUES(%s,%s,%s);",list)
         self.connection.commit()
 
-    def add_user_poll(self,poll_id:int,discord_id:int,vote_option:int,vote_at:datetime):
-        self.cursor.execute(f"INSERT INTO `stardb_user`.`user_poll` VALUES(%s,%s,%s,%s) ON DUPLICATE KEY UPDATE `vote_option` = %s, `vote_at` = %s;",(poll_id,discord_id,vote_option,vote_at,vote_option,vote_at))
+    def add_user_poll(self,poll_id:int,discord_id:int,vote_option:int,vote_at:datetime,vote_magnification:int=1):
+        self.cursor.execute(f"INSERT INTO `stardb_user`.`user_poll` VALUES(%s,%s,%s,%s,%s) ON DUPLICATE KEY UPDATE `vote_option` = %s, `vote_at` = %s, `vote_magnification` = %s;",(poll_id,discord_id,vote_option,vote_at,vote_magnification,vote_option,vote_at,vote_magnification))
         self.connection.commit()
     
     def remove_user_poll(self,poll_id:int,discord_id:int):
@@ -718,16 +718,28 @@ class MySQLPollSystem(MySQLBaseModel):
     
     def get_poll_vote_count(self,poll_id:int,include_alternatives_accounts=True):
         if include_alternatives_accounts:
-            self.cursor.execute(f"SELECT vote_option,COUNT(*) as count FROM `stardb_user`.`user_poll` WHERE `poll_id` = {poll_id} GROUP BY vote_option;")
+            self.cursor.execute(f"SELECT vote_option,SUM(vote_magnification) as count FROM `stardb_user`.`user_poll` WHERE `poll_id` = {poll_id} GROUP BY vote_option;")
         else:
-            self.cursor.execute(f"SELECT vote_option,COUNT(*) as count FROM `stardb_user`.`user_poll` LEFT JOIN `stardb_user`.`user_account` ON `user_poll`.discord_id = `user_account`.alternate_account WHERE poll_id = {poll_id} AND alternate_account IS NULL GROUP BY vote_option;")
+            self.cursor.execute(f"SELECT vote_option,SUM(vote_magnification) as count FROM `stardb_user`.`user_poll` LEFT JOIN `stardb_user`.`user_account` ON `user_poll`.discord_id = `user_account`.alternate_account WHERE poll_id = {poll_id} AND alternate_account IS NULL GROUP BY vote_option;")
         records = self.cursor.fetchall()
         dict = {}
         if records:
             for i in records:
-                dict[str(i["vote_option"])] = i["count"]
+                dict[str(i["vote_option"])] = int(i["count"])
         return dict
     
+    def add_poll_role(self,poll_id:int,role_id:int,role_type:int,role_magnification:int=1):
+        """role_type 1:只有此身分組可投票 2:倍率 """
+        self.cursor.execute(f"INSERT INTO `database`.`poll_role` VALUES(%s,%s,%s,%s) ON DUPLICATE KEY UPDATE `role_type` = %s, `role_magnification` = %s;",(poll_id,role_id,role_type,role_magnification,role_type,role_magnification))
+        self.connection.commit()
+    
+    def get_poll_role(self,poll_id:int,role_type:int=None):
+        if role_type:
+            self.cursor.execute(f"SELECT * FROM `database`.`poll_role` WHERE `poll_id` = {poll_id} AND `role_type` = {role_type};")
+        else:
+            self.cursor.execute(f"SELECT * FROM `database`.`poll_role` WHERE `poll_id` = {poll_id};")
+        return self.cursor.fetchall()
+
 class MYSQLElectionSystem(MySQLBaseModel):
     def add_election(self,discord_id:int,session:int,position,represent_party_id:int=None):
         position = Position(position)

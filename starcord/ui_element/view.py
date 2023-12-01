@@ -1,3 +1,4 @@
+from re import T
 import discord,datetime,matplotlib,io
 from typing import TYPE_CHECKING
 from starcord.utilities.utility import BotEmbed
@@ -10,9 +11,24 @@ class PollOptionButton(discord.ui.Button):
     
     async def callback(self,interaction):
         view:PollView = self.view
-        view.sqldb.add_user_poll(self.poll_id,interaction.user.id,self.option_id,datetime.datetime.now())
-        await interaction.response.send_message(f"{interaction.user.mention} 已投票給 {self.label}",ephemeral=True)
-    
+        can_vote = True
+        vote_magnification = 1
+        if view.role_dict:
+            for roleid in view.role_dict:
+                if view.role_dict[roleid][0] == 1:
+                    role = interaction.user.get_role(roleid)
+                    if not role:
+                        can_vote = False
+
+                if view.role_dict[roleid][1] > vote_magnification:
+                    vote_magnification = view.role_dict[roleid][1]
+        
+        if can_vote:
+            view.sqldb.add_user_poll(self.poll_id,interaction.user.id,self.option_id,datetime.datetime.now(),vote_magnification)
+            await interaction.response.send_message(f"{interaction.user.mention} 已投票給 {self.label} {vote_magnification} 票",ephemeral=True)
+        else:
+            await interaction.response.send_message(f"{interaction.user.mention}：你沒有投票資格",ephemeral=True)
+
 class PollEndButton(discord.ui.Button):
     def __init__(self,poll_id,created_id):
         super().__init__(label="結算投票",custom_id=f"end_poll_{poll_id}",style=discord.ButtonStyle.danger)
@@ -26,37 +42,7 @@ class PollEndButton(discord.ui.Button):
             view.sqldb.update_poll(self.poll_id,"is_on",0)
             
             polldata = view.sqldb.get_poll(self.poll_id)
-            dbdata = view.sqldb.get_poll_vote_count(self.poll_id,view.alternate_account_can_vote)
-            options_data = view.sqldb.get_poll_options(self.poll_id)
-
-            if view.show_name:
-                user_vote_data = view.sqldb.get_users_poll(self.poll_id,view.alternate_account_can_vote)
-                user_vote_list = {}
-                for i in range(1,len(options_data) + 1):
-                    user_vote_list[str(i)] = [] 
-
-                for i in user_vote_data:
-                    discord_id = i["discord_id"]
-                    vote_option = i["vote_option"]
-                    user = interaction.guild.get_member(discord_id)
-                    username = user.mention if user else discord_id
-                    user_vote_list[str(vote_option)].append(username)
-
-            text = ""
-            labels = []
-            sizes = []
-            for option in options_data:
-                name = option['option_name']
-                id = option['option_id']
-                count = dbdata.get(str(id),0)
-                text += f"{name}： {count}票\n"
-
-                if view.show_name:
-                    text += ",".join(user_vote_list[str(id)]) + "\n"
-
-                if count > 0:
-                    labels.append(name)
-                    sizes.append(count)
+            text, labels, sizes = view.results_text(interaction,True)
 
             import matplotlib.pyplot as plt
             fig, ax = plt.subplots()
@@ -100,30 +86,7 @@ class PollResultButton(discord.ui.Button):
     async def callback(self,interaction):
         view:PollView = self.view    
         if not view.results_only_initiator:
-            dbdata = view.sqldb.get_poll_vote_count(self.poll_id, view.alternate_account_can_vote)
-            options_data = view.sqldb.get_poll_options(self.poll_id)
-
-            if view.show_name:
-                user_vote_data = view.sqldb.get_users_poll(self.poll_id,view.alternate_account_can_vote)
-                user_vote_list = {}
-                for i in range(1,len(options_data) + 1):
-                    user_vote_list[str(i)] = [] 
-
-                for i in user_vote_data:
-                    discord_id = i["discord_id"]
-                    vote_option = i["vote_option"]
-                    user = interaction.guild.get_member(discord_id)
-                    username = user.mention if user else discord_id
-                    user_vote_list[str(vote_option)].append(username)
-
-            text = ""
-            for option in options_data:
-                name = option['option_name']
-                id = option['option_id']
-                text += f"{name}： {dbdata.get(str(id),0)}票\n"
-                if view.show_name:
-                    text += ",".join(user_vote_list[str(id)]) + "\n"
-
+            text = view.results_text(interaction)
             embed = BotEmbed.simple("目前票數",description=f'投票ID：{self.poll_id}\n{text}')
             await interaction.response.send_message(embed=embed,ephemeral=True)
 
@@ -189,10 +152,80 @@ class PollView(discord.ui.View):
         for option in dbdata:
             custom_id = f"poll_{poll_id}_{option['option_id']}"
             self.add_item(PollOptionButton(label=option['option_name'],poll_id=poll_id, option_id=option['option_id'],custom_id=custom_id))
+    
+    @property
+    def role_dict(self):
+        dbdata = self.sqldb.get_poll_role(self.poll_id)
+        if dbdata:
+            dict = {}
+            for data in dbdata:
+                role_id = data['role_id']
+                role_type = data['role_type']
+                role_magnification = data['role_magnification']
+                dict[role_id] = [role_type,role_magnification]
+            return dict
 
-    def display(self):
-        embed = BotEmbed.general(name="投票系統",title=self.title,description=f"投票ID：{self.poll_id}\n- 小帳是否算有效票：{self.alternate_account_can_vote}\n- 結果顯示用戶名：{self.show_name}\n- 只有發起人能查看結果：{self.results_only_initiator}")
+    def display(self,ctx:discord.ApplicationContext):
+        only_role_list = []
+        role_magification_list = []
+        for roleid in self.role_dict:
+            role = ctx.guild.get_role(roleid)
+            if self.role_dict[roleid][0] == 1:
+                only_role_list.append(role.mention if role else roleid)
+            if self.role_dict[roleid][1] > 1:
+                mag = self.role_dict[roleid][1]
+                role_magification_list.append(f"{role.mention}({mag})" if role else f"{roleid}({mag})")
+        
+        description = f"投票ID：{self.poll_id}\n- 小帳是否算有效票：{self.alternate_account_can_vote}\n- 結果顯示用戶名：{self.show_name}\n- 只有發起人能查看結果：{self.results_only_initiator}"
+        if only_role_list:
+            description += "\n- 可投票身分組：" + ",".join(only_role_list)
+        if role_magification_list:
+            description += "\n- 身分組投票權重：" + ",".join(role_magification_list)
+        embed = BotEmbed.general(name="投票系統",title=self.title,description=description)
         return embed
+    
+    def results_text(self,interaction,labels_and_sizes=False) -> tuple[str, list, list] | str:
+        vote_count_data = self.sqldb.get_poll_vote_count(self.poll_id, self.alternate_account_can_vote)
+        options_data = self.sqldb.get_poll_options(self.poll_id)
+
+        if self.show_name:
+            user_vote_data = self.sqldb.get_users_poll(self.poll_id,self.alternate_account_can_vote)
+            user_vote_list = {}
+            for i in range(1,len(options_data) + 1):
+                user_vote_list[str(i)] = [] 
+
+            for i in user_vote_data:
+                discord_id = i["discord_id"]
+                vote_option = i["vote_option"]
+                vote_magnification = i.get("vote_magnification",1)
+                user = interaction.guild.get_member(discord_id)
+                username = user.mention if user else discord_id
+                if vote_magnification != 1:
+                    username += f"({vote_magnification})"
+                user_vote_list[str(vote_option)].append(username)
+
+        text = ""
+        if labels_and_sizes:
+            labels = []
+            sizes = []
+
+        for option in options_data:
+            name = option['option_name']
+            id = option['option_id']
+            count = vote_count_data.get(str(id),0)
+            text += f"{name}： {count}票\n"
+            
+            if self.show_name:
+                text += ",".join(user_vote_list[str(id)]) + "\n"
+
+            if labels_and_sizes and count > 0:
+                labels.append(name)
+                sizes.append(count)
+        
+        if labels_and_sizes:
+            return text, labels, sizes
+        else:
+            return text
 
 class GameView(discord.ui.View):
     def __init__(self,creator,game,number_all,number_now,message):

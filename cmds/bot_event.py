@@ -51,8 +51,14 @@ class event(Cog_Extension):
             return
         
         if message.guild and message.guild.id == 613747262291443742 and not message.author.bot and not is_owner:
-            p = re.compile(r"(?:貢丸|贡丸|Meatball)(?!殲滅黨)",re.IGNORECASE)
-            result = p.search(message.content)
+            if message.author.get_role(1160460037114822758) or message.author.get_role(1161644357410107483) or message.author.get_role(1178151415403790478):
+                return
+            elif message.author.get_role(1162721481520852993):
+                p = re.compile(r"(?:貢\S*丸|贡\S*丸|Meat\S*ball)",re.IGNORECASE)
+                result = p.search(message.content)
+            else:
+                p = re.compile(r"(?:貢丸|贡丸|Meatball)(?!殲滅黨)",re.IGNORECASE)
+                result = p.search(message.content)
             if result:
                 try:
                     await message.delete(reason="打出貢丸相關詞彙")

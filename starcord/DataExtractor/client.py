@@ -66,10 +66,25 @@ class PointClient(MySQLDatabase):
 
 class PollClient(MySQLDatabase):
     """投票系統"""
-    def create_poll(self, title:str, options:list, creator_id:int, guild_id:int, alternate_account_can_vote=True,show_name=False,check_results_in_advance=True,results_only_initiator=False):
+    def create_poll(self, title:str, options:list, creator_id:int, guild_id:int, alternate_account_can_vote=True,show_name=False,check_results_in_advance=True,results_only_initiator=False,only_role_list:list=[],role_magnification_dict:dict={}):
         poll_id = self.add_poll(title,creator_id,datetime.now(),None,guild_id,alternate_account_can_vote,show_name,check_results_in_advance,results_only_initiator)
         self.add_poll_option(poll_id,options)
-        
+
+        poll_role_dict = {}
+        for roleid in only_role_list:
+            poll_role_dict[roleid] = [1,1]
+            
+        for roleid in role_magnification_dict:
+            if roleid in poll_role_dict:
+                poll_role_dict[roleid][1] = role_magnification_dict[roleid]
+            else:
+                poll_role_dict[roleid] = [2,role_magnification_dict[roleid]]
+
+        for roleid in poll_role_dict:
+            role_type = poll_role_dict[roleid][0]
+            role_magnification = poll_role_dict[roleid][1]
+            self.add_poll_role(poll_id,roleid,role_type,role_magnification)
+
         view = PollView(poll_id,self)
         return view
 
