@@ -379,8 +379,8 @@ class MySQLCurrencySystem(MySQLBaseModel):
         self.cursor.execute(f"INSERT INTO `user_point` SET discord_id = %s, scoin = %s,rcoin = %s ON DUPLICATE KEY UPDATE scoin = scoin + %s, rcoin = rcoin + %s",(discord_id,scoin,Rcoin,scoin,Rcoin))
         self.connection.commit()
     
-    def get_scoin_shop_item(self,item_id:int):
-        self.cursor.execute(f"SELECT * FROM `stardb_idbase`.`scoin_shop` WHERE `item_id` = {item_id};")
+    def get_scoin_shop_item(self,item_uid:int):
+        self.cursor.execute(f"SELECT * FROM `stardb_idbase`.`scoin_shop` WHERE `item_uid` = {item_uid};")
         record = self.cursor.fetchall()
         if record:
             return ShopItem(record[0])
@@ -512,52 +512,43 @@ class MySQLRPGSystem(MySQLBaseModel):
         records = self.get_userdata(discord_id,"rpg_activities")
         return records or {}
 
-    def get_bag(self,discord_id:int,item_id:int=None,with_name=False):
+    def get_bag(self,discord_id:int,item_uid:int=None,with_name=False):
         self.cursor.execute(f"USE `stardb_user`;")
         if with_name:
-            self.cursor.execute(f"SELECT `rpg_user_bag`.item_id,item_name,amount FROM `stardb_user`.`rpg_user_bag` LEFT JOIN `stardb_idbase`.`rpg_item` ON `rpg_user_bag`.item_id = `rpg_item`.item_id WHERE discord_id = {discord_id};")
-        elif item_id:
-            self.cursor.execute(f"SELECT * FROM `rpg_user_bag` WHERE discord_id = {discord_id} AND item_id = {item_id};")
+            self.cursor.execute(f"SELECT `rpg_user_bag`.item_uid,item_name,amount FROM `stardb_user`.`rpg_user_bag` LEFT JOIN `stardb_idbase`.`rpg_item` ON `rpg_user_bag`.item_uid = `rpg_item`.item_uid WHERE discord_id = {discord_id};")
+        elif item_uid:
+            self.cursor.execute(f"SELECT * FROM `rpg_user_bag` WHERE discord_id = {discord_id} AND item_uid = {item_uid};")
         else:
-            self.cursor.execute(f"SELECT item_id,amount FROM `rpg_user_bag` WHERE discord_id = {discord_id};")
+            self.cursor.execute(f"SELECT item_uid,amount FROM `rpg_user_bag` WHERE discord_id = {discord_id};")
         records = self.cursor.fetchall()
         return records or []
     
     def get_bag_desplay(self,discord_id:int):
-        # data = self.get_bag(str(discord_id))
-        # self.cursor.execute(f"USE `stardb_idbase`;")
-        # bag_list = []
-        # for item in data:
-        #     self.cursor.execute(f"SELECT name FROM `rpg_item` WHERE item_id = {item['item_id']};")
-        #     records = self.cursor.fetchone()
-        #     bag_list.append((records['name'],item['amount']))
-
-        # return bag_list
-        self.cursor.execute(f"SELECT rpg_item.item_id,item_name,amount FROM `stardb_user`.`rpg_user_bag` JOIN `stardb_idbase`.`rpg_item` ON rpg_user_bag.item_id = rpg_item.item_id WHERE discord_id = {discord_id};")
+        self.cursor.execute(f"SELECT * FROM `stardb_user`.`rpg_user_bag` LEFT JOIN `stardb_idbase`.`rpg_item` ON `rpg_user_bag`.item_uid = `rpg_item`.item_uid WHERE discord_id = {discord_id};")
         #self.cursor.execute(f"SELECT rpg_item.item_id,name,amount FROM `database`.`rpg_user_bag`,`stardb_idbase`.`rpg_item` WHERE discord_id = {discord_id};")
         records = self.cursor.fetchall()
         return records
 
-    def getif_bag(self,discord_id:int,item_id:int,amount:int):
-        self.cursor.execute(f"SELECT * FROM `stardb_user`.`rpg_user_bag` WHERE discord_id = {discord_id} AND item_id = {item_id} AND amount >= {amount};")
+    def getif_bag(self,discord_id:int,item_uid:int,amount:int):
+        self.cursor.execute(f"SELECT * FROM `stardb_user`.`rpg_user_bag` WHERE discord_id = {discord_id} AND item_uid = {item_uid} AND amount >= {amount};")
         records = self.cursor.fetchall()
         if records:
             return records
 
-    def update_bag(self,discord_id:int,item_id:int,amount:int):
-        self.cursor.execute(f"INSERT INTO `stardb_user`.`rpg_user_bag` SET discord_id = {discord_id}, item_id = {item_id}, amount = {amount} ON DUPLICATE KEY UPDATE amount = amount + {amount};")
+    def update_bag(self,discord_id:int,item_uid:int,amount:int):
+        self.cursor.execute(f"INSERT INTO `stardb_user`.`rpg_user_bag` SET discord_id = {discord_id}, item_uid = {item_uid}, amount = {amount} ON DUPLICATE KEY UPDATE amount = amount + {amount};")
         self.connection.commit()
 
-    def remove_bag(self,discord_id:int,item_id:int,amount:int):
-        r = self.get_bag(discord_id,item_id)
+    def remove_bag(self,discord_id:int,item_uid:int,amount:int):
+        r = self.get_bag(discord_id,item_uid)
         if r[0]['amount'] < amount:
             raise ValueError('此物品數量不足')
         
         self.cursor.execute(f"USE `stardb_user`;")
         if r[0]['amount'] == amount:
-            self.cursor.execute(f"DELETE FROM `rpg_user_bag` WHERE `discord_id` = %s AND `item_id` = %s;",(discord_id,item_id))
+            self.cursor.execute(f"DELETE FROM `rpg_user_bag` WHERE `discord_id` = %s AND `item_uid` = %s;",(discord_id,item_uid))
         else:
-            self.cursor.execute(f'UPDATE `rpg_user_bag` SET amount = amount - {amount} WHERE `discord_id` = {discord_id} AND `item_id` = {item_id}')
+            self.cursor.execute(f'UPDATE `rpg_user_bag` SET amount = amount - {amount} WHERE `discord_id` = {discord_id} AND `item_uid` = {item_uid}')
         self.connection.commit()
 
     def get_work(self,discord_id:int):
@@ -580,12 +571,12 @@ class MySQLRPGSystem(MySQLBaseModel):
 
     def get_rpg_shop_list(self):
         self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f"SELECT * FROM `rpg_shop` LEFT JOIN `stardb_idbase`.`rpg_item` ON `rpg_shop`.item_id = `rpg_item`.item_id;")
+        self.cursor.execute(f"SELECT * FROM `rpg_shop` LEFT JOIN `stardb_idbase`.`rpg_item` ON `rpg_shop`.item_uid = `rpg_item`.item_uid;")
         records = self.cursor.fetchall()
         return records
     
     def get_rpg_shop_item(self,shop_item_id:int):
-        self.cursor.execute(f"SELECT * FROM `database`.`rpg_shop` LEFT JOIN `stardb_idbase`.`rpg_item` ON `rpg_shop`.item_id = `rpg_item`.item_id WHERE `shop_item_id` = {shop_item_id};")
+        self.cursor.execute(f"SELECT * FROM `database`.`rpg_shop` LEFT JOIN `stardb_idbase`.`rpg_item` ON `rpg_shop`.item_uid = `rpg_item`.item_uid WHERE `shop_item_id` = {shop_item_id};")
         record = self.cursor.fetchall()
         if record:
             return ShopItem(record[0])
@@ -601,14 +592,14 @@ class MySQLRPGSystem(MySQLBaseModel):
         self.cursor.execute(f"UPDATE `database`.`rpg_shop` SET `item_price` =  item_inital_price * pow(0.97,item_inventory - item_inital_inventory);")
         self.connection.commit()
 
-    def get_rpgitem(self,item_id):
-        self.cursor.execute(f"SELECT * FROM `stardb_idbase`.`rpg_item` WHERE `item_id` = {item_id};")
+    def get_rpgitem(self,item_uid):
+        self.cursor.execute(f"SELECT * FROM `stardb_idbase`.`rpg_item` WHERE `item_uid` = {item_uid};")
         record = self.cursor.fetchall()
         if record:
             return RPGItem(record[0])
         
     def get_rpgplayer_equipment(self,discord_id:int):
-        self.cursor.execute(f"SELECT * FROM `stardb_user`.`rpg_player_equipment` LEFT JOIN `database`.`rpg_equipment` ON `rpg_player_equipment`.equipment_id = `rpg_equipment`.equipment_id LEFT JOIN `stardb_idbase`.`rpg_item` ON `rpg_equipment`.item_id = `rpg_item`.item_id WHERE `discord_id` = {discord_id};")
+        self.cursor.execute(f"SELECT * FROM `stardb_user`.`rpg_player_equipment` LEFT JOIN `database`.`rpg_equipment` ON `rpg_player_equipment`.equipment_id = `rpg_equipment`.equipment_id LEFT JOIN `stardb_idbase`.`rpg_item` ON `rpg_equipment`.item_id = `rpg_item`.item_id WHERE `discord_id` = {discord_id} AND item_category_id = {ItemCategory.equipment.value};")
         record = self.cursor.fetchall() or []
         return RPGPlayerEquipment(record)
         

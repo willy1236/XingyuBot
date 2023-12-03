@@ -1,7 +1,7 @@
 import discord
 from typing import TYPE_CHECKING
 from .BaseModel import ListObject
-from starcord.types import ItemType,ShopItemMode,EquipmentSolt
+from starcord.types import ItemCategory,ShopItemMode,EquipmentSolt
 from starcord.utilities.utility import BotEmbed
 
 class Monster:
@@ -22,29 +22,30 @@ class Monster:
 
 class RPGItem:
     if TYPE_CHECKING:
-        item_id:int
-        name:str
-        amount:int
-        type:ItemType
+        item_id: int
+        category: ItemCategory
+        name: str
+        item_uid: str
+        amount: int
 
     def __init__(self,data):
         self.item_id = data.get('item_id')
         self.name = data.get('item_name')
         self.amount = data.get('amount')
-        self.type = ItemType(data.get('item_type') or 1)
+        self.category = ItemCategory(data.get('item_type') or 1)
+        self.item_uid = data.get('item_uid')
 
-class ItemBag(ListObject):
+class RPGPlayerItemBag(ListObject):
     def __init__(self,data,sqldb):
         super().__init__()
         self.sqldb = sqldb
         for i in data:
             self.append(RPGItem(i))
 
-class ShopItem():
+class ShopItem(RPGItem):
     def __init__(self,data:dict):
-        self.item_id = data.get('item_id')
+        super().__init__(data)
         self.shop_item_id = data.get('shop_item_id')
-        self.name = data.get('item_name')
         self.price = data.get('item_price')
         self.mode = ShopItemMode(data.get('item_mode'))
 

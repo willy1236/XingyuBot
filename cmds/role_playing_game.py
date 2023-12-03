@@ -4,9 +4,10 @@ from core.classes import Cog_Extension
 from discord.ext import commands
 from discord.commands import SlashCommandGroup
 from starcord import BotEmbed,sclient,ChoiceList
+from starcord.types.rpg import ItemCategory
 from starcord.ui_element.RPGview import RPGAdvanceView
-from starcord.models import GameInfoPage,RPGItem
-from starcord.types import Coins,ItemType,ShopItemMode
+from starcord.models import GameInfoPage,RPGItem,ShopItem
+from starcord.types import Coins,ItemCategory,ShopItemMode
 
 rpgcareer_option = ChoiceList.set("rpgcareer_option")
 
@@ -107,7 +108,7 @@ class role_playing_game(Cog_Extension):
             general_list = []
             for item_data in dbdata:
                 item = RPGItem(item_data)
-                if item.type == ItemType.general:
+                if item.category == ItemCategory.general:
                     general_list.append(item)
             
             text = "\n".join([f"{item.name} x{item.amount}" for item in general_list])
@@ -119,9 +120,14 @@ class role_playing_game(Cog_Extension):
     @rpgshop.command(description='查看RPG商店（開發中）')
     async def list(self,ctx):
         dbdata = sclient.get_rpg_shop_list()
-        embed = BotEmbed.general(name="RPG商城")
+        embed = BotEmbed.rpg(name="RPG商城")
         for i in dbdata:
-            embed.add_field(name=f"[{i['shop_item_id']}] {i['item_name']}",value=f"${i['item_price']}")
+            item = ShopItem(i)
+            if item.mode == ShopItemMode.buy:
+                mode = "購買"
+            else:
+                mode = "售出"
+            embed.add_field(name=f"[{item.shop_item_id}] {item.name}({mode})",value=f"${item.price}")
         await ctx.respond(embed=embed)
 
     @rpgshop.command(description='售出物品給RPG商店（開發中）')
