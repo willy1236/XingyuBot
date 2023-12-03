@@ -4,6 +4,7 @@ from core.classes import Cog_Extension
 from discord.ext import commands
 from discord.commands import SlashCommandGroup
 from starcord import BotEmbed,sclient,ChoiceList
+from starcord.FileDatabase import Jsondb
 from starcord.types.rpg import ItemCategory
 from starcord.ui_element.RPGview import RPGAdvanceView
 from starcord.models import GameInfoPage,RPGItem,ShopItem
@@ -105,14 +106,18 @@ class role_playing_game(Cog_Extension):
         dbdata = sclient.get_bag_desplay(user_dc.id)
         embed = BotEmbed.rpg(f'{user_dc.name}的包包')
         if dbdata:
-            general_list = []
+            dict = {}
+            for i in Jsondb.jdict.get("rpgitem_category"):
+                dict[i] = []
+            
             for item_data in dbdata:
                 item = RPGItem(item_data)
-                if item.category == ItemCategory.general:
-                    general_list.append(item)
+                dict[str(item.category)].append(item)
             
-            text = "\n".join([f"{item.name} x{item.amount}" for item in general_list])
-            embed.add_field(name='一般物品',value=text)
+            for i in dict:
+                if dict[i]:
+                    text = "\n".join([f"{item.name} x{item.amount}" for item in dict[i]])
+                    embed.add_field(name=Jsondb.get_jdict("rpgitem_category",i),value=text)
         else:
             embed.description = '背包空無一物'
         await ctx.respond(embed=embed)
