@@ -18,9 +18,8 @@ USER_SCOPE = [AuthScope.CHAT_READ, AuthScope.CHAT_EDIT,AuthScope.BITS_READ,AuthS
 #TARGET_CHANNEL = ["helper_chatbot","sakagawa_0309"]
 TARGET_CHANNEL = "sakagawa_0309"
 
-async def callback_whisper(uuid: UUID, data: dict) -> None:
-    print('got callback for UUID ' + str(uuid))
-    print(data)
+async def callback_channel_points(*uuid: UUID, **data: dict) -> None:
+    print("callback_channel_points:",uuid,data)
 
 async def on_follow(data: ChannelFollowEvent):
     # our event happend, lets do things with the data we got!
@@ -104,7 +103,7 @@ async def run():
     # starting up PubSub
     pubsub = PubSub(twitch)
     # uuid1 = await pubsub.listen_bits_v1(user.id, callback_whisper)
-    await pubsub.listen_channel_points(user.id, callback_whisper)
+    uuid2 = await pubsub.listen_channel_points(user.id, callback_channel_points)
     pubsub.start()
     # you can either start listening before or after you started pubsub.
     

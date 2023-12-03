@@ -1,5 +1,6 @@
 import random,time,datetime,discord
 from typing import TYPE_CHECKING
+from .BaseModel import ListObject
 from starcord.utilities.utility import BotEmbed,ChoiceList
 from starcord.types import DBGame,Coins
 from starcord.FileDatabase import Jsondb
@@ -51,9 +52,9 @@ class DiscordUser():
         self.user_dc = user_dc
         self.discord_id = data.get('discord_id')
         self.name = data.get('name')
-        self._scoin = data.get('scoin') or 0
-        self._point = data.get('point') or 0
-        self._rcoin = data.get('rcoin') or 0
+        self._scoin = data.get('scoin')
+        self._point = data.get('point')
+        self._rcoin = data.get('rcoin')
         self.guaranteed = data.get('guaranteed')
         self.max_sign_consecutive_days = data.get('max_sign_consecutive_days') or 0
         self.meatball_times = data.get('meatball_times')
@@ -112,8 +113,8 @@ class DiscordUser():
         :param force_refresh: 若是則刷新現有資料
         """
         if force_refresh or not hasattr(self,'scoin'):
-            self.scoin = self.sqldb.get_scoin(self.discord_id)
-        return self.scoin
+            self._scoin = self.sqldb.get_coin(self.discord_id)
+        return self._scoin
     
     def update_coins(self,mod,coin_type:Coins,amount:int):
         self.sqldb.update_coins(self.discord_id,mod,coin_type,amount)
@@ -149,7 +150,21 @@ class RPGUser(DiscordUser):
         self.atk = data.get('user_atk')
         self.hrt = data.get('hrt',60)
         self.career_id = data.get('career_id')
+        self.last_work = data.get('last_work')
 
+    @property
+    def itembag(self):
+        return ItemBag(self.sqldb.get_bag(self.discord_id),self.sqldb)
+
+    def desplay(self, bot: discord.Bot = None):
+        embed = BotEmbed.general(name=self.user_dc.name if self.user_dc else self.name, icon_url=self.user_dc.avatar.url if self.user_dc.avatar else discord.Embed.Empty)
+        embed.add_field(name='生命',value=self.hp)
+        embed.add_field(name='攻擊力',value=self.atk)
+        embed.add_field(name='命中率',value=f"{self.hrt}%")
+        embed.add_field(name='職業',value=self.career_id)
+        embed.add_field(name='上次工作',value=self.last_work)
+        embed.add_field(name='Rcoin',value=self.rcoin)
+        return embed
     
     # def advance(self) -> list[discord.Embed]:
     #     '''
@@ -301,3 +316,17 @@ class Monster:
     #     #結束儲存資料
     #     sqldb.update_userdata(player.id, 'rpg_user','user_hp',player.hp)
     #     return embed
+
+class Item:
+    def __init__(self,data):
+        self.item_id = data.get('item_id')
+        self.name = data.get('item_name')
+        self.amount = data.get('amount')
+
+class ItemBag(ListObject):
+    def __init__(self,data,sqldb):
+        super().__init__()
+        self.sqldb = sqldb
+        for i in data:
+            self.append(Item(i))
+        

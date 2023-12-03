@@ -1,5 +1,6 @@
 import discord,datetime
 from typing import TYPE_CHECKING
+from .BaseModel import ListObject
 from starcord.types import DBGame
 from starcord.utilities.utility import BotEmbed
 from starcord.FileDatabase import Jsondb
@@ -106,25 +107,25 @@ class WarningSheet:
     def remove(self):
         self.sqldb.remove_warning(self.warning_id)
 
-class WarningList():
+class WarningList(ListObject):
     def __init__(self,data:dict,discord_id:int,sqldb=None):
-        self.datalist = [WarningSheet(i,sqldb) for i in data]
+        super().__init__()
+        self.items = [WarningSheet(i,sqldb) for i in data]
         self.discord_id = discord_id
-
-    def __len__(self):
-        return len(self.datalist)
     
     def display(self,bot:discord.Bot):
         user = bot.get_user(self.discord_id)
-        embed = BotEmbed.general(f'{user.name} 的警告單列表（共{len(self.datalist)}筆）',user.display_avatar.url)
-        for i in self.datalist:
+        embed = BotEmbed.general(f'{user.name} 的警告單列表（共{len(self)}筆）',user.display_avatar.url)
+        for i in self.items:
             name, value = i.display_embed_field(bot)
             embed.add_field(name=name,value=value)
         return embed
     
 class ShopItem():
     def __init__(self,data:dict):
+        """item_mode: 1玩家賣出 2玩家買入"""
         self.item_id = data.get('item_id')
         self.shop_item_id = data.get('shop_item_id')
         self.name = data.get('item_name')
         self.price = data.get('item_price')
+        self.mode = data.get('item_mode')

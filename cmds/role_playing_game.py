@@ -3,7 +3,7 @@ from core.classes import Cog_Extension
 from discord.ext import commands
 from discord.commands import SlashCommandGroup
 from starcord import BotEmbed,sclient,ChoiceList
-from starcord.ui_element.RPGbutton import RPGbutton1,RPGbutton2
+from starcord.ui_element.RPGview import RPGAdvanceView,RPGbutton2
 from starcord.models import GameInfoPage
 from starcord.types import Coins
 
@@ -17,7 +17,7 @@ class role_playing_game(Cog_Extension):
     async def advance(self,ctx:discord.ApplicationContext):
         # await ctx.respond('敬請期待',ephemeral=False)
         # return
-        await ctx.respond(view=RPGbutton1(ctx.author.id))
+        await ctx.respond(view=RPGAdvanceView(ctx.author.id))
 
     @work.command(description='進行工作（開發中）')
     async def start(self,ctx:discord.ApplicationContext):
@@ -91,6 +91,12 @@ class role_playing_game(Cog_Extension):
         game_embed = game.desplay(user_dc) if game else GameInfoPage().desplay(user_dc)
         await ctx.respond(embeds=[user.desplay(self.bot), pet_embed, game_embed])
 
+    @commands.slash_command(description='查看RPG資訊')
+    async def rpgui(self,ctx:discord.ApplicationContext,user_dc:discord.Option(discord.Member,name='用戶',description='留空以查詢自己',default=None)):
+        user_dc = user_dc or ctx.author
+        user = sclient.get_rpguser(user_dc.id,user_dc=user_dc)
+        await ctx.respond(embeds=[user.desplay(self.bot)])
+
     @commands.slash_command(description='查看背包（開發中）')
     async def bag(self,ctx:discord.ApplicationContext,user_dc:discord.Option(discord.Member,name='用戶',description='留空以查詢自己',default=None)):
         user_dc = user_dc or ctx.author
@@ -115,10 +121,10 @@ class role_playing_game(Cog_Extension):
 
     @rpgshop.command(description='售出物品給RPG商店（開發中）')
     async def sell(self,ctx,
-                   item_id:discord.Option(int,name='商品id',description='要售出的商品'),
+                   shop_item_id:discord.Option(int,name='商品id',description='要售出的商品'),
                    amount:discord.Option(int,name='數量',description='要售出的數量',default=1,min_value=1)):
-        item = sclient.get_rpg_shop_item(item_id)
-        if not item:
+        item = sclient.get_rpg_shop_item(shop_item_id)
+        if not item  or item.mode != 1:
             await ctx.respond(f"{ctx.author.mention}：商店不買這個喔")
             return
         
@@ -131,19 +137,21 @@ class role_playing_game(Cog_Extension):
         else:
             await ctx.respond(f"{ctx.author.mention}：你的東西數量不夠喔")
 
-    # @rpgshop.command(description='購買RPG商店物品（開發中）')
-    # async def buy(self,ctx,item_id):
-    #     item = sclient.get_scoin_shop_item(item_id)
-    #     if not item:
-    #         await ctx.respond(f"{ctx.author.mention}：商店沒有賣這個喔")
-    #         return
+    @rpgshop.command(description='購買RPG商店物品（開發中）')
+    async def buy(self,ctx,
+                  shop_item_id:discord.Option(int,name='商品id',description='要購買的商品'),
+                  amount:discord.Option(int,name='數量',description='要售出的數量',default=1,min_value=1)):
+        item = sclient.get_rpg_shop_item(shop_item_id)
+        if not item or item.mode != 2:
+            await ctx.respond(f"{ctx.author.mention}：商店沒有賣這個喔")
+            return
         
-    #     buyer_id = sclient.getif_coin(ctx.author.id,item.price,Coins.RCOIN)
-    #     if buyer_id:
-    #         sclient.update_bag(ctx.author.id,item.item_id,1)
-    #         await ctx.respond(f"{ctx.author.mention}：已購買 {item.name} * 1")
-    #     else:
-    #         await ctx.respond(f"{ctx.author.mention}：Rcoin不足")
+        buyer_id = sclient.getif_coin(ctx.author.id,item.price * amount,Coins.RCOIN)
+        if buyer_id:
+            sclient.update_bag(ctx.author.id,item.item_id,amount)
+            await ctx.respond(f"{ctx.author.mention}：已購買 {item.name} * {amount}")
+        else:
+            await ctx.respond(f"{ctx.author.mention}：Rcoin不足")
 
 def setup(bot):
     bot.add_cog(role_playing_game(bot))
