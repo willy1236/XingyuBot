@@ -41,14 +41,12 @@ class RPGAdvanceView(discord.ui.View):
                     await interaction.edit_original_response(content="你已陣亡 請購買復活藥水復活")
                     return
 
-            if player.rcoin <= 0:
-                #await interaction.edit_original_response(content="你的Rcoin不足 至少需要1Rcoin才能冒險\n但因為目前為開發階段 那我就送你一些Rcoin吧")
-                await interaction.edit_original_response(content="你的Rcoin不足 至少需要5Rcoin才能冒險")
-                #sclient.update_coins(player.id,"add",Coins.RCOIN,100)
-                return
-                
-
-            sclient.update_coins(player.discord_id,"add",Coins.RCOIN,-5)
+            # if player.rcoin < 5:
+            #     #await interaction.edit_original_response(content="你的Rcoin不足 至少需要1Rcoin才能冒險\n但因為目前為開發階段 那我就送你一些Rcoin吧")
+            #     await interaction.edit_original_response(content="你的Rcoin不足 至少需要5Rcoin才能冒險")
+            #     #sclient.update_coins(player.id,"add",Coins.RCOIN,100)
+            #     return
+            # sclient.update_coins(player.discord_id,"add",Coins.RCOIN,-5)
 
         list = [embed]
         rd = random.randint(1,100)
