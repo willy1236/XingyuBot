@@ -103,7 +103,7 @@ class role_playing_game(Cog_Extension):
     async def bag(self,ctx:discord.ApplicationContext,user_dc:discord.Option(discord.Member,name='用戶',description='留空以查詢自己',default=None)):
         user_dc = user_dc or ctx.author
         dbdata = sclient.get_bag_desplay(user_dc.id)
-        embed = BotEmbed.simple(f'{user_dc.name}的包包')
+        embed = BotEmbed.rpg(f'{user_dc.name}的包包')
         if dbdata:
             general_list = []
             for item_data in dbdata:
@@ -120,7 +120,7 @@ class role_playing_game(Cog_Extension):
     @rpgshop.command(description='查看RPG商店（開發中）')
     async def list(self,ctx):
         dbdata = sclient.get_rpg_shop_list()
-        embed = BotEmbed.rpg(name="RPG商城")
+        embed = BotEmbed.rpg(title="RPG商城")
         for i in dbdata:
             item = ShopItem(i)
             if item.mode == ShopItemMode.buy:
