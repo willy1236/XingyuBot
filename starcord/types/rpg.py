@@ -7,7 +7,9 @@ class ShopItemMode(IntEnum):
 class ItemCategory(IntEnum):
     general = 1
     equipment = 2
-    
+    potion = 3
+    erroritem = 4
+
 class EquipmentSolt(IntEnum):
     head = 1
     body = 2

@@ -64,7 +64,7 @@ class system_economy(Cog_Extension):
         userid = ctx.author.id
         r = sclient.getif_coin(userid,2)
         if not r:
-            await ctx.respond('你的PT點不足喔 需要2點才能遊玩')
+            await ctx.respond('你的星幣不足喔 需要2元才能遊玩')
             return
         
         sclient.update_coins(userid,'add',Coins.SCOIN,-2)
