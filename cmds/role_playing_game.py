@@ -112,7 +112,7 @@ class role_playing_game(Cog_Extension):
             
             for item_data in dbdata:
                 item = RPGItem(item_data)
-                dict[str(item.category)].append(item)
+                dict[str(item.category.value)].append(item)
             
             for i in dict:
                 if dict[i]:

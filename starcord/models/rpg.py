@@ -32,7 +32,7 @@ class RPGItem:
         self.item_id = data.get('item_id')
         self.name = data.get('item_name')
         self.amount = data.get('amount')
-        self.category = ItemCategory(data.get('item_type') or 1)
+        self.category = ItemCategory(data.get('item_category_id') or 1)
         self.item_uid = data.get('item_uid')
 
 class RPGPlayerItemBag(ListObject):
