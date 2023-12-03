@@ -1,9 +1,9 @@
 import random,time,datetime,discord
 from typing import TYPE_CHECKING
-from .BaseModel import ListObject
 from starcord.utilities.utility import BotEmbed,ChoiceList
 from starcord.types import DBGame,Coins
 from starcord.FileDatabase import Jsondb
+from .rpg import *
 
 class Pet():
     if TYPE_CHECKING:
@@ -54,7 +54,7 @@ class DiscordUser():
         self.name = data.get('name')
         self._scoin = data.get('scoin')
         self._point = data.get('point')
-        self._rcoin = data.get('rcoin')
+        self._rcoin = data.get('rcoin') 
         self.guaranteed = data.get('guaranteed')
         self.max_sign_consecutive_days = data.get('max_sign_consecutive_days') or 0
         self.meatball_times = data.get('meatball_times')
@@ -75,7 +75,7 @@ class DiscordUser():
     @property
     def rcoin(self):
         if not self._rcoin:
-            self._rcoin = self.sqldb.get_coin(self.discord_id,Coins.POINT) or 0
+            self._rcoin = self.sqldb.get_coin(self.discord_id,Coins.RCOIN) or 0
         return self._rcoin
     
     def desplay(self,bot:discord.Bot=None):
@@ -135,8 +135,12 @@ class RPGUser(DiscordUser):
         atk: int
         hrt: int
         career_id: int
-    
-    def __init__(self,data,*args,**kwargs):
+        last_work: datetime.datetime
+        workcareer: RPGWorkCareer
+        itembag: ItemBag
+        equipment: RPGPlayerEquipment
+
+    def __init__(self,data:dict,*args,**kwargs):
         """
         hp:生命 atk:攻擊 def:防禦\n
         DEX=Dexterity敏捷\n
@@ -151,19 +155,24 @@ class RPGUser(DiscordUser):
         self.hrt = data.get('hrt',60)
         self.career_id = data.get('career_id')
         self.last_work = data.get('last_work')
+        self.workcareer = RPGWorkCareer(data)
 
     @property
     def itembag(self):
         return ItemBag(self.sqldb.get_bag(self.discord_id),self.sqldb)
 
-    def desplay(self, bot: discord.Bot = None):
+    @property
+    def equipment(self):
+        return self.sqldb.get_rpgplayer_equipment(self.discord_id)
+
+    def desplay(self):
         embed = BotEmbed.general(name=self.user_dc.name if self.user_dc else self.name, icon_url=self.user_dc.avatar.url if self.user_dc.avatar else discord.Embed.Empty)
         embed.add_field(name='生命',value=self.hp)
         embed.add_field(name='攻擊力',value=self.atk)
         embed.add_field(name='命中率',value=f"{self.hrt}%")
-        embed.add_field(name='職業',value=self.career_id)
-        embed.add_field(name='上次工作',value=self.last_work)
         embed.add_field(name='Rcoin',value=self.rcoin)
+        embed.add_field(name='職業',value=self.workcareer.name)
+        embed.add_field(name='上次工作',value=self.last_work)
         return embed
     
     # def advance(self) -> list[discord.Embed]:
@@ -203,32 +212,6 @@ class RPGUser(DiscordUser):
     #         sqldb.update_userdata(self.id,'rpg_activities','advance_times',times)
 
     #     return list
-    
-    # def work(self) -> str:
-    #     '''
-    #     進行工作
-        
-    #     Return: str（以文字輸出工作結果）
-    #     '''
-    #     if not self.career_id:
-    #         return '你還沒有選擇職業'
-        
-    #     rd = random.randint(1,100)
-    #     if self.career_id == 1 and rd >= 50:
-    #         sqldb.update_bag(self.id,1,1)
-    #         text = '工作完成，獲得：小麥x1'
-    #     elif self.career_id == 2 and rd >= 50:
-    #         sqldb.update_bag(self.id,2,1)
-    #         text = '工作完成，獲得：鐵礦x1'
-    #     #elif self.career_id == 3 and rd >= 50:
-    #     #    return '工作完成，獲得：麵包x1'
-    #     #elif self.career_id == 4 and rd >= 50:
-    #     #    return '工作完成，獲得：麵包x1'
-    #     else:
-    #         text = '工作完成，但沒有獲得東西'
-    #     time.sleep(0.5)
-    #     sqldb.update_userdata(self.id,"rpg_activities","work_date",datetime.date.today().isoformat())
-    #     return text
         
 class PartialUser(DiscordUser):
     """只含有特定資料的用戶"""
@@ -241,92 +224,3 @@ class GameUser(DiscordUser):
     
     def get_gamedata(self,game:str):
         pass
-
-class Monster:
-    if TYPE_CHECKING:
-        id: str
-        name: str
-        hp: int
-        atk: int
-        hrt: int
-
-    def __init__(self,data):
-        self.id = data.get('monster_id')
-        self.name = data.get('monster_name')
-        self.hp = data.get('monster_hp')
-        self.atk = data.get('monster_atk')
-        self.hrt = data.get('hrt')
-
-
-    # def battle(self, player:RPGUser):
-    #     '''玩家與怪物戰鬥\n
-    #     player:要戰鬥的玩家'''
-    #     player_hp_reduce = 0
-    #     battle_round = 0
-    #     embed = BotEmbed.simple(f"遭遇戰鬥：{self.name}")
-    #     #戰鬥到一方倒下
-    #     while self.hp > 0 and player.hp > 0:
-    #         text = ""
-    #         battle_round += 1
-    #         #造成的傷害總和
-    #         damage_player = 0
-    #         damage_monster = 0
-            
-    #         #玩家先攻
-    #         if random.randint(1,100) < player.hrt:
-    #             damage_player = player.atk
-    #             self.hp -= damage_player
-    #             text += "玩家：普通攻擊 "
-    #             #怪物被擊倒
-    #             if self.hp <= 0:
-    #                 text += f"\n擊倒怪物 扣除{player_hp_reduce}滴後你還剩下 {player.hp} HP"
-    #                 # if "loot" in self.data:
-    #                 #     loot = random.choices(self.data["loot"][0],weights=self.data["loot"][1],k=self.data["loot"][2])
-    #                 #     player.add_bag(loot)
-    #                 #     text += f"\n獲得道具！"
-    #                 sqldb.update_rcoin(player.id, 'add',1)
-    #                 text += f"\nRcoin+1"
-    #         else:
-    #             text += "玩家：未命中 "
-            
-    #         #怪物後攻
-    #         if self.hp > 0:
-    #             if random.randint(1,100) < self.hrt:
-    #                 damage_monster = self.atk
-    #                 player.hp -= damage_monster
-    #                 player_hp_reduce += damage_monster
-    #                 text += "怪物：普通攻擊"
-    #             else:
-    #                 text += "怪物：未命中"
-
-    #             if damage_player == 0:
-    #                 damage_player = "未命中"
-    #             if damage_monster == 0:
-    #                 damage_monster = "未命中"
-    #             text += f"\n剩餘HP： 怪物{self.hp}(-{damage_player}) 玩家{player.hp}(-{damage_monster})\n"
-                
-    #             #玩家被擊倒
-    #             if player.hp <= 0:
-    #                 text += "被怪物擊倒\n"
-    #                 player.hp = 10
-    #                 text += '你在冒險中死掉了 但因為目前仍在開發階段 你可以直接滿血復活\n'
-            
-    #         embed.add_field(name=f"\n第{battle_round}回合\n",value=text,inline=False)
-            
-    #     #結束儲存資料
-    #     sqldb.update_userdata(player.id, 'rpg_user','user_hp',player.hp)
-    #     return embed
-
-class Item:
-    def __init__(self,data):
-        self.item_id = data.get('item_id')
-        self.name = data.get('item_name')
-        self.amount = data.get('amount')
-
-class ItemBag(ListObject):
-    def __init__(self,data,sqldb):
-        super().__init__()
-        self.sqldb = sqldb
-        for i in data:
-            self.append(Item(i))
-        

@@ -65,6 +65,12 @@ class RPGAdvanceView(discord.ui.View):
         else:
             if rd > 0 and rd <= 50:
                 embed.description += "沒事發生"
+                if random.randint(1,10) <= 3:
+                    hp_add = random.randint(0,3)
+                    embed.description += f"，並且稍作休息後繼續冒險\n生命+{hp_add}"
+                    player.hp += hp_add
+                    sclient.set_rpguser_data(player.discord_id,'user_hp',player.hp)
+
             elif rd > 50 and rd <= 60:
                 embed.description += "尋獲物品"
                 item = sclient.get_rpgitem(random.randint(1,3))
@@ -141,8 +147,8 @@ class RPGBattleView(discord.ui.View):
                     #     loot = random.choices(self.data["loot"][0],weights=self.data["loot"][1],k=self.data["loot"][2])
                     #     player.add_bag(loot)
                     #     text += f"\n獲得道具！"
-                    sclient.update_coins(player.discord_id,"add",Coins.RCOIN,1)
-                    text += f"\nRcoin+1"
+                    sclient.update_coins(player.discord_id,"add",Coins.RCOIN,monster.drop_money)
+                    text += f"\nRcoin +{monster.drop_money}"
             else:
                 text += "玩家：未命中 "
             

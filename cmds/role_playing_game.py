@@ -1,11 +1,12 @@
 import discord,asyncio,random,datetime
+
 from core.classes import Cog_Extension
 from discord.ext import commands
 from discord.commands import SlashCommandGroup
 from starcord import BotEmbed,sclient,ChoiceList
-from starcord.ui_element.RPGview import RPGAdvanceView,RPGbutton2
-from starcord.models import GameInfoPage
-from starcord.types import Coins
+from starcord.ui_element.RPGview import RPGAdvanceView
+from starcord.models import GameInfoPage,RPGItem
+from starcord.types import Coins,ItemType,ShopItemMode
 
 rpgcareer_option = ChoiceList.set("rpgcareer_option")
 
@@ -94,21 +95,25 @@ class role_playing_game(Cog_Extension):
     @commands.slash_command(description='查看RPG資訊')
     async def rpgui(self,ctx:discord.ApplicationContext,user_dc:discord.Option(discord.Member,name='用戶',description='留空以查詢自己',default=None)):
         user_dc = user_dc or ctx.author
-        user = sclient.get_rpguser(user_dc.id,user_dc=user_dc)
-        await ctx.respond(embeds=[user.desplay(self.bot)])
+        user = sclient.get_rpguser(user_dc.id,full=True,user_dc=user_dc)
+        await ctx.respond(embeds=[user.desplay(),user.equipment.desplay(user_dc)])
 
     @commands.slash_command(description='查看背包（開發中）')
     async def bag(self,ctx:discord.ApplicationContext,user_dc:discord.Option(discord.Member,name='用戶',description='留空以查詢自己',default=None)):
         user_dc = user_dc or ctx.author
-        data = sclient.get_bag_desplay(user_dc.id)
+        dbdata = sclient.get_bag_desplay(user_dc.id)
         embed = BotEmbed.simple(f'{user_dc.name}的包包')
-        if data:
-            text = ""
-            for item in data:
-                text += f"{item['item_name']} x{item['amount']}\n"
+        if dbdata:
+            general_list = []
+            for item_data in dbdata:
+                item = RPGItem(item_data)
+                if item.type == ItemType.general:
+                    general_list.append(item)
+            
+            text = "\n".join([f"{item.name} x{item.amount}" for item in general_list])
             embed.add_field(name='一般物品',value=text)
         else:
-            embed.add_field(name='一般物品',value='背包空無一物')
+            embed.description = '背包空無一物'
         await ctx.respond(embed=embed)
 
     @rpgshop.command(description='查看RPG商店（開發中）')
@@ -124,7 +129,7 @@ class role_playing_game(Cog_Extension):
                    shop_item_id:discord.Option(int,name='商品id',description='要售出的商品'),
                    amount:discord.Option(int,name='數量',description='要售出的數量',default=1,min_value=1)):
         item = sclient.get_rpg_shop_item(shop_item_id)
-        if not item  or item.mode != 1:
+        if not item or item.mode != ShopItemMode.sell:
             await ctx.respond(f"{ctx.author.mention}：商店不買這個喔")
             return
         
@@ -142,7 +147,7 @@ class role_playing_game(Cog_Extension):
                   shop_item_id:discord.Option(int,name='商品id',description='要購買的商品'),
                   amount:discord.Option(int,name='數量',description='要售出的數量',default=1,min_value=1)):
         item = sclient.get_rpg_shop_item(shop_item_id)
-        if not item or item.mode != 2:
+        if not item or item.mode != ShopItemMode.buy:
             await ctx.respond(f"{ctx.author.mention}：商店沒有賣這個喔")
             return
         

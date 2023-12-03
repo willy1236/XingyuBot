@@ -3,6 +3,7 @@ from mysql.connector.errors import Error as sqlerror
 from starcord.types import DBGame,Coins, Position
 from starcord.models.user import *
 from starcord.models.model import *
+from starcord.models.rpg import *
 
 def create_id():
     return 'SELECT idNumber FROM ( SELECT CONCAT("U-", LPAD(FLOOR(RAND()*1000000), 6, 0)) as idNumber) AS generated_ids WHERE NOT EXISTS ( SELECT 1 FROM stardb_user.user_data WHERE user_id = generated_ids.idNumber);'
@@ -475,11 +476,15 @@ class MySQLPetSystem(MySQLBaseModel):
         self.remove_userdata(discord_id,"user_pet")
 
 class MySQLRPGSystem(MySQLBaseModel):
-    def get_rpguser(self,discord_id:int,user_dc:discord.User=None):
+    def get_rpguser(self,discord_id:int,full=False,user_dc:discord.User=None):
         """取得RPG用戶"""
         self.cursor.execute(f"USE `stardb_user`;")
-        #self.cursor.execute(f'SELECT * FROM `rpg_user` LEFT JOIN `user_point`ON `rpg_user`.discord_id = `user_point`.discord_id WHERE rpg_user.discord_id = %s;',(discord_id,))
-        self.cursor.execute(f'SELECT * FROM `rpg_user` LEFT JOIN `user_point`ON `rpg_user`.discord_id = `user_point`.discord_id WHERE rpg_user.discord_id = %s;',(discord_id,))
+        if full:
+            #self.cursor.execute(f'SELECT * FROM `rpg_user` LEFT JOIN `user_point`ON `rpg_user`.discord_id = `user_point`.discord_id WHERE rpg_user.discord_id = %s;',(discord_id,))
+            self.cursor.execute(f'SELECT * FROM `rpg_user` LEFT JOIN `user_point` ON `rpg_user`.discord_id = `user_point`.discord_id LEFT JOIN `stardb_idbase`.`rpg_career` ON `rpg_user`.career_id = `rpg_career`.career_id WHERE rpg_user.discord_id = %s;',(discord_id,))
+        else:
+            self.cursor.execute(f'SELECT * FROM `rpg_user` LEFT JOIN `user_point` ON `rpg_user`.discord_id = `user_point`.discord_id WHERE rpg_user.discord_id = %s;',(discord_id,))
+            
         records = self.cursor.fetchall()
         if records:
             return RPGUser(records[0],self,user_dc=user_dc)
@@ -600,7 +605,14 @@ class MySQLRPGSystem(MySQLBaseModel):
         self.cursor.execute(f"SELECT * FROM `stardb_idbase`.`rpg_item` WHERE `item_id` = {item_id};")
         record = self.cursor.fetchall()
         if record:
-            return Item(record[0])
+            return RPGItem(record[0])
+        
+    def get_rpgplayer_equipment(self,discord_id:int):
+        self.cursor.execute(f"SELECT * FROM `stardb_user`.`rpg_player_equipment` LEFT JOIN `database`.`rpg_equipment` ON `rpg_player_equipment`.equipment_id = `rpg_equipment`.equipment_id LEFT JOIN `stardb_idbase`.`rpg_item` ON `rpg_equipment`.item_id = `rpg_item`.item_id WHERE `discord_id` = {discord_id};")
+        record = self.cursor.fetchall()
+        if record:
+            print(record)
+            return RPGPlayerEquipment(record)
         
 
 class MySQLBusyTimeSystem(MySQLBaseModel):

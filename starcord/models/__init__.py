@@ -2,3 +2,4 @@
 from .user import *
 from .model import *
 from .game import *
+from .rpg import *
