@@ -609,10 +609,8 @@ class MySQLRPGSystem(MySQLBaseModel):
         
     def get_rpgplayer_equipment(self,discord_id:int):
         self.cursor.execute(f"SELECT * FROM `stardb_user`.`rpg_player_equipment` LEFT JOIN `database`.`rpg_equipment` ON `rpg_player_equipment`.equipment_id = `rpg_equipment`.equipment_id LEFT JOIN `stardb_idbase`.`rpg_item` ON `rpg_equipment`.item_id = `rpg_item`.item_id WHERE `discord_id` = {discord_id};")
-        record = self.cursor.fetchall()
-        if record:
-            print(record)
-            return RPGPlayerEquipment(record)
+        record = self.cursor.fetchall() or []
+        return RPGPlayerEquipment(record)
         
 
 class MySQLBusyTimeSystem(MySQLBaseModel):
