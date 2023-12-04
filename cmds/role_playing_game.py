@@ -42,15 +42,15 @@ class role_playing_game(Cog_Extension):
             embed = BotEmbed.rpg("工作結果",f"你已經工作過了，請等到 <t:{next_work}> 再繼續工作")
         else:
             next_work = int((now + datetime.timedelta(hours=11)).timestamp())
-            reward_item_id = dbdata.get("reward_item_id")
+            reward_item_uid = dbdata.get("reward_item_uid")
             reward_item_name = dbdata.get("item_name")
             reward_item_min = dbdata.get("reward_item_min",0)
             reward_item_max = dbdata.get("reward_item_max",0)
             
-            if reward_item_id:
+            if reward_item_uid:
                 reward_item_get = random.randint(reward_item_min,reward_item_max)
                 hard_woring_rate = (reward_item_get - reward_item_min) / (reward_item_max - reward_item_min) if reward_item_max != 0 else 0
-                sclient.update_bag(rpguser.discord_id,reward_item_id,reward_item_get)
+                sclient.update_bag(rpguser.discord_id,reward_item_uid,reward_item_get)
                 
                 if hard_woring_rate == 0:
                     work_text = "你工作時出了點狀況"
@@ -144,9 +144,9 @@ class role_playing_game(Cog_Extension):
             await ctx.respond(f"{ctx.author.mention}：商店不買這個喔")
             return
         
-        seller_id = sclient.getif_bag(ctx.author.id,item.item_id,amount)
+        seller_id = sclient.getif_bag(ctx.author.id,item.item_uid,amount)
         if seller_id:
-            sclient.update_bag(ctx.author.id,item.item_id,amount*-1)
+            sclient.update_bag(ctx.author.id,item.item_uid,amount*-1)
             sclient.update_coins(ctx.author.id,"add",Coins.RCOIN,item.price * amount)
             sclient.update_rpg_shop_inventory(item.shop_item_id,amount)
             await ctx.respond(f"{ctx.author.mention}：已售出 {item.name} * {amount}")
@@ -164,7 +164,7 @@ class role_playing_game(Cog_Extension):
         
         buyer_id = sclient.getif_coin(ctx.author.id,item.price * amount,Coins.RCOIN)
         if buyer_id:
-            sclient.update_bag(ctx.author.id,item.item_id,amount)
+            sclient.update_bag(ctx.author.id,item.item_uid,amount)
             await ctx.respond(f"{ctx.author.mention}：已購買 {item.name} * {amount}")
         else:
             await ctx.respond(f"{ctx.author.mention}：Rcoin不足")

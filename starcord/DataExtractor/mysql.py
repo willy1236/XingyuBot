@@ -554,7 +554,7 @@ class MySQLRPGSystem(MySQLBaseModel):
     def get_work(self,discord_id:int):
         self.cursor.execute(f"USE `stardb_user`;")
         #self.cursor.execute(f"SELECT * FROM `rpg_user` LEFT JOIN `stardb_idbase`.`rpg_career` ON `rpg_user`.career_id = `rpg_career`.career_id LEFT JOIN `stardb_idbase`.`rpg_item` ON `rpg_career`.reward_item_id = `rpg_item`.item_id WHERE `discord_id` = {discord_id} AND `last_work` > NOW() - INTERVAL 12 HOUR;")
-        self.cursor.execute(f"SELECT * FROM `rpg_user` LEFT JOIN `stardb_idbase`.`rpg_career` ON `rpg_user`.career_id = `rpg_career`.career_id LEFT JOIN `stardb_idbase`.`rpg_item` ON `rpg_career`.reward_item_id = `rpg_item`.item_id WHERE `discord_id` = {discord_id};")
+        self.cursor.execute(f"SELECT * FROM `rpg_user` LEFT JOIN `stardb_idbase`.`rpg_career` ON `rpg_user`.career_id = `rpg_career`.career_id LEFT JOIN `stardb_idbase`.`rpg_item` ON `rpg_career`.reward_item_uid = `rpg_item`.item_uid WHERE `discord_id` = {discord_id};")
         records = self.cursor.fetchall()
         if records:
             return records[0]
