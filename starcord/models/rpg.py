@@ -65,7 +65,10 @@ class RPGEquipment(RPGItem):
         self.category = ItemCategory.equipment
         self.name = data.get('equipment_name') or self.name
         self.customized_name = data.get('equipment_customized_name')
-        self.atk = data.get('equipment_atk') or data.get("equipment_initial_atk",0)
+        self.price = data.get('equipment_price')
+        self.atk = data.get('equipment_atk') or 0 + data.get("equipment_initial_atk") or 0
+        self.hrt = data.get('equipment_hrt') or 0 + data.get("equipment_initial_hrt") or 0
+        self.slot = EquipmentSolt(data.get('slot_id') or 0)
 
 class RPGPlayerEquipmentBag(ListObject):
     def __init__(self,data,sqldb):
@@ -73,25 +76,19 @@ class RPGPlayerEquipmentBag(ListObject):
         self.sqldb = sqldb
         for i in data:
             self.append(RPGEquipment(i))
-
-class WearingEquipment(RPGEquipment):
-    def __init__(self,data):
-        super().__init__(data)
-        self.slot = EquipmentSolt(data.get('slot_id'))
         
 class RPGPlayerWearingEquipment:
     if TYPE_CHECKING:
-        head:WearingEquipment
-        body:WearingEquipment
-        legging:WearingEquipment
-        foot:WearingEquipment
-        mainhand:WearingEquipment
-        seconhand:WearingEquipment
+        head:RPGEquipment
+        body:RPGEquipment
+        legging:RPGEquipment
+        foot:RPGEquipment
+        mainhand:RPGEquipment
+        seconhand:RPGEquipment
 
     def __init__(self,data):
         dict = {}
-        for i in data:
-            equip = WearingEquipment(i)
+        for equip in data:
             dict[str(equip.slot.value)] = equip
         
         self.head = dict.get('1')
@@ -103,12 +100,12 @@ class RPGPlayerWearingEquipment:
 
     def desplay(self,user_dc:discord.User=None):
         embed = BotEmbed.simple(f"{user_dc.name} 角色裝備" if user_dc else "角色裝備")
-        embed.add_field(name="主手",value=self.mainhand.name if self.mainhand else "無")
-        embed.add_field(name="副手",value=self.seconhand.name if self.seconhand else "無")
-        embed.add_field(name="頭部",value=self.head.name if self.head else "無")
-        embed.add_field(name="身體",value=self.body.name if self.body else "無")
-        embed.add_field(name="腿部",value=self.legging.name if self.legging else "無")
-        embed.add_field(name="鞋子",value=self.foot.name if self.foot else "無")
+        embed.add_field(name="主手",value=f"[{self.mainhand.equipment_uid}]{self.mainhand.name}" if self.mainhand else "無")
+        embed.add_field(name="副手",value=f"[{self.seconhand.equipment_uid}]{self.seconhand.name}" if self.seconhand else "無")
+        embed.add_field(name="頭部",value=f"[{self.head.equipment_uid}]{self.head.name}" if self.head else "無")
+        embed.add_field(name="身體",value=f"[{self.body.equipment_uid}]{self.body.name}" if self.body else "無")
+        embed.add_field(name="腿部",value=f"[{self.legging.equipment_uid}]{self.legging.name}" if self.legging else "無")
+        embed.add_field(name="鞋子",value=f"[{self.foot.equipment_uid}]{self.foot.name}" if self.foot else "無")
         return embed
     
 class MonsterEquipmentLoot(RPGEquipment):

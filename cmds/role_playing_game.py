@@ -6,16 +6,16 @@ from discord.commands import SlashCommandGroup
 from starcord import BotEmbed,sclient,ChoiceList
 from starcord.FileDatabase import Jsondb
 from starcord.models.user import RPGUser
-from starcord.types.rpg import ItemCategory
 from starcord.ui_element.RPGview import RPGAdvanceView
 from starcord.models import GameInfoPage,RPGItem,ShopItem,RPGEquipment
-from starcord.types import Coins,ItemCategory,ShopItemMode
+from starcord.types import Coins,ItemCategory,ShopItemMode,EquipmentSolt
 
 rpgcareer_option = ChoiceList.set("rpgcareer_option")
 
 class role_playing_game(Cog_Extension):
     work = SlashCommandGroup("work", "工作相關指令")
     rpgshop = SlashCommandGroup("rpgshop", "rpg商店相關指令")
+    equip = SlashCommandGroup("equip", "裝備相關指令")
     
     @commands.slash_command(description='進行冒險（開發中）')
     async def advance(self,ctx:discord.ApplicationContext):
@@ -99,7 +99,7 @@ class role_playing_game(Cog_Extension):
     async def rpgui(self,ctx:discord.ApplicationContext,user_dc:discord.Option(discord.Member,name='用戶',description='留空以查詢自己',default=None)):
         user_dc = user_dc or ctx.author
         user = sclient.get_rpguser(user_dc.id,full=True,user_dc=user_dc)
-        await ctx.respond(embeds=[user.desplay(),user.equipment.desplay(user_dc)])
+        await ctx.respond(embeds=[user.desplay(),user.waring_equipment.desplay(user_dc)])
 
     @commands.slash_command(description='查看背包（開發中）')
     async def bag(self,ctx:discord.ApplicationContext,user_dc:discord.Option(discord.Member,name='用戶',description='留空以查詢自己',default=None)):
@@ -123,21 +123,6 @@ class role_playing_game(Cog_Extension):
                     embed.add_field(name=Jsondb.get_jdict("rpgitem_category",i),value=text)
         else:
             embed.description += '背包空無一物'
-        await ctx.respond(embed=embed)
-
-    @commands.slash_command(description='查看裝備背包（開發中）')
-    async def equipmentbag(self,ctx:discord.ApplicationContext,user_dc:discord.Option(discord.Member,name='用戶',description='留空以查詢自己',default=None)):
-        user_dc = user_dc or ctx.author
-        dbdata = sclient.get_equipmentbag_desplay(user_dc.id)
-        embed = BotEmbed.rpg(f'{user_dc.name}的裝備包包')
-        embed.description = ""
-        if dbdata:
-            for item in dbdata.items:
-                item:RPGEquipment
-                name = f"{item.customized_name}({item.name})" if item.customized_name else item.name
-                embed.description += f"[{item.equipment_uid}] {name}\n"
-        else:
-            embed.description = '背包空無一物'
         await ctx.respond(embed=embed)
 
     @rpgshop.command(description='查看RPG商店（開發中）')
@@ -186,6 +171,62 @@ class role_playing_game(Cog_Extension):
             await ctx.respond(f"{ctx.author.mention}：已購買 {item.name} * {amount}")
         else:
             await ctx.respond(f"{ctx.author.mention}：Rcoin不足")
+
+    @equip.command(description='查看裝備背包（開發中）')
+    async def bag(self,ctx:discord.ApplicationContext,user_dc:discord.Option(discord.Member,name='用戶',description='留空以查詢自己',default=None)):
+        user_dc = user_dc or ctx.author
+        dbdata = sclient.get_equipmentbag_desplay(user_dc.id)
+        embed = BotEmbed.rpg(f'{user_dc.name}的裝備包包')
+        embed.description = ""
+        if dbdata:
+            for item in dbdata.items:
+                item:RPGEquipment
+                name = f"{item.customized_name}({item.name})" if item.customized_name else item.name
+                embed.description += f"[{item.equipment_uid}] {name}\n"
+        else:
+            embed.description = '背包空無一物'
+        await ctx.respond(embed=embed)
+    
+    @equip.command(description='售出裝備給RPG商店（開發中）')
+    async def sell(self,ctx,
+                   equipment_uid:discord.Option(str,name='裝備uid',description='要售出的裝備')):
+        equipment_uid = int(equipment_uid)
+        item = sclient.get_rpgplayer_equipment(ctx.author.id,equipment_uid)
+        
+        if not item:
+            await ctx.respond(f"{ctx.author.mention}：你沒有此件裝備")
+            return
+        
+        sclient.sell_rpgplayer_equipment(ctx.author.id,equipment_uid)
+        sclient.update_coins(ctx.author.id,"add",Coins.RCOIN,item.price)
+        await ctx.respond(f"{ctx.author.mention}：已售出 {item.name} 並獲得 ${item.price}")
+
+    @equip.command(description='穿脫裝備（開發中）')
+    async def waring(self,ctx,
+                   equipment_uid:discord.Option(str,name='裝備uid',description='要穿/脫/換上的裝備')):
+        equipment_uid = int(equipment_uid)
+        item = sclient.get_rpgplayer_equipment(ctx.author.id,equipment_uid)
+
+        if not item:
+            await ctx.respond(f"{ctx.author.mention}：你沒有此件裝備")
+            return
+        
+        if item.slot == EquipmentSolt.none:
+            waring_item = sclient.get_rpgplayer_waring_equipment(ctx.author.id,item.item_id)
+            sclient.update_rpgplayer_equipment_warning(ctx.author.id,item.equipment_uid,item.item_id)
+            sclient.update_rpguser_attribute(ctx.author.id,item.atk,item.hrt)
+            if not waring_item:
+                await ctx.respond(f"{ctx.author.mention}：已穿上 {item.customized_name or item.name}")
+            else:
+                sclient.update_rpgplayer_equipment_warning(ctx.author.id,waring_item.equipment_uid,None)
+                sclient.update_rpguser_attribute(ctx.author.id,-waring_item.atk,-waring_item.hrt)
+                await ctx.respond(f"{ctx.author.mention}：已將 {waring_item.customized_name or waring_item.name} 替換成 {item.customized_name or item.name}")
+        
+        else:
+            sclient.update_rpgplayer_equipment_warning(ctx.author.id,item.equipment_uid,None)
+            sclient.update_rpguser_attribute(ctx.author.id,-item.atk,-item.hrt)
+            await ctx.respond(f"{ctx.author.mention}：已脫下 {item.customized_name or item.name}")
+        
 
 def setup(bot):
     bot.add_cog(role_playing_game(bot))

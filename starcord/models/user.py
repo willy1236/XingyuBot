@@ -139,7 +139,7 @@ class RPGUser(DiscordUser):
         workcareer: RPGWorkCareer
         itembag: RPGPlayerItemBag
         equipmentbag: RPGPlayerEquipmentBag
-        equipment: WearingEquipment
+        waring_equipment: RPGPlayerWearingEquipment
 
     def __init__(self,data:dict,*args,**kwargs):
         """
@@ -152,8 +152,8 @@ class RPGUser(DiscordUser):
         """
         super().__init__(data,*args,**kwargs)
         self.hp = data.get('user_hp')
-        self.atk = data.get('user_atk')
-        self.hrt = data.get('hrt',60)
+        self.atk = data.get('user_atk') or 1
+        self.hrt = data.get('user_hrt') or 60
         self.career_id = data.get('career_id')
         self.last_work = data.get('last_work')
         self.workcareer = RPGWorkCareer(data)
@@ -172,8 +172,8 @@ class RPGUser(DiscordUser):
         return self.sqldb.get_equipmentbag_desplay(self.discord_id)
 
     @property
-    def equipment(self):
-        return self.sqldb.get_rpgplayer_equipment(self.discord_id)
+    def waring_equipment(self):
+        return RPGPlayerWearingEquipment(self.sqldb.get_rpgplayer_waring_equipment(self.discord_id))
 
     def desplay(self):
         embed = BotEmbed.general(name=self.user_dc.name if self.user_dc else self.name, icon_url=self.user_dc.avatar.url if self.user_dc.avatar else discord.Embed.Empty)

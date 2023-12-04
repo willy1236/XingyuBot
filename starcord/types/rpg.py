@@ -11,6 +11,7 @@ class ItemCategory(IntEnum):
     erroritem = 4
 
 class EquipmentSolt(IntEnum):
+    none = 0
     head = 1
     body = 2
     legging = 3
