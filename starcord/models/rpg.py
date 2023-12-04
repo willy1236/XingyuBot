@@ -1,4 +1,5 @@
-import discord
+from unittest import result
+import discord,random
 from typing import TYPE_CHECKING
 from .BaseModel import ListObject
 from starcord.types import ItemCategory,ShopItemMode,EquipmentSolt
@@ -6,7 +7,7 @@ from starcord.utilities.utility import BotEmbed
 
 class Monster:
     if TYPE_CHECKING:
-        id: str
+        monster_id: int
         name: str
         hp: int
         atk: int
@@ -18,7 +19,7 @@ class Monster:
         self.hp = data.get('monster_hp')
         self.atk = data.get('monster_atk')
         self.hrt = data.get('monster_hrt')
-        self.drop_money = data.get('monster_drop_money',1)
+        self.drop_money = data.get('monster_drop_money',0)
 
 class RPGItem:
     if TYPE_CHECKING:
@@ -57,14 +58,28 @@ class RPGWorkCareer:
         self.reward_item_min = data.get('reward_item_min')
         self.reward_item_max = data.get('reward_item_max')
 
-class WearingEquipment(RPGItem):
+class RPGEquipment(RPGItem):
+    def __init__(self,data):
+        super().__init__(data)
+        self.equipment_uid = data.get('equipment_uid')
+        self.category = ItemCategory.equipment
+        self.name = data.get('equipment_name') or self.name
+        self.customized_name = data.get('equipment_customized_name')
+        self.atk = data.get('equipment_atk') or data.get("equipment_initial_atk",0)
+
+class RPGPlayerEquipmentBag(ListObject):
+    def __init__(self,data,sqldb):
+        super().__init__()
+        self.sqldb = sqldb
+        for i in data:
+            self.append(RPGEquipment(i))
+
+class WearingEquipment(RPGEquipment):
     def __init__(self,data):
         super().__init__(data)
         self.slot = EquipmentSolt(data.get('slot_id'))
-        self.equipment_id = data.get('slot_id')
-        self.name = data.get('equipment_name') or self.name
         
-class RPGPlayerEquipment:
+class RPGPlayerWearingEquipment:
     if TYPE_CHECKING:
         head:WearingEquipment
         body:WearingEquipment
@@ -95,3 +110,31 @@ class RPGPlayerEquipment:
         embed.add_field(name="腿部",value=self.legging.name if self.legging else "無")
         embed.add_field(name="鞋子",value=self.foot.name if self.foot else "無")
         return embed
+    
+class MonsterEquipmentLoot(RPGEquipment):
+    def __init__(self,data):
+        super().__init__(data)
+        self.monster_id = data.get('monster_id')
+        self.equipment_id = data.get('equipment_id')
+        self.drop_probability = data.get('drop_probability',0)
+
+    def drop(self):
+        """return: list[物品id,數量] | None(未掉落)"""
+        result = random.choices([True,False],weights=[self.drop_probability,100-self.drop_probability])
+        if result[0]:
+            return self
+        
+class MonsterLootList(ListObject):
+    def __init__(self,data):
+        super().__init__()
+        for i in data:
+            self.items.append(MonsterEquipmentLoot(i))
+
+    def looting(self) -> list[MonsterEquipmentLoot]:
+        loot_list = []
+        for loot in self.items:
+            result = loot.drop()
+            if result:
+                loot_list.append(result)
+
+        return loot_list

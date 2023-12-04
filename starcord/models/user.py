@@ -138,7 +138,8 @@ class RPGUser(DiscordUser):
         last_work: datetime.datetime
         workcareer: RPGWorkCareer
         itembag: RPGPlayerItemBag
-        equipment: RPGPlayerEquipment
+        equipmentbag: RPGPlayerEquipmentBag
+        equipment: WearingEquipment
 
     def __init__(self,data:dict,*args,**kwargs):
         """
@@ -159,7 +160,16 @@ class RPGUser(DiscordUser):
 
     @property
     def itembag(self):
-        return RPGPlayerItemBag(self.sqldb.get_bag(self.discord_id),self.sqldb)
+        dbdata = self.sqldb.get_bag(self.discord_id,with_name=True)
+        if dbdata:
+            return [RPGItem(i) for i in dbdata]
+        else:
+            return []
+        #return RPGPlayerItemBag(self.sqldb.get_bag(self.discord_id),self.sqldb)
+
+    @property
+    def equipmentbag(self):
+        return self.sqldb.get_equipmentbag_desplay(self.discord_id)
 
     @property
     def equipment(self):

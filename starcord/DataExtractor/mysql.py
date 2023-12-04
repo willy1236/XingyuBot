@@ -502,6 +502,12 @@ class MySQLRPGSystem(MySQLBaseModel):
             return Monster(records[0])
         else:
             raise ValueError('monster_id not found.')
+        
+    def get_monster_loot(self,monster_id:str):
+        self.cursor.execute(f'SELECT * FROM `stardb_idbase`.`rpg_monster_loot_equipment` LEFT JOIN `stardb_idbase`.`rpg_equipment` ON `rpg_monster_loot_equipment`.equipment_id = `rpg_equipment`.equipment_id WHERE `monster_id` = %s;',(monster_id,))
+        records = self.cursor.fetchall()
+        if records:
+            return MonsterLootList(records)
 
     def set_rpguser(self,discord_id:int):
         self.cursor.execute(f"USE `stardb_user`;")
@@ -598,11 +604,41 @@ class MySQLRPGSystem(MySQLBaseModel):
         if record:
             return RPGItem(record[0])
         
-    def get_rpgplayer_equipment(self,discord_id:int):
-        self.cursor.execute(f"SELECT * FROM `stardb_user`.`rpg_player_equipment` LEFT JOIN `database`.`rpg_equipment` ON `rpg_player_equipment`.equipment_id = `rpg_equipment`.equipment_id LEFT JOIN `stardb_idbase`.`rpg_item` ON `rpg_equipment`.item_id = `rpg_item`.item_id WHERE `discord_id` = {discord_id} AND item_category_id = {ItemCategory.equipment.value};")
-        record = self.cursor.fetchall() or []
-        return RPGPlayerEquipment(record)
+    # def get_rpgplayer_equipment(self,discord_id:int):
+    #     self.cursor.execute(f"SELECT * FROM `stardb_user`.`rpg_player_equipment` LEFT JOIN `database`.`rpg_equipment` ON `rpg_player_equipment`.equipment_id = `rpg_equipment`.equipment_id LEFT JOIN `stardb_idbase`.`rpg_item` ON `rpg_equipment`.item_id = `rpg_item`.item_id WHERE `discord_id` = {discord_id} AND item_category_id = {ItemCategory.equipment.value};")
+    #     record = self.cursor.fetchall() or []
+    #     return RPGPlayerEquipment(record)
         
+    def get_rpgequipment_ingame(self,equipment_uid):
+        self.cursor.execute(f"SELECT * FROM database.rpg_equipment_ingame LEFT JOIN `stardb_idbase`.`rpg_equipment` ON `rpg_equipment_ingame`.equipment_id = `rpg_equipment`.equipment_id LEFT JOIN `stardb_idbase`.`rpg_item` ON `rpg_equipment`.item_id = `rpg_item`.item_id WHERE `equipment_uid` = {equipment_uid};")
+        record = self.cursor.fetchall()
+        if record:
+            return RPGEquipment(record[0])
+        
+    def add_equipment_ingame(self, equipment_id, equipment_customized_name=None, equipment_atk=None):
+        self.cursor.execute(f"INSERT INTO `database`.`rpg_equipment_ingame` VALUES(%s,%s,%s,%s);",(None,equipment_id,equipment_customized_name,equipment_atk))
+        self.connection.commit()
+        return self.cursor.lastrowid
+    
+    def add_rpgplayer_equipment(self,discord_id,equipment_uid):
+        self.cursor.execute(f"INSERT INTO `stardb_user`.`rpg_player_equipment` VALUES(%s,%s,%s);",(discord_id,equipment_uid,None))
+        self.connection.commit()
+    
+    def remove_rpgplayer_equipment(self,discord_id,equipment_uid):
+        self.cursor.execute(f"DELETE FROM `stardb_user`.`rpg_player_equipment` WHERE `discord_id` = %s AND `equipment_uid` = %s;",(discord_id,equipment_uid))
+        self.connection.commit()
+
+    def update_rpgplayer_equipment_warning(self,discord_id,equipment_uid,slot_id):
+        slot = EquipmentSolt(slot_id)
+        self.cursor.execute(f"UPDATE `stardb_user`.`rpg_player_equipment` SET `slot_id` = %s WHERE `discord_id` = %s AND `equipment_uid` = %s;",(slot.value,discord_id,equipment_uid))
+        self.connection.commit()
+
+    def get_equipmentbag_desplay(self,discord_id):
+        self.cursor.execute(f"SELECT * FROM `stardb_user`.`rpg_player_equipment` LEFT JOIN `database`.`rpg_equipment_ingame` ON `rpg_player_equipment`.equipment_uid = `rpg_equipment_ingame`.equipment_uid LEFT JOIN `stardb_idbase`.`rpg_equipment` ON `rpg_equipment_ingame`.equipment_id = `rpg_equipment`.equipment_id WHERE `discord_id` = {discord_id};")
+        record = self.cursor.fetchall()
+        if record:
+            return RPGPlayerEquipmentBag(record,self)
+    
 
 class MySQLBusyTimeSystem(MySQLBaseModel):
     def add_busy(self, discord_id, date, time):

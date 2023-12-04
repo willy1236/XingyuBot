@@ -5,9 +5,10 @@ from discord.ext import commands
 from discord.commands import SlashCommandGroup
 from starcord import BotEmbed,sclient,ChoiceList
 from starcord.FileDatabase import Jsondb
+from starcord.models.user import RPGUser
 from starcord.types.rpg import ItemCategory
 from starcord.ui_element.RPGview import RPGAdvanceView
-from starcord.models import GameInfoPage,RPGItem,ShopItem
+from starcord.models import GameInfoPage,RPGItem,ShopItem,RPGEquipment
 from starcord.types import Coins,ItemCategory,ShopItemMode
 
 rpgcareer_option = ChoiceList.set("rpgcareer_option")
@@ -103,21 +104,38 @@ class role_playing_game(Cog_Extension):
     @commands.slash_command(description='查看背包（開發中）')
     async def bag(self,ctx:discord.ApplicationContext,user_dc:discord.Option(discord.Member,name='用戶',description='留空以查詢自己',default=None)):
         user_dc = user_dc or ctx.author
-        dbdata = sclient.get_bag_desplay(user_dc.id)
-        embed = BotEmbed.rpg(f'{user_dc.name}的包包')
-        if dbdata:
+        rpguser = sclient.get_rpguser(user_dc.id,sclient,user_dc)
+        bag = rpguser.itembag
+        
+        embed = BotEmbed.rpg(f'{user_dc.name}的包包',"")
+        embed.description = f"Rcoin：{rpguser.rcoin}"
+        if bag:
             dict = {}
             for i in Jsondb.jdict.get("rpgitem_category"):
                 dict[i] = []
             
-            for item_data in dbdata:
-                item = RPGItem(item_data)
+            for item in bag:
                 dict[str(item.category.value)].append(item)
             
             for i in dict:
                 if dict[i]:
                     text = "\n".join([f"{item.name} x{item.amount}" for item in dict[i]])
                     embed.add_field(name=Jsondb.get_jdict("rpgitem_category",i),value=text)
+        else:
+            embed.description += '背包空無一物'
+        await ctx.respond(embed=embed)
+
+    @commands.slash_command(description='查看裝備背包（開發中）')
+    async def equipmentbag(self,ctx:discord.ApplicationContext,user_dc:discord.Option(discord.Member,name='用戶',description='留空以查詢自己',default=None)):
+        user_dc = user_dc or ctx.author
+        dbdata = sclient.get_equipmentbag_desplay(user_dc.id)
+        embed = BotEmbed.rpg(f'{user_dc.name}的裝備包包')
+        embed.description = ""
+        if dbdata:
+            for item in dbdata.items:
+                item:RPGEquipment
+                name = f"{item.customized_name}({item.name})" if item.customized_name else item.name
+                embed.description += f"[{item.equipment_uid}] {name}\n"
         else:
             embed.description = '背包空無一物'
         await ctx.respond(embed=embed)

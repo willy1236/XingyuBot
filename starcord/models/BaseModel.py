@@ -1,6 +1,6 @@
 class ListObject():
-    def __init__(self,list=[]):
-        self.items = list
+    def __init__(self, lst=None):
+        self.items = lst if lst else []
 
     def append(self, item):
         self.items.append(item)

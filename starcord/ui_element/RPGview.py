@@ -32,10 +32,10 @@ class RPGAdvanceView(discord.ui.View):
         embed.description = ""
         if times == 1:
             if player.hp <= 0:
-                if sclient.getif_bag(player.discord_id,3,1):
+                if sclient.getif_bag(player.discord_id,13,1):
                     player.hp = 10
                     sclient.set_rpguser_data(player.discord_id,'user_hp',player.hp)
-                    sclient.remove_bag(player.discord_id,3,1)
+                    sclient.remove_bag(player.discord_id,13,1)
                     embed.description = "使用藥水復活並繼續冒險\n"
                 else:
                     await interaction.edit_original_response(content="你已陣亡 請購買復活藥水復活")
@@ -50,10 +50,10 @@ class RPGAdvanceView(discord.ui.View):
 
         list = [embed]
         rd = random.randint(1,100)
-        
+        rd =100
         if rd > 70 and rd <=100:
             embed.description += "遇到怪物"
-            monster = sclient.get_monster(random.randint(1,2))
+            monster = sclient.get_monster(random.randint(2,2))
             embed2 = BotEmbed.simple(f"遭遇戰鬥：{monster.name}")
             list.append(embed2)
             sclient.set_userdata(player.discord_id,'rpg_activities','advance_times',times)
@@ -71,7 +71,7 @@ class RPGAdvanceView(discord.ui.View):
 
             elif rd > 50 and rd <= 60:
                 embed.description += "尋獲物品"
-                item = sclient.get_rpgitem(random.randint(1,3))
+                item = sclient.get_rpgitem( int("1" + str(random.randint(1,3))))
                 sclient.update_bag(player.discord_id,item.item_id,1)
                 embed.description += f"，獲得道具 {item.name}"
             elif rd > 60 and rd <= 70:
@@ -140,11 +140,16 @@ class RPGBattleView(discord.ui.View):
                 text += "玩家：普通攻擊 "
                 #怪物被擊倒
                 if monster.hp <= 0:
-                    text += f"\n擊倒怪物 扣除{player_hp_reduce}滴後你還剩下 {player.hp} HP"
-                    # if "loot" in self.data:
-                    #     loot = random.choices(self.data["loot"][0],weights=self.data["loot"][1],k=self.data["loot"][2])
-                    #     player.add_bag(loot)
-                    #     text += f"\n獲得道具！"
+                    #text += f"\n擊倒怪物 扣除{player_hp_reduce}滴後你還剩下 {player.hp} HP"
+                    text += f"\n擊倒怪物 損失 {player_hp_reduce} HP"
+
+                    lootlist = sclient.get_monster_loot(monster.monster_id)
+                    if lootlist:
+                        for loot in lootlist.looting():
+                            equipment_uid = sclient.add_equipment_ingame(loot.equipment_id)
+                            sclient.add_rpgplayer_equipment(player.discord_id,equipment_uid)
+                            text += f"\n獲得道具：{loot.name}"
+
                     sclient.update_coins(player.discord_id,"add",Coins.RCOIN,monster.drop_money)
                     text += f"\nRcoin +{monster.drop_money}"
             else:
@@ -159,16 +164,11 @@ class RPGBattleView(discord.ui.View):
                     text += "怪物：普通攻擊"
                 else:
                     text += "怪物：未命中"
-
-                if damage_player == 0:
-                    damage_player = "未命中"
-                if damage_monster == 0:
-                    damage_monster = "未命中"
-                text += f"\n剩餘HP： 怪物{monster.hp}(-{damage_player}) 玩家{player.hp}(-{damage_monster})\n"
+                
                 
                 #玩家被擊倒
                 if player.hp <= 0:
-                    text += "被怪物擊倒\n"
+                    text += "\n被怪物擊倒"
                     sclient.set_userdata(player.discord_id,'rpg_activities','advance_times',0)
                     # if sclient.getif_bag(player.discord_id,3,1):
                     #     player.hp = 10
@@ -176,7 +176,13 @@ class RPGBattleView(discord.ui.View):
                     #     text += '你在冒險中死掉了，自動使用復活藥水重生\n'
                     # else:
                     #     text += '你在冒險中死掉了，請購買復活藥水重生\n'
-
+            
+            if damage_player == 0:
+                damage_player = "未命中"
+            if damage_monster == 0:
+                damage_monster = "未命中"
+            text += f"\n剩餘HP： 怪物{monster.hp}(-{damage_player}) / 玩家{player.hp}(-{damage_monster})"
+            
             embed.description = f"第{battle_round}回合\n{text}"
             self.enable_all_items()
             if monster.hp <= 0 or player.hp <= 0:
