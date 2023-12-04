@@ -16,6 +16,7 @@ class role_playing_game(Cog_Extension):
     work = SlashCommandGroup("work", "工作相關指令")
     rpgshop = SlashCommandGroup("rpgshop", "rpg商店相關指令")
     equip = SlashCommandGroup("equip", "裝備相關指令")
+    itemcmd = SlashCommandGroup("item", "物品相關指令")
     
     @commands.slash_command(description='進行冒險（開發中）')
     async def advance(self,ctx:discord.ApplicationContext):
@@ -101,7 +102,7 @@ class role_playing_game(Cog_Extension):
         user = sclient.get_rpguser(user_dc.id,full=True,user_dc=user_dc)
         await ctx.respond(embeds=[user.desplay(),user.waring_equipment.desplay(user_dc)])
 
-    @commands.slash_command(description='查看背包（開發中）')
+    @itemcmd.command(description='查看背包（開發中）')
     async def bag(self,ctx:discord.ApplicationContext,user_dc:discord.Option(discord.Member,name='用戶',description='留空以查詢自己',default=None)):
         user_dc = user_dc or ctx.author
         rpguser = sclient.get_rpguser(user_dc.id,sclient,user_dc)
