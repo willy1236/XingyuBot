@@ -525,7 +525,7 @@ class MySQLRPGSystem(MySQLBaseModel):
     def get_bag(self,discord_id:int,item_uid:int=None,with_name=False):
         self.cursor.execute(f"USE `stardb_user`;")
         if with_name:
-            self.cursor.execute(f"SELECT `rpg_user_bag`.item_uid,item_name,amount FROM `stardb_user`.`rpg_user_bag` LEFT JOIN `stardb_idbase`.`rpg_item` ON `rpg_user_bag`.item_uid = `rpg_item`.item_uid WHERE discord_id = {discord_id};")
+            self.cursor.execute(f"SELECT `rpg_user_bag`.item_uid,item_name,amount,item_category_id,item_id FROM `stardb_user`.`rpg_user_bag` LEFT JOIN `stardb_idbase`.`rpg_item` ON `rpg_user_bag`.item_uid = `rpg_item`.item_uid WHERE discord_id = {discord_id};")
         elif item_uid:
             self.cursor.execute(f"SELECT * FROM `rpg_user_bag` WHERE discord_id = {discord_id} AND item_uid = {item_uid};")
         else:
