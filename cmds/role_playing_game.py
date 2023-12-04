@@ -228,6 +228,21 @@ class role_playing_game(Cog_Extension):
             sclient.update_rpguser_attribute(ctx.author.id,-item.atk,-item.hrt)
             await ctx.respond(f"{ctx.author.mention}：已脫下 {item.customized_name or item.name}")
         
+    @equip.command(description='檢查裝備資訊（開發中）')
+    async def check(self,ctx,
+                   equipment_uid:discord.Option(str,name='裝備uid',description='要檢查的裝備')):
+        item = sclient.get_rpgplayer_equipment(ctx.author.id,equipment_uid)
+        
+        if not item:
+            await ctx.respond("你沒有此件裝備") 
+            return
+        
+        embed = BotEmbed.rpg(item.customized_name if item.customized_name else item.name)
+        embed.add_field(name="裝備uid",value=item.equipment_uid)
+        embed.add_field(name="攻擊力",value=item.atk)
+        embed.add_field(name="命中率",value=item.hrt)
+        await ctx.respond(embed=embed)
+
 
 def setup(bot):
     bot.add_cog(role_playing_game(bot))

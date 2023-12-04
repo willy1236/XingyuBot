@@ -619,8 +619,8 @@ class MySQLRPGSystem(MySQLBaseModel):
         if record:
             return RPGEquipment(record[0])
         
-    def add_equipment_ingame(self, equipment_id, equipment_customized_name=None, equipment_atk=None):
-        self.cursor.execute(f"INSERT INTO `database`.`rpg_equipment_ingame` VALUES(%s,%s,%s,%s);",(None,equipment_id,equipment_customized_name,equipment_atk))
+    def add_equipment_ingame(self, equipment_id, equipment_customized_name=None, equipment_atk=None, equipment_hrt=None):
+        self.cursor.execute(f"INSERT INTO `database`.`rpg_equipment_ingame` VALUES(%s,%s,%s,%s,%s);",(None,equipment_id,equipment_customized_name,equipment_atk,equipment_hrt))
         self.connection.commit()
         return self.cursor.lastrowid
 

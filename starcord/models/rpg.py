@@ -26,7 +26,7 @@ class RPGItem:
         item_id: int
         category: ItemCategory
         name: str
-        item_uid: str
+        item_uid: int
         amount: int
 
     def __init__(self,data):

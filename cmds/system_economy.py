@@ -103,7 +103,7 @@ class system_economy(Cog_Extension):
         
         buyer_id = sclient.getif_coin(ctx.author.id,item.price)
         if buyer_id:
-            sclient.update_bag(ctx.author.id,item.item_id,1)
+            sclient.update_bag(ctx.author.id,item.item_uid,1)
             await ctx.respond(f"{ctx.author.mention}：已購買 {item.name} * 1")
         else:
             await ctx.respond(f"{ctx.author.mention}：星幣不足")

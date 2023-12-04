@@ -41,21 +41,15 @@ class RPGAdvanceView(discord.ui.View):
                     await interaction.edit_original_response(content="你已陣亡 請購買復活藥水復活")
                     return
 
-            # if player.rcoin < 5:
-            #     #await interaction.edit_original_response(content="你的Rcoin不足 至少需要1Rcoin才能冒險\n但因為目前為開發階段 那我就送你一些Rcoin吧")
-            #     await interaction.edit_original_response(content="你的Rcoin不足 至少需要5Rcoin才能冒險")
-            #     #sclient.update_coins(player.id,"add",Coins.RCOIN,100)
-            #     return
-            # sclient.update_coins(player.discord_id,"add",Coins.RCOIN,-5)
-
         list = [embed]
         rd = random.randint(1,100)
 
         if rd > 70 and rd <=100:
             embed.description += "遇到怪物"
-            monster = sclient.get_monster(random.randint(1,3))
+            id = random.randint(1,3)
+            monster = sclient.get_monster(id)
             embed2 = BotEmbed.simple(f"遭遇戰鬥：{monster.name}")
-            list.append(embed2)
+            list.append(embed2) 
             sclient.set_userdata(player.discord_id,'rpg_activities','advance_times',times)
             view = RPGBattleView(player,monster,list)
             await interaction.edit_original_response(embeds=list,view=view)
@@ -72,7 +66,7 @@ class RPGAdvanceView(discord.ui.View):
             elif rd > 50 and rd <= 60:
                 embed.description += "尋獲物品"
                 item = sclient.get_rpgitem( int("1" + str(random.randint(1,3))))
-                sclient.update_bag(player.discord_id,item.item_id,1)
+                sclient.update_bag(player.discord_id,item.item_uid,1)
                 embed.description += f"，獲得道具 {item.name}"
             elif rd > 60 and rd <= 70:
                 embed.description += "採到陷阱"
@@ -83,7 +77,7 @@ class RPGAdvanceView(discord.ui.View):
                     embed.description += "，你已陣亡"
                 sclient.set_rpguser_data(player.discord_id,'user_hp',player.hp)
             
-            if times >= 5 and random.randint(0,100) <= times*5:
+            if times >= 5 and random.randint(0,100) <= times*5 or player.hp <= 0:
                     sclient.set_userdata(player.discord_id,'rpg_activities','advance_times',0)
                     embed.description += '，冒險結束'
             else:
