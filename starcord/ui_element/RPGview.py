@@ -53,7 +53,7 @@ class RPGAdvanceView(discord.ui.View):
 
         if rd > 70 and rd <=100:
             embed.description += "遇到怪物"
-            monster = sclient.get_monster(random.randint(1,2))
+            monster = sclient.get_monster(random.randint(1,3))
             embed2 = BotEmbed.simple(f"遭遇戰鬥：{monster.name}")
             list.append(embed2)
             sclient.set_userdata(player.discord_id,'rpg_activities','advance_times',times)
