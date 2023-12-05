@@ -132,8 +132,11 @@ class RPGUser(DiscordUser):
     '''RPG遊戲用戶'''
     if TYPE_CHECKING:
         hp: int
+        maxhp: int
         atk: int
+        df: int
         hrt: int
+        dex: int
         career_id: int
         last_work: datetime.datetime
         workcareer: RPGWorkCareer
@@ -143,7 +146,7 @@ class RPGUser(DiscordUser):
 
     def __init__(self,data:dict,*args,**kwargs):
         """
-        hp:生命 atk:攻擊 def:防禦\n
+        hp:生命 atk:攻擊 def(df):防禦\n
         DEX=Dexterity敏捷\n
         STR=Strength力量\n
         INT=Intelligence智力\n
@@ -152,8 +155,11 @@ class RPGUser(DiscordUser):
         """
         super().__init__(data,*args,**kwargs)
         self.hp = data.get('user_hp')
+        self.maxhp = data.get('user_mxahp') or 10
         self.atk = data.get('user_atk') or 1
+        self.df = data.get('user_def') or 0
         self.hrt = data.get('user_hrt') or 60
+        self.dex = data.get('user_dex') or 1
         self.career_id = data.get('career_id')
         self.last_work = data.get('last_work')
         self.workcareer = RPGWorkCareer(data)
@@ -177,13 +183,22 @@ class RPGUser(DiscordUser):
 
     def desplay(self):
         embed = BotEmbed.general(name=self.user_dc.name if self.user_dc else self.name, icon_url=self.user_dc.avatar.url if self.user_dc.avatar else discord.Embed.Empty)
-        embed.add_field(name='生命',value=self.hp)
+        embed.add_field(name='最大生命/生命',value=f"{self.maxhp} / {self.hp}")
         embed.add_field(name='攻擊力',value=self.atk)
+        embed.add_field(name='防禦力',value=self.df)
         embed.add_field(name='命中率',value=f"{self.hrt}%")
+        embed.add_field(name='敏捷',value=self.dex)
         embed.add_field(name='Rcoin',value=self.rcoin)
         embed.add_field(name='職業',value=self.workcareer.name)
         embed.add_field(name='上次工作',value=self.last_work)
         return embed
+    
+    def update_hp(self,value:int,save_to_db=False):
+        self.hp += value
+        if self.hp > self.maxhp:
+            self.hp = self.maxhp
+        if save_to_db:
+            self.sqldb.set_rpguser_data(self.discord_id,"user_hp",self.hp)
     
     # def advance(self) -> list[discord.Embed]:
     #     '''

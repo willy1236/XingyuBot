@@ -33,8 +33,7 @@ class RPGAdvanceView(discord.ui.View):
         if times == 1:
             if player.hp <= 0:
                 if sclient.getif_bag(player.discord_id,13,1):
-                    player.hp = 10
-                    sclient.set_rpguser_data(player.discord_id,'user_hp',player.hp)
+                    player.update_hp(20)
                     sclient.remove_bag(player.discord_id,13,1)
                     embed.description = "使用藥水復活並繼續冒險\n"
                 else:
@@ -60,8 +59,7 @@ class RPGAdvanceView(discord.ui.View):
                 if random.randint(1,10) <= 3:
                     hp_add = random.randint(0,3)
                     embed.description += f"，並且稍作休息後繼續冒險\n生命+{hp_add}"
-                    player.hp += hp_add
-                    sclient.set_rpguser_data(player.discord_id,'user_hp',player.hp)
+                    player.update_hp(hp_add,True)
 
             elif rd > 50 and rd <= 60:
                 embed.description += "尋獲物品"
@@ -71,11 +69,10 @@ class RPGAdvanceView(discord.ui.View):
             elif rd > 60 and rd <= 70:
                 embed.description += "採到陷阱"
                 injuried_value = random.randint(1,3)
-                player.hp -= injuried_value
+                player.update_hp(injuried_value,True)
                 embed.description += f"，受到{injuried_value}點傷害"
                 if player.hp <= 0:
                     embed.description += "，你已陣亡"
-                sclient.set_rpguser_data(player.discord_id,'user_hp',player.hp)
             
             if times >= 5 and random.randint(0,100) <= times*5 or player.hp <= 0:
                     sclient.set_userdata(player.discord_id,'rpg_activities','advance_times',0)
@@ -128,8 +125,8 @@ class RPGBattleView(discord.ui.View):
             await asyncio.sleep(0.5)
 
             #玩家先攻
-            if self.attck == 1 and random.randint(1,100) < player.hrt:
-                damage_player = player.atk
+            if self.attck == 1 and random.randint(1,100) < player.hrt + int((player.dex - monster.dex)/5):
+                damage_player = player.atk - monster.df
                 monster.hp -= damage_player
                 text += "玩家：普通攻擊 "
                 #怪物被擊倒
@@ -151,9 +148,9 @@ class RPGBattleView(discord.ui.View):
             
             #怪物後攻
             if monster.hp > 0:
-                if random.randint(1,100) < monster.hrt:
-                    damage_monster = monster.atk
-                    player.hp -= damage_monster
+                if random.randint(1,100) < monster.hrt + int((monster.dex - player.dex)/5):
+                    damage_monster = monster.atk - player.df
+                    player.update_hp(damage_monster)
                     player_hp_reduce += damage_monster
                     text += "怪物：普通攻擊"
                 else:
@@ -164,12 +161,6 @@ class RPGBattleView(discord.ui.View):
                 if player.hp <= 0:
                     text += "\n被怪物擊倒"
                     sclient.set_userdata(player.discord_id,'rpg_activities','advance_times',0)
-                    # if sclient.getif_bag(player.discord_id,3,1):
-                    #     player.hp = 10
-                    #     sclient.update_bag(player.discord_id,3,-1)
-                    #     text += '你在冒險中死掉了，自動使用復活藥水重生\n'
-                    # else:
-                    #     text += '你在冒險中死掉了，請購買復活藥水重生\n'
             
             if damage_player == 0:
                 damage_player = "未命中"
@@ -181,7 +172,7 @@ class RPGBattleView(discord.ui.View):
             self.enable_all_items()
             if monster.hp <= 0 or player.hp <= 0:
                 #結束儲存資料
-                sclient.set_rpguser_data(player.discord_id,'user_hp',player.hp)
+                player.update_hp(0,True)
                 await interaction.edit_original_response(embeds=self.embed_list,view=RPGAdvanceView(player.discord_id))
                 return
             else:

@@ -514,8 +514,8 @@ class MySQLRPGSystem(MySQLBaseModel):
         self.cursor.execute(f"INSERT INTO `rpg_user` VALUES(%s);",(discord_id,))
         self.connection.commit()
     
-    def update_rpguser_attribute(self,discord_id:int,atk=0,hrt=0):
-        self.cursor.execute(f'UPDATE `stardb_user`.`rpg_user` SET `user_atk` = `user_atk` + {atk}, `user_hrt` = `user_hrt` + {hrt} WHERE `discord_id` = {discord_id}')
+    def update_rpguser_attribute(self,discord_id:int,maxhp=0,atk=0,df=0,hrt=0,dex=0):
+        self.cursor.execute(f'UPDATE `stardb_user`.`rpg_user` SET `user_hp` = CASE WHEN `user_maxhp` + {maxhp} < `user_hp` THEN `user_maxhp` ELSE `user_hp` END, `user_maxhp` = `user_maxhp` + {maxhp}, `user_atk` = `user_atk` + {atk}, `user_def` = `user_def` + {df}, `user_hrt` = `user_hrt` + {hrt}, `user_dex` = `user_dex` + {dex} WHERE `discord_id` = {discord_id}')
         self.connection.commit()
 
     def get_activities(self,discord_id:int):
@@ -619,8 +619,8 @@ class MySQLRPGSystem(MySQLBaseModel):
         if record:
             return RPGEquipment(record[0])
         
-    def add_equipment_ingame(self, equipment_id, equipment_customized_name=None, equipment_atk=None, equipment_hrt=None):
-        self.cursor.execute(f"INSERT INTO `database`.`rpg_equipment_ingame` VALUES(%s,%s,%s,%s,%s);",(None,equipment_id,equipment_customized_name,equipment_atk,equipment_hrt))
+    def add_equipment_ingame(self, equipment_id, equipment_customized_name=None, equipment_maxhp=None, equipment_atk=None, equipment_def=None, equipment_hrt=None, equipment_dex=None):
+        self.cursor.execute(f"INSERT INTO `database`.`rpg_equipment_ingame` VALUES(%s,%s,%s,%s,%s,%s,%s,%s);",(None,equipment_id,equipment_customized_name,equipment_maxhp,equipment_atk,equipment_def,equipment_hrt,equipment_dex))
         self.connection.commit()
         return self.cursor.lastrowid
 

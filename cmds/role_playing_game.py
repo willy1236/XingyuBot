@@ -216,17 +216,17 @@ class role_playing_game(Cog_Extension):
         if item.slot == EquipmentSolt.none:
             waring_item = sclient.get_rpgplayer_waring_equipment(ctx.author.id,item.item_id)
             sclient.update_rpgplayer_equipment_warning(ctx.author.id,item.equipment_uid,item.item_id)
-            sclient.update_rpguser_attribute(ctx.author.id,item.atk,item.hrt)
+            sclient.update_rpguser_attribute(ctx.author.id,item.maxhp,item.atk,item.df,item.hrt,item.dex)
             if not waring_item:
                 await ctx.respond(f"{ctx.author.mention}：已穿上 {item.customized_name or item.name}")
             else:
                 sclient.update_rpgplayer_equipment_warning(ctx.author.id,waring_item.equipment_uid,None)
-                sclient.update_rpguser_attribute(ctx.author.id,-waring_item.atk,-waring_item.hrt)
+                sclient.update_rpguser_attribute(ctx.author.id,-waring_item.maxhp,-waring_item.atk,-waring_item.df,-waring_item.hrt,-waring_item.dex)
                 await ctx.respond(f"{ctx.author.mention}：已將 {waring_item.customized_name or waring_item.name} 替換成 {item.customized_name or item.name}")
         
         else:
             sclient.update_rpgplayer_equipment_warning(ctx.author.id,item.equipment_uid,None)
-            sclient.update_rpguser_attribute(ctx.author.id,-item.atk,-item.hrt)
+            sclient.update_rpguser_attribute(ctx.author.id,-item.maxhp,-item.atk,-item.df,-item.hrt,-item.dex)
             await ctx.respond(f"{ctx.author.mention}：已脫下 {item.customized_name or item.name}")
         
     @equip.command(description='檢查裝備資訊（開發中）')
@@ -240,8 +240,11 @@ class role_playing_game(Cog_Extension):
         
         embed = BotEmbed.rpg(item.customized_name if item.customized_name else item.name)
         embed.add_field(name="裝備uid",value=item.equipment_uid)
+        embed.add_field(name="最大生命值",value=item.maxhp)
         embed.add_field(name="攻擊力",value=item.atk)
+        embed.add_field(name="防禦力",value=item.df)
         embed.add_field(name="命中率(%)",value=item.hrt)
+        embed.add_field(name="敏捷",value=item.dex)
         await ctx.respond(embed=embed)
 
 

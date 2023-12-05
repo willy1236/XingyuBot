@@ -11,14 +11,18 @@ class Monster:
         name: str
         hp: int
         atk: int
+        df: int
         hrt: int
+        dex: int
 
     def __init__(self,data):
         self.monster_id = data.get('monster_id')
         self.name = data.get('monster_name')
         self.hp = data.get('monster_hp')
         self.atk = data.get('monster_atk')
+        self.df = data.get('monster_def')
         self.hrt = data.get('monster_hrt')
+        self.dex = data.get('monster_dex')
         self.drop_money = data.get('monster_drop_money',0)
 
 class RPGItem:
@@ -66,8 +70,11 @@ class RPGEquipment(RPGItem):
         self.name = data.get('equipment_name') or self.name
         self.customized_name = data.get('equipment_customized_name')
         self.price = data.get('equipment_price')
+        self.maxhp = data.get('equipment_maxhp') or 0 + data.get("equipment_initial_maxhp") or 0
         self.atk = data.get('equipment_atk') or 0 + data.get("equipment_initial_atk") or 0
+        self.df = data.get('equipment_def') or 0 + data.get("equipment_initial_def") or 0
         self.hrt = data.get('equipment_hrt') or 0 + data.get("equipment_initial_hrt") or 0
+        self.dex = data.get('equipment_dex') or 0 + data.get("equipment_initial_dex") or 0
         self.slot = EquipmentSolt(data.get('slot_id') or 0)
 
 class RPGPlayerEquipmentBag(ListObject):
