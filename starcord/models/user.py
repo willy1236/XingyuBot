@@ -155,11 +155,11 @@ class RPGUser(DiscordUser):
         """
         super().__init__(data,*args,**kwargs)
         self.hp = data.get('user_hp')
-        self.maxhp = data.get('user_mxahp') or 10
+        self.maxhp = data.get('user_maxhp') or 10
         self.atk = data.get('user_atk') or 1
         self.df = data.get('user_def') or 0
         self.hrt = data.get('user_hrt') or 60
-        self.dex = data.get('user_dex') or 1
+        self.dex = data.get('user_dex') or 0
         self.career_id = data.get('career_id')
         self.last_work = data.get('last_work')
         self.workcareer = RPGWorkCareer(data)
