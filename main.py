@@ -103,8 +103,8 @@ class SatrPlatform():
     pass
 
 if __name__ == "__main__":
-    if not debug_mode and auto_update:
-        os.system('python ./app/update.py')
+    # if not debug_mode and auto_update:
+    #     os.system('python ./app/update.py')
             
     if api_website:
         from .app.bot_website import ltThread,WebsiteThread
