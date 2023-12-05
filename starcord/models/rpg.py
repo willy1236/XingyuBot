@@ -63,7 +63,7 @@ class RPGWorkCareer:
         self.reward_item_max = data.get('reward_item_max')
 
 class RPGEquipment(RPGItem):
-    def __init__(self,data):
+    def __init__(self,data:dict):
         super().__init__(data)
         self.equipment_uid = data.get('equipment_uid')
         self.category = ItemCategory.equipment
@@ -77,12 +77,22 @@ class RPGEquipment(RPGItem):
         self.dex = data.get('equipment_dex') or 0 + data.get("equipment_initial_dex") or 0
         self.slot = EquipmentSolt(data.get('slot_id') or 0)
 
+class RPGPartialEquipment(RPGItem):
+    def __init__(self,data:dict):
+        super().__init__(data)
+        self.equipment_uid = data.get('equipment_uid')
+        self.category = ItemCategory.equipment
+        self.name = data.get('equipment_name') or self.name
+        self.customized_name = data.get('equipment_customized_name')
+        self.price = data.get('equipment_price')
+        self.slot = EquipmentSolt(data.get('slot_id') or 0)
+
 class RPGPlayerEquipmentBag(ListObject):
     def __init__(self,data,sqldb):
         super().__init__()
         self.sqldb = sqldb
         for i in data:
-            self.append(RPGEquipment(i))
+            self.append(RPGPartialEquipment(i))
         
 class RPGPlayerWearingEquipment:
     if TYPE_CHECKING:

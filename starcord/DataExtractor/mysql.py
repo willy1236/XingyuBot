@@ -671,7 +671,7 @@ class MySQLRPGSystem(MySQLBaseModel):
         self.connection.commit()
 
     def get_equipmentbag_desplay(self,discord_id):
-        self.cursor.execute(f"SELECT * FROM `stardb_user`.`rpg_player_equipment` LEFT JOIN `database`.`rpg_equipment_ingame` ON `rpg_player_equipment`.equipment_uid = `rpg_equipment_ingame`.equipment_uid LEFT JOIN `stardb_idbase`.`rpg_equipment` ON `rpg_equipment_ingame`.equipment_id = `rpg_equipment`.equipment_id WHERE `discord_id` = {discord_id};")
+        self.cursor.execute(f"SELECT discord_id,rpe.equipment_uid,re.equipment_id,equipment_customized_name,equipment_name,item_id FROM `stardb_user`.`rpg_player_equipment` AS rpe LEFT JOIN `database`.`rpg_equipment_ingame` AS rei ON rpe.equipment_uid = rei.equipment_uid LEFT JOIN `stardb_idbase`.`rpg_equipment` AS re ON rei.equipment_id = re.equipment_id WHERE `discord_id` = {discord_id} ORDER BY re.`equipment_id`;")
         record = self.cursor.fetchall()
         if record:
             return RPGPlayerEquipmentBag(record,self)

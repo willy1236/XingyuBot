@@ -1,7 +1,7 @@
 import discord,asyncio,random,datetime
 
 from core.classes import Cog_Extension
-from discord.ext import commands
+from discord.ext import commands,pages
 from discord.commands import SlashCommandGroup
 from starcord import BotEmbed,sclient,ChoiceList
 from starcord.FileDatabase import Jsondb
@@ -178,17 +178,29 @@ class role_playing_game(Cog_Extension):
     async def bag(self,ctx:discord.ApplicationContext,user_dc:discord.Option(discord.Member,name='用戶',description='留空以查詢自己',default=None)):
         user_dc = user_dc or ctx.author
         dbdata = sclient.get_equipmentbag_desplay(user_dc.id)
-        embed = BotEmbed.rpg(f'{user_dc.name}的裝備包包')
-        embed.description = ""
+
         if dbdata:
+            page = []
+            page_count = -1
+            item_count = 9
+            
             for item in dbdata.items:
                 item:RPGEquipment
+                if item_count == 9:
+                    page_count += 1
+                    item_count = 0
+                    page.append(BotEmbed.rpg(f'{user_dc.name}的裝備包包'," "))
+                
                 name = f"{item.customized_name}({item.name})" if item.customized_name else item.name
-                embed.description += f"[{item.equipment_uid}] {name}\n"
+                page[page_count].description += f"[{item.equipment_uid}] {name}\n"
+                item_count += 1
+
+            paginator = pages.Paginator(pages=page, use_default_buttons=True,loop_pages=True)
+            await paginator.respond(ctx.interaction, ephemeral=False)
         else:
-            embed.description = '背包空無一物'
-        await ctx.respond(embed=embed)
-    
+            await ctx.respond(embed=BotEmbed.rpg(f'{user_dc.name}的裝備包包','背包空無一物'))
+
+
     @equip.command(description='售出裝備給RPG商店（開發中）')
     async def sell(self,ctx,
                    equipment_uid:discord.Option(str,name='裝備uid',description='要售出的裝備')):

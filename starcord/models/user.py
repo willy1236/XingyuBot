@@ -183,7 +183,7 @@ class RPGUser(DiscordUser):
 
     def desplay(self):
         embed = BotEmbed.general(name=self.user_dc.name if self.user_dc else self.name, icon_url=self.user_dc.avatar.url if self.user_dc.avatar else discord.Embed.Empty)
-        embed.add_field(name='最大生命/生命',value=f"{self.maxhp} / {self.hp}")
+        embed.add_field(name='生命/最大生命',value=f"{self.hp} / {self.maxhp}")
         embed.add_field(name='攻擊力',value=self.atk)
         embed.add_field(name='防禦力',value=self.df)
         embed.add_field(name='命中率',value=f"{self.hrt}%")

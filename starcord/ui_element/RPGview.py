@@ -115,6 +115,8 @@ class RPGBattleView(discord.ui.View):
         while monster.hp > 0 and player.hp > 0:
             text = ""
             battle_round += 1
+            player_hit = True
+            monster_hit = True
             #造成的傷害總和
             damage_player = 0
             damage_monster = 0
@@ -126,7 +128,7 @@ class RPGBattleView(discord.ui.View):
 
             #玩家先攻
             if self.attck == 1 and random.randint(1,100) < player.hrt + int((player.dex - monster.dex)/5):
-                damage_player = player.atk - monster.df
+                damage_player = player.atk - monster.df if player.atk - monster.df > 0 else 0
                 monster.hp -= damage_player
                 text += "玩家：普通攻擊 "
                 #怪物被擊倒
@@ -144,16 +146,18 @@ class RPGBattleView(discord.ui.View):
                     sclient.update_coins(player.discord_id,"add",Coins.RCOIN,monster.drop_money)
                     text += f"\nRcoin +{monster.drop_money}"
             else:
+                player_hit = False
                 text += "玩家：未命中 "
             
             #怪物後攻
             if monster.hp > 0:
                 if random.randint(1,100) < monster.hrt + int((monster.dex - player.dex)/5):
-                    damage_monster = monster.atk - player.df
-                    player.update_hp(damage_monster)
+                    damage_monster = monster.atk - player.df if monster.atk - player.df > 0 else 0
+                    player.update_hp(-damage_monster)
                     player_hp_reduce += damage_monster
                     text += "怪物：普通攻擊"
                 else:
+                    monster_hit = False
                     text += "怪物：未命中"
                 
                 
@@ -162,9 +166,9 @@ class RPGBattleView(discord.ui.View):
                     text += "\n被怪物擊倒"
                     sclient.set_userdata(player.discord_id,'rpg_activities','advance_times',0)
             
-            if damage_player == 0:
+            if not player_hit:
                 damage_player = "未命中"
-            if damage_monster == 0:
+            if not monster_hit:
                 damage_monster = "未命中"
             text += f"\n剩餘HP： 怪物{monster.hp}(-{damage_player}) / 玩家{player.hp}(-{damage_monster})"
             
