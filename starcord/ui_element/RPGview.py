@@ -1,7 +1,8 @@
 import discord,random,asyncio
+from discord.ext import pages
 from starcord.utilities.utility import BotEmbed
 from starcord.DataExtractor import sclient
-from starcord.models.user import RPGUser,Monster
+from starcord.models.user import RPGUser,Monster,RPGPlayerEquipmentBag,RPGEquipment
 from starcord.types import Coins
 
 class RPGAdvanceView(discord.ui.View):
@@ -57,7 +58,7 @@ class RPGAdvanceView(discord.ui.View):
             if rd > 0 and rd <= 50:
                 embed.description += "沒事發生"
                 if random.randint(1,10) <= 3:
-                    hp_add = random.randint(0,3)
+                    hp_add = random.randint(0,5)
                     embed.description += f"，並且稍作休息後繼續冒險\n生命+{hp_add}"
                     player.update_hp(hp_add,True)
 
@@ -190,3 +191,30 @@ class RPGBattleView(discord.ui.View):
             self.attck = 1
             self.disable_all_items()
             await interaction.response.edit_message(view=self)
+
+class RPGEquipmentBagView(discord.ui.View):
+    def __init__(self,bag:RPGPlayerEquipmentBag):
+        super().__init__()
+        self.bag = bag
+        self.paginator:pages.Paginator = None
+        self.now_page_item = -1
+
+    @property
+    def now_item(self):
+        return self.bag[self.paginator.current_page * 10 + self.now_page_item]
+    
+    @discord.ui.button(label="上個裝備",style=discord.ButtonStyle.primary)
+    async def button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
+        self.now_page_item = self.now_page_item - 1 if self.now_page_item != -1 else (self.paginator.current_page - 1) * 10
+        item:RPGEquipment = self.now_item
+        embed = BotEmbed.rpg(item.customized_name if item.customized_name else item.name,f"uid：{item.equipment_uid}")
+        await interaction.response.edit_message(embeds=[self.paginator.pages[self.paginator.current_page-1],embed])
+
+    
+    @discord.ui.button(label="下個裝備",style=discord.ButtonStyle.primary)
+    async def button2_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
+        self.now_page_item = self.now_page_item + 1 if self.now_page_item != 9 and self.paginator.current_page * 10 + self.now_page_item + 1 < len(self.bag) else 0
+        item:RPGEquipment = self.now_item
+        
+        embed = BotEmbed.rpg(item.customized_name if item.customized_name else item.name,f"uid：{item.equipment_uid}")
+        await interaction.response.edit_message(embeds=[self.paginator.pages[self.paginator.current_page-1],embed])

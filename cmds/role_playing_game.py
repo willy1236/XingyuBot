@@ -6,7 +6,7 @@ from discord.commands import SlashCommandGroup
 from starcord import BotEmbed,sclient,ChoiceList
 from starcord.FileDatabase import Jsondb
 from starcord.models.user import RPGUser
-from starcord.ui_element.RPGview import RPGAdvanceView
+from starcord.ui_element.RPGview import RPGAdvanceView,RPGEquipmentBagView
 from starcord.models import GameInfoPage,RPGItem,ShopItem,RPGEquipment
 from starcord.types import Coins,ItemCategory,ShopItemMode,EquipmentSolt
 
@@ -195,7 +195,9 @@ class role_playing_game(Cog_Extension):
                 page[page_count].description += f"[{item.equipment_uid}] {name}\n"
                 item_count += 1
 
-            paginator = pages.Paginator(pages=page, use_default_buttons=True,loop_pages=True)
+            view = RPGEquipmentBagView(dbdata)
+            paginator = pages.Paginator(pages=page, use_default_buttons=True,loop_pages=True,custom_view=view)
+            view.paginator = paginator
             await paginator.respond(ctx.interaction, ephemeral=False)
         else:
             await ctx.respond(embed=BotEmbed.rpg(f'{user_dc.name}的裝備包包','背包空無一物'))
