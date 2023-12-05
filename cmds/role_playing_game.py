@@ -169,6 +169,7 @@ class role_playing_game(Cog_Extension):
         buyer_id = sclient.getif_coin(ctx.author.id,item.price * amount,Coins.RCOIN)
         if buyer_id:
             sclient.update_bag(ctx.author.id,item.item_uid,amount)
+            sclient.update_coins(ctx.author.id,"add",Coins.RCOIN,item.price * amount * -1)
             await ctx.respond(f"{ctx.author.mention}：已購買 {item.name} * {amount}")
         else:
             await ctx.respond(f"{ctx.author.mention}：Rcoin不足")
@@ -240,7 +241,7 @@ class role_playing_game(Cog_Extension):
         embed = BotEmbed.rpg(item.customized_name if item.customized_name else item.name)
         embed.add_field(name="裝備uid",value=item.equipment_uid)
         embed.add_field(name="攻擊力",value=item.atk)
-        embed.add_field(name="命中率",value=item.hrt)
+        embed.add_field(name="命中率(%)",value=item.hrt)
         await ctx.respond(embed=embed)
 
 
