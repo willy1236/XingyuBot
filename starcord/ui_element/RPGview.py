@@ -198,7 +198,7 @@ class RPGBattleView(discord.ui.View):
     async def button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
         if interaction.user.id == self.player.discord_id:
             embed = self.embed_list[1]
-            rd = random.randint(1,self.player.maxhp / 10 * 3)
+            rd = random.randint(1,int(self.player.maxhp / 10 * 3))
             self.player.update_hp(-rd)
 
             embed.description = f"逃避雖然可恥但有用\n你選擇撤離戰鬥，在過程中你受到 {rd} hp傷害"
