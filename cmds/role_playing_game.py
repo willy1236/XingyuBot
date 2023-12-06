@@ -176,26 +176,28 @@ class role_playing_game(Cog_Extension):
 
     @equip.command(description='查看裝備背包（開發中）')
     async def bag(self,ctx:discord.ApplicationContext,user_dc:discord.Option(discord.Member,name='用戶',description='留空以查詢自己',default=None)):
+        await ctx.defer()
         user_dc = user_dc or ctx.author
         dbdata = sclient.get_equipmentbag_desplay(user_dc.id)
 
         if dbdata:
-            page = []
-            page_count = -1
-            item_count = 9
+            # page = []
+            # page_count = -1
+            # item_count = 9
             
-            for item in dbdata.items:
-                item:RPGEquipment
-                if item_count == 9:
-                    page_count += 1
-                    item_count = 0
-                    page.append(BotEmbed.rpg(f'{user_dc.name}的裝備包包'," "))
+            # for item in dbdata.items:
+            #     item:RPGEquipment
+            #     if item_count == 9:
+            #         page_count += 1
+            #         item_count = 0
+            #         page.append(BotEmbed.rpg(f'{user_dc.name}的裝備包包'," "))
                 
-                name = f"{item.customized_name}({item.name})" if item.customized_name else item.name
-                page[page_count].description += f"[{item.equipment_uid}] {name}\n"
-                item_count += 1
+            #     name = f"{item.customized_name}({item.name})" if item.customized_name else item.name
+            #     page[page_count].description += f"[{item.equipment_uid}] {name}\n"
+            #     item_count += 1
 
-            view = RPGEquipmentBagView(dbdata)
+            view = RPGEquipmentBagView(dbdata,ctx.author)
+            page = view.refresh_item_page()
             paginator = pages.Paginator(pages=page, use_default_buttons=True,loop_pages=True,custom_view=view)
             view.paginator = paginator
             await paginator.respond(ctx.interaction, ephemeral=False)

@@ -1,4 +1,5 @@
 import discord,random,asyncio
+from discord.components import Component
 from discord.ext import pages
 from starcord.utilities.utility import BotEmbed
 from starcord.DataExtractor import sclient
@@ -193,28 +194,56 @@ class RPGBattleView(discord.ui.View):
             await interaction.response.edit_message(view=self)
 
 class RPGEquipmentBagView(discord.ui.View):
-    def __init__(self,bag:RPGPlayerEquipmentBag):
+    def __init__(self,bag:RPGPlayerEquipmentBag,user_dc:discord.User):
         super().__init__()
         self.bag = bag
+        self.user_dc = user_dc
         self.paginator:pages.Paginator = None
         self.now_page_item = -1
+        self.item_per_page = 10
 
     @property
     def now_item(self):
-        return self.bag[self.paginator.current_page * 10 + self.now_page_item]
-    
+        return self.bag[self.paginator.current_page * self.item_per_page + self.now_page_item]
+
+    def refresh_item_page(self):
+        page = []
+        
+        for i in range(int(len(self.bag)/self.item_per_page) + 1):
+            page.append(BotEmbed.rpg(f'{self.user_dc.name}的裝備包包'," "))
+            
+            text_list = []
+            for j in range(i*self.item_per_page,(i + 1)*self.item_per_page):
+                try:
+                    item:RPGEquipment = self.bag.items[j]
+                except IndexError:
+                    break
+                name = f"{item.customized_name}({item.name})" if item.customized_name else item.name
+                text_list.append(f"[{item.equipment_uid}] {name} {j}")
+            page[i].description = "\n".join(text_list)
+
+        return page
+
     @discord.ui.button(label="上個裝備",style=discord.ButtonStyle.primary)
     async def button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
-        self.now_page_item = self.now_page_item - 1 if self.now_page_item != -1 else (self.paginator.current_page - 1) * 10
+        self.now_page_item -= 1
+        if self.now_page_item <= -1:
+            self.now_page_item = 9
+        if self.paginator.current_page * 10 + self.now_page_item > len(self.bag):
+            self.now_page_item = (len(self.bag) -1) % self.item_per_page
+
         item:RPGEquipment = self.now_item
         embed = BotEmbed.rpg(item.customized_name if item.customized_name else item.name,f"uid：{item.equipment_uid}")
-        await interaction.response.edit_message(embeds=[self.paginator.pages[self.paginator.current_page-1],embed])
+        await interaction.response.edit_message(embeds=[self.paginator.pages[self.paginator.current_page],embed])
 
     
     @discord.ui.button(label="下個裝備",style=discord.ButtonStyle.primary)
     async def button2_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
-        self.now_page_item = self.now_page_item + 1 if self.now_page_item != 9 and self.paginator.current_page * 10 + self.now_page_item + 1 < len(self.bag) else 0
+        self.now_page_item += 1
+        if self.now_page_item == self.item_per_page or self.paginator.current_page * 10 + self.now_page_item > len(self.bag) -1 :
+            self.now_page_item = 0
+
         item:RPGEquipment = self.now_item
         
         embed = BotEmbed.rpg(item.customized_name if item.customized_name else item.name,f"uid：{item.equipment_uid}")
-        await interaction.response.edit_message(embeds=[self.paginator.pages[self.paginator.current_page-1],embed])
+        await interaction.response.edit_message(embeds=[self.paginator.pages[self.paginator.current_page],embed])

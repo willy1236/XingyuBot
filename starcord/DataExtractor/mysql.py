@@ -597,9 +597,9 @@ class MySQLRPGSystem(MySQLBaseModel):
         self.connection.commit()
 
     def rpg_shop_daily(self):
-        self.cursor.execute(f"UPDATE `database`.`rpg_shop` SET `item_inventory` = item_inventory - item_inital_inventory * (item_inventory / item_inital_inventory * FLOOR(RAND()*76+25) / 100 );")
-        self.cursor.execute(f"UPDATE `database`.`rpg_shop` SET `item_inventory` = item_inital_inventory WHERE item_inventory <= item_inital_inventory;")
-        self.cursor.execute(f"UPDATE `database`.`rpg_shop` SET `item_price` =  item_inital_price * pow(0.97,item_inventory - item_inital_inventory);")
+        self.cursor.execute(f"UPDATE `database`.`rpg_shop` SET `item_inventory` = item_inventory - item_inital_inventory * (item_inventory / item_inital_inventory * FLOOR(RAND()*76+25) / 100 WHERE `item_mode` = 1);")
+        self.cursor.execute(f"UPDATE `database`.`rpg_shop` SET `item_inventory` = item_inital_inventory WHERE item_inventory <= item_inital_inventory AND `item_mode` = 1;")
+        self.cursor.execute(f"UPDATE `database`.`rpg_shop` SET `item_price` =  item_inital_price * pow(0.97,item_inventory - item_inital_inventory) WHERE `item_mode` = 1;")
         self.connection.commit()
 
     def get_rpgitem(self,item_uid):
