@@ -104,7 +104,7 @@ class RPGBattleView(discord.ui.View):
         self.monster = monster
         self.embed_list = embed_list
         self.attck = None
-        self.wait_attack = False
+        self.wait_attack = True
         self.player_hp_reduce = 0
         self.battle_round = 0
         self.battle_is_end = False
@@ -178,6 +178,7 @@ class RPGBattleView(discord.ui.View):
             await self.end_battle(interaction)
         else:
             await interaction.edit_original_response(embeds=self.embed_list,view=self)
+            self.wait_attack = True
 
     async def end_battle(self,interaction: discord.Interaction):
         self.player.update_hp(0,True)
@@ -185,7 +186,8 @@ class RPGBattleView(discord.ui.View):
 
     @discord.ui.button(label="普通攻擊",style=discord.ButtonStyle.green)
     async def button2_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
-        if interaction.user.id == self.player.discord_id:
+        if interaction.user.id == self.player.discord_id and self.wait_attack:
+            self.wait_attack = False
             self.attck = 1
             self.disable_all_items()
             await interaction.response.edit_message(view=self)
