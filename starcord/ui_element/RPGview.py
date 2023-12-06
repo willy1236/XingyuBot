@@ -35,7 +35,7 @@ class RPGAdvanceView(discord.ui.View):
         if times == 1:
             if player.hp <= 0:
                 if sclient.getif_bag(player.discord_id,13,1):
-                    player.update_hp(20)
+                    player.update_hp(20,True)
                     sclient.remove_bag(player.discord_id,13,1)
                     embed.description = "使用藥水復活並繼續冒險\n"
                 else:
@@ -54,7 +54,7 @@ class RPGAdvanceView(discord.ui.View):
             sclient.set_userdata(player.discord_id,'rpg_activities','advance_times',times)
             view = RPGBattleView(player,monster,list)
             await interaction.edit_original_response(embeds=list,view=view)
-            await view.battle(interaction)
+            #await view.battle(interaction)
         else:
             if rd > 0 and rd <= 50:
                 embed.description += "沒事發生"
@@ -104,94 +104,104 @@ class RPGBattleView(discord.ui.View):
         self.monster = monster
         self.embed_list = embed_list
         self.attck = None
+        self.wait_attack = False
+        self.player_hp_reduce = 0
+        self.battle_round = 0
+        self.battle_is_end = False
 
-    async def battle(self,interaction: discord.Interaction,advance_view:RPGAdvanceView=None):
-        '''玩家與怪物戰鬥'''
+    async def player_attack_result(self,interaction: discord.Interaction):
         player = self.player
         monster = self.monster
-        player_hp_reduce = 0
-        battle_round = 0
         embed = self.embed_list[1]
         
-        #戰鬥到一方倒下
-        while monster.hp > 0 and player.hp > 0:
-            text = ""
-            battle_round += 1
-            player_hit = True
-            monster_hit = True
-            #造成的傷害總和
-            damage_player = 0
-            damage_monster = 0
+        self.battle_round += 1
             
-            while not self.attck:
-                await asyncio.sleep(1)
+        #這回合命中與傷害總和
+        player_hit = True
+        monster_hit = True
+        damage_player = 0
+        damage_monster = 0
+        text = ""
+        #玩家先攻
+        if self.attck == 1 and random.randint(1,100) < player.hrt + int((player.dex - monster.dex)/5):
+            damage_player = player.atk - monster.df if player.atk - monster.df > 0 else 0
+            monster.hp -= damage_player
+            text += "玩家：普通攻擊 "
+            #怪物被擊倒
+            if monster.hp <= 0:
+                #text += f"\n擊倒怪物 扣除{player_hp_reduce}滴後你還剩下 {player.hp} HP"
+                text += f"\n擊倒怪物 損失 {self.player_hp_reduce} HP"
 
-            await asyncio.sleep(0.5)
+                lootlist = sclient.get_monster_loot(monster.monster_id)
+                if lootlist:
+                    for loot in lootlist.looting():
+                        equipment_uid = sclient.add_equipment_ingame(loot.equipment_id)
+                        sclient.add_rpgplayer_equipment(player.discord_id,equipment_uid)
+                        text += f"\n獲得道具：{loot.name}"
 
-            #玩家先攻
-            if self.attck == 1 and random.randint(1,100) < player.hrt + int((player.dex - monster.dex)/5):
-                damage_player = player.atk - monster.df if player.atk - monster.df > 0 else 0
-                monster.hp -= damage_player
-                text += "玩家：普通攻擊 "
-                #怪物被擊倒
-                if monster.hp <= 0:
-                    #text += f"\n擊倒怪物 扣除{player_hp_reduce}滴後你還剩下 {player.hp} HP"
-                    text += f"\n擊倒怪物 損失 {player_hp_reduce} HP"
-
-                    lootlist = sclient.get_monster_loot(monster.monster_id)
-                    if lootlist:
-                        for loot in lootlist.looting():
-                            equipment_uid = sclient.add_equipment_ingame(loot.equipment_id)
-                            sclient.add_rpgplayer_equipment(player.discord_id,equipment_uid)
-                            text += f"\n獲得道具：{loot.name}"
-
-                    sclient.update_coins(player.discord_id,"add",Coins.RCOIN,monster.drop_money)
-                    text += f"\nRcoin +{monster.drop_money}"
-            else:
-                player_hit = False
-                text += "玩家：未命中 "
-            
-            #怪物後攻
-            if monster.hp > 0:
-                if random.randint(1,100) < monster.hrt + int((monster.dex - player.dex)/5):
-                    damage_monster = monster.atk - player.df if monster.atk - player.df > 0 else 0
-                    player.update_hp(-damage_monster)
-                    player_hp_reduce += damage_monster
-                    text += "怪物：普通攻擊"
-                else:
-                    monster_hit = False
-                    text += "怪物：未命中"
+                sclient.update_coins(player.discord_id,"add",Coins.RCOIN,monster.drop_money)
+                text += f"\nRcoin +{monster.drop_money}"
                 
-                
-                #玩家被擊倒
-                if player.hp <= 0:
-                    text += "\n被怪物擊倒"
-                    sclient.set_userdata(player.discord_id,'rpg_activities','advance_times',0)
-            
-            if not player_hit:
-                damage_player = "未命中"
-            if not monster_hit:
-                damage_monster = "未命中"
-            text += f"\n剩餘HP： 怪物{monster.hp}(-{damage_player}) / 玩家{player.hp}(-{damage_monster})"
-            
-            embed.description = f"第{battle_round}回合\n{text}"
-            self.enable_all_items()
-            if monster.hp <= 0 or player.hp <= 0:
-                #結束儲存資料
-                player.update_hp(0,True)
-                await interaction.edit_original_response(embeds=self.embed_list,view=RPGAdvanceView(player.discord_id))
-                return
+                self.battle_is_end = True
+        else:
+            player_hit = False
+            text += "玩家：未命中 "
+        
+        #怪物後攻
+        if monster.hp > 0:
+            if random.randint(1,100) < monster.hrt + int((monster.dex - player.dex)/5):
+                damage_monster = monster.atk - player.df if monster.atk - player.df > 0 else 0
+                player.update_hp(-damage_monster)
+                self.player_hp_reduce += damage_monster
+                text += "怪物：普通攻擊"
             else:
-                await interaction.edit_original_response(embeds=self.embed_list,view=self)
-            self.attck = None
+                monster_hit = False
+                text += "怪物：未命中"
+            
+            
+            #玩家被擊倒
+            if player.hp <= 0:
+                text += "\n被怪物擊倒"
+                sclient.set_userdata(player.discord_id,'rpg_activities','advance_times',0)
+                self.battle_is_end = True
+        
+        if not player_hit:
+            damage_player = "未命中"
+        if not monster_hit:
+            damage_monster = "未命中"
+        text += f"\n剩餘HP： 怪物{monster.hp}(-{damage_player}) / 玩家{player.hp}(-{damage_monster})"
+        
+        embed.description = f"第{self.battle_round}回合\n{text}"
+        self.enable_all_items()
 
+        if self.battle_is_end:
+            await self.end_battle(interaction)
+        else:
+            await interaction.edit_original_response(embeds=self.embed_list,view=self)
+
+    async def end_battle(self,interaction: discord.Interaction):
+        self.player.update_hp(0,True)
+        await interaction.edit_original_response(embeds=self.embed_list,view=RPGAdvanceView(self.player.discord_id))
 
     @discord.ui.button(label="普通攻擊",style=discord.ButtonStyle.green)
-    async def button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
+    async def button2_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
         if interaction.user.id == self.player.discord_id:
             self.attck = 1
             self.disable_all_items()
             await interaction.response.edit_message(view=self)
+            
+            await self.player_attack_result(interaction)
+
+    @discord.ui.button(label="撤離戰鬥",style=discord.ButtonStyle.red)
+    async def button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
+        if interaction.user.id == self.player.discord_id:
+            embed = self.embed_list[1]
+            rd = random.randint(1,self.player.maxhp / 10 * 3)
+            self.player.update_hp(-rd)
+
+            embed.description = f"逃避雖然可恥但有用\n你選擇撤離戰鬥，在過程中你受到 {rd} hp傷害"
+            await interaction.response.edit_message(view=self)
+            await self.end_battle(interaction)
 
 class RPGEquipmentBagView(discord.ui.View):
     def __init__(self,bag:RPGPlayerEquipmentBag,user_dc:discord.User):
