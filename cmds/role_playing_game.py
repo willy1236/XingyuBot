@@ -5,6 +5,7 @@ from discord.ext import commands,pages
 from discord.commands import SlashCommandGroup
 from starcord import BotEmbed,sclient,ChoiceList
 from starcord.FileDatabase import Jsondb
+from starcord.models.rpg import RPGMarketItem
 from starcord.models.user import RPGUser
 from starcord.ui_element.RPGview import RPGAdvanceView,RPGEquipmentBagView
 from starcord.models import GameInfoPage,RPGItem,ShopItem,RPGEquipment
@@ -17,7 +18,8 @@ class role_playing_game(Cog_Extension):
     rpgshop = SlashCommandGroup("rpgshop", "rpg商店相關指令")
     equip = SlashCommandGroup("equip", "裝備相關指令")
     itemcmd = SlashCommandGroup("item", "物品相關指令")
-    
+    rpgmarket = SlashCommandGroup("rpgmarket","rpg玩家市場相關指令")
+
     @commands.slash_command(description='進行冒險（開發中）')
     async def advance(self,ctx:discord.ApplicationContext):
         # await ctx.respond('敬請期待',ephemeral=False)
@@ -181,22 +183,7 @@ class role_playing_game(Cog_Extension):
         dbdata = sclient.get_equipmentbag_desplay(user_dc.id)
 
         if dbdata:
-            # page = []
-            # page_count = -1
-            # item_count = 9
-            
-            # for item in dbdata.items:
-            #     item:RPGEquipment
-            #     if item_count == 9:
-            #         page_count += 1
-            #         item_count = 0
-            #         page.append(BotEmbed.rpg(f'{user_dc.name}的裝備包包'," "))
-                
-            #     name = f"{item.customized_name}({item.name})" if item.customized_name else item.name
-            #     page[page_count].description += f"[{item.equipment_uid}] {name}\n"
-            #     item_count += 1
-
-            view = RPGEquipmentBagView(dbdata,ctx.author)
+            view = RPGEquipmentBagView(dbdata,user_dc)
             page = view.refresh_item_page()
             paginator = pages.Paginator(pages=page, use_default_buttons=True,loop_pages=True,custom_view=view)
             view.paginator = paginator
@@ -249,17 +236,14 @@ class role_playing_game(Cog_Extension):
         if item.slot == EquipmentSolt.none:
             waring_item = sclient.get_rpgplayer_equipment(ctx.author.id,slot_id=item.slot.value)
             sclient.update_rpgplayer_equipment_warning(ctx.author.id,item.equipment_uid,item.item_id)
-            sclient.update_rpguser_attribute(ctx.author.id,item.maxhp,item.atk,item.df,item.hrt,item.dex)
             if not waring_item:
                 await ctx.respond(f"{ctx.author.mention}：已穿上 {item.customized_name or item.name}")
             else:
                 sclient.update_rpgplayer_equipment_warning(ctx.author.id,waring_item.equipment_uid,None)
-                sclient.update_rpguser_attribute(ctx.author.id,-waring_item.maxhp,-waring_item.atk,-waring_item.df,-waring_item.hrt,-waring_item.dex)
                 await ctx.respond(f"{ctx.author.mention}：已將 {waring_item.customized_name or waring_item.name} 替換成 {item.customized_name or item.name}")
         
         else:
             sclient.update_rpgplayer_equipment_warning(ctx.author.id,item.equipment_uid,None)
-            sclient.update_rpguser_attribute(ctx.author.id,-item.maxhp,-item.atk,-item.df,-item.hrt,-item.dex)
             await ctx.respond(f"{ctx.author.mention}：已脫下 {item.customized_name or item.name}")
         
     @equip.command(description='檢查裝備資訊（開發中）')
@@ -279,6 +263,80 @@ class role_playing_game(Cog_Extension):
         embed.add_field(name="命中率(%)",value=item.hrt)
         embed.add_field(name="敏捷",value=item.dex)
         await ctx.respond(embed=embed)
+
+    @rpgmarket.command(description='列出玩家的物品市場（開發中）')
+    async def list(self,ctx,user_dc:discord.Option(discord.Member,name='用戶',description='留空以查詢自己',default=None)):
+        user_dc = user_dc or ctx.author
+        dbdata = sclient.get_item_market_list(user_dc.id)
+        embed = BotEmbed.rpg(f"{user_dc.name}的市場")
+        if dbdata:
+            embed.description = "\n".join( f"[{i.item_uid}] {i.name} {i.per_price}\n剩餘數量：{i.remain_amount}" for i in dbdata )
+        else:
+            embed.description = "玩家沒有販賣物品"
+        await ctx.respond(embed=embed)
+
+    @rpgmarket.command(description='上架商品到市場（開發中）')
+    async def launch(self,ctx,
+                     item_uid:discord.Option(int,name='物品uid',description='要上架的物品'),
+                     per_price:discord.Option(int,name='商品單價',description='每個物品單價',min_value=0),
+                     launch_amount:discord.Option(int,name='上架數量',description='預設1',default=1,min_value=1),
+                     ):
+        userid = ctx.author.id
+        market_item = sclient.get_item_market_item(userid,item_uid)
+        if market_item:
+            await ctx.respond(f"{ctx.author.mention}：已有上架這個物品")
+            return
+        
+        item = sclient.getif_bag(userid,item_uid,launch_amount)
+        
+        if not item:
+            await ctx.respond(f"{ctx.author.mention}：這個物品數量不足")
+            return
+        
+        sclient.update_bag(userid,item_uid,-launch_amount)
+        sclient.add_item_market_item(userid,item_uid,launch_amount,per_price)
+        await ctx.respond(f"{ctx.author.mention}：已上架 {item.name} 每件價格為 {per_price}")
+
+    @rpgmarket.command(description='下架商品到（開發中）')
+    async def unlaunch(self,ctx,item_uid:discord.Option(int,name='物品uid',description='要購買的物品')):
+        userid = ctx.author.id
+        item = sclient.get_item_market_item(userid,item_uid)
+        
+        if not item:
+            await ctx.respond(f"{ctx.author.mention}：沒有上架這個物品")
+            return
+
+        sclient.update_bag(userid,item_uid,item.remain_amount)
+        sclient.remove_item_market_item(userid,item_uid)
+        await ctx.respond(f"{ctx.author.mention}：已下架 {item.name}")
+
+    @rpgmarket.command(description='購買商品（開發中）')
+    async def buy(self,ctx,
+                     user_dc:discord.Option(discord.Member,name='賣家用戶',description=''),
+                     item_uid:discord.Option(str,name='物品uid',description='要上架的物品'),
+                     buy_amount:discord.Option(int,name='購買數量',description='預設1',default=1,min_value=1)
+                     ):
+        userid = user_dc.id
+        item = sclient.get_item_market_item(userid,item_uid)
+        
+        if not item:
+            await ctx.respond(f"{ctx.author.mention}：沒有上架這個物品")
+            return
+        if item.remain_amount < buy_amount:
+            await ctx.respond(f"{ctx.author.mention}：商品剩餘數量不足")
+            return
+        if not sclient.getif_coin(ctx.author.id,buy_amount*item.per_price,Coins.RCOIN):
+            await ctx.respond(f"{ctx.author.mention}：剩餘Rcoin不足")
+            return
+        
+        sclient.update_bag(ctx.author.id,item_uid,buy_amount)
+        sclient.update_coins(ctx.author.id,"add",Coins.RCOIN,buy_amount*-1*item.per_price)
+        sclient.update_coins(userid,"add",Coins.RCOIN,buy_amount*item.per_price)
+        if item.remain_amount == buy_amount:
+            sclient.remove_item_market_item(userid,item_uid)
+        else:
+            sclient.update_item_market_item(userid,item_uid,buy_amount)
+        await ctx.respond(f"{ctx.author.mention}：已購買 {item.name} * {buy_amount} 總花費為 {buy_amount*item.per_price}")
 
 
 def setup(bot):

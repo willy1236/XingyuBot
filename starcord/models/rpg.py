@@ -32,6 +32,7 @@ class RPGItem:
         name: str
         item_uid: int
         amount: int
+        star_uid: str
 
     def __init__(self,data):
         self.item_id = data.get('item_id')
@@ -39,6 +40,12 @@ class RPGItem:
         self.amount = data.get('amount')
         self.category = ItemCategory(data.get('item_category_id') or 1)
         self.item_uid = data.get('item_uid')
+        self.star_uid = data.get('star_uid')
+
+class RPGPlayerItem(RPGItem):
+    def __init__(self,data):
+        super().__init__(data)
+        self.discord_id = data.get('discord_id')
 
 class RPGPlayerItemBag(ListObject):
     def __init__(self,data,sqldb):
@@ -76,6 +83,8 @@ class RPGEquipment(RPGItem):
         self.hrt = data.get('equipment_hrt') or 0 + data.get("equipment_initial_hrt") or 0
         self.dex = data.get('equipment_dex') or 0 + data.get("equipment_initial_dex") or 0
         self.slot = EquipmentSolt(data.get('slot_id') or 0)
+        self.equipment_inmarket = bool(data.get('equipment_inmarket'))
+        self.desplay_name = self.customized_name or self.name
 
 class RPGPartialEquipment(RPGItem):
     def __init__(self,data:dict):
@@ -152,3 +161,9 @@ class MonsterLootList(ListObject):
                 loot_list.append(result)
 
         return loot_list
+    
+class RPGMarketItem(RPGItem):
+    def __init__(self,data):
+        super().__init__(data)
+        self.remain_amount = data.get('remain_amount')
+        self.per_price = data.get('per_price')
