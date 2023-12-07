@@ -19,6 +19,7 @@ class role_playing_game(Cog_Extension):
     equip = SlashCommandGroup("equip", "裝備相關指令")
     itemcmd = SlashCommandGroup("item", "物品相關指令")
     rpgmarket = SlashCommandGroup("rpgmarket","rpg玩家市場相關指令")
+    rpgcity = SlashCommandGroup("city","rpg城市相關指令")
 
     @commands.slash_command(description='進行冒險（開發中）')
     async def advance(self,ctx:discord.ApplicationContext):
@@ -338,6 +339,21 @@ class role_playing_game(Cog_Extension):
             sclient.update_item_market_item(userid,item_uid,buy_amount)
         await ctx.respond(f"{ctx.author.mention}：已購買 {item.name} * {buy_amount} 總花費為 {buy_amount*item.per_price}")
 
+    @rpgcity.command(description='移動到新城市（開發中）')
+    async def move(self,ctx,city_id:discord.Option(int,name='城市id',description='')):
+        city = sclient.get_city(city_id)
+        player = sclient.get_rpguser(ctx.author.id,user_dc=ctx.author)
+        if not city:
+            await ctx.respond(f"{ctx.author.mention}：沒有這個城市")
+            return
+        print(player.in_city_id)
+        if player.in_city_id == city.city_id:
+            await ctx.respond(f"{ctx.author.mention}：已在這個城市")
+            return
+
+        player.update_data("in_city_id",city.city_id)
+        embed = BotEmbed.rpg(f"來到城市：{city.city_name}")
+        await ctx.respond(embed=embed)
 
 def setup(bot):
     bot.add_cog(role_playing_game(bot))

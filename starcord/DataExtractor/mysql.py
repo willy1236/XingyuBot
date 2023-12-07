@@ -754,6 +754,12 @@ class MySQLRPGSystem(MySQLBaseModel):
         record = self.cursor.fetchall()
         if record:
             return [RPGMarketItem(i) for i in record]
+        
+    def get_city(self,city_id,with_introduce=False):
+        self.cursor.execute(f"SELECT * FROM `stardb_idbase`.`rpg_cities` LEFT JOIN `database`.`rpg_cities_statue` ON `rpg_cities_statue`.city_id = `rpg_cities`.city_id WHERE `rpg_cities`.`city_id` = {city_id};")
+        record = self.cursor.fetchall()
+        if record:
+            return RPGCity(record[0])
 
 class MySQLBusyTimeSystem(MySQLBaseModel):
     def add_busy(self, discord_id, date, time):

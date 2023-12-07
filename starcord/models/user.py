@@ -139,6 +139,7 @@ class RPGUser(DiscordUser):
         dex: int
         career_id: int
         last_work: datetime.datetime
+        in_city_id: int
         workcareer: RPGWorkCareer
         itembag: RPGPlayerItemBag
         equipmentbag: RPGPlayerEquipmentBag
@@ -163,6 +164,7 @@ class RPGUser(DiscordUser):
         self.career_id = data.get('career_id')
         self.last_work = data.get('last_work')
         self.workcareer = RPGWorkCareer(data)
+        self.in_city_id = data.get('in_city_id')
 
     @property
     def itembag(self):
@@ -199,44 +201,10 @@ class RPGUser(DiscordUser):
             self.hp = self.maxhp
         if save_to_db:
             self.sqldb.set_rpguser_data(self.discord_id,"user_hp",self.hp)
-    
-    # def advance(self) -> list[discord.Embed]:
-    #     '''
-    #     進行冒險
-        
-    #     Return: list[discord.Embed]（輸出冒險結果）
-    #     '''
-    #     data = sqldb.get_advance(self.id)
-    #     times = data.get('advance_times',0) + 1
-        
-    #     if times == 1:
-    #         if self.rcoin <= 0:
-    #             return "你的Rcoin不足 至少需要1Rcoin才能冒險"
 
-    #         sqldb.update_rcoin(self.id,'add',-1)
+    def update_data(self,column: str, value):
+        self.sqldb.set_rpguser_data(self.discord_id,column,value)
 
-    #     embed = BotEmbed.simple()
-    #     list = [embed]
-    #     rd = random.randint(71,100)
-    #     if rd >=1 and rd <=70:
-    #         embed.title = f"第{times}次冒險"
-    #         embed.description = "沒事發生"
-    #     elif rd >= 71 and rd <=100:
-    #         embed.title = f"第{times}次冒險"
-    #         embed.description = "遇到怪物"
-    #         monster = Monster.get_monster(random.randint(1,2))
-    #         embed2 = monster.battle(self)
-    #         list.append(embed2)
-
-    #         embed = BotEmbed.simple(f"遭遇戰鬥：{self.name}")
-    #         view = RPGbutton3(self,monster,embed)
-    #     if times >= 5 and random.randint(0,100) <= times*5:
-    #         sqldb.remove_userdata(self.id,'rpg_activities')
-    #         embed.description += '，冒險結束'
-    #     else:
-    #         sqldb.update_userdata(self.id,'rpg_activities','advance_times',times)
-
-    #     return list
         
 class PartialUser(DiscordUser):
     """只含有特定資料的用戶"""

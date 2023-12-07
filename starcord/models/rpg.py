@@ -167,3 +167,10 @@ class RPGMarketItem(RPGItem):
         super().__init__(data)
         self.remain_amount = data.get('remain_amount')
         self.per_price = data.get('per_price')
+
+class RPGCity():
+    def __init__(self,data):
+        self.city_id = data.get('city_id')
+        self.city_name = data.get('city_name')
+        self.coordinate_x = data.get('coordinate_x')
+        self.coordinate_y = data.get('coordinate_y')
