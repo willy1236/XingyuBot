@@ -1,10 +1,11 @@
+from pydoc import describe
 import discord,random,asyncio
 from discord.components import Component
 from discord.ext import pages
-from starcord.utilities.utility import BotEmbed
+from starcord.utilities.utility import BotEmbed,ChoiceList
 from starcord.DataExtractor import sclient
 from starcord.models.user import RPGUser,Monster,RPGPlayerEquipmentBag,RPGEquipment
-from starcord.types import Coins
+from starcord.types import Coins,EquipmentSolt
 
 class RPGAdvanceView(discord.ui.View):
     def __init__(self,userid):
@@ -136,7 +137,7 @@ class RPGBattleView(discord.ui.View):
                 if lootlist:
                     for loot in lootlist.looting():
                         equipment_uid = sclient.add_equipment_ingame(loot.equipment_id)
-                        sclient.add_rpgplayer_equipment(player.discord_id,equipment_uid)
+                        sclient.set_rpgplayer_equipment(player.discord_id,equipment_uid)
                         text += f"\n獲得道具：{loot.name}"
 
                 sclient.update_coins(player.discord_id,"add",Coins.RCOIN,monster.drop_money)
@@ -198,7 +199,7 @@ class RPGBattleView(discord.ui.View):
     async def button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
         if interaction.user.id == self.player.discord_id:
             embed = self.embed_list[1]
-            rd = random.randint(1,int(self.player.maxhp / 10 * 3))
+            rd = random.randint(0,int(self.player.maxhp / 10 * 3))
             self.player.update_hp(-rd)
 
             embed.description = f"逃避雖然可恥但有用\n你選擇撤離戰鬥，在過程中你受到 {rd} hp傷害"
@@ -215,7 +216,7 @@ class RPGEquipmentBagView(discord.ui.View):
         self.item_per_page = 10
 
     @property
-    def now_item(self):
+    def now_item(self) -> RPGEquipment:
         return self.bag[self.paginator.current_page * self.item_per_page + self.now_page_item]
 
     def refresh_item_page(self):
@@ -227,15 +228,26 @@ class RPGEquipmentBagView(discord.ui.View):
             text_list = []
             for j in range(i*self.item_per_page,(i + 1)*self.item_per_page):
                 try:
-                    item:RPGEquipment = self.bag.items[j]
+                    item:RPGEquipment = self.bag[j]
                 except IndexError:
                     break
                 name = f"{item.customized_name}({item.name})" if item.customized_name else item.name
-                text_list.append(f"[{item.equipment_uid}] {name} {j}")
+                text_list.append(f"[{item.equipment_uid}] {name}")
             page[i].description = "\n".join(text_list)
 
+        if self.paginator:
+            self.paginator.pages = page
         return page
 
+    def now_item_embed(self):
+        item = self.now_item
+        description = f"uid/id：{item.equipment_uid}/{item.item_id}\n價格：{item.price}"
+        if item.slot.value != 0:
+            description +=f"\n裝備位置：{ChoiceList.get_tw(str(item.slot.value),'rpgequipment_solt')}"
+        description +=f"\n最大生命（MaxHP）：{item.maxhp}\n攻擊（ATK）：{item.atk}\n防禦（DEF）：{item.df}\n命中（HRT）：{item.hrt}%\n敏捷（DEX）：{item.dex}"
+        embed = BotEmbed.rpg(item.customized_name if item.customized_name else item.name,description)
+        return embed
+    
     @discord.ui.button(label="上個裝備",style=discord.ButtonStyle.primary)
     async def button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
         self.now_page_item -= 1
@@ -244,18 +256,35 @@ class RPGEquipmentBagView(discord.ui.View):
         if self.paginator.current_page * 10 + self.now_page_item > len(self.bag):
             self.now_page_item = (len(self.bag) -1) % self.item_per_page
 
-        item:RPGEquipment = self.now_item
-        embed = BotEmbed.rpg(item.customized_name if item.customized_name else item.name,f"uid：{item.equipment_uid}")
+        embed = self.now_item_embed()
         await interaction.response.edit_message(embeds=[self.paginator.pages[self.paginator.current_page],embed])
 
-    
+    @discord.ui.button(label="售出裝備",style=discord.ButtonStyle.danger)
+    async def button3_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
+        if interaction.user.id == self.user_dc.id and self.now_item:
+            sclient.sell_rpgplayer_equipment(self.user_dc.id,self.now_item.equipment_uid)
+            sclient.update_coins(self.user_dc.id,"add",Coins.RCOIN,self.now_item.price)
+            
+            del self.bag[self.paginator.current_page * self.item_per_page + self.now_page_item]
+            self.refresh_item_page()
+            await interaction.response.edit_message(content=f"已售出 {self.now_item.name} 並獲得 {self.now_item.price} Rcoin",embeds=[self.paginator.pages[self.paginator.current_page]])
+
+    @discord.ui.button(label="批量售出",style=discord.ButtonStyle.danger)
+    async def button4_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
+        if interaction.user.id == self.user_dc.id and self.now_item:
+            total_price, deleted_uids = sclient.sell_rpgplayer_equipment(self.user_dc.id,equipment_id=self.now_item.item_id)
+            sclient.update_coins(self.user_dc.id,"add",Coins.RCOIN,self.now_item.price)
+            
+            self.bag = [equip for equip in self.bag if equip.equipment_uid not in deleted_uids]
+
+            self.refresh_item_page()
+            await interaction.response.edit_message(content=f"已售出未穿著的所有 {self.now_item.name} 並獲得 {total_price} Rcoin",embeds=[self.paginator.pages[self.paginator.current_page]])
+
     @discord.ui.button(label="下個裝備",style=discord.ButtonStyle.primary)
     async def button2_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
         self.now_page_item += 1
         if self.now_page_item == self.item_per_page or self.paginator.current_page * 10 + self.now_page_item > len(self.bag) -1 :
             self.now_page_item = 0
 
-        item:RPGEquipment = self.now_item
-        
-        embed = BotEmbed.rpg(item.customized_name if item.customized_name else item.name,f"uid：{item.equipment_uid}")
+        embed = self.now_item_embed()
         await interaction.response.edit_message(embeds=[self.paginator.pages[self.paginator.current_page],embed])

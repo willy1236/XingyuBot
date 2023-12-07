@@ -608,11 +608,6 @@ class MySQLRPGSystem(MySQLBaseModel):
         if record:
             return RPGItem(record[0])
         
-    # def get_rpgplayer_equipment(self,discord_id:int):
-    #     self.cursor.execute(f"SELECT * FROM `stardb_user`.`rpg_player_equipment` LEFT JOIN `database`.`rpg_equipment` ON `rpg_player_equipment`.equipment_id = `rpg_equipment`.equipment_id LEFT JOIN `stardb_idbase`.`rpg_item` ON `rpg_equipment`.item_id = `rpg_item`.item_id WHERE `discord_id` = {discord_id} AND item_category_id = {ItemCategory.equipment.value};")
-    #     record = self.cursor.fetchall() or []
-    #     return RPGPlayerEquipment(record)
-        
     def get_rpgequipment_ingame(self,equipment_uid):
         self.cursor.execute(f"SELECT * FROM database.rpg_equipment_ingame LEFT JOIN `stardb_idbase`.`rpg_equipment` ON `rpg_equipment_ingame`.equipment_id = `rpg_equipment`.equipment_id LEFT JOIN `stardb_idbase`.`rpg_item` ON `rpg_equipment`.item_id = `rpg_item`.item_id WHERE `equipment_uid` = {equipment_uid};")
         record = self.cursor.fetchall()
@@ -620,58 +615,91 @@ class MySQLRPGSystem(MySQLBaseModel):
             return RPGEquipment(record[0])
         
     def add_equipment_ingame(self, equipment_id, equipment_customized_name=None, equipment_maxhp=None, equipment_atk=None, equipment_def=None, equipment_hrt=None, equipment_dex=None):
-        self.cursor.execute(f"INSERT INTO `database`.`rpg_equipment_ingame` VALUES(%s,%s,%s,%s,%s,%s,%s,%s);",(None,equipment_id,equipment_customized_name,equipment_maxhp,equipment_atk,equipment_def,equipment_hrt,equipment_dex))
+        self.cursor.execute(f"INSERT INTO `database`.`rpg_equipment_ingame` VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);",(None,equipment_id,equipment_customized_name,None,None,equipment_maxhp,equipment_atk,equipment_def,equipment_hrt,equipment_dex))
         self.connection.commit()
         return self.cursor.lastrowid
 
-    def get_rpgplayer_equipment(self,discord_id,equipment_uid=None):
+    def get_rpgplayer_equipment(self,discord_id,equipment_uid=None,equipment_id=None,slot_id=None):
+        """查詢現有裝備\n
+        以下三者則一提供，都不提供則查詢玩家所有裝備
+        :param equipment_uid: 查詢玩家是否擁有指定裝備
+        :param equipment_id: 查詢玩家同類型裝備，同時傳入slot_id=0則查詢玩家未穿戴同類型裝備
+        :param slot_id: 查詢玩家所有穿戴或未穿戴裝備 -1:穿戴 0:未穿戴 其他:指定欄位穿戴
+        """
         if equipment_uid:
-            self.cursor.execute(f"SELECT * FROM `stardb_user`.`rpg_player_equipment` LEFT JOIN `database`.`rpg_equipment_ingame` ON `rpg_player_equipment`.equipment_uid = `rpg_equipment_ingame`.equipment_uid  LEFT JOIN `stardb_idbase`.`rpg_equipment` ON `rpg_equipment_ingame`.equipment_id = `rpg_equipment`.equipment_id LEFT JOIN `stardb_idbase`.`rpg_item` ON `rpg_equipment`.item_id = `rpg_item`.item_id WHERE `rpg_player_equipment`.`equipment_uid` = {equipment_uid} AND `discord_id` = {discord_id};")
+            self.cursor.execute(f"SELECT * FROM `database`.`rpg_equipment_ingame` LEFT JOIN `stardb_idbase`.`rpg_equipment` ON `rpg_equipment_ingame`.equipment_id = `rpg_equipment`.equipment_id LEFT JOIN `stardb_idbase`.`rpg_item` ON `rpg_equipment`.item_id = `rpg_item`.item_id WHERE `equipment_uid` = {equipment_uid} AND `discord_id` = {discord_id};")
             record = self.cursor.fetchall()
             if record:
                 return RPGEquipment(record[0])
-        else:
-            self.cursor.execute(f"SELECT * FROM `stardb_user`.`rpg_player_equipment` LEFT JOIN `database`.`rpg_equipment_ingame` ON `rpg_player_equipment`.equipment_uid = `rpg_equipment_ingame`.equipment_uid  LEFT JOIN `stardb_idbase`.`rpg_equipment` ON `rpg_equipment_ingame`.equipment_id = `rpg_equipment`.equipment_id LEFT JOIN `stardb_idbase`.`rpg_item` ON `rpg_equipment`.item_id = `rpg_item`.item_id WHERE `discord_id` = {discord_id};")
+        elif equipment_id:
+            if slot_id == 0:
+                WHERE = f"`rpg_equipment_ingame`.equipment_id = {equipment_id} AND `discord_id` = {discord_id} AND `slot_id` IS NULL"
+            else:
+                WHERE = f"`rpg_equipment_ingame`.equipment_id = {equipment_id} AND `discord_id` = {discord_id}"
+            self.cursor.execute(f"SELECT * FROM `database`.`rpg_equipment_ingame` LEFT JOIN `stardb_idbase`.`rpg_equipment` ON `rpg_equipment_ingame`.equipment_id = `rpg_equipment`.equipment_id LEFT JOIN `stardb_idbase`.`rpg_item` ON `rpg_equipment`.item_id = `rpg_item`.item_id WHERE {WHERE};")
             record = self.cursor.fetchall()
             if record:
-                return [ RPGEquipment(i for i in record) ] 
+                return [ RPGEquipment(i) for i in record ] 
+            
+        elif slot_id is not None:
+            if slot_id == -1:
+                WHERE = f"`discord_id` = {discord_id} AND `slot_id` IS NOT NULL"
+            elif slot_id == 0:
+                WHERE = f"`discord_id` = {discord_id} AND `slot_id` IS NULL"
+            else:
+                WHERE = f"`discord_id` = {discord_id} AND `slot_id` = {slot_id}"
+            self.cursor.execute(f"SELECT * FROM `database`.`rpg_equipment_ingame` LEFT JOIN `stardb_idbase`.`rpg_equipment` ON `rpg_equipment_ingame`.equipment_id = `rpg_equipment`.equipment_id LEFT JOIN `stardb_idbase`.`rpg_item` ON `rpg_equipment`.item_id = `rpg_item`.item_id WHERE {WHERE};")
+            record = self.cursor.fetchall()
+            if record:
+                return [ RPGEquipment(i) for i in record ]
+
+        else:
+            self.cursor.execute(f"SELECT * FROM `database`.`rpg_equipment_ingame` LEFT JOIN `stardb_idbase`.`rpg_equipment` ON `rpg_equipment_ingame`.equipment_id = `rpg_equipment`.equipment_id LEFT JOIN `stardb_idbase`.`rpg_item` ON `rpg_equipment`.item_id = `rpg_item`.item_id WHERE `discord_id` = {discord_id};")
+            record = self.cursor.fetchall()
+            if record:
+                return [ RPGEquipment(i) for i in record ] 
             else:
                 return []
 
-    def get_rpgplayer_waring_equipment(self,discord_id,slot_id=None):
-        if slot_id:
-            self.cursor.execute(f"SELECT * FROM `stardb_user`.`rpg_player_equipment` LEFT JOIN `database`.`rpg_equipment_ingame` ON `rpg_player_equipment`.equipment_uid = `rpg_equipment_ingame`.equipment_uid  LEFT JOIN `stardb_idbase`.`rpg_equipment` ON `rpg_equipment_ingame`.equipment_id = `rpg_equipment`.equipment_id LEFT JOIN `stardb_idbase`.`rpg_item` ON `rpg_equipment`.item_id = `rpg_item`.item_id WHERE `slot_id` = {slot_id} AND `discord_id` = {discord_id};")
-            record = self.cursor.fetchall()
-            if record:
-                return RPGEquipment(record[0])
-        else:
-            self.cursor.execute(f"SELECT * FROM `stardb_user`.`rpg_player_equipment` LEFT JOIN `database`.`rpg_equipment_ingame` ON `rpg_player_equipment`.equipment_uid = `rpg_equipment_ingame`.equipment_uid  LEFT JOIN `stardb_idbase`.`rpg_equipment` ON `rpg_equipment_ingame`.equipment_id = `rpg_equipment`.equipment_id LEFT JOIN `stardb_idbase`.`rpg_item` ON `rpg_equipment`.item_id = `rpg_item`.item_id WHERE `slot_id` IS NOT NULL AND `discord_id` = {discord_id};")
-            record = self.cursor.fetchall()
-            if record:
-                return [RPGEquipment(i) for i in record]
-            else:
-                return []
-
-    def add_rpgplayer_equipment(self,discord_id,equipment_uid):
-        self.cursor.execute(f"INSERT INTO `stardb_user`.`rpg_player_equipment` VALUES(%s,%s,%s);",(discord_id,equipment_uid,None))
+    def set_rpgplayer_equipment(self,discord_id,equipment_uid):
+        self.cursor.execute(f"UPDATE `database`.`rpg_equipment_ingame` SET `discord_id` = %s WHERE `equipment_uid` = %s;",(discord_id,equipment_uid))
         self.connection.commit()
     
     def remove_rpgplayer_equipment(self,discord_id,equipment_uid):
-        self.cursor.execute(f"DELETE FROM `stardb_user`.`rpg_player_equipment` WHERE `discord_id` = %s AND `equipment_uid` = %s;",(discord_id,equipment_uid))
+        self.cursor.execute(f"DELETE FROM `database`.`rpg_equipment_ingame` WHERE `discord_id` = %s AND `equipment_uid` = %s;",(discord_id,equipment_uid))
         self.connection.commit()
 
-    def sell_rpgplayer_equipment(self,discord_id,equipment_uid):
-        self.cursor.execute(f"DELETE FROM `stardb_user`.`rpg_player_equipment` WHERE `discord_id` = %s AND `equipment_uid` = %s;",(discord_id,equipment_uid))
-        self.cursor.execute(f"DELETE FROM `database`.`rpg_equipment_ingame` WHERE `equipment_uid` = %s;",(discord_id,equipment_uid))
-        self.connection.commit()
+    def sell_rpgplayer_equipment(self,discord_id,equipment_uid=None,equipment_id=None):
+        """售出裝備
+        :param equipment_uid: 售出指定裝備
+        :param equipment_id: 售出同類型裝備，並回傳總價格與裝備uid列表
+        """
+        if equipment_uid:
+            self.cursor.execute(f"DELETE FROM `database`.`rpg_equipment_ingame` WHERE `discord_id` = %s AND `equipment_uid` = %s;",(discord_id,equipment_uid))
+            self.connection.commit()
+        elif equipment_id:
+            self.cursor.execute(f"SELECT `equipment_uid` FROM `database`.`rpg_equipment_ingame` LEFT JOIN `stardb_idbase`.`rpg_equipment` ON `rpg_equipment_ingame`.equipment_id = `rpg_equipment`.equipment_id WHERE `rpg_equipment_ingame`.`equipment_id` = {equipment_id} AND `discord_id` = {discord_id} AND `slot_id` IS NULL;")
+            equipment_uids = [row["equipment_uid"] for row in self.cursor.fetchall()]
+            price = 0
+            if equipment_uids:
+                self.cursor.execute(f"SELECT SUM(`rpg_equipment`.equipment_price) as price FROM `database`.`rpg_equipment_ingame` LEFT JOIN `stardb_idbase`.`rpg_equipment` ON `rpg_equipment_ingame`.equipment_id = `rpg_equipment`.equipment_id WHERE `rpg_equipment_ingame`.`equipment_id` = {equipment_id} AND `discord_id` = {discord_id} AND `slot_id` IS NULL;")
+                record = self.cursor.fetchall() 
+                price = record[0]["price"]
+                
+                uid_list = ','.join(map(str, equipment_uids))
+                self.cursor.execute(f"DELETE FROM `database`.`rpg_equipment_ingame` WHERE `equipment_uid` IN ({uid_list});")
+                #self.connection.commit()
+                print(equipment_uids)
+            
+            return (price, equipment_uids)
 
-    def update_rpgplayer_equipment_warning(self,discord_id,equipment_uid,slot_id):
+    def update_rpgplayer_equipment_warning(self,discord_id,equipment_uid,slot_id=None):
         slot = EquipmentSolt(slot_id) if slot_id else None
-        self.cursor.execute(f"UPDATE `stardb_user`.`rpg_player_equipment` SET `slot_id` = %s WHERE `discord_id` = %s AND `equipment_uid` = %s;",(slot.value if slot else None,discord_id,equipment_uid))
+        self.cursor.execute(f"UPDATE `database`.`rpg_equipment_ingame` SET `slot_id` = %s WHERE `discord_id` = %s AND `equipment_uid` = %s;",(slot.value if slot else None,discord_id,equipment_uid))
         self.connection.commit()
 
     def get_equipmentbag_desplay(self,discord_id):
-        self.cursor.execute(f"SELECT discord_id,rpe.equipment_uid,re.equipment_id,equipment_customized_name,equipment_name,item_id FROM `stardb_user`.`rpg_player_equipment` AS rpe LEFT JOIN `database`.`rpg_equipment_ingame` AS rei ON rpe.equipment_uid = rei.equipment_uid LEFT JOIN `stardb_idbase`.`rpg_equipment` AS re ON rei.equipment_id = re.equipment_id WHERE `discord_id` = {discord_id} ORDER BY re.`equipment_id`;")
+        self.cursor.execute(f"SELECT * FROM `database`.`rpg_equipment_ingame` AS rei LEFT JOIN `stardb_idbase`.`rpg_equipment` AS re ON rei.equipment_id = re.equipment_id WHERE `discord_id` = {discord_id} ORDER BY re.`equipment_id`;")
         record = self.cursor.fetchall()
         if record:
             return RPGPlayerEquipmentBag(record,self)

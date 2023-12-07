@@ -6,7 +6,11 @@ class ListObject():
         self.items.append(item)
 
     def __getitem__(self, index):
-        return self.items[index]
+        if 0 <= index < len(self.items):
+            return self.items[index]
+        else:
+            raise IndexError("Index out of range")
+
 
     def __setitem__(self, index, value):
         self.items[index] = value

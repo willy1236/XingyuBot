@@ -219,6 +219,23 @@ class role_playing_game(Cog_Extension):
         sclient.update_coins(ctx.author.id,"add",Coins.RCOIN,item.price)
         await ctx.respond(f"{ctx.author.mention}：已售出 {item.name} 並獲得 ${item.price}")
 
+    @equip.command(description='售出同類型裝備給RPG商店（開發中）')
+    async def bulksell(self,ctx,
+                   equipment_id:discord.Option(str,name='裝備id',description='要售出的裝備')):
+        equipment_id = int(equipment_id)
+        items = sclient.get_rpgplayer_equipment(ctx.author.id,equipment_id=equipment_id)
+        
+        if not items:
+            await ctx.respond(f"{ctx.author.mention}：你沒有此種裝備")
+            return
+        
+        price = sclient.sell_rpgplayer_equipment(ctx.author.id,equipment_id=equipment_id)
+        if price:
+            sclient.update_coins(ctx.author.id,"add",Coins.RCOIN,price)
+            await ctx.respond(f"{ctx.author.mention}：已批量售出 {items[0].name} 並獲得 ${price}")
+        else:
+            await ctx.respond(f"{ctx.author.mention}：沒有找到此種裝備")
+
     @equip.command(description='穿脫裝備（開發中）')
     async def waring(self,ctx,
                    equipment_uid:discord.Option(str,name='裝備uid',description='要穿/脫/換上的裝備')):
@@ -230,7 +247,7 @@ class role_playing_game(Cog_Extension):
             return
         
         if item.slot == EquipmentSolt.none:
-            waring_item = sclient.get_rpgplayer_waring_equipment(ctx.author.id,item.item_id)
+            waring_item = sclient.get_rpgplayer_equipment(ctx.author.id,slot_id=item.slot.value)
             sclient.update_rpgplayer_equipment_warning(ctx.author.id,item.equipment_uid,item.item_id)
             sclient.update_rpguser_attribute(ctx.author.id,item.maxhp,item.atk,item.df,item.hrt,item.dex)
             if not waring_item:

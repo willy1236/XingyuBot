@@ -92,7 +92,7 @@ class RPGPlayerEquipmentBag(ListObject):
         super().__init__()
         self.sqldb = sqldb
         for i in data:
-            self.append(RPGPartialEquipment(i))
+            self.append(RPGEquipment(i))
         
 class RPGPlayerWearingEquipment:
     if TYPE_CHECKING:

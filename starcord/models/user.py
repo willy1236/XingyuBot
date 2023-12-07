@@ -179,7 +179,7 @@ class RPGUser(DiscordUser):
 
     @property
     def waring_equipment(self):
-        return RPGPlayerWearingEquipment(self.sqldb.get_rpgplayer_waring_equipment(self.discord_id))
+        return RPGPlayerWearingEquipment(self.sqldb.get_rpgplayer_equipment(self.discord_id,slot_id=-1))
 
     def desplay(self):
         embed = BotEmbed.general(name=self.user_dc.name if self.user_dc else self.name, icon_url=self.user_dc.avatar.url if self.user_dc.avatar else discord.Embed.Empty)

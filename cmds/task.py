@@ -6,7 +6,7 @@ from discord.ext import commands,tasks
 from requests.exceptions import ConnectTimeout
 
 from core.classes import Cog_Extension
-from starcord import Jsondb,sclient
+from starcord import Jsondb,sclient,log
 from starcord.DataExtractor import *
 
 
@@ -215,6 +215,7 @@ class task(Cog_Extension):
         pass
 
     async def update_rpgshop_data(self):
+        log.info("update rpgshop_data start")
         sclient.rpg_shop_daily()
 
 def setup(bot):
