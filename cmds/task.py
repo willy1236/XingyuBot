@@ -8,6 +8,7 @@ from requests.exceptions import ConnectTimeout
 from core.classes import Cog_Extension
 from starcord import Jsondb,sclient,log
 from starcord.DataExtractor import *
+from starcord.utilities.utility import BotEmbed
 
 
 apsc_log = logging.getLogger('apscheduler')
@@ -227,16 +228,29 @@ class task(Cog_Extension):
             return
         
         for city_battle in city_battle_list:    
-            for defencer in city_battle.defencer:
-                player_def = sclient.get_rpguser(defencer.discord_id,self.bot.get_user(defencer.discord_id))
-                if city_battle.attacker:
-                    attacker = random.choice(city_battle.attacker)
-                    player_atk = sclient.get_rpguser(attacker.discord_id,self.bot.get_user(attacker.discord_id))
-                    
-                    text = f"在{city_battle.city.city_name} 的占領戰\n"
-                    text += f"攻擊者 {player_atk.name} 對 防守者{player_def.name}\n"
-                    text += player_def.battle_with(player_atk)
-                    await self.bot.get_channel(1181201785055096842).send(text)
+            if city_battle.defencer:
+                for defencer in city_battle.defencer:
+                    player_def = sclient.get_rpguser(defencer.discord_id,self.bot.get_user(defencer.discord_id))
+                    if city_battle.attacker:
+                        attacker = random.choice(city_battle.attacker)
+                        player_atk = sclient.get_rpguser(attacker.discord_id,self.bot.get_user(attacker.discord_id))
+                        
+                        embed = BotEmbed.rpg(f"在{city_battle.city.city_name} 的占領戰\n",f"攻擊者 {player_atk.name} 對 防守者{player_def.name}\n")
+                        text, participants = player_def.battle_with(player_atk)
+                        embed.description += text
+
+                        if participants[0] == player_def:
+                            city_battle.attacker.remove(attacker)
+                        embed.description += f"\n剩餘 {len(city_battle.attacker)} 位攻擊者"
+                        await self.bot.get_channel(1181201785055096842).send(embed=embed)
+
+            else:
+                
+                embed = BotEmbed.rpg(f"在{city_battle.city.city_name} 的占領戰\n",f"佔領值 +{len(city_battle.attacker)}")
+                await self.bot.get_channel(1181201785055096842).send(embed=embed)
+        
+        log.info("city_battle end")
+
 
 def setup(bot):
     bot.add_cog(task(bot))

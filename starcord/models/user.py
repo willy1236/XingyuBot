@@ -216,7 +216,7 @@ class RPGUser(DiscordUser):
     def battle_with(self,enemy_id,enemy_user_dc=None):
         """
         :param enemy_id: 欲戰鬥的玩家，可直接輸入RPGUser物件
-        
+        return: 遊戲紀錄,[獲勝者, 落敗者]
         """
         enemy = enemy_id if type(enemy_id) == RPGUser else self.sqldb.get_rpguser(enemy_id,user_dc=enemy_user_dc)
         text = ""
@@ -246,19 +246,23 @@ class RPGUser(DiscordUser):
                 self.activities_statue = ActivitiesStatue.none
                 self.update_data("activities_statue",self.activities_statue.value)
                 self.sqldb.remove_city_battle(self.in_city_id,self.discord_id)
+            winner = self
+            loser = enemy
         elif self.hp > 0:
             text += f"\n{self.name} 倒下"
             if enemy.activities_statue != ActivitiesStatue.none:
                 enemy.activities_statue = ActivitiesStatue.none
                 enemy.update_data("activities_statue",enemy.activities_statue.value)
                 self.sqldb.remove_city_battle(enemy.in_city_id,enemy.discord_id)
+            winner = enemy
+            loser = self
         else:
             text += "\n"
 
         self.update_hp(0,True)
         enemy.update_hp(0,True)
 
-        return text
+        return text, [winner,loser]
         
 class CityBattlePlayer(RPGUser):
     def __init__(self, data: dict):
