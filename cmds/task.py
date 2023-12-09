@@ -217,10 +217,11 @@ class task(Cog_Extension):
         pass
 
     async def update_rpgshop_data(self):
-        log.info("update rpgshop_data start")
+        log.info("update_rpgshop_data start")
         sclient.rpg_shop_daily()
 
     async def city_battle(self):
+        log.info("city_battle start")
         city_battle_list = sclient.get_all_city_battle()
         if not city_battle_list:
             return
