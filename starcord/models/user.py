@@ -274,7 +274,6 @@ class CityBattle(ListObject):
     def __init__(self,data,sqldb=None):
         super().__init__()
         self.sqldb = sqldb
-        self.att    
         self._city = None
         self._defencer = []
         self._attacker = []
