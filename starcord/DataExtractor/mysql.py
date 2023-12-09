@@ -767,7 +767,7 @@ class MySQLRPGSystem(MySQLBaseModel):
         self.cursor.execute(f"SELECT * FROM `database`.`rpg_city_battle` LEFT JOIN `stardb_idbase`.`rpg_cities` ON `rpg_city_battle`.city_id = `rpg_cities`.city_id WHERE `rpg_cities`.`city_id` = {city_id};")
         record = self.cursor.fetchall()
         if record:
-            return CityBattle(record)
+            return CityBattle(record,sqldb=self)
         
     def get_all_city_battle(self):
         self.cursor.execute(f"SELECT DISTINCT `rpg_cities`.`city_id` FROM `database`.`rpg_city_battle` LEFT JOIN `stardb_idbase`.`rpg_cities` ON `rpg_city_battle`.city_id = `rpg_cities`.city_id;")
