@@ -47,7 +47,7 @@ class DiscordUser():
         pet: Pet | None
         main_account_id: int | None
 
-    def __init__(self,data:dict,sqldb,user_dc=None):
+    def __init__(self,data:dict,sqldb=None,user_dc=None):
         self.sqldb = sqldb
         self.user_dc = user_dc
         self.discord_id = data.get('discord_id')
