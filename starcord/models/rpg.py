@@ -1,4 +1,3 @@
-from unittest import result
 import discord,random
 from typing import TYPE_CHECKING
 from .BaseModel import ListObject
@@ -33,19 +32,24 @@ class RPGItem:
         item_uid: int
         amount: int
         star_uid: str
+        discord_id: int
 
     def __init__(self,data):
+        #rpg_item
+        self.category = ItemCategory(data.get('item_category_id') or 1)
         self.item_id = data.get('item_id')
         self.name = data.get('item_name')
-        self.amount = data.get('amount')
-        self.category = ItemCategory(data.get('item_category_id') or 1)
         self.item_uid = data.get('item_uid')
         self.star_uid = data.get('star_uid')
 
-class RPGPlayerItem(RPGItem):
-    def __init__(self,data):
-        super().__init__(data)
+        #rpg_user_bag
         self.discord_id = data.get('discord_id')
+        self.amount = data.get('amount')
+
+# class RPGPlayerItem(RPGItem):
+#     def __init__(self,data):
+#         super().__init__(data)
+        
 
 class RPGPlayerItemBag(ListObject):
     def __init__(self,data,sqldb):
@@ -57,6 +61,7 @@ class RPGPlayerItemBag(ListObject):
 class ShopItem(RPGItem):
     def __init__(self,data:dict):
         super().__init__(data)
+        #rpg_shop
         self.shop_item_id = data.get('shop_item_id')
         self.price = data.get('item_price')
         self.mode = ShopItemMode(data.get('item_mode'))
@@ -72,29 +77,35 @@ class RPGWorkCareer:
 class RPGEquipment(RPGItem):
     def __init__(self,data:dict):
         super().__init__(data)
-        self.equipment_uid = data.get('equipment_uid')
-        self.category = ItemCategory.equipment
+        #rpg_equipment
+        self.equipment_id = data.get('equipment_id')
         self.name = data.get('equipment_name') or self.name
-        self.customized_name = data.get('equipment_customized_name')
         self.price = data.get('equipment_price')
+
         self.maxhp = data.get('equipment_maxhp') or 0 + data.get("equipment_initial_maxhp") or 0
         self.atk = data.get('equipment_atk') or 0 + data.get("equipment_initial_atk") or 0
         self.df = data.get('equipment_def') or 0 + data.get("equipment_initial_def") or 0
         self.hrt = data.get('equipment_hrt') or 0 + data.get("equipment_initial_hrt") or 0
         self.dex = data.get('equipment_dex') or 0 + data.get("equipment_initial_dex") or 0
+
+        #rpg_equipment_ingame
+        self.equipment_uid = data.get('equipment_uid')
+        self.customized_name = data.get('equipment_customized_name')
         self.slot = EquipmentSolt(data.get('slot_id') or 0)
         self.equipment_inmarket = bool(data.get('equipment_inmarket'))
+        
+        self.category = ItemCategory.equipment
         self.desplay_name = self.customized_name or self.name
 
-class RPGPartialEquipment(RPGItem):
-    def __init__(self,data:dict):
-        super().__init__(data)
-        self.equipment_uid = data.get('equipment_uid')
-        self.category = ItemCategory.equipment
-        self.name = data.get('equipment_name') or self.name
-        self.customized_name = data.get('equipment_customized_name')
-        self.price = data.get('equipment_price')
-        self.slot = EquipmentSolt(data.get('slot_id') or 0)
+# class RPGPartialEquipment(RPGItem):
+#     def __init__(self,data:dict):
+#         super().__init__(data)
+#         self.equipment_uid = data.get('equipment_uid')
+#         self.category = ItemCategory.equipment
+#         self.name = data.get('equipment_name') or self.name
+#         self.customized_name = data.get('equipment_customized_name')
+#         self.price = data.get('equipment_price')
+#         self.slot = EquipmentSolt(data.get('slot_id') or 0)
 
 class RPGPlayerEquipmentBag(ListObject):
     def __init__(self,data,sqldb):
@@ -138,7 +149,6 @@ class MonsterEquipmentLoot(RPGEquipment):
     def __init__(self,data):
         super().__init__(data)
         self.monster_id = data.get('monster_id')
-        self.equipment_id = data.get('equipment_id')
         self.drop_probability = data.get('drop_probability',0)
 
     def drop(self):
@@ -151,11 +161,11 @@ class MonsterLootList(ListObject):
     def __init__(self,data):
         super().__init__()
         for i in data:
-            self.items.append(MonsterEquipmentLoot(i))
+            self.append(MonsterEquipmentLoot(i))
 
     def looting(self) -> list[MonsterEquipmentLoot]:
         loot_list = []
-        for loot in self.items:
+        for loot in self:
             result = loot.drop()
             if result:
                 loot_list.append(result)
@@ -165,12 +175,24 @@ class MonsterLootList(ListObject):
 class RPGMarketItem(RPGItem):
     def __init__(self,data):
         super().__init__(data)
+        #rpg_item_market
         self.remain_amount = data.get('remain_amount')
         self.per_price = data.get('per_price')
 
 class RPGCity():
     def __init__(self,data):
+        #rpg_cities
         self.city_id = data.get('city_id')
         self.city_name = data.get('city_name')
         self.coordinate_x = data.get('coordinate_x')
         self.coordinate_y = data.get('coordinate_y')
+        
+        #rpg_cities_statue
+        self.city_occupation_value = data.get('city_occupation_value')
+
+    def desplay(self):
+        embed = BotEmbed.rpg(self.city_name)
+        embed.add_field(name="座標",value=f"({self.coordinate_x},{self.coordinate_y})")
+        return embed
+    
+

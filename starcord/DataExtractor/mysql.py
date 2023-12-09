@@ -1,4 +1,3 @@
-from os import remove
 import mysql.connector,datetime,discord
 from mysql.connector.errors import Error as sqlerror
 from starcord.types import DBGame,Coins, Position
@@ -7,7 +6,7 @@ from starcord.models.model import *
 from starcord.models.rpg import *
 
 def create_id():
-    return 'SELECT idNumber FROM ( SELECT CONCAT("U-", LPAD(FLOOR(RAND()*1000000), 6, 0)) as idNumber) AS generated_ids WHERE NOT EXISTS ( SELECT 1 FROM stardb_user.user_data WHERE user_id = generated_ids.idNumber);'
+    return 'SELECT idNumber FROM ( SELECT CONCAT("U", LPAD(FLOOR(RAND()*1000000), 6, 0)) as idNumber) AS generated_ids WHERE NOT EXISTS ( SELECT 1 FROM stardb_user.user_data WHERE user_id = generated_ids.idNumber);'
 
 class MySQLBaseModel(object):
     """MySQL資料庫基本模型"""
@@ -490,8 +489,10 @@ class MySQLRPGSystem(MySQLBaseModel):
                 return RPGEquipment(records[0])
         
     
-    def get_rpguser(self,discord_id:int,full=False,user_dc:discord.User=None):
-        """取得RPG用戶"""
+    def get_rpguser(self,discord_id:int,full=False,user_dc:discord.User=None,):
+        """取得RPG用戶
+        :param full: 是否合併其他表取得完整資料
+        """
         self.cursor.execute(f"USE `stardb_user`;")
         if full:
             #self.cursor.execute(f'SELECT * FROM `rpg_user` LEFT JOIN `user_point`ON `rpg_user`.discord_id = `user_point`.discord_id WHERE rpg_user.discord_id = %s;',(discord_id,))
@@ -611,7 +612,7 @@ class MySQLRPGSystem(MySQLBaseModel):
         self.connection.commit()
 
     def rpg_shop_daily(self):
-        self.cursor.execute(f"UPDATE `database`.`rpg_shop` SET `item_inventory` = item_inventory - item_inital_inventory * (item_inventory / item_inital_inventory * FLOOR(RAND()*76+25) / 100 WHERE `item_mode` = 1);")
+        self.cursor.execute(f"UPDATE `database`.`rpg_shop` SET `item_inventory` = item_inventory - item_inital_inventory * (item_inventory / item_inital_inventory * FLOOR(RAND()*76+25) / 100 ) WHERE `item_mode` = 1;")
         self.cursor.execute(f"UPDATE `database`.`rpg_shop` SET `item_inventory` = item_inital_inventory WHERE item_inventory <= item_inital_inventory AND `item_mode` = 1;")
         self.cursor.execute(f"UPDATE `database`.`rpg_shop` SET `item_price` =  item_inital_price * pow(0.97,item_inventory - item_inital_inventory) WHERE `item_mode` = 1;")
         self.connection.commit()
@@ -760,6 +761,29 @@ class MySQLRPGSystem(MySQLBaseModel):
         record = self.cursor.fetchall()
         if record:
             return RPGCity(record[0])
+        
+    def get_city_battle(self,city_id):
+        self.cursor.execute(f"SELECT * FROM `database`.`rpg_city_battle` LEFT JOIN `stardb_idbase`.`rpg_cities` ON `rpg_city_battle`.city_id = `rpg_cities`.city_id WHERE `rpg_cities`.`city_id` = {city_id};")
+        record = self.cursor.fetchall()
+        if record:
+            return CityBattle(record)
+        
+    def get_all_city_battle(self):
+        self.cursor.execute(f"SELECT DISTINCT `city_id` FROM `database`.`rpg_city_battle` LEFT JOIN `stardb_idbase`.`rpg_cities` ON `rpg_city_battle`.city_id = `rpg_cities`.city_id;")
+        record = self.cursor.fetchall()
+        if record:
+            city_id_list = [i["city_id"] for i in record]
+            city_battle_list = [self.get_city_battle(city_id) for city_id in city_id_list]
+            return city_battle_list
+        
+        
+    def add_city_battle(self,city_id,discord_id,in_city_statue):
+        self.cursor.execute(f"INSERT INTO `database`.`rpg_city_battle` VALUES(%s,%s,%s) ON DUPLICATE KEY UPDATE `in_city_statue` = {in_city_statue};",(city_id,discord_id,in_city_statue))
+        self.connection.commit()
+
+    def remove_city_battle(self,city_id,discord_id):
+        self.cursor.execute(f"DELETE FROM `database`.`rpg_city_battle` WHERE `city_id` = {city_id} AND `discord_id` = {discord_id};")
+        self.connection.commit()
 
 class MySQLBusyTimeSystem(MySQLBaseModel):
     def add_busy(self, discord_id, date, time):

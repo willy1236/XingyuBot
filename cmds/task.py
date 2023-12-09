@@ -1,4 +1,4 @@
-import asyncio,discord,genshin,logging
+import asyncio,discord,genshin,logging,random
 #from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from datetime import datetime, timezone, timedelta,date
@@ -33,7 +33,7 @@ class task(Cog_Extension):
             scheduler.add_job(self.apex_crafting_update,'cron',hour=1,minute=5,second=0,jitter=30,misfire_grace_time=60)
             scheduler.add_job(self.forecast_update,'cron',hour='00,03,06,09,12,15,18,21',minute=0,second=1,jitter=30,misfire_grace_time=60)
             scheduler.add_job(self.auto_hoyo_reward,'cron',hour=19,minute=0,second=0,jitter=30,misfire_grace_time=60)
-            scheduler.add_job(self.update_rpgshop_data,'cron',hour=0,minute=0,second=0,jitter=30,misfire_grace_time=60)
+            scheduler.add_job(self.update_rpgshop_data,'cron',hour=0,minute=0,second=1,jitter=30,misfire_grace_time=60)
             #scheduler.add_job(self.update_channel_dict,'cron',hour='*',minute="0,30",second=0,jitter=30,misfire_grace_time=60)
 
             scheduler.add_job(self.earthquake_check,'interval',minutes=1,jitter=30,misfire_grace_time=40)
@@ -217,6 +217,23 @@ class task(Cog_Extension):
     async def update_rpgshop_data(self):
         log.info("update rpgshop_data start")
         sclient.rpg_shop_daily()
+
+    async def city_battle(self):
+        city_battle_list = sclient.get_all_city_battle()
+        if not city_battle_list:
+            return
+        
+        for city_battle in city_battle_list:    
+            for defencer in city_battle.defencer:
+                player_def = sclient.get_rpguser(defencer.discord_id,self.bot.get_user(defencer.discord_id))
+                if city_battle.attacker:
+                    attacker = random.choice(city_battle.attacker)
+                    player_atk = sclient.get_rpguser(attacker.discord_id,self.bot.get_user(attacker.discord_id))
+                    
+                    text = f"在{city_battle.city.city_name} 的占領戰\n"
+                    text += f"攻擊者 {player_atk.name} 對 防守者{player_def.name}\n"
+                    text += player_def.battle_with(player_atk)
+                    self.bot.get_channel(1181201785055096842).send(text)
 
 def setup(bot):
     bot.add_cog(task(bot))

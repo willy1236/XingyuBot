@@ -18,3 +18,8 @@ class EquipmentSolt(IntEnum):
     foot = 4
     mainhand = 5
     seconhand = 6
+
+class ActivitiesStatue(IntEnum):
+    none = 0
+    attack_city = 1
+    defence_city = 2

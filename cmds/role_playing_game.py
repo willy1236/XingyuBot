@@ -9,9 +9,10 @@ from starcord.models.rpg import RPGMarketItem
 from starcord.models.user import RPGUser
 from starcord.ui_element.RPGview import RPGAdvanceView,RPGEquipmentBagView
 from starcord.models import GameInfoPage,RPGItem,ShopItem,RPGEquipment
-from starcord.types import Coins,ItemCategory,ShopItemMode,EquipmentSolt
+from starcord.types import Coins,ItemCategory,ShopItemMode,EquipmentSolt,ActivitiesStatue
 
 rpgcareer_option = ChoiceList.set("rpgcareer_option")
+rpgcity_action_option = ChoiceList.set("rpgcity_action_option")
 
 class role_playing_game(Cog_Extension):
     work = SlashCommandGroup("work", "工作相關指令")
@@ -298,7 +299,7 @@ class role_playing_game(Cog_Extension):
         sclient.add_item_market_item(userid,item_uid,launch_amount,per_price)
         await ctx.respond(f"{ctx.author.mention}：已上架 {item.name} 每件價格為 {per_price}")
 
-    @rpgmarket.command(description='下架商品到（開發中）')
+    @rpgmarket.command(description='下架商品（開發中）')
     async def unlaunch(self,ctx,item_uid:discord.Option(int,name='物品uid',description='要購買的物品')):
         userid = ctx.author.id
         item = sclient.get_item_market_item(userid,item_uid)
@@ -330,9 +331,16 @@ class role_playing_game(Cog_Extension):
             await ctx.respond(f"{ctx.author.mention}：剩餘Rcoin不足")
             return
         
-        sclient.update_bag(ctx.author.id,item_uid,buy_amount)
-        sclient.update_coins(ctx.author.id,"add",Coins.RCOIN,buy_amount*-1*item.per_price)
-        sclient.update_coins(userid,"add",Coins.RCOIN,buy_amount*item.per_price)
+        buyer = sclient.get_rpguser(userid,user_dc=ctx.author)
+        seller = sclient.get_rpguser(userid,user_dc=user_dc)
+
+        if buyer.in_city_id != seller.in_city_id:
+            await ctx.respond(f"{ctx.author.mention}：不在同一城市")
+            return
+
+        buyer.update_bag(item_uid,buy_amount)
+        buyer.update_coins("add",Coins.RCOIN,buy_amount*-1*item.per_price)
+        seller.update_coins("add",Coins.RCOIN,buy_amount*item.per_price)
         if item.remain_amount == buy_amount:
             sclient.remove_item_market_item(userid,item_uid)
         else:
@@ -346,14 +354,51 @@ class role_playing_game(Cog_Extension):
         if not city:
             await ctx.respond(f"{ctx.author.mention}：沒有這個城市")
             return
-        print(player.in_city_id)
         if player.in_city_id == city.city_id:
             await ctx.respond(f"{ctx.author.mention}：已在這個城市")
             return
 
         player.update_data("in_city_id",city.city_id)
+        player.update_data("activities_statue",0)
         embed = BotEmbed.rpg(f"來到城市：{city.city_name}")
         await ctx.respond(embed=embed)
+
+    @rpgcity.command(description='取得所在城市（開發中）')
+    async def get(self,ctx):
+        player = sclient.get_rpguser(ctx.author.id,user_dc=ctx.author)
+        
+        if not player.in_city_id:
+            await ctx.respond(f"{ctx.author.mention}：沒有所在城市")
+            return
+
+        city = sclient.get_city(player.in_city_id)
+        await ctx.respond(embed=city.desplay())
+
+
+    @rpgcity.command(description='在所在城市開始行動（開發中）')
+    async def action(self,ctx,action_id:discord.Option(int,name='行動',description='',choices=rpgcity_action_option)):
+        player = sclient.get_rpguser(ctx.author.id,user_dc=ctx.author)
+        
+        if not player.in_city_id:
+            await ctx.respond(f"{ctx.author.mention}：沒有所在城市")
+            return
+
+        city = sclient.get_city(player.in_city_id)
+        action = ActivitiesStatue(action_id)
+        if player.activities_statue == action:
+            await ctx.respond(f"{ctx.author.mention}：已經在做此行動")
+            return
+        
+        player.update_data("activities_statue",action_id)
+        embed = BotEmbed.rpg(f"開始在{city.city_name} 進行 {ChoiceList.get_tw(str(action_id),'rpgcity_action_option')}")
+
+        if action == ActivitiesStatue.none:
+            sclient.remove_city_battle(city.city_id,player.discord_id)
+        else:
+            sclient.add_city_battle(city.city_id,player.discord_id,action.value)
+
+        await ctx.respond(embed=embed)
+
 
 def setup(bot):
     bot.add_cog(role_playing_game(bot))
