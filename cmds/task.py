@@ -236,7 +236,7 @@ class task(Cog_Extension):
                     text = f"在{city_battle.city.city_name} 的占領戰\n"
                     text += f"攻擊者 {player_atk.name} 對 防守者{player_def.name}\n"
                     text += player_def.battle_with(player_atk)
-                    self.bot.get_channel(1181201785055096842).send(text)
+                    await self.bot.get_channel(1181201785055096842).send(text)
 
 def setup(bot):
     bot.add_cog(task(bot))

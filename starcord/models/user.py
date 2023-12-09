@@ -51,7 +51,7 @@ class DiscordUser():
         self.sqldb = sqldb
         self.user_dc = user_dc
         self.discord_id = data.get('discord_id')
-        self.name = data.get('name')
+        self.name = user_dc.name if user_dc else data.get('name')
         self._scoin = data.get('scoin')
         self._point = data.get('point')
         self._rcoin = data.get('rcoin') 
@@ -229,12 +229,12 @@ class RPGUser(DiscordUser):
             damage_by_enemy = enemy.atk - self.df
 
             #self先攻
-            enemy.update_hp(damage_by_self)
+            enemy.update_hp(-damage_by_self)
             text += f"\n{self.name}：{damage_by_self} / "
             
             #enemy後攻
             if enemy.hp > 0:
-                self.update_hp(damage_by_enemy)
+                self.update_hp(-damage_by_enemy)
                 text += f"{enemy.name}：{damage_by_enemy}"
             else:
                 text += f"{enemy.name}：未攻擊"
