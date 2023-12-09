@@ -125,8 +125,9 @@ class RPGPlayerWearingEquipment:
 
     def __init__(self,data):
         dict = {}
-        for equip in data:
-            dict[str(equip.slot.value)] = equip
+        if data:
+            for equip in data:
+                dict[str(equip.slot.value)] = equip
         
         self.head = dict.get('1')
         self.body = dict.get('2')

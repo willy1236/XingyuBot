@@ -669,12 +669,12 @@ class MySQLRPGSystem(MySQLBaseModel):
                 return [ RPGEquipment(i) for i in record ]
 
         else:
-            self.cursor.execute(f"SELECT * FROM `database`.`rpg_equipment_ingame` LEFT JOIN `stardb_idbase`.`rpg_equipment` ON `rpg_equipment_ingame`.equipment_id = `rpg_equipment`.equipment_id LEFT JOIN `stardb_idbase`.`rpg_item` ON `rpg_equipment`.item_id = `rpg_item`.item_id WHERE `discord_id` = {discord_id};")
+            self.cursor.execute(f"SELECT * FROM `database`.`rpg_equipment_ingame` LEFT JOIN `stardb_idbase`.`rpg_equipment` ON `rpg_equipment_ingame`.equipment_id = `rpg_equipment`.equipment_id LEFT JOIN `stardb_idbase`.`rpg_item` ON `rpg_equipment`.item_id = `rpg_item`.item_id WHERE `discord_id` = {discord_id} AND `item_category_id` = 2;")
             record = self.cursor.fetchall()
             if record:
-                return RPGPlayerWearingEquipment([ RPGEquipment(i) for i in record ] )
+                return [ RPGEquipment(i) for i in record ]
             else:
-                return RPGPlayerWearingEquipment()
+                return []
 
     def set_rpgplayer_equipment(self,discord_id,equipment_uid):
         self.cursor.execute(f"UPDATE `database`.`rpg_equipment_ingame` SET `discord_id` = %s WHERE `equipment_uid` = %s;",(discord_id,equipment_uid))
@@ -724,6 +724,7 @@ class MySQLRPGSystem(MySQLBaseModel):
             #脫掉裝備
             self.cursor.execute(f"UPDATE `database`.`rpg_equipment_ingame` SET `slot_id` = %s WHERE `equipment_uid` = %s AND `equipment_inmarket` != 1;",(None,equipment_uid))
             self.update_rpguser_attribute(discord_id,-item.maxhp,-item.atk,-item.df,-item.hrt,-item.dex)
+        self.connection.commit()
         
 
     def get_equipmentbag_desplay(self,discord_id):
