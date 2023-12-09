@@ -672,9 +672,9 @@ class MySQLRPGSystem(MySQLBaseModel):
             self.cursor.execute(f"SELECT * FROM `database`.`rpg_equipment_ingame` LEFT JOIN `stardb_idbase`.`rpg_equipment` ON `rpg_equipment_ingame`.equipment_id = `rpg_equipment`.equipment_id LEFT JOIN `stardb_idbase`.`rpg_item` ON `rpg_equipment`.item_id = `rpg_item`.item_id WHERE `discord_id` = {discord_id};")
             record = self.cursor.fetchall()
             if record:
-                return [ RPGEquipment(i) for i in record ] 
+                return RPGPlayerWearingEquipment([ RPGEquipment(i) for i in record ] )
             else:
-                return []
+                return RPGPlayerWearingEquipment()
 
     def set_rpgplayer_equipment(self,discord_id,equipment_uid):
         self.cursor.execute(f"UPDATE `database`.`rpg_equipment_ingame` SET `discord_id` = %s WHERE `equipment_uid` = %s;",(discord_id,equipment_uid))
