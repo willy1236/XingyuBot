@@ -21,6 +21,7 @@ class role_playing_game(Cog_Extension):
     itemcmd = SlashCommandGroup("item", "物品相關指令")
     rpgmarket = SlashCommandGroup("rpgmarket","rpg玩家市場相關指令")
     rpgcity = SlashCommandGroup("city","rpg城市相關指令")
+    #rpgguild = SlashCommandGroup("guild","rpg公會相關指令")
 
     @commands.slash_command(description='進行冒險（開發中）')
     async def advance(self,ctx:discord.ApplicationContext):

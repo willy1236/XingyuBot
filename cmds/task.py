@@ -39,7 +39,7 @@ class task(Cog_Extension):
             #scheduler.add_job(self.update_channel_dict,'cron',hour='*',minute="0,30",second=0,jitter=30,misfire_grace_time=60)
 
             scheduler.add_job(self.earthquake_check,'interval',minutes=1,jitter=30,misfire_grace_time=40)
-            scheduler.add_job(self.city_battle,'interval',minutes=1,jitter=30,misfire_grace_time=60)
+            #scheduler.add_job(self.city_battle,'interval',minutes=1,jitter=30,misfire_grace_time=60)
             #scheduler.add_job(self.get_mongodb_data,'interval',minutes=3,jitter=30,misfire_grace_time=40)
 
             scheduler.add_job(sclient.init_NoticeClient,"date")
@@ -229,13 +229,16 @@ class task(Cog_Extension):
         
         for city_battle in city_battle_list:    
             if city_battle.defencer:
+                if not city_battle.attacker:
+                    return
+                
                 for defencer in city_battle.defencer:
-                    player_def = sclient.get_rpguser(defencer.discord_id,self.bot.get_user(defencer.discord_id))
+                    player_def = sclient.get_rpguser(defencer.discord_id,user_dc=self.bot.get_user(defencer.discord_id))
                     if city_battle.attacker:
                         attacker = random.choice(city_battle.attacker)
-                        player_atk = sclient.get_rpguser(attacker.discord_id,self.bot.get_user(attacker.discord_id))
+                        player_atk = sclient.get_rpguser(attacker.discord_id,user_dc=self.bot.get_user(attacker.discord_id))
                         
-                        embed = BotEmbed.rpg(f"在{city_battle.city.city_name} 的占領戰\n",f"攻擊者 {player_atk.name} 對 防守者{player_def.name}\n")
+                        embed = BotEmbed.rpg(f"在 {city_battle.city.city_name} 的占領戰\n",f"攻擊者 {player_atk.name} 對 防守者{player_def.name}\n")
                         text, participants = player_def.battle_with(player_atk)
                         embed.description += text
 
@@ -246,7 +249,7 @@ class task(Cog_Extension):
 
             else:
                 
-                embed = BotEmbed.rpg(f"在{city_battle.city.city_name} 的占領戰\n",f"佔領值 +{len(city_battle.attacker)}")
+                embed = BotEmbed.rpg(f"在 {city_battle.city.city_name} 的占領戰\n",f"佔領值 +{len(city_battle.attacker)}")
                 await self.bot.get_channel(1181201785055096842).send(embed=embed)
         
         log.info("city_battle end")

@@ -221,7 +221,7 @@ class RPGUser(DiscordUser):
         enemy = enemy_id if type(enemy_id) == RPGUser else self.sqldb.get_rpguser(enemy_id,user_dc=enemy_user_dc)
         text = ""
         round = 0
-        while enemy.hp > 0 and self.hp >0:
+        while enemy.hp > 0 and self.hp > 0:
             round += 1
             text += f"第{round}回合"
             #計算傷害
@@ -239,6 +239,8 @@ class RPGUser(DiscordUser):
             else:
                 text += f"{enemy.name}：未攻擊"
             
+            text += "\n"
+        
         #結算
         if enemy.hp > 0:
             text += f"\n{enemy.name} 倒下"
@@ -256,8 +258,7 @@ class RPGUser(DiscordUser):
                 self.sqldb.remove_city_battle(enemy.in_city_id,enemy.discord_id)
             winner = enemy
             loser = self
-        else:
-            text += "\n"
+            
 
         self.update_hp(0,True)
         enemy.update_hp(0,True)
