@@ -218,7 +218,7 @@ class RPGUser(DiscordUser):
         :param enemy_id: 欲戰鬥的玩家，可直接輸入RPGUser物件
         
         """
-        enemy = enemy if type(enemy) == RPGUser else self.sqldb.get_rpguser(enemy_id,user_dc=enemy_user_dc)
+        enemy = enemy_id if type(enemy_id) == RPGUser else self.sqldb.get_rpguser(enemy_id,user_dc=enemy_user_dc)
         text = ""
         round = 0
         while enemy.hp > 0 and self.hp >0:
