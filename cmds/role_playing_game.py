@@ -104,6 +104,9 @@ class role_playing_game(Cog_Extension):
     async def rpgui(self,ctx:discord.ApplicationContext,user_dc:discord.Option(discord.Member,name='用戶',description='留空以查詢自己',default=None)):
         user_dc = user_dc or ctx.author
         user = sclient.get_rpguser(user_dc.id,full=True,user_dc=user_dc)
+        if not user:
+            sclient.set_rpguser(user_dc.id)
+            user = sclient.get_rpguser(user_dc.id,full=True,user_dc=user_dc)
         await ctx.respond(embeds=[user.desplay(),user.waring_equipment.desplay(user_dc)])
 
     @itemcmd.command(description='查看背包（開發中）')
