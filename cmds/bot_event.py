@@ -54,7 +54,7 @@ class event(Cog_Extension):
             if message.author.get_role(1160460037114822758) or message.author.get_role(1161644357410107483) or message.author.get_role(1178151415403790478):
                 return
             elif message.author.get_role(1162721481520852993):
-                p = re.compile(r"(?:貢\S*丸|贡\S*丸|Meat\S*ball|貢\S*ㄨㄢ)",re.IGNORECASE)
+                p = re.compile(r"(?:貢\S*丸|贡\S*丸|Meat\S*ball|貢\S*ㄨ\S*ㄢ)",re.IGNORECASE)
                 result = p.search(message.content)
             else:
                 p = re.compile(r"(?:貢丸|贡丸|Meatball)(?!殲滅黨)",re.IGNORECASE)
