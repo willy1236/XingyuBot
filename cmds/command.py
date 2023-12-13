@@ -522,7 +522,7 @@ class command(Cog_Extension):
         end_time = datetime.datetime(start_time.year,start_time.month,start_time.day,0,0,0) + datetime.timedelta(days=during)
         end_time = end_time.replace(tzinfo=timezone)
 
-        event = await guild.create_scheduled_event(name="【第二屆線上TRPG】正式場第三場-???",start_time=start_time,end_time=end_time,location="https://trpgline.com/zh-TW/admin")
+        event = await guild.create_scheduled_event(name="【第二屆線上TRPG】正式場第三場-阿卡姆之影",start_time=start_time,end_time=end_time,location="https://trpgline.com/zh-TW/admin")
         await ctx.respond(f"{event.name} 已建立完成")
         channel = self.bot.get_channel(1097158403358478486)
         await channel.send(f"{event.name}：{event.url}")

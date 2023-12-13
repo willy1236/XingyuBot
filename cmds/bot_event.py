@@ -54,16 +54,27 @@ class event(Cog_Extension):
             if message.author.get_role(1160460037114822758) or message.author.get_role(1161644357410107483) or message.author.get_role(1178151415403790478):
                 return
             elif message.author.get_role(1162721481520852993):
-                p = re.compile(r"(?:貢\S*丸|贡\S*丸|Meat\S*ball)",re.IGNORECASE)
+                p = re.compile(r"(?:貢\S*丸|贡\S*丸|Meat\S*ball|貢\S*ㄨㄢ)",re.IGNORECASE)
                 result = p.search(message.content)
             else:
                 p = re.compile(r"(?:貢丸|贡丸|Meatball)(?!殲滅黨)",re.IGNORECASE)
                 result = p.search(message.content)
             if result:
                 try:
-                    await message.delete(reason="打出貢丸相關詞彙")
-                    await message.author.timeout_for(duration=datetime.timedelta(seconds=60),reason="打出貢丸相關詞彙")
-                    await message.channel.send(f"{message.author.mention} 貢丸很危險 不要打貢丸知道嗎")
+                    reason = "打出貢丸相關詞彙"
+                    time = datetime.timedelta(seconds=15)
+                    create_time = datetime.datetime.now()
+                    
+                    await message.delete(reason=reason)
+                    await message.author.timeout_for(duration=datetime.timedelta(seconds=60),reason=reason)
+                    
+                    timestamp = int((create_time+time).timestamp())
+                    embed = BotEmbed.general(f'{message.author.name} 已被禁言',message.author.display_avatar.url,description=f"{message.author.mention}：{reason}")
+                    embed.add_field(name="執行人員",value=self.bot.user.mention)
+                    embed.add_field(name="結束時間",value=f"<t:{timestamp}>（15s）")
+                    embed.timestamp = create_time
+                    
+                    await message.channel.send(f"{message.author.mention} 貢丸很危險 不要打貢丸知道嗎",embed=embed)
                     sclient.add_userdata_value(message.author.id,"user_discord","meatball_times",1)
                     channel = self.bot.get_channel(877495919879286824)
                     await channel.send(f"{message.author.name} 打出了：{message.content}")
