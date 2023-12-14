@@ -1,0 +1,3 @@
+[submodule "starcord"]
+	path = starcord
+	url = https://github.com/willy1236/starcord
