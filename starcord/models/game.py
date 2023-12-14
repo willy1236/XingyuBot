@@ -5,6 +5,16 @@ from starcord.FileDatabase import Jsondb,csvdb
 jdict = Jsondb.jdict
 lol_jdict = Jsondb.lol_jdict
 
+class RiotUser():
+    def __init__(self,data):
+        self.puuid = data.get("puuid")
+        self.name = data.get("gameName")
+        self.tag = data.get("tagLine")
+
+    @property
+    def fullname(self):
+        return self.name + "#" + self.tag
+    
 class LOLPlayer():
     def __init__(self,data):
         self.name = data.get('name')

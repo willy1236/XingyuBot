@@ -12,11 +12,22 @@ class RiotClient(GameInterface):
         super().__init__()
         self.url_tw2 = 'https://tw2.api.riotgames.com'
         self.url_sea = 'https://sea.api.riotgames.com'
+        self.url_asia = 'https://asia.api.riotgames.com'
         self.key = Jsondb.get_token('riot')
         self.headers = {
             'X-Riot-Token':self.key
         }
 
+
+    def get_riot_account_byname(self,username):
+        name, tag = username.split('#')
+        r = requests.get(f'{self.url_asia}/riot/account/v1/accounts/by-riot-id/{name}/{tag}',headers=self.headers)
+        if r.ok:
+            return RiotUser(r.json())
+        elif r.status_code == 404:
+            return None
+        else:
+            raise ClientError("lol_player_byname",r.text)
 
     def get_player_byname(self,username):
         r = requests.get(f'{self.url_tw2}/lol/summoner/v4/summoners/by-name/{username}',headers=self.headers)

@@ -56,16 +56,18 @@ class JsonDatabase():
         }
         if not os.path.isdir(self._DBPATH):
             os.mkdir(self._DBPATH)
+            print(f">> Created folder: {self._DBPATH} <<")
         
         for file in self._dict:
-            if not os.path.isfile(self._dict[file]):
+            path = self._dict[file]
+            if not os.path.isfile(path):
                 if not create_file:
                     continue
-                with open(self._dict[file],'w',encoding='utf-8') as jfile:
+                with open(path,'w',encoding='utf-8') as jfile:
                     json.dump({},jfile,indent=4)
                     print(f">> Created json file: {file} <<")
             
-            with open(self._dict[file],mode='r',encoding='utf8') as jfile:
+            with open(path,mode='r',encoding='utf8') as jfile:
                 setattr(self, file,json.load(jfile))
 
 
@@ -118,30 +120,3 @@ class JsonDatabase():
     def get_jdict(self,key,value):
         """取得jdict資料"""
         return self.jdict[key].get(value,value)
-        
-
-    # @staticmethod
-    # async def get_gamedata(user_id:str, game:str, ctx:discord.ApplicationContext=None):
-    #     """查詢資料庫中的玩家資訊，若輸入dc用戶則需傳入ctx\n
-    #     dcuser and in database -> 資料庫資料\n
-    #     dcuser and not in database -> None\n
-    #     not dcuser -> user_id(原資料輸出)
-    #     """
-    #     gdata = JsonDatabase().gdata
-        
-    #     if ctx:
-    #         dcuser = await find.user2(ctx,user_id)
-    #         if dcuser:
-    #             user_id = str(dcuser.id)
-    #         else:
-    #             return user_id
-    #     else:
-    #         user_id = str(user_id)
-
-    #     try:
-    #         data = gdata[str(user_id)][game]
-    #         if game in ['steam']:
-    #             data = data['id']
-    #         return data
-    #     except:
-    #         return None
