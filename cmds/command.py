@@ -634,6 +634,7 @@ class command(Cog_Extension):
                    position:discord.Option(str,name='職位',description='要競選的職位',choices=position_option),
                    user_dc:discord.Option(discord.Member,name='成員',description='要競選的成員（此選項供政黨代表一次性報名用）',required=False),
                    party_id:discord.Option(int,name='代表政黨',description='如果有多個政黨，可選擇要代表的政黨',default=None,choices=party_option)):
+        session = 4
         user_dc = user_dc or ctx.author
 
         if party_id:
@@ -643,13 +644,14 @@ class command(Cog_Extension):
                 await ctx.respond(f"{user_dc.mention}：你沒有參加 {Jsondb.jdict['party_option'].get(str(party_id))}")
                 return
 
-        sclient.add_election(user_dc.id,3,position,party_id)
+        sclient.add_election(user_dc.id,session,position,party_id)
         await ctx.respond(f"{user_dc.mention}：完成競選報名 {Jsondb.jdict['position_option'].get(position)}")
 
     @election.command(description='離開選舉')
     async def leave(self, ctx, 
                     position:discord.Option(str,name='職位',description='要退選的職位',choices=position_option)):
-        sclient.remove_election(ctx.author.id,3,position)
+        session = 4
+        sclient.remove_election(ctx.author.id,session,position)
         
         text = f"{ctx.author.mention}：完成競選退出"
         if position:
@@ -660,7 +662,7 @@ class command(Cog_Extension):
     @commands.is_owner()
     async def format(self, ctx):
         await ctx.defer()
-        session = 3
+        session = 4
         dbdata = sclient.get_election_full_by_session(session)
         result = {
             "president": {},
@@ -699,7 +701,7 @@ class command(Cog_Extension):
     @commands.is_owner()
     async def start(self,ctx:discord.ApplicationContext):
         await ctx.defer()
-        session = 3
+        session = 4
 
         count_data = sclient.get_election_count(session)
         for position_data in count_data:
