@@ -664,11 +664,10 @@ class command(Cog_Extension):
         await ctx.defer()
         session = 4
         dbdata = sclient.get_election_full_by_session(session)
-        result = {
-            "president": {},
-            "legislative_president": {},
-            "executive_president": {}
-        }
+        
+        result = {}
+        for position in Jsondb.jdict["position_option"].keys():
+            result[position] = {}
         
         for i in dbdata:
             discord_id = i['discord_id']
