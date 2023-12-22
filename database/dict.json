@@ -113,7 +113,8 @@
     "position_option": {
         "president": "總統",
         "legislative_president": "立法院長",
-        "executive_president": "行政院長"
+        "executive_president": "行政院長",
+        "judiciary_president": "司法院長"
         
     },
     "party_option":{
