@@ -62,3 +62,4 @@ class Position(Enum):
     PRESIDENT= "president"
     EXECUTIVE_PRESIDENT  = "executive_president"
     LEGISLATIVE_PRESIDENT  = "legislative_president"
+    JUDICIARY_PRESIDENT = "judiciary_president"
