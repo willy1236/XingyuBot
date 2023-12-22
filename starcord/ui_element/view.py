@@ -135,6 +135,8 @@ class PollView(discord.ui.View):
         super().__init__(timeout=None)
         self.poll_id = poll_id
         self.sqldb = sqldb
+        self._role_dict = {}
+        
         poll_data = self.sqldb.get_poll(poll_id)
         self.title = poll_data['title']
         self.created_id = poll_data['created_user']
@@ -157,15 +159,16 @@ class PollView(discord.ui.View):
     
     @property
     def role_dict(self):
-        dbdata = self.sqldb.get_poll_role(self.poll_id)
-        dict = {}
-        if dbdata:
-            for data in dbdata:
-                role_id = data['role_id']
-                role_type = data['role_type']
-                role_magnification = data['role_magnification']
-                dict[role_id] = [role_type,role_magnification]
-        return dict
+        if not self._role_dict:
+            dbdata = self.sqldb.get_poll_role(self.poll_id)
+            self._role_dict = {}
+            if dbdata:
+                for data in dbdata:
+                    role_id = data['role_id']
+                    role_type = data['role_type']
+                    role_magnification = data['role_magnification']
+                    self._role_dict[role_id] = [role_type,role_magnification]
+        return self._role_dict
         
     def display(self,ctx:discord.ApplicationContext):
         only_role_list = []
