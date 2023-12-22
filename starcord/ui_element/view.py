@@ -25,7 +25,7 @@ class PollOptionButton(discord.ui.Button):
                 if view.role_dict[roleid][1] > vote_magnification:
                     vote_magnification = view.role_dict[roleid][1]
         
-        if have_only_role and can_vote:
+        if not view.role_dict or (have_only_role and can_vote):
             view.sqldb.add_user_poll(self.poll_id,interaction.user.id,self.option_id,datetime.datetime.now(),vote_magnification)
             await interaction.response.send_message(f"{interaction.user.mention} 已投票給 {self.label} {vote_magnification} 票",ephemeral=True)
         else:
