@@ -22,6 +22,10 @@ def get_playing_ow2(member:discord.Member):
         
     return False
 
+if not debug_mode:
+    from gpt4all import GPT4All
+    model = GPT4All("mistral-7b-openorca.Q4_0.gguf")
+
 class event(Cog_Extension):
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
@@ -95,20 +99,27 @@ class event(Cog_Extension):
                 await message.author.timeout_for(duration=datetime.timedelta(seconds=60),reason="發送多次重複訊息")
                 await message.channel.purge(limit=5)
                 await message.channel.send(f"{message.author.mention} 請不要發送重複訊息")
-                
+
+            #GPT4ALL
+            if message.channel.id == 1189907001015275521 and not message.author.bot:
+                with model.chat_session("### system:\n你是一個名叫貓貓快樂營的discord伺服器的AI助手，請用繁體中文及台灣人的用字遣詞回答使用者的問題"):
+                    response = model.generate(prompt=message.content, temp=0)
+                    #print(model.current_chat_session[-1]["content"])
+                    await message.reply(response)
+            
             #跨群聊天Ver.1.0
-        # if not message.author.bot and message.channel.id in crass_chat_channels:
-        #     await message.delete()
+            # if not message.author.bot and message.channel.id in crass_chat_channels:
+            #     await message.delete()
 
-        #     embed=discord.Embed(description=message.content,color=0x4aa0b5)
-        #     embed.set_author(name=message.author,icon_url=message.author.display_avatar.url)
-        #     embed.set_footer(text=f'來自: {message.guild}')
+            #     embed=discord.Embed(description=message.content,color=0x4aa0b5)
+            #     embed.set_author(name=message.author,icon_url=message.author.display_avatar.url)
+            #     embed.set_footer(text=f'來自: {message.guild}')
 
-        #     for i in crass_chat_channels:
-        #         channel = self.bot.get_channel(i)
-        #         if channel:
-        #             await channel.send(embed=embed)
-        #     return
+            #     for i in crass_chat_channels:
+            #         channel = self.bot.get_channel(i)
+            #         if channel:
+            #             await channel.send(embed=embed)
+            #     return
 
     # @commands.Cog.listener()
     # async def on_raw_reaction_add(self, payload):

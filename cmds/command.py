@@ -13,8 +13,6 @@ from starcord.ui_element.view import PollView
 from starcord.errors import CommandError
 from starcord.DataExtractor import GoogleCloud
 
-
-#openai.api_key = Jsondb.get_token('openai')
 bet_option = ChoiceList.set('bet_option')
 busy_time_option = ChoiceList.set('busy_time_option')
 position_option = ChoiceList.set('position_option')
@@ -764,7 +762,6 @@ class command(Cog_Extension):
         for party in dbdata:
             embed.add_field(name=party["party_name"], value=f"政黨ID：{party['party_id']}\n政黨人數：{party['count']}")
         await ctx.respond(embed=embed)
-
 
 def setup(bot):
     bot.add_cog(command(bot))
