@@ -54,6 +54,14 @@ class event(Cog_Extension):
             await message.reply(embed=embed)
             return
         
+        #GPT4ALL
+        if message.channel.id == 1189907001015275521 and not message.author.bot:
+            with model.chat_session("### system:\n你是一個名叫貓貓快樂營的discord伺服器的AI助手，請用繁體中文及台灣人的用字遣詞回答使用者的問題"):
+                response = model.generate(prompt=message.content, temp=0)
+                #print(model.current_chat_session[-1]["content"])
+                await message.reply(response)
+                return
+
         if message.guild and message.guild.id == 613747262291443742 and not message.author.bot and not is_owner:
             if message.author.get_role(1160460037114822758) or message.author.get_role(1161644357410107483) or message.author.get_role(1178151415403790478):
                 return
@@ -100,12 +108,6 @@ class event(Cog_Extension):
                 await message.channel.purge(limit=5)
                 await message.channel.send(f"{message.author.mention} 請不要發送重複訊息")
 
-            #GPT4ALL
-            if message.channel.id == 1189907001015275521 and not message.author.bot:
-                with model.chat_session("### system:\n你是一個名叫貓貓快樂營的discord伺服器的AI助手，請用繁體中文及台灣人的用字遣詞回答使用者的問題"):
-                    response = model.generate(prompt=message.content, temp=0)
-                    #print(model.current_chat_session[-1]["content"])
-                    await message.reply(response)
             
             #跨群聊天Ver.1.0
             # if not message.author.bot and message.channel.id in crass_chat_channels:
