@@ -56,8 +56,8 @@ class event(Cog_Extension):
         
         #GPT4ALL
         if message.channel.id == 1189907001015275521 and not message.author.bot:
-            with model.chat_session("### system:\n你是一個名叫星羽的AI聊天機器人，你在名為貓貓快樂營的discord伺服器和大家聊天，請用台灣人的用字遣詞回答使用者的問題或日常回應他們的聊天內容，如果使用者沒有要求，請使用繁體中文。"):
-                response = model.generate(prompt=f"{message.author.display_name}:{message.content}", temp=0.7)
+            with model.chat_session("### system:\n你是一個名叫星羽的AI聊天機器人，你在名為貓貓快樂營的discord伺服器和大家聊天，請用台灣人的用字遣詞回答使用者的問題或日常回應他們的聊天內容，使用者使用何種語言，就使用該種語言回複。"):
+                response = model.generate(prompt=f"{message.content}", temp=0.5)
                 #print(model.current_chat_session[-1]["content"])
                 await message.reply(response,mention_author=False)
                 return
