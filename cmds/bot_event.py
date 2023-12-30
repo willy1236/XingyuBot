@@ -59,7 +59,7 @@ class event(Cog_Extension):
         
         #GPT4ALL
         if message.channel.id == 1189907001015275521 and not message.author.bot and not message.content.startswith("."):
-            with model.chat_session(promptTemplate ="### User:\n%1\n### Response:\n"):
+            with model.chat_session(prompt_template ="### User:\n%1\n### Response:\n"):
                 model.current_chat_session = self.chat_session_log
                 response = model.generate(prompt=f"{message.content}", temp=0.3, max_tokens=1024)
                 #print(model.current_chat_session[-1]["content"])
