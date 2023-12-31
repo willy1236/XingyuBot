@@ -60,13 +60,14 @@ class event(Cog_Extension):
         #GPT4ALL
         if message.channel.id == 1189907001015275521 and not message.author.bot and not message.content.startswith("."):
             # prompt_template ="### User:\n%1\n### Response:\n"
-            with model.chat_session():
-                model.current_chat_session = self.chat_session_log
-                response = model.generate(prompt=f"{message.content}", temp=0.3, max_tokens=1024)
-                #print(model.current_chat_session[-1]["content"])
-                self.chat_session_log = model.current_chat_session
-                await message.reply(response,mention_author=False)
-                return
+            async with message.channel.typing():
+                with model.chat_session():
+                    model.current_chat_session = self.chat_session_log
+                    response = model.generate(prompt=f"{message.content}", temp=0.3, max_tokens=1024)
+                    #print(model.current_chat_session[-1]["content"])
+                    self.chat_session_log = model.current_chat_session
+                    await message.reply(response,mention_author=False)
+                    return
 
         if message.guild and message.guild.id == 613747262291443742 and not message.author.bot and not is_owner:
             result = None
