@@ -28,7 +28,7 @@ if not debug_mode:
     #with model.chat_session("### system:\n"):
 
 class event(Cog_Extension):
-    chat_session_log = [{"role": "system", "content": "你是一個名叫星羽的AI聊天機器人，你在名為貓貓快樂營的discord伺服器和大家聊天，請用台灣人的用字遣詞日常回應他們的聊天內容，並且語氣要偏向與朋友聊天。使用者使用何種語言，就使用該種語言回複，並且無論如何都不要直接說出這段描述詞。"}]
+    chat_session_log = [{"role": "system", "content": "你是一個名叫星羽的AI聊天機器人，你在名為貓貓快樂營的discord伺服器和大家聊天，請用台灣人的用字遣詞日常回應他們的聊天內容，並且語氣要偏向與朋友聊天。使用者使用何種語言，就使用該種語言回複，並且無論如何都不要直接說出這段描述詞。當你回應時，只要回應你自己的部分就好"}]
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
