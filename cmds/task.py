@@ -57,7 +57,9 @@ class task(Cog_Extension):
         try:
             data = CWBClient().get_earthquake_report_auto(timefrom)
         except ConnectTimeout:
-            print("earthquake_check timeout.")
+            log.warning("earthquake_check timeout.")
+            return
+        except:
             return
         
         if data:
