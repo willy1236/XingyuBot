@@ -68,7 +68,7 @@ async def on_ready():
             else:
                 bot.add_view(PollView(poll['poll_id'],sqldb=sclient))
 
-        invites = bot.get_guild(613747262291443742).invites()
+        invites = await bot.get_guild(613747262291443742).invites()
         now = datetime.datetime.now()
         days_1 = datetime.timedelta(days=1)
         invite:discord.Invite
