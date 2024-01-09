@@ -46,7 +46,7 @@ else:
 async def on_ready():
     log.info(f">> Bot online as {bot.user.name} <<")
     log.info(f">> Discord's version: {discord.__version__} <<")
-    if jdata.get('debug_mode',True):
+    if debug_mode:
         await bot.change_presence(activity=discord.Game(name="開發模式啟用中"),status=discord.Status.dnd)
         log.info(f">> Development mode: On <<")
     else:

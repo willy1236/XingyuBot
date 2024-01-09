@@ -1,16 +1,13 @@
-from tkinter import N
 import discord,random,asyncio,datetime,re
 from discord.errors import Forbidden, NotFound
 from discord.ext import commands,pages
 from discord.commands import SlashCommandGroup
 from mysql.connector.errors import Error as sqlerror
 
-from core.classes import Cog_Extension
-from starcord import Jsondb,BRS,log,BotEmbed,ChoiceList,sclient
-from starcord.utilities.funtions import find,random_color
+from starcord import Cog_Extension,Jsondb,BRS,log,BotEmbed,ChoiceList,sclient
+from starcord.utilities import find,random_color
 from starcord.ui_element.button import Delete_Add_Role_button
 from starcord.ui_element.view import PollView
-from starcord.errors import CommandError
 from starcord.DataExtractor import GoogleCloud
 
 bet_option = ChoiceList.set('bet_option')
@@ -632,7 +629,7 @@ class command(Cog_Extension):
                    position:discord.Option(str,name='職位',description='要競選的職位',choices=position_option),
                    user_dc:discord.Option(discord.Member,name='成員',description='要競選的成員（此選項供政黨代表一次性報名用）',required=False),
                    party_id:discord.Option(int,name='代表政黨',description='如果有多個政黨，可選擇要代表的政黨',default=None,choices=party_option)):
-        session = 4
+        session = 5
         user_dc = user_dc or ctx.author
 
         if party_id:
@@ -648,7 +645,7 @@ class command(Cog_Extension):
     @election.command(description='離開選舉')
     async def leave(self, ctx, 
                     position:discord.Option(str,name='職位',description='要退選的職位',choices=position_option)):
-        session = 4
+        session = 5
         sclient.remove_election(ctx.author.id,session,position)
         
         text = f"{ctx.author.mention}：完成競選退出"
@@ -660,7 +657,7 @@ class command(Cog_Extension):
     @commands.is_owner()
     async def format(self, ctx):
         await ctx.defer()
-        session = 4
+        session = 5
         dbdata = sclient.get_election_full_by_session(session)
         
         result = {}
@@ -681,7 +678,6 @@ class command(Cog_Extension):
                     result[position][discord_id] = [user.mention, [party_name]]
 
         embed = BotEmbed.simple(f"第{session}屆中央選舉名單")
-        
         for position_name in result:
             text = ""
             count = 0
@@ -698,16 +694,21 @@ class command(Cog_Extension):
     @commands.is_owner()
     async def start(self,ctx:discord.ApplicationContext):
         await ctx.defer()
-        session = 4
+        session = 5
 
         count_data = sclient.get_election_count(session)
-        for position_data in count_data:
-            if position_data['count'] > 0:
-                position_name = Jsondb.get_jdict('position_option',position_data['position'])
+        count_dict = {}
+        for data in count_data:
+            pos = data['position']
+            count = data['count']
+            count_dict[pos] = count
+
+        for position in Jsondb.jdict["position_option"].keys():
+            count = count_dict[position]
+            if count > 0:
+                position_name = Jsondb.get_jdict('position_option',position)
                 title = f"第{session}屆中央選舉：{position_name}"
-                options = []
-                for i in range(1,position_data['count'] + 1):
-                    options.append(f"{i}號")
+                options = [f"{i}號" for i in range(1,count + 1)]
 
                 view = sclient.create_poll(title,options,ctx.author.id,ctx.guild.id,False)
 

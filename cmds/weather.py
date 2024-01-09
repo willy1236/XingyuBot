@@ -1,5 +1,5 @@
 from discord.ext import commands
-from core.classes import Cog_Extension
+from starcord import Cog_Extension
 from starcord.DataExtractor.weather import *
 
 class weather(Cog_Extension):

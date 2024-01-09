@@ -1,7 +1,6 @@
-from re import T
 import discord,datetime,matplotlib,io
 from typing import TYPE_CHECKING
-from starcord.utilities.utility import BotEmbed
+from starcord.utilities import BotEmbed
 
 class PollOptionButton(discord.ui.Button):
     def __init__(self,label,poll_id,option_id,custom_id):

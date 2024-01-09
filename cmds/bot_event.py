@@ -1,7 +1,6 @@
 import discord,datetime,re,asyncio
 from discord.ext import commands
-from core.classes import Cog_Extension
-from starcord import Jsondb,BotEmbed,BRS,sclient
+from starcord import Cog_Extension,Jsondb,BotEmbed,BRS,sclient
 
 # keywords = {
 #     '抹茶粉':'由威立冠名贊助撥出~',
@@ -24,7 +23,7 @@ def get_playing_ow2(member:discord.Member):
 
 if not debug_mode:
     from gpt4all import GPT4All
-    model = GPT4All("mistral-7b-openorca.Q4_0.gguf")
+    model = GPT4All("mistral-7b-openorca.Q4_0.gguf",device="gpu")
     #with model.chat_session("### system:\n"):
 
 class event(Cog_Extension):

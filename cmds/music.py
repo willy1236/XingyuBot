@@ -1,8 +1,7 @@
 import discord,asyncio,time,random
 from discord.ext import commands,pages
 from typing import TYPE_CHECKING
-from core.classes import Cog_Extension
-from starcord import BotEmbed,log
+from starcord import Cog_Extension,BotEmbed,log
 from starcord.errors import *
 import youtube_dl
 

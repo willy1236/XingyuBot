@@ -54,6 +54,14 @@ class BotEmbed:
         return embed
     
     @staticmethod
+    def slts():
+        '''星光終端系統 格式'''
+        picdata = Jsondb.picdata
+        embed = discord.Embed(color=0xc4e9ff)
+        embed.set_author(name="「星光」終端系統",icon_url=picdata['radio_001'])
+        return embed
+    
+    @staticmethod
     def info(title:str=discord.Embed.Empty,description:str=discord.Embed.Empty,url:str=discord.Embed.Empty):
         '''一般資訊 格式'''
         embed = discord.Embed(title=title,description=description or discord.Embed.Empty, color=0xc4e9ff,url=url)

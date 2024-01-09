@@ -9,7 +9,6 @@
 #         self.message = message or 'A Exception occurred.'
 #         self.original = original
 #         self.original_message = original_message
-    
 
 class StarException(Exception):
     """
@@ -33,22 +32,29 @@ class StarException(Exception):
     def __str__(self):
         return f'[{self.code}] {self.message}'
 
-class CommandError(StarException):
-    "Command original error: 1100"
+class ApiError(StarException):
+    "Api original error: 1100"
     code = 1100
-    message = 'A command exception occurred'
+    message = 'A Api exception occurred'
 
-class ClientError(CommandError):
+class ClientError(ApiError):
     def __init__(self,message=None,original_message=None):
         self.code = 1101
         self.message = '調用API時發生錯誤：' + message
         self.original_message = original_message
 
+class CommandError(ApiError):
+    def __init__(self,message=None,original_message=None):
+        self.code = 1101
+        self.message = '調用指令時發生錯誤：' + message
+        self.original_message = original_message
+
+
 class MysqlError(StarException):
     "MySQL original error: 1200"
     code = 1200
 
-class MysqlError01(MysqlError):
+class DataExistError(MysqlError):
     code = 1201
     message = '新增的資料已存在'
 

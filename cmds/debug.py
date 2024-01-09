@@ -3,11 +3,10 @@ from datetime import datetime, timezone, timedelta
 from discord.ext import commands,tasks
 import matplotlib.pyplot as plt
 
-from core.classes import Cog_Extension
-from starcord import Jsondb,sclient
+from starcord import Cog_Extension,Jsondb,sclient
 from starcord.errors import *
 from starcord.types.game import DBGame
-from starcord.rpg.map import sunmon_area
+from starcord.utilities.map import sunmon_area
 
 tz = timezone(timedelta(hours=+8))
 

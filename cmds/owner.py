@@ -2,8 +2,7 @@ import discord,os,mcrcon,datetime
 from discord.ext import commands
 from discord.commands import SlashCommandGroup
 
-from core.classes import Cog_Extension
-from starcord import BotEmbed,BRS,Jsondb,sclient
+from starcord import Cog_Extension,BotEmbed,BRS,Jsondb,sclient
 from starcord.ui_element.button import ReactRole_button
 from starcord.utilities.utility import converter
 

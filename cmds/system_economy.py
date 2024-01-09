@@ -1,8 +1,7 @@
 import discord,asyncio,random
 from discord.ext import commands
 from discord.commands import SlashCommandGroup
-from core.classes import Cog_Extension
-from starcord import Jsondb,sclient,BotEmbed
+from starcord import Cog_Extension,Jsondb,sclient,BotEmbed
 from starcord.types import Coins
 
 debug_guild = Jsondb.jdata.get('debug_guild')

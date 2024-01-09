@@ -1,8 +1,7 @@
 import discord
 from discord.ext import commands,pages
-from core.classes import Cog_Extension
 from discord.commands import SlashCommandGroup
-from starcord import BotEmbed,ChoiceList
+from starcord import Cog_Extension,BotEmbed,ChoiceList
 
 info_option = ChoiceList.set('info_option')
 help_option = ChoiceList.set('help_option')

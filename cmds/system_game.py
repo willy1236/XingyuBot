@@ -3,8 +3,7 @@ from discord.ext import commands
 from discord.commands import SlashCommandGroup
 from datetime import timedelta,datetime
 
-from core.classes import Cog_Extension
-from starcord import BotEmbed,Jsondb,csvdb,ChoiceList,sclient
+from starcord import Cog_Extension,BotEmbed,Jsondb,csvdb,ChoiceList,sclient
 from starcord.DataExtractor import *
 from starcord.types import DBGame
 from starcord.ui_element.view import GameView

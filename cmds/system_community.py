@@ -1,8 +1,7 @@
 import discord,datetime
-from core.classes import Cog_Extension
 from discord.commands import SlashCommandGroup
 from starcord.DataExtractor import TwitchAPI,YoutubeAPI
-from starcord import BotEmbed,sclient
+from starcord import Cog_Extension,BotEmbed,sclient
 
 class system_community(Cog_Extension):
     twitch = SlashCommandGroup("twitch", "Twitch相關指令")

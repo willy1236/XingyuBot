@@ -1,9 +1,8 @@
 import discord,asyncio,random,datetime
 
-from core.classes import Cog_Extension
 from discord.ext import commands,pages
 from discord.commands import SlashCommandGroup
-from starcord import BotEmbed,sclient,ChoiceList
+from starcord import Cog_Extension,BotEmbed,sclient,ChoiceList
 from starcord.FileDatabase import Jsondb
 from starcord.models.rpg import RPGMarketItem
 from starcord.models.user import RPGUser
