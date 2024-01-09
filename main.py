@@ -57,7 +57,7 @@ async def on_ready():
     else:
         log.warning(f">> Cogs not all loaded, {len(bot.cogs)}/{len(os.listdir('./cmds'))} loaded<<")
     
-    if bot_code == 'Bot1':
+    if bot_code == 'Bot1' and not debug_mode:
         #將超過14天的投票自動關閉
         dbdata = sclient.get_all_active_polls()
         now = datetime.datetime.now()
@@ -67,6 +67,14 @@ async def on_ready():
                 sclient.update_poll(poll['poll_id'],"is_on",0)
             else:
                 bot.add_view(PollView(poll['poll_id'],sqldb=sclient))
+
+        invites = bot.get_guild(613747262291443742).invites()
+        now = datetime.datetime.now()
+        days_1 = datetime.timedelta(days=1)
+        invite:discord.Invite
+        for invite in invites:
+            if not invite.expires_at and invite.uses == 0 and now - invite.created_at > days_1:
+                await invite.delete()
     
 
 #load

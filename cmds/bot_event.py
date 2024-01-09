@@ -1,6 +1,6 @@
 import discord,datetime,re,asyncio
 from discord.ext import commands
-from starcord import Cog_Extension,Jsondb,BotEmbed,BRS,sclient
+from starcord import Cog_Extension,Jsondb,BotEmbed,BRS,sclient,log
 
 # keywords = {
 #     '抹茶粉':'由威立冠名贊助撥出~',
@@ -61,6 +61,7 @@ class event(Cog_Extension):
             # prompt_template ="### User:\n%1\n### Response:\n"
             async with message.channel.typing():
                 with model.chat_session():
+                    log.info(model.current_chat_session)
                     model.current_chat_session = self.chat_session_log
                     response = model.generate(prompt=f"{message.content}", temp=0.3, max_tokens=1024)
                     #print(model.current_chat_session[-1]["content"])
