@@ -1,4 +1,4 @@
-import discord, os,time
+import discord, os,time,asyncio
 from discord.ext import commands
 from threading import Thread
 
@@ -75,6 +75,7 @@ async def on_ready():
         for invite in invites:
             if not invite.expires_at and invite.uses == 0 and now - invite.created_at > days_1:
                 await invite.delete()
+                await asyncio.sleep(1)
     
 
 #load

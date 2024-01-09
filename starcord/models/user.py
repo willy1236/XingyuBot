@@ -5,6 +5,13 @@ from starcord.types import DBGame,Coins,ActivitiesStatue
 from starcord.FileDatabase import Jsondb
 from .rpg import *
 
+class StarUser():
+    if TYPE_CHECKING:
+        discord_id: int
+
+    def __init__(self,data:dict):
+        self.discord_id = data.get("discord_id")
+
 class Pet():
     if TYPE_CHECKING:
         discord_id: str
@@ -83,7 +90,7 @@ class DiscordUser():
         if bot and self.main_account_id:
             main_account = bot.get_user(self.main_account_id) or self.main_account_id
             embed.description = f"{main_account.mention} 的小帳"
-        embed.add_field(name='星幣⭐',value=self.scoin)
+        embed.add_field(name='星塵⭐',value=self.scoin)
         embed.add_field(name='PT點數',value=self.point)
         embed.add_field(name='Rcoin',value=self.rcoin)
         embed.add_field(name='連續簽到最高天數',value=self.max_sign_consecutive_days)

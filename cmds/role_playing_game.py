@@ -97,8 +97,8 @@ class role_playing_game(Cog_Extension):
         pet = user.get_pet()
         game = user.get_game()
         pet_embed = pet.desplay(user_dc) if pet else BotEmbed.simple(f'{user_dc.name} 的寵物','用戶沒有認養寵物')
-        game_embed = game.desplay(user_dc) if game else GameInfoPage().desplay(user_dc)
-        await ctx.respond(embeds=[user.desplay(self.bot), pet_embed, game_embed])
+        #game_embed = game.desplay(user_dc) if game else GameInfoPage().desplay(user_dc)
+        await ctx.respond(embeds=[user.desplay(self.bot), pet_embed])
 
     @commands.slash_command(description='查看RPG資訊')
     async def rpgui(self,ctx:discord.ApplicationContext,user_dc:discord.Option(discord.Member,name='用戶',description='留空以查詢自己',default=None)):

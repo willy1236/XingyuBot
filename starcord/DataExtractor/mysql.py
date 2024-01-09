@@ -6,7 +6,7 @@ from starcord.models.model import *
 from starcord.models.rpg import *
 
 def create_id():
-    return 'SELECT idNumber FROM ( SELECT CONCAT("U", LPAD(FLOOR(RAND()*1000000), 6, 0)) as idNumber) AS generated_ids WHERE NOT EXISTS ( SELECT 1 FROM stardb_user.user_data WHERE user_id = generated_ids.idNumber);'
+    return 'SELECT idNumber FROM ( SELECT CONCAT("U", LPAD(FLOOR(RAND()*10000000), 7, 0)) as idNumber) AS generated_ids WHERE NOT EXISTS ( SELECT 1 FROM stardb_user.user_data WHERE user_id = generated_ids.idNumber);'
 
 class MySQLBaseModel(object):
     """MySQL資料庫基本模型"""
@@ -101,6 +101,7 @@ class MySQLUserSystem(MySQLBaseModel):
     
     def create_discord_user(self,discord_id:int):
         self.cursor.execute(f"USE `stardb_user`;")
+        self.cursor.execute(f"INSERT INTO `user_data` SET discord_id = {discord_id};")
         self.cursor.execute(f"INSERT INTO `user_discord` SET discord_id = {discord_id};")
         self.cursor.execute(f"INSERT INTO `user_point` SET discord_id = {discord_id};")
         self.connection.commit()
