@@ -128,12 +128,6 @@ if __name__ == "__main__":
         except:
             log.info('>> website: offline <<')
         time.sleep(2)
-
-    # if twitch_bot:
-    #     loop = asyncio.get_event_loop()
-    #     #loop.run_until_complete(twitch_bot.connect())
-    #     loop.create_task(twitch_bot.connect())
-    #     time.sleep(2)
     
     try:
         bot.run(token)

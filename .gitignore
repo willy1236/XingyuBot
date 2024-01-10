@@ -5,7 +5,6 @@ database/token.json
 database/cache.json
 database/setting.json
 logs
-twitch_chatbot/database/
 database/google_token.json
 twitch_token.json
 user_token.json

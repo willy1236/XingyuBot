@@ -29,6 +29,7 @@ class TwitchUser():
         embed.add_field(name="觀看數",value=self.view_count)
         embed.add_field(name="頻道創建日期",value=self.created_at)
         embed.add_field(name="聯絡郵件",value=self.email)
+        embed.set_footer(text=self.id)
         return embed
 
 class TwitchStream():

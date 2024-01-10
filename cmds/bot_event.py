@@ -11,6 +11,13 @@ voice_updata = Jsondb.jdata.get('voice_updata')
 debug_mode = Jsondb.jdata.get("debug_mode",True)
 main_guild = Jsondb.jdata.get('main_guild',[])
 
+guild_dict = {
+    "609732674197651466":1176165451374534686,
+    "606098232942002176":1178365174533607435,
+    "726790741103476746":1176165460757184612,
+    "898170282236329995":1176165464594972763
+}
+
 def check_event_stage(vc:discord.VoiceState):
     return vc.channel and vc.channel.category and vc.channel.category.id == 1097158160709591130
 
@@ -280,6 +287,22 @@ class event(Cog_Extension):
             if dbdata:
                 channel = self.bot.get_channel(mod_channel_id)
                 channel.send(f"新成員{member.mention}({member.id}) 共有 {len(dbdata)} 個紀錄")
+
+        if guildid == 613747262291443742:
+            dict = {}
+            earlest = datetime.datetime.now(datetime.timezone.utc)
+            earlest_guildid = None
+            guild_list = guild_dict.keys()
+            for guild in member.mutual_guilds:
+                if str(guild.id) in guild_list:
+                    join_time = guild.get_member(member.id).joined_at
+                    if join_time < earlest:
+                        earlest = join_time
+                        earlest_guildid = guild.id
+
+            if earlest_guildid:
+                await member.add_roles(member.guild.get_role(guild_dict[str(earlest_guildid)]), reason="加入的最早伺服器")
+
 
     @commands.Cog.listener()
     async def on_guild_join(self, guild:discord.Guild):
