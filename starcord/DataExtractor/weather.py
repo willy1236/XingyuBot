@@ -10,8 +10,8 @@ class WeatherClient():
 class CWBClient(WeatherClient):
     def __init__(self):
         super().__init__()
-        self.auth = Jsondb.get_token('CWB_api')
-        self.url = 'https://opendata.cwb.gov.tw/api/v1/rest/datastore'
+        self.auth = Jsondb.get_token('cwa_api')
+        self.url = 'https://opendata.cwa.gov.tw/api/v1/rest/datastore'
 
     def get_earthquake_report(self,significant=False):
         params = {
