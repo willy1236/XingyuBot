@@ -25,12 +25,18 @@ def get_playing_ow2(member:discord.Member):
     for activity in member.activities:
         if activity.name == "Overwatch 2" and member.voice.channel.id != 703617778095095958:
             return True
-        
     return False
+
+def get_guildid(before, after):
+    if before.channel:
+        return before.channel.guild.id
+    elif after.channel:
+        return after.channel.guild.id
+    return
 
 if not debug_mode:
     from gpt4all import GPT4All
-    model = GPT4All("mistral-7b-openorca.Q4_0.gguf",device="gpu")
+    model = GPT4All("mistral-7b-openorca.Q4_0.gguf",device="cpu")
     #with model.chat_session("### system:\n"):
 
 class event(Cog_Extension):
@@ -70,11 +76,11 @@ class event(Cog_Extension):
                 with model.chat_session():
                     log.info(model.current_chat_session)
                     model.current_chat_session = self.chat_session_log
-                    response = model.generate(prompt=f"{message.content}", temp=0.3, max_tokens=1024)
+                    response = model.generate(prompt=f"{message.content}", temp=0.2, max_tokens=1024)
                     #print(model.current_chat_session[-1]["content"])
                     self.chat_session_log = model.current_chat_session
                     await message.reply(response,mention_author=False)
-                    return
+            return
 
         if message.guild and message.guild.id == 613747262291443742 and not message.author.bot and not is_owner:
             result = None
@@ -157,14 +163,6 @@ class event(Cog_Extension):
                     
     @commands.Cog.listener()
     async def on_voice_state_update(self,user:discord.Member, before:discord.VoiceState, after:discord.VoiceState):
-        def get_guildid(before, after):
-            if before.channel:
-                return before.channel.guild.id
-            elif after.channel:
-                return after.channel.guild.id
-            else:
-                return None
-
         if debug_mode:
             return
 
@@ -181,18 +179,15 @@ class event(Cog_Extension):
                 if after.channel:
                     after_text = after.channel.mention if not sclient.getif_dynamic_voice_room(after.channel.id) else after.channel.name + ' (動態語音)'
                 
-                if before.channel and after.channel and before.channel != after.channel:
-                    embed=discord.Embed(description=f'{user.mention} 更換語音',color=0x4aa0b5,timestamp=NowTime)
-                    embed.add_field(name='頻道', value=f'{before_text}->{after_text}', inline=False)
-                
-                elif not before.channel:
+                if not before.channel:
                     embed=discord.Embed(description=f'{user.mention} 進入語音',color=0x4aa0b5,timestamp=NowTime)
                     embed.add_field(name='頻道', value=f'{after_text}', inline=False)
-                
                 elif not after.channel:
                     embed=discord.Embed(description=f'{user.mention} 離開語音',color=0x4aa0b5,timestamp=NowTime)
                     embed.add_field(name='頻道', value=f'{before_text}', inline=False)
-                
+                elif before.channel != after.channel:
+                    embed=discord.Embed(description=f'{user.mention} 更換語音',color=0x4aa0b5,timestamp=NowTime)
+                    embed.add_field(name='頻道', value=f'{before_text}->{after_text}', inline=False)
                 else:
                     return
                 
@@ -219,12 +214,14 @@ class event(Cog_Extension):
                     sclient.set_dynamic_voice(new_channel.id,user.id,guild.id,None)
                     sclient.set_list_in_notice_dict("dynamic_voice_room",new_data=new_channel.id)
                     await user.move_to(new_channel)
+                    return
 
                 #移除
-                elif before.channel and not after.channel and sclient.getif_dynamic_voice_room(before.channel.id) and not before.channel.members:
+                elif before.channel and not after.channel and not before.channel.members and sclient.getif_dynamic_voice_room(before.channel.id):
                     await before.channel.delete(reason="動態語音：移除")
                     sclient.remove_dynamic_voice(before.channel.id)
                     sclient.set_list_in_notice_dict("dynamic_voice_room",remove_data=before.channel.id)
+                    return
 
             #舞台發言
             if check_event_stage(before) or check_event_stage(after):
@@ -289,7 +286,6 @@ class event(Cog_Extension):
                 channel.send(f"新成員{member.mention}({member.id}) 共有 {len(dbdata)} 個紀錄")
 
         if guildid == 613747262291443742:
-            dict = {}
             earlest = datetime.datetime.now(datetime.timezone.utc)
             earlest_guildid = None
             guild_list = guild_dict.keys()

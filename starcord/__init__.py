@@ -9,11 +9,6 @@ from .utilities import *
 from .errors import *
 from starcord.core.classes import Cog_Extension
 
-# if Jsondb.jdata.get('twitch_bot'):
-#     from .clients.twitch_chatbot import twitch_bot
-# else:
-#     twitch_bot = None
-
 __all__ = [
     'Jsondb',
     'csvdb',

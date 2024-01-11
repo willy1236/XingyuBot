@@ -60,8 +60,7 @@ class command(Cog_Extension):
         added_user = []
         
         if user_list:
-            user_list = user_list.split()
-            for user in user_list:
+            for user in user_list.split():
                 user = await find.user(ctx,user)
                 if user and user != self.bot.user:
                     try:
@@ -70,8 +69,13 @@ class command(Cog_Extension):
                             user = ctx.guild.get_member(dbdata['main_account'])
                     except sqlerror:
                         pass
+                    
                     await user.add_roles(new_role,reason='指令:加身分組')
                     added_user.append(user.mention)
+                    if ctx.guild.id == 613747262291443742 and not user.get_role(877934319249797120):
+                        divider_role = await ctx.guild.get_role(877934319249797120)
+                        await user.add_roles(divider_role,reason='指令:加身分組')
+
                 elif user == self.bot.user:
                     await ctx.respond("請不要加我身分組好嗎")
                 elif user and user.bot:
@@ -387,24 +391,6 @@ class command(Cog_Extension):
         args = args.split()
         result = random.choice(args)
         await ctx.respond(f'我選擇:{result}')
-
-    # @commands.cooldown(rate=1,per=50)
-    # @commands.slash_command(description='既然ChatGPT那麼紅，那為何不試試看跟AI聊天呢?')
-    # async def chat(self,ctx:discord.ApplicationContext,content:discord.Option(str,name='訊息',description='要傳送的訊息內容')):
-    #     await ctx.defer()
-    #     raise CommandError('目前聊天的額度已過期，故無法使用此指令，敬請期待未來更新')
-    #     response = openai.Completion.create(
-    #         model="text-davinci-003",
-    #         prompt=content,
-    #         temperature=0.9,
-    #         max_tokens=500,
-    #         top_p=1,
-    #         frequency_penalty=0.0,
-    #         presence_penalty=0.6,
-    #         stop=[" Human:", " AI:"]
-    #     )
-    #     text = response['choices'][0]['text']
-    #     await ctx.respond(text)
 
     @busytime.command(description='新增沒空時間')
     async def add(self,
