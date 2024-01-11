@@ -7,7 +7,7 @@ from starcord.models.weather import *
 class WeatherClient():
     """天氣資料交互"""
 
-class CWBClient(WeatherClient):
+class CWA_API(WeatherClient):
     def __init__(self):
         super().__init__()
         self.auth = Jsondb.get_token('cwa_api')
@@ -51,9 +51,20 @@ class CWBClient(WeatherClient):
         params = {
             'Authorization': self.auth
         }
-        APIdata = requests.get(f'{self.url}/F-C0032-001?Authorization={self.auth}',params=params).json()
+        APIdata = requests.get(f'{self.url}/F-C0032-001',params=params).json()
         if APIdata:
             return Forecast(APIdata)
+        else:
+            return None
+        
+    def get_weather_warning(self):
+        params = {
+            'Authorization': self.auth,
+            'limit': 1
+        }
+        APIdata = requests.get(f'{self.url}/W-C0033-002',params=params).json().get('records').get('record')
+        if APIdata:
+            return WeatherWarning(APIdata[0])
         else:
             return None
         

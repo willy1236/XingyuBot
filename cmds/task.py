@@ -53,9 +53,9 @@ class task(Cog_Extension):
     #     await task_report_channel.send('簽到已重置')
 
     async def earthquake_check(self):
-        timefrom = Jsondb.read_cache('timefrom')
+        timefrom = Jsondb.read_cache('earthquake_timefrom')
         try:
-            data = CWBClient().get_earthquake_report_auto(timefrom)
+            data = CWA_API().get_earthquake_report_auto(timefrom)
         except ConnectTimeout:
             log.warning("earthquake_check timeout.")
             return
@@ -65,7 +65,7 @@ class task(Cog_Extension):
         if data:
             embed = data.desplay()
             time = datetime.strptime(data.originTime, "%Y-%m-%d %H:%M:%S")+timedelta(seconds=1)
-            Jsondb.write_cache('timefrom',time.strftime("%Y-%m-%dT%H:%M:%S"))
+            Jsondb.write_cache('earthquake_timefrom',time.strftime("%Y-%m-%dT%H:%M:%S"))
 
             if data.auto_type == 'E-A0015-001':
                 text = '顯著有感地震報告'
@@ -88,6 +88,13 @@ class task(Cog_Extension):
                     await asyncio.sleep(0.5)
                 else:
                     print(f"earthquake_check: {i['guild_id']}/{i['channel_id']}")
+
+    async def weather_warning_check(self):
+        timefrom = Jsondb.read_cache('earthquake_timefrom')
+        try:
+            data = CWA_API().get_earthquake_report_auto(timefrom)
+        except:
+            pass
 
     async def apex_info_update(self):
         aclient = ApexInterface()
@@ -131,7 +138,7 @@ class task(Cog_Extension):
 
 
     async def forecast_update(self):
-        forecast = CWBClient().get_forecast()
+        forecast = CWA_API().get_forecast()
         if forecast:
             records = sclient.get_notify_channel_by_type('forecast')
             for i in records:

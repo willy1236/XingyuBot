@@ -1,5 +1,4 @@
 import datetime,discord
-
 from starcord.utilities.utility import BotEmbed
 
 
@@ -86,4 +85,28 @@ class Forecast():
             embed.add_field(name=data['name'],value=text)
         embed.timestamp = datetime.datetime.now()
         embed.set_footer(text=f'{self.timestart}至{self.timeend}')
+        return embed
+    
+class WeatherWarning:
+    def __init__(self,data):
+        self.issueTime = data.get('issueTime')
+        self.startTime = data.get('startTime')
+        self.endTime = data.get('endTime')
+        self.update = data.get('update')
+        self.contentText = data.get('contentText')
+        self.phenomena = data.get('phenomena')
+        self.significance = data.get('significance')
+        self.locationName = data.get('locationName')
+
+    def desplay(self):
+        embed = BotEmbed.general('天氣警特報',description=self.contentText)
+        embed.add_field(name='發布時間',value=self.issueTime)
+        embed.add_field(name='開始時間',value=self.startTime)
+        embed.add_field(name='結束時間',value=self.endTime)
+        embed.add_field(name='警特報類型',value=self.phenomena)
+        embed.add_field(name='程度',value=self.significance)
+        embed.add_field(name='涵蓋區域市',value=self.locationName)
+
+        embed.timestamp = datetime.datetime.now()
+        embed.set_footer(text=f'最後更新：{self.update}')
         return embed

@@ -67,5 +67,5 @@ __all__ =[
     'ApexInterface',
     'SteamInterface',
     'DBDInterface',
-    'CWBClient',
+    'CWA_API',
 ]
