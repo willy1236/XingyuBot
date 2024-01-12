@@ -1,5 +1,6 @@
 import discord,datetime
 from starcord.FileDatabase import Jsondb
+from .funtions import find
 
 class BotEmbed:
     @staticmethod
@@ -203,3 +204,22 @@ class converter():
                     seconds = m
                 m=''
         return datetime.timedelta(days=days,hours=hours,minutes=minutes,seconds=seconds)
+    
+async def create_only_role_list(text:str,ctx):
+    """投票系統：建立限制投票身分組清單"""
+    only_role_list = []
+    for i in text.split(","):
+        role = await find.role(ctx,i)
+        if role:
+            only_role_list.append(role.id)
+    return only_role_list
+
+async def create_role_magification_dict(text:str,ctx):
+    """投票系統：建立身分組權重列表"""
+    role_magnification_dict = {}
+    text = text.split(",")
+    for i in range(0,len(text),2):
+        role = await find.role(ctx,text[i])
+        if role:
+            role_magnification_dict[role.id] = int(text[i+1])
+    return role_magnification_dict

@@ -5,7 +5,7 @@ from discord.commands import SlashCommandGroup
 from mysql.connector.errors import Error as sqlerror
 
 from starcord import Cog_Extension,Jsondb,BRS,log,BotEmbed,ChoiceList,sclient
-from starcord.utilities import find,random_color
+from starcord.utilities import find,random_color,create_only_role_list,create_role_magification_dict
 from starcord.ui_element.button import Delete_Add_Role_button
 from starcord.ui_element.view import PollView
 from starcord.DataExtractor import GoogleCloud
@@ -547,20 +547,8 @@ class command(Cog_Extension):
             await ctx.respond(f"錯誤：投票選項超過10項或小於1項",ephemeral=True)
             return
         
-        only_role_list = []
-        if only_role:
-            for i in only_role.split(","):
-                role = await find.role(ctx,i)
-                if role:
-                    only_role_list.append(role.id)
-
-        role_magnification_dict = {}
-        if role_magnification:
-            role_magnification = role_magnification.split(",")
-            for i in range(0,len(role_magnification),2):
-                role = await find.role(ctx,role_magnification[i])
-                if role:
-                    role_magnification_dict[role.id] = int(role_magnification[i+1])
+        only_role_list = await create_only_role_list(only_role,ctx) if only_role else []
+        role_magnification_dict = await create_role_magification_dict(role_magnification,ctx) if role_magnification else {}
 
         view = sclient.create_poll(title,options,ctx.author.id,ctx.guild.id,alternate_account_can_vote,show_name,check_results_in_advance,results_only_initiator,only_role_list=only_role_list,role_magnification_dict=role_magnification_dict)
         embed = view.display(ctx)
@@ -578,6 +566,39 @@ class command(Cog_Extension):
             await ctx.respond(view=view,embed=view.display(ctx))
         else:
             await ctx.respond("錯誤：查無此ID")
+
+    @commands.is_owner()
+    @poll.command(description='編輯投票')
+    async def view(self,ctx,
+                   poll_id:discord.Option(int,name='投票id',description=''),
+                   title:discord.Option(str,name='標題',description='投票標題，限45字內',default=None),
+                   alternate_account_can_vote:discord.Option(bool,name='小帳是否算有效票',description='預設為true',default=None),
+                   show_name:discord.Option(bool,name='投票結果是否顯示用戶名',description='預設為false，若投票人數多建議關閉',default=None),
+                   check_results_in_advance:discord.Option(bool,name='是否能預先查看結果',description='預設為true',default=None),
+                   results_only_initiator:discord.Option(bool,name='僅限發起人能看到結果',description='預設為false',default=None)):
+        dbdata = sclient.get_poll(poll_id)
+        if not dbdata:
+            await ctx.respond("錯誤：查無此ID")
+            return
+        
+        if title:
+            sclient.update_poll(view.poll_id,"title",title)
+        if alternate_account_can_vote:
+            sclient.update_poll(view.poll_id,"alternate_account_can_vote",alternate_account_can_vote)
+        if show_name:
+            sclient.update_poll(view.poll_id,"show_name",show_name)
+        if check_results_in_advance:
+            sclient.update_poll(view.poll_id,"check_results_in_advance",check_results_in_advance)
+        if results_only_initiator:
+            sclient.update_poll(view.poll_id,"results_only_initiator",results_only_initiator)
+        
+        view = PollView(poll_id,sqldb=sclient)
+        message = self.bot.get_message(view.message_id)
+        if message:
+            await message.edit(view=view,embed=view.display(ctx))
+            await ctx.respond(f"投票更新完成：{message.jump_url}")
+        else:
+            await ctx.respond("投票更新完成，但沒有更新投票介面")
 
     # @commands.is_owner()
     # @poll.command(description='取得投票結果')

@@ -124,12 +124,15 @@ class PollView(discord.ui.View):
         from starcord.DataExtractor import MySQLDatabase
         poll_id: int
         sqldb: MySQLDatabase
+        guild_id: int
+        message_id: int | None
+        title: str
         created_id: int
         alternate_account_can_vote: bool
         show_name: bool
         check_results_in_advance: bool
         results_only_initiator: bool
-    
+
     def __init__(self,poll_id,sqldb=None):
         super().__init__(timeout=None)
         self.poll_id = poll_id
@@ -144,6 +147,9 @@ class PollView(discord.ui.View):
         self.check_results_in_advance = bool(poll_data['check_results_in_advance'])
         self.results_only_initiator = bool(poll_data['results_only_initiator'])
         
+        self.guild_id = poll_data['guild_id']
+        self.message_id = poll_data['message_id']
+
         self.add_item(PollEndButton(poll_id,self.created_id))
         if self.check_results_in_advance:
             self.add_item(PollResultButton(poll_id))
