@@ -14,6 +14,10 @@ class EarthquakeReport():
         self.magnitude = data['EarthquakeInfo']['EarthquakeMagnitude']['MagnitudeValue']
         self.reportColor = data['ReportColor']
         self.reportContent = data['ReportContent']
+        self.intensity = {}
+        for data in data.get("Intensity").get("ShakingArea"):
+            if data["AreaDesc"].startswith("最大震度"):
+                self.intensity[data['AreaDesc']] = data['CountyName']
 
     def desplay(self):
         if self.reportColor == "綠色":
@@ -33,6 +37,9 @@ class EarthquakeReport():
         embed.add_field(name='震源深度',value=f'{self.depth} km')
         embed.add_field(name='芮氏規模',value=f'{self.magnitude}')
         embed.add_field(name='震央',value=self.location,inline=False)
+        if self.intensity and self.earthquakeNo[3:] != "000":
+            for key in self.intensity:
+                embed.add_field(name=key,value=self.intensity[key],inline=False)
         embed.set_image(url=self.reportImageURI)
         return embed
         

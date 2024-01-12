@@ -35,7 +35,7 @@ class GameClient(MySQLDatabase):
         else:
             return dbdata
         
-    def get_player_data(self,summoner_name=None,discord_id=None):
+    def get_riot_player(self,summoner_name=None,discord_id=None):
         """
         從資料庫取得資料，若沒有則從API取得
         :param summoner_name: 召喚師名稱

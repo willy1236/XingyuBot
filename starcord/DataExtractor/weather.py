@@ -13,15 +13,14 @@ class CWA_API(WeatherClient):
         self.auth = Jsondb.get_token('cwa_api')
         self.url = 'https://opendata.cwa.gov.tw/api/v1/rest/datastore'
 
-    def get_earthquake_report(self,significant=False):
+    def get_earthquake_report(self,significant=True):
         params = {
             'Authorization': self.auth,
             'limit': 1
         }
-        if significant:
-            APIdata = requests.get(f'{self.url}/E-A0015-001',params=params).json().get('records').get('Earthquake')[0]
-        else:
-            APIdata = requests.get(f'{self.url}/E-A0016-001',params=params).json().get('records').get('Earthquake')[0]
+
+        id = "E-A0015-001" if significant else "E-A0016-001"        
+        APIdata = requests.get(f'{self.url}/{id}',params=params).json().get('records').get('Earthquake')[0]
         
         if APIdata:
             return EarthquakeReport(APIdata)

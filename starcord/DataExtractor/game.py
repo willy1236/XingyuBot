@@ -65,11 +65,11 @@ class RiotClient(GameInterface):
         else:
             raise ClientError("lol_match",r.text)
         
-    def get_summoner_masteries(self,summoner_id) -> list[LOLChampionMasteries | None]:
+    def get_summoner_masteries(self,puuid) -> list[LOLChampionMasteries | None]:
         params = {
             'count':5
             }
-        r = requests.get(f'{self.url_tw2}/lol/champion-mastery/v4/champion-masteries/by-summoner/{summoner_id}/top',params=params,headers=self.headers)
+        r = requests.get(f'{self.url_tw2}/lol/champion-mastery/v4/champion-masteries/by-puuid/{puuid}/top',params=params,headers=self.headers)
         if r.ok:
             return [LOLChampionMasteries(data) for data in r.json()]
         elif r.status_code == 404:
