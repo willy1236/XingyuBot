@@ -569,7 +569,7 @@ class command(Cog_Extension):
 
     @commands.is_owner()
     @poll.command(description='編輯投票')
-    async def view(self,ctx,
+    async def edit(self,ctx,
                    poll_id:discord.Option(int,name='投票id',description=''),
                    title:discord.Option(str,name='標題',description='投票標題，限45字內',default=None),
                    alternate_account_can_vote:discord.Option(bool,name='小帳是否算有效票',description='預設為true',default=None),
