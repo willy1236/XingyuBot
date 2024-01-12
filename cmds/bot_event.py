@@ -90,7 +90,7 @@ class event(Cog_Extension):
                 p = re.compile(r"(?:貢(\S*|\s*)*丸|贡(\S*|\s*)*丸|Meat(\S*|\s*)*ball|貢(\S*|\s*)*ㄨ(\S*|\s*)*ㄢ)(?!殲滅黨)",re.IGNORECASE)
                 result = p.search(message.content)
             else:
-                p = re.compile(r"(?:貢丸|贡丸|Meatball)(?!殲滅黨)",re.IGNORECASE)
+                p = re.compile(r"(?:貢(\S*|\s*)*丸|贡(\S*|\s*)*丸|Meat(\S*|\s*)*ball)(?!殲滅黨)",re.IGNORECASE)
                 result = p.search(message.content)
             
             if result:
@@ -99,7 +99,7 @@ class event(Cog_Extension):
                     time = datetime.timedelta(seconds=15)
                     create_time = datetime.datetime.now()
                     
-                    await message.delete(reason=reason)
+                    #await message.delete(reason=reason)
                     await message.author.timeout_for(duration=datetime.timedelta(seconds=60),reason=reason)
                     
                     timestamp = int((create_time+time).timestamp())
