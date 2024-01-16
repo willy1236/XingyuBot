@@ -186,7 +186,7 @@ class PollView(discord.ui.View):
                 mag = self.role_dict[roleid][1]
                 role_magification_list.append(f"{role.mention}({mag})" if role else f"{roleid}({mag})")
         
-        description = f"投票ID：{self.poll_id}\n- 小帳是否算有效票：{self.alternate_account_can_vote}\n- 結果顯示用戶名：{self.show_name}\n- 只有發起人能查看結果：{self.results_only_initiator}"
+        description = f"投票ID：{self.poll_id}\n- 顯示投票人：{self.show_name}\n- 僅限發起人能查看結果：{self.results_only_initiator}\n- 小帳是否算有效票：{self.alternate_account_can_vote}"
         if only_role_list:
             description += "\n- 可投票身分組：" + ",".join(only_role_list)
         if role_magification_list:

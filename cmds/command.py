@@ -535,10 +535,10 @@ class command(Cog_Extension):
     async def create(self,ctx,
                      title:discord.Option(str,name='標題',description='投票標題，限45字內'),
                      options:discord.Option(str,name='選項',description='投票選項，最多輸入10項，每個選項請用英文,隔開'),
+                     show_name:discord.Option(bool,name='顯示投票人',description='預設為false，若投票人數多建議關閉',default=False),
+                     check_results_in_advance:discord.Option(bool,name='預先查看結果',description='預設為true',default=True),
+                     results_only_initiator:discord.Option(bool,name='僅限發起人能查看結果',description='預設為false',default=False),
                      alternate_account_can_vote:discord.Option(bool,name='小帳是否算有效票',description='預設為true',default=True),
-                     show_name:discord.Option(bool,name='投票結果是否顯示用戶名',description='預設為false，若投票人數多建議關閉',default=False),
-                     check_results_in_advance:discord.Option(bool,name='是否能預先查看結果',description='預設為true',default=True),
-                     results_only_initiator:discord.Option(bool,name='僅限發起人能看到結果',description='預設為false',default=False),
                      only_role:discord.Option(str,name='限制身分組',description='若提供。則只有擁有身分組才能投票，多個身分組以英文,隔開，身分組可輸入id、提及、名稱等',default=None),
                      role_magnification:discord.Option(str,name='身分組權重',description='若提供，擁有身分組的用戶票數將乘指定倍數，取最高，格式為：身分組1,權重,身分組2,權重...，身分組可輸入id、提及、名稱等',default=None)
                      ):
@@ -562,7 +562,7 @@ class command(Cog_Extension):
                    poll_id:discord.Option(int,name='投票id',description='')):
         dbdata = sclient.get_poll(poll_id)
         if dbdata:
-            view = PollView(dbdata['poll_id'],sqldb=sclient)
+            view = PollView(dbdata['poll_id'],sqldb=sclient)    
             await ctx.respond(view=view,embed=view.display(ctx))
         else:
             await ctx.respond("錯誤：查無此ID")
@@ -572,10 +572,10 @@ class command(Cog_Extension):
     async def edit(self,ctx,
                    poll_id:discord.Option(int,name='投票id',description=''),
                    title:discord.Option(str,name='標題',description='投票標題，限45字內',default=None),
-                   alternate_account_can_vote:discord.Option(bool,name='小帳是否算有效票',description='預設為true',default=None),
-                   show_name:discord.Option(bool,name='投票結果是否顯示用戶名',description='預設為false，若投票人數多建議關閉',default=None),
-                   check_results_in_advance:discord.Option(bool,name='是否能預先查看結果',description='預設為true',default=None),
-                   results_only_initiator:discord.Option(bool,name='僅限發起人能看到結果',description='預設為false',default=None)):
+                   show_name:discord.Option(bool,name='顯示投票人',description='預設為false，若投票人數多建議關閉',default=None),
+                   check_results_in_advance:discord.Option(bool,name='預先查看結果',description='預設為true',default=None),
+                   results_only_initiator:discord.Option(bool,name='僅限發起人能查看結果',description='預設為false',default=None),
+                   alternate_account_can_vote:discord.Option(bool,name='小帳是否算有效票',description='預設為true',default=None)):
         dbdata = sclient.get_poll(poll_id)
         if not dbdata:
             await ctx.respond("錯誤：查無此ID")
