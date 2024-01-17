@@ -73,7 +73,7 @@ class command(Cog_Extension):
                     await user.add_roles(new_role,reason='指令:加身分組')
                     added_user.append(user.mention)
                     if ctx.guild.id == 613747262291443742 and not user.get_role(877934319249797120):
-                        divider_role = await ctx.guild.get_role(877934319249797120)
+                        divider_role = ctx.guild.get_role(877934319249797120)
                         await user.add_roles(divider_role,reason='指令:加身分組')
 
                 elif user == self.bot.user:
