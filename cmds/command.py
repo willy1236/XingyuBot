@@ -582,15 +582,15 @@ class command(Cog_Extension):
             return
         
         if title:
-            sclient.update_poll(view.poll_id,"title",title)
+            sclient.update_poll(poll_id,"title",title)
         if alternate_account_can_vote:
-            sclient.update_poll(view.poll_id,"alternate_account_can_vote",alternate_account_can_vote)
+            sclient.update_poll(poll_id,"alternate_account_can_vote",alternate_account_can_vote)
         if show_name:
-            sclient.update_poll(view.poll_id,"show_name",show_name)
+            sclient.update_poll(poll_id,"show_name",show_name)
         if check_results_in_advance:
-            sclient.update_poll(view.poll_id,"check_results_in_advance",check_results_in_advance)
+            sclient.update_poll(poll_id,"check_results_in_advance",check_results_in_advance)
         if results_only_initiator:
-            sclient.update_poll(view.poll_id,"results_only_initiator",results_only_initiator)
+            sclient.update_poll(poll_id,"results_only_initiator",results_only_initiator)
         
         view = PollView(poll_id,sqldb=sclient)
         message = self.bot.get_message(view.message_id)
