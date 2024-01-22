@@ -304,6 +304,16 @@ class MySQLRoleSaveSystem(MySQLBaseModel):
         records = self.cursor.fetchall()
         if records:
             return records[0]['COUNT(*)']
+        
+    def get_role_save_count_list(self) -> dict[str,int]:
+        self.cursor.execute(f"USE `stardb_user`;")
+        self.cursor.execute(f'SELECT discord_id,COUNT(*) as count FROM `role_save` GROUP BY `discord_id` ORDER BY `count` DESC;')
+        records = self.cursor.fetchall()
+        if records:
+            dict = {}
+            for data in records:
+                dict[data['discord_id']] = data['count']
+            return dict
 
     def add_role_save(self,discord_id:int,role_id:str,role_name:str,time:datetime.date):
         self.cursor.execute(f"USE `stardb_user`;")

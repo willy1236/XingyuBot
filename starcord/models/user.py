@@ -43,7 +43,7 @@ class DiscordUser():
     if TYPE_CHECKING:
         from starcord.DataExtractor import MySQLDatabase
         sqldb: MySQLDatabase
-        user_dc: discord.User
+        user_dc: discord.User | None
         discord_id: int
         name: str
         point: int
@@ -85,26 +85,27 @@ class DiscordUser():
             self._rcoin = self.sqldb.get_coin(self.discord_id,Coins.RCOIN) or 0
         return self._rcoin
     
+    @property
+    def mention(self):
+        return f"<@{self.discord_id}>"
+    
     def desplay(self,bot:discord.Bot=None):
         embed = BotEmbed.general(name=self.user_dc.name if self.user_dc else self.name, icon_url=self.user_dc.avatar.url if self.user_dc.avatar else discord.Embed.Empty)
         if bot and self.main_account_id:
             main_account = bot.get_user(self.main_account_id) or self.main_account_id
             embed.description = f"{main_account.mention} 的小帳"
-        embed.add_field(name='星塵⭐',value=self.scoin)
+        embed.add_field(name='⭐星塵',value=self.scoin)
         embed.add_field(name='PT點數',value=self.point)
         embed.add_field(name='Rcoin',value=self.rcoin)
         embed.add_field(name='連續簽到最高天數',value=self.max_sign_consecutive_days)
         if self.meatball_times:
             embed.add_field(name='貢丸次數',value=self.meatball_times)
-        #embed.add_field(name='遊戲資料',value="/game find",inline=False)
-        #embed.add_field(name='寵物',value="/pet check",inline=False)
-        # embed.add_field(name='生命值',value=self.hp)
-        # if self.pet.has_pet:
-        #     embed.add_field(name='寵物',value=self.pet.name)
-        # else:
-        #     embed.add_field(name='寵物',value='無')
         return embed
 
+    def get_alternate_account(self) -> list[int]:
+        dbdata = self.sqldb.get_alternate_account(self.discord_id)
+        return [data['alternate_account'] for data in dbdata]
+    
     def get_pet(self):
         """等同於 UserClient.get_pet()"""
         self.pet = self.sqldb.get_pet(self.discord_id)
@@ -125,9 +126,6 @@ class DiscordUser():
     
     def update_coins(self,mod,coin_type:Coins,amount:int):
         self.sqldb.update_coins(self.discord_id,mod,coin_type,amount)
-
-    def get_alternate_account(self):
-        return self.sqldb.get_alternate_account(self.discord_id)
     
     def get_main_account(self):
         return self.sqldb.get_main_account(self.discord_id)

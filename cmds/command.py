@@ -182,7 +182,23 @@ class command(Cog_Extension):
             
         else:
             raise commands.errors.ArgumentParsingError('沒有此用戶的紀錄')
-
+    
+    @role.command(description='身分組排行榜')
+    async def ranking(self, ctx):
+        await ctx.defer()
+        dbdata = sclient.get_role_save_count_list()
+        sorted_data = sorted(dbdata.items(), key=lambda x:x[1],reverse=True)
+        embed = BotEmbed.simple("身分組排行榜")
+        for i in range(5):
+            try:
+                data = sorted_data[i]
+                user = self.bot.get_user(data[0])
+                username = user.mention if user else data[0]
+                count = data[1]
+                embed.add_field(name=f"第{i+1}名", value=f"{username} {count}個", inline=False)
+            except IndexError:
+                break
+        await ctx.respond(embed=embed)
 
     @commands.slash_command(description='抽抽試手氣')
     @commands.cooldown(rate=1,per=2)
@@ -363,15 +379,32 @@ class command(Cog_Extension):
         await member.timeout_for(time,reason="指令：禁言10秒")
         await ctx.respond(f"已禁言{member.mention} 10秒",ephemeral=True)
     
-    @commands.user_command(name="不想理你生態區",guild_ids=main_guild)
-    @commands.has_permissions(moderate_members=True)
+    #@commands.user_command(name="不想理你生態區",guild_ids=main_guild)
+    @commands.user_command(name="懲戒集中營",guild_ids=main_guild)
+    #@commands.has_permissions(moderate_members=True)
     async def user_command2(self,ctx, member: discord.Member):
         await ctx.respond(f"開始執行",ephemeral=True)
+        
+        role = ctx.guild.get_role(1195407446315892888)
+        member.add_roles(role,reason="指令：懲戒集中營 開始")
+        
+        moderate_user = ctx.author
+        create_time = datetime.datetime.now()
+        time = datetime.timedelta(seconds=20)
+        timestamp = int((create_time+time).timestamp())
+
+        embed = BotEmbed.general(f'{member.name} 已被懲戒',member.display_avatar.url,description=f"{member.mention}：懲戒集中營")
+        embed.add_field(name="執行人員",value=moderate_user.mention)
+        embed.add_field(name="結束時間",value=f"<t:{timestamp}>（20s）")
+        embed.timestamp = create_time
+        await self.bot.get_channel(1195406858056368189).send(embed=embed)
+        
         channel = self.bot.get_channel(613760923668185121)
         for i in range(40):
             if member.voice and member.voice.channel != channel:
                 await member.move_to(channel)
             await asyncio.sleep(0.5)
+        member.remove_roles(role,reason="指令：懲戒集中營 結束")
 
     @commands.slash_command(description='傳送訊息給機器人擁有者')
     @commands.cooldown(rate=1,per=10)

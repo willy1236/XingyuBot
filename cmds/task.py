@@ -255,7 +255,6 @@ class task(Cog_Extension):
                         await self.bot.get_channel(1181201785055096842).send(embed=embed)
 
             else:
-                
                 embed = BotEmbed.rpg(f"在 {city_battle.city.city_name} 的占領戰\n",f"佔領值 +{len(city_battle.attacker)}")
                 await self.bot.get_channel(1181201785055096842).send(embed=embed)
         

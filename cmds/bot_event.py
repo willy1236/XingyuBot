@@ -208,7 +208,7 @@ class event(Cog_Extension):
                     #permission.manage_channels = True
                     #overwrites = discord.PermissionOverwrite({user:permission})
                     overwrites = {
-                    user: discord.PermissionOverwrite(manage_channels=True,manage_roles=True)
+                        user: discord.PermissionOverwrite(manage_channels=True,manage_roles=True)
                     }
                     new_channel = await guild.create_voice_channel(name=f'{user.name}的頻道', reason='動態語音：新增',category=category,overwrites=overwrites)
                     sclient.set_dynamic_voice(new_channel.id,user.id,guild.id,None)

@@ -10,10 +10,13 @@ class RiotUser():
         self.puuid = data.get("puuid")
         self.name = data.get("gameName")
         self.tag = data.get("tagLine")
+        self._fullname = None
 
     @property
     def fullname(self):
-        return self.name + "#" + self.tag
+        if not self._fullname:
+            self._fullname = self.name + "#" + self.tag
+        return self._fullname
     
 class LOLPlayer():
     def __init__(self,data):
