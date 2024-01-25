@@ -73,7 +73,7 @@ async def on_ready():
         days_1 = datetime.timedelta(days=1)
         invite:discord.Invite
         for invite in invites:
-            if not invite.expires_at and not invite.scheduled_event and invite.uses == 0 and now - invite.created_at > days_1:
+            if not invite.expires_at and not invite.scheduled_event and invite.uses == 0 and now - invite.created_at > days_1 and invite.url != "https://discord.gg/AqnruTZ2FD":
                 await invite.delete()
                 await asyncio.sleep(1)
     

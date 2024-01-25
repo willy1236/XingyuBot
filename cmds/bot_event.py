@@ -11,7 +11,7 @@ voice_updata = Jsondb.jdata.get('voice_updata')
 debug_mode = Jsondb.jdata.get("debug_mode",True)
 main_guild = Jsondb.jdata.get('main_guild',[])
 
-guild_dict = {
+guild_registration = {
     "609732674197651466":1176165451374534686,
     "606098232942002176":1178365174533607435,
     "726790741103476746":1176165460757184612,
@@ -64,7 +64,7 @@ class event(Cog_Extension):
 
         #介紹
         if message.content == self.bot.user.mention:
-            embed = BotEmbed.bot(self.bot,description=f"你好~我是 dc小幫手，是一個discord機器人喔~\n你可以輸入 </help:1067700245015834638> 來查看所有指令的用法\n\n希望我能在discord上幫助到你喔~\n有任何建議與需求可以使用 </feedback:1067700244848058386> 指令")
+            embed = BotEmbed.bot(self.bot,description=f"你好~我是星羽，是一個discord機器人喔~\n你可以輸入 </help:1067700245015834638> 來查看所有指令的用法\n\n希望我能在discord上幫助到你喔~\n有任何建議與需求可以使用 </feedback:1067700244848058386> 指令\n\n支援伺服器：https://discord.gg/AqnruTZ2FD")
             embed.set_footer(text="此機器人由 威立 負責維護")
             await message.reply(embed=embed)
             return
@@ -288,7 +288,7 @@ class event(Cog_Extension):
         if guildid == 613747262291443742:
             earlest = datetime.datetime.now(datetime.timezone.utc)
             earlest_guildid = None
-            guild_list = guild_dict.keys()
+            guild_list = guild_registration.keys()
             for guild in member.mutual_guilds:
                 if str(guild.id) in guild_list:
                     join_time = guild.get_member(member.id).joined_at
@@ -297,7 +297,7 @@ class event(Cog_Extension):
                         earlest_guildid = guild.id
 
             if earlest_guildid:
-                await member.add_roles(member.guild.get_role(guild_dict[str(earlest_guildid)]), reason="加入的最早伺服器")
+                await member.add_roles(member.guild.get_role(guild_registration[str(earlest_guildid)]), reason="加入的最早伺服器")
 
 
     @commands.Cog.listener()
