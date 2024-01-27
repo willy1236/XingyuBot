@@ -782,7 +782,8 @@ class command(Cog_Extension):
             end_time = datetime.datetime(start_time.year,start_time.month,start_time.day,20,0,0,tzinfo=timezone)
         else:
             end_time = start_time + datetime.timedelta(days=1)
-            
+        
+        start_time += datetime.timedelta(seconds=10)
         event = await ctx.guild.create_scheduled_event(name="【快樂營中央選舉】投票階段",start_time=start_time,end_time=end_time,location="<#1163127708839071827>")
 
     @party.command(description='加入政黨')
