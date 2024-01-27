@@ -736,19 +736,38 @@ class command(Cog_Extension):
         await ctx.defer()
         session = 5
 
-        count_data = sclient.get_election_count(session)
-        count_dict = {}
-        for data in count_data:
-            pos = data['position']
-            count = data['count']
-            count_dict[pos] = count
+        dbdata = sclient.get_election_full_by_session(session)
+        
+        result = {}
+        for position in Jsondb.jdict["position_option"].keys():
+            result[position] = []
+        
+        for i in dbdata:
+            discord_id = i['discord_id']
+            #party_name = i['party_name'] or "無黨籍"
+            position = i['position']
+            
+            user = ctx.guild.get_member(discord_id)
+            result[position].append(user.display_name if user else discord_id)
+
+        # count_data = sclient.get_election_count(session)
+        # count_dict = {}
+        # for data in count_data:
+        #     pos = data['position']
+        #     count = data['count']
+        #     count_dict[pos] = count
 
         for position in Jsondb.jdict["position_option"].keys():
-            count = count_dict[position]
-            if count > 0:
+            #count = count_dict[position]
+            if len(result[position]) > 0:
                 position_name = Jsondb.get_jdict('position_option',position)
                 title = f"第{session}屆中央選舉：{position_name}"
-                options = [f"{i}號" for i in range(1,count + 1)]
+                i = 1
+                options = []
+                for username in result[position]:
+                #options = [f"{i}號" for i in range(1,count + 1)]
+                    options.append(f"{i}號 {username}" )
+                    i += 1
 
                 view = sclient.create_poll(title,options,ctx.author.id,ctx.guild.id,False)
 
