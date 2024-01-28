@@ -70,10 +70,10 @@ async def on_ready():
 
         invites = await bot.get_guild(613747262291443742).invites()
         now = datetime.datetime.now(datetime.timezone.utc)
-        days_1 = datetime.timedelta(days=1)
+        days_5 = datetime.timedelta(days=5)
         invite:discord.Invite
         for invite in invites:
-            if not invite.expires_at and not invite.scheduled_event and invite.uses == 0 and now - invite.created_at > days_1 and invite.url != "https://discord.gg/ye5yrZhYGF":
+            if not invite.expires_at and not invite.scheduled_event and invite.uses == 0 and now - invite.created_at > days_5 and invite.url != "https://discord.gg/ye5yrZhYGF":
                 await invite.delete()
                 await asyncio.sleep(1)
 

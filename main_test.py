@@ -149,9 +149,8 @@ if __name__ == '__main__':
 	# print(dc.access_token)
 
 	import feedparser
-	CHANNEL_ID = "123"
+	CHANNEL_ID = "UCNkJevYXQcjTc70j45FXFjA"
 	youtube_feed = f'https://www.youtube.com/feeds/videos.xml?channel_id={CHANNEL_ID}'
 	feed = feedparser.parse(youtube_feed)
-	print(feed)
 	for entry in feed['entries']:
-		print(entry)
+		print(entry['title'])

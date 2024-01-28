@@ -110,9 +110,9 @@ class system_community(Cog_Extension):
         if ytchannel:
             sclient.set_notify_community('youtube',ytchannel_id,guildid,channelid,roleid)
             if role:
-                await ctx.respond(f'設定成功：{ytchannel.title}的開台通知將會發送在{channel.mention}並會通知{role.mention}')
+                await ctx.respond(f'設定成功：{ytchannel.title}的通知將會發送在{channel.mention}並會通知{role.mention}')
             else:
-                await ctx.respond(f'設定成功：{ytchannel.title}的開台通知將會發送在{channel.mention}')
+                await ctx.respond(f'設定成功：{ytchannel.title}的通知將會發送在{channel.mention}')
                 
             from .task import scheduler
             scheduler.add_job(sclient.init_NoticeClient,"date",args=["youtube"])

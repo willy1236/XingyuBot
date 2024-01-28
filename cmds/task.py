@@ -207,6 +207,7 @@ class task(Cog_Extension):
             user_cache = youtube_cache.get(user)
             
             if not user_cache or user_cache != data["yt_videoid"]:
+                log.info(data["title"])
                 youtube_cache[user] = data["yt_videoid"]
                 embed = BotEmbed.simple(data["title"],data["author"],url=data["link"])
                 embed.set_image(url=data["media_thumbnail"]['url'])
@@ -222,6 +223,7 @@ class task(Cog_Extension):
                             await channel.send(f'{role.mention} 新影片上傳啦~',embed=embed)
                         else:
                             await channel.send(f'新影片上傳啦~',embed=embed)
+                        log.info(channel.name)
                         await asyncio.sleep(0.5)
                     else:
                         print(f"youtube: {guild.id}/{channel.id}")
