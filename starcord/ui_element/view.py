@@ -280,3 +280,13 @@ class GameView(discord.ui.View):
 
         else:
             await interaction.response.send_message(f"{interaction.user.mention} 你不是主揪",ephemeral=True)
+
+class WelcomeView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    @discord.ui.button(label="按下按鈕進入伺服器",style=discord.ButtonStyle.green,custom_id="welcome_1")
+    async def button2_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
+        role = interaction.guild.get_role()
+        await interaction.user.add_roles(role)        
+        await interaction.response.send_message(f"{interaction.user} 歡迎加入！",ephemeral=True)

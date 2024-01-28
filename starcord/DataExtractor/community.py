@@ -120,7 +120,7 @@ class YoutubeAPI(CommunityInterface):
             'maxResults':1
         }
         r = requests.get('https://youtube.googleapis.com/youtube/v3/channels',params=params)
-        if r.ok:
+        if r.ok and r.json().get('items'):
             return YoutubeChannel(r.json().get('items')[0])
         else:
             return None

@@ -76,6 +76,8 @@ async def on_ready():
             if not invite.expires_at and not invite.scheduled_event and invite.uses == 0 and now - invite.created_at > days_1 and invite.url != "https://discord.gg/ye5yrZhYGF":
                 await invite.delete()
                 await asyncio.sleep(1)
+
+        # bot.add_view(WelcomeView())
     
 
 #load

@@ -1,6 +1,8 @@
 import discord,datetime
+from discord.ext import commands
 from discord.commands import SlashCommandGroup
 from starcord.DataExtractor import TwitchAPI,YoutubeAPI,YoutubeRSS
+from starcord.ui_element.view import WelcomeView
 from starcord import Cog_Extension,BotEmbed,sclient,Jsondb
 
 class system_community(Cog_Extension):
@@ -97,7 +99,7 @@ class system_community(Cog_Extension):
 
     @youtube.command(description='設置youtube開台通知')
     async def set(self,ctx,
-                  ytchannel_id:discord.Option(str,required=True,name='youtube頻道id',description='當此頻道發新影片時會發送通知'),
+                  ytchannel_id:discord.Option(str,required=True,name='youtube頻道id',description='請輸入以uc開頭的頻道id，若不清楚可搜尋yt id finder'),
                   channel:discord.Option(discord.TextChannel,required=True,name='頻道',description='通知發送頻道'),
                   role:discord.Option(discord.Role,required=False,default=None,name='身分組',description='發送通知時tag的身分組')):
         guildid = ctx.guild.id
@@ -121,13 +123,13 @@ class system_community(Cog_Extension):
             cache[ytchannel_id] = yt_videoid
             Jsondb.write_cache('youtube',cache)
         else:
-            await ctx.respond(f'錯誤：找不到ID {ytchannel_id} 的頻道')
+            await ctx.respond(f'錯誤：找不到頻道ID {ytchannel_id} 的頻道')
 
     @youtube.command(description='移除youtube通知')
     async def remove(self,ctx,ytchannel_id:discord.Option(str,required=True,name='youtube頻道id',description='要移除通知的頻道id')):
         guildid = ctx.guild.id
-        sclient.remove_notify_community('twitch',ytchannel_id,guildid)
-        await ctx.respond(f'已移除ID {ytchannel_id} 的開台通知')
+        sclient.remove_notify_community('youtube',ytchannel_id,guildid)
+        await ctx.respond(f'已移除頻道ID {ytchannel_id} 的通知')
         
         from .task import scheduler
         scheduler.add_job(sclient.init_NoticeClient,"date",args=["youtube"])
@@ -139,7 +141,7 @@ class system_community(Cog_Extension):
     @youtube.command(description='確認youtube通知')
     async def notify(self,ctx,ytchannel_id:discord.Option(str,required=True,name='youtube頻道id',description='要確認通知的頻道id')):
         guildid = ctx.guild.id
-        record = sclient.get_notify_community_user('twitch',ytchannel_id,guildid)
+        record = sclient.get_notify_community_user('youtube',ytchannel_id,guildid)
         if record:
             channel = self.bot.get_channel(record[0]['channel_id'])
             role = channel.guild.get_role(record[0]['role_id'])
@@ -173,6 +175,13 @@ class system_community(Cog_Extension):
                     text += f" {role.mention}"
             embed.add_field(name=notify_name, value=text)
         await ctx.respond(embed=embed)
+
+    # @commands.slash_command(description='加入伺服器按鈕',debug_guilds=[1058234922076217415])
+    # @commands.has_permissions(manage_channels=True)
+    # async def welcome(self, ctx):
+    #     view = WelcomeView()
+    #     await ctx.channel.send(view=view)
+    #     await ctx.respond("按鈕創建完成",ephemeral=True)
 
 def setup(bot):
     bot.add_cog(system_community(bot))
