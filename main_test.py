@@ -143,7 +143,15 @@ class DiscordAPI:
 		return r.json()
 
 if __name__ == '__main__':
-	dc = DiscordAPI()
-	dc.set_auth_token()
+	# dc = DiscordAPI()
+	# dc.set_auth_token()
 
-	print(dc.access_token)
+	# print(dc.access_token)
+
+	import feedparser
+	CHANNEL_ID = "123"
+	youtube_feed = f'https://www.youtube.com/feeds/videos.xml?channel_id={CHANNEL_ID}'
+	feed = feedparser.parse(youtube_feed)
+	print(feed)
+	for entry in feed['entries']:
+		print(entry)

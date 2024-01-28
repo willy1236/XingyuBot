@@ -7,6 +7,7 @@ from requests.exceptions import ConnectTimeout
 
 from starcord import Cog_Extension,Jsondb,sclient,log,BotEmbed
 from starcord.DataExtractor import *
+from starcord.DataExtractor.community import YoutubeRSS
 
 
 apsc_log = logging.getLogger('apscheduler')
@@ -190,6 +191,42 @@ class task(Cog_Extension):
                 del twitch_cache[user]
 
         Jsondb.write_cache('twitch',twitch_cache)
+
+    @tasks.loop(minutes=15)
+    async def youtube_video(self):
+        users = sclient.get_notice_dict("youtube")
+        if not users:
+            return
+        youtube_cache = Jsondb.read_cache('youtube') or {}
+        for user in users:
+            rss_data = YoutubeRSS.get_videos(user)
+            if rss_data:
+                data = rss_data[0]
+            else: 
+                continue
+            user_cache = youtube_cache.get(user)
+            
+            if not user_cache or user_cache != data["yt_videoid"]:
+                youtube_cache[user] = data["yt_videoid"]
+                embed = BotEmbed.simple(data["title"],data["author"],url=data["link"])
+                embed.set_image(url=data["media_thumbnail"]['url'])
+                embed.add_field(name="上傳時間",value=data["published_parsed"],inline=False)
+                
+                guilds = sclient.get_notify_community_guild('youtube',user)
+                for guildid in guilds:
+                    guild = self.bot.get_guild(guildid)
+                    channel = self.bot.get_channel(guilds[guildid][0])
+                    role = guild.get_role(guilds[guildid][1])
+                    if channel:
+                        if role:
+                            await channel.send(f'{role.mention} 新影片上傳啦~',embed=embed)
+                        else:
+                            await channel.send(f'新影片上傳啦~',embed=embed)
+                        await asyncio.sleep(0.5)
+                    else:
+                        print(f"youtube: {guild.id}/{channel.id}")
+
+        Jsondb.write_cache('youtube',youtube_cache)
 
     async def auto_hoyo_reward(self):
         list = sclient.get_hoyo_reward()

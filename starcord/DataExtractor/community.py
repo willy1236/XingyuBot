@@ -1,4 +1,4 @@
-import requests,os.path
+import requests,os.path,feedparser
 from starcord.FileDatabase import Jsondb
 from starcord.models.community import *
 from starcord.errors import Forbidden
@@ -172,6 +172,14 @@ class YoutubeAPI(CommunityInterface):
             print(r.text)
             print(r.status_code)
             return None
+
+class YoutubeRSS(CommunityInterface):
+    def get_videos(self,channel_id):
+        youtube_feed = f'https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}'
+        feed = feedparser.parse(youtube_feed)
+        # for entry in feed['entries']:
+        #     print(entry)
+        return feed['entries']
 
 class GoogleCloud():
     def __init__(self):

@@ -110,8 +110,6 @@ class event(Cog_Extension):
                     
                     await message.channel.send(f"{message.author.mention} 貢丸很危險 不要打貢丸知道嗎",embed=embed)
                     sclient.add_userdata_value(message.author.id,"user_discord","meatball_times",1)
-                    channel = self.bot.get_channel(877495919879286824)
-                    await channel.send(f"{message.author.name} 打出了：{message.content}")
                 except Exception as e:
                     print(e)
         

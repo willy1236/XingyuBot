@@ -67,6 +67,7 @@ class PointClient(MySQLDatabase):
 class PollClient(MySQLDatabase):
     """投票系統"""
     def create_poll(self, title:str, options:list, creator_id:int, guild_id:int, alternate_account_can_vote=True,show_name=False,check_results_in_advance=True,results_only_initiator=False,only_role_list:list=[],role_magnification_dict:dict={}):
+        """創建投票"""
         poll_id = self.add_poll(title,creator_id,datetime.now(),None,guild_id,alternate_account_can_vote,show_name,check_results_in_advance,results_only_initiator)
         self.add_poll_option(poll_id,options)
 
@@ -127,7 +128,7 @@ class NoticeClient(MySQLDatabase):
         :param channel_type: 若提供則只讀取指定資料
         """
         dict_type = ["dynamic_voice","voice_log"]
-        list_type = ["twitch","dynamic_voice_room"]
+        list_type = ["twitch","dynamic_voice_room","youtube"]
         init_list = channel_type or dict_type + list_type
         
         for type in init_list:
@@ -144,7 +145,7 @@ class NoticeClient(MySQLDatabase):
                 self.set_notice_dict(type, dict)
             
             elif type in list_type:
-                if type == "twitch":
+                if type == "twitch" or type == "youtube":
                     dbdata = self.get_notify_community_userlist(type)
                     self.notice_dict[type] = dbdata
                 elif type == "dynamic_voice_room":
