@@ -77,7 +77,7 @@ async def on_ready():
                 await invite.delete()
                 await asyncio.sleep(1)
 
-        # bot.add_view(WelcomeView())
+        bot.add_view(WelcomeView())
     
 
 #load

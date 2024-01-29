@@ -176,12 +176,12 @@ class system_community(Cog_Extension):
             embed.add_field(name=notify_name, value=text)
         await ctx.respond(embed=embed)
 
-    # @commands.slash_command(description='加入伺服器按鈕',debug_guilds=[1058234922076217415])
-    # @commands.has_permissions(manage_channels=True)
-    # async def welcome(self, ctx):
-    #     view = WelcomeView()
-    #     await ctx.channel.send(view=view)
-    #     await ctx.respond("按鈕創建完成",ephemeral=True)
+    @commands.slash_command(description='加入伺服器按鈕',debug_guilds=[1058234922076217415])
+    @commands.has_permissions(manage_channels=True)
+    async def welcome(self, ctx):
+        view = WelcomeView()
+        await ctx.channel.send(view=view)
+        await ctx.respond("按鈕創建完成",ephemeral=True)
 
 def setup(bot):
     bot.add_cog(system_community(bot))

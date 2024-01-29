@@ -287,6 +287,6 @@ class WelcomeView(discord.ui.View):
 
     @discord.ui.button(label="按下按鈕進入伺服器",style=discord.ButtonStyle.green,custom_id="welcome_1")
     async def button2_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
-        role = interaction.guild.get_role()
+        role = interaction.guild.get_role(1190269561891737690)
         await interaction.user.add_roles(role)        
         await interaction.response.send_message(f"{interaction.user} 歡迎加入！",ephemeral=True)
