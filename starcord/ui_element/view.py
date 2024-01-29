@@ -295,7 +295,7 @@ class ReactionRole1(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
 
-    async def reaction_role(interaction: discord.Interaction,roleid:int):
+    async def reaction_role(self,interaction: discord.Interaction,roleid:int):
         role = interaction.guild.get_role(roleid)
         if interaction.user.get_role(roleid):
             await interaction.user.remove_roles(role)
