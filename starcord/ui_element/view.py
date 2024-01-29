@@ -305,7 +305,7 @@ class ReactionRole1(discord.ui.View):
             await interaction.response.send_message(f"已給予 {role.name} 身分組！",ephemeral=True)
 
     @discord.ui.button(label="League of Legends",style=discord.ButtonStyle.primary,custom_id="ReactionRole1_1")
-    async def button2_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
+    async def button1_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
         roleid = 1201020961684738128
         await self.reaction_role(interaction,roleid)
 
@@ -315,26 +315,26 @@ class ReactionRole1(discord.ui.View):
         await self.reaction_role(interaction,roleid)
 
     @discord.ui.button(label="日麻",style=discord.ButtonStyle.primary,custom_id="ReactionRole1_1")
-    async def button2_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
+    async def button3_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
         roleid = 1201021022179176538
         await self.reaction_role(interaction,roleid)
 
     @discord.ui.button(label="APEX",style=discord.ButtonStyle.primary,custom_id="ReactionRole1_1")
-    async def button2_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
+    async def button4_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
         roleid = 1201021043284922460
         await self.reaction_role(interaction,roleid)
 
     @discord.ui.button(label="特戰英豪",style=discord.ButtonStyle.primary,custom_id="ReactionRole1_1")
-    async def button2_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
+    async def button5_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
         roleid = 1201021066454241443
         await self.reaction_role(interaction,roleid)
 
     @discord.ui.button(label="OSU",style=discord.ButtonStyle.primary,custom_id="ReactionRole1_1")
-    async def button2_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
+    async def button6_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
         roleid = 1201021221299560581
         await self.reaction_role(interaction,roleid)
     
     @discord.ui.button(label="NSFW",style=discord.ButtonStyle.primary,custom_id="ReactionRole1_1")
-    async def button2_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
+    async def button7_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
         roleid = 1201350881422082129
         await self.reaction_role(interaction,roleid)
