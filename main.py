@@ -78,6 +78,7 @@ async def on_ready():
                 await asyncio.sleep(1)
 
         bot.add_view(WelcomeView())
+        bot.add_view(ReactionRole1())
     
 
 #load

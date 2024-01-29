@@ -2,7 +2,7 @@ import discord,datetime
 from discord.ext import commands
 from discord.commands import SlashCommandGroup
 from starcord.DataExtractor import TwitchAPI,YoutubeAPI,YoutubeRSS
-from starcord.ui_element.view import WelcomeView
+from starcord.ui_element.view import ReactionRole1, WelcomeView
 from starcord import Cog_Extension,BotEmbed,sclient,Jsondb
 
 class system_community(Cog_Extension):
@@ -181,6 +181,13 @@ class system_community(Cog_Extension):
     async def welcome(self, ctx):
         view = WelcomeView()
         await ctx.channel.send(view=view)
+        await ctx.respond("按鈕創建完成",ephemeral=True)
+
+    @commands.slash_command(description='反應身分組按鈕',debug_guilds=[1058234922076217415])
+    @commands.has_permissions(manage_channels=True)
+    async def reactionrole(self, ctx):
+        view = ReactionRole1()
+        await ctx.channel.send("請依自身喜好點選身分組",view=view)
         await ctx.respond("按鈕創建完成",ephemeral=True)
 
 def setup(bot):
