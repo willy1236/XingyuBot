@@ -748,7 +748,9 @@ class command(Cog_Extension):
             position = i['position']
             
             user = ctx.guild.get_member(discord_id)
-            result[position].append(user.display_name if user else discord_id)
+            name = user.display_name if user else discord_id
+            if name not in result[position]:
+                result[position].append(name)
 
         # count_data = sclient.get_election_count(session)
         # count_dict = {}
