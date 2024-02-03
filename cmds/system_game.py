@@ -101,17 +101,17 @@ class system_game(Cog_Extension):
         await ctx.respond(f'已將用戶的 {game.name} 資料設定為 {player_name}')
             
 
-    @game.command(description='揪團找人')
-    async def find(self,
-                   ctx:discord.ApplicationContext,
-                   number_all:discord.Option(int,name='人數',description=''),
-                   game_option:discord.Option(str,name='遊戲',description='',choices=set_option),
-                   message:discord.Option(str,name='要留下的訊息',description='',default=None),
-                   number_now:discord.Option(int,name='現有人數',description='預設為1',default=1)):
-        game = DBGame(game_option)
-        creator = ctx.author
-        view = GameView(creator,game,number_all,number_now,message)
-        await ctx.respond(embed=view.embed,view=view)
+    # @game.command(description='揪團找人')
+    # async def find(self,
+    #                ctx:discord.ApplicationContext,
+    #                number_all:discord.Option(int,name='人數',description=''),
+    #                game_option:discord.Option(str,name='遊戲',description='',choices=set_option),
+    #                message:discord.Option(str,name='要留下的訊息',description='',default=None),
+    #                number_now:discord.Option(int,name='現有人數',description='預設為1',default=1)):
+    #     game = DBGame(game_option)
+    #     creator = ctx.author
+    #     view = GameView(creator,game,number_all,number_now,message)
+    #     await ctx.respond(embed=view.embed,view=view)
     
     @game.command(description='查詢遊戲資料')
     async def player(self,ctx,
@@ -145,7 +145,7 @@ class system_game(Cog_Extension):
     #     await ctx.respond(embed=embed)
 
     @lol.command(description='查詢League of Legends用戶資料')
-    async def user(self,ctx,username:discord.Option(str,name='用戶名稱',description='要查詢的用戶')):
+    async def user(self,ctx,username:discord.Option(str,name='召喚師名稱',description='要查詢的用戶')):
         player = RiotClient().get_player_byname(username)
         if player:
             await ctx.respond('查詢成功',embed=player.desplay())

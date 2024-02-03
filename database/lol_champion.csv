@@ -16,6 +16,7 @@ champion_id,name_en,name_tw
 53,Blitzcrank,布里茨
 63,Brand,布蘭德
 201,Braum,布郎姆
+233,Briar,布蕾爾
 51,Caitlyn,凱特琳
 164,Camille,卡蜜兒
 69,Cassiopeia,卡莎碧雅
@@ -41,6 +42,7 @@ champion_id,name_en,name_tw
 887,Gwen,關
 120,Hecarim,赫克林
 74,Heimerdinger,漢默丁格
+910,Hwei,赫威
 420,Illaoi,伊羅旖
 39,Irelia,伊瑞莉雅
 427,Ivern,埃爾文
@@ -120,6 +122,7 @@ champion_id,name_en,name_tw
 14,Sion,賽恩
 15,Sivir,希維爾
 72,Skarner,史加納
+901,Smolder,史矛德
 37,Sona,索娜
 16,Soraka,索拉卡
 50,Swain,斯溫

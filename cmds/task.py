@@ -200,7 +200,7 @@ class task(Cog_Extension):
             return
         youtube_cache = Jsondb.read_cache('youtube') or {}
         for user in users:
-            rss_data = YoutubeRSS.get_videos(user)
+            rss_data = YoutubeRSS().get_videos(user)
             if rss_data:
                 data = rss_data[0]
             else: 

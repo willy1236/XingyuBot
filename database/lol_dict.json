@@ -17,6 +17,7 @@
         "Blitzcrank": "布里茨",
         "Brand": "布蘭德",
         "Braum": "布郎姆",
+        "Briar": "布蕾爾",
         "Caitlyn": "凱特琳",
         "Camille": "卡蜜兒",
         "Cassiopeia": "卡莎碧雅",
@@ -42,6 +43,7 @@
         "Gwen": "關",
         "Hecarim": "赫克林",
         "Heimerdinger": "漢默丁格",
+        "Hwei": "赫威",
         "Illaoi": "伊羅旖",
         "Irelia": "伊瑞莉雅",
         "Ivern": "埃爾文",
@@ -121,6 +123,7 @@
         "Sion": "賽恩",
         "Sivir": "希維爾",
         "Skarner": "史加納",
+        "Smolder": "史矛德",
         "Sona": "索娜",
         "Soraka": "索拉卡",
         "Swain": "斯溫",
@@ -179,7 +182,8 @@
     "type": {
         "URF": "阿福快打（URF）",
         "ARAM": "隨機單中（ARAM）",
-        "MATCHED_GAME": "積分對戰（MATCHED_GAME）"
+        "MATCHED_GAME": "積分對戰（MATCHED_GAME）",
+        "MATCHED": "積分對戰（MATCHED）"
     },
     "map": {
         "11": "召喚峽谷",
