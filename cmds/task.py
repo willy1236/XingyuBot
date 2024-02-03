@@ -195,6 +195,7 @@ class task(Cog_Extension):
 
     async def youtube_video(self):
         users = sclient.get_notice_dict("youtube")
+        log.info(users)
         if not users:
             return
         youtube_cache = Jsondb.read_cache('youtube') or {}
