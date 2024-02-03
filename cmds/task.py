@@ -89,7 +89,7 @@ class task(Cog_Extension):
                     await channel.send(text,embed=embed)
                     await asyncio.sleep(0.5)
                 else:
-                    print(f"earthquake_check: {i['guild_id']}/{i['channel_id']}")
+                    log.warning(f"earthquake_check: {i['guild_id']}/{i['channel_id']}")
 
     async def weather_warning_check(self):
         timefrom = Jsondb.read_cache('earthquake_timefrom')
@@ -125,7 +125,7 @@ class task(Cog_Extension):
                     await asyncio.sleep(0.5)
                 
                 else:
-                    print(f"apex_info_update: {i['guild_id']}/{i['channel_id']}")
+                    log.warning(f"apex_info_update: {i['guild_id']}/{i['channel_id']}")
 
     async def apex_crafting_update(self):
         today = date.today()
@@ -159,7 +159,7 @@ class task(Cog_Extension):
                     await asyncio.sleep(0.5)
                 
                 else:
-                    print(f"forecast_update: {i['guild_id']}/{i['channel_id']}")
+                    log.warning(f"forecast_update: {i['guild_id']}/{i['channel_id']}")
 
     @tasks.loop(minutes=3)
     async def twitch(self):
@@ -195,7 +195,7 @@ class task(Cog_Extension):
 
     async def youtube_video(self):
         users = sclient.get_notice_dict("youtube")
-        log.info(users)
+        log.debug(users)
         if not users:
             return
         youtube_cache = Jsondb.read_cache('youtube') or {}
@@ -208,7 +208,7 @@ class task(Cog_Extension):
             user_cache = youtube_cache.get(user)
             
             if not user_cache or user_cache != data["yt_videoid"]:
-                log.info(data["title"])
+                log.debug(data["title"])
                 youtube_cache[user] = data["yt_videoid"]
                 embed = BotEmbed.simple(data["title"],data["author"],url=data["link"])
                 embed.set_image(url=data["media_thumbnail"]['url'])
@@ -224,10 +224,10 @@ class task(Cog_Extension):
                             await channel.send(f'{role.mention} 新影片上傳啦~',embed=embed)
                         else:
                             await channel.send(f'新影片上傳啦~',embed=embed)
-                        log.info(channel.name)
+                        log.debug(channel.name)
                         await asyncio.sleep(0.5)
                     else:
-                        print(f"youtube: {guild.id}/{channel.id}")
+                        log.warning(f"youtube: {guild.id}/{channel.id}")
 
         Jsondb.write_cache('youtube',youtube_cache)
 
@@ -240,7 +240,7 @@ class task(Cog_Extension):
             channel = self.bot.get_channel(int(channel_id))
             cookies = sclient.get_userdata(user_id,'game_hoyo_cookies')
             if not channel:
-                print(f"auto_hoyo_reward: {user_id}/{channel_id}")
+                log.warning(f"auto_hoyo_reward: {user_id}/{channel_id}")
             if not cookies:
                 await channel.send(f'{user_dc.mention} 沒有設定cookies或已過期')
             else:
