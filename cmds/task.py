@@ -38,6 +38,7 @@ class task(Cog_Extension):
             #scheduler.add_job(self.update_channel_dict,'cron',hour='*',minute="0,30",second=0,jitter=30,misfire_grace_time=60)
 
             scheduler.add_job(self.earthquake_check,'interval',minutes=1,jitter=30,misfire_grace_time=40)
+            scheduler.add_job(self.youtube_video,'interval',minutes=15,jitter=30,misfire_grace_time=40)
             #scheduler.add_job(self.city_battle,'interval',minutes=1,jitter=30,misfire_grace_time=60)
             #scheduler.add_job(self.get_mongodb_data,'interval',minutes=3,jitter=30,misfire_grace_time=40)
 
@@ -192,7 +193,6 @@ class task(Cog_Extension):
 
         Jsondb.write_cache('twitch',twitch_cache)
 
-    @tasks.loop(minutes=15)
     async def youtube_video(self):
         users = sclient.get_notice_dict("youtube")
         if not users:
