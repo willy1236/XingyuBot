@@ -153,4 +153,4 @@ if __name__ == '__main__':
 	youtube_feed = f'https://www.youtube.com/feeds/videos.xml?channel_id={CHANNEL_ID}'
 	feed = feedparser.parse(youtube_feed)
 	for entry in feed['entries']:
-		print(entry['title'])
+		print(entry['media_thumbnail'][0]["url"])

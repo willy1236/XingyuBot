@@ -199,8 +199,9 @@ class task(Cog_Extension):
         if not users:
             return
         youtube_cache = Jsondb.read_cache('youtube') or {}
+        rss = YoutubeRSS()
         for user in users:
-            rss_data = YoutubeRSS().get_videos(user)
+            rss_data = rss.get_videos(user)
             if rss_data:
                 data = rss_data[0]
             else: 
@@ -211,7 +212,7 @@ class task(Cog_Extension):
                 log.debug(data["title"])
                 youtube_cache[user] = data["yt_videoid"]
                 embed = BotEmbed.simple(data["title"],data["author"],url=data["link"])
-                embed.set_image(url=data["media_thumbnail"]['url'])
+                embed.set_image(url=data["media_thumbnail"][0]['url'])
                 embed.add_field(name="上傳時間",value=data["published_parsed"],inline=False)
                 
                 guilds = sclient.get_notify_community_guild('youtube',user)
