@@ -223,7 +223,7 @@ class event(Cog_Extension):
 
             #舞台發言
             if check_event_stage(before) or check_event_stage(after):
-                kp_user = self.bot.get_user(713748326377455676)
+                kp_user = self.bot.get_guild(613747262291443742).get_member(713748326377455676)
                 #調查員、特許證舞台發言
                 if after.suppress and after.channel and ( user.get_role(1126820808761819197) or (user.get_role(1130849778264195104) and not kp_user in after.channel.members) ):
                     await user.request_to_speak()
@@ -232,13 +232,13 @@ class event(Cog_Extension):
                 if user == kp_user and before.channel != after.channel:
                     if after.channel:
                         for member in after.channel.members:
-                            if not member.voice.suppress and member.get_role(1130849778264195104):
+                            if not member.voice.suppress and not member.get_role(1126820808761819197):
                                 await member.edit(suppress=True)
                                 await asyncio.sleep(0.5)
 
                     if before.channel:
                         for member in before.channel.members:
-                            if member.voice.suppress and member.get_role(1130849778264195104):
+                            if member.voice.suppress and not member.get_role(1126820808761819197):
                                 await member.request_to_speak()
                                 await asyncio.sleep(0.5)
 

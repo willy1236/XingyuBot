@@ -1,4 +1,4 @@
-import asyncio,discord,genshin,logging,random
+import asyncio,discord,genshin,logging,random,time
 #from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from datetime import datetime, timezone, timedelta,date
@@ -213,7 +213,8 @@ class task(Cog_Extension):
                 youtube_cache[user] = data["yt_videoid"]
                 embed = BotEmbed.simple(data["title"],data["author"],url=data["link"])
                 embed.set_image(url=data["media_thumbnail"][0]['url'])
-                embed.add_field(name="上傳時間",value=data["published_parsed"],inline=False)
+                uplood_time = datetime.fromtimestamp(time.mktime(data["published_parsed"]))
+                embed.add_field(name="上傳時間",value=uplood_time.isoformat(),inline=False)
                 
                 guilds = sclient.get_notify_community_guild('youtube',user)
                 for guildid in guilds:
