@@ -238,7 +238,7 @@ class event(Cog_Extension):
 
                     if before.channel:
                         for member in before.channel.members:
-                            if member.voice.suppress and not member.get_role(1126820808761819197):
+                            if member.voice.suppress and member.get_role(1126820808761819197):
                                 await member.request_to_speak()
                                 await asyncio.sleep(0.5)
 

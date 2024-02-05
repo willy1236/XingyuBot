@@ -148,9 +148,38 @@ if __name__ == '__main__':
 
 	# print(dc.access_token)
 
-	import feedparser
-	CHANNEL_ID = "UCNkJevYXQcjTc70j45FXFjA"
-	youtube_feed = f'https://www.youtube.com/feeds/videos.xml?channel_id={CHANNEL_ID}'
-	feed = feedparser.parse(youtube_feed)
-	for entry in feed['entries']:
-		print(entry['media_thumbnail'][0]["url"])
+	# import feedparser
+	# CHANNEL_ID = "UCNkJevYXQcjTc70j45FXFjA"
+	# youtube_feed = f'https://www.youtube.com/feeds/videos.xml?channel_id={CHANNEL_ID}'
+	# feed = feedparser.parse(youtube_feed)
+	# for entry in feed['entries']:
+	# 	print(entry['media_thumbnail'][0]["url"])
+
+	def slice_list(lst:list[dict], target_id, radius=0):
+		index = next((i for i, d in enumerate(lst) if d["id"] == target_id), None)
+		if index is None:
+			return lst
+		
+		#start_index = max(0, index - radius)
+		#end_index = min(len(lst), index + radius + 1)
+		#return lst[start_index:end_index]
+
+		return lst[index:]
+
+	# 示例列表
+	my_list = [
+		{"id": 1, "value": 10},
+		{"id": 2, "value": 20},
+		{"id": 3, "value": 30},
+		{"id": 4, "value": 40},
+		{"id": 5, "value": 50},
+		{"id": 6, "value": 60},
+		{"id": 7, "value": 70},
+		{"id": 8, "value": 80},
+		{"id": 9, "value": 90},
+		{"id": 10, "value": 100}
+	]
+	target_id = None
+	radius = 0
+	result = slice_list(my_list, target_id, radius)
+	print(result)

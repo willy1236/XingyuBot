@@ -17,6 +17,11 @@ consoleHandler.setLevel(logging.WARNING)
 consoleHandler.setFormatter(formatter)
 apsc_log.addHandler(consoleHandler)
 
+def slice_list(lst:list[dict], target_id):
+    """以target_id為基準取出更新的影片資訊"""
+    index = next((i for i, d in enumerate(lst) if d["yt_videoid"] == target_id), None)
+    return lst[index:] if index else lst
+
 class task(Cog_Extension):
     def __init__(self,*args,**kwargs):
         super().__init__(*args,**kwargs)
@@ -48,11 +53,6 @@ class task(Cog_Extension):
             self.twitch.start()
         else:
             pass
-
-    # async def sign_reset(self):
-    #     sqldb.truncate_table('user_sign')
-    #     task_report_channel = self.bot.get_channel(Jsondb.jdata['task_report'])
-    #     await task_report_channel.send('簽到已重置')
 
     async def earthquake_check(self):
         timefrom = Jsondb.read_cache('earthquake_timefrom')
@@ -194,44 +194,46 @@ class task(Cog_Extension):
         Jsondb.write_cache('twitch',twitch_cache)
 
     async def youtube_video(self):
-        users = sclient.get_notice_dict("youtube")
-        log.debug(users)
-        if not users:
+        ytchannels = sclient.get_notice_dict("youtube")
+        log.debug(ytchannels)
+        if not ytchannels:
             return
-        youtube_cache = Jsondb.read_cache('youtube') or {}
+        cache_youtube = Jsondb.read_cache('youtube') or {}
         rss = YoutubeRSS()
-        for user in users:
-            rss_data = rss.get_videos(user)
-            if rss_data:
-                data = rss_data[0]
-            else: 
+        for ytchannel in ytchannels:
+            rss_data = rss.get_videos(ytchannel)
+            if not rss_data:
                 continue
-            user_cache = youtube_cache.get(user)
-            
-            if not user_cache or user_cache != data["yt_videoid"]:
-                log.debug(data["title"])
-                youtube_cache[user] = data["yt_videoid"]
-                embed = BotEmbed.simple(data["title"],data["author"],url=data["link"])
-                embed.set_image(url=data["media_thumbnail"][0]['url'])
-                uplood_time = datetime.fromtimestamp(time.mktime(data["published_parsed"]))
-                embed.add_field(name="上傳時間",value=uplood_time.isoformat(),inline=False)
                 
-                guilds = sclient.get_notify_community_guild('youtube',user)
-                for guildid in guilds:
-                    guild = self.bot.get_guild(guildid)
-                    channel = self.bot.get_channel(guilds[guildid][0])
-                    role = guild.get_role(guilds[guildid][1])
-                    if channel:
-                        if role:
-                            await channel.send(f'{role.mention} 新影片上傳啦~',embed=embed)
+            cache_videoid = cache_youtube.get(ytchannel)
+            
+            if not cache_videoid or cache_videoid != rss_data[0]["yt_videoid"]:
+                video_list = slice_list(rss_data.reverse(), cache_videoid)
+                
+                for data in video_list:
+                    log.debug(data["title"])
+                    cache_youtube[ytchannel] = data["yt_videoid"]
+                    embed = BotEmbed.simple(data["title"],data["author"],url=data["link"])
+                    embed.set_image(url=data["media_thumbnail"][0]['url'])
+                    uplood_time = datetime.fromtimestamp(time.mktime(data["published_parsed"]),tz=timezone(timedelta(hours=8)))
+                    embed.add_field(name="上傳時間",value=uplood_time.isoformat(),inline=False)
+                    
+                    guilds = sclient.get_notify_community_guild('youtube',ytchannel)
+                    for guildid in guilds:
+                        guild = self.bot.get_guild(guildid)
+                        channel = self.bot.get_channel(guilds[guildid][0])
+                        role = guild.get_role(guilds[guildid][1])
+                        if channel:
+                            if role:
+                                await channel.send(f'{role.mention} 新影片上傳啦~',embed=embed)
+                            else:
+                                await channel.send(f'新影片上傳啦~',embed=embed)
+                            log.debug(channel.name)
+                            await asyncio.sleep(0.5)
                         else:
-                            await channel.send(f'新影片上傳啦~',embed=embed)
-                        log.debug(channel.name)
-                        await asyncio.sleep(0.5)
-                    else:
-                        log.warning(f"youtube: {guild.id}/{channel.id}")
+                            log.warning(f"youtube: {guild.id}/{channel.id}")
 
-        Jsondb.write_cache('youtube',youtube_cache)
+        Jsondb.write_cache('youtube',cache_youtube)
 
     async def auto_hoyo_reward(self):
         list = sclient.get_hoyo_reward()
