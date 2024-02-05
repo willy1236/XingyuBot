@@ -34,7 +34,6 @@ class task(Cog_Extension):
         if not Jsondb.jdata.get("debug_mode",True):
             global scheduler
             scheduler = AsyncIOScheduler()
-            #scheduler.add_job(self.sign_reset,'cron',hour=4,minute=0,second=0,jitter=30,misfire_grace_time=60)
             scheduler.add_job(self.apex_info_update,'cron',minute='00,15,30,45',second=1,jitter=30,misfire_grace_time=60)
             scheduler.add_job(self.apex_crafting_update,'cron',hour=1,minute=5,second=0,jitter=30,misfire_grace_time=60)
             scheduler.add_job(self.forecast_update,'cron',hour='00,03,06,09,12,15,18,21',minute=0,second=1,jitter=30,misfire_grace_time=60)

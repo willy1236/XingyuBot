@@ -9,5 +9,4 @@ debug_mode = Jsondb.jdata.get("debug_mode",True)
 
 from logging import INFO,DEBUG
 #log_level = DEBUG if debug_mode else INFO
-log_level = DEBUG
-log = create_logger('./logs',file_log,log_level)
+log = create_logger('./logs',file_log)

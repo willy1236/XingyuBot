@@ -7,7 +7,7 @@ def create_logger(dir_path,file_log=False,log_level=logging.DEBUG):
     logging.captureWarnings(True)   # 捕捉 py waring message
     formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s')
     logger = logging.getLogger('py.warnings')    # 捕捉 py waring message
-    logger.setLevel(logging.INFO)
+    logger.setLevel(log_level)
 
     if file_log:
         # 若不存在目錄則新建
