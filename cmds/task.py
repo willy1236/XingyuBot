@@ -42,7 +42,7 @@ class task(Cog_Extension):
             
             #scheduler.add_job(self.update_channel_dict,'cron',hour='*',minute="0,30",second=0,jitter=30,misfire_grace_time=60)
 
-            scheduler.add_job(self.earthquake_check,'interval',minutes=1,jitter=30,misfire_grace_time=40)
+            scheduler.add_job(self.earthquake_check,'interval',minutes=2,jitter=30,misfire_grace_time=40)
             scheduler.add_job(self.youtube_video,'interval',minutes=15,jitter=30,misfire_grace_time=40)
             #scheduler.add_job(self.city_battle,'interval',minutes=1,jitter=30,misfire_grace_time=60)
             #scheduler.add_job(self.get_mongodb_data,'interval',minutes=3,jitter=30,misfire_grace_time=40)
@@ -208,7 +208,8 @@ class task(Cog_Extension):
             cache_videoid = cache_youtube.get(ytchannel)
             
             if not cache_videoid or cache_videoid != rss_data[0]["yt_videoid"]:
-                video_list = slice_list(rss_data.reverse(), cache_videoid)
+                rss_data.reverse()
+                video_list = slice_list(rss_data, cache_videoid)
                 
                 for data in video_list:
                     log.debug(data["title"])
