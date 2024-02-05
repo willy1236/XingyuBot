@@ -174,7 +174,7 @@ class YoutubeAPI(CommunityInterface):
             return None
 
 class YoutubeRSS(CommunityInterface):
-    def get_videos(self,channel_id):
+    def get_videos(self,channel_id) -> list[dict]:
         youtube_feed = f'https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}'
         feed = feedparser.parse(youtube_feed)
         # for entry in feed['entries']:

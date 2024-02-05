@@ -179,7 +179,7 @@ if __name__ == '__main__':
 		{"id": 9, "value": 90},
 		{"id": 10, "value": 100}
 	]
-	target_id = None
+	target_id = 3
 	radius = 0
 	result = slice_list(my_list, target_id, radius)
 	print(result)

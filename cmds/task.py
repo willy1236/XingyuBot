@@ -19,6 +19,7 @@ apsc_log.addHandler(consoleHandler)
 
 def slice_list(lst:list[dict], target_id):
     """以target_id為基準取出更新的影片資訊"""
+    log.debug(lst)
     index = next((i for i, d in enumerate(lst) if d["yt_videoid"] == target_id), None)
     return lst[index:] if index else lst
 
