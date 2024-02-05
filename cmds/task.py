@@ -37,7 +37,7 @@ class task(Cog_Extension):
             scheduler.add_job(self.apex_info_update,'cron',minute='00,15,30,45',second=1,jitter=30,misfire_grace_time=60)
             scheduler.add_job(self.apex_crafting_update,'cron',hour=1,minute=5,second=0,jitter=30,misfire_grace_time=60)
             scheduler.add_job(self.forecast_update,'cron',hour='00,03,06,09,12,15,18,21',minute=0,second=1,jitter=30,misfire_grace_time=60)
-            scheduler.add_job(self.auto_hoyo_reward,'cron',hour=19,minute=0,second=0,jitter=30,misfire_grace_time=60)
+            #scheduler.add_job(self.auto_hoyo_reward,'cron',hour=19,minute=0,second=0,jitter=30,misfire_grace_time=60)
             #scheduler.add_job(self.update_rpgshop_data,'cron',hour=0,minute=0,second=1,jitter=30,misfire_grace_time=60)
             
             #scheduler.add_job(self.update_channel_dict,'cron',hour='*',minute="0,30",second=0,jitter=30,misfire_grace_time=60)
@@ -195,7 +195,6 @@ class task(Cog_Extension):
 
     async def youtube_video(self):
         ytchannels = sclient.get_notice_dict("youtube")
-        log.debug(ytchannels)
         if not ytchannels:
             return
         cache_youtube = Jsondb.read_cache('youtube') or {}
@@ -212,7 +211,6 @@ class task(Cog_Extension):
                 video_list = slice_list(rss_data, cache_videoid)
                 
                 for data in video_list:
-                    log.debug(data["title"])
                     cache_youtube[ytchannel] = data["yt_videoid"]
                     embed = BotEmbed.simple(data["title"],data["author"],url=data["link"])
                     embed.set_image(url=data["media_thumbnail"][0]['url'])
@@ -229,7 +227,6 @@ class task(Cog_Extension):
                                 await channel.send(f'{role.mention} 新影片上傳啦~',embed=embed)
                             else:
                                 await channel.send(f'新影片上傳啦~',embed=embed)
-                            log.debug(channel.name)
                             await asyncio.sleep(0.5)
                         else:
                             log.warning(f"youtube: {guild.id}/{channel.id}")
