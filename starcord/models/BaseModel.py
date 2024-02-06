@@ -23,3 +23,9 @@ class ListObject():
 
     def __repr__(self):
         return repr(self.items)
+    
+class BaseVideo:
+    pass
+
+class BaseUser:
+    pass

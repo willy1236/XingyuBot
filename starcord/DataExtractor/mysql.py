@@ -209,10 +209,10 @@ class MySQLNotifySystem(MySQLBaseModel):
             list.append(data['channel_id'])
         return list
 
-    def set_notify_community(self,notify_type:str,notify_name:str,guild_id:int,channel_id:int,role_id:int=None):
+    def set_notify_community(self,notify_type:str,notify_name:str,guild_id:int,channel_id:int,role_id:int=None,display_name:str=None):
         """設定社群通知"""
         self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f"INSERT INTO `notify_community` VALUES(%s,%s,%s,%s,%s) ON DUPLICATE KEY UPDATE `notify_type` = %s, `notify_name` = %s, `guild_id` = %s, `channel_id` = %s, `role_id` = %s",(notify_type,notify_name,guild_id,channel_id,role_id,notify_type,notify_name,guild_id,channel_id,role_id))
+        self.cursor.execute(f"INSERT INTO `notify_community` VALUES(%s,%s,%s,%s,%s,%s) ON DUPLICATE KEY UPDATE `notify_type` = %s, `notify_name` = %s, `guild_id` = %s, `channel_id` = %s, `role_id` = %s, `display_name` = %s",(notify_type,notify_name,display_name,guild_id,channel_id,role_id,notify_type,notify_name,guild_id,channel_id,role_id,display_name))
         self.connection.commit()
 
     def remove_notify_community(self,notify_type:str,notify_name:str,guild_id:int):

@@ -128,7 +128,7 @@ class NoticeClient(MySQLDatabase):
         :param channel_type: 若提供則只讀取指定資料
         """
         dict_type = ["dynamic_voice","voice_log"]
-        list_type = ["twitch","dynamic_voice_room","youtube"]
+        list_type = ["twitch","dynamic_voice_room","youtube","twitch_v"]
         init_list = channel_type or dict_type + list_type
         
         for type in init_list:
@@ -145,7 +145,7 @@ class NoticeClient(MySQLDatabase):
                 self.set_notice_dict(type, dict)
             
             elif type in list_type:
-                if type == "twitch" or type == "youtube":
+                if type == "twitch" or type == "youtube" or type == "twitch_v":
                     dbdata = self.get_notify_community_userlist(type)
                     self.notice_dict[type] = dbdata
                 elif type == "dynamic_voice_room":

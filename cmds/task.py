@@ -8,20 +8,24 @@ from requests.exceptions import ConnectTimeout
 from starcord import Cog_Extension,Jsondb,sclient,log,BotEmbed
 from starcord.DataExtractor import *
 from starcord.DataExtractor.community import YoutubeRSS
+from starcord.models.community import TwitchVideo
 
-
-apsc_log = logging.getLogger('apscheduler')
+#apsc_log = logging.getLogger('apscheduler')
 formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s')
 consoleHandler = logging.StreamHandler()
 consoleHandler.setLevel(logging.WARNING)
 consoleHandler.setFormatter(formatter)
-apsc_log.addHandler(consoleHandler)
+log.addHandler(consoleHandler)
 
 def slice_list(lst:list[dict], target_id):
     """以target_id為基準取出更新的影片資訊"""
-    log.debug(lst)
     index = next((i for i, d in enumerate(lst) if d["yt_videoid"] == target_id), None)
-    return lst[index:] if index else lst
+    return lst[index + 1:] if index else lst
+
+def slice_list_twitch(lst:list[TwitchVideo], target_id):
+    """以target_id為基準取出更新的影片資訊"""
+    index = next((i for i, d in enumerate(lst) if d.video_id == target_id), None)
+    return lst[index + 1:] if index else lst
 
 class task(Cog_Extension):
     def __init__(self,*args,**kwargs):
@@ -44,6 +48,7 @@ class task(Cog_Extension):
 
             scheduler.add_job(self.earthquake_check,'interval',minutes=2,jitter=30,misfire_grace_time=40)
             scheduler.add_job(self.youtube_video,'interval',minutes=15,jitter=30,misfire_grace_time=40)
+            scheduler.add_job(self.twitch_video,'interval',minutes=15,jitter=30,misfire_grace_time=40)
             #scheduler.add_job(self.city_battle,'interval',minutes=1,jitter=30,misfire_grace_time=60)
             #scheduler.add_job(self.get_mongodb_data,'interval',minutes=3,jitter=30,misfire_grace_time=40)
 
@@ -193,6 +198,37 @@ class task(Cog_Extension):
 
         Jsondb.write_cache('twitch',twitch_cache)
 
+    async def twitch_video(self):
+        users = sclient.get_notice_dict("twitch_v")
+        if not users:
+            return
+        twitch_cache = Jsondb.read_cache('twitch_v') or {}
+        for user in users:
+            videos = TwitchAPI().get_videos(user)
+            cache_videoid = twitch_cache.get(user)
+            if not cache_videoid or cache_videoid != videos[0].video_id:
+                videos.reverse()
+                video_list = slice_list(videos, cache_videoid)
+                twitch_cache[user] = video_list[-1].video_id
+
+                for data in video_list:
+                    embed = data.desplay()
+                    guilds = sclient.get_notify_community_guild('twitch_v',data.user_id)
+                    for guildid in guilds:
+                        guild = self.bot.get_guild(guildid)
+                        channel = self.bot.get_channel(guilds[guildid][0])
+                        role = guild.get_role(guilds[guildid][1])
+                        if channel:
+                            if role:
+                                await channel.send(f'{role.mention} 新影片上傳啦~',embed=embed)
+                            else:
+                                await channel.send(f'新影片上傳啦~',embed=embed)
+                            await asyncio.sleep(0.5)
+                        else:
+                            log.warning(f"twitch_v: {guild.id}/{channel.id}")
+
+        Jsondb.write_cache('twitch_v',twitch_cache)
+
     async def youtube_video(self):
         ytchannels = sclient.get_notice_dict("youtube")
         if not ytchannels:
@@ -209,9 +245,9 @@ class task(Cog_Extension):
             if not cache_videoid or cache_videoid != rss_data[0]["yt_videoid"]:
                 rss_data.reverse()
                 video_list = slice_list(rss_data, cache_videoid)
-                
+                cache_youtube[ytchannel] = rss_data[-1]["yt_videoid"]
+
                 for data in video_list:
-                    cache_youtube[ytchannel] = data["yt_videoid"]
                     embed = BotEmbed.simple(data["title"],data["author"],url=data["link"])
                     embed.set_image(url=data["media_thumbnail"][0]['url'])
                     uplood_time = datetime.fromtimestamp(time.mktime(data["published_parsed"]),tz=timezone(timedelta(hours=8)))

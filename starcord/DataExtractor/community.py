@@ -42,7 +42,7 @@ class TwitchAPI(CommunityInterface):
         else:
             raise Forbidden(f"在讀取Twitch API時發生錯誤",f"[{r.status_code}] {apidata['message']}")
 
-    def get_lives(self,users:list):
+    def get_lives(self,users:str|list):
         """
         取得twitch用戶的直播資訊
         :param users: list of users
@@ -76,6 +76,25 @@ class TwitchAPI(CommunityInterface):
         apidata = r.json()
         if apidata.get('data'):
             return TwitchUser(apidata['data'][0])
+        else:
+            return None
+
+    def get_videos(self,users:str) -> list[TwitchVideo]:
+        """
+        取得twitch用戶的影片資訊
+        :param users: list of users
+        :return: list[TwitchVideo]
+        """
+        params = {
+            "user_id": users,
+            "sort": "time",
+            "first": 5
+        }
+        r = requests.get(f"{self.url}/videos", params=params,headers=self.__headers)
+        apidata = r.json()
+        print(apidata)
+        if apidata.get('data'):
+            return [TwitchVideo(i) for i in apidata['data']]
         else:
             return None
 
