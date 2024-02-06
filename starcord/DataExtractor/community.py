@@ -17,7 +17,7 @@ class TwitchAPI(CommunityInterface):
     與Twitch api交互相關
     '''
     def __init__(self):
-        self.__headers = self.__get_headers()
+        self._headers = self.__get_headers()
         self.url = "https://api.twitch.tv/helix"
 
     def __get_headers(self):
@@ -52,7 +52,7 @@ class TwitchAPI(CommunityInterface):
             "user_login": users,
             "first": 1
         }
-        r = requests.get(f"{self.url}/streams", params=params,headers=self.__headers)
+        r = requests.get(f"{self.url}/streams", params=params,headers=self._headers)
         apidata = r.json()
         dict = {}
         for user in users:
@@ -72,7 +72,7 @@ class TwitchAPI(CommunityInterface):
             "login": username,
             "first": 1
         }
-        r = requests.get(f"{self.url}/users", params=params,headers=self.__headers)
+        r = requests.get(f"{self.url}/users", params=params,headers=self._headers)
         apidata = r.json()
         if apidata.get('data'):
             return TwitchUser(apidata['data'][0])
@@ -90,9 +90,8 @@ class TwitchAPI(CommunityInterface):
             "sort": "time",
             "first": 5
         }
-        r = requests.get(f"{self.url}/videos", params=params,headers=self.__headers)
+        r = requests.get(f"{self.url}/videos", params=params,headers=self._headers)
         apidata = r.json()
-        print(apidata)
         if apidata.get('data'):
             return [TwitchVideo(i) for i in apidata['data']]
         else:
@@ -193,12 +192,12 @@ class YoutubeAPI(CommunityInterface):
             return None
 
 class YoutubeRSS(CommunityInterface):
-    def get_videos(self,channel_id) -> list[dict]:
+    def get_videos(self,channel_id) -> list[YoutubeVideo]:
         youtube_feed = f'https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}'
         feed = feedparser.parse(youtube_feed)
         # for entry in feed['entries']:
         #     print(entry)
-        return feed['entries']
+        return [YoutubeVideo(i) for i in feed['entries']]
 
 class GoogleCloud():
     def __init__(self):

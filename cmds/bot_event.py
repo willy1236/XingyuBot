@@ -2,10 +2,9 @@ import discord,datetime,re,asyncio
 from discord.ext import commands
 from starcord import Cog_Extension,Jsondb,BotEmbed,BRS,sclient,log
 
-# keywords = {
-#     '抹茶粉':'由威立冠名贊助撥出~',
-#     '消費':'那你好像也是頂級消費者喔'
-# }
+keywords = {
+    '抹茶粉':'由威立冠名贊助撥出~'
+}
 
 voice_updata = Jsondb.jdata.get('voice_updata')
 debug_mode = Jsondb.jdata.get("debug_mode",True)
@@ -58,9 +57,17 @@ class event(Cog_Extension):
             return
 
         #關鍵字觸發
-        # if message.content in keywords and self.bot.user.id == 589744540240314368:
-        #     await message.reply(keywords[message.content])
-        #     return
+        if message.content.startswith("!") and message.author != self.bot.user:
+            word = message.content.lstrip('!')
+            if word == 'azusa':
+                bot_user = self.bot.get_user(1203368856647630878)
+                embed = BotEmbed.general(name=bot_user.name,icon_url=bot_user.display_avatar.url,description=f"你好~我是假裝成星羽的Azusa，是一個discord機器人喔~\n你不可以輸入 </help:1067700245015834638> 來查看所有指令的用法\n\n希望我能在discord上幫助到你喔~\n有任何建議與需求不可以使用 </feedback:1067700244848058386> 指令\n\n支援伺服器：https://discord.gg/ye5yrZhYGF")
+                embed.set_footer(text="此機器人由 XX12 負責搞事")
+                await message.reply(embed=embed)
+                return
+            elif word in keywords:
+                await message.reply(keywords[word])
+                return
 
         #介紹
         if message.content == self.bot.user.mention:

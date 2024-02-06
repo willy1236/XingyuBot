@@ -235,25 +235,21 @@ class task(Cog_Extension):
             return
         cache_youtube = Jsondb.read_cache('youtube') or {}
         rss = YoutubeRSS()
-        for ytchannel in ytchannels:
-            rss_data = rss.get_videos(ytchannel)
+        for ytchannel_id in ytchannels:
+            rss_data = rss.get_videos(ytchannel_id)
             if not rss_data:
                 continue
                 
-            cache_videoid = cache_youtube.get(ytchannel)
+            cache_videoid = cache_youtube.get(ytchannel_id)
             
             if not cache_videoid or cache_videoid != rss_data[0]["yt_videoid"]:
                 rss_data.reverse()
                 video_list = slice_list(rss_data, cache_videoid)
-                cache_youtube[ytchannel] = rss_data[-1]["yt_videoid"]
+                cache_youtube[ytchannel_id] = rss_data[-1]["yt_videoid"]
 
-                for data in video_list:
-                    embed = BotEmbed.simple(data["title"],data["author"],url=data["link"])
-                    embed.set_image(url=data["media_thumbnail"][0]['url'])
-                    uplood_time = datetime.fromtimestamp(time.mktime(data["published_parsed"]),tz=timezone(timedelta(hours=8)))
-                    embed.add_field(name="上傳時間",value=uplood_time.isoformat(),inline=False)
-                    
-                    guilds = sclient.get_notify_community_guild('youtube',ytchannel)
+                for video in video_list:
+                    embed = video.embed()
+                    guilds = sclient.get_notify_community_guild('youtube',ytchannel_id)
                     for guildid in guilds:
                         guild = self.bot.get_guild(guildid)
                         channel = self.bot.get_channel(guilds[guildid][0])
