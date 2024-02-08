@@ -79,7 +79,7 @@ class TwitchAPI(CommunityInterface):
         else:
             return None
 
-    def get_videos(self,users:str) -> list[TwitchVideo]:
+    def get_videos(self,users:str,types:str|list="highlight") -> list[TwitchVideo]:
         """
         取得twitch用戶的影片資訊
         :param users: list of users
@@ -88,7 +88,8 @@ class TwitchAPI(CommunityInterface):
         params = {
             "user_id": users,
             "sort": "time",
-            "first": 5
+            "first": 5,
+            "type": types
         }
         r = requests.get(f"{self.url}/videos", params=params,headers=self._headers)
         apidata = r.json()

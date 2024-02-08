@@ -8,7 +8,7 @@ from requests.exceptions import ConnectTimeout
 from starcord import Cog_Extension,Jsondb,sclient,log,BotEmbed
 from starcord.DataExtractor import *
 from starcord.DataExtractor.community import YoutubeRSS
-from starcord.models.community import TwitchVideo
+from starcord.models.community import TwitchVideo, YoutubeVideo
 
 #apsc_log = logging.getLogger('apscheduler')
 formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s')
@@ -17,9 +17,9 @@ consoleHandler.setLevel(logging.WARNING)
 consoleHandler.setFormatter(formatter)
 log.addHandler(consoleHandler)
 
-def slice_list(lst:list[dict], target_id):
+def slice_list(lst:list[YoutubeVideo], target_id):
     """以target_id為基準取出更新的影片資訊"""
-    index = next((i for i, d in enumerate(lst) if d["yt_videoid"] == target_id), None)
+    index = next((i for i, d in enumerate(lst) if d.id == target_id), None)
     return lst[index + 1:] if index else lst
 
 def slice_list_twitch(lst:list[TwitchVideo], target_id):

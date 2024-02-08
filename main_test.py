@@ -156,5 +156,5 @@ if __name__ == '__main__':
 	# feed = feedparser.parse(youtube_feed)
 	# for entry in feed['entries']:
 	# 	print(entry['media_thumbnail'][0]["url"])
-	r = TwitchAPI().get_videos(["490765956","197367758"])
-	print(r)
+	r = TwitchAPI().get_videos("490765956")
+	print(r[0].video_id)
