@@ -61,7 +61,7 @@ class event(Cog_Extension):
             word = message.content.lstrip('!')
             if word == 'azusa':
                 bot_user = self.bot.get_user(1203368856647630878)
-                embed = BotEmbed.general(name=bot_user.name,icon_url=bot_user.display_avatar.url,description=f"你好~我是假裝成星羽的Azusa，是一個discord機器人喔~\n你不可以輸入 </help:1067700245015834638> 來查看所有指令的用法\n\n希望我能在discord上幫助到你喔~\n有任何建議與需求不可以使用 </feedback:1067700244848058386> 指令\n\n支援伺服器：https://discord.gg/ye5yrZhYGF")
+                embed = BotEmbed.user(user=bot_user,description=f"你好~我是假裝成星羽的Azusa，是一個discord機器人喔~\n你不可以輸入 </help:1067700245015834638> 來查看所有指令的用法\n\n希望我能在discord上幫助到你喔~\n有任何建議與需求不可以使用 </feedback:1067700244848058386> 指令\n\n支援伺服器：https://discord.gg/ye5yrZhYGF")
                 embed.set_footer(text="此機器人由 XX12 負責搞事")
                 await message.reply(embed=embed)
                 return

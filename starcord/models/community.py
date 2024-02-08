@@ -131,6 +131,7 @@ class YouTubeStream:
 
 class YoutubeVideo:
     def __init__(self,data:dict):
+        self.id = data.get('yt_videoid')
         self.title = data.get("title")
         self.author_name = data.get("author")
         self.link = data.get("link")

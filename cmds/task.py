@@ -208,7 +208,7 @@ class task(Cog_Extension):
             cache_videoid = twitch_cache.get(user)
             if not cache_videoid or cache_videoid != videos[0].video_id:
                 videos.reverse()
-                video_list = slice_list(videos, cache_videoid)
+                video_list = slice_list_twitch(videos, cache_videoid)
                 twitch_cache[user] = video_list[-1].video_id
 
                 for data in video_list:
@@ -242,10 +242,10 @@ class task(Cog_Extension):
                 
             cache_videoid = cache_youtube.get(ytchannel_id)
             
-            if not cache_videoid or cache_videoid != rss_data[0]["yt_videoid"]:
+            if not cache_videoid or cache_videoid != rss_data[0].id:
                 rss_data.reverse()
                 video_list = slice_list(rss_data, cache_videoid)
-                cache_youtube[ytchannel_id] = rss_data[-1]["yt_videoid"]
+                cache_youtube[ytchannel_id] = rss_data[-1].id
 
                 for video in video_list:
                     embed = video.embed()

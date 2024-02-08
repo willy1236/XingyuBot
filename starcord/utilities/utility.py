@@ -11,6 +11,13 @@ class BotEmbed:
         return embed
     
     @staticmethod
+    def user(user:discord.User,title:str=discord.Embed.Empty,description:str=discord.Embed.Empty,url=discord.Embed.Empty):
+        '''使用者 格式'''
+        embed = discord.Embed(title=title,description=description, color=0x00ffff,url=url)
+        embed.set_author(name=user.name,icon_url=user.display_avatar.url)
+        return embed
+    
+    @staticmethod
     def simple(title:str=discord.Embed.Empty,description:str=discord.Embed.Empty,url=discord.Embed.Empty):
         '''簡易:不帶作者'''
         embed = discord.Embed(title=title,description=description or discord.Embed.Empty, color=0xc4e9ff,url=url)
@@ -55,11 +62,11 @@ class BotEmbed:
         return embed
     
     @staticmethod
-    def slts():
-        '''星光終端系統 格式'''
+    def mts():
+        '''星河終端系統 格式'''
         picdata = Jsondb.picdata
         embed = discord.Embed(color=0xc4e9ff)
-        embed.set_author(name="「星光」終端系統",icon_url=picdata['radio_001'])
+        embed.set_author(name="「星河」終端系統",icon_url=picdata['radio_001'])
         return embed
     
     @staticmethod
