@@ -178,7 +178,7 @@ class task(Cog_Extension):
             
             if data[user] and not user_cache:
                 twitch_cache[user] = True
-                embed = data[user].desplay()
+                embed = data[user].embed()
                 guilds = sclient.get_notify_community_guild('twitch',user)
                 for guildid in guilds:
                     guild = self.bot.get_guild(guildid)
@@ -212,7 +212,7 @@ class task(Cog_Extension):
                 twitch_cache[user] = video_list[-1].video_id
 
                 for data in video_list:
-                    embed = data.desplay()
+                    embed = data.embed()
                     guilds = sclient.get_notify_community_guild('twitch_v',data.user_id)
                     for guildid in guilds:
                         guild = self.bot.get_guild(guildid)

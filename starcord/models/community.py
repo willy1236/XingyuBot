@@ -23,7 +23,7 @@ class TwitchUser():
             url=self.url,
             description=self.description,
             color=0x6441a5,
-            timestamp = datetime.datetime.now()
+            timestamp = datetime.now()
             )
         embed.set_image(url=self.offline_image_url)
         embed.set_author(name=self.login,icon_url=self.profile_image_url)
@@ -49,7 +49,7 @@ class TwitchStream():
         self.tags = data.get('tags')
         self.url = f"https://www.twitch.tv/{self.user_login}"
 
-    def desplay(self):
+    def embed(self):
         embed = discord.Embed(
             title=self.title,
             url=self.url,
@@ -71,14 +71,14 @@ class TwitchVideo():
         self.user_name = data.get("user_name")
         self.title = data.get("title")
         self.description = data.get("description")
-        self.created_at = (datetime.strptime(data.get('created_at'),'%Y-%m-%dT%H:%M:%SZ')+timedelta(hours=8)).strftime('%Y/%m/%d %H:%M:%S')
-        self.published_at = (datetime.strptime(data.get('published_at'),'%Y-%m-%dT%H:%M:%SZ')+timedelta(hours=8)).strftime('%Y/%m/%d %H:%M:%S')
+        self.created_at = (datetime.strptime(data.get('created_at'),'%Y-%m-%dT%H:%M:%SZ') + timedelta(hours=8)).replace(tzinfo=timezone(timedelta(hours=8)))
+        self.published_at = (datetime.strptime(data.get('published_at'),'%Y-%m-%dT%H:%M:%SZ') + timedelta(hours=8)).replace(tzinfo=timezone(timedelta(hours=8)))
         self.url = data.get("url")
         self.thumbnail_url = data.get("thumbnail_url").replace('{width}','960').replace('{height}','540')
         self.view_count = data.get("view_count")
         self.duration = data.get("duration")
     
-    def desplay(self):
+    def embed(self):
         embed = discord.Embed(
             title=self.title,
             url=self.url,
@@ -88,7 +88,7 @@ class TwitchVideo():
             )
         embed.set_author(name=f"{self.user_name}")
         embed.set_image(url=self.thumbnail_url)
-        embed.set_footer(text=f"上傳時間 {self.created_at}")
+        embed.set_footer(text=f"上傳時間 {self.created_at.strftime('%Y/%m/%d %H:%M:%S')}")
         return embed
 
 class YoutubeChannel:
@@ -136,10 +136,10 @@ class YoutubeVideo:
         self.author_name = data.get("author")
         self.link = data.get("link")
         self.media_thumbnail_url = data.get("media_thumbnail")[0].get('url')
-        self.uplood_time = datetime.fromtimestamp(time.mktime(data["published_parsed"]),tz=timezone(timedelta(hours=0))).replace(tzinfo=timezone(timedelta(hours=8)))
+        self.uplood_time = datetime.fromtimestamp(time.mktime(data["published_parsed"]),tz=timezone(timedelta(hours=8)))
         
     def embed(self):
         embed = BotEmbed.simple(self.title,self.author_name,url=self.link)
-        embed.add_field(name="上傳時間",value=self.uplood_time.isoformat(),inline=False)
+        embed.add_field(name="上傳時間",value=self.uplood_time.strftime('%Y/%m/%d %H:%M:%S'),inline=False)
         embed.set_image(url=self.media_thumbnail_url)
         return embed

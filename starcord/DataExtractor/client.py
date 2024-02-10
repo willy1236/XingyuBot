@@ -1,6 +1,6 @@
 import random,discord
 from datetime import datetime
-from .game import RiotClient,SteamInterface,OsuInterface,ApexInterface
+from .game import RiotAPI,SteamInterface,OsuInterface,ApexInterface
 from .mysql import MySQLDatabase
 from starcord.models import *
 from starcord.types import DBGame
@@ -30,7 +30,7 @@ class GameClient(MySQLDatabase):
             elif game == DBGame.APEX:
                 APIdata = ApexInterface().get_player(dbdata['player_name'])
             elif game == DBGame.LOL:
-                APIdata = RiotClient().get_player_bypuuid(dbdata['other_id'])
+                APIdata = RiotAPI().get_player_bypuuid(dbdata['other_id'])
             return APIdata
         else:
             return dbdata
@@ -47,9 +47,11 @@ class GameClient(MySQLDatabase):
                 return PartialLOLPlayer(dbdata)
         
         if summoner_name:
-            rclient = RiotClient()
-            player = rclient.get_player_byname(summoner_name)
-            return player
+            api = RiotAPI()
+            user = api.get_riot_account_byname(summoner_name)
+            if user:
+                player = api.get_player_bypuuid(user.puuid)
+                return player if player else None
 
 class PointClient(MySQLDatabase):
     """點數系統"""

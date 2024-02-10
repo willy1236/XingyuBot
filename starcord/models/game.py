@@ -51,12 +51,12 @@ class PartialLOLPlayer(LOLPlayer):
         self.accountid = data.get('account_id')
         self.puuid = data.get('other_id')
 
-class LOLPlayerInMatch():
+class LOLPlayerInMatch(LOLPlayer):
     def __init__(self,data):
-        #self.participantId = data['participantId']
+        self.participantId = data['participantId']
         #self.profileIcon = data['profileIcon']
         #self.puuid = data['puuid']
-        self.summonerId = data['summonerId']
+        self.summonerid = data['summonerId']
         self.summonerLevel = data['summonerLevel']
         self.summonerName = data['summonerName']
 
@@ -74,7 +74,6 @@ class LOLPlayerInMatch():
         self.quadraKills = data['quadraKills']
         self.pentaKills = data['pentaKills']
         self.largestMultiKill = data['largestMultiKill']
-        self.soloKills = data['challenges']['soloKills']
         
         self.dragonKills = data['dragonKills']
         self.baronKills = data['baronKills']
@@ -102,17 +101,25 @@ class LOLPlayerInMatch():
         self.goldEarned = data['goldEarned']
         self.goldSpent = data['goldSpent']
         self.totalMinionsKilled = data['totalMinionsKilled']
-        self.laneMinionsFirst10Minutes = data['challenges']['laneMinionsFirst10Minutes']
-        self.jungleCsBefore10Minutes = round(data['challenges']['jungleCsBefore10Minutes'])
-        self.AllMinionsBefore10Minutes =self.laneMinionsFirst10Minutes + self.jungleCsBefore10Minutes * 10
-        self.bountyGold = data['challenges']['bountyGold']
+        
+        challenges = data.get('challenges')
+        if challenges:
+            try:
+                self.soloKills = data['challenges']['soloKills']
+                
+                self.laneMinionsFirst10Minutes = data['challenges']['laneMinionsFirst10Minutes']
+                self.jungleCsBefore10Minutes = round(data['challenges']['jungleCsBefore10Minutes'])
+                self.AllMinionsBefore10Minutes =self.laneMinionsFirst10Minutes + self.jungleCsBefore10Minutes * 10
+                self.bountyGold = data['challenges']['bountyGold']
 
-        self.damagePerMinute = data['challenges']['damagePerMinute']
-        self.damageTakenOnTeamPercentage = round(data['challenges']['damageTakenOnTeamPercentage'] * 100, 1)
-        self.goldPerMinute = round(data['challenges']['goldPerMinute'])
+                self.damagePerMinute = data['challenges']['damagePerMinute']
+                self.damageTakenOnTeamPercentage = round(data['challenges']['damageTakenOnTeamPercentage'] * 100, 1)
+                self.goldPerMinute = round(data['challenges']['goldPerMinute'])
 
-        self.teamDamagePercentage = round(data['challenges']['teamDamagePercentage'] * 100, 1)
-        self.visionScorePerMinute = round(data['challenges']['visionScorePerMinute'], 2)
+                self.teamDamagePercentage = round(data['challenges']['teamDamagePercentage'] * 100, 1)
+                self.visionScorePerMinute = round(data['challenges']['visionScorePerMinute'], 2)
+            except KeyError as e:
+                print("LOLPlayerInMatch: Error in challenges", e)
         #self.items = [ data['item0'],data['item1'],data['item2'],data['item3'],data['item4'],data['item5'],data['item6'] ]
 
     def desplaytext(self):
@@ -124,14 +131,14 @@ class LOLPlayerInMatch():
         if self.role != "NONE":
             lane +=f" {self.role}"
         text += f'{lane}\n'
-        text += f'{self.kills}/{self.deaths}/{self.assists} KDA: {self.kda} solokill：{self.soloKills}\n'
+        text += f'{self.kills}/{self.deaths}/{self.assists} KDA: {self.kda}\n'
         text += f'視野分：{self.visionScore} ({self.visionScorePerMinute}/min)\n'
         text += f'連殺：{self.doubleKills}/{self.tripleKills}/{self.quadraKills}/{self.pentaKills}\n'
         text += f'輸出：{self.totalDamageDealtToChampions} ({self.teamDamagePercentage}%)\n'
         text += f'承受：{self.totalDamageTaken} ({self.damageTakenOnTeamPercentage}%)\n'
         #text += f'治療/CC：{self.totalHeal}/{self.totalTimeCCDealt}\n'
         text += f'經濟：{self.goldEarned} ({self.goldPerMinute}/min)\n'
-        text += f'吃兵/前10分鐘：{self.totalMinionsKilled}/{self.AllMinionsBefore10Minutes}\n'
+        text += f'吃兵：{self.totalMinionsKilled}\n'
         text += f'小龍/巴龍：{self.dragonKills}/{self.baronKills}\n'
         text += f'個人賞金：{self.bountyGold}\n'
         text += f'Ping問號燈：{self.enemyMissingPings}\n'
@@ -253,6 +260,7 @@ class LOLPlayerRank(LOLPlayer):
         self.inactive = data.get("inactive")
         self.freshBlood = data.get("freshBlood")
         self.hotStreak = data.get("hotStreak")
+        self.name = data.get("summonerName")
 
     def desplay(self):
         embed = BotEmbed.simple(self.queueType)

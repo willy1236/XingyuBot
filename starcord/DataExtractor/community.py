@@ -42,7 +42,7 @@ class TwitchAPI(CommunityInterface):
         else:
             raise Forbidden(f"在讀取Twitch API時發生錯誤",f"[{r.status_code}] {apidata['message']}")
 
-    def get_lives(self,users:str|list):
+    def get_lives(self,users:str|list) -> dict[str, TwitchStream | None]:
         """
         取得twitch用戶的直播資訊
         :param users: list of users
@@ -63,7 +63,7 @@ class TwitchAPI(CommunityInterface):
         
         return dict
 
-    def get_user(self,username:str):
+    def get_user(self,username:str) -> TwitchUser | None:
         """
         取得Twitch用戶
         :param username: 用戶名稱（user_login）

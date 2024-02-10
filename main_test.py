@@ -1,5 +1,7 @@
+from operator import index
 import requests,genshin,asyncio,discord,secrets,starcord
 from bs4 import BeautifulSoup
+import pandas as pd
 #from pydantic import BaseModel
 
 # rclient = RiotClient()
@@ -29,11 +31,11 @@ from bs4 import BeautifulSoup
 # r = db.get_row_by_column_value(db.lol_champion,"name_tw","凱莎")
 # print(r.loc["name_en"])
 
-import asyncio,aiohttp,webbrowser,requests,json,os
+import asyncio,aiohttp,webbrowser,requests,json,os,time
 from aiohttp import web
 from aiohttp.web_runner import GracefulExit
 
-from starcord.DataExtractor.community import TwitchAPI
+from starcord.DataExtractor import TwitchAPI,RiotAPI
 
 class DiscordAPI:
 	def __init__(self):
@@ -145,6 +147,7 @@ class DiscordAPI:
 		return r.json()
 
 if __name__ == '__main__':
+	pass
 	# dc = DiscordAPI()
 	# dc.set_auth_token()
 
@@ -155,6 +158,12 @@ if __name__ == '__main__':
 	# youtube_feed = f'https://www.youtube.com/feeds/videos.xml?channel_id={CHANNEL_ID}'
 	# feed = feedparser.parse(youtube_feed)
 	# for entry in feed['entries']:
-	# 	print(entry['media_thumbnail'][0]["url"])
-	r = TwitchAPI().get_videos("490765956")
-	print(r[0].video_id)
+	# 	print(entry)
+	# r = TwitchAPI().get_videos("490765956")
+	# print(r[0].video_id)
+
+	df = RiotAPI().get_rank_dataframe("SakaGawa#0309")
+	# df = pd.read_csv('my_data.csv').sort_values("tier")
+	counts = df['tier'].value_counts()
+	print(str(counts))
+	df.to_csv('my_data.csv', index=False)

@@ -1,4 +1,5 @@
-import requests
+import requests,time
+import pandas as pd
 from starcord.FileDatabase import Jsondb
 from starcord.models.game import *
 from starcord.errors import ClientError
@@ -7,7 +8,7 @@ class GameInterface():
     def __init__(self):
         self.db = Jsondb
 
-class RiotClient(GameInterface):
+class RiotAPI(GameInterface):
     def __init__(self):
         super().__init__()
         self.url_tw2 = 'https://tw2.api.riotgames.com'
@@ -17,7 +18,6 @@ class RiotClient(GameInterface):
         self.headers = {
             'X-Riot-Token':self.key
         }
-
 
     def get_riot_account_byname(self,username):
         name, tag = username.split('#')
@@ -94,6 +94,29 @@ class RiotClient(GameInterface):
             return []
         else:
             raise ClientError(f"get_summoner_rank:{r.text}")
+
+    def get_rank_dataframe(self,riot_name:str):
+        user = self.get_riot_account_byname(riot_name)
+        if not user:
+            return
+        player = self.get_player_bypuuid(user.puuid)
+        if not player:
+            return
+        match_ids = self.get_player_matchs(player.puuid,count=20)
+        df = pd.DataFrame(columns=['name', 'queueType', 'tier', 'rank','participantId'])
+        participantId_list = []
+        for id in match_ids:
+            match = self.get_match(id)
+            for participant in match.players:
+                if participant.summonerid not in participantId_list:
+                    participantId_list.append(participant.summonerid)
+                    ranks = self.get_summoner_rank(participant.summonerid)
+                    for rank in ranks:
+                        new_row = {'name': rank.name, 'queueType': rank.queueType, 'tier': rank.tier, 'rank': rank.rank, 'participantId': participant.participantId}
+                        df.loc[len(df)] = new_row
+                time.sleep(1)
+            time.sleep(1)
+        return df
     
 class OsuInterface(GameInterface):
     def __init__(self):

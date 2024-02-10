@@ -62,7 +62,7 @@ __all__ =[
     'YoutubeAPI',
     'GoogleCloud',
     'NotionAPI',
-    'RiotClient',
+    'RiotAPI',
     'OsuInterface',
     'ApexInterface',
     'SteamInterface',
