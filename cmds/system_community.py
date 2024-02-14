@@ -163,9 +163,9 @@ class system_community(Cog_Extension):
             scheduler.add_job(sclient.init_NoticeClient,"date",args=["youtube"])
 
             feed = YoutubeRSS().get_videos(ytchannel_id)
-            yt_videoid = feed[0]['yt_videoid'] if feed else None
+            updated_at = feed[0].updated_at.isoformat() if feed else None
             cache = Jsondb.read_cache("youtube")
-            cache[ytchannel_id] = yt_videoid
+            cache[ytchannel_id] = updated_at
             Jsondb.write_cache('youtube',cache)
         else:
             await ctx.respond(f'錯誤：找不到頻道ID {ytchannel_id} 的頻道')
@@ -180,7 +180,7 @@ class system_community(Cog_Extension):
         scheduler.add_job(sclient.init_NoticeClient,"date",args=["youtube"])
 
         cache = Jsondb.read_cache("youtube")
-        del cache['ytchannel_id']
+        del cache[ytchannel_id]
         Jsondb.write_cache('youtube',cache)
 
     @youtube.command(description='確認youtube通知')

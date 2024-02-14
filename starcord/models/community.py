@@ -136,7 +136,8 @@ class YoutubeVideo:
         self.author_name = data.get("author")
         self.link = data.get("link")
         self.media_thumbnail_url = data.get("media_thumbnail")[0].get('url')
-        self.uplood_time = datetime.fromtimestamp(time.mktime(data["published_parsed"]),tz=timezone(timedelta(hours=8)))
+        self.uplood_at = datetime.fromtimestamp(time.mktime(data["published_parsed"]),tz=timezone(timedelta(hours=0))).replace(tzinfo=timezone(timedelta(hours=8)))
+        self.updated_at = datetime.fromtimestamp(time.mktime(data["updated_parsed"]),tz=timezone(timedelta(hours=0))).replace(tzinfo=timezone(timedelta(hours=8)))
         
     def embed(self):
         embed = BotEmbed.simple(self.title,self.author_name,url=self.link)

@@ -35,10 +35,10 @@ class GameClient(MySQLDatabase):
         else:
             return dbdata
         
-    def get_riot_player(self,summoner_name=None,discord_id=None):
+    def get_riot_player(self,riot_id=None,discord_id=None):
         """
         從資料庫取得資料，若沒有則從API取得
-        :param summoner_name: 召喚師名稱
+        :param riot_id: Riot ID（名稱#tag）
         :param discord_id: 若提供則先查詢資料庫
         """
         if discord_id:
@@ -46,9 +46,9 @@ class GameClient(MySQLDatabase):
             if dbdata:
                 return PartialLOLPlayer(dbdata)
         
-        if summoner_name:
+        if riot_id:
             api = RiotAPI()
-            user = api.get_riot_account_byname(summoner_name)
+            user = api.get_riot_account_byname(riot_id)
             if user:
                 player = api.get_player_bypuuid(user.puuid)
                 return player if player else None

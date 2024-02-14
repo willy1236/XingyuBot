@@ -153,17 +153,21 @@ if __name__ == '__main__':
 
 	# print(dc.access_token)
 
-	# import feedparser
-	# CHANNEL_ID = "UCNkJevYXQcjTc70j45FXFjA"
-	# youtube_feed = f'https://www.youtube.com/feeds/videos.xml?channel_id={CHANNEL_ID}'
-	# feed = feedparser.parse(youtube_feed)
-	# for entry in feed['entries']:
-	# 	print(entry)
-	# r = TwitchAPI().get_videos("490765956")
-	# print(r[0].video_id)
+	import feedparser
+	CHANNEL_ID = "UCbh7KHPMgYGgpISdbF6l0Kw"
+	youtube_feed = f'https://www.youtube.com/feeds/videos.xml?channel_id={CHANNEL_ID}'
+	feed = feedparser.parse(youtube_feed)
+	for entry in feed['entries']:
+		print(entry)
 
-	df = RiotAPI().get_rank_dataframe("SakaGawa#0309")
+	#df = RiotAPI().get_rank_dataframe("SakaGawa#0309")
 	# df = pd.read_csv('my_data.csv').sort_values("tier")
-	counts = df['tier'].value_counts()
-	print(str(counts))
-	df.to_csv('my_data.csv', index=False)
+	# #counts = df['tier'].value_counts()
+	# #print(str(counts))
+	# dict = {
+	# 	"RANKED_FLEX_SR": "彈性積分",
+	# 	"RANKED_SOLO_5x5": "單/雙"
+	# }
+	# for idx,data in df.iterrows():
+	# 	print(data["name"],dict.get(data["queueType"]),data["tier"] + " " + data["rank"])
+	#df.to_csv('my_data.csv', index=False)

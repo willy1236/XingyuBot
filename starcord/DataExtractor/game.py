@@ -95,15 +95,15 @@ class RiotAPI(GameInterface):
         else:
             raise ClientError(f"get_summoner_rank:{r.text}")
 
-    def get_rank_dataframe(self,riot_name:str):
+    def get_rank_dataframe(self,riot_name:str,count=20):
         user = self.get_riot_account_byname(riot_name)
         if not user:
             return
         player = self.get_player_bypuuid(user.puuid)
         if not player:
             return
-        match_ids = self.get_player_matchs(player.puuid,count=20)
-        df = pd.DataFrame(columns=['name', 'queueType', 'tier', 'rank','participantId'])
+        match_ids = self.get_player_matchs(player.puuid,count=count)
+        df = pd.DataFrame(columns=['name', 'queueType', 'tier', 'rank'])
         participantId_list = []
         for id in match_ids:
             match = self.get_match(id)
@@ -112,8 +112,9 @@ class RiotAPI(GameInterface):
                     participantId_list.append(participant.summonerid)
                     ranks = self.get_summoner_rank(participant.summonerid)
                     for rank in ranks:
-                        new_row = {'name': rank.name, 'queueType': rank.queueType, 'tier': rank.tier, 'rank': rank.rank, 'participantId': participant.participantId}
+                        new_row = {'name': rank.name, 'queueType': rank.queueType, 'tier': rank.tier, 'rank': rank.rank}
                         df.loc[len(df)] = new_row
+                        pd.concat()
                 time.sleep(1)
             time.sleep(1)
         return df
@@ -257,10 +258,3 @@ class DBDInterface(SteamInterface):
                 return None
         else:
             return None
-
-
-# class hoyoInterface(GameInterface):
-#     def __init__(self,dcid):
-#         super().__init__()
-#         cookies = {}
-#         self.__client = genshin.Client(cookies) 

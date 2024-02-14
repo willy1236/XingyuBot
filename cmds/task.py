@@ -19,7 +19,7 @@ log.addHandler(consoleHandler)
 
 def slice_list(lst:list[YoutubeVideo], target_id):
     """以target_id為基準取出更新的影片資訊"""
-    index = next((i for i, d in enumerate(lst) if d.id == target_id), None)
+    index = next((i for i, d in enumerate(lst) if d.updated_at == target_id), None)
     return lst[index + 1:] if index else lst
 
 def slice_list_twitch(lst:list[TwitchVideo], target_id):
@@ -236,17 +236,20 @@ class task(Cog_Extension):
         cache_youtube = Jsondb.read_cache('youtube') or {}
         rss = YoutubeRSS()
         for ytchannel_id in ytchannels:
+            #抓取資料
             rss_data = rss.get_videos(ytchannel_id)
             if not rss_data:
                 continue
-                
-            cache_videoid = cache_youtube.get(ytchannel_id)
+            cache_last_update_time = datetime.fromisoformat(cache_youtube.get(ytchannel_id)) if cache_youtube.get(ytchannel_id) else None
             
-            if not cache_videoid or cache_videoid != rss_data[0].id:
+            #判斷是否有更新
+            if not cache_last_update_time or cache_last_update_time > rss_data[0].updated_at:
+                #整理影片列表&儲存最後更新時間
                 rss_data.reverse()
-                video_list = slice_list(rss_data, cache_videoid)
-                cache_youtube[ytchannel_id] = rss_data[-1].id
+                video_list = slice_list(rss_data, cache_last_update_time)
+                cache_youtube[ytchannel_id] = rss_data[-1].updated_at.isoformat()
 
+                #發布通知
                 for video in video_list:
                     embed = video.embed()
                     guilds = sclient.get_notify_community_guild('youtube',ytchannel_id)
@@ -254,11 +257,12 @@ class task(Cog_Extension):
                         guild = self.bot.get_guild(guildid)
                         channel = self.bot.get_channel(guilds[guildid][0])
                         role = guild.get_role(guilds[guildid][1])
+                        text = "新影片上傳啦~" if video.uplood_at == video.updated_at else "影片更新啦~"
                         if channel:
                             if role:
-                                await channel.send(f'{role.mention} 新影片上傳啦~',embed=embed)
+                                await channel.send(f'{role.mention} {text}',embed=embed)
                             else:
-                                await channel.send(f'新影片上傳啦~',embed=embed)
+                                await channel.send(f'{text}',embed=embed)
                             await asyncio.sleep(0.5)
                         else:
                             log.warning(f"youtube: {guild.id}/{channel.id}")

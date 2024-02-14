@@ -13,12 +13,12 @@ class RiotUser():
         self._fullname = None
 
     @property
-    def fullname(self):
+    def fullname(self) -> str:
         if not self._fullname:
             self._fullname = self.name + "#" + self.tag
         return self._fullname
     
-class LOLPlayer():
+class LOLPlayer(RiotUser):
     def __init__(self,data):
         self.name = data.get('name')
         self.summonerid = data.get('id')
@@ -53,12 +53,11 @@ class PartialLOLPlayer(LOLPlayer):
 
 class LOLPlayerInMatch(LOLPlayer):
     def __init__(self,data):
+        super().__init__(data)
         self.participantId = data['participantId']
         #self.profileIcon = data['profileIcon']
         #self.puuid = data['puuid']
-        self.summonerid = data['summonerId']
-        self.summonerLevel = data['summonerLevel']
-        self.summonerName = data['summonerName']
+        self.name = data['summonerName']
 
         self.assists = data['assists']
         self.deaths = data['deaths']
@@ -123,7 +122,7 @@ class LOLPlayerInMatch(LOLPlayer):
         #self.items = [ data['item0'],data['item1'],data['item2'],data['item3'],data['item4'],data['item5'],data['item6'] ]
 
     def desplaytext(self):
-        text = f'`{self.summonerName}(LV. {self.summonerLevel})`\n'
+        text = f'`{self.name}(LV. {self.summonerLevel})`\n'
         name_csv = csvdb.get_row_by_column_value(csvdb.lol_champion,"name_en",self.championName)
         name = name_csv.loc["name_tw"] if not name_csv.empty else self.championName
         text += f'{name}(LV. {self.champLevel})\n'
