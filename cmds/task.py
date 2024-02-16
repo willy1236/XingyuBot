@@ -22,9 +22,9 @@ def slice_list(lst:list[YoutubeVideo], target_id):
     index = next((i for i, d in enumerate(lst) if d.updated_at == target_id), None)
     return lst[index + 1:] if index else lst
 
-def slice_list_twitch(lst:list[TwitchVideo], target_id):
+def slice_list_twitch(lst:list[TwitchVideo], target_id:datetime):
     """以target_id為基準取出更新的影片資訊"""
-    index = next((i for i, d in enumerate(lst) if d.video_id == target_id), None)
+    index = next((i for i, d in enumerate(lst) if d.created_at > target_id), None)
     return lst[index + 1:] if index else lst
 
 class task(Cog_Extension):
@@ -205,11 +205,11 @@ class task(Cog_Extension):
         twitch_cache = Jsondb.read_cache('twitch_v') or {}
         for user in users:
             videos = TwitchAPI().get_videos(user)
-            cache_videoid = twitch_cache.get(user)
-            if not cache_videoid or cache_videoid != videos[0].video_id:
+            cache_last_update_time = datetime.fromisoformat(twitch_cache.get(user)) if twitch_cache.get(user) else None
+            if not cache_last_update_time or videos[0].created_at > cache_last_update_time:
                 videos.reverse()
-                video_list = slice_list_twitch(videos, cache_videoid)
-                twitch_cache[user] = video_list[-1].video_id
+                video_list = slice_list_twitch(videos, cache_last_update_time)
+                twitch_cache[user] = video_list[-1].created_at.isoformat()
 
                 for data in video_list:
                     embed = data.embed()

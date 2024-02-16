@@ -57,7 +57,7 @@ class system_community(Cog_Extension):
             scheduler.add_job(sclient.init_NoticeClient,"date",run_date=time,args=["twitch_v"])
 
             cache = Jsondb.read_cache('twitch_v')
-            cache[user.id] = api.get_videos(user.id)[0].video_id
+            cache[user.id] = api.get_videos(user.id)[0].created_at.isoformat()
             Jsondb.write_cache('twitch_v',cache)
 
         else:
