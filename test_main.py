@@ -1,7 +1,8 @@
-from operator import index
 import requests,genshin,asyncio,discord,secrets,starcord
 from bs4 import BeautifulSoup
 import pandas as pd
+
+from starcord.DataExtractor.community import TwitchAPI
 #from pydantic import BaseModel
 
 # rclient = RiotClient()

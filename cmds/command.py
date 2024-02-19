@@ -1,4 +1,4 @@
-import discord,random,asyncio,datetime,re
+import discord,random,asyncio,datetime,re,psutil,subprocess
 from discord.errors import Forbidden, NotFound
 from discord.ext import commands,pages
 from discord.commands import SlashCommandGroup
@@ -825,6 +825,25 @@ class command(Cog_Extension):
         for party in dbdata:
             embed.add_field(name=party["party_name"], value=f"政黨ID：{party['party_id']}\n政黨人數：{party['count']}")
         await ctx.respond(embed=embed)
+
+    @commands.command(description="開啟mc伺服器",guild_ids=main_guild)
+    @commands.cooldown(rate=1,per=60)
+    async def startserver(self,ctx:discord.ApplicationContext):
+        def is_bat_running(bat_name):
+            for proc in psutil.process_iter():
+                try:
+                    if proc.name().lower() == bat_name.lower():
+                        return True
+                except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                    pass
+            return False
+
+        file_path = r'D:\minecraft server\1.19.2 forge 43.3.0\run.bat'
+        if is_bat_running("run"):
+            await ctx.respond("伺服器已開啟")
+        else:
+            subprocess.call([file_path])
+            await ctx.respond("已發送開啟指令")
 
 def setup(bot):
     bot.add_cog(command(bot))

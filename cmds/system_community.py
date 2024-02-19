@@ -1,4 +1,3 @@
-from random import choice
 import discord,datetime
 from discord.ext import commands
 from discord.commands import SlashCommandGroup
@@ -102,7 +101,7 @@ class system_community(Cog_Extension):
     async def list(self,ctx):
         guildid = ctx.guild.id
         embed = BotEmbed.general("twitch開台通知",ctx.guild.icon.url if ctx.guild.icon else discord.Embed.Empty)
-        dbdata = sclient.get_notify_community_list('twitch',guildid) + sclient.get_notify_community_list('twitch_v  ',guildid)
+        dbdata = sclient.get_notify_community_list('twitch',guildid) + sclient.get_notify_community_list('twitch_v',guildid)
         for data in dbdata:
             display_name = data['display_name'] if data['display_name'] else data['notify_name']
             channel_id = data['channel_id']
