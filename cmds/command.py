@@ -826,10 +826,10 @@ class command(Cog_Extension):
             embed.add_field(name=party["party_name"], value=f"政黨ID：{party['party_id']}\n政黨人數：{party['count']}")
         await ctx.respond(embed=embed)
 
-    @commands.command(description="開啟mc伺服器",guild_ids=main_guild)
+    @commands.slash_command(description="開啟mc伺服器",guild_ids=main_guild)
     @commands.cooldown(rate=1,per=60)
     async def startserver(self,ctx:discord.ApplicationContext):
-        def is_bat_running(bat_name):
+        def is_bat_running(bat_name:str):
             for proc in psutil.process_iter():
                 try:
                     if proc.name().lower() == bat_name.lower():
