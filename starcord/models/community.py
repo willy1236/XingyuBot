@@ -77,6 +77,7 @@ class TwitchVideo():
         self.thumbnail_url = data.get("thumbnail_url").replace('{width}','960').replace('{height}','540')
         self.view_count = data.get("view_count")
         self.duration = data.get("duration")
+        self.author = data.get("authors")[0].get("name")
     
     def embed(self):
         embed = discord.Embed(

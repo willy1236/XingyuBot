@@ -152,7 +152,7 @@ class system_community(Cog_Extension):
 
         ytchannel = YoutubeAPI().get_channel_content(ytchannel_id)
         if ytchannel:
-            sclient.set_notify_community('youtube',ytchannel_id,guildid,channelid,roleid)
+            sclient.set_notify_community('youtube',ytchannel_id,guildid,channelid,roleid,ytchannel.title)
             if role:
                 await ctx.respond(f'設定成功：{ytchannel.title}的通知將會發送在{channel.mention}並會通知{role.mention}')
             else:
