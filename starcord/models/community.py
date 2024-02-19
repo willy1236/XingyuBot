@@ -77,7 +77,6 @@ class TwitchVideo():
         self.thumbnail_url = data.get("thumbnail_url").replace('{width}','960').replace('{height}','540')
         self.view_count = data.get("view_count")
         self.duration = data.get("duration")
-        self.author = data.get("authors")[0].get("name")
     
     def embed(self):
         embed = discord.Embed(
@@ -139,6 +138,7 @@ class YoutubeVideo:
         self.media_thumbnail_url = data.get("media_thumbnail")[0].get('url')
         self.uplood_at = datetime.fromtimestamp(time.mktime(data["published_parsed"]),tz=timezone(timedelta(hours=0))).replace(tzinfo=timezone(timedelta(hours=8)))
         self.updated_at = datetime.fromtimestamp(time.mktime(data["updated_parsed"]),tz=timezone(timedelta(hours=0))).replace(tzinfo=timezone(timedelta(hours=8)))
+        self.author = data.get("authors")[0].get("name")
         
     def embed(self):
         embed = BotEmbed.simple(self.title,self.author_name,url=self.link)
