@@ -1,4 +1,4 @@
-import discord,random,asyncio,datetime,re,psutil,subprocess
+import discord,random,asyncio,datetime,re,psutil,subprocess,ctypes
 from discord.errors import Forbidden, NotFound
 from discord.ext import commands,pages
 from discord.commands import SlashCommandGroup
@@ -837,12 +837,21 @@ class command(Cog_Extension):
                 except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
                     pass
             return False
+        
+        def run_as_admin(command):
+            try:
+                if ctypes.windll.shell32.IsUserAnAdmin():
+                    subprocess.call(command, shell=True)
+                else:
+                    ctypes.windll.shell32.ShellExecuteW(None, "runas", "cmd.exe", f"/c {command}", None, 1)
+            except Exception as e:
+                print("Error:", e)
 
         file_path = r'D:\minecraft server\1.19.2 forge 43.3.0\run.bat'
         if is_bat_running("run"):
             await ctx.respond("伺服器已開啟")
         else:
-            subprocess.call([file_path])
+            run_as_admin(file_path)
             await ctx.respond("已發送開啟指令")
 
 def setup(bot):
