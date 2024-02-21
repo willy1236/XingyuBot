@@ -131,9 +131,9 @@ class event(Cog_Extension):
                 pass
             
             if spam_count >= 5 and not message.author.timed_out:
-                await message.author.timeout_for(duration=datetime.timedelta(seconds=60),reason="發送多次重複訊息")
+                await message.author.timeout_for(duration=datetime.timedelta(seconds=60),reason="發送快速發送訊息")
                 await message.channel.purge(limit=5)
-                await message.channel.send(f"{message.author.mention} 請不要發送重複訊息")
+                await message.channel.send(f"{message.author.mention} 請不要快速發送訊息")
 
             
             #跨群聊天Ver.1.0
@@ -222,7 +222,7 @@ class event(Cog_Extension):
                     return
 
                 #移除
-                elif before.channel and not after.channel and not before.channel.members and sclient.getif_dynamic_voice_room(before.channel.id):
+                elif before.channel and not after.channel and len(before.channel.members) == 1 and sclient.getif_dynamic_voice_room(before.channel.id):
                     await before.channel.delete(reason="動態語音：移除")
                     sclient.remove_dynamic_voice(before.channel.id)
                     sclient.set_list_in_notice_dict("dynamic_voice_room",remove_data=before.channel.id)

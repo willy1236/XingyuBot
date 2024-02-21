@@ -78,24 +78,18 @@ class MusicPlayer():
         self.nowplaying = None
 
     async def play_next(self,*arg):
-            #print('play_next')
             song = self.start_first_song()
-            #print(self.playlist,arg)
             try:
-                #print(song.title)
                 source = await YTDLSource.from_url(song.url, stream=True,volume=self.volume)
                 #, loop=self.bot.loop
                 
                 embed = BotEmbed.simple(title="現在播放", description=f"[{song.title}]({song.url}) [{song.requester.mention}]")
                 await self.channel.send(embed=embed)
-                #print(f"play1")
                 self.vc.play(source, after=self.after)
-                #print(f"play2")
             except Exception as e:
                 raise MusicPlayingError(str(e))
 
     def after(self,error):
-        #print(f"after")
         self.play_conpleted()
         if error:
             raise MusicPlayingError(error)
@@ -107,10 +101,9 @@ class MusicPlayer():
             asyncio.run_coroutine_threadsafe(self.wait_to_leave(),self.loop)
 
     async def wait_to_leave(self):
-        #print('wait2')
         await asyncio.sleep(15)
-        if self.vc and not self.vc.is_playing():
-            #print('stop')
+        #if self.vc and not self.vc.is_playing():
+        if not self.vc.is_playing():
             await self.stop()
 
     def skip_song(self):
@@ -126,8 +119,7 @@ class MusicPlayer():
     
     def start_first_song(self) -> Song:
         if not self.songloop:
-            self.nowplaying = self.playlist[0]
-            self.playlist.pop(0)
+            self.nowplaying = self.playlist.pop(0)
         return self.nowplaying
 
     def play_conpleted(self):
