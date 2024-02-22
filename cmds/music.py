@@ -3,7 +3,7 @@ from discord.ext import commands,pages
 from typing import TYPE_CHECKING
 from starcord import Cog_Extension,BotEmbed,log
 from starcord.errors import *
-import youtube_dl
+import yt_dlp as youtube_dl
 
 # Suppress noise about console usage from errors
 youtube_dl.utils.bug_reports_message = lambda: ""

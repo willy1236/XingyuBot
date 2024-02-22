@@ -20,12 +20,12 @@ log.addHandler(consoleHandler)
 def slice_list(lst:list[YoutubeVideo], target_id):
     """以target_id為基準取出更新的影片資訊"""
     index = next((i for i, d in enumerate(lst) if d.updated_at > target_id), None)
-    return lst[index + 1:] if index else lst
+    return lst[index:] if index else lst
 
 def slice_list_twitch(lst:list[TwitchVideo], target_id:datetime):
     """以target_id為基準取出更新的影片資訊"""
     index = next((i for i, d in enumerate(lst) if d.created_at > target_id), None)
-    return lst[index + 1:] if index else lst
+    return lst[index:] if index else lst
 
 class task(Cog_Extension):
     def __init__(self,*args,**kwargs):

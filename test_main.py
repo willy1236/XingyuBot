@@ -1,8 +1,9 @@
 import requests,genshin,asyncio,discord,secrets,starcord
 from bs4 import BeautifulSoup
 import pandas as pd
+from datetime import datetime
 
-from starcord.DataExtractor.community import TwitchAPI
+from starcord.DataExtractor.community import TwitchAPI, YoutubeAPI, YoutubeRSS
 #from pydantic import BaseModel
 
 # rclient = RiotClient()
@@ -36,12 +37,21 @@ from starcord.DataExtractor.community import TwitchAPI
 if __name__ == '__main__':
 	pass
 
-	import feedparser
-	CHANNEL_ID = "UCLRkp9Xg_-cjQ0RuVZ0VZnA"
-	youtube_feed = f'https://www.youtube.com/feeds/videos.xml?channel_id={CHANNEL_ID}'
-	feed = feedparser.parse(youtube_feed)
-	for entry in feed['entries']:
-		print(entry)
+	# import feedparser
+	# CHANNEL_ID = "UCLRkp9Xg_-cjQ0RuVZ0VZnA"
+	# youtube_feed = f'https://www.youtube.com/feeds/videos.xml?channel_id={CHANNEL_ID}'
+	# feed = feedparser.parse(youtube_feed)
+	# for entry in feed['entries']:
+	# 	print(entry)
+	
+	from cmds.task import slice_list
+	list = YoutubeRSS().get_videos("UCNkJevYXQcjTc70j45FXFjA")
+	list.reverse()
+	print(len(list))
+	for i in list:
+		print(i.updated_at)
+	time = datetime.fromisoformat("2024-02-18 06:52:51+08:00")
+	print(len(slice_list(list,time)))
 
 	#df = RiotAPI().get_rank_dataframe("SakaGawa#0309")
 	# df = pd.read_csv('my_data.csv').sort_values("tier")
