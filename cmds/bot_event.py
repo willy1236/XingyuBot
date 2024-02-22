@@ -202,52 +202,52 @@ class event(Cog_Extension):
                 
                 await self.bot.get_channel(voice_log_dict.get(guildid)[0]).send(embed=embed)
             
-            #動態語音
-            dynamic_voice_dict = sclient.get_notice_dict("dynamic_voice")
-            if guildid in dynamic_voice_dict:
-                #新增
-                if after.channel and after.channel.id == dynamic_voice_dict[guildid][0]:
-                    guild = after.channel.guild
-                    category = after.channel.category
-                    #permission = discord.Permissions.advanced()
-                    #permission.manage_channels = True
-                    #overwrites = discord.PermissionOverwrite({user:permission})
-                    overwrites = {
-                        user: discord.PermissionOverwrite(manage_channels=True,manage_roles=True)
-                    }
-                    new_channel = await guild.create_voice_channel(name=f'{user.name}的頻道', reason='動態語音：新增',category=category,overwrites=overwrites)
-                    sclient.set_dynamic_voice(new_channel.id,user.id,guild.id,None)
-                    sclient.set_list_in_notice_dict("dynamic_voice_room",new_data=new_channel.id)
-                    await user.move_to(new_channel)
-                    return
+        #動態語音
+        dynamic_voice_dict = sclient.get_notice_dict("dynamic_voice")
+        if guildid in dynamic_voice_dict:
+            #新增
+            if after.channel and after.channel.id == dynamic_voice_dict[guildid][0]:
+                guild = after.channel.guild
+                category = after.channel.category
+                #permission = discord.Permissions.advanced()
+                #permission.manage_channels = True
+                #overwrites = discord.PermissionOverwrite({user:permission})
+                overwrites = {
+                    user: discord.PermissionOverwrite(manage_channels=True,manage_roles=True)
+                }
+                new_channel = await guild.create_voice_channel(name=f'{user.name}的頻道', reason='動態語音：新增',category=category,overwrites=overwrites)
+                sclient.set_dynamic_voice(new_channel.id,user.id,guild.id,None)
+                sclient.set_list_in_notice_dict("dynamic_voice_room",new_data=new_channel.id)
+                await user.move_to(new_channel)
+                return
 
-                #移除
-                elif before.channel and not after.channel and len(before.channel.members) == 1 and sclient.getif_dynamic_voice_room(before.channel.id):
-                    await before.channel.delete(reason="動態語音：移除")
-                    sclient.remove_dynamic_voice(before.channel.id)
-                    sclient.set_list_in_notice_dict("dynamic_voice_room",remove_data=before.channel.id)
-                    return
+            #移除
+            elif before.channel and not after.channel and len(before.channel.members) == 1 and sclient.getif_dynamic_voice_room(before.channel.id):
+                await before.channel.delete(reason="動態語音：移除")
+                sclient.remove_dynamic_voice(before.channel.id)
+                sclient.set_list_in_notice_dict("dynamic_voice_room",remove_data=before.channel.id)
+                return
 
-            #舞台發言
-            if check_event_stage(before) or check_event_stage(after):
-                kp_user = self.bot.get_guild(613747262291443742).get_member(713748326377455676)
-                #調查員、特許證舞台發言
-                if after.suppress and after.channel and ( user.get_role(1126820808761819197) or (user.get_role(1130849778264195104) and not kp_user in after.channel.members) ):
-                    await user.request_to_speak()
-                    await asyncio.sleep(0.5)
+        #舞台發言
+        if check_event_stage(before) or check_event_stage(after):
+            kp_user = self.bot.get_guild(613747262291443742).get_member(713748326377455676)
+            #調查員、特許證舞台發言
+            if after.suppress and after.channel and ( user.get_role(1126820808761819197) or (user.get_role(1130849778264195104) and not kp_user in after.channel.members) ):
+                await user.request_to_speak()
+                await asyncio.sleep(0.5)
 
-                if user == kp_user and before.channel != after.channel:
-                    if after.channel:
-                        for member in after.channel.members:
-                            if not member.voice.suppress and not member.get_role(1126820808761819197):
-                                await member.edit(suppress=True)
-                                await asyncio.sleep(0.5)
+            if user == kp_user and before.channel != after.channel:
+                if after.channel:
+                    for member in after.channel.members:
+                        if not member.voice.suppress and not member.get_role(1126820808761819197):
+                            await member.edit(suppress=True)
+                            await asyncio.sleep(0.5)
 
-                    if before.channel:
-                        for member in before.channel.members:
-                            if member.voice.suppress and member.get_role(1126820808761819197):
-                                await member.request_to_speak()
-                                await asyncio.sleep(0.5)
+                if before.channel:
+                    for member in before.channel.members:
+                        if member.voice.suppress and member.get_role(1126820808761819197):
+                            await member.request_to_speak()
+                            await asyncio.sleep(0.5)
 
     @commands.Cog.listener()
     async def on_member_remove(self, member:discord.Member):

@@ -193,7 +193,6 @@ class task(Cog_Extension):
                     else:
                         print(f"twitch: {guild.id}/{channel.id}")
             elif not data[user] and user_cache:
-                #cache['twitch'][user] = False
                 del twitch_cache[user]
 
         Jsondb.write_cache('twitch',twitch_cache)
