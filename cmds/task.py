@@ -247,9 +247,10 @@ class task(Cog_Extension):
                 rss_data.reverse()
                 video_list = slice_list(rss_data, cache_last_update_time)
                 cache_youtube[ytchannel_id] = rss_data[-1].updated_at.isoformat()
-
+                log.info(video_list)
                 #發布通知
                 for video in video_list:
+                    log.info(video.title)
                     embed = video.embed()
                     guilds = sclient.get_notify_community_guild('youtube',ytchannel_id)
                     for guildid in guilds:

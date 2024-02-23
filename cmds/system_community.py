@@ -202,7 +202,7 @@ class system_community(Cog_Extension):
         embed = BotEmbed.general("youtube通知",ctx.guild.icon.url if ctx.guild.icon else discord.Embed.Empty)
         dbdata = sclient.get_notify_community_list('youtube',guildid)
         for data in dbdata:
-            notify_name = data['notify_name']
+            notify_name = data['display_name'] if data.get("display_name") else data['notify_name']
             channel_id = data['channel_id']
             role_id = data['role_id']
             

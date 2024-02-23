@@ -227,7 +227,7 @@ class MySQLNotifySystem(MySQLBaseModel):
         self.cursor.execute(f'SELECT * FROM `notify_community` WHERE `notify_type` = %s;',(notify_type,))
         return self.cursor.fetchall()
     
-    def get_notify_community_guild(self,notify_type:str,notify_name:str):
+    def get_notify_community_guild(self,notify_type:str,notify_name:str) -> dict[str, list[int]]:
         """取得指定社群的所有通知"""
         self.cursor.execute(f"USE `database`;")
         self.cursor.execute(f'SELECT `guild_id`,`channel_id`,`role_id` FROM `notify_community` WHERE `notify_type` = %s AND `notify_name` = %s;',(notify_type,notify_name))
