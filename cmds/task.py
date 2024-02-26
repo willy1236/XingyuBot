@@ -20,6 +20,7 @@ log.addHandler(consoleHandler)
 def slice_list(lst:list[YoutubeVideo], target_id):
     """以target_id為基準取出更新的影片資訊"""
     index = next((i for i, d in enumerate(lst) if d.updated_at > target_id), None)
+    print(index)
     return lst[index:] if index else lst
 
 def slice_list_twitch(lst:list[TwitchVideo], target_id:datetime):
@@ -243,7 +244,7 @@ class task(Cog_Extension):
             cache_last_update_time = datetime.fromisoformat(cache_youtube.get(ytchannel_id)) if cache_youtube.get(ytchannel_id) else None
             log.info(cache_last_update_time)
             #判斷是否有更新
-            if not cache_last_update_time or cache_last_update_time > rss_data[0].updated_at:
+            if not cache_last_update_time or rss_data[0].updated_at > cache_last_update_time:
                 log.info(rss_data)
                 #整理影片列表&儲存最後更新時間
                 rss_data.reverse()
