@@ -234,15 +234,17 @@ class task(Cog_Extension):
             return
         cache_youtube = Jsondb.read_cache('youtube') or {}
         rss = YoutubeRSS()
+        log.info("youtube_video start")
         for ytchannel_id in ytchannels:
             #抓取資料
             rss_data = rss.get_videos(ytchannel_id)
             if not rss_data:
                 continue
             cache_last_update_time = datetime.fromisoformat(cache_youtube.get(ytchannel_id)) if cache_youtube.get(ytchannel_id) else None
-            
+            log.info(cache_last_update_time)
             #判斷是否有更新
             if not cache_last_update_time or cache_last_update_time > rss_data[0].updated_at:
+                log.info(rss_data)
                 #整理影片列表&儲存最後更新時間
                 rss_data.reverse()
                 video_list = slice_list(rss_data, cache_last_update_time)

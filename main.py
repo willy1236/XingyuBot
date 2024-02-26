@@ -1,6 +1,10 @@
-import discord, os,time,asyncio
-from discord.ext import commands
+import os
+import time
+import asyncio
 from threading import Thread
+
+import discord
+from discord.ext import commands
 
 from starcord import Jsondb,log,sclient
 from starcord.ui_element.button import *
@@ -19,6 +23,10 @@ debug_mode = jdata.get('debug_mode',True)
 #command_prefix=commands.when_mentioned_or('b!'),
 #command_prefix='b!',
 #case_insensitive=True,
+
+class DiscordBot(discord.Bot):
+    def __init__(self,*args,**options):
+        super().__init__(*args,**options)
 
 if bot_code == 'Bot1':
     bot = discord.Bot(
@@ -117,7 +125,7 @@ class SatrPlatform():
 if __name__ == "__main__":
     # if not debug_mode and auto_update:
     #     os.system('python ./app/update.py')
-            
+
     if api_website:
         from .app.bot_website import ltThread,WebsiteThread
         ltserver = ltThread()
