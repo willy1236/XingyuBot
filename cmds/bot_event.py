@@ -207,7 +207,7 @@ class event(Cog_Extension):
         if guildid in dynamic_voice_dict:
             log.info(guildid in dynamic_voice_dict)
             log.info(f"{before.channel} {not after.channel} {not before.channel.members} {sclient.getif_dynamic_voice_room(before.channel.id)}")
-            log.info(f"{before.channel.members} {after.channel.members}")
+            log.info(f"{before.channel.members if before.channel else None} {after.channel.members if after.channel else None}")
             #新增
             if after.channel and after.channel.id == dynamic_voice_dict[guildid][0]:
                 guild = after.channel.guild
