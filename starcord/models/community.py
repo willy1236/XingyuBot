@@ -143,5 +143,6 @@ class YoutubeVideo:
     def embed(self):
         embed = BotEmbed.simple(self.title,self.author_name,url=self.link)
         embed.add_field(name="上傳時間",value=self.uplood_at.strftime('%Y/%m/%d %H:%M:%S'),inline=False)
+        embed.add_field(name="更新時間",value=self.updated_at.strftime('%Y/%m/%d %H:%M:%S'),inline=True)
         embed.set_image(url=self.media_thumbnail_url)
         return embed

@@ -205,6 +205,8 @@ class event(Cog_Extension):
         #動態語音
         dynamic_voice_dict = sclient.get_notice_dict("dynamic_voice")
         if guildid in dynamic_voice_dict:
+            log.info(guildid in dynamic_voice_dict)
+            log.info(f"{before.channel} {not after.channel} {len(before.channel.members) == 1} {sclient.getif_dynamic_voice_room(before.channel.id)}")
             #新增
             if after.channel and after.channel.id == dynamic_voice_dict[guildid][0]:
                 guild = after.channel.guild

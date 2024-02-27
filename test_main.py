@@ -4,6 +4,7 @@ import pandas as pd
 from datetime import datetime
 
 from starcord.DataExtractor.community import TwitchAPI, YoutubeAPI, YoutubeRSS
+from starcord import log
 #from pydantic import BaseModel
 
 # rclient = RiotClient()
@@ -44,14 +45,14 @@ if __name__ == '__main__':
 	# for entry in feed['entries']:
 	# 	print(entry)
 	
-	from cmds.task import slice_list
-	list = YoutubeRSS().get_videos("UCNkJevYXQcjTc70j45FXFjA")
-	list.reverse()
-	print(len(list))
-	for i in list:
-		print(i.updated_at)
-	time = datetime.fromisoformat("2024-02-18 06:52:51+08:00")
-	print(len(slice_list(list,time)))
+	# from cmds.task import slice_list
+	# list = YoutubeRSS().get_videos("UCNkJevYXQcjTc70j45FXFjA")
+	# list.reverse()
+	# print(len(list))
+	# for i in list:
+	# 	print(i.updated_at)
+	# time = datetime.fromisoformat("2024-02-18 06:52:51+08:00")
+	# print(len(slice_list(list,time)))
 
 	#df = RiotAPI().get_rank_dataframe("SakaGawa#0309")
 	# df = pd.read_csv('my_data.csv').sort_values("tier")
@@ -64,3 +65,30 @@ if __name__ == '__main__':
 	# for idx,data in df.iterrows():
 	# 	print(data["name"],dict.get(data["queueType"]),data["tier"] + " " + data["rank"])
 	#df.to_csv('my_data.csv', index=False)
+
+	from cmds.task import slice_list
+	ytchannels = ["UCNkJevYXQcjTc70j45FXFjA"]
+	cache_youtube = "2024-02-15T04:07:49+08:00"
+	rss = YoutubeRSS()
+	log.info("youtube_video start")
+	for ytchannel_id in ytchannels:
+		#抓取資料
+		rss_data = rss.get_videos(ytchannel_id)
+		#log.info(rss_data)
+		if not rss_data:
+			continue
+		cache_last_update_time = datetime.fromisoformat(cache_youtube)
+		log.info(cache_last_update_time)
+		#判斷是否有更新
+		log.info(rss_data[0].updated_at)
+		log.info(f"{rss_data[0].updated_at > cache_last_update_time}")
+		if not cache_last_update_time or rss_data[0].updated_at > cache_last_update_time:
+			
+			#整理影片列表&儲存最後更新時間
+			rss_data.reverse()
+			video_list = slice_list(rss_data, cache_last_update_time)
+			log.info(video_list)
+			#發布通知
+			for video in video_list:
+				log.info(f"{video.title}:{video.updated_at}")
+				log.info(f"sec: {ytchannel_id}")
