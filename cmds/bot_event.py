@@ -205,9 +205,6 @@ class event(Cog_Extension):
         #動態語音
         dynamic_voice_dict = sclient.get_notice_dict("dynamic_voice")
         if guildid in dynamic_voice_dict:
-            log.info(guildid in dynamic_voice_dict)
-            log.info(f"{before.channel} {not after.channel} {not before.channel.members} {sclient.getif_dynamic_voice_room(before.channel.id)}")
-            log.info(f"{before.channel.members if before.channel else None} {after.channel.members if after.channel else None}")
             #新增
             if after.channel and after.channel.id == dynamic_voice_dict[guildid][0]:
                 guild = after.channel.guild
@@ -225,7 +222,7 @@ class event(Cog_Extension):
                 return
 
             #移除
-            elif before.channel and not after.channel and len(before.channel.members) == 1 and sclient.getif_dynamic_voice_room(before.channel.id):
+            elif before.channel and not after.channel and not before.channel.members and sclient.getif_dynamic_voice_room(before.channel.id):
                 await before.channel.delete(reason="動態語音：移除")
                 sclient.remove_dynamic_voice(before.channel.id)
                 sclient.set_list_in_notice_dict("dynamic_voice_room",remove_data=before.channel.id)
