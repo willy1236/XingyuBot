@@ -103,6 +103,7 @@ class TwitterInterface:
 
 class YoutubeAPI(CommunityInterface):
     def __init__(self):
+        self.URL = "https://www.googleapis.com/youtube/v3"
         self.__token = Jsondb.get_token('youtube')
         self.__headers = {
             'Authorization': f'Bearer {self.__token}',
@@ -116,7 +117,7 @@ class YoutubeAPI(CommunityInterface):
             'part': 'id',
             'maxResults':1
         }
-        r = requests.get('https://youtube.googleapis.com/youtube/v3/channels',params=params)
+        r = requests.get(f'{self.URL}/channels',params=params)
         if r.ok:
             data = r.json()
             print(data)
@@ -138,7 +139,7 @@ class YoutubeAPI(CommunityInterface):
             'part': 'statistics,snippet',
             'maxResults':1
         }
-        r = requests.get('https://youtube.googleapis.com/youtube/v3/channels',params=params)
+        r = requests.get(f'{self.URL}/channels',params=params)
         if r.ok and r.json().get('items'):
             return YoutubeChannel(r.json().get('items')[0])
         else:
@@ -150,7 +151,7 @@ class YoutubeAPI(CommunityInterface):
             'channelId': channel_id,
             'part': 'contentDetails'
         }
-        r = requests.get('https://www.googleapis.com/youtube/v3/channelSections',params=params)
+        r = requests.get(f'{self.URL}/channelSections',params=params)
         if r.status_code == 200:
             print(r)
             print(r.json())
@@ -167,7 +168,7 @@ class YoutubeAPI(CommunityInterface):
             'eventType':'live',
             'type': 'video'
         }
-        r = requests.get('https://www.googleapis.com/youtube/v3/search',params=params)
+        r = requests.get(f'{self.URL}/search',params=params)
         if r.status_code == 200:
             print(r)
             print(r.json())
@@ -184,13 +185,16 @@ class YoutubeAPI(CommunityInterface):
             'eventType':'live',
             'type': 'video'
         }
-        r = requests.get('https://www.googleapis.com/youtube/v3/search',params=params)
+        r = requests.get(f'{self.URL}/search',params=params)
         if r.status_code == 200 and r.json()['items']:
             return YouTubeStream(r.json()['items'][0])
         else:
             print(r.text)
             print(r.status_code)
             return None
+        
+    def get_video(self,video_id) -> list[YoutubeVideo]:
+        #https://www.googleapis.com/youtube/v3/videos
 
 class YoutubeRSS(CommunityInterface):
     def get_videos(self,channel_id) -> list[YoutubeVideo]:

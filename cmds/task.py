@@ -19,7 +19,7 @@ log.addHandler(consoleHandler)
 
 def slice_list(lst:list[YoutubeVideo], target_id):
     """以target_id為基準取出更新的影片資訊"""
-    index = next((i for i, d in enumerate(lst) if d.updated_at > target_id), None)
+    index = next((i for i, d in enumerate(lst) if d.uplood_at > target_id), None)
     print(index)
     return lst[index:] if index else lst
 
@@ -242,11 +242,11 @@ class task(Cog_Extension):
                 continue
             cache_last_update_time = datetime.fromisoformat(cache_youtube.get(ytchannel_id)) if cache_youtube.get(ytchannel_id) else None
             #判斷是否有更新
-            if not cache_last_update_time or rss_data[0].updated_at > cache_last_update_time:
+            if not cache_last_update_time or rss_data[0].uplood_at > cache_last_update_time:
                 #整理影片列表&儲存最後更新時間
                 rss_data.reverse()
                 video_list = slice_list(rss_data, cache_last_update_time)
-                cache_youtube[ytchannel_id] = rss_data[-1].updated_at.isoformat()
+                cache_youtube[ytchannel_id] = rss_data[-1].uplood_at.isoformat()
                 #發布通知
                 for video in video_list:
                     embed = video.embed()
@@ -255,7 +255,7 @@ class task(Cog_Extension):
                         guild = self.bot.get_guild(guildid)
                         channel = self.bot.get_channel(guilds[guildid][0])
                         role = guild.get_role(guilds[guildid][1])
-                        text = "新影片上傳啦~" if video.uplood_at == video.updated_at else "影片更新啦~"
+                        text = "新影片上傳啦~"
                         if channel:
                             if role:
                                 await channel.send(f'{role.mention} {text}',embed=embed)

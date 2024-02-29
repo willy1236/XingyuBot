@@ -1,49 +1,32 @@
-import requests,genshin,asyncio,discord,secrets,starcord
-from bs4 import BeautifulSoup
-import pandas as pd
+import asyncio
+import secrets
 from datetime import datetime
 
-from starcord.DataExtractor.community import TwitchAPI, YoutubeAPI, YoutubeRSS
-from starcord import log
+import discord
+import requests
+import genshin
+import feedparser
+from bs4 import BeautifulSoup
+import pandas as pd
 #from pydantic import BaseModel
 
-# rclient = RiotClient()
-# player = rclient.get_player_byname("")
-# match_list = rclient.get_player_matchs(player.puuid,3)
-# kda_avg = 0
-# i = 0
-# for match_id in match_list:
-#     match = rclient.get_match(match_id)
-#     print(match.gameMode)
-#     if match.gameMode != "CLASSIC":
-#         continue
-    
-#     i += 1
-#     player_im = match.get_player_in_match(player.name)
-    
-#     championName = db.get_row_by_column_value(db.lol_champion,"name_en",player_im.championName)
-#     print(f"第{i}場：{championName.loc['name_tw']} {player_im.lane} KDA {player_im.kda}")
-#     kda_avg += player_im.kda
-#     time.sleep(1)
 
-# kda_avg = round(kda_avg / 5, 2)
-
-# print(f"Avg. {kda_avg}")
+import starcord
+from starcord.DataExtractor.community import TwitchAPI, YoutubeAPI, YoutubeRSS
+from starcord import log
 
 # db = CsvDatabase()
 # r = db.get_row_by_column_value(db.lol_champion,"name_tw","凱莎")
 # print(r.loc["name_en"])
 
-
 if __name__ == '__main__':
 	pass
 
-	# import feedparser
-	# CHANNEL_ID = "UCLRkp9Xg_-cjQ0RuVZ0VZnA"
-	# youtube_feed = f'https://www.youtube.com/feeds/videos.xml?channel_id={CHANNEL_ID}'
-	# feed = feedparser.parse(youtube_feed)
-	# for entry in feed['entries']:
-	# 	print(entry)
+	CHANNEL_ID = "UCbh7KHPMgYGgpISdbF6l0Kw"
+	youtube_feed = f'https://www.youtube.com/feeds/videos.xml?channel_id={CHANNEL_ID}'
+	feed = feedparser.parse(youtube_feed)
+	for entry in feed['entries']:
+		print(entry)
 	
 	# from cmds.task import slice_list
 	# list = YoutubeRSS().get_videos("UCNkJevYXQcjTc70j45FXFjA")
@@ -66,29 +49,29 @@ if __name__ == '__main__':
 	# 	print(data["name"],dict.get(data["queueType"]),data["tier"] + " " + data["rank"])
 	#df.to_csv('my_data.csv', index=False)
 
-	from cmds.task import slice_list
-	ytchannels = ["UCNkJevYXQcjTc70j45FXFjA"]
-	cache_youtube = "2024-02-15T04:07:49+08:00"
-	rss = YoutubeRSS()
-	log.info("youtube_video start")
-	for ytchannel_id in ytchannels:
-		#抓取資料
-		rss_data = rss.get_videos(ytchannel_id)
-		#log.info(rss_data)
-		if not rss_data:
-			continue
-		cache_last_update_time = datetime.fromisoformat(cache_youtube)
-		log.info(cache_last_update_time)
-		#判斷是否有更新
-		log.info(rss_data[0].updated_at)
-		log.info(f"{rss_data[0].updated_at > cache_last_update_time}")
-		if not cache_last_update_time or rss_data[0].updated_at > cache_last_update_time:
+	# from cmds.task import slice_list
+	# ytchannels = ["UCNkJevYXQcjTc70j45FXFjA"]
+	# cache_youtube = "2024-02-15T04:07:49+08:00"
+	# rss = YoutubeRSS()
+	# log.info("youtube_video start")
+	# for ytchannel_id in ytchannels:
+	# 	#抓取資料
+	# 	rss_data = rss.get_videos(ytchannel_id)
+	# 	#log.info(rss_data)
+	# 	if not rss_data:
+	# 		continue
+	# 	cache_last_update_time = datetime.fromisoformat(cache_youtube)
+	# 	log.info(cache_last_update_time)
+	# 	#判斷是否有更新
+	# 	log.info(rss_data[0].updated_at)
+	# 	log.info(f"{rss_data[0].updated_at > cache_last_update_time}")
+	# 	if not cache_last_update_time or rss_data[0].updated_at > cache_last_update_time:
 			
-			#整理影片列表&儲存最後更新時間
-			rss_data.reverse()
-			video_list = slice_list(rss_data, cache_last_update_time)
-			log.info(video_list)
-			#發布通知
-			for video in video_list:
-				log.info(f"{video.title}:{video.updated_at}")
-				log.info(f"sec: {ytchannel_id}")
+	# 		#整理影片列表&儲存最後更新時間
+	# 		rss_data.reverse()
+	# 		video_list = slice_list(rss_data, cache_last_update_time)
+	# 		log.info(video_list)
+	# 		#發布通知
+	# 		for video in video_list:
+	# 			log.info(f"{video.title}:{video.updated_at}")
+	# 			log.info(f"sec: {ytchannel_id}")
