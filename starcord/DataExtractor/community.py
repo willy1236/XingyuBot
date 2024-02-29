@@ -195,6 +195,7 @@ class YoutubeAPI(CommunityInterface):
         
     def get_video(self,video_id) -> list[YoutubeVideo]:
         #https://www.googleapis.com/youtube/v3/videos
+        pass
 
 class YoutubeRSS(CommunityInterface):
     def get_videos(self,channel_id) -> list[YoutubeVideo]:
