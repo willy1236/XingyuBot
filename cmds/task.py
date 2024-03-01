@@ -1,11 +1,11 @@
 import asyncio,discord,genshin,logging,random,time
 #from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from datetime import datetime, timezone, timedelta,date
+from datetime import datetime, timezone, timedelta, date
 from discord.ext import commands,tasks
 from requests.exceptions import ConnectTimeout
 
-from starcord import Cog_Extension,Jsondb,sclient,log,BotEmbed
+from starcord import Cog_Extension,Jsondb,sclient,log,BotEmbed,utilities
 from starcord.DataExtractor import *
 from starcord.DataExtractor.community import YoutubeRSS
 from starcord.models.community import TwitchVideo, YoutubeVideo
@@ -36,9 +36,9 @@ class task(Cog_Extension):
     
     @commands.Cog.listener()
     async def on_ready(self):
-        if not Jsondb.jdata.get("debug_mode",True):
-            global scheduler
-            scheduler = AsyncIOScheduler()
+        global scheduler
+        scheduler = AsyncIOScheduler()
+        if not Jsondb.jdata.get("debug_mode",True):    
             scheduler.add_job(self.apex_info_update,'cron',minute='00,15,30,45',second=1,jitter=30,misfire_grace_time=60)
             scheduler.add_job(self.apex_crafting_update,'cron',hour=1,minute=5,second=0,jitter=30,misfire_grace_time=60)
             scheduler.add_job(self.forecast_update,'cron',hour='00,03,06,09,12,15,18,21',minute=0,second=1,jitter=30,misfire_grace_time=60)
@@ -46,6 +46,7 @@ class task(Cog_Extension):
             #scheduler.add_job(self.update_rpgshop_data,'cron',hour=0,minute=0,second=1,jitter=30,misfire_grace_time=60)
             
             #scheduler.add_job(self.update_channel_dict,'cron',hour='*',minute="0,30",second=0,jitter=30,misfire_grace_time=60)
+            scheduler.add_job(self.start_eletion,'cron',day=1,hour=0,minute=0,second=5,jitter=30,misfire_grace_time=60)
 
             scheduler.add_job(self.earthquake_check,'interval',minutes=2,jitter=30,misfire_grace_time=40)
             scheduler.add_job(self.youtube_video,'interval',minutes=15,jitter=30,misfire_grace_time=40)
@@ -55,10 +56,12 @@ class task(Cog_Extension):
 
             scheduler.add_job(sclient.init_NoticeClient,"date")
 
-            scheduler.start()
             self.twitch.start()
         else:
             pass
+            #scheduler.add_job(self.start_eletion,"date")
+        
+        scheduler.start()
 
     async def earthquake_check(self):
         timefrom = Jsondb.read_cache('earthquake_timefrom')
@@ -71,8 +74,7 @@ class task(Cog_Extension):
             return
         
         if data:
-            embed = data.desplay()
-            time = datetime.strptime(data.originTime, "%Y-%m-%d %H:%M:%S")+timedelta(seconds=1)
+            time = datetime.strptime(data.originTime, "%Y-%m-%d %H:%M:%S") + timedelta(seconds=1)
             Jsondb.write_cache('earthquake_timefrom',time.strftime("%Y-%m-%dT%H:%M:%S"))
 
             if data.auto_type == 'E-A0015-001':
@@ -92,10 +94,10 @@ class task(Cog_Extension):
                             text += f' {role.mention}'
                         except:
                             pass
-                    await channel.send(text,embed=embed)
+                    await channel.send(text,embed=data.embed())
                     await asyncio.sleep(0.5)
                 else:
-                    log.warning(f"earthquake_check: {i['guild_id']}/{i['channel_id']}")
+                    log.warning(f"earthquake_check fail sending message: guild:{i['guild_id']}/channel:{i['channel_id']}")
 
     async def weather_warning_check(self):
         timefrom = Jsondb.read_cache('earthquake_timefrom')
@@ -336,6 +338,58 @@ class task(Cog_Extension):
         
         log.info("city_battle end")
 
+    async def start_eletion(self):
+        print("start_eletion start")
+        session = utilities.calculate_eletion_session()
+        channel = self.bot.get_channel(566533708371329026)
+
+        embed = sclient.election_format(session,self.bot)
+        await channel.send(embed=embed)
+
+        dbdata = sclient.get_election_full_by_session(session)
+        result = {}
+        for position in Jsondb.jdict["position_option"].keys():
+            result[position] = []
+        
+        for i in dbdata:
+            discord_id = i['discord_id']
+            #party_name = i['party_name'] or "無黨籍"
+            position = i['position']
+            
+            user = channel.guild.get_member(discord_id)
+            name = user.display_name if user else discord_id
+            if name not in result[position]:
+                result[position].append(name)
+    
+        for position in Jsondb.jdict["position_option"].keys():
+            #count = count_dict[position]
+            if len(result[position]) > 0:
+                position_name = Jsondb.get_jdict('position_option',position)
+                title = f"第{session}屆中央選舉：{position_name}"
+                i = 1
+                options = []
+                for username in result[position]:
+                #options = [f"{i}號" for i in range(1,count + 1)]
+                    options.append(f"{i}號 {username}" )
+                    i += 1
+
+                view = sclient.create_poll(title,options,self.bot.user.id,channel.guild.id,False,bot=self.bot)
+
+                message = await channel.send(embed=view.embed(channel),view=view)
+                #sclient.update_poll(view.poll_id,"message_id",message.id)
+                await asyncio.sleep(1)
+
+        await channel.send(f"第{session}屆中央選舉投票已開始，請大家把握時間踴躍投票!")
+
+        tz = timezone(timedelta(hours=8))
+        start_time = datetime.now(tz)
+        if start_time.hour < 20:
+            end_time = datetime(start_time.year,start_time.month,start_time.day,20,0,0,tzinfo=tz)
+        else:
+            end_time = start_time + timedelta(days=1)
+        
+        start_time += timedelta(seconds=10)
+        event = await channel.guild.create_scheduled_event(name="【快樂營中央選舉】投票階段",start_time=start_time,end_time=end_time,location="<#1163127708839071827>")
 
 def setup(bot):
     bot.add_cog(task(bot))

@@ -19,7 +19,7 @@ class EarthquakeReport():
             if data["AreaDesc"].startswith("最大震度"):
                 self.intensity[data['AreaDesc']] = data['CountyName']
 
-    def desplay(self):
+    def embed(self):
         if self.reportColor == "綠色":
             embed = discord.Embed(title='地震報告',description=self.reportContent,color=0x00BB00,url=self.web)
         elif self.reportColor == "橙色":

@@ -8,7 +8,7 @@ class weather(Cog_Extension):
     async def earthquake(self,ctx):
         report = CWA_API().get_earthquake_report()
         if report:
-            await ctx.respond('查詢成功',embed=report.desplay())
+            await ctx.respond('查詢成功',embed=report.embed())
         else:
             await ctx.respond('查詢失敗',delete_after=5)
 

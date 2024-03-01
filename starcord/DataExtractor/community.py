@@ -193,9 +193,19 @@ class YoutubeAPI(CommunityInterface):
             print(r.status_code)
             return None
         
-    def get_video(self,video_id) -> list[YoutubeVideo]:
-        #https://www.googleapis.com/youtube/v3/videos
-        pass
+    def get_video(self,video_id:str|list) -> list[YoutubeVideo]:
+        params ={
+            'key': self.__token,
+            'part': 'snippet',
+            'id': video_id
+        }
+        r = requests.get(f'{self.URL}/videos',params=params)
+        if r.ok and r.json()['items']:
+            return r.json()['items'][0]
+        else:
+            print(r.text)
+            print(r.status_code)
+            return None
 
 class YoutubeRSS(CommunityInterface):
     def get_videos(self,channel_id) -> list[YoutubeVideo]:

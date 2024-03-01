@@ -1,10 +1,14 @@
-import random,discord
+import random
 from datetime import datetime
+
+import discord
+
 from .game import RiotAPI,SteamInterface,OsuInterface,ApexInterface
 from .mysql import MySQLDatabase
 from starcord.models import *
 from starcord.types import DBGame
 from starcord.ui_element.view import PollView
+from starcord.FileDatabase import Jsondb
 
 class BatClient(MySQLDatabase):
     """賭盤系統"""
@@ -68,7 +72,18 @@ class PointClient(MySQLDatabase):
 
 class PollClient(MySQLDatabase):
     """投票系統"""
-    def create_poll(self, title:str, options:list, creator_id:int, guild_id:int, alternate_account_can_vote=True,show_name=False,check_results_in_advance=True,results_only_initiator=False,only_role_list:list=[],role_magnification_dict:dict={}):
+    def create_poll(self,
+                    title:str,
+                    options:list,
+                    creator_id:int,
+                    guild_id:int,
+                    alternate_account_can_vote=True,
+                    show_name=False,
+                    check_results_in_advance=True,
+                    results_only_initiator=False,
+                    only_role_list:list=[],
+                    role_magnification_dict:dict={},
+                    bot:discord.bot=None) -> PollView:
         """創建投票"""
         poll_id = self.add_poll(title,creator_id,datetime.now(),None,guild_id,alternate_account_can_vote,show_name,check_results_in_advance,results_only_initiator)
         self.add_poll_option(poll_id,options)
@@ -88,9 +103,44 @@ class PollClient(MySQLDatabase):
             role_magnification = poll_role_dict[roleid][1]
             self.add_poll_role(poll_id,roleid,role_type,role_magnification)
 
-        view = PollView(poll_id,self)
+        view = PollView(poll_id,self,bot)
         return view
+    
+class ElectionSystem(MySQLDatabase):
+    def election_format(self,session:str,bot:discord.Bot):
+        dbdata = self.get_election_full_by_session(session)
+        
+        # result = { "職位": { "用戶id": ["用戶提及", ["政黨"]]}}
+        result = {}
+        for position in Jsondb.jdict["position_option"].keys():
+            result[position] = {}
+        
+        for i in dbdata:
+            discord_id = i['discord_id']
+            party_name = i['party_name'] or "無黨籍"
+            position = i['position']
+            
+            user = bot.get_user(discord_id)
+            if user:
+                if discord_id in result[position]:
+                    #多政黨判斷
+                    if not party_name in result[position][discord_id][1]:
+                        result[position][discord_id][1].append(party_name)
+                else:
+                    result[position][discord_id] = [user.mention, [party_name]]
 
+        embed = BotEmbed.simple(f"第{session}屆中央選舉名單")
+        for position_name in result:
+            text = ""
+            count = 0
+            for i in result[position_name]:
+                count += 1
+                user_mention = result[position_name][i][0]
+                party_name = ",".join(result[position_name][i][1])
+                text += f"{count}. {user_mention} （{party_name}）\n"
+            embed.add_field(name=Jsondb.get_jdict('position_option',position_name), value=text, inline=False)
+        return embed
+    
 class GiveawayClient(MySQLDatabase):
     """todo:抽獎系統"""
 
@@ -162,6 +212,7 @@ class StarClient(
     GameClient,
     PointClient,
     PollClient,
+    ElectionSystem,
     NoticeClient,
 ):
     """整合各項系統的星羽客戶端"""

@@ -31,13 +31,14 @@ class PollOptionButton(discord.ui.Button):
             await interaction.response.send_message(f"{interaction.user.mention}：你沒有投票資格",ephemeral=True)
 
 class PollEndButton(discord.ui.Button):
-    def __init__(self,poll_id,created_id):
+    def __init__(self,poll_id,created_id,bot:discord.Bot):
         super().__init__(label="結算投票",custom_id=f"end_poll_{poll_id}",style=discord.ButtonStyle.danger)
         self.poll_id = poll_id
         self.created_id = created_id
+        self.bot = bot
 
     async def callback(self,interaction):
-        if interaction.user.id == self.created_id:
+        if interaction.user.id == self.created_id or (self.bot and await self.bot.is_owner(interaction.user)):
             view:PollView = self.view
             view.disable_all_items()
             view.sqldb.update_poll(self.poll_id,"is_on",0)
@@ -48,7 +49,7 @@ class PollEndButton(discord.ui.Button):
             import matplotlib.pyplot as plt
             fig, ax = plt.subplots()
             #圖表製作
-            def data_string(s,d):
+            def data_string(s,d) -> str:
                 t = int(round(s/100.*sum(d)))     # 透過百分比反推原本的數值
                 return f'{t}\n（{s:.1f}%）'
 
@@ -124,6 +125,7 @@ class PollView(discord.ui.View):
         from starcord.DataExtractor import MySQLDatabase
         poll_id: int
         sqldb: MySQLDatabase
+        bot: discord.Bot
         guild_id: int
         message_id: int | None
         title: str
@@ -133,10 +135,11 @@ class PollView(discord.ui.View):
         check_results_in_advance: bool
         results_only_initiator: bool
 
-    def __init__(self,poll_id,sqldb=None):
+    def __init__(self,poll_id,sqldb=None,bot=None):
         super().__init__(timeout=None)
         self.poll_id = poll_id
         self.sqldb = sqldb
+        self.bot = bot
         self._role_dict = {}
         
         poll_data = self.sqldb.get_poll(poll_id)
@@ -150,7 +153,7 @@ class PollView(discord.ui.View):
         self.guild_id = poll_data['guild_id']
         self.message_id = poll_data['message_id']
 
-        self.add_item(PollEndButton(poll_id,self.created_id))
+        self.add_item(PollEndButton(poll_id,self.created_id,bot))
         if self.check_results_in_advance:
             self.add_item(PollResultButton(poll_id))
         self.add_item(PollCanenlButton(poll_id))
@@ -163,7 +166,7 @@ class PollView(discord.ui.View):
             self.add_item(PollOptionButton(label=option['option_name'],poll_id=poll_id, option_id=option['option_id'],custom_id=custom_id))
     
     @property
-    def role_dict(self):
+    def role_dict(self) -> dict:
         if not self._role_dict:
             dbdata = self.sqldb.get_poll_role(self.poll_id)
             self._role_dict = {}
@@ -175,11 +178,11 @@ class PollView(discord.ui.View):
                     self._role_dict[role_id] = [role_type,role_magnification]
         return self._role_dict
         
-    def display(self,ctx:discord.ApplicationContext):
+    def embed(self,guild:discord.Guild):
         only_role_list = []
         role_magification_list = []
         for roleid in self.role_dict:
-            role = ctx.guild.get_role(roleid)
+            role = guild.get_role(roleid)
             if self.role_dict[roleid][0] == 1:
                 only_role_list.append(role.mention if role else roleid)
             if self.role_dict[roleid][1] > 1:

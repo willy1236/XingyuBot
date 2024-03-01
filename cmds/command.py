@@ -4,7 +4,7 @@ from discord.ext import commands,pages
 from discord.commands import SlashCommandGroup
 from mysql.connector.errors import Error as sqlerror
 
-from starcord import Cog_Extension,Jsondb,BRS,log,BotEmbed,ChoiceList,sclient
+from starcord import Cog_Extension,Jsondb,BRS,log,BotEmbed,ChoiceList,sclient,utilities
 from starcord.utilities import find,random_color,create_only_role_list,create_role_magification_dict
 from starcord.ui_element.button import Delete_Add_Role_button
 from starcord.ui_element.view import PollView
@@ -16,6 +16,8 @@ position_option = ChoiceList.set('position_option')
 party_option = ChoiceList.set('party_option')
 
 main_guild = Jsondb.jdata.get('main_guild')
+
+session = utilities.calculate_eletion_session()
 
 class command(Cog_Extension):
 
@@ -596,7 +598,7 @@ class command(Cog_Extension):
         dbdata = sclient.get_poll(poll_id)
         if dbdata:
             view = PollView(dbdata['poll_id'],sqldb=sclient)    
-            await ctx.respond(view=view,embed=view.display(ctx))
+            await ctx.respond(view=view,embed=view.embed(ctx.guild))
         else:
             await ctx.respond("錯誤：查無此ID")
 
@@ -628,7 +630,7 @@ class command(Cog_Extension):
         view = PollView(poll_id,sqldb=sclient)
         message = self.bot.get_message(view.message_id)
         if message:
-            await message.edit(view=view,embed=view.display(ctx))
+            await message.edit(view=view,embed=view.embed(ctx.guild))
             await ctx.respond(f"投票更新完成：{message.jump_url}")
         else:
             await ctx.respond("投票更新完成，但沒有更新投票介面")
@@ -669,7 +671,6 @@ class command(Cog_Extension):
                    position:discord.Option(str,name='職位',description='要競選的職位',choices=position_option),
                    user_dc:discord.Option(discord.Member,name='成員',description='要競選的成員（此選項供政黨代表一次性報名用）',required=False),
                    party_id:discord.Option(int,name='代表政黨',description='如果有多個政黨，可選擇要代表的政黨',default=None,choices=party_option)):
-        session = 6
         user_dc = user_dc or ctx.author
 
         if party_id:
@@ -679,14 +680,13 @@ class command(Cog_Extension):
                 await ctx.respond(f"{user_dc.mention}：你沒有參加 {Jsondb.jdict['party_option'].get(str(party_id))}")
                 return
 
-        sclient.add_election(user_dc.id,session,position,party_id)
+        sclient.add_election(user_dc.id,session + 1,position,party_id)
         await ctx.respond(f"{user_dc.mention}：完成競選報名 {Jsondb.jdict['position_option'].get(position)}")
 
     @election.command(description='離開選舉')
     async def leave(self, ctx, 
                     position:discord.Option(str,name='職位',description='要退選的職位',choices=position_option)):
-        session = 6
-        sclient.remove_election(ctx.author.id,session,position)
+        sclient.remove_election(ctx.author.id,session + 1,position)
         
         text = f"{ctx.author.mention}：完成競選退出"
         if position:
@@ -695,49 +695,17 @@ class command(Cog_Extension):
 
     @election.command(description='候選人名單')
     @commands.is_owner()
-    async def format(self, ctx):
+    async def format(self, ctx, last:discord.Option(bool,name='上屆候選人名單',description='是否顯示上屆候選人名單',default=False)):
         await ctx.defer()
-        session = 6
-        dbdata = sclient.get_election_full_by_session(session)
-        
-        result = {}
-        for position in Jsondb.jdict["position_option"].keys():
-            result[position] = {}
-        
-        for i in dbdata:
-            discord_id = i['discord_id']
-            party_name = i['party_name'] or "無黨籍"
-            position = i['position']
-            
-            user = self.bot.get_user(discord_id)
-            if user:
-                if discord_id in result[position]:
-                    if not party_name in result[position][discord_id][1]:
-                        result[position][discord_id][1].append(party_name)
-                else:
-                    result[position][discord_id] = [user.mention, [party_name]]
-
-        embed = BotEmbed.simple(f"第{session}屆中央選舉名單")
-        for position_name in result:
-            text = ""
-            count = 0
-            for i in result[position_name]:
-                count += 1
-                user_mention = result[position_name][i][0]
-                party_name = ",".join(result[position_name][i][1])
-                text += f"{count}. {user_mention} （{party_name}）\n"
-            embed.add_field(name=Jsondb.get_jdict('position_option',position_name),value=text,inline=False)
-
+        embed = sclient.election_format(session if last else session + 1, self.bot)
         await ctx.respond(embed=embed)
 
     @election.command(description='開始投票')
     @commands.is_owner()
     async def start(self,ctx:discord.ApplicationContext):
         await ctx.defer()
-        session = 6
 
         dbdata = sclient.get_election_full_by_session(session)
-        
         result = {}
         for position in Jsondb.jdict["position_option"].keys():
             result[position] = []
@@ -792,9 +760,9 @@ class command(Cog_Extension):
     async def join(self,ctx:discord.ApplicationContext,
                     party_id:discord.Option(int,name='政黨',description='要參加的政黨',choices=party_option)):
         sclient.join_party(ctx.author.id,party_id)
+        dbdata = sclient.get_party_data(party_id)
+        role_id = dbdata["role_id"]
         try:
-            dbdata = sclient.get_party_data(party_id)
-            role_id = dbdata["role_id"]
             role = ctx.guild.get_role(role_id)
             if role:
                 await ctx.author.add_roles(role)
@@ -805,11 +773,11 @@ class command(Cog_Extension):
 
     @party.command(description='離開政黨')
     async def leave(self,ctx:discord.ApplicationContext,
-                    party_id:discord.Option(int,name='政黨',description='要參加的政黨',choices=party_option)):
+                    party_id:discord.Option(int,name='政黨',description='要離開的政黨',choices=party_option)):
         sclient.leave_party(ctx.author.id,party_id)
+        dbdata = sclient.get_party_data(party_id)
+        role_id = dbdata["role_id"]
         try:
-            dbdata = sclient.get_party_data(party_id)
-            role_id = dbdata["role_id"]
             role = ctx.author.get_role(role_id)
             if role:
                 await ctx.author.remove_roles(role)
