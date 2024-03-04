@@ -628,7 +628,7 @@ class command(Cog_Extension):
             sclient.update_poll(poll_id,"results_only_initiator",results_only_initiator)
         
         view = PollView(poll_id,sqldb=sclient)
-        message = self.bot.get_message(view.message_id)
+        message = ctx.channel.fetch_message(view.message_id)
         if message:
             await message.edit(view=view,embed=view.embed(ctx.guild))
             await ctx.respond(f"投票更新完成：{message.jump_url}")

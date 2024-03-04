@@ -1,3 +1,7 @@
+"""
+### 模組：工具集
+提供各項函式與方法
+"""
 from .funtions import *
 from .logger import *
 from .utility import *

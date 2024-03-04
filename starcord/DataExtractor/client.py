@@ -208,13 +208,13 @@ class NoticeClient(MySQLDatabase):
         """確認頻道是否為動態語音房"""
         return channel_id if channel_id in self.notice_dict['dynamic_voice_room'] else None
 
-class StarClient(
+class StarManager(
     GameClient,
     PointClient,
     PollClient,
     ElectionSystem,
     NoticeClient,
 ):
-    """整合各項系統的星羽客戶端"""
+    """整合各項系統的星羽資料管理物件"""
     def __init__(self,*args,**kwargs):
         super().__init__(*args,**kwargs)

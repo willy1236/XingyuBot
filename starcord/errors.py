@@ -1,3 +1,7 @@
+"""
+### 模組：例外處理
+提供錯誤代碼與錯誤訊息的類別
+"""
 # class StarException(Exception):
 #     "starcord original error: 1000"
 #     def __init__(self,

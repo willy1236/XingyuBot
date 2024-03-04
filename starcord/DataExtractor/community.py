@@ -98,9 +98,6 @@ class TwitchAPI(CommunityInterface):
         else:
             return None
 
-class TwitterInterface:
-    pass
-
 class YoutubeAPI(CommunityInterface):
     def __init__(self):
         self.URL = "https://www.googleapis.com/youtube/v3"
