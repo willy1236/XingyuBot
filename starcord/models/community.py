@@ -45,7 +45,7 @@ class TwitchStream():
         self.title = data.get('title')
         self.viewer_count = data.get('viewer_count')
         self.thumbnail_url = data.get('thumbnail_url').replace('{width}','960').replace('{height}','540')
-        self.starttime = (datetime.strptime(data.get('started_at'),'%Y-%m-%dT%H:%M:%SZ')+timedelta(hours=8)).strftime('%Y/%m/%d %H:%M:%S')
+        self.starttime = (datetime.strptime(data.get('started_at'),'%Y-%m-%dT%H:%M:%SZ') + timedelta(hours=8)).strftime('%Y/%m/%d %H:%M:%S')
         self.tags = data.get('tags')
         self.url = f"https://www.twitch.tv/{self.user_login}"
 

@@ -145,20 +145,20 @@ class command(Cog_Extension):
                 await asyncio.sleep(0.5)
         await ctx.respond('身分組清理完成',delete_after=5)
 
-    @role.command(description='更改暱稱')
-    @commands.bot_has_permissions(manage_roles=True)
-    async def nick(self, ctx, arg:discord.Option(str,name='欲更改的內容',description='可輸入新暱稱或輸入以#開頭的6位顏色代碼')):
-        await ctx.defer()
-        user = ctx.author
-        role = user.roles[-1]
-        if role.name.startswith('稱號 | '):
-            if arg.startswith('#'):
-                await role.edit(colour=arg,reason='稱號:顏色改變')
-            else:
-                await role.edit(name=f'稱號 | {arg}',reason='稱號:名稱改變')
-            await ctx.respond('暱稱更改完成',delete_after=5)
-        else:
-            await ctx.respond(f'錯誤:{ctx.author.mention}沒有稱號可更改',delete_after=5)
+    # @role.command(description='更改暱稱')
+    # @commands.bot_has_permissions(manage_roles=True)
+    # async def nick(self, ctx, arg:discord.Option(str,name='欲更改的內容',description='可輸入新暱稱或輸入以#開頭的6位顏色代碼')):
+    #     await ctx.defer()
+    #     user = ctx.author
+    #     role = user.roles[-1]
+    #     if role.name.startswith('稱號 | '):
+    #         if arg.startswith('#'):
+    #             await role.edit(colour=arg,reason='稱號:顏色改變')
+    #         else:
+    #             await role.edit(name=f'稱號 | {arg}',reason='稱號:名稱改變')
+    #         await ctx.respond('暱稱更改完成',delete_after=5)
+    #     else:
+    #         await ctx.respond(f'錯誤:{ctx.author.mention}沒有稱號可更改',delete_after=5)
 
     @role.command(description='身分組紀錄')
     async def record(self, ctx, user:discord.Option(discord.Member,name='欲查詢的成員',description='留空以查詢自己',default=None)):
@@ -604,7 +604,8 @@ class command(Cog_Extension):
 
     @commands.is_owner()
     @poll.command(description='編輯投票')
-    async def edit(self,ctx,
+    async def edit(self,
+                   ctx:discord.ApplicationContext,
                    poll_id:discord.Option(int,name='投票id',description=''),
                    title:discord.Option(str,name='標題',description='投票標題，限45字內',default=None),
                    show_name:discord.Option(bool,name='顯示投票人',description='預設為false，若投票人數多建議關閉',default=None),
@@ -716,7 +717,7 @@ class command(Cog_Extension):
             position = i['position']
             
             user = ctx.guild.get_member(discord_id)
-            name = user.display_name if user else discord_id
+            name = discord_id if not user else (user.display_name if user.display_name else (user.global_name if user.global_name else user.name))
             if name not in result[position]:
                 result[position].append(name)
 

@@ -133,9 +133,9 @@ class system_community(Cog_Extension):
             await ctx.respond(f"查詢不到用戶：{twitch_username}",ephemeral=True)
 
     @youtube.command(description='取得youtube頻道的相關資訊')
-    async def channel(self,ctx,youtube_id:discord.Option(str,required=True,name='youtube頻道id')):
+    async def channel(self,ctx,youtube_handle:discord.Option(str,required=True,name='youtube帳號代碼',description="youtube頻道中以@開頭的代號")):
         ytapi = YoutubeAPI()
-        channel = ytapi.get_channel_content(youtube_id)
+        channel = ytapi.get_channel(handle=youtube_handle)
         if channel:
             await ctx.respond("查詢成功",embed=channel.desplay())
         else:
@@ -143,16 +143,16 @@ class system_community(Cog_Extension):
 
     @youtube.command(description='設置youtube開台通知')
     async def set(self,ctx,
-                  ytchannel_id:discord.Option(str,required=True,name='youtube頻道id',description='請輸入以uc開頭的頻道id，若不清楚可搜尋yt id finder'),
+                  ythandle:discord.Option(str,required=True,name='youtube帳號代碼',description="youtube頻道中以@開頭的代號"),
                   channel:discord.Option(discord.TextChannel,required=True,name='頻道',description='通知發送頻道'),
                   role:discord.Option(discord.Role,required=False,default=None,name='身分組',description='發送通知時tag的身分組')):
         guildid = ctx.guild.id
         channelid = channel.id
         roleid = role.id if role else None
 
-        ytchannel = YoutubeAPI().get_channel_content(ytchannel_id)
+        ytchannel = YoutubeAPI().get_channel(handle=ythandle)
         if ytchannel:
-            sclient.set_notify_community('youtube',ytchannel_id,guildid,channelid,roleid,ytchannel.title)
+            sclient.set_notify_community('youtube',ytchannel.id,guildid,channelid,roleid,ytchannel.title)
             if role:
                 await ctx.respond(f'設定成功：{ytchannel.title}的通知將會發送在{channel.mention}並會通知{role.mention}')
             else:
@@ -161,40 +161,52 @@ class system_community(Cog_Extension):
             from .task import scheduler
             scheduler.add_job(sclient.init_NoticeClient,"date",args=["youtube"])
 
-            feed = YoutubeRSS().get_videos(ytchannel_id)
+            feed = YoutubeRSS().get_videos(ytchannel.id)
             updated_at = feed[0].updated_at.isoformat() if feed else None
             cache = Jsondb.read_cache("youtube")
-            cache[ytchannel_id] = updated_at
+            cache[ytchannel.id] = updated_at
             Jsondb.write_cache('youtube',cache)
         else:
-            await ctx.respond(f'錯誤：找不到頻道ID {ytchannel_id} 的頻道')
+            await ctx.respond(f'錯誤：找不到帳號代碼 {ythandle} 的頻道')
 
     @youtube.command(description='移除youtube通知')
-    async def remove(self,ctx,ytchannel_id:discord.Option(str,required=True,name='youtube頻道id',description='要移除通知的頻道id')):
+    async def remove(self,ctx,ythandle:discord.Option(str,required=True,name='youtube帳號代碼',description="youtube頻道中以@開頭的代號")):
         guildid = ctx.guild.id
-        sclient.remove_notify_community('youtube',ytchannel_id,guildid)
-        await ctx.respond(f'已移除頻道ID {ytchannel_id} 的通知')
+
+        ytchannel = YoutubeAPI().get_channel(handle=ythandle)
+        if not ytchannel:
+            await ctx.respond(f'錯誤：找不到帳號代碼 {ythandle} 的頻道')
+            return
+
+        sclient.remove_notify_community('youtube',ytchannel.id,guildid)
+        await ctx.respond(f'已移除頻道 {ytchannel.title} 的通知')
         
         from .task import scheduler
         scheduler.add_job(sclient.init_NoticeClient,"date",args=["youtube"])
 
         cache = Jsondb.read_cache("youtube")
-        del cache[ytchannel_id]
+        del cache[ytchannel.id]
         Jsondb.write_cache('youtube',cache)
 
     @youtube.command(description='確認youtube通知')
-    async def notify(self,ctx,ytchannel_id:discord.Option(str,required=True,name='youtube頻道id',description='要確認通知的頻道id')):
+    async def notify(self,ctx,ythandle:discord.Option(str,required=True,name='youtube帳號代碼',description="youtube頻道中以@開頭的代號")):
         guildid = ctx.guild.id
-        record = sclient.get_notify_community_user('youtube',ytchannel_id,guildid)
+        
+        ytchannel = YoutubeAPI().get_channel(handle=ythandle)
+        if not ytchannel:
+            await ctx.respond(f'錯誤：找不到帳號代碼 {ythandle} 的頻道')
+            return
+        
+        record = sclient.get_notify_community_user('youtube',ytchannel.id,guildid)
         if record:
             channel = self.bot.get_channel(record[0]['channel_id'])
             role = channel.guild.get_role(record[0]['role_id'])
             if role:
-                await ctx.respond(f'YoutubeID: {ytchannel_id} 的通知在 {channel.mention} 並通知 {role.mention}')
+                await ctx.respond(f'Youtube頻道: {ytchannel.title} 的通知在 {channel.mention} 並通知 {role.mention}')
             else:
-                await ctx.respond(f'YoutubeID: {ytchannel_id} 的通知在 {channel.mention}')
+                await ctx.respond(f'Youtube頻道: {ytchannel.title} 的通知在 {channel.mention}')
         else:
-            await ctx.respond(f'YoutubeID: {ytchannel_id} 在此群組沒有設通知')
+            await ctx.respond(f'Youtube頻道: {ytchannel.title} 在此群組沒有設通知')
     
     @youtube.command(description='確認群組內所有的youtube通知')
     async def list(self,ctx):

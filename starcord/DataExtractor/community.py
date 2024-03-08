@@ -107,32 +107,43 @@ class YoutubeAPI(CommunityInterface):
             'Accept': 'application/json'
         }
 
-    def get_channel_id(self,channel_name:str):
+    def get_channel_id(self, channel_handle: str) -> str | None:
+        """
+        Retrieves the channel ID for a given channel handle.
+
+        Args:
+            channel_handle (str): The handle of the channel.
+
+        Returns:
+            str | None: The ID of the channel if found, None otherwise.
+        """
         params = {
             'key': self.__token,
-            'forUsername': channel_name,
+            'forHandle': channel_handle,
             'part': 'id',
-            'maxResults':1
+            'maxResults': 1
         }
-        r = requests.get(f'{self.URL}/channels',params=params)
+        r = requests.get(f'{self.URL}/channels', params=params)
         if r.ok:
             data = r.json()
-            print(data)
             if data['pageInfo']['totalResults']:
-                print(data["pageInfo"])
+                return data["items"][0]['id']
             else:
                 return None
-                
         else:
             print(r.text)
             print(r.status_code)
 
-    def get_channel_content(self,channel_id:str):
-        '''獲取Youtube頻道資訊'''
+    def get_channel(self,id:str=None,handle:str=None):
+        '''獲取Youtube頻道資訊
+        :param id: 頻道ID
+        :param handle: 頻道名稱
+        兩者擇一提供即可
+        '''
         params = {
             'key': self.__token,
-            'id':channel_id,
-            #'forUsername': channel_name,
+            'id':id,
+            'forHandle': handle,
             'part': 'statistics,snippet',
             'maxResults':1
         }
