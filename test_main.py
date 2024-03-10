@@ -12,7 +12,7 @@ import pandas as pd
 #from pydantic import BaseModel
 
 import starcord
-from starcord import log
+from starcord import log,Jsondb
 from starcord.DataExtractor import TwitchAPI, YoutubeAPI, YoutubeRSS
 
 # db = CsvDatabase()
@@ -27,9 +27,9 @@ if __name__ == '__main__':
 	# feed = feedparser.parse(youtube_feed)
 	# for entry in feed['entries']:
 	# 	print(entry)
-	api = YoutubeAPI()
-	id = api.get_channel_id("sakagawa_0309")
-	print(id)
+	# api = YoutubeAPI()
+	# id = api.get_channel_id("sakagawa_0309")
+	# print(id)
 	
 	# from cmds.task import slice_list
 	# list = YoutubeRSS().get_videos("UCNkJevYXQcjTc70j45FXFjA")

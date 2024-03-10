@@ -1,6 +1,13 @@
-import discord,datetime,re,asyncio
+import datetime
+import re
+import asyncio
+
+import discord
+import google.generativeai as genai
 from discord.ext import commands
+
 from starcord import Cog_Extension,Jsondb,BotEmbed,BRS,sclient,log
+from starcord.starAI import generate_aitext
 
 keywords = {
     '抹茶粉':'由威立冠名贊助撥出~'
@@ -88,6 +95,12 @@ class event(Cog_Extension):
         #             self.chat_session_log = model.current_chat_session
         #             await message.reply(response,mention_author=False)
         #     return
+
+        #ai chat
+        if message.channel.id == 1189907001015275521 and not message.author.bot and not message.content.startswith("."):
+            text = generate_aitext(message.content)
+            await message.reply(text,mention_author=False)
+            return
 
         if message.guild and message.guild.id == 613747262291443742 and not message.author.bot and not is_owner:
             result = None

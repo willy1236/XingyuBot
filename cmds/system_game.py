@@ -37,6 +37,7 @@ class system_game(Cog_Extension):
     dbd = SlashCommandGroup("dbd", "Dead by Daylight相關指令")
     steam = SlashCommandGroup("steam", "Steam相關指令")
     hoyo = SlashCommandGroup("hoyo", "MiHaYo相關指令")
+    match_cmd = SlashCommandGroup("match", "聯賽相關指令")
         
     @game.command(description='設定遊戲資料')
     async def set(self,ctx,
