@@ -79,8 +79,5 @@ if __name__ == '__main__':
 	# 			log.info(f"{video.title}:{video.updated_at}")
 	# 			log.info(f"sec: {ytchannel_id}")
 
-	from starcord.starAI import start_aichat
-	chat = start_aichat()
-	for i in ["你好","請問你是","你知道貢丸嗎"]:
-		response = chat.send_message(i)
-		print(response.text)
+	from starcord.starAI import start_aichat, generate_aitext
+	print(generate_aitext("請描述你看到的圖片",r"H:\.shortcut-targets-by-id\1mX9Phd0X42peWaLigodMNjGT8WUsG_90\507-willy\圖片\手機桌布\1f490172f40cc27b.jpg"))

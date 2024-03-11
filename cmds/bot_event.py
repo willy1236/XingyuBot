@@ -97,9 +97,9 @@ class event(Cog_Extension):
         #     return
 
         #ai chat
-        if message.channel.id == 1189907001015275521 and not message.author.bot and not message.content.startswith("."):
-            image_bytes = await message.attachments[0].read() if message.attachments else None
-            text = generate_aitext(message.content,image_bytes)
+        if message.channel.id == 1189907001015275521 and not message.author.bot and message.content and not message.content.startswith("."):
+            #image_bytes = await message.attachments[0].read() if message.attachments else None
+            text = generate_aitext(message.content)
             await message.reply(text,mention_author=False)
             return
 
