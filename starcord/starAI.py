@@ -1,6 +1,7 @@
 from io import BytesIO
 from PIL import Image
 import google.generativeai as genai
+import google.api_core.exceptions
 
 from .FileDatabase import Jsondb
 
@@ -17,6 +18,7 @@ generation_config = {
     "input",
     "，貢丸",
     "。貢丸",
+    "output",
   ],
 }
 
@@ -96,7 +98,11 @@ def generate_aitext(input_text,image_bytes:bytes=None):
 	# 	image = Image.open(fp=image_bytes)
 	# 	prompt_parts.append(image)
 	
-	response = model.generate_content(prompt_parts)
+	try:
+		response = model.generate_content(prompt_parts)
+	except google.api_core.exceptions.InternalServerError:
+		print("google.api_core.exceptions.InternalServerError")	
+		response = model.generate_content(prompt_parts)
 
 	prompt_parts.append(f"output: {response.text}")
 	return response.text
