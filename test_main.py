@@ -78,3 +78,9 @@ if __name__ == '__main__':
 	# 		for video in video_list:
 	# 			log.info(f"{video.title}:{video.updated_at}")
 	# 			log.info(f"sec: {ytchannel_id}")
+
+	from starcord.starAI import start_aichat
+	chat = start_aichat()
+	for i in ["你好","請問你是","你知道貢丸嗎"]:
+		response = chat.send_message(i)
+		print(response.text)
