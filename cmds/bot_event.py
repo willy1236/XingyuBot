@@ -18,6 +18,7 @@ debug_mode = Jsondb.jdata.get("debug_mode",True)
 main_guild = Jsondb.jdata.get('main_guild',[])
 
 guild_registration = {
+    "613747262291443742":0,
     "606098232942002176":1178365174533607435,
     "609732674197651466":1176165451374534686,
     "726790741103476746":1176165460757184612,
