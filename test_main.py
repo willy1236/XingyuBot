@@ -5,7 +5,6 @@ from enum import Enum, IntEnum
 
 import discord
 import requests
-import genshin
 import feedparser
 from bs4 import BeautifulSoup
 import pandas as pd
@@ -78,6 +77,3 @@ if __name__ == '__main__':
 	# 		for video in video_list:
 	# 			log.info(f"{video.title}:{video.updated_at}")
 	# 			log.info(f"sec: {ytchannel_id}")
-
-	from starcord.starAI import start_aichat, generate_aitext
-	print(generate_aitext("請描述你看到的圖片",r"H:\.shortcut-targets-by-id\1mX9Phd0X42peWaLigodMNjGT8WUsG_90\507-willy\圖片\手機桌布\1f490172f40cc27b.jpg"))
