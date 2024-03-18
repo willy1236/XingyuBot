@@ -10,6 +10,8 @@ from starcord.ui_element.button import Delete_Add_Role_button
 from starcord.ui_element.view import PollView
 from starcord.DataExtractor import GoogleCloud
 
+from .bot_event import check_registration
+
 bet_option = ChoiceList.set('bet_option')
 busy_time_option = ChoiceList.set('busy_time_option')
 position_option = ChoiceList.set('position_option')
@@ -27,6 +29,7 @@ class command(Cog_Extension):
     poll = SlashCommandGroup("poll", "投票相關指令")
     election = SlashCommandGroup("election", "選舉相關指令",guild_ids=main_guild)
     party = SlashCommandGroup("party", "政黨相關指令",guild_ids=main_guild)
+    registration = SlashCommandGroup("registration", "戶籍相關指令",guild_ids=main_guild)
 
     @role.command(description='查詢身分組數')
     async def count(self,ctx,user_list:discord.Option(str,required=False,name='要查詢的用戶',description='多個用戶請用空格隔開，或可輸入default查詢常用人選')):
@@ -813,6 +816,24 @@ class command(Cog_Extension):
     #     else:
     #         subprocess.call(file_path)
     #         await ctx.respond("已發送開啟指令")
+
+    @registration.command(description='確認/更新戶籍')
+    @commands.cooldown(rate=1,per=10)
+    async def update(self,ctx):
+        guild_id = check_registration(ctx.author)
+        if guild_id:
+            guild = self.bot.get_guild(guild_id)
+            dbdata = sclient.get_resgistration_by_guildid(guild_id)
+            role_guild = self.bot.get_guild(613747262291443742)
+            role = role_guild.get_role(dbdata['role_id'])
+
+            if role:
+                await role_guild.get_member(ctx.author.id).add_roles(role)
+            sclient.set_userdata(ctx.author.id,"user_discord","discord_registration",dbdata['registrations_id'])
+            
+            await ctx.respond(f"已註冊戶籍至 {guild.name}")
+        else:
+            await ctx.respond("你沒有可註冊的戶籍")
 
 def setup(bot):
     bot.add_cog(command(bot))

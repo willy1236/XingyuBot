@@ -121,7 +121,13 @@ class MySQLUserSystem(MySQLBaseModel):
         """取得discord用戶"""
         self.cursor.execute(f"USE `stardb_user`;")
         if full:
-            self.cursor.execute(f'SELECT * FROM `user_discord` LEFT JOIN `user_point` ON `user_discord`.`discord_id` = `user_point`.`discord_id` LEFT JOIN `user_account` ON `user_discord`.`discord_id` = `user_account`.`alternate_account` WHERE `user_discord`.`discord_id` = %s;',(discord_id,))
+            self.cursor.execute(f'''
+                                SELECT * FROM `user_discord`
+                                LEFT JOIN `user_point` ON `user_discord`.`discord_id` = `user_point`.`discord_id`
+                                LEFT JOIN `user_account` ON `user_discord`.`discord_id` = `user_account`.`alternate_account`
+                                LEFT JOIN `stardb_idbase`.`discord_registrations` ON `user_discord`.`discord_registration` = `discord_registrations`.`registrations_id`
+                                WHERE `user_discord`.`discord_id` = %s;
+                                ''',(discord_id,))
         else:
             self.cursor.execute(f'SELECT * FROM `user_discord` WHERE `discord_id` = %s;',(discord_id,))
         record = self.cursor.fetchall()
@@ -1000,6 +1006,19 @@ class MYSQLElectionSystem(MySQLBaseModel):
         if records:
             return records[0]
 
+class MySQLRegistrationSystem(MySQLBaseModel):
+    def get_resgistration(self,registrations_id:int):
+        self.cursor.execute(f"SELECT * FROM `stardb_idbase`.`registration` WHERE `registrations_id` = {registrations_id};")
+        records = self.cursor.fetchall()
+        if records:
+            return records[0]
+        
+    def get_resgistration_by_guildid(self,guild_id:int):
+        self.cursor.execute(f"SELECT * FROM `stardb_idbase`.`registration` WHERE `guild_id` = {guild_id};")
+        records = self.cursor.fetchall()
+        if records:
+            return records[0]
+
 class MySQLDatabase(
     MySQLUserSystem,
     MySQLNotifySystem,
@@ -1014,5 +1033,6 @@ class MySQLDatabase(
     MySQLWarningSystem,
     MySQLPollSystem,
     MYSQLElectionSystem,
+    MySQLRegistrationSystem,
 ):
     """Mysql操作"""

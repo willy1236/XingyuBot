@@ -66,6 +66,9 @@ class DiscordUser():
         self.max_sign_consecutive_days = data.get('max_sign_consecutive_days') or 0
         self.meatball_times = data.get('meatball_times')
         self.main_account_id = data.get('main_account')
+        self.discord_registration = data.get('discord_registration') or 0
+        self.registration_guild_id = data.get('guild_id') or 0
+        print(self.discord_registration,self.registration_guild_id)
 
     @property
     def scoin(self):
@@ -91,15 +94,23 @@ class DiscordUser():
     
     def desplay(self,bot:discord.Bot=None):
         embed = BotEmbed.general(name=self.user_dc.name if self.user_dc else self.name, icon_url=self.user_dc.avatar.url if self.user_dc.avatar else discord.Embed.Empty)
-        if bot and self.main_account_id:
-            main_account = bot.get_user(self.main_account_id) or self.main_account_id
-            embed.description = f"{main_account.mention} 的小帳"
+        guild = None
+        if bot:
+            if self.main_account_id:
+                main_account = bot.get_user(self.main_account_id) or self.main_account_id
+                embed.description = f"{main_account.mention} 的小帳"
+            
+            if self.discord_registration:
+                guild = bot.get_guild(self.registration_guild_id)
+
         embed.add_field(name='⭐星塵',value=self.scoin)
         embed.add_field(name='PT點數',value=self.point)
         embed.add_field(name='Rcoin',value=self.rcoin)
         embed.add_field(name='連續簽到最高天數',value=self.max_sign_consecutive_days)
         if self.meatball_times:
             embed.add_field(name='貢丸次數',value=self.meatball_times)
+        if guild:
+            embed.add_field(name='戶籍',value=guild.name)
         return embed
 
     def get_alternate_account(self) -> list[int]:

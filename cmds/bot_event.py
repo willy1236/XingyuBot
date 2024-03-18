@@ -24,6 +24,18 @@ guild_registration = {
     "898170282236329995":1176165464594972763
 }
 
+def check_registration(member:discord.Member):
+    earlest = datetime.datetime.now(datetime.timezone.utc)
+    earlest_guildid = None
+    guild_list = guild_registration.keys()
+    for guild in member.mutual_guilds:
+        if str(guild.id) in guild_list:
+            join_time = guild.get_member(member.id).joined_at
+            if join_time < earlest:
+                earlest = join_time
+                earlest_guildid = guild.id
+    return earlest_guildid
+
 def check_event_stage(vc:discord.VoiceState):
     return vc.channel and vc.channel.category and vc.channel.category.id == 1097158160709591130
 
@@ -305,16 +317,7 @@ class event(Cog_Extension):
                 channel.send(f"新成員{member.mention}({member.id}) 共有 {len(dbdata)} 個紀錄")
 
         if guildid == 613747262291443742:
-            earlest = datetime.datetime.now(datetime.timezone.utc)
-            earlest_guildid = None
-            guild_list = guild_registration.keys()
-            for guild in member.mutual_guilds:
-                if str(guild.id) in guild_list:
-                    join_time = guild.get_member(member.id).joined_at
-                    if join_time < earlest:
-                        earlest = join_time
-                        earlest_guildid = guild.id
-
+            earlest_guildid = check_registration(member)
             if earlest_guildid:
                 await member.add_roles(member.guild.get_role(guild_registration[str(earlest_guildid)]), reason="加入的最早伺服器")
 
