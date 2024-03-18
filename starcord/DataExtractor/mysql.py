@@ -1008,13 +1008,13 @@ class MYSQLElectionSystem(MySQLBaseModel):
 
 class MySQLRegistrationSystem(MySQLBaseModel):
     def get_resgistration(self,registrations_id:int):
-        self.cursor.execute(f"SELECT * FROM `stardb_idbase`.`registrations` WHERE `registrations_id` = {registrations_id};")
+        self.cursor.execute(f"SELECT * FROM `stardb_idbase`.`discord_registrations` WHERE `registrations_id` = {registrations_id};")
         records = self.cursor.fetchall()
         if records:
             return records[0]
         
     def get_resgistration_by_guildid(self,guild_id:int):
-        self.cursor.execute(f"SELECT * FROM `stardb_idbase`.`registrations` WHERE `guild_id` = {guild_id};")
+        self.cursor.execute(f"SELECT * FROM `stardb_idbase`.`discord_registrations` WHERE `guild_id` = {guild_id};")
         records = self.cursor.fetchall()
         if records:
             return records[0]
