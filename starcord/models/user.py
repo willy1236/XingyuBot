@@ -68,7 +68,6 @@ class DiscordUser():
         self.main_account_id = data.get('main_account')
         self.discord_registration = data.get('discord_registration') or 0
         self.registration_guild_id = data.get('guild_id') or 0
-        print(self.discord_registration,self.registration_guild_id)
 
     @property
     def scoin(self):
