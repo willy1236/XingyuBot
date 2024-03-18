@@ -835,5 +835,24 @@ class command(Cog_Extension):
         else:
             await ctx.respond("你沒有可註冊的戶籍")
 
+    @registration.command(description='設定戶籍')
+    @commands.is_owner()
+    @commands.cooldown(rate=1,per=10)
+    async def set(self,ctx,
+                     user:discord.Option(discord.Member,name='用戶'),
+                     registrations_id:discord.Option(int,name='戶籍id')):
+        dbdata = sclient.get_resgistration(registrations_id)
+        guild = self.bot.get_guild(dbdata['guild_id'])
+        
+        role_guild = self.bot.get_guild(613747262291443742)
+        role = role_guild.get_role(dbdata['role_id'])
+
+        if role:
+            await role_guild.get_member(ctx.author.id).add_roles(role)
+        sclient.set_userdata(ctx.author.id,"user_discord","discord_registration",dbdata['registrations_id'])
+        
+        await ctx.respond(f"已註冊戶籍至 {guild.name}")
+
+
 def setup(bot):
     bot.add_cog(command(bot))
