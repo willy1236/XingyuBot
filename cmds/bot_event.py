@@ -17,13 +17,7 @@ voice_updata = Jsondb.jdata.get('voice_updata')
 debug_mode = Jsondb.jdata.get("debug_mode",True)
 main_guild = Jsondb.jdata.get('main_guild',[])
 
-guild_registration = {
-    "613747262291443742":1175285283609137172,
-    "606098232942002176":1178365174533607435,
-    "609732674197651466":1176165451374534686,
-    "726790741103476746":1176165460757184612,
-    "898170282236329995":1176165464594972763
-}
+guild_registration = sclient.get_resgistration_dict()
 
 def check_registration(member:discord.Member):
     earlest = datetime.datetime.now(datetime.timezone.utc)
@@ -91,7 +85,7 @@ class event(Cog_Extension):
 
         #介紹
         if message.content == self.bot.user.mention:
-            embed = BotEmbed.bot(self.bot,description=f"你好~我是星羽，是一個discord機器人喔~\n你可以輸入 </help:1067700245015834638> 來查看所有指令的用法\n\n希望我能在discord上幫助到你喔~\n有任何建議與需求可以使用 </feedback:1067700244848058386> 指令\n\n支援伺服器：https://discord.gg/ye5yrZhYGF")
+            embed = BotEmbed.bot(self.bot,description=f"你好~我是星羽，是一個discord機器人喔~\n你可以輸入 </help:1067700245015834638> 來查看所有指令的用法\n\n希望我能在discord上幫助到你喔~\n有任何建議與需求可以私訊我\n\n支援伺服器：https://discord.gg/ye5yrZhYGF")
             embed.set_footer(text="此機器人由 威立 負責維護")
             await message.reply(embed=embed)
             return
@@ -110,57 +104,58 @@ class event(Cog_Extension):
         #     return
 
         #ai chat
-        if message.channel.id == 1189907001015275521 and not message.author.bot and message.content and not message.content.startswith("."):
-            #image_bytes = await message.attachments[0].read() if message.attachments else None
-            text = generate_aitext(message.content)
-            await message.reply(text,mention_author=False)
-            return
+        if message.guild and message.guild.id == 613747262291443742 and not message.author.bot:
+            if message.content and message.content.startswith(".") and message.content[1] != ".":
+                #image_bytes = await message.attachments[0].read() if message.attachments else None
+                text = generate_aitext(message.content)
+                await message.reply(text,mention_author=False)
+                return
 
-        if message.guild and message.guild.id == 613747262291443742 and not message.author.bot and not is_owner:
-            result = None
-            if message.author.get_role(1160460037114822758) or message.author.get_role(1161644357410107483) or message.author.get_role(1178151415403790478):
-                pass
-            elif message.author.get_role(1162721481520852993):
-                p = re.compile(r"(?:貢(\S*|\s*)*丸|贡(\S*|\s*)*丸|Meat(\S*|\s*)*ball|貢(\S*|\s*)*ㄨ(\S*|\s*)*ㄢ)(?!殲滅黨)",re.IGNORECASE)
-                result = p.search(message.content)
-            else:
-                p = re.compile(r"(?:貢(\S*|\s*)*丸|贡(\S*|\s*)*丸|Meat(\S*|\s*)*ball)(?!殲滅黨)",re.IGNORECASE)
-                result = p.search(message.content)
+            if not is_owner:
+                result = None
+                if message.author.get_role(1160460037114822758) or message.author.get_role(1161644357410107483) or message.author.get_role(1178151415403790478):
+                    pass
+                elif message.author.get_role(1162721481520852993):
+                    p = re.compile(r"(?:貢(\S*|\s*)*丸|贡(\S*|\s*)*丸|Meat(\S*|\s*)*ball|貢(\S*|\s*)*ㄨ(\S*|\s*)*ㄢ)(?!殲滅黨)",re.IGNORECASE)
+                    result = p.search(message.content)
+                else:
+                    p = re.compile(r"(?:貢(\S*|\s*)*丸|贡(\S*|\s*)*丸|Meat(\S*|\s*)*ball)(?!殲滅黨)",re.IGNORECASE)
+                    result = p.search(message.content)
+                
+                if result:
+                    try:
+                        reason = "打出貢丸相關詞彙"
+                        time = datetime.timedelta(seconds=15)
+                        create_time = datetime.datetime.now()
+                        
+                        #await message.delete(reason=reason)
+                        await message.author.timeout_for(duration=datetime.timedelta(seconds=60),reason=reason)
+                        
+                        timestamp = int((create_time+time).timestamp())
+                        embed = BotEmbed.general(f'{message.author.name} 已被禁言',message.author.display_avatar.url,description=f"{message.author.mention}：{reason}")
+                        embed.add_field(name="執行人員",value=self.bot.user.mention)
+                        embed.add_field(name="結束時間",value=f"<t:{timestamp}>（15s）")
+                        embed.timestamp = create_time
+                        
+                        await message.channel.send(f"{message.author.mention} 貢丸很危險 不要打貢丸知道嗎",embed=embed)
+                        sclient.add_userdata_value(message.author.id,"user_discord","meatball_times",1)
+                    except Exception as e:
+                        print(e)
             
-            if result:
-                try:
-                    reason = "打出貢丸相關詞彙"
-                    time = datetime.timedelta(seconds=15)
-                    create_time = datetime.datetime.now()
-                    
-                    #await message.delete(reason=reason)
-                    await message.author.timeout_for(duration=datetime.timedelta(seconds=60),reason=reason)
-                    
-                    timestamp = int((create_time+time).timestamp())
-                    embed = BotEmbed.general(f'{message.author.name} 已被禁言',message.author.display_avatar.url,description=f"{message.author.mention}：{reason}")
-                    embed.add_field(name="執行人員",value=self.bot.user.mention)
-                    embed.add_field(name="結束時間",value=f"<t:{timestamp}>（15s）")
-                    embed.timestamp = create_time
-                    
-                    await message.channel.send(f"{message.author.mention} 貢丸很危險 不要打貢丸知道嗎",embed=embed)
-                    sclient.add_userdata_value(message.author.id,"user_discord","meatball_times",1)
-                except Exception as e:
-                    print(e)
-        
-            #洗頻防制
-            # spam_count = 0
-            # try:
-            #     async for past_message in message.channel.history(limit=6,oldest_first=True,after=datetime.datetime.now()-datetime.timedelta(seconds=5)):
-            #         #if past_message.author == message.author and past_message.content == message.content:
-            #         if past_message.author == message.author:
-            #             spam_count += 1
-            # except (discord.errors.Forbidden, AttributeError):
-            #     pass
-            
-            # if spam_count >= 5 and not message.author.timed_out:
-            #     await message.author.timeout_for(duration=datetime.timedelta(seconds=60),reason="快速發送訊息")
-            #     await message.channel.purge(limit=5)
-            #     await message.channel.send(f"{message.author.mention} 請不要快速發送訊息")
+                #洗頻防制
+                # spam_count = 0
+                # try:
+                #     async for past_message in message.channel.history(limit=6,oldest_first=True,after=datetime.datetime.now()-datetime.timedelta(seconds=5)):
+                #         #if past_message.author == message.author and past_message.content == message.content:
+                #         if past_message.author == message.author:
+                #             spam_count += 1
+                # except (discord.errors.Forbidden, AttributeError):
+                #     pass
+                
+                # if spam_count >= 5 and not message.author.timed_out:
+                #     await message.author.timeout_for(duration=datetime.timedelta(seconds=60),reason="快速發送訊息")
+                #     await message.channel.purge(limit=5)
+                #     await message.channel.send(f"{message.author.mention} 請不要快速發送訊息")
 
             
             #跨群聊天Ver.1.0
@@ -319,7 +314,9 @@ class event(Cog_Extension):
 
         if guildid == 613747262291443742:
             earlest_guildid = check_registration(member)
-            if earlest_guildid:
+            if earlest_guildid and earlest_guildid != 613747262291443742:
+                dbdata = sclient.get_resgistration_by_guildid(earlest_guildid)
+                sclient.set_userdata(member.id,"user_discord","discord_registration",dbdata['registrations_id'])
                 await member.add_roles(member.guild.get_role(guild_registration[str(earlest_guildid)]), reason="加入的最早伺服器")
 
 

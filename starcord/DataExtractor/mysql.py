@@ -1007,6 +1007,15 @@ class MYSQLElectionSystem(MySQLBaseModel):
             return records[0]
 
 class MySQLRegistrationSystem(MySQLBaseModel):
+    def get_resgistration_dict(self):
+        self.cursor.execute(f"SELECT * FROM `stardb_idbase`.`discord_registrations`;")
+        records = self.cursor.fetchall()
+        if records:
+            dict = {}
+            for i in records:
+                dict[i['guild_id']] = i['role_id']
+            return dict
+
     def get_resgistration(self,registrations_id:int):
         self.cursor.execute(f"SELECT * FROM `stardb_idbase`.`discord_registrations` WHERE `registrations_id` = {registrations_id};")
         records = self.cursor.fetchall()

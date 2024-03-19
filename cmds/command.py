@@ -820,8 +820,8 @@ class command(Cog_Extension):
     @registration.command(description='確認/更新戶籍')
     @commands.cooldown(rate=1,per=10)
     async def update(self,ctx):
-        user = sclient.get_dcuser(ctx.author.id,full=True)
-        if user.discord_registration:
+        user = sclient.get_dcuser(ctx.author.id)
+        if user.registration:
             await ctx.respond("你已經註冊戶籍了")
             return
 

@@ -5,6 +5,15 @@ from starcord.types import DBGame,Coins,ActivitiesStatue
 from starcord.FileDatabase import Jsondb
 from .rpg import *
 
+class RegistrationData():
+    def __init__(self,data:dict):
+        self.registrations_id = data.get("registrations_id") or data.get("discord_registration") or 0
+        self.guild_id = data.get('guild_id')
+        self.role_id = data.get('role_id')
+
+    def __bool__(self):
+        return bool(self.registrations_id)
+
 class StarUser():
     if TYPE_CHECKING:
         discord_id: int
@@ -66,8 +75,7 @@ class DiscordUser():
         self.max_sign_consecutive_days = data.get('max_sign_consecutive_days') or 0
         self.meatball_times = data.get('meatball_times')
         self.main_account_id = data.get('main_account')
-        self.discord_registration = data.get('discord_registration') or 0
-        self.registration_guild_id = data.get('guild_id') or 0
+        self.registration = RegistrationData(data)
 
     @property
     def scoin(self):
@@ -99,8 +107,8 @@ class DiscordUser():
                 main_account = bot.get_user(self.main_account_id) or self.main_account_id
                 embed.description = f"{main_account.mention} 的小帳"
             
-            if self.discord_registration:
-                guild = bot.get_guild(self.registration_guild_id)
+            if self.registration:
+                guild = bot.get_guild(self.registration.guild_id)
 
         embed.add_field(name='⭐星塵',value=self.scoin)
         embed.add_field(name='PT點數',value=self.point)
