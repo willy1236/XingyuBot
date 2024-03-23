@@ -43,7 +43,7 @@ class error(Cog_Extension):
                 await ctx.respond(f'錯誤：資料重複新增',ephemeral=True)
             
             else:
-                await ctx.respond(f'指令調用時發生錯誤，已自動回報：```py\n{error.original}```',ephemeral=True)
+                await ctx.respond(f'發生未知錯誤：```py\n{error.original}```',ephemeral=True)
                 if not ctx.guild or ctx.guild.id not in debug_guild:
                     await BRS.error(self.bot,ctx,error)
 

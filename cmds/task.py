@@ -47,6 +47,7 @@ class task(Cog_Extension):
             
             #scheduler.add_job(self.update_channel_dict,'cron',hour='*',minute="0,30",second=0,jitter=30,misfire_grace_time=60)
             scheduler.add_job(self.start_eletion,'cron',day=1,hour=0,minute=0,second=5,jitter=30,misfire_grace_time=60)
+            scheduler.add_job(self.remind_eletion,'cron',day=28,hour=9,minute=0,second=0,jitter=30,misfire_grace_time=60)
 
             scheduler.add_job(self.earthquake_check,'interval',minutes=2,jitter=30,misfire_grace_time=40)
             scheduler.add_job(self.youtube_video,'interval',minutes=15,jitter=30,misfire_grace_time=40)
@@ -390,6 +391,11 @@ class task(Cog_Extension):
         
         start_time += timedelta(seconds=10)
         event = await channel.guild.create_scheduled_event(name="【快樂營中央選舉】投票階段",start_time=start_time,end_time=end_time,location="<#1163127708839071827>")
+
+    async def remind_eletion(self):
+        channel = self.bot.get_channel(1160459117270405222)
+        await channel.send("投票時間接近了，提醒大家記得參選喔")
+        
 
 def setup(bot):
     bot.add_cog(task(bot))
