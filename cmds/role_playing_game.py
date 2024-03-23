@@ -99,7 +99,7 @@ class role_playing_game(Cog_Extension):
 
         pet = user.get_pet()
         #game = user.get_game()
-        user_embed = user.desplay(self.bot)
+        user_embed = user.embed(self.bot)
         if show_alt_account:
             dbdata = user.get_alternate_account()
             if dbdata:
@@ -116,7 +116,7 @@ class role_playing_game(Cog_Extension):
         if not user:
             sclient.set_rpguser(user_dc.id)
             user = sclient.get_rpguser(user_dc.id,full=True,user_dc=user_dc)
-        await ctx.respond(embeds=[user.desplay(),user.waring_equipment.desplay(user_dc)])
+        await ctx.respond(embeds=[user.embed(),user.waring_equipment.desplay(user_dc)])
 
     @itemcmd.command(description='查看背包（開發中）')
     async def bag(self,ctx:discord.ApplicationContext,user_dc:discord.Option(discord.Member,name='用戶',description='留空以查詢自己',default=None)):

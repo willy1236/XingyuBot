@@ -795,7 +795,9 @@ class command(Cog_Extension):
         dbdata = sclient.get_all_party_data()
         embed = BotEmbed.simple("政黨統計")
         for party in dbdata:
-            embed.add_field(name=party["party_name"], value=f"政黨ID：{party['party_id']}\n政黨人數：{party['count']}")
+            creator = self.bot.get_user(party['creator_id'])
+            creator_mention = creator.mention if creator else f"<@{party['creator_id']}>"
+            embed.add_field(name=party["party_name"], value=f"政黨ID：{party['party_id']}\n政黨人數：{party['count']}\n創黨人：{creator_mention}")
         await ctx.respond(embed=embed)
 
     # @commands.slash_command(description="開啟mc伺服器",guild_ids=main_guild)
