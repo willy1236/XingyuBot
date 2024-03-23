@@ -16,10 +16,16 @@ class RegistrationData():
 
 class StarUser():
     if TYPE_CHECKING:
+        user_id: str
         discord_id: int
+        email: str
+        drive_share_id: str
 
     def __init__(self,data:dict):
+        self.user_id = data.get("user_id")
         self.discord_id = data.get("discord_id")
+        self.email = data.get("email")
+        self.drive_share_id = data.get("drive_share_id")
 
 class Pet():
     if TYPE_CHECKING:

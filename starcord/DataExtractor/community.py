@@ -208,8 +208,36 @@ class YoutubeAPI(CommunityInterface):
             'id': video_id
         }
         r = requests.get(f'{self.URL}/videos',params=params)
-        if r.ok and r.json()['items']:
-            return r.json()['items'][0]
+        if r.ok:
+            return [YoutubeVideo(i) for i in r.json()['items']] if r.json()['items'] else None
+        else:
+            print(r.text)
+            print(r.status_code)
+            return None
+        
+    def get_playlist(self,playlist_id:str|list):
+        params ={
+            'key': self.__token,
+            'part': 'snippet,contentDetails',
+            'id': playlist_id
+        }
+        r = requests.get(f'{self.URL}/playlists',params=params)
+        if r.ok:
+            return r.json()['items'][0] if r.json()['items'] else None
+        else:
+            print(r.text)
+            print(r.status_code)
+            return None
+    
+    def get_playlist_item(self,playlist_id:str|list):
+        params ={
+            'key': self.__token,
+            'part': 'snippet,contentDetails',
+            'playlistId': playlist_id
+        }
+        r = requests.get(f'{self.URL}/playlistItems',params=params)
+        if r.ok:
+            return r.json()['items'][0] if r.json()['items'] else None
         else:
             print(r.text)
             print(r.status_code)

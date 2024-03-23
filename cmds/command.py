@@ -589,7 +589,7 @@ class command(Cog_Extension):
         role_magnification_dict = await create_role_magification_dict(role_magnification,ctx) if role_magnification else {}
 
         view = sclient.create_poll(title,options,ctx.author.id,ctx.guild.id,alternate_account_can_vote,show_name,check_results_in_advance,results_only_initiator,only_role_list=only_role_list,role_magnification_dict=role_magnification_dict)
-        embed = view.display(ctx)
+        embed = view.embed(ctx)
         embed.set_author(name=ctx.author.name,icon_url=ctx.author.avatar.url)
         message = await ctx.respond(embed=embed,view=view)
         sclient.update_poll(view.poll_id,"message_id",message.id)
@@ -647,17 +647,17 @@ class command(Cog_Extension):
     @commands.slash_command(description='共用「94共用啦」雲端資料夾',guild_ids=main_guild)
     async def drive(self,ctx,email:discord.Option(str,name='gmail帳戶',description='要使用的Gmail帳戶，留空以移除資料',required=False)):
         await ctx.defer()
-        data = sclient.get_userdata(ctx.author.id,"user_data")
+        suser = sclient.get_user(ctx.author.id)
+        fileId = "1bDtsLbOi5crIOkWUZbQmPq3dXUbwWEan"
         if not email:
-            if data and data.get("email"):
-                GoogleCloud().remove_file_permissions("1bDtsLbOi5crIOkWUZbQmPq3dXUbwWEan",data.get("drive_share_id"))
-                sclient.set_userdata(ctx.author.id,"user_data","email",None)
-                sclient.set_userdata(ctx.author.id,"user_data","drive_share_id",None)
+            if suser and suser.email:
+                GoogleCloud().remove_file_permissions(fileId, suser.drive_share_id)
+                sclient.remove_sharefolder_data(ctx.author.id)
             else:
                 await ctx.respond(f"{ctx.author.mention}：此帳號沒有設定過google帳戶")
                 return
         
-        if data and data.get("drive_share_id"):
+        if suser and suser.drive_share_id:
             await ctx.respond(f"{ctx.author.mention}：此帳號已經共用雲端資料夾了")
             return
         
@@ -666,8 +666,8 @@ class command(Cog_Extension):
             await ctx.respond(f"{ctx.author.mention}：Gmail格式錯誤")
             return
         
-        google_data = GoogleCloud().add_file_permissions("1bDtsLbOi5crIOkWUZbQmPq3dXUbwWEan",email)
-        sclient.set_staruser_data(ctx.author.id,email,google_data.get("id"))
+        google_data = GoogleCloud().add_file_permissions(fileId,email)
+        sclient.set_sharefolder_data(ctx.author.id, email, google_data["id"])
         await ctx.respond(f"{ctx.author.mention}：已與 {email} 共用雲端資料夾")
 
     @election.command(description='加入選舉')

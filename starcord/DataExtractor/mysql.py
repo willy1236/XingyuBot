@@ -115,7 +115,7 @@ class MySQLUserSystem(MySQLBaseModel):
         self.cursor.execute(f'SELECT * FROM `user_data` WHERE `user_id` = %s;',(user_id,))
         record = self.cursor.fetchall()
         if record:
-            return record[0]
+            return StarUser(record[0])
 
     def get_dcuser(self,discord_id:int,full=False,user_dc:discord.User=None):
         """取得discord用戶"""
@@ -155,9 +155,14 @@ class MySQLUserSystem(MySQLBaseModel):
         self.cursor.execute(f'SELECT * FROM `user_account` WHERE `main_account` = %s;',(discord_id,))
         return self.cursor.fetchall()
     
-    def set_staruser_data(self,discord_id:int,emailAddress=None,drive_share_id=None):
+    def set_sharefolder_data(self,discord_id:int,emailAddress=None,drive_share_id=None):
         self.cursor.execute(f"USE `stardb_user`;")
         self.cursor.execute(f"INSERT INTO `user_data` SET `discord_id` = %s, `email` = %s, `drive_share_id` = %s ON DUPLICATE KEY UPDATE `email` = %s, `drive_share_id` = %s;",(discord_id,emailAddress,drive_share_id,emailAddress,drive_share_id))
+        self.connection.commit()
+
+    def remove_sharefolder_data(self,discord_id:int):
+        self.cursor.execute(f"USE `stardb_user`;")
+        self.cursor.execute(f"UPDATE `user_data` SET `email` = NULL, `drive_share_id` = NULL WHERE `discord_id` = %s;",(discord_id,))
         self.connection.commit()
 
 class MySQLNotifySystem(MySQLBaseModel):

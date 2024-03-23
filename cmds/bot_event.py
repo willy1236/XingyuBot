@@ -3,7 +3,6 @@ import re
 import asyncio
 
 import discord
-import google.generativeai as genai
 from discord.ext import commands
 
 from starcord import Cog_Extension,Jsondb,BotEmbed,BRS,sclient,log
@@ -35,9 +34,10 @@ def check_event_stage(vc:discord.VoiceState):
     return vc.channel and vc.channel.category and vc.channel.category.id == 1097158160709591130
 
 def get_playing_ow2(member:discord.Member):
-    for activity in member.activities:
-        if activity.name == "Overwatch 2" and member.voice.channel.id != 703617778095095958:
-            return True
+    if member.voice.channel.id != 703617778095095958:
+        for activity in member.activities:
+            if activity.name == "Overwatch 2":
+                return True
     return False
 
 def get_guildid(before:discord.VoiceState, after:discord.VoiceState):
