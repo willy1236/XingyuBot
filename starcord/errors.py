@@ -62,6 +62,10 @@ class DataExistError(MysqlError):
     code = 1201
     message = '新增的資料已存在'
 
+class SQLNotFoundError(StarException):
+    def __init__(self,message='找不到資料'):
+        self.code = 1202
+        self.message = message
 
 class VoiceError(StarException):
     "Voice original error: 1300"

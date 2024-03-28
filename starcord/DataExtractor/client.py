@@ -81,11 +81,12 @@ class PollClient(MySQLDatabase):
                     show_name=False,
                     check_results_in_advance=True,
                     results_only_initiator=False,
+                    multiple_choice=False,
                     only_role_list:list=[],
                     role_magnification_dict:dict={},
                     bot:discord.bot=None) -> PollView:
         """創建投票"""
-        poll_id = self.add_poll(title,creator_id,datetime.now(),None,guild_id,alternate_account_can_vote,show_name,check_results_in_advance,results_only_initiator)
+        poll_id = self.add_poll(title,creator_id,datetime.now(),None,guild_id,alternate_account_can_vote,show_name,check_results_in_advance,results_only_initiator,multiple_choice)
         self.add_poll_option(poll_id,options)
 
         poll_role_dict = {}

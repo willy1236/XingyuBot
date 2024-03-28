@@ -25,8 +25,11 @@ class PollOptionButton(discord.ui.Button):
                     vote_magnification = view.role_dict[roleid][1]
         
         if not view.role_dict or (have_only_role and can_vote):
-            view.sqldb.add_user_poll(self.poll_id,interaction.user.id,self.option_id,datetime.datetime.now(),vote_magnification)
-            await interaction.response.send_message(f"{interaction.user.mention} 已投票給 {self.label} {vote_magnification} 票",ephemeral=True)
+            r = view.sqldb.set_user_poll(self.poll_id,interaction.user.id,self.option_id,datetime.datetime.now(),vote_magnification)
+            if r == 1:
+                await interaction.response.send_message(f"{interaction.user.mention} 已投票給 {self.label} {vote_magnification} 票",ephemeral=True)
+            else:
+                await interaction.response.send_message(f"{interaction.user.mention} 已取消投票給 {self.label}",ephemeral=True)
         else:
             await interaction.response.send_message(f"{interaction.user.mention}：你沒有投票資格",ephemeral=True)
 
@@ -134,6 +137,7 @@ class PollView(discord.ui.View):
         show_name: bool
         check_results_in_advance: bool
         results_only_initiator: bool
+        multiple_choice: bool
 
     def __init__(self,poll_id,sqldb=None,bot=None):
         super().__init__(timeout=None)
@@ -149,6 +153,7 @@ class PollView(discord.ui.View):
         self.show_name = bool(poll_data['show_name'])
         self.check_results_in_advance = bool(poll_data['check_results_in_advance'])
         self.results_only_initiator = bool(poll_data['results_only_initiator'])
+        self.multiple_choice = bool(poll_data['multiple_choice'])
         
         self.guild_id = poll_data['guild_id']
         self.message_id = poll_data['message_id']
@@ -189,7 +194,7 @@ class PollView(discord.ui.View):
                 mag = self.role_dict[roleid][1]
                 role_magification_list.append(f"{role.mention}({mag})" if role else f"{roleid}({mag})")
         
-        description = f"投票ID：{self.poll_id}\n- 顯示投票人：{self.show_name}\n- 僅限發起人能查看結果：{self.results_only_initiator}\n- 小帳是否算有效票：{self.alternate_account_can_vote}"
+        description = f"投票ID：{self.poll_id}\n- 顯示投票人：{self.show_name}\n- 僅限發起人能查看結果：{self.results_only_initiator}\n- 小帳是否算有效票：{self.alternate_account_can_vote}\n- 多選：{self.multiple_choice}"
         if only_role_list:
             description += "\n- 可投票身分組：" + ",".join(only_role_list)
         if role_magification_list:

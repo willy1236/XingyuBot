@@ -577,8 +577,9 @@ class command(Cog_Extension):
                      check_results_in_advance:discord.Option(bool,name='預先查看結果',description='預設為true',default=True),
                      results_only_initiator:discord.Option(bool,name='僅限發起人能查看結果',description='預設為false',default=False),
                      alternate_account_can_vote:discord.Option(bool,name='小帳是否算有效票',description='預設為true',default=True),
+                     multiple_choice:discord.Option(bool,name='多選',description='預設為false',default=False),
                      only_role:discord.Option(str,name='限制身分組',description='若提供。則只有擁有身分組才能投票，多個身分組以英文,隔開，身分組可輸入id、提及、名稱等',default=None),
-                     role_magnification:discord.Option(str,name='身分組權重',description='若提供，擁有身分組的用戶票數將乘指定倍數，取最高，格式為：身分組1,權重,身分組2,權重...，身分組可輸入id、提及、名稱等',default=None)
+                     role_magnification:discord.Option(str,name='身分組權重',description='若提供，擁有身分組的用戶票數將乘指定倍數，取最高，格式為：身分組1,權重,身分組2,權重...，身分組可輸入id、提及、名稱等',default=None),
                      ):
         options = options.split(",")
         if len(options) > 10 or len(options) < 1:
@@ -588,7 +589,7 @@ class command(Cog_Extension):
         only_role_list = await create_only_role_list(only_role,ctx) if only_role else []
         role_magnification_dict = await create_role_magification_dict(role_magnification,ctx) if role_magnification else {}
 
-        view = sclient.create_poll(title,options,ctx.author.id,ctx.guild.id,alternate_account_can_vote,show_name,check_results_in_advance,results_only_initiator,only_role_list=only_role_list,role_magnification_dict=role_magnification_dict)
+        view = sclient.create_poll(title,options,ctx.author.id,ctx.guild.id,alternate_account_can_vote,show_name,check_results_in_advance,results_only_initiator,multiple_choice,only_role_list=only_role_list,role_magnification_dict=role_magnification_dict)
         embed = view.embed(ctx)
         embed.set_author(name=ctx.author.name,icon_url=ctx.author.avatar.url)
         message = await ctx.respond(embed=embed,view=view)

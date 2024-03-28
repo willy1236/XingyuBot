@@ -20,7 +20,6 @@ log.addHandler(consoleHandler)
 def slice_list(lst:list[YoutubeVideo], target_id):
     """以target_id為基準取出更新的影片資訊"""
     index = next((i for i, d in enumerate(lst) if d.uplood_at > target_id), None)
-    print(index)
     return lst[index:] if index else lst
 
 def slice_list_twitch(lst:list[TwitchVideo], target_id:datetime):
@@ -47,7 +46,7 @@ class task(Cog_Extension):
             
             #scheduler.add_job(self.update_channel_dict,'cron',hour='*',minute="0,30",second=0,jitter=30,misfire_grace_time=60)
             scheduler.add_job(self.start_eletion,'cron',day=1,hour=0,minute=0,second=5,jitter=30,misfire_grace_time=60)
-            scheduler.add_job(self.remind_eletion,'cron',day=28,hour=9,minute=0,second=0,jitter=30,misfire_grace_time=60)
+            scheduler.add_job(self.remind_eletion,'cron',day=28,hour=21,minute=0,second=0,jitter=30,misfire_grace_time=60)
 
             scheduler.add_job(self.earthquake_check,'interval',minutes=2,jitter=30,misfire_grace_time=40)
             scheduler.add_job(self.youtube_video,'interval',minutes=15,jitter=30,misfire_grace_time=40)
@@ -340,7 +339,7 @@ class task(Cog_Extension):
         log.info("city_battle end")
 
     async def start_eletion(self):
-        print("start_eletion start")
+        log.info("start_eletion start")
         session = utilities.calculate_eletion_session()
         channel = self.bot.get_channel(566533708371329026)
 
@@ -374,7 +373,7 @@ class task(Cog_Extension):
                     options.append(f"{i}號 {username}" )
                     i += 1
 
-                view = sclient.create_poll(title,options,self.bot.user.id,channel.guild.id,False,bot=self.bot)
+                view = sclient.create_poll(title,options,self.bot.user.id,channel.guild.id,alternate_account_can_vote=False,bot=self.bot)
 
                 message = await channel.send(embed=view.embed(channel),view=view)
                 #sclient.update_poll(view.poll_id,"message_id",message.id)

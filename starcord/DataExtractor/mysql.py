@@ -4,6 +4,7 @@ from starcord.types import DBGame,Coins, Position
 from starcord.models.user import *
 from starcord.models.model import *
 from starcord.models.rpg import *
+from starcord.errors import *
 
 def create_id():
     return 'SELECT idNumber FROM ( SELECT CONCAT("U", LPAD(FLOOR(RAND()*10000000), 7, 0)) as idNumber) AS generated_ids WHERE NOT EXISTS ( SELECT 1 FROM stardb_user.user_data WHERE user_id = generated_ids.idNumber);'
@@ -862,8 +863,8 @@ class MySQLWarningSystem(MySQLBaseModel):
         self.connection.commit()
 
 class MySQLPollSystem(MySQLBaseModel):
-    def add_poll(self,title:str,created_user:int,created_at:datetime,message_id,guild_id,alternate_account_can_vote=True,show_name=False,check_results_in_advance=True,results_only_initiator=False):
-        self.cursor.execute(f"INSERT INTO `database`.`poll_data` VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);",(None,title,created_user,created_at,True,message_id,guild_id,alternate_account_can_vote,show_name,check_results_in_advance,results_only_initiator))
+    def add_poll(self,title:str,created_user:int,created_at:datetime,message_id,guild_id,alternate_account_can_vote=True,show_name=False,check_results_in_advance=True,results_only_initiator=False,multiple_choice=False):
+        self.cursor.execute(f"INSERT INTO `database`.`poll_data` VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);",(None,title,created_user,created_at,True,message_id,guild_id,alternate_account_can_vote,show_name,check_results_in_advance,results_only_initiator,multiple_choice))
         self.connection.commit()
         return self.cursor.lastrowid
     
@@ -906,6 +907,46 @@ class MySQLPollSystem(MySQLBaseModel):
             list.append([poll_id, count, option])
         self.cursor.executemany(f"INSERT INTO `database`.`poll_options` VALUES(%s,%s,%s);",list)
         self.connection.commit()
+
+    def set_user_poll(self, poll_id: int, discord_id: int, vote_option: int = None, vote_at: datetime = None, vote_magnification: int = 1):
+        """
+        Sets the user's poll vote in the database.
+
+        Args:
+            poll_id (int): The ID of the poll.
+            discord_id (int): The ID of the user on Discord.
+            vote_option (int, optional): The option the user voted for. Defaults to None.
+            vote_at (datetime, optional): The timestamp of the vote. Defaults to None.
+            vote_magnification (int, optional): The magnification of the vote. Defaults to 1.
+
+        Returns:
+            int: The result of the operation. -1 if the user's vote was deleted, 1 if the user's vote was inserted or updated.
+        
+        Raises:
+            SQLNotFoundError: If the poll with the given ID is not found in the database.
+        """
+        self.cursor.execute(f"SELECT `multiple_choice` FROM `database`.`poll_data` WHERE `poll_id` = {poll_id} LIMIT 1;")
+        dbdata = self.cursor.fetchall()
+        if not dbdata:
+            raise SQLNotFoundError(f"Poll {poll_id} not found")
+        result = dbdata[0].get("multiple_choice")
+        
+        if result == 1:    
+            self.cursor.execute(f"SELECT * FROM `stardb_user`.`user_poll` WHERE `poll_id` = {poll_id} AND `discord_id` = {discord_id} AND `vote_option` = {vote_option};")
+            dbdata = self.cursor.fetchall()
+            if dbdata:
+                self.cursor.execute(f"DELETE FROM `stardb_user`.`user_poll` WHERE poll_id = {poll_id} AND discord_id = {discord_id} AND vote_option = {vote_option};")
+                text = -1
+            else:
+                self.cursor.execute(f"INSERT INTO `stardb_user`.`user_poll` VALUES(%s,%s,%s,%s,%s);",(poll_id,discord_id,vote_option,vote_at,vote_magnification))
+                text = 1
+        else:
+            self.cursor.execute(f"INSERT INTO `stardb_user`.`user_poll` VALUES(%s,%s,%s,%s,%s) ON DUPLICATE KEY UPDATE `vote_option` = %s, `vote_at` = %s, `vote_magnification` = %s;",(poll_id,discord_id,vote_option,vote_at,vote_magnification,vote_option,vote_at,vote_magnification))
+            text = 1
+        
+        self.connection.commit()
+        return text
+
 
     def add_user_poll(self,poll_id:int,discord_id:int,vote_option:int,vote_at:datetime,vote_magnification:int=1):
         self.cursor.execute(f"INSERT INTO `stardb_user`.`user_poll` VALUES(%s,%s,%s,%s,%s) ON DUPLICATE KEY UPDATE `vote_option` = %s, `vote_at` = %s, `vote_magnification` = %s;",(poll_id,discord_id,vote_option,vote_at,vote_magnification,vote_option,vote_at,vote_magnification))

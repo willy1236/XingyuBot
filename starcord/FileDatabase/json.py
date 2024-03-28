@@ -1,6 +1,10 @@
 import json,os
 from typing import TYPE_CHECKING
 
+class JsonCeche:
+    if TYPE_CHECKING:
+        pass
+
 class JsonDatabase():
     if TYPE_CHECKING:
         lol_jdict: dict
