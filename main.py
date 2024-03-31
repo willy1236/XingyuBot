@@ -74,7 +74,7 @@ async def on_ready():
                 #sqldb.remove_poll(poll['poll_id'])
                 sclient.update_poll(poll['poll_id'],"is_on",0)
             else:
-                bot.add_view(PollView(poll['poll_id'],sqldb=sclient))
+                bot.add_view(PollView(poll['poll_id'],sqldb=sclient,bot=bot))
 
         invites = await bot.get_guild(613747262291443742).invites()
         now = datetime.datetime.now(datetime.timezone.utc)

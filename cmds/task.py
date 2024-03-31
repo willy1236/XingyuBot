@@ -45,7 +45,7 @@ class task(Cog_Extension):
             #scheduler.add_job(self.update_rpgshop_data,'cron',hour=0,minute=0,second=1,jitter=30,misfire_grace_time=60)
             
             #scheduler.add_job(self.update_channel_dict,'cron',hour='*',minute="0,30",second=0,jitter=30,misfire_grace_time=60)
-            scheduler.add_job(self.start_eletion,'cron',day=1,hour=0,minute=5,second=5,jitter=30,misfire_grace_time=60)
+            scheduler.add_job(self.start_eletion,'cron',day=1,hour=0,minute=0,second=10,jitter=30,misfire_grace_time=60)
             scheduler.add_job(self.remind_eletion,'cron',day=28,hour=21,minute=0,second=0,jitter=30,misfire_grace_time=60)
 
             scheduler.add_job(self.earthquake_check,'interval',minutes=2,jitter=30,misfire_grace_time=40)

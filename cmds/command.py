@@ -801,24 +801,25 @@ class command(Cog_Extension):
             embed.add_field(name=party["party_name"], value=f"政黨ID：{party['party_id']}\n政黨人數：{party['count']}\n創黨人：{creator_mention}")
         await ctx.respond(embed=embed)
 
-    # @commands.slash_command(description="開啟mc伺服器",guild_ids=main_guild)
-    # @commands.cooldown(rate=1,per=60)
-    # async def startserver(self,ctx:discord.ApplicationContext):
-    #     def is_bat_running(bat_name:str):
-    #         for proc in psutil.process_iter():
-    #             try:
-    #                 if proc.name().lower() == bat_name.lower():
-    #                     return True
-    #             except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
-    #                 pass
-    #         return False
+    @commands.slash_command(description="開啟mc伺服器",guild_ids=main_guild)
+    @commands.cooldown(rate=1,per=120)
+    async def startserver(self,ctx:discord.ApplicationContext):
+        def is_bat_running(bat_name:str):
+            bat_name = bat_name.lower()
+            for proc in psutil.process_iter():
+                try:
+                    if proc.name().lower() == bat_name:
+                        return True
+                except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                    pass
+            return False
 
-    #     file_path = r'D:\minecraft server\1.19.2 forge 43.3.0\run.bat'
-    #     if is_bat_running("run"):
-    #         await ctx.respond("伺服器已開啟")
-    #     else:
-    #         subprocess.call(file_path)
-    #         await ctx.respond("已發送開啟指令")
+        file_path = r'D:\minecraft_server\1.20.1_yeecraft\start.bat'
+        if is_bat_running("java.exe"):
+            await ctx.respond("伺服器已開啟")
+        else:
+            subprocess.call(file_path)
+            await ctx.respond("已發送開啟指令")
 
     @registration.command(description='確認/更新戶籍')
     @commands.cooldown(rate=1,per=10)
