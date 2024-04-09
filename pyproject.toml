@@ -1,25 +1,25 @@
 [tool.poetry]
-name = "discord-helper"
+name = "xingyubot"
 version = "0.1.0"
 description = ""
-authors = ["willy1236"]
+authors = ["威立 <66502303+willy1236@users.noreply.github.com>"]
 readme = "README.md"
-packages = [{include = "discord_helper"}]
 
 [tool.poetry.dependencies]
 python = "^3.11"
-py-cord = "^2.4.1"
+py-cord = "^2.5.0"
 requests = "^2.31.0"
-youtube_dl = "^2021.12.17"
-mysql-connector-python = "^8.1.0"
-GitPython = "^3.1.32"
-APScheduler = "^3.10.1"
-fastapi = "^0.100.0"
-uvicorn = "^0.23.1"
-mcrcon = "^0.7.0"
-twitchio = "^2.6.0"
-beautifulsoup4 = "^4.12.2"
-pymongo = "^4.4.1"
+feedparser = "^6.0.11"
+pandas = "^2.2.1"
+psutil = "^5.9.8"
+beautifulsoup4 = "^4.12.3"
+mysql-connector-python = "^8.3.0"
+genshin = "^1.6.2"
+gitpython = "^3.1.43"
+apscheduler = "^3.10.4"
+fastapi = "^0.110.1"
+uvicorn = "^0.29.0"
+yt-dlp = "^2024.3.10"
 
 
 [build-system]

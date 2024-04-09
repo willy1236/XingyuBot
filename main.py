@@ -15,7 +15,7 @@ jdata = Jsondb.jdata
 bot_code = jdata.get('bot_code')
 token = Jsondb.get_token(bot_code)
 api_website = jdata.get('api_website')
-auto_update = jdata.get('auto_update')
+auto_update = jdata.get('auto_update')  
 debug_guild = jdata.get('debug_guild')
 debug_mode = jdata.get('debug_mode',True)
 #commands.Bot
