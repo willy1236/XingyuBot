@@ -154,6 +154,10 @@ class PollView(discord.ui.View):
         self.check_results_in_advance = bool(poll_data['check_results_in_advance'])
         self.results_only_initiator = bool(poll_data['results_only_initiator'])
         self.multiple_choice = bool(poll_data['multiple_choice'])
+        # TODO:
+        # number_of_user_votes (replace multiple_choice)
+        # change_vote (decide if user can change his/her vote or not)
+
         
         self.guild_id = poll_data['guild_id']
         self.message_id = poll_data['message_id']
@@ -194,7 +198,10 @@ class PollView(discord.ui.View):
                 mag = self.role_dict[roleid][1]
                 role_magification_list.append(f"{role.mention}({mag})" if role else f"{roleid}({mag})")
         
-        description = f"投票ID：{self.poll_id}\n- 顯示投票人：{self.show_name}\n- 僅限發起人能查看結果：{self.results_only_initiator}\n- 小帳是否算有效票：{self.alternate_account_can_vote}\n- 多選：{self.multiple_choice}"
+        description = f"投票ID：{self.poll_id}\n- 顯示投票人：{self.show_name}\n- 僅限發起人能查看結果：{self.results_only_initiator}\n- 多選：{self.multiple_choice}"
+        if self.alternate_account_can_vote:
+            description += f"\n- 小帳是否算有效票：{self.alternate_account_can_vote}"
+
         if only_role_list:
             description += "\n- 可投票身分組：" + ",".join(only_role_list)
         if role_magification_list:
