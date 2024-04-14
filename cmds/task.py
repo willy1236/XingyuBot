@@ -90,7 +90,7 @@ class task(Cog_Extension):
             else:
                 text = '地震報告'
             
-            records = sclient.get_notify_channel_by_type('earthquake')
+            records = sclient.sqldb.get_notify_channel_by_type('earthquake')
             for i in records:
                 channel = self.bot.get_channel(i['channel_id'])
                 if channel:
@@ -122,7 +122,7 @@ class task(Cog_Extension):
                 embed_list.append(crafting.desplay())
             embed_list.append(map.desplay())
             
-            records = sclient.get_notify_channel_by_type('apex_info')
+            records = sclient.sqldb.get_notify_channel_by_type('apex_info')
             for i in records:
                 channel = self.bot.get_channel(i['channel_id'])
                 if channel:
@@ -156,7 +156,7 @@ class task(Cog_Extension):
     async def forecast_update(self):
         forecast = CWA_API().get_forecast()
         if forecast:
-            records = sclient.get_notify_channel_by_type('forecast')
+            records = sclient.sqldb.get_notify_channel_by_type('forecast')
             for i in records:
                 channel = self.bot.get_channel(i['channel_id'])
                 if channel:
@@ -188,7 +188,7 @@ class task(Cog_Extension):
             if data[user] and not user_cache:
                 twitch_cache[user] = True
                 embed = data[user].embed()
-                guilds = sclient.get_notify_community_guild('twitch',user)
+                guilds = sclient.sqldb.get_notify_community_guild('twitch',user)
                 for guildid in guilds:
                     guild = self.bot.get_guild(guildid)
                     channel = self.bot.get_channel(guilds[guildid][0])
@@ -221,7 +221,7 @@ class task(Cog_Extension):
 
                 for data in video_list:
                     embed = data.embed()
-                    guilds = sclient.get_notify_community_guild('twitch_v',data.user_id)
+                    guilds = sclient.sqldb.get_notify_community_guild('twitch_v',data.user_id)
                     for guildid in guilds:
                         guild = self.bot.get_guild(guildid)
                         channel = self.bot.get_channel(guilds[guildid][0])
@@ -258,7 +258,7 @@ class task(Cog_Extension):
                 #發布通知
                 for video in video_list:
                     embed = video.embed()
-                    guilds = sclient.get_notify_community_guild('youtube',ytchannel_id)
+                    guilds = sclient.sqldb.get_notify_community_guild('youtube',ytchannel_id)
                     for guildid in guilds:
                         guild = self.bot.get_guild(guildid)
                         channel = self.bot.get_channel(guilds[guildid][0])
@@ -276,13 +276,13 @@ class task(Cog_Extension):
         Jsondb.write_cache('youtube',cache_youtube)
 
     async def auto_hoyo_reward(self):
-        list = sclient.get_hoyo_reward()
+        list = sclient.sqldb.get_hoyo_reward()
         for user in list:
             user_id = user['user_id']
             user_dc = self.bot.get_user(int(user_id))
             channel_id = user['channel_id']
             channel = self.bot.get_channel(int(channel_id))
-            cookies = sclient.get_userdata(user_id,'game_hoyo_cookies')
+            cookies = sclient.sqldb.get_userdata(user_id,'game_hoyo_cookies')
             if not channel:
                 log.warning(f"auto_hoyo_reward: {user_id}/{channel_id}")
             if not cookies:
@@ -310,11 +310,11 @@ class task(Cog_Extension):
 
     async def update_rpgshop_data(self):
         log.info("update_rpgshop_data start")
-        sclient.rpg_shop_daily()
+        sclient.sqldb.rpg_shop_daily()
 
     async def city_battle(self):
         log.info("city_battle start")
-        city_battle_list = sclient.get_all_city_battle()
+        city_battle_list = sclient.sqldb.get_all_city_battle()
         if not city_battle_list:
             return
         
@@ -324,10 +324,10 @@ class task(Cog_Extension):
                     return
                 
                 for defencer in city_battle.defencer:
-                    player_def = sclient.get_rpguser(defencer.discord_id,user_dc=self.bot.get_user(defencer.discord_id))
+                    player_def = sclient.sqldb.get_rpguser(defencer.discord_id,user_dc=self.bot.get_user(defencer.discord_id))
                     if city_battle.attacker:
                         attacker = random.choice(city_battle.attacker)
-                        player_atk = sclient.get_rpguser(attacker.discord_id,user_dc=self.bot.get_user(attacker.discord_id))
+                        player_atk = sclient.sqldb.get_rpguser(attacker.discord_id,user_dc=self.bot.get_user(attacker.discord_id))
                         
                         embed = BotEmbed.rpg(f"在 {city_battle.city.city_name} 的占領戰\n",f"攻擊者 {player_atk.name} 對 防守者{player_def.name}\n")
                         text, participants = player_def.battle_with(player_atk)
@@ -352,7 +352,7 @@ class task(Cog_Extension):
         embed = sclient.election_format(session,self.bot)
         await channel.send(embed=embed)
 
-        dbdata = sclient.get_election_full_by_session(session)
+        dbdata = sclient.sqldb.get_election_full_by_session(session)
         result = {}
         for position in Jsondb.jdict["position_option"].keys():
             result[position] = []

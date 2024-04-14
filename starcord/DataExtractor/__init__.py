@@ -5,20 +5,20 @@
 ### 各類別功能
 sqldb: 存取與操作Mysql資料庫\n
 """
-from starcord.FileDatabase import Jsondb
-from starcord.Utilities import log
+from ..FileDatabase import Jsondb
+from ..Utilities import log
 from .mysql import MySQLDatabase
 from .cloud import MongoDB
 
+from .community import *
+from .game import *
+from .weather import *
 
-
-SQLsettings = Jsondb.jdata.get('SQLsettings')
 SQL_connection = Jsondb.jdata.get('SQL_connection')
-
 def create_sqldb(SQL_connection:bool) -> MySQLDatabase:
     if SQL_connection:
         try:
-            sqldb = MySQLDatabase(SQLsettings)
+            sqldb = MySQLDatabase(Jsondb.jdata.get('SQLsettings'))
             log.info('>> SQL connect: on <<')
         except:
             sqldb = None
@@ -37,16 +37,12 @@ def create_mongedb(Mongedb_connection) -> MongoDB:
     if Mongedb_connection:
         url = Jsondb.get_token("mongodb_url")
         mongedb = MongoDB(url)
-        print('>> MongoDB connect: on <<')
+        log.info('>> MongoDB connect: on <<')
     else:
         mongedb = None
     return mongedb
 
 mongedb = create_mongedb(Mongedb_connection)
-
-from .community import *
-from .game import *
-from .weather import *
 
 __all__ =[
     'MySQLDatabase',

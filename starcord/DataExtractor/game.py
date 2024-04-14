@@ -1,5 +1,8 @@
-import requests,time
+import time
+
+import requests
 import pandas as pd
+
 from starcord.FileDatabase import Jsondb
 from starcord.models.game import *
 from starcord.errors import ClientError
@@ -19,9 +22,9 @@ class RiotAPI(GameInterface):
             'X-Riot-Token':self.key
         }
 
-    def get_riot_account_byname(self,username):
+    def get_riot_account_byname(self,username:str):
         name, tag = username.split('#')
-        r = requests.get(f'{self.url_asia}/riot/account/v1/accounts/by-riot-id/{name}/{tag}',headers=self.headers)
+        r = requests.get(f'{self.url_asia}/riot/account/v1/accounts/by-riot-id/{name}/{tag}', headers=self.headers)
         if r.ok:
             return RiotUser(r.json())
         elif r.status_code == 404:
@@ -29,8 +32,8 @@ class RiotAPI(GameInterface):
         else:
             raise ClientError("lol_player_byname",r.text)
 
-    def get_player_byname(self,username):
-        r = requests.get(f'{self.url_tw2}/lol/summoner/v4/summoners/by-name/{username}',headers=self.headers)
+    def get_player_byname(self,username:str):
+        r = requests.get(f'{self.url_tw2}/lol/summoner/v4/summoners/by-name/{username}', headers=self.headers)
         if r.ok:
             return LOLPlayer(r.json())
         elif r.status_code == 404:
@@ -236,7 +239,7 @@ class SteamInterface(GameInterface):
             'steamids':userid
         }
         response = requests.get('https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/',params=params)
-        if response.status_code == 200 and response.json().get('response').get('players'):
+        if response.ok and response.json().get('response').get('players'):
             APIdata = response.json().get('response').get('players')[0]
             return SteamUser(APIdata)
         else:
@@ -252,7 +255,7 @@ class DBDInterface(SteamInterface):
         if user:
             params = {'steamid':user.id}
             response = requests.get('https://dbd.tricky.lol/api/playerstats', params=params)
-            if response.status_code == 200:
+            if response.ok:
                 return DBDPlayer(response.json(),user.name)
             else:
                 return None

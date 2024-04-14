@@ -46,7 +46,7 @@ class system_game(Cog_Extension):
         await ctx.defer()
         id = str(ctx.author.id)
         if not value:
-            sclient.remove_game_data(id,game)
+            sclient.sqldb.remove_game_data(id,game)
             await ctx.respond(f'已將{game}資料移除')
             return
 
@@ -99,7 +99,7 @@ class system_game(Cog_Extension):
                 await ctx.respond(f'錯誤:找不到此用戶',ephemeral=True)
                 return
 
-        sclient.set_game_data(id,game.value,player_name,player_id,account_id,other_id)
+        sclient.sqldb.set_game_data(id,game.value,player_name,player_id,account_id,other_id)
         await ctx.respond(f'已將用戶的 {game.name} 資料設定為 {player_name}')
             
 

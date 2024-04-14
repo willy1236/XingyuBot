@@ -1,5 +1,9 @@
-import mysql.connector,datetime,discord
+from datetime import datetime,date,timedelta
+
+import discord
+import mysql.connector
 from mysql.connector.errors import Error as sqlerror
+
 from starcord.types import DBGame,Coins, Position
 from starcord.models.user import *
 from starcord.models.model import *
@@ -327,7 +331,7 @@ class MySQLRoleSaveSystem(MySQLBaseModel):
                 dict[data['discord_id']] = data['count']
             return dict
 
-    def add_role_save(self,discord_id:int,role_id:str,role_name:str,time:datetime.date):
+    def add_role_save(self,discord_id:int,role_id:str,role_name:str,time:date):
         self.cursor.execute(f"USE `stardb_user`;")
         self.cursor.execute(f"INSERT INTO `role_save` VALUES(%s,%s,%s,%s)",(discord_id,role_id,role_name,time))
         self.connection.commit()
@@ -380,8 +384,8 @@ class MySQLCurrencySystem(MySQLBaseModel):
 
     def user_sign(self,discord_id:int):
         '''新增簽到資料'''
-        time = datetime.date.today()
-        yesterday = time - datetime.timedelta(days=1)
+        time = date.today()
+        yesterday = time - timedelta(days=1)
         self.cursor.execute(f"USE `stardb_user`;")
 
         #檢測是否簽到過
@@ -831,7 +835,7 @@ class MySQLBusyTimeSystem(MySQLBaseModel):
         return records
 
 class MySQLWarningSystem(MySQLBaseModel):
-    def add_warning(self,discord_id:int,moderate_type:str,moderate_user:int,create_guild:int,create_time:datetime.datetime,reason:str=None,last_time:str=None,guild_only=True) -> int:
+    def add_warning(self,discord_id:int,moderate_type:str,moderate_user:int,create_guild:int,create_time:datetime,reason:str=None,last_time:str=None,guild_only=True) -> int:
         """給予用戶警告\n
         returns: 新增的warning_id
         """

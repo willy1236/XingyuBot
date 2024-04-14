@@ -2,7 +2,7 @@ from datetime import datetime,timedelta
 
 import discord
 
-from starcord.FileDatabase import Jsondb
+from ..FileDatabase import Jsondb
 from .funtions import find
 
 class BotEmbed:

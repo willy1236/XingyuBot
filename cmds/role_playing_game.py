@@ -29,18 +29,18 @@ class role_playing_game(Cog_Extension):
 
     @work.command(description='進行工作（開發中）')
     async def start(self,ctx:discord.ApplicationContext):
-        # dbdata = sclient.get_activities(ctx.author.id)
+        # dbdata = sclient.sqldb.get_activities(ctx.author.id)
         # if dbdata.get("work_date") == datetime.date.today():
         #     await ctx.respond("今天已經工作過了")
         
         # await ctx.respond(view=RPGbutton2(ctx.author.id))
-        rpguser = sclient.get_rpguser(ctx.author.id)
+        rpguser = sclient.sqldb.get_rpguser(ctx.author.id)
         if not rpguser.career_id:
             await ctx.respond(embed=BotEmbed.rpg("工作結果",f"你現在是無業游民，請選擇職業再工作"))
             return
         
         now = datetime.datetime.now()
-        dbdata = sclient.get_work(rpguser.discord_id)
+        dbdata = sclient.sqldb.get_work(rpguser.discord_id)
         last_work = dbdata.get("last_work")
         if last_work and now - last_work < datetime.timedelta(hours=11):
             next_work = int((last_work + datetime.timedelta(hours=11)).timestamp())
@@ -55,7 +55,7 @@ class role_playing_game(Cog_Extension):
             if reward_item_uid:
                 reward_item_get = random.randint(reward_item_min,reward_item_max)
                 hard_woring_rate = (reward_item_get - reward_item_min) / (reward_item_max - reward_item_min) if reward_item_max != 0 else 0
-                sclient.update_bag(rpguser.discord_id,reward_item_uid,reward_item_get)
+                sclient.sqldb.update_bag(rpguser.discord_id,reward_item_uid,reward_item_get)
                 
                 if hard_woring_rate == 0:
                     work_text = "你工作時出了點狀況"
@@ -74,14 +74,14 @@ class role_playing_game(Cog_Extension):
             else:
                 embed = BotEmbed.rpg("工作結果",f"你勤奮的打工\n下次工作時間：<t:{next_work}>")
             
-            sclient.refresh_work(rpguser.discord_id)
+            sclient.sqldb.refresh_work(rpguser.discord_id)
         
         await ctx.respond(embed=embed)
 
     @work.command(description='選擇職業（開發中）')
     async def career(self,ctx:discord.ApplicationContext,
                     career_id:discord.Option(int,name='工作職業',description='',choices=rpgcareer_option,default=None)):
-        sclient.set_rpguser_data(ctx.author.id,"career_id",career_id)
+        sclient.sqldb.set_rpguser_data(ctx.author.id,"career_id",career_id)
         embed = BotEmbed.rpg("工作職業",f"已選擇職業 {ChoiceList.get_tw(career_id,'rpgcareer_option')}" if career_id else "你成為無業遊民了")
         await ctx.respond(embed=embed)
 
@@ -92,10 +92,10 @@ class role_playing_game(Cog_Extension):
         if user_dc and not await self.bot.is_owner(ctx.author):
             show_alt_account = False
         user_dc = user_dc or ctx.author
-        user = sclient.get_dcuser(user_dc.id,True,user_dc)
+        user = sclient.sqldb.get_dcuser(user_dc.id,True,user_dc)
         if not user:
-            sclient.create_discord_user(user_dc.id)
-            user = sclient.get_dcuser(user_dc.id,True,user_dc)
+            sclient.sqldb.create_discord_user(user_dc.id)
+            user = sclient.sqldb.get_dcuser(user_dc.id,True,user_dc)
 
         pet = user.get_pet()
         #game = user.get_game()
@@ -112,16 +112,16 @@ class role_playing_game(Cog_Extension):
     @commands.slash_command(description='查看RPG資訊')
     async def rpgui(self,ctx:discord.ApplicationContext,user_dc:discord.Option(discord.Member,name='用戶',description='留空以查詢自己',default=None)):
         user_dc = user_dc or ctx.author
-        user = sclient.get_rpguser(user_dc.id,full=True,user_dc=user_dc)
+        user = sclient.sqldb.get_rpguser(user_dc.id,full=True,user_dc=user_dc)
         if not user:
-            sclient.set_rpguser(user_dc.id)
-            user = sclient.get_rpguser(user_dc.id,full=True,user_dc=user_dc)
+            sclient.sqldb.set_rpguser(user_dc.id)
+            user = sclient.sqldb.get_rpguser(user_dc.id,full=True,user_dc=user_dc)
         await ctx.respond(embeds=[user.embed(),user.waring_equipment.desplay(user_dc)])
 
     @itemcmd.command(description='查看背包（開發中）')
     async def bag(self,ctx:discord.ApplicationContext,user_dc:discord.Option(discord.Member,name='用戶',description='留空以查詢自己',default=None)):
         user_dc = user_dc or ctx.author
-        rpguser = sclient.get_rpguser(user_dc.id,sclient,user_dc)
+        rpguser = sclient.sqldb.get_rpguser(user_dc.id,sclient.sqldb.user_dc)
         bag = rpguser.itembag
         
         embed = BotEmbed.rpg(f'{user_dc.name}的包包',"")
@@ -144,7 +144,7 @@ class role_playing_game(Cog_Extension):
 
     @rpgshop.command(description='查看RPG商店（開發中）')
     async def list(self,ctx):
-        dbdata = sclient.get_rpg_shop_list()
+        dbdata = sclient.sqldb.get_rpg_shop_list()
         embed = BotEmbed.rpg(title="RPG商城")
         for i in dbdata:
             item = ShopItem(i)
@@ -159,16 +159,16 @@ class role_playing_game(Cog_Extension):
     async def sell(self,ctx,
                    shop_item_id:discord.Option(int,name='商品id',description='要售出的商品'),
                    amount:discord.Option(int,name='數量',description='要售出的數量',default=1,min_value=1)):
-        item = sclient.get_rpg_shop_item(shop_item_id)
+        item = sclient.sqldb.get_rpg_shop_item(shop_item_id)
         if not item or item.mode != ShopItemMode.sell:
             await ctx.respond(f"{ctx.author.mention}：商店不買這個喔")
             return
         
-        seller_id = sclient.getif_bag(ctx.author.id,item.item_uid,amount)
+        seller_id = sclient.sqldb.getif_bag(ctx.author.id,item.item_uid,amount)
         if seller_id:
-            sclient.update_bag(ctx.author.id,item.item_uid,amount*-1)
-            sclient.update_coins(ctx.author.id,"add",Coins.RCOIN,item.price * amount)
-            sclient.update_rpg_shop_inventory(item.shop_item_id,amount)
+            sclient.sqldb.update_bag(ctx.author.id,item.item_uid,amount*-1)
+            sclient.sqldb.update_coins(ctx.author.id,"add",Coins.RCOIN,item.price * amount)
+            sclient.sqldb.update_rpg_shop_inventory(item.shop_item_id,amount)
             await ctx.respond(f"{ctx.author.mention}：已售出 {item.name} * {amount}")
         else:
             await ctx.respond(f"{ctx.author.mention}：你的東西數量不夠喔")
@@ -177,15 +177,15 @@ class role_playing_game(Cog_Extension):
     async def buy(self,ctx,
                   shop_item_id:discord.Option(int,name='商品id',description='要購買的商品'),
                   amount:discord.Option(int,name='數量',description='要售出的數量',default=1,min_value=1)):
-        item = sclient.get_rpg_shop_item(shop_item_id)
+        item = sclient.sqldb.get_rpg_shop_item(shop_item_id)
         if not item or item.mode != ShopItemMode.buy:
             await ctx.respond(f"{ctx.author.mention}：商店沒有賣這個喔")
             return
         
-        buyer_id = sclient.getif_coin(ctx.author.id,item.price * amount,Coins.RCOIN)
+        buyer_id = sclient.sqldb.getif_coin(ctx.author.id,item.price * amount,Coins.RCOIN)
         if buyer_id:
-            sclient.update_bag(ctx.author.id,item.item_uid,amount)
-            sclient.update_coins(ctx.author.id,"add",Coins.RCOIN,item.price * amount * -1)
+            sclient.sqldb.update_bag(ctx.author.id,item.item_uid,amount)
+            sclient.sqldb.update_coins(ctx.author.id,"add",Coins.RCOIN,item.price * amount * -1)
             await ctx.respond(f"{ctx.author.mention}：已購買 {item.name} * {amount}")
         else:
             await ctx.respond(f"{ctx.author.mention}：Rcoin不足")
@@ -194,7 +194,7 @@ class role_playing_game(Cog_Extension):
     async def bag(self,ctx:discord.ApplicationContext,user_dc:discord.Option(discord.Member,name='用戶',description='留空以查詢自己',default=None)):
         await ctx.defer()
         user_dc = user_dc or ctx.author
-        dbdata = sclient.get_equipmentbag_desplay(user_dc.id)
+        dbdata = sclient.sqldb.get_equipmentbag_desplay(user_dc.id)
 
         if dbdata:
             view = RPGEquipmentBagView(dbdata,user_dc)
@@ -210,29 +210,29 @@ class role_playing_game(Cog_Extension):
     async def sell(self,ctx,
                    equipment_uid:discord.Option(str,name='裝備uid',description='要售出的裝備')):
         equipment_uid = int(equipment_uid)
-        item = sclient.get_rpgplayer_equipment(ctx.author.id,equipment_uid)
+        item = sclient.sqldb.get_rpgplayer_equipment(ctx.author.id,equipment_uid)
         
         if not item:
             await ctx.respond(f"{ctx.author.mention}：你沒有此件裝備")
             return
         
-        sclient.sell_rpgplayer_equipment(ctx.author.id,equipment_uid)
-        sclient.update_coins(ctx.author.id,"add",Coins.RCOIN,item.price)
+        sclient.sqldb.sell_rpgplayer_equipment(ctx.author.id,equipment_uid)
+        sclient.sqldb.update_coins(ctx.author.id,"add",Coins.RCOIN,item.price)
         await ctx.respond(f"{ctx.author.mention}：已售出 {item.name} 並獲得 ${item.price}")
 
     @equip.command(description='售出同類型裝備給RPG商店（開發中）')
     async def bulksell(self,ctx,
                    equipment_id:discord.Option(str,name='裝備id',description='要售出的裝備')):
         equipment_id = int(equipment_id)
-        items = sclient.get_rpgplayer_equipment(ctx.author.id,equipment_id=equipment_id)
+        items = sclient.sqldb.get_rpgplayer_equipment(ctx.author.id,equipment_id=equipment_id)
         
         if not items:
             await ctx.respond(f"{ctx.author.mention}：你沒有此種裝備")
             return
         
-        price = sclient.sell_rpgplayer_equipment(ctx.author.id,equipment_id=equipment_id)
+        price = sclient.sqldb.sell_rpgplayer_equipment(ctx.author.id,equipment_id=equipment_id)
         if price:
-            sclient.update_coins(ctx.author.id,"add",Coins.RCOIN,price)
+            sclient.sqldb.update_coins(ctx.author.id,"add",Coins.RCOIN,price)
             await ctx.respond(f"{ctx.author.mention}：已批量售出 {items[0].name} 並獲得 ${price}")
         else:
             await ctx.respond(f"{ctx.author.mention}：沒有找到此種裝備")
@@ -241,29 +241,29 @@ class role_playing_game(Cog_Extension):
     async def waring(self,ctx,
                    equipment_uid:discord.Option(str,name='裝備uid',description='要穿/脫/換上的裝備')):
         equipment_uid = int(equipment_uid)
-        item = sclient.get_rpgplayer_equipment(ctx.author.id,equipment_uid)
+        item = sclient.sqldb.get_rpgplayer_equipment(ctx.author.id,equipment_uid)
 
         if not item:
             await ctx.respond(f"{ctx.author.mention}：你沒有此件裝備")
             return
         
         if item.slot == EquipmentSolt.none:
-            waring_item = sclient.get_rpgplayer_equipment(ctx.author.id,slot_id=item.slot.value)
-            sclient.update_rpgplayer_equipment_warning(ctx.author.id,item.equipment_uid,item.item_id)
+            waring_item = sclient.sqldb.get_rpgplayer_equipment(ctx.author.id,slot_id=item.slot.value)
+            sclient.sqldb.update_rpgplayer_equipment_warning(ctx.author.id,item.equipment_uid,item.item_id)
             if not waring_item:
                 await ctx.respond(f"{ctx.author.mention}：已穿上 {item.customized_name or item.name}")
             else:
-                sclient.update_rpgplayer_equipment_warning(ctx.author.id,waring_item.equipment_uid,None)
+                sclient.sqldb.update_rpgplayer_equipment_warning(ctx.author.id,waring_item.equipment_uid,None)
                 await ctx.respond(f"{ctx.author.mention}：已將 {waring_item.customized_name or waring_item.name} 替換成 {item.customized_name or item.name}")
         
         else:
-            sclient.update_rpgplayer_equipment_warning(ctx.author.id,item.equipment_uid,None)
+            sclient.sqldb.update_rpgplayer_equipment_warning(ctx.author.id,item.equipment_uid,None)
             await ctx.respond(f"{ctx.author.mention}：已脫下 {item.customized_name or item.name}")
         
     @equip.command(description='檢查裝備資訊（開發中）')
     async def check(self,ctx,
                    equipment_uid:discord.Option(str,name='裝備uid',description='要檢查的裝備')):
-        item = sclient.get_rpgplayer_equipment(ctx.author.id,equipment_uid)
+        item = sclient.sqldb.get_rpgplayer_equipment(ctx.author.id,equipment_uid)
         
         if not item:
             await ctx.respond("你沒有此件裝備") 
@@ -281,7 +281,7 @@ class role_playing_game(Cog_Extension):
     @rpgmarket.command(description='列出玩家的物品市場（開發中）')
     async def list(self,ctx,user_dc:discord.Option(discord.Member,name='用戶',description='留空以查詢自己',default=None)):
         user_dc = user_dc or ctx.author
-        dbdata = sclient.get_item_market_list(user_dc.id)
+        dbdata = sclient.sqldb.get_item_market_list(user_dc.id)
         embed = BotEmbed.rpg(f"{user_dc.name}的市場")
         if dbdata:
             embed.description = "\n".join( f"[{i.item_uid}] {i.name} {i.per_price}\n剩餘數量：{i.remain_amount}" for i in dbdata )
@@ -296,32 +296,32 @@ class role_playing_game(Cog_Extension):
                      launch_amount:discord.Option(int,name='上架數量',description='預設1',default=1,min_value=1),
                      ):
         userid = ctx.author.id
-        market_item = sclient.get_item_market_item(userid,item_uid)
+        market_item = sclient.sqldb.get_item_market_item(userid,item_uid)
         if market_item:
             await ctx.respond(f"{ctx.author.mention}：已有上架這個物品")
             return
         
-        item = sclient.getif_bag(userid,item_uid,launch_amount)
+        item = sclient.sqldb.getif_bag(userid,item_uid,launch_amount)
         
         if not item:
             await ctx.respond(f"{ctx.author.mention}：這個物品數量不足")
             return
         
-        sclient.update_bag(userid,item_uid,-launch_amount)
-        sclient.add_item_market_item(userid,item_uid,launch_amount,per_price)
+        sclient.sqldb.update_bag(userid,item_uid,-launch_amount)
+        sclient.sqldb.add_item_market_item(userid,item_uid,launch_amount,per_price)
         await ctx.respond(f"{ctx.author.mention}：已上架 {item.name} 每件價格為 {per_price}")
 
     @rpgmarket.command(description='下架商品（開發中）')
     async def unlaunch(self,ctx,item_uid:discord.Option(int,name='物品uid',description='要購買的物品')):
         userid = ctx.author.id
-        item = sclient.get_item_market_item(userid,item_uid)
+        item = sclient.sqldb.get_item_market_item(userid,item_uid)
         
         if not item:
             await ctx.respond(f"{ctx.author.mention}：沒有上架這個物品")
             return
 
-        sclient.update_bag(userid,item_uid,item.remain_amount)
-        sclient.remove_item_market_item(userid,item_uid)
+        sclient.sqldb.update_bag(userid,item_uid,item.remain_amount)
+        sclient.sqldb.remove_item_market_item(userid,item_uid)
         await ctx.respond(f"{ctx.author.mention}：已下架 {item.name}")
 
     @rpgmarket.command(description='購買商品（開發中）')
@@ -331,7 +331,7 @@ class role_playing_game(Cog_Extension):
                      buy_amount:discord.Option(int,name='購買數量',description='預設1',default=1,min_value=1)
                      ):
         userid = user_dc.id
-        item = sclient.get_item_market_item(userid,item_uid)
+        item = sclient.sqldb.get_item_market_item(userid,item_uid)
         
         if not item:
             await ctx.respond(f"{ctx.author.mention}：沒有上架這個物品")
@@ -339,12 +339,12 @@ class role_playing_game(Cog_Extension):
         if item.remain_amount < buy_amount:
             await ctx.respond(f"{ctx.author.mention}：商品剩餘數量不足")
             return
-        if not sclient.getif_coin(ctx.author.id,buy_amount*item.per_price,Coins.RCOIN):
+        if not sclient.sqldb.getif_coin(ctx.author.id,buy_amount*item.per_price,Coins.RCOIN):
             await ctx.respond(f"{ctx.author.mention}：剩餘Rcoin不足")
             return
         
-        buyer = sclient.get_rpguser(userid,user_dc=ctx.author)
-        seller = sclient.get_rpguser(userid,user_dc=user_dc)
+        buyer = sclient.sqldb.get_rpguser(userid,user_dc=ctx.author)
+        seller = sclient.sqldb.get_rpguser(userid,user_dc=user_dc)
 
         if buyer.in_city_id != seller.in_city_id:
             await ctx.respond(f"{ctx.author.mention}：不在同一城市")
@@ -354,15 +354,15 @@ class role_playing_game(Cog_Extension):
         buyer.update_coins("add",Coins.RCOIN,buy_amount*-1*item.per_price)
         seller.update_coins("add",Coins.RCOIN,buy_amount*item.per_price)
         if item.remain_amount == buy_amount:
-            sclient.remove_item_market_item(userid,item_uid)
+            sclient.sqldb.remove_item_market_item(userid,item_uid)
         else:
-            sclient.update_item_market_item(userid,item_uid,buy_amount)
+            sclient.sqldb.update_item_market_item(userid,item_uid,buy_amount)
         await ctx.respond(f"{ctx.author.mention}：已購買 {item.name} * {buy_amount} 總花費為 {buy_amount*item.per_price}")
 
     @rpgcity.command(description='移動到新城市（開發中）')
     async def move(self,ctx,city_id:discord.Option(int,name='城市id',description='')):
-        city = sclient.get_city(city_id)
-        player = sclient.get_rpguser(ctx.author.id,user_dc=ctx.author)
+        city = sclient.sqldb.get_city(city_id)
+        player = sclient.sqldb.get_rpguser(ctx.author.id,user_dc=ctx.author)
         if not city:
             await ctx.respond(f"{ctx.author.mention}：沒有這個城市")
             return
@@ -377,25 +377,25 @@ class role_playing_game(Cog_Extension):
 
     @rpgcity.command(description='取得所在城市（開發中）')
     async def get(self,ctx):
-        player = sclient.get_rpguser(ctx.author.id,user_dc=ctx.author)
+        player = sclient.sqldb.get_rpguser(ctx.author.id,user_dc=ctx.author)
         
         if not player.in_city_id:
             await ctx.respond(f"{ctx.author.mention}：沒有所在城市")
             return
 
-        city = sclient.get_city(player.in_city_id)
+        city = sclient.sqldb.get_city(player.in_city_id)
         await ctx.respond(embed=city.desplay())
 
 
     @rpgcity.command(description='在所在城市開始行動（開發中）')
     async def action(self,ctx,action_id:discord.Option(int,name='行動',description='',choices=rpgcity_action_option)):
-        player = sclient.get_rpguser(ctx.author.id,user_dc=ctx.author)
+        player = sclient.sqldb.get_rpguser(ctx.author.id,user_dc=ctx.author)
         
         if not player.in_city_id:
             await ctx.respond(f"{ctx.author.mention}：沒有所在城市")
             return
 
-        city = sclient.get_city(player.in_city_id)
+        city = sclient.sqldb.get_city(player.in_city_id)
         action = ActivitiesStatue(action_id)
         if player.activities_statue == action:
             await ctx.respond(f"{ctx.author.mention}：已經在做此行動")
@@ -405,9 +405,9 @@ class role_playing_game(Cog_Extension):
         embed = BotEmbed.rpg(f"開始在{city.city_name} 進行 {ChoiceList.get_tw(str(action_id),'rpgcity_action_option')}")
 
         if action == ActivitiesStatue.none:
-            sclient.remove_city_battle(city.city_id,player.discord_id)
+            sclient.sqldb.remove_city_battle(city.city_id,player.discord_id)
         else:
-            sclient.add_city_battle(city.city_id,player.discord_id,action.value)
+            sclient.sqldb.add_city_battle(city.city_id,player.discord_id,action.value)
 
         await ctx.respond(embed=embed)
 

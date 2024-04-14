@@ -29,7 +29,7 @@ bot = DiscordBot(bot_code)
 async def on_ready():
     log.info(f">> Bot online as {bot.user.name} <<")
     log.info(f">> Discord's version: {discord.__version__} <<")
-    if debug_mode:
+    if bot.debug_mode:
         await bot.change_presence(activity=discord.Game(name="開發模式啟用中"),status=discord.Status.dnd)
         log.info(f">> Development mode: On <<")
     else:
@@ -40,16 +40,16 @@ async def on_ready():
     else:
         log.warning(f">> Cogs not all loaded, {len(bot.cogs)}/{len(os.listdir('./cmds'))} loaded<<")
     
-    if bot_code == 'Bot1' and not debug_mode:
+    if bot.bot_code == 'Bot1' and not bot.debug_mode:
         #將超過14天的投票自動關閉
-        dbdata = sclient.get_all_active_polls()
+        dbdata = sclient.sqldb.get_all_active_polls()
         now = datetime.datetime.now()
         for poll in dbdata:
             if now - poll['created_at'] > datetime.timedelta(days=14):
                 #sqldb.remove_poll(poll['poll_id'])
-                sclient.update_poll(poll['poll_id'],"is_on",0)
+                sclient.sqldb.update_poll(poll['poll_id'],"is_on",0)
             else:   
-                bot.add_view(PollView(poll['poll_id'],sqldb=sclient,bot=bot))
+                bot.add_view(PollView(poll['poll_id'],sqldb=sclient.sqldb,bot=bot))
 
         invites = await bot.get_guild(613747262291443742).invites()
         now = datetime.datetime.now(datetime.timezone.utc)
@@ -93,9 +93,6 @@ async def ping(ctx):
 for filename in os.listdir('./cmds'):
     if filename.endswith('.py'):
         bot.load_extension(f'cmds.{filename[:-3]}')
-
-class SatrPlatform():
-    pass
 
 if __name__ == "__main__":
     # if not debug_mode and auto_update:

@@ -1,6 +1,7 @@
-import datetime
-import re
 import asyncio
+import re
+from datetime import datetime,timezone,timedelta
+
 
 import discord
 from discord.ext import commands
@@ -16,10 +17,10 @@ voice_updata = Jsondb.jdata.get('voice_updata')
 debug_mode = Jsondb.jdata.get("debug_mode",True)
 main_guild = Jsondb.jdata.get('main_guild',[])
 
-guild_registration = sclient.sqldb.get_resgistration_dict()
+guild_registration = sclient.sqldb.get_resgistration_dict() if sclient.sqldb else {}
 
 def check_registration(member:discord.Member):
-    earlest = datetime.datetime.now(datetime.timezone.utc)
+    earlest = datetime.now(timezone.utc)
     earlest_guildid = None
     guild_list = guild_registration.keys()
     for guild in member.mutual_guilds:
@@ -125,11 +126,11 @@ class event(Cog_Extension):
                 if result:
                     try:
                         reason = "打出貢丸相關詞彙"
-                        time = datetime.timedelta(seconds=15)
-                        create_time = datetime.datetime.now()
+                        time = timedelta(seconds=15)
+                        create_time = datetime.now()
                         
                         #await message.delete(reason=reason)
-                        await message.author.timeout_for(duration=datetime.timedelta(seconds=60),reason=reason)
+                        await message.author.timeout_for(duration=timedelta(seconds=60),reason=reason)
                         
                         timestamp = int((create_time+time).timestamp())
                         embed = BotEmbed.general(f'{message.author.name} 已被禁言',message.author.display_avatar.url,description=f"{message.author.mention}：{reason}")
@@ -198,7 +199,7 @@ class event(Cog_Extension):
         if voice_updata:
             voice_log_dict = sclient.get_notice_dict("voice_log")
             if guildid in voice_log_dict:
-                NowTime = datetime.datetime.now()
+                NowTime = datetime.now()
                 before_text = ""
                 after_text = ""
                 if before.channel:

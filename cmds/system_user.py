@@ -12,7 +12,7 @@ class system_user(Cog_Extension):
     @pet.command(description='查看寵物資訊')
     async def check(self,ctx,user_dc:discord.Option(discord.Member,name='用戶',description='可不輸入以查詢自己',default=None)):
         user_dc = user_dc or ctx.author
-        pet = sclient.get_pet(user_dc.id)
+        pet = sclient.sqldb.get_pet(user_dc.id)
         embed = pet.desplay(user_dc) if pet else BotEmbed.simple(f'{user_dc.name} 的寵物','用戶沒有認養寵物')
         await ctx.respond(embed=embed)
     
@@ -20,7 +20,7 @@ class system_user(Cog_Extension):
     async def add(self,ctx,
                   species:discord.Option(str,name='物種',description='想認養的寵物物種',choices=pet_option),
                   name:discord.Option(str,name='寵物名',description='想幫寵物取的名子')):
-        r = sclient.create_user_pet(ctx.author.id,species,name)
+        r = sclient.sqldb.create_user_pet(ctx.author.id,species,name)
         if r:
             await ctx.respond(r)
         else:
@@ -28,7 +28,7 @@ class system_user(Cog_Extension):
     
     @pet.command(description='放生寵物')
     async def remove(self,ctx):
-        pet = sclient.get_pet(ctx.author.id)
+        pet = sclient.sqldb.get_pet(ctx.author.id)
         if not pet:
             await ctx.respond('你沒有寵物')
             return

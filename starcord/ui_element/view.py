@@ -126,9 +126,10 @@ class PollNowButton(discord.ui.Button):
 class PollView(discord.ui.View):
     if TYPE_CHECKING:
         from starcord.DataExtractor import MySQLDatabase
+        from starcord.Core import DiscordBot
         poll_id: int
         sqldb: MySQLDatabase
-        bot: discord.Bot
+        bot: DiscordBot
         guild_id: int
         message_id: int | None
         title: str

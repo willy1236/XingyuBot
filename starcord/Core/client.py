@@ -11,6 +11,8 @@ from starcord.ui_element.view import PollView
 
 class UserClient():
     """用戶查詢系統"""
+    def get_user(self,user_id:str):
+        pass
 
 class GameClient():
     """遊戲查詢系統"""
@@ -211,6 +213,9 @@ class NotifyClient():
         """確認頻道是否為動態語音房"""
         return channel_id if channel_id in self.notice_dict['dynamic_voice_room'] else None
 
+class SatrPlatform():
+    pass
+
 class StarManager(
     GameClient,
     PointClient,
@@ -221,5 +226,4 @@ class StarManager(
     """整合各項系統的星羽資料管理物件"""
     def __init__(self):
         super().__init__()
-        if sqldb:
-            self.sqldb = sqldb
+        self.sqldb = sqldb
