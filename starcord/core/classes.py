@@ -12,7 +12,7 @@ class DiscordBot(discord.Bot):
 
         self.bot_code = bot_code
         self.main_guilds = Jsondb.jdata.get('main_guild')
-        self.debug_mode = jdata.get('debug_mode',True)
+        self.debug_mode = Jsondb.jdata.get('debug_mode',True)
 
         if bot_code != 'Bot1':
             self.debug_guilds = Jsondb.jdata.get('debug_guild')
