@@ -1,5 +1,5 @@
 import discord,time
-from starcord.utilities.utility import BotEmbed
+from starcord.Utilities.utility import BotEmbed
 from datetime import datetime,timedelta,timezone
 
 class TwitchUser():

@@ -3,24 +3,23 @@ from datetime import datetime
 
 import discord
 
-from .game import RiotAPI,SteamInterface,OsuInterface,ApexInterface
-from .mysql import MySQLDatabase
+from starcord.DataExtractor import sqldb,RiotAPI,SteamInterface,OsuInterface,ApexInterface
+from starcord.FileDatabase import Jsondb
 from starcord.models import *
 from starcord.types import DBGame
 from starcord.ui_element.view import PollView
-from starcord.FileDatabase import Jsondb
 
-class BatClient(MySQLDatabase):
-    """賭盤系統"""
+class UserClient():
+    """用戶查詢系統"""
 
-class GameClient(MySQLDatabase):
+class GameClient():
     """遊戲查詢系統"""
     def get_user_game(self,discord_id,game:DBGame=None):
         """取得遊戲資料
         :param discord_id: 要查詢的用戶
         :param game: 提供將只查詢指定遊戲內容
         """
-        dbdata = self.get_game_data(discord_id,game)
+        dbdata = sqldb.get_game_data(discord_id,game)
         if not dbdata:
             return
         
@@ -46,7 +45,7 @@ class GameClient(MySQLDatabase):
         :param discord_id: 若提供則先查詢資料庫
         """
         if discord_id:
-            dbdata = self.get_game_data(discord_id,"lol")
+            dbdata = sqldb.get_game_data(discord_id,"lol")
             if dbdata:
                 return PartialLOLPlayer(dbdata)
         
@@ -57,20 +56,23 @@ class GameClient(MySQLDatabase):
                 player = api.get_player_bypuuid(user.puuid)
                 return player if player else None
 
-class PointClient(MySQLDatabase):
+class BatClient():
+    """賭盤系統"""
+
+class PointClient():
     """點數系統"""
 
     def daily_sign(self,discord_id):
         """每日簽到"""
-        code = self.user_sign(discord_id)
+        code = sqldb.user_sign(discord_id)
         if code:
             return code
         scoin_add  = random.randint(5,10)
         rcoin_add = 0   # random.randint(3,5)
-        self.sign_add_coin(discord_id,scoin_add,rcoin_add)
+        sqldb.sign_add_coin(discord_id,scoin_add,rcoin_add)
         return [scoin_add, rcoin_add]
 
-class PollClient(MySQLDatabase):
+class PollClient():
     """投票系統"""
     def create_poll(self,
                     title:str,
@@ -86,8 +88,8 @@ class PollClient(MySQLDatabase):
                     role_magnification_dict:dict={},
                     bot:discord.bot=None) -> PollView:
         """創建投票"""
-        poll_id = self.add_poll(title,creator_id,datetime.now(),None,guild_id,alternate_account_can_vote,show_name,check_results_in_advance,results_only_initiator,multiple_choice)
-        self.add_poll_option(poll_id,options)
+        poll_id = sqldb.add_poll(title,creator_id,datetime.now(),None,guild_id,alternate_account_can_vote,show_name,check_results_in_advance,results_only_initiator,multiple_choice)
+        sqldb.add_poll_option(poll_id,options)
 
         poll_role_dict = {}
         for roleid in only_role_list:
@@ -102,14 +104,14 @@ class PollClient(MySQLDatabase):
         for roleid in poll_role_dict:
             role_type = poll_role_dict[roleid][0]
             role_magnification = poll_role_dict[roleid][1]
-            self.add_poll_role(poll_id,roleid,role_type,role_magnification)
+            sqldb.add_poll_role(poll_id,roleid,role_type,role_magnification)
 
-        view = PollView(poll_id,self,bot)
+        view = PollView(poll_id,sqldb,bot)
         return view
     
-class ElectionSystem(MySQLDatabase):
+class ElectionSystem():
     def election_format(self,session:str,bot:discord.Bot):
-        dbdata = self.get_election_full_by_session(session)
+        dbdata = sqldb.get_election_full_by_session(session)
         
         # result = { "職位": { "用戶id": ["用戶提及", ["政黨"]]}}
         result = {}
@@ -142,10 +144,10 @@ class ElectionSystem(MySQLDatabase):
             embed.add_field(name=Jsondb.get_jdict('position_option',position_name), value=text, inline=False)
         return embed
     
-class GiveawayClient(MySQLDatabase):
+class GiveawayClient():
     """todo:抽獎系統"""
 
-class NoticeClient(MySQLDatabase):
+class NotifyClient():
     """
     ### 通知頻道系統
     由notice_dict進行緩存，使得讀取資料時可不用每次都讀取資料庫
@@ -187,7 +189,7 @@ class NoticeClient(MySQLDatabase):
         for type in init_list:
             
             if type in dict_type:
-                dbdata = self.get_notify_channel_by_type(type)
+                dbdata = sqldb.get_notify_channel_by_type(type)
                 dict = {}
                 for data in dbdata:
                     guildid = data['guild_id']
@@ -199,10 +201,10 @@ class NoticeClient(MySQLDatabase):
             
             elif type in list_type:
                 if type == "twitch" or type == "youtube" or type == "twitch_v":
-                    dbdata = self.get_notify_community_userlist(type)
+                    dbdata = sqldb.get_notify_community_userlist(type)
                     self.notice_dict[type] = dbdata
                 elif type == "dynamic_voice_room":
-                    dbdata = self.get_all_dynamic_voice()
+                    dbdata = sqldb.get_all_dynamic_voice()
                     self.notice_dict[type] = dbdata
 
     def getif_dynamic_voice_room(self,channel_id):
@@ -214,8 +216,10 @@ class StarManager(
     PointClient,
     PollClient,
     ElectionSystem,
-    NoticeClient,
+    NotifyClient,
 ):
     """整合各項系統的星羽資料管理物件"""
-    def __init__(self,*args,**kwargs):
-        super().__init__(*args,**kwargs)
+    def __init__(self):
+        super().__init__()
+        if sqldb:
+            self.sqldb = sqldb

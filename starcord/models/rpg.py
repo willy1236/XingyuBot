@@ -2,7 +2,7 @@ import discord,random
 from typing import TYPE_CHECKING
 from .BaseModel import ListObject
 from starcord.types import ItemCategory,ShopItemMode,EquipmentSolt
-from starcord.utilities.utility import BotEmbed
+from starcord.Utilities.utility import BotEmbed
 
 class Monster:
     if TYPE_CHECKING:

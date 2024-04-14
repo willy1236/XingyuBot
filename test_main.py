@@ -3,7 +3,6 @@ import secrets
 from datetime import datetime
 from enum import Enum, IntEnum
 
-
 import discord
 import feedparser
 import requests
@@ -11,7 +10,6 @@ import pandas as pd
 from bs4 import BeautifulSoup
 #from pydantic import BaseModel
 
-import starcord
 from starcord import log,Jsondb
 from starcord.DataExtractor import TwitchAPI, YoutubeAPI, YoutubeRSS
 

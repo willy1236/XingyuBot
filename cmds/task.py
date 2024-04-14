@@ -1,11 +1,17 @@
-import asyncio,discord,genshin,logging,random,time
+import asyncio
+import logging
+import random
+import time
+from datetime import datetime, timezone, timedelta, date
+
+import discord
+import genshin
 #from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from datetime import datetime, timezone, timedelta, date
 from discord.ext import commands,tasks
 from requests.exceptions import ConnectTimeout
 
-from starcord import Cog_Extension,Jsondb,sclient,log,BotEmbed,utilities
+from starcord import Cog_Extension,Jsondb,sclient,log,BotEmbed,Utilities
 from starcord.DataExtractor import *
 from starcord.DataExtractor.community import YoutubeRSS
 from starcord.models.community import TwitchVideo, YoutubeVideo
@@ -17,14 +23,14 @@ consoleHandler.setLevel(logging.WARNING)
 consoleHandler.setFormatter(formatter)
 log.addHandler(consoleHandler)
 
-def slice_list(lst:list[YoutubeVideo], target_id):
-    """以target_id為基準取出更新的影片資訊"""
-    index = next((i for i, d in enumerate(lst) if d.uplood_at > target_id), None)
+def slice_list(lst:list[YoutubeVideo], target) -> list[YoutubeVideo]:
+    """以target為基準取出更新的影片資訊"""
+    index = next((i for i, d in enumerate(lst) if d.uplood_at > target), None)
     return lst[index:] if index else lst
 
-def slice_list_twitch(lst:list[TwitchVideo], target_id:datetime):
-    """以target_id為基準取出更新的影片資訊"""
-    index = next((i for i, d in enumerate(lst) if d.created_at > target_id), None)
+def slice_list_twitch(lst:list[TwitchVideo], target:datetime) -> list[TwitchVideo]:
+    """以target為基準取出更新的影片資訊"""
+    index = next((i for i, d in enumerate(lst) if d.created_at > target), None)
     return lst[index:] if index else lst
 
 class task(Cog_Extension):
@@ -340,7 +346,7 @@ class task(Cog_Extension):
 
     async def start_eletion(self):
         log.info("start_eletion start")
-        session = utilities.calculate_eletion_session()
+        session = Utilities.calculate_eletion_session()
         channel = self.bot.get_channel(1163127708839071827)
 
         embed = sclient.election_format(session,self.bot)

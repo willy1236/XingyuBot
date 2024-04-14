@@ -2,7 +2,7 @@ import discord,datetime
 from discord.ext import commands
 from discord.commands import SlashCommandGroup
 from starcord import Cog_Extension,ChoiceList,BotEmbed,Jsondb,sclient
-from starcord.utilities.utility import converter
+from starcord.Utilities.utility import converter
 
 set_option = ChoiceList.set('channel_set_option')
 debug_guild = Jsondb.jdata['debug_guild']

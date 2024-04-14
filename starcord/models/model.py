@@ -2,7 +2,7 @@ import discord,datetime
 from typing import TYPE_CHECKING
 from .BaseModel import ListObject
 from starcord.types import DBGame
-from starcord.utilities.utility import BotEmbed
+from starcord.Utilities.utility import BotEmbed
 from starcord.FileDatabase import Jsondb
 
 class GameInfo:

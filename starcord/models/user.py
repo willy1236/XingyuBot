@@ -1,6 +1,6 @@
 import random,time,datetime,discord
 from typing import TYPE_CHECKING
-from starcord.utilities.utility import BotEmbed,ChoiceList
+from starcord.Utilities.utility import BotEmbed,ChoiceList
 from starcord.types import DBGame,Coins,ActivitiesStatue
 from starcord.FileDatabase import Jsondb
 from .rpg import *

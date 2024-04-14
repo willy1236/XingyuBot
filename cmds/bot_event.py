@@ -16,7 +16,7 @@ voice_updata = Jsondb.jdata.get('voice_updata')
 debug_mode = Jsondb.jdata.get("debug_mode",True)
 main_guild = Jsondb.jdata.get('main_guild',[])
 
-guild_registration = sclient.get_resgistration_dict()
+guild_registration = sclient.sqldb.get_resgistration_dict()
 
 def check_registration(member:discord.Member):
     earlest = datetime.datetime.now(datetime.timezone.utc)
@@ -138,7 +138,7 @@ class event(Cog_Extension):
                         embed.timestamp = create_time
                         
                         await message.channel.send(f"{message.author.mention} 貢丸很危險 不要打貢丸知道嗎",embed=embed)
-                        sclient.add_userdata_value(message.author.id,"user_discord","meatball_times",1)
+                        sclient.sqldb.add_userdata_value(message.author.id,"user_discord","meatball_times",1)
                     except Exception as e:
                         print(e)
             
@@ -238,7 +238,7 @@ class event(Cog_Extension):
                     user: discord.PermissionOverwrite(manage_channels=True,manage_roles=True)
                 }
                 new_channel = await guild.create_voice_channel(name=f'{user.name}的頻道', reason='動態語音：新增',category=category,overwrites=overwrites)
-                sclient.set_dynamic_voice(new_channel.id,user.id,guild.id,None)
+                sclient.sqldb.set_dynamic_voice(new_channel.id,user.id,guild.id,None)
                 sclient.set_list_in_notice_dict("dynamic_voice_room",new_data=new_channel.id)
                 await user.move_to(new_channel)
                 return
@@ -246,7 +246,7 @@ class event(Cog_Extension):
             #移除
             elif before.channel and not after.channel and not before.channel.members and sclient.getif_dynamic_voice_room(before.channel.id):
                 await before.channel.delete(reason="動態語音：移除")
-                sclient.remove_dynamic_voice(before.channel.id)
+                sclient.sqldb.remove_dynamic_voice(before.channel.id)
                 sclient.set_list_in_notice_dict("dynamic_voice_room",remove_data=before.channel.id)
                 return
 
@@ -278,7 +278,7 @@ class event(Cog_Extension):
         
         #離開通知
         guildid = member.guild.id
-        dbdata = sclient.get_notify_channel(guildid,"member_leave")
+        dbdata = sclient.sqldb.get_notify_channel(guildid,"member_leave")
 
         if dbdata:
             username = member.name if member.discriminator == "0" else f"{member.name}#{member.discriminator}"
@@ -292,7 +292,7 @@ class event(Cog_Extension):
         
         #加入通知
         guildid = member.guild.id
-        dbdata = sclient.get_notify_channel(guildid,"member_join")
+        dbdata = sclient.sqldb.get_notify_channel(guildid,"member_join")
 
         if dbdata:
             username = member.name if member.discriminator == "0" else f"{member.name}#{member.discriminator}"
@@ -300,11 +300,11 @@ class event(Cog_Extension):
             await self.bot.get_channel(int(dbdata["channel_id"])).send(text)
 
         #警告系統：管理員通知
-        notice_data = sclient.get_notify_channel(guildid,"mod")
+        notice_data = sclient.sqldb.get_notify_channel(guildid,"mod")
         mod_channel_id = notice_data.get('channel_id') if notice_data else None
         #role_id = notice_data['role_id']
         if mod_channel_id:
-            dbdata = sclient.get_warnings(member.id)
+            dbdata = sclient.sqldb.get_warnings(member.id)
             #if role_id:
             #    role = member.guild.get_role(role_id)
 
@@ -315,7 +315,7 @@ class event(Cog_Extension):
         if guildid == 613747262291443742:
             earlest_guildid = check_registration(member)
             if earlest_guildid and earlest_guildid != 613747262291443742:
-                dbdata = sclient.get_resgistration_by_guildid(earlest_guildid)
+                dbdata = sclient.sqldb.get_resgistration_by_guildid(earlest_guildid)
                 sclient.set_userdata(member.id,"user_discord","discord_registration",dbdata['registrations_id'])
                 await member.add_roles(member.guild.get_role(guild_registration[str(earlest_guildid)]), reason="加入的最早伺服器")
 

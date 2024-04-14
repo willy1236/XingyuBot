@@ -1,22 +1,20 @@
+import asyncio
 import os
 import time
-import asyncio
 from threading import Thread
 
 import discord
 from discord.ext import commands
 
-from starcord import Jsondb,log,sclient
+from starcord import Jsondb,log,sclient,DiscordBot
 from starcord.ui_element.button import *
 from starcord.ui_element.view import *
 
 #Bot1:dc小幫手, Bep:Bep, Bot2:RO
 jdata = Jsondb.jdata
 bot_code = jdata.get('bot_code')
-token = Jsondb.get_token(bot_code)
 api_website = jdata.get('api_website')
-auto_update = jdata.get('auto_update')  
-debug_guild = jdata.get('debug_guild')
+auto_update = jdata.get('auto_update')
 debug_mode = jdata.get('debug_mode',True)
 #commands.Bot
 #shard_count=1,
@@ -24,30 +22,7 @@ debug_mode = jdata.get('debug_mode',True)
 #command_prefix='b!',
 #case_insensitive=True,
 
-class DiscordBot(discord.Bot):
-    def __init__(self,*args,**options):
-        super().__init__(*args,**options)
-
-if bot_code == 'Bot1':
-    bot = discord.Bot(
-        owner_id=419131103836635136,
-        intents=discord.Intents.all(),
-        help_command=None
-    )
-elif bot_code == 'Bep':
-    bot = discord.Bot(
-        owner_id=419131103836635136,
-        intents=discord.Intents.all(),
-        help_command=None,
-        debug_guilds = debug_guild
-    )
-elif bot_code == 'Bot2':
-    bot = discord.Bot(
-        owner_id=419131103836635136,
-        debug_guilds = debug_guild
-    )
-else:
-    raise ValueError("Invalid bot_code")
+bot = DiscordBot(bot_code)
 
 #啟動
 @bot.event
@@ -73,7 +48,7 @@ async def on_ready():
             if now - poll['created_at'] > datetime.timedelta(days=14):
                 #sqldb.remove_poll(poll['poll_id'])
                 sclient.update_poll(poll['poll_id'],"is_on",0)
-            else:
+            else:   
                 bot.add_view(PollView(poll['poll_id'],sqldb=sclient,bot=bot))
 
         invites = await bot.get_guild(613747262291443742).invites()
@@ -141,7 +116,7 @@ if __name__ == "__main__":
         time.sleep(2)
     
     try:
-        bot.run(token)
+        bot.run()
     except discord.errors.LoginFailure:
         log.error('>> Bot: Login failed <<')
     except Exception as e:

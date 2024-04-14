@@ -4,13 +4,13 @@
 由StarClient繼承並整合所有內容，使用者可直接調用sclient使用\n
 ### 各類別功能
 sqldb: 存取與操作Mysql資料庫\n
-各類client: 結合所有資料進行複雜操作\n
-StarManager: 繼承所有內容，將基本（直接操作資料庫）及進階（clients）整合
 """
 from starcord.FileDatabase import Jsondb
+from starcord.Utilities import log
 from .mysql import MySQLDatabase
 from .cloud import MongoDB
-from .client import StarManager
+
+
 
 SQLsettings = Jsondb.jdata.get('SQLsettings')
 SQL_connection = Jsondb.jdata.get('SQL_connection')
@@ -19,25 +19,20 @@ def create_sqldb(SQL_connection:bool) -> MySQLDatabase:
     if SQL_connection:
         try:
             sqldb = MySQLDatabase(SQLsettings)
-            #log.info('>> SQL connect: on <<')
-            print('>> MySQL connect: on <<')
+            log.info('>> SQL connect: on <<')
         except:
-            #log.warning('>> SQL connect: offline <<')
             sqldb = None
-            print('>> MySQL connect: offline <<')
+            log.warning('>> SQL connect: offline <<')
     else:
-        #log.info('>> SQL connect: off <<')
         sqldb = None
-        print('>> MySQL connect: off <<')
+        log.info('>> SQL connect: off <<')
     
     return sqldb
 
-#sqldb = create_sqldb(SQL_connection)
-sclient = StarManager(mysql_settings=SQLsettings)
+sqldb = create_sqldb(SQL_connection)
+
 
 Mongedb_connection = Jsondb.jdata.get('Mongedb_connection')
-
-
 def create_mongedb(Mongedb_connection) -> MongoDB:
     if Mongedb_connection:
         url = Jsondb.get_token("mongodb_url")
@@ -49,14 +44,11 @@ def create_mongedb(Mongedb_connection) -> MongoDB:
 
 mongedb = create_mongedb(Mongedb_connection)
 
-#from .client import *
 from .community import *
 from .game import *
 from .weather import *
 
 __all__ =[
-    'StarManager',
-    'sclient',
     'MySQLDatabase',
     'TwitchAPI',
     'YoutubeAPI',

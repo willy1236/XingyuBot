@@ -11,13 +11,13 @@ def create_id():
 
 class MySQLBaseModel(object):
     """MySQL資料庫基本模型"""
-    def __init__(self,*args,**kwargs):
+    def __init__(self,mysql_settings:dict):
         '''MySQL 資料庫連接\n
         settings = {"host": "","port": ,"user": "","password": "","db": "","charset": ""}
         '''
         
         #建立連線
-        self.connection = mysql.connector.connect(**kwargs['mysql_settings'])
+        self.connection = mysql.connector.connect(**mysql_settings)
         self.cursor = self.connection.cursor(dictionary=True)
         self.connection.get_server_info()
 

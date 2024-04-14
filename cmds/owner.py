@@ -4,7 +4,7 @@ from discord.commands import SlashCommandGroup
 
 from starcord import Cog_Extension,BotEmbed,BRS,Jsondb,sclient
 from starcord.ui_element.button import ReactRole_button
-from starcord.utilities.utility import converter
+from starcord.Utilities.utility import converter
 
 class SendMessageModal(discord.ui.Modal):
     def __init__(self, channel, is_dm, *args, **kwargs):

@@ -1,5 +1,5 @@
 import datetime,discord
-from starcord.utilities.utility import BotEmbed
+from starcord.Utilities.utility import BotEmbed
 
 
 class EarthquakeReport():

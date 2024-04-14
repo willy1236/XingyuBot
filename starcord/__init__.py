@@ -4,11 +4,11 @@ Discord機器人"星羽"用libary
 '''
 
 from .FileDatabase import Jsondb,csvdb
-from .DataExtractor import sclient
 
-from .utilities import *
+from .Core import Cog_Extension, DiscordBot, sclient, StarManager
+from .Utilities import *
 from .errors import *
-from starcord.core.classes import Cog_Extension
+
 
 __all__ = [
     'Jsondb',
@@ -20,4 +20,5 @@ __all__ = [
     'mongedb',
     'sclient',
     'Cog_Extension',
+    'DiscordBot',
 ]

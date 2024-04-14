@@ -1,9 +1,8 @@
-from pydoc import describe
 import discord,random,asyncio
 from discord.components import Component
 from discord.ext import pages
-from starcord.utilities.utility import BotEmbed,ChoiceList
-from starcord.DataExtractor import sclient
+from starcord.Utilities.utility import BotEmbed,ChoiceList
+from starcord.Core import sclient
 from starcord.models.user import RPGUser,Monster,RPGPlayerEquipmentBag,RPGEquipment
 from starcord.types import Coins,EquipmentSolt
 
@@ -18,7 +17,7 @@ class RPGAdvanceView(discord.ui.View):
         await interaction.response.edit_message(view=self)
         button.disabled = False
         if interaction.user.id == self.userid:
-            user = sclient.get_rpguser(self.userid)
+            user = sclient.sqldb.get_rpguser(self.userid)
             result = await self.advance(user,interaction)
             if result:
                 await interaction.edit_original_response(content=result,view=self)
@@ -28,16 +27,16 @@ class RPGAdvanceView(discord.ui.View):
 
     async def advance(self,player:RPGUser,interaction: discord.Interaction):
         '''進行冒險'''
-        data = sclient.get_activities(player.discord_id)
+        data = sclient.sqldb.get_activities(player.discord_id)
         times = data.get('advance_times',0) + 1
         
         embed = BotEmbed.simple(f"第{times}次冒險")
         embed.description = ""
         if times == 1:
             if player.hp <= 0:
-                if sclient.getif_bag(player.discord_id,13,1):
+                if sclient.sqldb.getif_bag(player.discord_id,13,1):
                     player.update_hp(20,True)
-                    sclient.remove_bag(player.discord_id,13,1)
+                    sclient.sqldb.remove_bag(player.discord_id,13,1)
                     embed.description = "使用藥水復活並繼續冒險\n"
                 else:
                     await interaction.edit_original_response(content="你已陣亡 請購買復活藥水復活")
@@ -49,10 +48,10 @@ class RPGAdvanceView(discord.ui.View):
         if rd > 70 and rd <=100:
             embed.description += "遇到怪物"
             id = random.randint(1,3)
-            monster = sclient.get_monster(id)
+            monster = sclient.sqldb.get_monster(id)
             embed2 = BotEmbed.simple(f"遭遇戰鬥：{monster.name}")
             list.append(embed2) 
-            sclient.set_userdata(player.discord_id,'rpg_activities','advance_times',times)
+            sclient.sqldb.set_userdata(player.discord_id,'rpg_activities','advance_times',times)
             view = RPGBattleView(player,monster,list)
             await interaction.edit_original_response(embeds=list,view=view)
             #await view.battle(interaction)
@@ -66,8 +65,8 @@ class RPGAdvanceView(discord.ui.View):
 
             elif rd > 50 and rd <= 60:
                 embed.description += "尋獲物品"
-                item = sclient.get_rpgitem( int("1" + str(random.randint(1,3))))
-                sclient.update_bag(player.discord_id,item.item_uid,1)
+                item = sclient.sqldb.get_rpgitem( int("1" + str(random.randint(1,3))))
+                sclient.sqldb.update_bag(player.discord_id,item.item_uid,1)
                 embed.description += f"，獲得道具 {item.name}"
             elif rd > 60 and rd <= 70:
                 embed.description += "採到陷阱"
@@ -78,10 +77,10 @@ class RPGAdvanceView(discord.ui.View):
                     embed.description += "，你已陣亡"
             
             if times >= 5 and random.randint(0,100) <= times*5 or player.hp <= 0:
-                    sclient.set_userdata(player.discord_id,'rpg_activities','advance_times',0)
+                    sclient.sqldb.set_userdata(player.discord_id,'rpg_activities','advance_times',0)
                     embed.description += '，冒險結束'
             else:
-                sclient.set_userdata(player.discord_id,'rpg_activities','advance_times',times)
+                sclient.sqldb.set_userdata(player.discord_id,'rpg_activities','advance_times',times)
             
             await interaction.edit_original_response(embeds=list,view=self)
             
@@ -94,7 +93,7 @@ class RPGbutton2(discord.ui.View):
     @discord.ui.button(label="按我進行工作",style=discord.ButtonStyle.green)
     async def button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
         if interaction.user.id == self.userid:
-            user = sclient.get_rpguser(interaction.user.id)
+            user = sclient.sqldb.get_rpguser(interaction.user.id)
             result = user.work()
             await interaction.response.edit_message(content=result)
 
@@ -133,14 +132,14 @@ class RPGBattleView(discord.ui.View):
                 #text += f"\n擊倒怪物 扣除{player_hp_reduce}滴後你還剩下 {player.hp} HP"
                 text += f"\n擊倒怪物 損失 {self.player_hp_reduce} HP"
 
-                lootlist = sclient.get_monster_loot(monster.monster_id)
+                lootlist = sclient.sqldb.get_monster_loot(monster.monster_id)
                 if lootlist:
                     for loot in lootlist.looting():
-                        equipment_uid = sclient.add_equipment_ingame(loot.equipment_id)
-                        sclient.set_rpgplayer_equipment(player.discord_id,equipment_uid)
+                        equipment_uid = sclient.sqldb.add_equipment_ingame(loot.equipment_id)
+                        sclient.sqldb.set_rpgplayer_equipment(player.discord_id,equipment_uid)
                         text += f"\n獲得道具：{loot.name}"
 
-                sclient.update_coins(player.discord_id,"add",Coins.RCOIN,monster.drop_money)
+                sclient.sqldb.update_coins(player.discord_id,"add",Coins.RCOIN,monster.drop_money)
                 text += f"\nRcoin +{monster.drop_money}"
                 
                 self.battle_is_end = True
@@ -163,7 +162,7 @@ class RPGBattleView(discord.ui.View):
             #玩家被擊倒
             if player.hp <= 0:
                 text += "\n被怪物擊倒"
-                sclient.set_userdata(player.discord_id,'rpg_activities','advance_times',0)
+                sclient.sqldb.set_userdata(player.discord_id,'rpg_activities','advance_times',0)
                 self.battle_is_end = True
         
         if not player_hit:
@@ -262,8 +261,8 @@ class RPGEquipmentBagView(discord.ui.View):
     @discord.ui.button(label="售出裝備",style=discord.ButtonStyle.danger)
     async def button3_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
         if interaction.user.id == self.user_dc.id and self.now_item:
-            sclient.sell_rpgplayer_equipment(self.user_dc.id,self.now_item.equipment_uid)
-            sclient.update_coins(self.user_dc.id,"add",Coins.RCOIN,self.now_item.price)
+            sclient.sqldb.sell_rpgplayer_equipment(self.user_dc.id,self.now_item.equipment_uid)
+            sclient.sqldb.update_coins(self.user_dc.id,"add",Coins.RCOIN,self.now_item.price)
             
             del self.bag[self.paginator.current_page * self.item_per_page + self.now_page_item]
             self.refresh_item_page()
@@ -272,8 +271,8 @@ class RPGEquipmentBagView(discord.ui.View):
     @discord.ui.button(label="批量售出",style=discord.ButtonStyle.danger)
     async def button4_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
         if interaction.user.id == self.user_dc.id and self.now_item:
-            total_price, deleted_uids = sclient.sell_rpgplayer_equipment(self.user_dc.id,equipment_id=self.now_item.item_id)
-            sclient.update_coins(self.user_dc.id,"add",Coins.RCOIN,self.now_item.price)
+            total_price, deleted_uids = sclient.sqldb.sell_rpgplayer_equipment(self.user_dc.id,equipment_id=self.now_item.item_id)
+            sclient.sqldb.update_coins(self.user_dc.id,"add",Coins.RCOIN,self.now_item.price)
             
             self.bag = [equip for equip in self.bag if equip.equipment_uid not in deleted_uids]
 
