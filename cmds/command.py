@@ -10,7 +10,7 @@ from starcord.ui_element.button import Delete_Add_Role_button
 from starcord.ui_element.view import PollView
 from starcord.DataExtractor import GoogleCloud
 
-from .bot_event import check_registration
+from cmds.bot_event import check_registration
 
 bet_option = ChoiceList.set('bet_option')
 busy_time_option = ChoiceList.set('busy_time_option')

@@ -1,4 +1,5 @@
-import json,os
+import json
+import os
 from typing import TYPE_CHECKING
 
 class JsonCeche:
@@ -18,7 +19,7 @@ class JsonDatabase():
 
     __slots__ = [
         "_DBPATH",
-        "_dict",
+        "_PATH_DICT",
         "lol_jdict",
         "jdict",
         "jdata",
@@ -34,7 +35,7 @@ class JsonDatabase():
         TRN = tracker.gg
         """
         self._DBPATH = "./database"
-        self._dict = {
+        self._PATH_DICT = {
             'lol_jdict': f'{self._DBPATH}/lol_dict.json',
             'jdict': f'{self._DBPATH}/dict.json',
             'jdata': f'{self._DBPATH}/setting.json',
@@ -62,8 +63,8 @@ class JsonDatabase():
             os.mkdir(self._DBPATH)
             print(f">> Created folder: {self._DBPATH} <<")
         
-        for file in self._dict:
-            path = self._dict[file]
+        for file in self._PATH_DICT:
+            path = self._PATH_DICT[file]
             if not os.path.isfile(path):
                 if not create_file:
                     continue

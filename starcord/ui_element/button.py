@@ -1,5 +1,5 @@
 import discord
-from starcord.Core import sclient
+from starcord.DataExtractor import sqldb,MySQLDatabase
 
 class ReactRole_button(discord.ui.View):
     def __init__(self):
@@ -72,12 +72,12 @@ class Delete_Pet_button(discord.ui.View):
     @discord.ui.button(label="放生寵物",style=discord.ButtonStyle.danger)
     async def button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
         user = interaction.user
-        sclient.delete_user_pet(str(user.id))
+        sqldb.delete_user_pet(str(user.id))
         button.disabled = True
         await interaction.response.edit_message(content="寵物已放生",view=self)
 
 class Delete_Add_Role_button(discord.ui.View):
-    def __init__(self,role,creater):
+    def __init__(self,role:discord.Role,creater:discord.Member):
         super().__init__(timeout=30)
         self.role = role
         self.creater = creater
@@ -85,6 +85,8 @@ class Delete_Add_Role_button(discord.ui.View):
     async def on_timeout(self):
         try:
             self.clear_items()
+            for user in self.role.members:
+                sqldb.add_role_save(user.id,self.role.id,self.role.name,self.role.created_at)
             await self.message.edit(view=self)
         except discord.errors.NotFound:
             pass

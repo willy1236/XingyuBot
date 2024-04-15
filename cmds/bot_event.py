@@ -13,6 +13,10 @@ keywords = {
     '抹茶粉':'由威立冠名贊助撥出~'
 }
 
+member_names = {
+    419131103836635136: "威立"
+}
+
 voice_updata = Jsondb.jdata.get('voice_updata')
 debug_mode = Jsondb.jdata.get("debug_mode",True)
 main_guild = Jsondb.jdata.get('main_guild',[])
@@ -108,7 +112,7 @@ class event(Cog_Extension):
         if message.guild and message.guild.id == 613747262291443742 and not message.author.bot:
             if message.content and message.content.startswith(".") and message.content[1] and message.content[1] != ".":
                 #image_bytes = await message.attachments[0].read() if message.attachments else None
-                text = generate_aitext(message.content)
+                text = generate_aitext(f"{member_names.get(message.author.id,message.author.name)}：{message.content}")
                 await message.reply(text,mention_author=False)
                 return
 
