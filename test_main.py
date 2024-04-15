@@ -21,10 +21,19 @@ from starcord.starAI import generate_aitext
 
 if __name__ == '__main__':
 	pass
-	for _ in range(5):
-		content =".星羽 你認為台中摃殘黨與山珍海味黨有何異同"
-		print(generate_aitext(f"威立：{content[1:]}"))
-		time.sleep(3)
+	content = [
+			"威立：星羽 你認為台中摃殘黨與山珍海味黨的差異在哪裡",
+			"威立：星羽 你可以簡單介紹一下快樂營的各政黨嗎",
+			"威立：星羽 對於全國林冠宇神聖階級運動說要將官員任期從一個月調整到六個月 你比較偏好哪種任期時長呢",
+			"威立：介紹彩虹頻道",
+			"威立：諷黎認為自己很常被禁言 那他要加入哪個政黨才能解決這個問題呢",
+			"威立：山珍海味黨以前就叫山珍海味黨嗎",
+			 ]
+	for i in content:
+		print(f"{i}：")
+		print(generate_aitext(f"{i}"))
+		print("="*50)
+		time.sleep(10)
 	# CHANNEL_ID = "UCbh7KHPMgYGgpISdbF6l0Kw"
 	# youtube_feed = f'https://www.youtube.com/feeds/videos.xml?channel_id={CHANNEL_ID}'
 	# feed = feedparser.parse(youtube_feed)
