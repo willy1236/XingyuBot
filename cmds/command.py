@@ -189,12 +189,13 @@ class command(Cog_Extension):
             raise commands.errors.ArgumentParsingError('沒有此用戶的紀錄')
     
     @role.command(description='身分組排行榜')
-    async def ranking(self, ctx):
+    async def ranking(self, ctx,
+                      ranking_count:discord.Option(int,name='排行榜人數',default=5,min_value=1,max_value=30)):
         await ctx.defer()
         dbdata = sclient.sqldb.get_role_save_count_list()
         sorted_data = sorted(dbdata.items(), key=lambda x:x[1],reverse=True)
         embed = BotEmbed.simple("身分組排行榜")
-        for i in range(5):
+        for i in range(ranking_count):
             try:
                 data = sorted_data[i]
                 user = self.bot.get_user(data[0])
