@@ -148,7 +148,7 @@ class task(Cog_Extension):
             apex_crafting = ApexInterface().get_raw_crafting()
             apex_crafting_dict = {
                 "date": today.isoformat(),
-                "data": apex_crafting[0:2]
+                "data": apex_crafting[0:1]
             }
             Jsondb.write_cache("apex_crafting",apex_crafting_dict)
 

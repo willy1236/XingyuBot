@@ -486,12 +486,12 @@ class ApexPlayer():
 
 class ApexCrafting():
     def __init__(self,data):
-        self.daily = data[0]
-        self.weekly = data[1]
+        #self.daily = data[0]
+        self.weekly = data[0]
 
-        self.daily_start = self.daily['startDate']
-        self.daily_end = self.daily['endDate']
-        self.daily_item = [ApexCraftingItem(i) for i in self.daily['bundleContent']]
+        # self.daily_start = self.daily['startDate']
+        # self.daily_end = self.daily['endDate']
+        # self.daily_item = [ApexCraftingItem(i) for i in self.daily['bundleContent']]
 
         self.weekly_start = self.weekly['startDate']
         self.weekly_end = self.weekly['endDate']
@@ -499,10 +499,10 @@ class ApexCrafting():
     
     def desplay(self):
         embed = BotEmbed.simple("Apex合成器內容")
-        text = ""
-        for item in self.daily_item:
-            text += f"{item.name_tw} {item.cost}\n"
-        embed.add_field(name="每日物品",value=text[:-1],inline=False)
+        # text = ""
+        # for item in self.daily_item:
+        #     text += f"{item.name_tw} {item.cost}\n"
+        # embed.add_field(name="每日物品",value=text[:-1],inline=False)
         
         text = ""
         for item in self.weekly_item:
