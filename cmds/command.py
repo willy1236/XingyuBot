@@ -35,7 +35,7 @@ class command(Cog_Extension):
     async def count(self,ctx,user_list:discord.Option(str,required=False,name='要查詢的用戶',description='多個用戶請用空格隔開，或可輸入default查詢常用人選')):
         await ctx.defer()
         if not user_list:
-            user_list = [ctx.author]
+            user_list = [ctx.author.id]
         elif 'default' in user_list:
             user_list = [419131103836635136,528935362199027716,465831362168094730,539405949681795073,723435216244572160,490136735557222402]
         else:
