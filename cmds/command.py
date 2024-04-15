@@ -215,7 +215,7 @@ class command(Cog_Extension):
         six_list_100 = []
         guaranteed = 100
         
-        dbuser = sclient.get_partial_dcuser(user_id,"guaranteed")
+        dbuser = sclient.sqldb.get_partial_dcuser(user_id,"guaranteed")
         user_guaranteed = dbuser.guaranteed or 0
             
         for i in range(times):
