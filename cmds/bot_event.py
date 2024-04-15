@@ -116,7 +116,7 @@ class event(Cog_Extension):
         if message.guild and message.guild.id == 613747262291443742 and not message.author.bot:
             if message.content and message.content.startswith(".") and message.content[1] and message.content[1] != ".":
                 #image_bytes = await message.attachments[0].read() if message.attachments else None
-                text = generate_aitext(f"{member_names.get(message.author.id,message.author.name)}：{message.content}")
+                text = generate_aitext(f"{member_names.get(message.author.id,message.author.name)}：{message.content[1:]}")
                 await message.reply(text,mention_author=False)
                 return
 

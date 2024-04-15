@@ -1,5 +1,6 @@
 import asyncio
 import secrets
+import time
 from datetime import datetime
 from enum import Enum, IntEnum
 
@@ -12,6 +13,7 @@ from bs4 import BeautifulSoup
 
 from starcord import log,Jsondb
 from starcord.DataExtractor import TwitchAPI, YoutubeAPI, YoutubeRSS
+from starcord.starAI import generate_aitext
 
 # db = CsvDatabase()
 # r = db.get_row_by_column_value(db.lol_champion,"name_tw","凱莎")
@@ -19,7 +21,10 @@ from starcord.DataExtractor import TwitchAPI, YoutubeAPI, YoutubeRSS
 
 if __name__ == '__main__':
 	pass
-
+	for _ in range(5):
+		content =".星羽 你認為台中摃殘黨與山珍海味黨有何異同"
+		print(generate_aitext(f"威立：{content[1:]}"))
+		time.sleep(3)
 	# CHANNEL_ID = "UCbh7KHPMgYGgpISdbF6l0Kw"
 	# youtube_feed = f'https://www.youtube.com/feeds/videos.xml?channel_id={CHANNEL_ID}'
 	# feed = feedparser.parse(youtube_feed)
