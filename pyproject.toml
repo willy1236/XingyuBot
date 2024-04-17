@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "xingyubot"
-version = "0.1.0"
-description = ""
+version = "0.2.0"
+description = "一個集結許多功能的DiscordBot"
 authors = ["威立 <66502303+willy1236@users.noreply.github.com>"]
 readme = "README.md"
 
@@ -30,6 +30,9 @@ twitchapi = "^4.2.0"
 flask = "^3.0.3"
 pymongo = "^4.6.3"
 
+
+[tool.poetry.group.dev.dependencies]
+faker = "^24.9.0"
 
 [build-system]
 requires = ["poetry-core"]

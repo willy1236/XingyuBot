@@ -9,6 +9,7 @@ import feedparser
 import requests
 import pandas as pd
 from bs4 import BeautifulSoup
+from faker import Faker
 #from pydantic import BaseModel
 
 from starcord import log,Jsondb
@@ -21,36 +22,20 @@ from starcord.starAI import generate_aitext
 
 if __name__ == '__main__':
 	pass
-	content = [
-			"威立：星羽 你認為台中摃殘黨與山珍海味黨的差異在哪裡",
-			"威立：星羽 你可以簡單介紹一下快樂營的各政黨嗎",
-			"威立：星羽 對於全國林冠宇神聖階級運動說要將官員任期從一個月調整到六個月 你比較偏好哪種任期時長呢",
-			"威立：介紹彩虹頻道",
-			"威立：諷黎認為自己很常被禁言 那他要加入哪個政黨才能解決這個問題呢",
-			"威立：山珍海味黨以前就叫山珍海味黨嗎",
-			 ]
-	for i in content:
-		print(f"{i}：")
-		print(generate_aitext(f"{i}"))
-		print("="*50)
-		time.sleep(10)
-	# CHANNEL_ID = "UCbh7KHPMgYGgpISdbF6l0Kw"
-	# youtube_feed = f'https://www.youtube.com/feeds/videos.xml?channel_id={CHANNEL_ID}'
-	# feed = feedparser.parse(youtube_feed)
-	# for entry in feed['entries']:
-	# 	print(entry)
-	# api = YoutubeAPI()
-	# id = api.get_channel_id("sakagawa_0309")
-	# print(id)
-	
-	# from cmds.task import slice_list
-	# list = YoutubeRSS().get_videos("UCNkJevYXQcjTc70j45FXFjA")
-	# list.reverse()
-	# print(len(list))
-	# for i in list:
-	# 	print(i.updated_at)
-	# time = datetime.fromisoformat("2024-02-18 06:52:51+08:00")
-	# print(len(slice_list(list,time)))
+
+	# content = [
+	# 		"威立：星羽 你認為台中摃殘黨與山珍海味黨的差異在哪裡",
+	# 		"威立：星羽 你可以簡單介紹一下快樂營的各政黨嗎",
+	# 		"威立：星羽 對於全國林冠宇神聖階級運動說要將官員任期從一個月調整到六個月 你比較偏好哪種任期時長呢",
+	# 		"威立：介紹彩虹頻道",
+	# 		"威立：諷黎認為自己很常被禁言 那他要加入哪個政黨才能解決這個問題呢",
+	# 		"威立：山珍海味黨以前就叫山珍海味黨嗎",
+	# 		 ]
+	# for i in content:
+	# 	print(f"{i}：")
+	# 	print(generate_aitext(f"{i}"))
+	# 	print("="*50)
+	# 	time.sleep(10)
 
 	#df = RiotAPI().get_rank_dataframe("SakaGawa#0309")
 	# df = pd.read_csv('my_data.csv').sort_values("tier")
@@ -63,30 +48,3 @@ if __name__ == '__main__':
 	# for idx,data in df.iterrows():
 	# 	print(data["name"],dict.get(data["queueType"]),data["tier"] + " " + data["rank"])
 	#df.to_csv('my_data.csv', index=False)
-
-	# from cmds.task import slice_list
-	# ytchannels = ["UCNkJevYXQcjTc70j45FXFjA"]
-	# cache_youtube = "2024-02-15T04:07:49+08:00"
-	# rss = YoutubeRSS()
-	# log.info("youtube_video start")
-	# for ytchannel_id in ytchannels:
-	# 	#抓取資料
-	# 	rss_data = rss.get_videos(ytchannel_id)
-	# 	#log.info(rss_data)
-	# 	if not rss_data:
-	# 		continue
-	# 	cache_last_update_time = datetime.fromisoformat(cache_youtube)
-	# 	log.info(cache_last_update_time)
-	# 	#判斷是否有更新
-	# 	log.info(rss_data[0].updated_at)
-	# 	log.info(f"{rss_data[0].updated_at > cache_last_update_time}")
-	# 	if not cache_last_update_time or rss_data[0].updated_at > cache_last_update_time:
-			
-	# 		#整理影片列表&儲存最後更新時間
-	# 		rss_data.reverse()
-	# 		video_list = slice_list(rss_data, cache_last_update_time)
-	# 		log.info(video_list)
-	# 		#發布通知
-	# 		for video in video_list:
-	# 			log.info(f"{video.title}:{video.updated_at}")
-	# 			log.info(f"sec: {ytchannel_id}")

@@ -1,9 +1,12 @@
-from datetime import datetime,date,timedelta
+from _decimal import Decimal
+from datetime import datetime,date, time,timedelta
+from typing import Dict, List, Set, Tuple
 
 import discord
 import mysql.connector
 from mysql.connector.errors import Error as sqlerror
 
+from starcord.models.model import GameInfoPage
 from starcord.types import DBGame,Coins, Position
 from starcord.models.user import *
 from starcord.models.model import *
@@ -291,7 +294,7 @@ class MySQLGameSystem(MySQLBaseModel):
         self.cursor.execute(f"DELETE FROM `game_data` WHERE `discord_id` = %s AND `game` = %s;",(discord_id,game.value))
         self.connection.commit()
 
-    def get_game_data(self,discord_id:int,game:DBGame=None):
+    def get_game_data(self,discord_id:int,game:DBGame=None) -> dict | GameInfoPage:
         """獲取遊戲資料"""
         self.cursor.execute(f"USE `stardb_user`;")
         if game:

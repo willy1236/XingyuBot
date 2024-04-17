@@ -96,56 +96,46 @@ class command(Cog_Extension):
     @role.command(description='儲存身分組')
     @commands.cooldown(rate=1,per=5)
     @commands.is_owner()
+    @commands.bot_has_permissions(manage_roles=True)
     async def save(self,
-                   ctx:discord.ApplicationContext,
-                   user:discord.Option(str,name='用戶名',description='輸入all可儲存所有身分組')):
-        def save_role(user:discord.Member):
-            user_id = user.id
-            for role in user.roles:
-                if role.id == 877934319249797120:
-                    break
-                if role.name == '@everyone':
-                    continue
-                try:
-                    #1062
-                    sclient.sqldb.add_role_save(user_id,role.id,role.name,role.created_at.date())
-                    log.info(f'新增:{role.name}')
-                except sqlerror as e:
-                    if e.errno == 1062:
-                        pass
-                    else:
-                        log.warning(f'儲存身分組時發生錯誤：{role.name}')
-                        raise
-
+                   ctx:discord.ApplicationContext):
         await ctx.defer()
         guild = self.bot.get_guild(main_guild[0])
-        add_role = guild.get_role(877934319249797120)
-        if user == 'all':
-            for user in add_role.members:
-                save_role(user)
-            await ctx.respond('身分組儲存完成',delete_after=5)
-        else:
-            user = await find.user(ctx,user)
-            if user and add_role in user.roles:
-                save_role(user)
-                await ctx.respond('身分組儲存完成',delete_after=5)
-            elif add_role not in user.roles:
-                await ctx.respond('錯誤:此用戶沒有"加身分組"')
+        
+        for role in guild.roles:
+            if role.id == 877934319249797120:
+                break
+            elif not role.is_default():
+                for user in role.members:
+                    try:
+                        #1062
+                        sclient.sqldb.add_role_save(user.id,role.id,role.name,role.created_at.date())
+                        log.info(f'新增:{role.name}')
+                    except sqlerror as e:
+                        if e.errno != 1062:
+                            log.warning(f'儲存身分組時發生錯誤：{role.name}')
+                            raise
+                            
+        await ctx.respond('身分組儲存完成',delete_after=5)
 
     @role.command(description='清除身分組')
     @commands.is_owner()
     async def rsmove(self,ctx):
         await ctx.defer()
-        for user in ctx.guild.get_role(877934319249797120).members:
-            log.info(user.name)
-            for role in user.roles:
-                if role.id == 877934319249797120:
-                    break
-                if role.name == '@everyone':
-                    continue
-                log.info(f'已移除:{role.name}')
-                await role.delete()
-                await asyncio.sleep(0.5)
+        guild = self.bot.get_guild(main_guild[0])
+        if not guild.get_role(877934319249797120):
+            await ctx.respond('錯誤：找不到"加身分組"',delete_after=5)
+            return
+        
+        for role in guild.roles:
+            if role.id == 877934319249797120:
+                break
+            if role.is_default():
+                continue
+            log.info(f'已移除:{role.name}')
+            await role.delete()
+            await asyncio.sleep(0.5)
+        
         await ctx.respond('身分組清理完成',delete_after=5)
 
     # @role.command(description='更改暱稱')
@@ -168,25 +158,23 @@ class command(Cog_Extension):
         await ctx.defer()
         user = user or ctx.author
         record = sclient.sqldb.get_role_save(user.id)
-        if record:
-            page = []
-            i = 10
-            page_now = -1
-            for data in record:
-                if i >= 10:
-                    page.append(BotEmbed.simple(f"{user.name} 身分組紀錄"))
-                    i = 0
-                    page_now += 1
-                role_name = data['role_name']
-                time = data['time']
-                page[page_now].add_field(name=role_name, value=time, inline=False)
-                i += 1
-
-            paginator = pages.Paginator(pages=page, use_default_buttons=True)
-            await paginator.respond(ctx.interaction, ephemeral=False)
-            
-        else:
+        if not record:
             raise commands.errors.ArgumentParsingError('沒有此用戶的紀錄')
+        
+        page:list[discord.Embed] = []
+        i = 10
+        for data in record:
+            if i >= 10:
+                page.append(BotEmbed.simple(f"{user.name} 身分組紀錄"))
+                i = 0
+            role_name = data['role_name']
+            time = data['time']
+            page[-1].add_field(name=role_name, value=time, inline=False)
+            i += 1
+
+        paginator = pages.Paginator(pages=page, use_default_buttons=True)
+        await paginator.respond(ctx.interaction, ephemeral=False)
+            
     
     @role.command(description='身分組排行榜')
     async def ranking(self, ctx,

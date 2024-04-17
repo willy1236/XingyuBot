@@ -130,9 +130,9 @@ class system_game(Cog_Extension):
         player_data = sclient.get_user_game(userid)
 
         if player_data:
-            await ctx.respond(f'查詢成功',embed=player_data.desplay(user))
+            await ctx.respond(f'查詢成功',embed=player_data.embed(user))
         else:
-            await ctx.respond(f'錯誤:找不到此用戶',ephemeral=True)
+            await ctx.respond(f'錯誤：找不到用戶或尚未註冊資料',ephemeral=True)
 
     # @lol.command(description='查詢League of Legends用戶資料')
     # async def user(self,ctx,userid:discord.Option(str,name='用戶',description='要查詢的用戶')):

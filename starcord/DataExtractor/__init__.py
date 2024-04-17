@@ -56,4 +56,5 @@ __all__ =[
     'SteamInterface',
     'DBDInterface',
     'CWA_API',
+    'YoutubeRSS',
 ]

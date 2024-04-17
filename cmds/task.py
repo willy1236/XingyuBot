@@ -13,15 +13,14 @@ from requests.exceptions import ConnectTimeout
 
 from starcord import Cog_Extension,Jsondb,sclient,log,BotEmbed,Utilities
 from starcord.DataExtractor import *
-from starcord.DataExtractor.community import YoutubeRSS
 from starcord.models.community import TwitchVideo, YoutubeVideo
 
-#apsc_log = logging.getLogger('apscheduler')
+apsc_log = logging.getLogger('apscheduler')
 formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s')
 consoleHandler = logging.StreamHandler()
-consoleHandler.setLevel(logging.WARNING)
+consoleHandler.setLevel(logging.INFO)
 consoleHandler.setFormatter(formatter)
-log.addHandler(consoleHandler)
+apsc_log.addHandler(consoleHandler)
 
 def slice_list(lst:list[YoutubeVideo], target) -> list[YoutubeVideo]:
     """以target為基準取出更新的影片資訊"""

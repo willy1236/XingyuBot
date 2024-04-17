@@ -22,23 +22,23 @@ class GameInfo:
         self.account_id = data.get("account_id")
         self.other_id = data.get("other_id")
 
-class GameInfoPage:
+class GameInfoPage():
     def __init__(self,data=None):
-        self.data = [GameInfo(i) for i in data] if data else []
-        self.discord_id = self.data[0].discord_id if self.data else None
+        self.items = [GameInfo(i) for i in data] if data else []
+        self.discord_id = self.items[0].discord_id if self.items else None
 
-    def desplay(self,dc_user:discord.User=None):
+    def embed(self,dc_user:discord.User=None):
         if dc_user:
             title = dc_user.name + " 遊戲資料"
             thumbnail_url = dc_user.display_avatar.url
         else:
             title = self.discord_id + " 遊戲資料"
-            thumbnail_url = discord.Embed.Empty
+            thumbnail_url = None
         
         embed = BotEmbed.simple(title=title)
         embed.set_thumbnail(url=thumbnail_url)
         
-        for d in self.data:
+        for d in self.items:
             game = d.game.value
             name = d.player_name
             if name:
