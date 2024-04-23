@@ -31,7 +31,7 @@ class CWA_API(WeatherClient):
         params = {
             'Authorization': self.auth,
             'timeFrom': timeFrom,
-            'limit': 1
+            'limit': 5
         }
         APIdata = requests.get(f'{self.url}/E-A0015-001',params=params,timeout=20)
         data = APIdata.json().get('records').get('Earthquake')
