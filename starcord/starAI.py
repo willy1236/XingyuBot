@@ -11,8 +11,8 @@ genai.configure(api_key=Jsondb.get_token("google_aistudio"))
 # Set up the model
 generation_config = {
   "temperature": 1,
-  "top_p": 0.95,
-  #"top_k": 1,
+  "top_p": 1,
+  "top_k": 1,
   "max_output_tokens": 8192,
   "stop_sequences": [
     "白色長髮的神秘角色",
@@ -42,7 +42,7 @@ safety_settings = [
   },
 ]
 
-model = genai.GenerativeModel(model_name="gemini-1.0-pro-latest",
+model = genai.GenerativeModel(model_name="gemini-1.5-pro-latest",
                               generation_config=generation_config,
                               safety_settings=safety_settings)
 
@@ -112,11 +112,11 @@ def generate_aitext(input_text,image_bytes:bytes=None):
 	
 	try:
 		response = model.generate_content(prompt_parts)
-	except google.api_core.exceptions.InternalServerError:
-		print("google.api_core.exceptions.InternalServerError")	
+	except Exception as e:
+		print(type(e))
 		response = model.generate_content(prompt_parts)
 
-	#prompt_parts.append(f"output: {response.text}")
+	prompt_parts.append(f"output: {response.text}")
 	return response.text
 
 def start_aichat():

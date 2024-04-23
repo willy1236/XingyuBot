@@ -36,13 +36,13 @@ class CWA_API(WeatherClient):
         APIdata = requests.get(f'{self.url}/E-A0015-001',params=params,timeout=20)
         data = APIdata.json().get('records').get('Earthquake')
         if data:
-            return EarthquakeReport(data[0],auto_type='E-A0015-001')
+            return [EarthquakeReport(i,auto_type='E-A0015-001') for i in data]
         else:
             time.sleep(1)
             APIdata = requests.get(f'{self.url}/E-A0016-001',params=params,timeout=20)
             data = APIdata.json().get('records').get('Earthquake')
             if data:
-                return EarthquakeReport(data[0],auto_type='E-A0016-001')
+                return [EarthquakeReport(i,auto_type='E-A0016-001') for i in data]
             else:
                 return None
 

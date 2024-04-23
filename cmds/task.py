@@ -71,14 +71,14 @@ class task(Cog_Extension):
     async def earthquake_check(self):
         timefrom = Jsondb.read_cache('earthquake_timefrom')
         try:
-            data = CWA_API().get_earthquake_report_auto(timefrom)
+            datas = CWA_API().get_earthquake_report_auto(timefrom)
         except ConnectTimeout:
             log.warning("earthquake_check timeout.")
             return
         except:
             return
         
-        if data:
+        for data in datas:
             time = datetime.strptime(data.originTime, "%Y-%m-%d %H:%M:%S") + timedelta(seconds=1)
             Jsondb.write_cache('earthquake_timefrom',time.strftime("%Y-%m-%dT%H:%M:%S"))
 
