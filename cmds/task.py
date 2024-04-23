@@ -78,7 +78,7 @@ class task(Cog_Extension):
         except:
             return
         
-        if not data:
+        if not datas:
             return
 
         for data in datas:
