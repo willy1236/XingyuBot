@@ -880,13 +880,13 @@ files = [
 
 [[package]]
 name = "genshin"
-version = "1.6.3"
+version = "1.6.2"
 description = "An API wrapper for Genshin Impact."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "genshin-1.6.3-py3-none-any.whl", hash = "sha256:de5f87dbac46abbbed8ccc6cf48be345044a927cbce28fe0830639484d53b1e0"},
-    {file = "genshin-1.6.3.tar.gz", hash = "sha256:5a9dc17fcaf1627f1b4077e77d6e000c1121b8d8797e34809bc8dce6678606cc"},
+    {file = "genshin-1.6.2-py3-none-any.whl", hash = "sha256:ba119dbc67632e8584d1b4a08fb83ec3640ef1aa5c5b915938b0a7e69733840e"},
+    {file = "genshin-1.6.2.tar.gz", hash = "sha256:b238fa5b4e735d61988ca459efb9b8e71054a3dd46daa25e2a04189a5f07cbd1"},
 ]
 
 [package.dependencies]
@@ -894,10 +894,10 @@ aiohttp = "*"
 pydantic = "*"
 
 [package.extras]
-all = ["browser-cookie3", "click", "qrcode[pil]", "rsa"]
+all = ["browser-cookie3", "click", "rsa"]
 cli = ["click"]
 cookies = ["browser-cookie3"]
-geetest = ["qrcode[pil]", "rsa"]
+geetest = ["rsa"]
 
 [[package]]
 name = "gitdb"
@@ -2745,4 +2745,4 @@ secretstorage = ["cffi", "secretstorage"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "5ce92ebb8ef4b7b44c66c2c1df808e96c65eff93b1ed724e57827bb8e94ef6e7"
+content-hash = "792852dd7bf31e926f8076c1193a3df8f425183c4c07fd76911ecc9aee77d589"

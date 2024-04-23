@@ -26,7 +26,7 @@ class weather(Cog_Extension):
     async def weatherwarning(self,ctx):
         report = CWA_API().get_weather_warning()
         if report:
-            await ctx.respond('查詢成功',embed=report.desplay())
+            await ctx.respond('查詢成功',embed=report.embed())
         else:
             await ctx.respond('目前無發布中警特報',delete_after=5)
 

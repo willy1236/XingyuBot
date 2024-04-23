@@ -1,4 +1,7 @@
-import datetime,discord
+from datetime import datetime
+
+import discord
+
 from starcord.Utilities.utility import BotEmbed
 
 
@@ -90,30 +93,32 @@ class Forecast():
         for data in self.forecast_all:
             text = f"{data['Wx']}\n高低溫:{data['maxT']}/{data['minT']}\n{data['Cl']}"
             embed.add_field(name=data['name'],value=text)
-        embed.timestamp = datetime.datetime.now()
+        embed.timestamp = datetime.now()
         embed.set_footer(text=f'{self.timestart}至{self.timeend}')
         return embed
     
 class WeatherWarning:
     def __init__(self,data):
-        self.issueTime = data.get('issueTime')
-        self.startTime = data.get('startTime')
-        self.endTime = data.get('endTime')
-        self.update = data.get('update')
-        self.contentText = data.get('contentText')
+        self.issueTime = data["datasetInfo"].get('issueTime')
+        self.datasetDescription = data["datasetInfo"].get('datasetDescription')
+        self.startTime = data["datasetInfo"]["validTime"].get('startTime')
+        self.endTime = data["datasetInfo"]["validTime"].get('endTime')
+        self.update = data["datasetInfo"].get('update')
+        self.contentText = data["contents"]["content"].get('contentText')
+        
         self.phenomena = data.get('phenomena')
         self.significance = data.get('significance')
         self.locationName = data.get('locationName')
 
-    def desplay(self):
-        embed = BotEmbed.general('天氣警特報',description=self.contentText)
+    def embed(self):
+        embed = BotEmbed.general('天氣警特報',title=self.datasetDescription,description=self.contentText)
         embed.add_field(name='發布時間',value=self.issueTime)
         embed.add_field(name='開始時間',value=self.startTime)
         embed.add_field(name='結束時間',value=self.endTime)
-        embed.add_field(name='警特報類型',value=self.phenomena)
-        embed.add_field(name='程度',value=self.significance)
-        embed.add_field(name='涵蓋區域市',value=self.locationName)
+        # embed.add_field(name='警特報類型',value=self.phenomena)
+        # embed.add_field(name='程度',value=self.significance)
+        # embed.add_field(name='涵蓋區域市',value=self.locationName)
 
-        embed.timestamp = datetime.datetime.now()
+        embed.timestamp = datetime.now()
         embed.set_footer(text=f'最後更新：{self.update}')
         return embed

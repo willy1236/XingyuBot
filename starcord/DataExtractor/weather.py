@@ -63,7 +63,7 @@ class CWA_API(WeatherClient):
         }
         APIdata = requests.get(f'{self.url}/W-C0033-002',params=params).json().get('records').get('record')
         if APIdata:
-            return WeatherWarning(APIdata[0])
+            return [WeatherWarning(i) for i in APIdata]
         else:
             return None
         

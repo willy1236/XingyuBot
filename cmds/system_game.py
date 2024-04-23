@@ -1,7 +1,10 @@
-import discord,genshin,re,asyncio
+import re
+
+import discord
+import genshin
+from datetime import timedelta,datetime
 from discord.ext import commands,pages
 from discord.commands import SlashCommandGroup
-from datetime import timedelta,datetime
 
 from starcord import Cog_Extension,BotEmbed,Jsondb,csvdb,ChoiceList,sclient
 from starcord.DataExtractor import *
@@ -378,20 +381,20 @@ class system_game(Cog_Extension):
                   #cookie_token:discord.Option(str,name='cookie_token',description="非必填 輸入後才能使用更多功能 如兌換序號",required=False,default=None),
                   remove:discord.Option(bool,name='若要移除資料請設為true',default=False)):
         if not remove:
-            self.sqldb.set_hoyo_cookies(str(ctx.author.id),ltuid,ltoken,None)
+            sclient.sqldb.set_hoyo_cookies(str(ctx.author.id),ltuid,ltoken,None)
             if uid:
-                self.sqldb.set_game_data(str(ctx.author.id),DBGame.GENSHIN.value,player_id=uid)
+                sclient.sqldb.set_game_data(str(ctx.author.id),DBGame.GENSHIN.value,player_id=uid)
             await ctx.respond(f'{ctx.author.mention} 設定完成',ephemeral=True)
         else:
-            self.sqldb.remove_hoyo_cookies(str(ctx.author.id))
-            self.sqldb.remove_game_data(str(ctx.author.id),DBGame.GENSHIN.value)
+            sclient.sqldb.remove_hoyo_cookies(str(ctx.author.id))
+            sclient.sqldb.remove_game_data(str(ctx.author.id),DBGame.GENSHIN.value)
             await ctx.respond(f'{ctx.author.mention} cookies移除完成',ephemeral=True)
 
     @hoyo.command(description='取得每月原石來源統計（原神）')
     @commands.cooldown(rate=1,per=1)
     async def diary(self,ctx):
         await ctx.defer()
-        cookies = self.sqldb.get_userdata(str(ctx.author.id),'game_hoyo_cookies')
+        cookies = sclient.sqldb.get_userdata(str(ctx.author.id),'game_hoyo_cookies')
         if not cookies:
             raise commands.errors.ArgumentParsingError("沒有設定cookies或已過期")
         client = genshin.Client(cookies,lang='zh-tw')
@@ -428,7 +431,7 @@ class system_game(Cog_Extension):
     async def hoyolab(self,ctx,
                    hoyolab_name:discord.Option(str,name='hoyolab名稱',description='要查詢的用戶')):
         await ctx.defer()
-        cookies = self.sqldb.get_userdata(str(ctx.author.id),'game_hoyo_cookies')
+        cookies = sclient.sqldb.get_userdata(str(ctx.author.id),'game_hoyo_cookies')
         if not cookies:
             raise commands.errors.ArgumentParsingError("沒有設定cookies或已過期")
         client = genshin.Client(cookies,lang='zh-tw')
@@ -494,7 +497,7 @@ class system_game(Cog_Extension):
     async def genshin(self,ctx,
                    genshin_id:discord.Option(str,name='原神uid',description='要查詢的用戶',default=None)):
         await ctx.defer()
-        cookies = self.sqldb.get_userdata(str(ctx.author.id),'game_hoyo_cookies')
+        cookies = sclient.sqldb.get_userdata(str(ctx.author.id),'game_hoyo_cookies')
         if not cookies:
             raise commands.errors.ArgumentParsingError("沒有設定cookies或已過期")
         client = genshin.Client(cookies,lang='zh-tw')
@@ -517,7 +520,7 @@ class system_game(Cog_Extension):
     async def honkai(self,ctx,
                    honkai_id:discord.Option(str,name='崩壞uid',description='要查詢的用戶',default=None)):
         await ctx.defer()
-        cookies = self.sqldb.get_userdata(str(ctx.author.id),'game_hoyo_cookies')
+        cookies = sclient.sqldb.get_userdata(str(ctx.author.id),'game_hoyo_cookies')
         if not cookies:
             raise commands.errors.ArgumentParsingError("沒有設定cookies或已過期")
         client = genshin.Client(cookies,lang='zh-tw')
@@ -539,7 +542,7 @@ class system_game(Cog_Extension):
                            genshin_id:discord.Option(str,name='原神uid',description='要查詢的用戶',default=None),
                            previous:discord.Option(bool,name='是否查詢上期紀錄',description='',default=False)):
         await ctx.defer()
-        cookies = self.sqldb.get_userdata(str(ctx.author.id),'game_hoyo_cookies')
+        cookies = sclient.sqldb.get_userdata(str(ctx.author.id),'game_hoyo_cookies')
         if not cookies:
             raise commands.errors.ArgumentParsingError("沒有設定cookies或已過期")
         client = genshin.Client(cookies,lang='zh-tw')
@@ -587,7 +590,7 @@ class system_game(Cog_Extension):
                    code:discord.Option(str,name='禮包碼',description='要兌換的禮包碼'),
                    uid:discord.Option(str,name='uid',description='要兌換的用戶')):
         if not jdata.get("debug_mode"):
-            cookies = self.sqldb.get_userdata(str(ctx.author.id),'game_hoyo_cookies')
+            cookies = sclient.sqldb.get_userdata(str(ctx.author.id),'game_hoyo_cookies')
         else:
             cookies = genshin.utility.get_browser_cookies("chrome")
 
@@ -604,14 +607,14 @@ class system_game(Cog_Extension):
                    need_mention:discord.Option(bool,name='成功簽到時是否要tag提醒',default=True),
                    remove:discord.Option(bool,name='若要移除資料請設為true',default=False)):
         if remove:
-            self.sqldb.remove_hoyo_reward(ctx.author.id)
+            sclient.sqldb.remove_hoyo_reward(ctx.author.id)
             await ctx.respond('設定已移除')
             return
         
-        cookies = self.sqldb.get_userdata(str(ctx.author.id),'game_hoyo_cookies')
+        cookies = sclient.sqldb.get_userdata(str(ctx.author.id),'game_hoyo_cookies')
         if not cookies:
             raise commands.errors.ArgumentParsingError("沒有設定cookies或已過期")
-        self.sqldb.add_hoyo_reward(ctx.author.id,game,ctx.channel.id,need_mention)
+        sclient.sqldb.add_hoyo_reward(ctx.author.id,game,ctx.channel.id,need_mention)
         await ctx.respond('設定已完成')
         
     
@@ -619,7 +622,7 @@ class system_game(Cog_Extension):
     @commands.cooldown(rate=1,per=1)
     async def test(self,ctx,
                    hoyolab_uid:discord.Option(str,name='hoyolab_uid',description='要查詢的用戶',default=None)):
-        cookies = self.sqldb.get_userdata(str(ctx.author.id),'game_hoyo_cookies')
+        cookies = sclient.sqldb.get_userdata(str(ctx.author.id),'game_hoyo_cookies')
         if not cookies:
             raise commands.errors.ArgumentParsingError("沒有設定cookies")
         client = genshin.Client(cookies,lang='zh-tw')
