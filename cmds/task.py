@@ -78,6 +78,9 @@ class task(Cog_Extension):
         except:
             return
         
+        if not data:
+            return
+
         for data in datas:
             time = datetime.strptime(data.originTime, "%Y-%m-%d %H:%M:%S") + timedelta(seconds=1)
             Jsondb.write_cache('earthquake_timefrom',time.strftime("%Y-%m-%dT%H:%M:%S"))
