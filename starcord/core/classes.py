@@ -9,7 +9,7 @@ class DiscordBot(discord.Bot):
             intents = discord.Intents.all(),
             help_command = None
         )
-
+        
         self.bot_code = bot_code
         self.main_guilds = Jsondb.jdata.get('main_guild')
         self.debug_mode = Jsondb.jdata.get('debug_mode',True)

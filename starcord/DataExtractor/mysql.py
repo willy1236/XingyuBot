@@ -1,5 +1,4 @@
-from _decimal import Decimal
-from datetime import datetime,date, time,timedelta
+from datetime import datetime,date,time,timedelta
 from typing import Dict, List, Set, Tuple
 
 import discord
@@ -851,7 +850,7 @@ class MySQLWarningSystem(MySQLBaseModel):
         self.cursor.execute(f"SELECT * FROM `stardb_user`.`user_moderate` WHERE `warning_id` = {warning_id};")
         records = self.cursor.fetchall()
         if records:
-            return WarningSheet(records,self)
+            return WarningSheet(records[0],self)
     
     def get_warnings(self,discord_id:int,guild_id:int=None):
         """取得用戶的警告列表
@@ -936,9 +935,9 @@ class MySQLPollSystem(MySQLBaseModel):
         dbdata = self.cursor.fetchall()
         if not dbdata:
             raise SQLNotFoundError(f"Poll {poll_id} not found")
-        result = dbdata[0].get("multiple_choice")
+        multiple_choice = dbdata[0].get("multiple_choice")
         
-        if result == 1:    
+        if multiple_choice == 1:    
             self.cursor.execute(f"SELECT * FROM `stardb_user`.`user_poll` WHERE `poll_id` = {poll_id} AND `discord_id` = {discord_id} AND `vote_option` = {vote_option};")
             dbdata = self.cursor.fetchall()
             if dbdata:

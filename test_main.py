@@ -37,11 +37,12 @@ if __name__ == '__main__':
 			"XX12：為什麼隕石每次都能精準的砸到隕石坑裡？",
 			"XX12：我想配個6000多的電腦 大概要多少錢？",
 			 ]
-	for i in content:
-		print(f"{i}：")
-		print(generate_aitext(f"{i}"))
-		print("="*50)
-		time.sleep(10)
+	# for i in content:
+	# 	print(f"{i}：")
+	# 	print(generate_aitext(f"{i}"))
+	# 	print("="*50)
+	# 	time.sleep(10)
+
 
 	# CWA_API().get_weather_warning()
 

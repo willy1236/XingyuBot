@@ -1,5 +1,5 @@
 import discord
-from starcord.DataExtractor import sqldb,MySQLDatabase
+from starcord.DataExtractor import sqldb
 
 class ReactRole_button(discord.ui.View):
     def __init__(self):

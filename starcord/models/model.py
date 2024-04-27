@@ -79,7 +79,7 @@ class WarningSheet:
     def officially_given(self):
         return self.guild_id in Jsondb.jdata["debug_guild"]
     
-    def display(self,bot:discord.Bot):
+    def embed(self,bot:discord.Bot):
         user = bot.get_user(self.discord_id)
         moderate_user = bot.get_user(self.moderate_user_id)
         guild = bot.get_guild(self.guild_id)

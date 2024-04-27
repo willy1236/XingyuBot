@@ -1,16 +1,15 @@
 import asyncio
 import os
 import time
+from datetime import datetime, timedelta, timezone
 from threading import Thread
 
 import discord
 from discord.ext import commands
 
 from starcord import Jsondb,log,sclient,DiscordBot
-from starcord.ui_element.button import *
-from starcord.ui_element.view import *
+from starcord.ui_element.view import PollView, WelcomeView, ReactionRole1
 
-#Bot1:dc小幫手, Bep:Bep, Bot2:RO
 jdata = Jsondb.jdata
 bot_code = jdata.get('bot_code')
 api_website = jdata.get('api_website')
@@ -41,19 +40,19 @@ async def on_ready():
         log.warning(f">> Cogs not all loaded, {len(bot.cogs)}/{len(os.listdir('./cmds'))} loaded<<")
     
     if bot.bot_code == 'Bot1' and not bot.debug_mode:
-        #將超過14天的投票自動關閉
+        #將超過28天的投票自動關閉
         dbdata = sclient.sqldb.get_all_active_polls()
-        now = datetime.datetime.now()
+        now = datetime.now()
         for poll in dbdata:
-            if now - poll['created_at'] > datetime.timedelta(days=14):
+            if now - poll['created_at'] > timedelta(days=28):
                 #sqldb.remove_poll(poll['poll_id'])
                 sclient.sqldb.update_poll(poll['poll_id'],"is_on",0)
             else:   
                 bot.add_view(PollView(poll['poll_id'],sqldb=sclient.sqldb,bot=bot))
 
         invites = await bot.get_guild(613747262291443742).invites()
-        now = datetime.datetime.now(datetime.timezone.utc)
-        days_5 = datetime.timedelta(days=5)
+        now = datetime.now(timezone.utc)
+        days_5 = timedelta(days=5)
         invite:discord.Invite
         for invite in invites:
             if not invite.expires_at and not invite.scheduled_event and invite.uses == 0 and now - invite.created_at > days_5 and invite.url != "https://discord.gg/ye5yrZhYGF":

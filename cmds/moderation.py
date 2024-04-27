@@ -1,6 +1,9 @@
-import discord,datetime
+from datetime import datetime, timedelta
+
+import discord
 from discord.ext import commands
 from discord.commands import SlashCommandGroup
+
 from starcord import Cog_Extension,ChoiceList,BotEmbed,Jsondb,sclient
 from starcord.Utilities import converter
 
@@ -51,10 +54,10 @@ class moderation(Cog_Extension):
             await ctx.send(embed=BotEmbed.simple('溫馨提醒','若為定時通知，請將機器人的訊息保持在此頻道的最新訊息，以免機器人找不到訊息而重複發送'),delete_after=10)
             if notify_type in ["voice_log"]:
                 from .task import scheduler
-                time = datetime.datetime.now() + datetime.timedelta(seconds=1)
+                time = datetime.now() + timedelta(seconds=1)
                 scheduler.add_job(sclient.init_NoticeClient,"date",run_date=time,args=[notify_type])
         else:
-            sclient.sqldb.remove_notice_channel(guildid,notify_type)
+            sclient.sqldb.remove_notify_channel(guildid,notify_type)
             await ctx.respond(f'設定完成，已移除 {notify_type} 頻道')
 
     @channel_notify.command(description='設定動態語音頻道')
@@ -70,7 +73,7 @@ class moderation(Cog_Extension):
             await ctx.respond(f'設定完成，已移除 動態語音 頻道')
         
         from .task import scheduler
-        time = datetime.datetime.now() + datetime.timedelta(seconds=1)
+        time = datetime.now() + timedelta(seconds=1)
         scheduler.add_job(sclient.init_NoticeClient,"date",run_date=time,args=["dynamic_voice","dynamic_voice_room"])
     
     @channel_notify.command(description='查看通知設定的頻道')
@@ -78,7 +81,7 @@ class moderation(Cog_Extension):
     @commands.guild_only()
     async def list(self,ctx:discord.ApplicationContext):
         dbdata = sclient.sqldb.get_all_notify_channel(ctx.guild.id)
-        embed = BotEmbed.general("通知頻道",ctx.guild.icon.url if ctx.guild.icon else discord.Embed.Empty)
+        embed = BotEmbed.general("通知頻道",ctx.guild.icon.url if ctx.guild.icon else None)
         for data in dbdata:
             notify_type = data['notify_type']
             channel_id = data['channel_id']
@@ -99,7 +102,7 @@ class moderation(Cog_Extension):
     @warning.command(description='給予用戶警告，此警告可連動至其他群組')
     @commands.has_permissions(manage_messages=True)
     @commands.guild_only()
-    async def add(self,ctx,
+    async def add(self,ctx:discord.ApplicationContext,
                       user:discord.Option(discord.User,name='用戶',description='要給予警告的用戶',required=True),
                       reason:discord.Option(str,name='原因',description='限100字內'),
                       add_record:discord.Option(bool,name='是否要將此紀錄存入警告系統',description='將紀錄存入警告系統供其他群組檢視',default=False)):
@@ -111,7 +114,7 @@ class moderation(Cog_Extension):
             await ctx.respond("不能警告機器人")
             return
 
-        time = datetime.datetime.now()
+        time = datetime.now()
         moderate_user = ctx.author.id
         warning_id = sclient.sqldb.add_warning(user.id,'warning',moderate_user,ctx.guild.id,time,reason,None,not add_record)
         embed = BotEmbed.general(f'{user.name} 已被警告',user.display_avatar.url,description=f"{user.mention}：{reason}")
@@ -123,7 +126,7 @@ class moderation(Cog_Extension):
     
     @warning.command(description='獲取用戶的所有警告')
     @commands.guild_only()
-    async def list(self,ctx,
+    async def list(self,ctx:discord.ApplicationContext,
                       user:discord.Option(discord.User,name='用戶',description='要查詢的用戶',required=True),
                       guild_only:discord.Option(bool,name='查詢是否包含伺服器區域警告',description='預設為True',default=True)):
         dbdata = sclient.sqldb.get_warnings(user.id,ctx.guild.id if guild_only else None)
@@ -131,24 +134,24 @@ class moderation(Cog_Extension):
 
     @warning.command(description='獲取指定警告')
     @commands.guild_only()
-    async def get(self,ctx,
+    async def get(self,ctx:discord.ApplicationContext,
                       warning_id:discord.Option(str,name='警告編號',description='要查詢的警告',required=True)):
         sheet = sclient.sqldb.get_warning(int(warning_id))
         if sheet:
-            await ctx.respond(embed=sheet.display(self.bot))
+            await ctx.respond(embed=sheet.embed(self.bot))
         else:
             await ctx.respond("查無此警告單")
 
     @warning.command(description='移除用戶警告')
     @commands.has_permissions(kick_members=True)
     @commands.guild_only()
-    async def remove(self,ctx,
+    async def remove(self,ctx:discord.ApplicationContext,
                      warning_id:discord.Option(str,name='警告編號',description='要移除的警告',required=True)):
         dbdata = sclient.sqldb.get_warning(int(warning_id))
         is_owner = await self.bot.is_owner(ctx.author)
         if dbdata:
             guild = self.bot.get_guild(dbdata['create_guild'])
-            if not guild == ctx.guild and not is_owner:
+            if guild != ctx.guild and not is_owner:
                 await ctx.respond("不能移除非此伺服器發出的警告")
                 return
             sclient.sqldb.remove_warning(int(warning_id))
@@ -167,14 +170,14 @@ class moderation(Cog_Extension):
                       add_record:discord.Option(bool,name='是否要將此紀錄存入警告系統',description='將紀錄存入警告系統供其他群組檢視',default=False)):
         await ctx.defer()
         time = converter.time_to_datetime(time_last)
-        if not time or time > datetime.timedelta(days=7) :
+        if not time or time > timedelta(days=7) :
             await ctx.respond(f"錯誤：時間格式錯誤（不得超過7天）")
             return
         
         await user.timeout_for(time,reason=reason)
         
         moderate_user = ctx.user.id
-        create_time = datetime.datetime.now()
+        create_time = datetime.now()
         if add_record and not user.bot:
             sclient.sqldb.add_warning(user.id,'timeout',moderate_user,ctx.guild.id,create_time,reason,time_last)
         
@@ -197,7 +200,7 @@ class moderation(Cog_Extension):
         await user.kick(reason=reason)
         
         moderate_user = ctx.user.id
-        create_time = datetime.datetime.now()
+        create_time = datetime.now()
         if add_record and not user.bot:
             sclient.sqldb.add_warning(user.id,'kick',moderate_user,ctx.guild.id,create_time,reason,None)
         
@@ -220,7 +223,7 @@ class moderation(Cog_Extension):
         await user.ban(reason=reason,delete_message_days=delete_message_days)
         
         moderate_user = ctx.user.id
-        create_time = datetime.datetime.now()
+        create_time = datetime.now()
         if add_record and not user.bot:
             sclient.sqldb.add_warning(user.id,'ban',moderate_user,ctx.guild.id,create_time,reason,None)
         
