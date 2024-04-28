@@ -37,11 +37,14 @@ class error(Cog_Extension):
                         await BRS.error(self.bot,ctx,f"{error.original} ({error.original.original_message})")
 
             elif isinstance(error.original,discord.errors.Forbidden):
-                await ctx.respond(f'錯誤：我缺少權限執行這項操作，可能為我的身分組位階較低或缺少必要權限導致',ephemeral=True)
+                await ctx.respond(f'錯誤：我缺少權限執行這項操作，可能為我的身分組位階較低或缺少必要權限',ephemeral=True)
 
             elif isinstance(error.original,sqlerror) and error.original.errno == 1062:
                 await ctx.respond(f'錯誤：資料重複新增',ephemeral=True)
-            
+            elif isinstance(error.original,AttributeError):
+                await ctx.respond(f'錯誤：機器人內部錯誤（若發生此項錯誤請靜待修復）',ephemeral=True)
+                await BRS.error(self.bot,ctx,error)
+
             else:
                 await ctx.respond(f'發生未知錯誤：```py\n{error.original}```',ephemeral=True)
                 if not ctx.guild or ctx.guild.id not in debug_guild:
