@@ -674,7 +674,7 @@ class command(Cog_Extension):
                 await ctx.respond(f"{user_dc.mention}：你沒有參加 {Jsondb.jdict['party_option'].get(str(party_id))}")
                 return
 
-        sclient.add_election(user_dc.id,session + 1,position,party_id)
+        sclient.sqldb.add_election(user_dc.id,session + 1,position,party_id)
         await ctx.respond(f"{user_dc.mention}：完成競選報名 {Jsondb.jdict['position_option'].get(position)}")
 
     @election.command(description='離開選舉')
@@ -691,7 +691,7 @@ class command(Cog_Extension):
     @commands.is_owner()
     async def format(self, ctx, last:discord.Option(bool,name='上屆候選人名單',description='是否顯示上屆候選人名單',default=False)):
         await ctx.defer()
-        embed = sclient.sqldb.election_format(session if last else session + 1, self.bot)
+        embed = sclient.election_format(session if last else session + 1, self.bot)
         await ctx.respond(embed=embed)
 
     @election.command(description='開始投票')

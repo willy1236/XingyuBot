@@ -75,9 +75,13 @@ class WarningSheet:
         self.guild_only = data.get("guild_only")
         self.bot_given = data.get("bot_given")
 
+        self.__officially_given = None
+
     @property
     def officially_given(self):
-        return self.guild_id in Jsondb.jdata["debug_guild"]
+        if self.__officially_given is None:
+            self.__officially_given = self.guild_id in Jsondb.jdata["debug_guild"]
+        return self.__officially_given
     
     def embed(self,bot:discord.Bot):
         user = bot.get_user(self.discord_id)
@@ -87,7 +91,7 @@ class WarningSheet:
         name = f'{user.name} 的警告單'
         description = f"**編號:{self.warning_id} ({self.moderate_type})**\n被警告用戶：{user.mention}\n管理員：{guild.name}/{moderate_user.mention}\n原因：{self.reason}\n時間：{self.create_time}"
         if self.officially_given:
-            description += "\n機器人官方給予"
+            description += "\n官方警告"
         if self.guild_only:
             description += "\n伺服器區域警告"
         embed = BotEmbed.general(name=name,icon_url=user.display_avatar.url,description=description)
@@ -99,7 +103,7 @@ class WarningSheet:
             name = f"編號: {self.warning_id} ({self.moderate_type})"
             value = f"{guild.name}/{moderate_user.mention}\n{self.reason}\n{self.create_time}"
             if self.officially_given:
-                value += "\n機器人官方給予"
+                value += "\n官方警告"
             if self.guild_only:
                 value += "\n伺服器區域警告"
             return name, value
