@@ -115,6 +115,7 @@ class PollClient():
 class ElectionSystem():
     def election_format(self,session:str,bot:discord.Bot):
         dbdata = sqldb.get_election_full_by_session(session)
+        guild = bot.get_guild(613747262291443742)
         
         # result = { "職位": { "用戶id": ["用戶提及", ["政黨"]]}}
         result = {}
@@ -123,8 +124,14 @@ class ElectionSystem():
         
         for i in dbdata:
             discord_id = i['discord_id']
-            party_name = i['party_name'] or "無黨籍"
             position = i['position']
+            if i['party_name'] and guild:
+                role = guild.get_role(i["role_id"])
+                party_name = role.mention if role else i['party_name']
+                
+            else:
+                party_name = i['party_name'] or "無黨籍"
+            
             
             user = bot.get_user(discord_id)
             if user:

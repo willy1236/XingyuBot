@@ -1026,7 +1026,8 @@ class MYSQLElectionSystem(MySQLBaseModel):
                 cl.session,
                 cl.position,
                 COALESCE(cl.represent_party_id, up.party_id) AS party_id,
-                pd.party_name
+                pd.party_name,
+                pd.role_id
             FROM
                 `database`.`candidate_list` cl
                     LEFT JOIN
@@ -1058,7 +1059,16 @@ class MYSQLElectionSystem(MySQLBaseModel):
         self.connection.commit()
 
     def get_all_party_data(self):
-        self.cursor.execute(f"SELECT `party_data`.*,count(*) AS count FROM `stardb_user`.`user_party` LEFT JOIN `database`.`party_data` ON user_party.party_id = party_data.party_id GROUP BY `party_id` ORDER BY `party_id`")
+        self.cursor.execute(f"""
+            SELECT 
+                `party_data`.*, COUNT(`user_party`.party_id) AS count
+            FROM
+                `database`.`party_data`
+                    LEFT JOIN
+                `stardb_user`.`user_party` ON party_data.party_id = user_party.party_id
+            GROUP BY `party_id`
+            ORDER BY `party_id`;
+        """)
         records = self.cursor.fetchall()
         return records
     
