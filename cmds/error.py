@@ -25,8 +25,9 @@ class error(Cog_Extension):
             await ctx.respond(f'缺少權限:我沒有權限來使用此指令\n缺少權限: {text}',ephemeral=True)
 
         elif isinstance(error,commands.errors.NoPrivateMessage):
-            await ctx.respond(f'頻道錯誤：此指令不可在DM中使用',ephemeral=True)
+            await ctx.respond(f'頻道錯誤：此指令不可在私訊中使用',ephemeral=True)
         
+        #指令執行時發生錯誤
         elif isinstance(error,discord.ApplicationCommandInvokeError):
             if isinstance(error.original,StarException):
                 await ctx.respond(error.original,ephemeral=True)
@@ -37,13 +38,14 @@ class error(Cog_Extension):
                         await BRS.error(self.bot,ctx,f"{error.original} ({error.original.original_message})")
 
             elif isinstance(error.original,discord.errors.Forbidden):
-                await ctx.respond(f'錯誤：我缺少權限執行這項操作，可能為我的身分組位階較低或缺少必要權限',ephemeral=True)
+                await ctx.respond(f'缺少權限：我缺少權限執行這項操作，可能為我的身分組位階較低或缺少必要權限',ephemeral=True)
 
             elif isinstance(error.original,sqlerror) and error.original.errno == 1062:
-                await ctx.respond(f'錯誤：資料重複新增',ephemeral=True)
+                await ctx.respond(f'資料錯誤：資料重複新增',ephemeral=True)
             elif isinstance(error.original,AttributeError):
                 await ctx.respond(f'錯誤：機器人內部錯誤（若發生此項錯誤請靜待修復）',ephemeral=True)
                 await BRS.error(self.bot,ctx,error)
+                log.error(f'{error},{type(error)},{type(error.original)}')
 
             else:
                 await ctx.respond(f'發生未知錯誤：```py\n{error.original}```',ephemeral=True)

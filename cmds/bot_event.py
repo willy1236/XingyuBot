@@ -7,7 +7,7 @@ import discord
 from discord.ext import commands
 
 from starcord import Cog_Extension,Jsondb,BotEmbed,BRS,sclient,log
-from starcord.starAI import generate_aitext
+from starcord.starAI import StarGeminiAI
 
 keywords = {
     '抹茶粉':'由威立冠名贊助撥出~'
@@ -26,6 +26,8 @@ debug_mode = Jsondb.jdata.get("debug_mode",True)
 main_guild = Jsondb.jdata.get('main_guild',[])
 
 guild_registration = sclient.sqldb.get_resgistration_dict() if sclient.sqldb else {}
+
+starai = StarGeminiAI()
 
 def check_registration(member:discord.Member):
     earlest = datetime.now(timezone.utc)
@@ -116,7 +118,7 @@ class event(Cog_Extension):
         if message.guild and message.guild.id == 613747262291443742 and not message.author.bot:
             if message.content and message.content.startswith(".") and message.content[1] and message.content[1] != ".":
                 #image_bytes = await message.attachments[0].read() if message.attachments else None
-                text = generate_aitext(f"{member_names.get(message.author.id,message.author.name)}：{message.content[1:]}")
+                text = starai.generate_aitext(f"{member_names.get(message.author.id,message.author.name)}：{message.content[1:]}")
                 await message.reply(text,mention_author=False)
                 return
 
