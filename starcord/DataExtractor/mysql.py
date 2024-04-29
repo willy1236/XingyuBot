@@ -1020,7 +1020,22 @@ class MYSQLElectionSystem(MySQLBaseModel):
         return records
     
     def get_election_full_by_session(self,session:int):
-        self.cursor.execute(f"SELECT cl.discord_id,cl.session,cl.position,COALESCE(cl.represent_party_id, up.party_id) AS party_id,pd.party_name FROM `database`.`candidate_list` cl JOIN `stardb_user`.`user_party` up ON cl.discord_id = up.discord_id LEFT JOIN `database`.`party_data` pd ON COALESCE(cl.represent_party_id, up.party_id) = pd.party_id WHERE session = {session};")
+        self.cursor.execute(f"""
+            SELECT 
+                cl.discord_id,
+                cl.session,
+                cl.position,
+                COALESCE(cl.represent_party_id, up.party_id) AS party_id,
+                pd.party_name
+            FROM
+                `database`.`candidate_list` cl
+                    LEFT JOIN
+                `stardb_user`.`user_party` up ON cl.discord_id = up.discord_id
+                    LEFT JOIN
+                `database`.`party_data` pd ON COALESCE(cl.represent_party_id, up.party_id) = pd.party_id
+            WHERE
+                session = {session};
+        """)
         return self.cursor.fetchall()
 
     def get_election_by_session_position(self,session:int,position=str):
