@@ -9,6 +9,7 @@ from starcord.Utilities import find, random_color, create_only_role_list, create
 from starcord.ui_element.button import Delete_Add_Role_button
 from starcord.ui_element.view import PollView
 from starcord.DataExtractor import GoogleCloud
+from starcord.types import Coins
 
 from cmds.bot_event import check_registration
 
@@ -332,16 +333,16 @@ class command(Cog_Extension):
             #點數計算
             for i in winners:
                 pt_add = i['money'] * (mag+1)
-                sclient.sqldb.update_point('add',i['user_id'],pt_add)
+                sclient.sqldb.update_coins(i['user_id'],'add',Coins.POINT,pt_add)
             
         else:
             users = sclient.sqldb.get_bet_winner(bet_id,'blue')
             for i in users:
-                sclient.sqldb.update_point('add',i['user_id'],i['money'])
+                sclient.sqldb.update_coins(i['user_id'],'add',Coins.POINT,i['money'])
             
             users = sclient.sqldb.get_bet_winner(bet_id,'pink')
             for i in users:
-                sclient.sqldb.update_point('add',i['user_id'],i['money'])
+                sclient.sqldb.update_coins(i['user_id'],'add',Coins.POINT,i['money'])
             await ctx.respond(f'編號{bet_id}：因為有一方沒有人選擇，所以此局平手，點數將歸還給所有人')
         
         #更新資料庫
@@ -735,7 +736,7 @@ class command(Cog_Extension):
 
                 view = sclient.create_poll(title,options,ctx.author.id,ctx.guild.id,False)
 
-                message = await ctx.send(embed=view.display(ctx),view=view)
+                message = await ctx.send(embed=view.embed(ctx),view=view)
                 #sclient.update_poll(view.poll_id,"message_id",message.id)
                 await asyncio.sleep(1)
         await ctx.respond(f"第{session}屆中央選舉投票創建完成")
