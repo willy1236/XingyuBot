@@ -1,13 +1,13 @@
 [tool.poetry]
 name = "xingyubot"
-version = "0.2.0"
+version = "0.2.1"
 description = "一個集結許多功能的DiscordBot"
 authors = ["威立 <66502303+willy1236@users.noreply.github.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.11"
-py-cord = "^2.5.0"
+py-cord = {extras = ["voice"], version = "^2.5.0"}
 requests = "^2.31.0"
 feedparser = "^6.0.11"
 pandas = "^2.2.1"
@@ -33,6 +33,7 @@ genshin = "1.6.2"
 
 [tool.poetry.group.dev.dependencies]
 faker = "^24.9.0"
+spotify-dl = "^8.9.0"
 
 [build-system]
 requires = ["poetry-core"]

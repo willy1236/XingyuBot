@@ -1,16 +1,26 @@
-import discord,asyncio,time,random
-from discord.ext import commands,pages
+import asyncio
+import enum
+import random
+import time
 from typing import TYPE_CHECKING
+
+import discord
+import yt_dlp as youtube_dl
+from discord.ext import commands,pages
+
 from starcord import Cog_Extension,BotEmbed,log
 from starcord.errors import *
-import yt_dlp as youtube_dl
+
 
 # Suppress noise about console usage from errors
 youtube_dl.utils.bug_reports_message = lambda: ""
 
+class SongSource(enum.IntEnum):
+    YOUTUBE_OR_OTHER = 1
+    SPOTIFY = 2
 
 ytdl_format_options = {
-    "format": "bestaudio/best",
+    # "format": "bestaudio/best",
     "outtmpl": "%(extractor)s-%(id)s-%(title)s.%(ext)s",
     "restrictfilenames": True,
     "noplaylist": False,
@@ -20,8 +30,8 @@ ytdl_format_options = {
     "quiet": True,
     "no_warnings": True,
     "default_search": "auto",
-    "source_address": "0.0.0.0",  # Bind to ipv4 since ipv6 addresses cause issues at certain times
-    'extractor_retries': 'auto',
+    "source_address": "0.0.0.0",
+    'extractor_retries': 3,
 }
 
 ffmpeg_options = {
@@ -30,7 +40,6 @@ ffmpeg_options = {
 }
 
 ytdl = youtube_dl.YoutubeDL(ytdl_format_options)
-
 
 class YTDLSource(discord.PCMVolumeTransformer):
     def __init__(self, source: discord.AudioSource, *, data: dict, volume: float = 0.5):
@@ -41,21 +50,30 @@ class YTDLSource(discord.PCMVolumeTransformer):
     @classmethod
     async def from_url(self, url, *, loop=None, stream=False, volume: float = 0.5):
         loop = loop or asyncio.get_event_loop()
-        data = await loop.run_in_executor(None, lambda: ytdl.extract_info(url, download=not stream))
+        datas = await loop.run_in_executor(None, lambda: ytdl.extract_info(url, download=not stream))
 
-        if "entries" in data:
+        if "entries" in datas:
             # Takes the first item from a playlist
-            data = data["entries"][0]
+            datas = datas["entries"][0]
+        
+        data = None
+        if datas["webpage_url_domain"] == "youtube.com":
+            for data in datas["formats"]:
+                if data["format_note"] != "medium":
+                    continue
+        else:
+            data = datas["formats"][0]
 
         filename = data["url"] if stream else ytdl.prepare_filename(data)
         return self(discord.FFmpegPCMAudio(filename, **ffmpeg_options), data=data,volume=volume)
 
 
 class Song:
-    def __init__(self,url:str,title:str,requester:discord.Member=None):
+    def __init__(self,url:str,title:str,requester:discord.Member=None,song_from:SongSource=SongSource.YOUTUBE_OR_OTHER):
         self.url = url
         self.title = title
         self.requester = requester
+        self.song_from = song_from
 
 class MusicPlayer():
     if TYPE_CHECKING:
@@ -78,18 +96,19 @@ class MusicPlayer():
         self.nowplaying = None
 
     async def play_next(self,*arg):
-            song = self.start_first_song()
-            try:
-                source = await YTDLSource.from_url(song.url, stream=True,volume=self.volume)
-                #, loop=self.bot.loop
-                
-                embed = BotEmbed.simple(title="現在播放", description=f"[{song.title}]({song.url}) [{song.requester.mention}]")
-                await self.channel.send(embed=embed)
-                self.vc.play(source, after=self.after)
-            except Exception as e:
-                raise MusicPlayingError(str(e))
+        log.debug("play_next")
+        song = self.start_first_song()
+        try:
+            source = await YTDLSource.from_url(song.url, stream=True,volume=self.volume)
+            
+            embed = BotEmbed.simple(title="現在播放", description=f"[{song.title}]({song.url}) [{song.requester.mention}]")
+            await self.channel.send(embed=embed)
+            self.vc.play(source, after=self.after, wait_finish=True)
+        except Exception as e:
+            raise MusicPlayingError(str(e))
 
     def after(self,error):
+        log.debug("after")
         self.play_conpleted()
         if error:
             raise MusicPlayingError(error)
@@ -162,20 +181,25 @@ class music(Cog_Extension):
     @commands.guild_only()
     async def play(self, ctx: discord.ApplicationContext, url: str):
         await ctx.defer()
-        guildid =str(ctx.guild.id)
+        guildid = str(ctx.guild.id)
         vc = ctx.voice_client
 
-        #抓取歌曲
-        try:
-            results = ytdl.extract_info(url,download=False)
-        except youtube_dl.utils.DownloadError as e:
-            raise MusicCommandError("不受支援的連結，請重新檢查網址是否正確")
-
-        #區分歌單與單首歌曲
-        if "entries" in results:
-            song_data_list = results["entries"]
+        if url.startswith("https://open.spotify.com/"):
+            songfrom = SongSource.SPOTIFY
+            pass
         else:
-            song_data_list = [ results ]
+            songfrom = SongSource.YOUTUBE_OR_OTHER
+            #抓取歌曲
+            try:
+                results = ytdl.extract_info(url, download=False)
+            except youtube_dl.utils.DownloadError as e:
+                raise MusicCommandError("不受支援的連結，請重新檢查網址是否正確")
+
+            #區分歌單與單首歌曲
+            if "entries" in results:
+                song_data_list = list(results["entries"])  # Convert to list
+            else:
+                song_data_list = [results]
 
         #播放器設定
         player = guild_playing.get(guildid)
@@ -189,7 +213,7 @@ class music(Cog_Extension):
             for result in song_data_list:
                 title = result['title']
 
-                song = Song(url,title,ctx.author)
+                song = Song(url,title,ctx.author,songfrom)
                 player.add_song(song)
                 song_count += 1
 
@@ -206,6 +230,22 @@ class music(Cog_Extension):
             await ctx.respond(f"加入歌單: {results['title']}")
         else:
             await ctx.respond(f"**{song_count}** 首歌已加入歌單")
+
+    @commands.slash_command(description='播放音樂')
+    @commands.guild_only()
+    async def playtest(self, ctx: discord.ApplicationContext, url: str):
+        await ctx.defer()
+        channel = ctx.author.voice.channel
+        voice = await channel.connect()
+
+        ydl_opts = {}
+        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+            url2 = info['formats'][0]['url']
+            source = await discord.FFmpegOpusAudio.from_probe(url2, **ffmpeg_options)
+            player = voice.play(source)
+
+        await ctx.respond(f"加入歌單: {info['title']}")
 
     @commands.slash_command(description='跳過歌曲')
     @commands.guild_only()
