@@ -736,7 +736,7 @@ class command(Cog_Extension):
 
                 view = sclient.create_poll(title,options,ctx.author.id,ctx.guild.id,False)
 
-                message = await ctx.send(embed=view.embed(ctx),view=view)
+                message = await ctx.send(embed=view.embed(ctx.guild),view=view)
                 #sclient.update_poll(view.poll_id,"message_id",message.id)
                 await asyncio.sleep(1)
         await ctx.respond(f"第{session}屆中央選舉投票創建完成")
