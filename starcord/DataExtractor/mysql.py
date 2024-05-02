@@ -325,7 +325,7 @@ class MySQLRoleSaveSystem(MySQLBaseModel):
         
     def get_role_save_count_list(self) -> dict[str,int]:
         self.cursor.execute(f"USE `stardb_user`;")
-        self.cursor.execute(f'SELECT discord_id,COUNT(*) as count FROM `role_save` GROUP BY `discord_id` ORDER BY `count` DESC;')
+        self.cursor.execute(f'SELECT discord_id,COUNT(*) as count FROM `role_save` GROUP BY `discord_id` ORDER BY `count` ASC;')
         records = self.cursor.fetchall()
         if records:
             dict = {}
@@ -333,9 +333,9 @@ class MySQLRoleSaveSystem(MySQLBaseModel):
                 dict[data['discord_id']] = data['count']
             return dict
 
-    def add_role_save(self,discord_id:int,role_id:str,role_name:str,time:date):
+    def add_role_save(self,discord_id:int,role:discord.Role):
         self.cursor.execute(f"USE `stardb_user`;")
-        self.cursor.execute(f"INSERT INTO `role_save` VALUES(%s,%s,%s,%s)",(discord_id,role_id,role_name,time))
+        self.cursor.execute(f"INSERT INTO `role_save` VALUES(%s,%s,%s,%s)",(discord_id,role.id,role.name,role.created_at.date()))
         self.connection.commit()
 
 class MySQLCurrencySystem(MySQLBaseModel):
@@ -815,27 +815,6 @@ class MySQLRPGSystem(MySQLBaseModel):
         self.cursor.execute(f"DELETE FROM `database`.`rpg_city_battle` WHERE `city_id` = {city_id} AND `discord_id` = {discord_id};")
         self.connection.commit()
 
-class MySQLBusyTimeSystem(MySQLBaseModel):
-    def add_busy(self, discord_id, date, time):
-        self.cursor.execute(f"USE `stardb_user`;")
-        self.cursor.execute(f"INSERT INTO `busy_time` VALUES(%s,%s,%s);",(discord_id,date,time))
-        self.connection.commit()
-
-    def remove_busy(self, discord_id, date, time):
-        self.cursor.execute(f"USE `stardb_user`;")
-        self.cursor.execute(f"DELETE FROM `busy_time` WHERE `discord_id` = %s AND `date` = %s AND `time` = %s;",(discord_id,date,time))
-        self.connection.commit()
-
-    def get_busy(self,date):
-        self.cursor.execute(f"SELECT * FROM `stardb_user`.`busy_time` WHERE date = {date};")
-        records = self.cursor.fetchall()
-        return records
-    
-    def get_statistics_busy(self,discord_id:int):
-        self.cursor.execute(f"SELECT count(*) FROM `stardb_user`.`busy_time` WHERE `discord_id` = {discord_id};")
-        records = self.cursor.fetchone()
-        return records
-
 class MySQLWarningSystem(MySQLBaseModel):
     def add_warning(self,discord_id:int,moderate_type:str,moderate_user:int,create_guild:int,create_time:datetime,reason:str=None,last_time:str=None,guild_only=True) -> int:
         """給予用戶警告\n
@@ -1105,6 +1084,12 @@ class MySQLRegistrationSystem(MySQLBaseModel):
         if records:
             return records[0]
 
+class MySQLBackupSystem(MySQLBaseModel):
+    def backup_role(self,role:discord.Role,description:str=None):
+        self.cursor.execute(f"INSERT INTO `stardb_idbase`.`role_backup` VALUES(%s,%s,%s,%s,%s,%s,%s);",(role.id,role.name,role.created_at,role.colour.r,role.colour.g,role.colour.b,description))
+        for member in role.members:
+            self.cursor.execute(f"INSERT INTO `stardb_idbase`.`role_member_backup` VALUES(%s,%s);",(role.id,member.id))
+        self.connection.commit()
 class MySQLDatabase(
     MySQLUserSystem,
     MySQLNotifySystem,
@@ -1115,10 +1100,10 @@ class MySQLDatabase(
     MySQLBetSystem,
     MySQLPetSystem,
     MySQLRPGSystem,
-    MySQLBusyTimeSystem,
     MySQLWarningSystem,
     MySQLPollSystem,
     MYSQLElectionSystem,
     MySQLRegistrationSystem,
+    MySQLBackupSystem,
 ):
     """Mysql操作"""

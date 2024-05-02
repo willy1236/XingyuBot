@@ -237,5 +237,4 @@ async def create_role_magification_dict(text:str,ctx):
 def calculate_eletion_session(current_date=datetime.now()) -> int:
     """選舉屆數計算器"""
     start_date = datetime(2023, 10, 11)
-    months = (current_date.year - start_date.year) * 12 + current_date.month - start_date.month + 1
-    return months
+    return (current_date.year - start_date.year) * 12 + current_date.month - start_date.month + 1

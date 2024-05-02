@@ -1,4 +1,12 @@
-import discord,random,asyncio,datetime,re,psutil,subprocess,ctypes
+import asyncio
+import ctypes
+import random
+import re
+import subprocess
+from datetime import datetime, timedelta, timezone
+
+import discord
+import psutil
 from discord.errors import Forbidden, NotFound
 from discord.ext import commands,pages
 from discord.commands import SlashCommandGroup
@@ -10,7 +18,6 @@ from starcord.ui_element.button import Delete_Add_Role_button
 from starcord.ui_element.view import PollView
 from starcord.DataExtractor import GoogleCloud
 from starcord.types import Coins
-
 from cmds.bot_event import check_registration
 
 bet_option = ChoiceList.set('bet_option')
@@ -23,10 +30,8 @@ main_guild = Jsondb.jdata.get('main_guild')
 session = calculate_eletion_session()
 
 class command(Cog_Extension):
-
     bet = SlashCommandGroup("bet", "賭盤相關指令")
     role = SlashCommandGroup("role", "身分組管理指令")
-    busytime = SlashCommandGroup("busytime", "忙碌時間統計指令")
     poll = SlashCommandGroup("poll", "投票相關指令")
     election = SlashCommandGroup("election", "選舉相關指令",guild_ids=main_guild)
     party = SlashCommandGroup("party", "政黨相關指令",guild_ids=main_guild)
@@ -110,7 +115,7 @@ class command(Cog_Extension):
                 for user in role.members:
                     try:
                         #1062
-                        sclient.sqldb.add_role_save(user.id,role.id,role.name,role.created_at.date())
+                        sclient.sqldb.add_role_save(user.id,role)
                         log.info(f'新增:{role.name}')
                     except sqlerror as e:
                         if e.errno != 1062:
@@ -155,7 +160,7 @@ class command(Cog_Extension):
     #         await ctx.respond(f'錯誤:{ctx.author.mention}沒有稱號可更改',delete_after=5)
 
     @role.command(description='身分組紀錄')
-    async def record(self, ctx, user:discord.Option(discord.Member,name='欲查詢的成員',description='留空以查詢自己',default=None)):
+    async def record(self, ctx:discord.ApplicationContext, user:discord.Option(discord.Member,name='欲查詢的成員',description='留空以查詢自己',default=None)):
         await ctx.defer()
         user = user or ctx.author
         record = sclient.sqldb.get_role_save(user.id)
@@ -182,7 +187,7 @@ class command(Cog_Extension):
                       ranking_count:discord.Option(int,name='排行榜人數',default=5,min_value=1,max_value=30)):
         await ctx.defer()
         dbdata = sclient.sqldb.get_role_save_count_list()
-        sorted_data = sorted(dbdata.items(), key=lambda x:x[1],reverse=True)
+        sorted_data = sorted(dbdata.items(), key=lambda x:x[1])
         embed = BotEmbed.simple("身分組排行榜")
         for i in range(ranking_count):
             try:
@@ -244,9 +249,9 @@ class command(Cog_Extension):
                    dice_n:discord.Option(int,name='骰子數',description='總共擲幾顆骰子，預設為1',default=1,min_value=1),
                    dice:discord.Option(int,name='面骰',description='骰子為幾面骰，預設為100',default=100,min_value=1)):
         sum = 0
-        for i in range(dice_n):
+        for _ in range(dice_n):
             sum += random.randint(1,dice)
-        await ctx.respond(f'{dice_n}d{dice} 結果： {sum}')
+        await ctx.respond(f'{dice_n}d{dice} 結果：{sum}')
 
 
     @bet.command(description='賭盤下注')
@@ -266,13 +271,13 @@ class command(Cog_Extension):
             await ctx.respond('錯誤：此賭盤已經關閉了喔',ephemeral=True)
             return
         
-        user_data = sclient.sqldb.get_point(str(ctx.author.id))
+        user_data = sclient.sqldb.get_coin(str(ctx.author.id),Coins.POINT)
 
         if user_data['point'] < money:
             await ctx.respond('點數錯誤：你沒有那麼多點數',ephemeral=True)
             return
 
-        sclient.sqldb.update_point('add',str(ctx.author.id),money*-1)
+        sclient.sqldb.update_coins(str(ctx.author.id),'add',Coins.POINT,money*-1)
         sclient.sqldb.place_bet(bet_id,choice,money)
         await ctx.respond('下注完成!')
 
@@ -370,7 +375,7 @@ class command(Cog_Extension):
     @commands.has_permissions(moderate_members=True)
     @commands.bot_has_permissions(moderate_members=True)
     async def timeout_10s(self,ctx, member: discord.Member):
-        time = datetime.timedelta(seconds=10)
+        time = timedelta(seconds=10)
         await member.timeout_for(time,reason="指令：禁言10秒")
         await ctx.respond(f"已禁言{member.mention} 10秒",ephemeral=True)
     
@@ -384,8 +389,8 @@ class command(Cog_Extension):
         member.add_roles(role,reason="指令：懲戒集中營 開始")
         
         moderate_user = ctx.author
-        create_time = datetime.datetime.now()
-        time = datetime.timedelta(seconds=20)
+        create_time = datetime.now()
+        time = timedelta(seconds=20)
         timestamp = int((create_time+time).timestamp())
 
         embed = BotEmbed.general(f'{member.name} 已被懲戒',member.display_avatar.url,description=f"{member.mention}：懲戒集中營")
@@ -420,126 +425,10 @@ class command(Cog_Extension):
         result = random.choice(args)
         await ctx.respond(f'我選擇:{result}')
 
-    @busytime.command(description='新增沒空時間')
-    async def add(self,
-                  ctx:discord.ApplicationContext,
-                  date:discord.Option(str,name='日期',description='6/4請輸入0604 6/5~6/8請輸入0605~0608 以此類推'),
-                  time:discord.Option(str,name='時間',description='',choices=busy_time_option)):
-        try:
-            if len(date) == 4:
-                datetime.datetime.strptime(date,"%m%d")
-                sclient.sqldb.add_busy(ctx.author.id,date,time)
-                await ctx.respond('設定完成')
-            elif len(date) == 9:
-                date1_str = date[0:4]
-                date2_str = date[5:9]
-                date1 = datetime.datetime.strptime(date1_str,"%m%d")
-                date2 = datetime.datetime.strptime(date2_str,"%m%d")
-        except ValueError:
-            await ctx.respond('錯誤：日期格式錯誤')
-            return
-            
-        for i in range((date2 - date1).days + 1):
-            date_str = date1.strftime("%m%d")
-            sclient.sqldb.add_busy(str(ctx.author.id),date_str,time)
-            date1 += datetime.timedelta(days=1)
-        await ctx.respond('設定完成')
-
-
-    @busytime.command(description='移除沒空時間')
-    async def remove(self,
-                     ctx:discord.ApplicationContext,
-                     date:discord.Option(str,name='日期',description='6/4請輸入0604 6/5~6/8請輸入0605~0608 以此類推'),
-                     time:discord.Option(str,name='時間',description='',choices=busy_time_option)):
-        try:
-            if len(date) == 4:
-                datetime.datetime.strptime(date,"%m%d")
-                sclient.sqldb.remove_busy(ctx.author.id, date,time)
-                await ctx.respond('移除完成')
-            elif len(date) == 9:
-                date1_str = date[0:4]
-                date2_str = date[5:9]
-                date1 = datetime.datetime.strptime(date1_str,"%m%d")
-                date2 = datetime.datetime.strptime(date2_str,"%m%d")
-        except ValueError:
-            await ctx.respond('錯誤：日期格式錯誤')
-            return
-        
-        for i in range((date2 - date1).days + 1):
-            date_str = date1.strftime("%m%d")
-            sclient.sqldb.remove_busy(str(ctx.author.id),date_str,time)
-            date1 += datetime.timedelta(days=1)
-        await ctx.respond('設定完成')
-
-    @busytime.command(description='確認沒空時間')
-    async def check(self,
-                    ctx:discord.ApplicationContext,
-                    date:discord.Option(str,name='日期',description='請輸入四位數日期 如6/4請輸入0604 留空查詢現在時間',required=False),
-                    days:discord.Option(int,name='連續天數',description='想查詢的天數 預設為7',default=7,min_value=1,max_value=270)):
-        if date:
-            date_now = datetime.datetime.strptime(date,"%m%d")
-        else:
-            date_now = datetime.datetime.now()
-        text = ""
-
-        for i in range(days):
-            date_str = date_now.strftime("%m%d")
-            dbdata = sclient.get_busy(date_str)
-            list = ["早上","下午","晚上"]
-            for j in dbdata:
-                try:
-                    if j['time'] == "1":
-                        list.remove("早上")
-                    if j['time'] == "2":
-                        list.remove("下午")
-                    if j['time'] == "3":
-                        list.remove("晚上")
-                except ValueError:
-                    pass
-
-            text += f"{date_str}: {','.join(list)}\n"
-            date_now += datetime.timedelta(days=1)
-
-        embed = BotEmbed.simple('目前有空時間',text)
-        await ctx.respond(embed=embed)
-
-    @busytime.command(description='統計沒空時間')
-    async def statistics(self,ctx):
-        user_list = self.bot.get_guild(613747262291443742).get_role(1097455657428471918).members
-        text = ''
-        for i in user_list:
-            dbdata = sclient.sqldb.get_statistics_busy(i.id)
-            text += f'{i.mention}: {dbdata.get("count(user_id)")}\n'
-        embed = BotEmbed.simple('總計',text)
-        await ctx.respond(embed=embed)
-
-    @busytime.command(description='創建活動',guild_ids=main_guild)
-    async def event(self,ctx,
-                    date:discord.Option(str,name='時間',description='請輸入四位數日期+四位數時間 如8/25 14:00請輸入08251400'),
-                    during:discord.Option(int,name='活動持續天數',description='活動將持續幾天',default=1,min_value=1,max_value=31)):
-        guild = self.bot.get_guild(613747262291443742)
-        
-        timezone = datetime.timezone(datetime.timedelta(hours=8))
-        today = datetime.datetime.today()
-        date += str(today.year)
-        start_time = datetime.datetime.strptime(date,"%m%d%H%M%Y")
-        if start_time < today:
-            date += str(today.year + 1)
-            start_time = datetime.datetime.strptime(date,"%m%d%H%M%Y")
-        start_time = start_time.replace(tzinfo=timezone)
-        
-        end_time = datetime.datetime(start_time.year,start_time.month,start_time.day,0,0,0) + datetime.timedelta(days=during)
-        end_time = end_time.replace(tzinfo=timezone)
-
-        event = await guild.create_scheduled_event(name="【第二屆線上TRPG】正式場第三場-阿卡姆之影",start_time=start_time,end_time=end_time,location="https://trpgline.com/zh-TW/admin")
-        await ctx.respond(f"{event.name} 已建立完成")
-        channel = self.bot.get_channel(1097158403358478486)
-        await channel.send(f"{event.name}：{event.url}")
-
     @commands.user_command(name="辣味貢丸一周年",guild_ids=main_guild)
     @commands.bot_has_permissions(moderate_members=True)
     async def meatball(self,ctx, member: discord.Member):
-        time = datetime.timedelta(seconds=60)
+        time = timedelta(seconds=60)
         await member.timeout_for(time,reason="辣味貢丸一周年")
         await member.edit(nick="我是辣味貢丸")
         role = member.guild.get_role(1136338119835254946)
@@ -556,11 +445,12 @@ class command(Cog_Extension):
             await ctx.respond(f"你不是台中摃殘黨員",ephemeral=True)
             return
         
-        member.timeout_for(duration=datetime.timedelta(seconds=10),reason="bonk")
+        member.timeout_for(duration=timedelta(seconds=10),reason="bonk")
         await ctx.respond(f"{member.mention}：bonk")
 
     @poll.command(description='創建投票')
-    async def create(self,ctx,
+    async def create(self,
+                     ctx:discord.ApplicationContext,
                      title:discord.Option(str,name='標題',description='投票標題，限45字內'),
                      options:discord.Option(str,name='選項',description='投票選項，最多輸入10項，每個選項請用英文,隔開'),
                      show_name:discord.Option(bool,name='顯示投票人',description='預設為false，若投票人數多建議關閉',default=False),
@@ -574,14 +464,13 @@ class command(Cog_Extension):
         options = options.split(",")
         if len(options) > 10 or len(options) < 1:
             await ctx.respond(f"錯誤：投票選項超過10項或小於1項",ephemeral=True)
-            return
+            return  
         
         only_role_list = await create_only_role_list(only_role,ctx) if only_role else []
         role_magnification_dict = await create_role_magification_dict(role_magnification,ctx) if role_magnification else {}
 
         view = sclient.create_poll(title,options,ctx.author.id,ctx.guild.id,alternate_account_can_vote,show_name,check_results_in_advance,results_only_initiator,multiple_choice,only_role_list=only_role_list,role_magnification_dict=role_magnification_dict)
-        embed = view.embed(ctx)
-        embed.set_author(name=ctx.author.name,icon_url=ctx.author.avatar.url)
+        embed = view.embed(ctx.guild)
         message = await ctx.respond(embed=embed,view=view)
         sclient.sqldb.update_poll(view.poll_id,"message_id",message.id)
 
@@ -664,7 +553,7 @@ class command(Cog_Extension):
     @election.command(description='加入選舉')
     async def join(self, ctx,
                    position:discord.Option(str,name='職位',description='要競選的職位',choices=position_option),
-                   user_dc:discord.Option(discord.Member,name='成員',description='要競選的成員（此選項供政黨代表一次性報名用）',required=False),
+                   user_dc:discord.Option(discord.Member,name='成員',description='要競選的成員（此選項供政黨代表統一報名用）',required=False),
                    party_id:discord.Option(int,name='代表政黨',description='如果有多個政黨，可選擇要代表的政黨',default=None,choices=party_option)):
         user_dc = user_dc or ctx.author
 
@@ -741,14 +630,14 @@ class command(Cog_Extension):
                 await asyncio.sleep(1)
         await ctx.respond(f"第{session}屆中央選舉投票創建完成")
 
-        timezone = datetime.timezone(datetime.timedelta(hours=8))
-        start_time = datetime.datetime.now(timezone)
+        timezone = timezone(timedelta(hours=8))
+        start_time = datetime.now(timezone)
         if start_time.hour < 20:
-            end_time = datetime.datetime(start_time.year,start_time.month,start_time.day,20,0,0,tzinfo=timezone)
+            end_time = datetime(start_time.year,start_time.month,start_time.day,20,0,0,tzinfo=timezone)
         else:
-            end_time = start_time + datetime.timedelta(days=1)
+            end_time = start_time + timedelta(days=1)
         
-        start_time += datetime.timedelta(seconds=10)
+        start_time += timedelta(seconds=10)
         event = await ctx.guild.create_scheduled_event(name="【快樂營中央選舉】投票階段",start_time=start_time,end_time=end_time,location="<#1163127708839071827>")
 
     @party.command(description='加入政黨')
@@ -852,6 +741,13 @@ class command(Cog_Extension):
         
         await ctx.respond(f"已註冊戶籍至 {guild.name}")
 
+    @commands.command(description="紀錄身分組")
+    @commands.is_owner()
+    async def registerrole(self,ctx,
+                           role:discord.Option(discord.Role,name='保存的身分組'),
+                           description:discord.Option(str,name='保存的身分組描述',required=False)):
+        sclient.sqldb.backup_role(role,description)
+        await ctx.respond(f"已將 {role.name} 身分組儲存")
 
 def setup(bot):
     bot.add_cog(command(bot))

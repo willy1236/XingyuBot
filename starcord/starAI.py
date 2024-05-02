@@ -54,14 +54,25 @@ class StarGeminiAI():
 										   generation_config=generation_config,
 										   safety_settings=safety_settings)
 	
-	def generate_aitext(self,input_text,image_bytes:bytes=None):
+	def generate_aitext(self, input_text, image_bytes: bytes = None):
+		"""
+		Generate AI text based on input text and image bytes.
+
+		Parameters:
+			input_text (str): The input text to generate AI text from.
+			image_bytes (bytes, optional): The image bytes to include in the generation process.
+
+		Returns:
+			str: The generated AI text.
+
+		"""
 		self.history.append(f"input: {input_text}")
 		#prompt_parts.append(f"{input_text}")
 		# if image_bytes:
-		# 	#image = Image.open(fp=BytesIO(image_bytes))
-		# 	image = Image.open(fp=image_bytes)
-		# 	prompt_parts.append(image)
-		
+		#     image = Image.open(fp=BytesIO(image_bytes))
+		#     image = Image.open(fp=image_bytes)
+		#     prompt_parts.append(image)
+
 		try:
 			response = self.model.generate_content(self.history)
 		except Exception as e:

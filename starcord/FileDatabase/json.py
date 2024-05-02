@@ -78,7 +78,7 @@ class JsonDatabase():
 
     def write(self,file:str,data:dict):
         try:
-            location = self._dict[file]
+            location = self._PATH_DICT[file]
             setattr(self,file,data)
             with open(file=location,mode='w',encoding='utf8') as jfile:
                 json.dump(data,jfile,indent=4,ensure_ascii=False)

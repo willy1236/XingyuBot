@@ -189,6 +189,7 @@ class PollView(discord.ui.View):
         return self._role_dict
         
     def embed(self,guild:discord.Guild):
+        """guild: 提供投票所在的伺服器"""
         only_role_list = []
         role_magification_list = []
         for roleid in self.role_dict:
@@ -199,7 +200,7 @@ class PollView(discord.ui.View):
                 mag = self.role_dict[roleid][1]
                 role_magification_list.append(f"{role.mention}({mag})" if role else f"{roleid}({mag})")
         
-        description = f"投票ID：{self.poll_id}\n- 顯示投票人：{self.show_name}\n- 僅限發起人能查看結果：{self.results_only_initiator}\n- 多選：{self.multiple_choice}"
+        description = f"- 顯示投票人：{self.show_name}\n- 僅限發起人能查看結果：{self.results_only_initiator}\n- 多選：{self.multiple_choice}"
         if self.alternate_account_can_vote:
             description += f"\n- 小帳是否算有效票：{self.alternate_account_can_vote}"
 
@@ -208,6 +209,11 @@ class PollView(discord.ui.View):
         if role_magification_list:
             description += "\n- 身分組投票權重：" + ",".join(role_magification_list)
         embed = BotEmbed.general(name="投票系統",title=self.title,description=description)
+        embed.set_footer(text=f"投票ID：{self.poll_id}")
+
+        author = guild.get_member(self.created_id)
+        if author:
+            embed.set_author(name=author.name, icon_url=author.avatar.url)
         return embed
     
     def results_text(self,interaction,labels_and_sizes=False) -> tuple[str, list, list] | str:
@@ -252,6 +258,21 @@ class PollView(discord.ui.View):
             return text, labels, sizes
         else:
             return text
+        
+class ElectionPollView(PollView):
+    if TYPE_CHECKING:
+        from starcord.DataExtractor import MySQLDatabase
+        from starcord.Core import DiscordBot
+        poll_id: int
+        sqldb: MySQLDatabase
+        bot: DiscordBot
+    
+    def __init__(self,poll_id,sqldb=None,bot=None):
+        self.add_item(PollEndButton(poll_id,self.created_id,bot))
+        if self.check_results_in_advance:
+            self.add_item(PollResultButton(poll_id))
+        self.add_item(PollCanenlButton(poll_id))
+        self.add_item(PollNowButton(poll_id))
 
 class GameView(discord.ui.View):
     def __init__(self,creator,game,number_all,number_now,message):

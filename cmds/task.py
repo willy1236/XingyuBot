@@ -50,7 +50,7 @@ class task(Cog_Extension):
             #scheduler.add_job(self.update_rpgshop_data,'cron',hour=0,minute=0,second=1,jitter=30,misfire_grace_time=60)
             
             #scheduler.add_job(self.update_channel_dict,'cron',hour='*',minute="0,30",second=0,jitter=30,misfire_grace_time=60)
-            scheduler.add_job(self.start_eletion,'cron',day=1,hour=0,minute=0,second=10,jitter=30,misfire_grace_time=60)
+            scheduler.add_job(self.start_eletion,'cron',day=1,hour=0,minute=0,second=30,jitter=30,misfire_grace_time=60)
             scheduler.add_job(self.remind_eletion,'cron',day=28,hour=21,minute=0,second=0,jitter=30,misfire_grace_time=60)
 
             scheduler.add_job(self.earthquake_check,'interval',minutes=2,jitter=30,misfire_grace_time=40)
@@ -383,7 +383,7 @@ class task(Cog_Extension):
 
                 view = sclient.create_poll(title,options,self.bot.user.id,channel.guild.id,alternate_account_can_vote=False,bot=self.bot)
 
-                message = await channel.send(embed=view.embed(channel),view=view)
+                message = await channel.send(embed=view.embed(channel.guild),view=view)
                 #sclient.update_poll(view.poll_id,"message_id",message.id)
                 await asyncio.sleep(1)
 

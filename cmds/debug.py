@@ -116,9 +116,8 @@ class debug(Cog_Extension):
     @commands.slash_command(description='測試指令')
     async def test(self,ctx:discord.ApplicationContext):
         #await ctx.defer()
-        
-        user = sclient.get_dcuser(ctx.user.id)
-        await ctx.respond(user.scoin)
+        command = self.bot.get_cog('command')
+        await command.dice(ctx,1,100)
 
     @commands.slash_command(description='地圖生成測試')
     async def maptest(self,ctx:discord.ApplicationContext):
