@@ -43,7 +43,7 @@ class PollEndButton(discord.ui.Button):
     async def callback(self,interaction):
         if interaction.user.id == self.created_id or (self.bot and await self.bot.is_owner(interaction.user)):
             view:PollView = self.view
-            view.disable_all_items()
+            view.clear_items()
             view.sqldb.update_poll(self.poll_id,"is_on",0)
             
             polldata = view.sqldb.get_poll(self.poll_id)
@@ -78,7 +78,8 @@ class PollEndButton(discord.ui.Button):
             plt.savefig(image_buffer, format='png', dpi=200, bbox_inches='tight')
             image_buffer.seek(0)
 
-            embed = BotEmbed.simple(polldata["title"],description=f'投票ID：{self.poll_id}\n{text}')
+            embed = BotEmbed.simple(polldata["title"],description=f'{text}')
+            embed.set_footer(text=f"投票ID：{self.poll_id}")
             await interaction.response.edit_message(embed=embed,view=view,file=discord.File(image_buffer,filename="pie.png"))
         else:
             await interaction.response.send_message(f"錯誤：只有投票發起人才能結算",ephemeral=True)
@@ -92,7 +93,8 @@ class PollResultButton(discord.ui.Button):
         view:PollView = self.view    
         if not view.results_only_initiator:
             text = view.results_text(interaction)
-            embed = BotEmbed.simple("目前票數",description=f'投票ID：{self.poll_id}\n{text}')
+            embed = BotEmbed.simple("目前票數",description=f'{text}')
+            embed.set_footer(text=f"投票ID：{self.poll_id}")
             await interaction.response.send_message(embed=embed,ephemeral=True)
 
         else:
