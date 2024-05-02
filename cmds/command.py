@@ -741,7 +741,7 @@ class command(Cog_Extension):
         
         await ctx.respond(f"已註冊戶籍至 {guild.name}")
 
-    @commands.command(description="紀錄身分組")
+    @commands.slash_command(description="紀錄身分組")
     @commands.is_owner()
     async def registerrole(self,ctx,
                            role:discord.Option(discord.Role,name='保存的身分組'),
