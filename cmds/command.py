@@ -758,7 +758,7 @@ class command(Cog_Extension):
         elif remove_member:
             for member in role.members:
                 await member.remove_roles(role)
-                asyncio.sleep(1)
+                await asyncio.sleep(1)
             await ctx.send(f"已將 {role.name} 成員清空")
 
 def setup(bot):
