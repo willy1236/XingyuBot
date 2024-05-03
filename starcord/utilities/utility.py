@@ -66,7 +66,7 @@ class BotEmbed:
     
     @staticmethod
     def sts():
-        '''星河終端系統 格式'''
+        '''星光終端系統 格式'''
         picdata = Jsondb.picdata
         embed = discord.Embed(color=0xc4e9ff)
         embed.set_author(name="「星光」終端系統", icon_url=picdata['radio_001'])
@@ -81,7 +81,7 @@ class BotEmbed:
 
 class BRS():
     @staticmethod
-    async def error(bot,ctx,error:str):
+    async def error(bot,ctx:discord.ApplicationContext,error:str):
         error_report = bot.get_channel(Jsondb.jdata['error_report'])
         embed=BotEmbed.general(name="BRS | 錯誤回報")
         embed.add_field(name='錯誤訊息', value=f'```py\n{error}```', inline=True)
@@ -101,7 +101,7 @@ class BRS():
         await report_channel.send(embed=embed)
 
     @staticmethod
-    async def feedback(self,ctx,msg):
+    async def feedback(self,ctx:discord.ApplicationContext,msg):
         feedback_channel = self.bot.get_channel(Jsondb.jdata['feedback_channel'])
         embed=BotEmbed.general(name="BRS | 回饋訊息")
         embed.add_field(name='訊息內容', value=msg, inline=True)
@@ -111,7 +111,7 @@ class BRS():
         await feedback_channel.send(embed=embed)
 
     @staticmethod
-    async def dm(bot,msg):
+    async def dm(bot,msg:discord.Message):
         dm_channel = bot.get_channel(Jsondb.jdata['dm_channel'])
         embed=BotEmbed.general(name="BRS | 私人訊息")
         embed.add_field(name='訊息內容', value=msg.content, inline=True)

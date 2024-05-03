@@ -1086,9 +1086,9 @@ class MySQLRegistrationSystem(MySQLBaseModel):
 
 class MySQLBackupSystem(MySQLBaseModel):
     def backup_role(self,role:discord.Role,description:str=None):
-        self.cursor.execute(f"INSERT INTO `stardb_idbase`.`role_backup` VALUES(%s,%s,%s,%s,%s,%s,%s,%s);",(role.id,role.name,role.created_at,role.guild.id,role.colour.r,role.colour.g,role.colour.b,description))
+        self.cursor.execute(f"INSERT INTO `stardb_backup`.`roles_backup` VALUES(%s,%s,%s,%s,%s,%s,%s,%s);",(role.id,role.name,role.created_at,role.guild.id,role.colour.r,role.colour.g,role.colour.b,description))
         for member in role.members:
-            self.cursor.execute(f"INSERT INTO `stardb_idbase`.`role_member_backup` VALUES(%s,%s);",(role.id,member.id))
+            self.cursor.execute(f"INSERT INTO `stardb_backup`.`role_user_backup` VALUES(%s,%s);",(role.id,member.id))
         self.connection.commit()
 class MySQLDatabase(
     MySQLUserSystem,
