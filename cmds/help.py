@@ -27,8 +27,8 @@ class help(Cog_Extension):
 
     @commands.slash_command(description='一些資訊')
     async def info(self, ctx, arg:discord.Option(str,name='選項',description='資訊名稱',choices=info_option)):
-        text = info_data[arg]
-        await ctx.respond(text)
+        title,text = info_data[arg].split('\n',1)
+        await ctx.respond(embed=BotEmbed.bot(self.bot, title=title, description=text))
 
     # @commands.group(invoke_without_command=True)
     # @commands.cooldown(rate=1,per=3)
