@@ -745,9 +745,21 @@ class command(Cog_Extension):
     @commands.is_owner()
     async def registerrole(self,ctx,
                            role:discord.Option(discord.Role,name='保存的身分組'),
-                           description:discord.Option(str,name='保存的身分組描述',required=False)):
+                           description:discord.Option(str,name='描述',description="保存的身分組描述",required=False),
+                           delete_role:discord.Option(bool,name='保存後是否刪除身分組',default=False),
+                           remove_member:discord.Option(bool,name='保存後是否清空身分組成員',default=False)):
         sclient.sqldb.backup_role(role,description)
         await ctx.respond(f"已將 {role.name} 身分組儲存")
+        
+        #身分組儲存後執行確保資料完整
+        if delete_role:
+            await role.delete()
+            await ctx.send(f"已將 {role.name} 刪除")
+        elif remove_member:
+            for member in role.members:
+                await member.remove_roles(role)
+                asyncio.sleep(1)
+            await ctx.send(f"已將 {role.name} 成員清空")
 
 def setup(bot):
     bot.add_cog(command(bot))
