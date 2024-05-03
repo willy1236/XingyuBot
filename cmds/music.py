@@ -59,8 +59,9 @@ class YTDLSource(discord.PCMVolumeTransformer):
         data = None
         if datas["webpage_url_domain"] == "youtube.com":
             for data in datas["formats"]:
-                if data["format_note"] != "medium":
-                    continue
+                if data.get("format_note") == "medium":
+                    break
+
         else:
             data = datas["formats"][0]
 
@@ -84,6 +85,7 @@ class MusicPlayer():
         songloop: bool
         volume: float
         nowplaying: Song
+        skip_voters: list[int]
 
     def __init__(self,vc:discord.VoiceClient,ctx:discord.ApplicationContext,loop):
         self.vc = vc
@@ -94,6 +96,7 @@ class MusicPlayer():
         self.songloop = False
         self.volume = 0.5
         self.nowplaying = None
+        self.skip_voters = []
 
     async def play_next(self,*arg):
         log.debug("play_next")
@@ -125,8 +128,21 @@ class MusicPlayer():
         if not self.vc.is_playing():
             await self.stop()
 
-    def skip_song(self):
-        self.vc.stop()
+    def skip_song(self,skip_voter:discord.Member):
+        if self.nowplaying.requester == skip_voter:
+            self.vc.stop()
+            return f"已跳過歌曲：{self.nowplaying.title}"
+        else:
+            if skip_voter.id not in self.skip_voters:
+                self.skip_voters.append(skip_voter.id)
+            else:    
+                return "你已投票跳過歌曲"
+
+            if len(self.skip_voters) >= len(self.vc.channel.members) / 3:
+                self.vc.stop()
+                return f"已達投票人數，跳過歌曲：{self.nowplaying.title}"
+            else:
+                return f"已成功投票，目前票數：{len(self.skip_voters)}/{int(len(self.vc.channel.members) / 3) + 1}"
 
     async def stop(self):
         await self.vc.disconnect()
@@ -139,6 +155,7 @@ class MusicPlayer():
     def start_first_song(self) -> Song:
         if not self.songloop:
             self.nowplaying = self.playlist.pop(0)
+        self.skip_voter = []
         return self.nowplaying
 
     def play_conpleted(self):
@@ -186,7 +203,7 @@ class music(Cog_Extension):
 
         if url.startswith("https://open.spotify.com/"):
             songfrom = SongSource.SPOTIFY
-            pass
+            raise MusicCommandError("不受支援的連結，請重新檢查網址是否正確")
         else:
             songfrom = SongSource.YOUTUBE_OR_OTHER
             #抓取歌曲
@@ -231,30 +248,13 @@ class music(Cog_Extension):
         else:
             await ctx.respond(f"**{song_count}** 首歌已加入歌單")
 
-    @commands.slash_command(description='播放音樂')
-    @commands.guild_only()
-    async def playtest(self, ctx: discord.ApplicationContext, url: str):
-        await ctx.defer()
-        channel = ctx.author.voice.channel
-        voice = await channel.connect()
-
-        ydl_opts = {}
-        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=False)
-            url2 = info['formats'][0]['url']
-            source = await discord.FFmpegOpusAudio.from_probe(url2, **ffmpeg_options)
-            player = voice.play(source)
-
-        await ctx.respond(f"加入歌單: {info['title']}")
-
     @commands.slash_command(description='跳過歌曲')
     @commands.guild_only()
     async def skip(self, ctx: discord.ApplicationContext):
         guildid = str(ctx.guild.id)
         player = get_player(guildid)
-        #if player.nowplaying.requester == ctx.author:
-        player.skip_song()
-        await ctx.respond(f"歌曲已跳過")
+        text = player.skip_song(ctx.author)
+        await ctx.respond(text)
 
     # @commands.slash_command(description='調整音量')
     # async def volume(self, ctx: discord.ApplicationContext, volume: int):

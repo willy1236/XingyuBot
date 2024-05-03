@@ -42,7 +42,7 @@ class error(Cog_Extension):
 
             elif isinstance(error.original,sqlerror) and error.original.errno == 1062:
                 await ctx.respond(f'資料錯誤：資料重複新增',ephemeral=True)
-            elif isinstance(error.original,AttributeError):
+            elif isinstance(error.original,(AttributeError, KeyError)):
                 await ctx.respond(f'錯誤：機器人內部錯誤（若發生此項錯誤請靜待修復）',ephemeral=True)
                 await BRS.error(self.bot,ctx,error)
                 log.error(f'{error},{type(error)},{type(error.original)}')

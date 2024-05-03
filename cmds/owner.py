@@ -1,9 +1,11 @@
-import discord,os,mcrcon,datetime
+from datetime import datetime, timedelta
+
+import discord
+import mcrcon
 from discord.ext import commands
 from discord.commands import SlashCommandGroup
 
 from starcord import Cog_Extension,BotEmbed,BRS,Jsondb,sclient
-from starcord.ui_element.button import ReactRole_button
 from starcord.Utilities.utility import converter
 
 class SendMessageModal(discord.ui.Modal):
@@ -28,11 +30,11 @@ class AnnoModal(discord.ui.Modal):
     async def callback(self, interaction: discord.Interaction):
         msg = await interaction.response.send_message(f"訊息發送中..")
         picdata = Jsondb.picdata
-        embed = discord.Embed(description=self.children[0].value,color=0xc4e9ff,timestamp=datetime.datetime.now())
+        embed = discord.Embed(description=self.children[0].value,color=0xc4e9ff,timestamp=datetime.now())
         embed.set_author(name="機器人全群公告",icon_url=picdata['radio_001'])
         embed.set_footer(text='Bot Radio System')
         send_success = 0
-        channels = sclient.get_notify_channel_by_type('all_anno')
+        channels = sclient.sqldb.get_notify_channel_by_type('all_anno')
 
         for i in channels:
             channel = interaction.client.get_channel(i['channel_id'])
@@ -59,11 +61,11 @@ class BotUpdateModal(discord.ui.Modal):
     async def callback(self, interaction: discord.Interaction):
         msg = await interaction.response.send_message(f"訊息發送中..")
         picdata = Jsondb.picdata
-        embed = discord.Embed(description=self.children[0].value,color=0xc4e9ff,timestamp=datetime.datetime.now())
+        embed = discord.Embed(description=self.children[0].value,color=0xc4e9ff,timestamp=datetime.now())
         embed.set_author(name="機器人更新通知",icon_url=picdata['radio_001'])
         embed.set_footer(text='Bot Radio System')
         send_success = 0
-        channels = sclient.get_notify_channel_by_type('bot')
+        channels = sclient.sqldb.get_notify_channel_by_type('bot')
 
         for i in channels:
             channel = interaction.client.get_channel(i['channel_id'])
@@ -153,7 +155,7 @@ class owner(Cog_Extension):
     #edit
     @commands.slash_command(description='編輯訊息',guild_ids=debug_guild)
     @commands.is_owner()
-    async def editmessage(self,ctx,msgid:str,new_msg):
+    async def editmessage(self,ctx:discord.ApplicationContext,msgid:str,new_msg):
         await ctx.defer()
         message = await ctx.fetch_message(int(msgid))
         await message.edit(content=new_msg)
@@ -235,38 +237,21 @@ class owner(Cog_Extension):
     #     await message.edit('請點擊按鈕獲得權限',view=ReactRole_button())
     #     await ctx.respond('訊息已發送')
 
-    # #reset
-    # @commands.slash_command(description='資料重置',guild_ids=debug_guild)
-    # @commands.is_owner()
-    # async def reset(self,ctx,arg=None):
-    #     await ctx.defer()
-    #     if arg == 'sign':
-    #         task_report_channel = self.bot.get_channel(Jsondb.jdata['task_report'])
-    #         self.sqldb.truncate_table('user_sign')
+    # @bot.event
+    # async def on_message(message):
+    #     if message.content.startswith('$thumb'):
+    #         channel = message.channel
+    #         await channel.send('Send me that 👍 reaction, mate')
 
-    #         await task_report_channel.send('簽到已重置')
-    #         await ctx.respond('簽到已重置',delete_after=5)
-    #     elif not arg:
-    #         for filename in os.listdir('./cmds'):
-    #             if filename.endswith('.py'):
-    #                 self.bot.reload_extension(f'cmds.{filename[:-3]}')
-    #         await ctx.respond('Re - Loaded all done',delete_after=5)
+    #         def check(reaction, user):
+    #             return user == message.author and str(reaction.emoji) == '👍'
 
-# @bot.event
-# async def on_message(message):
-#     if message.content.startswith('$thumb'):
-#         channel = message.channel
-#         await channel.send('Send me that 👍 reaction, mate')
-
-#         def check(reaction, user):
-#             return user == message.author and str(reaction.emoji) == '👍'
-
-#         try:
-#             reaction, user = await bot.wait_for('reaction_add', timeout=60.0, check=check)
-#         except asyncio.TimeoutError:
-#             await channel.send('👎')
-#         else:
-#             await channel.send('👍')
+    #         try:
+    #             reaction, user = await bot.wait_for('reaction_add', timeout=60.0, check=check)
+    #         except asyncio.TimeoutError:
+    #             await channel.send('👎')
+    #         else:
+    #             await channel.send('👍')
 
     @commands.slash_command(description='使用mc伺服器指令',guild_ids=debug_guild)
     @commands.is_owner()
@@ -355,7 +340,7 @@ class owner(Cog_Extension):
 
     @commands.slash_command(description='尋找id對象',guild_ids=debug_guild)
     @commands.cooldown(rate=1,per=3)
-    async def find(self,ctx,id:discord.Option(str,name='id'),guildid:discord.Option(str,name='guildid',required=False)):
+    async def find(self,ctx:discord.ApplicationContext,id:discord.Option(str,name='id'),guildid:discord.Option(str,name='guildid',required=False)):
         success = 0
         id = int(id)
         user = await self.bot.get_or_fetch_user(id)
@@ -436,7 +421,7 @@ class owner(Cog_Extension):
         await ctx.defer()
         time = converter.time_to_datetime(time_last)
         channel = self.bot.get_channel(int(channelid))
-        if not time or time > datetime.timedelta(days=7) :
+        if not time or time > timedelta(days=7) :
             await ctx.respond(f"錯誤：時間格式錯誤（不得超過7天）")
             return
         
@@ -444,7 +429,7 @@ class owner(Cog_Extension):
         await user.timeout_for(time,reason=reason)
         
         moderate_user = self.bot.user
-        create_time = datetime.datetime.now()
+        create_time = datetime.now()
         
         timestamp = int((create_time+time).timestamp())
         embed = BotEmbed.general(f'{user.name} 已被禁言',user.display_avatar.url,description=f"{user.mention}：{reason}")

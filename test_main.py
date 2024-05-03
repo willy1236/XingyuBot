@@ -26,7 +26,6 @@ from starcord.starAI import StarGeminiAI
 
 if __name__ == '__main__':
 	pass
-
 	starai = StarGeminiAI()
 	content = [
 			# "威立：星羽 你認為台中摃殘黨與山珍海味黨的差異在哪裡",
@@ -45,8 +44,11 @@ if __name__ == '__main__':
 			# "拔辣：星羽，妳喜歡下棋嗎",
 			# "拔辣：在64格棋盤上，只有2個白色主教，1個黑色騎士。其中一個白色主教位於E5，另一個白色主教位於C8，黑色騎士位於D4，請問黑白哪方會贏？",
 			# "威立：剛剛的問題可不可以再複述一次？使用條列的方式分析黑色方與白色方",
-   			# "請以妳自己的性格創造一個故事中的角色，但名子中不要有星這個字",
-	  			"星羽 妳知道無黨籍這個政黨嗎",
+   			"請以妳自己的性格創造一個故事中的角色，但名子中不要有星這個字",
+	  		# "星羽 妳知道無黨籍這個政黨嗎",
+	 		# "威立：星羽 如果你是台中摃殘黨的主席，同時又當選總統，那你會如何對待選輸的海豹，執行共殘黨理念中的「把不要的總統放進消波塊流放邊疆」？",
+			# "星羽 請將快樂營政黨的以SWOT分析後作成表格",
+			"如果你有一個專屬武器，那會叫什麼？是什麼樣的武器？",
 			 ]
 	# for i in content:
 	# 	print(f"{i}：")
@@ -54,18 +56,24 @@ if __name__ == '__main__':
 	# 	print("="*50)
 	# 	time.sleep(10)
 
-	# url = "https://www.bilibili.com/video/BV15C4y1Z7bL/?spm_id_from=333.788.recommend_more_video.0&vd_source=99697669d29e9e85eb52b2b6e795b986"
-	# info = yt_dlp.YoutubeDL().extract_info(url, download=False)
-	# print(info)
-	# with open("music.json","w") as f:
-	# 	json.dump(info, f)
-	import subprocess
-
-	# 設定 Spotify 播放清單的連結
-	spotify_playlist_link = "https://open.spotify.com/playlist/0EuV0NfZDbhUIl9hIltB0E"
-
-	# 執行 spotify_dl
-	subprocess.run(["spotify_dl", "-l", spotify_playlist_link])
+# 	url = "https://youtu.be/UcEHstSuAiM?si=b1Qs3GWXpCTZP_4g"
+# 	info = yt_dlp.YoutubeDL({
+#     # "format": "bestaudio/best",
+#     "outtmpl": "%(extractor)s-%(id)s-%(title)s.%(ext)s",
+#     "restrictfilenames": True,
+#     "noplaylist": False,
+#     "nocheckcertificate": True,
+#     "ignoreerrors": False,
+#     "logtostderr": False,
+#     "quiet": True,
+#     "no_warnings": True,
+#     "default_search": "auto",
+#     "source_address": "0.0.0.0",
+#     'extractor_retries': 3,
+# }).extract_info(url, download=False)
+# 	print(info)
+# 	with open("music.json","w") as f:
+# 		json.dump(info, f)
 
 	# CWA_API().get_weather_warning()
 

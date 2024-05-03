@@ -1,8 +1,8 @@
 import re
+from datetime import timedelta,datetime
 
 import discord
 import genshin
-from datetime import timedelta,datetime
 from discord.ext import commands,pages
 from discord.commands import SlashCommandGroup
 
@@ -418,7 +418,7 @@ class system_game(Cog_Extension):
         if primogems_gap > 0:
             text = f'比上個月多{mora_gap}個'
         elif primogems_gap < 0:
-            text = f'比上個月少{mora_gap*-1}個'
+            text = f'比上個月少{-mora_gap}個'
         else:
             text = f'與上個月相同'
         embed = BotEmbed.simple(title=f'本月總計：{diary.data.current_mora} 個摩拉',description=text)

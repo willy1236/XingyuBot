@@ -36,7 +36,7 @@ class moderation(Cog_Extension):
             await ctx.channel.purge(limit=num)
             await ctx.respond(content=f'清除完成，清除了{num}則訊息',delete_after=5)
         else:
-            await ctx.respond(content=f'沒有提供任何訊息，所以沒有清除任何內容',delete_after=5)
+            await ctx.respond(content=f'沒有提供任何資訊，所以沒有清除任何內容',delete_after=5)
 
     @channel_notify.command(description='設定通知頻道')
     @commands.has_permissions(manage_channels=True)
@@ -54,8 +54,7 @@ class moderation(Cog_Extension):
             await ctx.send(embed=BotEmbed.simple('溫馨提醒','若為定時通知，請將機器人的訊息保持在此頻道的最新訊息，以免機器人找不到訊息而重複發送'),delete_after=10)
             if notify_type in ["voice_log"]:
                 from .task import scheduler
-                time = datetime.now() + timedelta(seconds=1)
-                scheduler.add_job(sclient.init_NoticeClient,"date",run_date=time,args=[notify_type])
+                scheduler.add_job(sclient.init_NoticeClient,"date",args=[notify_type])
         else:
             sclient.sqldb.remove_notify_channel(guildid,notify_type)
             await ctx.respond(f'設定完成，已移除 {notify_type} 頻道')
@@ -73,8 +72,7 @@ class moderation(Cog_Extension):
             await ctx.respond(f'設定完成，已移除 動態語音 頻道')
         
         from .task import scheduler
-        time = datetime.now() + timedelta(seconds=1)
-        scheduler.add_job(sclient.init_NoticeClient,"date",run_date=time,args=["dynamic_voice","dynamic_voice_room"])
+        scheduler.add_job(sclient.init_NoticeClient,"date",args=["dynamic_voice","dynamic_voice_room"])
     
     @channel_notify.command(description='查看通知設定的頻道')
     @commands.has_permissions(manage_channels=True)

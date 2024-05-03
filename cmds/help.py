@@ -6,6 +6,18 @@ from starcord import Cog_Extension,BotEmbed,ChoiceList
 info_option = ChoiceList.set('info_option')
 help_option = ChoiceList.set('help_option')
 
+info_data = {
+    "help": "總表 | info可用選項\n指令用法:/info <參數>\nvpn類\nvpn | vpn列表\nvpn01 | vpn使用教學\n\nminecraft類\nmc | minecraft總表\nmc01 | minecraft資料夾\nmc02 | 如何裝模組\n\n共用類\nshare | 雲端共用資料夾資訊",
+    "vpn": "vpn | vpn列表\nRadmin VPN\n名稱:willy1236_1 密:123456987 | willy的房間\nzerotier\nID:b15644912ed8306b | willy的房間\nID:17d709436c5b2934 | 辣ㄆMinecraft專用\n申請進入zerotier的房間後記得通知房間的管理員幫你認證喔",
+    "vpn01": "vpn01 | vpn安裝教學\nwindow版\n1.下載Radmin(vpn)\nhttps://www.radmin-vpn.com/tw/\n2.選擇 加入網路 並輸入名稱及密碼(可輸入/info vpn查詢)\n3.記得 改名 讓大家知道你是誰\n\nMacOS版\n下載zerotier並安裝\nhttps://www.zerotier.com/download/\n2.右下角小工具中找到zerotier並右鍵點擊\n3.選擇Join New Network\n4.輸入房間ID\n\nIP依據開伺服器的方式不同分為\n區域網: xx.xxx.xx.xxx:ooooo\n伺服器: xx.xxx.xx.xxx\nx:開地圖的人的IP(VPN的IP)\no:公開至區網時會顯示的連接阜數字",
+    "share": "雲端共用資料夾 | 94共用啦\n可以在這裡下載或共用檔案\n請洽威立以取得雲端權限",
+    "mc": "總表 | mc可用選項\nmc01 | minecraft資料夾\nmc02 | 如何裝模組",
+    "mc01": "mc01 | minecraft資料夾\n資料夾開啟方式\n法1:\n在minecraft的選項中開啟 資源包\n選擇 開啟資料包資料夾\n法2:\n按下Ctrl+r 輸入 %AppData% 按確認\n選擇.minecraft\n\n資料夾名稱\nsaves 單人地圖存檔\nresourcepacks 資源包存檔\nscreenshots F2截圖圖片",
+    "mc02": "mc02 | 如何裝模組\n被你發現我還沒打內容了w\n既然你這麼想知道的話\nhttps://youtu.be/8gYBo_vcZFs",
+    "trpg01": "trpg01 | 參加房間\nhttps://trpgline.com/zh-TW/admin\n房間管理->參與房間->輸入房號與密碼",
+    "trpg02": "trpg02 | 放入角色\n左邊五個按鈕 選擇物件控制台 -> 點+ -> 新物件 -> 收藏夾 -> 選擇角色匯入物件\n右方點擊自己的齒輪 -> 操作角色 -> 選擇角色 -> 最後將角色拖到地圖上"
+}
+
 class help(Cog_Extension):
     @commands.slash_command(description='關於機器人')
     async def about(self,ctx):
@@ -15,31 +27,7 @@ class help(Cog_Extension):
 
     @commands.slash_command(description='一些資訊')
     async def info(self, ctx, arg:discord.Option(str,name='選項',description='資訊名稱',choices=info_option)):
-        if arg == 'help':
-            text = "總表 | info可用選項\n指令用法:/info <參數>\nvpn類\nvpn | vpn列表\nvpn01 | vpn使用教學\n\nminecraft類\nmc | minecraft總表\nmc01 | minecraft資料夾\nmc02 | 如何裝模組\n\n共用類\nshare | 雲端共用資料夾資訊"
-
-        elif arg == 'vpn':
-            text = "vpn | vpn列表\nRadmin VPN\n名稱:willy1236_1 密:123456987 | willy的房間\nzerotier\nID:b15644912ed8306b | willy的房間\nID:17d709436c5b2934 | 辣ㄆMinecraft專用\n申請進入zerotier的房間後記得通知房間的管理員幫你認證喔"
-        elif arg == 'vpn01':
-            text = "vpn01 | vpn安裝教學\nwindow版\n1.下載Radmin(vpn)\nhttps://www.radmin-vpn.com/tw/\n2.選擇 加入網路 並輸入名稱及密碼(可輸入/info vpn查詢)\n3.記得 改名 讓大家知道你是誰\n\nMacOS版\n下載zerotier並安裝\nhttps://www.zerotier.com/download/\n2.右下角小工具中找到zerotier並右鍵點擊\n3.選擇Join New Network\n4.輸入房間ID\n\nIP依據開伺服器的方式不同分為\n區域網: xx.xxx.xx.xxx:ooooo\n伺服器: xx.xxx.xx.xxx\nx:開地圖的人的IP(VPN的IP)\no:公開至區網時會顯示的連接阜數字"
-        elif arg == 'share':
-            text = "雲端共用資料夾 | 94共用啦\n可以在這裡下載或共用檔案\n請洽威立以取得雲端權限"
-
-        elif arg == 'mc':
-            text = "總表 | mc可用選項\nmc01 | minecraft資料夾\nmc02 | 如何裝模組"
-        elif arg == 'mc01':
-            text = "mc01 | minecraft資料夾\n資料夾開啟方式\n法1:\n在minecraft的選項中開啟 資源包\n選擇 開啟資料包資料夾\n法2:\n按下Ctrl+r 輸入 %AppData% 按確認\n選擇.minecraft\n\n資料夾名稱\nsaves 單人地圖存檔\nresourcepacks 資源包存檔\nscreenshots F2截圖圖片"
-        elif arg == 'mc02':
-            text = "mc02 | 如何裝模組\n被你發現我還沒打內容了w\n既然你這麼想知道的話\nhttps://youtu.be/8gYBo_vcZFs"
-        
-        elif arg == "trpg01":
-            text = "https://trpgline.com/zh-TW/admin\n房間管理->參與房間->輸入房號與密碼"
-        elif arg == "trpg02":
-            text = "左邊五個按鈕 選擇物件控制台 -> 點+ -> 新物件 -> 收藏夾 -> 選擇角色匯入物件\n右方點擊自己的齒輪 -> 操作角色 -> 選擇角色 -> 最後將角色拖到地圖上"
-        
-        else:
-            raise commands.errors.ArgumentParsingError("查無資訊")
-            #await ctx.send('參數錯誤，請輸入/info help取得幫助',delete_after=5)
+        text = info_data[arg]
         await ctx.respond(text)
 
     # @commands.group(invoke_without_command=True)
@@ -182,7 +170,6 @@ class help(Cog_Extension):
         embed.add_field(name="/editmessage <訊息ID> <新訊息>", value="編輯訊息", inline=False)
         #embed.add_field(name="/reaction <訊息ID> <add/remove> <表情/表情ID>", value="添加/移除反應", inline=False)
         embed.add_field(name="/ptset <用戶ID> <+/-/set> <數量>", value="更改指定用戶Pt數", inline=False)
-        #embed.add_field(name="/reset", value="簽到重置", inline=False)
         embed.add_field(name="/role save", value="儲存身分組", inline=False)
         embed.add_field(name="/panel", value="機器人面板", inline=False)
         embed.add_field(name="/getcommand", value="獲取指令ID", inline=False)
