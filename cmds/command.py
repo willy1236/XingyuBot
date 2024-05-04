@@ -425,20 +425,6 @@ class command(Cog_Extension):
         result = random.choice(args)
         await ctx.respond(f'我選擇:{result}')
 
-    @commands.user_command(name="辣味貢丸一周年",guild_ids=main_guild)
-    @commands.bot_has_permissions(moderate_members=True)
-    async def meatball(self,ctx, member: discord.Member):
-        time = timedelta(seconds=60)
-        await member.timeout_for(time,reason="辣味貢丸一周年")
-        await member.edit(nick="我是辣味貢丸")
-        role = member.guild.get_role(1136338119835254946)
-        await member.add_roles(role)
-        
-        await ctx.respond(f"辣味貢丸大禮包~",ephemeral=True)
-        channel = self.bot.get_channel(640541440103153674)
-        await channel.send(f"{member.mention}收到了一份貢丸大禮包")
-        sclient.sqldb.add_userdata_value(member.id,"user_discord","meatball_times",1)
-
     @commands.user_command(name="摃殘",guild_ids=main_guild)
     async def bonk(self,ctx:discord.ApplicationContext, member: discord.Member):
         if not ctx.user.get_role(1178151415403790478):
@@ -760,6 +746,26 @@ class command(Cog_Extension):
                 await member.remove_roles(role)
                 await asyncio.sleep(1)
             await ctx.send(f"已將 {role.name} 成員清空")
+
+    @commands.slash_command(description="取得邀請連結")
+    async def getinvite(self, ctx,
+                        invite_url:discord.Option(str,name='邀請連結網址')):
+        invite = await self.bot.fetch_invite(invite_url)
+        embed = BotEmbed.simple("邀請連結")
+        embed.add_field(name="伺服器名稱",value=invite.guild.name)
+        embed.add_field(name="伺服器人數",value=invite.approximate_member_count)
+        embed.add_field(name="邀請人",value=invite.inviter.mention)
+        embed.add_field(name="邀請頻道",value=invite.channel.name)
+        embed.add_field(name="邀請次數",value=f"{invite.uses}/{invite.max_uses if invite.max_uses else '無限制'}")
+        embed.add_field(name="臨時成員",value=invite.temporary  )
+        created_str = f"<t:{int(invite.created_at.timestamp())}>" if invite.created_at else "無"
+        expires_str = f"<t:{int(invite.expires_at.timestamp())}>" if invite.expires_at else "無"
+        embed.add_field(name="創建於",value=created_str)
+        embed.add_field(name="過期於",value=expires_str)
+        embed.add_field(name="伺服器邀請連結",value=invite.url,inline=False)
+        if invite.guild.icon:
+            embed.set_thumbnail(url=invite.guild.icon.url)
+        await ctx.respond(embed=embed)
 
 def setup(bot):
     bot.add_cog(command(bot))

@@ -28,8 +28,6 @@ main_guild = Jsondb.jdata.get('main_guild',[])
 
 guild_registration = sclient.sqldb.get_resgistration_dict() if sclient.sqldb else {}
 
-starai = StarGeminiAI()
-
 def check_registration(member:discord.Member):
     earlest = datetime.now(timezone.utc)
     earlest_guildid = None
@@ -113,7 +111,7 @@ class event(Cog_Extension):
         if message.guild and message.guild.id == 613747262291443742 and not message.author.bot:
             if message.content and message.content.startswith(".") and message.content[1] and message.content[1] != ".":
                 #image_bytes = await message.attachments[0].read() if message.attachments else None
-                text = starai.generate_aitext(f"{member_names.get(message.author.id,message.author.name)}：{message.content[1:]}")
+                text = sclient.starai.generate_aitext(f"{member_names.get(message.author.id,message.author.name)}：{message.content[1:]}")
                 await message.reply(text,mention_author=False)
                 return
 
@@ -226,7 +224,7 @@ class event(Cog_Extension):
                 
                 username = user.name if user.discriminator == "0" else user
                 embed.set_author(name=username,icon_url=user.display_avatar.url)
-                embed.set_footer(text=self.bot.get_guild(guildid).name)
+                embed.set_footer(text=user.guild.name)
                 
                 await self.bot.get_channel(voice_log_dict.get(guildid)[0]).send(embed=embed)
             

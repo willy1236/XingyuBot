@@ -8,6 +8,7 @@ from starcord.FileDatabase import Jsondb
 from starcord.models import *
 from starcord.types import DBGame
 from starcord.ui_element.view import PollView
+from starcord.starAI import StarGeminiAI
 
 class UserClient():
     """用戶查詢系統"""
@@ -235,3 +236,10 @@ class StarManager(
     def __init__(self):
         super().__init__()
         self.sqldb = sqldb
+        self._starai = None
+
+    @property
+    def starai(self):
+        if not self._starai:
+            self._starai = StarGeminiAI()
+        return self._starai
