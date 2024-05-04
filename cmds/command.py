@@ -751,16 +751,29 @@ class command(Cog_Extension):
     async def getinvite(self, ctx,
                         invite_url:discord.Option(str,name='邀請連結網址')):
         invite = await self.bot.fetch_invite(invite_url)
+        guild = self.bot.get_guild(invite.guild.id)
         embed = BotEmbed.simple("邀請連結")
         embed.add_field(name="伺服器名稱",value=invite.guild.name)
-        embed.add_field(name="伺服器人數",value=invite.approximate_member_count)
-        embed.add_field(name="邀請人",value=invite.inviter.mention)
-        embed.add_field(name="邀請頻道",value=invite.channel.name)
-        embed.add_field(name="邀請次數",value=f"{invite.uses}/{invite.max_uses if invite.max_uses else '無限制'}")
-        embed.add_field(name="臨時成員",value=invite.temporary  )
-        created_str = f"<t:{int(invite.created_at.timestamp())}>" if invite.created_at else "無"
+        
+        if guild:
+            invite = next((i for i in await guild.invites() if i.code == invite.code), invite)
+            embed.add_field(name="伺服器人數",value=invite.guild.member_count)
+            embed.add_field(name="邀請人",value=invite.inviter.mention)
+            embed.add_field(name="邀請頻道",value=invite.channel.name)
+            embed.add_field(name="邀請次數",value=f"{invite.uses}/{invite.max_uses if invite.max_uses else '無限制'}")
+            embed.add_field(name="臨時成員",value=invite.temporary  )
+            created_str = f"<t:{int(invite.created_at.timestamp())}>" if invite.created_at else "未知"
+            embed.add_field(name="創建於",value=created_str)
+        else:
+            embed.add_field(name="伺服器人數",value=invite.approximate_member_count)
+            embed.add_field(name="邀請人",value=invite.inviter.mention)
+            embed.add_field(name="邀請頻道",value=invite.channel.name)
+            embed.add_field(name="邀請次數",value=f"未知/{invite.max_uses if invite.max_uses else '無限制'}")
+            embed.add_field(name="臨時成員",value="未知")
+            embed.add_field(name="創建於",value="未知")
+            embed.set_footer(text="邀請機器人加入獲取完整資訊")
+
         expires_str = f"<t:{int(invite.expires_at.timestamp())}>" if invite.expires_at else "無"
-        embed.add_field(name="創建於",value=created_str)
         embed.add_field(name="過期於",value=expires_str)
         embed.add_field(name="伺服器邀請連結",value=invite.url,inline=False)
         if invite.guild.icon:
