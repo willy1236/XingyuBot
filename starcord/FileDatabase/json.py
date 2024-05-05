@@ -26,6 +26,7 @@ class JsonDatabase():
         "picdata",
         "cache",
         "tokens",
+        "options",
     ]
 
     def __init__(self,create_file=True):
@@ -41,6 +42,7 @@ class JsonDatabase():
             'jdata': f'{self._DBPATH}/setting.json',
             #'cdata': f'{self.location}/channel_settings.json',
             'picdata': f'{self._DBPATH}/picture.json',
+            'options': f'{self._DBPATH}/command_option.json',
             #'udata': f'{self.location}/user_settings/basic.json',
             #'jpt': f'{self.location}/user_settings/point.json',
             #'jloot': f'{self.location}/lottery.json',
@@ -59,6 +61,7 @@ class JsonDatabase():
             #'jtwitch': f'{self.location}/community_settings/twitch.json',
             'tokens': f'{self._DBPATH}/token.json'
         }
+        # craete folder
         if not os.path.isdir(self._DBPATH):
             os.mkdir(self._DBPATH)
             print(f">> Created folder: {self._DBPATH} <<")
@@ -73,7 +76,7 @@ class JsonDatabase():
                     print(f">> Created json file: {file} <<")
             
             with open(path,mode='r',encoding='utf8') as jfile:
-                setattr(self, file,json.load(jfile))
+                setattr(self, file, json.load(jfile))
 
 
     def write(self,file:str,data:dict):
@@ -114,7 +117,7 @@ class JsonDatabase():
         
     def read_cache(self,key):
         """讀取cache的指定資料"""
-        return self.cache.get(key)
+        return self.cache.get(key)  
     
     def write_cache(self,key,value):
         """將指定資料寫入cache並更新內容"""

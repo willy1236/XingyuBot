@@ -1,25 +1,4 @@
 {
-
-    "channel_set_option": {
-        "zh-TW":{
-            "all_anno": "全群公告",
-            "bot": "機器人更新通知",
-            "earthquake": "地震通知",
-            "forecast": "台灣各縣市天氣預報",
-            "apex_info": "Apex輪替資訊",
-            "mod":"管理員專用頻道",
-            "member_join": "成員加入",
-            "member_leave": "成員離開",
-            "dynamic_voice": "動態語音",
-            "voice_log": "語音進出紀錄"
-        }
-    },
-    "game_set_option": {
-        "steam": "Steam",
-        "osu": "Osu",
-        "apex": "Apex",
-        "lol": "League of Legends"
-    },
     "ApexMap": {
         "Storm Point": "風暴點",
         "Olympus": "奧林匹斯",
@@ -64,69 +43,10 @@
         "Other": "其他",
         "Spiral Abyss": "深境螺旋"
     },
-    "bet_option":{
-        "blue": "藍藍幫",
-        "pink": "粉紅幫"
-    },
-    "pet_option":{
-        "shark":"鯊魚",
-        "dog":"狗狗",
-        "cat":"貓貓",
-        "fox":"狐狸",
-        "wolf":"狼",
-        "frog":"青蛙",
-        "rabbit":"兔子"
-    },
-    "info_option": {
-        "help": "總表",
-        "vpn": "vpn | vpn列表",
-        "vpn01": "vpn | vpn安裝教學",
-        "share": "share | 雲端共用資料夾",
-        "mc01": "mc | minecraft資料夾",
-        "mc02": "mc | 如何裝模組",
-        "trpg01": "trpg | 參加房間",
-        "trpg02": "trpg | 放入角色"
-    },
-    "help_option": {
-        "use": "使用指令教學（use）",
-        "channel": "通知系統（channel）",
-        "music": "音樂系統（music）",
-        "pt": "點數系統（pt）",
-        "game": "遊戲查詢系統（game）",
-        "role": "身分組系統（role）",
-        "bet": "賭盤系統（bet）",
-        "weather": "天氣系統（weather）",
-        "user": "用戶系統（user）",
-        "twitch": "twitch相關（twitch）",
-        "admin": "管理員指令（admin）"
-    },
     "permissions": {
         "manage_channels":"管理頻道",
         "moderate_members":"禁言成員",
         "manage_roles": "管理身分組"
-    },
-    "busy_time_option": {
-        "1": "早上",
-        "2": "下午",
-        "3": "晚上"
-    },
-    "position_option": {
-        "president": "總統",
-        "legislative_president": "立法院長",
-        "executive_president": "行政院長",
-        "judiciary_president": "司法院長"
-        
-    },  
-    "party_option":{
-        "1": "阿拉花瓜黨",
-        "2": "山珍海味黨",
-        "3": "貢丸殲滅黨",
-        "4": "全國林冠宇神聖階級運動",
-        "5": "台中摃殘黨",
-        "6": "無黨籍"
-    },
-    "rpgcareer_option": {
-        "1": "農夫"
     },
     "rpgitem_category":{
         "1": "一般物品",
@@ -141,14 +61,5 @@
         "4": "鞋子",
         "5": "主武器",
         "6": "副武器"
-    },
-    "rpgcity_action_option": {
-        "0": "取消行動",
-        "1": "攻擊城市",
-        "2": "防禦城市"
-    },
-    "twitch_notify_option": {
-        "1": "開台通知",
-        "2": "新影片通知"
     }
 }

@@ -21,7 +21,6 @@ from starcord.types import Coins
 from cmds.bot_event import check_registration
 
 bet_option = ChoiceList.set('bet_option')
-busy_time_option = ChoiceList.set('busy_time_option')
 position_option = ChoiceList.set('position_option')
 party_option = ChoiceList.set('party_option')
 

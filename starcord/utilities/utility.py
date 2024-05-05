@@ -143,11 +143,15 @@ class BRS():
 
 class ChoiceList():
     @staticmethod
-    def set(option_name,lcode:str="zh-TW"):
-        list = []
+    def set(option_name):
+        return [discord.OptionChoice(name=name_loc.get("en-US",name_loc.get("zh-TW")),
+                                     value=value, 
+                                     name_localizations=name_loc
+                                     ) for value, name_loc in Jsondb.options[option_name].items()
+                ]
         if Jsondb.jdict[option_name].get(lcode):
             for value,name in Jsondb.jdict[option_name][lcode].items():
-                list.append(discord.OptionChoice(name=name,value=value))
+                list.append()
             return list
         else:
             for value,name in Jsondb.jdict[option_name].items():

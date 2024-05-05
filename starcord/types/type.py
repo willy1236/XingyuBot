@@ -1,9 +1,9 @@
 from enum import Enum, IntEnum
 
-class NotufyType(IntEnum):
+class NotifyCommunityType(IntEnum):
     TWITCH = 1
     YOUTUBE = 2
     TWITCH_VIDEO = 3
 
-class NoticeChannel(Enum):
+class NotifyChannelType(Enum):
     pass

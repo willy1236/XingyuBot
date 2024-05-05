@@ -1,0 +1,218 @@
+{
+    "last_update": "2024-05-05",
+    "channel_set_option": {
+        "all_anno": {
+            "en-US": "All Announcements",
+            "zh-TW": "全群公告"
+        },
+        "bot": {
+            "en-US": "Bot Updates",
+            "zh-TW": "機器人更新通知"
+        },
+        "earthquake": {
+            "en-US": "Earthquake Notifications",
+            "zh-TW": "地震通知"
+        },
+        "forecast": {
+            "en-US": "Weather Forecast for Taiwan",
+            "zh-TW": "台灣各縣市天氣預報"
+        },
+        "apex_info": {
+            "en-US": "Apex Rotation Information",
+            "zh-TW": "Apex輪替資訊"
+        },
+        "mod": {
+            "en-US": "Admin Channel",
+            "zh-TW": "管理員專用頻道"
+        },
+        "member_join": {
+            "en-US": "Member Join",
+            "zh-TW": "成員加入"
+        },
+        "member_leave": {
+            "en-US": "Member Leave",
+            "zh-TW": "成員離開"
+        },
+        "dynamic_voice": {
+            "en-US": "Dynamic Voice",
+            "zh-TW": "動態語音"
+        },
+        "voice_log": {
+            "en-US": "Voice Log",
+            "zh-TW": "語音進出紀錄"
+        }
+    },
+    "game_set_option": {
+        "steam": {
+            "en-US": "Steam"
+        },
+        "osu": {
+            "en-US": "Osu"
+        },
+        "apex": {
+            "en-US": "Apex Legends"
+        },
+        "lol": {
+            "en-US": "League of Legends"
+        }
+    },
+    "bet_option": {
+        "blue": {
+            "en-US": "Blue Side",
+            "zh-TW": "藍藍幫"
+        },
+        "pink": {
+            "en-US": "Pink Side",
+            "zh-TW": "粉紅幫"
+        }
+    },
+    "pet_option": {
+        "shark": {
+            "en-US": "Shark",
+            "zh-TW": "鯊魚"
+        },
+        "dog": {
+            "en-US": "Dog",
+            "zh-TW": "狗狗"
+        },
+        "cat": {
+            "en-US": "Cat",
+            "zh-TW": "貓貓"
+        },
+        "fox": {
+            "en-US": "Fox",
+            "zh-TW": "狐狸"
+        },
+        "wolf": {
+            "en-US": "Wolf",
+            "zh-TW": "狼"
+        },
+        "frog": {
+            "en-US": "Frog",
+            "zh-TW": "青蛙"
+        },
+        "rabbit": {
+            "en-US": "Rabbit",
+            "zh-TW": "兔子"
+        }
+    },
+    "info_option": {
+        "help": {
+            "zh-TW": "總表"
+        },
+        "vpn": {
+            "zh-TW": "vpn | vpn列表"
+        },
+        "vpn01": {
+            "zh-TW": "vpn | vpn安裝教學"
+        },
+        "share": {
+            "zh-TW": "share | 雲端共用資料夾"
+        },
+        "mc01": {
+            "zh-TW": "mc | minecraft資料夾"
+        },
+        "mc02": {
+            "zh-TW": "mc | 如何裝模組"
+        },
+        "trpg01": {
+            "zh-TW": "trpg | 參加房間"
+        },
+        "trpg02": {
+            "zh-TW": "trpg | 放入角色"
+        }
+    },
+    "help_option": {
+        "use": {
+            "zh-TW": "使用指令教學（use）"
+        },
+        "channel": {
+            "zh-TW": "通知系統（channel）"
+        },
+        "music": {
+            "zh-TW": "音樂系統（music）"
+        },
+        "pt": {
+            "zh-TW": "點數系統（pt）"
+        },
+        "game": {
+            "zh-TW": "遊戲查詢系統（game）"
+        },
+        "role": {
+            "zh-TW": "身分組系統（role）"
+        },
+        "bet": {
+            "zh-TW": "賭盤系統（bet）"
+        },
+        "weather": {
+            "zh-TW": "天氣系統（weather）"
+        },
+        "user": {
+            "zh-TW": "用戶系統（user）"
+        },
+        "twitch": {
+            "zh-TW": "twitch相關（twitch）"
+        },
+        "admin": {
+            "zh-TW": "管理員指令（admin）"
+        }
+    },
+    "position_option": {
+        "president": {
+            "zh-TW": "總統"
+        },
+        "legislative_president": {
+            "zh-TW": "立法院長"
+        },
+        "executive_president": {
+            "zh-TW": "行政院長"
+        },
+        "judiciary_president": {
+            "zh-TW": "司法院長"
+        }
+    },
+    "party_option": {
+        "1": {
+            "zh-TW": "阿拉花瓜黨"
+        },
+        "2": {
+            "zh-TW": "山珍海味黨"
+        },
+        "3": {
+            "zh-TW": "貢丸殲滅黨"
+        },
+        "4": {
+            "zh-TW": "全國林冠宇神聖階級運動"
+        },
+        "5": {
+            "zh-TW": "台中摃殘黨"
+        },
+        "6": {
+            "zh-TW": "無黨籍"
+        }
+    },
+    "rpgcareer_option": {
+        "1": {
+            "zh-TW": "農夫"
+        }
+    },
+    "rpgcity_action_option": {
+        "0": {
+            "zh-TW": "取消行動"
+        },
+        "1": {
+            "zh-TW": "攻擊城市"
+        },
+        "2": {
+            "zh-TW": "防禦城市"
+        }
+    },
+    "twitch_notify_option": {
+        "1": {
+            "zh-TW": "開台通知"
+        },
+        "2": {
+            "zh-TW": "新影片通知"
+        }
+    }
+}

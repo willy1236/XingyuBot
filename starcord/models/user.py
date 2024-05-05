@@ -216,7 +216,7 @@ class RPGUser(DiscordUser):
     def waring_equipment(self):
         return RPGPlayerWearingEquipment(self.sqldb.get_rpgplayer_equipment(self.discord_id,slot_id=-1))
 
-    def desplay(self):
+    def embed(self):
         embed = BotEmbed.general(name=self.user_dc.name if self.user_dc else self.name, icon_url=self.user_dc.avatar.url if self.user_dc.avatar else None)
         embed.add_field(name='生命/最大生命',value=f"{self.hp} / {self.maxhp}")
         embed.add_field(name='攻擊力',value=self.atk)
