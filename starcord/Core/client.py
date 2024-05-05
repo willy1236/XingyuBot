@@ -121,7 +121,7 @@ class ElectionSystem():
         
         # result = { "職位": { "用戶id": ["用戶提及", ["政黨"]]}}
         result = {}
-        for position in Jsondb.jdict["position_option"].keys():
+        for position in Jsondb.options["position_option"].keys():
             result[position] = {}
         
         for i in dbdata:
