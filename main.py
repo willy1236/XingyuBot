@@ -15,14 +15,9 @@ bot_code = jdata.get('bot_code')
 api_website = jdata.get('api_website')
 auto_update = jdata.get('auto_update')
 debug_mode = jdata.get('debug_mode',True)
-#commands.Bot
-#shard_count=1,
-#command_prefix=commands.when_mentioned_or('b!'),
-#command_prefix='b!',
-#case_insensitive=True,
 
 bot = DiscordBot(bot_code)
-
+sclient.bot = bot
 #啟動
 @bot.event
 async def on_ready():
@@ -45,7 +40,6 @@ async def on_ready():
         now = datetime.now()
         for poll in dbdata:
             if now - poll['created_at'] > timedelta(days=28):
-                #sqldb.remove_poll(poll['poll_id'])
                 sclient.sqldb.update_poll(poll['poll_id'],"is_on",0)
             else:   
                 bot.add_view(PollView(poll['poll_id'],sqldb=sclient.sqldb,bot=bot))
@@ -53,7 +47,6 @@ async def on_ready():
         invites = await bot.get_guild(613747262291443742).invites()
         now = datetime.now(timezone.utc)
         days_5 = timedelta(days=5)
-        invite:discord.Invite
         for invite in invites:
             if not invite.expires_at and not invite.scheduled_event and invite.uses == 0 and now - invite.created_at > days_5 and invite.url != "https://discord.gg/ye5yrZhYGF":
                 await invite.delete()
@@ -98,7 +91,7 @@ if __name__ == "__main__":
     #     os.system('python ./app/update.py')
 
     if api_website:
-        from .app.bot_website import ltThread,WebsiteThread
+        from app.bot_website import ltThread,WebsiteThread
         ltserver = ltThread()
         ltserver.start()
         time.sleep(2)

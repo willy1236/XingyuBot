@@ -14,6 +14,7 @@ class JsonDatabase():
         picdata: dict
         cache: dict
         tokens: dict
+        options: dict
         channel_dict: dict
         dynamic_voice_list: list
 

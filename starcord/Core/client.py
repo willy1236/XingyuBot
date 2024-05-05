@@ -9,6 +9,7 @@ from starcord.models import *
 from starcord.types import DBGame
 from starcord.ui_element.view import PollView
 from starcord.starAI import StarGeminiAI
+from .classes import DiscordBot
 
 class UserClient():
     """用戶查詢系統"""
@@ -237,6 +238,7 @@ class StarManager(
         super().__init__()
         self.sqldb = sqldb
         self._starai = None
+        self.bot:DiscordBot = None
 
     @property
     def starai(self):

@@ -1,12 +1,13 @@
-import os,time,threading
+import os
+import threading
+import time
+import xml.etree.ElementTree as ET
 from fastapi import FastAPI,BackgroundTasks
 from fastapi.requests import Request
 from fastapi.responses import HTMLResponse,JSONResponse,PlainTextResponse
-import xml.etree.ElementTree as ET
 
-from main import bot
-from starcord.models.push import Youtube_Push
-from starcord import log
+from starcord import log, sclient
+from starcord.models.push import YoutubePush
 
 app = FastAPI()
 
@@ -65,9 +66,9 @@ async def get_yt_push(content):
 
     # 輸出結果
     print(result)
-    embed = Youtube_Push(result).desplay()
-    if bot:
-        channel = bot.get_channel(566533708371329026)
+    embed = YoutubePush(result).embed()
+    if sclient.bot:
+        channel = sclient.bot.get_channel(566533708371329026)
         if channel:
             await channel.send(embed=embed)
         else:
