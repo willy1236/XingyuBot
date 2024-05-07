@@ -18,9 +18,6 @@ from twitchAPI.object.api import TwitchUser
 from starcord import Jsondb,twitch_log
 
 
-token = Jsondb.get_token('twitch_chatbot')
-APP_ID = token.get('id')
-APP_SECRET = token.get('secret')
 USER_SCOPE = [
     AuthScope.BITS_READ,
     AuthScope.CHANNEL_BOT,
@@ -134,13 +131,24 @@ async def test_command(cmd: ChatCommand):
 
 # this is where we set up the bot
 async def run():
+    jtoken = Jsondb.get_token("twitch_chatbot")
+    APP_ID = jtoken.get('id')
+    APP_SECRET = jtoken.get('secret')
+    token = jtoken['token']
+    refresh_token = jtoken['refresh']
+
+    validate_data = await validate_token(token)
+    if validate_data.get("client_id") != APP_ID:
+        raise ValueError("Token is not valid")
+    
     # set up twitch api instance and add user authentication with some scopes
     twitch = await Twitch(APP_ID, APP_SECRET)
     auth = UserAuthenticator(twitch, USER_SCOPE)
-    
+    await twitch.set_user_authentication(token, USER_SCOPE, refresh_token)
+
     # 使用自帶的函式處理token
-    helper = UserAuthenticationStorageHelper(twitch, USER_SCOPE, storage_path=PurePath('./database/twitch_token.json'))
-    await helper.bind()
+    # helper = UserAuthenticationStorageHelper(twitch, USER_SCOPE, storage_path=PurePath('./database/twitch_token.json'))
+    # await helper.bind()
 
     # if os.path.exists('database/twitch_token.json'):
     #     with open('database/twitch_token.json','r') as IOtoken:
