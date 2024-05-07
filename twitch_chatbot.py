@@ -1,6 +1,12 @@
+import asyncio
+import json
+import time
+from uuid import UUID
+
+from pathlib import PurePath
 from twitchAPI.twitch import Twitch
-from twitchAPI.oauth import UserAuthenticator,refresh_access_token,UserAuthenticationStorageHelper
-from twitchAPI.type import AuthScope, ChatEvent,EventSubSubscriptionError
+from twitchAPI.oauth import UserAuthenticator,refresh_access_token,UserAuthenticationStorageHelper,validate_token 
+from twitchAPI.type import AuthScope, ChatEvent
 from twitchAPI.chat import Chat, EventData, ChatMessage, ChatSub, ChatCommand, JoinedEvent, LeftEvent, NoticeEvent, WhisperEvent
 from twitchAPI.chat.middleware import ChannelRestriction
 from twitchAPI.pubsub import PubSub
@@ -8,10 +14,9 @@ from twitchAPI.object import eventsub
 from twitchAPI.eventsub.websocket import EventSubWebsocket
 from twitchAPI.helper import first
 from twitchAPI.object.api import TwitchUser
-import asyncio,os,json, time
-from uuid import UUID
-from starcord import Jsondb
-from pathlib import PurePath
+
+from starcord import Jsondb,twitch_log
+
 
 token = Jsondb.get_token('twitch_chatbot')
 APP_ID = token.get('id')
@@ -49,38 +54,43 @@ USER_SCOPE = [
     AuthScope.USER_READ_SUBSCRIPTIONS,
     
     ]
+
 TARGET_CHANNEL = ["sakagawa_0309"]
 
-# pubsub
+# pubsub (may be deprecated in the future)
 async def pubsub_channel_points(uuid: UUID, data: dict) -> None:
-    print("callback_channel_points:",uuid,data)
+    twitch_log.info("callback_channel_points:",uuid,data)
 
 async def pubsub_bits(uuid: UUID, data: dict) -> None:
-    print("callback_bits:",uuid,data)
+    twitch_log.info("callback_bits:",uuid,data)
 
 async def pubsub_chat_moderator_actions(uuid: UUID, data: dict) -> None:
-    print("chat_moderator_actions:",uuid,data)
+    twitch_log.info("chat_moderator_actions:",uuid,data)
 
 # eventsub
 async def on_follow(data: eventsub.ChannelFollowEvent):
     #await chat.send_message(data.event.broadcaster_user_name,text = f'{data.event.user_name} now follows {data.event.broadcaster_user_name}!')
-    print(f'{data.event.user_name} now follows {data.event.broadcaster_user_name}!')
+    twitch_log.info(f'{data.event.user_name} now follows {data.event.broadcaster_user_name}!')
 
 async def on_stream_online(event: eventsub.StreamOnlineEvent):
-    print(f'{event.event.broadcaster_user_name} starting stream!')
+    twitch_log.info(f'{event.event.broadcaster_user_name} starting stream!')
 
 async def on_stream_offline(event: eventsub.StreamOfflineEvent):
-    print(f'{event.event.broadcaster_user_name} ending stream.')
+    twitch_log.info(f'{event.event.broadcaster_user_name} ending stream.')
 
 async def on_channel_points_custom_reward_redemption_add(event: eventsub.ChannelPointsCustomRewardRedemptionAddEvent):
-    print(f'{event.event.user_name} redeemed {event.event.reward.title}!')
+    text = f'{event.event.user_name} redeemed {event.event.reward.title}!' 
+    if event.event.reward.prompt:
+        text += f' ({event.event.reward.prompt})'
+    twitch_log.info(text)
     
 async def on_channel_points_custom_reward_redemption_update(event: eventsub.ChannelPointsCustomRewardRedemptionUpdateEvent):
-    print(f'{event.event.user_name} updated their redemption of {event.event.reward.title}!')
+    twitch_log.info(f"{event.event.user_name}'s redemption of {event.event.reward.title} has been updated!")
+    
 
 # this will be called when the event READY is triggered, which will be on bot start
 async def on_ready(ready_event: EventData):
-    print('Bot is ready for work, joining channels')
+    twitch_log.info('Bot is ready for work, joining channels')
     # join our target channel, if you want to join multiple, either call join for each individually
     # or even better pass a list of channels as the argument
     await ready_event.chat.join_room(TARGET_CHANNEL)
@@ -88,11 +98,11 @@ async def on_ready(ready_event: EventData):
 
 # this will be called whenever a message in a channel was send by either the bot OR another user
 async def on_message(msg: ChatMessage):
-    print(f'in {msg.room.name}, {msg.user.name} said: {msg.text}')
+    twitch_log.info(f'in {msg.room.name}, {msg.user.name} said: {msg.text}')
 
 # this will be called whenever someone subscribes to a channel
 async def on_sub(sub: ChatSub):
-    print(f'New subscription in {sub.room.name}:\\n'
+    twitch_log.info(f'New subscription in {sub.room.name}:\\n'
           f'  Type: {sub.sub_plan}\\n'
           f'  Message: {sub.sub_message}')
 
@@ -101,19 +111,19 @@ async def on_bot_joined(event: JoinedEvent):
     text = f'Joined bot in {event.room_name}'
     if event.chat.is_mod(event.room_name):
         text += " as mod"
-    print(text)
+    twitch_log.info(text)
         
 async def on_bot_leaved(event: LeftEvent):
-    print(f'Leaved bot in {event.room_name}')
+    twitch_log.info(f'Leaved bot in {event.room_name}')
 
 async def on_server_notice(event: NoticeEvent):
-    print(f'Notice from server: {event.message} in {event.room.name}')
+    twitch_log.info(f'Notice from server: {event.message} in {event.room.name}')
 
 async def on_whisper(event: WhisperEvent):
-    print(f'Whisper from {event.user.name}: {event.message}')
+    twitch_log.info(f'Whisper from {event.user.name}: {event.message}')
 
 async def on_raid(event:dict):
-    print(f'Raid from {event["from_broadcaster_user_name"]} with {event["viewers"]} viewers')
+    twitch_log.info(f'Raid from {event["from_broadcaster_user_name"]} with {event["viewers"]} viewers')
 
 # this will be called whenever the !reply command is issued
 async def test_command(cmd: ChatCommand):
@@ -203,16 +213,40 @@ async def run():
         if chat.is_mod(user.login):
             await eventsub.listen_channel_follow_v2(user.id, me.id, on_follow)
     
-            await eventsub.listen_channel_points_custom_reward_redemption_add(user.id, on_channel_points_custom_reward_redemption_add)
-    await eventsub.listen_channel_points_custom_reward_redemption_update(me.id, on_channel_points_custom_reward_redemption_update)
 
     # we are done with our setup, lets start this bot up!
     return chat, twitch
     
+async def run_sakagawa():
+    USER_SCOPE_SAKAGAWA = [AuthScope.CHANNEL_READ_REDEMPTIONS]
+    jtoken = Jsondb.get_token("twitch_sakagawa")
+    token = jtoken['token']
+    refresh_token = jtoken['refresh']
+    client_id = jtoken['client_id']
+
+    validate_data = await validate_token(token)
+    if validate_data.get("client_id") != client_id:
+        raise ValueError("Token is not valid")
+    
+    twitch_sakagawa = await Twitch(client_id, authenticate_app=False)
+    await twitch_sakagawa.set_user_authentication(token, USER_SCOPE_SAKAGAWA, refresh_token)
+    #helper_sakagawa = UserAuthenticationStorageHelper(twitch_sakagawa, USER_SCOPE_SAKAGAWA, storage_path=PurePath('./database/twitch_token_sakagawa.json'))
+    #await helper_sakagawa.bind()
+    target_user = await first(twitch_sakagawa.get_users(logins=TARGET_CHANNEL))
+
+    eventsub_sakagawa = EventSubWebsocket(twitch_sakagawa)
+    eventsub_sakagawa.start()
+    await eventsub_sakagawa.listen_channel_points_custom_reward_redemption_add(target_user.id, on_channel_points_custom_reward_redemption_add)
+    await eventsub_sakagawa.listen_channel_points_custom_reward_redemption_update(target_user.id, on_channel_points_custom_reward_redemption_update)
+
 if __name__ == '__main__':
     # lets run our setup
     chat, twitch = asyncio.run(run())
     chat:Chat
+    twitch:Twitch
+    asyncio.run(run_sakagawa())
+    # auth = UserAuthenticator(twitch, [AuthScope.CHANNEL_READ_REDEMPTIONS])
+    # print(auth.return_auth_url())
 
     # lets run till we press enter in the console
     try:

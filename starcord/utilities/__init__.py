@@ -14,3 +14,5 @@ debug_mode = Jsondb.jdata.get("debug_mode",True)
 from logging import INFO,DEBUG
 #log_level = DEBUG if debug_mode else INFO
 log = create_logger('./logs',file_log)
+
+twitch_log = create_logger('./logs',False,INFO,"twitch_log",format="%(asctime)s [%(levelname)s] [twitch_bot] %(message)s")

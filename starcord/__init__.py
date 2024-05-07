@@ -21,4 +21,5 @@ __all__ = [
     'sclient',
     'Cog_Extension',
     'DiscordBot',
+    'twitch_log',
 ]

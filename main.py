@@ -15,6 +15,7 @@ bot_code = jdata.get('bot_code')
 api_website = jdata.get('api_website')
 auto_update = jdata.get('auto_update')
 debug_mode = jdata.get('debug_mode',True)
+twitch_bot = jdata.get('twitch_bot',False)
 
 bot = DiscordBot(bot_code)
 sclient.bot = bot
@@ -103,6 +104,11 @@ if __name__ == "__main__":
         except:
             log.info('>> website: offline <<')
         time.sleep(2)
+
+    if twitch_bot:
+        from twitch_chatbot import run, run_sakagawa
+        asyncio.run(run())
+        asyncio.run(run_sakagawa())
     
     try:
         bot.run()
