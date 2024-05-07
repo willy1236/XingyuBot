@@ -80,12 +80,22 @@ class JsonDatabase():
                 setattr(self, file, json.load(jfile))
 
 
-    def write(self,file:str,data:dict):
+    def write(self, file_name: str, data: dict):
+        """
+        Writes the given data to the specified file in the database.
+
+        Args:
+            file_name (str): The name of the file to write the data to.
+            data (dict): The data to be written to the file.
+
+        Raises:
+            KeyError: If the specified file_name is not found in the database.
+        """
         try:
-            location = self._PATH_DICT[file]
-            setattr(self,file,data)
-            with open(file=location,mode='w',encoding='utf8') as jfile:
-                json.dump(data,jfile,indent=4,ensure_ascii=False)
+            location = self._PATH_DICT[file_name]
+            setattr(self, file_name, data)
+            with open(file=location, mode='w', encoding='utf8') as jfile:
+                json.dump(data, jfile, indent=4, ensure_ascii=False)
         except:
             raise KeyError("此項目沒有在資料庫中")
 
@@ -115,6 +125,10 @@ class JsonDatabase():
                 return token
             else:
                 raise ValueError('無此API token')
+            
+    def set_token(self, name:str, value:str|dict):
+        self.tokens[name] = value
+        self.write('tokens',self.tokens)
         
     def read_cache(self,key):
         """讀取cache的指定資料"""

@@ -3,12 +3,12 @@ from datetime import datetime
 
 import discord
 
-from starcord.DataExtractor import sqldb,RiotAPI,SteamInterface,OsuInterface,ApexInterface
-from starcord.FileDatabase import Jsondb
-from starcord.models import *
-from starcord.types import DBGame
-from starcord.ui_element.view import PollView
-from starcord.starAI import StarGeminiAI
+from ..DataExtractor import sqldb,RiotAPI,SteamInterface,OsuInterface,ApexInterface
+from ..FileDatabase import Jsondb
+from ..models import *
+from ..types import DBGame
+from ..ui_element.view import PollView
+from ..starAI import StarGeminiAI
 from .classes import DiscordBot
 
 class UserClient():

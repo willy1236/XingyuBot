@@ -98,7 +98,7 @@ class system_community(Cog_Extension):
     async def list(self,ctx):
         guildid = ctx.guild.id
         embed = BotEmbed.general("twitch開台通知",ctx.guild.icon.url if ctx.guild.icon else None)
-        dbdata = sclient.sqldb.get_notify_community_list('twitch',guildid) + sclient.get_notify_community_list('twitch_v',guildid)
+        dbdata = sclient.sqldb.get_notify_community_list('twitch',guildid) + sclient.sqldb.get_notify_community_list('twitch_v',guildid)
         for data in dbdata:
             display_name = data['display_name'] if data['display_name'] else data['notify_name']
             channel_id = data['channel_id']
@@ -194,7 +194,7 @@ class system_community(Cog_Extension):
             await ctx.respond(f'錯誤：找不到帳號代碼 {ythandle} 的頻道')
             return
         
-        record = sclient.get_notify_community_user('youtube',ytchannel.id,guildid)
+        record = sclient.sqldb.get_notify_community_user('youtube',ytchannel.id,guildid)
         if record:
             channel = self.bot.get_channel(record[0]['channel_id'])
             role = channel.guild.get_role(record[0]['role_id'])

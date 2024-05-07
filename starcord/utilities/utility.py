@@ -172,10 +172,17 @@ class ChoiceList():
 
     @staticmethod
     def get_tw(value,option_name):
-        if Jsondb.jdict[option_name].get("zh-TW"):
-            return Jsondb.jdict[option_name]["zh-TW"].get(str(value),value)
+        if Jsondb.jdict.get(option_name):
+            if Jsondb.jdict[option_name].get("zh-TW"):
+                return Jsondb.jdict[option_name]["zh-TW"].get(str(value),value)
+            else:
+                return Jsondb.jdict[option_name].get(str(value),value)
+            
         else:
-            return Jsondb.jdict[option_name].get(str(value),value)
+            if Jsondb.options[option_name].get(str(value)):
+                return Jsondb.options[option_name][str(value)]["zh-TW"]
+            else:
+                return value
 
 class converter():
     def time_to_sec(arg:str):
