@@ -9,7 +9,6 @@ from .Core import Cog_Extension, DiscordBot, sclient, StarManager
 from .Utilities import *
 from .errors import *
 
-
 __all__ = [
     'Jsondb',
     'csvdb',

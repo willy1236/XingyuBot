@@ -10,6 +10,7 @@ from ..types import DBGame
 from ..ui_element.view import PollView
 from ..starAI import StarGeminiAI
 from .classes import DiscordBot
+from ..Utilities import scheduler
 
 class UserClient():
     """用戶查詢系統"""
@@ -233,13 +234,19 @@ class StarManager(
     ElectionSystem,
     NotifyClient,
 ):
-    """整合各項系統的星羽資料管理物件"""
+    """整合各項系統的星羽資料管理物件
+    :attr sqldb: Mysql Database
+    :attr starai: AI
+    :attr bot: Discord Bot
+    :attr scheduler: Async Task Scheduler
+    """
     def __init__(self):
         super().__init__()
         self.sqldb = sqldb
         self._starai = None
         self.bot:DiscordBot = None
-
+        self.scheduler = scheduler
+    
     @property
     def starai(self):
         if not self._starai:

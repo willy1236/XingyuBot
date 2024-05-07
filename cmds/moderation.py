@@ -53,8 +53,7 @@ class moderation(Cog_Extension):
             await ctx.respond(f'設定完成，已將 {ChoiceList.get_tw(notify_type,"channel_set_option")} 頻道設定在 {channel.mention}')
             await ctx.send(embed=BotEmbed.simple('溫馨提醒','若為定時通知，請將機器人的訊息保持在此頻道的最新訊息，以免機器人找不到訊息而重複發送'),delete_after=10)
             if notify_type in ["voice_log"]:
-                from .task import scheduler
-                scheduler.add_job(sclient.init_NoticeClient,"date",args=[notify_type])
+                sclient.scheduler.add_job(sclient.init_NoticeClient,"date",args=[notify_type])
         else:
             sclient.sqldb.remove_notify_channel(guildid,notify_type)
             await ctx.respond(f'設定完成，已移除 {notify_type} 頻道')
@@ -71,8 +70,7 @@ class moderation(Cog_Extension):
             sclient.sqldb.remove_notify_channel(ctx.guild.id,"dynamic_voice")
             await ctx.respond(f'設定完成，已移除 動態語音 頻道')
         
-        from .task import scheduler
-        scheduler.add_job(sclient.init_NoticeClient,"date",args=["dynamic_voice","dynamic_voice_room"])
+        sclient.scheduler.add_job(sclient.init_NoticeClient,"date",args=["dynamic_voice","dynamic_voice_room"])
     
     @channel_notify.command(description='查看通知設定的頻道')
     @commands.has_permissions(manage_channels=True)

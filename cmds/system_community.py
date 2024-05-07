@@ -28,8 +28,7 @@ class system_community(Cog_Extension):
             else:
                 await ctx.respond(f'設定成功：{user.display_name}({user.login})的開台通知將會發送在{channel.mention}')
                 
-            from .task import scheduler
-            scheduler.add_job(sclient.init_NoticeClient,"date",args=["twitch"])
+            sclient.scheduler.add_job(sclient.init_NoticeClient,"date",args=["twitch"])
         else:
             await ctx.respond(f'錯誤：找不到用戶{twitch_user}')
 
@@ -50,8 +49,7 @@ class system_community(Cog_Extension):
             else:
                 await ctx.respond(f'設定成功：{user.display_name}({user.login})的影片通知將會發送在{channel.mention}')
                 
-            from .task import scheduler
-            scheduler.add_job(sclient.init_NoticeClient,"date",args=["twitch_v"])
+            sclient.scheduler.add_job(sclient.init_NoticeClient,"date",args=["twitch_v"])
 
             cache = Jsondb.read_cache('twitch_v')
             cache[user.id] = api.get_videos(user.id)[0].created_at.isoformat()
@@ -77,8 +75,7 @@ class system_community(Cog_Extension):
         
         await ctx.respond(f'已移除 {twitch_user} 的通知')
         
-        from .task import scheduler
-        scheduler.add_job(sclient.init_NoticeClient,"date",args=["twitch","twitch_v"])
+        sclient.scheduler.add_job(sclient.init_NoticeClient,"date",args=["twitch","twitch_v"])
 
     @twitch.command(description='確認twitch開台通知')
     async def notify(self,ctx,twitch_user:discord.Option(str,required=True,name='twitch用戶')):
@@ -155,8 +152,7 @@ class system_community(Cog_Extension):
             else:
                 await ctx.respond(f'設定成功：{ytchannel.title}的通知將會發送在{channel.mention}')
                 
-            from .task import scheduler
-            scheduler.add_job(sclient.init_NoticeClient,"date",args=["youtube"])
+            sclient.scheduler.add_job(sclient.init_NoticeClient,"date",args=["youtube"])
 
             feed = YoutubeRSS().get_videos(ytchannel.id)
             updated_at = feed[0].updated_at.isoformat() if feed else None
@@ -178,8 +174,7 @@ class system_community(Cog_Extension):
         sclient.sqldb.remove_notify_community('youtube',ytchannel.id,guildid)
         await ctx.respond(f'已移除頻道 {ytchannel.title} 的通知')
         
-        from .task import scheduler
-        scheduler.add_job(sclient.init_NoticeClient,"date",args=["youtube"])
+        sclient.scheduler.add_job(sclient.init_NoticeClient,"date",args=["youtube"])
 
         cache = Jsondb.read_cache("youtube")
         del cache[ytchannel.id]

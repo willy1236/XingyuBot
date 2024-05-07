@@ -1,26 +1,16 @@
 import asyncio
-import logging
 import random
 import time
 from datetime import datetime, timezone, timedelta, date
 
 import discord
 import genshin
-#from apscheduler.schedulers.blocking import BlockingScheduler
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from discord.ext import commands,tasks
 from requests.exceptions import ConnectTimeout
 
 from starcord import Cog_Extension,Jsondb,sclient,log,BotEmbed,Utilities
 from starcord.DataExtractor import *
 from starcord.models.community import TwitchVideo, YoutubeVideo
-
-apsc_log = logging.getLogger('apscheduler')
-formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s')
-consoleHandler = logging.StreamHandler()
-consoleHandler.setLevel(logging.INFO)
-consoleHandler.setFormatter(formatter)
-apsc_log.addHandler(consoleHandler)
 
 def slice_list(lst:list[YoutubeVideo], target) -> list[YoutubeVideo]:
     """以target為基準取出更新的影片資訊"""
@@ -40,9 +30,8 @@ class task(Cog_Extension):
     
     @commands.Cog.listener()
     async def on_ready(self):
-        global scheduler
-        scheduler = AsyncIOScheduler()
-        if not Jsondb.jdata.get("debug_mode",True):    
+        scheduler = sclient.scheduler
+        if not Jsondb.jdata.get("debug_mode",True):
             scheduler.add_job(self.apex_info_update,'cron',minute='00,15,30,45',second=1,jitter=30,misfire_grace_time=60)
             scheduler.add_job(self.apex_crafting_update,'cron',hour=1,minute=5,second=0,jitter=30,misfire_grace_time=60)
             scheduler.add_job(self.forecast_update,'cron',hour='00,03,06,09,12,15,18,21',minute=0,second=1,jitter=30,misfire_grace_time=60)

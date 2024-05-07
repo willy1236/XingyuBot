@@ -15,7 +15,7 @@ from twitchAPI.eventsub.websocket import EventSubWebsocket
 from twitchAPI.helper import first
 from twitchAPI.object.api import TwitchUser
 
-from starcord import Jsondb,twitch_log
+from starcord import Jsondb,twitch_log,sclient,BotEmbed
 
 
 USER_SCOPE = [
@@ -53,6 +53,13 @@ USER_SCOPE = [
     ]
 
 TARGET_CHANNEL = ["sakagawa_0309"]
+if sclient.bot:
+    global dc_channel
+    dc_channel = sclient.bot.get_channel(1237412404980355092)
+
+async def send_dc_message(embed):
+    if dc_channel:
+        dc_channel.send(embed=embed)
 
 # pubsub (may be deprecated in the future)
 async def pubsub_channel_points(uuid: UUID, data: dict) -> None:
@@ -65,9 +72,11 @@ async def pubsub_chat_moderator_actions(uuid: UUID, data: dict) -> None:
     twitch_log.info("chat_moderator_actions:",uuid,data)
 
 # eventsub
-async def on_follow(data: eventsub.ChannelFollowEvent):
+async def on_follow(event: eventsub.ChannelFollowEvent):
     #await chat.send_message(data.event.broadcaster_user_name,text = f'{data.event.user_name} now follows {data.event.broadcaster_user_name}!')
-    twitch_log.info(f'{data.event.user_name} now follows {data.event.broadcaster_user_name}!')
+    twitch_log.info(f'{event.event.user_name} now follows {event.event.broadcaster_user_name}!')
+    if event.event.broadcaster_user_login == TARGET_CHANNEL[0]:
+        await send_dc_message(BotEmbed.simple("新追隨",f'{event.event.user_name} 正在追隨 {event.event.broadcaster_user_name}!'))
 
 async def on_stream_online(event: eventsub.StreamOnlineEvent):
     twitch_log.info(f'{event.event.broadcaster_user_name} starting stream!')
@@ -76,10 +85,12 @@ async def on_stream_offline(event: eventsub.StreamOfflineEvent):
     twitch_log.info(f'{event.event.broadcaster_user_name} ending stream.')
 
 async def on_channel_points_custom_reward_redemption_add(event: eventsub.ChannelPointsCustomRewardRedemptionAddEvent):
-    text = f'{event.event.user_name} redeemed {event.event.reward.title}!' 
+    text = f'{event.event.user_name} 兌換了 {event.event.reward.title}!' 
     if event.event.reward.prompt:
         text += f' ({event.event.reward.prompt})'
     twitch_log.info(text)
+    if event.event.broadcaster_user_login == TARGET_CHANNEL[0]:
+        await send_dc_message(BotEmbed.simple("兌換自訂獎勵",text))
     
 async def on_channel_points_custom_reward_redemption_update(event: eventsub.ChannelPointsCustomRewardRedemptionUpdateEvent):
     twitch_log.info(f"{event.event.user_name}'s redemption of {event.event.reward.title} has been updated!")
@@ -96,6 +107,8 @@ async def on_ready(ready_event: EventData):
 # this will be called whenever a message in a channel was send by either the bot OR another user
 async def on_message(msg: ChatMessage):
     twitch_log.info(f'in {msg.room.name}, {msg.user.name} said: {msg.text}')
+    if msg.room.name == TARGET_CHANNEL[0]:
+        await send_dc_message(BotEmbed.general(msg.user.name,description=msg.text))
 
 # this will be called whenever someone subscribes to a channel
 async def on_sub(sub: ChatSub):
@@ -139,7 +152,7 @@ async def run():
 
     validate_data = await validate_token(token)
     if validate_data.get("client_id") != APP_ID:
-        raise ValueError("Token is not valid")
+        raise ValueError(validate_data)
     
     # set up twitch api instance and add user authentication with some scopes
     twitch = await Twitch(APP_ID, APP_SECRET)
@@ -174,7 +187,7 @@ async def run():
 
 
     # create chat instance
-    global chat
+    #global chat
     chat = await Chat(twitch)
 
     # register the handlers for the events you want
@@ -203,7 +216,7 @@ async def run():
     for user in users:
         uuid1 = await pubsub.listen_channel_points(user.id, pubsub_channel_points)
         uuid2 = await pubsub.listen_bits(user.id, pubsub_bits)
-        uuid3 = await pubsub.listen_chat_moderator_actions(me.id, user.id, pubsub_bits)
+        uuid3 = await pubsub.listen_chat_moderator_actions(me.id, user.id, pubsub_chat_moderator_actions)
     pubsub.start()
     # you can either start listening before or after you started pubsub.
     
@@ -234,7 +247,7 @@ async def run_sakagawa():
 
     validate_data = await validate_token(token)
     if validate_data.get("client_id") != client_id:
-        raise ValueError("Token is not valid")
+        raise ValueError(validate_data)
     
     twitch_sakagawa = await Twitch(client_id, authenticate_app=False)
     await twitch_sakagawa.set_user_authentication(token, USER_SCOPE_SAKAGAWA, refresh_token)
