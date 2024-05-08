@@ -53,7 +53,7 @@ USER_SCOPE = [
     AuthScope.WHISPERS_EDIT,
     ]
 
-TARGET_CHANNEL = ["sakagawa_0309"]
+TARGET_CHANNEL = ["sakagawa_0309", "niantt_"]
 if sclient.bot:
     global dc_channel
     dc_channel = sclient.bot.get_channel(1237412404980355092)
@@ -267,7 +267,9 @@ async def run_sakagawa():
     eventsub_sakagawa = EventSubWebsocket(twitch_sakagawa)
     eventsub_sakagawa.start()
     await eventsub_sakagawa.listen_channel_points_custom_reward_redemption_add(target_user.id, on_channel_points_custom_reward_redemption_add)
+    twitch_log.debug("listening to channel points custom reward redemption add")
     await eventsub_sakagawa.listen_channel_points_custom_reward_redemption_update(target_user.id, on_channel_points_custom_reward_redemption_update)
+    twitch_log.debug("listening to channel points custom reward redemption update")
 
 if __name__ == '__main__':
     # lets run our setup
