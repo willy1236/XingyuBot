@@ -98,7 +98,7 @@ async def on_channel_points_custom_reward_redemption_update(event: eventsub.Chan
 
 # this will be called when the event READY is triggered, which will be on bot start
 async def on_ready(ready_event: EventData):
-    twitch_log.info('Bot is ready for work, joining channels')
+    twitch_log.info(f'Bot is ready as {ready_event.chat.username}, joining channels')
     # join our target channel, if you want to join multiple, either call join for each individually
     # or even better pass a list of channels as the argument
     await ready_event.chat.join_room(TARGET_CHANNEL)
@@ -132,7 +132,7 @@ async def on_server_notice(event: NoticeEvent):
 async def on_whisper(event: WhisperEvent):
     twitch_log.info(f'Whisper from {event.user.name}: {event.message}')
     if sclient.bot:
-        channel = sclient.bot.get_channel()
+        channel = sclient.bot.get_channel(956523514389733408)
         if channel:
             channel.send(embed=BotEmbed.general(event.user.name,description=event.message))
 
