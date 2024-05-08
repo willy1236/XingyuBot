@@ -131,7 +131,10 @@ async def on_server_notice(event: NoticeEvent):
 
 async def on_whisper(event: WhisperEvent):
     twitch_log.info(f'Whisper from {event.user.name}: {event.message}')
-    # TODO: send notification to discord
+    if sclient.bot:
+        channel = sclient.bot.get_channel()
+        if channel:
+            channel.send(embed=BotEmbed.general(event.user.name,description=event.message))
 
 async def on_raid(event:dict):
     twitch_log.info(f'Raid from {event["from_broadcaster_user_name"]} with {event["viewers"]} viewers')
@@ -153,9 +156,11 @@ async def run():
 
     
     # validate_data = await validate_token(token)
-    # print(validate_data)
     # if validate_data.get("client_id") != APP_ID:
-    #     raise ValueError(validate_data)
+    #     token, refresh_token = await refresh_access_token(refresh_token, APP_ID, APP_SECRET)
+    #     jtoken['token'] = token
+    #     jtoken['refresh'] = refresh_token
+    #     Jsondb.set_token("twitch_chatbot", jtoken)
     
     # set up twitch api instance and add user authentication with some scopes
     twitch = await Twitch(APP_ID, APP_SECRET)
