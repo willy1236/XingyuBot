@@ -131,6 +131,7 @@ async def on_server_notice(event: NoticeEvent):
 
 async def on_whisper(event: WhisperEvent):
     twitch_log.info(f'Whisper from {event.user.name}: {event.message}')
+    # TODO: send notification to discord
 
 async def on_raid(event:dict):
     twitch_log.info(f'Raid from {event["from_broadcaster_user_name"]} with {event["viewers"]} viewers')
@@ -147,21 +148,23 @@ async def run():
     jtoken = Jsondb.get_token("twitch_chatbot")
     APP_ID = jtoken.get('id')
     APP_SECRET = jtoken.get('secret')
-    token = jtoken['token']
-    refresh_token = jtoken['refresh']
+    # token = jtoken['token']
+    # refresh_token = jtoken['refresh']
 
-    validate_data = await validate_token(token)
-    if validate_data.get("client_id") != APP_ID:
-        raise ValueError(validate_data)
+    
+    # validate_data = await validate_token(token)
+    # print(validate_data)
+    # if validate_data.get("client_id") != APP_ID:
+    #     raise ValueError(validate_data)
     
     # set up twitch api instance and add user authentication with some scopes
     twitch = await Twitch(APP_ID, APP_SECRET)
     auth = UserAuthenticator(twitch, USER_SCOPE)
-    await twitch.set_user_authentication(token, USER_SCOPE, refresh_token)
+    #  await twitch.set_user_authentication(token, USER_SCOPE, refresh_token)
 
     # 使用自帶的函式處理token
-    # helper = UserAuthenticationStorageHelper(twitch, USER_SCOPE, storage_path=PurePath('./database/twitch_token.json'))
-    # await helper.bind()
+    helper = UserAuthenticationStorageHelper(twitch, USER_SCOPE, storage_path=PurePath('./database/twitch_token.json'))
+    await helper.bind()
 
     # if os.path.exists('database/twitch_token.json'):
     #     with open('database/twitch_token.json','r') as IOtoken:

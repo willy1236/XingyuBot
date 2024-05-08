@@ -88,9 +88,6 @@ for filename in os.listdir('./cmds'):
         bot.load_extension(f'cmds.{filename[:-3]}')
 
 if __name__ == "__main__":
-    # if not debug_mode and auto_update:
-    #     os.system('python ./app/update.py')
-
     if api_website:
         from app.bot_website import ltThread,WebsiteThread
         ltserver = ltThread()

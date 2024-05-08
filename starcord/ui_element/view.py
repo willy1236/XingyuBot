@@ -157,9 +157,8 @@ class PollView(discord.ui.View):
         self.check_results_in_advance = bool(poll_data['check_results_in_advance'])
         self.results_only_initiator = bool(poll_data['results_only_initiator'])
         self.multiple_choice = bool(poll_data['multiple_choice'])
-        # TODO:
-        # number_of_user_votes (replace multiple_choice)
-        # change_vote (decide if user can change his/her vote or not)
+        # TODO: number_of_user_votes (replace multiple_choice)
+        # TODO: change_vote (decide if user can change his/her vote or not)
 
         
         self.guild_id = poll_data['guild_id']
