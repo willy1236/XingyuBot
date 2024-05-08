@@ -49,7 +49,8 @@ USER_SCOPE = [
     AuthScope.USER_READ_EMAIL,
     AuthScope.USER_READ_MODERATED_CHANNELS,
     AuthScope.USER_READ_SUBSCRIPTIONS,
-    
+    AuthScope.USER_WRITE_CHAT,
+    AuthScope.WHISPERS_EDIT,
     ]
 
 TARGET_CHANNEL = ["sakagawa_0309"]
