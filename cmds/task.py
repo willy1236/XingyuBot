@@ -55,7 +55,8 @@ class task(Cog_Extension):
             pass
             #scheduler.add_job(self.start_eletion,"date")
         
-        scheduler.start()
+        if not scheduler.running:
+            scheduler.start()
 
     async def earthquake_check(self):
         timefrom = Jsondb.read_cache('earthquake_timefrom')

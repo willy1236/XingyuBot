@@ -138,7 +138,8 @@ async def on_whisper(event: WhisperEvent):
             channel.send(embed=BotEmbed.general(event.user.name,description=event.message))
 
 async def on_raid(event:dict):
-    twitch_log.info(f'Raid from {event["from_broadcaster_user_name"]} with {event["viewers"]} viewers')
+    print(event)
+    #twitch_log.info(f'Raid from {event["from_broadcaster_user_name"]} with {event["viewers"]} viewers')
 
 # this will be called whenever the !reply command is issued
 async def test_command(cmd: ChatCommand):
