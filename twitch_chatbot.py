@@ -83,13 +83,13 @@ async def on_stream_online(event: eventsub.StreamOnlineEvent):
     twitch_log.info(f'{event.event.broadcaster_user_name} starting stream!')
     if sclient.bot:
         channel = sclient.bot.get_channel(566533708371329026)
-        channel.send(f'{event.event.broadcaster_user_name} starting stream!')
+        await channel.send(f'{event.event.broadcaster_user_name} starting stream!')
 
 async def on_stream_offline(event: eventsub.StreamOfflineEvent):
     twitch_log.info(f'{event.event.broadcaster_user_name} ending stream.')
     if sclient.bot:
         channel = sclient.bot.get_channel(566533708371329026)
-        channel.send(f'{event.event.broadcaster_user_name} ending stream.')
+        await channel.send(f'{event.event.broadcaster_user_name} ending stream.')
 
 async def on_channel_points_custom_reward_redemption_add(event: eventsub.ChannelPointsCustomRewardRedemptionAddEvent):
     text = f'{event.event.user_name} 兌換了 {event.event.reward.title}!' 
@@ -119,9 +119,9 @@ async def on_message(msg: ChatMessage):
 
 # this will be called whenever someone subscribes to a channel
 async def on_sub(sub: ChatSub):
-    twitch_log.info(f'New subscription in {sub.room.name}:\\n'
-          f'  Type: {sub.sub_plan}\\n'
-          f'  Message: {sub.sub_message}')
+    twitch_log.info(f'New subscription in {sub.room.name}: Type: {sub.sub_plan_name} Message: {sub.sub_message}')
+    if sub.room.name == TARGET_CHANNEL[0]:
+        await send_dc_message(BotEmbed.general(title=f'{sub.room.name} 的新訂閱!',description=f"類型: {sub.sub_plan_name}\訊息: {sub.sub_message}"))
 
 async def on_bot_joined(event: JoinedEvent):
     await asyncio.sleep(1)
@@ -144,8 +144,10 @@ async def on_whisper(event: WhisperEvent):
             channel.send(embed=BotEmbed.general(event.user.name,description=event.message))
 
 async def on_raid(event:dict):
-    print(event)
-    #twitch_log.info(f'Raid from {event["from_broadcaster_user_name"]} with {event["viewers"]} viewers')
+    try:
+        twitch_log.info(f'Raid from {event["tags"]["display-name"]} with {event["tags"]["msg-param-viewerCount"]} viewers')
+    except:
+        print(event)
 
 # this will be called whenever the !reply command is issued
 async def test_command(cmd: ChatCommand):
