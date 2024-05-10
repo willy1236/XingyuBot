@@ -81,9 +81,15 @@ async def on_follow(event: eventsub.ChannelFollowEvent):
 
 async def on_stream_online(event: eventsub.StreamOnlineEvent):
     twitch_log.info(f'{event.event.broadcaster_user_name} starting stream!')
+    if sclient.bot:
+        channel = sclient.bot.get_channel(566533708371329026)
+        channel.send(f'{event.event.broadcaster_user_name} starting stream!')
 
 async def on_stream_offline(event: eventsub.StreamOfflineEvent):
     twitch_log.info(f'{event.event.broadcaster_user_name} ending stream.')
+    if sclient.bot:
+        channel = sclient.bot.get_channel(566533708371329026)
+        channel.send(f'{event.event.broadcaster_user_name} ending stream.')
 
 async def on_channel_points_custom_reward_redemption_add(event: eventsub.ChannelPointsCustomRewardRedemptionAddEvent):
     text = f'{event.event.user_name} 兌換了 {event.event.reward.title}!' 
@@ -241,8 +247,9 @@ async def run():
     for user in users:
         await eventsub.listen_stream_online(user.id, on_stream_online)
         await eventsub.listen_stream_offline(user.id, on_stream_offline)
-        if chat.is_mod(user.login):
-            await eventsub.listen_channel_follow_v2(user.id, me.id, on_follow)
+        await eventsub.listen_channel_follow_v2(user.id, me.id, on_follow)
+        # if chat.is_mod(user.login):
+        #     await eventsub.listen_channel_follow_v2(user.id, me.id, on_follow)
     
 
     # we are done with our setup, lets start this bot up!

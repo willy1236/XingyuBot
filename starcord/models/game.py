@@ -35,7 +35,7 @@ class LOLPlayer(RiotUser):
         embed.add_field(name="召喚師ID", value=self.summonerid, inline=False)
         embed.add_field(name="puuid", value=self.puuid, inline=False)
         try:
-            embed.set_thumbnail(url=f'https://ddragon.leagueoflegends.com/cdn/13.15.1/img/profileicon/{self.profileIconId}.png')
+            embed.set_thumbnail(url=f'https://ddragon.leagueoflegends.com/cdn/14.9.1/img/profileicon/{self.profileIconId}.png')
         except:
             embed.set_thumbnail(url='https://i.imgur.com/B0TMreW.png')
         embed.set_footer(text="puuid是全球唯一的ID，不隨帳號移動地區而改變")

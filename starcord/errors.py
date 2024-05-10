@@ -16,11 +16,12 @@
 
 class StarException(Exception):
     """
-    starcord original error: 1000
-    :param message: 錯誤訊息
-    :param code: 錯誤代碼
-    :param original: 原始錯誤
-    :param original_message: 原始錯誤提供的訊息，如果提供，將會使機器人自動回報
+    A custom exception class for starcord.
+
+    :param message: The error message.
+    :param code: The error code.
+    :param original: The original error.
+    :param original_message: The message provided by the original error. If provided, the bot will automatically report it.
     """
     code = 1000
     message = 'A Exception occurred.'
@@ -41,7 +42,8 @@ class ApiError(StarException):
     code = 1100
     message = 'A Api exception occurred'
 
-class ClientError(ApiError):
+class APIInvokeError(ApiError):
+    """A error occurred while calling API: 1101"""
     def __init__(self,message=None,original_message=None):
         self.code = 1101
         self.message = '調用API時發生錯誤：' + message

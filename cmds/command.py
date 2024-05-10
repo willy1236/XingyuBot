@@ -411,7 +411,7 @@ class command(Cog_Extension):
                        ctx:discord.ApplicationContext,
                        text:discord.Option(str,name='訊息',description='要傳送的訊息內容，歡迎提供各項建議')):
         await ctx.defer()
-        await BRS.feedback(self,ctx,text)
+        await BRS.feedback(self.bot,ctx,text)
         await ctx.respond(f"訊息已發送!",ephemeral=True,delete_after=3)
 
     @staticmethod

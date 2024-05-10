@@ -5,11 +5,10 @@ import pandas as pd
 
 from starcord.FileDatabase import Jsondb
 from starcord.models.game import *
-from starcord.errors import ClientError
+from starcord.errors import APIInvokeError
 
 class GameInterface():
-    def __init__(self):
-        self.db = Jsondb
+    pass
 
 class RiotAPI(GameInterface):
     def __init__(self):
@@ -18,85 +17,93 @@ class RiotAPI(GameInterface):
         self.url_sea = 'https://sea.api.riotgames.com'
         self.url_asia = 'https://asia.api.riotgames.com'
         self.key = Jsondb.get_token('riot')
-        self.headers = {
+        self._headers = {
             'X-Riot-Token':self.key
         }
 
+        self._ddg_version = None
+
+    @property
+    def ddg_version(self):
+        if not self._ddg_version:
+            self._ddg_version = self.get_ddragon_version()
+        return self._ddg_version
+
     def get_riot_account_byname(self,username:str):
         name, tag = username.split('#')
-        r = requests.get(f'{self.url_asia}/riot/account/v1/accounts/by-riot-id/{name}/{tag}', headers=self.headers)
+        r = requests.get(f'{self.url_asia}/riot/account/v1/accounts/by-riot-id/{name}/{tag}', headers=self._headers)
         if r.ok:
             return RiotUser(r.json())
         elif r.status_code == 404:
             return None
         else:
-            raise ClientError("lol_player_byname",r.text)
+            raise APIInvokeError("lol_player_byname",r.text)
 
     def get_player_byname(self,username:str):
-        r = requests.get(f'{self.url_tw2}/lol/summoner/v4/summoners/by-name/{username}', headers=self.headers)
+        r = requests.get(f'{self.url_tw2}/lol/summoner/v4/summoners/by-name/{username}', headers=self._headers)
         if r.ok:
             return LOLPlayer(r.json())
         elif r.status_code == 404:
             return None
         else:
-            raise ClientError("lol_player_byname",r.text)
+            raise APIInvokeError("lol_player_byname",r.text)
         
     def get_player_bypuuid(self,puuid):
-        r = requests.get(f'{self.url_tw2}/lol/summoner/v4/summoners/by-puuid/{puuid}',headers=self.headers)
+        r = requests.get(f'{self.url_tw2}/lol/summoner/v4/summoners/by-puuid/{puuid}',headers=self._headers)
         if r.ok:
             return LOLPlayer(r.json())
         elif r.status_code == 404:
             return None        
         else:
-            raise ClientError("lol_player_bypuuid",r.text)
+            raise APIInvokeError("lol_player_bypuuid",r.text)
 
     def get_player_matchs(self,puuid,count=5) -> list[str]:
         params = {
             'start':0,
             'count':count
             }
-        r = requests.get(f'{self.url_sea}/lol/match/v5/matches/by-puuid/{puuid}/ids',params=params,headers=self.headers)
+        r = requests.get(f'{self.url_sea}/lol/match/v5/matches/by-puuid/{puuid}/ids',params=params,headers=self._headers)
         if r.ok:
             return r.json()
         else:
-            raise ClientError("lol_player_match",r.text)
+            raise APIInvokeError("lol_player_match",r.text)
 
     def get_match(self,matchId):
-        r = requests.get(f'{self.url_sea}/lol/match/v5/matches/{matchId}',headers=self.headers)
+        r = requests.get(f'{self.url_sea}/lol/match/v5/matches/{matchId}',headers=self._headers)
         if r.ok:
             return LOLMatch(r.json())
         else:
-            raise ClientError("lol_match",r.text)
+            raise APIInvokeError("lol_match",r.text)
         
     def get_summoner_masteries(self,puuid) -> list[LOLChampionMasteries | None]:
         params = {
             'count':5
             }
-        r = requests.get(f'{self.url_tw2}/lol/champion-mastery/v4/champion-masteries/by-puuid/{puuid}/top',params=params,headers=self.headers)
+        r = requests.get(f'{self.url_tw2}/lol/champion-mastery/v4/champion-masteries/by-puuid/{puuid}/top',params=params,headers=self._headers)
         if r.ok:
             return [LOLChampionMasteries(data) for data in r.json()]
         elif r.status_code == 404:
             return []
         else:
-            raise ClientError("lol_summoner_masteries",r.text)
+            raise APIInvokeError("lol_summoner_masteries",r.text)
     
     def get_summoner_active_match(self,summoner_id):
-        r = requests.get(f'{self.url_tw2}/lol/spectator/v4/active-games/by-summoner/{summoner_id}',headers=self.headers)
+        r = requests.get(f'{self.url_tw2}/lol/spectator/v4/active-games/by-summoner/{summoner_id}',headers=self._headers)
         if r.ok:
             return LOLActiveMatch(r.json())
         elif r.status_code == 404:
             return None
         else:
-            raise ClientError(f"lol_summoner_active_match:{r.text}")
+            raise APIInvokeError(f"lol_summoner_active_match:{r.text}")
         
     def get_summoner_rank(self,summoner_id):
-        r = requests.get(f'{self.url_tw2}/lol/league/v4/entries/by-summoner/{summoner_id}',headers=self.headers)
+        r = requests.get(f'{self.url_tw2}/lol/league/v4/entries/by-summoner/{summoner_id}',headers=self._headers)
         if r.ok:
             return [LOLPlayerRank(data) for data in r.json()]
         elif r.status_code == 404:
             return []
         else:
-            raise ClientError(f"get_summoner_rank:{r.text}")
+            raise APIInvokeError(f"get_summoner_rank:{r.text}")
 
     def get_rank_dataframe(self,riot_name:str,count=20):
         user = self.get_riot_account_byname(riot_name)
@@ -122,6 +129,14 @@ class RiotAPI(GameInterface):
             time.sleep(1)
         return df
     
+    def get_ddragon_version(self,all=False) -> str | list[str]:
+        r = requests.get('https://ddragon.leagueoflegends.com/api/versions.json')
+        if r.ok:
+            apidata = r.json()
+            return apidata if all else apidata[0]
+        else:
+            raise APIInvokeError("ddragon_version",r.text)
+    
 class OsuInterface(GameInterface):
     def __init__(self):
         super().__init__()
@@ -129,7 +144,7 @@ class OsuInterface(GameInterface):
         self._url = 'https://osu.ppy.sh/api/v2'
 
     def _get_headers(self):
-        ous_token = self.db.get_token('osu')
+        ous_token = self.db.get_token('osu')                   
         data = {
             'client_id': ous_token[0],
             'client_secret': ous_token[1],

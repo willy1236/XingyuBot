@@ -101,8 +101,8 @@ class BRS():
         await report_channel.send(embed=embed)
 
     @staticmethod
-    async def feedback(self,ctx:discord.ApplicationContext,msg):
-        feedback_channel = self.bot.get_channel(Jsondb.jdata['feedback_channel'])
+    async def feedback(bot,ctx:discord.ApplicationContext,msg):
+        feedback_channel = bot.get_channel(Jsondb.jdata['feedback_channel'])
         embed=BotEmbed.general(name="BRS | 回饋訊息")
         embed.add_field(name='訊息內容', value=msg, inline=True)
         embed.add_field(name='發送者', value=f"{ctx.author}\n{ctx.author.id}", inline=False)
@@ -124,7 +124,7 @@ class BRS():
     @staticmethod
     async def mentioned(bot,msg:discord.Message):
         dm_channel = bot.get_channel(Jsondb.jdata['mentioned_channel'])
-        embed=BotEmbed.general(name="BRS | 提及訊息",description=f"https://discord.com/channels/{msg.guild.id}/{msg.channel.id}/{msg.id}")
+        embed=BotEmbed.general(name="BRS | 提及訊息",description=msg.jump_url)
         embed.add_field(name='訊息內容', value=msg.content, inline=True)
         embed.add_field(name='發送者', value=f"{msg.author}\n{msg.author.id}", inline=False)
         embed.add_field(name='來源頻道', value=f'{msg.channel}\n{msg.channel.id}', inline=True)
