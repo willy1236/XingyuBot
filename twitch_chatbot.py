@@ -247,9 +247,8 @@ async def run():
     for user in users:
         await eventsub.listen_stream_online(user.id, on_stream_online)
         await eventsub.listen_stream_offline(user.id, on_stream_offline)
-        await eventsub.listen_channel_follow_v2(user.id, me.id, on_follow)
-        # if chat.is_mod(user.login):
-        #     await eventsub.listen_channel_follow_v2(user.id, me.id, on_follow)
+        if chat.is_mod(user.login):
+            await eventsub.listen_channel_follow_v2(user.id, me.id, on_follow)
     
 
     # we are done with our setup, lets start this bot up!
