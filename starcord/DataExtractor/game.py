@@ -144,7 +144,7 @@ class OsuInterface(GameInterface):
         self._url = 'https://osu.ppy.sh/api/v2'
 
     def _get_headers(self):
-        ous_token = self.db.get_token('osu')                   
+        ous_token = Jsondb.get_token('osu')                   
         data = {
             'client_id': ous_token[0],
             'client_secret': ous_token[1],
@@ -170,7 +170,7 @@ class OsuInterface(GameInterface):
 
     def get_beatmap(self,beatmapid:str):
         '''獲取Osu圖譜資訊'''
-        response = requests.get(f'{self.__url}/beatmaps/{beatmapid}', headers=self._headers).json()
+        response = requests.get(f'{self._url}/beatmaps/{beatmapid}', headers=self._headers).json()
         if 'error' not in response:
             return OsuBeatmap(response)
         else:
@@ -178,7 +178,7 @@ class OsuInterface(GameInterface):
 
     def get_multiplayer(self,room,playlist):
         '''獲取Osu多人遊戲資訊（未完成）'''
-        r = requests.get(f'{self.__url}/rooms/{room}/playlist/{playlist}/scores',headers=self._headers)
+        r = requests.get(f'{self._url}/rooms/{room}/playlist/{playlist}/scores',headers=self._headers)
         if r.status_code == 200:
             return OsuMultiplayer(r.json())
         else:
@@ -188,7 +188,7 @@ class OsuInterface(GameInterface):
 class ApexInterface(GameInterface):
     def __init__(self):
         super().__init__()
-        self.auth = self.db.get_token('apex')
+        self.auth = Jsondb.get_token('apex')
         self.url = 'https://api.mozambiquehe.re'
 
     def get_player(self,username:str,platform:str='PC'):
@@ -246,7 +246,7 @@ class ApexInterface(GameInterface):
 class SteamInterface(GameInterface):
     def __init__(self):
         super().__init__()
-        self.key = self.db.get_token('steam')
+        self.key = Jsondb.get_token('steam')
 
     def get_user(self,userid):
         params = {
