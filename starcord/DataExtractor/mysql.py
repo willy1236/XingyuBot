@@ -848,8 +848,8 @@ class MySQLWarningSystem(MySQLBaseModel):
         self.connection.commit()
 
 class MySQLPollSystem(MySQLBaseModel):
-    def add_poll(self,title:str,created_user:int,created_at:datetime,message_id,guild_id,ban_alternate_account_voting=False,show_name=False,check_results_in_advance=True,results_only_initiator=False,multiple_choice=False):
-        self.cursor.execute(f"INSERT INTO `database`.`poll_data` VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);",(None,title,created_user,created_at,True,message_id,guild_id,ban_alternate_account_voting,show_name,check_results_in_advance,results_only_initiator,multiple_choice))
+    def add_poll(self,title:str,created_user:int,created_at:datetime,message_id,guild_id,ban_alternate_account_voting=False,show_name=False,check_results_in_advance=True,results_only_initiator=False,number_of_user_votes=1):
+        self.cursor.execute(f"INSERT INTO `database`.`poll_data` VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);",(None,title,created_user,created_at,True,message_id,guild_id,ban_alternate_account_voting,show_name,check_results_in_advance,results_only_initiator,number_of_user_votes))
         self.connection.commit()
         return self.cursor.lastrowid
     
@@ -878,12 +878,6 @@ class MySQLPollSystem(MySQLBaseModel):
         records = self.cursor.fetchall()
         return records
 
-    def get_poll_option(self,poll_id:int,option_id:int):
-        self.cursor.execute(f"SELECT * FROM `database`.`poll_options` WHERE `poll_id` = {poll_id} AND `option_id` = {option_id};")
-        records = self.cursor.fetchall()
-        if records:
-            return records[0]
-
     def add_poll_option(self,poll_id:int,options:list):
         lst = []
         count = 0
@@ -910,28 +904,22 @@ class MySQLPollSystem(MySQLBaseModel):
         Raises:
             SQLNotFoundError: If the poll with the given ID is not found in the database.
         """
-        self.cursor.execute(f"SELECT `multiple_choice` FROM `database`.`poll_data` WHERE `poll_id` = {poll_id} LIMIT 1;")
+        self.cursor.execute(f"SELECT * FROM `stardb_user`.`user_poll` WHERE `poll_id` = {poll_id} AND `discord_id` = {discord_id} AND `vote_option` = {vote_option};")
         dbdata = self.cursor.fetchall()
-        if not dbdata:
-            raise SQLNotFoundError(f"Poll {poll_id} not found")
-        multiple_choice = dbdata[0].get("multiple_choice")
-        
-        if multiple_choice == 1:    
-            self.cursor.execute(f"SELECT * FROM `stardb_user`.`user_poll` WHERE `poll_id` = {poll_id} AND `discord_id` = {discord_id} AND `vote_option` = {vote_option};")
-            dbdata = self.cursor.fetchall()
-            if dbdata:
-                self.cursor.execute(f"DELETE FROM `stardb_user`.`user_poll` WHERE poll_id = {poll_id} AND discord_id = {discord_id} AND vote_option = {vote_option};")
-                text = -1
-            else:
-                self.cursor.execute(f"INSERT INTO `stardb_user`.`user_poll` VALUES(%s,%s,%s,%s,%s);",(poll_id,discord_id,vote_option,vote_at,vote_magnification))
-                text = 1
+        if dbdata:
+            self.cursor.execute(f"DELETE FROM `stardb_user`.`user_poll` WHERE poll_id = {poll_id} AND discord_id = {discord_id} AND vote_option = {vote_option};")
+            text = -1
         else:
-            self.cursor.execute(f"INSERT INTO `stardb_user`.`user_poll` VALUES(%s,%s,%s,%s,%s) ON DUPLICATE KEY UPDATE `vote_option` = %s, `vote_at` = %s, `vote_magnification` = %s;",(poll_id,discord_id,vote_option,vote_at,vote_magnification,vote_option,vote_at,vote_magnification))
+            self.cursor.execute(f"INSERT INTO `stardb_user`.`user_poll` VALUES(%s,%s,%s,%s,%s);",(poll_id,discord_id,vote_option,vote_at,vote_magnification))
             text = 1
         
         self.connection.commit()
         return text
 
+    def get_user_vote_count(self,poll_id,discord_id):
+        self.cursor.execute(f"SELECT count(*) FROM `stardb_user`.`user_poll` WHERE `poll_id` = {poll_id} AND `discord_id` = {discord_id};")
+        dbdata = self.cursor.fetchall()
+        return dbdata[0]["count(*)"] if dbdata else 0
 
     def add_user_poll(self,poll_id:int,discord_id:int,vote_option:int,vote_at:datetime,vote_magnification:int=1):
         self.cursor.execute(f"INSERT INTO `stardb_user`.`user_poll` VALUES(%s,%s,%s,%s,%s) ON DUPLICATE KEY UPDATE `vote_option` = %s, `vote_at` = %s, `vote_magnification` = %s;",(poll_id,discord_id,vote_option,vote_at,vote_magnification,vote_option,vote_at,vote_magnification))
@@ -942,10 +930,20 @@ class MySQLPollSystem(MySQLBaseModel):
         self.connection.commit()
     
     def get_user_poll(self,poll_id:int,discord_id:int):
-        self.cursor.execute(f"SELECT * FROM `stardb_user`.`user_poll` WHERE poll_id = {poll_id} AND `discord_id` = {discord_id};")
+        self.cursor.execute(f"""
+                            SELECT 
+                                `user_poll`.*, `poll_options`.option_name
+                            FROM
+                                `stardb_user`.`user_poll`
+                                    LEFT JOIN
+                                `database`.`poll_options` ON `user_poll`.vote_option = `poll_options`.option_id
+                                    AND `user_poll`.poll_id = `poll_options`.poll_id
+                            WHERE
+                                `user_poll`.poll_id = {poll_id}
+                                    AND `discord_id` = {discord_id};
+                            """)
         records = self.cursor.fetchall()
-        if records:
-            return records[0]
+        return records
     
     def get_users_poll(self,poll_id:int,include_alternatives_accounts=True):
         if include_alternatives_accounts:

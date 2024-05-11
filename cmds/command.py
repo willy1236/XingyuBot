@@ -442,7 +442,7 @@ class command(Cog_Extension):
                      check_results_in_advance:discord.Option(bool,name='預先查看結果',description='預設為true',default=True),
                      results_only_initiator:discord.Option(bool,name='僅限發起人能查看結果',description='預設為false',default=False),
                      ban_alternate_account_voting:discord.Option(bool,name='是否禁止小帳投票',description='僅供特定群組使用，預設為false',default=False),
-                     multiple_choice:discord.Option(bool,name='多選',description='預設為false',default=False),
+                     number_of_user_votes:discord.Option(int,name='一人最多可投票數',description='預設為1',default=1, min_value=1, max_value=20),
                      only_role:discord.Option(str,name='限制身分組',description='若提供。則只有擁有身分組才能投票，多個身分組以英文,隔開，身分組可輸入id、提及、名稱等',default=None),
                      role_magnification:discord.Option(str,name='身分組權重',description='若提供，擁有身分組的用戶票數將乘指定倍數，取最高，格式為：身分組1,權重,身分組2,權重...，身分組可輸入id、提及、名稱等',default=None),
                      ):
@@ -454,7 +454,7 @@ class command(Cog_Extension):
         only_role_list = await create_only_role_list(only_role,ctx) if only_role else []
         role_magnification_dict = await create_role_magification_dict(role_magnification,ctx) if role_magnification else {}
 
-        view = sclient.create_poll(title,options,ctx.author.id,ctx.guild.id,ban_alternate_account_voting,show_name,check_results_in_advance,results_only_initiator,multiple_choice,only_role_list=only_role_list,role_magnification_dict=role_magnification_dict)
+        view = sclient.create_poll(title,options,ctx.author.id,ctx.guild.id,ban_alternate_account_voting,show_name,check_results_in_advance,results_only_initiator,number_of_user_votes,only_role_list=only_role_list,role_magnification_dict=role_magnification_dict)
         embed = view.embed(ctx.guild)
         message = await ctx.respond(embed=embed,view=view)
         sclient.sqldb.update_poll(view.poll_id,"message_id",message.id)
@@ -465,49 +465,19 @@ class command(Cog_Extension):
                    poll_id:discord.Option(int,name='投票id',description='')):
         dbdata = sclient.sqldb.get_poll(poll_id)
         if dbdata:
-            view = PollView(dbdata['poll_id'],sqldb=sclient)    
+            view = PollView(dbdata['poll_id'],sqldb=sclient.sqldb)    
             await ctx.respond(view=view,embed=view.embed(ctx.guild))
         else:
             await ctx.respond("錯誤：查無此ID")
 
     @commands.is_owner()
-    @poll.command(description='編輯投票')
-    async def edit(self,
-                   ctx:discord.ApplicationContext,
-                   poll_id:discord.Option(int,name='投票id',description=''),
-                   title:discord.Option(str,name='標題',description='投票標題，限45字內',default=None),
-                   show_name:discord.Option(bool,name='顯示投票人',description='預設為false，若投票人數多建議關閉',default=None),
-                   check_results_in_advance:discord.Option(bool,name='預先查看結果',description='預設為true',default=None),
-                   results_only_initiator:discord.Option(bool,name='僅限發起人能查看結果',description='預設為false',default=None),
-                   ban_alternate_account_voting:discord.Option(bool,name='是否禁止小帳投票',description='僅供特定群組使用，預設為false',default=None)):
-        dbdata = sclient.sqldb.get_poll(poll_id)
-        if not dbdata:
-            await ctx.respond("錯誤：查無此ID")
-            return
-        
-        if title:
-            sclient.sqldb.update_poll(poll_id,"title",title)
-        if ban_alternate_account_voting:
-            sclient.sqldb.update_poll(poll_id,"ban_alternate_account_voting",ban_alternate_account_voting)
-        if show_name:
-            sclient.sqldb.update_poll(poll_id,"show_name",show_name)
-        if check_results_in_advance:
-            sclient.sqldb.update_poll(poll_id,"check_results_in_advance",check_results_in_advance)
-        if results_only_initiator:
-            sclient.sqldb.update_poll(poll_id,"results_only_initiator",results_only_initiator)
-        
-        view = PollView(poll_id,sqldb=sclient.sqldb)
-        message = ctx.channel.fetch_message(view.message_id)
-        if message:
-            await message.edit(view=view,embed=view.embed(ctx.guild))
-            await ctx.respond(f"投票更新完成：{message.jump_url}")
-        else:
-            await ctx.respond("投票更新完成，但沒有更新投票介面")
-
-    # @commands.is_owner()
-    # @poll.command(description='取得投票結果')
-    # async def result(self,ctx,
-    #                poll_id:discord.Option(int,name='投票id',description='')):
+    @poll.command(description='取得投票結果')
+    async def result(self,ctx:discord.ApplicationContext,
+                   poll_id:discord.Option(int,name='投票id',description='')):
+        await ctx.defer()
+        view = PollView(poll_id,sclient.sqldb,self.bot)
+        embed = view.results_embed(ctx.interaction)
+        await ctx.respond(embed=embed)
 
     @commands.slash_command(description='共用「94共用啦」雲端資料夾',guild_ids=main_guild)
     async def drive(self,ctx,email:discord.Option(str,name='gmail帳戶',description='要使用的Gmail帳戶，留空以移除資料',required=False)):
