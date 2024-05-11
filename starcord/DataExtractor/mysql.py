@@ -848,8 +848,8 @@ class MySQLWarningSystem(MySQLBaseModel):
         self.connection.commit()
 
 class MySQLPollSystem(MySQLBaseModel):
-    def add_poll(self,title:str,created_user:int,created_at:datetime,message_id,guild_id,alternate_account_can_vote=True,show_name=False,check_results_in_advance=True,results_only_initiator=False,multiple_choice=False):
-        self.cursor.execute(f"INSERT INTO `database`.`poll_data` VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);",(None,title,created_user,created_at,True,message_id,guild_id,alternate_account_can_vote,show_name,check_results_in_advance,results_only_initiator,multiple_choice))
+    def add_poll(self,title:str,created_user:int,created_at:datetime,message_id,guild_id,ban_alternate_account_voting=False,show_name=False,check_results_in_advance=True,results_only_initiator=False,multiple_choice=False):
+        self.cursor.execute(f"INSERT INTO `database`.`poll_data` VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);",(None,title,created_user,created_at,True,message_id,guild_id,ban_alternate_account_voting,show_name,check_results_in_advance,results_only_initiator,multiple_choice))
         self.connection.commit()
         return self.cursor.lastrowid
     
@@ -885,12 +885,12 @@ class MySQLPollSystem(MySQLBaseModel):
             return records[0]
 
     def add_poll_option(self,poll_id:int,options:list):
-        list = []
+        lst = []
         count = 0
         for option in options:
             count += 1
-            list.append([poll_id, count, option])
-        self.cursor.executemany(f"INSERT INTO `database`.`poll_options` VALUES(%s,%s,%s);",list)
+            lst.append([poll_id, count, option])
+        self.cursor.executemany(f"INSERT INTO `database`.`poll_options` VALUES(%s,%s,%s);",lst)
         self.connection.commit()
 
     def set_user_poll(self, poll_id: int, discord_id: int, vote_option: int = None, vote_at: datetime = None, vote_magnification: int = 1):
@@ -1029,6 +1029,10 @@ class MYSQLElectionSystem(MySQLBaseModel):
         records = self.cursor.fetchall()
         return records
     
+    def add_official(self, discord_id, session, position):
+        self.cursor.execute(f"INSERT INTO `database`.`official_list` VALUES(%s,%s,%s);",(discord_id,session,position))
+        self.connection.commit()
+
     def join_party(self,discord_id:int,party_id:int):
         self.cursor.execute(f"INSERT INTO `stardb_user`.`user_party` VALUES(%s,%s);",(discord_id,party_id))
         self.connection.commit()

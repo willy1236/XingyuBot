@@ -7,7 +7,7 @@ from ..DataExtractor import sqldb,RiotAPI,SteamInterface,OsuInterface,ApexInterf
 from ..FileDatabase import Jsondb
 from ..models import *
 from ..types import DBGame
-from ..ui_element.view import PollView
+from ..ui_element.view import PollView, ElectionPollView
 from ..starAI import StarGeminiAI
 from .classes import DiscordBot
 from ..Utilities import scheduler
@@ -84,7 +84,7 @@ class PollClient():
                     options:list,
                     creator_id:int,
                     guild_id:int,
-                    alternate_account_can_vote=True,
+                    ban_alternate_account_voting=False,
                     show_name=False,
                     check_results_in_advance=True,
                     results_only_initiator=False,
@@ -94,7 +94,7 @@ class PollClient():
                     bot:discord.bot=None
                     ) -> PollView:
         """創建投票"""
-        poll_id = sqldb.add_poll(title,creator_id,datetime.now(),None,guild_id,alternate_account_can_vote,show_name,check_results_in_advance,results_only_initiator,multiple_choice)
+        poll_id = sqldb.add_poll(title,creator_id,datetime.now(),None,guild_id,ban_alternate_account_voting,show_name,check_results_in_advance,results_only_initiator,multiple_choice)
         sqldb.add_poll_option(poll_id,options)
 
         poll_role_dict = {}
@@ -115,46 +115,63 @@ class PollClient():
         view = PollView(poll_id,sqldb,bot)
         return view
     
+    def create_election_poll(self,title:str,options:list,creator_id:int,guild_id:int,value:int,bot:discord.bot=None):
+        """創建選舉投票"""
+        poll_id = sqldb.add_poll(title,creator_id,datetime.now(),None,guild_id,ban_alternate_account_voting=True,check_results_in_advance=False,value=value)
+        sqldb.add_poll_option(poll_id,options)
+        
+        view = ElectionPollView(poll_id,sqldb,bot)
+        return view
+    
 class ElectionSystem():
     def election_format(self,session:str,bot:discord.Bot):
         dbdata = sqldb.get_election_full_by_session(session)
         guild = bot.get_guild(613747262291443742)
         
         # result = { "職位": { "用戶id": ["用戶提及", ["政黨"]]}}
-        result = {}
+        # init results
+        results = {}
         for position in Jsondb.options["position_option"].keys():
-            result[position] = {}
+            results[position] = {}
         
-        for i in dbdata:
-            discord_id = i['discord_id']
-            position = i['position']
-            if i['party_name'] and guild:
-                role = guild.get_role(i["role_id"])
-                party_name = role.mention if role else i['party_name']
-                
-            else:
-                party_name = i['party_name'] or "無黨籍"
+        # deal data
+        for data in dbdata:
+            discord_id = data['discord_id']
+            position = data['position']
+            party_id = data['party_id']
+            party_name = data['party_name']
             
-            
-            user = bot.get_user(discord_id)
-            if user:
-                if discord_id in result[position]:
-                    #多政黨判斷
-                    if not party_name in result[position][discord_id][1]:
-                        result[position][discord_id][1].append(party_name)
+            if party_id:
+                if guild:
+                    role = guild.get_role(data["role_id"])
+                    party = role.mention if role else party_name
                 else:
-                    result[position][discord_id] = [user.mention, [party_name]]
+                    party = party_name
+            else:
+                party = "無黨籍"
+            user = bot.get_user(discord_id)
+            username = user.mention if user else discord_id
 
+            #新增資料
+            if discord_id not in results[position]:
+                results[position][discord_id] = [username, [party]]
+            else:
+                results[position][discord_id][1].append(party)
+
+        # create embed
         embed = BotEmbed.simple(f"第{session}屆中央選舉名單")
-        for position_name in result:
+        for pos_id in results:
             text = ""
             count = 0
-            for i in result[position_name]:
+            for user_data in results[pos_id]:
                 count += 1
-                user_mention = result[position_name][i][0]
-                party_name = ",".join(result[position_name][i][1])
+                user_mention = results[pos_id][user_data][0]
+                party_name = ",".join(results[pos_id][user_data][1])
                 text += f"{count}. {user_mention} （{party_name}）\n"
-            embed.add_field(name=Jsondb.get_jdict('position_option',position_name), value=text, inline=False)
+            
+            position_name = ChoiceList.get_tw(pos_id,"position_option")
+            embed.add_field(name=position_name, value=text, inline=False)
+        
         return embed
     
 class GiveawayClient():

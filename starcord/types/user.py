@@ -31,7 +31,7 @@ class PetType(IntEnum):
     def text(self,lcode='en'):
         return pet_tl[lcode][str(self.value)]
 
-class BusyTime(Enum):
+class BusyTime(IntEnum):
     早上 = 1
     下午 = 2
     晚上 = 3
@@ -41,8 +41,8 @@ class Coins(Enum):
     RCOIN = "rcoin"
     SCOIN = "scoin"
 
-class Position(Enum):
-    PRESIDENT= "president"
-    EXECUTIVE_PRESIDENT  = "executive_president"
-    LEGISLATIVE_PRESIDENT  = "legislative_president"
-    JUDICIARY_PRESIDENT = "judiciary_president"
+class Position(IntEnum):
+    PRESIDENT= 1
+    EXECUTIVE_PRESIDENT  = 2
+    LEGISLATIVE_PRESIDENT  = 3
+    JUDICIARY_PRESIDENT = 4

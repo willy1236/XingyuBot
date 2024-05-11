@@ -3,8 +3,8 @@ from typing import TYPE_CHECKING
 from starcord.Utilities import BotEmbed
 
 class PollOptionButton(discord.ui.Button):
-    def __init__(self,label,poll_id,option_id,custom_id):
-        super().__init__(label=label,custom_id=custom_id)
+    def __init__(self,label:str,poll_id:int,option_id:int,custom_id:str,row:int=None):
+        super().__init__(label=label,custom_id=custom_id,row=row)
         self.poll_id = poll_id
         self.option_id = option_id
     
@@ -45,40 +45,11 @@ class PollEndButton(discord.ui.Button):
             view:PollView = self.view
             view.clear_items()
             view.sqldb.update_poll(self.poll_id,"is_on",0)
-            
-            polldata = view.sqldb.get_poll(self.poll_id)
+
             text, labels, sizes = view.results_text(interaction,True)
+            image_buffer = view.generate_chart(labels, sizes)
 
-            import matplotlib.pyplot as plt
-            fig, ax = plt.subplots()
-            #圖表製作
-            def data_string(s,d) -> str:
-                t = int(round(s/100.*sum(d)))     # 透過百分比反推原本的數值
-                return f'{t}\n（{s:.1f}%）'
-
-            # 字形
-            matplotlib.rc('font', family='Microsoft JhengHei')
-            matplotlib.rcParams["font.sans-serif"] = ["Microsoft JhengHei"]
-
-            # 設置顏色
-            colors = ['gold', 'yellowgreen', 'lightcoral', 'lightskyblue']
-
-            # 設置圓餅圖的突出顯示
-            #explode = (0.1, 0, 0, 0)  # 將第一塊突出顯示
-        
-            # 繪製圓餅圖
-            ax.pie(sizes, labels=labels, colors=colors, autopct=lambda i: data_string(i,sizes), shadow=False, startangle=140)
-            #plt.pie()
-
-            # 添加標題
-            ax.set_title(polldata['title'])
-            #plt.title()
-
-            image_buffer = io.BytesIO()
-            plt.savefig(image_buffer, format='png', dpi=200, bbox_inches='tight')
-            image_buffer.seek(0)
-
-            embed = BotEmbed.simple(polldata["title"],description=f'{text}')
+            embed = BotEmbed.simple(view.title, description=text)
             embed.set_footer(text=f"投票ID：{self.poll_id}")
             await interaction.response.edit_message(embed=embed,view=view,file=discord.File(image_buffer,filename="pie.png"))
         else:
@@ -136,13 +107,13 @@ class PollView(discord.ui.View):
         message_id: int | None
         title: str
         created_id: int
-        alternate_account_can_vote: bool
+        ban_alternate_account_voting: bool
         show_name: bool
         check_results_in_advance: bool
         results_only_initiator: bool
         multiple_choice: bool
 
-    def __init__(self,poll_id,sqldb=None,bot=None):
+    def __init__(self,poll_id,sqldb=None,bot=None,is_election=False):
         super().__init__(timeout=None)
         self.poll_id = poll_id
         self.sqldb = sqldb
@@ -152,29 +123,31 @@ class PollView(discord.ui.View):
         poll_data = self.sqldb.get_poll(poll_id)
         self.title = poll_data['title']
         self.created_id = poll_data['created_user']
-        self.alternate_account_can_vote = bool(poll_data['alternate_account_can_vote'])
+        self.ban_alternate_account_voting = bool(poll_data['ban_alternate_account_voting'])
         self.show_name = bool(poll_data['show_name'])
         self.check_results_in_advance = bool(poll_data['check_results_in_advance'])
         self.results_only_initiator = bool(poll_data['results_only_initiator'])
         self.multiple_choice = bool(poll_data['multiple_choice'])
         # TODO: number_of_user_votes (replace multiple_choice)
         # TODO: change_vote (decide if user can change his/her vote or not)
-
         
         self.guild_id = poll_data['guild_id']
         self.message_id = poll_data['message_id']
 
-        self.add_item(PollEndButton(poll_id,self.created_id,bot))
-        if self.check_results_in_advance:
-            self.add_item(PollResultButton(poll_id))
-        self.add_item(PollCanenlButton(poll_id))
-        self.add_item(PollNowButton(poll_id))
+        if not is_election:
+            self.add_item(PollEndButton(poll_id,self.created_id,bot))
+            if self.check_results_in_advance:
+                self.add_item(PollResultButton(poll_id))
+            self.add_item(PollCanenlButton(poll_id))
+            self.add_item(PollNowButton(poll_id))
 
         
         dbdata = sqldb.get_poll_options(poll_id)
+        i = 5
         for option in dbdata:
             custom_id = f"poll_{poll_id}_{option['option_id']}"
-            self.add_item(PollOptionButton(label=option['option_name'],poll_id=poll_id, option_id=option['option_id'],custom_id=custom_id))
+            self.add_item(PollOptionButton(label=option['option_name'],poll_id=poll_id, option_id=option['option_id'],custom_id=custom_id,row=int(i/5)))
+            i += 1
     
     @property
     def role_dict(self) -> dict:
@@ -201,9 +174,12 @@ class PollView(discord.ui.View):
                 mag = self.role_dict[roleid][1]
                 role_magification_list.append(f"{role.mention}({mag})" if role else f"{roleid}({mag})")
         
-        description = f"- 顯示投票人：{self.show_name}\n- 僅限發起人能查看結果：{self.results_only_initiator}\n- 多選：{self.multiple_choice}"
-        if self.alternate_account_can_vote:
-            description += f"\n- 小帳是否算有效票：{self.alternate_account_can_vote}"
+        description = ""
+        description += "- 使用投票實名制" if self.show_name else "- 匿名投票"
+        description += "\n- 僅限發起人能預先查看結果" if self.results_only_initiator else "\n- 所有人都能預先查看結果"
+        description += "\n- 多選" if self.multiple_choice else "\n- 單選"
+        if self.ban_alternate_account_voting:
+            description += f"\n- 小帳不算有效票"
 
         if only_role_list:
             description += "\n- 可投票身分組：" + ",".join(only_role_list)
@@ -217,12 +193,12 @@ class PollView(discord.ui.View):
             embed.set_author(name=author.name, icon_url=author.avatar.url)
         return embed
     
-    def results_text(self,interaction,labels_and_sizes=False) -> tuple[str, list, list] | str:
-        vote_count_data = self.sqldb.get_poll_vote_count(self.poll_id, self.alternate_account_can_vote)
+    def results_text(self,interaction:discord.Interaction,labels_and_sizes=False) -> tuple[str, list, list] | str:
+        vote_count_data = self.sqldb.get_poll_vote_count(self.poll_id, self.ban_alternate_account_voting)
         options_data = self.sqldb.get_poll_options(self.poll_id)
 
         if self.show_name:
-            user_vote_data = self.sqldb.get_users_poll(self.poll_id,self.alternate_account_can_vote)
+            user_vote_data = self.sqldb.get_users_poll(self.poll_id,self.ban_alternate_account_voting)
             user_vote_list = {}
             for i in range(1,len(options_data) + 1):
                 user_vote_list[str(i)] = [] 
@@ -231,6 +207,7 @@ class PollView(discord.ui.View):
                 discord_id = i["discord_id"]
                 vote_option = i["vote_option"]
                 vote_magnification = i.get("vote_magnification",1)
+                
                 user = interaction.guild.get_member(discord_id)
                 username = user.mention if user else discord_id
                 if vote_magnification != 1:
@@ -260,6 +237,38 @@ class PollView(discord.ui.View):
         else:
             return text
         
+    def generate_chart(self,labels,sizes):
+        import matplotlib.pyplot as plt
+        fig, ax = plt.subplots()
+        #圖表製作
+        def data_string(s,d) -> str:
+            t = int(round(s/100.*sum(d)))     # 透過百分比反推原本的數值
+            return f'{t}\n（{s:.1f}%）'
+
+        # 字形
+        matplotlib.rc('font', family='Microsoft JhengHei')
+        matplotlib.rcParams["font.sans-serif"] = ["Microsoft JhengHei"]
+
+        # 設置顏色
+        colors = ['gold', 'yellowgreen', 'lightcoral', 'lightskyblue']
+
+        # 設置圓餅圖的突出顯示
+        #explode = (0.1, 0, 0, 0)  # 將第一塊突出顯示
+    
+        # 繪製圓餅圖
+        ax.pie(sizes, labels=labels, colors=colors, autopct=lambda i: data_string(i,sizes), shadow=False, startangle=140)
+        #plt.pie()
+
+        # 添加標題
+        ax.set_title(self.title)
+        #plt.title()
+
+        image_buffer = io.BytesIO()
+        plt.savefig(image_buffer, format='png', dpi=200, bbox_inches='tight')
+        image_buffer.seek(0)
+        
+        return image_buffer
+    
 class ElectionPollView(PollView):
     if TYPE_CHECKING:
         from starcord.DataExtractor import MySQLDatabase
@@ -269,11 +278,27 @@ class ElectionPollView(PollView):
         bot: DiscordBot
     
     def __init__(self,poll_id,sqldb=None,bot=None):
-        self.add_item(PollEndButton(poll_id,self.created_id,bot))
-        if self.check_results_in_advance:
-            self.add_item(PollResultButton(poll_id))
-        self.add_item(PollCanenlButton(poll_id))
-        self.add_item(PollNowButton(poll_id))
+        super().__init__(poll_id,sqldb,bot)
+
+    # FIXME: unfinished
+    def set_elected(self):
+        vote_count_data = self.sqldb.get_poll_vote_count(self.poll_id, self.ban_alternate_account_voting)
+        options_data = self.sqldb.get_poll_options(self.poll_id)
+        max_count = 0
+        max_count_value = []
+        for option in options_data:
+            name = option['option_name']
+            id = option['option_id']
+            value = option['option_value']
+            count = vote_count_data.get(str(id),0)
+            if count > max_count:
+                max_count = count
+                max_count_value = [value]
+            elif count > max_count:
+                max_count_value.append(value)
+
+        for value in max_count_value:
+            self.sqldb.add_elected(value,self.poll_value,None)
 
 class GameView(discord.ui.View):
     def __init__(self,creator,game,number_all,number_now,message):
@@ -292,7 +317,7 @@ class GameView(discord.ui.View):
         embed.add_field(name="遊戲",value=self.game.value)
         embed.add_field(name="人數",value=f"{self.number_now}/{self.number_all}")
         return embed
-    
+
     @discord.ui.button(label="我要加入",style=discord.ButtonStyle.green)
     async def button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
         if self.number_now < self.number_all and interaction.user not in self.participant:

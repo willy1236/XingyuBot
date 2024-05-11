@@ -437,24 +437,24 @@ class command(Cog_Extension):
     async def create(self,
                      ctx:discord.ApplicationContext,
                      title:discord.Option(str,name='標題',description='投票標題，限45字內'),
-                     options:discord.Option(str,name='選項',description='投票選項，最多輸入10項，每個選項請用英文,隔開'),
-                     show_name:discord.Option(bool,name='顯示投票人',description='預設為false，若投票人數多建議關閉',default=False),
+                     options:discord.Option(str,name='選項',description='投票選項，最多輸入20項，每個選項請用英文,隔開'),
+                     show_name:discord.Option(bool,name='顯示投票人',description='預設為false，若投票人數多建議關閉',default=False),    
                      check_results_in_advance:discord.Option(bool,name='預先查看結果',description='預設為true',default=True),
                      results_only_initiator:discord.Option(bool,name='僅限發起人能查看結果',description='預設為false',default=False),
-                     alternate_account_can_vote:discord.Option(bool,name='小帳是否算有效票',description='預設為true',default=True),
+                     ban_alternate_account_voting:discord.Option(bool,name='是否禁止小帳投票',description='僅供特定群組使用，預設為false',default=False),
                      multiple_choice:discord.Option(bool,name='多選',description='預設為false',default=False),
                      only_role:discord.Option(str,name='限制身分組',description='若提供。則只有擁有身分組才能投票，多個身分組以英文,隔開，身分組可輸入id、提及、名稱等',default=None),
                      role_magnification:discord.Option(str,name='身分組權重',description='若提供，擁有身分組的用戶票數將乘指定倍數，取最高，格式為：身分組1,權重,身分組2,權重...，身分組可輸入id、提及、名稱等',default=None),
                      ):
         options = options.split(",")
-        if len(options) > 10 or len(options) < 1:
-            await ctx.respond(f"錯誤：投票選項超過10項或小於1項",ephemeral=True)
+        if len(options) > 20 or len(options) < 1:
+            await ctx.respond(f"錯誤：投票選項超過20項或小於1項",ephemeral=True)
             return  
         
         only_role_list = await create_only_role_list(only_role,ctx) if only_role else []
         role_magnification_dict = await create_role_magification_dict(role_magnification,ctx) if role_magnification else {}
 
-        view = sclient.create_poll(title,options,ctx.author.id,ctx.guild.id,alternate_account_can_vote,show_name,check_results_in_advance,results_only_initiator,multiple_choice,only_role_list=only_role_list,role_magnification_dict=role_magnification_dict)
+        view = sclient.create_poll(title,options,ctx.author.id,ctx.guild.id,ban_alternate_account_voting,show_name,check_results_in_advance,results_only_initiator,multiple_choice,only_role_list=only_role_list,role_magnification_dict=role_magnification_dict)
         embed = view.embed(ctx.guild)
         message = await ctx.respond(embed=embed,view=view)
         sclient.sqldb.update_poll(view.poll_id,"message_id",message.id)
@@ -479,7 +479,7 @@ class command(Cog_Extension):
                    show_name:discord.Option(bool,name='顯示投票人',description='預設為false，若投票人數多建議關閉',default=None),
                    check_results_in_advance:discord.Option(bool,name='預先查看結果',description='預設為true',default=None),
                    results_only_initiator:discord.Option(bool,name='僅限發起人能查看結果',description='預設為false',default=None),
-                   alternate_account_can_vote:discord.Option(bool,name='小帳是否算有效票',description='預設為true',default=None)):
+                   ban_alternate_account_voting:discord.Option(bool,name='是否禁止小帳投票',description='僅供特定群組使用，預設為false',default=None)):
         dbdata = sclient.sqldb.get_poll(poll_id)
         if not dbdata:
             await ctx.respond("錯誤：查無此ID")
@@ -487,8 +487,8 @@ class command(Cog_Extension):
         
         if title:
             sclient.sqldb.update_poll(poll_id,"title",title)
-        if alternate_account_can_vote:
-            sclient.sqldb.update_poll(poll_id,"alternate_account_can_vote",alternate_account_can_vote)
+        if ban_alternate_account_voting:
+            sclient.sqldb.update_poll(poll_id,"ban_alternate_account_voting",ban_alternate_account_voting)
         if show_name:
             sclient.sqldb.update_poll(poll_id,"show_name",show_name)
         if check_results_in_advance:
@@ -537,7 +537,7 @@ class command(Cog_Extension):
 
     @election.command(description='加入選舉')
     async def join(self, ctx,
-                   position:discord.Option(str,name='職位',description='要競選的職位',choices=position_option),
+                   position:discord.Option(int,name='職位',description='要競選的職位',choices=position_option),
                    user_dc:discord.Option(discord.Member,name='成員',description='要競選的成員（此選項供政黨代表統一報名用）',required=False),
                    party_id:discord.Option(int,name='代表政黨',description='如果有多個政黨，可選擇要代表的政黨',default=None,choices=party_option)):
         user_dc = user_dc or ctx.author
@@ -546,11 +546,12 @@ class command(Cog_Extension):
             dbdata = sclient.sqldb.get_user_party(user_dc.id)
             joined_party = [party_data.get("party_id") for party_data in dbdata] if dbdata else []
             if not party_id in joined_party:
-                await ctx.respond(f"{user_dc.mention}：你沒有參加 {Jsondb.jdict['party_option'].get(str(party_id))}")
+                await ctx.respond(f"{user_dc.mention}：你沒有參加 {ChoiceList.get_tw(party_id,'party_option')}")
                 return
-
+        
         sclient.sqldb.add_election(user_dc.id,session + 1,position,party_id)
-        await ctx.respond(f"{user_dc.mention}：完成競選報名 {Jsondb.jdict['position_option'].get(position)}")
+        await ctx.respond(f"{user_dc.mention}：完成競選報名 {ChoiceList.get_tw(position,'position_option')}")
+        
 
     @election.command(description='離開選舉')
     async def leave(self, ctx, 
@@ -559,7 +560,7 @@ class command(Cog_Extension):
         
         text = f"{ctx.author.mention}：完成競選退出"
         if position:
-            text += " " + Jsondb.jdict['position_option'].get(position)
+            text += " " + ChoiceList.get_tw(position,'position_option')
         await ctx.respond(text)
 
     @election.command(description='候選人名單')
@@ -573,21 +574,20 @@ class command(Cog_Extension):
     @commands.is_owner()
     async def start(self,ctx:discord.ApplicationContext):
         await ctx.defer()
-
-        dbdata = sclient.sqldb.get_election_full_by_session(session)
-        result = {}
-        for position in Jsondb.jdict["position_option"].keys():
-            result[position] = []
+        dbdata = sclient.sqldb.get_election_full_by_session(session + 1)
+        results = {}
+        for position in Jsondb.options["position_option"].keys():
+            results[position] = []
         
-        for i in dbdata:
-            discord_id = i['discord_id']
+        for data in dbdata:
+            user_id = data['discord_id']
             #party_name = i['party_name'] or "無黨籍"
-            position = i['position']
+            position = data['position']
             
-            user = ctx.guild.get_member(discord_id)
-            name = discord_id if not user else (user.display_name if user.display_name else (user.global_name if user.global_name else user.name))
-            if name not in result[position]:
-                result[position].append(name)
+            user = ctx.guild.get_member(user_id)
+            username = user_id if not user else (user.display_name if user.display_name else (user.global_name if user.global_name else user.name))
+            if username not in results[position]:
+                results[position].append(username)
 
         # count_data = sclient.get_election_count(session)
         # count_dict = {}
@@ -596,29 +596,30 @@ class command(Cog_Extension):
         #     count = data['count']
         #     count_dict[pos] = count
 
-        for position in Jsondb.jdict["position_option"].keys():
+        for position in Jsondb.options["position_option"].keys():
             #count = count_dict[position]
-            if len(result[position]) > 0:
-                position_name = Jsondb.get_jdict('position_option',position)
-                title = f"第{session}屆中央選舉：{position_name}"
-                i = 1
-                options = []
-                for username in result[position]:
-                #options = [f"{i}號" for i in range(1,count + 1)]
-                    options.append(f"{i}號 {username}" )
-                    i += 1
+            if len(results[position]) <= 0:
+                continue
 
-                view = sclient.create_poll(title,options,ctx.author.id,ctx.guild.id,False)
+            position_name = ChoiceList.get_tw(position, "position_option")
+            title = f"第{session}屆中央選舉：{position_name}"
+            #options = [f"{i}號" for i in range(1,count + 1)]
+            i = 1
+            options = []
+            for username in results[position]:
+                options.append(f"{i}號 {username}" )
+                i += 1
 
-                message = await ctx.send(embed=view.embed(ctx.guild),view=view)
-                #sclient.update_poll(view.poll_id,"message_id",message.id)
-                await asyncio.sleep(1)
+            view = sclient.create_election_poll(title, options, self.bot.user.id, ctx.guild.id, self.bot)
+
+            message = await ctx.send(embed=view.embed(ctx.guild),view=view)
+            await asyncio.sleep(1)
         await ctx.respond(f"第{session}屆中央選舉投票創建完成")
 
-        timezone = timezone(timedelta(hours=8))
-        start_time = datetime.now(timezone)
+        tz = timezone(timedelta(hours=8))
+        start_time = datetime.now(tz)
         if start_time.hour < 20:
-            end_time = datetime(start_time.year,start_time.month,start_time.day,20,0,0,tzinfo=timezone)
+            end_time = datetime(start_time.year,start_time.month,start_time.day,20,0,0,tzinfo=tz)
         else:
             end_time = start_time + timedelta(days=1)
         

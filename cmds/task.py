@@ -8,7 +8,7 @@ import genshin
 from discord.ext import commands,tasks
 from requests.exceptions import ConnectTimeout
 
-from starcord import Cog_Extension,Jsondb,sclient,log,BotEmbed,Utilities
+from starcord import Cog_Extension,Jsondb,sclient,log,BotEmbed,Utilities, ChoiceList
 from starcord.DataExtractor import *
 from starcord.models.community import TwitchVideo, YoutubeVideo
 
@@ -345,38 +345,46 @@ class task(Cog_Extension):
         await channel.send(embed=embed)
 
         dbdata = sclient.sqldb.get_election_full_by_session(session)
-        result = {}
-        for position in Jsondb.jdict["position_option"].keys():
-            result[position] = []
+        results = {}
+        for position in Jsondb.options["position_option"].keys():
+            results[position] = []
         
-        for i in dbdata:
-            discord_id = i['discord_id']
+        for data in dbdata:
+            user_id = data['discord_id']
             #party_name = i['party_name'] or "無黨籍"
-            position = i['position']
+            position = data['position']
             
-            user = channel.guild.get_member(discord_id)
-            name = user.display_name if user else discord_id
-            if name not in result[position]:
-                result[position].append(name)
-    
-        for position in Jsondb.jdict["position_option"].keys():
+            user = channel.guild.get_member(user_id)
+            username = user_id if not user else (user.display_name if user.display_name else (user.global_name if user.global_name else user.name))
+            if username not in results[position]:
+                results[position].append(username)
+
+        # count_data = sclient.get_election_count(session)
+        # count_dict = {}
+        # for data in count_data:
+        #     pos = data['position']
+        #     count = data['count']
+        #     count_dict[pos] = count
+
+        for position in Jsondb.options["position_option"].keys():
             #count = count_dict[position]
-            if len(result[position]) > 0:
-                position_name = Jsondb.get_jdict('position_option',position)
-                title = f"第{session}屆中央選舉：{position_name}"
-                i = 1
-                options = []
-                for username in result[position]:
-                #options = [f"{i}號" for i in range(1,count + 1)]
-                    options.append(f"{i}號 {username}" )
-                    i += 1
+            if len(results[position]) <= 0:
+                continue
 
-                view = sclient.create_poll(title,options,self.bot.user.id,channel.guild.id,alternate_account_can_vote=False,bot=self.bot)
+            position_name = ChoiceList.get_tw(position, "position_option")
+            title = f"第{session}屆中央選舉：{position_name}"
+            #options = [f"{i}號" for i in range(1,count + 1)]
+            i = 1
+            options = []
+            for username in results[position]:
+                options.append(f"{i}號 {username}" )
+                i += 1
 
-                message = await channel.send(embed=view.embed(channel.guild),view=view)
-                #sclient.update_poll(view.poll_id,"message_id",message.id)
-                await asyncio.sleep(1)
+            view = sclient.create_election_poll(title, options, self.bot.user.id, channel.guild.id, self.bot)
 
+            message = await channel.send(embed=view.embed(channel.guild),view=view)
+            await asyncio.sleep(1)
+    
         await channel.send(f"第{session}屆中央選舉投票已開始，請大家把握時間踴躍投票!")
 
         tz = timezone(timedelta(hours=8))

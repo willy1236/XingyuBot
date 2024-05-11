@@ -158,17 +158,21 @@
         }
     },
     "position_option": {
-        "president": {
-            "zh-TW": "總統"
+        "1": {
+            "zh-TW": "總統",
+            "en-US": "President"
         },
-        "legislative_president": {
-            "zh-TW": "立法院長"
+        "2": {
+            "zh-TW": "立法院長",
+            "en-US": "Legislative President"
         },
-        "executive_president": {
-            "zh-TW": "行政院長"
+        "3": {
+            "zh-TW": "行政院長",
+            "en-US": "Executive President"
         },
-        "judiciary_president": {
-            "zh-TW": "司法院長"
+        "4": {
+            "zh-TW": "司法院長",
+            "en-US": "Judiciary President"
         }
     },
     "party_option": {
