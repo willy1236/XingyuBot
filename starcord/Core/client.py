@@ -115,9 +115,9 @@ class PollClient():
         view = PollView(poll_id,sqldb,bot)
         return view
     
-    def create_election_poll(self,title:str,options:list,creator_id:int,guild_id:int,value:int,bot:discord.bot=None):
+    def create_election_poll(self,title:str,options:list,creator_id:int,guild_id:int,bot:discord.bot=None):
         """創建選舉投票"""
-        poll_id = sqldb.add_poll(title,creator_id,datetime.now(),None,guild_id,ban_alternate_account_voting=True,check_results_in_advance=False,value=value)
+        poll_id = sqldb.add_poll(title,creator_id,datetime.now(),None,guild_id,ban_alternate_account_voting=True,check_results_in_advance=False)
         sqldb.add_poll_option(poll_id,options)
         
         view = ElectionPollView(poll_id,sqldb,bot)

@@ -544,7 +544,7 @@ class command(Cog_Extension):
     @commands.is_owner()
     async def start(self,ctx:discord.ApplicationContext):
         await ctx.defer()
-        dbdata = sclient.sqldb.get_election_full_by_session(session + 1)
+        dbdata = sclient.sqldb.get_election_full_by_session(session)
         results = {}
         for position in Jsondb.options["position_option"].keys():
             results[position] = []

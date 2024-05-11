@@ -176,7 +176,7 @@ class PollView(discord.ui.View):
         
         description = ""
         description += "- 使用投票實名制" if self.show_name else "- 匿名投票"
-        description += "\n- 僅限發起人能預先查看結果" if self.results_only_initiator else "\n- 所有人都能預先查看結果"
+        description += ("\n- 僅限發起人能預先查看結果" if self.results_only_initiator else "\n- 所有人都能預先查看結果") if self.check_results_in_advance else "\n- 結果將在結束時公佈"
         description += f"\n- 可選擇 {self.number_of_user_votes} 個選項"
         if self.ban_alternate_account_voting:
             description += f"\n- 小帳不算有效票"
