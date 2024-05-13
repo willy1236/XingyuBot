@@ -86,7 +86,7 @@ class Delete_Add_Role_button(discord.ui.View):
         try:
             self.clear_items()
             for user in self.role.members:
-                sqldb.add_role_save(user.id,self.role.id,self.role.name,self.role.created_at)
+                sqldb.add_role_save(user.id,self.role)
             await self.message.edit(view=self)
         except discord.errors.NotFound:
             pass
