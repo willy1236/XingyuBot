@@ -98,44 +98,79 @@ class MusicPlayer():
         self.nowplaying = None
         self.skip_voters = []
 
-    async def play_next(self,*arg):
-        log.debug("play_next")
-        song = self.start_first_song()
-        try:
-            source = await YTDLSource.from_url(song.url, stream=True,volume=self.volume)
-            
-            embed = BotEmbed.simple(title="現在播放", description=f"[{song.title}]({song.url}) [{song.requester.mention}]")
-            await self.channel.send(embed=embed)
-            self.vc.play(source, after=self.after, wait_finish=True)
-        except Exception as e:
-            raise MusicPlayingError(str(e))
+    async def play_next(self):
+            """
+            Plays the next song in the queue.
 
-    def after(self,error):
+            This method retrieves the next song from the queue and plays it using the voice client.
+            It also sends an embed message to the channel indicating the currently playing song.
+
+            Raises:
+                MusicPlayingError: If there is an error playing the next song.
+            """
+            log.debug("play_next")
+            song = self.start_first_song()
+            try:
+                source = await YTDLSource.from_url(song.url, stream=True, volume=self.volume)
+                
+                embed = BotEmbed.simple(title="現在播放", description=f"[{song.title}]({song.url}) [{song.requester.mention}]")
+                await self.channel.send(embed=embed)
+                self.vc.play(source, after=self.after, wait_finish=True)
+            except Exception as e:
+                raise MusicPlayingError(str(e))
+
+    def after(self, error):
+        """
+        Callback function called after a song has finished playing.
+
+        Args:
+            error (Exception): The error that occurred during playback, if any.
+        """
         log.debug("after")
-        self.play_conpleted()
+        # self.play_completed()
         if error:
             raise MusicPlayingError(error)
         time.sleep(2)
         if self.playlist:
-            #使用既有的bot協程
-            asyncio.run_coroutine_threadsafe(self.play_next(),self.loop)
+            # 使用既有的bot協程
+            asyncio.run_coroutine_threadsafe(self.play_next(), self.loop)
         else:
-            asyncio.run_coroutine_threadsafe(self.wait_to_leave(),self.loop)
+            asyncio.run_coroutine_threadsafe(self.wait_to_leave(), self.loop)
 
-    async def wait_to_leave(self):
-        await asyncio.sleep(15)
-        #if self.vc and not self.vc.is_playing():
-        if not self.vc.is_playing():
-            await self.stop()
+    async def wait_to_leave(self, wait_for=15):
+            """
+            Waits for a specified amount of time and stops the music if it is not playing.
 
-    def skip_song(self,skip_voter:discord.Member):
+            This method is used to wait for a certain amount of time before stopping the music playback
+            if there is no audio being played in the voice channel.
+
+            Parameters:
+            - wait_for (int): The number of seconds to wait before stopping the music. Default is 15.
+
+            Returns:
+            - None
+            """
+            await asyncio.sleep(wait_for)
+            if not self.vc.is_playing():
+                await self.stop()
+
+    def skip_song(self, skip_voter: discord.Member):
+        """
+        Skips the currently playing song.
+
+        Parameters:
+            skip_voter (discord.Member): The member who initiated the skip.
+
+        Returns:
+            str: A message indicating the result of the skip operation.
+        """
         if self.nowplaying.requester == skip_voter:
             self.vc.stop()
             return f"已跳過歌曲：{self.nowplaying.title}"
         else:
             if skip_voter.id not in self.skip_voters:
                 self.skip_voters.append(skip_voter.id)
-            else:    
+            else:
                 return "你已投票跳過歌曲"
 
             if len(self.skip_voters) >= len(self.vc.channel.members) / 3:
@@ -145,26 +180,72 @@ class MusicPlayer():
                 return f"已成功投票，目前票數：{len(self.skip_voters)}/{int(len(self.vc.channel.members) / 3) + 1}"
 
     async def stop(self):
+        """
+        Stops playing the current song and disconnects from the voice channel.
+
+        This method stops the playback of the current song and removes the guild from the `guild_playing` dictionary.
+        It also sends a message to the channel indicating that the song has finished playing.
+
+        Parameters:
+        - None
+
+        Returns:
+        - None
+        """
         await self.vc.disconnect()
         del guild_playing[self.guildid]
         await self.channel.send("歌曲播放完畢 掰掰~")
 
+    def add_song(self, song: Song):
+        """
+        加入歌曲到播放清單
+
+        Parameters:
+        - song (Song): The song to be added to the playlist.
+
+        Returns:
+        - None
+        """
+        self.playlist.append(song)
+
     def add_song(self,song:Song):
+        """加入歌曲到播放清單"""
         self.playlist.append(song)
     
     def start_first_song(self) -> Song:
-        if not self.songloop:
-            self.nowplaying = self.playlist.pop(0)
-        self.skip_voter = []
-        return self.nowplaying
+            """
+            Starts playing the first song in the playlist.
 
-    def play_conpleted(self):
+            If the song loop is disabled, the first song is removed from the playlist and set as the currently playing song.
+            The skip voter list is reset.
+
+            Returns:
+                The currently playing song.
+            """
+            if not self.songloop:
+                self.nowplaying = self.playlist.pop(0)
+            self.skip_voter = []
+            return self.nowplaying
+
+    def play_completed(self):
+        """
+        Stops the audio playback in the voice channel.
+        """
         self.vc.stop()
 
     def get_full_playlist(self) -> list[Song]:
-        return self.playlist
+            """
+            Returns the full playlist of songs.
+
+            Returns:
+                list[Song]: The full playlist of songs.
+            """
+            return self.playlist
 
     def shuffle(self):
+        """
+        Shuffles the playlist randomly.
+        """
         random.shuffle(self.playlist)
 
 guild_playing = {}
