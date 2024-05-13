@@ -54,9 +54,7 @@ USER_SCOPE = [
     ]
 
 TARGET_CHANNEL = ["sakagawa_0309", "niantt_"]
-if sclient.bot:
-    global dc_channel
-    dc_channel = sclient.bot.get_channel(1237412404980355092)
+global dc_channel
 
 async def send_dc_message(embed):
     if dc_channel:
@@ -110,6 +108,9 @@ async def on_ready(ready_event: EventData):
     # or even better pass a list of channels as the argument
     await ready_event.chat.join_room(TARGET_CHANNEL)
     # you can do other bot initialization things in here
+    global dc_channel
+    if sclient.bot:
+        dc_channel = sclient.bot.get_channel(1237412404980355092)
 
 # this will be called whenever a message in a channel was send by either the bot OR another user
 async def on_message(msg: ChatMessage):

@@ -47,11 +47,11 @@ if __name__ == '__main__':
 			"星羽 請將無黨籍黨的以SWOT分析後作成表格",
 			# "如果你有一個專屬武器，那會叫什麼？是什麼樣的武器？",
 			 ]
-	for i in content:
-		print(f"{i}：")
-		print(starai.generate_aitext(f"{i}"))
-		print("="*50)
-		time.sleep(10)
+	# for i in content:
+	# 	print(f"{i}：")
+	# 	print(starai.generate_aitext(f"{i}"))
+	# 	print("="*50)
+	# 	time.sleep(10)
 	
 	# 	url = "https://youtu.be/UcEHstSuAiM?si=b1Qs3GWXpCTZP_4g"
 	# 	info = yt_dlp.YoutubeDL({
@@ -85,3 +85,8 @@ if __name__ == '__main__':
 	# for idx,data in df.iterrows():
 	# 	print(data["name"],dict.get(data["queueType"]),data["tier"] + " " + data["rank"])
 	#df.to_csv('my_data.csv', index=False)
+
+	dct:dict = {}
+	dct["A"] = 1
+	dct["B"] = {"C":3}
+	print(dct.get("D",5))

@@ -552,7 +552,7 @@ class command(Cog_Extension):
         for data in dbdata:
             user_id = data['discord_id']
             #party_name = i['party_name'] or "無黨籍"
-            position = data['position']
+            position = str(data['position'])
             
             user = ctx.guild.get_member(user_id)
             username = user_id if not user else (user.display_name if user.display_name else (user.global_name if user.global_name else user.name))
@@ -595,6 +595,19 @@ class command(Cog_Extension):
         
         start_time += timedelta(seconds=10)
         event = await ctx.guild.create_scheduled_event(name="【快樂營中央選舉】投票階段",start_time=start_time,end_time=end_time,location="<#1163127708839071827>")
+
+    @election.command(description='結算投票')
+    @commands.is_owner()
+    async def end(self,ctx,
+                  president:discord.Option(str,name='總統',description='多人以,分隔'),
+                  legislative:discord.Option(str,name='立法院長',description='多人以,分隔'),
+                  executive:discord.Option(str,name='行政院長',description='多人以,分隔'),
+                  judiciary:discord.Option(str,name='司法院長',description='多人以,分隔')
+                  ):
+        # TODO: 紀錄當選官員、分配身分組、輸出當選官員名單
+        #lab = Legal Affairs Bureau
+        lab_channel = self.bot.get_channel(1160467781473533962)
+        await ctx.respond("結算完成，恭喜當選者")
 
     @party.command(description='加入政黨')
     async def join(self,ctx:discord.ApplicationContext,

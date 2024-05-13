@@ -171,6 +171,7 @@ guild_playing = {}
 def get_player(guildid:str) -> MusicPlayer | None:
     return guild_playing.get(str(guildid))
 
+
 class music(Cog_Extension):
 
     @commands.slash_command(description='讓機器人加入語音頻道')
