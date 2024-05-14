@@ -54,6 +54,8 @@ USER_SCOPE = [
     ]
 
 TARGET_CHANNEL = ["sakagawa_0309", "niantt_"]
+
+DC_CHANNEL_ID = 1237412404980355092
 global dc_channel
 
 async def send_dc_message(embed):
@@ -74,28 +76,35 @@ async def pubsub_chat_moderator_actions(uuid: UUID, data: dict) -> None:
 async def on_follow(event: eventsub.ChannelFollowEvent):
     #await chat.send_message(data.event.broadcaster_user_name,text = f'{data.event.user_name} now follows {data.event.broadcaster_user_name}!')
     twitch_log.info(f'{event.event.user_name} now follows {event.event.broadcaster_user_name}!')
-    if event.event.broadcaster_user_login == TARGET_CHANNEL[0]:
-        await send_dc_message(BotEmbed.simple("新追隨",f'{event.event.user_name} 正在追隨 {event.event.broadcaster_user_name}!'))
+    if event.event.broadcaster_user_login == TARGET_CHANNEL[0] and sclient.bot:
+        loop = sclient.bot.loop
+        channel = sclient.bot.get_channel(DC_CHANNEL_ID)
+        asyncio.run_coroutine_threadsafe(channel.send(embed=BotEmbed.simple("新追隨",f'{event.event.user_name} 正在追隨 {event.event.broadcaster_user_name}!')), loop)
 
 async def on_stream_online(event: eventsub.StreamOnlineEvent):
     twitch_log.info(f'{event.event.broadcaster_user_name} starting stream!')
     if sclient.bot:
+        loop = sclient.bot.loop
         channel = sclient.bot.get_channel(566533708371329026)
-        await channel.send(f'{event.event.broadcaster_user_name} starting stream!')
+        asyncio.run_coroutine_threadsafe(channel.send(f'{event.event.broadcaster_user_name} starting stream!'), loop)
+        
 
 async def on_stream_offline(event: eventsub.StreamOfflineEvent):
     twitch_log.info(f'{event.event.broadcaster_user_name} ending stream.')
     if sclient.bot:
+        loop = sclient.bot.loop
         channel = sclient.bot.get_channel(566533708371329026)
-        await channel.send(f'{event.event.broadcaster_user_name} ending stream.')
+        asyncio.run_coroutine_threadsafe(channel.send(f'{event.event.broadcaster_user_name} ending stream.'), loop)
 
 async def on_channel_points_custom_reward_redemption_add(event: eventsub.ChannelPointsCustomRewardRedemptionAddEvent):
     text = f'{event.event.user_name} 兌換了 {event.event.reward.title}!' 
     if event.event.reward.prompt:
         text += f' ({event.event.reward.prompt})'
     twitch_log.info(text)
-    if event.event.broadcaster_user_login == TARGET_CHANNEL[0]:
-        await send_dc_message(BotEmbed.simple("兌換自訂獎勵",text))
+    if event.event.broadcaster_user_login == TARGET_CHANNEL[0] and sclient.bot:
+        loop = sclient.bot.loop
+        channel = sclient.bot.get_channel(DC_CHANNEL_ID)
+        asyncio.run_coroutine_threadsafe(channel.send(embed=BotEmbed.simple("兌換自訂獎勵",text)), loop)
     
 async def on_channel_points_custom_reward_redemption_update(event: eventsub.ChannelPointsCustomRewardRedemptionUpdateEvent):
     twitch_log.info(f"{event.event.user_name}'s redemption of {event.event.reward.title} has been updated!")
@@ -108,21 +117,22 @@ async def on_ready(ready_event: EventData):
     # or even better pass a list of channels as the argument
     await ready_event.chat.join_room(TARGET_CHANNEL)
     # you can do other bot initialization things in here
-    global dc_channel
-    if sclient.bot:
-        dc_channel = sclient.bot.get_channel(1237412404980355092)
 
 # this will be called whenever a message in a channel was send by either the bot OR another user
 async def on_message(msg: ChatMessage):
     twitch_log.info(f'in {msg.room.name}, {msg.user.name} said: {msg.text}')
-    if msg.room.name == TARGET_CHANNEL[0]:
-        await send_dc_message(BotEmbed.general(msg.user.name,description=msg.text))
+    if msg.room.name == TARGET_CHANNEL[0] and sclient.bot:
+        loop = sclient.bot.loop
+        channel = sclient.bot.get_channel(DC_CHANNEL_ID)
+        asyncio.run_coroutine_threadsafe(channel.send(embed=BotEmbed.general(msg.user.name,description=msg.text)), loop)
 
 # this will be called whenever someone subscribes to a channel
 async def on_sub(sub: ChatSub):
     twitch_log.info(f'New subscription in {sub.room.name}: Type: {sub.sub_plan_name} Message: {sub.sub_message}')
-    if sub.room.name == TARGET_CHANNEL[0]:
-        await send_dc_message(BotEmbed.general(title=f'{sub.room.name} 的新訂閱!',description=f"類型: {sub.sub_plan_name}\訊息: {sub.sub_message}"))
+    if sub.room.name == TARGET_CHANNEL[0] and sclient.bot:
+        loop = sclient.bot.loop
+        channel = sclient.bot.get_channel(DC_CHANNEL_ID)
+        asyncio.run_coroutine_threadsafe(channel.send(embed=BotEmbed.general(title=f'{sub.room.name} 的新訂閱!',description=f"類型: {sub.sub_plan_name}\訊息: {sub.sub_message}")), loop)
 
 async def on_bot_joined(event: JoinedEvent):
     await asyncio.sleep(1)
