@@ -113,8 +113,7 @@ class WarningSheet:
 
 class WarningList(ListObject):
     def __init__(self,data:dict,discord_id:int,sqldb=None):
-        super().__init__()
-        self.items = [WarningSheet(i,sqldb) for i in data]
+        super().__init__([WarningSheet(i,sqldb) for i in data])
         self.discord_id = discord_id
     
     def display(self,bot:discord.Bot):

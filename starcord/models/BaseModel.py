@@ -1,5 +1,12 @@
 class ListObject():
-    def __init__(self, lst=None):
+    """
+    A class representing a list object with additional functionality.
+
+    Attributes:
+        items (list): The list of items stored in the object.
+    """
+
+    def __init__(self, lst:list=None):
         self.items = lst if lst else []
 
     def append(self, item):
@@ -10,7 +17,6 @@ class ListObject():
             return self.items[index]
         else:
             raise IndexError("Index out of range")
-
 
     def __setitem__(self, index, value):
         self.items[index] = value

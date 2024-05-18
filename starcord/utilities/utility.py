@@ -77,6 +77,18 @@ class BotEmbed:
         '''一般資訊 格式'''
         embed = discord.Embed(title=title, description=description, color=0xc4e9ff,url=url)
         return embed
+    
+    @staticmethod
+    def simple_warn_sheet(warn_user:discord.User, moderate_user:discord.User, create_at=datetime.now(), last=timedelta(seconds=15), reason:str=None, title="已被禁言"):
+        '''簡易警告表格'''
+        timestamp = int((create_at + last).timestamp())
+        embed = discord.Embed(description=f"{warn_user.mention}：{reason}", color=0xc4e9ff)
+        embed.set_author(name=f"{warn_user.name} {title}",icon_url=warn_user.display_avatar.url)
+        embed.add_field(name="執行人員",value=moderate_user.mention)
+        embed.add_field(name="結束時間",value=f"<t:{timestamp}>（{timedelta.total_seconds():0f}s）")
+        embed.timestamp = create_at
+        return embed
+        
 
 
 class BRS():

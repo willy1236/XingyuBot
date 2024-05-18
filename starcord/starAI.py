@@ -153,3 +153,16 @@ class StarGeminiAI():
 #     from gpt4all import GPT4All
 #     model = GPT4All("mistral-7b-openorca.Q4_0.gguf",device="cpu")
     #with model.chat_session("### system:\n"):
+
+#GPT4ALL
+# if message.channel.id == 1189907001015275521 and not message.author.bot and not message.content.startswith("."):
+#     # prompt_template ="### User:\n%1\n### Response:\n"
+#     async with message.channel.typing():
+#         with model.chat_session():
+#             log.info(model.current_chat_session)
+#             model.current_chat_session = self.chat_session_log
+#             response = model.generate(prompt=f"{message.content}", temp=0.2, max_tokens=1024)
+#             #print(model.current_chat_session[-1]["content"])
+#             self.chat_session_log = model.current_chat_session
+#             await message.reply(response,mention_author=False)
+#     return

@@ -14,8 +14,31 @@ from ..Utilities import scheduler
 
 class UserClient():
     """用戶查詢系統"""
-    def get_user(self,user_id:str):
-        pass
+    def get_user(self, user_id: str):
+            """
+            Retrieves a user from the database based on the provided user ID.
+
+            Args:
+                user_id (str): The ID of the user to retrieve.
+
+            Returns:
+                StarUser: The user object corresponding to the provided user ID.
+            """
+            return sqldb.get_user(user_id)
+    
+    def get_dcuser(self, discord_id: int, full=False, user_dc: discord.User = None):
+        """
+        Retrieves a Discord user from the database.
+
+        Args:
+            discord_id (int): The Discord ID of the user.
+            full (bool, optional): Whether to retrieve the full user information. Defaults to False.
+            user_dc (discord.User, optional): The Discord user object. Defaults to None.
+
+        Returns:
+            DiscordUser: The Discord user object from the database.
+        """
+        return sqldb.get_dcuser(discord_id, full, user_dc)
 
 class GameClient():
     """遊戲查詢系統"""
@@ -62,7 +85,7 @@ class GameClient():
                 return player if player else None
 
 class BatClient():
-    """賭盤系統"""
+    """TODO: 賭盤系統"""
 
 class PointClient():
     """點數系統"""
@@ -124,7 +147,7 @@ class PollClient():
         return view
     
 class ElectionSystem():
-    def election_format(self,session:str,bot:discord.Bot):
+    def election_format(self,session:int,bot:discord.Bot):
         dbdata = sqldb.get_election_full_by_session(session)
         guild = bot.get_guild(613747262291443742)
         
@@ -175,7 +198,7 @@ class ElectionSystem():
         return embed
     
 class GiveawayClient():
-    """todo:抽獎系統"""
+    """TODO: 抽獎系統"""
 
 class NotifyClient():
     """

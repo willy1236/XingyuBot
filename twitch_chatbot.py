@@ -124,7 +124,7 @@ async def on_message(msg: ChatMessage):
     if msg.room.name == TARGET_CHANNEL[0] and sclient.bot:
         loop = sclient.bot.loop
         channel = sclient.bot.get_channel(DC_CHANNEL_ID)
-        asyncio.run_coroutine_threadsafe(channel.send(embed=BotEmbed.general(msg.user.name,description=msg.text)), loop)
+        asyncio.run_coroutine_threadsafe(channel.send(embed=BotEmbed.general(msg.user.display_name,description=msg.text)), loop)
 
 # this will be called whenever someone subscribes to a channel
 async def on_sub(sub: ChatSub):

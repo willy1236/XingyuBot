@@ -85,8 +85,3 @@ if __name__ == '__main__':
 	# for idx,data in df.iterrows():
 	# 	print(data["name"],dict.get(data["queueType"]),data["tier"] + " " + data["rank"])
 	#df.to_csv('my_data.csv', index=False)
-
-	dct:dict = {}
-	dct["A"] = 1
-	dct["B"] = {"C":3}
-	print(dct.get("D",5))

@@ -6,7 +6,6 @@ import discord
 from discord.ext import commands
 
 from starcord import Cog_Extension,Jsondb,BotEmbed,BRS,sclient,log
-from starcord.starAI import StarGeminiAI
 
 keywords = {
     '抹茶粉':'由威立冠名贊助撥出~'
@@ -93,29 +92,16 @@ class event(Cog_Extension):
             embed.set_footer(text="此機器人由 威立 負責維護")
             await message.reply(embed=embed)
             return
-        
-        #GPT4ALL
-        # if message.channel.id == 1189907001015275521 and not message.author.bot and not message.content.startswith("."):
-        #     # prompt_template ="### User:\n%1\n### Response:\n"
-        #     async with message.channel.typing():
-        #         with model.chat_session():
-        #             log.info(model.current_chat_session)
-        #             model.current_chat_session = self.chat_session_log
-        #             response = model.generate(prompt=f"{message.content}", temp=0.2, max_tokens=1024)
-        #             #print(model.current_chat_session[-1]["content"])
-        #             self.chat_session_log = model.current_chat_session
-        #             await message.reply(response,mention_author=False)
-        #     return
 
         #ai chat
-        if message.guild and message.guild.id == 613747262291443742 and not message.author.bot:
+        if message.guild and message.guild.id in [613747262291443742, 566533708371329024] and not message.author.bot:
             if message.content and message.content.startswith(".") and message.content[1] and message.content[1] != ".":
                 #image_bytes = await message.attachments[0].read() if message.attachments else None
                 text = sclient.starai.generate_aitext(f"{member_names.get(message.author.id,message.author.name)}：{message.content[1:]}")
                 await message.reply(text,mention_author=False)
                 return
 
-            if not is_owner:
+            if not is_owner and message.guild.id == 613747262291443742:
                 result = None
                 if message.author.get_role(1160460037114822758) or message.author.get_role(1161644357410107483) or message.author.get_role(1178151415403790478):
                     pass
@@ -129,18 +115,10 @@ class event(Cog_Extension):
                 if result:
                     try:
                         reason = "打出貢丸相關詞彙"
-                        time = timedelta(seconds=15)
-                        create_time = datetime.now()
-                        
                         #await message.delete(reason=reason)
                         await message.author.timeout_for(duration=timedelta(seconds=60),reason=reason)
                         
-                        timestamp = int((create_time+time).timestamp())
-                        embed = BotEmbed.general(f'{message.author.name} 已被禁言',message.author.display_avatar.url,description=f"{message.author.mention}：{reason}")
-                        embed.add_field(name="執行人員",value=self.bot.user.mention)
-                        embed.add_field(name="結束時間",value=f"<t:{timestamp}>（15s）")
-                        embed.timestamp = create_time
-                        
+                        embed = BotEmbed.simple_warn_sheet(message.author,self.bot.user,reason=reason)
                         await message.channel.send(f"{message.author.mention} 貢丸很危險 不要打貢丸知道嗎",embed=embed)
                         sclient.sqldb.add_userdata_value(message.author.id,"user_discord","meatball_times",1)
                     except Exception as e:

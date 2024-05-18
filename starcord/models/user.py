@@ -1,6 +1,6 @@
 import random,time,datetime,discord
 from typing import TYPE_CHECKING
-from starcord.Utilities.utility import BotEmbed,ChoiceList
+from starcord.Utilities import BotEmbed,ChoiceList
 from starcord.types import DBGame,Coins,ActivitiesStatue
 from starcord.FileDatabase import Jsondb
 from .rpg import *
@@ -14,7 +14,10 @@ class RegistrationData():
     def __bool__(self):
         return bool(self.registrations_id)
 
-class StarUser():
+class BaseUser:
+    """Represents a user."""
+
+class StarUser(BaseUser):
     if TYPE_CHECKING:
         user_id: str
         discord_id: int
@@ -45,15 +48,11 @@ class Pet():
         title = self.name
         description = f'{user_dc.name} 的寵物' if user_dc else "寵物資訊"
         embed = BotEmbed.simple(title,description)
-        #embed.add_field(name='寵物名',value=self.name)
         embed.add_field(name='寵物物種',value=ChoiceList.get_tw(self.species,"pet_option"))
         embed.add_field(name='飽食度',value=self.food)
         return embed
 
-class User:
-    """基本用戶"""
-
-class DiscordUser():
+class DiscordUser(BaseUser):
     """Discord用戶"""
     if TYPE_CHECKING:
         from starcord.DataExtractor import MySQLDatabase
@@ -83,6 +82,8 @@ class DiscordUser():
         self.main_account_id = data.get('main_account')
         self.registration = RegistrationData(data)
 
+        self._pet = None
+
     @property
     def scoin(self):
         if not self._scoin:
@@ -100,6 +101,12 @@ class DiscordUser():
         if not self._rcoin:
             self._rcoin = self.sqldb.get_coin(self.discord_id,Coins.RCOIN) or 0
         return self._rcoin
+    
+    @property
+    def pet(self):
+        if not self._pet:
+            self._pet = self.sqldb.get_pet(self.discord_id)
+        return self._pet
     
     @property
     def mention(self):
@@ -130,10 +137,14 @@ class DiscordUser():
         dbdata = self.sqldb.get_alternate_account(self.discord_id)
         return [data['alternate_account'] for data in dbdata]
     
+    def get_main_account(self) -> int:
+        dbdata = self.sqldb.get_main_account(self.discord_id)
+        return dbdata['main_account']
+
     def get_pet(self):
-        """等同於 UserClient.get_pet()"""
-        self.pet = self.sqldb.get_pet(self.discord_id)
-        return self.pet
+        """刷新寵物資訊"""
+        self._pet = self.sqldb.get_pet(self.discord_id)
+        return self._pet
     
     def get_game(self,game:DBGame=None):
         """等同於GameClient.get_user_game()"""
@@ -150,9 +161,6 @@ class DiscordUser():
     
     def update_coins(self,mod,coin_type:Coins,amount:int):
         self.sqldb.update_coins(self.discord_id,mod,coin_type,amount)
-    
-    def get_main_account(self):
-        return self.sqldb.get_main_account(self.discord_id)
     
     def update_data(self,table:str,column:str,value):
         self.sqldb.set_userdata(self.discord_id,table,column,value)

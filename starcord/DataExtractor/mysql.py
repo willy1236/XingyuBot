@@ -117,7 +117,7 @@ class MySQLUserSystem(MySQLBaseModel):
         if record:
             return PartialUser(record[0])
 
-    def get_user(self,user_id:int):
+    def get_user(self,user_id:str):
         """取得基本用戶"""
         self.cursor.execute(f'SELECT * FROM `user_data` WHERE `user_id` = %s;',(user_id,))
         record = self.cursor.fetchall()
@@ -346,7 +346,7 @@ class MySQLCurrencySystem(MySQLBaseModel):
             coin = Coins(coin)
             return records.get(coin.value,0)
 
-    def getif_coin(self,discord_id:int,amount:int,coin:Coins=Coins.SCOIN) -> int | None:
+    def getif_coin(self,discord_id:int,amount:int,coin=Coins.SCOIN) -> int | None:
         """取得指定貨幣足夠的用戶
         :return: 若足夠則回傳傳入的discord_id
         """

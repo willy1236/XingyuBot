@@ -387,15 +387,8 @@ class command(Cog_Extension):
         role = ctx.guild.get_role(1195407446315892888)
         member.add_roles(role,reason="指令：懲戒集中營 開始")
         
-        moderate_user = ctx.author
-        create_time = datetime.now()
         time = timedelta(seconds=20)
-        timestamp = int((create_time+time).timestamp())
-
-        embed = BotEmbed.general(f'{member.name} 已被懲戒',member.display_avatar.url,description=f"{member.mention}：懲戒集中營")
-        embed.add_field(name="執行人員",value=moderate_user.mention)
-        embed.add_field(name="結束時間",value=f"<t:{timestamp}>（20s）")
-        embed.timestamp = create_time
+        embed = BotEmbed.simple_warn_sheet(member,ctx.author,last=time,reason="懲戒集中營",title="已被懲戒")
         await self.bot.get_channel(1195406858056368189).send(embed=embed)
         
         channel = self.bot.get_channel(613760923668185121)
