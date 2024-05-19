@@ -79,7 +79,8 @@ async def on_follow(event: eventsub.ChannelFollowEvent):
     if event.event.broadcaster_user_login == TARGET_CHANNEL[0] and sclient.bot:
         loop = sclient.bot.loop
         channel = sclient.bot.get_channel(DC_CHANNEL_ID)
-        asyncio.run_coroutine_threadsafe(channel.send(embed=BotEmbed.simple("新追隨",f'{event.event.user_name} 正在追隨 {event.event.broadcaster_user_name}!')), loop)
+        asyncio.run_coroutine_threadsafe(channel.send(embed=BotEmbed.simple("新追隨",f'{event.event.user_name}({event.event.user_login}) 正在追隨 {event.event.broadcaster_user_name}!')), loop)
+        
 
 async def on_stream_online(event: eventsub.StreamOnlineEvent):
     twitch_log.info(f'{event.event.broadcaster_user_name} starting stream!')
