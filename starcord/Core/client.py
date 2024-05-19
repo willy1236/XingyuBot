@@ -3,7 +3,8 @@ from datetime import datetime
 
 import discord
 
-from ..DataExtractor import sqldb,RiotAPI,SteamInterface,OsuInterface,ApexInterface
+from ..Database import sqldb
+from ..DataExtractor import RiotAPI,SteamInterface,OsuInterface,ApexInterface
 from ..FileDatabase import Jsondb
 from ..models import *
 from ..types import DBGame

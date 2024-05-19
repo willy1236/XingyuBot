@@ -103,7 +103,7 @@ if __name__ == "__main__":
         time.sleep(2)
 
     if twitch_bot:
-        from twitch_chatbot import run, run_sakagawa
+        from app.twitch_chatbot import run, run_sakagawa
         asyncio.run(run())
         time.sleep(2)
         asyncio.run(run_sakagawa())

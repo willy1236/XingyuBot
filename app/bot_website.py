@@ -2,14 +2,22 @@ import os
 import threading
 import time
 import xml.etree.ElementTree as ET
+from datetime import datetime, timedelta
+
 from fastapi import FastAPI,BackgroundTasks
 from fastapi.requests import Request
 from fastapi.responses import HTMLResponse,JSONResponse,PlainTextResponse
 
-from starcord import log, sclient
+from starcord import log, sclient, Jsondb
 from starcord.models.push import YoutubePush
+from starcord.DataExtractor import DiscordOauth
 
 app = FastAPI()
+
+oauth_setting = Jsondb.get_token("discord_oauth")
+CLIENT_ID = oauth_setting["id"]
+CLIENT_SECRET = oauth_setting["secret"]
+REDIRECT_URI = oauth_setting["redirect_uri"]
 
 @app.route('/')
 def main(request:Request):
@@ -92,16 +100,30 @@ async def youtube_push_post(request:Request,background_task: BackgroundTasks):
     background_task.add_task(get_yt_push,body)
     return HTMLResponse('OK')
 
-@app.get('/book/{book_id}',response_class=JSONResponse)
-def get_book_by_id(book_id: int):
-    return {
-        'book_id': book_id
-    }
+@app.route('/discord',methods=['GET'])
+async def discord_oauth(request:Request):
+    params = dict(request.query_params)
+    auth = DiscordOauth(CLIENT_ID, CLIENT_SECRET, redirect_uri=REDIRECT_URI)
+    auth.exchange_code(params['code'])
+    
+    connections = auth.get_connections()
+    for connection in connections:
+        if connection.type == 'twitch':
+            print(f"{connection.name}({connection.id})")
+            sclient.sqldb.add_userdata_value(auth.user_id, "user_data", "twitch_id", connection.id)
 
-@app.get("/items/{id}", response_class=HTMLResponse)
-async def read_item(request: Request, id: str):
-    html_file = open().read()
-    return html_file
+    return HTMLResponse('授權已完成，您現在可以關閉此頁面')
+
+# @app.get('/book/{book_id}',response_class=JSONResponse)
+# def get_book_by_id(book_id: int):
+#     return {
+#         'book_id': book_id
+#     }
+
+# @app.get("/items/{id}", response_class=HTMLResponse)
+# async def read_item(request: Request, id: str):
+#     html_file = open().read()
+#     return html_file
 
 
 class ltThread(threading.Thread):
@@ -135,7 +157,7 @@ class WebsiteThread(threading.Thread):
 
 if __name__ == '__main__':
     #os.system('uvicorn bot_website:app --reload')
-    server = ltThread()
-    server.start()
+    # server = ltThread()
+    # server.start()
     web = WebsiteThread()
     web.start()

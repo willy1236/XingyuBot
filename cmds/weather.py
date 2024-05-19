@@ -24,9 +24,9 @@ class weather(Cog_Extension):
     @commands.cooldown(rate=1,per=15)
     @commands.slash_command(description='查詢天氣警特報（開發中）')
     async def weatherwarning(self,ctx):
-        report = CWA_API().get_weather_warning()
-        if report:
-            await ctx.respond('查詢成功',embed=report.embed())
+        reports = CWA_API().get_weather_warning()
+        if reports:
+            await ctx.respond('查詢成功',embeds=[report.embed() for report in reports])
         else:
             await ctx.respond('目前無發布中警特報',delete_after=5)
 

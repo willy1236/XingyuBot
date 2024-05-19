@@ -4,7 +4,7 @@ Discord機器人"星羽"用libary
 '''
 
 from .FileDatabase import Jsondb,csvdb
-
+from .Database import sqldb
 from .Core import Cog_Extension, DiscordBot, sclient, StarManager
 from .Utilities import *
 from .errors import *

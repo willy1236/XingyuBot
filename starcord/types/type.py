@@ -7,3 +7,6 @@ class NotifyCommunityType(IntEnum):
 
 class NotifyChannelType(Enum):
     pass
+
+class CommunityType(Enum):
+    Discord = 1

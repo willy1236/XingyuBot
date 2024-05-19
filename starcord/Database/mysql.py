@@ -6,7 +6,7 @@ import mysql.connector
 from mysql.connector.errors import Error as sqlerror
 
 from starcord.models.model import GameInfoPage
-from starcord.types import DBGame,Coins, Position
+from starcord.types import DBGame, Coins, Position, CommunityType
 from starcord.models.user import *
 from starcord.models.model import *
 from starcord.models.rpg import *
@@ -1092,6 +1092,20 @@ class MySQLBackupSystem(MySQLBaseModel):
         for member in role.members:
             self.cursor.execute(f"INSERT INTO `stardb_backup`.`role_user_backup` VALUES(%s,%s);",(role.id,member.id))
         self.connection.commit()
+
+class MySQLTokensSystem(MySQLBaseModel):
+    def set_oauth(self, user_id:int, type:CommunityType, access_token:str, refresh_token:str=None, expires_at:datetime=None):
+        type = CommunityType(type)
+        self.cursor.execute(f"INSERT INTO `stardb_tokens`.`oauth_token` VALUES(%s,%s,%s,%s,%s) ON DUPLICATE KEY UPDATE `access_token` = %s, `refresh_token` = %s, `expires_at` = %s;",(user_id,type.value,access_token,refresh_token,expires_at,access_token,refresh_token,expires_at))
+        self.connection.commit()
+
+    def get_oauth(self, user_id:int, type:CommunityType):
+        type = CommunityType(type)
+        self.cursor.execute(f"SELECT * FROM `stardb_tokens`.`oauth_token` WHERE `user_id` = {user_id} AND `type` = {type.value};")
+        records = self.cursor.fetchall()
+        if records:
+            return records[0]
+
 class MySQLDatabase(
     MySQLUserSystem,
     MySQLNotifySystem,
@@ -1107,5 +1121,6 @@ class MySQLDatabase(
     MYSQLElectionSystem,
     MySQLRegistrationSystem,
     MySQLBackupSystem,
+    MySQLTokensSystem,
 ):
     """Mysql操作"""

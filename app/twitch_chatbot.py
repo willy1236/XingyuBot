@@ -75,7 +75,7 @@ async def pubsub_chat_moderator_actions(uuid: UUID, data: dict) -> None:
 # eventsub
 async def on_follow(event: eventsub.ChannelFollowEvent):
     #await chat.send_message(data.event.broadcaster_user_name,text = f'{data.event.user_name} now follows {data.event.broadcaster_user_name}!')
-    twitch_log.info(f'{event.event.user_name} now follows {event.event.broadcaster_user_name}!')
+    twitch_log.info(f'{event.event.user_name}({event.event.user_login}) now follows {event.event.broadcaster_user_name}!')
     if event.event.broadcaster_user_login == TARGET_CHANNEL[0] and sclient.bot:
         loop = sclient.bot.loop
         channel = sclient.bot.get_channel(DC_CHANNEL_ID)

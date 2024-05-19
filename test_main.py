@@ -3,7 +3,6 @@ import json
 import secrets
 import time
 from datetime import datetime
-from enum import Enum, IntEnum
 
 import discord
 import feedparser
@@ -15,8 +14,8 @@ from bs4 import BeautifulSoup
 from faker import Faker
 #from pydantic import BaseModel
 
-from starcord import log,Jsondb, ChoiceList
-from starcord.DataExtractor import TwitchAPI, YoutubeAPI, YoutubeRSS, CWA_API, sqldb
+from starcord import log,Jsondb, ChoiceList, sqldb
+from starcord.DataExtractor import TwitchAPI, YoutubeAPI, YoutubeRSS, CWA_API, DiscordOauth
 from starcord.starAI import StarGeminiAI
 from starcord.Utilities import calculate_eletion_session
 

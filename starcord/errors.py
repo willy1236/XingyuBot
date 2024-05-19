@@ -69,6 +69,11 @@ class SQLNotFoundError(StarException):
         self.code = 1202
         self.message = message
 
+class DataExpiredError(StarException):
+    def __init__(self,message='資料已經過期'):
+        self.code = 1203
+        self.message = message
+
 class VoiceError(StarException):
     "Voice original error: 1300"
     code = 1300
