@@ -28,6 +28,13 @@ main_guild = Jsondb.jdata.get('main_guild')
 
 session = calculate_eletion_session()
 
+position_role = {
+    "1": 1161686745126019082,
+    "2": 1161686757373399132,
+    "3": 1162714634441195530,
+    "4": 1187609355131027456
+}
+
 class command(Cog_Extension):
     bet = SlashCommandGroup("bet", "賭盤相關指令")
     role = SlashCommandGroup("role", "身分組管理指令")
@@ -589,17 +596,60 @@ class command(Cog_Extension):
         start_time += timedelta(seconds=10)
         event = await ctx.guild.create_scheduled_event(name="【快樂營中央選舉】投票階段",start_time=start_time,end_time=end_time,location="<#1163127708839071827>")
 
-    @election.command(description='結算投票')
+    @election.command(description='結算選舉')
     @commands.is_owner()
-    async def end(self,ctx,
-                  president:discord.Option(str,name='總統',description='多人以,分隔'),
-                  legislative:discord.Option(str,name='立法院長',description='多人以,分隔'),
-                  executive:discord.Option(str,name='行政院長',description='多人以,分隔'),
-                  judiciary:discord.Option(str,name='司法院長',description='多人以,分隔')
+    async def end(self,
+                  ctx:discord.ApplicationContext,
+                  officials:discord.Option(str,name='官員清單',description='多人以空格分隔，職位以,分隔並按順序排列，若該職位從缺請留空')
                   ):
-        # TODO: 紀錄當選官員、分配身分組、輸出當選官員名單
+        await ctx.defer()
+        session = calculate_eletion_session()
+        officials = officials.split(",")
+        
+        if len(officials) != 4:
+            await ctx.respond("錯誤：官員清單不完整")
+            return
+
+        # 移除身分組
+        for roleid in position_role.values():
+            role = ctx.guild.get_role(roleid)
+            if not role:
+                continue
+            for user in role.members:
+                await user.remove_roles(role,reason=f"第{session}界官員卸任")
+                await asyncio.sleep(0.5)
+        
+        # 製作當選官員名單並分配身分組
+        dct = {}
+        save_list = []
+        for n in Jsondb.options["position_option"].keys():
+            lst = []
+            roleid = position_role[n]
+            role = ctx.guild.get_role(roleid)
+
+            for user in officials[int(n) - 1].split(" "):
+                user = await find.user(ctx, user)
+                if not user:
+                    continue
+                
+                lst.append(user)
+                save_list.append([user.id, session, n])
+                if role:
+                    await user.add_roles(role,reason=f"第{session}屆官員當選")
+                    await asyncio.sleep(0.5)
+
+            dct[n] = lst
+        
+        # 輸出當選官員名單
+        now = datetime.now()
+        text = f'# 第{session}屆中央政府（{now.strftime("%Y-%m")}）'
+        for n, userlist in Jsondb.options["position_option"].items():
+            text += f"\n{ChoiceList.get_tw(n,'position_option')}：{' '.join(userlist)}"
+        
         #lab = Legal Affairs Bureau
+        sclient.sqldb.add_officials(save_list)
         lab_channel = self.bot.get_channel(1160467781473533962)
+        await lab_channel.send(text)
         await ctx.respond("結算完成，恭喜當選者")
 
     @party.command(description='加入政黨')
