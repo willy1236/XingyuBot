@@ -40,41 +40,66 @@ ffmpeg_options = {
 }
 
 ytdl = youtube_dl.YoutubeDL(ytdl_format_options)
-
-class YTDLSource(discord.PCMVolumeTransformer):
-    def __init__(self, source: discord.AudioSource, *, data: dict, volume: float = 0.5):
-        super().__init__(source, volume)
-        self.title = data.get("title")
-        self.url = data.get("url")
-
-    @classmethod
-    async def from_url(self, url, *, loop=None, stream=False, volume: float = 0.5):
-        loop = loop or asyncio.get_event_loop()
-        datas = await loop.run_in_executor(None, lambda: ytdl.extract_info(url, download=not stream))
-
-        if "entries" in datas:
-            # Takes the first item from a playlist
-            datas = datas["entries"][0]
-        
-        data = None
-        if datas["webpage_url_domain"] == "youtube.com":
-            for data in datas["formats"]:
-                if data.get("format_note") == "medium":
-                    break
-
-        else:
-            data = datas["formats"][0]
-
-        filename = data["url"] if stream else ytdl.prepare_filename(data)
-        return self(discord.FFmpegPCMAudio(filename, **ffmpeg_options), data=data,volume=volume)
-
-
-class Song:
-    def __init__(self,url:str,title:str,requester:discord.Member=None,song_from:SongSource=SongSource.YOUTUBE_OR_OTHER):
+class Song():
+    def __init__(self, url:str, source_path:str, title:str, requester:discord.Member=None, song_from=SongSource.YOUTUBE_OR_OTHER):
         self.url = url
+        self.source_path = source_path
         self.title = title
         self.requester = requester
         self.song_from = song_from
+        self.source = None
+
+    async def get_source(self, volume=0.5):
+        if not self.source:
+            source:discord.AudioSource = discord.FFmpegPCMAudio(self.source_path, **ffmpeg_options)
+            self.volume = volume
+            self.source = discord.PCMVolumeTransformer(source, volume)
+        return self.source
+
+    @classmethod
+    async def from_url(cls, url:str, *, loop:asyncio.AbstractEventLoop=None, requester:discord.Member=None, song_from=SongSource.YOUTUBE_OR_OTHER):
+        """
+        Creates a list of Song objects from the given URL.
+
+        Parameters:
+        - url (str): The URL of the song or playlist.
+        - loop (asyncio.AbstractEventLoop, optional): The event loop to use for asynchronous operations. Defaults to None.
+        - stream (bool, optional): Whether to stream the song or download it. Defaults to False.
+        - requester (discord.Member, optional): The member who requested the song. Defaults to None.
+        - song_from (SongSource, optional): The source of the song. Defaults to SongSource.YOUTUBE_OR_OTHER.
+
+        Returns:
+        - list[Song]: A list of Song objects created from the URL.
+        """
+        loop = loop or asyncio.get_event_loop()
+        results = await loop.run_in_executor(None, lambda: ytdl.extract_info(url, download=False))
+        lst:list[cls] = []
+
+        if "entries" in results:
+            # 處理歌單
+            results = results["entries"]
+        else:
+            # 處理單首歌曲
+            results = [results]
+
+        for song_datas in results:
+            title = song_datas.get("title")
+            
+            data = None
+            if song_datas["webpage_url_domain"] == "youtube.com":
+                #針對youtube的處理
+                for data in song_datas["formats"]:
+                    if data.get("format_note") == "medium":
+                        break
+
+            else:
+                data = song_datas["formats"][0]
+
+            #filename = data["url"] if stream else ytdl.prepare_filename(data)
+            source_path = data.get("url")
+            lst.append(cls(url, source_path, title, requester=requester, song_from=song_from))
+        
+        return lst
 
 class MusicPlayer():
     if TYPE_CHECKING:
@@ -111,7 +136,7 @@ class MusicPlayer():
             log.debug("play_next")
             song = self.start_first_song()
             try:
-                source = await YTDLSource.from_url(song.url, stream=True, volume=self.volume)
+                source = await song.get_source(self.volume)
                 
                 embed = BotEmbed.simple(title="現在播放", description=f"[{song.title}]({song.url}) [{song.requester.mention}]")
                 await self.channel.send(embed=embed)
@@ -196,21 +221,20 @@ class MusicPlayer():
         del guild_playing[self.guildid]
         await self.channel.send("歌曲播放完畢 掰掰~")
 
-    def add_song(self, song: Song):
-        """
-        加入歌曲到播放清單
+    def add_song(self, song: Song | list[Song]):
+            """
+            Adds a song or a list of songs to the playlist.
 
-        Parameters:
-        - song (Song): The song to be added to the playlist.
+            Parameters:
+            - song (Song | list[Song]): The song or list of songs to be added to the playlist.
 
-        Returns:
-        - None
-        """
-        self.playlist.append(song)
-
-    def add_song(self,song:Song):
-        """加入歌曲到播放清單"""
-        self.playlist.append(song)
+            Returns:
+            - None
+            """
+            if isinstance(song, list):
+                self.playlist.extend(song)
+            else:
+                self.playlist.append(song)
     
     def start_first_song(self) -> Song:
             """
@@ -290,15 +314,9 @@ class music(Cog_Extension):
             songfrom = SongSource.YOUTUBE_OR_OTHER
             #抓取歌曲
             try:
-                results = ytdl.extract_info(url, download=False)
+                results = await Song.from_url(url, requester=ctx.author)
             except youtube_dl.utils.DownloadError as e:
                 raise MusicCommandError("不受支援的連結，請重新檢查網址是否正確")
-
-            #區分歌單與單首歌曲
-            if "entries" in results:
-                song_data_list = list(results["entries"])  # Convert to list
-            else:
-                song_data_list = [results]
 
         #播放器設定
         player = guild_playing.get(guildid)
@@ -307,14 +325,8 @@ class music(Cog_Extension):
             guild_playing[guildid] = player
         
         #把歌曲放入清單
-        song_count = 0
         try:
-            for result in song_data_list:
-                title = result['title']
-
-                song = Song(url,title,ctx.author,songfrom)
-                player.add_song(song)
-                song_count += 1
+            player.add_song(results)
 
             if not vc.is_playing():
                 await asyncio.sleep(2)
@@ -325,8 +337,9 @@ class music(Cog_Extension):
             raise MusicCommandError(e)
 
         #回應
+        song_count = len(results)
         if song_count == 1:
-            await ctx.respond(f"加入歌單: {results['title']}")
+            await ctx.respond(f"加入歌單: {results[0].title}")
         else:
             await ctx.respond(f"**{song_count}** 首歌已加入歌單")
 
@@ -434,4 +447,5 @@ class music(Cog_Extension):
 def setup(bot):
     bot.add_cog(music(bot))
 
-    
+if __name__ == '__main__':
+    asyncio.run(Song.from_url("https://youtu.be/TcT_BTzp83M?si=gT2xYd2d9WSiT7Lu"))
