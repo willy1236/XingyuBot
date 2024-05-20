@@ -11,6 +11,7 @@ from discord.errors import Forbidden, NotFound
 from discord.ext import commands,pages
 from discord.commands import SlashCommandGroup
 from mysql.connector.errors import Error as sqlerror
+from mysql.connector.errors import IntegrityError
 
 from starcord import Cog_Extension,Jsondb,BRS,log,BotEmbed,ChoiceList,sclient
 from starcord.Utilities import find, random_color, create_only_role_list, create_role_magification_dict, calculate_eletion_session
@@ -632,7 +633,7 @@ class command(Cog_Extension):
                 if not user:
                     continue
                 
-                lst.append(user)
+                lst.append(user.mention)
                 save_list.append([user.id, session, n])
                 if role:
                     await user.add_roles(role,reason=f"第{session}屆官員當選")
@@ -643,13 +644,22 @@ class command(Cog_Extension):
         # 輸出當選官員名單
         now = datetime.now()
         text = f'# 第{session}屆中央政府（{now.strftime("%Y-%m")}）'
-        for n, userlist in Jsondb.options["position_option"].items():
-            text += f"\n{ChoiceList.get_tw(n,'position_option')}：{' '.join(userlist)}"
-        
+        for n, userlist in dct.items():
+            user_mention = ' '.join(userlist) if userlist else "從缺"
+            text += f"\n{ChoiceList.get_tw(n,'position_option')}：{user_mention}"
+
         #lab = Legal Affairs Bureau
-        sclient.sqldb.add_officials(save_list)
+        try:
+            sclient.sqldb.add_officials(save_list)
+        except IntegrityError as e:
+            if e.errno == 1062:
+                pass
+            
         lab_channel = self.bot.get_channel(1160467781473533962)
-        await lab_channel.send(text)
+        if lab_channel:
+            await lab_channel.send(text)
+        else:
+            await ctx.send(text)
         await ctx.respond("結算完成，恭喜當選者")
 
     @party.command(description='加入政黨')
