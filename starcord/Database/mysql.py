@@ -1031,6 +1031,10 @@ class MYSQLElectionSystem(MySQLBaseModel):
         self.cursor.execute(f"INSERT INTO `database`.`official_list` VALUES(%s,%s,%s);",(discord_id,session,position))
         self.connection.commit()
 
+    def add_officials(self, lst:list[list[int, int, int]]):
+        self.cursor.executemany(f"INSERT INTO `database`.`official_list` VALUES(%s,%s,%s);",lst)
+        self.connection.commit()
+
     def join_party(self,discord_id:int,party_id:int):
         self.cursor.execute(f"INSERT INTO `stardb_user`.`user_party` VALUES(%s,%s);",(discord_id,party_id))
         self.connection.commit()

@@ -31,11 +31,6 @@ class PetType(IntEnum):
     def text(self,lcode='en'):
         return pet_tl[lcode][str(self.value)]
 
-class BusyTime(IntEnum):
-    早上 = 1
-    下午 = 2
-    晚上 = 3
-
 class Coins(Enum):
     POINT = "point"
     RCOIN = "rcoin"

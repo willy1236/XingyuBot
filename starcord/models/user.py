@@ -1,8 +1,13 @@
-import random,time,datetime,discord
+import random
+import time
+from datetime import datetime
 from typing import TYPE_CHECKING
-from starcord.Utilities import BotEmbed,ChoiceList
-from starcord.types import DBGame,Coins,ActivitiesStatue
-from starcord.FileDatabase import Jsondb
+
+import discord
+
+from ..Utilities import BotEmbed,ChoiceList
+from ..types import DBGame,Coins,ActivitiesStatue
+from ..FileDatabase import Jsondb
 from .rpg import *
 
 class RegistrationData():
@@ -23,12 +28,14 @@ class StarUser(BaseUser):
         discord_id: int
         email: str
         drive_share_id: str
+        twitch_id: int | None
 
     def __init__(self,data:dict):
         self.user_id = data.get("user_id")
         self.discord_id = data.get("discord_id")
         self.email = data.get("email")
         self.drive_share_id = data.get("drive_share_id")
+        self.twitch_id = data.get("twitch_id")
 
 class Pet():
     if TYPE_CHECKING:
@@ -55,7 +62,7 @@ class Pet():
 class DiscordUser(BaseUser):
     """Discord用戶"""
     if TYPE_CHECKING:
-        from starcord.DataExtractor import MySQLDatabase
+        from starcord.Database import MySQLDatabase
         sqldb: MySQLDatabase
         user_dc: discord.User | None
         discord_id: int
@@ -175,9 +182,9 @@ class RPGUser(DiscordUser):
         hrt: int
         dex: int
         career_id: int
-        last_work: datetime.datetime
+        last_work: datetime
         in_city_id: int
-        activities_done: datetime.datetime
+        activities_done: datetime
 
         workcareer: RPGWorkCareer
         itembag: RPGPlayerItemBag
@@ -310,17 +317,15 @@ class CityBattlePlayer(RPGUser):
 
 class CityBattle(ListObject):
     if TYPE_CHECKING:
-        from starcord.DataExtractor import MySQLDatabase
+        from starcord.Database import MySQLDatabase
         sqldb: MySQLDatabase
     
     def __init__(self,data,sqldb=None):
-        super().__init__()
+        super().__init__([CityBattlePlayer(i) for i in data])
         self.sqldb = sqldb
         self._city = None
         self._defencer = []
         self._attacker = []
-        for i in data:
-            self.append(CityBattlePlayer(i))
 
     @property
     def city(self):

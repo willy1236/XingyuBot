@@ -372,18 +372,9 @@ class music(Cog_Extension):
         player = get_player(ctx.guild.id)
         playlist = player.get_full_playlist()
         if playlist:
-            count = 0
-            page_count = 0
-            song_count = 1
-            page = [BotEmbed.simple(title="播放清單",description='')]
-            for song in playlist:
-                page[page_count].description += f"**{song_count}.** [{song.title}]({song.url}) [{song.requester.mention}]\n\n"
-                song_count += 1
-                count += 1
-                if count > 10:
-                    page.append(BotEmbed.simple(title="播放清單",description=''))
-                    count = 0
-                    page_count += 1
+            page = [BotEmbed.simple(title="播放清單",description='') for _ in range(int(len(playlist) / 10) + 1)]
+            for i, song in enumerate(playlist):
+                page[int(i / 10)].description += f"**{i+1}.** [{song.title}]({song.url}) [{song.requester.mention}]\n\n"
 
             paginator = pages.Paginator(pages=page, use_default_buttons=True,loop_pages=True)
             await paginator.respond(ctx.interaction, ephemeral=False)
