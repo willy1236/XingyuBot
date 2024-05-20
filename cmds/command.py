@@ -174,16 +174,11 @@ class command(Cog_Extension):
         if not record:
             raise commands.errors.ArgumentParsingError('沒有此用戶的紀錄')
         
-        page:list[discord.Embed] = []
-        i = 10
-        for data in record:
-            if i >= 10:
-                page.append(BotEmbed.simple(f"{user.name} 身分組紀錄"))
-                i = 0
+        page = [BotEmbed.simple(f"{user.name} 身分組紀錄") for _ in range(int(len(record) % 10) + 1)]
+        for i, data in enumerate(record):
             role_name = data['role_name']
             time = data['time']
-            page[-1].add_field(name=role_name, value=time, inline=False)
-            i += 1
+            page[int(i / 10)].add_field(name=role_name, value=time, inline=False)
 
         paginator = pages.Paginator(pages=page, use_default_buttons=True)
         await paginator.respond(ctx.interaction, ephemeral=False)
@@ -278,13 +273,13 @@ class command(Cog_Extension):
             await ctx.respond('錯誤：此賭盤已經關閉了喔',ephemeral=True)
             return
         
-        user_data = sclient.sqldb.get_coin(str(ctx.author.id),Coins.POINT)
+        user_data = sclient.sqldb.get_coin(ctx.author.id,Coins.POINT)
 
         if user_data['point'] < money:
             await ctx.respond('點數錯誤：你沒有那麼多點數',ephemeral=True)
             return
 
-        sclient.sqldb.update_coins(str(ctx.author.id),'add',Coins.POINT,money*-1)
+        sclient.sqldb.update_coins(ctx.author.id,'add',Coins.POINT,money*-1)
         sclient.sqldb.place_bet(bet_id,choice,money)
         await ctx.respond('下注完成!')
 
@@ -697,9 +692,9 @@ class command(Cog_Extension):
         dbdata = sclient.sqldb.get_all_party_data()
         embed = BotEmbed.simple("政黨統計")
         for party in dbdata:
-            creator = self.bot.get_user(party['creator_id'])
-            creator_mention = creator.mention if creator else f"<@{party['creator_id']}>"
-            embed.add_field(name=party["party_name"], value=f"政黨ID：{party['party_id']}\n政黨人數：{party['count']}\n創黨人：{creator_mention}")
+            creator = self.bot.get_user(party.creator_id)
+            creator_mention = creator.mention if creator else f"<@{party.creator_id}>"
+            embed.add_field(name=party.name, value=f"政黨ID：{party.id}\n政黨人數：{party.member_count}\n創黨人：{creator_mention}\n創黨日期：{party.created_at.strftime('%Y-%m-%d')}")
         await ctx.respond(embed=embed)
 
     @commands.slash_command(description="開啟mc伺服器",guild_ids=main_guild)

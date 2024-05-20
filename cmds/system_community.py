@@ -131,7 +131,7 @@ class system_community(Cog_Extension):
         ytapi = YoutubeAPI()
         channel = ytapi.get_channel(handle=youtube_handle)
         if channel:
-            await ctx.respond("查詢成功",embed=channel.desplay())
+            await ctx.respond("查詢成功",embed=channel.embed())
         else:
             await ctx.respond("查詢失敗",ephemeral=True)
 

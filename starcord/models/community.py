@@ -1,6 +1,7 @@
 import discord,time
 from starcord.Utilities.utility import BotEmbed
 from datetime import datetime,timedelta,timezone
+from typing import TYPE_CHECKING
 
 class TwitchUser():
     def __init__(self,data:dict):
@@ -92,30 +93,52 @@ class TwitchVideo():
         return embed
 
 class YoutubeChannel:
+    if TYPE_CHECKING:
+        id: str
+        title: str
+        description: str
+        customUrl: str
+        publishedAt: datetime
+        thumbnails_default: str
+        thumbnails_medium: str
+        thumbnails_high: str
+        viewCount: int
+        subscriberCount: int
+        hiddenSubscriberCount: bool
+        videoCount: int
+
     def __init__(self,data:dict):
         self.id = data.get('id')
         
         self.title = data.get('snippet').get('title')
         self.description = data.get('snippet').get('description')
         self.customUrl = data.get('snippet').get('customUrl')
-        self.publishedAt = data.get('snippet').get('publishedAt')
+        self.publishedAt = datetime.fromisoformat(data.get('snippet').get('publishedAt'))
         
         self.thumbnails_default = data.get('snippet').get('thumbnails').get('default').get('url')
         self.thumbnails_medium = data.get('snippet').get('thumbnails').get('medium').get('url')
         self.thumbnails_high = data.get('snippet').get('thumbnails').get('high').get('url')
 
-        self.viewCount = data.get('statistics').get('viewCount')
-        self.subscriberCount = data.get('statistics').get('subscriberCount')
+        self.viewCount = int(data.get('statistics').get('viewCount'))
+        self.subscriberCount = int(data.get('statistics').get('subscriberCount'))
         self.hiddenSubscriberCount = data.get('statistics').get('hiddenSubscriberCount')
-        self.videoCount = data.get('statistics').get('videoCount')
+        self.videoCount = int(data.get('statistics').get('videoCount'))
 
-    def desplay(self):
-        embed = BotEmbed.simple(self.title, self.description,f"https://www.youtube.com/channel/{self.id}")
+    def embed(self):
+        embed = discord.Embed(
+            title=self.title,
+            url=f"https://www.youtube.com/channel/{self.id}",
+            description=self.description,
+            color=0xff0000,
+            timestamp = datetime.now()
+            )
         embed.set_image(url=self.thumbnails_default)
-        embed.add_field(name="頻道創建時間",value=self.publishedAt)
-        embed.add_field(name="訂閱數",value=self.subscriberCount)
-        embed.add_field(name="觀看數",value=self.viewCount)
-        embed.add_field(name="影片數",value=self.videoCount)
+        embed.add_field(name="頻道創建時間",value=self.publishedAt.strftime('%Y/%m/%d %H:%M:%S'))
+        embed.add_field(name="訂閱數",value=f"{self.subscriberCount:,}")
+        embed.add_field(name="影片數",value=f"{self.videoCount:,}")
+        embed.add_field(name="觀看數",value=f"{self.viewCount:,}")
+        embed.add_field(name="用戶代碼",value=self.customUrl)
+        embed.set_footer(text=self.id)
         return embed
 
 class YouTubeStream:

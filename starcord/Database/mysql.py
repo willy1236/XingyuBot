@@ -10,6 +10,7 @@ from starcord.types import DBGame, Coins, Position, CommunityType
 from starcord.models.user import *
 from starcord.models.model import *
 from starcord.models.rpg import *
+from starcord.models.mysql import *
 from starcord.errors import *
 
 def create_id():
@@ -1046,7 +1047,7 @@ class MYSQLElectionSystem(MySQLBaseModel):
     def get_all_party_data(self):
         self.cursor.execute(f"""
             SELECT 
-                `party_data`.*, COUNT(`user_party`.party_id) AS count
+                `party_data`.*, COUNT(`user_party`.party_id) AS member_count
             FROM
                 `database`.`party_data`
                     LEFT JOIN
@@ -1055,18 +1056,18 @@ class MYSQLElectionSystem(MySQLBaseModel):
             ORDER BY `party_id`;
         """)
         records = self.cursor.fetchall()
-        return records
+        return [Party(i) for i in records]
     
     def get_user_party(self,discord_id:int):
         self.cursor.execute(f"SELECT `user_party`.discord_id,`party_data`.* FROM `stardb_user`.`user_party` LEFT JOIN `database`.`party_data` ON user_party.party_id = party_data.party_id WHERE `discord_id` = {discord_id}")
         records = self.cursor.fetchall()
-        return records
+        return [Party(i) for i in records]
     
     def get_party_data(self,party_id:int):
         self.cursor.execute(f"SELECT * FROM `database`.`party_data` WHERE `party_id` = {party_id};")
         records = self.cursor.fetchall()
         if records:
-            return records[0]
+            return Party(records[0])
 
 class MySQLRegistrationSystem(MySQLBaseModel):
     def get_resgistration_dict(self):
