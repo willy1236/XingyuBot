@@ -84,3 +84,4 @@ if __name__ == '__main__':
 	# for idx,data in df.iterrows():
 	# 	print(data["name"],dict.get(data["queueType"]),data["tier"] + " " + data["rank"])
 	#df.to_csv('my_data.csv', index=False)
+	sqldb.copy_data("stardb_backup","role_user_backup","stardb_backup","role_user_backup")

@@ -203,6 +203,22 @@ class command(Cog_Extension):
                 break
         await ctx.respond(embed=embed)
 
+    @role.command(description='查詢特殊身分組')
+    async def special(self, ctx):
+        await ctx.defer()
+        lst = sclient.sqldb.get_all_backup_roles()
+        if not lst:
+            await ctx.respond('查詢失敗')
+            return
+
+        page = [[] for _ in range(math.ceil(len(lst) / 3))]
+        for i, role in enumerate(lst):
+            page[int(i / 3)].append(role.embed(self.bot))
+
+        paginator = pages.Paginator(pages=page, use_default_buttons=True, loop_pages=True)
+        await paginator.respond(ctx.interaction, ephemeral=False)
+
+
     @commands.slash_command(description='抽抽試手氣')
     @commands.cooldown(rate=1,per=2)
     async def draw(self,ctx,times:discord.Option(int,name='抽卡次數',description='可輸入1~1000的整數',default=1,min_value=1,max_value=1000)):

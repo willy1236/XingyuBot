@@ -371,7 +371,7 @@ class music(Cog_Extension):
         await ctx.voice_client.disconnect(force=True)
         if guild_playing.get(guildid):
             del guild_playing[guildid]
-        await ctx.respond(f"再見啦~")
+        await ctx.respond(f"再見啦~👋")
 
     @commands.slash_command(description='現在播放')
     @commands.guild_only()

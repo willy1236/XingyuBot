@@ -1098,6 +1098,20 @@ class MySQLBackupSystem(MySQLBaseModel):
             self.cursor.execute(f"INSERT INTO `stardb_backup`.`role_user_backup` VALUES(%s,%s);",(role.id,member.id))
         self.connection.commit()
 
+    def get_all_backup_roles(self):
+        self.cursor.execute(f"SELECT * FROM `stardb_backup`.`roles_backup`;")
+        records = self.cursor.fetchall()
+        
+        self.cursor.execute(f"SELECT * FROM `stardb_backup`.`role_user_backup`;")
+        user_records = self.cursor.fetchall()
+        dct = {}
+        for data in user_records:
+            if data["role_id"] not in dct:
+                dct[data["role_id"]] = []
+            dct[data["role_id"]].append(data["discord_id"])
+
+        return [BackupRoles(i, dct.get(i["role_id"])) for i in records]
+
 class MySQLTokensSystem(MySQLBaseModel):
     def set_oauth(self, user_id:int, type:CommunityType, access_token:str, refresh_token:str=None, expires_at:datetime=None):
         type = CommunityType(type)
@@ -1110,6 +1124,23 @@ class MySQLTokensSystem(MySQLBaseModel):
         records = self.cursor.fetchall()
         if records:
             return records[0]
+
+class MySQLManager(MySQLBaseModel):
+    def copy_data(self, remote_schema, remote_table, local_schema, local_table):
+        remote = MySQLBaseModel(Jsondb.jdata["remote_SQLsettings"])
+        remote.cursor.execute(f"SELECT * FROM `{remote_schema}`.`{remote_table}`;")
+        records = remote.cursor.fetchall()
+
+        col_count = len(records[0])
+        values_str = ",".join(["%s" for _ in range(col_count)])
+        try:
+            self.cursor.executemany(f'INSERT INTO `{local_schema}`.`{local_table}` VALUES({values_str});', [tuple(r.values()) for r in records])
+            self.connection.commit()
+        except sqlerror as e:
+            if e.errno == 1062:
+                print(e.msg)
+            else:
+                raise e
 
 class MySQLDatabase(
     MySQLUserSystem,
@@ -1127,5 +1158,6 @@ class MySQLDatabase(
     MySQLRegistrationSystem,
     MySQLBackupSystem,
     MySQLTokensSystem,
+    MySQLManager,
 ):
     """Mysql操作"""
