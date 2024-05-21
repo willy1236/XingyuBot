@@ -63,7 +63,7 @@ class BackupRoles:
     
     def embed(self, bot):
         embed = BotEmbed.simple(self.name,self.description)
-        embed.add_field(name="創建於", value=self.created_at.isoformat())
+        embed.add_field(name="創建於", value=self.created_at.strftime("%Y/%m/%d %H:%M:%S"))
         embed.add_field(name="顏色", value=f"({self.colour_r}, {self.colour_g}, {self.colour_b})")
         if self.user_ids and bot:
             user_list = []

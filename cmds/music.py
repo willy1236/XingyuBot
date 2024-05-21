@@ -178,7 +178,7 @@ class MusicPlayer():
             - None
             """
             await asyncio.sleep(wait_for)
-            if not self.vc.is_playing():
+            if not self.vc.is_playing() and not self.nowplaying:
                 await self.stop()
 
     def skip_song(self, skip_voter: discord.Member):
