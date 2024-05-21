@@ -1,5 +1,6 @@
 import asyncio
 import enum
+import math
 import random
 import time
 from typing import TYPE_CHECKING
@@ -386,7 +387,7 @@ class music(Cog_Extension):
         player = get_player(ctx.guild.id)
         playlist = player.get_full_playlist()
         if playlist:
-            page = [BotEmbed.simple(title="播放清單",description='') for _ in range(int(len(playlist) / 10) + 1)]
+            page = [BotEmbed.simple(title="播放清單",description='') for _ in range(math.ceil(len(playlist) / 10))]
             for i, song in enumerate(playlist):
                 page[int(i / 10)].description += f"**{i+1}.** [{song.title}]({song.url}) [{song.requester.mention}]\n\n"
 

@@ -1,5 +1,6 @@
 import asyncio
 import ctypes
+import math
 import random
 import re
 import subprocess
@@ -174,7 +175,7 @@ class command(Cog_Extension):
         if not record:
             raise commands.errors.ArgumentParsingError('沒有此用戶的紀錄')
         
-        page = [BotEmbed.simple(f"{user.name} 身分組紀錄") for _ in range(int(len(record) / 10) + 1)]
+        page = [BotEmbed.simple(f"{user.name} 身分組紀錄") for _ in range(math.ceil(len(record) / 10))]
         for i, data in enumerate(record):
             role_name = data['role_name']
             time = data['time']
