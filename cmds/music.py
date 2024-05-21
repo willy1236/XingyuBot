@@ -104,8 +104,9 @@ class Song():
 class MusicPlayer():
     if TYPE_CHECKING:
         vc: discord.VoiceClient
-        ctx: discord.ApplicationContext
+        channel: discord.interactions.InteractionChannel
         loop: asyncio.AbstractEventLoop
+        guildid: str
         playlist: list[Song]
         songloop: bool
         volume: float
@@ -115,8 +116,8 @@ class MusicPlayer():
     def __init__(self,vc:discord.VoiceClient,ctx:discord.ApplicationContext,loop):
         self.vc = vc
         self.channel = ctx.channel
-        self.guildid = str(ctx.guild.id)
         self.loop = loop
+        self.guildid = str(ctx.guild.id)
         self.playlist = []
         self.songloop = False
         self.volume = 0.5
@@ -139,7 +140,7 @@ class MusicPlayer():
                 source = await song.get_source(self.volume)
                 
                 embed = BotEmbed.simple(title="現在播放", description=f"[{song.title}]({song.url}) [{song.requester.mention}]")
-                await self.channel.send(embed=embed)
+                await self.channel.send(embed=embed,silent=True)
                 self.vc.play(source, after=self.after, wait_finish=True)
             except Exception as e:
                 raise MusicPlayingError(str(e))

@@ -174,13 +174,13 @@ class command(Cog_Extension):
         if not record:
             raise commands.errors.ArgumentParsingError('沒有此用戶的紀錄')
         
-        page = [BotEmbed.simple(f"{user.name} 身分組紀錄") for _ in range(int(len(record) % 10) + 1)]
+        page = [BotEmbed.simple(f"{user.name} 身分組紀錄") for _ in range(int(len(record) / 10) + 1)]
         for i, data in enumerate(record):
             role_name = data['role_name']
             time = data['time']
             page[int(i / 10)].add_field(name=role_name, value=time, inline=False)
 
-        paginator = pages.Paginator(pages=page, use_default_buttons=True)
+        paginator = pages.Paginator(pages=page, use_default_buttons=True, loop_pages=True)
         await paginator.respond(ctx.interaction, ephemeral=False)
             
     
