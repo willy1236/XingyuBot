@@ -16,7 +16,7 @@ __all__ =[
     'GoogleCloud',
     'NotionAPI',
     'RiotAPI',
-    'OsuInterface',
+    'OsuAPI',
     'ApexInterface',
     'SteamInterface',
     'DBDInterface',

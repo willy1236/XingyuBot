@@ -1,4 +1,4 @@
-from datetime import datetime,date,time,timedelta
+from datetime import datetime,date,time,timedelta,timezone
 from typing import Dict, List, Set, Tuple
 
 import discord
@@ -16,17 +16,16 @@ from starcord.errors import *
 def create_id():
     return 'SELECT idNumber FROM ( SELECT CONCAT("U", LPAD(FLOOR(RAND()*10000000), 7, 0)) as idNumber) AS generated_ids WHERE NOT EXISTS ( SELECT 1 FROM stardb_user.user_data WHERE user_id = generated_ids.idNumber);'
 
+tz = timezone(timedelta(hours=8))
 class MySQLBaseModel(object):
     """MySQL資料庫基本模型"""
     def __init__(self,mysql_settings:dict):
         '''MySQL 資料庫連接\n
         settings = {"host": "","port": ,"user": "","password": "","db": "","charset": ""}
         '''
-        
         #建立連線
         self.connection = mysql.connector.connect(**mysql_settings)
         self.cursor = self.connection.cursor(dictionary=True)
-        self.connection.get_server_info()
 
     def truncate_table(self,table:str,database="database"):
         self.cursor.execute(f"USE `{database}`;")
@@ -1093,7 +1092,7 @@ class MySQLRegistrationSystem(MySQLBaseModel):
 
 class MySQLBackupSystem(MySQLBaseModel):
     def backup_role(self,role:discord.Role,description:str=None):
-        self.cursor.execute(f"INSERT INTO `stardb_backup`.`roles_backup` VALUES(%s,%s,%s,%s,%s,%s,%s,%s);",(role.id,role.name,role.created_at,role.guild.id,role.colour.r,role.colour.g,role.colour.b,description))
+        self.cursor.execute(f"INSERT INTO `stardb_backup`.`roles_backup` VALUES(%s,%s,%s,%s,%s,%s,%s,%s);",(role.id,role.name,role.created_at.astimezone(tz),role.guild.id,role.colour.r,role.colour.g,role.colour.b,description))
         for member in role.members:
             self.cursor.execute(f"INSERT INTO `stardb_backup`.`role_user_backup` VALUES(%s,%s);",(role.id,member.id))
         self.connection.commit()

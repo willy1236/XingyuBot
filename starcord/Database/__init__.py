@@ -13,7 +13,8 @@ def create_sqldb(SQL_connection:bool) -> MySQLDatabase:
     if SQL_connection:
         try:
             sqldb = MySQLDatabase(Jsondb.jdata.get('SQLsettings'))
-            log.info('>> SQL connect: on <<')
+            version = sqldb.connection.get_server_info()
+            log.info(f'>> SQL connect: online ({version}) <<')
         except:
             sqldb = None
             log.warning('>> SQL connect: offline <<')

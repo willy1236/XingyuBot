@@ -1,10 +1,10 @@
 import random
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 
 import discord
 
 from ..Database import sqldb
-from ..DataExtractor import RiotAPI,SteamInterface,OsuInterface,ApexInterface
+from ..DataExtractor import RiotAPI,SteamInterface,OsuAPI,ApexInterface
 from ..FileDatabase import Jsondb
 from ..models import *
 from ..types import DBGame
@@ -12,6 +12,7 @@ from ..ui_element.view import PollView, ElectionPollView
 from ..starAI import StarGeminiAI
 from .classes import DiscordBot
 from ..Utilities import scheduler
+from ..settings import tz
 
 class UserClient():
     """用戶查詢系統"""
@@ -58,7 +59,7 @@ class GameClient():
             if game == DBGame.STEAM:
                 APIdata = SteamInterface().get_user(dbdata['player_id'])
             elif game == DBGame.OSU:
-                APIdata = OsuInterface().get_player(dbdata['player_name'])
+                APIdata = OsuAPI().get_player(dbdata['player_name'])
             elif game == DBGame.APEX:
                 APIdata = ApexInterface().get_player(dbdata['player_name'])
             elif game == DBGame.LOL:
@@ -67,7 +68,7 @@ class GameClient():
         else:
             return dbdata
         
-    def get_riot_player(self,riot_id=None,discord_id=None):
+    def get_lol_player(self,riot_id=None,discord_id=None):
         """
         從資料庫取得資料，若沒有則從API取得
         :param riot_id: Riot ID（名稱#tag）
@@ -118,7 +119,7 @@ class PollClient():
                     bot:discord.bot=None
                     ) -> PollView:
         """創建投票"""
-        poll_id = sqldb.add_poll(title,creator_id,datetime.now(),None,guild_id,ban_alternate_account_voting,show_name,check_results_in_advance,results_only_initiator,number_of_user_votes)
+        poll_id = sqldb.add_poll(title,creator_id,datetime.now(tz=tz),None,guild_id,ban_alternate_account_voting,show_name,check_results_in_advance,results_only_initiator,number_of_user_votes)
         sqldb.add_poll_option(poll_id,options)
 
         poll_role_dict = {}

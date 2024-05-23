@@ -1,4 +1,6 @@
 from datetime import datetime,timedelta
+from typing import TYPE_CHECKING
+
 from starcord.Utilities.utility import BotEmbed
 from starcord.FileDatabase import Jsondb,csvdb
 
@@ -6,6 +8,11 @@ jdict = Jsondb.jdict
 lol_jdict = Jsondb.lol_jdict
 
 class RiotUser():
+    if TYPE_CHECKING:
+        puuid: str
+        name: str
+        tag: str
+
     def __init__(self,data):
         self.puuid = data.get("puuid")
         self.name = data.get("gameName")
@@ -17,6 +24,12 @@ class RiotUser():
         if not self._fullname:
             self._fullname = self.name + "#" + self.tag
         return self._fullname
+    
+    def embed(self):
+        embed = BotEmbed.general(self.fullname)
+        embed.add_field(name="puuid", value=self.puuid, inline=False)
+        embed.timestamp = datetime.now()
+        return embed
     
 class LOLPlayer(RiotUser):
     def __init__(self,data):

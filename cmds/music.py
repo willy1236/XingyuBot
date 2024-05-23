@@ -16,10 +16,6 @@ from starcord.errors import *
 # Suppress noise about console usage from errors
 youtube_dl.utils.bug_reports_message = lambda: ""
 
-class SongSource(enum.IntEnum):
-    YOUTUBE_OR_OTHER = 1
-    SPOTIFY = 2
-
 ytdl_format_options = {
     # "format": "bestaudio/best",
     "outtmpl": "%(extractor)s-%(id)s-%(title)s.%(ext)s",
@@ -41,6 +37,10 @@ ffmpeg_options = {
 }
 
 ytdl = youtube_dl.YoutubeDL(ytdl_format_options)
+
+class SongSource(enum.IntEnum):
+    YOUTUBE_OR_OTHER = 1
+    SPOTIFY = 2
 class Song():
     def __init__(self, url:str, source_path:str, title:str, requester:discord.Member=None, song_from=SongSource.YOUTUBE_OR_OTHER):
         self.url = url
@@ -50,10 +50,9 @@ class Song():
         self.song_from = song_from
         self.source = None
 
-    async def get_source(self, volume=0.5):
+    async def get_source(self,volume = 0.5):
         if not self.source:
             source:discord.AudioSource = discord.FFmpegPCMAudio(self.source_path, **ffmpeg_options)
-            self.volume = volume
             self.source = discord.PCMVolumeTransformer(source, volume)
         return self.source
 
@@ -157,7 +156,7 @@ class MusicPlayer():
         # self.play_completed()
         if error:
             raise MusicPlayingError(error)
-        time.sleep(2)
+        time.sleep(1)
         if self.playlist:
             # 使用既有的bot協程
             asyncio.run_coroutine_threadsafe(self.play_next(), self.loop)
@@ -177,6 +176,7 @@ class MusicPlayer():
             Returns:
             - None
             """
+            self.nowplaying = None
             await asyncio.sleep(wait_for)
             if not self.vc.is_playing() and not self.nowplaying:
                 await self.stop()
@@ -220,6 +220,7 @@ class MusicPlayer():
         - None
         """
         await self.vc.disconnect()
+        self.playlist.clear()
         del guild_playing[self.guildid]
         await self.channel.send("歌曲播放完畢 掰掰~")
 

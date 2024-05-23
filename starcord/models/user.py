@@ -11,6 +11,11 @@ from ..FileDatabase import Jsondb
 from .rpg import *
 
 class RegistrationData():
+    if TYPE_CHECKING:
+        registrations_id: int
+        guild_id: int
+        role_id: int
+
     def __init__(self,data:dict):
         self.registrations_id = data.get("registrations_id") or data.get("discord_registration") or 0
         self.guild_id = data.get('guild_id')
@@ -21,13 +26,15 @@ class RegistrationData():
 
 class BaseUser:
     """Represents a user."""
-
-class StarUser(BaseUser):
     if TYPE_CHECKING:
         user_id: str
         discord_id: int
-        email: str
-        drive_share_id: str
+        name: str
+
+class StarUser(BaseUser):
+    if TYPE_CHECKING:
+        email: str | None
+        drive_share_id: str | None
         twitch_id: int | None
 
     def __init__(self,data:dict):
@@ -65,8 +72,6 @@ class DiscordUser(BaseUser):
         from starcord.Database import MySQLDatabase
         sqldb: MySQLDatabase
         user_dc: discord.User | None
-        discord_id: int
-        name: str
         point: int
         rcoin: int
         max_sign_consecutive_days: int

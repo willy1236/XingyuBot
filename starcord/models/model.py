@@ -1,9 +1,13 @@
-import discord,datetime
+from datetime import datetime
 from typing import TYPE_CHECKING
+
+import discord
+
 from .BaseModel import ListObject
-from starcord.types import DBGame
-from starcord.Utilities.utility import BotEmbed
-from starcord.FileDatabase import Jsondb
+from ..types import DBGame
+from ..Utilities.utility import BotEmbed
+from ..FileDatabase import Jsondb
+from ..settings import tz
 
 class GameInfo:
     if TYPE_CHECKING:
@@ -48,13 +52,13 @@ class GameInfoPage():
     
 class WarningSheet:
     if TYPE_CHECKING:
-        from starcord.DataExtractor import MySQLDatabase
+        from starcord.Database import MySQLDatabase
         sqldb: MySQLDatabase
         warning_id: int
         discord_id: int
         moderate_user_id: int
         guild_id: int
-        create_time: datetime.datetime
+        create_time: datetime
         moderate_type: str
         reason: str
         last_time: str
@@ -76,6 +80,9 @@ class WarningSheet:
         self.bot_given = data.get("bot_given")
 
         self.__officially_given = None
+
+        if isinstance(self.create_time,datetime):
+            self.create_time.replace(tzinfo=tz)
 
     @property
     def officially_given(self):
@@ -112,6 +119,10 @@ class WarningSheet:
         self.sqldb.remove_warning(self.warning_id)
 
 class WarningList(ListObject):
+    if TYPE_CHECKING:
+        items: list[WarningSheet]
+        discord_id: int
+
     def __init__(self,data:dict,discord_id:int,sqldb=None):
         super().__init__([WarningSheet(i,sqldb) for i in data])
         self.discord_id = discord_id

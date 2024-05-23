@@ -137,7 +137,7 @@ class RiotAPI(GameInterface):
         else:
             raise APIInvokeError("ddragon_version",r.text)
     
-class OsuInterface(GameInterface):
+class OsuAPI(GameInterface):
     def __init__(self):
         super().__init__()
         self._headers = self._get_headers()
@@ -181,6 +181,14 @@ class OsuInterface(GameInterface):
         r = requests.get(f'{self._url}/rooms/{room}/playlist/{playlist}/scores',headers=self._headers)
         if r.status_code == 200:
             return OsuMultiplayer(r.json())
+        else:
+            return None
+        
+    def get_user_scores(self,user_id):
+        '''獲取Osu玩家分數'''
+        r = requests.get(f'{self._url}/users/{user_id}/scores/recent',headers=self._headers)
+        if r.status_code == 200:
+            return r.json()
         else:
             return None
 

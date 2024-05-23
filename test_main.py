@@ -2,7 +2,7 @@ import asyncio
 import json
 import secrets
 import time
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 import discord
 import feedparser
@@ -14,8 +14,8 @@ from bs4 import BeautifulSoup
 from faker import Faker
 #from pydantic import BaseModel
 
-from starcord import log,Jsondb, ChoiceList, sqldb
-from starcord.DataExtractor import TwitchAPI, YoutubeAPI, YoutubeRSS, CWA_API, DiscordOauth
+from starcord import log,Jsondb, ChoiceList, sqldb, tz
+from starcord.DataExtractor import TwitchAPI, YoutubeAPI, YoutubeRSS, CWA_API, DiscordOauth, OsuAPI
 from starcord.starAI import StarGeminiAI
 from starcord.Utilities import calculate_eletion_session
 
@@ -84,4 +84,15 @@ if __name__ == '__main__':
 	# for idx,data in df.iterrows():
 	# 	print(data["name"],dict.get(data["queueType"]),data["tier"] + " " + data["rank"])
 	#df.to_csv('my_data.csv', index=False)
-	sqldb.copy_data("stardb_backup","role_user_backup","stardb_backup","role_user_backup")
+	
+	#sqldb.copy_data("stardb_backup","role_user_backup","stardb_backup","role_user_backup")
+
+	# data = OsuAPI().get_user_scores(17113935)
+	# print(len(data))
+	# for i in data:
+	# 	print(datetime.fromisoformat(i["created_at"]).astimezone(tz=tz))
+	
+	dbdata = sqldb.get_all_backup_roles()
+
+	print(dbdata[0].created_at)
+	print(dbdata[0].created_at.tzinfo)

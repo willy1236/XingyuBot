@@ -2,6 +2,7 @@ from datetime import date, datetime
 from typing import TYPE_CHECKING
 
 from ..Utilities import BotEmbed
+from ..settings import tz
 
 class Party:
     __solts__ = ['id', 'name', 'role_id', 'creator_id', 'created_at', "member_count"]
@@ -23,7 +24,7 @@ class Party:
         self.member_count = dct.get('member_count')
 
     def __str__(self):
-        return f'Party(id={self.id})'
+        return f'<Party id={self.id}>'
 
     def __repr__(self):
         return self.__str__()
@@ -60,6 +61,8 @@ class BackupRoles:
         self.colour_b = dct.get('colour_b')
         self.description = dct.get('description')
         self.user_ids = user_ids
+        if isinstance(self.created_at, datetime):
+            self.created_at.replace(tzinfo=tz)
     
     def embed(self, bot):
         embed = BotEmbed.simple(self.name,self.description)
