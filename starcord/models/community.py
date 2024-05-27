@@ -67,7 +67,6 @@ class TwitchStream():
 
 class TwitchVideo():
     def __init__(self,data:dict):
-        print(data)
         self.video_id = data.get("id")
         self.stream_id = data.get("stream_id")
         self.user_id = data.get("user_id")
