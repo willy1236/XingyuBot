@@ -38,7 +38,7 @@ class error(Cog_Extension):
                         await BRS.error(self.bot,ctx,f"{error.original} ({error.original.original_message})")
 
             elif isinstance(error.original,discord.errors.Forbidden):
-                await ctx.respond(f'缺少權限：我缺少權限執行這項操作，可能為我的身分組位階較低或缺少必要權限',ephemeral=True)
+                await ctx.respond(f'操作被拒：我缺少權限執行這項操作，可能為我的身分組位階較低或缺少必要權限',ephemeral=True)
 
             elif isinstance(error.original,sqlerror) and error.original.errno == 1062:
                 await ctx.respond(f'資料錯誤：資料重複新增',ephemeral=True)

@@ -15,7 +15,7 @@ class DiscordOauth:
     - client_id (str): The client ID of the Discord application.
     - client_secret (str): The client secret of the Discord application.
     - redirect_uri (str, optional): The redirect URI for the OAuth flow. Defaults to 'http://127.0.0.1:14000/discord '.
-    - user_id (str, optional): The user ID associated with the OAuth token. Defaults to None.\n
+    - user_id (int, optional): The user ID associated with the OAuth token. Defaults to None.\n
     - if provided, the OAuth token will be set automatically from database.
 
     Attributes:
@@ -26,8 +26,9 @@ class DiscordOauth:
     - expires_at (datetime): The expiration date and time of the access token.
     """
 
-    def __init__(self, client_id, client_secret, redirect_uri='http://127.0.0.1:14000/discord', user_id=None):
-        self.API_ENDPOINT = 'https://discord.com/api/v10'
+    API_ENDPOINT = 'https://discord.com/api/v9'
+
+    def __init__(self, client_id:str, client_secret:str, redirect_uri='http://127.0.0.1:14000/discord', user_id:int=None):
         self.CLIENT_ID = client_id
         self.CLIENT_SECRET = client_secret
         self.REDIRECT_URI = redirect_uri
@@ -54,7 +55,7 @@ class DiscordOauth:
         """
         dbdata = sqldb.get_oauth(user_id, CommunityType.Discord)
         if not dbdata:
-            raise SQLNotFoundError('Discord OAuth token not found.')
+            raise SQLNotFoundError(f'Discord OAuth token not found. ({user_id=})')
         
         self._user_id = user_id
         self.access_token = dbdata['access_token']

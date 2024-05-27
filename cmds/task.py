@@ -45,6 +45,7 @@ class task(Cog_Extension):
             scheduler.add_job(self.earthquake_check,'interval',minutes=2,jitter=30,misfire_grace_time=40)
             scheduler.add_job(self.youtube_video,'interval',minutes=15,jitter=30,misfire_grace_time=40)
             scheduler.add_job(self.twitch_video,'interval',minutes=15,jitter=30,misfire_grace_time=40)
+            scheduler.add_job(self.twitch_clip,'interval',minutes=15,jitter=30,misfire_grace_time=40)
             #scheduler.add_job(self.city_battle,'interval',minutes=1,jitter=30,misfire_grace_time=60)
             #scheduler.add_job(self.get_mongodb_data,'interval',minutes=3,jitter=30,misfire_grace_time=40)
 
@@ -228,6 +229,39 @@ class task(Cog_Extension):
                             log.warning(f"twitch_v: {guild.id}/{channel.id}")
 
         Jsondb.write_cache('twitch_v',twitch_cache)
+
+    async def twitch_clip(self):
+        users = sclient.get_notice_dict("twitch_c")
+        if not users:
+            return
+        twitch_cache = Jsondb.read_cache('twitch_c') or {}
+        for user in users:
+            cache_last_update_time = datetime.fromisoformat(twitch_cache.get(user)) if twitch_cache.get(user) else None
+            clips = TwitchAPI().get_clips(user, started_at=cache_last_update_time.strftime('%Y-%m-%dT%H:%M:%SZ') if cache_last_update_time else None)
+            if clips:
+                newest = clips[0].created_at
+                broadcaster_id = clips[0].broadcaster_id
+                for clip in clips:
+                    newest = clip.created_at if clip.created_at > newest else newest
+                    embed = clip.embed()
+                    guilds = sclient.sqldb.get_notify_community_guild('twitch_c',broadcaster_id)
+                    
+                    for guildid in guilds:
+                        guild = self.bot.get_guild(guildid)
+                        channel = self.bot.get_channel(guilds[guildid][0])
+                        role = guild.get_role(guilds[guildid][1])
+                        if channel:
+                            if role:
+                                await channel.send(f'{role.mention} 新剪輯上傳啦~',embed=embed)
+                            else:
+                                await channel.send(f'新剪輯上傳啦~',embed=embed)
+                            await asyncio.sleep(0.5)
+                        else:
+                            log.warning(f"twitch_c: {guild.id}/{channel.id}")
+
+                twitch_cache[broadcaster_id] = newest.isoformat()
+
+        Jsondb.write_cache('twitch_c',twitch_cache)
 
     async def youtube_video(self):
         ytchannels = sclient.get_notice_dict("youtube")

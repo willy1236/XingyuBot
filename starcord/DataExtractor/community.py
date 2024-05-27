@@ -16,9 +16,10 @@ class TwitchAPI(CommunityInterface):
     '''
     與Twitch api交互相關
     '''
+    URL = "https://api.twitch.tv/helix"
+
     def __init__(self):
-        self._headers = self.__get_headers()
-        self.url = "https://api.twitch.tv/helix"
+        self._headers = self.__get_headers()    
 
     def __get_headers(self):
         #客戶端憑據僅能使用API
@@ -42,7 +43,7 @@ class TwitchAPI(CommunityInterface):
         else:
             raise Forbidden(f"在讀取Twitch API時發生錯誤",f"[{r.status_code}] {apidata['message']}")
 
-    def get_lives(self,users:str|list) -> dict[str, TwitchStream | None]:
+    def get_lives(self,users:str | list[str]) -> dict[str, TwitchStream | None]:
         """
         取得twitch用戶的直播資訊
         :param users: list of users
@@ -52,9 +53,13 @@ class TwitchAPI(CommunityInterface):
             "user_login": users,
             "first": 1
         }
-        r = requests.get(f"{self.url}/streams", params=params,headers=self._headers)
+        r = requests.get(f"{self.URL}/streams", params=params,headers=self._headers)
         apidata = r.json()
         dict = {}
+        
+        if isinstance(users,str):
+            users = [users]
+
         for user in users:
             dict[user] = None
 
@@ -72,14 +77,14 @@ class TwitchAPI(CommunityInterface):
             "login": username,
             "first": 1
         }
-        r = requests.get(f"{self.url}/users", params=params,headers=self._headers)
+        r = requests.get(f"{self.URL}/users", params=params,headers=self._headers)
         apidata = r.json()
         if apidata.get('data'):
             return TwitchUser(apidata['data'][0])
         else:
             return None
 
-    def get_videos(self,users:str,types:str|list="highlight") -> list[TwitchVideo]:
+    def get_videos(self,users:int|list[int], types:str|list[str]="highlight") -> list[TwitchVideo]:
         """
         取得twitch用戶的影片資訊
         :param users: list of users
@@ -91,10 +96,26 @@ class TwitchAPI(CommunityInterface):
             "first": 5,
             "type": types
         }
-        r = requests.get(f"{self.url}/videos", params=params,headers=self._headers)
+        r = requests.get(f"{self.URL}/videos", params=params,headers=self._headers)
         apidata = r.json()
         if apidata.get('data'):
             return [TwitchVideo(i) for i in apidata['data']]
+        else:
+            return None
+        
+    def get_clips(self,broadcaster_id:int,started_at:datetime=None):
+        params = {
+            "broadcaster_id": broadcaster_id,
+            "first": 5,
+        }
+        if started_at:
+            params['started_at'] = started_at.strftime('%Y-%m-%dT%H:%M:%SZ')
+            params['ended_at'] = datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
+
+        r = requests.get(f"{self.URL}/clips", params=params,headers=self._headers)
+        apidata = r.json()
+        if apidata.get('data'):
+            return [TwitchClip(i) for i in apidata['data']]
         else:
             return None
 

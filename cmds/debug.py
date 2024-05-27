@@ -109,6 +109,31 @@ class RPG_advanture_panel(discord.ui.View):
                 await interaction.response.edit_message(content=self.map_display(),view=self)
         else:
             await interaction.response.edit_message(content=self.text,view=self)
+class MySelectMenus(discord.ui.Select):
+    def __init__(self,bot:discord.Bot,guild_id:int,role_ids:list[int]):
+        super().__init__(
+            placeholder = "Choose a Flavor!",
+            min_values = 1,
+            max_values = 3,
+        )
+        self.bot = bot
+        self.guild = bot.get_guild(guild_id)
+        for role_id in role_ids:
+            role = self.guild.get_role(role_id)
+            self.append_option(discord.SelectOption(label=role.name, value=str(role.id), description=f"Role ID: {role.id}"))
+
+    async def callback(self, interaction: discord.Interaction):
+        lst = []
+        for i in self.values:
+            role = interaction.guild.get_role(int(i))
+            lst.append(role.name)
+        await interaction.response.send_message(f"Added role: {','.join(lst)}", ephemeral=True)
+
+class MySelectMenusView(discord.ui.View):
+    def __init__(self,bot:discord.Bot,guild_id:int,role_ids:list[int]):
+        super().__init__()
+        select = MySelectMenus(bot,guild_id,role_ids)
+        self.add_item(select)
 
 class debug(Cog_Extension):
     pass
@@ -116,8 +141,9 @@ class debug(Cog_Extension):
     @commands.slash_command(description='測試指令')
     async def test(self,ctx:discord.ApplicationContext):
         #await ctx.defer()
-        command = self.bot.get_cog('command')
-        await command.dice(ctx,1,100)
+        # command = self.bot.get_cog('command')
+        # await command.dice(ctx,1,100)
+        await ctx.respond(view=MySelectMenusView(self.bot,ctx.guild.id,[865582049238843422,866241387166433300,870929961417068565]))
 
     @commands.slash_command(description='地圖生成測試')
     async def maptest(self,ctx:discord.ApplicationContext):

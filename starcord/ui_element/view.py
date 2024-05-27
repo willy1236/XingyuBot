@@ -1,6 +1,15 @@
-import discord,datetime,matplotlib,io
+import io
+from datetime import datetime
 from typing import TYPE_CHECKING
-from starcord.Utilities import BotEmbed
+
+import discord
+import matplotlib
+
+from ..Utilities import BotEmbed
+
+if TYPE_CHECKING:
+    from starcord.Database import MySQLDatabase
+    from starcord.Core import DiscordBot
 
 class PollOptionButton(discord.ui.Button):
     def __init__(self,label:str,poll_id:int,option_id:int,custom_id:str,row:int=None):
@@ -30,7 +39,7 @@ class PollOptionButton(discord.ui.Button):
                 await interaction.response.send_message(f"{interaction.user.mention} 已投了 {count} 票而無法投票",ephemeral=True)
                 return
             
-            r = view.sqldb.set_user_poll(self.poll_id,interaction.user.id,self.option_id,datetime.datetime.now(),vote_magnification)
+            r = view.sqldb.set_user_poll(self.poll_id,interaction.user.id,self.option_id,datetime.now(),vote_magnification)
             if r == 1:
                 await interaction.response.send_message(f"{interaction.user.mention} 已投票給 {self.label} {vote_magnification} 票",ephemeral=True)
             else:
@@ -100,8 +109,6 @@ class PollNowButton(discord.ui.Button):
 
 class PollView(discord.ui.View):
     if TYPE_CHECKING:
-        from starcord.DataExtractor import MySQLDatabase
-        from starcord.Core import DiscordBot
         poll_id: int
         sqldb: MySQLDatabase
         bot: DiscordBot | None
@@ -285,8 +292,6 @@ class PollView(discord.ui.View):
     
 class ElectionPollView(PollView):
     if TYPE_CHECKING:
-        from starcord.DataExtractor import MySQLDatabase
-        from starcord.Core import DiscordBot
         poll_id: int
         sqldb: MySQLDatabase
         bot: DiscordBot

@@ -62,7 +62,7 @@ class BackupRoles:
         self.description = dct.get('description')
         self.user_ids = user_ids
         if isinstance(self.created_at, datetime):
-            self.created_at.replace(tzinfo=tz)
+            self.created_at = self.created_at.replace(tzinfo=tz)
     
     def embed(self, bot):
         embed = BotEmbed.simple(self.name,self.description)

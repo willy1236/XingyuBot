@@ -10,6 +10,9 @@ from ..types import DBGame,Coins,ActivitiesStatue
 from ..FileDatabase import Jsondb
 from .rpg import *
 
+if TYPE_CHECKING:
+    from starcord.Database import MySQLDatabase
+
 class RegistrationData():
     if TYPE_CHECKING:
         registrations_id: int
@@ -69,7 +72,6 @@ class Pet():
 class DiscordUser(BaseUser):
     """Discord用戶"""
     if TYPE_CHECKING:
-        from starcord.Database import MySQLDatabase
         sqldb: MySQLDatabase
         user_dc: discord.User | None
         point: int
@@ -322,7 +324,6 @@ class CityBattlePlayer(RPGUser):
 
 class CityBattle(ListObject):
     if TYPE_CHECKING:
-        from starcord.Database import MySQLDatabase
         sqldb: MySQLDatabase
     
     def __init__(self,data,sqldb=None):

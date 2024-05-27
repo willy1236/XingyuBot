@@ -87,7 +87,7 @@ async def on_stream_online(event: eventsub.StreamOnlineEvent):
     if sclient.bot:
         loop = sclient.bot.loop
         channel = sclient.bot.get_channel(566533708371329026)
-        asyncio.run_coroutine_threadsafe(channel.send(f'{event.event.broadcaster_user_name} starting stream!'), loop)
+        asyncio.run_coroutine_threadsafe(channel.send(f'{event.event.broadcaster_user_name} starting {event.event.type}!'), loop)
         
 
 async def on_stream_offline(event: eventsub.StreamOfflineEvent):

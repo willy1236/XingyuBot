@@ -57,25 +57,58 @@ class system_community(Cog_Extension):
 
         else:
             await ctx.respond(f'錯誤：找不到用戶{twitch_user}')
+
+    @twitch.command(description='設置twitch剪輯通知')
+    async def clip(self,ctx,
+                  twitch_user:discord.Option(str,required=True,name='twitch用戶',description='當此用戶有新影片時會發送通知'),
+                  channel:discord.Option(discord.TextChannel,required=True,name='頻道',description='通知發送頻道'),
+                  role:discord.Option(discord.Role,required=False,default=None,name='身分組',description='發送通知時tag的身分組')):
+        guildid = ctx.guild.id
+        channelid = channel.id
+        roleid = role.id if role else None
+        api = TwitchAPI()
+        user = api.get_user(twitch_user)
+        if user:
+            sclient.sqldb.set_notify_community('twitch_c',user.id,guildid,channelid,roleid,user.login)
+            if role:
+                await ctx.respond(f'設定成功：{user.display_name}({user.login})的剪輯通知將會發送在{channel.mention}並會通知{role.mention}')
+            else:
+                await ctx.respond(f'設定成功：{user.display_name}({user.login})的剪輯通知將會發送在{channel.mention}')
+                
+            sclient.scheduler.add_job(sclient.init_NoticeClient,"date",args=["twitch_c"])
+
+            cache = Jsondb.read_cache('twitch_c')
+            cache[user.id] = datetime.datetime.now().isoformat()
+            Jsondb.write_cache('twitch_c',cache)
+
+        else:
+            await ctx.respond(f'錯誤：找不到用戶{twitch_user}')
     
     @twitch.command(description='移除twitch開台通知')
     async def remove(self,ctx,
                      twitch_user:discord.Option(str,required=True,name='twitch用戶'),
                      notify_type:discord.Option(str,required=False,name='通知種類',description='通知種類，留空為移除全部',choices=twitch_notify_option)):
         guildid = ctx.guild.id
+        user = TwitchAPI().get_user(twitch_user)
         if not notify_type or notify_type == "1":
             sclient.sqldb.remove_notify_community('twitch',twitch_user,guildid)
         if not notify_type or notify_type == "2":
             sclient.sqldb.remove_notify_community('twitch_v',twitch_user,guildid)
             
-            user = TwitchAPI().get_user(twitch_user)
             cache = Jsondb.read_cache('twitch_v')
             del cache[user.id]
             Jsondb.write_cache('twitch_v',cache)
+
+        if not notify_type or notify_type == "3":
+            sclient.sqldb.remove_notify_community('twitch_c',twitch_user,guildid)
+
+            cache = Jsondb.read_cache('twitch_c')
+            del cache[user.id]
+            Jsondb.write_cache('twitch_c',cache)
         
         await ctx.respond(f'已移除 {twitch_user} 的通知')
         
-        sclient.scheduler.add_job(sclient.init_NoticeClient,"date",args=["twitch","twitch_v"])
+        sclient.scheduler.add_job(sclient.init_NoticeClient,"date",args=["twitch","twitch_v","twitch_c"])
 
     @twitch.command(description='確認twitch開台通知')
     async def notify(self,ctx,twitch_user:discord.Option(str,required=True,name='twitch用戶')):
@@ -103,6 +136,9 @@ class system_community(Cog_Extension):
             
             if data['notify_type'] == "twitch_v":
                 display_name += "（影片）"
+
+            if data['notify_type'] == "twitch_c":
+                display_name += "（剪輯）"
 
             channel = self.bot.get_channel(channel_id)
             if role_id:

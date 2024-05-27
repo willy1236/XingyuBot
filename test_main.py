@@ -43,8 +43,9 @@ if __name__ == '__main__':
 			# "請創造一個故事中的角色，賦予它與眾不同的性格與興趣愛好，包含一段關於他的故事，並且符合快樂營的相關設定，但不要與妳自己的設定雷同，也不要有與星空相關的能力",
 	  		# "星羽 妳知道無黨籍這個政黨嗎",
 	 		# "威立：星羽 如果你是台中摃殘黨的主席，同時又當選總統，那你會如何對待選輸的海豹，執行共殘黨理念中的「把不要的總統放進消波塊流放邊疆」？",
-			"星羽 請將無黨籍黨的以SWOT分析後作成表格",
+			# "星羽 請將無黨籍黨的以SWOT分析後作成表格",
 			# "如果你有一個專屬武器，那會叫什麼？是什麼樣的武器？",
+
 			 ]
 	# for i in content:
 	# 	print(f"{i}：")
@@ -92,7 +93,11 @@ if __name__ == '__main__':
 	# for i in data:
 	# 	print(datetime.fromisoformat(i["created_at"]).astimezone(tz=tz))
 	
-	dbdata = sqldb.get_all_backup_roles()
+	# dbdata = sqldb.get_all_backup_roles()
 
-	print(dbdata[0].created_at)
-	print(dbdata[0].created_at.tzinfo)
+	# print(dbdata[0].created_at)
+	# print(dbdata[0].created_at.tzinfo)
+	api = TwitchAPI()
+	for i in api.get_clips([490765956,843151396],started_at=datetime(2023,6,4,17,12,0)):
+		print(i.broadcaster_name,i.created_at)
+	
