@@ -1,9 +1,13 @@
-import discord,datetime
+from datetime import datetime
+
+import discord
 from discord.ext import commands
 from discord.commands import SlashCommandGroup
+
 from starcord.DataExtractor import TwitchAPI,YoutubeAPI,YoutubeRSS
 from starcord.ui_element.view import ReactionRole1, WelcomeView
 from starcord import Cog_Extension,BotEmbed,sclient,Jsondb,ChoiceList
+from starcord.types import NotifyCommunityType
 
 twitch_notify_option = ChoiceList.set("twitch_notify_option")
 
@@ -13,94 +17,62 @@ class system_community(Cog_Extension):
     
     @twitch.command(description='設置twitch開台通知')
     async def set(self,ctx,
+                  notify_type:discord.Option(int,required=True,name='通知種類',description='通知種類',choices=twitch_notify_option),
                   twitch_user:discord.Option(str,required=True,name='twitch用戶',description='當此用戶開台時會發送通知'),
                   channel:discord.Option(discord.TextChannel,required=True,name='頻道',description='通知發送頻道'),
                   role:discord.Option(discord.Role,required=False,default=None,name='身分組',description='發送通知時tag的身分組')):
         guildid = ctx.guild.id
         channelid = channel.id
         roleid = role.id if role else None
-
-        user = TwitchAPI().get_user(twitch_user)
-        if user:
-            sclient.sqldb.set_notify_community('twitch',twitch_user,guildid,channelid,roleid)
-            if role:
-                await ctx.respond(f'設定成功：{user.display_name}({user.login})的開台通知將會發送在{channel.mention}並會通知{role.mention}')
-            else:
-                await ctx.respond(f'設定成功：{user.display_name}({user.login})的開台通知將會發送在{channel.mention}')
-                
-            sclient.scheduler.add_job(sclient.init_NoticeClient,"date",args=["twitch"])
-        else:
-            await ctx.respond(f'錯誤：找不到用戶{twitch_user}')
-
-    @twitch.command(description='設置twitch影片通知')
-    async def video(self,ctx,
-                  twitch_user:discord.Option(str,required=True,name='twitch用戶',description='當此用戶有新影片時會發送通知'),
-                  channel:discord.Option(discord.TextChannel,required=True,name='頻道',description='通知發送頻道'),
-                  role:discord.Option(discord.Role,required=False,default=None,name='身分組',description='發送通知時tag的身分組')):
-        guildid = ctx.guild.id
-        channelid = channel.id
-        roleid = role.id if role else None
+        type = NotifyCommunityType(notify_type)
         api = TwitchAPI()
+
         user = api.get_user(twitch_user)
+        type_tw = ChoiceList.get_tw(type.value, "twitch_notify_option")
         if user:
-            sclient.sqldb.set_notify_community('twitch_v',user.id,guildid,channelid,roleid,user.login)
+            sclient.sqldb.set_notify_community(type.value, twitch_user, guildid, channelid, roleid)
             if role:
-                await ctx.respond(f'設定成功：{user.display_name}({user.login})的影片通知將會發送在{channel.mention}並會通知{role.mention}')
+                await ctx.respond(f'設定成功：{user.display_name}({user.login})的{type_tw}將會發送在{channel.mention}並會通知{role.mention}')
             else:
-                await ctx.respond(f'設定成功：{user.display_name}({user.login})的影片通知將會發送在{channel.mention}')
-                
-            sclient.scheduler.add_job(sclient.init_NoticeClient,"date",args=["twitch_v"])
-
-            cache = Jsondb.read_cache('twitch_v')
-            cache[user.id] = api.get_videos(user.id)[0].created_at.isoformat()
-            Jsondb.write_cache('twitch_v',cache)
-
-        else:
-            await ctx.respond(f'錯誤：找不到用戶{twitch_user}')
-
-    @twitch.command(description='設置twitch剪輯通知')
-    async def clip(self,ctx,
-                  twitch_user:discord.Option(str,required=True,name='twitch用戶',description='當此用戶有新影片時會發送通知'),
-                  channel:discord.Option(discord.TextChannel,required=True,name='頻道',description='通知發送頻道'),
-                  role:discord.Option(discord.Role,required=False,default=None,name='身分組',description='發送通知時tag的身分組')):
-        guildid = ctx.guild.id
-        channelid = channel.id
-        roleid = role.id if role else None
-        api = TwitchAPI()
-        user = api.get_user(twitch_user)
-        if user:
-            sclient.sqldb.set_notify_community('twitch_c',user.id,guildid,channelid,roleid,user.login)
-            if role:
-                await ctx.respond(f'設定成功：{user.display_name}({user.login})的剪輯通知將會發送在{channel.mention}並會通知{role.mention}')
-            else:
-                await ctx.respond(f'設定成功：{user.display_name}({user.login})的剪輯通知將會發送在{channel.mention}')
-                
-            sclient.scheduler.add_job(sclient.init_NoticeClient,"date",args=["twitch_c"])
-
-            cache = Jsondb.read_cache('twitch_c')
-            cache[user.id] = datetime.datetime.now().isoformat()
-            Jsondb.write_cache('twitch_c',cache)
-
+                await ctx.respond(f'設定成功：{user.display_name}({user.login})的{type_tw}將會發送在{channel.mention}')
+            
+            args = []
+            if type == NotifyCommunityType.Twitch:
+                args.append("twitch")
+            
+            elif type == NotifyCommunityType.TwitchVideo:
+                args.append("twitch_v")
+                cache = Jsondb.read_cache('twitch_v')
+                cache[user.id] = api.get_videos(user.id)[0].created_at.isoformat()
+                Jsondb.write_cache('twitch_v',cache)
+            
+            elif type == NotifyCommunityType.TwitchClip:
+                args.append("twitch_c")
+                cache = Jsondb.read_cache('twitch_c')
+                cache[user.id] = datetime.now().isoformat()
+                Jsondb.write_cache('twitch_c',cache)
+            sclient.scheduler.add_job(sclient.init_NoticeClient,"date",args=args)
         else:
             await ctx.respond(f'錯誤：找不到用戶{twitch_user}')
     
     @twitch.command(description='移除twitch開台通知')
     async def remove(self,ctx,
                      twitch_user:discord.Option(str,required=True,name='twitch用戶'),
-                     notify_type:discord.Option(str,required=False,name='通知種類',description='通知種類，留空為移除全部',choices=twitch_notify_option)):
+                     notify_type:discord.Option(int,required=False,name='通知種類',description='通知種類，留空為移除全部',choices=twitch_notify_option)):
         guildid = ctx.guild.id
+        type = NotifyCommunityType(notify_type) if notify_type else None
         user = TwitchAPI().get_user(twitch_user)
-        if not notify_type or notify_type == "1":
-            sclient.sqldb.remove_notify_community('twitch',twitch_user,guildid)
-        if not notify_type or notify_type == "2":
-            sclient.sqldb.remove_notify_community('twitch_v',twitch_user,guildid)
-            
+        if not type or type == NotifyCommunityType.Twitch:
+            sclient.sqldb.remove_notify_community(NotifyCommunityType.Twitch.value, twitch_user, guildid)
+        if not notify_type or type == NotifyCommunityType.TwitchVideo:
+            sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitchVideo.value, twitch_user, guildid)
+
             cache = Jsondb.read_cache('twitch_v')
             del cache[user.id]
             Jsondb.write_cache('twitch_v',cache)
 
-        if not notify_type or notify_type == "3":
-            sclient.sqldb.remove_notify_community('twitch_c',twitch_user,guildid)
+        if not type or type == NotifyCommunityType.TwitchClip:
+            sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitchClip.value, twitch_user, guildid)
 
             cache = Jsondb.read_cache('twitch_c')
             del cache[user.id]
@@ -113,7 +85,7 @@ class system_community(Cog_Extension):
     @twitch.command(description='確認twitch開台通知')
     async def notify(self,ctx,twitch_user:discord.Option(str,required=True,name='twitch用戶')):
         guildid = ctx.guild.id
-        record = sclient.sqldb.get_notify_community_user('twitch',twitch_user,guildid)
+        record = sclient.sqldb.get_notify_community_user(NotifyCommunityType.Twitch.value, twitch_user, guildid)
         if record:
             channel = self.bot.get_channel(record[0]['channel_id'])
             role = channel.guild.get_role(record[0]['role_id'])
@@ -124,20 +96,21 @@ class system_community(Cog_Extension):
         else:
             await ctx.respond(f'TwitchID: {twitch_user} 在此群組沒有設開台通知')
     
-    @twitch.command(description='確認群組內所有的twitch開台通知')
-    async def list(self,ctx):
+    @twitch.command(description='確認群組內所有的twitch通知')
+    async def list(self,ctx:discord.ApplicationContext):
         guildid = ctx.guild.id
         embed = BotEmbed.general("twitch開台通知",ctx.guild.icon.url if ctx.guild.icon else None)
-        dbdata = sclient.sqldb.get_notify_community_list('twitch',guildid) + sclient.sqldb.get_notify_community_list('twitch_v',guildid) + sclient.sqldb.get_notify_community_list('twitch_c',guildid)
+        dbdata = sclient.sqldb.get_notify_community_list(NotifyCommunityType.Twitch.value,guildid) + sclient.sqldb.get_notify_community_list(NotifyCommunityType.TwitchVideo.value,guildid) + sclient.sqldb.get_notify_community_list(NotifyCommunityType.TwitchClip.value,guildid)
         for data in dbdata:
             display_name = data['display_name'] if data['display_name'] else data['notify_name']
             channel_id = data['channel_id']
             role_id = data['role_id']
+            notify_type = NotifyCommunityType(data['notify_type'])
             
-            if data['notify_type'] == "twitch_v":
+            if notify_type == NotifyCommunityType.TwitchVideo:
                 display_name += "（影片）"
 
-            if data['notify_type'] == "twitch_c":
+            if notify_type == NotifyCommunityType.TwitchClip:
                 display_name += "（剪輯）"
 
             channel = self.bot.get_channel(channel_id)
@@ -182,7 +155,7 @@ class system_community(Cog_Extension):
 
         ytchannel = YoutubeAPI().get_channel(handle=ythandle)
         if ytchannel:
-            sclient.sqldb.set_notify_community('youtube',ytchannel.id,guildid,channelid,roleid,ytchannel.title)
+            sclient.sqldb.set_notify_community(NotifyCommunityType.Youtube.value,ytchannel.id,guildid,channelid,roleid,ytchannel.title)
             if role:
                 await ctx.respond(f'設定成功：{ytchannel.title}的通知將會發送在{channel.mention}並會通知{role.mention}')
             else:
@@ -207,7 +180,7 @@ class system_community(Cog_Extension):
             await ctx.respond(f'錯誤：找不到帳號代碼 {ythandle} 的頻道')
             return
 
-        sclient.sqldb.remove_notify_community('youtube',ytchannel.id,guildid)
+        sclient.sqldb.remove_notify_community(NotifyCommunityType.Youtube.value,ytchannel.id,guildid)
         await ctx.respond(f'已移除頻道 {ytchannel.title} 的通知')
         
         sclient.scheduler.add_job(sclient.init_NoticeClient,"date",args=["youtube"])
@@ -225,7 +198,7 @@ class system_community(Cog_Extension):
             await ctx.respond(f'錯誤：找不到帳號代碼 {ythandle} 的頻道')
             return
         
-        record = sclient.sqldb.get_notify_community_user('youtube',ytchannel.id,guildid)
+        record = sclient.sqldb.get_notify_community_user(NotifyCommunityType.Youtube.value,ytchannel.id,guildid)
         if record:
             channel = self.bot.get_channel(record[0]['channel_id'])
             role = channel.guild.get_role(record[0]['role_id'])
@@ -240,7 +213,7 @@ class system_community(Cog_Extension):
     async def list(self,ctx):
         guildid = ctx.guild.id
         embed = BotEmbed.general("youtube通知",ctx.guild.icon.url if ctx.guild.icon else discord.Embed.Empty)
-        dbdata = sclient.sqldb.get_notify_community_list('youtube',guildid)
+        dbdata = sclient.sqldb.get_notify_community_list(NotifyCommunityType.Youtube.value,guildid)
         for data in dbdata:
             notify_name = data['display_name'] if data.get("display_name") else data['notify_name']
             channel_id = data['channel_id']

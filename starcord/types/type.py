@@ -1,13 +1,13 @@
 from enum import Enum, IntEnum
 
 class NotifyCommunityType(IntEnum):
-    TWITCH = 1
-    YOUTUBE = 2
-    TWITCH_VIDEO = 3
+    Twitch = 1
+    Youtube = 2
+    TwitchVideo = 3
     TwitchClip = 4
 
 class NotifyChannelType(IntEnum):
-    Bot_Updates = 1
+    BotUpdates = 1
     EarthquakeNotifications = 2
     WeatherForecast = 3
     ApexRotation = 4

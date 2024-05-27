@@ -11,6 +11,7 @@ from requests.exceptions import ConnectTimeout
 from starcord import Cog_Extension,Jsondb,sclient,log,BotEmbed,Utilities, ChoiceList
 from starcord.DataExtractor import *
 from starcord.models.community import TwitchVideo, YoutubeVideo
+from starcord.types import NotifyCommunityType
 
 def slice_list(lst:list[YoutubeVideo], target) -> list[YoutubeVideo]:
     """以target為基準取出更新的影片資訊"""
@@ -181,7 +182,7 @@ class task(Cog_Extension):
             if data[user] and not user_cache:
                 twitch_cache[user] = True
                 embed = data[user].embed()
-                guilds = sclient.sqldb.get_notify_community_guild('twitch',user)
+                guilds = sclient.sqldb.get_notify_community_guild(NotifyCommunityType.Twitch.value, user)
                 for guildid in guilds:
                     guild = self.bot.get_guild(guildid)
                     channel = self.bot.get_channel(guilds[guildid][0])
@@ -215,7 +216,7 @@ class task(Cog_Extension):
 
                 for data in video_list:
                     embed = data.embed()
-                    guilds = sclient.sqldb.get_notify_community_guild('twitch_v',data.user_id)
+                    guilds = sclient.sqldb.get_notify_community_guild(NotifyCommunityType.TwitchVideo.value,data.user_id)
                     for guildid in guilds:
                         guild = self.bot.get_guild(guildid)
                         channel = self.bot.get_channel(guilds[guildid][0])
@@ -246,7 +247,7 @@ class task(Cog_Extension):
                 for clip in clips:
                     newest = clip.created_at if clip.created_at > newest else newest
                     embed = clip.embed()
-                    guilds = sclient.sqldb.get_notify_community_guild('twitch_c',broadcaster_id)
+                    guilds = sclient.sqldb.get_notify_community_guild(NotifyCommunityType.TwitchClip.value,broadcaster_id)
                     
                     for guildid in guilds:
                         guild = self.bot.get_guild(guildid)
@@ -286,7 +287,7 @@ class task(Cog_Extension):
                 #發布通知
                 for video in video_list:
                     embed = video.embed()
-                    guilds = sclient.sqldb.get_notify_community_guild('youtube',ytchannel_id)
+                    guilds = sclient.sqldb.get_notify_community_guild(NotifyCommunityType.Youtube.value,ytchannel_id)
                     for guildid in guilds:
                         guild = self.bot.get_guild(guildid)
                         channel = self.bot.get_channel(guilds[guildid][0])
