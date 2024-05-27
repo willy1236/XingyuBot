@@ -103,10 +103,13 @@ if __name__ == "__main__":
         time.sleep(2)
 
     if twitch_bot:
-        from app.twitch_chatbot import run, run_sakagawa
-        asyncio.run(run())
+        from app.twitch_chatbot import TwitchBotThread, SakagawaEventsubThread
+        twitchbot_thread = TwitchBotThread()
+        twitchbot_thread.start()
         time.sleep(2)
-        asyncio.run(run_sakagawa())
+
+        sakagawa_thread = SakagawaEventsubThread()
+        sakagawa_thread.start()
     
     try:
         bot.run()

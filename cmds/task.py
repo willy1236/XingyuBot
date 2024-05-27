@@ -45,7 +45,7 @@ class task(Cog_Extension):
             scheduler.add_job(self.earthquake_check,'interval',minutes=2,jitter=30,misfire_grace_time=40)
             scheduler.add_job(self.youtube_video,'interval',minutes=15,jitter=30,misfire_grace_time=40)
             scheduler.add_job(self.twitch_video,'interval',minutes=15,jitter=30,misfire_grace_time=40)
-            scheduler.add_job(self.twitch_clip,'interval',minutes=15,jitter=30,misfire_grace_time=40)
+            scheduler.add_job(self.twitch_clip,'interval',minutes=10,jitter=30,misfire_grace_time=40)
             #scheduler.add_job(self.city_battle,'interval',minutes=1,jitter=30,misfire_grace_time=60)
             #scheduler.add_job(self.get_mongodb_data,'interval',minutes=3,jitter=30,misfire_grace_time=40)
 
@@ -204,8 +204,9 @@ class task(Cog_Extension):
         if not users:
             return
         twitch_cache = Jsondb.read_cache('twitch_v') or {}
+        api = TwitchAPI()
         for user in users:
-            videos = TwitchAPI().get_videos(user)
+            videos = api.get_videos(user)
             cache_last_update_time = datetime.fromisoformat(twitch_cache.get(user)) if twitch_cache.get(user) else None
             if not cache_last_update_time or videos[0].created_at > cache_last_update_time:
                 videos.reverse()
@@ -235,9 +236,10 @@ class task(Cog_Extension):
         if not users:
             return
         twitch_cache = Jsondb.read_cache('twitch_c') or {}
+        api = TwitchAPI()
         for user in users:
             cache_last_update_time = datetime.fromisoformat(twitch_cache.get(user)) if twitch_cache.get(user) else None
-            clips = TwitchAPI().get_clips(user, started_at=cache_last_update_time.strftime('%Y-%m-%dT%H:%M:%SZ') if cache_last_update_time else None)
+            clips = api.get_clips(user, started_at=cache_last_update_time.strftime('%Y-%m-%dT%H:%M:%SZ') if cache_last_update_time else None)
             if clips:
                 newest = clips[0].created_at
                 broadcaster_id = clips[0].broadcaster_id

@@ -22,7 +22,6 @@ class TwitchAPI(CommunityInterface):
         self._headers = self.__get_headers()    
 
     def __get_headers(self):
-        #客戶端憑據僅能使用API
         TOKENURL = "https://id.twitch.tv/oauth2/token"
         #headers = {"Content-Type": "application/x-www-form-urlencoded"}
         tokens = Jsondb.get_token('twitch')
@@ -34,7 +33,7 @@ class TwitchAPI(CommunityInterface):
 
         r = requests.post(TOKENURL, params=params)
         apidata = r.json()
-        if r.status_code == 200:
+        if r.ok:
             headers = {
                 'Authorization': f"Bearer {apidata['access_token']}",
                 'Client-Id':tokens[0]
