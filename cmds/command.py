@@ -527,7 +527,7 @@ class command(Cog_Extension):
 
         if party_id:
             dbdata = sclient.sqldb.get_user_party(user_dc.id)
-            joined_party = [party_data.get("party_id") for party_data in dbdata] if dbdata else []
+            joined_party = [party_data.id for party_data in dbdata] if dbdata else []
             if not party_id in joined_party:
                 await ctx.respond(f"{user_dc.mention}：你沒有參加 {ChoiceList.get_tw(party_id,'party_option')}")
                 return
