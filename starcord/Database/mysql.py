@@ -1055,18 +1055,18 @@ class MYSQLElectionSystem(MySQLBaseModel):
             ORDER BY `party_id`;
         """)
         records = self.cursor.fetchall()
-        return [Party(i) for i in records]
+        return [Party.model_validate(i) for i in records]
     
     def get_user_party(self,discord_id:int):
         self.cursor.execute(f"SELECT `user_party`.discord_id,`party_data`.* FROM `stardb_user`.`user_party` LEFT JOIN `database`.`party_data` ON user_party.party_id = party_data.party_id WHERE `discord_id` = {discord_id}")
         records = self.cursor.fetchall()
-        return [Party(i) for i in records]
+        return [Party.model_validate(i) for i in records]
     
     def get_party_data(self,party_id:int):
         self.cursor.execute(f"SELECT * FROM `database`.`party_data` WHERE `party_id` = {party_id};")
         records = self.cursor.fetchall()
         if records:
-            return Party(records[0])
+            return Party.model_validate(records[0])
 
 class MySQLRegistrationSystem(MySQLBaseModel):
     def get_resgistration_dict(self):

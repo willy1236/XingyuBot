@@ -375,7 +375,7 @@ class task(Cog_Extension):
 
     async def start_eletion(self):
         log.info("start_eletion start")
-        session = Utilities.calculate_eletion_session()
+        session = Utilities.calculate_eletion_session(datetime.now())
         channel = self.bot.get_channel(1163127708839071827)
 
         embed = sclient.election_format(session,self.bot)

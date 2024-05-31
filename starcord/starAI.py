@@ -1,3 +1,4 @@
+import time
 from io import BytesIO
 from typing import TYPE_CHECKING
 

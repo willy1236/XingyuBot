@@ -56,11 +56,15 @@ def get_guildid(before:discord.VoiceState, after:discord.VoiceState):
         return after.channel.guild.id
     return
 
+def check_spam(message:discord.Message, user_id:int):
+    return message.author.id == user_id
+
 class event(Cog_Extension):    
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
         is_owner = await self.bot.is_owner(message.author)
+
         #被提及回報
         if self.bot.user in message.mentions and not is_owner:
             await BRS.mentioned(self.bot,message)
@@ -95,7 +99,7 @@ class event(Cog_Extension):
 
         #ai chat
         if message.guild and message.guild.id in [613747262291443742, 566533708371329024] and not message.author.bot:
-            if message.content and message.content.startswith(".") and message.content[1] and message.content[1] != ".":
+            if message.content and message.content.startswith(".") and len(message.content) > 1 and message.content[1] != ".":
                 #image_bytes = await message.attachments[0].read() if message.attachments else None
                 text = sclient.starai.generate_aitext(f"{member_names.get(message.author.id,message.author.name)}：{message.content[1:]}")
                 await message.reply(text,mention_author=False)
@@ -127,17 +131,18 @@ class event(Cog_Extension):
                 #洗頻防制
                 # spam_count = 0
                 # try:
-                #     async for past_message in message.channel.history(limit=6,oldest_first=True,after=datetime.datetime.now()-datetime.timedelta(seconds=5)):
-                #         #if past_message.author == message.author and past_message.content == message.content:
+                #     now = datetime.now()
+                #     async for past_message in message.channel.history(limit=6, oldest_first=True, after=now-timedelta(seconds=3)):
                 #         if past_message.author == message.author:
                 #             spam_count += 1
+
+                #     if spam_count >= 5 and not message.author.timed_out:
+                #         await message.author.timeout_for(duration=timedelta(seconds=60),reason="快速發送訊息")
+                #         if message.channel.last_message.author != self.bot.user:
+                #             await message.channel.purge(limit=10,check=lambda message, user_id=message.author.id: check_spam(message, user_id), around=now)
+                #             await message.channel.send(f"{message.author.mention} 請不要快速發送訊息")
                 # except (discord.errors.Forbidden, AttributeError):
                 #     pass
-                
-                # if spam_count >= 5 and not message.author.timed_out:
-                #     await message.author.timeout_for(duration=datetime.timedelta(seconds=60),reason="快速發送訊息")
-                #     await message.channel.purge(limit=5)
-                #     await message.channel.send(f"{message.author.mention} 請不要快速發送訊息")
 
             
             #跨群聊天Ver.1.0

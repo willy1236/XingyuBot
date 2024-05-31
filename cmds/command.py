@@ -679,7 +679,7 @@ class command(Cog_Extension):
                     party_id:discord.Option(int,name='政黨',description='要參加的政黨',choices=party_option)):
         sclient.sqldb.join_party(ctx.author.id,party_id)
         dbdata = sclient.sqldb.get_party_data(party_id)
-        role_id = dbdata["role_id"]
+        role_id = dbdata.role_id
         try:
             role = ctx.guild.get_role(role_id)
             if role:
@@ -694,7 +694,7 @@ class command(Cog_Extension):
                     party_id:discord.Option(int,name='政黨',description='要離開的政黨',choices=party_option)):
         sclient.sqldb.leave_party(ctx.author.id,party_id)
         dbdata = sclient.sqldb.get_party_data(party_id)
-        role_id = dbdata["role_id"]
+        role_id = dbdata.role_id
         try:
             role = ctx.author.get_role(role_id)
             if role:

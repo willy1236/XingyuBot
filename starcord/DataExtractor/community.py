@@ -119,8 +119,9 @@ class TwitchAPI(CommunityInterface):
             return None
 
 class YoutubeAPI(CommunityInterface):
+    URL = "https://www.googleapis.com/youtube/v3"
+    
     def __init__(self):
-        self.URL = "https://www.googleapis.com/youtube/v3"
         self.__token = Jsondb.get_token('youtube')
         self.__headers = {
             'Authorization': f'Bearer {self.__token}',
@@ -319,7 +320,6 @@ class GoogleCloud():
                 print(u'{0} ({1})'.format(item['name'], item['id']))
             return results
         except HttpError as error:
-            # TODO(developer) - Handle errors from drive API.
             print(f'An error occurred: {error}')
 
     def list_file_permissions(self,fileId):

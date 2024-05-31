@@ -1,5 +1,6 @@
 import discord
 from starcord.DataExtractor import sqldb
+from ..Utilities import log
 
 class ReactRole_button(discord.ui.View):
     def __init__(self):
@@ -87,6 +88,7 @@ class Delete_Add_Role_button(discord.ui.View):
             self.clear_items()
             for user in self.role.members:
                 sqldb.add_role_save(user.id,self.role)
+                log.info(f"{user} has been added to the role {self.role}")
             await self.message.edit(view=self)
         except discord.errors.NotFound:
             pass
