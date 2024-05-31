@@ -180,7 +180,7 @@ class ElectionSystem():
             #新增資料
             if discord_id not in results[position]:
                 results[position][discord_id] = [username, [party]]
-            else:
+            elif party not in results[position][discord_id][1]:
                 results[position][discord_id][1].append(party)
 
         # create embed

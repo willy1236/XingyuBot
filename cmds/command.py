@@ -28,8 +28,6 @@ party_option = ChoiceList.set('party_option')
 
 main_guild = Jsondb.jdata.get('main_guild')
 
-session = calculate_eletion_session()
-
 position_role = {
     "1": 1161686745126019082,
     "2": 1161686757373399132,
@@ -532,6 +530,7 @@ class command(Cog_Extension):
                 await ctx.respond(f"{user_dc.mention}：你沒有參加 {ChoiceList.get_tw(party_id,'party_option')}")
                 return
         
+        session = calculate_eletion_session(datetime.now())
         sclient.sqldb.add_election(user_dc.id,session + 1,position,party_id)
         await ctx.respond(f"{user_dc.mention}：完成競選報名 {ChoiceList.get_tw(position,'position_option')}")
         
@@ -539,6 +538,7 @@ class command(Cog_Extension):
     @election.command(description='離開選舉')
     async def leave(self, ctx, 
                     position:discord.Option(str,name='職位',description='要退選的職位',choices=position_option)):
+        session = calculate_eletion_session(datetime.now())
         sclient.sqldb.remove_election(ctx.author.id,session + 1,position)
         
         text = f"{ctx.author.mention}：完成競選退出"
@@ -550,13 +550,15 @@ class command(Cog_Extension):
     @commands.is_owner()
     async def format(self, ctx, last:discord.Option(bool,name='上屆候選人名單',description='是否顯示上屆候選人名單',default=False)):
         await ctx.defer()
-        embed = sclient.election_format(session if last else session + 1, self.bot)
+        session = calculate_eletion_session(datetime.now())
+        embed = sclient.election_format(session - 1 if last else session, self.bot)
         await ctx.respond(embed=embed)
 
     @election.command(description='開始投票')
     @commands.is_owner()
     async def start(self,ctx:discord.ApplicationContext):
         await ctx.defer()
+        session = calculate_eletion_session(datetime.now()) - 1
         dbdata = sclient.sqldb.get_election_full_by_session(session)
         results = {}
         for position in Jsondb.options["position_option"].keys():
