@@ -484,9 +484,11 @@ class command(Cog_Extension):
     @commands.is_owner()
     @poll.command(description='取得投票結果')
     async def result(self,ctx:discord.ApplicationContext,
-                   poll_id:discord.Option(int,name='投票id',description='')):
+                   poll_id:discord.Option(int,name='投票id',description=''),
+                   show_name:discord.Option(bool,name='是否顯示投票人',description='',default=False)):
         await ctx.defer()
         view = PollView(poll_id,sclient.sqldb,self.bot)
+        view.show_name = show_name
         embed = view.results_embed(ctx.interaction)
         await ctx.respond(embed=embed)
 

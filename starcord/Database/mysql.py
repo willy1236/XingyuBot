@@ -887,7 +887,7 @@ class MySQLPollSystem(MySQLBaseModel):
         self.cursor.executemany(f"INSERT INTO `database`.`poll_options` VALUES(%s,%s,%s);",lst)
         self.connection.commit()
 
-    def set_user_poll(self, poll_id: int, discord_id: int, vote_option: int = None, vote_at: datetime = None, vote_magnification: int = 1):
+    def set_user_poll(self, poll_id: int, discord_id: int, vote_option: int = None, vote_at: datetime = None, vote_magnification: int = 1, max_can_vote:int = None):
         """
         Sets the user's poll vote in the database.
 
@@ -897,18 +897,32 @@ class MySQLPollSystem(MySQLBaseModel):
             vote_option (int, optional): The option the user voted for. Defaults to None.
             vote_at (datetime, optional): The timestamp of the vote. Defaults to None.
             vote_magnification (int, optional): The magnification of the vote. Defaults to 1.
+            max_can_vote (int, optional): The maximum number of votes the user can cast. Defaults to None.
 
         Returns:
-            int: The result of the operation. -1 if the user's vote was deleted, 1 if the user's vote was inserted or updated.
+            int: The result of the operation.
+                -1 if the user's vote was deleted,\n
+                1 if the user's vote was inserted or updated, \n
+                2 if the user's vote reach the max poll can vote.
         
         Raises:
             SQLNotFoundError: If the poll with the given ID is not found in the database.
         """
+        count = 0
+        if max_can_vote:
+            count = self.get_user_vote_count(poll_id,discord_id)
+            if count > max_can_vote:
+                return 2
+
         self.cursor.execute(f"SELECT * FROM `stardb_user`.`user_poll` WHERE `poll_id` = {poll_id} AND `discord_id` = {discord_id} AND `vote_option` = {vote_option};")
         dbdata = self.cursor.fetchall()
         if dbdata:
             self.cursor.execute(f"DELETE FROM `stardb_user`.`user_poll` WHERE poll_id = {poll_id} AND discord_id = {discord_id} AND vote_option = {vote_option};")
             text = -1
+        
+        elif count == max_can_vote:
+            return 2
+        
         else:
             self.cursor.execute(f"INSERT INTO `stardb_user`.`user_poll` VALUES(%s,%s,%s,%s,%s);",(poll_id,discord_id,vote_option,vote_at,vote_magnification))
             text = 1

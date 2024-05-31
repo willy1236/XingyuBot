@@ -33,14 +33,11 @@ class PollOptionButton(discord.ui.Button):
                 if view.role_dict[roleid][1] > vote_magnification:
                     vote_magnification = view.role_dict[roleid][1]
         
-        if not view.role_dict or (have_only_role and can_vote):
-            count = view.sqldb.get_user_vote_count(view.poll_id,interaction.user.id)
-            if count >= view.number_of_user_votes:
-                await interaction.response.send_message(f"{interaction.user.mention} 已投了 {count} 票而無法投票",ephemeral=True)
-                return
-            
-            r = view.sqldb.set_user_poll(self.poll_id,interaction.user.id,self.option_id,datetime.now(),vote_magnification)
-            if r == 1:
+        if not view.role_dict or (have_only_role and can_vote):            
+            r = view.sqldb.set_user_poll(self.poll_id,interaction.user.id,self.option_id,datetime.now(),vote_magnification, view.number_of_user_votes)
+            if r == 2:
+                await interaction.response.send_message(f"{interaction.user.mention} 已投了 {view.number_of_user_votes} 票而無法投票",ephemeral=True)
+            elif r == 1:
                 await interaction.response.send_message(f"{interaction.user.mention} 已投票給 {self.label} {vote_magnification} 票",ephemeral=True)
             else:
                 await interaction.response.send_message(f"{interaction.user.mention} 已取消投票給 {self.label}",ephemeral=True)
