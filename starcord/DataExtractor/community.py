@@ -1,5 +1,5 @@
 import requests,os.path,feedparser
-from starcord.FileDatabase import Jsondb
+from starcord.fileDatabase import Jsondb
 from starcord.models.community import *
 from starcord.errors import Forbidden
 
@@ -16,7 +16,7 @@ class TwitchAPI(CommunityInterface):
     '''
     與Twitch api交互相關
     '''
-    URL = "https://api.twitch.tv/helix"
+    BaseURL = "https://api.twitch.tv/helix"
 
     def __init__(self):
         self._headers = self.__get_headers()    
@@ -52,7 +52,7 @@ class TwitchAPI(CommunityInterface):
             "user_login": users,
             "first": 1
         }
-        r = requests.get(f"{self.URL}/streams", params=params,headers=self._headers)
+        r = requests.get(f"{self.BaseURL}/streams", params=params,headers=self._headers)
         apidata = r.json()
         dict = {}
         
@@ -76,7 +76,7 @@ class TwitchAPI(CommunityInterface):
             "login": username,
             "first": 1
         }
-        r = requests.get(f"{self.URL}/users", params=params,headers=self._headers)
+        r = requests.get(f"{self.BaseURL}/users", params=params,headers=self._headers)
         apidata = r.json()
         if apidata.get('data'):
             return TwitchUser(apidata['data'][0])
@@ -95,7 +95,7 @@ class TwitchAPI(CommunityInterface):
             "first": 5,
             "type": types
         }
-        r = requests.get(f"{self.URL}/videos", params=params,headers=self._headers)
+        r = requests.get(f"{self.BaseURL}/videos", params=params,headers=self._headers)
         apidata = r.json()
         if apidata.get('data'):
             return [TwitchVideo(i) for i in apidata['data']]
@@ -111,7 +111,7 @@ class TwitchAPI(CommunityInterface):
             params['started_at'] = started_at.strftime('%Y-%m-%dT%H:%M:%SZ')
             params['ended_at'] = datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
 
-        r = requests.get(f"{self.URL}/clips", params=params,headers=self._headers)
+        r = requests.get(f"{self.BaseURL}/clips", params=params,headers=self._headers)
         apidata = r.json()
         if apidata.get('data'):
             return [TwitchClip(i) for i in apidata['data']]
@@ -119,7 +119,7 @@ class TwitchAPI(CommunityInterface):
             return None
 
 class YoutubeAPI(CommunityInterface):
-    URL = "https://www.googleapis.com/youtube/v3"
+    BaseURL = "https://www.googleapis.com/youtube/v3"
     
     def __init__(self):
         self.__token = Jsondb.get_token('youtube')
@@ -144,7 +144,7 @@ class YoutubeAPI(CommunityInterface):
             'part': 'id',
             'maxResults': 1
         }
-        r = requests.get(f'{self.URL}/channels', params=params)
+        r = requests.get(f'{self.BaseURL}/channels', params=params)
         if r.ok:
             data = r.json()
             if data['pageInfo']['totalResults']:
@@ -168,7 +168,7 @@ class YoutubeAPI(CommunityInterface):
             'part': 'statistics,snippet',
             'maxResults':1
         }
-        r = requests.get(f'{self.URL}/channels',params=params)
+        r = requests.get(f'{self.BaseURL}/channels',params=params)
         if r.ok and r.json().get('items'):
             return YoutubeChannel(r.json().get('items')[0])
         else:
@@ -180,7 +180,7 @@ class YoutubeAPI(CommunityInterface):
             'channelId': channel_id,
             'part': 'contentDetails'
         }
-        r = requests.get(f'{self.URL}/channelSections',params=params)
+        r = requests.get(f'{self.BaseURL}/channelSections',params=params)
         if r.status_code == 200:
             print(r)
             print(r.json())
@@ -197,7 +197,7 @@ class YoutubeAPI(CommunityInterface):
             'eventType':'live',
             'type': 'video'
         }
-        r = requests.get(f'{self.URL}/search',params=params)
+        r = requests.get(f'{self.BaseURL}/search',params=params)
         if r.status_code == 200:
             print(r)
             print(r.json())
@@ -214,7 +214,7 @@ class YoutubeAPI(CommunityInterface):
             'eventType':'live',
             'type': 'video'
         }
-        r = requests.get(f'{self.URL}/search',params=params)
+        r = requests.get(f'{self.BaseURL}/search',params=params)
         if r.status_code == 200 and r.json()['items']:
             return YouTubeStream(r.json()['items'][0])
         else:
@@ -228,7 +228,7 @@ class YoutubeAPI(CommunityInterface):
             'part': 'snippet',
             'id': video_id
         }
-        r = requests.get(f'{self.URL}/videos',params=params)
+        r = requests.get(f'{self.BaseURL}/videos',params=params)
         if r.ok:
             return [YoutubeVideo(i) for i in r.json()['items']] if r.json()['items'] else None
         else:
@@ -242,7 +242,7 @@ class YoutubeAPI(CommunityInterface):
             'part': 'snippet,contentDetails',
             'id': playlist_id
         }
-        r = requests.get(f'{self.URL}/playlists',params=params)
+        r = requests.get(f'{self.BaseURL}/playlists',params=params)
         if r.ok:
             return r.json()['items'][0] if r.json()['items'] else None
         else:
@@ -256,7 +256,7 @@ class YoutubeAPI(CommunityInterface):
             'part': 'snippet,contentDetails',
             'playlistId': playlist_id
         }
-        r = requests.get(f'{self.URL}/playlistItems',params=params)
+        r = requests.get(f'{self.BaseURL}/playlistItems',params=params)
         if r.ok:
             return r.json()['items'][0] if r.json()['items'] else None
         else:

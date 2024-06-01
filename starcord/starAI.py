@@ -6,7 +6,7 @@ import google.generativeai as genai
 import google.api_core.exceptions
 from PIL import Image
 
-from .FileDatabase import Jsondb
+from .fileDatabase import Jsondb
 
 genai.configure(api_key=Jsondb.get_token("google_aistudio"))
 

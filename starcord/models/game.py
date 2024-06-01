@@ -1,8 +1,8 @@
 from datetime import datetime,timedelta
 from typing import TYPE_CHECKING
 
-from starcord.Utilities.utility import BotEmbed
-from starcord.FileDatabase import Jsondb,csvdb
+from ..utilities import BotEmbed
+from ..fileDatabase import Jsondb,csvdb
 
 jdict = Jsondb.jdict
 lol_jdict = Jsondb.lol_jdict
@@ -242,6 +242,7 @@ class LOLMatch():
     
     def get_player_in_match(self,playername):
         for player in self.players:
+            # FIXME: 確認名稱是否正確
             if player.summonerName == playername:
                 return player
     

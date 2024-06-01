@@ -2,14 +2,14 @@
 ### 模組：資料庫
 處理資料庫連線與操作。
 """
-from ..FileDatabase import Jsondb
-from ..Utilities import log
+from ..fileDatabase import Jsondb
+from ..utilities import log
 
 from .mysql import MySQLDatabase
 from .mongodb import MongoDB
 
 SQL_connection = Jsondb.jdata.get('SQL_connection')
-def create_sqldb(SQL_connection:bool) -> MySQLDatabase:
+def create_sqldb(SQL_connection:bool) -> MySQLDatabase | None:
     if SQL_connection:
         try:
             sqldb = MySQLDatabase(Jsondb.jdata.get('SQLsettings'))
@@ -27,7 +27,7 @@ def create_sqldb(SQL_connection:bool) -> MySQLDatabase:
 sqldb = create_sqldb(SQL_connection)
 
 Mongedb_connection = Jsondb.jdata.get('Mongedb_connection')
-def create_mongedb(Mongedb_connection) -> MongoDB:
+def create_mongedb(Mongedb_connection) -> MongoDB | None:
     if Mongedb_connection:
         url = Jsondb.get_token("mongodb_url")
         mongedb = MongoDB(url)

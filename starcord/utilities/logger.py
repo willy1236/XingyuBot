@@ -1,10 +1,12 @@
-import logging,os,datetime
+import logging
+import os
+from datetime import datetime
 
-filename = datetime.datetime.now().strftime("%Y-%m-%d %H_%M_%S") + '.log'
+filename = datetime.now().strftime("%Y-%m-%d %H_%M_%S") + '.log'
 
-def create_logger(dir_path,file_log=False,log_level=logging.DEBUG,log_name='py.warnings',format='%(asctime)s [%(levelname)s] %(message)s'):
+def create_logger(dir_path, file_log=False, log_level=logging.DEBUG, log_name='py.warnings', format='%(asctime)s [%(levelname)s] %(message)s'):
     # config
-    logging.captureWarnings(True)   # 捕捉 py waring message
+    logging.captureWarnings(log_name == "py.warnings")   # 捕捉 py waring message
     formatter = logging.Formatter(format)
     logger = logging.getLogger(log_name)    # 捕捉 py waring message
     logger.setLevel(log_level)

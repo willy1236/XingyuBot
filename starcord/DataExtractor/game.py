@@ -3,7 +3,7 @@ import time
 import requests
 import pandas as pd
 
-from starcord.FileDatabase import Jsondb
+from starcord.fileDatabase import Jsondb
 from starcord.models.game import *
 from starcord.errors import APIInvokeError
 

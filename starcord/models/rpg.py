@@ -1,8 +1,8 @@
 import discord,random
 from typing import TYPE_CHECKING
 from .BaseModel import ListObject
-from starcord.types import ItemCategory,ShopItemMode,EquipmentSolt
-from starcord.Utilities.utility import BotEmbed
+from ..types import ItemCategory,ShopItemMode,EquipmentSolt
+from ..utilities import BotEmbed
 
 class Monster:
     if TYPE_CHECKING:

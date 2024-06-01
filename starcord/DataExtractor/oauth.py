@@ -4,7 +4,7 @@ import requests
 
 from ..models import UserConnection
 from ..types import CommunityType
-from ..Database import sqldb
+from ..database import sqldb
 from ..errors import SQLNotFoundError
 
 class DiscordOauth:

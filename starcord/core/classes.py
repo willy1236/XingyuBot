@@ -1,7 +1,6 @@
 import discord
 from discord.ext import commands
-from starcord.FileDatabase import Jsondb
-
+from starcord.fileDatabase import Jsondb
 
 class DiscordBot(discord.Bot):
     def __init__(self,bot_code):

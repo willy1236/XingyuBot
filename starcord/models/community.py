@@ -2,7 +2,7 @@ import discord,time
 from datetime import datetime,timedelta,timezone
 from typing import TYPE_CHECKING
 
-from ..Utilities import BotEmbed
+from ..utilities import BotEmbed
 from ..settings import tz
 
 class TwitchUser():
@@ -32,7 +32,7 @@ class TwitchUser():
         embed.set_author(name=self.login,icon_url=self.profile_image_url)
         embed.add_field(name="觀看數",value=self.view_count)
         embed.add_field(name="頻道創建日期",value=self.created_at)
-        embed.add_field(name="聯絡郵件",value=self.email)
+        #embed.add_field(name="聯絡郵件",value=self.email)
         embed.set_footer(text=self.id)
         return embed
 
@@ -189,8 +189,8 @@ class YoutubeVideo:
         self.author_name = data.get("author")
         self.link = data.get("link")
         self.media_thumbnail_url = data.get("media_thumbnail")[0].get('url')
-        self.uplood_at = datetime.fromtimestamp(time.mktime(data["published_parsed"]),tz=timezone(timedelta(hours=0))).replace(tzinfo=timezone(timedelta(hours=8)))
-        self.updated_at = datetime.fromtimestamp(time.mktime(data["updated_parsed"]),tz=timezone(timedelta(hours=0))).replace(tzinfo=timezone(timedelta(hours=8)))
+        self.uplood_at = datetime.fromtimestamp(time.mktime(data["published_parsed"]),tz=timezone(timedelta(hours=0))).replace(tzinfo=tz)
+        self.updated_at = datetime.fromtimestamp(time.mktime(data["updated_parsed"]),tz=timezone(timedelta(hours=0))).replace(tzinfo=tz)
         self.author = data.get("authors")[0].get("name")
         
     def embed(self):

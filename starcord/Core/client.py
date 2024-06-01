@@ -1,18 +1,21 @@
 import random
 from datetime import datetime, timezone, timedelta
+from typing import TYPE_CHECKING
 
 import discord
 
-from ..Database import sqldb
-from ..DataExtractor import RiotAPI,SteamInterface,OsuAPI,ApexInterface
-from ..FileDatabase import Jsondb
-from ..models import *
+from ..database import sqldb
+from ..dataExtractor import RiotAPI,SteamInterface,OsuAPI,ApexInterface
+from ..fileDatabase import Jsondb
+from ..models import PartialLOLPlayer
 from ..types import DBGame
 from ..ui_element.view import PollView, ElectionPollView
 from ..starAI import StarGeminiAI
-from .classes import DiscordBot
-from ..Utilities import scheduler
+from ..utilities import BotEmbed, ChoiceList, scheduler
 from ..settings import tz
+
+if TYPE_CHECKING:
+    from .classes import DiscordBot
 
 class UserClient():
     """用戶查詢系統"""

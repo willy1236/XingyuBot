@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from starcord import Cog_Extension,Jsondb,sclient
 from starcord.errors import *
 from starcord.types.game import DBGame
-from starcord.Utilities.map import sunmon_area
+from starcord.utilities.map import sunmon_area
 
 tz = timezone(timedelta(hours=+8))
 

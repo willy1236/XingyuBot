@@ -1,10 +1,17 @@
-import discord,random,asyncio
+import asyncio
+import random
+from typing import TYPE_CHECKING
+
+import discord
 from discord.components import Component
 from discord.ext import pages
-from starcord.Utilities.utility import BotEmbed,ChoiceList
-from starcord.Core import sclient
-from starcord.models.user import RPGUser,Monster,RPGPlayerEquipmentBag,RPGEquipment
-from starcord.types import Coins,EquipmentSolt
+
+from ..utilities import BotEmbed,ChoiceList
+from ..core import sclient
+from ..types import Coins,EquipmentSolt
+
+if TYPE_CHECKING:
+    from ..models import RPGUser,Monster,RPGPlayerEquipmentBag,RPGEquipment
 
 class RPGAdvanceView(discord.ui.View):
     def __init__(self,userid):

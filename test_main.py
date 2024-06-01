@@ -10,15 +10,13 @@ import feedparser
 import google.generativeai as genai
 import pandas as pd
 import requests
-import yt_dlp
 from bs4 import BeautifulSoup
 from faker import Faker
 #from pydantic import BaseModel
 
 from starcord import log,Jsondb, ChoiceList, sqldb, tz
-from starcord.DataExtractor import TwitchAPI, YoutubeAPI, YoutubeRSS, CWA_API, DiscordOauth, OsuAPI
+from starcord.dataExtractor import *
 from starcord.starAI import StarGeminiAI
-from starcord.Utilities import calculate_eletion_session
 
 if __name__ == '__main__':
 	pass
@@ -63,56 +61,3 @@ if __name__ == '__main__':
 	obj = Test.model_validate(dct)
 	#obj = Test(dct)
 	print(obj.name)
-	
-	# 	url = "https://youtu.be/UcEHstSuAiM?si=b1Qs3GWXpCTZP_4g"
-	# 	info = yt_dlp.YoutubeDL({
-	#     # "format": "bestaudio/best",
-	#     "outtmpl": "%(extractor)s-%(id)s-%(title)s.%(ext)s",
-	#     "restrictfilenames": True,
-	#     "noplaylist": False,
-	#     "nocheckcertificate": True,
-	#     "ignoreerrors": False,
-	#     "logtostderr": False,
-	#     "quiet": True,
-	#     "no_warnings": True,
-	#     "default_search": "auto",
-	#     "source_address": "0.0.0.0",
-	#     'extractor_retries': 3,
-	# }).extract_info(url, download=False)
-	# 	print(info)
-	# 	with open("music.json","w") as f:
-	# 		json.dump(info, f)
-
-	# CWA_API().get_weather_warning()
-
-	#df = RiotAPI().get_rank_dataframe("SakaGawa#0309")
-	# df = pd.read_csv('my_data.csv').sort_values("tier")
-	# #counts = df['tier'].value_counts()
-	# #print(str(counts))
-	# dict = {
-	# 	"RANKED_FLEX_SR": "彈性積分",
-	# 	"RANKED_SOLO_5x5": "單/雙"
-	# }
-	# for idx,data in df.iterrows():
-	# 	print(data["name"],dict.get(data["queueType"]),data["tier"] + " " + data["rank"])
-	#df.to_csv('my_data.csv', index=False)
-	
-	#sqldb.copy_data("stardb_backup","role_user_backup","stardb_backup","role_user_backup")
-
-	# data = OsuAPI().get_user_scores(17113935)
-	# print(len(data))
-	# for i in data:
-	# 	print(datetime.fromisoformat(i["created_at"]).astimezone(tz=tz))
-	# class test():
-	# 	def __init__(self,cache=None):
-	# 		if cache is None:
-	# 			self.cache = {}
-	# 		else:
-	# 			self.cache = cache
-	# 		print(id(self.cache))
-
-	# test1 = test()
-	# test2 = test()
-	# test3 = test({})
-	# test1.cache["test"] = "test"
-	# print(test2.cache)

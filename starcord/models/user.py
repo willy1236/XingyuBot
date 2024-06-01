@@ -5,13 +5,13 @@ from typing import TYPE_CHECKING
 
 import discord
 
-from ..Utilities import BotEmbed,ChoiceList
+from ..utilities import BotEmbed,ChoiceList
 from ..types import DBGame,Coins,ActivitiesStatue
-from ..FileDatabase import Jsondb
+from ..fileDatabase import Jsondb
 from .rpg import *
 
 if TYPE_CHECKING:
-    from starcord.Database import MySQLDatabase
+    from starcord.database import MySQLDatabase
 
 class RegistrationData():
     if TYPE_CHECKING:

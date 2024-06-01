@@ -15,10 +15,10 @@ from mysql.connector.errors import Error as sqlerror
 from mysql.connector.errors import IntegrityError
 
 from starcord import Cog_Extension,Jsondb,BRS,log,BotEmbed,ChoiceList,sclient
-from starcord.Utilities import find, random_color, create_only_role_list, create_role_magification_dict, calculate_eletion_session
+from starcord.utilities import find, random_color, create_only_role_list, create_role_magification_dict, calculate_eletion_session
 from starcord.ui_element.button import Delete_Add_Role_button
 from starcord.ui_element.view import PollView
-from starcord.DataExtractor import GoogleCloud
+from starcord.dataExtractor import GoogleCloud
 from starcord.types import Coins
 from cmds.bot_event import check_registration
 
@@ -620,7 +620,7 @@ class command(Cog_Extension):
                   officials:discord.Option(str,name='官員清單',description='多人以空格分隔，職位以,分隔並按順序排列，若該職位從缺請留空')
                   ):
         await ctx.defer()
-        session = calculate_eletion_session()
+        session = calculate_eletion_session(datetime.now())
         officials = officials.split(",")
         
         if len(officials) != 4:
@@ -628,12 +628,13 @@ class command(Cog_Extension):
             return
 
         # 移除身分組
+        official_role = ctx.guild.get_role(989033175357480961)
         for roleid in position_role.values():
             role = ctx.guild.get_role(roleid)
             if not role:
                 continue
             for user in role.members:
-                await user.remove_roles(role,reason=f"第{session}界官員卸任")
+                await user.remove_roles(role,official_role,reason=f"第{session}界官員卸任")
                 await asyncio.sleep(0.5)
         
         # 製作當選官員名單並分配身分組
@@ -652,7 +653,7 @@ class command(Cog_Extension):
                 lst.append(user.mention)
                 save_list.append([user.id, session, n])
                 if role:
-                    await user.add_roles(role,reason=f"第{session}屆官員當選")
+                    await user.add_roles(role,official_role,reason=f"第{session}屆官員當選")
                     await asyncio.sleep(0.5)
 
             dct[n] = lst

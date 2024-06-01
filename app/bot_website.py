@@ -10,7 +10,7 @@ from fastapi.responses import HTMLResponse,JSONResponse,PlainTextResponse
 
 from starcord import log, sclient, Jsondb
 from starcord.models.push import YoutubePush
-from starcord.DataExtractor import DiscordOauth
+from starcord.dataExtractor import DiscordOauth
 
 app = FastAPI()
 

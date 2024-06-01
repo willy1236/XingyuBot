@@ -2,7 +2,7 @@ from datetime import date, datetime
 from pydantic import BaseModel
 from typing import TYPE_CHECKING
 
-from ..Utilities import BotEmbed
+from ..utilities import BotEmbed
 from ..settings import tz
 
 class Party(BaseModel):

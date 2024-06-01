@@ -4,7 +4,7 @@ import discord
 from discord.ext import commands
 from discord.commands import SlashCommandGroup
 
-from starcord.DataExtractor import TwitchAPI,YoutubeAPI,YoutubeRSS
+from starcord.dataExtractor import TwitchAPI,YoutubeAPI,YoutubeRSS
 from starcord.ui_element.view import ReactionRole1, WelcomeView
 from starcord import Cog_Extension,BotEmbed,sclient,Jsondb,ChoiceList
 from starcord.types import NotifyCommunityType

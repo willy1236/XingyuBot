@@ -8,8 +8,8 @@ import genshin
 from discord.ext import commands,tasks
 from requests.exceptions import ConnectTimeout
 
-from starcord import Cog_Extension,Jsondb,sclient,log,BotEmbed,Utilities, ChoiceList
-from starcord.DataExtractor import *
+from starcord import Cog_Extension,Jsondb,sclient,log,BotEmbed,utilities, ChoiceList
+from starcord.dataExtractor import *
 from starcord.models.community import TwitchVideo, YoutubeVideo
 from starcord.types import NotifyCommunityType
 
@@ -375,7 +375,7 @@ class task(Cog_Extension):
 
     async def start_eletion(self):
         log.info("start_eletion start")
-        session = Utilities.calculate_eletion_session(datetime.now())
+        session = utilities.calculate_eletion_session(datetime.now())
         channel = self.bot.get_channel(1163127708839071827)
 
         embed = sclient.election_format(session,self.bot)

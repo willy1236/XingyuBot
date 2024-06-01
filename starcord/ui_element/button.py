@@ -1,6 +1,6 @@
 import discord
-from starcord.DataExtractor import sqldb
-from ..Utilities import log
+from ..dataExtractor import sqldb
+from ..utilities import log
 
 class ReactRole_button(discord.ui.View):
     def __init__(self):

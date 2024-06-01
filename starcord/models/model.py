@@ -5,9 +5,12 @@ import discord
 
 from .BaseModel import ListObject
 from ..types import DBGame
-from ..Utilities.utility import BotEmbed
-from ..FileDatabase import Jsondb
+from ..utilities.utility import BotEmbed
+from ..fileDatabase import Jsondb
 from ..settings import tz
+
+if TYPE_CHECKING:
+    from starcord.database import MySQLDatabase
 
 class GameInfo:
     if TYPE_CHECKING:
@@ -52,7 +55,6 @@ class GameInfoPage():
     
 class WarningSheet:
     if TYPE_CHECKING:
-        from starcord.Database import MySQLDatabase
         sqldb: MySQLDatabase
         warning_id: int
         discord_id: int

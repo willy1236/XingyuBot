@@ -2,8 +2,7 @@ from datetime import datetime
 
 import discord
 
-from starcord.Utilities.utility import BotEmbed
-
+from ..utilities import BotEmbed
 
 class EarthquakeReport():
     def __init__(self,data,auto_type=None):
@@ -45,7 +44,6 @@ class EarthquakeReport():
                 embed.add_field(name=key,value=self.intensity[key],inline=False)
         embed.set_image(url=self.reportImageURI)
         return embed
-        
 
 class Covid19Report():
     def __init__(self,data):

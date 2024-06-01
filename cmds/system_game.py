@@ -7,7 +7,7 @@ from discord.ext import commands,pages
 from discord.commands import SlashCommandGroup
 
 from starcord import Cog_Extension,BotEmbed,Jsondb,csvdb,ChoiceList,sclient
-from starcord.DataExtractor import *
+from starcord.dataExtractor import *
 from starcord.types import DBGame
 from starcord.ui_element.view import GameView
 
