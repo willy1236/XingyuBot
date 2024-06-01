@@ -9,9 +9,8 @@ from discord.ext import pages
 from ..utilities import BotEmbed,ChoiceList
 from ..core import sclient
 from ..types import Coins,EquipmentSolt
+from ..models import RPGUser, Monster, RPGPlayerEquipmentBag, RPGEquipment
 
-if TYPE_CHECKING:
-    from ..models import RPGUser,Monster,RPGPlayerEquipmentBag,RPGEquipment
 
 class RPGAdvanceView(discord.ui.View):
     def __init__(self,userid):
