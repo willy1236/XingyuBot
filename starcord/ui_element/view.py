@@ -209,11 +209,11 @@ class PollView(discord.ui.View):
             tuple[discord.Embed, list, list] | discord.Embed: If `labels_and_sizes` is True, returns a tuple containing the embed object, a list of labels, and a list of sizes. 
             If `labels_and_sizes` is False, returns only the embed object.
         """
-        vote_count_data = self.sqldb.get_poll_vote_count(self.poll_id, self.ban_alternate_account_voting)
+        vote_count_data = self.sqldb.get_poll_vote_count(self.poll_id, not self.ban_alternate_account_voting)
         options_data = self.sqldb.get_poll_options(self.poll_id)
 
         if self.show_name:
-            user_vote_data = self.sqldb.get_users_poll(self.poll_id, self.ban_alternate_account_voting)
+            user_vote_data = self.sqldb.get_users_poll(self.poll_id, not self.ban_alternate_account_voting)
             user_vote_list = {}
             for i in range(1, len(options_data) + 1):
                 user_vote_list[str(i)] = []
@@ -224,7 +224,7 @@ class PollView(discord.ui.View):
                 vote_magnification = i.get("vote_magnification", 1)
 
                 user = interaction.guild.get_member(discord_id)
-                username = user.mention if user else discord_id
+                username = user.mention if user else f"<@{discord_id}>"
                 if vote_magnification != 1:
                     username += f"({vote_magnification})"
                 user_vote_list[str(vote_option)].append(username)
