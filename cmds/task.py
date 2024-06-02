@@ -53,7 +53,7 @@ class task(Cog_Extension):
 
             scheduler.add_job(sclient.init_NoticeClient,"date")
 
-            self.twitch.start()
+            #self.twitch.start()
         else:
             pass
             #scheduler.add_job(self.start_eletion,"date")
