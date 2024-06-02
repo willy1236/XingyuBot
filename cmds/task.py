@@ -45,6 +45,7 @@ class task(Cog_Extension):
 
             scheduler.add_job(self.earthquake_check,'interval',minutes=2,jitter=30,misfire_grace_time=40)
             scheduler.add_job(self.youtube_video,'interval',minutes=15,jitter=30,misfire_grace_time=40)
+            scheduler.add_job(self.twitch_live,'interval',minutes=3,jitter=15,misfire_grace_time=20)
             scheduler.add_job(self.twitch_video,'interval',minutes=15,jitter=30,misfire_grace_time=40)
             scheduler.add_job(self.twitch_clip,'interval',minutes=10,jitter=30,misfire_grace_time=40)
             #scheduler.add_job(self.city_battle,'interval',minutes=1,jitter=30,misfire_grace_time=60)
@@ -169,8 +170,8 @@ class task(Cog_Extension):
                 else:
                     log.warning(f"forecast_update: {i['guild_id']}/{i['channel_id']}")
 
-    @tasks.loop(minutes=3)
-    async def twitch(self):
+    #@tasks.loop(minutes=3)
+    async def twitch_live(self):
         users = sclient.get_notice_dict("twitch")
         if not users:
             return
