@@ -17,6 +17,7 @@ from faker import Faker
 from starcord import log,Jsondb, ChoiceList, sqldb, tz
 from starcord.dataExtractor import *
 from starcord.starAI import StarGeminiAI
+from starcord.types import NotifyCommunityType
 
 if __name__ == '__main__':
 	pass

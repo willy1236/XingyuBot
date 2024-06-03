@@ -172,11 +172,14 @@ class task(Cog_Extension):
 
     #@tasks.loop(minutes=3)
     async def twitch_live(self):
+        log.debug("twitch_live start")
         users = sclient.get_notice_dict("twitch")
         if not users:
             return
         twitch_cache = Jsondb.read_cache('twitch') or {}
+        log.debug("twitch_live:", users)
         data = TwitchAPI().get_lives(users)
+        log.debug("twitch_live:", data)
         for user in users:
             user_cache = twitch_cache.get(user)
             
