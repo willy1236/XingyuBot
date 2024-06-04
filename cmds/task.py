@@ -177,7 +177,6 @@ class task(Cog_Extension):
         if not users:
             return
         twitch_cache = Jsondb.read_cache('twitch') or {}
-        log.debug(f"twitch_live users: {users}")
         data = TwitchAPI().get_lives(users)
         log.debug(f"twitch_live data: {data}")
         for user in users:
@@ -187,6 +186,7 @@ class task(Cog_Extension):
                 twitch_cache[user] = True
                 embed = data[user].embed()
                 guilds = sclient.sqldb.get_notify_community_guild(NotifyCommunityType.Twitch.value, user)
+                log.debug(f"twitch_live guilds: {guilds}")
                 for guildid in guilds:
                     guild = self.bot.get_guild(guildid)
                     channel = self.bot.get_channel(guilds[guildid][0])
