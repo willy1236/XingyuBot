@@ -173,7 +173,7 @@ class task(Cog_Extension):
     #@tasks.loop(minutes=3)
     async def twitch_live(self):
         log.debug("twitch_live start")
-        users = sclient.get_notice_dict("twitch")
+        users = sclient.cache[NotifyCommunityType.Twitch]
         if not users:
             return
         twitch_cache = Jsondb.read_cache('twitch') or {}
@@ -205,7 +205,7 @@ class task(Cog_Extension):
         Jsondb.write_cache('twitch',twitch_cache)
 
     async def twitch_video(self):
-        users = sclient.get_notice_dict("twitch_v")
+        users = sclient.cache[NotifyCommunityType.TwitchVideo]
         if not users:
             return
         twitch_cache = Jsondb.read_cache('twitch_v') or {}
@@ -237,7 +237,7 @@ class task(Cog_Extension):
         Jsondb.write_cache('twitch_v',twitch_cache)
 
     async def twitch_clip(self):
-        users = sclient.get_notice_dict("twitch_c")
+        users = sclient.cache[NotifyCommunityType.TwitchClip]
         if not users:
             return
         twitch_cache = Jsondb.read_cache('twitch_c') or {}
@@ -271,7 +271,7 @@ class task(Cog_Extension):
         Jsondb.write_cache('twitch_c',twitch_cache)
 
     async def youtube_video(self):
-        ytchannels = sclient.get_notice_dict("youtube")
+        ytchannels = sclient.cache[NotifyCommunityType.Youtube]
         if not ytchannels:
             return
         cache_youtube = Jsondb.read_cache('youtube') or {}

@@ -13,6 +13,7 @@ from ..ui_element.view import PollView, ElectionPollView
 from ..starAI import StarGeminiAI
 from ..utilities import BotEmbed, ChoiceList, scheduler
 from ..settings import tz
+from .classes import StarCache
 
 if TYPE_CHECKING:
     from .classes import DiscordBot
@@ -207,6 +208,7 @@ class GiveawayClient():
 
 class NotifyClient():
     """
+    ! 已棄用
     ### 通知頻道系統
     由notice_dict進行緩存，使得讀取資料時可不用每次都讀取資料庫
 
@@ -277,7 +279,6 @@ class StarManager(
     PointClient,
     PollClient,
     ElectionSystem,
-    NotifyClient,
 ):
     """整合各項系統的星羽資料管理物件
     :attr sqldb: Mysql Database
@@ -291,6 +292,7 @@ class StarManager(
         self._starai = None
         self.bot:DiscordBot = None
         self.scheduler = scheduler
+        self.cache = StarCache() if self.sqldb else None
     
     @property
     def starai(self):
