@@ -177,9 +177,9 @@ class task(Cog_Extension):
         if not users:
             return
         twitch_cache = Jsondb.read_cache('twitch') or {}
-        log.debug("twitch_live:", users)
+        log.debug("twitch_live users:", users)
         data = TwitchAPI().get_lives(users)
-        log.debug("twitch_live:", data)
+        log.debug("twitch_live data:", data)
         for user in users:
             user_cache = twitch_cache.get(user)
             
@@ -244,7 +244,7 @@ class task(Cog_Extension):
         api = TwitchAPI()
         for user in users:
             cache_last_update_time = datetime.fromisoformat(twitch_cache.get(user)) if twitch_cache.get(user) else None
-            clips = api.get_clips(user, started_at=cache_last_update_time.strftime('%Y-%m-%dT%H:%M:%SZ') if cache_last_update_time else None)
+            clips = api.get_clips(user, started_at=cache_last_update_time if cache_last_update_time else None)
             if clips:
                 newest = clips[0].created_at
                 broadcaster_id = clips[0].broadcaster_id

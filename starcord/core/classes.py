@@ -37,7 +37,7 @@ class Cog_Extension(commands.Cog):
 class StarCache:
     dict_type = ["dynamic_voice","voice_log"]
     list_type = ["dynamic_voice_room"]
-    notify_community_type = [NotifyCommunityType.Twitch, NotifyCommunityType.TwitchVideo, NotifyCommunityType.TwitchClip]
+    notify_community_type = [NotifyCommunityType.Twitch, NotifyCommunityType.Youtube, NotifyCommunityType.TwitchVideo, NotifyCommunityType.TwitchClip]
 
     def __init__(self):
         self.cache = {}
@@ -69,7 +69,7 @@ class StarCache:
     def generate_notify_community_dbdata(dbdata):
         lst = []
         for data in dbdata:
-            if data not in lst:
+            if data['notify_name'] not in lst:
                 lst.append(data['notify_name'])
         return lst
 
