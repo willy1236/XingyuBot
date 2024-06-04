@@ -51,7 +51,7 @@ class task(Cog_Extension):
             #scheduler.add_job(self.city_battle,'interval',minutes=1,jitter=30,misfire_grace_time=60)
             #scheduler.add_job(self.get_mongodb_data,'interval',minutes=3,jitter=30,misfire_grace_time=40)
 
-            scheduler.add_job(sclient.init_NoticeClient,"date")
+            # scheduler.add_job(sclient.init_NoticeClient,"date")
 
             #self.twitch.start()
         else:
