@@ -177,9 +177,9 @@ class task(Cog_Extension):
         if not users:
             return
         twitch_cache = Jsondb.read_cache('twitch') or {}
-        log.debug("twitch_live users:", users)
+        log.debug(f"twitch_live users: {users}")
         data = TwitchAPI().get_lives(users)
-        log.debug("twitch_live data:", data)
+        log.debug(f"twitch_live data: {data}")
         for user in users:
             user_cache = twitch_cache.get(user)
             
