@@ -29,7 +29,7 @@ hoyo_game_option = [
     discord.OptionChoice(name='崩壞：星穹軌道',value=genshin.Game.STARRAIL)
 ]
 
-debug_guild = Jsondb.jdata.get('debug_guild')
+debug_guilds = Jsondb.jdata.get('debug_guilds')
 jdata = Jsondb.jdata
 
 class system_game(Cog_Extension):
@@ -628,7 +628,7 @@ class system_game(Cog_Extension):
         await ctx.respond('設定已完成')
         
     
-    @hoyo.command(description='測試',guild_ids=debug_guild)
+    @hoyo.command(description='測試',guild_ids=debug_guilds)
     @commands.cooldown(rate=1,per=1)
     async def test(self,ctx,
                    hoyolab_uid:discord.Option(str,name='hoyolab_uid',description='要查詢的用戶',default=None)):
@@ -640,7 +640,7 @@ class system_game(Cog_Extension):
         print(r)
         await ctx.respond('done')
 
-    @commands.message_command(name="尋找序號",guild_ids=debug_guild)
+    @commands.message_command(name="尋找序號",guild_ids=debug_guilds)
     async def exchange_code_genshin(self,ctx,message:discord.Message):
         textline = message.content.splitlines()
         p = re.compile(r'[0-9A-Z]{10,}')

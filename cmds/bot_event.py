@@ -23,7 +23,7 @@ member_names = {
 
 voice_updata = Jsondb.jdata.get('voice_updata')
 debug_mode = Jsondb.jdata.get("debug_mode",True)
-main_guild = Jsondb.jdata.get('main_guild',[])
+main_guilds = Jsondb.jdata.get('main_guilds',[])
 
 guild_registration = sclient.sqldb.get_resgistration_dict() if sclient.sqldb else {}
 
@@ -321,7 +321,7 @@ class event(Cog_Extension):
     async def on_member_update(self,before:discord.Member, after:discord.Member):
         guildid = after.guild.id
         member = after
-        if guildid in main_guild and (after.nick and before.nick != after.nick) or not after.nick:
+        if guildid in main_guilds and (after.nick and before.nick != after.nick) or not after.nick:
             p2 = re.compile(r"冠宇")
             nick = after.nick or ""
             
@@ -335,7 +335,7 @@ class event(Cog_Extension):
 
     # @commands.Cog.listener()
     # async def on_presence_update(self,before:discord.Member, after:discord.Member):
-    #     if not after.bot and after.guild.id in main_guild  and after.activities and after.voice:
+    #     if not after.bot and after.guild.id in main_guilds  and after.activities and after.voice:
     #         if get_playing_ow2(after):
     #             list = []
     #             channel = self.bot.get_channel(703617778095095958)

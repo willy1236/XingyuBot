@@ -3,12 +3,13 @@ from datetime import datetime, timezone, timedelta
 from discord.ext import commands,tasks
 import matplotlib.pyplot as plt
 
-from starcord import Cog_Extension,Jsondb,sclient
+from starcord import Cog_Extension,Jsondb,sclient,tz
 from starcord.errors import *
 from starcord.types.game import DBGame
 from starcord.utilities.map import sunmon_area
 
-tz = timezone(timedelta(hours=+8))
+
+debug_guilds = Jsondb.jdata.get('debug_guilds')
 
 # Note that custom_ids can only be up to 100 characters long.
 class PersistentView(discord.ui.View):
@@ -138,7 +139,7 @@ class MySelectMenusView(discord.ui.View):
 class debug(Cog_Extension):
     pass
     @commands.is_owner()
-    @commands.slash_command(description='測試指令')
+    @commands.slash_command(description='測試指令', guild_ids=debug_guilds)
     async def test(self,ctx:discord.ApplicationContext):
         #await ctx.defer()
         # command = self.bot.get_cog('command')
@@ -156,6 +157,11 @@ class debug(Cog_Extension):
         # Permission = channel.permissions_for(botuser)
         # await ctx.respond((Permission.send_messages and Permission.embed_links))
     
+    @commands.is_owner()
+    @commands.slash_command(description='ver.2.0測試', guild_ids=debug_guilds)
+    async def embedtest(self, ctx:discord.ApplicationContext):
+        pass
+
     # @commands.slash_command()
     # async def modal_slash(self,ctx: discord.ApplicationContext):
     #     """Shows an example of a modal dialog being invoked from a slash command."""

@@ -97,13 +97,13 @@ class BotPanel(discord.ui.View):
         embed = BotEmbed.simple('伺服器列表','\n'.join(name_list))
         await interaction.response.send_message(content="",ephemeral=False,embed=embed)
 
-debug_guild = Jsondb.jdata.get('debug_guild')
+debug_guilds = Jsondb.jdata.get('debug_guilds')
 
 class owner(Cog_Extension):
-    twitch_chatbot = SlashCommandGroup("twitch_chatbot", "twitch機器人相關指令",guild_ids=debug_guild)
+    twitch_chatbot = SlashCommandGroup("twitch_chatbot", "twitch機器人相關指令",guild_ids=debug_guilds)
     
     #change_presence
-    @commands.slash_command(description='更換bot狀態',guild_ids=debug_guild)
+    @commands.slash_command(description='更換bot狀態',guild_ids=debug_guilds)
     @commands.is_owner()
     async def statue(self,ctx,statue):
         jdata = Jsondb.jdata
@@ -113,7 +113,7 @@ class owner(Cog_Extension):
         await ctx.respond(f'狀態更改完成',delete_after=5)
 
     #send
-    @commands.slash_command(description='發送訊息',guild_ids=debug_guild)
+    @commands.slash_command(description='發送訊息',guild_ids=debug_guilds)
     @commands.is_owner()
     async def sendmesssage(self,ctx,
                    id:discord.Option(str,required=True,name='頻道id',description='')):      
@@ -137,7 +137,7 @@ class owner(Cog_Extension):
         await modal.wait()
 
     #all_anno
-    @commands.slash_command(description='全群公告',guild_ids=debug_guild)
+    @commands.slash_command(description='全群公告',guild_ids=debug_guilds)
     @commands.is_owner()
     async def anno(self,ctx:discord.ApplicationContext):
         modal = AnnoModal(title="全群公告")
@@ -145,7 +145,7 @@ class owner(Cog_Extension):
         await modal.wait()
 
     #bot_update
-    @commands.slash_command(description='機器人更新通知',guild_ids=debug_guild)
+    @commands.slash_command(description='機器人更新通知',guild_ids=debug_guilds)
     @commands.is_owner()
     async def botupdate(self,ctx:discord.ApplicationContext):
         modal = BotUpdateModal(title="機器人更新")
@@ -153,7 +153,7 @@ class owner(Cog_Extension):
         await modal.wait()
 
     #edit
-    @commands.slash_command(description='編輯訊息',guild_ids=debug_guild)
+    @commands.slash_command(description='編輯訊息',guild_ids=debug_guilds)
     @commands.is_owner()
     async def editmessage(self,ctx:discord.ApplicationContext,msgid:str,new_msg):
         await ctx.defer()
@@ -181,7 +181,7 @@ class owner(Cog_Extension):
     #     else:
     #         ctx.send('參數錯誤:請輸入正確模式(add/remove)',delete_after=5)
 
-    @commands.slash_command(description='權限檢查',guild_ids=debug_guild)
+    @commands.slash_command(description='權限檢查',guild_ids=debug_guilds)
     @commands.is_owner()
     async def permission(self,ctx,guild_id):
         guild_id = int(guild_id)
@@ -229,7 +229,7 @@ class owner(Cog_Extension):
         # permission.request_to_speak
         await ctx.respond(embed=embed)
 
-    # @commands.slash_command(guild_ids=debug_guild)
+    # @commands.slash_command(guild_ids=debug_guilds)
     # @commands.is_owner()
     # async def reaction_role(self,ctx,chaid,msgid):
     #     channel = await self.bot.fetch_channel(chaid)
@@ -253,7 +253,7 @@ class owner(Cog_Extension):
     #         else:
     #             await channel.send('👍')
 
-    @commands.slash_command(description='使用mc伺服器指令',guild_ids=debug_guild)
+    @commands.slash_command(description='使用mc伺服器指令',guild_ids=debug_guilds)
     @commands.is_owner()
     async def mccommand(self,ctx,command):
         settings = Jsondb.jdata.get('mc_server')
@@ -264,7 +264,7 @@ class owner(Cog_Extension):
             response = rcon.command(command)
             await ctx.respond(response)
 
-    # @twitch_chatbot.command(description='加入Twitch頻道',guild_ids=debug_guild)
+    # @twitch_chatbot.command(description='加入Twitch頻道',guild_ids=debug_guilds)
     # @commands.is_owner()
     # async def join(self,ctx,twitch_user):
     #     channel = twitch_bot.get_channel(twitch_user)
@@ -280,7 +280,7 @@ class owner(Cog_Extension):
     #         await twitch_bot.join_channels((twitch_user,))
             
     
-    # @twitch_chatbot.command(description='離開Twitch頻道',guild_ids=debug_guild)
+    # @twitch_chatbot.command(description='離開Twitch頻道',guild_ids=debug_guilds)
     # @commands.is_owner()
     # async def leave(self,ctx,twitch_user):
     #     cache = Jsondb.cache
@@ -292,13 +292,13 @@ class owner(Cog_Extension):
     #     else:
     #         await ctx.respond(f'錯誤：未加入 {twitch_user}')
 
-    # @twitch_chatbot.command(description='發送消息到指定Twitch頻道',guild_ids=debug_guild)
+    # @twitch_chatbot.command(description='發送消息到指定Twitch頻道',guild_ids=debug_guilds)
     # @commands.is_owner()
     # async def send(self,ctx,twitch_user,context):
     #     await twitch_bot.get_channel(twitch_user).send(context)
     #     await ctx.respond(f'已發送到 {twitch_user}: {context}')
     
-    @commands.slash_command(description='機器人面板',guild_ids=debug_guild)
+    @commands.slash_command(description='機器人面板',guild_ids=debug_guilds)
     @commands.is_owner()
     async def panel(self,ctx):
         embed_list = []
@@ -307,7 +307,7 @@ class owner(Cog_Extension):
 
         await ctx.respond(f'',embeds=embed_list,view=BotPanel(self.bot))
 
-    @commands.slash_command(description='獲取指令',guild_ids=debug_guild)
+    @commands.slash_command(description='獲取指令',guild_ids=debug_guilds)
     @commands.is_owner()
     async def getcommand(self,ctx,name:discord.Option(str,name='指令名稱')):
         data = self.bot.get_application_command(name)
@@ -316,7 +316,7 @@ class owner(Cog_Extension):
         else:
             await ctx.respond(embed=BotEmbed.simple('指令未找到'))
 
-    @commands.slash_command(description='獲取指定伺服器與主伺服器的共通成員',guild_ids=debug_guild)
+    @commands.slash_command(description='獲取指定伺服器與主伺服器的共通成員',guild_ids=debug_guilds)
     @commands.is_owner()
     async def findmember(self,ctx,guildid:discord.Option(str,name='伺服器id')):
         guild = self.bot.get_guild(int(guildid))
@@ -338,7 +338,7 @@ class owner(Cog_Extension):
         embed = BotEmbed.simple(f"{guild.name} 的共通成員","\n".join(common_member_display))
         await ctx.respond(embed=embed)
 
-    @commands.slash_command(description='尋找id對象',guild_ids=debug_guild)
+    @commands.slash_command(description='尋找id對象',guild_ids=debug_guilds)
     @commands.cooldown(rate=1,per=3)
     async def find(self,ctx:discord.ApplicationContext,id:discord.Option(str,name='id'),guildid:discord.Option(str,name='guildid',required=False)):
         success = 0
@@ -410,7 +410,7 @@ class owner(Cog_Extension):
         else:
             await ctx.respond('無法辨認此ID')
 
-    @commands.slash_command(description='以機器人禁言用戶',guild_ids=debug_guild)
+    @commands.slash_command(description='以機器人禁言用戶',guild_ids=debug_guilds)
     @commands.bot_has_permissions(moderate_members=True)
     @commands.is_owner()
     async def timeout_bot(self,ctx:discord.ApplicationContext,

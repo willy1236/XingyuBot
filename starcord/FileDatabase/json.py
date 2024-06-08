@@ -2,9 +2,38 @@ import json
 import os
 from typing import TYPE_CHECKING
 
-class JsonCeche:
-    if TYPE_CHECKING:
-        pass
+defaule_json = {
+    "jdata": {
+        "task_report": 0,
+        "feedback_channel": 0,
+        "error_report": 0,
+        "report_channel": 0,
+        "dm_channel": 0,
+        "mentioned_channel": 0,
+        "mention_everyone_channel": 0,
+        "happycamp_guild": [ 0 ],
+        "main_guilds": [ 0 ],
+        "debug_guilds": [ 0 ],
+        "SQLsettings" : {
+            "host": "",
+            "port": "",
+            "user": "",
+            "password": "",
+            "db": ""
+        },
+        "bot_code": "Bot1",
+        "activity": "",
+        "debug_mode": True,
+        "log_level": "DEBUG",
+        "voice_updata": True,
+        "api_website": False,
+        "auto_update": False,
+        "SQL_connection": False,
+        "file_log": False,
+        "Mongedb_connection": False,
+        "twitch_bot": False
+    }
+}
 
 class JsonDatabase():
     if TYPE_CHECKING:
@@ -73,7 +102,7 @@ class JsonDatabase():
                 if not create_file:
                     continue
                 with open(path,'w',encoding='utf-8') as jfile:
-                    json.dump({},jfile,indent=4)
+                    json.dump(defaule_json.get(file,{}),jfile,indent=4)
                     print(f">> Created json file: {file} <<")
             
             with open(path,mode='r',encoding='utf8') as jfile:

@@ -14,11 +14,11 @@ class DiscordBot(discord.Bot):
         )
         
         self.bot_code = bot_code
-        self.main_guilds = Jsondb.jdata.get('main_guild')
+        self.main_guilds = Jsondb.jdata.get('main_guilds')
         self.debug_mode = Jsondb.jdata.get('debug_mode',True)
 
         if bot_code != 'Bot1':
-            self.debug_guilds = Jsondb.jdata.get('debug_guild')
+            self.debug_guilds = Jsondb.jdata.get('debug_guilds')
 
     def run(self):
         token = Jsondb.get_token(self.bot_code)

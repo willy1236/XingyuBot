@@ -5,7 +5,7 @@ from starcord.errors import *
 from starcord import Cog_Extension,log,BRS,Jsondb
 
 permissions_tl = Jsondb.jdict.get('permissions')
-debug_guild = Jsondb.jdata.get('debug_guild')
+debug_guilds = Jsondb.jdata.get('debug_guilds')
 debug_mode = Jsondb.jdata.get('debug_mode')
 
 class error(Cog_Extension):
@@ -49,7 +49,7 @@ class error(Cog_Extension):
 
             else:
                 await ctx.respond(f'發生未知錯誤：```py\n{error.original}```',ephemeral=True)
-                if not ctx.guild or ctx.guild.id not in debug_guild:
+                if not ctx.guild or ctx.guild.id not in debug_guilds:
                     await BRS.error(self.bot,ctx,error)
 
                 log.error(f'{error},{type(error)},{type(error.original)}')
@@ -61,7 +61,7 @@ class error(Cog_Extension):
             await ctx.respond(f'參數錯誤:{error}',ephemeral=True)
         
         else:
-            if not ctx.guild or ctx.guild.id not in debug_guild:
+            if not ctx.guild or ctx.guild.id not in debug_guilds:
                 await BRS.error(self.bot,ctx,error)
             await ctx.respond(f'發生未知錯誤\n```{error.original}```',ephemeral=True)
             log.error(f'{error},{type(error)}')

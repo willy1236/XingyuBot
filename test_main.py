@@ -7,6 +7,7 @@ from pydantic import BaseModel
 
 import discord
 import feedparser
+import genshin
 import google.generativeai as genai
 import pandas as pd
 import requests
@@ -52,13 +53,17 @@ if __name__ == '__main__':
 	# 	print("="*50)
 	# 	time.sleep(10)
 
-	class Test(BaseModel):
-		name: str
+	# class Test(BaseModel):
+	# 	name: str
 
-		# def __init__(self, dct:dict):
-		# 	super().model_validate(dct)
+	# 	# def __init__(self, dct:dict):
+	# 	# 	super().model_validate(dct)
 	
-	dct = {"name": "test"}
-	obj = Test.model_validate(dct)
-	#obj = Test(dct)
-	print(obj.name)
+	# dct = {"name": "test"}
+	# obj = Test.model_validate(dct)
+	# #obj = Test(dct)
+	# print(obj.name)
+
+	from typing import Union, Awaitable
+
+	testtype = Union[int, str, Awaitable]

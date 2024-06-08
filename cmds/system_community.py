@@ -211,7 +211,7 @@ class system_community(Cog_Extension):
     @youtube.command(description='確認群組內所有的youtube通知')
     async def list(self,ctx):
         guildid = ctx.guild.id
-        embed = BotEmbed.general("youtube通知",ctx.guild.icon.url if ctx.guild.icon else discord.Embed.Empty)
+        embed = BotEmbed.general("youtube通知",ctx.guild.icon.url if ctx.guild.icon else None)
         dbdata = sclient.sqldb.get_notify_community_list(NotifyCommunityType.Youtube.value,guildid)
         for data in dbdata:
             notify_name = data['display_name'] if data.get("display_name") else data['notify_name']

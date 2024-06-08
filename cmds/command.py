@@ -26,7 +26,7 @@ bet_option = ChoiceList.set('bet_option')
 position_option = ChoiceList.set('position_option')
 party_option = ChoiceList.set('party_option')
 
-main_guild = Jsondb.jdata.get('main_guild')
+main_guilds = Jsondb.jdata.get('main_guilds')
 
 position_role = {
     "1": 1161686745126019082,
@@ -39,9 +39,9 @@ class command(Cog_Extension):
     bet = SlashCommandGroup("bet", "賭盤相關指令")
     role = SlashCommandGroup("role", "身分組管理指令")
     poll = SlashCommandGroup("poll", "投票相關指令")
-    election = SlashCommandGroup("election", "選舉相關指令",guild_ids=main_guild)
-    party = SlashCommandGroup("party", "政黨相關指令",guild_ids=main_guild)
-    registration = SlashCommandGroup("registration", "戶籍相關指令",guild_ids=main_guild)
+    election = SlashCommandGroup("election", "選舉相關指令",guild_ids=main_guilds)
+    party = SlashCommandGroup("party", "政黨相關指令",guild_ids=main_guilds)
+    registration = SlashCommandGroup("registration", "戶籍相關指令",guild_ids=main_guilds)
 
     @role.command(description='查詢身分組數')
     async def count(self,ctx,user_list:discord.Option(str,required=False,name='要查詢的用戶',description='多個用戶請用空格隔開，或可輸入default查詢常用人選')):
@@ -112,7 +112,7 @@ class command(Cog_Extension):
     async def save(self,
                    ctx:discord.ApplicationContext):
         await ctx.defer()
-        guild = self.bot.get_guild(main_guild[0])
+        guild = self.bot.get_guild(main_guilds[0])
         
         for role in guild.roles:
             if role.id == 877934319249797120:
@@ -134,7 +134,7 @@ class command(Cog_Extension):
     @commands.is_owner()
     async def rsmove(self,ctx):
         await ctx.defer()
-        guild = self.bot.get_guild(main_guild[0])
+        guild = self.bot.get_guild(main_guilds[0])
         if not guild.get_role(877934319249797120):
             await ctx.respond('錯誤：找不到"加身分組"',delete_after=5)
             return
@@ -396,8 +396,8 @@ class command(Cog_Extension):
         await member.timeout_for(time,reason="指令：禁言10秒")
         await ctx.respond(f"已禁言{member.mention} 10秒",ephemeral=True)
     
-    #@commands.user_command(name="不想理你生態區",guild_ids=main_guild)
-    @commands.user_command(name="懲戒集中營",guild_ids=main_guild)
+    #@commands.user_command(name="不想理你生態區",guild_ids=main_guilds)
+    @commands.user_command(name="懲戒集中營",guild_ids=main_guilds)
     #@commands.has_permissions(moderate_members=True)
     async def user_command2(self,ctx, member: discord.Member):
         await ctx.respond(f"開始執行",ephemeral=True)
@@ -435,7 +435,7 @@ class command(Cog_Extension):
         result = random.choice(args)
         await ctx.respond(f'我選擇:{result}')
 
-    @commands.user_command(name="摃殘",guild_ids=main_guild)
+    @commands.user_command(name="摃殘",guild_ids=main_guilds)
     async def bonk(self,ctx:discord.ApplicationContext, member: discord.Member):
         if not ctx.user.get_role(1178151415403790478):
             await ctx.respond(f"你不是台中摃殘黨員",ephemeral=True)
@@ -492,7 +492,7 @@ class command(Cog_Extension):
         embed = view.results_embed(ctx.interaction)
         await ctx.respond(embed=embed)
 
-    @commands.slash_command(description='共用「94共用啦」雲端資料夾',guild_ids=main_guild)
+    @commands.slash_command(description='共用「94共用啦」雲端資料夾',guild_ids=main_guilds)
     async def drive(self,ctx,email:discord.Option(str,name='gmail帳戶',description='要使用的Gmail帳戶，留空以移除資料',required=False)):
         await ctx.defer()
         suser = sclient.sqldb.get_user(ctx.author.id)
@@ -719,7 +719,7 @@ class command(Cog_Extension):
             embed.add_field(name=party.name, value=f"政黨ID：{party.id}\n政黨人數：{party.member_count}\n創黨人：{creator_mention}\n創黨日期：{party.created_at.strftime('%Y-%m-%d')}")
         await ctx.respond(embed=embed)
 
-    @commands.slash_command(description="開啟mc伺服器",guild_ids=main_guild)
+    @commands.slash_command(description="開啟mc伺服器",guild_ids=main_guilds)
     @commands.cooldown(rate=1,per=120)
     async def startserver(self,ctx:discord.ApplicationContext):
         def is_bat_running(bat_name:str):

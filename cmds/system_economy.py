@@ -8,7 +8,7 @@ from discord.commands import SlashCommandGroup
 from starcord import Cog_Extension,Jsondb,sclient,BotEmbed
 from starcord.types import Coins
 
-debug_guild = Jsondb.jdata.get('debug_guild')
+debug_guilds = Jsondb.jdata.get('debug_guilds')
 
 class system_economy(Cog_Extension):
     point = SlashCommandGroup("point", "PT點數相關指令")
@@ -40,7 +40,7 @@ class system_economy(Cog_Extension):
                 await ctx.respond(f'{ctx.author.mention}：{code}',ephemeral=True)
     
     @commands.is_owner()
-    @point.command(description='設定星幣',guild_ids=debug_guild)
+    @point.command(description='設定星幣',guild_ids=debug_guilds)
     async def set(self,ctx,
                   user:discord.Option(discord.User,name='成員',description='欲調整的成員',required=True),
                   mod:discord.Option(str,name='模式',description='add,set',required=True,choices=['add','set']),
