@@ -185,20 +185,8 @@ class task(Cog_Extension):
             if data[user] and not user_cache:
                 twitch_cache[user] = True
                 embed = data[user].embed()
-                guilds = sclient.sqldb.get_notify_community_guild(NotifyCommunityType.Twitch.value, user)
-                log.debug(f"twitch_live guilds: {guilds}")
-                for guildid in guilds:
-                    guild = self.bot.get_guild(guildid)
-                    channel = self.bot.get_channel(guilds[guildid][0])
-                    role = guild.get_role(guilds[guildid][1])
-                    if channel:
-                        if role:
-                            await channel.send(f'{role.mention} 開台啦~',embed=embed)
-                        else:
-                            await channel.send(f'開台啦~',embed=embed)
-                        await asyncio.sleep(0.5)
-                    else:
-                        print(f"twitch: {guild.id}/{channel.id}")
+                await self.bot.send_message_to_notify_communities(embed, NotifyCommunityType.Twitch, user)
+
             elif not data[user] and user_cache:
                 del twitch_cache[user]
 
@@ -220,19 +208,7 @@ class task(Cog_Extension):
 
                 for data in video_list:
                     embed = data.embed()
-                    guilds = sclient.sqldb.get_notify_community_guild(NotifyCommunityType.TwitchVideo.value,data.user_id)
-                    for guildid in guilds:
-                        guild = self.bot.get_guild(guildid)
-                        channel = self.bot.get_channel(guilds[guildid][0])
-                        role = guild.get_role(guilds[guildid][1])
-                        if channel:
-                            if role:
-                                await channel.send(f'{role.mention} 新影片上傳啦~',embed=embed)
-                            else:
-                                await channel.send(f'新影片上傳啦~',embed=embed)
-                            await asyncio.sleep(0.5)
-                        else:
-                            log.warning(f"twitch_v: {guild.id}/{channel.id}")
+                    await self.bot.send_message_to_notify_communities(embed, NotifyCommunityType.TwitchVideo, data.user_id)
 
         Jsondb.write_cache('twitch_v',twitch_cache)
 
@@ -251,20 +227,7 @@ class task(Cog_Extension):
                 for clip in clips:
                     newest = clip.created_at if clip.created_at > newest else newest
                     embed = clip.embed()
-                    guilds = sclient.sqldb.get_notify_community_guild(NotifyCommunityType.TwitchClip.value,broadcaster_id)
-                    
-                    for guildid in guilds:
-                        guild = self.bot.get_guild(guildid)
-                        channel = self.bot.get_channel(guilds[guildid][0])
-                        role = guild.get_role(guilds[guildid][1])
-                        if channel:
-                            if role:
-                                await channel.send(f'{role.mention} 新剪輯上傳啦~',embed=embed)
-                            else:
-                                await channel.send(f'新剪輯上傳啦~',embed=embed)
-                            await asyncio.sleep(0.5)
-                        else:
-                            log.warning(f"twitch_c: {guild.id}/{channel.id}")
+                    await self.bot.send_message_to_notify_communities(embed, NotifyCommunityType.TwitchClip, broadcaster_id)
 
                 twitch_cache[broadcaster_id] = newest.isoformat()
 
@@ -291,20 +254,7 @@ class task(Cog_Extension):
                 #發布通知
                 for video in video_list:
                     embed = video.embed()
-                    guilds = sclient.sqldb.get_notify_community_guild(NotifyCommunityType.Youtube.value,ytchannel_id)
-                    for guildid in guilds:
-                        guild = self.bot.get_guild(guildid)
-                        channel = self.bot.get_channel(guilds[guildid][0])
-                        role = guild.get_role(guilds[guildid][1])
-                        text = "新影片上傳啦~"
-                        if channel:
-                            if role:
-                                await channel.send(f'{role.mention} {text}',embed=embed)
-                            else:
-                                await channel.send(f'{text}',embed=embed)
-                            await asyncio.sleep(0.5)
-                        else:
-                            log.warning(f"youtube: {guild.id}/{channel.id}")
+                    await self.bot.send_message_to_notify_communities(embed, NotifyCommunityType.Youtube, ytchannel_id)
 
         Jsondb.write_cache('youtube',cache_youtube)
 
