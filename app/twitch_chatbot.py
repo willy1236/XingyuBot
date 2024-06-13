@@ -132,7 +132,7 @@ async def on_message(msg: ChatMessage):
 
 # this will be called whenever someone subscribes to a channel
 async def on_sub(sub: ChatSub):
-    twitch_log.info(f'New subscription in {sub.room.name}: Type: {sub.sub_plan_name} Message: {sub.sub_message}')
+    twitch_log.info(f'New subscription in {sub.room.name}:\nType: {sub.sub_plan_name}\nMessage: {sub.sub_message}')
     if sub.room.name == TARGET_CHANNEL[0] and sclient.bot:
         loop = sclient.bot.loop
         channel = sclient.bot.get_channel(DC_CHANNEL_ID)
