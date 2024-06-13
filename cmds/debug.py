@@ -3,7 +3,7 @@ from datetime import datetime, timezone, timedelta
 from discord.ext import commands,tasks
 import matplotlib.pyplot as plt
 
-from starcord import Cog_Extension,Jsondb,sclient,tz
+from starcord import Cog_Extension,Jsondb,sclient,tz,BotEmbed
 from starcord.errors import *
 from starcord.types.game import DBGame
 from starcord.utilities.map import sunmon_area
@@ -160,7 +160,9 @@ class debug(Cog_Extension):
     @commands.is_owner()
     @commands.slash_command(description='ver.2.0測試', guild_ids=debug_guilds)
     async def embedtest(self, ctx:discord.ApplicationContext):
-        pass
+        embed = BotEmbed.sts()
+        embed.add_field(name='測試',value='測試')
+        await ctx.respond(embed=embed)
 
     # @commands.slash_command()
     # async def modal_slash(self,ctx: discord.ApplicationContext):

@@ -14,7 +14,7 @@ from discord.commands import SlashCommandGroup
 from mysql.connector.errors import Error as sqlerror
 from mysql.connector.errors import IntegrityError
 
-from starcord import Cog_Extension,Jsondb,BRS,log,BotEmbed,ChoiceList,sclient
+from starcord import Cog_Extension,Jsondb,log,BotEmbed,ChoiceList,sclient
 from starcord.utilities import find, random_color, create_only_role_list, create_role_magification_dict, calculate_eletion_session
 from starcord.ui_element.button import Delete_Add_Role_button
 from starcord.ui_element.view import PollView
@@ -422,7 +422,7 @@ class command(Cog_Extension):
                        ctx:discord.ApplicationContext,
                        text:discord.Option(str,name='訊息',description='要傳送的訊息內容，歡迎提供各項建議')):
         await ctx.defer()
-        await BRS.feedback(self.bot,ctx,text)
+        await self.bot.feedback(self.bot,ctx,text)
         await ctx.respond(f"訊息已發送!",ephemeral=True,delete_after=3)
 
     @staticmethod

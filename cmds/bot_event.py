@@ -5,7 +5,7 @@ from datetime import datetime,timezone,timedelta
 import discord
 from discord.ext import commands
 
-from starcord import Cog_Extension,Jsondb,BotEmbed,BRS,sclient,log
+from starcord import Cog_Extension,Jsondb,BotEmbed,sclient,log
 
 keywords = {
     '抹茶粉':'由威立冠名贊助撥出~'
@@ -67,14 +67,14 @@ class event(Cog_Extension):
 
         #被提及回報
         if self.bot.user in message.mentions and not is_owner:
-            await BRS.mentioned(self.bot,message)
+            await self.bot.mentioned(self.bot,message)
         #被提及所有人回報
         if message.mention_everyone and not is_owner:
-            await BRS.mention_everyone(self.bot,message)
+            await self.bot.mention_everyone(self.bot,message)
         
         #私人訊息回報
         if isinstance(message.channel,discord.DMChannel) and message.author != self.bot.user:
-            await BRS.dm(self.bot,message)
+            await self.bot.dm(self.bot,message)
             return
 
         #關鍵字觸發

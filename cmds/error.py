@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 from mysql.connector.errors import Error as sqlerror
 from starcord.errors import *
-from starcord import Cog_Extension,log,BRS,Jsondb
+from starcord import Cog_Extension,log,Jsondb
 
 permissions_tl = Jsondb.jdict.get('permissions')
 debug_guilds = Jsondb.jdata.get('debug_guilds')
@@ -35,7 +35,7 @@ class error(Cog_Extension):
                     if debug_mode:
                         log.error(f'{error},{error.original.original_message},{type(error.original)}')
                     else:
-                        await BRS.error(self.bot,ctx,f"{error.original} ({error.original.original_message})")
+                        await self.bot.error(self.bot,ctx,f"{error.original} ({error.original.original_message})")
 
             elif isinstance(error.original,discord.errors.Forbidden):
                 await ctx.respond(f'操作被拒：我缺少權限執行這項操作，可能為我的身分組位階較低或缺少必要權限',ephemeral=True)
@@ -44,13 +44,13 @@ class error(Cog_Extension):
                 await ctx.respond(f'資料錯誤：資料重複新增',ephemeral=True)
             elif isinstance(error.original,(AttributeError, KeyError)):
                 await ctx.respond(f'錯誤：機器人內部錯誤（若發生此項錯誤請靜待修復）',ephemeral=True)
-                await BRS.error(self.bot,ctx,error)
+                await self.bot.error(self.bot,ctx,error)
                 log.error(f'{error},{type(error)},{type(error.original)}')
 
             else:
                 await ctx.respond(f'發生未知錯誤：```py\n{error.original}```',ephemeral=True)
                 if not ctx.guild or ctx.guild.id not in debug_guilds:
-                    await BRS.error(self.bot,ctx,error)
+                    await self.bot.error(self.bot,ctx,error)
 
                 log.error(f'{error},{type(error)},{type(error.original)}')
         
@@ -62,7 +62,7 @@ class error(Cog_Extension):
         
         else:
             if not ctx.guild or ctx.guild.id not in debug_guilds:
-                await BRS.error(self.bot,ctx,error)
+                await self.bot.error(self.bot,ctx,error)
             await ctx.respond(f'發生未知錯誤\n```{error.original}```',ephemeral=True)
             log.error(f'{error},{type(error)}')
 

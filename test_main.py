@@ -64,6 +64,3 @@ if __name__ == '__main__':
 	# #obj = Test(dct)
 	# print(obj.name)
 
-	from typing import Union, Awaitable
-
-	testtype = Union[int, str, Awaitable]

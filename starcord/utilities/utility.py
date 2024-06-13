@@ -79,7 +79,7 @@ class BotEmbed:
         return embed
     
     @staticmethod
-    def simple_warn_sheet(warn_user:discord.User, moderate_user:discord.User, create_at=datetime.now(), last=timedelta(seconds=15), reason:str=None, title="已被禁言"):
+    def simple_warn_sheet(warn_user:discord.User, moderate_user:discord.User, create_at:datetime, last=timedelta(seconds=15), reason:str=None, title="已被禁言"):
         '''簡易警告表格'''
         timestamp = int((create_at + last).timestamp())
         embed = discord.Embed(description=f"{warn_user.mention}：{reason}", color=0xc4e9ff)
@@ -88,71 +88,6 @@ class BotEmbed:
         embed.add_field(name="結束時間",value=f"<t:{timestamp}>（{timedelta.total_seconds():0f}s）")
         embed.timestamp = create_at
         return embed
-        
-
-
-class BRS():
-    @staticmethod
-    async def error(bot,ctx:discord.ApplicationContext,error:str):
-        error_report = bot.get_channel(Jsondb.jdata['error_report'])
-        embed=BotEmbed.general(name="BRS | 錯誤回報")
-        embed.add_field(name='錯誤訊息', value=f'```py\n{error}```', inline=True)
-        if ctx.command:
-            embed.add_field(name='使用指令', value=f'```{ctx.command}```', inline=False)
-            embed.add_field(name='參數', value=f'```{ctx.selected_options}```', inline=False)
-        embed.add_field(name='使用者', value=f"{ctx.author}\n{ctx.author.id}", inline=False)
-        embed.add_field(name='發生頻道', value=f'{ctx.channel}\n{ctx.channel.id}', inline=True)
-        embed.add_field(name='發生群組', value=f'{ctx.guild}\n{ctx.guild.id}', inline=True)
-        await error_report.send(embed=embed)
-
-    @staticmethod
-    async def report(bot,msg):
-        report_channel = bot.get_channel(Jsondb.jdata['report_channel'])
-        embed=BotEmbed.general(name="BRS | 回報訊息")
-        embed.add_field(name='訊息', value=msg, inline=True)
-        await report_channel.send(embed=embed)
-
-    @staticmethod
-    async def feedback(bot,ctx:discord.ApplicationContext,msg):
-        feedback_channel = bot.get_channel(Jsondb.jdata['feedback_channel'])
-        embed=BotEmbed.general(name="BRS | 回饋訊息")
-        embed.add_field(name='訊息內容', value=msg, inline=True)
-        embed.add_field(name='發送者', value=f"{ctx.author}\n{ctx.author.id}", inline=False)
-        embed.add_field(name='來源頻道', value=f'{ctx.channel}\n{ctx.channel.id}', inline=True)
-        embed.add_field(name='來源群組', value=f'{ctx.guild}\n{ctx.guild.id}', inline=True)
-        await feedback_channel.send(embed=embed)
-
-    @staticmethod
-    async def dm(bot,msg:discord.Message):
-        dm_channel = bot.get_channel(Jsondb.jdata['dm_channel'])
-        embed=BotEmbed.general(name="BRS | 私人訊息")
-        embed.add_field(name='訊息內容', value=msg.content, inline=True)
-        if msg.channel.recipient:
-            embed.add_field(name='發送者', value=f"{msg.author}->{msg.channel.recipient}\n{msg.author.id}->{msg.channel.recipient.id}", inline=False)
-        else:
-            embed.add_field(name='發送者', value=f"{msg.author}\n{msg.author.id}", inline=False)
-        await dm_channel.send(embed=embed)
-
-    @staticmethod
-    async def mentioned(bot,msg:discord.Message):
-        dm_channel = bot.get_channel(Jsondb.jdata['mentioned_channel'])
-        embed=BotEmbed.general(name="BRS | 提及訊息",description=msg.jump_url)
-        embed.add_field(name='訊息內容', value=msg.content, inline=True)
-        embed.add_field(name='發送者', value=f"{msg.author}\n{msg.author.id}", inline=False)
-        embed.add_field(name='來源頻道', value=f'{msg.channel}\n{msg.channel.id}', inline=True)
-        embed.add_field(name='來源群組', value=f'{msg.guild}\n{msg.guild.id}', inline=True)
-        await dm_channel.send(embed=embed)
-    
-    @staticmethod
-    async def mention_everyone(bot,msg:discord.Message):
-        dm_channel = bot.get_channel(Jsondb.jdata['mention_everyone_channel'])
-        embed=BotEmbed.general(name="BRS | 提及所有人訊息",description=f"https://discord.com/channels/{msg.guild.id}/{msg.channel.id}/{msg.id}")
-        embed.add_field(name='訊息內容', value=msg.content, inline=True)
-        embed.add_field(name='發送者', value=f"{msg.author}\n{msg.author.id}", inline=False)
-        embed.add_field(name='來源頻道', value=f'{msg.channel}\n{msg.channel.id}', inline=True)
-        embed.add_field(name='來源群組', value=f'{msg.guild}\n{msg.guild.id}', inline=True)
-        await dm_channel.send(embed=embed)
-
 class ChoiceList():
     @staticmethod
     def set(option_name):

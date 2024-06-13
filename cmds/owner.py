@@ -5,7 +5,7 @@ import mcrcon
 from discord.ext import commands
 from discord.commands import SlashCommandGroup
 
-from starcord import Cog_Extension,BotEmbed,BRS,Jsondb,sclient
+from starcord import Cog_Extension,BotEmbed,Jsondb,sclient
 from starcord.utilities.utility import converter
 
 class SendMessageModal(discord.ui.Modal):
@@ -19,7 +19,7 @@ class SendMessageModal(discord.ui.Modal):
         message = await self.channel.send(self.children[0].value)
         await interaction.response.send_message(f'訊息發送成功',delete_after=5,ephemeral=True)
         if self.is_dm:
-            await BRS.dm(interaction.client,message)
+            await interaction.client.dm(interaction.client,message)
 
 
 class AnnoModal(discord.ui.Modal):
