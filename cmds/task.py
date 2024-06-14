@@ -8,7 +8,7 @@ import genshin
 from discord.ext import commands,tasks
 from requests.exceptions import ConnectTimeout
 
-from starcord import Cog_Extension,Jsondb,sclient,log,BotEmbed,utilities, ChoiceList
+from starcord import Cog_Extension,Jsondb,sclient,log,BotEmbed,utilities, ChoiceList, tz
 from starcord.dataExtractor import *
 from starcord.models.community import TwitchVideo, YoutubeVideo
 from starcord.types import NotifyCommunityType
@@ -27,7 +27,6 @@ class task(Cog_Extension):
     def __init__(self,*args,**kwargs):
         super().__init__(*args,**kwargs)
         #await self.bot.wait_until_ready()
-    tz = timezone(timedelta(hours=8))
     
     @commands.Cog.listener()
     async def on_ready(self):

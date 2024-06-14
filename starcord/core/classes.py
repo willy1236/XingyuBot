@@ -97,6 +97,11 @@ class DiscordBot(discord.Bot):
                 else:
                     log.warning(f"{notify_type} not found: {guild.id}/{channel.id}")
 
+    def about_embed(self):
+        embed = BotEmbed.bot(self.bot,description=f"你好~我是星羽，你可以輸入 </help:1067700245015834638> 來查看所有指令的用法\n\n希望我能在discord上幫助到你喔~\n有任何建議、需求、協助與合作可以使用 </feedback:1067700244848058386> 指令\n\n支援伺服器：https://discord.gg/ye5yrZhYGF")
+        embed.set_footer(text="此機器人由 威立 負責維護")
+        return embed
+
 #commands.Bot
 #shard_count=1,
 #command_prefix=commands.when_mentioned_or('b!'),
@@ -117,7 +122,7 @@ class StarCache:
         self.set_data()
 
     def set_data(self):
-        """重置所有資料"""
+        """設定或重置所有資料"""
         for t in self.dict_type:
             dbdata = sqldb.get_notify_channel_by_type(t)
             self[t] = self.generate_notify_channel_dbdata(dbdata)
@@ -173,9 +178,9 @@ class StarCache:
     def update_dynamic_voice_room(self,add_channel=None,remove_channel=None):
         """更新動態語音房間"""
         if add_channel and add_channel not in self.cache["dynamic_voice_room"]:
-            self["dynamic_voice"].append(add_channel)
+            self["dynamic_voice_room"].append(add_channel)
         if remove_channel:
-            self["dynamic_voice"].remove(remove_channel)
+            self["dynamic_voice_room"].remove(remove_channel)
 
     def update_notify_channel(self,notify_type):
         """更新通知頻道"""

@@ -21,9 +21,7 @@ info_data = {
 class help(Cog_Extension):
     @commands.slash_command(description='關於機器人')
     async def about(self,ctx):
-        embed = BotEmbed.bot(self.bot,description=f"你好~我是星羽，是一個discord機器人喔~\n你可以輸入 </help:1067700245015834638> 來查看所有指令的用法\n\n希望我能在discord上幫助到你喔~\n有任何建議與需求可以使用 </feedback:1067700244848058386> 指令\n\n支援伺服器：https://discord.gg/ye5yrZhYGF")
-        embed.set_footer(text="此機器人由 威立 負責維護")
-        await ctx.respond(embed=embed)
+        await ctx.respond(embed=self.bot.about_embed())
 
     @commands.slash_command(description='一些資訊')
     async def info(self, ctx, arg:discord.Option(str,name='選項',description='資訊名稱',choices=info_option)):
@@ -103,7 +101,7 @@ class help(Cog_Extension):
             embed.set_footer(text="輸入/help use查詢指令用法")
             await ctx.respond(embed=embed)
         elif arg == 'music':
-            page = [BotEmbed.simple("音樂(music) 指令:"),BotEmbed.simple("音樂(music) 指令:")]
+            page = [BotEmbed.simple("音樂(music) 指令:")]
             page[0].add_field(name="/play <歌曲>", value="播放歌曲", inline=False)
             page[0].add_field(name="/queue", value="歌曲列表", inline=False)
             page[0].add_field(name="/nowplaying", value="現在播放的歌曲", inline=False)
@@ -146,7 +144,8 @@ class help(Cog_Extension):
             embed = BotEmbed.simple("圖奇(twitch) 指令")
             embed.add_field(name="/twitch set <twitch用戶> <頻道> [身分組]", value="設定twitch的開台通知", inline=False)
             embed.add_field(name="/twitch remove <twitch用戶>", value="移除twitch的開台通知", inline=False)
-            embed.add_field(name="/twitch notice <twitch用戶>", value="檢查twitch的開台通知頻道", inline=False)
+            embed.add_field(name="/twitch notify <twitch用戶>", value="檢查twitch的開台通知頻道", inline=False)
+            embed.add_field(name="/twitch list", value="檢查群組所有的twitch開台通知頻道", inline=False)
             embed.add_field(name="/twitch user <twitch用戶>", value="查詢twitch用戶", inline=False)
             embed.set_footer(text="輸入/help use查詢指令用法")
             await ctx.respond(embed=embed)
