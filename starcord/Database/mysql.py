@@ -1,3 +1,4 @@
+import json
 from datetime import datetime,date,time,timedelta,timezone
 from typing import Dict, List, Set, Tuple
 
@@ -415,9 +416,10 @@ class MySQLCurrencySystem(MySQLBaseModel):
             return ShopItem(record[0])
 
 class MySQLHoYoLabSystem(MySQLBaseModel):
-    def set_hoyo_cookies(self,discord_id:int,ltuid:str,ltoken:str,cookie_token:str):
+    def set_hoyo_cookies(self,discord_id:int,cookies:dict):
+        cookies = json.dumps(cookies)
         self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f"INSERT INTO `game_hoyo_cookies` VALUES(%s,%s,%s,%s) ON DUPLICATE KEY UPDATE `discord_id` = %s, `ltuid` = %s, `ltoken` = %s, `cookie_token` = %s",(discord_id,ltuid,ltoken,cookie_token,discord_id,ltuid,ltoken,cookie_token))
+        self.cursor.execute(f"INSERT INTO `game_hoyo_cookies` VALUES(%s,%s) ON DUPLICATE KEY UPDATE `discord_id` = %s, `hoyolab_cookies` = %s;",(discord_id,cookies,discord_id,cookies))
         self.connection.commit()
 
     def remove_hoyo_cookies(self,discord_id:int):

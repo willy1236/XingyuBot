@@ -10,6 +10,7 @@ from starcord import Cog_Extension,BotEmbed,Jsondb,csvdb,ChoiceList,sclient
 from starcord.dataExtractor import *
 from starcord.types import DBGame
 from starcord.ui_element.view import GameView
+from starcord.ui_element.modals import HoyolabCookiesModal
 
 # def player_search(url):
 #     response = requests.get(url)
@@ -219,7 +220,7 @@ class system_game(Cog_Extension):
                 text += f"距離專精等級提升： {data.championPointsUntilNextLevel}\n"
             elif data.championLevel == 5 or data.championLevel == 6:
                 text += f"專精代幣獲取數： {data.tokensEarned}\n"
-            text += f"是否取得寶箱： {data.chestGranted}\n"
+            # text += f"是否取得寶箱： {data.chestGranted}\n"
             #text += f"上次遊玩： {datetime.fromtimestamp(data.lastPlayTime/1000).isoformat(sep=' ')}\n"
             text += f"上次遊玩： <t:{int(data.lastPlayTime/1000)}>\n"
             champion_name = csvdb.get_row_by_column_value(csvdb.lol_champion,"champion_id",data.championId)
@@ -266,9 +267,9 @@ class system_game(Cog_Extension):
             await ctx.respond('查詢失敗：查無此玩家',ephemeral=True)
             return
         
-        active_match = api.get_summoner_active_match(player.summonerid)
+        active_match = api.get_summoner_active_match(player.puuid)
         if not active_match:
-            await ctx.respond(f'{riot_id} 沒有進行中的對戰',ephemeral=True)
+            await ctx.respond(f'{player.fullname} 沒有進行中的對戰',ephemeral=True)
             return
         
         await ctx.respond('查詢成功',embed=active_match.desplay())
@@ -378,27 +379,22 @@ class system_game(Cog_Extension):
     @hoyo.command(description='如何設定cookies(需先設定才能使用其他功能)')
     @commands.cooldown(rate=1,per=1)
     async def help(self,ctx):
-        embed = BotEmbed.simple(description="1.前往 https://www.hoyolab.com/ 並登入\n2.複製以下代碼```script:d=document.cookie; c=d.includes('account_id') || alert('過期或無效的Cookie,請先登出帳號再重新登入!'); c && document.write(d)```\n3.在網址列打上java後直接貼上複製的代碼\n4.找到`ltuid=`跟`ltoken=`並複製其中的內容\n5.使用指令 </hoyo set:1045323352421711947>")
-        embed2 = BotEmbed.simple(description="擁有此cookie將可以使機器人以登入帳號的身分瀏覽與操作hoyolab的相關功能，但無法用於登入遊戲與改變遊戲中所持有的內容。\n若對此功能有疑慮，可隨時終止使用，cookie也可以隨時刪除，但米哈遊沒有官方正式API，故若不提供cookie將會無法使用相關功能。")
+        #embed = BotEmbed.simple(description="1.前往 https://www.hoyolab.com/ 並登入\n2.複製以下代碼```script:d=document.cookie; c=d.includes('account_id') || alert('過期或無效的Cookie,請先登出帳號再重新登入!'); c && document.write(d)```\n3.在網址列打上java後直接貼上複製的代碼\n4.找到`ltuid=`跟`ltoken=`並複製其中的內容\n5.使用指令 </hoyo set:1045323352421711947>")
+        embed = BotEmbed.simple(description="1.前往 https://www.hoyolab.com/ 並登入\n2.F12->Application(應用程式)->Cookies->點開www.hoyolab.com\n3.找到`ltuid_v2`、`ltmid_v2`跟`ltoken_v2`\n4.使用指令 </hoyo set:1045323352421711947>並在彈出視窗中填入對應的資料")
+        embed2 = BotEmbed.simple(description="擁有此cookie將可以使機器人以登入帳號的身分瀏覽與操作hoyolab的相關功能，但無法用於登入遊戲與改變遊戲中所持有的內容。\n若對此功能有疑慮，可隨時終止使用，cookie也可以隨時刪除，若使用此功能則代表您允許機器人進行上述操作，並自負相應的風險。")
         await ctx.respond(embeds=[embed,embed2])
 
     @hoyo.command(description='設定cookies')
     @commands.cooldown(rate=1,per=1)
-    async def set(self,ctx,
-                  ltuid:discord.Option(str,name='ltuid',required=False),
-                  ltoken:discord.Option(str,name='ltoken',required=False),
-                  uid:discord.Option(str,name='uid',description="非必填 輸入後能在使用某些功能時自動套用 若輸入過可跳過",required=False),
+    async def set(self,ctx:discord.ApplicationContext,
                   #cookie_token:discord.Option(str,name='cookie_token',description="非必填 輸入後才能使用更多功能 如兌換序號",required=False,default=None),
                   remove:discord.Option(bool,name='若要移除資料請設為true',default=False)):
-        if not remove:
-            sclient.sqldb.set_hoyo_cookies(str(ctx.author.id),ltuid,ltoken,None)
-            if uid:
-                sclient.sqldb.set_game_data(str(ctx.author.id),DBGame.GENSHIN.value,player_id=uid)
-            await ctx.respond(f'{ctx.author.mention} 設定完成',ephemeral=True)
-        else:
-            sclient.sqldb.remove_hoyo_cookies(str(ctx.author.id))
-            sclient.sqldb.remove_game_data(str(ctx.author.id),DBGame.GENSHIN.value)
+        if remove:
+            sclient.sqldb.remove_hoyo_cookies(ctx.author.id)
             await ctx.respond(f'{ctx.author.mention} cookies移除完成',ephemeral=True)
+            return
+        
+        await ctx.send_modal(HoyolabCookiesModal())
 
     @hoyo.command(description='取得每月原石來源統計（原神）')
     @commands.cooldown(rate=1,per=1)
