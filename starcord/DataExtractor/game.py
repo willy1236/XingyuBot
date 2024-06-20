@@ -40,6 +40,7 @@ class RiotAPI(GameInterface):
             raise APIInvokeError("lol_player_byname",r.text)
 
     def get_player_byname(self,username:str):
+        """#!Deprecated"""
         r = requests.get(f'{self.url_tw2}/lol/summoner/v4/summoners/by-name/{username}', headers=self._headers)
         if r.ok:
             return LOLPlayer(r.json())
@@ -87,8 +88,8 @@ class RiotAPI(GameInterface):
         else:
             raise APIInvokeError("lol_summoner_masteries",r.text)
     
-    def get_summoner_active_match(self,summoner_id):
-        r = requests.get(f'{self.url_tw2}/lol/spectator/v4/active-games/by-summoner/{summoner_id}',headers=self._headers)
+    def get_summoner_active_match(self,puuid):
+        r = requests.get(f'{self.url_tw2}/lol/spectator/v5/active-games/by-summoner/{puuid}',headers=self._headers)
         if r.ok:
             return LOLActiveMatch(r.json())
         elif r.status_code == 404:
@@ -124,7 +125,7 @@ class RiotAPI(GameInterface):
                     for rank in ranks:
                         new_row = {'name': rank.name, 'queueType': rank.queueType, 'tier': rank.tier, 'rank': rank.rank}
                         df.loc[len(df)] = new_row
-                        pd.concat()
+                        #pd.concat()
                 time.sleep(1)
             time.sleep(1)
         return df

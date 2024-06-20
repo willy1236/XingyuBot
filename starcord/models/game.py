@@ -64,10 +64,18 @@ class PartialLOLPlayer(LOLPlayer):
         self.accountid = data.get('account_id')
         self.puuid = data.get('other_id')
 
+    @property
+    def fullname(self):
+        return self.name
+
 class LOLPlayerInMatch(LOLPlayer):
     def __init__(self,data):
         super().__init__(data)
-        self.participantId = data['participantId']
+        self.name = data.get('riotIdGameName')
+        self.tag = data.get('riotIdTagline')
+        self.participantId = data.get('participantId')
+        self.summonerName = data.get('summonerName')
+        self.summonerid = data.get('summonerId')
         #self.profileIcon = data['profileIcon']
         #self.puuid = data['puuid']
         self.name = data['summonerName']
@@ -242,7 +250,6 @@ class LOLMatch():
     
     def get_player_in_match(self,playername):
         for player in self.players:
-            # FIXME: 確認名稱是否正確
             if player.summonerName == playername:
                 return player
     
@@ -256,8 +263,10 @@ class LOLChampionMasteries(LOLPlayer):
         self.lastPlayTime = data['lastPlayTime']
         self.championPointsSinceLastLevel = data['championPointsSinceLastLevel']
         self.championPointsUntilNextLevel = data['championPointsUntilNextLevel']
-        self.chestGranted = data['chestGranted']
+        #self.chestGranted = data['chestGranted']
         self.tokensEarned = data['tokensEarned']
+        self.championSeasonMilestone = data["championSeasonMilestone"]
+        self.milestoneGrades = data.get("milestoneGrades")
 
 class LOLPlayerRank(LOLPlayer):
     def __init__(self,data):
