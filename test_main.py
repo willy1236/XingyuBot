@@ -2,7 +2,9 @@ import asyncio
 import json
 import secrets
 import time
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+from enum import Enum, IntEnum
 from pydantic import BaseModel
 
 import discord
@@ -53,14 +55,49 @@ if __name__ == '__main__':
 	# 	print("="*50)
 	# 	time.sleep(10)
 
-	# class Test(BaseModel):
-	# 	name: str
+	class Test(BaseModel):
+		name: str
 
-	# 	# def __init__(self, dct:dict):
-	# 	# 	super().model_validate(dct)
+		def __init__(self, dct:dict):
+			super().model_validate(dct)
 	
-	# dct = {"name": "test"}
+	dct = {"name": "test"}
+	obj = Test(dct)
+	print(obj.name)
 	# obj = Test.model_validate(dct)
 	# #obj = Test(dct)
 	# print(obj.name)
 
+from typing import TypedDict
+
+class classrole(IntEnum):
+	role1 = 1
+	role2 = 2
+class lUser(TypedDict):
+	id: int
+	username: str
+	discriminator: str
+	global_name: str | None
+	avatar: str | None
+	role: classrole
+    
+dict = {"id": 123, "role": 1}
+user = lUser(dict)
+print(type(user))
+print(type(user["role"]))
+
+@dataclass
+class kUser():
+	id: int
+	role: classrole
+
+	def test(self):
+		print("test")
+
+dict = {"id": 123, "role": 1}
+user = kUser(**dict)
+print(type(user))
+print(user.role == classrole.role1)
+
+from starcord.dataExtractor import CWA_API
+print(CWA_API().get_earthquake_report(True))

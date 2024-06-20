@@ -50,7 +50,9 @@ class task(Cog_Extension):
             #scheduler.add_job(self.city_battle,'interval',minutes=1,jitter=30,misfire_grace_time=60)
             #scheduler.add_job(self.get_mongodb_data,'interval',minutes=3,jitter=30,misfire_grace_time=40)
 
-            # scheduler.add_job(sclient.init_NoticeClient,"date")
+            if self.bot.user.id == 589744540240314368:
+                scheduler.add_job(self.birtday_task,'cron',month=10,day=16,hour=8,minute=0,second=0,jitter=30,misfire_grace_time=60)
+                
 
             #self.twitch.start()
         else:
@@ -391,6 +393,9 @@ class task(Cog_Extension):
         channel = self.bot.get_channel(1160459117270405222)
         await channel.send("投票時間接近了，提醒大家記得參選喔")
         
+    async def birtday_task(self):
+        channel = self.bot.get_channel(566533708371329026)
+        await channel.send("今天是個特別的日子，別忘記了喔⭐")
 
 def setup(bot):
     bot.add_cog(task(bot))

@@ -1,6 +1,6 @@
 from datetime import date, datetime
 from pydantic import BaseModel
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypedDict
 
 from ..utilities import BotEmbed
 from ..settings import tz
