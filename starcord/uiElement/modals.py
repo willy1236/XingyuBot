@@ -3,6 +3,7 @@ import genshin
 
 from ..database import sqldb
 
+
 class HoyolabCookiesModal(discord.ui.Modal):
     def __init__(self) -> None:
         super().__init__(title="Hoyolab Cookies")
