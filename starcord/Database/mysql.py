@@ -1142,7 +1142,7 @@ class MySQLTokensSystem(MySQLBaseModel):
 
 class MySQLManager(MySQLBaseModel):
     def copy_data(self, remote_schema, remote_table, local_schema, local_table):
-        remote = MySQLBaseModel(Jsondb.jdata["remote_SQLsettings"])
+        remote = MySQLBaseModel(Jsondb.config["remote_SQLsettings"])
         remote.cursor.execute(f"SELECT * FROM `{remote_schema}`.`{remote_table}`;")
         records = remote.cursor.fetchall()
 

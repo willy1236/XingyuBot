@@ -5,7 +5,7 @@ from discord.ext import commands
 from discord.commands import SlashCommandGroup
 
 from starcord.dataExtractor import TwitchAPI,YoutubeAPI,YoutubeRSS
-from starcord.ui_element.view import ReactionRole1, WelcomeView
+from starcord.uiElement.view import ReactionRole1, WelcomeView
 from starcord import Cog_Extension,BotEmbed,sclient,Jsondb,ChoiceList
 from starcord.types import NotifyCommunityType
 
@@ -41,14 +41,14 @@ class system_community(Cog_Extension):
                 pass
             
             elif type == NotifyCommunityType.TwitchVideo:
-                cache = Jsondb.read_cache('twitch_v')
+                cache = Jsondb.cache.get('twitch_v')
                 cache[user.id] = api.get_videos(user.id)[0].created_at.isoformat()
-                Jsondb.write_cache('twitch_v',cache)
+                Jsondb.cache.write('twitch_v',cache)
             
             elif type == NotifyCommunityType.TwitchClip:
-                cache = Jsondb.read_cache('twitch_c')
+                cache = Jsondb.cache.get('twitch_c')
                 cache[user.id] = datetime.now().isoformat()
-                Jsondb.write_cache('twitch_c',cache)
+                Jsondb.cache.write('twitch_c',cache)
             
             sclient.cache.update_notify_notify_community(type)
         else:
@@ -66,16 +66,16 @@ class system_community(Cog_Extension):
         if not notify_type or type == NotifyCommunityType.TwitchVideo:
             sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitchVideo.value, twitch_user, guildid)
 
-            cache = Jsondb.read_cache('twitch_v')
+            cache = Jsondb.cache.get('twitch_v')
             del cache[user.id]
-            Jsondb.write_cache('twitch_v',cache)
+            Jsondb.cache.write('twitch_v',cache)
 
         if not type or type == NotifyCommunityType.TwitchClip:
             sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitchClip.value, twitch_user, guildid)
 
-            cache = Jsondb.read_cache('twitch_c')
+            cache = Jsondb.cache.get('twitch_c')
             del cache[user.id]
-            Jsondb.write_cache('twitch_c',cache)
+            Jsondb.cache.write('twitch_c',cache)
         
         await ctx.respond(f'已移除 {twitch_user} 的通知')
         
@@ -164,9 +164,9 @@ class system_community(Cog_Extension):
 
             feed = YoutubeRSS().get_videos(ytchannel.id)
             updated_at = feed[0].updated_at.isoformat() if feed else None
-            cache = Jsondb.read_cache("youtube")
+            cache = Jsondb.cache.get("youtube")
             cache[ytchannel.id] = updated_at
-            Jsondb.write_cache('youtube',cache)
+            Jsondb.cache.write('youtube',cache)
         else:
             await ctx.respond(f'錯誤：找不到帳號代碼 {ythandle} 的頻道')
 
@@ -184,9 +184,9 @@ class system_community(Cog_Extension):
         
         sclient.cache.update_notify_notify_community(NotifyCommunityType.Youtube)
 
-        cache = Jsondb.read_cache("youtube")
+        cache = Jsondb.cache.get("youtube")
         del cache[ytchannel.id]
-        Jsondb.write_cache('youtube',cache)
+        Jsondb.cache.write('youtube',cache)
 
     @youtube.command(description='確認youtube通知')
     async def notify(self,ctx,ythandle:discord.Option(str,required=True,name='youtube帳號代碼',description="youtube頻道中以@開頭的代號")):

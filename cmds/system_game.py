@@ -1,27 +1,17 @@
 import re
-from datetime import timedelta,datetime
+from datetime import datetime, timedelta
 
 import discord
 import genshin
-from discord.ext import commands,pages
 from discord.commands import SlashCommandGroup
+from discord.ext import commands, pages
 
-from starcord import Cog_Extension,BotEmbed,Jsondb,csvdb,ChoiceList,sclient
+from starcord import (BotEmbed, ChoiceList, Cog_Extension, Jsondb, csvdb,
+                      sclient)
 from starcord.dataExtractor import *
 from starcord.types import DBGame
-from starcord.ui_element.view import GameView
-from starcord.ui_element.modals import HoyolabCookiesModal
-
-# def player_search(url):
-#     response = requests.get(url)
-#     soup = BeautifulSoup(response.text, "html.parser")
-#     results = soup.find_all("h1",class_="row")
-
-#     for result in results:
-#         if result.div.string == None:
-#             result2 = str(result.div)[166:]
-#             lvl = ''.join([x for x in result2 if x.isdigit()])
-#             return lvl
+from starcord.uiElement.modals import HoyolabCookiesModal
+from starcord.uiElement.view import GameView
 
 set_option = ChoiceList.set('game_set_option')
 hoyo_game_option = [
@@ -30,8 +20,8 @@ hoyo_game_option = [
     discord.OptionChoice(name='崩壞：星穹軌道',value=genshin.Game.STARRAIL)
 ]
 
-debug_guilds = Jsondb.jdata.get('debug_guilds')
-jdata = Jsondb.jdata
+config = Jsondb.config
+debug_guilds = config.get('debug_guilds')
 
 class system_game(Cog_Extension):
     game = SlashCommandGroup("game", "遊戲資訊相關指令")
@@ -595,7 +585,7 @@ class system_game(Cog_Extension):
                    game:discord.Option(str,name='遊戲',description='要簽到的遊戲',choices=hoyo_game_option),
                    code:discord.Option(str,name='禮包碼',description='要兌換的禮包碼'),
                    uid:discord.Option(str,name='uid',description='要兌換的用戶')):
-        if not jdata.get("debug_mode"):
+        if not config.get("debug_mode"):
             cookies = sclient.sqldb.get_userdata(str(ctx.author.id),'game_hoyo_cookies')
         else:
             cookies = genshin.utility.get_browser_cookies("chrome")

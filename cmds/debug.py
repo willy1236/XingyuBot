@@ -9,7 +9,7 @@ from starcord.types.game import DBGame
 from starcord.utilities.map import sunmon_area
 
 
-debug_guilds = Jsondb.jdata.get('debug_guilds')
+debug_guilds = Jsondb.config.get('debug_guilds')
 
 # Note that custom_ids can only be up to 100 characters long.
 class PersistentView(discord.ui.View):
@@ -170,16 +170,6 @@ class debug(Cog_Extension):
     #     modal = MyModal(title="Modal Slash Command")
     #     await ctx.send_modal(modal)
 
-    # @commands.command()
-    # @commands.is_owner()
-    # async def prepare(self,ctx: commands.Context):
-    #     """Starts a persistent view."""
-    #     # In order for a persistent view to be listened to, it needs to be sent to an actual message.
-    #     # Call this method once just to store it somewhere.
-    #     # In a more complicated program you might fetch the message_id from a database for use later.
-    #     # However this is outside of the scope of this simple example.
-    #     await ctx.send("What's your favourite colour?", view=PersistentView(self))
-    
     # @commands.command()
     # @commands.is_owner()
     # async def derole(self,ctx: commands.Context):

@@ -5,7 +5,6 @@ import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from enum import Enum, IntEnum
-from pydantic import BaseModel
 
 import discord
 import feedparser
@@ -15,9 +14,9 @@ import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 from faker import Faker
-#from pydantic import BaseModel
+from pydantic import BaseModel
 
-from starcord import log,Jsondb, ChoiceList, sqldb, tz
+from starcord import ChoiceList, Jsondb, log, sqldb, tz
 from starcord.dataExtractor import *
 from starcord.starAI import StarGeminiAI
 from starcord.types import NotifyCommunityType
@@ -44,7 +43,7 @@ if __name__ == '__main__':
 	# 		# "威立：剛剛的問題可不可以再複述一次？使用條列的方式分析黑色方與白色方",
    	# 		# "請以妳自己的性格創造一個故事中的角色，但名子中不要有星這個字",
 	# 		# "請創造一個故事中的角色，賦予它與眾不同的性格與興趣愛好，包含一段關於他的故事，並且符合快樂營的相關設定，但不要與妳自己的設定雷同，也不要有與星空相關的能力",
-	#   		# "星羽 妳知道無黨籍這個政黨嗎",
+	#   	# "星羽 妳知道無黨籍這個政黨嗎",
 	#  		# "威立：星羽 如果你是台中摃殘黨的主席，同時又當選總統，那你會如何對待選輸的海豹，執行共殘黨理念中的「把不要的總統放進消波塊流放邊疆」？",
 	# 		# "星羽 請將無黨籍黨的以SWOT分析後作成表格",
 	# 		# "如果你有一個專屬槍械，那會叫什麼？請告訴我他的代號與名稱，並且形容是什麼樣的槍械、它的外觀，以及有什麼特殊功能？同時不要包含月影與月光元素",
@@ -57,18 +56,16 @@ if __name__ == '__main__':
 
 	class Test(BaseModel):
 		name: str
-
-		def __init__(self, dct:dict):
-			super().model_validate(dct)
 	
 	dct = {"name": "test"}
-	obj = Test(dct)
+	obj = Test(**dct)
 	print(obj.name)
 	# obj = Test.model_validate(dct)
 	# #obj = Test(dct)
 	# print(obj.name)
 
 from typing import TypedDict
+
 
 class classrole(IntEnum):
 	role1 = 1
@@ -82,9 +79,9 @@ class lUser(TypedDict):
 	role: classrole
     
 dict = {"id": 123, "role": 1}
-user = lUser(dict)
-print(type(user))
-print(type(user["role"]))
+luser = lUser(dict)
+print(type(luser))
+print(type(luser["role"]))
 
 @dataclass
 class kUser():
@@ -98,6 +95,3 @@ dict = {"id": 123, "role": 1}
 user = kUser(**dict)
 print(type(user))
 print(user.role == classrole.role1)
-
-from starcord.dataExtractor import CWA_API
-print(CWA_API().get_earthquake_report(True))

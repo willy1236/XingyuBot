@@ -21,9 +21,9 @@ member_names = {
     814846401501986818: "黑龍",
 }
 
-voice_updata = Jsondb.jdata.get('voice_updata')
-debug_mode = Jsondb.jdata.get("debug_mode",True)
-main_guilds = Jsondb.jdata.get('main_guilds',[])
+voice_updata = Jsondb.config.get('voice_updata')
+debug_mode = Jsondb.config.get("debug_mode",True)
+main_guilds = Jsondb.config.get('main_guilds',[])
 
 guild_registration = sclient.sqldb.get_resgistration_dict() if sclient.sqldb else {}
 
@@ -307,12 +307,12 @@ class event(Cog_Extension):
 
     @commands.Cog.listener()
     async def on_guild_join(self, guild:discord.Guild):
-        report_channel = self.bot.get_channel(Jsondb.jdata['report_channel'])
+        report_channel = self.bot.get_channel(Jsondb.config.get('report_channel'))
         await report_channel.send(f"公會異動：我加入了 {guild.name} ({guild.id})")
 
     @commands.Cog.listener()
     async def on_guild_remove(self, guild:discord.Guild):
-        report_channel = self.bot.get_channel(Jsondb.jdata['report_channel'])
+        report_channel = self.bot.get_channel(Jsondb.config.get('report_channel'))
         await report_channel.send(f"公會異動：我離開了 {guild.name} ({guild.id})")
 
     @commands.Cog.listener()

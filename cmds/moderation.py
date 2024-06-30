@@ -8,7 +8,7 @@ from starcord import Cog_Extension,ChoiceList,BotEmbed,Jsondb,sclient
 from starcord.utilities import converter
 
 set_option = ChoiceList.set('channel_set_option')
-debug_guilds = Jsondb.jdata['debug_guilds']
+debug_guilds = Jsondb.config.get('debug_guilds')
 
 class moderation(Cog_Extension):
     warning = SlashCommandGroup("warning", "警告相關指令")

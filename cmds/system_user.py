@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 from discord.commands import SlashCommandGroup
 from starcord import Cog_Extension,BotEmbed,ChoiceList,sclient
-from starcord.ui_element.button import Delete_Pet_button
+from starcord.uiElement.button import Delete_Pet_button
 
 pet_option = ChoiceList.set('pet_option')
 

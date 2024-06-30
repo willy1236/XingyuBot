@@ -46,7 +46,7 @@ def random_color(max=255):
     if max > 255:
         raise ValueError("max must below 256")
     color = []
-    for i in range(3):
+    for _ in range(3):
         color.append(random.randint(0,max))
     return color
 

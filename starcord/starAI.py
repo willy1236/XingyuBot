@@ -2,8 +2,8 @@ import time
 from io import BytesIO
 from typing import TYPE_CHECKING
 
-import google.generativeai as genai
 import google.api_core.exceptions
+import google.generativeai as genai
 from PIL import Image
 
 from .fileDatabase import Jsondb

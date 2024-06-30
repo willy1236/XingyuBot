@@ -10,9 +10,9 @@ from .logger import *
 from .utility import *
 from .task import scheduler
 
-file_log = Jsondb.jdata.get('file_log')
-debug_mode = Jsondb.jdata.get("debug_mode",True)
-log_level = Jsondb.jdata.get("log_level",INFO)
+file_log = Jsondb.config.get('file_log')
+debug_mode = Jsondb.config.get("debug_mode",True)
+log_level = Jsondb.config.get("log_level",INFO)
 #log_level = DEBUG if debug_mode else INFO
 
 log = create_logger('./logs', file_log, log_level)

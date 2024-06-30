@@ -89,7 +89,7 @@ class WarningSheet:
     @property
     def officially_given(self):
         if self.__officially_given is None:
-            self.__officially_given = self.guild_id in Jsondb.jdata["debug_guilds"]
+            self.__officially_given = self.guild_id in Jsondb.config["debug_guilds"]
         return self.__officially_given
     
     def embed(self,bot:discord.Bot):

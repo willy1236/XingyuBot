@@ -8,7 +8,7 @@ from discord.commands import SlashCommandGroup
 from starcord import Cog_Extension,Jsondb,sclient,BotEmbed
 from starcord.types import Coins
 
-debug_guilds = Jsondb.jdata.get('debug_guilds')
+debug_guilds = Jsondb.config.get('debug_guilds')
 
 class system_economy(Cog_Extension):
     point = SlashCommandGroup("point", "PT點數相關指令")

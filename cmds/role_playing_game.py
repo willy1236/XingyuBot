@@ -5,7 +5,7 @@ from discord.commands import SlashCommandGroup
 from starcord import Cog_Extension,BotEmbed,sclient,ChoiceList,Jsondb
 from starcord.models.rpg import RPGMarketItem
 from starcord.models.user import RPGUser
-from starcord.ui_element.RPGview import RPGAdvanceView,RPGEquipmentBagView
+from starcord.uiElement.RPGview import RPGAdvanceView,RPGEquipmentBagView
 from starcord.models import GameInfoPage,RPGItem,ShopItem,RPGEquipment
 from starcord.types import Coins,ItemCategory,ShopItemMode,EquipmentSolt,ActivitiesStatue
 

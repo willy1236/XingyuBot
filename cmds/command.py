@@ -16,8 +16,8 @@ from mysql.connector.errors import IntegrityError
 
 from starcord import Cog_Extension,Jsondb,log,BotEmbed,ChoiceList,sclient
 from starcord.utilities import find, random_color, create_only_role_list, create_role_magification_dict, calculate_eletion_session
-from starcord.ui_element.button import Delete_Add_Role_button
-from starcord.ui_element.view import PollView
+from starcord.uiElement.button import Delete_Add_Role_button
+from starcord.uiElement.view import PollView
 from starcord.dataExtractor import GoogleCloud
 from starcord.types import Coins
 from cmds.bot_event import check_registration
@@ -26,7 +26,7 @@ bet_option = ChoiceList.set('bet_option')
 position_option = ChoiceList.set('position_option')
 party_option = ChoiceList.set('party_option')
 
-main_guilds = Jsondb.jdata.get('main_guilds')
+main_guilds = Jsondb.config.get('main_guilds')
 
 position_role = {
     "1": 1161686745126019082,

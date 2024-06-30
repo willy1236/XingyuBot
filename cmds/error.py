@@ -5,8 +5,8 @@ from starcord.errors import *
 from starcord import Cog_Extension,log,Jsondb
 
 permissions_tl = Jsondb.jdict.get('permissions')
-debug_guilds = Jsondb.jdata.get('debug_guilds')
-debug_mode = Jsondb.jdata.get('debug_mode')
+debug_guilds = Jsondb.config.get('debug_guilds')
+debug_mode = Jsondb.config.get('debug_mode')
 
 class error(Cog_Extension):
     @commands.Cog.listener()
@@ -39,6 +39,9 @@ class error(Cog_Extension):
 
             elif isinstance(error.original,discord.errors.Forbidden):
                 await ctx.respond(f'操作被拒：我缺少權限執行這項操作，可能為我的身分組位階較低或缺少必要權限',ephemeral=True)
+            elif isinstance(error.original,discord.errors.NotFound):
+                await ctx.respond(f'未找到：給定的參數未找到',ephemeral=True)
+                
 
             elif isinstance(error.original,sqlerror) and error.original.errno == 1062:
                 await ctx.respond(f'資料錯誤：資料重複新增',ephemeral=True)

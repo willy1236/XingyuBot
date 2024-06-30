@@ -8,11 +8,11 @@ from ..utilities import log
 from .mysql import MySQLDatabase
 from .mongodb import MongoDB
 
-SQL_connection = Jsondb.jdata.get('SQL_connection')
+SQL_connection = Jsondb.config.get('SQL_connection')
 def create_sqldb(SQL_connection:bool) -> MySQLDatabase | None:
     if SQL_connection:
         try:
-            sqldb = MySQLDatabase(Jsondb.jdata.get('SQLsettings'))
+            sqldb = MySQLDatabase(Jsondb.config.get('SQLsettings'))
             version = sqldb.connection.get_server_info()
             log.info(f'>> SQL connect: online ({version}) <<')
         except:
@@ -26,7 +26,7 @@ def create_sqldb(SQL_connection:bool) -> MySQLDatabase | None:
 
 sqldb = create_sqldb(SQL_connection)
 
-Mongedb_connection = Jsondb.jdata.get('Mongedb_connection')
+Mongedb_connection = Jsondb.config.get('Mongedb_connection')
 def create_mongedb(Mongedb_connection) -> MongoDB | None:
     if Mongedb_connection:
         url = Jsondb.get_token("mongodb_url")

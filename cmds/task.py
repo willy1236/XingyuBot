@@ -31,7 +31,7 @@ class task(Cog_Extension):
     @commands.Cog.listener()
     async def on_ready(self):
         scheduler = sclient.scheduler
-        if not Jsondb.jdata.get("debug_mode",True):
+        if not Jsondb.config.get("debug_mode",True):
             scheduler.add_job(self.apex_info_update,'cron',minute='00,15,30,45',second=1,jitter=30,misfire_grace_time=60)
             scheduler.add_job(self.apex_crafting_update,'cron',hour=1,minute=5,second=0,jitter=30,misfire_grace_time=60)
             scheduler.add_job(self.forecast_update,'cron',hour='00,03,06,09,12,15,18,21',minute=0,second=1,jitter=30,misfire_grace_time=60)
@@ -63,7 +63,7 @@ class task(Cog_Extension):
             scheduler.start()
 
     async def earthquake_check(self):
-        timefrom = Jsondb.read_cache('earthquake_timefrom')
+        timefrom = Jsondb.cache.get('earthquake_timefrom')
         try:
             datas = CWA_API().get_earthquake_report_auto(timefrom)
         except ConnectTimeout:
@@ -77,7 +77,7 @@ class task(Cog_Extension):
 
         for data in datas:
             time = datetime.strptime(data.originTime, "%Y-%m-%d %H:%M:%S") + timedelta(seconds=1)
-            Jsondb.write_cache('earthquake_timefrom',time.strftime("%Y-%m-%dT%H:%M:%S"))
+            Jsondb.cache.write('earthquake_timefrom',time.strftime("%Y-%m-%dT%H:%M:%S"))
 
             if data.auto_type == 'E-A0015-001':
                 text = '顯著有感地震報告'
@@ -102,7 +102,7 @@ class task(Cog_Extension):
                     log.warning(f"earthquake_check fail sending message: guild:{i['guild_id']}/channel:{i['channel_id']}")
 
     async def weather_warning_check(self):
-        timefrom = Jsondb.read_cache('earthquake_timefrom')
+        timefrom = Jsondb.cache.get('earthquake_timefrom')
         try:
             data = CWA_API().get_earthquake_report_auto(timefrom)
         except:
@@ -139,14 +139,14 @@ class task(Cog_Extension):
 
     async def apex_crafting_update(self):
         today = date.today()
-        apex_crafting = Jsondb.read_cache("apex_crafting")
+        apex_crafting = Jsondb.cache.get("apex_crafting")
         if not apex_crafting or apex_crafting.get("date") != today.isoformat():
             apex_crafting = ApexInterface().get_raw_crafting()
             apex_crafting_dict = {
                 "date": today.isoformat(),
                 "data": apex_crafting[0:1]
             }
-            Jsondb.write_cache("apex_crafting",apex_crafting_dict)
+            Jsondb.cache.write("apex_crafting",apex_crafting_dict)
 
 
     async def forecast_update(self):
@@ -177,7 +177,7 @@ class task(Cog_Extension):
         users = sclient.cache[NotifyCommunityType.Twitch]
         if not users:
             return
-        twitch_cache = Jsondb.read_cache('twitch') or {}
+        twitch_cache = Jsondb.cache.get('twitch') or {}
         data = TwitchAPI().get_lives(users)
         log.debug(f"twitch_live data: {data}")
         for user in users:
@@ -191,13 +191,13 @@ class task(Cog_Extension):
             elif not data[user] and user_cache:
                 del twitch_cache[user]
 
-        Jsondb.write_cache('twitch',twitch_cache)
+        Jsondb.cache.write('twitch',twitch_cache)
 
     async def twitch_video(self):
         users = sclient.cache[NotifyCommunityType.TwitchVideo]
         if not users:
             return
-        twitch_cache = Jsondb.read_cache('twitch_v') or {}
+        twitch_cache = Jsondb.cache.get('twitch_v') or {}
         api = TwitchAPI()
         for user in users:
             videos = api.get_videos(user)
@@ -211,13 +211,13 @@ class task(Cog_Extension):
                     embed = data.embed()
                     await self.bot.send_message_to_notify_communities(embed, NotifyCommunityType.TwitchVideo, data.user_id)
 
-        Jsondb.write_cache('twitch_v',twitch_cache)
+        Jsondb.cache.write('twitch_v',twitch_cache)
 
     async def twitch_clip(self):
         users = sclient.cache[NotifyCommunityType.TwitchClip]
         if not users:
             return
-        twitch_cache = Jsondb.read_cache('twitch_c') or {}
+        twitch_cache = Jsondb.cache.get('twitch_c') or {}
         api = TwitchAPI()
         for user in users:
             cache_last_update_time = datetime.fromisoformat(twitch_cache.get(user)) if twitch_cache.get(user) else None
@@ -232,13 +232,13 @@ class task(Cog_Extension):
 
                 twitch_cache[broadcaster_id] = newest.isoformat()
 
-        Jsondb.write_cache('twitch_c',twitch_cache)
+        Jsondb.cache.write('twitch_c',twitch_cache)
 
     async def youtube_video(self):
         ytchannels = sclient.cache[NotifyCommunityType.Youtube]
         if not ytchannels:
             return
-        cache_youtube = Jsondb.read_cache('youtube') or {}
+        cache_youtube = Jsondb.cache.get('youtube') or {}
         rss = YoutubeRSS()
         for ytchannel_id in ytchannels:
             #抓取資料
@@ -257,7 +257,7 @@ class task(Cog_Extension):
                     embed = video.embed()
                     await self.bot.send_message_to_notify_communities(embed, NotifyCommunityType.Youtube, ytchannel_id)
 
-        Jsondb.write_cache('youtube',cache_youtube)
+        Jsondb.cache.write('youtube',cache_youtube)
 
     async def auto_hoyo_reward(self):
         list = sclient.sqldb.get_hoyo_reward()

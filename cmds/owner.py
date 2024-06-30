@@ -97,7 +97,7 @@ class BotPanel(discord.ui.View):
         embed = BotEmbed.simple('伺服器列表','\n'.join(name_list))
         await interaction.response.send_message(content="",ephemeral=False,embed=embed)
 
-debug_guilds = Jsondb.jdata.get('debug_guilds')
+debug_guilds = Jsondb.config.get('debug_guilds')
 
 class owner(Cog_Extension):
     twitch_chatbot = SlashCommandGroup("twitch_chatbot", "twitch機器人相關指令",guild_ids=debug_guilds)
@@ -106,10 +106,9 @@ class owner(Cog_Extension):
     @commands.slash_command(description='更換bot狀態',guild_ids=debug_guilds)
     @commands.is_owner()
     async def statue(self,ctx,statue):
-        jdata = Jsondb.jdata
-        jdata['activity'] = statue
-        await self.bot.change_presence(activity=discord.Game(name=jdata.get("activity","/help")),status=discord.Status.online)
-        Jsondb.write('jdata',jdata)
+        config = Jsondb.config
+        config.write('activity', statue)
+        await self.bot.change_presence(activity=discord.Game(name=config.get("activity")),status=discord.Status.online)
         await ctx.respond(f'狀態更改完成',delete_after=5)
 
     #send
@@ -256,7 +255,7 @@ class owner(Cog_Extension):
     @commands.slash_command(description='使用mc伺服器指令',guild_ids=debug_guilds)
     @commands.is_owner()
     async def mccommand(self,ctx,command):
-        settings = Jsondb.jdata.get('mc_server')
+        settings = Jsondb.config.get('mc_server')
         host = settings.get('host')
         port = settings.get('port')
         password = settings.get('password')

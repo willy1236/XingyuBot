@@ -16,18 +16,18 @@ class DiscordBot(discord.Bot):
         )
         
         self.bot_code = bot_code
-        self.main_guilds = Jsondb.jdata.get('main_guilds')
-        self.debug_mode = Jsondb.jdata.get('debug_mode',True)
+        self.main_guilds = Jsondb.config.get('main_guilds')
+        self.debug_mode = Jsondb.config.get('debug_mode',True)
 
         if bot_code != 'Bot1':
-            self.debug_guilds = Jsondb.jdata.get('debug_guilds')
+            self.debug_guilds = Jsondb.config.get('debug_guilds')
 
     def run(self):
         token = Jsondb.get_token(self.bot_code)
         super().run(token)
 
     async def error(self, ctx:discord.ApplicationContext, error:str) -> None:
-        error_report = self.get_channel(Jsondb.jdata['error_report'])
+        error_report = self.get_channel(Jsondb.config.get('error_report'))
         embed = BotEmbed.general(name="BRS | 錯誤回報")
         embed.add_field(name='錯誤訊息', value=f'```py\n{error}```', inline=True)
         if ctx.command:
@@ -39,13 +39,13 @@ class DiscordBot(discord.Bot):
         await error_report.send(embed=embed)
 
     async def report(self,msg):
-        report_channel = self.get_channel(Jsondb.jdata['report_channel'])
+        report_channel = self.get_channel(Jsondb.config.get('report_channel'))
         embed = BotEmbed.general(name="BRS | 回報訊息")
         embed.add_field(name='訊息', value=msg, inline=True)
         await report_channel.send(embed=embed)
 
     async def feedback(self,ctx:discord.ApplicationContext, msg) -> None:
-        feedback_channel = self.get_channel(Jsondb.jdata['feedback_channel'])
+        feedback_channel = self.get_channel(Jsondb.config.get('feedback_channel'))
         embed = BotEmbed.general(name="BRS | 回饋訊息")
         embed.add_field(name='訊息內容', value=msg, inline=True)
         embed.add_field(name='發送者', value=f"{ctx.author}\n{ctx.author.id}", inline=False)
@@ -54,7 +54,7 @@ class DiscordBot(discord.Bot):
         await feedback_channel.send(embed=embed)
 
     async def dm(self,msg:discord.Message) -> None:
-        dm_channel = self.get_channel(Jsondb.jdata['dm_channel'])
+        dm_channel = self.get_channel(Jsondb.config.get('dm_channel'))
         embed = BotEmbed.general(name="BRS | 私人訊息")
         embed.add_field(name='訊息內容', value=msg.content, inline=True)
         if msg.channel.recipient:
@@ -64,7 +64,7 @@ class DiscordBot(discord.Bot):
         await dm_channel.send(embed=embed)
 
     async def mentioned(self,msg:discord.Message) -> None:
-        dm_channel = self.get_channel(Jsondb.jdata['mentioned_channel'])
+        dm_channel = self.get_channel(Jsondb.config.get('mentioned_channel'))
         embed=BotEmbed.general(name="BRS | 提及訊息",description=msg.jump_url)
         embed.add_field(name='訊息內容', value=msg.content, inline=True)
         embed.add_field(name='發送者', value=f"{msg.author}\n{msg.author.id}", inline=False)
@@ -73,7 +73,7 @@ class DiscordBot(discord.Bot):
         await dm_channel.send(embed=embed)
     
     async def mention_everyone(self,msg:discord.Message) -> None:
-        dm_channel = self.get_channel(Jsondb.jdata['mention_everyone_channel'])
+        dm_channel = self.get_channel(Jsondb.config.get('mention_everyone_channel'))
         embed=BotEmbed.general(name="BRS | 提及所有人訊息",description=f"https://discord.com/channels/{msg.guild.id}/{msg.channel.id}/{msg.id}")
         embed.add_field(name='訊息內容', value=msg.content, inline=True)
         embed.add_field(name='發送者', value=f"{msg.author}\n{msg.author.id}", inline=False)

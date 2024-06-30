@@ -7,15 +7,15 @@ from threading import Thread
 import discord
 from discord.ext import commands
 
-from starcord import Jsondb,log,sclient,DiscordBot
-from starcord.ui_element.view import PollView, WelcomeView, ReactionRole1
+from starcord import DiscordBot, Jsondb, log, sclient
+from starcord.uiElement.view import PollView, ReactionRole1, WelcomeView
 
-jdata = Jsondb.jdata
-bot_code = jdata.get('bot_code')
-api_website = jdata.get('api_website')
-auto_update = jdata.get('auto_update')
-debug_mode = jdata.get('debug_mode',True)
-twitch_bot = jdata.get('twitch_bot',False)
+config = Jsondb.config
+bot_code = config.get('bot_code')
+api_website = config.get('api_website')
+auto_update = config.get('auto_update')
+debug_mode = config.get('debug_mode',True)
+twitch_bot = config.get('twitch_bot',False)
 
 bot = DiscordBot(bot_code)
 sclient.bot = bot
@@ -28,7 +28,7 @@ async def on_ready():
         await bot.change_presence(activity=discord.Game(name="開發模式啟用中"),status=discord.Status.dnd)
         log.info(f">> Development mode: On <<")
     else:
-        await bot.change_presence(activity=discord.Game(name=jdata.get("activity","/help")),status=discord.Status.online)
+        await bot.change_presence(activity=discord.Game(name=config.get("activity","/help")),status=discord.Status.online)
 
     if len(os.listdir('./cmds'))-1 == len(bot.cogs):
         log.info(">> Cogs all loaded <<")
@@ -89,7 +89,7 @@ for filename in os.listdir('./cmds'):
 
 if __name__ == "__main__":
     if api_website:
-        from app.bot_website import ltThread,WebsiteThread
+        from app.bot_website import WebsiteThread, ltThread
         ltserver = ltThread()
         ltserver.start()
         time.sleep(2)
@@ -103,7 +103,7 @@ if __name__ == "__main__":
         time.sleep(2)
 
     if twitch_bot:
-        from app.twitch_chatbot import TwitchBotThread, SakagawaEventsubThread
+        from app.twitch_chatbot import SakagawaEventsubThread, TwitchBotThread
         twitchbot_thread = TwitchBotThread()
         twitchbot_thread.start()
         time.sleep(5)

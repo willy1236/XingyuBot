@@ -1,18 +1,18 @@
 import random
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
 
 import discord
 
 from ..database import sqldb
-from ..dataExtractor import RiotAPI,SteamInterface,OsuAPI,ApexInterface
+from ..dataExtractor import ApexInterface, OsuAPI, RiotAPI, SteamInterface
 from ..fileDatabase import Jsondb
 from ..models import PartialLOLPlayer
-from ..types import DBGame
-from ..ui_element.view import PollView, ElectionPollView
-from ..starAI import StarGeminiAI
-from ..utilities import BotEmbed, ChoiceList, scheduler
 from ..settings import tz
+from ..starAI import StarGeminiAI
+from ..types import DBGame
+from ..uiElement.view import ElectionPollView, PollView
+from ..utilities import BotEmbed, ChoiceList, scheduler
 from .classes import StarCache
 
 if TYPE_CHECKING:
@@ -271,9 +271,6 @@ class NotifyClient():
         """確認頻道是否為動態語音房"""
         return channel_id if channel_id in self.notice_dict['dynamic_voice_room'] else None
 
-class SatrPlatform():
-    pass
-
 class StarManager(
     GameClient,
     PointClient,
@@ -289,10 +286,11 @@ class StarManager(
     def __init__(self):
         super().__init__()
         self.sqldb = sqldb
-        self._starai = None
-        self.bot:DiscordBot = None
         self.scheduler = scheduler
         self.cache = StarCache() if self.sqldb else None
+
+        self._starai:StarGeminiAI = None
+        self.bot:DiscordBot = None
     
     @property
     def starai(self):
