@@ -1,7 +1,7 @@
 import requests,os.path,feedparser
-from starcord.fileDatabase import Jsondb
-from starcord.models.community import *
-from starcord.errors import Forbidden
+from starlib.fileDatabase import Jsondb
+from starlib.models.community import *
+from starlib.errors import Forbidden
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials

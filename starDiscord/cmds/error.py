@@ -2,7 +2,8 @@ import discord
 from discord.ext import commands
 from mysql.connector.errors import Error as sqlerror
 from starlib.errors import *
-from starlib import Cog_Extension,log,Jsondb
+from starlib import log,Jsondb
+from ..extension import Cog_Extension
 
 permissions_tl = Jsondb.jdict.get('permissions')
 debug_guilds = Jsondb.config.get('debug_guilds')

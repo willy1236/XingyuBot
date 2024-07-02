@@ -1,11 +1,14 @@
 import asyncio
 import re
+import os
 from datetime import datetime,timezone,timedelta
 
 import discord
 from discord.ext import commands
 
-from starlib import Cog_Extension,Jsondb,BotEmbed,sclient,log
+from starlib import Jsondb,BotEmbed,sclient,log
+from starlib.uiElement.view import WelcomeView, ReactionRole1, PollView
+from ..extension import Cog_Extension
 
 keywords = {
     '抹茶粉':'由威立冠名贊助撥出~'
@@ -59,7 +62,45 @@ def get_guildid(before:discord.VoiceState, after:discord.VoiceState):
 def check_spam(message:discord.Message, user_id:int):
     return message.author.id == user_id
 
-class event(Cog_Extension):    
+config = Jsondb.config
+
+class event(Cog_Extension):
+    @commands.Cog.listener()
+    async def on_ready(self):
+        bot = self.bot
+        log.info(f">> Bot online as {bot.user.name} <<")
+        log.info(f">> Discord's version: {discord.__version__} <<")
+        if bot.debug_mode:
+            await bot.change_presence(activity=discord.Game(name="開發模式啟用中"),status=discord.Status.dnd)
+            log.info(f">> Development mode: On <<")
+        else:
+            await bot.change_presence(activity=discord.Game(name=config.get("activity","/help")),status=discord.Status.online)
+
+        if len(os.listdir('./cmds'))-1 == len(bot.cogs):
+            log.info(">> Cogs all loaded <<")
+        else:
+            log.warning(f">> Cogs not all loaded, {len(bot.cogs)}/{len(os.listdir('./cmds'))} loaded<<")
+        
+        if bot.bot_code == 'Bot1' and not bot.debug_mode:
+            #將超過28天的投票自動關閉
+            dbdata = sclient.sqldb.get_all_active_polls()
+            now = datetime.now()
+            for poll in dbdata:
+                if now - poll['created_at'] > timedelta(days=28):
+                    sclient.sqldb.update_poll(poll['poll_id'],"is_on",0)
+                else:   
+                    bot.add_view(PollView(poll['poll_id'],sqldb=sclient.sqldb,bot=bot))
+
+            invites = await bot.get_guild(613747262291443742).invites()
+            now = datetime.now(timezone.utc)
+            days_5 = timedelta(days=5)
+            for invite in invites:
+                if not invite.expires_at and not invite.scheduled_event and invite.uses == 0 and now - invite.created_at > days_5 and invite.url != "https://discord.gg/ye5yrZhYGF":
+                    await invite.delete()
+                    await asyncio.sleep(1)
+
+            bot.add_view(WelcomeView())
+            bot.add_view(ReactionRole1())
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):

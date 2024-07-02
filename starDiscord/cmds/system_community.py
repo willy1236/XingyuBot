@@ -6,8 +6,9 @@ from discord.commands import SlashCommandGroup
 
 from starlib.dataExtractor import TwitchAPI,YoutubeAPI,YoutubeRSS
 from starlib.uiElement.view import ReactionRole1, WelcomeView
-from starlib import Cog_Extension,BotEmbed,sclient,Jsondb,ChoiceList
+from starlib import BotEmbed,sclient,Jsondb,ChoiceList
 from starlib.types import NotifyCommunityType
+from ..extension import Cog_Extension
 
 twitch_notify_option = ChoiceList.set("twitch_notify_option")
 

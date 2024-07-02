@@ -1,6 +1,6 @@
 from discord.ext import commands
-from starlib import Cog_Extension
 from starlib.dataExtractor.weather import *
+from ..extension import Cog_Extension
 
 class weather(Cog_Extension):
     @commands.cooldown(rate=1,per=20)

@@ -5,8 +5,9 @@ import mcrcon
 from discord.ext import commands
 from discord.commands import SlashCommandGroup
 
-from starlib import Cog_Extension,BotEmbed,Jsondb,sclient
+from starlib import BotEmbed,Jsondb,sclient
 from starlib.utilities.utility import converter
+from ..extension import Cog_Extension
 
 class SendMessageModal(discord.ui.Modal):
     def __init__(self, channel, is_dm, *args, **kwargs):
@@ -101,6 +102,33 @@ debug_guilds = Jsondb.config.get('debug_guilds')
 
 class owner(Cog_Extension):
     twitch_chatbot = SlashCommandGroup("twitch_chatbot", "twitch機器人相關指令",guild_ids=debug_guilds)
+
+    #load
+    #@bot.command()
+    @commands.slash_command(description='載入extension',guild_ids=debug_guilds)
+    @commands.is_owner()
+    async def load(self, ctx, extension):
+        self.bot.load_extension(f'cmds.{extension}')
+        await ctx.respond(f'Loaded {extension} done')
+
+    #unload
+    @commands.slash_command(description='關閉extension',guild_ids=debug_guilds)
+    @commands.is_owner()
+    async def unload(self, ctx, extension):
+        self.bot.unload_extension(f'cmds.{extension}')
+        await ctx.respond(f'Un - Loaded {extension} done')
+
+    #reload
+    @commands.slash_command(description='重載extension',guild_ids=debug_guilds)
+    @commands.is_owner()
+    async def reload(self, ctx, extension):
+        self.bot.reload_extension(f'cmds.{extension}')
+        await ctx.respond(f'Re - Loaded {extension} done')
+
+    #ping
+    @commands.slash_command(description='查詢延遲')
+    async def ping(self, ctx):
+        await ctx.respond(f'延遲為：{self.bot.latency*1000:0f} ms')
     
     #change_presence
     @commands.slash_command(description='更換bot狀態',guild_ids=debug_guilds)

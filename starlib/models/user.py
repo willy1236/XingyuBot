@@ -11,7 +11,7 @@ from ..fileDatabase import Jsondb
 from .rpg import *
 
 if TYPE_CHECKING:
-    from starcord.database import MySQLDatabase
+    from starlib.database import MySQLDatabase
 
 class RegistrationData():
     if TYPE_CHECKING:

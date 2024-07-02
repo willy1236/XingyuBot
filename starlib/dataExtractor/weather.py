@@ -1,8 +1,8 @@
 import requests,time
 from bs4 import BeautifulSoup
 
-from starcord.fileDatabase import Jsondb
-from starcord.models.weather import *
+from starlib.fileDatabase import Jsondb
+from starlib.models.weather import *
 
 class WeatherClient():
     """天氣資料交互"""

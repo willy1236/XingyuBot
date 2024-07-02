@@ -8,8 +8,8 @@ import matplotlib
 from ..utilities import BotEmbed
 
 if TYPE_CHECKING:
-    from starcord.database import MySQLDatabase
-    from starcord.core import DiscordBot
+    from starlib.database import MySQLDatabase
+    from starlib.core import DiscordBot
 
 class PollOptionButton(discord.ui.Button):
     def __init__(self,label:str,poll_id:int,option_id:int,custom_id:str,row:int=None):

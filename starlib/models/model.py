@@ -10,7 +10,7 @@ from ..fileDatabase import Jsondb
 from ..settings import tz
 
 if TYPE_CHECKING:
-    from starcord.database import MySQLDatabase
+    from starlib.database import MySQLDatabase
 
 class GameInfo:
     if TYPE_CHECKING:

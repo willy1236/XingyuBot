@@ -9,8 +9,9 @@ import discord
 import yt_dlp as youtube_dl
 from discord.ext import commands,pages
 
-from starlib import Cog_Extension,BotEmbed,log
+from starlib import BotEmbed,log
 from starlib.errors import *
+from ..extension import Cog_Extension
 
 
 # Suppress noise about console usage from errors

@@ -8,9 +8,9 @@ from fastapi import FastAPI,BackgroundTasks
 from fastapi.requests import Request
 from fastapi.responses import HTMLResponse,JSONResponse,PlainTextResponse
 
-from starcord import log, sclient, Jsondb
-from starcord.models.push import YoutubePush
-from starcord.dataExtractor import DiscordOauth
+from starlib import log, sclient, Jsondb
+from starlib.models.push import YoutubePush
+from starlib.dataExtractor import DiscordOauth
 
 app = FastAPI()
 

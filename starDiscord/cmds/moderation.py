@@ -4,8 +4,9 @@ import discord
 from discord.ext import commands
 from discord.commands import SlashCommandGroup
 
-from starlib import Cog_Extension,ChoiceList,BotEmbed,Jsondb,sclient
+from starlib import ChoiceList,BotEmbed,Jsondb,sclient
 from starlib.utilities import converter
+from ..extension import Cog_Extension
 
 set_option = ChoiceList.set('channel_set_option')
 debug_guilds = Jsondb.config.get('debug_guilds')

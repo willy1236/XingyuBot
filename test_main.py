@@ -16,10 +16,10 @@ from bs4 import BeautifulSoup
 from faker import Faker
 from pydantic import BaseModel
 
-from starcord import ChoiceList, Jsondb, log, sqldb, tz
-from starcord.dataExtractor import *
-from starcord.starAI import StarGeminiAI
-from starcord.types import NotifyCommunityType
+from starlib import ChoiceList, Jsondb, log, sqldb, tz
+from starlib.dataExtractor import *
+from starlib.starAI import StarGeminiAI
+from starlib.types import NotifyCommunityType
 
 if __name__ == '__main__':
 	pass

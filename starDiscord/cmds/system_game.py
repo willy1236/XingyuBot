@@ -6,12 +6,13 @@ import genshin
 from discord.commands import SlashCommandGroup
 from discord.ext import commands, pages
 
-from starlib import (BotEmbed, ChoiceList, Cog_Extension, Jsondb, csvdb,
+from starlib import (BotEmbed, ChoiceList, Jsondb, csvdb,
                       sclient)
 from starlib.dataExtractor import *
 from starlib.types import DBGame
 from starlib.uiElement.modals import HoyolabCookiesModal
 from starlib.uiElement.view import GameView
+from ..extension import Cog_Extension
 
 set_option = ChoiceList.set('game_set_option')
 hoyo_game_option = [

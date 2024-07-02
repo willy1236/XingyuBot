@@ -3,7 +3,7 @@
 提供錯誤代碼與錯誤訊息的類別
 """
 # class StarException(Exception):
-#     "starcord original error: 1000"
+#     "starlib original error: 1000"
 #     def __init__(self,
 #                  message: str = None,
 #                  code: int = None,
@@ -16,7 +16,7 @@
 
 class StarException(Exception):
     """
-    A custom exception class for starcord.
+    A custom exception class for starlib.
 
     :param message: The error message.
     :param code: The error code.

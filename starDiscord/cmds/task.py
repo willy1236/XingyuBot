@@ -8,10 +8,11 @@ import genshin
 from discord.ext import commands,tasks
 from requests.exceptions import ConnectTimeout
 
-from starlib import Cog_Extension,Jsondb,sclient,log,BotEmbed,utilities, ChoiceList, tz
+from starlib import Jsondb,sclient,log,BotEmbed,utilities, ChoiceList, tz
 from starlib.dataExtractor import *
 from starlib.models.community import TwitchVideo, YoutubeVideo
 from starlib.types import NotifyCommunityType
+from ..extension import Cog_Extension
 
 def slice_list(lst:list[YoutubeVideo], target) -> list[YoutubeVideo]:
     """以target為基準取出更新的影片資訊"""

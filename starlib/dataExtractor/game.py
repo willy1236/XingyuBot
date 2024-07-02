@@ -3,9 +3,9 @@ import time
 import requests
 import pandas as pd
 
-from starcord.fileDatabase import Jsondb
-from starcord.models.game import *
-from starcord.errors import APIInvokeError
+from starlib.fileDatabase import Jsondb
+from starlib.models.game import *
+from starlib.errors import APIInvokeError
 
 class GameInterface():
     pass

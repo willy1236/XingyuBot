@@ -2,7 +2,7 @@ import json
 
 import mysql.connector
 from mysql.connector import connection
-from starcord.dataExtractor import sclient,Jsondb
+from starlib.dataExtractor import sclient,Jsondb
 
 DBPATH = "../database"
 

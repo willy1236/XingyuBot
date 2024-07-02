@@ -6,13 +6,13 @@ import discord
 import mysql.connector
 from mysql.connector.errors import Error as sqlerror
 
-from starcord.models.model import GameInfoPage
-from starcord.types import DBGame, Coins, Position, CommunityType
-from starcord.models.user import *
-from starcord.models.model import *
-from starcord.models.rpg import *
-from starcord.models.mysql import *
-from starcord.errors import *
+from starlib.models.model import GameInfoPage
+from starlib.types import DBGame, Coins, Position, CommunityType
+from starlib.models.user import *
+from starlib.models.model import *
+from starlib.models.rpg import *
+from starlib.models.mysql import *
+from starlib.errors import *
 
 def create_id():
     return 'SELECT idNumber FROM ( SELECT CONCAT("U", LPAD(FLOOR(RAND()*10000000), 7, 0)) as idNumber) AS generated_ids WHERE NOT EXISTS ( SELECT 1 FROM stardb_user.user_data WHERE user_id = generated_ids.idNumber);'

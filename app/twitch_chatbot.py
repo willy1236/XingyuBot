@@ -18,7 +18,7 @@ from twitchAPI.eventsub.websocket import EventSubWebsocket
 from twitchAPI.helper import first
 from twitchAPI.object.api import TwitchUser
 
-from starcord import Jsondb,twitch_log,sclient,BotEmbed
+from starlib import Jsondb,twitch_log,sclient,BotEmbed
 
 
 USER_SCOPE = [

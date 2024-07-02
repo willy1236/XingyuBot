@@ -14,13 +14,14 @@ from discord.commands import SlashCommandGroup
 from mysql.connector.errors import Error as sqlerror
 from mysql.connector.errors import IntegrityError
 
-from starlib import Cog_Extension,Jsondb,log,BotEmbed,ChoiceList,sclient
+from starlib import Jsondb,log,BotEmbed,ChoiceList,sclient
 from starlib.utilities import find, random_color, create_only_role_list, create_role_magification_dict, calculate_eletion_session
 from starlib.uiElement.button import Delete_Add_Role_button
 from starlib.uiElement.view import PollView
 from starlib.dataExtractor import GoogleCloud
 from starlib.types import Coins
 from cmds.bot_event import check_registration
+from ..extension import Cog_Extension
 
 bet_option = ChoiceList.set('bet_option')
 position_option = ChoiceList.set('position_option')

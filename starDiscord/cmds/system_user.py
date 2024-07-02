@@ -1,8 +1,9 @@
 import discord
 from discord.ext import commands
 from discord.commands import SlashCommandGroup
-from starlib import Cog_Extension,BotEmbed,ChoiceList,sclient
+from starlib import BotEmbed,ChoiceList,sclient
 from starlib.uiElement.button import Delete_Pet_button
+from ..extension import Cog_Extension
 
 pet_option = ChoiceList.set('pet_option')
 

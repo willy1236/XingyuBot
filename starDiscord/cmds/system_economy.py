@@ -5,8 +5,9 @@ import discord
 from discord.ext import commands
 from discord.commands import SlashCommandGroup
 
-from starlib import Cog_Extension,Jsondb,sclient,BotEmbed
+from starlib import Jsondb,sclient,BotEmbed
 from starlib.types import Coins
+from ..extension import Cog_Extension
 
 debug_guilds = Jsondb.config.get('debug_guilds')
 

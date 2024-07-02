@@ -3,10 +3,11 @@ from datetime import datetime, timezone, timedelta
 from discord.ext import commands,tasks
 import matplotlib.pyplot as plt
 
-from starlib import Cog_Extension,Jsondb,sclient,tz,BotEmbed
+from starlib import Jsondb,sclient,tz,BotEmbed
 from starlib.errors import *
 from starlib.types.game import DBGame
 from starlib.utilities.map import sunmon_area
+from ..extension import Cog_Extension
 
 
 debug_guilds = Jsondb.config.get('debug_guilds')
