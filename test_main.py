@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import json
 import secrets
@@ -66,10 +68,10 @@ if __name__ == '__main__':
 
 from typing import TypedDict
 
-
 class classrole(IntEnum):
 	role1 = 1
 	role2 = 2
+	role3 = 3
 class lUser(TypedDict):
 	id: int
 	username: str

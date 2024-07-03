@@ -37,6 +37,9 @@ class BaseJsonHandler:
         with open(f'{self._DBPATH}/{self.filename}.json', 'w', encoding='utf-8') as jfile:
             json.dump(self.datas, jfile, indent=4)
 
+    def __getitem__(self, key):
+        return self.get(key)
+
 class JsonConfig(BaseJsonHandler):
     def __init__(self):
         super().__init__("setting")
@@ -63,17 +66,21 @@ class JsonCache(BaseJsonHandler):
             self.write(key, dict_data)
             return True
         return False
+    
+class JsonToken(BaseJsonHandler):
+    def __init__(self):
+        super().__init__("token")
 
 class JsonDatabase():
     if TYPE_CHECKING:
         lol_jdict: dict
         jdict: dict
         picdata: dict
-        tokens: dict
         options: dict
 
         config: JsonConfig
         cache: JsonCache
+        tokens: JsonToken
 
     __slots__ = [
         "lol_jdict",
@@ -102,6 +109,7 @@ class JsonDatabase():
         """
         self.config = JsonConfig()
         self.cache = JsonCache()
+        self.tokens = JsonToken()
 
         # craete folder
         if not os.path.isdir(self._DBPATH):

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import random
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
@@ -13,7 +15,7 @@ from ..starAI import StarGeminiAI
 from ..types import DBGame
 from ..uiElement.view import ElectionPollView, PollView
 from ..utilities import BotEmbed, ChoiceList, scheduler
-from .classes import StarCache
+from .cache import StarCache
 
 if TYPE_CHECKING:
     from starDiscord import DiscordBot
@@ -60,14 +62,17 @@ class GameClient():
         if game:
             game = DBGame(game)
             APIdata = None
-            if game == DBGame.STEAM:
-                APIdata = SteamInterface().get_user(dbdata['player_id'])
-            elif game == DBGame.OSU:
-                APIdata = OsuAPI().get_player(dbdata['player_name'])
-            elif game == DBGame.APEX:
-                APIdata = ApexInterface().get_player(dbdata['player_name'])
-            elif game == DBGame.LOL:
-                APIdata = RiotAPI().get_player_bypuuid(dbdata['other_id'])
+            match game:
+                case DBGame.STEAM:
+                    APIdata = SteamInterface().get_user(dbdata['player_id'])
+                case DBGame.OSU:
+                    APIdata = OsuAPI().get_player(dbdata['player_name'])
+                case DBGame.APEX:
+                    APIdata = ApexInterface().get_player(dbdata['player_name'])
+                case DBGame.LOL:
+                    APIdata = RiotAPI().get_player_bypuuid(dbdata['other_id'])
+                case _:
+                    raise ValueError("Invalid game")
             return APIdata
         else:
             return dbdata
@@ -123,6 +128,7 @@ class PollClient():
                     bot:discord.bot=None
                     ) -> PollView:
         """創建投票"""
+        # TODO: add Poll config class
         poll_id = sqldb.add_poll(title,creator_id,datetime.now(tz=tz),None,guild_id,ban_alternate_account_voting,show_name,check_results_in_advance,results_only_initiator,number_of_user_votes)
         sqldb.add_poll_option(poll_id,options)
 
