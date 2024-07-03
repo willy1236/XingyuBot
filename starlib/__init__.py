@@ -6,7 +6,7 @@ from datetime import timedelta, timezone
 
 from .fileDatabase import Jsondb, csvdb
 from .database import sqldb
-from .core import Cog_Extension, DiscordBot, sclient, StarManager
+from .core import sclient, StarManager
 from .utilities import *
 from .errors import *
 from .settings import tz
@@ -21,8 +21,6 @@ __all__ = [
     'mongedb',
     'sclient',
     'StarManager',
-    'Cog_Extension',
-    'DiscordBot',
     'twitch_log',
     'tz',
 ]
