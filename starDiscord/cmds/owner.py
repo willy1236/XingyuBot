@@ -8,19 +8,21 @@ from discord.commands import SlashCommandGroup
 from starlib import BotEmbed,Jsondb,sclient
 from starlib.utilities.utility import converter
 from ..extension import Cog_Extension
+from ..bot import DiscordBot
 
 class SendMessageModal(discord.ui.Modal):
-    def __init__(self, channel, is_dm, *args, **kwargs):
+    def __init__(self, channel, bot, is_dm, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.add_item(discord.ui.InputText(label="要傳送的訊息", style=discord.InputTextStyle.long))
         self.channel = channel
         self.is_dm = is_dm
+        self.bot:DiscordBot = bot
     
     async def callback(self, interaction: discord.Interaction):
         message = await self.channel.send(self.children[0].value)
         await interaction.response.send_message(f'訊息發送成功',delete_after=5,ephemeral=True)
         if self.is_dm:
-            await interaction.client.dm(interaction.client,message)
+            await self.bot.dm(interaction.client,message)
 
 
 class AnnoModal(discord.ui.Modal):
@@ -108,27 +110,27 @@ class owner(Cog_Extension):
     @commands.slash_command(description='載入extension',guild_ids=debug_guilds)
     @commands.is_owner()
     async def load(self, ctx, extension):
-        self.bot.load_extension(f'cmds.{extension}')
+        self.bot.load_extension(f'starDiscord.cmds.{extension}')
         await ctx.respond(f'Loaded {extension} done')
 
     #unload
     @commands.slash_command(description='關閉extension',guild_ids=debug_guilds)
     @commands.is_owner()
     async def unload(self, ctx, extension):
-        self.bot.unload_extension(f'cmds.{extension}')
+        self.bot.unload_extension(f'starDiscord.cmds.{extension}')
         await ctx.respond(f'Un - Loaded {extension} done')
 
     #reload
     @commands.slash_command(description='重載extension',guild_ids=debug_guilds)
     @commands.is_owner()
     async def reload(self, ctx, extension):
-        self.bot.reload_extension(f'cmds.{extension}')
+        self.bot.reload_extension(f'starDiscord.cmds.{extension}')
         await ctx.respond(f'Re - Loaded {extension} done')
 
     #ping
     @commands.slash_command(description='查詢延遲')
     async def ping(self, ctx):
-        await ctx.respond(f'延遲為：{self.bot.latency*1000:0f} ms')
+        await ctx.respond(f'延遲為：{round(self.bot.latency*1000)} ms')
     
     #change_presence
     @commands.slash_command(description='更換bot狀態',guild_ids=debug_guilds)
@@ -151,11 +153,11 @@ class owner(Cog_Extension):
         id = int(id)
         channel = self.bot.get_channel(id)
         if channel:
-            modal = SendMessageModal(title="發送訊息(頻道)",channel=channel,is_dm=False)
+            modal = SendMessageModal(title="發送訊息(頻道)", channel=channel, bot=self.bot, is_dm=False)
         else:
             user = self.bot.get_user(id)
             if user:
-                modal = SendMessageModal(title="發送訊息(私訊)",channel=channel,is_dm=True)
+                modal = SendMessageModal(title="發送訊息(私訊)", channel=channel, bot=self.bot, is_dm=True)
             else:
                 await ctx.respond(f'找不到此ID',ephemeral=True)
                 return

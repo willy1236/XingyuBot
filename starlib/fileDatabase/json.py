@@ -44,7 +44,25 @@ class JsonConfig(BaseJsonHandler):
 class JsonCache(BaseJsonHandler):
     def __init__(self):
         super().__init__("cache")
-    
+
+    def add_dict_data(self, key, target, value):
+        """Add a key-value pair to a dictionary stored in the cache.\\
+        usually used in notify_community data in the cache.
+        """
+        dict_data:dict = self.get(key)
+        dict_data[target] = value
+        self.write(key, dict_data)
+
+    def remove_dict_data(self, key, target):
+        """Remove a key-value pair from a dictionary stored in the cache.\\
+        usually used in notify_community data in the cache.
+        """
+        dict_data:dict = self.get(key)
+        if target in dict_data:
+            del dict_data[target]
+            self.write(key, dict_data)
+            return True
+        return False
 
 class JsonDatabase():
     if TYPE_CHECKING:

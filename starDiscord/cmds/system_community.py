@@ -1,13 +1,14 @@
 from datetime import datetime
 
 import discord
-from discord.ext import commands
 from discord.commands import SlashCommandGroup
+from discord.ext import commands
 
-from starlib.dataExtractor import TwitchAPI,YoutubeAPI,YoutubeRSS
-from starlib.uiElement.view import ReactionRole1, WelcomeView
-from starlib import BotEmbed,sclient,Jsondb,ChoiceList
+from starlib import BotEmbed, ChoiceList, Jsondb, sclient
+from starlib.dataExtractor import TwitchAPI, YoutubeAPI, YoutubeRSS
 from starlib.types import NotifyCommunityType
+from starlib.uiElement.view import ReactionRole1, WelcomeView
+
 from ..extension import Cog_Extension
 
 twitch_notify_option = ChoiceList.set("twitch_notify_option")
@@ -36,20 +37,15 @@ class system_community(Cog_Extension):
                 await ctx.respond(f'設定成功：{user.display_name}({user.login})的{type_tw}將會發送在{channel.mention}並會通知{role.mention}')
             else:
                 await ctx.respond(f'設定成功：{user.display_name}({user.login})的{type_tw}將會發送在{channel.mention}')
-            
-            args = []
+
             if type == NotifyCommunityType.Twitch:
                 pass
             
             elif type == NotifyCommunityType.TwitchVideo:
-                cache = Jsondb.cache.get('twitch_v')
-                cache[user.id] = api.get_videos(user.id)[0].created_at.isoformat()
-                Jsondb.cache.write('twitch_v',cache)
+                Jsondb.cache.add_dict_data("twitch_v", user.id, api.get_videos(user.id)[0].created_at.isoformat())
             
             elif type == NotifyCommunityType.TwitchClip:
-                cache = Jsondb.cache.get('twitch_c')
-                cache[user.id] = datetime.now().isoformat()
-                Jsondb.cache.write('twitch_c',cache)
+                Jsondb.cache.add_dict_data("twitch_c", user.id, datetime.now().isoformat())
             
             sclient.cache.update_notify_community(type)
         else:
@@ -66,17 +62,11 @@ class system_community(Cog_Extension):
             sclient.sqldb.remove_notify_community(NotifyCommunityType.Twitch.value, twitch_user, guildid)
         if not notify_type or type == NotifyCommunityType.TwitchVideo:
             sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitchVideo.value, twitch_user, guildid)
-
-            cache = Jsondb.cache.get('twitch_v')
-            del cache[user.id]
-            Jsondb.cache.write('twitch_v',cache)
+            Jsondb.cache.remove_dict_data("twitch_v", user.id)
 
         if not type or type == NotifyCommunityType.TwitchClip:
             sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitchClip.value, twitch_user, guildid)
-
-            cache = Jsondb.cache.get('twitch_c')
-            del cache[user.id]
-            Jsondb.cache.write('twitch_c',cache)
+            Jsondb.cache.remove_dict_data("twitch_c", user.id)
         
         await ctx.respond(f'已移除 {twitch_user} 的通知')
         

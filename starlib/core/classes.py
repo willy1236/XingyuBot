@@ -74,7 +74,7 @@ class StarCache:
 
     def update_notify_channel(self,notify_type):
         """更新通知頻道"""
-        if notify_type not in self.cache["dict_type"]:
+        if notify_type not in self.dict_type:
             raise KeyError(f"Not implemented notify type: {notify_type}")
         dbdata = sqldb.get_notify_channel_by_type(notify_type)
         self[notify_type] = self.generate_notify_channel_dbdata(dbdata)
@@ -82,7 +82,7 @@ class StarCache:
     def update_notify_community(self,notify_type:NotifyCommunityType=None):
         """更新社群通知"""
         if notify_type:
-            if notify_type not in self.cache["notify_community_type"]:
+            if notify_type not in self.notify_community_type:
                 raise KeyError(f"Not implemented notify type: {notify_type}")
             
             dbdata = sqldb.get_notify_community(notify_type.value)
