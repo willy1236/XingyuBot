@@ -5,6 +5,8 @@ from starlib import Jsondb, BotEmbed, sqldb, log
 from starlib.types import NotifyCommunityType
 
 class DiscordBot(discord.Bot):
+    _COG_PATH = './starDiscord/cmds'
+
     def __init__(self,bot_code):
         super().__init__(
             owner_id = 419131103836635136,
@@ -24,7 +26,7 @@ class DiscordBot(discord.Bot):
         super().run(token)
 
     def load_all_extensions(self):
-        for filename in os.listdir('./starDiscord/cmds'):
+        for filename in os.listdir(self._COG_PATH):
             if filename.endswith('.py'):
                 self.load_extension(f'starDiscord.cmds.{filename[:-3]}')
 

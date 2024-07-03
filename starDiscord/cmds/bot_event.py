@@ -76,7 +76,7 @@ class event(Cog_Extension):
         else:
             await bot.change_presence(activity=discord.Game(name=config.get("activity","/help")),status=discord.Status.online)
 
-        if len(os.listdir('./cmds'))-1 == len(bot.cogs):
+        if len(os.listdir(bot._COG_PATH))-1 == len(bot.cogs):
             log.info(">> Cogs all loaded <<")
         else:
             log.warning(f">> Cogs not all loaded, {len(bot.cogs)}/{len(os.listdir('./cmds'))} loaded<<")

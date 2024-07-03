@@ -20,7 +20,7 @@ from starlib.uiElement.button import Delete_Add_Role_button
 from starlib.uiElement.view import PollView
 from starlib.dataExtractor import GoogleCloud
 from starlib.types import Coins
-from cmds.bot_event import check_registration
+from .bot_event import check_registration
 from ..extension import Cog_Extension
 
 bet_option = ChoiceList.set('bet_option')

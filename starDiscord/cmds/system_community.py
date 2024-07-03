@@ -51,7 +51,7 @@ class system_community(Cog_Extension):
                 cache[user.id] = datetime.now().isoformat()
                 Jsondb.cache.write('twitch_c',cache)
             
-            sclient.cache.update_notify_notify_community(type)
+            sclient.cache.update_notify_community(type)
         else:
             await ctx.respond(f'錯誤：找不到用戶{twitch_user}')
     
@@ -80,7 +80,7 @@ class system_community(Cog_Extension):
         
         await ctx.respond(f'已移除 {twitch_user} 的通知')
         
-        sclient.cache.update_notify_notify_community()
+        sclient.cache.update_notify_community()
 
     @twitch.command(description='確認twitch開台通知')
     async def notify(self,ctx,twitch_user:discord.Option(str,required=True,name='twitch用戶')):
@@ -161,7 +161,7 @@ class system_community(Cog_Extension):
             else:
                 await ctx.respond(f'設定成功：{ytchannel.title}的通知將會發送在{channel.mention}')
                 
-            sclient.cache.update_notify_notify_community(NotifyCommunityType.Youtube)
+            sclient.cache.update_notify_community(NotifyCommunityType.Youtube)
 
             feed = YoutubeRSS().get_videos(ytchannel.id)
             updated_at = feed[0].updated_at.isoformat() if feed else None
@@ -183,7 +183,7 @@ class system_community(Cog_Extension):
         sclient.sqldb.remove_notify_community(NotifyCommunityType.Youtube.value,ytchannel.id,guildid)
         await ctx.respond(f'已移除頻道 {ytchannel.title} 的通知')
         
-        sclient.cache.update_notify_notify_community(NotifyCommunityType.Youtube)
+        sclient.cache.update_notify_community(NotifyCommunityType.Youtube)
 
         cache = Jsondb.cache.get("youtube")
         del cache[ytchannel.id]

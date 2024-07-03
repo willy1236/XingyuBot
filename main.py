@@ -7,7 +7,7 @@ from threading import Thread
 import discord
 
 from starlib import Jsondb, log, sclient
-from starDiscord.bot import DiscordBot
+from starDiscord import DiscordBot
 
 config = Jsondb.config
 bot_code = config.get('bot_code')

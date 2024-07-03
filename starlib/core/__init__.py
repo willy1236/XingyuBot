@@ -6,13 +6,10 @@
 StarManager: 繼承所有內容，將基本（直接操作資料庫）及進階（clients）整合
 """
 from .client import StarManager
-from .classes import Cog_Extension, DiscordBot
 
 sclient = StarManager()
 
 __all__ = [
-    'Cog_Extension',
-    'DiscordBot',
     'sclient',
     'StarManager',
 ]
