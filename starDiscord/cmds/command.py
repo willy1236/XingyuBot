@@ -635,7 +635,7 @@ class command(Cog_Extension):
             if not role:
                 continue
             for user in role.members:
-                await user.remove_roles(role,official_role,reason=f"第{session}界官員卸任")
+                await user.remove_roles(role,official_role,reason=f"第{session - 1}屆官員卸任")
                 await asyncio.sleep(0.5)
         
         # 製作當選官員名單並分配身分組
