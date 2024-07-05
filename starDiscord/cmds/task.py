@@ -202,7 +202,7 @@ class task(Cog_Extension):
         api = TwitchAPI()
         for user in users:
             videos = api.get_videos(user)
-            cache_last_update_time = datetime.fromisoformat(twitch_cache.get(user)) if twitch_cache.get(user) else None
+            cache_last_update_time = datetime.fromisoformat(twitch_cache.get(user)).replace(tzinfo=tz) if twitch_cache.get(user) else None
             if not cache_last_update_time or videos[0].created_at > cache_last_update_time:
                 videos.reverse()
                 video_list = slice_list_twitch(videos, cache_last_update_time)
@@ -221,7 +221,7 @@ class task(Cog_Extension):
         twitch_cache = Jsondb.cache.get('twitch_c') or {}
         api = TwitchAPI()
         for user in users:
-            cache_last_update_time = datetime.fromisoformat(twitch_cache.get(user)) if twitch_cache.get(user) else None
+            cache_last_update_time = datetime.fromisoformat(twitch_cache.get(user)).replace(tzinfo=tz) if twitch_cache.get(user) else None
             clips = api.get_clips(user, started_at=cache_last_update_time if cache_last_update_time else None)
             if clips:
                 newest = clips[0].created_at
