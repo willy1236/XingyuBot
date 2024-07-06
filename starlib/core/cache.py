@@ -3,6 +3,7 @@ from ..types import NotifyCommunityType
 from ..utilities import log
 
 class StarCache:
+    #TODO: 與JsonCache合併
     dict_type = ["dynamic_voice","voice_log"]
     list_type = ["dynamic_voice_room"]
     notify_community_type = [NotifyCommunityType.Twitch, NotifyCommunityType.Youtube, NotifyCommunityType.TwitchVideo, NotifyCommunityType.TwitchClip]
@@ -14,8 +15,7 @@ class StarCache:
     def set_data(self):
         """設定或重置所有資料"""
         for t in self.dict_type:
-            dbdata = sqldb.get_notify_channel_by_type(t)
-            self[t] = self.generate_notify_channel_dbdata(dbdata)
+            self.update_notify_channel(t)
 
         for t in self.list_type:
             if t == "dynamic_voice_room":

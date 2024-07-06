@@ -45,11 +45,12 @@ class TwitchAPI(CommunityInterface):
     def get_lives(self,users:str | list[str]) -> dict[str, TwitchStream | None]:
         """
         取得twitch用戶的直播資訊
-        :param users: list of users
+        :param users: list of users id
         :return: dict: {username: TwitchStream | None（如果無正在直播）}
         """
         params = {
-            "user_login": users,
+            #"user_login": users,
+            "user_id": users,
             "first": 1
         }
         r = requests.get(f"{self.BaseURL}/streams", params=params,headers=self._headers)
@@ -63,7 +64,7 @@ class TwitchAPI(CommunityInterface):
             dict[user] = None
 
         for data in apidata['data']:
-            dict[data.get('user_login')] = TwitchStream(data)
+            dict[data.get('user_id')] = TwitchStream(data)
         
         return dict
 

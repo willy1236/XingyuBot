@@ -259,7 +259,7 @@ class MySQLNotifySystem(MySQLBaseModel):
     def get_notify_community_user(self,notify_type:str,notify_name:str,guild_id:int):
         """取得伺服器內的指定社群通知"""
         self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f'SELECT `channel_id`,`role_id` FROM `notify_community` WHERE `notify_type` = %s AND `notify_name` = %s AND `guild_id` = %s;',(notify_type,notify_name,guild_id))
+        self.cursor.execute(f'SELECT `channel_id`,`role_id` FROM `notify_community` WHERE `notify_type` = %s AND (`notify_name` = %s OR `display_name` = %s) AND `guild_id` = %s;',(notify_type,notify_name,notify_name,guild_id))
         return self.cursor.fetchall()
 
     def get_notify_community_userlist(self,notify_type:str):

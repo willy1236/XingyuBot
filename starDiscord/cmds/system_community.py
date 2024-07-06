@@ -4,7 +4,7 @@ import discord
 from discord.commands import SlashCommandGroup
 from discord.ext import commands
 
-from starlib import BotEmbed, ChoiceList, Jsondb, sclient
+from starlib import BotEmbed, ChoiceList, Jsondb, sclient, tz
 from starlib.dataExtractor import TwitchAPI, YoutubeAPI, YoutubeRSS
 from starlib.types import NotifyCommunityType
 from starlib.uiElement.view import ReactionRole1, WelcomeView
@@ -23,6 +23,7 @@ class system_community(Cog_Extension):
                   twitch_user:discord.Option(str,required=True,name='twitch用戶',description='當此用戶開台時會發送通知'),
                   channel:discord.Option(discord.TextChannel,required=True,name='頻道',description='通知發送頻道'),
                   role:discord.Option(discord.Role,required=False,default=None,name='身分組',description='發送通知時tag的身分組')):
+        await ctx.defer()
         guildid = ctx.guild.id
         channelid = channel.id
         roleid = role.id if role else None
@@ -32,23 +33,24 @@ class system_community(Cog_Extension):
         user = api.get_user(twitch_user)
         type_tw = ChoiceList.get_tw(type.value, "twitch_notify_option")
         if user:
-            sclient.sqldb.set_notify_community(type.value, twitch_user, guildid, channelid, roleid)
-            if role:
-                await ctx.respond(f'設定成功：{user.display_name}({user.login})的{type_tw}將會發送在{channel.mention}並會通知{role.mention}')
-            else:
-                await ctx.respond(f'設定成功：{user.display_name}({user.login})的{type_tw}將會發送在{channel.mention}')
-
+            sclient.sqldb.set_notify_community(type.value, user.id, guildid, channelid, roleid, user.login)
             match type:
                 case NotifyCommunityType.Twitch:
                     pass
             
                 case NotifyCommunityType.TwitchVideo:
-                    Jsondb.cache.add_dict_data("twitch_v", user.id, datetime.now().isoformat())
+                    Jsondb.cache.add_dict_data("twitch_v", user.id, datetime.now(tz=tz).isoformat())
                 
                 case NotifyCommunityType.TwitchClip:
-                    Jsondb.cache.add_dict_data("twitch_c", user.id, datetime.now().isoformat())
+                    Jsondb.cache.add_dict_data("twitch_c", user.id, datetime.now(tz=tz).isoformat())
             
             sclient.cache.update_notify_community(type)
+
+            if role:
+                await ctx.respond(f'設定成功：{user.display_name}({user.login})的{type_tw}將會發送在{channel.mention}並會通知{role.mention}')
+            else:
+                await ctx.respond(f'設定成功：{user.display_name}({user.login})的{type_tw}將會發送在{channel.mention}')
+
         else:
             await ctx.respond(f'錯誤：找不到用戶{twitch_user}')
     
@@ -60,19 +62,20 @@ class system_community(Cog_Extension):
         type = NotifyCommunityType(notify_type) if notify_type else None
         user = TwitchAPI().get_user(twitch_user)
         if not type or type == NotifyCommunityType.Twitch:
-            sclient.sqldb.remove_notify_community(NotifyCommunityType.Twitch.value, twitch_user, guildid)
+            sclient.sqldb.remove_notify_community(NotifyCommunityType.Twitch.value, user.id, guildid)
+        
         if not type or type == NotifyCommunityType.TwitchVideo:
-            sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitchVideo.value, twitch_user, guildid)
+            sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitchVideo.value, user.id, guildid)
             Jsondb.cache.remove_dict_data("twitch_v", user.id)
 
         if not type or type == NotifyCommunityType.TwitchClip:
-            sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitchClip.value, twitch_user, guildid)
+            sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitchClip.value, user.id, guildid)
             Jsondb.cache.remove_dict_data("twitch_c", user.id)
         
         if type:
-            await ctx.respond(f'已移除 {twitch_user} 的通知')
+            await ctx.respond(f'已移除 {user.display_name}({user.login}) 的通知')
         else:
-            await ctx.respond(f'已移除 {twitch_user} 的所有通知')
+            await ctx.respond(f'已移除 {user.display_name}({user.login}) 的所有通知')
         
         sclient.cache.update_notify_community()
 
@@ -84,9 +87,9 @@ class system_community(Cog_Extension):
             channel = self.bot.get_channel(record[0]['channel_id'])
             role = channel.guild.get_role(record[0]['role_id'])
             if role:
-                await ctx.respond(f'TwitchID: {twitch_user} 的開台通知在 {channel.mention} 並通知 {role.mention}')
+                await ctx.respond(f'Twitch名稱: {twitch_user} 的開台通知在 {channel.mention} 並通知 {role.mention}')
             else:
-                await ctx.respond(f'TwitchID: {twitch_user} 的開台通知在 {channel.mention}')
+                await ctx.respond(f'Twitch名稱: {twitch_user} 的開台通知在 {channel.mention}')
         else:
             await ctx.respond(f'TwitchID: {twitch_user} 在此群組沒有設開台通知')
     
