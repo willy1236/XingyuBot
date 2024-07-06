@@ -39,10 +39,10 @@ class system_community(Cog_Extension):
                     pass
             
                 case NotifyCommunityType.TwitchVideo:
-                    Jsondb.cache.add_dict_data("twitch_v", user.id, datetime.now(tz=tz).isoformat())
+                    Jsondb.cache.add_dict_data("twitch_v", user.id, datetime.now(tz=tz).isoformat(timespec="seconds"))
                 
                 case NotifyCommunityType.TwitchClip:
-                    Jsondb.cache.add_dict_data("twitch_c", user.id, datetime.now(tz=tz).isoformat())
+                    Jsondb.cache.add_dict_data("twitch_c", user.id, datetime.now(tz=tz).isoformat(timespec="seconds"))
             
             sclient.cache.update_notify_community(type)
 

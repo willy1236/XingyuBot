@@ -104,14 +104,18 @@ class TwitchAPI(CommunityInterface):
             return None
         
     def get_clips(self,broadcaster_id:int,started_at:datetime=None):
+        """
+        取得twitch用戶的剪輯資訊\\
+        *即使加入了started_at參數，Twitch API也會返回指定時間之前的clip，原因未知，需手動過濾資料*
+        """
         params = {
             "broadcaster_id": broadcaster_id,
             "first": 5,
         }
         if started_at:
-            params['started_at'] = started_at.astimezone(tz=timezone(timedelta(hours=0))).strftime('%Y-%m-%dT%H:%M:%SZ')
-            params['ended_at'] = datetime.now(tz=timezone(timedelta(hours=0))).strftime('%Y-%m-%dT%H:%M:%SZ')
-
+            params['started_at'] = started_at.astimezone(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+            params['ended_at'] = datetime.now(tz=timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+        
         r = requests.get(f"{self.BaseURL}/clips", params=params,headers=self._headers)
         apidata = r.json()
         if apidata.get('data'):

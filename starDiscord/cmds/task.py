@@ -10,7 +10,7 @@ from requests.exceptions import ConnectTimeout
 
 from starlib import Jsondb,sclient,log,BotEmbed,utilities, ChoiceList, tz
 from starlib.dataExtractor import *
-from starlib.models.community import TwitchVideo, YoutubeVideo
+from starlib.models.community import TwitchVideo, YoutubeVideo, TwitchClip
 from starlib.types import NotifyCommunityType
 from ..extension import Cog_Extension
 
@@ -22,6 +22,11 @@ def slice_list(lst:list[YoutubeVideo], target) -> list[YoutubeVideo]:
 def slice_list_twitch(lst:list[TwitchVideo], target:datetime) -> list[TwitchVideo]:
     """以target為基準取出更新的影片資訊"""
     index = next((i for i, d in enumerate(lst) if d.created_at > target), None)
+    return lst[index:] if index else lst
+
+def slice_twitch_clip(lst:list[TwitchClip], target:datetime) -> list[TwitchClip]:
+    """以target為基準取出更新的影片資訊"""
+    index = next((i for i, d in enumerate(lst) if d.created_at >= target), None)
     return lst[index:] if index else lst
 
 class task(Cog_Extension):
@@ -224,6 +229,9 @@ class task(Cog_Extension):
             cache_last_update_time = datetime.fromisoformat(twitch_cache.get(user)).replace(tzinfo=tz) if twitch_cache.get(user) else None
             clips = api.get_clips(user, started_at=cache_last_update_time if cache_last_update_time else None)
             if clips:
+                # Twitch API 會無視started_at參數回傳錯誤時間的資料，故使用函數過濾掉，解法尚待改進
+                clips = slice_twitch_clip(clips, cache_last_update_time)
+
                 newest = clips[0].created_at
                 broadcaster_id = clips[0].broadcaster_id
                 for clip in clips:
