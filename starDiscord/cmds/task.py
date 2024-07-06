@@ -228,10 +228,9 @@ class task(Cog_Extension):
         for user in users:
             cache_last_update_time = datetime.fromisoformat(twitch_cache.get(user)).replace(tzinfo=tz) if twitch_cache.get(user) else None
             clips = api.get_clips(user, started_at=cache_last_update_time if cache_last_update_time else None)
+            # Twitch API 會無視started_at參數回傳錯誤時間的資料，故使用函數過濾掉，解法尚待改進
+            clips = filter_twitch_clip(clips, cache_last_update_time)
             if clips:
-                # Twitch API 會無視started_at參數回傳錯誤時間的資料，故使用函數過濾掉，解法尚待改進
-                clips = filter_twitch_clip(clips, cache_last_update_time)
-
                 newest = clips[0].created_at
                 broadcaster_id = clips[0].broadcaster_id
                 for clip in clips:
