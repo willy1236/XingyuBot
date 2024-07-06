@@ -97,16 +97,18 @@ if __name__ == '__main__':
 # user = kUser(**dict)
 # print(type(user))
 # print(user.role == classrole.role1)
-
+from starDiscord.cmds.task import filter_twitch_clip
 users = ["490765956"]
 twitch_cache = {
-	"490765956": "2024-07-05T23:14:22+08:00"
+	"490765956": "2024-07-05T23:14:21+08:00"
 }
 api = TwitchAPI()
 for user in users:
 	cache_last_update_time = datetime.fromisoformat(twitch_cache.get(user)).replace(tzinfo=tz) if twitch_cache.get(user) else None
 	print(cache_last_update_time.isoformat())
 	clips = api.get_clips(user, started_at=cache_last_update_time if cache_last_update_time else None)
+	clips = filter_twitch_clip(clips, cache_last_update_time)
+	print(clips)
 	if clips:
 		newest = clips[0].created_at
 		broadcaster_id = clips[0].broadcaster_id

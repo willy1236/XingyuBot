@@ -24,10 +24,10 @@ def slice_list_twitch(lst:list[TwitchVideo], target:datetime) -> list[TwitchVide
     index = next((i for i, d in enumerate(lst) if d.created_at > target), None)
     return lst[index:] if index else lst
 
-def slice_twitch_clip(lst:list[TwitchClip], target:datetime) -> list[TwitchClip]:
+def filter_twitch_clip(lst:list[TwitchClip], target:datetime) -> list[TwitchClip]:
     """以target為基準取出更新的影片資訊"""
-    index = next((i for i, d in enumerate(lst) if d.created_at >= target), None)
-    return lst[index:] if index else lst
+    return [d for d in lst if d.created_at >= target]
+    
 
 class task(Cog_Extension):
     def __init__(self,*args,**kwargs):
@@ -230,7 +230,7 @@ class task(Cog_Extension):
             clips = api.get_clips(user, started_at=cache_last_update_time if cache_last_update_time else None)
             if clips:
                 # Twitch API 會無視started_at參數回傳錯誤時間的資料，故使用函數過濾掉，解法尚待改進
-                clips = slice_twitch_clip(clips, cache_last_update_time)
+                clips = filter_twitch_clip(clips, cache_last_update_time)
 
                 newest = clips[0].created_at
                 broadcaster_id = clips[0].broadcaster_id
