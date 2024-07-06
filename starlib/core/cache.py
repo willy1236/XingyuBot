@@ -1,6 +1,7 @@
 from ..database import sqldb
 from ..types import NotifyCommunityType
 from ..utilities import log
+from ..models.mysql import NotifyCommunityRecords
 
 class StarCache:
     #TODO: 與JsonCache合併
@@ -34,11 +35,11 @@ class StarCache:
         return dict
     
     @staticmethod
-    def generate_notify_community_dbdata(dbdata):
+    def generate_notify_community_dbdata(dbdata:list[NotifyCommunityRecords]):
         lst = []
         for data in dbdata:
-            if data['notify_name'] not in lst:
-                lst.append(data['notify_name'])
+            if data.notify_name not in lst:
+                lst.append(data.notify_name)
         return lst
 
     def __setitem__(self, key, value):
@@ -85,11 +86,11 @@ class StarCache:
             if notify_type not in self.notify_community_type:
                 raise KeyError(f"Not implemented notify type: {notify_type}")
             
-            dbdata = sqldb.get_notify_community(notify_type.value)
+            dbdata = sqldb.get_notify_community(notify_type)
             self[notify_type] = self.generate_notify_community_dbdata(dbdata)
         else:
             for t in self.notify_community_type:
-                dbdata = sqldb.get_notify_community(t.value)
+                dbdata = sqldb.get_notify_community(t)
                 self[t] = self.generate_notify_community_dbdata(dbdata)
 
     def getif_dynamic_voice_room(self,channel_id):

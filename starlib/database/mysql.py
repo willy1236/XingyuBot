@@ -7,7 +7,7 @@ import mysql.connector
 from mysql.connector.errors import Error as sqlerror
 
 from starlib.models.model import GameInfoPage
-from starlib.types import DBGame, Coins, Position, CommunityType
+from starlib.types import DBGame, Coins, Position, CommunityType, NotifyCommunityType
 from starlib.models.user import *
 from starlib.models.model import *
 from starlib.models.rpg import *
@@ -223,60 +223,61 @@ class MySQLNotifySystem(MySQLBaseModel):
         self.cursor.execute(f"USE `database`;")
         self.cursor.execute(f'SELECT `channel_id` FROM `dynamic_channel`;')
         records = self.cursor.fetchall()
-        list = []
-        for data in records:
-            list.append(data['channel_id'])
-        return list
+        return [data['channel_id'] for data in records]
 
-    def set_notify_community(self,notify_type:str,notify_name:str,guild_id:int,channel_id:int,role_id:int=None,display_name:str=None):
+    def set_notify_community(self,notify_type:NotifyCommunityType,notify_name:str,guild_id:int,channel_id:int,role_id:int=None,display_name:str=None):
         """設定社群通知"""
+        notify_type = NotifyCommunityType(notify_type)
         self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f"INSERT INTO `notify_community` VALUES(%s,%s,%s,%s,%s,%s) ON DUPLICATE KEY UPDATE `notify_type` = %s, `notify_name` = %s, `guild_id` = %s, `channel_id` = %s, `role_id` = %s, `display_name` = %s",(notify_type,notify_name,display_name,guild_id,channel_id,role_id,notify_type,notify_name,guild_id,channel_id,role_id,display_name))
+        self.cursor.execute(f"INSERT INTO `notify_community` VALUES(%s,%s,%s,%s,%s,%s) ON DUPLICATE KEY UPDATE `notify_type` = %s, `notify_name` = %s, `guild_id` = %s, `channel_id` = %s, `role_id` = %s, `display_name` = %s",(notify_type.value,notify_name,display_name,guild_id,channel_id,role_id,notify_type.value,notify_name,guild_id,channel_id,role_id,display_name))
         self.connection.commit()
 
-    def remove_notify_community(self,notify_type:str,notify_name:str,guild_id:int):
+    def remove_notify_community(self,notify_type:NotifyCommunityType, notify_name:str, guild_id:int):
         """移除社群通知"""
+        notify_type = NotifyCommunityType(notify_type)
         self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f'DELETE FROM `notify_community` WHERE `notify_type` = %s AND `notify_name` = %s AND `guild_id` = %s;',(notify_type,notify_name,guild_id))
+        self.cursor.execute(f'DELETE FROM `notify_community` WHERE `notify_type` = %s AND (`notify_name` = %s OR `display_name` = %s) AND `guild_id` = %s;',(notify_type.value,notify_name,notify_name,guild_id))
         self.connection.commit()
 
-    def get_notify_community(self,notify_type:str):
+    def get_notify_community(self, notify_type:NotifyCommunityType):
         """取得社群通知（依據社群）"""
+        notify_type = NotifyCommunityType(notify_type)
         self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f'SELECT * FROM `notify_community` WHERE `notify_type` = %s;',(notify_type,))
-        return self.cursor.fetchall()
+        self.cursor.execute(f'SELECT * FROM `notify_community` WHERE `notify_type` = %s;',(notify_type.value,))
+        return [NotifyCommunityRecords(**d) for d in self.cursor.fetchall()]
     
-    def get_notify_community_guild(self,notify_type:int,notify_name:str) -> dict[str, list[int]]:
+    def get_notify_community_guild(self, notify_type:NotifyCommunityType, notify_name:str) -> dict[str, list[int]]:
         """取得指定社群的所有通知"""
+        notify_type = NotifyCommunityType(notify_type)
         self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f'SELECT `guild_id`,`channel_id`,`role_id` FROM `notify_community` WHERE `notify_type` = %s AND `notify_name` = %s;',(notify_type,notify_name))
+        self.cursor.execute(f'SELECT `guild_id`,`channel_id`,`role_id` FROM `notify_community` WHERE `notify_type` = %s AND `notify_name` = %s;',(notify_type.value,notify_name))
         records = self.cursor.fetchall()
         dict = {}
         for i in records:
             dict[i['guild_id']] = [i['channel_id'],i['role_id']]
         return dict
 
-    def get_notify_community_user(self,notify_type:str,notify_name:str,guild_id:int):
+    def get_notify_community_user(self,notify_type:NotifyCommunityType, notify_name:str, guild_id:int):
         """取得伺服器內的指定社群通知"""
+        notify_type = NotifyCommunityType(notify_type)
         self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f'SELECT `channel_id`,`role_id` FROM `notify_community` WHERE `notify_type` = %s AND (`notify_name` = %s OR `display_name` = %s) AND `guild_id` = %s;',(notify_type,notify_name,notify_name,guild_id))
-        return self.cursor.fetchall()
+        self.cursor.execute(f'SELECT `channel_id`,`role_id` FROM `notify_community` WHERE `notify_type` = %s AND (`notify_name` = %s OR `display_name` = %s) AND `guild_id` = %s;',(notify_type.value,notify_name,notify_name,guild_id))
+        return [NotifyCommunityRecords(**d) for d in self.cursor.fetchall()]
 
-    def get_notify_community_userlist(self,notify_type:str):
+    def get_notify_community_userlist(self, notify_type:NotifyCommunityType):
         """取得指定類型的社群通知清單"""
+        notify_type = NotifyCommunityType(notify_type)
         self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f'SELECT DISTINCT `notify_name` FROM `notify_community` WHERE `notify_type` = %s;',(notify_type,))
+        self.cursor.execute(f'SELECT DISTINCT `notify_name` FROM `notify_community` WHERE `notify_type` = %s;',(notify_type.value,))
         records = self.cursor.fetchall()
-        list = []
-        for i in records:
-            list.append(i.get('notify_name'))
-        return list
+        return [i.get('notify_name') for i in records]
 
-    def get_notify_community_list(self,notify_type:str,guild_id:int):
+    def get_notify_community_list(self,notify_type:NotifyCommunityType, guild_id:int):
         """取得伺服器內指定種類的所有通知"""
+        notify_type = NotifyCommunityType(notify_type)
         self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f'SELECT * FROM `notify_community` WHERE `notify_type` = %s AND `guild_id` = %s;',(notify_type,guild_id))
-        return self.cursor.fetchall()
+        self.cursor.execute(f'SELECT * FROM `notify_community` WHERE `notify_type` = %s AND `guild_id` = %s;',(notify_type.value,guild_id))
+        return [NotifyCommunityRecords(**d) for d in self.cursor.fetchall()]
 
 class MySQLGameSystem(MySQLBaseModel):
     """遊戲資料系統"""

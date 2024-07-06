@@ -1,9 +1,13 @@
+from dataclasses import dataclass
 from datetime import date, datetime
-from pydantic import BaseModel
 from typing import TYPE_CHECKING, TypedDict
 
-from ..utilities import BotEmbed
+from pydantic import BaseModel
+
 from ..settings import tz
+from ..types import NotifyCommunityType
+from ..utilities import BotEmbed
+
 
 class Party(BaseModel):
     id: int
@@ -75,4 +79,12 @@ class BackupRoles:
             embed.add_field(name="成員", value=",".join(user_list),inline=False)
 
         return embed
-        
+
+@dataclass
+class NotifyCommunityRecords:
+    notify_type: NotifyCommunityType
+    notify_name: str
+    display_name: str
+    guild_id: int
+    channel_id: int
+    role_id: int
