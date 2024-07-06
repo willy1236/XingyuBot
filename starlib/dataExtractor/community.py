@@ -108,8 +108,8 @@ class TwitchAPI(CommunityInterface):
             "first": 5,
         }
         if started_at:
-            params['started_at'] = started_at.strftime('%Y-%m-%dT%H:%M:%SZ')
-            params['ended_at'] = datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
+            params['started_at'] = started_at.astimezone(tz=timezone(timedelta(hours=0))).strftime('%Y-%m-%dT%H:%M:%SZ')
+            params['ended_at'] = datetime.now(tz=timezone(timedelta(hours=0))).strftime('%Y-%m-%dT%H:%M:%SZ')
 
         r = requests.get(f"{self.BaseURL}/clips", params=params,headers=self._headers)
         apidata = r.json()

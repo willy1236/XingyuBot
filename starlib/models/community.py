@@ -48,7 +48,7 @@ class TwitchStream():
         self.title = data.get('title')
         self.viewer_count = data.get('viewer_count')
         self.thumbnail_url = data.get('thumbnail_url').replace('{width}','960').replace('{height}','540')
-        self.starttime = (datetime.strptime(data.get('started_at'),'%Y-%m-%dT%H:%M:%SZ') + timedelta(hours=8)).strftime('%Y/%m/%d %H:%M:%S')
+        self.starttime = datetime.strptime(data.get('started_at'),'%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=timezone.utc).astimezone(tz=tz)
         self.tags = data.get('tags')
         self.url = f"https://www.twitch.tv/{self.user_login}"
 
@@ -62,7 +62,7 @@ class TwitchStream():
             )
         embed.set_author(name=f"{self.username} 開台啦！")
         embed.set_image(url=self.thumbnail_url)
-        embed.set_footer(text=f"開始於{self.starttime}")
+        embed.set_footer(text=f"開始於{self.starttime.strftime('%Y/%m/%d %H:%M:%S')}")
         return embed
 
 class TwitchVideo():
@@ -74,8 +74,8 @@ class TwitchVideo():
         self.user_name = data.get("user_name")
         self.title = data.get("title")
         self.description = data.get("description")
-        self.created_at = (datetime.strptime(data.get('created_at'),'%Y-%m-%dT%H:%M:%SZ') + timedelta(hours=8)).replace(tzinfo=timezone(timedelta(hours=8)))
-        self.published_at = (datetime.strptime(data.get('published_at'),'%Y-%m-%dT%H:%M:%SZ') + timedelta(hours=8)).replace(tzinfo=timezone(timedelta(hours=8)))
+        self.created_at = datetime.strptime(data.get('created_at'),'%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=timezone.utc).astimezone(tz=tz)
+        self.published_at = datetime.strptime(data.get('published_at'),'%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=timezone.utc).astimezone(tz=tz)
         self.url = data.get("url")
         self.thumbnail_url = data.get("thumbnail_url").replace('{width}','960').replace('{height}','540')
         self.view_count = data.get("view_count")
@@ -105,7 +105,7 @@ class TwitchClip():
         self.language = data.get("language")
         self.title = data.get("title")
         self.view_count = data.get("view_count")
-        self.created_at = datetime.strptime(data.get('created_at'),'%Y-%m-%dT%H:%M:%SZ').astimezone(tz)
+        self.created_at = datetime.strptime(data.get('created_at'),'%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=timezone.utc).astimezone(tz=tz)
         self.thumbnail_url = data.get("thumbnail_url").replace('{width}','960').replace('{height}','540')
         self.url = data.get("url")
         self.duration = timedelta(seconds=data.get("duration"))
@@ -189,8 +189,8 @@ class YoutubeVideo:
         self.author_name = data.get("author")
         self.link = data.get("link")
         self.media_thumbnail_url = data.get("media_thumbnail")[0].get('url')
-        self.uplood_at = datetime.fromtimestamp(time.mktime(data["published_parsed"]),tz=timezone(timedelta(hours=0))).replace(tzinfo=tz)
-        self.updated_at = datetime.fromtimestamp(time.mktime(data["updated_parsed"]),tz=timezone(timedelta(hours=0))).replace(tzinfo=tz)
+        self.uplood_at = datetime.fromtimestamp(time.mktime(data["published_parsed"]),tz=timezone.utc).replace(tzinfo=tz)
+        self.updated_at = datetime.fromtimestamp(time.mktime(data["updated_parsed"]),tz=timezone.utc).replace(tzinfo=tz)
         self.author = data.get("authors")[0].get("name")
         
     def embed(self):

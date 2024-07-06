@@ -231,7 +231,7 @@ class task(Cog_Extension):
                     embed = clip.embed()
                     await self.bot.send_message_to_notify_communities(embed, NotifyCommunityType.TwitchClip, broadcaster_id)
 
-                twitch_cache[broadcaster_id] = newest.isoformat()
+                twitch_cache[broadcaster_id] = (newest + timedelta(seconds=1)).isoformat()
 
         Jsondb.cache.write('twitch_c',twitch_cache)
 

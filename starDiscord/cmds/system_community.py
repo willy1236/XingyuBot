@@ -38,14 +38,15 @@ class system_community(Cog_Extension):
             else:
                 await ctx.respond(f'設定成功：{user.display_name}({user.login})的{type_tw}將會發送在{channel.mention}')
 
-            if type == NotifyCommunityType.Twitch:
-                pass
+            match type:
+                case NotifyCommunityType.Twitch:
+                    pass
             
-            elif type == NotifyCommunityType.TwitchVideo:
-                Jsondb.cache.add_dict_data("twitch_v", user.id, api.get_videos(user.id)[0].created_at.isoformat())
-            
-            elif type == NotifyCommunityType.TwitchClip:
-                Jsondb.cache.add_dict_data("twitch_c", user.id, datetime.now().isoformat())
+                case NotifyCommunityType.TwitchVideo:
+                    Jsondb.cache.add_dict_data("twitch_v", user.id, datetime.now().isoformat())
+                
+                case NotifyCommunityType.TwitchClip:
+                    Jsondb.cache.add_dict_data("twitch_c", user.id, datetime.now().isoformat())
             
             sclient.cache.update_notify_community(type)
         else:
@@ -60,7 +61,7 @@ class system_community(Cog_Extension):
         user = TwitchAPI().get_user(twitch_user)
         if not type or type == NotifyCommunityType.Twitch:
             sclient.sqldb.remove_notify_community(NotifyCommunityType.Twitch.value, twitch_user, guildid)
-        if not notify_type or type == NotifyCommunityType.TwitchVideo:
+        if not type or type == NotifyCommunityType.TwitchVideo:
             sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitchVideo.value, twitch_user, guildid)
             Jsondb.cache.remove_dict_data("twitch_v", user.id)
 
@@ -68,7 +69,10 @@ class system_community(Cog_Extension):
             sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitchClip.value, twitch_user, guildid)
             Jsondb.cache.remove_dict_data("twitch_c", user.id)
         
-        await ctx.respond(f'已移除 {twitch_user} 的通知')
+        if type:
+            await ctx.respond(f'已移除 {twitch_user} 的通知')
+        else:
+            await ctx.respond(f'已移除 {twitch_user} 的所有通知')
         
         sclient.cache.update_notify_community()
 
