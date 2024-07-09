@@ -2,6 +2,7 @@ import requests,os.path,feedparser
 from starlib.fileDatabase import Jsondb
 from starlib.models.community import *
 from starlib.errors import Forbidden
+from typing import Iterable
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -42,29 +43,34 @@ class TwitchAPI(CommunityInterface):
         else:
             raise Forbidden(f"在讀取Twitch API時發生錯誤",f"[{r.status_code}] {apidata['message']}")
 
-    def get_lives(self,users:str | list[str]) -> dict[str, TwitchStream | None]:
+    def get_lives(self,users:str | list[str], use_user_logins=False) -> dict[str, TwitchStream | None]:
         """
         取得twitch用戶的直播資訊
         :param users: list of users id
-        :return: dict: {username: TwitchStream | None（如果無正在直播）}
+        :return: dict: {user_id: TwitchStream | None（如果無正在直播）}
         """
         params = {
-            #"user_login": users,
-            "user_id": users,
             "first": 1
         }
+        if use_user_logins:
+            params["user_login"] = users
+        else:
+            params["user_id"] = users
         r = requests.get(f"{self.BaseURL}/streams", params=params,headers=self._headers)
         apidata = r.json()
         dict = {}
         
-        if isinstance(users,str):
+        if not isinstance(users, list):
             users = [users]
 
         for user in users:
             dict[user] = None
 
         for data in apidata['data']:
-            dict[data.get('user_id')] = TwitchStream(data)
+            if use_user_logins:
+                dict[data.get('user_login')] = TwitchStream(**data)
+            else:
+                dict[data.get('user_id')] = TwitchStream(**data)
         
         return dict
 

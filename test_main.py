@@ -68,10 +68,11 @@ if __name__ == '__main__':
 
 # from typing import TypedDict
 
-# class classrole(IntEnum):
-# 	role1 = 1
-# 	role2 = 2
-# 	role3 = 3
+class classrole(IntEnum):
+	role1 = 1
+	role2 = 2
+	role3 = 3
+
 # class lUser(TypedDict):
 # 	id: int
 # 	username: str
@@ -85,35 +86,43 @@ if __name__ == '__main__':
 # print(type(luser))
 # print(type(luser["role"]))
 
-# @dataclass
-# class kUser():
-# 	id: int
-# 	role: classrole
 
-# 	def test(self):
-# 		print("test")
+@dataclass(slots=True)
+class kUser():
+	id: int
+	role: classrole
+	time: datetime
 
-# dict = {"id": 123, "role": 1}
-# user = kUser(**dict)
-# print(type(user))
+	def __post_init__(self):
+		self.time = datetime.fromisoformat(self.time)
+
+	def test(self):
+		print("test")
+
+dict = {"id":1, "role": 1, "time": "2024-07-05T23:14:21+08:00"}
+user = kUser(**dict)
+print(user)
+print(type(user))
+print(user.time, type(user.time))
 # print(user.role == classrole.role1)
-from starDiscord.cmds.task import filter_twitch_clip
-users = ["490765956"]
-twitch_cache = {
-	"490765956": "2024-07-05T23:14:21+08:00"
-}
-api = TwitchAPI()
-for user in users:
-	cache_last_update_time = datetime.fromisoformat(twitch_cache.get(user)).replace(tzinfo=tz) if twitch_cache.get(user) else None
-	print(cache_last_update_time.isoformat())
-	clips = api.get_clips(user, started_at=cache_last_update_time if cache_last_update_time else None)
-	clips = filter_twitch_clip(clips, cache_last_update_time)
-	print(clips)
-	if clips:
-		newest = clips[0].created_at
-		broadcaster_id = clips[0].broadcaster_id
-		for clip in clips:
-			newest = clip.created_at if clip.created_at > newest else newest
-			print(clip.title,clip.created_at,clip.duration)
 
-		print((newest + timedelta(seconds=1)).isoformat())
+# from starDiscord.cmds.task import filter_twitch_clip
+# users = ["490765956"]
+# twitch_cache = {
+# 	"490765956": "2024-07-05T23:14:21+08:00"
+# }
+# api = TwitchAPI()
+# for user in users:
+# 	cache_last_update_time = datetime.fromisoformat(twitch_cache.get(user)).replace(tzinfo=tz) if twitch_cache.get(user) else None
+# 	print(cache_last_update_time.isoformat())
+# 	clips = api.get_clips(user, started_at=cache_last_update_time if cache_last_update_time else None)
+# 	clips = filter_twitch_clip(clips, cache_last_update_time)
+# 	print(clips)
+# 	if clips:
+# 		newest = clips[0].created_at
+# 		broadcaster_id = clips[0].broadcaster_id
+# 		for clip in clips:
+# 			newest = clip.created_at if clip.created_at > newest else newest
+# 			print(clip.title,clip.created_at,clip.duration)
+
+# 		print((newest + timedelta(seconds=1)).isoformat())

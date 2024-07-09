@@ -152,7 +152,7 @@ class system_community(Cog_Extension):
 
         ytchannel = YoutubeAPI().get_channel(handle=ythandle)
         if ytchannel:
-            sclient.sqldb.set_notify_community(NotifyCommunityType.Youtube.value,ytchannel.id,guildid,channelid,roleid,ytchannel.title)
+            sclient.sqldb.set_notify_community(NotifyCommunityType.Youtube,ytchannel.id,guildid,channelid,roleid,ytchannel.title)
             if role:
                 await ctx.respond(f'設定成功：{ytchannel.title}的通知將會發送在{channel.mention}並會通知{role.mention}')
             else:
@@ -177,7 +177,7 @@ class system_community(Cog_Extension):
             await ctx.respond(f'錯誤：找不到帳號代碼 {ythandle} 的頻道')
             return
 
-        sclient.sqldb.remove_notify_community(NotifyCommunityType.Youtube.value,ytchannel.id,guildid)
+        sclient.sqldb.remove_notify_community(NotifyCommunityType.Youtube,ytchannel.id,guildid)
         await ctx.respond(f'已移除頻道 {ytchannel.title} 的通知')
         
         sclient.cache.update_notify_community(NotifyCommunityType.Youtube)

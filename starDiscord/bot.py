@@ -1,8 +1,11 @@
 import asyncio
-import discord
 import os
-from starlib import Jsondb, BotEmbed, sqldb, log   
+
+import discord
+
+from starlib import BotEmbed, Jsondb, log, sqldb
 from starlib.types import NotifyCommunityType
+
 
 class DiscordBot(discord.Bot):
     _COG_PATH = './starDiscord/cmds'
@@ -22,7 +25,7 @@ class DiscordBot(discord.Bot):
             self.debug_guilds = Jsondb.config.get('debug_guilds')
 
     def run(self):
-        token = Jsondb.get_token(self.bot_code)
+        token = Jsondb.tokens.get(self.bot_code)
         super().run(token)
 
     def load_all_extensions(self):

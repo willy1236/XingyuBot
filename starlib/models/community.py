@@ -1,9 +1,14 @@
-import discord,time
-from datetime import datetime,timedelta,timezone
+import time
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
 
-from ..utilities import BotEmbed
+import discord
+
+from ..fileDatabase import Jsondb
 from ..settings import tz
+from ..utilities import BotEmbed
+
 
 class TwitchUser():
     def __init__(self,data:dict):
@@ -36,20 +41,28 @@ class TwitchUser():
         embed.set_footer(text=self.id)
         return embed
 
+@dataclass(slots=True)
 class TwitchStream():
-    def __init__(self,data:dict):
-        self.id = data.get('id')
-        self.user_login = data.get('user_login')
-        self.username = data.get('user_name')
-        
-        self.game_id = data.get('game_id')
-        self.game_name = data.get('game_name')
-        
-        self.title = data.get('title')
-        self.viewer_count = data.get('viewer_count')
-        self.thumbnail_url = data.get('thumbnail_url').replace('{width}','960').replace('{height}','540')
-        self.starttime = datetime.strptime(data.get('started_at'),'%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=timezone.utc).astimezone(tz=tz)
-        self.tags = data.get('tags')
+    id: str
+    user_id: str
+    user_login: str
+    user_name: str
+    game_id: str
+    game_name: str
+    type: str
+    title: str
+    viewer_count: int
+    started_at: datetime
+    language: str
+    thumbnail_url: str
+    tag_ids: list[str]
+    tags: list[str]
+    is_mature: bool
+    url: str = field(init=False)
+
+    def __post_init__(self):
+        self.thumbnail_url = self.thumbnail_url.replace('{width}','960').replace('{height}','540')
+        self.started_at = datetime.strptime(self.started_at,'%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=timezone.utc).astimezone(tz=tz)
         self.url = f"https://www.twitch.tv/{self.user_login}"
 
     def embed(self):
@@ -58,11 +71,13 @@ class TwitchStream():
             url=self.url,
             description=self.game_name,
             color=0x6441a5,
-            timestamp = datetime.now()
+            timestamp = datetime.now(),
+            icon_url = Jsondb.picdata["twitch_001"]
             )
         embed.set_author(name=f"{self.username} 開台啦！")
         embed.set_image(url=self.thumbnail_url)
-        embed.set_footer(text=f"開始於{self.starttime.strftime('%Y/%m/%d %H:%M:%S')}")
+        embed.add_field(name="標籤",value=", ".join(self.tags))
+        embed.set_footer(text=f"開始於 {self.starttime.strftime('%Y/%m/%d %H:%M:%S')}")
         return embed
 
 class TwitchVideo():

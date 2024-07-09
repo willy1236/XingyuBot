@@ -80,7 +80,7 @@ class BackupRoles:
 
         return embed
 
-@dataclass
+@dataclass(slots=True)
 class NotifyCommunityRecords:
     notify_type: NotifyCommunityType
     notify_name: str
