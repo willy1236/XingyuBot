@@ -2,7 +2,7 @@ import time
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Optional
-from pydantic import BaseModel, model_validator, HttpUrl
+from pydantic import BaseModel, model_validator, HttpUrl, ConfigDict, Field
 
 import discord
 
@@ -220,17 +220,30 @@ class YouTubeStream:
         self.thumbnails_medium = data.get('snippet').get('thumbnails').get('medium').get('url')
         self.thumbnails_high = data.get('snippet').get('thumbnails').get('high').get('url')
 
-class YoutubeVideo:
-    def __init__(self,data:dict):
-        self.id = data.get('yt_videoid')
-        self.title = data.get("title")
-        self.author_name = data.get("author")
-        self.link = data.get("link")
-        self.media_thumbnail_url = data.get("media_thumbnail")[0].get('url')
-        self.uplood_at = datetime.fromtimestamp(time.mktime(data["published_parsed"]),tz=timezone.utc).replace(tzinfo=tz)
-        self.updated_at = datetime.fromtimestamp(time.mktime(data["updated_parsed"]),tz=timezone.utc).replace(tzinfo=tz)
-        self.author = data.get("authors")[0].get("name")
-        
+class MediaThumbnail(BaseModel):
+    """Youtube thumbnail data class"""
+    url: HttpUrl
+    width: int
+    height: int
+
+class YoutubeVideo(BaseModel):
+    model_config = ConfigDict(extra='ignore')
+
+    id: str
+    link: HttpUrl
+    yt_videoid: str
+    yt_channelid: str
+    title: str
+    author_name: str = Field(alias='author')
+    uplood_at: datetime = Field(alias='published')
+    updated_at: datetime = Field(alias='updated')
+    media_thumbnail: list[MediaThumbnail]
+    
+    @model_validator(mode='after')
+    def __post_init__(self):
+        self.uplood_at = self.uplood_at.astimezone(tz=tz)
+        self.updated_at = self.updated_at.astimezone(tz=tz)
+
     def embed(self):
         embed = discord.Embed(
             title=self.title,
@@ -241,5 +254,5 @@ class YoutubeVideo:
             )
         embed.add_field(name="上傳時間",value=self.uplood_at.strftime('%Y/%m/%d %H:%M:%S'),inline=False)
         embed.add_field(name="更新時間",value=self.updated_at.strftime('%Y/%m/%d %H:%M:%S'),inline=True)
-        embed.set_image(url=self.media_thumbnail_url)
+        embed.set_image(url=self.media_thumbnail[0].url)
         return embed

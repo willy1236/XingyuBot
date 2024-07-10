@@ -282,7 +282,7 @@ class YoutubeRSS(CommunityInterface):
         feed = feedparser.parse(youtube_feed)
         # for entry in feed['entries']:
         #     print(entry)
-        return [YoutubeVideo(i) for i in feed['entries']]
+        return [YoutubeVideo(**i) for i in feed['entries']]
 
 class GoogleCloud():
     def __init__(self):
