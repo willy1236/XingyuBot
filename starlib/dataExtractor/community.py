@@ -86,7 +86,7 @@ class TwitchAPI(CommunityInterface):
         r = requests.get(f"{self.BaseURL}/users", params=params,headers=self._headers)
         apidata = r.json()
         if apidata.get('data'):
-            return TwitchUser(apidata['data'][0])
+            return TwitchUser(**apidata['data'][0])
         else:
             return None
 
@@ -105,7 +105,7 @@ class TwitchAPI(CommunityInterface):
         r = requests.get(f"{self.BaseURL}/videos", params=params,headers=self._headers)
         apidata = r.json()
         if apidata.get('data'):
-            return [TwitchVideo(i) for i in apidata['data']]
+            return [TwitchVideo(**i) for i in apidata['data']]
         else:
             return None
         
@@ -125,7 +125,7 @@ class TwitchAPI(CommunityInterface):
         r = requests.get(f"{self.BaseURL}/clips", params=params,headers=self._headers)
         apidata = r.json()
         if apidata.get('data'):
-            return [TwitchClip(i) for i in apidata['data']]
+            return [TwitchClip(**i) for i in apidata['data']]
         else:
             return None
 

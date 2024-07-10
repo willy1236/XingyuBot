@@ -56,15 +56,17 @@ if __name__ == '__main__':
 	# 	print("="*50)
 	# 	time.sleep(10)
 
-# 	class Test(BaseModel):
-# 		name: str
-	
-# 	dct = {"name": "test"}
-# 	obj = Test(**dct)
-# 	print(obj.name)
-# 	# obj = Test.model_validate(dct)
-# 	# #obj = Test(dct)
-# 	# print(obj.name)
+# class Test(BaseModel):
+# 	name: str
+# 	time: datetime
+
+# dct = {"name": "test", "time": "2024-07-05T23:14:21Z"}
+# obj = Test(**dct)
+# print(obj.name)
+# print(obj.time)
+# obj = Test.model_validate(dct)
+# #obj = Test(dct)
+# print(obj.name)
 
 # from typing import TypedDict
 
@@ -87,23 +89,23 @@ class classrole(IntEnum):
 # print(type(luser["role"]))
 
 
-@dataclass(slots=True)
-class kUser():
-	id: int
-	role: classrole
-	time: datetime
+# @dataclass(slots=True)
+# class kUser():
+# 	id: int
+# 	role: classrole
+# 	time: datetime
 
-	def __post_init__(self):
-		self.time = datetime.fromisoformat(self.time)
+# 	def __post_init__(self):
+# 		self.time = datetime.fromisoformat(self.time)
 
-	def test(self):
-		print("test")
+# 	def test(self):
+# 		print("test")
 
-dict = {"id":1, "role": 1, "time": "2024-07-05T23:14:21+08:00"}
-user = kUser(**dict)
-print(user)
-print(type(user))
-print(user.time, type(user.time))
+# dict = {"id":1, "role": 1, "time": "2024-07-05T23:14:21+08:00"}
+# user = kUser(**dict)
+# print(user)
+# print(type(user))
+# print(user.time, type(user.time))
 # print(user.role == classrole.role1)
 
 # from starDiscord.cmds.task import filter_twitch_clip
@@ -111,7 +113,7 @@ print(user.time, type(user.time))
 # twitch_cache = {
 # 	"490765956": "2024-07-05T23:14:21+08:00"
 # }
-# api = TwitchAPI()
+#api = TwitchAPI()
 # for user in users:
 # 	cache_last_update_time = datetime.fromisoformat(twitch_cache.get(user)).replace(tzinfo=tz) if twitch_cache.get(user) else None
 # 	print(cache_last_update_time.isoformat())

@@ -1,7 +1,8 @@
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
+from pydantic import BaseModel, model_validator, HttpUrl
 
 import discord
 
@@ -10,20 +11,24 @@ from ..settings import tz
 from ..utilities import BotEmbed
 
 
-class TwitchUser():
-    def __init__(self,data:dict):
-        self.id = data.get("id")
-        self.login = data.get("login")
-        self.display_name = data.get("display_name")
-        self.type = data.get("type")
-        self.broadcaster_type = data.get("broadcaster_type")
-        self.description = data.get("description")
-        self.profile_image_url = data.get("profile_image_url")
-        self.offline_image_url = data.get("offline_image_url")
-        self.view_count = data.get("view_count")
-        self.email = data.get("email")
-        self.created_at = data.get("created_at")
+class TwitchUser(BaseModel):
+    id: str
+    login: str
+    display_name: str
+    type: str
+    broadcaster_type: str
+    description: str
+    profile_image_url: HttpUrl
+    offline_image_url: HttpUrl
+    view_count: int
+    email: Optional[str] = None
+    created_at: datetime
+    url: HttpUrl = None
+        
+    @model_validator(mode='after')
+    def __post_init__(self):
         self.url = f"https://www.twitch.tv/{self.login}"
+        self.created_at = self.created_at.astimezone(tz=tz)
 
     def desplay(self):
         embed = discord.Embed(
@@ -31,7 +36,7 @@ class TwitchUser():
             url=self.url,
             description=self.description,
             color=0x6441a5,
-            timestamp = datetime.now()
+            timestamp = self.created_at
             )
         embed.set_image(url=self.offline_image_url)
         embed.set_author(name=self.login,icon_url=self.profile_image_url)
@@ -80,22 +85,31 @@ class TwitchStream():
         embed.set_footer(text=f"開始於")
         return embed
 
-class TwitchVideo():
-    def __init__(self,data:dict):
-        self.video_id = data.get("id")
-        self.stream_id = data.get("stream_id")
-        self.user_id = data.get("user_id")
-        self.user_login = data.get("user_login")
-        self.user_name = data.get("user_name")
-        self.title = data.get("title")
-        self.description = data.get("description")
-        self.created_at = datetime.strptime(data.get('created_at'),'%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=timezone.utc).astimezone(tz=tz)
-        self.published_at = datetime.strptime(data.get('published_at'),'%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=timezone.utc).astimezone(tz=tz)
-        self.url = data.get("url")
-        self.thumbnail_url = data.get("thumbnail_url").replace('{width}','960').replace('{height}','540')
-        self.view_count = data.get("view_count")
-        self.duration = data.get("duration")
+class TwitchVideo(BaseModel):
+    id: str
+    stream_id: Optional[str]
+    user_id: str
+    user_login: str
+    user_name: str
+    title: str
+    description: str
+    created_at: datetime
+    published_at: datetime
+    url: HttpUrl
+    thumbnail_url: HttpUrl
+    viewable: str
+    view_count: int
+    language: str
+    type: str
+    duration: str
+    muted_segments: Optional[str]
     
+    @model_validator(mode='after')
+    def __post_init__(self):
+        self.created_at = self.created_at.astimezone(tz=tz)
+        self.published_at = self.published_at.astimezone(tz=tz)
+        self.thumbnail_url = HttpUrl(str(self.thumbnail_url).replace('{width}', '960').replace('{height}', '540'))
+
     def embed(self):
         embed = discord.Embed(
             title=self.title,
@@ -109,23 +123,30 @@ class TwitchVideo():
         embed.set_footer(text=f"上傳時間")
         return embed
 
-class TwitchClip():
-    def __init__(self,data:dict):
-        self.clip_id = data.get("id")
-        self.broadcaster_id = data.get("broadcaster_id")
-        self.broadcaster_name = data.get("broadcaster_name")
-        self.creator_id = data.get("creator_id")
-        self.creator_name = data.get("creator_name")
-        self.video_id = data.get("video_id")
-        self.game_id = data.get("game_id")
-        self.language = data.get("language")
-        self.title = data.get("title")
-        self.view_count = data.get("view_count")
-        self.created_at = datetime.strptime(data.get('created_at'),'%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=timezone.utc).astimezone(tz=tz)
-        self.thumbnail_url = data.get("thumbnail_url").replace('{width}','960').replace('{height}','540')
-        self.url = data.get("url")
-        self.duration = timedelta(seconds=data.get("duration"))
+class TwitchClip(BaseModel):
+    id: str
+    url: HttpUrl
+    embed_url: HttpUrl
+    broadcaster_id: str
+    broadcaster_name: str
+    creator_id: str
+    creator_name: str
+    video_id: str
+    game_id: str
+    language: str
+    title: str
+    view_count: int
+    created_at: datetime
+    thumbnail_url: HttpUrl
+    duration: timedelta
+    vod_offset: Optional[int]
+    is_featured: bool
     
+    @model_validator(mode='after')
+    def __post_init__(self):
+        self.created_at = self.created_at.astimezone(tz=tz)
+        self.thumbnail_url = HttpUrl(str(self.thumbnail_url).replace('{width}', '960').replace('{height}', '540'))
+
     def embed(self):
         embed = discord.Embed(
             title=self.title,
