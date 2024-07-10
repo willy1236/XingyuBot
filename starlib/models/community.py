@@ -74,10 +74,10 @@ class TwitchStream():
             timestamp = datetime.now(),
             icon_url = Jsondb.picdata["twitch_001"]
             )
-        embed.set_author(name=f"{self.username} 開台啦！")
+        embed.set_author(name=f"{self.user_name} 開台啦！")
         embed.set_image(url=self.thumbnail_url)
         embed.add_field(name="標籤",value=", ".join(self.tags))
-        embed.set_footer(text=f"開始於 {self.starttime.strftime('%Y/%m/%d %H:%M:%S')}")
+        embed.set_footer(text=f"開始於 {self.started_at.strftime('%Y/%m/%d %H:%M:%S')}")
         return embed
 
 class TwitchVideo():
