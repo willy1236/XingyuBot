@@ -71,13 +71,13 @@ class TwitchStream():
             url=self.url,
             description=self.game_name,
             color=0x6441a5,
-            timestamp = datetime.now(),
+            timestamp = self.started_at,
             icon_url = Jsondb.picdata["twitch_001"]
             )
         embed.set_author(name=f"{self.user_name} 開台啦！")
         embed.set_image(url=self.thumbnail_url)
-        embed.add_field(name="標籤",value=", ".join(self.tags))
-        embed.set_footer(text=f"開始於 {self.started_at.strftime('%Y/%m/%d %H:%M:%S')}")
+        embed.add_field(name="標籤", value=", ".join(self.tags))
+        embed.set_footer(text=f"開始於")
         return embed
 
 class TwitchVideo():
@@ -101,11 +101,12 @@ class TwitchVideo():
             title=self.title,
             url=self.url,
             description=self.description,
-            color=0x6441a5
+            color=0x6441a5,
+            timestamp=self.created_at
             )
         embed.set_author(name=f"{self.user_name}")
         embed.set_image(url=self.thumbnail_url)
-        embed.set_footer(text=f"上傳時間 {self.created_at.strftime('%Y/%m/%d %H:%M:%S')}")
+        embed.set_footer(text=f"上傳時間")
         return embed
 
 class TwitchClip():
@@ -129,12 +130,13 @@ class TwitchClip():
         embed = discord.Embed(
             title=self.title,
             url=self.url,
-            color=0x6441a5
+            color=0x6441a5,
+            timestamp=self.created_at
             )
         embed.set_author(name=f"{self.broadcaster_name}")
         embed.set_image(url=self.thumbnail_url)
-        embed.add_field(name="剪輯者",value=self.creator_name)
-        embed.set_footer(text=f"上傳時間 {self.created_at.strftime('%Y/%m/%d %H:%M:%S')}")
+        embed.add_field(name="剪輯者", value=self.creator_name)
+        embed.set_footer(text=f"上傳時間")
         return embed
 
 class YoutubeChannel:
@@ -209,7 +211,13 @@ class YoutubeVideo:
         self.author = data.get("authors")[0].get("name")
         
     def embed(self):
-        embed = BotEmbed.simple(self.title,self.author_name,url=self.link)
+        embed = discord.Embed(
+            title=self.title,
+            url=self.link,
+            description=self.author_name,
+            color=0xff0000,
+            timestamp = self.uplood_at
+            )
         embed.add_field(name="上傳時間",value=self.uplood_at.strftime('%Y/%m/%d %H:%M:%S'),inline=False)
         embed.add_field(name="更新時間",value=self.updated_at.strftime('%Y/%m/%d %H:%M:%S'),inline=True)
         embed.set_image(url=self.media_thumbnail_url)
