@@ -1,6 +1,6 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, datetime
-from typing import TYPE_CHECKING, Optional, TypedDict
+from typing import Optional, TypedDict
 
 from ..settings import tz
 from ..types import NotifyCommunityType
@@ -16,33 +16,23 @@ class Party():
     created_at: date
     member_count: Optional[int]
     
+@dataclass(slots=True)
 class BackupRoles:
-    if TYPE_CHECKING:
-        id: int
-        name: str
-        created_at: datetime
-        guild_id: int
-        colour_r: int
-        colour_g: int
-        colour_b: int
-        description: str
-        user_ids: list[Optional[int]]
+    role_id: int
+    role_name: str
+    created_at: datetime
+    guild_id: int
+    colour_r: int
+    colour_g: int
+    colour_b: int
+    description: str
+    user_ids: list[Optional[int]] = field(default_factory=list)
 
-    def __init__(self, dct:dict, user_ids=[]):
-        self.id = dct.get('role_id')
-        self.name = dct.get('role_name')
-        self.created_at = dct.get('created_at')
-        self.guild_id = dct.get('guild_id')
-        self.colour_r = dct.get('colour_r')
-        self.colour_g = dct.get('colour_g')
-        self.colour_b = dct.get('colour_b')
-        self.description = dct.get('description')
-        self.user_ids = user_ids
-        if isinstance(self.created_at, datetime):
-            self.created_at = self.created_at.replace(tzinfo=tz)
+    def __post_init__(self):
+        self.created_at = self.created_at.replace(tzinfo=tz)
     
     def embed(self, bot):
-        embed = BotEmbed.simple(self.name,self.description)
+        embed = BotEmbed.simple(self.role_name,self.description)
         embed.add_field(name="創建於", value=self.created_at.strftime("%Y/%m/%d %H:%M:%S"))
         embed.add_field(name="顏色", value=f"({self.colour_r}, {self.colour_g}, {self.colour_b})")
         if self.user_ids and bot:
@@ -57,7 +47,7 @@ class BackupRoles:
 
 @dataclass(slots=True)
 class NotifyCommunityRecords:
-    notify_type: NotifyCommunityType
+    notify_type: NotifyCommunityType 
     notify_name: str
     display_name: str
     guild_id: int

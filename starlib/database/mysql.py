@@ -6,18 +6,38 @@ import discord
 import mysql.connector
 from mysql.connector.errors import Error as sqlerror
 
-from starlib.models.model import GameInfoPage
-from starlib.types import DBGame, Coins, Position, CommunityType, NotifyCommunityType
-from starlib.models.user import *
-from starlib.models.model import *
-from starlib.models.rpg import *
-from starlib.models.mysql import *
-from starlib.errors import *
+from ..models.model import GameInfoPage
+from ..types import DBGame, Coins, Position, CommunityType, NotifyCommunityType
+from ..models.user import *
+from ..models.model import *
+from ..models.rpg import *
+from ..models.mysql import *
+from ..errors import *
+from ..settings import tz
 
 def create_id():
     return 'SELECT idNumber FROM ( SELECT CONCAT("U", LPAD(FLOOR(RAND()*10000000), 7, 0)) as idNumber) AS generated_ids WHERE NOT EXISTS ( SELECT 1 FROM stardb_user.user_data WHERE user_id = generated_ids.idNumber);'
 
-tz = timezone(timedelta(hours=8))
+def merge_lists_by_role_id(list1:list, *, list2:list=None, dict2:dict=None):
+    """
+    合併兩個列表，依據role_id\\
+    dict2為可選參數，可提供已處理過的字典
+    """
+    # 將list1和list2轉換成以role_id為鍵的字典
+    dict1 = {item['role_id']: item for item in list1}
+    if not dict2:
+        dict2 = {item['role_id']: item for item in list2}
+
+    # 合併兩個字典
+    merged_dict = {}
+    for role_id in set(dict1) | set(dict2):
+        merged_dict[role_id] = {**dict1.get(role_id, {}), **dict2.get(role_id, {})}
+
+    # 將合併後的字典轉換回列表
+    merged_list = list(merged_dict.values())
+
+    return merged_list
+
 class MySQLBaseModel(object):
     """MySQL資料庫基本模型"""
     def __init__(self,mysql_settings:dict):
@@ -1072,18 +1092,18 @@ class MYSQLElectionSystem(MySQLBaseModel):
             ORDER BY `party_id`;
         """)
         records = self.cursor.fetchall()
-        return [Party.model_validate(i) for i in records]
+        return [Party(**i) for i in records]
     
     def get_user_party(self,discord_id:int):
         self.cursor.execute(f"SELECT `user_party`.discord_id,`party_data`.* FROM `stardb_user`.`user_party` LEFT JOIN `database`.`party_data` ON user_party.party_id = party_data.party_id WHERE `discord_id` = {discord_id}")
         records = self.cursor.fetchall()
-        return [Party.model_validate(i) for i in records]
+        return [Party(**i) for i in records]
     
     def get_party_data(self,party_id:int):
         self.cursor.execute(f"SELECT * FROM `database`.`party_data` WHERE `party_id` = {party_id};")
         records = self.cursor.fetchall()
         if records:
-            return Party.model_validate(records[0])
+            return Party(**records[0])
 
 class MySQLRegistrationSystem(MySQLBaseModel):
     def get_resgistration_dict(self):
@@ -1126,7 +1146,7 @@ class MySQLBackupSystem(MySQLBaseModel):
                 dct[data["role_id"]] = []
             dct[data["role_id"]].append(data["discord_id"])
 
-        return [BackupRoles(i, dct.get(i["role_id"])) for i in records]
+        return [BackupRoles(**i, user_ids=dct.get(i["role_id"], list())) for i in records]
 
 class MySQLTokensSystem(MySQLBaseModel):
     def set_oauth(self, user_id:int, type:CommunityType, access_token:str, refresh_token:str=None, expires_at:datetime=None):

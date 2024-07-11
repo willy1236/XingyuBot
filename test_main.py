@@ -97,8 +97,8 @@ class kUser():
 	def __post_init__(self):
 		self.time = datetime.fromisoformat(self.time)
 
-dict = {"id":1, "role": 1, "time": "2024-07-05T23:14:21+08:00"}
-user = kUser(**dict)
+data = {"id":1, "role": 1, "time": "2024-07-05T23:14:21+08:00"}
+user = kUser(**data)
 # print(user)
 # print(type(user))
 # print(user.time, type(user.time))
@@ -124,4 +124,3 @@ api = TwitchAPI()
 # 			print(clip.title,clip.created_at,clip.duration)
 
 # 		print((newest + timedelta(seconds=1)).isoformat())
-api.get_lives("yi_jiang",True)["yi_jiang"].embed()
