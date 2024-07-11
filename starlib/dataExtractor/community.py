@@ -1,14 +1,18 @@
-import requests,os.path,feedparser
-from starlib.fileDatabase import Jsondb
-from starlib.models.community import *
-from starlib.errors import Forbidden
-from typing import Iterable
+import os.path
+from datetime import timezone
 
+import feedparser
+import requests
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+
+from ..errors import Forbidden
+from ..fileDatabase import Jsondb
+from ..models.community import *
+
 
 class CommunityInterface():
     """社群資料交互"""
@@ -181,7 +185,7 @@ class YoutubeAPI(CommunityInterface):
         }
         r = requests.get(f'{self.BaseURL}/channels',params=params)
         if r.ok and r.json().get('items'):
-            return YoutubeChannel(r.json().get('items')[0])
+            return YoutubeChannel(**r.json().get('items')[0])
         else:
             return None
 
@@ -227,7 +231,7 @@ class YoutubeAPI(CommunityInterface):
         }
         r = requests.get(f'{self.BaseURL}/search',params=params)
         if r.status_code == 200 and r.json()['items']:
-            return YouTubeStream(r.json()['items'][0])
+            return YouTubeStream(**r.json()['items'][0])
         else:
             print(r.text)
             print(r.status_code)

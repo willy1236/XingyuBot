@@ -88,32 +88,28 @@ class classrole(IntEnum):
 # print(type(luser))
 # print(type(luser["role"]))
 
+@dataclass(slots=True)
+class kUser():
+	id: int
+	role: classrole
+	time: datetime
 
-# @dataclass(slots=True)
-# class kUser():
-# 	id: int
-# 	role: classrole
-# 	time: datetime
+	def __post_init__(self):
+		self.time = datetime.fromisoformat(self.time)
 
-# 	def __post_init__(self):
-# 		self.time = datetime.fromisoformat(self.time)
-
-# 	def test(self):
-# 		print("test")
-
-# dict = {"id":1, "role": 1, "time": "2024-07-05T23:14:21+08:00"}
-# user = kUser(**dict)
+dict = {"id":1, "role": 1, "time": "2024-07-05T23:14:21+08:00"}
+user = kUser(**dict)
 # print(user)
 # print(type(user))
 # print(user.time, type(user.time))
-# print(user.role == classrole.role1)
+# print(type(user.role), user.role == classrole.role1)
 
 # from starDiscord.cmds.task import filter_twitch_clip
 # users = ["490765956"]
 # twitch_cache = {
 # 	"490765956": "2024-07-05T23:14:21+08:00"
 # }
-#api = TwitchAPI()
+api = TwitchAPI()
 # for user in users:
 # 	cache_last_update_time = datetime.fromisoformat(twitch_cache.get(user)).replace(tzinfo=tz) if twitch_cache.get(user) else None
 # 	print(cache_last_update_time.isoformat())
@@ -128,3 +124,4 @@ class classrole(IntEnum):
 # 			print(clip.title,clip.created_at,clip.duration)
 
 # 		print((newest + timedelta(seconds=1)).isoformat())
+api.get_lives("yi_jiang",True)["yi_jiang"].embed()

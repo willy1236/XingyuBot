@@ -1,14 +1,11 @@
-import time
-from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
-from typing import TYPE_CHECKING, Optional
-from pydantic import BaseModel, model_validator, HttpUrl, ConfigDict, Field
+from datetime import datetime, timedelta
+from typing import Optional
 
 import discord
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, model_validator
 
 from ..fileDatabase import Jsondb
 from ..settings import tz
-from ..utilities import BotEmbed
 
 
 class TwitchUser(BaseModel):
@@ -46,8 +43,7 @@ class TwitchUser(BaseModel):
         embed.set_footer(text=self.id)
         return embed
 
-@dataclass(slots=True)
-class TwitchStream():
+class TwitchStream(BaseModel):
     id: str
     user_id: str
     user_login: str
@@ -59,15 +55,15 @@ class TwitchStream():
     viewer_count: int
     started_at: datetime
     language: str
-    thumbnail_url: str
-    tag_ids: list[str]
-    tags: list[str]
+    thumbnail_url: HttpUrl
+    tag_ids: list[Optional[str]]
+    tags: list[Optional[str]]
     is_mature: bool
-    url: str = field(init=False)
+    url: str = None
 
     def __post_init__(self):
-        self.thumbnail_url = self.thumbnail_url.replace('{width}','960').replace('{height}','540')
-        self.started_at = datetime.strptime(self.started_at,'%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=timezone.utc).astimezone(tz=tz)
+        self.thumbnail_url = HttpUrl(str(self.thumbnail_url).replace('{width}','960').replace('{height}','540'))
+        self.started_at = self.started_at.astimezone(tz=tz)
         self.url = f"https://www.twitch.tv/{self.user_login}"
 
     def embed(self):
@@ -77,9 +73,8 @@ class TwitchStream():
             description=self.game_name,
             color=0x6441a5,
             timestamp = self.started_at,
-            icon_url = Jsondb.picdata["twitch_001"]
             )
-        embed.set_author(name=f"{self.user_name} 開台啦！")
+        embed.set_author(name=f"{self.user_name} 開台啦！", icon_url=Jsondb.picdata["twitch_001"])
         embed.set_image(url=self.thumbnail_url)
         embed.add_field(name="標籤", value=", ".join(self.tags))
         embed.set_footer(text=f"開始於")
@@ -160,71 +155,83 @@ class TwitchClip(BaseModel):
         embed.set_footer(text=f"上傳時間")
         return embed
 
-class YoutubeChannel:
-    if TYPE_CHECKING:
-        id: str
-        title: str
-        description: str
-        customUrl: str
-        publishedAt: datetime
-        thumbnails_default: str
-        thumbnails_medium: str
-        thumbnails_high: str
-        viewCount: int
-        subscriberCount: int
-        hiddenSubscriberCount: bool
-        videoCount: int
-
-    def __init__(self,data:dict):
-        self.id = data.get('id')
-        
-        self.title = data.get('snippet').get('title')
-        self.description = data.get('snippet').get('description')
-        self.customUrl = data.get('snippet').get('customUrl')
-        self.publishedAt = datetime.fromisoformat(data.get('snippet').get('publishedAt'))
-        
-        self.thumbnails_default = data.get('snippet').get('thumbnails').get('default').get('url')
-        self.thumbnails_medium = data.get('snippet').get('thumbnails').get('medium').get('url')
-        self.thumbnails_high = data.get('snippet').get('thumbnails').get('high').get('url')
-
-        self.viewCount = int(data.get('statistics').get('viewCount'))
-        self.subscriberCount = int(data.get('statistics').get('subscriberCount'))
-        self.hiddenSubscriberCount = data.get('statistics').get('hiddenSubscriberCount')
-        self.videoCount = int(data.get('statistics').get('videoCount'))
-
-    def embed(self):
-        embed = discord.Embed(
-            title=self.title,
-            url=f"https://www.youtube.com/channel/{self.id}",
-            description=self.description,
-            color=0xff0000,
-            timestamp = datetime.now()
-            )
-        embed.set_image(url=self.thumbnails_default)
-        embed.add_field(name="頻道創建時間",value=self.publishedAt.strftime('%Y/%m/%d %H:%M:%S'))
-        embed.add_field(name="訂閱數",value=f"{self.subscriberCount:,}")
-        embed.add_field(name="影片數",value=f"{self.videoCount:,}")
-        embed.add_field(name="觀看數",value=f"{self.viewCount:,}")
-        embed.add_field(name="用戶代碼",value=self.customUrl)
-        embed.set_footer(text=self.id)
-        return embed
-
-class YouTubeStream:
-    def __init__(self,data:dict):
-        self.publishedAt = data.get('snippet').get('publishedAt')
-        self.channelId = data.get('snippet').get('channelId')
-        self.title = data.get('snippet').get('title')
-        self.description = data.get('snippet').get('description')
-
-        self.thumbnails_default = data.get('snippet').get('thumbnails').get('default').get('url')
-        self.thumbnails_medium = data.get('snippet').get('thumbnails').get('medium').get('url')
-        self.thumbnails_high = data.get('snippet').get('thumbnails').get('high').get('url')
-
-class MediaThumbnail(BaseModel):
-    """Youtube thumbnail data class"""
+class YoutubeThumbnail(BaseModel):
     url: HttpUrl
     width: int
     height: int
+
+class Thumbnails(BaseModel):
+    default: YoutubeThumbnail
+    medium: YoutubeThumbnail
+    high: YoutubeThumbnail
+
+class ChannelSnippet(BaseModel):
+    title: str
+    description: str
+    customUrl: Optional[str]
+    publishedAt: datetime
+    thumbnails: Thumbnails
+    localized: Optional[dict]
+    country: Optional[str]
+
+class Statistics(BaseModel):
+    viewCount: int
+    subscriberCount: int
+    hiddenSubscriberCount: bool
+    videoCount: int
+
+class IdInfo(BaseModel):
+    kind: str
+    videoId: str
+
+class StreamSnippet(BaseModel):
+    publishedAt: datetime
+    channelId: str
+    title: str
+    description: str
+    thumbnails: Thumbnails
+    channelTitle: str
+    liveBroadcastContent: str
+    publishTime: datetime
+
+class YoutubeChannel(BaseModel):
+    kind: str
+    etag: str
+    id: str
+    snippet: ChannelSnippet
+    statistics: Statistics
+
+    @model_validator(mode='after')
+    def __post_init__(self):
+        self.snippet.publishedAt = self.snippet.publishedAt.astimezone(tz=tz)
+
+    def embed(self):
+        embed = discord.Embed(
+            title=self.snippet.title,
+            url=f"https://www.youtube.com/channel/{self.id}",
+            description=self.snippet.description,
+            color=0xff0000,
+            timestamp = self.snippet.publishedAt
+            )
+        embed.set_image(url=self.snippet.thumbnails.default)
+        embed.add_field(name="頻道創建時間",value=self.snippet.publishedAt.strftime('%Y/%m/%d %H:%M:%S'))
+        embed.add_field(name="訂閱數",value=f"{self.statistics.subscriberCount:,}")
+        embed.add_field(name="影片數",value=f"{self.statistics.videoCount:,}")
+        embed.add_field(name="觀看數",value=f"{self.statistics.viewCount:,}")
+        embed.add_field(name="用戶代碼",value=self.snippet.customUrl)
+        embed.set_footer(text=self.id)
+        return embed
+
+class YouTubeStream(BaseModel):
+    kind: str
+    etag: str
+    id: IdInfo
+    snippet: StreamSnippet
+
+    @model_validator(mode='after')
+    def __post_init__(self):
+        self.snippet.publishedAt = self.snippet.publishedAt.astimezone(tz=tz)
+        self.snippet.publishTime = self.snippet.publishTime.astimezone(tz=tz)
 
 class YoutubeVideo(BaseModel):
     model_config = ConfigDict(extra='ignore')
@@ -237,7 +244,7 @@ class YoutubeVideo(BaseModel):
     author_name: str = Field(alias='author')
     uplood_at: datetime = Field(alias='published')
     updated_at: datetime = Field(alias='updated')
-    media_thumbnail: list[MediaThumbnail]
+    media_thumbnail: list[YoutubeThumbnail]
     
     @model_validator(mode='after')
     def __post_init__(self):
@@ -253,6 +260,6 @@ class YoutubeVideo(BaseModel):
             timestamp = self.uplood_at
             )
         embed.add_field(name="上傳時間",value=self.uplood_at.strftime('%Y/%m/%d %H:%M:%S'),inline=False)
-        embed.add_field(name="更新時間",value=self.updated_at.strftime('%Y/%m/%d %H:%M:%S'),inline=True)
+        #embed.add_field(name="更新時間",value=self.updated_at.strftime('%Y/%m/%d %H:%M:%S'),inline=True)
         embed.set_image(url=self.media_thumbnail[0].url)
         return embed
