@@ -151,11 +151,11 @@ class system_game(Cog_Extension):
             await ctx.respond('查詢失敗:查無此ID',ephemeral=True)
 
     @lol.command(description='查詢League of Legends用戶資料')
-    async def user(self,ctx,riot_id:discord.Option(str,name='riot_id',description='名稱#tag，留空則使用資料庫查詢',required=False)):
+    async def user(self,ctx,riot_id:discord.Option(str,name='riot_id',description='名稱#tag')):
         api = RiotAPI()
-        # user = api.get_riot_account_byname(riot_id)
-        # player = api.get_player_bypuuid(user.puuid)
-        player = sclient.get_lol_player(riot_id,ctx.author.id)
+        user = api.get_riot_account_byname(riot_id)
+        player = api.get_player_bypuuid(user.puuid)
+        # player = sclient.get_lol_player(riot_id,ctx.author.id)
 
         if player:
             await ctx.respond('查詢成功',embed=player.desplay())
@@ -191,9 +191,9 @@ class system_game(Cog_Extension):
             await ctx.respond('查詢失敗：出現未知錯誤',ephemeral=True)
 
     @lol.command(description='查詢League of Legends專精英雄')
-    async def masteries(self,ctx,riot_id:discord.Option(str,name='riot_id',description='名稱#tag，留空則使用資料庫查詢',required=False)):
+    async def masteries(self,ctx,riot_id:discord.Option(str,name='riot_id',description='名稱#tag')):
         api = RiotAPI()
-        player = sclient.get_lol_player(riot_id,ctx.author.id if not riot_id else None)
+        player = sclient.get_lol_player(riot_id)
         if not player:
             await ctx.respond('查詢失敗：查無此玩家',ephemeral=True)
             return
@@ -204,31 +204,27 @@ class system_game(Cog_Extension):
         
         embed = BotEmbed.simple(f"{player.name} 專精英雄")
         for data in masteries_list:
-            text = ""
-            text += f"專精等級： {data.championLevel}\n"
-            text += f"專精分數： {data.championPoints}\n"
-            if data.championLevel < 5:
-                text += f"距離專精等級提升： {data.championPointsUntilNextLevel}\n"
-            elif data.championLevel == 5 or data.championLevel == 6:
-                text += f"專精代幣獲取數： {data.tokensEarned}\n"
-            # text += f"是否取得寶箱： {data.chestGranted}\n"
-            #text += f"上次遊玩： {datetime.fromtimestamp(data.lastPlayTime/1000).isoformat(sep=' ')}\n"
-            text += f"上次遊玩： <t:{int(data.lastPlayTime/1000)}>\n"
+            text_list = [
+                f"專精等級： {data.championLevel}",
+                f"專精分數： {data.championPoints} ({data.championPointsUntilNextLevel} 升級)",
+                f"上次遊玩： <t:{int(data.lastPlayTime.timestamp())}>",
+                f"賽季里程碑： {data.championSeasonMilestone}",
+            ]
             champion_name = csvdb.get_row_by_column_value(csvdb.lol_champion,"champion_id",data.championId)
-            embed.add_field(name=champion_name.loc["name_tw"] if not champion_name.empty else f"ID: {data.championId}",value=text,inline=False)
+            embed.add_field(name=champion_name.loc["name_tw"] if not champion_name.empty else f"ID: {data.championId}",value="\n".join(text_list),inline=False)
         await ctx.respond('查詢成功',embed=embed)
 
     @lol.command(description='查詢League of Legends的玩家積分資訊')
-    async def rank(self,ctx,riot_id:discord.Option(str,name='riot_id',description='名稱#tag，留空則使用資料庫查詢',required=False)):
+    async def rank(self,ctx,riot_id:discord.Option(str,name='riot_id',description='名稱#tag')):
         api = RiotAPI()
-        player = sclient.get_lol_player(riot_id,ctx.author.id if not riot_id else None)
+        player = sclient.get_lol_player(riot_id)
         if not player:
             await ctx.respond('查詢失敗：查無此玩家',ephemeral=True)
             return
         
         rank_data = api.get_summoner_rank(player.summonerid)
         if rank_data:
-            embed_list = [rank.desplay() for rank in rank_data]
+            embed_list = [rank.embed() for rank in rank_data]
         else:
             embed_list = [BotEmbed.simple(f"{player.name} 本季未進行過積分對戰")]
         await ctx.respond('查詢成功',embeds=embed_list)

@@ -183,7 +183,9 @@
         "URF": "阿福快打（URF）",
         "ARAM": "隨機單中（ARAM）",
         "MATCHED_GAME": "積分對戰（MATCHED_GAME）",
-        "MATCHED": "積分對戰（MATCHED）"
+        "MATCHED": "積分對戰（MATCHED）",
+        "RANKED_FLEX_SR": "彈性積分",
+        "RANKED_SOLO_5x5": "單雙積分"
     },
     "map": {
         "11": "召喚峽谷",

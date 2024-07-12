@@ -86,7 +86,9 @@ class GameClient():
         if discord_id:
             dbdata = sqldb.get_game_data(discord_id,"lol")
             if dbdata:
-                return PartialLOLPlayer(dbdata)
+                player = PartialLOLPlayer(dbdata)
+                if player.fullname == riot_id:
+                    return player
         
         if riot_id:
             api = RiotAPI()

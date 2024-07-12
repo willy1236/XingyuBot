@@ -61,6 +61,7 @@ class TwitchStream(BaseModel):
     is_mature: bool
     url: str = None
 
+    @model_validator(mode='after')
     def __post_init__(self):
         self.thumbnail_url = HttpUrl(str(self.thumbnail_url).replace('{width}','960').replace('{height}','540'))
         self.started_at = self.started_at.astimezone(tz=tz)
@@ -194,6 +195,23 @@ class StreamSnippet(BaseModel):
     liveBroadcastContent: str
     publishTime: datetime
 
+class Localized(BaseModel):
+    title: str
+    description: str
+
+class VideoSnippet(BaseModel):
+    publishedAt: datetime
+    channelId: str
+    title: str
+    description: str
+    thumbnails: Thumbnails
+    channelTitle: str
+    tags: list[str]
+    categoryId: str
+    liveBroadcastContent: str
+    localized: Localized
+    defaultAudioLanguage: Optional[str]
+
 class YoutubeChannel(BaseModel):
     kind: str
     etag: str
@@ -234,6 +252,16 @@ class YouTubeStream(BaseModel):
         self.snippet.publishTime = self.snippet.publishTime.astimezone(tz=tz)
 
 class YoutubeVideo(BaseModel):
+    kind: str
+    etag: str
+    id: str
+    snippet: VideoSnippet
+    
+    @model_validator(mode='after')
+    def __post_init__(self):
+        self.snippet.publishedAt = self.snippet.publishedAt.astimezone(tz=tz)
+
+class YoutubeRSSVideo(BaseModel):
     model_config = ConfigDict(extra='ignore')
 
     id: str

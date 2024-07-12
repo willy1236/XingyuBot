@@ -38,16 +38,6 @@ class RiotAPI(GameInterface):
             return None
         else:
             raise APIInvokeError("lol_player_byname",r.text)
-
-    def get_player_byname(self,username:str):
-        """#!Deprecated"""
-        r = requests.get(f'{self.url_tw2}/lol/summoner/v4/summoners/by-name/{username}', headers=self._headers)
-        if r.ok:
-            return LOLPlayer(r.json())
-        elif r.status_code == 404:
-            return None
-        else:
-            raise APIInvokeError("lol_player_byname",r.text)
         
     def get_player_bypuuid(self,puuid):
         r = requests.get(f'{self.url_tw2}/lol/summoner/v4/summoners/by-puuid/{puuid}',headers=self._headers)
@@ -72,17 +62,17 @@ class RiotAPI(GameInterface):
     def get_match(self,matchId):
         r = requests.get(f'{self.url_sea}/lol/match/v5/matches/{matchId}',headers=self._headers)
         if r.ok:
-            return LOLMatch(r.json())
+            return LOLMatch(**r.json())
         else:
             raise APIInvokeError("lol_match",r.text)
         
-    def get_summoner_masteries(self,puuid) -> list[LOLChampionMasteries | None]:
+    def get_summoner_masteries(self, puuid, count=5) -> list[LOLChampionMastery | None]:
         params = {
-            'count':5
+            'count': count
             }
         r = requests.get(f'{self.url_tw2}/lol/champion-mastery/v4/champion-masteries/by-puuid/{puuid}/top',params=params,headers=self._headers)
         if r.ok:
-            return [LOLChampionMasteries(data) for data in r.json()]
+            return [LOLChampionMastery(**data) for data in r.json()]
         elif r.status_code == 404:
             return []
         else:
@@ -100,7 +90,7 @@ class RiotAPI(GameInterface):
     def get_summoner_rank(self,summoner_id):
         r = requests.get(f'{self.url_tw2}/lol/league/v4/entries/by-summoner/{summoner_id}',headers=self._headers)
         if r.ok:
-            return [LOLPlayerRank(data) for data in r.json()]
+            return [LOLPlayerRank(**data) for data in r.json()]
         elif r.status_code == 404:
             return []
         else:

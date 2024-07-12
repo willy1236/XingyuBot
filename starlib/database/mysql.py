@@ -18,26 +18,6 @@ from ..settings import tz
 def create_id():
     return 'SELECT idNumber FROM ( SELECT CONCAT("U", LPAD(FLOOR(RAND()*10000000), 7, 0)) as idNumber) AS generated_ids WHERE NOT EXISTS ( SELECT 1 FROM stardb_user.user_data WHERE user_id = generated_ids.idNumber);'
 
-def merge_lists_by_role_id(list1:list, *, list2:list=None, dict2:dict=None):
-    """
-    合併兩個列表，依據role_id\\
-    dict2為可選參數，可提供已處理過的字典
-    """
-    # 將list1和list2轉換成以role_id為鍵的字典
-    dict1 = {item['role_id']: item for item in list1}
-    if not dict2:
-        dict2 = {item['role_id']: item for item in list2}
-
-    # 合併兩個字典
-    merged_dict = {}
-    for role_id in set(dict1) | set(dict2):
-        merged_dict[role_id] = {**dict1.get(role_id, {}), **dict2.get(role_id, {})}
-
-    # 將合併後的字典轉換回列表
-    merged_list = list(merged_dict.values())
-
-    return merged_list
-
 class MySQLBaseModel(object):
     """MySQL資料庫基本模型"""
     def __init__(self,mysql_settings:dict):
@@ -153,7 +133,7 @@ class MySQLUserSystem(MySQLBaseModel):
                                 SELECT * FROM `user_discord`
                                 LEFT JOIN `user_point` ON `user_discord`.`discord_id` = `user_point`.`discord_id`
                                 LEFT JOIN `user_account` ON `user_discord`.`discord_id` = `user_account`.`alternate_account`
-                                LEFT JOIN `stardb_idbase`.`discord_registrations` ON `user_discord`.`discord_registration` = `discord_registrations`.`registrations_id`
+                                LEFT JOIN `stardb_idbase`.`registrations_ids` ON `user_discord`.`registrations_id` = `registrations_ids`.`registrations_id`
                                 WHERE `user_discord`.`discord_id` = %s;
                                 ''',(discord_id,))
         else:
@@ -1107,7 +1087,7 @@ class MYSQLElectionSystem(MySQLBaseModel):
 
 class MySQLRegistrationSystem(MySQLBaseModel):
     def get_resgistration_dict(self):
-        self.cursor.execute(f"SELECT * FROM `stardb_idbase`.`discord_registrations`;")
+        self.cursor.execute(f"SELECT * FROM `stardb_idbase`.`registrations_ids`;")
         records = self.cursor.fetchall()
         if records:
             dict = {}
@@ -1116,13 +1096,13 @@ class MySQLRegistrationSystem(MySQLBaseModel):
             return dict
 
     def get_resgistration(self,registrations_id:int):
-        self.cursor.execute(f"SELECT * FROM `stardb_idbase`.`discord_registrations` WHERE `registrations_id` = {registrations_id};")
+        self.cursor.execute(f"SELECT * FROM `stardb_idbase`.`registrations_ids` WHERE `registrations_id` = {registrations_id};")
         records = self.cursor.fetchall()
         if records:
             return records[0]
         
     def get_resgistration_by_guildid(self,guild_id:int):
-        self.cursor.execute(f"SELECT * FROM `stardb_idbase`.`discord_registrations` WHERE `guild_id` = {guild_id};")
+        self.cursor.execute(f"SELECT * FROM `stardb_idbase`.`registrations_ids` WHERE `guild_id` = {guild_id};")
         records = self.cursor.fetchall()
         if records:
             return records[0]

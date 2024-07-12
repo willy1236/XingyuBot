@@ -757,7 +757,7 @@ class command(Cog_Extension):
 
             if role:
                 await role_guild.get_member(ctx.author.id).add_roles(role)
-            sclient.sqldb.set_userdata(ctx.author.id,"user_discord","discord_registration",dbdata['registrations_id'])
+            sclient.sqldb.set_userdata(ctx.author.id,"user_discord","registrations_id",dbdata['registrations_id'])
             
             await ctx.respond(f"已註冊戶籍至 {guild.name}")
         else:
@@ -777,7 +777,7 @@ class command(Cog_Extension):
 
         if role:
             await role_guild.get_member(ctx.author.id).add_roles(role)
-        sclient.sqldb.set_userdata(ctx.author.id,"user_discord","discord_registration",dbdata['registrations_id'])
+        sclient.sqldb.set_userdata(ctx.author.id,"user_discord","registrations_id",dbdata['registrations_id'])
         
         await ctx.respond(f"已註冊戶籍至 {guild.name}")
 

@@ -9,7 +9,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
-from ..errors import Forbidden
+from ..errors import Forbidden, APIInvokeError
 from ..fileDatabase import Jsondb
 from ..models.community import *
 
@@ -139,7 +139,7 @@ class YoutubeAPI(CommunityInterface):
     def __init__(self):
         self.__token = Jsondb.get_token('youtube')
         self.__headers = {
-            'Authorization': f'Bearer {self.__token}',
+            'x-goog-api-key': self.__token,
             'Accept': 'application/json'
         }
 
@@ -154,12 +154,11 @@ class YoutubeAPI(CommunityInterface):
             str | None: The ID of the channel if found, None otherwise.
         """
         params = {
-            'key': self.__token,
             'forHandle': channel_handle,
             'part': 'id',
             'maxResults': 1
         }
-        r = requests.get(f'{self.BaseURL}/channels', params=params)
+        r = requests.get(f'{self.BaseURL}/channels', params=params, headers=self.__headers)
         if r.ok:
             data = r.json()
             if data['pageInfo']['totalResults']:
@@ -177,17 +176,16 @@ class YoutubeAPI(CommunityInterface):
         兩者擇一提供即可
         '''
         params = {
-            'key': self.__token,
             'id':id,
             'forHandle': handle,
             'part': 'statistics,snippet',
             'maxResults':1
         }
-        r = requests.get(f'{self.BaseURL}/channels',params=params)
-        if r.ok and r.json().get('items'):
-            return YoutubeChannel(**r.json().get('items')[0])
+        r = requests.get(f'{self.BaseURL}/channels', params=params, headers=self.__headers)
+        if r.ok:
+            return YoutubeChannel(**r.json().get('items')[0]) if r.json().get('items') else None
         else:
-            return None
+            raise APIInvokeError("youtube_get_video", f"[{r.status_code}] {r.text}")
 
     def get_channelsection(self,channel_id:str):
         params = {
@@ -213,7 +211,7 @@ class YoutubeAPI(CommunityInterface):
             'type': 'video'
         }
         r = requests.get(f'{self.BaseURL}/search',params=params)
-        if r.status_code == 200:
+        if r.ok:
             print(r)
             print(r.json())
         else:
@@ -223,33 +221,27 @@ class YoutubeAPI(CommunityInterface):
     def get_stream(self,channel_id:str):
         '''取得Youtube直播資訊（若無正在直播則回傳None）'''
         params ={
-            'key': self.__token,
             'part': 'snippet',
             'channelId': channel_id,
             'eventType':'live',
             'type': 'video'
         }
-        r = requests.get(f'{self.BaseURL}/search',params=params)
-        if r.status_code == 200 and r.json()['items']:
-            return YouTubeStream(**r.json()['items'][0])
+        r = requests.get(f'{self.BaseURL}/search', params=params, headers=self.__headers)
+        if r.ok:
+            return YouTubeStream(**r.json()['items'][0]) if r.json()['items'] else None
         else:
-            print(r.text)
-            print(r.status_code)
-            return None
+            raise APIInvokeError("youtube_get_stream", f"[{r.status_code}] {r.text}")
         
     def get_video(self,video_id:str|list) -> list[YoutubeVideo]:
         params ={
-            'key': self.__token,
             'part': 'snippet',
             'id': video_id
         }
-        r = requests.get(f'{self.BaseURL}/videos',params=params)
+        r = requests.get(f'{self.BaseURL}/videos', params=params, headers=self.__headers)
         if r.ok:
-            return [YoutubeVideo(i) for i in r.json()['items']] if r.json()['items'] else None
+            return [YoutubeVideo(**i) for i in r.json()['items']] if r.json()['items'] else None
         else:
-            print(r.text)
-            print(r.status_code)
-            return None
+            raise APIInvokeError("youtube_get_video", f"[{r.status_code}] {r.text}")
         
     def get_playlist(self,playlist_id:str|list):
         params ={
@@ -280,13 +272,13 @@ class YoutubeAPI(CommunityInterface):
             return None
 
 class YoutubeRSS(CommunityInterface):
-    def get_videos(self,channel_id) -> list[YoutubeVideo]:
+    def get_videos(self,channel_id) -> list[YoutubeRSSVideo]:
         """從RSS取得影片（由新到舊）"""
         youtube_feed = f'https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}'
         feed = feedparser.parse(youtube_feed)
         # for entry in feed['entries']:
         #     print(entry)
-        return [YoutubeVideo(**i) for i in feed['entries']]
+        return [YoutubeRSSVideo(**i) for i in feed['entries']]
 
 class GoogleCloud():
     def __init__(self):

@@ -1,5 +1,7 @@
 from datetime import datetime,timedelta
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
+
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, model_validator
 
 from ..utilities import BotEmbed
 from ..fileDatabase import Jsondb,csvdb
@@ -252,44 +254,49 @@ class LOLMatch():
         for player in self.players:
             if player.summonerName == playername:
                 return player
-    
-class LOLChampionMasteries(LOLPlayer):
-    def __init__(self,data):
-        #unused:puuid, summonerId
-        super().__init__(data)
-        self.championId = data['championId']
-        self.championLevel = data['championLevel']
-        self.championPoints = data['championPoints']
-        self.lastPlayTime = data['lastPlayTime']
-        self.championPointsSinceLastLevel = data['championPointsSinceLastLevel']
-        self.championPointsUntilNextLevel = data['championPointsUntilNextLevel']
-        #self.chestGranted = data['chestGranted']
-        self.tokensEarned = data['tokensEarned']
-        self.championSeasonMilestone = data["championSeasonMilestone"]
-        self.milestoneGrades = data.get("milestoneGrades")
+class LOLRewardConfig(BaseModel):
+    rewardValue: str
+    rewardType: str
+    maximumReward: int
 
-class LOLPlayerRank(LOLPlayer):
-    def __init__(self,data):
-        super().__init__(data)
-        self.leagueId = data.get("leagueId")
-        self.queueType = data.get("queueType")
-        self.tier = data.get("tier")
-        self.rank = data.get("rank")
-        self.leaguePoints = data.get("leaguePoints")
-        self.wins = data.get("wins")
-        self.losses = data.get("losses")
-        self.veteran = data.get("veteran")
-        self.inactive = data.get("inactive")
-        self.freshBlood = data.get("freshBlood")
-        self.hotStreak = data.get("hotStreak")
-        self.name = data.get("summonerName")
+class LOLSeasonMilestone(BaseModel):
+    requireGradeCounts: dict[str,int]
+    rewardMarks: int
+    bonus: bool
+    rewardConfig: LOLRewardConfig
+class LOLChampionMastery(BaseModel):
+    puuid: str
+    championId: int
+    championLevel: int
+    championPoints: int
+    lastPlayTime: datetime
+    championPointsSinceLastLevel: int
+    championPointsUntilNextLevel: int
+    markRequiredForNextLevel: int
+    tokensEarned: int
+    championSeasonMilestone: int
+    milestoneGrades: list[str] = Field(default_factory=list)
+    nextSeasonMilestone: LOLSeasonMilestone
 
-    def desplay(self):
-        embed = BotEmbed.simple(self.queueType)
-        embed.add_field(name="牌位", value=f"{self.tier} {self.rank}", inline=False)
-        embed.add_field(name="聯盟分數", value=self.leaguePoints, inline=False)
-        embed.add_field(name="勝敗", value=f"{self.wins}/{self.losses} {(round(self.wins / (self.wins + self.losses),3)) * 100}%", inline=False)
+class LOLPlayerRank(BaseModel):
+    leagueId: str = None
+    queueType: str
+    tier: str = None
+    rank: str = None
+    summonerId: str
+    leaguePoints: int
+    wins: int
+    losses: int
+    veteran: bool
+    inactive: bool
+    freshBlood: bool
+    hotStreak: bool
 
+    def embed(self):
+        embed = BotEmbed.simple(lol_jdict["type"].get(self.queueType, self.queueType))
+        embed.add_field(name="牌位", value=f"{self.tier} {self.rank}")
+        embed.add_field(name="聯盟分數", value=self.leaguePoints)
+        embed.add_field(name="勝敗", value=f"{self.wins}/{self.losses} {(round(self.wins / (self.wins + self.losses),3)) * 100}%")
         return embed
 
 class LOLActiveMatch:

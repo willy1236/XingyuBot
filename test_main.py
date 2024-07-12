@@ -104,23 +104,6 @@ user = kUser(**data)
 # print(user.time, type(user.time))
 # print(type(user.role), user.role == classrole.role1)
 
-# from starDiscord.cmds.task import filter_twitch_clip
-# users = ["490765956"]
-# twitch_cache = {
-# 	"490765956": "2024-07-05T23:14:21+08:00"
-# }
-api = TwitchAPI()
-# for user in users:
-# 	cache_last_update_time = datetime.fromisoformat(twitch_cache.get(user)).replace(tzinfo=tz) if twitch_cache.get(user) else None
-# 	print(cache_last_update_time.isoformat())
-# 	clips = api.get_clips(user, started_at=cache_last_update_time if cache_last_update_time else None)
-# 	clips = filter_twitch_clip(clips, cache_last_update_time)
-# 	print(clips)
-# 	if clips:
-# 		newest = clips[0].created_at
-# 		broadcaster_id = clips[0].broadcaster_id
-# 		for clip in clips:
-# 			newest = clip.created_at if clip.created_at > newest else newest
-# 			print(clip.title,clip.created_at,clip.duration)
-
-# 		print((newest + timedelta(seconds=1)).isoformat())
+# api = TwitchAPI()
+api = RiotAPI()
+data = api.get_match("TW2_212329562")

@@ -1,7 +1,8 @@
 import random
 import time
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
+from dataclasses import dataclass
 
 import discord
 
@@ -13,6 +14,15 @@ from .rpg import *
 if TYPE_CHECKING:
     from starlib.database import MySQLDatabase
 
+@dataclass(slots=True)
+class Registration():
+    registrations_id: int
+    guild_id: int
+    role_id: int
+
+    def __bool__(self):
+        return bool(self.registrations_id)
+    
 class RegistrationData():
     if TYPE_CHECKING:
         registrations_id: int
@@ -178,6 +188,46 @@ class DiscordUser(BaseUser):
     
     def update_data(self,table:str,column:str,value):
         self.sqldb.set_userdata(self.discord_id,table,column,value)
+
+# @dataclass(slots=True)
+# class DiscordUser:
+#     discord_id: int
+#     name: Optional[str]
+#     max_sign_consecutive_days: Optional[int]
+#     meatball_times: Optional[int]
+#     guaranteed: Optional[int]
+#     registrations_id: Optional[int]
+#     registration: Optional[Registration] = None
+
+#     def __post_init__(self):
+#         self.registration = 
+
+#     @property
+#     def mention(self):
+#         return f"<@{self.discord_id}>"
+    
+#     def embed(self, bot:discord.Bot=None):
+#         user_dc = bot.get_user(self.discord_id) if bot else None
+#         embed = BotEmbed.general(name=user_dc.name if user_dc else self.name, icon_url=user_dc.avatar.url if user_dc.avatar else None)
+#         guild = None
+#         if bot:
+#             if self.main_account_id:
+#                 main_account = bot.get_user(self.main_account_id) or self.main_account_id
+#                 embed.description = f"{main_account.mention} 的小帳"
+            
+#             if self.registration:
+#                 guild = bot.get_guild(self.registration.guild_id)
+
+#         embed.add_field(name='⭐星塵',value=self.scoin)
+#         embed.add_field(name='PT點數',value=self.point)
+#         embed.add_field(name='Rcoin',value=self.rcoin)
+#         embed.add_field(name='連續簽到最高天數',value=self.max_sign_consecutive_days)
+#         if self.meatball_times:
+#             embed.add_field(name='貢丸次數',value=self.meatball_times)
+#         if guild:
+#             embed.add_field(name='戶籍',value=guild.name)
+#         return embed
+
 
 class RPGUser(DiscordUser):
     '''RPG遊戲用戶'''

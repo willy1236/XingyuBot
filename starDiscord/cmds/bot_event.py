@@ -342,7 +342,7 @@ class event(Cog_Extension):
             earlest_guildid = check_registration(member)
             if earlest_guildid and earlest_guildid != 613747262291443742:
                 dbdata = sclient.sqldb.get_resgistration_by_guildid(earlest_guildid)
-                sclient.sqldb.set_userdata(member.id,"user_discord","discord_registration",dbdata['registrations_id'])
+                sclient.sqldb.set_userdata(member.id,"user_discord","registrations_id",dbdata['registrations_id'])
                 await member.add_roles(member.guild.get_role(guild_registration[str(earlest_guildid)]), reason="加入的最早伺服器")
 
 
