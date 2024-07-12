@@ -133,7 +133,7 @@ class MySQLUserSystem(MySQLBaseModel):
                                 SELECT * FROM `user_discord`
                                 LEFT JOIN `user_point` ON `user_discord`.`discord_id` = `user_point`.`discord_id`
                                 LEFT JOIN `user_account` ON `user_discord`.`discord_id` = `user_account`.`alternate_account`
-                                LEFT JOIN `stardb_idbase`.`registrations_ids` ON `user_discord`.`registrations_id` = `registrations_ids`.`registrations_id`
+                                LEFT JOIN `stardb_idbase`.`discord_registrations` ON `user_discord`.`registrations_id` = `discord_registrations`.`registrations_id`
                                 WHERE `user_discord`.`discord_id` = %s;
                                 ''',(discord_id,))
         else:
@@ -1087,7 +1087,7 @@ class MYSQLElectionSystem(MySQLBaseModel):
 
 class MySQLRegistrationSystem(MySQLBaseModel):
     def get_resgistration_dict(self):
-        self.cursor.execute(f"SELECT * FROM `stardb_idbase`.`registrations_ids`;")
+        self.cursor.execute(f"SELECT * FROM `stardb_idbase`.`discord_registrations`;")
         records = self.cursor.fetchall()
         if records:
             dict = {}
@@ -1096,13 +1096,13 @@ class MySQLRegistrationSystem(MySQLBaseModel):
             return dict
 
     def get_resgistration(self,registrations_id:int):
-        self.cursor.execute(f"SELECT * FROM `stardb_idbase`.`registrations_ids` WHERE `registrations_id` = {registrations_id};")
+        self.cursor.execute(f"SELECT * FROM `stardb_idbase`.`discord_registrations` WHERE `registrations_id` = {registrations_id};")
         records = self.cursor.fetchall()
         if records:
             return records[0]
         
     def get_resgistration_by_guildid(self,guild_id:int):
-        self.cursor.execute(f"SELECT * FROM `stardb_idbase`.`registrations_ids` WHERE `guild_id` = {guild_id};")
+        self.cursor.execute(f"SELECT * FROM `stardb_idbase`.`discord_registrations` WHERE `guild_id` = {guild_id};")
         records = self.cursor.fetchall()
         if records:
             return records[0]
