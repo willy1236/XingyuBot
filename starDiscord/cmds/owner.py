@@ -40,11 +40,11 @@ class AnnoModal(discord.ui.Modal):
         channels = sclient.sqldb.get_notify_channel_by_type('all_anno')
 
         for i in channels:
-            channel = interaction.client.get_channel(i['channel_id'])
+            channel = interaction.client.get_channel(i.channel_id)
             if channel:
                 try:
-                    if i['role_id']:
-                        role = channel.guild.get_role(i['role_id'])
+                    if i.role_id:
+                        role = channel.guild.get_role(i.role_id)
                         await channel.send(role.mention,embed=embed)
                     else:
                         await channel.send(embed=embed)
@@ -52,7 +52,7 @@ class AnnoModal(discord.ui.Modal):
                 except:
                     pass
             else:
-                    print(f"anno: {i['guild_id']}/{i['channel_id']}")
+                    print(f"anno: {i.guild_id}/{i.channel_id}")
 
         await msg.edit_original_response(content=f"已向{send_success}/{len(channels)}個頻道發送公告")
 
@@ -71,11 +71,11 @@ class BotUpdateModal(discord.ui.Modal):
         channels = sclient.sqldb.get_notify_channel_by_type('bot')
 
         for i in channels:
-            channel = interaction.client.get_channel(i['channel_id'])
+            channel = interaction.client.get_channel(i.channel_id)
             if channel:
                 try:
-                    if i['role_id']:
-                        role = channel.guild.get_role(i['role_id'])
+                    if i.role_id:
+                        role = channel.guild.get_role(i.role_id)
                         await channel.send(role.mention,embed=embed)
                     else:
                         await channel.send(embed=embed)
@@ -83,7 +83,7 @@ class BotUpdateModal(discord.ui.Modal):
                 except:
                     pass
             else:
-                print(f"botupdate: {i['guild_id']}/{i['channel_id']}")
+                print(f"botupdate: {i.guild_id}/{i.channel_id}")
         
         await msg.edit_original_response(content=f"已向{send_success}/{len(channels)}個頻道發送公告")
 

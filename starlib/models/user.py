@@ -189,22 +189,21 @@ class DiscordUser(BaseUser):
     def update_data(self,table:str,column:str,value):
         self.sqldb.set_userdata(self.discord_id,table,column,value)
 
-# @dataclass(slots=True)
-# class DiscordUser:
-#     discord_id: int
-#     name: Optional[str]
-#     max_sign_consecutive_days: Optional[int]
-#     meatball_times: Optional[int]
-#     guaranteed: Optional[int]
-#     registrations_id: Optional[int]
-#     registration: Optional[Registration] = None
+@dataclass(slots=True)
+class DiscordUserV2:
+    discord_id: int
+    name: Optional[str]
+    max_sign_consecutive_days: Optional[int]
+    meatball_times: Optional[int]
+    guaranteed: Optional[int]
+    registrations_id: Optional[int]
 
-#     def __post_init__(self):
-#         self.registration = 
+    # def __post_init__(self):
+    #     self.registration = 
 
-#     @property
-#     def mention(self):
-#         return f"<@{self.discord_id}>"
+    @property
+    def mention(self):
+        return f"<@{self.discord_id}>"
     
 #     def embed(self, bot:discord.Bot=None):
 #         user_dc = bot.get_user(self.discord_id) if bot else None

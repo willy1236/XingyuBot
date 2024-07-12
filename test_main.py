@@ -105,5 +105,5 @@ user = kUser(**data)
 # print(type(user.role), user.role == classrole.role1)
 
 # api = TwitchAPI()
-api = RiotAPI()
-data = api.get_match("TW2_212329562")
+user = sqldb.get_dcuser_v2("419131103836635136")
+print(user)

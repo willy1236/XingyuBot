@@ -41,3 +41,9 @@ class Position(IntEnum):
     EXECUTIVE_PRESIDENT  = 2
     LEGISLATIVE_PRESIDENT  = 3
     JUDICIARY_PRESIDENT = 4
+
+class WarningType(IntEnum):
+    Warning = 1
+    Timeout = 2
+    Kick = 3
+    Ban = 4

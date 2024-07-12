@@ -38,8 +38,8 @@ class task(Cog_Extension):
     async def on_ready(self):
         scheduler = sclient.scheduler
         if not Jsondb.config.get("debug_mode",True):
-            scheduler.add_job(self.apex_info_update,'cron',minute='00,15,30,45',second=1,jitter=30,misfire_grace_time=60)
-            scheduler.add_job(self.apex_crafting_update,'cron',hour=1,minute=5,second=0,jitter=30,misfire_grace_time=60)
+            # scheduler.add_job(self.apex_info_update,'cron',minute='00,15,30,45',second=1,jitter=30,misfire_grace_time=60)
+            # scheduler.add_job(self.apex_crafting_update,'cron',hour=1,minute=5,second=0,jitter=30,misfire_grace_time=60)
             scheduler.add_job(self.forecast_update,'cron',hour='00,03,06,09,12,15,18,21',minute=0,second=1,jitter=30,misfire_grace_time=60)
             #scheduler.add_job(self.auto_hoyo_reward,'cron',hour=19,minute=0,second=0,jitter=30,misfire_grace_time=60)
             #scheduler.add_job(self.update_rpgshop_data,'cron',hour=0,minute=0,second=1,jitter=30,misfire_grace_time=60)
@@ -94,18 +94,18 @@ class task(Cog_Extension):
             
             records = sclient.sqldb.get_notify_channel_by_type('earthquake')
             for i in records:
-                channel = self.bot.get_channel(i['channel_id'])
+                channel = self.bot.get_channel(i.channel_id)
                 if channel:
-                    if i.get('role_id'):
+                    if i.role_id:
                         try:
-                            role = self.bot.get_guild(i['guild_id']).get_role(i['role_id'])
+                            role = self.bot.get_guild(i.guild_id).get_role(i.role_id)
                             text += f' {role.mention}'
                         except:
                             pass
                     await channel.send(text,embed=data.embed())
                     await asyncio.sleep(0.5)
                 else:
-                    log.warning(f"earthquake_check fail sending message: guild:{i['guild_id']}/channel:{i['channel_id']}")
+                    log.warning(f"earthquake_check fail sending message: guild:{i.guild_id}/channel:{i.channel_id}")
 
     async def weather_warning_check(self):
         timefrom = Jsondb.cache.get('earthquake_timefrom')
@@ -160,7 +160,7 @@ class task(Cog_Extension):
         if forecast:
             records = sclient.sqldb.get_notify_channel_by_type('forecast')
             for i in records:
-                channel = self.bot.get_channel(i['channel_id'])
+                channel = self.bot.get_channel(i.channel_id)
                 if channel:
                     try:
                         id = channel.last_message_id
@@ -175,7 +175,7 @@ class task(Cog_Extension):
                     await asyncio.sleep(0.5)
                 
                 else:
-                    log.warning(f"forecast_update: {i['guild_id']}/{i['channel_id']}")
+                    log.warning(f"forecast_update: {i.guild_id}/{i.channel_id}")
 
     #@tasks.loop(minutes=3)
     async def twitch_live(self):

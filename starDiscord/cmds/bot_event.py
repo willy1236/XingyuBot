@@ -28,7 +28,7 @@ voice_updata = Jsondb.config.get('voice_updata')
 debug_mode = Jsondb.config.get("debug_mode",True)
 main_guilds = Jsondb.config.get('main_guilds',[])
 
-guild_registration = sclient.sqldb.get_resgistration_dict() if sclient.sqldb else {}
+guild_registration = sclient.sqldb.get_raw_resgistrations() if sclient.sqldb else {}
 
 def check_registration(member:discord.Member):
     earlest = datetime.now(timezone.utc)
@@ -309,7 +309,7 @@ class event(Cog_Extension):
         if dbdata:
             username = member.name if member.discriminator == "0" else f"{member.name}#{member.discriminator}"
             text = f'{member.mention} ({username}) 離開了我們'
-            await self.bot.get_channel(dbdata["channel_id"]).send(text)
+            await self.bot.get_channel(dbdata.channel_id).send(text)
 
     @commands.Cog.listener()
     async def on_member_join(self, member:discord.Member):
@@ -323,11 +323,11 @@ class event(Cog_Extension):
         if dbdata:
             username = member.name if member.discriminator == "0" else f"{member.name}#{member.discriminator}"
             text = f'{member.mention} ({username}) 加入了我們'
-            await self.bot.get_channel(int(dbdata["channel_id"])).send(text)
+            await self.bot.get_channel(int(dbdata.channel_id)).send(text)
 
         #警告系統：管理員通知
         notice_data = sclient.sqldb.get_notify_channel(guildid,"mod")
-        mod_channel_id = notice_data.get('channel_id') if notice_data else None
+        mod_channel_id = notice_data.channel_id if notice_data else None
         #role_id = notice_data['role_id']
         if mod_channel_id:
             dbdata = sclient.sqldb.get_warnings(member.id)
@@ -342,7 +342,7 @@ class event(Cog_Extension):
             earlest_guildid = check_registration(member)
             if earlest_guildid and earlest_guildid != 613747262291443742:
                 dbdata = sclient.sqldb.get_resgistration_by_guildid(earlest_guildid)
-                sclient.sqldb.set_userdata(member.id,"user_discord","registrations_id",dbdata['registrations_id'])
+                sclient.sqldb.set_userdata(member.id,"user_discord","registrations_id",dbdata.registrations_id)
                 await member.add_roles(member.guild.get_role(guild_registration[str(earlest_guildid)]), reason="加入的最早伺服器")
 
 

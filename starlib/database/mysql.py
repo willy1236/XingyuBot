@@ -57,6 +57,11 @@ class MySQLBaseModel(object):
         self.cursor.execute(f"USE `stardb_user`;")
         self.cursor.execute(f"INSERT INTO `{table}` SET discord_id = {discord_id}, {column} = {value} ON DUPLICATE KEY UPDATE `discord_id` = {discord_id}, `{column}` = CASE WHEN `{column}` IS NOT NULL THEN `{column}` + {value} ELSE {value} END;")
         self.connection.commit()
+
+    def set_userdata_v2(self, discord_id:int, column:str, value, table="user_discord"):
+        """設定用戶資料"""
+        self.cursor.execute(f"INSERT INTO `stardb_user`.`{table}` SET discord_id = {discord_id}, {column} = {value} ON DUPLICATE KEY UPDATE discord_id = {discord_id}, {column} = {value};")
+        self.connection.commit()
     
     # def add_data(self,table:str,*value,db="database"):
     #     self.cursor.execute(f"USE `{db}`;")
@@ -141,6 +146,12 @@ class MySQLUserSystem(MySQLBaseModel):
         record = self.cursor.fetchall()
         if record:
             return DiscordUser(record[0],self,user_dc)
+        
+    def get_dcuser_v2(self, discord_id:int):
+        self.cursor.execute(f'SELECT * FROM `stardb_user`.`user_discord` WHERE `discord_id` = %s LIMIT 1;',(discord_id,))
+        record = self.cursor.fetchall()
+        if record:
+            return DiscordUserV2(**record[0])
     
     def get_partial_dcuser(self,discord_id:int,column:str):
         self.cursor.execute(f"USE `stardb_user`;")
@@ -190,7 +201,7 @@ class MySQLNotifySystem(MySQLBaseModel):
         """取得自動通知頻道（依據通知種類）"""
         self.cursor.execute(f"USE `database`;")
         self.cursor.execute(f'SELECT * FROM `notify_channel` WHERE notify_type = %s;',(notify_type,))
-        return self.cursor.fetchall()
+        return [NotifyChannelRecords(**i) for i in self.cursor.fetchall()]
 
     def get_notify_channel(self,guild_id:str,notify_type:str):
         """取得自動通知頻道"""
@@ -198,13 +209,13 @@ class MySQLNotifySystem(MySQLBaseModel):
         self.cursor.execute(f'SELECT * FROM `notify_channel` WHERE guild_id = %s AND notify_type = %s;',(guild_id,notify_type))
         records = self.cursor.fetchall()
         if records:
-            return records[0]
+            return NotifyChannelRecords(**records[0])
     
     def get_all_notify_channel(self,guild_id:str):
         """取得伺服器的所有自動通知頻道"""
         self.cursor.execute(f"USE `database`;")
         self.cursor.execute(f'SELECT * FROM `notify_channel` WHERE guild_id = %s;',(guild_id,))
-        return self.cursor.fetchall()
+        return [NotifyChannelRecords(**i) for i in self.cursor.fetchall()]
     
     def set_dynamic_voice(self,channel_id,discord_id,guild_id,created_at=None):
         """設定動態語音"""
@@ -832,7 +843,7 @@ class MySQLWarningSystem(MySQLBaseModel):
         self.cursor.execute(f"SELECT * FROM `stardb_user`.`user_moderate` WHERE `warning_id` = {warning_id};")
         records = self.cursor.fetchall()
         if records:
-            return WarningSheet(records[0],self)
+            return WarningSheet(**records[0])
     
     def get_warnings(self,discord_id:int,guild_id:int=None):
         """取得用戶的警告列表
@@ -1086,7 +1097,7 @@ class MYSQLElectionSystem(MySQLBaseModel):
             return Party(**records[0])
 
 class MySQLRegistrationSystem(MySQLBaseModel):
-    def get_resgistration_dict(self):
+    def get_raw_resgistrations(self):
         self.cursor.execute(f"SELECT * FROM `stardb_idbase`.`discord_registrations`;")
         records = self.cursor.fetchall()
         if records:
@@ -1095,17 +1106,15 @@ class MySQLRegistrationSystem(MySQLBaseModel):
                 dict[i['guild_id']] = i['role_id']
             return dict
 
-    def get_resgistration(self,registrations_id:int):
+    def get_resgistration(self, registrations_id:int):
         self.cursor.execute(f"SELECT * FROM `stardb_idbase`.`discord_registrations` WHERE `registrations_id` = {registrations_id};")
         records = self.cursor.fetchall()
-        if records:
-            return records[0]
+        return DiscordRegisterationRecord(**records[0]) if records else None
         
     def get_resgistration_by_guildid(self,guild_id:int):
         self.cursor.execute(f"SELECT * FROM `stardb_idbase`.`discord_registrations` WHERE `guild_id` = {guild_id};")
         records = self.cursor.fetchall()
-        if records:
-            return records[0]
+        return DiscordRegisterationRecord(**records[0]) if records else None
 
 class MySQLBackupSystem(MySQLBaseModel):
     def backup_role(self,role:discord.Role,description:str=None):

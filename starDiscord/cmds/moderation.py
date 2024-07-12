@@ -5,6 +5,7 @@ from discord.ext import commands
 from discord.commands import SlashCommandGroup
 
 from starlib import ChoiceList,BotEmbed,Jsondb,sclient
+from starlib.types import WarningType
 from starlib.utilities import converter
 from ..extension import Cog_Extension
 
@@ -80,9 +81,9 @@ class moderation(Cog_Extension):
         dbdata = sclient.sqldb.get_all_notify_channel(ctx.guild.id)
         embed = BotEmbed.general("通知頻道",ctx.guild.icon.url if ctx.guild.icon else None)
         for data in dbdata:
-            notify_type = data['notify_type']
-            channel_id = data['channel_id']
-            role_id = data['role_id']
+            notify_type = data.notify_type
+            channel_id = data.channel_id
+            role_id = data.role_id
             
             channel = self.bot.get_channel(channel_id)
             role = ctx.guild.get_role(role_id) if role_id else None
@@ -104,7 +105,7 @@ class moderation(Cog_Extension):
                       reason:discord.Option(str,name='原因',description='限100字內'),
                       add_record:discord.Option(bool,name='是否要將此紀錄存入警告系統',description='將紀錄存入警告系統供其他群組檢視',default=False)):
         is_owner = await self.bot.is_owner(ctx.author)
-        if not user in ctx.guild.members and not is_owner:
+        if (ctx.author == user or user not in ctx.guild.members) and not is_owner:
             await ctx.respond("只能警告在伺服器內的成員")
             return
         if user.bot:
@@ -113,7 +114,7 @@ class moderation(Cog_Extension):
 
         time = datetime.now()
         moderate_user = ctx.author.id
-        warning_id = sclient.sqldb.add_warning(user.id,'warning',moderate_user,ctx.guild.id,time,reason,None,not add_record)
+        warning_id = sclient.sqldb.add_warning(user.id,WarningType.Warning,moderate_user,ctx.guild.id,time,reason,None,not add_record)
         embed = BotEmbed.general(f'{user.name} 已被警告',user.display_avatar.url,description=f"{user.mention}：{reason}")
         embed.add_field(name="執行人員",value=ctx.author.mention)
         embed.add_field(name="存入跨群警告系統",value=add_record)
@@ -147,7 +148,7 @@ class moderation(Cog_Extension):
         dbdata = sclient.sqldb.get_warning(int(warning_id))
         is_owner = await self.bot.is_owner(ctx.author)
         if dbdata:
-            guild = self.bot.get_guild(dbdata['create_guild'])
+            guild = self.bot.get_guild(dbdata.create_guild)
             if guild != ctx.guild and not is_owner:
                 await ctx.respond("不能移除非此伺服器發出的警告")
                 return
@@ -176,7 +177,7 @@ class moderation(Cog_Extension):
         moderate_user = ctx.user.id
         create_time = datetime.now()
         if add_record and not user.bot:
-            sclient.sqldb.add_warning(user.id,'timeout',moderate_user,ctx.guild.id,create_time,reason,time_last)
+            sclient.sqldb.add_warning(user.id,WarningType.Timeout,moderate_user,ctx.guild.id,create_time,reason,time_last)
         
         timestamp = int((create_time+time).timestamp())
         embed = BotEmbed.general(f'{user.name} 已被禁言',user.display_avatar.url,description=f"{user.mention}：{reason}")
@@ -199,7 +200,7 @@ class moderation(Cog_Extension):
         moderate_user = ctx.user.id
         create_time = datetime.now()
         if add_record and not user.bot:
-            sclient.sqldb.add_warning(user.id,'kick',moderate_user,ctx.guild.id,create_time,reason,None)
+            sclient.sqldb.add_warning(user.id,WarningType.Kick,moderate_user,ctx.guild.id,create_time,reason,None)
         
         embed = BotEmbed.general(f'{user.name} 已被踢除',user.display_avatar.url,description=f"{user.mention}：{reason}")
         embed.add_field(name="執行人員",value=ctx.author.mention)
@@ -222,7 +223,7 @@ class moderation(Cog_Extension):
         moderate_user = ctx.user.id
         create_time = datetime.now()
         if add_record and not user.bot:
-            sclient.sqldb.add_warning(user.id,'ban',moderate_user,ctx.guild.id,create_time,reason,None)
+            sclient.sqldb.add_warning(user.id,WarningType.Ban,moderate_user,ctx.guild.id,create_time,reason,None)
         
         embed = BotEmbed.general(f'{user.name} 已被停權',user.display_avatar.url,description=f"{user.mention}：{reason}")
         embed.add_field(name="執行人員",value=ctx.author.mention)
