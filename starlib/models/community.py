@@ -76,7 +76,7 @@ class TwitchStream(BaseModel):
             timestamp = self.started_at,
             )
         embed.set_author(name=f"{self.user_name} 開台啦！", icon_url=Jsondb.picdata["twitch_001"])
-        embed.set_image(url=self.thumbnail_url)
+        embed.set_image(url=str(self.thumbnail_url))
         embed.add_field(name="標籤", value=", ".join(self.tags))
         embed.set_footer(text=f"開始於")
         return embed
