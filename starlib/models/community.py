@@ -55,7 +55,7 @@ class TwitchStream(BaseModel):
     viewer_count: int
     started_at: datetime
     language: str
-    thumbnail_url: HttpUrl
+    thumbnail_url: str
     tag_ids: list[Optional[str]]
     tags: list[Optional[str]]
     is_mature: bool
@@ -63,7 +63,7 @@ class TwitchStream(BaseModel):
 
     @model_validator(mode='after')
     def __post_init__(self):
-        self.thumbnail_url = HttpUrl(str(self.thumbnail_url).replace('{width}','960').replace('{height}','540'))
+        self.thumbnail_url = self.thumbnail_url.replace('{width}','960').replace('{height}','540')
         self.started_at = self.started_at.astimezone(tz=tz)
         self.url = f"https://www.twitch.tv/{self.user_login}"
 
@@ -76,7 +76,7 @@ class TwitchStream(BaseModel):
             timestamp = self.started_at,
             )
         embed.set_author(name=f"{self.user_name} 開台啦！", icon_url=Jsondb.picdata["twitch_001"])
-        embed.set_image(url=str(self.thumbnail_url))
+        embed.set_image(url=self.thumbnail_url)
         embed.add_field(name="標籤", value=", ".join(self.tags))
         embed.set_footer(text=f"開始於")
         return embed
