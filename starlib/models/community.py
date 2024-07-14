@@ -15,12 +15,12 @@ class TwitchUser(BaseModel):
     type: str
     broadcaster_type: str
     description: str
-    profile_image_url: HttpUrl
-    offline_image_url: HttpUrl
+    profile_image_url: str
+    offline_image_url: str = None
     view_count: int
     email: Optional[str] = None
     created_at: datetime
-    url: HttpUrl = None
+    url: str = None
         
     @model_validator(mode='after')
     def __post_init__(self):

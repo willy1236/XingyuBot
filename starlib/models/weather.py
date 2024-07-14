@@ -22,14 +22,17 @@ class EarthquakeReport():
                 self.intensity[data['AreaDesc']] = data['CountyName']
 
     def embed(self):
-        if self.reportColor == "綠色":
-            embed = discord.Embed(title='地震報告',description=self.reportContent,color=0x00BB00,url=self.web)
-        elif self.reportColor == "橙色":
-            embed = discord.Embed(title='地震報告',description=self.reportContent,color=0xF75000,url=self.web)
-        elif self.reportColor == "黃色":
-            embed = discord.Embed(title='地震報告',description=self.reportContent,color=0xFFFF37,url=self.web)
-        else:
-            embed = discord.Embed(title='地震報告',description=self.reportContent,color=0xEA0000,url=self.web)
+        match self.reportColor:
+            case "綠色":
+                color = 0x00BB00
+            case "橙色":
+                color = 0xF75000
+            case "黃色":
+                color = 0xFFFF37
+            case _:
+                color = 0xEA0000
+        
+        embed = discord.Embed(title='地震報告',description=self.reportContent,color=color,url=self.web)
         
         if self.earthquakeNo[3:] == "000":
             embed.add_field(name='地震編號',value=f'{self.earthquakeNo}（小規模）')

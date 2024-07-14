@@ -164,7 +164,7 @@ class moderation(Cog_Extension):
     async def timeout(self,ctx:discord.ApplicationContext,
                       user:discord.Option(discord.Member,name='用戶',description='要禁言的用戶',required=True),
                       time_last:discord.Option(str,name='時長',description='格式為30s、1h20m等，支援天(d)、小時(h)、分鐘(m)、秒(s)',required=True),
-                      reason:discord.Option(str,name='原因',description='限100字內',required=False),
+                      reason:discord.Option(str,name='原因',description='限100字內',default="已禁言"),
                       add_record:discord.Option(bool,name='是否要將此紀錄存入警告系統',description='將紀錄存入警告系統供其他群組檢視',default=False)):
         await ctx.defer()
         time = converter.time_to_datetime(time_last)
