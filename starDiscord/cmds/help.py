@@ -76,7 +76,7 @@ class help(Cog_Extension):
             embed.add_field(name="/apex map", value="查詢apex地圖輪替", inline=False)
             embed.add_field(name="/apex creafting", value="查詢apex合成台內容", inline=False)
             embed.add_field(name="/dbd player <steamid>", value="查詢DBD玩家", inline=False)
-            embed.add_field(name="/hoyo", value="查詢原神相關指令", inline=False)
+            #embed.add_field(name="/hoyo", value="查詢原神相關指令", inline=False)
             embed.set_footer(text="輸入/help use查詢指令用法")
             await ctx.respond(embed=embed)
         elif arg == 'channel':

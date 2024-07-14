@@ -88,22 +88,25 @@ class classrole(IntEnum):
 # print(type(luser))
 # print(type(luser["role"]))
 
-@dataclass(slots=True)
-class kUser():
-	id: int
-	role: classrole
-	time: datetime
+# @dataclass(slots=True)
+# class kUser():
+# 	id: int
+# 	role: classrole
+# 	time: datetime
 
-	def __post_init__(self):
-		self.time = datetime.fromisoformat(self.time)
+# 	def __post_init__(self):
+# 		self.time = datetime.fromisoformat(self.time)
 
-data = {"id":1, "role": 1, "time": "2024-07-05T23:14:21+08:00"}
-user = kUser(**data)
+# data = {"id":1, "role": 1, "time": "2024-07-05T23:14:21+08:00"}
+# user = kUser(**data)
 # print(user)
 # print(type(user))
 # print(user.time, type(user.time))
 # print(type(user.role), user.role == classrole.role1)
 
 # api = TwitchAPI()
-user = sqldb.get_dcuser_v2("419131103836635136")
-print(user)
+# user = sqldb.get_dcuser_v2("419131103836635136")
+# print(user)
+api = CWA_API()
+data = api.get_earthquake_report()
+print(data.embed().to_dict())
