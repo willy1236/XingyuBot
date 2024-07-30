@@ -158,7 +158,8 @@ class WebsiteThread(threading.Thread):
 
     def run(self):
         import uvicorn
-        uvicorn.run(app,host='127.0.0.1',port=14000)
+        host = Jsondb.config.get("webip", "127.0.0.1")
+        uvicorn.run(app, host=host, port=14000)
         #os.system('uvicorn bot_website:app --port 14000')
 
 if __name__ == '__main__':

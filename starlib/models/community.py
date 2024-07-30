@@ -38,7 +38,7 @@ class TwitchUser(BaseModel):
         embed.set_image(url=self.offline_image_url)
         embed.set_author(name=self.login,icon_url=self.profile_image_url)
         embed.add_field(name="觀看數",value=self.view_count)
-        embed.add_field(name="頻道創建日期",value=self.created_at)
+        embed.add_field(name="頻道創建日期",value=self.created_at.strftime('%Y/%m/%d %H:%M:%S'))
         #embed.add_field(name="聯絡郵件",value=self.email)
         embed.set_footer(text=self.id)
         return embed

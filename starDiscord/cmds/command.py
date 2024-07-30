@@ -554,7 +554,7 @@ class command(Cog_Extension):
     async def format(self, ctx, last:discord.Option(bool,name='上屆候選人名單',description='是否顯示上屆候選人名單',default=False)):
         await ctx.defer()
         session = calculate_eletion_session(datetime.now())
-        embed = sclient.election_format(session - 1 if last else session, self.bot)
+        embed = sclient.election_format(session if last else session + 1, self.bot)
         await ctx.respond(embed=embed)
 
     @election.command(description='開始投票')

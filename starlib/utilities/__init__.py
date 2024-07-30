@@ -16,6 +16,8 @@ log_level = Jsondb.config.get("log_level",INFO)
 #log_level = DEBUG if debug_mode else INFO
 
 log = create_logger('./logs', file_log, log_level)
-apsc_log = create_logger('./logs', False, WARNING, "apscheduler", format="%(asctime)s [%(levelname)s] [apsc] %(message)s")
+apsc_log = create_logger('./logs', False, WARNING, "apscheduler", format="%(asctime)s [apsc/%(levelname)s] %(message)s")
 
-twitch_log = create_logger('./logs', False, DEBUG, "twitch_log", format="%(asctime)s [%(levelname)s] [twitch_bot] %(message)s")
+twitch_log = create_logger('./logs', False, DEBUG, "twitch_log", format="%(asctime)s [twitch_bot/%(levelname)s] %(message)s")
+
+# discord_log = create_logger('./logs', False, DEBUG, "discord", format="%(asctime)s [%(levelname)s] [discord] %(message)s")
