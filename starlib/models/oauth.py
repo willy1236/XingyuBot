@@ -1,13 +1,13 @@
-class UserConnection:
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, model_validator
+
+class UserConnection(BaseModel):
     """Connection Data from Discord Oauth API."""
-    
-    def __init__(self,dct:dict):
-        self.id = dct['id']
-        self.name = dct['name']
-        self.type = dct['type']
-        self.friend_sync = dct['friend_sync']
-        self.metadata_visibility = dct['metadata_visibility']
-        self.show_activity = dct['show_activity']
-        self.two_way_link = dct['two_way_link']
-        self.verified = dct['verified']
-        self.visibility = dct['visibility']
+    id: str
+    name: str
+    type: str
+    friend_sync: bool
+    metadata_visibility: int
+    show_activity: bool
+    two_way_link: bool
+    verified: bool
+    visibility: bool

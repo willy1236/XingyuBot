@@ -17,7 +17,7 @@ app = FastAPI()
 oauth_setting = Jsondb.get_token("discord_oauth")
 CLIENT_ID = oauth_setting["id"]
 CLIENT_SECRET = oauth_setting["secret"]
-REDIRECT_URI = oauth_setting["redirect_uri"]
+REDIRECT_URl = oauth_setting["redirect_url"]
 
 @app.route('/')
 def main(request:Request):
@@ -103,7 +103,7 @@ async def youtube_push_post(request:Request,background_task: BackgroundTasks):
 @app.route('/discord',methods=['GET'])
 async def discord_oauth(request:Request):
     params = dict(request.query_params)
-    auth = DiscordOauth(CLIENT_ID, CLIENT_SECRET, redirect_uri=REDIRECT_URI)
+    auth = DiscordOauth(CLIENT_ID, CLIENT_SECRET, redirect_url=REDIRECT_URl)
     auth.exchange_code(params['code'])
     
     connections = auth.get_connections()
@@ -112,7 +112,7 @@ async def discord_oauth(request:Request):
             print(f"{connection.name}({connection.id})")
             sclient.sqldb.add_userdata_value(auth.user_id, "user_data", "twitch_id", connection.id)
 
-    return HTMLResponse(f'授權已完成，您現在可以關閉此頁面\n\nDiscord ID：{auth.user_id}')
+    return HTMLResponse(f'授權已完成，您現在可以關閉此頁面<br><br>Discord ID：{auth.user_id}')
 
 # @app.get('/book/{book_id}',response_class=JSONResponse)
 # def get_book_by_id(book_id: int):

@@ -22,4 +22,5 @@ __all__ =[
     'DBDInterface',
     'CWA_API',
     'YoutubeRSS',
+    "DiscordOauth",
 ]

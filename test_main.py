@@ -75,17 +75,17 @@ if __name__ == '__main__':
 			# "威立：你可以依照我的敘述給我mysql語法嗎？我想要查詢名為table的表格中所有的資料，並將資料按照id由小到大排序",
 			"威立：星羽你可以介紹星空中你最喜歡的星星嗎?並告訴我為什麼?"
 			 ]
-	for i in content:
-		print(f"{i}：")
-		print(starai.generate_aitext(f"{i}"))
-		print("="*50)
-		time.sleep(10)
+	# for i in content:
+	# 	print(f"{i}：")
+	# 	print(starai.generate_aitext(f"{i}"))
+	# 	print("="*50)
+	# 	time.sleep(10)
 	 
-	while True:
-		pre = "威立："
-		i = input(pre)
-		print(starai.generate_aitext(f"{pre}{i}"))
-		print("="*50)
+	# while True:
+	# 	pre = "威立："
+	# 	i = input(pre)
+	# 	print(starai.generate_aitext(f"{pre}{i}"))
+	# 	print("="*50)
 
 # class Test(BaseModel):
 # 	name: str
@@ -154,3 +154,13 @@ class classrole(IntEnum):
 
 # user = jUser(**dict)
 # print(user, sys.getsizeof(user))
+
+oauth_setting = Jsondb.get_token("discord_oauth")
+CLIENT_ID = oauth_setting["id"]
+CLIENT_SECRET = oauth_setting["secret"]
+REDIRECT_URI = oauth_setting["redirect_uri"]
+
+oauth = DiscordOauth(CLIENT_ID,CLIENT_SECRET,user_id=419131103836635136)
+connections = oauth.get_connections()
+for connection in connections:
+	print(connection.name, connection.type)

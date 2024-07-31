@@ -7,6 +7,22 @@ from ..types import CommunityType
 from ..database import sqldb
 from ..errors import SQLNotFoundError
 
+class BaseOauth:
+    def __init__(self, settings:dict) -> None:
+        """
+        Oauth的基本架構
+
+        Parameters:
+        - settings (dict): 包含id, secret, redirect_url，未提供的項目會設為None
+        """
+        self.headers = {}
+        self.CLIENT_ID = settings.get("id")
+        self.CLIENT_SECRET = settings.get("secret")
+        self.REDIRECT_URI = settings.get("redirect_url")
+        self.access_token = None
+        self.refresh_token = None
+        self.expires_at = None
+
 class DiscordOauth:
     """
     Represents a Discord OAuth client for handling authentication and API requests.
@@ -28,12 +44,16 @@ class DiscordOauth:
 
     API_ENDPOINT = 'https://discord.com/api/v9'
 
-    def __init__(self, client_id:str, client_secret:str, redirect_uri='http://127.0.0.1:14000/discord', user_id:int=None):
+    def __init__(self, client_id:str, client_secret:str, redirect_url='http://127.0.0.1:14000/discord', user_id:int=None):
+        self.headers = {}
         self.CLIENT_ID = client_id
         self.CLIENT_SECRET = client_secret
-        self.REDIRECT_URI = redirect_uri
+        self.REDIRECT_URl = redirect_url
+        self.access_token = None
+        self.refresh_token = None
         self.expires_at = None
         self._user_id = user_id
+        
         if user_id:
             self.set_token(user_id)
 
@@ -65,6 +85,7 @@ class DiscordOauth:
         if dbdata['expires_at'] < datetime.now():
             self.refresh_access_token()
 
+        self.headers["Authorization"] = f'Bearer {self.access_token}'
 
     def save_token(self):
         """
@@ -137,10 +158,7 @@ class DiscordOauth:
         Returns:
         - dict: The JSON response containing the user information.
         """
-        headers = {
-            'Authorization': f'Bearer {self.access_token}'
-        }
-        r = requests.get('%s/users/@me' % self.API_ENDPOINT, headers=headers)
+        r = requests.get('%s/users/@me' % self.API_ENDPOINT, headers=self.headers)
         return r.json()
     
     def get_connections(self) -> list[UserConnection] | None:
@@ -156,7 +174,8 @@ class DiscordOauth:
         headers = {
             'Authorization': f'Bearer {self.access_token}'
         }
-        r = requests.get('%s/users/@me/connections' % self.API_ENDPOINT, headers=headers)
+        r = requests.get('%s/users/@me/connections' % self.API_ENDPOINT, headers=self.headers)
         if r.ok:
             data = r.json()
-            return [UserConnection(i) for i in data]
+            print(data)
+            return [UserConnection(**i) for i in data]
