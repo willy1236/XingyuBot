@@ -151,6 +151,24 @@ class ltThread(threading.Thread):
 
         print("ltThread stopped")
 
+class ServeoThread(threading.Thread):
+    def __init__(self):
+        super().__init__(name='ServeoThread')
+        self._stop_event = threading.Event()
+
+    def stop(self):
+        self._stop_event.set()
+
+    def run(self):
+        reconnection_times = 0
+        while not self._stop_event.is_set():
+            log.info("Starting ServeoThread")
+            os.system('ssh -R star1016:80:127.0.0.1:14000 serveo.net')
+            time.sleep(5)
+            reconnection_times += 1
+            if reconnection_times >= 5:
+                self._stop_event.set()
+
 class WebsiteThread(threading.Thread):
     def __init__(self):
         super().__init__(name='WebsiteThread')

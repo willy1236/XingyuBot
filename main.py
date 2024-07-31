@@ -22,9 +22,9 @@ bot.load_all_extensions()
 
 if __name__ == "__main__":
     if api_website:
-        from app.bot_website import WebsiteThread, ltThread
-        ltserver = ltThread()
-        ltserver.start()
+        from app.bot_website import WebsiteThread, ServeoThread
+        tunnel_server = ServeoThread()
+        tunnel_server.start()
         time.sleep(2)
 
         try:
