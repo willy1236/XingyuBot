@@ -112,7 +112,7 @@ async def discord_oauth(request:Request):
             print(f"{connection.name}({connection.id})")
             sclient.sqldb.add_userdata_value(auth.user_id, "user_data", "twitch_id", connection.id)
 
-    return HTMLResponse('授權已完成，您現在可以關閉此頁面')
+    return HTMLResponse(f'授權已完成，您現在可以關閉此頁面\n\nDiscord ID：{auth.user_id}')
 
 # @app.get('/book/{book_id}',response_class=JSONResponse)
 # def get_book_by_id(book_id: int):
