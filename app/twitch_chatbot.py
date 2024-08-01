@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 from pathlib import PurePath
 from twitchAPI.twitch import Twitch
 from twitchAPI.oauth import UserAuthenticator,refresh_access_token,UserAuthenticationStorageHelper,validate_token 
-from twitchAPI.type import AuthScope, ChatEvent
+from twitchAPI.type import AuthScope, ChatEvent, EventSubSubscriptionError
 from twitchAPI.chat import Chat, EventData, ChatMessage, ChatSub, ChatCommand, JoinedEvent, LeftEvent, NoticeEvent, WhisperEvent
 from twitchAPI.chat.middleware import ChannelRestriction
 from twitchAPI.pubsub import PubSub
@@ -57,7 +57,7 @@ USER_SCOPE = [
     AuthScope.WHISPERS_EDIT,
     ]
 
-TARGET_CHANNEL = ["sakagawa_0309", "niantt_"]
+TARGET_CHANNEL = ["sakagawa_0309", "willy1236owo", "niantt_"]
 
 DC_CHANNEL_ID = 1237412404980355092
 global dc_channel
@@ -278,10 +278,19 @@ async def run():
         twitch_log.debug(f"eventsub:{user.id}")
         await eventsub.listen_stream_online(user.id, on_stream_online)
         await eventsub.listen_stream_offline(user.id, on_stream_offline)
-        twitch_log.debug("listening to channel points custom reward redemption add")
-        await eventsub.listen_channel_points_custom_reward_redemption_add(user.id, on_channel_points_custom_reward_redemption_add)
-        twitch_log.debug("listening to channel points custom reward redemption update")
-        await eventsub.listen_channel_points_custom_reward_redemption_update(user.id, on_channel_points_custom_reward_redemption_update)
+        
+        try:
+            twitch_log.debug("listening to channel points custom reward redemption add")
+            await eventsub.listen_channel_points_custom_reward_redemption_add(user.id, on_channel_points_custom_reward_redemption_add)
+        except EventSubSubscriptionError as e:
+            twitch_log.error(f"Error subscribing to channel points custom reward redemption add: {e}")
+        
+        try:
+            twitch_log.debug("listening to channel points custom reward redemption update")
+            await eventsub.listen_channel_points_custom_reward_redemption_update(user.id, on_channel_points_custom_reward_redemption_update)
+        except EventSubSubscriptionError as e:
+            twitch_log.error(f"Error subscribing to channel points custom reward redemption update: {e}")
+        
         if chat.is_mod(user.login):
             await eventsub.listen_channel_follow_v2(user.id, me.id, on_follow)
 
