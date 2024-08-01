@@ -14,10 +14,7 @@ from starlib.dataExtractor import DiscordOauth
 
 app = FastAPI()
 
-oauth_setting = Jsondb.get_token("discord_oauth")
-CLIENT_ID = oauth_setting["id"]
-CLIENT_SECRET = oauth_setting["secret"]
-REDIRECT_URl = oauth_setting["redirect_url"]
+discord_oauth_settings = Jsondb.get_token("discord_oauth")
 
 @app.route('/')
 def main(request:Request):
@@ -88,7 +85,7 @@ async def get_yt_push(content):
 def youtube_push_get(request:Request):
     params = dict(request.query_params)
     if 'hub.challenge' in params:
-        return HTMLResponse(content=params['hub.challenge'])  
+        return HTMLResponse(content=params['hub.challenge'])
     else:
         return HTMLResponse('OK')
 
@@ -103,7 +100,7 @@ async def youtube_push_post(request:Request,background_task: BackgroundTasks):
 @app.route('/discord',methods=['GET'])
 async def discord_oauth(request:Request):
     params = dict(request.query_params)
-    auth = DiscordOauth(CLIENT_ID, CLIENT_SECRET, redirect_url=REDIRECT_URl)
+    auth = DiscordOauth(discord_oauth_settings)
     auth.exchange_code(params['code'])
     
     connections = auth.get_connections()
@@ -164,7 +161,7 @@ class ServeoThread(threading.Thread):
         while not self._stop_event.is_set():
             log.info("Starting ServeoThread")
             os.system('ssh -R star1016:80:127.0.0.1:14000 serveo.net')
-            time.sleep(5)
+            time.sleep(10)
             reconnection_times += 1
             if reconnection_times >= 5:
                 self._stop_event.set()

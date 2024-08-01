@@ -157,7 +157,7 @@ class TwitchClip(BaseModel):
         return embed
 
 class YoutubeThumbnail(BaseModel):
-    url: HttpUrl
+    url: str
     width: int
     height: int
 
@@ -231,7 +231,7 @@ class YoutubeChannel(BaseModel):
             color=0xff0000,
             timestamp = self.snippet.publishedAt
             )
-        embed.set_image(url=self.snippet.thumbnails.default)
+        embed.set_image(url=self.snippet.thumbnails.default.url)
         embed.add_field(name="頻道創建時間",value=self.snippet.publishedAt.strftime('%Y/%m/%d %H:%M:%S'))
         embed.add_field(name="訂閱數",value=f"{self.statistics.subscriberCount:,}")
         embed.add_field(name="影片數",value=f"{self.statistics.videoCount:,}")

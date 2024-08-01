@@ -8,10 +8,12 @@ from ..database import sqldb
 from ..errors import SQLNotFoundError
 
 class BaseOauth:
+    """
+    Base class for handle OAuth authentication.
+    """
+    
     def __init__(self, settings:dict) -> None:
         """
-        Oauth的基本架構
-
         Parameters:
         - settings (dict): 包含id, secret, redirect_url，未提供的項目會設為None
         """
@@ -23,39 +25,22 @@ class BaseOauth:
         self.refresh_token = None
         self.expires_at = None
 
-class DiscordOauth:
+class DiscordOauth(BaseOauth):
     """
     Represents a Discord OAuth client for handling authentication and API requests.
-
-    Parameters:
-    - client_id (str): The client ID of the Discord application.
-    - client_secret (str): The client secret of the Discord application.
-    - redirect_uri (str, optional): The redirect URI for the OAuth flow. Defaults to 'http://127.0.0.1:14000/discord '.
-    - user_id (int, optional): The user ID associated with the OAuth token. Defaults to None.\n
-    - if provided, the OAuth token will be set automatically from database.
-
-    Attributes:
-    - API_ENDPOINT (str): The Discord API endpoint.
-    - CLIENT_ID (str): The client ID of the Discord application.
-    - CLIENT_SECRET (str): The client secret of the Discord application.
-    - REDIRECT_URI (str): The redirect URI for the OAuth flow.
-    - expires_at (datetime): The expiration date and time of the access token.
     """
 
     API_ENDPOINT = 'https://discord.com/api/v9'
 
-    def __init__(self, client_id:str, client_secret:str, redirect_url='http://127.0.0.1:14000/discord', user_id:int=None):
-        self.headers = {}
-        self.CLIENT_ID = client_id
-        self.CLIENT_SECRET = client_secret
-        self.REDIRECT_URl = redirect_url
-        self.access_token = None
-        self.refresh_token = None
-        self.expires_at = None
+    def __init__(self, settings:dict, user_id:int=None):
+        super().__init__(settings)
+        if self.REDIRECT_URl is None:
+            self.REDIRECT_URl = 'http://127.0.0.1:14000/discord'
+
         self._user_id = user_id
         
         if user_id:
-            self.set_token(user_id)
+            self.set_token_from_id(user_id)
 
     @property
     def user_id(self):
@@ -63,12 +48,9 @@ class DiscordOauth:
             self._user_id = self.get_me()['id']
         return self._user_id
 
-    def set_token(self, user_id):
+    def set_token_from_id(self, user_id):
         """
         Set the OAuth token for the specified user ID.
-
-        Parameters:
-        - user_id (str): The user ID.
 
         Raises:
         - SQLNotFoundError: If the Discord OAuth token is not found in the database.
@@ -96,12 +78,6 @@ class DiscordOauth:
     def refresh_access_token(self) -> dict:
         """
         Refreshes the access token using the refresh token.
-
-        Parameters:
-        - refresh_token (str): The refresh token.
-
-        Returns:
-        - dict: The JSON response containing the new access token.
         """
         data = {
             'grant_type': 'refresh_token',
@@ -125,12 +101,6 @@ class DiscordOauth:
         """
         Exchanges the authorization code for an access token.
         You can get the code from the query parameter 'code' in the redirect URI.
-        
-        Parameters:
-        - code (str): The authorization code.
-
-        Returns:
-        - dict: The JSON response containing the access token.
         """
         data = {
             'grant_type': 'authorization_code',
@@ -154,9 +124,6 @@ class DiscordOauth:
     def get_me(self) -> dict:
         """
         Retrieves the user information.
-
-        Returns:
-        - dict: The JSON response containing the user information.
         """
         r = requests.get('%s/users/@me' % self.API_ENDPOINT, headers=self.headers)
         return r.json()
@@ -164,18 +131,8 @@ class DiscordOauth:
     def get_connections(self) -> list[UserConnection] | None:
         """
         Retrieves the user connections.
-
-        This method sends a GET request to the Discord API to retrieve the user's connections.
-        It requires the user to be authenticated with an access token.
-
-        Returns:
-        - list: A list of UserConnection objects representing the user's connections.
         """
-        headers = {
-            'Authorization': f'Bearer {self.access_token}'
-        }
         r = requests.get('%s/users/@me/connections' % self.API_ENDPOINT, headers=self.headers)
         if r.ok:
             data = r.json()
-            print(data)
             return [UserConnection(**i) for i in data]
