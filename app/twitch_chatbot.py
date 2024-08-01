@@ -286,6 +286,10 @@ async def run():
         twitch_log.debug(f"eventsub:{user.login}")
         await eventsub.listen_stream_online(user.id, on_stream_online)
         await eventsub.listen_stream_offline(user.id, on_stream_offline)
+        await eventsub.listen_channel_raid(on_channel_raid, to_broadcaster_user_id=user.id)
+
+        if not chat.is_mod(user.login):
+            continue
         
         try:
             twitch_log.debug("listening to channel points custom reward redemption add")
@@ -298,12 +302,6 @@ async def run():
             await eventsub.listen_channel_points_custom_reward_redemption_update(user.id, on_channel_points_custom_reward_redemption_update)
         except EventSubSubscriptionError as e:
             twitch_log.warn(f"Error subscribing to channel points custom reward redemption update: {e}")
-        
-        try:
-            twitch_log.debug("listening to channel raid")
-            await eventsub.listen_channel_raid(on_channel_raid, to_broadcaster_user_id=user.id)
-        except EventSubSubscriptionError as e:
-            twitch_log.warn(f"Error subscribing to channel raid: {e}")
 
         try:
             twitch_log.debug("listening to channel subscribe")
@@ -317,7 +315,6 @@ async def run():
         except EventSubSubscriptionError as e:
             twitch_log.warn(f"Error subscribing to channel subscription message: {e}")
 
-        #if chat.is_mod(user.login):
         try:
             twitch_log.debug("listening to channel follow")
             await eventsub.listen_channel_follow_v2(user.id, me.id, on_follow)

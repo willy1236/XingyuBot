@@ -1,16 +1,17 @@
 import os
+import subprocess
 import threading
 import time
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta
 
-from fastapi import FastAPI,BackgroundTasks
+from fastapi import BackgroundTasks, FastAPI
 from fastapi.requests import Request
-from fastapi.responses import HTMLResponse,JSONResponse,PlainTextResponse
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 
-from starlib import log, sclient, Jsondb
-from starlib.models.push import YoutubePush
+from starlib import Jsondb, log, sclient
 from starlib.dataExtractor import DiscordOauth, TwitchOauth
+from starlib.models.push import YoutubePush
 
 app = FastAPI()
 
@@ -177,8 +178,9 @@ class ServeoThread(threading.Thread):
         reconnection_times = 0
         while not self._stop_event.is_set():
             log.info("Starting ServeoThread")
-            os.system('ssh -R star1016:80:127.0.0.1:14000 -R startwitch:80:127.0.0.1:14001 serveo.net')
-            time.sleep(10)
+            result = subprocess.run("ssh -R star1016:80:127.0.0.1:14000 -R startwitch:80:127.0.0.1:14001 serveo.net", shell=True, capture_output=True, text=True)
+            #os.system('')
+            time.sleep(60)
             reconnection_times += 1
             if reconnection_times >= 5:
                 self._stop_event.set()
