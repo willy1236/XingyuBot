@@ -169,7 +169,7 @@ class ServeoThread(threading.Thread):
         reconnection_times = 0
         while not self._stop_event.is_set():
             log.info("Starting ServeoThread")
-            os.system('ssh -R star1016:80:127.0.0.1:14000 serveo.net')
+            os.system('ssh -R star1016:80:127.0.0.1:14000 -R startwitch:80:127.0.0.1:14001 serveo.net')
             time.sleep(10)
             reconnection_times += 1
             if reconnection_times >= 5:

@@ -268,15 +268,20 @@ async def run():
     #     if chat.is_mod(user.login):
     #         await eventsub.listen_channel_follow_v2(user.id, me.id, on_follow)
     
-    eventsub = EventSubWebhook(jtoken.get('callback_url'), 14000, twitch)
+    eventsub = EventSubWebhook(jtoken.get('callback_url'), 14001, twitch)
     # unsubscribe from all old events that might still be there
     # this will ensure we have a clean slate
     await eventsub.unsubscribe_all()
     # start the eventsub client
     eventsub.start()
     for user in users:
+        twitch_log.debug(f"eventsub:{user.id}")
         await eventsub.listen_stream_online(user.id, on_stream_online)
         await eventsub.listen_stream_offline(user.id, on_stream_offline)
+        twitch_log.debug("listening to channel points custom reward redemption add")
+        await eventsub.listen_channel_points_custom_reward_redemption_add(user.id, on_channel_points_custom_reward_redemption_add)
+        twitch_log.debug("listening to channel points custom reward redemption update")
+        await eventsub.listen_channel_points_custom_reward_redemption_update(user.id, on_channel_points_custom_reward_redemption_update)
         if chat.is_mod(user.login):
             await eventsub.listen_channel_follow_v2(user.id, me.id, on_follow)
 
