@@ -25,6 +25,11 @@ class BaseOauth:
         self.refresh_token = None
         self.expires_at = None
 
+    def save_token(self, user_id, type:CommunityType):
+        if sqldb:
+            type = CommunityType(type)
+            sqldb.set_oauth(user_id, type, self.access_token, self.refresh_token, self.expires_at)
+
 class DiscordOauth(BaseOauth):
     """
     Represents a Discord OAuth client for handling authentication and API requests.
@@ -69,12 +74,6 @@ class DiscordOauth(BaseOauth):
 
         self.headers["Authorization"] = f'Bearer {self.access_token}'
 
-    def save_token(self):
-        """
-        Save the OAuth token to the database.
-        """
-        sqldb.set_oauth(self.user_id, CommunityType.Discord, self.access_token, self.refresh_token, self.expires_at)
-
     def refresh_access_token(self) -> dict:
         """
         Refreshes the access token using the refresh token.
@@ -93,8 +92,8 @@ class DiscordOauth(BaseOauth):
         self.access_token = data['access_token']
         self.refresh_token = data['refresh_token']
         self.expires_at = datetime.now() + timedelta(seconds=data['expires_in'])
-        if sqldb:
-            self.save_token()
+        
+        self.save_token(self.user_id,CommunityType.Discord)
         return data
 
     def exchange_code(self, code) -> dict:
@@ -117,8 +116,9 @@ class DiscordOauth(BaseOauth):
         self.access_token = data['access_token']
         self.refresh_token = data['refresh_token']
         self.expires_at = datetime.now() + timedelta(seconds=data['expires_in'])
-        if sqldb:
-            self.save_token()
+        self.headers["Authorization"] = f'Bearer {self.access_token}'
+        
+        self.save_token(self.user_id, CommunityType.Discord)
         return data
 
     def get_me(self) -> dict:
@@ -147,6 +147,13 @@ class TwitchOauth(BaseOauth):
 
     def __init__(self, settings:dict, user_id:int=None):
         super().__init__(settings)
+        self._user_id = user_id
+
+    @property
+    def user_id(self):
+        if self._user_id is None:
+            self._user_id = self.get_user()['data'][0]['id']
+        return self._user_id
 
     def exchange_code(self, code) -> dict:
         """
@@ -170,4 +177,14 @@ class TwitchOauth(BaseOauth):
         self.access_token = data['access_token']
         self.refresh_token = data['refresh_token']
         self.expires_at = datetime.now() + timedelta(seconds=data['expires_in'])
+        self.headers["Authorization"] = f'Bearer {self.access_token}'
+        
+        self.save_token(self.user_id, CommunityType.Twitch)
         return data
+    
+    def get_user(self) -> dict:
+        """
+        Retrieves the user information.
+        """
+        r = requests.get(f'{self.API_ENDPOINT}/users', headers=self.headers)
+        return r.json()

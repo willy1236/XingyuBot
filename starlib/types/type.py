@@ -19,3 +19,4 @@ class NotifyChannelType(IntEnum):
 
 class CommunityType(Enum):
     Discord = 1
+    Twitch = 2

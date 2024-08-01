@@ -126,7 +126,7 @@ async def twitch_oauth(request:Request):
     params = dict(request.query_params)
     auth = TwitchOauth(twitch_oauth_settings)
     auth.exchange_code(params['code'])
-    return HTMLResponse(f'授權已完成，您現在可以關閉此頁面')
+    return HTMLResponse(f'授權已完成，您現在可以關閉此頁面<br><br>Twitch ID：{auth.user_id}')
 
 # @app.get('/book/{book_id}',response_class=JSONResponse)
 # def get_book_by_id(book_id: int):
