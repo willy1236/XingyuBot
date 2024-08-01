@@ -16,6 +16,15 @@ app = FastAPI()
 
 discord_oauth_settings = Jsondb.get_token("discord_oauth")
 
+IGNORE_PATHS = ["/twitch_bot/callback"]
+
+@app.middleware("http")
+async def ignore_specific_paths(request: Request, call_next):
+    if request.url.path in IGNORE_PATHS:
+        return 
+    response = await call_next(request)
+    return response
+
 @app.route('/')
 def main(request:Request):
     return HTMLResponse('test')
