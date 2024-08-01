@@ -147,12 +147,18 @@ class TwitchOauth(BaseOauth):
 
     def __init__(self, settings:dict, user_id:int=None):
         super().__init__(settings)
+        self.headers["Client-Id"] = self.CLIENT_ID
         self._user_id = user_id
 
     @property
     def user_id(self):
         if self._user_id is None:
-            self._user_id = self.get_user()['data'][0]['id']
+            try:
+                apidata = self.get_user()
+                self._user_id = apidata['data'][0]['id']
+            except KeyError:
+                print(apidata)
+                raise
         return self._user_id
 
     def exchange_code(self, code) -> dict:
