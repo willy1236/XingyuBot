@@ -10,20 +10,21 @@ from fastapi.responses import HTMLResponse,JSONResponse,PlainTextResponse
 
 from starlib import log, sclient, Jsondb
 from starlib.models.push import YoutubePush
-from starlib.dataExtractor import DiscordOauth
+from starlib.dataExtractor import DiscordOauth, TwitchOauth
 
 app = FastAPI()
 
 discord_oauth_settings = Jsondb.get_token("discord_oauth")
+twitch_oauth_settings = Jsondb.get_token("twitch_chatbot")
 
-IGNORE_PATHS = ["/twitch_bot/callback"]
+# IGNORE_PATHS = ["/twitch_bot/callback"]
 
-@app.middleware("http")
-async def ignore_specific_paths(request: Request, call_next):
-    if request.url.path in IGNORE_PATHS:
-        return 
-    response = await call_next(request)
-    return response
+# @app.middleware("http")
+# async def ignore_specific_paths(request: Request, call_next):
+#     if request.url.path in IGNORE_PATHS:
+#         return 
+#     response = await call_next(request)
+#     return response
 
 @app.route('/')
 def main(request:Request):
@@ -119,6 +120,13 @@ async def discord_oauth(request:Request):
             sclient.sqldb.add_userdata_value(auth.user_id, "user_data", "twitch_id", connection.id)
 
     return HTMLResponse(f'授權已完成，您現在可以關閉此頁面<br><br>Discord ID：{auth.user_id}')
+
+@app.route('/twitchauth',methods=['GET'])
+async def twitch_oauth(request:Request):
+    params = dict(request.query_params)
+    auth = TwitchOauth(twitch_oauth_settings)
+    auth.exchange_code(params['code'])
+    return HTMLResponse(f'授權已完成，您現在可以關閉此頁面')
 
 # @app.get('/book/{book_id}',response_class=JSONResponse)
 # def get_book_by_id(book_id: int):

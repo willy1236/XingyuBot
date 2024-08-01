@@ -136,3 +136,38 @@ class DiscordOauth(BaseOauth):
         if r.ok:
             data = r.json()
             return [UserConnection(**i) for i in data]
+        
+
+class TwitchOauth(BaseOauth):
+    """
+    Represents a Twitch OAuth client for handling authentication and API requests.
+    """
+
+    API_ENDPOINT = 'https://api.twitch.tv/helix'
+
+    def __init__(self, settings:dict, user_id:int=None):
+        super().__init__(settings)
+
+    def exchange_code(self, code) -> dict:
+        """
+        Exchanges the authorization code for an access token.
+        You can get the code from the query parameter 'code' in the redirect URI.
+        """
+        data = {
+            'grant_type': 'authorization_code',
+            'client_id': self.CLIENT_ID,
+            'client_secret': self.CLIENT_SECRET,
+            'code': code,
+            'redirect_uri': self.REDIRECT_URI
+        }
+        headers = {
+            'Content-Type': 'application/x-www-form-urlencoded'
+        }
+        r = requests.post("https://id.twitch.tv/oauth2/token", data=data, headers=headers, auth=(self.CLIENT_ID, self.CLIENT_SECRET))
+        r.raise_for_status()
+        data = r.json()
+        
+        self.access_token = data['access_token']
+        self.refresh_token = data['refresh_token']
+        self.expires_at = datetime.now() + timedelta(seconds=data['expires_in'])
+        return data
