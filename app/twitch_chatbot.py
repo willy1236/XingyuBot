@@ -14,6 +14,7 @@ from twitchAPI.chat import Chat, EventData, ChatMessage, ChatSub, ChatCommand, J
 from twitchAPI.chat.middleware import ChannelRestriction
 from twitchAPI.pubsub import PubSub
 from twitchAPI.object import eventsub
+from twitchAPI.eventsub.webhook import EventSubWebhook
 from twitchAPI.eventsub.websocket import EventSubWebsocket
 from twitchAPI.helper import first
 from twitchAPI.object.api import TwitchUser
@@ -254,19 +255,30 @@ async def run():
     # you can either start listening before or after you started pubsub.
     
 
-    # create eventsub websocket instance and start the client.
-    eventsub = EventSubWebsocket(twitch)
+    # # create eventsub websocket instance and start the client.
+    # eventsub = EventSubWebsocket(twitch)
+    # eventsub.start()
+    # # subscribing to the desired eventsub hook for our user
+    # # the given function (in this example on_follow) will be called every time this event is triggered
+    # # the broadcaster is a moderator in their own channel by default so specifying both as the same works in this example
+    # # We have to subscribe to the first topic within 10 seconds of eventsub.start() to not be disconnected.
+    # for user in users:
+    #     await eventsub.listen_stream_online(user.id, on_stream_online)
+    #     await eventsub.listen_stream_offline(user.id, on_stream_offline)
+    #     if chat.is_mod(user.login):
+    #         await eventsub.listen_channel_follow_v2(user.id, me.id, on_follow)
+    
+    eventsub = EventSubWebhook(jtoken.get('callback_url'), 14000, twitch)
+    # unsubscribe from all old events that might still be there
+    # this will ensure we have a clean slate
+    await eventsub.unsubscribe_all()
+    # start the eventsub client
     eventsub.start()
-    # subscribing to the desired eventsub hook for our user
-    # the given function (in this example on_follow) will be called every time this event is triggered
-    # the broadcaster is a moderator in their own channel by default so specifying both as the same works in this example
-    # We have to subscribe to the first topic within 10 seconds of eventsub.start() to not be disconnected.
     for user in users:
         await eventsub.listen_stream_online(user.id, on_stream_online)
         await eventsub.listen_stream_offline(user.id, on_stream_offline)
         if chat.is_mod(user.login):
             await eventsub.listen_channel_follow_v2(user.id, me.id, on_follow)
-    
 
     # we are done with our setup, lets start this bot up!
     return chat, twitch
