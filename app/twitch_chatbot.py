@@ -114,14 +114,23 @@ async def on_channel_points_custom_reward_redemption_add(event: eventsub.Channel
 async def on_channel_points_custom_reward_redemption_update(event: eventsub.ChannelPointsCustomRewardRedemptionUpdateEvent):
     twitch_log.info(f"{event.event.user_name}'s redemption of {event.event.reward.title} has been updated!")
     
+async def on_channel_raid(event:eventsub.ChannelRaidEvent):
+    twitch_log.info(f"{event.event.from_broadcaster_user_name} 帶了 {event.event.viewers} 位觀眾來 {event.event.to_broadcaster_user_name} 的頻道!")
 
-# this will be called when the event READY is triggered, which will be on bot start
+async def on_channel_subscribe(event: eventsub.ChannelSubscribeEvent):
+    twitch_log.info(f"{event.event.user_name} 在 {event.event.broadcaster_user_name} 的層級{event.event.tier[0]}新訂閱")
+
+async def on_channel_subscription_message(event: eventsub.ChannelSubscriptionMessageEvent):
+    twitch_log.info(f"{event.event.user_name} 在 {event.event.broadcaster_user_name} 的層級{event.event.tier[0]} {event.event.duration_months} 個月 訂閱")
+    twitch_log.info(f"他已經訂閱 {event.event.cumulative_months} 個月了")
+    twitch_log.info(f"訊息：{event.event.message}")
+
+# bot
 async def on_ready(ready_event: EventData):
     twitch_log.info(f'Bot is ready as {ready_event.chat.username}, joining channels')
     # join our target channel, if you want to join multiple, either call join for each individually
     # or even better pass a list of channels as the argument
     await ready_event.chat.join_room(TARGET_CHANNEL)
-    # you can do other bot initialization things in here
 
 # this will be called whenever a message in a channel was send by either the bot OR another user
 async def on_message(msg: ChatMessage):
@@ -131,7 +140,6 @@ async def on_message(msg: ChatMessage):
     #     channel = sclient.bot.get_channel(DC_CHANNEL_ID)
     #     asyncio.run_coroutine_threadsafe(channel.send(embed=BotEmbed.general(msg.user.display_name,description=msg.text)), loop)
 
-# this will be called whenever someone subscribes to a channel
 async def on_sub(sub: ChatSub):
     twitch_log.info(f'New subscription in {sub.room.name}:\nType: {sub.sub_plan_name}\nMessage: {sub.sub_message}')
     if sub.room.name == TARGET_CHANNEL[0] and sclient.bot:
@@ -160,10 +168,11 @@ async def on_whisper(event: WhisperEvent):
             channel.send(embed=BotEmbed.general(event.user.name,description=event.message))
 
 async def on_raid(event:dict):
+    print(event)
     try:
         twitch_log.info(f'Raid from {event["tags"]["display-name"]} with {event["tags"]["msg-param-viewerCount"]} viewers')
     except:
-        print(event)
+        twitch_log.info(event)
 
 # this will be called whenever the !reply command is issued
 async def test_command(cmd: ChatCommand):
@@ -172,7 +181,6 @@ async def test_command(cmd: ChatCommand):
     else:
         await cmd.reply(f'{cmd.user.name}: {cmd.parameter}')
 
-# this is where we set up the bot
 async def run():
     jtoken = Jsondb.get_token("twitch_chatbot")
     APP_ID = jtoken.get('id')
@@ -209,7 +217,6 @@ async def run():
 
     # await twitch.set_user_authentication(token, USER_SCOPE, refresh_token)
     me = await first(twitch.get_users())
-    target_user = await first(twitch.get_users(logins=TARGET_CHANNEL))
     users = [user async for user in twitch.get_users(logins=TARGET_CHANNEL)]
 
     # dict = {
@@ -243,6 +250,7 @@ async def run():
     # chat.register_command('reply', test_command)
     # TODO: modify_channel_information
     
+    sclient.twitch_bot = chat
     chat.start()
 
     # starting up PubSub
@@ -275,7 +283,7 @@ async def run():
     # start the eventsub client
     eventsub.start()
     for user in users:
-        twitch_log.debug(f"eventsub:{user.id}")
+        twitch_log.debug(f"eventsub:{user.login}")
         await eventsub.listen_stream_online(user.id, on_stream_online)
         await eventsub.listen_stream_offline(user.id, on_stream_offline)
         
@@ -291,8 +299,30 @@ async def run():
         except EventSubSubscriptionError as e:
             twitch_log.warn(f"Error subscribing to channel points custom reward redemption update: {e}")
         
-        if chat.is_mod(user.login):
+        try:
+            twitch_log.debug("listening to channel raid")
+            await eventsub.listen_channel_raid(on_channel_raid, to_broadcaster_user_id=user.id)
+        except EventSubSubscriptionError as e:
+            twitch_log.warn(f"Error subscribing to channel raid: {e}")
+
+        try:
+            twitch_log.debug("listening to channel subscribe")
+            await eventsub.listen_channel_subscribe(user.id, on_channel_subscribe)
+        except EventSubSubscriptionError as e:
+            twitch_log.warn(f"Error subscribing to channel subscribe: {e}")
+
+        try:
+            twitch_log.debug("listening to channel subscription message")
+            await eventsub.listen_channel_subscription_message(user.id, on_channel_subscription_message)
+        except EventSubSubscriptionError as e:
+            twitch_log.warn(f"Error subscribing to channel subscription message: {e}")
+
+        #if chat.is_mod(user.login):
+        try:
+            twitch_log.debug("listening to channel follow")
             await eventsub.listen_channel_follow_v2(user.id, me.id, on_follow)
+        except EventSubSubscriptionError as e:
+            twitch_log.warn(f"Error subscribing to channel follow: {e}")
 
     # we are done with our setup, lets start this bot up!
     return chat, twitch
@@ -310,8 +340,6 @@ async def run_sakagawa():
     
     twitch_sakagawa = await Twitch(client_id, authenticate_app=False)
     await twitch_sakagawa.set_user_authentication(token, USER_SCOPE_SAKAGAWA, refresh_token)
-    #helper_sakagawa = UserAuthenticationStorageHelper(twitch_sakagawa, USER_SCOPE_SAKAGAWA, storage_path=PurePath('./database/twitch_token_sakagawa.json'))
-    #await helper_sakagawa.bind()
     target_user = await first(twitch_sakagawa.get_users(logins=TARGET_CHANNEL))
 
     eventsub_sakagawa = EventSubWebsocket(twitch_sakagawa)
