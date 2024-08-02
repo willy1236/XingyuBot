@@ -14,8 +14,8 @@ class YoutubePush(BaseModel):
     yt_channelid: str
     title: str
     link: str
-    author_name: str = Field(validation_alias=AliasPath('authors', '0', 'name'))
-    author_uri: str  = Field(validation_alias=AliasPath('authors', '0', 'href'))
+    author_name: str = Field(validation_alias=AliasPath('authors', 0, 'name'))
+    author_uri: str  = Field(validation_alias=AliasPath('authors', 0, 'href'))
     published: datetime
     updated: datetime
         

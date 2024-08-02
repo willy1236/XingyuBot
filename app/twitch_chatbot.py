@@ -75,19 +75,19 @@ async def on_follow(event: eventsub.ChannelFollowEvent):
     #await chat.send_message(data.event.broadcaster_user_name,text = f'{data.event.user_name} now follows {data.event.broadcaster_user_name}!')
     twitch_log.info(f'{event.event.user_name}({event.event.user_login}) now follows {event.event.broadcaster_user_name}!')
     if event.event.broadcaster_user_login == TARGET_CHANNEL[0] and sclient.bot:
-        await sclient.bot.twitchbot_send_message(1237412404980355092, embed=BotEmbed.simple("新追隨",f'{event.event.user_name}({event.event.user_login}) 正在追隨 {event.event.broadcaster_user_name}!'))
+        sclient.bot.twitchbot_send_message(1237412404980355092, embed=BotEmbed.simple("新追隨",f'{event.event.user_name}({event.event.user_login}) 正在追隨 {event.event.broadcaster_user_name}!'))
         
 
 async def on_stream_online(event: eventsub.StreamOnlineEvent):
     twitch_log.info(f'{event.event.broadcaster_user_name} starting stream!')
     if sclient.bot:
-        await sclient.bot.twitchbot_send_message(content=f'{event.event.broadcaster_user_name} starting {event.event.type}!')
+        sclient.bot.twitchbot_send_message(content=f'{event.event.broadcaster_user_name} starting {event.event.type}!')
         
 
 async def on_stream_offline(event: eventsub.StreamOfflineEvent):
     twitch_log.info(f'{event.event.broadcaster_user_name} ending stream.')
     if sclient.bot:
-        await sclient.bot.twitchbot_send_message(content=f'{event.event.broadcaster_user_name} ending stream.')
+        sclient.bot.twitchbot_send_message(content=f'{event.event.broadcaster_user_name} ending stream.')
 
 async def on_channel_points_custom_reward_redemption_add(event: eventsub.ChannelPointsCustomRewardRedemptionAddEvent):
     text = f'{event.event.user_name} 兌換了 {event.event.reward.title}!' 
@@ -95,7 +95,7 @@ async def on_channel_points_custom_reward_redemption_add(event: eventsub.Channel
         text += f' ({event.event.reward.prompt})'
     twitch_log.info(text)
     if event.event.broadcaster_user_login == TARGET_CHANNEL[0] and sclient.bot:
-        await sclient.bot.twitchbot_send_message(1237412404980355092, embed=BotEmbed.simple("兌換自訂獎勵",text))
+        sclient.bot.twitchbot_send_message(1237412404980355092, embed=BotEmbed.simple("兌換自訂獎勵",text))
     
 async def on_channel_points_custom_reward_redemption_update(event: eventsub.ChannelPointsCustomRewardRedemptionUpdateEvent):
     twitch_log.info(f"{event.event.user_name}'s redemption of {event.event.reward.title} has been updated!")
@@ -129,7 +129,7 @@ async def on_message(msg: ChatMessage):
 async def on_sub(sub: ChatSub):
     twitch_log.info(f'New subscription in {sub.room.name}:\nType: {sub.sub_plan_name}\nMessage: {sub.sub_message}')
     if sub.room.name == TARGET_CHANNEL[0] and sclient.bot:
-        await sclient.bot.twitchbot_send_message(1237412404980355092, embed=BotEmbed.general(title=f'{sub.room.name} 的新訂閱!',description=f"類型: {sub.sub_plan_name}\訊息: {sub.sub_message}"))
+        sclient.bot.twitchbot_send_message(1237412404980355092, embed=BotEmbed.general(title=f'{sub.room.name} 的新訂閱!',description=f"類型: {sub.sub_plan_name}\訊息: {sub.sub_message}"))
 
 async def on_bot_joined(event: JoinedEvent):
     await asyncio.sleep(1)
@@ -147,7 +147,7 @@ async def on_server_notice(event: NoticeEvent):
 async def on_whisper(event: WhisperEvent):
     twitch_log.info(f'Whisper from {event.user.name}: {event.message}')
     if sclient.bot:
-        await sclient.bot.twitchbot_send_message(embed=BotEmbed.general(event.user.name,description=event.message))
+        sclient.bot.twitchbot_send_message(embed=BotEmbed.general(event.user.name,description=event.message))
 
 async def on_raid(event:dict):
     print(event)

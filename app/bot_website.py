@@ -22,6 +22,7 @@ twitch_oauth_settings = Jsondb.get_token("twitch_chatbot")
 
 @app.route('/')
 def main(request:Request):
+    log.info(f'{request.client.host} - {request.method} - {request.url.path}')
     return HTMLResponse('test')
 
 @app.route('/keep_alive',methods=['GET'])
@@ -54,6 +55,8 @@ def keep_alive(request:Request):
 async def get_yt_push(content):
     feed = feedparser.parse(content)
     print(feed)
+    if not feed["entries"][0]:
+        return
     embed = YoutubePush(**feed["entries"][0]).embed()
     
     if sclient.bot:
