@@ -144,14 +144,17 @@ async def twitch_bot_callback(request: Request):
 #     html_file = open().read()
 #     return html_file
 
-
-class ltThread(threading.Thread):
-    def __init__(self):
-        super().__init__(name='ltThread')
+class BaseThread(threading.Thread):
+    def __init__(self, name):
+        super().__init__(name=name)
         self._stop_event = threading.Event()
 
     def stop(self):
         self._stop_event.set()
+
+class ltThread(BaseThread):
+    def __init__(self):
+        super().__init__(name='ltThread')
 
     def run(self):
         reconnection_times = 0
@@ -170,13 +173,9 @@ class ltThread(threading.Thread):
 
         print("ltThread stopped")
 
-class ServeoThread(threading.Thread):
+class ServeoThread(BaseThread):
     def __init__(self):
         super().__init__(name='ServeoThread')
-        self._stop_event = threading.Event()
-
-    def stop(self):
-        self._stop_event.set()
 
     def run(self):
         reconnection_times = 0
@@ -188,13 +187,10 @@ class ServeoThread(threading.Thread):
             reconnection_times += 1
             if reconnection_times >= 5:
                 self._stop_event.set()
-class LoopholeThread(threading.Thread):
+
+class LoopholeThread(BaseThread):
     def __init__(self):
         super().__init__(name='LoopholeThread')
-        self._stop_event = threading.Event()
-
-    def stop(self):
-        self._stop_event.set()
 
     def run(self):
         reconnection_times = 0
@@ -207,10 +203,24 @@ class LoopholeThread(threading.Thread):
             if reconnection_times >= 5:
                 self._stop_event.set()
 
-class WebsiteThread(threading.Thread):
+class LoopholeTwitchThread(BaseThread):
+    def __init__(self):
+        super().__init__(name='LoopholeTwitchThread')
+
+    def run(self):
+        reconnection_times = 0
+        while not self._stop_event.is_set():
+            log.info("Starting LoopholeThread")
+            result = subprocess.run("loophole http 14001 127.0.0.1 --hostname startwitch", shell=True, capture_output=True, text=True)
+            print(result.stdout)
+            time.sleep(30)
+            reconnection_times += 1
+            if reconnection_times >= 5:
+                self._stop_event.set()
+
+class WebsiteThread(BaseThread):
     def __init__(self):
         super().__init__(name='WebsiteThread')
-        self._stop_event = threading.Event()
 
     def run(self):
         import uvicorn

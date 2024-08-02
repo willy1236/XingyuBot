@@ -37,6 +37,12 @@ if __name__ == "__main__":
 
     if twitch_bot:
         from app.twitch_chatbot import SakagawaEventsubThread, TwitchBotThread
+        from app.bot_website import LoopholeTwitchThread
+        
+        twitchtunnel_thread = LoopholeTwitchThread()
+        twitchtunnel_thread.start()
+        time.sleep(5)
+
         twitchbot_thread = TwitchBotThread()
         twitchbot_thread.start()
         time.sleep(5)
