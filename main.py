@@ -22,8 +22,8 @@ bot.load_all_extensions()
 
 if __name__ == "__main__":
     if api_website:
-        from app.bot_website import WebsiteThread, ServeoThread
-        tunnel_server = ServeoThread()
+        from app.bot_website import WebsiteThread, LoopholeThread
+        tunnel_server = LoopholeThread()
         tunnel_server.start()
         time.sleep(2)
 

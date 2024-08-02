@@ -7,7 +7,8 @@ from datetime import datetime, timedelta
 
 from fastapi import BackgroundTasks, FastAPI
 from fastapi.requests import Request
-from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, StreamingResponse
+import httpx
 
 from starlib import Jsondb, log, sclient
 from starlib.dataExtractor import DiscordOauth, TwitchOauth
@@ -17,15 +18,6 @@ app = FastAPI()
 
 discord_oauth_settings = Jsondb.get_token("discord_oauth")
 twitch_oauth_settings = Jsondb.get_token("twitch_chatbot")
-
-# IGNORE_PATHS = ["/twitch_bot/callback"]
-
-# @app.middleware("http")
-# async def ignore_specific_paths(request: Request, call_next):
-#     if request.url.path in IGNORE_PATHS:
-#         return 
-#     response = await call_next(request)
-#     return response
 
 @app.route('/')
 def main(request:Request):
@@ -129,6 +121,18 @@ async def twitch_oauth(request:Request):
     auth.exchange_code(params['code'])
     return HTMLResponse(f'授權已完成，您現在可以關閉此頁面<br><br>Twitch ID：{auth.user_id}')
 
+@app.api_route("/twitch_bot/callback", methods=["GET", "POST"])
+async def twitch_bot_callback(request: Request):
+    async with httpx.AsyncClient() as client:
+        proxy_url = f"http://127.0.0.1:14001{request.url.path}"
+        proxy_response = await client.request(
+            method=request.method,
+            url=proxy_url,
+            headers=request.headers.raw,
+            content=await request.body()
+        )
+        return StreamingResponse(proxy_response.aiter_raw(), status_code=proxy_response.status_code)
+
 # @app.get('/book/{book_id}',response_class=JSONResponse)
 # def get_book_by_id(book_id: int):
 #     return {
@@ -178,9 +182,27 @@ class ServeoThread(threading.Thread):
         reconnection_times = 0
         while not self._stop_event.is_set():
             log.info("Starting ServeoThread")
-            result = subprocess.run("ssh -R star1016:80:127.0.0.1:14000 -R startwitch:80:127.0.0.1:14001 serveo.net", shell=True, capture_output=True, text=True)
+            result = subprocess.run(" ", shell=True, capture_output=True, text=True)
             print(result.stdout)
             time.sleep(60)
+            reconnection_times += 1
+            if reconnection_times >= 5:
+                self._stop_event.set()
+class LoopholeThread(threading.Thread):
+    def __init__(self):
+        super().__init__(name='LoopholeThread')
+        self._stop_event = threading.Event()
+
+    def stop(self):
+        self._stop_event.set()
+
+    def run(self):
+        reconnection_times = 0
+        while not self._stop_event.is_set():
+            log.info("Starting LoopholeThread")
+            result = subprocess.run("loophole http 14000 127.0.0.1 --hostname star1016", shell=True, capture_output=True, text=True)
+            print(result.stdout)
+            time.sleep(30)
             reconnection_times += 1
             if reconnection_times >= 5:
                 self._stop_event.set()
