@@ -53,6 +53,7 @@ def keep_alive(request:Request):
     
 async def get_yt_push(content):
     feed = feedparser.parse(content)
+    print(feed)
     embed = YoutubePush(**feed).embed()
     if sclient.bot:
         channel = sclient.bot.get_channel(566533708371329026)
@@ -75,7 +76,6 @@ def youtube_push_get(request:Request):
 async def youtube_push_post(request:Request,background_task: BackgroundTasks):
     body = await request.body()
     body = body.decode('UTF-8')
-    print(body)
     background_task.add_task(get_yt_push,body)
     return HTMLResponse('OK')
 

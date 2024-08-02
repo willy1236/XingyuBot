@@ -147,9 +147,7 @@ async def on_server_notice(event: NoticeEvent):
 async def on_whisper(event: WhisperEvent):
     twitch_log.info(f'Whisper from {event.user.name}: {event.message}')
     if sclient.bot:
-        channel = sclient.bot.get_channel(956523514389733408)
-        if channel:
-            channel.send(embed=BotEmbed.general(event.user.name,description=event.message))
+        await sclient.bot.twitchbot_send_message(embed=BotEmbed.general(event.user.name,description=event.message))
 
 async def on_raid(event:dict):
     print(event)
