@@ -54,7 +54,8 @@ def keep_alive(request:Request):
 async def get_yt_push(content):
     feed = feedparser.parse(content)
     print(feed)
-    embed = YoutubePush(**feed).embed()
+    embed = YoutubePush(**feed["entries"][0]).embed()
+    
     if sclient.bot:
         channel = sclient.bot.get_channel(566533708371329026)
         if channel:
