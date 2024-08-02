@@ -108,6 +108,11 @@ class DiscordBot(discord.Bot):
         embed = BotEmbed.bot(self,description=f"你好~我是星羽，你可以輸入 </help:1067700245015834638> 來查看所有指令的用法\n\n希望我能在discord上幫助到你喔~\n有任何建議、需求、協助與合作可以使用 </feedback:1067700244848058386> 指令\n\n支援伺服器：https://discord.gg/ye5yrZhYGF")
         embed.set_footer(text="此機器人由 威立 負責維護")
         return embed
+    
+    async def twitchbot_send_message(self,channel_id=956523514389733408, *, content=None, embed=None):
+        channel = self.get_channel(channel_id)
+        if channel:
+            await channel.send(content=content, embed=embed)
 
 #commands.Bot
 #shard_count=1,

@@ -1,23 +1,35 @@
-from datetime import datetime,timezone,timedelta
-from ..utilities import BotEmbed
+from datetime import datetime, timedelta, timezone
 
-class YoutubePush:
-    def __init__(self,data:dict):
-        tz = timezone(timedelta(hours=8))
-        self.id = data.get('id')
-        self.video_id = data.get('videoId')
-        self.channelid = data.get('channelId')
-        self.title = data.get('title')
-        self.link = data.get('link')
-        self.author_name = data.get('author_name')
-        self.author_url = data.get('author_uri')
-        self.published = datetime.fromisoformat(data.get('published')).replace(tzinfo=tz)
-        self.updated = datetime.strptime(data.get('updated')[:-10],'%Y-%m-%dT%H:%M:%S.%f').replace(tzinfo=tz) + timedelta(hours=8)
+import discord
+from pydantic import BaseModel, model_validator
+
+from ..settings import tz
+
+
+class YoutubePush(BaseModel):
+    id: str
+    videoId: str
+    channelId: str
+    title: str
+    link: str
+    author_name: str
+    author_uri: str
+    published: datetime
+    updated: datetime
         
+    @model_validator(mode='after')
+    def __post_init__(self):
+        self.published = self.published.astimezone(tz)
+        self.updated = self.updated.astimezone(tz)
+
     def embed(self):
-        embed = BotEmbed.simple(title=self.title,
-                                url=self.link,
-                                description=f'[{self.author_name}]({self.author_url})')
+        embed = discord.Embed(
+            title=self.title,
+            url=self.link,
+            description=self.author_name,
+            color=0xff0000,
+            timestamp = self.published
+            )
+        embed.add_field(name="上傳時間",value=self.published.strftime('%Y/%m/%d %H:%M:%S'),inline=False)
         return embed
-
-
+    

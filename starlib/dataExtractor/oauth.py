@@ -2,10 +2,11 @@ from datetime import datetime, timedelta
 
 import requests
 
-from ..models import UserConnection
-from ..types import CommunityType
 from ..database import sqldb
 from ..errors import SQLNotFoundError
+from ..models import DiscordUser, UserConnection
+from ..types import CommunityType
+
 
 class BaseOauth:
     """
@@ -15,12 +16,12 @@ class BaseOauth:
     def __init__(self, settings:dict) -> None:
         """
         Parameters:
-        - settings (dict): 包含id, secret, redirect_url，未提供的項目會設為None
+        - settings (dict): 包含id, secret, redirect_uri，未提供的項目會設為None
         """
         self.headers = {}
         self.CLIENT_ID = settings.get("id")
         self.CLIENT_SECRET = settings.get("secret")
-        self.REDIRECT_URI = settings.get("redirect_url")
+        self.REDIRECT_URI = settings.get("redirect_uri")
         self.access_token = None
         self.refresh_token = None
         self.expires_at = None
@@ -39,8 +40,8 @@ class DiscordOauth(BaseOauth):
 
     def __init__(self, settings:dict, user_id:int=None):
         super().__init__(settings)
-        if self.REDIRECT_URl is None:
-            self.REDIRECT_URl = 'http://127.0.0.1:14000/discord'
+        if self.REDIRECT_URI is None:
+            self.REDIRECT_URI = 'http://127.0.0.1:14000/discord'
 
         self._user_id = user_id
         
@@ -50,7 +51,7 @@ class DiscordOauth(BaseOauth):
     @property
     def user_id(self):
         if self._user_id is None:
-            self._user_id = self.get_me()['id']
+            self._user_id = self.get_me().id
         return self._user_id
 
     def set_token_from_id(self, user_id):
@@ -121,14 +122,14 @@ class DiscordOauth(BaseOauth):
         self.save_token(self.user_id, CommunityType.Discord)
         return data
 
-    def get_me(self) -> dict:
+    def get_me(self) -> DiscordUser:
         """
-        Retrieves the user information.
+        Retrieves the user information. 
         """
         r = requests.get('%s/users/@me' % self.API_ENDPOINT, headers=self.headers)
-        return r.json()
+        return DiscordUser(**r.json())
     
-    def get_connections(self) -> list[UserConnection] | None:
+    def get_connections(self) -> list[UserConnection | None]:
         """
         Retrieves the user connections.
         """

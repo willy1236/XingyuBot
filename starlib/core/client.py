@@ -19,7 +19,7 @@ from .cache import StarCache
 
 if TYPE_CHECKING:
     from starDiscord import DiscordBot
-    from twitchAPI.chat import Chat
+    from twitchAPI.twitch import Twitch
 
 class UserClient():
     """用戶查詢系統"""
@@ -235,7 +235,7 @@ class StarManager(
 
         self._starai:StarGeminiAI = None
         self.bot:DiscordBot = None
-        self.twitch_bot:Chat = None
+        self.twitch:Twitch = None
     
     @property
     def starai(self):

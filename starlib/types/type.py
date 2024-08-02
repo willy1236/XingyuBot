@@ -1,4 +1,5 @@
-from enum import Enum, IntEnum
+from enum import IntEnum
+
 
 class NotifyCommunityType(IntEnum):
     Twitch = 1
@@ -17,6 +18,6 @@ class NotifyChannelType(IntEnum):
     DynamicVoice = 8
     VoiceLog = 9
 
-class CommunityType(Enum):
+class CommunityType(IntEnum):
     Discord = 1
     Twitch = 2

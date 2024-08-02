@@ -2,13 +2,14 @@ import os
 import subprocess
 import threading
 import time
-import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta
 
+import feedparser
+import httpx
 from fastapi import BackgroundTasks, FastAPI
 from fastapi.requests import Request
-from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, StreamingResponse
-import httpx
+from fastapi.responses import (HTMLResponse, JSONResponse, PlainTextResponse,
+                               StreamingResponse)
 
 from starlib import Jsondb, log, sclient
 from starlib.dataExtractor import DiscordOauth, TwitchOauth
@@ -28,53 +29,31 @@ def keep_alive(request:Request):
     r = HTMLResponse(content='Bot is aLive!')
     return r
 
-@app.post('/twitch_eventsub',response_class=PlainTextResponse)
-def twitch_eventsub(request:Request):
-    try:
-        if request.method == "POST":
-            data = Request.json()
-            challenge = data['challenge']
-            print('status:',data['subscription']['status'])
+# @app.post('/twitch_eventsub',response_class=PlainTextResponse)
+# def twitch_eventsub(request:Request):
+#     try:
+#         if request.method == "POST":
+#             data = Request.json()
+#             challenge = data['challenge']
+#             print('status:',data['subscription']['status'])
 
-            r = HTMLResponse(
-                content = challenge,
-                media_type = 'text/plain',
-                status_code = 200
-            )
-            return r
-        else:
-            print("[Warning] Server Received & Refused!")
-            return "Refused", 400
+#             r = HTMLResponse(
+#                 content = challenge,
+#                 media_type = 'text/plain',
+#                 status_code = 200
+#             )
+#             return r
+#         else:
+#             print("[Warning] Server Received & Refused!")
+#             return "Refused", 400
 
-    except Exception as e:
-        print("[Warning] Error:", e)
-        return "Server error", 400
+#     except Exception as e:
+#         print("[Warning] Error:", e)
+#         return "Server error", 400
     
 async def get_yt_push(content):
-    # 解析XML文件
-    # tree = ET.parse(content)
-    # root = tree.getroot()
-    print(content)
-    root = ET.fromstring(content)
-
-    # 创建一个空字典来存储结果
-    result = {}
-
-    # 解析entry元素並存入字典中
-    entry = root.find('{http://www.w3.org/2005/Atom}entry')
-    result['id'] = entry.find('{http://www.w3.org/2005/Atom}id').text
-    result['videoId'] = entry.find('{http://www.youtube.com/xml/schemas/2015}videoId').text
-    result['channelId'] = entry.find('{http://www.youtube.com/xml/schemas/2015}channelId').text
-    result['title'] = entry.find('{http://www.w3.org/2005/Atom}title').text
-    result['link'] = entry.find('{http://www.w3.org/2005/Atom}link').attrib['href']
-    result['author_name'] = entry.find('{http://www.w3.org/2005/Atom}author/{http://www.w3.org/2005/Atom}name').text
-    result['author_uri'] = entry.find('{http://www.w3.org/2005/Atom}author/{http://www.w3.org/2005/Atom}uri').text
-    result['published'] = entry.find('{http://www.w3.org/2005/Atom}published').text
-    result['updated'] = entry.find('{http://www.w3.org/2005/Atom}updated').text
-
-    # 輸出結果
-    print(result)
-    embed = YoutubePush(result).embed()
+    feed = feedparser.parse(content)
+    embed = YoutubePush(**feed).embed()
     if sclient.bot:
         channel = sclient.bot.get_channel(566533708371329026)
         if channel:
@@ -103,8 +82,12 @@ async def youtube_push_post(request:Request,background_task: BackgroundTasks):
 @app.route('/discord',methods=['GET'])
 async def discord_oauth(request:Request):
     params = dict(request.query_params)
+    code = params.get('code')
+    if not code:
+        return HTMLResponse(f'授權失敗：{params}', 400)
+
     auth = DiscordOauth(discord_oauth_settings)
-    auth.exchange_code(params['code'])
+    auth.exchange_code(code)
     
     connections = auth.get_connections()
     for connection in connections:
@@ -117,8 +100,12 @@ async def discord_oauth(request:Request):
 @app.route('/twitchauth',methods=['GET'])
 async def twitch_oauth(request:Request):
     params = dict(request.query_params)
+    code = params.get('code')
+    if not code:
+        return HTMLResponse(f'授權失敗：{params}', 400)
+    
     auth = TwitchOauth(twitch_oauth_settings)
-    auth.exchange_code(params['code'])
+    auth.exchange_code(code)
     return HTMLResponse(f'授權已完成，您現在可以關閉此頁面<br><br>Twitch ID：{auth.user_id}')
 
 @app.api_route("/twitch_bot/callback", methods=["GET", "POST"])
@@ -210,7 +197,7 @@ class LoopholeTwitchThread(BaseThread):
     def run(self):
         reconnection_times = 0
         while not self._stop_event.is_set():
-            log.info("Starting LoopholeThread")
+            log.info("Starting LoopholeTwitchThread")
             result = subprocess.run("loophole http 14001 127.0.0.1 --hostname startwitch", shell=True, capture_output=True, text=True)
             print(result.stdout)
             time.sleep(30)

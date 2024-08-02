@@ -156,11 +156,7 @@ class classrole(IntEnum):
 # print(user, sys.getsizeof(user))
 
 oauth_setting = Jsondb.get_token("discord_oauth")
-CLIENT_ID = oauth_setting["id"]
-CLIENT_SECRET = oauth_setting["secret"]
-REDIRECT_URI = oauth_setting["redirect_uri"]
 
-oauth = DiscordOauth(CLIENT_ID,CLIENT_SECRET,user_id=419131103836635136)
-connections = oauth.get_connections()
-for connection in connections:
-	print(connection.name, connection.type)
+oauth = DiscordOauth(oauth_setting, user_id=419131103836635136)
+connections = oauth.get_me()
+print(connections)

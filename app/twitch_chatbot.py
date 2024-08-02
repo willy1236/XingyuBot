@@ -2,25 +2,26 @@ import asyncio
 import json
 import threading
 import time
-from uuid import UUID
-from typing import TYPE_CHECKING
-
-
 from pathlib import PurePath
-from twitchAPI.twitch import Twitch
-from twitchAPI.oauth import UserAuthenticator,refresh_access_token,UserAuthenticationStorageHelper,validate_token 
-from twitchAPI.type import AuthScope, ChatEvent, EventSubSubscriptionError
-from twitchAPI.chat import Chat, EventData, ChatMessage, ChatSub, ChatCommand, JoinedEvent, LeftEvent, NoticeEvent, WhisperEvent
+from typing import TYPE_CHECKING
+from uuid import UUID
+
+from twitchAPI.chat import (Chat, ChatCommand, ChatMessage, ChatSub, EventData,
+                            JoinedEvent, LeftEvent, NoticeEvent, WhisperEvent)
 from twitchAPI.chat.middleware import ChannelRestriction
-from twitchAPI.pubsub import PubSub
-from twitchAPI.object import eventsub
 from twitchAPI.eventsub.webhook import EventSubWebhook
 from twitchAPI.eventsub.websocket import EventSubWebsocket
 from twitchAPI.helper import first
+from twitchAPI.oauth import (UserAuthenticationStorageHelper,
+                             UserAuthenticator, refresh_access_token,
+                             validate_token)
+from twitchAPI.object import eventsub
 from twitchAPI.object.api import TwitchUser
+from twitchAPI.pubsub import PubSub
+from twitchAPI.twitch import Twitch
+from twitchAPI.type import AuthScope, ChatEvent, EventSubSubscriptionError
 
-from starlib import Jsondb,twitch_log,sclient,BotEmbed
-
+from starlib import BotEmbed, Jsondb, sclient, twitch_log
 
 USER_SCOPE = [
     AuthScope.BITS_READ,
@@ -59,13 +60,6 @@ USER_SCOPE = [
 
 TARGET_CHANNEL = ["sakagawa_0309", "willy1236owo", "niantt_"]
 
-DC_CHANNEL_ID = 1237412404980355092
-global dc_channel
-
-async def send_dc_message(embed):
-    if dc_channel:
-        dc_channel.send(embed=embed)
-
 # pubsub (may be deprecated in the future)
 async def pubsub_channel_points(uuid: UUID, data: dict) -> None:
     twitch_log.info("callback_channel_points:",uuid,data)
@@ -81,25 +75,19 @@ async def on_follow(event: eventsub.ChannelFollowEvent):
     #await chat.send_message(data.event.broadcaster_user_name,text = f'{data.event.user_name} now follows {data.event.broadcaster_user_name}!')
     twitch_log.info(f'{event.event.user_name}({event.event.user_login}) now follows {event.event.broadcaster_user_name}!')
     if event.event.broadcaster_user_login == TARGET_CHANNEL[0] and sclient.bot:
-        loop = sclient.bot.loop
-        channel = sclient.bot.get_channel(DC_CHANNEL_ID)
-        asyncio.run_coroutine_threadsafe(channel.send(embed=BotEmbed.simple("新追隨",f'{event.event.user_name}({event.event.user_login}) 正在追隨 {event.event.broadcaster_user_name}!')), loop)
+        await sclient.bot.twitchbot_send_message(1237412404980355092, embed=BotEmbed.simple("新追隨",f'{event.event.user_name}({event.event.user_login}) 正在追隨 {event.event.broadcaster_user_name}!'))
         
 
 async def on_stream_online(event: eventsub.StreamOnlineEvent):
     twitch_log.info(f'{event.event.broadcaster_user_name} starting stream!')
     if sclient.bot:
-        loop = sclient.bot.loop
-        channel = sclient.bot.get_channel(566533708371329026)
-        asyncio.run_coroutine_threadsafe(channel.send(f'{event.event.broadcaster_user_name} starting {event.event.type}!'), loop)
+        await sclient.bot.twitchbot_send_message(content=f'{event.event.broadcaster_user_name} starting {event.event.type}!')
         
 
 async def on_stream_offline(event: eventsub.StreamOfflineEvent):
     twitch_log.info(f'{event.event.broadcaster_user_name} ending stream.')
     if sclient.bot:
-        loop = sclient.bot.loop
-        channel = sclient.bot.get_channel(566533708371329026)
-        asyncio.run_coroutine_threadsafe(channel.send(f'{event.event.broadcaster_user_name} ending stream.'), loop)
+        await sclient.bot.twitchbot_send_message(content=f'{event.event.broadcaster_user_name} ending stream.')
 
 async def on_channel_points_custom_reward_redemption_add(event: eventsub.ChannelPointsCustomRewardRedemptionAddEvent):
     text = f'{event.event.user_name} 兌換了 {event.event.reward.title}!' 
@@ -107,9 +95,7 @@ async def on_channel_points_custom_reward_redemption_add(event: eventsub.Channel
         text += f' ({event.event.reward.prompt})'
     twitch_log.info(text)
     if event.event.broadcaster_user_login == TARGET_CHANNEL[0] and sclient.bot:
-        loop = sclient.bot.loop
-        channel = sclient.bot.get_channel(DC_CHANNEL_ID)
-        asyncio.run_coroutine_threadsafe(channel.send(embed=BotEmbed.simple("兌換自訂獎勵",text)), loop)
+        await sclient.bot.twitchbot_send_message(1237412404980355092, embed=BotEmbed.simple("兌換自訂獎勵",text))
     
 async def on_channel_points_custom_reward_redemption_update(event: eventsub.ChannelPointsCustomRewardRedemptionUpdateEvent):
     twitch_log.info(f"{event.event.user_name}'s redemption of {event.event.reward.title} has been updated!")
@@ -143,9 +129,7 @@ async def on_message(msg: ChatMessage):
 async def on_sub(sub: ChatSub):
     twitch_log.info(f'New subscription in {sub.room.name}:\nType: {sub.sub_plan_name}\nMessage: {sub.sub_message}')
     if sub.room.name == TARGET_CHANNEL[0] and sclient.bot:
-        loop = sclient.bot.loop
-        channel = sclient.bot.get_channel(DC_CHANNEL_ID)
-        asyncio.run_coroutine_threadsafe(channel.send(embed=BotEmbed.general(title=f'{sub.room.name} 的新訂閱!',description=f"類型: {sub.sub_plan_name}\訊息: {sub.sub_message}")), loop)
+        await sclient.bot.twitchbot_send_message(1237412404980355092, embed=BotEmbed.general(title=f'{sub.room.name} 的新訂閱!',description=f"類型: {sub.sub_plan_name}\訊息: {sub.sub_message}"))
 
 async def on_bot_joined(event: JoinedEvent):
     await asyncio.sleep(1)
@@ -250,7 +234,6 @@ async def run():
     # chat.register_command('reply', test_command)
     # TODO: modify_channel_information
     
-    sclient.twitch_bot = chat
     chat.start()
 
     # starting up PubSub
@@ -321,6 +304,7 @@ async def run():
         except EventSubSubscriptionError as e:
             twitch_log.warn(f"Error subscribing to channel follow: {e}")
 
+    sclient.twitch = twitch
     # we are done with our setup, lets start this bot up!
     return chat, twitch
     
