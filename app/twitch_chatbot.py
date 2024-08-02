@@ -167,10 +167,7 @@ async def run():
     jtoken = Jsondb.get_token("twitch_chatbot")
     APP_ID = jtoken.get('id')
     APP_SECRET = jtoken.get('secret')
-    # token = jtoken['token']
-    # refresh_token = jtoken['refresh']
 
-    
     # validate_data = await validate_token(token)
     # if validate_data.get("client_id") != APP_ID:
     #     token, refresh_token = await refresh_access_token(refresh_token, APP_ID, APP_SECRET)
@@ -187,27 +184,8 @@ async def run():
     helper = UserAuthenticationStorageHelper(twitch, USER_SCOPE, storage_path=PurePath('./database/twitch_token.json'))
     await helper.bind()
 
-    # if os.path.exists('database/twitch_token.json'):
-    #     with open('database/twitch_token.json','r') as IOtoken:
-    #         jtoken = json.load(IOtoken)
-    #         token = jtoken['token']
-    #         refresh_token = jtoken['refresh_token']
-    #         #token, refresh_token = await refresh_access_token(refresh_token, APP_ID, APP_SECRET)
-    # else:
-    #     #token, refresh_token = await auth.authenticate()
-        
-
-    # await twitch.set_user_authentication(token, USER_SCOPE, refresh_token)
     me = await first(twitch.get_users())
     users = [user async for user in twitch.get_users(logins=TARGET_CHANNEL)]
-
-    # dict = {
-    #     "token": token,
-    #     "refresh_token": refresh_token
-    # }
-    # with open('database/twitch_token.json','w') as IOtoken:
-    #     json.dump(dict,IOtoken)
-
 
     # create chat instance
     #global chat
@@ -268,6 +246,7 @@ async def run():
         await eventsub.listen_stream_online(user.id, on_stream_online)
         await eventsub.listen_stream_offline(user.id, on_stream_offline)
         await eventsub.listen_channel_raid(on_channel_raid, to_broadcaster_user_id=user.id)
+        twitch_log.debug(f"eventsub:{user.login} done.")
 
         if not chat.is_mod(user.login):
             continue

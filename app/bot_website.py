@@ -168,8 +168,7 @@ class ServeoThread(BaseThread):
         reconnection_times = 0
         while not self._stop_event.is_set():
             log.info("Starting ServeoThread")
-            result = subprocess.run(" ", shell=True, capture_output=True, text=True)
-            print(result.stdout)
+            os.system("ssh -R star1016:80:127.0.0.1:14000 -R startwitch:80:127.0.0.1:14001 serveo.net")
             time.sleep(60)
             reconnection_times += 1
             if reconnection_times >= 5:
@@ -183,8 +182,10 @@ class LoopholeThread(BaseThread):
         reconnection_times = 0
         while not self._stop_event.is_set():
             log.info("Starting LoopholeThread")
-            result = subprocess.run("loophole http 14000 127.0.0.1 --hostname star1016", shell=True, capture_output=True, text=True)
-            print(result.stdout)
+            result = subprocess.run(["loophole", "http", "14000", "127.0.0.1", "--hostname", "star1016"], capture_output=True, text=True)
+            log.info(f'Stdout: {result.stdout}')
+            log.info(f'Stderr: {result.stderr}')
+            log.info(f'Exit status: {result.returncode}')
             time.sleep(30)
             reconnection_times += 1
             if reconnection_times >= 5:
@@ -198,8 +199,10 @@ class LoopholeTwitchThread(BaseThread):
         reconnection_times = 0
         while not self._stop_event.is_set():
             log.info("Starting LoopholeTwitchThread")
-            result = subprocess.run("loophole http 14001 127.0.0.1 --hostname startwitch", shell=True, capture_output=True, text=True)
-            print(result.stdout)
+            result = subprocess.run(["loophole", "http", "14001", "127.0.0.1", "--hostname", "startwitch"], capture_output=True, text=True)
+            log.info(f'Stdout: {result.stdout}')
+            log.info(f'Stderr: {result.stderr}')
+            log.info(f'Exit status: {result.returncode}')
             time.sleep(30)
             reconnection_times += 1
             if reconnection_times >= 5:
