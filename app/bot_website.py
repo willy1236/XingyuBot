@@ -1,3 +1,4 @@
+import asyncio
 import os
 import subprocess
 import threading
@@ -22,7 +23,7 @@ twitch_oauth_settings = Jsondb.get_token("twitch_chatbot")
 
 @app.route('/')
 def main(request:Request):
-    log.info(f'{request.client.host} - {request.method} - {request.url.path}')
+    log.debug(f'{request.client.host} - {request.method} - {request.url.path}')
     return HTMLResponse('test')
 
 @app.route('/keep_alive',methods=['GET'])
@@ -62,7 +63,7 @@ async def get_yt_push(content):
     if sclient.bot:
         channel = sclient.bot.get_channel(566533708371329026)
         if channel:
-            await channel.send(embed=embed)
+            asyncio.run_coroutine_threadsafe(channel.send(embed=embed), sclient.bot.loop)
         else:
             print('Channel not found.')
     else:

@@ -109,7 +109,7 @@ class DiscordBot(discord.Bot):
         embed.set_footer(text="此機器人由 威立 負責維護")
         return embed
     
-    def twitchbot_send_message(self,channel_id=956523514389733408, *, content=None, embed=None):
+    def twitchbot_send_message(self,channel_id=566533708371329026, *, content=None, embed=None):
         channel = self.get_channel(channel_id)
         if channel:
             asyncio.run_coroutine_threadsafe(channel.send(content=content, embed=embed), self.loop)
