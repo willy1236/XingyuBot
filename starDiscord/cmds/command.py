@@ -15,7 +15,7 @@ from mysql.connector.errors import Error as sqlerror
 from mysql.connector.errors import IntegrityError
 
 from starlib import Jsondb,log,BotEmbed,ChoiceList,sclient
-from starlib.utilities import find, random_color, create_only_role_list, create_role_magification_dict, calculate_eletion_session
+from starlib.utilities import find, random_color, create_only_role_list, create_role_magification_dict
 from starlib.uiElement.button import Delete_Add_Role_button
 from starlib.uiElement.view import PollView
 from starlib.dataExtractor import GoogleCloud
@@ -29,18 +29,10 @@ party_option = ChoiceList.set('party_option')
 
 main_guilds = Jsondb.config.get('main_guilds')
 
-position_role = {
-    "1": 1161686745126019082,
-    "2": 1161686757373399132,
-    "3": 1162714634441195530,
-    "4": 1187609355131027456
-}
-
 class command(Cog_Extension):
     bet = SlashCommandGroup("bet", "賭盤相關指令")
     role = SlashCommandGroup("role", "身分組管理指令")
     poll = SlashCommandGroup("poll", "投票相關指令")
-    election = SlashCommandGroup("election", "選舉相關指令",guild_ids=main_guilds)
     party = SlashCommandGroup("party", "政黨相關指令",guild_ids=main_guilds)
     registration = SlashCommandGroup("registration", "戶籍相關指令",guild_ids=main_guilds)
 
@@ -82,9 +74,9 @@ class command(Cog_Extension):
                 user = await find.user(ctx,user)
                 if user and user != self.bot.user:
                     try:
-                        dbdata = sclient.sqldb.get_main_account(user.id)
-                        if dbdata:
-                            user = ctx.guild.get_member(dbdata['main_account'])
+                        main_account = sclient.sqldb.get_main_account(user.id)
+                        if main_account:
+                            user = ctx.guild.get_member(main_account)
                     except sqlerror:
                         pass
                     
@@ -176,8 +168,8 @@ class command(Cog_Extension):
         
         page = [BotEmbed.simple(f"{user.name} 身分組紀錄") for _ in range(math.ceil(len(record) / 10))]
         for i, data in enumerate(record):
-            role_name = data['role_name']
-            time = data['time']
+            role_name = data.role_name
+            time = data.time
             page[int(i / 10)].add_field(name=role_name, value=time, inline=False)
 
         paginator = pages.Paginator(pages=page, use_default_buttons=True, loop_pages=True)
@@ -189,15 +181,17 @@ class command(Cog_Extension):
                       ranking_count:discord.Option(int,name='排行榜人數',default=5,min_value=1,max_value=30)):
         await ctx.defer()
         dbdata = sclient.sqldb.get_role_save_count_list()
-        sorted_data = sorted(dbdata.items(), key=lambda x:x[1])
         embed = BotEmbed.simple("身分組排行榜")
-        for i in range(ranking_count):
+        i = 1
+        for id in dbdata:
             try:
-                data = sorted_data[i]
-                user = self.bot.get_user(data[0])
-                username = user.mention if user else data[0]
-                count = data[1]
-                embed.add_field(name=f"第{i+1}名", value=f"{username} {count}個", inline=False)
+                count = dbdata[id]
+                user = self.bot.get_user(id)
+                username = user.mention if user else id
+                embed.add_field(name=f"第{i}名", value=f"{username} {count}個", inline=False)
+                i += 1
+                if i > ranking_count:
+                    break
             except IndexError:
                 break
         await ctx.respond(embed=embed)
@@ -210,9 +204,9 @@ class command(Cog_Extension):
             await ctx.respond('查詢失敗')
             return
 
-        page = [[] for _ in range(math.ceil(len(lst) / 3))]
+        page = [list() for _ in range(math.ceil(len(lst) / 3))]
         for i, role in enumerate(lst):
-            page[int(i / 3)].append(role.embed(self.bot))
+            page[int(i / 3)].append(role.embed(self.bot, sclient.sqldb))
 
         paginator = pages.Paginator(pages=page, use_default_buttons=True, loop_pages=True)
         await paginator.respond(ctx.interaction, ephemeral=False)
@@ -519,167 +513,6 @@ class command(Cog_Extension):
         sclient.sqldb.set_sharefolder_data(ctx.author.id, email, google_data["id"])
         await ctx.respond(f"{ctx.author.mention}：已與 {email} 共用雲端資料夾")
 
-    @election.command(description='加入選舉')
-    async def join(self, ctx,
-                   position:discord.Option(int,name='職位',description='要競選的職位',choices=position_option),
-                   user_dc:discord.Option(discord.Member,name='成員',description='要競選的成員（此選項供政黨代表統一報名用）',required=False),
-                   party_id:discord.Option(int,name='代表政黨',description='如果有多個政黨，可選擇要代表的政黨',default=None,choices=party_option)):
-        user_dc = user_dc or ctx.author
-
-        if party_id:
-            dbdata = sclient.sqldb.get_user_party(user_dc.id)
-            joined_party = [party_data.id for party_data in dbdata] if dbdata else []
-            if not party_id in joined_party:
-                await ctx.respond(f"{user_dc.mention}：你沒有參加 {ChoiceList.get_tw(party_id,'party_option')}")
-                return
-        
-        session = calculate_eletion_session(datetime.now())
-        sclient.sqldb.add_election(user_dc.id,session + 1,position,party_id)
-        await ctx.respond(f"{user_dc.mention}：完成競選報名 {ChoiceList.get_tw(position,'position_option')}")
-        
-
-    @election.command(description='離開選舉')
-    async def leave(self, ctx, 
-                    position:discord.Option(str,name='職位',description='要退選的職位',choices=position_option)):
-        session = calculate_eletion_session(datetime.now())
-        sclient.sqldb.remove_election(ctx.author.id,session + 1,position)
-        
-        text = f"{ctx.author.mention}：完成競選退出"
-        if position:
-            text += " " + ChoiceList.get_tw(position,'position_option')
-        await ctx.respond(text)
-
-    @election.command(description='候選人名單')
-    @commands.is_owner()
-    async def format(self, ctx, last:discord.Option(bool,name='上屆候選人名單',description='是否顯示上屆候選人名單',default=False)):
-        await ctx.defer()
-        session = calculate_eletion_session(datetime.now())
-        embed = sclient.election_format(session if last else session + 1, self.bot)
-        await ctx.respond(embed=embed)
-
-    @election.command(description='開始投票')
-    @commands.is_owner()
-    async def start(self,ctx:discord.ApplicationContext):
-        await ctx.defer()
-        session = calculate_eletion_session(datetime.now()) - 1
-        dbdata = sclient.sqldb.get_election_full_by_session(session)
-        results = {}
-        for position in Jsondb.options["position_option"].keys():
-            results[position] = []
-        
-        for data in dbdata:
-            user_id = data['discord_id']
-            #party_name = i['party_name'] or "無黨籍"
-            position = str(data['position'])
-            
-            user = ctx.guild.get_member(user_id)
-            username = user_id if not user else (user.display_name if user.display_name else (user.global_name if user.global_name else user.name))
-            if username not in results[position]:
-                results[position].append(username)
-
-        # count_data = sclient.get_election_count(session)
-        # count_dict = {}
-        # for data in count_data:
-        #     pos = data['position']
-        #     count = data['count']
-        #     count_dict[pos] = count
-
-        for position in Jsondb.options["position_option"].keys():
-            #count = count_dict[position]
-            if len(results[position]) <= 0:
-                continue
-
-            position_name = ChoiceList.get_tw(position, "position_option")
-            title = f"第{session}屆中央選舉：{position_name}"
-            #options = [f"{i}號" for i in range(1,count + 1)]
-            i = 1
-            options = []
-            for username in results[position]:
-                options.append(f"{i}號 {username}" )
-                i += 1
-
-            view = sclient.create_election_poll(title, options, self.bot.user.id, ctx.guild.id, self.bot)
-
-            message = await ctx.send(embed=view.embed(ctx.guild),view=view)
-            await asyncio.sleep(1)
-        await ctx.respond(f"第{session}屆中央選舉投票創建完成")
-
-        tz = timezone(timedelta(hours=8))
-        start_time = datetime.now(tz)
-        if start_time.hour < 20:
-            end_time = datetime(start_time.year,start_time.month,start_time.day,20,0,0,tzinfo=tz)
-        else:
-            end_time = start_time + timedelta(days=1)
-        
-        start_time += timedelta(seconds=10)
-        event = await ctx.guild.create_scheduled_event(name="【快樂營中央選舉】投票階段",start_time=start_time,end_time=end_time,location="<#1163127708839071827>")
-
-    @election.command(description='結算選舉')
-    @commands.is_owner()
-    async def end(self,
-                  ctx:discord.ApplicationContext,
-                  officials:discord.Option(str,name='官員清單',description='多人以空格分隔，職位以,分隔並按順序排列，若該職位從缺請留空')
-                  ):
-        await ctx.defer()
-        session = calculate_eletion_session(datetime.now())
-        officials = officials.split(",")
-        
-        if len(officials) != 4:
-            await ctx.respond("錯誤：官員清單不完整")
-            return
-
-        # 移除身分組
-        official_role = ctx.guild.get_role(989033175357480961)
-        for roleid in position_role.values():
-            role = ctx.guild.get_role(roleid)
-            if not role:
-                continue
-            for user in role.members:
-                await user.remove_roles(role,official_role,reason=f"第{session - 1}屆官員卸任")
-                await asyncio.sleep(0.5)
-        
-        # 製作當選官員名單並分配身分組
-        dct = {}
-        save_list = []
-        for n in Jsondb.options["position_option"].keys():
-            lst = []
-            roleid = position_role[n]
-            role = ctx.guild.get_role(roleid)
-
-            for user in officials[int(n) - 1].split(" "):
-                user = await find.user(ctx, user)
-                if not user:
-                    continue
-                
-                lst.append(user.mention)
-                save_list.append([user.id, session, n])
-                if role:
-                    await user.add_roles(role,official_role,reason=f"第{session}屆官員當選")
-                    await asyncio.sleep(0.5)
-
-            dct[n] = lst
-        
-        # 輸出當選官員名單
-        now = datetime.now()
-        text = f'# 第{session}屆中央政府（{now.strftime("%Y-%m")}）'
-        for n, userlist in dct.items():
-            user_mention = ' '.join(userlist) if userlist else "從缺"
-            text += f"\n{ChoiceList.get_tw(n,'position_option')}：{user_mention}"
-
-        #lab = Legal Affairs Bureau
-        try:
-            sclient.sqldb.add_officials(save_list)
-        except IntegrityError as e:
-            if e.errno == 1062:
-                pass
-            
-        lab_channel = self.bot.get_channel(1160467781473533962)
-        if lab_channel:
-            await lab_channel.send(text)
-        else:
-            await ctx.send(text)
-        await ctx.respond("結算完成，恭喜當選者")
-
     @party.command(description='加入政黨')
     async def join(self,ctx:discord.ApplicationContext,
                     party_id:discord.Option(int,name='政黨',description='要參加的政黨',choices=party_option)):
@@ -714,10 +547,10 @@ class command(Cog_Extension):
     async def list(self,ctx:discord.ApplicationContext):
         dbdata = sclient.sqldb.get_all_party_data()
         embed = BotEmbed.simple("政黨統計")
-        for party in dbdata:
+        for party, member_count in dbdata:
             creator = self.bot.get_user(party.creator_id)
             creator_mention = creator.mention if creator else f"<@{party.creator_id}>"
-            embed.add_field(name=party.name, value=f"政黨ID：{party.id}\n政黨人數：{party.member_count}\n創黨人：{creator_mention}\n創黨日期：{party.created_at.strftime('%Y-%m-%d')}")
+            embed.add_field(name=party.party_name, value=f"政黨ID：{party.party_id}\n政黨人數：{member_count}\n創黨人：{creator_mention}\n創黨日期：{party.created_at.strftime('%Y-%m-%d')}")
         await ctx.respond(embed=embed)
 
     @commands.slash_command(description="開啟mc伺服器",guild_ids=main_guilds)
@@ -744,20 +577,22 @@ class command(Cog_Extension):
     @commands.cooldown(rate=1,per=10)
     async def update(self,ctx):
         user = sclient.sqldb.get_dcuser(ctx.author.id)
-        if user.registration:
+        if user.registrations_id:
             await ctx.respond("你已經註冊戶籍了")
             return
 
         guild_id = check_registration(ctx.author)
         if guild_id:
             guild = self.bot.get_guild(guild_id)
-            dbdata = sclient.sqldb.get_resgistration_by_guildid(guild_id)
+            resgistration = sclient.sqldb.get_resgistration_by_guildid(guild_id)
             role_guild = self.bot.get_guild(613747262291443742)
-            role = role_guild.get_role(dbdata.role_id)
+            role = role_guild.get_role(resgistration.role_id)
 
             if role:
                 await role_guild.get_member(ctx.author.id).add_roles(role)
-            sclient.sqldb.set_userdata(ctx.author.id,"user_discord","registrations_id",dbdata['registrations_id'])
+            from starlib.models.mysql import DiscordUser
+            duser = DiscordUser(discord_id=ctx.author.id, registrations_id=resgistration.registrations_id)
+            sclient.sqldb.add_dcuser(duser)
             
             await ctx.respond(f"已註冊戶籍至 {guild.name}")
         else:

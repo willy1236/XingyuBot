@@ -1,7 +1,7 @@
 from ..database import sqldb
 from ..types import NotifyCommunityType
 from ..utilities import log
-from ..models.mysql import NotifyCommunityRecords, NotifyChannelRecords
+from ..models.mysql import NotifyCommunity, NotifyChannel
 
 class StarCache:
     #TODO: 與JsonCache合併
@@ -25,7 +25,7 @@ class StarCache:
         self.update_notify_community()
 
     @staticmethod
-    def generate_notify_channel_dbdata(dbdata:list[NotifyChannelRecords]):
+    def generate_notify_channel_dbdata(dbdata:list[NotifyChannel]):
         dict = {}
         for data in dbdata:
             guildid = data.guild_id
@@ -35,7 +35,7 @@ class StarCache:
         return dict
     
     @staticmethod
-    def generate_notify_community_dbdata(dbdata:list[NotifyCommunityRecords]):
+    def generate_notify_community_dbdata(dbdata:list[NotifyCommunity]):
         lst = []
         for data in dbdata:
             if data.notify_name not in lst:

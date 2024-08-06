@@ -341,8 +341,10 @@ class event(Cog_Extension):
         if guildid == 613747262291443742:
             earlest_guildid = check_registration(member)
             if earlest_guildid and earlest_guildid != 613747262291443742:
+                from starlib.models.mysql import DiscordUser
                 dbdata = sclient.sqldb.get_resgistration_by_guildid(earlest_guildid)
-                sclient.sqldb.set_userdata(member.id,"user_discord","registrations_id",dbdata.registrations_id)
+                user = DiscordUser(discord_id=member.id, registrations_id=dbdata.registrations_id)
+                sclient.sqldb.add_dcuser(user)
                 await member.add_roles(member.guild.get_role(guild_registration[str(earlest_guildid)]), reason="加入的最早伺服器")
 
 

@@ -55,7 +55,6 @@ def keep_alive(request:Request):
     
 async def get_yt_push(content):
     feed = feedparser.parse(content)
-    print(feed)
     if not feed["entries"][0]:
         return
     embed = YoutubePush(**feed["entries"][0]).embed()

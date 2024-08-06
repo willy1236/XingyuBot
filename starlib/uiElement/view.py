@@ -296,26 +296,6 @@ class ElectionPollView(PollView):
     def __init__(self,poll_id,sqldb=None,bot=None):
         super().__init__(poll_id,sqldb,bot)
 
-    # FIXME: unfinished
-    def set_elected(self):
-        vote_count_data = self.sqldb.get_poll_vote_count(self.poll_id, self.ban_alternate_account_voting)
-        options_data = self.sqldb.get_poll_options(self.poll_id)
-        max_count = 0
-        max_count_value = []
-        for option in options_data:
-            name = option['option_name']
-            id = option['option_id']
-            value = option['option_value']
-            count = vote_count_data.get(str(id),0)
-            if count > max_count:
-                max_count = count
-                max_count_value = [value]
-            elif count > max_count:
-                max_count_value.append(value)
-
-        for value in max_count_value:
-            self.sqldb.add_elected(value,self.poll_value,None)
-
 class GameView(discord.ui.View):
     def __init__(self,creator,game,number_all,number_now,message):
         super().__init__()

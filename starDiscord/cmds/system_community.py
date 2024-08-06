@@ -33,7 +33,7 @@ class system_community(Cog_Extension):
         user = api.get_user(twitch_user)
         type_tw = ChoiceList.get_tw(type.value, "twitch_notify_option")
         if user:
-            sclient.sqldb.set_notify_community(type.value, user.id, guildid, channelid, roleid, user.login)
+            sclient.sqldb.add_notify_community(type.value, user.id, guildid, channelid, roleid, user.login)
             match type:
                 case NotifyCommunityType.Twitch:
                     pass
@@ -152,7 +152,7 @@ class system_community(Cog_Extension):
 
         ytchannel = YoutubeAPI().get_channel(handle=ythandle)
         if ytchannel:
-            sclient.sqldb.set_notify_community(NotifyCommunityType.Youtube,ytchannel.id,guildid,channelid,roleid,ytchannel.title)
+            sclient.sqldb.add_notify_community(NotifyCommunityType.Youtube,ytchannel.id,guildid,channelid,roleid,ytchannel.snippet.title)
             if role:
                 await ctx.respond(f'設定成功：{ytchannel.title}的通知將會發送在{channel.mention}並會通知{role.mention}')
             else:

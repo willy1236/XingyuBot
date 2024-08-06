@@ -11,6 +11,7 @@ from ..extension import Cog_Extension
 
 
 debug_guilds = Jsondb.config.get('debug_guilds')
+main_guilds = Jsondb.config.get('main_guilds')
 
 # Note that custom_ids can only be up to 100 characters long.
 class PersistentView(discord.ui.View):
@@ -164,6 +165,23 @@ class debug(Cog_Extension):
         embed = BotEmbed.sts()
         embed.add_field(name='測試',value='測試')
         await ctx.respond(embed=embed)
+
+    @commands.is_owner()
+    @commands.slash_command(description='更改身分組', guild_ids=main_guilds)
+    async def roletest(self,ctx:discord.ApplicationContext):
+        await ctx.defer()
+        guild = ctx.guild
+        old_role = guild.get_role(984485859132854332)
+        new_role = guild.get_role(1250797750174351440)
+
+        for member in old_role.members:
+            await member.add_roles(new_role)
+            await member.remove_roles(old_role)
+            await asyncio.sleep(1)
+
+        await ctx.respond('完成',ephemeral=True)
+
+
 
     # @commands.slash_command()
     # async def modal_slash(self,ctx: discord.ApplicationContext):

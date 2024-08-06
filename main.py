@@ -46,10 +46,6 @@ if __name__ == "__main__":
         twitchbot_thread = TwitchBotThread()
         twitchbot_thread.start()
         time.sleep(5)
-
-        # sakagawa_thread = SakagawaEventsubThread()
-        # sakagawa_thread.start()
-        # time.sleep(2)
     
     try:
         bot.run()

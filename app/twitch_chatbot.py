@@ -1,7 +1,5 @@
 import asyncio
-import json
 import threading
-import time
 from pathlib import PurePath
 from typing import TYPE_CHECKING
 from uuid import UUID
@@ -16,7 +14,6 @@ from twitchAPI.oauth import (UserAuthenticationStorageHelper,
                              UserAuthenticator, refresh_access_token,
                              validate_token)
 from twitchAPI.object import eventsub
-from twitchAPI.object.api import TwitchUser
 from twitchAPI.pubsub import PubSub
 from twitchAPI.twitch import Twitch
 from twitchAPI.type import AuthScope, ChatEvent, EventSubSubscriptionError
@@ -121,10 +118,6 @@ async def on_ready(ready_event: EventData):
 # this will be called whenever a message in a channel was send by either the bot OR another user
 async def on_message(msg: ChatMessage):
     twitch_log.info(f'in {msg.room.name}, {msg.user.name} said: {msg.text}')
-    # if msg.room.name == TARGET_CHANNEL[0] and sclient.bot:
-    #     loop = sclient.bot.loop
-    #     channel = sclient.bot.get_channel(DC_CHANNEL_ID)
-    #     asyncio.run_coroutine_threadsafe(channel.send(embed=BotEmbed.general(msg.user.display_name,description=msg.text)), loop)
 
 async def on_sub(sub: ChatSub):
     twitch_log.info(f'New subscription in {sub.room.name}:\nType: {sub.sub_plan_name}\nMessage: {sub.sub_message}')

@@ -1,10 +1,15 @@
 import json
 from datetime import datetime,date,time,timedelta,timezone
-from typing import Dict, List, Set, Tuple
 
 import discord
 import mysql.connector
 from mysql.connector.errors import Error as sqlerror
+from sqlmodel import SQLModel, Field, create_engine, Session, select
+from sqlalchemy import delete, or_, desc, func
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.engine import URL
+
+from starlib.models.mysql import NotifyCommunity
 
 from ..models.model import GameInfoPage
 from ..types import DBGame, Coins, Position, CommunityType, NotifyCommunityType
@@ -15,8 +20,261 @@ from ..models.mysql import *
 from ..errors import *
 from ..settings import tz
 
-def create_id():
-    return 'SELECT idNumber FROM ( SELECT CONCAT("U", LPAD(FLOOR(RAND()*10000000), 7, 0)) as idNumber) AS generated_ids WHERE NOT EXISTS ( SELECT 1 FROM stardb_user.user_data WHERE user_id = generated_ids.idNumber);'
+SQLsettings = Jsondb.config["SQLsettings"]
+
+# type: ignore
+connection_url = URL.create(
+    drivername="mysql+mysqlconnector",
+    username=SQLsettings["user"], 
+    password=SQLsettings["password"],
+    host=SQLsettings["host"],
+    port=SQLsettings["port"]
+)
+class BaseSQLEngine:
+    def __init__(self,connection_url):
+        self.engine = create_engine(connection_url, echo=False, pool_pre_ping=True)
+        # SessionLocal = sessionmaker(bind=self.engine)
+        # self.session:Session = SessionLocal()
+        SQLModel.metadata.create_all(self.engine)
+
+        # with Session(self.engine) as session:
+        self.session = Session(bind=self.engine)
+
+    #* User
+    def get_dcuser(self, discord_id:int):
+        stmt = select(DiscordUser).where(DiscordUserV2.discord_id == discord_id)
+        result = self.session.exec(stmt).one_or_none()
+        return result
+    
+    def add_dcuser(self, user:DiscordUser):
+        self.session.merge(user)
+        self.session.commit()
+    
+    def get_main_account(self, alternate_account):
+        stmt = select(UserAccount.main_account).where(UserAccount.alternate_account == alternate_account)
+        result = self.session.exec(stmt).one_or_none()
+        return result
+        
+    def get_alternate_account(self,discord_id):
+        stmt = select(UserAccount.alternate_account).where(UserAccount.alternate_account == discord_id)
+        result = self.session.exec(stmt).all()
+        return result
+    
+    
+    def get_raw_resgistrations(self):
+        stmt = select(DiscordRegistration)
+        result = self.session.exec(stmt).all()
+        return {i.guild_id: i.role_id for i in result}
+    
+    def get_resgistration(self, registrations_id:int):
+        stmt = select(DiscordRegistration).where(DiscordRegistration.registrations_id == registrations_id)
+        result = self.session.exec(stmt).one_or_none()
+        return result
+        
+    def get_resgistration_by_guildid(self,guild_id:int):
+        stmt = select(DiscordRegistration).where(DiscordRegistration.guild_id == guild_id)
+        result = self.session.exec(stmt).one_or_none()
+        return result
+
+    #* role_save
+    def get_role_save(self,discord_id:int):
+        stmt = select(RoleSave).where(RoleSave.discord_id == discord_id).order_by(RoleSave.time, desc(RoleSave.role_id))
+        result = self.session.exec(stmt).all()
+        return result
+
+    def get_role_save_count(self,discord_id:int):
+        stmt = select(func.count()).select_from(RoleSave).where(RoleSave.discord_id == discord_id)
+        result = self.session.exec(stmt).one_or_none()
+        return result
+        
+    def get_role_save_count_list(self):
+        stmt = select(RoleSave.discord_id,func.count()).select_from(RoleSave).group_by(RoleSave.discord_id).order_by(desc(func.count()))
+        result = self.session.exec(stmt).all()
+        return {i[0]: i[1] for i in result}
+
+    def add_role_save(self,discord_id:int,role:discord.Role):
+        role_save = RoleSave(discord_id=discord_id,role_id=role.id,role_name=role.name,time=role.created_at.date())
+        self.session.add(role_save)
+        self.session.commit()
+
+    #* notify channel
+    def add_notify_channel(self,guild_id:int,notify_type:str,channel_id:int,role_id:int=None):
+        """設定自動通知頻道"""
+        channel = NotifyChannel(guild_id=guild_id, notify_type=notify_type, channel_id=channel_id, role_id=role_id)
+        self.session.merge(channel)
+        self.session.commit()
+
+    def remove_notify_channel(self,guild_id:int,notify_type:str):
+        """移除自動通知頻道"""
+        stmt = delete(NotifyChannel).where(
+            NotifyChannel.guild_id == guild_id,
+            NotifyChannel.notify_type == notify_type
+        )
+        self.session.exec(stmt)
+        self.session.commit()
+    
+    def get_notify_channel(self,guild_id:str,notify_type:str):
+        """取得自動通知頻道"""
+        statement = select(NotifyChannel).where(NotifyChannel.guild_id == guild_id, NotifyChannel.notify_type == notify_type)
+        result = self.session.exec(statement).one_or_none()
+        return result
+
+    def get_notify_channel_by_type(self,notify_type:str):
+        """取得自動通知頻道（依據通知種類）"""
+        statement = select(NotifyChannel).where(NotifyChannel.notify_type == notify_type)
+        result = self.session.exec(statement).all()
+        return result
+    
+    def get_notify_channel_all(self,guild_id:str):
+        """取得伺服器的所有自動通知頻道"""
+        statement = select(NotifyChannel).where(NotifyChannel.guild_id == guild_id)
+        result = self.session.exec(statement).all()
+        return result
+    def get_all_dynamic_voice(self):
+        """取得目前所有的動態語音"""
+        statement = select(DynamicChannel.channel_id)
+        result = self.session.exec(statement).all()
+        return result
+
+    #* notify community
+    def add_notify_community(self,notify_type:NotifyCommunityType,notify_name:str,guild_id:int,channel_id:int,role_id:int=None,display_name:str=None):
+        """設定社群通知"""
+        community = NotifyCommunity(notify_type=notify_type, notify_name=notify_name, display_name=display_name, guild_id=guild_id, channel_id=channel_id, role_id=role_id)
+        self.session.merge(community)
+        self.session.commit()
+
+    def remove_notify_community(self,notify_type:NotifyCommunityType, notify_name:str, guild_id:int):
+        """移除社群通知"""
+        statement = delete(NotifyCommunity).where(
+            NotifyCommunity.notify_type == notify_type,
+            or_(
+                NotifyCommunity.notify_name == notify_name,
+                NotifyCommunity.display_name == notify_name
+            ),
+            NotifyCommunity.guild_id == guild_id
+        )
+        self.session.exec(statement)
+        self.session.commit()
+        notify_type = NotifyCommunityType(notify_type)
+
+    def get_notify_community(self, notify_type:NotifyCommunityType):
+        """取得社群通知（依據社群）"""
+        statement = select(NotifyCommunity).where(NotifyCommunity.notify_type == notify_type)
+        result = self.session.exec(statement).all()
+        return result
+    
+    def get_notify_community_guild(self, notify_type:NotifyCommunityType, notify_name:str):
+        """取得指定社群的所有通知"""
+        statement = select(NotifyCommunity.guild_id, NotifyCommunity.channel_id, NotifyCommunity.role_id).where(NotifyCommunity.notify_type == notify_type, NotifyCommunity.notify_name == notify_name)
+        result = self.session.exec(statement).all()
+        return {i[0]: (i[1], i[2]) for i in result}
+        
+
+    def get_notify_community_user(self,notify_type:NotifyCommunityType, notify_name:str, guild_id:int):
+        """取得伺服器內的指定社群通知"""
+        statement = select(NotifyCommunity).where(NotifyCommunity.notify_type == notify_type, or_(NotifyCommunity.notify_name == notify_name, NotifyCommunity.display_name == notify_name), NotifyCommunity.guild_id == guild_id)
+        result = self.session.exec(statement).all()
+        return result
+
+    def get_notify_community_userlist(self, notify_type:NotifyCommunityType):
+        """取得指定類型的社群通知清單"""
+        statement = select(NotifyCommunity.notify_name).distinct().where(NotifyCommunity.notify_type == notify_type)
+        result = self.session.exec(statement).all()
+        return result
+
+    def get_notify_community_list(self,notify_type:NotifyCommunityType, guild_id:int) -> list[NotifyCommunity]:
+        """取得伺服器內指定種類的所有通知"""
+        statement = select(NotifyCommunity).where(NotifyCommunity.notify_type == notify_type, NotifyCommunity.guild_id == guild_id)
+        result = self.session.exec(statement).all()
+        return result
+    
+    #* warning
+    def add_warning(self,discord_id:int,moderate_type:str,moderate_user:int,create_guild:int,create_time:datetime,reason:str=None,last_time:str=None,guild_only=True) -> int:
+        """給予用戶警告\n
+        returns: 新增的warning_id
+        """
+        warning = UserModerate(discord_id=discord_id,moderate_type=moderate_type,moderate_user=moderate_user,create_guild=create_guild,create_time=create_time,reason=reason,last_time=last_time,guild_only=guild_only, officially_given=create_guild in Jsondb.config["debug_guilds"])
+        self.session.add(warning)
+        self.session.commit()
+        return warning.warning_id
+
+    def get_warning(self,warning_id:int):
+        """取得警告單"""
+        stmt = select(UserModerate).where(UserModerate.warning_id == warning_id)
+        result = self.session.exec(stmt).one_or_none()
+        return result
+    
+    def get_warnings(self,discord_id:int,guild_id:int=None):
+        """取得用戶的警告列表
+        :param guild_id: 若給予，則同時查詢該伺服器的紀錄
+        """
+        if guild_id:
+            stmt = select(UserModerate).where(UserModerate.discord_id == discord_id, UserModerate.create_guild == guild_id)
+        else:
+            stmt = select(UserModerate).where(UserModerate.discord_id == discord_id, UserModerate.guild_only == False)
+        result = self.session.exec(stmt).all()
+        return WarningList(result, discord_id)
+    
+    def remove_warning(self,warning_id:int):
+        """移除用戶警告"""
+        stmt = delete(UserModerate).where(UserModerate.warning_id == warning_id)
+        self.session.exec(stmt)
+        self.session.commit()
+    
+    #* party
+    def join_party(self,discord_id:int,party_id:int):
+        up = UserParty(discord_id=discord_id,party_id=party_id)
+        self.session.add(up)
+        self.session.commit()
+
+    def leave_party(self,discord_id:int,party_id:int):
+        up = UserParty(discord_id=discord_id,party_id=party_id)
+        self.session.delete(up)
+        self.session.commit()
+
+    def get_all_party_data(self):
+        stmt = (
+            select(Party,func.count(UserParty.party_id).label('member_count'))
+            .join(UserParty, Party.party_id == UserParty.party_id, isouter=True)
+            .group_by(Party.party_id)
+            .order_by(Party.party_id)
+        )
+        result = self.session.exec(stmt).all()
+        return result
+    
+    def get_user_party(self,discord_id:int):
+        stmt = select(Party).select_from(UserParty).join(Party, UserParty.party_id == Party.party_id, isouter=True).where(UserParty.discord_id == discord_id)
+        result = self.session.exec(stmt).all()
+        return result
+    
+    def get_party(self,party_id:int):
+        stmt = select(Party).where(Party.party_id == party_id)
+        result = self.session.exec(stmt).one_or_none()
+        return result
+
+    #* backup
+    def get_backup_roles_userlist(self,role_id:int):
+        stmt = select(BackupRoleUser.discord_id).where(BackupRoleUser.role_id == role_id)
+        result = self.session.exec(stmt).all()
+        return result
+    
+    def get_all_backup_roles(self):
+        stmt = select(BackupRole)
+        result_role = self.session.exec(stmt).all()
+        
+        # stmt = select(BackupRoleUser)
+        # result_user = self.session.exec(stmt).all()
+        
+        # dct = {}
+        # for data in result_user:
+        #     if data.role_id not in dct:
+        #         dct[data.role_id] = list()
+        #     dct[data.role_id].append(data.discord_id)
+        
+        # for role in result_role:
+        #     role.user_ids = dct.get(role.role_id)
+
+        return result_role
 
 class MySQLBaseModel(object):
     """MySQL資料庫基本模型"""
@@ -97,7 +355,7 @@ class MySQLUserSystem(MySQLBaseModel):
 
         while error:
             try:
-                user_id = create_id()
+                user_id = str()
                 if discord_id:
                     operation = f"INSERT INTO `user_data` SET user_id = ({user_id}), discord_id = {discord_id};"
                 else:
@@ -1186,3 +1444,6 @@ class MySQLDatabase(
     MySQLManager,
 ):
     """Mysql操作"""
+
+class SQLEngine(BaseSQLEngine):
+    """SQL引擎"""

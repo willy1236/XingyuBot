@@ -4,9 +4,8 @@
 """
 from ..fileDatabase import Jsondb
 from ..utilities import log
-
-from .mysql import MySQLDatabase
 from .mongodb import MongoDB
+from .mysql import MySQLDatabase, SQLEngine
 
 SQL_connection = Jsondb.config.get('SQL_connection')
 def create_sqldb(SQL_connection:bool) -> MySQLDatabase | None:
@@ -24,7 +23,33 @@ def create_sqldb(SQL_connection:bool) -> MySQLDatabase | None:
     
     return sqldb
 
-sqldb = create_sqldb(SQL_connection)
+def create_sqlengine(SQL_connection:bool) -> SQLEngine | None:
+    if SQL_connection:
+        try:
+            from sqlalchemy.engine import URL
+
+            SQLsettings = Jsondb.config["SQLsettings"]
+
+            connection_url = URL.create(
+                drivername="mysql+mysqlconnector",
+                username=SQLsettings["user"],
+                password=SQLsettings["password"],
+                host=SQLsettings["host"],
+                port=SQLsettings["port"]
+            )
+            sqlengine = SQLEngine(connection_url)
+            version = sqlengine.engine.dialect.server_version_info
+            log.info(f'>> SQL connect: online ({version}) <<')
+        except:
+            sqlengine = None
+            log.warning('>> SQL connect: offline <<')
+    else:
+        sqlengine = None
+        log.info('>> SQL connect: off <<')
+    
+    return sqlengine
+
+sqldb = create_sqlengine(SQL_connection)
 
 Mongedb_connection = Jsondb.config.get('Mongedb_connection')
 def create_mongedb(Mongedb_connection) -> MongoDB | None:

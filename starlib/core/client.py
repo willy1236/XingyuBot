@@ -18,8 +18,9 @@ from ..utilities import BotEmbed, ChoiceList, scheduler
 from .cache import StarCache
 
 if TYPE_CHECKING:
-    from starDiscord import DiscordBot
     from twitchAPI.twitch import Twitch
+
+    from starDiscord import DiscordBot
 
 class UserClient():
     """用戶查詢系統"""
