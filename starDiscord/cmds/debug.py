@@ -168,10 +168,10 @@ class debug(Cog_Extension):
 
     @commands.is_owner()
     @commands.slash_command(description='更改身分組', guild_ids=main_guilds)
-    async def roletest(self,ctx:discord.ApplicationContext):
+    async def roletest(self,ctx:discord.ApplicationContext,old_role:discord.Role):
         await ctx.defer()
         guild = ctx.guild
-        old_role = guild.get_role(984485859132854332)
+        #old_role = guild.get_role(984485859132854332)
         new_role = guild.get_role(1250797750174351440)
 
         for member in old_role.members:
