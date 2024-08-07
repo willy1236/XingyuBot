@@ -2,22 +2,42 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import date, datetime
-from typing import TYPE_CHECKING, Optional, TypedDict, List
+from typing import TYPE_CHECKING, List, Optional, TypedDict, dataclass_transform
 
 from discord import Bot
-from sqlalchemy import Column, Integer
-from sqlmodel import Field, Session, SQLModel, create_engine, select, Relationship
-from pydantic import model_validator, ConfigDict
-from sqlalchemy.orm import Mapped
+from pydantic import ConfigDict, model_validator
+from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import DeclarativeBase
+from sqlmodel import (Field, Relationship, Session, SQLModel, create_engine,
+                      select)
 
 from ..fileDatabase import Jsondb
 from ..settings import tz
-from ..types import NotifyCommunityType, WarningType
+from ..types import CommunityType, NotifyCommunityType, WarningType
 from ..utilities import BotEmbed, ChoiceList
 from .BaseModel import ListObject
 
 if TYPE_CHECKING:
     from ..database import SQLEngine
+
+    @dataclass_transform()
+    class Base(DeclarativeBase):
+        pass
+else:
+    class Base(DeclarativeBase):
+        pass
+
+# Base = declarative_base()
+
+class Student(Base):
+    __tablename__ = 'student'
+    __table_args__ = {'schema': 'database'}
+    
+    id = Column(Integer, primary_key=True)
+    name = Column(String(255))
+    gender = Column(String(255))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(tz))
 
 class DiscordUser(SQLModel, table=True):
     __tablename__ = "user_discord"
@@ -34,9 +54,9 @@ class UserPoll(SQLModel, table=True):
     __tablename__ = "user_poll"
     __table_args__ = {'schema': 'stardb_user'}
     
-    poll_id: int = Field(primary_key=True)
+    poll_id: int = Field(primary_key=True, foreign_key="database.poll_data.poll_id")
     discord_id: int = Field(primary_key=True)
-    vote_option: int
+    vote_option: int = Field(primary_key=True, foreign_key="database.poll_options.option_id")
     vote_at: datetime
     vote_magnification: int = Field(default=1)
 
@@ -155,7 +175,7 @@ class PollOption(SQLModel, table=True):
     __tablename__ = "poll_options"
     __table_args__ = {'schema': 'database'}
 
-    poll_id: int = Field(primary_key=True)
+    poll_id: int = Field(primary_key=True, foreign_key="database.poll_data.poll_id")
     option_id: int = Field(primary_key=True)
     option_name: str
 
@@ -163,7 +183,7 @@ class PollRole(SQLModel, table=True):
     __tablename__ = "poll_role"
     __table_args__ = {'schema': 'database'}
 
-    poll_id: int = Field(primary_key=True)
+    poll_id: int = Field(primary_key=True, foreign_key="database.poll_data.poll_id")
     role_id: int = Field(primary_key=True)
     role_type: int
     role_magnification: int
@@ -223,56 +243,19 @@ class BackupRoleUser(SQLModel, table=True):
     role_id: int = Field(primary_key=True)
     discord_id: int = Field(primary_key=True)
 
-@dataclass(slots=True)
-class WarningSheet:
-    warning_id: int
-    discord_id: int
-    moderate_type: WarningType
-    moderate_user: int
-    create_guild: int
-    create_time: datetime
-    reason: str
-    last_time: str
-    guild_only: bool
-    officially_given: bool = None
-    bot_given: bool = None
+class OAuth2Token(SQLModel, table=True):
+    __tablename__ = "oauth_token"
+    __table_args__ = {'schema': 'stardb_tokens'}
 
-    def __post_init__(self):
-        self.create_time = self.create_time.replace(tzinfo=tz)
-        self.moderate_type = WarningType(self.moderate_type)
-        self.officially_given = self.create_guild in Jsondb.config["debug_guilds"]
-    
-    def embed(self,bot:Bot):
-        user = bot.get_user(self.discord_id)
-        moderate_user = bot.get_user(self.moderate_user)
-        guild = bot.get_guild(self.create_guild)
-        
-        name = f'{user.name} 的警告單'
-        description = f"**編號:{self.warning_id} ({ChoiceList.get_tw(self.moderate_type,'warning_type')})**\n被警告用戶：{user.mention}\n管理員：{guild.name}/{moderate_user.mention}\n原因：{self.reason}\n時間：{self.create_time}"
-        if self.officially_given:
-            description += "\n官方警告"
-        if self.guild_only:
-            description += "\n伺服器區域警告"
-        embed = BotEmbed.general(name=name,icon_url=user.display_avatar.url,description=description)
-        return embed
-    
-    def display_embed_field(self,bot:Bot):
-            moderate_user = bot.get_user(self.moderate_user)
-            guild = bot.get_guild(self.create_guild)
-            name = f"編號: {self.warning_id} ({ChoiceList.get_tw(self.moderate_type,'warning_type')})"
-            value = f"{guild.name}/{moderate_user.mention}\n{self.reason}\n{self.create_time}"
-            if self.officially_given:
-                value += "\n官方警告"
-            if self.guild_only:
-                value += "\n伺服器區域警告"
-            return name, value
-    
-    # def remove(self):
-    #     self.sqldb.remove_warning(self.warning_id)
+    user_id: str = Field(primary_key=True)
+    type: CommunityType = Field(sa_column=Column(Integer, primary_key=True))
+    access_token: str
+    refresh_token: str
+    expires_at: datetime
 
 class WarningList(ListObject):
     if TYPE_CHECKING:
-        items: list[WarningSheet]
+        items: list[UserModerate]
         discord_id: int
 
     def __init__(self,items:list, discord_id:int):

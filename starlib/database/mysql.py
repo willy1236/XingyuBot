@@ -3,9 +3,10 @@ from datetime import datetime,date,time,timedelta,timezone
 
 import discord
 import mysql.connector
+import sqlalchemy
 from mysql.connector.errors import Error as sqlerror
 from sqlmodel import SQLModel, Field, create_engine, Session, select
-from sqlalchemy import delete, or_, desc, func
+from sqlalchemy import delete, or_, desc, func, and_ 
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.engine import URL
 
@@ -30,6 +31,7 @@ connection_url = URL.create(
     host=SQLsettings["host"],
     port=SQLsettings["port"]
 )
+
 class BaseSQLEngine:
     def __init__(self,connection_url):
         self.engine = create_engine(connection_url, echo=False, pool_pre_ping=True)
@@ -39,6 +41,11 @@ class BaseSQLEngine:
 
         # with Session(self.engine) as session:
         self.session = Session(bind=self.engine)
+        
+        self.alengine = sqlalchemy.create_engine(connection_url, echo=False)
+        Base.metadata.create_all(self.alengine)
+        Sessionmkr = sessionmaker(bind=self.alengine)
+        self.alsession = Sessionmkr()
 
     #* User
     def get_dcuser(self, discord_id:int):
@@ -60,7 +67,6 @@ class BaseSQLEngine:
         result = self.session.exec(stmt).all()
         return result
     
-    
     def get_raw_resgistrations(self):
         stmt = select(DiscordRegistration)
         result = self.session.exec(stmt).all()
@@ -76,27 +82,7 @@ class BaseSQLEngine:
         result = self.session.exec(stmt).one_or_none()
         return result
 
-    #* role_save
-    def get_role_save(self,discord_id:int):
-        stmt = select(RoleSave).where(RoleSave.discord_id == discord_id).order_by(RoleSave.time, desc(RoleSave.role_id))
-        result = self.session.exec(stmt).all()
-        return result
-
-    def get_role_save_count(self,discord_id:int):
-        stmt = select(func.count()).select_from(RoleSave).where(RoleSave.discord_id == discord_id)
-        result = self.session.exec(stmt).one_or_none()
-        return result
-        
-    def get_role_save_count_list(self):
-        stmt = select(RoleSave.discord_id,func.count()).select_from(RoleSave).group_by(RoleSave.discord_id).order_by(desc(func.count()))
-        result = self.session.exec(stmt).all()
-        return {i[0]: i[1] for i in result}
-
-    def add_role_save(self,discord_id:int,role:discord.Role):
-        role_save = RoleSave(discord_id=discord_id,role_id=role.id,role_name=role.name,time=role.created_at.date())
-        self.session.add(role_save)
-        self.session.commit()
-
+class SQLNotifySystem(BaseSQLEngine):
     #* notify channel
     def add_notify_channel(self,guild_id:int,notify_type:str,channel_id:int,role_id:int=None):
         """設定自動通知頻道"""
@@ -130,6 +116,7 @@ class BaseSQLEngine:
         statement = select(NotifyChannel).where(NotifyChannel.guild_id == guild_id)
         result = self.session.exec(statement).all()
         return result
+
     def get_all_dynamic_voice(self):
         """取得目前所有的動態語音"""
         statement = select(DynamicChannel.channel_id)
@@ -187,7 +174,30 @@ class BaseSQLEngine:
         statement = select(NotifyCommunity).where(NotifyCommunity.notify_type == notify_type, NotifyCommunity.guild_id == guild_id)
         result = self.session.exec(statement).all()
         return result
-    
+
+class SQLRoleSaveSystem(BaseSQLEngine):
+    #* role_save
+    def get_role_save(self,discord_id:int):
+        stmt = select(RoleSave).where(RoleSave.discord_id == discord_id).order_by(RoleSave.time, desc(RoleSave.role_id))
+        result = self.session.exec(stmt).all()
+        return result
+
+    def get_role_save_count(self,discord_id:int):
+        stmt = select(func.count()).select_from(RoleSave).where(RoleSave.discord_id == discord_id)
+        result = self.session.exec(stmt).one_or_none()
+        return result
+        
+    def get_role_save_count_list(self):
+        stmt = select(RoleSave.discord_id,func.count()).select_from(RoleSave).group_by(RoleSave.discord_id).order_by(desc(func.count()))
+        result = self.session.exec(stmt).all()
+        return {i[0]: i[1] for i in result}
+
+    def add_role_save(self,discord_id:int,role:discord.Role):
+        role_save = RoleSave(discord_id=discord_id,role_id=role.id,role_name=role.name,time=role.created_at.date())
+        self.session.add(role_save)
+        self.session.commit()
+
+class SQLWarningSystem(BaseSQLEngine):
     #* warning
     def add_warning(self,discord_id:int,moderate_type:str,moderate_user:int,create_guild:int,create_time:datetime,reason:str=None,last_time:str=None,guild_only=True) -> int:
         """給予用戶警告\n
@@ -220,7 +230,144 @@ class BaseSQLEngine:
         stmt = delete(UserModerate).where(UserModerate.warning_id == warning_id)
         self.session.exec(stmt)
         self.session.commit()
+
+class SQLPollSystem(BaseSQLEngine):
+    #* poll
+    def add_poll(self,title:str,created_user:int,created_at:datetime,message_id,guild_id,ban_alternate_account_voting=False,show_name=False,check_results_in_advance=True,results_only_initiator=False,number_of_user_votes=1):
+        poll = Poll(title=title,created_user=created_user,created_at=created_at,is_on=True,message_id=message_id,guild_id=guild_id,ban_alternate_account_voting=ban_alternate_account_voting,show_name=show_name,check_results_in_advance=check_results_in_advance,results_only_initiator=results_only_initiator,number_of_user_votes=number_of_user_votes)
+        self.session.add(poll)
+        self.session.commit()
+        return poll.poll_id
     
+    def remove_poll(self,poll_id:int):
+        self.session.exec(delete(Poll).where(Poll.poll_id == poll_id))
+        self.session.exec(delete(UserPoll).where(Poll.poll_id == poll_id))
+        self.session.exec(delete(PollOption).where(Poll.poll_id == poll_id))
+        self.session.commit()
+
+    def get_poll(self,poll_id:int):
+        stmt = select(Poll).where(Poll.poll_id == poll_id)
+        result = self.session.exec(stmt).one_or_none()
+        return result
+    
+    def update_poll(self,poll:Poll):
+        self.session.merge(poll)
+        self.session.commit()
+
+    def get_all_active_polls(self):
+        stmt = select(Poll).where(Poll.is_on == True)
+        result = self.session.exec(stmt).all()
+        return result
+
+    def get_poll_options(self,poll_id:int):
+        stmt = select(PollOption).where(PollOption.poll_id == poll_id)
+        result = self.session.exec(stmt).all()
+        return result
+
+    def add_poll_option(self,poll_id:int,options:list):
+        lst = list()
+        count = 0
+        for option in options:
+            count += 1
+            lst.append(PollOption(poll_id=poll_id, option_id=count, option_name=option))
+
+        self.session.add_all(lst)
+        self.session.commit()
+
+    def set_user_poll(self, poll_id: int, discord_id: int, vote_option: int = None, vote_at: datetime = None, vote_magnification: int = 1, max_can_vote:int = None):
+        """
+        Sets the user's poll vote in the database.
+
+        Args:
+            poll_id (int): The ID of the poll.
+            discord_id (int): The ID of the user on Discord.
+            vote_option (int, optional): The option the user voted for. Defaults to None.
+            vote_at (datetime, optional): The timestamp of the vote. Defaults to None.
+            vote_magnification (int, optional): The magnification of the vote. Defaults to 1.
+            max_can_vote (int, optional): The maximum number of votes the user can cast. Defaults to None.
+
+        Returns:
+            int: The result of the operation.
+                -1 if the user's vote was deleted,\n
+                1 if the user's vote was inserted or updated, \n
+                2 if the user's vote reach the max poll can vote.
+        
+        Raises:
+            SQLNotFoundError: If the poll with the given ID is not found in the database.
+        """
+        count = 0
+        if max_can_vote:
+            count = self.get_user_vote_count(poll_id,discord_id)
+            if count > max_can_vote:
+                return 2
+
+        vote = UserPoll(poll_id=poll_id,discord_id=discord_id,vote_option=vote_option,vote_at=vote_at,vote_magnification=vote_magnification)
+        stmt = select(UserPoll).where(UserPoll.poll_id == poll_id, UserPoll.discord_id == discord_id, UserPoll.vote_option == vote_option)
+        result = self.session.exec(stmt).one_or_none()
+        if result:
+            self.session.delete(vote)
+            text = -1
+        
+        elif count == max_can_vote:
+            return 2
+        
+        else:
+            self.session.add(vote)
+            text = 1
+        
+        self.session.commit()
+        return text
+
+    def get_user_vote_count(self,poll_id,discord_id):
+        stmt = select(func.count()).where(UserPoll.poll_id == poll_id, UserPoll.discord_id == discord_id)
+        result = self.session.exec(stmt).one_or_none()
+        return result
+
+    def add_user_poll(self,poll_id:int,discord_id:int,vote_option:int,vote_at:datetime,vote_magnification:int=1):
+        self.session.merge(UserPoll(poll_id=poll_id,discord_id=discord_id,vote_option=vote_option,vote_at=vote_at,vote_magnification=vote_magnification))
+        self.session.commit()
+    
+    def remove_user_poll(self,poll_id:int,discord_id:int):
+        stmt = delete(UserPoll).where(UserPoll.poll_id == poll_id, UserPoll.discord_id == discord_id)
+        self.session.exec(stmt)
+        self.session.commit()
+    
+    def get_user_poll(self,poll_id:int,discord_id:int):
+        stmt = select(UserPoll, PollOption.option_name).select_from(UserPoll).join(PollOption, and_(UserPoll.vote_option == PollOption.option_id, UserPoll.poll_id == PollOption.poll_id), isouter=True).where(UserPoll.poll_id == poll_id, UserPoll.discord_id == discord_id)
+        result = self.session.exec(stmt).all()
+        return result
+    
+    def get_users_poll(self,poll_id:int,include_alternatives_accounts=True):
+        if include_alternatives_accounts:
+            stmt = select(UserPoll).where(UserPoll.poll_id == poll_id)
+        else:
+            stmt = select(UserPoll).select_from(UserPoll).join(UserAccount, UserPoll.discord_id == UserAccount.alternate_account).where(UserPoll.poll_id == poll_id, UserAccount.alternate_account == None)
+        result = self.session.exec(stmt).all()
+        return result
+    
+    def get_poll_vote_count(self,poll_id:int,include_alternatives_accounts=True):
+        if include_alternatives_accounts:
+            stmt = select(UserPoll.vote_option,func.sum(UserPoll.vote_magnification)).where(UserPoll.poll_id == poll_id).group_by(UserPoll.vote_option)
+        else:
+            stmt = select(UserPoll.vote_option,func.sum(UserPoll.vote_magnification)).select_from(UserPoll).join(UserAccount, UserPoll.discord_id == UserAccount.alternate_account).where(UserPoll.poll_id == poll_id, UserAccount.alternate_account == None).group_by(UserPoll.vote_option)
+        result = self.session.exec(stmt).all()
+        return {str(i[0]): i[1] for i in result}
+    
+    def add_poll_role(self,poll_id:int,role_id:int,role_type:int,role_magnification:int=1):
+        """role_type 1:只有此身分組可投票 2:倍率 """
+        pollrole = PollRole(poll_id=poll_id,role_id=role_id,role_type=role_type,role_magnification=role_magnification)
+        self.session.merge(pollrole)
+        self.session.commit()
+    
+    def get_poll_role(self,poll_id:int,role_type:int=None):
+        if role_type:
+            stmt = select(PollRole).where(PollRole.poll_id == poll_id, PollRole.role_type == role_type)
+        else:
+            stmt = select(PollRole).where(PollRole.poll_id == poll_id)
+        result = self.session.exec(stmt).all()
+        return result
+    
+class SQLElectionSystem(BaseSQLEngine):
     #* party
     def join_party(self,discord_id:int,party_id:int):
         up = UserParty(discord_id=discord_id,party_id=party_id)
@@ -251,8 +398,16 @@ class BaseSQLEngine:
         stmt = select(Party).where(Party.party_id == party_id)
         result = self.session.exec(stmt).one_or_none()
         return result
-
+    
+class SQLBackupSystem(BaseSQLEngine):
     #* backup
+    def backup_role(self,role:discord.Role,description:str=None):
+        backup_role = BackupRole(role_id=role.id,name=role.name,created_at=role.created_at.astimezone(tz),guild_id=role.guild.id,colour_r=role.colour.r,colour_g=role.colour.g,colour_b=role.colour.b,description=description)
+        self.session.add(backup_role)
+        for member in role.members:
+            self.session.add(BackupRoleUser(role_id=role.id,discord_id=member.id))
+        self.session.commit()
+
     def get_backup_roles_userlist(self,role_id:int):
         stmt = select(BackupRoleUser.discord_id).where(BackupRoleUser.role_id == role_id)
         result = self.session.exec(stmt).all()
@@ -275,6 +430,33 @@ class BaseSQLEngine:
         #     role.user_ids = dct.get(role.role_id)
 
         return result_role
+    
+class SQLTokensSystem(BaseSQLEngine):
+    def set_oauth(self, user_id:int, type:CommunityType, access_token:str, refresh_token:str=None, expires_at:datetime=None):
+        type = CommunityType(type)
+        self.cursor.execute(f"INSERT INTO `stardb_tokens`.`oauth_token` VALUES(%s,%s,%s,%s,%s) ON DUPLICATE KEY UPDATE `access_token` = %s, `refresh_token` = %s, `expires_at` = %s;",(user_id,type.value,access_token,refresh_token,expires_at,access_token,refresh_token,expires_at))
+        self.connection.commit()
+
+    def get_oauth(self, user_id:int, type:CommunityType):
+        type = CommunityType(type)
+        self.cursor.execute(f"SELECT * FROM `stardb_tokens`.`oauth_token` WHERE `user_id` = {user_id} AND `type` = {type.value};")
+        records = self.cursor.fetchall()
+        if records:
+            return records[0]
+
+class SQLTest(BaseSQLEngine):
+    def get_test(self):
+        result = self.alsession.query(Student).all()
+        return result
+
+    def add_test(self, student:Student):
+        self.alsession.add(Student)
+        self.alsession.commit()
+
+    def remove_test(self, student_id:int):
+        stmt = delete(Student).where(Student.id == student_id)
+        self.alsession.execute(stmt)
+        self.alsession.commit()
 
 class MySQLBaseModel(object):
     """MySQL資料庫基本模型"""
@@ -442,112 +624,6 @@ class MySQLUserSystem(MySQLBaseModel):
         self.cursor.execute(f"UPDATE `user_data` SET `email` = NULL, `drive_share_id` = NULL WHERE `discord_id` = %s;",(discord_id,))
         self.connection.commit()
 
-class MySQLNotifySystem(MySQLBaseModel):
-    def set_notify_channel(self,guild_id:int,notify_type:str,channel_id:int,role_id:int=None):
-        """設定自動通知頻道"""
-        self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f"INSERT INTO `notify_channel` VALUES(%s,%s,%s,%s) ON DUPLICATE KEY UPDATE `guild_id` = %s, `notify_type` = %s, `channel_id` = %s, `role_id` = %s",(guild_id,notify_type,channel_id,role_id,guild_id,notify_type,channel_id,role_id))
-        self.connection.commit()
-
-    def remove_notify_channel(self,guild_id:int,notify_type:str):
-        """移除自動通知頻道"""
-        self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f'DELETE FROM `notify_channel` WHERE `guild_id` = %s AND `notify_type` = %s;',(guild_id,notify_type))
-        self.connection.commit()
-
-    def get_notify_channel_by_type(self,notify_type:str):
-        """取得自動通知頻道（依據通知種類）"""
-        self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f'SELECT * FROM `notify_channel` WHERE notify_type = %s;',(notify_type,))
-        return [NotifyChannelRecords(**i) for i in self.cursor.fetchall()]
-
-    def get_notify_channel(self,guild_id:str,notify_type:str):
-        """取得自動通知頻道"""
-        self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f'SELECT * FROM `notify_channel` WHERE guild_id = %s AND notify_type = %s;',(guild_id,notify_type))
-        records = self.cursor.fetchall()
-        if records:
-            return NotifyChannelRecords(**records[0])
-    
-    def get_all_notify_channel(self,guild_id:str):
-        """取得伺服器的所有自動通知頻道"""
-        self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f'SELECT * FROM `notify_channel` WHERE guild_id = %s;',(guild_id,))
-        return [NotifyChannelRecords(**i) for i in self.cursor.fetchall()]
-    
-    def set_dynamic_voice(self,channel_id,discord_id,guild_id,created_at=None):
-        """設定動態語音"""
-        self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f"INSERT INTO `dynamic_channel` VALUES(%s,%s,%s,%s)",(channel_id,discord_id,guild_id,created_at))
-        self.connection.commit()
-
-    def remove_dynamic_voice(self,channel_id):
-        """移除動態語音"""
-        self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f"DELETE FROM `dynamic_channel` WHERE `channel_id` = %s",(channel_id,))
-        self.connection.commit()
-
-    def get_all_dynamic_voice(self):
-        """取得目前所有的動態語音"""
-        self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f'SELECT `channel_id` FROM `dynamic_channel`;')
-        records = self.cursor.fetchall()
-        return [data['channel_id'] for data in records]
-
-    def set_notify_community(self,notify_type:NotifyCommunityType,notify_name:str,guild_id:int,channel_id:int,role_id:int=None,display_name:str=None):
-        """設定社群通知"""
-        notify_type = NotifyCommunityType(notify_type)
-        self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f"INSERT INTO `notify_community` VALUES(%s,%s,%s,%s,%s,%s) ON DUPLICATE KEY UPDATE `notify_type` = %s, `notify_name` = %s, `guild_id` = %s, `channel_id` = %s, `role_id` = %s, `display_name` = %s",(notify_type.value,notify_name,display_name,guild_id,channel_id,role_id,notify_type.value,notify_name,guild_id,channel_id,role_id,display_name))
-        self.connection.commit()
-
-    def remove_notify_community(self,notify_type:NotifyCommunityType, notify_name:str, guild_id:int):
-        """移除社群通知"""
-        notify_type = NotifyCommunityType(notify_type)
-        self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f'DELETE FROM `notify_community` WHERE `notify_type` = %s AND (`notify_name` = %s OR `display_name` = %s) AND `guild_id` = %s;',(notify_type.value,notify_name,notify_name,guild_id))
-        self.connection.commit()
-
-    def get_notify_community(self, notify_type:NotifyCommunityType):
-        """取得社群通知（依據社群）"""
-        notify_type = NotifyCommunityType(notify_type)
-        self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f'SELECT * FROM `notify_community` WHERE `notify_type` = %s;',(notify_type.value,))
-        return [NotifyCommunityRecords(**d) for d in self.cursor.fetchall()]
-    
-    def get_notify_community_guild(self, notify_type:NotifyCommunityType, notify_name:str) -> dict[str, list[int]]:
-        """取得指定社群的所有通知"""
-        notify_type = NotifyCommunityType(notify_type)
-        self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f'SELECT `guild_id`,`channel_id`,`role_id` FROM `notify_community` WHERE `notify_type` = %s AND `notify_name` = %s;',(notify_type.value,notify_name))
-        records = self.cursor.fetchall()
-        dict = {}
-        for i in records:
-            dict[i['guild_id']] = [i['channel_id'],i['role_id']]
-        return dict
-
-    def get_notify_community_user(self,notify_type:NotifyCommunityType, notify_name:str, guild_id:int):
-        """取得伺服器內的指定社群通知"""
-        notify_type = NotifyCommunityType(notify_type)
-        self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f'SELECT `channel_id`,`role_id` FROM `notify_community` WHERE `notify_type` = %s AND (`notify_name` = %s OR `display_name` = %s) AND `guild_id` = %s;',(notify_type.value,notify_name,notify_name,guild_id))
-        return [NotifyCommunityRecords(**d) for d in self.cursor.fetchall()]
-
-    def get_notify_community_userlist(self, notify_type:NotifyCommunityType):
-        """取得指定類型的社群通知清單"""
-        notify_type = NotifyCommunityType(notify_type)
-        self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f'SELECT DISTINCT `notify_name` FROM `notify_community` WHERE `notify_type` = %s;',(notify_type.value,))
-        records = self.cursor.fetchall()
-        return [i.get('notify_name') for i in records]
-
-    def get_notify_community_list(self,notify_type:NotifyCommunityType, guild_id:int):
-        """取得伺服器內指定種類的所有通知"""
-        notify_type = NotifyCommunityType(notify_type)
-        self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f'SELECT * FROM `notify_community` WHERE `notify_type` = %s AND `guild_id` = %s;',(notify_type.value,guild_id))
-        return [NotifyCommunityRecords(**d) for d in self.cursor.fetchall()]
-
 class MySQLGameSystem(MySQLBaseModel):
     """遊戲資料系統"""
     def set_game_data(self,discord_id:int,game:DBGame,player_name:str=None,player_id:str=None,account_id:str=None,other_id:str=None):
@@ -579,35 +655,6 @@ class MySQLGameSystem(MySQLBaseModel):
             if records:
                 records = GameInfoPage(records)
         return records
-
-class MySQLRoleSaveSystem(MySQLBaseModel):
-    def get_role_save(self,discord_id:int):
-        self.cursor.execute(f"USE `stardb_user`;")
-        self.cursor.execute(f'SELECT * FROM `role_save` WHERE discord_id = %s ORDER BY `time`,`role_id` DESC;',(discord_id,))
-        records = self.cursor.fetchall()
-        return records
-
-    def get_role_save_count(self,discord_id:int) -> int | None:
-        self.cursor.execute(f"USE `stardb_user`;")
-        self.cursor.execute(f'SELECT COUNT(*) FROM `role_save` WHERE discord_id = %s;',(discord_id,))
-        records = self.cursor.fetchall()
-        if records:
-            return records[0]['COUNT(*)']
-        
-    def get_role_save_count_list(self) -> dict[str,int]:
-        self.cursor.execute(f"USE `stardb_user`;")
-        self.cursor.execute(f'SELECT discord_id,COUNT(*) as count FROM `role_save` GROUP BY `discord_id` ORDER BY `count` ASC;')
-        records = self.cursor.fetchall()
-        if records:
-            dict = {}
-            for data in records:
-                dict[data['discord_id']] = data['count']
-            return dict
-
-    def add_role_save(self,discord_id:int,role:discord.Role):
-        self.cursor.execute(f"USE `stardb_user`;")
-        self.cursor.execute(f"INSERT INTO `role_save` VALUES(%s,%s,%s,%s)",(discord_id,role.id,role.name,role.created_at.date()))
-        self.connection.commit()
 
 class MySQLCurrencySystem(MySQLBaseModel):
     def get_coin(self,discord_id:int,coin:Coins=Coins.SCOIN) -> int:
@@ -1087,182 +1134,6 @@ class MySQLRPGSystem(MySQLBaseModel):
         self.cursor.execute(f"DELETE FROM `database`.`rpg_city_battle` WHERE `city_id` = {city_id} AND `discord_id` = {discord_id};")
         self.connection.commit()
 
-class MySQLWarningSystem(MySQLBaseModel):
-    def add_warning(self,discord_id:int,moderate_type:str,moderate_user:int,create_guild:int,create_time:datetime,reason:str=None,last_time:str=None,guild_only=True) -> int:
-        """給予用戶警告\n
-        returns: 新增的warning_id
-        """
-        self.cursor.execute(f"INSERT INTO `stardb_user`.`user_moderate` VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s);",(None,discord_id,moderate_type,moderate_user,create_guild,create_time,reason,last_time,guild_only))
-        self.connection.commit()
-        return self.cursor.lastrowid
-
-    def get_warning(self,warning_id:int):
-        """取得警告單"""
-        self.cursor.execute(f"SELECT * FROM `stardb_user`.`user_moderate` WHERE `warning_id` = {warning_id};")
-        records = self.cursor.fetchall()
-        if records:
-            return WarningSheet(**records[0])
-    
-    def get_warnings(self,discord_id:int,guild_id:int=None):
-        """取得用戶的警告列表
-        :param guild_id: 若給予，則同時查詢該伺服器的紀錄
-        """
-        if guild_id:
-            self.cursor.execute(f"SELECT * FROM `stardb_user`.`user_moderate` WHERE `discord_id` = {discord_id} AND `create_guild` = {guild_id};")
-        else:
-            self.cursor.execute(f"SELECT * FROM `stardb_user`.`user_moderate` WHERE `discord_id` = {discord_id} AND `guild_only` = false;")
-        records = self.cursor.fetchall()
-        return WarningList(records,discord_id,self)
-    
-    def remove_warning(self,warning_id:int):
-        """移除用戶警告"""
-        self.cursor.execute(f"DELETE FROM `stardb_user`.`user_moderate` WHERE warning_id = {warning_id};")
-        self.connection.commit()
-
-class MySQLPollSystem(MySQLBaseModel):
-    def add_poll(self,title:str,created_user:int,created_at:datetime,message_id,guild_id,ban_alternate_account_voting=False,show_name=False,check_results_in_advance=True,results_only_initiator=False,number_of_user_votes=1):
-        self.cursor.execute(f"INSERT INTO `database`.`poll_data` VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);",(None,title,created_user,created_at,True,message_id,guild_id,ban_alternate_account_voting,show_name,check_results_in_advance,results_only_initiator,number_of_user_votes))
-        self.connection.commit()
-        return self.cursor.lastrowid
-    
-    def remove_poll(self,poll_id:int):
-        self.cursor.execute(f"DELETE FROM `database`.`poll_data` WHERE `poll_id` = {poll_id};")
-        self.cursor.execute(f"DELETE FROM `stardb_user`.`user_poll` WHERE `poll_id` = {poll_id};")
-        self.cursor.execute(f"DELETE FROM `database`.`poll_options` WHERE `poll_id` = {poll_id};")
-        self.connection.commit()
-
-    def get_poll(self,poll_id:int):
-        self.cursor.execute(f"SELECT * FROM `database`.`poll_data` WHERE `poll_id` = {poll_id};")
-        records = self.cursor.fetchall()
-        return records[0]
-    
-    def update_poll(self,poll_id:int,column:str,value):
-        self.cursor.execute(f"UPDATE `database`.`poll_data` SET {column} = %s WHERE `poll_id` = %s;",(value,poll_id))
-        self.connection.commit()
-
-    def get_all_active_polls(self):
-        self.cursor.execute(f"SELECT * FROM `database`.`poll_data` WHERE `is_on` = 1;")
-        records = self.cursor.fetchall()
-        return records
-
-    def get_poll_options(self,poll_id:int):
-        self.cursor.execute(f"SELECT * FROM `database`.`poll_options` WHERE `poll_id` = {poll_id};")
-        records = self.cursor.fetchall()
-        return records
-
-    def add_poll_option(self,poll_id:int,options:list):
-        lst = []
-        count = 0
-        for option in options:
-            count += 1
-            lst.append([poll_id, count, option])
-        self.cursor.executemany(f"INSERT INTO `database`.`poll_options` VALUES(%s,%s,%s);",lst)
-        self.connection.commit()
-
-    def set_user_poll(self, poll_id: int, discord_id: int, vote_option: int = None, vote_at: datetime = None, vote_magnification: int = 1, max_can_vote:int = None):
-        """
-        Sets the user's poll vote in the database.
-
-        Args:
-            poll_id (int): The ID of the poll.
-            discord_id (int): The ID of the user on Discord.
-            vote_option (int, optional): The option the user voted for. Defaults to None.
-            vote_at (datetime, optional): The timestamp of the vote. Defaults to None.
-            vote_magnification (int, optional): The magnification of the vote. Defaults to 1.
-            max_can_vote (int, optional): The maximum number of votes the user can cast. Defaults to None.
-
-        Returns:
-            int: The result of the operation.
-                -1 if the user's vote was deleted,\n
-                1 if the user's vote was inserted or updated, \n
-                2 if the user's vote reach the max poll can vote.
-        
-        Raises:
-            SQLNotFoundError: If the poll with the given ID is not found in the database.
-        """
-        count = 0
-        if max_can_vote:
-            count = self.get_user_vote_count(poll_id,discord_id)
-            if count > max_can_vote:
-                return 2
-
-        self.cursor.execute(f"SELECT * FROM `stardb_user`.`user_poll` WHERE `poll_id` = {poll_id} AND `discord_id` = {discord_id} AND `vote_option` = {vote_option};")
-        dbdata = self.cursor.fetchall()
-        if dbdata:
-            self.cursor.execute(f"DELETE FROM `stardb_user`.`user_poll` WHERE poll_id = {poll_id} AND discord_id = {discord_id} AND vote_option = {vote_option};")
-            text = -1
-        
-        elif count == max_can_vote:
-            return 2
-        
-        else:
-            self.cursor.execute(f"INSERT INTO `stardb_user`.`user_poll` VALUES(%s,%s,%s,%s,%s);",(poll_id,discord_id,vote_option,vote_at,vote_magnification))
-            text = 1
-        
-        self.connection.commit()
-        return text
-
-    def get_user_vote_count(self,poll_id,discord_id):
-        self.cursor.execute(f"SELECT count(*) FROM `stardb_user`.`user_poll` WHERE `poll_id` = {poll_id} AND `discord_id` = {discord_id};")
-        dbdata = self.cursor.fetchall()
-        return dbdata[0]["count(*)"] if dbdata else 0
-
-    def add_user_poll(self,poll_id:int,discord_id:int,vote_option:int,vote_at:datetime,vote_magnification:int=1):
-        self.cursor.execute(f"INSERT INTO `stardb_user`.`user_poll` VALUES(%s,%s,%s,%s,%s) ON DUPLICATE KEY UPDATE `vote_option` = %s, `vote_at` = %s, `vote_magnification` = %s;",(poll_id,discord_id,vote_option,vote_at,vote_magnification,vote_option,vote_at,vote_magnification))
-        self.connection.commit()
-    
-    def remove_user_poll(self,poll_id:int,discord_id:int):
-        self.cursor.execute(f"DELETE FROM `stardb_user`.`user_poll` WHERE `poll_id` = {poll_id} AND `discord_id` = {discord_id};")
-        self.connection.commit()
-    
-    def get_user_poll(self,poll_id:int,discord_id:int):
-        self.cursor.execute(f"""
-                            SELECT 
-                                `user_poll`.*, `poll_options`.option_name
-                            FROM
-                                `stardb_user`.`user_poll`
-                                    LEFT JOIN
-                                `database`.`poll_options` ON `user_poll`.vote_option = `poll_options`.option_id
-                                    AND `user_poll`.poll_id = `poll_options`.poll_id
-                            WHERE
-                                `user_poll`.poll_id = {poll_id}
-                                    AND `discord_id` = {discord_id};
-                            """)
-        records = self.cursor.fetchall()
-        return records
-    
-    def get_users_poll(self,poll_id:int,include_alternatives_accounts=True):
-        if include_alternatives_accounts:
-            self.cursor.execute(f"SELECT * FROM `stardb_user`.`user_poll` WHERE poll_id = {poll_id};")
-        else:
-            self.cursor.execute(f"SELECT * FROM `stardb_user`.`user_poll` LEFT JOIN `stardb_user`.`user_account` ON `user_poll`.discord_id = `user_account`.alternate_account WHERE poll_id = {poll_id} AND alternate_account IS NULL;")
-        records = self.cursor.fetchall()
-        return records
-    
-    def get_poll_vote_count(self,poll_id:int,include_alternatives_accounts=True):
-        if include_alternatives_accounts:
-            self.cursor.execute(f"SELECT vote_option,SUM(vote_magnification) as count FROM `stardb_user`.`user_poll` WHERE `poll_id` = {poll_id} GROUP BY vote_option;")
-        else:
-            self.cursor.execute(f"SELECT vote_option,SUM(vote_magnification) as count FROM `stardb_user`.`user_poll` LEFT JOIN `stardb_user`.`user_account` ON `user_poll`.discord_id = `user_account`.alternate_account WHERE poll_id = {poll_id} AND alternate_account IS NULL GROUP BY vote_option;")
-        records = self.cursor.fetchall()
-        dict = {}
-        if records:
-            for i in records:
-                dict[str(i["vote_option"])] = int(i["count"])
-        return dict
-    
-    def add_poll_role(self,poll_id:int,role_id:int,role_type:int,role_magnification:int=1):
-        """role_type 1:只有此身分組可投票 2:倍率 """
-        self.cursor.execute(f"INSERT INTO `database`.`poll_role` VALUES(%s,%s,%s,%s) ON DUPLICATE KEY UPDATE `role_type` = %s, `role_magnification` = %s;",(poll_id,role_id,role_type,role_magnification,role_type,role_magnification))
-        self.connection.commit()
-    
-    def get_poll_role(self,poll_id:int,role_type:int=None):
-        if role_type:
-            self.cursor.execute(f"SELECT * FROM `database`.`poll_role` WHERE `poll_id` = {poll_id} AND `role_type` = {role_type};")
-        else:
-            self.cursor.execute(f"SELECT * FROM `database`.`poll_role` WHERE `poll_id` = {poll_id};")
-        return self.cursor.fetchall()
-
 class MYSQLElectionSystem(MySQLBaseModel):
     def add_election(self,discord_id:int,session:int,position,represent_party_id:int=None):
         position = Position(position)
@@ -1354,47 +1225,6 @@ class MYSQLElectionSystem(MySQLBaseModel):
         if records:
             return Party(**records[0])
 
-class MySQLRegistrationSystem(MySQLBaseModel):
-    def get_raw_resgistrations(self):
-        self.cursor.execute(f"SELECT * FROM `stardb_idbase`.`discord_registrations`;")
-        records = self.cursor.fetchall()
-        if records:
-            dict = {}
-            for i in records:
-                dict[i['guild_id']] = i['role_id']
-            return dict
-
-    def get_resgistration(self, registrations_id:int):
-        self.cursor.execute(f"SELECT * FROM `stardb_idbase`.`discord_registrations` WHERE `registrations_id` = {registrations_id};")
-        records = self.cursor.fetchall()
-        return DiscordRegisterationRecord(**records[0]) if records else None
-        
-    def get_resgistration_by_guildid(self,guild_id:int):
-        self.cursor.execute(f"SELECT * FROM `stardb_idbase`.`discord_registrations` WHERE `guild_id` = {guild_id};")
-        records = self.cursor.fetchall()
-        return DiscordRegisterationRecord(**records[0]) if records else None
-
-class MySQLBackupSystem(MySQLBaseModel):
-    def backup_role(self,role:discord.Role,description:str=None):
-        self.cursor.execute(f"INSERT INTO `stardb_backup`.`roles_backup` VALUES(%s,%s,%s,%s,%s,%s,%s,%s);",(role.id,role.name,role.created_at.astimezone(tz),role.guild.id,role.colour.r,role.colour.g,role.colour.b,description))
-        for member in role.members:
-            self.cursor.execute(f"INSERT INTO `stardb_backup`.`role_user_backup` VALUES(%s,%s);",(role.id,member.id))
-        self.connection.commit()
-
-    def get_all_backup_roles(self):
-        self.cursor.execute(f"SELECT * FROM `stardb_backup`.`roles_backup`;")
-        records = self.cursor.fetchall()
-        
-        self.cursor.execute(f"SELECT * FROM `stardb_backup`.`role_user_backup`;")
-        user_records = self.cursor.fetchall()
-        dct = {}
-        for data in user_records:
-            if data["role_id"] not in dct:
-                dct[data["role_id"]] = []
-            dct[data["role_id"]].append(data["discord_id"])
-
-        return [BackupRoles(**i, user_ids=dct.get(i["role_id"], list())) for i in records]
-
 class MySQLTokensSystem(MySQLBaseModel):
     def set_oauth(self, user_id:int, type:CommunityType, access_token:str, refresh_token:str=None, expires_at:datetime=None):
         type = CommunityType(type)
@@ -1427,23 +1257,26 @@ class MySQLManager(MySQLBaseModel):
 
 class MySQLDatabase(
     MySQLUserSystem,
-    MySQLNotifySystem,
     MySQLGameSystem,
-    MySQLRoleSaveSystem,
     MySQLCurrencySystem,
     MySQLHoYoLabSystem,
     MySQLBetSystem,
     MySQLPetSystem,
     MySQLRPGSystem,
-    MySQLWarningSystem,
-    MySQLPollSystem,
     MYSQLElectionSystem,
-    MySQLRegistrationSystem,
-    MySQLBackupSystem,
     MySQLTokensSystem,
     MySQLManager,
 ):
     """Mysql操作"""
 
-class SQLEngine(BaseSQLEngine):
+class SQLEngine(
+    SQLNotifySystem,
+    SQLRoleSaveSystem,
+    SQLWarningSystem,
+    SQLPollSystem,
+    SQLElectionSystem,
+    SQLBackupSystem,
+    SQLTokensSystem,
+    SQLTest,
+    ):
     """SQL引擎"""

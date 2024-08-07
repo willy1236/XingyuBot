@@ -463,7 +463,8 @@ class command(Cog_Extension):
         view = sclient.create_poll(title,options,ctx.author.id,ctx.guild.id,ban_alternate_account_voting,show_name,check_results_in_advance,results_only_initiator,number_of_user_votes,only_role_list=only_role_list,role_magnification_dict=role_magnification_dict)
         embed = view.embed(ctx.guild)
         message = await ctx.respond(embed=embed,view=view)
-        sclient.sqldb.update_poll(view.poll_id,"message_id",message.id)
+        view.poll.message_id = message.id
+        sclient.sqldb.update_poll(view.poll)
 
     @commands.is_owner()
     @poll.command(description='重新創建投票介面')
@@ -483,7 +484,7 @@ class command(Cog_Extension):
                    show_name:discord.Option(bool,name='是否顯示投票人',description='',default=False)):
         await ctx.defer()
         view = PollView(poll_id,sclient.sqldb,self.bot)
-        view.show_name = show_name
+        view.poll.show_name = show_name
         embed = view.results_embed(ctx.interaction)
         await ctx.respond(embed=embed)
 
@@ -517,7 +518,7 @@ class command(Cog_Extension):
     async def join(self,ctx:discord.ApplicationContext,
                     party_id:discord.Option(int,name='政黨',description='要參加的政黨',choices=party_option)):
         sclient.sqldb.join_party(ctx.author.id,party_id)
-        dbdata = sclient.sqldb.get_party_data(party_id)
+        dbdata = sclient.sqldb.get_party(party_id)
         role_id = dbdata.role_id
         try:
             role = ctx.guild.get_role(role_id)
@@ -532,7 +533,7 @@ class command(Cog_Extension):
     async def leave(self,ctx:discord.ApplicationContext,
                     party_id:discord.Option(int,name='政黨',description='要離開的政黨',choices=party_option)):
         sclient.sqldb.leave_party(ctx.author.id,party_id)
-        dbdata = sclient.sqldb.get_party_data(party_id)
+        dbdata = sclient.sqldb.get_party(party_id)
         role_id = dbdata.role_id
         try:
             role = ctx.author.get_role(role_id)
@@ -604,15 +605,17 @@ class command(Cog_Extension):
     async def set(self,ctx,
                      user:discord.Option(discord.Member,name='用戶'),
                      registrations_id:discord.Option(int,name='戶籍id')):
-        dbdata = sclient.sqldb.get_resgistration(registrations_id)
-        guild = self.bot.get_guild(dbdata.guild_id)
+        resgistration = sclient.sqldb.get_resgistration(registrations_id)
+        guild = self.bot.get_guild(resgistration.guild_id)
         
         role_guild = self.bot.get_guild(613747262291443742)
-        role = role_guild.get_role(dbdata['role_id'])
+        role = role_guild.get_role(resgistration.role_id)
 
         if role:
             await role_guild.get_member(ctx.author.id).add_roles(role)
-        sclient.sqldb.set_userdata(ctx.author.id,"user_discord","registrations_id",dbdata['registrations_id'])
+        from starlib.models.mysql import DiscordUser
+        duser = DiscordUser(discord_id=ctx.author.id, registrations_id=resgistration.registrations_id)
+        sclient.sqldb.add_dcuser(duser)
         
         await ctx.respond(f"已註冊戶籍至 {guild.name}")
 

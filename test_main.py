@@ -162,5 +162,3 @@ class classrole(IntEnum):
 # oauth = DiscordOauth(oauth_setting, user_id=419131103836635136)
 # connections = oauth.get_me()
 # print(connections)
-
-print(sqldb.get_all_party_data())

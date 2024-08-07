@@ -13,7 +13,7 @@ from ..models import PartialLOLPlayer
 from ..settings import tz
 from ..starAI import StarGeminiAI
 from ..types import DBGame
-from ..uiElement.view import ElectionPollView, PollView
+from ..uiElement.view import PollView
 from ..utilities import BotEmbed, ChoiceList, scheduler
 from .cache import StarCache
 
@@ -21,34 +21,6 @@ if TYPE_CHECKING:
     from twitchAPI.twitch import Twitch
 
     from starDiscord import DiscordBot
-
-class UserClient():
-    """用戶查詢系統"""
-    def get_user(self, user_id: str):
-            """
-            Retrieves a user from the database based on the provided user ID.
-
-            Args:
-                user_id (str): The ID of the user to retrieve.
-
-            Returns:
-                StarUser: The user object corresponding to the provided user ID.
-            """
-            return sqldb.get_user(user_id)
-    
-    def get_dcuser(self, discord_id: int, full=False, user_dc: discord.User = None):
-        """
-        Retrieves a Discord user from the database.
-
-        Args:
-            discord_id (int): The Discord ID of the user.
-            full (bool, optional): Whether to retrieve the full user information. Defaults to False.
-            user_dc (discord.User, optional): The Discord user object. Defaults to None.
-
-        Returns:
-            DiscordUser: The Discord user object from the database.
-        """
-        return sqldb.get_dcuser(discord_id, full, user_dc)
 
 class GameClient():
     """遊戲查詢系統"""
@@ -151,15 +123,8 @@ class PollClient():
             role_magnification = poll_role_dict[roleid][1]
             sqldb.add_poll_role(poll_id,roleid,role_type,role_magnification)
 
-        view = PollView(poll_id,sqldb,bot)
-        return view
-    
-    def create_election_poll(self,title:str,options:list,creator_id:int,guild_id:int,bot:discord.bot=None):
-        """創建選舉投票"""
-        poll_id = sqldb.add_poll(title,creator_id,datetime.now(),None,guild_id,ban_alternate_account_voting=True,check_results_in_advance=False)
-        sqldb.add_poll_option(poll_id,options)
-        
-        view = ElectionPollView(poll_id,sqldb,bot)
+        poll = sqldb.get_poll(poll_id)
+        view = PollView(poll,sqldb,bot)
         return view
     
 class ElectionSystem():

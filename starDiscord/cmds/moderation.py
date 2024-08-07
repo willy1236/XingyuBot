@@ -66,7 +66,7 @@ class moderation(Cog_Extension):
     async def voice(self,ctx:discord.ApplicationContext,
                     channel:discord.Option(discord.VoiceChannel,name='頻道',description='動態語音頻道',default=None)):
         if channel:
-            sclient.sqldb.set_notify_channel(ctx.guild.id,"dynamic_voice",channel.id)
+            sclient.sqldb.add_notify_channel(ctx.guild.id,"dynamic_voice",channel.id)
             await ctx.respond(f'設定完成，已將 {channel.mention} 設定為動態語音頻道')
             sclient.cache.update_dynamic_voice(add_channel=channel.id)
         else:
@@ -78,7 +78,7 @@ class moderation(Cog_Extension):
     @commands.has_permissions(manage_channels=True)
     @commands.guild_only()
     async def list(self,ctx:discord.ApplicationContext):
-        dbdata = sclient.sqldb.get_all_notify_channel(ctx.guild.id)
+        dbdata = sclient.sqldb.get_notify_channel_all(ctx.guild.id)
         embed = BotEmbed.general("通知頻道",ctx.guild.icon.url if ctx.guild.icon else None)
         for data in dbdata:
             notify_type = data.notify_type

@@ -86,10 +86,11 @@ class event(Cog_Extension):
             dbdata = sclient.sqldb.get_all_active_polls()
             now = datetime.now()
             for poll in dbdata:
-                if now - poll['created_at'] > timedelta(days=28):
-                    sclient.sqldb.update_poll(poll['poll_id'],"is_on",0)
+                if now - poll.created_at > timedelta(days=28):
+                    poll.is_on = 0
+                    sclient.sqldb.update_poll(poll)
                 else:   
-                    bot.add_view(PollView(poll['poll_id'],sqldb=sclient.sqldb,bot=bot))
+                    bot.add_view(PollView(poll.poll_id,sqldb=sclient.sqldb,bot=bot))
 
             invites = await bot.get_guild(613747262291443742).invites()
             now = datetime.now(timezone.utc)
