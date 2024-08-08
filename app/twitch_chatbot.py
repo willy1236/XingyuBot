@@ -104,9 +104,20 @@ async def on_channel_subscribe(event: eventsub.ChannelSubscribeEvent):
     twitch_log.info(f"{event.event.user_name} 在 {event.event.broadcaster_user_name} 的層級{event.event.tier[0]}新訂閱")
 
 async def on_channel_subscription_message(event: eventsub.ChannelSubscriptionMessageEvent):
-    twitch_log.info(f"{event.event.user_name} 在 {event.event.broadcaster_user_name} 的層級{event.event.tier[0]} {event.event.duration_months} 個月 訂閱")
-    twitch_log.info(f"他已經訂閱 {event.event.cumulative_months} 個月了")
-    twitch_log.info(f"訊息：{event.event.message}")
+    texts = [
+        f"{event.event.user_name} 在 {event.event.broadcaster_user_name} 的層級{event.event.tier[0]} {event.event.duration_months} 個月 訂閱",
+        f"他已經訂閱 {event.event.cumulative_months} 個月了",
+    ]
+    if event.event.message:
+        texts.append(f"訊息：{event.event.message.text}")
+    
+    for text in texts:
+        twitch_log.info(text)
+    
+    if event.event.broadcaster_user_login == TARGET_CHANNEL[0] and sclient.bot:
+        sclient.bot.twitchbot_send_message(1237412404980355092, embed=BotEmbed.simple("新訂閱","\n".join(texts)))
+        chat.send_message(TARGET_CHANNEL[0], "\n".join(texts))
+    
 
 # bot
 async def on_ready(ready_event: EventData):
@@ -121,8 +132,6 @@ async def on_message(msg: ChatMessage):
 
 async def on_sub(sub: ChatSub):
     twitch_log.info(f'New subscription in {sub.room.name}:\nType: {sub.sub_plan_name}\nMessage: {sub.sub_message}')
-    if sub.room.name == TARGET_CHANNEL[0] and sclient.bot:
-        sclient.bot.twitchbot_send_message(1237412404980355092, embed=BotEmbed.general(title=f'{sub.room.name} 的新訂閱!',description=f"類型: {sub.sub_plan_name}\訊息: {sub.sub_message}"))
 
 async def on_bot_joined(event: JoinedEvent):
     await asyncio.sleep(1)
@@ -181,7 +190,7 @@ async def run():
     users = [user async for user in twitch.get_users(logins=TARGET_CHANNEL)]
 
     # create chat instance
-    #global chat
+    global chat
     chat = await Chat(twitch)
 
     # register the handlers for the events you want

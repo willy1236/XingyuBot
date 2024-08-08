@@ -206,11 +206,11 @@ class VideoSnippet(BaseModel):
     description: str
     thumbnails: Thumbnails
     channelTitle: str
-    tags: list[str]
+    tags: list[str | None] = list()
     categoryId: str
     liveBroadcastContent: str
     localized: Localized
-    defaultAudioLanguage: Optional[str]
+    defaultAudioLanguage: str | None = None
 
 class YoutubeChannel(BaseModel):
     kind: str
@@ -260,6 +260,19 @@ class YoutubeVideo(BaseModel):
     @model_validator(mode='after')
     def __post_init__(self):
         self.snippet.publishedAt = self.snippet.publishedAt.astimezone(tz=tz)
+    
+    def embed(self):
+        embed = discord.Embed(
+            title=self.snippet.title,
+            url=f"https://www.youtube.com/watch?v={self.id}",
+            description=self.snippet.channelTitle,
+            color=0xff0000,
+            timestamp = self.snippet.publishedAt
+            )
+        embed.add_field(name="上傳時間",value=self.snippet.publishedAt.strftime('%Y/%m/%d %H:%M:%S'),inline=False)
+        #embed.add_field(name="更新時間",value=self.updated_at.strftime('%Y/%m/%d %H:%M:%S'),inline=True)
+        embed.set_image(url=self.snippet.thumbnails.default.url)
+        return embed
 
 class YoutubeRSSVideo(BaseModel):
     model_config = ConfigDict(extra='ignore')

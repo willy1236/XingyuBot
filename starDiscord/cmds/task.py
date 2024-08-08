@@ -16,7 +16,7 @@ from ..extension import Cog_Extension
 
 def slice_list(lst:list[YoutubeVideo], target) -> list[YoutubeVideo]:
     """以target為基準取出更新的影片資訊"""
-    index = next((i for i, d in enumerate(lst) if d.uplood_at > target), None)
+    index = next((i for i, d in enumerate(lst) if d.snippet.publishedAt > target), None)
     return lst[index:] if index else lst
 
 def slice_list_twitch(lst:list[TwitchVideo], target:datetime) -> list[TwitchVideo]:
@@ -227,7 +227,7 @@ class task(Cog_Extension):
         api = TwitchAPI()
         for user in users:
             cache_last_update_time = datetime.fromisoformat(twitch_cache.get(user)).replace(tzinfo=tz) if twitch_cache.get(user) else None
-            clips = api.get_clips(user, started_at=cache_last_update_time if cache_last_update_time else None)
+            clips = api.get_clips(user, started_at=cache_last_update_time)
             # Twitch API 會無視started_at參數回傳錯誤時間的資料，故使用函數過濾掉，解法尚待改進
             clips = filter_twitch_clip(clips, cache_last_update_time)
             if clips:
