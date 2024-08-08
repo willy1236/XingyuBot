@@ -186,7 +186,7 @@ class LoopholeThread(BaseThread):
         reconnection_times = 0
         while not self._stop_event.is_set():
             log.info("Starting LoopholeThread")
-            result = subprocess.run(["loophole", "http", "14000", "127.0.0.1", "--hostname", "star1016"], capture_output=True, text=True)
+            result = subprocess.run(["loophole", "http", "14000", "127.0.0.1", "--hostname", "cloudfoam"], capture_output=True, text=True)
             log.info(f'Stdout: {result.stdout}')
             log.info(f'Stderr: {result.stderr}')
             log.info(f'Exit status: {result.returncode}')
@@ -203,7 +203,7 @@ class LoopholeTwitchThread(BaseThread):
         reconnection_times = 0
         while not self._stop_event.is_set():
             log.info("Starting LoopholeTwitchThread")
-            result = subprocess.run(["loophole", "http", "14001", "127.0.0.1", "--hostname", "startwitch"], capture_output=True, text=True)
+            result = subprocess.run(["loophole", "http", "14001", "127.0.0.1", "--hostname", "twitch.cloudfoam"], capture_output=True, text=True)
             log.info(f'Stdout: {result.stdout}')
             log.info(f'Stderr: {result.stderr}')
             log.info(f'Exit status: {result.returncode}')

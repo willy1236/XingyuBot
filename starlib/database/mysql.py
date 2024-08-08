@@ -433,16 +433,14 @@ class SQLBackupSystem(BaseSQLEngine):
     
 class SQLTokensSystem(BaseSQLEngine):
     def set_oauth(self, user_id:int, type:CommunityType, access_token:str, refresh_token:str=None, expires_at:datetime=None):
-        type = CommunityType(type)
-        self.cursor.execute(f"INSERT INTO `stardb_tokens`.`oauth_token` VALUES(%s,%s,%s,%s,%s) ON DUPLICATE KEY UPDATE `access_token` = %s, `refresh_token` = %s, `expires_at` = %s;",(user_id,type.value,access_token,refresh_token,expires_at,access_token,refresh_token,expires_at))
-        self.connection.commit()
+        token = OAuth2Token(user_id=user_id,type=type,access_token=access_token,refresh_token=refresh_token,expires_at=expires_at)
+        self.session.merge(token)
+        self.session.commit()
 
     def get_oauth(self, user_id:int, type:CommunityType):
-        type = CommunityType(type)
-        self.cursor.execute(f"SELECT * FROM `stardb_tokens`.`oauth_token` WHERE `user_id` = {user_id} AND `type` = {type.value};")
-        records = self.cursor.fetchall()
-        if records:
-            return records[0]
+        stmt = select(OAuth2Token).where(OAuth2Token.user_id == user_id, OAuth2Token.type == type)
+        result = self.session.exec(stmt).one_or_none()
+        return result
 
 class SQLTest(BaseSQLEngine):
     def get_test(self):
