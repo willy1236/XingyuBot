@@ -87,9 +87,9 @@ async def on_stream_offline(event: eventsub.StreamOfflineEvent):
         sclient.bot.twitchbot_send_message(content=f'{event.event.broadcaster_user_name} ending stream.')
 
 async def on_channel_points_custom_reward_redemption_add(event: eventsub.ChannelPointsCustomRewardRedemptionAddEvent):
-    text = f'{event.event.user_name} 兌換了 {event.event.reward.title}!' 
-    if event.event.reward.prompt:
-        text += f' ({event.event.reward.prompt})'
+    text = f'{event.event.user_name}({event.event.user_login}) 兌換了 {event.event.reward.title}!'
+    if event.event.user_input:
+        text += f' ({event.event.user_input})'
     twitch_log.info(text)
     if event.event.broadcaster_user_login == TARGET_CHANNEL[0] and sclient.bot:
         sclient.bot.twitchbot_send_message(1237412404980355092, embed=BotEmbed.simple("兌換自訂獎勵",text))
