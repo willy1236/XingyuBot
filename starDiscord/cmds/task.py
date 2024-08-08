@@ -10,13 +10,13 @@ from requests.exceptions import ConnectTimeout
 
 from starlib import Jsondb,sclient,log,BotEmbed,utilities, ChoiceList, tz
 from starlib.dataExtractor import *
-from starlib.models.community import TwitchVideo, YoutubeVideo, TwitchClip
+from starlib.models.community import TwitchVideo, YoutubeRSSVideo, TwitchClip
 from starlib.types import NotifyCommunityType
 from ..extension import Cog_Extension
 
-def slice_list(lst:list[YoutubeVideo], target) -> list[YoutubeVideo]:
+def slice_list(lst:list[YoutubeRSSVideo], target) -> list[YoutubeRSSVideo]:
     """以target為基準取出更新的影片資訊"""
-    index = next((i for i, d in enumerate(lst) if d.snippet.publishedAt > target), None)
+    index = next((i for i, d in enumerate(lst) if d.uplood_at > target), None)
     return lst[index:] if index else lst
 
 def slice_list_twitch(lst:list[TwitchVideo], target:datetime) -> list[TwitchVideo]:
