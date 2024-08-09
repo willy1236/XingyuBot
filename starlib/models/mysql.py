@@ -14,7 +14,7 @@ from sqlmodel import (Field, Relationship, Session, SQLModel, create_engine,
 
 from ..fileDatabase import Jsondb
 from ..settings import tz
-from ..types import CommunityType, NotifyCommunityType, WarningType
+from ..types import CommunityType, NotifyCommunityType, WarningType, NotifyChannelType
 from ..utilities import BotEmbed, ChoiceList
 from .BaseModel import ListObject
 
@@ -130,7 +130,7 @@ class NotifyChannel(SQLModel, table=True):
     __table_args__ = {'schema': 'database'}
     
     guild_id: int = Field(primary_key=True)
-    notify_type: str = Field(primary_key=True)
+    notify_type: NotifyChannelType = Field(sa_column=Column(Integer, primary_key=True))
     channel_id: int
     role_id: int | None
 

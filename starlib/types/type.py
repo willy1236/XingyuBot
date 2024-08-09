@@ -8,15 +8,16 @@ class NotifyCommunityType(IntEnum):
     TwitchClip = 4
 
 class NotifyChannelType(IntEnum):
-    BotUpdates = 1
-    EarthquakeNotifications = 2
-    WeatherForecast = 3
-    ApexRotation = 4
-    AdminChannel = 5
-    MemberJoin = 6
-    MemberLeave = 7
-    DynamicVoice = 8
-    VoiceLog = 9
+    AllAnnouncements = 1
+    BotUpdates = 2
+    EarthquakeNotifications = 3
+    WeatherForecast = 4
+    ApexRotation = 5
+    AdminChannel = 6
+    MemberJoin = 7
+    MemberLeave = 8
+    DynamicVoice = 9
+    VoiceLog = 10
 
 class CommunityType(IntEnum):
     Discord = 1

@@ -1,43 +1,43 @@
 {
     "last_update": "2024-05-05",
     "channel_set_option": {
-        "all_anno": {
+        "1": {
             "en-US": "All Announcements",
             "zh-TW": "全群公告"
         },
-        "bot": {
+        "2": {
             "en-US": "Bot Updates",
             "zh-TW": "機器人更新通知"
         },
-        "earthquake": {
+        "3": {
             "en-US": "Earthquake Notifications",
             "zh-TW": "地震通知"
         },
-        "forecast": {
+        "4": {
             "en-US": "Weather Forecast for Taiwan",
             "zh-TW": "台灣各縣市天氣預報"
         },
-        "apex_info": {
+        "5": {
             "en-US": "Apex Rotation Information",
             "zh-TW": "Apex輪替資訊"
         },
-        "mod": {
+        "6": {
             "en-US": "Admin Channel",
             "zh-TW": "管理員專用頻道"
         },
-        "member_join": {
+        "7": {
             "en-US": "Member Join",
             "zh-TW": "成員加入"
         },
-        "member_leave": {
+        "8": {
             "en-US": "Member Leave",
             "zh-TW": "成員離開"
         },
-        "dynamic_voice": {
+        "9": {
             "en-US": "Dynamic Voice",
             "zh-TW": "動態語音"
         },
-        "voice_log": {
+        "10": {
             "en-US": "Voice Log",
             "zh-TW": "語音進出紀錄"
         }

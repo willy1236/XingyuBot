@@ -105,7 +105,7 @@ class SQLNotifySystem(BaseSQLEngine):
         result = self.session.exec(statement).one_or_none()
         return result
 
-    def get_notify_channel_by_type(self,notify_type:str):
+    def get_notify_channel_by_type(self,notify_type:NotifyChannelType):
         """取得自動通知頻道（依據通知種類）"""
         statement = select(NotifyChannel).where(NotifyChannel.notify_type == notify_type)
         result = self.session.exec(statement).all()
@@ -122,6 +122,18 @@ class SQLNotifySystem(BaseSQLEngine):
         statement = select(DynamicChannel.channel_id)
         result = self.session.exec(statement).all()
         return result
+    
+    def add_dynamic_voice(self, channel_id, discord_id, guild_id, created_at=None):
+        """設定動態語音"""
+        voice = DynamicChannel(channel_id=channel_id, discord_id=discord_id, guild_id=guild_id, created_at=created_at)
+        self.session.add(voice)
+        self.session.commit()
+
+    def remove_dynamic_voice(self,channel_id):
+        """移除動態語音"""
+        stmt = delete(DynamicChannel).where(DynamicChannel.channel_id == channel_id)
+        self.session.exec(stmt)
+        self.session.commit()
 
     #* notify community
     def add_notify_community(self,notify_type:NotifyCommunityType,notify_name:str,guild_id:int,channel_id:int,role_id:int=None,display_name:str=None):

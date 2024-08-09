@@ -8,6 +8,7 @@ from discord.ext import commands
 
 from starlib import Jsondb,BotEmbed,sclient,log
 from starlib.uiElement.view import WelcomeView, ReactionRole1, PollView
+from starlib.types import NotifyChannelType
 from ..extension import Cog_Extension
 
 keywords = {
@@ -223,7 +224,7 @@ class event(Cog_Extension):
         guildid = get_guildid(before,after)
         #語音進出紀錄
         if voice_updata:
-            voice_log_dict = sclient.cache["voice_log"]
+            voice_log_dict = sclient.cache[NotifyChannelType.VoiceLog]
             if guildid in voice_log_dict:
                 NowTime = datetime.now()
                 before_text = ""
@@ -252,7 +253,7 @@ class event(Cog_Extension):
                 await self.bot.get_channel(voice_log_dict.get(guildid)[0]).send(embed=embed)
             
         #動態語音
-        dynamic_voice_dict = sclient.cache["dynamic_voice"]
+        dynamic_voice_dict = sclient.cache[NotifyChannelType.DynamicVoice]
         if guildid in dynamic_voice_dict:
             #新增
             if after.channel and after.channel.id == dynamic_voice_dict[guildid][0]:
@@ -266,7 +267,7 @@ class event(Cog_Extension):
                 }
                 new_channel = await guild.create_voice_channel(name=f'{user.name}的頻道', reason='動態語音：新增',category=category,overwrites=overwrites)
                 sclient.cache.update_dynamic_voice_room(add_channel=new_channel.id)
-                sclient.sqldb.set_dynamic_voice(new_channel.id,user.id,guild.id,None)
+                sclient.sqldb.add_dynamic_voice(new_channel.id,user.id,guild.id,None)
                 await user.move_to(new_channel)
                 return
 
@@ -324,7 +325,7 @@ class event(Cog_Extension):
         if dbdata:
             username = member.name if member.discriminator == "0" else f"{member.name}#{member.discriminator}"
             text = f'{member.mention} ({username}) 加入了我們'
-            await self.bot.get_channel(int(dbdata.channel_id)).send(text)
+            await self.bot.get_channel(dbdata.channel_id).send(text)
 
         #警告系統：管理員通知
         notice_data = sclient.sqldb.get_notify_channel(guildid,"mod")

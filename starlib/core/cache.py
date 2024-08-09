@@ -1,11 +1,10 @@
 from ..database import sqldb
-from ..types import NotifyCommunityType
+from ..types import NotifyCommunityType, NotifyChannelType
 from ..utilities import log
 from ..models.mysql import NotifyCommunity, NotifyChannel
 
 class StarCache:
-    #TODO: 與JsonCache合併
-    dict_type = ["dynamic_voice","voice_log"]
+    dict_type = [NotifyChannelType.DynamicVoice, NotifyChannelType.VoiceLog]
     list_type = ["dynamic_voice_room"]
     notify_community_type = [NotifyCommunityType.Twitch, NotifyCommunityType.Youtube, NotifyCommunityType.TwitchVideo, NotifyCommunityType.TwitchClip]
 
@@ -61,10 +60,10 @@ class StarCache:
 
     def update_dynamic_voice(self,add_channel=None,remove_channel=None):
         """更新動態語音頻道"""
-        if add_channel and add_channel not in self.cache["dynamic_voice"]:
-            self["dynamic_voice"].append(add_channel)
+        if add_channel and add_channel not in self.cache[NotifyChannelType.DynamicVoice]:
+            self[NotifyChannelType.DynamicVoice].append(add_channel)
         if remove_channel:
-            self["dynamic_voice"].remove(remove_channel)
+            self[NotifyChannelType.DynamicVoice].remove(remove_channel)
 
     def update_dynamic_voice_room(self,add_channel=None,remove_channel=None):
         """更新動態語音房間"""
@@ -73,7 +72,7 @@ class StarCache:
         if remove_channel:
             self["dynamic_voice_room"].remove(remove_channel)
 
-    def update_notify_channel(self,notify_type):
+    def update_notify_channel(self,notify_type:NotifyChannelType):
         """更新通知頻道"""
         if notify_type not in self.dict_type:
             raise KeyError(f"Not implemented notify type: {notify_type}")
