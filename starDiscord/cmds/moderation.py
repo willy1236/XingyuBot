@@ -51,7 +51,7 @@ class moderation(Cog_Extension):
         
         if channel:
             roleid = role.id if role else None
-            sclient.sqldb.set_notify_channel(guildid,notify_type,channel.id,roleid)
+            sclient.sqldb.add_notify_channel(guildid,notify_type,channel.id,roleid)
             await ctx.respond(f'設定完成，已將 {ChoiceList.get_tw(notify_type,"channel_set_option")} 頻道設定在 {channel.mention}')
             await ctx.send(embed=BotEmbed.simple('溫馨提醒','若為定時通知，請將機器人的訊息保持在此頻道的最新訊息，以免機器人找不到訊息而重複發送'),delete_after=10)
             if notify_type in ["voice_log"]:
