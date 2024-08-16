@@ -11,7 +11,7 @@ from requests.exceptions import ConnectTimeout
 from starlib import Jsondb,sclient,log,BotEmbed,utilities, ChoiceList, tz
 from starlib.dataExtractor import *
 from starlib.models.community import TwitchVideo, YoutubeRSSVideo, TwitchClip
-from starlib.types import NotifyCommunityType
+from starlib.types import NotifyCommunityType, NotifyChannelType
 from ..extension import Cog_Extension
 
 def slice_list(lst:list[YoutubeRSSVideo], target) -> list[YoutubeRSSVideo]:
@@ -45,8 +45,6 @@ class task(Cog_Extension):
             #scheduler.add_job(self.update_rpgshop_data,'cron',hour=0,minute=0,second=1,jitter=30,misfire_grace_time=60)
             
             #scheduler.add_job(self.update_channel_dict,'cron',hour='*',minute="0,30",second=0,jitter=30,misfire_grace_time=60)
-            scheduler.add_job(self.start_eletion,'cron',day=1,hour=0,minute=0,second=30,jitter=30,misfire_grace_time=60)
-            scheduler.add_job(self.remind_eletion,'cron',day=28,hour=21,minute=0,second=0,jitter=30,misfire_grace_time=60)
 
             scheduler.add_job(self.earthquake_check,'interval',minutes=2,jitter=30,misfire_grace_time=40)
             scheduler.add_job(self.youtube_video,'interval',minutes=15,jitter=30,misfire_grace_time=40)
@@ -92,7 +90,7 @@ class task(Cog_Extension):
             else:
                 text = '地震報告'
             
-            records = sclient.sqldb.get_notify_channel_by_type('earthquake')
+            records = sclient.sqldb.get_notify_channel_by_type(NotifyChannelType.EarthquakeNotifications)
             for i in records:
                 channel = self.bot.get_channel(i.channel_id)
                 if channel:
