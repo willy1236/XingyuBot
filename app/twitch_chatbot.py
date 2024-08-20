@@ -116,7 +116,7 @@ async def on_channel_subscription_message(event: eventsub.ChannelSubscriptionMes
     
     if event.event.broadcaster_user_login == TARGET_CHANNEL[0] and sclient.bot:
         sclient.bot.twitchbot_send_message(1237412404980355092, embed=BotEmbed.simple("新訂閱","\n".join(texts)))
-        chat.send_message(TARGET_CHANNEL[0], "\n".join(texts))
+        await chat.send_message(TARGET_CHANNEL[0], "\n".join(texts))
     
 
 # bot
@@ -144,7 +144,10 @@ async def on_bot_leaved(event: LeftEvent):
     twitch_log.info(f'Leaved bot in {event.room_name}')
 
 async def on_server_notice(event: NoticeEvent):
-    twitch_log.info(f'Notice from server: {event.message} in {event.room.name}')
+    if event.room:
+        twitch_log.info(f'Notice from server: {event.message} in {event.room.name}')
+    else:
+        twitch_log.info(f'Notice from server: {event.message}')
 
 async def on_whisper(event: WhisperEvent):
     twitch_log.info(f'Whisper from {event.user.name}: {event.message}')

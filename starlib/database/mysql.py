@@ -205,7 +205,7 @@ class SQLRoleSaveSystem(BaseSQLEngine):
         return {i[0]: i[1] for i in result}
 
     def add_role_save(self,discord_id:int,role:discord.Role):
-        role_save = RoleSave(discord_id=discord_id,role_id=role.id,role_name=role.name,time=role.created_at.date())
+        role_save = RoleSave(discord_id=discord_id, role_id=role.id, role_name=role.name, time=role.created_at.date())
         self.session.add(role_save)
         self.session.commit()
 
