@@ -4,7 +4,7 @@ from datetime import datetime
 
 filename = datetime.now().strftime("%Y-%m-%d %H_%M_%S") + '.log'
 
-def create_logger(dir_path, file_log=False, log_level=logging.DEBUG, log_name='py.warnings', format='%(asctime)s [%(levelname)s] %(message)s'):
+def create_logger(log_name='py.warnings', log_level=logging.DEBUG, file_log=False, dir_path="./logs", format='%(asctime)s [%(levelname)s] %(message)s'):
     # config
     logging.captureWarnings(log_name == "py.warnings")   # 捕捉 py waring message
     formatter = logging.Formatter(format)

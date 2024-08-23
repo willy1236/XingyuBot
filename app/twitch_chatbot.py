@@ -116,7 +116,7 @@ async def on_channel_subscription_message(event: eventsub.ChannelSubscriptionMes
     
     if event.event.broadcaster_user_login == TARGET_CHANNEL[0] and sclient.bot:
         sclient.bot.twitchbot_send_message(1237412404980355092, embed=BotEmbed.simple("新訂閱","\n".join(texts)))
-        await chat.send_message(TARGET_CHANNEL[0], "\n".join(texts))
+        await chat.send_message(TARGET_CHANNEL[0], f"感謝{event.event.user_name}的{event.event.duration_months}個月訂閱！")
     
 
 # bot

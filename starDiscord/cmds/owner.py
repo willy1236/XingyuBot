@@ -7,6 +7,7 @@ from discord.commands import SlashCommandGroup
 
 from starlib import BotEmbed,Jsondb,sclient
 from starlib.utilities.utility import converter
+from starlib.types import NotifyChannelType
 from ..extension import Cog_Extension
 from ..bot import DiscordBot
 
@@ -37,7 +38,7 @@ class AnnoModal(discord.ui.Modal):
         embed.set_author(name="機器人全群公告",icon_url=picdata['radio_001'])
         embed.set_footer(text='Bot Radio System')
         send_success = 0
-        channels = sclient.sqldb.get_notify_channel_by_type('all_anno')
+        channels = sclient.sqldb.get_notify_channel_by_type(NotifyChannelType.AllAnnouncements)
 
         for i in channels:
             channel = interaction.client.get_channel(i.channel_id)
@@ -68,7 +69,7 @@ class BotUpdateModal(discord.ui.Modal):
         embed.set_author(name="機器人更新通知",icon_url=picdata['radio_001'])
         embed.set_footer(text='Bot Radio System')
         send_success = 0
-        channels = sclient.sqldb.get_notify_channel_by_type('bot')
+        channels = sclient.sqldb.get_notify_channel_by_type(NotifyChannelType.BotUpdates)
 
         for i in channels:
             channel = interaction.client.get_channel(i.channel_id)

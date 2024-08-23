@@ -122,7 +122,7 @@ class task(Cog_Extension):
                 embed_list.append(crafting.desplay())
             embed_list.append(map.desplay())
             
-            records = sclient.sqldb.get_notify_channel_by_type('apex_info')
+            records = sclient.sqldb.get_notify_channel_by_type(NotifyChannelType.ApexRotation)
             for i in records:
                 channel = self.bot.get_channel(i['channel_id'])
                 if channel:
@@ -156,7 +156,7 @@ class task(Cog_Extension):
     async def forecast_update(self):
         forecast = CWA_API().get_forecast()
         if forecast:
-            records = sclient.sqldb.get_notify_channel_by_type('forecast')
+            records = sclient.sqldb.get_notify_channel_by_type(NotifyChannelType.WeatherForecast)
             for i in records:
                 channel = self.bot.get_channel(i.channel_id)
                 if channel:
