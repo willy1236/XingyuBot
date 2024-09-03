@@ -5,7 +5,7 @@ from discord.ext import commands
 from discord.commands import SlashCommandGroup
 
 from starlib import ChoiceList,BotEmbed,Jsondb,sclient
-from starlib.types import WarningType
+from starlib.types import WarningType, NotifyChannelType
 from starlib.utilities import converter
 from ..extension import Cog_Extension
 
@@ -58,7 +58,7 @@ class moderation(Cog_Extension):
                 sclient.cache.update_notify_channel(notify_type)
         else:
             sclient.sqldb.remove_notify_channel(guildid,notify_type)
-            await ctx.respond(f'設定完成，已移除 {notify_type} 頻道')
+            await ctx.respond(f'設定完成，已移除 {ChoiceList.get_tw(notify_type,"channel_set_option")} 頻道')
 
     @channel_notify.command(description='設定動態語音頻道')
     @commands.has_permissions(manage_channels=True)
@@ -66,11 +66,11 @@ class moderation(Cog_Extension):
     async def voice(self,ctx:discord.ApplicationContext,
                     channel:discord.Option(discord.VoiceChannel,name='頻道',description='動態語音頻道',default=None)):
         if channel:
-            sclient.sqldb.add_notify_channel(ctx.guild.id,"dynamic_voice",channel.id)
+            sclient.sqldb.add_notify_channel(ctx.guild.id,NotifyChannelType.DynamicVoice,channel.id)
             await ctx.respond(f'設定完成，已將 {channel.mention} 設定為動態語音頻道')
             sclient.cache.update_dynamic_voice(add_channel=channel.id)
         else:
-            sclient.sqldb.remove_notify_channel(ctx.guild.id,"dynamic_voice")
+            sclient.sqldb.remove_notify_channel(ctx.guild.id,NotifyChannelType.DynamicVoice)
             await ctx.respond(f'設定完成，已移除 動態語音 頻道')
             sclient.cache.update_dynamic_voice(remove_channel=channel.id)
     

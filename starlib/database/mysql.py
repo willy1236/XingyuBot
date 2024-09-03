@@ -84,13 +84,13 @@ class BaseSQLEngine:
 
 class SQLNotifySystem(BaseSQLEngine):
     #* notify channel
-    def add_notify_channel(self,guild_id:int,notify_type:str,channel_id:int,role_id:int=None):
+    def add_notify_channel(self,guild_id:int,notify_type:NotifyChannelType,channel_id:int,role_id:int=None):
         """設定自動通知頻道"""
         channel = NotifyChannel(guild_id=guild_id, notify_type=notify_type, channel_id=channel_id, role_id=role_id)
         self.session.merge(channel)
         self.session.commit()
 
-    def remove_notify_channel(self,guild_id:int,notify_type:str):
+    def remove_notify_channel(self,guild_id:int,notify_type:NotifyChannelType):
         """移除自動通知頻道"""
         stmt = delete(NotifyChannel).where(
             NotifyChannel.guild_id == guild_id,
@@ -99,7 +99,7 @@ class SQLNotifySystem(BaseSQLEngine):
         self.session.exec(stmt)
         self.session.commit()
     
-    def get_notify_channel(self,guild_id:str,notify_type:str):
+    def get_notify_channel(self,guild_id:str,notify_type:NotifyChannelType):
         """取得自動通知頻道"""
         statement = select(NotifyChannel).where(NotifyChannel.guild_id == guild_id, NotifyChannel.notify_type == notify_type)
         result = self.session.exec(statement).one_or_none()

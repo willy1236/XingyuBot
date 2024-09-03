@@ -105,7 +105,7 @@ async def on_channel_subscribe(event: eventsub.ChannelSubscribeEvent):
 
 async def on_channel_subscription_message(event: eventsub.ChannelSubscriptionMessageEvent):
     texts = [
-        f"{event.event.user_name} 在 {event.event.broadcaster_user_name} 的層級{event.event.tier[0]} {event.event.duration_months} 個月 訂閱",
+        f"{event.event.user_name} 在 {event.event.broadcaster_user_name} 的{event.event.duration_months}個月 層級{event.event.tier[0]}訂閱",
         f"他已經訂閱 {event.event.cumulative_months} 個月了",
     ]
     if event.event.message:

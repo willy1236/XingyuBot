@@ -472,7 +472,7 @@ class command(Cog_Extension):
                    poll_id:discord.Option(int,name='投票id',description='')):
         dbdata = sclient.sqldb.get_poll(poll_id)
         if dbdata:
-            view = PollView(dbdata['poll_id'],sqldb=sclient.sqldb)    
+            view = PollView(dbdata, sqldb=sclient.sqldb)    
             await ctx.respond(view=view,embed=view.embed(ctx.guild))
         else:
             await ctx.respond("錯誤：查無此ID")

@@ -14,15 +14,13 @@ from starlib.models.community import TwitchVideo, YoutubeRSSVideo, TwitchClip
 from starlib.types import NotifyCommunityType, NotifyChannelType
 from ..extension import Cog_Extension
 
-def slice_list(lst:list[YoutubeRSSVideo], target) -> list[YoutubeRSSVideo]:
+def slice_list(lst:list[YoutubeRSSVideo], target:datetime) -> list[YoutubeRSSVideo]:
     """以target為基準取出更新的影片資訊"""
-    index = next((i for i, d in enumerate(lst) if d.uplood_at > target), None)
-    return lst[index:] if index else lst
+    return [d for d in lst if d.uplood_at > target]
 
 def slice_list_twitch(lst:list[TwitchVideo], target:datetime) -> list[TwitchVideo]:
     """以target為基準取出更新的影片資訊"""
-    index = next((i for i, d in enumerate(lst) if d.created_at > target), None)
-    return lst[index:] if index else lst
+    return [d for d in lst if d.created_at > target]
 
 def filter_twitch_clip(lst:list[TwitchClip], target:datetime) -> list[TwitchClip]:
     """以target為基準取出更新的影片資訊"""
@@ -41,9 +39,6 @@ class task(Cog_Extension):
             # scheduler.add_job(self.apex_info_update,'cron',minute='00,15,30,45',second=1,jitter=30,misfire_grace_time=60)
             # scheduler.add_job(self.apex_crafting_update,'cron',hour=1,minute=5,second=0,jitter=30,misfire_grace_time=60)
             scheduler.add_job(self.forecast_update,'cron',hour='00,03,06,09,12,15,18,21',minute=0,second=1,jitter=30,misfire_grace_time=60)
-            #scheduler.add_job(self.auto_hoyo_reward,'cron',hour=19,minute=0,second=0,jitter=30,misfire_grace_time=60)
-            #scheduler.add_job(self.update_rpgshop_data,'cron',hour=0,minute=0,second=1,jitter=30,misfire_grace_time=60)
-            
             #scheduler.add_job(self.update_channel_dict,'cron',hour='*',minute="0,30",second=0,jitter=30,misfire_grace_time=60)
 
             scheduler.add_job(self.earthquake_check,'interval',minutes=2,jitter=30,misfire_grace_time=40)
@@ -51,7 +46,6 @@ class task(Cog_Extension):
             scheduler.add_job(self.twitch_live,'interval',minutes=3,jitter=15,misfire_grace_time=20)
             scheduler.add_job(self.twitch_video,'interval',minutes=15,jitter=30,misfire_grace_time=40)
             scheduler.add_job(self.twitch_clip,'interval',minutes=10,jitter=30,misfire_grace_time=40)
-            #scheduler.add_job(self.city_battle,'interval',minutes=1,jitter=30,misfire_grace_time=60)
             #scheduler.add_job(self.get_mongodb_data,'interval',minutes=3,jitter=30,misfire_grace_time=40)
 
             if self.bot.user.id == 589744540240314368:
@@ -61,7 +55,6 @@ class task(Cog_Extension):
             #self.twitch.start()
         else:
             pass
-            #scheduler.add_job(self.start_eletion,"date")
         
         if not scheduler.running:
             scheduler.start()
@@ -190,7 +183,7 @@ class task(Cog_Extension):
             if data[user] and not user_cache:
                 twitch_cache[user] = True
                 embed = data[user].embed()
-                await self.bot.send_message_to_notify_communities(embed, NotifyCommunityType.Twitch, user)
+                await self.bot.send_notify_communities(embed, NotifyCommunityType.Twitch, user)
 
             elif not data[user] and user_cache:
                 del twitch_cache[user]
@@ -213,7 +206,7 @@ class task(Cog_Extension):
 
                 for data in video_list:
                     embed = data.embed()
-                    await self.bot.send_message_to_notify_communities(embed, NotifyCommunityType.TwitchVideo, data.user_id)
+                    await self.bot.send_notify_communities(embed, NotifyCommunityType.TwitchVideo, data.user_id)
 
         Jsondb.cache.write('twitch_v',twitch_cache)
 
@@ -234,7 +227,7 @@ class task(Cog_Extension):
                 for clip in clips:
                     newest = clip.created_at if clip.created_at > newest else newest
                     embed = clip.embed()
-                    await self.bot.send_message_to_notify_communities(embed, NotifyCommunityType.TwitchClip, broadcaster_id)
+                    await self.bot.send_notify_communities(embed, NotifyCommunityType.TwitchClip, broadcaster_id)
 
                 twitch_cache[broadcaster_id] = (newest + timedelta(seconds=1)).isoformat()
 
@@ -261,7 +254,7 @@ class task(Cog_Extension):
                 #發布通知
                 for video in video_list:
                     embed = video.embed()
-                    await self.bot.send_message_to_notify_communities(embed, NotifyCommunityType.Youtube, ytchannel_id)
+                    await self.bot.send_notify_communities(embed, NotifyCommunityType.Youtube, ytchannel_id)
 
         Jsondb.cache.write('youtube',cache_youtube)
 

@@ -88,7 +88,7 @@ class DiscordBot(discord.Bot):
         embed.add_field(name='來源群組', value=f'{msg.guild}\n{msg.guild.id}', inline=True)
         await dm_channel.send(embed=embed)
 
-    async def send_message_to_notify_communities(self, embed:discord.Embed, notify_type:NotifyCommunityType, notify_name:str):
+    async def send_notify_communities(self, embed:discord.Embed, notify_type:NotifyCommunityType, notify_name:str):
             guilds = sqldb.get_notify_community_guild(notify_type.value, notify_name)
             log.debug(f"{notify_type} guilds: {guilds}")
             for guildid in guilds:
