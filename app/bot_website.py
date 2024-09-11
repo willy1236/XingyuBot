@@ -14,7 +14,7 @@ from linebot.v3.messaging import (ApiClient, Configuration, MessagingApi,
 from linebot.v3.webhooks import MessageEvent, TextMessageContent
 from linebot.v3.webhooks.models.message_event import MessageEvent
 
-from starlib import Jsondb, log, sclient
+from starlib import Jsondb, web_log, sclient
 from starlib.dataExtractor import DiscordOauth, TwitchOauth
 from starlib.models.push import YoutubePush
 
@@ -31,7 +31,7 @@ handler = WebhookHandler(linebot_token.get("secret"))
 
 @app.route('/')
 def main(request:Request):
-    log.debug(f'{request.client.host} - {request.method} - {request.url.path}')
+    web_log.debug(f'{request.client.host} - {request.method} - {request.url.path}')
     return HTMLResponse('test')
 
 @app.route('/keep_alive',methods=['GET'])
@@ -127,13 +127,13 @@ async def linebot_callback(request:Request):
     # get request body as text
     body = await request.body()
     body = body.decode('UTF-8')
-    log.info("Request body: " + body)
+    web_log.info("Request body: " + body)
 
     # handle webhook body
     try:
         handler.handle(body, signature)
     except InvalidSignatureError:
-        log.info("Invalid signature. Please check your channel access token/channel secret.")
+        web_log.info("Invalid signature. Please check your channel access token/channel secret.")
         raise HTTPException(status_code=400, detail="Invalid signature")
 
     return 'OK'
