@@ -1,25 +1,33 @@
 import asyncio
-import os
-import subprocess
-import threading
-import time
 from datetime import datetime, timedelta
 
 import feedparser
 import httpx
-from fastapi import BackgroundTasks, FastAPI
+from fastapi import BackgroundTasks, FastAPI, HTTPException
 from fastapi.requests import Request
 from fastapi.responses import (HTMLResponse, JSONResponse, PlainTextResponse,
                                StreamingResponse)
+from linebot.v3 import WebhookHandler
+from linebot.v3.exceptions import InvalidSignatureError
+from linebot.v3.messaging import (ApiClient, Configuration, MessagingApi,
+                                  ReplyMessageRequest, TextMessage)
+from linebot.v3.webhooks import MessageEvent, TextMessageContent
+from linebot.v3.webhooks.models.message_event import MessageEvent
 
 from starlib import Jsondb, log, sclient
 from starlib.dataExtractor import DiscordOauth, TwitchOauth
 from starlib.models.push import YoutubePush
 
+from .tunnel_threads import BaseThread
+
 app = FastAPI()
 
 discord_oauth_settings = Jsondb.get_token("discord_oauth")
 twitch_oauth_settings = Jsondb.get_token("twitch_chatbot")
+linebot_token = Jsondb.get_token("line_bot")
+
+configuration = Configuration(access_token=linebot_token.get("token"))
+handler = WebhookHandler(linebot_token.get("secret"))
 
 @app.route('/')
 def main(request:Request):
@@ -112,17 +120,35 @@ async def twitch_oauth(request:Request):
     auth.exchange_code(code)
     return HTMLResponse(f'授權已完成，您現在可以關閉此頁面<br><br>Twitch ID：{auth.user_id}')
 
-@app.api_route("/twitch_bot/callback", methods=["GET", "POST"])
-async def twitch_bot_callback(request: Request):
-    async with httpx.AsyncClient() as client:
-        proxy_url = f"http://127.0.0.1:14001{request.url.path}"
-        proxy_response = await client.request(
-            method=request.method,
-            url=proxy_url,
-            headers=request.headers.raw,
-            content=await request.body()
+@app.post("/linebotcallback")
+async def linebot_callback(request:Request):
+    signature = request.headers.get('X-Line-Signature')
+
+    # get request body as text
+    body = await request.body()
+    body = body.decode('UTF-8')
+    log.info("Request body: " + body)
+
+    # handle webhook body
+    try:
+        handler.handle(body, signature)
+    except InvalidSignatureError:
+        log.info("Invalid signature. Please check your channel access token/channel secret.")
+        raise HTTPException(status_code=400, detail="Invalid signature")
+
+    return 'OK'
+
+@handler.add(MessageEvent, message=TextMessageContent)
+def handle_message(event:MessageEvent):
+    print(type(event))
+    with ApiClient(configuration) as api_client:
+        line_bot_api = MessagingApi(api_client)
+        line_bot_api.reply_message_with_http_info(
+            ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[TextMessage(text=event.message.text)]
+            )
         )
-        return StreamingResponse(proxy_response.aiter_raw(), status_code=proxy_response.status_code)
 
 # @app.get('/book/{book_id}',response_class=JSONResponse)
 # def get_book_by_id(book_id: int):
@@ -134,83 +160,6 @@ async def twitch_bot_callback(request: Request):
 # async def read_item(request: Request, id: str):
 #     html_file = open().read()
 #     return html_file
-
-class BaseThread(threading.Thread):
-    def __init__(self, name):
-        super().__init__(name=name)
-        self._stop_event = threading.Event()
-
-    def stop(self):
-        self._stop_event.set()
-
-class ltThread(BaseThread):
-    def __init__(self):
-        super().__init__(name='ltThread')
-
-    def run(self):
-        reconnection_times = 0
-        while not self._stop_event.is_set():
-            log.info("Starting ltThread")
-            os.system('lt --port 14000 --subdomain starbot --max-sockets 10 --local-host 127.0.0.1 --max-https-sockets 86395')
-            #cmd = [ "cmd","/c",'lt', '--port', '14000', '--subdomain', 'willy1236', '--max-sockets', '10', '--local-host', '127.0.0.1', '--max-https-sockets', '86395']
-            #cmd = ["cmd","/c","echo", "Hello, World!"]
-            #self.process = psutil.Popen(cmd)
-            #self.process.wait()
-            log.info("Finished ltThread")
-            time.sleep(5)
-            reconnection_times += 1
-            if reconnection_times >= 5:
-                self._stop_event.set()
-
-        print("ltThread stopped")
-
-class ServeoThread(BaseThread):
-    def __init__(self):
-        super().__init__(name='ServeoThread')
-
-    def run(self):
-        reconnection_times = 0
-        while not self._stop_event.is_set():
-            log.info("Starting ServeoThread")
-            os.system("ssh -R star1016:80:127.0.0.1:14000 -R startwitch:80:127.0.0.1:14001 serveo.net")
-            time.sleep(60)
-            reconnection_times += 1
-            if reconnection_times >= 5:
-                self._stop_event.set()
-
-class LoopholeThread(BaseThread):
-    def __init__(self):
-        super().__init__(name='LoopholeThread')
-
-    def run(self):
-        reconnection_times = 0
-        while not self._stop_event.is_set():
-            log.info("Starting LoopholeThread")
-            result = subprocess.run(["loophole", "http", "14000", "127.0.0.1", "--hostname", "cloudfoam"], capture_output=True, text=True)
-            log.info(f'Stdout: {result.stdout}')
-            log.info(f'Stderr: {result.stderr}')
-            log.info(f'Exit status: {result.returncode}')
-            time.sleep(30)
-            reconnection_times += 1
-            if reconnection_times >= 5:
-                self._stop_event.set()
-
-class LoopholeTwitchThread(BaseThread):
-    def __init__(self):
-        super().__init__(name='LoopholeTwitchThread')
-
-    def run(self):
-        reconnection_times = 0
-        while not self._stop_event.is_set():
-            log.info("Starting LoopholeTwitchThread")
-            result = subprocess.run(["loophole", "http", "14001", "127.0.0.1", "--hostname", "twitchcloudfoam"], capture_output=True, text=True)
-            log.info(f'Stdout: {result.stdout}')
-            log.info(f'Stderr: {result.stderr}')
-            log.info(f'Exit status: {result.returncode}')
-            time.sleep(30)
-            reconnection_times += 1
-            if reconnection_times >= 5:
-                self._stop_event.set()
 
 class WebsiteThread(BaseThread):
     def __init__(self):

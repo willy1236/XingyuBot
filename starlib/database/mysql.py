@@ -49,7 +49,7 @@ class BaseSQLEngine:
 
     #* User
     def get_dcuser(self, discord_id:int):
-        stmt = select(DiscordUser).where(DiscordUserV2.discord_id == discord_id)
+        stmt = select(DiscordUser).where(DiscordUser.discord_id == discord_id)
         result = self.session.exec(stmt).one_or_none()
         return result
     

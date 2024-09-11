@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "xingyubot"
-version = "0.2.4"
+version = "0.2.5"
 description = "一個集結許多功能的DiscordBot"
 authors = ["威立 <66502303+willy1236@users.noreply.github.com>"]
 readme = "README.md"
@@ -31,11 +31,11 @@ genshin = "^1.7.1"
 httpx = "^0.27.0"
 selenium = "^4.23.1"
 sqlmodel = "^0.0.21"
+line-bot-sdk = "^3.13.0"
 
 
 [tool.poetry.group.dev.dependencies]
 faker = "^24.9.0"
-spotify-dl = "^8.9.0"
 genshin = {extras = ["cookies", "rsa"], version = "^1.7.1"}
 
 [build-system]
