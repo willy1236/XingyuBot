@@ -109,10 +109,13 @@ class DiscordBot(discord.Bot):
         embed.set_footer(text="此機器人由 威立 負責維護")
         return embed
     
-    def twitchbot_send_message(self,channel_id=566533708371329026, *, content=None, embed=None):
+    def send_message(self, channel_id=566533708371329026, *, content=None, embed=None) -> discord.Message | None:
+        if not content and not embed:
+            raise ValueError('Content and embed must provided at least one.')
         channel = self.get_channel(channel_id)
         if channel:
-            asyncio.run_coroutine_threadsafe(channel.send(content=content, embed=embed), self.loop)
+            r = asyncio.run_coroutine_threadsafe(channel.send(content=content, embed=embed), self.loop)
+            return r.result()
 
 #commands.Bot
 #shard_count=1,

@@ -2,7 +2,6 @@ import asyncio
 from datetime import datetime, timedelta
 
 import feedparser
-import httpx
 from fastapi import BackgroundTasks, FastAPI, HTTPException
 from fastapi.requests import Request
 from fastapi.responses import (HTMLResponse, JSONResponse, PlainTextResponse,
@@ -14,9 +13,10 @@ from linebot.v3.messaging import (ApiClient, Configuration, MessagingApi,
 from linebot.v3.webhooks import MessageEvent, TextMessageContent
 from linebot.v3.webhooks.models.message_event import MessageEvent
 
-from starlib import Jsondb, web_log, sclient
+from starlib import Jsondb, sclient, web_log
 from starlib.dataExtractor import DiscordOauth, TwitchOauth
 from starlib.models.push import YoutubePush
+from starlib.models.mysql import CloudUser
 
 from .tunnel_threads import BaseThread
 
@@ -36,8 +36,7 @@ def main(request:Request):
 
 @app.route('/keep_alive',methods=['GET'])
 def keep_alive(request:Request):
-    r = HTMLResponse(content='Bot is aLive!')
-    return r
+    return HTMLResponse(content='Bot is aLive!')
 
 # @app.post('/twitch_eventsub',response_class=PlainTextResponse)
 # def twitch_eventsub(request:Request):
@@ -68,11 +67,9 @@ async def get_yt_push(content):
     embed = YoutubePush(**feed["entries"][0]).embed()
     
     if sclient.bot:
-        channel = sclient.bot.get_channel(566533708371329026)
-        if channel:
-            asyncio.run_coroutine_threadsafe(channel.send(embed=embed), sclient.bot.loop)
-        else:
-            print('Channel not found.')
+        msg = sclient.bot.send_message(embed=embed)
+        if not msg:
+            print('Channel not found. Message sent failed.')
     else:
         print('Bot not found.')
 
@@ -105,7 +102,7 @@ async def discord_oauth(request:Request):
     for connection in connections:
         if connection.type == 'twitch':
             print(f"{connection.name}({connection.id})")
-            sclient.sqldb.add_userdata_value(auth.user_id, "user_data", "twitch_id", connection.id)
+            sclient.sqldb.merge(CloudUser(discord_id=auth.user_id, twitch_id=connection.id))
 
     return HTMLResponse(f'授權已完成，您現在可以關閉此頁面<br><br>Discord ID：{auth.user_id}')
 

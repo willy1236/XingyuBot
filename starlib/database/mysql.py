@@ -1,25 +1,24 @@
 import json
-from datetime import datetime,date,time,timedelta,timezone
+from datetime import date, datetime, time, timedelta, timezone
 
 import discord
 import mysql.connector
 import sqlalchemy
 from mysql.connector.errors import Error as sqlerror
-from sqlmodel import SQLModel, Field, create_engine, Session, select
-from sqlalchemy import delete, or_, desc, func, and_ 
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import and_, delete, desc, func, or_
 from sqlalchemy.engine import URL
+from sqlalchemy.orm import sessionmaker
+from sqlmodel import Field, Session, SQLModel, create_engine, select
 
 from starlib.models.mysql import NotifyCommunity
 
-from ..models.model import GameInfoPage
-from ..types import DBGame, Coins, Position, CommunityType, NotifyCommunityType
-from ..models.user import *
-from ..models.model import *
-from ..models.rpg import *
-from ..models.mysql import *
 from ..errors import *
+from ..models.model import *
+from ..models.mysql import *
+from ..models.rpg import *
+from ..models.user import *
 from ..settings import tz
+from ..types import Coins, CommunityType, DBGame, NotifyCommunityType, Position
 
 SQLsettings = Jsondb.config["SQLsettings"]
 
@@ -47,7 +46,25 @@ class BaseSQLEngine:
         Sessionmkr = sessionmaker(bind=self.alengine)
         self.alsession = Sessionmkr()
 
+    #* Base
+    def add(self, db_obj):
+        self.session.add(db_obj)
+        self.session.commit()
+
+    def merge(self, db_obj):
+        self.session.merge(db_obj)
+        self.session.commit()
+
+    def remove(self, db_obj):
+        self.session.delete(db_obj)
+        self.session.commit()
+
     #* User
+    def get_cloud_user(self, discord_id:int):
+        stmt = select(CloudUser).where(CloudUser.discord_id == discord_id)
+        result = self.session.exec(stmt).one_or_none()
+        return result
+
     def get_dcuser(self, discord_id:int):
         stmt = select(DiscordUser).where(DiscordUser.discord_id == discord_id)
         result = self.session.exec(stmt).one_or_none()

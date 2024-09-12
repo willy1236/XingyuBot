@@ -1,8 +1,4 @@
-import asyncio
-import os
 import time
-from datetime import datetime, timedelta, timezone
-from threading import Thread
 
 import discord
 
@@ -37,8 +33,8 @@ if __name__ == "__main__":
         time.sleep(2)
 
     if twitch_bot:
-        from app.twitch_chatbot import TwitchBotThread
         from app.tunnel_threads import LoopholeTwitchThread
+        from app.twitch_chatbot import TwitchBotThread
         
         twitchtunnel_thread = LoopholeTwitchThread()
         twitchtunnel_thread.start()

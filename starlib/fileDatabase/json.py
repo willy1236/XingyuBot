@@ -154,7 +154,6 @@ class JsonDatabase():
         支援CWB_api,osu(id,secret),TRN,apex,steam,twitch(id,secret),twitch_chatbot,youtube,riot,openai
         """
         dict = {
-            "CWB_api":'CWB_api',
             'osu':'osu_api',
             'TRN':'TRN_API',
             'apex':'apex_status_API',
@@ -162,8 +161,7 @@ class JsonDatabase():
             'twitch':'twitch_api',
             'youtube':'youtube_api',
             'riot':"riot_api",
-            'openai':'openai_api',
-            'twitch_chatbot':'twitch_chatbot'
+            'openai':'openai_api'
             }
         if webname in dict:
             name = dict[webname]

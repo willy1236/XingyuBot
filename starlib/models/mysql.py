@@ -5,16 +5,13 @@ from datetime import date, datetime
 from typing import TYPE_CHECKING, List, Optional, TypedDict, dataclass_transform
 
 from discord import Bot
-from pydantic import ConfigDict, model_validator
-from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy import Column, Integer, String, DateTime, BigInteger
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import DeclarativeBase
-from sqlmodel import (Field, Relationship, Session, SQLModel, create_engine,
-                      select)
+from sqlmodel import Field, Relationship, SQLModel
 
-from ..fileDatabase import Jsondb
 from ..settings import tz
-from ..types import CommunityType, NotifyCommunityType, WarningType, NotifyChannelType
+from ..types import *
 from ..utilities import BotEmbed, ChoiceList
 from .BaseModel import ListObject
 
@@ -38,6 +35,16 @@ class Student(Base):
     name = Column(String(255))
     gender = Column(String(255))
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(tz))
+
+class CloudUser(SQLModel, table=True):
+    __tablename__ = 'cloud_user'
+    __table_args__ = {'schema': 'stardb_user'}
+
+    id: str = Field(sa_column=Column(BigInteger(), primary_key=True))
+    discord_id: int = Field(primary_key=True)
+    email: str
+    drive_share_id: str
+    twitch_id: int
 
 class DiscordUser(SQLModel, table=True):
     __tablename__ = "user_discord"
@@ -252,6 +259,18 @@ class OAuth2Token(SQLModel, table=True):
     access_token: str
     refresh_token: str
     expires_at: datetime
+
+class BotToken(SQLModel, table=True):
+    __tablename__ = "bot_token"
+    __table_args__ = {'schema': 'stardb_tokens'}
+
+    api_type: CommunityType = Field(sa_column=Column(Integer, primary_key=True))
+    client_id: str
+    client_secret: str
+    access_token: str
+    refresh_token: str
+    redirect_uri: str
+    callback_uri: str
 
 class WarningList(ListObject):
     if TYPE_CHECKING:
