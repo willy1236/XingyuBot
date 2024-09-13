@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, List, Optional, TypedDict
 
 from discord import Bot
 from sqlalchemy import Column, Integer, String, DateTime, BigInteger
+from sqlalchemy.orm import declarative_base
 from sqlmodel import Field, Relationship, SQLModel
 
 from ..settings import tz
@@ -16,7 +17,7 @@ from .BaseModel import ListObject
 if TYPE_CHECKING:
     from ..database import SQLEngine
 
-# Base = declarative_base()
+Base = declarative_base()
 
 class Student(SQLModel, table=True):
     __tablename__ = 'students'
