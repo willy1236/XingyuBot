@@ -88,5 +88,5 @@ from starlib.models.mysql import School, Student
 # school = sqldb.get_school(1)
 # print(school.name, school.students)
 
-party = sqldb.get_party(1)
-print(party.members)
+user = sqldb.get_cloud_user(525563221583724544)
+print(user.id)

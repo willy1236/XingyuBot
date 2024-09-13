@@ -117,7 +117,15 @@ async def on_channel_subscription_message(event: eventsub.ChannelSubscriptionMes
     if event.event.broadcaster_user_login == TARGET_CHANNEL[0] and sclient.bot:
         sclient.bot.send_message(1237412404980355092, embed=BotEmbed.simple("新訂閱","\n".join(texts)))
         await chat.send_message(TARGET_CHANNEL[0], f"感謝{event.event.user_name}的{event.event.duration_months}個月訂閱！")
-    
+
+async def on_channel_poll_begin(event: eventsub.ChannelPollBeginEvent):
+    twitch_log.info(f"{event.event.broadcaster_user_name} 開始了投票：{event.event.title}")
+
+async def on_channel_prediction_begin(event: eventsub.ChannelPredictionEvent):
+    twitch_log.info(f"{event.event.broadcaster_user_name} 開始了預測：{event.event.title}\n{event.event.outcomes[0].title} V.S. {event.event.outcomes[1].title}")
+
+async def on_channel_prediction_end(event: eventsub.ChannelPredictionEndEvent):
+    twitch_log.info(f"{event.event.broadcaster_user_name} 結束了預測：{event.event.title}")    
 
 # bot
 async def on_ready(ready_event: EventData):
@@ -260,32 +268,50 @@ async def run():
             twitch_log.debug("listening to channel points custom reward redemption add")
             await eventsub.listen_channel_points_custom_reward_redemption_add(user.id, on_channel_points_custom_reward_redemption_add)
         except EventSubSubscriptionError as e:
-            twitch_log.warn(f"Error subscribing to channel points custom reward redemption add: {e}")
+            twitch_log.warning(f"Error subscribing to channel points custom reward redemption add: {e}")
         
         try:
             twitch_log.debug("listening to channel points custom reward redemption update")
             await eventsub.listen_channel_points_custom_reward_redemption_update(user.id, on_channel_points_custom_reward_redemption_update)
         except EventSubSubscriptionError as e:
-            twitch_log.warn(f"Error subscribing to channel points custom reward redemption update: {e}")
+            twitch_log.warning(f"Error subscribing to channel points custom reward redemption update: {e}")
 
         try:
             twitch_log.debug("listening to channel subscribe")
             await eventsub.listen_channel_subscribe(user.id, on_channel_subscribe)
         except EventSubSubscriptionError as e:
-            twitch_log.warn(f"Error subscribing to channel subscribe: {e}")
+            twitch_log.warning(f"Error subscribing to channel subscribe: {e}")
 
         try:
             twitch_log.debug("listening to channel subscription message")
             await eventsub.listen_channel_subscription_message(user.id, on_channel_subscription_message)
         except EventSubSubscriptionError as e:
-            twitch_log.warn(f"Error subscribing to channel subscription message: {e}")
+            twitch_log.warning(f"Error subscribing to channel subscription message: {e}")
 
         try:
             twitch_log.debug("listening to channel follow")
             await eventsub.listen_channel_follow_v2(user.id, me.id, on_follow)
         except EventSubSubscriptionError as e:
-            twitch_log.warn(f"Error subscribing to channel follow: {e}")
+            twitch_log.warning(f"Error subscribing to channel follow: {e}")
 
+        try:
+            twitch_log.debug("listening to channel poll begin")
+            await eventsub.listen_channel_poll_begin(user.id, on_channel_poll_begin)
+        except EventSubSubscriptionError as e:
+            twitch_log.warning(f"Error subscribing to channel poll begin: {e}")
+        
+        try:
+            twitch_log.debug("listening to channel prediction begin")
+            await eventsub.listen_channel_prediction_begin(user.id, on_channel_prediction_begin)
+        except EventSubSubscriptionError as e:
+            twitch_log.warning(f"Error subscribing to channel prediction begin: {e}")
+        
+        try:
+            twitch_log.debug("listening to channel prediction end")
+            await eventsub.listen_channel_prediction_end(user.id, on_channel_prediction_end)
+        except EventSubSubscriptionError as e:
+            twitch_log.warning(f"Error subscribing to channel prediction end: {e}")
+        
     sclient.twitch = twitch
     # we are done with our setup, lets start this bot up!
     return chat, twitch

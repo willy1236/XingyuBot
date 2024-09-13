@@ -346,7 +346,7 @@ class event(Cog_Extension):
                 from starlib.models.mysql import DiscordUser
                 dbdata = sclient.sqldb.get_resgistration_by_guildid(earlest_guildid)
                 user = DiscordUser(discord_id=member.id, registrations_id=dbdata.registrations_id)
-                sclient.sqldb.add_dcuser(user)
+                sclient.sqldb.add(user)
                 await member.add_roles(member.guild.get_role(guild_registration[str(earlest_guildid)]), reason="加入的最早伺服器")
 
 

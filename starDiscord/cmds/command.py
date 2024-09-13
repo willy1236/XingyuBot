@@ -221,35 +221,35 @@ class command(Cog_Extension):
         six_list_100 = []
         guaranteed = 100
         
-        dbuser = sclient.sqldb.get_partial_dcuser(user_id,"guaranteed")
-        user_guaranteed = dbuser.guaranteed or 0
+        dbuser = sclient.sqldb.get_dcuser(user_id)
+        if dbuser.guaranteed is None:
+            dbuser.guaranteed = 0
             
         for i in range(times):
             choice =  random.randint(1,100)
             if choice == 1:
                 result["six"] += 1
                 six_list.append(str(i+1))
-                user_guaranteed = 0
-            elif user_guaranteed >= guaranteed-1:
+                dbuser.guaranteed = 0
+            elif dbuser.guaranteed >= guaranteed-1:
                 result["six"] += 1
                 six_list_100.append(str(i+1))
-                user_guaranteed = 0
+                dbuser.guaranteed = 0
 
             elif choice >= 2 and choice <= 11:
                 result["five"] += 1
-                user_guaranteed += 1
+                dbuser.guaranteed += 1
             elif choice >= 12 and choice <= 41:
                 result["four"]+= 1
-                user_guaranteed += 1
+                dbuser.guaranteed += 1
             else:
                 result["three"] += 1
-                user_guaranteed += 1
+                dbuser.guaranteed += 1
 
-        
-        dbuser.update_data('user_discord','guaranteed',user_guaranteed)
+        sclient.sqldb.add(dbuser)
         embed=BotEmbed.lottery()
         embed.add_field(name='抽卡結果', value=f"六星x{result['six']} 五星x{result['five']} 四星x{result['four']} 三星x{result['three']}", inline=False)
-        embed.add_field(name='保底累積', value=user_guaranteed, inline=False)
+        embed.add_field(name='保底累積', value=dbuser.guaranteed, inline=False)
         if six_list:
             embed.add_field(name='六星出現', value=','.join(six_list), inline=False)
         if six_list_100:
@@ -491,17 +491,19 @@ class command(Cog_Extension):
     @commands.slash_command(description='共用「94共用啦」雲端資料夾',guild_ids=main_guilds)
     async def drive(self,ctx,email:discord.Option(str,name='gmail帳戶',description='要使用的Gmail帳戶，留空以移除資料',required=False)):
         await ctx.defer()
-        suser = sclient.sqldb.get_user(ctx.author.id)
+        cuser = sclient.sqldb.get_cloud_user(ctx.author.id)
         fileId = "1bDtsLbOi5crIOkWUZbQmPq3dXUbwWEan"
         if not email:
-            if suser and suser.email:
-                GoogleCloud().remove_file_permissions(fileId, suser.drive_share_id)
-                sclient.sqldb.remove_sharefolder_data(ctx.author.id)
+            if cuser and cuser.email:
+                GoogleCloud().remove_file_permissions(fileId, cuser.drive_share_id)
+                cuser.drive_share_id = None
+                cuser.email = None
+                sclient.sqldb.add(cuser)
             else:
                 await ctx.respond(f"{ctx.author.mention}：此帳號沒有設定過google帳戶")
                 return
         
-        if suser and suser.drive_share_id:
+        if cuser and cuser.drive_share_id:
             await ctx.respond(f"{ctx.author.mention}：此帳號已經共用雲端資料夾了")
             return
         
@@ -511,7 +513,9 @@ class command(Cog_Extension):
             return
         
         google_data = GoogleCloud().add_file_permissions(fileId,email)
-        sclient.sqldb.set_sharefolder_data(ctx.author.id, email, google_data["id"])
+        cuser.email = email
+        cuser.drive_share_id = google_data["id"]
+        sclient.sqldb.add(cuser)
         await ctx.respond(f"{ctx.author.mention}：已與 {email} 共用雲端資料夾")
 
     @party.command(description='加入政黨')
@@ -551,7 +555,7 @@ class command(Cog_Extension):
         for party, member_count in dbdata:
             creator = self.bot.get_user(party.creator_id)
             creator_mention = creator.mention if creator else f"<@{party.creator_id}>"
-            embed.add_field(name=party.party_name, value=f"政黨ID：{party.party_id}\n政黨人數：{member_count}\n創黨人：{creator_mention}\n創黨日期：{party.created_at.strftime('%Y-%m-%d')}")
+            embed.add_field(name=party.party_name, value=f"政黨ID：{party.party_id}\n政黨人數：{member_count}\n創黨人：{creator_mention}\n創黨日期：{party.created_at.strftime('%Y/%m/%d')}")
         await ctx.respond(embed=embed)
 
     @commands.slash_command(description="開啟mc伺服器",guild_ids=main_guilds)
@@ -579,7 +583,8 @@ class command(Cog_Extension):
     async def update(self,ctx):
         user = sclient.sqldb.get_dcuser(ctx.author.id)
         if user.registrations_id:
-            await ctx.respond("你已經註冊戶籍了")
+            guild = self.bot.get_guild(user.registration.guild_id)
+            await ctx.respond(f"你已經註冊戶籍至 {guild.name if guild else user.registration.guild_id} 了")
             return
 
         guild_id = check_registration(ctx.author)
@@ -593,7 +598,7 @@ class command(Cog_Extension):
                 await role_guild.get_member(ctx.author.id).add_roles(role)
             from starlib.models.mysql import DiscordUser
             duser = DiscordUser(discord_id=ctx.author.id, registrations_id=resgistration.registrations_id)
-            sclient.sqldb.add_dcuser(duser)
+            sclient.sqldb.merge(duser)
             
             await ctx.respond(f"已註冊戶籍至 {guild.name}")
         else:
@@ -612,10 +617,10 @@ class command(Cog_Extension):
         role = role_guild.get_role(resgistration.role_id)
 
         if role:
-            await role_guild.get_member(ctx.author.id).add_roles(role)
+            await role_guild.get_member(user.id).add_roles(role)
         from starlib.models.mysql import DiscordUser
-        duser = DiscordUser(discord_id=ctx.author.id, registrations_id=resgistration.registrations_id)
-        sclient.sqldb.add_dcuser(duser)
+        duser = DiscordUser(discord_id=user.id, registrations_id=resgistration.registrations_id)
+        sclient.sqldb.add(duser)
         
         await ctx.respond(f"已註冊戶籍至 {guild.name}")
 

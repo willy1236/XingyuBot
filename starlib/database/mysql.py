@@ -16,7 +16,7 @@ from ..errors import *
 from ..models.model import *
 from ..models.mysql import *
 from ..models.rpg import *
-from ..models.user import *
+from ..models.user import PartialUser, StarUser, DiscordUserV2, Pet, RPGUser, CityBattle
 from ..settings import tz
 from ..types import *
 
@@ -71,19 +71,23 @@ class BaseSQLEngine:
 
     #* User
     def get_cloud_user(self, discord_id:int):
-        self.session.get_one()
+        """
+        Retrieve a CloudUser from the database based on the provided Discord ID.
+
+        Args:
+            discord_id (int): The Discord ID of the user to retrieve.
+
+        Returns:
+            CloudUser: The CloudUser object if found, otherwise a new CloudUser instance.
+        """
         stmt = select(CloudUser).where(CloudUser.discord_id == discord_id)
         result = self.session.exec(stmt).one_or_none()
-        return result
+        return result if result is not None else CloudUser()
 
     def get_dcuser(self, discord_id:int):
         stmt = select(DiscordUser).where(DiscordUser.discord_id == discord_id)
         result = self.session.exec(stmt).one_or_none()
         return result
-    
-    def add_dcuser(self, user:DiscordUser):
-        self.session.merge(user)
-        self.session.commit()
     
     def get_main_account(self, alternate_account):
         stmt = select(UserAccount.main_account).where(UserAccount.alternate_account == alternate_account)

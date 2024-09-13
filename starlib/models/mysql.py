@@ -54,11 +54,22 @@ class DiscordUser(SQLModel, table=True):
     __table_args__ = {'schema': 'stardb_user'}
 
     discord_id:int = Field(primary_key=True)
-    name:str
-    max_sign_consecutive_days:int | None
-    meatball_times:int | None
-    guaranteed:int | None
-    registrations_id:int | None
+    name: str | None
+    max_sign_consecutive_days: int | None
+    meatball_times: int | None
+    guaranteed: int | None
+    registrations_id: int | None = Field(foreign_key="stardb_idbase.discord_registrations.registrations_id")
+    
+    registration: "DiscordRegistration" = Relationship(back_populates="members")
+
+class UserPoint(SQLModel, table=True):
+    __tablename__ = "user_point"
+    __table_args__ = {'schema': 'stardb_user'}
+
+    discord_id: int = Field(primary_key=True)
+    scoin: int = Field(default=0)
+    point: int = Field(default=0)
+    rcoin: int = Field(default=0)
 
 class UserPoll(SQLModel, table=True):
     __tablename__ = "user_poll"
@@ -218,6 +229,8 @@ class DiscordRegistration(SQLModel, table=True):
     registrations_id: int = Field(primary_key=True)
     guild_id: int
     role_id: int
+
+    members: list[DiscordUser] = Relationship(back_populates="registration")
 
 class BackupRole(SQLModel, table=True):
     __tablename__ = "roles_backup"
