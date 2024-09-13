@@ -43,11 +43,11 @@ class CloudUser(SQLModel, table=True):
     __tablename__ = 'cloud_user'
     __table_args__ = {'schema': 'stardb_user'}
 
-    id: str = Field(sa_column=Column(String(255), primary_key=True))
+    id: str = Field(unique=True, nullable=True)
     discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
-    email: str
-    drive_share_id: str
-    twitch_id: int
+    email: str = Field(nullable=True)
+    drive_share_id: str = Field(nullable=True)
+    twitch_id: int = Field(nullable=True)
 
 class DiscordUser(SQLModel, table=True):
     __tablename__ = "user_discord"
