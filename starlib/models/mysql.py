@@ -1,13 +1,11 @@
-from __future__ import annotations
+#from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import date, datetime
-from typing import TYPE_CHECKING, List, Optional, TypedDict, dataclass_transform
+from typing import TYPE_CHECKING, List, Optional, TypedDict
 
 from discord import Bot
 from sqlalchemy import Column, Integer, String, DateTime, BigInteger
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import DeclarativeBase
 from sqlmodel import Field, Relationship, SQLModel
 
 from ..settings import tz
@@ -18,30 +16,34 @@ from .BaseModel import ListObject
 if TYPE_CHECKING:
     from ..database import SQLEngine
 
-    @dataclass_transform()
-    class Base(DeclarativeBase):
-        pass
-else:
-    class Base(DeclarativeBase):
-        pass
-
 # Base = declarative_base()
 
-class Student(Base):
-    __tablename__ = 'student'
+class Student(SQLModel, table=True):
+    __tablename__ = 'students'
     __table_args__ = {'schema': 'database'}
     
-    id = Column(Integer, primary_key=True)
-    name = Column(String(255))
-    gender = Column(String(255))
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(tz))
+    id: int = Field(sa_column=Column(Integer, primary_key=True))
+    name: str = Field(sa_column=Column(String(255)))
+    created_at: datetime = Field(sa_column=Column(DateTime(timezone=True), default=lambda: datetime.now(tz)))
+    school_id: int | None = Field(foreign_key="database.schools.id")
+
+    school: "School" = Relationship(back_populates="students")
+
+class School(SQLModel, table=True):
+    __tablename__ = 'schools'
+    __table_args__ = {'schema': 'database'}
+
+    id: int = Field(primary_key=True)
+    name: str
+
+    students: list[Student] = Relationship(back_populates="school")
 
 class CloudUser(SQLModel, table=True):
     __tablename__ = 'cloud_user'
     __table_args__ = {'schema': 'stardb_user'}
 
-    id: str = Field(sa_column=Column(BigInteger(), primary_key=True))
-    discord_id: int = Field(primary_key=True)
+    id: str = Field(sa_column=Column(String(255), primary_key=True))
+    discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
     email: str
     drive_share_id: str
     twitch_id: int
@@ -80,7 +82,8 @@ class UserParty(SQLModel, table=True):
     
     discord_id: int = Field(primary_key=True)
     party_id: int = Field(primary_key=True, foreign_key="database.party_data.party_id")
-    #party: "Party" | None = Relationship(back_populates="users")
+    
+    party: "Party" = Relationship(back_populates="members")
 
 class UserModerate(SQLModel, table=True):
     __tablename__ = "user_moderate"
@@ -204,7 +207,8 @@ class Party(SQLModel, table=True):
     role_id: int
     creator_id: int
     created_at: datetime
-    #users: Mapped[list[UserParty]] = Relationship(back_populates="party")
+    
+    members: list[UserParty] = Relationship(back_populates="party")
 
 class DiscordRegistration(SQLModel, table=True):
     __tablename__ = "discord_registrations"
@@ -226,20 +230,20 @@ class BackupRole(SQLModel, table=True):
     colour_g: int
     colour_b: int
     description: str
+
+    members: list["BackupRoleUser"] = Relationship(back_populates="role")
     
-    def embed(self, bot, sqldb:SQLEngine):
+    def embed(self, bot:Bot):
         embed = BotEmbed.simple(self.role_name,self.description)
         embed.add_field(name="創建於", value=self.created_at.strftime("%Y/%m/%d %H:%M:%S"))
         embed.add_field(name="顏色", value=f"({self.colour_r}, {self.colour_g}, {self.colour_b})")
-        if bot:
-            user_ids = sqldb.get_backup_roles_userlist(self.role_id)
-            if user_ids:
-                user_list = []
-                for user_id in user_ids:
-                    user = bot.get_user(user_id)
-                    if user:
-                        user_list.append(user.mention)
-                embed.add_field(name="成員", value=",".join(user_list),inline=False)
+        if bot and self.members:
+            user_list = list()
+            for user in self.members:
+                user = bot.get_user(user.discord_id)
+                if user:
+                    user_list.append(user.mention)
+            embed.add_field(name="成員", value=",".join(user_list),inline=False)
 
         return embed
 
@@ -247,8 +251,10 @@ class BackupRoleUser(SQLModel, table=True):
     __tablename__ = "role_user_backup"
     __table_args__ = {'schema': 'stardb_backup'}
     
-    role_id: int = Field(primary_key=True)
+    role_id: int = Field(primary_key=True, foreign_key="stardb_backup.roles_backup.role_id")
     discord_id: int = Field(primary_key=True)
+
+    role: BackupRole = Relationship(back_populates="members")
 
 class OAuth2Token(SQLModel, table=True):
     __tablename__ = "oauth_token"

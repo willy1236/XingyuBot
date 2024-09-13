@@ -206,7 +206,7 @@ class command(Cog_Extension):
 
         page = [list() for _ in range(math.ceil(len(lst) / 3))]
         for i, role in enumerate(lst):
-            page[int(i / 3)].append(role.embed(self.bot, sclient.sqldb))
+            page[int(i / 3)].append(role.embed(self.bot))
 
         paginator = pages.Paginator(pages=page, use_default_buttons=True, loop_pages=True)
         await paginator.respond(ctx.interaction, ephemeral=False)

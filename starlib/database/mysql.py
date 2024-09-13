@@ -8,7 +8,7 @@ from mysql.connector.errors import Error as sqlerror
 from sqlalchemy import and_, delete, desc, func, or_
 from sqlalchemy.engine import URL
 from sqlalchemy.orm import sessionmaker
-from sqlmodel import Field, Session, SQLModel, create_engine, select
+from sqlmodel import Session, SQLModel, create_engine, select
 
 from starlib.models.mysql import NotifyCommunity
 
@@ -18,7 +18,7 @@ from ..models.mysql import *
 from ..models.rpg import *
 from ..models.user import *
 from ..settings import tz
-from ..types import Coins, CommunityType, DBGame, NotifyCommunityType, Position
+from ..types import *
 
 SQLsettings = Jsondb.config["SQLsettings"]
 
@@ -59,8 +59,19 @@ class BaseSQLEngine:
         self.session.delete(db_obj)
         self.session.commit()
 
+    def get_student(self, student_id:int):
+        stmt = select(Student).where(Student.id == student_id)
+        result = self.session.exec(stmt).one_or_none()
+        return result
+    
+    def get_school(self, school_id:int):
+        stmt = select(School).where(School.id == school_id)
+        result = self.session.exec(stmt).one_or_none()
+        return result
+
     #* User
     def get_cloud_user(self, discord_id:int):
+        self.session.get_one()
         stmt = select(CloudUser).where(CloudUser.discord_id == discord_id)
         result = self.session.exec(stmt).one_or_none()
         return result
@@ -171,7 +182,6 @@ class SQLNotifySystem(BaseSQLEngine):
         )
         self.session.exec(statement)
         self.session.commit()
-        notify_type = NotifyCommunityType(notify_type)
 
     def get_notify_community(self, notify_type:NotifyCommunityType):
         """取得社群通知（依據社群）"""
@@ -444,21 +454,8 @@ class SQLBackupSystem(BaseSQLEngine):
     
     def get_all_backup_roles(self):
         stmt = select(BackupRole)
-        result_role = self.session.exec(stmt).all()
-        
-        # stmt = select(BackupRoleUser)
-        # result_user = self.session.exec(stmt).all()
-        
-        # dct = {}
-        # for data in result_user:
-        #     if data.role_id not in dct:
-        #         dct[data.role_id] = list()
-        #     dct[data.role_id].append(data.discord_id)
-        
-        # for role in result_role:
-        #     role.user_ids = dct.get(role.role_id)
-
-        return result_role
+        result = self.session.exec(stmt).all()
+        return result
     
 class SQLTokensSystem(BaseSQLEngine):
     def set_oauth(self, user_id:int, type:CommunityType, access_token:str, refresh_token:str=None, expires_at:datetime=None):

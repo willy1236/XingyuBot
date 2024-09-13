@@ -72,3 +72,21 @@ if __name__ == '__main__':
 # oauth = DiscordOauth(oauth_setting, user_id=419131103836635136)
 # connections = oauth.get_me()
 # print(connections)
+
+from starlib.models.mysql import School, Student
+
+# sqldb.add(School(id=1, name="school1"))
+# sqldb.add(School(id=2, name="school2"))
+# sqldb.add(Student(id=1, name="student1", created_at=datetime.now(), school_id=1))
+# sqldb.add(Student(id=2, name="student2", created_at=datetime.now(), school_id=2))
+# sqldb.add(Student(id=3, name="student3", created_at=datetime.now()))
+# sqldb.add(Student(id=4, name="student4", created_at=datetime.now(), school_id=1))
+
+# student = sqldb.get_student(1)
+# print(student.name, student.school)
+
+# school = sqldb.get_school(1)
+# print(school.name, school.students)
+
+party = sqldb.get_party(1)
+print(party.members)
