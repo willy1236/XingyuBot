@@ -40,9 +40,9 @@ def create_sqlengine(SQL_connection:bool) -> SQLEngine | None:
             sqlengine = SQLEngine(connection_url)
             version = sqlengine.engine.dialect.server_version_info
             log.info(f'>> SQL connect: online ({version}) <<')
-        except:
+        except Exception:
             sqlengine = None
-            log.warning('>> SQL connect: offline <<')
+            log.exception('>> SQL connect: offline <<')
     else:
         sqlengine = None
         log.info('>> SQL connect: off <<')
