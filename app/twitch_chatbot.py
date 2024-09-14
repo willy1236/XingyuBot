@@ -52,6 +52,7 @@ USER_SCOPE = [
     AuthScope.USER_READ_MODERATED_CHANNELS,
     AuthScope.USER_READ_SUBSCRIPTIONS,
     AuthScope.USER_WRITE_CHAT,
+    AuthScope.WHISPERS_READ,
     AuthScope.WHISPERS_EDIT,
     ]
 
@@ -86,7 +87,6 @@ async def on_stream_online(event: eventsub.StreamOnlineEvent):
     action_channel_id = TARGET_CHANNEL.get(event.event.broadcaster_user_id)
     if action_channel_id:
         await chat.send_message(event.event.broadcaster_user_login, f'{event.event.broadcaster_user_name} 正在直播 {stream.game_name}! {stream.title}')
-    
 
 async def on_stream_offline(event: eventsub.StreamOfflineEvent):
     twitch_log.info(f'{event.event.broadcaster_user_name} ending stream.')
@@ -138,7 +138,14 @@ async def on_channel_prediction_begin(event: eventsub.ChannelPredictionEvent):
     twitch_log.info(f"{event.event.broadcaster_user_name} 開始了預測：{event.event.title}\n{event.event.outcomes[0].title} V.S. {event.event.outcomes[1].title}")
 
 async def on_channel_prediction_end(event: eventsub.ChannelPredictionEndEvent):
-    twitch_log.info(f"{event.event.broadcaster_user_name} 結束了預測：{event.event.title}")    
+    if event.event.status == "resolved":
+        twitch_log.info(f"{event.event.broadcaster_user_name} 結束了預測：{event.event.title}")
+        for outcome in event.event.outcomes:
+            if outcome.id == event.event.winning_outcome_id:
+                twitch_log.info(f"{outcome.title} ({outcome.color}) 獲勝！{outcome.users}個人成功預測")
+    else:
+        twitch_log.info(f"{event.event.broadcaster_user_name} 取消了預測：{event.event.title}")
+
 
 # bot
 async def on_ready(ready_event: EventData):
@@ -207,7 +214,9 @@ async def run():
     
     # set up twitch api instance and add user authentication with some scopes
     twitch = await Twitch(APP_ID, APP_SECRET)
-    auth = UserAuthenticator(twitch, USER_SCOPE)
+    # auth = UserAuthenticator(twitch, USER_SCOPE)
+    # token, refresh_token = await auth.authenticate()
+    # print(token, refresh_token)
     #  await twitch.set_user_authentication(token, USER_SCOPE, refresh_token)
 
     # 使用自帶的函式處理token
@@ -401,7 +410,7 @@ if __name__ == '__main__':
     chat, twitch = asyncio.run(run())
     chat:Chat
     twitch:Twitch
-    asyncio.run(run_sakagawa())
+    # asyncio.run(run_sakagawa())
     # auth = UserAuthenticator(twitch, [AuthScope.CHANNEL_READ_REDEMPTIONS])
     # print(auth.return_auth_url())
 
