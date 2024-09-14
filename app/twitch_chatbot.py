@@ -57,7 +57,7 @@ USER_SCOPE = [
 
 # TARGET_CHANNEL = ["sakagawa_0309", "willy1236owo", "niantt_"]
 TARGET_CHANNEL = sclient.sqldb.get_bot_join_channel_all()
-TARGET_CHANNEL_IDS = TARGET_CHANNEL.keys()
+TARGET_CHANNEL_IDS = list(TARGET_CHANNEL.keys())
 
 # pubsub (may be deprecated in the future)
 # async def pubsub_channel_points(uuid: UUID, data: dict) -> None:
