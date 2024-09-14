@@ -263,6 +263,7 @@ async def run():
     # unsubscribe from all old events that might still be there
     # this will ensure we have a clean slate
     await eventsub.unsubscribe_all()
+    await asyncio.sleep(3)
     # start the eventsub client
     eventsub.start()
     for user in users:
