@@ -16,7 +16,7 @@ from linebot.v3.webhooks.models.message_event import MessageEvent
 from starlib import Jsondb, sclient, web_log
 from starlib.dataExtractor import DiscordOauth, TwitchOauth
 from starlib.models.push import YoutubePush
-from starlib.models.mysql import CloudUser
+from starlib.models.mysql import CloudUser, TwitchBotJoinChannel
 
 from .tunnel_threads import BaseThread
 
@@ -115,6 +115,7 @@ async def twitch_oauth(request:Request):
     
     auth = TwitchOauth(twitch_oauth_settings)
     auth.exchange_code(code)
+    sclient.sqldb.merge(TwitchBotJoinChannel(twitch_id=auth.user_id))
     return HTMLResponse(f'授權已完成，您現在可以關閉此頁面<br><br>Twitch ID：{auth.user_id}')
 
 @app.post("/linebotcallback")
