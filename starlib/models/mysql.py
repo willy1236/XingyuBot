@@ -93,7 +93,7 @@ class UserParty(SQLModel, table=True):
     __table_args__ = {'schema': 'stardb_user'}
     
     discord_id: int = Field(primary_key=True)
-    party_id: int = Field(primary_key=True, foreign_key="stardb_basic.party_data.party_id")
+    party_id: int = Field(primary_key=True, foreign_key="database.party_data.party_id")
     
     party: "Party" = Relationship(back_populates="members")
 
