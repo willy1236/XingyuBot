@@ -78,9 +78,15 @@ async def on_follow(event: eventsub.ChannelFollowEvent):
         sclient.bot.send_message(action_channel_id, embed=BotEmbed.simple("新追隨",f'{event.event.user_name}({event.event.user_login}) 正在追隨 {event.event.broadcaster_user_name}!'))
 
 async def on_stream_online(event: eventsub.StreamOnlineEvent):
+    stream = await first(twitch.get_streams(user_id=event.event.broadcaster_user_id))
     twitch_log.info(f'{event.event.broadcaster_user_name} starting stream!')
     if sclient.bot:
-        sclient.bot.send_message(content=f'{event.event.broadcaster_user_name} starting {event.event.type}!')
+        sclient.bot.send_message(content=f'{event.event.broadcaster_user_name} 正在直播 {stream.game_name}!')
+    
+    action_channel_id = TARGET_CHANNEL.get(event.event.broadcaster_user_id)
+    if action_channel_id:
+        await chat.send_message(event.event.broadcaster_user_login, f'{event.event.broadcaster_user_name} 正在直播 {stream.game_name}! {stream.title}')
+    
 
 async def on_stream_offline(event: eventsub.StreamOfflineEvent):
     twitch_log.info(f'{event.event.broadcaster_user_name} ending stream.')
@@ -106,7 +112,7 @@ async def on_channel_subscribe(event: eventsub.ChannelSubscribeEvent):
     twitch_log.info(f"{event.event.user_name} 在 {event.event.broadcaster_user_name} 的層級{event.event.tier[0]}新訂閱")
     action_channel_id = TARGET_CHANNEL.get(event.event.broadcaster_user_id)
     if action_channel_id:
-        await chat.send_message(event.event.broadcaster_user_name, f"感謝@{event.event.user_name} 的首次訂閱！")
+        await chat.send_message(event.event.broadcaster_user_login, f"感謝@{event.event.user_name} 的首次訂閱！")
 
 async def on_channel_subscription_message(event: eventsub.ChannelSubscriptionMessageEvent):
     texts = [
@@ -121,7 +127,7 @@ async def on_channel_subscription_message(event: eventsub.ChannelSubscriptionMes
     
     action_channel_id = TARGET_CHANNEL.get(event.event.broadcaster_user_id)
     if action_channel_id:
-        await chat.send_message(event.event.broadcaster_user_name, f"感謝@{event.event.user_name} 的{event.event.duration_months}個月訂閱！")
+        await chat.send_message(event.event.broadcaster_user_login, f"感謝@{event.event.user_name} 的{event.event.duration_months}個月訂閱！")
         if sclient.bot:
             sclient.bot.send_message(action_channel_id, embed=BotEmbed.simple("新訂閱","\n".join(texts)))
 
@@ -212,7 +218,7 @@ async def run():
     users = [user async for user in twitch.get_users(user_ids=TARGET_CHANNEL_IDS)]
     global users_login
     users_login = [user.login for user in users]
-    
+
     # create chat instance
     global chat
     chat = await Chat(twitch)
