@@ -73,13 +73,11 @@ async def on_follow(event: eventsub.ChannelFollowEvent):
     twitch_log.info(f'{event.event.user_name}({event.event.user_login}) now follows {event.event.broadcaster_user_name}!')
     if event.event.broadcaster_user_login == TARGET_CHANNEL[0] and sclient.bot:
         sclient.bot.send_message(1237412404980355092, embed=BotEmbed.simple("新追隨",f'{event.event.user_name}({event.event.user_login}) 正在追隨 {event.event.broadcaster_user_name}!'))
-        
 
 async def on_stream_online(event: eventsub.StreamOnlineEvent):
     twitch_log.info(f'{event.event.broadcaster_user_name} starting stream!')
     if sclient.bot:
         sclient.bot.send_message(content=f'{event.event.broadcaster_user_name} starting {event.event.type}!')
-        
 
 async def on_stream_offline(event: eventsub.StreamOfflineEvent):
     twitch_log.info(f'{event.event.broadcaster_user_name} ending stream.')
@@ -102,6 +100,8 @@ async def on_channel_raid(event:eventsub.ChannelRaidEvent):
 
 async def on_channel_subscribe(event: eventsub.ChannelSubscribeEvent):
     twitch_log.info(f"{event.event.user_name} 在 {event.event.broadcaster_user_name} 的層級{event.event.tier[0]}新訂閱")
+    if event.event.broadcaster_user_login == TARGET_CHANNEL[0]:
+        await chat.send_message(TARGET_CHANNEL[0], f"感謝@{event.event.user_name} 的首次訂閱！")
 
 async def on_channel_subscription_message(event: eventsub.ChannelSubscriptionMessageEvent):
     texts = [
@@ -114,9 +114,10 @@ async def on_channel_subscription_message(event: eventsub.ChannelSubscriptionMes
     for text in texts:
         twitch_log.info(text)
     
-    if event.event.broadcaster_user_login == TARGET_CHANNEL[0] and sclient.bot:
-        sclient.bot.send_message(1237412404980355092, embed=BotEmbed.simple("新訂閱","\n".join(texts)))
-        await chat.send_message(TARGET_CHANNEL[0], f"感謝{event.event.user_name}的{event.event.duration_months}個月訂閱！")
+    if event.event.broadcaster_user_login == TARGET_CHANNEL[0]:
+        await chat.send_message(TARGET_CHANNEL[0], f"感謝@{event.event.user_name} 的{event.event.duration_months}個月訂閱！")
+        if sclient.bot:
+            sclient.bot.send_message(1237412404980355092, embed=BotEmbed.simple("新訂閱","\n".join(texts)))
 
 async def on_channel_poll_begin(event: eventsub.ChannelPollBeginEvent):
     twitch_log.info(f"{event.event.broadcaster_user_name} 開始了投票：{event.event.title}")
@@ -139,7 +140,10 @@ async def on_message(msg: ChatMessage):
     twitch_log.info(f'in {msg.room.name}, {msg.user.name} said: {msg.text}')
 
 async def on_sub(sub: ChatSub):
-    twitch_log.info(f'New subscription in {sub.room.name}:\nType: {sub.sub_plan_name}\nMessage: {sub.sub_message}')
+    twitch_log.info(f'New subscription in {sub.room.name}:')
+    twitch_log.info(f'Type: {sub.sub_plan_name}')
+    twitch_log.info(f'Message: {sub.sub_message}')
+    twitch_log.info(f"System message: {sub.system_message}")
 
 async def on_bot_joined(event: JoinedEvent):
     await asyncio.sleep(1)
@@ -226,12 +230,12 @@ async def run():
     chat.start()
 
     # starting up PubSub
-    pubsub = PubSub(twitch)
-    for user in users:
-        uuid1 = await pubsub.listen_channel_points(user.id, pubsub_channel_points)
-        uuid2 = await pubsub.listen_bits(user.id, pubsub_bits)
-        uuid3 = await pubsub.listen_chat_moderator_actions(me.id, user.id, pubsub_chat_moderator_actions)
-    pubsub.start()
+    # pubsub = PubSub(twitch)
+    # for user in users:
+    #     uuid1 = await pubsub.listen_channel_points(user.id, pubsub_channel_points)
+    #     uuid2 = await pubsub.listen_bits(user.id, pubsub_bits)
+    #     uuid3 = await pubsub.listen_chat_moderator_actions(me.id, user.id, pubsub_chat_moderator_actions)
+    # pubsub.start()
     # you can either start listening before or after you started pubsub.
     
 
@@ -294,23 +298,23 @@ async def run():
         except EventSubSubscriptionError as e:
             twitch_log.warning(f"Error subscribing to channel follow: {e}")
 
-        try:
-            twitch_log.debug("listening to channel poll begin")
-            await eventsub.listen_channel_poll_begin(user.id, on_channel_poll_begin)
-        except EventSubSubscriptionError as e:
-            twitch_log.warning(f"Error subscribing to channel poll begin: {e}")
+        # try:
+        #     twitch_log.debug("listening to channel poll begin")
+        #     await eventsub.listen_channel_poll_begin(user.id, on_channel_poll_begin)
+        # except EventSubSubscriptionError as e:
+        #     twitch_log.warning(f"Error subscribing to channel poll begin: {e}")
         
-        try:
-            twitch_log.debug("listening to channel prediction begin")
-            await eventsub.listen_channel_prediction_begin(user.id, on_channel_prediction_begin)
-        except EventSubSubscriptionError as e:
-            twitch_log.warning(f"Error subscribing to channel prediction begin: {e}")
+        # try:
+        #     twitch_log.debug("listening to channel prediction begin")
+        #     await eventsub.listen_channel_prediction_begin(user.id, on_channel_prediction_begin)
+        # except EventSubSubscriptionError as e:
+        #     twitch_log.warning(f"Error subscribing to channel prediction begin: {e}")
         
-        try:
-            twitch_log.debug("listening to channel prediction end")
-            await eventsub.listen_channel_prediction_end(user.id, on_channel_prediction_end)
-        except EventSubSubscriptionError as e:
-            twitch_log.warning(f"Error subscribing to channel prediction end: {e}")
+        # try:
+        #     twitch_log.debug("listening to channel prediction end")
+        #     await eventsub.listen_channel_prediction_end(user.id, on_channel_prediction_end)
+        # except EventSubSubscriptionError as e:
+        #     twitch_log.warning(f"Error subscribing to channel prediction end: {e}")
         
     sclient.twitch = twitch
     # we are done with our setup, lets start this bot up!

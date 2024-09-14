@@ -400,8 +400,8 @@ class command(Cog_Extension):
         role = ctx.guild.get_role(1195407446315892888)
         member.add_roles(role,reason="指令：懲戒集中營 開始")
         
-        time = timedelta(seconds=20)
-        embed = BotEmbed.simple_warn_sheet(member,ctx.author,last=time,reason="懲戒集中營",title="已被懲戒")
+        last_time = timedelta(seconds=20)
+        embed = BotEmbed.simple_warn_sheet(member,ctx.author,datetime.now(),last=last_time,reason="懲戒集中營",title="已被懲戒")
         await self.bot.get_channel(1195406858056368189).send(embed=embed)
         
         channel = self.bot.get_channel(613760923668185121)
@@ -426,7 +426,7 @@ class command(Cog_Extension):
 
     @commands.slash_command(description='讓機器人選擇一樣東西')
     async def choice(self,ctx,args:discord.Option(str,name='選項',description='多個選項請用空格隔開')):
-        args = args.split()
+        args:list[str] = args.split()
         result = random.choice(args)
         await ctx.respond(f'我選擇:{result}')
 

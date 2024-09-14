@@ -140,16 +140,16 @@ class UserModerate(SQLModel, table=True):
 
 class RoleSave(SQLModel, table=True):
     __tablename__ = "role_save"
-    __table_args__ = {'schema': 'database'}
+    __table_args__ = {'schema': 'stardb_user'}
 
-    discord_id: int = Field(primary_key=True)
-    role_id: int = Field(primary_key=True)
-    role_name: int
+    discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
+    role_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
+    role_name: str
     time: date
 
 class NotifyChannel(SQLModel, table=True):
     __tablename__ = "notify_channel"
-    __table_args__ = {'schema': 'database'}
+    __table_args__ = {'schema': 'stardb_basic'}
     
     guild_id: int = Field(primary_key=True)
     notify_type: NotifyChannelType = Field(sa_column=Column(Integer, primary_key=True))
@@ -158,7 +158,7 @@ class NotifyChannel(SQLModel, table=True):
 
 class NotifyCommunity(SQLModel, table=True):
     __tablename__ = "notify_community"
-    __table_args__ = {'schema': 'database'}
+    __table_args__ = {'schema': 'stardb_basic'}
     
     notify_type: NotifyCommunityType = Field(sa_column=Column(Integer, primary_key=True))
     notify_name: str = Field(primary_key=True)
@@ -169,7 +169,7 @@ class NotifyCommunity(SQLModel, table=True):
 
 class DynamicChannel(SQLModel, table=True):
     __tablename__ = "dynamic_channel"
-    __table_args__ = {'schema': 'database'}
+    __table_args__ = {'schema': 'stardb_basic'}
     
     channel_id: int = Field(primary_key=True)
     discord_id: int
@@ -178,7 +178,7 @@ class DynamicChannel(SQLModel, table=True):
 
 class Poll(SQLModel, table=True):
     __tablename__ = "poll_data"
-    __table_args__ = {'schema': 'database'}
+    __table_args__ = {'schema': 'stardb_basic'}
 
     poll_id: int = Field(default=None, primary_key=True)
     title: str
@@ -195,17 +195,17 @@ class Poll(SQLModel, table=True):
 
 class PollOption(SQLModel, table=True):
     __tablename__ = "poll_options"
-    __table_args__ = {'schema': 'database'}
+    __table_args__ = {'schema': 'stardb_basic'}
 
-    poll_id: int = Field(primary_key=True, foreign_key="database.poll_data.poll_id")
+    poll_id: int = Field(primary_key=True, foreign_key="stardb_basic.poll_data.poll_id")
     option_id: int = Field(primary_key=True)
     option_name: str
 
 class PollRole(SQLModel, table=True):
     __tablename__ = "poll_role"
-    __table_args__ = {'schema': 'database'}
+    __table_args__ = {'schema': 'stardb_basic'}
 
-    poll_id: int = Field(primary_key=True, foreign_key="database.poll_data.poll_id")
+    poll_id: int = Field(primary_key=True, foreign_key="stardb_basic.poll_data.poll_id")
     role_id: int = Field(primary_key=True)
     role_type: int
     role_magnification: int

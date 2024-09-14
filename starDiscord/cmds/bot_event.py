@@ -9,6 +9,7 @@ from discord.ext import commands
 from starlib import Jsondb,BotEmbed,sclient,log
 from starlib.uiElement.view import WelcomeView, ReactionRole1, PollView
 from starlib.types import NotifyChannelType
+from starlib.models.mysql import DiscordUser
 from ..extension import Cog_Extension
 
 keywords = {
@@ -165,7 +166,12 @@ class event(Cog_Extension):
                         
                         embed = BotEmbed.simple_warn_sheet(message.author,self.bot.user,reason=reason)
                         await message.channel.send(f"{message.author.mention} 貢丸很危險 不要打貢丸知道嗎",embed=embed)
-                        sclient.sqldb.add_userdata_value(message.author.id,"user_discord","meatball_times",1)
+                        dbuser = sclient.sqldb.get_dcuser(message.author.id) or DiscordUser(discord_id=message.author.id)
+                        if dbuser.meatball_times is None:
+                            dbuser.meatball_times = 1
+                        else:
+                            dbuser.meatball_times += 1
+                        sclient.sqldb.merge(dbuser)
                     except Exception as e:
                         print(e)
             

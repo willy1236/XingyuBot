@@ -80,8 +80,10 @@ class BotEmbed:
         return embed
     
     @staticmethod
-    def simple_warn_sheet(warn_user:discord.User, moderate_user:discord.User, create_at:datetime, last=timedelta(seconds=15), reason:str=None, title="已被禁言"):
+    def simple_warn_sheet(warn_user:discord.User, moderate_user:discord.User, create_at:datetime=None, last=timedelta(seconds=15), reason:str=None, title="已被禁言"):
         '''簡易警告表格'''
+        if create_at is None:
+            create_at = datetime.now()
         timestamp = int((create_at + last).timestamp())
         embed = discord.Embed(description=f"{warn_user.mention}：{reason}", color=0xc4e9ff)
         embed.set_author(name=f"{warn_user.name} {title}",icon_url=warn_user.display_avatar.url)
