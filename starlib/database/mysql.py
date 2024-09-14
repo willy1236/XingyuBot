@@ -237,7 +237,7 @@ class SQLRoleSaveSystem(BaseSQLEngine):
 
     def add_role_save(self,discord_id:int,role:discord.Role):
         role_save = RoleSave(discord_id=discord_id, role_id=role.id, role_name=role.name, time=role.created_at.date())
-        self.session.add(role_save)
+        self.session.merge(role_save)
         self.session.commit()
 
 class SQLWarningSystem(BaseSQLEngine):
