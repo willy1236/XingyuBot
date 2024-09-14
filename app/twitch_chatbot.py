@@ -139,8 +139,8 @@ async def on_ready(ready_event: EventData):
     twitch_log.info(f'Bot is ready as {ready_event.chat.username}, joining channels')
     # join our target channel, if you want to join multiple, either call join for each individually
     # or even better pass a list of channels as the argument
-    if TARGET_CHANNEL_IDS:
-        await ready_event.chat.join_room(TARGET_CHANNEL_IDS)
+    if users_login:
+        await ready_event.chat.join_room(users_login)
 
 # this will be called whenever a message in a channel was send by either the bot OR another user
 async def on_message(msg: ChatMessage):
@@ -210,7 +210,9 @@ async def run():
 
     me = await first(twitch.get_users())
     users = [user async for user in twitch.get_users(user_ids=TARGET_CHANNEL_IDS)]
-
+    global users_login
+    users_login = [user.login for user in users]
+    
     # create chat instance
     global chat
     chat = await Chat(twitch)
