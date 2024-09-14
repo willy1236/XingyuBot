@@ -75,9 +75,9 @@ class UserPoll(SQLModel, table=True):
     __tablename__ = "user_poll"
     __table_args__ = {'schema': 'stardb_user'}
     
-    poll_id: int = Field(primary_key=True, foreign_key="database.poll_data.poll_id")
+    poll_id: int = Field(primary_key=True, foreign_key="stardb_basic.poll_data.poll_id")
     discord_id: int = Field(primary_key=True)
-    vote_option: int = Field(primary_key=True, foreign_key="database.poll_options.option_id")
+    vote_option: int = Field(primary_key=True, foreign_key="stardb_basic.poll_options.option_id")
     vote_at: datetime
     vote_magnification: int = Field(default=1)
 
@@ -93,7 +93,7 @@ class UserParty(SQLModel, table=True):
     __table_args__ = {'schema': 'stardb_user'}
     
     discord_id: int = Field(primary_key=True)
-    party_id: int = Field(primary_key=True, foreign_key="database.party_data.party_id")
+    party_id: int = Field(primary_key=True, foreign_key="stardb_basic.party_data.party_id")
     
     party: "Party" = Relationship(back_populates="members")
 
@@ -221,6 +221,13 @@ class Party(SQLModel, table=True):
     created_at: datetime
     
     members: list[UserParty] = Relationship(back_populates="party")
+
+class TwitchBotJoinChannel(SQLModel, table=True):
+    __tablename__ = "twitch_bot_join_channel"
+    __table_args__ = {'schema': 'database'}
+    
+    twitch_id: int = Field(primary_key=True)
+    action_channel_id: int = Field(sa_column=Column(BigInteger))
 
 class DiscordRegistration(SQLModel, table=True):
     __tablename__ = "discord_registrations"

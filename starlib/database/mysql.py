@@ -68,7 +68,8 @@ class BaseSQLEngine:
         stmt = select(School).where(School.id == school_id)
         result = self.session.exec(stmt).one_or_none()
         return result
-
+    
+class SQLUserSystem(BaseSQLEngine):
     #* User
     def get_cloud_user(self, discord_id:int):
         """
@@ -441,7 +442,14 @@ class SQLElectionSystem(BaseSQLEngine):
         stmt = select(Party).where(Party.party_id == party_id)
         result = self.session.exec(stmt).one_or_none()
         return result
-    
+
+class SQLTwitchSystem(BaseSQLEngine):    
+    #* twitch
+    def get_bot_join_channel_all(self):
+        stmt = select(TwitchBotJoinChannel)
+        result = self.session.exec(stmt).all()
+        return {i.twitch_id: i.action_channel_id for i in result}
+
 class SQLBackupSystem(BaseSQLEngine):
     #* backup
     def backup_role(self,role:discord.Role,description:str=None):
@@ -556,101 +564,6 @@ class MySQLBaseModel(object):
     #     #self.cursor.execute(f'DELETE FROM `{table}` WHERE `id` = %s;',("3",))
     #     self.cursor.execute(f'DELETE FROM `{table}` WHERE `id` = %s;',value)
     #     self.connection.commit()
-
-class MySQLUserSystem(MySQLBaseModel):
-    """用戶資料系統"""
-    def create_user(self,discord_id:int=None):
-        self.cursor.execute(f"USE `stardb_user`;")
-        error = True
-
-        while error:
-            try:
-                user_id = str()
-                if discord_id:
-                    operation = f"INSERT INTO `user_data` SET user_id = ({user_id}), discord_id = {discord_id};"
-                else:
-                    operation = f"INSERT INTO `user_data` SET user_id = ({user_id});"
-                self.cursor.execute(operation)
-                error = False
-            except sqlerror as e:
-                if e.errno == 1062:
-                    pass
-                else:
-                    raise
-        
-        return self.get_user(user_id)
-    
-    def create_discord_user(self,discord_id:int):
-        self.cursor.execute(f"USE `stardb_user`;")
-        self.cursor.execute(f"INSERT INTO `user_data` SET discord_id = {discord_id};")
-        self.cursor.execute(f"INSERT INTO `user_discord` SET discord_id = {discord_id};")
-        self.cursor.execute(f"INSERT INTO `user_point` SET discord_id = {discord_id};")
-        self.connection.commit()
-        self.cursor.execute(f'SELECT * FROM `user_discord` WHERE `discord_id` = %s;',(discord_id,))
-        record = self.cursor.fetchall()
-        if record:
-            return PartialUser(record[0])
-
-    def get_user(self,user_id:str):
-        """取得基本用戶"""
-        self.cursor.execute(f'SELECT * FROM `user_data` WHERE `user_id` = %s;',(user_id,))
-        record = self.cursor.fetchall()
-        if record:
-            return StarUser(record[0])
-
-    def get_dcuser(self,discord_id:int,full=False,user_dc:discord.User=None):
-        """取得discord用戶"""
-        self.cursor.execute(f"USE `stardb_user`;")
-        if full:
-            self.cursor.execute(f'''
-                                SELECT * FROM `user_discord`
-                                LEFT JOIN `user_point` ON `user_discord`.`discord_id` = `user_point`.`discord_id`
-                                LEFT JOIN `user_account` ON `user_discord`.`discord_id` = `user_account`.`alternate_account`
-                                LEFT JOIN `stardb_idbase`.`discord_registrations` ON `user_discord`.`registrations_id` = `discord_registrations`.`registrations_id`
-                                WHERE `user_discord`.`discord_id` = %s;
-                                ''',(discord_id,))
-        else:
-            self.cursor.execute(f'SELECT * FROM `user_discord` WHERE `discord_id` = %s;',(discord_id,))
-        record = self.cursor.fetchall()
-        if record:
-            return DiscordUser(record[0],self,user_dc)
-        
-    def get_dcuser_v2(self, discord_id:int):
-        self.cursor.execute(f'SELECT * FROM `stardb_user`.`user_discord` WHERE `discord_id` = %s LIMIT 1;',(discord_id,))
-        record = self.cursor.fetchall()
-        if record:
-            return DiscordUserV2(**record[0])
-    
-    def get_partial_dcuser(self,discord_id:int,column:str):
-        self.cursor.execute(f"USE `stardb_user`;")
-        self.cursor.execute(f'SELECT `discord_id`,`{column}` FROM `user_discord` WHERE `discord_id` = %s;',(discord_id,))
-        record = self.cursor.fetchall()
-        if record:
-            return PartialUser(record[0],self)
-        else:
-            return PartialUser(self.create_discord_user(discord_id),self)
-
-    def get_main_account(self,alternate_account):
-        self.cursor.execute(f"USE `stardb_user`;")
-        self.cursor.execute(f'SELECT * FROM `user_account` WHERE `alternate_account` = %s;',(alternate_account,))
-        record = self.cursor.fetchall()
-        if record:
-            return record[0]
-        
-    def get_alternate_account(self,discord_id):
-        self.cursor.execute(f"USE `stardb_user`;")
-        self.cursor.execute(f'SELECT * FROM `user_account` WHERE `main_account` = %s;',(discord_id,))
-        return self.cursor.fetchall()
-    
-    def set_sharefolder_data(self,discord_id:int,emailAddress=None,drive_share_id=None):
-        self.cursor.execute(f"USE `stardb_user`;")
-        self.cursor.execute(f"INSERT INTO `user_data` SET `discord_id` = %s, `email` = %s, `drive_share_id` = %s ON DUPLICATE KEY UPDATE `email` = %s, `drive_share_id` = %s;",(discord_id,emailAddress,drive_share_id,emailAddress,drive_share_id))
-        self.connection.commit()
-
-    def remove_sharefolder_data(self,discord_id:int):
-        self.cursor.execute(f"USE `stardb_user`;")
-        self.cursor.execute(f"UPDATE `user_data` SET `email` = NULL, `drive_share_id` = NULL WHERE `discord_id` = %s;",(discord_id,))
-        self.connection.commit()
 
 class MySQLGameSystem(MySQLBaseModel):
     """遊戲資料系統"""
@@ -1284,7 +1197,6 @@ class MySQLManager(MySQLBaseModel):
                 raise e
 
 class MySQLDatabase(
-    MySQLUserSystem,
     MySQLGameSystem,
     MySQLCurrencySystem,
     MySQLHoYoLabSystem,
@@ -1298,11 +1210,13 @@ class MySQLDatabase(
     """Mysql操作"""
 
 class SQLEngine(
+    SQLUserSystem,
     SQLNotifySystem,
     SQLRoleSaveSystem,
     SQLWarningSystem,
     SQLPollSystem,
     SQLElectionSystem,
+    SQLTwitchSystem,
     SQLBackupSystem,
     SQLTokensSystem,
     SQLTest,

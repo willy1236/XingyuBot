@@ -55,24 +55,27 @@ USER_SCOPE = [
     AuthScope.WHISPERS_EDIT,
     ]
 
-TARGET_CHANNEL = ["sakagawa_0309", "willy1236owo", "niantt_"]
+# TARGET_CHANNEL = ["sakagawa_0309", "willy1236owo", "niantt_"]
+TARGET_CHANNEL = sclient.sqldb.get_bot_join_channel_all()
+TARGET_CHANNEL_IDS = TARGET_CHANNEL.keys()
 
 # pubsub (may be deprecated in the future)
-async def pubsub_channel_points(uuid: UUID, data: dict) -> None:
-    twitch_log.info("callback_channel_points:",uuid,data)
+# async def pubsub_channel_points(uuid: UUID, data: dict) -> None:
+#     twitch_log.info("callback_channel_points:",uuid,data)
 
-async def pubsub_bits(uuid: UUID, data: dict) -> None:
-    twitch_log.info("callback_bits:",uuid,data)
+# async def pubsub_bits(uuid: UUID, data: dict) -> None:
+#     twitch_log.info("callback_bits:",uuid,data)
 
-async def pubsub_chat_moderator_actions(uuid: UUID, data: dict) -> None:
-    twitch_log.info("chat_moderator_actions:",uuid,data)
+# async def pubsub_chat_moderator_actions(uuid: UUID, data: dict) -> None:
+#     twitch_log.info("chat_moderator_actions:",uuid,data)
 
 # eventsub
 async def on_follow(event: eventsub.ChannelFollowEvent):
     #await chat.send_message(data.event.broadcaster_user_name,text = f'{data.event.user_name} now follows {data.event.broadcaster_user_name}!')
     twitch_log.info(f'{event.event.user_name}({event.event.user_login}) now follows {event.event.broadcaster_user_name}!')
-    if event.event.broadcaster_user_login == TARGET_CHANNEL[0] and sclient.bot:
-        sclient.bot.send_message(1237412404980355092, embed=BotEmbed.simple("新追隨",f'{event.event.user_name}({event.event.user_login}) 正在追隨 {event.event.broadcaster_user_name}!'))
+    action_channel_id = TARGET_CHANNEL.get(event.event.broadcaster_user_id)
+    if action_channel_id and sclient.bot:
+        sclient.bot.send_message(action_channel_id, embed=BotEmbed.simple("新追隨",f'{event.event.user_name}({event.event.user_login}) 正在追隨 {event.event.broadcaster_user_name}!'))
 
 async def on_stream_online(event: eventsub.StreamOnlineEvent):
     twitch_log.info(f'{event.event.broadcaster_user_name} starting stream!')
@@ -89,8 +92,9 @@ async def on_channel_points_custom_reward_redemption_add(event: eventsub.Channel
     if event.event.user_input:
         text += f' ({event.event.user_input})'
     twitch_log.info(text)
-    if event.event.broadcaster_user_login == TARGET_CHANNEL[0] and sclient.bot:
-        sclient.bot.send_message(1237412404980355092, embed=BotEmbed.simple("兌換自訂獎勵",text))
+    action_channel_id = TARGET_CHANNEL.get(event.event.broadcaster_user_id)
+    if action_channel_id and sclient.bot:
+        sclient.bot.send_message(action_channel_id, embed=BotEmbed.simple("兌換自訂獎勵",text))
     
 async def on_channel_points_custom_reward_redemption_update(event: eventsub.ChannelPointsCustomRewardRedemptionUpdateEvent):
     twitch_log.info(f"{event.event.user_name}'s redemption of {event.event.reward.title} has been updated!")
@@ -100,8 +104,9 @@ async def on_channel_raid(event:eventsub.ChannelRaidEvent):
 
 async def on_channel_subscribe(event: eventsub.ChannelSubscribeEvent):
     twitch_log.info(f"{event.event.user_name} 在 {event.event.broadcaster_user_name} 的層級{event.event.tier[0]}新訂閱")
-    if event.event.broadcaster_user_login == TARGET_CHANNEL[0]:
-        await chat.send_message(TARGET_CHANNEL[0], f"感謝@{event.event.user_name} 的首次訂閱！")
+    action_channel_id = TARGET_CHANNEL.get(event.event.broadcaster_user_id)
+    if action_channel_id:
+        await chat.send_message(event.event.broadcaster_user_name, f"感謝@{event.event.user_name} 的首次訂閱！")
 
 async def on_channel_subscription_message(event: eventsub.ChannelSubscriptionMessageEvent):
     texts = [
@@ -114,10 +119,11 @@ async def on_channel_subscription_message(event: eventsub.ChannelSubscriptionMes
     for text in texts:
         twitch_log.info(text)
     
-    if event.event.broadcaster_user_login == TARGET_CHANNEL[0]:
-        await chat.send_message(TARGET_CHANNEL[0], f"感謝@{event.event.user_name} 的{event.event.duration_months}個月訂閱！")
+    action_channel_id = TARGET_CHANNEL.get(event.event.broadcaster_user_id)
+    if action_channel_id:
+        await chat.send_message(event.event.broadcaster_user_name, f"感謝@{event.event.user_name} 的{event.event.duration_months}個月訂閱！")
         if sclient.bot:
-            sclient.bot.send_message(1237412404980355092, embed=BotEmbed.simple("新訂閱","\n".join(texts)))
+            sclient.bot.send_message(action_channel_id, embed=BotEmbed.simple("新訂閱","\n".join(texts)))
 
 async def on_channel_poll_begin(event: eventsub.ChannelPollBeginEvent):
     twitch_log.info(f"{event.event.broadcaster_user_name} 開始了投票：{event.event.title}")
@@ -133,7 +139,7 @@ async def on_ready(ready_event: EventData):
     twitch_log.info(f'Bot is ready as {ready_event.chat.username}, joining channels')
     # join our target channel, if you want to join multiple, either call join for each individually
     # or even better pass a list of channels as the argument
-    await ready_event.chat.join_room(TARGET_CHANNEL)
+    await ready_event.chat.join_room(TARGET_CHANNEL_IDS)
 
 # this will be called whenever a message in a channel was send by either the bot OR another user
 async def on_message(msg: ChatMessage):
@@ -202,7 +208,7 @@ async def run():
     await helper.bind()
 
     me = await first(twitch.get_users())
-    users = [user async for user in twitch.get_users(logins=TARGET_CHANNEL)]
+    users = [user async for user in twitch.get_users(user_ids=TARGET_CHANNEL_IDS)]
 
     # create chat instance
     global chat
