@@ -224,7 +224,7 @@ class Party(SQLModel, table=True):
 
 class TwitchBotJoinChannel(SQLModel, table=True):
     __tablename__ = "twitch_bot_join_channel"
-    __table_args__ = {'schema': 'database'}
+    __table_args__ = {'schema': 'stardb_basic'}
     
     twitch_id: int = Field(primary_key=True)
     action_channel_id: int = Field(sa_column=Column(BigInteger))

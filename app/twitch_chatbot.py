@@ -139,7 +139,8 @@ async def on_ready(ready_event: EventData):
     twitch_log.info(f'Bot is ready as {ready_event.chat.username}, joining channels')
     # join our target channel, if you want to join multiple, either call join for each individually
     # or even better pass a list of channels as the argument
-    await ready_event.chat.join_room(TARGET_CHANNEL_IDS)
+    if TARGET_CHANNEL_IDS:
+        await ready_event.chat.join_room(TARGET_CHANNEL_IDS)
 
 # this will be called whenever a message in a channel was send by either the bot OR another user
 async def on_message(msg: ChatMessage):
