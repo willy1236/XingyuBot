@@ -5,7 +5,7 @@ from datetime import date, datetime
 from typing import TYPE_CHECKING, List, Optional, TypedDict
 
 from discord import Bot
-from sqlalchemy import Column, Integer, String, DateTime, BigInteger
+from sqlalchemy import Column, Integer, String, DateTime, BigInteger, ForeignKey
 from sqlalchemy.orm import declarative_base
 from sqlmodel import Field, Relationship, SQLModel
 
@@ -43,17 +43,17 @@ class CloudUser(SQLModel, table=True):
     __tablename__ = 'cloud_user'
     __table_args__ = {'schema': 'stardb_user'}
 
-    id: str = Field(unique=True, nullable=True)
-    discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
-    email: str = Field(nullable=True)
-    drive_share_id: str = Field(nullable=True)
-    twitch_id: int = Field(nullable=True)
+    id: str | None = Field(nullable=True)
+    discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True, autoincrement=False))
+    email: str | None = Field(nullable=True)
+    drive_share_id: str | None = Field(nullable=True)
+    twitch_id: int | None = Field(nullable=True)
 
 class DiscordUser(SQLModel, table=True):
     __tablename__ = "user_discord"
     __table_args__ = {'schema': 'stardb_user'}
 
-    discord_id: int = Field(primary_key=True)
+    discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True, autoincrement=False))
     name: str | None
     max_sign_consecutive_days: int | None
     meatball_times: int | None
@@ -66,7 +66,7 @@ class UserPoint(SQLModel, table=True):
     __tablename__ = "user_point"
     __table_args__ = {'schema': 'stardb_user'}
 
-    discord_id: int = Field(primary_key=True)
+    discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True, autoincrement=False))
     scoin: int = Field(default=0)
     point: int = Field(default=0)
     rcoin: int = Field(default=0)
@@ -76,7 +76,7 @@ class UserPoll(SQLModel, table=True):
     __table_args__ = {'schema': 'stardb_user'}
     
     poll_id: int = Field(primary_key=True, foreign_key="stardb_basic.poll_data.poll_id")
-    discord_id: int = Field(primary_key=True)
+    discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
     vote_option: int = Field(primary_key=True, foreign_key="stardb_basic.poll_options.option_id")
     vote_at: datetime
     vote_magnification: int = Field(default=1)
@@ -92,7 +92,7 @@ class UserParty(SQLModel, table=True):
     __tablename__ = "user_party"
     __table_args__ = {'schema': 'stardb_user'}
     
-    discord_id: int = Field(primary_key=True)
+    discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
     party_id: int = Field(primary_key=True, foreign_key="stardb_idbase.party_datas.party_id")
     
     party: "Party" = Relationship(back_populates="members")
@@ -102,7 +102,7 @@ class UserModerate(SQLModel, table=True):
     __table_args__ = {'schema': 'stardb_user'}
 
     warning_id: int = Field(primary_key=True, default=None)
-    discord_id: int
+    discord_id: int = Field(sa_column=Column(BigInteger))
     moderate_type: WarningType = Field(sa_column=Column(Integer, primary_key=True))
     moderate_user: int
     create_guild: int
@@ -151,10 +151,10 @@ class NotifyChannel(SQLModel, table=True):
     __tablename__ = "notify_channel"
     __table_args__ = {'schema': 'stardb_basic'}
     
-    guild_id: int = Field(primary_key=True)
+    guild_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
     notify_type: NotifyChannelType = Field(sa_column=Column(Integer, primary_key=True))
-    channel_id: int
-    role_id: int | None
+    channel_id: int = Field(sa_column=Column(BigInteger))
+    role_id: int | None = Field(sa_column=Column(BigInteger))
 
 class NotifyCommunity(SQLModel, table=True):
     __tablename__ = "notify_community"
@@ -162,18 +162,18 @@ class NotifyCommunity(SQLModel, table=True):
     
     notify_type: NotifyCommunityType = Field(sa_column=Column(Integer, primary_key=True))
     notify_name: str = Field(primary_key=True)
-    guild_id: int = Field(primary_key=True)
+    guild_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
     display_name: str
-    channel_id: int
-    role_id: int | None
+    channel_id: int = Field(sa_column=Column(BigInteger))
+    role_id: int | None = Field(sa_column=Column(BigInteger))
 
 class DynamicChannel(SQLModel, table=True):
     __tablename__ = "dynamic_channel"
     __table_args__ = {'schema': 'stardb_basic'}
     
-    channel_id: int = Field(primary_key=True)
-    discord_id: int
-    guild_id: int
+    channel_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
+    discord_id: int = Field(sa_column=Column(BigInteger))
+    guild_id: int = Field(sa_column=Column(BigInteger))
     created_at: datetime
 
 class Poll(SQLModel, table=True):
@@ -182,11 +182,11 @@ class Poll(SQLModel, table=True):
 
     poll_id: int = Field(default=None, primary_key=True)
     title: str
-    created_user: int
+    created_user: int = Field(sa_column=Column(BigInteger))
     created_at: datetime
     is_on: bool
     message_id: int
-    guild_id: int
+    guild_id: int = Field(sa_column=Column(BigInteger))
     ban_alternate_account_voting: bool
     show_name: bool
     check_results_in_advance: bool
@@ -206,7 +206,7 @@ class PollRole(SQLModel, table=True):
     __table_args__ = {'schema': 'stardb_basic'}
 
     poll_id: int = Field(primary_key=True, foreign_key="stardb_basic.poll_data.poll_id")
-    role_id: int = Field(primary_key=True)
+    role_id: int = Field(sa_column=Column(BigInteger))
     role_type: int
     role_magnification: int
 
@@ -234,8 +234,8 @@ class DiscordRegistration(SQLModel, table=True):
     __table_args__ = {'schema': 'stardb_idbase'}
     
     registrations_id: int = Field(primary_key=True)
-    guild_id: int
-    role_id: int
+    guild_id: int = Field(sa_column=Column(BigInteger))
+    role_id: int = Field(sa_column=Column(BigInteger))
 
     members: list[DiscordUser] = Relationship(back_populates="registration")
 
@@ -243,10 +243,10 @@ class BackupRole(SQLModel, table=True):
     __tablename__ = "roles_backup"
     __table_args__ = {'schema': 'stardb_backup'}
 
-    role_id: int = Field(primary_key=True)
+    role_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
     role_name: str
     created_at: datetime
-    guild_id: int
+    guild_id: int = Field(sa_column=Column(BigInteger))
     colour_r: int
     colour_g: int
     colour_b: int
@@ -272,9 +272,8 @@ class BackupRoleUser(SQLModel, table=True):
     __tablename__ = "role_user_backup"
     __table_args__ = {'schema': 'stardb_backup'}
     
-    role_id: int = Field(primary_key=True, foreign_key="stardb_backup.roles_backup.role_id")
-    discord_id: int = Field(primary_key=True)
-
+    role_id: int = Field(sa_column=Column(BigInteger, ForeignKey("stardb_backup.roles_backup.role_id"), primary_key=True))
+    discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
     role: BackupRole = Relationship(back_populates="members")
 
 class OAuth2Token(SQLModel, table=True):

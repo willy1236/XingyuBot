@@ -100,7 +100,7 @@ async def on_channel_points_custom_reward_redemption_add(event: eventsub.Channel
     twitch_log.info(text)
     action_channel_id = TARGET_CHANNEL.get(event.event.broadcaster_user_id)
     if action_channel_id and sclient.bot:
-        sclient.bot.send_message(action_channel_id, embed=BotEmbed.simple("兌換自訂獎勵",text))
+        sclient.bot.send_message(event.event.broadcaster_user_login, embed=BotEmbed.simple("兌換自訂獎勵",text))
     
 async def on_channel_points_custom_reward_redemption_update(event: eventsub.ChannelPointsCustomRewardRedemptionUpdateEvent):
     twitch_log.info(f"{event.event.user_name}'s redemption of {event.event.reward.title} has been updated!")
@@ -130,6 +130,12 @@ async def on_channel_subscription_message(event: eventsub.ChannelSubscriptionMes
         await chat.send_message(event.event.broadcaster_user_login, f"感謝@{event.event.user_name} 的{event.event.duration_months}個月訂閱！")
         if sclient.bot:
             sclient.bot.send_message(action_channel_id, embed=BotEmbed.simple("新訂閱","\n".join(texts)))
+
+async def on_channel_subscription_gift(event: eventsub.ChannelSubscriptionGiftEvent):
+    twitch_log.info(f"{event.event.user_name} 在 {event.event.broadcaster_user_name} 送出的{event.event.total}份層級{event.event.tier[0]}訂閱")
+    action_channel_id = TARGET_CHANNEL.get(event.event.broadcaster_user_id)
+    if action_channel_id and not event.event.is_anonymous:
+        await chat.send_message(event.event.broadcaster_user_login, f"感謝@{event.event.user_name} 送出的{event.event.total}份訂閱！")
 
 async def on_channel_poll_begin(event: eventsub.ChannelPollBeginEvent):
     twitch_log.info(f"{event.event.broadcaster_user_name} 開始了投票：{event.event.title}")
@@ -302,6 +308,13 @@ async def run():
             await asyncio.sleep(1)
         except EventSubSubscriptionError as e:
             twitch_log.warning(f"Error subscribing to channel points custom reward redemption add: {e}")
+
+        try:
+            twitch_log.debug("listening to channel follow")
+            await eventsub.listen_channel_follow_v2(user.id, me.id, on_follow)
+            await asyncio.sleep(1)
+        except EventSubSubscriptionError as e:
+            twitch_log.warning(f"Error subscribing to channel follow: {e}")
         
         try:
             twitch_log.debug("listening to channel points custom reward redemption update")
@@ -325,11 +338,11 @@ async def run():
             twitch_log.warning(f"Error subscribing to channel subscription message: {e}")
 
         try:
-            twitch_log.debug("listening to channel follow")
-            await eventsub.listen_channel_follow_v2(user.id, me.id, on_follow)
+            twitch_log.debug("listening to channel subscription gift")
+            await eventsub.listen_channel_subscription_gift(user.id, on_channel_subscription_gift)
             await asyncio.sleep(1)
         except EventSubSubscriptionError as e:
-            twitch_log.warning(f"Error subscribing to channel follow: {e}")
+            twitch_log.warning(f"Error subscribing to channel subscription gift: {e}")
 
         # try:
         #     twitch_log.debug("listening to channel poll begin")

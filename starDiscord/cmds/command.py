@@ -498,10 +498,12 @@ class command(Cog_Extension):
                 GoogleCloud().remove_file_permissions(fileId, cuser.drive_share_id)
                 cuser.drive_share_id = None
                 cuser.email = None
-                sclient.sqldb.add(cuser)
+                sclient.sqldb.merge(cuser)
+                await ctx.respond(f"{ctx.author.mention}：google帳戶移除完成")
             else:
                 await ctx.respond(f"{ctx.author.mention}：此帳號沒有設定過google帳戶")
-                return
+            
+            return
         
         if cuser and cuser.drive_share_id:
             await ctx.respond(f"{ctx.author.mention}：此帳號已經共用雲端資料夾了")
@@ -515,7 +517,7 @@ class command(Cog_Extension):
         google_data = GoogleCloud().add_file_permissions(fileId,email)
         cuser.email = email
         cuser.drive_share_id = google_data["id"]
-        sclient.sqldb.add(cuser)
+        sclient.sqldb.merge(cuser)
         await ctx.respond(f"{ctx.author.mention}：已與 {email} 共用雲端資料夾")
 
     @party.command(description='加入政黨')

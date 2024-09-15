@@ -16,7 +16,7 @@ from ..errors import *
 from ..models.model import *
 from ..models.mysql import *
 from ..models.rpg import *
-from ..models.user import PartialUser, StarUser, DiscordUserV2, Pet, RPGUser, CityBattle
+from ..models.user import Pet, RPGUser, CityBattle
 from ..settings import tz
 from ..types import *
 
@@ -83,7 +83,7 @@ class SQLUserSystem(BaseSQLEngine):
         """
         stmt = select(CloudUser).where(CloudUser.discord_id == discord_id)
         result = self.session.exec(stmt).one_or_none()
-        return result if result is not None else CloudUser()
+        return result if result is not None else CloudUser(discord_id=discord_id)
 
     def get_dcuser(self, discord_id:int):
         stmt = select(DiscordUser).where(DiscordUser.discord_id == discord_id)

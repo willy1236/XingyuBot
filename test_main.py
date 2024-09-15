@@ -73,7 +73,7 @@ if __name__ == '__main__':
 # connections = oauth.get_me()
 # print(connections)
 
-from starlib.models.mysql import School, Student
+#from starlib.models.mysql import School, Student
 
 # sqldb.add(School(id=1, name="school1"))
 # sqldb.add(School(id=2, name="school2"))
@@ -88,5 +88,4 @@ from starlib.models.mysql import School, Student
 # school = sqldb.get_school(1)
 # print(school.name, school.students)
 
-user = sqldb.get_cloud_user(525563221583724544)
-print(user.id)
+GoogleCloud()

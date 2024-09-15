@@ -44,19 +44,6 @@ class BaseUser:
         discord_id: int
         name: str
 
-class StarUser(BaseUser):
-    if TYPE_CHECKING:
-        email: str | None
-        drive_share_id: str | None
-        twitch_id: int | None
-
-    def __init__(self,data:dict):
-        self.user_id = data.get("user_id")
-        self.discord_id = data.get("discord_id")
-        self.email = data.get("email")
-        self.drive_share_id = data.get("drive_share_id")
-        self.twitch_id = data.get("twitch_id")
-
 class Pet():
     if TYPE_CHECKING:
         discord_id: str
