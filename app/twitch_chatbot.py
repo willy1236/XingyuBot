@@ -100,7 +100,7 @@ async def on_channel_points_custom_reward_redemption_add(event: eventsub.Channel
     twitch_log.info(text)
     action_channel_id = TARGET_CHANNEL.get(event.event.broadcaster_user_id)
     if action_channel_id and sclient.bot:
-        sclient.bot.send_message(event.event.broadcaster_user_login, embed=BotEmbed.simple("兌換自訂獎勵",text))
+        sclient.bot.send_message(action_channel_id, embed=BotEmbed.simple("兌換自訂獎勵",text))
     
 async def on_channel_points_custom_reward_redemption_update(event: eventsub.ChannelPointsCustomRewardRedemptionUpdateEvent):
     twitch_log.info(f"{event.event.user_name}'s redemption of {event.event.reward.title} has been updated!")
