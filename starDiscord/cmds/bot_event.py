@@ -7,7 +7,7 @@ import discord
 from discord.ext import commands
 
 from starlib import Jsondb,BotEmbed,sclient,log
-from starlib.uiElement.view import WelcomeView, ReactionRole1, PollView
+from starlib.uiElement.view import WelcomeView, ReactionRole1, ReactionRole2, PollView
 from starlib.types import NotifyChannelType
 from starlib.models.mysql import DiscordUser
 from ..extension import Cog_Extension
@@ -104,6 +104,7 @@ class event(Cog_Extension):
 
             bot.add_view(WelcomeView())
             bot.add_view(ReactionRole1())
+            bot.add_view(ReactionRole2())
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):

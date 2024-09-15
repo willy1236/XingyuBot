@@ -7,7 +7,7 @@ from discord.ext import commands
 from starlib import BotEmbed, ChoiceList, Jsondb, sclient, tz
 from starlib.dataExtractor import TwitchAPI, YoutubeAPI, YoutubeRSS
 from starlib.types import NotifyCommunityType
-from starlib.uiElement.view import ReactionRole1, WelcomeView
+from starlib.uiElement.view import ReactionRole1, ReactionRole2, WelcomeView
 
 from ..extension import Cog_Extension
 
@@ -240,8 +240,8 @@ class system_community(Cog_Extension):
     @commands.slash_command(description='反應身分組按鈕',debug_guilds=[1058234922076217415])
     @commands.has_permissions(manage_channels=True)
     async def reactionrole(self, ctx):
-        view = ReactionRole1()
-        await ctx.channel.send("請依自身喜好點選身分組",view=view)
+        await ctx.channel.send("請依自身喜好點選身分組",view=ReactionRole1())
+        await ctx.channel.send("開/關Twitch開台通知",view=ReactionRole2())
         await ctx.respond("按鈕創建完成",ephemeral=True)
 
 def setup(bot):
