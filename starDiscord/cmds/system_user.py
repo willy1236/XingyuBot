@@ -21,7 +21,7 @@ class system_user(Cog_Extension):
         
         user = sclient.sqldb.get_dcuser(user_dc.id) or DiscordUser(discord_id=user_dc.id)
         user_embed = BotEmbed.general(name="Discord資料", icon_url=user_dc.avatar.url if user_dc.avatar else None)
-        main_account_id = sclient.sqldb.get_main_account(user.discord_id)
+        main_account_id = sclient.sqldb.get_main_account(user_dc.id)
         if main_account_id:
             main_account = self.bot.get_user(main_account_id).mention or main_account_id
             user_embed.description = f"{main_account} 的小帳"
@@ -37,7 +37,7 @@ class system_user(Cog_Extension):
             user_embed.add_field(name='戶籍',value=guild.name if guild else user.registration.guild_id)
 
         if show_alt_account:
-            dbdata = sclient.sqldb.get_alternate_account(user.discord_id)
+            dbdata = sclient.sqldb.get_alternate_account(user_dc.id)
             if dbdata:
                 alt_accounts = ", ".join([f'<@{i}>' for i in dbdata])
                 user_embed.add_field(name='小帳',value=f"{alt_accounts}",inline=False)

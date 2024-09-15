@@ -95,8 +95,8 @@ class SQLUserSystem(BaseSQLEngine):
         result = self.session.exec(stmt).one_or_none()
         return result
         
-    def get_alternate_account(self,discord_id):
-        stmt = select(UserAccount.alternate_account).where(UserAccount.alternate_account == discord_id)
+    def get_alternate_account(self,main_account):
+        stmt = select(UserAccount.alternate_account).where(UserAccount.main_account == main_account)
         result = self.session.exec(stmt).all()
         return result
     
