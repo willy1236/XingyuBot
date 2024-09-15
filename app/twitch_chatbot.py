@@ -291,12 +291,24 @@ async def run():
     eventsub.start()
     for user in users:
         twitch_log.debug(f"eventsub:{user.login}")
-        await eventsub.listen_stream_online(user.id, on_stream_online)
-        await asyncio.sleep(1)
-        await eventsub.listen_stream_offline(user.id, on_stream_offline)
-        await asyncio.sleep(1)
-        await eventsub.listen_channel_raid(on_channel_raid, to_broadcaster_user_id=user.id)
-        await asyncio.sleep(1)
+        try:
+            await eventsub.listen_stream_online(user.id, on_stream_online)
+            await asyncio.sleep(1)
+        except EventSubSubscriptionError as e:
+            twitch_log.warning(f"Error subscribing stream online: {e}")
+        
+        try:
+            await eventsub.listen_stream_offline(user.id, on_stream_offline)
+            await asyncio.sleep(1)
+        except EventSubSubscriptionError as e:
+            twitch_log.warning(f"Error subscribing stream offline: {e}")
+        
+        try:
+            await eventsub.listen_channel_raid(on_channel_raid, to_broadcaster_user_id=user.id)
+            await asyncio.sleep(1)
+        except EventSubSubscriptionError as e:
+            twitch_log.warning(f"Error subscribing channel raid: {e}")
+        
         twitch_log.debug(f"eventsub:{user.login} done.")
 
         if not chat.is_mod(user.login):
