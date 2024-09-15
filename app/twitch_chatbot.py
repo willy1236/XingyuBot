@@ -79,7 +79,7 @@ async def on_follow(event: eventsub.ChannelFollowEvent):
         sclient.bot.send_message(action_channel_id, embed=BotEmbed.simple("新追隨",f'{event.event.user_name}({event.event.user_login}) 正在追隨 {event.event.broadcaster_user_name}!'))
 
 async def on_stream_online(event: eventsub.StreamOnlineEvent):
-    stream = await first(twitch.get_streams(user_id=event.event.broadcaster_user_id))
+    stream = await first(sclient.twitch.get_streams(user_id=event.event.broadcaster_user_id))
     twitch_log.info(f'{event.event.broadcaster_user_name} starting stream!')
     if sclient.bot:
         sclient.bot.send_message(content=f'{event.event.broadcaster_user_name} 正在直播 {stream.game_name}!')

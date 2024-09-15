@@ -105,7 +105,7 @@ class DiscordBot(discord.Bot):
                     log.warning(f"{notify_type} not found: {guild.id}/{channel.id}")
 
     def about_embed(self):
-        embed = BotEmbed.bot(self,description=f"你好~我是星羽，你可以輸入 </help:1067700245015834638> 來查看所有指令的用法\n\n希望我能在discord上幫助到你喔~\n有任何建議、需求、協助與合作可以使用 </feedback:1067700244848058386> 指令\n\n支援伺服器：https://discord.gg/ye5yrZhYGF")
+        embed = BotEmbed.bot(self,description=f"你好~我是星羽，你可以輸入 </help:1067700245015834638> 來查看所有指令的用法\n\n希望我能在discord上幫助到你喔~\n有任何建議、需求、協助與合作可以使用 </feedback:1067700244848058386> 指令\n\n支援伺服器：https://discord.gg/P4jqdcMxkH")
         embed.set_footer(text="此機器人由 威立 負責維護")
         return embed
     

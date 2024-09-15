@@ -107,10 +107,10 @@ class UserModerate(SQLModel, table=True):
     moderate_user: int
     create_guild: int
     create_time: int
-    reason: str
-    last_time: str
-    guild_only: bool
-    officially_given: bool
+    reason: str | None
+    last_time: str | None
+    guild_only: bool | None
+    officially_given: bool | None
 
     def embed(self,bot:Bot):
         user = bot.get_user(self.discord_id)
@@ -292,12 +292,14 @@ class BotToken(SQLModel, table=True):
     __table_args__ = {'schema': 'stardb_tokens'}
 
     api_type: CommunityType = Field(sa_column=Column(Integer, primary_key=True))
-    client_id: str
-    client_secret: str
-    access_token: str
-    refresh_token: str
-    redirect_uri: str
-    callback_uri: str
+    id: int | None = Field(sa_column=Column(Integer, primary_key=True))
+    client_id: str | None
+    client_secret: str | None
+    access_token: str | None
+    refresh_token: str | None
+    revoke_token: str | None
+    redirect_uri: str | None
+    callback_uri: str | None
 
 class WarningList(ListObject):
     if TYPE_CHECKING:

@@ -84,21 +84,22 @@ class event(Cog_Extension):
             log.warning(f">> Cogs not all loaded, {len(bot.cogs)}/{len(os.listdir('./cmds'))} loaded<<")
         
         if bot.bot_code == 'Bot1' and not bot.debug_mode:
-            #將超過28天的投票自動關閉
-            dbdata = sclient.sqldb.get_all_active_polls()
+            polls = sclient.sqldb.get_all_active_polls()
             now = datetime.now()
-            for poll in dbdata:
-                if now - poll.created_at > timedelta(days=28):
+            days_poll_period = timedelta(days=28)
+            for poll in polls:
+                if now - poll.created_at > days_poll_period:
+                    #將超過28天的投票自動關閉
                     poll.is_on = 0
-                    sclient.sqldb.update_poll(poll)
+                    sclient.sqldb.merge(poll)
                 else:   
-                    bot.add_view(PollView(poll.poll_id,sqldb=sclient.sqldb,bot=bot))
+                    bot.add_view(PollView(poll, sqldb=sclient.sqldb, bot=bot))
 
             invites = await bot.get_guild(613747262291443742).invites()
             now = datetime.now(timezone.utc)
             days_5 = timedelta(days=5)
             for invite in invites:
-                if not invite.expires_at and not invite.scheduled_event and invite.uses == 0 and now - invite.created_at > days_5 and invite.url != "https://discord.gg/ye5yrZhYGF":
+                if not invite.expires_at and not invite.scheduled_event and invite.uses == 0 and now - invite.created_at > days_5:
                     await invite.delete()
                     await asyncio.sleep(1)
 
@@ -110,12 +111,13 @@ class event(Cog_Extension):
     async def on_message(self, message: discord.Message):
         is_owner = await self.bot.is_owner(message.author)
 
-        #被提及回報
-        if self.bot.user in message.mentions and not is_owner:
-            await self.bot.mentioned(self.bot,message)
-        #被提及所有人回報
-        if message.mention_everyone and not is_owner:
-            await self.bot.mention_everyone(self.bot,message)
+        if not is_owner:
+            #被提及回報
+            if self.bot.user in message.mentions:
+                await self.bot.mentioned(self.bot,message)
+            #被提及所有人回報
+            if message.mention_everyone:
+                await self.bot.mention_everyone(self.bot,message)
         
         #私人訊息回報
         if isinstance(message.channel,discord.DMChannel) and message.author != self.bot.user:
@@ -140,14 +142,16 @@ class event(Cog_Extension):
             await message.reply(embed=self.bot.about_embed())
             return
 
-        #ai chat
+        
         if message.guild and message.guild.id in [613747262291443742, 566533708371329024] and not message.author.bot:
+            #ai chat
             if message.content and message.content.startswith(".") and len(message.content) > 1 and message.content[1] != ".":
                 #image_bytes = await message.attachments[0].read() if message.attachments else None
                 text = sclient.starai.generate_aitext(f"{member_names.get(message.author.id,message.author.name)}：{message.content[1:]}")
                 await message.reply(text,mention_author=False)
                 return
 
+            # 貢丸防制
             if not is_owner and message.guild.id == 613747262291443742:
                 result = None
                 if message.author.get_role(1160460037114822758) or message.author.get_role(1161644357410107483) or message.author.get_role(1178151415403790478):

@@ -19,7 +19,7 @@ from bs4 import BeautifulSoup
 from faker import Faker
 from pydantic import BaseModel, Field, ConfigDict, AliasPath
 
-from starlib import ChoiceList, Jsondb, log, sqldb, tz
+from starlib import ChoiceList, Jsondb, log, sqldb, tz, sclient
 from starlib.dataExtractor import *
 from starlib.starAI import StarGeminiAI
 from starlib.types import NotifyCommunityType

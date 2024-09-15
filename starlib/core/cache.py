@@ -1,7 +1,10 @@
+from typing import TypeVar
 from ..database import sqldb
 from ..types import NotifyCommunityType, NotifyChannelType
 from ..utilities import log
 from ..models.mysql import NotifyCommunity, NotifyChannel
+
+T = TypeVar("T")
 
 class StarCache:
     dict_type = [NotifyChannelType.DynamicVoice, NotifyChannelType.VoiceLog]
@@ -52,7 +55,7 @@ class StarCache:
 
     def __getitem__(self, key):
         try:
-            value = self.cache[key]
+            value: dict | list = self.cache[key]
             return value
         except KeyError:
             log.debug(f"cache KeyError: {key}")

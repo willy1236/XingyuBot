@@ -1,12 +1,13 @@
 from datetime import datetime, timedelta
 
 import discord
-from discord.ext import commands
 from discord.commands import SlashCommandGroup
+from discord.ext import commands
 
-from starlib import ChoiceList,BotEmbed,Jsondb,sclient
-from starlib.types import WarningType, NotifyChannelType
+from starlib import BotEmbed, ChoiceList, Jsondb, sclient
+from starlib.types import NotifyChannelType, WarningType
 from starlib.utilities import converter
+
 from ..extension import Cog_Extension
 
 set_option = ChoiceList.set('channel_set_option')
@@ -44,17 +45,18 @@ class moderation(Cog_Extension):
     @commands.has_permissions(manage_channels=True)
     @commands.guild_only()
     async def set(self,ctx:discord.ApplicationContext,
-                  notify_type:discord.Option(str,name='通知類型',description='要接收的通知類型',required=True,choices=set_option),
+                  notify_type:discord.Option(int,name='通知類型',description='要接收的通知類型',required=True,choices=set_option),
                   channel:discord.Option(discord.abc.GuildChannel,name='頻道',description='要接收通知的頻道',default=None),
                   role:discord.Option(discord.Role,required=False,name='身分組',description='發送通知時tag的身分組，定時通知與部分通知不會tag',default=None)):
         guildid = ctx.guild.id
+        notify_type = NotifyChannelType(notify_type)
         
         if channel:
             roleid = role.id if role else None
             sclient.sqldb.add_notify_channel(guildid,notify_type,channel.id,roleid)
             await ctx.respond(f'設定完成，已將 {ChoiceList.get_tw(notify_type,"channel_set_option")} 頻道設定在 {channel.mention}')
             await ctx.send(embed=BotEmbed.simple('溫馨提醒','若為定時通知，請將機器人的訊息保持在此頻道的最新訊息，以免機器人找不到訊息而重複發送'),delete_after=10)
-            if notify_type in ["voice_log"]:
+            if notify_type in [NotifyChannelType.VoiceLog]:
                 sclient.cache.update_notify_channel(notify_type)
         else:
             sclient.sqldb.remove_notify_channel(guildid,notify_type)
@@ -66,11 +68,11 @@ class moderation(Cog_Extension):
     async def voice(self,ctx:discord.ApplicationContext,
                     channel:discord.Option(discord.VoiceChannel,name='頻道',description='動態語音頻道',default=None)):
         if channel:
-            sclient.sqldb.add_notify_channel(ctx.guild.id,NotifyChannelType.DynamicVoice,channel.id)
+            sclient.sqldb.add_notify_channel(ctx.guild.id, NotifyChannelType.DynamicVoice, channel.id)
             await ctx.respond(f'設定完成，已將 {channel.mention} 設定為動態語音頻道')
             sclient.cache.update_dynamic_voice(add_channel=channel.id)
         else:
-            sclient.sqldb.remove_notify_channel(ctx.guild.id,NotifyChannelType.DynamicVoice)
+            sclient.sqldb.remove_notify_channel(ctx.guild.id, NotifyChannelType.DynamicVoice)
             await ctx.respond(f'設定完成，已移除 動態語音 頻道')
             sclient.cache.update_dynamic_voice(remove_channel=channel.id)
     
@@ -114,7 +116,7 @@ class moderation(Cog_Extension):
 
         time = datetime.now()
         moderate_user = ctx.author.id
-        warning_id = sclient.sqldb.add_warning(user.id,WarningType.Warning,moderate_user,ctx.guild.id,time,reason,None,not add_record)
+        warning_id = sclient.sqldb.add_warning(user.id, WarningType.Warning, moderate_user, ctx.guild.id, time, reason, None, not add_record)
         embed = BotEmbed.general(f'{user.name} 已被警告',user.display_avatar.url,description=f"{user.mention}：{reason}")
         embed.add_field(name="執行人員",value=ctx.author.mention)
         embed.add_field(name="存入跨群警告系統",value=add_record)
@@ -127,7 +129,7 @@ class moderation(Cog_Extension):
     async def list(self,ctx:discord.ApplicationContext,
                       user:discord.Option(discord.User,name='用戶',description='要查詢的用戶',required=True),
                       guild_only:discord.Option(bool,name='查詢是否包含伺服器區域警告',description='預設為True',default=True)):
-        dbdata = sclient.sqldb.get_warnings(user.id,ctx.guild.id if guild_only else None)
+        dbdata = sclient.sqldb.get_warnings(user.id, ctx.guild.id if guild_only else None)
         await ctx.respond(embed=dbdata.display(self.bot))
 
     @warning.command(description='獲取指定警告')
@@ -135,13 +137,15 @@ class moderation(Cog_Extension):
     async def get(self,ctx:discord.ApplicationContext,
                       warning_id:discord.Option(str,name='警告編號',description='要查詢的警告',required=True)):
         sheet = sclient.sqldb.get_warning(int(warning_id))
-        if sheet:
+        if sheet and (ctx.guild.get_member(sheet.discord_id) or ctx.guild.id in debug_guilds):
             await ctx.respond(embed=sheet.embed(self.bot))
         else:
             await ctx.respond("查無此警告單")
 
     @warning.command(description='移除用戶警告')
-    @commands.has_permissions(kick_members=True)
+    @commands.check_any(commands.has_permissions(kick_members=True), 
+                        commands.has_permissions(ban_members=True),
+                        commands.has_permissions(manage_messages=True))
     @commands.guild_only()
     async def remove(self,ctx:discord.ApplicationContext,
                      warning_id:discord.Option(str,name='警告編號',description='要移除的警告',required=True)):
@@ -153,7 +157,7 @@ class moderation(Cog_Extension):
                 await ctx.respond("不能移除非此伺服器發出的警告")
                 return
             sclient.sqldb.remove_warning(int(warning_id))
-            await ctx.respond(f"已移除編號:{warning_id}的警告")
+            await ctx.respond(f"已移除編號：{warning_id}的警告")
         else:
             await ctx.respond("查無此警告單")
 
@@ -177,7 +181,7 @@ class moderation(Cog_Extension):
         moderate_user = ctx.user.id
         create_time = datetime.now()
         if add_record and not user.bot:
-            sclient.sqldb.add_warning(user.id,WarningType.Timeout,moderate_user,ctx.guild.id,create_time,reason,time_last)
+            sclient.sqldb.add_warning(user.id, WarningType.Timeout, moderate_user, ctx.guild.id, create_time, reason, time_last, guild_only=False)
         
         timestamp = int((create_time+time).timestamp())
         embed = BotEmbed.general(f'{user.name} 已被禁言',user.display_avatar.url,description=f"{user.mention}：{reason}")
@@ -200,7 +204,7 @@ class moderation(Cog_Extension):
         moderate_user = ctx.user.id
         create_time = datetime.now()
         if add_record and not user.bot:
-            sclient.sqldb.add_warning(user.id,WarningType.Kick,moderate_user,ctx.guild.id,create_time,reason,None)
+            sclient.sqldb.add_warning(user.id, WarningType.Kick, moderate_user, ctx.guild.id, create_time, reason, guild_only=False)
         
         embed = BotEmbed.general(f'{user.name} 已被踢除',user.display_avatar.url,description=f"{user.mention}：{reason}")
         embed.add_field(name="執行人員",value=ctx.author.mention)
@@ -223,7 +227,7 @@ class moderation(Cog_Extension):
         moderate_user = ctx.user.id
         create_time = datetime.now()
         if add_record and not user.bot:
-            sclient.sqldb.add_warning(user.id,WarningType.Ban,moderate_user,ctx.guild.id,create_time,reason,None)
+            sclient.sqldb.add_warning(user.id, WarningType.Ban, moderate_user, ctx.guild.id, create_time, reason, guild_only=False)
         
         embed = BotEmbed.general(f'{user.name} 已被停權',user.display_avatar.url,description=f"{user.mention}：{reason}")
         embed.add_field(name="執行人員",value=ctx.author.mention)
