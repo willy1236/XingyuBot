@@ -313,7 +313,7 @@ class event(Cog_Extension):
         
         #離開通知
         guildid = member.guild.id
-        dbdata = sclient.sqldb.get_notify_channel(guildid,"member_leave")
+        dbdata = sclient.sqldb.get_notify_channel(guildid, NotifyChannelType.MemberLeave)
 
         if dbdata:
             username = member.name if member.discriminator == "0" else f"{member.name}#{member.discriminator}"
@@ -327,7 +327,7 @@ class event(Cog_Extension):
         
         #加入通知
         guildid = member.guild.id
-        dbdata = sclient.sqldb.get_notify_channel(guildid,"member_join")
+        dbdata = sclient.sqldb.get_notify_channel(guildid, NotifyChannelType.MemberJoin)
 
         if dbdata:
             username = member.name if member.discriminator == "0" else f"{member.name}#{member.discriminator}"
@@ -335,7 +335,7 @@ class event(Cog_Extension):
             await self.bot.get_channel(dbdata.channel_id).send(text)
 
         #警告系統：管理員通知
-        notice_data = sclient.sqldb.get_notify_channel(guildid,"mod")
+        notice_data = sclient.sqldb.get_notify_channel(guildid, NotifyChannelType.AdminChannel)
         mod_channel_id = notice_data.channel_id if notice_data else None
         #role_id = notice_data['role_id']
         if mod_channel_id:

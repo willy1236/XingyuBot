@@ -53,7 +53,7 @@ class DiscordUser(SQLModel, table=True):
     __tablename__ = "user_discord"
     __table_args__ = {'schema': 'stardb_user'}
 
-    discord_id:int = Field(primary_key=True)
+    discord_id: int = Field(primary_key=True)
     name: str | None
     max_sign_consecutive_days: int | None
     meatball_times: int | None
@@ -93,7 +93,7 @@ class UserParty(SQLModel, table=True):
     __table_args__ = {'schema': 'stardb_user'}
     
     discord_id: int = Field(primary_key=True)
-    party_id: int = Field(primary_key=True, foreign_key="database.party_data.party_id")
+    party_id: int = Field(primary_key=True, foreign_key="stardb_idbase.party_datas.party_id")
     
     party: "Party" = Relationship(back_populates="members")
 
@@ -210,9 +210,16 @@ class PollRole(SQLModel, table=True):
     role_type: int
     role_magnification: int
 
+class TwitchBotJoinChannel(SQLModel, table=True):
+    __tablename__ = "twitch_bot_join_channel"
+    __table_args__ = {'schema': 'stardb_basic'}
+    
+    twitch_id: int = Field(primary_key=True)
+    action_channel_id: int = Field(sa_column=Column(BigInteger))
+
 class Party(SQLModel, table=True):
-    __tablename__ = "party_data"
-    __table_args__ = {'schema': 'database'}
+    __tablename__ = "party_datas"
+    __table_args__ = {'schema': 'stardb_idbase'}
 
     party_id: int = Field(primary_key=True)
     party_name: str
@@ -221,13 +228,6 @@ class Party(SQLModel, table=True):
     created_at: datetime
     
     members: list[UserParty] = Relationship(back_populates="party")
-
-class TwitchBotJoinChannel(SQLModel, table=True):
-    __tablename__ = "twitch_bot_join_channel"
-    __table_args__ = {'schema': 'stardb_basic'}
-    
-    twitch_id: int = Field(primary_key=True)
-    action_channel_id: int = Field(sa_column=Column(BigInteger))
 
 class DiscordRegistration(SQLModel, table=True):
     __tablename__ = "discord_registrations"

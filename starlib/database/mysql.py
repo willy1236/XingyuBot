@@ -453,7 +453,7 @@ class SQLTwitchSystem(BaseSQLEngine):
 class SQLBackupSystem(BaseSQLEngine):
     #* backup
     def backup_role(self,role:discord.Role,description:str=None):
-        backup_role = BackupRole(role_id=role.id,name=role.name,created_at=role.created_at.astimezone(tz),guild_id=role.guild.id,colour_r=role.colour.r,colour_g=role.colour.g,colour_b=role.colour.b,description=description)
+        backup_role = BackupRole(role_id=role.id,role_name=role.name,created_at=role.created_at.astimezone(tz),guild_id=role.guild.id,colour_r=role.colour.r,colour_g=role.colour.g,colour_b=role.colour.b,description=description)
         self.session.add(backup_role)
         for member in role.members:
             self.session.add(BackupRoleUser(role_id=role.id,discord_id=member.id))
