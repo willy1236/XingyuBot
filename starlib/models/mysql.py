@@ -1,11 +1,10 @@
-#from __future__ import annotations
-
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from typing import TYPE_CHECKING, List, Optional, TypedDict
 
 from discord import Bot
-from sqlalchemy import Column, Integer, String, DateTime, BigInteger, ForeignKey
+from sqlalchemy import (BigInteger, Column, DateTime, ForeignKey, Integer,
+                        String)
 from sqlalchemy.orm import declarative_base
 from sqlmodel import Field, Relationship, SQLModel
 
@@ -43,11 +42,11 @@ class CloudUser(SQLModel, table=True):
     __tablename__ = 'cloud_user'
     __table_args__ = {'schema': 'stardb_user'}
 
-    id: str | None = Field(nullable=True)
+    id: str | None
     discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True, autoincrement=False))
-    email: str | None = Field(nullable=True)
-    drive_share_id: str | None = Field(nullable=True)
-    twitch_id: int | None = Field(nullable=True)
+    email: str | None
+    drive_share_id: str | None
+    twitch_id: int | None
 
 class DiscordUser(SQLModel, table=True):
     __tablename__ = "user_discord"
@@ -67,9 +66,9 @@ class UserPoint(SQLModel, table=True):
     __table_args__ = {'schema': 'stardb_user'}
 
     discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True, autoincrement=False))
-    scoin: int = Field(default=0)
-    point: int = Field(default=0)
-    rcoin: int = Field(default=0)
+    stardust: int | None = Field(default=0)
+    point: int | None = Field(default=0)
+    rcoin: int | None = Field(default=0)
 
 class UserPoll(SQLModel, table=True):
     __tablename__ = "user_poll"
@@ -137,7 +136,6 @@ class UserModerate(SQLModel, table=True):
                 value += "\n伺服器區域警告"
             return name, value
 
-
 class RoleSave(SQLModel, table=True):
     __tablename__ = "role_save"
     __table_args__ = {'schema': 'stardb_user'}
@@ -146,6 +144,15 @@ class RoleSave(SQLModel, table=True):
     role_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
     role_name: str
     time: date
+
+class UserPet(SQLModel, table=True):
+    __tablename__ = "user_pet"
+    __table_args__ = {'schema': 'stardb_user'}
+
+    discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
+    pet_species: str
+    pet_name: str
+    food: int | None
 
 class NotifyChannel(SQLModel, table=True):
     __tablename__ = "notify_channel"
@@ -215,7 +222,7 @@ class TwitchBotJoinChannel(SQLModel, table=True):
     __table_args__ = {'schema': 'stardb_basic'}
     
     twitch_id: int = Field(primary_key=True)
-    action_channel_id: int = Field(sa_column=Column(BigInteger))
+    action_channel_id: int | None = Field(sa_column=Column(BigInteger))
 
 class Party(SQLModel, table=True):
     __tablename__ = "party_datas"
@@ -311,7 +318,7 @@ class WarningList(ListObject):
     
     def display(self,bot:Bot):
         user = bot.get_user(self.discord_id)
-        embed = BotEmbed.general(f'{user.name} 的警告單列表（共{len(self)}筆）',user.display_avatar.url)
+        embed = BotEmbed.general(f'{user.name} 的警告單列表（共{len(self.items)}筆）',user.display_avatar.url)
         for i in self.items:
             name, value = i.display_embed_field(bot)
             embed.add_field(name=name,value=value)

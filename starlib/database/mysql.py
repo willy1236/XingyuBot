@@ -269,6 +269,14 @@ class SQLWarningSystem(BaseSQLEngine):
         result = self.session.exec(stmt).all()
         return WarningList(result, discord_id)
     
+    def get_warnings_count(self,discord_id:int,guild_id:int=None):
+        if guild_id:
+            stmt = select(func.count()).where(UserModerate.discord_id == discord_id, UserModerate.create_guild == guild_id)
+        else:
+            stmt = select(func.count()).where(UserModerate.discord_id == discord_id, UserModerate.guild_only == False)
+        result = self.session.exec(stmt).one()
+        return result
+
     def remove_warning(self,warning_id:int):
         """移除用戶警告"""
         stmt = delete(UserModerate).where(UserModerate.warning_id == warning_id)

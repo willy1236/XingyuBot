@@ -576,84 +576,84 @@ class system_game(Cog_Extension):
         #print(r_spiral_abyss)
         await ctx.respond(embed=embed)
 
-    @hoyo.command(description='兌換禮包碼')
-    @commands.cooldown(rate=1,per=1)
-    async def code(self,ctx,
-                   game:discord.Option(str,name='遊戲',description='要簽到的遊戲',choices=hoyo_game_option),
-                   code:discord.Option(str,name='禮包碼',description='要兌換的禮包碼'),
-                   uid:discord.Option(str,name='uid',description='要兌換的用戶')):
-        if not config.get("debug_mode"):
-            cookies = sclient.sqldb.get_userdata(str(ctx.author.id),'game_hoyo_cookies')
-        else:
-            cookies = genshin.utility.get_browser_cookies("chrome")
+    # @hoyo.command(description='兌換禮包碼')
+    # @commands.cooldown(rate=1,per=1)
+    # async def code(self,ctx,
+    #                game:discord.Option(str,name='遊戲',description='要簽到的遊戲',choices=hoyo_game_option),
+    #                code:discord.Option(str,name='禮包碼',description='要兌換的禮包碼'),
+    #                uid:discord.Option(str,name='uid',description='要兌換的用戶')):
+    #     if not config.get("debug_mode"):
+    #         cookies = sclient.sqldb.get_userdata(str(ctx.author.id),'game_hoyo_cookies')
+    #     else:
+    #         cookies = genshin.utility.get_browser_cookies("chrome")
 
-        if not cookies:
-            raise commands.errors.ArgumentParsingError("沒有設定cookies或已過期")
-        client = genshin.Client(cookies,lang='zh-tw')
-        await client.redeem_code(code,uid,game=game)  
-        await ctx.respond('兌換已完成')
+    #     if not cookies:
+    #         raise commands.errors.ArgumentParsingError("沒有設定cookies或已過期")
+    #     client = genshin.Client(cookies,lang='zh-tw')
+    #     await client.redeem_code(code,uid,game=game)  
+    #     await ctx.respond('兌換已完成')
 
-    @hoyo.command(description='簽到設定（多個遊戲請個別設定）（尚在測試可能有bug）')
-    @commands.cooldown(rate=1,per=1)
-    async def reward(self,ctx,
-                   game:discord.Option(str,name='遊戲',description='要簽到的遊戲',choices=hoyo_game_option),
-                   need_mention:discord.Option(bool,name='成功簽到時是否要tag提醒',default=True),
-                   remove:discord.Option(bool,name='若要移除資料請設為true',default=False)):
-        if remove:
-            sclient.sqldb.remove_hoyo_reward(ctx.author.id)
-            await ctx.respond('設定已移除')
-            return
+    # @hoyo.command(description='簽到設定（多個遊戲請個別設定）（尚在測試可能有bug）')
+    # @commands.cooldown(rate=1,per=1)
+    # async def reward(self,ctx,
+    #                game:discord.Option(str,name='遊戲',description='要簽到的遊戲',choices=hoyo_game_option),
+    #                need_mention:discord.Option(bool,name='成功簽到時是否要tag提醒',default=True),
+    #                remove:discord.Option(bool,name='若要移除資料請設為true',default=False)):
+    #     if remove:
+    #         sclient.sqldb.remove_hoyo_reward(ctx.author.id)
+    #         await ctx.respond('設定已移除')
+    #         return
         
-        cookies = sclient.sqldb.get_userdata(str(ctx.author.id),'game_hoyo_cookies')
-        if not cookies:
-            raise commands.errors.ArgumentParsingError("沒有設定cookies或已過期")
-        sclient.sqldb.add_hoyo_reward(ctx.author.id,game,ctx.channel.id,need_mention)
-        await ctx.respond('設定已完成')
+    #     cookies = sclient.sqldb.get_userdata(str(ctx.author.id),'game_hoyo_cookies')
+    #     if not cookies:
+    #         raise commands.errors.ArgumentParsingError("沒有設定cookies或已過期")
+    #     sclient.sqldb.add_hoyo_reward(ctx.author.id,game,ctx.channel.id,need_mention)
+    #     await ctx.respond('設定已完成')
         
     
-    @hoyo.command(description='測試',guild_ids=debug_guilds)
-    @commands.cooldown(rate=1,per=1)
-    async def test(self,ctx,
-                   hoyolab_uid:discord.Option(str,name='hoyolab_uid',description='要查詢的用戶',default=None)):
-        cookies = sclient.sqldb.get_userdata(str(ctx.author.id),'game_hoyo_cookies')
-        if not cookies:
-            raise commands.errors.ArgumentParsingError("沒有設定cookies")
-        client = genshin.Client(cookies,lang='zh-tw')
-        r = await client.get_genshin_spiral_abyss(hoyolab_uid)
-        print(r)
-        await ctx.respond('done')
+    # @hoyo.command(description='測試',guild_ids=debug_guilds)
+    # @commands.cooldown(rate=1,per=1)
+    # async def test(self,ctx,
+    #                hoyolab_uid:discord.Option(str,name='hoyolab_uid',description='要查詢的用戶',default=None)):
+    #     cookies = sclient.sqldb.get_userdata(str(ctx.author.id),'game_hoyo_cookies')
+    #     if not cookies:
+    #         raise commands.errors.ArgumentParsingError("沒有設定cookies")
+    #     client = genshin.Client(cookies,lang='zh-tw')
+    #     r = await client.get_genshin_spiral_abyss(hoyolab_uid)
+    #     print(r)
+    #     await ctx.respond('done')
 
-    @commands.message_command(name="尋找序號",guild_ids=debug_guilds)
-    async def exchange_code_genshin(self,ctx,message:discord.Message):
-        textline = message.content.splitlines()
-        p = re.compile(r'[0-9A-Z]{10,}')
-        code_list = []
-        for i in textline:
-            code = p.match(i)
-            if code and code not in code_list:
-                code_list.append(code.group())
+    # @commands.message_command(name="尋找序號",guild_ids=debug_guilds)
+    # async def exchange_code_genshin(self,ctx,message:discord.Message):
+    #     textline = message.content.splitlines()
+    #     p = re.compile(r'[0-9A-Z]{10,}')
+    #     code_list = []
+    #     for i in textline:
+    #         code = p.match(i)
+    #         if code and code not in code_list:
+    #             code_list.append(code.group())
         
-        if code_list:
-            codetext = ""
-            for i in code_list:
-                codetext+=f"\n[{i}](https://genshin.hoyoverse.com/zh-tw/gift?code={i})"
-            #await ctx.respond(f"找到以下兌換碼{codetext}\n若有設定cookie及uid則將自動兌換",ephemeral=True)
-            await ctx.respond(f"找到以下兌換碼{codetext}",ephemeral=True)
+    #     if code_list:
+    #         codetext = ""
+    #         for i in code_list:
+    #             codetext+=f"\n[{i}](https://genshin.hoyoverse.com/zh-tw/gift?code={i})"
+    #         #await ctx.respond(f"找到以下兌換碼{codetext}\n若有設定cookie及uid則將自動兌換",ephemeral=True)
+    #         await ctx.respond(f"找到以下兌換碼{codetext}",ephemeral=True)
 
-    #         cookies = self.sqldb.get_userdata(str(ctx.author.id),'game_hoyo_cookies')
-    #         dbdata = self.sqldb.get_game_data(str(ctx.author.id),DatabaseGame.GENSHIN.value)
-    #         if not cookies:
-    #             await ctx.send("沒有設定cookies或已過期")
-    #             return
-    #         if dbdata:
-    #             client = genshin.Client(cookies,lang='zh-tw')
-    #             uid = dbdata['player_id']
-    #             for code in code_list:
-    #                 await client.redeem_code(code,uid,game=genshin.Game.GENSHIN)
-    #                 asyncio.sleep(3)
-    #             await ctx.send('兌換已完成')
-        else:
-            await ctx.respond(f"沒有找到兌換碼",ephemeral=True)
+    # #         cookies = self.sqldb.get_userdata(str(ctx.author.id),'game_hoyo_cookies')
+    # #         dbdata = self.sqldb.get_game_data(str(ctx.author.id),DatabaseGame.GENSHIN.value)
+    # #         if not cookies:
+    # #             await ctx.send("沒有設定cookies或已過期")
+    # #             return
+    # #         if dbdata:
+    # #             client = genshin.Client(cookies,lang='zh-tw')
+    # #             uid = dbdata['player_id']
+    # #             for code in code_list:
+    # #                 await client.redeem_code(code,uid,game=genshin.Game.GENSHIN)
+    # #                 asyncio.sleep(3)
+    # #             await ctx.send('兌換已完成')
+    #     else:
+    #         await ctx.respond(f"沒有找到兌換碼",ephemeral=True)
 
 def setup(bot):
     bot.add_cog(system_game(bot))

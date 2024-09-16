@@ -31,10 +31,10 @@ class PetType(IntEnum):
     def text(self,lcode='en'):
         return pet_tl[lcode][str(self.value)]
 
-class Coins(Enum):
-    POINT = "point"
-    RCOIN = "rcoin"
-    SCOIN = "scoin"
+class Coins(IntEnum):
+    Point = 1
+    Stardust = 2
+    Rcoin = 3
 
 class Position(IntEnum):
     PRESIDENT= 1

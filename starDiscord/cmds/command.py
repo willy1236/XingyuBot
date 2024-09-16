@@ -143,21 +143,6 @@ class command(Cog_Extension):
         
         await ctx.respond('身分組清理完成',delete_after=5)
 
-    # @role.command(description='更改暱稱')
-    # @commands.bot_has_permissions(manage_roles=True)
-    # async def nick(self, ctx, arg:discord.Option(str,name='欲更改的內容',description='可輸入新暱稱或輸入以#開頭的6位顏色代碼')):
-    #     await ctx.defer()
-    #     user = ctx.author
-    #     role = user.roles[-1]
-    #     if role.name.startswith('稱號 | '):
-    #         if arg.startswith('#'):
-    #             await role.edit(colour=arg,reason='稱號:顏色改變')
-    #         else:
-    #             await role.edit(name=f'稱號 | {arg}',reason='稱號:名稱改變')
-    #         await ctx.respond('暱稱更改完成',delete_after=5)
-    #     else:
-    #         await ctx.respond(f'錯誤:{ctx.author.mention}沒有稱號可更改',delete_after=5)
-
     @role.command(description='身分組紀錄')
     async def record(self, ctx:discord.ApplicationContext, user:discord.Option(discord.Member,name='欲查詢的成員',description='留空以查詢自己',default=None)):
         await ctx.defer()
@@ -472,7 +457,7 @@ class command(Cog_Extension):
                    poll_id:discord.Option(int,name='投票id',description='')):
         dbdata = sclient.sqldb.get_poll(poll_id)
         if dbdata:
-            view = PollView(dbdata, sqldb=sclient.sqldb)    
+            view = PollView(dbdata, sqldb=sclient.sqldb)
             await ctx.respond(view=view,embed=view.embed(ctx.guild))
         else:
             await ctx.respond("錯誤：查無此ID")

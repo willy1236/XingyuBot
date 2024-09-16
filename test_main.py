@@ -87,5 +87,3 @@ if __name__ == '__main__':
 
 # school = sqldb.get_school(1)
 # print(school.name, school.students)
-
-GoogleCloud()

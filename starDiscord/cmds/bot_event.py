@@ -341,15 +341,12 @@ class event(Cog_Extension):
         #警告系統：管理員通知
         notice_data = sclient.sqldb.get_notify_channel(guildid, NotifyChannelType.AdminChannel)
         mod_channel_id = notice_data.channel_id if notice_data else None
-        #role_id = notice_data['role_id']
         if mod_channel_id:
-            dbdata = sclient.sqldb.get_warnings(member.id)
-            #if role_id:
-            #    role = member.guild.get_role(role_id)
+            dbdata = sclient.sqldb.get_warnings_count(member.id)
 
             if dbdata:
                 channel = self.bot.get_channel(mod_channel_id)
-                channel.send(f"新成員{member.mention}({member.id}) 共有 {len(dbdata)} 個紀錄")
+                channel.send(f"新成員{member.mention}({member.id}) 共有 {dbdata} 筆紀錄")
 
         if guildid == 613747262291443742:
             earlest_guildid = check_registration(member)
