@@ -18,9 +18,13 @@ class system_economy(Cog_Extension):
     @point.command(description='查詢擁有的星幣數')
     async def check(self,ctx,
                     user:discord.Option(discord.Member,name='成員',description='留空以查詢自己',default=None)):
-        user = user or ctx.author
-        pt = sclient.sqldb.get_coin(user.id)
-        await ctx.respond(f'{user.mention} 目前擁有 {pt} 星幣⭐')
+        user_dc = user or ctx.author
+        coins = sclient.sqldb.get_coin(user_dc.id)
+        embed = BotEmbed.simple(f'{user_dc.name} 的點數')
+        embed.add_field(name='⭐星塵',value=coins.stardust)
+        embed.add_field(name='PT點數',value=coins.point)
+        embed.add_field(name='Rcoin',value=coins.rcoin)
+        await ctx.respond(embed=embed)
         if user.bot:
             await ctx.send('但是為什麼你要查詢機器人的點數呢?',delete_after=5)
 
@@ -62,55 +66,55 @@ class system_economy(Cog_Extension):
         else:
             await ctx.respond(f'{ctx.author.mention}：{code}')
 
-    @commands.slash_command(description='猜數字遊戲')
-    async def guess(self,ctx):
-        channel = ctx.channel
-        userid = ctx.author.id
-        r = sclient.sqldb.getif_coin(userid,2)
-        if not r:
-            await ctx.respond('你的星幣不足喔 需要2元才能遊玩')
-            return
+    # @commands.slash_command(description='猜數字遊戲')
+    # async def guess(self,ctx):
+    #     channel = ctx.channel
+    #     userid = ctx.author.id
+    #     r = sclient.sqldb.getif_coin(userid,2)
+    #     if not r:
+    #         await ctx.respond('你的星幣不足喔 需要2元才能遊玩')
+    #         return
         
-        sclient.sqldb.update_coins(userid,'add',Coins.Stardust,-2)
-        await ctx.respond('猜數字遊戲 來猜個數字吧 從1~10')
-        n = random.randint(1,10)
-        def check(m):
-            try:
-                text = int(m.content)
-                return text in range(1,11) and m.author == ctx.author
-            except:
-                return False
+    #     sclient.sqldb.update_coins(userid,'add',Coins.Stardust,-2)
+    #     await ctx.respond('猜數字遊戲 來猜個數字吧 從1~10')
+    #     n = random.randint(1,10)
+    #     def check(m):
+    #         try:
+    #             text = int(m.content)
+    #             return text in range(1,11) and m.author == ctx.author
+    #         except:
+    #             return False
 
-        try:
-            msg = await self.bot.wait_for('message', check=check,timeout=60)
-            if msg.content == str(n):
-                sclient.sqldb.update_coins(userid,'add',Coins.Stardust,18)
-                await channel.send('猜對了喔! 獎勵:18星幣⭐',reference=msg)
-            else:
-                await channel.send(f'可惜了 答案是 {n}',reference=msg)
-        except asyncio.TimeoutError:
-            await channel.send(f'{ctx.author.mention} 時間超過了')
+    #     try:
+    #         msg = await self.bot.wait_for('message', check=check,timeout=60)
+    #         if msg.content == str(n):
+    #             sclient.sqldb.update_coins(userid,'add',Coins.Stardust,18)
+    #             await channel.send('猜對了喔! 獎勵:18星幣⭐',reference=msg)
+    #         else:
+    #             await channel.send(f'可惜了 答案是 {n}',reference=msg)
+    #     except asyncio.TimeoutError:
+    #         await channel.send(f'{ctx.author.mention} 時間超過了')
 
-    @shop.command(description='打開商店列表（開發中）')
-    async def list(self,ctx):
-        embed = BotEmbed.general(name="商城")
-        #embed.add_field(name="[1] 稱號(僅限Felis catus快樂營)",value='$10')
-        embed.add_field(name="[1] 石頭",value='$10')
-        await ctx.respond(embed=embed)
+    # @shop.command(description='打開商店列表（開發中）')
+    # async def list(self,ctx):
+    #     embed = BotEmbed.general(name="商城")
+    #     #embed.add_field(name="[1] 稱號(僅限Felis catus快樂營)",value='$10')
+    #     embed.add_field(name="[1] 石頭",value='$10')
+    #     await ctx.respond(embed=embed)
     
-    @shop.command(description='購買商店物品（開發中）')
-    async def buy(self,ctx,item_id):
-        item = sclient.sqldb.get_scoin_shop_item(item_id)
-        if not item:
-            await ctx.respond(f"{ctx.author.mention}：商店沒有賣這個喔")
-            return
+    # @shop.command(description='購買商店物品（開發中）')
+    # async def buy(self,ctx,item_id):
+    #     item = sclient.sqldb.get_scoin_shop_item(item_id)
+    #     if not item:
+    #         await ctx.respond(f"{ctx.author.mention}：商店沒有賣這個喔")
+    #         return
         
-        buyer_id = sclient.sqldb.getif_coin(ctx.author.id,item.price)
-        if buyer_id:
-            sclient.sqldb.update_bag(ctx.author.id,item.item_uid,1)
-            await ctx.respond(f"{ctx.author.mention}：已購買 {item.name} * 1")
-        else:
-            await ctx.respond(f"{ctx.author.mention}：星幣不足")
+    #     buyer_id = sclient.sqldb.getif_coin(ctx.author.id,item.price)
+    #     if buyer_id:
+    #         sclient.sqldb.update_bag(ctx.author.id,item.item_uid,1)
+    #         await ctx.respond(f"{ctx.author.mention}：已購買 {item.name} * 1")
+    #     else:
+    #         await ctx.respond(f"{ctx.author.mention}：星幣不足")
 
 def setup(bot):
     bot.add_cog(system_economy(bot))

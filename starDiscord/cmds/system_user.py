@@ -1,9 +1,11 @@
 import discord
-from discord.ext import commands
 from discord.commands import SlashCommandGroup
-from starlib import BotEmbed,ChoiceList,sclient
-from starlib.uiElement.button import Delete_Pet_button
+from discord.ext import commands
+
+from starlib import BotEmbed, ChoiceList, sclient
 from starlib.models.mysql import DiscordUser
+from starlib.uiElement.button import Delete_Pet_button
+
 from ..extension import Cog_Extension
 
 pet_option = ChoiceList.set('pet_option')
@@ -26,9 +28,11 @@ class system_user(Cog_Extension):
             main_account = self.bot.get_user(main_account_id).mention or main_account_id
             user_embed.description = f"{main_account} 的小帳"
         
-        # user_embed.add_field(name='⭐星塵',value=user_dc.scoin)
-        # user_embed.add_field(name='PT點數',value=user_dc.point)
-        # user_embed.add_field(name='Rcoin',value=user_dc.rcoin)
+        coins = sclient.sqldb.get_coin(user_dc.id)
+        user_embed.add_field(name='⭐星塵',value=coins.stardust)
+        user_embed.add_field(name='PT點數',value=coins.point)
+        user_embed.add_field(name='Rcoin',value=coins.rcoin)
+
         user_embed.add_field(name='連續簽到最高天數',value=user.max_sign_consecutive_days)
         if user.meatball_times:
             user_embed.add_field(name='貢丸次數',value=user.meatball_times)

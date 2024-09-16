@@ -56,19 +56,8 @@ USER_SCOPE = [
     AuthScope.WHISPERS_EDIT,
     ]
 
-# TARGET_CHANNEL = ["sakagawa_0309", "willy1236owo", "niantt_"]
 TARGET_CHANNEL = sclient.sqldb.get_bot_join_channel_all()
 TARGET_CHANNEL_IDS = [str(i) for i in TARGET_CHANNEL.keys()]
-
-# pubsub (may be deprecated in the future)
-# async def pubsub_channel_points(uuid: UUID, data: dict) -> None:
-#     twitch_log.info("callback_channel_points:",uuid,data)
-
-# async def pubsub_bits(uuid: UUID, data: dict) -> None:
-#     twitch_log.info("callback_bits:",uuid,data)
-
-# async def pubsub_chat_moderator_actions(uuid: UUID, data: dict) -> None:
-#     twitch_log.info("chat_moderator_actions:",uuid,data)
 
 # eventsub
 async def on_follow(event: eventsub.ChannelFollowEvent):
@@ -258,15 +247,6 @@ async def run():
     # TODO: modify_channel_information
     
     chat.start()
-
-    # starting up PubSub
-    # pubsub = PubSub(twitch)
-    # for user in users:
-    #     uuid1 = await pubsub.listen_channel_points(user.id, pubsub_channel_points)
-    #     uuid2 = await pubsub.listen_bits(user.id, pubsub_bits)
-    #     uuid3 = await pubsub.listen_chat_moderator_actions(me.id, user.id, pubsub_chat_moderator_actions)
-    # pubsub.start()
-    # you can either start listening before or after you started pubsub.
     
 
     # # create eventsub websocket instance and start the client.
@@ -286,9 +266,9 @@ async def run():
     # unsubscribe from all old events that might still be there
     # this will ensure we have a clean slate
     await eventsub.unsubscribe_all()
-    await asyncio.sleep(3)
     # start the eventsub client
     eventsub.start()
+    await asyncio.sleep(3)
     for user in users:
         twitch_log.debug(f"eventsub:{user.login}")
         try:

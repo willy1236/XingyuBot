@@ -9,6 +9,7 @@ from sqlalchemy import and_, delete, desc, func, or_
 from sqlalchemy.engine import URL
 from sqlalchemy.orm import sessionmaker
 from sqlmodel import Session, SQLModel, create_engine, select
+from sqlalchemy.exc import IntegrityError
 
 from starlib.models.mysql import NotifyCommunity
 
@@ -16,7 +17,7 @@ from ..errors import *
 from ..models.model import *
 from ..models.mysql import *
 from ..models.rpg import *
-from ..models.user import Pet, RPGUser, CityBattle
+from ..models.user import RPGUser, CityBattle
 from ..settings import tz
 from ..types import *
 
@@ -114,6 +115,101 @@ class SQLUserSystem(BaseSQLEngine):
         stmt = select(DiscordRegistration).where(DiscordRegistration.guild_id == guild_id)
         result = self.session.exec(stmt).one_or_none()
         return result
+
+class SQLCurrencySystem(BaseSQLEngine):
+    def get_coin(self,discord_id:int):
+        """取得用戶擁有的貨幣數"""
+        stmt = select(UserPoint).where(UserPoint.discord_id == discord_id)
+        result = self.session.exec(stmt).one_or_none()
+        return result if result is not None else UserPoint(discord_id=discord_id)
+
+    def getif_coin(self,discord_id:int,amount:int,coin=Coins.Stardust) -> int | None:
+        """取得指定貨幣足夠的用戶
+        :return: 若足夠則回傳傳入的discord_id
+        """
+        coin = Coins(coin)
+        self.cursor.execute(f"USE `stardb_user`;")
+        self.cursor.execute(f'SELECT `discord_id` FROM `user_point` WHERE discord_id = %s AND `{coin.value}` >= %s;',(discord_id,amount))
+        records = self.cursor.fetchall()
+        if records:
+            return records[0].get("discord_id")
+
+    def transfer_scoin(self,giver_id:int,given_id:int,amount:int):
+        """轉移星幣
+        :param giver_id: 給予點數者
+        :param given_id: 被給予點數者
+        :param amount: 轉移的點數數量
+        """
+        records = self.getif_coin(giver_id,amount)
+        if records:
+            self.cursor.execute(f"UPDATE `user_point` SET scoin = scoin - %s WHERE discord_id = %s;",(amount,giver_id))
+            self.cursor.execute(f"INSERT INTO `user_point` SET discord_id = %s, scoin = %s ON DUPLICATE KEY UPDATE discord_id = %s, scoin = scoin + %s",(given_id,amount,given_id,amount))
+            self.connection.commit()
+            #self.cursor.execute(f"UPDATE `user_point` SET `point` = REPLACE(`欄位名`, '要被取代的欄位值', '取代後的欄位值') WHERE `欄位名` LIKE '%欄位值%';",(giver_id,amount))
+        else:
+            return "點數不足"
+
+    def update_coins(self,discord_id:str,mod,coin_type:Coins,amount:int):
+        """更改用戶的點數數量"""
+        coin_type = Coins(coin_type)
+        self.cursor.execute(f"USE `stardb_user`;")
+        if mod == 'set':
+            self.cursor.execute(f"REPLACE INTO `user_point`(discord_id,{coin_type.value}) VALUES(%s,%s);",(discord_id,amount))
+        elif mod == 'add':
+            self.cursor.execute(f"UPDATE `user_point` SET {coin_type.value} = CASE WHEN `{coin_type.value}` IS NULL THEN {amount} ELSE {coin_type.value} + {amount} END WHERE discord_id = %s;",(discord_id,))
+        else:
+            raise ValueError("mod must be 'set' or 'add'")
+        self.connection.commit()
+
+    def user_sign(self,discord_id:int):
+        '''新增簽到資料'''
+        time = date.today()
+        yesterday = time - timedelta(days=1)
+        self.cursor.execute(f"USE `stardb_user`;")
+
+        #檢測是否簽到過
+        self.cursor.execute(f"SELECT `discord_id` FROM `user_sign` WHERE `discord_id` = {discord_id} AND `date` = '{time}';")
+        record = self.cursor.fetchall()
+        if record:
+            return '已經簽到過了喔'
+
+        #更新最後簽到日期+計算連續簽到
+        self.cursor.execute(f"INSERT INTO `user_sign` VALUES(%s,%s,%s) ON DUPLICATE KEY UPDATE `consecutive_days` = CASE WHEN `date` = %s THEN `consecutive_days` + 1 ELSE 1 END, `date` = %s;",(discord_id,time,1,yesterday.isoformat(),time))
+        #更新最大連續簽到日
+        self.cursor.execute(f"UPDATE `user_discord` AS `data` JOIN `user_sign` AS `sign` ON `data`.`discord_id` = `sign`.`discord_id` SET `data`.`max_sign_consecutive_days` = `sign`.`consecutive_days` WHERE `sign`.`discord_id` = {discord_id} AND (`data`.`max_sign_consecutive_days` < `sign`.`consecutive_days` OR `data`.`max_sign_consecutive_days` IS NULL);")
+        self.connection.commit()
+
+    def sign_add_coin(self,discord_id:int,scoin:int=0,Rcoin:int=0):
+        """簽到獎勵點數"""
+        self.cursor.execute(f"USE `stardb_user`;")
+        self.cursor.execute(f"INSERT INTO `user_point` SET discord_id = %s, scoin = %s,rcoin = %s ON DUPLICATE KEY UPDATE scoin = scoin + %s, rcoin = rcoin + %s",(discord_id,scoin,Rcoin,scoin,Rcoin))
+        self.connection.commit()
+    
+    def get_scoin_shop_item(self,item_uid:int):
+        self.cursor.execute(f"SELECT * FROM `stardb_idbase`.`scoin_shop` WHERE `item_uid` = {item_uid};")
+        record = self.cursor.fetchall()
+        if record:
+            return ShopItem(record[0])
+
+class SQLPetSystem(BaseSQLEngine):
+    def get_pet(self,discord_id:int):
+        """取得寵物"""
+        stmt = select(UserPet).where(UserPet.discord_id == discord_id)
+        result = self.session.exec(stmt).one_or_none()
+        return result
+
+    def create_user_pet(self,discord_id:int,pet_species:str,pet_name:str):
+        try:
+            pet = UserPet(discord_id=discord_id, pet_species=pet_species, pet_name=pet_name, food=20)
+            self.session.add(pet)
+            self.session.commit()
+        except IntegrityError:
+            return "已經有寵物了喔"
+
+    def remove_user_pet(self,discord_id:int):
+        stmt = delete(UserPet).where(UserPet.discord_id == discord_id)
+        self.session.exec(stmt)
+        self.session.commit()
 
 class SQLNotifySystem(BaseSQLEngine):
     #* notify channel
@@ -604,83 +700,7 @@ class MySQLGameSystem(MySQLBaseModel):
             if records:
                 records = GameInfoPage(records)
         return records
-
-class MySQLCurrencySystem(MySQLBaseModel):
-    def get_coin(self,discord_id:int,coin:Coins=Coins.Stardust) -> int:
-        """取得用戶擁有的貨幣數"""
-        records = self.get_userdata(discord_id,"user_point")
-        if records:
-            coin = Coins(coin)
-            return records.get(coin.value,0)
-
-    def getif_coin(self,discord_id:int,amount:int,coin=Coins.Stardust) -> int | None:
-        """取得指定貨幣足夠的用戶
-        :return: 若足夠則回傳傳入的discord_id
-        """
-        coin = Coins(coin)
-        self.cursor.execute(f"USE `stardb_user`;")
-        self.cursor.execute(f'SELECT `discord_id` FROM `user_point` WHERE discord_id = %s AND `{coin.value}` >= %s;',(discord_id,amount))
-        records = self.cursor.fetchall()
-        if records:
-            return records[0].get("discord_id")
-
-    def transfer_scoin(self,giver_id:int,given_id:int,amount:int):
-        """轉移星幣
-        :param giver_id: 給予點數者
-        :param given_id: 被給予點數者
-        :param amount: 轉移的點數數量
-        """
-        records = self.getif_coin(giver_id,amount)
-        if records:
-            self.cursor.execute(f"UPDATE `user_point` SET scoin = scoin - %s WHERE discord_id = %s;",(amount,giver_id))
-            self.cursor.execute(f"INSERT INTO `user_point` SET discord_id = %s, scoin = %s ON DUPLICATE KEY UPDATE discord_id = %s, scoin = scoin + %s",(given_id,amount,given_id,amount))
-            self.connection.commit()
-            #self.cursor.execute(f"UPDATE `user_point` SET `point` = REPLACE(`欄位名`, '要被取代的欄位值', '取代後的欄位值') WHERE `欄位名` LIKE '%欄位值%';",(giver_id,amount))
-        else:
-            return "點數不足"
-
-    def update_coins(self,discord_id:str,mod,coin_type:Coins,amount:int):
-        """更改用戶的點數數量"""
-        coin_type = Coins(coin_type)
-        self.cursor.execute(f"USE `stardb_user`;")
-        if mod == 'set':
-            self.cursor.execute(f"REPLACE INTO `user_point`(discord_id,{coin_type.value}) VALUES(%s,%s);",(discord_id,amount))
-        elif mod == 'add':
-            self.cursor.execute(f"UPDATE `user_point` SET {coin_type.value} = CASE WHEN `{coin_type.value}` IS NULL THEN {amount} ELSE {coin_type.value} + {amount} END WHERE discord_id = %s;",(discord_id,))
-        else:
-            raise ValueError("mod must be 'set' or 'add'")
-        self.connection.commit()
-
-    def user_sign(self,discord_id:int):
-        '''新增簽到資料'''
-        time = date.today()
-        yesterday = time - timedelta(days=1)
-        self.cursor.execute(f"USE `stardb_user`;")
-
-        #檢測是否簽到過
-        self.cursor.execute(f"SELECT `discord_id` FROM `user_sign` WHERE `discord_id` = {discord_id} AND `date` = '{time}';")
-        record = self.cursor.fetchall()
-        if record:
-            return '已經簽到過了喔'
-
-        #更新最後簽到日期+計算連續簽到
-        self.cursor.execute(f"INSERT INTO `user_sign` VALUES(%s,%s,%s) ON DUPLICATE KEY UPDATE `consecutive_days` = CASE WHEN `date` = %s THEN `consecutive_days` + 1 ELSE 1 END, `date` = %s;",(discord_id,time,1,yesterday.isoformat(),time))
-        #更新最大連續簽到日
-        self.cursor.execute(f"UPDATE `user_discord` AS `data` JOIN `user_sign` AS `sign` ON `data`.`discord_id` = `sign`.`discord_id` SET `data`.`max_sign_consecutive_days` = `sign`.`consecutive_days` WHERE `sign`.`discord_id` = {discord_id} AND (`data`.`max_sign_consecutive_days` < `sign`.`consecutive_days` OR `data`.`max_sign_consecutive_days` IS NULL);")
-        self.connection.commit()
-
-    def sign_add_coin(self,discord_id:int,scoin:int=0,Rcoin:int=0):
-        """簽到獎勵點數"""
-        self.cursor.execute(f"USE `stardb_user`;")
-        self.cursor.execute(f"INSERT INTO `user_point` SET discord_id = %s, scoin = %s,rcoin = %s ON DUPLICATE KEY UPDATE scoin = scoin + %s, rcoin = rcoin + %s",(discord_id,scoin,Rcoin,scoin,Rcoin))
-        self.connection.commit()
     
-    def get_scoin_shop_item(self,item_uid:int):
-        self.cursor.execute(f"SELECT * FROM `stardb_idbase`.`scoin_shop` WHERE `item_uid` = {item_uid};")
-        record = self.cursor.fetchall()
-        if record:
-            return ShopItem(record[0])
-
 class MySQLHoYoLabSystem(MySQLBaseModel):
     def set_hoyo_cookies(self,discord_id:int,cookies:dict):
         cookies = json.dumps(cookies)
@@ -750,27 +770,6 @@ class MySQLBetSystem(MySQLBaseModel):
         self.cursor.execute(f'DELETE FROM `stardb_user`.`user_bet` WHERE `bet_id` = %s;',(bet_id,))
         self.cursor.execute(f'DELETE FROM `database`.`bet_data` WHERE `bet_id` = %s;',(bet_id,))
         self.connection.commit()
-
-class MySQLPetSystem(MySQLBaseModel):
-    def get_pet(self,discord_id:int):
-        """取得寵物"""
-        records = self.get_userdata(discord_id,"user_pet")
-        if records:
-            return Pet(records)
-
-    def create_user_pet(self,discord_id:int,pet_species:str,pet_name:str):
-        try:
-            self.cursor.execute(f"USE `stardb_user`;")
-            self.cursor.execute(f'INSERT INTO `user_pet` VALUES(%s,%s,%s,%s);',(discord_id,pet_species,pet_name,20))
-            self.connection.commit()
-        except sqlerror as e:
-            if e.errno == 1062:
-                return '你已經擁有寵物了'
-            else:
-                raise
-
-    def delete_user_pet(self,discord_id:int):
-        self.remove_userdata(discord_id,"user_pet")
 
 class MySQLRPGSystem(MySQLBaseModel):
     def get_star_uid_inrpg(self,star_uid:str):
@@ -1206,10 +1205,8 @@ class MySQLManager(MySQLBaseModel):
 
 class MySQLDatabase(
     MySQLGameSystem,
-    MySQLCurrencySystem,
     MySQLHoYoLabSystem,
     MySQLBetSystem,
-    MySQLPetSystem,
     MySQLRPGSystem,
     MYSQLElectionSystem,
     MySQLTokensSystem,
@@ -1219,6 +1216,8 @@ class MySQLDatabase(
 
 class SQLEngine(
     SQLUserSystem,
+    SQLCurrencySystem,
+    SQLPetSystem,
     SQLNotifySystem,
     SQLRoleSaveSystem,
     SQLWarningSystem,

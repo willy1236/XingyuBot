@@ -38,7 +38,7 @@ if __name__ == "__main__":
         
         twitchtunnel_thread = LoopholeTwitchThread()
         twitchtunnel_thread.start()
-        time.sleep(5)
+        time.sleep(10)
 
         twitchbot_thread = TwitchBotThread()
         twitchbot_thread.start()
