@@ -46,9 +46,9 @@ class system_economy(Cog_Extension):
                   user:discord.Option(discord.User,name='成員',description='欲調整的成員',required=True),
                   mod:discord.Option(str,name='模式',description='add,set',required=True,choices=['add','set']),
                   amount:discord.Option(int,name='點數',description='',required=True)):
-        sclient.sqldb.update_coins(user.id,mod,Coins.SCOIN,amount)
+        sclient.sqldb.update_coins(user.id,mod,Coins.Stardust,amount)
         await ctx.respond(f'設定成功：已更改{user.mention}的星幣')
-
+    
     @commands.slash_command(description='簽到')
     async def sign(self,ctx):
         user = sclient.sqldb.get_dcuser(ctx.author.id,True,ctx.author)
@@ -71,7 +71,7 @@ class system_economy(Cog_Extension):
             await ctx.respond('你的星幣不足喔 需要2元才能遊玩')
             return
         
-        sclient.sqldb.update_coins(userid,'add',Coins.SCOIN,-2)
+        sclient.sqldb.update_coins(userid,'add',Coins.Stardust,-2)
         await ctx.respond('猜數字遊戲 來猜個數字吧 從1~10')
         n = random.randint(1,10)
         def check(m):
@@ -84,7 +84,7 @@ class system_economy(Cog_Extension):
         try:
             msg = await self.bot.wait_for('message', check=check,timeout=60)
             if msg.content == str(n):
-                sclient.sqldb.update_coins(userid,'add',Coins.SCOIN,18)
+                sclient.sqldb.update_coins(userid,'add',Coins.Stardust,18)
                 await channel.send('猜對了喔! 獎勵:18星幣⭐',reference=msg)
             else:
                 await channel.send(f'可惜了 答案是 {n}',reference=msg)

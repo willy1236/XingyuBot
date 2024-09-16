@@ -145,7 +145,7 @@ class RPGBattleView(discord.ui.View):
                         sclient.sqldb.set_rpgplayer_equipment(player.discord_id,equipment_uid)
                         text += f"\n獲得道具：{loot.name}"
 
-                sclient.sqldb.update_coins(player.discord_id,"add",Coins.RCOIN,monster.drop_money)
+                sclient.sqldb.update_coins(player.discord_id,"add",Coins.Rcoin,monster.drop_money)
                 text += f"\nRcoin +{monster.drop_money}"
                 
                 self.battle_is_end = True
@@ -268,7 +268,7 @@ class RPGEquipmentBagView(discord.ui.View):
     async def button3_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
         if interaction.user.id == self.user_dc.id and self.now_item:
             sclient.sqldb.sell_rpgplayer_equipment(self.user_dc.id,self.now_item.equipment_uid)
-            sclient.sqldb.update_coins(self.user_dc.id,"add",Coins.RCOIN,self.now_item.price)
+            sclient.sqldb.update_coins(self.user_dc.id,"add",Coins.Rcoin,self.now_item.price)
             
             del self.bag[self.paginator.current_page * self.item_per_page + self.now_page_item]
             self.refresh_item_page()
@@ -278,7 +278,7 @@ class RPGEquipmentBagView(discord.ui.View):
     async def button4_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
         if interaction.user.id == self.user_dc.id and self.now_item:
             total_price, deleted_uids = sclient.sqldb.sell_rpgplayer_equipment(self.user_dc.id,equipment_id=self.now_item.item_id)
-            sclient.sqldb.update_coins(self.user_dc.id,"add",Coins.RCOIN,self.now_item.price)
+            sclient.sqldb.update_coins(self.user_dc.id,"add",Coins.Rcoin,self.now_item.price)
             
             self.bag = [equip for equip in self.bag if equip.equipment_uid not in deleted_uids]
 

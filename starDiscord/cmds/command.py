@@ -268,13 +268,13 @@ class command(Cog_Extension):
             await ctx.respond('錯誤：此賭盤已經關閉了喔',ephemeral=True)
             return
         
-        user_data = sclient.sqldb.get_coin(ctx.author.id,Coins.POINT)
+        user_data = sclient.sqldb.get_coin(ctx.author.id,Coins.Point)
 
         if user_data['point'] < money:
             await ctx.respond('點數錯誤：你沒有那麼多點數',ephemeral=True)
             return
 
-        sclient.sqldb.update_coins(ctx.author.id,'add',Coins.POINT,money*-1)
+        sclient.sqldb.update_coins(ctx.author.id,'add',Coins.Point,money*-1)
         sclient.sqldb.place_bet(bet_id,choice,money)
         await ctx.respond('下注完成!')
 
@@ -335,16 +335,16 @@ class command(Cog_Extension):
             #點數計算
             for i in winners:
                 pt_add = i['money'] * (mag+1)
-                sclient.sqldb.update_coins(i['user_id'],'add',Coins.POINT,pt_add)
+                sclient.sqldb.update_coins(i['user_id'],'add',Coins.Point,pt_add)
             
         else:
             users = sclient.sqldb.get_bet_winner(bet_id,'blue')
             for i in users:
-                sclient.sqldb.update_coins(i['user_id'],'add',Coins.POINT,i['money'])
+                sclient.sqldb.update_coins(i['user_id'],'add',Coins.Point,i['money'])
             
             users = sclient.sqldb.get_bet_winner(bet_id,'pink')
             for i in users:
-                sclient.sqldb.update_coins(i['user_id'],'add',Coins.POINT,i['money'])
+                sclient.sqldb.update_coins(i['user_id'],'add',Coins.Point,i['money'])
             await ctx.respond(f'編號{bet_id}：因為有一方沒有人選擇，所以此局平手，點數將歸還給所有人')
         
         #更新資料庫

@@ -606,14 +606,14 @@ class MySQLGameSystem(MySQLBaseModel):
         return records
 
 class MySQLCurrencySystem(MySQLBaseModel):
-    def get_coin(self,discord_id:int,coin:Coins=Coins.SCOIN) -> int:
+    def get_coin(self,discord_id:int,coin:Coins=Coins.Stardust) -> int:
         """取得用戶擁有的貨幣數"""
         records = self.get_userdata(discord_id,"user_point")
         if records:
             coin = Coins(coin)
             return records.get(coin.value,0)
 
-    def getif_coin(self,discord_id:int,amount:int,coin=Coins.SCOIN) -> int | None:
+    def getif_coin(self,discord_id:int,amount:int,coin=Coins.Stardust) -> int | None:
         """取得指定貨幣足夠的用戶
         :return: 若足夠則回傳傳入的discord_id
         """

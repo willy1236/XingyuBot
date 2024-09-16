@@ -104,13 +104,13 @@ class DiscordUser(BaseUser):
     @property
     def point(self):
         if not self._point:
-            self._point = self.sqldb.get_coin(self.discord_id,Coins.POINT) or 0
+            self._point = self.sqldb.get_coin(self.discord_id,Coins.Point) or 0
         return self._point
     
     @property
     def rcoin(self):
         if not self._rcoin:
-            self._rcoin = self.sqldb.get_coin(self.discord_id,Coins.RCOIN) or 0
+            self._rcoin = self.sqldb.get_coin(self.discord_id,Coins.Rcoin) or 0
         return self._rcoin
     
     @property
