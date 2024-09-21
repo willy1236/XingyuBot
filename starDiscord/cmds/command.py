@@ -3,6 +3,7 @@ import ctypes
 import math
 import random
 import re
+import socket
 import subprocess
 from datetime import datetime, timedelta, timezone
 
@@ -35,6 +36,7 @@ class command(Cog_Extension):
     poll = SlashCommandGroup("poll", "投票相關指令")
     party = SlashCommandGroup("party", "政黨相關指令",guild_ids=main_guilds)
     registration = SlashCommandGroup("registration", "戶籍相關指令",guild_ids=main_guilds)
+    mcserver = SlashCommandGroup("mcserver", "Minecraft伺服器相關指令",guild_ids=main_guilds)
 
     @role.command(description='查詢身分組數')
     async def count(self,ctx,user_list:discord.Option(str,required=False,name='要查詢的用戶',description='多個用戶請用空格隔開，或可輸入default查詢常用人選')):
@@ -545,21 +547,26 @@ class command(Cog_Extension):
             embed.add_field(name=party.party_name, value=f"政黨ID：{party.party_id}\n政黨人數：{member_count}\n創黨人：{creator_mention}\n創黨日期：{party.created_at.strftime('%Y/%m/%d')}")
         await ctx.respond(embed=embed)
 
-    @commands.slash_command(description="開啟mc伺服器",guild_ids=main_guilds)
+    @mcserver.command(description="開啟mc伺服器")
     @commands.cooldown(rate=1,per=120)
-    async def startserver(self,ctx:discord.ApplicationContext):
-        def is_bat_running(bat_name:str):
-            bat_name = bat_name.lower()
-            for proc in psutil.process_iter():
-                try:
-                    if proc.name().lower() == bat_name:
-                        return True
-                except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
-                    pass
+    async def start(self,ctx:discord.ApplicationContext):
+        def is_server_running_by_process():
+            # 檢查所有正在運行的進程
+            for process in psutil.process_iter(['pid', 'name']):
+                if 'java' in process.info['name']:  # Minecraft伺服器通常是以Java運行
+                    return True
             return False
 
-        file_path = r'D:\minecraft_server\1.20.1_yeecraft\start.bat'
-        if is_bat_running("java.exe"):
+        def is_server_running_by_connect(host='localhost', port=25565):
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                try:
+                    s.connect((host, port))
+                    return True
+                except ConnectionRefusedError:
+                    return False
+
+        file_path = r"D:\minecraft_server\1.20.1_forge\run.bat"
+        if is_server_running_by_process() or is_server_running_by_connect("26.111.85.196"):
             await ctx.respond("伺服器已開啟")
         else:
             subprocess.call(file_path)

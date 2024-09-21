@@ -148,6 +148,24 @@ class debug(Cog_Extension):
         # await command.dice(ctx,1,100)
         await ctx.respond(view=MySelectMenusView(self.bot,ctx.guild.id,[865582049238843422,866241387166433300,870929961417068565]))
 
+    @commands.is_owner()
+    @commands.slash_command(description='幫助測試', guild_ids=debug_guilds)
+    async def helptest(self,ctx:discord.ApplicationContext, arg:str):
+        if not arg:
+            command_names_list = [command.name for command in self.bot.commands]
+            await ctx.send(f"{i}. {command.name}" for i, command in enumerate(self.bot.commands, 1))
+            await ctx.respond(f"指令列表：{','.join(command_names_list)}")
+        else:
+            command = self.bot.get_command(arg)
+            if not command:
+                await ctx.respond(f"找不到指令：{arg}")
+            elif isinstance(command, discord.SlashCommandGroup):
+                await ctx.respond(f"指令：{command.name}\n描述：{command.description}")
+            else:
+                command: discord.SlashCommand
+                option_str = '\n> '.join([f"{option.name}：{option.description}" for option in command.options])
+                await ctx.respond(f"指令：{command.full_parent_name} {command.name}\n描述：{command.description}\n參數：\n> {option_str}")
+
     @commands.slash_command(description='地圖生成測試')
     async def maptest(self,ctx:discord.ApplicationContext):
         await ctx.defer()
