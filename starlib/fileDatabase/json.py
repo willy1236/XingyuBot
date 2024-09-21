@@ -67,6 +67,9 @@ class JsonCache(BaseJsonHandler):
             return True
         return False
     
+    def get_dict_data(self, key, target):
+        pass
+    
 class JsonToken(BaseJsonHandler):
     def __init__(self):
         super().__init__("token")

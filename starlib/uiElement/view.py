@@ -12,8 +12,8 @@ from ..utilities import BotEmbed
 
 if TYPE_CHECKING:
     from starlib.core import DiscordBot
-    from starlib.database import MySQLDatabase, SQLEngine
-    from starlib.models.mysql import Poll, PollOption
+    from starlib.database import SQLEngine
+    from starlib.models.mysql import Poll, PollOption, TRPGStoryPlot, TRPGStoryOption
 
 class PollOptionButton(discord.ui.Button):
     def __init__(self,option:PollOption, custom_id:str, row:int=None):
@@ -112,7 +112,7 @@ class PollView(discord.ui.View):
     if TYPE_CHECKING:
         poll = Poll
         sqldb: SQLEngine
-        bot: DiscordBot | None
+        bot: discord.Bot | None
 
     def __init__(self,poll:Poll,sqldb,bot=None):
         super().__init__(timeout=None)
@@ -271,50 +271,6 @@ class PollView(discord.ui.View):
         
         return image_buffer
 
-class GameView(discord.ui.View):
-    def __init__(self,creator,game,number_all,number_now,message):
-        super().__init__()
-        self.creator = creator
-        self.game = game
-        self.number_all = number_all
-        self.number_now = number_now
-        self.message = message
-        self.embed = self.create_embed()
-        self.participant = [self.creator]
-
-    def create_embed(self):
-        embed = BotEmbed.general(f"{self.creator.name} 正在揪團",self.creator.avatar.url,description=self.message)
-        embed.add_field(name="主揪",value=self.creator.mention,inline=False)
-        embed.add_field(name="遊戲",value=self.game.value)
-        embed.add_field(name="人數",value=f"{self.number_now}/{self.number_all}")
-        return embed
-
-    @discord.ui.button(label="我要加入",style=discord.ButtonStyle.green)
-    async def button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
-        if self.number_now < self.number_all and interaction.user not in self.participant:
-            self.number_now += 1
-            await interaction.response.edit_message(embed = self.create_embed(),view=self)
-            await interaction.channel.send(f"{interaction.user.mention} 加入遊戲!")
-        elif interaction.user.id in self.participant:
-            await interaction.response.send_message(f"{interaction.user.mention} 你已經參加此揪團了!",ephemeral=True)
-        else:
-            await interaction.response.send_message(f"{interaction.user.mention} 很抱歉 揪團已經滿了!",ephemeral=True)
-
-    @discord.ui.button(label="揪團名單",style=discord.ButtonStyle.secondary)
-    async def button2_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
-        list = [user.mention for user in self.participant]
-        text = ",".join(list)
-        await interaction.response.send_message(f"目前揪團名單:\n{text}",ephemeral=True)
-
-    @discord.ui.button(label="結束揪團",style=discord.ButtonStyle.danger)
-    async def button3_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
-        if interaction.user == self.creator:
-            self.disable_all_items()
-            await interaction.response.edit_message(view=self)
-
-        else:
-            await interaction.response.send_message(f"{interaction.user.mention} 你不是主揪",ephemeral=True)
-
 class SakagawaReactionRole(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
@@ -376,3 +332,34 @@ class ReactionRole2(SakagawaReactionRole):
     async def button1_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
         roleid = 1221128533779284108
         await self.reaction_role(interaction,roleid)
+
+class TRPGPlotButton(discord.ui.Button):
+    def __init__(self,option:TRPGStoryOption):
+        super().__init__(label=option.option_title,style=discord.ButtonStyle.primary,custom_id=f"plot_{option.plot.id}_{option.option_id}")
+        self.option = option
+
+    async def callback(self, interaction):
+        view:TRPGPlotView = self.view
+        await interaction.response.send_message(f"{interaction.user.mention} 已選擇 {self.label}", ephemeral=True)
+        await view.next_plot(self.option.lead_to_plot)
+
+class TRPGPlotView(discord.ui.View):
+    def __init__(self, plot:TRPGStoryPlot, sqldb:SQLEngine):
+        super().__init__(timeout=None)
+        self.plot = plot
+        self.sqldb = sqldb
+        for option in plot.options:
+            self.add_item(TRPGPlotButton(option))
+
+    def embed(self):
+        embed = BotEmbed.general("TRPG故事線", title=self.plot.title, description=self.plot.content)
+        return embed
+    
+    async def next_plot(self, plot_id):
+        self.disable_all_items()
+        await self.message.edit(view=self)
+        next = self.sqldb.get_trpg_plot(plot_id)
+        view = TRPGPlotView(next, self.sqldb)
+        await self.message.channel.send(embed=view.embed(), view=view)
+        self.stop()
+    

@@ -14,10 +14,6 @@ from starlib.models.community import TwitchVideo, YoutubeRSSVideo, TwitchClip
 from starlib.types import NotifyCommunityType, NotifyChannelType
 from ..extension import Cog_Extension
 
-def slice_list(lst:list[YoutubeRSSVideo], target:datetime) -> list[YoutubeRSSVideo]:
-    """以target為基準取出更新的影片資訊"""
-    return [d for d in lst if d.uplood_at > target]
-
 def slice_list_twitch(lst:list[TwitchVideo], target:datetime) -> list[TwitchVideo]:
     """以target為基準取出更新的影片資訊"""
     return [d for d in lst if d.created_at > target]
@@ -26,6 +22,8 @@ def filter_twitch_clip(lst:list[TwitchClip], target:datetime) -> list[TwitchClip
     """以target為基準取出更新的影片資訊"""
     return [d for d in lst if d.created_at >= target]
     
+rss = YoutubeRSS()
+ytapi = YoutubeAPI()
 
 class task(Cog_Extension):
     def __init__(self,*args,**kwargs):
@@ -237,21 +235,23 @@ class task(Cog_Extension):
         if not ytchannels:
             return
         cache_youtube = Jsondb.cache.get('youtube') or {}
-        rss = YoutubeRSS()
         for ytchannel_id in ytchannels:
             #抓取資料
             rss_data = rss.get_videos(ytchannel_id)
             if not rss_data:
                 continue
-            cache_last_update_time = datetime.fromisoformat(cache_youtube.get(ytchannel_id)) if cache_youtube.get(ytchannel_id) else None
+            cache_last_update_time_str = cache_youtube.get(ytchannel_id)
+            cache_last_update_time = datetime.fromisoformat(cache_last_update_time_str) if cache_last_update_time_str else None
             #判斷是否有更新
             if not cache_last_update_time or rss_data[0].uplood_at > cache_last_update_time:
                 #整理影片列表&儲存最後更新時間
                 rss_data.reverse()
-                video_list = slice_list(rss_data, cache_last_update_time)
+                video_id_list = [d.id for d in rss_data if d.uplood_at > cache_last_update_time]
                 cache_youtube[ytchannel_id] = rss_data[-1].uplood_at.isoformat()
+
+                api_videos = ytapi.get_video(video_id_list)
                 #發布通知
-                for video in video_list:
+                for video in api_videos:
                     embed = video.embed()
                     await self.bot.send_notify_communities(embed, NotifyCommunityType.Youtube, ytchannel_id)
 

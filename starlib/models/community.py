@@ -7,6 +7,11 @@ from pydantic import BaseModel, ConfigDict, Field, HttpUrl, model_validator
 from ..fileDatabase import Jsondb
 from ..settings import tz
 
+ytvideo_lives = {
+    "live": "直播中",
+    "upcoming": "即將直播",
+    "none": "新影片/結束直播"
+}
 
 class TwitchUser(BaseModel):
     id: str
@@ -271,6 +276,7 @@ class YoutubeVideo(BaseModel):
             )
         embed.add_field(name="上傳時間",value=self.snippet.publishedAt.strftime('%Y/%m/%d %H:%M:%S'),inline=False)
         #embed.add_field(name="更新時間",value=self.updated_at.strftime('%Y/%m/%d %H:%M:%S'),inline=True)
+        embed.add_field(name="現況", value=ytvideo_lives.get(self.snippet.liveBroadcastContent, "未知"))
         embed.set_image(url=self.snippet.thumbnails.default.url)
         return embed
 

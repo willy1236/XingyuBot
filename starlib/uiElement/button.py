@@ -66,7 +66,7 @@ class ReactRole_button(discord.ui.View):
     #         await interaction.response.send_message(content="遊戲狂熱區 已給予權限",ephemeral=True)
 
 
-class Delete_Pet_button(discord.ui.View):
+class DeletePetButton(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=30)
 
@@ -77,7 +77,7 @@ class Delete_Pet_button(discord.ui.View):
         button.disabled = True
         await interaction.response.edit_message(content="寵物已放生",view=self)
 
-class Delete_Add_Role_button(discord.ui.View):
+class DeleteAddRoleButton(discord.ui.View):
     def __init__(self,role:discord.Role,creater:discord.Member):
         super().__init__(timeout=30)
         self.role = role

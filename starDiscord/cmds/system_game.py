@@ -11,7 +11,6 @@ from starlib import (BotEmbed, ChoiceList, Jsondb, csvdb,
 from starlib.dataExtractor import *
 from starlib.types import DBGame
 from starlib.uiElement.modals import HoyolabCookiesModal
-from starlib.uiElement.view import GameView
 from ..extension import Cog_Extension
 
 set_option = ChoiceList.set('game_set_option')

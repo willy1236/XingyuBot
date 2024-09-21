@@ -4,7 +4,7 @@ from discord.ext import commands
 
 from starlib import BotEmbed, ChoiceList, sclient
 from starlib.models.mysql import DiscordUser
-from starlib.uiElement.button import Delete_Pet_button
+from starlib.uiElement.button import DeletePetButton
 
 from ..extension import Cog_Extension
 
@@ -76,7 +76,7 @@ class system_user(Cog_Extension):
         if not pet:
             await ctx.respond('你沒有寵物')
             return
-        await ctx.respond('你真的確定要放生寵物嗎?',view=Delete_Pet_button())
+        await ctx.respond('你真的確定要放生寵物嗎?',view=DeletePetButton())
 
 def setup(bot):
     bot.add_cog(system_user(bot))

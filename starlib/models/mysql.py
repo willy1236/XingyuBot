@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, List, Optional, TypedDict
 
 from discord import Bot
 from sqlalchemy import (BigInteger, Column, DateTime, ForeignKey, Integer,
-                        String)
+                        String, Text)
 from sqlalchemy.orm import declarative_base
 from sqlmodel import Field, Relationship, SQLModel
 
@@ -245,6 +245,25 @@ class DiscordRegistration(SQLModel, table=True):
     role_id: int = Field(sa_column=Column(BigInteger))
 
     members: list[DiscordUser] = Relationship(back_populates="registration")
+
+class TRPGStoryPlot(SQLModel, table=True):
+    __tablename__ = "trpg_storyplots"
+    __table_args__ = {'schema': 'stardb_idbase'}
+
+    id: int = Field(primary_key=True)
+    title: str
+    content: str = Field(sa_column=Column(Text))
+    options: list["TRPGStoryOption"] = Relationship(back_populates="plot")
+
+class TRPGStoryOption(SQLModel, table=True):
+    __tablename__ = "trpg_plot_options"
+    __table_args__ = {'schema': 'stardb_idbase'}
+
+    plot_id: int = Field(primary_key=True, foreign_key="stardb_idbase.trpg_storyplots.id")
+    option_id: int = Field(primary_key=True)
+    option_title: str
+    lead_to_plot: int
+    plot: TRPGStoryPlot = Relationship(back_populates="options")
 
 class BackupRole(SQLModel, table=True):
     __tablename__ = "roles_backup"

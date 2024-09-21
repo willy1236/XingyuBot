@@ -554,6 +554,12 @@ class SQLTwitchSystem(BaseSQLEngine):
         result = self.session.exec(stmt).all()
         return {i.twitch_id: i.action_channel_id for i in result}
 
+class SQLTRPGSystem(BaseSQLEngine):
+    def get_trpg_plot(self, plot_id):
+        stmt = select(TRPGStoryPlot).where(TRPGStoryPlot.id == plot_id)
+        result = self.session.exec(stmt).one()
+        return result
+
 class SQLBackupSystem(BaseSQLEngine):
     #* backup
     def backup_role(self,role:discord.Role,description:str=None):
@@ -1224,6 +1230,7 @@ class SQLEngine(
     SQLPollSystem,
     SQLElectionSystem,
     SQLTwitchSystem,
+    SQLTRPGSystem,
     SQLBackupSystem,
     SQLTokensSystem,
     SQLTest,

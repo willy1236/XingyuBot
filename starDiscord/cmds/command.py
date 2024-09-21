@@ -17,8 +17,8 @@ from mysql.connector.errors import IntegrityError
 
 from starlib import Jsondb,log,BotEmbed,ChoiceList,sclient
 from starlib.utilities import find, random_color, create_only_role_list, create_role_magification_dict
-from starlib.uiElement.button import Delete_Add_Role_button
-from starlib.uiElement.view import PollView
+from starlib.uiElement.button import DeleteAddRoleButton
+from starlib.uiElement.view import PollView, TRPGPlotView
 from starlib.dataExtractor import GoogleCloud
 from starlib.types import Coins
 from .bot_event import check_registration
@@ -93,7 +93,7 @@ class command(Cog_Extension):
                 elif user and user.bot:
                     await ctx.respond("請不要加機器人身分組好嗎")
         
-        view = Delete_Add_Role_button(new_role,ctx.author)
+        view = DeleteAddRoleButton(new_role,ctx.author)
         if added_user:
             view.message = await ctx.respond(f"已添加 {new_role.name} 給{' '.join(added_user)}",view=view)
         else:
@@ -671,6 +671,13 @@ class command(Cog_Extension):
         if invite.guild.icon:
             embed.set_thumbnail(url=invite.guild.icon.url)
         await ctx.respond(embed=embed)
+
+    @commands.slash_command(description="TRPG故事")
+    async def trpgstory(self, ctx,
+                              plot_id:discord.Option(int, name='故事id', description='故事id')):
+        plot = sclient.sqldb.get_trpg_plot(plot_id)
+        view = TRPGPlotView(plot, sclient.sqldb)
+        await ctx.respond(embed=view.embed(), view=view)
 
 def setup(bot):
     bot.add_cog(command(bot))
