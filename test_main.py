@@ -3,27 +3,26 @@ from __future__ import annotations
 import asyncio
 import json
 import secrets
-import time
 import sys
+import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from enum import Enum, IntEnum
 
 import discord
 import feedparser
-import genshin
 import google.generativeai as genai
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 from faker import Faker
-from pydantic import BaseModel, Field, ConfigDict, AliasPath
+from pydantic import AliasPath, BaseModel, ConfigDict, Field
 
-from starlib import ChoiceList, Jsondb, log, sqldb, tz, sclient
+from starlib import ChoiceList, Jsondb, log, sclient, sqldb, tz
+from starlib.database import SQLEngine
 from starlib.dataExtractor import *
 from starlib.starAI import StarGeminiAI
 from starlib.types import NotifyCommunityType
-from starlib.database import SQLEngine
 
 if __name__ == '__main__':
     pass

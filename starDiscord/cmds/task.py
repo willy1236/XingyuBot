@@ -39,7 +39,6 @@ class task(Cog_Extension):
             # scheduler.add_job(self.apex_info_update,'cron',minute='00,15,30,45',second=1,jitter=30,misfire_grace_time=60)
             # scheduler.add_job(self.apex_crafting_update,'cron',hour=1,minute=5,second=0,jitter=30,misfire_grace_time=60)
             scheduler.add_job(self.forecast_update,'cron',hour='00,03,06,09,12,15,18,21',minute=0,second=1,jitter=30,misfire_grace_time=60)
-            #scheduler.add_job(self.update_channel_dict,'cron',hour='*',minute="0,30",second=0,jitter=30,misfire_grace_time=60)
 
             scheduler.add_job(self.earthquake_check,'interval',minutes=2,jitter=30,misfire_grace_time=40)
             scheduler.add_job(self.youtube_video,'interval',minutes=15,jitter=30,misfire_grace_time=40)
@@ -258,42 +257,11 @@ class task(Cog_Extension):
 
         Jsondb.cache.write('youtube',cache_youtube)
 
-    async def auto_hoyo_reward(self):
-        list = sclient.sqldb.get_hoyo_reward()
-        for user in list:
-            user_id = user['user_id']
-            user_dc = self.bot.get_user(int(user_id))
-            channel_id = user['channel_id']
-            channel = self.bot.get_channel(int(channel_id))
-            cookies = sclient.sqldb.get_userdata(user_id,'game_hoyo_cookies')
-            if not channel:
-                log.warning(f"auto_hoyo_reward: {user_id}/{channel_id}")
-            if not cookies:
-                await channel.send(f'{user_dc.mention} 沒有設定cookies或已過期')
-            else:
-                try:
-                    client = genshin.Client(cookies,lang='zh-tw')
-                    game = genshin.Game(user['game'])
-
-                    reward = await client.claim_daily_reward(game=game,reward=True)
-                    if channel and user['need_mention']:
-                        await channel.send(f'{user_dc.mention} 簽到完成！獲得{reward.name}x{reward.amount}')
-                    elif channel and not user['need_mention']:
-                        await channel.send(f'{user_dc.name} 簽到完成！獲得{reward.name}x{reward.amount}')
-                except Exception as e:
-                    await channel.send(f'{user_dc.mention} 簽到時發生錯誤：{e}')
-            
-            await asyncio.sleep(30)
-
     # async def get_mongodb_data(self):
     #     dbdata = mongedb.get_apidata()
 
     async def update_pubsubhubbub_data(self):
         pass
-
-    async def update_rpgshop_data(self):
-        log.info("update_rpgshop_data start")
-        sclient.sqldb.rpg_shop_daily()
 
     async def city_battle(self):
         log.info("city_battle start")

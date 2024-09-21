@@ -35,7 +35,10 @@ class StarException(Exception):
             return f'[{self.code}] {self.message}'
 
     def __str__(self):
-        return f'[{self.code}] {self.message}'
+        if self.original_message:
+            return f'[{self.code}] {self.message} ({self.original_message})'
+        else:
+            return f'[{self.code}] {self.message}'
 
 class ApiError(StarException):
     "Api original error: 1100"

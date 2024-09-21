@@ -5,7 +5,6 @@
 
 from .json import *
 from .csv import *
-from .xml import *
 
 Jsondb = JsonDatabase()
 csvdb = CsvDatabase()

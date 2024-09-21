@@ -1,15 +1,17 @@
 import asyncio
-import re
 import os
-from datetime import datetime,timezone,timedelta
+import re
+from datetime import datetime, timedelta, timezone
 
 import discord
 from discord.ext import commands
 
-from starlib import Jsondb,BotEmbed,sclient,log
-from starlib.uiElement.view import WelcomeView, ReactionRole1, ReactionRole2, PollView
-from starlib.types import NotifyChannelType
+from starlib import BotEmbed, Jsondb, log, sclient
 from starlib.models.mysql import DiscordUser
+from starlib.types import NotifyChannelType
+from starlib.uiElement.view import (PollView, ReactionRole1, ReactionRole2,
+                                    WelcomeView)
+
 from ..extension import Cog_Extension
 
 keywords = {
@@ -133,9 +135,9 @@ class event(Cog_Extension):
                 embed.set_footer(text="此機器人由 XX12 負責搞事")
                 await message.reply(embed=embed)
                 return
-            elif word in keywords:
-                await message.reply(keywords[word])
-                return
+            # elif word in keywords:
+            #     await message.reply(keywords[word])
+            #     return
 
         #介紹
         if message.content == self.bot.user.mention:

@@ -9,15 +9,12 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
-from ..errors import Forbidden, APIInvokeError
+from ..errors import APIInvokeError, Forbidden
 from ..fileDatabase import Jsondb
 from ..models.community import *
 
 
-class CommunityInterface():
-    """社群資料交互"""
-
-class TwitchAPI(CommunityInterface):
+class TwitchAPI():
     '''
     與Twitch api交互相關
     '''
@@ -133,7 +130,7 @@ class TwitchAPI(CommunityInterface):
         else:
             return None
 
-class YoutubeAPI(CommunityInterface):
+class YoutubeAPI():
     BaseURL = "https://www.googleapis.com/youtube/v3"
     
     def __init__(self):
@@ -271,7 +268,7 @@ class YoutubeAPI(CommunityInterface):
             print(r.status_code)
             return None
 
-class YoutubeRSS(CommunityInterface):
+class YoutubeRSS():
     def get_videos(self,channel_id) -> list[YoutubeRSSVideo]:
         """從RSS取得影片（由新到舊）"""
         youtube_feed = f'https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}'
@@ -352,7 +349,7 @@ class GoogleCloud():
         print(results)
         return results
 
-class NotionAPI(CommunityInterface):
+class NotionAPI():
     def __init__(self):
         self.headers = self._get_headers()
         self.url = "https://api.notion.com/v1"

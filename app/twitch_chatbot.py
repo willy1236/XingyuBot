@@ -63,7 +63,7 @@ TARGET_CHANNEL_IDS = [str(i) for i in TARGET_CHANNEL.keys()]
 async def on_follow(event: eventsub.ChannelFollowEvent):
     #await chat.send_message(data.event.broadcaster_user_name,text = f'{data.event.user_name} now follows {data.event.broadcaster_user_name}!')
     twitch_log.info(f'{event.event.user_name}({event.event.user_login}) now follows {event.event.broadcaster_user_name}!')
-    action_channel_id = TARGET_CHANNEL.get(event.event.broadcaster_user_id)
+    action_channel_id = TARGET_CHANNEL.get(int(event.event.broadcaster_user_id))
     if action_channel_id and sclient.bot:
         sclient.bot.send_message(action_channel_id, embed=BotEmbed.simple("新追隨",f'{event.event.user_name}({event.event.user_login}) 正在追隨 {event.event.broadcaster_user_name}!'))
 
@@ -73,7 +73,7 @@ async def on_stream_online(event: eventsub.StreamOnlineEvent):
     if sclient.bot:
         sclient.bot.send_message(content=f'{event.event.broadcaster_user_name} 正在直播 {stream.game_name}!')
     
-    action_channel_id = TARGET_CHANNEL.get(event.event.broadcaster_user_id)
+    action_channel_id = TARGET_CHANNEL.get(int(event.event.broadcaster_user_id))
     if action_channel_id:
         await chat.send_message(event.event.broadcaster_user_login, f'{event.event.broadcaster_user_name} 正在直播 {stream.game_name}! {stream.title}')
 
@@ -87,7 +87,7 @@ async def on_channel_points_custom_reward_redemption_add(event: eventsub.Channel
     if event.event.user_input:
         text += f' ({event.event.user_input})'
     twitch_log.info(text)
-    action_channel_id = TARGET_CHANNEL.get(event.event.broadcaster_user_id)
+    action_channel_id = TARGET_CHANNEL.get(int(event.event.broadcaster_user_id))
     if action_channel_id and sclient.bot:
         sclient.bot.send_message(action_channel_id, embed=BotEmbed.simple("兌換自訂獎勵",text))
     
@@ -99,7 +99,7 @@ async def on_channel_raid(event:eventsub.ChannelRaidEvent):
 
 async def on_channel_subscribe(event: eventsub.ChannelSubscribeEvent):
     twitch_log.info(f"{event.event.user_name} 在 {event.event.broadcaster_user_name} 的層級{event.event.tier[0]}新訂閱")
-    action_channel_id = TARGET_CHANNEL.get(event.event.broadcaster_user_id)
+    action_channel_id = TARGET_CHANNEL.get(int(event.event.broadcaster_user_id))
     if action_channel_id:
         await chat.send_message(event.event.broadcaster_user_login, f"感謝@{event.event.user_name} 的首次訂閱！")
 
@@ -114,7 +114,7 @@ async def on_channel_subscription_message(event: eventsub.ChannelSubscriptionMes
     for text in texts:
         twitch_log.info(text)
     
-    action_channel_id = TARGET_CHANNEL.get(event.event.broadcaster_user_id)
+    action_channel_id = TARGET_CHANNEL.get(int(event.event.broadcaster_user_id))
     if action_channel_id:
         await chat.send_message(event.event.broadcaster_user_login, f"感謝@{event.event.user_name} 的{event.event.duration_months}個月訂閱！")
         if sclient.bot:
@@ -122,7 +122,7 @@ async def on_channel_subscription_message(event: eventsub.ChannelSubscriptionMes
 
 async def on_channel_subscription_gift(event: eventsub.ChannelSubscriptionGiftEvent):
     twitch_log.info(f"{event.event.user_name} 在 {event.event.broadcaster_user_name} 送出的{event.event.total}份層級{event.event.tier[0]}訂閱")
-    action_channel_id = TARGET_CHANNEL.get(event.event.broadcaster_user_id)
+    action_channel_id = TARGET_CHANNEL.get(int(event.event.broadcaster_user_id))
     if action_channel_id and not event.event.is_anonymous:
         await chat.send_message(event.event.broadcaster_user_login, f"感謝@{event.event.user_name} 送出的{event.event.total}份訂閱！")
 
