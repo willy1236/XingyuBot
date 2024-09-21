@@ -231,7 +231,7 @@ class YoutubeAPI():
         
     def get_video(self,video_id:str|list) -> list[YoutubeVideo]:
         params ={
-            'part': 'snippet',
+            'part': 'snippet,liveStreamingDetails',
             'id': video_id
         }
         r = requests.get(f'{self.BaseURL}/videos', params=params, headers=self.__headers)

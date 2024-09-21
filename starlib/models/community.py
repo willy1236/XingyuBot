@@ -217,6 +217,14 @@ class VideoSnippet(BaseModel):
     localized: Localized
     defaultAudioLanguage: str | None = None
 
+class LiveStreamingDetails(BaseModel):
+    actualStartTime: datetime | None = None
+    actualEndTime: datetime | None = None
+    scheduledStartTime: datetime = None
+    scheduledEndTime: datetime | None = None
+    concurrentViewers: int | None = None
+    activeLiveChatId: str
+
 class YoutubeChannel(BaseModel):
     kind: str
     etag: str
@@ -261,10 +269,15 @@ class YoutubeVideo(BaseModel):
     etag: str
     id: str
     snippet: VideoSnippet
-    
+    liveStreamingDetails: LiveStreamingDetails
+
     @model_validator(mode='after')
     def __post_init__(self):
         self.snippet.publishedAt = self.snippet.publishedAt.astimezone(tz=tz)
+        self.liveStreamingDetails.actualStartTime = self.liveStreamingDetails.actualStartTime.astimezone(tz=tz) if self.liveStreamingDetails.actualStartTime else None
+        self.liveStreamingDetails.actualEndTime = self.liveStreamingDetails.actualEndTime.astimezone(tz=tz) if self.liveStreamingDetails.actualEndTime else None
+        self.liveStreamingDetails.scheduledStartTime = self.liveStreamingDetails.scheduledStartTime.astimezone(tz=tz) if self.liveStreamingDetails.scheduledStartTime else None
+        self.liveStreamingDetails.scheduledEndTime = self.liveStreamingDetails.scheduledEndTime.astimezone(tz=tz) if self.liveStreamingDetails.scheduledEndTime else None
     
     def embed(self):
         embed = discord.Embed(
@@ -277,6 +290,10 @@ class YoutubeVideo(BaseModel):
         embed.add_field(name="上傳時間",value=self.snippet.publishedAt.strftime('%Y/%m/%d %H:%M:%S'),inline=False)
         #embed.add_field(name="更新時間",value=self.updated_at.strftime('%Y/%m/%d %H:%M:%S'),inline=True)
         embed.add_field(name="現況", value=ytvideo_lives.get(self.snippet.liveBroadcastContent, "未知"))
+        if self.liveStreamingDetails.scheduledStartTime:
+            embed.add_field(name="預定直播時間", value=self.liveStreamingDetails.scheduledStartTime.strftime('%Y/%m/%d %H:%M:%S'))
+        if self.liveStreamingDetails.actualEndTime:
+            embed.add_field(name="直播結束時間", value=self.liveStreamingDetails.actualStartTime.strftime('%Y/%m/%d %H:%M:%S'))
         embed.set_image(url=self.snippet.thumbnails.default.url)
         return embed
 
