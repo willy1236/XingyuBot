@@ -570,7 +570,7 @@ class command(Cog_Extension):
             await ctx.respond("伺服器已開啟")
         else:
             cmd = r"D: && cd D:\minecraft_server\1.20.1_forge && run.bat"
-            subprocess.run(cmd, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.Popen(cmd, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             await ctx.respond("已發送開啟指令")
 
     @registration.command(description='確認/更新戶籍')
