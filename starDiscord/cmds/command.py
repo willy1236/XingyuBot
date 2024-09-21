@@ -565,11 +565,11 @@ class command(Cog_Extension):
                 except ConnectionRefusedError:
                     return False
 
-        file_path = r"D:\minecraft_server\1.20.1_forge\run.bat"
+        cmd = r"D: && cd D:\minecraft_server\1.20.1_forge && run.bat"
         if is_server_running_by_process() or is_server_running_by_connect("26.111.85.196"):
             await ctx.respond("伺服器已開啟")
         else:
-            subprocess.call(file_path)
+            subprocess.run(cmd, shell=True)
             await ctx.respond("已發送開啟指令")
 
     @registration.command(description='確認/更新戶籍')
