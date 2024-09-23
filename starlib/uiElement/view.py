@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import random
 from datetime import datetime
 from typing import TYPE_CHECKING
 from decimal import Decimal
@@ -340,9 +341,42 @@ class TRPGPlotButton(discord.ui.Button):
 
     async def callback(self, interaction):
         view:TRPGPlotView = self.view
-        await interaction.response.send_message(f"{interaction.user.mention} 已選擇 {self.label}", ephemeral=True)
-        await view.next_plot(self.option.lead_to_plot)
+        if self.option.check_ability:
+            ability = view.sqldb.get_trpg_cheracter_ability(interaction.user.id, self.option.check_ability)
+            rd = random.randint(1,100)
+            
+            text_list = [
+                f"{ability.character.character_name if ability.character else interaction.user.mention}  已選擇 {self.label}\n"
+                f"進行 {ability.ability.ability_name} 檢定：{rd} <= {ability.value}",
+            ]
+            if rd <= ability.value:
+                text_list.append(f"，成功！")
+            else:
+                text_list.append(f"，失敗！")
+                if self.option.check_ability == 1:
+                    #掉san
+                    dice_n, dice = self.option.san_check_fall_dice.split("d")
+                    san_reduce = 0
+                    for _ in range(int(dice_n)):
+                        san_reduce += random.randint(1,int(dice))
 
+                    ability.value -= san_reduce
+                    text_list.append(f"\n{self.option.san_check_fall_dice}：{san_reduce}\nSAN值-{san_reduce}，剩餘{ability.value}")
+                    view.sqldb.merge(ability)
+                    if ability.value < ability.san_lower_limit:
+                        text_list.append(f"\nSAN值低於{ability.san_lower_limit}，進入瘋狂狀態")
+                        await view.next_plot(random.choice([1,2]))
+
+            text = "".join(text_list)
+            await interaction.response.send_message(f"{text}", ephemeral=False)
+            if ability.value >= ability.san_lower_limit:
+                await view.next_plot(self.option.success_plot if rd <= ability.value else self.option.fail_plot)
+
+        else:
+            cheracter = view.sqldb.get_trpg_cheracter(interaction.user.id)
+            await interaction.response.send_message(f"{cheracter.character_name if cheracter else interaction.user.mention} 已選擇 {self.label}", ephemeral=False)
+            await view.next_plot(self.option.lead_to_plot)
+            
 class TRPGPlotView(discord.ui.View):
     def __init__(self, plot:TRPGStoryPlot, sqldb:SQLEngine):
         super().__init__(timeout=None)

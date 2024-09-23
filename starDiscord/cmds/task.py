@@ -1,18 +1,19 @@
 import asyncio
 import random
 import time
-from datetime import datetime, timezone, timedelta, date
+from datetime import date, datetime, timedelta, timezone
 
 import discord
-import genshin
-from discord.ext import commands,tasks
+from discord.ext import commands, tasks
 from requests.exceptions import ConnectTimeout
 
-from starlib import Jsondb,sclient,log,BotEmbed,utilities, ChoiceList, tz
+from starlib import BotEmbed, ChoiceList, Jsondb, log, sclient, tz, utilities
 from starlib.dataExtractor import *
-from starlib.models.community import TwitchVideo, YoutubeRSSVideo, TwitchClip
-from starlib.types import NotifyCommunityType, NotifyChannelType
+from starlib.models.community import TwitchClip, TwitchVideo
+from starlib.types import NotifyChannelType, NotifyCommunityType
+
 from ..extension import Cog_Extension
+
 
 def slice_list_twitch(lst:list[TwitchVideo], target:datetime) -> list[TwitchVideo]:
     """以target為基準取出更新的影片資訊"""

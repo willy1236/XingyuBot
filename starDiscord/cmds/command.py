@@ -11,7 +11,7 @@ import discord
 import psutil
 from discord.errors import Forbidden, NotFound
 from discord.ext import commands,pages
-from discord.commands import SlashCommandGroup
+from discord.commands import SlashCommandGroup, OptionChoice
 from mysql.connector.errors import Error as sqlerror
 from mysql.connector.errors import IntegrityError
 
@@ -29,6 +29,13 @@ position_option = ChoiceList.set('position_option')
 party_option = ChoiceList.set('party_option')
 
 main_guilds = Jsondb.config.get('main_guilds')
+
+trpg_plot_start = [
+    OptionChoice(name='劇情開始：米爾（威立）',value=1)
+]
+
+async def trpg_plot_autocomplete(ctx: discord.AutocompleteContext):
+    return trpg_plot_start if not ctx.options["故事id"] else []
 
 class command(Cog_Extension):
     bet = SlashCommandGroup("bet", "賭盤相關指令")
@@ -570,7 +577,7 @@ class command(Cog_Extension):
             await ctx.respond("伺服器已開啟")
         else:
             cmd = r"D: && cd D:\minecraft_server\1.20.1_forge && run.bat"
-            subprocess.Popen(cmd, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.Popen(cmd, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=subprocess.CREATE_NEW_CONSOLE)
             await ctx.respond("已發送開啟指令")
 
     @registration.command(description='確認/更新戶籍')
@@ -674,7 +681,7 @@ class command(Cog_Extension):
 
     @commands.slash_command(description="TRPG故事")
     async def trpgstory(self, ctx,
-                              plot_id:discord.Option(int, name='故事id', description='故事id')):
+                              plot_id:discord.Option(int, name='故事id', description='故事id', autocomplete=trpg_plot_autocomplete)):
         plot = sclient.sqldb.get_trpg_plot(plot_id)
         view = TRPGPlotView(plot, sclient.sqldb)
         await ctx.respond(embed=view.embed(), view=view)

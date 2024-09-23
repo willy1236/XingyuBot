@@ -262,8 +262,42 @@ class TRPGStoryOption(SQLModel, table=True):
     plot_id: int = Field(primary_key=True, foreign_key="stardb_idbase.trpg_storyplots.id")
     option_id: int = Field(primary_key=True)
     option_title: str
-    lead_to_plot: int
+    lead_to_plot: int | None
+    check_ability: int | None
+    san_check_fall_dice: str | None
+    success_plot: int | None
+    fail_plot: int | None
     plot: TRPGStoryPlot = Relationship(back_populates="options")
+
+class TRPGCharacter(SQLModel, table=True):
+    __tablename__ = "trpg_characters"
+    __table_args__ = {'schema': 'stardb_idbase'}
+
+    discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
+    character_name: str
+
+    abilities: list["TRPGCharacterAbility"] = Relationship(back_populates="character")
+
+class TRPGCharacterAbility(SQLModel, table=True):
+    __tablename__ = "trpg_character_abilities"
+    __table_args__ = {'schema': 'stardb_idbase'}
+
+    discord_id: int = Field(sa_column=Column(BigInteger, ForeignKey("stardb_idbase.trpg_characters.discord_id"), primary_key=True))
+    ability_id: int = Field(primary_key=True, foreign_key="stardb_idbase.trpg_abilities.ability_id")
+    san_lower_limit: int | None
+    value: int
+
+    character: TRPGCharacter = Relationship(back_populates="abilities")
+    ability: "TRPGAbility" = Relationship(back_populates="characters")
+
+class TRPGAbility(SQLModel, table=True):
+    __tablename__ = "trpg_abilities"
+    __table_args__ = {'schema': 'stardb_idbase'}
+
+    ability_id: int = Field(primary_key=True)
+    ability_name: str
+
+    characters: list[TRPGCharacterAbility] = Relationship(back_populates="ability")
 
 class BackupRole(SQLModel, table=True):
     __tablename__ = "roles_backup"

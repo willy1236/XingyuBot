@@ -560,6 +560,16 @@ class SQLTRPGSystem(BaseSQLEngine):
         result = self.session.exec(stmt).one()
         return result
 
+    def get_trpg_cheracter(self, discord_id):
+        stmt = select(TRPGCharacter).where(TRPGCharacter.discord_id == discord_id)
+        result = self.session.exec(stmt).one_or_none()
+        return result
+
+    def get_trpg_cheracter_ability(self, discord_id, ability_id):
+        stmt = select(TRPGCharacterAbility).where(TRPGCharacterAbility.discord_id == discord_id, TRPGCharacterAbility.ability_id == ability_id)
+        result = self.session.exec(stmt).one()
+        return result
+
 class SQLBackupSystem(BaseSQLEngine):
     #* backup
     def backup_role(self,role:discord.Role,description:str=None):
