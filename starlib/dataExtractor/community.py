@@ -236,7 +236,7 @@ class YoutubeAPI():
         }
         r = requests.get(f'{self.BaseURL}/videos', params=params, headers=self.__headers)
         if r.ok:
-            return [YoutubeVideo(**i) for i in r.json()['items']] if r.json()['items'] else None
+            return [YoutubeVideo(**i) for i in r.json()['items']] if r.json()['items'] else list()
         else:
             raise APIInvokeError("youtube_get_video", f"[{r.status_code}] {r.text}")
         
