@@ -247,7 +247,7 @@ class task(Cog_Extension):
             if not cache_last_update_time or rss_data[0].uplood_at > cache_last_update_time:
                 #整理影片列表&儲存最後更新時間
                 rss_data.reverse()
-                video_id_list = [d.id for d in rss_data if d.uplood_at > cache_last_update_time]
+                video_id_list = [d.yt_videoid for d in rss_data if d.uplood_at > cache_last_update_time]
                 cache_youtube[ytchannel_id] = rss_data[-1].uplood_at.isoformat()
 
                 api_videos = ytapi.get_video(video_id_list)

@@ -223,7 +223,7 @@ class LiveStreamingDetails(BaseModel):
     scheduledStartTime: datetime = None
     scheduledEndTime: datetime | None = None
     concurrentViewers: int | None = None
-    activeLiveChatId: str
+    activeLiveChatId: str | None = None
 
 class YoutubeChannel(BaseModel):
     kind: str
