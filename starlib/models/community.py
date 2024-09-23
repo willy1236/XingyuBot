@@ -293,7 +293,7 @@ class YoutubeVideo(BaseModel):
         if self.liveStreamingDetails.scheduledStartTime:
             embed.add_field(name="預定直播時間", value=self.liveStreamingDetails.scheduledStartTime.strftime('%Y/%m/%d %H:%M:%S'))
         if self.liveStreamingDetails.actualEndTime:
-            embed.add_field(name="直播結束時間", value=self.liveStreamingDetails.actualStartTime.strftime('%Y/%m/%d %H:%M:%S'))
+            embed.add_field(name="直播結束時間", value=self.liveStreamingDetails.actualEndTime.strftime('%Y/%m/%d %H:%M:%S'))
         embed.set_image(url=self.snippet.thumbnails.high.url)
         return embed
 
