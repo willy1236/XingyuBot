@@ -33,9 +33,8 @@ class AnnoModal(discord.ui.Modal):
 
     async def callback(self, interaction: discord.Interaction):
         msg = await interaction.response.send_message(f"訊息發送中..")
-        picdata = Jsondb.picdata
         embed = discord.Embed(description=self.children[0].value,color=0xc4e9ff,timestamp=datetime.now())
-        embed.set_author(name="機器人全群公告",icon_url=picdata['radio_001'])
+        embed.set_author(name="機器人全群公告",icon_url=Jsondb.get_picture('radio_001'))
         embed.set_footer(text='Bot Radio System')
         send_success = 0
         channels = sclient.sqldb.get_notify_channel_by_type(NotifyChannelType.AllAnnouncements)
@@ -64,9 +63,8 @@ class BotUpdateModal(discord.ui.Modal):
 
     async def callback(self, interaction: discord.Interaction):
         msg = await interaction.response.send_message(f"訊息發送中..")
-        picdata = Jsondb.picdata
         embed = discord.Embed(description=self.children[0].value,color=0xc4e9ff,timestamp=datetime.now())
-        embed.set_author(name="機器人更新通知",icon_url=picdata['radio_001'])
+        embed.set_author(name="機器人更新通知",icon_url=Jsondb.get_picture('radio_001'))
         embed.set_footer(text='Bot Radio System')
         send_success = 0
         channels = sclient.sqldb.get_notify_channel_by_type(NotifyChannelType.BotUpdates)

@@ -46,7 +46,7 @@ class CloudUser(SQLModel, table=True):
     discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True, autoincrement=False))
     email: str | None
     drive_share_id: str | None
-    twitch_id: int | None
+    twitch_id: int | None = Field(unique=True)
 
 class DiscordUser(SQLModel, table=True):
     __tablename__ = "user_discord"
@@ -145,7 +145,7 @@ class RoleSave(SQLModel, table=True):
     role_name: str
     time: date
 
-class UserPet(SQLModel, table=True):
+class Pet(SQLModel, table=True):
     __tablename__ = "user_pet"
     __table_args__ = {'schema': 'stardb_user'}
 

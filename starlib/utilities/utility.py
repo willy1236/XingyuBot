@@ -8,27 +8,27 @@ from .funtions import find
 
 class BotEmbed:
     @staticmethod
-    def bot(bot:discord.Bot,title:str=None,description:str=None,url=None):
+    def bot(bot:discord.Bot, title:str=None, description:str=None, url=None):
         '''機器人 格式'''
         embed = discord.Embed(title=title, description=description, color=0xc4e9ff, url=url)
         embed.set_author(name=bot.user.name,icon_url=bot.user.display_avatar.url)
         return embed
     
     @staticmethod
-    def user(user:discord.User,title:str=None,description:str=None,url=None):
+    def user(user:discord.User, title:str=None, description:str=None, url=None):
         '''使用者 格式'''
         embed = discord.Embed(title=title, description=description, color=0x00ffff,url=url)
         embed.set_author(name=user.name,icon_url=user.display_avatar.url)
         return embed
     
     @staticmethod
-    def simple(title:str=None,description:str=None,url=None):
+    def simple(title:str=None, description:str=None, url=None):
         '''簡易:不帶作者'''
         embed = discord.Embed(title=title, description=description, color=0xc4e9ff,url=url)
         return embed
 
     @staticmethod
-    def general(name:str=None,icon_url:str=None,url:str=None,title:str=None,description:str=None):
+    def general(name:str=None, icon_url:str=None, url:str=None, title:str=None, description:str=None):
         '''普通:自訂作者'''
         embed = discord.Embed(title=title, description=description, color=0xc4e9ff)
         embed.set_author(name=name,icon_url=icon_url,url=url)
@@ -44,37 +44,33 @@ class BotEmbed:
     @staticmethod
     def brs():
         '''Bot Radio System 格式'''
-        picdata = Jsondb.picdata
         embed = discord.Embed(color=0xc4e9ff)
-        embed.set_author(name="Bot Radio System", icon_url=picdata['radio_001'])
+        embed.set_author(name="Bot Radio System", icon_url=Jsondb.get_picture("radio_001"))
         return embed
 
     @staticmethod
     def lottery():
         '''Lottery System格式'''
-        picdata = Jsondb.picdata
         embed = discord.Embed(color=0xc4e9ff)
-        embed.set_author(name="Lottery System", icon_url=picdata['lottery_001'])
+        embed.set_author(name="Lottery System", icon_url=Jsondb.get_picture("lottery_001"))
         return embed
     
     @staticmethod
     def star_radio():
         '''星系電台 格式'''
-        picdata = Jsondb.picdata
         embed = discord.Embed(color=0xc4e9ff)
-        embed.set_author(name="Star Rd.", icon_url=picdata['radio_001'])
+        embed.set_author(name="Star Rd.", icon_url=Jsondb.get_picture("radio_001"))
         return embed
     
     @staticmethod
     def sts():
         '''星光終端系統 格式'''
-        picdata = Jsondb.picdata
         embed = discord.Embed(color=0xc4e9ff)
-        embed.set_author(name="「星光」終端系統", icon_url=picdata['radio_001'])
+        embed.set_author(name="「星光」終端系統", icon_url=Jsondb.get_picture("radio_001"))
         return embed
     
     @staticmethod
-    def info(title:str=None,description:str=None,url:str=None):
+    def info(title:str=None, description:str=None, url:str=None):
         '''一般資訊 格式'''
         embed = discord.Embed(title=title, description=description, color=0xc4e9ff,url=url)
         return embed
@@ -91,6 +87,7 @@ class BotEmbed:
         embed.add_field(name="結束時間",value=f"<t:{timestamp}>（{last.total_seconds():0f}s）")
         embed.timestamp = create_at
         return embed
+
 class ChoiceList():
     @staticmethod
     def set(option_name):

@@ -166,7 +166,7 @@ class YoutubeAPI():
             print(r.text)
             print(r.status_code)
 
-    def get_channel(self,id:str=None,handle:str=None):
+    def get_channel(self, id:str=None, handle:str=None):
         '''獲取Youtube頻道資訊
         :param id: 頻道ID
         :param handle: 頻道名稱

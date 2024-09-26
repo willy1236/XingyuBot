@@ -194,20 +194,20 @@ class SQLCurrencySystem(BaseSQLEngine):
 class SQLPetSystem(BaseSQLEngine):
     def get_pet(self,discord_id:int):
         """取得寵物"""
-        stmt = select(UserPet).where(UserPet.discord_id == discord_id)
+        stmt = select(Pet).where(Pet.discord_id == discord_id)
         result = self.session.exec(stmt).one_or_none()
         return result
 
     def create_user_pet(self,discord_id:int,pet_species:str,pet_name:str):
         try:
-            pet = UserPet(discord_id=discord_id, pet_species=pet_species, pet_name=pet_name, food=20)
+            pet = Pet(discord_id=discord_id, pet_species=pet_species, pet_name=pet_name, food=20)
             self.session.add(pet)
             self.session.commit()
         except IntegrityError:
             return "已經有寵物了喔"
 
     def remove_user_pet(self,discord_id:int):
-        stmt = delete(UserPet).where(UserPet.discord_id == discord_id)
+        stmt = delete(Pet).where(Pet.discord_id == discord_id)
         self.session.exec(stmt)
         self.session.commit()
 

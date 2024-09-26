@@ -3,18 +3,19 @@ from __future__ import annotations
 import io
 import random
 from datetime import datetime
-from typing import TYPE_CHECKING
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 import discord
 import matplotlib
 
+from ..fileDatabase import Jsondb
 from ..utilities import BotEmbed
 
 if TYPE_CHECKING:
-    from starlib.core import DiscordBot
     from starlib.database import SQLEngine
-    from starlib.models.mysql import Poll, PollOption, TRPGStoryPlot, TRPGStoryOption
+    from starlib.models.mysql import (Poll, PollOption, TRPGStoryOption,
+                                      TRPGStoryPlot)
 
 class PollOptionButton(discord.ui.Button):
     def __init__(self,option:PollOption, custom_id:str, row:int=None):
@@ -336,7 +337,7 @@ class ReactionRole2(SakagawaReactionRole):
 
 class TRPGPlotButton(discord.ui.Button):
     def __init__(self,option:TRPGStoryOption):
-        super().__init__(label=option.option_title,style=discord.ButtonStyle.primary,custom_id=f"plot_{option.plot.id}_{option.option_id}")
+        super().__init__(label=option.option_title, style=discord.ButtonStyle.primary, custom_id=f"plot_{option.plot.id}_{option.option_id}")
         self.option = option
 
     async def callback(self, interaction):
@@ -346,7 +347,7 @@ class TRPGPlotButton(discord.ui.Button):
             rd = random.randint(1,100)
             
             text_list = [
-                f"{ability.character.character_name if ability.character else interaction.user.mention}  已選擇 {self.label}\n"
+                f"{ability.character.character_name if ability.character else interaction.user.mention} 已選擇 {self.label}\n"
                 f"進行 {ability.ability.ability_name} 檢定：{rd} <= {ability.value}",
             ]
             if rd <= ability.value:
@@ -386,7 +387,7 @@ class TRPGPlotView(discord.ui.View):
             self.add_item(TRPGPlotButton(option))
 
     def embed(self):
-        embed = BotEmbed.general("TRPG故事線", title=self.plot.title, description=self.plot.content)
+        embed = BotEmbed.general("TRPG故事線", Jsondb.get_picture("dice_001"), title=self.plot.title, description=self.plot.content)
         return embed
     
     async def next_plot(self, plot_id):

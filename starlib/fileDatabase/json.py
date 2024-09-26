@@ -176,6 +176,10 @@ class JsonDatabase():
             else:
                 raise ValueError('無此API token')
             
+    def get_picture(self, id):
+        """取得圖片網址"""
+        return self.picdata[id]
+            
     def set_token(self, name:str, value:str|dict):
         self.tokens[name] = value
         self.write('tokens',self.tokens)

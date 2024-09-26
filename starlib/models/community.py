@@ -80,7 +80,7 @@ class TwitchStream(BaseModel):
             color=0x6441a5,
             timestamp = self.started_at,
             )
-        embed.set_author(name=f"{self.user_name} 開台啦！", icon_url=Jsondb.picdata["twitch_001"])
+        embed.set_author(name=f"{self.user_name} 開台啦！", icon_url=Jsondb.get_picture("twitch_001"))
         embed.set_image(url=self.thumbnail_url)
         embed.add_field(name="標籤", value=", ".join(self.tags))
         embed.set_footer(text=f"開始於")
@@ -96,8 +96,8 @@ class TwitchVideo(BaseModel):
     description: str
     created_at: datetime
     published_at: datetime
-    url: HttpUrl
-    thumbnail_url: HttpUrl
+    url: str
+    thumbnail_url: str
     viewable: str
     view_count: int
     language: str
@@ -109,7 +109,7 @@ class TwitchVideo(BaseModel):
     def __post_init__(self):
         self.created_at = self.created_at.astimezone(tz=tz)
         self.published_at = self.published_at.astimezone(tz=tz)
-        self.thumbnail_url = HttpUrl(str(self.thumbnail_url).replace('{width}', '960').replace('{height}', '540'))
+        self.thumbnail_url = self.thumbnail_url.replace('{width}', '960').replace('{height}', '540')
 
     def embed(self):
         embed = discord.Embed(
@@ -126,8 +126,8 @@ class TwitchVideo(BaseModel):
 
 class TwitchClip(BaseModel):
     id: str
-    url: HttpUrl
-    embed_url: HttpUrl
+    url: str
+    embed_url: str
     broadcaster_id: str
     broadcaster_name: str
     creator_id: str
@@ -138,7 +138,7 @@ class TwitchClip(BaseModel):
     title: str
     view_count: int
     created_at: datetime
-    thumbnail_url: HttpUrl
+    thumbnail_url: str
     duration: timedelta
     vod_offset: Optional[int]
     is_featured: bool
@@ -146,7 +146,7 @@ class TwitchClip(BaseModel):
     @model_validator(mode='after')
     def __post_init__(self):
         self.created_at = self.created_at.astimezone(tz=tz)
-        self.thumbnail_url = HttpUrl(str(self.thumbnail_url).replace('{width}', '960').replace('{height}', '540'))
+        self.thumbnail_url = self.thumbnail_url.replace('{width}', '960').replace('{height}', '540')
 
     def embed(self):
         embed = discord.Embed(
@@ -269,7 +269,7 @@ class YoutubeVideo(BaseModel):
     etag: str
     id: str
     snippet: VideoSnippet
-    liveStreamingDetails: LiveStreamingDetails
+    liveStreamingDetails: LiveStreamingDetails | None = None
 
     @model_validator(mode='after')
     def __post_init__(self):
@@ -290,7 +290,7 @@ class YoutubeVideo(BaseModel):
         embed.add_field(name="上傳時間",value=self.snippet.publishedAt.strftime('%Y/%m/%d %H:%M:%S'),inline=False)
         #embed.add_field(name="更新時間",value=self.updated_at.strftime('%Y/%m/%d %H:%M:%S'),inline=True)
         embed.add_field(name="現況", value=ytvideo_lives.get(self.snippet.liveBroadcastContent, "未知"))
-        if self.liveStreamingDetails.scheduledStartTime:
+        if self.liveStreamingDetails.scheduledStartTime and self.snippet.liveBroadcastContent == "upcoming":
             embed.add_field(name="預定直播時間", value=self.liveStreamingDetails.scheduledStartTime.strftime('%Y/%m/%d %H:%M:%S'))
         if self.liveStreamingDetails.actualEndTime:
             embed.add_field(name="直播結束時間", value=self.liveStreamingDetails.actualEndTime.strftime('%Y/%m/%d %H:%M:%S'))
