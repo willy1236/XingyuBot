@@ -578,7 +578,12 @@ class command(Cog_Extension):
         else:
             cmd = r"D: && cd D:\minecraft_server\1.20.1_forge && run.bat"
             subprocess.Popen(cmd, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=subprocess.CREATE_NEW_CONSOLE)
-            await ctx.respond("已發送開啟指令")
+            msg = await ctx.respond("已發送開啟指令")
+            for _ in range(10):
+                await asyncio.sleep(10)
+                if is_server_running_by_process() or is_server_running_by_connect("26.111.85.196"):
+                    await msg.edit(content="伺服器已開啟")
+                    break
 
     @registration.command(description='確認/更新戶籍')
     @commands.cooldown(rate=1,per=10)
