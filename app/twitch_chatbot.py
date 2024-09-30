@@ -262,7 +262,7 @@ async def run():
     #     if chat.is_mod(user.login):
     #         await eventsub.listen_channel_follow_v2(user.id, me.id, on_follow)
     
-    eventsub = EventSubWebhook(jtoken.get('callback_uri'), 14001, twitch, subscription_url=f"{jtoken.get('callback_uri')}/eventsubtest")
+    eventsub = EventSubWebhook(jtoken.get('callback_uri'), 14001, twitch)
     # unsubscribe from all old events that might still be there
     # this will ensure we have a clean slate
     await eventsub.unsubscribe_all()
