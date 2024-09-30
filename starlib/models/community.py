@@ -148,7 +148,7 @@ class TwitchClip(BaseModel):
         self.created_at = self.created_at.astimezone(tz=tz)
         self.thumbnail_url = self.thumbnail_url.replace('{width}', '960').replace('{height}', '540')
 
-    def embed(self):
+    def embed(self, original_video: TwitchVideo = None):
         embed = discord.Embed(
             title=self.title,
             url=self.url,
@@ -158,6 +158,8 @@ class TwitchClip(BaseModel):
         embed.set_author(name=f"{self.broadcaster_name}")
         embed.set_image(url=self.thumbnail_url)
         embed.add_field(name="剪輯者", value=self.creator_name)
+        if original_video:
+            embed.description = original_video.title
         embed.set_footer(text=f"上傳時間")
         return embed
 

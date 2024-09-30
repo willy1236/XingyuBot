@@ -25,6 +25,7 @@ def filter_twitch_clip(lst:list[TwitchClip], target:datetime) -> list[TwitchClip
     
 rss = YoutubeRSS()
 ytapi = YoutubeAPI()
+twapi = TwitchAPI()
 
 class task(Cog_Extension):
     def __init__(self,*args,**kwargs):
@@ -173,7 +174,7 @@ class task(Cog_Extension):
         if not users:
             return
         twitch_cache = Jsondb.cache.get('twitch') or {}
-        data = TwitchAPI().get_lives(users)
+        data = twapi.get_lives(users)
         log.debug(f"twitch_live data: {data}")
         for user in users:
             user_cache = twitch_cache.get(user)
@@ -193,9 +194,8 @@ class task(Cog_Extension):
         if not users:
             return
         twitch_cache = Jsondb.cache.get('twitch_v') or {}
-        api = TwitchAPI()
         for user in users:
-            videos = api.get_videos(user)
+            videos = twapi.get_videos(user)
             cache_last_update_time = datetime.fromisoformat(twitch_cache.get(user)).replace(tzinfo=tz) if twitch_cache.get(user) else None
             if not cache_last_update_time or videos[0].created_at > cache_last_update_time:
                 videos.reverse()
@@ -213,19 +213,25 @@ class task(Cog_Extension):
         if not users:
             return
         twitch_cache = Jsondb.cache.get('twitch_c') or {}
-        api = TwitchAPI()
         for user in users:
             cache_last_update_time = datetime.fromisoformat(twitch_cache.get(user)).replace(tzinfo=tz) if twitch_cache.get(user) else None
-            clips = api.get_clips(user, started_at=cache_last_update_time)
+            clips = twapi.get_clips(user, started_at=cache_last_update_time)
             # Twitch API 會無視started_at參數回傳錯誤時間的資料，故使用函數過濾掉，解法尚待改進
             clips = filter_twitch_clip(clips, cache_last_update_time)
             if clips:
                 newest = clips[0].created_at
                 broadcaster_id = clips[0].broadcaster_id
+                
+                videos_dict = {clip.video_id: None for clip in clips}
+                api_video = twapi.get_videos(ids=list(videos_dict.keys()))
+                videos_dict = {video.id: video for video in api_video}
+
                 for clip in clips:
+                    video = videos_dict[video.id]
                     newest = clip.created_at if clip.created_at > newest else newest
-                    embed = clip.embed()
-                    await self.bot.send_notify_communities(embed, NotifyCommunityType.TwitchClip, broadcaster_id)
+                    if clip.title != video.title:
+                        embed = clip.embed(video)
+                        await self.bot.send_notify_communities(embed, NotifyCommunityType.TwitchClip, broadcaster_id)
 
                 twitch_cache[broadcaster_id] = (newest + timedelta(seconds=1)).isoformat()
 

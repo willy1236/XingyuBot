@@ -100,7 +100,7 @@ async def on_channel_raid(event:eventsub.ChannelRaidEvent):
 async def on_channel_subscribe(event: eventsub.ChannelSubscribeEvent):
     twitch_log.info(f"{event.event.user_name} 在 {event.event.broadcaster_user_name} 的層級{event.event.tier[0]}新訂閱")
     action_channel_id = TARGET_CHANNEL.get(int(event.event.broadcaster_user_id))
-    if action_channel_id:
+    if action_channel_id and not event.event.is_gift:
         await chat.send_message(event.event.broadcaster_user_login, f"感謝@{event.event.user_name} 的首次訂閱！")
 
 async def on_channel_subscription_message(event: eventsub.ChannelSubscriptionMessageEvent):

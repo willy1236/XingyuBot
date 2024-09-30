@@ -91,25 +91,33 @@ class TwitchAPI():
         else:
             return None
 
-    def get_videos(self,users:int|list[int], types:str|list[str]="highlight") -> list[TwitchVideo]:
+    def get_videos(self, user_ids:str|list[str] = None, ids:str|list[str] = None, types:str|list[str]="highlight"):
         """
         取得twitch用戶的影片資訊
-        :param users: list of users
+        :param users: list of users id
         :return: list[TwitchVideo]
         """
         params = {
-            "user_id": users,
             "sort": "time",
             "first": 5,
             "type": types
         }
+
+        if user_ids:
+            params["user_id"] = user_ids
+        elif ids:
+            params["id"] = ids
+        else:
+            raise ValueError("must provide either user_ids or ids.")
+
         r = requests.get(f"{self.BaseURL}/videos", params=params,headers=self._headers)
         apidata = r.json()
         if apidata.get('data'):
             return [TwitchVideo(**i) for i in apidata['data']]
         else:
             return None
-        
+
+
     def get_clips(self,broadcaster_id:int,started_at:datetime=None):
         """
         取得twitch用戶的剪輯資訊\\
