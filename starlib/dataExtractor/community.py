@@ -26,10 +26,10 @@ class TwitchAPI():
     def __get_headers(self):
         TOKENURL = "https://id.twitch.tv/oauth2/token"
         #headers = {"Content-Type": "application/x-www-form-urlencoded"}
-        tokens = Jsondb.get_token('twitch')
+        tokens = Jsondb.get_token("twitch_chatbot")
         params = {
-            'client_id':tokens[0],
-            'client_secret':tokens[1],
+            'client_id':tokens["id"],
+            'client_secret':tokens["secret"],
             'grant_type':'client_credentials'
             }
 
@@ -38,7 +38,7 @@ class TwitchAPI():
         if r.ok:
             headers = {
                 'Authorization': f"Bearer {apidata['access_token']}",
-                'Client-Id':tokens[0]
+                'Client-Id':tokens["id"]
             }
             return headers
         else:
@@ -142,7 +142,7 @@ class YoutubeAPI():
     BaseURL = "https://www.googleapis.com/youtube/v3"
     
     def __init__(self):
-        self.__token = Jsondb.get_token('youtube')
+        self.__token = Jsondb.get_token("youtube_api")
         self.__headers = {
             'x-goog-api-key': self.__token,
             'Accept': 'application/json'

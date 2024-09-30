@@ -16,7 +16,7 @@ class RiotAPI(GameInterface):
         self.url_tw2 = 'https://tw2.api.riotgames.com'
         self.url_sea = 'https://sea.api.riotgames.com'
         self.url_asia = 'https://asia.api.riotgames.com'
-        self.key = Jsondb.get_token('riot')
+        self.key = Jsondb.get_token("riot_api")
         self._headers = {
             'X-Riot-Token':self.key
         }
@@ -135,7 +135,7 @@ class OsuAPI(GameInterface):
         self._url = 'https://osu.ppy.sh/api/v2'
 
     def _get_headers(self):
-        ous_token = Jsondb.get_token('osu')                   
+        ous_token = Jsondb.get_token("osu_api")                   
         data = {
             'client_id': ous_token[0],
             'client_secret': ous_token[1],
@@ -187,7 +187,7 @@ class OsuAPI(GameInterface):
 class ApexInterface(GameInterface):
     def __init__(self):
         super().__init__()
-        self.auth = Jsondb.get_token('apex')
+        self.auth = Jsondb.get_token("apex_status_API")
         self.url = 'https://api.mozambiquehe.re'
 
     def get_player(self,username:str,platform:str='PC'):
@@ -245,7 +245,7 @@ class ApexInterface(GameInterface):
 class SteamInterface(GameInterface):
     def __init__(self):
         super().__init__()
-        self.key = Jsondb.get_token('steam')
+        self.key = Jsondb.get_token("steam_api")
 
     def get_user(self,userid):
         params = {

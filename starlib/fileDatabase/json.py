@@ -153,28 +153,12 @@ class JsonDatabase():
 
     def get_token(self,webname:str):
         """獲取相關api的tokens
-        
-        支援CWB_api,osu(id,secret),TRN,apex,steam,twitch(id,secret),twitch_chatbot,youtube,riot,openai
         """
-        dict = {
-            'osu':'osu_api',
-            'TRN':'TRN_API',
-            'apex':'apex_status_API',
-            'steam':'steam_api',
-            'twitch':'twitch_api',
-            'youtube':'youtube_api',
-            'riot':"riot_api",
-            'openai':'openai_api'
-            }
-        if webname in dict:
-            name = dict[webname]
-            return self.tokens[name]
+        token = self.tokens[webname]
+        if token:
+            return token
         else:
-            token =  self.tokens[webname]
-            if token:
-                return token
-            else:
-                raise ValueError('無此API token')
+            raise ValueError('無此API token')
             
     def get_picture(self, id):
         """取得圖片網址"""
