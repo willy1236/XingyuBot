@@ -23,7 +23,7 @@ class TwitchUser(BaseModel):
     profile_image_url: str
     offline_image_url: str = None
     view_count: int
-    email: Optional[str] = None
+    email: str | None = None
     created_at: datetime
     url: str = None
         
@@ -155,7 +155,7 @@ class TwitchClip(BaseModel):
             color=0x6441a5,
             timestamp=self.created_at
             )
-        embed.set_author(name=f"{self.broadcaster_name}")
+        embed.set_author(name=f"{self.broadcaster_name}", icon_url=Jsondb.get_picture("twitch_001"))
         embed.set_image(url=self.thumbnail_url)
         embed.add_field(name="剪輯者", value=self.creator_name)
         if original_video:
@@ -276,10 +276,11 @@ class YoutubeVideo(BaseModel):
     @model_validator(mode='after')
     def __post_init__(self):
         self.snippet.publishedAt = self.snippet.publishedAt.astimezone(tz=tz)
-        self.liveStreamingDetails.actualStartTime = self.liveStreamingDetails.actualStartTime.astimezone(tz=tz) if self.liveStreamingDetails.actualStartTime else None
-        self.liveStreamingDetails.actualEndTime = self.liveStreamingDetails.actualEndTime.astimezone(tz=tz) if self.liveStreamingDetails.actualEndTime else None
-        self.liveStreamingDetails.scheduledStartTime = self.liveStreamingDetails.scheduledStartTime.astimezone(tz=tz) if self.liveStreamingDetails.scheduledStartTime else None
-        self.liveStreamingDetails.scheduledEndTime = self.liveStreamingDetails.scheduledEndTime.astimezone(tz=tz) if self.liveStreamingDetails.scheduledEndTime else None
+        if self.liveStreamingDetails:
+            self.liveStreamingDetails.actualStartTime = self.liveStreamingDetails.actualStartTime.astimezone(tz=tz) if self.liveStreamingDetails.actualStartTime else None
+            self.liveStreamingDetails.actualEndTime = self.liveStreamingDetails.actualEndTime.astimezone(tz=tz) if self.liveStreamingDetails.actualEndTime else None
+            self.liveStreamingDetails.scheduledStartTime = self.liveStreamingDetails.scheduledStartTime.astimezone(tz=tz) if self.liveStreamingDetails.scheduledStartTime else None
+            self.liveStreamingDetails.scheduledEndTime = self.liveStreamingDetails.scheduledEndTime.astimezone(tz=tz) if self.liveStreamingDetails.scheduledEndTime else None
     
     def embed(self):
         embed = discord.Embed(

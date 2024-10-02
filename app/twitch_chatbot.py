@@ -101,7 +101,7 @@ async def on_channel_subscribe(event: eventsub.ChannelSubscribeEvent):
     twitch_log.info(f"{event.event.user_name} 在 {event.event.broadcaster_user_name} 的層級{event.event.tier[0]}新訂閱")
     action_channel_id = TARGET_CHANNEL.get(int(event.event.broadcaster_user_id))
     if action_channel_id and not event.event.is_gift:
-        await chat.send_message(event.event.broadcaster_user_login, f"感謝 @{event.event.user_login} 的首次訂閱！")
+        await chat.send_message(event.event.broadcaster_user_login, f"感謝 @{event.event.user_login} 的訂閱！")
 
 async def on_channel_subscription_message(event: eventsub.ChannelSubscriptionMessageEvent):
     texts = [
@@ -128,9 +128,13 @@ async def on_channel_subscription_gift(event: eventsub.ChannelSubscriptionGiftEv
 
 async def on_channel_poll_begin(event: eventsub.ChannelPollBeginEvent):
     twitch_log.info(f"{event.event.broadcaster_user_name} 開始了投票：{event.event.title}")
+    if sclient.bot:
+        sclient.bot.send_message(embed=BotEmbed.general(event.event.broadcaster_user_name,description=f"{event.event.title}\n{event.event.choices}"))
 
 async def on_channel_prediction_begin(event: eventsub.ChannelPredictionEvent):
     twitch_log.info(f"{event.event.broadcaster_user_name} 開始了預測：{event.event.title}\n{event.event.outcomes[0].title} V.S. {event.event.outcomes[1].title}")
+    if sclient.bot:
+        sclient.bot.send_message(embed=BotEmbed.general(event.event.broadcaster_user_name,description=f"{event.event.title}\n{event.event.outcomes[0].title} V.S. {event.event.outcomes[1].title}"))
 
 async def on_channel_prediction_end(event: eventsub.ChannelPredictionEndEvent):
     if event.event.status == "resolved":
@@ -138,6 +142,8 @@ async def on_channel_prediction_end(event: eventsub.ChannelPredictionEndEvent):
         for outcome in event.event.outcomes:
             if outcome.id == event.event.winning_outcome_id:
                 twitch_log.info(f"{outcome.title} ({outcome.color}) 獲勝！{outcome.users}個人成功預測")
+                if sclient.bot:
+                    sclient.bot.send_message(embed=BotEmbed.general(event.event.broadcaster_user_name,description=f"{event.event.title}\n{outcome.title} 獲勝！{outcome.users}個人成功預測"))
     else:
         twitch_log.info(f"{event.event.broadcaster_user_name} 取消了預測：{event.event.title}")
 
@@ -179,7 +185,7 @@ async def on_server_notice(event: NoticeEvent):
 async def on_whisper(event: WhisperEvent):
     twitch_log.info(f'Whisper from {event.user.name}: {event.message}')
     if sclient.bot:
-        sclient.bot.send_message(embed=BotEmbed.general(event.user.name,description=event.message))
+        sclient.bot.send_message(embed=BotEmbed.general(event.user.name, Jsondb.get_picture("twitch_001"),description=event.message))
 
 async def on_raid(event:dict):
     print(event)
