@@ -22,7 +22,7 @@ from starlib.dataExtractor import DiscordOauth, TwitchOauth
 from starlib.models.mysql import CloudUser, TwitchBotJoinChannel
 from starlib.models.push import YoutubePush
 
-from .tunnel_threads import BaseThread
+from starWebServer.tunnel_threads import BaseThread
 
 discord_oauth_settings = Jsondb.get_token("discord_oauth")
 twitch_oauth_settings = Jsondb.get_token("twitch_chatbot")
@@ -63,27 +63,8 @@ def main(request:Request):
 def keep_alive(request:Request):
     return HTMLResponse(content='Bot is aLive!')
 
-# @app.post('/twitch_eventsub',response_class=PlainTextResponse)
-# def twitch_eventsub(request:Request):
-#     try:
-#         if request.method == "POST":
-#             data = Request.json()
-#             challenge = data['challenge']
-#             print('status:',data['subscription']['status'])
-
-#             r = HTMLResponse(
-#                 content = challenge,
-#                 media_type = 'text/plain',
-#                 status_code = 200
-#             )
-#             return r
-#         else:
-#             print("[Warning] Server Received & Refused!")
-#             return "Refused", 400
-
-#     except Exception as e:
-#         print("[Warning] Error:", e)
-#         return "Server error", 400
+# print("[Warning] Server Received & Refused!")
+# print("[Warning] Error:", e)
     
 async def get_yt_push(content):
     feed = feedparser.parse(content)

@@ -18,8 +18,8 @@ bot.load_all_extensions()
 
 if __name__ == "__main__":
     if api_website:
-        from app.bot_website import WebsiteThread
-        from app.tunnel_threads import LoopholeThread
+        from starWebServer.bot_website import WebsiteThread
+        from starWebServer.tunnel_threads import LoopholeThread
         tunnel_server = LoopholeThread()
         tunnel_server.start()
         time.sleep(2)
@@ -33,8 +33,8 @@ if __name__ == "__main__":
         time.sleep(2)
 
     if twitch_bot:
-        from app.tunnel_threads import LoopholeTwitchThread
         from app.twitch_chatbot import TwitchBotThread
+        from starWebServer.tunnel_threads import LoopholeTwitchThread
         
         twitchtunnel_thread = LoopholeTwitchThread()
         twitchtunnel_thread.start()

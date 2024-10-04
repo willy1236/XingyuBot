@@ -14,9 +14,9 @@ from twitchAPI.oauth import (UserAuthenticationStorageHelper,
                              UserAuthenticator, refresh_access_token,
                              validate_token)
 from twitchAPI.object import eventsub
-from twitchAPI.pubsub import PubSub
 from twitchAPI.twitch import Twitch
-from twitchAPI.type import AuthScope, ChatEvent, EventSubSubscriptionError, EventSubSubscriptionTimeout
+from twitchAPI.type import (AuthScope, ChatEvent, EventSubSubscriptionError,
+                            EventSubSubscriptionTimeout)
 
 from starlib import BotEmbed, Jsondb, sclient, twitch_log
 
@@ -101,7 +101,9 @@ async def on_channel_subscribe(event: eventsub.ChannelSubscribeEvent):
     twitch_log.info(f"{event.event.user_name} 在 {event.event.broadcaster_user_name} 的層級{event.event.tier[0]}新訂閱")
     action_channel_id = TARGET_CHANNEL.get(int(event.event.broadcaster_user_id))
     if action_channel_id and not event.event.is_gift:
-        await chat.send_message(event.event.broadcaster_user_login, f"感謝 @{event.event.user_login} 的訂閱！")
+        # await chat.send_message(event.event.broadcaster_user_login, f"感謝 @{event.event.user_login} 的訂閱！")
+        if sclient.bot:
+            sclient.bot.send_message(embed=BotEmbed.simple("subscribe", f"感謝 @{event.event.user_login} 的訂閱！"))
 
 async def on_channel_subscription_message(event: eventsub.ChannelSubscriptionMessageEvent):
     texts = [
@@ -119,6 +121,7 @@ async def on_channel_subscription_message(event: eventsub.ChannelSubscriptionMes
         await chat.send_message(event.event.broadcaster_user_login, f"感謝 @{event.event.user_login} 的{event.event.duration_months}個月訂閱！")
         if sclient.bot:
             sclient.bot.send_message(action_channel_id, embed=BotEmbed.simple("新訂閱","\n".join(texts)))
+            sclient.bot.send_message(embed=BotEmbed.simple("subscription_message", "\n".join(texts)))
 
 async def on_channel_subscription_gift(event: eventsub.ChannelSubscriptionGiftEvent):
     twitch_log.info(f"{event.event.user_name} 在 {event.event.broadcaster_user_name} 送出的{event.event.total}份層級{event.event.tier[0]}訂閱")
