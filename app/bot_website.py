@@ -16,12 +16,13 @@ from linebot.v3.messaging import (ApiClient, Configuration, MessagingApi,
                                   ReplyMessageRequest, TextMessage)
 from linebot.v3.webhooks import MessageEvent, TextMessageContent
 from linebot.v3.webhooks.models.message_event import MessageEvent
-from tunnel_threads import BaseThread
 
 from starlib import Jsondb, sclient, web_log
 from starlib.dataExtractor import DiscordOauth, TwitchOauth
 from starlib.models.mysql import CloudUser, TwitchBotJoinChannel
 from starlib.models.push import YoutubePush
+
+from .tunnel_threads import BaseThread
 
 discord_oauth_settings = Jsondb.get_token("discord_oauth")
 twitch_oauth_settings = Jsondb.get_token("twitch_chatbot")
