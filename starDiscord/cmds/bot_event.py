@@ -237,15 +237,15 @@ class event(Cog_Extension):
         guildid = get_guildid(before,after)
         #語音進出紀錄
         if voice_updata:
-            voice_log_dict = sclient.cache[NotifyChannelType.VoiceLog]
+            voice_log_dict = sclient.dbcache[NotifyChannelType.VoiceLog]
             if guildid in voice_log_dict:
                 NowTime = datetime.now()
                 before_text = ""
                 after_text = ""
                 if before.channel:
-                    before_text = before.channel.mention if not sclient.cache.getif_dynamic_voice_room(before.channel.id) else before.channel.name + ' (動態語音)'
+                    before_text = before.channel.mention if not sclient.dbcache.getif_dynamic_voice_room(before.channel.id) else before.channel.name + ' (動態語音)'
                 if after.channel:
-                    after_text = after.channel.mention if not sclient.cache.getif_dynamic_voice_room(after.channel.id) else after.channel.name + ' (動態語音)'
+                    after_text = after.channel.mention if not sclient.dbcache.getif_dynamic_voice_room(after.channel.id) else after.channel.name + ' (動態語音)'
                 
                 if not before.channel:
                     embed=discord.Embed(description=f'{user.mention} 進入語音',color=0x4aa0b5,timestamp=NowTime)
@@ -266,7 +266,7 @@ class event(Cog_Extension):
                 await self.bot.get_channel(voice_log_dict.get(guildid)[0]).send(embed=embed)
             
         #動態語音
-        dynamic_voice_dict = sclient.cache[NotifyChannelType.DynamicVoice]
+        dynamic_voice_dict = sclient.dbcache[NotifyChannelType.DynamicVoice]
         if guildid in dynamic_voice_dict:
             #新增
             if after.channel and after.channel.id == dynamic_voice_dict[guildid][0]:
@@ -279,15 +279,15 @@ class event(Cog_Extension):
                     user: discord.PermissionOverwrite(manage_channels=True,manage_roles=True)
                 }
                 new_channel = await guild.create_voice_channel(name=f'{user.name}的頻道', reason='動態語音：新增',category=category,overwrites=overwrites)
-                sclient.cache.update_dynamic_voice_room(add_channel=new_channel.id)
+                sclient.dbcache.update_dynamic_voice_room(add_channel=new_channel.id)
                 sclient.sqldb.add_dynamic_voice(new_channel.id,user.id,guild.id,None)
                 await user.move_to(new_channel)
                 return
 
             #移除
-            elif before.channel and not after.channel and not before.channel.members and sclient.cache.getif_dynamic_voice_room(before.channel.id):
+            elif before.channel and not after.channel and not before.channel.members and sclient.dbcache.getif_dynamic_voice_room(before.channel.id):
                 await before.channel.delete(reason="動態語音：移除")
-                sclient.cache.update_dynamic_voice_room(remove_channel=before.channel.id)
+                sclient.dbcache.update_dynamic_voice_room(remove_channel=before.channel.id)
                 sclient.sqldb.remove_dynamic_voice(before.channel.id)
                 return
 

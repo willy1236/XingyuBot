@@ -56,7 +56,9 @@ async def openapi(username: str = Depends(get_current_username)):
 @app.get('/')
 def main(request:Request):
     web_log.debug(f'{request.client.host} - {request.method} - {request.url.path}')
-    return HTMLResponse('test')
+    if request.query_params:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    return HTMLResponse('OK')
 
 @app.route('/keep_alive',methods=['GET'])
 def keep_alive(request:Request):
