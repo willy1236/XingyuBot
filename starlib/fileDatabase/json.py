@@ -23,7 +23,7 @@ class BaseJsonHandler:
         with open(path, 'r', encoding='utf8') as jfile:
             self.datas = json.load(jfile)
 
-    def get(self, key, default=None):
+    def get(self, key, default=None) -> dict | list | str | None:
         try:
             data = self.datas[key]
         except KeyError:
@@ -48,28 +48,6 @@ class JsonCache(BaseJsonHandler):
     def __init__(self):
         super().__init__("cache")
 
-    def add_dict_data(self, key, target, value):
-        """Add a key-value pair to a dictionary stored in the cache.\\
-        usually used in notify_community data in the cache.
-        """
-        dict_data:dict = self.get(key)
-        dict_data[target] = value
-        self.write(key, dict_data)
-
-    def remove_dict_data(self, key, target):
-        """Remove a key-value pair from a dictionary stored in the cache.\\
-        usually used in notify_community data in the cache.
-        """
-        dict_data:dict = self.get(key)
-        if target in dict_data:
-            del dict_data[target]
-            self.write(key, dict_data)
-            return True
-        return False
-    
-    def get_dict_data(self, key, target):
-        pass
-    
 class JsonToken(BaseJsonHandler):
     def __init__(self):
         super().__init__("token")
@@ -171,3 +149,34 @@ class JsonDatabase():
     def get_jdict(self,key,value):
         """取得jdict資料"""
         return self.jdict[key].get(value,value)
+    
+    def add_cache(self, key: str, target: str, value):
+        """Add a key-value(target-value) pair to a dictionary stored in the cache.\\
+        usually used in notify_community data in the cache.
+        """
+        dict_data = self.cache.get(key)
+        dict_data[target] = value
+        self.cache.write(key, dict_data)
+
+    def remove_cache(self, key: str, target: str):
+        """Remove a key-value(target-value) pair from a dictionary stored in the cache.\\
+        usually used in notify_community data in the cache.
+        """
+        dict_data = self.cache.get(key)
+        if target in dict_data:
+            del dict_data[target]
+            self.cache.write(key, dict_data)
+            return True
+        return False
+    
+    def get_cache(self, key: str):
+        """
+        Retrieve a full dict, list, or str from the cache using the provided key.
+        """
+        return self.cache.get(key)
+    
+    def write_cache(self, key: str, value: dict | list | str):
+        """
+        Writes a full dict, list, or str to the cache.
+        """
+        self.cache.write(key, value)

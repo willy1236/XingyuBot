@@ -15,7 +15,7 @@ from ..starAI import StarGeminiAI
 from ..types import DBGame
 from ..uiElement.view import PollView
 from ..utilities import BotEmbed, ChoiceList, scheduler
-from .cache import StarCache
+from .cache import StardbCache
 
 if TYPE_CHECKING:
     from twitchAPI.twitch import Twitch
@@ -70,9 +70,6 @@ class GameClient():
             if user:
                 player = api.get_player_bypuuid(user.puuid)
                 return player if player else None
-
-class BatClient():
-    """TODO: 賭盤系統"""
 
 class PointClient():
     """點數系統"""
@@ -196,8 +193,8 @@ class StarManager(
     def __init__(self):
         super().__init__()
         self.sqldb = sqldb
+        self.dbcache = StardbCache() if self.sqldb else None
         self.scheduler = scheduler
-        self.cache = StarCache() if self.sqldb else None
 
         self._starai:StarGeminiAI = None
         self.bot:DiscordBot = None

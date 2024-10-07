@@ -42,10 +42,10 @@ class BaseSQLEngine:
         # with Session(self.engine) as session:
         self.session = Session(bind=self.engine)
         
-        self.alengine = sqlalchemy.create_engine(connection_url, echo=False)
-        Base.metadata.create_all(self.alengine)
-        Sessionmkr = sessionmaker(bind=self.alengine)
-        self.alsession = Sessionmkr()
+        # self.alengine = sqlalchemy.create_engine(connection_url, echo=False)
+        # Base.metadata.create_all(self.alengine)
+        # Sessionmkr = sessionmaker(bind=self.alengine)
+        # self.alsession = Sessionmkr()
 
     #* Base
     def add(self, db_obj):
@@ -599,6 +599,10 @@ class SQLTokensSystem(BaseSQLEngine):
         stmt = select(OAuth2Token).where(OAuth2Token.user_id == user_id, OAuth2Token.type == type)
         result = self.session.exec(stmt).one_or_none()
         return result
+    
+    def get_bot_token(self, type:CommunityType):
+        stmt = select(BotToken).where(OAuth2Token.type == type).limit(1)
+        return self.session.exec(stmt).one()
 
 class SQLTest(BaseSQLEngine):
     def get_test(self):

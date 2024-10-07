@@ -21,7 +21,6 @@ from starlib import Jsondb, sclient, web_log
 from starlib.dataExtractor import DiscordOauth, TwitchOauth
 from starlib.models.mysql import CloudUser, TwitchBotJoinChannel
 from starlib.models.push import YoutubePush
-
 from starWebServer.tunnel_threads import BaseThread
 
 discord_oauth_settings = Jsondb.get_token("discord_oauth")
@@ -54,7 +53,7 @@ async def get_documentation(username: str = Depends(get_current_username)):
 async def openapi(username: str = Depends(get_current_username)):
     return get_openapi(title="FastAPI", version="0.1.0", routes=app.routes)
 
-@app.route('/')
+@app.get('/')
 def main(request:Request):
     web_log.debug(f'{request.client.host} - {request.method} - {request.url.path}')
     return HTMLResponse('test')

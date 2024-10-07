@@ -229,7 +229,7 @@ class ApexInterface(GameInterface):
             return None
         
     def get_crafting_from_chche(self):
-        apex_crafting = Jsondb.cache.get("apex_crafting")
+        apex_crafting = Jsondb.get_cache("apex_crafting")
         if apex_crafting:
             return ApexCrafting(apex_crafting['data'])
 

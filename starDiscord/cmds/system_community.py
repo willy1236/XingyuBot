@@ -39,12 +39,12 @@ class system_community(Cog_Extension):
                     pass
             
                 case NotifyCommunityType.TwitchVideo:
-                    Jsondb.cache.add_dict_data("twitch_v", user.id, datetime.now(tz=tz).isoformat(timespec="seconds"))
+                    Jsondb.add_cache("twitch_v", user.id, datetime.now(tz=tz).isoformat(timespec="seconds"))
                 
                 case NotifyCommunityType.TwitchClip:
-                    Jsondb.cache.add_dict_data("twitch_c", user.id, datetime.now(tz=tz).isoformat(timespec="seconds"))
+                    Jsondb.add_cache("twitch_c", user.id, datetime.now(tz=tz).isoformat(timespec="seconds"))
             
-            sclient.cache.update_notify_community(type)
+            sclient.dbcache.update_notify_community(type)
 
             if role:
                 await ctx.respond(f'設定成功：{user.display_name}({user.login})的{type_tw}將會發送在{channel.mention}並會通知{role.mention}')
@@ -62,22 +62,22 @@ class system_community(Cog_Extension):
         user = TwitchAPI().get_user(twitch_user)
         if not notify_type or notify_type == NotifyCommunityType.Twitch:
             sclient.sqldb.remove_notify_community(NotifyCommunityType.Twitch.value, user.id, guildid)
-            Jsondb.cache.remove_dict_data("twitch", user.id)
+            Jsondb.remove_cache("twitch", user.id)
         
         if not notify_type or notify_type == NotifyCommunityType.TwitchVideo:
             sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitchVideo.value, user.id, guildid)
-            Jsondb.cache.remove_dict_data("twitch_v", user.id)
+            Jsondb.remove_cache("twitch_v", user.id)
 
         if not notify_type or notify_type == NotifyCommunityType.TwitchClip:
             sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitchClip.value, user.id, guildid)
-            Jsondb.cache.remove_dict_data("twitch_c", user.id)
+            Jsondb.remove_cache("twitch_c", user.id)
         
         if notify_type:
             await ctx.respond(f'已移除 {user.display_name}({user.login}) 的通知')
         else:
             await ctx.respond(f'已移除 {user.display_name}({user.login}) 的所有通知')
         
-        sclient.cache.update_notify_community()
+        sclient.dbcache.update_notify_community()
 
     @twitch.command(description='確認twitch開台通知')
     async def notify(self,ctx,twitch_user:discord.Option(str,required=True,name='twitch用戶')):
@@ -158,13 +158,13 @@ class system_community(Cog_Extension):
             else:
                 await ctx.respond(f'設定成功：{ytchannel.title}的通知將會發送在{channel.mention}')
                 
-            sclient.cache.update_notify_community(NotifyCommunityType.Youtube)
+            sclient.dbcache.update_notify_community(NotifyCommunityType.Youtube)
 
             feed = YoutubeRSS().get_videos(ytchannel.id)
             updated_at = feed[0].updated_at.isoformat() if feed else None
-            cache = Jsondb.cache.get("youtube")
+            cache = Jsondb.get_cache("youtube")
             cache[ytchannel.id] = updated_at
-            Jsondb.cache.write('youtube',cache)
+            Jsondb.write_cache('youtube',cache)
         else:
             await ctx.respond(f'錯誤：找不到帳號代碼 {ythandle} 的頻道')
 
@@ -180,11 +180,11 @@ class system_community(Cog_Extension):
         sclient.sqldb.remove_notify_community(NotifyCommunityType.Youtube,ytchannel.id,guildid)
         await ctx.respond(f'已移除頻道 {ytchannel.title} 的通知')
         
-        sclient.cache.update_notify_community(NotifyCommunityType.Youtube)
+        sclient.dbcache.update_notify_community(NotifyCommunityType.Youtube)
 
-        cache = Jsondb.cache.get("youtube")
+        cache = Jsondb.get_cache("youtube")
         del cache[ytchannel.id]
-        Jsondb.cache.write('youtube',cache)
+        Jsondb.write_cache('youtube',cache)
 
     @youtube.command(description='確認youtube通知')
     async def notify(self,ctx,ythandle:discord.Option(str,required=True,name='youtube帳號代碼',description="youtube頻道中以@開頭的代號")):

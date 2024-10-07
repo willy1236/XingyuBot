@@ -351,7 +351,7 @@ class BotToken(SQLModel, table=True):
     __table_args__ = {'schema': 'stardb_tokens'}
 
     api_type: CommunityType = Field(sa_column=Column(Integer, primary_key=True))
-    id: int | None = Field(sa_column=Column(Integer, primary_key=True))
+    id: int | None = Field(sa_column=Column(Integer, primary_key=True, autoincrement=True))
     client_id: str | None
     client_secret: str | None
     access_token: str | None
@@ -359,6 +359,61 @@ class BotToken(SQLModel, table=True):
     revoke_token: str | None
     redirect_uri: str | None
     callback_uri: str | None
+    expires_at: datetime | None
+
+class AccountDetails(SQLModel, table=True):
+    __tablename__ = "account_details"
+    __table_args__ = {'schema': 'stardb_ledger'}
+
+    id: int = Field(primary_key=True)
+    title: str
+    category: int
+    Payment_method: int
+    created_at: datetime
+    total_money: int
+    actual_paid_money: int
+    irrelevant_money: int
+    note: str
+    import_source: int
+
+class UpfrontDetails(SQLModel, table=True):
+    __tablename__ = "upfront_details"
+    __table_args__ = {'schema': 'stardb_ledger'}
+
+    account_details_id: int = Field(primary_key=True)
+    upfront_id: int
+    upfront_type: datetime
+    upfront_amount: int
+    note: str
+
+class DetailsCategory(SQLModel, table=True):
+    __tablename__ = "details_category"
+    __table_args__ = {'schema': 'stardb_ledger'}
+
+    category_id: int = Field(primary_key=True)
+    category_name: str
+
+class PaymentMethod(SQLModel, table=True):
+    __tablename__ = "payment_method"
+    __table_args__ = {'schema': 'stardb_ledger'}
+
+    method_id: int = Field(primary_key=True)
+    method_name: str
+
+class ImportSource(SQLModel, table=True):
+    __tablename__ = "import_source"
+    __table_args__ = {'schema': 'stardb_ledger'}
+
+    source_id: int = Field(primary_key=True)
+    source_name: str
+
+class UpfrontType(SQLModel, table=True):
+    __tablename__ = "upfront_type"
+    __table_args__ = {'schema': 'stardb_ledger'}
+
+    type_id: int = Field(primary_key=True)
+    type_name: str
+
 
 class WarningList(ListObject):
     if TYPE_CHECKING:

@@ -1,12 +1,16 @@
 from typing import TypeVar
+
 from ..database import sqldb
-from ..types import NotifyCommunityType, NotifyChannelType
+from ..models.mysql import NotifyChannel, NotifyCommunity
+from ..types import NotifyChannelType, NotifyCommunityType
 from ..utilities import log
-from ..models.mysql import NotifyCommunity, NotifyChannel
 
 T = TypeVar("T")
 
-class StarCache:
+class StardbCache:
+    """
+    處理資料庫的快取資料，用於通知頻道、社群通知等
+    """
     dict_type = [NotifyChannelType.DynamicVoice, NotifyChannelType.VoiceLog]
     list_type = ["dynamic_voice_room"]
     notify_community_type = [NotifyCommunityType.Twitch, NotifyCommunityType.Youtube, NotifyCommunityType.TwitchVideo, NotifyCommunityType.TwitchClip]

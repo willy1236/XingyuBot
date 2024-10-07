@@ -87,4 +87,5 @@ if __name__ == '__main__':
 # school = sqldb.get_school(1)
 # print(school.name, school.students)
 ytapi = YoutubeAPI()
+breakpoint()
 print(ytapi.get_video("X-dTcoW2A8s")[0].embed().fields)
