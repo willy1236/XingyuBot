@@ -279,8 +279,7 @@ class YoutubeAPI():
 class YoutubeRSS():
     def get_videos(self,channel_id) -> list[YoutubeRSSVideo]:
         """從RSS取得影片（由新到舊）"""
-        youtube_feed = f'https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}'
-        feed = feedparser.parse(youtube_feed)
+        feed = feedparser.parse(f'https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}')
         # for entry in feed['entries']:
         #     print(entry)
         return [YoutubeRSSVideo(**i) for i in feed['entries']]

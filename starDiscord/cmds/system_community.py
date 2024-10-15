@@ -84,8 +84,8 @@ class system_community(Cog_Extension):
         guildid = ctx.guild.id
         record = sclient.sqldb.get_notify_community_user(NotifyCommunityType.Twitch, twitch_user, guildid)
         if record:
-            channel = self.bot.get_channel(record[0].channel_id)
-            role = channel.guild.get_role(record[0].role_id)
+            channel = self.bot.get_channel(record.channel_id)
+            role = channel.guild.get_role(record.role_id)
             if role:
                 await ctx.respond(f'Twitch名稱: {twitch_user} 的開台通知在 {channel.mention} 並通知 {role.mention}')
             else:
@@ -154,9 +154,9 @@ class system_community(Cog_Extension):
         if ytchannel:
             sclient.sqldb.add_notify_community(NotifyCommunityType.Youtube,ytchannel.id,guildid,channelid,roleid,ytchannel.snippet.title)
             if role:
-                await ctx.respond(f'設定成功：{ytchannel.title}的通知將會發送在{channel.mention}並會通知{role.mention}')
+                await ctx.respond(f'設定成功：{ytchannel.snippet.title}的通知將會發送在{channel.mention}並會通知{role.mention}')
             else:
-                await ctx.respond(f'設定成功：{ytchannel.title}的通知將會發送在{channel.mention}')
+                await ctx.respond(f'設定成功：{ytchannel.snippet.title}的通知將會發送在{channel.mention}')
                 
             sclient.dbcache.update_notify_community(NotifyCommunityType.Youtube)
 
@@ -178,7 +178,7 @@ class system_community(Cog_Extension):
             return
 
         sclient.sqldb.remove_notify_community(NotifyCommunityType.Youtube,ytchannel.id,guildid)
-        await ctx.respond(f'已移除頻道 {ytchannel.title} 的通知')
+        await ctx.respond(f'已移除頻道 {ytchannel.snippet.title} 的通知')
         
         sclient.dbcache.update_notify_community(NotifyCommunityType.Youtube)
 
@@ -197,14 +197,14 @@ class system_community(Cog_Extension):
         
         record = sclient.sqldb.get_notify_community_user(NotifyCommunityType.Youtube,ytchannel.id,guildid)
         if record:
-            channel = self.bot.get_channel(record[0].channel_id)
-            role = channel.guild.get_role(record[0].role_id)
+            channel = self.bot.get_channel(record.channel_id)
+            role = channel.guild.get_role(record.role_id)
             if role:
-                await ctx.respond(f'Youtube頻道: {ytchannel.title} 的通知在 {channel.mention} 並通知 {role.mention}')
+                await ctx.respond(f'Youtube頻道: {ytchannel.snippet.title} 的通知在 {channel.mention} 並通知 {role.mention}')
             else:
-                await ctx.respond(f'Youtube頻道: {ytchannel.title} 的通知在 {channel.mention}')
+                await ctx.respond(f'Youtube頻道: {ytchannel.snippet.title} 的通知在 {channel.mention}')
         else:
-            await ctx.respond(f'Youtube頻道: {ytchannel.title} 在此群組沒有設通知')
+            await ctx.respond(f'Youtube頻道: {ytchannel.snippet.title} 在此群組沒有設通知')
     
     @youtube.command(description='確認群組內所有的youtube通知')
     async def list(self,ctx):

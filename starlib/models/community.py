@@ -10,7 +10,8 @@ from ..settings import tz
 ytvideo_lives = {
     "live": "直播中",
     "upcoming": "即將直播",
-    "none": "新影片/結束直播"
+    "none": "新影片"
+    # 新影片或結束直播都是none
 }
 
 class TwitchUser(BaseModel):
@@ -292,12 +293,19 @@ class YoutubeVideo(BaseModel):
             )
         embed.add_field(name="上傳時間",value=self.snippet.publishedAt.strftime('%Y/%m/%d %H:%M:%S'),inline=False)
         #embed.add_field(name="更新時間",value=self.updated_at.strftime('%Y/%m/%d %H:%M:%S'),inline=True)
-        embed.add_field(name="現況", value=ytvideo_lives.get(self.snippet.liveBroadcastContent, "未知"))
+        
         if self.liveStreamingDetails:
+            if self.liveStreamingDetails.actualEndTime and self.snippet.liveBroadcastContent == "none":
+                embed.add_field(name="現況", value="直播結束")
+            else:
+                embed.add_field(name="現況", value=ytvideo_lives.get(self.snippet.liveBroadcastContent, "未知"))
+
             if self.liveStreamingDetails.scheduledStartTime and self.snippet.liveBroadcastContent == "upcoming":
                 embed.add_field(name="預定直播時間", value=self.liveStreamingDetails.scheduledStartTime.strftime('%Y/%m/%d %H:%M:%S'))
             if self.liveStreamingDetails.actualEndTime:
                 embed.add_field(name="直播結束時間", value=self.liveStreamingDetails.actualEndTime.strftime('%Y/%m/%d %H:%M:%S'))
+        else:
+            embed.add_field(name="現況", value=ytvideo_lives.get(self.snippet.liveBroadcastContent, "未知"))
         embed.set_image(url=self.snippet.thumbnails.high.url)
         return embed
 

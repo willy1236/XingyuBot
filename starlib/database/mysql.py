@@ -300,7 +300,7 @@ class SQLNotifySystem(BaseSQLEngine):
     def get_notify_community_user(self,notify_type:NotifyCommunityType, notify_name:str, guild_id:int):
         """取得伺服器內的指定社群通知"""
         statement = select(NotifyCommunity).where(NotifyCommunity.notify_type == notify_type, or_(NotifyCommunity.notify_name == notify_name, NotifyCommunity.display_name == notify_name), NotifyCommunity.guild_id == guild_id)
-        result = self.session.exec(statement).all()
+        result = self.session.exec(statement).one_or_none()
         return result
 
     def get_notify_community_userlist(self, notify_type:NotifyCommunityType):

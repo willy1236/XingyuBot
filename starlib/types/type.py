@@ -22,3 +22,4 @@ class NotifyChannelType(IntEnum):
 class CommunityType(IntEnum):
     Discord = 1
     Twitch = 2
+    Spotify = 3
