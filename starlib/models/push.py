@@ -23,6 +23,7 @@ class YoutubePush(BaseModel):
     def __post_init__(self):
         self.published = self.published.astimezone(tz)
         self.updated = self.updated.astimezone(tz)
+        return self
 
     def embed(self):
         embed = discord.Embed(

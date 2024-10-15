@@ -32,6 +32,7 @@ class TwitchUser(BaseModel):
     def __post_init__(self):
         self.url = f"https://www.twitch.tv/{self.login}"
         self.created_at = self.created_at.astimezone(tz=tz)
+        return self
 
     def desplay(self):
         embed = discord.Embed(
@@ -72,6 +73,7 @@ class TwitchStream(BaseModel):
         self.thumbnail_url = self.thumbnail_url.replace('{width}','960').replace('{height}','540')
         self.started_at = self.started_at.astimezone(tz=tz)
         self.url = f"https://www.twitch.tv/{self.user_login}"
+        return self
 
     def embed(self):
         embed = discord.Embed(
@@ -111,6 +113,7 @@ class TwitchVideo(BaseModel):
         self.created_at = self.created_at.astimezone(tz=tz)
         self.published_at = self.published_at.astimezone(tz=tz)
         self.thumbnail_url = self.thumbnail_url.replace('{width}', '960').replace('{height}', '540')
+        return self
 
     def embed(self):
         embed = discord.Embed(
@@ -148,6 +151,7 @@ class TwitchClip(BaseModel):
     def __post_init__(self):
         self.created_at = self.created_at.astimezone(tz=tz)
         self.thumbnail_url = self.thumbnail_url.replace('{width}', '960').replace('{height}', '540')
+        return self
 
     def embed(self, original_video: TwitchVideo = None):
         embed = discord.Embed(
@@ -238,6 +242,7 @@ class YoutubeChannel(BaseModel):
     @model_validator(mode='after')
     def __post_init__(self):
         self.snippet.publishedAt = self.snippet.publishedAt.astimezone(tz=tz)
+        return self
 
     def embed(self):
         embed = discord.Embed(
@@ -266,6 +271,7 @@ class YouTubeStream(BaseModel):
     def __post_init__(self):
         self.snippet.publishedAt = self.snippet.publishedAt.astimezone(tz=tz)
         self.snippet.publishTime = self.snippet.publishTime.astimezone(tz=tz)
+        return self
 
 class YoutubeVideo(BaseModel):
     kind: str
@@ -282,6 +288,7 @@ class YoutubeVideo(BaseModel):
             self.liveStreamingDetails.actualEndTime = self.liveStreamingDetails.actualEndTime.astimezone(tz=tz) if self.liveStreamingDetails.actualEndTime else None
             self.liveStreamingDetails.scheduledStartTime = self.liveStreamingDetails.scheduledStartTime.astimezone(tz=tz) if self.liveStreamingDetails.scheduledStartTime else None
             self.liveStreamingDetails.scheduledEndTime = self.liveStreamingDetails.scheduledEndTime.astimezone(tz=tz) if self.liveStreamingDetails.scheduledEndTime else None
+        return self
     
     def embed(self):
         embed = discord.Embed(
@@ -326,6 +333,7 @@ class YoutubeRSSVideo(BaseModel):
     def __post_init__(self):
         self.uplood_at = self.uplood_at.astimezone(tz=tz)
         self.updated_at = self.updated_at.astimezone(tz=tz)
+        return self
 
     def embed(self):
         embed = discord.Embed(
