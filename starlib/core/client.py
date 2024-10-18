@@ -7,12 +7,9 @@ from typing import TYPE_CHECKING
 import discord
 
 from ..database import sqldb
-from ..dataExtractor import ApexInterface, OsuAPI, RiotAPI, SteamInterface
 from ..fileDatabase import Jsondb
-from ..models import PartialLOLPlayer
 from ..settings import tz
 from ..starAI import StarGeminiAI
-from ..types import DBGame
 from ..uiElement.view import PollView
 from ..utilities import BotEmbed, ChoiceList, scheduler
 from .cache import StardbCache
@@ -21,55 +18,6 @@ if TYPE_CHECKING:
     from twitchAPI.twitch import Twitch
 
     from starDiscord import DiscordBot
-
-class GameClient():
-    """遊戲查詢系統"""
-    def get_user_game(self,discord_id,game:DBGame=None):
-        """取得遊戲資料
-        :param discord_id: 要查詢的用戶
-        :param game: 提供將只查詢指定遊戲內容
-        """
-        dbdata = sqldb.get_game_data(discord_id,game)
-        if not dbdata:
-            return
-        
-        if game:
-            game = DBGame(game)
-            APIdata = None
-            match game:
-                case DBGame.STEAM:
-                    APIdata = SteamInterface().get_user(dbdata['player_id'])
-                case DBGame.OSU:
-                    APIdata = OsuAPI().get_player(dbdata['player_name'])
-                case DBGame.APEX:
-                    APIdata = ApexInterface().get_player(dbdata['player_name'])
-                case DBGame.LOL:
-                    APIdata = RiotAPI().get_player_bypuuid(dbdata['other_id'])
-                case _:
-                    raise ValueError("Invalid game")
-            return APIdata
-        else:
-            return dbdata
-        
-    def get_lol_player(self,riot_id=None,discord_id=None):
-        """
-        從資料庫取得資料，若沒有則從API取得
-        :param riot_id: Riot ID（名稱#tag）
-        :param discord_id: 若提供則先查詢資料庫
-        """
-        if discord_id:
-            dbdata = sqldb.get_game_data(discord_id,"lol")
-            if dbdata:
-                player = PartialLOLPlayer(dbdata)
-                if player.fullname == riot_id:
-                    return player
-        
-        if riot_id:
-            api = RiotAPI()
-            user = api.get_riot_account_byname(riot_id)
-            if user:
-                player = api.get_player_bypuuid(user.puuid)
-                return player if player else None
 
 class PointClient():
     """點數系統"""
@@ -174,12 +122,8 @@ class ElectionSystem():
             embed.add_field(name=position_name, value=text, inline=False)
         
         return embed
-    
-class GiveawayClient():
-    """TODO: 抽獎系統"""
 
 class StarManager(
-    GameClient,
     PointClient,
     PollClient,
     ElectionSystem,

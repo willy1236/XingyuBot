@@ -9,11 +9,13 @@ from discord.ext import commands, pages
 from starlib import (BotEmbed, ChoiceList, Jsondb, csvdb,
                       sclient)
 from starlib.dataExtractor import *
-from starlib.types import DBGame
+from starlib.types import GameType
 from starlib.uiElement.modals import HoyolabCookiesModal
+from starlib.errors import APIInvokeError
+from starlib.models.mysql import UserGame
 from ..extension import Cog_Extension
 
-set_option = ChoiceList.set('game_set_option')
+game_option = ChoiceList.set('game_set_option')
 hoyo_game_option = [
     discord.OptionChoice(name='原神',value=genshin.Game.GENSHIN),
     discord.OptionChoice(name='崩壞3rd',value=genshin.Game.HONKAI),
@@ -22,6 +24,21 @@ hoyo_game_option = [
 
 config = Jsondb.config
 debug_guilds = config.get('debug_guilds')
+
+riot_api = RiotAPI()
+
+def get_lol_player(user:discord.User, riot_id:str = None):
+    if riot_id:
+        player = riot_api.get_player_lol(riot_id)
+    else:
+        user_game = sclient.sqldb.get_user_game(user.id, GameType.LOL)
+        if user_game:
+            player = riot_api.get_player_bypuuid(user_game.other_id)
+            player.name = user_game.player_name
+        else:
+            player = None
+    
+    return player
 
 class system_game(Cog_Extension):
     game = SlashCommandGroup("game", "遊戲資訊相關指令")
@@ -35,97 +52,83 @@ class system_game(Cog_Extension):
         
     @game.command(description='設定遊戲資料')
     async def set(self,ctx,
-                  game:discord.Option(str,name='遊戲',description='要設定的遊戲',required=True,choices=set_option),
+                  game:discord.Option(int,name='遊戲',description='要設定的遊戲',required=True,choices=game_option),
                   value:discord.Option(str,name='資料',description='要設定的資料，留空以移除資料',default=None)):
         await ctx.defer()
         id = str(ctx.author.id)
+        game = GameType(game)
         if not value:
-            sclient.sqldb.remove_game_data(id,game)
+            sclient.sqldb.remove_user_game(id, game)
             await ctx.respond(f'已將{game}資料移除')
             return
 
-        player_name = None
-        player_id = None
-        account_id = None
-        other_id = None
+        user_game = UserGame(discord_id=ctx.author.id,game=game.value)
 
-        game = DBGame(game)
         unneed_verify = []
         if game in unneed_verify:
-            player_name = value
+            user_game.player_name = value
         
-        elif game == DBGame.STEAM:
-            APIdata = SteamInterface().get_user(value)
+        elif game == GameType.Steam:
+            APIdata = SteamAPI().get_user(value)
             if APIdata:
-                player_name = APIdata.name
-                player_id = APIdata.id,
+                user_game.player_name = APIdata.name
+                user_game.player_id = APIdata.id,
             else:
                 await ctx.respond(f'錯誤:找不到此用戶',ephemeral=True)
                 return
         
-        elif game == DBGame.LOL:
-            api = RiotAPI()
-            riot_user = api.get_riot_account_byname(value)
-            APIdata = api.get_player_bypuuid(riot_user.puuid)
+        elif game == GameType.LOL:
+            riot_user = riot_api.get_riot_account_byname(value)
+            APIdata = riot_api.get_player_bypuuid(riot_user.puuid)
             if APIdata:
-                player_name = riot_user.fullname
-                player_id = APIdata.summonerid
-                account_id = APIdata.accountid
-                other_id = APIdata.puuid
+                user_game.player_name = riot_user.fullname
+                user_game.player_id = APIdata.summonerid
+                user_game.account_id = APIdata.accountid
+                user_game.other_id = APIdata.puuid
             else:
                 await ctx.respond(f'錯誤:找不到此用戶',ephemeral=True)
                 return
 
-        elif game == DBGame.APEX:
-            APIdata = ApexInterface().get_player(value)
+        elif game == GameType.Apex:
+            APIdata = ApexAPI().get_player(value)
             if APIdata:
-                player_name = APIdata.name
-                player_id = APIdata.id
+                user_game.player_name = APIdata.name
+                user_game.player_id = APIdata.id
             else:
                 await ctx.respond(f'錯誤:找不到此用戶',ephemeral=True)
                 return
 
-        elif game == DBGame.OSU:
+        elif game == GameType.Osu:
             APIdata = OsuAPI().get_player(value)
             if APIdata:
-                player_name = APIdata.name
-                player_id = APIdata.id
+                user_game.player_name = APIdata.name
+                user_game.player_id = APIdata.id
             else:
                 await ctx.respond(f'錯誤:找不到此用戶',ephemeral=True)
                 return
 
-        sclient.sqldb.set_game_data(id,game.value,player_name,player_id,account_id,other_id)
-        await ctx.respond(f'已將用戶的 {game.name} 資料設定為 {player_name}')
-            
-
-    # @game.command(description='揪團找人')
-    # async def find(self,
-    #                ctx:discord.ApplicationContext,
-    #                number_all:discord.Option(int,name='人數',description=''),
-    #                game_option:discord.Option(str,name='遊戲',description='',choices=set_option),
-    #                message:discord.Option(str,name='要留下的訊息',description='',default=None),
-    #                number_now:discord.Option(int,name='現有人數',description='預設為1',default=1)):
-    #     game = DBGame(game_option)
-    #     creator = ctx.author
-    #     view = GameView(creator,game,number_all,number_now,message)
-    #     await ctx.respond(embed=view.embed,view=view)
+        sclient.sqldb.merge(user_game)
+        await ctx.respond(f'已將用戶的 {ChoiceList.get_tw(game.value, "game_set_option")} 資料設定為 {user_game.player_name}')
     
     @game.command(description='查詢遊戲資料')
     async def player(self,ctx,
                    user:discord.Option(discord.Member,name='用戶',description='要查詢的用戶',default=None),
-                   game:discord.Option(str,name='遊戲',description='若輸入此欄，將會用資料庫的資料查詢玩家',default=None,choices=set_option)):
+                   #game:discord.Option(int,name='遊戲',description='若輸入此欄，將會用資料庫的資料查詢玩家',default=None,choices=game_option)
+                   ):
         await ctx.defer()
         user = user or ctx.author
         userid = user.id
         
-        if not game and not (user == ctx.author or self.bot.is_owner(ctx.author)):
-            await ctx.respond('目前不開放查詢別人的綜合資料喔',ephemeral=True)
-            return
+        # if not game and not (user == ctx.author or self.bot.is_owner(ctx.author)):
+        #     await ctx.respond('目前不開放查詢別人的綜合資料喔',ephemeral=True)
+        #     return
         
-        player_data = sclient.get_user_game(userid)
-
+        player_data = sclient.sqldb.get_user_game_all(userid)
         if player_data:
-            await ctx.respond(f'查詢成功',embed=player_data.embed(user))
+            embed = BotEmbed.user(user, "遊戲資料")
+            for data in player_data:
+                embed.add_field(name=ChoiceList.get_tw(data.game, "game_set_option"), value=data.player_name)
+            await ctx.respond(f'查詢成功',embed=embed)
         else:
             await ctx.respond(f'錯誤：找不到用戶或尚未註冊資料',ephemeral=True)
 
@@ -140,6 +143,7 @@ class system_game(Cog_Extension):
     #     embed.add_field(name="查詢戰績", value="LOL戰績網(lol.moa.tw)", inline=False)
     #     embed.set_thumbnail(url='https://i.imgur.com/B0TMreW.png')
     #     await ctx.respond(embed=embed)
+
     @lol.command(description='查詢Riot帳號資料')
     async def riot(self,ctx,riot_id:discord.Option(str,name='riot_id',description='名稱#tag')):
         api = RiotAPI()
@@ -147,23 +151,20 @@ class system_game(Cog_Extension):
         if user:
             await ctx.respond('查詢成功',embed=user.embed())
         else:
-            await ctx.respond('查詢失敗:查無此ID',ephemeral=True)
+            await ctx.respond('查詢失敗：查無此ID',ephemeral=True)
 
     @lol.command(description='查詢League of Legends用戶資料')
-    async def user(self,ctx,riot_id:discord.Option(str,name='riot_id',description='名稱#tag')):
-        api = RiotAPI()
-        user = api.get_riot_account_byname(riot_id)
-        player = api.get_player_bypuuid(user.puuid)
-        # player = sclient.get_lol_player(riot_id,ctx.author.id)
+    async def user(self,ctx,riot_id:discord.Option(str,name='riot_id',description='名稱#tag，留空則使用資料庫查詢',required=False)):
+        player = get_lol_player(ctx.author, riot_id)
 
         if player:
-            await ctx.respond('查詢成功',embed=player.desplay())
+            await ctx.respond('查詢成功',embed=player.desplay(ctx.author))
         else:
-            await ctx.respond('查詢失敗:查無此ID',ephemeral=True)
+            await ctx.respond('查詢失敗：查無此ID' if riot_id else "查詢失敗：無設定ID", ephemeral=True)
 
     @lol.command(description='查詢League of Legends對戰資料')
     async def match(self,ctx,matchid:discord.Option(str,name='對戰id',description='要查詢的對戰')):
-        match = RiotAPI().get_match(matchid)
+        match = riot_api.get_match(matchid)
         if match:
             await ctx.respond('查詢成功',embed=match.desplay())
         else:
@@ -171,33 +172,30 @@ class system_game(Cog_Extension):
 
     @lol.command(description='查詢最近一次的League of Legends對戰')
     async def playermatch(self,ctx,riot_id:discord.Option(str,name='riot_id',description='名稱#tag，留空則使用資料庫查詢',required=False)):
-        api = RiotAPI()
-        player = sclient.get_lol_player(riot_id,ctx.author.id)
+        player = get_lol_player(ctx.author, riot_id)
         if not player:
             await ctx.respond('查詢失敗：查無此玩家',ephemeral=True)
             return
-        puuid = player.puuid
         
-        match_list = api.get_player_matchs(puuid,1)
+        match_list = riot_api.get_player_matchs(player.puuid,1)
         if not match_list:
-            await ctx.respond('查詢失敗:此玩家查無對戰紀錄',ephemeral=True)
+            await ctx.respond('查詢失敗：此玩家查無對戰紀錄',ephemeral=True)
             return
         
-        match = api.get_match(match_list[0])
+        match = riot_api.get_match(match_list[0])
         if match:
             await ctx.respond('查詢成功',embed=match.desplay())
         else:
-            await ctx.respond('查詢失敗：出現未知錯誤',ephemeral=True)
+            raise APIInvokeError("playermatch occurred error while getting match data.")
 
     @lol.command(description='查詢League of Legends專精英雄')
-    async def masteries(self,ctx,riot_id:discord.Option(str,name='riot_id',description='名稱#tag')):
-        api = RiotAPI()
-        player = sclient.get_lol_player(riot_id)
+    async def masteries(self,ctx,riot_id:discord.Option(str,name='riot_id',description='名稱#tag，留空則使用資料庫查詢',required=False)):
+        player = get_lol_player(ctx.author, riot_id)
         if not player:
             await ctx.respond('查詢失敗：查無此玩家',ephemeral=True)
             return
         
-        masteries_list = api.get_summoner_masteries(player.puuid)
+        masteries_list = riot_api.get_summoner_masteries(player.puuid)
         if not masteries_list:
             await ctx.respond('查詢失敗：此玩家查無專精資料',ephemeral=True)
         
@@ -214,14 +212,13 @@ class system_game(Cog_Extension):
         await ctx.respond('查詢成功',embed=embed)
 
     @lol.command(description='查詢League of Legends的玩家積分資訊')
-    async def rank(self,ctx,riot_id:discord.Option(str,name='riot_id',description='名稱#tag')):
-        api = RiotAPI()
-        player = sclient.get_lol_player(riot_id)
+    async def rank(self,ctx,riot_id:discord.Option(str,name='riot_id',description='名稱#tag，留空則使用資料庫查詢',required=False)):
+        player = get_lol_player(ctx.author, riot_id)
         if not player:
             await ctx.respond('查詢失敗：查無此玩家',ephemeral=True)
             return
         
-        rank_data = api.get_summoner_rank(player.summonerid)
+        rank_data = riot_api.get_summoner_rank(player.summonerid)
         if rank_data:
             embed_list = [rank.embed() for rank in rank_data]
         else:
@@ -230,14 +227,13 @@ class system_game(Cog_Extension):
 
     @lol.command(description='查詢最近的League of Legends對戰ID（僅取得ID，需另行用查詢對戰內容）')
     async def recentmatches(self,ctx,riot_id:discord.Option(str,name='riot_id',description='名稱#tag，留空則使用資料庫查詢',required=False)):
-        api = RiotAPI()
-        player = sclient.get_lol_player(riot_id,ctx.author.id if not riot_id else None)
+        player = get_lol_player(ctx.author, riot_id)
         if not player:
             await ctx.respond('查詢失敗：查無此玩家',ephemeral=True)
             return
         puuid = player.puuid
         
-        match_list = api.get_player_matchs(puuid,20)
+        match_list = riot_api.get_player_matchs(puuid,20)
         if not match_list:
             await ctx.respond('查詢失敗:此玩家查無對戰紀錄',ephemeral=True)
             return
@@ -247,13 +243,12 @@ class system_game(Cog_Extension):
 
     @lol.command(description='查詢正在進行的League of Legends對戰（無法查詢聯盟戰棋）')
     async def activematches(self,ctx,riot_id:discord.Option(str,name='riot_id',description='名稱#tag，留空則使用資料庫查詢',required=False)):
-        api = RiotAPI()
-        player = sclient.get_lol_player(riot_id,ctx.author.id if not riot_id else None)
+        player = get_lol_player(ctx.author, riot_id)
         if not player:
             await ctx.respond('查詢失敗：查無此玩家',ephemeral=True)
             return
         
-        active_match = api.get_summoner_active_match(player.puuid)
+        active_match = riot_api.get_summoner_active_match(player.puuid)
         if not active_match:
             await ctx.respond(f'{player.fullname} 沒有進行中的對戰',ephemeral=True)
             return
@@ -316,7 +311,7 @@ class system_game(Cog_Extension):
     async def user(self,
                    ctx:discord.ApplicationContext,
                    username:discord.Option(str,name='玩家名稱',description='要查詢的玩家')):
-        player = ApexInterface().get_player(username)
+        player = ApexAPI().get_player(username)
         if player:
             await ctx.respond(content='查詢成功',embed=player.desplay())
         else:
@@ -325,13 +320,13 @@ class system_game(Cog_Extension):
     @apex.command(description='查詢Apex地圖資料')
     @commands.cooldown(rate=1,per=3)
     async def map(self,ctx):
-        embed = ApexInterface().get_map_rotation().desplay()
+        embed = ApexAPI().get_map_rotation().desplay()
         await ctx.respond(content='查詢成功',embed=embed)
 
     @apex.command(description='查詢Apex合成器內容資料')
     @commands.cooldown(rate=1,per=3)
     async def crafting(self,ctx):
-        embed = ApexInterface().get_crafting().desplay()
+        embed = ApexAPI().get_crafting().desplay()
         await ctx.respond(content='查詢成功',embed=embed)
 
     # @apex.command(description='查詢Apex伺服器資料',enabled=False)
@@ -355,7 +350,7 @@ class system_game(Cog_Extension):
     @commands.cooldown(rate=1,per=1)
     async def user(self,ctx,
                 userid:discord.Option(str,name='用戶id',description='要查詢的用戶',default=None)):
-        user = SteamInterface().get_user(userid)
+        user = SteamAPI().get_user(userid)
         if user:
             await ctx.respond(content='查詢成功',embed=user.desplay())
         else:

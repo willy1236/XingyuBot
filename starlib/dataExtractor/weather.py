@@ -4,10 +4,7 @@ from bs4 import BeautifulSoup
 from starlib.fileDatabase import Jsondb
 from starlib.models.weather import *
 
-class WeatherClient():
-    """天氣資料交互"""
-
-class CWA_API(WeatherClient):
+class CWA_API():
     def __init__(self):
         super().__init__()
         self.auth = Jsondb.get_token('cwa_api')

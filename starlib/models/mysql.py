@@ -70,6 +70,17 @@ class UserPoint(SQLModel, table=True):
     point: int | None = Field(default=0)
     rcoin: int | None = Field(default=0)
 
+class UserGame(SQLModel, table=True):
+    __tablename__ = "game_data"
+    __table_args__ = {'schema': 'stardb_user'}
+
+    discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True, autoincrement=False))
+    game: GameType = Field(sa_column=Column(Integer, primary_key=True, autoincrement=False))
+    player_name: str
+    player_id: str | None
+    account_id: str | None
+    other_id: str | None
+
 class UserPoll(SQLModel, table=True):
     __tablename__ = "user_poll"
     __table_args__ = {'schema': 'stardb_user'}

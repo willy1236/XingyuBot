@@ -7,17 +7,16 @@ import sqlalchemy
 from mysql.connector.errors import Error as sqlerror
 from sqlalchemy import and_, delete, desc, func, or_
 from sqlalchemy.engine import URL
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker
 from sqlmodel import Session, SQLModel, create_engine, select
-from sqlalchemy.exc import IntegrityError
-
-from starlib.models.mysql import NotifyCommunity
 
 from ..errors import *
-from ..models.model import *
+from ..fileDatabase import Jsondb
 from ..models.mysql import *
+from ..models.mysql import NotifyCommunity
 from ..models.rpg import *
-from ..models.user import RPGUser, CityBattle
+from ..models.user import CityBattle, RPGUser
 from ..settings import tz
 from ..types import *
 
@@ -190,6 +189,22 @@ class SQLCurrencySystem(BaseSQLEngine):
         record = self.cursor.fetchall()
         if record:
             return ShopItem(record[0])
+
+class SQLGameSystem(BaseSQLEngine):
+    def get_user_game(self, discord_id:int, game:GameType):
+        stmt = select(UserGame).where(UserGame.discord_id == discord_id, UserGame.game == game)
+        result = self.session.exec(stmt).one_or_none()
+        return result
+    
+    def get_user_game_all(self, discord_id:int):
+        stmt = select(UserGame).where(UserGame.discord_id == discord_id)
+        result = self.session.exec(stmt).all()
+        return result
+
+    def remove_user_game(self, discord_id:int, game:GameType):
+        stmt = delete(UserGame).where(UserGame.discord_id == discord_id, UserGame.game == game)
+        self.session.exec(stmt)
+        self.session.commit()
 
 class SQLPetSystem(BaseSQLEngine):
     def get_pet(self,discord_id:int):
@@ -688,38 +703,6 @@ class MySQLBaseModel(object):
     #     #self.cursor.execute(f'DELETE FROM `{table}` WHERE `id` = %s;',("3",))
     #     self.cursor.execute(f'DELETE FROM `{table}` WHERE `id` = %s;',value)
     #     self.connection.commit()
-
-class MySQLGameSystem(MySQLBaseModel):
-    """遊戲資料系統"""
-    def set_game_data(self,discord_id:int,game:DBGame,player_name:str=None,player_id:str=None,account_id:str=None,other_id:str=None):
-        """設定遊戲資料"""
-        game = DBGame(game)
-        self.cursor.execute(f"USE `stardb_user`;")
-        self.cursor.execute(f"REPLACE INTO `game_data` VALUES(%s,%s,%s,%s,%s,%s);",(discord_id,game.value,player_name,player_id,account_id,other_id))
-        self.connection.commit()
-
-    def remove_game_data(self,discord_id:int,game:DBGame):
-        """移除遊戲資料"""
-        game = DBGame(game)
-        self.cursor.execute(f"USE `stardb_user`;")
-        self.cursor.execute(f"DELETE FROM `game_data` WHERE `discord_id` = %s AND `game` = %s;",(discord_id,game.value))
-        self.connection.commit()
-
-    def get_game_data(self,discord_id:int,game:DBGame=None) -> dict | GameInfoPage:
-        """獲取遊戲資料"""
-        self.cursor.execute(f"USE `stardb_user`;")
-        if game:
-            game = DBGame(game)
-            self.cursor.execute(f"SELECT * FROM `game_data` WHERE `discord_id` = %s AND `game` = %s;",(discord_id,game.value))
-            records = self.cursor.fetchall()
-            if records:
-                records = records[0]
-        else:
-            self.cursor.execute(f"SELECT * FROM `game_data` WHERE `discord_id` = %s;",(discord_id,))
-            records = self.cursor.fetchall()
-            if records:
-                records = GameInfoPage(records)
-        return records
     
 class MySQLHoYoLabSystem(MySQLBaseModel):
     def set_hoyo_cookies(self,discord_id:int,cookies:dict):
@@ -1193,19 +1176,6 @@ class MYSQLElectionSystem(MySQLBaseModel):
         if records:
             return Party(**records[0])
 
-class MySQLTokensSystem(MySQLBaseModel):
-    def set_oauth(self, user_id:int, type:CommunityType, access_token:str, refresh_token:str=None, expires_at:datetime=None):
-        type = CommunityType(type)
-        self.cursor.execute(f"INSERT INTO `stardb_tokens`.`oauth_token` VALUES(%s,%s,%s,%s,%s) ON DUPLICATE KEY UPDATE `access_token` = %s, `refresh_token` = %s, `expires_at` = %s;",(user_id,type.value,access_token,refresh_token,expires_at,access_token,refresh_token,expires_at))
-        self.connection.commit()
-
-    def get_oauth(self, user_id:int, type:CommunityType):
-        type = CommunityType(type)
-        self.cursor.execute(f"SELECT * FROM `stardb_tokens`.`oauth_token` WHERE `user_id` = {user_id} AND `type` = {type.value};")
-        records = self.cursor.fetchall()
-        if records:
-            return records[0]
-
 class MySQLManager(MySQLBaseModel):
     def copy_data(self, remote_schema, remote_table, local_schema, local_table):
         remote = MySQLBaseModel(Jsondb.config["remote_SQLsettings"])
@@ -1224,12 +1194,10 @@ class MySQLManager(MySQLBaseModel):
                 raise e
 
 class MySQLDatabase(
-    MySQLGameSystem,
     MySQLHoYoLabSystem,
     MySQLBetSystem,
     MySQLRPGSystem,
     MYSQLElectionSystem,
-    MySQLTokensSystem,
     MySQLManager,
 ):
     """Mysql操作"""
@@ -1237,6 +1205,7 @@ class MySQLDatabase(
 class SQLEngine(
     SQLUserSystem,
     SQLCurrencySystem,
+    SQLGameSystem,
     SQLPetSystem,
     SQLNotifySystem,
     SQLRoleSaveSystem,

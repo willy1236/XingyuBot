@@ -34,8 +34,8 @@ class RiotUser():
         return embed
     
 class LOLPlayer(RiotUser):
-    def __init__(self,data):
-        self.name = data.get('name')
+    def __init__(self,data, name=None):
+        self.name = data.get('name', name)
         self.summonerid = data.get('id')
         self.accountid = data.get('accountId')
         self.puuid = data.get('puuid')

@@ -1,4 +1,4 @@
-from enum import IntEnum
+from enum import Enum, IntEnum
 
 
 class NotifyCommunityType(IntEnum):
@@ -19,7 +19,16 @@ class NotifyChannelType(IntEnum):
     DynamicVoice = 9
     VoiceLog = 10
 
+class GameType(IntEnum):
+    LOL = 1
+    Apex = 2
+    Osu = 3
+    Steam = 4
+    
 class CommunityType(IntEnum):
     Discord = 1
     Twitch = 2
     Spotify = 3
+
+class StardbCacheType(Enum):
+    pass

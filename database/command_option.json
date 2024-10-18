@@ -1,5 +1,5 @@
 {
-    "last_update": "2024-05-05",
+    "last_update": "2024-10-18",
     "channel_set_option": {
         "1": {
             "en-US": "All Announcements",
@@ -43,17 +43,21 @@
         }
     },
     "game_set_option": {
-        "steam": {
-            "en-US": "Steam"
+        "1": {
+            "en-US": "League of Legends",
+            "zh-TW": "League of Legends"
         },
-        "osu": {
-            "en-US": "Osu"
+        "2": {
+            "en-US": "Apex Legends",
+            "zh-TW": "Apex Legends"
         },
-        "apex": {
-            "en-US": "Apex Legends"
+        "3": {
+            "en-US": "Osu",
+            "zh-TW": "Osu"
         },
-        "lol": {
-            "en-US": "League of Legends"
+        "4": {
+            "en-US": "Steam",
+            "zh-TW": "Steam"
         }
     },
     "bet_option": {

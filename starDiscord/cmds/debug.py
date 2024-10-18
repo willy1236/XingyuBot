@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 
 from starlib import Jsondb,sclient,tz,BotEmbed
 from starlib.errors import *
-from starlib.types.game import DBGame
 from starlib.utilities.map import sunmon_area
 from ..extension import Cog_Extension
 

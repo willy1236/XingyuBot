@@ -118,7 +118,7 @@ class ChoiceList():
         return list
 
     @staticmethod
-    def get_tw(value,option_name):
+    def get_tw(value,option_name) -> str:
         if Jsondb.jdict.get(option_name):
             if Jsondb.jdict[option_name].get("zh-TW"):
                 return Jsondb.jdict[option_name]["zh-TW"].get(str(value),value)

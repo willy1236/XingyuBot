@@ -1,16 +1,14 @@
 import time
 
-import requests
 import pandas as pd
+import requests
 
+from starlib.errors import APIInvokeError
 from starlib.fileDatabase import Jsondb
 from starlib.models.game import *
-from starlib.errors import APIInvokeError
 
-class GameInterface():
-    pass
 
-class RiotAPI(GameInterface):
+class RiotAPI():
     def __init__(self):
         super().__init__()
         self.url_tw2 = 'https://tw2.api.riotgames.com'
@@ -39,16 +37,21 @@ class RiotAPI(GameInterface):
         else:
             raise APIInvokeError("lol_player_byname",r.text)
         
-    def get_player_bypuuid(self,puuid):
-        r = requests.get(f'{self.url_tw2}/lol/summoner/v4/summoners/by-puuid/{puuid}',headers=self._headers)
+    def get_player_bypuuid(self,puuid:str):
+        r = requests.get(f'{self.url_tw2}/lol/summoner/v4/summoners/by-puuid/{puuid}', headers=self._headers)
         if r.ok:
             return LOLPlayer(r.json())
         elif r.status_code == 404:
             return None        
         else:
             raise APIInvokeError("lol_player_bypuuid",r.text)
+        
+    def get_player_lol(self, riot_id):
+        account = self.get_riot_account_byname(riot_id)
+        if account:
+            return self.get_player_bypuuid(account.puuid)
 
-    def get_player_matchs(self,puuid,count=5) -> list[str]:
+    def get_player_matchs(self,puuid:str,count=5) -> list[str]:
         params = {
             'start':0,
             'count':count
@@ -59,18 +62,18 @@ class RiotAPI(GameInterface):
         else:
             raise APIInvokeError("lol_player_match",r.text)
 
-    def get_match(self,matchId):
-        r = requests.get(f'{self.url_sea}/lol/match/v5/matches/{matchId}',headers=self._headers)
+    def get_match(self,matchId:str):
+        r = requests.get(f'{self.url_sea}/lol/match/v5/matches/{matchId}', headers=self._headers)
         if r.ok:
             return LOLMatch(**r.json())
         else:
             raise APIInvokeError("lol_match",r.text)
         
-    def get_summoner_masteries(self, puuid, count=5) -> list[LOLChampionMastery | None]:
+    def get_summoner_masteries(self, puuid:str, count=5) -> list[LOLChampionMastery | None]:
         params = {
             'count': count
             }
-        r = requests.get(f'{self.url_tw2}/lol/champion-mastery/v4/champion-masteries/by-puuid/{puuid}/top',params=params,headers=self._headers)
+        r = requests.get(f'{self.url_tw2}/lol/champion-mastery/v4/champion-masteries/by-puuid/{puuid}/top', params=params, headers=self._headers)
         if r.ok:
             return [LOLChampionMastery(**data) for data in r.json()]
         elif r.status_code == 404:
@@ -78,8 +81,8 @@ class RiotAPI(GameInterface):
         else:
             raise APIInvokeError("lol_summoner_masteries",r.text)
     
-    def get_summoner_active_match(self,puuid):
-        r = requests.get(f'{self.url_tw2}/lol/spectator/v5/active-games/by-summoner/{puuid}',headers=self._headers)
+    def get_summoner_active_match(self,puuid:str):
+        r = requests.get(f'{self.url_tw2}/lol/spectator/v5/active-games/by-summoner/{puuid}', headers=self._headers)
         if r.ok:
             return LOLActiveMatch(r.json())
         elif r.status_code == 404:
@@ -87,8 +90,8 @@ class RiotAPI(GameInterface):
         else:
             raise APIInvokeError(f"lol_summoner_active_match:{r.text}")
         
-    def get_summoner_rank(self,summoner_id):
-        r = requests.get(f'{self.url_tw2}/lol/league/v4/entries/by-summoner/{summoner_id}',headers=self._headers)
+    def get_summoner_rank(self,summoner_id:str):
+        r = requests.get(f'{self.url_tw2}/lol/league/v4/entries/by-summoner/{summoner_id}', headers=self._headers)
         if r.ok:
             return [LOLPlayerRank(**data) for data in r.json()]
         elif r.status_code == 404:
@@ -128,9 +131,8 @@ class RiotAPI(GameInterface):
         else:
             raise APIInvokeError("ddragon_version",r.text)
     
-class OsuAPI(GameInterface):
+class OsuAPI():
     def __init__(self):
-        super().__init__()
         self._headers = self._get_headers()
         self._url = 'https://osu.ppy.sh/api/v2'
 
@@ -184,9 +186,8 @@ class OsuAPI(GameInterface):
             return None
 
 
-class ApexInterface(GameInterface):
+class ApexAPI():
     def __init__(self):
-        super().__init__()
         self.auth = Jsondb.get_token("apex_status_API")
         self.url = 'https://api.mozambiquehe.re'
 
@@ -242,7 +243,7 @@ class ApexInterface(GameInterface):
             return None
 
 
-class SteamInterface(GameInterface):
+class SteamAPI():
     def __init__(self):
         super().__init__()
         self.key = Jsondb.get_token("steam_api")
@@ -260,12 +261,12 @@ class SteamInterface(GameInterface):
             return None
 
 
-class DBDInterface(SteamInterface):
+class DBDInterface(SteamAPI):
     def __init__(self):
         super().__init__()
 
     def get_player(self,steamid):
-        user = SteamInterface().get_user(steamid)
+        user = SteamAPI().get_user(steamid)
         if user:
             params = {'steamid':user.id}
             response = requests.get('https://dbd.tricky.lol/api/playerstats', params=params)

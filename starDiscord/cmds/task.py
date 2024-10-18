@@ -105,7 +105,7 @@ class task(Cog_Extension):
             pass
 
     async def apex_info_update(self):
-        aclient = ApexInterface()
+        aclient = ApexAPI()
         map = aclient.get_map_rotation()
         crafting = aclient.get_crafting_from_chche()
         if map:
@@ -137,7 +137,7 @@ class task(Cog_Extension):
         today = date.today()
         apex_crafting = Jsondb.get_cache("apex_crafting")
         if not apex_crafting or apex_crafting.get("date") != today.isoformat():
-            apex_crafting = ApexInterface().get_raw_crafting()
+            apex_crafting = ApexAPI().get_raw_crafting()
             apex_crafting_dict = {
                 "date": today.isoformat(),
                 "data": apex_crafting[0:1]
