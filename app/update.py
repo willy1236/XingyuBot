@@ -13,10 +13,13 @@ def update_repository():
         repo = git.Repo(location)
         pull_info = repo.remotes.origin.pull()
         
-        for info in pull_info:
-            print(f'更新：{info.note}')
+        if pull_info:
+            for info in pull_info:
+                print(f'更新：{info.note}')
+            print('[更新模組] 更新成功')
+        else:
+            print('[更新模組] 無更新')
         
-        print('[更新模組] 更新成功')
     except git.GitCommandError as git_error:
         print(f'[更新模組] Git 操作錯誤：{git_error}')
     except Exception as e:
