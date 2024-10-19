@@ -33,12 +33,12 @@ class ServeoThread(BaseThread):
     def run(self):
         reconnection_times = 0
         while not self._stop_event.is_set():
-            log.info("Starting ServeoThread")
+            log.debug(f"Starting ServeoThread {reconnection_times}")
             #result = subprocess.run(["ssh", "-R", "cloudfoam:80:127.0.0.1:14000", "-R", "cloudfoamtwitch:80:127.0.0.1:14001", "serveo.net"], capture_output=True, text=True)
             result = subprocess.run(["ssh", "-R", "cloudfoam:80:127.0.0.1:14000", "serveo.net"], capture_output=True, text=True)
-            log.info(f'Stdout: {result.stdout}')
-            log.info(f'Stderr: {result.stderr}')
-            log.info(f'Exit status: {result.returncode}')
+            log.debug(f'Stdout: {result.stdout}')
+            log.debug(f'Stderr: {result.stderr}')
+            log.debug(f'Exit status: {result.returncode}')
             time.sleep(60)
             reconnection_times += 1
             if reconnection_times >= 5:
@@ -51,11 +51,11 @@ class LoopholeThread(BaseThread):
     def run(self):
         reconnection_times = 0
         while not self._stop_event.is_set():
-            log.info("Starting LoopholeThread")
+            log.debug(f"Starting LoopholeThread {reconnection_times}")
             result = subprocess.run(["loophole", "http", "14000", "127.0.0.1", "--hostname", "cloudfoam"], capture_output=True, text=True)
-            log.info(f'Stdout: {result.stdout}')
-            log.info(f'Stderr: {result.stderr}')
-            log.info(f'Exit status: {result.returncode}')
+            log.debug(f'Stdout: {result.stdout}')
+            log.debug(f'Stderr: {result.stderr}')
+            log.debug(f'Exit status: {result.returncode}')
             time.sleep(30)
             reconnection_times += 1
             if reconnection_times >= 5:
@@ -68,11 +68,11 @@ class LoopholeTwitchThread(BaseThread):
     def run(self):
         reconnection_times = 0
         while not self._stop_event.is_set():
-            log.info("Starting LoopholeTwitchThread")
+            log.info(f"Starting LoopholeTwitchThread {reconnection_times}")
             result = subprocess.run(["loophole", "http", "14001", "127.0.0.1", "--hostname", "twitchcloudfoam"], capture_output=True, text=True)
-            log.info(f'Stdout: {result.stdout}')
-            log.info(f'Stderr: {result.stderr}')
-            log.info(f'Exit status: {result.returncode}')
+            log.debug(f'Stdout: {result.stdout}')
+            log.debug(f'Stderr: {result.stderr}')
+            log.debug(f'Exit status: {result.returncode}')
             time.sleep(30)
             reconnection_times += 1
             if reconnection_times >= 5:

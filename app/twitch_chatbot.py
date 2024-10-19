@@ -259,7 +259,7 @@ async def run():
     # TODO: modify_channel_information
     
     chat.start()
-    
+    await asyncio.sleep(5)
 
     # # create eventsub websocket instance and start the client.
     # eventsub = EventSubWebsocket(twitch)
@@ -286,20 +286,27 @@ async def run():
         try:
             await eventsub.listen_stream_online(user.id, on_stream_online)
             await asyncio.sleep(1)
-        except (EventSubSubscriptionError, EventSubSubscriptionTimeout) as e:
+        except EventSubSubscriptionError as e:
             twitch_log.warning(f"Error subscribing stream online: {e}")
-        
+        except EventSubSubscriptionTimeout:
+            twitch_log.warning(f"Error subscribing stream online: timeout.")
+            
         try:
             await eventsub.listen_stream_offline(user.id, on_stream_offline)
             await asyncio.sleep(1)
-        except (EventSubSubscriptionError, EventSubSubscriptionTimeout) as e:
+        except EventSubSubscriptionError as e:
             twitch_log.warning(f"Error subscribing stream offline: {e}")
+        except EventSubSubscriptionTimeout:
+            twitch_log.warning(f"Error subscribing stream offline: timeout.")
         
         try:
             await eventsub.listen_channel_raid(on_channel_raid, to_broadcaster_user_id=user.id)
             await asyncio.sleep(1)
-        except (EventSubSubscriptionError, EventSubSubscriptionTimeout) as e:
+        except EventSubSubscriptionError as e:
             twitch_log.warning(f"Error subscribing channel raid: {e}")
+        except EventSubSubscriptionTimeout:
+            twitch_log.warning(f"Error subscribing channel raid: timeout.")
+            
         
         twitch_log.debug(f"eventsub:{user.login} done.")
 
@@ -310,43 +317,55 @@ async def run():
             twitch_log.debug("listening to channel points custom reward redemption add")
             await eventsub.listen_channel_points_custom_reward_redemption_add(user.id, on_channel_points_custom_reward_redemption_add)
             await asyncio.sleep(1)
-        except (EventSubSubscriptionError, EventSubSubscriptionTimeout) as e:
+        except EventSubSubscriptionError as e:
             twitch_log.warning(f"Error subscribing to channel points custom reward redemption add: {e}")
+        except EventSubSubscriptionTimeout:
+            twitch_log.warning(f"Error subscribing to channel points custom reward redemption add: timeout.")
 
         try:
             twitch_log.debug("listening to channel follow")
             await eventsub.listen_channel_follow_v2(user.id, me.id, on_follow)
             await asyncio.sleep(1)
-        except (EventSubSubscriptionError, EventSubSubscriptionTimeout) as e:
+        except EventSubSubscriptionError as e:
             twitch_log.warning(f"Error subscribing to channel follow: {e}")
+        except EventSubSubscriptionTimeout:
+            twitch_log.warning(f"Error subscribing to channel follow: timeout.")
         
         try:
             twitch_log.debug("listening to channel points custom reward redemption update")
             await eventsub.listen_channel_points_custom_reward_redemption_update(user.id, on_channel_points_custom_reward_redemption_update)
             await asyncio.sleep(1)
-        except (EventSubSubscriptionError, EventSubSubscriptionTimeout) as e:
+        except EventSubSubscriptionError as e:
             twitch_log.warning(f"Error subscribing to channel points custom reward redemption update: {e}")
+        except EventSubSubscriptionTimeout:
+            twitch_log.warning(f"Error subscribing to channel points custom reward redemption update: timeout.")
 
         try:
             twitch_log.debug("listening to channel subscribe")
             await eventsub.listen_channel_subscribe(user.id, on_channel_subscribe)
             await asyncio.sleep(1)
-        except (EventSubSubscriptionError, EventSubSubscriptionTimeout) as e:
+        except EventSubSubscriptionError as e:
             twitch_log.warning(f"Error subscribing to channel subscribe: {e}")
+        except EventSubSubscriptionTimeout:
+            twitch_log.warning(f"Error subscribing to channel subscribe: timeout.")
 
         try:
             twitch_log.debug("listening to channel subscription message")
             await eventsub.listen_channel_subscription_message(user.id, on_channel_subscription_message)
             await asyncio.sleep(1)
-        except (EventSubSubscriptionError, EventSubSubscriptionTimeout) as e:
+        except EventSubSubscriptionError as e:
             twitch_log.warning(f"Error subscribing to channel subscription message: {e}")
+        except EventSubSubscriptionTimeout:
+            twitch_log.warning(f"Error subscribing to channel subscription message: timeout.")
 
         try:
             twitch_log.debug("listening to channel subscription gift")
             await eventsub.listen_channel_subscription_gift(user.id, on_channel_subscription_gift)
             await asyncio.sleep(1)
-        except (EventSubSubscriptionError, EventSubSubscriptionTimeout) as e:
+        except EventSubSubscriptionError as e:
             twitch_log.warning(f"Error subscribing to channel subscription gift: {e}")
+        except EventSubSubscriptionTimeout:
+            twitch_log.warning(f"Error subscribing to channel subscription gift: timeout.")
 
         # try:
         #     twitch_log.debug("listening to channel poll begin")
