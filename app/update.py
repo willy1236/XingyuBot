@@ -5,7 +5,7 @@ import git
 
 
 def update_repository():
-    print('[更新模組] 開始')
+    print('[Update Module] Start')
     try:
         current_dir = os.path.dirname(os.path.abspath(__file__))
         location = os.path.dirname(current_dir)
@@ -14,18 +14,26 @@ def update_repository():
         pull_info = repo.remotes.origin.pull()
         
         if pull_info:
-            for info in pull_info:
-                print(f'更新：{info.note}')
-            print('[更新模組] 更新成功')
+            if pull_info[0].flags & pull_info[0].HEAD_UPTODATE:
+                print('[Update Module] Already up-to-date')
+            else:
+                for info in pull_info:
+                    if info.flags & info.FAST_FORWARD:
+                        print(f'Update: Fast-forward to {info.commit}')
+                    elif info.flags & info.FORCED_UPDATE:
+                        print(f'Update: Forced update to {info.commit}')
+                    else:
+                        print(f'Update: {info.note}')
+                print('[Update Module] Update successful')
         else:
-            print('[更新模組] 無更新')
+            print('[Update Module] No updates')
         
     except git.GitCommandError as git_error:
-        print(f'[更新模組] Git 操作錯誤：{git_error}')
+        print(f'[Update Module] Git operation error: {git_error}')
     except Exception as e:
-        print(f'[更新模組] 發生錯誤：{e}')
+        print(f'[Update Module] Error: {e}')
 
-    print('[更新模組] 3秒後關閉...')
+    print('[Update Module] Close after 3 seconds...')
     time.sleep(3)
 
 if __name__ == "__main__":
