@@ -5,11 +5,11 @@
 各類client: 結合所有資料進行複雜操作\n
 StarManager：提供各資料間的資料交換\n
 """
-from .client import StarManager
+from .client import StarController
 
-sclient = StarManager()
+sclient = StarController()
 
 __all__ = [
     'sclient',
-    'StarManager',
+    'StarController',
 ]

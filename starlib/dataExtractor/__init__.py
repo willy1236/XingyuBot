@@ -7,8 +7,8 @@
 
 from .community import *
 from .game import *
-from .weather import *
 from .oauth import *
+from .weather import *
 
 __all__ =[
     'TwitchAPI',

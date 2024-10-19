@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from datetime import date, datetime
-from typing import TYPE_CHECKING, List, Optional, TypedDict
+from typing import TYPE_CHECKING, TypedDict
 
 from discord import Bot
 from sqlalchemy import (BigInteger, Column, DateTime, ForeignKey, Integer,
@@ -8,10 +8,11 @@ from sqlalchemy import (BigInteger, Column, DateTime, ForeignKey, Integer,
 from sqlalchemy.orm import declarative_base
 from sqlmodel import Field, Relationship, SQLModel
 
+from ..base import ListObject
+from ..fileDatabase import Jsondb
 from ..settings import tz
 from ..types import *
-from ..utilities import BotEmbed, ChoiceList
-from .BaseModel import ListObject
+from ..utilities import BotEmbed
 
 if TYPE_CHECKING:
     from ..database import SQLEngine
@@ -128,7 +129,7 @@ class UserModerate(SQLModel, table=True):
         guild = bot.get_guild(self.create_guild)
         
         name = f'{user.name} 的警告單'
-        description = f"**編號:{self.warning_id} ({ChoiceList.get_tw(self.moderate_type,'warning_type')})**\n被警告用戶：{user.mention}\n管理員：{guild.name}/{moderate_user.mention}\n原因：{self.reason}\n時間：{self.create_time}"
+        description = f"**編號:{self.warning_id} ({Jsondb.get_tw(self.moderate_type,'warning_type')})**\n被警告用戶：{user.mention}\n管理員：{guild.name}/{moderate_user.mention}\n原因：{self.reason}\n時間：{self.create_time}"
         if self.officially_given:
             description += "\n官方警告"
         if self.guild_only:
@@ -139,7 +140,7 @@ class UserModerate(SQLModel, table=True):
     def display_embed_field(self,bot:Bot):
             moderate_user = bot.get_user(self.moderate_user)
             guild = bot.get_guild(self.create_guild)
-            name = f"編號: {self.warning_id} ({ChoiceList.get_tw(self.moderate_type,'warning_type')})"
+            name = f"編號: {self.warning_id} ({Jsondb.get_tw(self.moderate_type,'warning_type')})"
             value = f"{guild.name}/{moderate_user.mention}\n{self.reason}\n{self.create_time}"
             if self.officially_given:
                 value += "\n官方警告"

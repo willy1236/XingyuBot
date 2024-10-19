@@ -11,7 +11,7 @@ from ..fileDatabase import Jsondb
 from ..settings import tz
 from ..starAI import StarGeminiAI
 from ..uiElement.view import PollView
-from ..utilities import BotEmbed, ChoiceList, scheduler
+from ..utilities import BotEmbed, scheduler
 from .cache import StardbCache
 
 if TYPE_CHECKING:
@@ -118,20 +118,20 @@ class ElectionSystem():
                 party_name = ",".join(results[pos_id][user_data][1])
                 text += f"{count}. {user_mention} （{party_name}）\n"
             
-            position_name = ChoiceList.get_tw(pos_id,"position_option")
+            position_name = Jsondb.get_tw(pos_id,"position_option")
             embed.add_field(name=position_name, value=text, inline=False)
         
         return embed
 
-class StarManager(
+class StarController(
     PointClient,
     PollClient,
     ElectionSystem,
 ):
-    """整合各項系統的星羽資料管理物件
-    :attr sqldb: Mysql Database
-    :attr starai: AI
-    :attr bot: Discord Bot
+    """整合各項系統的星羽資料管理物件 \\
+    :attr sqldb: Mysql Database \\
+    :attr starai: AI \\
+    :attr bot: Discord Bot \\
     :attr scheduler: Async Task Scheduler
     """
     def __init__(self):

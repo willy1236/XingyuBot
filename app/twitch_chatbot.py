@@ -1,5 +1,4 @@
 import asyncio
-import threading
 from pathlib import PurePath
 from typing import TYPE_CHECKING
 from uuid import UUID
@@ -18,7 +17,7 @@ from twitchAPI.twitch import Twitch
 from twitchAPI.type import (AuthScope, ChatEvent, EventSubSubscriptionError,
                             EventSubSubscriptionTimeout)
 
-from starlib import BotEmbed, Jsondb, sclient, twitch_log
+from starlib import BaseThread, BotEmbed, Jsondb, sclient, twitch_log
 
 USER_SCOPE = [
     AuthScope.BITS_READ,
@@ -393,14 +392,13 @@ async def run_sakagawa():
     await eventsub_sakagawa.listen_channel_points_custom_reward_redemption_update(target_user.id, on_channel_points_custom_reward_redemption_update)
     twitch_log.debug("listening to channel points custom reward redemption update")
 
-class TwitchBotThread(threading.Thread):
+class TwitchBotThread(BaseThread):
     if TYPE_CHECKING:
         chat:Chat | None
         twitch:Twitch | None
         
     def __init__(self):
         super().__init__(name='TwitchBotThread')
-        self._stop_event = threading.Event()
         self.chat = None
         self.twitch = None
 
@@ -413,14 +411,12 @@ class TwitchBotThread(threading.Thread):
         chat.stop()
         asyncio.run(twitch.close())
 
-class SakagawaEventsubThread(threading.Thread):
+class SakagawaEventsubThread(BaseThread):
     def __init__(self):
         super().__init__(name='SakagawaEventsubThread')
-        self._stop_event = threading.Event()
 
     def run(self):
         asyncio.run(run_sakagawa())
-        
         self._stop_event.wait()
 
 if __name__ == '__main__':

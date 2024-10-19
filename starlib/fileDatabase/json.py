@@ -1,6 +1,8 @@
 import json
 import os
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeVar
+
+T = TypeVar("T")
 
 
 class BaseJsonHandler:
@@ -180,3 +182,24 @@ class JsonDatabase():
         Writes a full dict, list, or str to the cache.
         """
         self.cache.write(key, value)
+
+    def get_tw(self, value:T, option_name:str) -> str | T:
+        """
+        Retrieve the Traditional Chinese (zh-TW) translation for a given value and option name.
+        Args:
+            value (T): The value to be translated.
+            option_name (str): The name of the option to look up in the dictionary.
+        Returns:
+            str | T: The translated value if found, otherwise the original value.
+        """
+        if self.jdict.get(option_name):
+            if self.jdict[option_name].get("zh-TW"):
+                return self.jdict[option_name]["zh-TW"].get(str(value),value)
+            else:
+                return self.jdict[option_name].get(str(value),value)
+            
+        elif self.options.get(option_name):
+            return self.options[option_name][str(value)]["zh-TW"]
+        
+        else:
+            return value

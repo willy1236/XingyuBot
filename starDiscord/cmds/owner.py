@@ -1,15 +1,21 @@
 from datetime import datetime, timedelta
+from typing import TYPE_CHECKING
+import platform
 
 import discord
+import psutil
 import mcrcon
-from discord.ext import commands
 from discord.commands import SlashCommandGroup
+from discord.ext import commands
 
-from starlib import BotEmbed,Jsondb,sclient
-from starlib.utilities.utility import converter
+from starlib import BotEmbed, Jsondb, sclient
 from starlib.types import NotifyChannelType
+from starlib.utilities.utility import converter
+
 from ..extension import Cog_Extension
-from ..bot import DiscordBot
+
+if TYPE_CHECKING:
+    from ..bot import DiscordBot
 
 class SendMessageModal(discord.ui.Modal):
     def __init__(self, channel, bot, is_dm, *args, **kwargs):
@@ -89,15 +95,13 @@ class BotUpdateModal(discord.ui.Modal):
 class BotPanel(discord.ui.View):
     def __init__(self,bot):
         super().__init__()
-        self.bot = bot
+        self.bot:DiscordBot = bot
     
     @discord.ui.button(label="伺服器列表",row=1,style=discord.ButtonStyle.primary)
     async def button_callback1(self, button: discord.ui.Button, interaction: discord.Interaction):
-        name_list = []
-        for i in self.bot.guilds:
-            name_list.append(f'{i.name}（{i.id}）')
+        name_list = [f'{i.name}（{i.id}）' for i in self.bot.guilds]
         embed = BotEmbed.simple('伺服器列表','\n'.join(name_list))
-        await interaction.response.send_message(content="",ephemeral=False,embed=embed)
+        await interaction.response.send_message(content="", ephemeral=False, embed=embed)
 
 debug_guilds = Jsondb.config.get('debug_guilds')
 
@@ -466,6 +470,61 @@ class owner(Cog_Extension):
         embed.timestamp = create_time
         msg = await channel.send(embed=embed)
         await ctx.respond(msg.jump_url)
+
+    @commands.slash_command(description='取得伺服器資訊',guild_ids=debug_guilds)
+    @commands.is_owner()
+    async def serverinfo(self,ctx:discord.ApplicationContext):
+        await ctx.defer()
+        # 取得 CPU 使用率
+        cpu_percent = psutil.cpu_percent(interval=1)
+        # 取得記憶體資訊
+        memory_info = psutil.virtual_memory()
+        # 取得磁碟使用情況
+        disk_usage = psutil.disk_usage('/')
+        # 取得網路使用情況
+        net_io = psutil.net_io_counters()
+        # 取得系統啟動時間
+        boot_time = psutil.boot_time()
+        boot_time_str = datetime.fromtimestamp(boot_time).strftime("%Y-%m-%d %H:%M:%S")
+        # 取得感測器溫度資訊（如果系統支援）
+        temperatures = psutil.sensors_temperatures() if hasattr(psutil, "sensors_temperatures") else {}
+
+        # 取得硬體和系統資訊
+        system_name = platform.system()
+        node_name = platform.node()
+        # release = platform.release()
+        version = platform.version()
+        machine = platform.machine()
+        processor = platform.processor()
+
+        python_version = platform.python_version()
+
+        # 建立嵌入訊息
+        embed = discord.Embed(title="伺服器資訊", color=discord.Color.blue())
+        embed.add_field(name="系統版本", value=f"{system_name} {version}", inline=False)
+        embed.add_field(name="節點名稱", value=node_name, inline=False)
+        embed.add_field(name="機器類型", value=machine, inline=False)
+        embed.add_field(name="處理器", value=processor, inline=False)
+        embed.add_field(name="Python 版本", value=python_version, inline=False)
+        embed.add_field(name="記憶體使用", value=f"{memory_info.percent}%")
+        embed.add_field(name="總記憶體", value=f"{memory_info.total / (1024 ** 3):.2f} GB")
+        embed.add_field(name="可用記憶體", value=f"{memory_info.available / (1024 ** 3):.2f} GB")
+        embed.add_field(name="磁碟使用", value=f"{disk_usage.percent}%")
+        embed.add_field(name="總磁碟空間", value=f"{disk_usage.total / (1024 ** 3):.2f} GB")
+        embed.add_field(name="可用磁碟空間", value=f"{disk_usage.free / (1024 ** 3):.2f} GB")
+        embed.add_field(name="CPU 使用率", value=f"{cpu_percent}%")
+        embed.add_field(name="已發送資料", value=f"{net_io.bytes_sent / (1024 ** 3):.2f} GB")
+        embed.add_field(name="已接收資料", value=f"{net_io.bytes_recv / (1024 ** 3):.2f} GB")
+        embed.add_field(name="系統啟動時間", value=boot_time_str, inline=False)
+
+        # 添加感測器溫度資訊
+        if temperatures:
+            for name, entries in temperatures.items():
+                for entry in entries:
+                    embed.add_field(name=f"{name} 溫度 ({entry.label})", value=f"{entry.current}°C", inline=False)
+        
+        # 回應嵌入訊息
+        await ctx.respond(embed=embed)
 
 def setup(bot):
     bot.add_cog(owner(bot))

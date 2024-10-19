@@ -54,13 +54,16 @@ class moderation(Cog_Extension):
         if channel:
             roleid = role.id if role else None
             sclient.sqldb.add_notify_channel(guildid,notify_type,channel.id,roleid)
-            await ctx.respond(f'設定完成，已將 {ChoiceList.get_tw(notify_type,"channel_set_option")} 頻道設定在 {channel.mention}')
+            await ctx.respond(f'設定完成，已將 {Jsondb.get_tw(notify_type,"channel_set_option")} 頻道設定在 {channel.mention}')
             await ctx.send(embed=BotEmbed.simple('溫馨提醒','若為定時通知，請將機器人的訊息保持在此頻道的最新訊息，以免機器人找不到訊息而重複發送'),delete_after=10)
+            if not channel.can_send():
+                await ctx.send(embed=BotEmbed.simple('溫馨提醒',f'我無法在{channel.mention}中發送訊息，請確認我有足夠的權限'))
+                
             if notify_type in [NotifyChannelType.VoiceLog]:
                 sclient.dbcache.update_notify_channel(notify_type)
         else:
             sclient.sqldb.remove_notify_channel(guildid,notify_type)
-            await ctx.respond(f'設定完成，已移除 {ChoiceList.get_tw(notify_type,"channel_set_option")} 頻道')
+            await ctx.respond(f'設定完成，已移除 {Jsondb.get_tw(notify_type,"channel_set_option")} 頻道')
 
     @channel_notify.command(description='設定動態語音頻道')
     @commands.has_permissions(manage_channels=True)
@@ -95,7 +98,7 @@ class moderation(Cog_Extension):
                 text = channel.mention
                 if role:
                     text += f" {role.mention}"
-            embed.add_field(name=ChoiceList.get_tw(notify_type,"channel_set_option"), value=text)
+            embed.add_field(name=Jsondb.get_tw(notify_type,"channel_set_option"), value=text)
         await ctx.respond(embed=embed)
         
     

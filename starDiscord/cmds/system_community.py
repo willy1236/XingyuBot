@@ -31,7 +31,7 @@ class system_community(Cog_Extension):
         api = TwitchAPI()
 
         user = api.get_user(twitch_user)
-        type_tw = ChoiceList.get_tw(type.value, "twitch_notify_option")
+        type_tw = Jsondb.get_tw(type.value, "twitch_notify_option")
         if user:
             sclient.sqldb.add_notify_community(type.value, user.id, guildid, channelid, roleid, user.login)
             match type:
@@ -48,6 +48,8 @@ class system_community(Cog_Extension):
 
             if role:
                 await ctx.respond(f'設定成功：{user.display_name}({user.login})的{type_tw}將會發送在{channel.mention}並會通知{role.mention}')
+                if not channel.can_send():
+                    await ctx.send(embed=BotEmbed.simple('溫馨提醒',f'我無法在{channel.mention}中發送訊息，請確認我有足夠的權限'))
             else:
                 await ctx.respond(f'設定成功：{user.display_name}({user.login})的{type_tw}將會發送在{channel.mention}')
 
@@ -155,6 +157,8 @@ class system_community(Cog_Extension):
             sclient.sqldb.add_notify_community(NotifyCommunityType.Youtube,ytchannel.id,guildid,channelid,roleid,ytchannel.snippet.title)
             if role:
                 await ctx.respond(f'設定成功：{ytchannel.snippet.title}的通知將會發送在{channel.mention}並會通知{role.mention}')
+                if not channel.can_send():
+                    await ctx.send(embed=BotEmbed.simple('溫馨提醒',f'我無法在{channel.mention}中發送訊息，請確認我有足夠的權限'))
             else:
                 await ctx.respond(f'設定成功：{ytchannel.snippet.title}的通知將會發送在{channel.mention}')
                 

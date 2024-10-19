@@ -1,28 +1,29 @@
 import asyncio
-import ctypes
 import math
 import random
 import re
 import socket
 import subprocess
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 import discord
 import psutil
+from discord.commands import OptionChoice, SlashCommandGroup
 from discord.errors import Forbidden, NotFound
-from discord.ext import commands,pages
-from discord.commands import SlashCommandGroup, OptionChoice
+from discord.ext import commands, pages
 from mysql.connector.errors import Error as sqlerror
 from mysql.connector.errors import IntegrityError
 
-from starlib import Jsondb,log,BotEmbed,ChoiceList,sclient
-from starlib.utilities import find, random_color, create_only_role_list, create_role_magification_dict
-from starlib.uiElement.button import DeleteAddRoleButton
-from starlib.uiElement.view import PollView, TRPGPlotView
+from starlib import BotEmbed, ChoiceList, Jsondb, log, sclient
 from starlib.dataExtractor import GoogleCloud
 from starlib.types import Coins
-from .bot_event import check_registration
+from starlib.uiElement.view import DeleteAddRoleView, PollView, TRPGPlotView
+from starlib.utilities import (create_only_role_list,
+                               create_role_magification_dict, find,
+                               random_color)
+
 from ..extension import Cog_Extension
+from .bot_event import check_registration
 
 bet_option = ChoiceList.set('bet_option')
 position_option = ChoiceList.set('position_option')
@@ -91,7 +92,7 @@ class command(Cog_Extension):
                     
                     await user.add_roles(new_role,reason='指令:加身分組')
                     added_user.append(user.mention)
-                    if ctx.guild.id == 613747262291443742 and not user.get_role(877934319249797120):
+                    if ctx.guild.id == main_guilds[0] and not user.get_role(877934319249797120):
                         divider_role = ctx.guild.get_role(877934319249797120)
                         await user.add_roles(divider_role,reason='指令:加身分組')
 
@@ -100,7 +101,7 @@ class command(Cog_Extension):
                 elif user and user.bot:
                     await ctx.respond("請不要加機器人身分組好嗎")
         
-        view = DeleteAddRoleButton(new_role,ctx.author)
+        view = DeleteAddRoleView(new_role,ctx.author)
         if added_user:
             view.message = await ctx.respond(f"已添加 {new_role.name} 給{' '.join(added_user)}",view=view)
         else:
@@ -219,15 +220,15 @@ class command(Cog_Extension):
         if dbuser.guaranteed is None:
             dbuser.guaranteed = 0
             
-        for i in range(times):
+        for i in range(1, times + 1):
             choice =  random.randint(1,100)
             if choice == 1:
                 result["six"] += 1
-                six_list.append(str(i+1))
+                six_list.append(str(i))
                 dbuser.guaranteed = 0
             elif dbuser.guaranteed >= guaranteed-1:
                 result["six"] += 1
-                six_list_100.append(str(i+1))
+                six_list_100.append(str(i))
                 dbuser.guaranteed = 0
 
             elif choice >= 2 and choice <= 11:
@@ -240,7 +241,7 @@ class command(Cog_Extension):
                 result["three"] += 1
                 dbuser.guaranteed += 1
 
-        sclient.sqldb.add(dbuser)
+        sclient.sqldb.merge(dbuser)
         embed=BotEmbed.lottery()
         embed.add_field(name='抽卡結果', value=f"六星x{result['six']} 五星x{result['five']} 四星x{result['four']} 三星x{result['three']}", inline=False)
         embed.add_field(name='保底累積', value=dbuser.guaranteed, inline=False)
@@ -527,7 +528,7 @@ class command(Cog_Extension):
         except:
             pass
 
-        await ctx.respond(f"{ctx.author.mention} 已加入政黨 {ChoiceList.get_tw(party_id,'party_option')}")
+        await ctx.respond(f"{ctx.author.mention} 已加入政黨 {Jsondb.get_tw(party_id,'party_option')}")
 
     @party.command(description='離開政黨')
     async def leave(self,ctx:discord.ApplicationContext,
@@ -542,7 +543,7 @@ class command(Cog_Extension):
         except:
             pass
 
-        await ctx.respond(f"{ctx.author.mention} 已退出政黨 {ChoiceList.get_tw(party_id,'party_option')}")
+        await ctx.respond(f"{ctx.author.mention} 已退出政黨 {Jsondb.get_tw(party_id,'party_option')}")
 
     @party.command(description='政黨列表')
     async def list(self,ctx:discord.ApplicationContext):

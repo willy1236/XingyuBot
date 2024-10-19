@@ -2,9 +2,9 @@ import discord
 from discord.commands import SlashCommandGroup
 from discord.ext import commands
 
-from starlib import BotEmbed, ChoiceList, sclient
+from starlib import BotEmbed, ChoiceList, Jsondb, sclient
 from starlib.models.mysql import DiscordUser
-from starlib.uiElement.button import DeletePetButton
+from starlib.uiElement.view import DeletePetView
 
 from ..extension import Cog_Extension
 
@@ -68,7 +68,7 @@ class system_user(Cog_Extension):
         if r:
             await ctx.respond(r)
         else:
-            await ctx.respond(f"你收養了一隻名叫 {name} 的{ChoiceList.get_tw(species,'pet_option')}!")
+            await ctx.respond(f"你收養了一隻名叫 {name} 的{Jsondb.get_tw(species,'pet_option')}!")
     
     @pet.command(description='放生寵物')
     async def remove(self,ctx):
@@ -76,7 +76,7 @@ class system_user(Cog_Extension):
         if not pet:
             await ctx.respond('你沒有寵物')
             return
-        await ctx.respond('你真的確定要放生寵物嗎?',view=DeletePetButton())
+        await ctx.respond('你真的確定要放生寵物嗎?',view=DeletePetView())
 
 def setup(bot):
     bot.add_cog(system_user(bot))

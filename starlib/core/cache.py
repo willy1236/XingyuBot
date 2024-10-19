@@ -64,6 +64,9 @@ class StardbCache:
         except KeyError:
             log.debug(f"cache KeyError: {key}")
             return None
+        
+    def __repr__(self):
+        return str(self.cache)
 
     def update_dynamic_voice(self,add_channel=None,remove_channel=None):
         """更新動態語音頻道"""

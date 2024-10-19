@@ -9,13 +9,51 @@ from typing import TYPE_CHECKING
 import discord
 import matplotlib
 
+from ..database import sqldb
 from ..fileDatabase import Jsondb
-from ..utilities import BotEmbed
+from ..utilities import BotEmbed, log
 
 if TYPE_CHECKING:
     from starlib.database import SQLEngine
     from starlib.models.mysql import (Poll, PollOption, TRPGStoryOption,
                                       TRPGStoryPlot)
+
+class DeletePetView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=30)
+
+    @discord.ui.button(label="放生寵物",style=discord.ButtonStyle.danger)
+    async def button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
+        user = interaction.user
+        sqldb.remove_user_pet(user.id)
+        button.disabled = True
+        await interaction.response.edit_message(content="寵物已放生",view=self)
+
+class DeleteAddRoleView(discord.ui.View):
+    def __init__(self,role:discord.Role,creater:discord.Member):
+        super().__init__(timeout=30)
+        self.role = role
+        self.creater = creater
+
+    async def on_timeout(self):
+        try:
+            self.clear_items()
+            for user in self.role.members:
+                sqldb.add_role_save(user.id,self.role)
+                log.info(f"{user} has been added to the role {self.role}")
+            await self.message.edit(view=self)
+        except discord.errors.NotFound:
+            pass
+
+    @discord.ui.button(label="刪除身分組",style=discord.ButtonStyle.danger)
+    async def button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
+        if interaction.user == self.creater:
+            role = self.role
+            await role.delete()
+            self.clear_items()
+            await interaction.message.delete()
+        else:
+            await interaction.response.send_message(content="只有使用此指令的用戶可以刪除",ephemeral=True)
 
 class PollOptionButton(discord.ui.Button):
     def __init__(self,option:PollOption, custom_id:str, row:int=None):

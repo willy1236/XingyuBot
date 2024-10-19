@@ -527,7 +527,7 @@ class ApexCrafting():
         self.weekly_end = self.weekly['endDate']
         self.weekly_item = [ApexCraftingItem(i) for i in self.weekly['bundleContent']]
     
-    def desplay(self):
+    def embed(self):
         embed = BotEmbed.simple("Apex合成器內容")
         # text = ""
         # for item in self.daily_item:
@@ -567,7 +567,7 @@ class ApexMapRotation():
         except TypeError:
             print(data)
 
-    def desplay(self):
+    def embed(self):
         tl = jdict['ApexMap']
         embed = BotEmbed.simple("Apex地圖輪替")
         embed.add_field(name="目前地圖",value=tl.get(self.nowmap,self.nowmap))
@@ -589,7 +589,7 @@ class ApexStatus():
             for j in data[i]:
                 print(j)
 
-    def desplay(self):
+    def embed(self):
         pass
 
 class SteamUser():
@@ -599,7 +599,7 @@ class SteamUser():
         self.profileurl = data['profileurl']
         self.avatar = data['avatarfull']
     
-    def desplay(self,dc_user=None):
+    def embed(self):
         embed = BotEmbed.simple("Stean用戶資訊")
         embed.add_field(name="用戶名稱",value=self.name)
         embed.add_field(name="用戶id",value=self.id)
@@ -637,7 +637,7 @@ class DBDPlayer(SteamUser):
         self.beartrapcatches = data["beartrapcatches"]
         self.phantasmstriggered = data["phantasmstriggered"]
 
-    def desplay(self):
+    def embed(self):
         embed = BotEmbed.simple("DBD玩家資訊")
         embed.add_field(name="玩家名稱",value=self.name)
         embed.add_field(name="血點數",value=self.bloodpoints)

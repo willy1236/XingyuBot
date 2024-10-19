@@ -7,12 +7,12 @@ from typing import TYPE_CHECKING
 
 import discord
 import yt_dlp as youtube_dl
-from discord.ext import commands,pages
+from discord.ext import commands, pages
 
-from starlib import BotEmbed,log
+from starlib import BotEmbed, log
 from starlib.errors import *
-from ..extension import Cog_Extension
 
+from ..extension import Cog_Extension
 
 # Suppress noise about console usage from errors
 youtube_dl.utils.bug_reports_message = lambda: ""
@@ -40,10 +40,10 @@ ffmpeg_options = {
 ytdl = youtube_dl.YoutubeDL(ytdl_format_options)
 
 class SongSource(enum.IntEnum):
-    YOUTUBE_OR_OTHER = 1
-    SPOTIFY = 2
+    Youtube_or_other = 1
+    Spotify = 2
 class Song():
-    def __init__(self, url:str, source_path:str, title:str, requester:discord.Member=None, song_from=SongSource.YOUTUBE_OR_OTHER):
+    def __init__(self, url:str, source_path:str, title:str, requester:discord.Member=None, song_from=SongSource.Youtube_or_other):
         self.url = url
         self.source_path = source_path
         self.title = title
@@ -58,7 +58,7 @@ class Song():
         return self.source
 
     @classmethod
-    async def from_url(cls, url:str, *, loop:asyncio.AbstractEventLoop=None, requester:discord.Member=None, song_from=SongSource.YOUTUBE_OR_OTHER):
+    async def from_url(cls, url:str, *, loop:asyncio.AbstractEventLoop=None, requester:discord.Member=None, song_from=SongSource.Youtube_or_other):
         """
         Creates a list of Song objects from the given URL.
 
@@ -135,7 +135,7 @@ class MusicPlayer():
             Raises:
                 MusicPlayingError: If there is an error playing the next song.
             """
-            log.debug("play_next")
+            log.debug(f"{self.guildid}: play_next")
             song = self.start_first_song()
             try:
                 source = await song.get_source(self.volume)
@@ -153,7 +153,7 @@ class MusicPlayer():
         Args:
             error (Exception): The error that occurred during playback, if any.
         """
-        log.debug("after")
+        log.debug(f"{self.guildid}: after")
         # self.play_completed()
         if error:
             raise MusicPlayingError(error)
@@ -312,10 +312,10 @@ class music(Cog_Extension):
         vc = ctx.voice_client
 
         if url.startswith("https://open.spotify.com/"):
-            songfrom = SongSource.SPOTIFY
+            songfrom = SongSource.Spotify
             raise MusicCommandError("不受支援的連結，請重新檢查網址是否正確")
         else:
-            songfrom = SongSource.YOUTUBE_OR_OTHER
+            songfrom = SongSource.Youtube_or_other
             #抓取歌曲
             try:
                 results = await Song.from_url(url, requester=ctx.author)

@@ -14,7 +14,6 @@ from sqlmodel import Session, SQLModel, create_engine, select
 from ..errors import *
 from ..fileDatabase import Jsondb
 from ..models.mysql import *
-from ..models.mysql import NotifyCommunity
 from ..models.rpg import *
 from ..models.user import CityBattle, RPGUser
 from ..settings import tz
@@ -147,18 +146,6 @@ class SQLCurrencySystem(BaseSQLEngine):
             #self.cursor.execute(f"UPDATE `user_point` SET `point` = REPLACE(`欄位名`, '要被取代的欄位值', '取代後的欄位值') WHERE `欄位名` LIKE '%欄位值%';",(giver_id,amount))
         else:
             return "點數不足"
-
-    def update_coins(self,discord_id:str,mod,coin_type:Coins,amount:int):
-        """更改用戶的點數數量"""
-        coin_type = Coins(coin_type)
-        self.cursor.execute(f"USE `stardb_user`;")
-        if mod == 'set':
-            self.cursor.execute(f"REPLACE INTO `user_point`(discord_id,{coin_type.value}) VALUES(%s,%s);",(discord_id,amount))
-        elif mod == 'add':
-            self.cursor.execute(f"UPDATE `user_point` SET {coin_type.value} = CASE WHEN `{coin_type.value}` IS NULL THEN {amount} ELSE {coin_type.value} + {amount} END WHERE discord_id = %s;",(discord_id,))
-        else:
-            raise ValueError("mod must be 'set' or 'add'")
-        self.connection.commit()
 
     def user_sign(self,discord_id:int):
         '''新增簽到資料'''

@@ -198,7 +198,11 @@ class debug(Cog_Extension):
 
         await ctx.respond('完成',ephemeral=True)
 
-
+    @commands.is_owner()
+    @commands.slash_command(description='測試指令', guild_ids=debug_guilds)
+    async def channeltest(self,ctx:discord.ApplicationContext, channel:discord.Option(discord.TextChannel,required=True,name='頻道',description='通知發送頻道')):
+        await ctx.respond(f'{channel.can_send()}',ephemeral=True)
+        
 
     # @commands.slash_command()
     # async def modal_slash(self,ctx: discord.ApplicationContext):

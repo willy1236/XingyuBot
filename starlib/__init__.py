@@ -1,12 +1,13 @@
 '''
-## Starcord Discord Bot Library
+## Xingyu Discord Bot Library
 Discord機器人"星羽"用libary
 '''
 from datetime import timedelta, timezone
 
-from .fileDatabase import Jsondb, csvdb
+from .base import *
+from .core import StarController, sclient
 from .database import sqldb
-from .core import sclient, StarManager
-from .utilities import *
 from .errors import *
+from .fileDatabase import Jsondb, csvdb
 from .settings import tz
+from .utilities import *

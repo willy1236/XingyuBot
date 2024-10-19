@@ -35,6 +35,12 @@ class BotEmbed:
         return embed
     
     @staticmethod
+    def deprecated():
+        """棄用:展示棄用訊息"""
+        embed = discord.Embed(title="此功能目前為棄用狀態", description="此功能目前不開放使用，請洽機器人管理員或支援伺服器", color=0xc4e9ff)
+        return embed
+    
+    @staticmethod
     def rpg(title:str=None,description:str=None):
         """RPG系統 格式"""
         embed = discord.Embed(title=title, description=description, color=0xc4e9ff)
@@ -96,40 +102,6 @@ class ChoiceList():
                                      name_localizations=name_loc
                                      ) for value, name_loc in Jsondb.options[option_name].items()
                 ]
-        if Jsondb.jdict[option_name].get(lcode):
-            for value,name in Jsondb.jdict[option_name][lcode].items():
-                list.append()
-            return list
-        else:
-            for value,name in Jsondb.jdict[option_name].items():
-                list.append(discord.OptionChoice(name=name,value=value))
-            return list
-    
-    @staticmethod
-    def set_with_localizations(option_name):
-        list = []
-        for option in Jsondb.jdict[option_name]['zh-TW']:
-            dict = {}
-            for lcode in Jsondb.jdict[option_name]:
-                value = option
-                name = Jsondb.jdict[option_name][lcode][value]
-                dict[lcode] = name
-            list.append(discord.OptionChoice(name=name,value=value,name_localizations=dict))
-        return list
-
-    @staticmethod
-    def get_tw(value,option_name) -> str:
-        if Jsondb.jdict.get(option_name):
-            if Jsondb.jdict[option_name].get("zh-TW"):
-                return Jsondb.jdict[option_name]["zh-TW"].get(str(value),value)
-            else:
-                return Jsondb.jdict[option_name].get(str(value),value)
-            
-        else:
-            if Jsondb.options[option_name].get(str(value)):
-                return Jsondb.options[option_name][str(value)]["zh-TW"]
-            else:
-                return value
 
 class converter():
     def time_to_sec(arg:str):

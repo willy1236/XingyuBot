@@ -111,8 +111,8 @@ class task(Cog_Extension):
         if map:
             embed_list = []
             if crafting:
-                embed_list.append(crafting.desplay())
-            embed_list.append(map.desplay())
+                embed_list.append(crafting.embed())
+            embed_list.append(map.embed())
             
             records = sclient.sqldb.get_notify_channel_by_type(NotifyChannelType.ApexRotation)
             for i in records:
@@ -337,7 +337,7 @@ class task(Cog_Extension):
             if len(results[position]) <= 0:
                 continue
 
-            position_name = ChoiceList.get_tw(position, "position_option")
+            position_name = Jsondb.get_tw(position, "position_option")
             title = f"第{session}屆中央選舉：{position_name}"
             #options = [f"{i}號" for i in range(1,count + 1)]
             i = 1
