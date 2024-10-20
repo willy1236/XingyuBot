@@ -99,7 +99,7 @@ class BotPanel(discord.ui.View):
     
     @discord.ui.button(label="伺服器列表",row=1,style=discord.ButtonStyle.primary)
     async def button_callback1(self, button: discord.ui.Button, interaction: discord.Interaction):
-        name_list = [f'{i.name}（{i.id}）' for i in self.bot.guilds]
+        name_list = [f'{i.name}（{i.id}）: {i.member_count}' for i in self.bot.guilds]
         embed = BotEmbed.simple('伺服器列表','\n'.join(name_list))
         await interaction.response.send_message(content="", ephemeral=False, embed=embed)
 

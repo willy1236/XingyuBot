@@ -75,10 +75,10 @@ class event(Cog_Extension):
         log.info(f">> Bot online as {bot.user.name} <<")
         log.info(f">> Discord's version: {discord.__version__} <<")
         if bot.debug_mode:
-            await bot.change_presence(activity=discord.Game(name="開發模式啟用中"),status=discord.Status.dnd)
+            await bot.change_presence(activity=discord.CustomActivity(name="開發模式啟用中"), status=discord.Status.dnd)
             log.info(f">> Development mode: On <<")
         else:
-            await bot.change_presence(activity=discord.Game(name=config.get("activity","/help")),status=discord.Status.online)
+            await bot.change_presence(activity=discord.CustomActivity(name=config.get("activity","/help")), status=discord.Status.online)
 
         if len(os.listdir(bot._COG_PATH))-1 == len(bot.cogs):
             log.info(">> Cogs all loaded <<")
@@ -116,14 +116,14 @@ class event(Cog_Extension):
         if not is_owner:
             #被提及回報
             if self.bot.user in message.mentions:
-                await self.bot.mentioned(self.bot,message)
+                await self.bot.mentioned(message)
             #被提及所有人回報
             if message.mention_everyone:
-                await self.bot.mention_everyone(self.bot,message)
+                await self.bot.mention_everyone(message)
         
         #私人訊息回報
         if isinstance(message.channel,discord.DMChannel) and message.author != self.bot.user:
-            await self.bot.dm(self.bot,message)
+            await self.bot.dm(message)
             return
 
         #關鍵字觸發
@@ -292,25 +292,25 @@ class event(Cog_Extension):
                 return
 
         #舞台發言
-        if check_event_stage(before) or check_event_stage(after):
-            kp_user = self.bot.get_guild(613747262291443742).get_member(713748326377455676)
-            #調查員、特許證舞台發言
-            if after.suppress and after.channel and ( user.get_role(1126820808761819197) or (user.get_role(1130849778264195104) and not kp_user in after.channel.members) ):
-                await user.request_to_speak()
-                await asyncio.sleep(0.5)
+        # if check_event_stage(before) or check_event_stage(after):
+        #     kp_user = self.bot.get_guild(613747262291443742).get_member(713748326377455676)
+        #     #調查員、特許證舞台發言
+        #     if after.suppress and after.channel and ( user.get_role(1126820808761819197) or (user.get_role(1130849778264195104) and not kp_user in after.channel.members) ):
+        #         await user.request_to_speak()
+        #         await asyncio.sleep(0.5)
 
-            if user == kp_user and before.channel != after.channel:
-                if after.channel:
-                    for member in after.channel.members:
-                        if not member.voice.suppress and not member.get_role(1126820808761819197):
-                            await member.edit(suppress=True)
-                            await asyncio.sleep(0.5)
+        #     if user == kp_user and before.channel != after.channel:
+        #         if after.channel:
+        #             for member in after.channel.members:
+        #                 if not member.voice.suppress and not member.get_role(1126820808761819197):
+        #                     await member.edit(suppress=True)
+        #                     await asyncio.sleep(0.5)
 
-                if before.channel:
-                    for member in before.channel.members:
-                        if member.voice.suppress and member.get_role(1126820808761819197):
-                            await member.request_to_speak()
-                            await asyncio.sleep(0.5)
+        #         if before.channel:
+        #             for member in before.channel.members:
+        #                 if member.voice.suppress and member.get_role(1126820808761819197):
+        #                     await member.request_to_speak()
+        #                     await asyncio.sleep(0.5)
 
     @commands.Cog.listener()
     async def on_member_remove(self, member:discord.Member):
