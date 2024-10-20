@@ -35,7 +35,7 @@ class system_community(Cog_Extension):
         if user:
             sclient.sqldb.add_notify_community(type.value, user.id, guildid, channelid, roleid, user.login)
             match type:
-                case NotifyCommunityType.Twitch:
+                case NotifyCommunityType.TwitchLive:
                     pass
             
                 case NotifyCommunityType.TwitchVideo:
@@ -48,10 +48,11 @@ class system_community(Cog_Extension):
 
             if role:
                 await ctx.respond(f'設定成功：{user.display_name}({user.login})的{type_tw}將會發送在{channel.mention}並會通知{role.mention}')
-                if not channel.can_send():
-                    await ctx.send(embed=BotEmbed.simple('溫馨提醒',f'我無法在{channel.mention}中發送訊息，請確認我有足夠的權限'))
             else:
                 await ctx.respond(f'設定成功：{user.display_name}({user.login})的{type_tw}將會發送在{channel.mention}')
+            
+            if not channel.can_send():
+                    await ctx.send(embed=BotEmbed.simple('溫馨提醒',f'我無法在{channel.mention}中發送訊息，請確認我有足夠的權限'))
 
         else:
             await ctx.respond(f'錯誤：找不到用戶{twitch_user}')
@@ -62,8 +63,8 @@ class system_community(Cog_Extension):
                      notify_type:discord.Option(int,required=False,name='通知種類',description='通知種類，留空為移除全部',choices=twitch_notify_option,default=None)):
         guildid = ctx.guild.id
         user = TwitchAPI().get_user(twitch_user)
-        if not notify_type or notify_type == NotifyCommunityType.Twitch:
-            sclient.sqldb.remove_notify_community(NotifyCommunityType.Twitch.value, user.id, guildid)
+        if not notify_type or notify_type == NotifyCommunityType.TwitchLive:
+            sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitchLive.value, user.id, guildid)
             Jsondb.remove_cache("twitch", user.id)
         
         if not notify_type or notify_type == NotifyCommunityType.TwitchVideo:
@@ -84,7 +85,7 @@ class system_community(Cog_Extension):
     @twitch.command(description='確認twitch開台通知')
     async def notify(self,ctx,twitch_user:discord.Option(str,required=True,name='twitch用戶')):
         guildid = ctx.guild.id
-        record = sclient.sqldb.get_notify_community_user(NotifyCommunityType.Twitch, twitch_user, guildid)
+        record = sclient.sqldb.get_notify_community_user(NotifyCommunityType.TwitchLive, twitch_user, guildid)
         if record:
             channel = self.bot.get_channel(record.channel_id)
             role = channel.guild.get_role(record.role_id)
@@ -99,7 +100,7 @@ class system_community(Cog_Extension):
     async def list(self,ctx:discord.ApplicationContext):
         guildid = ctx.guild.id
         embed = BotEmbed.general("twitch開台通知", ctx.guild.icon.url if ctx.guild.icon else None)
-        dbdata = sclient.sqldb.get_notify_community_list(NotifyCommunityType.Twitch,guildid) + sclient.sqldb.get_notify_community_list(NotifyCommunityType.TwitchVideo,guildid) + sclient.sqldb.get_notify_community_list(NotifyCommunityType.TwitchClip,guildid)
+        dbdata = sclient.sqldb.get_notify_community_list(NotifyCommunityType.TwitchLive,guildid) + sclient.sqldb.get_notify_community_list(NotifyCommunityType.TwitchVideo,guildid) + sclient.sqldb.get_notify_community_list(NotifyCommunityType.TwitchClip,guildid)
         for data in dbdata:
             display_name = data.display_name or data.notify_name
             channel_id = data.channel_id
@@ -157,18 +158,17 @@ class system_community(Cog_Extension):
             sclient.sqldb.add_notify_community(NotifyCommunityType.Youtube,ytchannel.id,guildid,channelid,roleid,ytchannel.snippet.title)
             if role:
                 await ctx.respond(f'設定成功：{ytchannel.snippet.title}的通知將會發送在{channel.mention}並會通知{role.mention}')
-                if not channel.can_send():
-                    await ctx.send(embed=BotEmbed.simple('溫馨提醒',f'我無法在{channel.mention}中發送訊息，請確認我有足夠的權限'))
             else:
                 await ctx.respond(f'設定成功：{ytchannel.snippet.title}的通知將會發送在{channel.mention}')
+
+            if not channel.can_send():
+                    await ctx.send(embed=BotEmbed.simple('溫馨提醒',f'我無法在{channel.mention}中發送訊息，請確認我有足夠的權限'))
                 
             sclient.dbcache.update_notify_community(NotifyCommunityType.Youtube)
 
             feed = YoutubeRSS().get_videos(ytchannel.id)
             updated_at = feed[0].updated_at.isoformat() if feed else None
-            cache = Jsondb.get_cache("youtube")
-            cache[ytchannel.id] = updated_at
-            Jsondb.write_cache('youtube',cache)
+            Jsondb.add_cache("youtube", ytchannel.id, updated_at)
         else:
             await ctx.respond(f'錯誤：找不到帳號代碼 {ythandle} 的頻道')
 
@@ -186,9 +186,7 @@ class system_community(Cog_Extension):
         
         sclient.dbcache.update_notify_community(NotifyCommunityType.Youtube)
 
-        cache = Jsondb.get_cache("youtube")
-        del cache[ytchannel.id]
-        Jsondb.write_cache('youtube',cache)
+        Jsondb.remove_cache("youtube", ytchannel.id)
 
     @youtube.command(description='確認youtube通知')
     async def notify(self,ctx,ythandle:discord.Option(str,required=True,name='youtube帳號代碼',description="youtube頻道中以@開頭的代號")):

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import random
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 from typing import TYPE_CHECKING
 
 import discord
@@ -137,7 +137,7 @@ class StarController(
     def __init__(self):
         super().__init__()
         self.sqldb = sqldb
-        self.dbcache = StardbCache() if self.sqldb else None
+        self.dbcache:StardbCache = StardbCache() if self.sqldb else None
         self.scheduler = scheduler
 
         self._starai:StarGeminiAI = None

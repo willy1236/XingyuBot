@@ -1,11 +1,10 @@
-from typing import TypeVar
+from typing import TYPE_CHECKING, Optional, overload
 
 from ..database import sqldb
 from ..models.mysql import NotifyChannel, NotifyCommunity
 from ..types import NotifyChannelType, NotifyCommunityType
 from ..utilities import log
 
-T = TypeVar("T")
 
 class StardbCache:
     """
@@ -13,10 +12,16 @@ class StardbCache:
     """
     dict_type = [NotifyChannelType.DynamicVoice, NotifyChannelType.VoiceLog]
     list_type = ["dynamic_voice_room"]
-    notify_community_type = [NotifyCommunityType.Twitch, NotifyCommunityType.Youtube, NotifyCommunityType.TwitchVideo, NotifyCommunityType.TwitchClip]
-
+    # notify_community_type = [NotifyCommunityType.Twitch, NotifyCommunityType.Youtube, NotifyCommunityType.TwitchVideo, NotifyCommunityType.TwitchClip]
+    
+    if TYPE_CHECKING:
+        cache: dict[
+                str | NotifyChannelType | NotifyCommunityType,
+                list[int] | dict[int, list[int | Optional[int]]] | list[str]
+            ]
+    
     def __init__(self):
-        self.cache = {}
+        self.cache = dict()
         self.set_data()
 
     def set_data(self):
@@ -55,14 +60,27 @@ class StardbCache:
         try:
             del self.cache[key]
         except KeyError:
+            log.warning(f"dbcache KeyError: {key}")
             pass
+
+    @overload
+    def __getitem__(self, key:str) -> list[int]:
+        ...
+
+    @overload
+    def __getitem__(self, key:NotifyChannelType) -> dict[int, list[int | Optional[int]]]:
+        ...
+
+    @overload
+    def __getitem__(self, key:NotifyCommunityType) -> list[str]:
+        ...
 
     def __getitem__(self, key):
         try:
-            value: dict | list = self.cache[key]
+            value = self.cache[key]
             return value
         except KeyError:
-            log.debug(f"cache KeyError: {key}")
+            log.warning(f"dbcache KeyError: {key}")
             return None
         
     def __repr__(self):
@@ -71,37 +89,37 @@ class StardbCache:
     def update_dynamic_voice(self,add_channel=None,remove_channel=None):
         """更新動態語音頻道"""
         if add_channel and add_channel not in self.cache[NotifyChannelType.DynamicVoice]:
-            self[NotifyChannelType.DynamicVoice].append(add_channel)
+            self.cache[NotifyChannelType.DynamicVoice].append(add_channel)
         if remove_channel:
-            self[NotifyChannelType.DynamicVoice].remove(remove_channel)
+            self.cache[NotifyChannelType.DynamicVoice].remove(remove_channel)
 
     def update_dynamic_voice_room(self,add_channel=None,remove_channel=None):
         """更新動態語音房間"""
         if add_channel and add_channel not in self.cache["dynamic_voice_room"]:
-            self["dynamic_voice_room"].append(add_channel)
+            self.cache["dynamic_voice_room"].append(add_channel)
         if remove_channel:
-            self["dynamic_voice_room"].remove(remove_channel)
+            self.cache["dynamic_voice_room"].remove(remove_channel)
 
     def update_notify_channel(self,notify_type:NotifyChannelType):
         """更新通知頻道"""
         if notify_type not in self.dict_type:
             raise KeyError(f"Not implemented notify type: {notify_type}")
         dbdata = sqldb.get_notify_channel_by_type(notify_type)
-        self[notify_type] = self.generate_notify_channel_dbdata(dbdata)
+        self.cache[notify_type] = self.generate_notify_channel_dbdata(dbdata)
 
     def update_notify_community(self,notify_type:NotifyCommunityType=None):
         """更新社群通知"""
         if notify_type:
-            if notify_type not in self.notify_community_type:
+            if notify_type not in NotifyCommunityType:
                 raise KeyError(f"Not implemented notify type: {notify_type}")
             
             dbdata = sqldb.get_notify_community(notify_type)
-            self[notify_type] = self.generate_notify_community_dbdata(dbdata)
+            self.cache[notify_type] = self.generate_notify_community_dbdata(dbdata)
         else:
-            for t in self.notify_community_type:
+            for t in NotifyCommunityType:
                 dbdata = sqldb.get_notify_community(t)
                 self[t] = self.generate_notify_community_dbdata(dbdata)
 
-    def getif_dynamic_voice_room(self,channel_id):
+    def getif_dynamic_voice_room(self,channel_id:int):
         """取得動態語音房間"""
         return channel_id if channel_id in self["dynamic_voice_room"] else None

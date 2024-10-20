@@ -90,6 +90,22 @@ class TwitchAPI():
             return TwitchUser(**apidata['data'][0])
         else:
             return None
+        
+    def get_user_by_id(self,userid:str) -> TwitchUser | None:
+        """
+        取得Twitch用戶
+        :param userid: 用戶id（user_id）
+        """
+        params = {
+            "id": userid,
+            "first": 1
+        }
+        r = requests.get(f"{self.BaseURL}/users", params=params,headers=self._headers)
+        apidata = r.json()
+        if apidata.get('data'):
+            return TwitchUser(**apidata['data'][0])
+        else:
+            return None
 
     def get_videos(self, user_ids:str|list[str] = None, ids:str|list[str] = None, types:str|list[str]="highlight"):
         """

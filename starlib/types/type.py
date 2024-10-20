@@ -2,7 +2,7 @@ from enum import Enum, IntEnum
 
 
 class NotifyCommunityType(IntEnum):
-    Twitch = 1
+    TwitchLive = 1
     Youtube = 2
     TwitchVideo = 3
     TwitchClip = 4
@@ -32,3 +32,10 @@ class CommunityType(IntEnum):
 
 class StardbCacheType(Enum):
     pass
+
+class JsonCacheType(Enum):
+    EarthquakeTimeFrom = "earthquake_timefrom"
+    TwitchLive = "twitch"
+    YoutubeVideo = "youtube"
+    TwitchVideo = "twitch_v"
+    TwitchClip = "twitch_c"

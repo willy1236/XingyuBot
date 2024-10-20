@@ -170,7 +170,7 @@ class task(Cog_Extension):
     #@tasks.loop(minutes=3)
     async def twitch_live(self):
         log.debug("twitch_live start")
-        users = sclient.dbcache[NotifyCommunityType.Twitch]
+        users = sclient.dbcache[NotifyCommunityType.TwitchLive]
         if not users:
             return
         twitch_cache = Jsondb.get_cache('twitch') or {}
@@ -182,7 +182,7 @@ class task(Cog_Extension):
             if data[user] and not user_cache:
                 twitch_cache[user] = True
                 embed = data[user].embed()
-                await self.bot.send_notify_communities(embed, NotifyCommunityType.Twitch, user)
+                await self.bot.send_notify_communities(embed, NotifyCommunityType.TwitchLive, user)
 
             elif not data[user] and user_cache:
                 del twitch_cache[user]

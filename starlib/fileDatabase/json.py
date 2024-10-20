@@ -140,15 +140,15 @@ class JsonDatabase():
         else:
             raise ValueError('無此API token')
             
-    def get_picture(self, id):
+    def get_picture(self, id) -> str:
         """取得圖片網址"""
         return self.picdata[id]
             
-    def set_token(self, name:str, value:str|dict):
+    def set_token(self, name:str, value:str | dict):
         self.tokens[name] = value
         self.write('tokens',self.tokens)
 
-    def get_jdict(self,key,value):
+    def get_jdict(self,key:str, value:str) -> str:
         """取得jdict資料"""
         return self.jdict[key].get(value,value)
     
@@ -165,21 +165,22 @@ class JsonDatabase():
         usually used in notify_community data in the cache.
         """
         dict_data = self.cache.get(key)
-        if target in dict_data:
+        try:
             del dict_data[target]
             self.cache.write(key, dict_data)
             return True
-        return False
+        except KeyError:
+            return False
     
-    def get_cache(self, key: str):
+    def get_cache(self, key: str) -> dict | str | None:
         """
-        Retrieve a full dict, list, or str from the cache using the provided key.
+        Retrieve a full data from the cache using the provided key.
         """
         return self.cache.get(key)
     
-    def write_cache(self, key: str, value: dict | list | str):
+    def write_cache(self, key: str, value: dict | str):
         """
-        Writes a full dict, list, or str to the cache.
+        Writes a full data to the cache.
         """
         self.cache.write(key, value)
 
