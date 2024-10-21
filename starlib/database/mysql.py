@@ -1,5 +1,6 @@
 import json
 from datetime import date, datetime, time, timedelta, timezone
+from typing import TypeVar
 
 import discord
 import mysql.connector
@@ -15,11 +16,12 @@ from ..errors import *
 from ..fileDatabase import Jsondb
 from ..models.mysql import *
 from ..models.rpg import *
-from ..models.user import CityBattle, RPGUser
 from ..settings import tz
 from ..types import *
 
 SQLsettings = Jsondb.config["SQLsettings"]
+
+O = TypeVar("O")
 
 # type: ignore
 connection_url = URL.create(
@@ -36,6 +38,7 @@ class BaseSQLEngine:
         # SessionLocal = sessionmaker(bind=self.engine)
         # self.session:Session = SessionLocal()
         SQLModel.metadata.create_all(self.engine)
+        # SQLModel.metadata.drop_all(engine, schema="my_schema")
 
         # with Session(self.engine) as session:
         self.session = Session(bind=self.engine)
@@ -49,14 +52,34 @@ class BaseSQLEngine:
     def add(self, db_obj):
         self.session.add(db_obj)
         self.session.commit()
+    
+    def batch_add(self, db_obj_list:list):
+        if db_obj_list:
+            for db_obj in db_obj_list:
+                self.session.add(db_obj)
+            self.session.commit()
 
     def merge(self, db_obj):
         self.session.merge(db_obj)
         self.session.commit()
 
+    def batch_merge(self, db_obj_list:list):
+        if db_obj_list:
+            for db_obj in db_obj_list:
+                self.session.merge(db_obj)
+            self.session.commit()
+
     def remove(self, db_obj):
         self.session.delete(db_obj)
         self.session.commit()
+
+    def expire(self, db_obj):
+        #self.session.expunge(db_obj)
+        self.session.expire(db_obj)
+
+    def get(self, db_obj:O, primary_keys:tuple):
+        return self.session.get(db_obj, primary_keys)
+
 
     def get_student(self, student_id:int):
         stmt = select(Student).where(Student.id == student_id)
@@ -556,6 +579,32 @@ class SQLTwitchSystem(BaseSQLEngine):
         result = self.session.exec(stmt).all()
         return {i.twitch_id: i.action_channel_id for i in result}
 
+class SQLRPGSystem(BaseSQLEngine):
+    def get_user_rpg(self, discord_id):
+        stmt = select(RPGUser).where(RPGUser.discord_id == discord_id)
+        result = self.session.exec(stmt).one_or_none()
+        return result
+    
+    def get_rpg_dungeon(self, dungeon_id):
+        stmt = select(RPGDungeon).where(RPGDungeon.id == dungeon_id)
+        result = self.session.exec(stmt).one()
+        return result
+    
+    def get_monster(self, monster_id):
+        stmt = select(Monster).where(Monster.id == monster_id)
+        result = self.session.exec(stmt).one()
+        return result
+
+    def get_player_item(self, discord_id, item_id):
+        stmt = select(RPGPlayerItem).where(RPGPlayerItem.discord_id == discord_id, RPGPlayerItem.item_id == item_id)
+        result = self.session.exec(stmt).one_or_none()
+        return result
+
+    def get_player_equipments(self, discord_id):
+        stmt = select(RPGEquipment).where(RPGEquipment.discord_id == discord_id)
+        result = self.session.exec(stmt).all()
+        return result
+
 class SQLTRPGSystem(BaseSQLEngine):
     def get_trpg_plot(self, plot_id):
         stmt = select(TRPGStoryPlot).where(TRPGStoryPlot.id == plot_id)
@@ -762,18 +811,6 @@ class MySQLBetSystem(MySQLBaseModel):
         self.connection.commit()
 
 class MySQLRPGSystem(MySQLBaseModel):
-    def get_star_uid_inrpg(self,star_uid:str):
-        if star_uid.startswith("IT"):
-            self.cursor.execute(f'SELECT * FROM `stardb_idbase`.`rpg_item` AS ri WHERE `star_uid` = {star_uid};')
-            records = self.cursor.fetchall()
-            if records:
-                return RPGItem(records[0])
-        elif star_uid.startswith("EQU"):
-            self.cursor.execute(f'SELECT * FROM `database`.`rpg_equipment_ingame` AS rei LEFT JOIN `stardb_idbase`.`rpg_equipment` AS re ON rei.equipment_id = re.equipment_id WHERE `star_uid` = %s;',(star_uid,))
-            records = self.cursor.fetchall()
-            if records:
-                return RPGEquipment(records[0])
-        
     
     def get_rpguser(self,discord_id:int,full=False,user_dc:discord.User=None,):
         """取得RPG用戶
@@ -840,12 +877,6 @@ class MySQLRPGSystem(MySQLBaseModel):
         records = self.cursor.fetchall()
         return records
 
-    def getif_bag(self,discord_id:int,item_uid:int,amount:int):
-        self.cursor.execute(f"SELECT * FROM `stardb_user`.`rpg_user_bag` LEFT JOIN `stardb_idbase`.`rpg_item` ON `rpg_user_bag`.item_uid = `rpg_item`.item_uid WHERE discord_id = {discord_id} AND `rpg_user_bag`.item_uid = {item_uid} AND amount >= {amount};")
-        records = self.cursor.fetchall()
-        if records:
-            return RPGItem(records[0])
-
     def update_bag(self,discord_id:int,item_uid:int,amount:int):
         self.cursor.execute(f"INSERT INTO `stardb_user`.`rpg_user_bag` SET discord_id = {discord_id}, item_uid = {item_uid}, amount = {amount} ON DUPLICATE KEY UPDATE amount = amount + {amount};")
         self.connection.commit()
@@ -902,12 +933,6 @@ class MySQLRPGSystem(MySQLBaseModel):
         self.cursor.execute(f"UPDATE `database`.`rpg_shop` SET `item_inventory` = item_inital_inventory WHERE item_inventory <= item_inital_inventory AND `item_mode` = 1;")
         self.cursor.execute(f"UPDATE `database`.`rpg_shop` SET `item_price` =  item_inital_price * pow(0.97,item_inventory - item_inital_inventory) WHERE `item_mode` = 1;")
         self.connection.commit()
-
-    def get_rpgitem(self,item_uid):
-        self.cursor.execute(f"SELECT * FROM `stardb_idbase`.`rpg_item` WHERE `item_uid` = {item_uid};")
-        record = self.cursor.fetchall()
-        if record:
-            return RPGItem(record[0])
         
     def get_rpgequipment_ingame(self,equipment_uid):
         self.cursor.execute(f"SELECT * FROM database.rpg_equipment_ingame LEFT JOIN `stardb_idbase`.`rpg_equipment` ON `rpg_equipment_ingame`.equipment_id = `rpg_equipment`.equipment_id LEFT JOIN `stardb_idbase`.`rpg_item` ON `rpg_equipment`.item_id = `rpg_item`.item_id WHERE `equipment_uid` = {equipment_uid};")
@@ -1012,13 +1037,6 @@ class MySQLRPGSystem(MySQLBaseModel):
             self.update_rpguser_attribute(discord_id,-item.maxhp,-item.atk,-item.df,-item.hrt,-item.dex)
         self.connection.commit()
         
-
-    def get_equipmentbag_desplay(self,discord_id):
-        self.cursor.execute(f"SELECT * FROM `database`.`rpg_equipment_ingame` AS rei LEFT JOIN `stardb_idbase`.`rpg_equipment` AS re ON rei.equipment_id = re.equipment_id WHERE `discord_id` = {discord_id} ORDER BY re.`equipment_id`;")
-        record = self.cursor.fetchall()
-        if record:
-            return RPGPlayerEquipmentBag(record,self)
-        
     def get_item_market_item(self,discord_id,item_uid):
         self.cursor.execute(f"SELECT * FROM `database`.`rpg_item_market` AS rim LEFT JOIN `stardb_idbase`.`rpg_item` AS ri ON ri.item_uid = rim.item_uid WHERE `discord_id` = {discord_id} AND rim.`item_uid` = {item_uid};")
         record = self.cursor.fetchall()
@@ -1052,8 +1070,8 @@ class MySQLRPGSystem(MySQLBaseModel):
     def get_city_battle(self,city_id):
         self.cursor.execute(f"SELECT * FROM `database`.`rpg_city_battle` LEFT JOIN `stardb_idbase`.`rpg_cities` ON `rpg_city_battle`.city_id = `rpg_cities`.city_id WHERE `rpg_cities`.`city_id` = {city_id};")
         record = self.cursor.fetchall()
-        if record:
-            return CityBattle(record,sqldb=self)
+        # if record:
+        #     return CityBattle(record,sqldb=self)
         
     def get_all_city_battle(self):
         self.cursor.execute(f"SELECT DISTINCT `rpg_cities`.`city_id` FROM `database`.`rpg_city_battle` LEFT JOIN `stardb_idbase`.`rpg_cities` ON `rpg_city_battle`.city_id = `rpg_cities`.city_id;")
@@ -1200,6 +1218,7 @@ class SQLEngine(
     SQLPollSystem,
     SQLElectionSystem,
     SQLTwitchSystem,
+    SQLRPGSystem,
     SQLTRPGSystem,
     SQLBackupSystem,
     SQLTokensSystem,

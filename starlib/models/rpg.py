@@ -2,67 +2,195 @@ import random
 from typing import TYPE_CHECKING
 
 import discord
+from sqlalchemy import (BigInteger, Column, DateTime, ForeignKey, Integer,
+                        String, Text)
 
 from ..base import ListObject
 from ..types import EquipmentSolt, ItemCategory, ShopItemMode
 from ..utilities import BotEmbed
+from .mysql import Field, Relationship, SQLModel
 
 
-class Monster:
-    if TYPE_CHECKING:
-        monster_id: int
-        name: str
-        hp: int
-        atk: int
-        df: int
-        hrt: int
-        dex: int
+class RPGEquipmentSolt(SQLModel, table=True):
+    __tablename__ = 'id_equipment_solt'
+    __table_args__ = {'schema': 'stardb_rpg'}
 
-    def __init__(self,data):
-        self.monster_id = data.get('monster_id')
-        self.name = data.get('monster_name')
-        self.hp = data.get('monster_hp')
-        self.atk = data.get('monster_atk')
-        self.df = data.get('monster_def')
-        self.hrt = data.get('monster_hrt')
-        self.dex = data.get('monster_dex')
-        self.drop_money = data.get('monster_drop_money',0)
+    solt_id: int = Field(primary_key=True)
+    solt_name: str
 
-class RPGItem:
-    if TYPE_CHECKING:
-        item_id: int
-        category: ItemCategory
-        name: str
-        item_uid: int
-        amount: int
-        star_uid: str
-        discord_id: int
+class RPGEquipmentTemplate(SQLModel, table=True):
+    __tablename__ = 'id_equipment'
+    __table_args__ = {'schema': 'stardb_rpg'}
+    
+    equipment_id: int = Field(primary_key=True)
+    slot_id: int = Field(foreign_key="stardb_rpg.id_equipment_solt.solt_id")
+    name: str
+    price: int = Field(default=0)
+    initial_maxhp: int = Field(default=0)
+    initial_atk: int = Field(default=0)
+    initial_pdef: int = Field(default=0)
+    initial_hrt: int = Field(default=0)
+    initial_dex: int = Field(default=0)
 
-    def __init__(self,data):
-        #rpg_item
-        self.category = ItemCategory(data.get('item_category_id') or 1)
-        self.item_id = data.get('item_id')
-        self.name = data.get('item_name')
-        self.item_uid = data.get('item_uid')
-        self.star_uid = data.get('star_uid')
+    equipments: list["RPGEquipment"] = Relationship(back_populates="template")
 
-        #rpg_user_bag
-        self.discord_id = data.get('discord_id')
-        self.amount = data.get('amount')
+class RPGItemTemplate(SQLModel, table=True):
+    __tablename__ = 'id_item'
+    __table_args__ = {'schema': 'stardb_rpg'}
+    
+    id: int = Field(primary_key=True)
+    category_id: int = Field(default=1)
+    name: str
+    
+    items: list["RPGPlayerItem"] = Relationship(back_populates="template")
+    dungeon_treasures: list["RPGDungeonTreasureInfo"] = Relationship(back_populates="item")
 
-# class RPGPlayerItem(RPGItem):
-#     def __init__(self,data):
-#         super().__init__(data)
-        
+class MonsterInBattle(SQLModel, table=False):
+    """在戰鬥前複製Monster的資料以確保資料庫內容不會被更動"""
+    id: int
+    name: str
+    hp: int
+    atk: int
+    pdef: int
+    hrt: int
+    dex: int
 
-class RPGPlayerItemBag(ListObject):
-    def __init__(self,data,sqldb):
-        super().__init__()
-        self.sqldb = sqldb
-        for i in data:
-            self.append(RPGItem(i))
+class Monster(SQLModel, table=True):
+    __tablename__ = 'id_monster'
+    __table_args__ = {'schema': 'stardb_rpg'}
+    
+    id: int = Field(primary_key=True)
+    name: str
+    hp: int = Field(default=0)
+    atk: int = Field(default=0)
+    pdef: int = Field(default=0)
+    hrt: int = Field(default=0)
+    dex: int = Field(default=0)
+    drop_money: int = Field(default=0)
 
-class ShopItem(RPGItem):
+    in_dungeon: list["RPGDungeonMonsterInfo"] = Relationship(back_populates="monster")
+    equipmen_drops: list["MonsterEquipmentDrop"] = Relationship(back_populates="monster")
+    item_drops: list["MonsterItemDrop"] = Relationship(back_populates="monster")
+
+    def create_monster(self):
+        return MonsterInBattle(id=self.id,name=self.name,hp=self.hp,atk=self.atk,pdef=self.pdef,hrt=self.hrt,dex=self.dex)
+
+class MonsterEquipmentDrop(SQLModel, table=True):
+    __tablename__ = 'id_monster_equipment_drop'
+    __table_args__ = {'schema': 'stardb_rpg'}
+    
+    monster_id: int = Field(primary_key=True, foreign_key="stardb_rpg.id_monster.id")
+    equipment_id: int = Field(primary_key=True, foreign_key="stardb_rpg.id_equipment.equipment_id")
+    drop_probability: int = Field(default=0)
+
+    monster: Monster = Relationship(back_populates="equipmen_drops")
+
+class MonsterItemDrop(SQLModel, table=True):
+    __tablename__ = 'id_monster_item_drop'
+    __table_args__ = {'schema': 'stardb_rpg'}
+    
+    monster_id: int = Field(primary_key=True, foreign_key="stardb_rpg.id_monster.id")
+    item_id: int = Field(primary_key=True, foreign_key="stardb_rpg.id_item.id")
+    drop_probability: int = Field(default=0)
+    drop_count: int = Field(default=1)
+
+    monster: Monster = Relationship(back_populates="item_drops")
+
+class RPGDungeon(SQLModel, table=True):
+    __tablename__ = 'id_dungeon'
+    __table_args__ = {'schema': 'stardb_rpg'}
+    
+    id: int = Field(primary_key=True)
+    name: str 
+    description: str | None
+
+    monsters: list["RPGDungeonMonsterInfo"] = Relationship(back_populates="dungeon")
+    treasures: list["RPGDungeonTreasureInfo"] = Relationship(back_populates="dungeon")
+
+class RPGDungeonMonsterInfo(SQLModel, table=True):
+    __tablename__ = 'id_dungeon_monster_info'
+    __table_args__ = {'schema': 'stardb_rpg'}
+    
+    dungeon_id: int = Field(primary_key=True, foreign_key="stardb_rpg.id_dungeon.id")
+    monster_id: int = Field(primary_key=True, foreign_key="stardb_rpg.id_monster.id")
+    weight: int = Field(default=1)
+
+    dungeon: RPGDungeon = Relationship(back_populates="monsters")
+    monster: Monster = Relationship(back_populates="in_dungeon")
+
+class RPGDungeonTreasureInfo(SQLModel, table=True):
+    __tablename__ = 'id_dungeon_treasure_info'
+    __table_args__ = {'schema': 'stardb_rpg'}
+    
+    dungeon_id: int = Field(primary_key=True, foreign_key="stardb_rpg.id_dungeon.id")
+    item_id: int = Field(primary_key=True, foreign_key="stardb_rpg.id_item.id")
+    weight: int = Field(default=1)
+    min_drop: int = Field(default=1)
+    max_drop: int = Field(default=1)
+
+    dungeon: RPGDungeon = Relationship(back_populates="treasures")
+    item: RPGItemTemplate = Relationship(back_populates="dungeon_treasures")
+
+class RPGUser(SQLModel, table=True):
+    __tablename__ = 'rpg_user'
+    __table_args__ = {'schema': 'stardb_rpg'}
+
+    discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True, autoincrement=False))
+    hp: int = Field(default=10)
+    maxhp: int = Field(default=10)
+    atk: int = Field(default=1)
+    pdef: int = Field(default=0)
+    hrt: int = Field(default=60)
+    dex: int = Field(default=0)
+
+    equipments: list["RPGEquipment"] = Relationship(back_populates="owner")
+    items: list["RPGPlayerItem"] = Relationship(back_populates="user")
+
+    def embed(self,user_dc:discord.User):
+        embed = BotEmbed.general(name=user_dc.name, icon_url=user_dc.avatar.url if user_dc.avatar else None)
+        embed.add_field(name='生命/最大生命',value=f"{self.hp} / {self.maxhp}")
+        embed.add_field(name='攻擊力',value=self.atk)
+        embed.add_field(name='物理防禦力',value=self.pdef)
+        embed.add_field(name='命中率',value=f"{self.hrt}%")
+        embed.add_field(name='敏捷',value=self.dex)
+        return embed
+
+    def change_hp(self,value:int):
+        self.hp += value
+        if self.hp > self.maxhp:
+            self.hp = self.maxhp
+
+class RPGEquipment(SQLModel, table=True):
+    __tablename__ = 'rpg_equipment_ingame'
+    __table_args__ = {'schema': 'stardb_rpg'}
+
+    equipment_uid: int = Field(sa_column=Column(Integer, primary_key=True, autoincrement=True))
+    equipment_id: int = Field(foreign_key="stardb_rpg.id_equipment.equipment_id")
+    customized_name: str | None
+    discord_id: int = Field(sa_column=Column(BigInteger, ForeignKey("stardb_rpg.rpg_user.discord_id")))
+    slot_id: int = Field(foreign_key="stardb_rpg.id_equipment_solt.solt_id")
+    maxhp: int = Field(default=0)
+    atk: int = Field(default=0)
+    pdef: int = Field(default=0)
+    hrt: int = Field(default=0)
+    dex: int = Field(default=0)
+    inmarket: int = Field(default=0)
+
+    template: RPGEquipmentTemplate = Relationship(back_populates="equipments")
+    owner: RPGUser = Relationship(back_populates="equipments")
+
+class RPGPlayerItem(SQLModel, table=True):
+    __tablename__ = 'rpg_user_item_bag'
+    __table_args__ = {'schema': 'stardb_rpg'}
+
+    item_id: int = Field(primary_key=True, foreign_key="stardb_rpg.id_item.id")
+    discord_id: int = Field(sa_column=Column(BigInteger, ForeignKey("stardb_rpg.rpg_user.discord_id"), primary_key=True))
+    amount: int = Field(default=0)
+
+    user: RPGUser = Relationship(back_populates="items")
+    template: RPGItemTemplate = Relationship(back_populates="items")
+
+class ShopItem():
     def __init__(self,data:dict):
         super().__init__(data)
         #rpg_shop
@@ -78,46 +206,6 @@ class RPGWorkCareer:
         self.reward_item_min = data.get('reward_item_min')
         self.reward_item_max = data.get('reward_item_max')
 
-class RPGEquipment(RPGItem):
-    def __init__(self,data:dict):
-        super().__init__(data)
-        #rpg_equipment
-        self.equipment_id = data.get('equipment_id')
-        self.name = data.get('equipment_name') or self.name
-        self.price = data.get('equipment_price')
-
-        self.maxhp = data.get('equipment_maxhp') or 0 + data.get("equipment_initial_maxhp") or 0
-        self.atk = data.get('equipment_atk') or 0 + data.get("equipment_initial_atk") or 0
-        self.df = data.get('equipment_def') or 0 + data.get("equipment_initial_def") or 0
-        self.hrt = data.get('equipment_hrt') or 0 + data.get("equipment_initial_hrt") or 0
-        self.dex = data.get('equipment_dex') or 0 + data.get("equipment_initial_dex") or 0
-
-        #rpg_equipment_ingame
-        self.equipment_uid = data.get('equipment_uid')
-        self.customized_name = data.get('equipment_customized_name')
-        self.slot = EquipmentSolt(data.get('slot_id') or 0)
-        self.equipment_inmarket = bool(data.get('equipment_inmarket'))
-        
-        self.category = ItemCategory.equipment
-        self.desplay_name = self.customized_name or self.name
-
-# class RPGPartialEquipment(RPGItem):
-#     def __init__(self,data:dict):
-#         super().__init__(data)
-#         self.equipment_uid = data.get('equipment_uid')
-#         self.category = ItemCategory.equipment
-#         self.name = data.get('equipment_name') or self.name
-#         self.customized_name = data.get('equipment_customized_name')
-#         self.price = data.get('equipment_price')
-#         self.slot = EquipmentSolt(data.get('slot_id') or 0)
-
-class RPGPlayerEquipmentBag(ListObject):
-    def __init__(self,data,sqldb):
-        super().__init__()
-        self.sqldb = sqldb
-        for i in data:
-            self.append(RPGEquipment(i))
-        
 class RPGPlayerWearingEquipment:
     if TYPE_CHECKING:
         head:RPGEquipment
@@ -150,7 +238,7 @@ class RPGPlayerWearingEquipment:
         embed.add_field(name="鞋子",value=f"[{self.foot.equipment_uid}]{self.foot.name}" if self.foot else "無")
         return embed
     
-class MonsterEquipmentLoot(RPGEquipment):
+class MonsterEquipmentLoot():
     def __init__(self,data):
         super().__init__(data)
         self.monster_id = data.get('monster_id')
@@ -177,7 +265,7 @@ class MonsterLootList(ListObject):
 
         return loot_list
     
-class RPGMarketItem(RPGItem):
+class RPGMarketItem():
     def __init__(self,data):
         super().__init__(data)
         #rpg_item_market

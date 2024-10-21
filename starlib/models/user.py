@@ -33,8 +33,6 @@ class RPGUser():
         activities_done: datetime
 
         workcareer: RPGWorkCareer
-        itembag: RPGPlayerItemBag
-        equipmentbag: RPGPlayerEquipmentBag
         waring_equipment: RPGPlayerWearingEquipment
         
     def __init__(self,data:dict,*args,**kwargs):
@@ -60,14 +58,6 @@ class RPGUser():
         self.activities_statue = ActivitiesStatue(data.get('activities_statue') or 0)
         self.activities_done = data.get('activities_done')
 
-    @property
-    def itembag(self):
-        dbdata = self.sqldb.get_bag(self.discord_id,with_name=True)
-        if dbdata:
-            return [RPGItem(i) for i in dbdata]
-        else:
-            return []
-        #return RPGPlayerItemBag(self.sqldb.get_bag(self.discord_id),self.sqldb)
 
     @property
     def equipmentbag(self):

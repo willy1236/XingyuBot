@@ -4,5 +4,4 @@
 """
 from .game import *
 from .oauth import *
-from .rpg import *
 from .user import *
