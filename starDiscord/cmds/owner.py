@@ -141,7 +141,7 @@ class owner(Cog_Extension):
     async def statue(self,ctx,statue):
         config = Jsondb.config
         config.write('activity', statue)
-        await self.bot.change_presence(activity=discord.Game(name=config.get("activity")),status=discord.Status.online)
+        await self.bot.change_presence(activity=discord.CustomActivity(name=config.get("activity")),status=discord.Status.online)
         await ctx.respond(f'狀態更改完成',delete_after=5)
 
     #send
