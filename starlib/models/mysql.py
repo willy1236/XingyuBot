@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, TypedDict
 from discord import Bot
 from sqlalchemy import (BigInteger, Column, DateTime, ForeignKey, Integer,
                         String, Text)
-from sqlalchemy.orm import declarative_base
+from sqlalchemy.orm import declarative_base, relationship
 from sqlmodel import Field, Relationship, SQLModel
 
 from ..base import ListObject
@@ -13,15 +13,16 @@ from ..fileDatabase import Jsondb
 from ..settings import tz
 from ..types import *
 from ..utilities import BotEmbed
+from .sqlSchema import *
 
 if TYPE_CHECKING:
     from ..database import SQLEngine
 
-Base = declarative_base()
+# Base = declarative_base()
 
-class Student(SQLModel, table=True):
+    
+class Student(DatabaseSchema, table=True):
     __tablename__ = 'students'
-    __table_args__ = {'schema': 'database'}
     
     id: int = Field(sa_column=Column(Integer, primary_key=True))
     name: str = Field(sa_column=Column(String(255)))
@@ -30,18 +31,16 @@ class Student(SQLModel, table=True):
 
     school: "School" = Relationship(back_populates="students")
 
-class School(SQLModel, table=True):
+class School(DatabaseSchema, table=True):
     __tablename__ = 'schools'
-    __table_args__ = {'schema': 'database'}
 
     id: int = Field(primary_key=True)
     name: str
 
     students: list[Student] = Relationship(back_populates="school")
 
-class CloudUser(SQLModel, table=True):
+class CloudUser(UserSchema, table=True):
     __tablename__ = 'cloud_user'
-    __table_args__ = {'schema': 'stardb_user'}
 
     id: str | None
     discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True, autoincrement=False))
@@ -49,9 +48,8 @@ class CloudUser(SQLModel, table=True):
     drive_share_id: str | None
     twitch_id: int | None = Field(unique=True)
 
-class DiscordUser(SQLModel, table=True):
+class DiscordUser(UserSchema, table=True):
     __tablename__ = "user_discord"
-    __table_args__ = {'schema': 'stardb_user'}
 
     discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True, autoincrement=False))
     name: str | None
@@ -62,18 +60,16 @@ class DiscordUser(SQLModel, table=True):
     
     registration: "DiscordRegistration" = Relationship(back_populates="members")
 
-class UserPoint(SQLModel, table=True):
+class UserPoint(UserSchema, table=True):
     __tablename__ = "user_point"
-    __table_args__ = {'schema': 'stardb_user'}
 
     discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True, autoincrement=False))
     stardust: int | None = Field(default=0)
     point: int | None = Field(default=0)
     rcoin: int | None = Field(default=0)
 
-class UserGame(SQLModel, table=True):
+class UserGame(UserSchema, table=True):
     __tablename__ = "game_data"
-    __table_args__ = {'schema': 'stardb_user'}
 
     discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True, autoincrement=False))
     game: GameType = Field(sa_column=Column(Integer, primary_key=True, autoincrement=False))
@@ -82,9 +78,8 @@ class UserGame(SQLModel, table=True):
     account_id: str | None
     other_id: str | None
 
-class UserPoll(SQLModel, table=True):
+class UserPoll(UserSchema, table=True):
     __tablename__ = "user_poll"
-    __table_args__ = {'schema': 'stardb_user'}
     
     poll_id: int = Field(primary_key=True, foreign_key="stardb_basic.poll_data.poll_id")
     discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
@@ -92,25 +87,22 @@ class UserPoll(SQLModel, table=True):
     vote_at: datetime
     vote_magnification: int = Field(default=1)
 
-class UserAccount(SQLModel, table=True):
+class UserAccount(UserSchema, table=True):
     __tablename__ = "user_account"
-    __table_args__ = {'schema': 'stardb_user'}
 
     main_account: int = Field(primary_key=True)
     alternate_account: int = Field(primary_key=True)
 
-class UserParty(SQLModel, table=True):
+class UserParty(UserSchema, table=True):
     __tablename__ = "user_party"
-    __table_args__ = {'schema': 'stardb_user'}
     
     discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
     party_id: int = Field(primary_key=True, foreign_key="stardb_idbase.party_datas.party_id")
     
     party: "Party" = Relationship(back_populates="members")
 
-class UserModerate(SQLModel, table=True):
+class UserModerate(UserSchema, table=True):
     __tablename__ = "user_moderate"
-    __table_args__ = {'schema': 'stardb_user'}
 
     warning_id: int = Field(primary_key=True, default=None)
     discord_id: int = Field(sa_column=Column(BigInteger))
@@ -148,36 +140,32 @@ class UserModerate(SQLModel, table=True):
                 value += "\n伺服器區域警告"
             return name, value
 
-class RoleSave(SQLModel, table=True):
+class RoleSave(UserSchema, table=True):
     __tablename__ = "role_save"
-    __table_args__ = {'schema': 'stardb_user'}
 
     discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
     role_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
     role_name: str
     time: date
 
-class Pet(SQLModel, table=True):
+class Pet(UserSchema, table=True):
     __tablename__ = "user_pet"
-    __table_args__ = {'schema': 'stardb_user'}
 
     discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
     pet_species: str
     pet_name: str
     food: int | None
 
-class NotifyChannel(SQLModel, table=True):
+class NotifyChannel(BasicSchema, table=True):
     __tablename__ = "notify_channel"
-    __table_args__ = {'schema': 'stardb_basic'}
     
     guild_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
     notify_type: NotifyChannelType = Field(sa_column=Column(Integer, primary_key=True))
     channel_id: int = Field(sa_column=Column(BigInteger))
     role_id: int | None = Field(sa_column=Column(BigInteger))
 
-class NotifyCommunity(SQLModel, table=True):
+class NotifyCommunity(BasicSchema, table=True):
     __tablename__ = "notify_community"
-    __table_args__ = {'schema': 'stardb_basic'}
     
     notify_type: NotifyCommunityType = Field(sa_column=Column(Integer, primary_key=True))
     notify_name: str = Field(primary_key=True)
@@ -186,18 +174,16 @@ class NotifyCommunity(SQLModel, table=True):
     channel_id: int = Field(sa_column=Column(BigInteger))
     role_id: int | None = Field(sa_column=Column(BigInteger))
 
-class DynamicChannel(SQLModel, table=True):
+class DynamicChannel(BasicSchema, table=True):
     __tablename__ = "dynamic_channel"
-    __table_args__ = {'schema': 'stardb_basic'}
     
     channel_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
     discord_id: int = Field(sa_column=Column(BigInteger))
     guild_id: int = Field(sa_column=Column(BigInteger))
     created_at: datetime
 
-class Poll(SQLModel, table=True):
+class Poll(BasicSchema, table=True):
     __tablename__ = "poll_data"
-    __table_args__ = {'schema': 'stardb_basic'}
 
     poll_id: int = Field(default=None, primary_key=True)
     title: str
@@ -212,33 +198,29 @@ class Poll(SQLModel, table=True):
     results_only_initiator: bool
     number_of_user_votes: int
 
-class PollOption(SQLModel, table=True):
+class PollOption(BasicSchema, table=True):
     __tablename__ = "poll_options"
-    __table_args__ = {'schema': 'stardb_basic'}
 
     poll_id: int = Field(primary_key=True, foreign_key="stardb_basic.poll_data.poll_id")
     option_id: int = Field(primary_key=True)
     option_name: str
 
-class PollRole(SQLModel, table=True):
+class PollRole(BasicSchema, table=True):
     __tablename__ = "poll_role"
-    __table_args__ = {'schema': 'stardb_basic'}
 
     poll_id: int = Field(primary_key=True, foreign_key="stardb_basic.poll_data.poll_id")
     role_id: int = Field(sa_column=Column(BigInteger))
     role_type: int
     role_magnification: int
 
-class TwitchBotJoinChannel(SQLModel, table=True):
+class TwitchBotJoinChannel(BasicSchema, table=True):
     __tablename__ = "twitch_bot_join_channel"
-    __table_args__ = {'schema': 'stardb_basic'}
     
     twitch_id: int = Field(primary_key=True)
     action_channel_id: int | None = Field(sa_column=Column(BigInteger))
 
-class Party(SQLModel, table=True):
+class Party(IdbaseSchema, table=True):
     __tablename__ = "party_datas"
-    __table_args__ = {'schema': 'stardb_idbase'}
 
     party_id: int = Field(primary_key=True)
     party_name: str
@@ -248,9 +230,8 @@ class Party(SQLModel, table=True):
     
     members: list[UserParty] = Relationship(back_populates="party")
 
-class DiscordRegistration(SQLModel, table=True):
+class DiscordRegistration(IdbaseSchema, table=True):
     __tablename__ = "discord_registrations"
-    __table_args__ = {'schema': 'stardb_idbase'}
     
     registrations_id: int = Field(primary_key=True)
     guild_id: int = Field(sa_column=Column(BigInteger))
@@ -258,18 +239,16 @@ class DiscordRegistration(SQLModel, table=True):
 
     members: list[DiscordUser] = Relationship(back_populates="registration")
 
-class TRPGStoryPlot(SQLModel, table=True):
+class TRPGStoryPlot(IdbaseSchema, table=True):
     __tablename__ = "trpg_storyplots"
-    __table_args__ = {'schema': 'stardb_idbase'}
 
     id: int = Field(primary_key=True)
     title: str
     content: str = Field(sa_column=Column(Text))
     options: list["TRPGStoryOption"] = Relationship(back_populates="plot")
 
-class TRPGStoryOption(SQLModel, table=True):
+class TRPGStoryOption(IdbaseSchema, table=True):
     __tablename__ = "trpg_plot_options"
-    __table_args__ = {'schema': 'stardb_idbase'}
 
     plot_id: int = Field(primary_key=True, foreign_key="stardb_idbase.trpg_storyplots.id")
     option_id: int = Field(primary_key=True)
@@ -281,18 +260,16 @@ class TRPGStoryOption(SQLModel, table=True):
     fail_plot: int | None
     plot: TRPGStoryPlot = Relationship(back_populates="options")
 
-class TRPGCharacter(SQLModel, table=True):
+class TRPGCharacter(IdbaseSchema, table=True):
     __tablename__ = "trpg_characters"
-    __table_args__ = {'schema': 'stardb_idbase'}
 
     discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
     character_name: str
 
     abilities: list["TRPGCharacterAbility"] = Relationship(back_populates="character")
 
-class TRPGCharacterAbility(SQLModel, table=True):
+class TRPGCharacterAbility(IdbaseSchema, table=True):
     __tablename__ = "trpg_character_abilities"
-    __table_args__ = {'schema': 'stardb_idbase'}
 
     discord_id: int = Field(sa_column=Column(BigInteger, ForeignKey("stardb_idbase.trpg_characters.discord_id"), primary_key=True))
     ability_id: int = Field(primary_key=True, foreign_key="stardb_idbase.trpg_abilities.ability_id")
@@ -302,18 +279,16 @@ class TRPGCharacterAbility(SQLModel, table=True):
     character: TRPGCharacter = Relationship(back_populates="abilities")
     ability: "TRPGAbility" = Relationship(back_populates="characters")
 
-class TRPGAbility(SQLModel, table=True):
+class TRPGAbility(IdbaseSchema, table=True):
     __tablename__ = "trpg_abilities"
-    __table_args__ = {'schema': 'stardb_idbase'}
 
     ability_id: int = Field(primary_key=True)
     ability_name: str
 
     characters: list[TRPGCharacterAbility] = Relationship(back_populates="ability")
 
-class BackupRole(SQLModel, table=True):
+class BackupRole(BackupSchema, table=True):
     __tablename__ = "roles_backup"
-    __table_args__ = {'schema': 'stardb_backup'}
 
     role_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
     role_name: str
@@ -340,17 +315,15 @@ class BackupRole(SQLModel, table=True):
 
         return embed
 
-class BackupRoleUser(SQLModel, table=True):
+class BackupRoleUser(BackupSchema, table=True):
     __tablename__ = "role_user_backup"
-    __table_args__ = {'schema': 'stardb_backup'}
     
     role_id: int = Field(sa_column=Column(BigInteger, ForeignKey("stardb_backup.roles_backup.role_id"), primary_key=True))
     discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
     role: BackupRole = Relationship(back_populates="members")
 
-class OAuth2Token(SQLModel, table=True):
+class OAuth2Token(TokensSchema, table=True):
     __tablename__ = "oauth_token"
-    __table_args__ = {'schema': 'stardb_tokens'}
 
     user_id: str = Field(primary_key=True)
     type: CommunityType = Field(sa_column=Column(Integer, primary_key=True))
@@ -358,9 +331,8 @@ class OAuth2Token(SQLModel, table=True):
     refresh_token: str
     expires_at: datetime
 
-class BotToken(SQLModel, table=True):
+class BotToken(TokensSchema, table=True):
     __tablename__ = "bot_token"
-    __table_args__ = {'schema': 'stardb_tokens'}
 
     api_type: CommunityType = Field(sa_column=Column(Integer, primary_key=True))
     id: int | None = Field(sa_column=Column(Integer, primary_key=True, autoincrement=True))
@@ -373,9 +345,8 @@ class BotToken(SQLModel, table=True):
     callback_uri: str | None
     expires_at: datetime | None
 
-class AccountDetails(SQLModel, table=True):
+class AccountDetails(LedgerSchema, table=True):
     __tablename__ = "account_details"
-    __table_args__ = {'schema': 'stardb_ledger'}
 
     id: int = Field(primary_key=True)
     title: str
@@ -388,9 +359,8 @@ class AccountDetails(SQLModel, table=True):
     note: str
     import_source: int
 
-class UpfrontDetails(SQLModel, table=True):
+class UpfrontDetails(LedgerSchema, table=True):
     __tablename__ = "upfront_details"
-    __table_args__ = {'schema': 'stardb_ledger'}
 
     account_details_id: int = Field(primary_key=True)
     upfront_id: int
@@ -398,30 +368,26 @@ class UpfrontDetails(SQLModel, table=True):
     upfront_amount: int
     note: str
 
-class DetailsCategory(SQLModel, table=True):
+class DetailsCategory(LedgerSchema, table=True):
     __tablename__ = "details_category"
-    __table_args__ = {'schema': 'stardb_ledger'}
 
     category_id: int = Field(primary_key=True)
     category_name: str
 
-class PaymentMethod(SQLModel, table=True):
+class PaymentMethod(LedgerSchema, table=True):
     __tablename__ = "payment_method"
-    __table_args__ = {'schema': 'stardb_ledger'}
 
     method_id: int = Field(primary_key=True)
     method_name: str
 
-class ImportSource(SQLModel, table=True):
+class ImportSource(LedgerSchema, table=True):
     __tablename__ = "import_source"
-    __table_args__ = {'schema': 'stardb_ledger'}
 
     source_id: int = Field(primary_key=True)
     source_name: str
 
-class UpfrontType(SQLModel, table=True):
+class UpfrontType(LedgerSchema, table=True):
     __tablename__ = "upfront_type"
-    __table_args__ = {'schema': 'stardb_ledger'}
 
     type_id: int = Field(primary_key=True)
     type_name: str

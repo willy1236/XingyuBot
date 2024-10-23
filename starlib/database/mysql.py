@@ -43,10 +43,10 @@ class BaseSQLEngine:
         # with Session(self.engine) as session:
         self.session = Session(bind=self.engine)
         
-        # self.alengine = sqlalchemy.create_engine(connection_url, echo=False)
+        self.alengine = sqlalchemy.create_engine(connection_url, echo=False)
         # Base.metadata.create_all(self.alengine)
-        # Sessionmkr = sessionmaker(bind=self.alengine)
-        # self.alsession = Sessionmkr()
+        Sessionmkr = sessionmaker(bind=self.alengine)
+        self.alsession = Sessionmkr()
 
     #* Base
     def add(self, db_obj):
@@ -77,7 +77,7 @@ class BaseSQLEngine:
         #self.session.expunge(db_obj)
         self.session.expire(db_obj)
 
-    def get(self, db_obj:O, primary_keys:tuple):
+    def get(self, db_obj:O, primary_keys:tuple) -> O | None:
         return self.session.get(db_obj, primary_keys)
 
 
@@ -663,6 +663,7 @@ class SQLTest(BaseSQLEngine):
     def add_test(self, student:Student):
         self.alsession.add(Student)
         self.alsession.commit()
+        self.alsession.merge()
 
     def remove_test(self, student_id:int):
         stmt = delete(Student).where(Student.id == student_id)

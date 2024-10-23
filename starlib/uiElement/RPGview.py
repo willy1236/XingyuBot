@@ -292,61 +292,102 @@ class RPGbutton2(discord.ui.View):
             result = user.work()
             await interaction.response.edit_message(content=result)
 
-class RPGEquipmentBagView(discord.ui.View):
+class RPGEquipmentBagPaginator(pages.Paginator):
     item_per_page = 10
 
     def __init__(self,user_dc:discord.User):
-        super().__init__()
-        self.bag = sqldb.get_player_equipments(user_dc.id)
         self.user_dc = user_dc
-        self.paginator:pages.Paginator = None
+        self.bag = sqldb.get_player_equipments(user_dc.id)
+        super().__init__(self.create_pages())
+        #super().__init__([BotEmbed.rpg(f'{self.user_dc.name}的裝備包包'," ")])
         self.now_page_item = -1
+        #self.refresh_item_page()
 
-    @property
-    def now_item(self):
-        return self.bag[self.paginator.current_page * self.item_per_page + self.now_page_item]
-
-    def refresh_item_page(self):
-        page = []
-        
-        for i in range(int(len(self.bag)/self.item_per_page) + 1):
-            page.append(BotEmbed.rpg(f'{self.user_dc.name}的裝備包包'," "))
-            
+    def create_pages(self):
+        item_pages = []
+        embed = BotEmbed.rpg(f'{self.user_dc.name}的包包',"請選擇一項裝備")
+        for i in range(0 , len(self.bag), self.item_per_page):
             text_list = []
-            for j in range(i*self.item_per_page,(i + 1)*self.item_per_page):
-                try:
-                    item = self.bag[j]
-                except IndexError:
-                    break
-                name = f"{item.customized_name}({item.name})" if item.customized_name else item.name
+            for item in self.bag[i: i + self.item_per_page]:
+                name = f"{item.customized_name}({item.template.name})" if item.customized_name else item.template.name
                 text_list.append(f"[{item.equipment_uid}] {name}")
-            page[i].description = "\n".join(text_list)
-
-        if self.paginator:
-            self.paginator.pages = page
-        return page
-
-    def now_item_embed(self):
-        item = self.now_item
-        description = f"uid/id：{item.equipment_uid}/{item.item_id}\n價格：{item.price}"
-        if item.slot.value != 0:
-            description +=f"\n裝備位置：{Jsondb.get_tw(str(item.slot.value),'rpgequipment_solt')}"
-        description +=f"\n最大生命（MaxHP）：{item.maxhp}\n攻擊（ATK）：{item.atk}\n防禦（DEF）：{item.df}\n命中（HRT）：{item.hrt}%\n敏捷（DEX）：{item.dex}"
-        embed = BotEmbed.rpg(item.customized_name if item.customized_name else item.name,description)
-        return embed
+            #embed = BotEmbed.rpg(f'{self.user_dc.name}的包包',"\n".join(text_list))
+            page = pages.Page(embeds=[embed], custom_view=RPGEquipmentSelectView(self.bag[i: i + self.item_per_page]))
+            item_pages.append(page)
+        return item_pages
     
-    @discord.ui.button(label="上個裝備",style=discord.ButtonStyle.primary)
+
+
+class RPGEquipmentSelect(discord.ui.Select):
+    def __init__(self, bag:list[RPGEquipment]):
+        self.bag = bag
+        super().__init__(
+            placeholder="選擇裝備",
+            max_values=1,
+            min_values=1,
+            options=[ discord.SelectOption(label=i.customized_name if i.customized_name else i.template.name, 
+                                           description=f"[{i.equipment_uid}] {i.template.name}", 
+                                           value=str(i.equipment_uid)
+                                           ) for i in bag]
+        )
+
+    async def callback(self, interaction: discord.Interaction):
+        self.view:RPGEquipmentSelectView
+        uid = int(self.values[0])
+        await interaction.response.edit_message(embed=next((item for item in self.bag if item.equipment_uid == uid), None).embed())
+
+class RPGEquipmentSelectView(discord.ui.View):
+    item_per_page = 10
+    def __init__(self, user_dc:discord.User):
+        super().__init__()
+        self.user_dc = user_dc
+        self.bag = sqldb.get_player_equipments(user_dc.id)
+        
+        self.embeds:list[discord.Embed] = None
+        self.now_page = 1
+        self.selects:list[RPGEquipmentSelect] = None
+        self.set_embeds_selects()
+
+        self.select = self.selects[0]
+        self.add_item(self.select)
+        
+    def set_embeds_selects(self):
+        item_embeds = []
+        selects = []
+        for i in range(0 , len(self.bag), self.item_per_page):
+            text_list = []
+            for item in self.bag[i: i + self.item_per_page]:
+                name = f"{item.customized_name}({item.template.name})" if item.customized_name else item.template.name
+                text_list.append(f"[{item.equipment_uid}] {name}")
+            
+            embed = BotEmbed.rpg(f'{self.user_dc.name}的包包', "\n".join(text_list))
+            select = RPGEquipmentSelect(self.bag[i: i + self.item_per_page])
+            #embed = BotEmbed.rpg(f'{self.user_dc.name}的包包',"\n".join(text_list))
+            #page = pages.Page(embeds=[], custom_view=RPGEquipmentSelectView(self.bag[i: i + self.item_per_page]))
+            item_embeds.append(embed)
+            selects.append(select)
+
+        self.embeds = item_embeds
+        self.selects = selects
+    
+    async def change_page(self,interaction: discord.Interaction):
+        print(self.children)
+        embed = self.embeds[self.now_page - 1]
+        self.select = self.selects[self.now_page - 1]
+        now_button:discord.Button = self.get_item("rpgequipment_now_page")
+        now_button.label = f"{self.now_page}/{len(self.embeds)}"
+        await interaction.response.edit_message(embeds=[embed], view=self)
+
+    @discord.ui.button(label="上一頁",style=discord.ButtonStyle.primary, row=1)
     async def button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
-        self.now_page_item -= 1
-        if self.now_page_item <= -1:
-            self.now_page_item = 9
-        if self.paginator.current_page * 10 + self.now_page_item > len(self.bag):
-            self.now_page_item = (len(self.bag) -1) % self.item_per_page
+        if interaction.user.id == self.user_dc.id:
+            num_back = self.now_page - 1
+            if num_back == 0:
+                num_back = len(self.embeds)
+                await self.change_page(interaction)
 
-        embed = self.now_item_embed()
-        await interaction.response.edit_message(embeds=[self.paginator.pages[self.paginator.current_page],embed])
 
-    @discord.ui.button(label="售出裝備",style=discord.ButtonStyle.danger)
+    @discord.ui.button(label="售出裝備",style=discord.ButtonStyle.danger, row=1)
     async def button3_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
         if interaction.user.id == self.user_dc.id and self.now_item:
             sqldb.sell_rpgplayer_equipment(self.user_dc.id,self.now_item.equipment_uid)
@@ -356,7 +397,12 @@ class RPGEquipmentBagView(discord.ui.View):
             self.refresh_item_page()
             await interaction.response.edit_message(content=f"已售出 {self.now_item.name} 並獲得 {self.now_item.price} Rcoin",embeds=[self.paginator.pages[self.paginator.current_page]])
 
-    @discord.ui.button(label="批量售出",style=discord.ButtonStyle.danger)
+    @discord.ui.button(label="當前頁面",style=discord.ButtonStyle.gray, row=1, custom_id="rpgequipment_now_page")
+    async def button5_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
+        if interaction.user.id == self.user_dc.id:
+            await self.change_page(interaction)
+
+    @discord.ui.button(label="批量售出",style=discord.ButtonStyle.danger, row=1)
     async def button4_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
         if interaction.user.id == self.user_dc.id and self.now_item:
             total_price, deleted_uids = sqldb.sell_rpgplayer_equipment(self.user_dc.id,equipment_id=self.now_item.item_id)
@@ -367,11 +413,10 @@ class RPGEquipmentBagView(discord.ui.View):
             self.refresh_item_page()
             await interaction.response.edit_message(content=f"已售出未穿著的所有 {self.now_item.name} 並獲得 {total_price} Rcoin",embeds=[self.paginator.pages[self.paginator.current_page]])
 
-    @discord.ui.button(label="下個裝備",style=discord.ButtonStyle.primary)
+    @discord.ui.button(label="下一頁",style=discord.ButtonStyle.primary, row=1)
     async def button2_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
-        self.now_page_item += 1
-        if self.now_page_item == self.item_per_page or self.paginator.current_page * 10 + self.now_page_item > len(self.bag) -1 :
-            self.now_page_item = 0
-
-        embed = self.now_item_embed()
-        await interaction.response.edit_message(embeds=[self.paginator.pages[self.paginator.current_page],embed])
+        if interaction.user.id == self.user_dc.id:
+            num_next = self.now_page + 1
+            if num_next == len(self.embeds) + 1:
+                num_next = 1
+                await self.change_page(interaction)

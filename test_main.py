@@ -86,6 +86,12 @@ if __name__ == '__main__':
 
 # school = sqldb.get_school(1)
 # print(school.name, school.students)
-ytapi = YoutubeAPI()
-breakpoint()
-print(ytapi.get_video("X-dTcoW2A8s")[0].embed().fields)
+# ytapi = YoutubeAPI()
+# breakpoint()
+# print(ytapi.get_video("X-dTcoW2A8s")[0].embed().fields)
+
+#print(sqldb.get_test())
+
+lst = [0,1,2,3,4,5,6,7,8,9]
+for i in range(0, len(lst), 3):
+    print(lst[i:i+3])
