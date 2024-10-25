@@ -18,6 +18,10 @@ from twitchAPI.type import (AuthScope, ChatEvent, EventSubSubscriptionError,
                             EventSubSubscriptionTimeout)
 
 from starlib import BaseThread, BotEmbed, Jsondb, sclient, twitch_log
+from starlib.dataExtractor import TwitchAPI
+from starlib.types import NotifyCommunityType
+
+twapi = TwitchAPI()
 
 USER_SCOPE = [
     AuthScope.BITS_READ,
@@ -71,6 +75,11 @@ async def on_stream_online(event: eventsub.StreamOnlineEvent):
     twitch_log.info(f'{event.event.broadcaster_user_name} starting stream!')
     if sclient.bot:
         sclient.bot.send_message(content=f'{event.event.broadcaster_user_name} 正在直播 {stream.game_name}!')
+        is_live = Jsondb.get_cache('twitch').get(event.event.broadcaster_user_id)
+        if is_live is False:
+            embed = twapi.get_lives(event.event.broadcaster_user_id)[event.event.broadcaster_user_id].embed()
+            asyncio.run_coroutine_threadsafe(sclient.bot.send_notify_communities(embed, NotifyCommunityType.TwitchLive, event.event.broadcaster_user_id), sclient.bot.loop)
+            Jsondb.set_cache('twitch', event.event.broadcaster_user_id, True)
     
     action_channel_id = TARGET_CHANNEL.get(int(event.event.broadcaster_user_id))
     if action_channel_id:
@@ -80,6 +89,9 @@ async def on_stream_offline(event: eventsub.StreamOfflineEvent):
     twitch_log.info(f'{event.event.broadcaster_user_name} ending stream.')
     if sclient.bot:
         sclient.bot.send_message(content=f'{event.event.broadcaster_user_name} ending stream.')
+        is_live = Jsondb.get_cache('twitch').get(event.event.broadcaster_user_id)
+        if is_live is True:
+            Jsondb.set_cache('twitch', event.event.broadcaster_user_id, False)
 
 async def on_channel_points_custom_reward_redemption_add(event: eventsub.ChannelPointsCustomRewardRedemptionAddEvent):
     text = f'{event.event.user_name}({event.event.user_login}) 兌換了 {event.event.reward.title}!'

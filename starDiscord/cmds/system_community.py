@@ -39,10 +39,10 @@ class system_community(Cog_Extension):
                     pass
             
                 case NotifyCommunityType.TwitchVideo:
-                    Jsondb.add_cache("twitch_v", user.id, datetime.now(tz=tz).isoformat(timespec="seconds"))
+                    Jsondb.set_cache("twitch_v", user.id, datetime.now(tz=tz).isoformat(timespec="seconds"))
                 
                 case NotifyCommunityType.TwitchClip:
-                    Jsondb.add_cache("twitch_c", user.id, datetime.now(tz=tz).isoformat(timespec="seconds"))
+                    Jsondb.set_cache("twitch_c", user.id, datetime.now(tz=tz).isoformat(timespec="seconds"))
             
             sclient.dbcache.update_notify_community(type)
 
@@ -168,7 +168,7 @@ class system_community(Cog_Extension):
 
             feed = YoutubeRSS().get_videos(ytchannel.id)
             updated_at = feed[0].updated_at.isoformat() if feed else None
-            Jsondb.add_cache("youtube", ytchannel.id, updated_at)
+            Jsondb.set_cache("youtube", ytchannel.id, updated_at)
         else:
             await ctx.respond(f'錯誤：找不到帳號代碼 {ythandle} 的頻道')
 

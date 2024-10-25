@@ -152,7 +152,7 @@ class JsonDatabase():
         """取得jdict資料"""
         return self.jdict[key].get(value,value)
     
-    def add_cache(self, key: str, target: str, value):
+    def set_cache(self, key: str, target: str, value):
         """Add a key-value(target-value) pair to a dictionary stored in the cache.\\
         usually used in notify_community data in the cache.
         """
