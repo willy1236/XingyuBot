@@ -391,11 +391,13 @@ async def run():
         # except EventSubSubscriptionError as e:
         #     twitch_log.warning(f"Error subscribing to channel prediction begin: {e}")
         
-        # try:
-        #     twitch_log.debug("listening to channel prediction end")
-        #     await eventsub.listen_channel_prediction_end(user.id, on_channel_prediction_end)
-        # except EventSubSubscriptionError as e:
-        #     twitch_log.warning(f"Error subscribing to channel prediction end: {e}")
+        try:
+            twitch_log.debug("listening to channel prediction end")
+            await eventsub.listen_channel_prediction_end(user.id, on_channel_prediction_end)
+        except EventSubSubscriptionError as e:
+            twitch_log.warning(f"Error subscribing to channel prediction end: {e}")
+        except EventSubSubscriptionTimeout:
+            twitch_log.warning(f"Error subscribing to channel prediction end: timeout.")
         
     sclient.twitch = twitch
     # we are done with our setup, lets start this bot up!

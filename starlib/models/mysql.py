@@ -331,6 +331,10 @@ class OAuth2Token(TokensSchema, table=True):
     refresh_token: str
     expires_at: datetime
 
+    @property
+    def valid(self):
+        return self.expires_at > datetime.now()
+
 class BotToken(TokensSchema, table=True):
     __tablename__ = "bot_token"
 

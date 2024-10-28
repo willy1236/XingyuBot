@@ -292,32 +292,6 @@ class RPGbutton2(discord.ui.View):
             result = user.work()
             await interaction.response.edit_message(content=result)
 
-class RPGEquipmentBagPaginator(pages.Paginator):
-    item_per_page = 10
-
-    def __init__(self,user_dc:discord.User):
-        self.user_dc = user_dc
-        self.bag = sqldb.get_player_equipments(user_dc.id)
-        super().__init__(self.create_pages())
-        #super().__init__([BotEmbed.rpg(f'{self.user_dc.name}的裝備包包'," ")])
-        self.now_page_item = -1
-        #self.refresh_item_page()
-
-    def create_pages(self):
-        item_pages = []
-        embed = BotEmbed.rpg(f'{self.user_dc.name}的包包',"請選擇一項裝備")
-        for i in range(0 , len(self.bag), self.item_per_page):
-            text_list = []
-            for item in self.bag[i: i + self.item_per_page]:
-                name = f"{item.customized_name}({item.template.name})" if item.customized_name else item.template.name
-                text_list.append(f"[{item.equipment_uid}] {name}")
-            #embed = BotEmbed.rpg(f'{self.user_dc.name}的包包',"\n".join(text_list))
-            page = pages.Page(embeds=[embed], custom_view=RPGEquipmentSelectView(self.bag[i: i + self.item_per_page]))
-            item_pages.append(page)
-        return item_pages
-    
-
-
 class RPGEquipmentSelect(discord.ui.Select):
     def __init__(self, bag:list[RPGEquipment]):
         self.bag = bag
@@ -362,8 +336,6 @@ class RPGEquipmentSelectView(discord.ui.View):
             
             embed = BotEmbed.rpg(f'{self.user_dc.name}的包包', "\n".join(text_list))
             select = RPGEquipmentSelect(self.bag[i: i + self.item_per_page])
-            #embed = BotEmbed.rpg(f'{self.user_dc.name}的包包',"\n".join(text_list))
-            #page = pages.Page(embeds=[], custom_view=RPGEquipmentSelectView(self.bag[i: i + self.item_per_page]))
             item_embeds.append(embed)
             selects.append(select)
 

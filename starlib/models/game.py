@@ -600,12 +600,29 @@ class SteamUser():
         self.avatar = data['avatarfull']
     
     def embed(self):
-        embed = BotEmbed.simple("Stean用戶資訊")
-        embed.add_field(name="用戶名稱",value=self.name)
+        embed = BotEmbed.simple(self.name)
         embed.add_field(name="用戶id",value=self.id)
         embed.add_field(name="個人檔案連結",value='[點我]({0})'.format(self.profileurl))
         embed.set_thumbnail(url=self.avatar)
         return embed
+    
+class SteamGame(BaseModel):
+    appid: int
+    name: str | None = None
+    img_icon_url: str | None = None
+    has_community_visible_stats: bool | None = None
+    playtime_forever: int
+    playtime_windows_forever: int
+    playtime_mac_forever: int
+    playtime_linux_forever: int
+    playtime_deck_forever: int
+    content_descriptorids: list[int] | None = None
+    rtime_last_played: datetime
+    playtime_disconnected: int
+
+class SteamOwnedGame(BaseModel):
+    game_count: int
+    games: list[SteamGame]
 
 class DBDPlayer(SteamUser):
     def __init__(self,data,name=None):

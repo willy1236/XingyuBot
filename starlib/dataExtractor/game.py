@@ -260,6 +260,18 @@ class SteamAPI():
         else:
             return None
 
+    def get_owned_games(self,userid):
+        params = {
+            'key':self.key,
+            'steamid':userid,
+            "include_appinfo": 1
+        }
+        response = requests.get('https://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/', params=params)
+        if response.ok:
+            print(response.json())
+            return SteamOwnedGame(**response.json().get('response'))
+        else:
+            return None
 
 class DBDInterface(SteamAPI):
     def __init__(self):

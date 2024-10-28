@@ -4,7 +4,7 @@ from discord.ext import commands
 
 from starlib import BotEmbed, ChoiceList, Jsondb, sclient
 from starlib.models.rpg import RPGUser
-from starlib.uiElement.RPGview import RPGAdvanceView, RPGEquipmentBagPaginator, RPGEquipmentSelectView
+from starlib.uiElement.RPGview import RPGAdvanceView, RPGEquipmentSelectView
 
 from ..extension import Cog_Extension
 
@@ -27,7 +27,6 @@ class system_rpg(Cog_Extension):
 
     @commands.slash_command(description='查看裝備背包')
     async def equipmentbag(self,ctx:discord.ApplicationContext):
-        # await RPGEquipmentBagPaginator(ctx.author).respond(ctx.interaction)
         view = RPGEquipmentSelectView(ctx.author)
         await ctx.respond(embed=view.embeds[0], view=view)
 

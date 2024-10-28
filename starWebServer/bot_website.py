@@ -53,6 +53,7 @@ async def openapi(username: str = Depends(get_current_username)):
     return get_openapi(title="FastAPI", version="0.1.0", routes=app.routes)
 
 @app.get('/')
+@app.head('/')
 def main(request:Request):
     web_log.debug(f'{request.client.host} - {request.method} - {request.url.path}')
     if not request.query_params or dict(request.query_params).get('code') != "200":
