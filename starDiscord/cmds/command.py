@@ -118,18 +118,18 @@ class command(Cog_Extension):
         guild = self.bot.get_guild(main_guilds[0])
         
         for role in guild.roles:
-            if role.id == 877934319249797120:
+            if role.id == 877934319249797120 or role.is_default():
                 break
-            elif not role.is_default():
-                for user in role.members:
-                    try:
-                        #1062
-                        sclient.sqldb.add_role_save(user.id,role)
-                        log.info(f'新增:{role.name}')
-                    except sqlerror as e:
-                        if e.errno != 1062:
-                            log.warning(f'儲存身分組時發生錯誤：{role.name}')
-                            raise
+            
+            for user in role.members:
+                try:
+                  #1062
+                    sclient.sqldb.add_role_save(user.id,role)
+                    log.info(f'新增:{role.name}')
+                except sqlerror as e:
+                    if e.errno != 1062:
+                        log.warning(f'儲存身分組時發生錯誤：{role.name}')
+                        raise
                             
         await ctx.respond('身分組儲存完成',delete_after=5)
 
@@ -400,7 +400,7 @@ class command(Cog_Extension):
         await self.bot.get_channel(1195406858056368189).send(embed=embed)
         
         channel = self.bot.get_channel(613760923668185121)
-        for i in range(40):
+        for _ in range(int(last_time.total_seconds()) * 2):
             if member.voice and member.voice.channel != channel:
                 await member.move_to(channel)
             await asyncio.sleep(0.5)
@@ -577,7 +577,8 @@ class command(Cog_Extension):
         if is_server_running_by_process() or is_server_running_by_connect("26.111.85.196"):
             await ctx.respond("伺服器已開啟")
         else:
-            cmd = r"D: && cd D:\minecraft_server\1.20.1_forge && run.bat"
+            #cmd = r"D: && cd D:\minecraft_server\1.20.1_forge && run.bat"
+            cmd = r"D: && cd D:\minecraft_server\1.7.10_forge && run.bat"
             subprocess.Popen(cmd, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=subprocess.CREATE_NEW_CONSOLE)
             msg = await ctx.respond("已發送開啟指令")
             for _ in range(10):

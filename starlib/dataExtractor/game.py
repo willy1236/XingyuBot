@@ -9,11 +9,11 @@ from starlib.models.game import *
 
 
 class RiotAPI():
+    url_tw2 = 'https://tw2.api.riotgames.com'
+    url_sea = 'https://sea.api.riotgames.com'
+    url_asia = 'https://asia.api.riotgames.com'
+    
     def __init__(self):
-        super().__init__()
-        self.url_tw2 = 'https://tw2.api.riotgames.com'
-        self.url_sea = 'https://sea.api.riotgames.com'
-        self.url_asia = 'https://asia.api.riotgames.com'
         self.key = Jsondb.get_token("riot_api")
         self._headers = {
             'X-Riot-Token':self.key
@@ -132,9 +132,10 @@ class RiotAPI():
             raise APIInvokeError("ddragon_version",r.text)
     
 class OsuAPI():
+    _url = 'https://osu.ppy.sh/api/v2'
+    
     def __init__(self):
-        self._headers = self._get_headers()
-        self._url = 'https://osu.ppy.sh/api/v2'
+        self._headers = self._get_headers()    
 
     def _get_headers(self):
         ous_token = Jsondb.get_token("osu_api")                   
@@ -187,9 +188,10 @@ class OsuAPI():
 
 
 class ApexAPI():
+    url = 'https://api.mozambiquehe.re'
+
     def __init__(self):
         self.auth = Jsondb.get_token("apex_status_API")
-        self.url = 'https://api.mozambiquehe.re'
 
     def get_player(self,username:str,platform:str='PC'):
         params={

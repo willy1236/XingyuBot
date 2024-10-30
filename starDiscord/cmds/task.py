@@ -7,17 +7,13 @@ import discord
 from discord.ext import commands, tasks
 from requests.exceptions import ConnectTimeout
 
-from starlib import BotEmbed, ChoiceList, Jsondb, log, sclient, tz, utilities
+from starlib import BotEmbed, Jsondb, log, sclient, tz, utilities
 from starlib.dataExtractor import *
-from starlib.models.community import TwitchClip, TwitchVideo
+from starlib.models.community import TwitchClip
 from starlib.types import NotifyChannelType, NotifyCommunityType
 
 from ..extension import Cog_Extension
 
-
-def slice_list_twitch(lst:list[TwitchVideo], target:datetime) -> list[TwitchVideo]:
-    """以target為基準取出更新的影片資訊"""
-    return [d for d in lst if d.created_at > target]
 
 def filter_twitch_clip(lst:list[TwitchClip], target:datetime) -> list[TwitchClip]:
     """以target為基準取出更新的影片資訊"""
@@ -199,7 +195,7 @@ class task(Cog_Extension):
             cache_last_update_time = datetime.fromisoformat(twitch_cache.get(user)).replace(tzinfo=tz) if twitch_cache.get(user) else None
             if not cache_last_update_time or videos[0].created_at > cache_last_update_time:
                 videos.reverse()
-                video_list = slice_list_twitch(videos, cache_last_update_time)
+                video_list = [d for d in videos if d.created_at > cache_last_update_time]
                 twitch_cache[user] = video_list[-1].created_at.isoformat()
 
                 for data in video_list:

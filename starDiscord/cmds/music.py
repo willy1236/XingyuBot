@@ -304,6 +304,16 @@ class music(Cog_Extension):
 
     #     await ctx.send(f"Now playing: {query}")
 
+    # @commands.slash_command(description='youtube查詢（非播歌）')
+    # @commands.guild_only()
+    # async def ytquery(self, ctx: discord.ApplicationContext, query: str):
+    #     await ctx.defer()
+    #     info = ytdl.extract_info(f'ytsearch:{query}', download=False)
+    #     videos = info['entries']
+    #     print(len(videos))
+    #     text = '\n'.join([f"{i+1}. {v['title']}" for i,v in enumerate(videos)])
+    #     await ctx.respond(f"搜尋結果: {text}")
+
     @commands.slash_command(description='播放音樂')
     @commands.guild_only()
     async def play(self, ctx: discord.ApplicationContext, url: str):
