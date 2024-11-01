@@ -2,12 +2,9 @@ import asyncio
 import math
 import random
 import re
-import socket
-import subprocess
 from datetime import datetime, timedelta
 
 import discord
-import psutil
 from discord.commands import OptionChoice, SlashCommandGroup
 from discord.errors import Forbidden, NotFound
 from discord.ext import commands, pages
@@ -44,7 +41,6 @@ class command(Cog_Extension):
     poll = SlashCommandGroup("poll", "投票相關指令")
     party = SlashCommandGroup("party", "政黨相關指令",guild_ids=main_guilds)
     registration = SlashCommandGroup("registration", "戶籍相關指令",guild_ids=main_guilds)
-    mcserver = SlashCommandGroup("mcserver", "Minecraft伺服器相關指令",guild_ids=main_guilds)
 
     @role.command(description='查詢身分組數')
     async def count(self,ctx,user_list:discord.Option(str,required=False,name='要查詢的用戶',description='多個用戶請用空格隔開，或可輸入default查詢常用人選')):
@@ -555,37 +551,7 @@ class command(Cog_Extension):
             embed.add_field(name=party.party_name, value=f"政黨ID：{party.party_id}\n政黨人數：{member_count}\n創黨人：{creator_mention}\n創黨日期：{party.created_at.strftime('%Y/%m/%d')}")
         await ctx.respond(embed=embed)
 
-    @mcserver.command(description="開啟mc伺服器")
-    @commands.cooldown(rate=1,per=120)
-    async def start(self,ctx:discord.ApplicationContext):
-        def is_server_running_by_process():
-            # 檢查所有正在運行的進程
-            for process in psutil.process_iter(['pid', 'name']):
-                if 'java' in process.info['name']:  # Minecraft伺服器通常是以Java運行
-                    return True
-            return False
 
-        def is_server_running_by_connect(host='localhost', port=25565):
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                try:
-                    s.connect((host, port))
-                    return True
-                except ConnectionRefusedError:
-                    return False
-
-        await ctx.defer()
-        if is_server_running_by_process() or is_server_running_by_connect("26.111.85.196"):
-            await ctx.respond("伺服器已開啟")
-        else:
-            #cmd = r"D: && cd D:\minecraft_server\1.20.1_forge && run.bat"
-            cmd = r"D: && cd D:\minecraft_server\1.7.10_forge && run.bat"
-            subprocess.Popen(cmd, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=subprocess.CREATE_NEW_CONSOLE)
-            msg = await ctx.respond("已發送開啟指令")
-            for _ in range(10):
-                await asyncio.sleep(10)
-                if is_server_running_by_process() or is_server_running_by_connect("26.111.85.196"):
-                    await msg.edit(content="伺服器已開啟")
-                    break
 
     @registration.command(description='確認/更新戶籍')
     @commands.cooldown(rate=1,per=10)

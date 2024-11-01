@@ -22,6 +22,7 @@ def filter_twitch_clip(lst:list[TwitchClip], target:datetime) -> list[TwitchClip
 rss = YoutubeRSS()
 ytapi = YoutubeAPI()
 twapi = TwitchAPI()
+cwa_api = CWA_API()
 
 class task(Cog_Extension):
     def __init__(self,*args,**kwargs):
@@ -35,6 +36,7 @@ class task(Cog_Extension):
             # scheduler.add_job(self.apex_info_update,'cron',minute='00,15,30,45',second=1,jitter=30,misfire_grace_time=60)
             # scheduler.add_job(self.apex_crafting_update,'cron',hour=1,minute=5,second=0,jitter=30,misfire_grace_time=60)
             scheduler.add_job(self.forecast_update,'cron',hour='00,03,06,09,12,15,18,21',minute=0,second=1,jitter=30,misfire_grace_time=60)
+            scheduler.add_job(self.weather_check,'cron',minute='00,15,30,45',second=1,jitter=30,misfire_grace_time=60)
 
             scheduler.add_job(self.earthquake_check,'interval',minutes=2,jitter=30,misfire_grace_time=40)
             scheduler.add_job(self.youtube_video,'interval',minutes=15,jitter=30,misfire_grace_time=40)
@@ -57,7 +59,7 @@ class task(Cog_Extension):
     async def earthquake_check(self):
         timefrom = Jsondb.get_cache('earthquake_timefrom')
         try:
-            datas = CWA_API().get_earthquake_report_auto(timefrom)
+            datas = cwa_api.get_earthquake_report_auto(timefrom)
         except ConnectTimeout:
             log.warning("earthquake_check timeout.")
             return
@@ -93,10 +95,15 @@ class task(Cog_Extension):
                 else:
                     log.warning(f"earthquake_check fail sending message: guild:{i.guild_id}/channel:{i.channel_id}")
 
+    async def weather_check(self):
+        weather = cwa_api.get_weather_data()[0]
+        print(f"{weather.StationName}測站： {weather.WeatherElement.Weather}")
+        self.bot.change_presence(activity=discord.CustomActivity(name=f"現在天氣： {weather.WeatherElement.Weather}/{weather.WeatherElement.AirTemperature}°C"))
+
     async def weather_warning_check(self):
         timefrom = Jsondb.get_cache('earthquake_timefrom')
         try:
-            data = CWA_API().get_earthquake_report_auto(timefrom)
+            data = cwa_api.get_earthquake_report_auto(timefrom)
         except:
             pass
 

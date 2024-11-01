@@ -56,14 +56,26 @@ class CWA_API():
     def get_weather_warning(self):
         params = {
             'Authorization': self.auth,
-            'limit': 1
+            #'limit': 1
         }
         APIdata = requests.get(f'{self.url}/W-C0033-002',params=params).json().get('records').get('record')
         if APIdata:
-            return [WeatherWarning(i) for i in APIdata]
+            return [WeatherWarningReport(**i) for i in APIdata]
         else:
             return None
         
+    def get_weather_data(self, StationId="C0Z100"):
+        """取得無人氣象站氣象資料"""
+        params = {
+            'Authorization': self.auth,
+            "StationId": StationId
+        }
+        APIdata = requests.get(f'{self.url}/O-A0001-001',params=params).json().get('records').get('Station')
+        
+        if APIdata:
+            return [WeatherReport(**i) for i in APIdata]
+        else:
+            return None
 
 # class Covid19Client(WeatherClient):
 #     def get_covid19():

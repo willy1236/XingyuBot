@@ -1,10 +1,13 @@
+import asyncio
+import platform
+import socket
+import subprocess
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
-import platform
 
 import discord
-import psutil
 import mcrcon
+import psutil
 from discord.commands import SlashCommandGroup
 from discord.ext import commands
 
@@ -104,9 +107,11 @@ class BotPanel(discord.ui.View):
         await interaction.response.send_message(content="", ephemeral=False, embed=embed)
 
 debug_guilds = Jsondb.config.get('debug_guilds')
+main_guilds = Jsondb.config.get('main_guilds')
 
 class owner(Cog_Extension):
     twitch_chatbot = SlashCommandGroup("twitch_chatbot", "twitch機器人相關指令",guild_ids=debug_guilds)
+    mcserver = SlashCommandGroup("mcserver", "Minecraft伺服器相關指令",guild_ids=main_guilds)
 
     #load
     #@bot.command()
@@ -285,9 +290,9 @@ class owner(Cog_Extension):
     #         else:
     #             await channel.send('👍')
 
-    @commands.slash_command(description='使用mc伺服器指令',guild_ids=debug_guilds)
+    @mcserver.command(description='使用mc伺服器指令')
     @commands.is_owner()
-    async def mccommand(self,ctx,command):
+    async def cmd(self,ctx:discord.ApplicationContext,command):
         settings = Jsondb.config.get('mc_server')
         host = settings.get('host')
         port = settings.get('port')
@@ -295,6 +300,38 @@ class owner(Cog_Extension):
         with mcrcon.MCRcon(host, password, port) as rcon:
             response = rcon.command(command)
             await ctx.respond(response)
+
+    @mcserver.command(description="開啟mc伺服器")
+    @commands.cooldown(rate=1,per=120)
+    async def start(self,ctx:discord.ApplicationContext):
+        def is_server_running_by_process():
+            # 檢查所有正在運行的進程
+            for process in psutil.process_iter(['pid', 'name']):
+                if 'java' in process.info['name']:  # Minecraft伺服器通常是以Java運行
+                    return True
+            return False
+
+        def is_server_running_by_connect(host='localhost', port=25565):
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                try:
+                    s.connect((host, port))
+                    return True
+                except ConnectionRefusedError:
+                    return False
+
+        await ctx.defer()
+        if is_server_running_by_process() or is_server_running_by_connect("26.111.85.196"):
+            await ctx.respond("伺服器已開啟")
+        else:
+            #cmd = r"D: && cd D:\minecraft_server\1.20.1_forge && run.bat"
+            cmd = r"D: && cd D:\minecraft_server\1.7.10_forge && run.bat"
+            subprocess.Popen(cmd, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=subprocess.CREATE_NEW_CONSOLE)
+            msg = await ctx.respond("已發送開啟指令")
+            for _ in range(10):
+                await asyncio.sleep(10)
+                if is_server_running_by_process() or is_server_running_by_connect("26.111.85.196"):
+                    await msg.edit(content="伺服器已開啟")
+                    break
 
     # @twitch_chatbot.command(description='加入Twitch頻道',guild_ids=debug_guilds)
     # @commands.is_owner()

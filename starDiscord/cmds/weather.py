@@ -22,7 +22,7 @@ class weather(Cog_Extension):
             await ctx.respond('查詢失敗',delete_after=5)
 
     @commands.cooldown(rate=1,per=15)
-    @commands.slash_command(description='查詢天氣警特報（開發中）')
+    @commands.slash_command(description='查詢天氣警特報')
     async def weatherwarning(self,ctx):
         reports = CWA_API().get_weather_warning()
         if reports:

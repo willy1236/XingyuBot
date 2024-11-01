@@ -1,4 +1,6 @@
+from pydantic import BaseModel
 from datetime import datetime
+from typing import List, Optional
 
 import discord
 
@@ -97,29 +99,108 @@ class Forecast():
         embed.timestamp = datetime.now()
         embed.set_footer(text=f'{self.timestart}至{self.timeend}')
         return embed
-    
-class WeatherWarning:
-    def __init__(self,data):
-        self.issueTime = data["datasetInfo"].get('issueTime')
-        self.datasetDescription = data["datasetInfo"].get('datasetDescription')
-        self.startTime = data["datasetInfo"]["validTime"].get('startTime')
-        self.endTime = data["datasetInfo"]["validTime"].get('endTime')
-        self.update = data["datasetInfo"].get('update')
-        self.contentText = data["contents"]["content"].get('contentText')
-        
-        self.phenomena = data.get('phenomena')
-        self.significance = data.get('significance')
-        self.locationName = data.get('locationName')
+
+class Coordinate(BaseModel):
+    CoordinateName: str
+    CoordinateFormat: str
+    StationLatitude: float
+    StationLongitude: float
+
+class ObsTime(BaseModel):
+    DateTime: datetime
+
+class GeoInfo(BaseModel):
+    Coordinates: List[Coordinate]
+    StationAltitude: str
+    CountyName: str
+    TownName: str
+    CountyCode: str
+    TownCode: str
+
+class GustInfo(BaseModel):
+    PeakGustSpeed: float
+    Occurred_at: Optional[dict]
+
+class TemperatureInfo(BaseModel):
+    AirTemperature: float = None
+    Occurred_at: ObsTime = None
+
+class DailyExtreme(BaseModel):
+    DailyHigh: TemperatureInfo = None
+    DailyLow: TemperatureInfo = None
+
+class WeatherElement(BaseModel):
+    Weather: str
+    Now: dict
+    WindDirection: int
+    WindSpeed: float
+    AirTemperature: float
+    RelativeHumidity: int
+    AirPressure: float
+    GustInfo: GustInfo
+    DailyExtreme: DailyExtreme
+
+class WeatherReport(BaseModel):
+    """自動氣象站氣象觀測資料"""
+    StationName: str
+    StationId: str
+    ObsTime: ObsTime
+    GeoInfo: GeoInfo
+    WeatherElement: WeatherElement
+
+class AffectedArea(BaseModel):
+    locationName: str
+
+class Locations(BaseModel):
+    location: List[AffectedArea]
+
+class HazardInfo(BaseModel):
+    language: str
+    phenomena: str
+    significance: str
+    affectedAreas: Locations
+
+class Hazard(BaseModel):
+    info: HazardInfo
+
+class Hazards(BaseModel):
+    hazard: List[Hazard]
+
+class HazardConditions(BaseModel):
+    hazards: Hazards
+
+class Content(BaseModel):
+    contentLanguage: str
+    contentText: str
+
+class Contents(BaseModel):
+    content: Content
+
+class ValidTime(BaseModel):
+    startTime: datetime
+    endTime: datetime
+
+class DatasetInfo(BaseModel):
+    datasetDescription: str
+    datasetLanguage: str
+    validTime: ValidTime
+    issueTime: datetime
+    update: datetime
+
+class WeatherWarningReport(BaseModel):
+    """天氣特報-各別天氣警特報之內容及所影響之區域"""
+    datasetInfo: DatasetInfo
+    contents: Contents
+    hazardConditions: HazardConditions | None = None
 
     def embed(self):
-        embed = BotEmbed.general('天氣警特報',title=self.datasetDescription,description=self.contentText)
-        embed.add_field(name='發布時間',value=self.issueTime)
-        embed.add_field(name='開始時間',value=self.startTime)
-        embed.add_field(name='結束時間',value=self.endTime)
-        # embed.add_field(name='警特報類型',value=self.phenomena)
-        # embed.add_field(name='程度',value=self.significance)
-        # embed.add_field(name='涵蓋區域市',value=self.locationName)
+        embed = BotEmbed.general('天氣警特報',title=self.datasetInfo.datasetDescription,description=self.contents.content.contentText)
+        embed.add_field(name='發布時間',value=self.datasetInfo.issueTime)
+        embed.add_field(name='開始時間',value=self.datasetInfo.validTime.startTime)
+        embed.add_field(name='結束時間',value=self.datasetInfo.validTime.endTime)
+        if self.hazardConditions:
+            embed.add_field(name='涵蓋區域市',value=", ".join([i.locationName for i in self.hazardConditions.hazards.hazard[0].info.affectedAreas.location]))
 
         embed.timestamp = datetime.now()
-        embed.set_footer(text=f'最後更新：{self.update}')
+        embed.set_footer(text=f'最後更新：{self.datasetInfo.update}')
         return embed

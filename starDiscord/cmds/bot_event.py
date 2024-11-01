@@ -169,9 +169,10 @@ class event(Cog_Extension):
                     try:
                         reason = "打出貢丸相關詞彙"
                         #await message.delete(reason=reason)
-                        await message.author.timeout_for(duration=timedelta(seconds=60),reason=reason)
+                        last = timedelta(seconds=60)
+                        await message.author.timeout_for(duration=last,reason=reason)
                         
-                        embed = BotEmbed.simple_warn_sheet(message.author,self.bot.user,reason=reason)
+                        embed = BotEmbed.simple_warn_sheet(message.author, self.bot.user, last=last, reason=reason)
                         await message.channel.send(f"{message.author.mention} 貢丸很危險 不要打貢丸知道嗎",embed=embed)
                         dbuser = sclient.sqldb.get_dcuser(message.author.id) or DiscordUser(discord_id=message.author.id)
                         if dbuser.meatball_times is None:
@@ -180,7 +181,7 @@ class event(Cog_Extension):
                             dbuser.meatball_times += 1
                         sclient.sqldb.merge(dbuser)
                     except Exception as e:
-                        print(e)
+                        log.error(e)
             
                 #洗頻防制
                 # spam_count = 0
