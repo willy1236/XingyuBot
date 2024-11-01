@@ -1,6 +1,5 @@
 import asyncio
 import random
-import time
 from datetime import date, datetime, timedelta, timezone
 
 import discord
@@ -33,8 +32,6 @@ class task(Cog_Extension):
     async def on_ready(self):
         scheduler = sclient.scheduler
         if not Jsondb.config.get("debug_mode",True):
-            # scheduler.add_job(self.apex_info_update,'cron',minute='00,15,30,45',second=1,jitter=30,misfire_grace_time=60)
-            # scheduler.add_job(self.apex_crafting_update,'cron',hour=1,minute=5,second=0,jitter=30,misfire_grace_time=60)
             scheduler.add_job(self.forecast_update,'cron',hour='00,03,06,09,12,15,18,21',minute=0,second=1,jitter=30,misfire_grace_time=60)
             scheduler.add_job(self.weather_check,'cron',minute='15,45',second=30,jitter=30,misfire_grace_time=60)
 
@@ -71,9 +68,7 @@ class task(Cog_Extension):
             return
 
         for data in datas:
-            time = datetime.strptime(data.originTime, "%Y-%m-%d %H:%M:%S") + timedelta(seconds=1)
-            Jsondb.write_cache('earthquake_timefrom', time.strftime("%Y-%m-%dT%H:%M:%S"))
-
+            timefrom = datetime.strptime(data.originTime, "%Y-%m-%d %H:%M:%S") + timedelta(seconds=1)
             if data.auto_type == 'E-A0015-001':
                 text = '顯著有感地震報告'
             elif data.auto_type == 'E-A0016-001':
@@ -83,59 +78,24 @@ class task(Cog_Extension):
             
             await self.bot.send_notify_channel(data.embed(), NotifyChannelType.EarthquakeNotifications, text)
 
+        Jsondb.write_cache('earthquake_timefrom', timefrom.strftime("%Y-%m-%dT%H:%M:%S"))
+
     async def weather_check(self):
         weather = cwa_api.get_weather_data()[0]
         await self.bot.change_presence(activity=discord.CustomActivity(name=f"現在天氣： {weather.WeatherElement.Weather if weather.WeatherElement.Weather != '-99' else '--'}/{weather.WeatherElement.AirTemperature}°C"))
 
     async def weather_warning_check(self):
+        apidatas = cwa_api.get_weather_warning()
+        if not apidatas:
+            return
+        
         timefrom = Jsondb.get_cache('weather_warning')
         report_time = datetime.fromisoformat(timefrom) if timefrom else datetime.now(tz) - timedelta(days=1)
-        datas = [i for i in cwa_api.get_weather_warning() if i.datasetInfo.issueTime > timefrom]
+        datas = [i for i in apidatas if i.datasetInfo.issueTime > report_time]
         for data in datas:
             report_time = data.datasetInfo.issueTime
             await self.bot.send_notify_channel(data.embed(), NotifyChannelType.WeatherWarning)
         Jsondb.write_cache('weather_warning', report_time.isoformat())
-
-    async def apex_info_update(self):
-        aclient = ApexAPI()
-        map = aclient.get_map_rotation()
-        crafting = aclient.get_crafting_from_chche()
-        if map:
-            embed_list = []
-            if crafting:
-                embed_list.append(crafting.embed())
-            embed_list.append(map.embed())
-            
-            records = sclient.sqldb.get_notify_channel_by_type(NotifyChannelType.ApexRotation)
-            for i in records:
-                channel = self.bot.get_channel(i['channel_id'])
-                if channel:
-                    try:
-                        id = channel.last_message_id
-                        msg = await channel.fetch_message(id)
-                    except:
-                        msg = None
-
-                    if msg and msg.author == self.bot.user:
-                        await msg.edit('Apex資訊自動更新資料',embeds=embed_list)
-                    else:
-                        await channel.send('Apex資訊內容自動更新資料',embeds=embed_list)
-                    await asyncio.sleep(0.5)
-                
-                else:
-                    log.warning(f"apex_info_update: {i['guild_id']}/{i['channel_id']}")
-
-    async def apex_crafting_update(self):
-        today = date.today()
-        apex_crafting = Jsondb.get_cache("apex_crafting")
-        if not apex_crafting or apex_crafting.get("date") != today.isoformat():
-            apex_crafting = ApexAPI().get_raw_crafting()
-            apex_crafting_dict = {
-                "date": today.isoformat(),
-                "data": apex_crafting[0:1]
-            }
-            Jsondb.write_cache("apex_crafting", apex_crafting_dict)
-
 
     async def forecast_update(self):
         forecast = CWA_API().get_forecast()
