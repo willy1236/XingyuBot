@@ -95,3 +95,5 @@ if __name__ == '__main__':
 # lst = [0,1,2,3,4,5,6,7,8,9]
 # for i in range(0, len(lst), 3):
 #     print(lst[i:i+3])
+weather = CWA_API().get_weather_data()[0]
+print(f"{weather.StationName}測站： {weather.WeatherElement.Weather}")

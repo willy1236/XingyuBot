@@ -27,8 +27,7 @@ class CWA_API():
     def get_earthquake_report_auto(self,timeFrom=None):
         params = {
             'Authorization': self.auth,
-            'timeFrom': timeFrom,
-            'limit': 5
+            'timeFrom': timeFrom
         }
         APIdata = requests.get(f'{self.url}/E-A0015-001',params=params,timeout=20)
         data = APIdata.json().get('records').get('Earthquake')
@@ -55,8 +54,7 @@ class CWA_API():
         
     def get_weather_warning(self):
         params = {
-            'Authorization': self.auth,
-            #'limit': 1
+            'Authorization': self.auth
         }
         APIdata = requests.get(f'{self.url}/W-C0033-002',params=params).json().get('records').get('record')
         if APIdata:

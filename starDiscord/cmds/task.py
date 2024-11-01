@@ -36,9 +36,10 @@ class task(Cog_Extension):
             # scheduler.add_job(self.apex_info_update,'cron',minute='00,15,30,45',second=1,jitter=30,misfire_grace_time=60)
             # scheduler.add_job(self.apex_crafting_update,'cron',hour=1,minute=5,second=0,jitter=30,misfire_grace_time=60)
             scheduler.add_job(self.forecast_update,'cron',hour='00,03,06,09,12,15,18,21',minute=0,second=1,jitter=30,misfire_grace_time=60)
-            scheduler.add_job(self.weather_check,'cron',minute='00,15,30,45',second=1,jitter=30,misfire_grace_time=60)
+            scheduler.add_job(self.weather_check,'cron',minute='15,45',second=30,jitter=30,misfire_grace_time=60)
 
             scheduler.add_job(self.earthquake_check,'interval',minutes=2,jitter=30,misfire_grace_time=40)
+            scheduler.add_job(self.weather_warning_check,'interval',minutes=15,jitter=30,misfire_grace_time=40)
             scheduler.add_job(self.youtube_video,'interval',minutes=15,jitter=30,misfire_grace_time=40)
             scheduler.add_job(self.twitch_live,'interval',minutes=3,jitter=15,misfire_grace_time=20)
             scheduler.add_job(self.twitch_video,'interval',minutes=15,jitter=30,misfire_grace_time=40)
@@ -80,32 +81,20 @@ class task(Cog_Extension):
             else:
                 text = '地震報告'
             
-            records = sclient.sqldb.get_notify_channel_by_type(NotifyChannelType.EarthquakeNotifications)
-            for i in records:
-                channel = self.bot.get_channel(i.channel_id)
-                if channel:
-                    if i.role_id:
-                        try:
-                            role = self.bot.get_guild(i.guild_id).get_role(i.role_id)
-                            text += f' {role.mention}'
-                        except:
-                            pass
-                    await channel.send(text,embed=data.embed())
-                    await asyncio.sleep(0.5)
-                else:
-                    log.warning(f"earthquake_check fail sending message: guild:{i.guild_id}/channel:{i.channel_id}")
+            await self.bot.send_notify_channel(data.embed(), NotifyChannelType.EarthquakeNotifications, text)
 
     async def weather_check(self):
         weather = cwa_api.get_weather_data()[0]
-        print(f"{weather.StationName}測站： {weather.WeatherElement.Weather}")
-        await self.bot.change_presence(activity=discord.CustomActivity(name=f"現在天氣： {weather.WeatherElement.Weather}/{weather.WeatherElement.AirTemperature}°C"))
+        await self.bot.change_presence(activity=discord.CustomActivity(name=f"現在天氣： {weather.WeatherElement.Weather if weather.WeatherElement.Weather != '-99' else '--'}/{weather.WeatherElement.AirTemperature}°C"))
 
     async def weather_warning_check(self):
-        timefrom = Jsondb.get_cache('earthquake_timefrom')
-        try:
-            data = cwa_api.get_earthquake_report_auto(timefrom)
-        except:
-            pass
+        timefrom = Jsondb.get_cache('weather_warning')
+        report_time = datetime.fromisoformat(timefrom) if timefrom else datetime.now(tz) - timedelta(days=1)
+        datas = [i for i in cwa_api.get_weather_warning() if i.datasetInfo.issueTime > timefrom]
+        for data in datas:
+            report_time = data.datasetInfo.issueTime
+            await self.bot.send_notify_channel(data.embed(), NotifyChannelType.WeatherWarning)
+        Jsondb.write_cache('weather_warning', report_time.isoformat())
 
     async def apex_info_update(self):
         aclient = ApexAPI()

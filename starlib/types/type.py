@@ -18,6 +18,7 @@ class NotifyChannelType(IntEnum):
     MemberLeave = 8
     DynamicVoice = 9
     VoiceLog = 10
+    WeatherWarning = 11
 
 class GameType(IntEnum):
     LOL = 1

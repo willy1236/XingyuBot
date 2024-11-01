@@ -273,19 +273,6 @@ async def run():
     chat.start()
     await asyncio.sleep(5)
 
-    # # create eventsub websocket instance and start the client.
-    # eventsub = EventSubWebsocket(twitch)
-    # eventsub.start()
-    # # subscribing to the desired eventsub hook for our user
-    # # the given function (in this example on_follow) will be called every time this event is triggered
-    # # the broadcaster is a moderator in their own channel by default so specifying both as the same works in this example
-    # # We have to subscribe to the first topic within 10 seconds of eventsub.start() to not be disconnected.
-    # for user in users:
-    #     await eventsub.listen_stream_online(user.id, on_stream_online)
-    #     await eventsub.listen_stream_offline(user.id, on_stream_offline)
-    #     if chat.is_mod(user.login):
-    #         await eventsub.listen_channel_follow_v2(user.id, me.id, on_follow)
-    
     eventsub = EventSubWebhook(jtoken.get('callback_uri'), 14001, twitch)
     # unsubscribe from all old events that might still be there
     # this will ensure we have a clean slate
@@ -400,7 +387,6 @@ async def run():
             twitch_log.warning(f"Error subscribing to channel prediction end: timeout.")
         
     sclient.twitch = twitch
-    # we are done with our setup, lets start this bot up!
     return chat, twitch
     
 async def run_sakagawa():
@@ -453,7 +439,6 @@ class SakagawaEventsubThread(BaseThread):
         self._stop_event.wait()
 
 if __name__ == '__main__':
-    # lets run our setup
     chat, twitch = asyncio.run(run())
     chat:Chat
     twitch:Twitch
@@ -461,11 +446,9 @@ if __name__ == '__main__':
     # auth = UserAuthenticator(twitch, [AuthScope.CHANNEL_READ_REDEMPTIONS])
     # print(auth.return_auth_url())
 
-    # lets run till we press enter in the console
     try:
         input('press ENTER to stop\n')
     finally:
-        # now we can close the chat bot and the twitch api client
         chat.stop()
         asyncio.run(twitch.close())
         

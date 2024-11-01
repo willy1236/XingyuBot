@@ -4,7 +4,7 @@ import os
 import discord
 
 from starlib import BotEmbed, Jsondb, log, sqldb
-from starlib.types import NotifyCommunityType
+from starlib.types import NotifyCommunityType, NotifyChannelType
 
 
 class DiscordBot(discord.Bot):
@@ -88,7 +88,7 @@ class DiscordBot(discord.Bot):
         embed.add_field(name='來源群組', value=f'{msg.guild}\n{msg.guild.id}', inline=True)
         await dm_channel.send(embed=embed)
 
-    async def send_notify_communities(self, embed:discord.Embed, notify_type:NotifyCommunityType, notify_name:str):
+    async def send_notify_communities(self, embed:discord.Embed, notify_type:NotifyCommunityType, notify_name:str, content:str=None):
             guilds = sqldb.get_notify_community_guild(notify_type.value, notify_name)
             log.debug(f"{notify_type} guilds: {guilds}")
             for guildid in guilds:
@@ -97,12 +97,30 @@ class DiscordBot(discord.Bot):
                 role = guild.get_role(guilds[guildid][1])
                 if channel:
                     if role:
-                        await channel.send(f'{role.mention}',embed=embed)
-                    else:
-                        await channel.send(embed=embed)
+                        content = f'{content} {role.mention}' if content is not None else f'{role.mention}'
+                        
+                    await channel.send(content, embed=embed)
                     await asyncio.sleep(0.5)
                 else:
-                    log.warning(f"{notify_type} not found: {guild.id}/{channel.id}")
+                    log.warning(f"{notify_type} not found: {guildid}/{guildid[0]}")
+    
+    async def send_notify_channel(self, embed:discord.Embed, notify_type:NotifyChannelType, content:str=None):
+        notify_channels = sqldb.get_notify_channel_by_type(notify_type)
+        log.debug(f"{notify_type} channels: {notify_channels}")
+        for no_channel in notify_channels:
+            channel = self.get_channel(no_channel.channel_id)
+            if channel:
+                if no_channel.role_id:
+                    try:
+                        role = self.get_guild(no_channel.guild_id).get_role(no_channel.role_id)
+                        content = f'{content} {role.mention}' if content is not None else f'{role.mention}'
+                    except:
+                        pass
+
+                await channel.send(content, embed=embed)
+                await asyncio.sleep(0.5)
+            else:
+                log.warning(f"{notify_type} not found: {no_channel.guild_id}/{no_channel.channel_id}")
 
     def about_embed(self):
         embed = BotEmbed.bot(self,description=f"你好~我是星羽，你可以輸入 </help:1067700245015834638> 來查看所有指令的用法\n\n希望我能在discord上幫助到你喔~\n有任何建議、需求、協助與合作可以使用 </feedback:1067700244848058386> 指令\n\n支援伺服器：https://discord.gg/P4jqdcMxkH")

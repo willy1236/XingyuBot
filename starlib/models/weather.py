@@ -1,10 +1,16 @@
-from pydantic import BaseModel
 from datetime import datetime
 from typing import List, Optional
 
 import discord
+from pydantic import BaseModel, model_validator
 
 from ..utilities import BotEmbed
+from ..settings import tz
+
+weather_warning_emojis = {
+    "大雨特報": "🌧️",
+    "解除颱風警報": "🌀",
+}
 
 class EarthquakeReport():
     def __init__(self,data,auto_type=None):
@@ -48,6 +54,7 @@ class EarthquakeReport():
             for key, value in sorted(self.intensity.items(), key=lambda x:x[0]):
                 embed.add_field(name=key,value=value,inline=False)
         embed.set_image(url=self.reportImageURI)
+        embed.set_footer(text='資料來源：中央氣象暑')
         return embed
 
 class Covid19Report():
@@ -193,14 +200,23 @@ class WeatherWarningReport(BaseModel):
     contents: Contents
     hazardConditions: HazardConditions | None = None
 
+    @model_validator(mode='after')
+    def __post_init__(self):
+        self.datasetInfo.issueTime = self.datasetInfo.issueTime.astimezone(tz=tz)
+        self.datasetInfo.validTime.startTime = self.datasetInfo.validTime.startTime.astimezone(tz=tz)
+        self.datasetInfo.validTime.endTime = self.datasetInfo.validTime.endTime.astimezone(tz=tz)
+        self.datasetInfo.update = self.datasetInfo.update.astimezone(tz=tz)
+        return self
+
     def embed(self):
-        embed = BotEmbed.general('天氣警特報',title=self.datasetInfo.datasetDescription,description=self.contents.content.contentText)
-        embed.add_field(name='發布時間',value=self.datasetInfo.issueTime)
-        embed.add_field(name='開始時間',value=self.datasetInfo.validTime.startTime)
-        embed.add_field(name='結束時間',value=self.datasetInfo.validTime.endTime)
+        emoji = weather_warning_emojis.get(self.datasetInfo.datasetDescription, "🚨")
+        embed = BotEmbed.general('天氣警特報', title=f"{emoji}{self.datasetInfo.datasetDescription}", description=f"**{self.contents.content.contentText[1:]}**")
+        embed.add_field(name='發布時間',value=self.datasetInfo.issueTime.strftime('%Y/%m/%d %H:%M'))
+        embed.add_field(name='開始時間',value=self.datasetInfo.validTime.startTime.strftime('%Y/%m/%d %H:%M'))
+        embed.add_field(name='結束時間',value=self.datasetInfo.validTime.endTime.strftime('%Y/%m/%d %H:%M'))
         if self.hazardConditions:
             embed.add_field(name='涵蓋區域市',value=", ".join([i.locationName for i in self.hazardConditions.hazards.hazard[0].info.affectedAreas.location]))
 
         embed.timestamp = datetime.now()
-        embed.set_footer(text=f'最後更新：{self.datasetInfo.update}')
+        embed.set_footer(text=f"中央氣象暑")
         return embed
