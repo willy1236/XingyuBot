@@ -98,7 +98,7 @@ class task(Cog_Extension):
     async def weather_check(self):
         weather = cwa_api.get_weather_data()[0]
         print(f"{weather.StationName}測站： {weather.WeatherElement.Weather}")
-        self.bot.change_presence(activity=discord.CustomActivity(name=f"現在天氣： {weather.WeatherElement.Weather}/{weather.WeatherElement.AirTemperature}°C"))
+        await self.bot.change_presence(activity=discord.CustomActivity(name=f"現在天氣： {weather.WeatherElement.Weather}/{weather.WeatherElement.AirTemperature}°C"))
 
     async def weather_warning_check(self):
         timefrom = Jsondb.get_cache('earthquake_timefrom')
