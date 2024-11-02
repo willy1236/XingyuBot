@@ -18,11 +18,11 @@ from bs4 import BeautifulSoup
 from faker import Faker
 from pydantic import AliasPath, BaseModel, ConfigDict, Field
 
-from starlib import ChoiceList, Jsondb, log, sclient, sqldb, tz
+from starlib import *
 from starlib.database import SQLEngine
 from starlib.dataExtractor import *
 from starlib.starAI import StarGeminiAI
-from starlib.types import NotifyCommunityType
+from starlib.types import *
 
 if __name__ == '__main__':
     pass
@@ -94,6 +94,4 @@ if __name__ == '__main__':
 
 # lst = [0,1,2,3,4,5,6,7,8,9]
 # for i in range(0, len(lst), 3):
-#     print(lst[i:i+3])
-weather = CWA_API().get_weather_data()[0]
-print(f"{weather.StationName}測站： {weather.WeatherElement.Weather}")
+#     print(lst[i:i+3])	

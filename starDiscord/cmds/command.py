@@ -356,8 +356,8 @@ class command(Cog_Extension):
         #更新資料庫
         sclient.sqldb.remove_bet(bet_id)    
 
-    @commands.user_command()  # create a user command for the supplied guilds
-    async def whois(self,ctx, member: discord.Member):  # user commands return the member
+    @commands.user_command()
+    async def whois(self,ctx, member: discord.Member):
         user = member
         embed = BotEmbed.simple(title=f'{user.name}#{user.discriminator}', description="ID:用戶(伺服器成員)")
         embed.add_field(name="暱稱", value=user.nick, inline=False)

@@ -33,7 +33,7 @@ class task(Cog_Extension):
         scheduler = sclient.scheduler
         if not Jsondb.config.get("debug_mode",True):
             scheduler.add_job(self.forecast_update,'cron',hour='00,03,06,09,12,15,18,21',minute=0,second=1,jitter=30,misfire_grace_time=60)
-            scheduler.add_job(self.weather_check,'cron',minute='15,45',second=30,jitter=30,misfire_grace_time=60)
+            scheduler.add_job(self.weather_check,'cron',minute='20,35',second=30,jitter=30,misfire_grace_time=60)
 
             scheduler.add_job(self.earthquake_check,'interval',minutes=2,jitter=30,misfire_grace_time=40)
             scheduler.add_job(self.weather_warning_check,'interval',minutes=15,jitter=30,misfire_grace_time=40)
@@ -45,9 +45,6 @@ class task(Cog_Extension):
 
             if self.bot.user.id == 589744540240314368:
                 scheduler.add_job(self.birtday_task,'cron',month=10,day=16,hour=8,minute=0,second=0,jitter=30,misfire_grace_time=60)
-                
-
-            #self.twitch.start()
         else:
             pass
         
@@ -82,7 +79,12 @@ class task(Cog_Extension):
 
     async def weather_check(self):
         weather = cwa_api.get_weather_data()[0]
-        await self.bot.change_presence(activity=discord.CustomActivity(name=f"現在天氣： {weather.WeatherElement.Weather if weather.WeatherElement.Weather != '-99' else '--'}/{weather.WeatherElement.AirTemperature}°C"))
+        text = f"現在天氣： {weather.WeatherElement.Weather if weather.WeatherElement.Weather != '-99' else '--'}/{weather.WeatherElement.AirTemperature}°C"
+        if weather.WeatherElement.AirTemperature == weather.WeatherElement.DailyExtreme.DailyHigh.AirTemperature:
+            text += f" （最高溫）"
+        elif weather.WeatherElement.AirTemperature == weather.WeatherElement.DailyExtreme.DailyLow.AirTemperature:
+            text += f" （最低溫）"
+        await self.bot.change_presence(activity=discord.CustomActivity(name=text))
 
     async def weather_warning_check(self):
         apidatas = cwa_api.get_weather_warning()

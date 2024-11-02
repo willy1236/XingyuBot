@@ -1,8 +1,10 @@
-import requests,time
-from bs4 import BeautifulSoup
+import time
+
+import requests
 
 from starlib.fileDatabase import Jsondb
 from starlib.models.weather import *
+
 
 class CWA_API():
     def __init__(self):
