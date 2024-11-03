@@ -17,7 +17,7 @@ class weather(Cog_Extension):
     async def forecast(self,ctx):
         report = CWA_API().get_forecast()
         if report:
-            await ctx.respond('查詢成功',embed=report.desplay())
+            await ctx.respond('查詢成功',embed=report.embed())
         else:
             await ctx.respond('查詢失敗',delete_after=5)
 

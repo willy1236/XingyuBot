@@ -12,6 +12,7 @@ from ..settings import tz
 from ..starAI import StarGeminiAI
 from ..uiElement.view import PollView
 from ..utilities import BotEmbed, scheduler
+from ..base.base import BaseThread
 from .cache import StardbCache
 
 if TYPE_CHECKING:
@@ -143,6 +144,11 @@ class StarController(
         self._starai:StarGeminiAI = None
         self.bot:DiscordBot = None
         self.twitch:Twitch = None
+
+        self.twitch_bot_thread: BaseThread = None
+        self.website_thread: BaseThread = None
+        self.tunnel_thread: BaseThread = None
+        self.twitchtunnel_thread: BaseThread = None
     
     @property
     def starai(self):

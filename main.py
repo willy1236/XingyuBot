@@ -28,11 +28,14 @@ if __name__ == "__main__":
         from starWebServer.bot_website import WebsiteThread
         from starWebServer.tunnel_threads import LoopholeThread
         tunnel_server = LoopholeThread()
+        sclient.tunnel_thread = tunnel_server
         tunnel_server.start()
         time.sleep(2)
+        
 
         try:
             server = WebsiteThread()
+            sclient.website_thread = server
             server.start()
             log.info('>> website: online <<')
         except:
@@ -44,10 +47,12 @@ if __name__ == "__main__":
         from starWebServer.tunnel_threads import LoopholeTwitchThread
         
         twitchtunnel_thread = LoopholeTwitchThread()
+        sclient.twitchtunnel_thread = twitchtunnel_thread
         twitchtunnel_thread.start()
         time.sleep(10)
 
         twitchbot_thread = TwitchBotThread()
+        sclient.twitch_bot_thread = twitchbot_thread
         twitchbot_thread.start()
         log.info('>> twitchBot: online <<')
         time.sleep(2)

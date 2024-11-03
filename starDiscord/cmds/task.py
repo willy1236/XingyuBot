@@ -8,16 +8,10 @@ from requests.exceptions import ConnectTimeout
 
 from starlib import BotEmbed, Jsondb, log, sclient, tz, utilities
 from starlib.dataExtractor import *
-from starlib.models.community import TwitchClip
 from starlib.types import NotifyChannelType, NotifyCommunityType
 
 from ..extension import Cog_Extension
 
-
-def filter_twitch_clip(lst:list[TwitchClip], target:datetime) -> list[TwitchClip]:
-    """以target為基準取出更新的影片資訊"""
-    return [d for d in lst if d.created_at >= target]
-    
 rss = YoutubeRSS()
 ytapi = YoutubeAPI()
 twapi = TwitchAPI()
@@ -100,26 +94,9 @@ class task(Cog_Extension):
         Jsondb.write_cache('weather_warning', report_time.isoformat())
 
     async def forecast_update(self):
-        forecast = CWA_API().get_forecast()
+        forecast = cwa_api.get_forecast()
         if forecast:
-            records = sclient.sqldb.get_notify_channel_by_type(NotifyChannelType.WeatherForecast)
-            for i in records:
-                channel = self.bot.get_channel(i.channel_id)
-                if channel:
-                    try:
-                        id = channel.last_message_id
-                        msg = await channel.fetch_message(id)
-                    except:
-                        msg = None
-
-                    if msg and msg.author == self.bot.user:
-                        await msg.edit('台灣各縣市天氣預報',embed=forecast.desplay())
-                    else:
-                        await channel.send('台灣各縣市天氣預報',embed=forecast.desplay())
-                    await asyncio.sleep(0.5)
-                
-                else:
-                    log.warning(f"forecast_update: {i.guild_id}/{i.channel_id}")
+            await self.bot.edit_notify_channel(forecast.embed(), NotifyChannelType.WeatherForecast, "6小時天氣預報")
 
     #@tasks.loop(minutes=3)
     async def twitch_live(self):
@@ -170,8 +147,8 @@ class task(Cog_Extension):
         for user in users:
             cache_last_update_time = datetime.fromisoformat(twitch_cache.get(user)).replace(tzinfo=tz) if twitch_cache.get(user) else None
             clips = twapi.get_clips(user, started_at=cache_last_update_time)
-            # Twitch API 會無視started_at參數回傳錯誤時間的資料，故使用函數過濾掉，解法尚待改進
-            clips = filter_twitch_clip(clips, cache_last_update_time)
+            # Twitch API 會無視started_at參數回傳錯誤時間的資料
+            clips = [d for d in clips if d.created_at >= cache_last_update_time]
             if clips:
                 newest = clips[0].created_at
                 broadcaster_id = clips[0].broadcaster_id
@@ -316,10 +293,6 @@ class task(Cog_Extension):
         
         start_time += timedelta(seconds=10)
         event = await channel.guild.create_scheduled_event(name="【快樂營中央選舉】投票階段",start_time=start_time,end_time=end_time,location="<#1163127708839071827>")
-
-    async def remind_eletion(self):
-        channel = self.bot.get_channel(1160459117270405222)
-        await channel.send("投票時間接近了，提醒大家記得參選喔")
         
     async def birtday_task(self):
         channel = self.bot.get_channel(566533708371329026)

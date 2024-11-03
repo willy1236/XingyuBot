@@ -193,6 +193,7 @@ async def on_bot_joined(event: JoinedEvent):
         
 async def on_bot_leaved(event: LeftEvent):
     twitch_log.info(f'Leaved bot in {event.room_name}')
+    
 
 async def on_server_notice(event: NoticeEvent):
     if event.room:

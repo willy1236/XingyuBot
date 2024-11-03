@@ -104,7 +104,7 @@ class Forecast():
             }
             self.forecast_all.append(forecast_one)
 
-    def desplay(self):
+    def embed(self):
         embed = BotEmbed.general('天氣預報')
         for data in self.forecast_all:
             text = f"{data['Wx']}\n高低溫:{data['maxT']}/{data['minT']}\n{data['Cl']}"
