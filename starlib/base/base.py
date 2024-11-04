@@ -14,7 +14,7 @@ class BaseThread(threading.Thread):
     def stop(self):
         self._stop_event.set()
 
-class ListObject:
+class ListObject(list[T]):
     """
     A class representing a list object with additional functionality.
 
