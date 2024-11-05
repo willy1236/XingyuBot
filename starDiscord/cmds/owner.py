@@ -10,6 +10,7 @@ import mcrcon
 import psutil
 from discord.commands import SlashCommandGroup
 from discord.ext import commands
+from mcstatus import JavaServer
 
 from starlib import BotEmbed, Jsondb, sclient
 from starlib.types import NotifyChannelType
@@ -340,7 +341,9 @@ class owner(Cog_Extension):
                     return False
 
         await ctx.defer()
-        if is_server_running_by_process() or is_server_running_by_connect("26.111.85.196"):
+        ip = "26.111.85.196"
+        port = 25565
+        if is_server_running_by_process() or is_server_running_by_connect(ip, port):
             await ctx.respond("伺服器已開啟")
         else:
             #cmd = r"D: && cd D:\minecraft_server\1.20.1_forge && run.bat"
@@ -349,8 +352,18 @@ class owner(Cog_Extension):
             msg = await ctx.respond("已發送開啟指令")
             for _ in range(10):
                 await asyncio.sleep(10)
-                if is_server_running_by_process() or is_server_running_by_connect("26.111.85.196"):
-                    await msg.edit(content="伺服器已開啟")
+                if is_server_running_by_process() or is_server_running_by_connect(ip, port):
+                    try:
+                        server = JavaServer.lookup(f"{ip}:{port}")
+                        status = server.status()
+                        latency = server.ping()
+                        embed = BotEmbed.general(f"{server.address.host}:{server.address.port}", title="伺服器已開啟", description=status.description)
+                        embed.add_field(name="伺服器版本", value=status.version.name, inline=True)
+                        embed.add_field(name="在線玩家數", value=f"{status.players.online}/{status.players.max}", inline=True)
+                        embed.add_field(name="延遲", value=f"{latency:.2f} ms", inline=True)
+                        await msg.edit(embed=embed)
+                    except:
+                        await msg.edit("伺服器已開啟")
                     break
 
     # @twitch_chatbot.command(description='加入Twitch頻道',guild_ids=debug_guilds)

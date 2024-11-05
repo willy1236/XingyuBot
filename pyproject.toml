@@ -31,6 +31,7 @@ genshin = "^1.7.2"
 selenium = "^4.26.1"
 sqlmodel = "^0.0.22"
 line-bot-sdk = "3.13.0"
+mcstatus = "^11.1.1"
 
 
 [tool.poetry.group.dev.dependencies]

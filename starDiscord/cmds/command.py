@@ -480,7 +480,7 @@ class command(Cog_Extension):
         embed = view.results_embed(ctx.interaction)
         await ctx.respond(embed=embed)
 
-    @commands.slash_command(description='共用「94共用啦」雲端資料夾',guild_ids=happycamp_guild)
+    @commands.slash_command(description='共用「94共用啦」雲端資料夾',guild_ids=main_guilds)
     async def drive(self,ctx,email:discord.Option(str,name='gmail帳戶',description='要使用的Gmail帳戶，留空以移除資料',required=False)):
         await ctx.defer()
         cuser = sclient.sqldb.get_cloud_user(ctx.author.id)
