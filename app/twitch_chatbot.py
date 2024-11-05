@@ -285,7 +285,7 @@ async def run():
     for user in users:
         twitch_log.debug(f"eventsub:{user.login}")
         try:
-            await eventsub.listen_stream_online(user.id, on_stream_online)
+            subscription_id = await eventsub.listen_stream_online(user.id, on_stream_online)
             await asyncio.sleep(1)
         except EventSubSubscriptionError as e:
             twitch_log.warning(f"Error subscribing stream online: {e}")
@@ -293,7 +293,7 @@ async def run():
             twitch_log.warning(f"Error subscribing stream online: timeout.")
             
         try:
-            await eventsub.listen_stream_offline(user.id, on_stream_offline)
+            subscription_id = await eventsub.listen_stream_offline(user.id, on_stream_offline)
             await asyncio.sleep(1)
         except EventSubSubscriptionError as e:
             twitch_log.warning(f"Error subscribing stream offline: {e}")
@@ -301,7 +301,7 @@ async def run():
             twitch_log.warning(f"Error subscribing stream offline: timeout.")
         
         try:
-            await eventsub.listen_channel_raid(on_channel_raid, to_broadcaster_user_id=user.id)
+            subscription_id = await eventsub.listen_channel_raid(on_channel_raid, to_broadcaster_user_id=user.id)
             await asyncio.sleep(1)
         except EventSubSubscriptionError as e:
             twitch_log.warning(f"Error subscribing channel raid: {e}")
@@ -316,7 +316,8 @@ async def run():
         
         try:
             twitch_log.debug("listening to channel points custom reward redemption add")
-            await eventsub.listen_channel_points_custom_reward_redemption_add(user.id, on_channel_points_custom_reward_redemption_add)
+            subscription_id = await eventsub.listen_channel_points_custom_reward_redemption_add(user.id, on_channel_points_custom_reward_redemption_add)
+            twitch_log.debug(f"subscription_id: {subscription_id}")
             await asyncio.sleep(1)
         except EventSubSubscriptionError as e:
             twitch_log.warning(f"Error subscribing to channel points custom reward redemption add: {e}")
@@ -325,7 +326,8 @@ async def run():
 
         try:
             twitch_log.debug("listening to channel follow")
-            await eventsub.listen_channel_follow_v2(user.id, me.id, on_follow)
+            subscription_id = await eventsub.listen_channel_follow_v2(user.id, me.id, on_follow)
+            twitch_log.debug(f"subscription_id: {subscription_id}")
             await asyncio.sleep(1)
         except EventSubSubscriptionError as e:
             twitch_log.warning(f"Error subscribing to channel follow: {e}")
@@ -334,7 +336,8 @@ async def run():
         
         try:
             twitch_log.debug("listening to channel points custom reward redemption update")
-            await eventsub.listen_channel_points_custom_reward_redemption_update(user.id, on_channel_points_custom_reward_redemption_update)
+            subscription_id = await eventsub.listen_channel_points_custom_reward_redemption_update(user.id, on_channel_points_custom_reward_redemption_update)
+            twitch_log.debug(f"subscription_id: {subscription_id}")
             await asyncio.sleep(1)
         except EventSubSubscriptionError as e:
             twitch_log.warning(f"Error subscribing to channel points custom reward redemption update: {e}")
@@ -343,7 +346,8 @@ async def run():
 
         try:
             twitch_log.debug("listening to channel subscribe")
-            await eventsub.listen_channel_subscribe(user.id, on_channel_subscribe)
+            subscription_id = await eventsub.listen_channel_subscribe(user.id, on_channel_subscribe)
+            twitch_log.debug(f"subscription_id: {subscription_id}")
             await asyncio.sleep(1)
         except EventSubSubscriptionError as e:
             twitch_log.warning(f"Error subscribing to channel subscribe: {e}")
@@ -352,7 +356,8 @@ async def run():
 
         try:
             twitch_log.debug("listening to channel subscription message")
-            await eventsub.listen_channel_subscription_message(user.id, on_channel_subscription_message)
+            subscription_id = await eventsub.listen_channel_subscription_message(user.id, on_channel_subscription_message)
+            twitch_log.debug(f"subscription_id: {subscription_id}")
             await asyncio.sleep(1)
         except EventSubSubscriptionError as e:
             twitch_log.warning(f"Error subscribing to channel subscription message: {e}")
@@ -361,7 +366,8 @@ async def run():
 
         try:
             twitch_log.debug("listening to channel subscription gift")
-            await eventsub.listen_channel_subscription_gift(user.id, on_channel_subscription_gift)
+            subscription_id = await eventsub.listen_channel_subscription_gift(user.id, on_channel_subscription_gift)
+            twitch_log.debug(f"subscription_id: {subscription_id}")
             await asyncio.sleep(1)
         except EventSubSubscriptionError as e:
             twitch_log.warning(f"Error subscribing to channel subscription gift: {e}")
@@ -382,7 +388,8 @@ async def run():
         
         try:
             twitch_log.debug("listening to channel prediction end")
-            await eventsub.listen_channel_prediction_end(user.id, on_channel_prediction_end)
+            subscription_id = await eventsub.listen_channel_prediction_end(user.id, on_channel_prediction_end)
+            twitch_log.debug(f"subscription_id: {subscription_id}")
         except EventSubSubscriptionError as e:
             twitch_log.warning(f"Error subscribing to channel prediction end: {e}")
         except EventSubSubscriptionTimeout:
