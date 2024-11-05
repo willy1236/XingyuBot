@@ -11,6 +11,7 @@ from ..extension import Cog_Extension
 
 debug_guilds = Jsondb.config.get('debug_guilds')
 main_guilds = Jsondb.config.get('main_guilds')
+happycamp_guild = Jsondb.config.get('happycamp_guild')
 
 # Note that custom_ids can only be up to 100 characters long.
 class PersistentView(discord.ui.View):

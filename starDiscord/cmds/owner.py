@@ -167,7 +167,7 @@ class owner(Cog_Extension):
             sclient.twitchtunnel_thread.stop()
 
         await self.bot.close()
-        self.bot.loop.stop()
+        exit()
 
     #send
     @commands.slash_command(description='發送訊息',guild_ids=debug_guilds)
