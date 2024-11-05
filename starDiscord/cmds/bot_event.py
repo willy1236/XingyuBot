@@ -31,6 +31,7 @@ member_names = {
 voice_updata = Jsondb.config.get('voice_updata')
 debug_mode = Jsondb.config.get("debug_mode",True)
 main_guilds = Jsondb.config.get('main_guilds',[])
+happycamp_guild = Jsondb.config.get('happycamp_guild',[])
 
 guild_registration = sclient.sqldb.get_raw_resgistrations() if sclient.sqldb else {}
 
@@ -375,7 +376,7 @@ class event(Cog_Extension):
     async def on_member_update(self,before:discord.Member, after:discord.Member):
         guildid = after.guild.id
         member = after
-        if guildid in main_guilds and (after.nick and before.nick != after.nick) or not after.nick:
+        if guildid in happycamp_guild and (after.nick and before.nick != after.nick) or not after.nick:
             p2 = re.compile(r"冠宇")
             nick = after.nick or ""
             

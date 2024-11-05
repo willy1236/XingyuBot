@@ -184,7 +184,7 @@ class debug(Cog_Extension):
         await ctx.respond(embed=embed)
 
     @commands.is_owner()
-    @commands.slash_command(description='更改身分組', guild_ids=main_guilds)
+    @commands.slash_command(description='更改身分組', guild_ids=happycamp_guild)
     async def roletest(self,ctx:discord.ApplicationContext,old_role:discord.Role):
         await ctx.defer()
         guild = ctx.guild

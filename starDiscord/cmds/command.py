@@ -27,6 +27,7 @@ position_option = ChoiceList.set('position_option')
 party_option = ChoiceList.set('party_option')
 
 main_guilds = Jsondb.config.get('main_guilds')
+happycamp_guild = Jsondb.config.get('happycamp_guild',[])
 
 trpg_plot_start = [
     OptionChoice(name='劇情開始：米爾（威立）',value=1)
@@ -39,8 +40,8 @@ class command(Cog_Extension):
     bet = SlashCommandGroup("bet", "賭盤相關指令")
     role = SlashCommandGroup("role", "身分組管理指令")
     poll = SlashCommandGroup("poll", "投票相關指令")
-    party = SlashCommandGroup("party", "政黨相關指令",guild_ids=main_guilds)
-    registration = SlashCommandGroup("registration", "戶籍相關指令",guild_ids=main_guilds)
+    party = SlashCommandGroup("party", "政黨相關指令",guild_ids=happycamp_guild)
+    registration = SlashCommandGroup("registration", "戶籍相關指令",guild_ids=happycamp_guild)
 
     @role.command(description='查詢身分組數')
     async def count(self,ctx,user_list:discord.Option(str,required=False,name='要查詢的用戶',description='多個用戶請用空格隔開，或可輸入default查詢常用人選')):
@@ -88,7 +89,7 @@ class command(Cog_Extension):
                     
                     await user.add_roles(new_role,reason='指令:加身分組')
                     added_user.append(user.mention)
-                    if ctx.guild.id == main_guilds[0] and not user.get_role(877934319249797120):
+                    if ctx.guild.id == happycamp_guild[0] and not user.get_role(877934319249797120):
                         divider_role = ctx.guild.get_role(877934319249797120)
                         await user.add_roles(divider_role,reason='指令:加身分組')
 
@@ -111,7 +112,7 @@ class command(Cog_Extension):
     async def save(self,
                    ctx:discord.ApplicationContext):
         await ctx.defer()
-        guild = self.bot.get_guild(main_guilds[0])
+        guild = self.bot.get_guild(happycamp_guild[0])
         
         for role in guild.roles:
             if role.id == 877934319249797120 or role.is_default():
@@ -133,7 +134,7 @@ class command(Cog_Extension):
     @commands.is_owner()
     async def rsmove(self,ctx):
         await ctx.defer()
-        guild = self.bot.get_guild(main_guilds[0])
+        guild = self.bot.get_guild(happycamp_guild[0])
         if not guild.get_role(877934319249797120):
             await ctx.respond('錯誤：找不到"加身分組"',delete_after=5)
             return
@@ -383,7 +384,7 @@ class command(Cog_Extension):
         await ctx.respond(f"已禁言{member.mention} 10秒",ephemeral=True)
     
     #@commands.user_command(name="不想理你生態區",guild_ids=main_guilds)
-    @commands.user_command(name="懲戒集中營",guild_ids=main_guilds)
+    @commands.user_command(name="懲戒集中營",guild_ids=happycamp_guild)
     #@commands.has_permissions(moderate_members=True)
     async def user_command2(self,ctx, member: discord.Member):
         await ctx.respond(f"開始執行",ephemeral=True)
@@ -421,7 +422,7 @@ class command(Cog_Extension):
         result = random.choice(args)
         await ctx.respond(f'我選擇:{result}')
 
-    @commands.user_command(name="摃殘",guild_ids=main_guilds)
+    @commands.user_command(name="摃殘",guild_ids=happycamp_guild)
     async def bonk(self,ctx:discord.ApplicationContext, member: discord.Member):
         if not ctx.user.get_role(1178151415403790478):
             await ctx.respond(f"你不是台中摃殘黨員",ephemeral=True)
@@ -479,7 +480,7 @@ class command(Cog_Extension):
         embed = view.results_embed(ctx.interaction)
         await ctx.respond(embed=embed)
 
-    @commands.slash_command(description='共用「94共用啦」雲端資料夾',guild_ids=main_guilds)
+    @commands.slash_command(description='共用「94共用啦」雲端資料夾',guild_ids=happycamp_guild)
     async def drive(self,ctx,email:discord.Option(str,name='gmail帳戶',description='要使用的Gmail帳戶，留空以移除資料',required=False)):
         await ctx.defer()
         cuser = sclient.sqldb.get_cloud_user(ctx.author.id)
