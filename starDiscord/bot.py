@@ -45,47 +45,52 @@ class DiscordBot(discord.Bot):
         embed.add_field(name='發生群組', value=f'{ctx.guild}\n{ctx.guild.id}', inline=True)
         await error_report.send(embed=embed)
 
-    async def report(self,msg):
+    async def report(self,msg:str):
         report_channel = self.get_channel(Jsondb.config.get('report_channel'))
-        embed = BotEmbed.general(name="BRS | 回報訊息")
+        embed = BotEmbed.general(name="回報訊息")
         embed.add_field(name='訊息', value=msg, inline=True)
         await report_channel.send(embed=embed)
 
-    async def feedback(self,ctx:discord.ApplicationContext, msg):
+    async def feedback(self,ctx:discord.ApplicationContext, msg:discord.Message):
         feedback_channel = self.get_channel(Jsondb.config.get('feedback_channel'))
-        embed = BotEmbed.general(name="BRS | 回饋訊息")
-        embed.add_field(name='訊息內容', value=msg, inline=True)
+        embed = BotEmbed.general(name=msg.author,icon_url=msg.author.display_avatar.url, title="💬回饋訊息", description=msg.content)
+        #embed.add_field(name='訊息內容', value=msg, inline=True)
         embed.add_field(name='發送者', value=f"{ctx.author}\n{ctx.author.id}", inline=False)
         embed.add_field(name='來源頻道', value=f'{ctx.channel}\n{ctx.channel.id}', inline=True)
         embed.add_field(name='來源群組', value=f'{ctx.guild}\n{ctx.guild.id}', inline=True)
+        embed.timestamp = msg.created_at
         await feedback_channel.send(embed=embed)
 
     async def dm(self,msg:discord.Message):
         dm_channel = self.get_channel(Jsondb.config.get('dm_channel'))
-        embed = BotEmbed.general(name="BRS | 私人訊息")
-        embed.add_field(name='訊息內容', value=msg.content, inline=True)
+        embed = BotEmbed.general(name=msg.author.name, icon_url=msg.author.display_avatar.url, title="💭私訊", description=msg.content)
+        # embed.add_field(name='訊息內容', value=msg.content, inline=True)
         if msg.channel.recipient:
             embed.add_field(name='發送者', value=f"{msg.author}->{msg.channel.recipient}\n{msg.author.id}->{msg.channel.recipient.id}", inline=False)
         else:
             embed.add_field(name='發送者', value=f"{msg.author}\n{msg.author.id}", inline=False)
+        embed.set_footer(text=self.user.display_name, icon_url=self.user.display_avatar.url)
+        embed.timestamp = msg.created_at
         await dm_channel.send(embed=embed)
 
     async def mentioned(self,msg:discord.Message):
         dm_channel = self.get_channel(Jsondb.config.get('mentioned_channel'))
-        embed=BotEmbed.general(name="BRS | 提及訊息",description=msg.jump_url)
-        embed.add_field(name='訊息內容', value=msg.content, inline=True)
+        embed=BotEmbed.general(name=msg.author,icon_url=msg.author.display_avatar.url, title="提及訊息", description=f"{msg.content}\n{msg.jump_url}")
+        #embed.add_field(name='訊息內容', value=msg.content, inline=True)
         embed.add_field(name='發送者', value=f"{msg.author}\n{msg.author.id}", inline=False)
         embed.add_field(name='來源頻道', value=f'{msg.channel}\n{msg.channel.id}', inline=True)
         embed.add_field(name='來源群組', value=f'{msg.guild}\n{msg.guild.id}', inline=True)
+        embed.timestamp = msg.created_at
         await dm_channel.send(embed=embed)
     
     async def mention_everyone(self,msg:discord.Message):
         dm_channel = self.get_channel(Jsondb.config.get('mention_everyone_channel'))
-        embed=BotEmbed.general(name="BRS | 提及所有人訊息",description=f"https://discord.com/channels/{msg.guild.id}/{msg.channel.id}/{msg.id}")
+        embed=BotEmbed.general(name=msg.author,icon_url=msg.author.display_avatar.url, title="提及所有人訊息", description=f"{msg.content}\n{msg.jump_url}")
         embed.add_field(name='訊息內容', value=msg.content, inline=True)
         embed.add_field(name='發送者', value=f"{msg.author}\n{msg.author.id}", inline=False)
         embed.add_field(name='來源頻道', value=f'{msg.channel}\n{msg.channel.id}', inline=True)
         embed.add_field(name='來源群組', value=f'{msg.guild}\n{msg.guild.id}', inline=True)
+        embed.timestamp = msg.created_at
         await dm_channel.send(embed=embed)
 
     async def send_notify_communities(self, embed:discord.Embed, notify_type:NotifyCommunityType, notify_name:str, content:str=None):
