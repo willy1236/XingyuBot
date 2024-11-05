@@ -365,40 +365,24 @@ class owner(Cog_Extension):
                     except:
                         await msg.edit("伺服器已開啟")
                     break
-
-    # @twitch_chatbot.command(description='加入Twitch頻道',guild_ids=debug_guilds)
-    # @commands.is_owner()
-    # async def join(self,ctx,twitch_user):
-    #     channel = twitch_bot.get_channel(twitch_user)
-    #     if channel:
-    #         await ctx.respond(f'加入 {twitch_user}')
-    #     else:
-    #         await ctx.respond(f'找不到 {twitch_user} 但仍加入')
-
-    #         cache = Jsondb.cache
-    #         cache.get('twitch_initial_channels').append(twitch_user)
-    #         Jsondb.write('cache',cache)
-
-    #         await twitch_bot.join_channels((twitch_user,))
-            
     
-    # @twitch_chatbot.command(description='離開Twitch頻道',guild_ids=debug_guilds)
-    # @commands.is_owner()
-    # async def leave(self,ctx,twitch_user):
-    #     cache = Jsondb.cache
-    #     if twitch_user in cache.get('twitch_initial_channels'):
-    #         cache.get('twitch_initial_channels').remove(twitch_user)
-    #         Jsondb.write('cache',cache)
-    #         await twitch_bot.part_channels((twitch_user,))
-    #         await ctx.respond(f'離開 {twitch_user}')
-    #     else:
-    #         await ctx.respond(f'錯誤：未加入 {twitch_user}')
-
-    # @twitch_chatbot.command(description='發送消息到指定Twitch頻道',guild_ids=debug_guilds)
-    # @commands.is_owner()
-    # async def send(self,ctx,twitch_user,context):
-    #     await twitch_bot.get_channel(twitch_user).send(context)
-    #     await ctx.respond(f'已發送到 {twitch_user}: {context}')
+    @mcserver.command(description="查詢mc伺服器")
+    @commands.cooldown(rate=1,per=3)
+    async def quary(self,ctx:discord.ApplicationContext, ip:discord.Option(str, description="伺服器ip", default="26.111.85.196:25565")):
+        await ctx.defer()
+        try:
+            server = JavaServer.lookup(ip)
+        except Exception as e:
+            await ctx.respond(f"找不到伺服器：{ip}")
+            return
+        
+        status = server.status()
+        latency = server.ping()
+        embed = BotEmbed.general(f"{server.address.host}:{server.address.port}", title="伺服器狀態", description=status.description)
+        embed.add_field(name="伺服器版本", value=status.version.name, inline=True)
+        embed.add_field(name="在線玩家數", value=f"{status.players.online}/{status.players.max}", inline=True)
+        embed.add_field(name="延遲", value=f"{latency:.2f} ms", inline=True)
+        await ctx.respond(embed=embed)
     
     @commands.slash_command(description='機器人面板',guild_ids=debug_guilds)
     @commands.is_owner()
