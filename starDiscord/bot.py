@@ -35,7 +35,7 @@ class DiscordBot(discord.Bot):
 
     async def error(self, ctx:discord.ApplicationContext, error:str) -> None:
         error_report = self.get_channel(Jsondb.config.get('error_report'))
-        embed = BotEmbed.general(name="BRS | 錯誤回報")
+        embed = BotEmbed.general(name=ctx.author,icon_url=ctx.author.display_avatar.url, title="❌錯誤回報")
         embed.add_field(name='錯誤訊息', value=f'```py\n{error}```', inline=True)
         if ctx.command:
             embed.add_field(name='使用指令', value=f'```{ctx.command}```', inline=False)
@@ -128,7 +128,7 @@ class DiscordBot(discord.Bot):
                 log.warning(f"{notify_type} not found: {no_channel.guild_id}/{no_channel.channel_id}")
 
     async def edit_notify_channel(self, embed:discord.Embed, notify_type:NotifyChannelType, content:str=None):
-        records = sqldb.get_notify_channel_by_type(NotifyChannelType.WeatherForecast)
+        records = sqldb.get_notify_channel_by_type(notify_type)
         for i in records:
             channel = self.get_channel(i.channel_id)
             if channel:

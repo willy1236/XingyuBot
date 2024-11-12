@@ -219,7 +219,7 @@ class ApexAPI():
         if r.ok:
             apidata = r.json()
             if apidata:
-                return ApexMapRotation(apidata)
+                return ApexMapRotation(**apidata)
         else:
             return None
     
