@@ -95,12 +95,18 @@ if __name__ == '__main__':
 # lst = [0,1,2,3,4,5,6,7,8,9]
 # for i in range(0, len(lst), 3):
 #     print(lst[i:i+3])	
-cwa_api = CWA_API()
-weather = cwa_api.get_weather_data()[0]
-text = f"現在天氣： {weather.WeatherElement.Weather if weather.WeatherElement.Weather != '-99' else '--'}/{weather.WeatherElement.AirTemperature}°C"
-if weather.WeatherElement.AirTemperature == weather.WeatherElement.DailyExtreme.DailyHigh.AirTemperature:
-    text += f" （最高溫）"
-elif weather.WeatherElement.AirTemperature == weather.WeatherElement.DailyExtreme.DailyLow.AirTemperature:
-    text += f" （最低溫）"
-print(text, weather.WeatherElement.DailyExtreme.DailyHigh.AirTemperature, weather.WeatherElement.DailyExtreme.DailyLow.AirTemperature)
-print(weather.model_dump())
+# cwa_api = CWA_API()
+# weather = cwa_api.get_weather_data()[0]
+# text = f"現在天氣： {weather.WeatherElement.Weather if weather.WeatherElement.Weather != '-99' else '--'}/{weather.WeatherElement.AirTemperature}°C"
+# if weather.WeatherElement.AirTemperature == weather.WeatherElement.DailyExtreme.DailyHigh.AirTemperature:
+#     text += f" （最高溫）"
+# elif weather.WeatherElement.AirTemperature == weather.WeatherElement.DailyExtreme.DailyLow.AirTemperature:
+#     text += f" （最低溫）"
+# print(text, weather.WeatherElement.DailyExtreme.DailyHigh.AirTemperature, weather.WeatherElement.DailyExtreme.DailyLow.AirTemperature)
+# print(weather.model_dump())
+
+# api = YoutubeAPI()
+# print(api.get_video("AgsGMDvpArc")[0].model_dump())
+
+api = ApexAPI()
+print(api.get_map_rotation().embed().to_dict())

@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field, HttpUrl, model_validator
 
 from ..utilities import BotEmbed
 from ..fileDatabase import Jsondb,csvdb
+from ..settings import tz
 
 jdict = Jsondb.jdict
 lol_jdict = Jsondb.lol_jdict
@@ -552,32 +553,41 @@ class ApexCraftingItem():
         # self.asset = data.get('itemType').get('asset')
         # self.rarityHex = data.get('itemType').get('rarityHex')
 
-class ApexMapRotation():
-    def __init__(self,data):
-        try:
-            self.nowmap = data["current"]['map']
-            self.nowstart = datetime.strptime(data['current']['readableDate_start'],"%Y-%m-%d %H:%M:%S") + timedelta(hours=8)
-            self.nowend = datetime.strptime(data['current']['readableDate_end'],"%Y-%m-%d %H:%M:%S") + timedelta(hours=8)
-            self.remaining = data['current']['remainingTimer']
-            self.mapimage = data['current']['asset']
+class MapData(BaseModel):
+    start: datetime
+    end: datetime
+    readableDate_start: str
+    readableDate_end: str
+    map: str
+    code: str
+    DurationInSecs: int
+    DurationInMinutes: int
+    asset: str | None = None
+    remainingSecs: int | None = None
+    remainingMins: int | None = None
+    remainingTimer: str | None = None
 
-            self.nextmap = data["next"]['map']
-            self.nextstart = datetime.strptime(data['next']['readableDate_start'],"%Y-%m-%d %H:%M:%S") + timedelta(hours=8)
-            self.nextend = datetime.strptime(data['next']['readableDate_end'],"%Y-%m-%d %H:%M:%S") + timedelta(hours=8)
-        except TypeError:
-            print(data)
+    @model_validator(mode='after')
+    def __post_init__(self):
+        self.start = self.start.astimezone(tz=tz)
+        self.end = self.end.astimezone(tz=tz)
+        return self
+
+class ApexMapRotation(BaseModel):
+    current: MapData
+    next: MapData
 
     def embed(self):
-        tl = jdict['ApexMap']
+        tl:dict = jdict['ApexMap']
         embed = BotEmbed.simple("Apex地圖輪替")
-        embed.add_field(name="目前地圖",value=tl.get(self.nowmap,self.nowmap))
-        embed.add_field(name="開始時間",value=self.nowstart)
-        embed.add_field(name="結束時間",value=self.nowend)
-        embed.add_field(name="下張地圖",value=tl.get(self.nextmap,self.nextmap))
-        embed.add_field(name="開始時間",value=self.nextstart)
-        embed.add_field(name="結束時間",value=self.nextend)
-        embed.add_field(name="目前地圖剩餘時間",value=self.remaining)
-        embed.set_image(url=self.mapimage)
+        embed.add_field(name="目前地圖",value=tl.get(self.current.map,self.current.map))
+        embed.add_field(name="開始時間",value=self.current.start.strftime("%Y-%m-%d %H:%M:%S"))
+        embed.add_field(name="結束時間",value=self.current.end.strftime("%Y-%m-%d %H:%M:%S"))
+        embed.add_field(name="下張地圖",value=tl.get(self.next.map,self.next.map))
+        embed.add_field(name="開始時間",value=self.next.start.strftime("%Y-%m-%d %H:%M:%S"))
+        embed.add_field(name="結束時間",value=self.next.start.strftime("%Y-%m-%d %H:%M:%S"))
+        embed.add_field(name="目前地圖剩餘時間",value=self.current.remainingTimer)
+        embed.set_image(url=self.current.asset)
         embed.timestamp = datetime.now()
         embed.set_footer(text='更新時間')
         return embed

@@ -16,6 +16,7 @@ rss = YoutubeRSS()
 ytapi = YoutubeAPI()
 twapi = TwitchAPI()
 cwa_api = CWA_API()
+apexapi = ApexAPI()
 
 class task(Cog_Extension):
     def __init__(self,*args,**kwargs):
@@ -28,6 +29,7 @@ class task(Cog_Extension):
         if not Jsondb.config.get("debug_mode",True):
             scheduler.add_job(self.forecast_update,'cron',hour='00,03,06,09,12,15,18,21',minute=0,second=1,jitter=30,misfire_grace_time=60)
             scheduler.add_job(self.weather_check,'cron',minute='20,35',second=30,jitter=30,misfire_grace_time=60)
+            scheduler.add_job(self.apex_map_rotation,'cron',hour='00,15,30,45',minute=0,second=10,jitter=30,misfire_grace_time=60)
 
             scheduler.add_job(self.earthquake_check,'interval',minutes=2,jitter=30,misfire_grace_time=40)
             scheduler.add_job(self.weather_warning_check,'interval',minutes=15,jitter=30,misfire_grace_time=40)
@@ -97,6 +99,10 @@ class task(Cog_Extension):
         forecast = cwa_api.get_forecast()
         if forecast:
             await self.bot.edit_notify_channel(forecast.embed(), NotifyChannelType.WeatherForecast, "6小時天氣預報")
+
+    async def apex_map_rotation(self):
+        data = apexapi.get_map_rotation()
+        await self.bot.edit_notify_channel(data.embed(), NotifyChannelType.ApexRotation)
 
     #@tasks.loop(minutes=3)
     async def twitch_live(self):
