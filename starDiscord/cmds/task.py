@@ -102,7 +102,7 @@ class task(Cog_Extension):
 
     async def apex_map_rotation(self):
         data = apexapi.get_map_rotation()
-        await self.bot.edit_notify_channel(data.embed(), NotifyChannelType.ApexRotation)
+        await self.bot.edit_notify_channel(data.embeds(), NotifyChannelType.ApexRotation)
 
     #@tasks.loop(minutes=3)
     async def twitch_live(self):
