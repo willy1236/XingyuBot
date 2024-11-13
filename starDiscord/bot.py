@@ -140,6 +140,7 @@ class DiscordBot(discord.Bot):
                 if msg and msg.author == self.user:
                     await msg.edit(content, embeds=embed if isinstance(embed, list) else [embed])
                 else:
+                    await channel.send(embed=BotEmbed.simple('溫馨提醒','此為定時通知，請將機器人的訊息保持在此頻道的最新訊息，以免機器人找不到訊息而重複發送'))
                     await channel.send(content, embeds=embed if isinstance(embed, list) else [embed])
                 await asyncio.sleep(0.5)
             

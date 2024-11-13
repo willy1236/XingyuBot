@@ -4,11 +4,20 @@
         "Olympus": "奧林匹斯",
         "World's Edge": "世界邊緣",
         "Kings Canyon": "王者峽谷",
-        "Broken Moon": "破碎之月"
+        "Broken Moon": "殘月",
+        "Wattson's Pylon": "華生的塔",
+        "Skulltown": "骷髏鎮",
+        "Barometer": "晴雨表",
+        "Habitat 4": "4號棲息地",
+        "Siphon": "岩漿虹吸管",
+        "Zeus Station": "宙斯站",
+        "Thunderdome": "雷鳴擂台",
+        "Fragment": "破碎東方"
     },
     "ApexEvent":{
-        "Control": "控制模式",
-        "Gun Run": "Gun Run"
+        "Control": "控制",
+        "Gun Run": "快速直擊",
+        "TDM": "團隊死鬥"
     },
     "ApexCraftingItem": {
         "extended_light_mag": "紫色輕型彈匣",
