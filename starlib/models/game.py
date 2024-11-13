@@ -626,7 +626,7 @@ class ApexMapRotation(BaseModel):
         embed_ltm.timestamp = now
         embed_ltm.set_footer(text='更新時間')
 
-        return [embed_rank, embed_battle_royale, embed_ltm]
+        return [embed_rank,embed_battle_royale,embed_ltm]
 
 class ApexStatus():
     def __init__(self,data):

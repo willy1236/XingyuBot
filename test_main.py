@@ -109,5 +109,7 @@ if __name__ == '__main__':
 # print(api.get_video("AgsGMDvpArc")[0].model_dump())
 
 api = ApexAPI()
-for i in api.get_map_rotation().embeds():
+data = api.get_map_rotation()
+print(data.embeds())
+for i in data.embeds():
     print(i.to_dict())

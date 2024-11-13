@@ -4,5 +4,5 @@
 """
 
 from .rpg import *
-from .type import *
+from .datatype import *
 from .user import *
