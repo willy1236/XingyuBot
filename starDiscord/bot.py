@@ -109,7 +109,7 @@ class DiscordBot(discord.Bot):
             else:
                 log.warning(f"{notify_type} not found: {guildid}/{guildid[0]}")
     
-    async def send_notify_channel(self, embed:discord.Embed | list[discord.Embed], notify_type:NotifyChannelType, content:str=None):
+    async def send_notify_channel(self, embed:discord.Embed, notify_type:NotifyChannelType, content:str=None):
         notify_channels = sqldb.get_notify_channel_by_type(notify_type)
         log.debug(f"{notify_type} channels: {notify_channels}")
         for no_channel in notify_channels:
@@ -122,12 +122,12 @@ class DiscordBot(discord.Bot):
                     except:
                         pass
 
-                await channel.send(content, embeds=embed if isinstance(embed, list) else [embed])
+                await channel.send(content,embed=embed)
                 await asyncio.sleep(0.5)
             else:
                 log.warning(f"{notify_type} not found: {no_channel.guild_id}/{no_channel.channel_id}")
 
-    async def edit_notify_channel(self, embed:discord.Embed, notify_type:NotifyChannelType, content:str=None):
+    async def edit_notify_channel(self, embed:discord.Embed | list[discord.Embed], notify_type:NotifyChannelType, content:str=None):
         records = sqldb.get_notify_channel_by_type(notify_type)
         for i in records:
             channel = self.get_channel(i.channel_id)
@@ -140,7 +140,7 @@ class DiscordBot(discord.Bot):
                 if msg and msg.author == self.user:
                     await msg.edit(content,embed=embed)
                 else:
-                    await channel.send(content,embed=embed)
+                    await channel.send(content, embeds=embed if isinstance(embed, list) else [embed])
                 await asyncio.sleep(0.5)
             
             else:

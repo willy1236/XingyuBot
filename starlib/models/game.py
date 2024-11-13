@@ -574,8 +574,8 @@ class MapData(BaseModel):
         return self
     
 class LTMMapData(MapData):
-    isActive: Optional[bool] = None
-    eventName: Optional[str] = None
+    isActive: bool | None = None
+    eventName: str | None = None
 
 class RotationType(BaseModel):
     current: MapData | LTMMapData
