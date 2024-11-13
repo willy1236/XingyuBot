@@ -138,7 +138,7 @@ class DiscordBot(discord.Bot):
                     msg = None
 
                 if msg and msg.author == self.user:
-                    await msg.edit(content,embed=embed)
+                    await msg.edit(content, embeds=embed if isinstance(embed, list) else [embed])
                 else:
                     await channel.send(content, embeds=embed if isinstance(embed, list) else [embed])
                 await asyncio.sleep(0.5)
