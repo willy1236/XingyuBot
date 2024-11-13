@@ -214,11 +214,15 @@ class ApexAPI():
             return None
     
     def get_map_rotation(self):
-        params={'auth':self.auth}
+        params={
+            "auth": self.auth,
+            "version": "2",
+        }
         r = requests.get(f'{self.url}/maprotation',params=params)
         if r.ok:
             apidata = r.json()
             if apidata:
+                print(apidata)
                 return ApexMapRotation(**apidata)
         else:
             return None
