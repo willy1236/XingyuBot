@@ -1,12 +1,9 @@
-import re
-from datetime import datetime, timedelta
-
 import discord
 import genshin
 from discord.commands import SlashCommandGroup
 from discord.ext import commands, pages
 
-from starlib import BotEmbed, ChoiceList, Jsondb, csvdb, sclient
+from starlib import BotEmbed, ChoiceList, Jsondb, csvdb, debug_guilds, sclient
 from starlib.dataExtractor import *
 from starlib.errors import APIInvokeError
 from starlib.models.mysql import UserGame
@@ -21,9 +18,6 @@ hoyo_game_option = [
     discord.OptionChoice(name='崩壞3rd',value=genshin.Game.HONKAI),
     discord.OptionChoice(name='崩壞：星穹軌道',value=genshin.Game.STARRAIL)
 ]
-
-config = Jsondb.config
-debug_guilds = config.get('debug_guilds')
 
 riot_api = RiotAPI()
 

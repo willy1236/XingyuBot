@@ -1,29 +1,30 @@
 import discord
 from discord.ext import commands
 from mysql.connector.errors import Error as sqlerror
+
+from starlib import Jsondb, debug_guilds, log
 from starlib.errors import *
-from starlib import log,Jsondb
+
 from ..extension import Cog_Extension
 
 permissions_tl = Jsondb.jdict.get('permissions')
-debug_guilds = Jsondb.config.get('debug_guilds')
 debug_mode = Jsondb.config.get('debug_mode')
 
 class error(Cog_Extension):
     @commands.Cog.listener()
     async def on_application_command_error(self, ctx: discord.ApplicationContext, error: discord.DiscordException):
         if isinstance(error, commands.CommandOnCooldown):
-            await ctx.respond(f'尚在冷卻:指令還在冷卻中(尚須{int(error.retry_after)}秒)',ephemeral=True)
+            await ctx.respond(f'尚在冷卻：指令還在冷卻中(尚須{int(error.retry_after)}秒)',ephemeral=True)
         elif isinstance(error,commands.errors.NotOwner):
-            await ctx.respond('缺少權限:你不是機器人擁有者',ephemeral=True)
+            await ctx.respond('缺少權限：你不是機器人擁有者',ephemeral=True)
         elif isinstance(error,commands.errors.MissingPermissions):
             permissions = [permissions_tl.get(i,i) for i in error.missing_permissions]
             text = ','.join(permissions)
-            await ctx.respond(f'缺少權限:你沒有權限來使用此指令\n缺少權限: {text}',ephemeral=True)
+            await ctx.respond(f'缺少權限：你沒有權限來使用此指令\n缺少權限: {text}',ephemeral=True)
         elif isinstance(error,commands.errors.BotMissingPermissions):
             permissions = [permissions_tl.get(i,i) for i in error.missing_permissions]
             text = ','.join(permissions)
-            await ctx.respond(f'缺少權限:我沒有權限來使用此指令\n缺少權限: {text}',ephemeral=True)
+            await ctx.respond(f'缺少權限：我沒有權限來使用此指令\n缺少權限: {text}',ephemeral=True)
 
         elif isinstance(error,commands.errors.NoPrivateMessage):
             await ctx.respond(f'頻道錯誤：此指令不可在私訊中使用',ephemeral=True)

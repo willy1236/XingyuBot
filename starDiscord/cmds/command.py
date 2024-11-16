@@ -11,7 +11,8 @@ from discord.ext import commands, pages
 from mysql.connector.errors import Error as sqlerror
 from mysql.connector.errors import IntegrityError
 
-from starlib import BotEmbed, ChoiceList, Jsondb, log, sclient
+from starlib import (BotEmbed, ChoiceList, Jsondb, happycamp_guild, log,
+                     main_guilds, sclient)
 from starlib.dataExtractor import GoogleCloud
 from starlib.types import Coins
 from starlib.uiElement.view import DeleteAddRoleView, PollView, TRPGPlotView
@@ -25,9 +26,6 @@ from .bot_event import check_registration
 bet_option = ChoiceList.set('bet_option')
 position_option = ChoiceList.set('position_option')
 party_option = ChoiceList.set('party_option')
-
-main_guilds = Jsondb.config.get('main_guilds')
-happycamp_guild = Jsondb.config.get('happycamp_guild',[])
 
 trpg_plot_start = [
     OptionChoice(name='劇情開始：米爾（威立）',value=1)

@@ -18,7 +18,6 @@ class DiscordBot(discord.Bot):
         )
         
         self.bot_code = bot_code
-        self.main_guilds = Jsondb.config.get('main_guilds')
         self.debug_mode = Jsondb.config.get('debug_mode',True)
 
         if bot_code != 'Bot1':
@@ -104,6 +103,7 @@ class DiscordBot(discord.Bot):
                 if role:
                     content = f'{content} {role.mention}' if content is not None else f'{role.mention}'
                     
+                log.debug(f"send_notify_communities: {guildid}/{guilds[guildid][0]}: {content}")
                 await channel.send(content, embed=embed)
                 await asyncio.sleep(0.5)
             else:

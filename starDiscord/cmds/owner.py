@@ -12,7 +12,7 @@ from discord.commands import SlashCommandGroup
 from discord.ext import commands
 from mcstatus import JavaServer
 
-from starlib import BotEmbed, Jsondb, sclient
+from starlib import BotEmbed, Jsondb, debug_guilds, main_guilds, sclient
 from starlib.types import NotifyChannelType
 from starlib.utilities.utility import converter
 
@@ -107,8 +107,6 @@ class BotPanel(discord.ui.View):
         embed = BotEmbed.simple('伺服器列表','\n'.join(name_list))
         await interaction.response.send_message(content="", ephemeral=False, embed=embed)
 
-debug_guilds = Jsondb.config.get('debug_guilds')
-main_guilds = Jsondb.config.get('main_guilds')
 
 class owner(Cog_Extension):
     twitch_chatbot = SlashCommandGroup("twitch_chatbot", "twitch機器人相關指令",guild_ids=debug_guilds)
@@ -168,6 +166,7 @@ class owner(Cog_Extension):
             sclient.twitchtunnel_thread.stop()
 
         await self.bot.close()
+        self.bot.loop.stop()
         exit()
 
     #send

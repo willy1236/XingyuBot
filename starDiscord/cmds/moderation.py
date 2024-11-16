@@ -4,14 +4,13 @@ import discord
 from discord.commands import SlashCommandGroup
 from discord.ext import commands
 
-from starlib import BotEmbed, ChoiceList, Jsondb, sclient
+from starlib import BotEmbed, ChoiceList, Jsondb, debug_guilds, sclient
 from starlib.types import NotifyChannelType, WarningType
 from starlib.utilities import converter
 
 from ..extension import Cog_Extension
 
 set_option = ChoiceList.set('channel_set_option')
-debug_guilds = Jsondb.config.get('debug_guilds')
 
 class moderation(Cog_Extension):
     warning = SlashCommandGroup("warning", "警告相關指令")

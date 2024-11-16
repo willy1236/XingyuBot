@@ -1,15 +1,12 @@
-import random
-
 import discord
 from discord.commands import SlashCommandGroup
 from discord.ext import commands
 
-from starlib import BotEmbed, Jsondb, sclient
+from starlib import BotEmbed, debug_guilds, sclient
 from starlib.types import Coins
 
 from ..extension import Cog_Extension
 
-debug_guilds = Jsondb.config.get('debug_guilds')
 
 class system_economy(Cog_Extension):
     point = SlashCommandGroup("point", "PT點數相關指令")

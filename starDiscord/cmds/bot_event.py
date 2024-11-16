@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 import discord
 from discord.ext import commands
 
-from starlib import BotEmbed, Jsondb, log, sclient
+from starlib import BotEmbed, Jsondb, happycamp_guild, log, sclient
 from starlib.models.mysql import DiscordUser
 from starlib.types import NotifyChannelType
 from starlib.uiElement.view import (PollView, ReactionRole1, ReactionRole2,
@@ -30,8 +30,6 @@ member_names = {
 
 voice_updata = Jsondb.config.get('voice_updata')
 debug_mode = Jsondb.config.get("debug_mode",True)
-main_guilds = Jsondb.config.get('main_guilds',[])
-happycamp_guild = Jsondb.config.get('happycamp_guild',[])
 
 guild_registration = sclient.sqldb.get_raw_resgistrations() if sclient.sqldb else {}
 
