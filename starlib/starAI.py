@@ -7,6 +7,7 @@ import google.generativeai as genai
 from PIL import Image
 
 from .fileDatabase import Jsondb
+from .errors import GenerateError
 
 genai.configure(api_key=Jsondb.get_token("google_aistudio"))
 
@@ -77,6 +78,8 @@ class StarGeminiAI():
 
 		try:
 			response = self.model.generate_content(self.history)
+			if not response.text:
+				raise GenerateError("No response text.")
 			self.history.append(f"output: {response.text}")
 		except Exception as e:
 			print(type(e))

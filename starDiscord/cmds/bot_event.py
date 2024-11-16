@@ -149,8 +149,12 @@ class event(Cog_Extension):
             if message.content and message.content.startswith(".") and len(message.content) > 1 and message.content[1] != ".":
                 #image_bytes = await message.attachments[0].read() if message.attachments else None
                 text = sclient.starai.generate_aitext(f"{member_names.get(message.author.id,message.author.name)}：{message.content[1:]}")
-                await message.reply(text,mention_author=False)
+                if text:
+                    await message.reply(text,mention_author=False)
+                else:
+                    await message.add_reaction('❌')
                 return
+                
 
             # 貢丸防制
             if not is_owner and message.guild.id == 613747262291443742:

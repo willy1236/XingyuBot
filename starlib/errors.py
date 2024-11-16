@@ -54,10 +54,15 @@ class APIInvokeError(ApiError):
 
 class CommandError(ApiError):
     def __init__(self,message=None,original_message=None):
-        self.code = 1101
+        self.code = 1102
         self.message = '調用指令時發生錯誤：' + message
         self.original_message = original_message
 
+class GenerateError(ApiError):
+    def __init__(self,message=None,original_message=None):
+        self.code = 1103
+        self.message = '生成時發生錯誤：' + message
+        self.original_message = original_message
 
 class MysqlError(StarException):
     "MySQL original error: 1200"
