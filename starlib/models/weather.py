@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import List, Optional
 
 import discord
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, model_validator, AliasPath, Field, ConfigDict
 
 from ..utilities import BotEmbed
 from ..settings import tz
@@ -22,22 +22,31 @@ weather_warning_emojis = {
     "解除陸上強風特報": "💨",
 }
 
-class EarthquakeReport():
-    def __init__(self,data,auto_type=None):
-        self.auto_type = auto_type
-        self.earthquakeNo = str(data['EarthquakeNo'])
-        self.reportImageURI = data['ReportImageURI']
-        self.web = data['Web']
-        self.originTime = data['EarthquakeInfo']['OriginTime']
-        self.depth = data['EarthquakeInfo']['FocalDepth']
-        self.location = data['EarthquakeInfo']['Epicenter']['Location']
-        self.magnitude = data['EarthquakeInfo']['EarthquakeMagnitude']['MagnitudeValue']
-        self.reportColor = data['ReportColor']
-        self.reportContent = data['ReportContent']
-        self.intensity = {}
-        for data in data.get("Intensity").get("ShakingArea"):
-            if data["AreaDesc"].startswith("最大震度"):
-                self.intensity[data['AreaDesc']] = data['CountyName']
+class EarthquakeReport(BaseModel):
+    """地震報告"""
+    model_config = ConfigDict(extra='ignore')
+    
+    earthquakeNo: str = Field(validation_alias=AliasPath('EarthquakeNo'), strict=False)
+    reportImageURI: str = Field(validation_alias=AliasPath('ReportImageURI'))
+    web: str = Field(validation_alias=AliasPath('Web'))
+    originTime: datetime = Field(validation_alias=AliasPath('EarthquakeInfo', "OriginTime"))
+    depth: float = Field(validation_alias=AliasPath('EarthquakeInfo', "FocalDepth"))
+    location: str = Field(validation_alias=AliasPath('EarthquakeInfo', "Epicenter", "Location"))
+    magnitude: float = Field(validation_alias=AliasPath('EarthquakeInfo', "EarthquakeMagnitude", "MagnitudeValue"))
+    reportColor: str = Field(validation_alias=AliasPath('ReportColor'))
+    reportContent: str = Field(validation_alias=AliasPath('ReportContent'))
+    intensity:dict = Field(validation_alias=AliasPath('intensity_dict'))
+    
+    @model_validator(mode='before')
+    @classmethod
+    def check_card_number_omitted(cls, data: dict):
+        data["EarthquakeNo"] = str(data["EarthquakeNo"])
+        dct = {}
+        for d in data["Intensity"]["ShakingArea"]:
+            if d["AreaDesc"].startswith("最大震度"):
+                dct[d['AreaDesc']] = d['CountyName']
+        data['intensity_dict'] = dct
+        return data
 
     @property
     def is_significant(self):
@@ -60,7 +69,7 @@ class EarthquakeReport():
             embed.add_field(name='地震編號',value=f'{self.earthquakeNo}')
         else:
             embed.add_field(name='地震編號',value=f'{self.earthquakeNo}（小規模）')
-        embed.add_field(name='發生時間',value=self.originTime)
+        embed.add_field(name='發生時間',value=self.originTime.strftime('%Y/%m/%d %H:%M:%S'))
         embed.add_field(name='震源深度',value=f'{self.depth} km')
         embed.add_field(name='芮氏規模',value=f'{self.magnitude}')
         embed.add_field(name='震央',value=self.location,inline=False)
@@ -69,6 +78,7 @@ class EarthquakeReport():
                 embed.add_field(name=key,value=value,inline=False)
         embed.set_image(url=self.reportImageURI)
         embed.set_footer(text='資料來源：中央氣象暑')
+        embed.timestamp = self.originTime
         return embed
 
 class Covid19Report():

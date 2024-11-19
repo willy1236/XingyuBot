@@ -50,7 +50,7 @@ class task(Cog_Extension):
     async def earthquake_check(self):
         timefrom = Jsondb.get_cache('earthquake_timefrom')
         try:
-            earthquake_records = cwa_api.get_earthquake_report_auto(timefrom)
+            earthquake_records = cwa_api.get_earthquake_report_auto(timefrom, True)
         except ConnectTimeout:
             log.warning("earthquake_check timeout.")
             return
@@ -62,12 +62,13 @@ class task(Cog_Extension):
             return
 
         for data in earthquake_records:
-            timefrom = datetime.strptime(data.originTime, "%Y-%m-%d %H:%M:%S") + timedelta(seconds=1)
+            timefrom = data.originTime
             if data.is_significant:
                 await self.bot.send_notify_channel(data.embed(), NotifyChannelType.MajorQuakeNotifications, "顯著有感地震報告")
             else:
                 await self.bot.send_notify_channel(data.embed(), NotifyChannelType.SlightQuakeNotifications, "小區域地震報告")
-
+        
+        timefrom += timedelta(seconds=1)
         Jsondb.write_cache('earthquake_timefrom', timefrom.strftime("%Y-%m-%dT%H:%M:%S"))
 
     async def weather_check(self):
