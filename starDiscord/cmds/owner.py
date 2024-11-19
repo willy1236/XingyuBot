@@ -4,6 +4,8 @@ import socket
 import subprocess
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
+from io import BytesIO
+import base64
 
 import discord
 import mcrcon
@@ -22,6 +24,32 @@ from ..extension import Cog_Extension
 if TYPE_CHECKING:
     from ..bot import DiscordBot
 
+def base64_to_buffer(base64_string: str) -> BytesIO:
+    """
+    將 Base64 字串轉換為 BufferedIO 物件
+    
+    Args:
+        base64_string (str): Base64 編碼的字串
+    
+    Returns:
+        BufferedIO: 包含解碼資料的 BufferedIO 物件
+    
+    Raises:
+        ValueError: 當 Base64 解碼失敗時
+    """
+    try:
+        # 移除可能的 Base64 前綴 (如 "data:image/png;base64,")
+        if ',' in base64_string:
+            base64_string = base64_string.split(',')[1]
+        
+        # 解碼 Base64 字串
+        binary_data = base64.b64decode(base64_string)
+        
+        # 創建 BytesIO 物件並返回
+        buffer = BytesIO(binary_data)
+        return buffer
+    except Exception as e:
+        raise ValueError(f"Base64 解碼失敗: {str(e)}")
 class SendMessageModal(discord.ui.Modal):
     def __init__(self, channel, bot, is_dm, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -377,20 +405,20 @@ class owner(Cog_Extension):
             return
         
         try:
-            status = server.status()
+            latency = server.ping()
         except Exception as e:
-            status = None
-        latency = server.ping()
+            latency = None
+        full_ip = f"{server.address.host}:{server.address.port}" if server.address.port != 25565 else server.address.host
+        status = server.status()
         
-        if status is not None:
-            embed = BotEmbed.general(f"{server.address.host}:{server.address.port}", title="伺服器狀態", description=status.description)
-            embed.add_field(name="伺服器版本", value=status.version.name, inline=True)
-            embed.add_field(name="在線玩家數", value=f"{status.players.online}/{status.players.max}", inline=True)
+        embed = BotEmbed.general(full_ip, title="伺服器狀態", description=status.description)
+        embed.add_field(name="伺服器版本", value=status.version.name, inline=True)
+        embed.add_field(name="在線玩家數", value=f"{status.players.online}/{status.players.max}", inline=True)
+        if latency is not None:
             embed.add_field(name="延遲", value=f"{latency:.2f} ms", inline=True)
-        else:
-            embed = BotEmbed.general(f"{server.address.host}:{server.address.port}", title="伺服器狀態")
-            embed.add_field(name="延遲", value=f"{latency:.2f} ms", inline=True)
-        await ctx.respond(embed=embed)
+        
+        file = discord.File(base64_to_buffer(status.icon), filename="server_icon.png") if status.icon else None
+        await ctx.respond(embed=embed, file=file)
     
     @commands.slash_command(description='機器人面板',guild_ids=debug_guilds)
     @commands.is_owner()
