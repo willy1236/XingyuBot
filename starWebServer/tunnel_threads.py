@@ -35,7 +35,7 @@ class ServeoThread(BaseThread):
         while not self._stop_event.is_set():
             log.debug(f"Starting ServeoThread {reconnection_times}")
             #result = subprocess.run(["ssh", "-R", "cloudfoam:80:127.0.0.1:14000", "-R", "cloudfoamtwitch:80:127.0.0.1:14001", "serveo.net"], capture_output=True, text=True)
-            result = subprocess.run(["ssh", "-R", "cloudfoam:80:127.0.0.1:14000", "serveo.net"], capture_output=True, text=True)
+            result = subprocess.run(["ssh", "-R", "yunmo:80:127.0.0.1:14000", "serveo.net"], capture_output=True, text=True)
             log.debug(f'Stdout: {result.stdout}')
             log.debug(f'Stderr: {result.stderr}')
             log.debug(f'Exit status: {result.returncode}')

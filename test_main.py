@@ -72,20 +72,6 @@ if __name__ == '__main__':
 # connections = oauth.get_me()
 # print(connections)
 
-#from starlib.models.mysql import School, Student
-
-# sqldb.add(School(id=1, name="school1"))
-# sqldb.add(School(id=2, name="school2"))
-# sqldb.add(Student(id=1, name="student1", created_at=datetime.now(), school_id=1))
-# sqldb.add(Student(id=2, name="student2", created_at=datetime.now(), school_id=2))
-# sqldb.add(Student(id=3, name="student3", created_at=datetime.now()))
-# sqldb.add(Student(id=4, name="student4", created_at=datetime.now(), school_id=1))
-
-# student = sqldb.get_student(1)
-# print(student.name, student.school)
-
-# school = sqldb.get_school(1)
-# print(school.name, school.students)
 # ytapi = YoutubeAPI()
 # breakpoint()
 # print(ytapi.get_video("X-dTcoW2A8s")[0].embed().fields)
@@ -104,12 +90,3 @@ if __name__ == '__main__':
 #     text += f" （最低溫）"
 # print(text, weather.WeatherElement.DailyExtreme.DailyHigh.AirTemperature, weather.WeatherElement.DailyExtreme.DailyLow.AirTemperature)
 # print(weather.model_dump())
-
-# api = YoutubeAPI()
-# print(api.get_video("AgsGMDvpArc")[0].model_dump())
-
-api = ApexAPI()
-data = api.get_map_rotation()
-print(data.embeds())
-for i in data.embeds():
-    print(i.to_dict())

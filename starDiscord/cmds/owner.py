@@ -12,7 +12,8 @@ from discord.commands import SlashCommandGroup
 from discord.ext import commands
 from mcstatus import JavaServer
 
-from starlib import BotEmbed, Jsondb, debug_guilds, main_guilds, sclient
+from starlib import (BotEmbed, Jsondb, debug_guilds, happycamp_guild,
+                     main_guilds, sclient)
 from starlib.types import NotifyChannelType
 from starlib.utilities.utility import converter
 
@@ -375,12 +376,20 @@ class owner(Cog_Extension):
             await ctx.respond(f"找不到伺服器：{ip}")
             return
         
-        status = server.status()
+        try:
+            status = server.status()
+        except Exception as e:
+            status = None
         latency = server.ping()
-        embed = BotEmbed.general(f"{server.address.host}:{server.address.port}", title="伺服器狀態", description=status.description)
-        embed.add_field(name="伺服器版本", value=status.version.name, inline=True)
-        embed.add_field(name="在線玩家數", value=f"{status.players.online}/{status.players.max}", inline=True)
-        embed.add_field(name="延遲", value=f"{latency:.2f} ms", inline=True)
+        
+        if status is not None:
+            embed = BotEmbed.general(f"{server.address.host}:{server.address.port}", title="伺服器狀態", description=status.description)
+            embed.add_field(name="伺服器版本", value=status.version.name, inline=True)
+            embed.add_field(name="在線玩家數", value=f"{status.players.online}/{status.players.max}", inline=True)
+            embed.add_field(name="延遲", value=f"{latency:.2f} ms", inline=True)
+        else:
+            embed = BotEmbed.general(f"{server.address.host}:{server.address.port}", title="伺服器狀態")
+            embed.add_field(name="延遲", value=f"{latency:.2f} ms", inline=True)
         await ctx.respond(embed=embed)
     
     @commands.slash_command(description='機器人面板',guild_ids=debug_guilds)
@@ -405,7 +414,7 @@ class owner(Cog_Extension):
     @commands.is_owner()
     async def findmember(self,ctx,guildid:discord.Option(str,name='伺服器id')):
         guild = self.bot.get_guild(int(guildid))
-        guild_main = self.bot.get_guild(613747262291443742)
+        guild_main = self.bot.get_guild(happycamp_guild[0])
         if not guild:
             await ctx.respond("伺服器未找到")
             return

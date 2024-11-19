@@ -565,7 +565,7 @@ class command(Cog_Extension):
         if guild_id:
             guild = self.bot.get_guild(guild_id)
             resgistration = sclient.sqldb.get_resgistration_by_guildid(guild_id)
-            role_guild = self.bot.get_guild(613747262291443742)
+            role_guild = self.bot.get_guild(happycamp_guild[0])
             role = role_guild.get_role(resgistration.role_id)
 
             if role:
@@ -587,7 +587,7 @@ class command(Cog_Extension):
         resgistration = sclient.sqldb.get_resgistration(registrations_id)
         guild = self.bot.get_guild(resgistration.guild_id)
         
-        role_guild = self.bot.get_guild(613747262291443742)
+        role_guild = self.bot.get_guild(happycamp_guild[0])
         role = role_guild.get_role(resgistration.role_id)
 
         if role:

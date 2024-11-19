@@ -96,7 +96,7 @@ class event(Cog_Extension):
                 else:   
                     bot.add_view(PollView(poll, sqldb=sclient.sqldb, bot=bot))
 
-            invites = await bot.get_guild(613747262291443742).invites()
+            invites = await bot.get_guild(happycamp_guild[0]).invites()
             now = datetime.now(timezone.utc)
             days_5 = timedelta(days=5)
             for invite in invites:
@@ -157,7 +157,7 @@ class event(Cog_Extension):
                 
 
             # 貢丸防制
-            if not is_owner and message.guild.id == 613747262291443742:
+            if not is_owner and message.guild.id == happycamp_guild[0]:
                 result = None
                 if message.author.get_role(1160460037114822758) or message.author.get_role(1161644357410107483) or message.author.get_role(1178151415403790478):
                     pass
@@ -354,9 +354,9 @@ class event(Cog_Extension):
                 channel = self.bot.get_channel(mod_channel_id)
                 channel.send(f"新成員{member.mention}({member.id}) 共有 {dbdata} 筆紀錄")
 
-        if guildid == 613747262291443742:
+        if guildid == happycamp_guild[0]:
             earlest_guildid = check_registration(member)
-            if earlest_guildid and earlest_guildid != 613747262291443742:
+            if earlest_guildid and earlest_guildid != happycamp_guild[0]:
                 from starlib.models.mysql import DiscordUser
                 dbdata = sclient.sqldb.get_resgistration_by_guildid(earlest_guildid)
                 user = DiscordUser(discord_id=member.id, registrations_id=dbdata.registrations_id)

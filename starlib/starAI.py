@@ -13,7 +13,7 @@ genai.configure(api_key=Jsondb.get_token("google_aistudio"))
 
 # Set up the model
 generation_config = {
-  "temperature": 1.5,
+  "temperature": 1.6,
   "top_p": 0.95,
   "top_k": 40,
   "max_output_tokens": 8192,
