@@ -39,6 +39,10 @@ class EarthquakeReport():
             if data["AreaDesc"].startswith("最大震度"):
                 self.intensity[data['AreaDesc']] = data['CountyName']
 
+    @property
+    def is_significant(self):
+        return self.earthquakeNo[3:] != "000"
+
     def embed(self):
         match self.reportColor:
             case "綠色":
@@ -52,10 +56,10 @@ class EarthquakeReport():
         
         embed = discord.Embed(title='地震報告',description=self.reportContent,color=color,url=self.web)
         
-        if self.earthquakeNo[3:] == "000":
-            embed.add_field(name='地震編號',value=f'{self.earthquakeNo}（小規模）')
-        else:
+        if self.is_significant:
             embed.add_field(name='地震編號',value=f'{self.earthquakeNo}')
+        else:
+            embed.add_field(name='地震編號',value=f'{self.earthquakeNo}（小規模）')
         embed.add_field(name='發生時間',value=self.originTime)
         embed.add_field(name='震源深度',value=f'{self.depth} km')
         embed.add_field(name='芮氏規模',value=f'{self.magnitude}')

@@ -10,7 +10,7 @@ class NotifyCommunityType(IntEnum):
 class NotifyChannelType(IntEnum):
     AllAnnouncements = 1
     BotUpdates = 2
-    EarthquakeNotifications = 3
+    MajorQuakeNotifications = 3
     WeatherForecast = 4
     ApexRotation = 5
     AdminChannel = 6
@@ -19,6 +19,7 @@ class NotifyChannelType(IntEnum):
     DynamicVoice = 9
     VoiceLog = 10
     WeatherWarning = 11
+    SlightQuakeNotifications = 12
 
 class GameType(IntEnum):
     LOL = 1

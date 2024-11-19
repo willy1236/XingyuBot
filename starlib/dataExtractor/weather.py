@@ -5,6 +5,8 @@ import requests
 from starlib.fileDatabase import Jsondb
 from starlib.models.weather import *
 
+def sort_earthquakeReport(x:EarthquakeReport):
+    return x.originTime
 
 class CWA_API():
     def __init__(self):
@@ -26,23 +28,26 @@ class CWA_API():
         else:
             return None
 
-    def get_earthquake_report_auto(self,timeFrom=None):
+    def get_earthquake_report_auto(self,timeFrom=None, only_significant=False)-> list[EarthquakeReport]:
         params = {
             'Authorization': self.auth,
             'timeFrom': timeFrom
         }
-        APIdata = requests.get(f'{self.url}/E-A0015-001',params=params,timeout=20)
+        records = list()
+
+        APIdata = requests.get(f'{self.url}/E-A0015-001', params=params, timeout=20)
         data = APIdata.json().get('records').get('Earthquake')
         if data:
-            return [EarthquakeReport(i,auto_type='E-A0015-001') for i in data]
-        else:
-            time.sleep(1)
-            APIdata = requests.get(f'{self.url}/E-A0016-001',params=params,timeout=20)
+            records += [EarthquakeReport(i, auto_type="E-A0015-001") for i in data]
+
+        if not only_significant:
+            APIdata = requests.get(f'{self.url}/E-A0016-001', params=params, timeout=20)
             data = APIdata.json().get('records').get('Earthquake')
             if data:
-                return [EarthquakeReport(i,auto_type='E-A0016-001') for i in data]
-            else:
-                return None
+                records += [EarthquakeReport(i, auto_type="E-A0016-001") for i in data]
+            
+            records.sort(key=sort_earthquakeReport)
+        return records
 
     def get_forecast(self):
         params = {

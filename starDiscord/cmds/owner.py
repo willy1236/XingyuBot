@@ -368,11 +368,21 @@ class owner(Cog_Extension):
                 except ConnectionRefusedError:
                     return False
 
+        def server_status(ip, port):
+            server = JavaServer.lookup(f"{ip}:{port}")
+            status = server.status()
+            latency = server.ping()
+            embed = BotEmbed.general(f"{server.address.host}:{server.address.port}", title="伺服器已開啟", description=status.description)
+            embed.add_field(name="伺服器版本", value=status.version.name, inline=True)
+            embed.add_field(name="在線玩家數", value=f"{status.players.online}/{status.players.max}", inline=True)
+            embed.add_field(name="延遲", value=f"{latency:.2f} ms", inline=True)
+            return embed
+
         await ctx.defer()
         ip = "26.111.85.196"
         port = 25565
         if is_server_running_by_process() or is_server_running_by_connect(ip, port):
-            await ctx.respond("伺服器已開啟")
+            await ctx.respond("伺服器已開啟", embed=server_status(ip, port))
         else:
             #cmd = r"D: && cd D:\minecraft_server\1.20.1_forge && run.bat"
             cmd = r"D: && cd D:\minecraft_server\1.7.10_forge && run.bat"
@@ -382,14 +392,7 @@ class owner(Cog_Extension):
                 await asyncio.sleep(10)
                 if is_server_running_by_process() or is_server_running_by_connect(ip, port):
                     try:
-                        server = JavaServer.lookup(f"{ip}:{port}")
-                        status = server.status()
-                        latency = server.ping()
-                        embed = BotEmbed.general(f"{server.address.host}:{server.address.port}", title="伺服器已開啟", description=status.description)
-                        embed.add_field(name="伺服器版本", value=status.version.name, inline=True)
-                        embed.add_field(name="在線玩家數", value=f"{status.players.online}/{status.players.max}", inline=True)
-                        embed.add_field(name="延遲", value=f"{latency:.2f} ms", inline=True)
-                        await msg.edit(embed=embed)
+                        await msg.edit(embed=server_status(ip, port))
                     except:
                         await msg.edit("伺服器已開啟")
                     break
