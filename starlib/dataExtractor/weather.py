@@ -38,13 +38,13 @@ class CWA_API():
         APIdata = requests.get(f'{self.url}/E-A0015-001', params=params, timeout=20)
         data = APIdata.json().get('records').get('Earthquake')
         if data:
-            records += [EarthquakeReport(i) for i in data]
+            records += [EarthquakeReport(**i) for i in data]
 
         if not only_significant:
             APIdata = requests.get(f'{self.url}/E-A0016-001', params=params, timeout=20)
             data = APIdata.json().get('records').get('Earthquake')
             if data:
-                records += [EarthquakeReport(i) for i in data]
+                records += [EarthquakeReport(**i) for i in data]
             
             records.sort(key=sort_earthquakeReport)
         return records
