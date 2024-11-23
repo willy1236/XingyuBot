@@ -53,7 +53,7 @@ class StarGeminiAI():
 
 	def __init__(self):
 		self.set_history()
-		self.model = genai.GenerativeModel(model_name="gemini-1.5-flash-8b",
+		self.model = genai.GenerativeModel(model_name="gemini-1.5-flash-002",
 										   generation_config=generation_config,
 										   safety_settings=safety_settings)
 	

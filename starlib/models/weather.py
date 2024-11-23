@@ -39,7 +39,7 @@ class EarthquakeReport(BaseModel):
     
     @model_validator(mode='before')
     @classmethod
-    def check_card_number_omitted(cls, data: dict):
+    def extract_intensity_info(cls, data: dict):
         data["EarthquakeNo"] = str(data["EarthquakeNo"])
         dct = {}
         for d in data["Intensity"]["ShakingArea"]:
@@ -77,7 +77,7 @@ class EarthquakeReport(BaseModel):
             for key, value in sorted(self.intensity.items(), key=lambda x:x[0]):
                 embed.add_field(name=key,value=value,inline=False)
         embed.set_image(url=self.reportImageURI)
-        embed.set_footer(text='資料來源：中央氣象暑')
+        embed.set_footer(text='中央氣象暑')
         embed.timestamp = self.originTime
         return embed
 

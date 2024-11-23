@@ -25,14 +25,14 @@ if __name__ == "__main__":
         time.sleep(2)
 
     if api_website:
-        from starWebServer.bot_website import WebsiteThread
-        from starWebServer.tunnel_threads import LoopholeThread
-        tunnel_server = LoopholeThread()
-        sclient.tunnel_thread = tunnel_server
-        tunnel_server.start()
-        time.sleep(2)
+        # from starWebServer.tunnel_threads import LoopholeThread
+        # tunnel_server = LoopholeThread()
+        # sclient.tunnel_thread = tunnel_server
+        # tunnel_server.start()
+        # time.sleep(2)
         
 
+        from starWebServer.bot_website import WebsiteThread
         try:
             server = WebsiteThread()
             sclient.website_thread = server
@@ -43,14 +43,13 @@ if __name__ == "__main__":
         time.sleep(2)
 
     if twitch_bot:
-        from app.twitch_chatbot import TwitchBotThread
         from starWebServer.tunnel_threads import LoopholeTwitchThread
-        
         twitchtunnel_thread = LoopholeTwitchThread()
         sclient.twitchtunnel_thread = twitchtunnel_thread
         twitchtunnel_thread.start()
         time.sleep(10)
 
+        from app.twitch_chatbot import TwitchBotThread
         twitchbot_thread = TwitchBotThread()
         sclient.twitch_bot_thread = twitchbot_thread
         twitchbot_thread.start()

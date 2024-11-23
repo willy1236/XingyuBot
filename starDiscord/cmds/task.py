@@ -62,13 +62,12 @@ class task(Cog_Extension):
             return
 
         for data in earthquake_records:
-            timefrom = data.originTime
             if data.is_significant:
                 await self.bot.send_notify_channel(data.embed(), NotifyChannelType.MajorQuakeNotifications, "顯著有感地震報告")
             else:
                 await self.bot.send_notify_channel(data.embed(), NotifyChannelType.SlightQuakeNotifications, "小區域地震報告")
         
-        timefrom += timedelta(seconds=1)
+        timefrom = earthquake_records[-1].originTime + timedelta(seconds=1)
         Jsondb.write_cache('earthquake_timefrom', timefrom.strftime("%Y-%m-%dT%H:%M:%S"))
 
     async def weather_check(self):
