@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 import discord
 import yt_dlp as youtube_dl
 from discord.ext import commands, pages
+from discord.commands import SlashCommandGroup
 
 from starlib import BotEmbed, log
 from starlib.errors import *
@@ -280,8 +281,17 @@ guild_playing = {}
 def get_player(guildid:str) -> MusicPlayer | None:
     return guild_playing.get(str(guildid))
 
+async def recording_done(sink: discord.sinks.WaveSink):
+    recorded_users = [
+        f"<@{user_id}>"
+        for user_id, audio in sink.audio_data.items()
+    ]
+    await sink.vc.disconnect()
+    files = [discord.File(audio.file, f"{user_id}.{sink.encoding}") for user_id, audio in sink.audio_data.items()]
+    await sink.vc.channel.send(f"完成以下成員的錄音： {', '.join(recorded_users)}.", files=files)
 
 class music(Cog_Extension):
+    recording = SlashCommandGroup("recording", "錄音指令")
 
     @commands.slash_command(description='讓機器人加入語音頻道')
     @commands.guild_only()
@@ -320,6 +330,9 @@ class music(Cog_Extension):
         await ctx.defer()
         guildid = str(ctx.guild.id)
         vc = ctx.voice_client
+
+        if vc.recording:
+            raise MusicCommandError("正在錄音時無法播放音樂")
 
         if url.startswith("https://open.spotify.com/"):
             songfrom = SongSource.Spotify
@@ -445,6 +458,7 @@ class music(Cog_Extension):
     @pause.before_invoke
     @loop.before_invoke
     @shuffle.before_invoke
+    @recording.before_invoke
     async def ensure_voice(self, ctx: discord.ApplicationContext):
         if not ctx.voice_client:
             if ctx.author.voice:
@@ -457,6 +471,25 @@ class music(Cog_Extension):
         else:
             if not ctx.author.voice or ctx.voice_client.channel != ctx.author.voice.channel:
                 raise discord.ApplicationCommandInvokeError(MusicCommandError("你必須要跟機器人在同一頻道才能使用指令"))
+            
+    @recording.command(description='開始錄音')
+    async def start(self, ctx: discord.ApplicationContext):
+        vc = ctx.voice_client
+        if vc.recording:
+            raise MusicCommandError("已經在錄音了")
+        if vc.is_playing():
+            raise MusicCommandError("正在播放音樂時無法錄音")
+        vc.start_recording(discord.sinks.MP3Sink(), recording_done)
+        await ctx.respond("開始錄音")
+
+    @recording.command(description='結束錄音')
+    async def end(self, ctx: discord.ApplicationContext):
+        vc = ctx.voice_client
+        if not vc.recording:
+            raise MusicCommandError("沒有在錄音")
+        vc.stop_recording()
+        await ctx.respond("結束錄音")
+
 
 def setup(bot):
     bot.add_cog(music(bot))

@@ -102,7 +102,7 @@ class moderation(Cog_Extension):
         
     
     @warning.command(description='給予用戶警告，此警告可連動至其他群組')
-    @commands.has_permissions(manage_messages=True)
+    @commands.has_guild_permissions(manage_messages=True)
     @commands.guild_only()
     async def add(self,ctx:discord.ApplicationContext,
                       user:discord.Option(discord.User,name='用戶',description='要給予警告的用戶',required=True),
@@ -145,9 +145,9 @@ class moderation(Cog_Extension):
             await ctx.respond("查無此警告單")
 
     @warning.command(description='移除用戶警告')
-    @commands.check_any(commands.has_permissions(kick_members=True), 
-                        commands.has_permissions(ban_members=True),
-                        commands.has_permissions(manage_messages=True))
+    @commands.check_any(commands.has_guild_permissions(kick_members=True), 
+                        commands.has_guild_permissions(ban_members=True),
+                        commands.has_guild_permissions(manage_messages=True))
     @commands.guild_only()
     async def remove(self,ctx:discord.ApplicationContext,
                      warning_id:discord.Option(str,name='警告編號',description='要移除的警告',required=True)):
@@ -164,7 +164,7 @@ class moderation(Cog_Extension):
             await ctx.respond("查無此警告單")
 
     @commands.slash_command(description='禁言用戶')
-    @commands.has_permissions(moderate_members=True)
+    @commands.has_guild_permissions(moderate_members=True)
     @commands.bot_has_permissions(moderate_members=True)
     @commands.guild_only()
     async def timeout(self,ctx:discord.ApplicationContext,
@@ -193,7 +193,7 @@ class moderation(Cog_Extension):
         await ctx.respond(embed=embed)
 
     @commands.slash_command(description='踢除用戶')
-    @commands.has_permissions(kick_members=True)
+    @commands.has_guild_permissions(kick_members=True)
     @commands.bot_has_permissions(kick_members=True)
     @commands.guild_only()
     async def kick(self,ctx:discord.ApplicationContext,
@@ -214,7 +214,7 @@ class moderation(Cog_Extension):
         await ctx.respond(embed=embed)
 
     @commands.slash_command(description='停權用戶')
-    @commands.has_permissions(ban_members=True)
+    @commands.has_guild_permissions(ban_members=True)
     @commands.bot_has_permissions(ban_members=True)
     @commands.guild_only()
     async def ban(self,ctx:discord.ApplicationContext,
