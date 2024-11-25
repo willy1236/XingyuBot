@@ -4,11 +4,13 @@ import math
 import random
 import time
 from typing import TYPE_CHECKING
+from datetime import datetime
 
 import discord
 import yt_dlp as youtube_dl
 from discord.ext import commands, pages
 from discord.commands import SlashCommandGroup
+# import speech_recognition as sr
 
 from starlib import BotEmbed, log
 from starlib.errors import *
@@ -39,6 +41,7 @@ ffmpeg_options = {
 }
 
 ytdl = youtube_dl.YoutubeDL(ytdl_format_options)
+# recognizer = sr.Recognizer()
 
 class SongSource(enum.IntEnum):
     Youtube_or_other = 1
@@ -282,12 +285,32 @@ def get_player(guildid:str) -> MusicPlayer | None:
     return guild_playing.get(str(guildid))
 
 async def recording_done(sink: discord.sinks.WaveSink):
+    now = datetime.now().strftime("%H%M%S")
     recorded_users = [
         f"<@{user_id}>"
         for user_id, audio in sink.audio_data.items()
     ]
     await sink.vc.disconnect()
-    files = [discord.File(audio.file, f"{user_id}.{sink.encoding}") for user_id, audio in sink.audio_data.items()]
+    files = [discord.File(audio.file, f"{user_id}_{now}.{sink.encoding}") for user_id, audio in sink.audio_data.items()]
+    
+    for user_id, audio in sink.audio_data.items():
+        audio: discord.sinks.AudioData
+        file_path = f"{user_id}_{now}.{sink.encoding}"
+        with open(file_path, "wb") as f:
+            f.write(audio.file.read())
+
+        # with sr.AudioFile(file_path) as source:
+        #     audio = recognizer.record(source)
+        
+        # try:
+        #     text = recognizer.recognize_google(audio, language='zh-TW')
+        #     recognizer.
+        #     print(text)
+        # except sr.UnknownValueError:
+        #     print("無法識別音頻")
+        # except sr.RequestError as e:
+        #     print(f"無法請求結果; {e}")
+
     await sink.vc.channel.send(f"完成以下成員的錄音： {', '.join(recorded_users)}.", files=files)
 
 class music(Cog_Extension):
@@ -472,14 +495,14 @@ class music(Cog_Extension):
             if not ctx.author.voice or ctx.voice_client.channel != ctx.author.voice.channel:
                 raise discord.ApplicationCommandInvokeError(MusicCommandError("你必須要跟機器人在同一頻道才能使用指令"))
             
-    @recording.command(description='開始錄音')
+    @recording.command(description='開始錄音（實驗版）')
     async def start(self, ctx: discord.ApplicationContext):
         vc = ctx.voice_client
         if vc.recording:
             raise MusicCommandError("已經在錄音了")
         if vc.is_playing():
             raise MusicCommandError("正在播放音樂時無法錄音")
-        vc.start_recording(discord.sinks.MP3Sink(), recording_done)
+        vc.start_recording(discord.sinks.WaveSink(), recording_done)
         await ctx.respond("開始錄音")
 
     @recording.command(description='結束錄音')
