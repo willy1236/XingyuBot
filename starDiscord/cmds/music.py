@@ -5,14 +5,16 @@ import random
 import time
 from typing import TYPE_CHECKING
 from datetime import datetime
+import json
 
 import discord
 import yt_dlp as youtube_dl
 from discord.ext import commands, pages
 from discord.commands import SlashCommandGroup
-# import speech_recognition as sr
+from vosk import Model, KaldiRecognizer
+import wave
 
-from starlib import BotEmbed, log
+from starlib import BotEmbed, log, Jsondb
 from starlib.errors import *
 
 from ..extension import Cog_Extension
@@ -41,7 +43,7 @@ ffmpeg_options = {
 }
 
 ytdl = youtube_dl.YoutubeDL(ytdl_format_options)
-# recognizer = sr.Recognizer()
+model:Model = Model(Jsondb.config.get("vosk_model_path"))
 
 class SongSource(enum.IntEnum):
     Youtube_or_other = 1
@@ -292,12 +294,38 @@ async def recording_done(sink: discord.sinks.WaveSink):
     ]
     await sink.vc.disconnect()
     files = [discord.File(audio.file, f"{user_id}_{now}.{sink.encoding}") for user_id, audio in sink.audio_data.items()]
+    await sink.vc.channel.send(f"完成以下成員的錄音： {', '.join(recorded_users)}.", files=files)
     
     for user_id, audio in sink.audio_data.items():
         audio: discord.sinks.AudioData
         file_path = f"{user_id}_{now}.{sink.encoding}"
-        with open(file_path, "wb") as f:
-            f.write(audio.file.read())
+        # with open(file_path, "wb") as f:
+        #     print(audio.file.getvalue())
+        #     print(len(wav_data.getvalue()))
+        #     f.write(audio.file.getvalue())
+        with wave.open(file_path, 'wb') as wav_file:
+            wav_file.setnchannels(2)  # 單聲道
+            wav_file.setsampwidth(2)  # 16 位元
+            wav_file.setframerate(48000)
+            wav_file.writeframes(audio.file.getvalue())
+            print(audio.file.getvalue())
+        
+        with wave.open(file_path, 'rb') as wav_file:
+            wav_data = wav_file.readframes(wav_file.getnframes())
+            recognizer = KaldiRecognizer(model, wav_file.getframerate())
+            recognizer.AcceptWaveform(wav_data)
+            print(json.loads(recognizer.Result()).get("text"))
+
+        # wf = wave.open(file_path, 'rb')
+        # rec = KaldiRecognizer(model, wf.getframerate())
+        # while True:
+        #     data = wf.readframes(4000)
+        #     if len(data) == 0:
+        #         break
+        #     if rec.AcceptWaveform(data):
+        #         result = json.loads(rec.Result()).get("text")
+        #         print(result)
+        # print(f'{file_path}: {json.loads(rec.FinalResult()).get("text")}')
 
         # with sr.AudioFile(file_path) as source:
         #     audio = recognizer.record(source)
@@ -310,8 +338,6 @@ async def recording_done(sink: discord.sinks.WaveSink):
         #     print("無法識別音頻")
         # except sr.RequestError as e:
         #     print(f"無法請求結果; {e}")
-
-    await sink.vc.channel.send(f"完成以下成員的錄音： {', '.join(recorded_users)}.", files=files)
 
 class music(Cog_Extension):
     recording = SlashCommandGroup("recording", "錄音指令")
