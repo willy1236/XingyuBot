@@ -1,20 +1,21 @@
 import asyncio
 import enum
+import json
 import math
 import random
+import subprocess
 import time
-from typing import TYPE_CHECKING
+import wave
 from datetime import datetime
-import json
+from typing import TYPE_CHECKING
 
 import discord
 import yt_dlp as youtube_dl
-from discord.ext import commands, pages
 from discord.commands import SlashCommandGroup
-from vosk import Model, KaldiRecognizer
-import wave
+from discord.ext import commands, pages
+from vosk import KaldiRecognizer, Model
 
-from starlib import BotEmbed, log, Jsondb
+from starlib import BotEmbed, Jsondb, log
 from starlib.errors import *
 
 from ..extension import Cog_Extension
@@ -43,7 +44,7 @@ ffmpeg_options = {
 }
 
 ytdl = youtube_dl.YoutubeDL(ytdl_format_options)
-model:Model = Model(Jsondb.config.get("vosk_model_path"))
+# model:Model = Model(Jsondb.config.get("vosk_model_path"))
 
 class SongSource(enum.IntEnum):
     Youtube_or_other = 1
@@ -286,6 +287,17 @@ guild_playing = {}
 def get_player(guildid:str) -> MusicPlayer | None:
     return guild_playing.get(str(guildid))
 
+def convert_audio(input_file, output_file):
+    command = [
+        'ffmpeg',
+        '-i', input_file,
+        '-ar', '16000',
+        '-ac', '1',
+        '-y',
+        output_file
+    ]
+    subprocess.run(command)
+
 async def recording_done(sink: discord.sinks.WaveSink):
     now = datetime.now().strftime("%H%M%S")
     recorded_users = [
@@ -299,22 +311,18 @@ async def recording_done(sink: discord.sinks.WaveSink):
     for user_id, audio in sink.audio_data.items():
         audio: discord.sinks.AudioData
         file_path = f"{user_id}_{now}.{sink.encoding}"
-        # with open(file_path, "wb") as f:
-        #     print(audio.file.getvalue())
-        #     print(len(wav_data.getvalue()))
-        #     f.write(audio.file.getvalue())
         with wave.open(file_path, 'wb') as wav_file:
-            wav_file.setnchannels(2)  # 單聲道
-            wav_file.setsampwidth(2)  # 16 位元
+            wav_file.setnchannels(2)
+            wav_file.setsampwidth(2)
             wav_file.setframerate(48000)
             wav_file.writeframes(audio.file.getvalue())
-            print(audio.file.getvalue())
         
-        with wave.open(file_path, 'rb') as wav_file:
-            wav_data = wav_file.readframes(wav_file.getnframes())
-            recognizer = KaldiRecognizer(model, wav_file.getframerate())
-            recognizer.AcceptWaveform(wav_data)
-            print(json.loads(recognizer.Result()).get("text"))
+        # convert_audio(file_path, f"output.wav")
+        # with wave.open("output.wav", 'rb') as wav_file:
+        #     wav_data = wav_file.readframes(wav_file.getnframes())
+        #     recognizer = KaldiRecognizer(model, wav_file.getframerate())
+        #     recognizer.AcceptWaveform(wav_data)
+        #     print(json.loads(recognizer.Result()).get("text"))
 
         # wf = wave.open(file_path, 'rb')
         # rec = KaldiRecognizer(model, wf.getframerate())

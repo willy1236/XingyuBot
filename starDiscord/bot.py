@@ -96,15 +96,16 @@ class DiscordBot(discord.Bot):
         guilds = sqldb.get_notify_community_guild(notify_type.value, notify_name)
         log.debug(f"{notify_type} guilds: {guilds}")
         for guildid in guilds:
-            guild = self.get_guild(guildid)
             channel = self.get_channel(guilds[guildid][0])
-            role = guild.get_role(guilds[guildid][1])
             if channel:
+                role = channel.guild.get_role(guilds[guildid][1])
                 if role:
-                    content = f'{content} {role.mention}' if content is not None else f'{role.mention}'
+                    text = f'{content} {role.mention}' if content is not None else f'{role.mention}'
+                else:
+                    text = content
                     
-                log.debug(f"send_notify_communities: {guildid}/{guilds[guildid][0]}: {content}")
-                await channel.send(content, embed=embed)
+                log.debug(f"send_notify_communities: {guildid}/{guilds[guildid][0]}: {text}")
+                await channel.send(text, embed=embed)
                 await asyncio.sleep(0.5)
             else:
                 log.warning(f"{notify_type} not found: {guildid}/{guildid[0]}")
@@ -115,14 +116,13 @@ class DiscordBot(discord.Bot):
         for no_channel in notify_channels:
             channel = self.get_channel(no_channel.channel_id)
             if channel:
-                if no_channel.role_id:
-                    try:
-                        role = self.get_guild(no_channel.guild_id).get_role(no_channel.role_id)
-                        content = f'{content} {role.mention}' if content is not None else f'{role.mention}'
-                    except:
-                        pass
+                role = channel.guild.get_role(no_channel.role_id)
+                if role:
+                    text = f'{content} {role.mention}' if content is not None else f'{role.mention}'
+                else:
+                    text = content
 
-                await channel.send(content,embed=embed)
+                await channel.send(text, embed=embed)
                 await asyncio.sleep(0.5)
             else:
                 log.warning(f"{notify_type} not found: {no_channel.guild_id}/{no_channel.channel_id}")
