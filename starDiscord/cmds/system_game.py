@@ -364,7 +364,6 @@ class system_game(Cog_Extension):
     # @hoyo.command(description='設定cookies')
     # @commands.cooldown(rate=1,per=1)
     # async def set(self,ctx:discord.ApplicationContext,
-    #               #cookie_token:discord.Option(str,name='cookie_token',description="非必填 輸入後才能使用更多功能 如兌換序號",required=False,default=None),
     #               remove:discord.Option(bool,name='若要移除資料請設為true',default=False)):
     #     if remove:
     #         sclient.sqldb.remove_hoyo_cookies(ctx.author.id)

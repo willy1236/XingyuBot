@@ -1,9 +1,10 @@
 import json
 import os
+import logging
 from typing import TYPE_CHECKING, TypeVar
 
 T = TypeVar("T")
-
+logger = logging.getLogger("star")
 
 class BaseJsonHandler:
     _DBPATH = "./database"
@@ -158,6 +159,7 @@ class JsonDatabase():
         """
         dict_data = self.cache.get(key)
         dict_data[target] = value
+        logger.debug(f"set_cache: {key} {target}: {value}")
         self.cache.write(key, dict_data)
 
     def remove_cache(self, key: str, target: str):
