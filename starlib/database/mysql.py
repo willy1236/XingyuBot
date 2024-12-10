@@ -350,7 +350,7 @@ class SQLNotifySystem(BaseSQLEngine):
     
     def remove_community(self, community_type:CommunityType, community_id:str):
         """移除社群，在沒有任何通所有通知"""
-        statement = select(func.count()).where(NotifyCommunity.notify_type == community_type, NotifyCommunity.community_id == community_id)
+        statement = select(func.count()).where(NotifyCommunity.community_type == community_type, NotifyCommunity.community_id == community_id)
         result = self.session.exec(statement).one()
         if not result:
             statement = delete(Community).where(Community.id == community_id, Community.type == community_type)
