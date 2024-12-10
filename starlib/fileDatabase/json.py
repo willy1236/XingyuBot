@@ -183,10 +183,12 @@ class JsonDatabase():
             key = key.value
         return self.cache.get(key)
     
-    def write_cache(self, key: str, value: dict | str):
+    def write_cache(self, key: str | JsonCacheType, value: dict | str):
         """
         Writes a full data to the cache.
         """
+        if isinstance(key, JsonCacheType):
+            key = key.value
         self.cache.write(key, value)
 
     def get_tw(self, value:T, option_name:str) -> str | T:
