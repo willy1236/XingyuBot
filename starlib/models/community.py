@@ -181,11 +181,11 @@ class Thumbnails(BaseModel):
 class ChannelSnippet(BaseModel):
     title: str
     description: str
-    customUrl: Optional[str]
+    customUrl: str
     publishedAt: datetime
     thumbnails: Thumbnails
-    localized: Optional[dict]
-    country: Optional[str]
+    localized: dict
+    country: str | None = None
 
 class Statistics(BaseModel):
     viewCount: int
@@ -218,7 +218,7 @@ class VideoSnippet(BaseModel):
     description: str
     thumbnails: Thumbnails
     channelTitle: str
-    tags: list[str | None] = list()
+    tags: list[str | None] = Field(default_factory=list)
     categoryId: str
     liveBroadcastContent: str
     localized: Localized

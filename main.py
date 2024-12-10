@@ -17,12 +17,12 @@ sclient.bot = bot
 bot.load_all_extensions()
 
 if __name__ == "__main__":
-    if api_website or twitch_bot:
-        from starWebServer.tunnel_threads import ServeoThread
-        serveo_tunnel = ServeoThread()
-        serveo_tunnel.start()
-        log.info('>> serveo tunnel: online <<')
-        time.sleep(2)
+    # if api_website or twitch_bot:
+    #     from starWebServer.tunnel_threads import ServeoThread
+    #     serveo_tunnel = ServeoThread()
+    #     serveo_tunnel.start()
+    #     log.info('>> serveo tunnel: online <<')
+    #     time.sleep(2)
 
     if api_website:
         # from starWebServer.tunnel_threads import LoopholeThread
