@@ -31,6 +31,7 @@ class CommunityType(IntEnum):
     Discord = 1
     Twitch = 2
     Spotify = 3
+    Youtube = 4
 
 class StardbCacheType(Enum):
     pass
@@ -41,3 +42,4 @@ class JsonCacheType(Enum):
     YoutubeVideo = "youtube"
     TwitchVideo = "twitch_v"
     TwitchClip = "twitch_c"
+    WeatherWarning = "weather_warning"

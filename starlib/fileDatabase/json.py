@@ -2,6 +2,7 @@ import json
 import os
 import logging
 from typing import TYPE_CHECKING, TypeVar
+from ..types.datatype import JsonCacheType
 
 T = TypeVar("T")
 logger = logging.getLogger("star")
@@ -174,10 +175,12 @@ class JsonDatabase():
         except KeyError:
             return False
     
-    def get_cache(self, key: str) -> dict | str | None:
+    def get_cache(self, key: str | JsonCacheType) -> dict | str | None:
         """
         Retrieve a full data from the cache using the provided key.
         """
+        if isinstance(key, JsonCacheType):
+            key = key.value
         return self.cache.get(key)
     
     def write_cache(self, key: str, value: dict | str):

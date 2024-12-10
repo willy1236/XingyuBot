@@ -164,15 +164,23 @@ class NotifyChannel(BasicSchema, table=True):
     channel_id: int = Field(sa_column=Column(BigInteger))
     role_id: int | None = Field(sa_column=Column(BigInteger))
 
+class Community(BasicSchema, table=True):
+    __tablename__ = "community_info"
+    
+    id: str = Field(primary_key=True)
+    community_type: CommunityType = Field(sa_column=Column(Integer, primary_key=True))
+    name: str
+
 class NotifyCommunity(BasicSchema, table=True):
     __tablename__ = "notify_community"
     
     notify_type: NotifyCommunityType = Field(sa_column=Column(Integer, primary_key=True))
-    notify_name: str = Field(primary_key=True)
+    community_id: str = Field(primary_key=True)
     guild_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
-    display_name: str
+    display_name: str | None
     channel_id: int = Field(sa_column=Column(BigInteger))
     role_id: int | None = Field(sa_column=Column(BigInteger))
+    message: str | None
 
 class DynamicChannel(BasicSchema, table=True):
     __tablename__ = "dynamic_channel"

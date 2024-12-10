@@ -290,19 +290,19 @@ class SQLNotifySystem(BaseSQLEngine):
         self.session.commit()
 
     #* notify community
-    def add_notify_community(self,notify_type:NotifyCommunityType,notify_name:str,guild_id:int,channel_id:int,role_id:int=None,display_name:str=None):
+    def add_notify_community(self,notify_type:NotifyCommunityType,community_id:str,guild_id:int,channel_id:int,role_id:int=None,display_name:str=None):
         """設定社群通知"""
-        community = NotifyCommunity(notify_type=notify_type, notify_name=notify_name, display_name=display_name, guild_id=guild_id, channel_id=channel_id, role_id=role_id)
+        community = NotifyCommunity(notify_type=notify_type, community_id=community_id, display_name=display_name, guild_id=guild_id, channel_id=channel_id, role_id=role_id)
         self.session.merge(community)
         self.session.commit()
 
-    def remove_notify_community(self,notify_type:NotifyCommunityType, notify_name:str, guild_id:int):
+    def remove_notify_community(self,notify_type:NotifyCommunityType, community_id:str, guild_id:int):
         """移除社群通知"""
         statement = delete(NotifyCommunity).where(
             NotifyCommunity.notify_type == notify_type,
             or_(
-                NotifyCommunity.notify_name == notify_name,
-                NotifyCommunity.display_name == notify_name
+                NotifyCommunity.community_id == community_id,
+                NotifyCommunity.display_name == community_id
             ),
             NotifyCommunity.guild_id == guild_id
         )
@@ -315,22 +315,22 @@ class SQLNotifySystem(BaseSQLEngine):
         result = self.session.exec(statement).all()
         return result
     
-    def get_notify_community_guild(self, notify_type:NotifyCommunityType, notify_name:str):
+    def get_notify_community_guild(self, notify_type:NotifyCommunityType, community_id:str):
         """取得指定社群的所有通知"""
-        statement = select(NotifyCommunity.guild_id, NotifyCommunity.channel_id, NotifyCommunity.role_id).where(NotifyCommunity.notify_type == notify_type, NotifyCommunity.notify_name == notify_name)
+        statement = select(NotifyCommunity.guild_id, NotifyCommunity.channel_id, NotifyCommunity.role_id).where(NotifyCommunity.notify_type == notify_type, NotifyCommunity.community_id == community_id)
         result = self.session.exec(statement).all()
         return {i[0]: (i[1], i[2]) for i in result}
         
 
-    def get_notify_community_user(self,notify_type:NotifyCommunityType, notify_name:str, guild_id:int):
+    def get_notify_community_user(self,notify_type:NotifyCommunityType, community_id:str, guild_id:int):
         """取得伺服器內的指定社群通知"""
-        statement = select(NotifyCommunity).where(NotifyCommunity.notify_type == notify_type, or_(NotifyCommunity.notify_name == notify_name, NotifyCommunity.display_name == notify_name), NotifyCommunity.guild_id == guild_id)
+        statement = select(NotifyCommunity).where(NotifyCommunity.notify_type == notify_type, or_(NotifyCommunity.community_id == community_id, NotifyCommunity.display_name == community_id), NotifyCommunity.guild_id == guild_id)
         result = self.session.exec(statement).one_or_none()
         return result
 
     def get_notify_community_userlist(self, notify_type:NotifyCommunityType):
         """取得指定類型的社群通知清單"""
-        statement = select(NotifyCommunity.notify_name).distinct().where(NotifyCommunity.notify_type == notify_type)
+        statement = select(NotifyCommunity.community_id).distinct().where(NotifyCommunity.notify_type == notify_type)
         result = self.session.exec(statement).all()
         return result
 

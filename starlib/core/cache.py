@@ -49,8 +49,8 @@ class StardbCache:
     def generate_notify_community_dbdata(dbdata:list[NotifyCommunity]):
         lst = []
         for data in dbdata:
-            if data.notify_name not in lst:
-                lst.append(data.notify_name)
+            if data.community_id not in lst:
+                lst.append(data.community_id)
         return lst
 
     def __setitem__(self, key, value):

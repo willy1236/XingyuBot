@@ -8,7 +8,7 @@ from requests.exceptions import ConnectTimeout
 
 from starlib import BotEmbed, Jsondb, log, sclient, tz, utilities
 from starlib.dataExtractor import *
-from starlib.types import NotifyChannelType, NotifyCommunityType
+from starlib.types import NotifyChannelType, NotifyCommunityType, JsonCacheType
 
 from ..extension import Cog_Extension
 
@@ -48,7 +48,7 @@ class task(Cog_Extension):
             scheduler.start()
 
     async def earthquake_check(self):
-        timefrom = Jsondb.get_cache('earthquake_timefrom')
+        timefrom = Jsondb.get_cache(JsonCacheType.EarthquakeTimeFrom)
         try:
             earthquake_records = cwa_api.get_earthquake_report_auto(timefrom, True)
         except ConnectTimeout:
@@ -68,7 +68,7 @@ class task(Cog_Extension):
                 await self.bot.send_notify_channel(data.embed(), NotifyChannelType.SlightQuakeNotifications, "小區域地震報告")
         
         timefrom = earthquake_records[-1].originTime + timedelta(seconds=1)
-        Jsondb.write_cache('earthquake_timefrom', timefrom.strftime("%Y-%m-%dT%H:%M:%S"))
+        Jsondb.write_cache(JsonCacheType.EarthquakeTimeFrom, timefrom.strftime("%Y-%m-%dT%H:%M:%S"))
 
     async def weather_check(self):
         weather = cwa_api.get_weather_data()[0]
@@ -84,13 +84,13 @@ class task(Cog_Extension):
         if not apidatas:
             return
         
-        timefrom = Jsondb.get_cache('weather_warning')
+        timefrom = Jsondb.get_cache(JsonCacheType.WeatherWarning)
         report_time = datetime.fromisoformat(timefrom) if timefrom else datetime.now(tz) - timedelta(days=1)
         datas = [i for i in apidatas if i.datasetInfo.issueTime > report_time]
         for data in datas:
             report_time = data.datasetInfo.issueTime
             await self.bot.send_notify_channel(data.embed(), NotifyChannelType.WeatherWarning)
-        Jsondb.write_cache('weather_warning', report_time.isoformat())
+        Jsondb.write_cache(JsonCacheType.WeatherWarning, report_time.isoformat())
 
     async def forecast_update(self):
         forecast = cwa_api.get_forecast()
@@ -107,7 +107,7 @@ class task(Cog_Extension):
         users = sclient.dbcache[NotifyCommunityType.TwitchLive]
         if not users:
             return
-        twitch_cache = Jsondb.get_cache('twitch') or {}
+        twitch_cache = Jsondb.get_cache(JsonCacheType.TwitchLive) or {}
         data = twapi.get_lives(users)
         log.debug(f"twitch_live data: {data}")
         for user in users:
@@ -121,13 +121,13 @@ class task(Cog_Extension):
             elif not data[user] and user_cache:
                 del twitch_cache[user]
 
-        Jsondb.write_cache('twitch',twitch_cache)
+        Jsondb.write_cache(JsonCacheType.TwitchLive, twitch_cache)
 
     async def twitch_video(self):
         users = sclient.dbcache[NotifyCommunityType.TwitchVideo]
         if not users:
             return
-        twitch_cache = Jsondb.get_cache('twitch_v') or {}
+        twitch_cache = Jsondb.get_cache(JsonCacheType.TwitchVideo) or {}
         for user in users:
             videos = twapi.get_videos(user)
             cache_last_update_time = datetime.fromisoformat(twitch_cache.get(user)).replace(tzinfo=tz) if twitch_cache.get(user) else None
@@ -140,13 +140,13 @@ class task(Cog_Extension):
                     embed = data.embed()
                     await self.bot.send_notify_communities(embed, NotifyCommunityType.TwitchVideo, data.user_id)
 
-        Jsondb.write_cache('twitch_v',twitch_cache)
+        Jsondb.write_cache(JsonCacheType.TwitchVideo,twitch_cache)
 
     async def twitch_clip(self):
         users = sclient.dbcache[NotifyCommunityType.TwitchClip]
         if not users:
             return
-        twitch_cache = Jsondb.get_cache('twitch_c') or {}
+        twitch_cache = Jsondb.get_cache(JsonCacheType.TwitchClip) or {}
         for user in users:
             cache_last_update_time = datetime.fromisoformat(twitch_cache.get(user)).replace(tzinfo=tz) if twitch_cache.get(user) else None
             clips = twapi.get_clips(user, started_at=cache_last_update_time)
@@ -169,13 +169,13 @@ class task(Cog_Extension):
 
                 twitch_cache[broadcaster_id] = (newest + timedelta(seconds=1)).isoformat()
 
-        Jsondb.write_cache('twitch_c',twitch_cache)
+        Jsondb.write_cache(JsonCacheType.TwitchClip,twitch_cache)
 
     async def youtube_video(self):
         ytchannels = sclient.dbcache[NotifyCommunityType.Youtube]
         if not ytchannels:
             return
-        cache_youtube = Jsondb.get_cache('youtube') or {}
+        cache_youtube = Jsondb.get_cache(JsonCacheType.YoutubeVideo) or {}
         for ytchannel_id in ytchannels:
             #抓取資料
             rss_data = rss.get_videos(ytchannel_id)
@@ -196,7 +196,7 @@ class task(Cog_Extension):
                     embed = video.embed()
                     await self.bot.send_notify_communities(embed, NotifyCommunityType.Youtube, ytchannel_id)
 
-        Jsondb.write_cache('youtube',cache_youtube)
+        Jsondb.write_cache(JsonCacheType.YoutubeVideo,cache_youtube)
 
     # async def get_mongodb_data(self):
     #     dbdata = mongedb.get_apidata()

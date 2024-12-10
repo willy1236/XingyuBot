@@ -102,7 +102,7 @@ class system_community(Cog_Extension):
         embed = BotEmbed.general("twitch開台通知", ctx.guild.icon.url if ctx.guild.icon else None)
         dbdata = sclient.sqldb.get_notify_community_list(NotifyCommunityType.TwitchLive,guildid) + sclient.sqldb.get_notify_community_list(NotifyCommunityType.TwitchVideo,guildid) + sclient.sqldb.get_notify_community_list(NotifyCommunityType.TwitchClip,guildid)
         for data in dbdata:
-            display_name = data.display_name or data.notify_name
+            display_name = data.display_name or data.community_id
             channel_id = data.channel_id
             role_id = data.role_id
             notify_type = data.notify_type
@@ -214,7 +214,7 @@ class system_community(Cog_Extension):
         embed = BotEmbed.general("youtube通知",ctx.guild.icon.url if ctx.guild.icon else None)
         dbdata = sclient.sqldb.get_notify_community_list(NotifyCommunityType.Youtube, guildid)
         for data in dbdata:
-            notify_name = data.display_name or data.notify_name
+            notify_name = data.display_name or data.community_id
             channel_id = data.channel_id
             role_id = data.role_id
             
