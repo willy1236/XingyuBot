@@ -1,6 +1,6 @@
 import json
 from datetime import date, datetime, time, timedelta, timezone
-from typing import TypeVar
+from typing import Tuple, TypeVar
 
 import discord
 import mysql.connector
@@ -11,6 +11,8 @@ from sqlalchemy.engine import URL
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker
 from sqlmodel import Session, SQLModel, create_engine, select
+
+from starlib.models.mysql import Community, NotifyCommunity
 
 from ..errors import *
 from ..fileDatabase import Jsondb
@@ -290,9 +292,9 @@ class SQLNotifySystem(BaseSQLEngine):
         self.session.commit()
 
     #* notify community
-    def add_notify_community(self,notify_type:NotifyCommunityType,community_id:str,guild_id:int,channel_id:int,role_id:int=None,display_name:str=None):
+    def add_notify_community(self, notify_type:NotifyCommunityType, community_id:str, community_type:CommunityType, guild_id:int, channel_id:int, role_id:int=None, message:str=None):
         """設定社群通知"""
-        community = NotifyCommunity(notify_type=notify_type, community_id=community_id, display_name=display_name, guild_id=guild_id, channel_id=channel_id, role_id=role_id)
+        community = NotifyCommunity(notify_type=notify_type, community_id=community_id, community_type=community_type, guild_id=guild_id, channel_id=channel_id, role_id=role_id, message=message)
         self.session.merge(community)
         self.session.commit()
 
@@ -322,9 +324,15 @@ class SQLNotifySystem(BaseSQLEngine):
         return {i[0]: (i[1], i[2]) for i in result}
         
 
-    def get_notify_community_user(self,notify_type:NotifyCommunityType, community_id:str, guild_id:int):
+    def get_notify_community_user_byid(self,notify_type:NotifyCommunityType, community_id:str, guild_id:int):
         """取得伺服器內的指定社群通知"""
-        statement = select(NotifyCommunity).where(NotifyCommunity.notify_type == notify_type, or_(NotifyCommunity.community_id == community_id, NotifyCommunity.display_name == community_id), NotifyCommunity.guild_id == guild_id)
+        statement = select(NotifyCommunity).join(Community, and_(NotifyCommunity.community_id == Community.id, NotifyCommunity.community_type == Community.type)).where(NotifyCommunity.notify_type == notify_type, Community.id == community_id, NotifyCommunity.guild_id == guild_id)
+        result = self.session.exec(statement).one_or_none()
+        return result
+    
+    def get_notify_community_user_bylogin(self,notify_type:NotifyCommunityType, community_login:str, guild_id:int):
+        """取得伺服器內的指定社群通知"""
+        statement = select(NotifyCommunity).join(Community, and_(NotifyCommunity.community_id == Community.id, NotifyCommunity.community_type == Community.type)).where(NotifyCommunity.notify_type == notify_type, Community.login == community_login, NotifyCommunity.guild_id == guild_id)
         result = self.session.exec(statement).one_or_none()
         return result
 
@@ -334,11 +342,21 @@ class SQLNotifySystem(BaseSQLEngine):
         result = self.session.exec(statement).all()
         return result
 
-    def get_notify_community_list(self,notify_type:NotifyCommunityType, guild_id:int) -> list[NotifyCommunity]:
+    def get_notify_community_list(self,notify_type:NotifyCommunityType, guild_id:int) -> list[Tuple[NotifyCommunity, Community]]:
         """取得伺服器內指定種類的所有通知"""
-        statement = select(NotifyCommunity).where(NotifyCommunity.notify_type == notify_type, NotifyCommunity.guild_id == guild_id)
+        statement = select(NotifyCommunity, Community).join(Community, and_(NotifyCommunity.community_id == Community.id, NotifyCommunity.community_type == Community.type)).where(NotifyCommunity.notify_type == notify_type, NotifyCommunity.guild_id == guild_id)
         result = self.session.exec(statement).all()
         return result
+    
+    def remove_community(self, community_type:CommunityType, community_id:str):
+        """移除社群，在沒有任何通所有通知"""
+        statement = select(func.count()).where(NotifyCommunity.notify_type == community_type, NotifyCommunity.community_id == community_id)
+        result = self.session.exec(statement).one()
+        if not result:
+            statement = delete(Community).where(Community.id == community_id, Community.type == community_type)
+            self.session.exec(statement)
+            self.session.commit()
+
 
 class SQLRoleSaveSystem(BaseSQLEngine):
     #* role_save

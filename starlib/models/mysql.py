@@ -168,14 +168,16 @@ class Community(BasicSchema, table=True):
     __tablename__ = "community_info"
     
     id: str = Field(primary_key=True)
-    community_type: CommunityType = Field(sa_column=Column(Integer, primary_key=True))
+    type: CommunityType = Field(sa_column=Column(Integer, primary_key=True))
     name: str
+    login: str | None
 
 class NotifyCommunity(BasicSchema, table=True):
     __tablename__ = "notify_community"
     
     notify_type: NotifyCommunityType = Field(sa_column=Column(Integer, primary_key=True))
-    community_id: str = Field(primary_key=True)
+    community_id: str = Field(primary_key=True, foreign_key="stardb_basic.community_info.id")
+    community_type: CommunityType = Field(sa_column=Column(Integer, ForeignKey("stardb_basic.community_info.type"), primary_key=True))
     guild_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
     display_name: str | None
     channel_id: int = Field(sa_column=Column(BigInteger))
