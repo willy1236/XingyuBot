@@ -298,8 +298,9 @@ class SQLNotifySystem(BaseSQLEngine):
         self.session.merge(community)
         self.session.commit()
 
-    def remove_notify_community(self,notify_type:NotifyCommunityType, community_id:str, guild_id:int):
-        """移除社群通知"""
+    def remove_notify_community(self,notify_type:NotifyCommunityType, community_id:str, guild_id:int, community_type:CommunityType=None):
+        """移除社群通知，若提供community_type則同時判斷移除社群"""
+        # TODO: 在type建表取代 community_type
         statement = delete(NotifyCommunity).where(
             NotifyCommunity.notify_type == notify_type,
             or_(
@@ -310,6 +311,8 @@ class SQLNotifySystem(BaseSQLEngine):
         )
         self.session.exec(statement)
         self.session.commit()
+        if community_type is not None:
+            self.remove_community(community_type, community_id)
 
     def get_notify_community(self, notify_type:NotifyCommunityType):
         """取得社群通知（依據社群）"""
@@ -348,8 +351,14 @@ class SQLNotifySystem(BaseSQLEngine):
         result = self.session.exec(statement).all()
         return result
     
+    def get_notify_community_count(self, notify_type:NotifyCommunityType, community_id:str):
+        """取得指定通知的數量"""
+        statement = select(func.count()).where(NotifyCommunity.notify_type == notify_type, NotifyCommunity.community_id == community_id)
+        result = self.session.exec(statement).one()
+        return result
+
     def remove_community(self, community_type:CommunityType, community_id:str):
-        """移除社群，在沒有任何通所有通知"""
+        """在沒有設定任何通知下移除社群"""
         statement = select(func.count()).where(NotifyCommunity.community_type == community_type, NotifyCommunity.community_id == community_id)
         result = self.session.exec(statement).one()
         if not result:

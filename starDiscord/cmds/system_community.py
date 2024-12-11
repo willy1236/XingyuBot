@@ -6,7 +6,7 @@ from discord.ext import commands
 
 from starlib import BotEmbed, ChoiceList, Jsondb, sclient, tz
 from starlib.dataExtractor import TwitchAPI, YoutubeAPI, YoutubeRSS
-from starlib.types import NotifyCommunityType, CommunityType
+from starlib.types import NotifyCommunityType, CommunityType, JsonCacheType
 from starlib.uiElement.view import ReactionRole1, ReactionRole2, WelcomeView
 from starlib.models.mysql import Community
 
@@ -42,10 +42,10 @@ class system_community(Cog_Extension):
                     pass
             
                 case NotifyCommunityType.TwitchVideo:
-                    Jsondb.set_cache("twitch_v", user.id, datetime.now(tz=tz).isoformat(timespec="seconds"))
+                    Jsondb.set_cache(JsonCacheType.TwitchVideo, user.id, datetime.now(tz=tz).isoformat(timespec="seconds"))
                 
                 case NotifyCommunityType.TwitchClip:
-                    Jsondb.set_cache("twitch_c", user.id, datetime.now(tz=tz).isoformat(timespec="seconds"))
+                    Jsondb.set_cache(JsonCacheType.TwitchClip, user.id, datetime.now(tz=tz).isoformat(timespec="seconds"))
             
             sclient.dbcache.update_notify_community(type)
 
@@ -58,32 +58,33 @@ class system_community(Cog_Extension):
                     await ctx.send(embed=BotEmbed.simple('溫馨提醒',f'我無法在{channel.mention}中發送訊息，請確認我有足夠的權限'))
 
         else:
-            await ctx.respond(f'錯誤：找不到用戶{twitch_user}')
+            await ctx.respond(f'錯誤：找不到用戶 {twitch_user}')
     
     @twitch.command(description='移除twitch開台通知')
     async def remove(self,ctx,
-                     twitch_user:discord.Option(str,required=True,name='twitch用戶'),
+                     twitch_user_login:discord.Option(str,required=True,name='twitch用戶'),
                      notify_type:discord.Option(int,required=False,name='通知種類',description='通知種類，留空為移除全部',choices=twitch_notify_option,default=None)):
         guildid = ctx.guild.id
-        user = TwitchAPI().get_user(twitch_user)
+        twitch_user = TwitchAPI().get_user(twitch_user_login)
         if not notify_type or notify_type == NotifyCommunityType.TwitchLive:
-            sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitchLive, user.id, guildid)
-            Jsondb.remove_cache("twitch", user.id)
+            sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitchLive, twitch_user.id, guildid, CommunityType.Twitch)
+            if sclient.sqldb.get_notify_community_count(NotifyCommunityType.TwitchLive, twitch_user.id):
+                Jsondb.remove_cache(JsonCacheType.TwitchLive, twitch_user.id)
         
         if not notify_type or notify_type == NotifyCommunityType.TwitchVideo:
-            sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitchVideo, user.id, guildid)
-            Jsondb.remove_cache("twitch_v", user.id)
+            sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitchVideo, twitch_user.id, guildid, CommunityType.Twitch)
+            if sclient.sqldb.get_notify_community_count(NotifyCommunityType.TwitchVideo, twitch_user.id):
+                Jsondb.remove_cache(JsonCacheType.TwitchVideo, twitch_user.id)
 
         if not notify_type or notify_type == NotifyCommunityType.TwitchClip:
-            sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitchClip, user.id, guildid)
-            Jsondb.remove_cache("twitch_c", user.id)
-
-        sclient.sqldb.remove_community(CommunityType.Twitch, user.id)
+            sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitchClip, twitch_user.id, guildid, CommunityType.Twitch)
+            if sclient.sqldb.get_notify_community_count(NotifyCommunityType.TwitchClip, twitch_user.id):
+                Jsondb.remove_cache(JsonCacheType.TwitchClip, twitch_user.id)
         
         if notify_type:
-            await ctx.respond(f'已移除 {user.display_name}({user.login}) 的通知')
+            await ctx.respond(f'已移除 {twitch_user.display_name}({twitch_user.login}) 的通知')
         else:
-            await ctx.respond(f'已移除 {user.display_name}({user.login}) 的所有通知')
+            await ctx.respond(f'已移除 {twitch_user.display_name}({twitch_user.login}) 的所有通知')
         
         sclient.dbcache.update_notify_community()
 
@@ -95,7 +96,7 @@ class system_community(Cog_Extension):
             channel = self.bot.get_channel(record.channel_id)
             role = channel.guild.get_role(record.role_id)
             if role:
-                await ctx.respond(f'Twitch名稱: {twitch_user_login} 的開台通知在 {channel.mention} 並通知 {role.mention}')
+                await ctx.respond(f'Twitch名稱: {twitch_user_login} 的開台通    知在 {channel.mention} 並通知 {role.mention}')
             else:
                 await ctx.respond(f'Twitch名稱: {twitch_user_login} 的開台通知在 {channel.mention}')
         else:
@@ -175,7 +176,7 @@ class system_community(Cog_Extension):
 
             feed = YoutubeRSS().get_videos(ytchannel.id)
             updated_at = feed[0].updated_at.isoformat() if feed else None
-            Jsondb.set_cache("youtube", ytchannel.id, updated_at)
+            Jsondb.set_cache(JsonCacheType.YoutubeVideo, ytchannel.id, updated_at)
         else:
             await ctx.respond(f'錯誤：找不到帳號代碼 {ythandle} 的頻道')
 
@@ -188,13 +189,13 @@ class system_community(Cog_Extension):
             await ctx.respond(f'錯誤：找不到帳號代碼 {ythandle} 的頻道')
             return
 
-        sclient.sqldb.remove_notify_community(NotifyCommunityType.Youtube,ytchannel.id,guildid)
-        sclient.sqldb.remove_community(CommunityType.Youtube, ytchannel.id)
+        sclient.sqldb.remove_notify_community(NotifyCommunityType.Youtube,ytchannel.id,guildid,CommunityType.Youtube)
         await ctx.respond(f'已移除頻道 {ytchannel.snippet.title} 的通知')
         
         sclient.dbcache.update_notify_community(NotifyCommunityType.Youtube)
 
-        Jsondb.remove_cache("youtube", ytchannel.id)
+        if sclient.sqldb.get_notify_community_count(NotifyCommunityType.Youtube, ytchannel.id):
+            Jsondb.remove_cache(JsonCacheType.YoutubeVideo, ytchannel.id)
 
     @youtube.command(description='確認youtube通知')
     async def notify(self,ctx,ythandle:discord.Option(str,required=True,name='youtube帳號代碼',description="youtube頻道中以@開頭的代號")):

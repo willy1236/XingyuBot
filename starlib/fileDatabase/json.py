@@ -154,23 +154,28 @@ class JsonDatabase():
         """取得jdict資料"""
         return self.jdict[key].get(value,value)
     
-    def set_cache(self, key: str, target: str, value):
+    def set_cache(self, key: str | JsonCacheType, target: str, value):
         """Add a key-value(target-value) pair to a dictionary stored in the cache.\\
         usually used in notify_community data in the cache.
         """
+        if isinstance(key, JsonCacheType):
+            key = key.value
         dict_data = self.cache.get(key)
         dict_data[target] = value
         logger.debug(f"set_cache: {key} {target}: {value}")
         self.cache.write(key, dict_data)
 
-    def remove_cache(self, key: str, target: str):
+    def remove_cache(self, key: str | JsonCacheType, target: str):
         """Remove a key-value(target-value) pair from a dictionary stored in the cache.\\
         usually used in notify_community data in the cache.
         """
+        if isinstance(key, JsonCacheType):
+            key = key.value
         dict_data = self.cache.get(key)
         try:
             del dict_data[target]
             self.cache.write(key, dict_data)
+            logger.debug(f"remove_cache: {key}/{target}")
             return True
         except KeyError:
             return False
