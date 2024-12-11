@@ -68,17 +68,17 @@ class system_community(Cog_Extension):
         twitch_user = TwitchAPI().get_user(twitch_user_login)
         if not notify_type or notify_type == NotifyCommunityType.TwitchLive:
             sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitchLive, twitch_user.id, guildid, CommunityType.Twitch)
-            if sclient.sqldb.get_notify_community_count(NotifyCommunityType.TwitchLive, twitch_user.id):
+            if not sclient.sqldb.get_notify_community_count(NotifyCommunityType.TwitchLive, twitch_user.id):
                 Jsondb.remove_cache(JsonCacheType.TwitchLive, twitch_user.id)
         
         if not notify_type or notify_type == NotifyCommunityType.TwitchVideo:
             sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitchVideo, twitch_user.id, guildid, CommunityType.Twitch)
-            if sclient.sqldb.get_notify_community_count(NotifyCommunityType.TwitchVideo, twitch_user.id):
+            if not sclient.sqldb.get_notify_community_count(NotifyCommunityType.TwitchVideo, twitch_user.id):
                 Jsondb.remove_cache(JsonCacheType.TwitchVideo, twitch_user.id)
 
         if not notify_type or notify_type == NotifyCommunityType.TwitchClip:
             sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitchClip, twitch_user.id, guildid, CommunityType.Twitch)
-            if sclient.sqldb.get_notify_community_count(NotifyCommunityType.TwitchClip, twitch_user.id):
+            if not sclient.sqldb.get_notify_community_count(NotifyCommunityType.TwitchClip, twitch_user.id):
                 Jsondb.remove_cache(JsonCacheType.TwitchClip, twitch_user.id)
         
         if notify_type:
@@ -194,7 +194,7 @@ class system_community(Cog_Extension):
         
         sclient.dbcache.update_notify_community(NotifyCommunityType.Youtube)
 
-        if sclient.sqldb.get_notify_community_count(NotifyCommunityType.Youtube, ytchannel.id):
+        if not sclient.sqldb.get_notify_community_count(NotifyCommunityType.Youtube, ytchannel.id):
             Jsondb.remove_cache(JsonCacheType.YoutubeVideo, ytchannel.id)
 
     @youtube.command(description='確認youtube通知')
