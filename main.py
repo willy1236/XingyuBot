@@ -8,7 +8,6 @@ from starlib import Jsondb, log, sclient
 config = Jsondb.config
 bot_code = config.get('bot_code')
 api_website = config.get('api_website')
-auto_update = config.get('auto_update')
 debug_mode = config.get('debug_mode',True)
 twitch_bot = config.get('twitch_bot',False)
 
@@ -18,21 +17,21 @@ bot.load_all_extensions()
 
 if __name__ == "__main__":
     # if api_website or twitch_bot:
-    #     from starWebServer.tunnel_threads import ServeoThread
+    #     from starServer.tunnel_threads import ServeoThread
     #     serveo_tunnel = ServeoThread()
     #     serveo_tunnel.start()
     #     log.info('>> serveo tunnel: online <<')
     #     time.sleep(2)
 
     if api_website:
-        # from starWebServer.tunnel_threads import LoopholeThread
+        # from starServer.tunnel_threads import LoopholeThread
         # tunnel_server = LoopholeThread()
         # sclient.tunnel_thread = tunnel_server
         # tunnel_server.start()
         # time.sleep(2)
         
 
-        from starWebServer.bot_website import WebsiteThread
+        from starServer.bot_website import WebsiteThread
         try:
             server = WebsiteThread()
             sclient.website_thread = server
@@ -43,13 +42,13 @@ if __name__ == "__main__":
         time.sleep(2)
 
     if twitch_bot:
-        from starWebServer.tunnel_threads import LoopholeTwitchThread
+        from starServer.tunnel_threads import LoopholeTwitchThread
         twitchtunnel_thread = LoopholeTwitchThread()
         sclient.twitchtunnel_thread = twitchtunnel_thread
         twitchtunnel_thread.start()
         time.sleep(10)
 
-        from app.twitch_chatbot import TwitchBotThread
+        from starServer.twitch_chatbot import TwitchBotThread
         twitchbot_thread = TwitchBotThread()
         sclient.twitch_bot_thread = twitchbot_thread
         twitchbot_thread.start()

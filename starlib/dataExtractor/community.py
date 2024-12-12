@@ -150,7 +150,7 @@ class TwitchAPI():
         r = requests.get(f"{self.BaseURL}/clips", params=params,headers=self._headers)
         apidata = r.json()
         if apidata.get('data'):
-            return [TwitchClip(**i) for i in apidata['data']]
+            return [clip for clip in [TwitchClip(**i) for i in apidata['data']] if clip.created_at > started_at]
         else:
             return None
 

@@ -124,6 +124,14 @@ class RPGDungeonTreasureInfo(RPGSchema, table=True):
     item: RPGItemTemplate = Relationship(back_populates="dungeon_treasures")
 
 class RPGUser(RPGSchema, table=True):
+    """
+    hp:生命 atk:攻擊 def(df):防禦\n
+    DEX=Dexterity敏捷\n
+    STR=Strength力量\n
+    INT=Intelligence智力\n
+    LUK=Lucky幸運\n
+    HRT=Hit rate命中率
+    """
     __tablename__ = 'rpg_user'
 
     discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True, autoincrement=False))

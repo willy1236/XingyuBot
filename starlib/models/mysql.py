@@ -229,6 +229,15 @@ class TwitchBotJoinChannel(BasicSchema, table=True):
     twitch_id: int = Field(primary_key=True)
     action_channel_id: int | None = Field(sa_column=Column(BigInteger))
 
+class InviteRecord(BasicSchema, table=True):
+    __tablename__ = "invite_record"
+
+    invited_user: int = Field(sa_column=Column(BigInteger, primary_key=True))
+    invite_guild: int = Field(sa_column=Column(BigInteger, primary_key=True))
+    inviter_user: int = Field(sa_column=Column(BigInteger, primary_key=True))
+    invite_time: datetime
+    invite_code: str
+
 class Party(IdbaseSchema, table=True):
     __tablename__ = "party_datas"
 

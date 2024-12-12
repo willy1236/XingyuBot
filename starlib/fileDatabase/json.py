@@ -1,7 +1,8 @@
 import json
-import os
 import logging
+import os
 from typing import TYPE_CHECKING, TypeVar
+
 from ..types.datatype import JsonCacheType
 
 T = TypeVar("T")
@@ -62,6 +63,7 @@ class JsonDatabase():
         jdict: dict
         picdata: dict
         options: dict
+        member_names: dict
 
         config: JsonConfig
         cache: JsonCache
@@ -75,6 +77,7 @@ class JsonDatabase():
         "options",
         "config",
         "cache",
+        "member_names",
     ]
 
     _DBPATH = "./database"
@@ -83,7 +86,8 @@ class JsonDatabase():
         'jdict': f'{_DBPATH}/dict.json',
         'picdata': f'{_DBPATH}/picture.json',
         'options': f'{_DBPATH}/command_option.json',
-        'tokens': f'{_DBPATH}/token.json'
+        'tokens': f'{_DBPATH}/token.json',
+        "member_names": f'{_DBPATH}/member_names.json'
     }
 
     def __init__(self,create_file=True):
@@ -99,7 +103,7 @@ class JsonDatabase():
         # craete folder
         if not os.path.isdir(self._DBPATH):
             os.mkdir(self._DBPATH)
-            print(f">> Created folder: {self._DBPATH} <<")
+            logger.info(f">> Created folder: {self._DBPATH} <<")
         
         for file in self._PATH_DICT:
             path = self._PATH_DICT[file]
@@ -108,7 +112,7 @@ class JsonDatabase():
                     continue
                 with open(path,'w',encoding='utf-8') as jfile:
                     json.dump({}, jfile, indent=4)
-                    print(f">> Created json file: {file} <<")
+                    logger.info(f">> Created json file: {file} <<")
             
             with open(path,mode='r',encoding='utf8') as jfile:
                 setattr(self, file, json.load(jfile))
@@ -216,3 +220,7 @@ class JsonDatabase():
         
         else:
             return value
+        
+    def get_member_name(self, id:int) -> str | None:
+        """取得成員名稱"""
+        return self.member_names.get(str(id))

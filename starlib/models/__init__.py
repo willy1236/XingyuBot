@@ -4,4 +4,3 @@
 """
 from .game import *
 from .oauth import *
-from .user import *

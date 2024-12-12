@@ -34,7 +34,7 @@ class task(Cog_Extension):
             scheduler.add_job(self.earthquake_check,'interval',minutes=2,jitter=30,misfire_grace_time=40)
             scheduler.add_job(self.weather_warning_check,'interval',minutes=15,jitter=30,misfire_grace_time=40)
             scheduler.add_job(self.youtube_video,'interval',minutes=15,jitter=30,misfire_grace_time=40)
-            scheduler.add_job(self.twitch_live,'interval',minutes=3,jitter=15,misfire_grace_time=20)
+            scheduler.add_job(self.twitch_live,'interval',minutes=4,jitter=15,misfire_grace_time=20)
             scheduler.add_job(self.twitch_video,'interval',minutes=15,jitter=30,misfire_grace_time=40)
             scheduler.add_job(self.twitch_clip,'interval',minutes=10,jitter=30,misfire_grace_time=40)
             #scheduler.add_job(self.get_mongodb_data,'interval',minutes=3,jitter=30,misfire_grace_time=40)
@@ -150,8 +150,6 @@ class task(Cog_Extension):
         for user in users:
             cache_last_update_time = datetime.fromisoformat(twitch_cache.get(user)).replace(tzinfo=tz) if twitch_cache.get(user) else None
             clips = twapi.get_clips(user, started_at=cache_last_update_time)
-            # Twitch API 會無視started_at參數回傳錯誤時間的資料
-            clips = [d for d in clips if d.created_at >= cache_last_update_time]
             if clips:
                 newest = clips[0].created_at
                 broadcaster_id = clips[0].broadcaster_id

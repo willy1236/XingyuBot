@@ -322,9 +322,9 @@ class SQLNotifySystem(BaseSQLEngine):
     
     def get_notify_community_guild(self, notify_type:NotifyCommunityType, community_id:str):
         """取得指定社群的所有通知"""
-        statement = select(NotifyCommunity.guild_id, NotifyCommunity.channel_id, NotifyCommunity.role_id).where(NotifyCommunity.notify_type == notify_type, NotifyCommunity.community_id == community_id)
+        statement = select(NotifyCommunity.guild_id, NotifyCommunity.channel_id, NotifyCommunity.role_id, NotifyCommunity.message).where(NotifyCommunity.notify_type == notify_type, NotifyCommunity.community_id == community_id)
         result = self.session.exec(statement).all()
-        return {i[0]: (i[1], i[2]) for i in result}
+        return {i[0]: (i[1], i[2], i[3]) for i in result}
         
 
     def get_notify_community_user_byid(self,notify_type:NotifyCommunityType, community_id:str, guild_id:int):
@@ -391,7 +391,7 @@ class SQLRoleSaveSystem(BaseSQLEngine):
 
 class SQLWarningSystem(BaseSQLEngine):
     #* warning
-    def add_warning(self,discord_id:int,moderate_type:str,moderate_user:int,create_guild:int,create_time:datetime,reason:str=None,last_time:str=None,guild_only=True) -> int:
+    def add_warning(self,discord_id:int,moderate_type:WarningType,moderate_user:int,create_guild:int,create_time:datetime,reason:str=None,last_time:str=None,guild_only=True) -> int:
         """給予用戶警告\n
         returns: 新增的warning_id
         """

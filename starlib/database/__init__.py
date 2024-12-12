@@ -8,8 +8,8 @@ from .mongodb import MongoDB
 from .mysql import MySQLDatabase, SQLEngine
 
 SQL_connection = Jsondb.config.get('SQL_connection')
-def create_sqldb(SQL_connection:bool) -> MySQLDatabase | None:
-    if SQL_connection:
+def create_sqldb(should_connect:bool) -> MySQLDatabase | None:
+    if should_connect:
         try:
             sqldb = MySQLDatabase(Jsondb.config.get('SQLsettings'))
             version = sqldb.connection.get_server_info()
@@ -23,8 +23,8 @@ def create_sqldb(SQL_connection:bool) -> MySQLDatabase | None:
     
     return sqldb
 
-def create_sqlengine(SQL_connection:bool) -> SQLEngine | None:
-    if SQL_connection:
+def create_sqlengine(should_connect:bool) -> SQLEngine | None:
+    if should_connect:
         try:
             from sqlalchemy.engine import URL
 
@@ -52,8 +52,8 @@ def create_sqlengine(SQL_connection:bool) -> SQLEngine | None:
 sqldb = create_sqlengine(SQL_connection)
 
 Mongedb_connection = Jsondb.config.get('Mongedb_connection')
-def create_mongedb(Mongedb_connection) -> MongoDB | None:
-    if Mongedb_connection:
+def create_mongedb(should_connect) -> MongoDB | None:
+    if should_connect:
         url = Jsondb.get_token("mongodb_url")
         mongedb = MongoDB(url)
         log.info('>> MongoDB connect: on <<')

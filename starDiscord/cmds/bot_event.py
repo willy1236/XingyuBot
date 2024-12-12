@@ -18,16 +18,6 @@ keywords = {
     '抹茶粉':'由威立冠名贊助撥出~'
 }
 
-member_names = {
-    419131103836635136: "威立",
-    1094928831976050728: "拔辣",
-    702476284844048434: "諷黎",
-    465831362168094730: "XX12",
-    490136735557222402: "海豹",
-    528935362199027716: "黑龍",
-    814846401501986818: "黑龍",
-}
-
 voice_updata = Jsondb.config.get('voice_updata')
 debug_mode = Jsondb.config.get("debug_mode",True)
 
@@ -148,7 +138,7 @@ class event(Cog_Extension):
             #ai chat
             if message.content and message.content.startswith(".") and len(message.content) > 1 and message.content[1] != ".":
                 #image_bytes = await message.attachments[0].read() if message.attachments else None
-                text = sclient.starai.generate_aitext(f"{member_names.get(message.author.id,message.author.name)}：{message.content[1:]}")
+                text = sclient.starai.generate_aitext(f"{Jsondb.get_member_name(message.author.id) or message.author.name}：{message.content[1:]}")
                 if text:
                     await message.reply(text,mention_author=False)
                 else:
@@ -353,6 +343,8 @@ class event(Cog_Extension):
             if dbdata:
                 channel = self.bot.get_channel(mod_channel_id)
                 channel.send(f"新成員{member.mention}({member.id}) 共有 {dbdata} 筆紀錄")
+
+        # TODO: 新增邀請紀錄
 
         if guildid == happycamp_guild[0]:
             earlest_guildid = check_registration(member)
