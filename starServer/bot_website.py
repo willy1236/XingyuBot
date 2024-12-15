@@ -163,7 +163,7 @@ async def to_discordauth(request:Request):
 async def to_twitchauth(request:Request):
     return RedirectResponse(url=f"https://id.twitch.tv/oauth2/authorize?client_id={twitch_oauth_settings['id']}&redirect_uri={twitch_oauth_settings['redirect_uri']}&response_type=code&scope=chat:read+channel:read:subscriptions+moderation:read+channel:read:redemptions+channel:manage:redemptions+channel:manage:raids+channel:read:vips+channel:bot+moderator:read:suspicious_users+channel:manage:polls+channel:manage:predictions&force_verify=true")
 
-@app.post("/.well-known/discord")
+@app.get("/.well-known/discord")
 async def discord_domain(request:Request):
     return PlainTextResponse(Jsondb.get_token("discord_domain"))
 
