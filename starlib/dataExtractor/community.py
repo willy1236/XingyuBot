@@ -21,7 +21,14 @@ class TwitchAPI():
     BaseURL = "https://api.twitch.tv/helix"
 
     def __init__(self):
-        self._headers = self.__get_headers()    
+        self._headers = None
+
+    @property
+    def headers(self):
+        if self._headers is None:
+            self._headers = self.__get_headers()
+        return self._headers
+    
 
     def __get_headers(self):
         TOKENURL = "https://id.twitch.tv/oauth2/token"
@@ -57,7 +64,7 @@ class TwitchAPI():
             params["user_login"] = users
         else:
             params["user_id"] = users
-        r = requests.get(f"{self.BaseURL}/streams", params=params,headers=self._headers)
+        r = requests.get(f"{self.BaseURL}/streams", params=params,headers=self.headers)
         apidata = r.json()
         dict = {}
         
@@ -84,7 +91,7 @@ class TwitchAPI():
             "login": username,
             "first": 1
         }
-        r = requests.get(f"{self.BaseURL}/users", params=params,headers=self._headers)
+        r = requests.get(f"{self.BaseURL}/users", params=params,headers=self.headers)
         apidata = r.json()
         if apidata.get('data'):
             return TwitchUser(**apidata['data'][0])
@@ -100,7 +107,7 @@ class TwitchAPI():
             "id": userid,
             "first": 1
         }
-        r = requests.get(f"{self.BaseURL}/users", params=params,headers=self._headers)
+        r = requests.get(f"{self.BaseURL}/users", params=params,headers=self.headers)
         apidata = r.json()
         if apidata.get('data'):
             return TwitchUser(**apidata['data'][0])
@@ -126,7 +133,7 @@ class TwitchAPI():
         else:
             raise ValueError("must provide either user_ids or ids.")
 
-        r = requests.get(f"{self.BaseURL}/videos", params=params,headers=self._headers)
+        r = requests.get(f"{self.BaseURL}/videos", params=params,headers=self.headers)
         apidata = r.json()
         if apidata.get('data'):
             return [TwitchVideo(**i) for i in apidata['data']]
@@ -147,7 +154,7 @@ class TwitchAPI():
             params['started_at'] = started_at.astimezone(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
             params['ended_at'] = datetime.now(tz=timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
         
-        r = requests.get(f"{self.BaseURL}/clips", params=params,headers=self._headers)
+        r = requests.get(f"{self.BaseURL}/clips", params=params,headers=self.headers)
         apidata = r.json()
         if apidata.get('data'):
             return [clip for clip in [TwitchClip(**i) for i in apidata['data']] if clip.created_at > started_at]

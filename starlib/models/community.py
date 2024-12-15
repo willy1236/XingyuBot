@@ -22,7 +22,7 @@ class TwitchUser(BaseModel):
     broadcaster_type: str
     description: str
     profile_image_url: str
-    offline_image_url: str = None
+    offline_image_url: str | None = None
     view_count: int
     email: str | None = None
     created_at: datetime
@@ -106,7 +106,7 @@ class TwitchVideo(BaseModel):
     language: str
     type: str
     duration: str
-    muted_segments: Optional[str]
+    muted_segments: str
     
     @model_validator(mode='after')
     def __post_init__(self):
@@ -144,7 +144,7 @@ class TwitchClip(BaseModel):
     created_at: datetime
     thumbnail_url: str
     duration: timedelta
-    vod_offset: Optional[int]
+    vod_offset: int
     is_featured: bool
     
     @model_validator(mode='after')
