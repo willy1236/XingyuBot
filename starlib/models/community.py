@@ -106,7 +106,7 @@ class TwitchVideo(BaseModel):
     language: str
     type: str
     duration: str
-    muted_segments: str
+    muted_segments: str | None = None
     
     @model_validator(mode='after')
     def __post_init__(self):
