@@ -50,6 +50,9 @@ def base64_to_buffer(base64_string: str) -> BytesIO:
         return buffer
     except Exception as e:
         raise ValueError(f"Base64 解碼失敗: {str(e)}")
+    
+mcserver_process: subprocess.Popen = None
+
 class SendMessageModal(discord.ui.Modal):
     def __init__(self, channel, bot, is_dm, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -348,7 +351,7 @@ class owner(Cog_Extension):
         password = settings.get('password')
         with mcrcon.MCRcon(host, password, port) as rcon:
             response = rcon.command(command)
-            await ctx.respond(response)
+            await ctx.respond(response if response else "指令已發送")
 
     @mcserver.command(description="開啟mc伺服器")
     @commands.cooldown(rate=1,per=120)
@@ -386,7 +389,7 @@ class owner(Cog_Extension):
         else:
             server_folder = Jsondb.config.get('mc_server').get('server_folder')
             cmd = rf"D: && cd D:\minecraft_server\{server_folder} && run.bat"
-            subprocess.Popen(cmd, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=subprocess.CREATE_NEW_CONSOLE)
+            mcserver_process = subprocess.Popen(cmd, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=subprocess.CREATE_NEW_CONSOLE)
             msg = await ctx.respond("已發送開啟指令")
             for _ in range(10):
                 await asyncio.sleep(10)
@@ -423,6 +426,15 @@ class owner(Cog_Extension):
         file = discord.File(base64_to_buffer(status.icon), filename="server_icon.png") if status.icon else None
         await ctx.respond(embed=embed, file=file)
     
+    @mcserver.command(description="關閉mc伺服器")
+    @commands.cooldown(rate=1,per=10)
+    async def stop(self,ctx:discord.ApplicationContext):
+        if mcserver_process:
+            mcserver_process.terminate()
+            await ctx.respond("伺服器已關閉")
+        else:
+            await ctx.respond("伺服器未開啟或未由我開啟")
+
     @commands.slash_command(description='機器人面板',guild_ids=debug_guilds)
     @commands.is_owner()
     async def panel(self,ctx):
