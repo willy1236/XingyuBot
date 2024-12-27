@@ -389,6 +389,7 @@ class owner(Cog_Extension):
         else:
             server_folder = Jsondb.config.get('mc_server').get('server_folder')
             cmd = rf"D: && cd D:\minecraft_server\{server_folder} && run.bat"
+            global mcserver_process
             mcserver_process = subprocess.Popen(cmd, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=subprocess.CREATE_NEW_CONSOLE)
             msg = await ctx.respond("已發送開啟指令")
             for _ in range(10):
@@ -429,9 +430,13 @@ class owner(Cog_Extension):
     @mcserver.command(description="關閉mc伺服器")
     @commands.cooldown(rate=1,per=10)
     async def stop(self,ctx:discord.ApplicationContext):
+        await ctx.defer()
+        global mcserver_process 
         if mcserver_process:
             mcserver_process.terminate()
             await ctx.respond("伺服器已關閉")
+            mcserver_process.wait()
+            mcserver_process = None
         else:
             await ctx.respond("伺服器未開啟或未由我開啟")
 
