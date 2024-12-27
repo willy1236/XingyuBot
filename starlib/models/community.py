@@ -123,7 +123,7 @@ class TwitchVideo(BaseModel):
             color=0x6441a5,
             timestamp=self.created_at
             )
-        embed.set_author(name=f"{self.user_name}")
+        embed.set_author(name=f"{self.user_name}", icon_url=Jsondb.get_picture("twitch_001"))
         embed.set_image(url=self.thumbnail_url)
         embed.set_footer(text=f"上傳時間")
         return embed
@@ -144,7 +144,7 @@ class TwitchClip(BaseModel):
     created_at: datetime
     thumbnail_url: str
     duration: timedelta
-    vod_offset: int
+    vod_offset: int | None = None
     is_featured: bool
     
     @model_validator(mode='after')

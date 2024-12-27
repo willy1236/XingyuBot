@@ -92,12 +92,13 @@ if __name__ == '__main__':
 # print(weather.model_dump())
 
 tw_api = TwitchAPI()
-clips = tw_api.get_clips(broadcaster_id=490765956, started_at=datetime.fromisoformat("2024-07-05 23:14:22+08:00"))
-# clips = tw_api.get_clips(broadcaster_id=490765956)
-new = datetime(2023, 12, 11, 18, 42, 55, tzinfo=timezone(timedelta(hours=8)))
-for i in clips:
-    print(i.created_at)
-    if i.created_at > new:
-        new = i.created_at
+# clips = tw_api.get_clips(broadcaster_id=490765956, started_at=datetime.fromisoformat("2024-07-05 23:14:22+08:00"))
+# # clips = tw_api.get_clips(broadcaster_id=490765956)
+# new = datetime(2023, 12, 11, 18, 42, 55, tzinfo=timezone(timedelta(hours=8)))
+# for i in clips:
+#     print(i.created_at)
+#     if i.created_at > new:
+#         new = i.created_at
 
-print(new)
+# print(new)
+print(tw_api.get_user_by_id("174268844"))
