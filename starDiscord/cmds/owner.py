@@ -384,8 +384,8 @@ class owner(Cog_Extension):
         if is_server_running_by_process() or is_server_running_by_connect(ip, port):
             await ctx.respond("伺服器已開啟", embed=server_status(ip, port))
         else:
-            #cmd = r"D: && cd D:\minecraft_server\1.20.1_forge && run.bat"
-            cmd = r"D: && cd D:\minecraft_server\1.7.10_forge && run.bat"
+            server_folder = Jsondb.config.get('mc_server').get('server_folder')
+            cmd = rf"D: && cd D:\minecraft_server\{server_folder} && run.bat"
             subprocess.Popen(cmd, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=subprocess.CREATE_NEW_CONSOLE)
             msg = await ctx.respond("已發送開啟指令")
             for _ in range(10):
