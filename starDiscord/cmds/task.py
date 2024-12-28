@@ -311,6 +311,7 @@ class task(Cog_Extension):
                 push.add_push(record.channel_id, callback_url)
                 data = push.get_push(record.channel_id, callback_url)
 
+                record.push_at = data.last_successful_verification
                 record.expire_at = data.expiration_time
                 sclient.sqldb.merge(record)
                 await asyncio.sleep(1)
