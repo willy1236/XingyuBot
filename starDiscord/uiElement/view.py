@@ -9,9 +9,7 @@ from typing import TYPE_CHECKING
 import discord
 import matplotlib
 
-from ..database import sqldb
-from ..fileDatabase import Jsondb
-from ..utils import BotEmbed, log
+from starlib import BotEmbed, Jsondb, log, sqldb, tz
 
 if TYPE_CHECKING:
     from starlib.database import SQLEngine
@@ -177,6 +175,51 @@ class PollView(discord.ui.View):
             self.add_item(PollOptionButton(option=option, custom_id=custom_id, row=int(i/5)))
             i += 1
     
+    @classmethod
+    def create(cls,
+               title:str,
+               options:list,
+               creator_id:int,
+               guild_id:int,
+               ban_alternate_account_voting=False,
+               show_name=False,
+               check_results_in_advance=True,
+               results_only_initiator=False,
+               number_of_user_votes=1,
+               only_role_list:list=None,
+               role_magnification_dict:dict=None,
+               bot:discord.bot=None
+            ):
+        """創建投票"""
+        # TODO: add Poll config class
+        poll_id = sqldb.add_poll(title,creator_id,datetime.now(tz=tz),None,guild_id,ban_alternate_account_voting,show_name,check_results_in_advance,results_only_initiator,number_of_user_votes)
+        sqldb.add_poll_option(poll_id,options)
+
+        if only_role_list is None:
+            only_role_list = []
+        if role_magnification_dict is None:
+            role_magnification_dict = {}
+
+        poll_role_dict = {}
+        for roleid in only_role_list:
+            poll_role_dict[roleid] = [1,1]
+            
+        for roleid in role_magnification_dict:
+            if roleid in poll_role_dict:
+                poll_role_dict[roleid][1] = role_magnification_dict[roleid]
+            else:
+                poll_role_dict[roleid] = [2,role_magnification_dict[roleid]]
+
+        for roleid in poll_role_dict:
+            role_type = poll_role_dict[roleid][0]
+            role_magnification = poll_role_dict[roleid][1]
+            sqldb.add_poll_role(poll_id,roleid,role_type,role_magnification)
+
+        poll = sqldb.get_poll(poll_id)
+        view = cls(poll,sqldb,bot)
+        return view
+
+
     @property
     def role_dict(self) -> dict:
         if not self._role_dict:

@@ -8,9 +8,9 @@ from starlib.dataExtractor import *
 from starlib.errors import APIInvokeError
 from starlib.models.mysql import UserGame
 from starlib.types import GameType
-from starlib.uiElement.modals import HoyolabCookiesModal
 
 from ..extension import Cog_Extension
+from ..uiElement.modals import HoyolabCookiesModal
 
 game_option = ChoiceList.set('game_set_option')
 hoyo_game_option = [

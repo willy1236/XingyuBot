@@ -4,7 +4,7 @@ import os
 import discord
 
 from starlib import BotEmbed, Jsondb, log, sqldb
-from starlib.types import NotifyCommunityType, NotifyChannelType
+from starlib.types import NotifyChannelType, NotifyCommunityType
 
 
 class DiscordBot(discord.Bot):
@@ -26,7 +26,7 @@ class DiscordBot(discord.Bot):
     def run(self):
         token = Jsondb.tokens.get(self.bot_code)
         super().run(token)
-
+        
     def load_all_extensions(self):
         for filename in os.listdir(self._COG_PATH):
             if filename.endswith('.py'):

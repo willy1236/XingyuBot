@@ -4,9 +4,9 @@ from discord.ext import commands
 
 from starlib import BotEmbed, ChoiceList, Jsondb, sclient
 from starlib.models.rpg import RPGUser
-from starlib.uiElement.RPGview import RPGAdvanceView, RPGEquipmentSelectView
 
 from ..extension import Cog_Extension
+from ..uiElement.RPGview import RPGAdvanceView, RPGEquipmentSelectView
 
 
 class system_rpg(Cog_Extension):

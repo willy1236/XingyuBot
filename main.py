@@ -11,9 +11,51 @@ api_website = config.get('api_website')
 debug_mode = config.get('debug_mode',True)
 twitch_bot = config.get('twitch_bot',False)
 
-bot = DiscordBot(bot_code)
-sclient.bot = bot
-bot.load_all_extensions()
+def run_discord_bot():
+    log.debug('Discord Bot start running...')
+    bot = DiscordBot(bot_code)
+    sclient.bot = bot
+    bot.load_all_extensions()
+    
+    try:
+        bot.run()
+    except discord.errors.LoginFailure:
+        log.error('>> Bot: Login failed <<')
+    except Exception as e:
+        log.error(e)
+
+def run_twitch_bot():
+    from starServer.tunnel_threads import LoopholeTwitchThread
+    log.debug('Twitch Bot start running...')
+    twitchtunnel_thread = LoopholeTwitchThread()
+    sclient.twitchtunnel_thread = twitchtunnel_thread
+    twitchtunnel_thread.start()
+    time.sleep(10)
+
+    from starServer.twitch_chatbot import TwitchBotThread
+    twitchbot_thread = TwitchBotThread()
+    sclient.twitch_bot_thread = twitchbot_thread
+    twitchbot_thread.start()
+    log.info('>> twitchBot: online <<')
+    time.sleep(2)
+
+def run_website():
+    from starServer.bot_website import WebsiteThread
+    log.debug('website start running...')
+    try:
+        server = WebsiteThread()
+        sclient.website_thread = server
+        server.start()
+        log.info('>> website: online <<')
+    except:
+        log.info('>> website: offline <<')
+    time.sleep(2)
+
+def run_scheduler():
+    pass
+
+def main():
+    pass
 
 if __name__ == "__main__":
     # if api_website or twitch_bot:
@@ -29,35 +71,9 @@ if __name__ == "__main__":
         # sclient.tunnel_thread = tunnel_server
         # tunnel_server.start()
         # time.sleep(2)
-        
-
-        from starServer.bot_website import WebsiteThread
-        try:
-            server = WebsiteThread()
-            sclient.website_thread = server
-            server.start()
-            log.info('>> website: online <<')
-        except:
-            log.info('>> website: offline <<')
-        time.sleep(2)
+        run_website()        
 
     if twitch_bot:
-        from starServer.tunnel_threads import LoopholeTwitchThread
-        twitchtunnel_thread = LoopholeTwitchThread()
-        sclient.twitchtunnel_thread = twitchtunnel_thread
-        twitchtunnel_thread.start()
-        time.sleep(10)
-
-        from starServer.twitch_chatbot import TwitchBotThread
-        twitchbot_thread = TwitchBotThread()
-        sclient.twitch_bot_thread = twitchbot_thread
-        twitchbot_thread.start()
-        log.info('>> twitchBot: online <<')
-        time.sleep(2)
+        run_twitch_bot()
     
-    try:
-        bot.run()
-    except discord.errors.LoginFailure:
-        log.error('>> Bot: Login failed <<')
-    except Exception as e:
-        log.error(e)
+    run_discord_bot()

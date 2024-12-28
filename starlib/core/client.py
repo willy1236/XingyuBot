@@ -6,13 +6,12 @@ from typing import TYPE_CHECKING
 
 import discord
 
+from ..base.base import BaseThread
 from ..database import sqldb
 from ..fileDatabase import Jsondb
 from ..settings import tz
 from ..starAI import StarGeminiAI
-from ..uiElement.view import PollView
 from ..utils import BotEmbed, scheduler
-from ..base.base import BaseThread
 from .cache import StardbCache
 
 if TYPE_CHECKING:
@@ -33,46 +32,6 @@ class PointClient():
         sqldb.sign_add_coin(discord_id,scoin_add,rcoin_add)
         return [scoin_add, rcoin_add]
 
-class PollClient():
-    """投票系統"""
-    def create_poll(self,
-                    title:str,
-                    options:list,
-                    creator_id:int,
-                    guild_id:int,
-                    ban_alternate_account_voting=False,
-                    show_name=False,
-                    check_results_in_advance=True,
-                    results_only_initiator=False,
-                    number_of_user_votes=1,
-                    only_role_list:list=[],
-                    role_magnification_dict:dict={},
-                    bot:discord.bot=None
-                    ) -> PollView:
-        """創建投票"""
-        # TODO: add Poll config class
-        poll_id = sqldb.add_poll(title,creator_id,datetime.now(tz=tz),None,guild_id,ban_alternate_account_voting,show_name,check_results_in_advance,results_only_initiator,number_of_user_votes)
-        sqldb.add_poll_option(poll_id,options)
-
-        poll_role_dict = {}
-        for roleid in only_role_list:
-            poll_role_dict[roleid] = [1,1]
-            
-        for roleid in role_magnification_dict:
-            if roleid in poll_role_dict:
-                poll_role_dict[roleid][1] = role_magnification_dict[roleid]
-            else:
-                poll_role_dict[roleid] = [2,role_magnification_dict[roleid]]
-
-        for roleid in poll_role_dict:
-            role_type = poll_role_dict[roleid][0]
-            role_magnification = poll_role_dict[roleid][1]
-            sqldb.add_poll_role(poll_id,roleid,role_type,role_magnification)
-
-        poll = sqldb.get_poll(poll_id)
-        view = PollView(poll,sqldb,bot)
-        return view
-    
 class ElectionSystem():
     def election_format(self,session:int,bot:discord.Bot):
         dbdata = sqldb.get_election_full_by_session(session)
@@ -124,11 +83,7 @@ class ElectionSystem():
         
         return embed
 
-class StarController(
-    PointClient,
-    PollClient,
-    ElectionSystem,
-):
+class StarController:
     """整合各項系統的星羽資料管理物件 \\
     :attr sqldb: Mysql Database \\
     :attr starai: AI \\

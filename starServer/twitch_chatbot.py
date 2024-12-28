@@ -421,20 +421,11 @@ async def run_sakagawa():
     twitch_log.debug("listening to channel points custom reward redemption update")
 
 class TwitchBotThread(BaseThread):
-    if TYPE_CHECKING:
-        chat:Chat | None
-        twitch:Twitch | None
-        
     def __init__(self):
         super().__init__(name='TwitchBotThread')
-        self.chat = None
-        self.twitch = None
 
     def run(self):
-        chat, twitch = asyncio.run(run())
-        self.chat = chat
-        self.twitch = twitch
-        
+        asyncio.run(run())
         self._stop_event.wait()
         chat.stop()
         asyncio.run(twitch.close())

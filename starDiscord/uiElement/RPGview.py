@@ -4,11 +4,10 @@ from typing import TYPE_CHECKING
 import discord
 from discord.ext import pages
 
-from ..database import sqldb
-from ..fileDatabase import Jsondb
-from ..models.rpg import Monster, RPGEquipment, RPGPlayerItem, MonsterInBattle
-from ..types import Coins
-from ..utils import BotEmbed
+from starlib import sqldb, Jsondb
+from starlib.models.rpg import Monster, RPGEquipment, RPGPlayerItem, MonsterInBattle
+from starlib.types import Coins
+from starlib.utils import BotEmbed
 
 
 class RPGAdvanceButton(discord.ui.Button):

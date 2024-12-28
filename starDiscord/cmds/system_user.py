@@ -4,9 +4,9 @@ from discord.ext import commands
 
 from starlib import BotEmbed, ChoiceList, Jsondb, sclient
 from starlib.models.mysql import DiscordUser
-from starlib.uiElement.view import DeletePetView
 
 from ..extension import Cog_Extension
+from ..uiElement.view import DeletePetView
 
 pet_option = ChoiceList.set('pet_option')
 

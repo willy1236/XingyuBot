@@ -9,10 +9,10 @@ from discord.ext import commands
 from starlib import BotEmbed, Jsondb, happycamp_guild, log, sclient
 from starlib.models.mysql import DiscordUser
 from starlib.types import NotifyChannelType
-from starlib.uiElement.view import (PollView, ReactionRole1, ReactionRole2,
-                                    WelcomeView)
 
 from ..extension import Cog_Extension
+from ..uiElement.view import (PollView, ReactionRole1, ReactionRole2,
+                              WelcomeView)
 
 keywords = {
     '抹茶粉':'由威立冠名贊助撥出~'

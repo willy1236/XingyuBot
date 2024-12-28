@@ -15,12 +15,11 @@ from starlib import (BotEmbed, ChoiceList, Jsondb, happycamp_guild, log,
                      main_guilds, sclient)
 from starlib.dataExtractor import GoogleCloud
 from starlib.types import Coins
-from starlib.uiElement.view import DeleteAddRoleView, PollView, TRPGPlotView
 from starlib.utils import (create_only_role_list,
-                               create_role_magification_dict, find,
-                               random_color)
+                           create_role_magification_dict, find, random_color)
 
 from ..extension import Cog_Extension
+from ..uiElement.view import DeleteAddRoleView, PollView, TRPGPlotView
 from .bot_event import check_registration
 
 bet_option = ChoiceList.set('bet_option')
@@ -449,7 +448,7 @@ class command(Cog_Extension):
         only_role_list = await create_only_role_list(only_role,ctx) if only_role else []
         role_magnification_dict = await create_role_magification_dict(role_magnification,ctx) if role_magnification else {}
 
-        view = sclient.create_poll(title,options,ctx.author.id,ctx.guild.id,ban_alternate_account_voting,show_name,check_results_in_advance,results_only_initiator,number_of_user_votes,only_role_list=only_role_list,role_magnification_dict=role_magnification_dict)
+        view = PollView.create(title,options,ctx.author.id,ctx.guild.id,ban_alternate_account_voting,show_name,check_results_in_advance,results_only_initiator,number_of_user_votes,only_role_list=only_role_list,role_magnification_dict=role_magnification_dict)
         embed = view.embed(ctx.guild)
         message = await ctx.respond(embed=embed,view=view)
         view.poll.message_id = message.id

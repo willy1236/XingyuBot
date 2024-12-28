@@ -1,7 +1,7 @@
 import discord
 import genshin
 
-from ..database import sqldb
+from starlib import sqldb
 
 
 class HoyolabCookiesModal(discord.ui.Modal):
