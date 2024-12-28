@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -347,3 +348,22 @@ class YoutubeRSSVideo(BaseModel):
         #embed.add_field(name="更新時間",value=self.updated_at.strftime('%Y/%m/%d %H:%M:%S'),inline=True)
         embed.set_image(url=self.media_thumbnail[0].url)
         return embed
+    
+@dataclass
+class YtSubscriptionDetails:
+    callback_url: str
+    state: str
+    last_successful_verification: datetime
+    expiration_time: datetime
+    last_subscribe_request: datetime
+    last_unsubscribe_request: datetime | None
+    last_verification_error: datetime | None
+    last_delivery_error: datetime | None
+    last_item_delivered: datetime
+    aggregate_statistics: str
+    content_received: datetime | None
+    content_delivered: datetime | None
+
+    @property
+    def has_verify(self):
+        return self.state == "verified"

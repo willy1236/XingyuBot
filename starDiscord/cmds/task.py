@@ -6,7 +6,7 @@ import discord
 from discord.ext import commands, tasks
 from requests.exceptions import ConnectTimeout
 
-from starlib import BotEmbed, Jsondb, log, sclient, tz, utilities
+from starlib import BotEmbed, Jsondb, log, sclient, tz, utils
 from starlib.dataExtractor import *
 from starlib.types import NotifyChannelType, NotifyCommunityType, JsonCacheType
 
@@ -30,6 +30,7 @@ class task(Cog_Extension):
             scheduler.add_job(self.forecast_update,'cron',hour='0/3',minute=0,second=1,jitter=30,misfire_grace_time=60)
             scheduler.add_job(self.weather_check,'cron',minute='20,35',second=30,jitter=30,misfire_grace_time=60)
             scheduler.add_job(self.apex_map_rotation,'cron',minute='0/15',second=10,jitter=30,misfire_grace_time=60)
+            scheduler.add_job(self.refresh_yt_push,'cron',hour=2,jitter=30,misfire_grace_time=40)
 
             scheduler.add_job(self.earthquake_check,'interval',minutes=2,jitter=30,misfire_grace_time=40)
             scheduler.add_job(self.weather_warning_check,'interval',minutes=15,jitter=30,misfire_grace_time=40)
@@ -237,7 +238,7 @@ class task(Cog_Extension):
 
     async def start_eletion(self):
         log.info("start_eletion start")
-        session = utilities.calculate_eletion_session(datetime.now())
+        session = utils.calculate_eletion_session(datetime.now())
         channel = self.bot.get_channel(1163127708839071827)
 
         embed = sclient.election_format(session,self.bot)
@@ -299,6 +300,21 @@ class task(Cog_Extension):
     async def birtday_task(self):
         channel = self.bot.get_channel(566533708371329026)
         await channel.send("今天是個特別的日子，別忘記了喔⭐")
+
+    async def refresh_yt_push(self):
+        push = YoutubePush()
+        records = sclient.sqldb.get_push_records()
+        now = datetime.now()
+        callback_url = Jsondb.get_token("youtube_push")
+        for record in records:
+            if record.expire_at < now:
+                push.add_push(record.channel_id, callback_url)
+                data = push.get_push(record.channel_id, callback_url)
+
+                record.expire_at = data.expiration_time
+                sclient.sqldb.merge(record)
+                await asyncio.sleep(1)
+
 
 def setup(bot):
     bot.add_cog(task(bot))

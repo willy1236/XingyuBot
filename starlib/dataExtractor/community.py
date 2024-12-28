@@ -8,10 +8,12 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+from bs4 import BeautifulSoup
 
 from ..errors import APIInvokeError, Forbidden
 from ..fileDatabase import Jsondb
 from ..models.community import *
+from ..settings import tz
 
 
 class TwitchAPI():
@@ -306,6 +308,77 @@ class YoutubeRSS():
         # for entry in feed['entries']:
         #     print(entry)
         return [YoutubeRSSVideo(**i) for i in feed['entries']]
+    
+class YoutubePush:
+    def __init__(self):
+        pass
+
+    def add_push(self, channel_id:str, callback_url:str, secret:str=None):
+        data = {
+            "hub.callback": callback_url,
+            "hub.topic": f"https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}",
+            "hub.verify": "sync",
+            "hub.mode": "subscribe",
+            "hub.verify_token": None,
+            "hub.secret": secret,
+            "hub.lease_numbers": None
+        }
+        r = requests.post(f'https://pubsubhubbub.appspot.com/subscribe', data=data)
+        if r.status_code != 204:
+            raise APIInvokeError(f"[{r.status_code}] youtube_push", f"[{r.status_code}] {r.text}")
+        
+    def get_push(self, channel_id:str, callback_url:str, secret:str=None):
+        params = {
+            "hub.callback": callback_url,
+            "hub.topic": f"https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}",
+            "hub.secret": secret
+        }
+        r = requests.get(f'https://pubsubhubbub.appspot.com/subscription-details', params=params)
+        if r.ok:
+            return self._parse_subscription_details(r.text)
+        else:
+            print(r.text)
+            print(r.status_code)
+            return None
+        
+    @staticmethod
+    def _parse_subscription_details(html_content: str) -> YtSubscriptionDetails:
+        soup = BeautifulSoup(html_content, 'html.parser')
+        
+        def get_text_from_dt(dt_text: str) -> str:
+            dt = soup.find('dt', string=dt_text)
+            if dt and dt.find_next_sibling('dd'):
+                return dt.find_next_sibling('dd').get_text(strip=True)
+            return 'n/a'
+        
+        def parse_datetime(dt_text: str) -> Optional[datetime]:
+            """
+            將時間字串轉換為 datetime，如果為 'n/a' 則返回 None。
+            """
+            time_str = get_text_from_dt(dt_text)
+            if time_str.strip().lower() == 'n/a':
+                return None
+            try:
+                return datetime.strptime(time_str, "%a, %d %b %Y %H:%M:%S %z").astimezone(tz=tz)
+            except ValueError as e:
+                print(f"時間格式錯誤: {e}")
+                return None
+        
+        return YtSubscriptionDetails(
+                callback_url=get_text_from_dt('Callback URL'),
+                state=get_text_from_dt('State'),
+                last_successful_verification=parse_datetime('Last successful verification'),
+                expiration_time=parse_datetime('Expiration time'),
+                last_subscribe_request=parse_datetime('Last subscribe request'),
+                last_unsubscribe_request=parse_datetime('Last unsubscribe request'),
+                last_verification_error=parse_datetime('Last verification error'),
+                last_delivery_error=parse_datetime('Last delivery error'),
+                last_item_delivered=get_text_from_dt('Last item delivered'),
+                aggregate_statistics=get_text_from_dt('Aggregate statistics'),
+                content_received=parse_datetime('Content received'),
+                content_delivered=parse_datetime('Content delivered')
+            )
+
 
 class GoogleCloud():
     def __init__(self):

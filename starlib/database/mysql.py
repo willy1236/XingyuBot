@@ -366,6 +366,10 @@ class SQLNotifySystem(BaseSQLEngine):
             self.session.exec(statement)
             self.session.commit()
 
+    def get_push_records(self):
+        statement = select(PushRecord)
+        result = self.session.exec(statement).all()
+        return result
 
 class SQLRoleSaveSystem(BaseSQLEngine):
     #* role_save
