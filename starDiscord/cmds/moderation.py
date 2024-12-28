@@ -6,7 +6,7 @@ from discord.ext import commands
 
 from starlib import BotEmbed, ChoiceList, Jsondb, debug_guilds, sclient
 from starlib.types import NotifyChannelType, WarningType
-from starlib.utilities import converter
+from starlib.utils import converter
 
 from ..extension import Cog_Extension
 

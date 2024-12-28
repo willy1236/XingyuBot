@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 from starlib import Jsondb,sclient,tz,BotEmbed, debug_guilds, main_guilds, happycamp_guild
 from starlib.errors import *
-from starlib.utilities.map import sunmon_area
+from starlib.utils.map import sunmon_area
 from ..extension import Cog_Extension
 
 # Note that custom_ids can only be up to 100 characters long.

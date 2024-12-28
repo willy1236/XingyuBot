@@ -17,7 +17,7 @@ from mcstatus import JavaServer
 from starlib import (BotEmbed, Jsondb, debug_guilds, happycamp_guild,
                      main_guilds, sclient)
 from starlib.types import NotifyChannelType
-from starlib.utilities.utility import converter
+from starlib.utils.utility import converter
 
 from ..extension import Cog_Extension
 

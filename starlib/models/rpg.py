@@ -7,7 +7,7 @@ from sqlalchemy import (BigInteger, Column, DateTime, ForeignKey, Integer,
 
 from ..base import ListObject
 from ..types import EquipmentSolt, ItemCategory, ShopItemMode
-from ..utilities import BotEmbed
+from ..utils import BotEmbed
 from .mysql import Field, Relationship, SQLModel
 from .sqlSchema import RPGSchema
 

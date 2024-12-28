@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, Optional, overload
 from ..database import sqldb
 from ..models.mysql import NotifyChannel, NotifyCommunity
 from ..types import NotifyChannelType, NotifyCommunityType
-from ..utilities import log
+from ..utils import log
 
 
 class StardbCache:

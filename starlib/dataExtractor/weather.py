@@ -1,18 +1,17 @@
-import time
-
 import requests
 
 from starlib.fileDatabase import Jsondb
 from starlib.models.weather import *
 
+
 def sort_earthquakeReport(x:EarthquakeReport):
     return x.originTime
 
 class CWA_API():
+    BaseURL = 'https://opendata.cwa.gov.tw/api/v1/rest/datastore'
+
     def __init__(self):
-        super().__init__()
         self.auth = Jsondb.get_token('cwa_api')
-        self.url = 'https://opendata.cwa.gov.tw/api/v1/rest/datastore'
 
     def get_earthquake_report(self,significant=True):
         params = {
@@ -20,8 +19,8 @@ class CWA_API():
             'limit': 1
         }
 
-        id = "E-A0015-001" if significant else "E-A0016-001"        
-        APIdata = requests.get(f'{self.url}/{id}',params=params).json().get('records').get('Earthquake')[0]
+        id = "E-A0015-001" if significant else "E-A0016-001"
+        APIdata = requests.get(f'{self.BaseURL}/{id}',params=params).json().get('records').get('Earthquake')[0]
         
         if APIdata:
             return EarthquakeReport(**APIdata)
@@ -35,13 +34,13 @@ class CWA_API():
         }
         records = list()
 
-        APIdata = requests.get(f'{self.url}/E-A0015-001', params=params, timeout=20)
+        APIdata = requests.get(f'{self.BaseURL}/E-A0015-001', params=params, timeout=20)
         data = APIdata.json().get('records').get('Earthquake')
         if data:
             records += [EarthquakeReport(**i) for i in data]
 
         if not only_significant:
-            APIdata = requests.get(f'{self.url}/E-A0016-001', params=params, timeout=20)
+            APIdata = requests.get(f'{self.BaseURL}/E-A0016-001', params=params, timeout=20)
             data = APIdata.json().get('records').get('Earthquake')
             if data:
                 records += [EarthquakeReport(**i) for i in data]
@@ -53,7 +52,7 @@ class CWA_API():
         params = {
             'Authorization': self.auth
         }
-        APIdata = requests.get(f'{self.url}/F-C0032-001',params=params).json()
+        APIdata = requests.get(f'{self.BaseURL}/F-C0032-001',params=params).json()
         if APIdata:
             return Forecast(APIdata)
         else:
@@ -63,7 +62,7 @@ class CWA_API():
         params = {
             'Authorization': self.auth
         }
-        APIdata = requests.get(f'{self.url}/W-C0033-002',params=params).json().get('records').get('record')
+        APIdata = requests.get(f'{self.BaseURL}/W-C0033-002',params=params).json().get('records').get('record')
         if APIdata:
             return [WeatherWarningReport(**i) for i in APIdata]
         else:
@@ -75,7 +74,7 @@ class CWA_API():
             'Authorization': self.auth,
             "StationId": StationId
         }
-        APIdata = requests.get(f'{self.url}/O-A0001-001',params=params).json().get('records').get('Station')
+        APIdata = requests.get(f'{self.BaseURL}/O-A0001-001',params=params).json().get('records').get('Station')
         
         if APIdata:
             return [WeatherReport(**i) for i in APIdata]

@@ -12,7 +12,7 @@ from ..base import ListObject
 from ..fileDatabase import Jsondb
 from ..settings import tz
 from ..types import *
-from ..utilities import BotEmbed
+from ..utils import BotEmbed
 from .sqlSchema import *
 
 if TYPE_CHECKING:
@@ -237,6 +237,13 @@ class InviteRecord(BasicSchema, table=True):
     inviter_user: int = Field(sa_column=Column(BigInteger, primary_key=True))
     invite_time: datetime
     invite_code: str
+
+class PushRecord(BasicSchema, table=True):
+    __tablename__ = "push_record"
+
+    channel_id: str = Field(primary_key=True)
+    push_at: datetime
+    expire_at: datetime
 
 class Party(IdbaseSchema, table=True):
     __tablename__ = "party_datas"

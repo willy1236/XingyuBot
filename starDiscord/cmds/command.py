@@ -16,7 +16,7 @@ from starlib import (BotEmbed, ChoiceList, Jsondb, happycamp_guild, log,
 from starlib.dataExtractor import GoogleCloud
 from starlib.types import Coins
 from starlib.uiElement.view import DeleteAddRoleView, PollView, TRPGPlotView
-from starlib.utilities import (create_only_role_list,
+from starlib.utils import (create_only_role_list,
                                create_role_magification_dict, find,
                                random_color)
 

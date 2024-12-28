@@ -8,7 +8,7 @@ from ..database import sqldb
 from ..fileDatabase import Jsondb
 from ..models.rpg import Monster, RPGEquipment, RPGPlayerItem, MonsterInBattle
 from ..types import Coins
-from ..utilities import BotEmbed
+from ..utils import BotEmbed
 
 
 class RPGAdvanceButton(discord.ui.Button):

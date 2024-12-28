@@ -23,4 +23,5 @@ __all__ =[
     'CWA_API',
     'YoutubeRSS',
     "DiscordOauth",
+    'YoutubePush',
 ]

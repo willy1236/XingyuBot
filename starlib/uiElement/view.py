@@ -11,7 +11,7 @@ import matplotlib
 
 from ..database import sqldb
 from ..fileDatabase import Jsondb
-from ..utilities import BotEmbed, log
+from ..utils import BotEmbed, log
 
 if TYPE_CHECKING:
     from starlib.database import SQLEngine

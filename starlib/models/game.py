@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, model_validator
 
-from ..utilities import BotEmbed
+from ..utils import BotEmbed
 from ..fileDatabase import Jsondb,csvdb
 from ..settings import tz
 

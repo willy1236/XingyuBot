@@ -21,6 +21,7 @@ from pydantic import AliasPath, BaseModel, ConfigDict, Field
 from starlib import *
 from starlib.database import SQLEngine
 from starlib.dataExtractor import *
+from starlib.dataExtractor.community import YoutubePush
 from starlib.starAI import StarGeminiAI
 from starlib.types import *
 
@@ -91,7 +92,7 @@ if __name__ == '__main__':
 # print(text, weather.WeatherElement.DailyExtreme.DailyHigh.AirTemperature, weather.WeatherElement.DailyExtreme.DailyLow.AirTemperature)
 # print(weather.model_dump())
 
-tw_api = TwitchAPI()
+# tw_api = TwitchAPI()
 # clips = tw_api.get_clips(broadcaster_id=490765956, started_at=datetime.fromisoformat("2024-07-05 23:14:22+08:00"))
 # # clips = tw_api.get_clips(broadcaster_id=490765956)
 # new = datetime(2023, 12, 11, 18, 42, 55, tzinfo=timezone(timedelta(hours=8)))
@@ -101,4 +102,6 @@ tw_api = TwitchAPI()
 #         new = i.created_at
 
 # print(new)
-print(tw_api.get_user_by_id("174268844"))
+# print(tw_api.get_user_by_id("174268844"))
+# from starlib.models.mysql import NotifyChannel
+# print(f'{NotifyChannel.__table_args__["schema"]}.{NotifyChannel.__tablename__}.{str(NotifyChannel.__fields__)}')

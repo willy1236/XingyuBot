@@ -11,7 +11,7 @@ from ..fileDatabase import Jsondb
 from ..settings import tz
 from ..starAI import StarGeminiAI
 from ..uiElement.view import PollView
-from ..utilities import BotEmbed, scheduler
+from ..utils import BotEmbed, scheduler
 from ..base.base import BaseThread
 from .cache import StardbCache
 

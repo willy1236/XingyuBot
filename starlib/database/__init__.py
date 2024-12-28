@@ -3,7 +3,7 @@
 處理資料庫連線與操作。
 """
 from ..fileDatabase import Jsondb
-from ..utilities import log
+from ..utils import log
 from .mongodb import MongoDB
 from .mysql import MySQLDatabase, SQLEngine
 

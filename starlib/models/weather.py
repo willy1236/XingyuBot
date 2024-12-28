@@ -4,7 +4,7 @@ from typing import List, Optional
 import discord
 from pydantic import BaseModel, model_validator, AliasPath, Field, ConfigDict
 
-from ..utilities import BotEmbed
+from ..utils import BotEmbed
 from ..settings import tz
 
 weather_warning_emojis = {
