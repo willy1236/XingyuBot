@@ -14,9 +14,7 @@ from ..extension import Cog_Extension
 from ..uiElement.view import (PollView, ReactionRole1, ReactionRole2,
                               WelcomeView)
 
-keywords = {
-    '抹茶粉':'由威立冠名贊助撥出~'
-}
+keywords = {}
 
 voice_updata = Jsondb.config.get('voice_updata')
 debug_mode = Jsondb.config.get("debug_mode",True)
@@ -115,19 +113,6 @@ class event(Cog_Extension):
             await self.bot.dm(message)
             return
 
-        #關鍵字觸發
-        if message.content.startswith("!") and message.author != self.bot.user:
-            word = message.content.lstrip('!')
-            if word == 'azusa':
-                bot_user = self.bot.get_user(1203368856647630878)
-                embed = BotEmbed.user(user=bot_user,description=f"你好~我是假裝成星羽的Azusa，是一個discord機器人喔~\n你不可以輸入 </help:1067700245015834638> 來查看所有指令的用法\n\n希望我能在discord上幫助到你喔~\n有任何建議與需求不可以使用 </feedback:1067700244848058386> 指令\n\n支援伺服器：https://discord.gg/ye5yrZhYGF")
-                embed.set_footer(text="此機器人由 XX12 負責搞事")
-                await message.reply(embed=embed)
-                return
-            # elif word in keywords:
-            #     await message.reply(keywords[word])
-            #     return
-
         #介紹
         if message.content == self.bot.user.mention:
             await message.reply(embed=self.bot.about_embed())
@@ -137,8 +122,8 @@ class event(Cog_Extension):
         if message.guild and message.guild.id in [613747262291443742, 566533708371329024] and not message.author.bot:
             #ai chat
             if message.content and message.content.startswith(".") and len(message.content) > 1 and message.content[1] != ".":
-                #image_bytes = await message.attachments[0].read() if message.attachments else None
-                text = sclient.starai.generate_aitext(f"{Jsondb.get_member_name(message.author.id) or message.author.name}：{message.content[1:]}")
+                image_bytes = await message.attachments[0].read() if message.attachments else None
+                text = sclient.starai.generate_response(f"{Jsondb.get_member_name(message.author.id) or message.author.name}：{message.content[1:]}", image_bytes)
                 if text:
                     await message.reply(text,mention_author=False)
                 else:
@@ -206,6 +191,19 @@ class event(Cog_Extension):
             #         if channel:
             #             await channel.send(embed=embed)
             #     return
+    
+    @commands.Cog.listener("on_message")
+    async def keyword_trigger(self, message: discord.Message):
+        #關鍵字觸發
+        if message.content.startswith("!") and message.author != self.bot.user:
+            word = message.content.lstrip('!')
+            if word == 'azusa':
+                bot_user = self.bot.get_user(1203368856647630878)
+                embed = BotEmbed.user(user=bot_user,description=f"你好~我是假裝成星羽的Azusa，是一個discord機器人喔~\n你不可以輸入 </help:1067700245015834638> 來查看所有指令的用法\n\n希望我能在discord上幫助到你喔~\n有任何建議與需求不可以使用 </feedback:1067700244848058386> 指令\n\n支援伺服器：https://discord.gg/ye5yrZhYGF")
+                embed.set_footer(text="此機器人由 XX12 負責搞事")
+                await message.reply(embed=embed)
+            # elif word in keywords:
+            #     await message.reply(keywords[word])
 
     # @commands.Cog.listener()
     # async def on_raw_reaction_add(self, payload):

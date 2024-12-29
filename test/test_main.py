@@ -55,7 +55,7 @@ if __name__ == '__main__':
     ]
     # for i in content:
     #     print(f"{i}：")
-    #     print(starai.generate_aitext(f"{i}"))
+    #     print(starai.generate_response(i))
     #     print("="*50)
     #     time.sleep(10)
 

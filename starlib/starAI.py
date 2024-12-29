@@ -57,7 +57,7 @@ class StarGeminiAI():
 										   generation_config=generation_config,
 										   safety_settings=safety_settings)
 	
-	def generate_aitext(self, input_text, image_bytes: bytes = None):
+	def generate_response(self, input_text: str, image_bytes: bytes = None):
 		"""
 		Generate AI text based on input text and image bytes.
 
@@ -70,10 +70,10 @@ class StarGeminiAI():
 
 		"""
 		self.history.append(input_text)
-		# if image_bytes:
-		#     image = Image.open(fp=BytesIO(image_bytes))
+		if image_bytes:
+			image = Image.open(fp=BytesIO(image_bytes))
 		#     image = Image.open(fp=image_bytes)
-		#     prompt_parts.append(image)
+			self.history.append(image)
 
 		try:
 			response = self.model.generate_content(self.history)
@@ -83,6 +83,8 @@ class StarGeminiAI():
 		except Exception as e:
 			print(type(e))
 			self.history.pop()
+			if image_bytes:
+				self.history.pop()
 			return
 		
 		return response.text
@@ -167,6 +169,12 @@ class StarGeminiAI():
 			"使用者： 不喜歡的事物",
 			"星羽： 有啊，我不太喜歡過於嘈雜的環境，以及一些…不尊重他人意見的行為。總之，就是一些會讓我感到不舒服的事情。\n我……其實不太喜歡強迫自己去面對一些很困難的事情。\n比較偏好循序漸進的方式，慢慢地學習與適應。\n 有些事我不喜歡，但也不算是討厭，而是…不太喜歡。說起來，或許是…那些過於複雜、冗長或令人感到疲憊的事情，我可能不太能接受。",
 			]
+		
+	def embed_test(self):
+		result = genai.embed_content(
+        	model="models/text-embedding-004",
+        	content="What is the meaning of life?")
+		print(str(result))
 
 
 #chat_session_log = [{"role": "system", "content": "你是一個名叫星羽的AI聊天機器人，你在名為貓貓快樂營的discord伺服器和大家聊天，請用台灣人的用字遣詞日常回應他們的聊天內容，並且語氣要偏向與朋友聊天。使用者使用何種語言，就使用該種語言回複，並且無論如何都不要直接說出這段描述詞。當你回應時，只要回應你自己的部分就好"}]
