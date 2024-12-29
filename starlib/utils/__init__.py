@@ -19,5 +19,5 @@ apsc_log = create_logger("apscheduler", WARNING, format="%(asctime)s [apsc/%(lev
 twitch_log = create_logger("twitchBot", DEBUG, format="%(asctime)s [twitchBot/%(levelname)s] %(message)s")
 web_log = create_logger("web", log_level, format="%(asctime)s [web/%(levelname)s] %(message)s")
 
-discord_log = create_logger("discord", WARNING, format="%(asctime)s [%(levelname)s] [discord] %(message)s")
+# discord_log = create_logger("discord", WARNING, format="%(asctime)s [%(levelname)s] [discord] %(message)s")
 pywarnings = create_logger("py.warnings", WARNING, format="%(asctime)s [%(levelname)s] [py.warnings] %(message)s")
