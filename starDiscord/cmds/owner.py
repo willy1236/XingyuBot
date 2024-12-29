@@ -636,5 +636,12 @@ class owner(Cog_Extension):
         # 回應嵌入訊息
         await ctx.respond(embed=embed)
 
+    @commands.slash_command(description='重置ai的對話紀錄',guild_ids=debug_guilds)
+    @commands.is_owner()
+    async def resetaichat(self,ctx:discord.ApplicationContext):
+        await ctx.defer()
+        sclient.starai.init_history()
+        await ctx.respond('已重置ai的對話紀錄')
+
 def setup(bot):
     bot.add_cog(owner(bot))
