@@ -17,7 +17,8 @@
     "ApexEvent":{
         "Control": "控制",
         "Gun Run": "快速直擊",
-        "TDM": "團隊死鬥"
+        "TDM": "團隊死鬥",
+        "Lockdown": "全面封鎖"
     },
     "ApexCraftingItem": {
         "extended_light_mag": "紫色輕型彈匣",

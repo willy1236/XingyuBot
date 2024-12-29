@@ -4,6 +4,7 @@ import discord
 
 from starDiscord import DiscordBot
 from starlib import Jsondb, log, sclient
+from starServer.scheduler import run_scheduler
 
 config = Jsondb.config
 bot_code = config.get('bot_code')
@@ -26,13 +27,13 @@ def run_discord_bot():
 
 def run_twitch_bot():
     from starServer.tunnel_threads import LoopholeTwitchThread
-    log.debug('Twitch Bot start running...')
     twitchtunnel_thread = LoopholeTwitchThread()
     sclient.twitchtunnel_thread = twitchtunnel_thread
     twitchtunnel_thread.start()
     time.sleep(10)
 
     from starServer.twitch_chatbot import TwitchBotThread
+    log.debug('Twitch Bot start running...')
     twitchbot_thread = TwitchBotThread()
     sclient.twitch_bot_thread = twitchbot_thread
     twitchbot_thread.start()
@@ -50,9 +51,6 @@ def run_website():
     except:
         log.info('>> website: offline <<')
     time.sleep(2)
-
-def run_scheduler():
-    pass
 
 def main():
     pass

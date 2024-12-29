@@ -309,6 +309,7 @@ class task(Cog_Extension):
         for record in records:
             if record.expire_at < now:
                 push.add_push(record.channel_id, callback_url)
+                await asyncio.sleep(3)
                 data = push.get_push(record.channel_id, callback_url)
 
                 record.push_at = data.last_successful_verification

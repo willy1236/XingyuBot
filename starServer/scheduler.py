@@ -7,7 +7,7 @@ from apscheduler.triggers.cron import CronTrigger
 def test_job():
     print("Test job executed.")
 
-def start_scheduler():
+def run_scheduler():
     scheduler = BackgroundScheduler(timezone="Asia/Taipei")
     
     scheduler.add_job(test_job, CronTrigger(day_of_week=1, hour=9, minute=0))
@@ -23,4 +23,4 @@ def start_scheduler():
         print("定時任務已關閉。")
 
 if __name__ == '__main__':
-    start_scheduler()
+    run_scheduler()
