@@ -1,4 +1,6 @@
 from typing import TYPE_CHECKING, Optional, overload
+from os.path import basename
+import sys
 
 from ..database import sqldb
 from ..models.mysql import NotifyChannel, NotifyCommunity
@@ -22,9 +24,11 @@ class StardbCache:
     
     def __init__(self):
         self.cache = dict()
-        self.set_data()
+        if basename(sys.modules['__main__'].__file__) == "main.py":
+            self.init_notify()
+            log.debug("dbcache: notify init.")
 
-    def set_data(self):
+    def init_notify(self):
         """設定或重置所有資料"""
         for t in self.dict_type:
             self.update_notify_channel(t)

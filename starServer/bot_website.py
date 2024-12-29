@@ -76,9 +76,9 @@ async def get_yt_push(content):
     if sclient.bot:
         msg = sclient.bot.send_message(embed=embed)
         if not msg:
-            print('Channel not found. Message sent failed.')
+            web_log.info('Channel not found. Message sent failed.')
     else:
-        print('Bot not found.')
+        web_log.info('Bot not found.')
 
 @app.get('/youtube_push')
 def youtube_push_get(request:Request):

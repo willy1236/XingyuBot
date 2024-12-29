@@ -3,12 +3,12 @@ import os
 from datetime import datetime
 
 filename = datetime.now().strftime("%Y-%m-%d %H_%M_%S") + '.log'
+logging.captureWarnings(True)
 
-def create_logger(log_name='py.warnings', log_level=logging.DEBUG, file_log=False, dir_path="./logs", format='%(asctime)s [%(levelname)s] %(message)s'):
+def create_logger(log_name, log_level=logging.DEBUG, file_log=False, dir_path="./logs", format='%(asctime)s [%(levelname)s] %(message)s'):
     # config
-    logging.captureWarnings(log_name == "py.warnings")   # 捕捉 py waring message
     formatter = logging.Formatter(format)
-    logger = logging.getLogger(log_name)    # 捕捉 py waring message
+    logger = logging.getLogger(log_name)
     logger.setLevel(log_level)
 
     if file_log:

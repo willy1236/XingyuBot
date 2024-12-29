@@ -11,7 +11,7 @@ from ..database import sqldb
 from ..fileDatabase import Jsondb
 from ..settings import tz
 from ..starAI import StarGeminiAI
-from ..utils import BotEmbed, scheduler
+from ..utils import BotEmbed
 from .cache import StardbCache
 
 if TYPE_CHECKING:
@@ -88,13 +88,11 @@ class StarController:
     :attr sqldb: Mysql Database \\
     :attr starai: AI \\
     :attr bot: Discord Bot \\
-    :attr scheduler: Async Task Scheduler
     """
     def __init__(self):
         super().__init__()
         self.sqldb = sqldb
         self.dbcache:StardbCache = StardbCache() if self.sqldb else None
-        self.scheduler = scheduler
 
         self._starai:StarGeminiAI = None
         self.bot:DiscordBot = None

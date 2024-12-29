@@ -21,13 +21,11 @@ from pydantic import AliasPath, BaseModel, ConfigDict, Field
 from starlib import *
 from starlib.database import SQLEngine
 from starlib.dataExtractor import *
-from starlib.dataExtractor.community import YoutubePush
-from starlib.starAI import StarGeminiAI
 from starlib.types import *
 
 if __name__ == '__main__':
     pass
-    starai = StarGeminiAI()
+    starai = sclient.starai
     content = [
         # "威立：星羽 你認為台中摃殘黨與山珍海味黨的差異在哪裡",
         # "威立：星羽 你可以簡單介紹一下快樂營的各政黨嗎",
