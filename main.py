@@ -1,10 +1,11 @@
 import time
+import asyncio
 
 import discord
 
 from starDiscord import DiscordBot
 from starlib import Jsondb, log, sclient
-from starServer.scheduler import run_scheduler
+from starServer.scheduler import run_scheduler_in_thread
 
 config = Jsondb.config
 bot_code = config.get('bot_code')
@@ -73,5 +74,7 @@ if __name__ == "__main__":
 
     if twitch_bot:
         run_twitch_bot()
+
+    run_scheduler_in_thread()
     
     run_discord_bot()

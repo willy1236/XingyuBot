@@ -122,8 +122,16 @@ class event(Cog_Extension):
         if message.guild and message.guild.id in [613747262291443742, 566533708371329024] and not message.author.bot:
             #ai chat
             if message.content and message.content.startswith(".") and len(message.content) > 1 and message.content[1] != ".":
-                image_bytes = await message.attachments[0].read() if message.attachments and message.attachments[0].content_type.startswith("image") else None
-                text = sclient.starai.generate_response(f"{Jsondb.get_member_name(message.author.id) or message.author.name}：{message.content[1:]}", image_bytes)
+                image_bytes = None
+                file = None
+                if message.attachments:
+                    att = message.attachments[0]
+                    if att.content_type.startswith("image"):
+                        image_bytes = await att.read() 
+                    elif att.content_type == "application/pdf":
+                        file = sclient.starai.get_or_set_file(att.filename, await att.read())
+                
+                text = sclient.starai.generate_response(f"{Jsondb.get_member_name(message.author.id) or message.author.name}：{message.content[1:]}", image_bytes, file)
                 if text:
                     await message.reply(text,mention_author=False)
                 else:

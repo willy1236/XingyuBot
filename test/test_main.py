@@ -64,6 +64,15 @@ if __name__ == '__main__':
     # 	i = input(pre)
     # 	print(starai.generate_aitext(f"{pre}{i}"))
     # 	print("="*50)
+    
+    # with open(r"", "rb") as f:
+    #     file = starai.get_or_set_file(f.name.split("\\")[-1], f.read())
+    #     print(file.name)
+    #     print(starai.generate_response("請描述這個檔案的內容", files=file))
+    
+    # import google.generativeai as genai
+    # for f in genai.list_files():
+    #     print(f.name, f.mime_type, f.display_name, f.expiration_time)
 
 # oauth_setting = Jsondb.get_token("discord_oauth")
 
