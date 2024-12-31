@@ -6,6 +6,7 @@ import discord
 from discord.ext import commands, tasks
 from requests.exceptions import ConnectTimeout, RequestException
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.cron import CronTrigger
 
 from starlib import BotEmbed, Jsondb, log, sclient, tz, utils
 from starlib.dataExtractor import *
@@ -43,6 +44,7 @@ class task(Cog_Extension):
 
             if self.bot.user.id == 589744540240314368:
                 scheduler.add_job(self.birtday_task,'cron',month=10,day=16,hour=8,minute=0,second=0,jitter=30,misfire_grace_time=60)
+                scheduler.add_job(self.new_years_eve_task, CronTrigger(month=1, day=1, hour=0, minute=0, second=0), misfire_grace_time=60)
         else:
             pass
         
@@ -304,6 +306,11 @@ class task(Cog_Extension):
     async def birtday_task(self):
         channel = self.bot.get_channel(566533708371329026)
         await channel.send("今天是個特別的日子，別忘記了喔⭐")
+
+    async def new_years_eve_task(self):
+        channel = self.bot.get_channel(643764975663448064)
+        msg = await channel.send("新的一年 祝大家新年快樂~🎉\n來自快樂營的新年轟炸 @everyone ", allowed_mentions=discord.AllowedMentions(everyone=True))
+        await msg.add_reaction("🎉")
 
     async def refresh_yt_push(self):
         push = YoutubePush()
