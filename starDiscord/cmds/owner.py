@@ -390,7 +390,7 @@ class owner(Cog_Extension):
             server_folder = Jsondb.config.get('mc_server').get('server_folder')
             cmd = rf"D: && cd D:\minecraft_server\{server_folder} && run.bat"
             global mcserver_process
-            mcserver_process = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=subprocess.CREATE_NEW_CONSOLE)
+            mcserver_process = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=subprocess.CREATE_NEW_CONSOLE, text=True)
             msg = await ctx.respond("已發送開啟指令")
             for _ in range(10):
                 await asyncio.sleep(10)
