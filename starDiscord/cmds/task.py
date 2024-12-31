@@ -4,7 +4,7 @@ from datetime import date, datetime, timedelta, timezone
 
 import discord
 from discord.ext import commands, tasks
-from requests.exceptions import ConnectTimeout
+from requests.exceptions import ConnectTimeout, RequestException
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from starlib import BotEmbed, Jsondb, log, sclient, tz, utils
@@ -100,9 +100,12 @@ class task(Cog_Extension):
             await self.bot.edit_notify_channel(forecast.embed(), NotifyChannelType.WeatherForecast, "6小時天氣預報")
 
     async def apex_map_rotation(self):
-        data = apexapi.get_map_rotation()
-        if data:
-            await self.bot.edit_notify_channel(data.embeds(), NotifyChannelType.ApexRotation)
+        try:
+            data = apexapi.get_map_rotation()
+            if data:
+                await self.bot.edit_notify_channel(data.embeds(), NotifyChannelType.ApexRotation)
+        except RequestException:
+            log.warning("連線失敗", exc_info=True)
 
     #@tasks.loop(minutes=3)
     async def twitch_live(self):
