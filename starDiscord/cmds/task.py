@@ -309,7 +309,7 @@ class task(Cog_Extension):
 
     async def new_years_eve_task(self):
         channel = self.bot.get_channel(643764975663448064)
-        msg = await channel.send("新的一年 祝大家新年快樂~🎉\n來自快樂營的新年轟炸 @everyone ", allowed_mentions=discord.AllowedMentions(everyone=True))
+        msg = await channel.send("新的一年 祝大家新年快樂~🎉\n來自快樂營的2025新年轟炸 @everyone ", allowed_mentions=discord.AllowedMentions(everyone=True))
         await msg.add_reaction("🎉")
 
     async def refresh_yt_push(self):
