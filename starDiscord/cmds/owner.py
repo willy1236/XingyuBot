@@ -435,8 +435,8 @@ class owner(Cog_Extension):
         if mcserver_process:
             mcserver_process.stdin.write('/stop\n')
             mcserver_process.stdin.flush()
-            mcserver_process.wait()
-            await ctx.respond("伺服器已關閉")
+            return_code = mcserver_process.wait()
+            await ctx.respond(f"伺服器已關閉，回傳代碼 {return_code}")
             mcserver_process = None
         else:
             await ctx.respond("伺服器未開啟或未由我開啟")
