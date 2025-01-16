@@ -130,7 +130,7 @@ async def on_channel_subscription_message(event: eventsub.ChannelSubscriptionMes
     
     action_channel_id = TARGET_CHANNEL.get(int(event.event.broadcaster_user_id))
     if action_channel_id:
-        chat_text = f"感謝 {event.event.user_name} 的{event.event.duration_months}個月訂閱！"
+        chat_text = f"感謝 {event.event.user_name} 的訂閱！"
         if event.event.cumulative_months:
             chat_text += f"累積訂閱{event.event.cumulative_months}個月！"
         await chat.send_message(event.event.broadcaster_user_login, chat_text)

@@ -412,11 +412,17 @@ class owner(Cog_Extension):
             return
         
         try:
+            status = server.status()
+        except Exception as e:
+            await ctx.respond(f"無法獲取伺服器狀態")
+            return
+        
+        try:
             latency = server.ping()
         except Exception as e:
             latency = None
         full_ip = f"{server.address.host}:{server.address.port}" if server.address.port != 25565 else server.address.host
-        status = server.status()
+        
         
         embed = BotEmbed.general(full_ip, title="伺服器狀態", description=status.description)
         embed.add_field(name="伺服器版本", value=status.version.name, inline=True)

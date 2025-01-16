@@ -315,18 +315,16 @@ class task(Cog_Extension):
     async def refresh_yt_push(self):
         push = YoutubePush()
         records = sclient.sqldb.get_push_records()
-        now = datetime.now()
         callback_url = Jsondb.get_token("youtube_push")
         for record in records:
-            if record.expire_at < now:
-                push.add_push(record.channel_id, callback_url)
-                await asyncio.sleep(3)
-                data = push.get_push(record.channel_id, callback_url)
+            push.add_push(record.channel_id, callback_url)
+            await asyncio.sleep(3)
+            data = push.get_push(record.channel_id, callback_url)
 
-                record.push_at = data.last_successful_verification
-                record.expire_at = data.expiration_time
-                sclient.sqldb.merge(record)
-                await asyncio.sleep(1)
+            record.push_at = data.last_successful_verification
+            record.expire_at = data.expiration_time
+            sclient.sqldb.merge(record)
+            await asyncio.sleep(1)
 
 
 def setup(bot):
