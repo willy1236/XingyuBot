@@ -80,13 +80,13 @@ class LoopholeTwitchThread(BaseThread):
 
 class NgrokTwitchThread(BaseThread):
     def __init__(self):
-        super().__init__(name='LoopholeTwitchThread')
+        super().__init__(name='NgrokTwitchThread')
 
     def run(self):
         reconnection_times = 0
         callback_url = Jsondb.get_token('twitch_chatbot')['callback_uri'].split('://')[1]
         while not self._stop_event.is_set():
-            log.info(f"Starting LoopholeTwitchThread {reconnection_times}")
+            log.info(f"Starting NgrokTwitchThread {reconnection_times}")
             result = subprocess.run(["ngrok", "http", f"--url={callback_url}", "14001"], capture_output=True, text=True)
             log.debug(f'Stdout: {result.stdout}')
             log.debug(f'Stderr: {result.stderr}')
