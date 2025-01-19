@@ -12,19 +12,19 @@ class ltThread(BaseThread):
     def run(self):
         reconnection_times = 0
         while not self._stop_event.is_set():
-            log.info("Starting ltThread")
+            log.info(f"Starting {self.name}")
             os.system('lt --port 14000 --subdomain starbot --max-sockets 10 --local-host 127.0.0.1 --max-https-sockets 86395')
             #cmd = [ "cmd","/c",'lt', '--port', '14000', '--subdomain', 'willy1236', '--max-sockets', '10', '--local-host', '127.0.0.1', '--max-https-sockets', '86395']
             #cmd = ["cmd","/c","echo", "Hello, World!"]
             #self.process = psutil.Popen(cmd)
             #self.process.wait()
-            log.info("Finished ltThread")
+            log.info(f"Finished {self.name}")
             time.sleep(5)
             reconnection_times += 1
             if reconnection_times >= 5:
                 self._stop_event.set()
 
-        print("ltThread stopped")
+        print(f"{self.name} stopped")
 
 class ServeoThread(BaseThread):
     def __init__(self):
@@ -33,7 +33,7 @@ class ServeoThread(BaseThread):
     def run(self):
         reconnection_times = 0
         while not self._stop_event.is_set():
-            log.debug(f"Starting ServeoThread {reconnection_times}")
+            log.debug(f"Starting {self.name} {reconnection_times}")
             #result = subprocess.run(["ssh", "-R", "cloudfoam:80:127.0.0.1:14000", "-R", "cloudfoamtwitch:80:127.0.0.1:14001", "serveo.net"], capture_output=True, text=True)
             result = subprocess.run(["ssh", "-R", "yunmo:80:127.0.0.1:14000", "serveo.net"], capture_output=True, text=True)
             log.debug(f'Stdout: {result.stdout}')
@@ -51,7 +51,7 @@ class LoopholeThread(BaseThread):
     def run(self):
         reconnection_times = 0
         while not self._stop_event.is_set():
-            log.debug(f"Starting LoopholeThread {reconnection_times}")
+            log.debug(f"Starting {self.name} {reconnection_times}")
             result = subprocess.run(["loophole", "http", "14000", "127.0.0.1", "--hostname", "cloudfoam"], capture_output=True, text=True)
             log.debug(f'Stdout: {result.stdout}')
             log.debug(f'Stderr: {result.stderr}')
@@ -68,7 +68,7 @@ class LoopholeTwitchThread(BaseThread):
     def run(self):
         reconnection_times = 0
         while not self._stop_event.is_set():
-            log.info(f"Starting LoopholeTwitchThread {reconnection_times}")
+            log.info(f"Starting {self.name} {reconnection_times}")
             result = subprocess.run(["loophole", "http", "14001", "127.0.0.1", "--hostname", "twitchcloudfoam"], capture_output=True, text=True)
             log.debug(f'Stdout: {result.stdout}')
             log.debug(f'Stderr: {result.stderr}')
@@ -86,7 +86,7 @@ class NgrokTwitchThread(BaseThread):
         reconnection_times = 0
         callback_url = Jsondb.get_token('twitch_chatbot')['callback_uri'].split('://')[1]
         while not self._stop_event.is_set():
-            log.info(f"Starting NgrokTwitchThread {reconnection_times}")
+            log.info(f"Starting {self.name} {reconnection_times}")
             result = subprocess.run(["ngrok", "http", f"--url={callback_url}", "14001"], capture_output=True, text=True)
             log.debug(f'Stdout: {result.stdout}')
             log.debug(f'Stderr: {result.stderr}')
