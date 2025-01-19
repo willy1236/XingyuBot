@@ -2,7 +2,7 @@ import os
 import subprocess
 import time
 
-from starlib import BaseThread, log
+from starlib import BaseThread, log, Jsondb
 
 
 class ltThread(BaseThread):
@@ -70,6 +70,24 @@ class LoopholeTwitchThread(BaseThread):
         while not self._stop_event.is_set():
             log.info(f"Starting LoopholeTwitchThread {reconnection_times}")
             result = subprocess.run(["loophole", "http", "14001", "127.0.0.1", "--hostname", "twitchcloudfoam"], capture_output=True, text=True)
+            log.debug(f'Stdout: {result.stdout}')
+            log.debug(f'Stderr: {result.stderr}')
+            log.debug(f'Exit status: {result.returncode}')
+            time.sleep(30)
+            reconnection_times += 1
+            if reconnection_times >= 5:
+                self._stop_event.set()
+
+class NgrokTwitchThread(BaseThread):
+    def __init__(self):
+        super().__init__(name='LoopholeTwitchThread')
+
+    def run(self):
+        reconnection_times = 0
+        callback_url = Jsondb.get_token('twitch_chatbot')['callback_uri'].split('://')[1]
+        while not self._stop_event.is_set():
+            log.info(f"Starting LoopholeTwitchThread {reconnection_times}")
+            result = subprocess.run(["ngrok", "http", f"--url={callback_url}", "14001"], capture_output=True, text=True)
             log.debug(f'Stdout: {result.stdout}')
             log.debug(f'Stderr: {result.stderr}')
             log.debug(f'Exit status: {result.returncode}')

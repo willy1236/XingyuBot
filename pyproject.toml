@@ -1,12 +1,12 @@
 [tool.poetry]
 name = "xingyubot"
-version = "0.2.6"
+version = "0.2.7"
 description = "一個集結許多功能的DiscordBot"
 authors = ["威立 <66502303+willy1236@users.noreply.github.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = ">=3.11, <3.13"
 py-cord = {extras = ["voice"], version = "^2.5.0"}
 requests = "^2.32.3"
 feedparser = "^6.0.11"

@@ -27,11 +27,11 @@ def run_discord_bot():
         log.error(e)
 
 def run_twitch_bot():
-    from starServer.tunnel_threads import LoopholeTwitchThread
-    twitchtunnel_thread = LoopholeTwitchThread()
+    from starServer.tunnel_threads import NgrokTwitchThread
+    twitchtunnel_thread = NgrokTwitchThread()
     sclient.twitchtunnel_thread = twitchtunnel_thread
     twitchtunnel_thread.start()
-    time.sleep(10)
+    time.sleep(5)
 
     from starServer.twitch_chatbot import TwitchBotThread
     log.debug('Twitch Bot start running...')

@@ -112,3 +112,11 @@ if __name__ == '__main__':
 # print(tw_api.get_user_by_id("174268844"))
 # from starlib.models.mysql import NotifyChannel
 # print(f'{NotifyChannel.__table_args__["schema"]}.{NotifyChannel.__tablename__}.{str(NotifyChannel.__fields__)}')
+
+# print(YoutubePush().get_push("UCUEXMpxIa7le_CK6yYRAboA", Jsondb.get_token("youtube_push")).aggregate_statistics)
+notion_api = NotionAPI()
+# print(notion_api.get_page("fcf82e7b8323414196e3e4fd25a3a42b"))
+r = notion_api.get_block_children("fcf82e7b8323414196e3e4fd25a3a42b")
+if r:
+    for i in r["results"]:
+        print(i)

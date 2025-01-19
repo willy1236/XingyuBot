@@ -473,11 +473,27 @@ class NotionAPI():
         else:
             print(apidata['message'])
     
+    def get_page_property(self,page_id:str,property_id:str):
+        r = requests.get(f"{self.url}/pages/{page_id}/properties/{property_id}",headers=self.headers)
+        apidata = r.json()
+        if r.status_code == 200:
+            print(apidata)
+        else:
+            print(apidata['message'])
+
     def get_block(self,block_id:str):
         r = requests.get(f"{self.url}/blocks/{block_id}",headers=self.headers)
         apidata = r.json()
         if r.status_code == 200:
             print(apidata)
+        else:
+            print(apidata['message'])
+
+    def get_block_children(self,block_id:str):
+        r = requests.get(f"{self.url}/blocks/{block_id}/children",headers=self.headers)
+        apidata = r.json()
+        if r.status_code == 200:
+            return apidata
         else:
             print(apidata['message'])
     

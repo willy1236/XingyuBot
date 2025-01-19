@@ -583,24 +583,27 @@ class RotationType(BaseModel):
 
 class ApexMapRotation(BaseModel):
     battle_royale: RotationType
-    ranked: RotationType
+    ranked: RotationType | None = None
     ltm: RotationType
 
     def embeds(self):
         tl:dict = jdict['ApexMap']
         event_tl:dict = jdict['ApexEvent']
         now = datetime.now(tz=tz)
-        embed_rank = BotEmbed.simple("Apex地圖：積分")
-        embed_rank.add_field(name="目前地圖",value=tl.get(self.ranked.current.map,self.ranked.current.map))
-        embed_rank.add_field(name="開始時間",value=self.ranked.current.start.strftime("%Y/%m/%d %H:%M"))
-        embed_rank.add_field(name="結束時間",value=self.ranked.current.end.strftime("%Y/%m/%d %H:%M"))
-        embed_rank.add_field(name="下張地圖",value=tl.get(self.ranked.next.map,self.ranked.next.map))
-        embed_rank.add_field(name="開始時間",value=self.ranked.next.start.strftime("%Y/%m/%d %H:%M"))
-        embed_rank.add_field(name="結束時間",value=self.ranked.next.end.strftime("%Y/%m/%d %H:%M"))
-        embed_rank.add_field(name="目前地圖剩餘時間",value=self.ranked.current.remainingTimer)
-        embed_rank.set_image(url=self.ranked.current.asset)
-        embed_rank.timestamp = now
-        embed_rank.set_footer(text='更新時間')
+        lst = list()
+        if self.ranked is not None:
+            embed_rank = BotEmbed.simple("Apex地圖：積分")
+            embed_rank.add_field(name="目前地圖",value=tl.get(self.ranked.current.map,self.ranked.current.map))
+            embed_rank.add_field(name="開始時間",value=self.ranked.current.start.strftime("%Y/%m/%d %H:%M"))
+            embed_rank.add_field(name="結束時間",value=self.ranked.current.end.strftime("%Y/%m/%d %H:%M"))
+            embed_rank.add_field(name="下張地圖",value=tl.get(self.ranked.next.map,self.ranked.next.map))
+            embed_rank.add_field(name="開始時間",value=self.ranked.next.start.strftime("%Y/%m/%d %H:%M"))
+            embed_rank.add_field(name="結束時間",value=self.ranked.next.end.strftime("%Y/%m/%d %H:%M"))
+            embed_rank.add_field(name="目前地圖剩餘時間",value=self.ranked.current.remainingTimer)
+            embed_rank.set_image(url=self.ranked.current.asset)
+            embed_rank.timestamp = now
+            embed_rank.set_footer(text='更新時間')
+        lst.append(embed_rank)
 
         embed_battle_royale = BotEmbed.simple("Apex地圖：大逃殺")
         embed_battle_royale.add_field(name="目前地圖",value=tl.get(self.battle_royale.current.map,self.battle_royale.current.map))
@@ -613,6 +616,7 @@ class ApexMapRotation(BaseModel):
         embed_battle_royale.set_image(url=self.battle_royale.current.asset)
         embed_battle_royale.timestamp = now
         embed_battle_royale.set_footer(text='更新時間')
+        lst.append(embed_battle_royale)
 
         embed_ltm = BotEmbed.simple(f"Apex地圖：限時模式")
         embed_ltm.add_field(name="目前地圖",value=f"{event_tl.get(self.ltm.current.eventName,self.ltm.current.eventName)}：{tl.get(self.ltm.current.map,self.ltm.current.map)}")
@@ -625,8 +629,9 @@ class ApexMapRotation(BaseModel):
         embed_ltm.set_image(url=self.ltm.current.asset)
         embed_ltm.timestamp = now
         embed_ltm.set_footer(text='更新時間')
+        lst.append(embed_ltm)
 
-        return [embed_rank,embed_battle_royale,embed_ltm]
+        return lst
 
 class ApexStatus():
     def __init__(self,data):

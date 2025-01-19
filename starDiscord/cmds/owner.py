@@ -386,20 +386,26 @@ class owner(Cog_Extension):
         port = 25565
         if is_server_running_by_process() or is_server_running_by_connect(ip, port):
             await ctx.respond("伺服器已開啟", embed=server_status(ip, port))
+            return
         else:
             server_folder = Jsondb.config.get('mc_server').get('server_folder')
             cmd = rf"D: && cd D:\minecraft_server\{server_folder} && run.bat"
             global mcserver_process
-            mcserver_process = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=subprocess.CREATE_NEW_CONSOLE, text=True)
+            mcserver_process = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=subprocess.CREATE_NEW_CONSOLE, text=True)
             msg = await ctx.respond("已發送開啟指令")
             for _ in range(10):
                 await asyncio.sleep(10)
-                if is_server_running_by_process() or is_server_running_by_connect(ip, port):
+                if is_server_running_by_connect(ip, port):
                     try:
                         await msg.edit(embed=server_status(ip, port))
                     except:
                         await msg.edit("伺服器已開啟")
                     break
+            
+            if is_server_running_by_process():
+                await msg.edit("伺服器已開啟")
+            else:
+                await msg.edit("伺服器開啟超過預定時間，請聯繫管理者進行確認")
     
     @mcserver.command(description="查詢mc伺服器")
     @commands.cooldown(rate=1,per=3)
