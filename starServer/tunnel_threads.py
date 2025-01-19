@@ -87,7 +87,7 @@ class NgrokTwitchThread(BaseThread):
         callback_url = Jsondb.get_token('twitch_chatbot')['callback_uri'].split('://')[1]
         while not self._stop_event.is_set():
             log.info(f"Starting {self.name} {reconnection_times}")
-            result = subprocess.run(["ngrok", "http", f"--url={callback_url}", "14001"], capture_output=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            result = subprocess.run(["ngrok", "http", f"--url={callback_url}", "14001"], text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             log.debug(f'Stdout: {result.stdout}')
             log.debug(f'Stderr: {result.stderr}')
             log.debug(f'Exit status: {result.returncode}')
