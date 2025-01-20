@@ -26,7 +26,7 @@ def check_registration(member:discord.Member):
     earlest_guildid = None
     guild_list = guild_registration.keys()
     for guild in member.mutual_guilds:
-        if str(guild.id) in guild_list:
+        if guild.id in guild_list:
             join_time = guild.get_member(member.id).joined_at
             if join_time < earlest:
                 earlest = join_time
@@ -359,7 +359,7 @@ class event(Cog_Extension):
                 dbdata = sclient.sqldb.get_resgistration_by_guildid(earlest_guildid)
                 user = DiscordUser(discord_id=member.id, registrations_id=dbdata.registrations_id)
                 sclient.sqldb.merge(user)
-                await member.add_roles(member.guild.get_role(guild_registration[str(earlest_guildid)]), reason="加入的最早伺服器")
+                await member.add_roles(member.guild.get_role(guild_registration[earlest_guildid]), reason="加入的最早伺服器")
 
 
     @commands.Cog.listener()
