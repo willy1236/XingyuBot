@@ -205,6 +205,14 @@ class debug(Cog_Extension):
         role_connection_metadata_records = discord.ApplicationRoleConnectionMetadata(type=discord.ApplicationRoleConnectionMetadataType.boolean_equal,key="metarolekey",name="metarole1",description="metarole1 description")
         data = await self.bot.update_role_connection_metadata_records(role_connection_metadata_records)
         await ctx.respond(f'{data}')
+
+    @commands.is_owner()
+    @commands.slash_command(description='戶籍測試', guild_ids=debug_guilds)
+    async def residenttest(self,ctx:discord.ApplicationContext, member:discord.Option(discord.Member, required=True, name='成員')):
+        await ctx.defer()
+        from .bot_event import check_registration
+        member: discord.Member
+        await ctx.respond(f"{member.display_name}：{check_registration(member)}",ephemeral=True)
         
 
     # @commands.slash_command()

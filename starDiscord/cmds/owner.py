@@ -357,19 +357,18 @@ class owner(Cog_Extension):
     @commands.cooldown(rate=1,per=60)
     async def start(self,ctx:discord.ApplicationContext):
         def is_server_running_by_process():
-            # 檢查所有正在運行的進程
             for process in psutil.process_iter(['pid', 'name']):
                 if 'java' in process.info['name']:  # Minecraft伺服器通常是以Java運行
                     return True
             return False
 
         def is_server_running_by_connect(host='localhost', port=25565):
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                try:
+            try:
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                     s.connect((host, port))
                     return True
-                except ConnectionRefusedError:
-                    return False
+            except ConnectionRefusedError:
+                return False
 
         def server_status(ip, port):
             server = JavaServer.lookup(f"{ip}:{port}")
@@ -384,12 +383,9 @@ class owner(Cog_Extension):
         await ctx.defer()
         ip = "26.111.85.196"
         port = 25565
-        try:
-            if is_server_running_by_process() or is_server_running_by_connect(ip, port):
-                await ctx.respond("伺服器已開啟", embed=server_status(ip, port))
-                return
-        except ConnectionRefusedError:
-            pass
+        if is_server_running_by_process() or is_server_running_by_connect(ip, port):
+            await ctx.respond("伺服器已開啟", embed=server_status(ip, port))
+            return
         
         server_folder = Jsondb.config.get('mc_server').get('server_folder')
         cmd = rf"D: && cd D:\minecraft_server\{server_folder} && run.bat"
