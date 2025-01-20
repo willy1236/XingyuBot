@@ -366,7 +366,7 @@ class SQLNotifySystem(BaseSQLEngine):
             self.session.exec(statement)
             self.session.commit()
 
-    def get_push_records(self):
+    def get_expired_push_records(self):
         now = datetime.now()
         statement = select(PushRecord).where(PushRecord.expire_at < now)
         result = self.session.exec(statement).all()

@@ -314,7 +314,7 @@ class task(Cog_Extension):
 
     async def refresh_yt_push(self):
         push = YoutubePush()
-        records = sclient.sqldb.get_push_records()
+        records = sclient.sqldb.get_expired_push_records()
         callback_url = Jsondb.get_token("youtube_push")
         for record in records:
             push.add_push(record.channel_id, callback_url)
