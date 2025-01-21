@@ -596,6 +596,39 @@ class command(Cog_Extension):
         
         await ctx.respond(f"已註冊戶籍至 {guild.name}")
 
+    @registration.command(description='批量設定戶籍')
+    @commands.cooldown(rate=1,per=10)
+    async def batchset(self, ctx, role:discord.Option(discord.Role,name='要批量驗證的身分組')):
+        await ctx.defer()
+        results_text = []
+        role_guild = self.bot.get_guild(happycamp_guild[0])
+        from starlib.models.mysql import DiscordUser
+        for member in role.members:
+            member: discord.Member
+            user = sclient.sqldb.get_dcuser(member.id)
+            if user and user.registrations_id:
+                guild = self.bot.get_guild(user.registration.guild_id)
+                results_text.append(f"{member.display_name}：已經註冊戶籍至 {guild.name if guild else user.registration.guild_id}")
+                continue
+
+            guild_id = check_registration(member)
+            if guild_id:
+                guild = self.bot.get_guild(guild_id)
+                resgistration = sclient.sqldb.get_resgistration_by_guildid(guild_id)
+                role = role_guild.get_role(resgistration.role_id)
+
+                if role:
+                    await role_guild.get_member(member.id).add_roles(role)
+                
+                duser = DiscordUser(discord_id=member.id, registrations_id=resgistration.registrations_id)
+                sclient.sqldb.merge(duser)
+            
+            results_text.append(f"{member.display_name}：已註冊戶籍至 {guild.name}")
+        else:
+            results_text.append(f"{member.display_name}：沒有可註冊的戶籍")
+
+        await ctx.respond("\n".join(results_text))
+
     @commands.slash_command(description="紀錄身分組")
     @commands.is_owner()
     async def registerrole(self,ctx,
