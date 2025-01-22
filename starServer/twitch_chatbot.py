@@ -83,6 +83,9 @@ async def on_stream_online(event: eventsub.StreamOnlineEvent):
         is_live = Jsondb.get_cache(JsonCacheType.TwitchLive).get(event.event.broadcaster_user_id)
         if not is_live:
             embed = twapi.get_lives(event.event.broadcaster_user_id)[event.event.broadcaster_user_id].embed()
+            profile_image_url = twapi.get_user_by_id(event.event.broadcaster_user_id).profile_image_url
+            if profile_image_url:
+                embed.author.icon_url = profile_image_url
             asyncio.run_coroutine_threadsafe(sclient.bot.send_notify_communities(embed, NotifyCommunityType.TwitchLive, event.event.broadcaster_user_id), sclient.bot.loop)
             Jsondb.set_cache(JsonCacheType.TwitchLive, event.event.broadcaster_user_id, True)
 
@@ -237,14 +240,12 @@ async def run():
     #     token, refresh_token = await refresh_access_token(refresh_token, APP_ID, APP_SECRET)
     #     jtoken['token'] = token
     #     jtoken['refresh'] = refresh_token
-    #     Jsondb.set_token("twitch_chatbot", jtoken)
     
     # set up twitch api instance and add user authentication with some scopes
     twitch = await Twitch(APP_ID, APP_SECRET)
     # auth = UserAuthenticator(twitch, USER_SCOPE)
     # token, refresh_token = await auth.authenticate()
-    # print(token, refresh_token)
-    #  await twitch.set_user_authentication(token, USER_SCOPE, refresh_token)
+    # await twitch.set_user_authentication(token, USER_SCOPE, refresh_token)
 
     # 使用自帶的函式處理token
     helper = UserAuthenticationStorageHelper(twitch, USER_SCOPE, storage_path=PurePath('./database/twitch_token.json'))
@@ -260,13 +261,9 @@ async def run():
     chat = await Chat(twitch)
 
     # register the handlers for the events you want
-    # listen to when the bot is done starting up and ready to join channels
     chat.register_event(ChatEvent.READY, on_ready)
-    # listen to chat messages
     chat.register_event(ChatEvent.MESSAGE, on_message)
-    # listen to channel subscriptions
     chat.register_event(ChatEvent.SUB, on_sub)
-    # there are more events, you can view them all in this documentation
     chat.register_event(ChatEvent.JOINED, on_bot_joined)
     chat.register_event(ChatEvent.LEFT, on_bot_leaved)
     chat.register_event(ChatEvent.NOTICE, on_server_notice)

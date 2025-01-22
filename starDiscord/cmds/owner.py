@@ -354,7 +354,7 @@ class owner(Cog_Extension):
             await ctx.respond(response if response else "指令已發送")
 
     @mcserver.command(description="開啟mc伺服器")
-    @commands.cooldown(rate=1,per=60)
+    @commands.cooldown(rate=1,per=100)
     async def start(self,ctx:discord.ApplicationContext):
         def is_server_running_by_process():
             for process in psutil.process_iter(['pid', 'name']):
@@ -383,8 +383,13 @@ class owner(Cog_Extension):
         await ctx.defer()
         ip = "26.111.85.196"
         port = 25565
-        if is_server_running_by_process() or is_server_running_by_connect(ip, port):
-            await ctx.respond("伺服器已開啟", embed=server_status(ip, port))
+        if  is_server_running_by_connect(ip, port) or is_server_running_by_process():
+            try:
+                embed = server_status(ip, port)
+            except Exception as e:
+                embed = BotEmbed.general(f"{ip}:{port}", title="伺服器已開啟", description="無法獲取伺服器狀態，若仍然無法連線，請聯繫管理者進行確認")
+            
+            await ctx.respond("伺服器已開啟，", embed=embed)
             return
         
         server_folder = Jsondb.config.get('mc_server').get('server_folder')
@@ -399,12 +404,10 @@ class owner(Cog_Extension):
                     await msg.edit(embed=server_status(ip, port))
                 except:
                     await msg.edit("伺服器已開啟")
-                break
+                return
         
-        if is_server_running_by_process():
-            await msg.edit("伺服器已開啟")
-        else:
-            await msg.edit("伺服器開啟超過預定時間，請聯繫管理者進行確認")
+        await msg.edit("伺服器開啟超過預定時間，請聯繫管理者進行確認")
+            
     
     @mcserver.command(description="查詢mc伺服器")
     @commands.cooldown(rate=1,per=3)
@@ -435,7 +438,7 @@ class owner(Cog_Extension):
         if latency is not None:
             embed.add_field(name="延遲", value=f"{latency:.2f} ms", inline=True)
         
-        file = discord.File(base64_to_buffer(status.icon), filename="server_icon.png") if status.icon else None
+        file = discord.File(fp=base64_to_buffer(status.icon), filename="server_icon.png") if status.icon is not None else None
         await ctx.respond(embed=embed, file=file)
     
     @mcserver.command(description="關閉mc伺服器")
@@ -446,7 +449,7 @@ class owner(Cog_Extension):
         if mcserver_process:
             mcserver_process.stdin.write('/stop\n')
             mcserver_process.stdin.flush()
-            return_code = mcserver_process.wait()
+            return_code = mcserver_process.wait(60)
             await ctx.respond(f"伺服器已關閉，回傳代碼 {return_code}")
             mcserver_process = None
         else:

@@ -85,7 +85,6 @@ class DiscordBot(discord.Bot):
     async def mention_everyone(self,msg:discord.Message):
         dm_channel = self.get_channel(Jsondb.config.get('mention_everyone_channel'))
         embed=BotEmbed.general(name=msg.author,icon_url=msg.author.display_avatar.url, title="提及所有人訊息", description=f"{msg.content}\n{msg.jump_url}")
-        embed.add_field(name='訊息內容', value=msg.content, inline=True)
         embed.add_field(name='發送者', value=f"{msg.author}\n{msg.author.id}", inline=False)
         embed.add_field(name='來源頻道', value=f'{msg.channel}\n{msg.channel.id}', inline=True)
         embed.add_field(name='來源群組', value=f'{msg.guild}\n{msg.guild.id}', inline=True)

@@ -8,6 +8,7 @@ import discord
 from discord.commands import OptionChoice, SlashCommandGroup
 from discord.errors import Forbidden, NotFound
 from discord.ext import commands, pages
+from discord.utils import format_dt
 from mysql.connector.errors import Error as sqlerror
 from mysql.connector.errors import IntegrityError
 
@@ -664,7 +665,7 @@ class command(Cog_Extension):
             embed.add_field(name="邀請頻道",value=invite.channel.name)
             embed.add_field(name="邀請次數",value=f"{invite.uses}/{invite.max_uses if invite.max_uses else '無限制'}")
             embed.add_field(name="臨時成員",value=invite.temporary  )
-            created_str = f"<t:{int(invite.created_at.timestamp())}>" if invite.created_at else "未知"
+            created_str = format_dt(invite.created_at, style="T") if invite.created_at else "未知"
             embed.add_field(name="創建於",value=created_str)
         else:
             embed.add_field(name="伺服器人數",value=invite.approximate_member_count)
@@ -675,7 +676,7 @@ class command(Cog_Extension):
             embed.add_field(name="創建於",value="未知")
             embed.set_footer(text="邀請機器人加入獲取完整資訊")
 
-        expires_str = f"<t:{int(invite.expires_at.timestamp())}>" if invite.expires_at else "無"
+        expires_str = format_dt(invite.expires_at, style="T") if invite.expires_at else "無"
         embed.add_field(name="過期於",value=expires_str)
         embed.add_field(name="伺服器邀請連結",value=invite.url,inline=False)
         if invite.guild.icon:

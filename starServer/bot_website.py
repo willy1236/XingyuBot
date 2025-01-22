@@ -124,7 +124,7 @@ async def oauth_twitch(request:Request):
     auth = TwitchOauth(twitch_oauth_settings)
     auth.exchange_code(code)
     sclient.sqldb.merge(TwitchBotJoinChannel(twitch_id=auth.user_id))
-    return HTMLResponse(f'授權已完成，您現在可以關閉此頁面<br><br>Twitch ID：{auth.user_id}')
+    return HTMLResponse(f'授權已完成，您現在可以關閉此頁面<br>別忘了在聊天室輸入 /mod xingyu1016<br><br>Twitch ID：{auth.user_id}')
 
 @app.post("/linebotcallback")
 async def linebot_callback(request:Request):
