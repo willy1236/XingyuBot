@@ -396,14 +396,14 @@ class owner(Cog_Extension):
         cmd = rf"D: && cd D:\minecraft_server\{server_folder} && run.bat"
         global mcserver_process
         mcserver_process = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=subprocess.CREATE_NEW_CONSOLE, text=True)
-        msg = await ctx.respond("已發送開啟指令")
+        msg = await ctx.respond("已發送開啟指令，伺服器正在啟動...")
         for _ in range(10):
             await asyncio.sleep(10)
             if is_server_running_by_connect(ip, port):
                 try:
                     await msg.edit(embed=server_status(ip, port))
                 except:
-                    await msg.edit("伺服器已開啟")
+                    await msg.edit("伺服器已開啟，但無法獲取詳細狀態。")
                 return
         
         await msg.edit("伺服器開啟超過預定時間，請聯繫管理者進行確認")
