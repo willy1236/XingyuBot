@@ -395,7 +395,7 @@ class owner(Cog_Extension):
         server_folder = Jsondb.config.get('mc_server').get('server_folder')
         cmd = rf"cd /d D:\minecraft_server\{server_folder} && run.bat"
         global mcserver_process
-        mcserver_process = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP, text=True)
+        mcserver_process = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=subprocess.CREATE_NEW_CONSOLE, text=True)
         msg = await ctx.respond("已發送開啟指令，伺服器正在啟動...")
         for _ in range(10):
             await asyncio.sleep(10)
@@ -439,7 +439,10 @@ class owner(Cog_Extension):
             embed.add_field(name="延遲", value=f"{latency:.2f} ms", inline=True)
         
         file = discord.File(fp=base64_to_buffer(status.icon), filename="server_icon.png") if status.icon is not None else None
-        await ctx.respond(embed=embed, file=file)
+        try:
+            await ctx.respond(embed=embed, file=file)
+        except AttributeError:
+            await ctx.respond(embed=embed)
     
     @mcserver.command(description="關閉mc伺服器")
     @commands.cooldown(rate=1,per=10)
