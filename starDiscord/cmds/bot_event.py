@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 import discord
 from discord.ext import commands
 
-from starlib import BotEmbed, Jsondb, happycamp_guild, log, sclient
+from starlib import BotEmbed, Jsondb, happycamp_guild, log, sclient, debug_guilds
 from starlib.models.mysql import DiscordUser
 from starlib.types import NotifyChannelType
 
@@ -18,6 +18,8 @@ keywords = {}
 
 voice_updata = Jsondb.config.get('voice_updata')
 debug_mode = Jsondb.config.get("debug_mode",True)
+
+ai_access_guilds: list[int] = happycamp_guild + debug_guilds
 
 guild_registration = sclient.sqldb.get_raw_resgistrations() if sclient.sqldb else {}
 
@@ -119,31 +121,11 @@ class event(Cog_Extension):
             return
 
         
-        if message.guild and message.guild.id in [613747262291443742, 566533708371329024] and not message.author.bot:
-            #ai chat
-            if message.content and message.content.startswith(".") and len(message.content) > 1 and message.content[1] != ".":
-                image_bytes = None
-                file = None
-                if message.attachments:
-                    att = message.attachments[0]
-                    if att.content_type.startswith("image"):
-                        image_bytes = await att.read() 
-                    elif att.content_type == "application/pdf":
-                        file = sclient.starai.get_or_set_file(att.filename, await att.read())
-                
-                text = sclient.starai.generate_response(f"{Jsondb.get_member_name(message.author.id) or message.author.name}：{message.content[1:]}", image_bytes, file)
-                if text:
-                    await message.reply(text,mention_author=False)
-                else:
-                    await message.add_reaction('❌')
-                return
-                
-
+        if message.guild and message.guild.id == happycamp_guild[0] and not message.author.bot:
             # 貢丸防制
-            if not is_owner and message.guild.id == happycamp_guild[0]:
-                result = None
+            if not is_owner:
                 if message.author.get_role(1160460037114822758) or message.author.get_role(1161644357410107483) or message.author.get_role(1178151415403790478):
-                    pass
+                    result = None
                 elif message.author.get_role(1162721481520852993):
                     p = re.compile(r"(?:貢(\S*|\s*)*丸|贡(\S*|\s*)*丸|Meat(\S*|\s*)*ball|貢(\S*|\s*)*ㄨ(\S*|\s*)*ㄢ)(?!殲滅黨)",re.IGNORECASE)
                     result = p.search(message.content)
@@ -200,6 +182,25 @@ class event(Cog_Extension):
             #             await channel.send(embed=embed)
             #     return
     
+    @commands.Cog.listener("on_message")
+    async def ai_trigger(self, message: discord.Message):
+        #ai chat
+        if message.guild and message.content and message.content.startswith(".") and not message.content.startswith(".", 1, 2) and message.guild.id in ai_access_guilds:
+            image_bytes = None
+            file = None
+            if message.attachments:
+                att = message.attachments[0]
+                if att.content_type.startswith("image"):
+                    image_bytes = await att.read() 
+                elif att.content_type == "application/pdf":
+                    file = sclient.starai.get_or_set_file(att.filename, await att.read())
+            
+            text = sclient.starai.generate_response(f"{Jsondb.get_member_name(message.author.id) or message.author.name}：{message.content[1:]}", image_bytes, file)
+            if text:
+                await message.reply(text,mention_author=False)
+            else:
+                await message.add_reaction('❌')
+
     @commands.Cog.listener("on_message")
     async def keyword_trigger(self, message: discord.Message):
         #關鍵字觸發
