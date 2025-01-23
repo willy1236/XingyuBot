@@ -393,9 +393,9 @@ class owner(Cog_Extension):
             return
         
         server_folder = Jsondb.config.get('mc_server').get('server_folder')
-        cmd = rf"D: && cd D:\minecraft_server\{server_folder} && run.bat"
+        cmd = rf"cd /d D:\minecraft_server\{server_folder} && run.bat"
         global mcserver_process
-        mcserver_process = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=subprocess.CREATE_NEW_CONSOLE, text=True)
+        mcserver_process = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP, text=True)
         msg = await ctx.respond("已發送開啟指令，伺服器正在啟動...")
         for _ in range(10):
             await asyncio.sleep(10)
