@@ -16,8 +16,9 @@ from mcstatus import JavaServer
 
 from starlib import (BotEmbed, Jsondb, debug_guilds, happycamp_guild,
                      main_guilds, sclient)
-from starlib.types import NotifyChannelType
+from starlib.types import NotifyChannelType, McssServerAction
 from starlib.utils.utility import converter
+from starlib.dataExtractor.others import McssAPI
 
 from ..extension import Cog_Extension
 
@@ -52,7 +53,7 @@ def base64_to_buffer(base64_string: str) -> BytesIO:
         raise ValueError(f"Base64 解碼失敗: {str(e)}")
     
 mcserver_process: subprocess.Popen = None
-
+mcss_api = McssAPI()
 class SendMessageModal(discord.ui.Modal):
     def __init__(self, channel, bot, is_dm, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -383,30 +384,52 @@ class owner(Cog_Extension):
         await ctx.defer()
         ip = "26.111.85.196"
         port = 25565
-        if  is_server_running_by_connect(ip, port) or is_server_running_by_process():
+        # if  is_server_running_by_connect(ip, port) or is_server_running_by_process():
+        #     try:
+        #         embed = server_status(ip, port)
+        #     except Exception as e:
+        #         embed = BotEmbed.general(f"{ip}:{port}", title="伺服器已開啟", description="無法獲取伺服器狀態，若仍然無法連線，請聯繫管理者進行確認")
+            
+        #     await ctx.respond("伺服器已開啟，", embed=embed)
+        #     return
+        
+        # server_folder = Jsondb.config.get('mc_server').get('server_folder')
+        # cmd = rf"cd /d D:\minecraft_server\{server_folder} && run.bat"
+        # global mcserver_process
+        # mcserver_process = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=subprocess.CREATE_NEW_CONSOLE, text=True)
+        # msg = await ctx.respond("已發送開啟指令，伺服器正在啟動...")
+        # for _ in range(10):
+        #     await asyncio.sleep(10)
+        #     if is_server_running_by_connect(ip, port):
+        #         try:
+        #             await msg.edit(embed=server_status(ip, port))
+        #         except:
+        #             await msg.edit("伺服器已開啟，但無法獲取詳細狀態。")
+        #         return
+        
+        # await msg.edit("伺服器開啟超過預定時間，請聯繫管理者進行確認")
+
+        server_id = Jsondb.config.get('mc_server').get('server_id')
+        server = mcss_api.get_server_detail(server_id)
+        if server and server["status"] == 0:
+            mcss_api.excute_action(server_id, McssServerAction.Start)
+            msg = await ctx.respond("已發送開啟指令，伺服器正在啟動...")
+
+            for _ in range(10):
+                await asyncio.sleep(10)
+                server = mcss_api.get_server_detail(server_id)
+                if server and server["status"] == 1:
+                    try:
+                        await msg.edit(embed=server_status(ip, port))
+                    except:
+                        await msg.edit("伺服器已開啟，但無法獲取詳細狀態。")
+        else:
             try:
                 embed = server_status(ip, port)
             except Exception as e:
                 embed = BotEmbed.general(f"{ip}:{port}", title="伺服器已開啟", description="無法獲取伺服器狀態，若仍然無法連線，請聯繫管理者進行確認")
             
             await ctx.respond("伺服器已開啟，", embed=embed)
-            return
-        
-        server_folder = Jsondb.config.get('mc_server').get('server_folder')
-        cmd = rf"cd /d D:\minecraft_server\{server_folder} && run.bat"
-        global mcserver_process
-        mcserver_process = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=subprocess.CREATE_NEW_CONSOLE, text=True)
-        msg = await ctx.respond("已發送開啟指令，伺服器正在啟動...")
-        for _ in range(10):
-            await asyncio.sleep(10)
-            if is_server_running_by_connect(ip, port):
-                try:
-                    await msg.edit(embed=server_status(ip, port))
-                except:
-                    await msg.edit("伺服器已開啟，但無法獲取詳細狀態。")
-                return
-        
-        await msg.edit("伺服器開啟超過預定時間，請聯繫管理者進行確認")
             
     
     @mcserver.command(description="查詢mc伺服器")
@@ -448,15 +471,22 @@ class owner(Cog_Extension):
     @commands.cooldown(rate=1,per=10)
     async def stop(self,ctx:discord.ApplicationContext):
         await ctx.defer()
-        global mcserver_process 
-        if mcserver_process:
-            mcserver_process.stdin.write('/stop\n')
-            mcserver_process.stdin.flush()
-            return_code = mcserver_process.wait(30)
-            await ctx.respond(f"伺服器已關閉，回傳代碼 {return_code}")
-            mcserver_process = None
+        # global mcserver_process 
+        # if mcserver_process:
+        #     mcserver_process.stdin.write('/stop\n')
+        #     mcserver_process.stdin.flush()
+        #     return_code = mcserver_process.wait(30)
+        #     await ctx.respond(f"伺服器已關閉，回傳代碼 {return_code}")
+        #     mcserver_process = None
+        # else:
+        #     await ctx.respond("伺服器未開啟或未由我開啟")
+        server_id = Jsondb.config.get('mc_server').get('server_id')
+        server = mcss_api.get_server_detail(server_id)
+        if server and server["status"] == 1:
+            mcss_api.excute_action(server_id, McssServerAction.Stop)
+            await ctx.respond("已發送關閉指令，伺服器正在關閉...")
         else:
-            await ctx.respond("伺服器未開啟或未由我開啟")
+            await ctx.respond("伺服器未開啟")
 
     @commands.slash_command(description='機器人面板',guild_ids=debug_guilds)
     @commands.is_owner()

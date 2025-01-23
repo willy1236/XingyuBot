@@ -43,3 +43,10 @@ class JsonCacheType(Enum):
     TwitchVideo = "twitch_v"
     TwitchClip = "twitch_c"
     WeatherWarning = "weather_warning"
+
+class McssServerAction(IntEnum):
+    Unknown = 0
+    Stop = 1
+    Start = 2
+    Kill = 3
+    Restart = 4

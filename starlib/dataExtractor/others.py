@@ -1,6 +1,7 @@
 from typing import Any
 import requests
-from starlib.fileDatabase import Jsondb
+from ..fileDatabase import Jsondb
+from ..types import McssServerAction
 
 class McssAPI:
     PORT = 25560
@@ -27,22 +28,23 @@ class McssAPI:
         else:
             print(r.status_code)
 
-    def excute_action(self, server_id: str, action: int):
+    def excute_action(self, server_id: str, action: McssServerAction):
         data = {
-            'action': action
+            'action': McssServerAction(action).value
         }
-        r = requests.post(f"{self.URL}/servers/{server_id}/execute/action", data=data, headers=self.headers)
+        r = requests.post(f"{self.URL}/servers/{server_id}/execute/action", json=data, headers=self.headers)
         r.raise_for_status()
         if r.ok:
-            return r.text
+            return True
         else:
             print(r.status_code)
+            return False
     
     def excute_command(self, server_id: str, command: str):
         data = {
             'command': command
         }
-        r = requests.post(f"{self.URL}/servers/{server_id}/execute/command", data=data, headers=self.headers)
+        r = requests.post(f"{self.URL}/servers/{server_id}/execute/command", json=data, headers=self.headers)
         r.raise_for_status()
         if r.ok:
             return r.text
