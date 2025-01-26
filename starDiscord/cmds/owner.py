@@ -1,11 +1,11 @@
 import asyncio
+import base64
 import platform
 import socket
 import subprocess
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING
 from io import BytesIO
-import base64
+from typing import TYPE_CHECKING
 
 import discord
 import mcrcon
@@ -16,10 +16,11 @@ from mcstatus import JavaServer
 
 from starlib import (BotEmbed, Jsondb, debug_guilds, happycamp_guild,
                      main_guilds, sclient)
-from starlib.types import NotifyChannelType, McssServerAction
+from starlib.instance import *
+from starlib.types import McssServerAction, NotifyChannelType
 from starlib.utils.utility import converter
-from starlib.dataExtractor.others import McssAPI
 
+from ..command_options import *
 from ..extension import Cog_Extension
 
 if TYPE_CHECKING:
@@ -53,7 +54,7 @@ def base64_to_buffer(base64_string: str) -> BytesIO:
         raise ValueError(f"Base64 解碼失敗: {str(e)}")
     
 mcserver_process: subprocess.Popen = None
-mcss_api = McssAPI()
+
 class SendMessageModal(discord.ui.Modal):
     def __init__(self, channel, bot, is_dm, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -343,9 +344,9 @@ class owner(Cog_Extension):
     #         else:
     #             await channel.send('👍')
 
-    @mcserver.command(description='使用mc伺服器指令')
+    @mcserver.command(description='使用rcon mc伺服器指令')
     @commands.is_owner()
-    async def cmd(self,ctx:discord.ApplicationContext,command):
+    async def rcon(self,ctx:discord.ApplicationContext, command):
         settings = Jsondb.config.get('mc_server')
         host = settings.get('host')
         port = settings.get('port')
@@ -487,6 +488,23 @@ class owner(Cog_Extension):
             await ctx.respond("已發送關閉指令，伺服器正在關閉...")
         else:
             await ctx.respond("伺服器未開啟")
+
+    @mcserver.command(description="執行mc伺服器指令")
+    @commands.is_owner()
+    async def cmd(self,ctx:discord.ApplicationContext, command):
+        await ctx.defer()
+        server_id = Jsondb.config.get('mc_server').get('server_id')
+        response = mcss_api.excute_command(server_id, command)
+        await ctx.respond(response if response else "指令已發送")
+
+    @mcserver.command(description="執行mc伺服器操作")
+    @commands.is_owner()
+    async def action(self,ctx:discord.ApplicationContext,
+                     server=mcss_server_option,
+                     action=mcss_action_option):
+        await ctx.defer()
+        response = mcss_api.excute_action(server, McssServerAction(action))
+        await ctx.respond(response if response else "指令已發送")
 
     @commands.slash_command(description='機器人面板',guild_ids=debug_guilds)
     @commands.is_owner()
