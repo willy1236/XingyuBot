@@ -212,7 +212,9 @@ class debug(Cog_Extension):
         await ctx.defer()
         from .bot_event import check_registration
         member: discord.Member
-        await ctx.respond(f"{member.display_name}：{check_registration(member)}",ephemeral=True)
+        guild_id = check_registration(member)
+        guild = self.bot.get_guild(guild_id)
+        await ctx.respond(f"{member.display_name}：{f'{guild}（{guild_id}）' if guild else guild}",ephemeral=True)
         
 
     # @commands.slash_command()

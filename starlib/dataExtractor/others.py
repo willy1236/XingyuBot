@@ -2,6 +2,7 @@ from typing import Any
 import requests
 from ..fileDatabase import Jsondb
 from ..types import McssServerAction
+from ..models.others import McssServer
 
 class McssAPI:
     PORT = 25560
@@ -12,19 +13,19 @@ class McssAPI:
            'apikey': Jsondb.get_token("mcss_api")
         }
 
-    def get_servers(self) -> list[dict] | None:
+    def get_servers(self):
         r = requests.get('http://localhost:25560/api/v2/servers', headers=self.headers)
         r.raise_for_status()
         if r.ok:
-            return r.json()
+            return [McssServer(**i)for i in r.json()]
         else:
             print(r.status_code)
 
-    def get_server_detail(self, server_id: str) -> dict | None:
+    def get_server_detail(self, server_id: str):
         r = requests.get(f"{self.URL}/servers/{server_id}", headers=self.headers)
         r.raise_for_status()
         if r.ok:
-            return r.json()
+            return McssServer(**r.json())
         else:
             print(r.status_code)
 
