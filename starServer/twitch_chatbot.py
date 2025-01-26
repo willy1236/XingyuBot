@@ -230,6 +230,12 @@ async def test_command(cmd: ChatCommand):
     else:
         await cmd.reply(f'{cmd.user.name}: {cmd.parameter}')
 
+async def add_chat_command(cmd: ChatCommand):
+    pass
+
+async def remove_chat_command(cmd: ChatCommand):
+    pass
+
 async def run():
     jtoken = Jsondb.get_token("twitch_chatbot")
     APP_ID = jtoken.get('id')

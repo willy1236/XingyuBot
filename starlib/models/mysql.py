@@ -229,6 +229,13 @@ class TwitchBotJoinChannel(BasicSchema, table=True):
     twitch_id: int = Field(primary_key=True)
     action_channel_id: int | None = Field(sa_column=Column(BigInteger))
 
+class TwitchChatCommand(BasicSchema, table=True):
+    __tablename__ = "twitch_chat_command"
+
+    twitch_id: int = Field(primary_key=True)
+    name: str = Field(primary_key=True)
+    response: str = Field(nullable=False)
+
 class InviteRecord(BasicSchema, table=True):
     __tablename__ = "invite_record"
 
