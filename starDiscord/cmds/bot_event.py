@@ -6,7 +6,8 @@ from datetime import datetime, timedelta, timezone
 import discord
 from discord.ext import commands
 
-from starlib import BotEmbed, Jsondb, happycamp_guild, log, sclient, debug_guilds
+from starlib import BotEmbed, Jsondb, log, sclient
+from starlib.instance import *
 from starlib.models.mysql import DiscordUser
 from starlib.types import NotifyChannelType
 
