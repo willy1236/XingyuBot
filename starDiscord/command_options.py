@@ -19,5 +19,5 @@ try:
 except:
     mcss_server_options = []
 
-mcss_server_option: int = Option(int, description="伺服器", choices=mcss_server_options)
-mcss_action_option: int = Option(int, description="操作", choices=mcss_server_actions)
+mcss_server_option: str = Option(str, description="麥塊伺服器", choices=mcss_server_options)
+mcss_action_option: int = Option(int, description="要執行的伺服器操作", choices=mcss_server_actions)
