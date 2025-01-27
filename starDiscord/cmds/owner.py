@@ -423,7 +423,7 @@ class owner(Cog_Extension):
                      action=mcss_action_option):
         await ctx.defer()
         response = mcss_api.excute_action(server, McssServerAction(action))
-        await ctx.respond(response if response else "指令已發送")
+        await ctx.respond("操作已完成" if response else "操作失敗")
 
     @commands.slash_command(description='機器人面板',guild_ids=debug_guilds)
     @commands.is_owner()

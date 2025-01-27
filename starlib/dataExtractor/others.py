@@ -1,4 +1,3 @@
-from typing import Any
 import requests
 from ..fileDatabase import Jsondb
 from ..types import McssServerAction

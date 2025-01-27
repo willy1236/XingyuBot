@@ -28,6 +28,7 @@ def run_discord_bot():
 
 def run_twitch_bot():
     from starServer.tunnel_threads import NgrokTwitchThread
+    log.debug('Twitch tunnel start running...')
     twitchtunnel_thread = NgrokTwitchThread()
     sclient.twitchtunnel_thread = twitchtunnel_thread
     twitchtunnel_thread.start()

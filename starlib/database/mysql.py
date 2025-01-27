@@ -71,7 +71,7 @@ class BaseSQLEngine:
                 self.session.merge(db_obj)
             self.session.commit()
 
-    def remove(self, db_obj):
+    def delete(self, db_obj):
         self.session.delete(db_obj)
         self.session.commit()
 

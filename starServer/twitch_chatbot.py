@@ -20,6 +20,7 @@ from twitchAPI.type import (AuthScope, ChatEvent, EventSubSubscriptionError,
 from starlib import BaseThread, BotEmbed, Jsondb, sclient, twitch_log
 from starlib.dataExtractor import TwitchAPI
 from starlib.types import NotifyCommunityType, JsonCacheType
+from starlib.models.mysql import TwitchChatCommand
 
 twapi = TwitchAPI()
 
@@ -231,10 +232,18 @@ async def test_command(cmd: ChatCommand):
         await cmd.reply(f'{cmd.user.name}: {cmd.parameter}')
 
 async def add_chat_command(cmd: ChatCommand):
-    pass
+    if len(cmd.parameter) < 2:
+        await cmd.reply('用法：!add_command <指令> <回覆>')
+    else:
+        sclient.sqldb.merge(TwitchChatCommand(twitch_id=cmd.source_room_id, command=cmd.parameter[0], response=" ".join(cmd.parameter[1:])))
+        await cmd.reply(f'已新增指令：{cmd.parameter[0]}')
 
 async def remove_chat_command(cmd: ChatCommand):
-    pass
+    if len(cmd.parameter) < 1:
+        await cmd.reply('用法：!remove_command <指令>')
+    else:
+        sclient.sqldb.delete(TwitchChatCommand(twitch_id=cmd.source_room_id, command=cmd.parameter[0]))
+        await cmd.reply(f'已移除指令：{cmd.parameter[0]}')
 
 async def run():
     jtoken = Jsondb.get_token("twitch_chatbot")
@@ -276,9 +285,12 @@ async def run():
     chat.register_event(ChatEvent.WHISPER, on_whisper)
     chat.register_event(ChatEvent.RAID, on_raid)
     
-    chat.register_command_middleware(ChannelRestriction(allowed_channel=['sakagawa_0309']))
+    #chat.register_command_middleware(ChannelRestriction(allowed_channel=['sakagawa_0309']))
+    chat.register_command_middleware(ChannelRestriction(allowed_channel=['willy1236owo']))
     # you can directly register commands and their handlers, this will register the !reply command
     # chat.register_command('reply', test_command)
+    chat.register_command("add_command", add_chat_command)
+    chat.register_command("remove_command", remove_chat_command)
     # TODO: modify_channel_information
     
     chat.start()
