@@ -4,7 +4,8 @@ import discord
 from discord.commands import SlashCommandGroup
 from discord.ext import commands
 
-from starlib import BotEmbed, ChoiceList, Jsondb, debug_guilds, sclient
+from starlib import BotEmbed, ChoiceList, Jsondb, sclient
+from starlib.instance import debug_guilds
 from starlib.types import NotifyChannelType, WarningType
 from starlib.utils import converter
 

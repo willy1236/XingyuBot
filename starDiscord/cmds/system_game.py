@@ -3,7 +3,7 @@ import genshin
 from discord.commands import SlashCommandGroup
 from discord.ext import commands, pages
 
-from starlib import BotEmbed, ChoiceList, Jsondb, csvdb, debug_guilds, sclient
+from starlib import BotEmbed, ChoiceList, Jsondb, csvdb, sclient
 from starlib.dataExtractor import *
 from starlib.errors import APIInvokeError
 from starlib.models.mysql import UserGame

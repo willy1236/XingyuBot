@@ -2,7 +2,8 @@ import discord
 from discord.commands import SlashCommandGroup
 from discord.ext import commands
 
-from starlib import BotEmbed, debug_guilds, sclient
+from starlib import BotEmbed, sclient
+from starlib.instance import debug_guilds
 from starlib.types import Coins
 
 from ..extension import Cog_Extension
