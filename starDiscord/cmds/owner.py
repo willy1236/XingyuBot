@@ -1,10 +1,7 @@
 import asyncio
-import base64
 import platform
-import socket
 import subprocess
 from datetime import datetime, timedelta
-from io import BytesIO
 from typing import TYPE_CHECKING
 
 import discord
@@ -14,11 +11,10 @@ from discord.commands import SlashCommandGroup
 from discord.ext import commands
 from mcstatus import JavaServer
 
-from starlib import (BotEmbed, Jsondb, debug_guilds, happycamp_guild,
-                     main_guilds, sclient)
+from starlib import BotEmbed, Jsondb, sclient
 from starlib.instance import *
 from starlib.types import McssServerAction, NotifyChannelType
-from starlib.utils.utility import converter
+from starlib.utils.utility import base64_to_buffer, converter
 
 from ..command_options import *
 from ..extension import Cog_Extension
@@ -26,33 +22,6 @@ from ..extension import Cog_Extension
 if TYPE_CHECKING:
     from ..bot import DiscordBot
 
-def base64_to_buffer(base64_string: str) -> BytesIO:
-    """
-    將 Base64 字串轉換為 BufferedIO 物件
-    
-    Args:
-        base64_string (str): Base64 編碼的字串
-    
-    Returns:
-        BufferedIO: 包含解碼資料的 BufferedIO 物件
-    
-    Raises:
-        ValueError: 當 Base64 解碼失敗時
-    """
-    try:
-        # 移除可能的 Base64 前綴 (如 "data:image/png;base64,")
-        if ',' in base64_string:
-            base64_string = base64_string.split(',')[1]
-        
-        # 解碼 Base64 字串
-        binary_data = base64.b64decode(base64_string)
-        
-        # 創建 BytesIO 物件並返回
-        buffer = BytesIO(binary_data)
-        return buffer
-    except Exception as e:
-        raise ValueError(f"Base64 解碼失敗: {str(e)}")
-    
 mcserver_process: subprocess.Popen = None
 
 class SendMessageModal(discord.ui.Modal):
@@ -143,8 +112,8 @@ class BotPanel(discord.ui.View):
 
 
 class owner(Cog_Extension):
-    twitch_chatbot = SlashCommandGroup("twitch_chatbot", "twitch機器人相關指令",guild_ids=debug_guilds)
-    mcserver = SlashCommandGroup("mcserver", "Minecraft伺服器相關指令",guild_ids=main_guilds)
+    twitch_chatbot = SlashCommandGroup("twitch_chatbot", "twitch機器人相關指令", guild_ids=debug_guilds)
+    mcserver = SlashCommandGroup("mcserver", "Minecraft伺服器相關指令", guild_ids=main_guilds)
 
     #load
     #@bot.command()
@@ -238,7 +207,7 @@ class owner(Cog_Extension):
     #bot_update
     @commands.slash_command(description='機器人更新通知',guild_ids=debug_guilds)
     @commands.is_owner()
-    async def botupdate(self,ctx:discord.ApplicationContext):
+    async def botupdate(self, ctx:discord.ApplicationContext):
         modal = BotUpdateModal(title="機器人更新")
         await ctx.send_modal(modal)
         await modal.wait()
@@ -246,7 +215,7 @@ class owner(Cog_Extension):
     #edit
     @commands.slash_command(description='編輯訊息',guild_ids=debug_guilds)
     @commands.is_owner()
-    async def editmessage(self,ctx:discord.ApplicationContext,msgid:str,new_msg):
+    async def editmessage(self, ctx:discord.ApplicationContext, msgid:str, new_msg:str):
         await ctx.defer()
         message = await ctx.fetch_message(int(msgid))
         await message.edit(content=new_msg)
@@ -272,9 +241,9 @@ class owner(Cog_Extension):
     #     else:
     #         ctx.send('參數錯誤:請輸入正確模式(add/remove)',delete_after=5)
 
-    @commands.slash_command(description='權限檢查',guild_ids=debug_guilds)
+    @commands.slash_command(description='權限檢查', guild_ids=debug_guilds)
     @commands.is_owner()
-    async def permission(self,ctx,guild_id):
+    async def permission(self, ctx, guild_id:str):
         guild_id = int(guild_id)
         guild = self.bot.get_guild(guild_id)
         member = guild.get_member(ctx.bot.user.id)
@@ -320,14 +289,6 @@ class owner(Cog_Extension):
         # permission.request_to_speak
         await ctx.respond(embed=embed)
 
-    # @commands.slash_command(guild_ids=debug_guilds)
-    # @commands.is_owner()
-    # async def reaction_role(self,ctx,chaid,msgid):
-    #     channel = await self.bot.fetch_channel(chaid)
-    #     message = await channel.fetch_message(msgid)
-    #     await message.edit('請點擊按鈕獲得權限',view=ReactRole_button())
-    #     await ctx.respond('訊息已發送')
-
     # @bot.event
     # async def on_message(message):
     #     if message.content.startswith('$thumb'):
@@ -346,7 +307,7 @@ class owner(Cog_Extension):
 
     @mcserver.command(description='使用rcon mc伺服器指令')
     @commands.is_owner()
-    async def rcon(self,ctx:discord.ApplicationContext, command):
+    async def rcon(self, ctx:discord.ApplicationContext, command:str):
         settings = Jsondb.config.get('mc_server')
         host = settings.get('host')
         port = settings.get('port')
@@ -357,21 +318,7 @@ class owner(Cog_Extension):
 
     @mcserver.command(description="開啟mc伺服器")
     @commands.cooldown(rate=1,per=100)
-    async def start(self,ctx:discord.ApplicationContext):
-        def is_server_running_by_process():
-            for process in psutil.process_iter(['pid', 'name']):
-                if 'java' in process.info['name']:  # Minecraft伺服器通常是以Java運行
-                    return True
-            return False
-
-        def is_server_running_by_connect(host='localhost', port=25565):
-            try:
-                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                    s.connect((host, port))
-                    return True
-            except ConnectionRefusedError:
-                return False
-
+    async def start(self, ctx:discord.ApplicationContext):
         def server_status(ip, port):
             server = JavaServer.lookup(f"{ip}:{port}")
             status = server.status()
@@ -385,30 +332,7 @@ class owner(Cog_Extension):
         await ctx.defer()
         ip = "26.111.85.196"
         port = 25565
-        # if  is_server_running_by_connect(ip, port) or is_server_running_by_process():
-        #     try:
-        #         embed = server_status(ip, port)
-        #     except Exception as e:
-        #         embed = BotEmbed.general(f"{ip}:{port}", title="伺服器已開啟", description="無法獲取伺服器狀態，若仍然無法連線，請聯繫管理者進行確認")
-            
-        #     await ctx.respond("伺服器已開啟，", embed=embed)
-        #     return
-        
-        # server_folder = Jsondb.config.get('mc_server').get('server_folder')
-        # cmd = rf"cd /d D:\minecraft_server\{server_folder} && run.bat"
-        # global mcserver_process
         # mcserver_process = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=subprocess.CREATE_NEW_CONSOLE, text=True)
-        # msg = await ctx.respond("已發送開啟指令，伺服器正在啟動...")
-        # for _ in range(10):
-        #     await asyncio.sleep(10)
-        #     if is_server_running_by_connect(ip, port):
-        #         try:
-        #             await msg.edit(embed=server_status(ip, port))
-        #         except:
-        #             await msg.edit("伺服器已開啟，但無法獲取詳細狀態。")
-        #         return
-        
-        # await msg.edit("伺服器開啟超過預定時間，請聯繫管理者進行確認")
 
         server_id = Jsondb.config.get('mc_server').get('server_id')
         server = mcss_api.get_server_detail(server_id)
@@ -435,7 +359,7 @@ class owner(Cog_Extension):
     
     @mcserver.command(description="查詢mc伺服器")
     @commands.cooldown(rate=1,per=3)
-    async def quary(self,ctx:discord.ApplicationContext, ip:discord.Option(str, description="伺服器ip", default="26.111.85.196:25565")):
+    async def quary(self, ctx:discord.ApplicationContext, ip:discord.Option(str, description="伺服器ip", default="26.111.85.196:25565")):
         await ctx.defer()
         try:
             server = JavaServer.lookup(ip)
@@ -470,17 +394,11 @@ class owner(Cog_Extension):
     
     @mcserver.command(description="關閉mc伺服器")
     @commands.cooldown(rate=1,per=10)
-    async def stop(self,ctx:discord.ApplicationContext):
+    async def stop(self, ctx:discord.ApplicationContext):
         await ctx.defer()
-        # global mcserver_process 
-        # if mcserver_process:
         #     mcserver_process.stdin.write('/stop\n')
         #     mcserver_process.stdin.flush()
         #     return_code = mcserver_process.wait(30)
-        #     await ctx.respond(f"伺服器已關閉，回傳代碼 {return_code}")
-        #     mcserver_process = None
-        # else:
-        #     await ctx.respond("伺服器未開啟或未由我開啟")
         server_id = Jsondb.config.get('mc_server').get('server_id')
         server = mcss_api.get_server_detail(server_id)
         if server and server["status"] == 1:
@@ -491,15 +409,16 @@ class owner(Cog_Extension):
 
     @mcserver.command(description="執行mc伺服器指令")
     @commands.is_owner()
-    async def cmd(self,ctx:discord.ApplicationContext, command):
+    async def cmd(self, ctx:discord.ApplicationContext, 
+                  server=mcss_server_option,
+                  command=command_option):
         await ctx.defer()
-        server_id = Jsondb.config.get('mc_server').get('server_id')
-        response = mcss_api.excute_command(server_id, command)
+        response = mcss_api.excute_command(server, command)
         await ctx.respond(response if response else "指令已發送")
 
     @mcserver.command(description="執行mc伺服器操作")
     @commands.is_owner()
-    async def action(self,ctx:discord.ApplicationContext,
+    async def action(self, ctx:discord.ApplicationContext,
                      server=mcss_server_option,
                      action=mcss_action_option):
         await ctx.defer()
@@ -508,7 +427,7 @@ class owner(Cog_Extension):
 
     @commands.slash_command(description='機器人面板',guild_ids=debug_guilds)
     @commands.is_owner()
-    async def panel(self,ctx):
+    async def panel(self, ctx:discord.ApplicationContext):
         embed_list = []
         embed = BotEmbed.bot(self.bot,description=f'伺服器總數：{len(self.bot.guilds)}\n成員：{len(self.bot.users)}')
         embed_list.append(embed)
@@ -517,16 +436,16 @@ class owner(Cog_Extension):
 
     @commands.slash_command(description='獲取指令',guild_ids=debug_guilds)
     @commands.is_owner()
-    async def getcommand(self,ctx,name:discord.Option(str,name='指令名稱')):
+    async def getcommand(self, ctx:discord.ApplicationContext, name:discord.Option(str, name='指令名稱')):
         data = self.bot.get_application_command(name)
         if data:
             await ctx.respond(embed=BotEmbed.simple(data.name,data.id))
         else:
             await ctx.respond(embed=BotEmbed.simple('指令未找到'))
 
-    @commands.slash_command(description='獲取指定伺服器與主伺服器的共通成員',guild_ids=debug_guilds)
+    @commands.slash_command(description='獲取指定伺服器與主伺服器的共通成員', guild_ids=debug_guilds)
     @commands.is_owner()
-    async def findmember(self,ctx,guildid:discord.Option(str,name='伺服器id')):
+    async def findmember(self, ctx:discord.ApplicationContext, guildid:discord.Option(str,name='伺服器id')):
         guild = self.bot.get_guild(int(guildid))
         guild_main = self.bot.get_guild(happycamp_guild[0])
         if not guild:
@@ -546,27 +465,29 @@ class owner(Cog_Extension):
         embed = BotEmbed.simple(f"{guild.name} 的共通成員","\n".join(common_member_display))
         await ctx.respond(embed=embed)
 
-    @commands.slash_command(description='尋找id對象',guild_ids=debug_guilds)
+    @commands.slash_command(description='尋找id對象', guild_ids=debug_guilds)
     @commands.cooldown(rate=1,per=3)
-    async def find(self,ctx:discord.ApplicationContext,id:discord.Option(str,name='id'),guildid:discord.Option(str,name='guildid',required=False)):
+    async def find(self, ctx:discord.ApplicationContext, id:str, guildid:discord.Option(str,name='guildid',required=False)):
         success = 0
         id = int(id)
+        now_guild: discord.Guild = ctx.guild
+        
         user = await self.bot.get_or_fetch_user(id)
-        if user and user in ctx.guild.members:
-            user = ctx.guild.get_member(user.id)
-            embed = BotEmbed.simple(title=f'{user.name}#{user.discriminator}', description="ID:用戶(伺服器成員)")
-            embed.add_field(name="暱稱", value=user.nick, inline=False)
-            embed.add_field(name="最高身分組", value=user.top_role.mention, inline=True)
-            embed.add_field(name="目前狀態", value=user.raw_status, inline=True)
-            if user.activity:
-                embed.add_field(name="目前活動", value=user.activity.name, inline=True)
-            embed.add_field(name="是否為機器人", value=user.bot, inline=False)
-            embed.add_field(name="是否為Discord官方", value=user.system, inline=True)
-            embed.add_field(name="是否被禁言", value=user.timed_out, inline=True)
-            embed.add_field(name="加入群組日期", value=user.joined_at, inline=False)
-            embed.add_field(name="帳號創建日期", value=user.created_at, inline=False)
-            embed.set_thumbnail(url=user.display_avatar.url)
-            embed.set_footer(text=f"id:{user.id}")
+        member = now_guild.get_member(id)
+        if member:
+            embed = BotEmbed.simple(title=f'{member.name}#{member.discriminator}', description="ID:用戶(伺服器成員)")
+            embed.add_field(name="暱稱", value=member.nick, inline=False)
+            embed.add_field(name="最高身分組", value=member.top_role.mention, inline=True)
+            embed.add_field(name="目前狀態", value=member.raw_status, inline=True)
+            if member.activity:
+                embed.add_field(name="目前活動", value=member.activity.name, inline=True)
+            embed.add_field(name="是否為機器人", value=member.bot, inline=False)
+            embed.add_field(name="是否為Discord官方", value=member.system, inline=True)
+            embed.add_field(name="是否被禁言", value=member.timed_out, inline=True)
+            embed.add_field(name="加入群組日期", value=member.joined_at, inline=False)
+            embed.add_field(name="帳號創建日期", value=member.created_at, inline=False)
+            embed.set_thumbnail(url=member.display_avatar.url)
+            embed.set_footer(text=f"id:{member.id}")
             success += 1
         elif user:
             embed = BotEmbed.simple(title=f'{user.name}#{user.discriminator}', description="ID:用戶")
@@ -647,9 +568,9 @@ class owner(Cog_Extension):
         msg = await channel.send(embed=embed)
         await ctx.respond(msg.jump_url)
 
-    @commands.slash_command(description='取得伺服器資訊',guild_ids=debug_guilds)
+    @commands.slash_command(description='取得伺服器資訊', guild_ids=debug_guilds)
     @commands.is_owner()
-    async def serverinfo(self,ctx:discord.ApplicationContext):
+    async def serverinfo(self, ctx:discord.ApplicationContext):
         await ctx.defer()
         # 取得 CPU 使用率
         cpu_percent = psutil.cpu_percent(interval=1)
@@ -702,9 +623,9 @@ class owner(Cog_Extension):
         # 回應嵌入訊息
         await ctx.respond(embed=embed)
 
-    @commands.slash_command(description='重置ai的對話紀錄',guild_ids=debug_guilds)
+    @commands.slash_command(description='重置ai的對話紀錄', guild_ids=debug_guilds)
     @commands.is_owner()
-    async def resetaichat(self,ctx:discord.ApplicationContext):
+    async def resetaichat(self, ctx:discord.ApplicationContext):
         await ctx.defer()
         sclient.starai.init_history()
         await ctx.respond('已重置ai的對話紀錄')

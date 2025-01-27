@@ -1,12 +1,19 @@
-import discord,asyncio,io,matplotlib
-from datetime import datetime, timezone, timedelta
-from discord.ext import commands,tasks
-import matplotlib.pyplot as plt
+import asyncio
+import io
+from datetime import datetime, timedelta, timezone
 
-from starlib import Jsondb,sclient,tz,BotEmbed, debug_guilds, main_guilds, happycamp_guild
+import discord
+import matplotlib
+import matplotlib.pyplot as plt
+from discord.ext import commands, tasks
+
+from starlib import BotEmbed, Jsondb, sclient, tz
 from starlib.errors import *
+from starlib.instance import *
 from starlib.utils.map import sunmon_area
+
 from ..extension import Cog_Extension
+
 
 # Note that custom_ids can only be up to 100 characters long.
 class PersistentView(discord.ui.View):

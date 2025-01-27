@@ -9,16 +9,10 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
 from starlib import BotEmbed, Jsondb, log, sclient, tz, utils
-from starlib.dataExtractor import *
 from starlib.types import NotifyChannelType, NotifyCommunityType, JsonCacheType
+from starlib.instance import *
 
 from ..extension import Cog_Extension
-
-rss = YoutubeRSS()
-ytapi = YoutubeAPI()
-twapi = TwitchAPI()
-cwa_api = CWA_API()
-apexapi = ApexAPI()
 
 class task(Cog_Extension):
     def __init__(self,*args,**kwargs):
@@ -116,7 +110,7 @@ class task(Cog_Extension):
         if not users:
             return
         twitch_cache = Jsondb.get_cache(JsonCacheType.TwitchLive) or {}
-        data = twapi.get_lives(users)
+        data = tw_api.get_lives(users)
         log.debug(f"twitch_live data: {data}")
         for user in users:
             user_cache = twitch_cache.get(user)
@@ -137,7 +131,7 @@ class task(Cog_Extension):
             return
         twitch_cache = Jsondb.get_cache(JsonCacheType.TwitchVideo) or {}
         for user in users:
-            videos = twapi.get_videos(user)
+            videos = tw_api.get_videos(user)
             cache_last_update_time = datetime.fromisoformat(twitch_cache.get(user)).replace(tzinfo=tz) if twitch_cache.get(user) else None
             if not cache_last_update_time or videos[0].created_at > cache_last_update_time:
                 videos.reverse()
@@ -157,13 +151,13 @@ class task(Cog_Extension):
         twitch_cache = Jsondb.get_cache(JsonCacheType.TwitchClip) or {}
         for user in users:
             cache_last_update_time = datetime.fromisoformat(twitch_cache.get(user)).replace(tzinfo=tz) if twitch_cache.get(user) else None
-            clips = twapi.get_clips(user, started_at=cache_last_update_time)
+            clips = tw_api.get_clips(user, started_at=cache_last_update_time)
             if clips:
                 newest = clips[0].created_at
                 broadcaster_id = clips[0].broadcaster_id
                 
                 videos_dict = {clip.video_id: None for clip in clips}
-                api_video = twapi.get_videos(ids=list(videos_dict.keys()))
+                api_video = tw_api.get_videos(ids=list(videos_dict.keys()))
                 videos_dict = {video.id: video for video in api_video}
 
                 for clip in clips:
@@ -184,7 +178,7 @@ class task(Cog_Extension):
         cache_youtube = Jsondb.get_cache(JsonCacheType.YoutubeVideo) or {}
         for ytchannel_id in ytchannels:
             #抓取資料
-            rss_data = rss.get_videos(ytchannel_id)
+            rss_data = yt_rss.get_videos(ytchannel_id)
             if not rss_data:
                 continue
             cache_last_update_time_str = cache_youtube.get(ytchannel_id)
@@ -196,7 +190,7 @@ class task(Cog_Extension):
                 video_id_list = [d.yt_videoid for d in rss_data if d.uplood_at > cache_last_update_time]
                 cache_youtube[ytchannel_id] = rss_data[-1].uplood_at.isoformat()
 
-                api_videos = ytapi.get_video(video_id_list)
+                api_videos = yt_api.get_video(video_id_list)
                 #發布通知
                 for video in api_videos:
                     embed = video.embed()
@@ -313,13 +307,12 @@ class task(Cog_Extension):
         await msg.add_reaction("🎉")
 
     async def refresh_yt_push(self):
-        push = YoutubePush()
         records = sclient.sqldb.get_expired_push_records()
         callback_url = Jsondb.get_token("youtube_push")
         for record in records:
-            push.add_push(record.channel_id, callback_url)
+            yt_push.add_push(record.channel_id, callback_url)
             await asyncio.sleep(3)
-            data = push.get_push(record.channel_id, callback_url)
+            data = yt_push.get_push(record.channel_id, callback_url)
 
             record.push_at = data.last_successful_verification
             record.expire_at = data.expiration_time

@@ -1,6 +1,10 @@
+import base64
+import socket
 from datetime import datetime, timedelta
+from io import BytesIO
 
 import discord
+import psutil
 
 from ..fileDatabase import Jsondb
 from .funtions import find
@@ -168,3 +172,44 @@ def calculate_eletion_session(current_date:datetime) -> int:
     """選舉屆數計算器"""
     start_date = datetime(2023, 10, 11)
     return (current_date.year - start_date.year) * 12 + current_date.month - start_date.month + 1
+
+def base64_to_buffer(base64_string: str) -> BytesIO:
+    """
+    將 Base64 字串轉換為 BufferedIO 物件
+    
+    Args:
+        base64_string (str): Base64 編碼的字串
+    
+    Returns:
+        BufferedIO: 包含解碼資料的 BufferedIO 物件
+    
+    Raises:
+        ValueError: 當 Base64 解碼失敗時
+    """
+    try:
+        # 移除可能的 Base64 前綴 (如 "data:image/png;base64,")
+        if ',' in base64_string:
+            base64_string = base64_string.split(',')[1]
+        
+        # 解碼 Base64 字串
+        binary_data = base64.b64decode(base64_string)
+        
+        # 創建 BytesIO 物件並返回
+        buffer = BytesIO(binary_data)
+        return buffer
+    except Exception as e:
+        raise ValueError(f"Base64 解碼失敗: {str(e)}")
+    
+def is_server_running_by_process():
+    for process in psutil.process_iter(['pid', 'name']):
+        if 'java' in process.info['name']:  # Minecraft伺服器通常是以Java運行
+            return True
+    return False
+
+def is_server_running_by_connect(host='localhost', port=25565):
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.connect((host, port))
+            return True
+    except ConnectionRefusedError:
+        return False

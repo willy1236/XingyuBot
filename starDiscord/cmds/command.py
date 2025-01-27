@@ -12,9 +12,9 @@ from discord.utils import format_dt
 from mysql.connector.errors import Error as sqlerror
 from mysql.connector.errors import IntegrityError
 
-from starlib import (BotEmbed, ChoiceList, Jsondb, happycamp_guild, log,
-                     main_guilds, sclient)
+from starlib import BotEmbed, ChoiceList, Jsondb, log, sclient
 from starlib.dataExtractor import GoogleCloud
+from starlib.instance import *
 from starlib.types import Coins
 from starlib.utils import (create_only_role_list,
                            create_role_magification_dict, find, random_color)

@@ -14,12 +14,12 @@ class McssAPI:
         }
 
     def get_servers(self):
-        r = requests.get('http://localhost:25560/api/v2/servers', headers=self.headers)
+        r = requests.get(f'{self.URL}/servers', headers=self.headers)
         r.raise_for_status()
         if r.ok:
             return [McssServer(**i)for i in r.json()]
         else:
-            print(r.status_code)
+            print(f"[{r.status_code}] {r.text}")
 
     def get_server_detail(self, server_id: str):
         r = requests.get(f"{self.URL}/servers/{server_id}", headers=self.headers)
@@ -27,7 +27,7 @@ class McssAPI:
         if r.ok:
             return McssServer(**r.json())
         else:
-            print(r.status_code)
+            print(f"[{r.status_code}] {r.text}")
 
     def excute_action(self, server_id: str, action: McssServerAction):
         data = {
@@ -38,7 +38,7 @@ class McssAPI:
         if r.ok:
             return True
         else:
-            print(r.status_code)
+            print(f"[{r.status_code}] {r.text}")
             return False
     
     def excute_command(self, server_id: str, command: str):
@@ -50,4 +50,4 @@ class McssAPI:
         if r.ok:
             return r.text
         else:
-            print(r.status_code)
+            print(f"[{r.status_code}] {r.text}")
