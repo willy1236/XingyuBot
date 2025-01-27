@@ -2,7 +2,8 @@ import discord
 from discord.ext import commands
 from mysql.connector.errors import Error as sqlerror
 
-from starlib import Jsondb, debug_guilds, log
+from starlib import Jsondb, log
+from starlib.instance import debug_guilds
 from starlib.errors import *
 
 from ..extension import Cog_Extension
