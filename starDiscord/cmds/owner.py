@@ -425,6 +425,14 @@ class owner(Cog_Extension):
         response = mcss_api.excute_action(server, McssServerAction(action))
         await ctx.respond("操作已完成" if response else "操作失敗")
 
+    @mcserver.command(description="取得mc伺服器")
+    @commands.is_owner()
+    async def get(self, ctx:discord.ApplicationContext,
+                     server=mcss_server_option):
+        await ctx.defer()
+        response = mcss_api.get_server_detail(server)
+        await ctx.respond(embed=response.embed())
+
     @commands.slash_command(description='機器人面板',guild_ids=debug_guilds)
     @commands.is_owner()
     async def panel(self, ctx:discord.ApplicationContext):

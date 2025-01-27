@@ -29,3 +29,4 @@ class McssServer(BaseModel):
         embed.add_field(name="伺服器ID", value=self.server_id)
         embed.add_field(name="伺服器類型", value=self.type)
         embed.add_field(name="伺服器狀態", value=f"{self.status}（{mcss_server_status.get(self.status)}）")
+        return embed
