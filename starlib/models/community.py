@@ -79,7 +79,7 @@ class TwitchStream(BaseModel):
         self.live_thumbnail_url = f"{self.thumbnail_url}?t={int(now.timestamp())}"
         return self
 
-    def embed(self):
+    def embed(self, profile_image_url:str=None):
         embed = discord.Embed(
             title=self.title,
             url=self.url,
@@ -87,7 +87,7 @@ class TwitchStream(BaseModel):
             color=0x6441a5,
             timestamp = self.started_at,
             )
-        embed.set_author(name=f"{self.user_name} 開台啦！", icon_url=Jsondb.get_picture("twitch_001"))
+        embed.set_author(name=f"{self.user_name} 開台啦！", icon_url=profile_image_url or Jsondb.get_picture("twitch_001"))
         embed.set_image(url=self.live_thumbnail_url)
         embed.add_field(name="標籤", value=", ".join(self.tags))
         embed.set_footer(text=f"開始於")

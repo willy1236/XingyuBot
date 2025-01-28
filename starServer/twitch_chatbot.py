@@ -83,10 +83,8 @@ async def on_stream_online(event: eventsub.StreamOnlineEvent):
         twitch_log.info(f'{event.event.broadcaster_user_name} is live: {is_live}')
         if not is_live:
             live = tw_api.get_lives(event.event.broadcaster_user_id)[event.event.broadcaster_user_id]
-            embed = live.embed()
             profile_image_url = tw_api.get_user_by_id(event.event.broadcaster_user_id).profile_image_url
-            if profile_image_url:
-                embed.author.icon_url = profile_image_url
+            embed = live.embed(profile_image_url)
             asyncio.run_coroutine_threadsafe(sclient.bot.send_notify_communities(embed, NotifyCommunityType.TwitchLive, event.event.broadcaster_user_id), sclient.bot.loop)
             Jsondb.set_cache(JsonCacheType.TwitchLive, event.event.broadcaster_user_id, live.id)
 
@@ -108,7 +106,7 @@ async def on_channel_points_custom_reward_redemption_add(event: eventsub.Channel
         sclient.bot.send_message(action_channel_id, embed=BotEmbed.simple("兌換自訂獎勵",text))
     
 async def on_channel_points_custom_reward_redemption_update(event: eventsub.ChannelPointsCustomRewardRedemptionUpdateEvent):
-    twitch_log.info(f"{event.event.user_name}'s redemption of {event.event.reward.title} has been updated!")
+    twitch_log.info(f"{event.event.user_name}'s redemption of {event.event.reward.title} has been updated to {event.event.status}!")
     
 async def on_channel_raid(event:eventsub.ChannelRaidEvent):
     twitch_log.info(f"{event.event.from_broadcaster_user_name} 帶了 {event.event.viewers} 位觀眾來 {event.event.to_broadcaster_user_name} 的頻道!")
@@ -245,6 +243,23 @@ async def remove_chat_command(cmd: ChatCommand):
         sclient.sqldb.delete(TwitchChatCommand(twitch_id=cmd.source_room_id, command=cmd.parameter[0]))
         await cmd.reply(f'已移除指令：{cmd.parameter[0]}')
 
+async def list_chat_command(cmd: ChatCommand):
+    if len(cmd.parameter) < 1:
+        commands = sclient.sqldb.list_chat_command_by_channel(cmd.source_room_id)
+        if commands:
+            await cmd.reply(f'指令列表：\n{", ".join([i.name for i in commands])}')
+        else:
+            await cmd.reply('沒有設定指令')
+    else:
+        command = sclient.sqldb.get_chat_command(cmd.parameter[0], cmd.source_room_id)
+        if command:
+            await cmd.reply(f'{command.name}：{command.response}')
+        else:
+            await cmd.reply(f'{cmd.parameter[0]} 不存在')
+
+async def modify_channel_information(cmd: ChatCommand):
+    pass
+
 async def run():
     jtoken = Jsondb.get_token("twitch_chatbot")
     APP_ID = jtoken.get('id')
@@ -291,6 +306,7 @@ async def run():
     # chat.register_command('reply', test_command)
     chat.register_command("add_command", add_chat_command)
     chat.register_command("remove_command", remove_chat_command)
+    chat.register_command("list_command", list_chat_command)
     # TODO: modify_channel_information
     
     chat.start()
@@ -334,16 +350,6 @@ async def run():
 
         if not chat.is_mod(user.login):
             continue
-        
-        try:
-            twitch_log.debug("listening to channel points custom reward redemption add")
-            subscription_id = await eventsub.listen_channel_points_custom_reward_redemption_add(user.id, on_channel_points_custom_reward_redemption_add)
-            twitch_log.debug(f"subscription_id: {subscription_id}")
-            await asyncio.sleep(1)
-        except EventSubSubscriptionError as e:
-            twitch_log.warning(f"Error subscribing to channel points custom reward redemption add: {e}")
-        except EventSubSubscriptionTimeout:
-            twitch_log.warning(f"Error subscribing to channel points custom reward redemption add: timeout.")
 
         try:
             twitch_log.debug("listening to channel follow")
@@ -354,6 +360,16 @@ async def run():
             twitch_log.warning(f"Error subscribing to channel follow: {e}")
         except EventSubSubscriptionTimeout:
             twitch_log.warning(f"Error subscribing to channel follow: timeout.")
+
+        try:
+            twitch_log.debug("listening to channel points custom reward redemption add")
+            subscription_id = await eventsub.listen_channel_points_custom_reward_redemption_add(user.id, on_channel_points_custom_reward_redemption_add)
+            twitch_log.debug(f"subscription_id: {subscription_id}")
+            await asyncio.sleep(1)
+        except EventSubSubscriptionError as e:
+            twitch_log.warning(f"Error subscribing to channel points custom reward redemption add: {e}")
+        except EventSubSubscriptionTimeout:
+            twitch_log.warning(f"Error subscribing to channel points custom reward redemption add: timeout.")
         
         try:
             twitch_log.debug("listening to channel points custom reward redemption update")

@@ -608,9 +608,14 @@ class SQLTwitchSystem(BaseSQLEngine):
         result = self.session.exec(stmt).all()
         return {i.twitch_id: i.action_channel_id for i in result}
     
-    def get_chat_command_by_channel(self, channel_id:str):
+    def list_chat_command_by_channel(self, channel_id:str):
         stmt = select(TwitchChatCommand).where(TwitchChatCommand.twitch_id == channel_id)
         result = self.session.exec(stmt).all()
+        return result
+    
+    def get_chat_command(self, command:str, channel_id:str):
+        stmt = select(TwitchChatCommand).where(TwitchChatCommand.twitch_id == channel_id, TwitchChatCommand.name == command)
+        result = self.session.exec(stmt).one_or_none()
         return result
 
 class SQLRPGSystem(BaseSQLEngine):
