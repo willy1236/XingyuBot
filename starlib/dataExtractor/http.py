@@ -1,5 +1,5 @@
 import requests
-from starlib.fileDatabase import Jsondb
+from ..fileDatabase import Jsondb
 
 class JsonStorageAPI:
     """https://www.jsonstorage.net/"""

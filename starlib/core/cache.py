@@ -24,9 +24,10 @@ class StardbCache:
     
     def __init__(self):
         self.cache = dict()
-        if basename(sys.modules['__main__'].__file__) == "main.py":
-            self.init_notify()
-            log.debug("dbcache: notify init.")
+        if sqldb:
+            if basename(sys.modules['__main__'].__file__) == "main.py":
+                self.init_notify()
+                log.debug("dbcache: notify init.")
 
     def init_notify(self):
         """設定或重置所有資料"""

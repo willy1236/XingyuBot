@@ -18,11 +18,9 @@ from twitchAPI.type import (AuthScope, ChatEvent, EventSubSubscriptionError,
                             EventSubSubscriptionTimeout)
 
 from starlib import BaseThread, BotEmbed, Jsondb, sclient, twitch_log
-from starlib.dataExtractor import TwitchAPI
+from starlib.instance import tw_api
 from starlib.types import NotifyCommunityType, JsonCacheType
 from starlib.models.mysql import TwitchChatCommand
-
-twapi = TwitchAPI()
 
 USER_SCOPE = [
     AuthScope.BITS_READ,
@@ -83,8 +81,8 @@ async def on_stream_online(event: eventsub.StreamOnlineEvent):
         sclient.bot.send_message(content=f'{event.event.broadcaster_user_name} 正在直播 {stream.game_name}!')
         is_live = Jsondb.get_cache(JsonCacheType.TwitchLive).get(event.event.broadcaster_user_id)
         if not is_live:
-            embed = twapi.get_lives(event.event.broadcaster_user_id)[event.event.broadcaster_user_id].embed()
-            profile_image_url = twapi.get_user_by_id(event.event.broadcaster_user_id).profile_image_url
+            embed = tw_api.get_lives(event.event.broadcaster_user_id)[event.event.broadcaster_user_id].embed()
+            profile_image_url = tw_api.get_user_by_id(event.event.broadcaster_user_id).profile_image_url
             if profile_image_url:
                 embed.author.icon_url = profile_image_url
             asyncio.run_coroutine_threadsafe(sclient.bot.send_notify_communities(embed, NotifyCommunityType.TwitchLive, event.event.broadcaster_user_id), sclient.bot.loop)

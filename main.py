@@ -58,20 +58,8 @@ def main():
     pass
 
 if __name__ == "__main__":
-    # if api_website or twitch_bot:
-    #     from starServer.tunnel_threads import ServeoThread
-    #     serveo_tunnel = ServeoThread()
-    #     serveo_tunnel.start()
-    #     log.info('>> serveo tunnel: online <<')
-    #     time.sleep(2)
-
     if api_website:
-        # from starServer.tunnel_threads import LoopholeThread
-        # tunnel_server = LoopholeThread()
-        # sclient.tunnel_thread = tunnel_server
-        # tunnel_server.start()
-        # time.sleep(2)
-        run_website()        
+        run_website()
 
     if twitch_bot:
         run_twitch_bot()

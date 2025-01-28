@@ -1,7 +1,7 @@
 import requests
 
-from starlib.fileDatabase import Jsondb
-from starlib.models.weather import *
+from ..fileDatabase import Jsondb
+from ..models.weather import *
 
 
 def sort_earthquakeReport(x:EarthquakeReport):

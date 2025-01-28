@@ -92,7 +92,7 @@ class StarController:
     def __init__(self):
         super().__init__()
         self.sqldb = sqldb
-        self.dbcache:StardbCache = StardbCache() if self.sqldb else None
+        self.dbcache:StardbCache = StardbCache()
 
         self._starai:StarGeminiAI = None
         self.bot:DiscordBot = None
@@ -108,3 +108,6 @@ class StarController:
         if not self._starai:
             self._starai = StarGeminiAI()
         return self._starai
+    
+    def __getitem__(self, key):
+        return self.dbcache[key]
