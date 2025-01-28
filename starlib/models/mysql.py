@@ -179,7 +179,6 @@ class NotifyCommunity(BasicSchema, table=True):
     community_id: str = Field(primary_key=True, foreign_key="stardb_basic.community_info.id")
     community_type: CommunityType = Field(sa_column=Column(Integer, ForeignKey("stardb_basic.community_info.type"), primary_key=True))
     guild_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
-    display_name: str | None
     channel_id: int = Field(sa_column=Column(BigInteger))
     role_id: int | None = Field(sa_column=Column(BigInteger))
     message: str | None

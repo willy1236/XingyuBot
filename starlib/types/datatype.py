@@ -33,6 +33,13 @@ class CommunityType(IntEnum):
     Spotify = 3
     Youtube = 4
 
+notify_to_community_map = {
+    NotifyCommunityType.TwitchLive: CommunityType.Twitch,
+    NotifyCommunityType.Youtube: CommunityType.Youtube,
+    NotifyCommunityType.TwitchVideo: CommunityType.Twitch,
+    NotifyCommunityType.TwitchClip: CommunityType.Twitch,
+}
+
 class StardbCacheType(Enum):
     pass
 

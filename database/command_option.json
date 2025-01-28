@@ -207,22 +207,6 @@
             "zh-TW": "無黨籍"
         }
     },
-    "rpgcareer_option": {
-        "1": {
-            "zh-TW": "農夫"
-        }
-    },
-    "rpgcity_action_option": {
-        "0": {
-            "zh-TW": "取消行動"
-        },
-        "1": {
-            "zh-TW": "攻擊城市"
-        },
-        "2": {
-            "zh-TW": "防禦城市"
-        }
-    },
     "twitch_notify_option": {
         "1": {
             "zh-TW": "開台通知"

@@ -35,7 +35,7 @@ class system_community(Cog_Extension):
         user = api.get_user(twitch_user)
         type_tw = Jsondb.get_tw(type.value, "twitch_notify_option")
         if user:
-            sclient.sqldb.add_notify_community(type.value, user.id, CommunityType.Twitch, guildid, channelid, roleid, msg)
+            sclient.sqldb.add_notify_community(type, user.id, CommunityType.Twitch, guildid, channelid, roleid, msg)
             sclient.sqldb.merge(Community(id=user.id, type=CommunityType.Twitch, name=user.display_name, login=user.login))
             match type:
                 case NotifyCommunityType.TwitchLive:
@@ -67,17 +67,17 @@ class system_community(Cog_Extension):
         guildid = ctx.guild.id
         twitch_user = TwitchAPI().get_user(twitch_user_login)
         if not notify_type or notify_type == NotifyCommunityType.TwitchLive:
-            sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitchLive, twitch_user.id, guildid, CommunityType.Twitch)
+            sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitchLive, twitch_user.id, guildid)
             if not sclient.sqldb.get_notify_community_count(NotifyCommunityType.TwitchLive, twitch_user.id):
                 Jsondb.remove_cache(JsonCacheType.TwitchLive, twitch_user.id)
         
         if not notify_type or notify_type == NotifyCommunityType.TwitchVideo:
-            sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitchVideo, twitch_user.id, guildid, CommunityType.Twitch)
+            sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitchVideo, twitch_user.id, guildid)
             if not sclient.sqldb.get_notify_community_count(NotifyCommunityType.TwitchVideo, twitch_user.id):
                 Jsondb.remove_cache(JsonCacheType.TwitchVideo, twitch_user.id)
 
         if not notify_type or notify_type == NotifyCommunityType.TwitchClip:
-            sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitchClip, twitch_user.id, guildid, CommunityType.Twitch)
+            sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitchClip, twitch_user.id, guildid)
             if not sclient.sqldb.get_notify_community_count(NotifyCommunityType.TwitchClip, twitch_user.id):
                 Jsondb.remove_cache(JsonCacheType.TwitchClip, twitch_user.id)
         
@@ -189,7 +189,7 @@ class system_community(Cog_Extension):
             await ctx.respond(f'錯誤：找不到帳號代碼 {ythandle} 的頻道')
             return
 
-        sclient.sqldb.remove_notify_community(NotifyCommunityType.Youtube,ytchannel.id,guildid,CommunityType.Youtube)
+        sclient.sqldb.remove_notify_community(NotifyCommunityType.Youtube, ytchannel.id, guildid)
         await ctx.respond(f'已移除頻道 {ytchannel.snippet.title} 的通知')
         
         sclient.dbcache.update_notify_community(NotifyCommunityType.Youtube)

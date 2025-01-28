@@ -298,19 +298,16 @@ class SQLNotifySystem(BaseSQLEngine):
         self.session.merge(community)
         self.session.commit()
 
-    def remove_notify_community(self,notify_type:NotifyCommunityType, community_id:str, guild_id:int, community_type:CommunityType=None):
-        """移除社群通知，若提供community_type則同時判斷移除社群"""
-        # TODO: 在type建表取代 community_type
+    def remove_notify_community(self,notify_type:NotifyCommunityType, community_id:str, guild_id:int):
+        """移除社群通知，同時判斷移除社群"""
         statement = delete(NotifyCommunity).where(
             NotifyCommunity.notify_type == notify_type,
-            or_(
-                NotifyCommunity.community_id == community_id,
-                NotifyCommunity.display_name == community_id
-            ),
+            NotifyCommunity.community_id == community_id,
             NotifyCommunity.guild_id == guild_id
         )
         self.session.exec(statement)
         self.session.commit()
+        community_type = notify_to_community_map.get(notify_type)
         if community_type is not None:
             self.remove_community(community_type, community_id)
 
