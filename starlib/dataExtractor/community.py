@@ -60,7 +60,7 @@ class TwitchAPI():
         :return: dict: {user_id: TwitchStream | None（如果無正在直播）}
         """
         params = {
-            "first": 1
+            "first": 100
         }
         if use_user_logins:
             params["user_login"] = users

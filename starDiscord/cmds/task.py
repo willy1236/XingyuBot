@@ -314,10 +314,13 @@ class task(Cog_Extension):
             await asyncio.sleep(3)
             data = yt_push.get_push(record.channel_id, callback_url)
 
-            record.push_at = data.last_successful_verification
-            record.expire_at = data.expiration_time
-            sclient.sqldb.merge(record)
-            await asyncio.sleep(1)
+            if data.has_verify:
+                record.push_at = data.last_successful_verification
+                record.expire_at = data.expiration_time
+                sclient.sqldb.merge(record)
+                await asyncio.sleep(1)
+            else:
+                log.warning(f"refresh_yt_push failed: {record.channel_id}")
 
 
 def setup(bot):

@@ -80,13 +80,15 @@ async def on_stream_online(event: eventsub.StreamOnlineEvent):
     if sclient.bot:
         sclient.bot.send_message(content=f'{event.event.broadcaster_user_name} 正在直播 {stream.game_name}!')
         is_live = Jsondb.get_cache(JsonCacheType.TwitchLive).get(event.event.broadcaster_user_id)
+        twitch_log.info(f'{event.event.broadcaster_user_name} is live: {is_live}')
         if not is_live:
-            embed = tw_api.get_lives(event.event.broadcaster_user_id)[event.event.broadcaster_user_id].embed()
+            live = tw_api.get_lives(event.event.broadcaster_user_id)[event.event.broadcaster_user_id]
+            embed = live.embed()
             profile_image_url = tw_api.get_user_by_id(event.event.broadcaster_user_id).profile_image_url
             if profile_image_url:
                 embed.author.icon_url = profile_image_url
             asyncio.run_coroutine_threadsafe(sclient.bot.send_notify_communities(embed, NotifyCommunityType.TwitchLive, event.event.broadcaster_user_id), sclient.bot.loop)
-            Jsondb.set_cache(JsonCacheType.TwitchLive, event.event.broadcaster_user_id, True)
+            Jsondb.set_cache(JsonCacheType.TwitchLive, event.event.broadcaster_user_id, live.id)
 
 async def on_stream_offline(event: eventsub.StreamOfflineEvent):
     twitch_log.info(f'{event.event.broadcaster_user_name} ending stream.')
