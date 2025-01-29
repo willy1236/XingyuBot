@@ -59,13 +59,11 @@ class McssServerAction(IntEnum):
     Restart = 4
 
 class McssServerStatues(IntEnum):
-    Offline = 0
+    Stopped = 0
     Running = 1
-    Stopped = 2
 
     def __str__(self):
         return {
             0: "離線",
             1: "啟動",
-            2: "停止",
         }.get(self.value)

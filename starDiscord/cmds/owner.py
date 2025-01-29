@@ -336,7 +336,11 @@ class owner(Cog_Extension):
 
         server_id = Jsondb.config.get('mc_server').get('server_id')
         server = mcss_api.get_server_detail(server_id)
-        if server and server.status == McssServerStatues.Stopped:
+        if not server:
+            await ctx.respond("伺服器未找到")
+            return
+        
+        if server.status == McssServerStatues.Stopped:
             mcss_api.excute_action(server_id, McssServerAction.Start)
             msg = await ctx.respond("已發送開啟指令，伺服器正在啟動...")
 
@@ -354,7 +358,7 @@ class owner(Cog_Extension):
             except Exception as e:
                 embed = BotEmbed.general(f"{ip}:{port}", title="伺服器已開啟", description="無法獲取伺服器狀態，若仍然無法連線，請聯繫管理者進行確認")
             
-            await ctx.respond("伺服器已開啟，", embed=embed)
+            await ctx.respond("伺服器已開啟", embed=embed)
             
     
     @mcserver.command(description="查詢mc伺服器")
