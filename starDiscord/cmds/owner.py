@@ -13,7 +13,7 @@ from mcstatus import JavaServer
 
 from starlib import BotEmbed, Jsondb, sclient
 from starlib.instance import *
-from starlib.types import McssServerAction, NotifyChannelType
+from starlib.types import McssServerAction, NotifyChannelType, McssServerStatues
 from starlib.utils.utility import base64_to_buffer, converter
 
 from ..command_options import *
@@ -336,14 +336,14 @@ class owner(Cog_Extension):
 
         server_id = Jsondb.config.get('mc_server').get('server_id')
         server = mcss_api.get_server_detail(server_id)
-        if server and server["status"] == 0:
+        if server and server.status == McssServerStatues.Stopped:
             mcss_api.excute_action(server_id, McssServerAction.Start)
             msg = await ctx.respond("已發送開啟指令，伺服器正在啟動...")
 
             for _ in range(10):
                 await asyncio.sleep(10)
                 server = mcss_api.get_server_detail(server_id)
-                if server and server["status"] == 1:
+                if server and server.status == McssServerStatues.Running:
                     try:
                         await msg.edit(embed=server_status(ip, port))
                     except:
@@ -401,7 +401,7 @@ class owner(Cog_Extension):
         #     return_code = mcserver_process.wait(30)
         server_id = Jsondb.config.get('mc_server').get('server_id')
         server = mcss_api.get_server_detail(server_id)
-        if server and server["status"] == 1:
+        if server and server.status == McssServerStatues.Running:
             mcss_api.excute_action(server_id, McssServerAction.Stop)
             await ctx.respond("已發送關閉指令，伺服器正在關閉...")
         else:
