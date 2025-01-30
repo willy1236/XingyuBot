@@ -70,16 +70,18 @@ def keep_alive(request:Request):
 async def get_yt_push(content):
     feed = feedparser.parse(content)
     print(feed)
-    if not feed["entries"][0]:
-        return
-    embed = YoutubePush(**feed["entries"][0]).embed()
-    
-    if sclient.bot:
-        msg = sclient.bot.send_message(embed=embed)
-        if not msg:
-            web_log.info('Channel not found. Message sent failed.')
-    else:
-        web_log.info('Bot not found.')
+    with open('test.json', 'w') as f:
+        f.write(str(feed))
+
+    for entry in feed["entries"]:
+        embed = YoutubePush(**entry).embed()
+        
+        if sclient.bot:
+            msg = sclient.bot.send_message(embed=embed)
+            if not msg:
+                web_log.info('Channel not found. Message sent failed.')
+        else:
+            web_log.info('Bot not found.')
 
 @app.get('/youtube_push')
 def youtube_push_get(request:Request):
@@ -188,11 +190,8 @@ class WebsiteThread(BaseThread):
         import uvicorn
         host = Jsondb.config.get("webip", "127.0.0.1")
         uvicorn.run(app, host=host, port=14000)
-        #os.system('uvicorn bot_website:app --port 14000')
+        #os.system('uvicorn bot_website:app --port 14000 --reload')
 
 if __name__ == '__main__':
-    #os.system('uvicorn bot_website:app --reload')
-    # server = ltThread()
-    # server.start()
     web = WebsiteThread()
     web.start()

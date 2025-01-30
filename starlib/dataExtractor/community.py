@@ -15,6 +15,14 @@ from ..fileDatabase import Jsondb
 from ..models.community import *
 from ..settings import tz
 
+class TwitterAPIResponse():
+    pass
+    # {
+    #     data: {}
+    #     pagination: {
+    #         cursor: str
+    #     }
+    # }
 
 class TwitchAPI():
     '''
@@ -52,6 +60,23 @@ class TwitchAPI():
             return headers
         else:
             raise Forbidden(f"在讀取Twitch API時發生錯誤",f"[{r.status_code}] {apidata['message']}")
+        
+    def _build_request(self, endpoint:str, params:dict):
+        after = True
+        while after:
+            r = requests.get(f"{self.BaseURL}/{endpoint}", params=params, headers=self.headers)
+            r.raise_for_status()
+            apidata = r.json()
+            if r.ok:
+                if apidata.get('pagination'):
+                    after = apidata['pagination'].get('cursor')
+                    params['after'] = after
+                else:
+                    after = None
+
+                for i in apidata['data']:
+                    i: dict
+                    yield i
 
     def get_lives(self,users:str | list[str], use_user_logins=False) -> dict[str, TwitchStream | None]:
         """
@@ -100,6 +125,19 @@ class TwitchAPI():
         else:
             return None
         
+    def get_user_test(self,username:str):
+        params = {
+            "login": username,
+            "first": 1
+        }
+        gen = self._build_request("users", params, TwitchUser)
+        data = next(gen)
+        print(data)
+        if data:
+            return TwitchUser(**data)
+        else:
+            return None
+        
     def get_user_by_id(self,userid:str) -> TwitchUser | None:
         """
         取得Twitch用戶
@@ -111,6 +149,7 @@ class TwitchAPI():
         }
         r = requests.get(f"{self.BaseURL}/users", params=params,headers=self.headers)
         apidata = r.json()
+        print(apidata)
         if apidata.get('data'):
             return TwitchUser(**apidata['data'][0])
         else:

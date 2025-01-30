@@ -74,7 +74,7 @@ class EarthquakeReport(BaseModel):
         embed.add_field(name='芮氏規模',value=f'{self.magnitude}')
         embed.add_field(name='震央',value=self.location,inline=False)
         if self.intensity and self.earthquakeNo[3:] != "000":
-            for key, value in sorted(self.intensity.items(), key=lambda x:x[0]):
+            for key, value in sorted(self.intensity.items(), key=lambda x:x[0], reverse=True):
                 embed.add_field(name=key,value=value,inline=False)
         embed.set_image(url=self.reportImageURI)
         embed.set_footer(text='中央氣象暑')

@@ -99,7 +99,8 @@ if __name__ == '__main__':
 # print(text, weather.WeatherElement.DailyExtreme.DailyHigh.AirTemperature, weather.WeatherElement.DailyExtreme.DailyLow.AirTemperature)
 # print(weather.model_dump())
 
-# tw_api = TwitchAPI()
+tw_api = TwitchAPI()
+print(tw_api.get_user_test("sakagawa_0309"))
 # clips = tw_api.get_clips(broadcaster_id=490765956, started_at=datetime.fromisoformat("2024-07-05 23:14:22+08:00"))
 # # clips = tw_api.get_clips(broadcaster_id=490765956)
 # new = datetime(2023, 12, 11, 18, 42, 55, tzinfo=timezone(timedelta(hours=8)))
@@ -113,7 +114,7 @@ if __name__ == '__main__':
 # from starlib.models.mysql import NotifyChannel
 # print(f'{NotifyChannel.__table_args__["schema"]}.{NotifyChannel.__tablename__}.{str(NotifyChannel.__fields__)}')
 
-print(YoutubePush().get_push("UCUEXMpxIa7le_CK6yYRAboA", Jsondb.get_token("youtube_push")))
+# print(YoutubePush().get_push("UCUEXMpxIa7le_CK6yYRAboA", Jsondb.get_token("youtube_push")))
 # notion_api = NotionAPI()
 # # print(notion_api.get_page("fcf82e7b8323414196e3e4fd25a3a42b"))
 # r = notion_api.get_block_children("fcf82e7b8323414196e3e4fd25a3a42b")
