@@ -7,12 +7,15 @@ from discord.ext import commands, tasks
 from requests.exceptions import ConnectTimeout, RequestException
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.date import DateTrigger
 
 from starlib import BotEmbed, Jsondb, log, sclient, tz, utils
 from starlib.types import NotifyChannelType, NotifyCommunityType, JsonCacheType
 from starlib.instance import *
 
 from ..extension import Cog_Extension
+
+scheduler = AsyncIOScheduler()
 
 class task(Cog_Extension):
     def __init__(self,*args,**kwargs):
@@ -21,7 +24,6 @@ class task(Cog_Extension):
     
     @commands.Cog.listener()
     async def on_ready(self):
-        scheduler = AsyncIOScheduler()
         if not Jsondb.config.get("debug_mode",True):
             scheduler.add_job(self.forecast_update,'cron',hour='0/3',minute=0,second=1,jitter=30,misfire_grace_time=60)
             scheduler.add_job(self.weather_check,'cron',minute='20,35',second=30,jitter=30,misfire_grace_time=60)
@@ -195,6 +197,8 @@ class task(Cog_Extension):
                 for video in api_videos:
                     embed = video.embed()
                     await self.bot.send_notify_communities(embed, NotifyCommunityType.Youtube, ytchannel_id)
+                    
+                    scheduler.add_job(self.test_one_times_job, 'date', run_date=video.liveStreamingDetails.scheduledStartTime, args=[f"{video.snippet.title}"])
 
         Jsondb.write_cache(JsonCacheType.YoutubeVideo,cache_youtube)
 
@@ -321,6 +325,9 @@ class task(Cog_Extension):
                 await asyncio.sleep(1)
             else:
                 log.warning(f"refresh_yt_push failed: {record.channel_id}")
+
+    async def test_one_times_job(text):
+        log.info(f"test_one_times_job: {text}")
 
 
 def setup(bot):
