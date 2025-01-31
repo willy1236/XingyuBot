@@ -378,11 +378,11 @@ class event(Cog_Extension):
     async def on_member_update(self,before:discord.Member, after:discord.Member):
         guildid = after.guild.id
         member = after
-        if guildid in happycamp_guild and (after.nick and before.nick != after.nick) or not after.nick:
+        if guildid in happycamp_guild and before.nick != after.nick:
             p2 = re.compile(r"冠宇")
-            nick = after.nick or ""
+            nick = after.nick
             
-            if p2.search(nick):
+            if nick and p2.search(nick):
                 role2 = after.guild.get_role(1145762872685764639)
                 await member.add_roles(role2)
             else:

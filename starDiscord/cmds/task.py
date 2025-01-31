@@ -198,47 +198,13 @@ class task(Cog_Extension):
                     embed = video.embed()
                     await self.bot.send_notify_communities(embed, NotifyCommunityType.Youtube, ytchannel_id)
                     
-                    scheduler.add_job(self.test_one_times_job, 'date', run_date=video.liveStreamingDetails.scheduledStartTime, args=[f"{video.snippet.title}"])
+                    if video.liveStreaming and video.liveStreamingDetails.scheduledStartTime:
+                        scheduler.add_job(self.test_one_times_job, DateTrigger(video.liveStreamingDetails.scheduledStartTime), args=[f"{video.snippet.title}"])
 
         Jsondb.write_cache(JsonCacheType.YoutubeVideo,cache_youtube)
 
     # async def get_mongodb_data(self):
     #     dbdata = mongedb.get_apidata()
-
-    async def update_pubsubhubbub_data(self):
-        pass
-
-    async def city_battle(self):
-        log.info("city_battle start")
-        city_battle_list = sclient.sqldb.get_all_city_battle()
-        if not city_battle_list:
-            return
-        
-        for city_battle in city_battle_list:    
-            if city_battle.defencer:
-                if not city_battle.attacker:
-                    return
-                
-                for defencer in city_battle.defencer:
-                    player_def = sclient.sqldb.get_rpguser(defencer.discord_id,user_dc=self.bot.get_user(defencer.discord_id))
-                    if city_battle.attacker:
-                        attacker = random.choice(city_battle.attacker)
-                        player_atk = sclient.sqldb.get_rpguser(attacker.discord_id,user_dc=self.bot.get_user(attacker.discord_id))
-                        
-                        embed = BotEmbed.rpg(f"在 {city_battle.city.city_name} 的占領戰\n",f"攻擊者 {player_atk.name} 對 防守者{player_def.name}\n")
-                        text, participants = player_def.battle_with(player_atk)
-                        embed.description += text
-
-                        if participants[0] == player_def:
-                            city_battle.attacker.remove(attacker)
-                        embed.description += f"\n剩餘 {len(city_battle.attacker)} 位攻擊者"
-                        await self.bot.get_channel(1181201785055096842).send(embed=embed)
-
-            else:
-                embed = BotEmbed.rpg(f"在 {city_battle.city.city_name} 的占領戰\n",f"佔領值 +{len(city_battle.attacker)}")
-                await self.bot.get_channel(1181201785055096842).send(embed=embed)
-        
-        log.info("city_battle end")
 
     async def start_eletion(self):
         log.info("start_eletion start")
