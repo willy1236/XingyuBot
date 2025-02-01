@@ -198,7 +198,7 @@ class task(Cog_Extension):
                     embed = video.embed()
                     await self.bot.send_notify_communities(embed, NotifyCommunityType.Youtube, ytchannel_id)
                     
-                    if video.liveStreaming and video.liveStreamingDetails.scheduledStartTime:
+                    if video.liveStreamingDetails and video.liveStreamingDetails.scheduledStartTime:
                         scheduler.add_job(self.test_one_times_job, DateTrigger(video.liveStreamingDetails.scheduledStartTime), args=[f"{video.snippet.title}"])
 
         Jsondb.write_cache(JsonCacheType.YoutubeVideo,cache_youtube)
