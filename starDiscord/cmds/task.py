@@ -108,7 +108,7 @@ class task(Cog_Extension):
     #@tasks.loop(minutes=3)
     async def twitch_live(self):
         log.debug("twitch_live start")
-        users = sclient.dbcache[NotifyCommunityType.TwitchLive]
+        users = sclient.sqldb[NotifyCommunityType.TwitchLive]
         if not users:
             return
         twitch_cache = Jsondb.get_cache(JsonCacheType.TwitchLive) or {}
@@ -128,7 +128,7 @@ class task(Cog_Extension):
         Jsondb.write_cache(JsonCacheType.TwitchLive, twitch_cache)
 
     async def twitch_video(self):
-        users = sclient.dbcache[NotifyCommunityType.TwitchVideo]
+        users = sclient.sqldb[NotifyCommunityType.TwitchVideo]
         if not users:
             return
         twitch_cache = Jsondb.get_cache(JsonCacheType.TwitchVideo) or {}
@@ -147,7 +147,7 @@ class task(Cog_Extension):
         Jsondb.write_cache(JsonCacheType.TwitchVideo,twitch_cache)
 
     async def twitch_clip(self):
-        users = sclient.dbcache[NotifyCommunityType.TwitchClip]
+        users = sclient.sqldb[NotifyCommunityType.TwitchClip]
         if not users:
             return
         twitch_cache = Jsondb.get_cache(JsonCacheType.TwitchClip) or {}
@@ -174,7 +174,7 @@ class task(Cog_Extension):
         Jsondb.write_cache(JsonCacheType.TwitchClip,twitch_cache)
 
     async def youtube_video(self):
-        ytchannels = sclient.dbcache[NotifyCommunityType.Youtube]
+        ytchannels = sclient.sqldb[NotifyCommunityType.Youtube]
         if not ytchannels:
             return
         cache_youtube = Jsondb.get_cache(JsonCacheType.YoutubeVideo) or {}

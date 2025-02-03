@@ -50,6 +50,7 @@ safety_settings = [
 ]
 
 class StarGeminiAI():
+	# TODO: LLM function call for AI chat
 	if TYPE_CHECKING:
 		history: list[str]
 		model: genai.GenerativeModel

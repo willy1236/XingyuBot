@@ -1,6 +1,5 @@
-import json
 from datetime import date, datetime, time, timedelta, timezone
-from typing import Tuple, TypeVar
+from typing import TYPE_CHECKING, Optional, Tuple, TypeVar, overload
 
 import discord
 import mysql.connector
@@ -20,6 +19,7 @@ from ..models.mysql import *
 from ..models.rpg import *
 from ..settings import tz
 from ..types import *
+from ..utils import log
 
 SQLsettings = Jsondb.config["SQLsettings"]
 
@@ -35,6 +35,9 @@ connection_url = URL.create(
 )
 
 class BaseSQLEngine:
+    if TYPE_CHECKING:
+        cache: dict[str, list[int]] | dict[NotifyChannelType, dict[int, list[int | Optional[int]]]] | dict[NotifyCommunityType, list[str]]
+
     def __init__(self,connection_url):
         self.engine = create_engine(connection_url, echo=False, pool_pre_ping=True)
         # SessionLocal = sessionmaker(bind=self.engine)
@@ -45,10 +48,12 @@ class BaseSQLEngine:
         # with Session(self.engine) as session:
         self.session = Session(bind=self.engine)
         
-        self.alengine = sqlalchemy.create_engine(connection_url, echo=False)
+        # self.alengine = sqlalchemy.create_engine(connection_url, echo=False)
         # Base.metadata.create_all(self.alengine)
-        Sessionmkr = sessionmaker(bind=self.alengine)
-        self.alsession = Sessionmkr()
+        # Sessionmkr = sessionmaker(bind=self.alengine)
+        # self.alsession = Sessionmkr()
+
+        self.cache = dict()
 
     #* Base
     def add(self, db_obj):
@@ -284,12 +289,16 @@ class SQLNotifySystem(BaseSQLEngine):
         voice = DynamicChannel(channel_id=channel_id, discord_id=discord_id, guild_id=guild_id, created_at=created_at)
         self.session.add(voice)
         self.session.commit()
+        if self.cache.get(NotifyChannelType.DynamicVoice):
+            self.cache[NotifyChannelType.DynamicVoice].append(channel_id)
 
     def remove_dynamic_voice(self,channel_id):
         """移除動態語音"""
         stmt = delete(DynamicChannel).where(DynamicChannel.channel_id == channel_id)
         self.session.exec(stmt)
         self.session.commit()
+        if self.cache.get(NotifyChannelType.DynamicVoice):
+            self.cache[NotifyChannelType.DynamicVoice].remove(channel_id)
 
     #* notify community
     def add_notify_community(self, notify_type:NotifyCommunityType, community_id:str, community_type:CommunityType, guild_id:int, channel_id:int, role_id:int=None, message:str=None):
@@ -696,7 +705,9 @@ class SQLTokensSystem(BaseSQLEngine):
 
 class SQLTest(BaseSQLEngine):
     def get_test(self):
-        result = self.alsession.query(Student).all()
+        # result = self.alsession.query(Student).all()
+        stmt = select(Student).where(Student.id == 1)
+        result = self.session.exec(stmt).one_or_none()
         return result
 
     def add_test(self, student:Student):
@@ -753,62 +764,6 @@ class MySQLBaseModel(object):
         """設定用戶資料"""
         self.cursor.execute(f"INSERT INTO `stardb_user`.`{table}` SET discord_id = {discord_id}, {column} = {value} ON DUPLICATE KEY UPDATE discord_id = {discord_id}, {column} = {value};")
         self.connection.commit()
-    
-    # def add_data(self,table:str,*value,db="database"):
-    #     self.cursor.execute(f"USE `{db}`;")
-    #     self.cursor.execute(f"INSERT INTO `{table}` VALUES(%s)",value)
-    #     self.connection.commit()
-
-    # def replace_data(self,table:str,*value,db="database"):
-    #     self.cursor.execute(f"USE `{db}`;")
-    #     self.cursor.execute(f"REPLACE INTO `{table}` VALUES(%s)",value)
-    #     self.connection.commit()
-
-    # def get_data(self,table:str):
-    #     db = "database"
-    #     self.cursor.execute(f"USE `{db}`;")
-    #     self.cursor.execute(f'SELECT * FROM `{table}` WHERE id = %s;',("1",))
-        
-    #     records = self.cursor.fetchall()
-    #     for r in records:
-    #          print(r)
-    
-    # def remove_data(self,table:str,*value):
-    #     db = "database"
-    #     self.cursor.execute(f"USE `{db}`;")
-    #     #self.cursor.execute(f'DELETE FROM `{table}` WHERE `id` = %s;',("3",))
-    #     self.cursor.execute(f'DELETE FROM `{table}` WHERE `id` = %s;',value)
-    #     self.connection.commit()
-    
-class MySQLHoYoLabSystem(MySQLBaseModel):
-    def set_hoyo_cookies(self,discord_id:int,cookies:dict):
-        cookies = json.dumps(cookies)
-        self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f"INSERT INTO `game_hoyo_cookies` VALUES(%s,%s) ON DUPLICATE KEY UPDATE `discord_id` = %s, `hoyolab_cookies` = %s;",(discord_id,cookies,discord_id,cookies))
-        self.connection.commit()
-
-    def remove_hoyo_cookies(self,discord_id:int):
-        self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f"DELETE FROM `game_hoyo_cookies` WHERE discord_id = {discord_id}")
-        self.connection.commit()
-
-    def get_hoyo_reward(self):
-        self.cursor.execute(f"USE `database`;")
-        #self.cursor.execute(f'SELECT * FROM `game_hoyo_reward` LEFT JOIN `game_hoyo_cookies` ON game_hoyo_reward.discord_id = game_hoyo_cookies.discord_id WHERE game_hoyo_reward.discord_id IS NOT NULL;')
-        self.cursor.execute(f'SELECT * FROM `game_hoyo_reward`;')
-        records = self.cursor.fetchall()
-        return records
-    
-    def add_hoyo_reward(self,discord_id:int,game:str,channel_id:str,need_mention:bool):
-        self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f"INSERT INTO `game_hoyo_reward` VALUES(%s,%s,%s,%s) ON DUPLICATE KEY UPDATE `channel_id` = {channel_id}, `need_mention` = {need_mention}",(discord_id,game,channel_id,need_mention))
-        self.connection.commit()
-
-    def remove_hoyo_reward(self,discord_id:int):
-        self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f"DELETE FROM `game_hoyo_reward` WHERE discord_id = {discord_id}")
-        self.connection.commit()
-
 class MySQLBetSystem(MySQLBaseModel):
     def get_bet_data(self,bet_id:int):
         self.cursor.execute(f"USE `database`;")
@@ -848,286 +803,6 @@ class MySQLBetSystem(MySQLBaseModel):
     def remove_bet(self,bet_id:int):
         self.cursor.execute(f'DELETE FROM `stardb_user`.`user_bet` WHERE `bet_id` = %s;',(bet_id,))
         self.cursor.execute(f'DELETE FROM `database`.`bet_data` WHERE `bet_id` = %s;',(bet_id,))
-        self.connection.commit()
-
-class MySQLRPGSystem(MySQLBaseModel):
-    
-    def get_rpguser(self,discord_id:int,full=False,user_dc:discord.User=None,):
-        """取得RPG用戶
-        :param full: 是否合併其他表取得完整資料
-        """
-        self.cursor.execute(f"USE `stardb_user`;")
-        if full:
-            #self.cursor.execute(f'SELECT * FROM `rpg_user` LEFT JOIN `user_point`ON `rpg_user`.discord_id = `user_point`.discord_id WHERE rpg_user.discord_id = %s;',(discord_id,))
-            self.cursor.execute(f'SELECT * FROM `rpg_user` LEFT JOIN `user_point` ON `rpg_user`.discord_id = `user_point`.discord_id LEFT JOIN `stardb_idbase`.`rpg_career` ON `rpg_user`.career_id = `rpg_career`.career_id WHERE rpg_user.discord_id = %s;',(discord_id,))
-        else:
-            self.cursor.execute(f'SELECT * FROM `rpg_user` LEFT JOIN `user_point` ON `rpg_user`.discord_id = `user_point`.discord_id WHERE rpg_user.discord_id = %s;',(discord_id,))
-            
-        records = self.cursor.fetchall()
-        if records:
-            return RPGUser(records[0],self,user_dc=user_dc)
-        else:
-            self.cursor.execute(f'INSERT INTO `rpg_user` SET `discord_id` = %s;',(discord_id,))
-            self.connection.commit()
-            self.cursor.execute(f'SELECT * FROM `rpg_user` LEFT JOIN `user_point`ON `rpg_user`.discord_id = `user_point`.discord_id WHERE rpg_user.discord_id = %s;',(discord_id,))
-            return RPGUser(self.cursor.fetchall()[0],self,user_dc=user_dc)
-
-    def get_monster(self,monster_id:str):
-        """取得怪物"""
-        self.cursor.execute(f'SELECT * FROM `stardb_idbase`.`rpg_monster` WHERE `monster_id` = %s;',(monster_id,))
-        records = self.cursor.fetchall()
-        if records:
-            return Monster(records[0])
-        else:
-            raise ValueError('monster_id not found.')
-        
-    def get_monster_loot(self,monster_id:str):
-        self.cursor.execute(f'SELECT * FROM `stardb_idbase`.`rpg_monster_loot_equipment` LEFT JOIN `stardb_idbase`.`rpg_equipment` ON `rpg_monster_loot_equipment`.equipment_id = `rpg_equipment`.equipment_id WHERE `monster_id` = %s;',(monster_id,))
-        records = self.cursor.fetchall()
-        if records:
-            return MonsterLootList(records)
-
-    def set_rpguser(self,discord_id:int):
-        self.cursor.execute(f"USE `stardb_user`;")
-        self.cursor.execute(f"INSERT INTO `rpg_user` VALUES(%s);",(discord_id,))
-        self.connection.commit()
-    
-    def update_rpguser_attribute(self,discord_id:int,maxhp=0,atk=0,df=0,hrt=0,dex=0):
-        self.cursor.execute(f'UPDATE `stardb_user`.`rpg_user` SET `user_hp` = CASE WHEN `user_maxhp` + {maxhp} < `user_hp` THEN `user_maxhp` ELSE `user_hp` END, `user_maxhp` = `user_maxhp` + {maxhp}, `user_atk` = `user_atk` + {atk}, `user_def` = `user_def` + {df}, `user_hrt` = `user_hrt` + {hrt}, `user_dex` = `user_dex` + {dex} WHERE `discord_id` = {discord_id}')
-        self.connection.commit()
-
-    def get_activities(self,discord_id:int):
-        records = self.get_userdata(discord_id,"rpg_activities")
-        return records or {}
-
-    def get_bag(self,discord_id:int,item_uid:int=None,with_name=False):
-        self.cursor.execute(f"USE `stardb_user`;")
-        if with_name:
-            self.cursor.execute(f"SELECT `rpg_user_bag`.item_uid,item_name,amount,item_category_id,item_id FROM `stardb_user`.`rpg_user_bag` LEFT JOIN `stardb_idbase`.`rpg_item` ON `rpg_user_bag`.item_uid = `rpg_item`.item_uid WHERE discord_id = {discord_id};")
-        elif item_uid:
-            self.cursor.execute(f"SELECT * FROM `rpg_user_bag` WHERE discord_id = {discord_id} AND item_uid = {item_uid};")
-        else:
-            self.cursor.execute(f"SELECT item_uid,amount FROM `rpg_user_bag` WHERE discord_id = {discord_id};")
-        records = self.cursor.fetchall()
-        return records or []
-    
-    def get_bag_desplay(self,discord_id:int):
-        self.cursor.execute(f"SELECT * FROM `stardb_user`.`rpg_user_bag` LEFT JOIN `stardb_idbase`.`rpg_item` ON `rpg_user_bag`.item_uid = `rpg_item`.item_uid WHERE discord_id = {discord_id};")
-        #self.cursor.execute(f"SELECT rpg_item.item_id,name,amount FROM `database`.`rpg_user_bag`,`stardb_idbase`.`rpg_item` WHERE discord_id = {discord_id};")
-        records = self.cursor.fetchall()
-        return records
-
-    def update_bag(self,discord_id:int,item_uid:int,amount:int):
-        self.cursor.execute(f"INSERT INTO `stardb_user`.`rpg_user_bag` SET discord_id = {discord_id}, item_uid = {item_uid}, amount = {amount} ON DUPLICATE KEY UPDATE amount = amount + {amount};")
-        self.connection.commit()
-
-    def remove_bag(self,discord_id:int,item_uid:int,amount:int):
-        r = self.get_bag(discord_id,item_uid)
-        if r[0]['amount'] < amount:
-            raise ValueError('此物品數量不足')
-        
-        self.cursor.execute(f"USE `stardb_user`;")
-        if r[0]['amount'] == amount:
-            self.cursor.execute(f"DELETE FROM `rpg_user_bag` WHERE `discord_id` = %s AND `item_uid` = %s;",(discord_id,item_uid))
-        else:
-            self.cursor.execute(f'UPDATE `rpg_user_bag` SET amount = amount - {amount} WHERE `discord_id` = {discord_id} AND `item_uid` = {item_uid}')
-        self.connection.commit()
-
-    def get_work(self,discord_id:int):
-        self.cursor.execute(f"USE `stardb_user`;")
-        #self.cursor.execute(f"SELECT * FROM `rpg_user` LEFT JOIN `stardb_idbase`.`rpg_career` ON `rpg_user`.career_id = `rpg_career`.career_id LEFT JOIN `stardb_idbase`.`rpg_item` ON `rpg_career`.reward_item_id = `rpg_item`.item_id WHERE `discord_id` = {discord_id} AND `last_work` > NOW() - INTERVAL 12 HOUR;")
-        self.cursor.execute(f"SELECT * FROM `rpg_user` LEFT JOIN `stardb_idbase`.`rpg_career` ON `rpg_user`.career_id = `rpg_career`.career_id LEFT JOIN `stardb_idbase`.`rpg_item` ON `rpg_career`.reward_item_uid = `rpg_item`.item_uid WHERE `discord_id` = {discord_id};")
-        records = self.cursor.fetchall()
-        if records:
-            return records[0]
-    
-    def refresh_work(self,discord_id:int):
-        self.cursor.execute(f'UPDATE `rpg_user` SET `last_work` = NOW() WHERE `discord_id` = {discord_id};')
-        self.connection.commit()
-
-    def set_rpguser_data(self,discord_id:int,column:str,value):
-        """設定或更新RPG用戶資料"""
-        self.cursor.execute(f"USE `stardb_user`;")
-        self.cursor.execute(f"INSERT INTO `rpg_user` SET discord_id = {discord_id}, {column} = {value} ON DUPLICATE KEY UPDATE discord_id = {discord_id}, {column} = {value};")
-        self.connection.commit()
-
-    def get_rpg_shop_list(self):
-        self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f"SELECT * FROM `rpg_shop` LEFT JOIN `stardb_idbase`.`rpg_item` ON `rpg_shop`.item_uid = `rpg_item`.item_uid;")
-        records = self.cursor.fetchall()
-        return records
-    
-    def get_rpg_shop_item(self,shop_item_id:int):
-        self.cursor.execute(f"SELECT * FROM `database`.`rpg_shop` LEFT JOIN `stardb_idbase`.`rpg_item` ON `rpg_shop`.item_uid = `rpg_item`.item_uid WHERE `shop_item_id` = {shop_item_id};")
-        record = self.cursor.fetchall()
-        if record:
-            return ShopItem(record[0])
-        
-    def update_rpg_shop_inventory(self,shop_item_id:int,item_inventory_add:int):
-        self.cursor.execute(f"UPDATE `database`.`rpg_shop` SET `item_inventory` = item_inventory + {item_inventory_add} WHERE `shop_item_id` = {shop_item_id};")
-        self.cursor.execute(f"UPDATE `database`.`rpg_shop` SET `item_price` = item_inital_price * pow(0.97,item_inventory - item_inital_inventory) WHERE `shop_item_id` = {shop_item_id};")
-        self.connection.commit()
-
-    def rpg_shop_daily(self):
-        self.cursor.execute(f"UPDATE `database`.`rpg_shop` SET `item_inventory` = item_inventory - item_inital_inventory * (item_inventory / item_inital_inventory * FLOOR(RAND()*76+25) / 100 ) WHERE `item_mode` = 1;")
-        self.cursor.execute(f"UPDATE `database`.`rpg_shop` SET `item_inventory` = item_inital_inventory WHERE item_inventory <= item_inital_inventory AND `item_mode` = 1;")
-        self.cursor.execute(f"UPDATE `database`.`rpg_shop` SET `item_price` =  item_inital_price * pow(0.97,item_inventory - item_inital_inventory) WHERE `item_mode` = 1;")
-        self.connection.commit()
-        
-    def get_rpgequipment_ingame(self,equipment_uid):
-        self.cursor.execute(f"SELECT * FROM database.rpg_equipment_ingame LEFT JOIN `stardb_idbase`.`rpg_equipment` ON `rpg_equipment_ingame`.equipment_id = `rpg_equipment`.equipment_id LEFT JOIN `stardb_idbase`.`rpg_item` ON `rpg_equipment`.item_id = `rpg_item`.item_id WHERE `equipment_uid` = {equipment_uid};")
-        record = self.cursor.fetchall()
-        if record:
-            return RPGEquipment(record[0])
-        
-    def add_equipment_ingame(self, equipment_id, equipment_customized_name=None, equipment_maxhp=None, equipment_atk=None, equipment_def=None, equipment_hrt=None, equipment_dex=None):
-        self.cursor.execute(f"INSERT INTO `database`.`rpg_equipment_ingame` VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);",(None,equipment_id,equipment_customized_name,None,None,equipment_maxhp,equipment_atk,equipment_def,equipment_hrt,equipment_dex))
-        self.connection.commit()
-        return self.cursor.lastrowid
-
-    def get_rpgplayer_equipment(self,discord_id,equipment_uid=None,equipment_id=None,slot_id=None):
-        """查詢現有裝備\n
-        以下三者則一提供，都不提供則查詢玩家所有裝備
-        :param equipment_uid: 查詢玩家是否擁有指定裝備
-        :param equipment_id: 查詢玩家同類型裝備，同時傳入slot_id=0則查詢玩家未穿戴同類型裝備
-        :param slot_id: 查詢玩家所有穿戴或未穿戴裝備 -1:穿戴 0:未穿戴 其他:指定欄位穿戴
-        """
-        if equipment_uid:
-            self.cursor.execute(f"SELECT * FROM `database`.`rpg_equipment_ingame` LEFT JOIN `stardb_idbase`.`rpg_equipment` ON `rpg_equipment_ingame`.equipment_id = `rpg_equipment`.equipment_id LEFT JOIN `stardb_idbase`.`rpg_item` ON `rpg_equipment`.item_id = `rpg_item`.item_id WHERE `equipment_uid` = {equipment_uid} AND `discord_id` = {discord_id};")
-            record = self.cursor.fetchall()
-            if record:
-                return RPGEquipment(record[0])
-        elif equipment_id:
-            if slot_id == 0:
-                WHERE = f"`rpg_equipment_ingame`.equipment_id = {equipment_id} AND `discord_id` = {discord_id} AND `slot_id` IS NULL"
-            else:
-                WHERE = f"`rpg_equipment_ingame`.equipment_id = {equipment_id} AND `discord_id` = {discord_id}"
-            self.cursor.execute(f"SELECT * FROM `database`.`rpg_equipment_ingame` LEFT JOIN `stardb_idbase`.`rpg_equipment` ON `rpg_equipment_ingame`.equipment_id = `rpg_equipment`.equipment_id LEFT JOIN `stardb_idbase`.`rpg_item` ON `rpg_equipment`.item_id = `rpg_item`.item_id WHERE {WHERE};")
-            record = self.cursor.fetchall()
-            if record:
-                return [ RPGEquipment(i) for i in record ] 
-            
-        elif slot_id is not None:
-            if slot_id == -1:
-                WHERE = f"`discord_id` = {discord_id} AND `slot_id` IS NOT NULL"
-            elif slot_id == 0:
-                WHERE = f"`discord_id` = {discord_id} AND `slot_id` IS NULL"
-            else:
-                WHERE = f"`discord_id` = {discord_id} AND `slot_id` = {slot_id}"
-            self.cursor.execute(f"SELECT * FROM `database`.`rpg_equipment_ingame` LEFT JOIN `stardb_idbase`.`rpg_equipment` ON `rpg_equipment_ingame`.equipment_id = `rpg_equipment`.equipment_id LEFT JOIN `stardb_idbase`.`rpg_item` ON `rpg_equipment`.item_id = `rpg_item`.item_id WHERE {WHERE};")
-            record = self.cursor.fetchall()
-            if record:
-                return [ RPGEquipment(i) for i in record ]
-
-        else:
-            self.cursor.execute(f"SELECT * FROM `database`.`rpg_equipment_ingame` LEFT JOIN `stardb_idbase`.`rpg_equipment` ON `rpg_equipment_ingame`.equipment_id = `rpg_equipment`.equipment_id LEFT JOIN `stardb_idbase`.`rpg_item` ON `rpg_equipment`.item_id = `rpg_item`.item_id WHERE `discord_id` = {discord_id} AND `item_category_id` = 2;")
-            record = self.cursor.fetchall()
-            if record:
-                return [ RPGEquipment(i) for i in record ]
-            else:
-                return []
-
-    def set_rpgplayer_equipment(self,discord_id,equipment_uid):
-        self.cursor.execute(f"UPDATE `database`.`rpg_equipment_ingame` SET `discord_id` = %s WHERE `equipment_uid` = %s;",(discord_id,equipment_uid))
-        self.connection.commit()
-    
-    def remove_rpgplayer_equipment(self,discord_id,equipment_uid):
-        self.cursor.execute(f"DELETE FROM `database`.`rpg_equipment_ingame` WHERE `discord_id` = %s AND `equipment_uid` = %s;",(discord_id,equipment_uid))
-        self.connection.commit()
-
-    def update_rpgplayer_equipment(self,equipment_uid,colum,value):
-        self.cursor.execute(f"UPDATE `database`.`rpg_equipment_ingame` SET `{colum}` = {value} WHERE `equipment_uid` = {equipment_uid};")
-        self.connection.commit()
-
-    def sell_rpgplayer_equipment(self,discord_id,equipment_uid=None,equipment_id=None):
-        """售出裝備
-        :param equipment_uid: 售出指定裝備
-        :param equipment_id: 售出同類型裝備，並回傳總價格與裝備uid列表
-        """
-        if equipment_uid:
-            self.cursor.execute(f"DELETE FROM `database`.`rpg_equipment_ingame` WHERE `discord_id` = %s AND `equipment_uid` = %s AND `equipment_inmarket` != 1;",(discord_id,equipment_uid))
-            self.connection.commit()
-        elif equipment_id:
-            self.cursor.execute(f"SELECT `equipment_uid` FROM `database`.`rpg_equipment_ingame` LEFT JOIN `stardb_idbase`.`rpg_equipment` ON `rpg_equipment_ingame`.equipment_id = `rpg_equipment`.equipment_id WHERE `rpg_equipment_ingame`.`equipment_id` = {equipment_id} AND `discord_id` = {discord_id} AND `slot_id` IS NULL AND `equipment_inmarket` != 1;")
-            equipment_uids = [row["equipment_uid"] for row in self.cursor.fetchall()]
-            price = 0
-            if equipment_uids:
-                self.cursor.execute(f"SELECT SUM(`rpg_equipment`.equipment_price) as price FROM `database`.`rpg_equipment_ingame` LEFT JOIN `stardb_idbase`.`rpg_equipment` ON `rpg_equipment_ingame`.equipment_id = `rpg_equipment`.equipment_id WHERE `rpg_equipment_ingame`.`equipment_id` = {equipment_id} AND `discord_id` = {discord_id} AND `slot_id` IS NULL AND `equipment_inmarket` != 1;")
-                record = self.cursor.fetchall() 
-                price = record[0]["price"]
-                
-                uid_list = ','.join(map(str, equipment_uids))
-                self.cursor.execute(f"DELETE FROM `database`.`rpg_equipment_ingame` WHERE `equipment_uid` IN ({uid_list});")
-                #self.connection.commit()
-                print(equipment_uids)
-            
-            return (price, equipment_uids)
-
-    def update_rpgplayer_equipment_warning(self,discord_id,equipment_uid,slot_id=None):
-        slot = EquipmentSolt(slot_id) if slot_id else None
-
-        item = self.get_rpgplayer_equipment(discord_id,equipment_uid)
-        if slot_id:
-            #穿上裝備
-            self.cursor.execute(f"UPDATE `database`.`rpg_equipment_ingame` SET `slot_id` = %s WHERE `equipment_uid` = %s AND `equipment_inmarket` != 1;",(slot.value,equipment_uid))
-            self.update_rpguser_attribute(discord_id,item.maxhp,item.atk,item.df,item.hrt,item.dex)
-        else:
-            #脫掉裝備
-            self.cursor.execute(f"UPDATE `database`.`rpg_equipment_ingame` SET `slot_id` = %s WHERE `equipment_uid` = %s AND `equipment_inmarket` != 1;",(None,equipment_uid))
-            self.update_rpguser_attribute(discord_id,-item.maxhp,-item.atk,-item.df,-item.hrt,-item.dex)
-        self.connection.commit()
-        
-    def get_item_market_item(self,discord_id,item_uid):
-        self.cursor.execute(f"SELECT * FROM `database`.`rpg_item_market` AS rim LEFT JOIN `stardb_idbase`.`rpg_item` AS ri ON ri.item_uid = rim.item_uid WHERE `discord_id` = {discord_id} AND rim.`item_uid` = {item_uid};")
-        record = self.cursor.fetchall()
-        if record:
-            return RPGMarketItem(record[0])
-        
-    def add_item_market_item(self,discord_id, item_uid, amount, per_price):
-        self.cursor.execute(f"INSERT INTO `database`.`rpg_item_market` VALUES(%s,%s,%s,%s);",(discord_id,item_uid,amount,per_price))
-        self.connection.commit()
-
-    def update_item_market_item(self,discord_id, item_uid, amount):
-        self.cursor.execute(f"UPDATE `database`.`rpg_item_market` SET `amount` = amount - {amount} WHERE `discord_id` = {discord_id} AND `item_uid` = {item_uid};")
-        self.connection.commit()
-
-    def remove_item_market_item(self,discord_id, item_uid):
-        self.cursor.execute(f"DELETE FROM `database`.`rpg_item_market` WHERE `discord_id` = {discord_id} AND `item_uid` = {item_uid};")
-        self.connection.commit()
-    
-    def get_item_market_list(self,discord_id):
-        self.cursor.execute(f"SELECT * FROM `database`.`rpg_item_market` AS rim LEFT JOIN `stardb_idbase`.`rpg_item` AS ri ON rim.item_uid = ri.item_uid WHERE `discord_id` = {discord_id};")
-        record = self.cursor.fetchall()
-        if record:
-            return [RPGMarketItem(i) for i in record]
-        
-    def get_city(self,city_id,with_introduce=False):
-        self.cursor.execute(f"SELECT * FROM `stardb_idbase`.`rpg_cities` LEFT JOIN `database`.`rpg_cities_statue` ON `rpg_cities_statue`.city_id = `rpg_cities`.city_id WHERE `rpg_cities`.`city_id` = {city_id};")
-        record = self.cursor.fetchall()
-        if record:
-            return RPGCity(record[0])
-        
-    def get_city_battle(self,city_id):
-        self.cursor.execute(f"SELECT * FROM `database`.`rpg_city_battle` LEFT JOIN `stardb_idbase`.`rpg_cities` ON `rpg_city_battle`.city_id = `rpg_cities`.city_id WHERE `rpg_cities`.`city_id` = {city_id};")
-        record = self.cursor.fetchall()
-        # if record:
-        #     return CityBattle(record,sqldb=self)
-        
-    def get_all_city_battle(self):
-        self.cursor.execute(f"SELECT DISTINCT `rpg_cities`.`city_id` FROM `database`.`rpg_city_battle` LEFT JOIN `stardb_idbase`.`rpg_cities` ON `rpg_city_battle`.city_id = `rpg_cities`.city_id;")
-        record = self.cursor.fetchall()
-        if record:
-            city_id_list = [i["city_id"] for i in record]
-            city_battle_list = [self.get_city_battle(city_id) for city_id in city_id_list]
-            return city_battle_list
-        
-        
-    def add_city_battle(self,city_id,discord_id,in_city_statue):
-        self.cursor.execute(f"INSERT INTO `database`.`rpg_city_battle` VALUES(%s,%s,%s) ON DUPLICATE KEY UPDATE `in_city_statue` = {in_city_statue};",(city_id,discord_id,in_city_statue))
-        self.connection.commit()
-
-    def remove_city_battle(self,city_id,discord_id):
-        self.cursor.execute(f"DELETE FROM `database`.`rpg_city_battle` WHERE `city_id` = {city_id} AND `discord_id` = {discord_id};")
         self.connection.commit()
 
 class MYSQLElectionSystem(MySQLBaseModel):
@@ -1239,9 +914,7 @@ class MySQLManager(MySQLBaseModel):
                 raise e
 
 class MySQLDatabase(
-    MySQLHoYoLabSystem,
     MySQLBetSystem,
-    MySQLRPGSystem,
     MYSQLElectionSystem,
     MySQLManager,
 ):
@@ -1265,3 +938,96 @@ class SQLEngine(
     SQLTest,
     ):
     """SQL引擎"""
+
+    dict_type = [NotifyChannelType.DynamicVoice, NotifyChannelType.VoiceLog]
+    list_type = ["dynamic_voice_room"]
+
+    def init_notify(self):
+        for t in self.dict_type:
+            self.update_notify_channel(t)
+
+        for t in self.list_type:
+            if t == "dynamic_voice_room":
+                self[t] = self.get_all_dynamic_voice()
+    
+        self.update_notify_community()
+        log.debug("dbcache: notify init.")
+
+    def __setitem__(self, key, value):
+        self.cache[key] = value
+
+    def __delitem__(self, key):
+        try:
+            del self.cache[key]
+        except KeyError:
+            log.warning(f"dbcache KeyError: {key}")
+            pass
+
+    @overload
+    def __getitem__(self, key:str) -> list[int]:
+        ...
+
+    @overload
+    def __getitem__(self, key:NotifyChannelType) -> dict[int, list[int | Optional[int]]]:
+        ...
+
+    @overload
+    def __getitem__(self, key:NotifyCommunityType) -> list[str]:
+        ...
+
+    def __getitem__(self, key):
+        try:
+            value = self.cache[key]
+            return value
+        except KeyError:
+            log.warning(f"dbcache KeyError: {key}")
+            return None
+
+    @staticmethod
+    def generate_notify_channel_dbdata(dbdata:list[NotifyChannel]):
+        dict = {}
+        for data in dbdata:
+            guildid = data.guild_id
+            channelid = data.channel_id
+            roleid = data.role_id
+            dict[guildid] = [channelid, roleid]
+        return dict
+    
+    @staticmethod
+    def generate_notify_community_dbdata(dbdata:list[NotifyCommunity]):
+        lst = []
+        for data in dbdata:
+            if data.community_id not in lst:
+                lst.append(data.community_id)
+        return lst
+    
+    def update_notify_channel(self, notify_type:NotifyChannelType):
+        """更新通知頻道"""
+        if notify_type not in self.dict_type:
+            raise KeyError(f"Not implemented notify type: {notify_type}")
+        dbdata = self.get_notify_channel_by_type(notify_type)
+        self.cache[notify_type] = self.generate_notify_channel_dbdata(dbdata)
+
+    def update_notify_community(self, notify_type:NotifyCommunityType=None):
+        """更新社群通知"""
+        if notify_type:
+            if notify_type not in NotifyCommunityType:
+                raise KeyError(f"Not implemented notify type: {notify_type}")
+            
+            dbdata = self.get_notify_community(notify_type)
+            self.cache[notify_type] = self.generate_notify_community_dbdata(dbdata)
+        else:
+            for t in NotifyCommunityType:
+                dbdata = self.get_notify_community(t)
+                self[t] = self.generate_notify_community_dbdata(dbdata)
+    
+    def update_dynamic_voice(self,add_channel=None,remove_channel=None):
+        """更新動態語音頻道"""
+        if add_channel and add_channel not in self.cache[NotifyChannelType.DynamicVoice]:
+            self.cache[NotifyChannelType.DynamicVoice].append(add_channel)
+        if remove_channel:
+            self.cache[NotifyChannelType.DynamicVoice].remove(remove_channel)
+    
+    def getif_dynamic_voice_room(self,channel_id:int):
+        """取得動態語音房間"""
+        return channel_id if channel_id in self["dynamic_voice_room"] else None

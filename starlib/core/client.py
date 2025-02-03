@@ -12,7 +12,6 @@ from ..fileDatabase import Jsondb
 from ..settings import tz
 from ..starAI import StarGeminiAI
 from ..utils import BotEmbed
-from .cache import StardbCache
 
 if TYPE_CHECKING:
     from twitchAPI.twitch import Twitch
@@ -92,7 +91,7 @@ class StarController:
     def __init__(self):
         super().__init__()
         self.sqldb = sqldb
-        self.dbcache:StardbCache = StardbCache()
+        # self.dbcache:StardbCache = StardbCache()
 
         self._starai:StarGeminiAI = None
         self.bot:DiscordBot = None
@@ -108,6 +107,3 @@ class StarController:
         if not self._starai:
             self._starai = StarGeminiAI()
         return self._starai
-    
-    def __getitem__(self, key):
-        return self.dbcache[key]

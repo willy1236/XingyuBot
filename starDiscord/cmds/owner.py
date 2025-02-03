@@ -421,7 +421,7 @@ class owner(Cog_Extension):
         await ctx.respond(response if response else "指令已發送")
 
     @mcserver.command(description="執行mc伺服器操作")
-    @commands.is_owner()
+    @commands.has_guild_permissions(manage_channels=True)
     async def action(self, ctx:discord.ApplicationContext,
                      server=mcss_server_option,
                      action=mcss_action_option):
