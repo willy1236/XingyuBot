@@ -14,6 +14,7 @@ debug_mode = config.get('debug_mode',True)
 twitch_bot = config.get('twitch_bot',False)
 
 def run_discord_bot():
+    sclient.sqldb.init_notify()
     log.debug('Discord Bot start running...')
     bot = DiscordBot(bot_code)
     sclient.bot = bot

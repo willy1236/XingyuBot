@@ -36,7 +36,7 @@ connection_url = URL.create(
 
 class BaseSQLEngine:
     if TYPE_CHECKING:
-        cache: dict[str, list[int]] | dict[NotifyChannelType, dict[int, list[int | Optional[int]]]] | dict[NotifyCommunityType, list[str]]
+        cache: dict[str, list[int]] | dict[NotifyChannelType, dict[int, tuple[int, Optional[int]]]] | dict[NotifyCommunityType, list[str]]
 
     def __init__(self,connection_url):
         self.engine = create_engine(connection_url, echo=False, pool_pre_ping=True)
@@ -251,6 +251,9 @@ class SQLNotifySystem(BaseSQLEngine):
         self.session.merge(channel)
         self.session.commit()
 
+        if self.cache.get(notify_type):
+            self.cache[notify_type][guild_id] = (channel_id, role_id)
+
     def remove_notify_channel(self,guild_id:int,notify_type:NotifyChannelType):
         """移除自動通知頻道"""
         stmt = delete(NotifyChannel).where(
@@ -259,6 +262,9 @@ class SQLNotifySystem(BaseSQLEngine):
         )
         self.session.exec(stmt)
         self.session.commit()
+
+        if self.cache.get(notify_type):
+            del self.cache[notify_type][guild_id]
     
     def get_notify_channel(self,guild_id:str,notify_type:NotifyChannelType):
         """取得自動通知頻道"""
@@ -307,6 +313,9 @@ class SQLNotifySystem(BaseSQLEngine):
         self.session.merge(community)
         self.session.commit()
 
+        if self.cache.get(notify_type):
+            self.cache[notify_type].append(community_id)
+
     def remove_notify_community(self,notify_type:NotifyCommunityType, community_id:str, guild_id:int):
         """移除社群通知，同時判斷移除社群"""
         statement = delete(NotifyCommunity).where(
@@ -319,6 +328,9 @@ class SQLNotifySystem(BaseSQLEngine):
         community_type = notify_to_community_map.get(notify_type)
         if community_type is not None:
             self.remove_community(community_type, community_id)
+        
+        if self.cache.get(notify_type):
+            self.cache[notify_type].remove(community_id)
 
     def get_notify_community(self, notify_type:NotifyCommunityType):
         """取得社群通知（依據社群）"""
@@ -968,7 +980,7 @@ class SQLEngine(
         ...
 
     @overload
-    def __getitem__(self, key:NotifyChannelType) -> dict[int, list[int | Optional[int]]]:
+    def __getitem__(self, key:NotifyChannelType) -> dict[int, tuple[int, Optional[int]]]:
         ...
 
     @overload
@@ -990,7 +1002,7 @@ class SQLEngine(
             guildid = data.guild_id
             channelid = data.channel_id
             roleid = data.role_id
-            dict[guildid] = [channelid, roleid]
+            dict[guildid] = (channelid, roleid)
         return dict
     
     @staticmethod

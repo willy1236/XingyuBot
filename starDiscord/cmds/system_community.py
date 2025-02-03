@@ -46,8 +46,6 @@ class system_community(Cog_Extension):
                 
                 case NotifyCommunityType.TwitchClip:
                     Jsondb.set_cache(JsonCacheType.TwitchClip, user.id, datetime.now(tz=tz).isoformat(timespec="seconds"))
-            
-            sclient.sqldb.update_notify_community(type)
 
             if role:
                 await ctx.respond(f'設定成功：{user.display_name}({user.login})的{type_tw}將會發送在{channel.mention}並會通知{role.mention}')
@@ -171,8 +169,6 @@ class system_community(Cog_Extension):
 
             if not channel.can_send():
                     await ctx.send(embed=BotEmbed.simple('溫馨提醒',f'我無法在{channel.mention}中發送訊息，請確認我有足夠的權限'))
-                
-            sclient.sqldb.update_notify_community(NotifyCommunityType.Youtube)
 
             feed = YoutubeRSS().get_videos(ytchannel.id)
             updated_at = feed[0].updated_at.isoformat() if feed else None
