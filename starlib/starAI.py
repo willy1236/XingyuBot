@@ -57,7 +57,7 @@ class StarGeminiAI():
 
 	def __init__(self):
 		self.init_history()
-		self.model = genai.GenerativeModel(model_name="gemini-1.5-flash-002",
+		self.model = genai.GenerativeModel(model_name="gemini-1.5-flash",
 										   generation_config=generation_config,
 										   safety_settings=safety_settings)
 	
@@ -73,17 +73,21 @@ class StarGeminiAI():
 			str: The generated AI text.
 
 		"""
+		request_input = 1
 		self.history.append(input_text)
 		if image_bytes:
 			image = Image.open(fp=BytesIO(image_bytes))
 		#     image = Image.open(fp=image_bytes)
 			self.history.append(image)
+			request_input += 1
 		if files is not None:
 			if isinstance(files, file_types.File):
 				self.history.append(files)
+				request_input += 1
 			else:
 				for file in files:
 					self.history.append(file)
+					request_input += 1
 
 		try:
 			response = self.model.generate_content(self.history)
@@ -92,15 +96,8 @@ class StarGeminiAI():
 			self.history.append(f"星羽： {response.text}")
 		except Exception as e:
 			print(type(e))
-			self.history.pop()
-			if image_bytes:
+			for _ in range(request_input):
 				self.history.pop()
-			if files:
-				if isinstance(files, file_types.File):
-					self.history.pop()
-				else:
-					for _ in files:
-						self.history.pop
 			return
 		
 		return response.text
