@@ -32,6 +32,7 @@ class CommunityType(IntEnum):
     Twitch = 2
     Spotify = 3
     Youtube = 4
+    Google = 4
 
 notify_to_community_map = {
     NotifyCommunityType.TwitchLive: CommunityType.Twitch,
