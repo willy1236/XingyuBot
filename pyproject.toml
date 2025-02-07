@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "xingyubot"
-version = "0.2.7"
+version = "0.2.8"
 description = "一個集結許多功能的DiscordBot"
 authors = ["威立 <66502303+willy1236@users.noreply.github.com>"]
 readme = "README.md"
@@ -28,7 +28,6 @@ mcrcon = "^0.7.0"
 twitchapi = "^4.3.1"
 pymongo = "^4.10.1"
 genshin = "^1.7.2"
-selenium = "^4.26.1"
 sqlmodel = "^0.0.22"
 line-bot-sdk = "3.13.0"
 mcstatus = "^11.1.1"
