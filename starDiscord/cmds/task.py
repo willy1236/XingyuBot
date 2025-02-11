@@ -158,13 +158,13 @@ class task(Cog_Extension):
                 newest = clips[0].created_at
                 broadcaster_id = clips[0].broadcaster_id
                 
-                # TODO：重新審視這段程式碼的必要性
+                # 取得剪輯的來源影片（直播）
                 videos_dict = {clip.video_id: None for clip in clips}
                 api_video = tw_api.get_videos(ids=list(videos_dict.keys()))
                 videos_dict = {video.id: video for video in api_video}
 
                 for clip in clips:
-                    video = videos_dict[clip.id]
+                    video = videos_dict[clip.video_id]
                     newest = clip.created_at if clip.created_at > newest else newest
                     if clip.title != video.title:
                         embed = clip.embed(video)
