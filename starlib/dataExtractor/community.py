@@ -150,7 +150,6 @@ class TwitchAPI():
         }
         r = requests.get(f"{self.BaseURL}/users", params=params,headers=self.headers)
         apidata = r.json()
-        print(apidata)
         if apidata.get('data'):
             return TwitchUser(**apidata['data'][0])
         else:

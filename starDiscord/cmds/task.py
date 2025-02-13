@@ -293,7 +293,7 @@ class task(Cog_Extension):
             else:
                 log.warning(f"refresh_yt_push failed: {record.channel_id}")
 
-    async def test_one_times_job(text):
+    async def test_one_times_job(self, text):
         log.info(f"test_one_times_job: {text}")
 
 

@@ -80,7 +80,7 @@ async def on_stream_online(event: eventsub.StreamOnlineEvent):
     if sclient.bot:
         sclient.bot.send_message(content=f'{event.event.broadcaster_user_name} 正在直播 {live.game_name}!')
         is_live = Jsondb.get_cache(JsonCacheType.TwitchLive).get(event.event.broadcaster_user_id)
-        twitch_log.info(f'{event.event.broadcaster_user_name} is live: {is_live}')
+        twitch_log.debug(f'{event.event.broadcaster_user_name} is live: {is_live}')
         if not is_live:
             profile_image_url = tw_api.get_user_by_id(event.event.broadcaster_user_id).profile_image_url
             embed = live.embed(profile_image_url)
