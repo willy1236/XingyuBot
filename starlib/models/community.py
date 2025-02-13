@@ -172,55 +172,55 @@ class TwitchClip(BaseModel):
         embed.set_footer(text=f"上傳時間")
         return embed
 
+class IdInfo(BaseModel):
+    kind: str
+    videoId: str
+
 class YoutubeThumbnail(BaseModel):
     url: str
     width: int
     height: int
 
-class Thumbnails(BaseModel):
+class YoutubeThumbnails(BaseModel):
     default: YoutubeThumbnail
     medium: YoutubeThumbnail
     high: YoutubeThumbnail
 
+class Localized(BaseModel):
+    title: str
+    description: str
+    
 class ChannelSnippet(BaseModel):
     title: str
     description: str
     customUrl: str
     publishedAt: datetime
-    thumbnails: Thumbnails
+    thumbnails: YoutubeThumbnails
     localized: dict
     country: str | None = None
 
-class Statistics(BaseModel):
+class ChannelStatistics(BaseModel):
     viewCount: int
     subscriberCount: int
     hiddenSubscriberCount: bool
     videoCount: int
-
-class IdInfo(BaseModel):
-    kind: str
-    videoId: str
 
 class StreamSnippet(BaseModel):
     publishedAt: datetime
     channelId: str
     title: str
     description: str
-    thumbnails: Thumbnails
+    thumbnails: YoutubeThumbnails
     channelTitle: str
     liveBroadcastContent: str
     publishTime: datetime
-
-class Localized(BaseModel):
-    title: str
-    description: str
 
 class VideoSnippet(BaseModel):
     publishedAt: datetime
     channelId: str
     title: str
     description: str
-    thumbnails: Thumbnails
+    thumbnails: YoutubeThumbnails
     channelTitle: str
     tags: list[str | None] = Field(default_factory=list)
     categoryId: str
@@ -241,7 +241,7 @@ class YoutubeChannel(BaseModel):
     etag: str
     id: str
     snippet: ChannelSnippet
-    statistics: Statistics
+    statistics: ChannelStatistics
 
     @model_validator(mode='after')
     def __post_init__(self):

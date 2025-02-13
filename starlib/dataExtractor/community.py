@@ -1,5 +1,6 @@
 import os.path
 from datetime import timezone
+from typing import TypeVar, Generator, Iterator
 
 import feedparser
 import requests
@@ -15,6 +16,7 @@ from ..fileDatabase import Jsondb
 from ..models.community import *
 from ..settings import tz
 
+T = TypeVar('T')
 class TwitterAPIResponse():
     pass
     # {
@@ -61,7 +63,7 @@ class TwitchAPI():
         else:
             raise Forbidden(f"在讀取Twitch API時發生錯誤",f"[{r.status_code}] {apidata['message']}")
         
-    def _build_request(self, endpoint:str, params:dict):
+    def _build_request(self, endpoint:str, params:dict, model:T) -> Iterator[T]:
         after = True
         while after:
             r = requests.get(f"{self.BaseURL}/{endpoint}", params=params, headers=self.headers)
@@ -75,8 +77,7 @@ class TwitchAPI():
                     after = None
 
                 for i in apidata['data']:
-                    i: dict
-                    yield i
+                    yield model(**i)
 
     def get_lives(self,users:str | list[str], use_user_logins=False) -> dict[str, TwitchStream | None]:
         """
