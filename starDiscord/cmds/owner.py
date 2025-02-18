@@ -342,16 +342,16 @@ class owner(Cog_Extension):
         
         if server.status == McssServerStatues.Stopped:
             mcss_api.excute_action(server_id, McssServerAction.Start)
-            msg = await ctx.respond("已發送開啟指令，伺服器正在啟動...")
+            msg = await ctx.respond("🟡已發送開啟指令，伺服器正在啟動...")
 
             for _ in range(10):
                 await asyncio.sleep(10)
                 server = mcss_api.get_server_detail(server_id)
                 if server and server.status == McssServerStatues.Running:
                     try:
-                        await msg.edit(embed=server_status(ip, port))
+                        await msg.edit("🟢伺服器已開啟", embed=server_status(ip, port))
                     except:
-                        await msg.edit("伺服器已開啟，但無法獲取詳細狀態。")
+                        await msg.edit("🟢伺服器已開啟")
         else:
             try:
                 embed = server_status(ip, port)
@@ -407,9 +407,18 @@ class owner(Cog_Extension):
         server = mcss_api.get_server_detail(server_id)
         if server and server.status == McssServerStatues.Running:
             mcss_api.excute_action(server_id, McssServerAction.Stop)
-            await ctx.respond("已發送關閉指令，伺服器正在關閉...")
+            msg = await ctx.respond("🟠已發送關閉指令，伺服器正在關閉...")
+
+            for _ in range(10):
+                await asyncio.sleep(10)
+                server = mcss_api.get_server_detail(server_id)
+                if server and server.status == McssServerStatues.Stopped:
+                    await msg.edit("🔴伺服器已關閉")
+                    break
         else:
             await ctx.respond("伺服器未開啟")
+
+        
 
     @mcserver.command(description="執行mc伺服器指令")
     @commands.is_owner()
