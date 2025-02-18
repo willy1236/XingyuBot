@@ -358,7 +358,7 @@ class owner(Cog_Extension):
             except Exception as e:
                 embed = BotEmbed.general(f"{ip}:{port}", title="伺服器已開啟", description="無法獲取伺服器狀態，若仍然無法連線，請聯繫管理者進行確認")
             
-            await ctx.respond("伺服器已開啟", embed=embed)
+            await ctx.respond("🟢伺服器已處於開啟狀態", embed=embed)
             
     
     @mcserver.command(description="查詢mc伺服器")
@@ -416,7 +416,7 @@ class owner(Cog_Extension):
                     await msg.edit("🔴伺服器已關閉")
                     break
         else:
-            await ctx.respond("伺服器未開啟")
+            await ctx.respond("🛑伺服器未處於開啟狀態")
 
         
 
