@@ -323,7 +323,7 @@ class owner(Cog_Extension):
             server = JavaServer.lookup(f"{ip}:{port}")
             status = server.status()
             latency = server.ping()
-            embed = BotEmbed.general(f"{server.address.host}:{server.address.port}", title="伺服器已開啟", description=status.motd.to_plain())
+            embed = BotEmbed.general(f"{server.address.host}:{server.address.port}", title="伺服器已開啟", description=status.description.encode("iso-8859-1").decode("utf-8"))
             embed.add_field(name="伺服器版本", value=status.version.name, inline=True)
             embed.add_field(name="在線玩家數", value=f"{status.players.online}/{status.players.max}", inline=True)
             embed.add_field(name="延遲", value=f"{latency:.2f} ms", inline=True)
