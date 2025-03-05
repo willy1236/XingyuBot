@@ -186,7 +186,7 @@ class event(Cog_Extension):
     @commands.Cog.listener("on_message")
     async def ai_trigger(self, message: discord.Message):
         #ai chat
-        if message.guild and message.content and message.content.startswith(".") and not message.content.startswith(".", 1, 2) and message.guild.id in ai_access_guilds:
+        if message.guild and message.content and len(message.content) > 1 and message.content.startswith(".") and not message.content.startswith(".", 1, 2) and message.guild.id in ai_access_guilds:
             image_bytes = None
             file = None
             if message.attachments:

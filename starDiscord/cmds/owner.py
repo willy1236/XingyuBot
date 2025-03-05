@@ -337,7 +337,7 @@ class owner(Cog_Extension):
         server_id = Jsondb.config.get('mc_server').get('server_id')
         server = mcss_api.get_server_detail(server_id)
         if not server:
-            await ctx.respond("伺服器未找到")
+            await ctx.respond("伺服器未找到，請重新設置伺服器ID")
             return
         
         if server.status == McssServerStatues.Stopped:
@@ -384,7 +384,7 @@ class owner(Cog_Extension):
         full_ip = f"{server.address.host}:{server.address.port}" if server.address.port != 25565 else server.address.host
         
         
-        embed = BotEmbed.general(full_ip, title="伺服器狀態", description=status.description)
+        embed = BotEmbed.general(full_ip, title="伺服器狀態", description=status.description.encode("iso-8859-1").decode("utf-8"))
         embed.add_field(name="伺服器版本", value=status.version.name, inline=True)
         embed.add_field(name="在線玩家數", value=f"{status.players.online}/{status.players.max}", inline=True)
         if latency is not None:
