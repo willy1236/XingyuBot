@@ -187,20 +187,21 @@ class event(Cog_Extension):
     async def ai_trigger(self, message: discord.Message):
         #ai chat
         if message.guild and message.content and len(message.content) > 1 and message.content.startswith(".") and not message.content.startswith(".", 1, 2) and message.guild.id in ai_access_guilds:
-            image_bytes = None
-            file = None
-            if message.attachments:
-                att = message.attachments[0]
-                if att.content_type.startswith("image"):
-                    image_bytes = await att.read() 
-                elif att.content_type == "application/pdf":
-                    file = sclient.starai.get_or_set_file(att.filename, await att.read())
-            
-            text = sclient.starai.generate_response(f"{Jsondb.get_member_name(message.author.id) or message.author.name}：{message.content[1:]}", image_bytes, file)
-            if text:
-                await message.reply(text,mention_author=False)
-            else:
-                await message.add_reaction('❌')
+            with message.channel.typing():
+                image_bytes = None
+                file = None
+                if message.attachments:
+                    att = message.attachments[0]
+                    if att.content_type.startswith("image"):
+                        image_bytes = await att.read() 
+                    elif att.content_type == "application/pdf":
+                        file = sclient.starai.get_or_set_file(att.filename, await att.read())
+                
+                text = sclient.starai.generate_response(f"{Jsondb.get_member_name(message.author.id) or message.author.name}：{message.content[1:]}", image_bytes, file)
+                if text:
+                    await message.reply(text,mention_author=False)
+                else:
+                    await message.add_reaction('❌')
 
     @commands.Cog.listener("on_message")
     async def keyword_trigger(self, message: discord.Message):
