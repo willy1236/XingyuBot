@@ -186,7 +186,7 @@ class event(Cog_Extension):
     @commands.Cog.listener("on_message")
     async def ai_trigger(self, message: discord.Message):
         #ai chat
-        if message.guild and message.content and (len(message.content) > 1 or message.attachments) and message.content.startswith(".") and not message.content.startswith(".", 1, 2) and message.guild.id in ai_access_guilds:
+        if message.guild and message.content and message.guild.id in ai_access_guilds and (len(message.content) > 1 or message.attachments) and message.content.startswith(".") and not message.content.startswith(".", 1, 2):
             async with message.channel.typing():
                 image_bytes = None
                 file = None
@@ -403,6 +403,14 @@ class event(Cog_Extension):
     #                 for member in list:
     #                     await member.move_to(channel)
     #                     await asyncio.sleep(0.5)
+    
+    @commands.Cog.listener()
+    async def on_audit_log_entry(self, entry:discord.AuditLogEntry):
+        if entry.guild == happycamp_guild[0] and entry.action == discord.AuditLogAction.member_update and entry.user != self.bot.user:
+            member: discord.Member = entry.target()
+            if member.timed_out and entry.user != member:
+                await asyncio.sleep(10)
+                await member.timeout(None)
 
 def setup(bot):
     bot.add_cog(event(bot))
