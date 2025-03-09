@@ -12,6 +12,7 @@ from apscheduler.triggers.date import DateTrigger
 from starlib import BotEmbed, Jsondb, log, sclient, tz, utils
 from starlib.types import NotifyChannelType, NotifyCommunityType, JsonCacheType
 from starlib.instance import *
+from starlib.models.community import YoutubeVideo
 
 from ..extension import Cog_Extension
 
@@ -28,7 +29,7 @@ class task(Cog_Extension):
             scheduler.add_job(self.forecast_update,'cron',hour='0/3',minute=0,second=1,jitter=30,misfire_grace_time=60)
             scheduler.add_job(self.weather_check,'cron',minute='20,35',second=30,jitter=30,misfire_grace_time=60)
             scheduler.add_job(self.apex_map_rotation,'cron',minute='0/15',second=10,jitter=30,misfire_grace_time=60)
-            scheduler.add_job(self.refresh_yt_push,'cron',hour="2/6",jitter=30,misfire_grace_time=40)
+            # scheduler.add_job(self.refresh_yt_push,'cron',hour="2/6",jitter=30,misfire_grace_time=40)
 
             scheduler.add_job(self.earthquake_check,'interval',minutes=2,jitter=30,misfire_grace_time=40)
             scheduler.add_job(self.weather_warning_check,'interval',minutes=15,jitter=30,misfire_grace_time=40)
@@ -40,7 +41,7 @@ class task(Cog_Extension):
 
             if self.bot.user.id == 589744540240314368:
                 scheduler.add_job(self.birtday_task,'cron',month=10,day=16,hour=8,minute=0,second=0,jitter=30,misfire_grace_time=60)
-                scheduler.add_job(self.new_years_eve_task, CronTrigger(month=1, day=1, hour=0, minute=0, second=0), misfire_grace_time=60)
+                # scheduler.add_job(self.new_years_eve_task, CronTrigger(month=1, day=1, hour=0, minute=0, second=0), misfire_grace_time=60)
         else:
             pass
         
@@ -200,7 +201,7 @@ class task(Cog_Extension):
                     await self.bot.send_notify_communities(embed, NotifyCommunityType.Youtube, ytchannel_id)
                     
                     if video.liveStreamingDetails and video.liveStreamingDetails.scheduledStartTime:
-                        scheduler.add_job(self.test_one_times_job, DateTrigger(video.liveStreamingDetails.scheduledStartTime), args=[f"{video.snippet.title}"])
+                        scheduler.add_job(self.test_one_times_job, DateTrigger(video.liveStreamingDetails.scheduledStartTime + timedelta(seconds=30)), args=[video])
 
         Jsondb.write_cache(JsonCacheType.YoutubeVideo,cache_youtube)
 
@@ -293,8 +294,17 @@ class task(Cog_Extension):
             else:
                 log.warning(f"refresh_yt_push failed: {record.channel_id}")
 
-    async def test_one_times_job(self, text):
-        log.info(f"test_one_times_job: {text}")
+    async def test_one_times_job(self, video: YoutubeVideo):
+        log.info(f"test_one_times_job: {video.snippet.title}")
+        for _ in range(30):
+            video_now = yt_api.get_video(video.id)[0]
+            if video_now.snippet.liveBroadcastContent == "live":
+                log.info(f"test_one_times_job: {video.snippet.title} is live")
+
+                embed = video.embed()
+                await self.bot.send_notify_communities(embed, NotifyCommunityType.Youtube, video_now.snippet.channelId)
+                break
+            await asyncio.sleep(120)
 
 
 def setup(bot):
