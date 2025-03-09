@@ -41,9 +41,6 @@ notify_to_community_map = {
     NotifyCommunityType.TwitchClip: CommunityType.Twitch,
 }
 
-class StardbCacheType(Enum):
-    pass
-
 class JsonCacheType(Enum):
     EarthquakeTimeFrom = "earthquake_timefrom"
     TwitchLive = "twitch"

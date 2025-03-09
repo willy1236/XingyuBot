@@ -109,10 +109,10 @@ async def on_channel_points_custom_reward_redemption_update(event: eventsub.Chan
     twitch_log.info(f"{event.event.user_name}'s redemption of {event.event.reward.title} has been updated to {event.event.status}!")
     
 async def on_channel_raid(event:eventsub.ChannelRaidEvent):
-    twitch_log.info(f"{event.event.from_broadcaster_user_name} 帶了 {event.event.viewers} 位觀眾來 {event.event.to_broadcaster_user_name} 的頻道!")
+    twitch_log.info(f"{event.event.from_broadcaster_user_name} 帶了 {event.event.viewers} 位觀眾來 {event.event.to_broadcaster_user_name} 的頻道！")
     action_channel_id = TARGET_CHANNEL.get(int(event.event.to_broadcaster_user_id))
     if action_channel_id:
-        await chat.send_message(event.event.to_broadcaster_user_login, f"{event.event.from_broadcaster_user_name} 帶了 {event.event.viewers} 位觀眾降落在 {event.event.to_broadcaster_user_name} 的頻道!")
+        await chat.send_message(event.event.to_broadcaster_user_login, f"{event.event.from_broadcaster_user_name} 帶了 {event.event.viewers} 位觀眾降落在 {event.event.to_broadcaster_user_name} 的頻道！")
         
         if sclient.bot:
             sclient.bot.send_message(action_channel_id, embed=BotEmbed.simple("揪團", f"{event.event.from_broadcaster_user_name} 帶了 {event.event.viewers} 位觀眾降落在 {event.event.to_broadcaster_user_name} 的頻道!"))

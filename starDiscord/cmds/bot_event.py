@@ -410,7 +410,7 @@ class event(Cog_Extension):
             member: discord.Member = entry.target()
             if member.timed_out and entry.user != member:
                 await asyncio.sleep(10)
-                await member.timeout(None)
+                await member.remove_timeout()
 
 def setup(bot):
     bot.add_cog(event(bot))

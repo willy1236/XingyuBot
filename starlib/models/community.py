@@ -302,9 +302,7 @@ class YoutubeVideo(BaseModel):
             color=0xff0000,
             timestamp = self.snippet.publishedAt
             )
-        embed.add_field(name="上傳時間",value=self.snippet.publishedAt.strftime('%Y/%m/%d %H:%M:%S'),inline=False)
-        #embed.add_field(name="更新時間",value=self.updated_at.strftime('%Y/%m/%d %H:%M:%S'),inline=True)
-        
+
         if self.liveStreamingDetails:
             if self.liveStreamingDetails.actualEndTime and self.snippet.liveBroadcastContent == "none":
                 embed.add_field(name="現況", value="直播結束")
@@ -313,10 +311,14 @@ class YoutubeVideo(BaseModel):
 
             if self.liveStreamingDetails.scheduledStartTime and self.snippet.liveBroadcastContent == "upcoming":
                 embed.add_field(name="預定直播時間", value=self.liveStreamingDetails.scheduledStartTime.strftime('%Y/%m/%d %H:%M:%S'))
+            elif self.liveStreamingDetails.actualStartTime:
+                embed.add_field(name="直播開始時間", value=self.liveStreamingDetails.actualStartTime.strftime('%Y/%m/%d %H:%M:%S'))
             if self.liveStreamingDetails.actualEndTime:
                 embed.add_field(name="直播結束時間", value=self.liveStreamingDetails.actualEndTime.strftime('%Y/%m/%d %H:%M:%S'))
         else:
             embed.add_field(name="現況", value=ytvideo_lives.get(self.snippet.liveBroadcastContent, "未知"))
+            embed.add_field(name="上傳時間",value=self.snippet.publishedAt.strftime('%Y/%m/%d %H:%M:%S'),inline=False)
+            
         embed.set_image(url=self.snippet.thumbnails.high.url)
         return embed
 
