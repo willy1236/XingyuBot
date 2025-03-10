@@ -116,7 +116,7 @@ class TwitchVideo(BaseModel):
     def __post_init__(self):
         self.created_at = self.created_at.astimezone(tz=tz)
         self.published_at = self.published_at.astimezone(tz=tz)
-        self.thumbnail_url = self.thumbnail_url.replace('{width}', '960').replace('{height}', '540')
+        self.thumbnail_url = self.thumbnail_url.replace('%{width}', '960').replace('%{height}', '540')
         return self
 
     def embed(self):
