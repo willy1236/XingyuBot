@@ -418,8 +418,6 @@ class owner(Cog_Extension):
         else:
             await ctx.respond("🛑伺服器未處於開啟狀態")
 
-        
-
     @mcserver.command(description="執行mc伺服器指令")
     @commands.is_owner()
     async def cmd(self, ctx:discord.ApplicationContext, 

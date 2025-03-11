@@ -4,7 +4,6 @@ from discord.ext import commands
 
 from starlib import BotEmbed, sclient
 from starlib.instance import debug_guilds
-from starlib.types import Coins
 
 from ..extension import Cog_Extension
 
@@ -13,24 +12,24 @@ class system_economy(Cog_Extension):
     point = SlashCommandGroup("point", "PT點數相關指令")
     shop = SlashCommandGroup("shop", "商店相關指令")
 
-    @point.command(description='查詢擁有的星幣數')
-    async def check(self,ctx,
+    @point.command(description='查詢擁有的星塵數')
+    async def check(self,ctx:discord.ApplicationContext,
                     user:discord.Option(discord.Member,name='成員',description='留空以查詢自己',default=None)):
-        user_dc = user or ctx.author
+        user_dc:discord.Member = user or ctx.author
         coins = sclient.sqldb.get_coin(user_dc.id)
         embed = BotEmbed.simple(f'{user_dc.name} 的點數')
         embed.add_field(name='⭐星塵',value=coins.stardust)
         embed.add_field(name='PT點數',value=coins.point)
         embed.add_field(name='Rcoin',value=coins.rcoin)
         await ctx.respond(embed=embed)
-        if user.bot:
+        if user_dc.bot:
             await ctx.send('但是為什麼你要查詢機器人的點數呢?',delete_after=5)
 
-    @point.command(description='轉移星幣')
-    async def give(self,ctx,
+    @point.command(description='轉移星塵')
+    async def give(self,ctx:discord.ApplicationContext,
                    given:discord.Option(discord.Member,name='成員',description='欲轉給的成員',required=True),
                    amount:discord.Option(int,name='點數',description='',min_value=1,required=True)):
-        giver = ctx.author
+        giver:discord.Member = ctx.author
         if given == giver:
             await ctx.respond(f'轉帳失敗：無法轉帳給自己',ephemeral=True)
         elif given.bot == True:
@@ -38,31 +37,23 @@ class system_economy(Cog_Extension):
         else:
             code = sclient.sqldb.transfer_scoin(giver.id,given.id,amount)
             if not code:
-                await ctx.respond(f'轉帳成功：{ctx.author.mention} 已將 {amount} 星幣⭐轉給 {given.mention}')
+                await ctx.respond(f'轉帳成功：{ctx.author.mention} 已將 {amount} 星塵⭐轉給 {given.mention}')
             else:
                 await ctx.respond(f'{ctx.author.mention}：{code}',ephemeral=True)
     
     @commands.is_owner()
-    @point.command(description='設定星幣',guild_ids=debug_guilds)
+    @point.command(description='設定星塵',guild_ids=debug_guilds)
     async def set(self,ctx,
                   user:discord.Option(discord.User,name='成員',description='欲調整的成員',required=True),
                   mod:discord.Option(str,name='模式',description='add,set',required=True,choices=['add','set']),
                   amount:discord.Option(int,name='點數',description='',required=True)):
-        sclient.sqldb.update_coins(user.id,mod,Coins.Stardust,amount)
-        await ctx.respond(f'設定成功：已更改{user.mention}的星幣')
-    
-    @commands.slash_command(description='簽到')
-    async def sign(self,ctx):
-        user = sclient.sqldb.get_dcuser(ctx.author.id,True,ctx.author)
-        if not user:
-            sclient.sqldb.create_discord_user(ctx.author.id)
-            user = sclient.sqldb.get_dcuser(ctx.author.id,True,ctx.author)
-
-        code = sclient.daily_sign(user.discord_id)
-        if type(code) == list:
-            await ctx.respond(f'{ctx.author.mention} 簽到完成! 星幣⭐+{code[0]}')
-        else:
-            await ctx.respond(f'{ctx.author.mention}：{code}')
+        user_point = sclient.sqldb.get_coin(user.id)
+        if mod == 'add':
+            user_point.stardust += amount
+        elif mod == 'set':
+            user_point.stardust = amount
+        sclient.sqldb.merge(user_point)
+        await ctx.respond(f'設定成功：已更改{user.mention}的星塵⭐為{user_point.stardust}')
 
     # @commands.slash_command(description='猜數字遊戲')
     # async def guess(self,ctx):
@@ -70,7 +61,7 @@ class system_economy(Cog_Extension):
     #     userid = ctx.author.id
     #     r = sclient.sqldb.getif_coin(userid,2)
     #     if not r:
-    #         await ctx.respond('你的星幣不足喔 需要2元才能遊玩')
+    #         await ctx.respond('你的星塵不足喔 需要2元才能遊玩')
     #         return
         
     #     sclient.sqldb.update_coins(userid,'add',Coins.Stardust,-2)
@@ -87,7 +78,7 @@ class system_economy(Cog_Extension):
     #         msg = await self.bot.wait_for('message', check=check,timeout=60)
     #         if msg.content == str(n):
     #             sclient.sqldb.update_coins(userid,'add',Coins.Stardust,18)
-    #             await channel.send('猜對了喔! 獎勵:18星幣⭐',reference=msg)
+    #             await channel.send('猜對了喔! 獎勵:18星塵⭐',reference=msg)
     #         else:
     #             await channel.send(f'可惜了 答案是 {n}',reference=msg)
     #     except asyncio.TimeoutError:
@@ -112,7 +103,7 @@ class system_economy(Cog_Extension):
     #         sclient.sqldb.update_bag(ctx.author.id,item.item_uid,1)
     #         await ctx.respond(f"{ctx.author.mention}：已購買 {item.name} * 1")
     #     else:
-    #         await ctx.respond(f"{ctx.author.mention}：星幣不足")
+    #         await ctx.respond(f"{ctx.author.mention}：星塵不足")
 
 def setup(bot):
     bot.add_cog(system_economy(bot))

@@ -201,7 +201,7 @@ class task(Cog_Extension):
                     await self.bot.send_notify_communities(embed, NotifyCommunityType.Youtube, ytchannel_id)
                     
                     if video.liveStreamingDetails and video.liveStreamingDetails.scheduledStartTime:
-                        scheduler.add_job(self.test_one_times_job, DateTrigger(video.liveStreamingDetails.scheduledStartTime + timedelta(seconds=10)), args=[video])
+                        scheduler.add_job(self.test_one_times_job, DateTrigger(video.liveStreamingDetails.scheduledStartTime + timedelta(seconds=30)), args=[video])
 
         Jsondb.write_cache(JsonCacheType.YoutubeVideo,cache_youtube)
 
@@ -299,9 +299,9 @@ class task(Cog_Extension):
         for _ in range(30):
             video_now = yt_api.get_video(video.id)[0]
             if video_now.snippet.liveBroadcastContent == "live":
-                log.info(f"test_one_times_job: {video.snippet.title} is live")
+                log.info(f"test_one_times_job: {video_now.snippet.title} is live")
 
-                embed = video.embed()
+                embed = video_now.embed()
                 await self.bot.send_notify_communities(embed, NotifyCommunityType.Youtube, video_now.snippet.channelId)
                 break
             await asyncio.sleep(120)

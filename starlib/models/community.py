@@ -110,7 +110,7 @@ class TwitchVideo(BaseModel):
     language: str
     type: str
     duration: str
-    muted_segments: str | None = None
+    muted_segments: list[dict] | None = None
     
     @model_validator(mode='after')
     def __post_init__(self):
@@ -168,7 +168,7 @@ class TwitchClip(BaseModel):
         embed.set_image(url=self.thumbnail_url)
         embed.add_field(name="剪輯者", value=self.creator_name)
         if original_video:
-            embed.description = original_video.title
+            embed.description = f"[{original_video.title}]({original_video.url})"
         embed.set_footer(text=f"上傳時間")
         return embed
 
