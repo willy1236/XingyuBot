@@ -1,7 +1,9 @@
 import time
+from datetime import date
 
 import pandas as pd
 import requests
+from mwrogue.esports_client import EsportsClient
 
 from starlib.errors import APIInvokeError
 from starlib.fileDatabase import Jsondb
@@ -293,3 +295,18 @@ class DBDInterface(SteamAPI):
                 return None
         else:
             return None
+        
+class LOLMediaWikiAPI:
+    def __init__(self):
+        self.site = EsportsClient("lol")
+    
+    def get_date_games(self, date:date):
+        response = self.site.cargo_client.query(
+            tables="ScoreboardGames=SG, Tournaments=T",
+            join_on="SG.OverviewPage=T.OverviewPage",
+            fields="T.Name=Tournament, T.TournamentLevel, SG.Gamename, SG.DateTime_UTC, SG.Team1, SG.Team2, SG.Winner, SG.Patch, SG.Gamelength, SG.Team1Players, SG.Team2Players, SG.Team1Kills, SG.Team2Kills",
+            where="SG.DateTime_UTC >= '" + str(date) + " 00:00:00' AND SG.DateTime_UTC <= '" + str(date + timedelta(1)) + " 00:00:00'",
+            order_by="SG.DateTime_UTC"
+        )
+        
+        return [dict(r) for r in response]

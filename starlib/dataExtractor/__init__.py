@@ -19,6 +19,7 @@ __all__ =[
     'ApexAPI',
     'SteamAPI',
     'DBDInterface',
+    'LOLMediaWikiAPI',
     'CWA_API',
     'YoutubeRSS',
     "DiscordOauth",

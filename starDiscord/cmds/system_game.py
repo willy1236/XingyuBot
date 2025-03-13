@@ -1,3 +1,5 @@
+from datetime import date, datetime
+
 import discord
 import genshin
 from discord.commands import SlashCommandGroup
@@ -278,6 +280,27 @@ class system_game(Cog_Extension):
         #         i += 1
         # paginator = pages.Paginator(pages=page, use_default_buttons=True)
         # await paginator.send(ctx, target=ctx.channel)
+
+    @lol.command(description='取得指定日期的League of Legends職業聯賽比賽結果')
+    async def progame(self,ctx,
+                    match_date:discord.Option(str,name='日期',description='要查詢的日期，格式為YYYY-MM-DD',required=False)):
+        await ctx.defer()
+        match_date = datetime.strptime(match_date, "%Y-%m-%d").date() if match_date else date.today()
+        results = LOLMediaWikiAPI().get_date_games(match_date)
+        if not results:
+            await ctx.respond('查詢失敗：查無此日期的比賽',ephemeral=True)
+            return
+        
+        embed = BotEmbed.simple(title=results[0]['Tournament'], description=f"{match_date.strftime('%Y/%m/%d')} 比賽戰果\nPatch：{results[0]['Patch']}")
+        for r in results:
+            if r["TournamentLevel"] == "Primary":
+                name = f"👑{r['Team1']} vs {r['Team2']} {r['Gamename']}" if r['Winner'] == '1' else f"{r['Team1']} vs 👑{r['Team2']} {r['Gamename']}"
+                value = f"\n⏱️{r['Gamelength']} ⚔️{r['Team1Kills']} : {r['Team2Kills']}"
+                value += f"\n`{r['Team1Players']}` vs `{r['Team2Players']}`"
+
+                embed.add_field(name=name, value=value, inline=False)
+            
+        await ctx.respond('查詢成功',embed=embed)
 
 
     @osu.command(description='查詢Osu用戶資料')

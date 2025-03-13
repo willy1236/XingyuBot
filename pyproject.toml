@@ -32,6 +32,7 @@ sqlmodel = "^0.0.22"
 line-bot-sdk = "3.13.0"
 mcstatus = "^11.1.1"
 vosk = "^0.3.45"
+mwrogue = "^0.1.5"
 
 
 [tool.poetry.group.dev.dependencies]
