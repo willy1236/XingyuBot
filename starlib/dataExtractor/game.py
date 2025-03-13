@@ -305,7 +305,7 @@ class LOLMediaWikiAPI:
             tables="ScoreboardGames=SG, Tournaments=T",
             join_on="SG.OverviewPage=T.OverviewPage",
             fields="T.Name=Tournament, T.TournamentLevel, SG.Gamename, SG.DateTime_UTC, SG.Team1, SG.Team2, SG.Winner, SG.Patch, SG.Gamelength, SG.Team1Players, SG.Team2Players, SG.Team1Kills, SG.Team2Kills",
-            where="SG.DateTime_UTC >= '" + str(date) + " 00:00:00' AND SG.DateTime_UTC <= '" + str(date + timedelta(1)) + " 00:00:00'",
+            where="SG.DateTime_UTC >= '" + str(date) + " 00:00:00' AND SG.DateTime_UTC <= '" + str(date + timedelta(1)) + " 00:00:00'" + " AND T.TournamentLevel = 'Primary'",
             order_by="SG.DateTime_UTC"
         )
         

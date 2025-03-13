@@ -291,16 +291,21 @@ class system_game(Cog_Extension):
             await ctx.respond('查詢失敗：查無此日期的比賽',ephemeral=True)
             return
         
-        embed = BotEmbed.simple(title=results[0]['Tournament'], description=f"{match_date.strftime('%Y/%m/%d')} 比賽戰果\nPatch：{results[0]['Patch']}")
+        tournament_dict:dict[str, discord.Embed] = {}
         for r in results:
-            if r["TournamentLevel"] == "Primary":
-                name = f"👑{r['Team1']} vs {r['Team2']} {r['Gamename']}" if r['Winner'] == '1' else f"{r['Team1']} vs 👑{r['Team2']} {r['Gamename']}"
-                value = f"\n⏱️{r['Gamelength']} ⚔️{r['Team1Kills']} : {r['Team2Kills']}"
-                value += f"\n`{r['Team1Players']}` vs `{r['Team2Players']}`"
-
-                embed.add_field(name=name, value=value, inline=False)
+            if r['Tournament'] not in tournament_dict:
+                tournament_name = r['Tournament']
+                tournament_dict[tournament_name] = BotEmbed.simple(title=tournament_name, description=f"{match_date.strftime('%Y/%m/%d')} 比賽戰果\nPatch：{r['Patch']}")
             
-        await ctx.respond('查詢成功',embed=embed)
+            embed = tournament_dict[r['Tournament']]
+            name = f"👑{r['Team1']} vs {r['Team2']} {r['Gamename']}" if r['Winner'] == '1' else f"{r['Team1']} vs 👑{r['Team2']} {r['Gamename']}"
+            value = f"\n⏱️{r['Gamelength']} ⚔️{r['Team1Kills']} : {r['Team2Kills']}"
+            value += f"\n`{r['Team1Players']}` vs `{r['Team2Players']}`"
+
+            embed.add_field(name=name, value=value, inline=False)
+
+        paginator = pages.Paginator(pages=[pages.PageGroup([page], page.title) for page in list(tournament_dict.values())], use_default_buttons=False, show_menu=True, menu_placeholder='請選擇賽區')
+        await paginator.respond(ctx.interaction, ephemeral=False, target_message='查詢成功')
 
 
     @osu.command(description='查詢Osu用戶資料')
