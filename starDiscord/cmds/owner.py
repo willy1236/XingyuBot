@@ -430,11 +430,48 @@ class owner(Cog_Extension):
     @mcserver.command(description="執行mc伺服器操作")
     @commands.has_guild_permissions(manage_channels=True)
     async def action(self, ctx:discord.ApplicationContext,
-                     server=mcss_server_option,
+                     server_id=mcss_server_option,
                      action=mcss_action_option):
         await ctx.defer()
+        server = mcss_api.get_server_detail(server_id)
+        if not server:
+            await ctx.respond(f"伺服器未找到，請聯繫{self.bot.mention_owner}進行確認", allowed_mentions=discord.AllowedMentions(users=True))
+            return
+        
+        if action == McssServerAction.Start and server.status == McssServerStatues.Running:
+            await ctx.respond("🛑伺服器已處於開啟狀態")
+            return
+        elif action == McssServerAction.Stop and server.status == McssServerStatues.Stopped:
+            await ctx.respond("🛑伺服器已處於關閉狀態")
+            return
+        
         response = mcss_api.excute_action(server, McssServerAction(action))
-        await ctx.respond("操作已完成" if response else "操作失敗")
+        if not response:
+            res_text = "操作失敗"
+        elif action == McssServerAction.Start:
+            res_text = "🟡已發送開啟指令，伺服器正在啟動..."
+        elif action == McssServerAction.Stop:
+            res_text = "🟠已發送關閉指令，伺服器正在關閉..."
+        else:
+            res_text = "操作已完成"
+
+        msg = await ctx.respond(res_text)
+
+        if action == McssServerAction.Start:
+            for _ in range(10):
+                await asyncio.sleep(10)
+                server = mcss_api.get_server_detail(server_id)
+                if server and server.status == McssServerStatues.Running:
+                    await msg.edit("🟢伺服器已開啟")
+                    break
+        
+        elif action == McssServerAction.Stop:
+            for _ in range(10):
+                await asyncio.sleep(10)
+                server = mcss_api.get_server_detail(server_id)
+                if server and server.status == McssServerStatues.Stopped:
+                    await msg.edit("🔴伺服器已關閉")
+                    break
 
     @mcserver.command(description="取得mc伺服器")
     @commands.is_owner()

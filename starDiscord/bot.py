@@ -32,6 +32,10 @@ class DiscordBot(discord.Bot):
             if filename.endswith('.py'):
                 self.load_extension(f'starDiscord.cmds.{filename[:-3]}')
 
+    @property
+    def mention_owner(self):
+        return f'<@{self.owner_id}>'
+
     async def error(self, ctx:discord.ApplicationContext, error:str) -> None:
         error_report = self.get_channel(Jsondb.config.get('error_report'))
         embed = BotEmbed.general(name=ctx.author,icon_url=ctx.author.display_avatar.url, title="❌錯誤回報")
