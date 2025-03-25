@@ -40,7 +40,7 @@ class BaseSQLEngine:
         cache: dict[str, list[int]] | dict[NotifyChannelType, dict[int, tuple[int, Optional[int]]]] | dict[NotifyCommunityType, list[str]]
 
     def __init__(self,connection_url):
-        self.engine = create_engine(connection_url, echo=False, pool_pre_ping=True)
+        self.engine = create_engine(connection_url, echo=False, pool_pre_ping=True, connect_args={'charset': 'utf8mb4'})
         # SessionLocal = sessionmaker(bind=self.engine)
         # self.session:Session = SessionLocal()
         SQLModel.metadata.create_all(self.engine)
