@@ -257,7 +257,7 @@ class moderation(Cog_Extension):
             await ctx.respond("找不到此訊息，請在該訊息的頻道進行設定", delete_after=5)
             return
         await message.delete()
-        sclient.sqldb.delete(ReactionRoleMessage(ctx.guild.id, ctx.channel.id, message.id))
+        sclient.sqldb.delete_reaction_role_message(message.id)
         await ctx.respond("已移除反應身分組訊息", delete_after=5)
         
     @react_role.command(description='設定反應身分組')
@@ -292,7 +292,7 @@ class moderation(Cog_Extension):
             await ctx.respond("找不到此訊息，請在該訊息的頻道進行設定", delete_after=5)
             return
         
-        sclient.sqldb.delete(ReactionRole(message.id, role.id))
+        sclient.sqldb.delete_reaction_role(message.id, role.id)
         react_roles = sclient.sqldb.get_reaction_roles_by_message(message.id)
         await message.edit(view=ReactionRoleView(message.id, react_roles))
         await ctx.respond(f"已移除 {role.mention}", delete_after=5)

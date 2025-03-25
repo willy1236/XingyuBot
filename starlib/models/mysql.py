@@ -259,7 +259,7 @@ class ReactionRoleMessage(AlchemyBasicSchema):
     guild_id: int = Column(BigInteger, primary_key=True)
     channel_id: int = Column(BigInteger, primary_key=True)
     message_id: int = Column(BigInteger, primary_key=True)
-    content: str = Column(String(255))
+    content: str = Column(Text(2048))
 
     react_roles: list["ReactionRole"] = Relationship(back_populates="message")
 

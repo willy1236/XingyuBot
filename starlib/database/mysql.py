@@ -447,6 +447,11 @@ class SQLRoleSaveSystem(BaseSQLEngine):
         self.session.exec(stmt)
         self.session.commit()
 
+    def delete_reaction_role(self, message_id:int, role_id:int):
+        stmt = delete(ReactionRole).where(ReactionRole.message_id == message_id, ReactionRole.role_id == role_id)
+        self.session.exec(stmt)
+        self.session.commit()
+
 class SQLWarningSystem(BaseSQLEngine):
     #* warning
     def add_warning(self,discord_id:int,moderate_type:WarningType,moderate_user:int,create_guild:int,create_time:datetime,reason:str=None,last_time:str=None,guild_only=True) -> int:
