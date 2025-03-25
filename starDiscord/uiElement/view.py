@@ -14,7 +14,7 @@ from starlib import BotEmbed, Jsondb, log, sqldb, tz
 if TYPE_CHECKING:
     from starlib.database import SQLEngine
     from starlib.models.mysql import (Poll, PollOption, TRPGStoryOption,
-                                      TRPGStoryPlot)
+                                      TRPGStoryPlot, ReactionRole)
 
 class DeletePetView(discord.ui.View):
     def __init__(self):
@@ -415,6 +415,28 @@ class ReactionRole2(SakagawaReactionRole):
     async def button1_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
         roleid = 1221128533779284108
         await self.reaction_role(interaction,roleid)
+
+class ReactionRoleButton(discord.ui.Button):
+    def __init__(self, dbdata:ReactionRole):
+        super().__init__(label=dbdata.title, style=discord.ButtonStyle.primary, custom_id=f"ReactionRole_{dbdata.role_id}")
+        self.role_id = dbdata.role_id
+
+    async def callback(self,interaction):
+        role = interaction.guild.get_role(self.role_id)
+        if interaction.user.get_role(self.role_id):
+            await interaction.user.remove_roles(role)
+            await interaction.response.send_message(f"已移除 {role.name} 身分組！",ephemeral=True)
+        else:
+            await interaction.user.add_roles(role)        
+            await interaction.response.send_message(f"已給予 {role.name} 身分組！",ephemeral=True)
+
+class ReactionRoleView(discord.ui.View):
+    def __init__(self, message_id, roles:list[ReactionRole]):
+        super().__init__(timeout=None)
+        self.message_id = message_id
+
+        for r in roles:
+            self.add_item(ReactionRoleButton(r))    
 
 class TRPGPlotButton(discord.ui.Button):
     def __init__(self,option:TRPGStoryOption):

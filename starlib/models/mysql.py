@@ -256,18 +256,22 @@ class PushRecord(AlchemyBasicSchema):
 class ReactionRoleMessage(AlchemyBasicSchema):
     __tablename__ = "reaction_role_message"
 
-    message_id: int = Column(BigInteger, primary_key=True)
     guild_id: int = Column(BigInteger, primary_key=True)
+    channel_id: int = Column(BigInteger, primary_key=True)
+    message_id: int = Column(BigInteger, primary_key=True)
     content: str = Column(String(255))
+
+    react_roles: list["ReactionRole"] = Relationship(back_populates="message")
 
 class ReactionRole(AlchemyBasicSchema):
     __tablename__ = "reaction_role"
 
     message_id: int = Column(BigInteger, primary_key=True)
-    reaction: str = Column(String(255), primary_key=True)
-    role_id: int = Column(BigInteger)
-    title: str | None = Column(String(255), nullable=True)
+    role_id: int = Column(BigInteger, primary_key=True)
+    title: str = Column(String(255))
     description: str | None = Column(String(255), nullable=True)
+
+    message: ReactionRoleMessage = Relationship(back_populates="react_roles")
 
 class Timetest(AlchemyBasicSchema):
     __tablename__ = "timetest"

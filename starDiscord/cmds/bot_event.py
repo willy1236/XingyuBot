@@ -13,7 +13,7 @@ from starlib.types import NotifyChannelType
 
 from ..extension import Cog_Extension
 from ..uiElement.view import (PollView, ReactionRole1, ReactionRole2,
-                              WelcomeView)
+                              WelcomeView, ReactionRoleView)
 
 keywords = {}
 
@@ -98,6 +98,17 @@ class event(Cog_Extension):
             bot.add_view(WelcomeView())
             bot.add_view(ReactionRole1())
             bot.add_view(ReactionRole2())
+
+            for react_message in sclient.sqldb.get_reaction_role_message_all():
+                channel = bot.get_channel(react_message.channel_id)
+                if not channel:
+                    continue
+                
+                message = await channel.fetch_message(react_message.message_id)
+                if message:
+                    bot.add_view(ReactionRoleView(message.id, react_message.react_roles))
+                else:
+                    sclient.sqldb.delete_reaction_role_message(react_message.message_id)
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):

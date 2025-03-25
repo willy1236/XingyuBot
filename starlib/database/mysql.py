@@ -413,6 +413,40 @@ class SQLRoleSaveSystem(BaseSQLEngine):
         self.session.merge(role_save)
         self.session.commit()
 
+    #* ReactionRole
+    def get_reaction_roles_all(self) -> dict[int, list[ReactionRole]]:
+        stmt = select(ReactionRole)
+        result = self.session.exec(stmt).all()
+        dct = dict()
+        for i in result:
+            if i.message_id not in dct:
+                dct[i.message_id] = list()
+            dct[i.message_id].append(i)
+        return dct
+    
+    def get_reaction_roles_by_message(self, message_id:int) -> list[ReactionRole]:
+        stmt = select(ReactionRole).where(ReactionRole.message_id == message_id)
+        result = self.session.exec(stmt).all()
+        return result
+    
+    def get_reaction_role_message_all(self):
+        stmt = select(ReactionRoleMessage)
+        result = self.session.exec(stmt).all()
+        return result
+    
+    def get_reaction_role_message(self, message_id:int):
+        stmt = select(ReactionRoleMessage).where(ReactionRoleMessage.message_id == message_id)
+        result = self.session.exec(stmt).one_or_none()
+        return result
+    
+    def delete_reaction_role_message(self, message_id:int):
+        stmt = delete(ReactionRoleMessage).where(ReactionRoleMessage.message_id == message_id)
+        self.session.exec(stmt)
+
+        stmt = delete(ReactionRole).where(ReactionRole.message_id == message_id)
+        self.session.exec(stmt)
+        self.session.commit()
+
 class SQLWarningSystem(BaseSQLEngine):
     #* warning
     def add_warning(self,discord_id:int,moderate_type:WarningType,moderate_user:int,create_guild:int,create_time:datetime,reason:str=None,last_time:str=None,guild_only=True) -> int:
