@@ -1,4 +1,9 @@
 from sqlmodel import SQLModel
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import MappedAsDataclass, DeclarativeBase
+
+class Base(MappedAsDataclass, DeclarativeBase):
+    """subclasses will be converted to dataclasses"""
 
 class BaseSchema(SQLModel):
     __table_args__:dict
@@ -11,6 +16,9 @@ class DatabaseSchema(BaseSchema):
     __table_args__ = {'schema': 'database'}
 
 class BasicSchema(BaseSchema):
+    __table_args__ = {'schema': 'stardb_basic'}
+class AlchemyBasicSchema(Base):
+    __abstract__ = True
     __table_args__ = {'schema': 'stardb_basic'}
 
 class BackupSchema(BaseSchema):
