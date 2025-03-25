@@ -324,7 +324,7 @@ class event(Cog_Extension):
 
         if dbdata:
             username = member.name if member.discriminator == "0" else f"{member.name}#{member.discriminator}"
-            text = f'{member.mention} ({username}) 離開了我們'
+            text = dbdata.message.replace('{member}', member.mention).replace('{guild}', member.guild.name) if dbdata.message else f'{member.mention} ({username}) 離開了我們'
             await self.bot.get_channel(dbdata.channel_id).send(text)
 
     @commands.Cog.listener()
@@ -338,7 +338,7 @@ class event(Cog_Extension):
 
         if dbdata:
             username = member.name if member.discriminator == "0" else f"{member.name}#{member.discriminator}"
-            text = f'{member.mention} ({username}) 加入了我們'
+            text = dbdata.message.replace('{member}', member.mention).replace('{guild}', member.guild.name) if dbdata.message else f'{member.mention} ({username}) 加入了我們'
             await self.bot.get_channel(dbdata.channel_id).send(text)
 
         #警告系統：管理員通知

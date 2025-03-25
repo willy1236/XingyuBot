@@ -47,13 +47,14 @@ class moderation(Cog_Extension):
     async def set(self,ctx:discord.ApplicationContext,
                   notify_type:discord.Option(int,name='通知類型',description='要接收的通知類型',required=True,choices=set_option),
                   channel:discord.Option(discord.abc.GuildChannel,name='頻道',description='要接收通知的頻道',default=None),
-                  role:discord.Option(discord.Role,required=False,name='身分組',description='發送通知時tag的身分組，定時通知與部分通知不會tag',default=None)):
+                  role:discord.Option(discord.Role,required=False,name='身分組',description='發送通知時tag的身分組，定時通知與部分通知不會tag', default=None),
+                  msg:discord.Option(str,default=None,name='通知文字',description='發送通知時的自訂文字')):
         guildid = ctx.guild.id
         notify_type = NotifyChannelType(notify_type)
         
         if channel:
             roleid = role.id if role else None
-            sclient.sqldb.add_notify_channel(guildid,notify_type,channel.id,roleid)
+            sclient.sqldb.add_notify_channel(guildid,notify_type,channel.id,roleid, msg)
             await ctx.respond(f'設定完成，已將 {Jsondb.get_tw(notify_type,"channel_set_option")} 頻道設定在 {channel.mention}')
             await ctx.send(embed=BotEmbed.simple('溫馨提醒','若為定時通知，請將機器人的訊息保持在此頻道的最新訊息，以免機器人找不到訊息而重複發送'),delete_after=10)
             if not channel.can_send():

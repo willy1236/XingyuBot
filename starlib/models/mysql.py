@@ -6,6 +6,7 @@ from discord import Bot
 from sqlalchemy import (BigInteger, Column, DateTime, ForeignKey, Integer,
                         String, Text)
 from sqlalchemy.orm import declarative_base, relationship
+from sqlalchemy.orm import Mapped
 from sqlmodel import Field, Relationship, SQLModel
 
 from ..base import ListObject
@@ -163,6 +164,7 @@ class NotifyChannel(BasicSchema, table=True):
     notify_type: NotifyChannelType = Field(sa_column=Column(Integer, primary_key=True))
     channel_id: int = Field(sa_column=Column(BigInteger))
     role_id: int | None = Field(sa_column=Column(BigInteger))
+    message: str | None
 
 class Community(BasicSchema, table=True):
     __tablename__ = "community_info"
@@ -235,21 +237,43 @@ class TwitchChatCommand(BasicSchema, table=True):
     name: str = Field(primary_key=True)
     response: str = Field(nullable=False)
 
-class InviteRecord(BasicSchema, table=True):
+class InviteRecord(AlchemyBasicSchema):
     __tablename__ = "invite_record"
 
-    invited_user: int = Field(sa_column=Column(BigInteger, primary_key=True))
-    invite_guild: int = Field(sa_column=Column(BigInteger, primary_key=True))
-    inviter_user: int = Field(sa_column=Column(BigInteger, primary_key=True))
-    invite_time: datetime
-    invite_code: str
+    invited_user: int = Column(BigInteger, primary_key=True)
+    invite_guild: int = Column(BigInteger, primary_key=True)
+    inviter_user: int = Column(BigInteger, primary_key=True)
+    invite_time: datetime = Column(DateTime(timezone=True))
+    invite_code: str = Column(String(255))
 
-class PushRecord(BasicSchema, table=True):
+class PushRecord(AlchemyBasicSchema):
     __tablename__ = "push_record"
 
-    channel_id: str = Field(primary_key=True)
-    push_at: datetime
-    expire_at: datetime
+    channel_id: str = Column(String(255), primary_key=True)
+    push_at: datetime = Column(DateTime(timezone=True))
+    expire_at: datetime = Column(DateTime(timezone=True))
+
+class ReactionRoleMessage(AlchemyBasicSchema):
+    __tablename__ = "reaction_role_message"
+
+    message_id: int = Column(BigInteger, primary_key=True)
+    guild_id: int = Column(BigInteger, primary_key=True)
+    content: str = Column(String(255))
+
+class ReactionRole(AlchemyBasicSchema):
+    __tablename__ = "reaction_role"
+
+    message_id: int = Column(BigInteger, primary_key=True)
+    reaction: str = Column(String(255), primary_key=True)
+    role_id: int = Column(BigInteger)
+    title: str | None = Column(String(255), nullable=True)
+    description: str | None = Column(String(255), nullable=True)
+
+class Timetest(AlchemyBasicSchema):
+    __tablename__ = "timetest"
+
+    id: int = Column(Integer, primary_key=True)
+    time: datetime = Column(DateTime(timezone=True))
 
 class Party(IdbaseSchema, table=True):
     __tablename__ = "party_datas"

@@ -12,6 +12,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlmodel import Session, SQLModel, create_engine, select
 
 from starlib.models.mysql import Community, NotifyCommunity
+from ..models.sqlSchema import Base
 
 from ..errors import *
 from ..fileDatabase import Jsondb
@@ -49,7 +50,7 @@ class BaseSQLEngine:
         self.session = Session(bind=self.engine)
         
         # self.alengine = sqlalchemy.create_engine(connection_url, echo=False)
-        # Base.metadata.create_all(self.alengine)
+        Base.metadata.create_all(self.engine)
         # Sessionmkr = sessionmaker(bind=self.alengine)
         # self.alsession = Sessionmkr()
 
@@ -245,9 +246,9 @@ class SQLPetSystem(BaseSQLEngine):
 
 class SQLNotifySystem(BaseSQLEngine):
     #* notify channel
-    def add_notify_channel(self,guild_id:int,notify_type:NotifyChannelType,channel_id:int,role_id:int=None):
+    def add_notify_channel(self,guild_id:int,notify_type:NotifyChannelType,channel_id:int,role_id:int=None, message:str=None):
         """設定自動通知頻道"""
-        channel = NotifyChannel(guild_id=guild_id, notify_type=notify_type, channel_id=channel_id, role_id=role_id)
+        channel = NotifyChannel(guild_id=guild_id, notify_type=notify_type, channel_id=channel_id, role_id=role_id, message=message)
         self.session.merge(channel)
         self.session.commit()
 
