@@ -101,7 +101,10 @@ class event(Cog_Extension):
 
         for react_message in sclient.sqldb.get_reaction_role_message_all():
             channel = bot.get_channel(react_message.channel_id)        
-            message = await channel.fetch_message(react_message.message_id) if channel else None
+            try:
+                message = await channel.fetch_message(react_message.message_id) if channel else None
+            except discord.errors.NotFound:
+                message = None
             if message:
                 react_roles = sclient.sqldb.get_reaction_roles_by_message(react_message.message_id)
                 bot.add_view(ReactionRoleView(message.id, react_roles))
