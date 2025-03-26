@@ -199,7 +199,7 @@ class Poll(BasicSchema, table=True):
     created_user: int = Field(sa_column=Column(BigInteger))
     created_at: datetime
     is_on: bool
-    message_id: int
+    message_id: int = Field(sa_column=Column(BigInteger))
     guild_id: int = Field(sa_column=Column(BigInteger))
     ban_alternate_account_voting: bool
     show_name: bool
@@ -218,7 +218,7 @@ class PollRole(BasicSchema, table=True):
     __tablename__ = "poll_role"
 
     poll_id: int = Field(primary_key=True)
-    role_id: int = Field(sa_column=Column(BigInteger))
+    role_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
     role_type: int
     role_magnification: int
 
