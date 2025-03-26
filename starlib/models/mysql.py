@@ -79,7 +79,7 @@ class UserGame(UserSchema, table=True):
 class UserPoll(UserSchema, table=True):
     __tablename__ = "user_poll"
     
-    poll_id: int = Field(primary_key=True, foreign_key="stardb_basic.poll_data.poll_id")
+    poll_id: int = Field(primary_key=True)
     discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
     vote_option: int = Field(primary_key=True)
     vote_at: datetime
@@ -88,8 +88,8 @@ class UserPoll(UserSchema, table=True):
 class UserAccount(UserSchema, table=True):
     __tablename__ = "user_account"
 
-    main_account: int = Field(primary_key=True)
-    alternate_account: int = Field(primary_key=True)
+    main_account: int = Field(primary_key=True, sa_column=Column(BigInteger))
+    alternate_account: int = Field(primary_key=True, sa_column=Column(BigInteger))
 
 class UserParty(UserSchema, table=True):
     __tablename__ = "user_party"
@@ -105,9 +105,9 @@ class UserModerate(UserSchema, table=True):
     warning_id: int = Field(primary_key=True, default=None)
     discord_id: int = Field(sa_column=Column(BigInteger))
     moderate_type: WarningType = Field(sa_column=Column(Integer, primary_key=True))
-    moderate_user: int
-    create_guild: int
-    create_time: int
+    moderate_user: int = Field(sa_column=Column(BigInteger))
+    create_guild: int = Field(sa_column=Column(BigInteger))
+    create_time: datetime
     reason: str | None
     last_time: str | None
     guild_only: bool | None
@@ -217,14 +217,14 @@ class Poll(BasicSchema, table=True):
 class PollOption(BasicSchema, table=True):
     __tablename__ = "poll_options"
 
-    poll_id: int = Field(primary_key=True, foreign_key="stardb_basic.poll_data.poll_id")
+    poll_id: int = Field(primary_key=True)
     option_id: int = Field(primary_key=True)
     option_name: str
 
 class PollRole(BasicSchema, table=True):
     __tablename__ = "poll_role"
 
-    poll_id: int = Field(primary_key=True, foreign_key="stardb_basic.poll_data.poll_id")
+    poll_id: int = Field(primary_key=True)
     role_id: int = Field(sa_column=Column(BigInteger))
     role_type: int
     role_magnification: int
@@ -285,9 +285,9 @@ class Party(IdbaseSchema, table=True):
 
     party_id: int = Field(primary_key=True)
     party_name: str
-    role_id: int
-    creator_id: int
-    created_at: datetime
+    role_id: int = Field(sa_column=Column(BigInteger))
+    creator_id: int = Field(sa_column=Column(BigInteger))
+    created_at: date
     
     members: list[UserParty] = Relationship(back_populates="party")
 
