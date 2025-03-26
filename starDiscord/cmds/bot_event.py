@@ -98,6 +98,7 @@ class event(Cog_Extension):
 
         # 反應身分組
         for react_message in sclient.sqldb.get_reaction_role_message_all():
+            log.debug(f"Loading reaction role message: {react_message.message_id}")
             message = bot.get_message(react_message.channel_id)
             if not message:
                 try:
@@ -109,8 +110,12 @@ class event(Cog_Extension):
             if message:
                 react_roles = sclient.sqldb.get_reaction_roles_by_message(react_message.message_id)
                 bot.add_view(ReactionRoleView(message.id, react_roles))
+                log.debug(f"Loaded reaction role message: {react_message.message_id}")
             else:
                 sclient.sqldb.delete_reaction_role_message(react_message.message_id)
+                log.debug(f"Deleted reaction role message: {react_message.message_id}")
+
+        log.info(f">> Bot on_ready done. <<")
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
