@@ -10,7 +10,6 @@ from starlib.models.mysql import Community
 from starlib.types import CommunityType, JsonCacheType, NotifyCommunityType
 
 from ..extension import Cog_Extension
-from ..uiElement.view import ReactionRole1, ReactionRole2, WelcomeView
 
 twitch_notify_option = ChoiceList.set("twitch_notify_option")
 
@@ -236,20 +235,6 @@ class system_community(Cog_Extension):
                     text += f" {role.mention}"
             embed.add_field(name=notify_name, value=text)
         await ctx.respond(embed=embed)
-
-    @commands.slash_command(description='加入伺服器按鈕',debug_guilds=[1058234922076217415])
-    @commands.has_permissions(manage_channels=True)
-    async def welcome(self, ctx):
-        view = WelcomeView()
-        await ctx.channel.send(view=view)
-        await ctx.respond("按鈕創建完成",ephemeral=True)
-
-    @commands.slash_command(description='反應身分組按鈕',debug_guilds=[1058234922076217415])
-    @commands.has_permissions(manage_channels=True)
-    async def reactionrole(self, ctx):
-        await ctx.channel.send("請依自身喜好點選身分組",view=ReactionRole1())
-        await ctx.channel.send("開/關Twitch開台通知",view=ReactionRole2())
-        await ctx.respond("按鈕創建完成",ephemeral=True)
 
 def setup(bot):
     bot.add_cog(system_community(bot))

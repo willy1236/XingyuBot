@@ -12,8 +12,7 @@ from starlib.models.mysql import DiscordUser
 from starlib.types import NotifyChannelType
 
 from ..extension import Cog_Extension
-from ..uiElement.view import (PollView, ReactionRole1, ReactionRole2,
-                              WelcomeView, ReactionRoleView)
+from ..uiElement.view import PollView, ReactionRoleView
 
 keywords = {}
 
