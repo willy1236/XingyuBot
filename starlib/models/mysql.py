@@ -88,8 +88,8 @@ class UserPoll(UserSchema, table=True):
 class UserAccount(UserSchema, table=True):
     __tablename__ = "user_account"
 
-    main_account: int = Field(primary_key=True, sa_column=Column(BigInteger))
-    alternate_account: int = Field(primary_key=True, sa_column=Column(BigInteger))
+    main_account: int = Field(sa_column=Column(BigInteger, primary_key=True))
+    alternate_account: int = Field(sa_column=Column(BigInteger, primary_key=True))
 
 class UserParty(UserSchema, table=True):
     __tablename__ = "user_party"
@@ -181,14 +181,7 @@ class NotifyCommunity(BasicSchema, table=True):
     channel_id: int = Field(sa_column=Column(BigInteger))
     role_id: int | None = Field(sa_column=Column(BigInteger))
     message: str | None
-    
-    # # 使用 __table_args__ 定義外鍵關聯
-    # __table_args__ = (
-    #     ForeignKeyConstraint(
-    #         ['community_id', 'community_type'],
-    #         ['stardb_basic.community_info.id', 'stardb_basic.community_info.type']
-    #     ),
-    # )
+
 
 class DynamicChannel(BasicSchema, table=True):
     __tablename__ = "dynamic_channel"
