@@ -236,30 +236,6 @@ class moderation(Cog_Extension):
         embed.timestamp = create_time
         await ctx.respond(embed=embed)
 
-    @react_role.command(description='新增反應身分組訊息，需新增反應身分組訊息後才能設定反應身分組')
-    @commands.has_permissions(manage_roles=True)
-    @commands.guild_only()
-    async def addmessage(self, ctx:discord.ApplicationContext,
-                         content:discord.Option(str, name='訊息', description='要設定的訊息', required=True)):
-        await ctx.defer()
-        msg = await ctx.channel.send(content)
-        sclient.sqldb.merge(ReactionRoleMessage(ctx.guild.id, ctx.channel.id, msg.id, content))
-        await ctx.respond("已新增反應身分組訊息", delete_after=5)
-
-    @react_role.command(description='移除反應身分組訊息')
-    @commands.has_permissions(manage_roles=True)
-    @commands.guild_only()
-    async def removemessage(self, ctx:discord.ApplicationContext,
-                            message_id:discord.Option(str, name='訊息id', description='要移除的訊息id', required=True)):
-        await ctx.defer()
-        message = await ctx.channel.fetch_message(int(message_id))
-        if not message:
-            await ctx.respond("找不到此訊息，請在該訊息的頻道進行設定", delete_after=5)
-            return
-        await message.delete()
-        sclient.sqldb.delete_reaction_role_message(message.id)
-        await ctx.respond("已移除反應身分組訊息", delete_after=5)
-
     @react_role.command(description='編輯反應身分組訊息文字')
     @commands.has_permissions(manage_roles=True)
     @commands.guild_only()
@@ -274,26 +250,36 @@ class moderation(Cog_Extension):
         
         react_msg = sclient.sqldb.get_reaction_role_message(message.id)
         if not react_msg:
-            await ctx.respond("找不到此訊息，請在該訊息的頻道進行設定", delete_after=5)
+            await ctx.respond("請先新增反應身分組", delete_after=5)
             return
         
         await message.edit(content=content)
-        await ctx.respond("已編輯反應身分組訊息", delete_after=5)
+        await ctx.respond("編輯完成", delete_after=5)
         
     @react_role.command(description='設定反應身分組')
     @commands.has_permissions(manage_roles=True)
     @commands.guild_only()
-    async def setrole(self, ctx:discord.ApplicationContext,
-                      message_id:discord.Option(str, name='訊息id', description='要設定的訊息id', required=True),
+    async def add(self, ctx:discord.ApplicationContext,
+                      message_id:discord.Option(str, name='訊息id', description='要設定的訊息id，若無則由機器人創建', required=False),
                       role:discord.Option(discord.Role,name='身分組',description='要設定的身分組',required=True),
                       title:discord.Option(str,name='表情符號',description='要設定的表情符號',required=True),
                       description:discord.Option(str,name='描述',description='要設定的描述',required=False)):
         await ctx.defer()
-        message = await ctx.channel.fetch_message(int(message_id))
-        if not message:
-            await ctx.respond("找不到此訊息，請在該訊息的頻道進行設定", delete_after=5)
-            return
-        
+        if message_id:
+            message:discord.Message = await ctx.channel.fetch_message(int(message_id))
+            if not message:
+                await ctx.respond("找不到此訊息，請在該訊息的頻道進行設定", delete_after=5)
+                return
+            elif message.author != ctx.bot.user:
+                await ctx.respond("此訊息非我所建立", delete_after=5)
+                return
+        else:
+            message = await ctx.channel.send("請依自身喜好點選身分組")
+
+        react_msg = sclient.sqldb.get_reaction_role_message(message.id)
+        if not react_msg:
+            sclient.sqldb.merge(ReactionRoleMessage(message.guild.id, message.channel.id, message.id))
+
         sclient.sqldb.merge(ReactionRole(message.id, role.id, title, description))
         react_roles = sclient.sqldb.get_reaction_roles_by_message(message.id)
         await message.edit(view=ReactionRoleView(message.id, react_roles))        
@@ -303,7 +289,7 @@ class moderation(Cog_Extension):
     @react_role.command(description='移除反應身分組')
     @commands.has_permissions(manage_roles=True)
     @commands.guild_only()
-    async def removerole(self, ctx:discord.ApplicationContext,
+    async def remove(self, ctx:discord.ApplicationContext,
                         message_id:discord.Option(str, name='訊息id', description='要設定的訊息id', required=True),
                         role:discord.Option(discord.Role,name='身分組',description='要設定的身分組',required=True)):
         await ctx.defer()
@@ -311,10 +297,18 @@ class moderation(Cog_Extension):
         if not message:
             await ctx.respond("找不到此訊息，請在該訊息的頻道進行設定", delete_after=5)
             return
+        elif message.author != ctx.bot.user:
+            await ctx.respond("此訊息非我所建立", delete_after=5)
+            return
         
         sclient.sqldb.delete_reaction_role(message.id, role.id)
         react_roles = sclient.sqldb.get_reaction_roles_by_message(message.id)
-        await message.edit(view=ReactionRoleView(message.id, react_roles))
+        if not react_roles:
+            sclient.sqldb.delete_reaction_role_message(message.id)
+            await message.edit(view=None)
+        else:
+            await message.edit(view=ReactionRoleView(message.id, react_roles))
+
         await ctx.respond(f"已移除 {role.mention}", delete_after=5)
     
 def setup(bot):
