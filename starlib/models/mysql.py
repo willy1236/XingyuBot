@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, TypedDict
 
 from discord import Bot
 from sqlalchemy import (BigInteger, Column, DateTime, ForeignKey, Integer,
-                        String, Text)
+                        String, Text, ForeignKeyConstraint)
 from sqlalchemy.orm import declarative_base, relationship
 from sqlalchemy.orm import Mapped
 from sqlmodel import Field, Relationship, SQLModel
@@ -19,9 +19,6 @@ from .sqlSchema import *
 if TYPE_CHECKING:
     from ..database import SQLEngine
 
-# Base = declarative_base()
-
-    
 class Student(DatabaseSchema, table=True):
     __tablename__ = 'students'
     
@@ -84,7 +81,7 @@ class UserPoll(UserSchema, table=True):
     
     poll_id: int = Field(primary_key=True, foreign_key="stardb_basic.poll_data.poll_id")
     discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
-    vote_option: int = Field(primary_key=True, foreign_key="stardb_basic.poll_options.option_id")
+    vote_option: int = Field(primary_key=True)
     vote_at: datetime
     vote_magnification: int = Field(default=1)
 
@@ -157,6 +154,14 @@ class Pet(UserSchema, table=True):
     pet_name: str
     food: int | None
 
+class Community(BasicSchema, table=True):
+    __tablename__ = "community_info"
+    
+    id: str = Field(primary_key=True)
+    type: CommunityType = Field(sa_column=Column(Integer, primary_key=True))
+    name: str
+    login: str | None
+
 class NotifyChannel(BasicSchema, table=True):
     __tablename__ = "notify_channel"
     
@@ -166,24 +171,24 @@ class NotifyChannel(BasicSchema, table=True):
     role_id: int | None = Field(sa_column=Column(BigInteger))
     message: str | None
 
-class Community(BasicSchema, table=True):
-    __tablename__ = "community_info"
-    
-    id: str = Field(primary_key=True)
-    type: CommunityType = Field(sa_column=Column(Integer, primary_key=True))
-    name: str
-    login: str | None
-
 class NotifyCommunity(BasicSchema, table=True):
     __tablename__ = "notify_community"
     
     notify_type: NotifyCommunityType = Field(sa_column=Column(Integer, primary_key=True))
-    community_id: str = Field(primary_key=True, foreign_key="stardb_basic.community_info.id")
-    community_type: CommunityType = Field(sa_column=Column(Integer, ForeignKey("stardb_basic.community_info.type"), primary_key=True))
+    community_id: str = Field(primary_key=True)
+    community_type: CommunityType = Field(sa_column=Column(Integer, primary_key=True))
     guild_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
     channel_id: int = Field(sa_column=Column(BigInteger))
     role_id: int | None = Field(sa_column=Column(BigInteger))
     message: str | None
+    
+    # # 使用 __table_args__ 定義外鍵關聯
+    # __table_args__ = (
+    #     ForeignKeyConstraint(
+    #         ['community_id', 'community_type'],
+    #         ['stardb_basic.community_info.id', 'stardb_basic.community_info.type']
+    #     ),
+    # )
 
 class DynamicChannel(BasicSchema, table=True):
     __tablename__ = "dynamic_channel"
@@ -259,9 +264,7 @@ class ReactionRoleMessage(AlchemyBasicSchema):
     guild_id: int = Column(BigInteger, primary_key=True)
     channel_id: int = Column(BigInteger, primary_key=True)
     message_id: int = Column(BigInteger, primary_key=True)
-    content: str = Column(Text(2048))
-
-    react_roles: list["ReactionRole"] = Relationship(back_populates="message")
+    content: str = Column(Text)
 
 class ReactionRole(AlchemyBasicSchema):
     __tablename__ = "reaction_role"
@@ -270,8 +273,6 @@ class ReactionRole(AlchemyBasicSchema):
     role_id: int = Column(BigInteger, primary_key=True)
     title: str = Column(String(255))
     description: str | None = Column(String(255), nullable=True)
-
-    message: ReactionRoleMessage = Relationship(back_populates="react_roles")
 
 class Timetest(AlchemyBasicSchema):
     __tablename__ = "timetest"

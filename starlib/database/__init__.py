@@ -7,11 +7,13 @@ from ..utils import log
 from .mongodb import MongoDB
 from .mysql import MySQLDatabase, SQLEngine
 
+debug_mode = Jsondb.config.get("debug_mode",True)
+
 SQL_connection = Jsondb.config.get('SQL_connection')
 def create_sqldb(should_connect:bool) -> MySQLDatabase | None:
     if should_connect:
         try:
-            sqldb = MySQLDatabase(Jsondb.config.get('SQLsettings'))
+            sqldb = MySQLDatabase(Jsondb.config.get('debug_SQLsettings') if debug_mode else Jsondb.config.get('SQLsettings'))
             version = sqldb.connection.get_server_info()
             log.info(f'>> SQL connect: online ({version}) <<')
         except:
@@ -28,18 +30,21 @@ def create_sqlengine(should_connect:bool) -> SQLEngine | None:
         try:
             from sqlalchemy.engine import URL
 
-            SQLsettings = Jsondb.config["SQLsettings"]
+            SQLsettings = Jsondb.config.get('debug_SQLsettings') if debug_mode else Jsondb.config.get('SQLsettings')
 
             connection_url = URL.create(
-                drivername="mysql+mysqlconnector",
+                #drivername="mysql+mysqlconnector",
+                drivername="postgresql",
                 username=SQLsettings["user"],
                 password=SQLsettings["password"],
                 host=SQLsettings["host"],
-                port=SQLsettings["port"]
+                port=SQLsettings["port"],
+                database=SQLsettings["database"],
             )
             sqlengine = SQLEngine(connection_url)
+            name = sqlengine.engine.dialect.name
             version = sqlengine.engine.dialect.server_version_info
-            log.info(f'>> SQL connect: online ({version}) <<')
+            log.info(f'>> SQL connect: online ({name}, {version}) <<')
         except Exception:
             sqlengine = None
             log.exception('>> SQL connect: offline <<')
