@@ -98,11 +98,14 @@ class event(Cog_Extension):
 
         # 反應身分組
         for react_message in sclient.sqldb.get_reaction_role_message_all():
-            channel = bot.get_channel(react_message.channel_id)        
-            try:
-                message = channel.get_partial_message(react_message.message_id) if channel else None
-            except discord.errors.NotFound:
-                message = None
+            message = bot.get_message(react_message.channel_id)
+            if not message:
+                try:
+                    channel = bot.get_channel(react_message.channel_id)
+                    message = channel.fetch_message(react_message.message_id) if channel else None
+                except discord.errors.NotFound:
+                    message = None
+
             if message:
                 react_roles = sclient.sqldb.get_reaction_roles_by_message(react_message.message_id)
                 bot.add_view(ReactionRoleView(message.id, react_roles))
