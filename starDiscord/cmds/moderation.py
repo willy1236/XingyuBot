@@ -259,6 +259,26 @@ class moderation(Cog_Extension):
         await message.delete()
         sclient.sqldb.delete_reaction_role_message(message.id)
         await ctx.respond("已移除反應身分組訊息", delete_after=5)
+
+    @react_role.command(description='編輯反應身分組訊息文字')
+    @commands.has_permissions(manage_roles=True)
+    @commands.guild_only()
+    async def editmessage(self, ctx:discord.ApplicationContext,
+                          message_id:discord.Option(str, name='訊息id', description='要編輯的訊息id', required=True),
+                          content:discord.Option(str, name='訊息', description='要編輯的訊息', required=True)):
+        await ctx.defer()
+        message = await ctx.channel.fetch_message(int(message_id))
+        if not message:
+            await ctx.respond("找不到此訊息，請在該訊息的頻道進行設定", delete_after=5)
+            return
+        
+        react_msg = sclient.sqldb.get_reaction_role_message(message.id)
+        if not react_msg:
+            await ctx.respond("找不到此訊息，請在該訊息的頻道進行設定", delete_after=5)
+            return
+        
+        await message.edit(content=content)
+        await ctx.respond("已編輯反應身分組訊息", delete_after=5)
         
     @react_role.command(description='設定反應身分組')
     @commands.has_permissions(manage_roles=True)
