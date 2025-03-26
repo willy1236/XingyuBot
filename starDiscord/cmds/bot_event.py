@@ -76,6 +76,7 @@ class event(Cog_Extension):
             log.warning(f">> Cogs not all loaded, {len(bot.cogs)}/{len(os.listdir('./cmds'))} loaded<<")
         
         if bot.bot_code == 'Bot1' and not bot.debug_mode:
+            # 投票介面
             polls = sclient.sqldb.get_all_active_polls()
             now = datetime.now()
             days_poll_period = timedelta(days=28)
@@ -87,6 +88,7 @@ class event(Cog_Extension):
                 else:   
                     bot.add_view(PollView(poll, sqldb=sclient.sqldb, bot=bot))
 
+            # 移除過期邀請
             invites = await bot.get_guild(happycamp_guild[0]).invites()
             now = datetime.now(timezone.utc)
             days_5 = timedelta(days=5)
@@ -95,14 +97,11 @@ class event(Cog_Extension):
                     await invite.delete()
                     await asyncio.sleep(1)
 
-            bot.add_view(WelcomeView())
-            bot.add_view(ReactionRole1())
-            bot.add_view(ReactionRole2())
-
+        # 反應身分組
         for react_message in sclient.sqldb.get_reaction_role_message_all():
             channel = bot.get_channel(react_message.channel_id)        
             try:
-                message = await channel.fetch_message(react_message.message_id) if channel else None
+                message = channel.get_partial_message(react_message.message_id) if channel else None
             except discord.errors.NotFound:
                 message = None
             if message:

@@ -354,68 +354,6 @@ class PollView(discord.ui.View):
         
         return image_buffer
 
-class SakagawaReactionRole(discord.ui.View):
-    def __init__(self):
-        super().__init__(timeout=None)
-
-    async def reaction_role(self,interaction: discord.Interaction,roleid:int):
-        role = interaction.guild.get_role(roleid)
-        if interaction.user.get_role(roleid):
-            await interaction.user.remove_roles(role)
-            await interaction.response.send_message(f"已移除 {role.name} 身分組！",ephemeral=True)
-        else:
-            await interaction.user.add_roles(role)        
-            await interaction.response.send_message(f"已給予 {role.name} 身分組！",ephemeral=True)
-
-class WelcomeView(SakagawaReactionRole):
-    @discord.ui.button(label="按下按鈕進入伺服器",style=discord.ButtonStyle.green,custom_id="welcome_1")
-    async def button2_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
-        role = interaction.guild.get_role(1190269561891737690)
-        await interaction.user.add_roles(role)        
-        await interaction.response.send_message(f"{interaction.user.mention} 歡迎加入！",ephemeral=True)
-
-class ReactionRole1(SakagawaReactionRole):
-    @discord.ui.button(label="League of Legends",style=discord.ButtonStyle.primary,custom_id="ReactionRole1_1")
-    async def button1_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
-        roleid = 1201020961684738128
-        await self.reaction_role(interaction,roleid)
-
-    @discord.ui.button(label="魔物獵人",style=discord.ButtonStyle.primary,custom_id="ReactionRole1_2")
-    async def button2_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
-        roleid = 1201020985147666472
-        await self.reaction_role(interaction,roleid)
-
-    @discord.ui.button(label="日麻",style=discord.ButtonStyle.primary,custom_id="ReactionRole1_3")
-    async def button3_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
-        roleid = 1201021022179176538
-        await self.reaction_role(interaction,roleid)
-
-    @discord.ui.button(label="APEX",style=discord.ButtonStyle.primary,custom_id="ReactionRole1_4")
-    async def button4_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
-        roleid = 1201021043284922460
-        await self.reaction_role(interaction,roleid)
-
-    @discord.ui.button(label="特戰英豪",style=discord.ButtonStyle.primary,custom_id="ReactionRole1_5")
-    async def button5_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
-        roleid = 1201021066454241443
-        await self.reaction_role(interaction,roleid)
-
-    @discord.ui.button(label="OSU",style=discord.ButtonStyle.primary,custom_id="ReactionRole1_6")
-    async def button6_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
-        roleid = 1201021221299560581
-        await self.reaction_role(interaction,roleid)
-    
-    @discord.ui.button(label="NSFW",style=discord.ButtonStyle.danger,custom_id="ReactionRole1_7")
-    async def button7_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
-        roleid = 1201350881422082129
-        await self.reaction_role(interaction,roleid)
-
-class ReactionRole2(SakagawaReactionRole):
-    @discord.ui.button(label="開台通知",style=discord.ButtonStyle.primary,custom_id="ReactionRole2_1")
-    async def button1_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
-        roleid = 1221128533779284108
-        await self.reaction_role(interaction,roleid)
-
 class ReactionRoleButton(discord.ui.Button):
     def __init__(self, dbdata:ReactionRole):
         super().__init__(label=dbdata.title, style=discord.ButtonStyle.primary, custom_id=f"ReactionRole_{dbdata.role_id}")
