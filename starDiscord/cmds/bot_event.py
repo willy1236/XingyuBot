@@ -102,7 +102,7 @@ class event(Cog_Extension):
             if not message:
                 try:
                     channel = bot.get_channel(react_message.channel_id)
-                    message = channel.fetch_message(react_message.message_id) if channel else None
+                    message = await channel.fetch_message(react_message.message_id) if channel else None
                 except discord.errors.NotFound:
                     message = None
 
