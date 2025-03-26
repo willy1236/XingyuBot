@@ -260,10 +260,10 @@ class moderation(Cog_Extension):
     @commands.has_permissions(manage_roles=True)
     @commands.guild_only()
     async def add(self, ctx:discord.ApplicationContext,
-                      message_id:discord.Option(str, name='訊息id', description='要設定的訊息id，若無則由機器人創建', required=False),
                       role:discord.Option(discord.Role,name='身分組',description='要設定的身分組',required=True),
-                      title:discord.Option(str,name='表情符號',description='要設定的表情符號',required=True),
-                      description:discord.Option(str,name='描述',description='要設定的描述',required=False)):
+                      title:discord.Option(str,name='標題',description='要設定的標題',required=True),
+                      description:discord.Option(str,name='描述',description='要設定的描述',required=False),
+                      message_id:discord.Option(str, name='訊息id', description='要設定的訊息id，若無則由機器人創建', required=False)):
         await ctx.defer()
         if message_id:
             message:discord.Message = await ctx.channel.fetch_message(int(message_id))
