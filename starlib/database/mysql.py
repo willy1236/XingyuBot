@@ -40,10 +40,10 @@ class BaseSQLEngine:
         # with Session(self.engine) as session:
         self.session = Session(bind=self.engine)
         
-        # self.alengine = sqlalchemy.create_engine(connection_url, echo=False)
+        self.alengine = sqlalchemy.create_engine(connection_url, echo=False)
         Base.metadata.create_all(self.engine)
-        # Sessionmkr = sessionmaker(bind=self.alengine)
-        # self.alsession = Sessionmkr()
+        Sessionmkr = sessionmaker(bind=self.alengine)
+        self.alsession = Sessionmkr()
 
         self.cache = dict()
 
@@ -78,17 +78,6 @@ class BaseSQLEngine:
 
     def get(self, db_obj:O, primary_keys:tuple) -> O | None:
         return self.session.get(db_obj, primary_keys)
-
-
-    def get_student(self, student_id:int):
-        stmt = select(Student).where(Student.id == student_id)
-        result = self.session.exec(stmt).one_or_none()
-        return result
-    
-    def get_school(self, school_id:int):
-        stmt = select(School).where(School.id == school_id)
-        result = self.session.exec(stmt).one_or_none()
-        return result
     
 class SQLUserSystem(BaseSQLEngine):
     #* User
@@ -747,21 +736,7 @@ class SQLTokensSystem(BaseSQLEngine):
         return self.session.exec(stmt).one()
 
 class SQLTest(BaseSQLEngine):
-    def get_test(self):
-        # result = self.alsession.query(Student).all()
-        stmt = select(Student).where(Student.id == 1)
-        result = self.session.exec(stmt).one_or_none()
-        return result
-
-    def add_test(self, student:Student):
-        self.alsession.add(Student)
-        self.alsession.commit()
-        self.alsession.merge()
-
-    def remove_test(self, student_id:int):
-        stmt = delete(Student).where(Student.id == student_id)
-        self.alsession.execute(stmt)
-        self.alsession.commit()
+    pass
 
 class MySQLBaseModel(object):
     """MySQL資料庫基本模型"""

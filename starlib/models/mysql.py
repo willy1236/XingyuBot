@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, TypedDict
 from discord import Bot
 from sqlalchemy import (BigInteger, Column, DateTime, ForeignKey, Integer,
                         String, Text, ForeignKeyConstraint)
+from sqlalchemy.dialects.postgresql import TIMESTAMP
 from sqlalchemy.orm import declarative_base, relationship
 from sqlalchemy.orm import Mapped
 from sqlmodel import Field, Relationship, SQLModel
@@ -18,25 +19,6 @@ from .sqlSchema import *
 
 if TYPE_CHECKING:
     from ..database import SQLEngine
-
-class Student(DatabaseSchema, table=True):
-    __tablename__ = 'students'
-    
-    id: int = Field(sa_column=Column(Integer, primary_key=True))
-    name: str = Field(sa_column=Column(String(255)))
-    created_at: datetime = Field(sa_column=Column(DateTime(timezone=True), default=lambda: datetime.now(tz)))
-    school_id: int | None = Field(foreign_key="database.schools.id")
-
-    school: "School" = Relationship(back_populates="students")
-
-class School(DatabaseSchema, table=True):
-    __tablename__ = 'schools'
-
-    id: int = Field(primary_key=True)
-    name: str
-
-    students: list[Student] = Relationship(back_populates="school")
-
 class CloudUser(UserSchema, table=True):
     __tablename__ = 'cloud_user'
 
@@ -241,15 +223,15 @@ class InviteRecord(AlchemyBasicSchema):
     invited_user: int = Column(BigInteger, primary_key=True)
     invite_guild: int = Column(BigInteger, primary_key=True)
     inviter_user: int = Column(BigInteger, primary_key=True)
-    invite_time: datetime = Column(DateTime(timezone=True))
+    invite_time: datetime = Column(TIMESTAMP(True, 0))
     invite_code: str = Column(String(255))
 
 class PushRecord(AlchemyBasicSchema):
     __tablename__ = "push_record"
 
     channel_id: str = Column(String(255), primary_key=True)
-    push_at: datetime = Column(DateTime(timezone=True))
-    expire_at: datetime = Column(DateTime(timezone=True))
+    push_at: datetime = Column(TIMESTAMP(True, 0))
+    expire_at: datetime = Column(TIMESTAMP(True, 0))
 
 class ReactionRoleMessage(AlchemyBasicSchema):
     __tablename__ = "reaction_role_message"
@@ -257,7 +239,6 @@ class ReactionRoleMessage(AlchemyBasicSchema):
     guild_id: int = Column(BigInteger, primary_key=True)
     channel_id: int = Column(BigInteger, primary_key=True)
     message_id: int = Column(BigInteger, primary_key=True)
-    content: str = Column(Text)
 
 class ReactionRole(AlchemyBasicSchema):
     __tablename__ = "reaction_role"
@@ -266,13 +247,6 @@ class ReactionRole(AlchemyBasicSchema):
     role_id: int = Column(BigInteger, primary_key=True)
     title: str = Column(String(255))
     description: str | None = Column(String(255), nullable=True)
-
-class Timetest(AlchemyBasicSchema):
-    __tablename__ = "timetest"
-
-    id: int = Column(Integer, primary_key=True)
-    time: datetime = Column(DateTime(timezone=True))
-
 class Party(IdbaseSchema, table=True):
     __tablename__ = "party_datas"
 
