@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 import discord
 from discord.commands import SlashCommandGroup
 from discord.ext import commands
+import discord.types
 
 from starlib import BotEmbed, ChoiceList, Jsondb, sclient
 from starlib.instance import debug_guilds
@@ -263,6 +264,8 @@ class moderation(Cog_Extension):
                       role:discord.Option(discord.Role,name='身分組',description='要設定的身分組',required=True),
                       title:discord.Option(str,name='標題',description='要設定的標題',required=True),
                       description:discord.Option(str,name='描述',description='要設定的描述',required=False),
+                      emoji:discord.Option(str,name='表情符號',description='要設定的表情符號',required=False),
+                      style:discord.Option(discord.ButtonStyle,name='樣式',description='要設定的樣式',required=False),
                       message_id:discord.Option(str, name='訊息id', description='要設定的訊息id，若無則由機器人創建', required=False)):
         await ctx.defer()
         if message_id:
@@ -280,7 +283,7 @@ class moderation(Cog_Extension):
         if not react_msg:
             sclient.sqldb.merge(ReactionRoleMessage(message.guild.id, message.channel.id, message.id))
 
-        sclient.sqldb.merge(ReactionRole(message.id, role.id, title, description))
+        sclient.sqldb.merge(ReactionRole(message.id, role.id, title, description, emoji, style))
         react_roles = sclient.sqldb.get_reaction_roles_by_message(message.id)
         await message.edit(view=ReactionRoleView(message.id, react_roles))        
         

@@ -356,7 +356,7 @@ class PollView(discord.ui.View):
 
 class ReactionRoleButton(discord.ui.Button):
     def __init__(self, dbdata:ReactionRole):
-        super().__init__(label=dbdata.title, style=discord.ButtonStyle.primary, custom_id=f"ReactionRole_{dbdata.message_id}_{dbdata.role_id}")
+        super().__init__(label=dbdata.title, style=dbdata.style if dbdata.style else discord.ButtonStyle.primary, emoji=dbdata.emoji, custom_id=f"ReactionRole_{dbdata.message_id}_{dbdata.role_id}")
         self.role_id = dbdata.role_id
 
     async def callback(self,interaction):

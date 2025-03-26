@@ -247,6 +247,9 @@ class ReactionRole(AlchemyBasicSchema):
     role_id: int = Column(BigInteger, primary_key=True)
     title: str = Column(String(255))
     description: str | None = Column(String(255), nullable=True)
+    emoji: str | None  = Column(String(255), nullable=True)
+    style: int | None  = Column(Integer, nullable=True)
+
 class Party(IdbaseSchema, table=True):
     __tablename__ = "party_datas"
 
