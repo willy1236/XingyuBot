@@ -259,11 +259,12 @@ class moderation(Cog_Extension):
         
     @react_role.command(description='設定反應身分組')
     @commands.has_permissions(manage_roles=True)
+    @commands.bot_has_permissions(manage_roles=True)
     @commands.guild_only()
     async def add(self, ctx:discord.ApplicationContext,
                       role:discord.Option(discord.Role,name='身分組',description='要設定的身分組',required=True),
-                      title:discord.Option(str,name='標題',description='要設定的標題',required=True),
-                      description:discord.Option(str,name='描述',description='要設定的描述',required=False),
+                      title:discord.Option(str,name='標題',description='要設定的標題，只能展示出純文字的效果',required=True),
+                      description:discord.Option(str,name='描述',description='要設定的描述（暫無用處）',required=False),
                       emoji:discord.Option(str,name='表情符號',description='要設定的表情符號',required=False),
                       style:discord.Option(discord.ButtonStyle,name='樣式',description='要設定的樣式',required=False),
                       message_id:discord.Option(str, name='訊息id', description='要設定的訊息id，若無則由機器人創建', required=False)):
@@ -291,6 +292,7 @@ class moderation(Cog_Extension):
 
     @react_role.command(description='移除反應身分組')
     @commands.has_permissions(manage_roles=True)
+    @commands.bot_has_permissions(manage_roles=True)
     @commands.guild_only()
     async def remove(self, ctx:discord.ApplicationContext,
                         message_id:discord.Option(str, name='訊息id', description='要設定的訊息id', required=True),

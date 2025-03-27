@@ -3,12 +3,11 @@ from datetime import date, datetime
 from typing import TYPE_CHECKING, TypedDict
 
 from discord import Bot
-from sqlalchemy import (BigInteger, Column, DateTime, ForeignKey, Integer,
+from sqlalchemy import (BigInteger, Column, ForeignKey, Integer,
                         String, Text, ForeignKeyConstraint)
 from sqlalchemy.dialects.postgresql import TIMESTAMP
-from sqlalchemy.orm import declarative_base, relationship
-from sqlalchemy.orm import Mapped
-from sqlmodel import Field, Relationship, SQLModel
+from sqlalchemy.orm import relationship, Mapped, mapped_column
+from sqlmodel import Field, Relationship
 
 from ..base import ListObject
 from ..fileDatabase import Jsondb
@@ -249,6 +248,27 @@ class ReactionRole(AlchemyBasicSchema):
     description: str | None = Column(String(255), nullable=True)
     emoji: str | None  = Column(String(255), nullable=True)
     style: int | None  = Column(Integer, nullable=True)
+
+class User(AlchemyBasicSchema):
+    __tablename__ = 'users'
+    
+    id: int = mapped_column(Integer, primary_key=True, autoincrement=True, init=False)
+    name: str = Column(String, nullable=False)
+
+    # 建立關聯：一個使用者對應多篇貼文
+    posts:list["Post"] = relationship(back_populates="user", init=False)
+
+class Post(AlchemyBasicSchema):
+    __tablename__ = 'posts'
+
+    id: int = mapped_column(Integer, primary_key=True, autoincrement=True, init=False)
+    title: str = Column(String, nullable=False)
+    content: str = Column(String, nullable=False)
+    created_at: datetime = Column(TIMESTAMP(precision=0), nullable=False)  # 只記錄到秒
+    user_id: int = Column(Integer, ForeignKey('stardb_basic.users.id'), nullable=False)
+
+    # 建立反向關聯
+    user:User = relationship(back_populates="posts", init=False)
 
 class Party(IdbaseSchema, table=True):
     __tablename__ = "party_datas"
