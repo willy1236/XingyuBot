@@ -3,10 +3,10 @@ from datetime import date, datetime
 from typing import TYPE_CHECKING, TypedDict
 
 from discord import Bot
-from sqlalchemy import (BigInteger, Column, ForeignKey, Integer,
-                        String, Text, ForeignKeyConstraint, Identity)
+from sqlalchemy import (BigInteger, Column, ForeignKey, ForeignKeyConstraint,
+                        Identity, Integer, String, Text)
 from sqlalchemy.dialects.postgresql import TIMESTAMP
-from sqlalchemy.orm import relationship, Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlmodel import Field, Relationship
 
 from ..base import ListObject

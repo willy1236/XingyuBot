@@ -4,8 +4,8 @@ import os
 import discord
 
 from starlib import BotEmbed, Jsondb, log, sqldb
-from starlib.types import NotifyChannelType, NotifyCommunityType
 from starlib.instance import debug_mode
+from starlib.types import NotifyChannelType, NotifyCommunityType
 
 
 class DiscordBot(discord.Bot):

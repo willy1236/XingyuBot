@@ -103,7 +103,6 @@ class PollEndButton(discord.ui.Button):
             embed, labels, sizes = view.results_embed(interaction,True)
             image_buffer = view.generate_chart(labels, sizes)
 
-            
             await interaction.response.edit_message(embed=embed,view=view,file=discord.File(image_buffer,filename="pie.png"))
         else:
             await interaction.response.send_message(f"錯誤：只有投票發起人才能結算",ephemeral=True)

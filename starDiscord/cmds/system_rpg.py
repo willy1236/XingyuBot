@@ -2,7 +2,7 @@ import discord
 from discord.commands import SlashCommandGroup
 from discord.ext import commands
 
-from starlib import BotEmbed, ChoiceList, Jsondb, sclient
+from starlib import BotEmbed, ChoiceList, sclient
 from starlib.models.rpg import RPGUser
 
 from ..extension import Cog_Extension
@@ -22,11 +22,11 @@ class system_rpg(Cog_Extension):
             sclient.sqldb.merge(user)
         await ctx.respond(embed=user.embed(user_dc))
 
-    @commands.slash_command(description='開始冒險')
+    @commands.slash_command(description='開始冒險', guild_ids=happycamp_guild)
     async def advance(self,ctx:discord.ApplicationContext):
         await ctx.respond(view=RPGAdvanceView(ctx.author.id, 1, ctx.author))
 
-    @commands.slash_command(description='查看裝備背包')
+    @commands.slash_command(description='查看裝備背包', guild_ids=happycamp_guild)
     async def equipmentbag(self,ctx:discord.ApplicationContext):
         view = RPGEquipmentSelectView(ctx.author)
         await ctx.respond(embed=view.embeds[0], view=view)

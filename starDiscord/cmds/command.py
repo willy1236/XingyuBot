@@ -481,8 +481,9 @@ class command(Cog_Extension):
         
         poll.show_name = show_name
         view = PollView(poll, sclient.sqldb, self.bot)
-        embed = view.results_embed(ctx.interaction)
-        await ctx.respond(embed=embed)
+        embed, labels, sizes = view.results_embed(ctx.interaction, True)
+        image_buffer = view.generate_chart(labels, sizes)
+        await ctx.respond(embed=embed,view=view,file=discord.File(image_buffer,filename="pie.png"))
 
     @commands.slash_command(description='共用「94共用啦」雲端資料夾',guild_ids=main_guilds)
     async def drive(self,ctx,email:discord.Option(str,name='gmail帳戶',description='要使用的Gmail帳戶，留空以移除資料',required=False)):
