@@ -281,7 +281,7 @@ class SQLNotifySystem(BaseSQLEngine):
         self.session.merge(channel)
         self.session.commit()
 
-        if self.cache(notify_type):
+        if self.cache.get(notify_type):
             self.cache[notify_type][guild_id] = (channel_id, role_id)
 
     def remove_notify_channel(self,guild_id:int,notify_type:NotifyChannelType):
@@ -293,7 +293,7 @@ class SQLNotifySystem(BaseSQLEngine):
         self.session.exec(stmt)
         self.session.commit()
 
-        if self.get(notify_type):
+        if self.cache.get(notify_type):
             del self.cache[notify_type][guild_id]
     
     def get_notify_channel(self,guild_id:str,notify_type:NotifyChannelType):
@@ -325,7 +325,7 @@ class SQLNotifySystem(BaseSQLEngine):
         voice = DynamicChannel(channel_id=channel_id, creator_id=creator_id, guild_id=guild_id, created_at=created_at)
         self.session.add(voice)
         self.session.commit()
-        if self.get(NotifyChannelType.DynamicVoice):
+        if self.cache.get(NotifyChannelType.DynamicVoice):
             self.cache[NotifyChannelType.DynamicVoice].append(channel_id)
 
     def remove_dynamic_voice(self,channel_id):
@@ -333,7 +333,7 @@ class SQLNotifySystem(BaseSQLEngine):
         stmt = delete(DynamicChannel).where(DynamicChannel.channel_id == channel_id)
         self.session.exec(stmt)
         self.session.commit()
-        if self.get(NotifyChannelType.DynamicVoice):
+        if self.cache.get(NotifyChannelType.DynamicVoice):
             self.cache[NotifyChannelType.DynamicVoice].remove(channel_id)
 
     #* notify community
@@ -359,7 +359,7 @@ class SQLNotifySystem(BaseSQLEngine):
         if community_type is not None:
             self.remove_community(community_type, community_id)
         
-        if self.get(notify_type):
+        if self.cache.get(notify_type):
             self.cache[notify_type].remove(community_id)
 
     def get_notify_community(self, notify_type:NotifyCommunityType):
