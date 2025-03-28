@@ -461,19 +461,26 @@ class command(Cog_Extension):
                    poll_id:discord.Option(int,name='投票id',description='')):
         dbdata = sclient.sqldb.get_poll(poll_id)
         if dbdata:
-            view = PollView(dbdata, sqldb=sclient.sqldb)
+            view = PollView(dbdata, sqldb=sclient.sqldb, bot=self.bot)
             await ctx.respond(view=view,embed=view.embed(ctx.guild))
         else:
             await ctx.respond("錯誤：查無此ID")
 
-    @commands.is_owner()
     @poll.command(description='取得投票結果')
     async def result(self,ctx:discord.ApplicationContext,
                    poll_id:discord.Option(int,name='投票id',description=''),
                    show_name:discord.Option(bool,name='是否顯示投票人',description='',default=False)):
         await ctx.defer()
-        view = PollView(poll_id,sclient.sqldb,self.bot)
-        view.poll.show_name = show_name
+        poll = sclient.sqldb.get_poll(poll_id)
+        if not poll:
+            await ctx.respond("錯誤：查無此ID")
+            return
+        elif poll.created_user != ctx.author.id and not self.bot.is_owner(ctx.author):
+            await ctx.respond("錯誤：你不是此投票的發起人")
+            return
+        
+        poll.show_name = show_name
+        view = PollView(poll, sclient.sqldb, self.bot)
         embed = view.results_embed(ctx.interaction)
         await ctx.respond(embed=embed)
 
