@@ -63,7 +63,7 @@ class UserPoll(UserSchema, table=True):
     poll_id: int = Field(primary_key=True)
     discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
     vote_option: int = Field(primary_key=True)
-    vote_at: datetime
+    vote_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
     vote_magnification: int = Field(default=1)
 
 class UserAccount(UserSchema, table=True):
@@ -83,12 +83,12 @@ class UserParty(UserSchema, table=True):
 class UserModerate(UserSchema, table=True):
     __tablename__ = "user_moderate"
 
-    warning_id: int = Field(primary_key=True, default=None)
+    warning_id: int = Field(sa_column=Column(Integer, Identity(), primary_key=True))
     discord_id: int = Field(sa_column=Column(BigInteger))
-    moderate_type: WarningType = Field(sa_column=Column(Integer, primary_key=True))
+    moderate_type: WarningType = Field(sa_column=Column(Integer))
     moderate_user: int = Field(sa_column=Column(BigInteger))
     create_guild: int = Field(sa_column=Column(BigInteger))
-    create_time: datetime
+    create_time: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
     reason: str | None
     last_time: str | None
     guild_only: bool | None
@@ -168,16 +168,17 @@ class DynamicChannel(BasicSchema, table=True):
     __tablename__ = "dynamic_channel"
     
     channel_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
-    discord_id: int = Field(sa_column=Column(BigInteger))
+    creator_id: int = Field(sa_column=Column(BigInteger))
     guild_id: int = Field(sa_column=Column(BigInteger))
-    created_at: datetime
+    created_at: datetime | None = Field(sa_column=Column(TIMESTAMP(True, 0), nullable=True))
+    
 
 class Poll(BasicSchema, table=True):
     __tablename__ = "poll_data"
 
     poll_id: int = Field(sa_column=Column(Integer, Identity(), primary_key=True))
     title: str
-    created_user: int = Field(sa_column=Column(BigInteger))
+    creator_id: int = Field(sa_column=Column(BigInteger))
     created_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
     guild_id: int = Field(sa_column=Column(BigInteger))
     message_id: int | None = Field(sa_column=Column(BigInteger))
@@ -381,11 +382,11 @@ class OAuth2Token(TokensSchema, table=True):
     type: CommunityType = Field(sa_column=Column(Integer, primary_key=True))
     access_token: str
     refresh_token: str
-    expires_at: datetime
+    expires_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
 
     @property
     def valid(self):
-        return self.expires_at > datetime.now()
+        return self.expires_at > datetime.now(tz)
 
 class BotToken(TokensSchema, table=True):
     __tablename__ = "bot_token"
@@ -399,7 +400,7 @@ class BotToken(TokensSchema, table=True):
     revoke_token: str | None
     redirect_uri: str | None
     callback_uri: str | None
-    expires_at: datetime | None
+    expires_at: datetime | None = Field(sa_column=Column(TIMESTAMP(True, 0)))
 
 class AccountDetails(LedgerSchema, table=True):
     __tablename__ = "account_details"
@@ -449,9 +450,8 @@ class UpfrontType(LedgerSchema, table=True):
     type_name: str
 
 
-class WarningList(ListObject):
+class WarningList(ListObject[UserModerate]):
     if TYPE_CHECKING:
-        items: list[UserModerate]
         discord_id: int
 
     def __init__(self,items:list, discord_id:int):

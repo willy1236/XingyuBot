@@ -98,7 +98,7 @@ class PollEndButton(discord.ui.Button):
             view:PollView = self.view
             view.clear_items()
             view.poll.is_on = 0
-            view.sqldb.update_poll(view.poll)
+            view.sqldb.merge(view.poll)
 
             embed, labels, sizes = view.results_embed(interaction,True)
             image_buffer = view.generate_chart(labels, sizes)
@@ -161,7 +161,7 @@ class PollView(discord.ui.View):
         # TODO: change_vote (decide if user can change his/her vote or not)
         
 
-        self.add_item(PollEndButton(poll.poll_id,self.poll.created_user,bot))
+        self.add_item(PollEndButton(poll.poll_id,self.poll.creator_id,bot))
         if self.poll.check_results_in_advance:
             self.add_item(PollResultButton(poll.poll_id))
         self.add_item(PollCanenlButton(poll.poll_id))
@@ -191,7 +191,7 @@ class PollView(discord.ui.View):
                bot:discord.bot=None
             ):
         """創建投票"""
-        poll = Poll(title=title, created_user=creator_id, created_at=datetime.now(tz), is_on=True, message_id=None, guild_id=guild_id, ban_alternate_account_voting=ban_alternate_account_voting, show_name=show_name, check_results_in_advance=check_results_in_advance, results_only_initiator=results_only_initiator, number_of_user_votes=number_of_user_votes)
+        poll = Poll(title=title, creator_id=creator_id, created_at=datetime.now(tz), is_on=True, message_id=None, guild_id=guild_id, ban_alternate_account_voting=ban_alternate_account_voting, show_name=show_name, check_results_in_advance=check_results_in_advance, results_only_initiator=results_only_initiator, number_of_user_votes=number_of_user_votes)
         sqldb.add(poll)
         sqldb.add_poll_option(poll.poll_id, options)
 
@@ -258,7 +258,7 @@ class PollView(discord.ui.View):
         embed = BotEmbed.general(name="投票系統",title=self.poll.title,description=description)
         embed.set_footer(text=f"投票ID：{self.poll.poll_id}")
 
-        author = guild.get_member(self.poll.created_user)
+        author = guild.get_member(self.poll.creator_id)
         if author:
             embed.set_author(name=author.name, icon_url=author.avatar.url)
         return embed

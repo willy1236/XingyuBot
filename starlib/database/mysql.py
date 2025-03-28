@@ -272,9 +272,9 @@ class SQLNotifySystem(BaseSQLEngine):
         result = self.session.exec(statement).all()
         return result
     
-    def add_dynamic_voice(self, channel_id, discord_id, guild_id, created_at=None):
+    def add_dynamic_voice(self, channel_id, creator_id, guild_id, created_at=None):
         """設定動態語音"""
-        voice = DynamicChannel(channel_id=channel_id, discord_id=discord_id, guild_id=guild_id, created_at=created_at)
+        voice = DynamicChannel(channel_id=channel_id, creator_id=creator_id, guild_id=guild_id, created_at=created_at)
         self.session.add(voice)
         self.session.commit()
         if self.cache.get(NotifyChannelType.DynamicVoice):
@@ -487,10 +487,6 @@ class SQLPollSystem(BaseSQLEngine):
         stmt = select(Poll).where(Poll.poll_id == poll_id)
         result = self.session.exec(stmt).one_or_none()
         return result
-    
-    def update_poll(self,poll:Poll):
-        self.session.merge(poll)
-        self.session.commit()
 
     def get_active_polls(self):
         stmt = select(Poll).where(Poll.is_on == True)

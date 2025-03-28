@@ -16,7 +16,7 @@ class system_user(Cog_Extension):
     @commands.slash_command(description='查看用戶資訊')
     async def ui(self,ctx:discord.ApplicationContext,
                  user_dc:discord.Option(discord.Member,name='用戶',description='留空以查詢自己',default=None),
-                 show_alt_account:discord.Option(bool,name='顯示小帳',description='顯示小帳，僅在查詢自己時可使用',default=False)):
+                 show_alt_account:discord.Option(bool,name='顯示小帳',description='顯示小帳，僅在查詢自己時可使用，此功能僅在特定情況下生效',default=False)):
         user_dc:discord.Member = user_dc or ctx.author
         if user_dc != ctx.author and not await self.bot.is_owner(ctx.author):
             show_alt_account = False
@@ -33,7 +33,8 @@ class system_user(Cog_Extension):
         user_embed.add_field(name='PT點數',value=coins.point)
         user_embed.add_field(name='Rcoin',value=coins.rcoin)
 
-        user_embed.add_field(name='連續簽到最高天數',value=user.max_sign_consecutive_days)
+        if user.max_sign_consecutive_days:
+            user_embed.add_field(name='連續簽到最高天數',value=user.max_sign_consecutive_days)
         if user.meatball_times:
             user_embed.add_field(name='貢丸次數',value=user.meatball_times)
         if user.registration:
@@ -47,7 +48,7 @@ class system_user(Cog_Extension):
                 user_embed.add_field(name='小帳',value=f"{alt_accounts}",inline=False)
 
         cuser = sclient.sqldb.get_cloud_user(user_dc.id)
-        cloud_user_embed = BotEmbed.general("星河協議", icon_url=user_dc.avatar.url if user_dc.avatar else None)
+        cloud_user_embed = BotEmbed.general("使用者資料", icon_url=user_dc.avatar.url if user_dc.avatar else None)
         if cuser:
             cloud_user_embed.add_field(name='雲端共用資料夾',value="已共用" if cuser.drive_share_id else "未共用")
             cloud_user_embed.add_field(name='Twitch ID',value=cuser.twitch_id or "未設定")

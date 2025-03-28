@@ -36,7 +36,7 @@ async def trpg_plot_autocomplete(ctx: discord.AutocompleteContext):
 
 class command(Cog_Extension):
     bet = SlashCommandGroup("bet", "賭盤相關指令")
-    role = SlashCommandGroup("role", "身分組管理指令")
+    role = SlashCommandGroup("role", "身分組管理指令", guild_ids=happycamp_guild)
     poll = SlashCommandGroup("poll", "投票相關指令")
     party = SlashCommandGroup("party", "政黨相關指令",guild_ids=happycamp_guild)
     registration = SlashCommandGroup("registration", "戶籍相關指令",guild_ids=happycamp_guild)
@@ -414,10 +414,11 @@ class command(Cog_Extension):
         return ['test']
 
     @commands.slash_command(description='讓機器人選擇一樣東西')
-    async def choice(self,ctx,args:discord.Option(str,name='選項',description='多個選項請用空格隔開')):
+    async def choice(self,ctx,args:discord.Option(str,name='選項',description='多個選項請用空格隔開'),
+                     times:discord.Option(int,name='次數',description='預設為1，可輸入1~10',default=1,min_value=1,max_value=10)):
         args:list[str] = args.split()
-        result = random.choice(args)
-        await ctx.respond(f'我選擇:{result}')
+        result = random.choices(args, k=times)
+        await ctx.respond(f'我選擇：{", ".join(result)}')
 
     @commands.user_command(name="摃殘",guild_ids=happycamp_guild)
     async def bonk(self,ctx:discord.ApplicationContext, member: discord.Member):
@@ -453,7 +454,7 @@ class command(Cog_Extension):
         embed = view.embed(ctx.guild)
         message = await ctx.respond(embed=embed,view=view)
         view.poll.message_id = message.id
-        sclient.sqldb.update_poll(view.poll)
+        sclient.sqldb.merge(view.poll)
 
     @commands.is_owner()
     @poll.command(description='重新創建投票介面')
@@ -476,7 +477,7 @@ class command(Cog_Extension):
         if not poll:
             await ctx.respond("錯誤：查無此ID")
             return
-        elif poll.created_user != ctx.author.id and not is_owner:
+        elif poll.creator_id != ctx.author.id and not is_owner:
             await ctx.respond("錯誤：你不是此投票的發起人")
             return
         
@@ -532,7 +533,7 @@ class command(Cog_Extension):
         except:
             pass
 
-        await ctx.respond(f"{ctx.author.mention} 已加入政黨 {Jsondb.get_tw(party_id,'party_option')}")
+        await ctx.respond(f"{ctx.author.mention} 已加入政黨 {dbdata.party_name}")
 
     @party.command(description='離開政黨')
     async def leave(self,ctx:discord.ApplicationContext,
@@ -547,7 +548,7 @@ class command(Cog_Extension):
         except:
             pass
 
-        await ctx.respond(f"{ctx.author.mention} 已退出政黨 {Jsondb.get_tw(party_id,'party_option')}")
+        await ctx.respond(f"{ctx.author.mention} 已退出政黨 {dbdata.party_name}")
 
     @party.command(description='政黨列表')
     async def list(self,ctx:discord.ApplicationContext):

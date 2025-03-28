@@ -30,7 +30,7 @@ cwa_api = CWA_API()
 apexapi = ApexAPI()
 
 # jsondb
-main_guilds = Jsondb.config.get('main_guilds', [])
-happycamp_guild = Jsondb.config.get('happycamp_guild', [])
-debug_guilds = Jsondb.config.get('debug_guilds', [])
-debug_mode = Jsondb.config.get("debug_mode", True)
+main_guilds: list[int] = Jsondb.config.get('main_guilds', [])
+happycamp_guild: list[int] = Jsondb.config.get('happycamp_guild', [])
+debug_guilds: list[int] = Jsondb.config.get('debug_guilds', [])
+debug_mode: bool = Jsondb.config.get("debug_mode", True)

@@ -57,7 +57,7 @@ class error(Cog_Extension):
                     await ctx.respond(f'發生未知錯誤，請等待修復',ephemeral=True)
                     await self.bot.error(ctx,error)
                 else:
-                    await ctx.respond(f'發生未知錯誤：```py\n{error.original}```',ephemeral=True)
+                    await ctx.respond(f'發生未知錯誤（debug）：```py\n{error.original}```',ephemeral=True)
 
                 log.error(f'{error},{type(error)},{type(error.original)}')
         
