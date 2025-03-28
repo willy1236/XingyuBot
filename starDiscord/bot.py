@@ -5,6 +5,7 @@ import discord
 
 from starlib import BotEmbed, Jsondb, log, sqldb
 from starlib.types import NotifyChannelType, NotifyCommunityType
+from starlib.instance import debug_mode
 
 
 class DiscordBot(discord.Bot):
@@ -17,8 +18,8 @@ class DiscordBot(discord.Bot):
             help_command = None
         )
         
+        self.debug_mode = debug_mode
         self.bot_code = bot_code
-        self.debug_mode = Jsondb.config.get('debug_mode',True)
 
         if bot_code != 'Bot1':
             self.debug_guilds = Jsondb.config.get('debug_guilds')

@@ -10,7 +10,6 @@ from starServer.scheduler import run_scheduler_in_thread
 config = Jsondb.config
 bot_code = config.get('bot_code')
 api_website = config.get('api_website')
-debug_mode = config.get('debug_mode',True)
 twitch_bot = config.get('twitch_bot',False)
 
 def run_discord_bot():

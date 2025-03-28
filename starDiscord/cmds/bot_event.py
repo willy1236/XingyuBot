@@ -17,7 +17,6 @@ from ..uiElement.view import PollView, ReactionRoleView
 keywords = {}
 
 voice_updata = Jsondb.config.get('voice_updata')
-debug_mode = Jsondb.config.get("debug_mode",True)
 
 ai_access_guilds: list[int] = happycamp_guild + debug_guilds
 

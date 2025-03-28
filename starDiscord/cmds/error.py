@@ -3,13 +3,12 @@ from discord.ext import commands
 from mysql.connector.errors import Error as sqlerror
 
 from starlib import Jsondb, log
-from starlib.instance import debug_guilds
+from starlib.instance import debug_guilds, debug_mode
 from starlib.errors import *
 
 from ..extension import Cog_Extension
 
 permissions_tl = Jsondb.jdict.get('permissions')
-debug_mode = Jsondb.config.get('debug_mode')
 
 class error(Cog_Extension):
     @commands.Cog.listener()

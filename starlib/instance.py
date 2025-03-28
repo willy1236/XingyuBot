@@ -16,7 +16,8 @@ __all__ = [
     "apexapi",
     "main_guilds",
     "happycamp_guild",
-    "debug_guilds"
+    "debug_guilds",
+    "debug_mode"
 ]
 
 # api
@@ -29,6 +30,7 @@ cwa_api = CWA_API()
 apexapi = ApexAPI()
 
 # jsondb
-main_guilds = Jsondb.config.get('main_guilds',[])
-happycamp_guild = Jsondb.config.get('happycamp_guild',[])
-debug_guilds = Jsondb.config.get('debug_guilds',[])
+main_guilds = Jsondb.config.get('main_guilds', [])
+happycamp_guild = Jsondb.config.get('happycamp_guild', [])
+debug_guilds = Jsondb.config.get('debug_guilds', [])
+debug_mode = Jsondb.config.get("debug_mode", True)
