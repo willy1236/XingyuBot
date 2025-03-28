@@ -1022,6 +1022,15 @@ class SQLEngine(
                 lst.append(data.community_id)
         return lst
     
+    def __getitem__(self, key):
+        return self.cache[key]
+    
+    def __delitem__(self, key):
+        del self.cache[key]
+
+    def __setitem__(self, key, value):
+        self.cache[key] = value
+
     def update_notify_channel(self, notify_type:NotifyChannelType):
         """更新通知頻道"""
         if notify_type not in self.dict_type:
