@@ -182,11 +182,12 @@ class Poll(BasicSchema, table=True):
     guild_id: int = Field(sa_column=Column(BigInteger))
     message_id: int | None = Field(sa_column=Column(BigInteger))
     is_on: bool
-    ban_alternate_account_voting: bool
-    show_name: bool
-    check_results_in_advance: bool
-    results_only_initiator: bool
     number_of_user_votes: int
+    ban_alternate_account_voting: bool | None
+    show_name: bool | None
+    check_results_in_advance: bool | None
+    results_only_initiator: bool | None
+    
 
 class PollOption(BasicSchema, table=True):
     __tablename__ = "poll_options"
