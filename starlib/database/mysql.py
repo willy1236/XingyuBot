@@ -46,11 +46,19 @@ class BaseSQLEngine:
         self.cache = {i.value: dict() for i in DBCacheType}
 
     def __setitem__(self, key, value):
-        self.cache[key] = value
+        cache_key = DBCacheType.map(key)
+        if cache_key:
+            self.cache[cache_key][key] = value
+        else:
+            self.cache[key] = value
 
     def __delitem__(self, key):
         try:
-            del self.cache[key]
+            cache_key = DBCacheType.map(key)
+            if cache_key:
+                del self.cache[cache_key][key]
+            else:
+                del self.cache[key]
         except KeyError:
             log.warning(f"dbcache KeyError: {key}")
             pass
