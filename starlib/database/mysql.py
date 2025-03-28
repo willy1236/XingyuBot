@@ -307,6 +307,12 @@ class SQLNotifySystem(BaseSQLEngine):
         statement = select(NotifyChannel).where(NotifyChannel.notify_type == notify_type)
         result = self.session.exec(statement).all()
         return result
+
+    def get_notify_channel_dict(self, notify_type:NotifyChannelType):
+        """取得自動通知頻道（原始dict）"""
+        statement = select(NotifyChannel).where(NotifyChannel.notify_type == notify_type)
+        result = self.session.exec(statement).all()
+        return {data.guild_id: (data.channel_id, data.role_id) for data in result}
     
     def get_notify_channel_all(self,guild_id:str):
         """取得伺服器的所有自動通知頻道"""
@@ -368,6 +374,12 @@ class SQLNotifySystem(BaseSQLEngine):
         result = self.session.exec(statement).all()
         return result
     
+    def get_notify_community_rawlist(self, notify_type:NotifyCommunityType):
+        """取得自動通知頻道（原始list）"""
+        statement = select(NotifyCommunity.community_id).where(NotifyCommunity.notify_type == notify_type).distinct()
+        result = self.session.exec(statement).all()
+        return result
+
     def get_notify_community_guild(self, notify_type:NotifyCommunityType, community_id:str):
         """取得指定社群的所有通知"""
         statement = select(NotifyCommunity.guild_id, NotifyCommunity.channel_id, NotifyCommunity.role_id, NotifyCommunity.message).where(NotifyCommunity.notify_type == notify_type, NotifyCommunity.community_id == community_id)
@@ -1003,24 +1015,6 @@ class SQLEngine(
     
         self.update_notify_community()
         log.debug("dbcache: notify init.")
-
-    @staticmethod
-    def generate_notify_channel_dbdata(dbdata:list[NotifyChannel]):
-        dict = {}
-        for data in dbdata:
-            guildid = data.guild_id
-            channelid = data.channel_id
-            roleid = data.role_id
-            dict[guildid] = (channelid, roleid)
-        return dict
-    
-    @staticmethod
-    def generate_notify_community_dbdata(dbdata:list[NotifyCommunity]):
-        lst = []
-        for data in dbdata:
-            if data.community_id not in lst:
-                lst.append(data.community_id)
-        return lst
     
     def __getitem__(self, key):
         return self.cache[key]
@@ -1035,21 +1029,17 @@ class SQLEngine(
         """更新通知頻道"""
         if notify_type not in self.dict_type:
             raise KeyError(f"Not implemented notify type: {notify_type}")
-        dbdata = self.get_notify_channel_by_type(notify_type)
-        self.cache[notify_type] = self.generate_notify_channel_dbdata(dbdata)
+        self.cache[notify_type] = self.get_notify_channel_dict(notify_type)
 
     def update_notify_community(self, notify_type:NotifyCommunityType=None):
         """更新社群通知"""
         if notify_type:
             if notify_type not in NotifyCommunityType:
                 raise KeyError(f"Not implemented notify type: {notify_type}")
-            
-            dbdata = self.get_notify_community(notify_type)
-            self.cache[notify_type] = self.generate_notify_community_dbdata(dbdata)
+            self.cache[notify_type] = self.get_notify_community_rawlist(notify_type)
         else:
             for t in NotifyCommunityType:
-                dbdata = self.get_notify_community(t)
-                self.cache[t] = self.generate_notify_community_dbdata(dbdata)
+                self.cache[t] = self.get_notify_community_rawlist(t)
     
     def update_dynamic_voice(self,add_channel=None,remove_channel=None):
         """更新動態語音頻道"""
