@@ -153,6 +153,8 @@ async def create_only_role_list(text:str,ctx):
     """投票系統：建立限制投票身分組清單"""
     only_role_list = []
     for i in text.split(","):
+        if i.endswith(" "):
+            i = i[:-1]
         role = await find.role(ctx,i)
         if role:
             only_role_list.append(role.id)
@@ -163,7 +165,9 @@ async def create_role_magification_dict(text:str,ctx):
     role_magnification_dict = {}
     text = text.split(",")
     for i in range(0,len(text),2):
-        role = await find.role(ctx,text[i])
+        if text[i].endswith(" "):
+            text[i] = text[i][:-1]
+        role = await find.role(ctx, text[i])
         if role:
             role_magnification_dict[role.id] = int(text[i+1])
     return role_magnification_dict

@@ -31,10 +31,10 @@ class BaseSQLEngine:
         cache: dict[str, list[int]] | dict[NotifyChannelType, dict[int, tuple[int, Optional[int]]]] | dict[NotifyCommunityType, list[str]]
 
     def __init__(self,connection_url):
-        # self.alengine = sqlalchemy.create_engine(connection_url, echo=False)
-        # Base.metadata.create_all(self.alengine)
-        # Sessionmkr = sessionmaker(bind=self.alengine)
-        # self.alsession = Sessionmkr()
+        self.alengine = sqlalchemy.create_engine(connection_url, echo=False)
+        Base.metadata.create_all(self.alengine)
+        Sessionmkr = sessionmaker(bind=self.alengine)
+        self.alsession = Sessionmkr()
 
         self.engine = create_engine(connection_url, echo=False, pool_pre_ping=True)
         # SessionLocal = sessionmaker(bind=self.engine)
@@ -477,12 +477,6 @@ class SQLWarningSystem(BaseSQLEngine):
 
 class SQLPollSystem(BaseSQLEngine):
     #* poll
-    def add_poll(self,title:str,created_user:int,created_at:datetime,message_id,guild_id,ban_alternate_account_voting=False,show_name=False,check_results_in_advance=True,results_only_initiator=False,number_of_user_votes=1):
-        poll = Poll(title=title,created_user=created_user,created_at=created_at,is_on=True,message_id=message_id,guild_id=guild_id,ban_alternate_account_voting=ban_alternate_account_voting,show_name=show_name,check_results_in_advance=check_results_in_advance,results_only_initiator=results_only_initiator,number_of_user_votes=number_of_user_votes)
-        self.session.add(poll)
-        self.session.commit()
-        return poll.poll_id
-    
     def remove_poll(self,poll_id:int):
         self.session.exec(delete(Poll).where(Poll.poll_id == poll_id))
         self.session.exec(delete(UserPoll).where(Poll.poll_id == poll_id))
@@ -498,7 +492,7 @@ class SQLPollSystem(BaseSQLEngine):
         self.session.merge(poll)
         self.session.commit()
 
-    def get_all_active_polls(self):
+    def get_active_polls(self):
         stmt = select(Poll).where(Poll.is_on == True)
         result = self.session.exec(stmt).all()
         return result
@@ -597,15 +591,9 @@ class SQLPollSystem(BaseSQLEngine):
         result = self.session.exec(stmt).all()
         return {str(i[0]): i[1] for i in result}
     
-    def add_poll_role(self,poll_id:int,role_id:int,role_type:int,role_magnification:int=1):
-        """role_type 1:只有此身分組可投票 2:倍率 """
-        pollrole = PollRole(poll_id=poll_id,role_id=role_id,role_type=role_type,role_magnification=role_magnification)
-        self.session.merge(pollrole)
-        self.session.commit()
-    
-    def get_poll_role(self,poll_id:int,role_type:int=None):
-        if role_type:
-            stmt = select(PollRole).where(PollRole.poll_id == poll_id, PollRole.role_type == role_type)
+    def get_poll_role(self,poll_id:int,is_only_role:int=None):
+        if is_only_role:
+            stmt = select(PollRole).where(PollRole.poll_id == poll_id, PollRole.is_only_role == is_only_role)
         else:
             stmt = select(PollRole).where(PollRole.poll_id == poll_id)
         result = self.session.exec(stmt).all()

@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 import discord
 from discord.ext import commands
 
-from starlib import BotEmbed, Jsondb, log, sclient
+from starlib import BotEmbed, Jsondb, log, sclient, tz
 from starlib.instance import *
 from starlib.models.mysql import DiscordUser
 from starlib.types import NotifyChannelType
@@ -75,18 +75,6 @@ class event(Cog_Extension):
             log.warning(f">> Cogs not all loaded, {len(bot.cogs)}/{len(os.listdir('./cmds'))} loaded<<")
         
         if bot.bot_code == 'Bot1' and not bot.debug_mode:
-            # 投票介面
-            polls = sclient.sqldb.get_all_active_polls()
-            now = datetime.now()
-            days_poll_period = timedelta(days=28)
-            for poll in polls:
-                if now - poll.created_at > days_poll_period:
-                    #將超過28天的投票自動關閉
-                    poll.is_on = 0
-                    sclient.sqldb.merge(poll)
-                else:   
-                    bot.add_view(PollView(poll, sqldb=sclient.sqldb, bot=bot))
-
             # 移除過期邀請
             invites = await bot.get_guild(happycamp_guild[0]).invites()
             now = datetime.now(timezone.utc)
@@ -95,6 +83,18 @@ class event(Cog_Extension):
                 if not invite.expires_at and not invite.scheduled_event and invite.uses == 0 and now - invite.created_at > days_5:
                     await invite.delete()
                     await asyncio.sleep(1)
+
+        # 投票介面
+        polls = sclient.sqldb.get_active_polls()
+        now = datetime.now(tz)
+        days_poll_period = timedelta(days=28)
+        for poll in polls:
+            if now - poll.created_at > days_poll_period:
+                #將超過28天的投票自動關閉
+                poll.is_on = 0
+                sclient.sqldb.merge(poll)
+            else:   
+                bot.add_view(PollView(poll, sqldb=sclient.sqldb, bot=bot))
 
         # 反應身分組
         for react_message in sclient.sqldb.get_reaction_role_message_all():

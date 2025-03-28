@@ -10,10 +10,11 @@ import discord
 import matplotlib
 
 from starlib import BotEmbed, Jsondb, log, sqldb, tz
+from starlib.models.mysql import Poll, PollRole
 
 if TYPE_CHECKING:
     from starlib.database import SQLEngine
-    from starlib.models.mysql import (Poll, PollOption, TRPGStoryOption,
+    from starlib.models.mysql import (PollOption, TRPGStoryOption,
                                       TRPGStoryPlot, ReactionRole)
 
 class DeletePetView(discord.ui.View):
@@ -191,9 +192,9 @@ class PollView(discord.ui.View):
                bot:discord.bot=None
             ):
         """創建投票"""
-        # TODO: add Poll config class
-        poll_id = sqldb.add_poll(title,creator_id,datetime.now(tz=tz),None,guild_id,ban_alternate_account_voting,show_name,check_results_in_advance,results_only_initiator,number_of_user_votes)
-        sqldb.add_poll_option(poll_id,options)
+        poll = Poll(title=title, created_user=creator_id, created_at=datetime.now(tz), is_on=True, message_id=None, guild_id=guild_id, ban_alternate_account_voting=ban_alternate_account_voting, show_name=show_name, check_results_in_advance=check_results_in_advance, results_only_initiator=results_only_initiator, number_of_user_votes=number_of_user_votes)
+        sqldb.add(poll)
+        sqldb.add_poll_option(poll.poll_id, options)
 
         if only_role_list is None:
             only_role_list = []
@@ -201,22 +202,21 @@ class PollView(discord.ui.View):
             role_magnification_dict = {}
 
         poll_role_dict = {}
-        for roleid in only_role_list:
-            poll_role_dict[roleid] = [1,1]
+        for role_id in only_role_list:
+            poll_role_dict[role_id] = [True, 1]
             
-        for roleid in role_magnification_dict:
-            if roleid in poll_role_dict:
-                poll_role_dict[roleid][1] = role_magnification_dict[roleid]
+        for role_id in role_magnification_dict:
+            if role_id in poll_role_dict:
+                poll_role_dict[role_id][1] = role_magnification_dict[role_id]
             else:
-                poll_role_dict[roleid] = [2,role_magnification_dict[roleid]]
+                poll_role_dict[role_id] = [False, role_magnification_dict[role_id]]
 
-        for roleid in poll_role_dict:
-            role_type = poll_role_dict[roleid][0]
-            role_magnification = poll_role_dict[roleid][1]
-            sqldb.add_poll_role(poll_id,roleid,role_type,role_magnification)
+        for role_id in poll_role_dict:
+            is_only_role = poll_role_dict[role_id][0]
+            role_magnification = poll_role_dict[role_id][1]
+            sqldb.merge(PollRole(poll_id=poll.poll_id, role_id=role_id, is_only_role=is_only_role, role_magnification=role_magnification))
 
-        poll = sqldb.get_poll(poll_id)
-        view = cls(poll,sqldb,bot)
+        view = cls(poll, sqldb, bot)
         return view
 
 
@@ -228,7 +228,7 @@ class PollView(discord.ui.View):
             if dbdata:
                 for data in dbdata:
                     role_id = data.role_id
-                    role_type = data.role_type
+                    role_type = data.is_only_role
                     role_magnification = data.role_magnification
                     self._role_dict[role_id] = [role_type,role_magnification]
         return self._role_dict

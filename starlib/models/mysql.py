@@ -175,13 +175,13 @@ class DynamicChannel(BasicSchema, table=True):
 class Poll(BasicSchema, table=True):
     __tablename__ = "poll_data"
 
-    poll_id: int = Field(default=None, primary_key=True)
+    poll_id: int = Field(sa_column=Column(Integer, primary_key=True, autoincrement=True))
     title: str
     created_user: int = Field(sa_column=Column(BigInteger))
-    created_at: datetime
-    is_on: bool
-    message_id: int = Field(sa_column=Column(BigInteger))
+    created_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
     guild_id: int = Field(sa_column=Column(BigInteger))
+    message_id: int | None = Field(sa_column=Column(BigInteger))
+    is_on: bool
     ban_alternate_account_voting: bool
     show_name: bool
     check_results_in_advance: bool
@@ -200,7 +200,7 @@ class PollRole(BasicSchema, table=True):
 
     poll_id: int = Field(primary_key=True)
     role_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
-    role_type: int
+    is_only_role: bool
     role_magnification: int
 
 class TwitchBotJoinChannel(BasicSchema, table=True):
@@ -252,7 +252,7 @@ class ReactionRole(AlchemyBasicSchema):
 class User(AlchemyBasicSchema):
     __tablename__ = 'users'
     
-    id: int = mapped_column(Integer, primary_key=True, autoincrement=True, init=False)
+    id: int = Base.auto_id_column()
     name: str = Column(String, nullable=False)
 
     # 建立關聯：一個使用者對應多篇貼文
@@ -261,7 +261,7 @@ class User(AlchemyBasicSchema):
 class Post(AlchemyBasicSchema):
     __tablename__ = 'posts'
 
-    id: int = mapped_column(Integer, primary_key=True, autoincrement=True, init=False)
+    id: int = Base.auto_id_column()
     title: str = Column(String, nullable=False)
     content: str = Column(String, nullable=False)
     created_at: datetime = Column(TIMESTAMP(precision=0), nullable=False)  # 只記錄到秒
