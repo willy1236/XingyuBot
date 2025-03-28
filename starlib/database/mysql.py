@@ -25,24 +25,8 @@ from ..utils import log
 SQLsettings = Jsondb.config["SQLsettings"]
 
 O = TypeVar("O")
-
-class BaseSQLEngine:
-    def __init__(self,connection_url):
-        self.alengine = sqlalchemy.create_engine(connection_url, echo=False)
-        Base.metadata.create_all(self.alengine)
-        Sessionmkr = sessionmaker(bind=self.alengine)
-        self.alsession = Sessionmkr()
-
-        self.engine = create_engine(connection_url, echo=False, pool_pre_ping=True)
-        # SessionLocal = sessionmaker(bind=self.engine)
-        # self.session:Session = SessionLocal()
-        
-        SQLModel.metadata.create_all(self.engine)
-        # SQLModel.metadata.drop_all(engine, schema="my_schema")
-
-        # with Session(self.engine) as session:
-        self.session = Session(bind=self.engine)
-
+class DBCache:
+    def __init__(self):
         self.cache = {i.value: dict() for i in DBCacheType}
 
     def __setitem__(self, key, value):
@@ -66,11 +50,9 @@ class BaseSQLEngine:
     @overload
     def __getitem__(self, key:str) -> list[int]:
         ...
-
     @overload
     def __getitem__(self, key:NotifyChannelType) -> dict[int, tuple[int, Optional[int]]]:
         ...
-
     @overload
     def __getitem__(self, key:NotifyCommunityType) -> list[str]:
         ...
@@ -86,6 +68,33 @@ class BaseSQLEngine:
         except KeyError:
             log.warning(f"dbcache KeyError: {key}")
             return None
+    
+    def get(self, key):
+        cache_key = DBCacheType.map(key)
+        if cache_key:
+            value = self.cache[cache_key].get(key)
+        else:
+            value = self.cache.get(key)
+        return value
+
+class BaseSQLEngine:
+    def __init__(self,connection_url):
+        self.alengine = sqlalchemy.create_engine(connection_url, echo=False)
+        Base.metadata.create_all(self.alengine)
+        Sessionmkr = sessionmaker(bind=self.alengine)
+        self.alsession = Sessionmkr()
+
+        self.engine = create_engine(connection_url, echo=False, pool_pre_ping=True)
+        # SessionLocal = sessionmaker(bind=self.engine)
+        # self.session:Session = SessionLocal()
+        
+        SQLModel.metadata.create_all(self.engine)
+        # SQLModel.metadata.drop_all(engine, schema="my_schema")
+
+        # with Session(self.engine) as session:
+        self.session = Session(bind=self.engine)
+
+        self.cache = DBCache()
 
     #* Base
     def add(self, db_obj):
@@ -272,8 +281,8 @@ class SQLNotifySystem(BaseSQLEngine):
         self.session.merge(channel)
         self.session.commit()
 
-        if self.get(notify_type):
-            self[notify_type][guild_id] = (channel_id, role_id)
+        if self.cache(notify_type):
+            self.cache[notify_type][guild_id] = (channel_id, role_id)
 
     def remove_notify_channel(self,guild_id:int,notify_type:NotifyChannelType):
         """移除自動通知頻道"""
@@ -285,7 +294,7 @@ class SQLNotifySystem(BaseSQLEngine):
         self.session.commit()
 
         if self.get(notify_type):
-            del self[notify_type][guild_id]
+            del self.cache[notify_type][guild_id]
     
     def get_notify_channel(self,guild_id:str,notify_type:NotifyChannelType):
         """取得自動通知頻道"""
@@ -317,7 +326,7 @@ class SQLNotifySystem(BaseSQLEngine):
         self.session.add(voice)
         self.session.commit()
         if self.get(NotifyChannelType.DynamicVoice):
-            self[NotifyChannelType.DynamicVoice].append(channel_id)
+            self.cache[NotifyChannelType.DynamicVoice].append(channel_id)
 
     def remove_dynamic_voice(self,channel_id):
         """移除動態語音"""
@@ -325,7 +334,7 @@ class SQLNotifySystem(BaseSQLEngine):
         self.session.exec(stmt)
         self.session.commit()
         if self.get(NotifyChannelType.DynamicVoice):
-            self[NotifyChannelType.DynamicVoice].remove(channel_id)
+            self.cache[NotifyChannelType.DynamicVoice].remove(channel_id)
 
     #* notify community
     def add_notify_community(self, notify_type:NotifyCommunityType, community_id:str, community_type:CommunityType, guild_id:int, channel_id:int, role_id:int=None, message:str=None):
@@ -335,7 +344,7 @@ class SQLNotifySystem(BaseSQLEngine):
         self.session.commit()
 
         if self.get(notify_type):
-            self[notify_type].append(community_id)
+            self.cache[notify_type].append(community_id)
 
     def remove_notify_community(self,notify_type:NotifyCommunityType, community_id:str, guild_id:int):
         """移除社群通知，同時判斷移除社群"""
@@ -351,7 +360,7 @@ class SQLNotifySystem(BaseSQLEngine):
             self.remove_community(community_type, community_id)
         
         if self.get(notify_type):
-            self[notify_type].remove(community_id)
+            self.cache[notify_type].remove(community_id)
 
     def get_notify_community(self, notify_type:NotifyCommunityType):
         """取得社群通知（依據社群）"""
@@ -990,7 +999,7 @@ class SQLEngine(
 
         for t in self.list_type:
             if t == "dynamic_voice_room":
-                self[t] = self.get_all_dynamic_voice()
+                self.cache[t] = self.get_all_dynamic_voice()
     
         self.update_notify_community()
         log.debug("dbcache: notify init.")
@@ -1018,7 +1027,7 @@ class SQLEngine(
         if notify_type not in self.dict_type:
             raise KeyError(f"Not implemented notify type: {notify_type}")
         dbdata = self.get_notify_channel_by_type(notify_type)
-        self[notify_type] = self.generate_notify_channel_dbdata(dbdata)
+        self.cache[notify_type] = self.generate_notify_channel_dbdata(dbdata)
 
     def update_notify_community(self, notify_type:NotifyCommunityType=None):
         """更新社群通知"""
@@ -1027,19 +1036,19 @@ class SQLEngine(
                 raise KeyError(f"Not implemented notify type: {notify_type}")
             
             dbdata = self.get_notify_community(notify_type)
-            self[notify_type] = self.generate_notify_community_dbdata(dbdata)
+            self.cache[notify_type] = self.generate_notify_community_dbdata(dbdata)
         else:
             for t in NotifyCommunityType:
                 dbdata = self.get_notify_community(t)
-                self[t] = self.generate_notify_community_dbdata(dbdata)
+                self.cache[t] = self.generate_notify_community_dbdata(dbdata)
     
     def update_dynamic_voice(self,add_channel=None,remove_channel=None):
         """更新動態語音頻道"""
-        if add_channel and add_channel not in self[NotifyChannelType.DynamicVoice]:
-            self[NotifyChannelType.DynamicVoice].append(add_channel)
+        if add_channel and add_channel not in self.cache[NotifyChannelType.DynamicVoice]:
+            self.cache[NotifyChannelType.DynamicVoice].append(add_channel)
         if remove_channel:
-            self[NotifyChannelType.DynamicVoice].remove(remove_channel)
+            self.cache[NotifyChannelType.DynamicVoice].remove(remove_channel)
     
     def getif_dynamic_voice_room(self,channel_id:int):
         """取得動態語音房間"""
-        return channel_id if channel_id in self["dynamic_voice_room"] else None
+        return channel_id if channel_id in self.cache["dynamic_voice_room"] else None
