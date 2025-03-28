@@ -100,7 +100,7 @@ class UserModerate(UserSchema, table=True):
         guild = bot.get_guild(self.create_guild)
         
         name = f'{user.name} 的警告單'
-        description = f"**編號:{self.warning_id} ({Jsondb.get_tw(self.moderate_type,'warning_type')})**\n被警告用戶：{user.mention}\n管理員：{guild.name}/{moderate_user.mention}\n原因：{self.reason}\n時間：{self.create_time}"
+        description = f"**編號：{self.warning_id}（{Jsondb.get_tw(self.moderate_type, 'warning_type')}）**\n被警告用戶：{user.mention}\n管理員：{guild.name}/{moderate_user.mention}\n原因：{self.reason}\n時間：{self.create_time}"
         if self.officially_given:
             description += "\n官方警告"
         if self.guild_only:
@@ -109,15 +109,15 @@ class UserModerate(UserSchema, table=True):
         return embed
     
     def display_embed_field(self,bot:Bot):
-            moderate_user = bot.get_user(self.moderate_user)
-            guild = bot.get_guild(self.create_guild)
-            name = f"編號: {self.warning_id} ({Jsondb.get_tw(self.moderate_type,'warning_type')})"
-            value = f"{guild.name}/{moderate_user.mention}\n{self.reason}\n{self.create_time}"
-            if self.officially_given:
-                value += "\n官方警告"
-            if self.guild_only:
-                value += "\n伺服器區域警告"
-            return name, value
+        moderate_user = bot.get_user(self.moderate_user)
+        guild = bot.get_guild(self.create_guild)
+        name = f"編號：{self.warning_id}（{Jsondb.get_tw(self.moderate_type, 'warning_type')}）"
+        value = f"{guild.name}/{moderate_user.mention}\n{self.reason}\n{self.create_time}"
+        if self.officially_given:
+            value += "\n官方警告"
+        if self.guild_only:
+            value += "\n伺服器區域警告"
+        return name, value
 
 class RoleSave(UserSchema, table=True):
     __tablename__ = "role_save"

@@ -125,7 +125,8 @@ class moderation(Cog_Extension):
         embed.add_field(name="存入跨群警告系統",value=add_record)
         embed.timestamp = time
         embed.set_footer(text=f"編號 {warning_id}")
-        await ctx.respond(embed=embed)
+
+        await ctx.respond(user.mention ,embed=embed, allowed_mentions=discord.AllowedMentions(users=True))
     
     @warning.command(description='獲取用戶的所有警告')
     @commands.guild_only()
@@ -184,14 +185,16 @@ class moderation(Cog_Extension):
         moderate_user = ctx.user.id
         create_time = datetime.now()
         if add_record and not user.bot:
-            sclient.sqldb.add_warning(user.id, WarningType.Timeout, moderate_user, ctx.guild.id, create_time, reason, time_last, guild_only=False)
+            warning_id = sclient.sqldb.add_warning(user.id, WarningType.Timeout, moderate_user, ctx.guild.id, create_time, reason, time_last, guild_only=False)
         
         timestamp = int((create_time+time).timestamp())
         embed = BotEmbed.general(f'{user.name} 已被禁言',user.display_avatar.url,description=f"{user.mention}：{reason}")
         embed.add_field(name="執行人員",value=ctx.author.mention)
         embed.add_field(name="結束時間",value=f"<t:{timestamp}>（{time_last}）")
         embed.timestamp = create_time
-        await ctx.respond(embed=embed)
+        if add_record:
+            embed.set_footer(text=f"編號 {warning_id}")
+        await ctx.respond(user.mention ,embed=embed, allowed_mentions=discord.AllowedMentions(users=True))
 
     @commands.slash_command(description='踢除用戶')
     @commands.has_guild_permissions(kick_members=True)
