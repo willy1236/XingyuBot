@@ -21,6 +21,19 @@ class NotifyChannelType(IntEnum):
     WeatherWarning = 11
     SlightQuakeNotifications = 12
 
+class DBCacheType(Enum):
+    Notify_channel = "notify_channel"
+    Notify_community = "notify_community"
+
+    @classmethod
+    def map(cls, key: IntEnum):
+        return cache_dict.get(key)
+
+cache_dict = {
+    NotifyChannelType: DBCacheType.Notify_channel,
+    NotifyCommunityType: DBCacheType.Notify_community
+}
+
 class GameType(IntEnum):
     LOL = 1
     Apex = 2

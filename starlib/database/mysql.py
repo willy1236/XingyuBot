@@ -27,9 +27,6 @@ SQLsettings = Jsondb.config["SQLsettings"]
 O = TypeVar("O")
 
 class BaseSQLEngine:
-    if TYPE_CHECKING:
-        cache: dict[str, list[int]] | dict[NotifyChannelType, dict[int, tuple[int, Optional[int]]]] | dict[NotifyCommunityType, list[str]]
-
     def __init__(self,connection_url):
         self.alengine = sqlalchemy.create_engine(connection_url, echo=False)
         Base.metadata.create_all(self.alengine)
@@ -46,7 +43,41 @@ class BaseSQLEngine:
         # with Session(self.engine) as session:
         self.session = Session(bind=self.engine)
 
-        self.cache = dict()
+        self.cache = {i.value: dict() for i in DBCacheType}
+
+    def __setitem__(self, key, value):
+        self.cache[key] = value
+
+    def __delitem__(self, key):
+        try:
+            del self.cache[key]
+        except KeyError:
+            log.warning(f"dbcache KeyError: {key}")
+            pass
+
+    @overload
+    def __getitem__(self, key:str) -> list[int]:
+        ...
+
+    @overload
+    def __getitem__(self, key:NotifyChannelType) -> dict[int, tuple[int, Optional[int]]]:
+        ...
+
+    @overload
+    def __getitem__(self, key:NotifyCommunityType) -> list[str]:
+        ...
+
+    def __getitem__(self, key):
+        try:
+            cache_key = DBCacheType.map(key)
+            if cache_key:
+                value = self.cache[cache_key][key]
+            else:
+                value = self.cache[key]
+            return value
+        except KeyError:
+            log.warning(f"dbcache KeyError: {key}")
+            return None
 
     #* Base
     def add(self, db_obj):
@@ -956,36 +987,6 @@ class SQLEngine(
         self.update_notify_community()
         log.debug("dbcache: notify init.")
 
-    def __setitem__(self, key, value):
-        self.cache[key] = value
-
-    def __delitem__(self, key):
-        try:
-            del self.cache[key]
-        except KeyError:
-            log.warning(f"dbcache KeyError: {key}")
-            pass
-
-    @overload
-    def __getitem__(self, key:str) -> list[int]:
-        ...
-
-    @overload
-    def __getitem__(self, key:NotifyChannelType) -> dict[int, tuple[int, Optional[int]]]:
-        ...
-
-    @overload
-    def __getitem__(self, key:NotifyCommunityType) -> list[str]:
-        ...
-
-    def __getitem__(self, key):
-        try:
-            value = self.cache[key]
-            return value
-        except KeyError:
-            log.warning(f"dbcache KeyError: {key}")
-            return None
-
     @staticmethod
     def generate_notify_channel_dbdata(dbdata:list[NotifyChannel]):
         dict = {}
@@ -1009,7 +1010,7 @@ class SQLEngine(
         if notify_type not in self.dict_type:
             raise KeyError(f"Not implemented notify type: {notify_type}")
         dbdata = self.get_notify_channel_by_type(notify_type)
-        self.cache[notify_type] = self.generate_notify_channel_dbdata(dbdata)
+        self[notify_type] = self.generate_notify_channel_dbdata(dbdata)
 
     def update_notify_community(self, notify_type:NotifyCommunityType=None):
         """更新社群通知"""
@@ -1018,7 +1019,7 @@ class SQLEngine(
                 raise KeyError(f"Not implemented notify type: {notify_type}")
             
             dbdata = self.get_notify_community(notify_type)
-            self.cache[notify_type] = self.generate_notify_community_dbdata(dbdata)
+            self[notify_type] = self.generate_notify_community_dbdata(dbdata)
         else:
             for t in NotifyCommunityType:
                 dbdata = self.get_notify_community(t)
@@ -1026,10 +1027,10 @@ class SQLEngine(
     
     def update_dynamic_voice(self,add_channel=None,remove_channel=None):
         """更新動態語音頻道"""
-        if add_channel and add_channel not in self.cache[NotifyChannelType.DynamicVoice]:
-            self.cache[NotifyChannelType.DynamicVoice].append(add_channel)
+        if add_channel and add_channel not in self[NotifyChannelType.DynamicVoice]:
+            self[NotifyChannelType.DynamicVoice].append(add_channel)
         if remove_channel:
-            self.cache[NotifyChannelType.DynamicVoice].remove(remove_channel)
+            self[NotifyChannelType.DynamicVoice].remove(remove_channel)
     
     def getif_dynamic_voice_room(self,channel_id:int):
         """取得動態語音房間"""
