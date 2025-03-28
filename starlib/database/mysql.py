@@ -264,8 +264,8 @@ class SQLNotifySystem(BaseSQLEngine):
         self.session.merge(channel)
         self.session.commit()
 
-        if self.cache.get(notify_type):
-            self.cache[notify_type][guild_id] = (channel_id, role_id)
+        if self.get(notify_type):
+            self[notify_type][guild_id] = (channel_id, role_id)
 
     def remove_notify_channel(self,guild_id:int,notify_type:NotifyChannelType):
         """移除自動通知頻道"""
@@ -276,8 +276,8 @@ class SQLNotifySystem(BaseSQLEngine):
         self.session.exec(stmt)
         self.session.commit()
 
-        if self.cache.get(notify_type):
-            del self.cache[notify_type][guild_id]
+        if self.get(notify_type):
+            del self[notify_type][guild_id]
     
     def get_notify_channel(self,guild_id:str,notify_type:NotifyChannelType):
         """取得自動通知頻道"""
@@ -308,16 +308,16 @@ class SQLNotifySystem(BaseSQLEngine):
         voice = DynamicChannel(channel_id=channel_id, creator_id=creator_id, guild_id=guild_id, created_at=created_at)
         self.session.add(voice)
         self.session.commit()
-        if self.cache.get(NotifyChannelType.DynamicVoice):
-            self.cache[NotifyChannelType.DynamicVoice].append(channel_id)
+        if self.get(NotifyChannelType.DynamicVoice):
+            self[NotifyChannelType.DynamicVoice].append(channel_id)
 
     def remove_dynamic_voice(self,channel_id):
         """移除動態語音"""
         stmt = delete(DynamicChannel).where(DynamicChannel.channel_id == channel_id)
         self.session.exec(stmt)
         self.session.commit()
-        if self.cache.get(NotifyChannelType.DynamicVoice):
-            self.cache[NotifyChannelType.DynamicVoice].remove(channel_id)
+        if self.get(NotifyChannelType.DynamicVoice):
+            self[NotifyChannelType.DynamicVoice].remove(channel_id)
 
     #* notify community
     def add_notify_community(self, notify_type:NotifyCommunityType, community_id:str, community_type:CommunityType, guild_id:int, channel_id:int, role_id:int=None, message:str=None):
@@ -326,8 +326,8 @@ class SQLNotifySystem(BaseSQLEngine):
         self.session.merge(community)
         self.session.commit()
 
-        if self.cache.get(notify_type):
-            self.cache[notify_type].append(community_id)
+        if self.get(notify_type):
+            self[notify_type].append(community_id)
 
     def remove_notify_community(self,notify_type:NotifyCommunityType, community_id:str, guild_id:int):
         """移除社群通知，同時判斷移除社群"""
@@ -342,8 +342,8 @@ class SQLNotifySystem(BaseSQLEngine):
         if community_type is not None:
             self.remove_community(community_type, community_id)
         
-        if self.cache.get(notify_type):
-            self.cache[notify_type].remove(community_id)
+        if self.get(notify_type):
+            self[notify_type].remove(community_id)
 
     def get_notify_community(self, notify_type:NotifyCommunityType):
         """取得社群通知（依據社群）"""
