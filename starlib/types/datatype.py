@@ -27,7 +27,7 @@ class DBCacheType(Enum):
 
     @classmethod
     def map(cls, key: IntEnum):
-        return cache_dict.get(key)
+        return cache_dict.get(type(key))
 
 cache_dict = {
     NotifyChannelType: DBCacheType.Notify_channel,
