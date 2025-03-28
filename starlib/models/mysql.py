@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, TypedDict
 
 from discord import Bot
 from sqlalchemy import (BigInteger, Column, ForeignKey, Integer,
-                        String, Text, ForeignKeyConstraint)
+                        String, Text, ForeignKeyConstraint, Identity)
 from sqlalchemy.dialects.postgresql import TIMESTAMP
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 from sqlmodel import Field, Relationship
@@ -175,7 +175,7 @@ class DynamicChannel(BasicSchema, table=True):
 class Poll(BasicSchema, table=True):
     __tablename__ = "poll_data"
 
-    poll_id: int = Field(sa_column=Column(Integer, primary_key=True, autoincrement=True))
+    poll_id: int = Field(sa_column=Column(Integer, Identity(), primary_key=True))
     title: str
     created_user: int = Field(sa_column=Column(BigInteger))
     created_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))

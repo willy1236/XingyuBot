@@ -1,16 +1,20 @@
 from sqlmodel import SQLModel
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import MappedAsDataclass, DeclarativeBase, declared_attr, mapped_column
-from sqlalchemy import Integer
-from typing import Any, Dict
+from sqlalchemy import Integer, Identity
+from typing import Any, Dict, TypeVar
+
+O = TypeVar("O")
 
 class Base(MappedAsDataclass, DeclarativeBase):
     """subclasses will be converted to dataclasses"""
 
     @classmethod
-    def auto_id_column(cls):
+    def auto_id_column(cls, datatype: O = Integer):
         """返回標準的自增ID欄位設定"""
-        return mapped_column(Integer, primary_key=True, autoincrement=True, init=False)
+        return mapped_column(datatype, Identity(), primary_key=True, init=False)
+        # return mapped_column(Integer, primary_key=True, autoincrement=True, init=False)
+        
     # # 為所有子類別的自動遞增欄位設定 init=False
     # @classmethod
     # def __get_declarations__(cls, **kw: Any) -> Dict[str, Any]:
