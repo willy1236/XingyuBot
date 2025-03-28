@@ -32,7 +32,7 @@ class DBCache:
     def __setitem__(self, key, value):
         cache_key = DBCacheType.map(key)
         if cache_key:
-            self.cache[cache_key][key] = value
+            self.cache[cache_key.value][key] = value
         else:
             self.cache[key] = value
 
@@ -61,7 +61,7 @@ class DBCache:
         try:
             cache_key = DBCacheType.map(key)
             if cache_key:
-                value = self.cache[cache_key][key]
+                value = self.cache[cache_key.value][key]
             else:
                 value = self.cache[key]
             return value
@@ -72,7 +72,7 @@ class DBCache:
     def get(self, key):
         cache_key = DBCacheType.map(key)
         if cache_key:
-            value = self.cache[cache_key].get(key)
+            value = self.cache[cache_key.value].get(key)
         else:
             value = self.cache.get(key)
         return value
