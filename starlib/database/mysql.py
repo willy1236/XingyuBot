@@ -308,7 +308,7 @@ class SQLNotifySystem(BaseSQLEngine):
         result = self.session.exec(statement).all()
         return result
 
-    def get_notify_channel_dict(self, notify_type:NotifyChannelType):
+    def get_notify_channel_rawdict(self, notify_type:NotifyChannelType):
         """取得自動通知頻道（原始dict）"""
         statement = select(NotifyChannel).where(NotifyChannel.notify_type == notify_type)
         result = self.session.exec(statement).all()
@@ -349,7 +349,7 @@ class SQLNotifySystem(BaseSQLEngine):
         self.session.merge(community)
         self.session.commit()
 
-        if self.get(notify_type):
+        if self.cache.get(notify_type):
             self.cache[notify_type].append(community_id)
 
     def remove_notify_community(self,notify_type:NotifyCommunityType, community_id:str, guild_id:int):
@@ -361,6 +361,7 @@ class SQLNotifySystem(BaseSQLEngine):
         )
         self.session.exec(statement)
         self.session.commit()
+        
         community_type = notify_to_community_map.get(notify_type)
         if community_type is not None:
             self.remove_community(community_type, community_id)
@@ -1029,7 +1030,7 @@ class SQLEngine(
         """更新通知頻道"""
         if notify_type not in self.dict_type:
             raise KeyError(f"Not implemented notify type: {notify_type}")
-        self.cache[notify_type] = self.get_notify_channel_dict(notify_type)
+        self.cache[notify_type] = self.get_notify_channel_rawdict(notify_type)
 
     def update_notify_community(self, notify_type:NotifyCommunityType=None):
         """更新社群通知"""

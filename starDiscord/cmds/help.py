@@ -24,18 +24,10 @@ class help(Cog_Extension):
     async def about(self,ctx):
         await ctx.respond(embed=self.bot.about_embed())
 
-    @commands.slash_command(description='一些資訊')
+    @commands.slash_command(description='一些你可能會用到的資訊')
     async def info(self, ctx, arg:discord.Option(str,name='選項',description='資訊名稱',choices=info_option)):
         title,text = info_data[arg].split('\n',1)
         await ctx.respond(embed=BotEmbed.bot(self.bot, title=title, description=text))
-
-    # @commands.group(invoke_without_command=True)
-    # @commands.cooldown(rate=1,per=3)
-    # async def help(self, ctx):
-    #     embed = discord.Embed(title="help 指令", color=0xc4e9ff)
-    #     embed.set_author(name=self.bot.user.name,icon_url=self.bot.user.display_avatar.url)
-    #     embed.add_field(name="尋求幫助", value="```/help [指令]```", inline=False)
-    #     await ctx.send(embed=embed)
     
     @commands.slash_command(name='help',description='幫助指令')
     @commands.cooldown(rate=1,per=3)
@@ -45,9 +37,9 @@ class help(Cog_Extension):
             embed.add_field(name="/help <系列指令>", value="查詢指令", inline=False)
             embed.add_field(name="/info <內容/help>", value="獲得相關資訊", inline=False)
             embed.add_field(name="/feedback <內容>", value="傳送訊息給機器人擁有者", inline=False)
-            #embed.add_field(name="/find <id>", value="搜尋指定ID", inline=False)
+            embed.add_field(name="/find <id>", value="搜尋指定ID", inline=False)
             embed.add_field(name="/draw [次數]", value="抽獎試手氣", inline=False)
-            embed.add_field(name="/channel set", value="設定自動通知", inline=False)
+            embed.add_field(name="/channel", value="設定自動通知", inline=False)
             embed.add_field(name="/about", value="關於機器人的小資訊", inline=False)
             embed.set_footer(text="輸入/help user查詢指令用法")
             await ctx.respond(embed=embed)
@@ -61,8 +53,8 @@ class help(Cog_Extension):
         elif arg == 'pt':
             embed = BotEmbed.simple("點數系統(PT) 指令","點數系統尚在開發中，許多功能尚未完整")
             embed.add_field(name="/point", value="PT點數相關指令", inline=False)
-            embed.add_field(name="/sign", value="每日簽到並領取點數", inline=False)
-            embed.add_field(name="/shop", value="商城(敬請期待)", inline=False)
+            # embed.add_field(name="/sign", value="每日簽到並領取點數", inline=False)
+            # embed.add_field(name="/shop", value="商城(敬請期待)", inline=False)
             embed.set_footer(text="輸入/help use查詢指令用法")
             await ctx.respond(embed=embed)
         elif arg == 'game':
@@ -83,15 +75,13 @@ class help(Cog_Extension):
             embed = BotEmbed.simple("通知設定(Channel) 指令","設定機器人自動通知\n若為定時通知，記得將機器人的訊息保持在頻道的最新訊息，以免機器人找不到訊息而重複發送")
             embed.add_field(name="/channel set", value="設定自動通知", inline=False)
             embed.add_field(name="/channel list", value="確認通知設定的頻道", inline=False)
-            embed.add_field(name="/channel voice", value="設定動態語音", inline=False)
+            embed.add_field(name="/channel voice", value="設定動態語音，動態語音可讓使用者創建臨時的語音房，並在沒人時自動刪除", inline=False)
             embed.add_field(name="通知選項", value="- 全群公告：機器人的綜合通知\n- 機器人更新通知：告訴你機器人更新了什麼\n- Apex合成器與地圖輪替：(定時通知)\n- 地震通知/天氣預報(定時通知)：中央氣象局發布的地震報告與天氣預報\n- 管理員專用：新成員若有警告紀錄則會發訊息通知\n- 成員加入/離開：讓機器人告訴大家成員進出\n- 語音進出紀錄：紀錄伺服器內的語音進出", inline=False)
             embed.set_footer(text="輸入/help use查詢指令用法")
             await ctx.respond(embed=embed)
         elif arg == 'role':
             embed = BotEmbed.simple("身分組(Role) 指令")
-            embed.add_field(name="/role count <用戶>", value="取得用戶的身分組數量(可批量輸入多個用戶)", inline=False)
-            embed.add_field(name="/role add <名稱> [用戶]", value="取得用戶的身分組數量(可批量輸入多個用戶)", inline=False)
-            embed.add_field(name="/role nick <名稱/顏色代碼>", value="更改稱號(顏色請輸入HEX格式)", inline=False)
+            embed.add_field(name="/reactrole", value="為訊息新增/移除反應身分組", inline=False)
             embed.set_footer(text="輸入/help use查詢指令用法")
             await ctx.respond(embed=embed)
         elif arg == 'bet':
@@ -136,9 +126,9 @@ class help(Cog_Extension):
         elif arg == 'user':
             embed = BotEmbed.simple("用戶(user) 指令")
             embed.add_field(name="/ui", value="關於你自己", inline=False)
-            embed.add_field(name="/bag", value="查看背包", inline=False)
+            #embed.add_field(name="/bag", value="查看背包", inline=False)
             embed.add_field(name="/pet", value='寵物相關指令', inline=False)
-            embed.add_field(name="/advance", value='進行冒險', inline=False)
+            #embed.add_field(name="/advance", value='進行冒險', inline=False)
             embed.set_footer(text="輸入/help use查詢指令用法")
             await ctx.respond(embed=embed)
         elif arg == 'twitch':

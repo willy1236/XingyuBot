@@ -41,7 +41,7 @@ class command(Cog_Extension):
     party = SlashCommandGroup("party", "政黨相關指令",guild_ids=happycamp_guild)
     registration = SlashCommandGroup("registration", "戶籍相關指令",guild_ids=happycamp_guild)
 
-    @role.command(description='查詢身分組數')
+    @role.command(description='查詢加身分組的數量')
     async def count(self,ctx,user_list:discord.Option(str,required=False,name='要查詢的用戶',description='多個用戶請用空格隔開，或可輸入default查詢常用人選')):
         await ctx.defer()
         if not user_list:
@@ -148,7 +148,7 @@ class command(Cog_Extension):
         
         await ctx.respond('身分組清理完成',delete_after=5)
 
-    @role.command(description='身分組紀錄')
+    @role.command(description='查詢加身分組紀錄')
     async def record(self, ctx:discord.ApplicationContext, user:discord.Option(discord.Member,name='欲查詢的成員',description='留空以查詢自己',default=None)):
         await ctx.defer()
         user = user or ctx.author
@@ -156,7 +156,7 @@ class command(Cog_Extension):
         if not record:
             raise commands.errors.ArgumentParsingError('沒有此用戶的紀錄')
         
-        page = [BotEmbed.simple(f"{user.name} 身分組紀錄") for _ in range(math.ceil(len(record) / 10))]
+        page = [BotEmbed.simple(f"{user.name} 加身分組紀錄") for _ in range(math.ceil(len(record) / 10))]
         for i, data in enumerate(record):
             role_name = data.role_name
             time = data.time
@@ -166,12 +166,12 @@ class command(Cog_Extension):
         await paginator.respond(ctx.interaction, ephemeral=False)
             
     
-    @role.command(description='身分組排行榜')
+    @role.command(description='加身分組排行榜')
     async def ranking(self, ctx,
                       ranking_count:discord.Option(int,name='排行榜人數',default=5,min_value=1,max_value=30)):
         await ctx.defer()
         dbdata = sclient.sqldb.get_role_save_count_list()
-        embed = BotEmbed.simple("身分組排行榜")
+        embed = BotEmbed.simple("加身分組排行榜")
         i = 1
         for id in dbdata:
             try:

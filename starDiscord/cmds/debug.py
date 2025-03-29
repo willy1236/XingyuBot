@@ -152,7 +152,7 @@ class debug(Cog_Extension):
 
     @commands.is_owner()
     @commands.slash_command(description='幫助測試', guild_ids=debug_guilds)
-    async def helptest(self,ctx:discord.ApplicationContext, arg:str):
+    async def helptest(self,ctx:discord.ApplicationContext, arg:str=None):
         if not arg:
             command_names_list = [command.name for command in self.bot.commands]
             await ctx.send(f"{i}. {command.name}" for i, command in enumerate(self.bot.commands, 1))
@@ -203,8 +203,9 @@ class debug(Cog_Extension):
 
     @commands.is_owner()
     @commands.slash_command(description='測試指令', guild_ids=debug_guilds)
-    async def channeltest(self,ctx:discord.ApplicationContext, channel:discord.Option(discord.TextChannel,required=True,name='頻道',description='通知發送頻道')):
-        await ctx.respond(f'{channel.can_send()}',ephemeral=True)
+    async def attachmenttest(self,ctx:discord.ApplicationContext, att:discord.Option(discord.Attachment, required=True,name='附件')):
+        att: discord.Attachment
+        await ctx.respond(file=discord.File(io.BytesIO(await att.read()), filename=att.filename),ephemeral=True)
 
     @commands.is_owner()
     @commands.slash_command(description='連結身分組測試', guild_ids=debug_guilds)
