@@ -8,9 +8,10 @@ from typing import TYPE_CHECKING
 
 import discord
 import matplotlib
+import numpy as np
 
 from starlib import BotEmbed, Jsondb, log, sqldb, tz
-from starlib.models.mysql import Poll, PollRole
+from starlib.models.mysql import Poll, PollRole, Giveaway, GiveawayUser
 
 if TYPE_CHECKING:
     from starlib.database import SQLEngine
@@ -437,4 +438,126 @@ class TRPGPlotView(discord.ui.View):
         view = TRPGPlotView(next, self.sqldb)
         await self.message.channel.send(embed=view.embed(), view=view)
         self.stop()
+
+class GiveawayJoinButton(discord.ui.Button):
+    def __init__(self, giveaway: Giveaway):
+        super().__init__(label="參加抽獎", style=discord.ButtonStyle.primary, custom_id=f"giveaway_join_{giveaway.id}")
+
+    async def callback(self, interaction: discord.Interaction):
+        view: GiveawayView = self.view
+        giveaway_user =  view.sqldb.get_user_in_giveaway(view.giveaway.id, interaction.user.id)
+        if giveaway_user:
+            view.sqldb.delete(giveaway_user)
+            await interaction.response.send_message(f"{interaction.user.mention} 離開了抽獎", ephemeral=True)
+        else:
+            giveaway_user = GiveawayUser(giveaway_id=view.giveaway.id, user_id=interaction.user.id, user_weight=1, join_at=datetime.now(tz))
+            view.sqldb.add(giveaway_user)
+            await interaction.response.send_message(f"{interaction.user.mention} 參加了抽獎！", ephemeral=True)
+
+class GiveawayEndButton(discord.ui.Button):
+    def __init__(self, giveaway: Giveaway):
+        super().__init__(label="結束抽獎", style=discord.ButtonStyle.danger, custom_id=f"giveaway_end_{giveaway.id}")
+
+    async def callback(self, interaction: discord.Interaction):
+        view: GiveawayView = self.view
+        if interaction.user.id == view.giveaway.creator_id or (view.bot and await view.bot.is_owner(interaction.user)):
+            embed = view.end_giveaway()
+            await interaction.message.edit(embed=embed, view=view)
+        else:
+            await interaction.response.send_message("只有發起人才能結束抽獎！", ephemeral=True)
+
+class GiveawayView(discord.ui.View):
+    def __init__(self, giveaway: Giveaway, sqldb:SQLEngine, bot:discord.Bot, timeout=None):
+        super().__init__(timeout=timeout)
+        self.giveaway = giveaway
+        self.sqldb = sqldb
+        self.bot = bot
+        if giveaway.is_on:
+            self.add_item(GiveawayJoinButton(giveaway))
+            self.add_item(GiveawayEndButton(giveaway))
+
+    def embed(self):
+        description = self.giveaway.description if self.giveaway.description else "按下下方按鈕開始抽獎！"
+        description += f"\n- 抽出人數：{self.giveaway.winner_count} 人"
+        description += f"\n- 舉辦人：{self.bot.get_user(self.giveaway.creator_id).mention}"
+        description += f"\n- 開始時間：{self.giveaway.created_at}"
+        if self.giveaway.end_at:
+            description += f"\n- 結束時間：{self.giveaway.end_at}"
+        embed = BotEmbed.general("抽獎系統", Jsondb.get_picture("dice_001"), title=f"{self.giveaway.prize_name}", description=description)
+        embed.set_footer(text=f"抽獎ID：{self.giveaway.id}")
+        embed.timestamp = self.giveaway.created_at
+        return embed
     
+    def result_embed(self, joiner_count:int):
+        description = self.giveaway.description or "抽獎結束" if joiner_count else "沒有參加抽獎的用戶"
+        description += f"\n- 中獎人數：{self.giveaway.winner_count} / {joiner_count} 人"
+        description += f"\n- 舉辦人：{self.bot.get_user(self.giveaway.creator_id).mention}"
+        description += f"\n- 開始時間：{self.giveaway.created_at}"
+        description += f"\n- 結束時間：{self.giveaway.end_at}"
+        embed = BotEmbed.general("抽獎系統", Jsondb.get_picture("dice_001"), title=f"{self.giveaway.prize_name}", description=description)
+        embed.set_footer(text=f"抽獎ID：{self.giveaway.id}")
+        return embed
+    
+    def end_giveaway(self):
+        if not self.giveaway.end_at:
+            self.giveaway.end_at = datetime.now(tz).replace(microsecond=0)
+        self.giveaway.is_on = False
+        self.clear_items()
+        joiner = self.sqldb.get_giveaway_users(self.giveaway.id)
+        joiner_ids = [i.user_id for i in joiner]
+        weights = [i.user_weight for i in joiner]
+        
+        embed = self.result_embed(len(joiner_ids))
+        if joiner_ids:
+            winners_id = np.random.choice(joiner_ids, size=self.giveaway.winner_count, replace=False, p=np.array(weights) / sum(weights)).tolist() if len(joiner_ids) > self.giveaway.winner_count else joiner_ids
+            self.sqldb.set_giveaway_winner(self.giveaway.id, winners_id)
+
+            winners_mention = []
+            for i in winners_id:
+                user = self.bot.get_user(i)
+                if user:
+                    winners_mention.append(user.mention)
+                else:
+                    winners_mention.append(f"<@{i}>")
+            embed.add_field(name="得獎者", value=", ".join(winners_mention), inline=False)
+
+        self.sqldb.merge(self.giveaway)
+
+        return embed
+
+    def redraw_winner_giveaway(self, old_winner:GiveawayUser=None):
+        if not old_winner:
+            self.sqldb.reset_giveaway_winner(self.giveaway.id)
+            redraw_count = self.giveaway.winner_count
+        else:
+            redraw_count = 1
+            old_winner.is_winner = False
+            self.sqldb.merge(old_winner)
+
+        joiner = self.sqldb.get_giveaway_users(self.giveaway.id)
+        joiner_ids = [i.user_id for i in joiner if not i.is_winner]
+        weights = [i.user_weight for i in joiner if not i.is_winner]
+        winners_id = [i.user_id for i in joiner if i.is_winner]
+        winners_id.extend((np.random.choice(joiner_ids, size=redraw_count, replace=False, p=np.array(weights) / sum(weights)).tolist()) if len(joiner_ids) > redraw_count else joiner_ids)
+        self.sqldb.set_giveaway_winner(self.giveaway.id, winners_id)
+
+        winners_mention = []
+        for i in winners_id:
+            user = self.bot.get_user(i)
+            if user:
+                winners_mention.append(user.mention)
+            else:
+                winners_mention.append(f"<@{i}>")
+
+        self.giveaway.redraw_count += 1
+        self.sqldb.merge(self.giveaway)
+
+        embed = self.result_embed(len(joiner))
+        embed.add_field(name="得獎者", value=", ".join(winners_mention), inline=False)
+        embed.set_footer(text=f"抽獎ID：{self.giveaway.id}，重新抽獎第 {self.giveaway.redraw_count} 次")
+        return embed
+
+    async def on_timeout(self):
+        embed = self.end_giveaway()
+        await self.message.edit(embed=embed, view=self)
+        self.stop()

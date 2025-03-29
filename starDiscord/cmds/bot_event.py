@@ -12,7 +12,7 @@ from starlib.models.mysql import DiscordUser
 from starlib.types import NotifyChannelType
 
 from ..extension import Cog_Extension
-from ..uiElement.view import PollView, ReactionRoleView
+from ..uiElement.view import PollView, ReactionRoleView, GiveawayView
 
 keywords = {}
 
@@ -94,6 +94,7 @@ class event(Cog_Extension):
                 sclient.sqldb.merge(poll)
             else:   
                 bot.add_view(PollView(poll, sqldb=sclient.sqldb, bot=bot))
+                log.debug(f"Loaded poll: {poll.poll_id}")
 
         # 反應身分組
         for react_message in sclient.sqldb.get_reaction_role_message_all():

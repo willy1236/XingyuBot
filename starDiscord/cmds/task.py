@@ -15,6 +15,7 @@ from starlib.instance import *
 from starlib.models.community import YoutubeVideo
 
 from ..extension import Cog_Extension
+from ..uiElement.view import GiveawayView
 
 scheduler = AsyncIOScheduler()
 
@@ -42,6 +43,21 @@ class task(Cog_Extension):
             if self.bot.user.id == 589744540240314368:
                 scheduler.add_job(self.birtday_task,'cron',month=10,day=16,hour=8,minute=0,second=0,jitter=30,misfire_grace_time=60)
                 # scheduler.add_job(self.new_years_eve_task, CronTrigger(month=1, day=1, hour=0, minute=0, second=0), misfire_grace_time=60)
+        
+        # 抽獎
+        now = datetime.now(tz)
+        for giveaway in sclient.sqldb.get_active_giveaways():
+            if now - giveaway.created_at > timedelta(days=28):
+                #將超過28天的抽獎自動關閉
+                giveaway.is_on = False
+                sclient.sqldb.merge(giveaway)
+            else:
+                view = GiveawayView(giveaway, sqldb=sclient.sqldb, bot=self.bot)
+                self.bot.add_view(view)
+                if giveaway.end_at:
+                    job = scheduler.add_job(giveaway_auto_end, DateTrigger(giveaway.end_at if giveaway.end_at > now else now + timedelta(seconds=10)), args=[self.bot, view])
+                    print(f"job: {job}")
+                log.debug(f"Loaded giveaway: {giveaway.id}")
         else:
             pass
         
@@ -306,6 +322,20 @@ class task(Cog_Extension):
                 break
             await asyncio.sleep(120)
 
+async def giveaway_auto_end(bot:discord.Bot, view:GiveawayView):
+    log.debug(f"giveaway_auto_end: {view.giveaway.id}")
+    if view.is_finished():
+        return
+    
+    embed = view.end_giveaway()
+    channel = bot.get_channel(view.giveaway.channel_id)
+    try:
+        message = await channel.fetch_message(view.giveaway.message_id)
+        await message.edit(embed=embed,view=view)
+    except discord.NotFound:
+        log.warning(f"giveaway_auto_end: message not found {view.giveaway.message_id}")
+        return
+    
 
 def setup(bot):
     bot.add_cog(task(bot))

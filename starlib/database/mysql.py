@@ -9,7 +9,7 @@ from sqlalchemy import and_, delete, desc, func, or_
 from sqlalchemy.engine import URL
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker
-from sqlmodel import Session, SQLModel, create_engine, select
+from sqlmodel import Session, SQLModel, create_engine, select, update
 
 from starlib.models.mysql import Community, NotifyCommunity
 from ..models.sqlSchema import Base
@@ -76,18 +76,22 @@ class DBCache:
         else:
             value = self.cache.get(key)
         return value
+    
+    def __str__(self):
+        return str(self.cache)
 
 class BaseSQLEngine:
     def __init__(self,connection_url):
-        self.alengine = sqlalchemy.create_engine(connection_url, echo=False)
-        Base.metadata.create_all(self.alengine)
-        Sessionmkr = sessionmaker(bind=self.alengine)
-        self.alsession = Sessionmkr()
+        # self.alengine = sqlalchemy.create_engine(connection_url, echo=False)
+        # Base.metadata.create_all(self.alengine)
+        # Sessionmkr = sessionmaker(bind=self.alengine)
+        # self.alsession = Sessionmkr()
 
         self.engine = create_engine(connection_url, echo=False, pool_pre_ping=True)
         # SessionLocal = sessionmaker(bind=self.engine)
         # self.session:Session = SessionLocal()
         
+        Base.metadata.create_all(self.engine)
         SQLModel.metadata.create_all(self.engine)
         # SQLModel.metadata.drop_all(engine, schema="my_schema")
 
@@ -655,6 +659,39 @@ class SQLPollSystem(BaseSQLEngine):
             stmt = select(PollRole).where(PollRole.poll_id == poll_id)
         result = self.session.exec(stmt).all()
         return result
+    
+    #* Giveaway
+    def get_user_in_giveaway(self, giveaway_id:int, discord_id:int):
+        stmt = select(GiveawayUser).where(GiveawayUser.giveaway_id == giveaway_id, GiveawayUser.user_id == discord_id)
+        result = self.session.exec(stmt).one_or_none()
+        return result
+    
+    def get_giveaway_users(self, giveaway_id:int):
+        stmt = select(GiveawayUser).where(GiveawayUser.giveaway_id == giveaway_id)
+        result = self.session.exec(stmt).all()
+        return result
+
+    def get_giveaway(self, giveaway_id:int):
+        stmt = select(Giveaway).where(Giveaway.id == giveaway_id)
+        result = self.session.exec(stmt).one_or_none()
+        return result
+    
+    def get_active_giveaways(self):
+        stmt = select(Giveaway).where(Giveaway.is_on == True)
+        result = self.session.exec(stmt).all()
+        return result
+    
+    def set_giveaway_winner(self, giveaway_id:int, winners_id:list[int]):
+        for winner in winners_id:
+            stmt = update(GiveawayUser).where(GiveawayUser.giveaway_id == giveaway_id, GiveawayUser.user_id == winner).values(is_winner = True)
+            self.session.exec(stmt)
+
+        self.session.commit()
+
+    def reset_giveaway_winner(self, giveaway_id:int):
+        stmt = update(GiveawayUser).where(GiveawayUser.giveaway_id == giveaway_id).values(is_winner = False).where(GiveawayUser.is_winner == True)
+        self.session.exec(stmt)
+        self.session.commit()
     
 class SQLElectionSystem(BaseSQLEngine):
     #* party

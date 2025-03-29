@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, TypedDict
 
 from discord import Bot
 from sqlalchemy import (BigInteger, Column, ForeignKey, ForeignKeyConstraint,
-                        Identity, Integer, String, Text)
+                        Identity, Integer, String, Text, Boolean)
 from sqlalchemy.dialects.postgresql import TIMESTAMP
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlmodel import Field, Relationship
@@ -250,6 +250,31 @@ class ReactionRole(AlchemyBasicSchema):
     description: str | None = Column(String(255), nullable=True)
     emoji: str | None  = Column(String(255), nullable=True)
     style: int | None  = Column(Integer, nullable=True)
+
+class Giveaway(BasicSchema, table=True):
+    __tablename__ = "giveaway_data"
+
+    id: int = Field(sa_column=Column(Integer, Identity(), primary_key=True))
+    guild_id: int = Field(sa_column=Column(BigInteger, nullable=False))
+    channel_id: int = Field(sa_column=Column(BigInteger, nullable=False))
+    message_id: int | None = Field(sa_column=Column(BigInteger, nullable=True, default=None))
+    creator_id: int = Field(sa_column=Column(BigInteger, nullable=False))
+    prize_name: str = Field(sa_column=Column(String(255), nullable=False))
+    winner_count: int = Field(sa_column=Column(Integer, nullable=False))
+    created_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0), nullable=False))
+    end_at: datetime | None = Field(sa_column=Column(TIMESTAMP(True, 0), nullable=True))
+    is_on: bool = Field(sa_column=Column(Boolean, nullable=False, default=True))
+    description: str | None = Field(sa_column=Column(String(255), nullable=True, default=None))
+    redraw_count: int = Field(sa_column=Column(Integer, nullable=True, default=0))
+
+class GiveawayUser(UserSchema, table=True):
+    __tablename__ = "user_giveaway"
+
+    giveaway_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
+    user_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
+    user_weight: int = Field(sa_column=Column(Integer, nullable=False))
+    join_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0), nullable=False))
+    is_winner: bool = Field(sa_column=Column(Boolean, nullable=False, default=False))
 
 class User(AlchemyBasicSchema):
     __tablename__ = 'users'

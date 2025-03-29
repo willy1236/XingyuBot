@@ -686,5 +686,11 @@ class owner(Cog_Extension):
         sclient.starai.init_history()
         await ctx.respond('已重置ai的對話紀錄')
 
+    @commands.slash_command(description='獲取資料庫緩存', guild_ids=debug_guilds)
+    @commands.is_owner()
+    async def cache(self, ctx:discord.ApplicationContext):
+        await ctx.defer()
+        await ctx.respond(f'{sclient.sqldb.cache}')
+
 def setup(bot):
     bot.add_cog(owner(bot))

@@ -37,7 +37,6 @@ class help(Cog_Extension):
             embed.add_field(name="/help <系列指令>", value="查詢指令", inline=False)
             embed.add_field(name="/info <內容/help>", value="獲得相關資訊", inline=False)
             embed.add_field(name="/feedback <內容>", value="傳送訊息給機器人擁有者", inline=False)
-            embed.add_field(name="/find <id>", value="搜尋指定ID", inline=False)
             embed.add_field(name="/draw [次數]", value="抽獎試手氣", inline=False)
             embed.add_field(name="/channel", value="設定自動通知", inline=False)
             embed.add_field(name="/about", value="關於機器人的小資訊", inline=False)

@@ -12,16 +12,18 @@ from discord.utils import format_dt
 from mysql.connector.errors import Error as sqlerror
 from mysql.connector.errors import IntegrityError
 
-from starlib import BotEmbed, ChoiceList, Jsondb, log, sclient
+from starlib import BotEmbed, ChoiceList, Jsondb, log, sclient, tz
 from starlib.dataExtractor import GoogleCloud
 from starlib.instance import *
 from starlib.types import Coins
 from starlib.utils import (create_only_role_list,
-                           create_role_magification_dict, find, random_color)
+                           create_role_magification_dict, find, random_color, converter)
+from starlib.models.mysql import Giveaway
 
 from ..extension import Cog_Extension
-from ..uiElement.view import DeleteAddRoleView, PollView, TRPGPlotView
+from ..uiElement.view import DeleteAddRoleView, PollView, TRPGPlotView, GiveawayView
 from .bot_event import check_registration
+from .task import giveaway_auto_end, scheduler, DateTrigger
 
 bet_option = ChoiceList.set('bet_option')
 position_option = ChoiceList.set('position_option')
@@ -40,6 +42,7 @@ class command(Cog_Extension):
     poll = SlashCommandGroup("poll", "投票相關指令")
     party = SlashCommandGroup("party", "政黨相關指令",guild_ids=happycamp_guild)
     registration = SlashCommandGroup("registration", "戶籍相關指令",guild_ids=happycamp_guild)
+    giveaway = SlashCommandGroup("giveaway", "抽獎相關指令")
 
     @role.command(description='查詢加身分組的數量')
     async def count(self,ctx,user_list:discord.Option(str,required=False,name='要查詢的用戶',description='多個用戶請用空格隔開，或可輸入default查詢常用人選')):
@@ -700,6 +703,61 @@ class command(Cog_Extension):
         plot = sclient.sqldb.get_trpg_plot(plot_id)
         view = TRPGPlotView(plot, sclient.sqldb)
         await ctx.respond(embed=view.embed(), view=view)
+
+    @giveaway.command(description="創建抽獎")
+    async def create(self, ctx,
+                        prize_name:discord.Option(str, name='獎品', description='抽獎獎品'),
+                        winner_count:discord.Option(int, name='中獎人數', description='預設為1', default=1, min_value=1, max_value=100),
+                        end_time:discord.Option(str, name='時長',description='格式為YYYY-MM-DD hh:mm:ss', required=False),
+                        description:discord.Option(str, name='描述', description='抽獎描述', required=False, default=None)):
+        await ctx.defer()
+        now = datetime.now(tz)
+        if end_time:
+            end_at = datetime.strptime(end_time, "%Y-%m-%d %H:%M:%S").astimezone(tz)
+            if end_at < now:
+                await ctx.respond("錯誤：結束時間必須大於現在時間")
+                return
+        else:
+            end_at = None
+
+        giveaway = Giveaway(guild_id=ctx.guild.id, channel_id=ctx.channel.id, prize_name=prize_name, winner_count=winner_count, created_at=datetime.now(tz), creator_id=ctx.author.id, end_at=end_at, description=description)
+        sclient.sqldb.add(giveaway)
+
+        view = GiveawayView(giveaway, sclient.sqldb, self.bot, timeout=int((end_at - now).total_seconds()) if end_at else None)
+        message = await ctx.respond(embed=view.embed(), view=view)
+        view.giveaway.message_id = message.id
+        sclient.sqldb.merge(view.giveaway)
+
+    @giveaway.command(description="重新抽出中獎者，未指定中獎者為全部重抽，不會保留原本的中獎者")
+    async def redraw(self, ctx,
+                        giveaway_id:discord.Option(int, name='抽獎id', description='抽獎id'),
+                        winner:discord.Option(discord.Member, name='中獎者', description='此中獎者的中獎資格將被取消並另行抽出替補者', required=False)):
+        await ctx.defer()
+        giveaway = sclient.sqldb.get_giveaway(giveaway_id)
+        if not giveaway:
+            await ctx.respond("錯誤：查無此ID")
+            return
+        elif giveaway.is_on:
+            await ctx.respond("錯誤：此抽獎尚未結束")
+            return
+        elif giveaway.creator_id != ctx.author.id and not self.bot.is_owner(ctx.author):
+            await ctx.respond("錯誤：你不是此抽獎的發起人")
+            return
+        
+        if winner:
+            old_winner = sclient.sqldb.get_user_in_giveaway(giveaway_id, winner.id)
+            if not old_winner:
+                await ctx.respond("錯誤：查無此中獎者")
+                return
+            elif not old_winner.is_winner:
+                await ctx.respond("錯誤：此用戶不是中獎者")
+                return
+        else:
+            old_winner = None
+
+        view = GiveawayView(giveaway, sclient.sqldb, self.bot)
+        embed = view.redraw_winner_giveaway(old_winner)
+        await ctx.respond(embed=embed)
 
 def setup(bot):
     bot.add_cog(command(bot))

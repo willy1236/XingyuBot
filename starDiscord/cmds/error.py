@@ -48,10 +48,13 @@ class error(Cog_Extension):
             elif isinstance(error.original,sqlerror) and error.original.errno == 1062:
                 await ctx.respond(f'資料錯誤：資料重複新增',ephemeral=True)
             elif isinstance(error.original,(AttributeError, KeyError)):
-                await ctx.respond(f'錯誤：機器人內部錯誤（若發生此項錯誤請靜待修復）',ephemeral=True)
-                await self.bot.error(ctx,error)
+                if not ctx.guild or ctx.guild.id not in debug_guilds:
+                    await ctx.respond(f'錯誤：機器人內部錯誤（若發生此項錯誤請靜待修復）', ephemeral=True)
+                    await self.bot.error(ctx,error)
+                else:
+                    await ctx.respond(f'錯誤（debug）：```py\n{type(error.original)}：{error.original}```', ephemeral=True)
+                
                 log.error(f'{error},{type(error)},{type(error.original)}')
-
             else:
                 if not ctx.guild or ctx.guild.id not in debug_guilds:
                     await ctx.respond(f'發生未知錯誤，請等待修復',ephemeral=True)
