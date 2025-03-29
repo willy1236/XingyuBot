@@ -1,3 +1,4 @@
+import io
 from datetime import datetime, timedelta
 
 import discord
@@ -13,6 +14,7 @@ from starlib.utils import converter
 
 from ..extension import Cog_Extension
 from ..uiElement.view import ReactionRoleView
+from ..uiElement.modal import RuleMessageModal
 
 set_option = ChoiceList.set('channel_set_option')
 
@@ -248,16 +250,16 @@ class moderation(Cog_Extension):
         await ctx.defer()
         message = await ctx.channel.fetch_message(int(message_id))
         if not message:
-            await ctx.respond("找不到此訊息，請在該訊息的頻道進行設定", delete_after=5)
+            await ctx.respond("找不到此訊息，請在該訊息的頻道進行設定", ephemeral=True)
             return
         
         react_msg = sclient.sqldb.get_reaction_role_message(message.id)
         if not react_msg:
-            await ctx.respond("請先新增反應身分組", delete_after=5)
+            await ctx.respond("請先新增反應身分組", ephemeral=True)
             return
         
         await message.edit(content=content)
-        await ctx.respond("編輯完成", delete_after=5)
+        await ctx.respond("編輯完成", ephemeral=True)
         
     @react_role.command(description='新增反應身分組')
     @commands.has_permissions(manage_roles=True)
@@ -274,10 +276,10 @@ class moderation(Cog_Extension):
         if message_id:
             message:discord.Message = await ctx.channel.fetch_message(int(message_id))
             if not message:
-                await ctx.respond("找不到此訊息，請在該訊息的頻道進行設定", delete_after=5)
+                await ctx.respond("找不到此訊息，請在該訊息的頻道進行設定", ephemeral=True)
                 return
             elif message.author != ctx.bot.user:
-                await ctx.respond("此訊息非我所建立", delete_after=5)
+                await ctx.respond("此訊息非我所建立", ephemeral=True)
                 return
         else:
             message = await ctx.channel.send("請依自身喜好點選身分組")
@@ -290,7 +292,7 @@ class moderation(Cog_Extension):
         react_roles = sclient.sqldb.get_reaction_roles_by_message(message.id)
         await message.edit(view=ReactionRoleView(message.id, react_roles))        
         
-        await ctx.respond(f"已新增 {title} 給 {role.mention}", delete_after=5)
+        await ctx.respond(f"已新增 {title} 給 {role.mention}", ephemeral=True)
 
     @react_role.command(description='移除反應身分組')
     @commands.has_permissions(manage_roles=True)
@@ -302,10 +304,10 @@ class moderation(Cog_Extension):
         await ctx.defer()
         message = await ctx.channel.fetch_message(int(message_id))
         if not message:
-            await ctx.respond("找不到此訊息，請在該訊息的頻道進行設定", delete_after=5)
+            await ctx.respond("找不到此訊息，請在該訊息的頻道進行設定", ephemeral=True)
             return
         elif message.author != ctx.bot.user:
-            await ctx.respond("此訊息非我所建立", delete_after=5)
+            await ctx.respond("此訊息非我所建立", ephemeral=True)
             return
         
         sclient.sqldb.delete_reaction_role(message.id, role.id)
@@ -316,7 +318,23 @@ class moderation(Cog_Extension):
         else:
             await message.edit(view=ReactionRoleView(message.id, react_roles))
 
-        await ctx.respond(f"已移除 {role.mention}", delete_after=5)
+        await ctx.respond(f"已移除 {role.mention}", ephemeral=True)
+
+    @commands.slash_command(description='創建規則訊息（開發中）')
+    @commands.has_permissions(manage_guild=True)
+    @commands.guild_only()
+    async def rule_message(self, ctx:discord.ApplicationContext,
+                           channel:discord.Option(discord.TextChannel, name='頻道', description='要創建的頻道', required=True),
+                           attachment:discord.Option(discord.Attachment, name='圖片', description='若提供，則在規則前會先放置該圖片，可用於分隔區塊', required=False)
+                           ):
+        modal = RuleMessageModal()
+        await ctx.send_modal(modal)
+        await modal.wait()
+        if attachment:
+            await channel.send(file=discord.File(io.BytesIO(await attachment.read()), filename=attachment.filename))
+        embed = BotEmbed.simple(title=modal.children[0].value, description=modal.children[1].value)
+        await channel.send(embed=embed)
+        await ctx.respond("規則創建完成", ephemeral=True)
     
 def setup(bot):
     bot.add_cog(moderation(bot))
