@@ -186,11 +186,11 @@ def handle_message(event:MessageEvent):
 
 @app.get("/to/discordauth")
 async def to_discordauth(request:Request):
-    return RedirectResponse(url=f"https://discord.com/api/oauth2/authorize?client_id={discord_oauth_settings['id']}&redirect_uri={discord_oauth_settings['redirect_uri']}&response_type=code&scope=identify%20connections")
+    return RedirectResponse(url=f"https://discord.com/api/oauth2/authorize?client_id={discord_oauth_settings['client_id']}&redirect_uri={discord_oauth_settings['redirect_uri']}&response_type=code&scope=identify%20connections")
 
 @app.get("/to/twitchauth")
 async def to_twitchauth(request:Request):
-    return RedirectResponse(url=f"https://id.twitch.tv/oauth2/authorize?client_id={twitch_oauth_settings['id']}&redirect_uri={twitch_oauth_settings['redirect_uri']}&response_type=code&scope=chat:read+channel:read:subscriptions+moderation:read+channel:read:redemptions+channel:manage:redemptions+channel:manage:raids+channel:read:vips+channel:bot+moderator:read:suspicious_users+channel:manage:polls+channel:manage:predictions&force_verify=true")
+    return RedirectResponse(url=f"https://id.twitch.tv/oauth2/authorize?client_id={twitch_oauth_settings['client_id']}&redirect_uri={twitch_oauth_settings['redirect_uri']}&response_type=code&scope=chat:read+channel:read:subscriptions+moderation:read+channel:read:redemptions+channel:manage:redemptions+channel:manage:raids+channel:read:vips+channel:bot+moderator:read:suspicious_users+channel:manage:polls+channel:manage:predictions&force_verify=true")
 
 @app.get("/to/googleauth")
 async def to_googleauth(request:Request):
