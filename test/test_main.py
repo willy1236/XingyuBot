@@ -99,9 +99,9 @@ if __name__ == '__main__':
 # print(text, weather.WeatherElement.DailyExtreme.DailyHigh.AirTemperature, weather.WeatherElement.DailyExtreme.DailyLow.AirTemperature)
 # print(weather.model_dump())
 
-from starlib.instance import tw_api
-clips = tw_api.get_clips("490765956")
-print(clips[0])
+# from starlib.instance import tw_api
+# clips = tw_api.get_clips("490765956")
+# print(clips[0])
 # from starlib.models.mysql import NotifyChannel
 # print(f'{NotifyChannel.__table_args__["schema"]}.{NotifyChannel.__tablename__}.{str(NotifyChannel.__fields__)}')
 
@@ -112,3 +112,22 @@ print(clips[0])
 # if r:
 #     for i in r["results"]:
 #         print(i)
+
+
+from starlib.dataExtractor.oauth import GoogleOauth2, DiscordOauth2, TwitchOauth2
+
+setting = Jsondb.get_token("twitch_oauth")
+google_oauth_settings = Jsondb.get_token("google_oauth")
+# print(setting)
+# print(GoogleOauth(setting, user_id="613747262291443742").list_playlists())
+# auth = DiscordOauth2(**setting, user_id="419131103836635136")
+# print(auth.refresh())
+# auth.save_token(auth.user_id)
+
+# auth = TwitchOauth2(**setting, user_id="689775663", scope=r"chat:read+channel:read:subscriptions+moderation:read+channel:read:redemptions+channel:manage:redemptions+channel:manage:raids+channel:read:vips+channel:bot+moderator:read:suspicious_users+channel:manage:polls+channel:manage:predictions")
+# print(auth.refresh())
+# # print(auth.get_authorization_url(force_verify=True))
+# print(auth.get_user("689775663"))
+
+#print(GoogleOauth2(user_id="112130059444606303598").get_authorization_url())
+from google_auth_oauthlib.flow import Flow

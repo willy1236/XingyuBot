@@ -406,7 +406,7 @@ class OAuth2Token(TokensSchema, table=True):
     user_id: str = Field(primary_key=True)
     type: CommunityType = Field(sa_column=Column(Integer, primary_key=True))
     access_token: str
-    refresh_token: str
+    refresh_token: str | None
     expires_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
 
     @property

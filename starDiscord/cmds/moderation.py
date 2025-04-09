@@ -324,7 +324,7 @@ class moderation(Cog_Extension):
     @commands.has_permissions(manage_guild=True)
     @commands.guild_only()
     async def rule_message(self, ctx:discord.ApplicationContext,
-                           channel:discord.Option(discord.TextChannel, name='頻道', description='要創建的頻道', required=True),
+                           channel:discord.Option(discord.TextChannel, name='頻道', description='要創建規則的頻道', required=True),
                            attachment:discord.Option(discord.Attachment, name='圖片', description='若提供，則在規則前會先放置該圖片，可用於分隔區塊', required=False)
                            ):
         modal = RuleMessageModal()

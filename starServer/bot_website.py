@@ -16,16 +16,20 @@ from linebot.v3.messaging import (ApiClient, Configuration, MessagingApi,
                                   ReplyMessageRequest, TextMessage)
 from linebot.v3.webhooks import MessageEvent, TextMessageContent
 from linebot.v3.webhooks.models.message_event import MessageEvent
+from google_auth_oauthlib.flow import Flow
 
 from starlib import Jsondb, sclient, web_log, BaseThread
-from starlib.dataExtractor import DiscordOauth, TwitchOauth
+from starlib.dataExtractor import DiscordOauth2, TwitchOauth2, GoogleOauth2
 from starlib.models.mysql import CloudUser, TwitchBotJoinChannel
 from starlib.models.push import YoutubePush
 
 discord_oauth_settings = Jsondb.get_token("discord_oauth")
-twitch_oauth_settings = Jsondb.get_token("twitch_chatbot")
+twitch_oauth_settings = Jsondb.get_token("twitch_oauth")
+google_oauth_settings = Jsondb.get_token("google_oauth")
 linebot_token = Jsondb.get_token("line_bot")
 docs_account = Jsondb.get_token("docs_account")
+
+GOOGLE_SCOPES = ["https://www.googleapis.com/auth/userinfo.profile", "https://www.googleapis.com/auth/userinfo.email", "openid", "https://www.googleapis.com/auth/youtube"]
 
 configuration = Configuration(access_token=linebot_token.get("token"))
 handler = WebhookHandler(linebot_token.get("secret"))
@@ -105,8 +109,9 @@ async def oauth_discord(request:Request):
     if not code:
         return HTMLResponse(f'授權失敗：{params}', 400)
 
-    auth = DiscordOauth(discord_oauth_settings)
+    auth = DiscordOauth2(discord_oauth_settings)
     auth.exchange_code(code)
+    auth.save_token(auth.user_id)
     
     connections = auth.get_connections()
     for connection in connections:
@@ -123,10 +128,31 @@ async def oauth_twitch(request:Request):
     if not code:
         return HTMLResponse(f'授權失敗：{params}', 400)
     
-    auth = TwitchOauth(twitch_oauth_settings)
+    auth = TwitchOauth2(**twitch_oauth_settings)
     auth.exchange_code(code)
+    auth.save_token(auth.user_id)
     sclient.sqldb.merge(TwitchBotJoinChannel(twitch_id=auth.user_id))
     return HTMLResponse(f'授權已完成，您現在可以關閉此頁面<br>別忘了在聊天室輸入 /mod xingyu1016<br><br>Twitch ID：{auth.user_id}')
+
+@app.get('/oauth/google')
+async def oauth_google(request:Request):
+    params = dict(request.query_params)
+    code = params.get('code')
+    if not code:
+        return HTMLResponse(f'授權失敗：{params}', 400)
+    
+    auth = GoogleOauth2(scopes=GOOGLE_SCOPES, redirect_uri=google_oauth_settings.get('redirect_uri'))
+
+    flow = Flow.from_client_secrets_file(
+        'database/google_client_credentials.json',
+        scopes=auth.scopes,
+        redirect_uri=auth.redirect_uri
+    )
+    flow.fetch_token(code=code)
+    
+    auth.set_creds(flow.credentials)
+    auth.save_token(auth.user_id)
+    return HTMLResponse(f'授權已完成，您現在可以關閉此頁面<br><br>Google ID：{auth.user_id}')
 
 @app.post("/linebotcallback")
 async def linebot_callback(request:Request):
@@ -165,6 +191,16 @@ async def to_discordauth(request:Request):
 @app.get("/to/twitchauth")
 async def to_twitchauth(request:Request):
     return RedirectResponse(url=f"https://id.twitch.tv/oauth2/authorize?client_id={twitch_oauth_settings['id']}&redirect_uri={twitch_oauth_settings['redirect_uri']}&response_type=code&scope=chat:read+channel:read:subscriptions+moderation:read+channel:read:redemptions+channel:manage:redemptions+channel:manage:raids+channel:read:vips+channel:bot+moderator:read:suspicious_users+channel:manage:polls+channel:manage:predictions&force_verify=true")
+
+@app.get("/to/googleauth")
+async def to_googleauth(request:Request):
+    flow = Flow.from_client_secrets_file(
+        'database/google_client_credentials.json',
+        scopes=GOOGLE_SCOPES,
+        redirect_uri=google_oauth_settings.get('redirect_uri')
+    )
+    url = flow.authorization_url()[0]
+    return RedirectResponse(url=url)
 
 @app.get("/.well-known/discord")
 async def discord_domain(request:Request):

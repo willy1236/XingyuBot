@@ -22,6 +22,6 @@ __all__ =[
     'LOLMediaWikiAPI',
     'CWA_API',
     'YoutubeRSS',
-    "DiscordOauth",
+    "DiscordOauth2",
     'YoutubePush',
 ]

@@ -809,7 +809,7 @@ class SQLTokensSystem(BaseSQLEngine):
         self.session.merge(token)
         self.session.commit()
 
-    def get_oauth(self, user_id:int, type:CommunityType):
+    def get_oauth(self, user_id:str, type:CommunityType):
         stmt = select(OAuth2Token).where(OAuth2Token.user_id == user_id, OAuth2Token.type == type)
         result = self.session.exec(stmt).one_or_none()
         return result
