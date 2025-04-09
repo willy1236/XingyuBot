@@ -141,14 +141,14 @@ async def oauth_google(request:Request):
     
     auth = GoogleOauth2(**google_oauth_settings)
 
-    flow = Flow.from_client_secrets_file(
-        'database/google_client_credentials.json',
-        scopes=auth.scopes,
-        redirect_uri=auth.redirect_uri
-    )
-    flow.fetch_token(code=code)
-    
-    auth.set_creds(flow.credentials)
+    # flow = Flow.from_client_secrets_file(
+    #     'database/google_client_credentials.json',
+    #     scopes=auth.scopes,
+    #     redirect_uri=auth.redirect_uri
+    # )
+    #flow.fetch_token(code=code)
+    auth.exchange_code(code)
+    auth.set_creds()
     auth.save_token(auth.user_id)
     return HTMLResponse(f'授權已完成，您現在可以關閉此頁面<br><br>Google ID：{auth.user_id}')
 

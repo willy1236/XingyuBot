@@ -255,6 +255,12 @@ class GoogleOauth2(OAuth2Base):
     def creds(self) -> Credentials:
         if self._creds is None:
             self.set_creds()
+        elif self._creds.expired and self._creds.refresh_token:
+            self._creds.refresh(Request())
+            self.access_token = self._creds.token
+            self.refresh_token = self._creds.refresh_token
+            self.expires_at = self._creds.expiry.replace(tzinfo=timezone(timedelta(hours=0))).astimezone(tz)
+            self.save_token(self.user_id)
         return self._creds
 
     @property
@@ -269,19 +275,25 @@ class GoogleOauth2(OAuth2Base):
         return self._user_id
     
     def set_creds(self, creds=None):
-        SCOPES = ["https://www.googleapis.com/auth/userinfo.profile", "https://www.googleapis.com/auth/userinfo.email", "openid", "https://www.googleapis.com/auth/youtube"]
+        """
+        設定 Google OAuth2 的憑證。\\
+        會依user_id、傳入的 creds、access_token 的順序來取得憑證。\\
+        如果都沒有且在debug_mode下，則會從 Google OAuth2 隱式授權中取得 token。
+        """
         if self._user_id:
             self.set_token_from_db(self._user_id)
             self._creds = Credentials(token=self.access_token, refresh_token=self.refresh_token, expiry=self.expires_at.replace(tzinfo=None))
         elif creds:
             self._creds = creds
+        elif self.access_token:
+            self._creds = Credentials(token=self.access_token, refresh_token=self.refresh_token, expiry=self.expires_at.replace(tzinfo=None))
         
         if debug_mode and (not self._creds or not self._creds.valid):
             if self._creds and self._creds.expired and self._creds.refresh_token:
                 self._creds.refresh(Request())
             else:
                 flow = InstalledAppFlow.from_client_secrets_file(
-                    'database/google_client_credentials.json', SCOPES)
+                    'database/google_client_credentials.json', self.scopes)
                 self._creds = flow.run_local_server()
             
                 self.access_token = self._creds.token
