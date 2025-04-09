@@ -29,8 +29,6 @@ google_oauth_settings = Jsondb.get_token("google_oauth")
 linebot_token = Jsondb.get_token("line_bot")
 docs_account = Jsondb.get_token("docs_account")
 
-GOOGLE_SCOPES = ["https://www.googleapis.com/auth/userinfo.profile", "https://www.googleapis.com/auth/userinfo.email", "openid", "https://www.googleapis.com/auth/youtube"]
-
 configuration = Configuration(access_token=linebot_token.get("token"))
 handler = WebhookHandler(linebot_token.get("secret"))
 
@@ -141,7 +139,7 @@ async def oauth_google(request:Request):
     if not code:
         return HTMLResponse(f'授權失敗：{params}', 400)
     
-    auth = GoogleOauth2(scopes=GOOGLE_SCOPES, redirect_uri=google_oauth_settings.get('redirect_uri'))
+    auth = GoogleOauth2(**google_oauth_settings)
 
     flow = Flow.from_client_secrets_file(
         'database/google_client_credentials.json',
@@ -196,7 +194,7 @@ async def to_twitchauth(request:Request):
 async def to_googleauth(request:Request):
     flow = Flow.from_client_secrets_file(
         'database/google_client_credentials.json',
-        scopes=GOOGLE_SCOPES,
+        scopes=google_oauth_settings.get('scopes'),
         redirect_uri=google_oauth_settings.get('redirect_uri')
     )
     url = flow.authorization_url()[0]
