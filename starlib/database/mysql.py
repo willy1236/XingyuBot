@@ -500,7 +500,7 @@ class SQLRoleSaveSystem(BaseSQLEngine):
 
 class SQLWarningSystem(BaseSQLEngine):
     #* warning
-    def add_warning(self,discord_id:int,moderate_type:WarningType,moderate_user:int,create_guild:int,create_time:datetime,reason:str=None,last_time:str=None,guild_only=True) -> int:
+    def add_warning(self, discord_id:int, moderate_type:WarningType, moderate_user:int, create_guild:int, create_time:datetime, reason:str=None, last_time:timedelta=None, guild_only=True) -> int:
         """給予用戶警告\n
         returns: 新增的warning_id
         """
@@ -539,6 +539,35 @@ class SQLWarningSystem(BaseSQLEngine):
         stmt = delete(UserModerate).where(UserModerate.warning_id == warning_id)
         self.session.exec(stmt)
         self.session.commit()
+
+    def get_warning_count(self, discord_id: int, guild_id: int) -> int:
+        """查詢自上次禁言後的警告次數"""
+        # 查找該用戶最後一次禁言的時間
+        last_ban_time_query = select(UserModerate).where(
+            UserModerate.discord_id == discord_id,
+            UserModerate.create_guild == guild_id,
+            UserModerate.moderate_type == WarningType.Timeout
+        ).order_by(desc(UserModerate.create_time)).limit(1)
+        
+        last_ban_time_result = self.session.exec(last_ban_time_query).first()
+        
+        # 如果該用戶沒有被禁言過，則最後禁言時間為當前時間
+        if last_ban_time_result is None:
+            last_ban_time = datetime.min
+        else:
+            last_ban_time = last_ban_time_result.create_time
+
+        # 查找該用戶在最後一次禁言後的警告次數
+        warning_count_query = select(func.count()).where(
+            UserModerate.discord_id == discord_id,
+            UserModerate.create_guild == guild_id,
+            UserModerate.moderate_type == WarningType.Warning,
+            UserModerate.create_time > last_ban_time
+        )
+        
+        warning_count = self.session.exec(warning_count_query).one()
+        
+        return warning_count
 
 class SQLPollSystem(BaseSQLEngine):
     #* poll

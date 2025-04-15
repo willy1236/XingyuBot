@@ -2,9 +2,9 @@ import io
 from datetime import datetime, timedelta
 
 import discord
-import discord.types
 from discord.commands import SlashCommandGroup
 from discord.ext import commands
+from discord.utils import format_dt
 
 from starlib import BotEmbed, ChoiceList, Jsondb, sclient
 from starlib.instance import debug_guilds
@@ -173,26 +173,25 @@ class moderation(Cog_Extension):
     @commands.guild_only()
     async def timeout(self,ctx:discord.ApplicationContext,
                       user:discord.Option(discord.Member, name='用戶', description='要禁言的使用者',required=True),
-                      time_last:discord.Option(str, name='時長',description='格式為30s、1h20m等，支援天(d)、小時(h)、分鐘(m)、秒(s)', required=True),
+                      time_last_str:discord.Option(str, name='時長',description='格式為30s、1h20m等，支援天(d)、小時(h)、分鐘(m)、秒(s)', required=True),
                       reason:discord.Option(str, name='原因',description='限100字內', default="已禁言"),
                       add_record:discord.Option(bool, name='是否要將此紀錄存入警告系統', description='將紀錄存入警告系統供其他群組檢視', default=False)):
         await ctx.defer()
-        time = converter.time_to_datetime(time_last)
-        if not time or time > timedelta(days=7) :
+        time_last = converter.time_to_datetime(time_last_str)
+        if not time_last or time_last > timedelta(days=7) :
             await ctx.respond(f"錯誤：時間格式錯誤（不得超過7天）")
             return
         
-        await user.timeout_for(time,reason=reason)
+        await user.timeout_for(time_last, reason=reason)
         
         moderate_user = ctx.user.id
         create_time = datetime.now()
         if add_record and not user.bot:
             warning_id = sclient.sqldb.add_warning(user.id, WarningType.Timeout, moderate_user, ctx.guild.id, create_time, reason, time_last, guild_only=False)
         
-        timestamp = int((create_time+time).timestamp())
         embed = BotEmbed.general(f'{user.name} 已被禁言',user.display_avatar.url,description=f"{user.mention}：{reason}")
         embed.add_field(name="執行人員",value=ctx.author.mention)
-        embed.add_field(name="結束時間",value=f"<t:{timestamp}>（{time_last}）")
+        embed.add_field(name="結束時間",value=f"{format_dt(create_time+time_last, style='T')}（{time_last}）")
         embed.timestamp = create_time
         if add_record:
             embed.set_footer(text=f"編號 {warning_id}")

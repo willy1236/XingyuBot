@@ -1,10 +1,10 @@
 from dataclasses import dataclass, field
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import TYPE_CHECKING, TypedDict
 
 from discord import Bot
 from sqlalchemy import (BigInteger, Column, ForeignKey, ForeignKeyConstraint,
-                        Identity, Integer, String, Text, Boolean)
+                        Identity, Integer, String, Text, Boolean, Interval)
 from sqlalchemy.dialects.postgresql import TIMESTAMP
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlmodel import Field, Relationship
@@ -90,7 +90,7 @@ class UserModerate(UserSchema, table=True):
     create_guild: int = Field(sa_column=Column(BigInteger))
     create_time: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
     reason: str | None
-    last_time: str | None
+    last_time: timedelta | None = Field(sa_column=Column(Interval, nullable=True))
     guild_only: bool | None
     officially_given: bool | None
 
@@ -426,53 +426,6 @@ class BotToken(TokensSchema, table=True):
     redirect_uri: str | None
     callback_uri: str | None
     expires_at: datetime | None = Field(sa_column=Column(TIMESTAMP(True, 0)))
-
-class AccountDetails(LedgerSchema, table=True):
-    __tablename__ = "account_details"
-
-    id: int = Field(primary_key=True)
-    title: str
-    category: int
-    Payment_method: int
-    created_at: datetime
-    total_money: int
-    actual_paid_money: int
-    irrelevant_money: int
-    note: str
-    import_source: int
-
-class UpfrontDetails(LedgerSchema, table=True):
-    __tablename__ = "upfront_details"
-
-    account_details_id: int = Field(primary_key=True)
-    upfront_id: int
-    upfront_type: datetime
-    upfront_amount: int
-    note: str
-
-class DetailsCategory(LedgerSchema, table=True):
-    __tablename__ = "details_category"
-
-    category_id: int = Field(primary_key=True)
-    category_name: str
-
-class PaymentMethod(LedgerSchema, table=True):
-    __tablename__ = "payment_method"
-
-    method_id: int = Field(primary_key=True)
-    method_name: str
-
-class ImportSource(LedgerSchema, table=True):
-    __tablename__ = "import_source"
-
-    source_id: int = Field(primary_key=True)
-    source_name: str
-
-class UpfrontType(LedgerSchema, table=True):
-    __tablename__ = "upfront_type"
-
-    type_id: int = Field(primary_key=True)
-    type_name: str
 
 
 class WarningList(ListObject[UserModerate]):

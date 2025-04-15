@@ -37,8 +37,6 @@ class BackupSchema(BaseSchema):
 class IdbaseSchema(BaseSchema):
     __table_args__ = {'schema': 'stardb_idbase'}
 
-class LedgerSchema(BaseSchema):
-    __table_args__ = {'schema': 'stardb_ledger'}
 
 class RPGSchema(BaseSchema):
     __table_args__ = {'schema': 'stardb_rpg'}

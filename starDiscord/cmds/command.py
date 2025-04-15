@@ -747,7 +747,7 @@ class command(Cog_Extension):
         if winner:
             old_winner = sclient.sqldb.get_user_in_giveaway(giveaway_id, winner.id)
             if not old_winner:
-                await ctx.respond("錯誤：查無此中獎者")
+                await ctx.respond("錯誤：用戶沒有參加此抽獎")
                 return
             elif not old_winner.is_winner:
                 await ctx.respond("錯誤：此用戶不是中獎者")

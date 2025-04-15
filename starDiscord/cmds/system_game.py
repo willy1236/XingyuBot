@@ -128,18 +128,6 @@ class system_game(Cog_Extension):
         else:
             await ctx.respond(f'錯誤：找不到用戶或尚未註冊資料',ephemeral=True)
 
-    # @lol.command(description='查詢League of Legends用戶資料')
-    # async def user(self,ctx,userid:discord.Option(str,name='用戶',description='要查詢的用戶')):
-    #     url = 'https://lol.moa.tw/summoner/show/'+userid
-    #     lvl = player_search(url) or '讀取失敗'
-
-    #     embed = discord.Embed(title="LOL玩家查詢", url=url, color=0xc4e9ff)
-    #     embed.add_field(name="玩家名稱", value=userid, inline=False)
-    #     embed.add_field(name="等級", value=lvl, inline=False)
-    #     embed.add_field(name="查詢戰績", value="LOL戰績網(lol.moa.tw)", inline=False)
-    #     embed.set_thumbnail(url='https://i.imgur.com/B0TMreW.png')
-    #     await ctx.respond(embed=embed)
-
     @lol.command(description='查詢Riot帳號資料')
     async def riot(self,ctx,riot_id:discord.Option(str,name='riot_id',description='名稱#tag')):
         api = RiotAPI()

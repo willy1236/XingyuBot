@@ -2,7 +2,6 @@ from datetime import datetime
 
 import discord
 from discord.commands import SlashCommandGroup
-from discord.ext import commands
 
 from starlib import BotEmbed, ChoiceList, Jsondb, sclient, tz
 from starlib.dataExtractor import TwitchAPI, YoutubeAPI, YoutubeRSS
@@ -19,10 +18,10 @@ class system_community(Cog_Extension):
     
     @twitch.command(description='設置twitch開台通知')
     async def set(self,ctx,
-                  notify_type:discord.Option(int,required=True,name='通知種類',description='通知種類',choices=twitch_notify_option),
-                  twitch_user:discord.Option(str,required=True,name='twitch用戶',description='當此用戶開台時會發送通知'),
-                  channel:discord.Option(discord.TextChannel,required=True,name='頻道',description='通知發送頻道'),
-                  role:discord.Option(discord.Role,required=False,default=None,name='身分組',description='發送通知時tag的身分組'),
+                  notify_type:discord.Option(int, required=True, name='通知種類',description='通知種類',choices=twitch_notify_option),
+                  twitch_user:discord.Option(str, required=True, name='twitch用戶', description='使用者名稱，當此用戶開台時會發送通知'),
+                  channel:discord.Option(discord.TextChannel, required=True, name='頻道', description='通知將會發送到此頻道'),
+                  role:discord.Option(discord.Role, default=None, name='身分組', description='發送通知時tag的身分組，若無則不會tag'),
                   msg:discord.Option(str,default=None,name='通知文字',description='發送通知時的自訂文字')):
         await ctx.defer()
         guildid = ctx.guild.id
@@ -59,8 +58,8 @@ class system_community(Cog_Extension):
     
     @twitch.command(description='移除twitch開台通知')
     async def remove(self,ctx,
-                     twitch_user_login:discord.Option(str,required=True,name='twitch用戶'),
-                     notify_type:discord.Option(int,required=False,name='通知種類',description='通知種類，留空為移除全部',choices=twitch_notify_option,default=None)):
+                     twitch_user_login:discord.Option(str, required=True, name='twitch用戶', description='使用者名稱'),
+                     notify_type:discord.Option(int, required=False, name='通知種類', description='要移除的通知種類，留空為移除全部',choices=twitch_notify_option,default=None)):
         guildid = ctx.guild.id
         twitch_user = TwitchAPI().get_user(twitch_user_login)
         if not notify_type or notify_type == NotifyCommunityType.TwitchLive:
@@ -86,14 +85,14 @@ class system_community(Cog_Extension):
         sclient.sqldb.update_notify_community()
 
     @twitch.command(description='確認twitch開台通知')
-    async def notify(self,ctx,twitch_user_login:discord.Option(str,required=True,name='twitch用戶')):
+    async def notify(self,ctx,twitch_user_login:discord.Option(str, required=True, name='twitch用戶', description='使用者名稱')):
         guildid = ctx.guild.id
         record = sclient.sqldb.get_notify_community_user_bylogin(NotifyCommunityType.TwitchLive, twitch_user_login, guildid)
         if record:
             channel = self.bot.get_channel(record.channel_id)
             role = channel.guild.get_role(record.role_id)
             if role:
-                await ctx.respond(f'Twitch名稱: {twitch_user_login} 的開台通    知在 {channel.mention} 並通知 {role.mention}')
+                await ctx.respond(f'Twitch名稱: {twitch_user_login} 的開台通知在 {channel.mention} 並通知 {role.mention}')
             else:
                 await ctx.respond(f'Twitch名稱: {twitch_user_login} 的開台通知在 {channel.mention}')
         else:
@@ -131,7 +130,7 @@ class system_community(Cog_Extension):
         await ctx.respond(embed=embed)
 
     @twitch.command(description='取得twitch頻道的相關資訊')
-    async def user(self,ctx,twitch_username:discord.Option(str,required=True,name='twitch用戶')):
+    async def user(self,ctx,twitch_username:discord.Option(str, required=True, name='twitch用戶', description='使用者名稱')):
         user = TwitchAPI().get_user(twitch_username)
         if user:
             await ctx.respond(embed=user.desplay())
@@ -150,7 +149,7 @@ class system_community(Cog_Extension):
     @youtube.command(description='設置youtube開台通知')
     async def set(self,ctx,
                   ythandle:discord.Option(str,required=True,name='youtube帳號代碼',description="youtube頻道中以@開頭的代號"),
-                  channel:discord.Option(discord.TextChannel,required=True,name='頻道',description='通知發送頻道'),
+                  channel:discord.Option(discord.TextChannel,required=True,name='頻道',description='通知將會發送到此頻道'),
                   role:discord.Option(discord.Role,required=False,default=None,name='身分組',description='發送通知時tag的身分組'),
                   msg:discord.Option(str,default=None,name='通知文字',description='發送通知時的自訂文字')):
         guildid = ctx.guild.id
