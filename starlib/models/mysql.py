@@ -100,11 +100,13 @@ class UserModerate(UserSchema, table=True):
         guild = bot.get_guild(self.create_guild)
         
         name = f'{user.name} 的警告單'
-        description = f"**編號：{self.warning_id}（{Jsondb.get_tw(self.moderate_type, 'warning_type')}）**\n被警告用戶：{user.mention}\n管理員：{guild.name}/{moderate_user.mention}\n原因：{self.reason}\n時間：{self.create_time}"
+        description = f"**編號：{self.warning_id}（{Jsondb.get_tw(self.moderate_type, 'warning_type')}）**\n- 被警告用戶：{user.mention}\n- 管理員：{guild.name}/{moderate_user.mention}\n- 原因：{self.reason}\n- 時間：{self.create_time}"
+        if self.last_time:
+            description += f"\n- 禁言時長：{self.last_time}"
         if self.officially_given:
-            description += "\n官方警告"
+            description += "\n- 官方警告"
         if self.guild_only:
-            description += "\n伺服器區域警告"
+            description += "\n- 伺服器區域警告"
         embed = BotEmbed.general(name=name,icon_url=user.display_avatar.url,description=description)
         return embed
     

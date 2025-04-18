@@ -23,7 +23,6 @@ from starlib.models.mysql import Giveaway
 from ..extension import Cog_Extension
 from ..uiElement.view import DeleteAddRoleView, PollView, TRPGPlotView, GiveawayView
 from .bot_event import check_registration
-from .task import giveaway_auto_end, scheduler, DateTrigger
 
 bet_option = ChoiceList.set('bet_option')
 position_option = ChoiceList.set('position_option')

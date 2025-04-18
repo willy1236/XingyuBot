@@ -6,11 +6,13 @@ import discord
 import matplotlib
 import matplotlib.pyplot as plt
 from discord.ext import commands, tasks
+from mcstatus import JavaServer
 
 from starlib import BotEmbed, Jsondb, sclient, tz
 from starlib.errors import *
 from starlib.instance import *
 from starlib.utils.map import sunmon_area
+from starlib.utils import get_arp_list
 
 from ..extension import Cog_Extension
 
@@ -224,6 +226,31 @@ class debug(Cog_Extension):
         guild = self.bot.get_guild(guild_id)
         await ctx.respond(f"{member.display_name}：{f'{guild}（{guild_id}）' if guild else guild}",ephemeral=True)
         
+    @commands.is_owner()
+    @commands.slash_command(description='伺服器偵測測試', guild_ids=debug_guilds)
+    async def serverchecktest(self,ctx:discord.ApplicationContext):
+        await ctx.defer()
+        
+        lst = get_arp_list()
+        text_lst = []
+        for i in lst:
+            try:
+                server = JavaServer(i[0], 25565)
+                status = server.status()
+                status.raw
+                text_lst.append(f"伺服器：{i[0]}，人數：{status.players.online}，版本：{status.version.name}")
+                text_lst
+            except Exception as e:
+                text_lst.append(f"伺服器：{i[0]}，無法連線")
+
+        if text_lst:
+            text = '\n'.join(text_lst)
+        else:
+            text = '無法連線到任何伺服器'
+
+        await ctx.respond(text)
+
+            
 
     # @commands.slash_command()
     # async def modal_slash(self,ctx: discord.ApplicationContext):

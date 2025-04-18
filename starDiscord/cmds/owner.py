@@ -14,7 +14,7 @@ from mcstatus import JavaServer
 from starlib import BotEmbed, Jsondb, sclient
 from starlib.instance import *
 from starlib.types import McssServerAction, NotifyChannelType, McssServerStatues
-from starlib.utils.utility import base64_to_buffer, converter
+from starlib.utils.utility import base64_to_buffer, converter, get_arp_list
 
 from ..command_options import *
 from ..extension import Cog_Extension
@@ -421,10 +421,10 @@ class owner(Cog_Extension):
     @mcserver.command(description="執行mc伺服器指令")
     @commands.is_owner()
     async def cmd(self, ctx:discord.ApplicationContext, 
-                  server=mcss_server_option,
+                  server_id=mcss_server_option,
                   command=command_option):
         await ctx.defer()
-        response = mcss_api.excute_command(server, command)
+        response = mcss_api.excute_command(server_id, command)
         await ctx.respond(response if response else "指令已發送")
 
     @mcserver.command(description="執行mc伺服器操作")
@@ -445,7 +445,7 @@ class owner(Cog_Extension):
             await ctx.respond("🛑伺服器已處於關閉狀態")
             return
         
-        response = mcss_api.excute_action(server, McssServerAction(action))
+        response = mcss_api.excute_action(server.server_id, McssServerAction(action))
         if not response:
             res_text = "操作失敗"
         elif action == McssServerAction.Start:
@@ -480,6 +480,27 @@ class owner(Cog_Extension):
         await ctx.defer()
         response = mcss_api.get_server_detail(server)
         await ctx.respond(embed=response.embed())
+
+    @mcserver.command(description="列出現在開啟的mc伺服器")
+    async def list(self, ctx:discord.ApplicationContext):
+        await ctx.defer()
+        arp_lst = get_arp_list()
+        text_lst = []
+        for i in arp_lst:
+            try:
+                server = JavaServer(i[0], 25565)
+                status = server.status()
+                text_lst.append(f"伺服器：`{i[0]}`：版本：{status.version.name}，目前上線人數：{status.players.online}")
+                text_lst.append(f"- {status.description.encode('iso-8859-1').decode('utf-8')}")
+            except Exception as e:
+                pass
+
+        if text_lst:
+            text = '\n'.join(text_lst)
+        else:
+            text = '沒有找到任何開啟的伺服器'
+
+        await ctx.respond(text)
 
     @commands.slash_command(description='機器人面板',guild_ids=debug_guilds)
     @commands.is_owner()

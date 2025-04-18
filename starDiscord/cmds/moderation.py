@@ -143,7 +143,7 @@ class moderation(Cog_Extension):
     async def get(self,ctx:discord.ApplicationContext,
                       warning_id:discord.Option(str,name='警告編號',description='要查詢的警告',required=True)):
         sheet = sclient.sqldb.get_warning(int(warning_id))
-        if sheet and (ctx.guild.get_member(sheet.discord_id) or ctx.guild.id in debug_guilds):
+        if sheet and (ctx.guild.id == sheet.create_guild or ctx.guild.id in debug_guilds):
             await ctx.respond(embed=sheet.embed(self.bot))
         else:
             await ctx.respond("查無此警告單")
