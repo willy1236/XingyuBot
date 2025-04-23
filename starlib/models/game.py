@@ -603,7 +603,7 @@ class ApexMapRotation(BaseModel):
             embed_rank.set_image(url=self.ranked.current.asset)
             embed_rank.timestamp = now
             embed_rank.set_footer(text='更新時間')
-        lst.append(embed_rank)
+            lst.append(embed_rank)
 
         embed_battle_royale = BotEmbed.simple("Apex地圖：大逃殺")
         embed_battle_royale.add_field(name="目前地圖",value=tl.get(self.battle_royale.current.map,self.battle_royale.current.map))
