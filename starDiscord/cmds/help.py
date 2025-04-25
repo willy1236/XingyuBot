@@ -11,7 +11,7 @@ info_data = {
     "help": "總表 | info可用選項\n指令用法:/info <參數>\nvpn類\nvpn | vpn列表\nvpn01 | vpn使用教學\n\nminecraft類\nmc | minecraft總表\nmc01 | minecraft資料夾\nmc02 | 如何裝模組\n\n共用類\nshare | 雲端共用資料夾資訊",
     "vpn": "vpn | vpn列表\nRadmin VPN\n名稱：`willy1236_1` 密：`123456987` | 一號房間\n\nzerotier\nID：`b15644912ed8306b` | 一號房間\n申請進入zerotier的房間後記得通知房間的管理員幫你認證喔",
     "vpn01": "vpn01 | vpn安裝教學\nWindow版\n1.下載Radmin vpn\nhttps://www.radmin-vpn.com/tw/\n2.選擇 加入網路 並輸入名稱及密碼（如果不知道要輸入什麼可以使用/info vpn查詢）\n3.記得 改名 讓大家知道你是誰\n\nMacOS/Window版\n下載zerotier並安裝\nhttps://www.zerotier.com/download/\n2.右下角小工具中找到zerotier並右鍵點擊\n3.選擇Join New Network\n4.輸入房間ID\n\nIP依據開伺服器的方式不同分為\n區域網: xxx.xxx.xxx.xxx:ooooo\n伺服器: xxx.xxx.xxx.xxx\nx:開地圖的人的IP（VPN的IP）\no:公開至區網時會顯示的連接埠數字\n如果埠號為25565（Minecraft預設）則可以省略，伺服器不用連接埠數字同理，但若伺服器不是開在25565上一樣需要輸入數字喔",
-    "share": "雲端共用資料夾 | 94共用啦\n可以在這裡下載或共用檔案\n請洽威立以取得雲端權限",
+    "share": "雲端共用資料夾 | 94共用啦\n可以在這裡下載或共用檔案\n請使用/drive或洽威立以取得雲端權限",
     "mc": "總表 | mc可用選項\nmc01 | minecraft資料夾\nmc02 | 如何裝模組",
     "mc01": "mc01 | minecraft資料夾\n資料夾開啟方式\n法1：\n在minecraft的選項中開啟 資源包\n選擇 開啟資料包資料夾\n法2：\n按下Ctrl+r 輸入 %AppData% 按確認\n選擇.minecraft\n\n資料夾名稱\nsaves 單人地圖存檔\nresourcepacks 資源包存檔\nscreenshots F2截圖圖片",
     "mc02": "mc02 | 如何裝模組\n被你發現我還沒打內容了w\n既然你這麼想知道的話\nhttps://youtu.be/8gYBo_vcZFs",

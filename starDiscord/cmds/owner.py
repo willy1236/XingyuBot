@@ -431,33 +431,33 @@ class owner(Cog_Extension):
     @commands.has_guild_permissions(manage_channels=True)
     async def action(self, ctx:discord.ApplicationContext,
                      server_id=mcss_server_option,
-                     action=mcss_action_option):
+                     execute_action=mcss_action_option):
         await ctx.defer()
         server = mcss_api.get_server_detail(server_id)
         if not server:
             await ctx.respond(f"伺服器未找到，請聯繫{self.bot.mention_owner}進行確認", allowed_mentions=discord.AllowedMentions(users=True))
             return
         
-        if action == McssServerAction.Start and server.status == McssServerStatues.Running:
+        if execute_action == McssServerAction.Start and server.status == McssServerStatues.Running:
             await ctx.respond("🛑伺服器已處於開啟狀態")
             return
-        elif action == McssServerAction.Stop and server.status == McssServerStatues.Stopped:
+        elif execute_action == McssServerAction.Stop and server.status == McssServerStatues.Stopped:
             await ctx.respond("🛑伺服器已處於關閉狀態")
             return
         
-        response = mcss_api.excute_action(server.server_id, McssServerAction(action))
+        response = mcss_api.excute_action(server_id, McssServerAction(execute_action))
         if not response:
             res_text = "操作失敗"
-        elif action == McssServerAction.Start:
+        elif execute_action == McssServerAction.Start:
             res_text = "🟡已發送開啟指令，伺服器正在啟動..."
-        elif action == McssServerAction.Stop:
+        elif execute_action == McssServerAction.Stop:
             res_text = "🟠已發送關閉指令，伺服器正在關閉..."
         else:
             res_text = "操作已完成"
 
         msg = await ctx.respond(res_text)
 
-        if action == McssServerAction.Start:
+        if execute_action == McssServerAction.Start:
             for _ in range(10):
                 await asyncio.sleep(10)
                 server = mcss_api.get_server_detail(server_id)
@@ -465,7 +465,7 @@ class owner(Cog_Extension):
                     await msg.edit("🟢伺服器已開啟")
                     break
         
-        elif action == McssServerAction.Stop:
+        elif execute_action == McssServerAction.Stop:
             for _ in range(10):
                 await asyncio.sleep(10)
                 server = mcss_api.get_server_detail(server_id)
