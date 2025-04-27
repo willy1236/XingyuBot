@@ -18,7 +18,7 @@ from starlib.instance import *
 from starlib.types import Coins
 from starlib.utils import (create_only_role_list,
                            create_role_magification_dict, find, random_color, converter)
-from starlib.models.mysql import Giveaway
+from starlib.models.mysql import Giveaway, DiscordUser
 
 from ..extension import Cog_Extension
 from ..uiElement.view import DeleteAddRoleView, PollView, TRPGPlotView, GiveawayView
@@ -359,20 +359,34 @@ class command(Cog_Extension):
 
     @commands.user_command(name="你是誰")
     async def whois(self,ctx, member: discord.Member):
-        embed = BotEmbed.simple(title=f'{member.name}#{member.discriminator}', description="ID：用戶(伺服器成員)")
-        embed.add_field(name="暱稱", value=member.nick, inline=False)
-        embed.add_field(name="最高身分組", value=member.top_role.mention, inline=True)
-        embed.add_field(name="目前狀態", value=member.raw_status, inline=True)
-        if member.activity:
-            embed.add_field(name="目前活動", value=member.activity, inline=True)
-        embed.add_field(name="是否為機器人", value=member.bot, inline=False)
-        embed.add_field(name="是否為Discord官方", value=member.system, inline=True)
-        embed.add_field(name="是否被禁言", value=member.timed_out, inline=True)
-        embed.add_field(name="加入群組日期", value=member.joined_at.strftime("%Y/%m/%d %H:%M:%S") if member.joined_at else None, inline=False)
-        embed.add_field(name="帳號創建日期", value=member.created_at.strftime("%Y/%m/%d %H:%M:%S") if member.created_at else None, inline=False)
-        embed.set_thumbnail(url=member.display_avatar.url)
-        embed.set_footer(text=f"id:{member.id}")
-        await ctx.respond(embed=embed,ephemeral=True)
+        user = sclient.sqldb.get_dcuser(member.id) or DiscordUser(discord_id=member.id)
+        user_embed = BotEmbed.general(name="Discord資料", icon_url=member.avatar.url if member.avatar else None)
+        main_account_id = sclient.sqldb.get_main_account(member.id)
+        if main_account_id:
+            main_account = self.bot.get_user(main_account_id).mention or main_account_id
+            user_embed.description = f"{main_account} 的小帳"
+        
+        coins = sclient.sqldb.get_coin(member.id)
+        user_embed.add_field(name='⭐星塵',value=coins.stardust)
+        user_embed.add_field(name='PT點數',value=coins.point)
+        user_embed.add_field(name='Rcoin',value=coins.rcoin)
+
+        if user.max_sign_consecutive_days:
+            user_embed.add_field(name='連續簽到最高天數',value=user.max_sign_consecutive_days)
+        if user.meatball_times:
+            user_embed.add_field(name='貢丸次數',value=user.meatball_times)
+        if user.registration:
+            guild = self.bot.get_guild(user.registration.guild_id)
+            user_embed.add_field(name='戶籍',value=guild.name if guild else user.registration.guild_id)
+
+
+        cuser = sclient.sqldb.get_cloud_user(member.id)
+        cloud_user_embed = BotEmbed.general("使用者資料", icon_url=member.avatar.url if member.avatar else None)
+        if cuser:
+            cloud_user_embed.add_field(name='雲端共用資料夾',value="已共用" if cuser.drive_share_id else "未共用")
+            cloud_user_embed.add_field(name='Twitch ID',value=cuser.twitch_id or "未設定")
+    
+        await ctx.respond(embeds=[user_embed, cloud_user_embed], ephemeral=True)
 
     @commands.user_command(name="禁言10秒")
     @commands.has_permissions(moderate_members=True)

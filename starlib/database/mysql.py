@@ -775,7 +775,7 @@ class SQLRPGSystem(BaseSQLEngine):
     def get_user_rpg(self, discord_id):
         stmt = select(RPGUser).where(RPGUser.discord_id == discord_id)
         result = self.session.exec(stmt).one_or_none()
-        return result
+        return result or RPGUser(discord_id=discord_id)
     
     def get_rpg_dungeon(self, dungeon_id):
         stmt = select(RPGDungeon).where(RPGDungeon.id == dungeon_id)

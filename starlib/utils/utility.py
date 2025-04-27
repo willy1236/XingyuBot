@@ -248,6 +248,7 @@ def find_radmin_vpn_network():
                     netmask = addr.netmask
                     network = ipaddress.IPv4Network(f"{ip}/{netmask}", strict=False)
 
+                    return ip
                     return {
                         "interface": iface_name,
                         "ip": ip,

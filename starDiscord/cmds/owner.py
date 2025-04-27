@@ -14,7 +14,7 @@ from mcstatus import JavaServer
 from starlib import BotEmbed, Jsondb, sclient
 from starlib.instance import *
 from starlib.types import McssServerAction, NotifyChannelType, McssServerStatues
-from starlib.utils.utility import base64_to_buffer, converter, get_arp_list
+from starlib.utils.utility import base64_to_buffer, converter, get_arp_list, find_radmin_vpn_network
 
 from ..command_options import *
 from ..extension import Cog_Extension
@@ -330,7 +330,7 @@ class owner(Cog_Extension):
             return embed
 
         await ctx.defer()
-        ip = "26.111.85.196"
+        ip = find_radmin_vpn_network()
         port = 25565
         # mcserver_process = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=subprocess.CREATE_NEW_CONSOLE, text=True)
 
@@ -363,8 +363,11 @@ class owner(Cog_Extension):
     
     @mcserver.command(description="查詢mc伺服器")
     @commands.cooldown(rate=1,per=3)
-    async def quary(self, ctx:discord.ApplicationContext, ip:discord.Option(str, description="伺服器ip", default="26.111.85.196:25565")):
+    async def quary(self, ctx:discord.ApplicationContext, ip:discord.Option(str, description="伺服器ip", default=None)):
         await ctx.defer()
+        if not ip:
+            ip = find_radmin_vpn_network() + ":25565"
+    
         try:
             server = JavaServer.lookup(ip)
         except Exception as e:

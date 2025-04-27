@@ -131,3 +131,4 @@ google_oauth_settings = Jsondb.get_token("google_oauth")
 
 #print(GoogleOauth2(user_id="112130059444606303598").get_authorization_url())
 from google_auth_oauthlib.flow import Flow
+print(find_radmin_vpn_network())

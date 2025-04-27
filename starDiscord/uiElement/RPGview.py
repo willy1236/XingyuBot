@@ -16,19 +16,13 @@ class RPGAdvanceButton(discord.ui.Button):
 
     async def callback(self, interaction: discord.Interaction):
         self.view:RPGAdvanceView
-        self.disabled = True
-        await interaction.response.edit_message(view=self.view)
-        self.disabled = False
         if interaction.user.id == self.view.player.discord_id:
             if not self.view.wait_attack:
-                result = await self.view.advance(interaction)
-                if result:
-                    await interaction.edit_original_response(content=result,view=self.view)
+                await self.view.advance(interaction)
             else:
                 await interaction.edit_original_response(content="你正在戰鬥的回合中",view=self.view)
         else:
             await interaction.edit_original_response(content="請不要點選其他人的按鈕",view=self.view)
-            #await interaction.response.send_message(content=result, ephemeral=False)
 
 class RPGBattleNormalButton(discord.ui.Button):
     def __init__(self):
@@ -38,8 +32,6 @@ class RPGBattleNormalButton(discord.ui.Button):
         self.view:RPGAdvanceView
         if interaction.user.id == self.view.player.discord_id and self.view.wait_attack:
             self.view.wait_attack = False
-            self.view.disable_all_items()
-            await interaction.response.edit_message(view=self.view)
             
             await self.view.calculate_battle(interaction, 1)
         else:
@@ -61,7 +53,6 @@ class RPGBattleGetAwayButton(discord.ui.Button):
             if self.view.player.hp <= 0:
                 embed.description = "\n最終逃跑失敗倒下了"
             self.view.update_player_embed()
-            await interaction.response.edit_message(embeds=self.view.embed_list)
             await self.view.end_battle(interaction)
         else:
             await interaction.response.edit_message(content="你沒有要戰鬥的回合")
@@ -72,7 +63,7 @@ class RPGAdvanceView(discord.ui.View):
         self.dungeon = sqldb.get_rpg_dungeon(dungeon_id)
         self.player = sqldb.get_user_rpg(userid)
         self.advance_times = 1
-        self.embed_list:list[discord.Embed] = list()
+        self.embed_list:list[discord.Embed] = [self.player.embed(user_dc), None]
         self.user_dc = user_dc
         
         self.wait_attack = False
@@ -87,20 +78,15 @@ class RPGAdvanceView(discord.ui.View):
         self.add_item(self.advance_button)
         self.add_item(self.battle_normal)
         self.add_item(self.battle_getaway)
-        self.create_advance_button()
+        self.button_set_advance()
 
-    def create_advance_button(self):
-        # self.clear_items()
-        # self.add_item(self.advance_button)
+    def button_set_advance(self):
         self.children:list[discord.Button]
         self.children[0].disabled = False
         for item in self.children[1:3]:
             item.disabled = True
 
-    def create_battle_button(self):
-        # self.clear_items()
-        # self.add_item(self.battle_normal)
-        # self.add_item(self.battle_getaway)
+    def button_set_battle(self):
         self.children:list[discord.Button]
         self.children[0].disabled = True
         for item in self.children[1:3]:
@@ -108,6 +94,12 @@ class RPGAdvanceView(discord.ui.View):
 
     def update_player_embed(self):
         self.embed_list[0] = self.player.embed(self.user_dc)
+
+    async def update_message(self, interaction: discord.Interaction):
+        if interaction.response.is_done():
+            await interaction.edit_original_response(embeds=self.embed_list,view=self)
+        else:
+            await interaction.response.edit_message(embeds=self.embed_list,view=self)
 
     async def advance(self,interaction: discord.Interaction):
         '''進行冒險'''
@@ -121,13 +113,14 @@ class RPGAdvanceView(discord.ui.View):
             sqldb.merge(player)
             await interaction.edit_original_response(content="你已陣亡但已自動補血", view=self)
 
-        self.embed_list = [self.player.embed(self.user_dc), embed]
+        self.embed_list[1] = embed
+        if len(self.embed_list) > 2:
+            self.embed_list.pop(2)
         rd = random.randint(1,100)
 
         if rd > 70 and rd <=100:
             embed.description += "遇到怪物"
             self.battle_init()
-            await interaction.edit_original_response(embeds=self.embed_list, view=self)
         else:
             if rd > 0 and rd <= 50:
                 embed.description += "沒事發生"
@@ -151,7 +144,7 @@ class RPGAdvanceView(discord.ui.View):
                     embed.description += f"\n不知道是不是看錯了，你並沒有找到任何東西"
 
             elif rd > 60 and rd <= 70:
-                embed.description += "採到陷阱"
+                embed.description += "踩到陷阱"
                 injuried_value = random.randint(1,3)
                 player.change_hp(-injuried_value)
                 sqldb.merge(player)
@@ -167,10 +160,10 @@ class RPGAdvanceView(discord.ui.View):
             else:
                 self.advance_times += 1
             
-            await interaction.edit_original_response(embeds=self.embed_list,view=self)
+        await self.update_message(interaction)
 
     def battle_init(self):
-        self.create_battle_button()
+        self.button_set_battle()
         monsters = self.dungeon.monsters
         weight_list = [m.weight for m in monsters]
         monster_id = random.choices(monsters, weight_list)[0].monster_id
@@ -202,9 +195,9 @@ class RPGAdvanceView(discord.ui.View):
             text += "玩家：普通攻擊\n"
             #怪物被擊倒
             if monster.hp <= 0:
-                #text += f"\n擊倒怪物 扣除{player_hp_reduce}滴後你還剩下 {player.hp} HP"
                 text += f"擊倒怪物 損失 {player_hp_reduce} HP"
 
+                # 隨機掉落裝備
                 if self.meet_monster.equipmen_drops:
                     eloot_list = []
                     for drop in self.meet_monster.equipmen_drops:
@@ -215,6 +208,7 @@ class RPGAdvanceView(discord.ui.View):
                             text += f"\n獲得裝備：{e.template.name}"
                     sqldb.batch_add(eloot_list)
 
+                # 隨機掉落道具
                 if self.meet_monster.item_drops:
                     iloot_list = []
                     for drop in self.meet_monster.item_drops:
@@ -225,8 +219,6 @@ class RPGAdvanceView(discord.ui.View):
                             iloot_list.append(i)
                             text += f"\n獲得道具：{i.template.name} * {drop_count}"
                     sqldb.batch_merge(iloot_list)
-                
-                # text += f"\nRcoin +{monster.drop_money}"
                 
                 self.battle_is_end = True
         else:
@@ -251,6 +243,7 @@ class RPGAdvanceView(discord.ui.View):
                 player.hp = 0
                 self.battle_is_end = True
         
+        # 攻擊與受傷展示
         if not player_hit:
             damage_player = "未命中"
         if not monster_hit:
@@ -263,8 +256,8 @@ class RPGAdvanceView(discord.ui.View):
         if self.battle_is_end:
             await self.end_battle(interaction)
         else:
-            self.create_battle_button()
-            await interaction.edit_original_response(embeds=self.embed_list,view=self)
+            self.button_set_battle()
+            await self.update_message(interaction)
             self.battle_round += 1
             self.wait_attack = True
             
@@ -272,12 +265,12 @@ class RPGAdvanceView(discord.ui.View):
         sqldb.merge(self.player)
         
         if self.player.hp > 0:
-            self.create_advance_button()
+            self.button_set_advance()
             self.advance_times += 1
         else:
             self.clear_items()
 
-        await interaction.edit_original_response(embeds=self.embed_list,view=self)
+        await self.update_message(interaction)
 
 class RPGbutton2(discord.ui.View):
     def __init__(self,userid):
