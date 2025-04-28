@@ -568,4 +568,4 @@ class RssHub():
                 return results
             
         else:
-            raise APIInvokeError("rsshub_get_twitter", f"[{r.status_code}] {r.text}")
+            raise APIInvokeError("rsshub_get_twitter", f"[{r.status_code}]")
