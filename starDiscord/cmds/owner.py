@@ -432,7 +432,7 @@ class owner(Cog_Extension):
 
     @mcserver.command(description="執行mc伺服器操作")
     @commands.has_guild_permissions(manage_channels=True)
-    async def action(self, ctx:discord.ApplicationContext,
+    async def actions(self, ctx:discord.ApplicationContext,
                      server_id=mcss_server_option,
                      execute_action=mcss_action_option):
         await ctx.defer()
