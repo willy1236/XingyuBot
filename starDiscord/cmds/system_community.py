@@ -252,7 +252,8 @@ class system_community(Cog_Extension):
             await ctx.respond(f'錯誤：查詢過於頻繁，請稍後再試\n（X/Twitter僅提供少少的次數故容易觸發）')
             return
         
-        sclient.sqldb.add_notify_community(NotifyCommunityType.TwitterTweet, api_twitter_user.data.id, CommunityType.Twitter, guildid, channelid, roleid, None)
+        #! api不支援id查詢 故使用username查詢
+        sclient.sqldb.add_notify_community(NotifyCommunityType.TwitterTweet, api_twitter_user.data.username, CommunityType.Twitter, guildid, channelid, roleid, None)
         sclient.sqldb.merge(Community(id=str(api_twitter_user.data.id), type=CommunityType.Twitter, name=api_twitter_user.data.name, login=api_twitter_user.data.username))
         if role:
             await ctx.respond(f'設定成功：{api_twitter_user.data.name}的通知將會發送在{channel.mention}並會通知{role.mention}')
