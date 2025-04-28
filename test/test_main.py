@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import difflib
 import json
 import secrets
 import sys
@@ -114,7 +115,8 @@ if __name__ == '__main__':
 #         print(i)
 
 
-from starlib.dataExtractor.oauth import GoogleOauth2, DiscordOauth2, TwitchOauth2
+from starlib.dataExtractor.oauth import (DiscordOauth2, GoogleOauth2,
+                                         TwitchOauth2)
 
 setting = Jsondb.get_token("twitch_oauth")
 google_oauth_settings = Jsondb.get_token("google_oauth")
@@ -130,11 +132,14 @@ google_oauth_settings = Jsondb.get_token("google_oauth")
 # print(auth.get_user("689775663"))
 
 #print(GoogleOauth2(user_id="112130059444606303598").get_authorization_url())
-from tweepy import Client, API, OAuth2BearerHandler, Tweet
+from tweepy import API, Client, OAuth2BearerHandler, Tweet
+
 # x_apiv2 = Client(Jsondb.get_token("x_api"), wait_on_rate_limit=True)
 # x_api = API(OAuth2BearerHandler(Jsondb.get_token("x_api")))
 # print(x_apiv2.get_user(username="").data.id)
-print(RssHub().get_twitter("", True))
+#print(RssHub().get_twitter("", True))
+
+
 
 #tweets = x_apiv2.get_users_tweets(1524040182861004800).data
 # tweets = x_apiv2.get_users_tweets(1530844907531010048).data
