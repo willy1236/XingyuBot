@@ -561,7 +561,7 @@ class RssHub():
         r = requests.get(f"{self.url}/twitter/user/{name}/readable=true")
         if r.ok:
             feeds = feedparser.parse(r.text)
-            results = [RssHubTwitterTweet(feed) for feed in feeds.entries]
+            results = [RssHubTwitterTweet(**feed) for feed in feeds.entries]
             if after:
                 return [result for result in results if result.published_parsed > after]
             else:
