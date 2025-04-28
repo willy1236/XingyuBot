@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+from datetime import datetime
 from typing import TYPE_CHECKING, TypeVar
 
 from ..types.datatype import JsonCacheType
@@ -41,6 +42,13 @@ class BaseJsonHandler:
         self.datas[key] = value
         with open(f'{self._DBPATH}/{self.filename}.json', 'w', encoding='utf-8') as jfile:
             json.dump(self.datas, jfile, indent=4)
+
+    def update_dict(self, key:str, value:dict):
+        """Update a dictionary in the JSON file with a new key-value pair."""
+        if key not in self.datas:
+            self.datas[key] = {}
+        self.datas[key].update(value)
+        self.write(key, self.datas[key])
 
     def __getitem__(self, key):
         return self.get(key)
@@ -192,6 +200,18 @@ class JsonDatabase():
             key = key.value
         return self.cache.get(key)
     
+    def get_cache_time(self, key: str | JsonCacheType, id:str) -> datetime | None:
+        """
+        Retrieve the time of a specific key in the cache.
+        """
+        if isinstance(key, JsonCacheType):
+            key = key.value
+        dict_data = self.cache.get(key)
+        try:
+            return datetime.fromisoformat(dict_data[id])
+        except KeyError:
+            return None
+    
     def write_cache(self, key: str | JsonCacheType, value: dict | str):
         """
         Writes a full data to the cache.
@@ -199,6 +219,16 @@ class JsonDatabase():
         if isinstance(key, JsonCacheType):
             key = key.value
         self.cache.write(key, value)
+    
+    def update_dict_cache(self, key: str | JsonCacheType, value: dict):
+        """
+        Update a dictionary in the cache.
+        """
+        if not value:
+            return
+        if isinstance(key, JsonCacheType):
+            key = key.value
+        self.cache.update_dict(key, value)
 
     def get_tw(self, value:T, option_name:str) -> str | T:
         """
