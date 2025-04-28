@@ -229,7 +229,7 @@ class task(Cog_Extension):
         twitter_cache = Jsondb.get_cache(JsonCacheType.TwitterTweet) or {}
         for user in users:
             cache_last_update_time = datetime.fromisoformat(twitter_cache.get(user)).replace(tzinfo=tz) if twitter_cache.get(user) else None
-            tweets = rss_hub.get_twitter(user, after=cache_last_update_time)
+            tweets = rss_hub.get_twitter(user, True, after=cache_last_update_time)
             if tweets:
                 newest = tweets[0].published_parsed
                 for tweet in tweets:

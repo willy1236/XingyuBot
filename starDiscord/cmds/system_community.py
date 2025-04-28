@@ -247,7 +247,7 @@ class system_community(Cog_Extension):
         roleid = role.id if role else None
         api_twitter_user = twitter_api.get_user(username=twitter_user)
         
-        sclient.sqldb.add_notify_community(NotifyCommunityType.TwitterTweet, twitter_user, CommunityType.Twitter, guildid, channelid, roleid, None)
+        sclient.sqldb.add_notify_community(NotifyCommunityType.TwitterTweet, api_twitter_user.data.id, CommunityType.Twitter, guildid, channelid, roleid, None)
         sclient.sqldb.merge(Community(id=api_twitter_user.data.id, type=CommunityType.Twitter, name=api_twitter_user.data.name))
         if role:
             await ctx.respond(f'設定成功：{twitter_user}的通知將會發送在{channel.mention}並會通知{role.mention}')
