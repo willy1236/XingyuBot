@@ -479,9 +479,9 @@ class owner(Cog_Extension):
     @mcserver.command(description="取得mc伺服器")
     @commands.is_owner()
     async def get(self, ctx:discord.ApplicationContext,
-                     server=mcss_server_option):
+                     server_id=mcss_server_option):
         await ctx.defer()
-        response = mcss_api.get_server_detail(server)
+        response = mcss_api.get_server_detail(server_id)
         await ctx.respond(embed=response.embed())
 
     @mcserver.command(description="列出現在開啟的mc伺服器")
