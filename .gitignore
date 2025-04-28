@@ -10,4 +10,3 @@ twitch_token.json
 user_token.json
 member_names.json
 database/google_client_credentials.json
-poetry.lock
