@@ -349,7 +349,7 @@ class SQLNotifySystem(BaseSQLEngine):
     #* notify community
     def add_notify_community(self, notify_type:NotifyCommunityType, community_id:str, community_type:CommunityType, guild_id:int, channel_id:int, role_id:int=None, message:str=None):
         """設定社群通知"""
-        community = NotifyCommunity(notify_type=notify_type, community_id=community_id, community_type=community_type, guild_id=guild_id, channel_id=channel_id, role_id=role_id, message=message)
+        community = NotifyCommunity(notify_type=notify_type, community_id=str(community_id), community_type=community_type, guild_id=guild_id, channel_id=channel_id, role_id=role_id, message=message)
         self.session.merge(community)
         self.session.commit()
 
