@@ -38,6 +38,7 @@ class task(Cog_Extension):
             scheduler.add_job(self.twitch_live,'interval',minutes=4,jitter=15,misfire_grace_time=20)
             scheduler.add_job(self.twitch_video,'interval',minutes=15,jitter=30,misfire_grace_time=40)
             scheduler.add_job(self.twitch_clip,'interval',minutes=10,jitter=30,misfire_grace_time=40)
+            scheduler.add_job(self.twitter_tweets,'interval',minutes=15, jitter=30, misfire_grace_time=40)
             #scheduler.add_job(self.get_mongodb_data,'interval',minutes=3,jitter=30,misfire_grace_time=40)
 
             if self.bot.user.id == 589744540240314368:
@@ -220,6 +221,24 @@ class task(Cog_Extension):
                         scheduler.add_job(self.test_one_times_job, DateTrigger(video.liveStreamingDetails.scheduledStartTime + timedelta(seconds=30)), args=[video])
 
         Jsondb.write_cache(JsonCacheType.YoutubeVideo,cache_youtube)
+
+    async def twitter_tweets(self):
+        users = sclient.sqldb[NotifyCommunityType.TwitterTweet]
+        if not users:
+            return
+        twitter_cache = Jsondb.get_cache(JsonCacheType.TwitterTweet) or {}
+        for user in users:
+            cache_last_update_time = datetime.fromisoformat(twitter_cache.get(user)).replace(tzinfo=tz) if twitter_cache.get(user) else None
+            tweets = rss_hub.get_twitter(user, after=cache_last_update_time)
+            if tweets:
+                newest = tweets[0].published_parsed
+                for tweet in tweets:
+                    newest = tweet.published_parsed if tweet.published_parsed > newest else newest
+                    await self.bot.send_notify_communities(None, NotifyCommunityType.TwitterTweet, user, content=f"{tweet.author} 轉推了推文\n{tweet.link}" if tweet.is_retweet else f"{tweet.author} 發布新推文\n{tweet.link}")
+
+                twitter_cache[user] = (newest + timedelta(seconds=1)).isoformat()
+
+        Jsondb.write_cache(JsonCacheType.TwitterTweet, twitter_cache)
 
     # async def get_mongodb_data(self):
     #     dbdata = mongedb.get_apidata()

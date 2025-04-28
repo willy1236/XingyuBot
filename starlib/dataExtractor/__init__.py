@@ -24,4 +24,5 @@ __all__ =[
     'YoutubeRSS',
     "DiscordOauth2",
     'YoutubePush',
+    "RssHub",
 ]

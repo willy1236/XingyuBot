@@ -7,6 +7,7 @@ from starlib import BotEmbed, ChoiceList, Jsondb, sclient, tz
 from starlib.dataExtractor import TwitchAPI, YoutubeAPI, YoutubeRSS
 from starlib.models.mysql import Community
 from starlib.types import CommunityType, JsonCacheType, NotifyCommunityType
+from starlib.instance import twitter_api
 
 from ..extension import Cog_Extension
 
@@ -15,6 +16,7 @@ twitch_notify_option = ChoiceList.set("twitch_notify_option")
 class system_community(Cog_Extension):
     twitch = SlashCommandGroup("twitch", "Twitch相關指令")
     youtube = SlashCommandGroup("youtube", "youtube相關指令")
+    twitter = SlashCommandGroup("twitter", "twitter相關指令")
     
     @twitch.command(description='設置twitch開台通知')
     async def set(self,ctx,
@@ -234,6 +236,51 @@ class system_community(Cog_Extension):
                     text += f" {role.mention}"
             embed.add_field(name=notify_name, value=text)
         await ctx.respond(embed=embed)
+
+    @twitter.command(description='設置twitter通知（測試中，目前尚不穩定）')
+    async def set(self,ctx,
+                  twitter_user:discord.Option(str,required=True,name='twitter用戶',description='使用者名稱，當此用戶發文時會發送通知'),
+                  channel:discord.Option(discord.TextChannel,required=True,name='頻道',description='通知將會發送到此頻道'),
+                  role:discord.Option(discord.Role,required=False,default=None,name='身分組',description='發送通知時tag的身分組')):
+        guildid = ctx.guild.id
+        channelid = channel.id
+        roleid = role.id if role else None
+        api_twitter_user = twitter_api.get_user(username=twitter_user)
+        
+        sclient.sqldb.add_notify_community(NotifyCommunityType.TwitterTweet, twitter_user, CommunityType.Twitter, guildid, channelid, roleid, None)
+        sclient.sqldb.merge(Community(id=api_twitter_user.data.id, type=CommunityType.Twitter, name=api_twitter_user.data.name))
+        if role:
+            await ctx.respond(f'設定成功：{twitter_user}的通知將會發送在{channel.mention}並會通知{role.mention}')
+        else:
+            await ctx.respond(f'設定成功：{twitter_user}的通知將會發送在{channel.mention}')
+
+        if not channel.can_send():
+                await ctx.send(embed=BotEmbed.simple('溫馨提醒',f'我無法在{channel.mention}中發送訊息，請確認我有足夠的權限'))
+
+    @twitter.command(description='移除twitter通知')
+    async def remove(self,ctx,twitter_user:discord.Option(str,required=True,name='twitter用戶',description='使用者名稱')):
+        guildid = ctx.guild.id
+        sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitterTweet, twitter_user, guildid)
+        await ctx.respond(f'已移除 {twitter_user} 的通知')
+        
+        sclient.sqldb.update_notify_community(NotifyCommunityType.TwitterTweet)
+
+        if not sclient.sqldb.get_notify_community_count(NotifyCommunityType.TwitterTweet, twitter_user):
+            Jsondb.remove_cache(JsonCacheType.TwitterTweet, twitter_user)
+
+    @twitter.command(description='確認twitter通知')
+    async def notify(self,ctx,twitter_user:discord.Option(str,required=True,name='twitter用戶',description='使用者名稱')):
+        guildid = ctx.guild.id
+        record = sclient.sqldb.get_notify_community_user_bylogin(NotifyCommunityType.TwitterTweet, twitter_user, guildid)
+        if record:
+            channel = self.bot.get_channel(record.channel_id)
+            role = channel.guild.get_role(record.role_id)
+            if role:
+                await ctx.respond(f'Twitter名稱: {twitter_user} 的通知在 {channel.mention} 並通知 {role.mention}')
+            else:
+                await ctx.respond(f'Twitter名稱: {twitter_user} 的通知在 {channel.mention}')
+        else:
+            await ctx.respond(f'Twitter名稱: {twitter_user} 在此群組沒有設通知')
 
 def setup(bot):
     bot.add_cog(system_community(bot))

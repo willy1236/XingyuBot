@@ -130,5 +130,15 @@ google_oauth_settings = Jsondb.get_token("google_oauth")
 # print(auth.get_user("689775663"))
 
 #print(GoogleOauth2(user_id="112130059444606303598").get_authorization_url())
-from google_auth_oauthlib.flow import Flow
-print(find_radmin_vpn_network())
+from tweepy import Client, API, OAuth2BearerHandler, Tweet
+x_apiv2 = Client(Jsondb.get_token("x_api"), wait_on_rate_limit=True)
+# x_api = API(OAuth2BearerHandler(Jsondb.get_token("x_api")))
+print(x_apiv2.get_user(username="").data.id)
+
+#tweets = x_apiv2.get_users_tweets(1524040182861004800).data
+# tweets = x_apiv2.get_users_tweets(1530844907531010048).data
+# print(type(tweets))
+# for tweet in tweets:
+#     tweet:Tweet
+#     print(type(tweet))
+#     print(tweet.id, tweet.text, tweet.created_at, tweet.attachments, tweet.entities, tweet.public_metrics, tweet.context_annotations, tweet.geo, tweet.in_reply_to_user_id, tweet.referenced_tweets, tweet.source)

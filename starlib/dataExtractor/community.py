@@ -550,3 +550,21 @@ class NotionAPI():
             print(apidata)
         else:
             print(apidata['message'])
+
+class RssHub():
+    def __init__(self):
+        self.url = "https://rsshub.app"
+    
+    def get_twitter(self, username:str, after:datetime=None):
+        """取得Twitter用戶的RSS"""
+        r = requests.get(f"{self.url}/twitter/user/{username}/readable=true")
+        if r.ok:
+            feeds = feedparser.parse(r.text)
+            results = [RssHubTwitterTweet(feed) for feed in feeds.entries]
+            if after:
+                return [result for result in results if result.published_parsed > after]
+            else:
+                return results
+            
+        else:
+            raise APIInvokeError("rsshub_get_twitter", f"[{r.status_code}] {r.text}")

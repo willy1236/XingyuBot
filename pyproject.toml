@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "xingyubot"
-version = "0.2.9"
+version = "0.2.10"
 description = "一個集結許多功能的DiscordBot"
 authors = ["威立 <66502303+willy1236@users.noreply.github.com>"]
 readme = "README.md"
@@ -34,6 +34,7 @@ mcstatus = "^11.1.1"
 vosk = "^0.3.45"
 mwrogue = "^0.1.5"
 psycopg2 = "^2.9.10"
+tweepy = {extras = ["async"], version = "^4.15.0"}
 
 
 [tool.poetry.group.dev.dependencies]

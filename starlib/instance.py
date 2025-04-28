@@ -1,6 +1,7 @@
 """
 此處提供bot在初始化與執行時所需的設定與物件（如api等）
 """
+import tweepy
 
 from .dataExtractor import *
 from .dataExtractor.others import McssAPI
@@ -12,12 +13,13 @@ __all__ = [
     "yt_api",
     "yt_push",
     "tw_api",
+    "rss_hub",
     "cwa_api",
     "apexapi",
     "main_guilds",
     "happycamp_guild",
     "debug_guilds",
-    "debug_mode"
+    "debug_mode",
 ]
 
 # api
@@ -26,6 +28,8 @@ yt_rss = YoutubeRSS()
 yt_api = YoutubeAPI()
 yt_push = YoutubePush()
 tw_api = TwitchAPI()
+twitter_api = tweepy.Client(Jsondb.get_token("x_api"))
+rss_hub = RssHub()
 cwa_api = CWA_API()
 apexapi = ApexAPI()
 

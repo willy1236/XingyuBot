@@ -1,9 +1,11 @@
+import time
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import discord
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl, model_validator
+from pydantic import (BaseModel, ConfigDict, Field, HttpUrl, computed_field,
+                      field_validator, model_validator)
 
 from ..fileDatabase import Jsondb
 from ..settings import tz
@@ -372,3 +374,36 @@ class YtSubscriptionDetails:
     @property
     def has_verify(self):
         return self.state == "verified"
+    
+class RssHubTwitterTweet(BaseModel):
+    title: str
+    title_detail: dict
+    summary: str
+    summary_detail: dict
+    links: list[dict]
+    link: str
+    id: str
+    guidislink: bool
+    published: str
+    published_parsed: datetime  # 特殊處理
+    authors: list[dict]
+    author: str
+    author_detail: dict
+
+    @field_validator('published_parsed', mode='before')
+    @classmethod
+    def parse_published_parsed(cls, v):
+        if isinstance(v, datetime):
+            return v
+        if isinstance(v, time.struct_time):
+            # struct_time 轉成 datetime
+            return datetime(*v[:6], tzinfo=timezone.utc).astimezone(tz=tz)
+        if isinstance(v, dict):
+            # 假如來的是 dict（像 JSON 會這樣），先轉成 tuple 再轉 datetime
+            return datetime(*tuple(v.values())[:6])
+        raise ValueError(f"Unsupported type for published_parsed: {type(v)}")
+    
+    @computed_field
+    @property
+    def is_retweet(self) -> bool:
+        return self.title.startswith("RT ")

@@ -6,6 +6,7 @@ class NotifyCommunityType(IntEnum):
     Youtube = 2
     TwitchVideo = 3
     TwitchClip = 4
+    TwitterTweet = 5
 
 class NotifyChannelType(IntEnum):
     AllAnnouncements = 1
@@ -46,12 +47,14 @@ class CommunityType(IntEnum):
     Spotify = 3
     Youtube = 4
     Google = 4
+    Twitter = 5
 
 notify_to_community_map = {
     NotifyCommunityType.TwitchLive: CommunityType.Twitch,
     NotifyCommunityType.Youtube: CommunityType.Youtube,
     NotifyCommunityType.TwitchVideo: CommunityType.Twitch,
     NotifyCommunityType.TwitchClip: CommunityType.Twitch,
+    NotifyCommunityType.TwitterTweet: CommunityType.Twitter,
 }
 
 class JsonCacheType(Enum):
@@ -61,6 +64,7 @@ class JsonCacheType(Enum):
     TwitchVideo = "twitch_v"
     TwitchClip = "twitch_c"
     WeatherWarning = "weather_warning"
+    TwitterTweet = "twitter_t"
 
 class McssServerAction(IntEnum):
     Unknown = 0
