@@ -554,22 +554,31 @@ class NotionAPI():
 class RssHub():
     def __init__(self):
         self.url = "https://rsshub.app"
+        self.url_local = "http://localhost:1200"
     
-    def get_twitter(self, username:str, use_id=False, after:datetime=None):
+    def get_twitter(self, username:str, local=False, after:datetime=None):
         """取得Twitter用戶的RSS"""
-        name = username if not use_id else f"+{username}"
-        r = requests.get(f"{self.url}/twitter/user/{name}")
+        if local:
+            try:
+                r = requests.get(f"{self.url_local}/twitter/user/{username}")
+                r.raise_for_status()
+            except (requests.exceptions.ConnectionError, requests.exceptions.HTTPError):
+                r = requests.get(f"{self.url}/twitter/user/{username}")
+        else:
+            r = requests.get(f"{self.url}/twitter/user/{username}")
+        
         if r.ok:
             feeds = feedparser.parse(r.text)
             results = [RssHubTwitterTweet(**feed) for feed in feeds.entries]
             results.reverse()
+
             if after:
                 return [result for result in results if result.published_parsed > after]
             else:
                 return results
             
         else:
-            if r.status_code == 503 and use_id == False:
+            if r.status_code == 503:
                 # 503可能為找不到用戶
                 return
             else:

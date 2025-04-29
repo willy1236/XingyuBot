@@ -235,7 +235,7 @@ class task(Cog_Extension):
         for twitter_username in users:
             log.debug(f"twitter_tweets: {twitter_username}")
             cache_last_update_time = Jsondb.get_cache_time(JsonCacheType.TwitterTweet, twitter_username)
-            tweets = rss_hub.get_twitter(twitter_username, after=cache_last_update_time)
+            tweets = rss_hub.get_twitter(twitter_username, local=True, after=cache_last_update_time)
             log.debug(f"twitter_tweets data: {tweets}")
             if tweets:
                 newest = tweets[0].published_parsed
