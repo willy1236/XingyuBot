@@ -231,16 +231,20 @@ class task(Cog_Extension):
         if not users:
             return
         cache_time_to_update:dict[str, str] = {}
-        for user in users:
-            cache_last_update_time = Jsondb.get_cache_time(JsonCacheType.TwitterTweet, user)
-            tweets = rss_hub.get_twitter(user, after=cache_last_update_time)
+        for twitter_username in users:
+            cache_last_update_time = Jsondb.get_cache_time(JsonCacheType.TwitterTweet, twitter_username)
+            tweets = rss_hub.get_twitter(twitter_username, after=cache_last_update_time)
             if tweets:
                 newest = tweets[0].published_parsed
                 for tweet in tweets:
                     newest = tweet.published_parsed if tweet.published_parsed > newest else newest
-                    await self.bot.send_notify_communities(None, NotifyCommunityType.TwitterTweet, user, content=f"{tweet.author} 轉推了推文\n{tweet.link}" if tweet.is_retweet else f"{tweet.author} 發布新推文\n{tweet.link}")
+                    await self.bot.send_notify_communities(None, NotifyCommunityType.TwitterTweet, twitter_username, content=f"{tweet.author} 轉推了推文↩️\n{tweet.link}" if tweet.is_retweet else f"{tweet.author} 發布新推文\n{tweet.link}")
 
-                cache_time_to_update[user] = (newest + timedelta(seconds=1)).isoformat()
+                cache_time_to_update[twitter_username] = (newest + timedelta(seconds=1)).isoformat()
+            elif tweets is None:
+                log.warning(f"twitter_tweets error / not found: {twitter_username}")
+                sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitterTweet, twitter_username)
+
 
         Jsondb.update_dict_cache(JsonCacheType.TwitterTweet, cache_time_to_update)
 

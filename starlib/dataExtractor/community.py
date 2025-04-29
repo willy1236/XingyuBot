@@ -568,4 +568,8 @@ class RssHub():
                 return results
             
         else:
-            raise APIInvokeError("rsshub_get_twitter", f"[{r.status_code}]")
+            if r.status_code == 503 and use_id == False:
+                # 503可能為找不到用戶
+                return
+            else:
+                raise APIInvokeError("rsshub_get_twitter", f"[{r.status_code}]")

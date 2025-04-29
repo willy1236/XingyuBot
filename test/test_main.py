@@ -137,9 +137,7 @@ from tweepy import API, Client, OAuth2BearerHandler, Tweet
 # x_apiv2 = Client(Jsondb.get_token("x_api"), wait_on_rate_limit=True)
 # x_api = API(OAuth2BearerHandler(Jsondb.get_token("x_api")))
 # print(x_apiv2.get_user(username="").data.id)
-#print(RssHub().get_twitter("", True))
-
-
+# print(RssHub().get_twitter(""))
 
 #tweets = x_apiv2.get_users_tweets(1524040182861004800).data
 # tweets = x_apiv2.get_users_tweets(1530844907531010048).data

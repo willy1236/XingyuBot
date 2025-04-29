@@ -356,13 +356,19 @@ class SQLNotifySystem(BaseSQLEngine):
         if self.cache.get(notify_type):
             self.cache[notify_type].append(community_id)
 
-    def remove_notify_community(self,notify_type:NotifyCommunityType, community_id:str, guild_id:int):
+    def remove_notify_community(self,notify_type:NotifyCommunityType, community_id:str, guild_id:int=None):
         """移除社群通知，同時判斷移除社群"""
-        statement = delete(NotifyCommunity).where(
-            NotifyCommunity.notify_type == notify_type,
-            NotifyCommunity.community_id == community_id,
-            NotifyCommunity.guild_id == guild_id
-        )
+        if guild_id is None:
+            statement = delete(NotifyCommunity).where(
+                NotifyCommunity.notify_type == notify_type,
+                NotifyCommunity.community_id == community_id
+            )
+        else:
+            statement = delete(NotifyCommunity).where(
+                NotifyCommunity.notify_type == notify_type,
+                NotifyCommunity.community_id == community_id,
+                NotifyCommunity.guild_id == guild_id
+            )
         self.session.exec(statement)
         self.session.commit()
         
