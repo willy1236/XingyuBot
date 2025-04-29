@@ -32,7 +32,7 @@ class task(Cog_Extension):
             scheduler.add_job(self.apex_map_rotation,'cron',minute='0/15',second=10,jitter=30,misfire_grace_time=60)
             # scheduler.add_job(self.refresh_yt_push,'cron',hour="2/6",jitter=30,misfire_grace_time=40)
 
-            scheduler.add_job(self.earthquake_check,'interval',minutes=2,jitter=30,misfire_grace_time=40)
+            scheduler.add_job(self.earthquake_check,'interval',minutes=3,jitter=30,misfire_grace_time=40)
             scheduler.add_job(self.weather_warning_check,'interval',minutes=15,jitter=30,misfire_grace_time=40)
             scheduler.add_job(self.youtube_video,'interval',minutes=15,jitter=30,misfire_grace_time=40)
             scheduler.add_job(self.twitch_live,'interval',minutes=4,jitter=15,misfire_grace_time=20)
@@ -227,13 +227,16 @@ class task(Cog_Extension):
         Jsondb.update_dict_cache(JsonCacheType.YoutubeVideo, cache_time_to_update)
 
     async def twitter_tweets(self):
+        log.debug("twitter_tweets start")
         users = sclient.sqldb[NotifyCommunityType.TwitterTweet]
         if not users:
             return
         cache_time_to_update:dict[str, str] = {}
         for twitter_username in users:
+            log.debug(f"twitter_tweets: {twitter_username}")
             cache_last_update_time = Jsondb.get_cache_time(JsonCacheType.TwitterTweet, twitter_username)
             tweets = rss_hub.get_twitter(twitter_username, after=cache_last_update_time)
+            log.debug(f"twitter_tweets data: {tweets}")
             if tweets:
                 newest = tweets[0].published_parsed
                 for tweet in tweets:
