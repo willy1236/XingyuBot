@@ -562,6 +562,7 @@ class RssHub():
         if r.ok:
             feeds = feedparser.parse(r.text)
             results = [RssHubTwitterTweet(**feed) for feed in feeds.entries]
+            results.reverse()
             if after:
                 return [result for result in results if result.published_parsed > after]
             else:

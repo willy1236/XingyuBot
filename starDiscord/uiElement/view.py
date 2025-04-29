@@ -360,23 +360,17 @@ class ReactionRoleButton(discord.ui.Button):
         self.role_id = dbdata.role_id
 
     async def callback(self,interaction):
-        try:
-            role = interaction.guild.get_role(self.role_id)
-            if not role:
-                await interaction.response.send_message(f"錯誤：身分組不存在，請聯絡管理員",ephemeral=True)
-                return
-            
-            if interaction.user.get_role(self.role_id):
-                await interaction.user.remove_roles(role)
-                await interaction.response.send_message(f"已移除 {role.name} 身分組！",ephemeral=True)
-            else:
-                await interaction.user.add_roles(role)        
-                await interaction.response.send_message(f"已給予 {role.name} 身分組！",ephemeral=True)
-        except discord.errors.Forbidden:
-            await interaction.response.send_message(f"錯誤：我沒有權限給予或移除身分組，可能為我的身分組位階較低或缺少必要權限",ephemeral=True)
-        except Exception as e:
-            await interaction.response.send_message(f"發生錯誤", ephemeral=True)
-            log.error(f"ReactionRoleButton error: {e}")
+        role = interaction.guild.get_role(self.role_id)
+        if not role:
+            await interaction.response.send_message(f"錯誤：身分組不存在，請聯絡管理員",ephemeral=True)
+            return
+        
+        if interaction.user.get_role(self.role_id):
+            await interaction.user.remove_roles(role)
+            await interaction.response.send_message(f"已移除 {role.name} 身分組！",ephemeral=True)
+        else:
+            await interaction.user.add_roles(role)        
+            await interaction.response.send_message(f"已給予 {role.name} 身分組！",ephemeral=True)
 
 class ReactionRoleView(discord.ui.View):
     def __init__(self, message_id, roles:list[ReactionRole]):
@@ -384,7 +378,14 @@ class ReactionRoleView(discord.ui.View):
         self.message_id = message_id
 
         for r in roles:
-            self.add_item(ReactionRoleButton(r))    
+            self.add_item(ReactionRoleButton(r))
+
+    async def on_error(self, error:Exception, item:discord.ui.Item, interaction:discord.Interaction):
+        if isinstance(error, discord.Forbidden):
+            await interaction.response.send_message(f"錯誤：我沒有權限給予或移除身分組，可能為我的身分組位階較低或缺少必要權限",ephemeral=True)
+        else:
+            await interaction.response.send_message(f"發生錯誤：{error}", ephemeral=True)
+            log.error(f"ReactionRoleView error: {item} / {error}")
 
 class TRPGPlotButton(discord.ui.Button):
     def __init__(self,option:TRPGStoryOption):
