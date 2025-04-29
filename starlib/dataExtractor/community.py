@@ -558,7 +558,7 @@ class RssHub():
     def get_twitter(self, username:str, use_id=False, after:datetime=None):
         """取得Twitter用戶的RSS"""
         name = username if not use_id else f"+{username}"
-        r = requests.get(f"{self.url}/twitter/user/{name}/readable=true")
+        r = requests.get(f"{self.url}/twitter/user/{name}")
         if r.ok:
             feeds = feedparser.parse(r.text)
             results = [RssHubTwitterTweet(**feed) for feed in feeds.entries]

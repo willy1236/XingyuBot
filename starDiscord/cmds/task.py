@@ -38,7 +38,7 @@ class task(Cog_Extension):
             scheduler.add_job(self.twitch_live,'interval',minutes=4,jitter=15,misfire_grace_time=20)
             scheduler.add_job(self.twitch_video,'interval',minutes=15,jitter=30,misfire_grace_time=40)
             scheduler.add_job(self.twitch_clip,'interval',minutes=10,jitter=30,misfire_grace_time=40)
-            scheduler.add_job(self.twitter_tweets,'interval',minutes=15, jitter=30, misfire_grace_time=40)
+            scheduler.add_job(self.twitter_tweets_rss,'interval',minutes=15, jitter=30, misfire_grace_time=40)
             #scheduler.add_job(self.get_mongodb_data,'interval',minutes=3,jitter=30,misfire_grace_time=40)
 
             if self.bot.user.id == 589744540240314368:
@@ -226,7 +226,7 @@ class task(Cog_Extension):
 
         Jsondb.update_dict_cache(JsonCacheType.YoutubeVideo, cache_time_to_update)
 
-    async def twitter_tweets(self):
+    async def twitter_tweets_rss(self):
         log.debug("twitter_tweets start")
         users = sclient.sqldb[NotifyCommunityType.TwitterTweet]
         if not users:
