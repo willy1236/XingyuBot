@@ -132,12 +132,12 @@ class task(Cog_Extension):
         users_id = [user_id for user_id in caches.keys()]
         data = tw_api.get_lives(users_id)
         log.debug(f"twitch_live data: {data}")
-        update_data = {}
+        update_data:dict[str, datetime] = {}
 
         for user_id in users_id:
             if data[user_id] and not caches[user_id]:
                 # 直播開始
-                update_data[user_id] = data[user_id].started_at.isoformat()
+                update_data[user_id] = data[user_id].started_at
 
                 embed = data[user_id].embed()
                 await self.bot.send_notify_communities(embed, NotifyCommunityType.TwitchLive, user_id)
@@ -149,34 +149,32 @@ class task(Cog_Extension):
         sclient.sqldb.set_community_cache(NotifyCommunityType.TwitchLive, update_data)
 
     async def twitch_video(self):
-        users = sclient.sqldb[NotifyCommunityType.TwitchVideo]
-        if not users:
+        caches = sclient.sqldb.get_community_cache(NotifyCommunityType.TwitchVideo)
+        if not caches:
             return
         
-        cache_time_to_update:dict[str, str] = {}
-        for user in users:
-            cache_last_update_time = Jsondb.get_cache_time(JsonCacheType.TwitchVideo, user)
-            videos = tw_api.get_videos(user, after=cache_last_update_time)
+        update_data:dict[str, datetime] = {}
+        for user_id, cache in caches.items():
+            videos = tw_api.get_videos(user_id, after=cache.value)
             
             if videos:
                 videos.reverse()
-                cache_time_to_update[user] = videos[-1].created_at.isoformat()
+                update_data[user_id] = videos[-1].created_at
 
                 for video in videos:
                     embed = video.embed()
                     await self.bot.send_notify_communities(embed, NotifyCommunityType.TwitchVideo, video.user_id)
 
-        Jsondb.update_dict_cache(JsonCacheType.TwitchVideo, cache_time_to_update)
+        sclient.sqldb.set_community_cache(NotifyCommunityType.TwitchVideo, update_data)
 
     async def twitch_clip(self):
-        users = sclient.sqldb[NotifyCommunityType.TwitchClip]
-        if not users:
+        caches = sclient.sqldb.get_community_cache(NotifyCommunityType.TwitchClip)
+        if not caches:
             return
         
-        cache_time_to_update:dict[str, str] = {}
-        for user in users:
-            cache_last_update_time = Jsondb.get_cache_time(JsonCacheType.TwitchClip, user)
-            clips = tw_api.get_clips(user, started_at=cache_last_update_time)
+        update_data:dict[str, datetime] = {}
+        for user_id, cache in caches.items():
+            clips = tw_api.get_clips(user_id, started_at=cache.value)
             if clips: 
                 newest = clips[0].created_at
                 broadcaster_id = clips[0].broadcaster_id
@@ -193,9 +191,9 @@ class task(Cog_Extension):
                         embed = clip.embed(video)
                         await self.bot.send_notify_communities(embed, NotifyCommunityType.TwitchClip, broadcaster_id)
 
-                cache_time_to_update[broadcaster_id] = (newest + timedelta(seconds=1)).isoformat()
+                update_data[broadcaster_id] = (newest + timedelta(seconds=1))
 
-        Jsondb.update_dict_cache(JsonCacheType.TwitchClip, cache_time_to_update)
+        sclient.sqldb.set_community_cache(NotifyCommunityType.TwitchClip, update_data)
 
     async def youtube_video(self):
         ytchannels = sclient.sqldb[NotifyCommunityType.Youtube]
@@ -228,28 +226,27 @@ class task(Cog_Extension):
 
     async def twitter_tweets_rss(self):
         log.debug("twitter_tweets start")
-        users = sclient.sqldb[NotifyCommunityType.TwitterTweet]
-        if not users:
+        caches = sclient.sqldb.get_community_cache(NotifyCommunityType.TwitterTweet)
+        if not caches:
             return
-        cache_time_to_update:dict[str, str] = {}
-        for twitter_username in users:
-            log.debug(f"twitter_tweets: {twitter_username}")
-            cache_last_update_time = Jsondb.get_cache_time(JsonCacheType.TwitterTweet, twitter_username)
-            tweets = rss_hub.get_twitter(twitter_username, local=True, after=cache_last_update_time)
+        
+        update_data:dict[str, datetime] = {}
+        for user_name, cache in caches.items():
+            log.debug(f"twitter_tweets: {user_name}")
+            tweets = rss_hub.get_twitter(user_name, local=True, after=cache.value)
             log.debug(f"twitter_tweets data: {tweets}")
             if tweets:
                 newest = tweets[0].published_parsed
                 for tweet in tweets:
                     newest = tweet.published_parsed if tweet.published_parsed > newest else newest
-                    await self.bot.send_notify_communities(None, NotifyCommunityType.TwitterTweet, twitter_username, content=f"{tweet.author} 轉推了推文↩️\n{tweet.link}" if tweet.is_retweet else f"{tweet.author} 發布新推文\n{tweet.link}")
+                    await self.bot.send_notify_communities(None, NotifyCommunityType.TwitterTweet, user_name, content=f"{tweet.author} 轉推了推文↩️\n{tweet.link}" if tweet.is_retweet else f"{tweet.author} 發布新推文\n{tweet.link}")
 
-                cache_time_to_update[twitter_username] = (newest + timedelta(seconds=1)).isoformat()
+                update_data[user_name] = (newest + timedelta(seconds=1))
             elif tweets is None:
-                log.warning(f"twitter_tweets error / not found: {twitter_username}")
-                sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitterTweet, twitter_username)
+                log.warning(f"twitter_tweets error / not found: {user_name}")
+                sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitterTweet, user_name)
 
-
-        Jsondb.update_dict_cache(JsonCacheType.TwitterTweet, cache_time_to_update)
+        sclient.sqldb.set_community_cache(NotifyCommunityType.TwitterTweet, update_data)
 
     # async def get_mongodb_data(self):
     #     dbdata = mongedb.get_apidata()

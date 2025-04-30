@@ -853,7 +853,7 @@ class SQLTokensSystem(BaseSQLEngine):
         return self.session.exec(stmt).one()
     
 class SQLCacheSystem(BaseSQLEngine):
-    def set_community_cache(self, type:NotifyCommunityType, data:dict[str, datetime | None]):
+    def set_community_cache(self, type:NotifyCommunityType, data:dict[str, str | datetime | None]):
         for community_id, value in data.items():
             cache = CommunityCache(community_id=community_id, notify_type=type, value=value)
             if value is None:
