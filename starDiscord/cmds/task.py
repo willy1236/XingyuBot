@@ -123,28 +123,30 @@ class task(Cog_Extension):
         except RequestException:
             log.warning("連線失敗", exc_info=True)
 
-    #@tasks.loop(minutes=3)
     async def twitch_live(self):
         log.debug("twitch_live start")
-        users = sclient.sqldb[NotifyCommunityType.TwitchLive]
-        if not users:
+        caches = sclient.sqldb.get_community_cache(NotifyCommunityType.TwitchLive)
+        if not caches:
             return
         
-        twitch_cache = Jsondb.get_cache(JsonCacheType.TwitchLive) or {}
-        data = tw_api.get_lives(users)
+        users_id = [user_id for user_id in caches.keys()]
+        data = tw_api.get_lives(users_id)
         log.debug(f"twitch_live data: {data}")
-        for user in users:
-            user_cache:bool | None = twitch_cache.get(user)
-            
-            if data[user] and not user_cache:
-                twitch_cache[user] = True
-                embed = data[user].embed()
-                await self.bot.send_notify_communities(embed, NotifyCommunityType.TwitchLive, user)
+        update_data = {}
 
-            elif not data[user] and user_cache:
-                del twitch_cache[user]
+        for user_id in users_id:
+            if data[user_id] and not caches[user_id]:
+                # 直播開始
+                update_data[user_id] = data[user_id].started_at.isoformat()
 
-        Jsondb.write_cache(JsonCacheType.TwitchLive, twitch_cache)
+                embed = data[user_id].embed()
+                await self.bot.send_notify_communities(embed, NotifyCommunityType.TwitchLive, user_id)
+
+            elif not data[user_id] and caches[user_id]:
+                # 直播結束
+                update_data[user_id] = None
+
+        sclient.sqldb.set_community_cache(NotifyCommunityType.TwitchLive, update_data)
 
     async def twitch_video(self):
         users = sclient.sqldb[NotifyCommunityType.TwitchVideo]
@@ -153,16 +155,16 @@ class task(Cog_Extension):
         
         cache_time_to_update:dict[str, str] = {}
         for user in users:
-            videos = tw_api.get_videos(user)
             cache_last_update_time = Jsondb.get_cache_time(JsonCacheType.TwitchVideo, user)
-            if not cache_last_update_time or videos[0].created_at > cache_last_update_time:
+            videos = tw_api.get_videos(user, after=cache_last_update_time)
+            
+            if videos:
                 videos.reverse()
-                video_list = [d for d in videos if d.created_at > cache_last_update_time]
-                cache_time_to_update[user] = video_list[-1].created_at.isoformat()
+                cache_time_to_update[user] = videos[-1].created_at.isoformat()
 
-                for data in video_list:
-                    embed = data.embed()
-                    await self.bot.send_notify_communities(embed, NotifyCommunityType.TwitchVideo, data.user_id)
+                for video in videos:
+                    embed = video.embed()
+                    await self.bot.send_notify_communities(embed, NotifyCommunityType.TwitchVideo, video.user_id)
 
         Jsondb.update_dict_cache(JsonCacheType.TwitchVideo, cache_time_to_update)
 
@@ -175,13 +177,13 @@ class task(Cog_Extension):
         for user in users:
             cache_last_update_time = Jsondb.get_cache_time(JsonCacheType.TwitchClip, user)
             clips = tw_api.get_clips(user, started_at=cache_last_update_time)
-            if clips:
+            if clips: 
                 newest = clips[0].created_at
                 broadcaster_id = clips[0].broadcaster_id
                 
                 # 取得剪輯的來源影片（直播）
                 videos_dict = {clip.video_id: None for clip in clips}
-                api_video = tw_api.get_videos(ids=list(videos_dict.keys()))
+                api_video = tw_api.get_videos(video_ids=list(videos_dict.keys()))
                 videos_dict = {video.id: video for video in api_video}
 
                 for clip in clips:

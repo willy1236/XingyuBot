@@ -374,7 +374,15 @@ class SQLNotifySystem(BaseSQLEngine):
         
         community_type = notify_to_community_map.get(notify_type)
         if community_type is not None:
-            self.remove_community(community_type, community_id)
+            stmt = select(func.count()).where(NotifyCommunity.community_type == community_type, NotifyCommunity.community_id == community_id)
+            count = self.session.exec(stmt).one()
+            if not count:
+                stmt = delete(Community).where(Community.id == community_id, Community.type == community_type)
+                self.session.exec(stmt)
+                
+                stmt = delete(CommunityCache).where(CommunityCache.community_id == community_id, CommunityCache.notify_type == notify_type)
+                self.session.exec(stmt)
+                self.session.commit()
         
         if self.cache.get(notify_type):
             self.cache[notify_type].remove(community_id)
@@ -427,15 +435,6 @@ class SQLNotifySystem(BaseSQLEngine):
         statement = select(func.count()).where(NotifyCommunity.notify_type == notify_type, NotifyCommunity.community_id == community_id)
         result = self.session.exec(statement).one()
         return result
-
-    def remove_community(self, community_type:CommunityType, community_id:str):
-        """在沒有設定任何通知下移除社群"""
-        statement = select(func.count()).where(NotifyCommunity.community_type == community_type, NotifyCommunity.community_id == community_id)
-        result = self.session.exec(statement).one()
-        if not result:
-            statement = delete(Community).where(Community.id == community_id, Community.type == community_type)
-            self.session.exec(statement)
-            self.session.commit()
 
     def get_expired_push_records(self):
         now = datetime.now()
@@ -852,6 +851,21 @@ class SQLTokensSystem(BaseSQLEngine):
     def get_bot_token(self, type:CommunityType):
         stmt = select(BotToken).where(OAuth2Token.type == type).limit(1)
         return self.session.exec(stmt).one()
+    
+class SQLCacheSystem(BaseSQLEngine):
+    def set_community_cache(self, type:NotifyCommunityType, data:dict[str, str]):
+        for community_id, value in data.items():
+            cache = CommunityCache(community_id=community_id, type=type, data=value)
+            if value is None:
+                self.session.delete(cache)
+            else:
+                self.session.merge(cache)
+        self.session.commit()
+
+    def get_community_cache(self, type:NotifyCommunityType):
+        stmt = select(NotifyCommunity.community_id, CommunityCache).select_from(NotifyCommunity).join(CommunityCache, NotifyCommunity.community_id == CommunityCache.community_id, isouter=True).where(NotifyCommunity.notify_type == type)
+        result = self.session.exec(stmt).all()
+        return {i[0]: i[1] for i in result}
 
 class SQLTest(BaseSQLEngine):
     pass
@@ -1071,6 +1085,7 @@ class SQLEngine(
     SQLTRPGSystem,
     SQLBackupSystem,
     SQLTokensSystem,
+    SQLCacheSystem,
     SQLTest,
     ):
     """SQL引擎"""

@@ -46,3 +46,6 @@ class TokensSchema(BaseSchema):
 
 class UserSchema(BaseSchema):
     __table_args__ = {'schema': 'stardb_user'}
+
+class CacheSchema(BaseSchema):
+    __table_args__ = {'schema': 'stardb_cache'}

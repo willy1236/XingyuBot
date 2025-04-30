@@ -435,6 +435,14 @@ class BotToken(TokensSchema, table=True):
     callback_uri: str | None
     expires_at: datetime | None = Field(sa_column=Column(TIMESTAMP(True, 0)))
 
+class CommunityCache(CacheSchema, table=True):
+    """社群快取資料表"""
+    __tablename__ = "community_cache"
+
+    notify_type: NotifyCommunityType = Field(sa_column=Column(Integer, primary_key=True))
+    community_id: str = Field(primary_key=True)
+    value: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
+    
 
 class WarningList(ListObject[UserModerate]):
     if TYPE_CHECKING:
