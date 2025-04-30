@@ -443,6 +443,12 @@ class CommunityCache(CacheSchema, table=True):
     community_id: str = Field(primary_key=True)
     value: datetime | None = Field(sa_column=Column(TIMESTAMP(True, 0), nullable=True))
     
+class NotifyCache(CacheSchema, table=True):
+    """通知快取資料表"""
+    __tablename__ = "notify_cache"
+
+    notify_type: NotifyChannelType = Field(sa_column=Column(Integer, primary_key=True))
+    value: datetime | None = Field(sa_column=Column(TIMESTAMP(True, 0), nullable=True))
 
 class WarningList(ListObject[UserModerate]):
     if TYPE_CHECKING:

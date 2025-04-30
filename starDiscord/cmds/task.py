@@ -66,7 +66,8 @@ class task(Cog_Extension):
             scheduler.start()
 
     async def earthquake_check(self):
-        timefrom = Jsondb.get_cache(JsonCacheType.EarthquakeTimeFrom)
+        cache = sclient.sqldb.get_notify_cache(NotifyChannelType.MajorQuakeNotifications)
+        timefrom = cache.value if cache else datetime.now(tz) - timedelta(days=1)
         try:
             earthquake_records = cwa_api.get_earthquake_report_auto(timefrom, True)
         except ConnectTimeout:
@@ -86,7 +87,7 @@ class task(Cog_Extension):
                 await self.bot.send_notify_channel(data.embed(), NotifyChannelType.SlightQuakeNotifications, "小區域地震報告")
         
         timefrom = earthquake_records[-1].originTime + timedelta(seconds=1)
-        Jsondb.write_cache(JsonCacheType.EarthquakeTimeFrom, timefrom.strftime("%Y-%m-%dT%H:%M:%S"))
+        sclient.sqldb.set_notify_cache(NotifyChannelType.MajorQuakeNotifications, timefrom)
 
     async def weather_check(self):
         weather = cwa_api.get_weather_data()[0]
@@ -102,13 +103,13 @@ class task(Cog_Extension):
         if not apidatas:
             return
         
-        timefrom = Jsondb.get_cache(JsonCacheType.WeatherWarning)
-        report_time = datetime.fromisoformat(timefrom) if timefrom else datetime.now(tz) - timedelta(days=1)
+        cache = sclient.sqldb.get_notify_cache(NotifyChannelType.WeatherWarning)
+        report_time = cache.value if cache else datetime.now(tz) - timedelta(days=1)
         datas = [i for i in apidatas if i.datasetInfo.issueTime > report_time]
         for data in datas:
             report_time = data.datasetInfo.issueTime
             await self.bot.send_notify_channel(data.embed(), NotifyChannelType.WeatherWarning)
-        Jsondb.write_cache(JsonCacheType.WeatherWarning, report_time.isoformat())
+        sclient.sqldb.set_notify_cache(NotifyChannelType.WeatherWarning, report_time)
 
     async def forecast_update(self):
         forecast = cwa_api.get_forecast()
@@ -146,7 +147,7 @@ class task(Cog_Extension):
                 # 直播結束
                 update_data[user_id] = None
 
-        sclient.sqldb.set_community_cache(NotifyCommunityType.TwitchLive, update_data)
+        sclient.sqldb.set_community_caches(NotifyCommunityType.TwitchLive, update_data)
 
     async def twitch_video(self):
         caches = sclient.sqldb.get_community_caches(NotifyCommunityType.TwitchVideo)
@@ -165,7 +166,7 @@ class task(Cog_Extension):
                     embed = video.embed()
                     await self.bot.send_notify_communities(embed, NotifyCommunityType.TwitchVideo, video.user_id)
 
-        sclient.sqldb.set_community_cache(NotifyCommunityType.TwitchVideo, update_data)
+        sclient.sqldb.set_community_caches(NotifyCommunityType.TwitchVideo, update_data)
 
     async def twitch_clip(self):
         caches = sclient.sqldb.get_community_caches(NotifyCommunityType.TwitchClip)
@@ -193,7 +194,7 @@ class task(Cog_Extension):
 
                 update_data[broadcaster_id] = (newest + timedelta(seconds=1))
 
-        sclient.sqldb.set_community_cache(NotifyCommunityType.TwitchClip, update_data)
+        sclient.sqldb.set_community_caches(NotifyCommunityType.TwitchClip, update_data)
 
     async def youtube_video(self):
         caches = sclient.sqldb.get_community_caches(NotifyCommunityType.Youtube)
@@ -221,7 +222,7 @@ class task(Cog_Extension):
                 if video.liveStreamingDetails and video.liveStreamingDetails.scheduledStartTime:
                     scheduler.add_job(self.test_one_times_job, DateTrigger(video.liveStreamingDetails.scheduledStartTime + timedelta(seconds=30)), args=[video])
 
-        sclient.sqldb.set_community_cache(NotifyCommunityType.Youtube, update_data)
+        sclient.sqldb.set_community_caches(NotifyCommunityType.Youtube, update_data)
 
     async def twitter_tweets_rss(self):
         log.debug("twitter_tweets start")
@@ -245,7 +246,7 @@ class task(Cog_Extension):
                 log.warning(f"twitter_tweets error / not found: {user_name}")
                 sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitterTweet, user_name)
 
-        sclient.sqldb.set_community_cache(NotifyCommunityType.TwitterTweet, update_data)
+        sclient.sqldb.set_community_caches(NotifyCommunityType.TwitterTweet, update_data)
 
     # async def get_mongodb_data(self):
     #     dbdata = mongedb.get_apidata()

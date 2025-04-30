@@ -5,9 +5,9 @@ from discord.commands import SlashCommandGroup
 from tweepy.errors import TooManyRequests
 
 from starlib import BotEmbed, ChoiceList, Jsondb, sclient, tz
-from starlib.dataExtractor import TwitchAPI, YoutubeAPI, YoutubeRSS
+from starlib.dataExtractor import TwitchAPI, YoutubeAPI
 from starlib.models.mysql import Community
-from starlib.types import CommunityType, JsonCacheType, NotifyCommunityType
+from starlib.types import CommunityType, NotifyCommunityType
 from starlib.instance import twitter_api
 
 from ..extension import Cog_Extension

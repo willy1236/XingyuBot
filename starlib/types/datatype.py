@@ -24,7 +24,7 @@ class NotifyChannelType(IntEnum):
 
 class DBCacheType(Enum):
     Notify_channel = "notify_channel"
-    Notify_community = "notify_community"
+    DynamicVoiceRoom = "dynamic_voice_room"
 
     @classmethod
     def map(cls, key: IntEnum):
@@ -32,7 +32,6 @@ class DBCacheType(Enum):
 
 cache_dict = {
     NotifyChannelType: DBCacheType.Notify_channel,
-    NotifyCommunityType: DBCacheType.Notify_community
 }
 
 class GameType(IntEnum):

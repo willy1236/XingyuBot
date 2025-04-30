@@ -12,12 +12,12 @@ from sqlalchemy.orm import sessionmaker
 from sqlmodel import Session, SQLModel, create_engine, select, update
 
 from starlib.models.mysql import Community, NotifyCommunity
-from ..models.sqlSchema import Base
 
 from ..errors import *
 from ..fileDatabase import Jsondb
 from ..models.mysql import *
 from ..models.rpg import *
+from ..models.sqlSchema import Base
 from ..settings import tz
 from ..types import *
 from ..utils import log
@@ -27,7 +27,8 @@ SQLsettings = Jsondb.config["SQLsettings"]
 O = TypeVar("O")
 class DBCache:
     def __init__(self):
-        self.cache = {i.value: dict() for i in DBCacheType}
+        # 為 DBCacheType 定義的所有類型建立快取
+        self.cache = {i.value: None for i in DBCacheType}
 
     def __setitem__(self, key, value):
         cache_key = DBCacheType.map(key)
@@ -53,10 +54,6 @@ class DBCache:
     @overload
     def __getitem__(self, key:NotifyChannelType) -> dict[int, tuple[int, Optional[int]]]:
         ...
-    @overload
-    def __getitem__(self, key:NotifyCommunityType) -> list[str]:
-        ...
-
     def __getitem__(self, key):
         try:
             cache_key = DBCacheType.map(key)
@@ -857,7 +854,7 @@ class SQLTokensSystem(BaseSQLEngine):
         return self.session.exec(stmt).one()
     
 class SQLCacheSystem(BaseSQLEngine):
-    def set_community_cache(self, type:NotifyCommunityType, data:dict[str, datetime | None]):
+    def set_community_caches(self, type:NotifyCommunityType, data:dict[str, datetime | None]):
         """批量設定社群快取"""
         for community_id, value in data.items():
             cache = CommunityCache(community_id=community_id, notify_type=type, value=value)
@@ -865,6 +862,15 @@ class SQLCacheSystem(BaseSQLEngine):
                 self.session.exec(delete(CommunityCache).where(CommunityCache.community_id == community_id, CommunityCache.notify_type == type))
             else:
                 self.session.merge(cache)
+        self.session.commit()
+
+    def set_community_cache(self, type:NotifyCommunityType, community_id:str, value:datetime | None):
+        """設定社群快取"""
+        if value is None:
+            self.session.exec(delete(CommunityCache).where(CommunityCache.community_id == community_id, CommunityCache.notify_type == type))
+        else:
+            cache = CommunityCache(community_id=community_id, notify_type=type, value=value)
+            self.session.merge(cache)
         self.session.commit()
 
     def add_community_cache(self, type:NotifyCommunityType, community_id:str, value:datetime | None):
@@ -876,10 +882,31 @@ class SQLCacheSystem(BaseSQLEngine):
         except IntegrityError:
             self.session.rollback()
 
+    def get_community_cache(self, type:NotifyCommunityType, community_id:str):
+        """取得社群快取"""
+        stmt = select(CommunityCache).where(CommunityCache.notify_type == type, CommunityCache.community_id == community_id)
+        result = self.session.exec(stmt).one_or_none()
+        return result
+    
     def get_community_caches(self, type:NotifyCommunityType):
         stmt = select(NotifyCommunity.community_id, CommunityCache).select_from(NotifyCommunity).join(CommunityCache, NotifyCommunity.community_id == CommunityCache.community_id, isouter=True).where(NotifyCommunity.notify_type == type)
         result = self.session.exec(stmt).all()
         return {i[0]: i[1] for i in result}
+    
+    def set_notify_cache(self, type:NotifyChannelType, value:datetime | None):
+        """設定通知快取"""
+        if value is None:
+            self.session.exec(delete(NotifyCache).where(NotifyCache.notify_type == type))
+        else:
+            cache = NotifyCache(notify_type=type, value=value)
+            self.session.merge(cache)
+        self.session.commit()
+
+    def get_notify_cache(self, type:NotifyChannelType):
+        """取得通知快取"""
+        stmt = select(NotifyCache).where(NotifyCache.notify_type == type)
+        result = self.session.exec(stmt).one_or_none()
+        return result
 
 class SQLTest(BaseSQLEngine):
     pass
@@ -1105,18 +1132,17 @@ class SQLEngine(
     """SQL引擎"""
 
     dict_type = [NotifyChannelType.DynamicVoice, NotifyChannelType.VoiceLog]
-    list_type = ["dynamic_voice_room"]
+    list_type = [DBCacheType.DynamicVoiceRoom]
 
-    def init_notify(self):
+    def init_cache(self):
         for t in self.dict_type:
             self.update_notify_channel(t)
 
         for t in self.list_type:
-            if t == "dynamic_voice_room":
+            if t == DBCacheType.DynamicVoiceRoom:
                 self.cache[t] = self.get_all_dynamic_voice()
-    
-        self.update_notify_community()
-        log.debug("dbcache: notify init.")
+
+        log.debug("dbcache: init.")
     
     def __getitem__(self, key):
         return self.cache[key]
@@ -1132,16 +1158,6 @@ class SQLEngine(
         if notify_type not in self.dict_type:
             raise KeyError(f"Not implemented notify type: {notify_type}")
         self.cache[notify_type] = self.get_notify_channel_rawdict(notify_type)
-
-    def update_notify_community(self, notify_type:NotifyCommunityType=None):
-        """更新社群通知"""
-        if notify_type:
-            if notify_type not in NotifyCommunityType:
-                raise KeyError(f"Not implemented notify type: {notify_type}")
-            self.cache[notify_type] = self.get_notify_community_rawlist(notify_type)
-        else:
-            for t in NotifyCommunityType:
-                self.cache[t] = self.get_notify_community_rawlist(t)
     
     def update_dynamic_voice(self,add_channel=None,remove_channel=None):
         """更新動態語音頻道"""

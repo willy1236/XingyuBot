@@ -148,5 +148,3 @@ from tweepy import API, Client, OAuth2BearerHandler, Tweet
 #     print(type(tweet))
 #     print(tweet.id, tweet.text, tweet.created_at, tweet.attachments, tweet.entities, tweet.public_metrics, tweet.context_annotations, tweet.geo, tweet.in_reply_to_user_id, tweet.referenced_tweets, tweet.source)
 
-print(sclient.sqldb.get_community_caches(NotifyCommunityType.TwitchLive))
-sclient.sqldb.set_community_cache(NotifyCommunityType.TwitchLive, {"test": None})
