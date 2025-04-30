@@ -324,6 +324,12 @@ class YoutubeVideo(BaseModel):
         embed.set_image(url=self.snippet.thumbnails.high.url)
         return embed
 
+    @property
+    def is_live_end(self) -> bool:
+        if self.liveStreamingDetails and self.liveStreamingDetails.actualEndTime:
+            return True
+        return False
+
 class YoutubeRSSVideo(BaseModel):
     model_config = ConfigDict(extra='ignore')
 

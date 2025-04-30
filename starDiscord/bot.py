@@ -96,7 +96,7 @@ class DiscordBot(discord.Bot):
         embed.timestamp = msg.created_at
         await dm_channel.send(embed=embed)
 
-    async def send_notify_communities(self, embed:discord.Embed, notify_type:NotifyCommunityType, community_id:str, content:str=None):
+    async def send_notify_communities(self, embed:discord.Embed, notify_type:NotifyCommunityType, community_id:str, content:str=None, no_mention:bool=False):
         guilds = sqldb.get_notify_community_guild(notify_type.value, community_id)
         log.debug(f"{notify_type} guilds: {guilds}")
         for guildid in guilds:
@@ -104,7 +104,7 @@ class DiscordBot(discord.Bot):
             if channel:
                 text = content or guilds[guildid][2]
                 role = channel.guild.get_role(guilds[guildid][1])
-                if role:
+                if role and not no_mention:
                     text = f'{role.mention} {text}' if text is not None else f'{role.mention}'
                     
                 log.debug(f"send_notify_communities: {guildid}/{guilds[guildid][0]}: {text}")

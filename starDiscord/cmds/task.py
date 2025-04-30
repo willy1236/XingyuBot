@@ -196,33 +196,32 @@ class task(Cog_Extension):
         sclient.sqldb.set_community_cache(NotifyCommunityType.TwitchClip, update_data)
 
     async def youtube_video(self):
-        ytchannels = sclient.sqldb[NotifyCommunityType.Youtube]
-        if not ytchannels:
+        caches = sclient.sqldb.get_community_caches(NotifyCommunityType.Youtube)
+        if not caches:
             return
         
-        cache_time_to_update:dict[str, str] = {}
-        for ytchannel_id in ytchannels:
+        update_data:dict[str, datetime] = {}
+        for ytchannel_id, cache in caches.items():
             #抓取資料
-            cache_last_update_time = Jsondb.get_cache_time(JsonCacheType.YoutubeVideo, ytchannel_id)
-            rss_data = yt_rss.get_videos(ytchannel_id, cache_last_update_time)
+            rss_data = yt_rss.get_videos(ytchannel_id, cache.value)
             if not rss_data:
                 continue
 
             #整理影片列表&儲存最後更新時間
             rss_data.reverse()
             video_id_list = [d.yt_videoid for d in rss_data]
-            cache_time_to_update[ytchannel_id] = rss_data[-1].uplood_at.isoformat()
+            update_data[ytchannel_id] = rss_data[-1].uplood_at
 
             api_videos = yt_api.get_video(video_id_list)
             #發布通知
             for video in api_videos:
                 embed = video.embed()
-                await self.bot.send_notify_communities(embed, NotifyCommunityType.Youtube, ytchannel_id)
+                await self.bot.send_notify_communities(embed, NotifyCommunityType.Youtube, ytchannel_id, no_mention=video.is_live_end)
                 
                 if video.liveStreamingDetails and video.liveStreamingDetails.scheduledStartTime:
                     scheduler.add_job(self.test_one_times_job, DateTrigger(video.liveStreamingDetails.scheduledStartTime + timedelta(seconds=30)), args=[video])
 
-        Jsondb.update_dict_cache(JsonCacheType.YoutubeVideo, cache_time_to_update)
+        sclient.sqldb.set_community_cache(NotifyCommunityType.Youtube, update_data)
 
     async def twitter_tweets_rss(self):
         log.debug("twitter_tweets start")

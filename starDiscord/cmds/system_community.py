@@ -143,16 +143,12 @@ class system_community(Cog_Extension):
 
         ytchannel = YoutubeAPI().get_channel(handle=ythandle)
         if ytchannel:
-            sclient.sqldb.add_notify_community(NotifyCommunityType.Youtube, ytchannel.id, CommunityType.Youtube, guildid, channelid, roleid, msg)
+            sclient.sqldb.add_notify_community(NotifyCommunityType.Youtube, ytchannel.id, CommunityType.Youtube, guildid, channelid, roleid, msg, cache_time=datetime.now(tz=tz))
             sclient.sqldb.merge(Community(id=ytchannel.id, type=CommunityType.Youtube, name=ytchannel.snippet.title))
             if role:
                 await ctx.respond(f'設定成功：{ytchannel.snippet.title}的通知將會發送在{channel.mention}並會通知{role.mention}')
             else:
                 await ctx.respond(f'設定成功：{ytchannel.snippet.title}的通知將會發送在{channel.mention}')
-
-            feed = YoutubeRSS().get_videos(ytchannel.id)
-            updated_at = feed[0].updated_at.isoformat() if feed else datetime.now(tz=tz).isoformat(timespec="seconds")
-            Jsondb.set_cache(JsonCacheType.YoutubeVideo, ytchannel.id, updated_at)
             
             if not channel.can_send():
                 await ctx.send(embed=BotEmbed.simple('溫馨提醒',f'我無法在{channel.mention}中發送訊息，請確認我有足夠的權限'))
@@ -170,11 +166,6 @@ class system_community(Cog_Extension):
 
         sclient.sqldb.remove_notify_community(NotifyCommunityType.Youtube, ytchannel.id, guildid)
         await ctx.respond(f'已移除頻道 {ytchannel.snippet.title} 的通知')
-        
-        sclient.sqldb.update_notify_community(NotifyCommunityType.Youtube)
-
-        if not sclient.sqldb.get_notify_community_count(NotifyCommunityType.Youtube, ytchannel.id):
-            Jsondb.remove_cache(JsonCacheType.YoutubeVideo, ytchannel.id)
 
     @youtube.command(description='確認youtube通知')
     async def notify(self,ctx,ythandle:discord.Option(str,required=True,name='youtube帳號代碼',description="youtube頻道中以@開頭的代號")):
