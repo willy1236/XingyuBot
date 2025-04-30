@@ -441,7 +441,7 @@ class CommunityCache(CacheSchema, table=True):
 
     notify_type: NotifyCommunityType = Field(sa_column=Column(Integer, primary_key=True))
     community_id: str = Field(primary_key=True)
-    value: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
+    value: datetime | None = Field(sa_column=Column(TIMESTAMP(True, 0), nullable=True))
     
 
 class WarningList(ListObject[UserModerate]):
