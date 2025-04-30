@@ -28,7 +28,7 @@ O = TypeVar("O")
 class DBCache:
     def __init__(self):
         # 為 DBCacheType 定義的所有類型建立快取
-        self.cache = {i.value: dict for i in DBCacheType}
+        self.cache = {i.value: dict() for i in DBCacheType}
 
     def __setitem__(self, key, value):
         cache_key = DBCacheType.map(key)
