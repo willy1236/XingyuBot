@@ -299,6 +299,12 @@ class Post(AlchemyBasicSchema):
     # 建立反向關聯
     user:User = relationship(back_populates="posts", init=False)
 
+class ServerConfig(BasicSchema, table=False):
+    __tablename__ = "server_config"
+
+    guild_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
+    timeout_after_warning_times: int | None = Field(default=0)
+
 class Party(IdbaseSchema, table=True):
     __tablename__ = "party_datas"
 

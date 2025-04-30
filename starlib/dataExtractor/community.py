@@ -344,12 +344,16 @@ class YoutubeAPI():
             return None
 
 class YoutubeRSS():
-    def get_videos(self,channel_id) -> list[YoutubeRSSVideo]:
+    def get_videos(self,channel_id, after:datetime=None) -> list[YoutubeRSSVideo]:
         """從RSS取得影片（由新到舊）"""
         feed = feedparser.parse(f'https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}')
         # for entry in feed['entries']:
         #     print(entry)
-        return [YoutubeRSSVideo(**i) for i in feed['entries']]
+        results = [YoutubeRSSVideo(**i) for i in feed['entries']]
+        if after:
+            return [i for i in results if i.uplood_at > after]
+        else:
+            return results
     
 class YoutubePush:
     def __init__(self):

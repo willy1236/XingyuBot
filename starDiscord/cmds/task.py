@@ -203,26 +203,24 @@ class task(Cog_Extension):
         cache_time_to_update:dict[str, str] = {}
         for ytchannel_id in ytchannels:
             #抓取資料
-            rss_data = yt_rss.get_videos(ytchannel_id)
+            cache_last_update_time = Jsondb.get_cache_time(JsonCacheType.YoutubeVideo, ytchannel_id)
+            rss_data = yt_rss.get_videos(ytchannel_id, cache_last_update_time)
             if not rss_data:
                 continue
 
-            cache_last_update_time = Jsondb.get_cache_time(JsonCacheType.YoutubeVideo, ytchannel_id)
-            #判斷是否有更新
-            if not cache_last_update_time or rss_data[0].uplood_at > cache_last_update_time:
-                #整理影片列表&儲存最後更新時間
-                rss_data.reverse()
-                video_id_list = [d.yt_videoid for d in rss_data if d.uplood_at > cache_last_update_time]
-                cache_time_to_update[ytchannel_id] = rss_data[-1].uplood_at.isoformat()
+            #整理影片列表&儲存最後更新時間
+            rss_data.reverse()
+            video_id_list = [d.yt_videoid for d in rss_data]
+            cache_time_to_update[ytchannel_id] = rss_data[-1].uplood_at.isoformat()
 
-                api_videos = yt_api.get_video(video_id_list)
-                #發布通知
-                for video in api_videos:
-                    embed = video.embed()
-                    await self.bot.send_notify_communities(embed, NotifyCommunityType.Youtube, ytchannel_id)
-                    
-                    if video.liveStreamingDetails and video.liveStreamingDetails.scheduledStartTime:
-                        scheduler.add_job(self.test_one_times_job, DateTrigger(video.liveStreamingDetails.scheduledStartTime + timedelta(seconds=30)), args=[video])
+            api_videos = yt_api.get_video(video_id_list)
+            #發布通知
+            for video in api_videos:
+                embed = video.embed()
+                await self.bot.send_notify_communities(embed, NotifyCommunityType.Youtube, ytchannel_id)
+                
+                if video.liveStreamingDetails and video.liveStreamingDetails.scheduledStartTime:
+                    scheduler.add_job(self.test_one_times_job, DateTrigger(video.liveStreamingDetails.scheduledStartTime + timedelta(seconds=30)), args=[video])
 
         Jsondb.update_dict_cache(JsonCacheType.YoutubeVideo, cache_time_to_update)
 
