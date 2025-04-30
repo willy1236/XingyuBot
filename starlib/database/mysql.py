@@ -28,7 +28,7 @@ O = TypeVar("O")
 class DBCache:
     def __init__(self):
         # 為 DBCacheType 定義的所有類型建立快取
-        self.cache = {i.value: None for i in DBCacheType}
+        self.cache = {i.value: dict for i in DBCacheType}
 
     def __setitem__(self, key, value):
         cache_key = DBCacheType.map(key)
@@ -1132,14 +1132,14 @@ class SQLEngine(
     """SQL引擎"""
 
     dict_type = [NotifyChannelType.DynamicVoice, NotifyChannelType.VoiceLog]
-    list_type = [DBCacheType.DynamicVoiceRoom]
+    list_type = ["dynamic_voice_room"]
 
     def init_cache(self):
         for t in self.dict_type:
             self.update_notify_channel(t)
 
         for t in self.list_type:
-            if t == DBCacheType.DynamicVoiceRoom:
+            if t == "dynamic_voice_room":
                 self.cache[t] = self.get_all_dynamic_voice()
 
         log.debug("dbcache: init.")

@@ -24,7 +24,6 @@ class NotifyChannelType(IntEnum):
 
 class DBCacheType(Enum):
     Notify_channel = "notify_channel"
-    DynamicVoiceRoom = "dynamic_voice_room"
 
     @classmethod
     def map(cls, key: IntEnum):
