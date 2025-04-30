@@ -54,7 +54,7 @@ class system_community(Cog_Extension):
                 await ctx.respond(f'設定成功：{user.display_name}({user.login})的{type_tw}將會發送在{channel.mention}')
             
             if not channel.can_send():
-                    await ctx.send(embed=BotEmbed.simple('溫馨提醒',f'我無法在{channel.mention}中發送訊息，請確認我有足夠的權限'))
+                await ctx.send(embed=BotEmbed.simple('溫馨提醒',f'我無法在{channel.mention}中發送訊息，請確認我有足夠的權限'))
 
         else:
             await ctx.respond(f'錯誤：找不到用戶 {twitch_user}')
@@ -168,12 +168,12 @@ class system_community(Cog_Extension):
             else:
                 await ctx.respond(f'設定成功：{ytchannel.snippet.title}的通知將會發送在{channel.mention}')
 
-            if not channel.can_send():
-                    await ctx.send(embed=BotEmbed.simple('溫馨提醒',f'我無法在{channel.mention}中發送訊息，請確認我有足夠的權限'))
-
             feed = YoutubeRSS().get_videos(ytchannel.id)
-            updated_at = feed[0].updated_at.isoformat() if feed else None
+            updated_at = feed[0].updated_at.isoformat() if feed else datetime.now(tz=tz).isoformat(timespec="seconds")
             Jsondb.set_cache(JsonCacheType.YoutubeVideo, ytchannel.id, updated_at)
+            
+            if not channel.can_send():
+                await ctx.send(embed=BotEmbed.simple('溫馨提醒',f'我無法在{channel.mention}中發送訊息，請確認我有足夠的權限'))
         else:
             await ctx.respond(f'錯誤：找不到帳號代碼 {ythandle} 的頻道')
 
@@ -258,13 +258,13 @@ class system_community(Cog_Extension):
         if role:
             await ctx.respond(f'設定成功：{api_twitter_user.data.name}的通知將會發送在{channel.mention}並會通知{role.mention}')
         else:
-            await ctx.respond(f'設定成功：{api_twitter_user.data.name}的通知將會發送在{channel.mention}')
-
-        if not channel.can_send():
-            await ctx.send(embed=BotEmbed.simple('溫馨提醒',f'我無法在{channel.mention}中發送訊息，請確認我有足夠的權限'))
+            await ctx.respond(f'設定成功：{api_twitter_user.data.name}的通知將會發送在{channel.mention}')        
 
         time_str = datetime.now(tz).isoformat()
         Jsondb.set_cache(JsonCacheType.TwitterTweet, api_twitter_user.data.username, time_str)
+
+        if not channel.can_send():
+            await ctx.send(embed=BotEmbed.simple('溫馨提醒',f'我無法在{channel.mention}中發送訊息，請確認我有足夠的權限'))
 
     @twitter.command(description='移除x/twitter通知')
     async def remove(self,ctx,twitter_user:discord.Option(str,required=True,name='twitter用戶',description='使用者名稱')):
