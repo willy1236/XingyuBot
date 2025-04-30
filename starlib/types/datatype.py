@@ -14,13 +14,14 @@ class NotifyChannelType(IntEnum):
     MajorQuakeNotifications = 3
     WeatherForecast = 4
     ApexRotation = 5
-    AdminChannel = 6
+    JoinLog = 6
     MemberJoin = 7
     MemberLeave = 8
     DynamicVoice = 9
     VoiceLog = 10
     WeatherWarning = 11
     SlightQuakeNotifications = 12
+    LeaveLog = 13
 
 class DBCacheType(Enum):
     Notify_channel = "notify_channel"

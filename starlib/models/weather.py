@@ -47,6 +47,11 @@ class EarthquakeReport(BaseModel):
                 dct[d['AreaDesc']] = d['CountyName']
         data['intensity_dict'] = dct
         return data
+    
+    @model_validator(mode='after')
+    def __post_init__(self):
+        self.originTime = self.originTime.astimezone(tz=tz)
+        return self
 
     @property
     def is_significant(self):

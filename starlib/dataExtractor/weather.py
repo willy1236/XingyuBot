@@ -27,7 +27,7 @@ class CWA_API():
         else:
             return None
 
-    def get_earthquake_report_auto(self,timeFrom=None, only_significant=False)-> list[EarthquakeReport]:
+    def get_earthquake_report_auto(self,timeFrom:str=None, only_significant=False)-> list[EarthquakeReport]:
         params = {
             'Authorization': self.auth,
             'timeFrom': timeFrom

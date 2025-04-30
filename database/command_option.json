@@ -1,5 +1,4 @@
 {
-    "last_update": "2024-11-19",
     "channel_set_option": {
         "1": {
             "en-US": "All Announcements",
@@ -30,8 +29,12 @@
             "zh-TW": "Apex地圖輪替"
         },
         "6": {
-            "en-US": "Admin Channel",
-            "zh-TW": "管理員專用頻道"
+            "en-US": "Member Join Log",
+            "zh-TW": "成員加入日誌"
+        },
+        "13":{
+            "en-US": "Member Leave Log",
+            "zh-TW": "成員離開日誌"
         },
         "7": {
             "en-US": "Member Join",

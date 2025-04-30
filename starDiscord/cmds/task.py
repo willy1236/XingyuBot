@@ -69,7 +69,7 @@ class task(Cog_Extension):
         cache = sclient.sqldb.get_notify_cache(NotifyChannelType.MajorQuakeNotifications)
         timefrom = cache.value if cache else datetime.now(tz) - timedelta(days=1)
         try:
-            earthquake_records = cwa_api.get_earthquake_report_auto(timefrom, True)
+            earthquake_records = cwa_api.get_earthquake_report_auto(timefrom.strftime("%Y-%m-%dT%H:%M:%S"), True)
         except ConnectTimeout:
             log.warning("earthquake_check timeout.")
             return

@@ -345,6 +345,17 @@ class event(Cog_Extension):
             text = dbdata.message.replace('{member}', member.mention).replace('{guild}', member.guild.name) if dbdata.message else f'{member.mention} ({username}) 離開了我們'
             await self.bot.get_channel(dbdata.channel_id).send(text)
 
+        # 離開日誌
+        notify_data = sclient.sqldb.get_notify_channel(guildid, NotifyChannelType.LeaveLog)
+        log_channel_id = notify_data.channel_id if notify_data else None
+        if log_channel_id:        
+            channel = self.bot.get_channel(log_channel_id)
+            description = f"{member.mention} 離開了伺服器"
+            description += f"\n身分組：{', '.join([r.mention for r in member.roles if not r.is_default()])}"
+            description += f"\n加入時長：{(datetime.now() - member.joined_at)}"
+            embed = BotEmbed.general(name=member.name, title="成員離開", description=description, color=0x4aa0b5)
+            channel.send(embed=embed)
+
     @commands.Cog.listener()
     async def on_member_join(self, member:discord.Member):
         if debug_mode:
@@ -359,15 +370,16 @@ class event(Cog_Extension):
             text = dbdata.message.replace('{member}', member.mention).replace('{guild}', member.guild.name) if dbdata.message else f'{member.mention} ({username}) 加入了我們'
             await self.bot.get_channel(dbdata.channel_id).send(text)
 
-        #警告系統：管理員通知
-        notice_data = sclient.sqldb.get_notify_channel(guildid, NotifyChannelType.AdminChannel)
-        mod_channel_id = notice_data.channel_id if notice_data else None
-        if mod_channel_id:
+        #加入日誌 / 警告系統：管理員通知
+        notify_data = sclient.sqldb.get_notify_channel(guildid, NotifyChannelType.JoinLog)
+        log_channel_id = notify_data.channel_id if notify_data else None
+        if log_channel_id:
             dbdata = sclient.sqldb.get_warnings_count(member.id)
-
-            if dbdata:
-                channel = self.bot.get_channel(mod_channel_id)
-                channel.send(f"新成員{member.mention}({member.id}) 共有 {dbdata} 筆紀錄")
+            description = f"{member.mention} ({member.id})\n共有 {dbdata} 筆跨群紀錄" if dbdata else f"{member.mention} 加入了伺服器"
+            
+            channel = self.bot.get_channel(log_channel_id)
+            embed = BotEmbed.general(name=member.name, title="成員加入", description=description, color=0x4aa0b5)
+            channel.send(embed=embed)
 
         # TODO: 新增邀請紀錄
 

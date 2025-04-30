@@ -148,3 +148,8 @@ from tweepy import API, Client, OAuth2BearerHandler, Tweet
 #     print(type(tweet))
 #     print(tweet.id, tweet.text, tweet.created_at, tweet.attachments, tweet.entities, tweet.public_metrics, tweet.context_annotations, tweet.geo, tweet.in_reply_to_user_id, tweet.referenced_tweets, tweet.source)
 
+cwa_api = CWA_API()
+timefrom = datetime(2025, 3, 21, 16, 29, 18, tzinfo=timezone(timedelta(hours=8)))
+earthquake_records = cwa_api.get_earthquake_report_auto(timefrom.strftime("%Y-%m-%dT%H:%M:%S"), True)
+for record in earthquake_records:
+    print(record.originTime, record.originTime > timefrom)
