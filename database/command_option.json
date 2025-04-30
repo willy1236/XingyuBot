@@ -150,23 +150,20 @@
         "game": {
             "zh-TW": "遊戲查詢系統（game）"
         },
-        "role": {
-            "zh-TW": "身分組系統（role）"
+        "manage": {
+            "zh-TW": "伺服器管理系統（manage）"
         },
         "bet": {
             "zh-TW": "賭盤系統（bet）"
         },
-        "weather": {
-            "zh-TW": "天氣系統（weather）"
+        "tool": {
+            "zh-TW": "綜合/實用工具（tool）"
         },
         "user": {
-            "zh-TW": "用戶系統（user）"
+            "zh-TW": "使用者系統（user）"
         },
-        "twitch": {
-            "zh-TW": "twitch相關（twitch）"
-        },
-        "admin": {
-            "zh-TW": "管理員指令（admin）"
+        "social": {
+            "zh-TW": "社群（social)"
         }
     },
     "position_option": {
