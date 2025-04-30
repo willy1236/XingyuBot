@@ -76,6 +76,11 @@ class error(Cog_Extension):
             await ctx.respond(f'發生未知錯誤\n```{error.original}```',ephemeral=True)
             log.error(f'{error},{type(error)}')
 
+    @commands.Cog.listener()
+    async def on_unknown_application_command(self, interaction: discord.Interaction):
+        log.warn(f'未知指令：{interaction.data}')
+        await interaction.response.send_message(f'未知指令：請再試一次',ephemeral=True)
+
     # @commands.Cog.listener()
     # async def on_command_error(self,ctx,error):
     #     if hasattr(ctx.command,'on_error'):

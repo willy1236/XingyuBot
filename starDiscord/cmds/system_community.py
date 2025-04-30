@@ -36,17 +36,8 @@ class system_community(Cog_Extension):
         user = api.get_user(twitch_user)
         type_tw = Jsondb.get_tw(type.value, "twitch_notify_option")
         if user:
-            sclient.sqldb.add_notify_community(type, user.id, CommunityType.Twitch, guildid, channelid, roleid, msg)
+            sclient.sqldb.add_notify_community(type, user.id, CommunityType.Twitch, guildid, channelid, roleid, msg, cache_time=datetime.now(tz=tz))
             sclient.sqldb.merge(Community(id=user.id, type=CommunityType.Twitch, name=user.display_name, login=user.login))
-            match type:
-                case NotifyCommunityType.TwitchLive:
-                    pass
-            
-                case NotifyCommunityType.TwitchVideo:
-                    Jsondb.set_cache(JsonCacheType.TwitchVideo, user.id, datetime.now(tz=tz).isoformat(timespec="seconds"))
-                
-                case NotifyCommunityType.TwitchClip:
-                    Jsondb.set_cache(JsonCacheType.TwitchClip, user.id, datetime.now(tz=tz).isoformat(timespec="seconds"))
 
             if role:
                 await ctx.respond(f'設定成功：{user.display_name}({user.login})的{type_tw}將會發送在{channel.mention}並會通知{role.mention}')
@@ -65,27 +56,18 @@ class system_community(Cog_Extension):
                      notify_type:discord.Option(int, required=False, name='通知種類', description='要移除的通知種類，留空為移除全部',choices=twitch_notify_option,default=None)):
         guildid = ctx.guild.id
         twitch_user = TwitchAPI().get_user(twitch_user_login)
+        
         if not notify_type or notify_type == NotifyCommunityType.TwitchLive:
             sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitchLive, twitch_user.id, guildid)
-            if not sclient.sqldb.get_notify_community_count(NotifyCommunityType.TwitchLive, twitch_user.id):
-                Jsondb.remove_cache(JsonCacheType.TwitchLive, twitch_user.id)
-        
         if not notify_type or notify_type == NotifyCommunityType.TwitchVideo:
             sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitchVideo, twitch_user.id, guildid)
-            if not sclient.sqldb.get_notify_community_count(NotifyCommunityType.TwitchVideo, twitch_user.id):
-                Jsondb.remove_cache(JsonCacheType.TwitchVideo, twitch_user.id)
-
         if not notify_type or notify_type == NotifyCommunityType.TwitchClip:
             sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitchClip, twitch_user.id, guildid)
-            if not sclient.sqldb.get_notify_community_count(NotifyCommunityType.TwitchClip, twitch_user.id):
-                Jsondb.remove_cache(JsonCacheType.TwitchClip, twitch_user.id)
         
         if notify_type:
             await ctx.respond(f'已移除 {twitch_user.display_name}({twitch_user.login}) 的通知')
         else:
             await ctx.respond(f'已移除 {twitch_user.display_name}({twitch_user.login}) 的所有通知')
-        
-        sclient.sqldb.update_notify_community()
 
     @twitch.command(description='確認twitch開台通知')
     async def notify(self,ctx,twitch_user_login:discord.Option(str, required=True, name='twitch用戶', description='使用者名稱')):
@@ -253,15 +235,13 @@ class system_community(Cog_Extension):
             return
         
         #! api不支援id查詢 故使用username查詢
-        sclient.sqldb.add_notify_community(NotifyCommunityType.TwitterTweet, api_twitter_user.data.username, CommunityType.Twitter, guildid, channelid, roleid, None)
+        sclient.sqldb.add_notify_community(NotifyCommunityType.TwitterTweet, api_twitter_user.data.username, CommunityType.Twitter, guildid, channelid, roleid, None, cache_time=datetime.now(tz=tz))
         sclient.sqldb.merge(Community(id=str(api_twitter_user.data.id), type=CommunityType.Twitter, name=api_twitter_user.data.name, login=api_twitter_user.data.username))
+        
         if role:
             await ctx.respond(f'設定成功：{api_twitter_user.data.name}的通知將會發送在{channel.mention}並會通知{role.mention}')
         else:
             await ctx.respond(f'設定成功：{api_twitter_user.data.name}的通知將會發送在{channel.mention}')        
-
-        time_str = datetime.now(tz).isoformat()
-        Jsondb.set_cache(JsonCacheType.TwitterTweet, api_twitter_user.data.username, time_str)
 
         if not channel.can_send():
             await ctx.send(embed=BotEmbed.simple('溫馨提醒',f'我無法在{channel.mention}中發送訊息，請確認我有足夠的權限'))
@@ -271,11 +251,7 @@ class system_community(Cog_Extension):
         guildid = ctx.guild.id
         sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitterTweet, twitter_user, guildid)
         await ctx.respond(f'已移除 {twitter_user} 的通知')
-        
-        sclient.sqldb.update_notify_community(NotifyCommunityType.TwitterTweet)
 
-        if not sclient.sqldb.get_notify_community_count(NotifyCommunityType.TwitterTweet, twitter_user):
-            Jsondb.remove_cache(JsonCacheType.TwitterTweet, twitter_user)
 
     @twitter.command(description='確認x/twitter通知')
     async def notify(self,ctx,twitter_user:discord.Option(str,required=True,name='twitter用戶',description='使用者名稱')):

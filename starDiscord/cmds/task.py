@@ -125,7 +125,7 @@ class task(Cog_Extension):
 
     async def twitch_live(self):
         log.debug("twitch_live start")
-        caches = sclient.sqldb.get_community_cache(NotifyCommunityType.TwitchLive)
+        caches = sclient.sqldb.get_community_caches(NotifyCommunityType.TwitchLive)
         if not caches:
             return
         
@@ -149,7 +149,7 @@ class task(Cog_Extension):
         sclient.sqldb.set_community_cache(NotifyCommunityType.TwitchLive, update_data)
 
     async def twitch_video(self):
-        caches = sclient.sqldb.get_community_cache(NotifyCommunityType.TwitchVideo)
+        caches = sclient.sqldb.get_community_caches(NotifyCommunityType.TwitchVideo)
         if not caches:
             return
         
@@ -168,7 +168,7 @@ class task(Cog_Extension):
         sclient.sqldb.set_community_cache(NotifyCommunityType.TwitchVideo, update_data)
 
     async def twitch_clip(self):
-        caches = sclient.sqldb.get_community_cache(NotifyCommunityType.TwitchClip)
+        caches = sclient.sqldb.get_community_caches(NotifyCommunityType.TwitchClip)
         if not caches:
             return
         
@@ -226,7 +226,7 @@ class task(Cog_Extension):
 
     async def twitter_tweets_rss(self):
         log.debug("twitter_tweets start")
-        caches = sclient.sqldb.get_community_cache(NotifyCommunityType.TwitterTweet)
+        caches = sclient.sqldb.get_community_caches(NotifyCommunityType.TwitterTweet)
         if not caches:
             return
         

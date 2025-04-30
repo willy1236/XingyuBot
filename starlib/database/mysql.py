@@ -347,14 +347,15 @@ class SQLNotifySystem(BaseSQLEngine):
             self.cache[NotifyChannelType.DynamicVoice].remove(channel_id)
 
     #* notify community
-    def add_notify_community(self, notify_type:NotifyCommunityType, community_id:str, community_type:CommunityType, guild_id:int, channel_id:int, role_id:int=None, message:str=None):
+    def add_notify_community(self, notify_type:NotifyCommunityType, community_id:str, community_type:CommunityType, guild_id:int, channel_id:int, role_id:int=None, message:str=None, cache_time:datetime=None):
         """設定社群通知"""
         community = NotifyCommunity(notify_type=notify_type, community_id=str(community_id), community_type=community_type, guild_id=guild_id, channel_id=channel_id, role_id=role_id, message=message)
         self.session.merge(community)
         self.session.commit()
-
-        if self.cache.get(notify_type):
-            self.cache[notify_type].append(community_id)
+        
+        # 新增快取
+        if cache_time:
+            self.session.add(CommunityCache(community_id=community_id, notify_type=notify_type, cache_time=cache_time))
 
     def remove_notify_community(self,notify_type:NotifyCommunityType, community_id:str, guild_id:int=None):
         """移除社群通知，同時判斷移除社群"""
@@ -374,12 +375,15 @@ class SQLNotifySystem(BaseSQLEngine):
         
         community_type = notify_to_community_map.get(notify_type)
         if community_type is not None:
+            # 檢查是否還有其他通知使用該社群
             stmt = select(func.count()).where(NotifyCommunity.community_type == community_type, NotifyCommunity.community_id == community_id)
             count = self.session.exec(stmt).one()
             if not count:
+                # 刪除社群資料
                 stmt = delete(Community).where(Community.id == community_id, Community.type == community_type)
                 self.session.exec(stmt)
                 
+                # 刪除社群快取
                 stmt = delete(CommunityCache).where(CommunityCache.community_id == community_id, CommunityCache.notify_type == notify_type)
                 self.session.exec(stmt)
                 self.session.commit()
@@ -853,7 +857,8 @@ class SQLTokensSystem(BaseSQLEngine):
         return self.session.exec(stmt).one()
     
 class SQLCacheSystem(BaseSQLEngine):
-    def set_community_cache(self, type:NotifyCommunityType, data:dict[str, str | datetime | None]):
+    def set_community_cache(self, type:NotifyCommunityType, data:dict[str, datetime | None]):
+        """批量設定社群快取"""
         for community_id, value in data.items():
             cache = CommunityCache(community_id=community_id, notify_type=type, value=value)
             if value is None:
@@ -862,7 +867,16 @@ class SQLCacheSystem(BaseSQLEngine):
                 self.session.merge(cache)
         self.session.commit()
 
-    def get_community_cache(self, type:NotifyCommunityType):
+    def add_community_cache(self, type:NotifyCommunityType, community_id:str, value:datetime | None):
+        """新增社群快取"""
+        cache = CommunityCache(community_id=community_id, notify_type=type, value=value)
+        try:
+            self.session.add(cache)
+            self.session.commit()
+        except IntegrityError:
+            self.session.rollback()
+
+    def get_community_caches(self, type:NotifyCommunityType):
         stmt = select(NotifyCommunity.community_id, CommunityCache).select_from(NotifyCommunity).join(CommunityCache, NotifyCommunity.community_id == CommunityCache.community_id, isouter=True).where(NotifyCommunity.notify_type == type)
         result = self.session.exec(stmt).all()
         return {i[0]: i[1] for i in result}
