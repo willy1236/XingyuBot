@@ -1,10 +1,7 @@
 import json
 import logging
 import os
-from datetime import datetime
 from typing import TYPE_CHECKING, TypeVar
-
-from ..types.datatype import JsonCacheType
 
 T = TypeVar("T")
 logger = logging.getLogger("star")
@@ -12,7 +9,10 @@ logger = logging.getLogger("star")
 class BaseJsonHandler:
     _DBPATH = "./database"
 
-    def __init__(self, filename):
+    if TYPE_CHECKING:
+        datas: dict[str, T]
+
+    def __init__(self, filename:str):
         self.filename = filename
 
         # craete folder
@@ -29,7 +29,7 @@ class BaseJsonHandler:
         with open(path, 'r', encoding='utf8') as jfile:
             self.datas = json.load(jfile)
 
-    def get(self, key, default=None) -> dict | list | str | None:
+    def get(self, key:str, default:T=None) -> T:
         try:
             data = self.datas[key]
         except KeyError:
@@ -38,7 +38,7 @@ class BaseJsonHandler:
         finally:
             return data
     
-    def write(self, key, value):
+    def write(self, key:str, value):
         self.datas[key] = value
         with open(f'{self._DBPATH}/{self.filename}.json', 'w', encoding='utf-8') as jfile:
             json.dump(self.datas, jfile, indent=4)
@@ -57,10 +57,6 @@ class JsonConfig(BaseJsonHandler):
     def __init__(self):
         super().__init__("setting")
 
-class JsonCache(BaseJsonHandler):
-    def __init__(self):
-        super().__init__("cache")
-
 class JsonToken(BaseJsonHandler):
     def __init__(self):
         super().__init__("token")
@@ -74,7 +70,6 @@ class JsonDatabase():
         member_names: dict
 
         config: JsonConfig
-        cache: JsonCache
         tokens: JsonToken
 
     __slots__ = [
@@ -84,7 +79,6 @@ class JsonDatabase():
         "tokens",
         "options",
         "config",
-        "cache",
         "member_names",
     ]
 
@@ -99,13 +93,7 @@ class JsonDatabase():
     }
 
     def __init__(self,create_file=True):
-        """
-        CWB = 中央氣象局
-
-        TRN = tracker.gg
-        """
         self.config = JsonConfig()
-        self.cache = JsonCache()
         self.tokens = JsonToken()
 
         # craete folder
@@ -128,14 +116,14 @@ class JsonDatabase():
 
     def write(self, file_name: str, data: dict):
         """
-        Writes the given data to the specified file in the database.
+        Writes the given data to the specified file in the JSON.
 
         Args:
             file_name (str): The name of the file to write the data to.
             data (dict): The data to be written to the file.
 
         Raises:
-            KeyError: If the specified file_name is not found in the database.
+            KeyError: If the specified file_name is not found in the JSON.
         """
         try:
             location = self._PATH_DICT[file_name]
@@ -165,70 +153,6 @@ class JsonDatabase():
     def get_jdict(self,key:str, value:str) -> str:
         """取得jdict資料"""
         return self.jdict[key].get(value,value)
-    
-    def set_cache(self, key: str | JsonCacheType, target: str, value):
-        """Add a key-value(target-value) pair to a dictionary stored in the cache.\\
-        usually used in notify_community data in the cache.
-        """
-        if isinstance(key, JsonCacheType):
-            key = key.value
-        dict_data = self.cache.get(key)
-        dict_data[target] = value
-        logger.debug(f"set_cache: {key} {target}: {value}")
-        self.cache.write(key, dict_data)
-
-    def remove_cache(self, key: str | JsonCacheType, target: str):
-        """Remove a key-value(target-value) pair from a dictionary stored in the cache.\\
-        usually used in notify_community data in the cache.
-        """
-        if isinstance(key, JsonCacheType):
-            key = key.value
-        dict_data = self.cache.get(key)
-        try:
-            del dict_data[target]
-            self.cache.write(key, dict_data)
-            logger.debug(f"remove_cache: {key}/{target}")
-            return True
-        except KeyError:
-            return False
-    
-    def get_cache(self, key: str | JsonCacheType) -> dict | str | None:
-        """
-        Retrieve a full data from the cache using the provided key.
-        """
-        if isinstance(key, JsonCacheType):
-            key = key.value
-        return self.cache.get(key)
-    
-    def get_cache_time(self, key: str | JsonCacheType, id:str) -> datetime | None:
-        """
-        Retrieve the time of a specific key in the cache.
-        """
-        if isinstance(key, JsonCacheType):
-            key = key.value
-        dict_data = self.cache.get(key)
-        try:
-            return datetime.fromisoformat(dict_data[id])
-        except KeyError:
-            return None
-    
-    def write_cache(self, key: str | JsonCacheType, value: dict | str):
-        """
-        Writes a full data to the cache.
-        """
-        if isinstance(key, JsonCacheType):
-            key = key.value
-        self.cache.write(key, value)
-    
-    def update_dict_cache(self, key: str | JsonCacheType, value: dict):
-        """
-        Update a dictionary in the cache.
-        """
-        if not value:
-            return
-        if isinstance(key, JsonCacheType):
-            key = key.value
-        self.cache.update_dict(key, value)
 
     def get_tw(self, value:T, option_name:str) -> str | T:
         """

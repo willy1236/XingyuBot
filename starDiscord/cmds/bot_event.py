@@ -376,6 +376,7 @@ class event(Cog_Extension):
         if log_channel_id:
             dbdata = sclient.sqldb.get_warnings_count(member.id)
             description = f"{member.mention} ({member.id})\n共有 {dbdata} 筆跨群紀錄" if dbdata else f"{member.mention} 加入了伺服器"
+            description += f"第 {member.guild.member_count} 位成員"
             
             channel = self.bot.get_channel(log_channel_id)
             embed = BotEmbed.general(name=member.name, title="成員加入", description=description, color=0x4aa0b5)

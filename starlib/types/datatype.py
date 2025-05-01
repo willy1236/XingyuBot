@@ -56,15 +56,6 @@ notify_to_community_map = {
     NotifyCommunityType.TwitterTweet: CommunityType.Twitter,
 }
 
-class JsonCacheType(Enum):
-    EarthquakeTimeFrom = "earthquake_timefrom"
-    TwitchLive = "twitch"
-    YoutubeVideo = "youtube"
-    TwitchVideo = "twitch_v"
-    TwitchClip = "twitch_c"
-    WeatherWarning = "weather_warning"
-    TwitterTweet = "twitter_t"
-
 class McssServerAction(IntEnum):
     Unknown = 0
     Stop = 1
