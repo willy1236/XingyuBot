@@ -351,8 +351,9 @@ class event(Cog_Extension):
         if log_channel_id:        
             channel = self.bot.get_channel(log_channel_id)
             description = f"{member.mention} 離開了伺服器"
-            description += f"\n身分組：{', '.join([r.mention for r in member.roles if not r.is_default()])}"
-            description += f"\n加入時長：{(datetime.now(tz=tz) - member.joined_at)}"
+            if member.roles:
+                description += f"\n身分組：{', '.join([r.mention for r in member.roles if not r.is_default()])}"
+            description += f"\n加入時長：{timedelta(seconds=int((datetime.now(tz=tz) - member.joined_at).total_seconds()))}"
             embed = BotEmbed.general(name=member.name, title="成員離開", description=description, icon_url=member.display_avatar.url)
             embed.timestamp = datetime.now(tz=tz)
             embed.set_footer(text=f"ID: {member.id}")
