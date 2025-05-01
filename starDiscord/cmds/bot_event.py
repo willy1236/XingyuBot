@@ -353,7 +353,9 @@ class event(Cog_Extension):
             description = f"{member.mention} 離開了伺服器"
             description += f"\n身分組：{', '.join([r.mention for r in member.roles if not r.is_default()])}"
             description += f"\n加入時長：{(datetime.now(tz=tz) - member.joined_at)}"
-            embed = BotEmbed.general(name=member.name, title="成員離開", description=description)
+            embed = BotEmbed.general(name=member.name, title="成員離開", description=description, icon_url=member.display_avatar.url)
+            embed.timestamp = datetime.now(tz=tz)
+            embed.set_footer(text=f"ID: {member.id}")
             await channel.send(embed=embed)
 
     @commands.Cog.listener()
@@ -376,10 +378,12 @@ class event(Cog_Extension):
         if log_channel_id:
             dbdata = sclient.sqldb.get_warnings_count(member.id)
             description = f"{member.mention} ({member.id})\n共有 {dbdata} 筆跨群紀錄" if dbdata else f"{member.mention} 加入了伺服器"
-            description += f"第 {member.guild.member_count} 位成員"
+            description += f"\n第 {member.guild.member_count} 位成員"
             
             channel = self.bot.get_channel(log_channel_id)
-            embed = BotEmbed.general(name=member.name, title="成員加入", description=description)
+            embed = BotEmbed.general(name=member.name, title="成員加入", description=description, icon_url=member.display_avatar.url)
+            embed.timestamp = datetime.now(tz=tz)
+            embed.set_footer(text=f"ID: {member.id}")
             await channel.send(embed=embed)
 
         # TODO: 新增邀請紀錄
