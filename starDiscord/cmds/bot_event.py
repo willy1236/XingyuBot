@@ -354,7 +354,7 @@ class event(Cog_Extension):
             description += f"\n身分組：{', '.join([r.mention for r in member.roles if not r.is_default()])}"
             description += f"\n加入時長：{(datetime.now() - member.joined_at)}"
             embed = BotEmbed.general(name=member.name, title="成員離開", description=description)
-            channel.send(embed=embed)
+            await channel.send(embed=embed)
 
     @commands.Cog.listener()
     async def on_member_join(self, member:discord.Member):
@@ -380,7 +380,7 @@ class event(Cog_Extension):
             
             channel = self.bot.get_channel(log_channel_id)
             embed = BotEmbed.general(name=member.name, title="成員加入", description=description)
-            channel.send(embed=embed)
+            await channel.send(embed=embed)
 
         # TODO: 新增邀請紀錄
 
