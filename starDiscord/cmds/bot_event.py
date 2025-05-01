@@ -352,7 +352,7 @@ class event(Cog_Extension):
             channel = self.bot.get_channel(log_channel_id)
             description = f"{member.mention} 離開了伺服器"
             description += f"\n身分組：{', '.join([r.mention for r in member.roles if not r.is_default()])}"
-            description += f"\n加入時長：{(datetime.now() - member.joined_at)}"
+            description += f"\n加入時長：{(datetime.now(tz=tz) - member.joined_at)}"
             embed = BotEmbed.general(name=member.name, title="成員離開", description=description)
             await channel.send(embed=embed)
 
