@@ -353,7 +353,7 @@ class event(Cog_Extension):
             description = f"{member.mention} 離開了伺服器"
             description += f"\n身分組：{', '.join([r.mention for r in member.roles if not r.is_default()])}"
             description += f"\n加入時長：{(datetime.now() - member.joined_at)}"
-            embed = BotEmbed.general(name=member.name, title="成員離開", description=description, color=0x4aa0b5)
+            embed = BotEmbed.general(name=member.name, title="成員離開", description=description)
             channel.send(embed=embed)
 
     @commands.Cog.listener()
@@ -379,7 +379,7 @@ class event(Cog_Extension):
             description += f"第 {member.guild.member_count} 位成員"
             
             channel = self.bot.get_channel(log_channel_id)
-            embed = BotEmbed.general(name=member.name, title="成員加入", description=description, color=0x4aa0b5)
+            embed = BotEmbed.general(name=member.name, title="成員加入", description=description)
             channel.send(embed=embed)
 
         # TODO: 新增邀請紀錄
