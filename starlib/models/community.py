@@ -438,9 +438,9 @@ class RettiwtTweetUser(BaseModel):
         return datetime.strptime(v, DATETIME_FORMAT)
 
 class RettiwtTweetEntity(BaseModel):
-    hashtags: list[str] = Field(default_factory=list)
-    mentionedUsers: list[str] = Field(default_factory=list)
-    urls: list[str] = Field(default_factory=list)
+    hashtags: list[str | None] = Field(default_factory=list)
+    mentionedUsers: list[str | None] = Field(default_factory=list)
+    urls: list[str | None] = Field(default_factory=list)
 
 class RettiwtTweetMedia(BaseModel):
     url: HttpUrl
