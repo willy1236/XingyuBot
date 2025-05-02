@@ -352,7 +352,12 @@ class SQLNotifySystem(BaseSQLEngine):
         
         # 新增快取
         if cache_time:
-            self.session.add(CommunityCache(community_id=community_id, notify_type=notify_type, cache_time=cache_time))
+            cache = CommunityCache(community_id=community_id, notify_type=notify_type, value=cache_time)
+            try:
+                self.session.add(cache)
+                self.session.commit()
+            except IntegrityError:
+                self.session.rollback()
 
     def remove_notify_community(self,notify_type:NotifyCommunityType, community_id:str, guild_id:int=None):
         """移除社群通知，同時判斷移除社群"""
