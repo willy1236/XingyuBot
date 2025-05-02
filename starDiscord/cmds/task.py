@@ -241,7 +241,11 @@ class task(Cog_Extension):
                 log.error(e.stderr)
                 continue
             log.debug(f"twitter_tweets data: {results}")
-            if results.list:
+            
+            if results is None:
+                log.warning(f"twitter_tweets error / not found: {user_name}")
+                sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitterTweet, user_name)
+            elif results.list:
                 tweets = results.list
                 newest = tweets[0].createdAt
                 for tweet in tweets:
@@ -250,9 +254,6 @@ class task(Cog_Extension):
                     await self.bot.send_notify_communities(None, NotifyCommunityType.TwitterTweet, user_name, content=f"{tweet.tweetBy.userName} 轉推了推文↩️\n{tweet.url}" if tweet.is_retweet else f"{tweet.tweetBy.userName} 發布新推文\n{tweet.url}")
 
                 update_data[user_name] = (newest + timedelta(seconds=1))
-            elif tweets is None:
-                log.warning(f"twitter_tweets error / not found: {user_name}")
-                sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitterTweet, user_name)
 
         sclient.sqldb.set_community_caches(NotifyCommunityType.TwitterTweet, update_data)
 
