@@ -1,6 +1,8 @@
 import os.path
+import subprocess
+import json
 from datetime import timezone
-from typing import TypeVar, Generator, Iterator
+from typing import NoReturn, TypeVar, Generator, Iterator
 
 import feedparser
 import requests
@@ -17,15 +19,6 @@ from ..models.community import *
 from ..settings import tz
 
 T = TypeVar('T')
-class TwitterAPIResponse():
-    pass
-    # {
-    #     data: {}
-    #     pagination: {
-    #         cursor: str
-    #     }
-    # }
-
 class TwitchAPI():
     '''
     與Twitch api交互相關
@@ -591,3 +584,17 @@ class RssHub():
                 return
             else:
                 raise APIInvokeError("rsshub_get_twitter", f"[{r.status_code}]")
+            
+class CLIInterface():
+    def __init__(self):
+        pass
+
+    def get_user_timeline(self, user_id:str, after:datetime=None) -> RettiwtTweetTimeLineResponse | None:
+        # shutil.which("rettiwt")
+        r = subprocess.run(f'rettiwt -k "{Jsondb.get_token("rettiwt_api_key")}" user timeline "{user_id}"', shell=True, capture_output=True, encoding='utf-8')
+        r.check_returncode()
+        data = json.loads(r.stdout)
+        results = RettiwtTweetTimeLineResponse(**data)
+        if after:
+            results.list = [i for i in results.list if i.createdAt > after]
+        return results

@@ -413,3 +413,67 @@ class RssHubTwitterTweet(BaseModel):
     @property
     def is_retweet(self) -> bool:
         return self.title.startswith("RT ")
+    
+
+DATETIME_FORMAT = "%a %b %d %H:%M:%S %z %Y"  # Twitter 時間格式
+
+class RettiwtTweetUser(BaseModel):
+    id: str
+    userName: str
+    fullName: str
+    createdAt: datetime
+    description: str
+    isVerified: bool
+    likeCount: int
+    followersCount: int
+    followingsCount: int
+    statusesCount: int
+    pinnedTweet: Optional[str]
+    profileBanner: Optional[HttpUrl]
+    profileImage: Optional[HttpUrl]
+
+    @field_validator("createdAt", mode="before")
+    @classmethod
+    def parse_created_at(cls, v: str) -> datetime:
+        return datetime.strptime(v, DATETIME_FORMAT)
+
+class RettiwtTweetEntity(BaseModel):
+    hashtags: list[str]
+    mentionedUsers: list[str]
+    urls: list[str]
+
+class RettiwtTweetMedia(BaseModel):
+    url: HttpUrl
+    type: str
+
+class RettiwtTweetItem(BaseModel):
+    id: str
+    createdAt: datetime
+    tweetBy: RettiwtTweetUser
+    entities: RettiwtTweetEntity
+    media: list[RettiwtTweetMedia | None] = Field(default_factory=list)
+    fullText: str
+    lang: str
+    quoteCount: int
+    replyCount: int
+    retweetCount: int
+    likeCount: int
+    viewCount: int
+    bookmarkCount: int
+
+    @field_validator("createdAt", mode="before")
+    @classmethod
+    def parse_created_at(cls, v: str) -> datetime:
+        return datetime.strptime(v, DATETIME_FORMAT).astimezone(tz=tz)
+
+    @property
+    def url(self) -> str:
+        return f"https://twitter.com/{self.tweetBy.userName}/status/{self.id}"
+    
+    @property
+    def is_retweet(self) -> bool:
+        return self.fullText.startswith("RT @")
+
+class RettiwtTweetTimeLineResponse(BaseModel):
+    list: list[RettiwtTweetItem]
+    next: dict | None = None

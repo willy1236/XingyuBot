@@ -132,11 +132,31 @@ google_oauth_settings = Jsondb.get_token("google_oauth")
 # print(auth.get_user("689775663"))
 
 #print(GoogleOauth2(user_id="112130059444606303598").get_authorization_url())
-from tweepy import API, Client, OAuth2BearerHandler, Tweet
 
-# x_apiv2 = Client(Jsondb.get_token("x_api"), wait_on_rate_limit=True)
+
+
+
+
+from tweepy import API, Client, OAuth2BearerHandler, Tweet
+"1524040182861004800"
+import shutil
+# rettiwt_path = shutil.which("rettiwt")
+# print(rettiwt_path)
+try:
+    parsed = CLIInterface().get_user_timeline("1524040182861004800")
+    print(parsed.next)
+    parsed.list = [i for i in parsed.list if i.createdAt > datetime(2022, 9, 30, 16, 8, 29, tzinfo=timezone(timedelta(hours=8)))]
+    for tweet in parsed.list:
+        #print(tweet.createdAt, tweet.tweetBy.userName, tweet.id)
+        print(tweet.fullText)
+        print("=" * 50)
+except subprocess.CalledProcessError as e:
+    print(e.output)
+    print(e.stderr)
+
+#x_apiv2 = Client(Jsondb.get_token("x_api"), wait_on_rate_limit=True)
 # x_api = API(OAuth2BearerHandler(Jsondb.get_token("x_api")))
-# print(x_apiv2.get_user(username="").data.id)
+#print(x_apiv2.get_user(username="Mochi_chan____").data.id)
 # for tweet in RssHub().get_twitter("", after=datetime.fromisoformat("2025-04-28T22:08:29+08:00"), local=True):
 #     print(tweet.published_parsed, tweet.title)
 
@@ -147,9 +167,3 @@ from tweepy import API, Client, OAuth2BearerHandler, Tweet
 #     tweet:Tweet
 #     print(type(tweet))
 #     print(tweet.id, tweet.text, tweet.created_at, tweet.attachments, tweet.entities, tweet.public_metrics, tweet.context_annotations, tweet.geo, tweet.in_reply_to_user_id, tweet.referenced_tweets, tweet.source)
-
-cwa_api = CWA_API()
-timefrom = datetime(2025, 3, 21, 16, 29, 18, tzinfo=timezone(timedelta(hours=8)))
-earthquake_records = cwa_api.get_earthquake_report_auto(timefrom.strftime("%Y-%m-%dT%H:%M:%S"), True)
-for record in earthquake_records:
-    print(record.originTime, record.originTime > timefrom)

@@ -233,13 +233,16 @@ class task(Cog_Extension):
         update_data:dict[str, datetime] = {}
         for user_name, cache in caches.items():
             log.debug(f"twitter_tweets: {user_name}")
-            tweets = rss_hub.get_twitter(user_name, local=True, after=cache.value)
-            log.debug(f"twitter_tweets data: {tweets}")
-            if tweets:
-                newest = tweets[0].published_parsed
+            #tweets = rss_hub.get_twitter(user_name, local=True, after=cache.value)
+            results = cli_api.get_user_timeline(user_name, after=cache.value)
+            log.debug(f"twitter_tweets data: {results}")
+            if results.list:
+                tweets = results.list
+                newest = tweets[0].createdAt
                 for tweet in tweets:
-                    newest = tweet.published_parsed if tweet.published_parsed > newest else newest
-                    await self.bot.send_notify_communities(None, NotifyCommunityType.TwitterTweet, user_name, content=f"{tweet.author} 轉推了推文↩️\n{tweet.link}" if tweet.is_retweet else f"{tweet.author} 發布新推文\n{tweet.link}")
+                    newest = tweet.createdAt if tweet.createdAt > newest else newest
+                    #await self.bot.send_notify_communities(None, NotifyCommunityType.TwitterTweet, user_name, content=f"{tweet.author} 轉推了推文↩️\n{tweet.link}" if tweet.is_retweet else f"{tweet.author} 發布新推文\n{tweet.link}")
+                    await self.bot.send_notify_communities(None, NotifyCommunityType.TwitterTweet, user_name, content=f"{tweet.tweetBy.userName} 轉推了推文↩️\n{tweet.url}" if tweet.is_retweet else f"{tweet.tweetBy.userName} 發布新推文\n{tweet.url}")
 
                 update_data[user_name] = (newest + timedelta(seconds=1))
             elif tweets is None:

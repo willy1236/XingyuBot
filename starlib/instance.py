@@ -16,6 +16,7 @@ __all__ = [
     "rss_hub",
     "cwa_api",
     "apexapi",
+    "cli_api",
     "main_guilds",
     "happycamp_guild",
     "debug_guilds",
@@ -32,6 +33,7 @@ twitter_api = tweepy.Client(Jsondb.get_token("x_api"))
 rss_hub = RssHub()
 cwa_api = CWA_API()
 apexapi = ApexAPI()
+cli_api = CLIInterface()
 
 # jsondb
 main_guilds: list[int] = Jsondb.config.get('main_guilds', [])
