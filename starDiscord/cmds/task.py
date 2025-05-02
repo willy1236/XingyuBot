@@ -1,5 +1,6 @@
 import asyncio
 import random
+import subprocess
 from datetime import date, datetime, timedelta, timezone
 
 import discord
@@ -234,7 +235,11 @@ class task(Cog_Extension):
         for user_name, cache in caches.items():
             log.debug(f"twitter_tweets: {user_name}")
             #tweets = rss_hub.get_twitter(user_name, local=True, after=cache.value)
-            results = cli_api.get_user_timeline(user_name, after=cache.value)
+            try:
+                results = cli_api.get_user_timeline(user_name, after=cache.value)
+            except subprocess.CalledProcessError as e:
+                log.error(e.stderr)
+                continue
             log.debug(f"twitter_tweets data: {results}")
             if results.list:
                 tweets = results.list
