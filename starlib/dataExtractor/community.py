@@ -594,6 +594,10 @@ class CLIInterface():
         r = subprocess.run(f'rettiwt -k "{Jsondb.get_token("rettiwt_api_key")}" user timeline "{user_id}"', shell=True, capture_output=True, encoding='utf-8')
         r.check_returncode()
         data = json.loads(r.stdout)
+
+        if data.get("name") == "VALIDATION_ERROR":
+            return RettiwtTweetTimeLineResponse(list=list(), next=None)
+        
         results = RettiwtTweetTimeLineResponse(**data)
         if after:
             results.list = [i for i in results.list if i.createdAt > after]
