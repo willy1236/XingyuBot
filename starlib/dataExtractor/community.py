@@ -591,7 +591,7 @@ class CLIInterface():
 
     def get_user_timeline(self, user_id:str, after:datetime=None) -> RettiwtTweetTimeLineResponse | None:
         # shutil.which("rettiwt")
-        r = subprocess.run(f'rettiwt -k "{Jsondb.get_token("rettiwt_api_key")}" user timeline "{user_id}"', shell=True, capture_output=True, encoding='utf-8')
+        r = subprocess.run(f'rettiwt -k "{Jsondb.get_token("rettiwt_api_key")}" user timeline "{user_id}" 10', shell=True, capture_output=True, encoding='utf-8')
         r.check_returncode()
         data = json.loads(r.stdout)
 

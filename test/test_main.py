@@ -138,21 +138,21 @@ google_oauth_settings = Jsondb.get_token("google_oauth")
 
 
 from tweepy import API, Client, OAuth2BearerHandler, Tweet
-"1524040182861004800"
 import shutil
 # rettiwt_path = shutil.which("rettiwt")
 # print(rettiwt_path)
 try:
-    parsed = CLIInterface().get_user_timeline("1524040182861004800")
+    parsed = CLIInterface().get_user_timeline("", datetime(2022, 9, 30, 16, 8, 29, tzinfo=timezone(timedelta(hours=8))))
     print(parsed.next)
-    parsed.list = [i for i in parsed.list if i.createdAt > datetime(2022, 9, 30, 16, 8, 29, tzinfo=timezone(timedelta(hours=8)))]
     for tweet in parsed.list:
         #print(tweet.createdAt, tweet.tweetBy.userName, tweet.id)
         print(tweet.fullText)
         print("=" * 50)
+    print(len(parsed.list))
 except subprocess.CalledProcessError as e:
     print(e.output)
     print(e.stderr)
+    
 
 #x_apiv2 = Client(Jsondb.get_token("x_api"), wait_on_rate_limit=True)
 # x_api = API(OAuth2BearerHandler(Jsondb.get_token("x_api")))
