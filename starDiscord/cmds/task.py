@@ -247,6 +247,7 @@ class task(Cog_Extension):
                 sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitterTweet, user_name)
             elif results.list:
                 tweets = results.list
+                tweets.reverse()
                 newest = tweets[0].createdAt
                 for tweet in tweets:
                     newest = tweet.createdAt if tweet.createdAt > newest else newest

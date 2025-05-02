@@ -559,6 +559,7 @@ class RssHub():
     
     def get_twitter(self, username:str, local=False, after:datetime=None):
         """取得Twitter用戶的RSS"""
+        #* api不支援id查詢 故使用username查詢
         if local:
             try:
                 r = requests.get(f"{self.url_local}/twitter/user/{username}")
