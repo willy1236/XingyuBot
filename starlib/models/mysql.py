@@ -142,8 +142,9 @@ class Community(BasicSchema, table=True):
     
     id: str = Field(primary_key=True)
     type: CommunityType = Field(sa_column=Column(Integer, primary_key=True))
-    name: str
-    login: str | None
+    username: str
+    display_name: str | None
+    
 
 class NotifyChannel(BasicSchema, table=True):
     __tablename__ = "notify_channel"

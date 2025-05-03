@@ -37,7 +37,7 @@ class system_community(Cog_Extension):
         type_tw = Jsondb.get_tw(type.value, "twitch_notify_option")
         if user:
             sclient.sqldb.add_notify_community(type, user.id, CommunityType.Twitch, guildid, channelid, roleid, msg, cache_time=datetime.now(tz=tz))
-            sclient.sqldb.merge(Community(id=user.id, type=CommunityType.Twitch, name=user.display_name, login=user.login))
+            sclient.sqldb.merge(Community(id=user.id, type=CommunityType.Twitch, display_name=user.display_name, username=user.login))
 
             if role:
                 await ctx.respond(f'設定成功：{user.display_name}({user.login})的{type_tw}將會發送在{channel.mention}並會通知{role.mention}')
@@ -72,7 +72,7 @@ class system_community(Cog_Extension):
     @twitch.command(description='確認twitch開台通知')
     async def notify(self, ctx, twitch_user_login:discord.Option(str, required=True, name='twitch使用者名稱', description='英文的使用者名稱')):
         guildid = ctx.guild.id
-        record = sclient.sqldb.get_notify_community_user_bylogin(NotifyCommunityType.TwitchLive, twitch_user_login, guildid)
+        record = sclient.sqldb.get_notify_community_user_byname(NotifyCommunityType.TwitchLive, twitch_user_login, guildid)
         if record:
             channel = self.bot.get_channel(record.channel_id)
             role = channel.guild.get_role(record.role_id)
@@ -89,7 +89,7 @@ class system_community(Cog_Extension):
         embed = BotEmbed.general("twitch通知", ctx.guild.icon.url if ctx.guild.icon else None)
         dbdata = sclient.sqldb.get_notify_community_list(NotifyCommunityType.TwitchLive,guildid) + sclient.sqldb.get_notify_community_list(NotifyCommunityType.TwitchVideo,guildid) + sclient.sqldb.get_notify_community_list(NotifyCommunityType.TwitchClip,guildid)
         for notify_data, community_data in dbdata:
-            display_name = f"{community_data.name}（{community_data.login}）"
+            display_name = f"{community_data.display_name}（{community_data.username}）"
             channel_id = notify_data.channel_id
             role_id = notify_data.role_id
             notify_type = notify_data.notify_type
@@ -144,7 +144,7 @@ class system_community(Cog_Extension):
         ytchannel = YoutubeAPI().get_channel(handle=ythandle)
         if ytchannel:
             sclient.sqldb.add_notify_community(NotifyCommunityType.Youtube, ytchannel.id, CommunityType.Youtube, guildid, channelid, roleid, msg, cache_time=datetime.now(tz=tz))
-            sclient.sqldb.merge(Community(id=ytchannel.id, type=CommunityType.Youtube, name=ytchannel.snippet.title, login=ytchannel.snippet.customUrl))
+            sclient.sqldb.merge(Community(id=ytchannel.id, type=CommunityType.Youtube, display_name=ytchannel.snippet.title, username=ytchannel.snippet.customUrl))
             if role:
                 await ctx.respond(f'設定成功：{ytchannel.snippet.title}的通知將會發送在{channel.mention}並會通知{role.mention}')
             else:
@@ -193,7 +193,7 @@ class system_community(Cog_Extension):
         embed = BotEmbed.general("youtube通知",ctx.guild.icon.url if ctx.guild.icon else None)
         dbdata = sclient.sqldb.get_notify_community_list(NotifyCommunityType.Youtube, guildid)
         for notify_data, community_data in dbdata:
-            notify_name = community_data.name
+            notify_name = community_data.display_name
             channel_id = notify_data.channel_id
             role_id = notify_data.role_id
             
@@ -226,7 +226,7 @@ class system_community(Cog_Extension):
             return
         
         sclient.sqldb.add_notify_community(NotifyCommunityType.TwitterTweet, api_twitter_user.data.id, CommunityType.Twitter, guildid, channelid, roleid, None, cache_time=datetime.now(tz=tz))
-        sclient.sqldb.merge(Community(id=str(api_twitter_user.data.id), type=CommunityType.Twitter, name=api_twitter_user.data.name, login=api_twitter_user.data.username))
+        sclient.sqldb.merge(Community(id=str(api_twitter_user.data.id), type=CommunityType.Twitter, display_name=api_twitter_user.data.name, username=api_twitter_user.data.username))
         
         if role:
             await ctx.respond(f'設定成功：{api_twitter_user.data.name}的通知將會發送在{channel.mention}並會通知{role.mention}')
@@ -246,7 +246,7 @@ class system_community(Cog_Extension):
     @twitter.command(description='確認x/twitter通知')
     async def notify(self, ctx, twitter_username:discord.Option(str,required=True,name='twitter用戶',description='使用者名稱')):
         guildid = ctx.guild.id
-        record = sclient.sqldb.get_notify_community_user_bylogin(NotifyCommunityType.TwitterTweet, twitter_username, guildid)
+        record = sclient.sqldb.get_notify_community_user_byname(NotifyCommunityType.TwitterTweet, twitter_username, guildid)
         if record:
             channel = self.bot.get_channel(record.channel_id)
             role = channel.guild.get_role(record.role_id)

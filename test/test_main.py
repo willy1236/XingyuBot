@@ -142,10 +142,10 @@ import shutil
 # rettiwt_path = shutil.which("rettiwt")
 # print(rettiwt_path)
 try:
-    parsed = CLIInterface().get_user_timeline("", datetime(2022, 9, 30, 16, 8, 29, tzinfo=timezone(timedelta(hours=8))))
+    parsed = CLIInterface().get_user_timeline("1830924770889867267", datetime(2025, 5, 3, 0, 0, 0, tzinfo=timezone(timedelta(hours=8))))
     print(parsed.next)
     for tweet in parsed.list:
-        #print(tweet.createdAt, tweet.tweetBy.userName, tweet.id)
+        print(tweet.createdAt, tweet.tweetBy.fullName, tweet.id)
         print(tweet.fullText)
         print("=" * 50)
     print(len(parsed.list))

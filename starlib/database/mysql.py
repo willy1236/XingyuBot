@@ -417,9 +417,9 @@ class SQLNotifySystem(BaseSQLEngine):
         result = self.session.exec(statement).one_or_none()
         return result
     
-    def get_notify_community_user_bylogin(self,notify_type:NotifyCommunityType, community_login:str, guild_id:int):
+    def get_notify_community_user_byname(self,notify_type:NotifyCommunityType, community_username:str, guild_id:int):
         """取得伺服器內的指定社群通知"""
-        statement = select(NotifyCommunity).join(Community, and_(NotifyCommunity.community_id == Community.id, NotifyCommunity.community_type == Community.type)).where(NotifyCommunity.notify_type == notify_type, Community.login == community_login, NotifyCommunity.guild_id == guild_id)
+        statement = select(NotifyCommunity).join(Community, and_(NotifyCommunity.community_id == Community.id, NotifyCommunity.community_type == Community.type)).where(NotifyCommunity.notify_type == notify_type, Community.username == community_username, NotifyCommunity.guild_id == guild_id)
         result = self.session.exec(statement).one_or_none()
         return result
 
