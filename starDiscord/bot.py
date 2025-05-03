@@ -110,7 +110,7 @@ class DiscordBot(discord.Bot):
                 await channel.send(text, embed=embed)
                 await asyncio.sleep(0.5)
             else:
-                log.warning(f"{notify_type} channel not found: {guild_id}/{channel_id}")
+                log.warning(f"NotifyCommunity:{notify_type}, channel not found: {guild_id}/{channel_id}")
     
     async def send_notify_channel(self, embed:discord.Embed, notify_type:NotifyChannelType, defult_content:str=None):
         notify_channels = sqldb.get_notify_channel_by_type(notify_type)
@@ -146,7 +146,7 @@ class DiscordBot(discord.Bot):
                 await asyncio.sleep(0.5)
             
             else:
-                log.warning(f"{notify_type} not found: {i.guild_id}/{i.channel_id}")
+                log.warning(f"NotifyChannel:{notify_type}, channel not found: {i.guild_id}/{i.channel_id}")
 
     def about_embed(self):
         embed = BotEmbed.bot(self,description=f"你好~我是星羽，你可以輸入 </help:1067700245015834638> 來查看所有指令的用法\n\n希望我能在discord上幫助到你喔~\n有任何建議、需求、協助與合作可以使用 </feedback:1067700244848058386> 指令\n\n支援伺服器：https://discord.gg/P4jqdcMxkH")
