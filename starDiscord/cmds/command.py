@@ -255,7 +255,7 @@ class command(Cog_Extension):
         sum = 0
         for _ in range(dice_n):
             sum += random.randint(1,dice)
-        await ctx.respond(f'{dice_n}d{dice} 結果：{sum}')
+        await ctx.respond(f'{dice_n}顆{dice}面骰（{dice_n}d{dice}）結果：{sum}')
 
 
     @bet.command(description='賭盤下注')

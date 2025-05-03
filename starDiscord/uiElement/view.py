@@ -153,7 +153,7 @@ class PollView(discord.ui.View):
         sqldb: SQLEngine
         bot: discord.Bot | None
 
-    def __init__(self,poll:Poll,sqldb,bot=None):
+    def __init__(self, poll:Poll, sqldb, bot=None):
         super().__init__(timeout=None)
         self.poll = poll
         self.sqldb = sqldb
@@ -162,8 +162,8 @@ class PollView(discord.ui.View):
         # TODO: change_vote (decide if user can change his/her vote or not)
         
 
-        self.add_item(PollEndButton(poll.poll_id,self.poll.creator_id,bot))
-        if self.poll.check_results_in_advance:
+        self.add_item(PollEndButton(poll.poll_id, poll.creator_id, bot))
+        if poll.check_results_in_advance:
             self.add_item(PollResultButton(poll.poll_id))
         self.add_item(PollCanenlButton(poll.poll_id))
         self.add_item(PollNowButton(poll.poll_id))
@@ -221,16 +221,16 @@ class PollView(discord.ui.View):
 
 
     @property
-    def role_dict(self) -> dict:
+    def role_dict(self) -> dict[int, tuple[bool, int]]:
         if not self._role_dict:
             dbdata = self.sqldb.get_poll_role(self.poll.poll_id)
             self._role_dict = {}
             if dbdata:
                 for data in dbdata:
                     role_id = data.role_id
-                    role_type = data.is_only_role
+                    is_only_role = data.is_only_role
                     role_magnification = data.role_magnification
-                    self._role_dict[role_id] = [role_type,role_magnification]
+                    self._role_dict[role_id] = (is_only_role,role_magnification)
         return self._role_dict
         
     def embed(self,guild:discord.Guild):
@@ -239,7 +239,7 @@ class PollView(discord.ui.View):
         role_magification_list = []
         for roleid in self.role_dict:
             role = guild.get_role(roleid)
-            if self.role_dict[roleid][0] == 1:
+            if self.role_dict[roleid][0] is True:
                 only_role_list.append(role.mention if role else roleid)
             if self.role_dict[roleid][1] > 1:
                 mag = self.role_dict[roleid][1]

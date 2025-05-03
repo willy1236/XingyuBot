@@ -211,7 +211,7 @@ class system_community(Cog_Extension):
             embed.add_field(name=notify_name, value=text)
         await ctx.respond(embed=embed)
 
-    @twitter.command(description='設置x/twitter通知（測試中，目前尚不穩定）')
+    @twitter.command(description='設置x/twitter通知')
     async def set(self,ctx,
                   twitter_username:discord.Option(str,required=True,name='twitter使用者名稱',description='使用者名稱，當此用戶發文時會發送通知'),
                   channel:discord.Option(discord.TextChannel,required=True,name='頻道',description='通知將會發送到此頻道'),
