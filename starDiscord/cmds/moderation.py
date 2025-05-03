@@ -134,7 +134,7 @@ class moderation(Cog_Extension):
     @commands.guild_only()
     async def list(self,ctx:discord.ApplicationContext,
                       user:discord.Option(discord.User,name='使用者',description='要查詢的使用者',required=True),
-                      guild_only:discord.Option(bool,name='查詢是否包含伺服器區域警告',description='若未存入警告系統的警告為服器區域警告，預設為True',default=True)):
+                      guild_only:discord.Option(bool,name='查詢是否包含伺服器區域警告',description='若未存入警告系統的警告為伺服器區域警告，預設為True',default=True)):
         dbdata = sclient.sqldb.get_warnings(user.id, ctx.guild.id if guild_only else None)
         await ctx.respond(embed=dbdata.display(self.bot))
 

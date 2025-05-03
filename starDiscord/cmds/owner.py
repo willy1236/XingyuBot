@@ -24,6 +24,16 @@ if TYPE_CHECKING:
 
 mcserver_process: subprocess.Popen = None
 
+def server_status(ip, port):
+    server = JavaServer.lookup(f"{ip}:{port}")
+    status = server.status()
+    latency = server.ping()
+    embed = BotEmbed.general(f"{server.address.host}:{server.address.port}", title="伺服器已開啟", description=status.description.encode("iso-8859-1").decode("utf-8"))
+    embed.add_field(name="伺服器版本", value=status.version.name, inline=True)
+    embed.add_field(name="在線玩家數", value=f"{status.players.online}/{status.players.max}", inline=True)
+    embed.add_field(name="延遲", value=f"{latency:.2f} ms", inline=True)
+    return embed
+
 class SendMessageModal(discord.ui.Modal):
     def __init__(self, channel, bot, is_dm, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -319,16 +329,7 @@ class owner(Cog_Extension):
     @mcserver.command(description="開啟mc伺服器")
     @commands.cooldown(rate=1,per=100)
     async def start(self, ctx:discord.ApplicationContext):
-        def server_status(ip, port):
-            server = JavaServer.lookup(f"{ip}:{port}")
-            status = server.status()
-            latency = server.ping()
-            embed = BotEmbed.general(f"{server.address.host}:{server.address.port}", title="伺服器已開啟", description=status.description.encode("iso-8859-1").decode("utf-8"))
-            embed.add_field(name="伺服器版本", value=status.version.name, inline=True)
-            embed.add_field(name="在線玩家數", value=f"{status.players.online}/{status.players.max}", inline=True)
-            embed.add_field(name="延遲", value=f"{latency:.2f} ms", inline=True)
-            return embed
-
+    
         await ctx.defer()
         ip = find_radmin_vpn_network()
         port = 25565
@@ -465,7 +466,11 @@ class owner(Cog_Extension):
                 await asyncio.sleep(10)
                 server = mcss_api.get_server_detail(server_id)
                 if server and server.status == McssServerStatues.Running:
-                    await msg.edit("🟢伺服器已開啟")
+                    try:
+                        embed = server_status(find_radmin_vpn_network(), 25565)
+                    except Exception as e:
+                        embed = None
+                    await msg.edit("🟢伺服器已開啟", embed=embed)
                     break
         
         elif execute_action == McssServerAction.Stop:

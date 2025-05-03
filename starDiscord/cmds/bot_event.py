@@ -251,7 +251,7 @@ class event(Cog_Extension):
     #             await channel.set_permissions(user,overwrite=None,reason='身分組選擇:退出')
                     
     @commands.Cog.listener()
-    async def on_voice_state_update(self,user:discord.Member, before:discord.VoiceState, after:discord.VoiceState):
+    async def on_voice_state_update(self, member:discord.Member, before:discord.VoiceState, after:discord.VoiceState):
         if debug_mode:
             return
 
@@ -269,20 +269,20 @@ class event(Cog_Extension):
                     after_text = after.channel.mention if not sclient.sqldb.getif_dynamic_voice_room(after.channel.id) else after.channel.name + ' (動態語音)'
                 
                 if not before.channel:
-                    embed=discord.Embed(description=f'{user.mention} 進入語音',color=0x4aa0b5,timestamp=NowTime)
+                    embed=discord.Embed(description=f'{member.mention} 進入語音',color=0x4aa0b5,timestamp=NowTime)
                     embed.add_field(name='頻道', value=f'{after_text}', inline=False)
                 elif not after.channel:
-                    embed=discord.Embed(description=f'{user.mention} 離開語音',color=0x4aa0b5,timestamp=NowTime)
+                    embed=discord.Embed(description=f'{member.mention} 離開語音',color=0x4aa0b5,timestamp=NowTime)
                     embed.add_field(name='頻道', value=f'{before_text}', inline=False)
                 elif before.channel != after.channel:
-                    embed=discord.Embed(description=f'{user.mention} 更換語音',color=0x4aa0b5,timestamp=NowTime)
+                    embed=discord.Embed(description=f'{member.mention} 更換語音',color=0x4aa0b5,timestamp=NowTime)
                     embed.add_field(name='頻道', value=f'{before_text}->{after_text}', inline=False)
                 else:
                     return
                 
-                username = user.name if user.discriminator == "0" else user
-                embed.set_author(name=username,icon_url=user.display_avatar.url)
-                embed.set_footer(text=user.guild.name)
+                username = member.name if member.discriminator == "0" else member
+                embed.set_author(name=username,icon_url=member.display_avatar.url)
+                embed.set_footer(text=member.guild.name)
                 
                 await self.bot.get_channel(voice_log_dict.get(guildid)[0]).send(embed=embed)
             
@@ -297,11 +297,11 @@ class event(Cog_Extension):
                 #permission.manage_channels = True
                 #overwrites = discord.PermissionOverwrite({user:permission})
                 overwrites = {
-                    user: discord.PermissionOverwrite(manage_channels=True,manage_roles=True)
+                    member: discord.PermissionOverwrite(manage_channels=True,manage_roles=True)
                 }
-                new_channel = await guild.create_voice_channel(name=f'{user.name}的頻道', reason='動態語音：新增',category=category,overwrites=overwrites)
-                sclient.sqldb.add_dynamic_voice(new_channel.id,user.id,guild.id,None)
-                await user.move_to(new_channel)
+                new_channel = await guild.create_voice_channel(name=f'{member.name}的頻道', reason='動態語音：新增',category=category,overwrites=overwrites)
+                sclient.sqldb.add_dynamic_voice(new_channel.id,member.id,guild.id,None)
+                await member.move_to(new_channel)
                 return
 
             #移除
