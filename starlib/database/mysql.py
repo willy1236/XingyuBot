@@ -440,6 +440,22 @@ class SQLNotifySystem(BaseSQLEngine):
         statement = select(func.count()).where(NotifyCommunity.notify_type == notify_type, NotifyCommunity.community_id == community_id)
         result = self.session.exec(statement).one()
         return result
+    
+    def get_community_by_notify(self, notify:NotifyCommunity):
+        """取得指定通知的社群資料"""
+        statement = select(Community).where(Community.id == notify.community_id, Community.type == notify.community_type)
+        result = self.session.exec(statement).one()
+        return result
+    
+    def update_community_name(self, community_type:CommunityType, community_id:str, username:str, display_name:str):
+        """更新社群名稱"""
+        stmt = select(Community).where(Community.id == community_id, Community.type == community_type)
+        community = self.session.exec(stmt).one_or_none()
+        if community and (community.username != username or community.display_name != display_name):
+            community.username = username
+            community.display_name = display_name
+            self.session.merge(community)
+        
 
     def get_expired_push_records(self):
         now = datetime.now()

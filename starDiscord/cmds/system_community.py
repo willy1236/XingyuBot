@@ -213,7 +213,7 @@ class system_community(Cog_Extension):
 
     @twitter.command(description='設置x/twitter通知（測試中，目前尚不穩定）')
     async def set(self,ctx,
-                  twitter_username:discord.Option(str,required=True,name='twitter用戶',description='使用者名稱，當此用戶發文時會發送通知'),
+                  twitter_username:discord.Option(str,required=True,name='twitter/x使用者名稱',description='使用者名稱，當此用戶發文時會發送通知'),
                   channel:discord.Option(discord.TextChannel,required=True,name='頻道',description='通知將會發送到此頻道'),
                   role:discord.Option(discord.Role,required=False,default=None,name='身分組',description='發送通知時tag的身分組')):
         guildid = ctx.guild.id
@@ -237,14 +237,14 @@ class system_community(Cog_Extension):
             await ctx.send(embed=BotEmbed.simple('溫馨提醒',f'我無法在{channel.mention}中發送訊息，請確認我有足夠的權限'))
 
     @twitter.command(description='移除x/twitter通知')
-    async def remove(self, ctx, twitter_username:discord.Option(str,required=True,name='twitter用戶',description='使用者名稱')):
+    async def remove(self, ctx, twitter_username:discord.Option(str,required=True,name='twitter/x使用者名稱',description='使用者名稱')):
         guildid = ctx.guild.id
         sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitterTweet, twitter_username, guildid)
         await ctx.respond(f'已移除 {twitter_username} 的通知')
 
 
     @twitter.command(description='確認x/twitter通知')
-    async def notify(self, ctx, twitter_username:discord.Option(str,required=True,name='twitter用戶',description='使用者名稱')):
+    async def notify(self, ctx, twitter_username:discord.Option(str,required=True,name='twitter/x使用者名稱',description='使用者名稱')):
         guildid = ctx.guild.id
         record = sclient.sqldb.get_notify_community_user_byname(NotifyCommunityType.TwitterTweet, twitter_username, guildid)
         if record:
