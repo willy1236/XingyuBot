@@ -99,7 +99,7 @@ class DiscordBot(discord.Bot):
     async def send_notify_communities(self, embed:discord.Embed, notify_type:NotifyCommunityType, community_id:str, defult_content:str=None, no_mention:bool=False):
         guilds = sqldb.get_notify_community_guild(notify_type.value, community_id)
         for guild_id, channel_id, role_id, message in guilds:
-            channel = self.get_channel(guild_id)
+            channel = self.get_channel(channel_id)
             if channel:
                 text = message or defult_content
                 role = channel.guild.get_role(role_id)
