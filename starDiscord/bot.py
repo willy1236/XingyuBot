@@ -96,41 +96,39 @@ class DiscordBot(discord.Bot):
         embed.timestamp = msg.created_at
         await dm_channel.send(embed=embed)
 
-    async def send_notify_communities(self, embed:discord.Embed, notify_type:NotifyCommunityType, community_id:str, content:str=None, no_mention:bool=False):
+    async def send_notify_communities(self, embed:discord.Embed, notify_type:NotifyCommunityType, community_id:str, defult_content:str=None, no_mention:bool=False):
         guilds = sqldb.get_notify_community_guild(notify_type.value, community_id)
-        log.debug(f"{notify_type} guilds: {guilds}")
-        for guildid in guilds:
-            channel = self.get_channel(guilds[guildid][0])
+        for guild_id, channel_id, role_id, message in guilds:
+            channel = self.get_channel(guild_id)
             if channel:
-                text = content or guilds[guildid][2]
-                role = channel.guild.get_role(guilds[guildid][1])
+                text = message or defult_content
+                role = channel.guild.get_role(role_id)
                 if role and not no_mention:
                     text = f'{role.mention} {text}' if text is not None else f'{role.mention}'
                     
-                log.debug(f"send_notify_communities: {guildid}/{guilds[guildid][0]}: {text}")
+                log.debug(f"send_notify_communities: {guild_id}/{channel_id}: {text}")
                 await channel.send(text, embed=embed)
                 await asyncio.sleep(0.5)
             else:
-                log.warning(f"{notify_type} not found: {guildid}/{guildid[0]}")
+                log.warning(f"{notify_type} channel not found: {guild_id}/{channel_id}")
     
-    async def send_notify_channel(self, embed:discord.Embed, notify_type:NotifyChannelType, content:str=None):
+    async def send_notify_channel(self, embed:discord.Embed, notify_type:NotifyChannelType, defult_content:str=None):
         notify_channels = sqldb.get_notify_channel_by_type(notify_type)
-        log.debug(f"{notify_type} channels: {notify_channels}")
         for no_channel in notify_channels:
             channel = self.get_channel(no_channel.channel_id)
             if channel:
                 role = channel.guild.get_role(no_channel.role_id)
                 if role:
-                    text = f'{content} {role.mention}' if content is not None else f'{role.mention}'
+                    text = f'{defult_content} {role.mention}' if defult_content is not None else f'{role.mention}'
                 else:
-                    text = content
+                    text = defult_content
 
                 await channel.send(text, embed=embed)
                 await asyncio.sleep(0.5)
             else:
                 log.warning(f"{notify_type} not found: {no_channel.guild_id}/{no_channel.channel_id}")
 
-    async def edit_notify_channel(self, embed:discord.Embed | list[discord.Embed], notify_type:NotifyChannelType, content:str=None):
+    async def edit_notify_channel(self, embed:discord.Embed | list[discord.Embed], notify_type:NotifyChannelType, defult_content:str=None):
         records = sqldb.get_notify_channel_by_type(notify_type)
         for i in records:
             channel = self.get_channel(i.channel_id)
@@ -141,10 +139,10 @@ class DiscordBot(discord.Bot):
                     msg = None
 
                 if msg and msg.author == self.user:
-                    await msg.edit(content, embeds=embed if isinstance(embed, list) else [embed])
+                    await msg.edit(defult_content, embeds=embed if isinstance(embed, list) else [embed])
                 else:
                     await channel.send(embed=BotEmbed.simple('溫馨提醒','此為定時通知，請將機器人的訊息保持在此頻道的最新訊息，以免機器人找不到訊息而重複發送'))
-                    await channel.send(content, embeds=embed if isinstance(embed, list) else [embed])
+                    await channel.send(defult_content, embeds=embed if isinstance(embed, list) else [embed])
                 await asyncio.sleep(0.5)
             
             else:

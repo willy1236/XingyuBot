@@ -252,7 +252,7 @@ class task(Cog_Extension):
                 for tweet in tweets:
                     newest = tweet.createdAt if tweet.createdAt > newest else newest
                     #await self.bot.send_notify_communities(None, NotifyCommunityType.TwitterTweet, user_name, content=f"{tweet.author} 轉推了推文↩️\n{tweet.link}" if tweet.is_retweet else f"{tweet.author} 發布新推文\n{tweet.link}")
-                    await self.bot.send_notify_communities(None, NotifyCommunityType.TwitterTweet, user_name, content=f"{tweet.tweetBy.fullName} 轉推了推文↩️\n{tweet.url}" if tweet.is_retweet else f"{tweet.tweetBy.fullName} 發布新推文\n{tweet.url}")
+                    await self.bot.send_notify_communities(None, NotifyCommunityType.TwitterTweet, user_name, defult_content=f"{tweet.tweetBy.fullName} 轉推了推文↩️\n{tweet.url}" if tweet.is_retweet else f"{tweet.tweetBy.fullName} 發布新推文\n{tweet.url}")
 
                 update_data[user_name] = (newest + timedelta(seconds=1))
 
