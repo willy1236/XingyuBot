@@ -31,7 +31,7 @@ class task(Cog_Extension):
             scheduler.add_job(self.forecast_update,'cron',hour='0/3',minute=0,second=1,jitter=30,misfire_grace_time=60)
             scheduler.add_job(self.weather_check,'cron',minute='20,35',second=30,jitter=30,misfire_grace_time=60)
             scheduler.add_job(self.apex_map_rotation,'cron',minute='0/15',second=10,jitter=30,misfire_grace_time=60)
-            # scheduler.add_job(self.refresh_yt_push,'cron',hour="2/6",jitter=30,misfire_grace_time=40)
+            scheduler.add_job(self.refresh_yt_push,'cron',hour="2/6",jitter=30,misfire_grace_time=40)
 
             scheduler.add_job(self.earthquake_check,'interval',minutes=3,jitter=30,misfire_grace_time=40)
             scheduler.add_job(self.weather_warning_check,'interval',minutes=15,jitter=30,misfire_grace_time=40)
@@ -332,9 +332,8 @@ class task(Cog_Extension):
         await msg.add_reaction("🎉")
 
     async def refresh_yt_push(self):
-        records = sclient.sqldb.get_expired_push_records()
         callback_url = Jsondb.get_token("youtube_push")
-        for record in records:
+        for record in sclient.sqldb.get_expired_push_records():
             yt_push.add_push(record.channel_id, callback_url)
             await asyncio.sleep(3)
             data = yt_push.get_push(record.channel_id, callback_url)
@@ -348,6 +347,7 @@ class task(Cog_Extension):
                 log.warning(f"refresh_yt_push failed: {record.channel_id}")
 
     async def test_one_times_job(self, video: YoutubeVideo):
+        # TODO: 改名並新增開台時間變更的處理方式
         log.info(f"test_one_times_job: {video.snippet.title}")
         for _ in range(30):
             video_now = yt_api.get_video(video.id)[0]

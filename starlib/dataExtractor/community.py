@@ -373,7 +373,7 @@ class YoutubePush:
     def get_push(self, channel_id:str, callback_url:str, secret:str=None):
         params = {
             "hub.callback": callback_url,
-            "hub.topic": f"https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}",
+            "hub.topic": f"https://www.youtube.com/xml/feeds/videos.xml?channel_id={channel_id}",
             "hub.secret": secret
         }
         r = requests.get(f'https://pubsubhubbub.appspot.com/subscription-details', params=params)

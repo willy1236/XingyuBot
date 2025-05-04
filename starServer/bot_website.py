@@ -79,7 +79,7 @@ async def get_yt_push(content):
         embed = YoutubePush(**entry).embed()
         
         if sclient.bot:
-            msg = sclient.bot.send_message(embed=embed)
+            msg = sclient.bot.send_message(embed=embed, content="YT push test")
             if not msg:
                 web_log.info('Channel not found. Message sent failed.')
         else:
