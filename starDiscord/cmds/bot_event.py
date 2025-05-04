@@ -252,8 +252,8 @@ class event(Cog_Extension):
                     
     @commands.Cog.listener()
     async def on_voice_state_update(self, member:discord.Member, before:discord.VoiceState, after:discord.VoiceState):
-        if debug_mode:
-            return
+        # if debug_mode:
+        #     return
 
         guildid = get_guildid(before,after)
         #語音進出紀錄
@@ -297,16 +297,25 @@ class event(Cog_Extension):
                 #permission.manage_channels = True
                 #overwrites = discord.PermissionOverwrite({user:permission})
                 overwrites = {
-                    member: discord.PermissionOverwrite(manage_channels=True,manage_roles=True)
+                    member: discord.PermissionOverwrite(manage_channels=True,manage_roles=True),
+                    self.bot.user: discord.PermissionOverwrite(manage_channels=True,manage_roles=True)
                 }
-                new_channel = await guild.create_voice_channel(name=f'{member.name}的頻道', reason='動態語音：新增',category=category,overwrites=overwrites)
+                try:
+                    new_channel = await guild.create_voice_channel(name=f'{member.name}的頻道', reason='動態語音：新增',category=category,overwrites=overwrites)
+                except discord.errors.Forbidden:
+                    await after.channel.send(f"{member.mention} 我無法創建動態語音頻道，請檢查我的權限", delete_after=5)
+                    return
                 sclient.sqldb.add_dynamic_voice(new_channel.id,member.id,guild.id,None)
                 await member.move_to(new_channel)
                 return
 
             #移除
             elif before.channel and not after.channel and not before.channel.members and sclient.sqldb.getif_dynamic_voice_room(before.channel.id):
-                await before.channel.delete(reason="動態語音：移除")
+                try:
+                    await before.channel.delete(reason="動態語音：移除")
+                except discord.errors.Forbidden:
+                    await before.channel.send(f"{member.mention} 我無法刪除動態語音頻道，請檢查我的權限", delete_after=5)
+                    return
                 sclient.sqldb.remove_dynamic_voice(before.channel.id)
                 return
 
