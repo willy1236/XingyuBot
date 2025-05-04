@@ -173,7 +173,6 @@ class DynamicChannel(BasicSchema, table=True):
     channel_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
     creator_id: int = Field(sa_column=Column(BigInteger))
     guild_id: int = Field(sa_column=Column(BigInteger))
-    created_at: datetime | None = Field(sa_column=Column(TIMESTAMP(True, 0), nullable=True))
     
 
 class Poll(BasicSchema, table=True):

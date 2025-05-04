@@ -305,7 +305,7 @@ class event(Cog_Extension):
                 except discord.errors.Forbidden as e:
                     await after.channel.send(f"{member.mention} 我無法創建動態語音頻道，請檢查我的權限", delete_after=5)
                     return
-                sclient.sqldb.add_dynamic_voice(new_channel.id,member.id,guild.id,None)
+                sclient.sqldb.add_dynamic_voice(new_channel.id,member.id,guild.id)
                 await member.move_to(new_channel)
                 return
 
