@@ -359,7 +359,7 @@ class YoutubePush:
     def add_push(self, channel_id:str, callback_url:str, secret:str=None):
         data = {
             "hub.callback": callback_url,
-            "hub.topic": f"https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}",
+            "hub.topic": f"https://www.youtube.com/xml/feeds/videos.xml?channel_id={channel_id}",
             "hub.verify": "sync",
             "hub.mode": "subscribe",
             "hub.verify_token": None,
