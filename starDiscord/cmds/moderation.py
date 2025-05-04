@@ -80,7 +80,8 @@ class moderation(Cog_Extension):
             await ctx.respond(f'設定完成，已將 {channel.mention} 設定為動態語音大廳頻道')
 
             if not channel.category.permissions_for(ctx.guild.me).manage_channels:
-                await ctx.send(embed=BotEmbed.simple('溫馨提醒',f'我無法在 {channel.category.mention} 中創建語音頻道，請確認我有足夠的權限'),delete_after=10)
+                #! 機器人不允許在頻道權限上給予管理身分組權限
+                await ctx.send(embed=BotEmbed.simple('溫馨提醒', f'我無法在 {channel.category.mention} 中創建語音頻道，請確認我有足夠的權限'), delete_after=10)
         else:
             sclient.sqldb.remove_notify_channel(ctx.guild.id, NotifyChannelType.DynamicVoice)
             await ctx.respond(f'設定完成，已移除 動態語音大廳 頻道')

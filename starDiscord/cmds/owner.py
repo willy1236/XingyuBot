@@ -253,27 +253,38 @@ class owner(Cog_Extension):
 
     @commands.slash_command(description='權限檢查', guild_ids=debug_guilds)
     @commands.is_owner()
-    async def permission(self, ctx, guild_id:str):
-        guild_id = int(guild_id)
-        guild = self.bot.get_guild(guild_id)
-        member = guild.get_member(ctx.bot.user.id)
-        permission = member.guild_permissions
+    async def permission(self, ctx, guild_id:str = None, channel_id:str = None):
+        if guild_id:
+            guild_id = int(guild_id)
+            guild = self.bot.get_guild(guild_id)
+            member = guild.get_member(ctx.bot.user.id)
+            permission = member.guild_permissions
 
-        embed = discord.Embed(title=guild.name, color=0xc4e9ff)
-        embed.add_field(name="管理員", value=permission.administrator, inline=True)
-        embed.add_field(name="管理頻道", value=permission.manage_channels, inline=True)
-        embed.add_field(name="管理公會", value=permission.manage_guild, inline=True)
-        embed.add_field(name="管理訊息", value=permission.manage_messages, inline=True)
-        embed.add_field(name="管理暱稱", value=permission.manage_nicknames, inline=True)
-        embed.add_field(name="管理身分組", value=permission.manage_roles, inline=True)
-        embed.add_field(name="管理webhook", value=permission.manage_webhooks, inline=True)
-        embed.add_field(name="管理表情符號", value=permission.manage_emojis, inline=True)
-        embed.add_field(name="管理討論串", value=permission.manage_threads, inline=True)
-        embed.add_field(name="管理活動", value=permission.manage_events, inline=True)
-        embed.add_field(name="踢出成員", value=permission.kick_members, inline=True)
-        embed.add_field(name="封鎖成員", value=permission.ban_members, inline=True)
-        embed.add_field(name="禁言成員", value=permission.moderate_members, inline=True)
-        embed.add_field(name="觀看審核日誌", value=permission.view_audit_log, inline=True)
+            embed = discord.Embed(title=guild.name, color=0xc4e9ff)
+            embed.add_field(name="管理員", value=permission.administrator, inline=True)
+            embed.add_field(name="管理頻道", value=permission.manage_channels, inline=True)
+            embed.add_field(name="管理公會", value=permission.manage_guild, inline=True)
+            embed.add_field(name="管理訊息", value=permission.manage_messages, inline=True)
+            embed.add_field(name="管理暱稱", value=permission.manage_nicknames, inline=True)
+            embed.add_field(name="管理身分組", value=permission.manage_roles, inline=True)
+            embed.add_field(name="管理webhook", value=permission.manage_webhooks, inline=True)
+            embed.add_field(name="管理表情符號", value=permission.manage_emojis, inline=True)
+            embed.add_field(name="管理討論串", value=permission.manage_threads, inline=True)
+            embed.add_field(name="管理活動", value=permission.manage_events, inline=True)
+            embed.add_field(name="踢出成員", value=permission.kick_members, inline=True)
+            embed.add_field(name="封鎖成員", value=permission.ban_members, inline=True)
+            embed.add_field(name="禁言成員", value=permission.moderate_members, inline=True)
+            embed.add_field(name="觀看審核日誌", value=permission.view_audit_log, inline=True)
+
+        if channel_id:
+            channel_id = int(channel_id)
+            channel = self.bot.get_channel(channel_id)
+
+            embed = discord.Embed(title=channel.name, color=0xc4e9ff)
+            embed.add_field(name="頻道", value=channel.permissions_for(channel.guild.me).manage_channels, inline=True)
+            embed.add_field(name="分類", value=channel.category.permissions_for(channel.guild.me).manage_channels, inline=True)
+            embed.add_field(name="伺服器", value=channel.guild.me.guild_permissions.manage_channels, inline=True)
+            
         
         # permission.create_instant_invite
         # permission.add_reactions
