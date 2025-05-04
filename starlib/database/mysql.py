@@ -332,16 +332,16 @@ class SQLNotifySystem(BaseSQLEngine):
         voice = DynamicChannel(channel_id=channel_id, creator_id=creator_id, guild_id=guild_id, created_at=created_at)
         self.session.add(voice)
         self.session.commit()
-        if self.cache.get(NotifyChannelType.DynamicVoice):
-            self.cache[NotifyChannelType.DynamicVoice].append(channel_id)
+        if self.cache.get("dynamic_voice_room"):
+            self.cache["dynamic_voice_room"].append(channel_id)
 
     def remove_dynamic_voice(self,channel_id):
         """移除動態語音"""
         stmt = delete(DynamicChannel).where(DynamicChannel.channel_id == channel_id)
         self.session.exec(stmt)
         self.session.commit()
-        if self.cache.get(NotifyChannelType.DynamicVoice):
-            self.cache[NotifyChannelType.DynamicVoice].remove(channel_id)
+        if self.cache.get("dynamic_voice_room"):
+            self.cache["dynamic_voice_room"].remove(channel_id)
 
     #* notify community
     def add_notify_community(self, notify_type:NotifyCommunityType, community_id:str, community_type:CommunityType, guild_id:int, channel_id:int, role_id:int=None, message:str=None, cache_time:datetime=None):
