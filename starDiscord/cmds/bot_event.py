@@ -310,7 +310,8 @@ class event(Cog_Extension):
                 return
 
             #移除
-            elif before.channel and not after.channel and not before.channel.members and sclient.sqldb.getif_dynamic_voice_room(before.channel.id):
+            await asyncio.sleep(1)
+            if before.channel and not after.channel and not before.channel.members and sclient.sqldb.getif_dynamic_voice_room(before.channel.id):
                 try:
                     await before.channel.delete(reason="動態語音：移除")
                 except discord.errors.Forbidden:
