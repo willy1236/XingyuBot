@@ -72,7 +72,7 @@ def keep_alive(request:Request):
 async def get_yt_push(content):
     feed = feedparser.parse(content)
     print(feed)
-    with open('test.json', 'w') as f:
+    with open('test.json', 'w', encoding="utf-8") as f:
         f.write(str(feed))
 
     for entry in feed["entries"]:
@@ -107,7 +107,7 @@ async def oauth_discord(request:Request):
     if not code:
         return HTMLResponse(f'授權失敗：{params}', 400)
 
-    auth = DiscordOauth2(discord_oauth_settings)
+    auth = DiscordOauth2(**discord_oauth_settings)
     auth.exchange_code(code)
     auth.save_token(auth.user_id)
     

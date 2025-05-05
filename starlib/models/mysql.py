@@ -137,6 +137,13 @@ class Pet(UserSchema, table=True):
     pet_name: str
     food: int | None
 
+class TwitchPoint(UserSchema, table=True):
+    __tablename__ = "twitch_point"
+
+    twitch_id: int = Field(primary_key=True)
+    broadcaster_id: int = Field(primary_key=True)
+    point: int | None = Field(default=0)
+
 class Community(BasicSchema, table=True):
     __tablename__ = "community_info"
     
@@ -212,6 +219,7 @@ class TwitchBotJoinChannel(BasicSchema, table=True):
     
     twitch_id: int = Field(primary_key=True)
     action_channel_id: int | None = Field(sa_column=Column(BigInteger))
+    point_name: str | None = Field(sa_column=Column(String(255)))
 
 class TwitchChatCommand(BasicSchema, table=True):
     __tablename__ = "twitch_chat_command"

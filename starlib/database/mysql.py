@@ -787,15 +787,31 @@ class SQLTwitchSystem(BaseSQLEngine):
         result = self.session.exec(stmt).all()
         return {i.twitch_id: i.action_channel_id for i in result}
     
-    def list_chat_command_by_channel(self, channel_id:str):
+    def list_chat_command_by_channel(self, channel_id:int):
         stmt = select(TwitchChatCommand).where(TwitchChatCommand.twitch_id == channel_id)
         result = self.session.exec(stmt).all()
         return result
     
-    def get_chat_command(self, command:str, channel_id:str):
+    def get_chat_command(self, command:str, channel_id:int):
         stmt = select(TwitchChatCommand).where(TwitchChatCommand.twitch_id == channel_id, TwitchChatCommand.name == command)
         result = self.session.exec(stmt).one_or_none()
         return result
+    
+    def get_twitch_point(self, twitch_id:int, broadcaster_id:int):
+        stmt = select(TwitchPoint).where(TwitchPoint.twitch_id == twitch_id, TwitchPoint.broadcaster_id == broadcaster_id)
+        result = self.session.exec(stmt).one_or_none()
+        return result or TwitchPoint(twitch_id=twitch_id, broadcaster_id=broadcaster_id)
+    
+    def update_twitch_point(self, twitch_id:int, broadcaster_id:int, point:int):
+        stmt = select(TwitchPoint).where(TwitchPoint.twitch_id == twitch_id, TwitchPoint.broadcaster_id == broadcaster_id)
+        result = self.session.exec(stmt).one_or_none()
+        if result:
+            result.point += point
+            self.session.merge(result)
+        else:
+            self.session.add(TwitchPoint(twitch_id=twitch_id, broadcaster_id=broadcaster_id, point=point))
+        self.session.commit()
+
 
 class SQLRPGSystem(BaseSQLEngine):
     def get_user_rpg(self, discord_id):
