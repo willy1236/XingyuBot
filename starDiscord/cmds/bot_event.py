@@ -249,14 +249,10 @@ class event(Cog_Extension):
     #             channel = self.bot.get_channel(706810474326655026)
     #             user = self.bot.get_user(payload.user_id)
     #             await channel.set_permissions(user,overwrite=None,reason='身分組選擇:退出')
-                    
-    @commands.Cog.listener()
-    async def on_voice_state_update(self, member:discord.Member, before:discord.VoiceState, after:discord.VoiceState):
-        # if debug_mode:
-        #     return
 
+    @commands.Cog.listener("on_voice_state_update")
+    async def dynamic_room_trigger(self, member:discord.Member, before:discord.VoiceState, after:discord.VoiceState):
         guildid = get_guildid(before, after)
-
         #動態語音
         dynamic_voice_dict = sclient.sqldb[NotifyChannelType.DynamicVoice]
         if guildid in dynamic_voice_dict:
@@ -276,8 +272,14 @@ class event(Cog_Extension):
                 except discord.errors.Forbidden as e:
                     await after.channel.send(f"{member.mention} 我無法創建動態語音頻道，請檢查我的權限", delete_after=5)
                     return
-                sclient.sqldb.add_dynamic_voice(new_channel.id,member.id,guild.id)
                 await member.move_to(new_channel)
+                sclient.sqldb.add_dynamic_voice(new_channel.id,member.id,guild.id)
+
+                await asyncio.sleep(2)
+                #檢查使用者是否進入
+                if len(new_channel.members) == 0:
+                    await new_channel.delete(reason="動態語音：移除")
+                    sclient.sqldb.remove_dynamic_voice(new_channel.id)
                 return
 
             #移除
@@ -285,11 +287,17 @@ class event(Cog_Extension):
             if before.channel and not after.channel and not before.channel.members and sclient.sqldb.getif_dynamic_voice_room(before.channel.id):
                 try:
                     await before.channel.delete(reason="動態語音：移除")
+                    sclient.sqldb.remove_dynamic_voice(new_channel.id)
                 except discord.errors.Forbidden:
                     await before.channel.send(f"{member.mention} 我無法刪除動態語音頻道，請檢查我的權限", delete_after=5)
                     return
-                sclient.sqldb.remove_dynamic_voice(before.channel.id)
-                return
+
+    @commands.Cog.listener()
+    async def on_voice_state_update(self, member:discord.Member, before:discord.VoiceState, after:discord.VoiceState):
+        if debug_mode:
+            return
+
+        guildid = get_guildid(before, after)
 
         #語音進出紀錄
         if voice_updata:
