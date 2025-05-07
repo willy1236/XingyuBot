@@ -287,7 +287,7 @@ class event(Cog_Extension):
             if before.channel and not after.channel and not before.channel.members and sclient.sqldb.getif_dynamic_voice_room(before.channel.id):
                 try:
                     await before.channel.delete(reason="動態語音：移除")
-                    sclient.sqldb.remove_dynamic_voice(new_channel.id)
+                    sclient.sqldb.remove_dynamic_voice(before.channel.id)
                 except discord.errors.Forbidden:
                     await before.channel.send(f"{member.mention} 我無法刪除動態語音頻道，請檢查我的權限", delete_after=5)
                     return
