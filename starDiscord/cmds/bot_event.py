@@ -272,8 +272,8 @@ class event(Cog_Extension):
                 except discord.errors.Forbidden as e:
                     await after.channel.send(f"{member.mention} 我無法創建動態語音頻道，請檢查我的權限", delete_after=5)
                     return
-                await member.move_to(new_channel)
                 sclient.sqldb.add_dynamic_voice(new_channel.id,member.id,guild.id)
+                await member.move_to(new_channel)
 
                 await asyncio.sleep(2)
                 #檢查使用者是否進入
@@ -286,8 +286,7 @@ class event(Cog_Extension):
                 return
 
             #移除
-            await asyncio.sleep(1)
-            if before.channel and not after.channel and not before.channel.members and sclient.sqldb.getif_dynamic_voice_room(before.channel.id):
+            elif before.channel and not after.channel and not before.channel.members and sclient.sqldb.getif_dynamic_voice_room(before.channel.id):
                 try:
                     await before.channel.delete(reason="動態語音：移除")
                     sclient.sqldb.remove_dynamic_voice(before.channel.id)
