@@ -129,7 +129,10 @@ class DiscordBot(discord.Bot):
                 else:
                     text = defult_content
 
-                await channel.send(text, embed=embed)
+                try:
+                    await channel.send(text, embed=embed)
+                except discord.Forbidden:
+                    log.warning(f"{notify_type} channel missing access: {no_channel.guild_id}/{no_channel.channel_id}")
                 await asyncio.sleep(0.5)
             else:
                 log.warning(f"{notify_type} not found: {no_channel.guild_id}/{no_channel.channel_id}")

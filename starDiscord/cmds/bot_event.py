@@ -255,6 +255,8 @@ class event(Cog_Extension):
         # if debug_mode:
         #     return
 
+        guildid = get_guildid(before, after)
+
         #動態語音
         dynamic_voice_dict = sclient.sqldb[NotifyChannelType.DynamicVoice]
         if guildid in dynamic_voice_dict:
@@ -289,7 +291,6 @@ class event(Cog_Extension):
                 sclient.sqldb.remove_dynamic_voice(before.channel.id)
                 return
 
-        guildid = get_guildid(before,after)
         #語音進出紀錄
         if voice_updata:
             voice_log_dict = sclient.sqldb[NotifyChannelType.VoiceLog]
