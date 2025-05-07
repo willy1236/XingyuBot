@@ -255,37 +255,6 @@ class event(Cog_Extension):
         # if debug_mode:
         #     return
 
-        guildid = get_guildid(before,after)
-        #語音進出紀錄
-        if voice_updata:
-            voice_log_dict = sclient.sqldb[NotifyChannelType.VoiceLog]
-            if guildid in voice_log_dict:
-                NowTime = datetime.now()
-                before_text = ""
-                after_text = ""
-                if before.channel:
-                    before_text = before.channel.mention if not sclient.sqldb.getif_dynamic_voice_room(before.channel.id) else before.channel.name + ' (動態語音)'
-                if after.channel:
-                    after_text = after.channel.mention if not sclient.sqldb.getif_dynamic_voice_room(after.channel.id) else after.channel.name + ' (動態語音)'
-                
-                if not before.channel:
-                    embed=discord.Embed(description=f'{member.mention} 進入語音',color=0x4aa0b5,timestamp=NowTime)
-                    embed.add_field(name='頻道', value=f'{after_text}', inline=False)
-                elif not after.channel:
-                    embed=discord.Embed(description=f'{member.mention} 離開語音',color=0x4aa0b5,timestamp=NowTime)
-                    embed.add_field(name='頻道', value=f'{before_text}', inline=False)
-                elif before.channel != after.channel:
-                    embed=discord.Embed(description=f'{member.mention} 更換語音',color=0x4aa0b5,timestamp=NowTime)
-                    embed.add_field(name='頻道', value=f'{before_text}->{after_text}', inline=False)
-                else:
-                    return
-                
-                username = member.name if member.discriminator == "0" else member
-                embed.set_author(name=username,icon_url=member.display_avatar.url)
-                embed.set_footer(text=member.guild.name)
-                
-                await self.bot.get_channel(voice_log_dict.get(guildid)[0]).send(embed=embed)
-            
         #動態語音
         dynamic_voice_dict = sclient.sqldb[NotifyChannelType.DynamicVoice]
         if guildid in dynamic_voice_dict:
@@ -319,6 +288,37 @@ class event(Cog_Extension):
                     return
                 sclient.sqldb.remove_dynamic_voice(before.channel.id)
                 return
+
+        guildid = get_guildid(before,after)
+        #語音進出紀錄
+        if voice_updata:
+            voice_log_dict = sclient.sqldb[NotifyChannelType.VoiceLog]
+            if guildid in voice_log_dict:
+                NowTime = datetime.now()
+                before_text = ""
+                after_text = ""
+                if before.channel:
+                    before_text = before.channel.mention if not sclient.sqldb.getif_dynamic_voice_room(before.channel.id) else before.channel.name + ' (動態語音)'
+                if after.channel:
+                    after_text = after.channel.mention if not sclient.sqldb.getif_dynamic_voice_room(after.channel.id) else after.channel.name + ' (動態語音)'
+                
+                if not before.channel:
+                    embed=discord.Embed(description=f'{member.mention} 進入語音',color=0x4aa0b5,timestamp=NowTime)
+                    embed.add_field(name='頻道', value=f'{after_text}', inline=False)
+                elif not after.channel:
+                    embed=discord.Embed(description=f'{member.mention} 離開語音',color=0x4aa0b5,timestamp=NowTime)
+                    embed.add_field(name='頻道', value=f'{before_text}', inline=False)
+                elif before.channel != after.channel:
+                    embed=discord.Embed(description=f'{member.mention} 更換語音',color=0x4aa0b5,timestamp=NowTime)
+                    embed.add_field(name='頻道', value=f'{before_text}->{after_text}', inline=False)
+                else:
+                    return
+                
+                username = member.name if member.discriminator == "0" else member
+                embed.set_author(name=username,icon_url=member.display_avatar.url)
+                embed.set_footer(text=member.guild.name)
+                
+                await self.bot.get_channel(voice_log_dict.get(guildid)[0]).send(embed=embed)
 
         #舞台發言
         # if check_event_stage(before) or check_event_stage(after):

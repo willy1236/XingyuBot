@@ -110,7 +110,10 @@ class DiscordBot(discord.Bot):
                     text = additional_content if text is None else f"{text}\n{additional_content}"
                     
                 log.debug(f"send_notify_communities: {guild_id}/{channel_id}: {text}")
-                await channel.send(text, embed=embed)
+                try:
+                    await channel.send(text, embed=embed)
+                except discord.Forbidden:
+                    log.warning(f"NotifyCommunity:{notify_type}, channel missing access: {guild_id}/{channel_id}")
                 await asyncio.sleep(0.5)
             else:
                 log.warning(f"NotifyCommunity:{notify_type}, channel not found: {guild_id}/{channel_id}")
