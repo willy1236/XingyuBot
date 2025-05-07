@@ -277,9 +277,12 @@ class event(Cog_Extension):
 
                 await asyncio.sleep(2)
                 #檢查使用者是否進入
-                if len(new_channel.members) == 0:
-                    await new_channel.delete(reason="動態語音：移除")
-                    sclient.sqldb.remove_dynamic_voice(new_channel.id)
+                if self.bot.get_channel(new_channel.id) and len(new_channel.members) == 0:
+                    try:
+                        await new_channel.delete(reason="動態語音：移除")
+                        sclient.sqldb.remove_dynamic_voice(new_channel.id)
+                    except discord.errors.NotFound:
+                        log.warning(f"動態語音頻道 {new_channel.id} 已經不存在")
                 return
 
             #移除
