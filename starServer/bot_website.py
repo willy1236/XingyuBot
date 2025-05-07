@@ -1,5 +1,6 @@
 import asyncio
 import secrets
+import json
 from datetime import datetime, timedelta
 
 import feedparser
@@ -73,7 +74,7 @@ async def get_yt_push(content):
     feed = feedparser.parse(content)
     print(feed)
     with open('test.json', 'w', encoding="utf-8") as f:
-        f.write(str(feed))
+        json.dump(feed, f, ensure_ascii=False, indent=4)
 
     for entry in feed["entries"]:
         embed = YoutubePush(**entry).embed()
