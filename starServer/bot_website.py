@@ -22,7 +22,7 @@ from google_auth_oauthlib.flow import Flow
 from starlib import Jsondb, sclient, web_log, BaseThread
 from starlib.dataExtractor import DiscordOauth2, TwitchOauth2, GoogleOauth2
 from starlib.models.mysql import CloudUser, TwitchBotJoinChannel
-from starlib.models.push import YoutubePush
+from starlib.models.push import YoutubePushEntry
 
 discord_oauth_settings = Jsondb.get_token("discord_oauth")
 twitch_oauth_settings = Jsondb.get_token("twitch_oauth")
@@ -77,7 +77,7 @@ async def get_yt_push(content):
         json.dump(feed, f, ensure_ascii=False, indent=4)
 
     for entry in feed["entries"]:
-        embed = YoutubePush(**entry).embed()
+        embed = YoutubePushEntry(**entry).embed()
         
         if sclient.bot:
             msg = sclient.bot.send_message(embed=embed, content="YT push test")
