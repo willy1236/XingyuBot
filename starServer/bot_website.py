@@ -120,6 +120,15 @@ async def oauth_discord(request:Request):
 
     return HTMLResponse(f'授權已完成，您現在可以關閉此頁面<br><br>Discord ID：{auth.user_id}')
 
+@app.get('/oauth/discordbot')
+async def oauth_discordbot(request:Request):
+    params = dict(request.query_params)
+    code = params.get('code')
+    if not code:
+        return HTMLResponse(f'授權失敗：{params}', 400)
+    
+    return HTMLResponse(f'授權已完成，您現在可以關閉此頁面<br>感謝您使用星羽機器人！', 200)
+
 @app.get('/oauth/twitch')
 async def oauth_twitch(request:Request):
     params = dict(request.query_params)

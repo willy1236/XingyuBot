@@ -20,11 +20,11 @@ class error(Cog_Extension):
         elif isinstance(error,commands.errors.MissingPermissions):
             permissions = [permissions_tl.get(i,i) for i in error.missing_permissions]
             text = ','.join(permissions)
-            await ctx.respond(f'缺少權限：你沒有權限來使用此指令\n缺少權限: {text}',ephemeral=True)
+            await ctx.respond(f'缺少權限：你沒有權限來使用此指令\n缺少權限：{text}',ephemeral=True)
         elif isinstance(error,commands.errors.BotMissingPermissions):
             permissions = [permissions_tl.get(i,i) for i in error.missing_permissions]
             text = ','.join(permissions)
-            await ctx.respond(f'缺少權限：我沒有權限來使用此指令\n缺少權限: {text}',ephemeral=True)
+            await ctx.respond(f'缺少權限：我沒有權限來使用此指令\n缺少權限：{text}',ephemeral=True)
 
         elif isinstance(error,commands.errors.NoPrivateMessage):
             await ctx.respond(f'頻道錯誤：此指令不可在私訊中使用',ephemeral=True)
