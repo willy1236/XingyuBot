@@ -2,7 +2,7 @@
 ### 模組：工具集
 提供各項函式與方法
 """
-from logging import DEBUG, INFO, WARNING
+from logging import DEBUG, ERROR, INFO, WARNING
 
 from ..fileDatabase import Jsondb
 from .funtions import *
@@ -20,4 +20,4 @@ twitch_log = create_logger("twitchBot", DEBUG, format="%(asctime)s [twitchBot/%(
 web_log = create_logger("web", log_level, format="%(asctime)s [web/%(levelname)s] %(message)s")
 
 # discord_log = create_logger("discord", WARNING, format="%(asctime)s [%(levelname)s] [discord] %(message)s")
-pywarnings = create_logger("py.warnings", WARNING, format="%(asctime)s [%(levelname)s] [py.warnings] %(message)s")
+pywarnings = create_logger("py.warnings", ERROR, format="%(asctime)s [%(levelname)s] [py.warnings] %(message)s")
