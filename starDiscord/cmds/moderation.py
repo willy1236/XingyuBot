@@ -80,7 +80,7 @@ class moderation(Cog_Extension):
             await ctx.respond(f'設定完成，已將 {channel.mention} 設定為動態語音大廳頻道')
 
             if not channel.category.permissions_for(ctx.guild.me).manage_channels:
-                #! 機器人不允許在頻道權限上給予管理身分組權限
+                #! 管理身分組權限需要經過額外的OAuth驗證
                 await ctx.send(embed=BotEmbed.simple('溫馨提醒', f'我無法在 {channel.category.mention} 中創建語音頻道，請確認我有足夠的權限（需求管理頻道）'), delete_after=10)
             if not channel.permissions_for(ctx.guild.me).move_members:
                 await ctx.send(embed=BotEmbed.simple('溫馨提醒', f'我無法把 {channel.mention} 中的使用者移至他們的房間（需求移動成員）'), delete_after=10)

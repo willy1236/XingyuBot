@@ -407,7 +407,8 @@ class SQLNotifySystem(BaseSQLEngine):
 
     def get_notify_community_guild(self, notify_type:NotifyCommunityType, community_id:str):
         """取得指定社群的所有通知"""
-        statement = select(NotifyCommunity.guild_id, NotifyCommunity.channel_id, NotifyCommunity.role_id, NotifyCommunity.message).where(NotifyCommunity.notify_type == notify_type, NotifyCommunity.community_id == community_id)
+        notify_type = NotifyCommunityType(notify_type)
+        statement = select(NotifyCommunity.guild_id, NotifyCommunity.channel_id, NotifyCommunity.role_id, NotifyCommunity.message).where(NotifyCommunity.notify_type == notify_type.value, NotifyCommunity.community_id == community_id)
         return self.session.exec(statement).all()
         
 

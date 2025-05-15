@@ -55,9 +55,6 @@ def run_website():
     time.sleep(2)
 
 def main():
-    pass
-
-if __name__ == "__main__":
     if api_website:
         run_website()
 
@@ -67,3 +64,6 @@ if __name__ == "__main__":
     run_scheduler_in_thread()
     
     run_discord_bot()
+
+if __name__ == "__main__":
+    main()

@@ -2,7 +2,8 @@ import os.path
 import subprocess
 import json
 from datetime import timezone
-from typing import NoReturn, TypeVar, Generator, Iterator
+from typing import TypeVar
+from collections.abc import Iterator
 
 import feedparser
 import requests
@@ -33,7 +34,7 @@ class TwitchAPI():
         if self._headers is None:
             self._headers = self.__get_headers()
         return self._headers
-    
+
 
     def __get_headers(self):
         TOKENURL = "https://id.twitch.tv/oauth2/token"
@@ -54,8 +55,8 @@ class TwitchAPI():
             }
             return headers
         else:
-            raise Forbidden(f"在讀取Twitch API時發生錯誤",f"[{r.status_code}] {apidata['message']}")
-        
+            raise Forbidden("在讀取Twitch API時發生錯誤",f"[{r.status_code}] {apidata['message']}")
+
     def _build_request(self, endpoint:str, params:dict, model:T) -> Iterator[T]:
         after = True
         while after:
@@ -87,21 +88,21 @@ class TwitchAPI():
             params["user_id"] = users
         r = requests.get(f"{self.BaseURL}/streams", params=params,headers=self.headers)
         apidata = r.json()
-        dict = {}
-        
+        dct = {}
+
         if not isinstance(users, list):
             users = [users]
 
         for user in users:
-            dict[user] = None
+            dct[user] = None
 
         for data in apidata['data']:
             if use_user_logins:
-                dict[data.get('user_login')] = TwitchStream(**data)
+                dct[data.get('user_login')] = TwitchStream(**data)
             else:
-                dict[data.get('user_id')] = TwitchStream(**data)
-        
-        return dict
+                dct[data.get('user_id')] = TwitchStream(**data)
+
+        return dct
 
     def get_user(self,username:str) -> TwitchUser | None:
         """
@@ -118,7 +119,7 @@ class TwitchAPI():
             return TwitchUser(**apidata['data'][0])
         else:
             return None
-        
+
     def get_user_test(self,username:str):
         params = {
             "login": username,
@@ -131,7 +132,7 @@ class TwitchAPI():
             return TwitchUser(**data)
         else:
             return None
-        
+
     def get_user_by_id(self,userid:str) -> TwitchUser | None:
         """
         取得Twitch用戶
@@ -191,7 +192,7 @@ class TwitchAPI():
         if started_at:
             params['started_at'] = started_at.astimezone(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
             params['ended_at'] = datetime.now(tz=timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
-        
+
         r = requests.get(f"{self.BaseURL}/clips", params=params,headers=self.headers)
         apidata = r.json()
         if apidata.get('data'):
@@ -204,7 +205,7 @@ class TwitchAPI():
 
 class YoutubeAPI():
     BaseURL = "https://www.googleapis.com/youtube/v3"
-    
+
     def __init__(self):
         self.__token = Jsondb.get_token("youtube_api")
         self.__headers = {
@@ -238,14 +239,14 @@ class YoutubeAPI():
             print(r.text)
             print(r.status_code)
 
-    def get_channel(self, id:str=None, handle:str=None):
+    def get_channel(self, channel_id:str=None, handle:str=None):
         '''獲取Youtube頻道資訊
         :param id: 頻道ID
         :param handle: 頻道名稱
         兩者擇一提供即可
         '''
         params = {
-            'id':id,
+            'id':channel_id,
             'forHandle': handle,
             'part': 'statistics,snippet',
             'maxResults':1
@@ -300,7 +301,7 @@ class YoutubeAPI():
             return YouTubeStream(**r.json()['items'][0]) if r.json()['items'] else None
         else:
             raise APIInvokeError("youtube_get_stream", f"[{r.status_code}] {r.text}")
-        
+
     def get_video(self,video_id:str|list) -> list[YoutubeVideo]:
         params ={
             'part': 'snippet,liveStreamingDetails',
@@ -311,7 +312,7 @@ class YoutubeAPI():
             return [YoutubeVideo(**i) for i in r.json()['items']] if r.json()['items'] else list()
         else:
             raise APIInvokeError("youtube_get_video", f"[{r.status_code}] {r.text}")
-        
+
     def get_playlist(self,playlist_id:str|list):
         params ={
             'key': self.__token,
@@ -325,7 +326,7 @@ class YoutubeAPI():
             print(r.text)
             print(r.status_code)
             return None
-    
+
     def get_playlist_item(self,playlist_id:str|list):
         params ={
             'key': self.__token,
@@ -351,7 +352,7 @@ class YoutubeRSS():
             return [i for i in results if i.uplood_at > after]
         else:
             return results
-    
+
 class YoutubePush:
     def __init__(self):
         pass
@@ -366,35 +367,35 @@ class YoutubePush:
             "hub.secret": secret,
             "hub.lease_numbers": None
         }
-        r = requests.post(f'https://pubsubhubbub.appspot.com/subscribe', data=data)
+        r = requests.post('https://pubsubhubbub.appspot.com/subscribe', data=data)
         if r.status_code != 204:
             raise APIInvokeError(f"[{r.status_code}] youtube_push", f"[{r.status_code}] {r.text}")
-        
+
     def get_push(self, channel_id:str, callback_url:str, secret:str=None):
         params = {
             "hub.callback": callback_url,
             "hub.topic": f"https://www.youtube.com/xml/feeds/videos.xml?channel_id={channel_id}",
             "hub.secret": secret
         }
-        r = requests.get(f'https://pubsubhubbub.appspot.com/subscription-details', params=params)
+        r = requests.get('https://pubsubhubbub.appspot.com/subscription-details', params=params)
         if r.ok:
             return self._parse_subscription_details(r.text)
         else:
             print(r.text)
             print(r.status_code)
             return None
-        
+
     @staticmethod
     def _parse_subscription_details(html_content: str) -> YtSubscriptionDetails:
         soup = BeautifulSoup(html_content, 'html.parser')
-        
+
         def get_text_from_dt(dt_text: str) -> str:
             dt = soup.find('dt', string=dt_text)
             if dt and dt.find_next_sibling('dd'):
                 return dt.find_next_sibling('dd').get_text(strip=True)
             return 'n/a'
-        
-        def parse_datetime(dt_text: str) -> Optional[datetime]:
+
+        def parse_datetime(dt_text: str) -> datetime | None:
             """
             將時間字串轉換為 datetime，如果為 'n/a' 則返回 None。
             """
@@ -406,7 +407,7 @@ class YoutubePush:
             except ValueError as e:
                 print(f"時間格式錯誤: {e}")
                 return None
-        
+
         return YtSubscriptionDetails(
                 callback_url=get_text_from_dt('Callback URL'),
                 state=get_text_from_dt('State'),
@@ -422,11 +423,11 @@ class YoutubePush:
                 content_delivered=parse_datetime('Content delivered')
             )
 
-
+# pylint: disable=E1101
 class GoogleCloud():
     def __init__(self):
         self.creds = self.get_creds()
-    
+
     def get_creds(self):
         # If modifying these scopes, delete the file token.json.
         SCOPES = ['https://www.googleapis.com/auth/drive']
@@ -445,10 +446,10 @@ class GoogleCloud():
                     'database/credentials.json', SCOPES)
                 creds = flow.run_local_server(port=0)
             # Save the credentials for the next run
-            with open('database/google_token.json', 'w') as token:
+            with open('database/google_token.json', 'w', encoding="utf-8") as token:
                 token.write(creds.to_json())
         return creds
-    
+
     def list_drive_files(self):
         """Shows basic usage of the Drive v3 API.
         Prints the names and ids of the first 10 files the user has access to.
@@ -467,7 +468,7 @@ class GoogleCloud():
                 return
             print('Files:')
             for item in items:
-                print(u'{0} ({1})'.format(item['name'], item['id']))
+                print(f"{item['name']} ({item['id']})")
             return results
         except HttpError as error:
             print(f'An error occurred: {error}')
@@ -488,7 +489,7 @@ class GoogleCloud():
         results = service.permissions().create(fileId=fileId,body=permission_dict).execute()
         print(results)
         return results
-    
+
     def remove_file_permissions(self,fileId,permissionId):
         service = build('drive', 'v3', credentials=self.creds)
         results = service.permissions().delete(fileId=fileId,permissionId=permissionId).execute()
@@ -507,7 +508,7 @@ class NotionAPI():
             "Notion-Version": "2022-06-28",
             "Content-Type": "application/json"
         }
-    
+
     def get_page(self,page_id:str):
         r = requests.get(f"{self.url}/pages/{page_id}",headers=self.headers)
         apidata = r.json()
@@ -515,7 +516,7 @@ class NotionAPI():
             print(apidata)
         else:
             print(apidata['message'])
-    
+
     def get_page_property(self,page_id:str,property_id:str):
         r = requests.get(f"{self.url}/pages/{page_id}/properties/{property_id}",headers=self.headers)
         apidata = r.json()
@@ -539,7 +540,7 @@ class NotionAPI():
             return apidata
         else:
             print(apidata['message'])
-    
+
     def search(self,title:str):
         """search by title"""
         data = {
@@ -556,7 +557,7 @@ class RssHub():
     def __init__(self):
         self.url = "https://rsshub.app"
         self.url_local = "http://localhost:1200"
-    
+
     def get_twitter(self, username:str, local=False, after:datetime=None):
         """取得Twitter用戶的RSS"""
         #* api不支援id查詢 故使用username查詢
@@ -568,7 +569,7 @@ class RssHub():
                 r = requests.get(f"{self.url}/twitter/user/{username}")
         else:
             r = requests.get(f"{self.url}/twitter/user/{username}")
-        
+
         if r.ok:
             feeds = feedparser.parse(r.text)
             results = [RssHubTwitterTweet(**feed) for feed in feeds.entries]
@@ -578,27 +579,27 @@ class RssHub():
                 return [result for result in results if result.published_parsed > after]
             else:
                 return results
-            
+
         else:
             if r.status_code == 503:
                 # 503可能為找不到用戶
                 return
             else:
                 raise APIInvokeError("rsshub_get_twitter", f"[{r.status_code}]")
-            
+
 class CLIInterface():
     def __init__(self):
         pass
 
     def get_user_timeline(self, user_id:str, after:datetime=None) -> RettiwtTweetTimeLineResponse | None:
         # shutil.which("rettiwt")
-        r = subprocess.run(f'rettiwt -k "{Jsondb.get_token("rettiwt_api_key")}" user timeline "{user_id}" 10', shell=True, capture_output=True, encoding='utf-8')
+        r = subprocess.run(f'rettiwt -k "{Jsondb.get_token("rettiwt_api_key")}" user timeline "{user_id}" 10', shell=True, capture_output=True, encoding='utf-8', check=False)
         r.check_returncode()
         data = json.loads(r.stdout)
 
         if data.get("name") == "VALIDATION_ERROR":
             return None
-        
+
         results = RettiwtTweetTimeLineResponse(**data)
         if after:
             results.list = [i for i in results.list if i.createdAt > after]

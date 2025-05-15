@@ -1,65 +1,73 @@
 import json
 import logging
 import os
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING, Never, TypeVar, Union
 
-T = TypeVar("T")
 logger = logging.getLogger("star")
+
+DataValue = TypeVar("DataValue", str, int, bool, dict, list)
+
 
 class BaseJsonHandler:
     _DBPATH = "./database"
 
     if TYPE_CHECKING:
-        datas: dict[str, T]
+        datas: dict[str, str | int | bool | dict | list]
 
-    def __init__(self, filename:str):
-        self.filename = filename
+    def __init__(self, filename: str) -> None:
+        self.filename: str = filename
 
-        # craete folder
+        # create folder
         if not os.path.isdir(self._DBPATH):
             os.mkdir(self._DBPATH)
             print(f">> Created folder: {self._DBPATH} <<")
-        
-        path = f'{self._DBPATH}/{filename}.json'
+
+        path = f"{self._DBPATH}/{filename}.json"
         if not os.path.isfile(path):
-            with open(path, 'w', encoding='utf-8') as jfile:
+            with open(path, "w", encoding="utf-8") as jfile:
                 json.dump({}, jfile, indent=4)
                 print(f">> Created json file: {filename} <<")
-        
-        with open(path, 'r', encoding='utf8') as jfile:
-            self.datas = json.load(jfile)
 
-    def get(self, key:str, default:T=None) -> T:
+        with open(path, "r", encoding="utf-8") as jfile:
+            self.datas: dict[str, str | int | bool | dict | list] = json.load(jfile)
+
+    def get(self, key: str, default: DataValue | None = None) -> DataValue | None:
         try:
-            data = self.datas[key]
+            data: DataValue | None = self.datas[key]
         except KeyError:
             data = default
             self.write(key, default)
-        finally:
-            return data
-    
-    def write(self, key:str, value):
+        return data
+
+    def write(self, key: str, value: DataValue | None) -> None:
         self.datas[key] = value
-        with open(f'{self._DBPATH}/{self.filename}.json', 'w', encoding='utf-8') as jfile:
+        with open(f"{self._DBPATH}/{self.filename}.json", "w", encoding="utf-8") as jfile:
             json.dump(self.datas, jfile, indent=4)
 
-    def update_dict(self, key:str, value:dict):
+    def update_dict(self, key: str, value: dict) -> None:
         """Update a dictionary in the JSON file with a new key-value pair."""
         if key not in self.datas:
             self.datas[key] = {}
-        self.datas[key].update(value)
+        if isinstance(self.datas[key], dict):
+            self.datas[key].update(value)
+        else:
+            raise TypeError(
+                f"Expected dict at key '{key}', got {type(self.datas[key])}")
         self.write(key, self.datas[key])
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: str) -> DataValue | None:
         return self.get(key)
+
 
 class JsonConfig(BaseJsonHandler):
     def __init__(self):
         super().__init__("setting")
 
+
 class JsonToken(BaseJsonHandler):
     def __init__(self):
         super().__init__("token")
+
 
 class JsonDatabase():
     if TYPE_CHECKING:
@@ -92,7 +100,7 @@ class JsonDatabase():
         "member_names": f'{_DBPATH}/member_names.json'
     }
 
-    def __init__(self,create_file=True):
+    def __init__(self, create_file=True):
         self.config = JsonConfig()
         self.tokens = JsonToken()
 
@@ -100,19 +108,17 @@ class JsonDatabase():
         if not os.path.isdir(self._DBPATH):
             os.mkdir(self._DBPATH)
             logger.info(f">> Created folder: {self._DBPATH} <<")
-        
-        for file in self._PATH_DICT:
-            path = self._PATH_DICT[file]
+
+        for file, path in self._PATH_DICT.items():
             if not os.path.isfile(path):
                 if not create_file:
                     continue
-                with open(path,'w',encoding='utf-8') as jfile:
+                with open(path, 'w', encoding='utf-8') as jfile:
                     json.dump({}, jfile, indent=4)
                     logger.info(f">> Created json file: {file} <<")
-            
-            with open(path,mode='r',encoding='utf8') as jfile:
-                setattr(self, file, json.load(jfile))
 
+            with open(path, mode='r', encoding='utf8') as jfile:
+                setattr(self, file, json.load(jfile))
 
     def write(self, file_name: str, data: dict):
         """
@@ -130,31 +136,37 @@ class JsonDatabase():
             setattr(self, file_name, data)
             with open(file=location, mode='w', encoding='utf8') as jfile:
                 json.dump(data, jfile, indent=4, ensure_ascii=False)
-        except:
-            raise KeyError("此項目沒有在資料庫中")
+        except KeyError as e:
+            raise KeyError("此項目沒有在資料庫中") from e
 
-    def get_token(self,webname:str):
-        """獲取相關api的tokens
+    def get_token(self, webname: str) -> str:
         """
+        取得API token
+
+        Args:
+            webname (str): API名稱
+
+        Raises:
+            ValueError: 無此API token
+
+        Returns:
+            str: API token
+        """        
         token = self.tokens[webname]
         if token:
             return token
         else:
             raise ValueError('無此API token')
-            
-    def get_picture(self, id) -> str:
+
+    def get_picture(self, pic_key) -> str:
         """取得圖片網址"""
-        return self.picdata[id]
-            
-    def set_token(self, name:str, value:str | dict):
-        self.tokens[name] = value
-        self.write('tokens',self.tokens)
+        return self.picdata[pic_key]
 
-    def get_jdict(self,key:str, value:str) -> str:
+    def get_jdict(self, key: str, value: str) -> str:
         """取得jdict資料"""
-        return self.jdict[key].get(value,value)
+        return self.jdict[key].get(value, value)
 
-    def get_tw(self, value:T, option_name:str) -> str | T:
+    def get_tw(self, value, option_name: str) -> str:
         """
         Retrieve the Traditional Chinese (zh-TW) translation for a given value and option name.
         Args:
@@ -165,16 +177,16 @@ class JsonDatabase():
         """
         if self.jdict.get(option_name):
             if self.jdict[option_name].get("zh-TW"):
-                return self.jdict[option_name]["zh-TW"].get(str(value),value)
+                return self.jdict[option_name]["zh-TW"].get(str(value), value)
             else:
-                return self.jdict[option_name].get(str(value),value)
-            
+                return self.jdict[option_name].get(str(value), value)
+
         elif self.options.get(option_name):
             return self.options[option_name][str(value)]["zh-TW"]
-        
+
         else:
             return value
-        
-    def get_member_name(self, id:int) -> str | None:
+
+    def get_member_name(self, discord_id: int) -> str | None:
         """取得成員名稱"""
-        return self.member_names.get(str(id))
+        return self.member_names.get(str(discord_id))

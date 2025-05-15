@@ -1,7 +1,6 @@
 import asyncio
-import random
 import subprocess
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 
 import discord
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -232,19 +231,19 @@ class task(Cog_Extension):
             return
         
         update_data:dict[str, datetime] = {}
-        for user_name, cache in caches.items():
-            log.debug(f"twitter_tweets: {user_name}")
+        for twitter_user_id, cache in caches.items():
+            log.debug(f"twitter_tweets: {twitter_user_id}")
             #tweets = rss_hub.get_twitter(user_name, local=True, after=cache.value)
             try:
-                results = cli_api.get_user_timeline(user_name, after=cache.value)
+                results = cli_api.get_user_timeline(twitter_user_id, after=cache.value)
             except subprocess.CalledProcessError as e:
                 log.error(e.stderr)
                 continue
             log.debug(f"twitter_tweets data: {results}")
             
             if results is None:
-                log.warning(f"twitter_tweets error / not found: {user_name}")
-                sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitterTweet, user_name)
+                log.warning(f"twitter_tweets error / not found: {twitter_user_id}")
+                sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitterTweet, twitter_user_id)
             elif results.list:
                 tweets = results.list
                 tweets.reverse()
@@ -252,9 +251,9 @@ class task(Cog_Extension):
                 for tweet in tweets:
                     newest = tweet.createdAt if tweet.createdAt > newest else newest
                     #await self.bot.send_notify_communities(None, NotifyCommunityType.TwitterTweet, user_name, content=f"{tweet.author} 轉推了推文↩️\n{tweet.link}" if tweet.is_retweet else f"{tweet.author} 發布新推文\n{tweet.link}")
-                    await self.bot.send_notify_communities(None, NotifyCommunityType.TwitterTweet, user_name, defult_content=f"{tweet.tweetBy.fullName} 轉推了推文↩️" if tweet.is_retweet else f"{tweet.tweetBy.fullName} 發布新推文", additional_content=tweet.url)
+                    await self.bot.send_notify_communities(None, NotifyCommunityType.TwitterTweet, twitter_user_id, defult_content=f"{tweet.tweetBy.fullName} 轉推了推文↩️" if tweet.is_retweet else f"{tweet.tweetBy.fullName} 發布新推文", additional_content=tweet.url)
 
-                update_data[user_name] = (newest + timedelta(seconds=1))
+                update_data[twitter_user_id] = (newest + timedelta(seconds=1))
 
         sclient.sqldb.set_community_caches(NotifyCommunityType.TwitterTweet, update_data)
 

@@ -1,6 +1,5 @@
 import asyncio
 import enum
-import json
 import math
 import random
 import subprocess
@@ -13,7 +12,6 @@ import discord
 import yt_dlp as youtube_dl
 from discord.commands import SlashCommandGroup
 from discord.ext import commands, pages
-from vosk import KaldiRecognizer, Model
 
 from starlib import BotEmbed, Jsondb, log
 from starlib.errors import *
@@ -49,6 +47,7 @@ ytdl = youtube_dl.YoutubeDL(ytdl_format_options)
 class SongSource(enum.IntEnum):
     Youtube_or_other = 1
     Spotify = 2
+
 class Song():
     def __init__(self, url:str, source_path:str, title:str, requester:discord.Member=None, song_from=SongSource.Youtube_or_other):
         self.url = url
@@ -92,7 +91,7 @@ class Song():
 
         for song_datas in results:
             title = song_datas.get("title")
-            
+
             data = None
             if song_datas["webpage_url_domain"] == "youtube.com":
                 #針對youtube的處理
@@ -106,7 +105,7 @@ class Song():
             #filename = data["url"] if stream else ytdl.prepare_filename(data)
             source_path = data.get("url")
             lst.append(cls(url, source_path, title, requester=requester, song_from=song_from))
-        
+
         return lst
 
 class MusicPlayer():
@@ -133,25 +132,25 @@ class MusicPlayer():
         self.skip_voters = []
 
     async def play_next(self):
-            """
-            Plays the next song in the queue.
+        """
+        Plays the next song in the queue.
 
-            This method retrieves the next song from the queue and plays it using the voice client.
-            It also sends an embed message to the channel indicating the currently playing song.
+        This method retrieves the next song from the queue and plays it using the voice client.
+        It also sends an embed message to the channel indicating the currently playing song.
 
-            Raises:
-                MusicPlayingError: If there is an error playing the next song.
-            """
-            log.debug(f"{self.guildid}: play_next")
-            song = self.start_first_song()
-            try:
-                source = await song.get_source(self.volume)
-                
-                embed = BotEmbed.simple(title="現在播放", description=f"[{song.title}]({song.url}) [{song.requester.mention}]")
-                await self.channel.send(embed=embed,silent=True)
-                self.vc.play(source, after=self.after, wait_finish=True)
-            except Exception as e:
-                raise MusicPlayingError(str(e))
+        Raises:
+            MusicPlayingError: If there is an error playing the next song.
+        """
+        log.debug(f"{self.guildid}: play_next")
+        song = self.start_first_song()
+        try:
+            source = await song.get_source(self.volume)
+
+            embed = BotEmbed.simple(title="現在播放", description=f"[{song.title}]({song.url}) [{song.requester.mention}]")
+            await self.channel.send(embed=embed,silent=True)
+            self.vc.play(source, after=self.after, wait_finish=True)
+        except Exception as e:
+            raise MusicPlayingError(str(e)) from e
 
     def after(self, error):
         """
@@ -172,22 +171,22 @@ class MusicPlayer():
             asyncio.run_coroutine_threadsafe(self.wait_to_leave(), self.loop)
 
     async def wait_to_leave(self, wait_for=15):
-            """
-            Waits for a specified amount of time and stops the music if it is not playing.
+        """
+        Waits for a specified amount of time and stops the music if it is not playing.
 
-            This method is used to wait for a certain amount of time before stopping the music playback
-            if there is no audio being played in the voice channel.
+        This method is used to wait for a certain amount of time before stopping the music playback
+        if there is no audio being played in the voice channel.
 
-            Parameters:
-            - wait_for (int): The number of seconds to wait before stopping the music. Default is 15.
+        Parameters:
+        - wait_for (int): The number of seconds to wait before stopping the music. Default is 15.
 
-            Returns:
-            - None
-            """
-            self.nowplaying = None
-            await asyncio.sleep(wait_for)
-            if not self.vc.is_playing() and not self.nowplaying:
-                await self.stop()
+        Returns:
+        - None
+        """
+        self.nowplaying = None
+        await asyncio.sleep(wait_for)
+        if not self.vc.is_playing() and not self.nowplaying:
+            await self.stop()
 
     def skip_song(self, skip_voter: discord.Member):
         """
@@ -233,34 +232,34 @@ class MusicPlayer():
         await self.channel.send("歌曲播放完畢 掰掰~")
 
     def add_song(self, song: Song | list[Song]):
-            """
-            Adds a song or a list of songs to the playlist.
+        """
+        Adds a song or a list of songs to the playlist.
 
-            Parameters:
-            - song (Song | list[Song]): The song or list of songs to be added to the playlist.
+        Parameters:
+        - song (Song | list[Song]): The song or list of songs to be added to the playlist.
 
-            Returns:
-            - None
-            """
-            if isinstance(song, list):
-                self.playlist.extend(song)
-            else:
-                self.playlist.append(song)
-    
+        Returns:
+        - None
+        """
+        if isinstance(song, list):
+            self.playlist.extend(song)
+        else:
+            self.playlist.append(song)
+
     def start_first_song(self) -> Song:
-            """
-            Starts playing the first song in the playlist.
+        """
+        Starts playing the first song in the playlist.
 
-            If the song loop is disabled, the first song is removed from the playlist and set as the currently playing song.
-            The skip voter list is reset.
+        If the song loop is disabled, the first song is removed from the playlist and set as the currently playing song.
+        The skip voter list is reset.
 
-            Returns:
-                The currently playing song.
-            """
-            if not self.songloop:
-                self.nowplaying = self.playlist.pop(0)
-            self.skip_voter = []
-            return self.nowplaying
+        Returns:
+            The currently playing song.
+        """
+        if not self.songloop:
+            self.nowplaying = self.playlist.pop(0)
+        self.skip_voters = []
+        return self.nowplaying
 
     def play_completed(self):
         """
@@ -269,13 +268,13 @@ class MusicPlayer():
         self.vc.stop()
 
     def get_full_playlist(self) -> list[Song]:
-            """
-            Returns the full playlist of songs.
+        """
+        Returns the full playlist of songs.
 
-            Returns:
-                list[Song]: The full playlist of songs.
-            """
-            return self.playlist
+        Returns:
+            list[Song]: The full playlist of songs.
+        """
+        return self.playlist
 
     def shuffle(self):
         """
@@ -296,7 +295,7 @@ def convert_audio(input_file, output_file):
         '-y',
         output_file
     ]
-    subprocess.run(command)
+    subprocess.run(command, check=False)
 
 async def recording_done(sink: discord.sinks.WaveSink):
     now = datetime.now().strftime("%H%M%S")
@@ -307,7 +306,8 @@ async def recording_done(sink: discord.sinks.WaveSink):
     await sink.vc.disconnect()
     files = [discord.File(audio.file, f"{user_id}_{now}.{sink.encoding}") for user_id, audio in sink.audio_data.items()]
     await sink.vc.channel.send(f"完成以下成員的錄音： {', '.join(recorded_users)}.", files=files)
-    
+
+    # pylint: disable=E1101
     for user_id, audio in sink.audio_data.items():
         audio: discord.sinks.AudioData
         file_path = f"{user_id}_{now}.{sink.encoding}"
@@ -316,7 +316,7 @@ async def recording_done(sink: discord.sinks.WaveSink):
             wav_file.setsampwidth(2)
             wav_file.setframerate(48000)
             wav_file.writeframes(audio.file.getvalue())
-        
+
         # convert_audio(file_path, f"output.wav")
         # with wave.open("output.wav", 'rb') as wav_file:
         #     wav_data = wav_file.readframes(wav_file.getnframes())
@@ -337,7 +337,7 @@ async def recording_done(sink: discord.sinks.WaveSink):
 
         # with sr.AudioFile(file_path) as source:
         #     audio = recognizer.record(source)
-        
+
         # try:
         #     text = recognizer.recognize_google(audio, language='zh-TW')
         #     recognizer.
@@ -392,22 +392,22 @@ class music(Cog_Extension):
             raise MusicCommandError("正在錄音時無法播放音樂")
 
         if url.startswith("https://open.spotify.com/"):
-            songfrom = SongSource.Spotify
+            # songfrom = SongSource.Spotify
             raise MusicCommandError("不受支援的連結，請重新檢查網址是否正確")
         else:
-            songfrom = SongSource.Youtube_or_other
+            # songfrom = SongSource.Youtube_or_other
             #抓取歌曲
             try:
                 results = await Song.from_url(url, requester=ctx.author)
             except youtube_dl.utils.DownloadError as e:
-                raise MusicCommandError("不受支援的連結，請重新檢查網址是否正確")
+                raise MusicCommandError("不受支援的連結，請重新檢查網址是否正確") from e
 
         #播放器設定
         player = guild_playing.get(guildid)
         if not player:
             player = MusicPlayer(vc,ctx,self.bot.loop)
             guild_playing[guildid] = player
-        
+
         #把歌曲放入清單
         try:
             player.add_song(results)
@@ -418,7 +418,7 @@ class music(Cog_Extension):
         except MusicPlayingError:
             raise
         except Exception as e:
-            raise MusicCommandError(e)
+            raise MusicCommandError(e) from e
 
         #回應
         song_count = len(results)
@@ -453,7 +453,7 @@ class music(Cog_Extension):
         await ctx.voice_client.disconnect(force=True)
         if guild_playing.get(guildid):
             del guild_playing[guildid]
-        await ctx.respond(f"再見啦~👋")
+        await ctx.respond("再見啦~👋")
 
     @commands.slash_command(description='現在播放')
     @commands.guild_only()
@@ -483,10 +483,10 @@ class music(Cog_Extension):
     async def pause(self, ctx: discord.ApplicationContext):
         if not ctx.voice_client.is_paused():
             await ctx.voice_client.pause()
-            await ctx.respond(f"歌曲已暫停⏸️")
+            await ctx.respond("歌曲已暫停⏸️")
         else:
             await ctx.voice_client.resume()
-            await ctx.respond(f"歌曲已繼續▶️")
+            await ctx.respond("歌曲已繼續▶️")
 
     @commands.slash_command(description='循環/取消循環歌曲')
     @commands.guild_only()
@@ -494,16 +494,16 @@ class music(Cog_Extension):
         player = get_player(ctx.guild.id)
         player.songloop = not player.songloop
         if player.songloop:
-            await ctx.respond(f"循環已開啟🔂")
+            await ctx.respond("循環已開啟🔂")
         else:
-            await ctx.respond(f"循環已關閉")
+            await ctx.respond("循環已關閉")
 
     @commands.slash_command(description='洗牌歌曲')
     @commands.guild_only()
     async def shuffle(self, ctx: discord.ApplicationContext):
         player = get_player(ctx.guild.id)
         player.shuffle()
-        await ctx.respond(f"歌單已隨機🔀")
+        await ctx.respond("歌單已隨機🔀")
 
     @play.before_invoke
     @skip.before_invoke
@@ -519,16 +519,13 @@ class music(Cog_Extension):
     async def ensure_voice(self, ctx: discord.ApplicationContext):
         if not ctx.voice_client:
             if ctx.author.voice:
-                try:
-                    await ctx.author.voice.channel.connect(timeout=10,reconnect=False)
-                except Exception as e:
-                    print(e)
+                await ctx.author.voice.channel.connect(timeout=10,reconnect=False)
             else:
                 raise discord.ApplicationCommandInvokeError(MusicCommandError("請先連接到一個語音頻道"))
         else:
             if not ctx.author.voice or ctx.voice_client.channel != ctx.author.voice.channel:
                 raise discord.ApplicationCommandInvokeError(MusicCommandError("你必須要跟機器人在同一頻道才能使用指令"))
-            
+
     @recording.command(description='開始錄音（實驗版）')
     async def start(self, ctx: discord.ApplicationContext):
         vc = ctx.voice_client
@@ -550,6 +547,3 @@ class music(Cog_Extension):
 
 def setup(bot):
     bot.add_cog(music(bot))
-
-if __name__ == '__main__':
-    asyncio.run(Song.from_url("https://youtu.be/TcT_BTzp83M?si=gT2xYd2d9WSiT7Lu"))
