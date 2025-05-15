@@ -1,4 +1,7 @@
 from enum import Enum, IntEnum
+from re import T
+
+from pandas.tseries.holiday import GoodFriday
 
 
 class NotifyCommunityType(IntEnum):
@@ -76,3 +79,19 @@ class McssServerStatues(IntEnum):
             3: "啟動中",
             4: "停止中",
         }.get(self.value)
+        
+class APIType(IntEnum):
+    Discord = 1
+    CWA = 2
+    Osu = 3
+    TRN = 4
+    Apex_Statue = 5
+    Steam = 6
+    Twitch = 7
+    Google = 8
+    Riot = 9
+    Notion = 10
+    Line = 11
+    MCSS = 12
+    Twitter = 13
+    rettiwt = 14

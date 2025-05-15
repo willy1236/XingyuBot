@@ -432,8 +432,8 @@ class OAuth2Token(TokensSchema, table=True):
 class BotToken(TokensSchema, table=True):
     __tablename__ = "bot_token"
 
-    api_type: CommunityType = Field(sa_column=Column(Integer, primary_key=True))
-    id: int | None = Field(sa_column=Column(Integer, primary_key=True, autoincrement=True))
+    api_type: APIType = Field(sa_column=Column(Integer, primary_key=True))
+    token_seq: int = Field(sa_column=Column(Integer, primary_key=True))
     client_id: str | None
     client_secret: str | None
     access_token: str | None
