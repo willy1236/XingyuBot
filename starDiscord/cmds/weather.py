@@ -1,12 +1,15 @@
 from discord.ext import commands
-from starlib.dataExtractor.weather import *
+
+from starlib.instance import cwa_api
+
 from ..extension import Cog_Extension
+
 
 class weather(Cog_Extension):
     @commands.cooldown(rate=1,per=20)
     @commands.slash_command(description='查詢最新的顯著地震報告')
     async def earthquake(self,ctx):
-        report = CWA_API().get_earthquake_report()
+        report = cwa_api.get_earthquake_report()
         if report:
             await ctx.respond('查詢成功',embed=report.embed())
         else:
@@ -15,7 +18,7 @@ class weather(Cog_Extension):
     @commands.cooldown(rate=1,per=15)
     @commands.slash_command(description='查詢12小時天氣預報')
     async def forecast(self,ctx):
-        report = CWA_API().get_forecast()
+        report = cwa_api.get_forecast()
         if report:
             await ctx.respond('查詢成功',embed=report.embed())
         else:
@@ -24,7 +27,7 @@ class weather(Cog_Extension):
     @commands.cooldown(rate=1,per=15)
     @commands.slash_command(description='查詢天氣警特報')
     async def weatherwarning(self,ctx):
-        reports = CWA_API().get_weather_warning()
+        reports = cwa_api.get_weather_warning()
         if reports:
             await ctx.respond('查詢成功',embeds=[report.embed() for report in reports])
         else:

@@ -19,13 +19,14 @@ from linebot.v3.webhooks import MessageEvent, TextMessageContent
 from linebot.v3.webhooks.models.message_event import MessageEvent
 from google_auth_oauthlib.flow import Flow
 
-from starlib import Jsondb, sclient, web_log, BaseThread
+from starlib import Jsondb, sclient, sqldb, web_log, BaseThread
 from starlib.dataExtractor import DiscordOauth2, TwitchOauth2, GoogleOauth2
 from starlib.models.mysql import CloudUser, TwitchBotJoinChannel
 from starlib.models.push import YoutubePushEntry
+from starlib.types import APIType
 
 discord_oauth_settings = Jsondb.get_token("discord_oauth")
-twitch_oauth_settings = Jsondb.get_token("twitch_oauth")
+twitch_oauth_settings = sqldb.get_bot_token(APIType.Twitch)
 google_oauth_settings = Jsondb.get_token("google_oauth")
 linebot_token = Jsondb.get_token("line_bot")
 docs_account = Jsondb.get_token("docs_account")
@@ -136,7 +137,7 @@ async def oauth_twitch(request:Request):
     if not code:
         return HTMLResponse(f'授權失敗：{params}', 400)
     
-    auth = TwitchOauth2(**twitch_oauth_settings)
+    auth = TwitchOauth2.from_bot_token(twitch_oauth_settings)
     auth.exchange_code(code)
     auth.save_token(auth.user_id)
     sclient.sqldb.merge(TwitchBotJoinChannel(twitch_id=auth.user_id))
@@ -198,7 +199,7 @@ async def to_discordauth(request:Request):
 
 @app.get("/to/twitchauth")
 async def to_twitchauth(request:Request):
-    return RedirectResponse(url=f"https://id.twitch.tv/oauth2/authorize?client_id={twitch_oauth_settings['client_id']}&redirect_uri={twitch_oauth_settings['redirect_uri']}&response_type=code&scope=chat:read+channel:read:subscriptions+moderation:read+channel:read:redemptions+channel:manage:redemptions+channel:manage:raids+channel:read:vips+channel:bot+moderator:read:suspicious_users+channel:manage:polls+channel:manage:predictions&force_verify=true")
+    return RedirectResponse(url=f"https://id.twitch.tv/oauth2/authorize?client_id={twitch_oauth_settings.client_id}&redirect_uri={twitch_oauth_settings.redirect_uri}&response_type=code&scope=chat:read+channel:read:subscriptions+moderation:read+channel:read:redemptions+channel:manage:redemptions+channel:manage:raids+channel:read:vips+channel:bot+moderator:read:suspicious_users+channel:manage:polls+channel:manage:predictions&force_verify=true")
 
 @app.get("/to/googleauth")
 async def to_googleauth(request:Request):

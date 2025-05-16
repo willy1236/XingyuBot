@@ -10,12 +10,13 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
-from ..database import sqldb, debug_mode
+from ..database import debug_mode, sqldb
 from ..errors import SQLNotFoundError
 from ..models import DiscordUser, UserConnection
+from ..models.mysql import BotToken
+from ..settings import tz
 from ..types import CommunityType
 from ..utils import log
-from ..settings import tz
 
 
 class OAuth2Base(ABC):
@@ -108,7 +109,7 @@ class OAuth2Base(ABC):
         return response.json()
     
     
-    def set_token_from_db(self, user_id):
+    def load_token_from_db(self, user_id):
         """
         從資料庫取得指定使用者的OAuth token。
         """
@@ -153,6 +154,30 @@ class OAuth2Base(ABC):
         self.scopes = token_data.get("scope")
         return token_data
 
+    @classmethod
+    def from_bot_token(cls, bot_token:BotToken, as_bot=False):
+        """
+        從資料庫取得指定使用者的OAuth token。
+        
+        Args:
+            bot_token (BotToken): 機器人token物件
+            as_bot (bool, optional): 帶入資料庫中機器人身分的access_token等。 預設為 False
+        """        
+        instance = cls(
+            client_id=bot_token.client_id,
+            client_secret=bot_token.client_secret,
+            redirect_uri=bot_token.redirect_uri
+        )
+        
+        if as_bot:
+            instance.access_token = bot_token.access_token
+            instance.refresh_token = bot_token.refresh_token
+            instance.expires_at = bot_token.expires_at
+
+        # if instance.expired:
+        #     instance.refresh()
+        
+        return instance
 
 class DiscordOauth2(OAuth2Base):
     auth_url = "https://discord.com/api/oauth2/authorize"
@@ -164,7 +189,7 @@ class DiscordOauth2(OAuth2Base):
         super().__init__(client_id, client_secret, redirect_uri, scope)
         self._user_id = user_id
         if user_id:
-            self.set_token_from_db(user_id)
+            self.load_token_from_db(user_id)
         
     @property
     def user_id(self):
@@ -194,7 +219,7 @@ class TwitchOauth2(OAuth2Base):
         super().__init__(client_id, client_secret, redirect_uri, scope)
         self._user_id = user_id
         if user_id:
-            self.set_token_from_db(user_id)
+            self.load_token_from_db(user_id)
 
     @property
     def user_id(self):
@@ -281,7 +306,7 @@ class GoogleOauth2(OAuth2Base):
         如果都沒有且在debug_mode下，則會從 Google OAuth2 隱式授權中取得 token。
         """
         if self._user_id:
-            self.set_token_from_db(self._user_id)
+            self.load_token_from_db(self._user_id)
             self._creds = Credentials(token=self.access_token, refresh_token=self.refresh_token, expiry=self.expires_at.replace(tzinfo=None))
         elif creds:
             self._creds = creds

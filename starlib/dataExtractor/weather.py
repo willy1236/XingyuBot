@@ -1,7 +1,8 @@
 import requests
 
-from ..fileDatabase import Jsondb
+from ..database import sqldb
 from ..models.weather import *
+from ..types import APIType
 
 
 def sort_earthquakeReport(x:EarthquakeReport):
@@ -11,7 +12,7 @@ class CWA_API():
     BaseURL = 'https://opendata.cwa.gov.tw/api/v1/rest/datastore'
 
     def __init__(self):
-        self.auth = Jsondb.get_token('cwa_api')
+        self.auth = sqldb.get_bot_token(APIType.CWA).access_token
 
     def get_earthquake_report(self,significant=True):
         params = {

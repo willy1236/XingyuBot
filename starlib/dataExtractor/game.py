@@ -7,6 +7,8 @@ from mwrogue.esports_client import EsportsClient
 
 from starlib.errors import APIInvokeError
 from starlib.fileDatabase import Jsondb
+from starlib.database import sqldb
+from starlib.types import APIType
 from starlib.models.game import *
 
 
@@ -140,10 +142,10 @@ class OsuAPI():
         self._headers = self._get_headers()    
 
     def _get_headers(self):
-        ous_token = Jsondb.get_token("osu_api")                   
+        ous_token = sqldb.get_bot_token(APIType.Osu)
         data = {
-            'client_id': ous_token[0],
-            'client_secret': ous_token[1],
+            'client_id': ous_token.client_id,
+            'client_secret': ous_token.client_secret,
             'grant_type': 'client_credentials',
             'scope': 'public'
         }
@@ -193,7 +195,7 @@ class ApexAPI():
     url = 'https://api.mozambiquehe.re'
 
     def __init__(self):
-        self.auth = Jsondb.get_token("apex_status_API")
+        self.auth = sqldb.get_bot_token(APIType.Apex_Statue).access_token
 
     def get_player(self,username:str,platform:str='PC'):
         params={
@@ -252,8 +254,7 @@ class ApexAPI():
 
 class SteamAPI():
     def __init__(self):
-        super().__init__()
-        self.key = Jsondb.get_token("steam_api")
+        self.key = sqldb.get_bot_token(APIType.Steam).access_token
 
     def get_user(self,userid):
         params = {

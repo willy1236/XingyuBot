@@ -886,8 +886,8 @@ class SQLTokensSystem(BaseSQLEngine):
         result = self.session.exec(stmt).one_or_none()
         return result
     
-    def get_bot_token(self, type:CommunityType):
-        stmt = select(BotToken).where(OAuth2Token.type == type).limit(1)
+    def get_bot_token(self, api_type:APIType, token_seq:int=1):
+        stmt = select(BotToken).where(BotToken.api_type == api_type, BotToken.token_seq == token_seq).limit(1)
         return self.session.exec(stmt).one()
     
 class SQLCacheSystem(BaseSQLEngine):

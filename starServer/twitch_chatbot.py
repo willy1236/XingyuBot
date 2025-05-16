@@ -1,5 +1,6 @@
 import asyncio
 from pathlib import PurePath
+from re import A
 from typing import TYPE_CHECKING
 from uuid import UUID
 
@@ -13,13 +14,13 @@ from twitchAPI.oauth import (UserAuthenticationStorageHelper,
                              UserAuthenticator, refresh_access_token,
                              validate_token)
 from twitchAPI.object import eventsub
-from twitchAPI.twitch import Twitch
+from twitchAPI.twitch import Twitch, InvalidTokenException, MissingScopeException
 from twitchAPI.type import (AuthScope, ChatEvent, EventSubSubscriptionError,
                             EventSubSubscriptionTimeout)
 
-from starlib import BaseThread, BotEmbed, Jsondb, sclient, twitch_log
+from starlib import BaseThread, BotEmbed, Jsondb, sclient, sqldb, twitch_log
 from starlib.instance import tw_api
-from starlib.types import NotifyCommunityType
+from starlib.types import NotifyCommunityType, APIType
 from starlib.models.mysql import TwitchChatCommand
 
 USER_SCOPE = [
@@ -261,9 +262,9 @@ async def modify_channel_information(cmd: ChatCommand):
     pass
 
 async def run():
-    jtoken = Jsondb.get_token("twitch_chatbot")
-    APP_ID = jtoken.get('id')
-    APP_SECRET = jtoken.get('secret')
+    jtoken = sqldb.get_bot_token(APIType.Twitch)
+    APP_ID = jtoken.client_id
+    APP_SECRET = jtoken.client_secret
 
     # validate_data = await validate_token(token)
     # if validate_data.get("client_id") != APP_ID:
@@ -273,13 +274,19 @@ async def run():
     
     # set up twitch api instance and add user authentication with some scopes
     twitch = await Twitch(APP_ID, APP_SECRET)
-    # auth = UserAuthenticator(twitch, USER_SCOPE)
-    # token, refresh_token = await auth.authenticate()
-    # await twitch.set_user_authentication(token, USER_SCOPE, refresh_token)
+    try:
+        await twitch.set_user_authentication(jtoken.access_token, USER_SCOPE, jtoken.refresh_token)
+    except (InvalidTokenException, MissingScopeException) as e:
+        auth = UserAuthenticator(twitch, USER_SCOPE)
+        token, refresh_token = await auth.authenticate()
+        jtoken.access_token = token
+        jtoken.refresh_token = refresh_token
+        sqldb.merge(jtoken)
+        await twitch.set_user_authentication(jtoken.access_token, USER_SCOPE, jtoken.refresh_token)
 
     # 使用自帶的函式處理token
-    helper = UserAuthenticationStorageHelper(twitch, USER_SCOPE, storage_path=PurePath('./database/twitch_token.json'))
-    await helper.bind()
+    # helper = UserAuthenticationStorageHelper(twitch, USER_SCOPE)
+    # await helper.bind()
 
     me = await first(twitch.get_users())
     users = [user async for user in twitch.get_users(user_ids=TARGET_CHANNEL_IDS)]
@@ -312,7 +319,7 @@ async def run():
     chat.start()
     await asyncio.sleep(5)
 
-    eventsub = EventSubWebhook(jtoken.get('callback_uri'), 14001, twitch)
+    eventsub = EventSubWebhook(jtoken.callback_uri, 14001, twitch)
     # unsubscribe from all old events that might still be there
     # this will ensure we have a clean slate
     await eventsub.unsubscribe_all()
@@ -434,29 +441,6 @@ async def run():
         
     sclient.twitch = twitch
     return chat, twitch
-    
-async def run_sakagawa():
-    USER_SCOPE_SAKAGAWA = [AuthScope.CHANNEL_READ_REDEMPTIONS]
-    jtoken = Jsondb.get_token("twitch_sakagawa")
-    token = jtoken['token']
-    refresh_token = jtoken['refresh']
-    client_id = jtoken['client_id']
-
-    validate_data = await validate_token(token)
-    if validate_data.get("client_id") != client_id:
-        raise ValueError(validate_data)
-    
-    twitch_sakagawa = await Twitch(client_id, authenticate_app=False)
-    await twitch_sakagawa.set_user_authentication(token, USER_SCOPE_SAKAGAWA, refresh_token)
-    target_user = await first(twitch_sakagawa.get_users(logins=TARGET_CHANNEL))
-
-    eventsub_sakagawa = EventSubWebsocket(twitch_sakagawa)
-    eventsub_sakagawa.start()
-    await eventsub_sakagawa.listen_channel_points_custom_reward_redemption_add(target_user.id, on_channel_points_custom_reward_redemption_add)
-    twitch_log.debug("listening to channel points custom reward redemption add")
-    await eventsub_sakagawa.listen_channel_points_custom_reward_redemption_update(target_user.id, on_channel_points_custom_reward_redemption_update)
-    twitch_log.debug("listening to channel points custom reward redemption update")
-
 class TwitchBotThread(BaseThread):
     def __init__(self):
         super().__init__(name='TwitchBotThread')
@@ -467,21 +451,10 @@ class TwitchBotThread(BaseThread):
         chat.stop()
         asyncio.run(twitch.close())
 
-class SakagawaEventsubThread(BaseThread):
-    def __init__(self):
-        super().__init__(name='SakagawaEventsubThread')
-
-    def run(self):
-        asyncio.run(run_sakagawa())
-        self._stop_event.wait()
-
 if __name__ == '__main__':
     chat, twitch = asyncio.run(run())
     chat:Chat
     twitch:Twitch
-    # asyncio.run(run_sakagawa())
-    # auth = UserAuthenticator(twitch, [AuthScope.CHANNEL_READ_REDEMPTIONS])
-    # print(auth.return_auth_url())
 
     try:
         input('press ENTER to stop\n')

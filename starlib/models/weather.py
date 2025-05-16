@@ -1,11 +1,10 @@
 from datetime import datetime
-from typing import List, Optional
 
 import discord
-from pydantic import BaseModel, model_validator, AliasPath, Field, ConfigDict
+from pydantic import AliasPath, BaseModel, ConfigDict, Field, model_validator
 
-from ..utils import BotEmbed
 from ..settings import tz
+from ..utils import BotEmbed
 
 weather_warning_emojis = {
     "大雨特報": "🌧️",
@@ -146,7 +145,7 @@ class ObsTime(BaseModel):
     DateTime: datetime
 
 class GeoInfo(BaseModel):
-    Coordinates: List[Coordinate]
+    Coordinates: list[Coordinate]
     StationAltitude: str
     CountyName: str
     TownName: str
@@ -155,7 +154,7 @@ class GeoInfo(BaseModel):
 
 class GustInfo(BaseModel):
     PeakGustSpeed: float
-    Occurred_at: Optional[dict]
+    Occurred_at: dict | None
 
 class TemperatureInfo(BaseModel):
     AirTemperature: float = None
@@ -188,7 +187,7 @@ class AffectedArea(BaseModel):
     locationName: str
 
 class Locations(BaseModel):
-    location: List[AffectedArea]
+    location: list[AffectedArea]
 
 class HazardInfo(BaseModel):
     language: str
@@ -200,7 +199,7 @@ class Hazard(BaseModel):
     info: HazardInfo
 
 class Hazards(BaseModel):
-    hazard: List[Hazard]
+    hazard: list[Hazard]
 
 class HazardConditions(BaseModel):
     hazards: Hazards

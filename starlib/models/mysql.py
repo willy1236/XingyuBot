@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, TypedDict
 
 from discord import Bot
 from sqlalchemy import (BigInteger, Column, ForeignKey, ForeignKeyConstraint,
-                        Identity, Integer, String, Text, Boolean, Interval)
+                        Identity, Integer, String, Text, Boolean, Interval, SmallInteger)
 from sqlalchemy.dialects.postgresql import TIMESTAMP
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlmodel import Field, Relationship
@@ -51,7 +51,7 @@ class UserGame(UserSchema, table=True):
     __tablename__ = "game_data"
 
     discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True, autoincrement=False))
-    game: GameType = Field(sa_column=Column(Integer, primary_key=True, autoincrement=False))
+    game: GameType = Field(sa_column=Column(SmallInteger, primary_key=True, autoincrement=False))
     player_name: str
     player_id: str | None
     account_id: str | None
@@ -432,8 +432,8 @@ class OAuth2Token(TokensSchema, table=True):
 class BotToken(TokensSchema, table=True):
     __tablename__ = "bot_token"
 
-    api_type: APIType = Field(sa_column=Column(Integer, primary_key=True))
-    token_seq: int = Field(sa_column=Column(Integer, primary_key=True))
+    api_type: APIType = Field(sa_column=Column(SmallInteger, primary_key=True))
+    token_seq: int = Field(sa_column=Column(SmallInteger, primary_key=True))
     client_id: str | None
     client_secret: str | None
     access_token: str | None
