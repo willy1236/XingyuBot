@@ -53,7 +53,7 @@ class TwitchAPI():
         if r.ok:
             headers = {
                 'Authorization': f"Bearer {apidata['access_token']}",
-                'Client-Id':tokens["id"]
+                'Client-Id':tokens.client_id
             }
             return headers
         else:

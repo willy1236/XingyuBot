@@ -63,12 +63,6 @@ class JsonConfig(BaseJsonHandler):
     def __init__(self):
         super().__init__("setting")
 
-
-class JsonToken(BaseJsonHandler):
-    def __init__(self):
-        super().__init__("token")
-
-
 class JsonDatabase():
     if TYPE_CHECKING:
         lol_jdict: dict
@@ -78,13 +72,11 @@ class JsonDatabase():
         member_names: dict
 
         config: JsonConfig
-        tokens: JsonToken
 
     __slots__ = [
         "lol_jdict",
         "jdict",
         "picdata",
-        "tokens",
         "options",
         "config",
         "member_names",
@@ -96,13 +88,11 @@ class JsonDatabase():
         'jdict': f'{_DBPATH}/dict.json',
         'picdata': f'{_DBPATH}/picture.json',
         'options': f'{_DBPATH}/command_option.json',
-        'tokens': f'{_DBPATH}/token.json',
         "member_names": f'{_DBPATH}/member_names.json'
     }
 
     def __init__(self, create_file=True):
         self.config = JsonConfig()
-        self.tokens = JsonToken()
 
         # craete folder
         if not os.path.isdir(self._DBPATH):
@@ -138,25 +128,6 @@ class JsonDatabase():
                 json.dump(data, jfile, indent=4, ensure_ascii=False)
         except KeyError as e:
             raise KeyError("此項目沒有在資料庫中") from e
-
-    def get_token(self, webname: str) -> str:
-        """
-        取得API token
-
-        Args:
-            webname (str): API名稱
-
-        Raises:
-            ValueError: 無此API token
-
-        Returns:
-            str: API token
-        """        
-        token = self.tokens[webname]
-        if token:
-            return token
-        else:
-            raise ValueError('無此API token')
 
     def get_picture(self, pic_key) -> str:
         """取得圖片網址"""
