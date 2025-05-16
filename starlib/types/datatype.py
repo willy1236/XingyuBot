@@ -94,5 +94,5 @@ class APIType(IntEnum):
     Line = 11
     MCSS = 12
     Twitter = 13
-    rettiwt = 14
+    Rettiwt = 14
     DocAccount = 15
