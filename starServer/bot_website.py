@@ -25,21 +25,21 @@ from starlib.models.mysql import CloudUser, TwitchBotJoinChannel
 from starlib.models.push import YoutubePushEntry
 from starlib.types import APIType
 
-discord_oauth_settings = Jsondb.get_token("discord_oauth")
+discord_oauth_settings = sqldb.get_bot_token(APIType.Discord)
 twitch_oauth_settings = sqldb.get_bot_token(APIType.Twitch)
-google_oauth_settings = Jsondb.get_token("google_oauth")
-linebot_token = Jsondb.get_token("line_bot")
-docs_account = Jsondb.get_token("docs_account")
+google_oauth_settings = sqldb.get_bot_token(APIType.Google)
+# linebot_token = sqldb.get_bot_token(APIType.Line)
+docs_account = sqldb.get_bot_token(APIType.DocAccount)
 
-configuration = Configuration(access_token=linebot_token.get("token"))
-handler = WebhookHandler(linebot_token.get("secret"))
+# configuration = Configuration(access_token=linebot_token.access_token)
+# handler = WebhookHandler(linebot_token.client_secret)
 
 app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
 
 security = HTTPBasic()
 def get_current_username(credentials: HTTPBasicCredentials = Depends(security)):
-    correct_username = secrets.compare_digest(credentials.username, docs_account["account"])
-    correct_password = secrets.compare_digest(credentials.password, docs_account["password"])
+    correct_username = secrets.compare_digest(credentials.username, docs_account.client_id)
+    correct_password = secrets.compare_digest(credentials.password, docs_account.client_secret)
     if not (correct_username and correct_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -109,7 +109,7 @@ async def oauth_discord(request:Request):
     if not code:
         return HTMLResponse(f'授權失敗：{params}', 400)
 
-    auth = DiscordOauth2(**discord_oauth_settings)
+    auth = DiscordOauth2.from_bot_token(discord_oauth_settings)
     auth.exchange_code(code)
     auth.save_token(auth.user_id)
     
@@ -150,7 +150,7 @@ async def oauth_google(request:Request):
     if not code:
         return HTMLResponse(f'授權失敗：{params}', 400)
     
-    auth = GoogleOauth2(**google_oauth_settings)
+    auth = GoogleOauth2.from_bot_token(google_oauth_settings)
 
     # flow = Flow.from_client_secrets_file(
     #     'database/google_client_credentials.json',
@@ -163,39 +163,39 @@ async def oauth_google(request:Request):
     auth.save_token(auth.user_id)
     return HTMLResponse(f'授權已完成，您現在可以關閉此頁面<br><br>Google ID：{auth.user_id}')
 
-@app.post("/linebotcallback")
-async def linebot_callback(request:Request):
-    signature = request.headers.get('X-Line-Signature')
+# @app.post("/linebotcallback")
+# async def linebot_callback(request:Request):
+#     signature = request.headers.get('X-Line-Signature')
 
-    # get request body as text
-    body = await request.body()
-    body = body.decode('UTF-8')
-    web_log.info("Request body: " + body)
+#     # get request body as text
+#     body = await request.body()
+#     body = body.decode('UTF-8')
+#     web_log.info("Request body: " + body)
 
-    # handle webhook body
-    try:
-        handler.handle(body, signature)
-    except InvalidSignatureError:
-        web_log.info("Invalid signature. Please check your channel access token/channel secret.")
-        raise HTTPException(status_code=400, detail="Invalid signature")
+#     # handle webhook body
+#     try:
+#         handler.handle(body, signature)
+#     except InvalidSignatureError:
+#         web_log.info("Invalid signature. Please check your channel access token/channel secret.")
+#         raise HTTPException(status_code=400, detail="Invalid signature")
 
-    return 'OK'
+#     return 'OK'
 
-@handler.add(MessageEvent, message=TextMessageContent)
-def handle_message(event:MessageEvent):
-    print(type(event))
-    with ApiClient(configuration) as api_client:
-        line_bot_api = MessagingApi(api_client)
-        line_bot_api.reply_message_with_http_info(
-            ReplyMessageRequest(
-                reply_token=event.reply_token,
-                messages=[TextMessage(text=event.message.text)]
-            )
-        )
+# @handler.add(MessageEvent, message=TextMessageContent)
+# def handle_message(event:MessageEvent):
+#     print(type(event))
+#     with ApiClient(configuration) as api_client:
+#         line_bot_api = MessagingApi(api_client)
+#         line_bot_api.reply_message_with_http_info(
+#             ReplyMessageRequest(
+#                 reply_token=event.reply_token,
+#                 messages=[TextMessage(text=event.message.text)]
+#             )
+#         )
 
 @app.get("/to/discordauth")
 async def to_discordauth(request:Request):
-    return RedirectResponse(url=f"https://discord.com/api/oauth2/authorize?client_id={discord_oauth_settings['client_id']}&redirect_uri={discord_oauth_settings['redirect_uri']}&response_type=code&scope=identify%20connections")
+    return RedirectResponse(url=f"https://discord.com/api/oauth2/authorize?client_id={discord_oauth_settings.client_id}&redirect_uri={discord_oauth_settings.redirect_uri}&response_type=code&scope=identify%20connections")
 
 @app.get("/to/twitchauth")
 async def to_twitchauth(request:Request):
@@ -203,18 +203,14 @@ async def to_twitchauth(request:Request):
 
 @app.get("/to/googleauth")
 async def to_googleauth(request:Request):
+    # TODO: scopes存放整理
     flow = Flow.from_client_secrets_file(
         'database/google_client_credentials.json',
-        scopes=google_oauth_settings.get('scopes'),
-        redirect_uri=google_oauth_settings.get('redirect_uri')
+        scopes=["https://www.googleapis.com/auth/userinfo.profile", "https://www.googleapis.com/auth/userinfo.email", "openid", "https://www.googleapis.com/auth/youtube"],
+        redirect_uri=google_oauth_settings.redirect_uri
     )
     url = flow.authorization_url()[0]
     return RedirectResponse(url=url)
-
-@app.get("/.well-known/discord")
-async def discord_domain(request:Request):
-    return PlainTextResponse(Jsondb.get_token("discord_domain"))
-
 
 # @app.get('/book/{book_id}',response_class=JSONResponse)
 # def get_book_by_id(book_id: int):

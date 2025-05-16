@@ -18,7 +18,7 @@ class RiotAPI():
     url_asia = 'https://asia.api.riotgames.com'
     
     def __init__(self):
-        self.key = Jsondb.get_token("riot_api")
+        self.key = sqldb.get_bot_token(APIType.Riot).access_token
         self._headers = {
             'X-Riot-Token':self.key
         }

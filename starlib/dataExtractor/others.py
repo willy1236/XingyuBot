@@ -1,6 +1,7 @@
 import requests
 from ..fileDatabase import Jsondb
-from ..types import McssServerAction
+from ..database import sqldb
+from ..types import McssServerAction, APIType
 from ..models.others import McssServer
 
 class McssAPI:
@@ -9,7 +10,7 @@ class McssAPI:
     
     def __init__(self):
         self.headers = {
-           'apikey': Jsondb.get_token("mcss_api")
+           'apikey': sqldb.get_bot_token(APIType.MCSS).access_token,
         }
 
     def get_servers(self):

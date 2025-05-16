@@ -13,9 +13,11 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from bs4 import BeautifulSoup
+from sqlmodel import sql
 
 from ..errors import APIInvokeError, Forbidden
-from ..fileDatabase import Jsondb
+from ..database import sqldb
+from ..types import APIType
 from ..models.community import *
 from ..settings import tz
 
@@ -39,10 +41,10 @@ class TwitchAPI():
     def __get_headers(self):
         TOKENURL = "https://id.twitch.tv/oauth2/token"
         #headers = {"Content-Type": "application/x-www-form-urlencoded"}
-        tokens = Jsondb.get_token("twitch_chatbot")
+        tokens = sqldb.get_bot_token(APIType.Twitch)
         params = {
-            'client_id':tokens["id"],
-            'client_secret':tokens["secret"],
+            'client_id':tokens.client_id,
+            'client_secret':tokens.client_secret,
             'grant_type':'client_credentials'
             }
 
@@ -207,7 +209,7 @@ class YoutubeAPI():
     BaseURL = "https://www.googleapis.com/youtube/v3"
 
     def __init__(self):
-        self.__token = Jsondb.get_token("youtube_api")
+        self.__token = sqldb.get_bot_token(APIType.Google).access_token
         self.__headers = {
             'x-goog-api-key': self.__token,
             'Accept': 'application/json'
@@ -502,7 +504,7 @@ class NotionAPI():
         self.url = "https://api.notion.com/v1"
 
     def _get_headers(self):
-        token = Jsondb.get_token("notion_api")
+        token = sqldb.get_bot_token(APIType.Notion).access_token
         return {
             "Authorization": f"Bearer {token}",
             "Notion-Version": "2022-06-28",
@@ -589,11 +591,11 @@ class RssHub():
 
 class CLIInterface():
     def __init__(self):
-        pass
+        self.rettiwt_api_key = sqldb.get_bot_token(APIType.Rettiwt).access_token
 
     def get_user_timeline(self, user_id:str, after:datetime=None) -> RettiwtTweetTimeLineResponse | None:
         # shutil.which("rettiwt")
-        r = subprocess.run(f'rettiwt -k "{Jsondb.get_token("rettiwt_api_key")}" user timeline "{user_id}" 10', shell=True, capture_output=True, encoding='utf-8', check=False)
+        r = subprocess.run(f'rettiwt -k "{self.rettiwt_api_key}" user timeline "{user_id}" 10', shell=True, capture_output=True, encoding='utf-8', check=False)
         r.check_returncode()
         data = json.loads(r.stdout)
 

@@ -9,10 +9,10 @@ from apscheduler.triggers.date import DateTrigger
 from discord.ext import commands, tasks
 from requests.exceptions import ConnectTimeout, RequestException
 
-from starlib import BotEmbed, Jsondb, log, sclient, tz, utils
+from starlib import BotEmbed, Jsondb, log, sclient, tz, utils, sqldb
 from starlib.instance import *
 from starlib.models.community import YoutubeVideo
-from starlib.types import NotifyChannelType, NotifyCommunityType
+from starlib.types import NotifyChannelType, NotifyCommunityType, APIType
 
 from ..extension import Cog_Extension
 from ..uiElement.view import GiveawayView
@@ -331,7 +331,7 @@ class task(Cog_Extension):
         await msg.add_reaction("🎉")
 
     async def refresh_yt_push(self):
-        callback_url = Jsondb.get_token("youtube_push")
+        callback_url = sqldb.get_bot_token(APIType.Google, 3).callback_uri
         for record in sclient.sqldb.get_expired_push_records():
             yt_push.add_push(record.channel_id, callback_url)
             await asyncio.sleep(3)

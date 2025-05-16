@@ -6,6 +6,8 @@ import tweepy
 from .dataExtractor import *
 from .dataExtractor.others import McssAPI
 from .fileDatabase import Jsondb
+from .database import sqldb
+from .types import APIType
 
 __all__ = [
     "mcss_api",
@@ -29,7 +31,7 @@ yt_rss = YoutubeRSS()
 yt_api = YoutubeAPI()
 yt_push = YoutubePush()
 tw_api = TwitchAPI()
-twitter_api = tweepy.Client(Jsondb.get_token("x_api"))
+twitter_api = tweepy.Client(sqldb.get_bot_token(APIType.Twitter).access_token)
 rss_hub = RssHub()
 cwa_api = CWA_API()
 apexapi = ApexAPI()

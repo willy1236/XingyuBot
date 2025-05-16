@@ -95,3 +95,4 @@ class APIType(IntEnum):
     MCSS = 12
     Twitter = 13
     rettiwt = 14
+    DocAccount = 15
