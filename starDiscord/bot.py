@@ -5,7 +5,7 @@ import discord
 
 from starlib import BotEmbed, Jsondb, log, sqldb
 from starlib.instance import debug_mode
-from starlib.types import NotifyChannelType, NotifyCommunityType
+from starlib.types import NotifyChannelType, NotifyCommunityType, APIType
 
 
 class DiscordBot(discord.Bot):
@@ -25,7 +25,7 @@ class DiscordBot(discord.Bot):
             self.debug_guilds = Jsondb.config.get('debug_guilds')
 
     def run(self):
-        token = Jsondb.tokens.get(self.bot_code)
+        token = sqldb.get_bot_token(APIType.Discord, self.bot_code).access_token
         super().run(token)
 
     def load_all_extensions(self):
