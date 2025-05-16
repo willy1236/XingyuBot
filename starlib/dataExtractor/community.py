@@ -425,7 +425,6 @@ class YoutubePush:
                 content_delivered=parse_datetime('Content delivered')
             )
 
-# pylint: disable=E1101
 class GoogleCloud():
     def __init__(self):
         self.creds = self.get_creds()

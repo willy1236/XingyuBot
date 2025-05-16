@@ -26,6 +26,7 @@ class CloudUser(UserSchema, table=True):
     email: str | None
     drive_share_id: str | None
     twitch_id: int | None = Field(unique=True)
+    name: str | None
 
 class DiscordUser(UserSchema, table=True):
     __tablename__ = "user_discord"

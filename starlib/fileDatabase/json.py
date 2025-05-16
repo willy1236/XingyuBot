@@ -1,7 +1,7 @@
 import json
 import logging
 import os
-from typing import TYPE_CHECKING, Never, TypeVar, Union
+from typing import TYPE_CHECKING, TypeVar
 
 logger = logging.getLogger("star")
 
@@ -79,7 +79,6 @@ class JsonDatabase():
         "picdata",
         "options",
         "config",
-        "member_names",
     ]
 
     _DBPATH = "./database"
@@ -87,8 +86,7 @@ class JsonDatabase():
         'lol_jdict': f'{_DBPATH}/lol_dict.json',
         'jdict': f'{_DBPATH}/dict.json',
         'picdata': f'{_DBPATH}/picture.json',
-        'options': f'{_DBPATH}/command_option.json',
-        "member_names": f'{_DBPATH}/member_names.json'
+        'options': f'{_DBPATH}/command_option.json'
     }
 
     def __init__(self, create_file=True):
@@ -157,7 +155,3 @@ class JsonDatabase():
 
         else:
             return value
-
-    def get_member_name(self, discord_id: int) -> str | None:
-        """取得成員名稱"""
-        return self.member_names.get(str(discord_id))

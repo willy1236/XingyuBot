@@ -175,6 +175,11 @@ class SQLUserSystem(BaseSQLEngine):
         result = self.session.exec(stmt).one_or_none()
         return result
 
+    def get_raw_user_names(self):
+        stmt = select(CloudUser).where(CloudUser.name != None)
+        result = self.session.exec(stmt).all()
+        return {i.discord_id: i.name for i in result}
+
 class SQLCurrencySystem(BaseSQLEngine):
     def get_coin(self,discord_id:int):
         """取得用戶擁有的貨幣數"""
