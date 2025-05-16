@@ -2,7 +2,8 @@ import os
 import subprocess
 import time
 
-from starlib import BaseThread, log, Jsondb
+from starlib import BaseThread, log, Jsondb, sqldb
+from starlib.types import APIType
 
 
 class ltThread(BaseThread):
@@ -84,7 +85,7 @@ class NgrokTwitchThread(BaseThread):
 
     def run(self):
         reconnection_times = 0
-        callback_url = Jsondb.get_token('twitch_chatbot')['callback_uri'].split('://')[1]
+        callback_url = sqldb.get_bot_token(APIType.Twitch).callback_uri.split('://')[1]
         while not self._stop_event.is_set():
             log.info(f"Starting {self.name} {reconnection_times}")
             result = subprocess.run(["ngrok", "http", f"--url={callback_url}", "14001"], capture_output=True, text=True)
