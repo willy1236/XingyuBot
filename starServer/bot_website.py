@@ -24,6 +24,7 @@ from starlib.dataExtractor import DiscordOauth2, TwitchOauth2, GoogleOauth2
 from starlib.models.mysql import CloudUser, TwitchBotJoinChannel
 from starlib.models.push import YoutubePushEntry
 from starlib.types import APIType
+from starlib.instance import yt_api
 
 discord_oauth_settings = sqldb.get_bot_token(APIType.Discord)
 twitch_oauth_settings = sqldb.get_bot_token(APIType.Twitch)
@@ -78,10 +79,11 @@ async def get_yt_push(content):
         json.dump(feed, f, ensure_ascii=False, indent=4)
 
     for entry in feed["entries"]:
-        embed = YoutubePushEntry(**entry).embed()
+        push_entry = YoutubePushEntry(**entry)
+        video = yt_api.get_video(push_entry.yt_videoid)[0]
         
         if sclient.bot:
-            msg = sclient.bot.send_message(embed=embed, content="YT push test")
+            msg = sclient.bot.send_message(embed=video.embed(), content="YT push test")
             if not msg:
                 web_log.info('Channel not found. Message sent failed.')
         else:

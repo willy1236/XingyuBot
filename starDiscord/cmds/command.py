@@ -12,7 +12,7 @@ from discord.utils import format_dt
 from mysql.connector.errors import Error as sqlerror
 from mysql.connector.errors import IntegrityError
 
-from starlib import BotEmbed, ChoiceList, Jsondb, log, sclient, tz
+from starlib import BotEmbed, ChoiceList, log, sclient, tz
 from starlib.dataExtractor import GoogleCloud
 from starlib.instance import *
 from starlib.types import Coins
@@ -527,8 +527,7 @@ class command(Cog_Extension):
         
         r = re.compile(r"@gmail.com")
         if not r.search(email):
-            await ctx.respond(f"{ctx.author.mention}：Gmail格式錯誤")
-            return
+            email += "@gmail.com"
         
         google_data = GoogleCloud().add_file_permissions(fileId,email)
         cuser.email = email
