@@ -14,7 +14,7 @@ from .types import APIType
 from .database import sqldb
 from .errors import GenerateError
 
-genai.configure(api_key=sqldb.get_bot_token(APIType.Google, 4).access_token)
+genai.configure(api_key=sqldb.get_bot_token(APIType.Google, 5).access_token)
 
 # Set up the model
 generation_config = {

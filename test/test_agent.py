@@ -49,7 +49,7 @@ class Tools:
             cursor.execute(f"SELECT column_name, data_type, is_nullable, column_default FROM information_schema.columns WHERE table_name = '{table_name}' AND table_schema = '{table_schema}';")
             return cursor.fetchall()
 
-provider = GoogleGLAProvider(api_key=sqldb.get_bot_token(APIType.Google, 4).access_token)
+provider = GoogleGLAProvider(api_key=sqldb.get_bot_token(APIType.Google, 5).access_token)
 model = GeminiModel(model_name="gemini-2.0-flash", provider=provider)
 agent = Agent(model,
             instrument=True,
