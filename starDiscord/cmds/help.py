@@ -140,6 +140,7 @@ class help(Cog_Extension):
             embed.add_field(name="/twitch", value="設定twitch通知/查詢資訊", inline=False)
             embed.add_field(name="/youtube", value="設定youtube通知/查詢資訊", inline=False)
             embed.add_field(name="/twitter", value="設定twitter/x通知（測試中）", inline=False)
+            embed.add_field(name="twitch機器人", value=f"可前往支援伺服器或私訊 {self.bot.mention_owner} 取得授權連結後完成授權，機器人會出現在觀眾名單中\n給予機器人mod後，可以使用各項管理功能\n此功能目前仍在開發，可私訊獲取進階功能設定", inline=False)
 
             embed.set_footer(text="輸入/help use查詢指令用法")
             await ctx.respond(embed=embed)

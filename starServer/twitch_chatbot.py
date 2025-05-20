@@ -239,34 +239,37 @@ async def test_command(cmd: ChatCommand):
         await cmd.reply(f'{cmd.user.name}: {cmd.parameter}')
 
 async def add_chat_command(cmd: ChatCommand):
-    if len(cmd.parameter) < 2:
+    parameters = cmd.parameter.split(maxsplit=1)
+    if len(parameters) < 2:
         await cmd.reply('用法：!add_command <指令> <回覆>')
     else:
-        twitch_log.info(f'add command: {cmd.parameter[0]}, {cmd.parameter[1:]}')
-        sclient.sqldb.merge(TwitchChatCommand(twitch_id=cmd.source_room_id, command=cmd.parameter[0], response=" ".join(cmd.parameter[1:])))
-        await cmd.reply(f'已新增指令：{cmd.parameter[0]}')
+        twitch_log.info(f'add command: {parameters[0]}, {parameters[1]}')
+        sclient.sqldb.merge(TwitchChatCommand(twitch_id=cmd.source_room_id, command=parameters[0], response=parameters[1]))
+        await cmd.reply(f'已新增指令：{parameters[0]}')
 
 async def remove_chat_command(cmd: ChatCommand):
-    if len(cmd.parameter) < 1:
+    parameters = cmd.parameter
+    if len(parameters) < 1:
         await cmd.reply('用法：!remove_command <指令>')
     else:
-        twitch_log.info(f'add command: {cmd.parameter[0]}, {cmd.parameter[1:]}')
-        sclient.sqldb.delete(TwitchChatCommand(twitch_id=cmd.source_room_id, command=cmd.parameter[0]))
-        await cmd.reply(f'已移除指令：{cmd.parameter[0]}')
+        twitch_log.info(f'remove command: {parameters}')
+        sclient.sqldb.delete(TwitchChatCommand(twitch_id=cmd.source_room_id, command=parameters))
+        await cmd.reply(f'已移除指令：{parameters}')
 
 async def list_chat_command(cmd: ChatCommand):
-    if len(cmd.parameter) < 1:
+    parameters = cmd.parameter
+    if len(parameters) < 1:
         commands = sclient.sqldb.list_chat_command_by_channel(cmd.source_room_id)
         if commands:
             await cmd.reply(f'指令列表：\n{", ".join([i.name for i in commands])}')
         else:
             await cmd.reply('目前沒有設定指令')
     else:
-        command = sclient.sqldb.get_chat_command(cmd.parameter[0], cmd.source_room_id)
+        command = sclient.sqldb.get_chat_command(parameters, cmd.source_room_id)
         if command:
             await cmd.reply(f'{command.name}：{command.response}')
         else:
-            await cmd.reply(f'{cmd.parameter[0]} 不存在')
+            await cmd.reply(f'{parameters} 不存在')
 
 async def modify_channel_information(cmd: ChatCommand):
     pass
