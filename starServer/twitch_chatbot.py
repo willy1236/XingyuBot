@@ -244,11 +244,7 @@ async def add_chat_command(cmd: ChatCommand):
     if len(parameters) < 2:
         await cmd.reply('用法：!add_command <指令> <回覆>')
     else:
-        twitch_log.info(f'add command: {parameters[0]}, {parameters[1]}')
-        twitch_log.info(f'add command: {cmd.source_room_id}')
-        twitch_log.info(f'add command: {cmd.room.room_id}')
-        twitch_log.info(f'add command: {cmd.source_id}')
-        sclient.sqldb.merge(TwitchChatCommand(twitch_id=cmd.source_room_id, name=parameters[0], response=parameters[1]))
+        sclient.sqldb.merge(TwitchChatCommand(twitch_id=cmd.room.room_id, name=parameters[0], response=parameters[1]))
         await cmd.reply(f'已新增指令：{parameters[0]}')
 
 async def remove_chat_command(cmd: ChatCommand):
@@ -257,19 +253,19 @@ async def remove_chat_command(cmd: ChatCommand):
         await cmd.reply('用法：!remove_command <指令>')
     else:
         twitch_log.info(f'remove command: {parameters}')
-        sclient.sqldb.delete(TwitchChatCommand(twitch_id=cmd.source_room_id, name=parameters))
+        sclient.sqldb.delete(TwitchChatCommand(twitch_id=cmd.room.room_id, name=parameters))
         await cmd.reply(f'已移除指令：{parameters}')
 
 async def list_chat_command(cmd: ChatCommand):
     parameters = cmd.parameter
     if len(parameters) < 1:
-        commands = sclient.sqldb.list_chat_command_by_channel(cmd.source_room_id)
+        commands = sclient.sqldb.list_chat_command_by_channel(cmd.room.room_id)
         if commands:
             await cmd.reply(f'指令列表：\n{", ".join([i.name for i in commands])}')
         else:
             await cmd.reply('目前沒有設定指令')
     else:
-        command = sclient.sqldb.get_chat_command(parameters, cmd.source_room_id)
+        command = sclient.sqldb.get_chat_command(parameters, cmd.room.room_id)
         if command:
             await cmd.reply(f'{command.name}：{command.response}')
         else:
