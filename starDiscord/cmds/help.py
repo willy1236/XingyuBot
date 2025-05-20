@@ -83,7 +83,8 @@ class help(Cog_Extension):
             embed.add_field(name="/warning", value="給予用戶警告", inline=False)
             embed.add_field(name="/timeout", value="禁言用戶", inline=False)
             embed.add_field(name="/kick", value="踢除用戶", inline=False)
-            embed.add_field(name="/ban", value="停權用戶", inline=False)    
+            embed.add_field(name="/ban", value="停權用戶", inline=False)
+            embed.add_field(name="跨群警告系統", value="蒐集各伺服器的警告紀錄，使得在一個伺服器的違規能被分享到其他伺服器\n可在警告時選擇是否使用，不使用則讓相關管理行為回歸伺服器內處理", inline=False)
             embed.set_footer(text="輸入/help use查詢指令用法")
             await ctx.respond(embed=embed)
         elif arg == 'bet':
@@ -134,7 +135,7 @@ class help(Cog_Extension):
             embed.add_field(name="/pet", value='寵物相關指令', inline=False)
             embed.set_footer(text="輸入/help use查詢指令用法")
             await ctx.respond(embed=embed)
-        elif arg == 'twitch':
+        elif arg == 'social':
             embed = BotEmbed.simple("社群（Social）指令")
             embed.add_field(name="/twitch", value="設定twitch通知/查詢資訊", inline=False)
             embed.add_field(name="/youtube", value="設定youtube通知/查詢資訊", inline=False)

@@ -72,9 +72,8 @@ def keep_alive(request:Request):
 # print("[Warning] Server Received & Refused!")
 # print("[Warning] Error:", e)
     
-async def get_yt_push(content):
+async def prase_yt_push(content):
     feed = feedparser.parse(content)
-    print(feed)
     with open('test.json', 'w', encoding="utf-8") as f:
         json.dump(feed, f, ensure_ascii=False, indent=4)
 
@@ -101,7 +100,7 @@ def youtube_push_get(request:Request):
 async def youtube_push_post(request:Request,background_task: BackgroundTasks):
     body = await request.body()
     body = body.decode('UTF-8')
-    background_task.add_task(get_yt_push,body)
+    background_task.add_task(prase_yt_push,body)
     return HTMLResponse('OK')
 
 @app.get('/oauth/discord')

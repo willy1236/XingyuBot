@@ -1,16 +1,16 @@
 from datetime import date, datetime, time, timedelta, timezone
-from typing import TYPE_CHECKING, Optional, Tuple, TypeVar, overload
+from typing import TYPE_CHECKING, TypeVar, overload
 
 import discord
 import mysql.connector
 import sqlalchemy
+from google.oauth2.credentials import Credentials
 from mysql.connector.errors import Error as sqlerror
 from sqlalchemy import and_, delete, desc, func, or_
 from sqlalchemy.engine import URL
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker
 from sqlmodel import Session, SQLModel, create_engine, select, update
-from google.oauth2.credentials import Credentials
 
 from starlib.models.mysql import Community, NotifyCommunity
 
@@ -53,7 +53,7 @@ class DBCache:
     def __getitem__(self, key:str) -> list[int]:
         ...
     @overload
-    def __getitem__(self, key:NotifyChannelType) -> dict[int, tuple[int, Optional[int]]]:
+    def __getitem__(self, key:NotifyChannelType) -> dict[int, tuple[int, int | None]]:
         ...
     def __getitem__(self, key):
         try:
@@ -436,7 +436,7 @@ class SQLNotifySystem(BaseSQLEngine):
         result = self.session.exec(statement).all()
         return result
 
-    def get_notify_community_list(self,notify_type:NotifyCommunityType, guild_id:int) -> list[Tuple[NotifyCommunity, Community]]:
+    def get_notify_community_list(self,notify_type:NotifyCommunityType, guild_id:int) -> list[tuple[NotifyCommunity, Community]]:
         """取得伺服器內指定種類的所有通知"""
         statement = select(NotifyCommunity, Community).join(Community, and_(NotifyCommunity.community_id == Community.id, NotifyCommunity.community_type == Community.type)).where(NotifyCommunity.notify_type == notify_type, NotifyCommunity.guild_id == guild_id)
         result = self.session.exec(statement).all()
