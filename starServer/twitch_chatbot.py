@@ -295,7 +295,7 @@ async def run():
 
     # create chat instance
     global chat
-    chat:Chat = await Chat(twitch)
+    chat:"Chat" = await Chat(twitch)
 
     # register the handlers for the events you want
     chat.register_event(ChatEvent.READY, on_ready)
