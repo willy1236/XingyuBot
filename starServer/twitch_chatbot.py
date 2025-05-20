@@ -239,12 +239,11 @@ async def test_command(cmd: ChatCommand):
         await cmd.reply(f'{cmd.user.name}: {cmd.parameter}')
 
 async def add_chat_command(cmd: ChatCommand):
-    
     parameters = cmd.parameter.split(maxsplit=1)
     if len(parameters) < 2:
         await cmd.reply('用法：!add_command <指令> <回覆>')
     else:
-        sclient.sqldb.merge(TwitchChatCommand(twitch_id=cmd.room.room_id, name=parameters[0], response=parameters[1]))
+        sclient.sqldb.add_twitch_cmd(cmd.room.room_id, parameters[0], parameters[1])
         await cmd.reply(f'已新增指令：{parameters[0]}')
 
 async def remove_chat_command(cmd: ChatCommand):
@@ -253,7 +252,7 @@ async def remove_chat_command(cmd: ChatCommand):
         await cmd.reply('用法：!remove_command <指令>')
     else:
         twitch_log.info(f'remove command: {parameters}')
-        sclient.sqldb.delete(TwitchChatCommand(twitch_id=cmd.room.room_id, name=parameters))
+        sclient.sqldb.remove_twitch_cmd(cmd.room.room_id, parameters)
         await cmd.reply(f'已移除指令：{parameters}')
 
 async def list_chat_command(cmd: ChatCommand):
@@ -324,9 +323,9 @@ async def run():
     chat.register_command_middleware(ChannelRestriction(allowed_channel=['willy1236owo']))
     # you can directly register commands and their handlers, this will register the !reply command
     # chat.register_command('reply', test_command)
-    chat.register_command("add_command", add_chat_command)
-    chat.register_command("remove_command", remove_chat_command)
-    chat.register_command("list_command", list_chat_command)
+    chat.register_command("add_cmd", add_chat_command)
+    chat.register_command("remove_cmd", remove_chat_command)
+    chat.register_command("list_cmd", list_chat_command)
     # TODO: modify_channel_information
     
     chat.start()

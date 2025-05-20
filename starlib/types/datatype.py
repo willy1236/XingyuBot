@@ -23,14 +23,18 @@ class NotifyChannelType(IntEnum):
     LeaveLog = 13
 
 class DBCacheType(Enum):
-    Notify_channel = "notify_channel"
+    DynamicVoice = "dynamic_voice"
+    DynamicVoiceRoom = "dynamic_voice_room"
+    VoiceLog = "voice_log"
+    TwitchCmd = "twitch_cmd"
 
     @classmethod
-    def map(cls, key: IntEnum):
-        return cache_dict.get(type(key))
+    def from_notify_channel(cls, key: NotifyChannelType):
+        return cache_dict.get(key)
 
 cache_dict = {
-    NotifyChannelType: DBCacheType.Notify_channel,
+    NotifyChannelType.DynamicVoice: DBCacheType.DynamicVoice,
+    NotifyChannelType.VoiceLog: DBCacheType.VoiceLog,
 }
 
 class GameType(IntEnum):
