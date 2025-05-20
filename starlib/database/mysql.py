@@ -10,6 +10,7 @@ from sqlalchemy.engine import URL
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker
 from sqlmodel import Session, SQLModel, create_engine, select, update
+from google.oauth2.credentials import Credentials
 
 from starlib.models.mysql import Community, NotifyCommunity
 
@@ -894,6 +895,47 @@ class SQLTokensSystem(BaseSQLEngine):
     def get_bot_token(self, api_type:APIType, token_seq:int=1):
         stmt = select(BotToken).where(BotToken.api_type == api_type, BotToken.token_seq == token_seq).limit(1)
         return self.session.exec(stmt).one()
+    
+    def get_google_credentials(self, token_seq:int=2):
+        token = self.get_bot_token(APIType.Google, token_seq)
+        return Credentials(
+            token=token.access_token,
+            refresh_token=token.refresh_token,
+            client_id=token.client_id,
+            client_secret=token.client_secret,
+            token_uri="https://oauth2.googleapis.com/token",
+            scopes=['https://www.googleapis.com/auth/drive'],
+            expiry=token.expires_at
+        )
+        
+    def get_google_client_config(self, token_seq:int=3):
+        token = self.get_bot_token(APIType.Google, token_seq)
+        if token_seq in (2,):
+            client_config = {
+                "installed": {
+                    "client_id": token.client_id,
+                    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                    "token_uri": "https://oauth2.googleapis.com/token",
+                    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+                    "client_secret": token.client_secret,
+                    "redirect_uris": [
+                        "http://localhost"
+                    ]
+                }
+            }
+        else:
+            client_config = {
+                "web": {
+                    "client_id": token.client_id,
+                    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                    "token_uri": "https://oauth2.googleapis.com/token",
+                    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+                    "client_secret": token.client_secret,
+                }
+            }
+        
+        return client_config
+    
     
 class SQLCacheSystem(BaseSQLEngine):
     def set_community_caches(self, type:NotifyCommunityType, data:dict[str, datetime | None]):

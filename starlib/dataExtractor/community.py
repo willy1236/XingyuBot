@@ -435,20 +435,31 @@ class GoogleCloud():
         # The file token.json stores the user's access and refresh tokens, and is
         # created automatically when the authorization flow completes for the first
         # time.
-        creds = None
-        if os.path.exists('database/google_token.json'):
-            creds = Credentials.from_authorized_user_file('database/google_token.json', SCOPES)
+        creds = sqldb.get_google_credentials()
+        # if os.path.exists('database/google_token.json'):
+        #     creds = Credentials.from_authorized_user_file('database/google_token.json', SCOPES)
+        
         # If there are no (valid) credentials available, let the user log in.
         if not creds or not creds.valid:
+            token = sqldb.get_bot_token(APIType.Google, 2)
             if creds and creds.expired and creds.refresh_token:
                 creds.refresh(Request())
             else:
-                flow = InstalledAppFlow.from_client_secrets_file(
-                    'database/credentials.json', SCOPES)
+                client_config = sqldb.get_google_client_config()
+                flow = InstalledAppFlow.from_client_config(client_config, scopes=SCOPES)
+                # flow = InstalledAppFlow.from_client_secrets_file(
+                #     'database/credentials.json', SCOPES)
                 creds = flow.run_local_server(port=0)
             # Save the credentials for the next run
-            with open('database/google_token.json', 'w', encoding="utf-8") as token:
-                token.write(creds.to_json())
+            # with open('database/google_token.json', 'w', encoding="utf-8") as token:
+            #     token.write(creds.to_json())
+            token.access_token = creds.token
+            token.refresh_token = creds.refresh_token
+            token.expires_at = creds.expiry
+            token.client_id = creds.client_id
+            token.client_secret = creds.client_secret
+            sqldb.merge(token)
+            
         return creds
 
     def list_drive_files(self):

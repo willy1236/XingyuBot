@@ -157,7 +157,7 @@ class OAuth2Base(ABC):
     @classmethod
     def from_bot_token(cls, bot_token:BotToken, as_bot=False):
         """
-        從資料庫取得指定使用者的OAuth token。
+        從資料庫設定機器人的OAuth client config。
         
         Args:
             bot_token (BotToken): 機器人token物件
@@ -267,10 +267,9 @@ class GoogleOauth2(OAuth2Base):
 
     def __init__(self, client_id=None, client_secret=None, redirect_uri="https://localhost:14000/oauth/google", scopes=None, user_id=None):
         if not client_id or not client_secret:
-            flow = InstalledAppFlow.from_client_secrets_file(
-                'database/google_client_credentials.json', scopes)
-            client_id = flow.client_config['client_id']
-            client_secret = flow.client_config['client_secret']
+            token = sqldb.get_bot_token(CommunityType.Google, 3)
+            client_id = token.client_id
+            client_secret = token.client_secret
 
         super().__init__(client_id, client_secret, redirect_uri, scopes)
         self._user_id = user_id
@@ -317,8 +316,10 @@ class GoogleOauth2(OAuth2Base):
             if self._creds and self._creds.expired and self._creds.refresh_token:
                 self._creds.refresh(Request())
             else:
-                flow = InstalledAppFlow.from_client_secrets_file(
-                    'database/google_client_credentials.json', self.scopes)
+                # flow = InstalledAppFlow.from_client_secrets_file(
+                #     'database/google_client_credentials.json', self.scopes)
+                client_config = sqldb.get_google_client_config(3)
+                flow = InstalledAppFlow.from_client_config(client_config, self.scopes)
                 self._creds = flow.run_local_server()
             
                 self.access_token = self._creds.token

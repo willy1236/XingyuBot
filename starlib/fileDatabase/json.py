@@ -69,7 +69,6 @@ class JsonDatabase():
         jdict: dict
         picdata: dict
         options: dict
-        member_names: dict
 
         config: JsonConfig
 

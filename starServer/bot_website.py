@@ -27,7 +27,7 @@ from starlib.types import APIType
 
 discord_oauth_settings = sqldb.get_bot_token(APIType.Discord)
 twitch_oauth_settings = sqldb.get_bot_token(APIType.Twitch)
-google_oauth_settings = sqldb.get_bot_token(APIType.Google)
+google_oauth_settings = sqldb.get_bot_token(APIType.Google, 3)
 # linebot_token = sqldb.get_bot_token(APIType.Line)
 docs_account = sqldb.get_bot_token(APIType.DocAccount)
 
@@ -204,11 +204,9 @@ async def to_twitchauth(request:Request):
 @app.get("/to/googleauth")
 async def to_googleauth(request:Request):
     # TODO: scopes存放整理
-    flow = Flow.from_client_secrets_file(
-        'database/google_client_credentials.json',
-        scopes=["https://www.googleapis.com/auth/userinfo.profile", "https://www.googleapis.com/auth/userinfo.email", "openid", "https://www.googleapis.com/auth/youtube"],
-        redirect_uri=google_oauth_settings.redirect_uri
-    )
+    scopes = ["https://www.googleapis.com/auth/userinfo.profile", "https://www.googleapis.com/auth/userinfo.email", "openid", "https://www.googleapis.com/auth/youtube"]
+    config = sqldb.get_google_client_config(3)
+    flow = Flow.from_client_config(config, scopes=scopes)
     url = flow.authorization_url()[0]
     return RedirectResponse(url=url)
 
