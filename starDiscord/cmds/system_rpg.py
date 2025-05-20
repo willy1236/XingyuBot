@@ -13,8 +13,8 @@ from starlib.instance import happycamp_guild
 class system_rpg(Cog_Extension):
     @commands.slash_command(description='查看用戶資訊', guild_ids=happycamp_guild)
     async def rpgui(self,ctx:discord.ApplicationContext,
-                 user_dc:discord.Option(discord.Member,name='用戶',description='留空以查詢自己',default=None)):
-        user_dc:discord.Member = user_dc or ctx.author
+                 member:discord.Option(discord.Member,name='用戶',description='留空以查詢自己',default=None)):
+        user_dc:discord.Member = member or ctx.author
         
         user = sclient.sqldb.get_user_rpg(user_dc.id)
         if not user:

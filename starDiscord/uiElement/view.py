@@ -101,7 +101,7 @@ class PollEndButton(discord.ui.Button):
             view.poll.is_on = 0
             view.sqldb.merge(view.poll)
 
-            embed, labels, sizes = view.results_embed(interaction,True)
+            embed, labels, sizes = view.results_embed(interaction,True) # type: ignore
             image_buffer = view.generate_chart(labels, sizes)
 
             await interaction.response.edit_message(embed=embed,view=view,file=discord.File(image_buffer,filename="pie.png"))
@@ -189,7 +189,7 @@ class PollView(discord.ui.View):
                number_of_user_votes=1,
                only_role_list:list=None,
                role_magnification_dict:dict=None,
-               bot:discord.bot=None
+               bot:discord.Bot=None
             ):
         """創建投票"""
         poll = Poll(title=title, creator_id=creator_id, created_at=datetime.now(tz), is_on=True, message_id=None, guild_id=guild_id, ban_alternate_account_voting=ban_alternate_account_voting, show_name=show_name, check_results_in_advance=check_results_in_advance, results_only_initiator=results_only_initiator, number_of_user_votes=number_of_user_votes)

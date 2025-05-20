@@ -22,7 +22,7 @@ from ..extension import Cog_Extension
 if TYPE_CHECKING:
     from ..bot import DiscordBot
 
-mcserver_process: subprocess.Popen = None
+mcserver_process: subprocess.Popen | None = None
 
 def server_status(ip, port):
     server = JavaServer.lookup(f"{ip}:{port}")
@@ -253,9 +253,9 @@ class owner(Cog_Extension):
 
     @commands.slash_command(description='權限檢查', guild_ids=debug_guilds)
     @commands.is_owner()
-    async def permission(self, ctx, guild_id:str = None, channel_id:str = None):
-        if guild_id:
-            guild_id = int(guild_id)
+    async def permission(self, ctx, guild_id_str:str = None, channel_id_str:str = None):
+        if guild_id_str:
+            guild_id = int(guild_id_str)
             guild = self.bot.get_guild(guild_id)
             member = guild.get_member(ctx.bot.user.id)
             permission = member.guild_permissions
@@ -276,8 +276,8 @@ class owner(Cog_Extension):
             embed.add_field(name="禁言成員", value=permission.moderate_members, inline=True)
             embed.add_field(name="觀看審核日誌", value=permission.view_audit_log, inline=True)
 
-        if channel_id:
-            channel_id = int(channel_id)
+        if channel_id_str:
+            channel_id = int(channel_id_str)
             channel = self.bot.get_channel(channel_id)
 
             embed = discord.Embed(title=channel.name, color=0xc4e9ff)
@@ -378,7 +378,9 @@ class owner(Cog_Extension):
     async def quary(self, ctx:discord.ApplicationContext, ip:discord.Option(str, description="伺服器ip", default=None)):
         await ctx.defer()
         if not ip:
-            ip = find_radmin_vpn_network() + ":25565"
+            radmin_ip = find_radmin_vpn_network()
+            if radmin_ip:
+                ip = radmin_ip + ":25565"
     
         try:
             server = JavaServer.lookup(ip)
@@ -563,9 +565,9 @@ class owner(Cog_Extension):
 
     @commands.slash_command(description='尋找id對象', guild_ids=debug_guilds)
     @commands.cooldown(rate=1,per=3)
-    async def find(self, ctx:discord.ApplicationContext, id:str, guildid:discord.Option(str,name='guildid',required=False)):
+    async def find(self, ctx:discord.ApplicationContext, id_str:str, guildid:discord.Option(str,name='guildid',required=False)):
         success = 0
-        id = int(id)
+        id = int(id_str)
         now_guild: discord.Guild = ctx.guild
         
         user = await self.bot.get_or_fetch_user(id)

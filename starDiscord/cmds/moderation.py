@@ -88,10 +88,10 @@ class moderation(Cog_Extension):
             sclient.sqldb.remove_notify_channel(ctx.guild.id, NotifyChannelType.DynamicVoice)
             await ctx.respond(f'設定完成，已移除 動態語音大廳 頻道')
     
-    @channel_notify.command(description='查看所有通知設定的頻道')
+    @channel_notify.command(name="list", description='查看所有通知設定的頻道')
     @commands.has_permissions(manage_channels=True)
     @commands.guild_only()
-    async def list(self,ctx:discord.ApplicationContext):
+    async def list_notify_channel(self,ctx:discord.ApplicationContext):
         dbdata = sclient.sqldb.get_notify_channel_all(ctx.guild.id)
         embed = BotEmbed.general("通知頻道",ctx.guild.icon.url if ctx.guild.icon else None)
         for data in dbdata:
@@ -111,10 +111,10 @@ class moderation(Cog_Extension):
         await ctx.respond(embed=embed)
         
     
-    @warning.command(description='給予使用者警告，此警告可選擇連動至其他群組')
+    @warning.command(name="add", description='給予使用者警告，此警告可選擇連動至其他群組')
     @commands.has_guild_permissions(manage_messages=True)
     @commands.guild_only()
-    async def add(self,ctx:discord.ApplicationContext,
+    async def add_notify_channel(self,ctx:discord.ApplicationContext,
                       user:discord.Option(discord.User, name='用戶', description='要給予警告的用戶',required=True),
                       reason:discord.Option(str, name='原因', description='限100字內'),
                       add_record:discord.Option(bool, name='是否要將此紀錄存入警告系統', description='將紀錄存入警告系統供其他群組檢視', default=False)):
@@ -155,12 +155,12 @@ class moderation(Cog_Extension):
         else:
             await ctx.respond("查無此警告單")
 
-    @warning.command(description='移除使用的指定警告')
+    @warning.command(name="remove", description='移除使用的指定警告')
     @commands.check_any(commands.has_guild_permissions(kick_members=True), 
                         commands.has_guild_permissions(ban_members=True),
                         commands.has_guild_permissions(manage_messages=True))
     @commands.guild_only()
-    async def remove(self,ctx:discord.ApplicationContext,
+    async def remove_warning(self,ctx:discord.ApplicationContext,
                      warning_id:discord.Option(str,name='警告編號',description='要移除的警告',required=True)):
         dbdata = sclient.sqldb.get_warning(int(warning_id))
         is_owner = await self.bot.is_owner(ctx.author)

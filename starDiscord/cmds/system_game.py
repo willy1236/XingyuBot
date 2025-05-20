@@ -137,8 +137,8 @@ class system_game(Cog_Extension):
         else:
             await ctx.respond('查詢失敗：查無此ID',ephemeral=True)
 
-    @lol.command(description='查詢League of Legends用戶資料')
-    async def user(self,ctx,riot_id:discord.Option(str,name='riot_id',description='名稱#tag，留空則使用資料庫查詢',required=False)):
+    @lol.command(name="user", description='查詢League of Legends用戶資料')
+    async def lol_user(self,ctx,riot_id:discord.Option(str,name='riot_id',description='名稱#tag，留空則使用資料庫查詢',required=False)):
         player = get_lol_player(ctx.author, riot_id)
 
         if player:
@@ -248,6 +248,7 @@ class system_game(Cog_Extension):
         df = api.get_rank_dataframe(riot_id,1)
         if df is None:
             await msg.edit("查詢失敗:查無此玩家")
+            return
         counts = df['tier'].value_counts()
         await ctx.channel.send(embed=BotEmbed.simple(title="查詢結果",description=str(counts)))
         
@@ -296,9 +297,9 @@ class system_game(Cog_Extension):
         await paginator.respond(ctx.interaction, ephemeral=False, target_message='查詢成功')
 
 
-    @osu.command(description='查詢Osu用戶資料')
+    @osu.command(name="user", description='查詢Osu用戶資料')
     @commands.cooldown(rate=1,per=1)
-    async def user(self,ctx,
+    async def osu_user(self,ctx,
                    username:discord.Option(str,name='玩家名稱',description='要查詢的玩家',default=None)):
         player = OsuAPI().get_player(username)
         if player:
@@ -306,9 +307,9 @@ class system_game(Cog_Extension):
         else:
             await ctx.respond('查詢失敗:查無此玩家',ephemeral=True)
 
-    @osu.command(description='查詢Osu圖譜資料')
+    @osu.command(name="map", description='查詢Osu圖譜資料')
     @commands.cooldown(rate=1,per=1)
-    async def map(self,ctx,
+    async def osu_map(self,ctx,
                   mapid:discord.Option(str,name='圖譜id',description='要查詢的圖譜ID',default=None)):
         map = OsuAPI().get_beatmap(mapid)
         if map:
@@ -316,9 +317,9 @@ class system_game(Cog_Extension):
         else:
             await ctx.respond('查詢失敗:查無此圖譜',ephemeral=True)
 
-    @apex.command(description='查詢Apex玩家資料')
+    @apex.command(name="user", description='查詢Apex玩家資料')
     @commands.cooldown(rate=1,per=3)
-    async def user(self,
+    async def apex_user(self,
                    ctx:discord.ApplicationContext,
                    username:discord.Option(str,name='玩家名稱',description='要查詢的玩家')):
         player = ApexAPI().get_player(username)
@@ -346,9 +347,9 @@ class system_game(Cog_Extension):
     #     embed = ApexInterface().get_server_status().desplay()
     #     await ctx.respond(content='查詢成功',embed=embed)
 
-    @dbd.command(description='查詢Dead by daylight玩家資料')
+    @dbd.command(name="user", description='查詢Dead by daylight玩家資料')
     @commands.cooldown(rate=1,per=1)
-    async def user(self,ctx,
+    async def dbd_user(self,ctx,
                    userid:discord.Option(str,name='steamid',description='要查詢的玩家id',default=None)):        
         player = DBDInterface().get_player(userid)
         if player:

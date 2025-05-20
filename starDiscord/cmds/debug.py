@@ -160,7 +160,7 @@ class debug(Cog_Extension):
             await ctx.send(f"{i}. {command.name}" for i, command in enumerate(self.bot.commands, 1))
             await ctx.respond(f"指令列表：{','.join(command_names_list)}")
         else:
-            command = self.bot.get_command(arg)
+            command = self.bot.get_command(arg) # type: ignore
             if not command:
                 await ctx.respond(f"找不到指令：{arg}")
             elif isinstance(command, discord.SlashCommandGroup):
@@ -206,7 +206,6 @@ class debug(Cog_Extension):
     @commands.is_owner()
     @commands.slash_command(description='測試指令', guild_ids=debug_guilds)
     async def attachmenttest(self,ctx:discord.ApplicationContext, att:discord.Option(discord.Attachment, required=True,name='附件')):
-        att: discord.Attachment
         await ctx.respond(file=discord.File(io.BytesIO(await att.read()), filename=att.filename),ephemeral=True)
 
     @commands.is_owner()
@@ -221,7 +220,6 @@ class debug(Cog_Extension):
     async def residenttest(self,ctx:discord.ApplicationContext, member:discord.Option(discord.Member, required=True, name='成員')):
         await ctx.defer()
         from .bot_event import check_registration
-        member: discord.Member
         guild_id = check_registration(member)
         guild = self.bot.get_guild(guild_id)
         await ctx.respond(f"{member.display_name}：{f'{guild}（{guild_id}）' if guild else guild}",ephemeral=True)
@@ -239,7 +237,6 @@ class debug(Cog_Extension):
                 status = server.status()
                 status.raw
                 text_lst.append(f"伺服器：{i[0]}，人數：{status.players.online}，版本：{status.version.name}")
-                text_lst
             except Exception as e:
                 text_lst.append(f"伺服器：{i[0]}，無法連線")
 

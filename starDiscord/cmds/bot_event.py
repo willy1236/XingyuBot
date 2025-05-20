@@ -29,7 +29,8 @@ def check_registration(member:discord.Member):
     for guild in member.mutual_guilds:
         if guild.id in guild_list:
             join_time = guild.get_member(member.id).joined_at
-            if join_time < earlest:
+
+            if join_time and join_time < earlest:
                 earlest = join_time
                 earlest_guildid = guild.id
     return earlest_guildid
@@ -79,7 +80,7 @@ class event(Cog_Extension):
             now = datetime.now(timezone.utc)
             days_5 = timedelta(days=5)
             for invite in invites:
-                if not invite.expires_at and not invite.scheduled_event and invite.uses == 0 and now - invite.created_at > days_5:
+                if not invite.expires_at and not invite.scheduled_event and invite.uses == 0 and invite.created_at and now - invite.created_at > days_5:
                     await invite.delete()
                     await asyncio.sleep(1)
 
@@ -386,7 +387,8 @@ class event(Cog_Extension):
             roles_mention = [r.mention for r in member.roles if not r.is_default()]
             if roles_mention:
                 description += f"\n身分組：{', '.join(roles_mention)}"
-            description += f"\n加入時長：{timedelta(seconds=int((datetime.now(tz=tz) - member.joined_at).total_seconds()))}"
+            if member.joined_at:
+                description += f"\n加入時長：{timedelta(seconds=int((datetime.now(tz=tz) - member.joined_at).total_seconds()))}"
             embed = BotEmbed.general(name=member.name, title="成員離開", description=description, icon_url=member.display_avatar.url)
             embed.timestamp = datetime.now(tz=tz)
             embed.set_footer(text=f"ID: {member.id}")
@@ -404,7 +406,12 @@ class event(Cog_Extension):
         if dbdata:
             username = member.name if member.discriminator == "0" else f"{member.name}#{member.discriminator}"
             text = dbdata.message.replace('{member}', member.mention).replace('{guild}', member.guild.name) if dbdata.message else f'{member.mention} ({username}) 加入了我們'
-            await self.bot.get_channel(dbdata.channel_id).send(text)
+            
+            channel = self.bot.get_channel(dbdata.channel_id)
+            if channel:
+                await channel.send(text)
+            else:
+                log.warning(f"Member join channel: {dbdata.channel_id} not found")
 
         #加入日誌 / 警告系統：管理員通知
         notify_data = sclient.sqldb.get_notify_channel(guildid, NotifyChannelType.JoinLog)
@@ -418,10 +425,12 @@ class event(Cog_Extension):
             embed = BotEmbed.general(name=member.name, title="成員加入", description=description, icon_url=member.display_avatar.url)
             embed.timestamp = datetime.now(tz=tz)
             embed.set_footer(text=f"ID: {member.id}")
-            await channel.send(embed=embed)
+            if channel:
+                await channel.send(embed=embed)
+            else:
+                log.warning(f"Member join log channel: {log_channel_id} not found")
 
-        # TODO: 新增邀請紀錄
-
+        # 快樂營戶籍註冊
         if guildid == happycamp_guild[0]:
             earlest_guildid = check_registration(member)
             if earlest_guildid and earlest_guildid != happycamp_guild[0]:

@@ -1,3 +1,4 @@
+#type: ignore[import]
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from typing import TYPE_CHECKING, TypedDict
@@ -143,7 +144,7 @@ class TwitchPoint(UserSchema, table=True):
 
     twitch_id: int = Field(primary_key=True)
     broadcaster_id: int = Field(primary_key=True)
-    point: int | None = Field(default=0)
+    point: int = Field(default=0, nullable=True)
 
 class Community(BasicSchema, table=True):
     __tablename__ = "community_info"

@@ -6,8 +6,8 @@ from starlib.dataExtractor.community import TwitchAPI
 
 class Test(unittest.TestCase):
     @classmethod
-    def setUpClass(self):
-        self.tw_api = TwitchAPI()
+    def setUpClass(cls):
+        cls.tw_api = TwitchAPI()
 
     def test_get_user(self):
         self.tw_api.get_user = MagicMock(return_value={"id": "123"})
@@ -18,7 +18,7 @@ class Test(unittest.TestCase):
         self.assertNotEqual(clips, [])
 
     @classmethod
-    def tearDownClass(self):
+    def tearDownClass(cls):
         pass
 
 if __name__ == '__main__':

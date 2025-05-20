@@ -7,7 +7,7 @@ from starlib import Jsondb, sqldb
 from starlib.types import APIType
 
 import psycopg2
-SQLsettings = Jsondb.config.get('SQLsettings')
+SQLsettings:dict = Jsondb.config.get('SQLsettings')
 connect = psycopg2.connect(
     host=SQLsettings['host'],
     database=SQLsettings['database'],

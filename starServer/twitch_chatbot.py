@@ -278,7 +278,7 @@ async def run():
         await twitch.set_user_authentication(jtoken.access_token, USER_SCOPE, jtoken.refresh_token)
     except (InvalidTokenException, MissingScopeException) as e:
         auth = UserAuthenticator(twitch, USER_SCOPE)
-        token, refresh_token = await auth.authenticate()
+        token, refresh_token = await auth.authenticate() # type: ignore
         jtoken.access_token = token
         jtoken.refresh_token = refresh_token
         sqldb.merge(jtoken)
@@ -295,7 +295,7 @@ async def run():
 
     # create chat instance
     global chat
-    chat = await Chat(twitch)
+    chat:Chat = await Chat(twitch)
 
     # register the handlers for the events you want
     chat.register_event(ChatEvent.READY, on_ready)

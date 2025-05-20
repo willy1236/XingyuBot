@@ -113,11 +113,3 @@ class find:
         except commands.GuildNotFound:
             guild = None
         return guild
-
-    @staticmethod
-    async def role(ctx,arg:str):
-        try:
-            role = await commands.RoleConverter().convert(ctx,str(arg))
-        except commands.RoleNotFound:
-            role = None
-        return role

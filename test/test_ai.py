@@ -1,3 +1,4 @@
+#type: ignore[import]
 import google.generativeai as genai
 from starlib.starAI import *
 

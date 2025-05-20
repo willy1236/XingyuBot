@@ -10,7 +10,7 @@ class Base(MappedAsDataclass, DeclarativeBase):
     """subclasses will be converted to dataclasses"""
 
     @classmethod
-    def auto_id_column(cls, datatype: O = Integer):
+    def auto_id_column(cls, datatype = Integer):
         """返回標準的自增ID欄位設定"""
         return mapped_column(datatype, Identity(), primary_key=True, init=False)
         # return mapped_column(Integer, primary_key=True, autoincrement=True, init=False)

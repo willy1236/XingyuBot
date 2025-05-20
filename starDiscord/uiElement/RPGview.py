@@ -357,7 +357,7 @@ class RPGEquipmentSelectView(discord.ui.View):
             sqldb.sell_rpgplayer_equipment(self.user_dc.id,self.now_item.equipment_uid)
             sqldb.update_coins(self.user_dc.id,"add",Coins.Rcoin,self.now_item.price)
             
-            del self.bag[self.paginator.current_page * self.item_per_page + self.now_page_item]
+            del self.bag[self.paginator.current_page * self.item_per_page + self.now_page_item] # type: ignore
             self.refresh_item_page()
             await interaction.response.edit_message(content=f"已售出 {self.now_item.name} 並獲得 {self.now_item.price} Rcoin",embeds=[self.paginator.pages[self.paginator.current_page]])
 

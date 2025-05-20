@@ -111,6 +111,7 @@ class ChoiceList():
                 ]
 
 class converter():
+    @staticmethod
     def time_to_sec(arg:str):
         '''10s->1,0用str相加 s則轉換後用int相乘'''
         dict = {'s':1,'m':60,'h':3600}
@@ -129,6 +130,7 @@ class converter():
                     raise KeyError
         return n
     
+    @staticmethod
     def time_to_datetime(arg:str): 
         m = ""
         days = 0
@@ -152,10 +154,10 @@ class converter():
                 m=''
         return timedelta(days=days,hours=hours,minutes=minutes,seconds=seconds)
     
-async def create_only_role_list(text:str,ctx):
+async def create_only_role_list(text_input:str,ctx):
     """投票系統：建立限制投票身分組清單"""
     only_role_list = []
-    for i in text.split(","):
+    for i in text_input.split(","):
         if i.endswith(" "):
             i = i[:-1]
         role = await find.role(ctx,i)
@@ -163,10 +165,10 @@ async def create_only_role_list(text:str,ctx):
             only_role_list.append(role.id)
     return only_role_list
 
-async def create_role_magification_dict(text:str,ctx):
+async def create_role_magification_dict(text_input:str,ctx):
     """投票系統：建立身分組權重列表"""
     role_magnification_dict = {}
-    text = text.split(",")
+    text = text_input.split(",")
     for i in range(0,len(text),2):
         if text[i].endswith(" "):
             text[i] = text[i][:-1]

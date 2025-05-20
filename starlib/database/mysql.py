@@ -42,7 +42,7 @@ class DBCache:
         try:
             cache_key = DBCacheType.map(key)
             if cache_key:
-                del self.cache[cache_key][key]
+                del self.cache[cache_key][key] # type: ignore
             else:
                 del self.cache[key]
         except KeyError:
@@ -128,7 +128,7 @@ class BaseSQLEngine:
         self.session.expire(db_obj)
 
     def get(self, db_obj:O, primary_keys:tuple) -> O | None:
-        return self.session.get(db_obj, primary_keys)
+        return self.session.get(db_obj, primary_keys) # type: ignore
     
 class SQLUserSystem(BaseSQLEngine):
     #* User
@@ -188,61 +188,61 @@ class SQLCurrencySystem(BaseSQLEngine):
         result = self.session.exec(stmt).one_or_none()
         return result if result is not None else UserPoint(discord_id=discord_id)
 
-    def getif_coin(self,discord_id:int,amount:int,coin=Coins.Stardust) -> int | None:
-        """取得指定貨幣足夠的用戶
-        :return: 若足夠則回傳傳入的discord_id
-        """
-        coin = Coins(coin)
-        self.cursor.execute(f"USE `stardb_user`;")
-        self.cursor.execute(f'SELECT `discord_id` FROM `user_point` WHERE discord_id = %s AND `{coin.value}` >= %s;',(discord_id,amount))
-        records = self.cursor.fetchall()
-        if records:
-            return records[0].get("discord_id")
+    # def getif_coin(self,discord_id:int,amount:int,coin=Coins.Stardust) -> int | None:
+    #     """取得指定貨幣足夠的用戶
+    #     :return: 若足夠則回傳傳入的discord_id
+    #     """
+    #     coin = Coins(coin)
+    #     self.cursor.execute(f"USE `stardb_user`;")
+    #     self.cursor.execute(f'SELECT `discord_id` FROM `user_point` WHERE discord_id = %s AND `{coin.value}` >= %s;',(discord_id,amount))
+    #     records = self.cursor.fetchall()
+    #     if records:
+    #         return records[0].get("discord_id")
 
-    def transfer_scoin(self,giver_id:int,given_id:int,amount:int):
-        """轉移星幣
-        :param giver_id: 給予點數者
-        :param given_id: 被給予點數者
-        :param amount: 轉移的點數數量
-        """
-        records = self.getif_coin(giver_id,amount)
-        if records:
-            self.cursor.execute(f"UPDATE `user_point` SET scoin = scoin - %s WHERE discord_id = %s;",(amount,giver_id))
-            self.cursor.execute(f"INSERT INTO `user_point` SET discord_id = %s, scoin = %s ON DUPLICATE KEY UPDATE discord_id = %s, scoin = scoin + %s",(given_id,amount,given_id,amount))
-            self.connection.commit()
-            #self.cursor.execute(f"UPDATE `user_point` SET `point` = REPLACE(`欄位名`, '要被取代的欄位值', '取代後的欄位值') WHERE `欄位名` LIKE '%欄位值%';",(giver_id,amount))
-        else:
-            return "點數不足"
+    # def transfer_scoin(self,giver_id:int,given_id:int,amount:int):
+    #     """轉移星幣
+    #     :param giver_id: 給予點數者
+    #     :param given_id: 被給予點數者
+    #     :param amount: 轉移的點數數量
+    #     """
+    #     records = self.getif_coin(giver_id,amount)
+    #     if records:
+    #         self.cursor.execute(f"UPDATE `user_point` SET scoin = scoin - %s WHERE discord_id = %s;",(amount,giver_id))
+    #         self.cursor.execute(f"INSERT INTO `user_point` SET discord_id = %s, scoin = %s ON DUPLICATE KEY UPDATE discord_id = %s, scoin = scoin + %s",(given_id,amount,given_id,amount))
+    #         self.connection.commit()
+    #         #self.cursor.execute(f"UPDATE `user_point` SET `point` = REPLACE(`欄位名`, '要被取代的欄位值', '取代後的欄位值') WHERE `欄位名` LIKE '%欄位值%';",(giver_id,amount))
+    #     else:
+    #         return "點數不足"
 
-    def user_sign(self,discord_id:int):
-        '''新增簽到資料'''
-        time = date.today()
-        yesterday = time - timedelta(days=1)
-        self.cursor.execute(f"USE `stardb_user`;")
+    # def user_sign(self,discord_id:int):
+    #     '''新增簽到資料'''
+    #     time = date.today()
+    #     yesterday = time - timedelta(days=1)
+    #     self.cursor.execute(f"USE `stardb_user`;")
 
-        #檢測是否簽到過
-        self.cursor.execute(f"SELECT `discord_id` FROM `user_sign` WHERE `discord_id` = {discord_id} AND `date` = '{time}';")
-        record = self.cursor.fetchall()
-        if record:
-            return '已經簽到過了喔'
+    #     #檢測是否簽到過
+    #     self.cursor.execute(f"SELECT `discord_id` FROM `user_sign` WHERE `discord_id` = {discord_id} AND `date` = '{time}';")
+    #     record = self.cursor.fetchall()
+    #     if record:
+    #         return '已經簽到過了喔'
 
-        #更新最後簽到日期+計算連續簽到
-        self.cursor.execute(f"INSERT INTO `user_sign` VALUES(%s,%s,%s) ON DUPLICATE KEY UPDATE `consecutive_days` = CASE WHEN `date` = %s THEN `consecutive_days` + 1 ELSE 1 END, `date` = %s;",(discord_id,time,1,yesterday.isoformat(),time))
-        #更新最大連續簽到日
-        self.cursor.execute(f"UPDATE `user_discord` AS `data` JOIN `user_sign` AS `sign` ON `data`.`discord_id` = `sign`.`discord_id` SET `data`.`max_sign_consecutive_days` = `sign`.`consecutive_days` WHERE `sign`.`discord_id` = {discord_id} AND (`data`.`max_sign_consecutive_days` < `sign`.`consecutive_days` OR `data`.`max_sign_consecutive_days` IS NULL);")
-        self.connection.commit()
+    #     #更新最後簽到日期+計算連續簽到
+    #     self.cursor.execute(f"INSERT INTO `user_sign` VALUES(%s,%s,%s) ON DUPLICATE KEY UPDATE `consecutive_days` = CASE WHEN `date` = %s THEN `consecutive_days` + 1 ELSE 1 END, `date` = %s;",(discord_id,time,1,yesterday.isoformat(),time))
+    #     #更新最大連續簽到日
+    #     self.cursor.execute(f"UPDATE `user_discord` AS `data` JOIN `user_sign` AS `sign` ON `data`.`discord_id` = `sign`.`discord_id` SET `data`.`max_sign_consecutive_days` = `sign`.`consecutive_days` WHERE `sign`.`discord_id` = {discord_id} AND (`data`.`max_sign_consecutive_days` < `sign`.`consecutive_days` OR `data`.`max_sign_consecutive_days` IS NULL);")
+    #     self.connection.commit()
 
-    def sign_add_coin(self,discord_id:int,scoin:int=0,Rcoin:int=0):
-        """簽到獎勵點數"""
-        self.cursor.execute(f"USE `stardb_user`;")
-        self.cursor.execute(f"INSERT INTO `user_point` SET discord_id = %s, scoin = %s,rcoin = %s ON DUPLICATE KEY UPDATE scoin = scoin + %s, rcoin = rcoin + %s",(discord_id,scoin,Rcoin,scoin,Rcoin))
-        self.connection.commit()
+    # def sign_add_coin(self,discord_id:int,scoin:int=0,Rcoin:int=0):
+    #     """簽到獎勵點數"""
+    #     self.cursor.execute(f"USE `stardb_user`;")
+    #     self.cursor.execute(f"INSERT INTO `user_point` SET discord_id = %s, scoin = %s,rcoin = %s ON DUPLICATE KEY UPDATE scoin = scoin + %s, rcoin = rcoin + %s",(discord_id,scoin,Rcoin,scoin,Rcoin))
+    #     self.connection.commit()
     
-    def get_scoin_shop_item(self,item_uid:int):
-        self.cursor.execute(f"SELECT * FROM `stardb_idbase`.`scoin_shop` WHERE `item_uid` = {item_uid};")
-        record = self.cursor.fetchall()
-        if record:
-            return ShopItem(record[0])
+    # def get_scoin_shop_item(self,item_uid:int):
+    #     self.cursor.execute(f"SELECT * FROM `stardb_idbase`.`scoin_shop` WHERE `item_uid` = {item_uid};")
+    #     record = self.cursor.fetchall()
+    #     if record:
+    #         return ShopItem(record[0])
 
 class SQLGameSystem(BaseSQLEngine):
     def get_user_game(self, discord_id:int, game:GameType):
@@ -303,7 +303,7 @@ class SQLNotifySystem(BaseSQLEngine):
         if self.cache.get(notify_type):
             del self.cache[notify_type][guild_id]
     
-    def get_notify_channel(self,guild_id:str,notify_type:NotifyChannelType):
+    def get_notify_channel(self,guild_id:int,notify_type:NotifyChannelType):
         """取得自動通知頻道"""
         statement = select(NotifyChannel).where(NotifyChannel.guild_id == guild_id, NotifyChannel.notify_type == notify_type)
         result = self.session.exec(statement).one_or_none()
@@ -436,7 +436,7 @@ class SQLNotifySystem(BaseSQLEngine):
         result = self.session.exec(statement).all()
         return result
 
-    def get_notify_community_list(self,notify_type:NotifyCommunityType, guild_id:int) -> list[tuple[NotifyCommunity, Community]]:
+    def get_notify_community_list(self,notify_type:NotifyCommunityType, guild_id:int):
         """取得伺服器內指定種類的所有通知"""
         statement = select(NotifyCommunity, Community).join(Community, and_(NotifyCommunity.community_id == Community.id, NotifyCommunity.community_type == Community.type)).where(NotifyCommunity.notify_type == notify_type, NotifyCommunity.guild_id == guild_id)
         result = self.session.exec(statement).all()
@@ -503,7 +503,7 @@ class SQLRoleSaveSystem(BaseSQLEngine):
             dct[i.message_id].append(i)
         return dct
     
-    def get_reaction_roles_by_message(self, message_id:int) -> list[ReactionRole]:
+    def get_reaction_roles_by_message(self, message_id:int):
         stmt = select(ReactionRole).where(ReactionRole.message_id == message_id)
         result = self.session.exec(stmt).all()
         return result
@@ -537,7 +537,7 @@ class SQLWarningSystem(BaseSQLEngine):
         """給予用戶警告\n
         returns: 新增的warning_id
         """
-        warning = UserModerate(discord_id=discord_id,moderate_type=moderate_type,moderate_user=moderate_user,create_guild=create_guild,create_time=create_time,reason=reason,last_time=last_time,guild_only=guild_only, officially_given=create_guild in Jsondb.config["debug_guilds"])
+        warning = UserModerate(discord_id=discord_id,moderate_type=moderate_type,moderate_user=moderate_user,create_guild=create_guild,create_time=create_time,reason=reason,last_time=last_time,guild_only=guild_only, officially_given=create_guild in Jsondb.config["debug_guilds"]) #type: ignore
         self.session.add(warning)
         self.session.commit()
         return warning.warning_id
@@ -682,7 +682,7 @@ class SQLPollSystem(BaseSQLEngine):
     def get_user_vote_count(self,poll_id,discord_id):
         stmt = select(func.count()).where(UserPoll.poll_id == poll_id, UserPoll.discord_id == discord_id)
         result = self.session.exec(stmt).one_or_none()
-        return result
+        return result or 0
 
     def add_user_poll(self,poll_id:int,discord_id:int,vote_option:int,vote_at:datetime,vote_magnification:int=1):
         self.session.merge(UserPoll(poll_id=poll_id,discord_id=discord_id,vote_option=vote_option,vote_at=vote_at,vote_magnification=vote_magnification))
@@ -995,205 +995,205 @@ class SQLCacheSystem(BaseSQLEngine):
 class SQLTest(BaseSQLEngine):
     pass
 
-class MySQLBaseModel(object):
-    """MySQL資料庫基本模型"""
-    def __init__(self,mysql_settings:dict):
-        '''MySQL 資料庫連接\n
-        settings = {"host": "","port": ,"user": "","password": "","db": "","charset": ""}
-        '''
-        #建立連線
-        self.connection = mysql.connector.connect(**mysql_settings)
-        self.cursor = self.connection.cursor(dictionary=True)
+# class MySQLBaseModel(object):
+#     """MySQL資料庫基本模型"""
+#     def __init__(self,mysql_settings:dict):
+#         '''MySQL 資料庫連接\n
+#         settings = {"host": "","port": ,"user": "","password": "","db": "","charset": ""}
+#         '''
+#         #建立連線
+#         self.connection = mysql.connector.connect(**mysql_settings)
+#         self.cursor = self.connection.cursor(dictionary=True)
 
-    def truncate_table(self,table:str,database="database"):
-        self.cursor.execute(f"USE `{database}`;")
-        self.cursor.execute(f"TRUNCATE TABLE `{table}`;")
+#     def truncate_table(self,table:str,database="database"):
+#         self.cursor.execute(f"USE `{database}`;")
+#         self.cursor.execute(f"TRUNCATE TABLE `{table}`;")
     
-    def set_userdata(self,discord_id:int,table:str,column:str,value):
-        """設定或更新用戶資料（只要PK為discord_id的皆可）"""
-        self.cursor.execute(f"USE `stardb_user`;")
-        self.cursor.execute(f"INSERT INTO `{table}` SET discord_id = {discord_id}, {column} = {value} ON DUPLICATE KEY UPDATE discord_id = {discord_id}, {column} = {value};")
-        self.connection.commit()
+#     def set_userdata(self,discord_id:int,table:str,column:str,value):
+#         """設定或更新用戶資料（只要PK為discord_id的皆可）"""
+#         self.cursor.execute(f"USE `stardb_user`;")
+#         self.cursor.execute(f"INSERT INTO `{table}` SET discord_id = {discord_id}, {column} = {value} ON DUPLICATE KEY UPDATE discord_id = {discord_id}, {column} = {value};")
+#         self.connection.commit()
 
-    def get_userdata(self,discord_id:int,table:str='user_discord'):
-        """取得用戶資料（只要PK為discord_id的皆可）"""
-        self.cursor.execute(f"USE `stardb_user`;")
-        self.cursor.execute(f'SELECT * FROM `{table}` WHERE discord_id = %s;',(discord_id,))
-        records = self.cursor.fetchall()
-        if records:
-            return records[0]
+#     def get_userdata(self,discord_id:int,table:str='user_discord'):
+#         """取得用戶資料（只要PK為discord_id的皆可）"""
+#         self.cursor.execute(f"USE `stardb_user`;")
+#         self.cursor.execute(f'SELECT * FROM `{table}` WHERE discord_id = %s;',(discord_id,))
+#         records = self.cursor.fetchall()
+#         if records:
+#             return records[0]
 
-    def remove_userdata(self,discord_id:int,table:str='user_discord'):
-        """移除用戶資料（只要PK為discord_id的皆可）"""
-        self.cursor.execute(f"USE `stardb_user`;")
-        self.cursor.execute(f"DELETE FROM `{table}` WHERE `discord_id` = %s;",(discord_id,))
-        self.connection.commit()
+#     def remove_userdata(self,discord_id:int,table:str='user_discord'):
+#         """移除用戶資料（只要PK為discord_id的皆可）"""
+#         self.cursor.execute(f"USE `stardb_user`;")
+#         self.cursor.execute(f"DELETE FROM `{table}` WHERE `discord_id` = %s;",(discord_id,))
+#         self.connection.commit()
 
-    def add_userdata_value(self,discord_id:int,table:str,column:str,value):
-        """增加用戶數值資料的值（只要PK為discord_id的皆可）"""
-        self.cursor.execute(f"USE `stardb_user`;")
-        self.cursor.execute(f"INSERT INTO `{table}` SET discord_id = {discord_id}, {column} = {value} ON DUPLICATE KEY UPDATE `discord_id` = {discord_id}, `{column}` = CASE WHEN `{column}` IS NOT NULL THEN `{column}` + {value} ELSE {value} END;")
-        self.connection.commit()
+#     def add_userdata_value(self,discord_id:int,table:str,column:str,value):
+#         """增加用戶數值資料的值（只要PK為discord_id的皆可）"""
+#         self.cursor.execute(f"USE `stardb_user`;")
+#         self.cursor.execute(f"INSERT INTO `{table}` SET discord_id = {discord_id}, {column} = {value} ON DUPLICATE KEY UPDATE `discord_id` = {discord_id}, `{column}` = CASE WHEN `{column}` IS NOT NULL THEN `{column}` + {value} ELSE {value} END;")
+#         self.connection.commit()
 
-    def set_userdata_v2(self, discord_id:int, column:str, value, table="user_discord"):
-        """設定用戶資料"""
-        self.cursor.execute(f"INSERT INTO `stardb_user`.`{table}` SET discord_id = {discord_id}, {column} = {value} ON DUPLICATE KEY UPDATE discord_id = {discord_id}, {column} = {value};")
-        self.connection.commit()
-class MySQLBetSystem(MySQLBaseModel):
-    def get_bet_data(self,bet_id:int):
-        self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f'SELECT `bet_id`,`IsOn` FROM `bet_data` WHERE `bet_id` = %s;',(bet_id,))
-        records = self.cursor.fetchone()
-        return records
+#     def set_userdata_v2(self, discord_id:int, column:str, value, table="user_discord"):
+#         """設定用戶資料"""
+#         self.cursor.execute(f"INSERT INTO `stardb_user`.`{table}` SET discord_id = {discord_id}, {column} = {value} ON DUPLICATE KEY UPDATE discord_id = {discord_id}, {column} = {value};")
+#         self.connection.commit()
+# class MySQLBetSystem(MySQLBaseModel):
+#     def get_bet_data(self,bet_id:int):
+#         self.cursor.execute(f"USE `database`;")
+#         self.cursor.execute(f'SELECT `bet_id`,`IsOn` FROM `bet_data` WHERE `bet_id` = %s;',(bet_id,))
+#         records = self.cursor.fetchone()
+#         return records
 
-    def place_bet(self,bet_id:int,choice:str,money:int):
-        self.cursor.execute(f"USE `stardb_user`;")
-        self.cursor.execute(f'INSERT INTO `user_bet` VALUES(%s,%s,%s);',(bet_id,choice,money))
-        self.connection.commit()
+#     def place_bet(self,bet_id:int,choice:str,money:int):
+#         self.cursor.execute(f"USE `stardb_user`;")
+#         self.cursor.execute(f'INSERT INTO `user_bet` VALUES(%s,%s,%s);',(bet_id,choice,money))
+#         self.connection.commit()
 
-    def create_bet(self,bet_id:int,title:str,pink:str,blue:str):
-        self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f'INSERT INTO `bet_data` VALUES(%s,%s,%s,%s,%s);',(bet_id,title,pink,blue,True))
-        self.connection.commit()
+#     def create_bet(self,bet_id:int,title:str,pink:str,blue:str):
+#         self.cursor.execute(f"USE `database`;")
+#         self.cursor.execute(f'INSERT INTO `bet_data` VALUES(%s,%s,%s,%s,%s);',(bet_id,title,pink,blue,True))
+#         self.connection.commit()
 
-    def update_bet(self,bet_id:int):
-        self.cursor.execute(f"USE `database`;")
-        self.cursor.execute(f"UPDATE `bet_data` SET IsOn = %s WHERE bet_id = %s;",(False,bet_id))
-        self.connection.commit()
+#     def update_bet(self,bet_id:int):
+#         self.cursor.execute(f"USE `database`;")
+#         self.cursor.execute(f"UPDATE `bet_data` SET IsOn = %s WHERE bet_id = %s;",(False,bet_id))
+#         self.connection.commit()
 
-    def get_bet_total(self,bet_id:int):
-        self.cursor.execute(f"USE `stardb_user`;")
-        self.cursor.execute(f'SELECT SUM(money) FROM `user_bet` WHERE `bet_id` = %s AND `choice` = %s;',(bet_id,'pink'))
-        total_pink = self.cursor.fetchone()
-        self.cursor.execute(f'SELECT SUM(money) FROM `user_bet` WHERE `bet_id` = %s AND `choice` = %s;',(bet_id,'blue'))
-        total_blue = self.cursor.fetchone()
-        return [int(total_pink['SUM(money)'] or 0),int(total_blue['SUM(money)'] or 0)]
+#     def get_bet_total(self,bet_id:int):
+#         self.cursor.execute(f"USE `stardb_user`;")
+#         self.cursor.execute(f'SELECT SUM(money) FROM `user_bet` WHERE `bet_id` = %s AND `choice` = %s;',(bet_id,'pink'))
+#         total_pink = self.cursor.fetchone()
+#         self.cursor.execute(f'SELECT SUM(money) FROM `user_bet` WHERE `bet_id` = %s AND `choice` = %s;',(bet_id,'blue'))
+#         total_blue = self.cursor.fetchone()
+#         return [int(total_pink['SUM(money)'] or 0),int(total_blue['SUM(money)'] or 0)]
 
-    def get_bet_winner(self,bet_id:int,winner:str):
-        self.cursor.execute(f"USE `stardb_user`;")
-        self.cursor.execute(f'SELECT * FROM `user_bet` WHERE `bet_id` = %s AND `choice` = %s;',(bet_id,winner))
-        records = self.cursor.fetchall()
-        return records
+#     def get_bet_winner(self,bet_id:int,winner:str):
+#         self.cursor.execute(f"USE `stardb_user`;")
+#         self.cursor.execute(f'SELECT * FROM `user_bet` WHERE `bet_id` = %s AND `choice` = %s;',(bet_id,winner))
+#         records = self.cursor.fetchall()
+#         return records
 
-    def remove_bet(self,bet_id:int):
-        self.cursor.execute(f'DELETE FROM `stardb_user`.`user_bet` WHERE `bet_id` = %s;',(bet_id,))
-        self.cursor.execute(f'DELETE FROM `database`.`bet_data` WHERE `bet_id` = %s;',(bet_id,))
-        self.connection.commit()
+#     def remove_bet(self,bet_id:int):
+#         self.cursor.execute(f'DELETE FROM `stardb_user`.`user_bet` WHERE `bet_id` = %s;',(bet_id,))
+#         self.cursor.execute(f'DELETE FROM `database`.`bet_data` WHERE `bet_id` = %s;',(bet_id,))
+#         self.connection.commit()
 
-class MYSQLElectionSystem(MySQLBaseModel):
-    def add_election(self,discord_id:int,session:int,position,represent_party_id:int=None):
-        position = Position(position)
-        self.cursor.execute(f"INSERT INTO `database`.`candidate_list` VALUES(%s,%s,%s,%s);",(discord_id,session,position.value,represent_party_id))
-        self.connection.commit()
+# class MYSQLElectionSystem(MySQLBaseModel):
+#     def add_election(self,discord_id:int,session:int,position,represent_party_id:int=None):
+#         position = Position(position)
+#         self.cursor.execute(f"INSERT INTO `database`.`candidate_list` VALUES(%s,%s,%s,%s);",(discord_id,session,position.value,represent_party_id))
+#         self.connection.commit()
 
-    def remove_election(self,discord_id:int,session:int,position=None):
-        if position:
-            position = Position(position)
-            self.cursor.execute(f"DELETE FROM `database`.`candidate_list` WHERE `discord_id` = %s AND `session` = %s AND `position` = %s;",(discord_id,session,position.value))
-        else:
-            self.cursor.execute(f"DELETE FROM `database`.`candidate_list` WHERE `discord_id` = %s AND `session` = %s;",(discord_id,session))
-        self.connection.commit()
+#     def remove_election(self,discord_id:int,session:int,position=None):
+#         if position:
+#             position = Position(position)
+#             self.cursor.execute(f"DELETE FROM `database`.`candidate_list` WHERE `discord_id` = %s AND `session` = %s AND `position` = %s;",(discord_id,session,position.value))
+#         else:
+#             self.cursor.execute(f"DELETE FROM `database`.`candidate_list` WHERE `discord_id` = %s AND `session` = %s;",(discord_id,session))
+#         self.connection.commit()
 
-    def get_election_by_session(self,session:int):
-        self.cursor.execute(f"SELECT * FROM `database`.`candidate_list` WHERE session = {session};")
-        records = self.cursor.fetchall()
-        return records
+#     def get_election_by_session(self,session:int):
+#         self.cursor.execute(f"SELECT * FROM `database`.`candidate_list` WHERE session = {session};")
+#         records = self.cursor.fetchall()
+#         return records
     
-    def get_election_full_by_session(self,session:int):
-        self.cursor.execute(f"""
-            SELECT 
-                cl.discord_id,
-                cl.session,
-                cl.position,
-                COALESCE(cl.represent_party_id, up.party_id) AS party_id,
-                pd.party_name,
-                pd.role_id
-            FROM
-                `database`.`candidate_list` cl
-                    LEFT JOIN
-                `stardb_user`.`user_party` up ON cl.discord_id = up.discord_id
-                    LEFT JOIN
-                `database`.`party_data` pd ON COALESCE(cl.represent_party_id, up.party_id) = pd.party_id
-            WHERE
-                session = {session};
-        """)
-        return self.cursor.fetchall()
+#     def get_election_full_by_session(self,session:int):
+#         self.cursor.execute(f"""
+#             SELECT 
+#                 cl.discord_id,
+#                 cl.session,
+#                 cl.position,
+#                 COALESCE(cl.represent_party_id, up.party_id) AS party_id,
+#                 pd.party_name,
+#                 pd.role_id
+#             FROM
+#                 `database`.`candidate_list` cl
+#                     LEFT JOIN
+#                 `stardb_user`.`user_party` up ON cl.discord_id = up.discord_id
+#                     LEFT JOIN
+#                 `database`.`party_data` pd ON COALESCE(cl.represent_party_id, up.party_id) = pd.party_id
+#             WHERE
+#                 session = {session};
+#         """)
+#         return self.cursor.fetchall()
 
-    def get_election_by_session_position(self,session:int,position=str):
-        position = Position(position)
-        self.cursor.execute(f"SELECT * FROM `database`.`candidate_list` WHERE session = {session} AND position = {position.value};")
-        records = self.cursor.fetchall()
-        return records
+#     def get_election_by_session_position(self,session:int,position=str):
+#         position = Position(position)
+#         self.cursor.execute(f"SELECT * FROM `database`.`candidate_list` WHERE session = {session} AND position = {position.value};")
+#         records = self.cursor.fetchall()
+#         return records
     
-    def get_election_count(self,session:int):
-        self.cursor.execute(f"SELECT position,count(*) AS count FROM `database`.`candidate_list` WHERE session = {session} GROUP BY position ORDER BY `position`;")
-        records = self.cursor.fetchall()
-        return records
+#     def get_election_count(self,session:int):
+#         self.cursor.execute(f"SELECT position,count(*) AS count FROM `database`.`candidate_list` WHERE session = {session} GROUP BY position ORDER BY `position`;")
+#         records = self.cursor.fetchall()
+#         return records
     
-    def add_official(self, discord_id, session, position):
-        self.cursor.execute(f"INSERT INTO `database`.`official_list` VALUES(%s,%s,%s);",(discord_id,session,position))
-        self.connection.commit()
+#     def add_official(self, discord_id, session, position):
+#         self.cursor.execute(f"INSERT INTO `database`.`official_list` VALUES(%s,%s,%s);",(discord_id,session,position))
+#         self.connection.commit()
 
-    def add_officials(self, lst:list[list[int, int, int]]):
-        self.cursor.executemany(f"INSERT INTO `database`.`official_list` VALUES(%s,%s,%s);",lst)
-        self.connection.commit()
+#     def add_officials(self, lst:list[list[int, int, int]]):
+#         self.cursor.executemany(f"INSERT INTO `database`.`official_list` VALUES(%s,%s,%s);",lst)
+#         self.connection.commit()
 
-    def join_party(self,discord_id:int,party_id:int):
-        self.cursor.execute(f"INSERT INTO `stardb_user`.`user_party` VALUES(%s,%s);",(discord_id,party_id))
-        self.connection.commit()
+#     def join_party(self,discord_id:int,party_id:int):
+#         self.cursor.execute(f"INSERT INTO `stardb_user`.`user_party` VALUES(%s,%s);",(discord_id,party_id))
+#         self.connection.commit()
 
-    def leave_party(self,discord_id:int,party_id:int):
-        self.cursor.execute(f"DELETE FROM `stardb_user`.`user_party` WHERE `discord_id` = %s AND `party_id` = %s;",(discord_id,party_id))
-        self.connection.commit()
+#     def leave_party(self,discord_id:int,party_id:int):
+#         self.cursor.execute(f"DELETE FROM `stardb_user`.`user_party` WHERE `discord_id` = %s AND `party_id` = %s;",(discord_id,party_id))
+#         self.connection.commit()
 
-    def get_all_party_data(self):
-        self.cursor.execute(f"""
-            SELECT 
-                `party_data`.*, COUNT(`user_party`.party_id) AS member_count
-            FROM
-                `database`.`party_data`
-                    LEFT JOIN
-                `stardb_user`.`user_party` ON party_data.party_id = user_party.party_id
-            GROUP BY `party_id`
-            ORDER BY `party_id`;
-        """)
-        records = self.cursor.fetchall()
-        return [Party(**i) for i in records]
+#     def get_all_party_data(self):
+#         self.cursor.execute(f"""
+#             SELECT 
+#                 `party_data`.*, COUNT(`user_party`.party_id) AS member_count
+#             FROM
+#                 `database`.`party_data`
+#                     LEFT JOIN
+#                 `stardb_user`.`user_party` ON party_data.party_id = user_party.party_id
+#             GROUP BY `party_id`
+#             ORDER BY `party_id`;
+#         """)
+#         records = self.cursor.fetchall()
+#         return [Party(**i) for i in records]
     
-    def get_user_party(self,discord_id:int):
-        self.cursor.execute(f"SELECT `user_party`.discord_id,`party_data`.* FROM `stardb_user`.`user_party` LEFT JOIN `database`.`party_data` ON user_party.party_id = party_data.party_id WHERE `discord_id` = {discord_id}")
-        records = self.cursor.fetchall()
-        return [Party(**i) for i in records]
+#     def get_user_party(self,discord_id:int):
+#         self.cursor.execute(f"SELECT `user_party`.discord_id,`party_data`.* FROM `stardb_user`.`user_party` LEFT JOIN `database`.`party_data` ON user_party.party_id = party_data.party_id WHERE `discord_id` = {discord_id}")
+#         records = self.cursor.fetchall()
+#         return [Party(**i) for i in records]
     
-    def get_party_data(self,party_id:int):
-        self.cursor.execute(f"SELECT * FROM `database`.`party_data` WHERE `party_id` = {party_id};")
-        records = self.cursor.fetchall()
-        if records:
-            return Party(**records[0])
+#     def get_party_data(self,party_id:int):
+#         self.cursor.execute(f"SELECT * FROM `database`.`party_data` WHERE `party_id` = {party_id};")
+#         records = self.cursor.fetchall()
+#         if records:
+#             return Party(**records[0])
 
-class MySQLManager(MySQLBaseModel):
-    def copy_data(self, remote_schema, remote_table, local_schema, local_table):
-        remote = MySQLBaseModel(Jsondb.config["remote_SQLsettings"])
-        remote.cursor.execute(f"SELECT * FROM `{remote_schema}`.`{remote_table}`;")
-        records = remote.cursor.fetchall()
+# class MySQLManager(MySQLBaseModel):
+#     def copy_data(self, remote_schema, remote_table, local_schema, local_table):
+#         remote = MySQLBaseModel(Jsondb.config["remote_SQLsettings"])
+#         remote.cursor.execute(f"SELECT * FROM `{remote_schema}`.`{remote_table}`;")
+#         records = remote.cursor.fetchall()
 
-        col_count = len(records[0])
-        values_str = ",".join(["%s" for _ in range(col_count)])
-        try:
-            self.cursor.executemany(f'INSERT INTO `{local_schema}`.`{local_table}` VALUES({values_str});', [tuple(r.values()) for r in records])
-            self.connection.commit()
-        except sqlerror as e:
-            if e.errno == 1062:
-                print(e.msg)
-            else:
-                raise e
+#         col_count = len(records[0])
+#         values_str = ",".join(["%s" for _ in range(col_count)])
+#         try:
+#             self.cursor.executemany(f'INSERT INTO `{local_schema}`.`{local_table}` VALUES({values_str});', [tuple(r.values()) for r in records])
+#             self.connection.commit()
+#         except sqlerror as e:
+#             if e.errno == 1062:
+#                 print(e.msg)
+#             else:
+#                 raise e
 
-class MySQLDatabase(
-    MySQLBetSystem,
-    MYSQLElectionSystem,
-    MySQLManager,
-):
-    """Mysql操作"""
+# class MySQLDatabase(
+#     MySQLBetSystem,
+#     MYSQLElectionSystem,
+#     MySQLManager,
+# ):
+#     """Mysql操作"""
 
 class SQLEngine(
     SQLUserSystem,

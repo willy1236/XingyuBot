@@ -286,8 +286,8 @@ class command(Cog_Extension):
         await ctx.respond('下注完成!')
 
 
-    @bet.command(description='創建賭盤')
-    async def create(self,ctx,
+    @bet.command(name="create", description='創建賭盤')
+    async def create_bet(self,ctx,
                      title:discord.Option(str,name='賭盤標題',description='',required=True),
                      pink:discord.Option(str,name='粉紅幫標題',description='',required=True),
                      blue:discord.Option(str,name='藍藍幫標題',description='',required=True),
@@ -403,7 +403,7 @@ class command(Cog_Extension):
         await ctx.respond(f"開始執行",ephemeral=True)
         
         role = ctx.guild.get_role(1195407446315892888)
-        member.add_roles(role,reason="指令：懲戒集中營 開始")
+        await member.add_roles(role,reason="指令：懲戒集中營 開始")
         
         last_time = timedelta(seconds=20)
         embed = BotEmbed.simple_warn_sheet(member,ctx.author,datetime.now(),last=last_time,reason="懲戒集中營",title="已被懲戒")
@@ -414,7 +414,7 @@ class command(Cog_Extension):
             if member.voice and member.voice.channel != channel:
                 await member.move_to(channel)
             await asyncio.sleep(0.5)
-        member.remove_roles(role,reason="指令：懲戒集中營 結束")
+        await member.remove_roles(role,reason="指令：懲戒集中營 結束")
 
     @commands.slash_command(description='傳送訊息給機器人擁有者')
     @commands.cooldown(rate=1,per=10)
@@ -426,13 +426,13 @@ class command(Cog_Extension):
         await ctx.respond(f"訊息已發送!",ephemeral=True,delete_after=3)
 
     @staticmethod
-    def Autocomplete(self: discord.AutocompleteContext):
+    def Autocomplete(ctx: discord.AutocompleteContext):
         return ['test']
 
     @commands.slash_command(description='讓機器人選擇一樣東西')
-    async def choice(self,ctx,args:discord.Option(str,name='選項',description='多個選項請用空格隔開'),
+    async def choice(self,ctx,args_str:discord.Option(str,name='選項',description='多個選項請用空格隔開'),
                      times:discord.Option(int,name='次數',description='預設為1，可輸入1~10',default=1,min_value=1,max_value=10)):
-        args:list[str] = args.split()
+        args:list[str] = args_str.split()
         result = random.choices(args, k=times)
         await ctx.respond(f'我選擇：{", ".join(result)}')
 
@@ -442,11 +442,11 @@ class command(Cog_Extension):
             await ctx.respond(f"你不是台中摃殘黨員",ephemeral=True)
             return
         
-        member.timeout_for(duration=timedelta(seconds=10),reason="bonk")
+        await member.timeout_for(duration=timedelta(seconds=10),reason="bonk")
         await ctx.respond(f"{member.mention}：bonk")
 
-    @poll.command(description='創建投票')
-    async def create(self,
+    @poll.command(name="create", description='創建投票')
+    async def create_poll(self,
                      ctx:discord.ApplicationContext,
                      title:discord.Option(str,name='標題',description='投票標題，限45字內'),
                      options:discord.Option(str,name='選項',description='投票選項，最多輸入20項，每個選項請用英文,隔開'),
@@ -500,7 +500,7 @@ class command(Cog_Extension):
         if is_owner:
             poll.show_name = show_name
         view = PollView(poll, sclient.sqldb, self.bot)
-        embed, labels, sizes = view.results_embed(ctx.interaction, True)
+        embed, labels, sizes = view.results_embed(ctx.interaction, True)  # type: ignore
         image_buffer = view.generate_chart(labels, sizes)
         await ctx.respond(embed=embed,file=discord.File(image_buffer,filename="pie.png"))
 

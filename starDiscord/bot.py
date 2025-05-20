@@ -67,7 +67,7 @@ class DiscordBot(discord.Bot):
 
     async def feedback(self, ctx: discord.ApplicationContext, msg: discord.Message):
         feedback_channel = self.get_channel(
-            Jsondb.config.get('feedback_channel'))
+        Jsondb.config.get('feedback_channel'))
         embed = BotEmbed.general(
             name=str(msg.author), icon_url=msg.author.display_avatar.url, title="💬回饋訊息", description=msg.content)
         # embed.add_field(name='訊息內容', value=msg, inline=True)

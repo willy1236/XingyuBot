@@ -40,7 +40,7 @@ def create_sqlengine(connect_name:str | None) -> SQLEngine:
         sqlengine = None
         log.info('>> SQL connect: off <<')
     
-    return sqlengine
+    return sqlengine # type: ignore
 
 sqldb = create_sqlengine(SQL_connection)
 
@@ -52,7 +52,7 @@ def create_mongedb(should_connect) -> MongoDB:
         log.info('>> MongoDB connect: on <<')
     else:
         mongedb = None
-    return mongedb
+    return mongedb # type: ignore
 
 mongedb = create_mongedb(Mongedb_connection)
 

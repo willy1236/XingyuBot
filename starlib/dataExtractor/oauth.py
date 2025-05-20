@@ -285,7 +285,7 @@ class GoogleOauth2(OAuth2Base):
             self.refresh_token = self._creds.refresh_token
             self.expires_at = self._creds.expiry.replace(tzinfo=timezone(timedelta(hours=0))).astimezone(tz)
             self.save_token(self.user_id)
-        return self._creds
+        return self._creds # type: ignore
 
     @property
     def user_id(self):

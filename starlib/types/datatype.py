@@ -1,8 +1,4 @@
 from enum import Enum, IntEnum
-from re import T
-
-from pandas.tseries.holiday import GoodFriday
-
 
 class NotifyCommunityType(IntEnum):
     TwitchLive = 1

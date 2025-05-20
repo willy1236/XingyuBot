@@ -15,9 +15,9 @@ class system_user(Cog_Extension):
 
     @commands.slash_command(description='查看用戶資訊')
     async def ui(self,ctx:discord.ApplicationContext,
-                 user_dc:discord.Option(discord.Member,name='用戶',description='留空以查詢自己',default=None),
+                 member:discord.Option(discord.Member,name='用戶',description='留空以查詢自己',default=None),
                  show_alt_account:discord.Option(bool,name='顯示小帳',description='顯示小帳，僅在查詢自己時可使用，此功能僅在特定情況下生效',default=False)):
-        user_dc:discord.Member = user_dc or ctx.author
+        user_dc:discord.Member = member or ctx.author
         if user_dc != ctx.author and not await self.bot.is_owner(ctx.author):
             show_alt_account = False
         

@@ -1,3 +1,4 @@
+# type: ignore
 import asyncio
 import enum
 import math
@@ -79,15 +80,15 @@ class Song():
         - list[Song]: A list of Song objects created from the URL.
         """
         loop = loop or asyncio.get_event_loop()
-        results = await loop.run_in_executor(None, lambda: ytdl.extract_info(url, download=False))
-        lst:list[cls] = []
+        results:dict | list[dict] = await loop.run_in_executor(None, lambda: ytdl.extract_info(url, download=False))  # type: ignore
+        lst:list["Song"] = []
 
-        if "entries" in results:
+        if  "entries" in results:
             # 處理歌單
             results = results["entries"]
         else:
             # 處理單首歌曲
-            results = [results]
+            results = [results] # type: ignore
 
         for song_datas in results:
             title = song_datas.get("title")
@@ -469,7 +470,7 @@ class music(Cog_Extension):
         player = get_player(ctx.guild.id)
         playlist = player.get_full_playlist()
         if playlist:
-            page = [BotEmbed.simple(title="播放清單",description='') for _ in range(math.ceil(len(playlist) / 10))]
+            page = [BotEmbed.simple(title="播放清單",description="") for _ in range(math.ceil(len(playlist) / 10))]
             for i, song in enumerate(playlist):
                 page[int(i / 10)].description += f"**{i+1}.** [{song.title}]({song.url}) [{song.requester.mention}]\n\n"
 

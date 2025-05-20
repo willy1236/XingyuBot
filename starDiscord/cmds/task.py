@@ -90,7 +90,10 @@ class task(Cog_Extension):
         sclient.sqldb.set_notify_cache(NotifyChannelType.MajorQuakeNotifications, timefrom)
 
     async def weather_check(self):
-        weather = cwa_api.get_weather_data()[0]
+        weathers = cwa_api.get_weather_data()
+        if not weathers:
+            return
+        weather = weathers[0] 
         text = f"現在天氣： {weather.WeatherElement.Weather if weather.WeatherElement.Weather != '-99' else '--'}/{weather.WeatherElement.AirTemperature}°C"
         if weather.WeatherElement.AirTemperature == weather.WeatherElement.DailyExtreme.DailyHigh.AirTemperature:
             text += f" （最高溫）"
@@ -183,6 +186,8 @@ class task(Cog_Extension):
                 # 取得剪輯的來源影片（直播）
                 videos_dict = {clip.video_id: None for clip in clips}
                 api_video = tw_api.get_videos(video_ids=list(videos_dict.keys()))
+                if not api_video:
+                    continue
                 videos_dict = {video.id: video for video in api_video}
 
                 for clip in clips:
