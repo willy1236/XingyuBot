@@ -792,7 +792,7 @@ class SQLTwitchSystem(BaseSQLEngine):
     def get_bot_join_channel_all(self):
         stmt = select(TwitchBotJoinChannel)
         result = self.session.exec(stmt).all()
-        return {i.twitch_id: i.action_channel_id for i in result}
+        return {i.twitch_id: i for i in result}
     
     def list_chat_command_by_channel(self, channel_id:int):
         stmt = select(TwitchChatCommand).where(TwitchChatCommand.twitch_id == channel_id)
