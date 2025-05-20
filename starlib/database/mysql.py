@@ -764,6 +764,10 @@ class SQLTwitchSystem(BaseSQLEngine):
         result = self.session.exec(stmt).all()
         return {i.name: i.response for i in result}
     
+    def get_chat_command_names(self):
+        stmt = select(TwitchChatCommand.twitch_id,TwitchChatCommand.name)
+        return self.session.exec(stmt).all()
+    
     def get_twitch_point(self, twitch_id:int, broadcaster_id:int):
         stmt = select(TwitchPoint).where(TwitchPoint.twitch_id == twitch_id, TwitchPoint.broadcaster_id == broadcaster_id)
         result = self.session.exec(stmt).one_or_none()
@@ -1239,7 +1243,7 @@ class SQLEngine(
         self.session.commit()
 
         self.cache[DBCacheType.TwitchCmd][twitch_channel_id] = self.get_raw_chat_command_channel(twitch_channel_id)
-
+    
     def get_twitch_cmd_response_cache(self, twitch_channel_id:int, command:str) -> str | None:
         """取得Twitch指令回應"""
         if twitch_channel_id in self.cache[DBCacheType.TwitchCmd]:

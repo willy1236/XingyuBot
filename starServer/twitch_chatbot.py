@@ -5,7 +5,7 @@ from uuid import UUID
 
 from twitchAPI.chat import (Chat, ChatCommand, ChatMessage, ChatSub, EventData,
                             JoinedEvent, LeftEvent, NoticeEvent, WhisperEvent)
-from twitchAPI.chat.middleware import ChannelRestriction
+from twitchAPI.chat.middleware import ChannelRestriction, ChannelCommandCooldown
 from twitchAPI.eventsub.webhook import EventSubWebhook
 from twitchAPI.eventsub.websocket import EventSubWebsocket
 from twitchAPI.helper import first
@@ -63,7 +63,6 @@ TARGET_CHANNEL = {twitch_id: data.action_channel_id for twitch_id, data in join_
 TARGET_CHANNEL_IDS = [str(i) for i in TARGET_CHANNEL.keys()]
 
 chat:"Chat"
-
 # eventsub
 async def on_follow(event: eventsub.ChannelFollowEvent):
     #await chat.send_message(data.event.broadcaster_user_name,text = f'{data.event.user_name} now follows {data.event.broadcaster_user_name}!')
@@ -196,7 +195,7 @@ async def on_ready(ready_event: EventData):
 # this will be called whenever a message in a channel was send by either the bot OR another user
 async def on_message(msg: ChatMessage):
     twitch_log.info(f'in {msg.room.name}, {msg.user.name} said: {msg.text}')
-    if msg.text.startswith('!'):
+    if not msg.is_me and msg.text.startswith('!'):
         resp = sqldb.get_twitch_cmd_response_cache(msg.room.room_id, msg.text[1:])
         if resp:
             await msg.reply(resp)
@@ -248,6 +247,7 @@ async def add_chat_command(cmd: ChatCommand):
         await cmd.reply('用法：!add_command <指令> <回覆>')
     else:
         sclient.sqldb.add_twitch_cmd(cmd.room.room_id, parameters[0], parameters[1])
+        cmd.chat.register_command(parameters[0], invoke_chat_command, [ChannelRestriction(allowed_channel=cmd.room.room_id), ChannelCommandCooldown(cooldown_seconds=30)])
         await cmd.reply(f'已新增指令：{parameters[0]}')
 
 async def remove_chat_command(cmd: ChatCommand):
@@ -255,8 +255,8 @@ async def remove_chat_command(cmd: ChatCommand):
     if len(parameters) < 1:
         await cmd.reply('用法：!remove_command <指令>')
     else:
-        twitch_log.info(f'remove command: {parameters}')
         sclient.sqldb.remove_twitch_cmd(cmd.room.room_id, parameters)
+        cmd.chat.unregister_command(parameters)
         await cmd.reply(f'已移除指令：{parameters}')
 
 async def list_chat_command(cmd: ChatCommand):
@@ -273,6 +273,11 @@ async def list_chat_command(cmd: ChatCommand):
             await cmd.reply(f'{command.name}：{command.response}')
         else:
             await cmd.reply(f'{parameters} 不存在')
+
+async def invoke_chat_command(cmd: ChatCommand):
+    resp = sqldb.get_twitch_cmd_response_cache(cmd.room.room_id, cmd.text[1:])
+    if resp:
+        await cmd.reply(resp)
 
 async def modify_channel_information(cmd: ChatCommand):
     pass
@@ -330,6 +335,8 @@ async def run():
     chat.register_command("add_cmd", add_chat_command)
     chat.register_command("remove_cmd", remove_chat_command)
     chat.register_command("list_cmd", list_chat_command)
+    for twitch_id, cmd in sqldb.get_chat_command_names():
+        chat.register_command(cmd, invoke_chat_command, [ChannelRestriction(allowed_channel=twitch_id), ChannelCommandCooldown(cooldown_seconds=30)])
     # TODO: modify_channel_information
     
     chat.start()
