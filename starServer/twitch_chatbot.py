@@ -242,7 +242,7 @@ async def add_chat_command(cmd: ChatCommand):
     if len(cmd.parameter) < 2:
         await cmd.reply('用法：!add_command <指令> <回覆>')
     else:
-        twitch_log.info(f'add command: {cmd.parameter[0]} {cmd.parameter[1:]}')
+        twitch_log.info(f'add command: {cmd.parameter[0]}, {cmd.parameter[1:]}')
         sclient.sqldb.merge(TwitchChatCommand(twitch_id=cmd.source_room_id, command=cmd.parameter[0], response=" ".join(cmd.parameter[1:])))
         await cmd.reply(f'已新增指令：{cmd.parameter[0]}')
 
@@ -250,7 +250,7 @@ async def remove_chat_command(cmd: ChatCommand):
     if len(cmd.parameter) < 1:
         await cmd.reply('用法：!remove_command <指令>')
     else:
-        twitch_log.info(f'add command: {cmd.parameter[0]} {cmd.parameter[1:]}')
+        twitch_log.info(f'add command: {cmd.parameter[0]}, {cmd.parameter[1:]}')
         sclient.sqldb.delete(TwitchChatCommand(twitch_id=cmd.source_room_id, command=cmd.parameter[0]))
         await cmd.reply(f'已移除指令：{cmd.parameter[0]}')
 
