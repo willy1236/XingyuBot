@@ -1,6 +1,5 @@
 import asyncio
 from pathlib import PurePath
-from re import A
 from typing import TYPE_CHECKING
 from uuid import UUID
 
@@ -61,6 +60,8 @@ USER_SCOPE = [
 
 TARGET_CHANNEL = sclient.sqldb.get_bot_join_channel_all()
 TARGET_CHANNEL_IDS = [str(i) for i in TARGET_CHANNEL.keys()]
+
+chat:"Chat"
 
 # eventsub
 async def on_follow(event: eventsub.ChannelFollowEvent):
@@ -295,7 +296,7 @@ async def run():
 
     # create chat instance
     global chat
-    chat:"Chat" = await Chat(twitch)
+    chat = await Chat(twitch)
 
     # register the handlers for the events you want
     chat.register_event(ChatEvent.READY, on_ready)
