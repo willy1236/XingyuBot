@@ -247,7 +247,7 @@ async def add_chat_command(cmd: ChatCommand):
         await cmd.reply('用法：!add_command <指令> <回覆>')
     else:
         sclient.sqldb.add_twitch_cmd(cmd.room.room_id, parameters[0], parameters[1])
-        cmd.chat.register_command(parameters[0], invoke_chat_command, [ChannelRestriction(allowed_channel=cmd.room.room_id), ChannelCommandCooldown(cooldown_seconds=30)])
+        cmd.chat.register_command(parameters[0], invoke_chat_command, [ChannelRestriction(allowed_channel=cmd.room.name), ChannelCommandCooldown(cooldown_seconds=30)])
         await cmd.reply(f'已新增指令：{parameters[0]}')
 
 async def remove_chat_command(cmd: ChatCommand):
@@ -313,6 +313,7 @@ async def run():
     users = [user async for user in twitch.get_users(user_ids=TARGET_CHANNEL_IDS)]
     global users_login
     users_login = [user.login for user in users]
+    login_id_map = {user.id: user.login for user in users}
 
     # create chat instance
     global chat
@@ -336,7 +337,7 @@ async def run():
     chat.register_command("remove_cmd", remove_chat_command)
     chat.register_command("list_cmd", list_chat_command)
     for twitch_id, cmd in sqldb.get_chat_command_names():
-        chat.register_command(cmd, invoke_chat_command, [ChannelRestriction(allowed_channel=str(twitch_id)), ChannelCommandCooldown(cooldown_seconds=30)])
+        chat.register_command(cmd, invoke_chat_command, [ChannelRestriction(allowed_channel=login_id_map.get(str(twitch_id))), ChannelCommandCooldown(cooldown_seconds=30)])
     # TODO: modify_channel_information
     
     chat.start()
