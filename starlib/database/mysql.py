@@ -1239,3 +1239,9 @@ class SQLEngine(
         self.session.commit()
 
         self.cache[DBCacheType.TwitchCmd][twitch_channel_id] = self.get_raw_chat_command_channel(twitch_channel_id)
+
+    def get_twitch_cmd_response_cache(self, twitch_channel_id:int, command:str) -> str | None:
+        """取得Twitch指令回應"""
+        if twitch_channel_id in self.cache[DBCacheType.TwitchCmd]:
+            return self.cache[DBCacheType.TwitchCmd][twitch_channel_id].get(command)
+        return None

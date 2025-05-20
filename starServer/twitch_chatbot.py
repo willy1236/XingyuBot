@@ -196,6 +196,10 @@ async def on_ready(ready_event: EventData):
 # this will be called whenever a message in a channel was send by either the bot OR another user
 async def on_message(msg: ChatMessage):
     twitch_log.info(f'in {msg.room.name}, {msg.user.name} said: {msg.text}')
+    if msg.text.startswith('!'):
+        resp = sqldb.get_twitch_cmd_response_cache(msg.room.room_id, msg.text[1:])
+        if resp:
+            await msg.reply(resp)
 
 async def on_sub(sub: ChatSub):
     twitch_log.info(f'New subscription in {sub.room.name}:')
