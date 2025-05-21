@@ -1198,7 +1198,7 @@ class SQLEngine(
     def __getitem__(self, key:Literal[DBCacheType.DynamicVoice, DBCacheType.VoiceLog, NotifyChannelType.DynamicVoice, NotifyChannelType.VoiceLog]) -> dict[int, tuple[int, int | None]]:
         ...
     @overload
-    def __getitem__(self, key:Literal[DBCacheType.TwitchCmd]) -> dict[int, dict[str, str]]:
+    def __getitem__(self, key:Literal[DBCacheType.TwitchCmd]) -> dict[int, dict[str, TwitchChatCommand]]:
         ...
     def __getitem__(self, key:DBCacheType | NotifyChannelType):
         if isinstance(key, NotifyChannelType):
@@ -1244,9 +1244,9 @@ class SQLEngine(
 
         self.cache[DBCacheType.TwitchCmd][twitch_channel_id] = self.get_raw_chat_command_channel(twitch_channel_id)
     
-    def get_twitch_cmd_response_cache(self, twitch_channel_id_input:int, command:str) -> TwitchChatCommand | None:
+    def get_twitch_cmd_response_cache(self, twitch_channel_id_input:int, command:str):
         """取得Twitch指令回應"""
         twitch_channel_id = int(twitch_channel_id_input)
         if twitch_channel_id in self.cache[DBCacheType.TwitchCmd]:
-            return self.cache[DBCacheType.TwitchCmd][twitch_channel_id].get(command)
+            return self[DBCacheType.TwitchCmd][twitch_channel_id].get(command)
         return None
