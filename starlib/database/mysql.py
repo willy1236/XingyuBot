@@ -1248,7 +1248,5 @@ class SQLEngine(
         """取得Twitch指令回應"""
         twitch_channel_id = int(twitch_channel_id_input)
         if twitch_channel_id in self.cache[DBCacheType.TwitchCmd]:
-            res = self[DBCacheType.TwitchCmd][twitch_channel_id].get(command)
-            print(f"twitch_cmd_cache: {twitch_channel_id=}, {command=}, {res=}")
-            return res
+            return self[DBCacheType.TwitchCmd][twitch_channel_id].get(command)
         return None

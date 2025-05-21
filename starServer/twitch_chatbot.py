@@ -277,6 +277,7 @@ async def list_chat_command(cmd: ChatCommand):
 async def invoke_chat_command(cmd: ChatCommand):
     resp = sqldb.get_twitch_cmd_response_cache(cmd.room.room_id, cmd.text[1:])
     twitch_log.debug(f"invoke_chat_command: {cmd.text[1:]} {resp.response}")
+    print(resp, type(resp))
     if resp:
         await cmd.reply(resp.response)
 
