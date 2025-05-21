@@ -338,6 +338,7 @@ async def run():
     chat.register_command("list_cmd", list_chat_command)
     for twitch_id, cmd in sqldb.get_chat_command_names():
         chat.register_command(cmd, invoke_chat_command, [ChannelRestriction(allowed_channel=login_id_map.get(str(twitch_id))), ChannelCommandCooldown(cooldown_seconds=30)])
+        twitch_log.debug(f"register command: {cmd} in {login_id_map.get(str(twitch_id))}")
     # TODO: modify_channel_information
     
     chat.start()
