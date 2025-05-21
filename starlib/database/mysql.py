@@ -312,7 +312,7 @@ class SQLNotifySystem(BaseSQLEngine):
             except IntegrityError:
                 self.session.rollback()
 
-    def remove_notify_community(self,notify_type:NotifyCommunityType, community_id:str, guild_id:int=None):
+    def remove_notify_community(self,notify_type:NotifyCommunityType, community_id:str, guild_id:int|None=None):
         """移除社群通知，同時判斷移除社群"""
         if guild_id is None:
             statement = delete(NotifyCommunity).where(
@@ -1248,5 +1248,7 @@ class SQLEngine(
         """取得Twitch指令回應"""
         twitch_channel_id = int(twitch_channel_id_input)
         if twitch_channel_id in self.cache[DBCacheType.TwitchCmd]:
-            return self[DBCacheType.TwitchCmd][twitch_channel_id].get(command)
+            res = self[DBCacheType.TwitchCmd][twitch_channel_id].get(command)
+            print(f"twitch_cmd_cache: {twitch_channel_id=}, {command=}, {res=}")
+            return res
         return None
