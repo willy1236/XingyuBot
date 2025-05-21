@@ -276,6 +276,7 @@ async def list_chat_command(cmd: ChatCommand):
 
 async def invoke_chat_command(cmd: ChatCommand):
     resp = sqldb.get_twitch_cmd_response_cache(cmd.room.room_id, cmd.text[1:])
+    twitch_log.debug(f"invoke_chat_command: {cmd.text[1:]} {resp}")
     if resp:
         await cmd.reply(resp)
 
@@ -337,8 +338,8 @@ async def run():
     chat.register_command("remove_cmd", remove_chat_command)
     chat.register_command("list_cmd", list_chat_command)
     for twitch_id, cmd in sqldb.get_chat_command_names():
-        chat.register_command(cmd, invoke_chat_command, [ChannelRestriction(allowed_channel=login_id_map.get(str(twitch_id))), ChannelCommandCooldown(cooldown_seconds=30)])
-        twitch_log.debug(f"register command: {cmd} in {login_id_map.get(str(twitch_id))}")
+        succ = chat.register_command(cmd, invoke_chat_command, [ChannelRestriction(allowed_channel=login_id_map.get(str(twitch_id))), ChannelCommandCooldown(cooldown_seconds=30)])
+        twitch_log.debug(f"register command: {cmd} in {login_id_map.get(str(twitch_id))} is {succ}")
     # TODO: modify_channel_information
     
     chat.start()
