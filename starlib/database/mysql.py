@@ -235,8 +235,9 @@ class SQLNotifySystem(BaseSQLEngine):
         self.session.merge(channel)
         self.session.commit()
 
-        if self.cache.get(notify_type):
-            self.cache[notify_type][guild_id] = (channel_id, role_id)
+        cache_type = DBCacheType.from_notify_channel(notify_type)
+        if cache_type:
+            self.cache[cache_type] = self.get_notify_channel_rawdict(notify_type)
 
     def remove_notify_channel(self,guild_id:int,notify_type:NotifyChannelType):
         """移除自動通知頻道"""
@@ -247,8 +248,9 @@ class SQLNotifySystem(BaseSQLEngine):
         self.session.exec(stmt)
         self.session.commit()
 
-        if self.cache.get(notify_type):
-            del self.cache[notify_type][guild_id]
+        cache_type = DBCacheType.from_notify_channel(notify_type)
+        if cache_type:
+            del self.cache[cache_type][guild_id]
     
     def get_notify_channel(self,guild_id:int,notify_type:NotifyChannelType):
         """取得自動通知頻道"""
@@ -285,16 +287,16 @@ class SQLNotifySystem(BaseSQLEngine):
         voice = DynamicChannel(channel_id=channel_id, creator_id=creator_id, guild_id=guild_id)
         self.session.add(voice)
         self.session.commit()
-        if self.cache.get("dynamic_voice_room"):
-            self.cache["dynamic_voice_room"].append(channel_id)
+        if self.cache.get(DBCacheType.DynamicVoiceRoom) is not None:
+            self.cache[DBCacheType.DynamicVoiceRoom].append(channel_id)
 
     def remove_dynamic_voice(self,channel_id):
         """移除動態語音"""
         stmt = delete(DynamicChannel).where(DynamicChannel.channel_id == channel_id)
         self.session.exec(stmt)
         self.session.commit()
-        if self.cache.get("dynamic_voice_room"):
-            self.cache["dynamic_voice_room"].remove(channel_id)
+        if self.cache.get(DBCacheType.DynamicVoiceRoom) is not None:
+            self.cache[DBCacheType.DynamicVoiceRoom].remove(channel_id)
 
     #* notify community
     def add_notify_community(self, notify_type:NotifyCommunityType, community_id:str, community_type:CommunityType, guild_id:int, channel_id:int, role_id:int=None, message:str=None, cache_time:datetime=None):
@@ -328,9 +330,8 @@ class SQLNotifySystem(BaseSQLEngine):
         self.session.exec(statement)
         self.session.commit()
         
-        community_type = notify_to_community_map.get(notify_type)
+        community_type = CommunityType.from_notify(notify_type)
         if community_type is not None:
-            # 檢查是否還有其他通知使用該社群
             stmt = select(func.count()).where(NotifyCommunity.community_type == community_type, NotifyCommunity.community_id == community_id)
             count = self.session.exec(stmt).one()
             if not count:
@@ -342,9 +343,6 @@ class SQLNotifySystem(BaseSQLEngine):
                 stmt = delete(CommunityCache).where(CommunityCache.community_id == community_id, CommunityCache.notify_type == notify_type)
                 self.session.exec(stmt)
                 self.session.commit()
-        
-        if self.cache.get(notify_type):
-            self.cache[notify_type].remove(community_id)
 
     def get_notify_community(self, notify_type:NotifyCommunityType):
         """取得社群通知（依據社群）"""
@@ -1217,7 +1215,9 @@ class SQLEngine(
 
     def update_notify_channel(self, notify_type:NotifyChannelType):
         """更新通知頻道"""
-        self.cache[DBCacheType.from_notify_channel(notify_type)] = self.get_notify_channel_rawdict(notify_type)
+        cache_type = DBCacheType.from_notify_channel(notify_type)
+        if cache_type:
+            self.cache[cache_type] = self.get_notify_channel_rawdict(notify_type)
     
     def update_dynamic_voice(self,add_channel=None,remove_channel=None):
         """更新動態語音頻道"""
@@ -1235,14 +1235,14 @@ class SQLEngine(
         self.session.merge(TwitchChatCommand(twitch_id=twitch_channel_id, name=command, response=response))
         self.session.commit()
 
-        self.cache[DBCacheType.TwitchCmd][twitch_channel_id] = self.get_raw_chat_command_channel(twitch_channel_id)
+        self.cache[DBCacheType.TwitchCmd][int(twitch_channel_id)] = self.get_raw_chat_command_channel(twitch_channel_id)
     
     def remove_twitch_cmd(self, twitch_channel_id:int, command:str):
         """移除Twitch指令"""
         self.session.exec(delete(TwitchChatCommand).where(TwitchChatCommand.twitch_id == twitch_channel_id, TwitchChatCommand.name == command))
         self.session.commit()
 
-        self.cache[DBCacheType.TwitchCmd][twitch_channel_id] = self.get_raw_chat_command_channel(twitch_channel_id)
+        self.cache[DBCacheType.TwitchCmd][int(twitch_channel_id)] = self.get_raw_chat_command_channel(twitch_channel_id)
     
     def get_twitch_cmd_response_cache(self, twitch_channel_id_input:int, command:str):
         """取得Twitch指令回應"""

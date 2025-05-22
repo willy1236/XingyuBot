@@ -230,13 +230,6 @@ async def on_raid(event:dict):
     except:
         twitch_log.info(event)
 
-# this will be called whenever the !reply command is issued
-async def test_command(cmd: ChatCommand):
-    if len(cmd.parameter) == 0:
-        await cmd.reply('you did not tell me what to reply with')
-    else:
-        await cmd.reply(f'{cmd.user.name}: {cmd.parameter}')
-
 async def add_chat_command(cmd: ChatCommand):
     parameters = cmd.parameter.split(maxsplit=1)
     if len(parameters) < 2:
@@ -272,9 +265,8 @@ async def list_chat_command(cmd: ChatCommand):
 
 async def respond_to_chat_command(cmd: ChatCommand):
     resp = sqldb.get_twitch_cmd_response_cache(cmd.room.room_id, cmd.text[1:])
-    twitch_log.debug(f"invoke_chat_command: {cmd.text[1:]} {resp.response}")
-    print(resp, type(resp))
     if resp:
+        twitch_log.debug(f"invoke_chat_command: {cmd.text[1:]} {resp.response}")
         await cmd.reply(resp.response)
 
 async def modify_channel_information(cmd: ChatCommand):
@@ -327,10 +319,7 @@ async def run():
     chat.register_event(ChatEvent.WHISPER, on_whisper)
     chat.register_event(ChatEvent.RAID, on_raid)
     
-    #chat.register_command_middleware(ChannelRestriction(allowed_channel=['sakagawa_0309']))
-    chat.register_command_middleware(ChannelRestriction(allowed_channel=['willy1236owo']))
-    # you can directly register commands and their handlers, this will register the !reply command
-    # chat.register_command('reply', test_command)
+    #chat.register_command_middleware(ChannelRestriction(allowed_channel=[]))
     chat.register_command("add_cmd", add_chat_command)
     chat.register_command("remove_cmd", remove_chat_command)
     chat.register_command("list_cmd", list_chat_command)

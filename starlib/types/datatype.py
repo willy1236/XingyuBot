@@ -50,6 +50,10 @@ class CommunityType(IntEnum):
     Youtube = 4
     Google = 4
     Twitter = 5
+    
+    @classmethod
+    def from_notify(cls, key: NotifyCommunityType):
+        return notify_to_community_map.get(key)
 
 notify_to_community_map = {
     NotifyCommunityType.TwitchLive: CommunityType.Twitch,
