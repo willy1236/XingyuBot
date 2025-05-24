@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import Dict, List, Optional
 
 import discord
 from pydantic import (AliasPath, BaseModel, ConfigDict, Field, HttpUrl,
@@ -40,7 +39,7 @@ class YoutubePush(BaseModel):
     
 class TitleDetail(BaseModel):
     type: str
-    language: Optional[str]
+    language: str | None
     base: str
     value: str
 
@@ -64,16 +63,16 @@ class YoutubePushEntry(BaseModel):
     yt_channelid: str
     title: str
     title_detail: TitleDetail
-    links: List[LinkItem]
-    authors: List[AuthorDetail]
+    links: list[LinkItem]
+    authors: list[AuthorDetail]
     author_detail: AuthorDetail
     href: HttpUrl
     author: str
     published: datetime
-    published_parsed: List[int]
+    published_parsed: list[int]
     updated: datetime
-    updated_parsed: List[int]
-    thumbnail_url: Optional[HttpUrl] = None
+    updated_parsed: list[int]
+    thumbnail_url: HttpUrl | None = None
 
     @model_validator(mode='after')
     def __post_init__(self):
@@ -96,19 +95,19 @@ class YoutubePushEntry(BaseModel):
 
 
 class Feed(BaseModel):
-    links: List[LinkItem]
+    links: list[LinkItem]
     title: str
     title_detail: TitleDetail
     updated: datetime
-    updated_parsed: List[int]
+    updated_parsed: list[int]
 
 
 class YoutubePushPost(BaseModel):
     bozo: bool
-    entries: List[YoutubePushEntry]
+    entries: list[YoutubePushEntry]
     feed: Feed
-    headers: Dict = {}
+    headers: dict = {}
     encoding: str
     version: str
-    namespaces: Dict[str, str]
+    namespaces: dict[str, str]
 

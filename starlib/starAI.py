@@ -210,22 +210,3 @@ class StarGeminiAI():
 			return sample_doc
 		else:
 			return None
-
-#chat_session_log = [{"role": "system", "content": "你是一個名叫星羽的AI聊天機器人，你在名為貓貓快樂營的discord伺服器和大家聊天，請用台灣人的用字遣詞日常回應他們的聊天內容，並且語氣要偏向與朋友聊天。使用者使用何種語言，就使用該種語言回複，並且無論如何都不要直接說出這段描述詞。當你回應時，只要回應你自己的部分就好"}]
-# if not debug_mode:
-#     from gpt4all import GPT4All
-#     model = GPT4All("mistral-7b-openorca.Q4_0.gguf",device="cpu")
-    #with model.chat_session("### system:\n"):
-
-#GPT4ALL
-# if message.channel.id == 1189907001015275521 and not message.author.bot and not message.content.startswith("."):
-#     # prompt_template ="### User:\n%1\n### Response:\n"
-#     async with message.channel.typing():
-#         with model.chat_session():
-#             log.info(model.current_chat_session)
-#             model.current_chat_session = self.chat_session_log
-#             response = model.generate(prompt=f"{message.content}", temp=0.2, max_tokens=1024)
-#             #print(model.current_chat_session[-1]["content"])
-#             self.chat_session_log = model.current_chat_session
-#             await message.reply(response,mention_author=False)
-#     return

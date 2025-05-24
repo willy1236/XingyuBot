@@ -78,8 +78,8 @@ class system_game(Cog_Extension):
             APIdata = riot_api.get_player_bypuuid(riot_user.puuid)
             if APIdata:
                 user_game.player_name = riot_user.fullname
-                user_game.player_id = APIdata.summonerid
-                user_game.account_id = APIdata.accountid
+                user_game.player_id = APIdata.id
+                user_game.account_id = APIdata.accountId
                 user_game.other_id = APIdata.puuid
             else:
                 await ctx.respond(f'錯誤:找不到此用戶',ephemeral=True)
@@ -138,13 +138,26 @@ class system_game(Cog_Extension):
             await ctx.respond('查詢失敗：查無此ID',ephemeral=True)
 
     @lol.command(name="user", description='查詢League of Legends用戶資料')
-    async def lol_user(self,ctx,riot_id:discord.Option(str,name='riot_id',description='名稱#tag，留空則使用資料庫查詢',required=False)):
-        player = get_lol_player(ctx.author, riot_id)
-
+    async def lol_user(self,ctx,riot_id:discord.Option(str,name='riot_id',description='名稱#tag，留空則使用資料庫查詢',required=False)):        
+        if not riot_id:
+            user_game = sclient.sqldb.get_user_game(ctx.author.id, GameType.LOL)
+            if user_game:
+                riot_id = user_game.player_name
+            else:
+                await ctx.respond('查詢失敗：無設定ID',ephemeral=True)
+                return
+        
+        account = riot_api.get_riot_account_byname(riot_id)
+        if not account:
+            await ctx.respond('查詢失敗：查無此ID',ephemeral=True)
+            return
+        
+        player = riot_api.get_player_bypuuid(account.puuid)
         if player:
-            await ctx.respond('查詢成功',embed=player.desplay(ctx.author))
+            await ctx.respond('查詢成功',embed=player.embed(account.fullname))
         else:
-            await ctx.respond('查詢失敗：查無此ID' if riot_id else "查詢失敗：無設定ID", ephemeral=True)
+            await ctx.respond('查詢失敗：查無此ID',ephemeral=True)
+            return
 
     @lol.command(description='查詢League of Legends對戰資料')
     async def match(self,ctx,matchid:discord.Option(str,name='對戰id',description='要查詢的對戰')):

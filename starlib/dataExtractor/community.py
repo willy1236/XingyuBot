@@ -13,7 +13,6 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from bs4 import BeautifulSoup
-from sqlmodel import sql
 
 from ..errors import APIInvokeError, Forbidden
 from ..database import sqldb

@@ -360,6 +360,10 @@ class YoutubeVideo(BaseModel):
     @property
     def is_live_end(self) -> bool:
         return bool(self.liveStreamingDetails and self.liveStreamingDetails.actualEndTime)
+    
+    @property
+    def is_live_upcoming(self) -> bool:
+        return self.snippet.liveBroadcastContent == "upcoming"
 
 
 class YoutubeRSSVideo(BaseModel):

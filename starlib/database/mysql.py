@@ -1,5 +1,9 @@
+import threading
+from collections.abc import Callable, Generator
+from contextlib import contextmanager
 from datetime import date, datetime, time, timedelta, timezone
-from typing import TYPE_CHECKING, TypeVar, overload, Literal
+from functools import wraps
+from typing import TYPE_CHECKING, Literal, ParamSpec, TypeVar, overload
 
 import discord
 import mysql.connector
@@ -10,6 +14,7 @@ from sqlalchemy import and_, delete, desc, func, or_
 from sqlalchemy.engine import URL
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import Session as ALSession
 from sqlmodel import Session, SQLModel, create_engine, select, update
 
 from starlib.models.mysql import Community, NotifyCommunity
@@ -24,6 +29,8 @@ from ..types import *
 from ..utils import log
 
 O = TypeVar("O")
+T = TypeVar('T')
+P = ParamSpec('P')
 
 class BaseSQLEngine:
     def __init__(self,connection_url):
@@ -31,8 +38,10 @@ class BaseSQLEngine:
         # Base.metadata.create_all(self.alengine)
         # Sessionmkr = sessionmaker(bind=self.alengine)
         # self.alsession = Sessionmkr()
-
+        self._local = threading.local()
+        
         self.engine = create_engine(connection_url, echo=False, pool_pre_ping=True)
+        self.SessionLocal = sessionmaker(bind=self.engine)
         # SessionLocal = sessionmaker(bind=self.engine)
         # self.session:Session = SessionLocal()
         
@@ -44,6 +53,32 @@ class BaseSQLEngine:
         self.session = Session(bind=self.engine)
 
         self.cache = dict()
+    
+    @property
+    def alsession(self) -> ALSession:
+        if not hasattr(self._local, "alsession"):
+            raise RuntimeError("Session not initialized. Use inside a session context.")
+        return self._local.alsession
+
+    @contextmanager
+    def session_scope(self) -> Generator[None, None, None]:
+        self._local.alsession = self.SessionLocal()
+        try:
+            yield
+            self.alsession.commit()
+        except Exception:
+            self.alsession.rollback()
+            raise
+        finally:
+            self.alsession.close()
+            del self._local.alsession
+
+    def with_session(self, func: Callable[P, T]) -> Callable[P, T]:
+        @wraps(func)
+        def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
+            with self.session_scope():
+                return func(*args, **kwargs)
+        return wrapper
 
     #* Base
     def add(self, db_obj):
@@ -96,7 +131,7 @@ class SQLUserSystem(BaseSQLEngine):
     def get_dcuser(self, discord_id:int):
         stmt = select(DiscordUser).where(DiscordUser.discord_id == discord_id)
         result = self.session.exec(stmt).one_or_none()
-        return result
+        return result or DiscordUser(discord_id=discord_id)
     
     def get_main_account(self, alternate_account):
         stmt = select(UserAccount.main_account).where(UserAccount.alternate_account == alternate_account)
@@ -938,6 +973,12 @@ class SQLCacheSystem(BaseSQLEngine):
         stmt = select(NotifyCommunity.community_id, CommunityCache).select_from(NotifyCommunity).join(CommunityCache, NotifyCommunity.community_id == CommunityCache.community_id, isouter=True).where(NotifyCommunity.notify_type == type)
         result = self.session.exec(stmt).all()
         return {i[0]: i[1] for i in result}
+    
+    def get_community_caches_with_id(self, type:NotifyCommunityType, community_id:str):
+        """取得指定社群的快取"""
+        stmt = select(CommunityCache).where(CommunityCache.notify_type == type, CommunityCache.community_id == community_id)
+        result = self.session.exec(stmt).one_or_none()
+        return result
     
     def set_notify_cache(self, type:NotifyChannelType, value:datetime | None):
         """設定通知快取"""

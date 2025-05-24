@@ -1,5 +1,5 @@
 from datetime import datetime,timedelta
-from typing import TYPE_CHECKING, Optional
+from functools import cached_property
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, model_validator
 
@@ -10,23 +10,14 @@ from ..settings import tz
 jdict = Jsondb.jdict
 lol_jdict = Jsondb.lol_jdict
 
-class RiotUser():
-    if TYPE_CHECKING:
-        puuid: str
-        name: str
-        tag: str
+class RiotUser(BaseModel):
+    puuid: str
+    gameName: str
+    tagLine: str
 
-    def __init__(self,data):
-        self.puuid = data.get("puuid")
-        self.name = data.get("gameName")
-        self.tag = data.get("tagLine")
-        self._fullname = None
-
-    @property
+    @cached_property
     def fullname(self) -> str:
-        if not self._fullname:
-            self._fullname = self.name + "#" + self.tag
-        return self._fullname
+        return self.gameName + "#" + self.tagLine
     
     def embed(self):
         embed = BotEmbed.general(self.fullname)
@@ -34,44 +25,35 @@ class RiotUser():
         embed.timestamp = datetime.now()
         return embed
     
-class LOLPlayer(RiotUser):
-    def __init__(self,data, name=None):
-        self.name = data.get('name', name)
-        self.summonerid = data.get('id')
-        self.accountid = data.get('accountId')
-        self.puuid = data.get('puuid')
-        self.summonerLevel = data.get('summonerLevel')
-        self.profileIconId = data.get('profileIconId')
+class LOLPlayer(BaseModel):
+    id: str
+    accountId: str
+    puuid: str
+    profileIconId: int
+    revisionDate: datetime
+    summonerLevel: int
 
-    def desplay(self,dc_user=None):
-        embed = BotEmbed.general(self.name)
-        #embed.add_field(name="玩家名稱", value=self.name, inline=False)
+    @model_validator(mode='after')
+    def __post_init__(self):
+        self.revisionDate = self.revisionDate.astimezone(tz=tz)
+        return self
+
+    def embed(self, name=None):
+        embed = BotEmbed.general(name)
         embed.add_field(name="召喚師等級", value=self.summonerLevel, inline=False)
-        embed.add_field(name="帳號ID", value=self.accountid, inline=False)
-        embed.add_field(name="召喚師ID", value=self.summonerid, inline=False)
+        embed.add_field(name="最後遊玩/修改資料時間", value=self.revisionDate.strftime("%Y/%m/%d %H:%M:%S"), inline=False)
+        embed.add_field(name="帳號ID", value=self.accountId, inline=False)
+        embed.add_field(name="召喚師ID", value=self.id, inline=False)
         embed.add_field(name="puuid", value=self.puuid, inline=False)
         try:
-            embed.set_thumbnail(url=f'https://ddragon.leagueoflegends.com/cdn/14.9.1/img/profileicon/{self.profileIconId}.png')
+            embed.set_thumbnail(url=f'https://ddragon.leagueoflegends.com/cdn/15.10.1/img/profileicon/{self.profileIconId}.png')
         except:
             embed.set_thumbnail(url='https://i.imgur.com/B0TMreW.png')
         embed.set_footer(text="puuid是全球唯一的ID，不隨帳號移動地區而改變")
         
         return embed
 
-class PartialLOLPlayer(LOLPlayer):
-    def __init__(self,data):
-        super().__init__(data)
-        self.discord_id = data.get('user_id')
-        self.name = data.get('player_name')
-        self.summonerid = data.get('player_id')
-        self.accountid = data.get('account_id')
-        self.puuid = data.get('other_id')
-
-    @property
-    def fullname(self):
-        return self.name
-
-class LOLPlayerInMatch(LOLPlayer):
+class LOLPlayerInMatch():
     def __init__(self,data):
         super().__init__(data)
         self.name = data.get('riotIdGameName')
@@ -264,7 +246,8 @@ class LOLSeasonMilestone(BaseModel):
     requireGradeCounts: dict[str,int]
     rewardMarks: int
     bonus: bool
-    rewardConfig: LOLRewardConfig
+    rewardConfig: LOLRewardConfig | None = None
+    totalGamesRequires: int | None = None
 class LOLChampionMastery(BaseModel):
     puuid: str
     championId: int

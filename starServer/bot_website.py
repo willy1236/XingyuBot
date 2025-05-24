@@ -23,7 +23,7 @@ from starlib import Jsondb, sclient, sqldb, web_log, BaseThread
 from starlib.dataExtractor import DiscordOauth2, TwitchOauth2, GoogleOauth2
 from starlib.models.mysql import CloudUser, TwitchBotJoinChannel
 from starlib.models.push import YoutubePushEntry
-from starlib.types import APIType
+from starlib.types import APIType, NotifyCommunityType
 from starlib.instance import yt_api
 
 discord_oauth_settings = sqldb.get_bot_token(APIType.Discord)
@@ -81,8 +81,19 @@ async def prase_yt_push(content):
         push_entry = YoutubePushEntry(**entry)
         video = yt_api.get_video(push_entry.yt_videoid)[0]
         
+        cache = sqldb.get_community_caches_with_id(NotifyCommunityType.Youtube, push_entry.yt_channelid)
+        if cache and push_entry.published > cache.value:
+            web_log.info(f'New Youtube push entry {push_entry.yt_videoid}')
+            # Send to Discord
+            
+            if video.is_live_upcoming:
+                web_log.info(f'Upcoming live video {video.id}')
+                # Add task for start live
+                
+            # sclient.sqldb.set_community_cache(NotifyCommunityType.Youtube, push_entry.yt_channelid, push_entry.published)
+        
         if sclient.bot:
-            msg = sclient.bot.send_message(embed=video.embed(), content="YT push test")
+            msg = sclient.bot.send_message(embed=video.embed(), content=f"YT push test {push_entry.updated == push_entry.published}")
             if not msg:
                 web_log.info('Channel not found. Message sent failed.')
         else:

@@ -31,26 +31,26 @@ class RiotAPI():
             self._ddg_version = self.get_ddragon_version()
         return self._ddg_version
 
-    def get_riot_account_byname(self,username:str):
+    def get_riot_account_byname(self, username:str):
         name, tag = username.split('#')
         r = requests.get(f'{self.url_asia}/riot/account/v1/accounts/by-riot-id/{name}/{tag}', headers=self._headers)
         if r.ok:
-            return RiotUser(r.json())
+            return RiotUser(**r.json())
         elif r.status_code == 404:
             return None
         else:
             raise APIInvokeError("lol_player_byname",r.text)
         
-    def get_player_bypuuid(self,puuid:str):
+    def get_player_bypuuid(self, puuid:str):
         r = requests.get(f'{self.url_tw2}/lol/summoner/v4/summoners/by-puuid/{puuid}', headers=self._headers)
         if r.ok:
-            return LOLPlayer(r.json())
+            return LOLPlayer(**r.json())
         elif r.status_code == 404:
             return None        
         else:
             raise APIInvokeError("lol_player_bypuuid",r.text)
         
-    def get_player_lol(self, riot_id):
+    def get_player_lol(self, riot_id:str):
         account = self.get_riot_account_byname(riot_id)
         if account:
             return self.get_player_bypuuid(account.puuid)

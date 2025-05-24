@@ -10,6 +10,7 @@ from starlib import BotEmbed, Jsondb, log, sclient, tz
 from starlib.instance import *
 from starlib.models.mysql import DiscordUser
 from starlib.types import NotifyChannelType
+from starlib.starAgent import agent
 
 from ..extension import Cog_Extension
 from ..uiElement.view import PollView, ReactionRoleView, GiveawayView
@@ -21,6 +22,8 @@ voice_updata = Jsondb.config.get('voice_updata')
 ai_access_guilds: list[int] = happycamp_guild + debug_guilds
 
 guild_registration = sclient.sqldb.get_raw_resgistrations() if sclient.sqldb else {}
+
+agent_history = []
 
 def check_registration(member:discord.Member):
     earlest = datetime.now(timezone.utc)
@@ -221,6 +224,19 @@ class event(Cog_Extension):
     #             await message.reply(text,mention_author=False)
     #         else:
     #             await message.add_reaction('❌')
+    
+    @commands.Cog.listener("on_message")
+    async def agent_trigger(self, message: discord.Message):
+        #AI agent
+        if message.guild and message.content and message.guild.id in ai_access_guilds and len(message.content) > 1 and message.content.startswith(".") and not message.content.startswith(".", 1, 2):
+            async with message.channel.typing():
+                global agent_history
+                resp = await agent.run(message.content[1:], message_history=agent_history)
+                agent_history = list(resp.all_messages())
+                if resp.output:
+                    await message.reply(resp.output, mention_author=False)
+                else:
+                    await message.add_reaction('❌')
 
     @commands.Cog.listener("on_message")
     async def keyword_trigger(self, message: discord.Message):

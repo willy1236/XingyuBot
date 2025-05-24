@@ -10,7 +10,6 @@ from ..base.base import BaseThread
 from ..database import sqldb
 from ..fileDatabase import Jsondb
 from ..settings import tz
-from ..starAI import StarGeminiAI
 from ..utils import BotEmbed
 
 if TYPE_CHECKING:
@@ -93,7 +92,7 @@ class StarController:
         self.sqldb = sqldb
         # self.dbcache:StardbCache = StardbCache()
 
-        self._starai:StarGeminiAI = None
+        #self._starai:StarGeminiAI = None
         self.bot:DiscordBot = None
         self.twitch:Twitch = None
 
@@ -102,8 +101,8 @@ class StarController:
         self.tunnel_thread: BaseThread = None
         self.twitchtunnel_thread: BaseThread = None
     
-    @property
-    def starai(self):
-        if not self._starai:
-            self._starai = StarGeminiAI()
-        return self._starai
+    # @property
+    # def starai(self):
+    #     if not self._starai:
+    #         self._starai = StarGeminiAI()
+    #     return self._starai
