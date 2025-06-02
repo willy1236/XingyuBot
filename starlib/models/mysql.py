@@ -4,8 +4,19 @@ from datetime import date, datetime, timedelta
 from typing import TYPE_CHECKING, TypedDict
 
 from discord import Bot
-from sqlalchemy import (BigInteger, Column, ForeignKey, ForeignKeyConstraint,
-                        Identity, Integer, String, Text, Boolean, Interval, SmallInteger)
+from sqlalchemy import (
+    BigInteger,
+    Boolean,
+    Column,
+    ForeignKey,
+    ForeignKeyConstraint,
+    Identity,
+    Integer,
+    Interval,
+    SmallInteger,
+    String,
+    Text,
+)
 from sqlalchemy.dialects.postgresql import TIMESTAMP
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlmodel import Field, Relationship
@@ -20,7 +31,7 @@ from .sqlSchema import *
 if TYPE_CHECKING:
     from ..database import SQLEngine
 class CloudUser(UserSchema, table=True):
-    __tablename__ = 'cloud_user'
+    __tablename__ = "cloud_user"
 
     id: str | None
     discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True, autoincrement=False))
@@ -38,30 +49,39 @@ class DiscordUser(UserSchema, table=True):
     meatball_times: int | None
     guaranteed: int | None
     registrations_id: int | None = Field(foreign_key="stardb_idbase.discord_registrations.registrations_id")
-    
+
     registration: "DiscordRegistration" = Relationship(back_populates="members")
+
 
 class UserPoint(UserSchema, table=True):
     __tablename__ = "user_point"
 
-    discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True, autoincrement=False))
+    discord_id: int = Field(
+        sa_column=Column(BigInteger, primary_key=True, autoincrement=False)
+    )
     stardust: int | None = Field(default=0)
     point: int | None = Field(default=0)
     rcoin: int | None = Field(default=0)
 
+
 class UserGame(UserSchema, table=True):
     __tablename__ = "game_data"
 
-    discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True, autoincrement=False))
-    game: GameType = Field(sa_column=Column(SmallInteger, primary_key=True, autoincrement=False))
+    discord_id: int = Field(
+        sa_column=Column(BigInteger, primary_key=True, autoincrement=False)
+    )
+    game: GameType = Field(
+        sa_column=Column(SmallInteger, primary_key=True, autoincrement=False)
+    )
     player_name: str
     player_id: str | None
     account_id: str | None
     other_id: str | None
 
+
 class UserPoll(UserSchema, table=True):
     __tablename__ = "user_poll"
-    
+
     poll_id: int = Field(primary_key=True)
     discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
     vote_option: int = Field(primary_key=True)
@@ -76,10 +96,12 @@ class UserAccount(UserSchema, table=True):
 
 class UserParty(UserSchema, table=True):
     __tablename__ = "user_party"
-    
+
     discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
-    party_id: int = Field(primary_key=True, foreign_key="stardb_idbase.party_datas.party_id")
-    
+    party_id: int = Field(
+        primary_key=True, foreign_key="stardb_idbase.party_datas.party_id"
+    )
+
     party: "Party" = Relationship(back_populates="members")
 
 class UserModerate(UserSchema, table=True):
@@ -101,8 +123,8 @@ class UserModerate(UserSchema, table=True):
         moderate_user = bot.get_user(self.moderate_user)
         guild = bot.get_guild(self.create_guild)
 
-        name = f"{user.name if user.name else f'<@{self.discord_id}>'} 的警告單"
-        description = f"**編號：{self.warning_id}（{Jsondb.get_tw(self.moderate_type, 'warning_type')}）**\n- 被警告用戶：{user.mention}\n- 管理員：{guild.name}/{moderate_user.mention}\n- 原因：{self.reason}\n- 時間：{self.create_time}"
+        name = f"{user.name if user else f'<@{self.discord_id}>'} 的警告單"
+        description = f"**編號：{self.warning_id}（{Jsondb.get_tw(self.moderate_type, 'warning_type')}）**\n- 被警告用戶：{user.mention if user else f'<@{self.discord_id}>'}\n- 管理員：{guild.name}/{moderate_user.mention}\n- 原因：{self.reason}\n- 時間：{self.create_time}"
         if self.last_time:
             description += f"\n- 禁言時長：{self.last_time}"
         if self.officially_given:
@@ -111,17 +133,20 @@ class UserModerate(UserSchema, table=True):
             description += "\n- 伺服器區域警告"
         embed = BotEmbed.general(name=name,icon_url=user.display_avatar.url,description=description)
         return embed
-    
-    def display_embed_field(self,bot:Bot):
+
+    def display_embed_field(self, bot: Bot):
         moderate_user = bot.get_user(self.moderate_user)
         guild = bot.get_guild(self.create_guild)
         name = f"編號：{self.warning_id}（{Jsondb.get_tw(self.moderate_type, 'warning_type')}）"
-        value = f"{guild.name}/{moderate_user.mention}\n{self.reason}\n{self.create_time}"
+        value = (
+            f"{guild.name}/{moderate_user.mention}\n{self.reason}\n{self.create_time}"
+        )
         if self.officially_given:
             value += "\n官方警告"
         if self.guild_only:
             value += "\n伺服器區域警告"
         return name, value
+
 
 class RoleSave(UserSchema, table=True):
     __tablename__ = "role_save"
@@ -131,6 +156,7 @@ class RoleSave(UserSchema, table=True):
     role_name: str
     time: date
 
+
 class Pet(UserSchema, table=True):
     __tablename__ = "user_pet"
 
@@ -139,6 +165,7 @@ class Pet(UserSchema, table=True):
     pet_name: str
     food: int | None
 
+
 class TwitchPoint(UserSchema, table=True):
     __tablename__ = "twitch_point"
 
@@ -146,18 +173,19 @@ class TwitchPoint(UserSchema, table=True):
     broadcaster_id: int = Field(primary_key=True)
     point: int = Field(default=0, nullable=True)
 
+
 class Community(BasicSchema, table=True):
     __tablename__ = "community_info"
-    
+
     id: str = Field(primary_key=True)
     type: CommunityType = Field(sa_column=Column(Integer, primary_key=True))
     username: str
     display_name: str | None
-    
+
 
 class NotifyChannel(BasicSchema, table=True):
     __tablename__ = "notify_channel"
-    
+
     guild_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
     notify_type: NotifyChannelType = Field(sa_column=Column(Integer, primary_key=True))
     channel_id: int = Field(sa_column=Column(BigInteger))
@@ -166,8 +194,10 @@ class NotifyChannel(BasicSchema, table=True):
 
 class NotifyCommunity(BasicSchema, table=True):
     __tablename__ = "notify_community"
-    
-    notify_type: NotifyCommunityType = Field(sa_column=Column(Integer, primary_key=True))
+
+    notify_type: NotifyCommunityType = Field(
+        sa_column=Column(Integer, primary_key=True)
+    )
     community_id: str = Field(primary_key=True)
     community_type: CommunityType = Field(sa_column=Column(Integer, primary_key=True))
     guild_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
@@ -178,11 +208,11 @@ class NotifyCommunity(BasicSchema, table=True):
 
 class DynamicChannel(BasicSchema, table=True):
     __tablename__ = "dynamic_channel"
-    
+
     channel_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
     creator_id: int = Field(sa_column=Column(BigInteger))
     guild_id: int = Field(sa_column=Column(BigInteger))
-    
+
 
 class Poll(BasicSchema, table=True):
     __tablename__ = "poll_data"
@@ -199,7 +229,7 @@ class Poll(BasicSchema, table=True):
     show_name: bool | None
     check_results_in_advance: bool | None
     results_only_initiator: bool | None
-    
+
 
 class PollOption(BasicSchema, table=True):
     __tablename__ = "poll_options"
@@ -218,10 +248,11 @@ class PollRole(BasicSchema, table=True):
 
 class TwitchBotJoinChannel(BasicSchema, table=True):
     __tablename__ = "twitch_bot_join_channel"
-    
+
     twitch_id: int = Field(primary_key=True)
     action_channel_id: int | None = Field(sa_column=Column(BigInteger))
     point_name: str | None = Field(sa_column=Column(String(255)))
+
 
 class TwitchChatCommand(BasicSchema, table=True):
     __tablename__ = "twitch_chat_command"
@@ -229,6 +260,7 @@ class TwitchChatCommand(BasicSchema, table=True):
     twitch_id: int = Field(primary_key=True)
     name: str = Field(primary_key=True)
     response: str = Field(nullable=False)
+
 
 class InviteRecord(AlchemyBasicSchema):
     __tablename__ = "invite_record"
@@ -239,12 +271,14 @@ class InviteRecord(AlchemyBasicSchema):
     invite_time: datetime = Column(TIMESTAMP(True, 0))
     invite_code: str = Column(String(255))
 
+
 class PushRecord(AlchemyBasicSchema):
     __tablename__ = "push_record"
 
     channel_id: str = Column(String(255), primary_key=True)
     push_at: datetime = Column(TIMESTAMP(True, 0))
     expire_at: datetime = Column(TIMESTAMP(True, 0))
+
 
 class ReactionRoleMessage(AlchemyBasicSchema):
     __tablename__ = "reaction_role_message"
@@ -253,6 +287,7 @@ class ReactionRoleMessage(AlchemyBasicSchema):
     channel_id: int = Column(BigInteger, primary_key=True)
     message_id: int = Column(BigInteger, primary_key=True)
 
+
 class ReactionRole(AlchemyBasicSchema):
     __tablename__ = "reaction_role"
 
@@ -260,8 +295,9 @@ class ReactionRole(AlchemyBasicSchema):
     role_id: int = Column(BigInteger, primary_key=True)
     title: str = Column(String(255))
     description: str | None = Column(String(255), nullable=True)
-    emoji: str | None  = Column(String(255), nullable=True)
-    style: int | None  = Column(Integer, nullable=True)
+    emoji: str | None = Column(String(255), nullable=True)
+    style: int | None = Column(Integer, nullable=True)
+
 
 class Giveaway(BasicSchema, table=True):
     __tablename__ = "giveaway_data"
@@ -269,15 +305,20 @@ class Giveaway(BasicSchema, table=True):
     id: int = Field(sa_column=Column(Integer, Identity(), primary_key=True))
     guild_id: int = Field(sa_column=Column(BigInteger, nullable=False))
     channel_id: int = Field(sa_column=Column(BigInteger, nullable=False))
-    message_id: int | None = Field(sa_column=Column(BigInteger, nullable=True, default=None))
+    message_id: int | None = Field(
+        sa_column=Column(BigInteger, nullable=True, default=None)
+    )
     creator_id: int = Field(sa_column=Column(BigInteger, nullable=False))
     prize_name: str = Field(sa_column=Column(String(255), nullable=False))
     winner_count: int = Field(sa_column=Column(Integer, nullable=False))
     created_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0), nullable=False))
     end_at: datetime | None = Field(sa_column=Column(TIMESTAMP(True, 0), nullable=True))
     is_on: bool = Field(sa_column=Column(Boolean, nullable=False, default=True))
-    description: str | None = Field(sa_column=Column(String(255), nullable=True, default=None))
+    description: str | None = Field(
+        sa_column=Column(String(255), nullable=True, default=None)
+    )
     redraw_count: int = Field(sa_column=Column(Integer, nullable=True, default=0))
+
 
 class GiveawayUser(UserSchema, table=True):
     __tablename__ = "user_giveaway"
@@ -288,32 +329,36 @@ class GiveawayUser(UserSchema, table=True):
     join_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0), nullable=False))
     is_winner: bool = Field(sa_column=Column(Boolean, nullable=False, default=False))
 
+
 class User(AlchemyBasicSchema):
-    __tablename__ = 'users'
-    
+    __tablename__ = "users"
+
     id: int = Base.auto_id_column()
     name: str = Column(String, nullable=False)
 
     # 建立關聯：一個使用者對應多篇貼文
-    posts:list["Post"] = relationship(back_populates="user", init=False)
+    posts: list["Post"] = relationship(back_populates="user", init=False)
+
 
 class Post(AlchemyBasicSchema):
-    __tablename__ = 'posts'
+    __tablename__ = "posts"
 
     id: int = Base.auto_id_column()
     title: str = Column(String, nullable=False)
     content: str = Column(String, nullable=False)
     created_at: datetime = Column(TIMESTAMP(precision=0), nullable=False)  # 只記錄到秒
-    user_id: int = Column(Integer, ForeignKey('stardb_basic.users.id'), nullable=False)
+    user_id: int = Column(Integer, ForeignKey("stardb_basic.users.id"), nullable=False)
 
     # 建立反向關聯
-    user:User = relationship(back_populates="posts", init=False)
+    user: User = relationship(back_populates="posts", init=False)
+
 
 class ServerConfig(BasicSchema, table=False):
     __tablename__ = "server_config"
 
     guild_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
     timeout_after_warning_times: int | None = Field(default=0)
+
 
 class Party(IdbaseSchema, table=True):
     __tablename__ = "party_datas"
@@ -323,17 +368,18 @@ class Party(IdbaseSchema, table=True):
     role_id: int = Field(sa_column=Column(BigInteger))
     creator_id: int = Field(sa_column=Column(BigInteger))
     created_at: date
-    
+
     members: list[UserParty] = Relationship(back_populates="party")
 
 class DiscordRegistration(IdbaseSchema, table=True):
     __tablename__ = "discord_registrations"
-    
+
     registrations_id: int = Field(primary_key=True)
     guild_id: int = Field(sa_column=Column(BigInteger))
     role_id: int = Field(sa_column=Column(BigInteger))
 
     members: list[DiscordUser] = Relationship(back_populates="registration")
+
 
 class TRPGStoryPlot(IdbaseSchema, table=True):
     __tablename__ = "trpg_storyplots"
@@ -343,10 +389,13 @@ class TRPGStoryPlot(IdbaseSchema, table=True):
     content: str = Field(sa_column=Column(Text))
     options: list["TRPGStoryOption"] = Relationship(back_populates="plot")
 
+
 class TRPGStoryOption(IdbaseSchema, table=True):
     __tablename__ = "trpg_plot_options"
 
-    plot_id: int = Field(primary_key=True, foreign_key="stardb_idbase.trpg_storyplots.id")
+    plot_id: int = Field(
+        primary_key=True, foreign_key="stardb_idbase.trpg_storyplots.id"
+    )
     option_id: int = Field(primary_key=True)
     option_title: str
     lead_to_plot: int | None
@@ -356,6 +405,7 @@ class TRPGStoryOption(IdbaseSchema, table=True):
     fail_plot: int | None
     plot: TRPGStoryPlot = Relationship(back_populates="options")
 
+
 class TRPGCharacter(IdbaseSchema, table=True):
     __tablename__ = "trpg_characters"
 
@@ -364,16 +414,26 @@ class TRPGCharacter(IdbaseSchema, table=True):
 
     abilities: list["TRPGCharacterAbility"] = Relationship(back_populates="character")
 
+
 class TRPGCharacterAbility(IdbaseSchema, table=True):
     __tablename__ = "trpg_character_abilities"
 
-    discord_id: int = Field(sa_column=Column(BigInteger, ForeignKey("stardb_idbase.trpg_characters.discord_id"), primary_key=True))
-    ability_id: int = Field(primary_key=True, foreign_key="stardb_idbase.trpg_abilities.ability_id")
+    discord_id: int = Field(
+        sa_column=Column(
+            BigInteger,
+            ForeignKey("stardb_idbase.trpg_characters.discord_id"),
+            primary_key=True,
+        )
+    )
+    ability_id: int = Field(
+        primary_key=True, foreign_key="stardb_idbase.trpg_abilities.ability_id"
+    )
     san_lower_limit: int | None
     value: int
 
     character: TRPGCharacter = Relationship(back_populates="abilities")
     ability: "TRPGAbility" = Relationship(back_populates="characters")
+
 
 class TRPGAbility(IdbaseSchema, table=True):
     __tablename__ = "trpg_abilities"
@@ -382,6 +442,7 @@ class TRPGAbility(IdbaseSchema, table=True):
     ability_name: str
 
     characters: list[TRPGCharacterAbility] = Relationship(back_populates="ability")
+
 
 class BackupRole(BackupSchema, table=True):
     __tablename__ = "roles_backup"
@@ -396,7 +457,7 @@ class BackupRole(BackupSchema, table=True):
     description: str
 
     members: list["BackupRoleUser"] = Relationship(back_populates="role")
-    
+
     def embed(self, bot:Bot):
         embed = BotEmbed.simple(self.role_name,self.description)
         embed.add_field(name="創建於", value=self.created_at.strftime("%Y/%m/%d %H:%M:%S"))
@@ -413,10 +474,17 @@ class BackupRole(BackupSchema, table=True):
 
 class BackupRoleUser(BackupSchema, table=True):
     __tablename__ = "role_user_backup"
-    
-    role_id: int = Field(sa_column=Column(BigInteger, ForeignKey("stardb_backup.roles_backup.role_id"), primary_key=True))
+
+    role_id: int = Field(
+        sa_column=Column(
+            BigInteger,
+            ForeignKey("stardb_backup.roles_backup.role_id"),
+            primary_key=True,
+        )
+    )
     discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
     role: BackupRole = Relationship(back_populates="members")
+
 
 class OAuth2Token(TokensSchema, table=True):
     __tablename__ = "oauth_token"
@@ -430,6 +498,7 @@ class OAuth2Token(TokensSchema, table=True):
     @property
     def valid(self):
         return self.expires_at > datetime.now(tz)
+
 
 class BotToken(TokensSchema, table=True):
     __tablename__ = "bot_token"
@@ -445,14 +514,19 @@ class BotToken(TokensSchema, table=True):
     callback_uri: str | None
     expires_at: datetime | None = Field(sa_column=Column(TIMESTAMP(True, 0)))
 
+
 class CommunityCache(CacheSchema, table=True):
     """社群快取資料表"""
+
     __tablename__ = "community_cache"
 
-    notify_type: NotifyCommunityType = Field(sa_column=Column(Integer, primary_key=True))
+    notify_type: NotifyCommunityType = Field(
+        sa_column=Column(Integer, primary_key=True)
+    )
     community_id: str = Field(primary_key=True)
     value: datetime | None = Field(sa_column=Column(TIMESTAMP(True, 0), nullable=True))
-    
+
+
 class NotifyCache(CacheSchema, table=True):
     """通知快取資料表"""
     __tablename__ = "notify_cache"
@@ -467,11 +541,14 @@ class WarningList(ListObject[UserModerate]):
     def __init__(self,items:list, discord_id:int):
         super().__init__(items)
         self.discord_id = discord_id
-    
-    def display(self,bot:Bot):
+
+    def display(self, bot: Bot):
         user = bot.get_user(self.discord_id)
-        embed = BotEmbed.general(f'{user.name} 的警告單列表（共{len(self.items)}筆）',user.display_avatar.url)
+        embed = BotEmbed.general(
+            f"{user.name} 的警告單列表（共{len(self.items)}筆）",
+            user.display_avatar.url,
+        )
         for i in self.items:
             name, value = i.display_embed_field(bot)
-            embed.add_field(name=name,value=value)
+            embed.add_field(name=name, value=value)
         return embed
