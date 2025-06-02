@@ -4,7 +4,7 @@ from sqlalchemy import Identity, Integer
 from sqlalchemy.orm import DeclarativeBase, MappedAsDataclass, mapped_column
 from sqlmodel import SQLModel
 
-O = TypeVar("O")
+OBJ = TypeVar("OBJ")
 
 class Base(MappedAsDataclass, DeclarativeBase):
     """subclasses will be converted to dataclasses"""

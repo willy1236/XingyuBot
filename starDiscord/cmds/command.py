@@ -400,7 +400,7 @@ class command(Cog_Extension):
     @commands.user_command(name="懲戒集中營",guild_ids=happycamp_guild)
     #@commands.has_permissions(moderate_members=True)
     async def user_command2(self,ctx, member: discord.Member):
-        await ctx.respond(f"開始執行",ephemeral=True)
+        await ctx.respond("開始執行",ephemeral=True)
         
         role = ctx.guild.get_role(1195407446315892888)
         await member.add_roles(role,reason="指令：懲戒集中營 開始")
@@ -423,7 +423,7 @@ class command(Cog_Extension):
                        text:discord.Option(str,name='訊息',description='要傳送的訊息內容，歡迎提供各項建議')):
         await ctx.defer()
         await self.bot.feedback(self.bot,ctx,text)
-        await ctx.respond(f"訊息已發送!",ephemeral=True,delete_after=3)
+        await ctx.respond("訊息已發送!",ephemeral=True,delete_after=3)
 
     @staticmethod
     def Autocomplete(ctx: discord.AutocompleteContext):
@@ -439,7 +439,7 @@ class command(Cog_Extension):
     @commands.user_command(name="摃殘",guild_ids=happycamp_guild)
     async def bonk(self,ctx:discord.ApplicationContext, member: discord.Member):
         if not ctx.user.get_role(1178151415403790478):
-            await ctx.respond(f"你不是台中摃殘黨員",ephemeral=True)
+            await ctx.respond("你不是台中摃殘黨員",ephemeral=True)
             return
         
         await member.timeout_for(duration=timedelta(seconds=10),reason="bonk")
@@ -460,9 +460,8 @@ class command(Cog_Extension):
                      ):
         options = options.split(",")
         if len(options) > 20 or len(options) < 1:
-            await ctx.respond(f"錯誤：投票選項超過20項或小於1項",ephemeral=True)
-            return  
-        
+            await ctx.respond("錯誤：投票選項超過20項或小於1項",ephemeral=True)
+            return
         only_role_list = await create_only_role_list(only_role,ctx) if only_role else []
         role_magnification_dict = await create_role_magification_dict(role_magnification,ctx) if role_magnification else {}
 
@@ -545,7 +544,7 @@ class command(Cog_Extension):
             role = ctx.guild.get_role(role_id)
             if role:
                 await ctx.author.add_roles(role)
-        except:
+        except Exception:
             pass
 
         await ctx.respond(f"{ctx.author.mention} 已加入政黨 {dbdata.party_name}")
@@ -560,7 +559,7 @@ class command(Cog_Extension):
             role = ctx.author.get_role(role_id)
             if role:
                 await ctx.author.remove_roles(role)
-        except:
+        except Exception:
             pass
 
         await ctx.respond(f"{ctx.author.mention} 已退出政黨 {dbdata.party_name}")

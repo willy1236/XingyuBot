@@ -165,7 +165,7 @@ async def create_only_role_list(text_input:str,ctx):
             only_role_list.append(role.id)
     return only_role_list
 
-async def create_role_magification_dict(text_input:str,ctx):
+async def create_role_magification_dict(text_input:str,ctx) -> dict[int, int]:
     """投票系統：建立身分組權重列表"""
     role_magnification_dict = {}
     text = text_input.split(",")

@@ -50,7 +50,7 @@ def run_website():
         sclient.website_thread = server
         server.start()
         log.info('>> website: online <<')
-    except:
+    except Exception:
         log.info('>> website: offline <<')
     time.sleep(2)
 

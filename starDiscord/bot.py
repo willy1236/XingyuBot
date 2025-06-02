@@ -21,7 +21,7 @@ class DiscordBot(discord.Bot):
         self.debug_mode = debug_mode
         self.bot_code = bot_code
 
-        if bot_code != 'Bot1':
+        if bot_code != "1":
             self.debug_guilds = Jsondb.config.get('debug_guilds')
 
     def run(self):

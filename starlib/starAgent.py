@@ -1,5 +1,6 @@
 from pydantic_ai.models.gemini import GeminiModel
 from pydantic_ai import Agent
+from pydantic_ai.mcp import MCPServerStdio
 from pydantic_ai.providers.google_gla import GoogleGLAProvider
 import os
 import inspect
@@ -17,6 +18,10 @@ connect = psycopg2.connect(
     port=SQLsettings['port']
 )
 
+mcp_servers = [
+    MCPServerStdio("uvx", ["mcp-server-fetch"])
+]
+
 class Tools:
     @staticmethod
     def read_file(file_path: str) -> str:
@@ -28,6 +33,12 @@ class Tools:
     def list_files(directory: str) -> list:
         print(f"Listing files in {directory}")
         return os.listdir(directory)
+    
+    @staticmethod
+    def write_file(file_path: str, content: str) -> None:
+        print(f"Writing to file: {file_path}")
+        with open(file_path, 'w', encoding="utf-8") as file:
+            file.write(content)
 
     # @staticmethod
     # def rename_file(old_name: str, new_name: str) -> None:
@@ -54,7 +65,8 @@ provider = GoogleGLAProvider(api_key=sqldb.get_bot_token(APIType.Google, 5).acce
 model = GeminiModel(model_name="gemini-2.0-flash", provider=provider)
 agent = Agent(model,
             instrument=True,
-            tools=[fn for _, fn in inspect.getmembers(Tools, predicate=inspect.isfunction)])
+            tools=[fn for _, fn in inspect.getmembers(Tools, predicate=inspect.isfunction)],
+            mcp_servers=mcp_servers)
 
 @agent.system_prompt
 async def system_prompt() -> str:
@@ -63,12 +75,15 @@ async def system_prompt() -> str:
     你是個富有經驗的系統管理員，請協助我完成以下任務
     """
 
-
-if __name__ == "__main__":
+async def main():
     history = []
     while True:
         user_input = input("Input: ")
-        resp = agent.run_sync(user_input,
-                                message_history=history)
+        async with agent.run_mcp_servers():
+            resp =  await agent.run(user_input, message_history=history)
         history = list(resp.all_messages())
         print(resp.output)
+
+if __name__ == "__main__":
+    import asyncio
+    asyncio.run(main())

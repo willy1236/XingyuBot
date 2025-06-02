@@ -6,15 +6,13 @@ from functools import wraps
 from typing import TYPE_CHECKING, Literal, ParamSpec, TypeVar, overload
 
 import discord
-import mysql.connector
 import sqlalchemy
 from google.oauth2.credentials import Credentials
-from mysql.connector.errors import Error as sqlerror
 from sqlalchemy import and_, delete, desc, func, or_
 from sqlalchemy.engine import URL
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm import Session as ALSession
+from sqlalchemy.orm import sessionmaker
 from sqlmodel import Session, SQLModel, create_engine, select, update
 
 from starlib.models.mysql import Community, NotifyCommunity
@@ -28,7 +26,7 @@ from ..settings import tz
 from ..types import *
 from ..utils import log
 
-O = TypeVar("O")
+OBJ = TypeVar("OBJ")
 T = TypeVar('T')
 P = ParamSpec('P')
 
@@ -109,7 +107,7 @@ class BaseSQLEngine:
         #self.session.expunge(db_obj)
         self.session.expire(db_obj)
 
-    def get(self, db_obj:O, primary_keys:tuple) -> O | None:
+    def get(self, db_obj: OBJ, primary_keys: tuple) -> OBJ | None:
         return self.session.get(db_obj, primary_keys) # type: ignore
     
 class SQLUserSystem(BaseSQLEngine):
@@ -159,7 +157,7 @@ class SQLUserSystem(BaseSQLEngine):
         return result
 
     def get_raw_user_names(self):
-        stmt = select(CloudUser).where(CloudUser.name != None)
+        stmt = select(CloudUser).where(CloudUser.name is not None)
         result = self.session.exec(stmt).all()
         return {i.discord_id: i.name for i in result}
 
@@ -535,7 +533,9 @@ class SQLWarningSystem(BaseSQLEngine):
         if guild_id:
             stmt = select(UserModerate).where(UserModerate.discord_id == discord_id, UserModerate.create_guild == guild_id)
         else:
-            stmt = select(UserModerate).where(UserModerate.discord_id == discord_id, UserModerate.guild_only == False)
+            stmt = select(UserModerate).where(
+                UserModerate.discord_id == discord_id, not UserModerate.guild_only
+            )
         result = self.session.exec(stmt).all()
         return WarningList(result, discord_id)
     
@@ -543,7 +543,9 @@ class SQLWarningSystem(BaseSQLEngine):
         if guild_id:
             stmt = select(func.count()).where(UserModerate.discord_id == discord_id, UserModerate.create_guild == guild_id)
         else:
-            stmt = select(func.count()).where(UserModerate.discord_id == discord_id, UserModerate.guild_only == False)
+            stmt = select(func.count()).where(
+                UserModerate.discord_id == discord_id, not UserModerate.guild_only
+            )
         result = self.session.exec(stmt).one()
         return result
 
@@ -596,7 +598,7 @@ class SQLPollSystem(BaseSQLEngine):
         return result
 
     def get_active_polls(self):
-        stmt = select(Poll).where(Poll.is_on == True)
+        stmt = select(Poll).where(Poll.is_on is True)
         result = self.session.exec(stmt).all()
         return result
 
@@ -682,7 +684,14 @@ class SQLPollSystem(BaseSQLEngine):
         if include_alternatives_accounts:
             stmt = select(UserPoll).where(UserPoll.poll_id == poll_id)
         else:
-            stmt = select(UserPoll).select_from(UserPoll).join(UserAccount, UserPoll.discord_id == UserAccount.alternate_account).where(UserPoll.poll_id == poll_id, UserAccount.alternate_account == None)
+            stmt = (
+                select(UserPoll)
+                .select_from(UserPoll)
+                .join(UserAccount, UserPoll.discord_id == UserAccount.alternate_account)
+                .where(
+                    UserPoll.poll_id == poll_id, UserAccount.alternate_account is None
+                )
+            )
         result = self.session.exec(stmt).all()
         return result
     
@@ -690,7 +699,15 @@ class SQLPollSystem(BaseSQLEngine):
         if include_alternatives_accounts:
             stmt = select(UserPoll.vote_option,func.sum(UserPoll.vote_magnification)).where(UserPoll.poll_id == poll_id).group_by(UserPoll.vote_option)
         else:
-            stmt = select(UserPoll.vote_option,func.sum(UserPoll.vote_magnification)).select_from(UserPoll).join(UserAccount, UserPoll.discord_id == UserAccount.alternate_account).where(UserPoll.poll_id == poll_id, UserAccount.alternate_account == None).group_by(UserPoll.vote_option)
+            stmt = (
+                select(UserPoll.vote_option, func.sum(UserPoll.vote_magnification))
+                .select_from(UserPoll)
+                .join(UserAccount, UserPoll.discord_id == UserAccount.alternate_account)
+                .where(
+                    UserPoll.poll_id == poll_id, UserAccount.alternate_account is None
+                )
+                .group_by(UserPoll.vote_option)
+            )
         result = self.session.exec(stmt).all()
         return {str(i[0]): i[1] for i in result}
     
@@ -719,7 +736,7 @@ class SQLPollSystem(BaseSQLEngine):
         return result
     
     def get_active_giveaways(self):
-        stmt = select(Giveaway).where(Giveaway.is_on == True)
+        stmt = select(Giveaway).where(Giveaway.is_on is True)
         result = self.session.exec(stmt).all()
         return result
     
@@ -731,7 +748,12 @@ class SQLPollSystem(BaseSQLEngine):
         self.session.commit()
 
     def reset_giveaway_winner(self, giveaway_id:int):
-        stmt = update(GiveawayUser).where(GiveawayUser.giveaway_id == giveaway_id).values(is_winner = False).where(GiveawayUser.is_winner == True)
+        stmt = (
+            update(GiveawayUser)
+            .where(GiveawayUser.giveaway_id == giveaway_id)
+            .values(is_winner=False)
+            .where(GiveawayUser.is_winner is True)
+        )
         self.session.exec(stmt)
         self.session.commit()
     
