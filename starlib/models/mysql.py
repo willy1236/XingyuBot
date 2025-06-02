@@ -131,7 +131,11 @@ class UserModerate(UserSchema, table=True):
             description += "\n- 官方警告"
         if self.guild_only:
             description += "\n- 伺服器區域警告"
-        embed = BotEmbed.general(name=name,icon_url=user.display_avatar.url,description=description)
+        embed = BotEmbed.general(
+            name=name,
+            icon_url=user.display_avatar.url if user else None,
+            description=description,
+        )
         return embed
 
     def display_embed_field(self, bot: Bot):
