@@ -2,19 +2,19 @@ import os
 import subprocess
 import time
 
-from starlib import BaseThread, log, Jsondb, sqldb
+from starlib import BaseThread, Jsondb, log, sqldb
 from starlib.types import APIType
 
 
 class ltThread(BaseThread):
     def __init__(self):
-        super().__init__(name='ltThread')
+        super().__init__(name="ltThread")
 
     def run(self):
         reconnection_times = 0
         while not self._stop_event.is_set():
             log.info(f"Starting {self.name}")
-            os.system('lt --port 14000 --subdomain starbot --max-sockets 10 --local-host 127.0.0.1 --max-https-sockets 86395')
+            os.system("lt --port 14000 --subdomain starbot --max-sockets 10 --local-host 127.0.0.1 --max-https-sockets 86395")
             #cmd = [ "cmd","/c",'lt', '--port', '14000', '--subdomain', 'willy1236', '--max-sockets', '10', '--local-host', '127.0.0.1', '--max-https-sockets', '86395']
             #cmd = ["cmd","/c","echo", "Hello, World!"]
             #self.process = psutil.Popen(cmd)
@@ -29,7 +29,7 @@ class ltThread(BaseThread):
 
 class ServeoThread(BaseThread):
     def __init__(self):
-        super().__init__(name='ServeoThread')
+        super().__init__(name="ServeoThread")
 
     def run(self):
         reconnection_times = 0
@@ -37,9 +37,9 @@ class ServeoThread(BaseThread):
             log.debug(f"Starting {self.name} {reconnection_times}")
             #result = subprocess.run(["ssh", "-R", "cloudfoam:80:127.0.0.1:14000", "-R", "cloudfoamtwitch:80:127.0.0.1:14001", "serveo.net"], capture_output=True, text=True)
             result = subprocess.run(["ssh", "-R", "yunmo:80:127.0.0.1:14000", "serveo.net"], capture_output=True, text=True)
-            log.info(f'Stdout: {result.stdout}')
-            log.error(f'Stderr: {result.stderr}')
-            log.info(f'Exit status: {result.returncode}')
+            log.info(f"Stdout: {result.stdout}")
+            log.error(f"Stderr: {result.stderr}")
+            log.info(f"Exit status: {result.returncode}")
             time.sleep(60)
             reconnection_times += 1
             if reconnection_times >= 5:
@@ -47,16 +47,16 @@ class ServeoThread(BaseThread):
 
 class LoopholeThread(BaseThread):
     def __init__(self):
-        super().__init__(name='LoopholeThread')
+        super().__init__(name="LoopholeThread")
 
     def run(self):
         reconnection_times = 0
         while not self._stop_event.is_set():
             log.debug(f"Starting {self.name} {reconnection_times}")
             result = subprocess.run(["loophole", "http", "14000", "127.0.0.1", "--hostname", "cloudfoam"], capture_output=True, text=True)
-            log.info(f'Stdout: {result.stdout}')
-            log.error(f'Stderr: {result.stderr}')
-            log.info(f'Exit status: {result.returncode}')
+            log.info(f"Stdout: {result.stdout}")
+            log.error(f"Stderr: {result.stderr}")
+            log.info(f"Exit status: {result.returncode}")
             time.sleep(30)
             reconnection_times += 1
             if reconnection_times >= 5:
@@ -64,16 +64,16 @@ class LoopholeThread(BaseThread):
 
 class LoopholeTwitchThread(BaseThread):
     def __init__(self):
-        super().__init__(name='LoopholeTwitchThread')
+        super().__init__(name="LoopholeTwitchThread")
 
     def run(self):
         reconnection_times = 0
         while not self._stop_event.is_set():
             log.info(f"Starting {self.name} {reconnection_times}")
             result = subprocess.run(["loophole", "http", "14001", "127.0.0.1", "--hostname", "twitchcloudfoam"], capture_output=True, text=True)
-            log.info(f'Stdout: {result.stdout}')
-            log.error(f'Stderr: {result.stderr}')
-            log.info(f'Exit status: {result.returncode}')
+            log.info(f"Stdout: {result.stdout}")
+            log.error(f"Stderr: {result.stderr}")
+            log.info(f"Exit status: {result.returncode}")
             time.sleep(30)
             reconnection_times += 1
             if reconnection_times >= 5:
@@ -81,17 +81,17 @@ class LoopholeTwitchThread(BaseThread):
 
 class NgrokTwitchThread(BaseThread):
     def __init__(self):
-        super().__init__(name='NgrokTwitchThread')
+        super().__init__(name="NgrokTwitchThread")
 
     def run(self):
         reconnection_times = 0
-        callback_url = sqldb.get_bot_token(APIType.Twitch).callback_uri.split('://')[1]
+        callback_url = sqldb.get_bot_token(APIType.Twitch).callback_uri.split("://")[1]
         while not self._stop_event.is_set():
             log.info(f"Starting {self.name} {reconnection_times}")
             result = subprocess.run(["ngrok", "http", f"--url={callback_url}", "14001"], capture_output=True, text=True)
-            log.info(f'Stdout: {result.stdout}')
-            log.error(f'Stderr: {result.stderr}')
-            log.info(f'Exit status: {result.returncode}')
+            log.info(f"Stdout: {result.stdout}")
+            log.error(f"Stderr: {result.stderr}")
+            log.info(f"Exit status: {result.returncode}")
             time.sleep(30)
             reconnection_times += 1
             if reconnection_times >= 5:

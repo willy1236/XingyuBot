@@ -27,8 +27,8 @@ from ..types import *
 from ..utils import log
 
 OBJ = TypeVar("OBJ")
-T = TypeVar('T')
-P = ParamSpec('P')
+T = TypeVar("T")
+P = ParamSpec("P")
 
 class BaseSQLEngine:
     def __init__(self,connection_url):
@@ -37,12 +37,12 @@ class BaseSQLEngine:
         # Sessionmkr = sessionmaker(bind=self.alengine)
         # self.alsession = Sessionmkr()
         self._local = threading.local()
-        
+
         self.engine = create_engine(connection_url, echo=False, pool_pre_ping=True)
         self.SessionLocal = sessionmaker(bind=self.engine)
         # SessionLocal = sessionmaker(bind=self.engine)
         # self.session:Session = SessionLocal()
-        
+
         Base.metadata.create_all(self.engine)
         SQLModel.metadata.create_all(self.engine)
         # SQLModel.metadata.drop_all(engine, schema="my_schema")
@@ -51,7 +51,7 @@ class BaseSQLEngine:
         self.session = Session(bind=self.engine)
 
         self.cache = dict()
-    
+
     @property
     def alsession(self) -> ALSession:
         if not hasattr(self._local, "alsession"):
@@ -76,14 +76,15 @@ class BaseSQLEngine:
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
             with self.session_scope():
                 return func(*args, **kwargs)
+
         return wrapper
 
-    #* Base
+    # * Base
     def add(self, db_obj):
         self.session.add(db_obj)
         self.session.commit()
-    
-    def batch_add(self, db_obj_list:list):
+
+    def batch_add(self, db_obj_list: list):
         if db_obj_list:
             for db_obj in db_obj_list:
                 self.session.add(db_obj)
@@ -93,7 +94,7 @@ class BaseSQLEngine:
         self.session.merge(db_obj)
         self.session.commit()
 
-    def batch_merge(self, db_obj_list:list):
+    def batch_merge(self, db_obj_list: list):
         if db_obj_list:
             for db_obj in db_obj_list:
                 self.session.merge(db_obj)
@@ -104,15 +105,16 @@ class BaseSQLEngine:
         self.session.commit()
 
     def expire(self, db_obj):
-        #self.session.expunge(db_obj)
+        # self.session.expunge(db_obj)
         self.session.expire(db_obj)
 
     def get(self, db_obj: OBJ, primary_keys: tuple) -> OBJ | None:
-        return self.session.get(db_obj, primary_keys) # type: ignore
-    
+        return self.session.get(db_obj, primary_keys)  # type: ignore
+
+
 class SQLUserSystem(BaseSQLEngine):
-    #* User
-    def get_cloud_user(self, discord_id:int):
+    # * User
+    def get_cloud_user(self, discord_id: int):
         """
         Retrieve a CloudUser from the database based on the provided Discord ID.
 
@@ -126,31 +128,31 @@ class SQLUserSystem(BaseSQLEngine):
         result = self.session.exec(stmt).one_or_none()
         return result if result is not None else CloudUser(discord_id=discord_id)
 
-    def get_dcuser(self, discord_id:int):
+    def get_dcuser(self, discord_id: int):
         stmt = select(DiscordUser).where(DiscordUser.discord_id == discord_id)
         result = self.session.exec(stmt).one_or_none()
         return result or DiscordUser(discord_id=discord_id)
-    
+
     def get_main_account(self, alternate_account):
         stmt = select(UserAccount.main_account).where(UserAccount.alternate_account == alternate_account)
         result = self.session.exec(stmt).one_or_none()
         return result
-        
-    def get_alternate_account(self,main_account):
+
+    def get_alternate_account(self, main_account):
         stmt = select(UserAccount.alternate_account).where(UserAccount.main_account == main_account)
         result = self.session.exec(stmt).all()
         return result
-    
+
     def get_raw_resgistrations(self):
         stmt = select(DiscordRegistration)
         result = self.session.exec(stmt).all()
         return {i.guild_id: i.role_id for i in result}
-    
-    def get_resgistration(self, registrations_id:int):
+
+    def get_resgistration(self, registrations_id: int):
         stmt = select(DiscordRegistration).where(DiscordRegistration.registrations_id == registrations_id)
         result = self.session.exec(stmt).one_or_none()
         return result
-        
+
     def get_resgistration_by_guildid(self,guild_id:int):
         stmt = select(DiscordRegistration).where(DiscordRegistration.guild_id == guild_id)
         result = self.session.exec(stmt).one_or_none()
@@ -217,37 +219,39 @@ class SQLCurrencySystem(BaseSQLEngine):
     #     self.cursor.execute(f"USE `stardb_user`;")
     #     self.cursor.execute(f"INSERT INTO `user_point` SET discord_id = %s, scoin = %s,rcoin = %s ON DUPLICATE KEY UPDATE scoin = scoin + %s, rcoin = rcoin + %s",(discord_id,scoin,Rcoin,scoin,Rcoin))
     #     self.connection.commit()
-    
+
     # def get_scoin_shop_item(self,item_uid:int):
     #     self.cursor.execute(f"SELECT * FROM `stardb_idbase`.`scoin_shop` WHERE `item_uid` = {item_uid};")
     #     record = self.cursor.fetchall()
     #     if record:
     #         return ShopItem(record[0])
 
+
 class SQLGameSystem(BaseSQLEngine):
-    def get_user_game(self, discord_id:int, game:GameType):
+    def get_user_game(self, discord_id: int, game: GameType):
         stmt = select(UserGame).where(UserGame.discord_id == discord_id, UserGame.game == game)
         result = self.session.exec(stmt).one_or_none()
         return result
-    
-    def get_user_game_all(self, discord_id:int):
+
+    def get_user_game_all(self, discord_id: int):
         stmt = select(UserGame).where(UserGame.discord_id == discord_id)
         result = self.session.exec(stmt).all()
         return result
 
-    def remove_user_game(self, discord_id:int, game:GameType):
+    def remove_user_game(self, discord_id: int, game: GameType):
         stmt = delete(UserGame).where(UserGame.discord_id == discord_id, UserGame.game == game)
         self.session.exec(stmt)
         self.session.commit()
 
+
 class SQLPetSystem(BaseSQLEngine):
-    def get_pet(self,discord_id:int):
+    def get_pet(self, discord_id: int):
         """取得寵物"""
         stmt = select(Pet).where(Pet.discord_id == discord_id)
         result = self.session.exec(stmt).one_or_none()
         return result
 
-    def create_user_pet(self,discord_id:int,pet_species:str,pet_name:str):
+    def create_user_pet(self, discord_id: int, pet_species: str, pet_name: str):
         try:
             pet = Pet(discord_id=discord_id, pet_species=pet_species, pet_name=pet_name, food=20)
             self.session.add(pet)
@@ -255,14 +259,15 @@ class SQLPetSystem(BaseSQLEngine):
         except IntegrityError:
             return "已經有寵物了喔"
 
-    def remove_user_pet(self,discord_id:int):
+    def remove_user_pet(self, discord_id: int):
         stmt = delete(Pet).where(Pet.discord_id == discord_id)
         self.session.exec(stmt)
         self.session.commit()
 
+
 class SQLNotifySystem(BaseSQLEngine):
-    #* notify channel
-    def add_notify_channel(self,guild_id:int,notify_type:NotifyChannelType,channel_id:int,role_id:int=None, message:str=None):
+    # * notify channel
+    def add_notify_channel(self, guild_id: int, notify_type: NotifyChannelType, channel_id: int, role_id: int = None, message: str = None):
         """設定自動通知頻道"""
         channel = NotifyChannel(guild_id=guild_id, notify_type=notify_type, channel_id=channel_id, role_id=role_id, message=message)
         self.session.merge(channel)
@@ -272,38 +277,35 @@ class SQLNotifySystem(BaseSQLEngine):
         if cache_type:
             self.cache[cache_type] = self.get_notify_channel_rawdict(notify_type)
 
-    def remove_notify_channel(self,guild_id:int,notify_type:NotifyChannelType):
+    def remove_notify_channel(self, guild_id: int, notify_type: NotifyChannelType):
         """移除自動通知頻道"""
-        stmt = delete(NotifyChannel).where(
-            NotifyChannel.guild_id == guild_id,
-            NotifyChannel.notify_type == notify_type
-        )
+        stmt = delete(NotifyChannel).where(NotifyChannel.guild_id == guild_id, NotifyChannel.notify_type == notify_type)
         self.session.exec(stmt)
         self.session.commit()
 
         cache_type = DBCacheType.from_notify_channel(notify_type)
         if cache_type:
             del self.cache[cache_type][guild_id]
-    
-    def get_notify_channel(self,guild_id:int,notify_type:NotifyChannelType):
+
+    def get_notify_channel(self, guild_id: int, notify_type: NotifyChannelType):
         """取得自動通知頻道"""
         statement = select(NotifyChannel).where(NotifyChannel.guild_id == guild_id, NotifyChannel.notify_type == notify_type)
         result = self.session.exec(statement).one_or_none()
         return result
 
-    def get_notify_channel_by_type(self,notify_type:NotifyChannelType):
+    def get_notify_channel_by_type(self, notify_type: NotifyChannelType):
         """取得自動通知頻道（依據通知種類）"""
         statement = select(NotifyChannel).where(NotifyChannel.notify_type == notify_type)
         result = self.session.exec(statement).all()
         return result
 
-    def get_notify_channel_rawdict(self, notify_type:NotifyChannelType):
+    def get_notify_channel_rawdict(self, notify_type: NotifyChannelType):
         """取得自動通知頻道（原始dict）"""
         statement = select(NotifyChannel).where(NotifyChannel.notify_type == notify_type)
         result = self.session.exec(statement).all()
         return {data.guild_id: (data.channel_id, data.role_id) for data in result}
-    
-    def get_notify_channel_all(self,guild_id:str):
+
+    def get_notify_channel_all(self, guild_id: str):
         """取得伺服器的所有自動通知頻道"""
         statement = select(NotifyChannel).where(NotifyChannel.guild_id == guild_id)
         result = self.session.exec(statement).all()
@@ -314,7 +316,7 @@ class SQLNotifySystem(BaseSQLEngine):
         statement = select(DynamicChannel.channel_id)
         result = self.session.exec(statement).all()
         return result
-    
+
     def add_dynamic_voice(self, channel_id, creator_id, guild_id):
         """設定動態語音"""
         voice = DynamicChannel(channel_id=channel_id, creator_id=creator_id, guild_id=guild_id)
@@ -323,7 +325,7 @@ class SQLNotifySystem(BaseSQLEngine):
         if self.cache.get(DBCacheType.DynamicVoiceRoom) is not None:
             self.cache[DBCacheType.DynamicVoiceRoom].append(channel_id)
 
-    def remove_dynamic_voice(self,channel_id):
+    def remove_dynamic_voice(self, channel_id):
         """移除動態語音"""
         stmt = delete(DynamicChannel).where(DynamicChannel.channel_id == channel_id)
         self.session.exec(stmt)
@@ -331,13 +333,31 @@ class SQLNotifySystem(BaseSQLEngine):
         if self.cache.get(DBCacheType.DynamicVoiceRoom) is not None:
             self.cache[DBCacheType.DynamicVoiceRoom].remove(channel_id)
 
-    #* notify community
-    def add_notify_community(self, notify_type:NotifyCommunityType, community_id:str, community_type:CommunityType, guild_id:int, channel_id:int, role_id:int=None, message:str=None, cache_time:datetime=None):
+    # * notify community
+    def add_notify_community(
+        self,
+        notify_type: NotifyCommunityType,
+        community_id: str,
+        community_type: CommunityType,
+        guild_id: int,
+        channel_id: int,
+        role_id: int = None,
+        message: str = None,
+        cache_time: datetime = None,
+    ):
         """設定社群通知"""
-        community = NotifyCommunity(notify_type=notify_type, community_id=str(community_id), community_type=community_type, guild_id=guild_id, channel_id=channel_id, role_id=role_id, message=message)
+        community = NotifyCommunity(
+            notify_type=notify_type,
+            community_id=str(community_id),
+            community_type=community_type,
+            guild_id=guild_id,
+            channel_id=channel_id,
+            role_id=role_id,
+            message=message,
+        )
         self.session.merge(community)
         self.session.commit()
-        
+
         # 新增快取
         if cache_time:
             cache = CommunityCache(community_id=community_id, notify_type=notify_type, value=cache_time)
@@ -347,22 +367,17 @@ class SQLNotifySystem(BaseSQLEngine):
             except IntegrityError:
                 self.session.rollback()
 
-    def remove_notify_community(self,notify_type:NotifyCommunityType, community_id:str, guild_id:int|None=None):
+    def remove_notify_community(self, notify_type: NotifyCommunityType, community_id: str, guild_id: int | None = None):
         """移除社群通知，同時判斷移除社群"""
         if guild_id is None:
-            statement = delete(NotifyCommunity).where(
-                NotifyCommunity.notify_type == notify_type,
-                NotifyCommunity.community_id == community_id
-            )
+            statement = delete(NotifyCommunity).where(NotifyCommunity.notify_type == notify_type, NotifyCommunity.community_id == community_id)
         else:
             statement = delete(NotifyCommunity).where(
-                NotifyCommunity.notify_type == notify_type,
-                NotifyCommunity.community_id == community_id,
-                NotifyCommunity.guild_id == guild_id
+                NotifyCommunity.notify_type == notify_type, NotifyCommunity.community_id == community_id, NotifyCommunity.guild_id == guild_id
             )
         self.session.exec(statement)
         self.session.commit()
-        
+
         community_type = CommunityType.from_notify(notify_type)
         if community_type is not None:
             stmt = select(func.count()).where(NotifyCommunity.community_type == community_type, NotifyCommunity.community_id == community_id)
@@ -371,68 +386,81 @@ class SQLNotifySystem(BaseSQLEngine):
                 # 刪除社群資料
                 stmt = delete(Community).where(Community.id == community_id, Community.type == community_type)
                 self.session.exec(stmt)
-                
+
                 # 刪除社群快取
                 stmt = delete(CommunityCache).where(CommunityCache.community_id == community_id, CommunityCache.notify_type == notify_type)
                 self.session.exec(stmt)
                 self.session.commit()
 
-    def get_notify_community(self, notify_type:NotifyCommunityType):
+    def get_notify_community(self, notify_type: NotifyCommunityType):
         """取得社群通知（依據社群）"""
         statement = select(NotifyCommunity).where(NotifyCommunity.notify_type == notify_type)
         result = self.session.exec(statement).all()
         return result
-    
-    def get_notify_community_rawlist(self, notify_type:NotifyCommunityType):
+
+    def get_notify_community_rawlist(self, notify_type: NotifyCommunityType):
         """取得自動通知頻道（原始list）"""
         statement = select(NotifyCommunity.community_id).where(NotifyCommunity.notify_type == notify_type).distinct()
         result = self.session.exec(statement).all()
         return result
 
-    def get_notify_community_guild(self, notify_type:NotifyCommunityType, community_id:str):
+    def get_notify_community_guild(self, notify_type: NotifyCommunityType, community_id: str):
         """取得指定社群的所有通知"""
         notify_type = NotifyCommunityType(notify_type)
-        statement = select(NotifyCommunity.guild_id, NotifyCommunity.channel_id, NotifyCommunity.role_id, NotifyCommunity.message).where(NotifyCommunity.notify_type == notify_type.value, NotifyCommunity.community_id == community_id)
+        statement = select(NotifyCommunity.guild_id, NotifyCommunity.channel_id, NotifyCommunity.role_id, NotifyCommunity.message).where(
+            NotifyCommunity.notify_type == notify_type.value, NotifyCommunity.community_id == community_id
+        )
         return self.session.exec(statement).all()
-        
 
-    def get_notify_community_user_byid(self,notify_type:NotifyCommunityType, community_id:str, guild_id:int):
+    def get_notify_community_user_byid(self, notify_type: NotifyCommunityType, community_id: str, guild_id: int):
         """取得伺服器內的指定社群通知"""
-        statement = select(NotifyCommunity).join(Community, and_(NotifyCommunity.community_id == Community.id, NotifyCommunity.community_type == Community.type)).where(NotifyCommunity.notify_type == notify_type, Community.id == community_id, NotifyCommunity.guild_id == guild_id)
-        result = self.session.exec(statement).one_or_none()
-        return result
-    
-    def get_notify_community_user_byname(self,notify_type:NotifyCommunityType, community_username:str, guild_id:int):
-        """取得伺服器內的指定社群通知"""
-        statement = select(NotifyCommunity).join(Community, and_(NotifyCommunity.community_id == Community.id, NotifyCommunity.community_type == Community.type)).where(NotifyCommunity.notify_type == notify_type, Community.username == community_username, NotifyCommunity.guild_id == guild_id)
+        statement = (
+            select(NotifyCommunity)
+            .join(Community, and_(NotifyCommunity.community_id == Community.id, NotifyCommunity.community_type == Community.type))
+            .where(NotifyCommunity.notify_type == notify_type, Community.id == community_id, NotifyCommunity.guild_id == guild_id)
+        )
         result = self.session.exec(statement).one_or_none()
         return result
 
-    def get_notify_community_userlist(self, notify_type:NotifyCommunityType):
+    def get_notify_community_user_byname(self, notify_type: NotifyCommunityType, community_username: str, guild_id: int):
+        """取得伺服器內的指定社群通知"""
+        statement = (
+            select(NotifyCommunity)
+            .join(Community, and_(NotifyCommunity.community_id == Community.id, NotifyCommunity.community_type == Community.type))
+            .where(NotifyCommunity.notify_type == notify_type, Community.username == community_username, NotifyCommunity.guild_id == guild_id)
+        )
+        result = self.session.exec(statement).one_or_none()
+        return result
+
+    def get_notify_community_userlist(self, notify_type: NotifyCommunityType):
         """取得指定類型的社群通知清單"""
         statement = select(NotifyCommunity.community_id).distinct().where(NotifyCommunity.notify_type == notify_type)
         result = self.session.exec(statement).all()
         return result
 
-    def get_notify_community_list(self,notify_type:NotifyCommunityType, guild_id:int):
+    def get_notify_community_list(self, notify_type: NotifyCommunityType, guild_id: int):
         """取得伺服器內指定種類的所有通知"""
-        statement = select(NotifyCommunity, Community).join(Community, and_(NotifyCommunity.community_id == Community.id, NotifyCommunity.community_type == Community.type)).where(NotifyCommunity.notify_type == notify_type, NotifyCommunity.guild_id == guild_id)
+        statement = (
+            select(NotifyCommunity, Community)
+            .join(Community, and_(NotifyCommunity.community_id == Community.id, NotifyCommunity.community_type == Community.type))
+            .where(NotifyCommunity.notify_type == notify_type, NotifyCommunity.guild_id == guild_id)
+        )
         result = self.session.exec(statement).all()
         return result
-    
-    def get_notify_community_count(self, notify_type:NotifyCommunityType, community_id:str):
+
+    def get_notify_community_count(self, notify_type: NotifyCommunityType, community_id: str):
         """取得指定通知的數量"""
         statement = select(func.count()).where(NotifyCommunity.notify_type == notify_type, NotifyCommunity.community_id == community_id)
         result = self.session.exec(statement).one()
         return result
-    
-    def get_community_by_notify(self, notify:NotifyCommunity):
+
+    def get_community_by_notify(self, notify: NotifyCommunity):
         """取得指定通知的社群資料"""
         statement = select(Community).where(Community.id == notify.community_id, Community.type == notify.community_type)
         result = self.session.exec(statement).one()
         return result
-    
-    def update_community_name(self, community_type:CommunityType, community_id:str, username:str, display_name:str):
+
+    def update_community_name(self, community_type: CommunityType, community_id: str, username: str, display_name: str):
         """更新社群名稱"""
         stmt = select(Community).where(Community.id == community_id, Community.type == community_type)
         community = self.session.exec(stmt).one_or_none()
@@ -440,7 +468,6 @@ class SQLNotifySystem(BaseSQLEngine):
             community.username = username
             community.display_name = display_name
             self.session.merge(community)
-        
 
     def get_expired_push_records(self):
         now = datetime.now()
@@ -448,18 +475,19 @@ class SQLNotifySystem(BaseSQLEngine):
         result = self.session.exec(statement).all()
         return result
 
+
 class SQLRoleSaveSystem(BaseSQLEngine):
-    #* role_save
-    def get_role_save(self,discord_id:int):
+    # * role_save
+    def get_role_save(self, discord_id: int):
         stmt = select(RoleSave).where(RoleSave.discord_id == discord_id).order_by(RoleSave.time, desc(RoleSave.role_id))
         result = self.session.exec(stmt).all()
         return result
 
-    def get_role_save_count(self,discord_id:int):
+    def get_role_save_count(self, discord_id: int):
         stmt = select(func.count()).select_from(RoleSave).where(RoleSave.discord_id == discord_id)
         result = self.session.exec(stmt).one_or_none()
         return result
-        
+
     def get_role_save_count_list(self):
         stmt = select(RoleSave.discord_id,func.count()).select_from(RoleSave).group_by(RoleSave.discord_id).order_by(desc(func.count()))
         result = self.session.exec(stmt).all()
@@ -480,22 +508,22 @@ class SQLRoleSaveSystem(BaseSQLEngine):
                 dct[i.message_id] = list()
             dct[i.message_id].append(i)
         return dct
-    
-    def get_reaction_roles_by_message(self, message_id:int):
+
+    def get_reaction_roles_by_message(self, message_id: int):
         stmt = select(ReactionRole).where(ReactionRole.message_id == message_id)
         result = self.session.exec(stmt).all()
         return result
-    
+
     def get_reaction_role_message_all(self):
         stmt = select(ReactionRoleMessage)
         result = self.session.exec(stmt).all()
         return result
-    
-    def get_reaction_role_message(self, message_id:int):
+
+    def get_reaction_role_message(self, message_id: int):
         stmt = select(ReactionRoleMessage).where(ReactionRoleMessage.message_id == message_id)
         result = self.session.exec(stmt).one_or_none()
         return result
-    
+
     def delete_reaction_role_message(self, message_id:int):
         stmt = delete(ReactionRoleMessage).where(ReactionRoleMessage.message_id == message_id)
         self.session.exec(stmt)
@@ -525,20 +553,18 @@ class SQLWarningSystem(BaseSQLEngine):
         stmt = select(UserModerate).where(UserModerate.warning_id == warning_id)
         result = self.session.exec(stmt).one_or_none()
         return result
-    
-    def get_warnings(self,discord_id:int,guild_id:int=None):
+
+    def get_warnings(self, discord_id: int, guild_id: int = None):
         """取得用戶的警告列表
         :param guild_id: 若給予，則同時查詢該伺服器的紀錄
         """
         if guild_id:
             stmt = select(UserModerate).where(UserModerate.discord_id == discord_id, UserModerate.create_guild == guild_id)
         else:
-            stmt = select(UserModerate).where(
-                UserModerate.discord_id == discord_id, not UserModerate.guild_only
-            )
+            stmt = select(UserModerate).where(UserModerate.discord_id == discord_id, not UserModerate.guild_only)
         result = self.session.exec(stmt).all()
         return WarningList(result, discord_id)
-    
+
     def get_warnings_count(self,discord_id:int,guild_id:int=None):
         if guild_id:
             stmt = select(func.count()).where(UserModerate.discord_id == discord_id, UserModerate.create_guild == guild_id)
@@ -563,9 +589,9 @@ class SQLWarningSystem(BaseSQLEngine):
             UserModerate.create_guild == guild_id,
             UserModerate.moderate_type == WarningType.Timeout
         ).order_by(desc(UserModerate.create_time)).limit(1)
-        
+
         last_ban_time_result = self.session.exec(last_ban_time_query).first()
-        
+
         # 如果該用戶沒有被禁言過，則最後禁言時間為當前時間
         if last_ban_time_result is None:
             last_ban_time = datetime.min
@@ -579,9 +605,9 @@ class SQLWarningSystem(BaseSQLEngine):
             UserModerate.moderate_type == WarningType.Warning,
             UserModerate.create_time > last_ban_time
         )
-        
+
         warning_count = self.session.exec(warning_count_query).one()
-        
+
         return warning_count
 
 class SQLPollSystem(BaseSQLEngine):
@@ -634,7 +660,7 @@ class SQLPollSystem(BaseSQLEngine):
                 -1 if the user's vote was deleted,\n
                 1 if the user's vote was inserted or updated, \n
                 2 if the user's vote reach the max poll can vote.
-        
+
         Raises:
             SQLNotFoundError: If the poll with the given ID is not found in the database.
         """
@@ -650,36 +676,41 @@ class SQLPollSystem(BaseSQLEngine):
         if result:
             self.session.delete(vote)
             text = -1
-        
+
         elif count == max_can_vote:
             return 2
-        
+
         else:
             self.session.add(vote)
             text = 1
-        
+
         self.session.commit()
         return text
 
-    def get_user_vote_count(self,poll_id,discord_id):
+    def get_user_vote_count(self, poll_id, discord_id):
         stmt = select(func.count()).where(UserPoll.poll_id == poll_id, UserPoll.discord_id == discord_id)
         result = self.session.exec(stmt).one_or_none()
         return result or 0
 
-    def add_user_poll(self,poll_id:int,discord_id:int,vote_option:int,vote_at:datetime,vote_magnification:int=1):
-        self.session.merge(UserPoll(poll_id=poll_id,discord_id=discord_id,vote_option=vote_option,vote_at=vote_at,vote_magnification=vote_magnification))
+    def add_user_poll(self, poll_id: int, discord_id: int, vote_option: int, vote_at: datetime, vote_magnification: int = 1):
+        self.session.merge(UserPoll(poll_id=poll_id, discord_id=discord_id, vote_option=vote_option, vote_at=vote_at, vote_magnification=vote_magnification))
         self.session.commit()
-    
+
     def remove_user_poll(self,poll_id:int,discord_id:int):
         stmt = delete(UserPoll).where(UserPoll.poll_id == poll_id, UserPoll.discord_id == discord_id)
         self.session.exec(stmt)
         self.session.commit()
-    
-    def get_user_poll(self,poll_id:int,discord_id:int):
-        stmt = select(UserPoll, PollOption.option_name).select_from(UserPoll).join(PollOption, and_(UserPoll.vote_option == PollOption.option_id, UserPoll.poll_id == PollOption.poll_id), isouter=True).where(UserPoll.poll_id == poll_id, UserPoll.discord_id == discord_id)
+
+    def get_user_poll(self, poll_id: int, discord_id: int):
+        stmt = (
+            select(UserPoll, PollOption.option_name)
+            .select_from(UserPoll)
+            .join(PollOption, and_(UserPoll.vote_option == PollOption.option_id, UserPoll.poll_id == PollOption.poll_id), isouter=True)
+            .where(UserPoll.poll_id == poll_id, UserPoll.discord_id == discord_id)
+        )
         result = self.session.exec(stmt).all()
         return result
-    
+
     def get_users_poll(self,poll_id:int,include_alternatives_accounts=True):
         if include_alternatives_accounts:
             stmt = select(UserPoll).where(UserPoll.poll_id == poll_id)
@@ -694,23 +725,21 @@ class SQLPollSystem(BaseSQLEngine):
             )
         result = self.session.exec(stmt).all()
         return result
-    
-    def get_poll_vote_count(self,poll_id:int,include_alternatives_accounts=True):
+
+    def get_poll_vote_count(self, poll_id: int, include_alternatives_accounts=True):
         if include_alternatives_accounts:
-            stmt = select(UserPoll.vote_option,func.sum(UserPoll.vote_magnification)).where(UserPoll.poll_id == poll_id).group_by(UserPoll.vote_option)
+            stmt = select(UserPoll.vote_option, func.sum(UserPoll.vote_magnification)).where(UserPoll.poll_id == poll_id).group_by(UserPoll.vote_option)
         else:
             stmt = (
                 select(UserPoll.vote_option, func.sum(UserPoll.vote_magnification))
                 .select_from(UserPoll)
                 .join(UserAccount, UserPoll.discord_id == UserAccount.alternate_account)
-                .where(
-                    UserPoll.poll_id == poll_id, UserAccount.alternate_account is None
-                )
+                .where(UserPoll.poll_id == poll_id, UserAccount.alternate_account is None)
                 .group_by(UserPoll.vote_option)
             )
         result = self.session.exec(stmt).all()
         return {str(i[0]): i[1] for i in result}
-    
+
     def get_poll_role(self,poll_id:int, is_only_role:bool=None):
         if is_only_role is not None:
             stmt = select(PollRole).where(PollRole.poll_id == poll_id, PollRole.is_only_role == is_only_role)
@@ -718,13 +747,13 @@ class SQLPollSystem(BaseSQLEngine):
             stmt = select(PollRole).where(PollRole.poll_id == poll_id)
         result = self.session.exec(stmt).all()
         return result
-    
-    #* Giveaway
-    def get_user_in_giveaway(self, giveaway_id:int, discord_id:int):
+
+    # * Giveaway
+    def get_user_in_giveaway(self, giveaway_id: int, discord_id: int):
         stmt = select(GiveawayUser).where(GiveawayUser.giveaway_id == giveaway_id, GiveawayUser.user_id == discord_id)
         result = self.session.exec(stmt).one_or_none()
         return result
-    
+
     def get_giveaway_users(self, giveaway_id:int):
         stmt = select(GiveawayUser).where(GiveawayUser.giveaway_id == giveaway_id)
         result = self.session.exec(stmt).all()
@@ -734,12 +763,12 @@ class SQLPollSystem(BaseSQLEngine):
         stmt = select(Giveaway).where(Giveaway.id == giveaway_id)
         result = self.session.exec(stmt).one_or_none()
         return result
-    
+
     def get_active_giveaways(self):
         stmt = select(Giveaway).where(Giveaway.is_on is True)
         result = self.session.exec(stmt).all()
         return result
-    
+
     def set_giveaway_winner(self, giveaway_id:int, winners_id:list[int]):
         for winner in winners_id:
             stmt = update(GiveawayUser).where(GiveawayUser.giveaway_id == giveaway_id, GiveawayUser.user_id == winner).values(is_winner = True)
@@ -756,56 +785,58 @@ class SQLPollSystem(BaseSQLEngine):
         )
         self.session.exec(stmt)
         self.session.commit()
-    
+
+
 class SQLElectionSystem(BaseSQLEngine):
-    #* party
-    def join_party(self,discord_id:int,party_id:int):
-        up = UserParty(discord_id=discord_id,party_id=party_id)
+    # * party
+    def join_party(self, discord_id: int, party_id: int):
+        up = UserParty(discord_id=discord_id, party_id=party_id)
         self.session.add(up)
         self.session.commit()
 
-    def leave_party(self,discord_id:int,party_id:int):
-        up = UserParty(discord_id=discord_id,party_id=party_id)
+    def leave_party(self, discord_id: int, party_id: int):
+        up = UserParty(discord_id=discord_id, party_id=party_id)
         self.session.delete(up)
         self.session.commit()
 
     def get_all_party_data(self):
         stmt = (
-            select(Party,func.count(UserParty.party_id).label('member_count'))
+            select(Party, func.count(UserParty.party_id).label("member_count"))
             .join(UserParty, Party.party_id == UserParty.party_id, isouter=True)
             .group_by(Party.party_id)
             .order_by(Party.party_id)
         )
         result = self.session.exec(stmt).all()
         return result
-    
-    def get_user_party(self,discord_id:int):
+
+    def get_user_party(self, discord_id: int):
         stmt = select(Party).select_from(UserParty).join(Party, UserParty.party_id == Party.party_id, isouter=True).where(UserParty.discord_id == discord_id)
         result = self.session.exec(stmt).all()
         return result
-    
-    def get_party(self,party_id:int):
+
+    def get_party(self, party_id: int):
         stmt = select(Party).where(Party.party_id == party_id)
         result = self.session.exec(stmt).one_or_none()
         return result
 
-class SQLTwitchSystem(BaseSQLEngine):    
-    #* twitch
+
+class SQLTwitchSystem(BaseSQLEngine):
+    # * twitch
     def get_bot_join_channel_all(self):
         stmt = select(TwitchBotJoinChannel)
         result = self.session.exec(stmt).all()
         return {i.twitch_id: i for i in result}
-    
+
     def list_chat_command_by_channel(self, channel_id:int):
         stmt = select(TwitchChatCommand).where(TwitchChatCommand.twitch_id == channel_id)
         result = self.session.exec(stmt).all()
         return result
-    
-    def get_chat_command(self, command:str, channel_id:int):
+
+    def get_chat_command(self, command: str, channel_id: int):
         stmt = select(TwitchChatCommand).where(TwitchChatCommand.twitch_id == channel_id, TwitchChatCommand.name == command)
         result = self.session.exec(stmt).one_or_none()
         return result
-    
+
     def get_raw_chat_command_all(self):
         stmt = select(TwitchChatCommand)
         result = self.session.exec(stmt).all()
@@ -813,21 +844,21 @@ class SQLTwitchSystem(BaseSQLEngine):
         for i in result:
             dct[i.twitch_id][i.name] = i
         return dct
-    
-    def get_raw_chat_command_channel(self, twitch_id:int):
+
+    def get_raw_chat_command_channel(self, twitch_id: int):
         stmt = select(TwitchChatCommand).where(TwitchChatCommand.twitch_id == twitch_id)
         result = self.session.exec(stmt).all()
         return {i.name: i.response for i in result}
-    
+
     def get_chat_command_names(self):
         stmt = select(TwitchChatCommand.twitch_id,TwitchChatCommand.name)
         return self.session.exec(stmt).all()
-    
-    def get_twitch_point(self, twitch_id:int, broadcaster_id:int):
+
+    def get_twitch_point(self, twitch_id: int, broadcaster_id: int):
         stmt = select(TwitchPoint).where(TwitchPoint.twitch_id == twitch_id, TwitchPoint.broadcaster_id == broadcaster_id)
         result = self.session.exec(stmt).one_or_none()
         return result or TwitchPoint(twitch_id=twitch_id, broadcaster_id=broadcaster_id)
-    
+
     def update_twitch_point(self, twitch_id:int, broadcaster_id:int, point:int):
         stmt = select(TwitchPoint).where(TwitchPoint.twitch_id == twitch_id, TwitchPoint.broadcaster_id == broadcaster_id)
         result = self.session.exec(stmt).one_or_none()
@@ -844,12 +875,12 @@ class SQLRPGSystem(BaseSQLEngine):
         stmt = select(RPGUser).where(RPGUser.discord_id == discord_id)
         result = self.session.exec(stmt).one_or_none()
         return result or RPGUser(discord_id=discord_id)
-    
+
     def get_rpg_dungeon(self, dungeon_id):
         stmt = select(RPGDungeon).where(RPGDungeon.id == dungeon_id)
         result = self.session.exec(stmt).one()
         return result
-    
+
     def get_monster(self, monster_id):
         stmt = select(Monster).where(Monster.id == monster_id)
         result = self.session.exec(stmt).one()
@@ -894,28 +925,29 @@ class SQLBackupSystem(BaseSQLEngine):
         stmt = select(BackupRoleUser.discord_id).where(BackupRoleUser.role_id == role_id)
         result = self.session.exec(stmt).all()
         return result
-    
+
     def get_all_backup_roles(self):
         stmt = select(BackupRole)
         result = self.session.exec(stmt).all()
         return result
-    
+
+
 class SQLTokensSystem(BaseSQLEngine):
-    def set_oauth(self, user_id:int, type:CommunityType, access_token:str, refresh_token:str=None, expires_at:datetime=None):
-        token = OAuth2Token(user_id=user_id,type=type,access_token=access_token,refresh_token=refresh_token,expires_at=expires_at)
+    def set_oauth(self, user_id: int, type: CommunityType, access_token: str, refresh_token: str = None, expires_at: datetime = None):
+        token = OAuth2Token(user_id=user_id, type=type, access_token=access_token, refresh_token=refresh_token, expires_at=expires_at)
         self.session.merge(token)
         self.session.commit()
 
-    def get_oauth(self, user_id:str, type:CommunityType):
+    def get_oauth(self, user_id: str, type: CommunityType):
         stmt = select(OAuth2Token).where(OAuth2Token.user_id == user_id, OAuth2Token.type == type)
         result = self.session.exec(stmt).one_or_none()
         return result
-    
-    def get_bot_token(self, api_type:APIType, token_seq:int=1):
+
+    def get_bot_token(self, api_type: APIType, token_seq: int = 1):
         stmt = select(BotToken).where(BotToken.api_type == api_type, BotToken.token_seq == token_seq).limit(1)
         return self.session.exec(stmt).one()
-    
-    def get_google_credentials(self, token_seq:int=2):
+
+    def get_google_credentials(self, token_seq: int = 2):
         token = self.get_bot_token(APIType.Google, token_seq)
         return Credentials(
             token=token.access_token,
@@ -923,11 +955,11 @@ class SQLTokensSystem(BaseSQLEngine):
             client_id=token.client_id,
             client_secret=token.client_secret,
             token_uri="https://oauth2.googleapis.com/token",
-            scopes=['https://www.googleapis.com/auth/drive'],
-            expiry=token.expires_at
+            scopes=["https://www.googleapis.com/auth/drive"],
+            expiry=token.expires_at,
         )
-        
-    def get_google_client_config(self, token_seq:int=3):
+
+    def get_google_client_config(self, token_seq: int = 3):
         token = self.get_bot_token(APIType.Google, token_seq)
         if token_seq in (2,):
             client_config = {
@@ -937,9 +969,7 @@ class SQLTokensSystem(BaseSQLEngine):
                     "token_uri": "https://oauth2.googleapis.com/token",
                     "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
                     "client_secret": token.client_secret,
-                    "redirect_uris": [
-                        "http://localhost"
-                    ]
+                    "redirect_uris": ["http://localhost"],
                 }
             }
         else:
@@ -952,12 +982,12 @@ class SQLTokensSystem(BaseSQLEngine):
                     "client_secret": token.client_secret,
                 }
             }
-        
+
         return client_config
-    
-    
+
+
 class SQLCacheSystem(BaseSQLEngine):
-    def set_community_caches(self, type:NotifyCommunityType, data:dict[str, datetime | None]):
+    def set_community_caches(self, type: NotifyCommunityType, data: dict[str, datetime | None]):
         """批量設定社群快取"""
         for community_id, value in data.items():
             cache = CommunityCache(community_id=community_id, notify_type=type, value=value)
@@ -967,7 +997,7 @@ class SQLCacheSystem(BaseSQLEngine):
                 self.session.merge(cache)
         self.session.commit()
 
-    def set_community_cache(self, type:NotifyCommunityType, community_id:str, value:datetime | None):
+    def set_community_cache(self, type: NotifyCommunityType, community_id: str, value: datetime | None):
         """設定社群快取"""
         if value is None:
             self.session.exec(delete(CommunityCache).where(CommunityCache.community_id == community_id, CommunityCache.notify_type == type))
@@ -976,7 +1006,7 @@ class SQLCacheSystem(BaseSQLEngine):
             self.session.merge(cache)
         self.session.commit()
 
-    def add_community_cache(self, type:NotifyCommunityType, community_id:str, value:datetime | None):
+    def add_community_cache(self, type: NotifyCommunityType, community_id: str, value: datetime | None):
         """新增社群快取"""
         cache = CommunityCache(community_id=community_id, notify_type=type, value=value)
         try:
@@ -985,24 +1015,29 @@ class SQLCacheSystem(BaseSQLEngine):
         except IntegrityError:
             self.session.rollback()
 
-    def get_community_cache(self, type:NotifyCommunityType, community_id:str):
+    def get_community_cache(self, type: NotifyCommunityType, community_id: str):
         """取得社群快取"""
         stmt = select(CommunityCache).where(CommunityCache.notify_type == type, CommunityCache.community_id == community_id)
         result = self.session.exec(stmt).one_or_none()
         return result
-    
-    def get_community_caches(self, type:NotifyCommunityType):
-        stmt = select(NotifyCommunity.community_id, CommunityCache).select_from(NotifyCommunity).join(CommunityCache, NotifyCommunity.community_id == CommunityCache.community_id, isouter=True).where(NotifyCommunity.notify_type == type)
+
+    def get_community_caches(self, type: NotifyCommunityType):
+        stmt = (
+            select(NotifyCommunity.community_id, CommunityCache)
+            .select_from(NotifyCommunity)
+            .join(CommunityCache, NotifyCommunity.community_id == CommunityCache.community_id, isouter=True)
+            .where(NotifyCommunity.notify_type == type)
+        )
         result = self.session.exec(stmt).all()
         return {i[0]: i[1] for i in result}
-    
-    def get_community_caches_with_id(self, type:NotifyCommunityType, community_id:str):
+
+    def get_community_caches_with_id(self, type: NotifyCommunityType, community_id: str):
         """取得指定社群的快取"""
         stmt = select(CommunityCache).where(CommunityCache.notify_type == type, CommunityCache.community_id == community_id)
         result = self.session.exec(stmt).one_or_none()
         return result
-    
-    def set_notify_cache(self, type:NotifyChannelType, value:datetime | None):
+
+    def set_notify_cache(self, type: NotifyChannelType, value: datetime | None):
         """設定通知快取"""
         if value is None:
             self.session.exec(delete(NotifyCache).where(NotifyCache.notify_type == type))
@@ -1011,14 +1046,16 @@ class SQLCacheSystem(BaseSQLEngine):
             self.session.merge(cache)
         self.session.commit()
 
-    def get_notify_cache(self, type:NotifyChannelType):
+    def get_notify_cache(self, type: NotifyChannelType):
         """取得通知快取"""
         stmt = select(NotifyCache).where(NotifyCache.notify_type == type)
         result = self.session.exec(stmt).one_or_none()
         return result
 
+
 class SQLTest(BaseSQLEngine):
     pass
+
 
 # class MySQLBaseModel(object):
 #     """MySQL資料庫基本模型"""
@@ -1033,7 +1070,7 @@ class SQLTest(BaseSQLEngine):
 #     def truncate_table(self,table:str,database="database"):
 #         self.cursor.execute(f"USE `{database}`;")
 #         self.cursor.execute(f"TRUNCATE TABLE `{table}`;")
-    
+
 #     def set_userdata(self,discord_id:int,table:str,column:str,value):
 #         """設定或更新用戶資料（只要PK為discord_id的皆可）"""
 #         self.cursor.execute(f"USE `stardb_user`;")
@@ -1123,10 +1160,10 @@ class SQLTest(BaseSQLEngine):
 #         self.cursor.execute(f"SELECT * FROM `database`.`candidate_list` WHERE session = {session};")
 #         records = self.cursor.fetchall()
 #         return records
-    
+
 #     def get_election_full_by_session(self,session:int):
 #         self.cursor.execute(f"""
-#             SELECT 
+#             SELECT
 #                 cl.discord_id,
 #                 cl.session,
 #                 cl.position,
@@ -1149,12 +1186,12 @@ class SQLTest(BaseSQLEngine):
 #         self.cursor.execute(f"SELECT * FROM `database`.`candidate_list` WHERE session = {session} AND position = {position.value};")
 #         records = self.cursor.fetchall()
 #         return records
-    
+
 #     def get_election_count(self,session:int):
 #         self.cursor.execute(f"SELECT position,count(*) AS count FROM `database`.`candidate_list` WHERE session = {session} GROUP BY position ORDER BY `position`;")
 #         records = self.cursor.fetchall()
 #         return records
-    
+
 #     def add_official(self, discord_id, session, position):
 #         self.cursor.execute(f"INSERT INTO `database`.`official_list` VALUES(%s,%s,%s);",(discord_id,session,position))
 #         self.connection.commit()
@@ -1173,7 +1210,7 @@ class SQLTest(BaseSQLEngine):
 
 #     def get_all_party_data(self):
 #         self.cursor.execute(f"""
-#             SELECT 
+#             SELECT
 #                 `party_data`.*, COUNT(`user_party`.party_id) AS member_count
 #             FROM
 #                 `database`.`party_data`
@@ -1184,12 +1221,12 @@ class SQLTest(BaseSQLEngine):
 #         """)
 #         records = self.cursor.fetchall()
 #         return [Party(**i) for i in records]
-    
+
 #     def get_user_party(self,discord_id:int):
 #         self.cursor.execute(f"SELECT `user_party`.discord_id,`party_data`.* FROM `stardb_user`.`user_party` LEFT JOIN `database`.`party_data` ON user_party.party_id = party_data.party_id WHERE `discord_id` = {discord_id}")
 #         records = self.cursor.fetchall()
 #         return [Party(**i) for i in records]
-    
+
 #     def get_party_data(self,party_id:int):
 #         self.cursor.execute(f"SELECT * FROM `database`.`party_data` WHERE `party_id` = {party_id};")
 #         records = self.cursor.fetchall()
@@ -1220,6 +1257,7 @@ class SQLTest(BaseSQLEngine):
 # ):
 #     """Mysql操作"""
 
+
 class SQLEngine(
     SQLUserSystem,
     SQLCurrencySystem,
@@ -1237,9 +1275,8 @@ class SQLEngine(
     SQLTokensSystem,
     SQLCacheSystem,
     SQLTest,
-    ):
+):
     """SQL引擎"""
-
 
     dict_type = [DBCacheType.DynamicVoice, DBCacheType.VoiceLog, DBCacheType.TwitchCmd]
     list_type = [DBCacheType.DynamicVoiceRoom]
@@ -1251,63 +1288,62 @@ class SQLEngine(
         self.cache[DBCacheType.DynamicVoiceRoom] = self.get_all_dynamic_voice()
         self.cache[DBCacheType.TwitchCmd] = self.get_raw_chat_command_all()
         log.debug("dbcache: init.")
-    
+
     @overload
-    def __getitem__(self, key:Literal[DBCacheType.DynamicVoiceRoom]) -> list[int]:
-        ...
+    def __getitem__(self, key: Literal[DBCacheType.DynamicVoiceRoom]) -> list[int]: ...
     @overload
-    def __getitem__(self, key:Literal[DBCacheType.DynamicVoice, DBCacheType.VoiceLog, NotifyChannelType.DynamicVoice, NotifyChannelType.VoiceLog]) -> dict[int, tuple[int, int | None]]:
-        ...
+    def __getitem__(
+        self, key: Literal[DBCacheType.DynamicVoice, DBCacheType.VoiceLog, NotifyChannelType.DynamicVoice, NotifyChannelType.VoiceLog]
+    ) -> dict[int, tuple[int, int | None]]: ...
     @overload
-    def __getitem__(self, key:Literal[DBCacheType.TwitchCmd]) -> dict[int, dict[str, TwitchChatCommand]]:
-        ...
-    def __getitem__(self, key:DBCacheType | NotifyChannelType):
+    def __getitem__(self, key: Literal[DBCacheType.TwitchCmd]) -> dict[int, dict[str, TwitchChatCommand]]: ...
+    def __getitem__(self, key: DBCacheType | NotifyChannelType):
         if isinstance(key, NotifyChannelType):
             return self.cache[DBCacheType.from_notify_channel(key)]
         return self.cache[key]
-    
-    def __delitem__(self, key:DBCacheType | NotifyChannelType):
+
+    def __delitem__(self, key: DBCacheType | NotifyChannelType):
         if isinstance(key, NotifyChannelType):
             del self.cache[DBCacheType.from_notify_channel(key)]
         del self.cache[key]
 
-    def __setitem__(self, key:DBCacheType | NotifyChannelType, value):
+    def __setitem__(self, key: DBCacheType | NotifyChannelType, value):
         if isinstance(key, NotifyChannelType):
             self.cache[DBCacheType.from_notify_channel(key)] = value
         self.cache[key] = value
 
-    def update_notify_channel(self, notify_type:NotifyChannelType):
+    def update_notify_channel(self, notify_type: NotifyChannelType):
         """更新通知頻道"""
         cache_type = DBCacheType.from_notify_channel(notify_type)
         if cache_type:
             self.cache[cache_type] = self.get_notify_channel_rawdict(notify_type)
-    
-    def update_dynamic_voice(self,add_channel=None,remove_channel=None):
+
+    def update_dynamic_voice(self, add_channel=None, remove_channel=None):
         """更新動態語音頻道"""
         if add_channel and add_channel not in self.cache[DBCacheType.DynamicVoice]:
             self.cache[DBCacheType.DynamicVoice].append(add_channel)
         if remove_channel:
             self.cache[DBCacheType.DynamicVoice].remove(remove_channel)
-    
-    def getif_dynamic_voice_room(self,channel_id:int):
+
+    def getif_dynamic_voice_room(self, channel_id: int):
         """取得動態語音房間"""
         return channel_id if channel_id in self.cache[DBCacheType.DynamicVoiceRoom] else None
-    
-    def add_twitch_cmd(self, twitch_channel_id:int, command:str, response:str):
+
+    def add_twitch_cmd(self, twitch_channel_id: int, command: str, response: str):
         """新增Twitch指令"""
         self.session.merge(TwitchChatCommand(twitch_id=twitch_channel_id, name=command, response=response))
         self.session.commit()
 
         self.cache[DBCacheType.TwitchCmd][int(twitch_channel_id)] = self.get_raw_chat_command_channel(twitch_channel_id)
-    
-    def remove_twitch_cmd(self, twitch_channel_id:int, command:str):
+
+    def remove_twitch_cmd(self, twitch_channel_id: int, command: str):
         """移除Twitch指令"""
         self.session.exec(delete(TwitchChatCommand).where(TwitchChatCommand.twitch_id == twitch_channel_id, TwitchChatCommand.name == command))
         self.session.commit()
 
         self.cache[DBCacheType.TwitchCmd][int(twitch_channel_id)] = self.get_raw_chat_command_channel(twitch_channel_id)
-    
-    def get_twitch_cmd_response_cache(self, twitch_channel_id_input:int, command:str):
+
+    def get_twitch_cmd_response_cache(self, twitch_channel_id_input: int, command: str):
         """取得Twitch指令回應"""
         twitch_channel_id = int(twitch_channel_id_input)
         if twitch_channel_id in self.cache[DBCacheType.TwitchCmd]:

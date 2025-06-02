@@ -9,21 +9,21 @@ from .game import *
 from .oauth import *
 from .weather import *
 
-__all__ =[
-    'TwitchAPI',
-    'YoutubeAPI',
-    'GoogleCloud',
-    'NotionAPI',
-    'RiotAPI',
-    'OsuAPI',
-    'ApexAPI',
-    'SteamAPI',
-    'DBDInterface',
-    'LOLMediaWikiAPI',
-    'CWA_API',
-    'YoutubeRSS',
+__all__ = [
+    "TwitchAPI",
+    "YoutubeAPI",
+    "GoogleCloud",
+    "NotionAPI",
+    "RiotAPI",
+    "OsuAPI",
+    "ApexAPI",
+    "SteamAPI",
+    "DBDInterface",
+    "LOLMediaWikiAPI",
+    "CWA_API",
+    "YoutubeRSS",
     "DiscordOauth2",
-    'YoutubePush',
+    "YoutubePush",
     "RssHub",
     "CLIInterface",
 ]

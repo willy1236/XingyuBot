@@ -9,10 +9,10 @@ from apscheduler.triggers.date import DateTrigger
 from discord.ext import commands, tasks
 from requests.exceptions import ConnectTimeout, RequestException
 
-from starlib import BotEmbed, Jsondb, log, sclient, tz, utils, sqldb
+from starlib import BotEmbed, Jsondb, log, sclient, sqldb, tz, utils
 from starlib.instance import *
 from starlib.models.community import YoutubeVideo
-from starlib.types import NotifyChannelType, NotifyCommunityType, APIType
+from starlib.types import APIType, NotifyChannelType, NotifyCommunityType
 
 from ..extension import Cog_Extension
 from ..uiElement.view import GiveawayView
@@ -22,29 +22,29 @@ scheduler = AsyncIOScheduler()
 class task(Cog_Extension):
     def __init__(self,*args,**kwargs):
         super().__init__(*args,**kwargs)
-        #await self.bot.wait_until_ready()
-    
+        # await self.bot.wait_until_ready()
+
     @commands.Cog.listener()
     async def on_ready(self):
-        if not Jsondb.config.get("debug_mode",True):
-            scheduler.add_job(self.forecast_update,'cron',hour='0/3',minute=0,second=1,jitter=30,misfire_grace_time=60)
-            scheduler.add_job(self.weather_check,'cron',minute='20,35',second=30,jitter=30,misfire_grace_time=60)
-            scheduler.add_job(self.apex_map_rotation,'cron',minute='0/15',second=10,jitter=30,misfire_grace_time=60)
-            scheduler.add_job(self.refresh_yt_push,'cron',hour="2/3",jitter=30,misfire_grace_time=40)
+        if not Jsondb.config.get("debug_mode", True):
+            scheduler.add_job(self.forecast_update, "cron", hour="0/3", minute=0, second=1, jitter=30, misfire_grace_time=60)
+            scheduler.add_job(self.weather_check, "cron", minute="20,35", second=30, jitter=30, misfire_grace_time=60)
+            scheduler.add_job(self.apex_map_rotation, "cron", minute="0/15", second=10, jitter=30, misfire_grace_time=60)
+            scheduler.add_job(self.refresh_yt_push, "cron", hour="2/3", jitter=30, misfire_grace_time=40)
 
-            scheduler.add_job(self.earthquake_check,'interval',minutes=3,jitter=30,misfire_grace_time=40)
-            scheduler.add_job(self.weather_warning_check,'interval',minutes=15,jitter=30,misfire_grace_time=40)
-            scheduler.add_job(self.youtube_video,'interval',minutes=15,jitter=30,misfire_grace_time=40)
-            scheduler.add_job(self.twitch_live,'interval',minutes=4,jitter=15,misfire_grace_time=20)
-            scheduler.add_job(self.twitch_video,'interval',minutes=15,jitter=30,misfire_grace_time=40)
-            scheduler.add_job(self.twitch_clip,'interval',minutes=10,jitter=30,misfire_grace_time=40)
-            scheduler.add_job(self.twitter_tweets_rss,'interval',minutes=15, jitter=30, misfire_grace_time=40)
-            #scheduler.add_job(self.get_mongodb_data,'interval',minutes=3,jitter=30,misfire_grace_time=40)
+            scheduler.add_job(self.earthquake_check, "interval", minutes=3, jitter=30, misfire_grace_time=40)
+            scheduler.add_job(self.weather_warning_check, "interval", minutes=15, jitter=30, misfire_grace_time=40)
+            scheduler.add_job(self.youtube_video, "interval", minutes=15, jitter=30, misfire_grace_time=40)
+            scheduler.add_job(self.twitch_live, "interval", minutes=4, jitter=15, misfire_grace_time=20)
+            scheduler.add_job(self.twitch_video, "interval", minutes=15, jitter=30, misfire_grace_time=40)
+            scheduler.add_job(self.twitch_clip, "interval", minutes=10, jitter=30, misfire_grace_time=40)
+            scheduler.add_job(self.twitter_tweets_rss, "interval", minutes=15, jitter=30, misfire_grace_time=40)
+            # scheduler.add_job(self.get_mongodb_data,'interval',minutes=3,jitter=30,misfire_grace_time=40)
 
             if self.bot.user.id == 589744540240314368:
-                scheduler.add_job(self.birtday_task,'cron',month=10,day=16,hour=8,minute=0,second=0,jitter=30,misfire_grace_time=60)
+                scheduler.add_job(self.birtday_task, "cron", month=10, day=16, hour=8, minute=0, second=0, jitter=30, misfire_grace_time=60)
                 # scheduler.add_job(self.new_years_eve_task, CronTrigger(month=1, day=1, hour=0, minute=0, second=0), misfire_grace_time=60)
-        
+
         # 抽獎
         now = datetime.now(tz)
         for giveaway in sclient.sqldb.get_active_giveaways():
@@ -61,7 +61,7 @@ class task(Cog_Extension):
                 log.debug(f"Loaded giveaway: {giveaway.id}")
         else:
             pass
-        
+
         if not scheduler.running:
             scheduler.start()
 
@@ -76,7 +76,7 @@ class task(Cog_Extension):
         except Exception as e:
             log.error(f"earthquake_check error: {e}")
             return
-        
+
         if not earthquake_records:
             return
 
@@ -85,7 +85,7 @@ class task(Cog_Extension):
                 await self.bot.send_notify_channel(data.embed(), NotifyChannelType.MajorQuakeNotifications, "顯著有感地震報告")
             else:
                 await self.bot.send_notify_channel(data.embed(), NotifyChannelType.SlightQuakeNotifications, "小區域地震報告")
-        
+
         timefrom = earthquake_records[-1].originTime + timedelta(seconds=1)
         sclient.sqldb.set_notify_cache(NotifyChannelType.MajorQuakeNotifications, timefrom)
 
@@ -93,7 +93,7 @@ class task(Cog_Extension):
         weathers = cwa_api.get_weather_data()
         if not weathers:
             return
-        weather = weathers[0] 
+        weather = weathers[0]
         text = f"現在天氣： {weather.WeatherElement.Weather if weather.WeatherElement.Weather != '-99' else '--'}/{weather.WeatherElement.AirTemperature}°C"
         if weather.WeatherElement.AirTemperature == weather.WeatherElement.DailyExtreme.DailyHigh.AirTemperature:
             text += f" （最高溫）"
@@ -105,7 +105,7 @@ class task(Cog_Extension):
         apidatas = cwa_api.get_weather_warning()
         if not apidatas:
             return
-        
+
         cache = sclient.sqldb.get_notify_cache(NotifyChannelType.WeatherWarning)
         report_time = cache.value if cache else datetime.now(tz) - timedelta(days=1)
         datas = [i for i in apidatas if i.datasetInfo.issueTime > report_time]
@@ -132,11 +132,11 @@ class task(Cog_Extension):
         caches = sclient.sqldb.get_community_caches(NotifyCommunityType.TwitchLive)
         if not caches:
             return
-        
+
         users_id = [user_id for user_id in caches.keys()]
         data = tw_api.get_lives(users_id)
         log.debug(f"twitch_live data: {data}")
-        update_data:dict[str, datetime] = {}
+        update_data: dict[str, datetime] = {}
 
         for user_id in users_id:
             if data[user_id] and not caches[user_id]:
@@ -156,11 +156,11 @@ class task(Cog_Extension):
         caches = sclient.sqldb.get_community_caches(NotifyCommunityType.TwitchVideo)
         if not caches:
             return
-        
+
         update_data:dict[str, datetime] = {}
         for user_id, cache in caches.items():
             videos = tw_api.get_videos(user_id, after=cache.value)
-            
+
             if videos:
                 videos.reverse()
                 update_data[user_id] = videos[-1].created_at
@@ -175,14 +175,14 @@ class task(Cog_Extension):
         caches = sclient.sqldb.get_community_caches(NotifyCommunityType.TwitchClip)
         if not caches:
             return
-        
+
         update_data:dict[str, datetime] = {}
         for user_id, cache in caches.items():
             clips = tw_api.get_clips(user_id, started_at=cache.value)
-            if clips: 
+            if clips:
                 newest = clips[0].created_at
                 broadcaster_id = clips[0].broadcaster_id
-                
+
                 # 取得剪輯的來源影片（直播）
                 videos_dict = {clip.video_id: None for clip in clips}
                 api_video = tw_api.get_videos(video_ids=list(videos_dict.keys()))
@@ -197,7 +197,7 @@ class task(Cog_Extension):
                         embed = clip.embed(video)
                         await self.bot.send_notify_communities(embed, NotifyCommunityType.TwitchClip, broadcaster_id)
 
-                update_data[broadcaster_id] = (newest + timedelta(seconds=1))
+                update_data[broadcaster_id] = newest + timedelta(seconds=1)
 
         sclient.sqldb.set_community_caches(NotifyCommunityType.TwitchClip, update_data)
 
@@ -205,7 +205,7 @@ class task(Cog_Extension):
         caches = sclient.sqldb.get_community_caches(NotifyCommunityType.Youtube)
         if not caches:
             return
-        
+
         update_data:dict[str, datetime] = {}
         for ytchannel_id, cache in caches.items():
             #抓取資料
@@ -223,7 +223,7 @@ class task(Cog_Extension):
             for video in api_videos:
                 embed = video.embed()
                 await self.bot.send_notify_communities(embed, NotifyCommunityType.Youtube, ytchannel_id, no_mention=video.is_live_end)
-                
+
                 if video.liveStreamingDetails and video.liveStreamingDetails.scheduledStartTime:
                     scheduler.add_job(self.test_one_times_job, DateTrigger(video.liveStreamingDetails.scheduledStartTime + timedelta(seconds=30)), args=[video])
 
@@ -234,7 +234,7 @@ class task(Cog_Extension):
         caches = sclient.sqldb.get_community_caches(NotifyCommunityType.TwitterTweet)
         if not caches:
             return
-        
+
         update_data:dict[str, datetime] = {}
         for twitter_user_id, cache in caches.items():
             log.debug(f"twitter_tweets: {twitter_user_id}")
@@ -245,7 +245,7 @@ class task(Cog_Extension):
                 log.error(e.stderr)
                 continue
             log.debug(f"twitter_tweets data: {results}")
-            
+
             if results is None:
                 log.warning(f"twitter_tweets error / not found: {twitter_user_id}")
                 sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitterTweet, twitter_user_id)
@@ -255,10 +255,16 @@ class task(Cog_Extension):
                 newest = tweets[0].createdAt
                 for tweet in tweets:
                     newest = tweet.createdAt if tweet.createdAt > newest else newest
-                    #await self.bot.send_notify_communities(None, NotifyCommunityType.TwitterTweet, user_name, content=f"{tweet.author} 轉推了推文↩️\n{tweet.link}" if tweet.is_retweet else f"{tweet.author} 發布新推文\n{tweet.link}")
-                    await self.bot.send_notify_communities(None, NotifyCommunityType.TwitterTweet, twitter_user_id, defult_content=f"{tweet.tweetBy.fullName} 轉推了推文↩️" if tweet.is_retweet else f"{tweet.tweetBy.fullName} 發布新推文", additional_content=tweet.url)
+                    # await self.bot.send_notify_communities(None, NotifyCommunityType.TwitterTweet, user_name, content=f"{tweet.author} 轉推了推文↩️\n{tweet.link}" if tweet.is_retweet else f"{tweet.author} 發布新推文\n{tweet.link}")
+                    await self.bot.send_notify_communities(
+                        None,
+                        NotifyCommunityType.TwitterTweet,
+                        twitter_user_id,
+                        defult_content=f"{tweet.tweetBy.fullName} 轉推了推文↩️" if tweet.is_retweet else f"{tweet.tweetBy.fullName} 發布新推文",
+                        additional_content=tweet.url,
+                    )
 
-                update_data[twitter_user_id] = (newest + timedelta(seconds=1))
+                update_data[twitter_user_id] = newest + timedelta(seconds=1)
 
         sclient.sqldb.set_community_caches(NotifyCommunityType.TwitterTweet, update_data)
 
@@ -270,19 +276,19 @@ class task(Cog_Extension):
         session = utils.calculate_eletion_session(datetime.now())
         channel = self.bot.get_channel(1163127708839071827)
 
-        embed = sclient.election_format(session,self.bot)
+        embed = sclient.election_format(session, self.bot)
         await channel.send(embed=embed)
 
         dbdata = sclient.sqldb.get_election_full_by_session(session)
         results = {}
         for position in Jsondb.options["position_option"].keys():
             results[position] = []
-        
+
         for data in dbdata:
-            user_id = data['discord_id']
+            user_id = data["discord_id"]
             #party_name = i['party_name'] or "無黨籍"
-            position = data['position']
-            
+            position = data["position"]
+
             user = channel.guild.get_member(user_id)
             username = user_id if not user else (user.display_name if user.display_name else (user.global_name if user.global_name else user.name))
             if username not in results[position]:
@@ -313,19 +319,19 @@ class task(Cog_Extension):
 
             message = await channel.send(embed=view.embed(channel.guild),view=view)
             await asyncio.sleep(1)
-    
+
         await channel.send(f"第{session}屆中央選舉投票已開始，請大家把握時間踴躍投票!")
 
         tz = timezone(timedelta(hours=8))
         start_time = datetime.now(tz)
         if start_time.hour < 20:
-            end_time = datetime(start_time.year,start_time.month,start_time.day,20,0,0,tzinfo=tz)
+            end_time = datetime(start_time.year, start_time.month, start_time.day, 20, 0, 0, tzinfo=tz)
         else:
             end_time = start_time + timedelta(days=1)
-        
+
         start_time += timedelta(seconds=10)
         event = await channel.guild.create_scheduled_event(name="【快樂營中央選舉】投票階段",start_time=start_time,end_time=end_time,location="<#1163127708839071827>")
-        
+
     async def birtday_task(self):
         channel = self.bot.get_channel(566533708371329026)
         await channel.send("今天是個特別的日子，別忘記了喔⭐")
@@ -363,11 +369,12 @@ class task(Cog_Extension):
                 break
             await asyncio.sleep(120)
 
-async def giveaway_auto_end(bot:discord.Bot, view:GiveawayView):
+
+async def giveaway_auto_end(bot: discord.Bot, view: GiveawayView):
     log.debug(f"giveaway_auto_end: {view.giveaway.id}")
     if view.is_finished():
         return
-    
+
     embed = view.end_giveaway()
     channel = bot.get_channel(view.giveaway.channel_id)
     try:
@@ -376,7 +383,7 @@ async def giveaway_auto_end(bot:discord.Bot, view:GiveawayView):
     except discord.NotFound:
         log.warning(f"giveaway_auto_end: message not found {view.giveaway.message_id}")
         return
-    
+
 
 def setup(bot):
     bot.add_cog(task(bot))

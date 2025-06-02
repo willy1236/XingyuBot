@@ -23,29 +23,29 @@ class BaseSchema(SQLModel):
         return f'{self.__table_args__["schema"]}.{self.__tablename__}'
 
 class DatabaseSchema(BaseSchema):
-    __table_args__ = {'schema': 'database'}
+    __table_args__ = {"schema": "database"}
 
 class BasicSchema(BaseSchema):
-    __table_args__ = {'schema': 'stardb_basic'}
+    __table_args__ = {"schema": "stardb_basic"}
 class AlchemyBasicSchema(Base):
     __abstract__ = True
-    __table_args__ = {'schema': 'stardb_basic'}
+    __table_args__ = {"schema": "stardb_basic"}
 
 class BackupSchema(BaseSchema):
-    __table_args__ = {'schema': 'stardb_backup'}
+    __table_args__ = {"schema": "stardb_backup"}
 
 class IdbaseSchema(BaseSchema):
-    __table_args__ = {'schema': 'stardb_idbase'}
+    __table_args__ = {"schema": "stardb_idbase"}
 
 
 class RPGSchema(BaseSchema):
-    __table_args__ = {'schema': 'stardb_rpg'}
+    __table_args__ = {"schema": "stardb_rpg"}
 
 class TokensSchema(BaseSchema):
-    __table_args__ = {'schema': 'stardb_tokens'}
+    __table_args__ = {"schema": "stardb_tokens"}
 
 class UserSchema(BaseSchema):
-    __table_args__ = {'schema': 'stardb_user'}
+    __table_args__ = {"schema": "stardb_user"}
 
 class CacheSchema(BaseSchema):
-    __table_args__ = {'schema': 'stardb_cache'}
+    __table_args__ = {"schema": "stardb_cache"}

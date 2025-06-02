@@ -3,8 +3,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
 import discord
-from pydantic import (BaseModel, ConfigDict, Field, HttpUrl, computed_field,
-                      field_validator, model_validator)
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, computed_field, field_validator, model_validator
 
 from ..fileDatabase import Jsondb
 from ..settings import tz
@@ -30,7 +29,7 @@ class TwitchUser(BaseModel):
     created_at: datetime
     url: str = None
 
-    @model_validator(mode='after')
+    @model_validator(mode="after")
     def __post_init__(self):
         self.url = f"https://www.twitch.tv/{self.login}"
         self.created_at = self.created_at.astimezone(tz=tz)
@@ -47,8 +46,7 @@ class TwitchUser(BaseModel):
         embed.set_image(url=self.offline_image_url)
         embed.set_author(name=self.login, icon_url=self.profile_image_url)
         embed.add_field(name="觀看數", value=self.view_count)
-        embed.add_field(
-            name="頻道創建日期", value=self.created_at.strftime('%Y/%m/%d %H:%M:%S'))
+        embed.add_field(name="頻道創建日期", value=self.created_at.strftime("%Y/%m/%d %H:%M:%S"))
         # embed.add_field(name="聯絡郵件",value=self.email)
         embed.set_footer(text=self.id)
         return embed
@@ -73,10 +71,9 @@ class TwitchStream(BaseModel):
     url: str = None
     live_thumbnail_url: str = None
 
-    @model_validator(mode='after')
+    @model_validator(mode="after")
     def __post_init__(self):
-        self.thumbnail_url = self.thumbnail_url.replace(
-            '{width}', '960').replace('{height}', '540')
+        self.thumbnail_url = self.thumbnail_url.replace("{width}", "960").replace("{height}", "540")
         self.started_at = self.started_at.astimezone(tz=tz)
         self.url = f"https://www.twitch.tv/{self.user_login}"
         now = datetime.now(tz=tz)
@@ -118,12 +115,11 @@ class TwitchVideo(BaseModel):
     duration: str
     muted_segments: list[dict] | None = None
 
-    @model_validator(mode='after')
+    @model_validator(mode="after")
     def __post_init__(self):
         self.created_at = self.created_at.astimezone(tz=tz)
         self.published_at = self.published_at.astimezone(tz=tz)
-        self.thumbnail_url = self.thumbnail_url.replace(
-            '%{width}', '960').replace('%{height}', '540')
+        self.thumbnail_url = self.thumbnail_url.replace("%{width}", "960").replace("%{height}", "540")
         return self
 
     def embed(self):
@@ -160,11 +156,10 @@ class TwitchClip(BaseModel):
     vod_offset: int | None = None
     is_featured: bool
 
-    @model_validator(mode='after')
+    @model_validator(mode="after")
     def __post_init__(self):
         self.created_at = self.created_at.astimezone(tz=tz)
-        self.thumbnail_url = self.thumbnail_url.replace(
-            '{width}', '960').replace('{height}', '540')
+        self.thumbnail_url = self.thumbnail_url.replace("{width}", "960").replace("{height}", "540")
         return self
 
     def embed(self, original_video: TwitchVideo = None):
@@ -264,7 +259,7 @@ class YoutubeChannel(BaseModel):
     snippet: ChannelSnippet
     statistics: ChannelStatistics
 
-    @model_validator(mode='after')
+    @model_validator(mode="after")
     def __post_init__(self):
         self.snippet.publishedAt = self.snippet.publishedAt.astimezone(tz=tz)
         return self
@@ -278,8 +273,7 @@ class YoutubeChannel(BaseModel):
             timestamp=self.snippet.publishedAt
         )
         embed.set_image(url=self.snippet.thumbnails.default.url)
-        embed.add_field(
-            name="頻道創建時間", value=self.snippet.publishedAt.strftime('%Y/%m/%d %H:%M:%S'))
+        embed.add_field(name="頻道創建時間", value=self.snippet.publishedAt.strftime("%Y/%m/%d %H:%M:%S"))
         embed.add_field(
             name="訂閱數", value=f"{self.statistics.subscriberCount:,}")
         embed.add_field(name="影片數", value=f"{self.statistics.videoCount:,}")
@@ -295,7 +289,7 @@ class YouTubeStream(BaseModel):
     id: IdInfo
     snippet: StreamSnippet
 
-    @model_validator(mode='after')
+    @model_validator(mode="after")
     def __post_init__(self):
         self.snippet.publishedAt = self.snippet.publishedAt.astimezone(tz=tz)
         self.snippet.publishTime = self.snippet.publishTime.astimezone(tz=tz)
@@ -309,7 +303,7 @@ class YoutubeVideo(BaseModel):
     snippet: VideoSnippet
     liveStreamingDetails: LiveStreamingDetails | None = None
 
-    @model_validator(mode='after')
+    @model_validator(mode="after")
     def __post_init__(self):
         self.snippet.publishedAt = self.snippet.publishedAt.astimezone(tz=tz)
         if self.liveStreamingDetails:
@@ -340,19 +334,15 @@ class YoutubeVideo(BaseModel):
                     self.snippet.liveBroadcastContent, "未知"))
 
             if self.liveStreamingDetails.scheduledStartTime and self.snippet.liveBroadcastContent == "upcoming":
-                embed.add_field(name="預定直播時間", value=self.liveStreamingDetails.scheduledStartTime.strftime(
-                    '%Y/%m/%d %H:%M:%S'))
+                embed.add_field(name="預定直播時間", value=self.liveStreamingDetails.scheduledStartTime.strftime("%Y/%m/%d %H:%M:%S"))
             elif self.liveStreamingDetails.actualStartTime:
-                embed.add_field(name="直播開始時間", value=self.liveStreamingDetails.actualStartTime.strftime(
-                    '%Y/%m/%d %H:%M:%S'))
+                embed.add_field(name="直播開始時間", value=self.liveStreamingDetails.actualStartTime.strftime("%Y/%m/%d %H:%M:%S"))
             if self.liveStreamingDetails.actualEndTime:
-                embed.add_field(name="直播結束時間", value=self.liveStreamingDetails.actualEndTime.strftime(
-                    '%Y/%m/%d %H:%M:%S'))
+                embed.add_field(name="直播結束時間", value=self.liveStreamingDetails.actualEndTime.strftime("%Y/%m/%d %H:%M:%S"))
         else:
             embed.add_field(name="現況", value=ytvideo_lives.get(
                 self.snippet.liveBroadcastContent, "未知"))
-            embed.add_field(name="上傳時間", value=self.snippet.publishedAt.strftime(
-                '%Y/%m/%d %H:%M:%S'), inline=False)
+            embed.add_field(name="上傳時間", value=self.snippet.publishedAt.strftime("%Y/%m/%d %H:%M:%S"), inline=False)
 
         embed.set_image(url=self.snippet.thumbnails.high.url)
         return embed
@@ -360,26 +350,26 @@ class YoutubeVideo(BaseModel):
     @property
     def is_live_end(self) -> bool:
         return bool(self.liveStreamingDetails and self.liveStreamingDetails.actualEndTime)
-    
+
     @property
     def is_live_upcoming(self) -> bool:
         return self.snippet.liveBroadcastContent == "upcoming"
 
 
 class YoutubeRSSVideo(BaseModel):
-    model_config = ConfigDict(extra='ignore')
+    model_config = ConfigDict(extra="ignore")
 
     id: str
     link: HttpUrl
     yt_videoid: str
     yt_channelid: str
     title: str
-    author_name: str = Field(alias='author')
-    uplood_at: datetime = Field(alias='published')
-    updated_at: datetime = Field(alias='updated')
+    author_name: str = Field(alias="author")
+    uplood_at: datetime = Field(alias="published")
+    updated_at: datetime = Field(alias="updated")
     media_thumbnail: list[YoutubeThumbnail]
 
-    @model_validator(mode='after')
+    @model_validator(mode="after")
     def __post_init__(self):
         self.uplood_at = self.uplood_at.astimezone(tz=tz)
         self.updated_at = self.updated_at.astimezone(tz=tz)
@@ -393,8 +383,7 @@ class YoutubeRSSVideo(BaseModel):
             color=0xff0000,
             timestamp=self.uplood_at
         )
-        embed.add_field(name="上傳時間", value=self.uplood_at.strftime(
-            '%Y/%m/%d %H:%M:%S'), inline=False)
+        embed.add_field(name="上傳時間", value=self.uplood_at.strftime("%Y/%m/%d %H:%M:%S"), inline=False)
         # embed.add_field(name="更新時間",value=self.updated_at.strftime('%Y/%m/%d %H:%M:%S'),inline=True)
         embed.set_image(url=self.media_thumbnail[0].url)
         return embed
@@ -435,7 +424,7 @@ class RssHubTwitterTweet(BaseModel):
     author: str
     author_detail: dict
 
-    @field_validator('published_parsed', mode='before')
+    @field_validator("published_parsed", mode="before")
     @classmethod
     def parse_published_parsed(cls, v):
         if isinstance(v, datetime):

@@ -3,10 +3,10 @@
 """
 import tweepy
 
+from .database import sqldb
 from .dataExtractor import *
 from .dataExtractor.others import McssAPI
 from .fileDatabase import Jsondb
-from .database import sqldb
 from .types import APIType
 
 __all__ = [
@@ -38,7 +38,7 @@ apexapi = ApexAPI()
 cli_api = CLIInterface()
 
 # jsondb
-main_guilds: list[int] = Jsondb.config.get('main_guilds', [])
-happycamp_guild: list[int] = Jsondb.config.get('happycamp_guild', [])
-debug_guilds: list[int] = Jsondb.config.get('debug_guilds', [])
+main_guilds: list[int] = Jsondb.config.get("main_guilds", [])
+happycamp_guild: list[int] = Jsondb.config.get("happycamp_guild", [])
+debug_guilds: list[int] = Jsondb.config.get("debug_guilds", [])
 debug_mode: bool = Jsondb.config.get("debug_mode", True)

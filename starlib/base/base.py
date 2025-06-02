@@ -45,6 +45,6 @@ class ListObject(list[T]):
 
     def __repr__(self):
         return repr(self.items)
-    
+
     def __iter__(self):
         return iter(self.items)

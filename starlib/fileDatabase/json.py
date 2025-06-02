@@ -82,10 +82,10 @@ class JsonDatabase():
 
     _DBPATH = "./database"
     _PATH_DICT = {
-        'lol_jdict': f'{_DBPATH}/lol_dict.json',
-        'jdict': f'{_DBPATH}/dict.json',
-        'picdata': f'{_DBPATH}/picture.json',
-        'options': f'{_DBPATH}/command_option.json'
+        "lol_jdict": f"{_DBPATH}/lol_dict.json",
+        "jdict": f"{_DBPATH}/dict.json",
+        "picdata": f"{_DBPATH}/picture.json",
+        "options": f"{_DBPATH}/command_option.json",
     }
 
     def __init__(self, create_file=True):
@@ -94,17 +94,17 @@ class JsonDatabase():
         # craete folder
         if not os.path.isdir(self._DBPATH):
             os.mkdir(self._DBPATH)
-            logger.info(f">> Created folder: {self._DBPATH} <<")
+            logger.info(">> Created folder: %s <<", self._DBPATH)
 
         for file, path in self._PATH_DICT.items():
             if not os.path.isfile(path):
                 if not create_file:
                     continue
-                with open(path, 'w', encoding='utf-8') as jfile:
+                with open(path, "w", encoding="utf-8") as jfile:
                     json.dump({}, jfile, indent=4)
-                    logger.info(f">> Created json file: {file} <<")
+                    logger.info(">> Created json file: %s <<", file)
 
-            with open(path, mode='r', encoding='utf8') as jfile:
+            with open(path, mode="r", encoding="utf8") as jfile:
                 setattr(self, file, json.load(jfile))
 
     def write(self, file_name: str, data: dict):
@@ -121,7 +121,7 @@ class JsonDatabase():
         try:
             location = self._PATH_DICT[file_name]
             setattr(self, file_name, data)
-            with open(file=location, mode='w', encoding='utf8') as jfile:
+            with open(file=location, mode="w", encoding="utf8") as jfile:
                 json.dump(data, jfile, indent=4, ensure_ascii=False)
         except KeyError as e:
             raise KeyError("此項目沒有在資料庫中") from e

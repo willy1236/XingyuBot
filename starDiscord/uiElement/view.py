@@ -11,12 +11,11 @@ import matplotlib
 import numpy as np
 
 from starlib import BotEmbed, Jsondb, log, sqldb, tz
-from starlib.models.mysql import Poll, PollRole, Giveaway, GiveawayUser
+from starlib.models.mysql import Giveaway, GiveawayUser, Poll, PollRole
 
 if TYPE_CHECKING:
     from starlib.database import SQLEngine
-    from starlib.models.mysql import (PollOption, TRPGStoryOption,
-                                      TRPGStoryPlot, ReactionRole)
+    from starlib.models.mysql import PollOption, ReactionRole, TRPGStoryOption, TRPGStoryPlot
 
 class DeletePetView(discord.ui.View):
     def __init__(self):
@@ -59,9 +58,9 @@ class PollOptionButton(discord.ui.Button):
     def __init__(self,option:PollOption, custom_id:str, row:int=None):
         super().__init__(label=option.option_name,custom_id=custom_id,row=row)
         self.option = option
-    
-    async def callback(self,interaction):
-        view:PollView = self.view
+
+    async def callback(self, interaction):
+        view: PollView = self.view
         can_vote = False
         have_only_role = False
         vote_magnification = 1
@@ -75,77 +74,84 @@ class PollOptionButton(discord.ui.Button):
 
                 if view.role_dict[roleid][1] > vote_magnification:
                     vote_magnification = view.role_dict[roleid][1]
-        
-        if not view.role_dict or (have_only_role and can_vote):            
-            r = view.sqldb.set_user_poll(self.option.poll_id,interaction.user.id,self.option.option_id,datetime.now(),vote_magnification, view.poll.number_of_user_votes)
+
+        if not view.role_dict or (have_only_role and can_vote):
+            r = view.sqldb.set_user_poll(
+                self.option.poll_id, interaction.user.id, self.option.option_id, datetime.now(), vote_magnification, view.poll.number_of_user_votes
+            )
             if r == 2:
-                await interaction.response.send_message(f"{interaction.user.mention} 已投了 {view.poll.number_of_user_votes} 票而無法投票",ephemeral=True)
+                await interaction.response.send_message(f"{interaction.user.mention} 已投了 {view.poll.number_of_user_votes} 票而無法投票", ephemeral=True)
             elif r == 1:
-                await interaction.response.send_message(f"{interaction.user.mention} 已投票給 {self.label} {vote_magnification} 票",ephemeral=True)
+                await interaction.response.send_message(f"{interaction.user.mention} 已投票給 {self.label} {vote_magnification} 票", ephemeral=True)
             else:
-                await interaction.response.send_message(f"{interaction.user.mention} 已取消投票給 {self.label}",ephemeral=True)
+                await interaction.response.send_message(f"{interaction.user.mention} 已取消投票給 {self.label}", ephemeral=True)
         else:
-            await interaction.response.send_message(f"{interaction.user.mention}：你沒有投票資格",ephemeral=True)
+            await interaction.response.send_message(f"{interaction.user.mention}：你沒有投票資格", ephemeral=True)
+
 
 class PollEndButton(discord.ui.Button):
-    def __init__(self,poll_id,created_id,bot:discord.Bot):
-        super().__init__(label="結算投票",custom_id=f"end_poll_{poll_id}",style=discord.ButtonStyle.danger)
+    def __init__(self, poll_id, created_id, bot: discord.Bot):
+        super().__init__(label="結算投票", custom_id=f"end_poll_{poll_id}", style=discord.ButtonStyle.danger)
         self.poll_id = poll_id
         self.created_id = created_id
         self.bot = bot
 
-    async def callback(self,interaction):
+    async def callback(self, interaction):
         if interaction.user.id == self.created_id or (self.bot and await self.bot.is_owner(interaction.user)):
-            view:PollView = self.view
+            view: PollView = self.view
             view.clear_items()
             view.poll.is_on = 0
             view.sqldb.merge(view.poll)
 
-            embed, labels, sizes = view.results_embed(interaction,True) # type: ignore
+            embed, labels, sizes = view.results_embed(interaction, True)  # type: ignore
             image_buffer = view.generate_chart(labels, sizes)
 
-            await interaction.response.edit_message(embed=embed,view=view,file=discord.File(image_buffer,filename="pie.png"))
+            await interaction.response.edit_message(embed=embed, view=view, file=discord.File(image_buffer, filename="pie.png"))
         else:
-            await interaction.response.send_message(f"錯誤：只有投票發起人才能結算",ephemeral=True)
-            
+            await interaction.response.send_message(f"錯誤：只有投票發起人才能結算", ephemeral=True)
+
+
 class PollResultButton(discord.ui.Button):
-    def __init__(self,poll_id):
-        super().__init__(label="查看結果",custom_id=f"poll_result_{poll_id}",style=discord.ButtonStyle.primary)
+    def __init__(self, poll_id):
+        super().__init__(label="查看結果", custom_id=f"poll_result_{poll_id}", style=discord.ButtonStyle.primary)
         self.poll_id = poll_id
 
-    async def callback(self,interaction):
-        view:PollView = self.view    
+    async def callback(self, interaction):
+        view: PollView = self.view
         if not view.poll.results_only_initiator:
             embed = view.results_embed(interaction)
-            await interaction.response.send_message(embed=embed,ephemeral=True)
+            await interaction.response.send_message(embed=embed, ephemeral=True)
 
         else:
-            await interaction.response.send_message(f"錯誤：此投票只有發起人才能查看結果",ephemeral=True)
+            await interaction.response.send_message(f"錯誤：此投票只有發起人才能查看結果", ephemeral=True)
+
 
 class PollCanenlButton(discord.ui.Button):
-    def __init__(self,poll_id):
-        super().__init__(label="取消投票",custom_id=f"vote_canenl_{poll_id}",style=discord.ButtonStyle.primary)
+    def __init__(self, poll_id):
+        super().__init__(label="取消投票", custom_id=f"vote_canenl_{poll_id}", style=discord.ButtonStyle.primary)
         self.poll_id = poll_id
 
-    async def callback(self,interaction):
-        view:PollView = self.view
+    async def callback(self, interaction):
+        view: PollView = self.view
         view.sqldb.remove_user_poll(self.poll_id, interaction.user.id)
-        await interaction.response.send_message(f"{interaction.user.mention} 已取消投票",ephemeral=True)
+        await interaction.response.send_message(f"{interaction.user.mention} 已取消投票", ephemeral=True)
+
 
 class PollNowButton(discord.ui.Button):
-    def __init__(self,poll_id):
-        super().__init__(label="目前選擇",custom_id=f"vote_now_{poll_id}",style=discord.ButtonStyle.primary)
+    def __init__(self, poll_id):
+        super().__init__(label="目前選擇", custom_id=f"vote_now_{poll_id}", style=discord.ButtonStyle.primary)
         self.poll_id = poll_id
-    
-    async def callback(self,interaction):
-        view:PollView = self.view
+
+    async def callback(self, interaction):
+        view: PollView = self.view
         dbdata = view.sqldb.get_user_poll(self.poll_id, interaction.user.id)
         if dbdata:
             vote_mag = dbdata[0][0].vote_magnification
             options_name = ",".join([data[1] for data in dbdata])
-            await interaction.response.send_message(f"{interaction.user.mention} 投給 {options_name} {vote_mag}票",ephemeral=True)
+            await interaction.response.send_message(f"{interaction.user.mention} 投給 {options_name} {vote_mag}票", ephemeral=True)
         else:
-            await interaction.response.send_message(f"{interaction.user.mention} 沒有投給任何選項",ephemeral=True)
+            await interaction.response.send_message(f"{interaction.user.mention} 沒有投給任何選項", ephemeral=True)
+
 
 class PollView(discord.ui.View):
     if TYPE_CHECKING:
@@ -153,14 +159,13 @@ class PollView(discord.ui.View):
         sqldb: SQLEngine
         bot: discord.Bot | None
 
-    def __init__(self, poll:Poll, sqldb, bot=None):
+    def __init__(self, poll: Poll, sqldb, bot=None):
         super().__init__(timeout=None)
         self.poll = poll
         self.sqldb = sqldb
         self.bot = bot
         self._role_dict = {}
         # TODO: change_vote (decide if user can change his/her vote or not)
-        
 
         self.add_item(PollEndButton(poll.poll_id, poll.creator_id, bot))
         if poll.check_results_in_advance:
@@ -168,31 +173,43 @@ class PollView(discord.ui.View):
         self.add_item(PollCanenlButton(poll.poll_id))
         self.add_item(PollNowButton(poll.poll_id))
 
-        
         dbdata = self.sqldb.get_poll_options(poll.poll_id)
         i = 5
         for option in dbdata:
             custom_id = f"poll_{poll.poll_id}_{option.option_id}"
-            self.add_item(PollOptionButton(option=option, custom_id=custom_id, row=int(i/5)))
+            self.add_item(PollOptionButton(option=option, custom_id=custom_id, row=int(i / 5)))
             i += 1
-    
+
     @classmethod
-    def create(cls,
-               title:str,
-               options:list,
-               creator_id:int,
-               guild_id:int,
-               ban_alternate_account_voting=False,
-               show_name=False,
-               check_results_in_advance=True,
-               results_only_initiator=False,
-               number_of_user_votes=1,
-               only_role_list:list=None,
-               role_magnification_dict:dict=None,
-               bot:discord.Bot=None
-            ):
+    def create(
+        cls,
+        title: str,
+        options: list,
+        creator_id: int,
+        guild_id: int,
+        ban_alternate_account_voting=False,
+        show_name=False,
+        check_results_in_advance=True,
+        results_only_initiator=False,
+        number_of_user_votes=1,
+        only_role_list: list = None,
+        role_magnification_dict: dict = None,
+        bot: discord.Bot = None,
+    ):
         """創建投票"""
-        poll = Poll(title=title, creator_id=creator_id, created_at=datetime.now(tz), is_on=True, message_id=None, guild_id=guild_id, ban_alternate_account_voting=ban_alternate_account_voting, show_name=show_name, check_results_in_advance=check_results_in_advance, results_only_initiator=results_only_initiator, number_of_user_votes=number_of_user_votes)
+        poll = Poll(
+            title=title,
+            creator_id=creator_id,
+            created_at=datetime.now(tz),
+            is_on=True,
+            message_id=None,
+            guild_id=guild_id,
+            ban_alternate_account_voting=ban_alternate_account_voting,
+            show_name=show_name,
+            check_results_in_advance=check_results_in_advance,
+            results_only_initiator=results_only_initiator,
+            number_of_user_votes=number_of_user_votes,
+        )
         sqldb.add(poll)
         sqldb.add_poll_option(poll.poll_id, options)
 
@@ -204,7 +221,7 @@ class PollView(discord.ui.View):
         poll_role_dict = {}
         for role_id in only_role_list:
             poll_role_dict[role_id] = [True, 1]
-            
+
         for role_id in role_magnification_dict:
             if role_id in poll_role_dict:
                 poll_role_dict[role_id][1] = role_magnification_dict[role_id]
@@ -219,7 +236,6 @@ class PollView(discord.ui.View):
         view = cls(poll, sqldb, bot)
         return view
 
-
     @property
     def role_dict(self) -> dict[int, tuple[bool, int]]:
         if not self._role_dict:
@@ -230,9 +246,9 @@ class PollView(discord.ui.View):
                     role_id = data.role_id
                     is_only_role = data.is_only_role
                     role_magnification = data.role_magnification
-                    self._role_dict[role_id] = (is_only_role,role_magnification)
+                    self._role_dict[role_id] = (is_only_role, role_magnification)
         return self._role_dict
-        
+
     def embed(self,guild:discord.Guild):
         """guild: 提供投票所在的伺服器"""
         only_role_list = []
@@ -244,10 +260,14 @@ class PollView(discord.ui.View):
             if self.role_dict[roleid][1] > 1:
                 mag = self.role_dict[roleid][1]
                 role_magification_list.append(f"{role.mention}({mag})" if role else f"{roleid}({mag})")
-        
+
         description = ""
         description += "- 使用投票實名制" if self.poll.show_name else "- 匿名投票"
-        description += ("\n- 僅限發起人能預先查看結果" if self.poll.results_only_initiator else "\n- 所有人都能預先查看結果") if self.poll.check_results_in_advance else "\n- 結果將在結束時公佈"
+        description += (
+            ("\n- 僅限發起人能預先查看結果" if self.poll.results_only_initiator else "\n- 所有人都能預先查看結果")
+            if self.poll.check_results_in_advance
+            else "\n- 結果將在結束時公佈"
+        )
         description += f"\n- 可選擇 {self.poll.number_of_user_votes} 個選項"
         if self.poll.ban_alternate_account_voting:
             description += f"\n- 小帳不算有效票"
@@ -256,14 +276,14 @@ class PollView(discord.ui.View):
             description += "\n- 可投票身分組：" + ",".join(only_role_list)
         if role_magification_list:
             description += "\n- 身分組投票權重：" + ",".join(role_magification_list)
-        embed = BotEmbed.general(name="投票系統",title=self.poll.title,description=description)
+        embed = BotEmbed.general(name="投票系統", title=self.poll.title, description=description)
         embed.set_footer(text=f"投票ID：{self.poll.poll_id}")
 
         author = guild.get_member(self.poll.creator_id)
         if author:
             embed.set_author(name=author.name, icon_url=author.avatar.url)
         return embed
-    
+
     def results_embed(self, interaction: discord.Interaction, labels_and_sizes=False) -> tuple[discord.Embed, list, list] | discord.Embed:
         """
         Generates an embed object containing the results of a poll.
@@ -273,7 +293,7 @@ class PollView(discord.ui.View):
             labels_and_sizes (bool, optional): Whether to include labels and sizes for each option. Defaults to False.
 
         Returns:
-            tuple[discord.Embed, list, list] | discord.Embed: If `labels_and_sizes` is True, returns a tuple containing the embed object, a list of labels, and a list of sizes. 
+            tuple[discord.Embed, list, list] | discord.Embed: If `labels_and_sizes` is True, returns a tuple containing the embed object, a list of labels, and a list of sizes.
             If `labels_and_sizes` is False, returns only the embed object.
         """
         vote_count_data = self.sqldb.get_poll_vote_count(self.poll.poll_id, not self.poll.ban_alternate_account_voting)
@@ -321,25 +341,27 @@ class PollView(discord.ui.View):
             return embed, labels, sizes
         else:
             return embed
-        
-    def generate_chart(self,labels,sizes):
+
+    def generate_chart(self, labels, sizes):
         import matplotlib.pyplot as plt
+
         fig, ax = plt.subplots()
-        #圖表製作
-        def data_string(s,d) -> str:
-            t = int(round(s/100. * float(sum(d))))     # 透過百分比反推原本的數值
-            return f'{t}\n（{s:.1f}%）'
+
+        # 圖表製作
+        def data_string(s, d) -> str:
+            t = int(round(s / 100.0 * float(sum(d))))  # 透過百分比反推原本的數值
+            return f"{t}\n（{s:.1f}%）"
 
         # 字形
-        matplotlib.rc('font', family='Microsoft JhengHei')
+        matplotlib.rc("font", family="Microsoft JhengHei")
         matplotlib.rcParams["font.sans-serif"] = ["Microsoft JhengHei"]
 
         # 設置顏色
-        colors = ['gold', 'yellowgreen', 'lightcoral', 'lightskyblue']
+        colors = ["gold", "yellowgreen", "lightcoral", "lightskyblue"]
 
         # 設置圓餅圖的突出顯示
-        #explode = (0.1, 0, 0, 0)  # 將第一塊突出顯示
-    
+        # explode = (0.1, 0, 0, 0)  # 將第一塊突出顯示
+
         # 繪製圓餅圖
         ax.pie(sizes, labels=labels, colors=colors, autopct=lambda i: data_string(i,sizes), shadow=False, startangle=140)
         #plt.pie()
@@ -349,55 +371,63 @@ class PollView(discord.ui.View):
         #plt.title()
 
         image_buffer = io.BytesIO()
-        plt.savefig(image_buffer, format='png', dpi=200, bbox_inches='tight')
+        plt.savefig(image_buffer, format="png", dpi=200, bbox_inches="tight")
         image_buffer.seek(0)
-        
+
         return image_buffer
 
+
 class ReactionRoleButton(discord.ui.Button):
-    def __init__(self, dbdata:ReactionRole):
-        super().__init__(label=dbdata.title, style=dbdata.style if dbdata.style else discord.ButtonStyle.primary, emoji=dbdata.emoji, custom_id=f"ReactionRole_{dbdata.message_id}_{dbdata.role_id}")
+    def __init__(self, dbdata: ReactionRole):
+        super().__init__(
+            label=dbdata.title,
+            style=dbdata.style if dbdata.style else discord.ButtonStyle.primary,
+            emoji=dbdata.emoji,
+            custom_id=f"ReactionRole_{dbdata.message_id}_{dbdata.role_id}",
+        )
         self.role_id = dbdata.role_id
 
-    async def callback(self,interaction):
+    async def callback(self, interaction):
         role = interaction.guild.get_role(self.role_id)
         if not role:
-            await interaction.response.send_message(f"錯誤：身分組不存在，請聯絡管理員",ephemeral=True)
+            await interaction.response.send_message(f"錯誤：身分組不存在，請聯絡管理員", ephemeral=True)
             return
-        
+
         if interaction.user.get_role(self.role_id):
             await interaction.user.remove_roles(role)
-            await interaction.response.send_message(f"已移除 {role.name} 身分組！",ephemeral=True)
+            await interaction.response.send_message(f"已移除 {role.name} 身分組！", ephemeral=True)
         else:
-            await interaction.user.add_roles(role)        
-            await interaction.response.send_message(f"已給予 {role.name} 身分組！",ephemeral=True)
+            await interaction.user.add_roles(role)
+            await interaction.response.send_message(f"已給予 {role.name} 身分組！", ephemeral=True)
+
 
 class ReactionRoleView(discord.ui.View):
-    def __init__(self, message_id, roles:list[ReactionRole]):
+    def __init__(self, message_id, roles: list[ReactionRole]):
         super().__init__(timeout=None)
         self.message_id = message_id
 
         for r in roles:
             self.add_item(ReactionRoleButton(r))
 
-    async def on_error(self, error:Exception, item:discord.ui.Item, interaction:discord.Interaction):
+    async def on_error(self, error: Exception, item: discord.ui.Item, interaction: discord.Interaction):
         if isinstance(error, discord.Forbidden):
-            await interaction.response.send_message(f"錯誤：我沒有權限給予或移除身分組，可能為我的身分組位階較低或缺少必要權限",ephemeral=True)
+            await interaction.response.send_message(f"錯誤：我沒有權限給予或移除身分組，可能為我的身分組位階較低或缺少必要權限", ephemeral=True)
         else:
             await interaction.response.send_message(f"發生錯誤：{error}", ephemeral=True)
             log.error(f"ReactionRoleView error: {item} / {error}")
 
+
 class TRPGPlotButton(discord.ui.Button):
-    def __init__(self,option:TRPGStoryOption):
+    def __init__(self, option: TRPGStoryOption):
         super().__init__(label=option.option_title, style=discord.ButtonStyle.primary, custom_id=f"plot_{option.plot.id}_{option.option_id}")
         self.option = option
 
     async def callback(self, interaction):
-        view:TRPGPlotView = self.view
+        view: TRPGPlotView = self.view
         if self.option.check_ability:
             ability = view.sqldb.get_trpg_cheracter_ability(interaction.user.id, self.option.check_ability)
-            rd = random.randint(1,100)
-            
+            rd = random.randint(1, 100)
+
             text_list = [
                 f"{ability.character.character_name if ability.character else interaction.user.mention} 已選擇 {self.label}\n"
                 f"進行 {ability.ability.ability_name} 檢定：{rd} <= {ability.value}",
@@ -407,18 +437,18 @@ class TRPGPlotButton(discord.ui.Button):
             else:
                 text_list.append(f"，失敗！")
                 if self.option.check_ability == 1:
-                    #掉san
+                    # 掉san
                     dice_n, dice = self.option.san_check_fall_dice.split("d")
                     san_reduce = 0
                     for _ in range(int(dice_n)):
-                        san_reduce += random.randint(1,int(dice))
+                        san_reduce += random.randint(1, int(dice))
 
                     ability.value -= san_reduce
                     text_list.append(f"\n{self.option.san_check_fall_dice}：{san_reduce}\nSAN值-{san_reduce}，剩餘{ability.value}")
                     view.sqldb.merge(ability)
                     if ability.value < ability.san_lower_limit:
                         text_list.append(f"\nSAN值低於{ability.san_lower_limit}，進入瘋狂狀態")
-                        await view.next_plot(random.choice([1,2]))
+                        await view.next_plot(random.choice([1, 2]))
 
             text = "".join(text_list)
             await interaction.response.send_message(f"{text}", ephemeral=False)
@@ -427,9 +457,12 @@ class TRPGPlotButton(discord.ui.Button):
 
         else:
             cheracter = view.sqldb.get_trpg_cheracter(interaction.user.id)
-            await interaction.response.send_message(f"{cheracter.character_name if cheracter else interaction.user.mention} 已選擇 {self.label}", ephemeral=False)
+            await interaction.response.send_message(
+                f"{cheracter.character_name if cheracter else interaction.user.mention} 已選擇 {self.label}", ephemeral=False
+            )
             await view.next_plot(self.option.lead_to_plot)
-            
+
+
 class TRPGPlotView(discord.ui.View):
     def __init__(self, plot:TRPGStoryPlot, sqldb:SQLEngine):
         super().__init__(timeout=None)
@@ -441,7 +474,7 @@ class TRPGPlotView(discord.ui.View):
     def embed(self):
         embed = BotEmbed.general("TRPG故事線", Jsondb.get_picture("dice_001"), title=self.plot.title, description=self.plot.content)
         return embed
-    
+
     async def next_plot(self, plot_id):
         self.disable_all_items()
         await self.message.edit(view=self)
@@ -450,13 +483,14 @@ class TRPGPlotView(discord.ui.View):
         await self.message.channel.send(embed=view.embed(), view=view)
         self.stop()
 
+
 class GiveawayJoinButton(discord.ui.Button):
     def __init__(self, giveaway: Giveaway):
         super().__init__(label="參加抽獎", style=discord.ButtonStyle.primary, custom_id=f"giveaway_join_{giveaway.id}")
 
     async def callback(self, interaction: discord.Interaction):
         view: GiveawayView = self.view
-        giveaway_user =  view.sqldb.get_user_in_giveaway(view.giveaway.id, interaction.user.id)
+        giveaway_user = view.sqldb.get_user_in_giveaway(view.giveaway.id, interaction.user.id)
         if giveaway_user:
             view.sqldb.delete(giveaway_user)
             await interaction.response.send_message(f"{interaction.user.mention} 離開了抽獎", ephemeral=True)
@@ -464,6 +498,7 @@ class GiveawayJoinButton(discord.ui.Button):
             giveaway_user = GiveawayUser(giveaway_id=view.giveaway.id, user_id=interaction.user.id, user_weight=1, join_at=datetime.now(tz))
             view.sqldb.add(giveaway_user)
             await interaction.response.send_message(f"{interaction.user.mention} 參加了抽獎！", ephemeral=True)
+
 
 class GiveawayEndButton(discord.ui.Button):
     def __init__(self, giveaway: Giveaway):
@@ -477,8 +512,9 @@ class GiveawayEndButton(discord.ui.Button):
         else:
             await interaction.response.send_message("只有發起人才能結束抽獎！", ephemeral=True)
 
+
 class GiveawayView(discord.ui.View):
-    def __init__(self, giveaway: Giveaway, sqldb:SQLEngine, bot:discord.Bot, timeout=None):
+    def __init__(self, giveaway: Giveaway, sqldb: SQLEngine, bot: discord.Bot, timeout=None):
         super().__init__(timeout=timeout)
         self.giveaway = giveaway
         self.sqldb = sqldb
@@ -498,8 +534,8 @@ class GiveawayView(discord.ui.View):
         embed.set_footer(text=f"抽獎ID：{self.giveaway.id}")
         embed.timestamp = self.giveaway.created_at
         return embed
-    
-    def result_embed(self, joiner_count:int):
+
+    def result_embed(self, joiner_count: int):
         description = self.giveaway.description or "抽獎結束" if joiner_count else "沒有參加抽獎的用戶"
         description += f"\n- 中獎人數：{self.giveaway.winner_count} / {joiner_count} 人"
         description += f"\n- 舉辦人：{self.bot.get_user(self.giveaway.creator_id).mention}"
@@ -508,7 +544,7 @@ class GiveawayView(discord.ui.View):
         embed = BotEmbed.general("抽獎系統", Jsondb.get_picture("dice_001"), title=f"{self.giveaway.prize_name}", description=description)
         embed.set_footer(text=f"抽獎ID：{self.giveaway.id}")
         return embed
-    
+
     def end_giveaway(self):
         if not self.giveaway.end_at:
             self.giveaway.end_at = datetime.now(tz).replace(microsecond=0)
@@ -517,10 +553,14 @@ class GiveawayView(discord.ui.View):
         joiner = self.sqldb.get_giveaway_users(self.giveaway.id)
         joiner_ids = [i.user_id for i in joiner]
         weights = [i.user_weight for i in joiner]
-        
+
         embed = self.result_embed(len(joiner_ids))
         if joiner_ids:
-            winners_id = np.random.choice(joiner_ids, size=self.giveaway.winner_count, replace=False, p=np.array(weights) / sum(weights)).tolist() if len(joiner_ids) > self.giveaway.winner_count else joiner_ids
+            winners_id = (
+                np.random.choice(joiner_ids, size=self.giveaway.winner_count, replace=False, p=np.array(weights) / sum(weights)).tolist()
+                if len(joiner_ids) > self.giveaway.winner_count
+                else joiner_ids
+            )
             self.sqldb.set_giveaway_winner(self.giveaway.id, winners_id)
 
             winners_mention = []
@@ -536,7 +576,7 @@ class GiveawayView(discord.ui.View):
 
         return embed
 
-    def redraw_winner_giveaway(self, old_winner:GiveawayUser=None):
+    def redraw_winner_giveaway(self, old_winner: GiveawayUser = None):
         if not old_winner:
             self.sqldb.reset_giveaway_winner(self.giveaway.id)
             redraw_count = self.giveaway.winner_count
@@ -549,7 +589,11 @@ class GiveawayView(discord.ui.View):
         joiner_ids = [i.user_id for i in joiner if not i.is_winner]
         weights = [i.user_weight for i in joiner if not i.is_winner]
         winners_id = [i.user_id for i in joiner if i.is_winner]
-        winners_id.extend((np.random.choice(joiner_ids, size=redraw_count, replace=False, p=np.array(weights) / sum(weights)).tolist()) if len(joiner_ids) > redraw_count else joiner_ids)
+        winners_id.extend(
+            (np.random.choice(joiner_ids, size=redraw_count, replace=False, p=np.array(weights) / sum(weights)).tolist())
+            if len(joiner_ids) > redraw_count
+            else joiner_ids
+        )
         self.sqldb.set_giveaway_winner(self.giveaway.id, winners_id)
 
         winners_mention = []

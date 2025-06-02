@@ -2,10 +2,10 @@ import logging
 import os
 from datetime import datetime
 
-filename = datetime.now().strftime("%Y-%m-%d %H_%M_%S") + '.log'
+filename = datetime.now().strftime("%Y-%m-%d %H_%M_%S") + ".log"
 logging.captureWarnings(True)
 
-def create_logger(log_name, log_level=logging.DEBUG, file_log=False, dir_path="./logs", format='%(asctime)s [%(levelname)s] %(message)s'):
+def create_logger(log_name, log_level=logging.DEBUG, file_log=False, dir_path="./logs", format="%(asctime)s [%(levelname)s] %(message)s"):
     # config
     formatter = logging.Formatter(format)
     logger = logging.getLogger(log_name)
@@ -17,7 +17,7 @@ def create_logger(log_name, log_level=logging.DEBUG, file_log=False, dir_path=".
             os.makedirs(dir_path)
 
         # file handler
-        fileHandler = logging.FileHandler(filename=f"{dir_path}/{filename}",mode='w',encoding='utf-8')
+        fileHandler = logging.FileHandler(filename=f"{dir_path}/{filename}", mode="w", encoding="utf-8")
         fileHandler.setFormatter(formatter)
         logger.addHandler(fileHandler)
 

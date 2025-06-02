@@ -34,13 +34,10 @@ ytdl_format_options = {
     "no_warnings": True,
     "default_search": "auto",
     "source_address": "0.0.0.0",
-    'extractor_retries': 3,
+    "extractor_retries": 3,
 }
 
-ffmpeg_options = {
-    'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
-    "options": "-vn"
-}
+ffmpeg_options = {"before_options": "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5", "options": "-vn"}
 
 ytdl = youtube_dl.YoutubeDL(ytdl_format_options)
 # model:Model = Model(Jsondb.config.get("vosk_model_path"))
@@ -288,14 +285,7 @@ def get_player(guildid:str) -> MusicPlayer | None:
     return guild_playing.get(str(guildid))
 
 def convert_audio(input_file, output_file):
-    command = [
-        'ffmpeg',
-        '-i', input_file,
-        '-ar', '16000',
-        '-ac', '1',
-        '-y',
-        output_file
-    ]
+    command = ["ffmpeg", "-i", input_file, "-ar", "16000", "-ac", "1", "-y", output_file]
     subprocess.run(command, check=False)
 
 async def recording_done(sink: discord.sinks.WaveSink):
@@ -312,7 +302,7 @@ async def recording_done(sink: discord.sinks.WaveSink):
     for user_id, audio in sink.audio_data.items():
         audio: discord.sinks.AudioData
         file_path = f"{user_id}_{now}.{sink.encoding}"
-        with wave.open(file_path, 'wb') as wav_file:
+        with wave.open(file_path, "wb") as wav_file:
             wav_file.setnchannels(2)
             wav_file.setsampwidth(2)
             wav_file.setframerate(48000)
@@ -351,7 +341,7 @@ async def recording_done(sink: discord.sinks.WaveSink):
 class music(Cog_Extension):
     recording = SlashCommandGroup("recording", "錄音指令")
 
-    @commands.slash_command(description='讓機器人加入語音頻道')
+    @commands.slash_command(description="讓機器人加入語音頻道")
     @commands.guild_only()
     async def join(self, ctx: discord.ApplicationContext, channel: discord.VoiceChannel):
         """Joins a voice channel"""
@@ -382,7 +372,7 @@ class music(Cog_Extension):
     #     text = '\n'.join([f"{i+1}. {v['title']}" for i,v in enumerate(videos)])
     #     await ctx.respond(f"搜尋結果: {text}")
 
-    @commands.slash_command(description='播放音樂')
+    @commands.slash_command(description="播放音樂")
     @commands.guild_only()
     async def play(self, ctx: discord.ApplicationContext, url: str):
         await ctx.defer()
@@ -428,7 +418,7 @@ class music(Cog_Extension):
         else:
             await ctx.respond(f"**{song_count}** 首歌已加入歌單")
 
-    @commands.slash_command(description='跳過歌曲')
+    @commands.slash_command(description="跳過歌曲")
     @commands.guild_only()
     async def skip(self, ctx: discord.ApplicationContext):
         guildid = str(ctx.guild.id)
@@ -446,7 +436,7 @@ class music(Cog_Extension):
     #     ctx.voice_client.source.volume = volume / 100
     #     await ctx.send(f"音量設定為 {volume}%")
 
-    @commands.slash_command(description='停止播放並離開頻道')
+    @commands.slash_command(description="停止播放並離開頻道")
     @commands.guild_only()
     async def stop(self, ctx: discord.ApplicationContext):
         """Stops and disconnects the bot from voice"""
@@ -456,7 +446,7 @@ class music(Cog_Extension):
             del guild_playing[guildid]
         await ctx.respond("再見啦~👋")
 
-    @commands.slash_command(description='現在播放')
+    @commands.slash_command(description="現在播放")
     @commands.guild_only()
     async def nowplaying(self,ctx: discord.ApplicationContext):
         player = get_player(ctx.guild.id)
@@ -464,7 +454,7 @@ class music(Cog_Extension):
         embed = BotEmbed.simple(title="現在播放", description=f"[{song.title}]({song.url}) [{song.requester.mention}]")
         await ctx.respond(embed=embed)
 
-    @commands.slash_command(description='歌單')
+    @commands.slash_command(description="歌單")
     @commands.guild_only()
     async def queue(self,ctx: discord.ApplicationContext):
         player = get_player(ctx.guild.id)
@@ -479,7 +469,7 @@ class music(Cog_Extension):
         else:
             await ctx.respond("歌單裡空無一物")
 
-    @commands.slash_command(description='暫停/繼續播放歌曲')
+    @commands.slash_command(description="暫停/繼續播放歌曲")
     @commands.guild_only()
     async def pause(self, ctx: discord.ApplicationContext):
         if not ctx.voice_client.is_paused():
@@ -489,7 +479,7 @@ class music(Cog_Extension):
             await ctx.voice_client.resume()
             await ctx.respond("歌曲已繼續▶️")
 
-    @commands.slash_command(description='循環/取消循環歌曲')
+    @commands.slash_command(description="循環/取消循環歌曲")
     @commands.guild_only()
     async def loop(self, ctx: discord.ApplicationContext):
         player = get_player(ctx.guild.id)
@@ -499,7 +489,7 @@ class music(Cog_Extension):
         else:
             await ctx.respond("循環已關閉")
 
-    @commands.slash_command(description='洗牌歌曲')
+    @commands.slash_command(description="洗牌歌曲")
     @commands.guild_only()
     async def shuffle(self, ctx: discord.ApplicationContext):
         player = get_player(ctx.guild.id)
@@ -527,7 +517,7 @@ class music(Cog_Extension):
             if not ctx.author.voice or ctx.voice_client.channel != ctx.author.voice.channel:
                 raise discord.ApplicationCommandInvokeError(MusicCommandError("你必須要跟機器人在同一頻道才能使用指令"))
 
-    @recording.command(description='開始錄音（實驗版）')
+    @recording.command(description="開始錄音（實驗版）")
     async def start(self, ctx: discord.ApplicationContext):
         vc = ctx.voice_client
         if vc.recording:
@@ -537,7 +527,7 @@ class music(Cog_Extension):
         vc.start_recording(discord.sinks.WaveSink(), recording_done)
         await ctx.respond("開始錄音")
 
-    @recording.command(description='結束錄音')
+    @recording.command(description="結束錄音")
     async def end(self, ctx: discord.ApplicationContext):
         vc = ctx.voice_client
         if not vc.recording:

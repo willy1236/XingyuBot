@@ -11,8 +11,8 @@ from mcstatus import JavaServer
 from starlib import BotEmbed, Jsondb, sclient, tz
 from starlib.errors import *
 from starlib.instance import *
-from starlib.utils.map import sunmon_area
 from starlib.utils import get_arp_list
+from starlib.utils.map import sunmon_area
 
 from ..extension import Cog_Extension
 
@@ -61,10 +61,10 @@ class RPG_advanture_panel(discord.ui.View):
         self.area = sunmon_area(self.map_l,self.map_w)
         self.player_x = 0
         self.player_y = 0
-        self.text = ''
-        
+        self.text = ""
+
     def map_display(self):
-        self.text = ''
+        self.text = ""
         #area_display = copy.deepcopy(self.area)
         area_display = []
         for i in self.area:
@@ -72,14 +72,14 @@ class RPG_advanture_panel(discord.ui.View):
             for j in i:
                 row.append(map_dict.get(j))
             area_display.append(row)
-        area_display[self.player_y][self.player_x] = map_dict.get('2')
+        area_display[self.player_y][self.player_x] = map_dict.get("2")
         for i in area_display:
-            self.text += " ".join(i) + '\n'
+            self.text += " ".join(i) + "\n"
         return self.text
 
     @discord.ui.button(label="↑",style=discord.ButtonStyle.green)
     async def up(self, button: discord.ui.Button, interaction: discord.Interaction):
-        if self.player_y != 0 and self.area[self.player_y-1][self.player_x] == '0':
+        if self.player_y != 0 and self.area[self.player_y - 1][self.player_x] == "0":
             self.player_y -= 1
             await interaction.response.edit_message(content=self.map_display(),view=self)
         else:
@@ -87,11 +87,11 @@ class RPG_advanture_panel(discord.ui.View):
 
     @discord.ui.button(label="↓",style=discord.ButtonStyle.green)
     async def down(self, button: discord.ui.Button, interaction: discord.Interaction):
-        if self.player_y != self.map_l-1 and self.area[self.player_y+1][self.player_x] == '0':
+        if self.player_y != self.map_l - 1 and self.area[self.player_y + 1][self.player_x] == "0":
             self.player_y += 1
             if self.player_x == self.map_w-1 and self.player_y == self.map_l-1:
                 self.disable_all_items()
-                await interaction.response.edit_message(content=f'恭喜完成~\n{self.map_display()}',view=self)
+                await interaction.response.edit_message(content=f"恭喜完成~\n{self.map_display()}", view=self)
             else:
                 await interaction.response.edit_message(content=self.map_display(),view=self)
         else:
@@ -99,29 +99,31 @@ class RPG_advanture_panel(discord.ui.View):
 
     @discord.ui.button(label="←",style=discord.ButtonStyle.green)
     async def left(self, button: discord.ui.Button, interaction: discord.Interaction):
-        if self.player_x != 0 and self.area[self.player_y][self.player_x-1] == '0':
+        if self.player_x != 0 and self.area[self.player_y][self.player_x - 1] == "0":
             self.player_x -= 1
             await interaction.response.edit_message(content=self.map_display(),view=self)
         else:
             await interaction.response.edit_message(content=self.text,view=self)
-    
-    @discord.ui.button(label="→",style=discord.ButtonStyle.green)
+
+    @discord.ui.button(label="→", style=discord.ButtonStyle.green)
     async def right(self, button: discord.ui.Button, interaction: discord.Interaction):
-        if self.player_x != self.map_w-1 and self.area[self.player_y][self.player_x+1] == '0':
+        if self.player_x != self.map_w - 1 and self.area[self.player_y][self.player_x + 1] == "0":
             self.player_x += 1
-            if self.player_x == self.map_w-1 and self.player_y == self.map_l-1:
+            if self.player_x == self.map_w - 1 and self.player_y == self.map_l - 1:
                 self.disable_all_items()
-                await interaction.response.edit_message(content=f'恭喜完成~\n{self.map_display()}',view=self)
+                await interaction.response.edit_message(content=f"恭喜完成~\n{self.map_display()}", view=self)
             else:
-                await interaction.response.edit_message(content=self.map_display(),view=self)
+                await interaction.response.edit_message(content=self.map_display(), view=self)
         else:
-            await interaction.response.edit_message(content=self.text,view=self)
+            await interaction.response.edit_message(content=self.text, view=self)
+
+
 class MySelectMenus(discord.ui.Select):
-    def __init__(self,bot:discord.Bot,guild_id:int,role_ids:list[int]):
+    def __init__(self, bot: discord.Bot, guild_id: int, role_ids: list[int]):
         super().__init__(
-            placeholder = "Choose a Flavor!",
-            min_values = 1,
-            max_values = 3,
+            placeholder="Choose a Flavor!",
+            min_values=1,
+            max_values=3,
         )
         self.bot = bot
         self.guild = bot.get_guild(guild_id)
@@ -136,64 +138,67 @@ class MySelectMenus(discord.ui.Select):
             lst.append(role.name)
         await interaction.response.send_message(f"Added role: {','.join(lst)}", ephemeral=True)
 
+
 class MySelectMenusView(discord.ui.View):
-    def __init__(self,bot:discord.Bot,guild_id:int,role_ids:list[int]):
+    def __init__(self, bot: discord.Bot, guild_id: int, role_ids: list[int]):
         super().__init__()
-        select = MySelectMenus(bot,guild_id,role_ids)
+        select = MySelectMenus(bot, guild_id, role_ids)
         self.add_item(select)
+
 
 class debug(Cog_Extension):
     pass
-    @commands.is_owner()
-    @commands.slash_command(description='測試指令', guild_ids=debug_guilds)
-    async def test(self,ctx:discord.ApplicationContext):
-        #await ctx.defer()
-        # command = self.bot.get_cog('command')
-        # await command.dice(ctx,1,100)
-        await ctx.respond(view=MySelectMenusView(self.bot,ctx.guild.id,[865582049238843422,866241387166433300,870929961417068565]))
 
     @commands.is_owner()
-    @commands.slash_command(description='幫助測試', guild_ids=debug_guilds)
-    async def helptest(self,ctx:discord.ApplicationContext, arg:str=None):
+    @commands.slash_command(description="測試指令", guild_ids=debug_guilds)
+    async def test(self, ctx: discord.ApplicationContext):
+        # await ctx.defer()
+        # command = self.bot.get_cog('command')
+        # await command.dice(ctx,1,100)
+        await ctx.respond(view=MySelectMenusView(self.bot, ctx.guild.id, [865582049238843422, 866241387166433300, 870929961417068565]))
+
+    @commands.is_owner()
+    @commands.slash_command(description="幫助測試", guild_ids=debug_guilds)
+    async def helptest(self, ctx: discord.ApplicationContext, arg: str = None):
         if not arg:
             command_names_list = [command.name for command in self.bot.commands]
             await ctx.send(f"{i}. {command.name}" for i, command in enumerate(self.bot.commands, 1))
             await ctx.respond(f"指令列表：{','.join(command_names_list)}")
         else:
-            command = self.bot.get_command(arg) # type: ignore
+            command = self.bot.get_command(arg)  # type: ignore
             if not command:
                 await ctx.respond(f"找不到指令：{arg}")
             elif isinstance(command, discord.SlashCommandGroup):
                 await ctx.respond(f"指令：{command.name}\n描述：{command.description}")
             else:
                 command: discord.SlashCommand
-                option_str = '\n> '.join([f"{option.name}：{option.description}" for option in command.options])
+                option_str = "\n> ".join([f"{option.name}：{option.description}" for option in command.options])
                 await ctx.respond(f"指令：{command.full_parent_name} {command.name}\n描述：{command.description}\n參數：\n> {option_str}")
 
-    @commands.slash_command(description='地圖生成測試')
-    async def maptest(self,ctx:discord.ApplicationContext):
+    @commands.slash_command(description="地圖生成測試")
+    async def maptest(self, ctx: discord.ApplicationContext):
         await ctx.defer()
         view = RPG_advanture_panel()
-        await ctx.respond(view.map_display(),view=view)
-        
+        await ctx.respond(view.map_display(), view=view)
+
         # channel = self.bot.get_channel(566533708371329026)
         # botuser = ctx.guild.get_member(self.bot.user.id)
         # Permission = channel.permissions_for(botuser)
         # await ctx.respond((Permission.send_messages and Permission.embed_links))
-    
+
     @commands.is_owner()
-    @commands.slash_command(description='ver.2.0測試', guild_ids=debug_guilds)
-    async def embedtest(self, ctx:discord.ApplicationContext):
+    @commands.slash_command(description="ver.2.0測試", guild_ids=debug_guilds)
+    async def embedtest(self, ctx: discord.ApplicationContext):
         embed = BotEmbed.sts()
-        embed.add_field(name='測試',value='測試')
+        embed.add_field(name="測試", value="測試")
         await ctx.respond(embed=embed)
 
     @commands.is_owner()
-    @commands.slash_command(description='更改身分組', guild_ids=happycamp_guild)
-    async def roletest(self,ctx:discord.ApplicationContext,old_role:discord.Role):
+    @commands.slash_command(description="更改身分組", guild_ids=happycamp_guild)
+    async def roletest(self, ctx: discord.ApplicationContext, old_role: discord.Role):
         await ctx.defer()
         guild = ctx.guild
-        #old_role = guild.get_role(984485859132854332)
+        # old_role = guild.get_role(984485859132854332)
         new_role = guild.get_role(1250797750174351440)
 
         for member in old_role.members:
@@ -201,34 +206,37 @@ class debug(Cog_Extension):
             await member.remove_roles(old_role)
             await asyncio.sleep(1)
 
-        await ctx.respond('完成',ephemeral=True)
+        await ctx.respond("完成", ephemeral=True)
 
     @commands.is_owner()
-    @commands.slash_command(description='測試指令', guild_ids=debug_guilds)
-    async def attachmenttest(self,ctx:discord.ApplicationContext, att:discord.Option(discord.Attachment, required=True,name='附件')):
-        await ctx.respond(file=discord.File(io.BytesIO(await att.read()), filename=att.filename),ephemeral=True)
+    @commands.slash_command(description="測試指令", guild_ids=debug_guilds)
+    async def attachmenttest(self, ctx: discord.ApplicationContext, att: discord.Option(discord.Attachment, required=True, name="附件")):
+        await ctx.respond(file=discord.File(io.BytesIO(await att.read()), filename=att.filename), ephemeral=True)
 
     @commands.is_owner()
-    @commands.slash_command(description='連結身分組測試', guild_ids=debug_guilds)
-    async def linkedroletest(self,ctx:discord.ApplicationContext):
-        role_connection_metadata_records = discord.ApplicationRoleConnectionMetadata(type=discord.ApplicationRoleConnectionMetadataType.boolean_equal,key="metarolekey",name="metarole1",description="metarole1 description")
+    @commands.slash_command(description="連結身分組測試", guild_ids=debug_guilds)
+    async def linkedroletest(self, ctx: discord.ApplicationContext):
+        role_connection_metadata_records = discord.ApplicationRoleConnectionMetadata(
+            type=discord.ApplicationRoleConnectionMetadataType.boolean_equal, key="metarolekey", name="metarole1", description="metarole1 description"
+        )
         data = await self.bot.update_role_connection_metadata_records(role_connection_metadata_records)
-        await ctx.respond(f'{data}')
+        await ctx.respond(f"{data}")
 
     @commands.is_owner()
-    @commands.slash_command(description='戶籍測試', guild_ids=debug_guilds)
-    async def residenttest(self,ctx:discord.ApplicationContext, member:discord.Option(discord.Member, required=True, name='成員')):
+    @commands.slash_command(description="戶籍測試", guild_ids=debug_guilds)
+    async def residenttest(self, ctx: discord.ApplicationContext, member: discord.Option(discord.Member, required=True, name="成員")):
         await ctx.defer()
         from .bot_event import check_registration
+
         guild_id = check_registration(member)
         guild = self.bot.get_guild(guild_id)
-        await ctx.respond(f"{member.display_name}：{f'{guild}（{guild_id}）' if guild else guild}",ephemeral=True)
-        
+        await ctx.respond(f"{member.display_name}：{f'{guild}（{guild_id}）' if guild else guild}", ephemeral=True)
+
     @commands.is_owner()
-    @commands.slash_command(description='伺服器偵測測試', guild_ids=debug_guilds)
+    @commands.slash_command(description="伺服器偵測測試", guild_ids=debug_guilds)
     async def serverchecktest(self,ctx:discord.ApplicationContext):
         await ctx.defer()
-        
+
         lst = get_arp_list()
         text_lst = []
         for i in lst:
@@ -241,31 +249,31 @@ class debug(Cog_Extension):
                 text_lst.append(f"伺服器：{i[0]}，無法連線")
 
         if text_lst:
-            text = '\n'.join(text_lst)
+            text = "\n".join(text_lst)
         else:
-            text = '無法連線到任何伺服器'
+            text = "無法連線到任何伺服器"
 
         await ctx.respond(text)
 
     @commands.is_owner()
-    @commands.slash_command(description='語音測試', guild_ids=debug_guilds)
-    async def voice_test(self,ctx:discord.ApplicationContext, category_test:discord.Option(discord.CategoryChannel, required=True,name='分類')):
+    @commands.slash_command(description="語音測試", guild_ids=debug_guilds)
+    async def voice_test(self, ctx: discord.ApplicationContext, category_test: discord.Option(discord.CategoryChannel, required=True, name="分類")):
         guild: discord.Guild = ctx.guild
         overwrites = {
             # ctx.author: discord.PermissionOverwrite(manage_channels=True,manage_roles=True),
             ctx.author: discord.PermissionOverwrite(manage_channels=True),
-            self.bot.user: discord.PermissionOverwrite(manage_channels=True)
+            self.bot.user: discord.PermissionOverwrite(manage_channels=True),
         }
         category: discord.CategoryChannel = category_test
-        channel = await guild.create_voice_channel(name='測試頻道', overwrites=overwrites, category=category)
+        channel = await guild.create_voice_channel(name="測試頻道", overwrites=overwrites, category=category)
         # channel = await guild.create_voice_channel(name='測試頻道', category=category)
         # channel = await category.create_voice_channel(name='測試頻道')
-        await ctx.respond(f'創建頻道：{channel.mention}')
+        await ctx.respond(f"創建頻道：{channel.mention}")
         print(channel.permissions_for(guild.me).manage_permissions)
         print(category.permissions_for(guild.me).manage_channels)
         print(category.permissions_for(guild.me).manage_roles)
         print(category.permissions_for(guild.me).manage_permissions)
-        
+
         # await channel.delete()
 
     # @commands.slash_command()
@@ -282,7 +290,7 @@ class debug(Cog_Extension):
     #     permission = discord.Permissions(view_channel=True)
     #     #overwrites = {}
     #     for user in role.members:
-    #         #overwrites[user] = discord.PermissionOverwrite(view_channel=True)    
+    #         #overwrites[user] = discord.PermissionOverwrite(view_channel=True)
     #         await channel.set_permissions(user,view_channel=True)
     #         await asyncio.sleep(0.5)
     #     await ctx.message.add_reaction('✅')

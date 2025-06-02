@@ -1,22 +1,9 @@
-#type: ignore[import]
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from typing import TYPE_CHECKING, TypedDict
 
 from discord import Bot
-from sqlalchemy import (
-    BigInteger,
-    Boolean,
-    Column,
-    ForeignKey,
-    ForeignKeyConstraint,
-    Identity,
-    Integer,
-    Interval,
-    SmallInteger,
-    String,
-    Text,
-)
+from sqlalchemy import BigInteger, Boolean, Column, ForeignKey, ForeignKeyConstraint, Identity, Integer, Interval, SmallInteger, String, Text
 from sqlalchemy.dialects.postgresql import TIMESTAMP
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlmodel import Field, Relationship
@@ -318,9 +305,7 @@ class Giveaway(BasicSchema, table=True):
     created_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0), nullable=False))
     end_at: datetime | None = Field(sa_column=Column(TIMESTAMP(True, 0), nullable=True))
     is_on: bool = Field(sa_column=Column(Boolean, nullable=False, default=True))
-    description: str | None = Field(
-        sa_column=Column(String(255), nullable=True, default=None)
-    )
+    description: str | None = Field(sa_column=Column(String(255), nullable=True, default=None))
     redraw_count: int = Field(sa_column=Column(Integer, nullable=True, default=0))
 
 

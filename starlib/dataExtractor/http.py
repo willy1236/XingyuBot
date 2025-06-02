@@ -1,5 +1,7 @@
 import requests
+
 from ..fileDatabase import Jsondb
+
 
 class JsonStorageAPI:
     """https://www.jsonstorage.net/"""
@@ -12,30 +14,30 @@ class JsonStorageAPI:
         self.params = {
             "apiKey":self.token
         }
-    
+
     def get(self):
-        r = requests.get(f'{self.url}/{self.userId}/{self.itemId}',params=self.params)
+        r = requests.get(f"{self.url}/{self.userId}/{self.itemId}", params=self.params)
         if r.status_code == 200:
             return r.json()
         else:
-            print(r.status_code,r.reason)
+            print(r.status_code, r.reason)
             return None
-    
+
     def post(self,data):
         """create a new json storage"""
-        r = requests.post(f'{self.url}',json=data,params=self.params)
+        r = requests.post(f"{self.url}", json=data, params=self.params)
         print(r.json())
-    
-    def put(self,data):
+
+    def put(self, data):
         """update current json data"""
-        r = requests.put(f'{self.url}/{self.userId}/{self.itemId}',json=data,params=self.params)
+        r = requests.put(f"{self.url}/{self.userId}/{self.itemId}", json=data, params=self.params)
         if r.status_code == 200:
             print(r.json())
         else:
-            print(r.status_code,r.reason)
-    
+            print(r.status_code, r.reason)
+
     def patch(self,data):
-        r = requests.patch(f'{self.url}/{self.userId}/{self.itemId}',json=data,params=self.params)
+        r = requests.patch(f"{self.url}/{self.userId}/{self.itemId}", json=data, params=self.params)
         print(r.json())
 
     def append_data(self,data):
@@ -46,6 +48,6 @@ class JsonStorageAPI:
             self.put(apidata)
         else:
             print("No apidata found.")
-    
-    def remove_first_data(self,data):
+
+    def remove_first_data(self, data):
         pass

@@ -11,4 +11,3 @@ class RuleMessageModal(discord.ui.Modal):
 
     async def callback(self, interaction: discord.Interaction):
         await interaction.respond("完成填寫規則訊息", ephemeral=True)
-    

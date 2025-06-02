@@ -34,20 +34,20 @@ class ElectionSystem():
     def election_format(self,session:int,bot:discord.Bot):
         dbdata = sqldb.get_election_full_by_session(session)
         guild = bot.get_guild(613747262291443742)
-        
+
         # result = { "職位": { "用戶id": ["用戶提及", ["政黨"]]}}
         # init results
         results = {}
         for position in Jsondb.options["position_option"].keys():
             results[position] = {}
-        
+
         # deal data
         for data in dbdata:
-            discord_id = data['discord_id']
-            position = data['position']
-            party_id = data['party_id']
-            party_name = data['party_name']
-            
+            discord_id = data["discord_id"]
+            position = data["position"]
+            party_id = data["party_id"]
+            party_name = data["party_name"]
+
             if party_id:
                 if guild:
                     role = guild.get_role(data["role_id"])
@@ -75,10 +75,10 @@ class ElectionSystem():
                 user_mention = results[pos_id][user_data][0]
                 party_name = ",".join(results[pos_id][user_data][1])
                 text += f"{count}. {user_mention} （{party_name}）\n"
-            
-            position_name = Jsondb.get_tw(pos_id,"position_option")
+
+            position_name = Jsondb.get_tw(pos_id, "position_option")
             embed.add_field(name=position_name, value=text, inline=False)
-        
+
         return embed
 
 class StarController:
@@ -100,7 +100,7 @@ class StarController:
         self.website_thread: BaseThread = None
         self.tunnel_thread: BaseThread = None
         self.twitchtunnel_thread: BaseThread = None
-    
+
     # @property
     # def starai(self):
     #     if not self._starai:

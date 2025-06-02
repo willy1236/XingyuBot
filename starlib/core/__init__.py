@@ -10,6 +10,6 @@ from .client import StarController
 sclient = StarController()
 
 __all__ = [
-    'sclient',
-    'StarController',
+    "sclient",
+    "StarController",
 ]

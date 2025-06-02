@@ -18,7 +18,7 @@ mcss_server_actions = [
 
 try:
     mcss_server_options = [OptionChoice(name=i.name, value=i.server_id) for i in instance.mcss_api.get_servers()] # type: ignore
-except:
+except Exception:
     mcss_server_options = []
 
 mcss_server_option: str = Option(str, description="麥塊伺服器", choices=mcss_server_options)

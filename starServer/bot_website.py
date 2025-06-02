@@ -1,6 +1,6 @@
 import asyncio
-import secrets
 import json
+import secrets
 from datetime import datetime, timedelta
 
 import feedparser
@@ -8,23 +8,21 @@ from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, status
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.openapi.utils import get_openapi
 from fastapi.requests import Request
-from fastapi.responses import (HTMLResponse, JSONResponse, PlainTextResponse,
-                               RedirectResponse, StreamingResponse)
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, StreamingResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from google_auth_oauthlib.flow import Flow
 from linebot.v3 import WebhookHandler
 from linebot.v3.exceptions import InvalidSignatureError
-from linebot.v3.messaging import (ApiClient, Configuration, MessagingApi,
-                                  ReplyMessageRequest, TextMessage)
+from linebot.v3.messaging import ApiClient, Configuration, MessagingApi, ReplyMessageRequest, TextMessage
 from linebot.v3.webhooks import MessageEvent, TextMessageContent
 from linebot.v3.webhooks.models.message_event import MessageEvent
-from google_auth_oauthlib.flow import Flow
 
-from starlib import Jsondb, sclient, sqldb, web_log, BaseThread
-from starlib.dataExtractor import DiscordOauth2, TwitchOauth2, GoogleOauth2
+from starlib import BaseThread, Jsondb, sclient, sqldb, web_log
+from starlib.dataExtractor import DiscordOauth2, GoogleOauth2, TwitchOauth2
+from starlib.instance import yt_api
 from starlib.models.mysql import CloudUser, TwitchBotJoinChannel
 from starlib.models.push import YoutubePushEntry
 from starlib.types import APIType, NotifyCommunityType
-from starlib.instance import yt_api
 
 discord_oauth_settings = sqldb.get_bot_token(APIType.Discord)
 twitch_oauth_settings = sqldb.get_bot_token(APIType.Twitch)
@@ -57,111 +55,118 @@ async def get_documentation(username: str = Depends(get_current_username)):
 async def openapi(username: str = Depends(get_current_username)):
     return get_openapi(title="FastAPI", version="0.1.0", routes=app.routes)
 
-@app.get('/')
-@app.head('/')
+@app.get("/")
+@app.head("/")
 def main(request:Request):
-    web_log.debug(f'{request.client.host} - {request.method} - {request.url.path}')
+    web_log.debug(f"{request.client.host} - {request.method} - {request.url.path}")
     # if not request.query_params or dict(request.query_params).get('code') != "200":
     #     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
-    return HTMLResponse('這是一個目前沒有內容的主頁')
+    return HTMLResponse("這是一個目前沒有內容的主頁")
 
-@app.route('/keep_alive',methods=['GET'])
+@app.route("/keep_alive", methods=["GET"])
 def keep_alive(request:Request):
-    return HTMLResponse(content='Bot is aLive!')
+    return HTMLResponse(content="Bot is aLive!")
 
 # print("[Warning] Server Received & Refused!")
 # print("[Warning] Error:", e)
-    
+
+
 async def prase_yt_push(content):
     feed = feedparser.parse(content)
-    with open('test.json', 'w', encoding="utf-8") as f:
+    with open("test.json", "w", encoding="utf-8") as f:
         json.dump(feed, f, ensure_ascii=False, indent=4)
 
     for entry in feed["entries"]:
         push_entry = YoutubePushEntry(**entry)
         video = yt_api.get_video(push_entry.yt_videoid)[0]
-        
+
         cache = sqldb.get_community_caches_with_id(NotifyCommunityType.Youtube, push_entry.yt_channelid)
         if cache and push_entry.published > cache.value:
-            web_log.info(f'New Youtube push entry {push_entry.yt_videoid}')
+            web_log.info(f"New Youtube push entry {push_entry.yt_videoid}")
             # Send to Discord
-            
+
             if video.is_live_upcoming:
-                web_log.info(f'Upcoming live video {video.id}')
+                web_log.info(f"Upcoming live video {video.id}")
                 # Add task for start live
-                
+
             # sclient.sqldb.set_community_cache(NotifyCommunityType.Youtube, push_entry.yt_channelid, push_entry.published)
-        
+
         if sclient.bot:
             msg = sclient.bot.send_message(embed=video.embed(), content=f"YT push test {push_entry.updated == push_entry.published}")
             if not msg:
-                web_log.info('Channel not found. Message sent failed.')
+                web_log.info("Channel not found. Message sent failed.")
         else:
-            web_log.info('Bot not found.')
+            web_log.info("Bot not found.")
 
-@app.get('/youtube_push')
-def youtube_push_get(request:Request):
+
+@app.get("/youtube_push")
+def youtube_push_get(request: Request):
     params = dict(request.query_params)
-    if 'hub.challenge' in params:
-        return HTMLResponse(content=params['hub.challenge'])
+    if "hub.challenge" in params:
+        return HTMLResponse(content=params["hub.challenge"])
     else:
-        return HTMLResponse('OK')
+        return HTMLResponse("OK")
 
-@app.post('/youtube_push')
-async def youtube_push_post(request:Request,background_task: BackgroundTasks):
+
+@app.post("/youtube_push")
+async def youtube_push_post(request: Request, background_task: BackgroundTasks):
     body = await request.body()
-    body = body.decode('UTF-8')
-    background_task.add_task(prase_yt_push,body)
-    return HTMLResponse('OK')
+    body = body.decode("UTF-8")
+    background_task.add_task(prase_yt_push, body)
+    return HTMLResponse("OK")
 
-@app.get('/oauth/discord')
-async def oauth_discord(request:Request):
+
+@app.get("/oauth/discord")
+async def oauth_discord(request: Request):
     params = dict(request.query_params)
-    code = params.get('code')
+    code = params.get("code")
     if not code:
-        return HTMLResponse(f'授權失敗：{params}', 400)
+        return HTMLResponse(f"授權失敗：{params}", 400)
 
     auth = DiscordOauth2.from_bot_token(discord_oauth_settings)
     auth.exchange_code(code)
     auth.save_token(auth.user_id)
-    
+
     connections = auth.get_connections()
     for connection in connections:
-        if connection.type == 'twitch':
+        if connection.type == "twitch":
             print(f"{connection.name}({connection.id})")
             sclient.sqldb.merge(CloudUser(discord_id=auth.user_id, twitch_id=connection.id))
 
-    return HTMLResponse(f'授權已完成，您現在可以關閉此頁面<br><br>Discord ID：{auth.user_id}')
+    return HTMLResponse(f"授權已完成，您現在可以關閉此頁面<br><br>Discord ID：{auth.user_id}")
 
-@app.get('/oauth/discordbot')
-async def oauth_discordbot(request:Request):
-    params = dict(request.query_params)
-    code = params.get('code')
-    if not code:
-        return HTMLResponse(f'授權失敗：{params}', 400)
-    
-    return HTMLResponse(f'授權已完成，您現在可以關閉此頁面<br>感謝您使用星羽機器人！', 200)
 
-@app.get('/oauth/twitch')
-async def oauth_twitch(request:Request):
+@app.get("/oauth/discordbot")
+async def oauth_discordbot(request: Request):
     params = dict(request.query_params)
-    code = params.get('code')
+    code = params.get("code")
     if not code:
-        return HTMLResponse(f'授權失敗：{params}', 400)
-    
+        return HTMLResponse(f"授權失敗：{params}", 400)
+
+    return HTMLResponse(f"授權已完成，您現在可以關閉此頁面<br>感謝您使用星羽機器人！", 200)
+
+
+@app.get("/oauth/twitch")
+async def oauth_twitch(request: Request):
+    params = dict(request.query_params)
+    code = params.get("code")
+    if not code:
+        return HTMLResponse(f"授權失敗：{params}", 400)
+
     auth = TwitchOauth2.from_bot_token(twitch_oauth_settings)
     auth.exchange_code(code)
     auth.save_token(auth.user_id)
     sclient.sqldb.merge(TwitchBotJoinChannel(twitch_id=auth.user_id))
-    return HTMLResponse(f'授權已完成，您現在可以關閉此頁面<br>別忘了在聊天室輸入 /mod xingyu1016<br><br>Twitch ID：{auth.user_id}')
+    return HTMLResponse(f"授權已完成，您現在可以關閉此頁面<br>別忘了在聊天室輸入 /mod xingyu1016<br><br>Twitch ID：{auth.user_id}")
 
-@app.get('/oauth/google')
-async def oauth_google(request:Request):
+
+@app.get("/oauth/google")
+async def oauth_google(request: Request):
     params = dict(request.query_params)
-    code = params.get('code')
+    code = params.get("code")
     if not code:
-        return HTMLResponse(f'授權失敗：{params}', 400)
-    
+        return HTMLResponse(f"授權失敗：{params}", 400)
+
     auth = GoogleOauth2.from_bot_token(google_oauth_settings)
 
     # flow = Flow.from_client_secrets_file(
@@ -169,11 +174,12 @@ async def oauth_google(request:Request):
     #     scopes=auth.scopes,
     #     redirect_uri=auth.redirect_uri
     # )
-    #flow.fetch_token(code=code)
+    # flow.fetch_token(code=code)
     auth.exchange_code(code)
     auth.set_creds()
     auth.save_token(auth.user_id)
-    return HTMLResponse(f'授權已完成，您現在可以關閉此頁面<br><br>Google ID：{auth.user_id}')
+    return HTMLResponse(f"授權已完成，您現在可以關閉此頁面<br><br>Google ID：{auth.user_id}")
+
 
 # @app.post("/linebotcallback")
 # async def linebot_callback(request:Request):
@@ -205,22 +211,35 @@ async def oauth_google(request:Request):
 #             )
 #         )
 
+
 @app.get("/to/discordauth")
-async def to_discordauth(request:Request):
-    return RedirectResponse(url=f"https://discord.com/api/oauth2/authorize?client_id={discord_oauth_settings.client_id}&redirect_uri={discord_oauth_settings.redirect_uri}&response_type=code&scope=identify%20connections")
+async def to_discordauth(request: Request):
+    return RedirectResponse(
+        url=f"https://discord.com/api/oauth2/authorize?client_id={discord_oauth_settings.client_id}&redirect_uri={discord_oauth_settings.redirect_uri}&response_type=code&scope=identify%20connections"
+    )
+
 
 @app.get("/to/twitchauth")
-async def to_twitchauth(request:Request):
-    return RedirectResponse(url=f"https://id.twitch.tv/oauth2/authorize?client_id={twitch_oauth_settings.client_id}&redirect_uri={twitch_oauth_settings.redirect_uri}&response_type=code&scope=chat:read+channel:read:subscriptions+moderation:read+channel:read:redemptions+channel:manage:redemptions+channel:manage:raids+channel:read:vips+channel:bot+moderator:read:suspicious_users+channel:manage:polls+channel:manage:predictions&force_verify=true")
+async def to_twitchauth(request: Request):
+    return RedirectResponse(
+        url=f"https://id.twitch.tv/oauth2/authorize?client_id={twitch_oauth_settings.client_id}&redirect_uri={twitch_oauth_settings.redirect_uri}&response_type=code&scope=chat:read+channel:read:subscriptions+moderation:read+channel:read:redemptions+channel:manage:redemptions+channel:manage:raids+channel:read:vips+channel:bot+moderator:read:suspicious_users+channel:manage:polls+channel:manage:predictions&force_verify=true"
+    )
+
 
 @app.get("/to/googleauth")
-async def to_googleauth(request:Request):
+async def to_googleauth(request: Request):
     # TODO: scopes存放整理
-    scopes = ["https://www.googleapis.com/auth/userinfo.profile", "https://www.googleapis.com/auth/userinfo.email", "openid", "https://www.googleapis.com/auth/youtube"]
+    scopes = [
+        "https://www.googleapis.com/auth/userinfo.profile",
+        "https://www.googleapis.com/auth/userinfo.email",
+        "openid",
+        "https://www.googleapis.com/auth/youtube",
+    ]
     config = sqldb.get_google_client_config(3)
     flow = Flow.from_client_config(config, scopes=scopes)
     url = flow.authorization_url()[0]
     return RedirectResponse(url=url)
+
 
 # @app.get('/book/{book_id}',response_class=JSONResponse)
 # def get_book_by_id(book_id: int):
@@ -233,16 +252,19 @@ async def to_googleauth(request:Request):
 #     html_file = open().read()
 #     return html_file
 
+
 class WebsiteThread(BaseThread):
     def __init__(self):
-        super().__init__(name='WebsiteThread')
+        super().__init__(name="WebsiteThread")
 
     def run(self):
         import uvicorn
+
         host = Jsondb.config.get("webip", "127.0.0.1")
         uvicorn.run(app, host=host, port=14000)
-        #os.system('uvicorn bot_website:app --port 14000 --reload')
+        # os.system('uvicorn bot_website:app --port 14000 --reload')
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     web = WebsiteThread()
     web.start()
