@@ -100,8 +100,8 @@ class UserModerate(UserSchema, table=True):
         user = bot.get_user(self.discord_id)
         moderate_user = bot.get_user(self.moderate_user)
         guild = bot.get_guild(self.create_guild)
-        
-        name = f'{user.name} 的警告單'
+
+        name = f"{user.name if user.name else f'<@{self.discord_id}>'} 的警告單"
         description = f"**編號：{self.warning_id}（{Jsondb.get_tw(self.moderate_type, 'warning_type')}）**\n- 被警告用戶：{user.mention}\n- 管理員：{guild.name}/{moderate_user.mention}\n- 原因：{self.reason}\n- 時間：{self.create_time}"
         if self.last_time:
             description += f"\n- 禁言時長：{self.last_time}"
