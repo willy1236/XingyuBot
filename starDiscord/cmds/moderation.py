@@ -159,16 +159,16 @@ class moderation(Cog_Extension):
         self,
         ctx: discord.ApplicationContext,
         user: discord.Option(discord.User, name="使用者", description="要查詢的使用者", required=True),
-        guild_only: discord.Option(bool, name="查詢是否包含伺服器區域警告", description="若未存入警告系統的警告為伺服器區域警告，預設為True", default=True),
+        guild_only: discord.Option(bool, name="查詢是否包含伺服器內警告", description="若未存入警告系統的警告為伺服器內警告，預設為True", default=True),
     ):
         dbdata = sclient.sqldb.get_warnings(user.id, ctx.guild.id if guild_only else None)
-        await ctx.respond(embed=dbdata.display(self.bot))
+        await ctx.respond(embed=dbdata.display(self.bot, user))
 
     @warning.command(description="查詢指定警告的資訊")
     @commands.guild_only()
     async def get(self, ctx: discord.ApplicationContext, warning_id: discord.Option(str, name="警告編號", description="要查詢的警告", required=True)):
         sheet = sclient.sqldb.get_warning(int(warning_id))
-        if sheet and (ctx.guild.id == sheet.create_guild or ctx.guild.id in debug_guilds):
+        if sheet and (ctx.guild.id == sheet.create_guild or ctx.guild.id in debug_guilds or ctx.guild.get_member(sheet.discord_id)):
             await ctx.respond(embed=sheet.embed(self.bot))
         else:
             await ctx.respond("查無此警告單")

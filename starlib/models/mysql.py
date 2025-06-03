@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from typing import TYPE_CHECKING, TypedDict
 
+import discord
 from discord import Bot
 from sqlalchemy import BigInteger, Boolean, Column, ForeignKey, ForeignKeyConstraint, Identity, Integer, Interval, SmallInteger, String, Text
 from sqlalchemy.dialects.postgresql import TIMESTAMP
@@ -105,19 +106,19 @@ class UserModerate(UserSchema, table=True):
     guild_only: bool | None
     officially_given: bool | None
 
-    def embed(self,bot:Bot):
+    def embed(self, bot: Bot) -> discord.Embed:
         user = bot.get_user(self.discord_id)
         moderate_user = bot.get_user(self.moderate_user)
         guild = bot.get_guild(self.create_guild)
 
         name = f"{user.name if user else f'<@{self.discord_id}>'} 的警告單"
-        description = f"**編號：{self.warning_id}（{Jsondb.get_tw(self.moderate_type, 'warning_type')}）**\n- 被警告用戶：{user.mention if user else f'<@{self.discord_id}>'}\n- 管理員：{guild.name}/{moderate_user.mention}\n- 原因：{self.reason}\n- 時間：{self.create_time}"
+        description = f"**編號：{self.warning_id}（{Jsondb.get_tw(self.moderate_type, 'warning_type')}）**\n- 被警告用戶：{user.mention if user else f'<@{self.discord_id}>'}\n- 管理員：{guild.name if guild else self.create_guild}/{moderate_user.mention if moderate_user else f'<@{self.moderate_user}>'}\n- 原因：{self.reason}\n- 時間：{self.create_time}"
         if self.last_time:
             description += f"\n- 禁言時長：{self.last_time}"
         if self.officially_given:
-            description += "\n- 官方警告"
+            description += "\n- 官方認證警告"
         if self.guild_only:
-            description += "\n- 伺服器區域警告"
+            description += "\n- 伺服器內警告"
         embed = BotEmbed.general(
             name=name,
             icon_url=user.display_avatar.url if user else None,
@@ -125,17 +126,15 @@ class UserModerate(UserSchema, table=True):
         )
         return embed
 
-    def display_embed_field(self, bot: Bot):
+    def display_embed_field(self, bot: Bot) -> tuple[str, str]:
         moderate_user = bot.get_user(self.moderate_user)
         guild = bot.get_guild(self.create_guild)
         name = f"編號：{self.warning_id}（{Jsondb.get_tw(self.moderate_type, 'warning_type')}）"
-        value = (
-            f"{guild.name}/{moderate_user.mention}\n{self.reason}\n{self.create_time}"
-        )
+        value = f"{guild.name if guild else self.create_guild}/{moderate_user.mention}\n{self.reason}\n{self.create_time}"
         if self.officially_given:
-            value += "\n官方警告"
+            value += "官方認證警告"
         if self.guild_only:
-            value += "\n伺服器區域警告"
+            value += "伺服器內警告"
         return name, value
 
 
@@ -524,17 +523,23 @@ class NotifyCache(CacheSchema, table=True):
     value: datetime | None = Field(sa_column=Column(TIMESTAMP(True, 0), nullable=True))
 
 class WarningList(ListObject[UserModerate]):
-    if TYPE_CHECKING:
-        discord_id: int
-
-    def __init__(self,items:list, discord_id:int):
+    def __init__(self, items: list[UserModerate], discord_id: int):
         super().__init__(items)
         self.discord_id = discord_id
 
-    def display(self, bot: Bot):
-        user = bot.get_user(self.discord_id)
+    def display(self, bot: Bot, user: discord.User | None = None) -> discord.Embed:
+        """生成警告單列表的嵌入消息
+
+        Args:
+            bot (Bot): 由Bot取得使用者與伺服器訊息
+            user (discord.User | None, optional): 若機器人找不到使用者，則使用此參數指定使用者。預設為None。
+
+        Returns:
+            discord.Embed
+        """
+        user = bot.get_user(self.discord_id) or user
         embed = BotEmbed.general(
-            f"{user.name} 的警告單列表（共{len(self.items)}筆）",
+            f"{user.name if user else f'<@{self.discord_id}>'} 的警告單列表（共{len(self.items)}筆）",
             user.display_avatar.url,
         )
         for i in self.items:

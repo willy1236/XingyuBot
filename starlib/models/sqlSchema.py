@@ -16,7 +16,7 @@ class Base(MappedAsDataclass, DeclarativeBase):
         # return mapped_column(Integer, primary_key=True, autoincrement=True, init=False)
 
 class BaseSchema(SQLModel):
-    __table_args__:dict
+    __table_args__: dict[str, str]
 
     @property
     def forigen(self):

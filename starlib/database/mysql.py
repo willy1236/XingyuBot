@@ -556,12 +556,13 @@ class SQLWarningSystem(BaseSQLEngine):
 
     def get_warnings(self, discord_id: int, guild_id: int = None):
         """取得用戶的警告列表
-        :param guild_id: 若給予，則同時查詢該伺服器的紀錄
+        :param guild_id: 若給予，則額外查詢該伺服器內的紀錄
         """
         if guild_id:
-            stmt = select(UserModerate).where(UserModerate.discord_id == discord_id, UserModerate.create_guild == guild_id)
+            stmt = select(UserModerate).where(UserModerate.discord_id == discord_id, or_(not UserModerate.guild_only, UserModerate.create_guild == guild_id))
         else:
             stmt = select(UserModerate).where(UserModerate.discord_id == discord_id, not UserModerate.guild_only)
+        print(stmt)
         result = self.session.exec(stmt).all()
         return WarningList(result, discord_id)
 
