@@ -65,7 +65,7 @@ class event(Cog_Extension):
     async def on_ready(self):
         bot = self.bot
         log.info(f">> Bot online as {bot.user.name} <<")
-        log.info(f">> Discord's version: {discord.__version__} <<")
+        log.info(f">> Py-cord's version: {discord.__version__} <<")
         if bot.debug_mode:
             await bot.change_presence(activity=discord.CustomActivity(name="開發模式啟用中"), status=discord.Status.dnd)
             log.info(f">> Development mode: On <<")
@@ -119,7 +119,19 @@ class event(Cog_Extension):
                 sclient.sqldb.delete_reaction_role_message(react_message.message_id)
                 log.debug(f"Deleted reaction role message: {react_message.message_id}")
 
-        log.info(f">> Bot on_ready done. <<")
+        # 動態語音
+        dynamic_voice_ids = sclient.sqldb.get_all_dynamic_voice()
+        if dynamic_voice_ids:
+            removed_ids = []
+            for id in dynamic_voice_ids:
+                channel = bot.get_channel(id)
+                if not channel:
+                    removed_ids.append(id)
+                    log.warning(f"Dynamic voice channel {id} not found")
+
+            sclient.sqldb.batch_remove_dynamic_voice(removed_ids)
+
+        log.info(">> Bot on_ready done. <<")
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
@@ -309,8 +321,8 @@ class event(Cog_Extension):
                 # 檢查使用者是否進入
                 if self.bot.get_channel(new_channel.id) and len(new_channel.members) == 0:
                     try:
-                        await new_channel.delete(reason="動態語音：移除")
                         sclient.sqldb.remove_dynamic_voice(new_channel.id)
+                        await new_channel.delete(reason="動態語音：移除")
                     except discord.errors.NotFound:
                         log.warning(f"動態語音頻道 {new_channel.id} 已經不存在")
                 return

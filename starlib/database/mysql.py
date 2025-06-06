@@ -353,6 +353,18 @@ class SQLNotifySystem(BaseSQLEngine):
         if self.cache.get(DBCacheType.DynamicVoiceRoom) is not None:
             self.cache[DBCacheType.DynamicVoiceRoom].remove(channel_id)
 
+    def batch_remove_dynamic_voice(self, channel_ids: list[int]):
+        """批次移除動態語音"""
+        if not channel_ids:
+            return
+        stmt = delete(DynamicChannel).where(DynamicChannel.channel_id.in_(channel_ids))
+        self.session.exec(stmt)
+        self.session.commit()
+        if self.cache.get(DBCacheType.DynamicVoiceRoom) is not None:
+            for channel_id in channel_ids:
+                if channel_id in self.cache[DBCacheType.DynamicVoiceRoom]:
+                    self.cache[DBCacheType.DynamicVoiceRoom].remove(channel_id)
+
     # * notify community
     def add_notify_community(
         self,

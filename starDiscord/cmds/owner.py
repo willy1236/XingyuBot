@@ -558,10 +558,27 @@ class owner(Cog_Extension):
 
     @commands.slash_command(description="尋找id對象", guild_ids=debug_guilds)
     @commands.cooldown(rate=1, per=3)
-    async def find(self, ctx: discord.ApplicationContext, id_str: str, guildid: discord.Option(str, name="guildid", required=False)):
+    async def find(
+        self,
+        ctx: discord.ApplicationContext,
+        id_str: str,
+        guildid: discord.Option(str, name="guildid", required=False),
+        channelid: discord.Option(str, name="channelid", required=False),
+    ):
         success = 0
         id = int(id_str)
         now_guild: discord.Guild = ctx.guild
+        channel_arg = self.bot.get_channel(int(channelid)) if channelid else None
+
+        if channel_arg:
+            message: discord.PartialMessage = channel_arg.get_partial_message(id)
+            if message:
+                embed = BotEmbed.simple(title=f"訊息在{channel_arg.name}頻道", description=f"ID:訊息")
+                embed.add_field(name="內容", value=message.content, inline=False)
+                embed.add_field(name="發送者", value=message.author.mention, inline=True)
+                embed.add_field(name="發送時間", value=message.created_at, inline=True)
+                embed.set_footer(text=f"id:{message.id}")
+                success += 1
 
         user = await self.bot.get_or_fetch_user(id)
         member = now_guild.get_member(id)
