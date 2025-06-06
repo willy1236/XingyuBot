@@ -556,7 +556,7 @@ class owner(Cog_Extension):
         embed = BotEmbed.simple(f"{guild.name} 的共通成員", "\n".join(common_member_display))
         await ctx.respond(embed=embed)
 
-    @commands.slash_command(description="尋找id對象", guild_ids=debug_guilds)
+    @commands.slash_command(description="尋找id對象", guild_ids=debug_guilds + happycamp_guild)
     @commands.cooldown(rate=1, per=3)
     async def find(
         self,

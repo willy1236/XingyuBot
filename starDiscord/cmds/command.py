@@ -679,11 +679,11 @@ class command(Cog_Extension):
 
         await ctx.respond("\n".join(results_text))
 
-    @commands.slash_command(description="紀錄身分組")
+    @commands.slash_command(description="將身分組保存至資料庫")
     @commands.is_owner()
     async def registerrole(
         self,
-        ctx,
+        ctx: discord.ApplicationContext,
         role: discord.Option(discord.Role, name="保存的身分組"),
         description: discord.Option(str, name="描述", description="保存的身分組描述", required=False),
         delete_role: discord.Option(bool, name="保存後是否刪除身分組", default=False),

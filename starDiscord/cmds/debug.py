@@ -214,15 +214,6 @@ class debug(Cog_Extension):
         await ctx.respond(file=discord.File(io.BytesIO(await att.read()), filename=att.filename), ephemeral=True)
 
     @commands.is_owner()
-    @commands.slash_command(description="連結身分組測試", guild_ids=debug_guilds)
-    async def linkedroletest(self, ctx: discord.ApplicationContext):
-        role_connection_metadata_records = discord.ApplicationRoleConnectionMetadata(
-            type=discord.ApplicationRoleConnectionMetadataType.boolean_equal, key="metarolekey", name="metarole1", description="metarole1 description"
-        )
-        data = await self.bot.update_role_connection_metadata_records(role_connection_metadata_records)
-        await ctx.respond(f"{data}")
-
-    @commands.is_owner()
     @commands.slash_command(description="戶籍測試", guild_ids=debug_guilds)
     async def residenttest(self, ctx: discord.ApplicationContext, member: discord.Option(discord.Member, required=True, name="成員")):
         await ctx.defer()
@@ -230,7 +221,7 @@ class debug(Cog_Extension):
 
         guild_id = check_registration(member)
         guild = self.bot.get_guild(guild_id)
-        await ctx.respond(f"{member.display_name}：{f'{guild}（{guild_id}）' if guild else guild}", ephemeral=True)
+        await ctx.respond(f"{member.display_name}：{f'{guild}（{guild_id}）' if guild else guild_id}", ephemeral=True)
 
     @commands.is_owner()
     @commands.slash_command(description="伺服器偵測測試", guild_ids=debug_guilds)
