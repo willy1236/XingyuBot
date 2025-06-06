@@ -276,6 +276,12 @@ class debug(Cog_Extension):
 
         # await channel.delete()
 
+    # @commands.is_owner()
+    # @commands.slash_command(description="錯誤測試", guild_ids=debug_guilds)
+    # async def errortest(self, ctx: discord.ApplicationContext):
+    #     # raise APIInvokeError("這是一個API調用錯誤測試", original_message="這是原始錯誤訊息")
+    #     raise AttributeError("這是一個屬性錯誤測試")  # This will trigger an AttributeError
+
     # @commands.slash_command()
     # async def modal_slash(self,ctx: discord.ApplicationContext):
     #     """Shows an example of a modal dialog being invoked from a slash command."""
@@ -294,6 +300,7 @@ class debug(Cog_Extension):
     #         await channel.set_permissions(user,view_channel=True)
     #         await asyncio.sleep(0.5)
     #     await ctx.message.add_reaction('✅')
+
 
 def setup(bot):
     bot.add_cog(debug(bot))

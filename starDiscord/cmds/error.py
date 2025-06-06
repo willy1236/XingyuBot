@@ -1,6 +1,5 @@
 import discord
 from discord.ext import commands
-from mysql.connector.errors import Error as sqlerror
 
 from starlib import Jsondb, log
 from starlib.errors import *
@@ -31,12 +30,12 @@ class error(Cog_Extension):
 
         #指令執行時發生錯誤
         elif isinstance(error,discord.ApplicationCommandInvokeError):
-            if isinstance(error.original,StarException):
-                await ctx.respond(error.original,ephemeral=True)
+            if isinstance(error.original, StarException):
+                await ctx.respond(error.original, ephemeral=True)
                 if error.original.original_message:
-                    if debug_mode:
-                        log.error(f"{error},{error.original.original_message},{type(error.original)}")
-                    else:
+                    log.error("%s, %s", error.original, type(error.original), exc_info=error.original)
+
+                    if not debug_mode:
                         await self.bot.error(ctx,f"{error.original} ({error.original.original_message})")
 
             elif isinstance(error.original,discord.errors.Forbidden):
@@ -44,24 +43,23 @@ class error(Cog_Extension):
             elif isinstance(error.original,discord.errors.NotFound):
                 await ctx.respond(f"未找到：給定的參數未找到", ephemeral=True)
 
-            elif isinstance(error.original,sqlerror) and error.original.errno == 1062:
-                await ctx.respond(f"資料錯誤：資料重複新增", ephemeral=True)
-            elif isinstance(error.original,(AttributeError, KeyError)):
+            elif isinstance(error.original, (AttributeError, KeyError)):
                 if not ctx.guild or ctx.guild.id not in debug_guilds:
                     await ctx.respond(f"錯誤：機器人內部錯誤（若發生此項錯誤請靜待修復）", ephemeral=True)
-                    await self.bot.error(ctx,error)
+                    await self.bot.error(ctx, error)
                 else:
                     await ctx.respond(f"錯誤（debug）：```py\n{type(error.original)}：{error.original}```", ephemeral=True)
 
-                log.error(f"{error},{type(error)},{type(error.original)}")
+                log.exception("%s, %s", error.original, type(error.original), exc_info=error.original)
+
             else:
                 if not ctx.guild or ctx.guild.id not in debug_guilds:
                     await ctx.respond(f"發生未知錯誤，請等待修復", ephemeral=True)
-                    await self.bot.error(ctx,error)
+                    await self.bot.error(ctx, error)
                 else:
                     await ctx.respond(f"發生未知錯誤（debug）：```py\n{error.original}```", ephemeral=True)
 
-                log.error(f"{error},{type(error)},{type(error.original)}")
+                log.exception("%s, %s", error, type(error.original), exc_info=error.original)
 
         elif isinstance(error,discord.ApplicationCommandError):
             await ctx.respond(f"{error}", ephemeral=True)
@@ -73,7 +71,7 @@ class error(Cog_Extension):
             if not ctx.guild or ctx.guild.id not in debug_guilds:
                 await self.bot.error(ctx,error)
             await ctx.respond(f"發生未知錯誤\n```{error.original}```", ephemeral=True)
-            log.error(f"{error},{type(error)}")
+            log.error(f"{error},{type(error)}", exc_info=error)
 
     @commands.Cog.listener()
     async def on_unknown_application_command(self, interaction: discord.Interaction):

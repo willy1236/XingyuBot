@@ -10,8 +10,8 @@ from twitchAPI.eventsub.websocket import EventSubWebsocket
 from twitchAPI.helper import first
 from twitchAPI.oauth import UserAuthenticationStorageHelper, UserAuthenticator, refresh_access_token, validate_token
 from twitchAPI.object import eventsub
-from twitchAPI.twitch import InvalidTokenException, MissingScopeException, Twitch
-from twitchAPI.type import AuthScope, ChatEvent, EventSubSubscriptionError, EventSubSubscriptionTimeout
+from twitchAPI.twitch import Twitch
+from twitchAPI.type import AuthScope, ChatEvent, EventSubSubscriptionError, EventSubSubscriptionTimeout, InvalidTokenException, MissingScopeException
 
 from starlib import BaseThread, BotEmbed, Jsondb, sclient, sqldb, twitch_log
 from starlib.instance import tw_api

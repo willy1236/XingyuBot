@@ -3,16 +3,16 @@ from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from datetime import date, datetime, time, timedelta, timezone
 from functools import wraps
-from typing import TYPE_CHECKING, Literal, ParamSpec, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Literal, ParamSpec, Self, TypeVar, overload
 
 import discord
 import sqlalchemy
 from google.oauth2.credentials import Credentials
 from sqlalchemy import and_, delete, desc, func, or_
 from sqlalchemy.engine import URL
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session as ALSession
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import joinedload, sessionmaker
 from sqlmodel import Session, SQLModel, create_engine, select, update
 
 from starlib.models.mysql import Community, NotifyCommunity
@@ -30,6 +30,16 @@ OBJ = TypeVar("OBJ")
 T = TypeVar("T")
 P = ParamSpec("P")
 
+# 外部裝飾器定義（不依賴 self）
+def with_session(func):
+    @wraps(func)
+    def wrapper(self: "BaseSQLEngine", *args, **kwargs):
+        with self.session_scope():
+            return func(self, *args, **kwargs)
+
+    return wrapper
+
+
 class BaseSQLEngine:
     def __init__(self,connection_url):
         # self.alengine = sqlalchemy.create_engine(connection_url, echo=False)
@@ -39,7 +49,7 @@ class BaseSQLEngine:
         self._local = threading.local()
 
         self.engine = create_engine(connection_url, echo=False, pool_pre_ping=True)
-        self.SessionLocal = sessionmaker(bind=self.engine)
+        self.SessionLocal = sessionmaker(bind=self.engine, class_=Session, expire_on_commit=False)
         # SessionLocal = sessionmaker(bind=self.engine)
         # self.session:Session = SessionLocal()
 
@@ -53,7 +63,7 @@ class BaseSQLEngine:
         self.cache = dict()
 
     @property
-    def alsession(self) -> ALSession:
+    def alsession(self) -> Session:
         if not hasattr(self._local, "alsession"):
             raise RuntimeError("Session not initialized. Use inside a session context.")
         return self._local.alsession
@@ -128,9 +138,19 @@ class SQLUserSystem(BaseSQLEngine):
         result = self.session.exec(stmt).one_or_none()
         return result if result is not None else CloudUser(discord_id=discord_id)
 
-    def get_dcuser(self, discord_id: int):
+    def get_dcuser(self, discord_id: int, with_registration: bool = False):
         stmt = select(DiscordUser).where(DiscordUser.discord_id == discord_id)
+        if with_registration:
+            stmt = stmt.options(joinedload(DiscordUser.registration))
         result = self.session.exec(stmt).one_or_none()
+        return result or DiscordUser(discord_id=discord_id)
+
+    @with_session
+    def get_dcuser_test_session(self, discord_id: int, with_registration: bool = False):
+        stmt = select(DiscordUser).where(DiscordUser.discord_id == discord_id)
+        if with_registration:
+            stmt = stmt.options(joinedload(DiscordUser.registration))
+        result = self.alsession.exec(stmt).one_or_none()
         return result or DiscordUser(discord_id=discord_id)
 
     def get_main_account(self, alternate_account):

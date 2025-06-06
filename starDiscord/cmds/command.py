@@ -9,8 +9,7 @@ from discord.commands import OptionChoice, SlashCommandGroup
 from discord.errors import Forbidden, NotFound
 from discord.ext import commands, pages
 from discord.utils import format_dt
-from mysql.connector.errors import Error as sqlerror
-from mysql.connector.errors import IntegrityError
+from git import exc
 
 from starlib import BotEmbed, ChoiceList, log, sclient, tz
 from starlib.dataExtractor import GoogleCloud
@@ -85,8 +84,8 @@ class command(Cog_Extension):
                         main_account = sclient.sqldb.get_main_account(user.id)
                         if main_account:
                             user = ctx.guild.get_member(main_account)
-                    except sqlerror:
-                        pass
+                    except Exception as e:
+                        log.warning("查詢主帳號時發生錯誤", exc_info=e)
 
                     await user.add_roles(new_role, reason="指令:加身分組")
                     added_user.append(user.mention)
@@ -122,10 +121,8 @@ class command(Cog_Extension):
                     # 1062
                     sclient.sqldb.add_role_save(user.id, role)
                     log.info(f"新增:{role.name}")
-                except sqlerror as e:
-                    if e.errno != 1062:
-                        log.warning(f"儲存身分組時發生錯誤：{role.name}")
-                        raise
+                except Exception as e:
+                    log.warning(f"儲存身分組時發生錯誤", role.name, exc_info=e)
 
         await ctx.respond("身分組儲存完成", delete_after=5)
 

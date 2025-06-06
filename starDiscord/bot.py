@@ -48,6 +48,7 @@ class DiscordBot(discord.Bot):
         embed.add_field(name="使用者", value=f"{ctx.author}\n{ctx.author.id}", inline=False)
         embed.add_field(name="發生頻道", value=f"{ctx.channel}\n{ctx.channel.id}", inline=True)
         embed.add_field(name="發生群組", value=f"{ctx.guild}\n{ctx.guild.id}", inline=True)
+        embed.timestamp = ctx.message.created_at
 
         assert isinstance(error_report ,discord.abc.Messageable)
         await error_report.send(embed=embed)
