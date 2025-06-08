@@ -9,7 +9,6 @@ from discord.commands import OptionChoice, SlashCommandGroup
 from discord.errors import Forbidden, NotFound
 from discord.ext import commands, pages
 from discord.utils import format_dt
-from git import exc
 
 from starlib import BotEmbed, ChoiceList, log, sclient, tz
 from starlib.dataExtractor import GoogleCloud
@@ -260,30 +259,32 @@ class command(Cog_Extension):
         self,
         ctx,
         bet_id: discord.Option(str, name="賭盤", description="", required=True),
-        choice: discord.Option(str, name="下注顏色", description="", required=True, choices=bet_option),
+        choice: discord.Option(int, name="下注顏色", description="", required=True, choices=bet_option),
         money: discord.Option(int, name="下注點數", description="", required=True, min_value=1),
     ):
         if bet_id == ctx.author.id:
             await ctx.respond("錯誤：你不可以下注自己的賭盤", ephemeral=True)
             return
 
-        bet = sclient.sqldb.get_bet_data(bet_id)
+        bet = sclient.sqldb.get_bet(bet_id)
         if not bet:
             await ctx.respond("編號錯誤：沒有此編號的賭盤喔", ephemeral=True)
             return
-        elif not bet["Ison"]:
+        elif not bet.is_on:
             await ctx.respond("錯誤：此賭盤已經關閉了喔", ephemeral=True)
             return
 
-        user_data = sclient.sqldb.get_coin(ctx.author.id, Coins.Point)
+        user_coin = sclient.sqldb.get_coin(ctx.author.id)
 
-        if user_data["point"] < money:
+        if user_coin.stardust < money:
             await ctx.respond("點數錯誤：你沒有那麼多點數", ephemeral=True)
             return
 
-        sclient.sqldb.update_coins(ctx.author.id, "add", Coins.Point, money * -1)
-        sclient.sqldb.place_bet(bet_id, choice, money)
-        await ctx.respond("下注完成!")
+        user_bet = sclient.sqldb.place_bet(bet_id, choice, money)
+        if user_bet:
+            user_coin.stardust -= money
+            sclient.sqldb.merge(user_coin)
+            await ctx.respond("下注完成!")
 
     @bet.command(name="create", description="創建賭盤")
     async def create_bet(
@@ -437,15 +438,6 @@ class command(Cog_Extension):
         args: list[str] = args_str.split()
         result = random.choices(args, k=times)
         await ctx.respond(f"我選擇：{', '.join(result)}")
-
-    @commands.user_command(name="摃殘", guild_ids=happycamp_guild)
-    async def bonk(self, ctx: discord.ApplicationContext, member: discord.Member):
-        if not ctx.user.get_role(1178151415403790478):
-            await ctx.respond("你不是台中摃殘黨員", ephemeral=True)
-            return
-
-        await member.timeout_for(duration=timedelta(seconds=10), reason="bonk")
-        await ctx.respond(f"{member.mention}：bonk")
 
     @poll.command(name="create", description="創建投票")
     async def create_poll(
@@ -685,7 +677,7 @@ class command(Cog_Extension):
         self,
         ctx: discord.ApplicationContext,
         role: discord.Option(discord.Role, name="保存的身分組"),
-        description: discord.Option(str, name="描述", description="保存的身分組描述", required=False),
+        description: discord.Option(str, name="描述", description="保存的身分組描述"),
         delete_role: discord.Option(bool, name="保存後是否刪除身分組", default=False),
         remove_member: discord.Option(bool, name="保存後是否清空身分組成員", default=False),
     ):

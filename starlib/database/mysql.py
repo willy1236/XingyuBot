@@ -184,7 +184,7 @@ class SQLUserSystem(BaseSQLEngine):
         return {i.discord_id: i.name for i in result}
 
 class SQLCurrencySystem(BaseSQLEngine):
-    def get_coin(self,discord_id:int):
+    def get_coin(self, discord_id: int):
         """取得用戶擁有的貨幣數"""
         stmt = select(UserPoint).where(UserPoint.discord_id == discord_id)
         result = self.session.exec(stmt).one_or_none()
@@ -246,6 +246,48 @@ class SQLCurrencySystem(BaseSQLEngine):
     #     if record:
     #         return ShopItem(record[0])
 
+class SQLBetSystem(BaseSQLEngine):
+    def get_bet(self, bet_id: int):
+        """取得指定的賭注資料"""
+        stmt = select(Bet).where(Bet.bet_id == bet_id)
+        result = self.session.exec(stmt).one_or_none()
+        return result
+
+    def place_bet(self, bet_id: int, discord_id: int, bet_option: int, bet_amount: int):
+        user_bet = UserBet(discord_id=discord_id, bet_id=bet_id, bet_option=bet_option, bet_amount=bet_amount, bet_time=datetime.now(tz=tz))
+        self.session.add(user_bet)
+        self.session.commit()
+        return user_bet
+
+
+#     def create_bet(self,bet_id:int,title:str,pink:str,blue:str):
+#         self.cursor.execute(f"USE `database`;")
+#         self.cursor.execute(f'INSERT INTO `bet_data` VALUES(%s,%s,%s,%s,%s);',(bet_id,title,pink,blue,True))
+#         self.connection.commit()
+
+#     def update_bet(self,bet_id:int):
+#         self.cursor.execute(f"USE `database`;")
+#         self.cursor.execute(f"UPDATE `bet_data` SET IsOn = %s WHERE bet_id = %s;",(False,bet_id))
+#         self.connection.commit()
+
+#     def get_bet_total(self,bet_id:int):
+#         self.cursor.execute(f"USE `stardb_user`;")
+#         self.cursor.execute(f'SELECT SUM(money) FROM `user_bet` WHERE `bet_id` = %s AND `choice` = %s;',(bet_id,'pink'))
+#         total_pink = self.cursor.fetchone()
+#         self.cursor.execute(f'SELECT SUM(money) FROM `user_bet` WHERE `bet_id` = %s AND `choice` = %s;',(bet_id,'blue'))
+#         total_blue = self.cursor.fetchone()
+#         return [int(total_pink['SUM(money)'] or 0),int(total_blue['SUM(money)'] or 0)]
+
+#     def get_bet_winner(self,bet_id:int,winner:str):
+#         self.cursor.execute(f"USE `stardb_user`;")
+#         self.cursor.execute(f'SELECT * FROM `user_bet` WHERE `bet_id` = %s AND `choice` = %s;',(bet_id,winner))
+#         records = self.cursor.fetchall()
+#         return records
+
+#     def remove_bet(self,bet_id:int):
+#         self.cursor.execute(f'DELETE FROM `stardb_user`.`user_bet` WHERE `bet_id` = %s;',(bet_id,))
+#         self.cursor.execute(f'DELETE FROM `database`.`bet_data` WHERE `bet_id` = %s;',(bet_id,))
+#         self.connection.commit()
 
 class SQLGameSystem(BaseSQLEngine):
     def get_user_game(self, discord_id: int, game: GameType):
@@ -1090,91 +1132,6 @@ class SQLTest(BaseSQLEngine):
     pass
 
 
-# class MySQLBaseModel(object):
-#     """MySQL資料庫基本模型"""
-#     def __init__(self,mysql_settings:dict):
-#         '''MySQL 資料庫連接\n
-#         settings = {"host": "","port": ,"user": "","password": "","db": "","charset": ""}
-#         '''
-#         #建立連線
-#         self.connection = mysql.connector.connect(**mysql_settings)
-#         self.cursor = self.connection.cursor(dictionary=True)
-
-#     def truncate_table(self,table:str,database="database"):
-#         self.cursor.execute(f"USE `{database}`;")
-#         self.cursor.execute(f"TRUNCATE TABLE `{table}`;")
-
-#     def set_userdata(self,discord_id:int,table:str,column:str,value):
-#         """設定或更新用戶資料（只要PK為discord_id的皆可）"""
-#         self.cursor.execute(f"USE `stardb_user`;")
-#         self.cursor.execute(f"INSERT INTO `{table}` SET discord_id = {discord_id}, {column} = {value} ON DUPLICATE KEY UPDATE discord_id = {discord_id}, {column} = {value};")
-#         self.connection.commit()
-
-#     def get_userdata(self,discord_id:int,table:str='user_discord'):
-#         """取得用戶資料（只要PK為discord_id的皆可）"""
-#         self.cursor.execute(f"USE `stardb_user`;")
-#         self.cursor.execute(f'SELECT * FROM `{table}` WHERE discord_id = %s;',(discord_id,))
-#         records = self.cursor.fetchall()
-#         if records:
-#             return records[0]
-
-#     def remove_userdata(self,discord_id:int,table:str='user_discord'):
-#         """移除用戶資料（只要PK為discord_id的皆可）"""
-#         self.cursor.execute(f"USE `stardb_user`;")
-#         self.cursor.execute(f"DELETE FROM `{table}` WHERE `discord_id` = %s;",(discord_id,))
-#         self.connection.commit()
-
-#     def add_userdata_value(self,discord_id:int,table:str,column:str,value):
-#         """增加用戶數值資料的值（只要PK為discord_id的皆可）"""
-#         self.cursor.execute(f"USE `stardb_user`;")
-#         self.cursor.execute(f"INSERT INTO `{table}` SET discord_id = {discord_id}, {column} = {value} ON DUPLICATE KEY UPDATE `discord_id` = {discord_id}, `{column}` = CASE WHEN `{column}` IS NOT NULL THEN `{column}` + {value} ELSE {value} END;")
-#         self.connection.commit()
-
-#     def set_userdata_v2(self, discord_id:int, column:str, value, table="user_discord"):
-#         """設定用戶資料"""
-#         self.cursor.execute(f"INSERT INTO `stardb_user`.`{table}` SET discord_id = {discord_id}, {column} = {value} ON DUPLICATE KEY UPDATE discord_id = {discord_id}, {column} = {value};")
-#         self.connection.commit()
-# class MySQLBetSystem(MySQLBaseModel):
-#     def get_bet_data(self,bet_id:int):
-#         self.cursor.execute(f"USE `database`;")
-#         self.cursor.execute(f'SELECT `bet_id`,`IsOn` FROM `bet_data` WHERE `bet_id` = %s;',(bet_id,))
-#         records = self.cursor.fetchone()
-#         return records
-
-#     def place_bet(self,bet_id:int,choice:str,money:int):
-#         self.cursor.execute(f"USE `stardb_user`;")
-#         self.cursor.execute(f'INSERT INTO `user_bet` VALUES(%s,%s,%s);',(bet_id,choice,money))
-#         self.connection.commit()
-
-#     def create_bet(self,bet_id:int,title:str,pink:str,blue:str):
-#         self.cursor.execute(f"USE `database`;")
-#         self.cursor.execute(f'INSERT INTO `bet_data` VALUES(%s,%s,%s,%s,%s);',(bet_id,title,pink,blue,True))
-#         self.connection.commit()
-
-#     def update_bet(self,bet_id:int):
-#         self.cursor.execute(f"USE `database`;")
-#         self.cursor.execute(f"UPDATE `bet_data` SET IsOn = %s WHERE bet_id = %s;",(False,bet_id))
-#         self.connection.commit()
-
-#     def get_bet_total(self,bet_id:int):
-#         self.cursor.execute(f"USE `stardb_user`;")
-#         self.cursor.execute(f'SELECT SUM(money) FROM `user_bet` WHERE `bet_id` = %s AND `choice` = %s;',(bet_id,'pink'))
-#         total_pink = self.cursor.fetchone()
-#         self.cursor.execute(f'SELECT SUM(money) FROM `user_bet` WHERE `bet_id` = %s AND `choice` = %s;',(bet_id,'blue'))
-#         total_blue = self.cursor.fetchone()
-#         return [int(total_pink['SUM(money)'] or 0),int(total_blue['SUM(money)'] or 0)]
-
-#     def get_bet_winner(self,bet_id:int,winner:str):
-#         self.cursor.execute(f"USE `stardb_user`;")
-#         self.cursor.execute(f'SELECT * FROM `user_bet` WHERE `bet_id` = %s AND `choice` = %s;',(bet_id,winner))
-#         records = self.cursor.fetchall()
-#         return records
-
-#     def remove_bet(self,bet_id:int):
-#         self.cursor.execute(f'DELETE FROM `stardb_user`.`user_bet` WHERE `bet_id` = %s;',(bet_id,))
-#         self.cursor.execute(f'DELETE FROM `database`.`bet_data` WHERE `bet_id` = %s;',(bet_id,))
-#         self.connection.commit()
-
 # class MYSQLElectionSystem(MySQLBaseModel):
 #     def add_election(self,discord_id:int,session:int,position,represent_party_id:int=None):
 #         position = Position(position)
@@ -1266,34 +1223,11 @@ class SQLTest(BaseSQLEngine):
 #         if records:
 #             return Party(**records[0])
 
-# class MySQLManager(MySQLBaseModel):
-#     def copy_data(self, remote_schema, remote_table, local_schema, local_table):
-#         remote = MySQLBaseModel(Jsondb.config["remote_SQLsettings"])
-#         remote.cursor.execute(f"SELECT * FROM `{remote_schema}`.`{remote_table}`;")
-#         records = remote.cursor.fetchall()
-
-#         col_count = len(records[0])
-#         values_str = ",".join(["%s" for _ in range(col_count)])
-#         try:
-#             self.cursor.executemany(f'INSERT INTO `{local_schema}`.`{local_table}` VALUES({values_str});', [tuple(r.values()) for r in records])
-#             self.connection.commit()
-#         except sqlerror as e:
-#             if e.errno == 1062:
-#                 print(e.msg)
-#             else:
-#                 raise e
-
-# class MySQLDatabase(
-#     MySQLBetSystem,
-#     MYSQLElectionSystem,
-#     MySQLManager,
-# ):
-#     """Mysql操作"""
-
 
 class SQLEngine(
     SQLUserSystem,
     SQLCurrencySystem,
+    SQLBetSystem,
     SQLGameSystem,
     SQLPetSystem,
     SQLNotifySystem,

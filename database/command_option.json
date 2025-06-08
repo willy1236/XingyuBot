@@ -72,11 +72,11 @@
         }
     },
     "bet_option": {
-        "blue": {
+        "1": {
             "en-US": "Blue Side",
             "zh-TW": "藍藍幫"
         },
-        "pink": {
+        "2": {
             "en-US": "Pink Side",
             "zh-TW": "粉紅幫"
         }

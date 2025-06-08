@@ -1,6 +1,4 @@
-from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
-from typing import TYPE_CHECKING, TypedDict
 
 import discord
 from discord import Bot
@@ -16,8 +14,7 @@ from ..types import *
 from ..utils import BotEmbed
 from .sqlSchema import *
 
-if TYPE_CHECKING:
-    from ..database import SQLEngine
+
 class CloudUser(UserSchema, table=True):
     __tablename__ = "cloud_user"
 
@@ -27,6 +24,7 @@ class CloudUser(UserSchema, table=True):
     drive_share_id: str | None
     twitch_id: int | None = Field(unique=True)
     name: str | None
+
 
 class DiscordUser(UserSchema, table=True):
     __tablename__ = "user_discord"
@@ -44,13 +42,19 @@ class DiscordUser(UserSchema, table=True):
 class UserPoint(UserSchema, table=True):
     __tablename__ = "user_point"
 
-    discord_id: int = Field(
-        sa_column=Column(BigInteger, primary_key=True, autoincrement=False)
-    )
+    discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True, autoincrement=False))
     stardust: int | None = Field(default=0)
     point: int | None = Field(default=0)
     rcoin: int | None = Field(default=0)
 
+class UserBet(UserSchema, table=True):
+    __tablename__ = "user_bet"
+
+    bet_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
+    discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
+    bet_option: int = Field(sa_column=Column(SmallInteger, primary_key=True))
+    bet_amount: int
+    bet_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
 
 class UserGame(UserSchema, table=True):
     __tablename__ = "game_data"
@@ -202,6 +206,17 @@ class DynamicChannel(BasicSchema, table=True):
     channel_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
     creator_id: int = Field(sa_column=Column(BigInteger))
     guild_id: int = Field(sa_column=Column(BigInteger))
+
+
+class Bet(BasicSchema, table=True):
+    __tablename__ = "bet_data"
+
+    bet_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
+    title: str
+    blue_title: str
+    pink_title: str
+    is_on: bool
+    created_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
 
 
 class Poll(BasicSchema, table=True):

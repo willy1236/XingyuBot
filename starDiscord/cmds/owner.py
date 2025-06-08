@@ -122,6 +122,62 @@ class BotPanel(discord.ui.View):
         embed = BotEmbed.simple("伺服器列表", "\n".join(name_list))
         await interaction.response.send_message(content="", ephemeral=False, embed=embed)
 
+class McServerPanel(discord.ui.View):
+    def __init__(self, server_id):
+        super().__init__()
+        self.server_id = server_id
+
+    def embed(self):
+        server = mcss_api.get_server_detail(self.server_id)
+        if not server:
+            return BotEmbed.simple("伺服器未找到", "請確認伺服器ID是否正確")
+
+        embed = server.embed()
+        embed.set_footer(text=f"伺服器ID：{self.server_id}")
+        return embed
+
+    @discord.ui.button(label="啟動伺服器", row=1, style=discord.ButtonStyle.primary)
+    async def start_button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
+        await interaction.response.defer()
+        if server := mcss_api.get_server_detail(self.server_id):
+            if server.status == McssServerStatues.Running:
+                await interaction.followup.send("伺服器已經在運行中", ephemeral=True)
+                return
+            elif server.status == McssServerStatues.Stopped:
+                mcss_api.excute_action(self.server_id, McssServerAction.Start)
+                await interaction.followup.send("伺服器啟動中...", ephemeral=True)
+                for _ in range(10):
+                    await asyncio.sleep(10)
+                    server = mcss_api.get_server_detail(self.server_id)
+                    if server and server.status == McssServerStatues.Running:
+                        try:
+                            embed = server.embed()
+                        except Exception as e:
+                            embed = BotEmbed.general("伺服器狀態無法獲取", title="伺服器啟動成功", description="若仍然無法連線，請聯繫管理者進行確認")
+                        await interaction.followup.send("伺服器啟動成功", embed=embed, ephemeral=True)
+                        return
+
+        await interaction.followup.send("伺服器啟動失敗，請稍後再試", ephemeral=True)
+
+    @discord.ui.button(label="關閉伺服器", row=1, style=discord.ButtonStyle.danger)
+    async def stop_button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
+        await interaction.response.defer()
+        if server := mcss_api.get_server_detail(self.server_id):
+            if server.status == McssServerStatues.Stopped:
+                await interaction.followup.send("伺服器已經關閉", ephemeral=True)
+                return
+            elif server.status == McssServerStatues.Running:
+                mcss_api.excute_action(self.server_id, McssServerAction.Stop)
+                await interaction.followup.send("伺服器關閉中...", ephemeral=True)
+                for _ in range(10):
+                    await asyncio.sleep(10)
+                    server = mcss_api.get_server_detail(self.server_id)
+                    if server and server.status == McssServerStatues.Stopped:
+                        await interaction.followup.send("伺服器已關閉", embed=server.embed(), ephemeral=True)
+                        return
+
+        await interaction.followup.send("伺服器關閉失敗，請稍後再試", ephemeral=True)
+
 
 class owner(Cog_Extension):
     twitch_chatbot = SlashCommandGroup("twitch_chatbot", "twitch機器人相關指令", guild_ids=debug_guilds)
@@ -494,6 +550,13 @@ class owner(Cog_Extension):
         await ctx.defer()
         response = mcss_api.get_server_detail(server_id)
         await ctx.respond(embed=response.embed())
+
+    @mcserver.command(description="開啟mc伺服器面板")
+    @commands.is_owner()
+    async def mcserver_panel(self, ctx: discord.ApplicationContext, server_id=mcss_server_option):
+        await ctx.defer()
+        view = McServerPanel(server_id)
+        await ctx.respond(view=view, embed=view.embed(), ephemeral=True)
 
     @mcserver.command(description="列出現在開啟的mc伺服器")
     async def list(self, ctx: discord.ApplicationContext):
