@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import asyncio
 import random
 from datetime import datetime
 from decimal import Decimal
@@ -12,6 +13,9 @@ import numpy as np
 
 from starlib import BotEmbed, Jsondb, log, sqldb, tz
 from starlib.models.mysql import Giveaway, GiveawayUser, Poll, PollRole
+from starlib.types import McssServerAction, McssServerStatues, NotifyChannelType
+from starlib.utils.utility import find_radmin_vpn_network
+from starlib.instance import mcss_api
 
 if TYPE_CHECKING:
 	from starlib.database import SQLEngine
@@ -616,3 +620,81 @@ class GiveawayView(discord.ui.View):
 		embed = self.end_giveaway()
 		await self.message.edit(embed=embed, view=self)
 		self.stop()
+
+class McServerPanel(discord.ui.View):
+	def __init__(self, server_id):
+		super().__init__(timeout=600)
+		self.server_id = server_id
+
+	async def on_timeout(self):
+		for item in self.children:
+			if isinstance(item, discord.ui.Button):
+				item.disabled = True
+		self.clear_items()
+		await self.message.edit(view=self)
+		self.stop()
+
+	def embed(self):
+		server = mcss_api.get_server_detail(self.server_id)
+		if not server:
+			return BotEmbed.simple("伺服器未找到", "請確認伺服器ID是否正確")
+
+		embed = server.embed()
+		return embed
+
+	@discord.ui.button(label="啟動伺服器", row=1, style=discord.ButtonStyle.primary)
+	async def start_button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
+		await interaction.response.defer()
+		if server := mcss_api.get_server_detail(self.server_id):
+			if server.status == McssServerStatues.Running:
+				await interaction.followup.send("伺服器已經在運行中", ephemeral=True)
+				return
+			elif server.status == McssServerStatues.Stopped:
+				mcss_api.excute_action(self.server_id, McssServerAction.Start)
+				await interaction.followup.send("伺服器啟動中...", ephemeral=True)
+				for _ in range(10):
+					await asyncio.sleep(10)
+					server = mcss_api.get_server_detail(self.server_id)
+					if server and server.status == McssServerStatues.Running:
+						await interaction.followup.send("伺服器啟動成功", ephemeral=True)
+						await interaction.edit_original_response(embed=server.embed())
+						return
+
+		await interaction.followup.send("伺服器啟動失敗，請稍後再試", ephemeral=True)
+
+	@discord.ui.button(label="關閉伺服器", row=1, style=discord.ButtonStyle.danger)
+	async def stop_button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
+		await interaction.response.defer()
+		if server := mcss_api.get_server_detail(self.server_id):
+			if server.status == McssServerStatues.Stopped:
+				await interaction.followup.send("伺服器已經關閉", ephemeral=True)
+				return
+			elif server.status == McssServerStatues.Running:
+				mcss_api.excute_action(self.server_id, McssServerAction.Stop)
+				await interaction.followup.send("伺服器關閉中...", ephemeral=True)
+				for _ in range(10):
+					await asyncio.sleep(10)
+					server = mcss_api.get_server_detail(self.server_id)
+					if server and server.status == McssServerStatues.Stopped:
+						await interaction.followup.send("伺服器已關閉", ephemeral=True)
+						await interaction.edit_original_response(embed=server.embed())
+						return
+
+		await interaction.followup.send("伺服器關閉失敗，請稍後再試", ephemeral=True)
+
+	@discord.ui.button(label="取得IP位置", row=1, style=discord.ButtonStyle.secondary)
+	async def ip_button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
+		await interaction.response.defer()
+		if server := mcss_api.get_server_detail(self.server_id):
+			ip = find_radmin_vpn_network()
+			if not ip:
+				await interaction.followup.send("無法獲取Radmin VPN IP", ephemeral=True)
+				return
+
+			port = server.find_port() or "XXXXX（請確認這個數字是多少）"
+			if port == 25565:
+				port = "25565（預設端口可省略）"
+
+			await interaction.followup.send(f"伺服器IP位置：`{ip}:{port}`")
+		else:
+			await interaction.followup.send("伺服器未找到", ephemeral=True)

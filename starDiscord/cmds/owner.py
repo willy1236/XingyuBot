@@ -1,6 +1,5 @@
 import asyncio
 import platform
-import subprocess
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
 
@@ -18,11 +17,10 @@ from starlib.utils.utility import base64_to_buffer, converter, find_radmin_vpn_n
 
 from ..command_options import *
 from ..extension import Cog_Extension
+from ..uiElement.view import McServerPanel
 
 if TYPE_CHECKING:
 	from ..bot import DiscordBot
-
-mcserver_process: subprocess.Popen | None = None
 
 def server_status(ip, port):
 	server = JavaServer.lookup(f"{ip}:{port}")
@@ -123,84 +121,6 @@ class BotPanel(discord.ui.View):
 		name_list = [f"{i.name}（{i.id}）: {i.member_count}" for i in self.bot.guilds]
 		embed = BotEmbed.simple("伺服器列表", "\n".join(name_list))
 		await interaction.response.send_message(content="", ephemeral=False, embed=embed)
-
-class McServerPanel(discord.ui.View):
-	def __init__(self, server_id):
-		super().__init__(timeout=600)
-		self.server_id = server_id
-
-	async def on_timeout(self):
-		for item in self.children:
-			if isinstance(item, discord.ui.Button):
-				item.disabled = True
-		self.clear_items()
-		await self.message.edit(view=self)
-		self.stop()
-
-	def embed(self):
-		server = mcss_api.get_server_detail(self.server_id)
-		if not server:
-			return BotEmbed.simple("伺服器未找到", "請確認伺服器ID是否正確")
-
-		embed = server.embed()
-		return embed
-
-	@discord.ui.button(label="啟動伺服器", row=1, style=discord.ButtonStyle.primary)
-	async def start_button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
-		await interaction.response.defer()
-		if server := mcss_api.get_server_detail(self.server_id):
-			if server.status == McssServerStatues.Running:
-				await interaction.followup.send("伺服器已經在運行中", ephemeral=True)
-				return
-			elif server.status == McssServerStatues.Stopped:
-				mcss_api.excute_action(self.server_id, McssServerAction.Start)
-				await interaction.followup.send("伺服器啟動中...", ephemeral=True)
-				for _ in range(10):
-					await asyncio.sleep(10)
-					server = mcss_api.get_server_detail(self.server_id)
-					if server and server.status == McssServerStatues.Running:
-						await interaction.followup.send("伺服器啟動成功", ephemeral=True)
-						await interaction.edit_original_response(embed=server.embed())
-						return
-
-		await interaction.followup.send("伺服器啟動失敗，請稍後再試", ephemeral=True)
-
-	@discord.ui.button(label="關閉伺服器", row=1, style=discord.ButtonStyle.danger)
-	async def stop_button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
-		await interaction.response.defer()
-		if server := mcss_api.get_server_detail(self.server_id):
-			if server.status == McssServerStatues.Stopped:
-				await interaction.followup.send("伺服器已經關閉", ephemeral=True)
-				return
-			elif server.status == McssServerStatues.Running:
-				mcss_api.excute_action(self.server_id, McssServerAction.Stop)
-				await interaction.followup.send("伺服器關閉中...", ephemeral=True)
-				for _ in range(10):
-					await asyncio.sleep(10)
-					server = mcss_api.get_server_detail(self.server_id)
-					if server and server.status == McssServerStatues.Stopped:
-						await interaction.followup.send("伺服器已關閉", ephemeral=True)
-						await interaction.edit_original_response(embed=server.embed())
-						return
-
-		await interaction.followup.send("伺服器關閉失敗，請稍後再試", ephemeral=True)
-
-	@discord.ui.button(label="取得IP位置", row=1, style=discord.ButtonStyle.secondary)
-	async def ip_button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
-		await interaction.response.defer()
-		if server := mcss_api.get_server_detail(self.server_id):
-			ip = find_radmin_vpn_network()
-			if not ip:
-				await interaction.followup.send("無法獲取Radmin VPN IP", ephemeral=True)
-				return
-
-			port = server.find_port() or "XXXXX（請確認這個數字是多少）"
-			if port == 25565:
-				port = "25565（預設端口可省略）"
-
-			await interaction.followup.send(f"伺服器IP位置：`{ip}:{port}`")
-		else:
-			await interaction.followup.send("伺服器未找到", ephemeral=True)
 
 
 class owner(Cog_Extension):
@@ -407,7 +327,7 @@ class owner(Cog_Extension):
 	#         else:
 	#             await channel.send('👍')
 
-	@mcserver.command(description="使用rcon mc伺服器指令")
+	@mcserver.command(description="使用rcon mc伺服器指令", guild_ids=debug_guilds)
 	@commands.is_owner()
 	async def rcon(self, ctx: discord.ApplicationContext, command: str):
 		settings = Jsondb.config.get("mc_server")
@@ -417,40 +337,6 @@ class owner(Cog_Extension):
 		with mcrcon.MCRcon(host, password, port) as rcon:
 			response = rcon.command(command)
 			await ctx.respond(response if response else "指令已發送")
-
-	@mcserver.command(description="開啟mc伺服器")
-	@commands.cooldown(rate=1, per=100)
-	async def start(self, ctx: discord.ApplicationContext):
-		await ctx.defer()
-		ip = find_radmin_vpn_network()
-		port = 25565
-		# mcserver_process = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=subprocess.CREATE_NEW_CONSOLE, text=True)
-
-		server_id = Jsondb.config.get("mc_server").get("server_id")
-		server = mcss_api.get_server_detail(server_id)
-		if not server:
-			await ctx.respond("伺服器未找到，請重新設置伺服器ID")
-			return
-
-		if server.status == McssServerStatues.Stopped:
-			mcss_api.excute_action(server_id, McssServerAction.Start)
-			msg = await ctx.respond("🟡已發送開啟指令，伺服器正在啟動...")
-
-			for _ in range(10):
-				await asyncio.sleep(10)
-				server = mcss_api.get_server_detail(server_id)
-				if server and server.status == McssServerStatues.Running:
-					try:
-						await msg.edit("🟢伺服器已開啟", embed=server_status(ip, port))
-					except Exception:
-						await msg.edit("🟢伺服器已開啟")
-		else:
-			try:
-				embed = server_status(ip, port)
-			except Exception as e:
-				embed = BotEmbed.general(f"{ip}:{port}", title="伺服器已開啟", description="無法獲取伺服器狀態，若仍然無法連線，請聯繫管理者進行確認")
-
-			await ctx.respond("🟢伺服器已處於開啟狀態", embed=embed)
 
 	@mcserver.command(description="查詢mc伺服器")
 	@commands.cooldown(rate=1, per=3)
@@ -491,29 +377,7 @@ class owner(Cog_Extension):
 		except AttributeError:
 			await ctx.respond(embed=embed)
 
-	@mcserver.command(description="關閉mc伺服器")
-	@commands.cooldown(rate=1, per=10)
-	async def stop(self, ctx: discord.ApplicationContext):
-		await ctx.defer()
-		#     mcserver_process.stdin.write('/stop\n')
-		#     mcserver_process.stdin.flush()
-		#     return_code = mcserver_process.wait(30)
-		server_id = Jsondb.config.get("mc_server").get("server_id")
-		server = mcss_api.get_server_detail(server_id)
-		if server and server.status == McssServerStatues.Running:
-			mcss_api.excute_action(server_id, McssServerAction.Stop)
-			msg = await ctx.respond("🟠已發送關閉指令，伺服器正在關閉...")
-
-			for _ in range(10):
-				await asyncio.sleep(10)
-				server = mcss_api.get_server_detail(server_id)
-				if server and server.status == McssServerStatues.Stopped:
-					await msg.edit("🔴伺服器已關閉")
-					break
-		else:
-			await ctx.respond("🛑伺服器未處於開啟狀態")
-
-	@mcserver.command(description="執行mc伺服器指令")
+	@mcserver.command(description="執行mc伺服器指令", guild_ids=debug_guilds)
 	@commands.is_owner()
 	async def cmd(self, ctx: discord.ApplicationContext, server_id=mcss_server_option, command=command_option):
 		await ctx.defer()
@@ -568,21 +432,14 @@ class owner(Cog_Extension):
 					await msg.edit("🔴伺服器已關閉")
 					break
 
-	@mcserver.command(description="取得mc伺服器")
-	@commands.is_owner()
-	async def get(self, ctx: discord.ApplicationContext, server_id=mcss_server_option):
-		await ctx.defer()
-		response = mcss_api.get_server_detail(server_id)
-		await ctx.respond(embed=response.embed())
-
 	@mcserver.command(description="開啟mc伺服器面板", name="panel")
-	@commands.is_owner()
+	@commands.has_guild_permissions(manage_channels=True)
 	async def mcserver_panel(self, ctx: discord.ApplicationContext, server_id=mcss_server_option):
 		await ctx.defer()
 		view = McServerPanel(server_id)
 		await ctx.respond(view=view, embed=view.embed(), ephemeral=True)
 
-	@mcserver.command(description="列出現在開啟的mc伺服器")
+	@mcserver.command(description="列出現在開啟的mc伺服器", guild_ids=debug_guilds)
 	async def list(self, ctx: discord.ApplicationContext):
 		await ctx.defer()
 		arp_lst = get_arp_list()
