@@ -14,605 +14,605 @@ from starlib import BotEmbed, Jsondb, log, sqldb, tz
 from starlib.models.mysql import Giveaway, GiveawayUser, Poll, PollRole
 
 if TYPE_CHECKING:
-    from starlib.database import SQLEngine
-    from starlib.models.mysql import PollOption, ReactionRole, TRPGStoryOption, TRPGStoryPlot
+	from starlib.database import SQLEngine
+	from starlib.models.mysql import PollOption, ReactionRole, TRPGStoryOption, TRPGStoryPlot
 
 class DeletePetView(discord.ui.View):
-    def __init__(self):
-        super().__init__(timeout=30)
+	def __init__(self):
+		super().__init__(timeout=30)
 
-    @discord.ui.button(label="放生寵物",style=discord.ButtonStyle.danger)
-    async def button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
-        user = interaction.user
-        sqldb.remove_user_pet(user.id)
-        button.disabled = True
-        await interaction.response.edit_message(content="寵物已放生",view=self)
+	@discord.ui.button(label="放生寵物", style=discord.ButtonStyle.danger)
+	async def button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
+		user = interaction.user
+		sqldb.remove_user_pet(user.id)
+		button.disabled = True
+		await interaction.response.edit_message(content="寵物已放生", view=self)
 
 class DeleteAddRoleView(discord.ui.View):
-    def __init__(self,role:discord.Role,creater:discord.Member):
-        super().__init__(timeout=30)
-        self.role = role
-        self.creater = creater
+	def __init__(self, role: discord.Role, creater: discord.Member):
+		super().__init__(timeout=30)
+		self.role = role
+		self.creater = creater
 
-    async def on_timeout(self):
-        try:
-            self.clear_items()
-            for user in self.role.members:
-                sqldb.add_role_save(user.id,self.role)
-                log.info(f"{user} has been added to the role {self.role}")
-            await self.message.edit(view=self)
-        except discord.errors.NotFound:
-            pass
+	async def on_timeout(self):
+		try:
+			self.clear_items()
+			for user in self.role.members:
+				sqldb.add_role_save(user.id, self.role)
+				log.info(f"{user} has been added to the role {self.role}")
+			await self.message.edit(view=self)
+		except discord.errors.NotFound:
+			pass
 
-    @discord.ui.button(label="刪除身分組",style=discord.ButtonStyle.danger)
-    async def button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
-        if interaction.user == self.creater:
-            role = self.role
-            await role.delete()
-            self.clear_items()
-            await interaction.message.delete()
-        else:
-            await interaction.response.send_message(content="只有使用此指令的用戶可以刪除",ephemeral=True)
+	@discord.ui.button(label="刪除身分組", style=discord.ButtonStyle.danger)
+	async def button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
+		if interaction.user == self.creater:
+			role = self.role
+			await role.delete()
+			self.clear_items()
+			await interaction.message.delete()
+		else:
+			await interaction.response.send_message(content="只有使用此指令的用戶可以刪除", ephemeral=True)
 
 class PollOptionButton(discord.ui.Button):
-    def __init__(self,option:PollOption, custom_id:str, row:int=None):
-        super().__init__(label=option.option_name,custom_id=custom_id,row=row)
-        self.option = option
+	def __init__(self, option: PollOption, custom_id: str, row: int = None):
+		super().__init__(label=option.option_name, custom_id=custom_id, row=row)
+		self.option = option
 
-    async def callback(self, interaction):
-        view: PollView = self.view
-        can_vote = False
-        have_only_role = False
-        vote_magnification = 1
-        if view.role_dict:
-            for roleid in view.role_dict:
-                if view.role_dict[roleid][0] == 1:
-                    have_only_role = True
-                    role = interaction.user.get_role(roleid)
-                    if role:
-                        can_vote = True
+	async def callback(self, interaction):
+		view: PollView = self.view
+		can_vote = False
+		have_only_role = False
+		vote_magnification = 1
+		if view.role_dict:
+			for roleid in view.role_dict:
+				if view.role_dict[roleid][0] == 1:
+					have_only_role = True
+					role = interaction.user.get_role(roleid)
+					if role:
+						can_vote = True
 
-                if view.role_dict[roleid][1] > vote_magnification:
-                    vote_magnification = view.role_dict[roleid][1]
+				if view.role_dict[roleid][1] > vote_magnification:
+					vote_magnification = view.role_dict[roleid][1]
 
-        if not view.role_dict or (have_only_role and can_vote):
-            r = view.sqldb.set_user_poll(
-                self.option.poll_id, interaction.user.id, self.option.option_id, datetime.now(), vote_magnification, view.poll.number_of_user_votes
-            )
-            if r == 2:
-                await interaction.response.send_message(f"{interaction.user.mention} 已投了 {view.poll.number_of_user_votes} 票而無法投票", ephemeral=True)
-            elif r == 1:
-                await interaction.response.send_message(f"{interaction.user.mention} 已投票給 {self.label} {vote_magnification} 票", ephemeral=True)
-            else:
-                await interaction.response.send_message(f"{interaction.user.mention} 已取消投票給 {self.label}", ephemeral=True)
-        else:
-            await interaction.response.send_message(f"{interaction.user.mention}：你沒有投票資格", ephemeral=True)
+		if not view.role_dict or (have_only_role and can_vote):
+			r = view.sqldb.set_user_poll(
+				self.option.poll_id, interaction.user.id, self.option.option_id, datetime.now(), vote_magnification, view.poll.number_of_user_votes
+			)
+			if r == 2:
+				await interaction.response.send_message(f"{interaction.user.mention} 已投了 {view.poll.number_of_user_votes} 票而無法投票", ephemeral=True)
+			elif r == 1:
+				await interaction.response.send_message(f"{interaction.user.mention} 已投票給 {self.label} {vote_magnification} 票", ephemeral=True)
+			else:
+				await interaction.response.send_message(f"{interaction.user.mention} 已取消投票給 {self.label}", ephemeral=True)
+		else:
+			await interaction.response.send_message(f"{interaction.user.mention}：你沒有投票資格", ephemeral=True)
 
 
 class PollEndButton(discord.ui.Button):
-    def __init__(self, poll_id, created_id, bot: discord.Bot):
-        super().__init__(label="結算投票", custom_id=f"end_poll_{poll_id}", style=discord.ButtonStyle.danger)
-        self.poll_id = poll_id
-        self.created_id = created_id
-        self.bot = bot
+	def __init__(self, poll_id, created_id: int, bot: discord.Bot):
+		super().__init__(label="結算投票", custom_id=f"end_poll_{poll_id}", style=discord.ButtonStyle.danger)
+		self.poll_id = poll_id
+		self.created_id = created_id
+		self.bot = bot
 
-    async def callback(self, interaction):
-        if interaction.user.id == self.created_id or (self.bot and await self.bot.is_owner(interaction.user)):
-            view: PollView = self.view
-            view.clear_items()
-            view.poll.is_on = 0
-            view.sqldb.merge(view.poll)
+	async def callback(self, interaction):
+		if interaction.user.id == self.created_id or (self.bot and await self.bot.is_owner(interaction.user)):
+			view: PollView = self.view
+			view.clear_items()
+			view.poll.is_on = 0
+			view.sqldb.merge(view.poll)
 
-            embed, labels, sizes = view.results_embed(interaction, True)  # type: ignore
-            image_buffer = view.generate_chart(labels, sizes)
+			embed, labels, sizes = view.results_embed(interaction, True)  # type: ignore
+			image_buffer = view.generate_chart(labels, sizes)
 
-            await interaction.response.edit_message(embed=embed, view=view, file=discord.File(image_buffer, filename="pie.png"))
-        else:
-            await interaction.response.send_message(f"錯誤：只有投票發起人才能結算", ephemeral=True)
+			await interaction.response.edit_message(embed=embed, view=view, file=discord.File(image_buffer, filename="pie.png"))
+		else:
+			await interaction.response.send_message(f"錯誤：只有投票發起人才能結算", ephemeral=True)
 
 
 class PollResultButton(discord.ui.Button):
-    def __init__(self, poll_id):
-        super().__init__(label="查看結果", custom_id=f"poll_result_{poll_id}", style=discord.ButtonStyle.primary)
-        self.poll_id = poll_id
+	def __init__(self, poll_id):
+		super().__init__(label="查看結果", custom_id=f"poll_result_{poll_id}", style=discord.ButtonStyle.primary)
+		self.poll_id = poll_id
 
-    async def callback(self, interaction):
-        view: PollView = self.view
-        if not view.poll.results_only_initiator:
-            embed = view.results_embed(interaction)
-            await interaction.response.send_message(embed=embed, ephemeral=True)
+	async def callback(self, interaction):
+		view: PollView = self.view
+		if not view.poll.results_only_initiator:
+			embed = view.results_embed(interaction)
+			await interaction.response.send_message(embed=embed, ephemeral=True)
 
-        else:
-            await interaction.response.send_message(f"錯誤：此投票只有發起人才能查看結果", ephemeral=True)
+		else:
+			await interaction.response.send_message(f"錯誤：此投票只有發起人才能查看結果", ephemeral=True)
 
 
 class PollCanenlButton(discord.ui.Button):
-    def __init__(self, poll_id):
-        super().__init__(label="取消投票", custom_id=f"vote_canenl_{poll_id}", style=discord.ButtonStyle.primary)
-        self.poll_id = poll_id
+	def __init__(self, poll_id):
+		super().__init__(label="取消投票", custom_id=f"vote_canenl_{poll_id}", style=discord.ButtonStyle.primary)
+		self.poll_id = poll_id
 
-    async def callback(self, interaction):
-        view: PollView = self.view
-        view.sqldb.remove_user_poll(self.poll_id, interaction.user.id)
-        await interaction.response.send_message(f"{interaction.user.mention} 已取消投票", ephemeral=True)
+	async def callback(self, interaction):
+		view: PollView = self.view
+		view.sqldb.remove_user_poll(self.poll_id, interaction.user.id)
+		await interaction.response.send_message(f"{interaction.user.mention} 已取消投票", ephemeral=True)
 
 
 class PollNowButton(discord.ui.Button):
-    def __init__(self, poll_id):
-        super().__init__(label="目前選擇", custom_id=f"vote_now_{poll_id}", style=discord.ButtonStyle.primary)
-        self.poll_id = poll_id
+	def __init__(self, poll_id):
+		super().__init__(label="目前選擇", custom_id=f"vote_now_{poll_id}", style=discord.ButtonStyle.primary)
+		self.poll_id = poll_id
 
-    async def callback(self, interaction):
-        view: PollView = self.view
-        dbdata = view.sqldb.get_user_poll(self.poll_id, interaction.user.id)
-        if dbdata:
-            vote_mag = dbdata[0][0].vote_magnification
-            options_name = ",".join([data[1] for data in dbdata])
-            await interaction.response.send_message(f"{interaction.user.mention} 投給 {options_name} {vote_mag}票", ephemeral=True)
-        else:
-            await interaction.response.send_message(f"{interaction.user.mention} 沒有投給任何選項", ephemeral=True)
+	async def callback(self, interaction):
+		view: PollView = self.view
+		dbdata = view.sqldb.get_user_poll(self.poll_id, interaction.user.id)
+		if dbdata:
+			vote_mag = dbdata[0][0].vote_magnification
+			options_name = ",".join([data[1] for data in dbdata])
+			await interaction.response.send_message(f"{interaction.user.mention} 投給 {options_name} {vote_mag}票", ephemeral=True)
+		else:
+			await interaction.response.send_message(f"{interaction.user.mention} 沒有投給任何選項", ephemeral=True)
 
 
 class PollView(discord.ui.View):
-    if TYPE_CHECKING:
-        poll = Poll
-        sqldb: SQLEngine
-        bot: discord.Bot | None
+	if TYPE_CHECKING:
+		poll = Poll
+		sqldb: SQLEngine
+		bot: discord.Bot | None
 
-    def __init__(self, poll: Poll, sqldb, bot=None):
-        super().__init__(timeout=None)
-        self.poll = poll
-        self.sqldb = sqldb
-        self.bot = bot
-        self._role_dict = {}
-        # TODO: change_vote (decide if user can change his/her vote or not)
+	def __init__(self, poll: Poll, sqldb, bot=None):
+		super().__init__(timeout=None)
+		self.poll = poll
+		self.sqldb = sqldb
+		self.bot = bot
+		self._role_dict = {}
+		# TODO: change_vote (decide if user can change his/her vote or not)
 
-        self.add_item(PollEndButton(poll.poll_id, poll.creator_id, bot))
-        if poll.check_results_in_advance:
-            self.add_item(PollResultButton(poll.poll_id))
-        self.add_item(PollCanenlButton(poll.poll_id))
-        self.add_item(PollNowButton(poll.poll_id))
+		self.add_item(PollEndButton(poll.poll_id, poll.creator_id, bot))
+		if poll.check_results_in_advance:
+			self.add_item(PollResultButton(poll.poll_id))
+		self.add_item(PollCanenlButton(poll.poll_id))
+		self.add_item(PollNowButton(poll.poll_id))
 
-        dbdata = self.sqldb.get_poll_options(poll.poll_id)
-        i = 5
-        for option in dbdata:
-            custom_id = f"poll_{poll.poll_id}_{option.option_id}"
-            self.add_item(PollOptionButton(option=option, custom_id=custom_id, row=int(i / 5)))
-            i += 1
+		dbdata = self.sqldb.get_poll_options(poll.poll_id)
+		i = 5
+		for option in dbdata:
+			custom_id = f"poll_{poll.poll_id}_{option.option_id}"
+			self.add_item(PollOptionButton(option=option, custom_id=custom_id, row=int(i / 5)))
+			i += 1
 
-    @classmethod
-    def create(
-        cls,
-        title: str,
-        options: list,
-        creator_id: int,
-        guild_id: int,
-        ban_alternate_account_voting=False,
-        show_name=False,
-        check_results_in_advance=True,
-        results_only_initiator=False,
-        number_of_user_votes=1,
-        only_role_list: list = None,
-        role_magnification_dict: dict = None,
-        bot: discord.Bot = None,
-    ):
-        """創建投票"""
-        poll = Poll(
-            title=title,
-            creator_id=creator_id,
-            created_at=datetime.now(tz),
-            is_on=True,
-            message_id=None,
-            guild_id=guild_id,
-            ban_alternate_account_voting=ban_alternate_account_voting,
-            show_name=show_name,
-            check_results_in_advance=check_results_in_advance,
-            results_only_initiator=results_only_initiator,
-            number_of_user_votes=number_of_user_votes,
-        )
-        sqldb.add(poll)
-        sqldb.add_poll_option(poll.poll_id, options)
+	@classmethod
+	def create(
+		cls,
+		title: str,
+		options: list,
+		creator_id: int,
+		guild_id: int,
+		ban_alternate_account_voting=False,
+		show_name=False,
+		check_results_in_advance=True,
+		results_only_initiator=False,
+		number_of_user_votes=1,
+		only_role_list: list | None = None,
+		role_magnification_dict: dict | None = None,
+		bot: discord.Bot = None,
+	):
+		"""創建投票"""
+		poll = Poll(
+			title=title,
+			creator_id=creator_id,
+			created_at=datetime.now(tz),
+			is_on=True,
+			message_id=None,
+			guild_id=guild_id,
+			ban_alternate_account_voting=ban_alternate_account_voting,
+			show_name=show_name,
+			check_results_in_advance=check_results_in_advance,
+			results_only_initiator=results_only_initiator,
+			number_of_user_votes=number_of_user_votes,
+		)
+		sqldb.add(poll)
+		sqldb.add_poll_option(poll.poll_id, options)
 
-        if only_role_list is None:
-            only_role_list = []
-        if role_magnification_dict is None:
-            role_magnification_dict = {}
+		if only_role_list is None:
+			only_role_list = []
+		if role_magnification_dict is None:
+			role_magnification_dict = {}
 
-        poll_role_dict = {}
-        for role_id in only_role_list:
-            poll_role_dict[role_id] = [True, 1]
+		poll_role_dict = {}
+		for role_id in only_role_list:
+			poll_role_dict[role_id] = [True, 1]
 
-        for role_id in role_magnification_dict:
-            if role_id in poll_role_dict:
-                poll_role_dict[role_id][1] = role_magnification_dict[role_id]
-            else:
-                poll_role_dict[role_id] = [False, role_magnification_dict[role_id]]
+		for role_id in role_magnification_dict:
+			if role_id in poll_role_dict:
+				poll_role_dict[role_id][1] = role_magnification_dict[role_id]
+			else:
+				poll_role_dict[role_id] = [False, role_magnification_dict[role_id]]
 
-        for role_id in poll_role_dict:
-            is_only_role = poll_role_dict[role_id][0]
-            role_magnification = poll_role_dict[role_id][1]
-            sqldb.merge(PollRole(poll_id=poll.poll_id, role_id=role_id, is_only_role=is_only_role, role_magnification=role_magnification))
+		for role_id in poll_role_dict:
+			is_only_role = poll_role_dict[role_id][0]
+			role_magnification = poll_role_dict[role_id][1]
+			sqldb.merge(PollRole(poll_id=poll.poll_id, role_id=role_id, is_only_role=is_only_role, role_magnification=role_magnification))
 
-        view = cls(poll, sqldb, bot)
-        return view
+		view = cls(poll, sqldb, bot)
+		return view
 
-    @property
-    def role_dict(self) -> dict[int, tuple[bool, int]]:
-        if not self._role_dict:
-            dbdata = self.sqldb.get_poll_role(self.poll.poll_id)
-            self._role_dict = {}
-            if dbdata:
-                for data in dbdata:
-                    role_id = data.role_id
-                    is_only_role = data.is_only_role
-                    role_magnification = data.role_magnification
-                    self._role_dict[role_id] = (is_only_role, role_magnification)
-        return self._role_dict
+	@property
+	def role_dict(self) -> dict[int, tuple[bool, int]]:
+		if not self._role_dict:
+			dbdata = self.sqldb.get_poll_role(self.poll.poll_id)
+			self._role_dict = {}
+			if dbdata:
+				for data in dbdata:
+					role_id = data.role_id
+					is_only_role = data.is_only_role
+					role_magnification = data.role_magnification
+					self._role_dict[role_id] = (is_only_role, role_magnification)
+		return self._role_dict
 
-    def embed(self,guild:discord.Guild):
-        """guild: 提供投票所在的伺服器"""
-        only_role_list = []
-        role_magification_list = []
-        for roleid in self.role_dict:
-            role = guild.get_role(roleid)
-            if self.role_dict[roleid][0] is True:
-                only_role_list.append(role.mention if role else roleid)
-            if self.role_dict[roleid][1] > 1:
-                mag = self.role_dict[roleid][1]
-                role_magification_list.append(f"{role.mention}({mag})" if role else f"{roleid}({mag})")
+	def embed(self, guild: discord.Guild):
+		"""guild: 提供投票所在的伺服器"""
+		only_role_list = []
+		role_magification_list = []
+		for roleid in self.role_dict:
+			role = guild.get_role(roleid)
+			if self.role_dict[roleid][0] is True:
+				only_role_list.append(role.mention if role else roleid)
+			if self.role_dict[roleid][1] > 1:
+				mag = self.role_dict[roleid][1]
+				role_magification_list.append(f"{role.mention}({mag})" if role else f"{roleid}({mag})")
 
-        description = ""
-        description += "- 使用投票實名制" if self.poll.show_name else "- 匿名投票"
-        description += (
-            ("\n- 僅限發起人能預先查看結果" if self.poll.results_only_initiator else "\n- 所有人都能預先查看結果")
-            if self.poll.check_results_in_advance
-            else "\n- 結果將在結束時公佈"
-        )
-        description += f"\n- 可選擇 {self.poll.number_of_user_votes} 個選項"
-        if self.poll.ban_alternate_account_voting:
-            description += f"\n- 小帳不算有效票"
+		description = ""
+		description += "- 使用投票實名制" if self.poll.show_name else "- 匿名投票"
+		description += (
+			("\n- 僅限發起人能預先查看結果" if self.poll.results_only_initiator else "\n- 所有人都能預先查看結果")
+			if self.poll.check_results_in_advance
+			else "\n- 結果將在結束時公佈"
+		)
+		description += f"\n- 可選擇 {self.poll.number_of_user_votes} 個選項"
+		if self.poll.ban_alternate_account_voting:
+			description += f"\n- 小帳不算有效票"
 
-        if only_role_list:
-            description += "\n- 可投票身分組：" + ",".join(only_role_list)
-        if role_magification_list:
-            description += "\n- 身分組投票權重：" + ",".join(role_magification_list)
-        embed = BotEmbed.general(name="投票系統", title=self.poll.title, description=description)
-        embed.set_footer(text=f"投票ID：{self.poll.poll_id}")
+		if only_role_list:
+			description += "\n- 可投票身分組：" + ",".join(only_role_list)
+		if role_magification_list:
+			description += "\n- 身分組投票權重：" + ",".join(role_magification_list)
+		embed = BotEmbed.general(name="投票系統", title=self.poll.title, description=description)
+		embed.set_footer(text=f"投票ID：{self.poll.poll_id}")
 
-        author = guild.get_member(self.poll.creator_id)
-        if author:
-            embed.set_author(name=author.name, icon_url=author.avatar.url)
-        return embed
+		author = guild.get_member(self.poll.creator_id)
+		if author:
+			embed.set_author(name=author.name, icon_url=author.avatar.url)
+		return embed
 
-    def results_embed(self, interaction: discord.Interaction, labels_and_sizes=False) -> tuple[discord.Embed, list, list] | discord.Embed:
-        """
-        Generates an embed object containing the results of a poll.
+	def results_embed(self, interaction: discord.Interaction, labels_and_sizes=False) -> tuple[discord.Embed, list, list] | discord.Embed:
+		"""
+		Generates an embed object containing the results of a poll.
 
-        Args:
-            interaction (discord.Interaction): The interaction object representing the poll.
-            labels_and_sizes (bool, optional): Whether to include labels and sizes for each option. Defaults to False.
+		Args:
+			interaction (discord.Interaction): The interaction object representing the poll.
+			labels_and_sizes (bool, optional): Whether to include labels and sizes for each option. Defaults to False.
 
-        Returns:
-            tuple[discord.Embed, list, list] | discord.Embed: If `labels_and_sizes` is True, returns a tuple containing the embed object, a list of labels, and a list of sizes.
-            If `labels_and_sizes` is False, returns only the embed object.
-        """
-        vote_count_data = self.sqldb.get_poll_vote_count(self.poll.poll_id, not self.poll.ban_alternate_account_voting)
-        options_data = self.sqldb.get_poll_options(self.poll.poll_id)
+		Returns:
+			tuple[discord.Embed, list, list] | discord.Embed: If `labels_and_sizes` is True, returns a tuple containing the embed object, a list of labels, and a list of sizes.
+			If `labels_and_sizes` is False, returns only the embed object.
+		"""
+		vote_count_data = self.sqldb.get_poll_vote_count(self.poll.poll_id, not self.poll.ban_alternate_account_voting)
+		options_data = self.sqldb.get_poll_options(self.poll.poll_id)
 
-        if self.poll.show_name:
-            user_vote_data = self.sqldb.get_users_poll(self.poll.poll_id, not self.poll.ban_alternate_account_voting)
-            user_vote_list = {}
-            for i in range(1, len(options_data) + 1):
-                user_vote_list[str(i)] = []
+		if self.poll.show_name:
+			user_vote_data = self.sqldb.get_users_poll(self.poll.poll_id, not self.poll.ban_alternate_account_voting)
+			user_vote_list = {}
+			for i in range(1, len(options_data) + 1):
+				user_vote_list[str(i)] = []
 
-            for i in user_vote_data:
-                discord_id = i.discord_id
-                vote_option = i.vote_option
-                vote_magnification = i.vote_magnification
+			for i in user_vote_data:
+				discord_id = i.discord_id
+				vote_option = i.vote_option
+				vote_magnification = i.vote_magnification
 
-                user = interaction.guild.get_member(discord_id)
-                username = user.mention if user else f"<@{discord_id}>"
-                if vote_magnification != 1:
-                    username += f"({vote_magnification})"
-                user_vote_list[str(vote_option)].append(username)
+				user = interaction.guild.get_member(discord_id)
+				username = user.mention if user else f"<@{discord_id}>"
+				if vote_magnification != 1:
+					username += f"({vote_magnification})"
+				user_vote_list[str(vote_option)].append(username)
 
-        text = ""
-        if labels_and_sizes:
-            labels = []
-            sizes = []
+		text = ""
+		if labels_and_sizes:
+			labels = []
+			sizes = []
 
-        for option in options_data:
-            name = option.option_name
-            id = option.option_id
-            count = vote_count_data.get(str(id), 0)
-            text += f"{name}： {count}票\n"
+		for option in options_data:
+			name = option.option_name
+			id = option.option_id
+			count = vote_count_data.get(str(id), 0)
+			text += f"{name}： {count}票\n"
 
-            if self.poll.show_name:
-                text += ",".join(user_vote_list[str(id)]) + "\n"
+			if self.poll.show_name:
+				text += ",".join(user_vote_list[str(id)]) + "\n"
 
-            if labels_and_sizes and count > 0:
-                labels.append(name)
-                sizes.append(count)
+			if labels_and_sizes and count > 0:
+				labels.append(name)
+				sizes.append(count)
 
-        embed = BotEmbed.simple(self.poll.title, description=text)
-        embed.set_footer(text=f"投票ID：{self.poll.poll_id}")
+		embed = BotEmbed.simple(self.poll.title, description=text)
+		embed.set_footer(text=f"投票ID：{self.poll.poll_id}")
 
-        if labels_and_sizes:
-            return embed, labels, sizes
-        else:
-            return embed
+		if labels_and_sizes:
+			return embed, labels, sizes
+		else:
+			return embed
 
-    def generate_chart(self, labels, sizes):
-        import matplotlib.pyplot as plt
+	def generate_chart(self, labels, sizes):
+		import matplotlib.pyplot as plt
 
-        fig, ax = plt.subplots()
+		fig, ax = plt.subplots()
 
-        # 圖表製作
-        def data_string(s, d) -> str:
-            t = int(round(s / 100.0 * float(sum(d))))  # 透過百分比反推原本的數值
-            return f"{t}\n（{s:.1f}%）"
+		# 圖表製作
+		def data_string(s, d) -> str:
+			t = int(round(s / 100.0 * float(sum(d))))  # 透過百分比反推原本的數值
+			return f"{t}\n（{s:.1f}%）"
 
-        # 字形
-        matplotlib.rc("font", family="Microsoft JhengHei")
-        matplotlib.rcParams["font.sans-serif"] = ["Microsoft JhengHei"]
+		# 字形
+		matplotlib.rc("font", family="Microsoft JhengHei")
+		matplotlib.rcParams["font.sans-serif"] = ["Microsoft JhengHei"]
 
-        # 設置顏色
-        colors = ["gold", "yellowgreen", "lightcoral", "lightskyblue"]
+		# 設置顏色
+		colors = ["gold", "yellowgreen", "lightcoral", "lightskyblue"]
 
-        # 設置圓餅圖的突出顯示
-        # explode = (0.1, 0, 0, 0)  # 將第一塊突出顯示
+		# 設置圓餅圖的突出顯示
+		# explode = (0.1, 0, 0, 0)  # 將第一塊突出顯示
 
-        # 繪製圓餅圖
-        ax.pie(sizes, labels=labels, colors=colors, autopct=lambda i: data_string(i,sizes), shadow=False, startangle=140)
-        #plt.pie()
+		# 繪製圓餅圖
+		ax.pie(sizes, labels=labels, colors=colors, autopct=lambda i: data_string(i, sizes), shadow=False, startangle=140)
+		# plt.pie()
 
-        # 添加標題
-        ax.set_title(self.poll.title)
-        #plt.title()
+		# 添加標題
+		ax.set_title(self.poll.title)
+		# plt.title()
 
-        image_buffer = io.BytesIO()
-        plt.savefig(image_buffer, format="png", dpi=200, bbox_inches="tight")
-        image_buffer.seek(0)
+		image_buffer = io.BytesIO()
+		plt.savefig(image_buffer, format="png", dpi=200, bbox_inches="tight")
+		image_buffer.seek(0)
 
-        return image_buffer
+		return image_buffer
 
 
 class ReactionRoleButton(discord.ui.Button):
-    def __init__(self, dbdata: ReactionRole):
-        super().__init__(
-            label=dbdata.title,
-            style=dbdata.style if dbdata.style else discord.ButtonStyle.primary,
-            emoji=dbdata.emoji,
-            custom_id=f"ReactionRole_{dbdata.message_id}_{dbdata.role_id}",
-        )
-        self.role_id = dbdata.role_id
+	def __init__(self, dbdata: ReactionRole):
+		super().__init__(
+			label=dbdata.title,
+			style=dbdata.style if dbdata.style else discord.ButtonStyle.primary,
+			emoji=dbdata.emoji,
+			custom_id=f"ReactionRole_{dbdata.message_id}_{dbdata.role_id}",
+		)
+		self.role_id = dbdata.role_id
 
-    async def callback(self, interaction):
-        role = interaction.guild.get_role(self.role_id)
-        if not role:
-            await interaction.response.send_message(f"錯誤：身分組不存在，請聯絡管理員", ephemeral=True)
-            return
+	async def callback(self, interaction):
+		role = interaction.guild.get_role(self.role_id)
+		if not role:
+			await interaction.response.send_message(f"錯誤：身分組不存在，請聯絡管理員", ephemeral=True)
+			return
 
-        if interaction.user.get_role(self.role_id):
-            await interaction.user.remove_roles(role)
-            await interaction.response.send_message(f"已移除 {role.name} 身分組！", ephemeral=True)
-        else:
-            await interaction.user.add_roles(role)
-            await interaction.response.send_message(f"已給予 {role.name} 身分組！", ephemeral=True)
+		if interaction.user.get_role(self.role_id):
+			await interaction.user.remove_roles(role)
+			await interaction.response.send_message(f"已移除 {role.name} 身分組！", ephemeral=True)
+		else:
+			await interaction.user.add_roles(role)
+			await interaction.response.send_message(f"已給予 {role.name} 身分組！", ephemeral=True)
 
 
 class ReactionRoleView(discord.ui.View):
-    def __init__(self, message_id, roles: list[ReactionRole]):
-        super().__init__(timeout=None)
-        self.message_id = message_id
+	def __init__(self, message_id, roles: list[ReactionRole]):
+		super().__init__(timeout=None)
+		self.message_id = message_id
 
-        for r in roles:
-            self.add_item(ReactionRoleButton(r))
+		for r in roles:
+			self.add_item(ReactionRoleButton(r))
 
-    async def on_error(self, error: Exception, item: discord.ui.Item, interaction: discord.Interaction):
-        if isinstance(error, discord.Forbidden):
-            await interaction.response.send_message(f"錯誤：我沒有權限給予或移除身分組，可能為我的身分組位階較低或缺少必要權限", ephemeral=True)
-        else:
-            await interaction.response.send_message(f"發生錯誤：{error}", ephemeral=True)
-            log.error(f"ReactionRoleView error: {item} / {error}")
+	async def on_error(self, error: Exception, item: discord.ui.Item, interaction: discord.Interaction):
+		if isinstance(error, discord.Forbidden):
+			await interaction.response.send_message(f"錯誤：我沒有權限給予或移除身分組，可能為我的身分組位階較低或缺少必要權限", ephemeral=True)
+		else:
+			await interaction.response.send_message(f"發生錯誤：{error}", ephemeral=True)
+			log.error(f"ReactionRoleView error: {item} / {error}")
 
 
 class TRPGPlotButton(discord.ui.Button):
-    def __init__(self, option: TRPGStoryOption):
-        super().__init__(label=option.option_title, style=discord.ButtonStyle.primary, custom_id=f"plot_{option.plot.id}_{option.option_id}")
-        self.option = option
+	def __init__(self, option: TRPGStoryOption):
+		super().__init__(label=option.option_title, style=discord.ButtonStyle.primary, custom_id=f"plot_{option.plot.id}_{option.option_id}")
+		self.option = option
 
-    async def callback(self, interaction):
-        view: TRPGPlotView = self.view
-        if self.option.check_ability:
-            ability = view.sqldb.get_trpg_cheracter_ability(interaction.user.id, self.option.check_ability)
-            rd = random.randint(1, 100)
+	async def callback(self, interaction):
+		view: TRPGPlotView = self.view
+		if self.option.check_ability:
+			ability = view.sqldb.get_trpg_cheracter_ability(interaction.user.id, self.option.check_ability)
+			rd = random.randint(1, 100)
 
-            text_list = [
-                f"{ability.character.character_name if ability.character else interaction.user.mention} 已選擇 {self.label}\n"
-                f"進行 {ability.ability.ability_name} 檢定：{rd} <= {ability.value}",
-            ]
-            if rd <= ability.value:
-                text_list.append(f"，成功！")
-            else:
-                text_list.append(f"，失敗！")
-                if self.option.check_ability == 1:
-                    # 掉san
-                    dice_n, dice = self.option.san_check_fall_dice.split("d")
-                    san_reduce = 0
-                    for _ in range(int(dice_n)):
-                        san_reduce += random.randint(1, int(dice))
+			text_list = [
+				f"{ability.character.character_name if ability.character else interaction.user.mention} 已選擇 {self.label}\n"
+				f"進行 {ability.ability.ability_name} 檢定：{rd} <= {ability.value}",
+			]
+			if rd <= ability.value:
+				text_list.append(f"，成功！")
+			else:
+				text_list.append(f"，失敗！")
+				if self.option.check_ability == 1:
+					# 掉san
+					dice_n, dice = self.option.san_check_fall_dice.split("d")
+					san_reduce = 0
+					for _ in range(int(dice_n)):
+						san_reduce += random.randint(1, int(dice))
 
-                    ability.value -= san_reduce
-                    text_list.append(f"\n{self.option.san_check_fall_dice}：{san_reduce}\nSAN值-{san_reduce}，剩餘{ability.value}")
-                    view.sqldb.merge(ability)
-                    if ability.value < ability.san_lower_limit:
-                        text_list.append(f"\nSAN值低於{ability.san_lower_limit}，進入瘋狂狀態")
-                        await view.next_plot(random.choice([1, 2]))
+					ability.value -= san_reduce
+					text_list.append(f"\n{self.option.san_check_fall_dice}：{san_reduce}\nSAN值-{san_reduce}，剩餘{ability.value}")
+					view.sqldb.merge(ability)
+					if ability.value < ability.san_lower_limit:
+						text_list.append(f"\nSAN值低於{ability.san_lower_limit}，進入瘋狂狀態")
+						await view.next_plot(random.choice([1, 2]))
 
-            text = "".join(text_list)
-            await interaction.response.send_message(f"{text}", ephemeral=False)
-            if ability.value >= ability.san_lower_limit:
-                await view.next_plot(self.option.success_plot if rd <= ability.value else self.option.fail_plot)
+			text = "".join(text_list)
+			await interaction.response.send_message(f"{text}", ephemeral=False)
+			if ability.value >= ability.san_lower_limit:
+				await view.next_plot(self.option.success_plot if rd <= ability.value else self.option.fail_plot)
 
-        else:
-            cheracter = view.sqldb.get_trpg_cheracter(interaction.user.id)
-            await interaction.response.send_message(
-                f"{cheracter.character_name if cheracter else interaction.user.mention} 已選擇 {self.label}", ephemeral=False
-            )
-            await view.next_plot(self.option.lead_to_plot)
+		else:
+			cheracter = view.sqldb.get_trpg_cheracter(interaction.user.id)
+			await interaction.response.send_message(
+				f"{cheracter.character_name if cheracter else interaction.user.mention} 已選擇 {self.label}", ephemeral=False
+			)
+			await view.next_plot(self.option.lead_to_plot)
 
 
 class TRPGPlotView(discord.ui.View):
-    def __init__(self, plot:TRPGStoryPlot, sqldb:SQLEngine):
-        super().__init__(timeout=None)
-        self.plot = plot
-        self.sqldb = sqldb
-        for option in plot.options:
-            self.add_item(TRPGPlotButton(option))
+	def __init__(self, plot: TRPGStoryPlot, sqldb: SQLEngine):
+		super().__init__(timeout=None)
+		self.plot = plot
+		self.sqldb = sqldb
+		for option in plot.options:
+			self.add_item(TRPGPlotButton(option))
 
-    def embed(self):
-        embed = BotEmbed.general("TRPG故事線", Jsondb.get_picture("dice_001"), title=self.plot.title, description=self.plot.content)
-        return embed
+	def embed(self):
+		embed = BotEmbed.general("TRPG故事線", Jsondb.get_picture("dice_001"), title=self.plot.title, description=self.plot.content)
+		return embed
 
-    async def next_plot(self, plot_id):
-        self.disable_all_items()
-        await self.message.edit(view=self)
-        next = self.sqldb.get_trpg_plot(plot_id)
-        view = TRPGPlotView(next, self.sqldb)
-        await self.message.channel.send(embed=view.embed(), view=view)
-        self.stop()
+	async def next_plot(self, plot_id):
+		self.disable_all_items()
+		await self.message.edit(view=self)
+		next = self.sqldb.get_trpg_plot(plot_id)
+		view = TRPGPlotView(next, self.sqldb)
+		await self.message.channel.send(embed=view.embed(), view=view)
+		self.stop()
 
 
 class GiveawayJoinButton(discord.ui.Button):
-    def __init__(self, giveaway: Giveaway):
-        super().__init__(label="參加抽獎", style=discord.ButtonStyle.primary, custom_id=f"giveaway_join_{giveaway.id}")
+	def __init__(self, giveaway: Giveaway):
+		super().__init__(label="參加抽獎", style=discord.ButtonStyle.primary, custom_id=f"giveaway_join_{giveaway.id}")
 
-    async def callback(self, interaction: discord.Interaction):
-        view: GiveawayView = self.view
-        giveaway_user = view.sqldb.get_user_in_giveaway(view.giveaway.id, interaction.user.id)
-        if giveaway_user:
-            view.sqldb.delete(giveaway_user)
-            await interaction.response.send_message(f"{interaction.user.mention} 離開了抽獎", ephemeral=True)
-        else:
-            giveaway_user = GiveawayUser(giveaway_id=view.giveaway.id, user_id=interaction.user.id, user_weight=1, join_at=datetime.now(tz))
-            view.sqldb.add(giveaway_user)
-            await interaction.response.send_message(f"{interaction.user.mention} 參加了抽獎！", ephemeral=True)
+	async def callback(self, interaction: discord.Interaction):
+		view: GiveawayView = self.view
+		giveaway_user = view.sqldb.get_user_in_giveaway(view.giveaway.id, interaction.user.id)
+		if giveaway_user:
+			view.sqldb.delete(giveaway_user)
+			await interaction.response.send_message(f"{interaction.user.mention} 離開了抽獎", ephemeral=True)
+		else:
+			giveaway_user = GiveawayUser(giveaway_id=view.giveaway.id, user_id=interaction.user.id, user_weight=1, join_at=datetime.now(tz))
+			view.sqldb.add(giveaway_user)
+			await interaction.response.send_message(f"{interaction.user.mention} 參加了抽獎！", ephemeral=True)
 
 
 class GiveawayEndButton(discord.ui.Button):
-    def __init__(self, giveaway: Giveaway):
-        super().__init__(label="結束抽獎", style=discord.ButtonStyle.danger, custom_id=f"giveaway_end_{giveaway.id}")
+	def __init__(self, giveaway: Giveaway):
+		super().__init__(label="結束抽獎", style=discord.ButtonStyle.danger, custom_id=f"giveaway_end_{giveaway.id}")
 
-    async def callback(self, interaction: discord.Interaction):
-        view: GiveawayView = self.view
-        if interaction.user.id == view.giveaway.creator_id or (view.bot and await view.bot.is_owner(interaction.user)):
-            embed = view.end_giveaway()
-            await interaction.message.edit(embed=embed, view=view)
-        else:
-            await interaction.response.send_message("只有發起人才能結束抽獎！", ephemeral=True)
+	async def callback(self, interaction: discord.Interaction):
+		view: GiveawayView = self.view
+		if interaction.user.id == view.giveaway.creator_id or (view.bot and await view.bot.is_owner(interaction.user)):
+			embed = view.end_giveaway()
+			await interaction.message.edit(embed=embed, view=view)
+		else:
+			await interaction.response.send_message("只有發起人才能結束抽獎！", ephemeral=True)
 
 
 class GiveawayView(discord.ui.View):
-    def __init__(self, giveaway: Giveaway, sqldb: SQLEngine, bot: discord.Bot, timeout=None):
-        super().__init__(timeout=timeout)
-        self.giveaway = giveaway
-        self.sqldb = sqldb
-        self.bot = bot
-        if giveaway.is_on:
-            self.add_item(GiveawayJoinButton(giveaway))
-            self.add_item(GiveawayEndButton(giveaway))
+	def __init__(self, giveaway: Giveaway, sqldb: SQLEngine, bot: discord.Bot, timeout=None):
+		super().__init__(timeout=timeout)
+		self.giveaway = giveaway
+		self.sqldb = sqldb
+		self.bot = bot
+		if giveaway.is_on:
+			self.add_item(GiveawayJoinButton(giveaway))
+			self.add_item(GiveawayEndButton(giveaway))
 
-    def embed(self):
-        description = self.giveaway.description if self.giveaway.description else "按下下方按鈕開始抽獎！"
-        description += f"\n- 抽出人數：{self.giveaway.winner_count} 人"
-        description += f"\n- 舉辦人：{self.bot.get_user(self.giveaway.creator_id).mention}"
-        description += f"\n- 開始時間：{self.giveaway.created_at}"
-        if self.giveaway.end_at:
-            description += f"\n- 結束時間：{self.giveaway.end_at}"
-        embed = BotEmbed.general("抽獎系統", Jsondb.get_picture("dice_001"), title=f"{self.giveaway.prize_name}", description=description)
-        embed.set_footer(text=f"抽獎ID：{self.giveaway.id}")
-        embed.timestamp = self.giveaway.created_at
-        return embed
+	def embed(self):
+		description = self.giveaway.description if self.giveaway.description else "按下下方按鈕開始抽獎！"
+		description += f"\n- 抽出人數：{self.giveaway.winner_count} 人"
+		description += f"\n- 舉辦人：{self.bot.get_user(self.giveaway.creator_id).mention}"
+		description += f"\n- 開始時間：{self.giveaway.created_at}"
+		if self.giveaway.end_at:
+			description += f"\n- 結束時間：{self.giveaway.end_at}"
+		embed = BotEmbed.general("抽獎系統", Jsondb.get_picture("dice_001"), title=f"{self.giveaway.prize_name}", description=description)
+		embed.set_footer(text=f"抽獎ID：{self.giveaway.id}")
+		embed.timestamp = self.giveaway.created_at
+		return embed
 
-    def result_embed(self, joiner_count: int):
-        description = self.giveaway.description or "抽獎結束" if joiner_count else "沒有參加抽獎的用戶"
-        description += f"\n- 中獎人數：{self.giveaway.winner_count} / {joiner_count} 人"
-        description += f"\n- 舉辦人：{self.bot.get_user(self.giveaway.creator_id).mention}"
-        description += f"\n- 開始時間：{self.giveaway.created_at}"
-        description += f"\n- 結束時間：{self.giveaway.end_at}"
-        embed = BotEmbed.general("抽獎系統", Jsondb.get_picture("dice_001"), title=f"{self.giveaway.prize_name}", description=description)
-        embed.set_footer(text=f"抽獎ID：{self.giveaway.id}")
-        return embed
+	def result_embed(self, joiner_count: int):
+		description = self.giveaway.description or "抽獎結束" if joiner_count else "沒有參加抽獎的用戶"
+		description += f"\n- 中獎人數：{self.giveaway.winner_count} / {joiner_count} 人"
+		description += f"\n- 舉辦人：{self.bot.get_user(self.giveaway.creator_id).mention}"
+		description += f"\n- 開始時間：{self.giveaway.created_at}"
+		description += f"\n- 結束時間：{self.giveaway.end_at}"
+		embed = BotEmbed.general("抽獎系統", Jsondb.get_picture("dice_001"), title=f"{self.giveaway.prize_name}", description=description)
+		embed.set_footer(text=f"抽獎ID：{self.giveaway.id}")
+		return embed
 
-    def end_giveaway(self):
-        if not self.giveaway.end_at:
-            self.giveaway.end_at = datetime.now(tz).replace(microsecond=0)
-        self.giveaway.is_on = False
-        self.clear_items()
-        joiner = self.sqldb.get_giveaway_users(self.giveaway.id)
-        joiner_ids = [i.user_id for i in joiner]
-        weights = [i.user_weight for i in joiner]
+	def end_giveaway(self):
+		if not self.giveaway.end_at:
+			self.giveaway.end_at = datetime.now(tz).replace(microsecond=0)
+		self.giveaway.is_on = False
+		self.clear_items()
+		joiner = self.sqldb.get_giveaway_users(self.giveaway.id)
+		joiner_ids = [i.user_id for i in joiner]
+		weights = [i.user_weight for i in joiner]
 
-        embed = self.result_embed(len(joiner_ids))
-        if joiner_ids:
-            winners_id = (
-                np.random.choice(joiner_ids, size=self.giveaway.winner_count, replace=False, p=np.array(weights) / sum(weights)).tolist()
-                if len(joiner_ids) > self.giveaway.winner_count
-                else joiner_ids
-            )
-            self.sqldb.set_giveaway_winner(self.giveaway.id, winners_id)
+		embed = self.result_embed(len(joiner_ids))
+		if joiner_ids:
+			winners_id = (
+				np.random.choice(joiner_ids, size=self.giveaway.winner_count, replace=False, p=np.array(weights) / sum(weights)).tolist()
+				if len(joiner_ids) > self.giveaway.winner_count
+				else joiner_ids
+			)
+			self.sqldb.set_giveaway_winner(self.giveaway.id, winners_id)
 
-            winners_mention = []
-            for i in winners_id:
-                user = self.bot.get_user(i)
-                if user:
-                    winners_mention.append(user.mention)
-                else:
-                    winners_mention.append(f"<@{i}>")
-            embed.add_field(name="得獎者", value=", ".join(winners_mention), inline=False)
+			winners_mention = []
+			for i in winners_id:
+				user = self.bot.get_user(i)
+				if user:
+					winners_mention.append(user.mention)
+				else:
+					winners_mention.append(f"<@{i}>")
+			embed.add_field(name="得獎者", value=", ".join(winners_mention), inline=False)
 
-        self.sqldb.merge(self.giveaway)
+		self.sqldb.merge(self.giveaway)
 
-        return embed
+		return embed
 
-    def redraw_winner_giveaway(self, old_winner: GiveawayUser = None):
-        if not old_winner:
-            self.sqldb.reset_giveaway_winner(self.giveaway.id)
-            redraw_count = self.giveaway.winner_count
-        else:
-            redraw_count = 1
-            old_winner.is_winner = False
-            self.sqldb.merge(old_winner)
+	def redraw_winner_giveaway(self, old_winner: GiveawayUser | None = None):
+		if not old_winner:
+			self.sqldb.reset_giveaway_winner(self.giveaway.id)
+			redraw_count = self.giveaway.winner_count
+		else:
+			redraw_count = 1
+			old_winner.is_winner = False
+			self.sqldb.merge(old_winner)
 
-        joiner = self.sqldb.get_giveaway_users(self.giveaway.id)
-        joiner_ids = [i.user_id for i in joiner if not i.is_winner]
-        weights = [i.user_weight for i in joiner if not i.is_winner]
-        winners_id = [i.user_id for i in joiner if i.is_winner]
-        winners_id.extend(
-            (np.random.choice(joiner_ids, size=redraw_count, replace=False, p=np.array(weights) / sum(weights)).tolist())
-            if len(joiner_ids) > redraw_count
-            else joiner_ids
-        )
-        self.sqldb.set_giveaway_winner(self.giveaway.id, winners_id)
+		joiner = self.sqldb.get_giveaway_users(self.giveaway.id)
+		joiner_ids = [i.user_id for i in joiner if not i.is_winner]
+		weights = [i.user_weight for i in joiner if not i.is_winner]
+		winners_id = [i.user_id for i in joiner if i.is_winner]
+		winners_id.extend(
+			(np.random.choice(joiner_ids, size=redraw_count, replace=False, p=np.array(weights) / sum(weights)).tolist())
+			if len(joiner_ids) > redraw_count
+			else joiner_ids
+		)
+		self.sqldb.set_giveaway_winner(self.giveaway.id, winners_id)
 
-        winners_mention = []
-        for i in winners_id:
-            user = self.bot.get_user(i)
-            if user:
-                winners_mention.append(user.mention)
-            else:
-                winners_mention.append(f"<@{i}>")
+		winners_mention = []
+		for i in winners_id:
+			user = self.bot.get_user(i)
+			if user:
+				winners_mention.append(user.mention)
+			else:
+				winners_mention.append(f"<@{i}>")
 
-        self.giveaway.redraw_count += 1
-        self.sqldb.merge(self.giveaway)
+		self.giveaway.redraw_count += 1
+		self.sqldb.merge(self.giveaway)
 
-        embed = self.result_embed(len(joiner))
-        embed.add_field(name="得獎者", value=", ".join(winners_mention), inline=False)
-        embed.set_footer(text=f"抽獎ID：{self.giveaway.id}，重新抽獎第 {self.giveaway.redraw_count} 次")
-        return embed
+		embed = self.result_embed(len(joiner))
+		embed.add_field(name="得獎者", value=", ".join(winners_mention), inline=False)
+		embed.set_footer(text=f"抽獎ID：{self.giveaway.id}，重新抽獎第 {self.giveaway.redraw_count} 次")
+		return embed
 
-    async def on_timeout(self):
-        embed = self.end_giveaway()
-        await self.message.edit(embed=embed, view=self)
-        self.stop()
+	async def on_timeout(self):
+		embed = self.end_giveaway()
+		await self.message.edit(embed=embed, view=self)
+		self.stop()
