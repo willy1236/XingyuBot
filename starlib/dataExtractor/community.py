@@ -1,5 +1,4 @@
 import json
-import os.path
 import subprocess
 from collections.abc import Iterator
 from datetime import timezone
