@@ -126,8 +126,16 @@ class BotPanel(discord.ui.View):
 
 class McServerPanel(discord.ui.View):
 	def __init__(self, server_id):
-		super().__init__(timeout=None)
+		super().__init__(timeout=600)
 		self.server_id = server_id
+
+	async def on_timeout(self):
+		for item in self.children:
+			if isinstance(item, discord.ui.Button):
+				item.disabled = True
+		self.clear_items()
+		await self.message.edit(view=self)
+		self.stop()
 
 	def embed(self):
 		server = mcss_api.get_server_detail(self.server_id)
