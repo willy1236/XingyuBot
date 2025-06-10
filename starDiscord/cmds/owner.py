@@ -188,7 +188,7 @@ class McServerPanel(discord.ui.View):
 
 			port = server.find_port() or "XXXXX（請確認這個數字是多少）"
 
-			await interaction.response.send_message(f"伺服器IP位置：`{ip}:{port}`", ephemeral=True)
+			await interaction.followup.send(f"伺服器IP位置：`{ip}:{port}`")
 		else:
 			await interaction.followup.send("伺服器未找到", ephemeral=True)
 
