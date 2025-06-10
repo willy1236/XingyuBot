@@ -195,6 +195,8 @@ class McServerPanel(discord.ui.View):
 				return
 
 			port = server.find_port() or "XXXXX（請確認這個數字是多少）"
+			if port == 25565:
+				port = "25565（預設端口可省略）"
 
 			await interaction.followup.send(f"伺服器IP位置：`{ip}:{port}`")
 		else:
