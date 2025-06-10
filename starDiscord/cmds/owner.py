@@ -177,6 +177,21 @@ class McServerPanel(discord.ui.View):
 
 		await interaction.followup.send("伺服器關閉失敗，請稍後再試", ephemeral=True)
 
+	@discord.ui.button(label="取得IP位置", row=1, style=discord.ButtonStyle.secondary)
+	async def ip_button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
+		await interaction.response.defer()
+		if server := mcss_api.get_server_detail(self.server_id):
+			ip = find_radmin_vpn_network()
+			if not ip:
+				await interaction.followup.send("無法獲取Radmin VPN IP", ephemeral=True)
+				return
+
+			port = server.find_port() or "XXXXX（請確認這個數字是多少）"
+
+			await interaction.response.send_message(f"伺服器IP位置：`{ip}:{port}`", ephemeral=True)
+		else:
+			await interaction.followup.send("伺服器未找到", ephemeral=True)
+
 
 class owner(Cog_Extension):
 	twitch_chatbot = SlashCommandGroup("twitch_chatbot", "twitch機器人相關指令", guild_ids=debug_guilds)

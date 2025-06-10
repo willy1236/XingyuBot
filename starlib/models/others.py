@@ -6,9 +6,9 @@ from ..types.datatype import McssServerStatues
 from ..utils import BotEmbed
 
 mcss_server_status = {
-    0: "離線",
-    1: "啟動",
-    2: "停止",
+	0: "離線",
+	1: "啟動",
+	2: "停止",
 }
 
 class McssServer(BaseModel):
@@ -36,3 +36,14 @@ class McssServer(BaseModel):
 		embed.add_field(name="記憶體分配", value=f"{self.java_allocated_memory} MB")
 		embed.set_footer(text=f"伺服器ID：{self.server_id}")
 		return embed
+
+	def find_port(self):
+		parts = self.name.split()
+		if self.description is not None:
+			parts += self.description.split()
+		for part in parts:
+			if part.isdigit():
+				num = int(part)
+				if 25565 <= num <= 65535:
+					return num
+		return None
