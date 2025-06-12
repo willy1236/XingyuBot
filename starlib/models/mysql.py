@@ -519,23 +519,22 @@ class BotToken(TokensSchema, table=True):
 
 
 class CommunityCache(CacheSchema, table=True):
-    """社群快取資料表"""
+	"""社群快取資料表"""
 
-    __tablename__ = "community_cache"
+	__tablename__ = "community_cache"
 
-    notify_type: NotifyCommunityType = Field(
-        sa_column=Column(Integer, primary_key=True)
-    )
-    community_id: str = Field(primary_key=True)
-    value: datetime | None = Field(sa_column=Column(TIMESTAMP(True, 0), nullable=True))
+	notify_type: NotifyCommunityType = Field(sa_column=Column(Integer, primary_key=True))
+	community_id: str = Field(primary_key=True)
+	value: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
 
 
 class NotifyCache(CacheSchema, table=True):
-    """通知快取資料表"""
-    __tablename__ = "notify_cache"
+	"""通知快取資料表"""
 
-    notify_type: NotifyChannelType = Field(sa_column=Column(Integer, primary_key=True))
-    value: datetime | None = Field(sa_column=Column(TIMESTAMP(True, 0), nullable=True))
+	__tablename__ = "notify_cache"
+
+	notify_type: NotifyChannelType = Field(sa_column=Column(Integer, primary_key=True))
+	value: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
 
 class WarningList(ListObject[UserModerate]):
     def __init__(self, items: list[UserModerate], discord_id: int):

@@ -1062,70 +1062,70 @@ class SQLTokensSystem(BaseSQLEngine):
 
 
 class SQLCacheSystem(BaseSQLEngine):
-    def set_community_caches(self, type: NotifyCommunityType, data: dict[str, datetime | None]):
-        """批量設定社群快取"""
-        for community_id, value in data.items():
-            cache = CommunityCache(community_id=community_id, notify_type=type, value=value)
-            if value is None:
-                self.session.exec(delete(CommunityCache).where(CommunityCache.community_id == community_id, CommunityCache.notify_type == type))
-            else:
-                self.session.merge(cache)
-        self.session.commit()
+	def set_community_caches(self, type: NotifyCommunityType, data: dict[str, datetime | None]):
+		"""批量設定社群快取"""
+		for community_id, value in data.items():
+			cache = CommunityCache(community_id=community_id, notify_type=type, value=value)
+			if value is None:
+				self.session.exec(delete(CommunityCache).where(CommunityCache.community_id == community_id, CommunityCache.notify_type == type))
+			else:
+				self.session.merge(cache)
+		self.session.commit()
 
-    def set_community_cache(self, type: NotifyCommunityType, community_id: str, value: datetime | None):
-        """設定社群快取"""
-        if value is None:
-            self.session.exec(delete(CommunityCache).where(CommunityCache.community_id == community_id, CommunityCache.notify_type == type))
-        else:
-            cache = CommunityCache(community_id=community_id, notify_type=type, value=value)
-            self.session.merge(cache)
-        self.session.commit()
+	def set_community_cache(self, type: NotifyCommunityType, community_id: str, value: datetime | None):
+		"""設定社群快取"""
+		if value is None:
+			self.session.exec(delete(CommunityCache).where(CommunityCache.community_id == community_id, CommunityCache.notify_type == type))
+		else:
+			cache = CommunityCache(community_id=community_id, notify_type=type, value=value)
+			self.session.merge(cache)
+		self.session.commit()
 
-    def add_community_cache(self, type: NotifyCommunityType, community_id: str, value: datetime | None):
-        """新增社群快取"""
-        cache = CommunityCache(community_id=community_id, notify_type=type, value=value)
-        try:
-            self.session.add(cache)
-            self.session.commit()
-        except IntegrityError:
-            self.session.rollback()
+	def add_community_cache(self, type: NotifyCommunityType, community_id: str, value: datetime | None):
+		"""新增社群快取"""
+		cache = CommunityCache(community_id=community_id, notify_type=type, value=value)
+		try:
+			self.session.add(cache)
+			self.session.commit()
+		except IntegrityError:
+			self.session.rollback()
 
-    def get_community_cache(self, type: NotifyCommunityType, community_id: str):
-        """取得社群快取"""
-        stmt = select(CommunityCache).where(CommunityCache.notify_type == type, CommunityCache.community_id == community_id)
-        result = self.session.exec(stmt).one_or_none()
-        return result
+	def get_community_cache(self, type: NotifyCommunityType, community_id: str):
+		"""取得社群快取"""
+		stmt = select(CommunityCache).where(CommunityCache.notify_type == type, CommunityCache.community_id == community_id)
+		result = self.session.exec(stmt).one_or_none()
+		return result
 
-    def get_community_caches(self, type: NotifyCommunityType):
-        stmt = (
-            select(NotifyCommunity.community_id, CommunityCache)
-            .select_from(NotifyCommunity)
-            .join(CommunityCache, NotifyCommunity.community_id == CommunityCache.community_id, isouter=True)
-            .where(NotifyCommunity.notify_type == type)
-        )
-        result = self.session.exec(stmt).all()
-        return {i[0]: i[1] for i in result}
+	def get_community_caches(self, type: NotifyCommunityType):
+		stmt = (
+			select(NotifyCommunity.community_id, CommunityCache)
+			.select_from(NotifyCommunity)
+			.join(CommunityCache, NotifyCommunity.community_id == CommunityCache.community_id, isouter=True)
+			.where(NotifyCommunity.notify_type == type)
+		)
+		result = self.session.exec(stmt).all()
+		return {i[0]: i[1] for i in result}
 
-    def get_community_caches_with_id(self, type: NotifyCommunityType, community_id: str):
-        """取得指定社群的快取"""
-        stmt = select(CommunityCache).where(CommunityCache.notify_type == type, CommunityCache.community_id == community_id)
-        result = self.session.exec(stmt).one_or_none()
-        return result
+	def get_community_caches_with_id(self, type: NotifyCommunityType, community_id: str):
+		"""取得指定社群的快取"""
+		stmt = select(CommunityCache).where(CommunityCache.notify_type == type, CommunityCache.community_id == community_id)
+		result = self.session.exec(stmt).one_or_none()
+		return result or CommunityCache(community_id=community_id, notify_type=type, value=datetime.min)
 
-    def set_notify_cache(self, type: NotifyChannelType, value: datetime | None):
-        """設定通知快取"""
-        if value is None:
-            self.session.exec(delete(NotifyCache).where(NotifyCache.notify_type == type))
-        else:
-            cache = NotifyCache(notify_type=type, value=value)
-            self.session.merge(cache)
-        self.session.commit()
+	def set_notify_cache(self, type: NotifyChannelType, value: datetime | None):
+		"""設定通知快取"""
+		if value is None:
+			self.session.exec(delete(NotifyCache).where(NotifyCache.notify_type == type))
+		else:
+			cache = NotifyCache(notify_type=type, value=value)
+			self.session.merge(cache)
+		self.session.commit()
 
-    def get_notify_cache(self, type: NotifyChannelType):
-        """取得通知快取"""
-        stmt = select(NotifyCache).where(NotifyCache.notify_type == type)
-        result = self.session.exec(stmt).one_or_none()
-        return result
+	def get_notify_cache(self, type: NotifyChannelType):
+		"""取得通知快取"""
+		stmt = select(NotifyCache).where(NotifyCache.notify_type == type)
+		result = self.session.exec(stmt).one_or_none()
+		return result
 
 
 class SQLTest(BaseSQLEngine):

@@ -81,28 +81,25 @@ async def prase_yt_push(content):
 		video = yt_api.get_video(push_entry.yt_videoid)[0]
 
 		cache = sqldb.get_community_caches_with_id(NotifyCommunityType.Youtube, push_entry.yt_channelid)
-		if cache and (push_entry.published > cache.value or video.is_live_getting_startrd):
+		if push_entry.published > cache.value or video.is_live_getting_startrd:
+			# 透過published的時間來判斷是否為新影片
+			# 透過is_live_getting_startrd來判斷是否為直播開始
 			web_log.info(f"New Youtube push entry {push_entry.yt_videoid}")
-			# Send to Discord
 
-			if video.is_live_upcoming:
-				web_log.info(f"Upcoming live video {video.id}")
-				# Add task for start live
+			if sclient.bot:
+				msg = sclient.bot.send_message(
+					embed=video.embed(),
+					content=f"YT push test {push_entry.updated == push_entry.published}"
+					if not video.is_live_getting_startrd
+					else f"YT live push test {push_entry.updated == push_entry.published}",
+				)
+				if not msg:
+					web_log.warning("Channel not found. Message sent failed.")
+			else:
+				web_log.warning("Bot not found.")
 
-		if sclient.bot:
-			msg = sclient.bot.send_message(
-				embed=video.embed(),
-				content=f"YT push test {push_entry.updated == push_entry.published}"
-				if not video.is_live_getting_startrd
-				else f"YT live push test {push_entry.updated == push_entry.published}",
-			)
-			if not msg:
-				web_log.warning("Channel not found. Message sent failed.")
-		else:
-			web_log.warning("Bot not found.")
-
-		if push_entry.published > cache.value if cache else datetime.min:
-			sqldb.set_community_cache(NotifyCommunityType.Youtube, push_entry.yt_channelid, push_entry.published)
+			if push_entry.published > cache.value:
+				sqldb.set_community_cache(NotifyCommunityType.Youtube, push_entry.yt_channelid, push_entry.published)
 
 
 @app.get("/youtube_push")
