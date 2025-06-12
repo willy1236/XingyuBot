@@ -108,19 +108,10 @@ class system_game(Cog_Extension):
 		await ctx.respond(f"已將{ctx.author.mention}的 {Jsondb.get_tw(game.value, 'game_set_option')} 資料設定為 {user_game.player_name}")
 
 	@game.command(description="查詢遊戲資料")
-	async def player(
-		self,
-		ctx,
-		user: discord.Option(discord.Member, name="用戶", description="要查詢的用戶", default=None),
-		# game:discord.Option(int,name='遊戲',description='若輸入此欄，將會用資料庫的資料查詢玩家',default=None,choices=game_option)
-	):
+	async def player(self, ctx, user: discord.Option(discord.Member, name="用戶", description="要查詢的用戶", default=None)):
 		await ctx.defer()
 		user = user or ctx.author
 		userid = user.id
-
-		# if not game and not (user == ctx.author or self.bot.is_owner(ctx.author)):
-		#     await ctx.respond('目前不開放查詢別人的綜合資料喔',ephemeral=True)
-		#     return
 
 		player_data = sclient.sqldb.get_user_game_all(userid)
 		if player_data:

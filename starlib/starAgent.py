@@ -11,9 +11,9 @@ from starlib import Jsondb, sqldb
 from starlib.types import APIType
 
 SQLsettings: dict = Jsondb.config.get("SQLsettings")
-connect = psycopg2.connect(
-    host=SQLsettings["host"], database=SQLsettings["database"], user=SQLsettings["user"], password=SQLsettings["password"], port=SQLsettings["port"]
-)
+# connect = psycopg2.connect(
+#     host=SQLsettings["host"], database=SQLsettings["database"], user=SQLsettings["user"], password=SQLsettings["password"], port=SQLsettings["port"]
+# )
 
 mcp_servers = [MCPServerStdio("uvx", ["mcp-server-fetch"])]
 
