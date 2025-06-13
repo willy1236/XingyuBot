@@ -98,6 +98,8 @@ async def prase_yt_push(content):
 			else:
 				web_log.warning("Bot not found.")
 
+			print(push_entry.published)
+			print(cache.value)
 			if push_entry.published > cache.value:
 				sqldb.set_community_cache(NotifyCommunityType.Youtube, push_entry.yt_channelid, push_entry.published)
 
