@@ -73,14 +73,16 @@ def keep_alive(request:Request):
 
 async def prase_yt_push(content):
 	feed = feedparser.parse(content)
-	with open("test.json", "w", encoding="utf-8") as f:
-		json.dump(feed, f, ensure_ascii=False, indent=4)
+	# with open("test.json", "w", encoding="utf-8") as f:
+	# 	json.dump(feed, f, ensure_ascii=False, indent=4)
 
 	for entry in feed["entries"]:
 		push_entry = YoutubePushEntry(**entry)
 		video = yt_api.get_video(push_entry.yt_videoid)[0]
 
 		cache = sqldb.get_community_caches_with_id(NotifyCommunityType.Youtube, push_entry.yt_channelid)
+		print(push_entry.published)
+		print(cache.value)
 		if push_entry.published > cache.value or video.is_live_getting_startrd:
 			# 透過published的時間來判斷是否為新影片
 			# 透過is_live_getting_startrd來判斷是否為直播開始
@@ -98,8 +100,6 @@ async def prase_yt_push(content):
 			else:
 				web_log.warning("Bot not found.")
 
-			print(push_entry.published)
-			print(cache.value)
 			if push_entry.published > cache.value:
 				sqldb.set_community_cache(NotifyCommunityType.Youtube, push_entry.yt_channelid, push_entry.published)
 

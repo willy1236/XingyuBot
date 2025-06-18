@@ -334,7 +334,7 @@ class moderation(Cog_Extension):
 	):
 		await ctx.defer()
 		if message_id:
-			message: discord.Message = await ctx.channel.fetch_message(int(message_id))
+			message: discord.Message | None = await ctx.channel.fetch_message(int(message_id))
 			if not message:
 				await ctx.respond("找不到此訊息，請在該訊息的頻道進行設定", ephemeral=True)
 				return
