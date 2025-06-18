@@ -75,15 +75,37 @@ class OAuth2Base(ABC):
             params["state"] = state
 
         return f"{self.auth_url}?{urlencode(params | kwargs, safe='+')}"
-        #return f"{self.auth_url}?{join(params)}"
+        # return f"{self.auth_url}?{join(params)}"
 
-    def exchange_code(self, code):
+    def exchange_code(self, code: str):
+        """
+        Exchange an authorization code for an access token.
+        This method sends a POST request to the token URL with the authorization code
+        and other required parameters to obtain an access token from the OAuth provider.
+        Args:
+            code (str): The authorization code received from the OAuth provider
+                        after user authorization.
+        Returns:
+            dict: The complete token response data from the OAuth provider,
+                  which typically includes:
+                  - access_token: Token to access protected resources
+                  - refresh_token: Token to obtain a new access token when the current one expires
+                  - expires_in: Token lifetime in seconds
+                  - scope: Granted permission scopes
+        Raises:
+            HTTPError: If the request to the token endpoint fails
+        Side Effects:
+            - Sets self.access_token with the received access token
+            - Sets self.refresh_token with the received refresh token
+            - Sets self.expires_at with the calculated expiration datetime
+            - Sets self.scopes with the granted permission scopes
+        """
         data = {
             "grant_type": "authorization_code",
             "code": code,
             "redirect_uri": self.redirect_uri,
             "client_id": self.client_id,
-            "client_secret": self.client_secret
+            "client_secret": self.client_secret,
         }
 
         headers = {"Accept": "application/x-www-form-urlencoded"}
@@ -97,7 +119,7 @@ class OAuth2Base(ABC):
         self.scopes = token_data.get("scope")
         return token_data
 
-    def get(self, url, params:dict=None, with_client_id=False):
+    def get(self, url, params: dict = None, with_client_id=False):
         if not self.access_token:
             raise Exception("Access token not available.")
         headers = {"Authorization": f"Bearer {self.access_token}"}
@@ -153,7 +175,7 @@ class OAuth2Base(ABC):
         return token_data
 
     @classmethod
-    def from_bot_token(cls, bot_token:BotToken, as_bot=False):
+    def from_bot_token(cls, bot_token: BotToken, as_bot=False):
         """
         從資料庫設定機器人的OAuth client config。
 
@@ -161,11 +183,7 @@ class OAuth2Base(ABC):
             bot_token (BotToken): 機器人token物件
             as_bot (bool, optional): 帶入資料庫中機器人身分的access_token等。 預設為 False
         """
-        instance = cls(
-            client_id=bot_token.client_id,
-            client_secret=bot_token.client_secret,
-            redirect_uri=bot_token.redirect_uri
-        )
+        instance = cls(client_id=bot_token.client_id, client_secret=bot_token.client_secret, redirect_uri=bot_token.redirect_uri)
 
         if as_bot:
             instance.access_token = bot_token.access_token

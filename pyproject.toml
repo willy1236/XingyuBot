@@ -45,4 +45,4 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.ruff.format]
-indent-style = "tab"
+indent-style = "space"
