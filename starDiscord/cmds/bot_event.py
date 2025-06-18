@@ -479,6 +479,7 @@ class event(Cog_Extension):
                 user = DiscordUser(discord_id=member.id, registrations_id=dbdata.registrations_id)
                 sclient.sqldb.merge(user)
                 await member.add_roles(member.guild.get_role(guild_registration[earlest_guildid]), reason="加入的最早伺服器")
+                await member.add_roles(member.guild.get_role(1250797750174351440), reason="由戶籍系統自動添加")
 
 
     @commands.Cog.listener()

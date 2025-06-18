@@ -71,7 +71,7 @@ def keep_alive(request:Request):
 # print("[Warning] Error:", e)
 
 
-async def prase_yt_push(content):
+async def prase_yt_push(content: str):
     feed = feedparser.parse(content)
     # with open("test.json", "w", encoding="utf-8") as f:
     # 	json.dump(feed, f, ensure_ascii=False, indent=4)
