@@ -5,8 +5,7 @@ from discord.commands import SlashCommandGroup
 from tweepy.errors import TooManyRequests
 
 from starlib import BotEmbed, ChoiceList, Jsondb, sclient, tz
-from starlib.dataExtractor import TwitchAPI, YoutubeAPI
-from starlib.instance import twitter_api
+from starlib.instance import tw_api, twitter_api, yt_api
 from starlib.models.mysql import Community
 from starlib.types import CommunityType, NotifyCommunityType
 
@@ -34,18 +33,17 @@ class system_community(Cog_Extension):
         channelid = channel.id
         roleid = role.id if role else None
         type = NotifyCommunityType(notify_type)
-        api = TwitchAPI()
 
-        user = api.get_user(twitch_user_login)
-        type_tw = Jsondb.get_tw(type.value, "twitch_notify_option")
-        if user:
-            sclient.sqldb.add_notify_community(type, user.id, CommunityType.Twitch, guildid, channelid, roleid, msg, cache_time=datetime.now(tz=tz))
-            sclient.sqldb.merge(Community(id=user.id, type=CommunityType.Twitch, display_name=user.display_name, username=user.login))
+        twitch_user = tw_api.get_user(twitch_user_login)
+        if twitch_user:
+            sclient.sqldb.add_notify_community(type, twitch_user.id, CommunityType.Twitch, guildid, channelid, roleid, msg, cache_time=datetime.now(tz=tz))
+            sclient.sqldb.merge(Community(id=twitch_user.id, type=CommunityType.Twitch, display_name=twitch_user.display_name, username=twitch_user.login))
 
+            type_tw = Jsondb.get_tw(type.value, "twitch_notify_option")
             if role:
-                await ctx.respond(f"設定成功：{user.display_name}({user.login})的{type_tw}將會發送在{channel.mention}並會通知{role.mention}")
+                await ctx.respond(f"設定成功：{twitch_user.display_name}({twitch_user.login})的{type_tw}將會發送在{channel.mention}並會通知{role.mention}")
             else:
-                await ctx.respond(f"設定成功：{user.display_name}({user.login})的{type_tw}將會發送在{channel.mention}")
+                await ctx.respond(f"設定成功：{twitch_user.display_name}({twitch_user.login})的{type_tw}將會發送在{channel.mention}")
 
             if not channel.can_send():
                 await ctx.send(embed=BotEmbed.simple("溫馨提醒", f"我無法在{channel.mention}中發送訊息，請確認我有足夠的權限"))
@@ -63,7 +61,7 @@ class system_community(Cog_Extension):
         ),
     ):
         guildid = ctx.guild.id
-        twitch_user = TwitchAPI().get_user(twitch_user_login)
+        twitch_user = tw_api.get_user(twitch_user_login)
 
         if not notify_type or notify_type == NotifyCommunityType.TwitchLive:
             sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitchLive, twitch_user.id, guildid)
@@ -126,18 +124,17 @@ class system_community(Cog_Extension):
             embed.add_field(name=display_name, value=text)
         await ctx.respond(embed=embed)
 
-    @twitch.command(description="取得twitch頻道的相關資訊")
-    async def user(self, ctx, twitch_user_login: discord.Option(str, required=True, name="twitch使用者名稱", description="英文的使用者名稱")):
-        user = TwitchAPI().get_user(twitch_user_login)
+    @twitch.command(name="user", description="取得twitch頻道的相關資訊")
+    async def twitch_user(self, ctx, twitch_user_login: discord.Option(str, required=True, name="twitch使用者名稱", description="英文的使用者名稱")):
+        user = tw_api.get_user(twitch_user_login)
         if user:
             await ctx.respond(embed=user.desplay())
         else:
             await ctx.respond(f"查詢不到 {twitch_user_login}",ephemeral=True)
 
-    @youtube.command(description="取得youtube頻道的相關資訊")
-    async def channel(self, ctx, ythandle: discord.Option(str, required=True, name="youtube帳號代碼", description="youtube頻道中以@開頭的代號")):
-        ytapi = YoutubeAPI()
-        channel = ytapi.get_channel(handle=ythandle)
+    @youtube.command(name="channel", description="取得youtube頻道的相關資訊")
+    async def youtube_channel(self, ctx, ythandle: discord.Option(str, required=True, name="youtube帳號代碼", description="youtube頻道中以@開頭的代號")):
+        channel = yt_api.get_channel(handle=ythandle)
         if channel:
             await ctx.respond("查詢成功",embed=channel.embed())
         else:
@@ -156,10 +153,11 @@ class system_community(Cog_Extension):
         channelid = channel.id
         roleid = role.id if role else None
 
-        ytchannel = YoutubeAPI().get_channel(handle=ythandle)
+        ytchannel = yt_api.get_channel(handle=ythandle)
         if ytchannel:
             sclient.sqldb.add_notify_community(NotifyCommunityType.Youtube, ytchannel.id, CommunityType.Youtube, guildid, channelid, roleid, msg, cache_time=datetime.now(tz=tz))
             sclient.sqldb.merge(Community(id=ytchannel.id, type=CommunityType.Youtube, display_name=ytchannel.snippet.title, username=ytchannel.snippet.customUrl))
+            # sclient.sqldb.add_push_record(ytchannel.id)
             if role:
                 await ctx.respond(f"設定成功：{ytchannel.snippet.title}的通知將會發送在{channel.mention}並會通知{role.mention}")
             else:
@@ -174,19 +172,20 @@ class system_community(Cog_Extension):
     async def youtube_remove(self, ctx, ythandle: discord.Option(str, required=True, name="youtube帳號代碼", description="youtube頻道中以@開頭的代號")):
         guildid = ctx.guild.id
 
-        ytchannel = YoutubeAPI().get_channel(handle=ythandle)
+        ytchannel = yt_api.get_channel(handle=ythandle)
         if not ytchannel:
             await ctx.respond(f"錯誤：找不到帳號代碼 {ythandle} 的頻道")
             return
 
         sclient.sqldb.remove_notify_community(NotifyCommunityType.Youtube, ytchannel.id, guildid)
+        sclient.sqldb.remove_push_record(ytchannel.id)
         await ctx.respond(f"已移除頻道 {ytchannel.snippet.title} 的通知")
 
     @youtube.command(name="notify", description="確認youtube通知")
     async def youtube_notify(self, ctx, ythandle: discord.Option(str, required=True, name="youtube帳號代碼", description="youtube頻道中以@開頭的代號")):
         guildid = ctx.guild.id
 
-        ytchannel = YoutubeAPI().get_channel(handle=ythandle)
+        ytchannel = yt_api.get_channel(handle=ythandle)
         if not ytchannel:
             await ctx.respond(f"錯誤：找不到帳號代碼 {ythandle} 的頻道")
             return

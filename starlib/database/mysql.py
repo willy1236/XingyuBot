@@ -415,9 +415,9 @@ class SQLNotifySystem(BaseSQLEngine):
         community_type: CommunityType,
         guild_id: int,
         channel_id: int,
-        role_id: int = None,
-        message: str = None,
-        cache_time: datetime = None,
+        role_id: int | None = None,
+        message: str | None = None,
+        cache_time: datetime | None = None,
     ):
         """設定社群通知"""
         community = NotifyCommunity(
@@ -548,6 +548,23 @@ class SQLNotifySystem(BaseSQLEngine):
         statement = select(PushRecord).where(PushRecord.expire_at < now)
         result = self.session.exec(statement).all()
         return result
+
+    def add_push_record(self, ytchannel_id: str):
+        """新增推播紀錄"""
+        try:
+            push_record = PushRecord(channel_id=ytchannel_id, push_at=datetime.min.astimezone(tz))
+            self.session.add(push_record)
+            self.session.commit()
+            return push_record
+        except IntegrityError:
+            self.session.rollback()
+            return None
+
+    def remove_push_record(self, ytchannel_id: str):
+        """移除推播紀錄"""
+        stmt = delete(PushRecord).where(PushRecord.channel_id == ytchannel_id)
+        self.session.exec(stmt)
+        self.session.commit()
 
 
 class SQLRoleSaveSystem(BaseSQLEngine):
