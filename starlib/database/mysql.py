@@ -686,7 +686,7 @@ class SQLWarningSystem(BaseSQLEngine):
 
         # 如果該用戶沒有被禁言過，則最後禁言時間為當前時間
         if last_ban_time_result is None:
-            last_ban_time = datetime.min
+            last_ban_time = datetime.min.astimezone(tz)
         else:
             last_ban_time = last_ban_time_result.create_time
 
