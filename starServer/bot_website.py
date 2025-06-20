@@ -80,7 +80,7 @@ async def prase_yt_push(content: str):
         push_entry = YoutubePushEntry(**entry)
         video = yt_api.get_video(push_entry.yt_videoid)[0]
 
-        cache = sqldb.get_community_caches_with_id(NotifyCommunityType.Youtube, push_entry.yt_channelid)
+        cache = sqldb.get_community_cache_with_default(NotifyCommunityType.Youtube, push_entry.yt_channelid)
         print(push_entry.published)
         print(cache.value)
         if push_entry.published > cache.value or video.is_live_getting_startrd:

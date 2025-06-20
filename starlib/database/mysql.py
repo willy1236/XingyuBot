@@ -552,7 +552,7 @@ class SQLNotifySystem(BaseSQLEngine):
     def add_push_record(self, ytchannel_id: str):
         """新增推播紀錄"""
         try:
-            push_record = PushRecord(channel_id=ytchannel_id, push_at=datetime.min.astimezone(tz))
+            push_record = PushRecord(channel_id=ytchannel_id, push_at=datetime.min.replace(tzinfo=timezone.utc))
             self.session.add(push_record)
             self.session.commit()
             return push_record
@@ -686,7 +686,7 @@ class SQLWarningSystem(BaseSQLEngine):
 
         # 如果該用戶沒有被禁言過，則最後禁言時間為當前時間
         if last_ban_time_result is None:
-            last_ban_time = datetime.min.astimezone(tz)
+            last_ban_time = datetime.min.replace(tzinfo=timezone.utc)
         else:
             last_ban_time = last_ban_time_result.create_time
 
@@ -1123,11 +1123,11 @@ class SQLCacheSystem(BaseSQLEngine):
         result = self.session.exec(stmt).all()
         return {i[0]: i[1] for i in result}
 
-    def get_community_caches_with_id(self, type: NotifyCommunityType, community_id: str):
+    def get_community_cache_with_default(self, type: NotifyCommunityType, community_id: str):
         """取得指定社群的快取"""
         stmt = select(CommunityCache).where(CommunityCache.notify_type == type, CommunityCache.community_id == community_id)
         result = self.session.exec(stmt).one_or_none()
-        return result or CommunityCache(community_id=community_id, notify_type=type, value=datetime.min.astimezone(tz))
+        return result or CommunityCache(community_id=community_id, notify_type=type, value=datetime.min.replace(tzinfo=timezone.utc))
 
     def set_notify_cache(self, type: NotifyChannelType, value: datetime | None):
         """設定通知快取"""
