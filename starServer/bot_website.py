@@ -4,6 +4,8 @@ import secrets
 from datetime import datetime, timedelta
 
 import feedparser
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.date import DateTrigger
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, status
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.openapi.utils import get_openapi
@@ -20,9 +22,11 @@ from linebot.v3.webhooks.models.message_event import MessageEvent
 from starlib import BaseThread, Jsondb, sclient, sqldb, web_log
 from starlib.dataExtractor import DiscordOauth2, GoogleOauth2, TwitchOauth2
 from starlib.instance import yt_api
+from starlib.models import YoutubeVideo
 from starlib.models.mysql import CloudUser, TwitchBotJoinChannel
 from starlib.models.push import YoutubePushEntry
 from starlib.types import APIType, NotifyCommunityType
+from starDiscord.cmds.task import youtube_start_live_notify
 
 discord_oauth_settings = sqldb.get_bot_token(APIType.Discord)
 twitch_oauth_settings = sqldb.get_bot_token(APIType.Twitch)
@@ -70,7 +74,6 @@ def keep_alive(request:Request):
 # print("[Warning] Server Received & Refused!")
 # print("[Warning] Error:", e)
 
-
 async def prase_yt_push(content: str):
     feed = feedparser.parse(content)
     # with open("test.json", "w", encoding="utf-8") as f:
@@ -81,24 +84,21 @@ async def prase_yt_push(content: str):
         video = yt_api.get_video(push_entry.yt_videoid)[0]
 
         cache = sqldb.get_community_cache_with_default(NotifyCommunityType.Youtube, push_entry.yt_channelid)
-        print(push_entry.published)
-        print(cache.value)
-        if push_entry.published > cache.value or video.is_live_getting_startrd:
+        if push_entry.published > cache.value:
             # 透過published的時間來判斷是否為新影片
-            # 透過is_live_getting_startrd來判斷是否為直播開始
             web_log.info(f"New Youtube push entry {push_entry.yt_videoid}")
 
             if sclient.bot:
-                msg = sclient.bot.send_message(
-                    embed=video.embed(),
-                    content=f"YT push test {push_entry.updated == push_entry.published}"
-                    if not video.is_live_getting_startrd
-                    else f"YT live push test {push_entry.updated == push_entry.published}",
-                )
+                msg = sclient.bot.send_message(embed=video.embed(), content=f"YT push test {push_entry.updated == push_entry.published}")
                 if not msg:
                     web_log.warning("Channel not found. Message sent failed.")
             else:
                 web_log.warning("Bot not found.")
+
+            if video.liveStreamingDetails and video.liveStreamingDetails.scheduledStartTime:
+                sclient.bot.scheduler.add_job(
+                    youtube_start_live_notify, DateTrigger(video.liveStreamingDetails.scheduledStartTime + timedelta(seconds=30)), args=[sclient.bot, video]
+                )
 
             if push_entry.published > cache.value:
                 sqldb.set_community_cache(NotifyCommunityType.Youtube, push_entry.yt_channelid, push_entry.published)

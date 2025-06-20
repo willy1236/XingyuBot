@@ -3,6 +3,7 @@ import datetime
 import os
 
 import discord
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from starlib import BotEmbed, Jsondb, log, sqldb
 from starlib.instance import debug_mode
@@ -21,6 +22,7 @@ class DiscordBot(discord.Bot):
 
         self.debug_mode = debug_mode
         self.bot_code = bot_code
+        self.scheduler = AsyncIOScheduler()
 
         if bot_code != "1":
             self.debug_guilds = Jsondb.config.get("debug_guilds")

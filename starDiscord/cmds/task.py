@@ -3,7 +3,6 @@ import subprocess
 from datetime import datetime, timedelta, timezone
 
 import discord
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.date import DateTrigger
 from discord.ext import commands, tasks
@@ -16,8 +15,7 @@ from starlib.types import APIType, NotifyChannelType, NotifyCommunityType
 
 from ..extension import Cog_Extension
 from ..uiElement.view import GiveawayView
-
-scheduler = AsyncIOScheduler()
+from ..bot import DiscordBot
 
 class task(Cog_Extension):
     def __init__(self, *args, **kwargs):
@@ -26,6 +24,7 @@ class task(Cog_Extension):
 
     @commands.Cog.listener()
     async def on_ready(self):
+        scheduler = self.bot.scheduler
         if not Jsondb.config.get("debug_mode", True):
             scheduler.add_job(self.forecast_update, "cron", hour="0/3", minute=0, second=1, jitter=30, misfire_grace_time=60)
             scheduler.add_job(self.weather_check, "cron", minute="20,35", second=30, jitter=30, misfire_grace_time=60)
@@ -227,7 +226,9 @@ class task(Cog_Extension):
                 await self.bot.send_notify_communities(embed, NotifyCommunityType.Youtube, ytchannel_id, no_mention=video.is_live_end)
 
                 if video.liveStreamingDetails and video.liveStreamingDetails.scheduledStartTime:
-                    scheduler.add_job(self.test_one_times_job, DateTrigger(video.liveStreamingDetails.scheduledStartTime + timedelta(seconds=30)), args=[video])
+                    self.bot.scheduler.add_job(
+                        youtube_start_live_notify, DateTrigger(video.liveStreamingDetails.scheduledStartTime + timedelta(seconds=30)), args=[self.bot, video]
+                    )
 
         sclient.sqldb.set_community_caches(NotifyCommunityType.Youtube, update_data)
 
@@ -360,18 +361,17 @@ class task(Cog_Extension):
             else:
                 log.warning(f"refresh_yt_push failed: {record.channel_id}")
 
-    async def test_one_times_job(self, video: YoutubeVideo):
-        # TODO: 改名並新增開台時間變更的處理方式
-        log.info(f"test_one_times_job: {video.snippet.title}")
-        for _ in range(30):
-            video_now = yt_api.get_video(video.id)[0]
-            if video_now.snippet.liveBroadcastContent == "live":
-                log.info(f"test_one_times_job: {video_now.snippet.title} is live")
+async def youtube_start_live_notify(bot: DiscordBot, video: YoutubeVideo):
+    log.info(f"youtube_start_live_notify: {video.snippet.title}")
+    for _ in range(30):
+        video_now = yt_api.get_video(video.id)[0]
+        if video_now.snippet.liveBroadcastContent == "live":
+            log.info(f"youtube_start_live_notify: {video_now.snippet.title} is live")
 
-                embed = video_now.embed()
-                await self.bot.send_notify_communities(embed, NotifyCommunityType.Youtube, video_now.snippet.channelId)
-                break
-            await asyncio.sleep(120)
+            embed = video_now.embed()
+            await bot.send_notify_communities(embed, NotifyCommunityType.Youtube, video_now.snippet.channelId)
+            break
+        await asyncio.sleep(120)
 
 
 async def giveaway_auto_end(bot: discord.Bot, view: GiveawayView):
