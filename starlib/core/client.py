@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 
 import discord
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from ..base.base import BaseThread
 from ..database import sqldb
@@ -95,6 +96,7 @@ class StarController:
         #self._starai:StarGeminiAI = None
         self.bot:DiscordBot = None
         self.twitch:Twitch = None
+        self.scheduler: AsyncIOScheduler = None
 
         self.twitch_bot_thread: BaseThread = None
         self.website_thread: BaseThread = None

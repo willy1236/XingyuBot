@@ -4,7 +4,6 @@ import secrets
 from datetime import datetime, timedelta
 
 import feedparser
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.date import DateTrigger
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, status
 from fastapi.openapi.docs import get_swagger_ui_html
@@ -19,14 +18,13 @@ from linebot.v3.messaging import ApiClient, Configuration, MessagingApi, ReplyMe
 from linebot.v3.webhooks import MessageEvent, TextMessageContent
 from linebot.v3.webhooks.models.message_event import MessageEvent
 
+from starDiscord.cmds.task import youtube_start_live_notify
 from starlib import BaseThread, Jsondb, sclient, sqldb, web_log
 from starlib.dataExtractor import DiscordOauth2, GoogleOauth2, TwitchOauth2
 from starlib.instance import yt_api
-from starlib.models import YoutubeVideo
 from starlib.models.mysql import CloudUser, TwitchBotJoinChannel
 from starlib.models.push import YoutubePushEntry
 from starlib.types import APIType, NotifyCommunityType
-from starDiscord.cmds.task import youtube_start_live_notify
 
 discord_oauth_settings = sqldb.get_bot_token(APIType.Discord)
 twitch_oauth_settings = sqldb.get_bot_token(APIType.Twitch)
