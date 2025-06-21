@@ -1118,7 +1118,7 @@ class SQLCacheSystem(BaseSQLEngine):
             select(NotifyCommunity.community_id, CommunityCache)
             .select_from(NotifyCommunity)
             .join(CommunityCache, NotifyCommunity.community_id == CommunityCache.community_id, isouter=True)
-            .where(NotifyCommunity.notify_type == type)
+            .where(NotifyCommunity.notify_type == type, CommunityCache.notify_type == type)
         )
         result = self.session.exec(stmt).all()
         return {i[0]: i[1] for i in result}

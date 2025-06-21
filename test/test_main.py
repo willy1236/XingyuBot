@@ -99,7 +99,31 @@ if __name__ == "__main__":
 # print(text, weather.WeatherElement.DailyExtreme.DailyHigh.AirTemperature, weather.WeatherElement.DailyExtreme.DailyLow.AirTemperature)
 # print(weather.model_dump())
 
-# from starlib.instance import tw_api
+from starlib.instance import tw_api
+
+# after = datetime.fromisoformat("2025-06-02T17:44:41+08")
+# videos = tw_api.get_videos(490765956, after=after)
+# print(videos)
+
+caches = sclient.sqldb.get_community_caches(NotifyCommunityType.TwitchVideo)
+
+update_data: dict[str, datetime] = {}
+print(caches)
+for user_id, cache in caches.items():
+    print(f"Updating videos for user {user_id} after {cache.value}")
+    videos = tw_api.get_videos(user_id, after=cache.value)
+
+    if videos:
+        videos.reverse()
+        update_data[user_id] = videos[-1].created_at
+
+        for video in videos:
+            embed = video.embed()
+            print(video)
+
+print(update_data)
+# sclient.sqldb.set_community_caches(NotifyCommunityType.TwitchVideo, update_data)
+
 # clips = tw_api.get_clips("490765956")
 # print(clips[0])
 # from starlib.models.mysql import NotifyChannel
