@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import random
-from datetime import datetime
 from typing import TYPE_CHECKING
 
 import discord
@@ -18,18 +16,6 @@ if TYPE_CHECKING:
 
     from starDiscord import DiscordBot
 
-class PointClient():
-    """點數系統"""
-
-    def daily_sign(self,discord_id):
-        """每日簽到"""
-        code = sqldb.user_sign(discord_id)
-        if code:
-            return code
-        scoin_add  = random.randint(5,10)
-        rcoin_add = 0   # random.randint(3,5)
-        sqldb.sign_add_coin(discord_id,scoin_add,rcoin_add)
-        return [scoin_add, rcoin_add]
 
 class ElectionSystem():
     def election_format(self,session:int,bot:discord.Bot):
@@ -91,9 +77,6 @@ class StarController:
     def __init__(self):
         super().__init__()
         self.sqldb = sqldb
-        # self.dbcache:StardbCache = StardbCache()
-
-        #self._starai:StarGeminiAI = None
         self.bot:DiscordBot = None
         self.twitch:Twitch = None
         self.scheduler: AsyncIOScheduler = None
@@ -102,9 +85,3 @@ class StarController:
         self.website_thread: BaseThread = None
         self.tunnel_thread: BaseThread = None
         self.twitchtunnel_thread: BaseThread = None
-
-    # @property
-    # def starai(self):
-    #     if not self._starai:
-    #         self._starai = StarGeminiAI()
-    #     return self._starai

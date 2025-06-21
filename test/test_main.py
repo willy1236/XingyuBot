@@ -24,9 +24,8 @@ from starlib.database import SQLEngine
 from starlib.dataExtractor import *
 from starlib.types import *
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     pass
-    starai = sclient.starai
     content = [
         # "威立：星羽 你認為台中摃殘黨與山珍海味黨的差異在哪裡",
         # "威立：星羽 你可以簡單介紹一下快樂營的各政黨嗎",
@@ -65,12 +64,12 @@ if __name__ == '__main__':
     # 	i = input(pre)
     # 	print(starai.generate_aitext(f"{pre}{i}"))
     # 	print("="*50)
-    
+
     # with open(r"", "rb") as f:
     #     file = starai.get_or_set_file(f.name.split("\\")[-1], f.read())
     #     print(file.name)
     #     print(starai.generate_response("請描述這個檔案的內容", files=file))
-    
+
     # import google.generativeai as genai
     # for f in genai.list_files():
     #     print(f.name, f.mime_type, f.display_name, f.expiration_time)
@@ -89,7 +88,7 @@ if __name__ == '__main__':
 
 # lst = [0,1,2,3,4,5,6,7,8,9]
 # for i in range(0, len(lst), 3):
-#     print(lst[i:i+3])	
+#     print(lst[i:i+3])
 # cwa_api = CWA_API()
 # weather = cwa_api.get_weather_data()[0]
 # text = f"現在天氣： {weather.WeatherElement.Weather if weather.WeatherElement.Weather != '-99' else '--'}/{weather.WeatherElement.AirTemperature}°C"
@@ -115,11 +114,8 @@ if __name__ == '__main__':
 #         print(i)
 
 
-from starlib.dataExtractor.oauth import (DiscordOauth2, GoogleOauth2,
-                                         TwitchOauth2)
+from starlib.dataExtractor.oauth import DiscordOauth2, GoogleOauth2, TwitchOauth2
 
-setting = Jsondb.get_token("twitch_oauth")
-google_oauth_settings = Jsondb.get_token("google_oauth")
 # print(setting)
 # print(GoogleOauth(setting, user_id="613747262291443742").list_playlists())
 # auth = DiscordOauth2(**setting, user_id="419131103836635136")
@@ -134,25 +130,22 @@ google_oauth_settings = Jsondb.get_token("google_oauth")
 #print(GoogleOauth2(user_id="112130059444606303598").get_authorization_url())
 
 
+# from tweepy import API, Client, OAuth2BearerHandler, Tweet
+# import shutil
+# # rettiwt_path = shutil.which("rettiwt")
+# # print(rettiwt_path)
+# try:
+#     parsed = CLIInterface().get_user_timeline("1830924770889867267", datetime(2025, 5, 3, 0, 0, 0, tzinfo=timezone(timedelta(hours=8))))
+#     print(parsed.next)
+#     for tweet in parsed.list:
+#         print(tweet.createdAt, tweet.tweetBy.fullName, tweet.id)
+#         print(tweet.fullText)
+#         print("=" * 50)
+#     print(len(parsed.list))
+# except subprocess.CalledProcessError as e:
+#     print(e.output)
+#     print(e.stderr)
 
-
-
-from tweepy import API, Client, OAuth2BearerHandler, Tweet
-import shutil
-# rettiwt_path = shutil.which("rettiwt")
-# print(rettiwt_path)
-try:
-    parsed = CLIInterface().get_user_timeline("1830924770889867267", datetime(2025, 5, 3, 0, 0, 0, tzinfo=timezone(timedelta(hours=8))))
-    print(parsed.next)
-    for tweet in parsed.list:
-        print(tweet.createdAt, tweet.tweetBy.fullName, tweet.id)
-        print(tweet.fullText)
-        print("=" * 50)
-    print(len(parsed.list))
-except subprocess.CalledProcessError as e:
-    print(e.output)
-    print(e.stderr)
-    
 
 #x_apiv2 = Client(Jsondb.get_token("x_api"), wait_on_rate_limit=True)
 # x_api = API(OAuth2BearerHandler(Jsondb.get_token("x_api")))

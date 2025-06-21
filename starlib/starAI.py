@@ -52,8 +52,7 @@ safety_settings = [
   },
 ]
 
-class StarGeminiAI():
-    # TODO: LLM function call for AI chat
+class StarGeminiAI:
     if TYPE_CHECKING:
         history: list[str]
         model: genai.GenerativeModel
@@ -67,11 +66,11 @@ class StarGeminiAI():
         Generate AI text based on input text and image bytes.
 
         Parameters:
-                input_text (str): The input text to generate AI text from.
-                image_bytes (bytes, optional): The image bytes to include in the generation process.
+            input_text (str): The input text to generate AI text from.
+            image_bytes (bytes, optional): The image bytes to include in the generation process.
 
         Returns:
-                str: The generated AI text.
+            str: The generated AI text.
 
         """
         request_input = 1

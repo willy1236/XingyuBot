@@ -13,9 +13,10 @@ from starlib.instance import *
 from starlib.models.community import YoutubeVideo
 from starlib.types import APIType, NotifyChannelType, NotifyCommunityType
 
+from ..bot import DiscordBot
 from ..extension import Cog_Extension
 from ..uiElement.view import GiveawayView
-from ..bot import DiscordBot
+
 
 class task(Cog_Extension):
     def __init__(self, *args, **kwargs):
@@ -35,9 +36,9 @@ class task(Cog_Extension):
             scheduler.add_job(self.weather_warning_check, "interval", minutes=15, jitter=30, misfire_grace_time=40)
             scheduler.add_job(self.youtube_video, "interval", minutes=10, jitter=30, misfire_grace_time=40)
             scheduler.add_job(self.twitch_live, "interval", minutes=4, jitter=15, misfire_grace_time=20)
-            scheduler.add_job(self.twitch_video, "interval", minutes=15, jitter=30, misfire_grace_time=40)
-            scheduler.add_job(self.twitch_clip, "interval", minutes=10, jitter=30, misfire_grace_time=40)
-            scheduler.add_job(self.twitter_tweets_rss, "interval", minutes=15, jitter=30, misfire_grace_time=40)
+            scheduler.add_job(self.twitch_video, "interval", minutes=10, jitter=30, misfire_grace_time=40)
+            scheduler.add_job(self.twitch_clip, "interval", minutes=5, jitter=30, misfire_grace_time=40)
+            scheduler.add_job(self.twitter_tweets_rss, "interval", minutes=10, jitter=30, misfire_grace_time=40)
             # scheduler.add_job(self.get_mongodb_data,'interval',minutes=3,jitter=30,misfire_grace_time=40)
 
             if self.bot.user.id == 589744540240314368:

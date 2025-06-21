@@ -156,8 +156,7 @@ class TwitchAPI:
             results = [TwitchVideo(**i) for i in apidata["data"]]
             if after:
                 results = [i for i in results if i.created_at > after]
-            else:
-                return results
+            return results
         else:
             return None
 

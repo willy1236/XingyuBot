@@ -536,6 +536,15 @@ class NotifyCache(CacheSchema, table=True):
 	notify_type: NotifyChannelType = Field(sa_column=Column(Integer, primary_key=True))
 	value: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
 
+class YoutubeCache(CacheSchema, table=True):
+    """YouTube快取資料表"""
+
+    __tablename__ = "youtube_cache"
+
+    video_id: str = Field(primary_key=True)
+    status: int = Field(sa_column=Column(SmallInteger))
+
+
 class WarningList(ListObject[UserModerate]):
     def __init__(self, items: list[UserModerate], discord_id: int):
         super().__init__(items)
