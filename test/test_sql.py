@@ -2,7 +2,7 @@ from datetime import datetime
 
 from sqlalchemy import and_, delete, desc, func, or_, select
 
-from starlib import tz, sqldb
+from starlib import sqldb, tz
 from starlib.models.mysql import Post, ReactionRoleMessage, User
 
 # session = sqldb.alsession
@@ -31,5 +31,6 @@ from starlib.models.mysql import Post, ReactionRoleMessage, User
 # print(f"User: {user.name}, ID: {user.id}")
 # print(f"Posts: {user.posts}")  # 會輸出 Alice 的所有貼文
 
-user = sqldb.get_dcuser_test_session(419131103836635136)
-print(user.discord_id)
+# user = sqldb.get_dcuser_test_session(419131103836635136)
+# print(user.discord_id)
+print(not sqldb.get_warnings(str(123)))

@@ -110,3 +110,4 @@ class APIType(IntEnum):
     Twitter = 13
     Rettiwt = 14
     DocAccount = 15
+    Tavily = 16

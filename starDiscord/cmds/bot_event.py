@@ -9,7 +9,7 @@ from discord.ext import commands
 from starlib import BotEmbed, Jsondb, log, sclient, tz
 from starlib.instance import *
 from starlib.models.mysql import DiscordUser
-from starlib.starAgent import agent
+from starlib.starAgent import ModelMessage, MyDeps, agent
 from starlib.types import NotifyChannelType
 
 from ..extension import Cog_Extension
@@ -23,7 +23,7 @@ ai_access_guilds: list[int] = happycamp_guild + debug_guilds
 
 guild_registration = sclient.sqldb.get_raw_resgistrations() if sclient.sqldb else {}
 
-agent_history = []
+agent_history: dict[int, list[ModelMessage]] = {}
 
 def check_registration(member:discord.Member):
     earlest = datetime.now(timezone.utc)
@@ -241,9 +241,12 @@ class event(Cog_Extension):
         if message.guild and message.content and message.guild.id in ai_access_guilds and len(message.content) > 1 and message.content.startswith(".") and not message.content.startswith(".", 1, 2):
             async with message.channel.typing():
                 global agent_history
-                resp = await agent.run(message.content[1:], message_history=agent_history)
-                agent_history = list(resp.all_messages())
+                history = agent_history.get(message.author.id, [])
+                deps = MyDeps(discord_id=message.author.id)
+
+                resp = await agent.run(message.content[1:], message_history=history, deps=deps)
                 if resp.output:
+                    agent_history[message.author.id] = list(resp.all_messages())
                     await message.reply(resp.output, mention_author=False)
                 else:
                     await message.add_reaction("❌")

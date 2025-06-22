@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, Literal, ParamSpec, Self, TypeVar, overlo
 import discord
 import sqlalchemy
 from google.oauth2.credentials import Credentials
-from sqlalchemy import and_, delete, desc, func, or_
+from sqlalchemy import and_, delete, desc, func, or_, not_
 from sqlalchemy.engine import URL
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session as ALSession
@@ -650,10 +650,9 @@ class SQLWarningSystem(BaseSQLEngine):
         :param guild_id: 若給予，則額外查詢該伺服器內的紀錄
         """
         if guild_id:
-            stmt = select(UserModerate).where(UserModerate.discord_id == discord_id, or_(not UserModerate.guild_only, UserModerate.create_guild == guild_id))
+            stmt = select(UserModerate).where(UserModerate.discord_id == discord_id, or_(not_(UserModerate.guild_only), UserModerate.create_guild == guild_id))
         else:
-            stmt = select(UserModerate).where(UserModerate.discord_id == discord_id, not UserModerate.guild_only)
-        print(stmt)
+            stmt = select(UserModerate).where(UserModerate.discord_id == discord_id, not_(UserModerate.guild_only))
         result = self.session.exec(stmt).all()
         return WarningList(result, discord_id)
 
