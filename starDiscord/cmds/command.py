@@ -730,7 +730,7 @@ class command(Cog_Extension):
 
         if register_message:
             assert isinstance(channel, discord.abc.Messageable), "必須提供一個頻道"
-            messages = await channel.history(limit=None, older_first=True).flatten()
+            messages = await channel.history(limit=None, oldest_first=True).flatten()
             sclient.sqldb.backup_messages(messages)
             await ctx.send(f"已將 {channel.name} 頻道的訊息儲存至資料庫")
 
