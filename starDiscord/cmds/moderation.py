@@ -305,7 +305,7 @@ class moderation(Cog_Extension):
         content: discord.Option(str, name="訊息", description="新的訊息文字", required=True),
     ):
         await ctx.defer()
-        message = await ctx.channel.fetch_message(int(message_id))
+        message = self.bot.get_message(int(message_id)) or await ctx.channel.fetch_message(int(message_id))
         if not message:
             await ctx.respond("找不到此訊息，請在該訊息的頻道進行設定", ephemeral=True)
             return
@@ -334,7 +334,7 @@ class moderation(Cog_Extension):
     ):
         await ctx.defer()
         if message_id:
-            message: discord.Message | None = await ctx.channel.fetch_message(int(message_id))
+            message: discord.Message | None = self.bot.get_message(int(message_id)) or await ctx.channel.fetch_message(int(message_id))
             if not message:
                 await ctx.respond("找不到此訊息，請在該訊息的頻道進行設定", ephemeral=True)
                 return
@@ -364,7 +364,7 @@ class moderation(Cog_Extension):
         role: discord.Option(discord.Role, name="身分組", description="要移除的身分組", required=True),
     ):
         await ctx.defer()
-        message = await ctx.channel.fetch_message(int(message_id))
+        message = self.bot.get_message(int(message_id)) or await ctx.channel.fetch_message(int(message_id))
         if not message:
             await ctx.respond("找不到此訊息，請在該訊息的頻道進行設定", ephemeral=True)
             return

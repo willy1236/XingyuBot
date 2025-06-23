@@ -1043,6 +1043,17 @@ class SQLBackupSystem(BaseSQLEngine):
         self.session.add(backup_channel)
         self.session.commit()
 
+    def backup_message(self, message: discord.Message, description: str = None):
+        backup_message = BackupMessage(
+            message_id=message.id,
+            channel_id=message.channel.id,
+            content=message.content,
+            created_at=message.created_at.astimezone(tz),
+            author_id=message.author.id,
+            description=description,
+        )
+        self.session.add(backup_message)
+        self.session.commit()
 
 class SQLTokensSystem(BaseSQLEngine):
     def set_oauth(self, user_id: int, type: CommunityType, access_token: str, refresh_token: str = None, expires_at: datetime = None):

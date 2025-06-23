@@ -732,6 +732,22 @@ class command(Cog_Extension):
             await channel.delete()
             await ctx.send(f"已將 {channel.name} 刪除")
 
+    @register.command(name="message", description="將訊息保存至資料庫")
+    @commands.is_owner()
+    async def register_message(
+        self,
+        ctx: discord.ApplicationContext,
+        message_str: discord.Option(str, name="保存的訊息id"),
+        description: discord.Option(str, name="描述", description="保存的訊息描述", default=None),
+    ):
+        message = self.bot.get_message(int(message_str)) or await ctx.channel.fetch_message(int(message_str))
+        if not message:
+            await ctx.respond("錯誤：無法找到指定的訊息", ephemeral=True)
+            return
+        assert isinstance(message, discord.Message), "必須提供一個訊息"
+        sclient.sqldb.backup_message(message, description)
+        await ctx.respond(f"已將{message.jump_url}儲存")
+
     @commands.slash_command(description="取得邀請連結")
     async def getinvite(self, ctx, invite_url: discord.Option(str, name="邀請連結網址")):
         invite = await self.bot.fetch_invite(invite_url)

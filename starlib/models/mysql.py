@@ -518,6 +518,24 @@ class BackupChannel(BackupSchema, table=True):
         embed.add_field(name="創建於", value=self.created_at.strftime("%Y/%m/%d %H:%M:%S"))
         return embed
 
+
+class BackupMessage(BackupSchema, table=True):
+    __tablename__ = "message_backup"
+
+    message_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
+    channel_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
+    content: str = Field(sa_column=Column(Text))
+    created_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
+    author_id: int = Field(sa_column=Column(BigInteger))
+    description: str | None
+
+    def embed(self, bot: Bot):
+        user = bot.get_user(self.author_id)
+        embed = BotEmbed.simple(f"Message from {user.name if user else self.author_id}", self.content or "No content")
+        embed.add_field(name="Created at", value=self.created_at.strftime("%Y/%m/%d %H:%M:%S"))
+        return embed
+
+
 class OAuth2Token(TokensSchema, table=True):
     __tablename__ = "oauth_token"
 
