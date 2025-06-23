@@ -297,75 +297,79 @@ class YouTubeStream(BaseModel):
 
 
 class YoutubeVideo(BaseModel):
-	kind: str
-	etag: str
-	id: str
-	snippet: VideoSnippet
-	liveStreamingDetails: LiveStreamingDetails | None = None
+    kind: str
+    etag: str
+    id: str
+    snippet: VideoSnippet
+    liveStreamingDetails: LiveStreamingDetails | None = None
 
-	@model_validator(mode="after")
-	def __post_init__(self):
-		self.snippet.publishedAt = self.snippet.publishedAt.astimezone(tz=tz)
-		if self.liveStreamingDetails:
-			self.liveStreamingDetails.actualStartTime = (
-				self.liveStreamingDetails.actualStartTime.astimezone(tz=tz) if self.liveStreamingDetails.actualStartTime else None
-			)
-			self.liveStreamingDetails.actualEndTime = (
-				self.liveStreamingDetails.actualEndTime.astimezone(tz=tz) if self.liveStreamingDetails.actualEndTime else None
-			)
-			self.liveStreamingDetails.scheduledStartTime = (
-				self.liveStreamingDetails.scheduledStartTime.astimezone(tz=tz) if self.liveStreamingDetails.scheduledStartTime else None
-			)
-			self.liveStreamingDetails.scheduledEndTime = (
-				self.liveStreamingDetails.scheduledEndTime.astimezone(tz=tz) if self.liveStreamingDetails.scheduledEndTime else None
-			)
-		return self
+    @model_validator(mode="after")
+    def __post_init__(self):
+        self.snippet.publishedAt = self.snippet.publishedAt.astimezone(tz=tz)
+        if self.liveStreamingDetails:
+            self.liveStreamingDetails.actualStartTime = (
+                self.liveStreamingDetails.actualStartTime.astimezone(tz=tz) if self.liveStreamingDetails.actualStartTime else None
+            )
+            self.liveStreamingDetails.actualEndTime = (
+                self.liveStreamingDetails.actualEndTime.astimezone(tz=tz) if self.liveStreamingDetails.actualEndTime else None
+            )
+            self.liveStreamingDetails.scheduledStartTime = (
+                self.liveStreamingDetails.scheduledStartTime.astimezone(tz=tz) if self.liveStreamingDetails.scheduledStartTime else None
+            )
+            self.liveStreamingDetails.scheduledEndTime = (
+                self.liveStreamingDetails.scheduledEndTime.astimezone(tz=tz) if self.liveStreamingDetails.scheduledEndTime else None
+            )
+        return self
 
-	def embed(self):
-		embed = discord.Embed(
-			title=self.snippet.title,
-			url=f"https://www.youtube.com/watch?v={self.id}",
-			description=self.snippet.channelTitle,
-			color=0xFF0000,
-			timestamp=self.snippet.publishedAt,
-		)
+    def embed(self):
+        embed = discord.Embed(
+            title=self.snippet.title,
+            url=f"https://www.youtube.com/watch?v={self.id}",
+            description=self.snippet.channelTitle,
+            color=0xFF0000,
+            timestamp=self.snippet.publishedAt,
+        )
 
-		if self.liveStreamingDetails:
-			if self.liveStreamingDetails.actualEndTime and self.snippet.liveBroadcastContent == "none":
-				embed.add_field(name="現況", value="直播結束")
-			else:
-				embed.add_field(name="現況", value=ytvideo_lives.get(self.snippet.liveBroadcastContent, "未知"))
+        if self.liveStreamingDetails:
+            if self.liveStreamingDetails.actualEndTime and self.snippet.liveBroadcastContent == "none":
+                embed.add_field(name="現況", value="直播結束")
+            else:
+                embed.add_field(name="現況", value=ytvideo_lives.get(self.snippet.liveBroadcastContent, "未知"))
 
-			if self.liveStreamingDetails.scheduledStartTime and self.snippet.liveBroadcastContent == "upcoming":
-				embed.add_field(name="預定直播時間", value=self.liveStreamingDetails.scheduledStartTime.strftime("%Y/%m/%d %H:%M:%S"))
-			elif self.liveStreamingDetails.actualStartTime:
-				embed.add_field(name="直播開始時間", value=self.liveStreamingDetails.actualStartTime.strftime("%Y/%m/%d %H:%M:%S"))
-			if self.liveStreamingDetails.actualEndTime:
-				embed.add_field(name="直播結束時間", value=self.liveStreamingDetails.actualEndTime.strftime("%Y/%m/%d %H:%M:%S"))
-		else:
-			embed.add_field(name="現況", value=ytvideo_lives.get(self.snippet.liveBroadcastContent, "未知"))
-			embed.add_field(name="上傳時間", value=self.snippet.publishedAt.strftime("%Y/%m/%d %H:%M:%S"), inline=False)
+            if self.liveStreamingDetails.scheduledStartTime and self.snippet.liveBroadcastContent == "upcoming":
+                embed.add_field(name="預定直播時間", value=self.liveStreamingDetails.scheduledStartTime.strftime("%Y/%m/%d %H:%M:%S"))
+            elif self.liveStreamingDetails.actualStartTime:
+                embed.add_field(name="直播開始時間", value=self.liveStreamingDetails.actualStartTime.strftime("%Y/%m/%d %H:%M:%S"))
+            if self.liveStreamingDetails.actualEndTime:
+                embed.add_field(name="直播結束時間", value=self.liveStreamingDetails.actualEndTime.strftime("%Y/%m/%d %H:%M:%S"))
+        else:
+            embed.add_field(name="現況", value=ytvideo_lives.get(self.snippet.liveBroadcastContent, "未知"))
+            embed.add_field(name="上傳時間", value=self.snippet.publishedAt.strftime("%Y/%m/%d %H:%M:%S"), inline=False)
 
-		embed.set_image(url=self.snippet.thumbnails.high.url)
-		return embed
+        embed.set_image(url=self.snippet.thumbnails.high.url)
+        return embed
 
-	@property
-	def is_live_end(self) -> bool:
-		return bool(self.liveStreamingDetails and self.liveStreamingDetails.actualEndTime)
+    @property
+    def is_live_end(self) -> bool:
+        return bool(self.liveStreamingDetails and self.liveStreamingDetails.actualEndTime)
 
-	@property
-	def is_live_upcoming(self) -> bool:
-		return self.snippet.liveBroadcastContent == "upcoming"
+    @property
+    def is_live_upcoming(self) -> bool:
+        return self.snippet.liveBroadcastContent == "upcoming"
 
-	@property
-	def is_live_getting_startrd(self) -> bool:
-		now = datetime.now(tz=tz)
-		return bool(
-			self.liveStreamingDetails
-			and self.liveStreamingDetails.actualStartTime
-			and not self.liveStreamingDetails.actualEndTime
-			and (now - self.liveStreamingDetails.actualStartTime) < timedelta(minutes=1)
-		)
+    @property
+    def is_live_upcoming_with_time(self) -> bool:
+        return bool(self.liveStreamingDetails is not None and self.liveStreamingDetails.scheduledStartTime and not self.liveStreamingDetails.actualEndTime)
+
+    @property
+    def is_live_getting_startrd(self) -> bool:
+        now = datetime.now(tz=tz)
+        return bool(
+            self.liveStreamingDetails
+            and self.liveStreamingDetails.actualStartTime
+            and not self.liveStreamingDetails.actualEndTime
+            and (now - self.liveStreamingDetails.actualStartTime) < timedelta(minutes=1)
+        )
 
 
 class YoutubeRSSVideo(BaseModel):

@@ -226,7 +226,8 @@ class task(Cog_Extension):
                 embed = video.embed()
                 await self.bot.send_notify_communities(embed, NotifyCommunityType.Youtube, ytchannel_id, no_mention=video.is_live_end)
 
-                if video.liveStreamingDetails and video.liveStreamingDetails.scheduledStartTime:
+                if video.is_live_upcoming_with_time:
+                    assert video.liveStreamingDetails.scheduledStartTime is not None, "Scheduled start time should not be None for upcoming live videos"
                     self.bot.scheduler.add_job(
                         youtube_start_live_notify, DateTrigger(video.liveStreamingDetails.scheduledStartTime + timedelta(seconds=30)), args=[self.bot, video]
                     )
