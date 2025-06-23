@@ -721,11 +721,18 @@ class command(Cog_Extension):
         ctx: discord.ApplicationContext,
         channel: discord.Option(discord.abc.GuildChannel, name="保存的頻道"),
         description: discord.Option(str, name="描述", description="保存的頻道描述"),
+        register_message: discord.Option(bool, name="是否將頻道的訊息儲存至資料庫", default=False),
         delete_channel: discord.Option(bool, name="保存後是否刪除頻道", default=False),
     ):
         assert isinstance(channel, discord.abc.GuildChannel), "必須提供一個頻道"
         sclient.sqldb.backup_channel(channel, description)
         await ctx.respond(f"已將 {channel.name} 頻道儲存")
+
+        if register_message:
+            assert isinstance(channel, discord.abc.Messageable), "必須提供一個頻道"
+            messages = await channel.history(limit=None, older_first=True).flatten()
+            sclient.sqldb.backup_messages(messages)
+            await ctx.send(f"已將 {channel.name} 頻道的訊息儲存至資料庫")
 
         # 頻道儲存後執行確保資料完整
         if delete_channel:

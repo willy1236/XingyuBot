@@ -1055,6 +1055,20 @@ class SQLBackupSystem(BaseSQLEngine):
         self.session.add(backup_message)
         self.session.commit()
 
+    def backup_messages(self, messages: list[discord.Message]):
+        for message in messages:
+            backup_message = BackupMessage(
+                message_id=message.id,
+                channel_id=message.channel.id,
+                content=message.content,
+                created_at=message.created_at.astimezone(tz),
+                author_id=message.author.id,
+                description=None,
+            )
+            self.session.add(backup_message)
+        self.session.commit()
+
+
 class SQLTokensSystem(BaseSQLEngine):
     def set_oauth(self, user_id: int, type: CommunityType, access_token: str, refresh_token: str = None, expires_at: datetime = None):
         token = OAuth2Token(user_id=user_id, type=type, access_token=access_token, refresh_token=refresh_token, expires_at=expires_at)
