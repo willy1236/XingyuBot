@@ -3,6 +3,7 @@ import os
 from dataclasses import dataclass
 
 import psycopg2
+from discord import Guild, Member
 from pydantic_ai import Agent, RunContext
 from pydantic_ai.common_tools.duckduckgo import duckduckgo_search_tool
 from pydantic_ai.common_tools.tavily import tavily_search_tool
@@ -21,6 +22,8 @@ mcp_servers = [MCPServerStdio("uvx", ["mcp-server-fetch"])]
 @dataclass
 class MyDeps:
     discord_id: int
+    guild: Guild | None = None
+    member: Member | None = None
 
 
 class Tools:
@@ -123,6 +126,22 @@ async def system_prompt(ctx: RunContext[MyDeps]) -> str:
     text += f"使用者的資訊為 {str(user)}"
     if user.discord_id == 419131103836635136:
         text += "\n這是開發者的ID"
+
+    # Discord Guild 資訊
+    if ctx.deps.guild:
+        text += f"\n\nDiscord Guild 資訊：\n"
+        text += f"Guild ID: {ctx.deps.guild.id}\n"
+        text += f"Guild 名稱: {ctx.deps.guild.name}\n"
+
+    # Discord Member 資訊
+    if ctx.deps.member:
+        text += f"\n\nDiscord Member 資訊：\n"
+        text += f"Member ID: {ctx.deps.member.id}\n"
+        text += f"Member 名稱: {ctx.deps.member.name}\n"
+        if ctx.deps.member.nick:
+            text += f"暱稱: {ctx.deps.member.nick}\n"
+        else:
+            text += "沒有設定暱稱。\n"
     return text
 
 

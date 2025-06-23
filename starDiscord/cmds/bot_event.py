@@ -242,7 +242,7 @@ class event(Cog_Extension):
             async with message.channel.typing():
                 global agent_history
                 history = agent_history.get(message.author.id, [])
-                deps = MyDeps(discord_id=message.author.id)
+                deps = MyDeps(discord_id=message.author.id, member=message.author, guild=message.guild)
 
                 resp = await agent.run(message.content[1:], message_history=history, deps=deps)
                 if resp.output:
@@ -482,7 +482,6 @@ class event(Cog_Extension):
                 user = DiscordUser(discord_id=member.id, registrations_id=dbdata.registrations_id)
                 sclient.sqldb.merge(user)
                 await member.add_roles(member.guild.get_role(dbdata.role_id), reason="加入的最早伺服器")
-                await member.add_roles(member.guild.get_role(1250797750174351440), reason="由戶籍系統自動添加")
 
 
     @commands.Cog.listener()

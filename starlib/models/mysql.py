@@ -488,6 +488,35 @@ class BackupRoleUser(BackupSchema, table=True):
     discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
     role: BackupRole = Relationship(back_populates="members")
 
+class BackupCategory(BackupSchema, table=True):
+    __tablename__ = "category_backup"
+
+    category_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
+    name: str
+    created_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
+    guild_id: int = Field(sa_column=Column(BigInteger))
+    description: str
+
+    def embed(self, bot: Bot):
+        embed = BotEmbed.simple(self.name, self.description)
+        embed.add_field(name="創建於", value=self.created_at.strftime("%Y/%m/%d %H:%M:%S"))
+        return embed
+
+
+class BackupChannel(BackupSchema, table=True):
+    __tablename__ = "channel_backup"
+
+    channel_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
+    name: str
+    created_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
+    guild_id: int = Field(sa_column=Column(BigInteger))
+    category_id: int | None = Field(sa_column=Column(BigInteger))
+    description: str
+
+    def embed(self, bot: Bot):
+        embed = BotEmbed.simple(self.name, self.description)
+        embed.add_field(name="創建於", value=self.created_at.strftime("%Y/%m/%d %H:%M:%S"))
+        return embed
 
 class OAuth2Token(TokensSchema, table=True):
     __tablename__ = "oauth_token"

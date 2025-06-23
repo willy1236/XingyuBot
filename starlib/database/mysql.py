@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, Literal, ParamSpec, Self, TypeVar, overlo
 import discord
 import sqlalchemy
 from google.oauth2.credentials import Credentials
-from sqlalchemy import and_, delete, desc, func, or_, not_
+from sqlalchemy import and_, delete, desc, func, not_, or_
 from sqlalchemy.engine import URL
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session as ALSession
@@ -660,9 +660,7 @@ class SQLWarningSystem(BaseSQLEngine):
         if guild_id:
             stmt = select(func.count()).where(UserModerate.discord_id == discord_id, UserModerate.create_guild == guild_id)
         else:
-            stmt = select(func.count()).where(
-                UserModerate.discord_id == discord_id, not UserModerate.guild_only
-            )
+            stmt = select(func.count()).where(UserModerate.discord_id == discord_id, not_(UserModerate.guild_only))
         result = self.session.exec(stmt).one()
         return result
 
@@ -1021,6 +1019,29 @@ class SQLBackupSystem(BaseSQLEngine):
         stmt = select(BackupRole)
         result = self.session.exec(stmt).all()
         return result
+
+    def backup_category(self, category: discord.CategoryChannel, description: str = None):
+        backup_category = BackupCategory(
+            category_id=category.id,
+            name=category.name,
+            created_at=category.created_at.astimezone(tz),
+            guild_id=category.guild.id,
+            description=description,
+        )
+        self.session.add(backup_category)
+        self.session.commit()
+
+    def backup_channel(self, channel: discord.abc.GuildChannel, description: str = None):
+        backup_channel = BackupChannel(
+            channel_id=channel.id,
+            name=channel.name,
+            created_at=channel.created_at.astimezone(tz),
+            guild_id=channel.guild.id,
+            category_id=channel.category_id,
+            description=description,
+        )
+        self.session.add(backup_channel)
+        self.session.commit()
 
 
 class SQLTokensSystem(BaseSQLEngine):

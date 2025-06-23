@@ -37,6 +37,7 @@ class command(Cog_Extension):
     party = SlashCommandGroup("party", "政黨相關指令", guild_ids=happycamp_guild)
     registration = SlashCommandGroup("registration", "戶籍相關指令", guild_ids=happycamp_guild)
     giveaway = SlashCommandGroup("giveaway", "抽獎相關指令")
+    register = SlashCommandGroup("register", "註冊相關指令")
 
     @role.command(description="查詢加身分組的數量")
     async def count(
@@ -672,9 +673,9 @@ class command(Cog_Extension):
 
         await ctx.respond("\n".join(results_text))
 
-    @commands.slash_command(description="將身分組保存至資料庫")
+    @register.command(name="role", description="將身分組保存至資料庫")
     @commands.is_owner()
-    async def registerrole(
+    async def register_role(
         self,
         ctx: discord.ApplicationContext,
         role: discord.Option(discord.Role, name="保存的身分組"),
@@ -694,6 +695,42 @@ class command(Cog_Extension):
                 await member.remove_roles(role)
                 await asyncio.sleep(1)
             await ctx.send(f"已將 {role.name} 成員清空")
+
+    @register.command(name="category", description="將頻道分類保存至資料庫")
+    @commands.is_owner()
+    async def register_category(
+        self,
+        ctx: discord.ApplicationContext,
+        category: discord.Option(discord.CategoryChannel, name="保存的頻道分類"),
+        description: discord.Option(str, name="描述", description="保存的頻道分類描述"),
+        delete_category: discord.Option(bool, name="保存後是否刪除頻道分類", default=False),
+    ):
+        assert isinstance(category, discord.CategoryChannel), "必須提供一個頻道分類"
+        sclient.sqldb.backup_category(category, description)
+        await ctx.respond(f"已將 {category.name} 頻道分類儲存")
+
+        # 頻道分類儲存後執行確保資料完整
+        if delete_category:
+            await category.delete()
+            await ctx.send(f"已將 {category.name} 刪除")
+
+    @register.command(name="channel", description="將頻道保存至資料庫")
+    @commands.is_owner()
+    async def register_channel(
+        self,
+        ctx: discord.ApplicationContext,
+        channel: discord.Option(discord.abc.GuildChannel, name="保存的頻道"),
+        description: discord.Option(str, name="描述", description="保存的頻道描述"),
+        delete_channel: discord.Option(bool, name="保存後是否刪除頻道", default=False),
+    ):
+        assert isinstance(channel, discord.abc.GuildChannel), "必須提供一個頻道"
+        sclient.sqldb.backup_channel(channel, description)
+        await ctx.respond(f"已將 {channel.name} 頻道儲存")
+
+        # 頻道儲存後執行確保資料完整
+        if delete_channel:
+            await channel.delete()
+            await ctx.send(f"已將 {channel.name} 刪除")
 
     @commands.slash_command(description="取得邀請連結")
     async def getinvite(self, ctx, invite_url: discord.Option(str, name="邀請連結網址")):
