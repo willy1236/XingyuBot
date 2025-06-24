@@ -524,7 +524,7 @@ class BackupMessage(BackupSchema, table=True):
 
     message_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
     channel_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
-    content: str = Field(sa_column=Column(Text))
+    content: str | None = Field(sa_column=Column(Text))
     created_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
     author_id: int = Field(sa_column=Column(BigInteger))
     description: str | None
