@@ -713,7 +713,7 @@ class SQLPollSystem(BaseSQLEngine):
         return result
 
     def get_active_polls(self):
-        stmt = select(Poll).where(Poll.is_on is True)
+        stmt = select(Poll).where(Poll.is_on)
         result = self.session.exec(stmt).all()
         return result
 
@@ -854,7 +854,7 @@ class SQLPollSystem(BaseSQLEngine):
         return result
 
     def get_active_giveaways(self):
-        stmt = select(Giveaway).where(Giveaway.is_on is True)
+        stmt = select(Giveaway).where(Giveaway.is_on)
         result = self.session.exec(stmt).all()
         return result
 
@@ -866,12 +866,7 @@ class SQLPollSystem(BaseSQLEngine):
         self.session.commit()
 
     def reset_giveaway_winner(self, giveaway_id:int):
-        stmt = (
-            update(GiveawayUser)
-            .where(GiveawayUser.giveaway_id == giveaway_id)
-            .values(is_winner=False)
-            .where(GiveawayUser.is_winner is True)
-        )
+        stmt = update(GiveawayUser).where(GiveawayUser.giveaway_id == giveaway_id).values(is_winner=False).where(GiveawayUser.is_winner)
         self.session.exec(stmt)
         self.session.commit()
 

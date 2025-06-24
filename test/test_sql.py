@@ -33,4 +33,4 @@ from starlib.models.mysql import Post, ReactionRoleMessage, User
 
 # user = sqldb.get_dcuser_test_session(419131103836635136)
 # print(user.discord_id)
-print(not sqldb.get_warnings(str(123)))
+print(sqldb.get_active_polls())
