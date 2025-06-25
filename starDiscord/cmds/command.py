@@ -517,8 +517,7 @@ class command(Cog_Extension):
         if is_owner:
             poll.show_name = show_name
         view = PollView(poll, sclient.sqldb, self.bot)
-        embed, labels, sizes = view.results_embed(ctx.interaction, True)  # type: ignore
-        image_buffer = view.generate_chart(labels, sizes)
+        embed, image_buffer = view.results_embed(ctx.interaction, True)  # type: ignore
         await ctx.respond(embed=embed, file=discord.File(image_buffer, filename="pie.png"))
 
     @commands.slash_command(description="共用「94共用啦」雲端資料夾", guild_ids=main_guilds)

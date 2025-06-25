@@ -26,7 +26,6 @@ from ..settings import tz
 from ..types import *
 from ..utils import log
 
-OBJ = TypeVar("OBJ")
 T = TypeVar("T")
 P = ParamSpec("P")
 
@@ -100,15 +99,18 @@ class BaseSQLEngine:
                 self.session.add(db_obj)
             self.session.commit()
 
-    def merge(self, db_obj):
-        self.session.merge(db_obj)
+    def merge(self, db_obj: T):  # type: ignore
+        obj = self.session.merge(db_obj)
         self.session.commit()
+        return obj
 
-    def batch_merge(self, db_obj_list: list):
+    def batch_merge(self, db_obj_list: list[T]):
         if db_obj_list:
+            lst: list[T] = list()
             for db_obj in db_obj_list:
-                self.session.merge(db_obj)
+                lst.append(self.session.merge(db_obj))
             self.session.commit()
+            return lst
 
     def delete(self, db_obj):
         self.session.delete(db_obj)
@@ -118,7 +120,7 @@ class BaseSQLEngine:
         # self.session.expunge(db_obj)
         self.session.expire(db_obj)
 
-    def get(self, db_obj: OBJ, primary_keys: tuple) -> OBJ | None:
+    def get(self, db_obj: T, primary_keys: tuple) -> T | None:
         return self.session.get(db_obj, primary_keys)  # type: ignore
 
 

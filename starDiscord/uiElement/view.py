@@ -4,7 +4,6 @@ import asyncio
 import io
 import random
 from datetime import datetime
-from decimal import Decimal
 from typing import TYPE_CHECKING
 
 import discord
@@ -14,7 +13,7 @@ import numpy as np
 from starlib import BotEmbed, Jsondb, log, sqldb, tz
 from starlib.instance import mcss_api
 from starlib.models.mysql import Giveaway, GiveawayUser, Poll, PollRole
-from starlib.types import McssServerAction, McssServerStatues, NotifyChannelType
+from starlib.types import McssServerAction, McssServerStatues
 from starlib.utils.utility import find_radmin_vpn_network
 
 if TYPE_CHECKING:
@@ -94,21 +93,17 @@ class PollOptionButton(discord.ui.Button):
 
 
 class PollEndButton(discord.ui.Button):
-    def __init__(self, poll_id, created_id: int, bot: discord.Bot):
+    def __init__(self, poll_id):
         super().__init__(label="結算投票", custom_id=f"end_poll_{poll_id}", style=discord.ButtonStyle.danger)
-        self.poll_id = poll_id
-        self.created_id = created_id
-        self.bot = bot
 
     async def callback(self, interaction):
-        if interaction.user.id == self.created_id or (self.bot and await self.bot.is_owner(interaction.user)):
-            view: PollView = self.view
+        view: PollView = self.view
+        if interaction.user.id == view.poll.creator_id or (view.bot and await view.bot.is_owner(interaction.user)):
             view.clear_items()
             view.poll.is_on = 0
-            view.sqldb.merge(view.poll)
+            view.poll = view.sqldb.merge(view.poll)
 
-            embed, labels, sizes = view.results_embed(interaction, True)  # type: ignore
-            image_buffer = view.generate_chart(labels, sizes)
+            embed, image_buffer = view.results_embed(interaction, True)  # type: ignore
 
             await interaction.response.edit_message(embed=embed, view=view, file=discord.File(image_buffer, filename="pie.png"))
         else:
@@ -118,7 +113,6 @@ class PollEndButton(discord.ui.Button):
 class PollResultButton(discord.ui.Button):
     def __init__(self, poll_id):
         super().__init__(label="查看結果", custom_id=f"poll_result_{poll_id}", style=discord.ButtonStyle.primary)
-        self.poll_id = poll_id
 
     async def callback(self, interaction):
         view: PollView = self.view
@@ -133,22 +127,20 @@ class PollResultButton(discord.ui.Button):
 class PollCanenlButton(discord.ui.Button):
     def __init__(self, poll_id):
         super().__init__(label="取消投票", custom_id=f"vote_canenl_{poll_id}", style=discord.ButtonStyle.primary)
-        self.poll_id = poll_id
 
     async def callback(self, interaction):
         view: PollView = self.view
-        view.sqldb.remove_user_poll(self.poll_id, interaction.user.id)
+        view.sqldb.remove_user_poll(view.poll.poll_id, interaction.user.id)
         await interaction.response.send_message(f"{interaction.user.mention} 已取消投票", ephemeral=True)
 
 
 class PollNowButton(discord.ui.Button):
     def __init__(self, poll_id):
         super().__init__(label="目前選擇", custom_id=f"vote_now_{poll_id}", style=discord.ButtonStyle.primary)
-        self.poll_id = poll_id
 
     async def callback(self, interaction):
         view: PollView = self.view
-        dbdata = view.sqldb.get_user_poll(self.poll_id, interaction.user.id)
+        dbdata = view.sqldb.get_user_poll(view.poll.poll_id, interaction.user.id)
         if dbdata:
             vote_mag = dbdata[0][0].vote_magnification
             options_name = ",".join([data[1] for data in dbdata])
@@ -159,11 +151,11 @@ class PollNowButton(discord.ui.Button):
 
 class PollView(discord.ui.View):
     if TYPE_CHECKING:
-        poll = Poll
+        poll: Poll
         sqldb: SQLEngine
-        bot: discord.Bot | None
+        bot: discord.Bot
 
-    def __init__(self, poll: Poll, sqldb, bot=None):
+    def __init__(self, poll: Poll, sqldb, bot):
         super().__init__(timeout=None)
         self.poll = poll
         self.sqldb = sqldb
@@ -198,7 +190,7 @@ class PollView(discord.ui.View):
         number_of_user_votes=1,
         only_role_list: list | None = None,
         role_magnification_dict: dict | None = None,
-        bot: discord.Bot = None,
+        bot: discord.Bot | None = None,
     ):
         """創建投票"""
         poll = Poll(
@@ -237,8 +229,9 @@ class PollView(discord.ui.View):
             role_magnification = poll_role_dict[role_id][1]
             sqldb.merge(PollRole(poll_id=poll.poll_id, role_id=role_id, is_only_role=is_only_role, role_magnification=role_magnification))
 
-        view = cls(poll, sqldb, bot)
-        return view
+        if bot:
+            view = cls(poll, sqldb, bot)
+            return view
 
     @property
     def role_dict(self) -> dict[int, tuple[bool, int]]:
@@ -288,17 +281,26 @@ class PollView(discord.ui.View):
             embed.set_author(name=author.name, icon_url=author.avatar.url)
         return embed
 
-    def results_embed(self, interaction: discord.Interaction, labels_and_sizes=False) -> tuple[discord.Embed, list, list] | discord.Embed:
+    def results_embed(self, interaction: discord.Interaction, with_chart=False) -> tuple[discord.Embed, io.BytesIO] | discord.Embed:
         """
-        Generates an embed object containing the results of a poll.
-
+        Generate a Discord embed displaying poll results with vote counts and optionally voter names.
         Args:
-            interaction (discord.Interaction): The interaction object representing the poll.
-            labels_and_sizes (bool, optional): Whether to include labels and sizes for each option. Defaults to False.
-
+            interaction (discord.Interaction): The Discord interaction object used to access guild members
+            with_chart (bool, optional): Whether to include a chart image with the embed. Defaults to False.
         Returns:
-            tuple[discord.Embed, list, list] | discord.Embed: If `labels_and_sizes` is True, returns a tuple containing the embed object, a list of labels, and a list of sizes.
-            If `labels_and_sizes` is False, returns only the embed object.
+            tuple[discord.Embed, io.BytesIO] | discord.Embed:
+                - If with_chart is True: Returns a tuple containing the embed and chart image as BytesIO
+                - If with_chart is False: Returns only the Discord embed
+        The embed includes:
+            - Poll title as the embed title
+            - Vote counts for each option
+            - Voter names (if show_name is enabled) with vote magnification indicators
+            - Poll ID in the footer
+        Notes:
+            - Retrieves vote count data and poll options from the database
+            - If show_name is enabled, displays voter mentions for each option
+            - Vote magnification is shown in parentheses when not equal to 1
+            - Chart generation is optional and only includes options with votes > 0
         """
         vote_count_data = self.sqldb.get_poll_vote_count(self.poll.poll_id, not self.poll.ban_alternate_account_voting)
         options_data = self.sqldb.get_poll_options(self.poll.poll_id)
@@ -321,7 +323,7 @@ class PollView(discord.ui.View):
                 user_vote_list[str(vote_option)].append(username)
 
         text = ""
-        if labels_and_sizes:
+        if with_chart:
             labels = []
             sizes = []
 
@@ -334,15 +336,15 @@ class PollView(discord.ui.View):
             if self.poll.show_name:
                 text += ",".join(user_vote_list[str(id)]) + "\n"
 
-            if labels_and_sizes and count > 0:
+            if with_chart and count > 0:
                 labels.append(name)
                 sizes.append(count)
 
         embed = BotEmbed.simple(self.poll.title, description=text)
         embed.set_footer(text=f"投票ID：{self.poll.poll_id}")
 
-        if labels_and_sizes:
-            return embed, labels, sizes
+        if with_chart:
+            return embed, self.generate_chart(labels, sizes)
         else:
             return embed
 
