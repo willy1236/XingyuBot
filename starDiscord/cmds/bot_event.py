@@ -323,7 +323,6 @@ class event(Cog_Extension):
                         name=f"{member.name}的頻道", reason="動態語音：新增", category=category, overwrites=overwrites
                     )
                 except discord.errors.Forbidden as e:
-                    print(1)
                     try:
                         for overwrite in overwrites.values():
                             overwrite.manage_roles = None
