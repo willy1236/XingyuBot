@@ -250,20 +250,9 @@ class debug(Cog_Extension):
     @commands.slash_command(description="語音測試", guild_ids=debug_guilds)
     async def voice_test(self, ctx: discord.ApplicationContext, category_test: discord.Option(discord.CategoryChannel, required=True, name="分類")):
         guild: discord.Guild = ctx.guild
-        overwrites = {
-            # ctx.author: discord.PermissionOverwrite(manage_channels=True,manage_roles=True),
-            ctx.author: discord.PermissionOverwrite(manage_channels=True),
-            self.bot.user: discord.PermissionOverwrite(manage_channels=True),
-        }
-        category: discord.CategoryChannel = category_test
-        channel = await guild.create_voice_channel(name="測試頻道", overwrites=overwrites, category=category)
-        # channel = await guild.create_voice_channel(name='測試頻道', category=category)
-        # channel = await category.create_voice_channel(name='測試頻道')
-        await ctx.respond(f"創建頻道：{channel.mention}")
-        print(channel.permissions_for(guild.me).manage_permissions)
-        print(category.permissions_for(guild.me).manage_channels)
-        print(category.permissions_for(guild.me).manage_roles)
-        print(category.permissions_for(guild.me).manage_permissions)
+        channel = self.bot.get_channel(1368534115229503518)
+        await channel.send(f"{ctx.author.mention} 測試", delete_after=5)
+        await ctx.respond("done")
 
         # await channel.delete()
 

@@ -296,23 +296,34 @@ class event(Cog_Extension):
                 #overwrites = discord.PermissionOverwrite({user:permission})
 
                 try:
-                    overwrites = {target: perms for target, perms in after.channel.overwrites.items()}
-                    if member in overwrites:
-                        overwrites[member].manage_channels = True
-                        overwrites[member].manage_roles = True
-                    else:
-                        overwrites[member] = discord.PermissionOverwrite(manage_channels=True, manage_roles=True)
+                    overwrites = {
+                        target: perms
+                        for target, perms in after.channel.overwrites.items()
+                        if (isinstance(target, discord.Member) and after.channel.guild.me.top_role > target.top_role)
+                        or (isinstance(target, discord.Role) and after.channel.guild.me.top_role > target)
+                    }
+                    if after.channel.guild.me.top_role > member.top_role:
+                        if member in overwrites:
+                            # * 注意成員位階比較高的情況
+                            overwrites[member].manage_channels = True
+                            overwrites[member].manage_roles = True
+                            overwrites[member].view_channel = True
+                        else:
+                            overwrites[member] = discord.PermissionOverwrite(manage_channels=True, manage_roles=True, view_channel=True)
 
                     if self.bot.user in overwrites:
                         overwrites[self.bot.user].manage_channels = True
                         overwrites[self.bot.user].manage_roles = True
+                        overwrites[self.bot.user].view_channel = True
+                        overwrites[self.bot.user].send_messages = True
                     else:
-                        overwrites[self.bot.user] = discord.PermissionOverwrite(manage_channels=True, manage_roles=True)
+                        overwrites[self.bot.user] = discord.PermissionOverwrite(manage_channels=True, manage_roles=True, view_channel=True, send_messages=True)
 
                     new_channel = await guild.create_voice_channel(
                         name=f"{member.name}的頻道", reason="動態語音：新增", category=category, overwrites=overwrites
                     )
                 except discord.errors.Forbidden as e:
+                    print(1)
                     try:
                         for overwrite in overwrites.values():
                             overwrite.manage_roles = None
@@ -321,22 +332,24 @@ class event(Cog_Extension):
                             name=f"{member.name}的頻道", reason="動態語音：新增", category=category, overwrites=overwrites
                         )
                     except discord.errors.Forbidden as e:
-                        await after.channel.send(f"{member.mention} 我無法創建動態語音頻道，請檢查我的權限", delete_after=5)
+                        await after.channel.send(f"{member.mention} 我無法創建動態語音頻道，請檢查我的權限", delete_after=10)
                         return
                 sclient.sqldb.add_dynamic_voice(new_channel.id, member.id, guild.id)
                 try:
                     await member.move_to(new_channel)
                 except discord.errors.HTTPException:
-                    pass
+                    await after.channel.send(f"{member.mention} 我無法把你移動至 {new_channel.mention}", delete_after=10)
 
                 await asyncio.sleep(2)
                 # 檢查使用者是否進入
                 if self.bot.get_channel(new_channel.id) and len(new_channel.members) == 0:
                     try:
-                        sclient.sqldb.remove_dynamic_voice(new_channel.id)
                         await new_channel.delete(reason="動態語音：移除")
+                        sclient.sqldb.remove_dynamic_voice(new_channel.id)
                     except discord.errors.NotFound:
                         log.warning(f"動態語音頻道 {new_channel.id} 已經不存在")
+                    except discord.errors.Forbidden:
+                        log.warning(f"無法刪除動態語音頻道 {new_channel.id}")
                 return
 
             # 移除
@@ -345,7 +358,7 @@ class event(Cog_Extension):
                     await before.channel.delete(reason="動態語音：移除")
                     sclient.sqldb.remove_dynamic_voice(before.channel.id)
                 except discord.errors.Forbidden:
-                    await before.channel.send(f"{member.mention} 我無法刪除動態語音頻道，請檢查我的權限", delete_after=5)
+                    await before.channel.send(f"{member.mention} 我無法刪除動態語音頻道", delete_after=5)
                     return
 
     @commands.Cog.listener()
