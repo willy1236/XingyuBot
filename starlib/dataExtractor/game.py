@@ -189,7 +189,7 @@ class ApexAPI():
     url = "https://api.mozambiquehe.re"
 
     def __init__(self):
-        self.auth = sqldb.get_bot_token(APIType.Apex_Statue).access_token
+        self.auth = sqldb.get_bot_token(APIType.ApexStatue).access_token
 
     def get_player(self, username: str, platform: str = "PC"):
         params = {"auth": self.auth, "player": username, "platform": platform}

@@ -163,7 +163,7 @@ class PollView(discord.ui.View):
         self._role_dict = {}
         # TODO: change_vote (decide if user can change his/her vote or not)
 
-        self.add_item(PollEndButton(poll.poll_id, poll.creator_id, bot))
+        self.add_item(PollEndButton(poll.poll_id))
         if poll.check_results_in_advance:
             self.add_item(PollResultButton(poll.poll_id))
         self.add_item(PollCanenlButton(poll.poll_id))

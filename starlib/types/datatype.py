@@ -79,6 +79,9 @@ class McssServerAction(IntEnum):
     Restart = 4
 
 
+mcss_server_statue_map = {0: "離線", 1: "啟動", 3: "啟動中", 4: "停止中"}
+
+
 class McssServerStatues(IntEnum):
     Stopped = 0
     Running = 1
@@ -86,20 +89,14 @@ class McssServerStatues(IntEnum):
     Stopping = 4
 
     def __str__(self):
-        return {
-            0: "離線",
-            1: "啟動",
-            3: "啟動中",
-            4: "停止中",
-        }.get(self.value)
-
+        return mcss_server_statue_map.get(self.value)
 
 class APIType(IntEnum):
     Discord = 1
     CWA = 2
     Osu = 3
     TRN = 4
-    Apex_Statue = 5
+    ApexStatue = 5
     Steam = 6
     Twitch = 7
     Google = 8
