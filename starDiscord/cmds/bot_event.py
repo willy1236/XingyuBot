@@ -1,4 +1,5 @@
 import asyncio
+import copy
 import os
 import re
 from datetime import datetime, timedelta, timezone
@@ -295,19 +296,27 @@ class event(Cog_Extension):
                 #overwrites = discord.PermissionOverwrite({user:permission})
 
                 try:
-                    overwrites = {
-                        member: discord.PermissionOverwrite(manage_channels=True, manage_roles=True),
-                        self.bot.user: discord.PermissionOverwrite(manage_channels=True, manage_roles=True),
-                    }
+                    overwrites = {target: perms for target, perms in after.channel.overwrites.items()}
+                    if member in overwrites:
+                        overwrites[member].manage_channels = True
+                        overwrites[member].manage_roles = True
+                    else:
+                        overwrites[member] = discord.PermissionOverwrite(manage_channels=True, manage_roles=True)
+
+                    if self.bot.user in overwrites:
+                        overwrites[self.bot.user].manage_channels = True
+                        overwrites[self.bot.user].manage_roles = True
+                    else:
+                        overwrites[self.bot.user] = discord.PermissionOverwrite(manage_channels=True, manage_roles=True)
+
                     new_channel = await guild.create_voice_channel(
                         name=f"{member.name}的頻道", reason="動態語音：新增", category=category, overwrites=overwrites
                     )
                 except discord.errors.Forbidden as e:
                     try:
-                        overwrites = {
-                            member: discord.PermissionOverwrite(manage_channels=True),
-                            self.bot.user: discord.PermissionOverwrite(manage_channels=True),
-                        }
+                        for overwrite in overwrites.values():
+                            overwrite.manage_roles = None
+
                         new_channel = await guild.create_voice_channel(
                             name=f"{member.name}的頻道", reason="動態語音：新增", category=category, overwrites=overwrites
                         )
