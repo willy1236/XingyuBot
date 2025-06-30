@@ -715,7 +715,7 @@ class SQLPollSystem(BaseSQLEngine):
         return result
 
     def get_active_polls(self):
-        stmt = select(Poll).where(Poll.is_on)
+        stmt = select(Poll).where(Poll.end_at is None)
         result = self.session.exec(stmt).all()
         return result
 

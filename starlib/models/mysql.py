@@ -228,7 +228,7 @@ class Poll(BasicSchema, table=True):
     created_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
     guild_id: int = Field(sa_column=Column(BigInteger))
     message_id: int | None = Field(sa_column=Column(BigInteger))
-    is_on: bool
+    end_at: datetime | None = Field(sa_column=Column(TIMESTAMP(True, 0), nullable=True, default=None))
     number_of_user_votes: int | None
     ban_alternate_account_voting: bool | None
     show_name: bool | None

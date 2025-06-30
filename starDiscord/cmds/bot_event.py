@@ -95,7 +95,7 @@ class event(Cog_Extension):
         for poll in polls:
             if now - poll.created_at > days_poll_period:
                 # 將超過28天的投票自動關閉
-                poll.is_on = 0
+                poll.end_at = now
                 sclient.sqldb.merge(poll)
             else:
                 bot.add_view(PollView(poll, sqldb=sclient.sqldb, bot=bot))

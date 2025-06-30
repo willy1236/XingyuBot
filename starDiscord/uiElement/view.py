@@ -100,7 +100,7 @@ class PollEndButton(discord.ui.Button):
         view: PollView = self.view
         if interaction.user.id == view.poll.creator_id or (view.bot and await view.bot.is_owner(interaction.user)):
             view.clear_items()
-            view.poll.is_on = 0
+            view.poll.end_at = datetime.now(tz)
             view.poll = view.sqldb.merge(view.poll)
 
             embed, image_buffer = view.results_embed(interaction, True)  # type: ignore
@@ -197,7 +197,6 @@ class PollView(discord.ui.View):
             title=title,
             creator_id=creator_id,
             created_at=datetime.now(tz),
-            is_on=True,
             message_id=None,
             guild_id=guild_id,
             ban_alternate_account_voting=ban_alternate_account_voting,

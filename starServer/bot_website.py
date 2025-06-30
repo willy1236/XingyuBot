@@ -95,6 +95,7 @@ async def prase_yt_push(content: str):
 
             if video.is_live_upcoming_with_time:
                 assert video.liveStreamingDetails.scheduledStartTime is not None, "Scheduled start time should not be None for upcoming live videos"
+                web_log.info(f"Upcoming live video detected: {video.id} at {video.liveStreamingDetails.scheduledStartTime}")
                 sclient.bot.scheduler.add_job(
                     youtube_start_live_notify, DateTrigger(video.liveStreamingDetails.scheduledStartTime + timedelta(seconds=30)), args=[sclient.bot, video]
                 )
