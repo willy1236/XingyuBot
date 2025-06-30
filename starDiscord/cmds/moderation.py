@@ -99,7 +99,7 @@ class moderation(Cog_Extension):
             assert isinstance(channel, discord.VoiceChannel), "頻道必須是語音頻道"
             sclient.sqldb.add_notify_channel(ctx.guild.id, NotifyChannelType.DynamicVoice, channel.id)
             await ctx.respond(
-                f"設定完成，已將 {channel.mention} 設定為動態語音大廳頻道\n記得將我的身分組位階調整到比其他使用者高，否則建立頻道後使用者會得不到權限"
+                f"設定完成，已將 {channel.mention} 設定為動態語音大廳頻道\n記得將我的身分組位階調整到比其他使用者高，否則建立頻道後使用者會得不到權限\n並且可以設定大廳頻道的權限，讓動態語音頻道有預設的權限",
             )
 
             if not channel.category.permissions_for(ctx.guild.me).manage_channels:

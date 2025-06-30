@@ -1,7 +1,8 @@
 from datetime import datetime, timedelta
 from functools import cached_property
+from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl, model_validator
+from pydantic import BaseModel, Field, model_validator
 
 from ..fileDatabase import Jsondb, csvdb
 from ..settings import tz
@@ -56,99 +57,297 @@ class LOLPlayer(BaseModel):
         return embed
 
 
-class LOLPlayerInMatch:
-    def __init__(self, data):
-        super().__init__(data)
-        self.name = data.get("riotIdGameName")
-        self.tag = data.get("riotIdTagline")
-        self.participantId = data.get("participantId")
-        self.summonerName = data.get("summonerName")
-        self.summonerid = data.get("summonerId")
-        # self.profileIcon = data['profileIcon']
-        # self.puuid = data['puuid']
-        self.name = data["summonerName"]
+class LOLMatchMetadata(BaseModel):
+    dataVersion: str
+    matchId: str
+    participants: list[str]
 
-        self.assists = data["assists"]
-        self.deaths = data["deaths"]
-        self.kills = data["kills"]
-        self.lane = data["lane"]
-        self.visionScore = data["visionScore"]
-        self.role = data["role"]
-        self.kda = round((self.kills + self.assists) / self.deaths, 2) if self.deaths > 0 else (self.kills + self.assists)
-        self.win = data["win"]
 
-        self.doubleKills = data["doubleKills"]
-        self.tripleKills = data["tripleKills"]
-        self.quadraKills = data["quadraKills"]
-        self.pentaKills = data["pentaKills"]
-        self.largestMultiKill = data["largestMultiKill"]
+class LOLPerks(BaseModel):
+    statPerks: dict[str, int]
+    styles: list[dict[str, Any]]
 
-        self.dragonKills = data["dragonKills"]
-        self.baronKills = data["baronKills"]
 
-        self.championId = data["championId"]
-        self.championName = data["championName"]
-        self.champLevel = data["champLevel"]
+class LOLMissions(BaseModel):
+    playerScore0: int = 0
+    playerScore1: int = 0
+    playerScore2: int = 0
+    playerScore3: int = 0
+    playerScore4: int = 0
+    playerScore5: int = 0
+    playerScore6: int = 0
+    playerScore7: int = 0
+    playerScore8: int = 0
+    playerScore9: int = 0
+    playerScore10: int = 0
+    playerScore11: int = 0
 
-        self.totalDamageDealt = data["totalDamageDealt"]
-        self.totalDamageDealtToChampions = data["totalDamageDealtToChampions"]
-        self.totalDamageTaken = data["totalDamageTaken"]
-        self.totalHeal = data["totalHeal"]
-        self.totalTimeCCDealt = data["totalTimeCCDealt"]
 
-        self.enemyMissingPings = data["enemyMissingPings"]
+class LOLChallenges(BaseModel):
+    # 基本統計
+    gameLength: float
+    goldPerMinute: float
+    damagePerMinute: float
+    kda: float
+    killParticipation: float
+    teamDamagePercentage: float
+    damageTakenOnTeamPercentage: float
+    visionScorePerMinute: float
 
-        self.firstBloodKill = data["firstBloodKill"]
-        # self.firstBloodAssist = data['firstBloodAssist']
-        self.firstTowerKill = data["firstTowerKill"]
-        # self.firstTowerAssist = data['firstTowerAssist']
+    # 擊殺相關
+    kills: int = Field(alias="takedowns", default=0)
+    soloKills: int = 0
+    multikills: int = 0
+    doubleKills: int = Field(alias="multikills", default=0)
+    tripleKills: int = 0
+    quadraKills: int = 0
+    pentaKills: int = 0
+    killingSprees: int = 0
+    largestKillingSpree: int = 0
 
-        self.gameEndedInEarlySurrender = data["gameEndedInEarlySurrender"]
-        self.gameEndedInSurrender = data["gameEndedInSurrender"]
-        # self.teamEarlySurrendered = data['teamEarlySurrendered']
-        self.goldEarned = data["goldEarned"]
-        self.goldSpent = data["goldSpent"]
-        self.totalMinionsKilled = data["totalMinionsKilled"]
+    # 傷害相關
+    totalDamageDealt: int = 0
+    totalDamageDealtToChampions: int = 0
+    totalDamageTaken: int = 0
+    bountyGold: float = 0
 
-        challenges = data.get("challenges")
-        if challenges:
-            try:
-                self.soloKills = data["challenges"]["soloKills"]
+    # 技能相關
+    abilityUses: int = 0
+    skillshotsHit: int = 0
+    skillshotsDodged: int = 0
+    enemyChampionImmobilizations: int = 0
 
-                self.laneMinionsFirst10Minutes = data["challenges"]["laneMinionsFirst10Minutes"]
-                self.jungleCsBefore10Minutes = round(data["challenges"]["jungleCsBefore10Minutes"])
-                self.AllMinionsBefore10Minutes = self.laneMinionsFirst10Minutes + self.jungleCsBefore10Minutes * 10
-                self.bountyGold = data["challenges"]["bountyGold"]
+    # 其他統計
+    laneMinionsFirst10Minutes: int = 0
+    jungleCsBefore10Minutes: float = 0
+    voidMonsterKill: int = 0
+    turretTakedowns: int = 0
+    baronTakedowns: int = 0
+    dragonTakedowns: int = 0
 
-                self.damagePerMinute = data["challenges"]["damagePerMinute"]
-                self.damageTakenOnTeamPercentage = round(data["challenges"]["damageTakenOnTeamPercentage"] * 100, 1)
-                self.goldPerMinute = round(data["challenges"]["goldPerMinute"])
+    # 特殊成就
+    flawlessAces: int = 0
+    perfectGame: int = 0
+    firstTurretKilled: int = 0
 
-                self.teamDamagePercentage = round(data["challenges"]["teamDamagePercentage"] * 100, 1)
-                self.visionScorePerMinute = round(data["challenges"]["visionScorePerMinute"], 2)
-            except KeyError as e:
-                print("LOLPlayerInMatch: Error in challenges", e)
-        # self.items = [ data['item0'],data['item1'],data['item2'],data['item3'],data['item4'],data['item5'],data['item6'] ]
+    # 其他字段可以用 Optional 處理
+    HealFromMapSources: float | None = None
+    snowballsHit: int | None = None
+
+    class Config:
+        extra = "allow"  # 允許額外字段，因為 challenges 包含很多可選字段
+
+
+class LOLParticipant(BaseModel):
+    # 基本信息
+    participantId: int
+    puuid: str
+    riotIdGameName: str
+    riotIdTagline: str
+    summonerId: str
+    summonerName: str = ""
+    summonerLevel: int
+    teamId: int
+
+    # 角色信息
+    championId: int
+    championName: str
+    championSkinId: int = 0
+    championTransform: int = 0
+    champLevel: int
+    champExperience: int
+
+    # 位置信息
+    lane: str
+    role: str
+    teamPosition: str = ""
+    individualPosition: str = "Invalid"
+
+    # 遊戲統計
+    kills: int
+    deaths: int
+    assists: int
+    doubleKills: int = 0
+    tripleKills: int = 0
+    quadraKills: int = 0
+    pentaKills: int = 0
+    largestKillingSpree: int = 0
+    largestMultiKill: int = 1
+    killingSprees: int = 0
+
+    # 傷害統計
+    totalDamageDealt: int
+    totalDamageDealtToChampions: int
+    totalDamageTaken: int
+    physicalDamageDealt: int
+    physicalDamageDealtToChampions: int
+    physicalDamageTaken: int
+    magicDamageDealt: int
+    magicDamageDealtToChampions: int
+    magicDamageTaken: int
+    trueDamageDealt: int
+    trueDamageDealtToChampions: int
+    trueDamageTaken: int
+    largestCriticalStrike: int = 0
+
+    # 經濟統計
+    goldEarned: int
+    goldSpent: int
+    totalMinionsKilled: int
+    neutralMinionsKilled: int = 0
+
+    # 建築物統計
+    turretKills: int = 0
+    turretTakedowns: int = 0
+    turretsLost: int = 0
+    inhibitorKills: int = 0
+    inhibitorTakedowns: int = 0
+    inhibitorsLost: int = 0
+
+    # 史詩怪物
+    baronKills: int = 0
+    dragonKills: int = 0
+
+    # 物品
+    item0: int = 0
+    item1: int = 0
+    item2: int = 0
+    item3: int = 0
+    item4: int = 0
+    item5: int = 0
+    item6: int = 0
+    itemsPurchased: int = 0
+    consumablesPurchased: int = 0
+
+    # 召喚師技能
+    summoner1Id: int
+    summoner2Id: int
+    summoner1Casts: int = 0
+    summoner2Casts: int = 0
+
+    # 技能施放
+    spell1Casts: int = 0
+    spell2Casts: int = 0
+    spell3Casts: int = 0
+    spell4Casts: int = 0
+
+    # 視野和控制
+    visionScore: int = 0
+    wardsPlaced: int = 0
+    wardsKilled: int = 0
+    visionWardsBoughtInGame: int = 0
+    sightWardsBoughtInGame: int = 0
+    detectorWardsPlaced: int = 0
+    timeCCingOthers: int = 0
+    totalTimeCCDealt: int = 0
+
+    # 治療和護盾
+    totalHeal: int = 0
+    totalHealsOnTeammates: int = 0
+    totalUnitsHealed: int = 1
+    totalDamageShieldedOnTeammates: int = 0
+
+    # 時間統計
+    timePlayed: int
+    totalTimeSpentDead: int = 0
+    longestTimeSpentLiving: int = 0
+
+    # 遊戲結果
+    win: bool
+    gameEndedInEarlySurrender: bool = False
+    gameEndedInSurrender: bool = False
+    teamEarlySurrendered: bool = False
+
+    # 特殊事件
+    firstBloodKill: bool = False
+    firstBloodAssist: bool = False
+    firstTowerKill: bool = False
+    firstTowerAssist: bool = False
+
+    # Ping 統計
+    allInPings: int = 0
+    assistMePings: int = 0
+    basicPings: int = 0
+    commandPings: int = 0
+    dangerPings: int = 0
+    enemyMissingPings: int = 0
+    enemyVisionPings: int = 0
+    getBackPings: int = 0
+    holdPings: int = 0
+    needVisionPings: int = 0
+    onMyWayPings: int = 0
+    pushPings: int = 0
+    retreatPings: int = 0
+    visionClearedPings: int = 0
+
+    # 複雜對象
+    perks: LOLPerks
+    challenges: LOLChallenges
+    missions: LOLMissions
+
+    # 其他
+    profileIcon: int
+    placement: int = 0
+    playerSubteamId: int = 0
+    subteamPlacement: int = 0
+    eligibleForProgression: bool = True
+
+    # 玩家增強（Arena 模式用）
+    playerAugment1: int = 0
+    playerAugment2: int = 0
+    playerAugment3: int = 0
+    playerAugment4: int = 0
+    playerAugment5: int = 0
+    playerAugment6: int = 0
+
+    # 其他統計
+    damageSelfMitigated: int = 0
+    damageDealtToBuildings: int = 0
+    damageDealtToObjectives: int = 0
+    damageDealtToTurrets: int = 0
+    nexusKills: int = 0
+    nexusLost: int = 0
+    nexusTakedowns: int = 0
+    objectivesStolen: int = 0
+    objectivesStolenAssists: int = 0
+    totalAllyJungleMinionsKilled: int = 0
+    totalEnemyJungleMinionsKilled: int = 0
+    unrealKills: int = 0
+
+    # 玩家評分相關
+    PlayerScore0: int = 0
+    PlayerScore1: int = 0
+    PlayerScore2: int = 0
+    PlayerScore3: int = 0
+    PlayerScore4: int = 0
+    PlayerScore5: int = 0
+    PlayerScore6: int = 0
+    PlayerScore7: int = 0
+    PlayerScore8: int = 0
+    PlayerScore9: int = 0
+    PlayerScore10: int = 0
+    PlayerScore11: int = 0
 
     def desplaytext(self):
-        text = f"`{self.name}(LV. {self.summonerLevel})`\n"
-        name_csv = csvdb.get_row_by_column_value(csvdb.lol_champion, "name_en", self.championName)
+        text = f"`{self.riotIdGameName}#{self.riotIdTagline}(LV. {self.summonerLevel})`\n"
+        name_csv = csvdb.get_row_by_column_value(csvdb.lol_champion, "champion_id", self.championId)
         name = name_csv.loc["name_tw"] if not name_csv.empty else self.championName
         text += f"{name}(LV. {self.champLevel})\n"
         lane = lol_jdict["road"].get(self.lane) or self.lane
         if self.role != "NONE":
             lane += f" {self.role}"
         text += f"{lane}\n"
-        text += f"{self.kills}/{self.deaths}/{self.assists} KDA: {self.kda}\n"
-        text += f"視野分：{self.visionScore} ({self.visionScorePerMinute}/min)\n"
+        kda = round((self.kills + self.assists) / self.deaths, 2) if self.deaths > 0 else (self.kills + self.assists)
+        text += f"{self.kills}/{self.deaths}/{self.assists} KDA: {kda}\n"
+        text += f"視野分：{self.visionScore} ({self.challenges.visionScorePerMinute}/min)\n"
         text += f"連殺：{self.doubleKills}/{self.tripleKills}/{self.quadraKills}/{self.pentaKills}\n"
-        text += f"輸出：{self.totalDamageDealtToChampions} ({self.teamDamagePercentage}%)\n"
-        text += f"承受：{self.totalDamageTaken} ({self.damageTakenOnTeamPercentage}%)\n"
+        text += f"輸出：{self.totalDamageDealtToChampions} ({round(self.challenges.teamDamagePercentage * 100, 2)}%)\n"
+        text += f"承受：{self.totalDamageTaken} ({round(self.challenges.damageTakenOnTeamPercentage * 100, 2)}%)\n"
         # text += f'治療/CC：{self.totalHeal}/{self.totalTimeCCDealt}\n'
-        text += f"經濟：{self.goldEarned} ({self.goldPerMinute}/min)\n"
+        text += f"經濟：{self.goldEarned} ({round(self.challenges.goldPerMinute, 2)}/min)\n"
         text += f"吃兵：{self.totalMinionsKilled}\n"
         text += f"小龍/巴龍：{self.dragonKills}/{self.baronKills}\n"
-        text += f"個人賞金：{self.bountyGold}\n"
+        text += f"個人賞金：{self.challenges.bountyGold:.2f}\n"
         text += f"Ping問號燈：{self.enemyMissingPings}\n"
 
         if self.firstBloodKill and self.firstTowerKill:
@@ -167,59 +366,104 @@ class LOLPlayerInMatch:
         return text
 
 
-class LOLTeamInMatch:
-    def __init__(self, data):
-        # 100 = blue, 200 = red
-        self.teamId = data["teamId"]
-        self.win = data["win"]
-        self.bans = data["bans"]
-
-        self.baronKill = data["objectives"]["baron"]["kills"]
-        self.dragonKill = data["objectives"]["dragon"]["kills"]
-        # riftHerald = 預示者
-        self.riftHeraldKill = data["objectives"]["riftHerald"]["kills"]
-
-        self.championKill = data["objectives"]["champion"]["kills"]
-        # inhibitor = 水晶兵營
-        self.inhibitorKill = data["objectives"]["inhibitor"]["kills"]
-        self.towerKill = data["objectives"]["tower"]["kills"]
+class LOLObjective(BaseModel):
+    first: bool
+    kills: int
 
 
-class LOLMatch:
-    def __init__(self, data):
-        self.matchId = data["metadata"]["matchId"]
+class LOLObjectives(BaseModel):
+    atakhan: LOLObjective
+    baron: LOLObjective
+    champion: LOLObjective
+    dragon: LOLObjective
+    horde: LOLObjective
+    inhibitor: LOLObjective
+    riftHerald: LOLObjective
+    tower: LOLObjective
 
-        self.gameStartTimestamp = data["info"]["gameStartTimestamp"]
-        self.gameDuration = data["info"]["gameDuration"]
-        self.gameEndTimestamp = data["info"]["gameEndTimestamp"]
 
-        self.gameId = data["info"]["gameId"]
-        self.gameMode = data["info"]["gameMode"]
-        self.gameVersion = data["info"]["gameVersion"]
-        self.mapId = data["info"]["mapId"]
-        self.platformId = data["info"]["platformId"]
-        self.tournamentCode = data["info"]["tournamentCode"]
+class LOLFeat(BaseModel):
+    featState: int
 
-        self.participants = data["info"]["participants"]
-        self.teams = data["info"]["teams"]
 
-        self.players = [LOLPlayerInMatch(i) for i in self.participants]
-        self.team = [LOLTeamInMatch(i) for i in self.teams]
+class LOLFeats(BaseModel):
+    EPIC_MONSTER_KILL: LOLFeat
+    FIRST_BLOOD: LOLFeat
+    FIRST_TURRET: LOLFeat
+
+
+class LOLTeam(BaseModel):
+    teamId: int
+    win: bool
+    bans: list[Any] = []  # ARAM 模式通常沒有 ban
+    objectives: LOLObjectives
+    feats: LOLFeats
+
+
+class LOLMatchInfo(BaseModel):
+    endOfGameResult: str
+    gameCreation: int  # 遊戲創建時間戳 (毫秒)
+    gameDuration: int  # 遊戲持續時間 (秒)
+    gameEndTimestamp: int  # 遊戲結束時間戳 (毫秒)
+    gameId: int
+    gameMode: str
+    gameModeMutators: list[str] = []
+    gameName: str
+    gameStartTimestamp: int  # 遊戲開始時間戳 (毫秒)
+    gameType: str
+    gameVersion: str
+    mapId: int
+    participants: list[LOLParticipant]
+    platformId: str
+    queueId: int
+    teams: list[LOLTeam]
+    tournamentCode: str = ""
+
+
+class LOLMatch(BaseModel):
+    metadata: LOLMatchMetadata
+    info: LOLMatchInfo
+
+    def get_player_by_puuid(self, puuid: str) -> LOLParticipant | None:
+        """根據 PUUID 獲取玩家資訊"""
+        for participant in self.info.participants:
+            if participant.puuid == puuid:
+                return participant
+        return None
+
+    def get_player_by_name(self, summoner_name: str) -> LOLParticipant | None:
+        """根據召喚師名稱獲取玩家資訊"""
+        for participant in self.info.participants:
+            if participant.riotIdGameName == summoner_name:
+                return participant
+        return None
+
+    def get_team_participants(self, team_id: int) -> list[LOLParticipant]:
+        """獲取指定隊伍的所有玩家"""
+        return [p for p in self.info.participants if p.teamId == team_id]
+
+    def get_winning_team(self) -> list[LOLParticipant]:
+        """獲取獲勝隊伍的玩家"""
+        return [p for p in self.info.participants if p.win]
+
+    def get_losing_team(self) -> list[LOLParticipant]:
+        """獲取失敗隊伍的玩家"""
+        return [p for p in self.info.participants if not p.win]
 
     def desplay(self):
         embed = BotEmbed.simple("LOL對戰")
-        gamemode = lol_jdict["mod"].get(self.gameMode) or self.gameMode
+        gamemode = lol_jdict["mod"].get(self.info.gameMode) or self.info.gameMode
         embed.add_field(name="遊戲模式", value=gamemode, inline=False)
-        embed.add_field(name="對戰ID", value=self.matchId, inline=False)
-        embed.add_field(name="遊戲版本", value=self.gameVersion, inline=False)
-        minutes = str(self.gameDuration // 60)
-        seconds = str(self.gameDuration % 60)
+        embed.add_field(name="對戰ID", value=self.metadata.matchId, inline=False)
+        embed.add_field(name="遊戲版本", value=self.info.gameVersion, inline=False)
+        minutes = str(self.info.gameDuration // 60)
+        seconds = str(self.info.gameDuration % 60)
         time = f"{minutes}:{seconds}"
         embed.add_field(name="遊戲時長", value=time, inline=False)
         blue = ""
         red = ""
         i = 0
-        for player in self.players:
+        for player in self.info.participants:
             if i < 5:
                 blue += player.desplaytext()
                 if i != 4:
@@ -229,18 +473,13 @@ class LOLMatch:
                 if i != 9:
                     red += "\n"
             i += 1
-        if self.team[0].win:
+        if self.info.teams[0].win:
             embed.add_field(name="藍方👑", value=blue, inline=True)
             embed.add_field(name="紅方", value=red, inline=True)
         else:
             embed.add_field(name="藍方", value=blue, inline=True)
             embed.add_field(name="紅方👑", value=red, inline=True)
         return embed
-
-    def get_player_in_match(self, playername):
-        for player in self.players:
-            if player.summonerName == playername:
-                return player
 
 
 class LOLRewardConfig(BaseModel):

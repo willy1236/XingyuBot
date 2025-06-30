@@ -831,7 +831,7 @@ class SQLPollSystem(BaseSQLEngine):
         result = self.session.exec(stmt).all()
         return {str(i[0]): i[1] for i in result}
 
-    def get_poll_role(self,poll_id:int, is_only_role:bool=None):
+    def get_poll_role(self, poll_id: int, is_only_role: bool | None = None):
         if is_only_role is not None:
             stmt = select(PollRole).where(PollRole.poll_id == poll_id, PollRole.is_only_role == is_only_role)
         else:

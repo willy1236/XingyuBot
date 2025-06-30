@@ -159,6 +159,59 @@ class Pet(UserSchema, table=True):
     pet_name: str
     food: int | None
 
+class LOLGameRecord(UserSchema, table=True):
+    __tablename__ = "lol_game_record"
+
+    puuid: str = Field(primary_key=True)
+    game_id: str = Field(primary_key=True)
+    game_type: int
+    champion_id: int
+    teamId: int
+    kills: int
+    deaths: int
+    assists: int
+    timePlayed: int
+    totalTimeSpentDead: int
+    win: bool
+    visionScore: int
+    damage_dealt: int
+    damage_taken: int
+    double_kills: int
+    triple_kills: int
+    quadra_kills: int
+    penta_kills: int
+    gold_earned: int
+    total_minions_killed: int
+    turretKills: int
+    inhibitorKills: int
+    baronKills: int
+    dragonKills: int
+    item0: int
+    item1: int
+    item2: int
+    item3: int
+    item4: int
+    item5: int
+    item6: int
+    firstBloodKill: bool
+    firstTowerKill: bool
+    allInPings: int
+    assistMePings: int
+    basicPings: int
+    commandPings: int
+    dangerPings: int
+    enemyMissingPings: int
+    enemyVisionPings: int
+    getBackPings: int
+    holdPings: int
+    needVisionPings: int
+    onMyWayPings: int
+    pushPings: int
+    retreatPings: int
+    visionClearedPings: int
+    primaryStyle_perks: int
+    subStyle_perks: int
+    created_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
 
 class TwitchPoint(UserSchema, table=True):
     __tablename__ = "twitch_point"
@@ -566,22 +619,22 @@ class BotToken(TokensSchema, table=True):
 
 
 class CommunityCache(CacheSchema, table=True):
-	"""社群快取資料表"""
+    """社群快取資料表"""
 
-	__tablename__ = "community_cache"
+    __tablename__ = "community_cache"
 
-	notify_type: NotifyCommunityType = Field(sa_column=Column(Integer, primary_key=True))
-	community_id: str = Field(primary_key=True)
-	value: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
+    notify_type: NotifyCommunityType = Field(sa_column=Column(Integer, primary_key=True))
+    community_id: str = Field(primary_key=True)
+    value: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
 
 
 class NotifyCache(CacheSchema, table=True):
-	"""通知快取資料表"""
+    """通知快取資料表"""
 
-	__tablename__ = "notify_cache"
+    __tablename__ = "notify_cache"
 
-	notify_type: NotifyChannelType = Field(sa_column=Column(Integer, primary_key=True))
-	value: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
+    notify_type: NotifyChannelType = Field(sa_column=Column(Integer, primary_key=True))
+    value: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
 
 class YoutubeCache(CacheSchema, table=True):
     """YouTube快取資料表"""

@@ -13,129 +13,129 @@ from starlib.types import APIType
 
 
 class RiotAPI():
-	url_tw2 = "https://tw2.api.riotgames.com"
-	url_sea = "https://sea.api.riotgames.com"
-	url_asia = "https://asia.api.riotgames.com"
+    url_tw2 = "https://tw2.api.riotgames.com"
+    url_sea = "https://sea.api.riotgames.com"
+    url_asia = "https://asia.api.riotgames.com"
 
-	def __init__(self):
-		self.key = sqldb.get_bot_token(APIType.Riot).access_token
-		self._headers = {"X-Riot-Token": self.key}
+    def __init__(self):
+        self.key = sqldb.get_bot_token(APIType.Riot).access_token
+        self._headers = {"X-Riot-Token": self.key}
 
-		self._ddg_version = None
+        self._ddg_version = None
 
-	@property
-	def ddg_version(self):
-		if not self._ddg_version:
-			self._ddg_version = self.get_ddragon_version()
-		return self._ddg_version
+    @property
+    def ddg_version(self):
+        if not self._ddg_version:
+            self._ddg_version = self.get_ddragon_version()
+        return self._ddg_version
 
-	def get_riot_account_byname(self, username: str):
-		name, tag = username.split("#")
-		r = requests.get(f"{self.url_asia}/riot/account/v1/accounts/by-riot-id/{name}/{tag}", headers=self._headers)
-		if r.ok:
-			return RiotUser(**r.json())
-		elif r.status_code == 404:
-			return None
-		else:
-			raise APIInvokeError("lol_player_byname", r.text)
+    def get_riot_account_byname(self, username: str):
+        name, tag = username.split("#")
+        r = requests.get(f"{self.url_asia}/riot/account/v1/accounts/by-riot-id/{name}/{tag}", headers=self._headers)
+        if r.ok:
+            return RiotUser(**r.json())
+        elif r.status_code == 404:
+            return None
+        else:
+            raise APIInvokeError("lol_player_byname", r.text)
 
-	def get_riot_account_bypuuid(self, puuid: str):
-		r = requests.get(f"{self.url_asia}/riot/account/v1/accounts/by-puuid/{puuid}", headers=self._headers)
-		if r.ok:
-			return RiotUser(**r.json())
-		elif r.status_code == 404:
-			return None
-		else:
-			raise APIInvokeError("lol_player_bypuuid", r.text)
+    def get_riot_account_bypuuid(self, puuid: str):
+        r = requests.get(f"{self.url_asia}/riot/account/v1/accounts/by-puuid/{puuid}", headers=self._headers)
+        if r.ok:
+            return RiotUser(**r.json())
+        elif r.status_code == 404:
+            return None
+        else:
+            raise APIInvokeError("lol_player_bypuuid", r.text)
 
-	def get_player_bypuuid(self, puuid: str):
-		r = requests.get(f"{self.url_tw2}/lol/summoner/v4/summoners/by-puuid/{puuid}", headers=self._headers)
-		if r.ok:
-			return LOLPlayer(**r.json())
-		elif r.status_code == 404:
-			return None
-		else:
-			raise APIInvokeError("lol_player_bypuuid", r.text)
+    def get_player_bypuuid(self, puuid: str):
+        r = requests.get(f"{self.url_tw2}/lol/summoner/v4/summoners/by-puuid/{puuid}", headers=self._headers)
+        if r.ok:
+            return LOLPlayer(**r.json())
+        elif r.status_code == 404:
+            return None
+        else:
+            raise APIInvokeError("lol_player_bypuuid", r.text)
 
-	def get_player_lol(self, riot_id: str):
-		account = self.get_riot_account_byname(riot_id)
-		if account:
-			return self.get_player_bypuuid(account.puuid)
+    def get_player_lol(self, riot_id: str):
+        account = self.get_riot_account_byname(riot_id)
+        if account:
+            return self.get_player_bypuuid(account.puuid)
 
-	def get_player_matchs(self, puuid: str, count=5) -> list[str]:
-		params = {"start": 0, "count": count}
-		r = requests.get(f"{self.url_sea}/lol/match/v5/matches/by-puuid/{puuid}/ids", params=params, headers=self._headers)
-		if r.ok:
-			return r.json()
-		else:
-			raise APIInvokeError("lol_player_match", r.text)
+    def get_player_matchs(self, puuid: str, count=5) -> list[str]:
+        params = {"start": 0, "count": count}
+        r = requests.get(f"{self.url_sea}/lol/match/v5/matches/by-puuid/{puuid}/ids", params=params, headers=self._headers)
+        if r.ok:
+            return r.json()
+        else:
+            raise APIInvokeError("lol_player_match", r.text)
 
-	def get_match(self, matchId: str):
-		r = requests.get(f"{self.url_sea}/lol/match/v5/matches/{matchId}", headers=self._headers)
-		if r.ok:
-			return LOLMatch(**r.json())
-		else:
-			raise APIInvokeError("lol_match", r.text)
+    def get_match(self, matchId: str):
+        r = requests.get(f"{self.url_sea}/lol/match/v5/matches/{matchId}", headers=self._headers)
+        if r.ok:
+            return LOLMatch(**r.json())
+        else:
+            raise APIInvokeError("lol_match", r.text)
 
-	def get_summoner_masteries(self, puuid: str, count=5) -> list[LOLChampionMastery | None]:
-		params = {"count": count}
-		r = requests.get(f"{self.url_tw2}/lol/champion-mastery/v4/champion-masteries/by-puuid/{puuid}/top", params=params, headers=self._headers)
-		if r.ok:
-			return [LOLChampionMastery(**data) for data in r.json()]
-		elif r.status_code == 404:
-			return []
-		else:
-			raise APIInvokeError("lol_summoner_masteries", r.text)
+    def get_summoner_masteries(self, puuid: str, count=5) -> list[LOLChampionMastery | None]:
+        params = {"count": count}
+        r = requests.get(f"{self.url_tw2}/lol/champion-mastery/v4/champion-masteries/by-puuid/{puuid}/top", params=params, headers=self._headers)
+        if r.ok:
+            return [LOLChampionMastery(**data) for data in r.json()]
+        elif r.status_code == 404:
+            return []
+        else:
+            raise APIInvokeError("lol_summoner_masteries", r.text)
 
-	def get_summoner_active_match(self, puuid: str):
-		r = requests.get(f"{self.url_tw2}/lol/spectator/v5/active-games/by-summoner/{puuid}", headers=self._headers)
-		if r.ok:
-			return LOLActiveMatch(r.json())
-		elif r.status_code == 404:
-			return None
-		else:
-			raise APIInvokeError(f"lol_summoner_active_match:{r.text}")
+    def get_summoner_active_match(self, puuid: str):
+        r = requests.get(f"{self.url_tw2}/lol/spectator/v5/active-games/by-summoner/{puuid}", headers=self._headers)
+        if r.ok:
+            return LOLActiveMatch(r.json())
+        elif r.status_code == 404:
+            return None
+        else:
+            raise APIInvokeError(f"lol_summoner_active_match:{r.text}")
 
-	def get_summoner_rank(self, puuid: str):
-		r = requests.get(f"{self.url_tw2}/lol/league/v4/entries/by-puuid/{puuid}", headers=self._headers)
-		if r.ok:
-			return [LOLPlayerRank(**data) for data in r.json()]
-		elif r.status_code == 404:
-			return []
-		else:
-			raise APIInvokeError(f"get_summoner_rank:{r.text}")
+    def get_summoner_rank(self, puuid: str):
+        r = requests.get(f"{self.url_tw2}/lol/league/v4/entries/by-puuid/{puuid}", headers=self._headers)
+        if r.ok:
+            return [LOLPlayerRank(**data) for data in r.json()]
+        elif r.status_code == 404:
+            return []
+        else:
+            raise APIInvokeError(f"get_summoner_rank:{r.text}")
 
-	def get_rank_dataframe(self, riot_name: str, count=20):
-		user = self.get_riot_account_byname(riot_name)
-		if not user:
-			return
-		player = self.get_player_bypuuid(user.puuid)
-		if not player:
-			return
-		match_ids = self.get_player_matchs(player.puuid, count=count)
-		df = pd.DataFrame(columns=["name", "queueType", "tier", "rank"])
-		participantId_list = []
-		for id in match_ids:
-			match = self.get_match(id)
-			for participant in match.players:
-				if participant.summonerid not in participantId_list:
-					participantId_list.append(participant.summonerid)
-					ranks = self.get_summoner_rank(participant.summonerid)
-					for rank in ranks:
-						new_row = {"name": rank.name, "queueType": rank.queueType, "tier": rank.tier, "rank": rank.rank}
-						df.loc[len(df)] = new_row
-						# pd.concat()
-				time.sleep(1)
-			time.sleep(1)
-		return df
+    def get_rank_dataframe(self, riot_name: str, count=20):
+        user = self.get_riot_account_byname(riot_name)
+        if not user:
+            return
+        player = self.get_player_bypuuid(user.puuid)
+        if not player:
+            return
+        match_ids = self.get_player_matchs(player.puuid, count=count)
+        df = pd.DataFrame(columns=["name", "queueType", "tier", "rank"])
+        participantId_list = []
+        for id in match_ids:
+            match = self.get_match(id)
+            for participant in match.players:
+                if participant.summonerid not in participantId_list:
+                    participantId_list.append(participant.summonerid)
+                    ranks = self.get_summoner_rank(participant.summonerid)
+                    for rank in ranks:
+                        new_row = {"name": rank.name, "queueType": rank.queueType, "tier": rank.tier, "rank": rank.rank}
+                        df.loc[len(df)] = new_row
+                        # pd.concat()
+                time.sleep(1)
+            time.sleep(1)
+        return df
 
-	def get_ddragon_version(self, all=False) -> str | list[str]:
-		r = requests.get("https://ddragon.leagueoflegends.com/api/versions.json")
-		if r.ok:
-			apidata = r.json()
-			return apidata if all else apidata[0]
-		else:
-			raise APIInvokeError("ddragon_version", r.text)
+    def get_ddragon_version(self, all=False) -> str | list[str]:
+        r = requests.get("https://ddragon.leagueoflegends.com/api/versions.json")
+        if r.ok:
+            apidata = r.json()
+            return apidata if all else apidata[0]
+        else:
+            raise APIInvokeError("ddragon_version", r.text)
 
 
 class OsuAPI:

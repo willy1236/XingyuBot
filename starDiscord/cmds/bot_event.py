@@ -78,19 +78,18 @@ class event(Cog_Extension):
         else:
             log.warning(f">> Cogs not all loaded, {len(bot.cogs)}/{len(os.listdir('./cmds'))} loaded<<")
 
-        if bot.bot_code == "Bot1" and not bot.debug_mode:
+        now = datetime.now(tz)
+        if bot.bot_code == "1" and not bot.debug_mode:
             # 移除過期邀請
             invites = await bot.get_guild(happycamp_guild[0]).invites()
-            now = datetime.now(timezone.utc)
-            days_5 = timedelta(days=5)
+            days_7 = timedelta(days=7)
             for invite in invites:
-                if not invite.expires_at and not invite.scheduled_event and invite.uses == 0 and invite.created_at and now - invite.created_at > days_5:
+                if not invite.expires_at and not invite.scheduled_event and invite.uses == 0 and invite.created_at and now - invite.created_at > days_7:
                     await invite.delete()
                     await asyncio.sleep(1)
 
         # 投票介面
         polls = sclient.sqldb.get_active_polls()
-        now = datetime.now(tz)
         days_poll_period = timedelta(days=28)
         for poll in polls:
             if now - poll.created_at > days_poll_period:

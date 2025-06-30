@@ -99,29 +99,11 @@ if __name__ == "__main__":
 # print(text, weather.WeatherElement.DailyExtreme.DailyHigh.AirTemperature, weather.WeatherElement.DailyExtreme.DailyLow.AirTemperature)
 # print(weather.model_dump())
 
-from starlib.instance import tw_api
 
 # after = datetime.fromisoformat("2025-06-02T17:44:41+08")
 # videos = tw_api.get_videos(490765956, after=after)
 # print(videos)
 
-caches = sclient.sqldb.get_community_caches(NotifyCommunityType.TwitchVideo)
-
-update_data: dict[str, datetime] = {}
-print(caches)
-for user_id, cache in caches.items():
-    print(f"Updating videos for user {user_id} after {cache.value}")
-    videos = tw_api.get_videos(user_id, after=cache.value)
-
-    if videos:
-        videos.reverse()
-        update_data[user_id] = videos[-1].created_at
-
-        for video in videos:
-            embed = video.embed()
-            print(video)
-
-print(update_data)
 # sclient.sqldb.set_community_caches(NotifyCommunityType.TwitchVideo, update_data)
 
 # clips = tw_api.get_clips("490765956")
@@ -184,3 +166,5 @@ from starlib.dataExtractor.oauth import DiscordOauth2, GoogleOauth2, TwitchOauth
 #     tweet:Tweet
 #     print(type(tweet))
 #     print(tweet.id, tweet.text, tweet.created_at, tweet.attachments, tweet.entities, tweet.public_metrics, tweet.context_annotations, tweet.geo, tweet.in_reply_to_user_id, tweet.referenced_tweets, tweet.source)
+
+print(RiotAPI().get_match("TW2_314770599").get_player_by_puuid("n4_C5WbB6Gf3NPbSbslQfRMc6an-t1iLvJk6345L9aJuxHf52uYvG6twfDlV19wYmCNtpWMErJ_BBA"))
