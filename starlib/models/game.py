@@ -69,18 +69,18 @@ class LOLPerks(BaseModel):
 
 
 class LOLMissions(BaseModel):
-    playerScore0: int = 0
-    playerScore1: int = 0
-    playerScore2: int = 0
-    playerScore3: int = 0
-    playerScore4: int = 0
-    playerScore5: int = 0
-    playerScore6: int = 0
-    playerScore7: int = 0
-    playerScore8: int = 0
-    playerScore9: int = 0
-    playerScore10: int = 0
-    playerScore11: int = 0
+    playerScore0: float = 0
+    playerScore1: float = 0
+    playerScore2: float = 0
+    playerScore3: float = 0
+    playerScore4: float = 0
+    playerScore5: float = 0
+    playerScore6: float = 0
+    playerScore7: float = 0
+    playerScore8: float = 0
+    playerScore9: float = 0
+    playerScore10: float = 0
+    playerScore11: float = 0
 
 
 class LOLChallenges(BaseModel):
@@ -282,7 +282,7 @@ class LOLParticipant(BaseModel):
 
     # 複雜對象
     perks: LOLPerks
-    challenges: LOLChallenges
+    challenges: LOLChallenges | None = None
     missions: LOLMissions
 
     # 其他
@@ -315,18 +315,18 @@ class LOLParticipant(BaseModel):
     unrealKills: int = 0
 
     # 玩家評分相關
-    PlayerScore0: int = 0
-    PlayerScore1: int = 0
-    PlayerScore2: int = 0
-    PlayerScore3: int = 0
-    PlayerScore4: int = 0
-    PlayerScore5: int = 0
-    PlayerScore6: int = 0
-    PlayerScore7: int = 0
-    PlayerScore8: int = 0
-    PlayerScore9: int = 0
-    PlayerScore10: int = 0
-    PlayerScore11: int = 0
+    PlayerScore0: float = 0
+    PlayerScore1: float = 0
+    PlayerScore2: float = 0
+    PlayerScore3: float = 0
+    PlayerScore4: float = 0
+    PlayerScore5: float = 0
+    PlayerScore6: float = 0
+    PlayerScore7: float = 0
+    PlayerScore8: float = 0
+    PlayerScore9: float = 0
+    PlayerScore10: float = 0
+    PlayerScore11: float = 0
 
     def desplaytext(self):
         text = f"`{self.riotIdGameName}#{self.riotIdTagline}(LV. {self.summonerLevel})`\n"
@@ -372,7 +372,7 @@ class LOLObjective(BaseModel):
 
 
 class LOLObjectives(BaseModel):
-    atakhan: LOLObjective
+    atakhan: LOLObjective | None = None
     baron: LOLObjective
     champion: LOLObjective
     dragon: LOLObjective
@@ -397,7 +397,7 @@ class LOLTeam(BaseModel):
     win: bool
     bans: list[Any] = []  # ARAM 模式通常沒有 ban
     objectives: LOLObjectives
-    feats: LOLFeats
+    feats: LOLFeats | None = None
 
 
 class LOLMatchInfo(BaseModel):

@@ -307,6 +307,19 @@ class SQLGameSystem(BaseSQLEngine):
         self.session.exec(stmt)
         self.session.commit()
 
+    def get_lol_record_with_champion(self, puuid: str):
+        """取得指定玩家的英雄戰績"""
+        stmt = (
+            select(LOLGameRecord.champion_id, func.count()).where(LOLGameRecord.puuid == puuid).group_by(LOLGameRecord.champion_id).order_by(desc(func.count()))
+        )
+        result = self.session.exec(stmt).all()
+        return result
+
+    def get_lol_record_with_win(self, puuid: str):
+        """取得指定玩家的勝率"""
+        stmt = select(LOLGameRecord.win, func.count()).where(LOLGameRecord.puuid == puuid).group_by(LOLGameRecord.win).order_by(desc(func.count()))
+        result = self.session.exec(stmt).all()
+        return {i: cnt for i, cnt in result}
 
 class SQLPetSystem(BaseSQLEngine):
     def get_pet(self, discord_id: int):
@@ -1183,6 +1196,12 @@ class SQLCacheSystem(BaseSQLEngine):
     def get_notify_cache(self, type: NotifyChannelType):
         """取得通知快取"""
         stmt = select(NotifyCache).where(NotifyCache.notify_type == type)
+        result = self.session.exec(stmt).one_or_none()
+        return result
+
+    def get_lol_cache(self, puuid: str):
+        """取得LOL快取"""
+        stmt = select(LOLGameCache).where(LOLGameCache.puuid == puuid)
         result = self.session.exec(stmt).one_or_none()
         return result
 

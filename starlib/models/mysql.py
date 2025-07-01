@@ -163,16 +163,18 @@ class LOLGameRecord(UserSchema, table=True):
     __tablename__ = "lol_game_record"
 
     puuid: str = Field(primary_key=True)
-    game_id: str = Field(primary_key=True)
-    game_type: int
+    game_id: int = Field(primary_key=True)
+    game_type: str
+    game_mode: str
     champion_id: int
-    teamId: int
+    teamId: int = Field(sa_column=Column(SmallInteger))
+    timePlayed: timedelta = Field(sa_column=Column(Interval))
+    totalTimeSpentDead: timedelta = Field(sa_column=Column(Interval))
+    created_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
+    win: bool
     kills: int
     deaths: int
     assists: int
-    timePlayed: int
-    totalTimeSpentDead: int
-    win: bool
     visionScore: int
     damage_dealt: int
     damage_taken: int
@@ -209,9 +211,6 @@ class LOLGameRecord(UserSchema, table=True):
     pushPings: int
     retreatPings: int
     visionClearedPings: int
-    primaryStyle_perks: int
-    subStyle_perks: int
-    created_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
 
 class TwitchPoint(UserSchema, table=True):
     __tablename__ = "twitch_point"
@@ -644,6 +643,13 @@ class YoutubeCache(CacheSchema, table=True):
     video_id: str = Field(primary_key=True)
     status: int = Field(sa_column=Column(SmallInteger))
 
+class LOLGameCache(CacheSchema, table=True):
+    """LOL遊戲快取資料表"""
+
+    __tablename__ = "lol_game_cache"
+
+    puuid: str = Field(primary_key=True)
+    newest_game_time: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
 
 class WarningList(ListObject[UserModerate]):
     def __init__(self, items: list[UserModerate], discord_id: int):

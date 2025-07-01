@@ -167,4 +167,3 @@ from starlib.dataExtractor.oauth import DiscordOauth2, GoogleOauth2, TwitchOauth
 #     print(type(tweet))
 #     print(tweet.id, tweet.text, tweet.created_at, tweet.attachments, tweet.entities, tweet.public_metrics, tweet.context_annotations, tweet.geo, tweet.in_reply_to_user_id, tweet.referenced_tweets, tweet.source)
 
-print(RiotAPI().get_match("TW2_314770599").get_player_by_puuid("n4_C5WbB6Gf3NPbSbslQfRMc6an-t1iLvJk6345L9aJuxHf52uYvG6twfDlV19wYmCNtpWMErJ_BBA"))

@@ -44,22 +44,22 @@ class error(Cog_Extension):
                 await ctx.respond(f"未找到：給定的參數未找到", ephemeral=True)
 
             elif isinstance(error.original, (AttributeError, KeyError)):
+                log.exception("%s, %s", error.original, type(error.original), exc_info=error.original)
+
                 if not ctx.guild or ctx.guild.id not in debug_guilds:
                     await ctx.respond(f"錯誤：機器人內部錯誤（若發生此項錯誤請靜待修復）", ephemeral=True)
                     await self.bot.error(ctx, error)
                 else:
                     await ctx.respond(f"錯誤（debug）：```py\n{type(error.original)}：{error.original}```", ephemeral=True)
 
-                log.exception("%s, %s", error.original, type(error.original), exc_info=error.original)
-
             else:
+                log.exception("%s, %s", error, type(error.original), exc_info=error.original)
+
                 if not ctx.guild or ctx.guild.id not in debug_guilds:
                     await ctx.respond(f"發生未知錯誤，請等待修復", ephemeral=True)
                     await self.bot.error(ctx, error)
                 else:
                     await ctx.respond(f"發生未知錯誤（debug）：```py\n{error.original}```", ephemeral=True)
-
-                log.exception("%s, %s", error, type(error.original), exc_info=error.original)
 
         elif isinstance(error,discord.ApplicationCommandError):
             await ctx.respond(f"{error}", ephemeral=True)

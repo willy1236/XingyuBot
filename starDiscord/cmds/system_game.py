@@ -1,15 +1,16 @@
-from datetime import date, datetime
+import asyncio
+from datetime import date, datetime, timedelta
 
 import discord
 import genshin
 from discord.commands import SlashCommandGroup
 from discord.ext import commands, pages
 
-from starlib import BotEmbed, ChoiceList, Jsondb, csvdb, sclient
+from starlib import BotEmbed, ChoiceList, Jsondb, csvdb, log, sclient, tz
 from starlib.dataExtractor import *
 from starlib.errors import APIInvokeError
 from starlib.models.game import RiotUser
-from starlib.models.mysql import UserGame
+from starlib.models.mysql import LOLGameCache, LOLGameRecord, UserGame
 from starlib.types import GameType
 
 from ..extension import Cog_Extension
@@ -313,6 +314,140 @@ class system_game(Cog_Extension):
             menu_placeholder="請選擇賽區",
         )
         await paginator.respond(ctx.interaction, ephemeral=False, target_message="查詢成功")
+
+    @lol.command(description="建立今年度的戰績資料")
+    @commands.max_concurrency(number=1, wait=True)
+    async def setyearly(
+        self, ctx: discord.ApplicationContext, riot_id: discord.Option(str, name="riot_id", description="名稱#tag，留空則使用資料庫查詢", required=False)
+    ):
+        await ctx.defer()
+        puuid = get_riot_account_puuid(ctx.author, riot_id)
+        if not puuid:
+            await ctx.respond("查詢失敗：查無此玩家", ephemeral=True)
+            return
+
+        cache = sclient.sqldb.get_lol_cache(puuid)
+        startTime = max(datetime(date.today().year, 1, 1, tzinfo=tz), cache.newest_game_time) if cache else datetime(date.today().year, 1, 1, tzinfo=tz)
+
+        i = 0
+        match_list: list[str] = []
+        while True:
+            lst = riot_api.get_player_matchs(puuid, 100, start=i * 100, startTime=startTime)
+            log.info(f"查詢第{i}頁，數量：{len(lst)}")
+            match_list.extend(lst)
+            if not lst or len(lst) < 100:
+                break
+            i += 1
+
+        if not match_list:
+            await ctx.respond("查詢失敗:此玩家查無對戰紀錄", ephemeral=True)
+            return
+
+        msg = await ctx.respond(f"開始查詢中，請稍待片刻，查詢過程預計需{int(len(match_list) / 20) + 1}分鐘")
+
+        records: list[LOLGameRecord] = []
+        newest_game_time = datetime.min
+        for match_id in match_list:
+            try:
+                match = riot_api.get_match(match_id)
+                if match:
+                    if (time := datetime.fromtimestamp(match.info.gameCreation / 1000)) > newest_game_time:
+                        newest_game_time = time
+
+                    player = match.get_player_by_puuid(puuid)
+                    records.append(
+                        LOLGameRecord(
+                            puuid=puuid,
+                            game_id=match.info.gameId,
+                            game_type=match.info.gameType,
+                            game_mode=match.info.gameMode,
+                            champion_id=player.championId,
+                            teamId=player.teamId,
+                            created_at=time,
+                            timePlayed=timedelta(seconds=player.timePlayed),
+                            totalTimeSpentDead=timedelta(seconds=player.totalTimeSpentDead),
+                            win=player.win,
+                            kills=player.kills,
+                            deaths=player.deaths,
+                            assists=player.assists,
+                            visionScore=player.visionScore,
+                            damage_dealt=player.totalDamageDealtToChampions,
+                            damage_taken=player.totalDamageTaken,
+                            double_kills=player.doubleKills,
+                            triple_kills=player.tripleKills,
+                            quadra_kills=player.quadraKills,
+                            penta_kills=player.pentaKills,
+                            gold_earned=player.goldEarned,
+                            total_minions_killed=player.totalMinionsKilled,
+                            turretKills=player.turretKills,
+                            inhibitorKills=player.inhibitorKills,
+                            baronKills=player.baronKills,
+                            dragonKills=player.dragonKills,
+                            item0=player.item0,
+                            item1=player.item1,
+                            item2=player.item2,
+                            item3=player.item3,
+                            item4=player.item4,
+                            item5=player.item5,
+                            item6=player.item6,
+                            firstBloodKill=player.firstBloodKill,
+                            firstTowerKill=player.firstTowerKill,
+                            allInPings=player.allInPings,
+                            assistMePings=player.assistMePings,
+                            basicPings=player.basicPings,
+                            commandPings=player.commandPings,
+                            dangerPings=player.dangerPings,
+                            enemyMissingPings=player.enemyMissingPings,
+                            enemyVisionPings=player.enemyVisionPings,
+                            getBackPings=player.getBackPings,
+                            holdPings=player.holdPings,
+                            needVisionPings=player.needVisionPings,
+                            onMyWayPings=player.onMyWayPings,
+                            pushPings=player.pushPings,
+                            retreatPings=player.retreatPings,
+                            visionClearedPings=player.visionClearedPings,
+                        )
+                    )
+            except Exception as e:
+                log.error(f"Error processing match {match_id} for puuid {puuid}: {e}")
+
+            await asyncio.sleep(3)
+
+        log.info(f"共查詢到{len(records)}場對戰")
+        sclient.sqldb.batch_merge(records)
+        cache = LOLGameCache(puuid=puuid, newest_game_time=newest_game_time)
+        sclient.sqldb.merge(cache)
+        await msg.edit(f"查詢完成，共查詢到{len(records)}場對戰，已儲存至資料庫。最新對戰時間：{newest_game_time.strftime('%Y-%m-%d %H:%M:%S')}")
+
+    @lol.command(description="查詢今年度的戰績資料（目前需手動執行儲存資料後才能統計）")
+    @commands.cooldown(rate=1, per=30)
+    async def yearly(
+        self, ctx: discord.ApplicationContext, riot_id: discord.Option(str, name="riot_id", description="名稱#tag，留空則使用資料庫查詢", required=False)
+    ):
+        await ctx.defer()
+        puuid = get_riot_account_puuid(ctx.author, riot_id)
+        if not puuid:
+            await ctx.respond("查詢失敗：查無此玩家", ephemeral=True)
+            return
+
+        embed = BotEmbed.simple("2025年戰績統計")
+        lst = sclient.sqldb.get_lol_record_with_champion(puuid)
+        champion_lst = []
+        for id, count in lst[:10]:
+            champion_name = csvdb.get_row_by_column_value(csvdb.lol_champion, "champion_id", id)
+            if not champion_name.empty:
+                champion_lst.append(f"{champion_name.loc['name_tw']}: {count}")
+            else:
+                champion_lst.append(f"ID. {id}: {count} 場")
+        embed.add_field(name="英雄遊玩次數", value="\n".join(champion_lst) if champion_lst else "無戰績資料", inline=False)
+
+        data = sclient.sqldb.get_lol_record_with_win(puuid)
+        win_cnt = data.get(True, 0)
+        lose_cnt = data.get(False, 0)
+        win_rate = (win_cnt / (win_cnt + lose_cnt) * 100) if (win_cnt + lose_cnt) > 0 else 0
+        embed.add_field(name="勝率統計", value=f"勝場: {win_cnt} 場\n敗場: {lose_cnt} 場\n勝率: {win_rate:.2f}%", inline=False)
+
+        await ctx.respond("查詢成功", embed=embed)
 
     @osu.command(name="user", description="查詢Osu用戶資料")
     @commands.cooldown(rate=1, per=1)

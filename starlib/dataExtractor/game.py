@@ -62,8 +62,10 @@ class RiotAPI():
         if account:
             return self.get_player_bypuuid(account.puuid)
 
-    def get_player_matchs(self, puuid: str, count=5) -> list[str]:
-        params = {"start": 0, "count": count}
+    def get_player_matchs(self, puuid: str, count=5, start=0, startTime: datetime | None = None) -> list[str]:
+        params = {"start": 0, "count": count, "start": start}
+        if startTime:
+            params["startTime"] = int(startTime.timestamp())
         r = requests.get(f"{self.url_sea}/lol/match/v5/matches/by-puuid/{puuid}/ids", params=params, headers=self._headers)
         if r.ok:
             return r.json()
