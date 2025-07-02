@@ -105,11 +105,12 @@ class event(Cog_Extension):
             log.debug(f"Loading reaction role message: {react_message.message_id}")
             message = bot.get_message(react_message.channel_id)
             if not message:
-                try:
-                    channel = bot.get_channel(react_message.channel_id)
-                    message = await channel.fetch_message(react_message.message_id) if channel else None
-                except discord.errors.NotFound:
-                    message = None
+                channel = bot.get_channel(react_message.channel_id)
+                if channel:
+                    try:
+                        message = channel.get_partial_message(react_message.message_id) or await channel.fetch_message(react_message.message_id)
+                    except discord.errors.NotFound:
+                        message = None
 
             if message:
                 react_roles = sclient.sqldb.get_reaction_roles_by_message(react_message.message_id)
