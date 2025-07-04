@@ -24,6 +24,7 @@ class CloudUser(UserSchema, table=True):
     drive_share_id: str | None
     twitch_id: int | None = Field(unique=True)
     name: str | None
+    privilege_level: PrivilegeLevel | None = Field(sa_column=Column(SmallInteger, default=PrivilegeLevel.User))
 
 
 class DiscordUser(UserSchema, table=True):
@@ -641,7 +642,7 @@ class YoutubeCache(CacheSchema, table=True):
     __tablename__ = "youtube_cache"
 
     video_id: str = Field(primary_key=True)
-    status: int = Field(sa_column=Column(SmallInteger))
+    scheduled_live_start: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
 
 class LOLGameCache(CacheSchema, table=True):
     """LOL遊戲快取資料表"""

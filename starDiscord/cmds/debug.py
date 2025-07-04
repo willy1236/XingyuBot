@@ -8,9 +8,11 @@ import matplotlib.pyplot as plt
 from discord.ext import commands, tasks
 from mcstatus import JavaServer
 
-from starlib import BotEmbed, Jsondb, sclient, tz
+from starDiscord.checks import has_privilege_level
+from starlib import BotEmbed, Jsondb, sclient, sqldb, tz
 from starlib.errors import *
 from starlib.instance import *
+from starlib.types import PrivilegeLevel
 from starlib.utils import get_arp_list
 from starlib.utils.map import sunmon_area
 
@@ -187,6 +189,7 @@ class debug(Cog_Extension):
         # await ctx.respond((Permission.send_messages and Permission.embed_links))
 
     @commands.is_owner()
+    @has_privilege_level(PrivilegeLevel.Level3)
     @commands.slash_command(description="ver.2.0測試", guild_ids=debug_guilds)
     async def embedtest(self, ctx: discord.ApplicationContext):
         embed = BotEmbed.sts()

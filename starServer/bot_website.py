@@ -82,7 +82,8 @@ async def prase_yt_push(content: str):
         video = yt_api.get_video(push_entry.yt_videoid)[0]
 
         cache = sqldb.get_community_cache_with_default(NotifyCommunityType.Youtube, push_entry.yt_channelid)
-        if push_entry.published > cache.value:
+        ytcache = sqldb.get_yt_cache(push_entry.yt_videoid)
+        if push_entry.published > cache.value or (ytcache is not None and video.snippet.liveBroadcastContent == "live"):
             # 透過published的時間來判斷是否為新影片
             web_log.info(f"New Youtube push entry {push_entry.yt_videoid}")
 
@@ -93,12 +94,17 @@ async def prase_yt_push(content: str):
             else:
                 web_log.warning("Bot not found.")
 
-            if video.is_live_upcoming_with_time:
+            if ytcache is not None:
+                web_log.info(f"Removing cached video {video.id} from database")
+                sqldb.remove_yt_cache(video.id)
+
+            elif video.is_live_upcoming_with_time:
                 assert video.liveStreamingDetails.scheduledStartTime is not None, "Scheduled start time should not be None for upcoming live videos"
                 web_log.info(f"Upcoming live video detected: {video.id} at {video.liveStreamingDetails.scheduledStartTime}")
-                sclient.bot.scheduler.add_job(
-                    youtube_start_live_notify, DateTrigger(video.liveStreamingDetails.scheduledStartTime + timedelta(seconds=30)), args=[sclient.bot, video]
-                )
+                sqldb.add_yt_cache(video.id, video.liveStreamingDetails.scheduledStartTime)
+                # sclient.bot.scheduler.add_job(
+                #     youtube_start_live_notify, DateTrigger(video.liveStreamingDetails.scheduledStartTime + timedelta(seconds=30)), args=[sclient.bot, video]
+                # )
 
             if push_entry.published > cache.value:
                 sqldb.set_community_cache(NotifyCommunityType.Youtube, push_entry.yt_channelid, push_entry.published)

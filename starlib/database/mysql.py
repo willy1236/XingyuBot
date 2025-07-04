@@ -147,6 +147,20 @@ class SQLUserSystem(BaseSQLEngine):
         result = self.session.exec(stmt).one_or_none()
         return result or DiscordUser(discord_id=discord_id)
 
+    def get_cloud_user_privilege(self, discord_id: int):
+        """
+        Retrieve the privilege level of a CloudUser based on their Discord ID.
+
+        Args:
+            discord_id (int): The Discord ID of the user.
+
+        Returns:
+            PrivilegeLevel: The privilege level of the user.
+        """
+        stmt = select(CloudUser.privilege_level).where(CloudUser.discord_id == discord_id)
+        result = self.session.exec(stmt).one_or_none()
+        return PrivilegeLevel(result) if result else PrivilegeLevel.User
+
     @with_session
     def get_dcuser_test_session(self, discord_id: int, with_registration: bool = False):
         stmt = select(DiscordUser).where(DiscordUser.discord_id == discord_id)
@@ -1198,6 +1212,27 @@ class SQLCacheSystem(BaseSQLEngine):
         stmt = select(NotifyCache).where(NotifyCache.notify_type == type)
         result = self.session.exec(stmt).one_or_none()
         return result
+
+    def get_yt_cache(self, video_id: str):
+        """取得YouTube快取"""
+        stmt = select(YoutubeCache).where(YoutubeCache.video_id == video_id)
+        result = self.session.exec(stmt).one_or_none()
+        return result
+
+    def add_yt_cache(self, video_id: str, scheduled_live_start: datetime):
+        """新增YouTube快取"""
+        cache = YoutubeCache(video_id=video_id, scheduled_live_start=scheduled_live_start)
+        try:
+            self.session.add(cache)
+            self.session.commit()
+        except IntegrityError:
+            self.session.rollback()
+
+    def remove_yt_cache(self, video_id: str):
+        """移除YouTube快取"""
+        stmt = delete(YoutubeCache).where(YoutubeCache.video_id == video_id)
+        self.session.exec(stmt)
+        self.session.commit()
 
     def get_lol_cache(self, puuid: str):
         """取得LOL快取"""

@@ -87,7 +87,7 @@ provider = GoogleGLAProvider(api_key=sqldb.get_bot_token(APIType.Google, 5).acce
 model = GeminiModel(model_name="gemini-2.0-flash", provider=provider)
 agent = Agent(
     model,
-    tools=[fn for _, fn in inspect.getmembers(Tools, predicate=inspect.isfunction)] + [duckduckgo_search_tool(), tavily_search_tool(tavily_api_key)],
+    tools=[fn for _, fn in inspect.getmembers(Tools, predicate=inspect.isfunction)] + [duckduckgo_search_tool()],
 )
 
 
@@ -140,7 +140,7 @@ async def system_prompt(ctx: RunContext[MyDeps]) -> str:
         text += f"Member ID: {ctx.deps.member.id}\n"
         text += f"Member 名稱: {ctx.deps.member.name}\n"
         if ctx.deps.member.nick:
-            text += f"暱稱: {ctx.deps.member.nick}\n"
+            text += f"Member 暱稱: {ctx.deps.member.nick}\n"
         else:
             text += "沒有設定暱稱。\n"
     return text

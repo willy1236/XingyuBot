@@ -108,3 +108,9 @@ class APIType(IntEnum):
     Rettiwt = 14
     DocAccount = 15
     Tavily = 16
+
+class PrivilegeLevel(IntEnum):
+    User = 0
+    Level1 = 1
+    Level2 = 2
+    Level3 = 3
