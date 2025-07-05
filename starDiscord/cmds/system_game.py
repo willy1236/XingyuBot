@@ -304,6 +304,22 @@ class system_game(Cog_Extension):
             name = f"👑{r['Team1']} vs {r['Team2']} {r['Gamename']}" if r["Winner"] == "1" else f"{r['Team1']} vs 👑{r['Team2']} {r['Gamename']}"
             value = f"\n⏱️{r['Gamelength']} ⚔️{r['Team1Kills']} : {r['Team2Kills']}"
             value += f"\n`{r['Team1Players']}` vs `{r['Team2Players']}`"
+            team1_picks = []
+            for i in r["Team1Picks"].split(","):
+                champion_name = csvdb.get_row_by_column_value(csvdb.lol_champion, "name_en", i.replace(" ", ""))
+                if not champion_name.empty:
+                    team1_picks.append(f"{champion_name.loc['name_tw']}")
+                else:
+                    team1_picks.append(i)
+
+            team2_picks = []
+            for i in r["Team2Picks"].split(","):
+                champion_name = csvdb.get_row_by_column_value(csvdb.lol_champion, "name_en", i.replace(" ", ""))
+                if not champion_name.empty:
+                    team2_picks.append(f"{champion_name.loc['name_tw']}")
+                else:
+                    team2_picks.append(i)
+            value += f"\n{','.join(team1_picks)} vs {','.join(team2_picks)}"
 
             embed.add_field(name=name, value=value, inline=False)
 

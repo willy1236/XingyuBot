@@ -88,7 +88,7 @@ async def prase_yt_push(content: str):
             web_log.info(f"New Youtube push entry {push_entry.yt_videoid}")
 
             if sclient.bot:
-                msg = sclient.bot.send_message(embed=video.embed(), content=f"YT push test {push_entry.updated == push_entry.published}")
+                msg = sclient.bot.send_message(embed=video.embed(), content=f"YT push test {push_entry.yt_videoid}")
                 if not msg:
                     web_log.warning("Channel not found. Message sent failed.")
             else:
