@@ -31,7 +31,6 @@ class DiscordUser(UserSchema, table=True):
     __tablename__ = "user_discord"
 
     discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True, autoincrement=False))
-    name: str | None
     max_sign_consecutive_days: int | None
     meatball_times: int | None
     guaranteed: int | None

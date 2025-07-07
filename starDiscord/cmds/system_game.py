@@ -9,8 +9,7 @@ from discord.ext import commands, pages
 from starlib import BotEmbed, ChoiceList, Jsondb, csvdb, log, sclient, tz
 from starlib.dataExtractor import *
 from starlib.errors import APIInvokeError
-from starlib.models.game import RiotUser
-from starlib.models.mysql import LOLGameCache, LOLGameRecord, UserGame
+from starlib.models import LOLGameCache, LOLGameRecord, UserGame
 from starlib.types import GameType
 
 from ..extension import Cog_Extension
@@ -200,7 +199,7 @@ class system_game(Cog_Extension):
                 f"上次遊玩： <t:{int(data.lastPlayTime.timestamp())}>",
                 f"賽季里程碑： {data.championSeasonMilestone}",
             ]
-            champion_name = csvdb.get_row_by_column_value(csvdb.lol_champion, "champion_id", data.championId)
+            champion_name = csvdb.get_row(csvdb.lol_champion, "champion_id", data.championId)
             embed.add_field(
                 name=champion_name.loc["name_tw"] if not champion_name.empty else f"ID: {data.championId}", value="\n".join(text_list), inline=False
             )
@@ -306,17 +305,17 @@ class system_game(Cog_Extension):
             value += f"\n`{r['Team1Players']}` vs `{r['Team2Players']}`"
             team1_picks = []
             for i in r["Team1Picks"].split(","):
-                champion_name = csvdb.get_row_by_column_value(csvdb.lol_champion, "name_en", i.replace(" ", ""))
+                champion_name = csvdb.get_row(csvdb.lol_champion, "name_en", i.replace(" ", ""))
                 if not champion_name.empty:
-                    team1_picks.append(f"{champion_name.loc['name_tw']}")
+                    team1_picks.append(champion_name.loc["name_tw"])
                 else:
                     team1_picks.append(i)
 
             team2_picks = []
             for i in r["Team2Picks"].split(","):
-                champion_name = csvdb.get_row_by_column_value(csvdb.lol_champion, "name_en", i.replace(" ", ""))
+                champion_name = csvdb.get_row(csvdb.lol_champion, "name_en", i.replace(" ", ""))
                 if not champion_name.empty:
-                    team2_picks.append(f"{champion_name.loc['name_tw']}")
+                    team2_picks.append(champion_name.loc["name_tw"])
                 else:
                     team2_picks.append(i)
             value += f"\n{','.join(team1_picks)} vs {','.join(team2_picks)}"
@@ -356,7 +355,7 @@ class system_game(Cog_Extension):
             i += 1
 
         if not match_list:
-            await ctx.respond("查詢失敗:此玩家查無對戰紀錄", ephemeral=True)
+            await ctx.respond("查詢失敗：此玩家查無對戰紀錄", ephemeral=True)
             return
 
         msg = await ctx.respond(f"開始查詢中，請稍待片刻，查詢過程預計需{int(len(match_list) / 20) + 1}分鐘")
@@ -450,7 +449,7 @@ class system_game(Cog_Extension):
         lst = sclient.sqldb.get_lol_record_with_champion(puuid)
         champion_lst = []
         for id, count in lst[:10]:
-            champion_name = csvdb.get_row_by_column_value(csvdb.lol_champion, "champion_id", id)
+            champion_name = csvdb.get_row(csvdb.lol_champion, "champion_id", id)
             if not champion_name.empty:
                 champion_lst.append(f"{champion_name.loc['name_tw']}: {count}")
             else:

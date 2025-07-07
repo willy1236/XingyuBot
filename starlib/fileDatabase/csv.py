@@ -56,7 +56,7 @@ class CsvDatabase:
             return row.iloc[0]  # Return the first matching row
         return None
 
-    def get_row_by_column_value(self, df: pd.DataFrame, colume, value) -> pd.Series:
+    def get_row(self, df: pd.DataFrame, colume: str, value) -> pd.Series:
         """給予指定欄位與其值，尋找符合的資料
         :param df: 要尋找的資料表
         :param colume: 尋找資料的條件欄位

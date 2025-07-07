@@ -330,7 +330,7 @@ class LOLParticipant(BaseModel):
 
     def desplaytext(self):
         text = f"`{self.riotIdGameName}#{self.riotIdTagline}(LV. {self.summonerLevel})`\n"
-        name_csv = csvdb.get_row_by_column_value(csvdb.lol_champion, "champion_id", self.championId)
+        name_csv = csvdb.get_row(csvdb.lol_champion, "champion_id", self.championId)
         name = name_csv.loc["name_tw"] if not name_csv.empty else self.championName
         text += f"{name}(LV. {self.champLevel})\n"
         lane = lol_jdict["road"].get(self.lane) or self.lane
@@ -597,7 +597,7 @@ class LOLLActiveMatchPlayer:
 
     def desplaytext(self):
         text = f"`{self.summonerName}`\n"
-        name_csv = csvdb.get_row_by_column_value(csvdb.lol_champion, "champion_id", self.championId)
+        name_csv = csvdb.get_row(csvdb.lol_champion, "champion_id", self.championId)
         name = name_csv.loc["name_tw"] if not name_csv.empty else self.championId
         if not self.bot:
             text += f"{name}\n"
@@ -623,7 +623,7 @@ class LOLBanChampion:
         self.championId = data.get("championId")
         self.teamId = data.get("teamId")
         self.pickTurn = data.get("pickTurn")
-        name_csv = csvdb.get_row_by_column_value(csvdb.lol_champion, "champion_id", self.championId)
+        name_csv = csvdb.get_row(csvdb.lol_champion, "champion_id", self.championId)
         name = name_csv.loc["name_tw"] if not name_csv.empty else str(self.championId)
         self.name = name
 

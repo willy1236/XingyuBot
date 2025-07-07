@@ -22,8 +22,7 @@ from starDiscord.cmds.task import youtube_start_live_notify
 from starlib import BaseThread, Jsondb, sclient, sqldb, web_log
 from starlib.dataExtractor import DiscordOauth2, GoogleOauth2, TwitchOauth2
 from starlib.instance import yt_api
-from starlib.models.mysql import CloudUser, TwitchBotJoinChannel
-from starlib.models.push import YoutubePushEntry
+from starlib.models import YoutubePushEntry, CloudUser, TwitchBotJoinChannel
 from starlib.types import APIType, NotifyCommunityType
 
 discord_oauth_settings = sqldb.get_bot_token(APIType.Discord)
