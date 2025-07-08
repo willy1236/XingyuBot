@@ -55,6 +55,8 @@ class system_user(Cog_Extension):
         if cuser:
             cloud_user_embed.add_field(name="雲端共用資料夾", value="已共用" if cuser.drive_share_id else "未共用")
             cloud_user_embed.add_field(name="Twitch ID", value=cuser.twitch_id or "未設定")
+            if cuser.name:
+                cloud_user_embed.add_field(name="註冊名稱", value=cuser.name)
         await ctx.respond(embeds=[user_embed, cloud_user_embed])
 
     @pet.command(description="查看寵物資訊")

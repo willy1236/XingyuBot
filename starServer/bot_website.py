@@ -87,9 +87,9 @@ async def prase_yt_push(content: str):
             web_log.info(f"New Youtube push entry {push_entry.yt_videoid}")
 
             if sclient.bot:
-                msg = sclient.bot.send_message(embed=video.embed(), content=f"YT push test {push_entry.yt_videoid}")
-                if not msg:
-                    web_log.warning("Channel not found. Message sent failed.")
+                asyncio.run_coroutine_threadsafe(
+                    sclient.bot.send_notify_communities(video.embed(), NotifyCommunityType.Youtube, push_entry.yt_channelid), sclient.bot.loop
+                )
             else:
                 web_log.warning("Bot not found.")
 

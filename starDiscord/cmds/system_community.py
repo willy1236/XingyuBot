@@ -157,7 +157,7 @@ class system_community(Cog_Extension):
         if ytchannel:
             sclient.sqldb.add_notify_community(NotifyCommunityType.Youtube, ytchannel.id, CommunityType.Youtube, guildid, channelid, roleid, msg, cache_time=datetime.now(tz=tz))
             sclient.sqldb.merge(Community(id=ytchannel.id, type=CommunityType.Youtube, display_name=ytchannel.snippet.title, username=ytchannel.snippet.customUrl))
-            # sclient.sqldb.add_push_record(ytchannel.id)
+            sclient.sqldb.add_push_record(ytchannel.id)
             if role:
                 await ctx.respond(f"設定成功：{ytchannel.snippet.title}的通知將會發送在{channel.mention}並會通知{role.mention}")
             else:

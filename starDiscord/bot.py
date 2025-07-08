@@ -119,6 +119,29 @@ class DiscordBot(discord.Bot):
         no_mention: bool = False,
         additional_content: str = None,
     ):
+        """
+        Sends notification messages to multiple Discord communities with embeds and role mentions.
+        This method retrieves a list of guilds/channels configured to receive notifications for a specific
+        community and notification type, then sends the notification message with an embed to each channel.
+        Args:
+            embed (discord.Embed): The Discord embed to include with the notification message.
+            notify_type (NotifyCommunityType): The type of notification being sent.
+            community_id (str): The ID of the community this notification is for.
+            defult_content (str, optional): Default text content to send if no custom message is configured.
+                Defaults to None.
+            no_mention (bool, optional): If True, disables role mentions in the message. Defaults to False.
+            additional_content (str, optional): Extra content to append to the message. Defaults to None.
+        Returns:
+            None
+        Raises:
+            discord.Forbidden: When the bot lacks permissions to send messages to a channel.
+                This exception is caught and logged as a warning.
+        Note:
+            - Includes a 0.5 second delay between sends to avoid rate limiting
+            - Logs warnings for channels that cannot be found or accessed
+            - Role mentions are prepended to the message text unless no_mention is True
+            - Additional content is appended with a newline separator if both text and additional_content exist
+        """
         guilds = sqldb.get_notify_community_guild(notify_type, community_id)
         for guild_id, channel_id, role_id, message in guilds:
             channel = self.get_channel(channel_id)
