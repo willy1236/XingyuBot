@@ -580,14 +580,15 @@ class SQLNotifySystem(BaseSQLEngine):
 
     def add_push_record(self, ytchannel_id: str):
         """新增推播紀錄"""
-        try:
-            push_record = PushRecord(channel_id=ytchannel_id, push_at=datetime.min.replace(tzinfo=timezone.utc))
-            self.session.add(push_record)
-            self.session.commit()
-            return push_record
-        except IntegrityError:
-            self.session.rollback()
-            return None
+        stmt = select(PushRecord).where(PushRecord.channel_id == ytchannel_id)
+        existing_record = self.session.exec(stmt).one_or_none()
+        if existing_record:
+            return existing_record
+
+        push_record = PushRecord(channel_id=ytchannel_id, push_at=datetime.min.replace(tzinfo=timezone.utc))
+        self.session.add(push_record)
+        self.session.commit()
+        return push_record
 
     def remove_push_record(self, ytchannel_id: str):
         """移除推播紀錄"""
