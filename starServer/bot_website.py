@@ -22,7 +22,7 @@ from starDiscord.cmds.task import youtube_start_live_notify
 from starlib import BaseThread, Jsondb, sclient, sqldb, web_log
 from starlib.dataExtractor import DiscordOauth2, GoogleOauth2, TwitchOauth2
 from starlib.instance import yt_api
-from starlib.models import YoutubePushEntry, CloudUser, TwitchBotJoinChannel
+from starlib.models import CloudUser, TwitchBotJoinChannel, YoutubePushEntry
 from starlib.types import APIType, NotifyCommunityType
 
 discord_oauth_settings = sqldb.get_bot_token(APIType.Discord)
@@ -86,13 +86,6 @@ async def prase_yt_push(content: str):
             # 透過published的時間來判斷是否為新影片
             web_log.info(f"New Youtube push entry {push_entry.yt_videoid}")
 
-            if sclient.bot:
-                asyncio.run_coroutine_threadsafe(
-                    sclient.bot.send_notify_communities(video.embed(), NotifyCommunityType.Youtube, push_entry.yt_channelid), sclient.bot.loop
-                )
-            else:
-                web_log.warning("Bot not found.")
-
             if ytcache is not None:
                 web_log.info(f"Removing cached video {video.id} from database")
                 sqldb.remove_yt_cache(video.id)
@@ -101,12 +94,16 @@ async def prase_yt_push(content: str):
                 assert video.liveStreamingDetails.scheduledStartTime is not None, "Scheduled start time should not be None for upcoming live videos"
                 web_log.info(f"Upcoming live video detected: {video.id} at {video.liveStreamingDetails.scheduledStartTime}")
                 sqldb.add_yt_cache(video.id, video.liveStreamingDetails.scheduledStartTime)
-                # sclient.bot.scheduler.add_job(
-                #     youtube_start_live_notify, DateTrigger(video.liveStreamingDetails.scheduledStartTime + timedelta(seconds=30)), args=[sclient.bot, video]
-                # )
 
             if push_entry.published > cache.value:
                 sqldb.set_community_cache(NotifyCommunityType.Youtube, push_entry.yt_channelid, push_entry.published)
+
+            if sclient.bot:
+                asyncio.run_coroutine_threadsafe(
+                    sclient.bot.send_notify_communities(video.embed(), NotifyCommunityType.Youtube, push_entry.yt_channelid), sclient.bot.loop
+                )
+            else:
+                web_log.warning("Bot not found.")
 
 
 @app.get("/youtube_push")

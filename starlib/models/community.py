@@ -1,6 +1,7 @@
 import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+from typing import TypeVar
 
 import discord
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, computed_field, field_validator, model_validator
@@ -526,3 +527,426 @@ class RettiwtTweetItem(BaseModel):
 class RettiwtTweetTimeLineResponse(BaseModel):
     list: list[RettiwtTweetItem]
     next: dict | None = None
+
+
+# Notion API Models
+class NotionUser(BaseModel):
+    object: str
+    id: str
+    type: str | None = None  # 設為可選字段
+    name: str | None = None
+    avatar_url: str | None = None
+    person: dict | None = None
+    bot: dict | None = None
+
+
+class NotionParent(BaseModel):
+    type: str
+    database_id: str | None = None
+    page_id: str | None = None
+    workspace: bool | None = None
+    block_id: str | None = None
+
+
+class NotionRichTextContent(BaseModel):
+    content: str | None = None
+    link: str | None = None
+
+
+class NotionRichTextAnnotations(BaseModel):
+    bold: bool
+    italic: bool
+    strikethrough: bool
+    underline: bool
+    code: bool
+    color: str = "default"
+
+
+class NotionRichText(BaseModel):
+    type: str
+    text: NotionRichTextContent | None = None
+    mention: dict | None = None
+    equation: dict | None = None
+    annotations: NotionRichTextAnnotations | None = None
+    plain_text: str
+    href: str | None = None
+
+
+class NotionPropertyValue(BaseModel):
+    id: str
+    type: str
+    # Title property
+    title: list[NotionRichText] | None = None
+    # Rich text property
+    rich_text: list[NotionRichText] | None = None
+    # Number property
+    number: float | int | None = None
+    # Select property
+    select: dict | None = None
+    # Multi-select property
+    multi_select: list[dict] | None = None
+    # Date property
+    date: dict | None = None
+    # People property
+    people: list[NotionUser] | None = None
+    # Files property
+    files: list[dict] | None = None
+    # Checkbox property
+    checkbox: bool | None = None
+    # URL property
+    url: str | None = None
+    # Email property
+    email: str | None = None
+    # Phone number property
+    phone_number: str | None = None
+    # Formula property
+    formula: dict | None = None
+    # Relation property
+    relation: list[dict] | None = None
+    # Rollup property
+    rollup: dict | None = None
+    # Created time property
+    created_time: datetime | None = None
+    # Created by property
+    created_by: NotionUser | None = None
+    # Last edited time property
+    last_edited_time: datetime | None = None
+    # Last edited by property
+    last_edited_by: NotionUser | None = None
+    # Status property
+    status: dict | None = None
+    # Unique ID property
+    unique_id: dict | None = None
+    # Verification property
+    verification: dict | None = None
+
+    @field_validator("created_time", "last_edited_time", mode="before")
+    @classmethod
+    def parse_datetime(cls, v):
+        if isinstance(v, str):
+            return datetime.fromisoformat(v.replace("Z", "+00:00")).astimezone(tz=tz)
+        return v
+
+
+class NotionIcon(BaseModel):
+    type: str
+    emoji: str | None = None
+    external: dict | None = None
+    file: dict | None = None
+
+
+class NotionCover(BaseModel):
+    type: str
+    external: dict | None = None
+    file: dict | None = None
+
+
+class NotionPage(BaseModel):
+    object: str
+    id: str
+    created_time: datetime
+    created_by: NotionUser
+    last_edited_time: datetime
+    last_edited_by: NotionUser
+    cover: NotionCover | None = None
+    icon: NotionIcon | None = None
+    parent: NotionParent
+    archived: bool
+    properties: dict[str, NotionPropertyValue]
+    url: str
+    public_url: str | None = None
+
+    @field_validator("created_time", "last_edited_time", mode="before")
+    @classmethod
+    def parse_datetime(cls, v):
+        if isinstance(v, str):
+            return datetime.fromisoformat(v.replace("Z", "+00:00")).astimezone(tz=tz)
+        return v
+
+    def embed(self):
+        title = "未命名頁面"
+        # 尋找 title 屬性
+        for prop_name, prop_value in self.properties.items():
+            if prop_value.type == "title" and prop_value.title:
+                title = prop_value.title[0].plain_text if prop_value.title else "未命名頁面"
+                break
+
+        embed = discord.Embed(title=title, url=self.url, color=0x2F3437, timestamp=self.last_edited_time)
+        embed.set_author(name="Notion 頁面", icon_url="https://www.notion.so/images/favicon.ico")
+        embed.add_field(name="建立時間", value=self.created_time.strftime("%Y/%m/%d %H:%M:%S"))
+        embed.add_field(name="最後編輯", value=self.last_edited_time.strftime("%Y/%m/%d %H:%M:%S"))
+        embed.add_field(name="建立者", value=self.created_by.name or "未知")
+        embed.add_field(name="最後編輯者", value=self.last_edited_by.name or "未知")
+
+        # 添加圖示資訊
+        if self.icon:
+            if self.icon.type == "emoji":
+                embed.add_field(name="圖示", value=self.icon.emoji or "無")
+            elif self.icon.type in ["external", "file"]:
+                embed.add_field(name="圖示", value="圖片")
+
+        embed.set_footer(text=f"頁面 ID: {self.id}")
+        return embed
+
+
+class NotionDatabase(BaseModel):
+    object: str
+    id: str
+    created_time: datetime
+    created_by: NotionUser
+    last_edited_time: datetime
+    last_edited_by: NotionUser
+    title: list[NotionRichText] | None = None  # 可選字段
+    description: list[NotionRichText] = Field(default_factory=list)
+    icon: NotionIcon | None = None
+    cover: NotionCover | None = None
+    properties: dict[str, dict]
+    parent: NotionParent
+    url: str
+    archived: bool
+    is_inline: bool | None = None  # 可選字段
+    public_url: str | None = None
+
+    @field_validator("created_time", "last_edited_time", mode="before")
+    @classmethod
+    def parse_datetime(cls, v):
+        if isinstance(v, str):
+            return datetime.fromisoformat(v.replace("Z", "+00:00")).astimezone(tz=tz)
+        return v
+
+    def embed(self):
+        title = "未命名資料庫"
+        if self.title:
+            title = self.title[0].plain_text if self.title else "未命名資料庫"
+
+        description = "無描述"
+        if self.description:
+            description = self.description[0].plain_text if self.description else "無描述"
+
+        embed = discord.Embed(title=title, url=self.url, description=description, color=0x2F3437, timestamp=self.last_edited_time)
+        embed.set_author(name="Notion 資料庫", icon_url="https://www.notion.so/images/favicon.ico")
+        embed.add_field(name="建立時間", value=self.created_time.strftime("%Y/%m/%d %H:%M:%S"))
+        embed.add_field(name="最後編輯", value=self.last_edited_time.strftime("%Y/%m/%d %H:%M:%S"))
+        embed.add_field(name="屬性數量", value=len(self.properties))
+        embed.add_field(name="建立者", value=self.created_by.name or "未知")
+        embed.add_field(name="最後編輯者", value=self.last_edited_by.name or "未知")
+        embed.set_footer(text=f"資料庫 ID: {self.id}")
+        return embed
+
+
+class NotionParagraph(BaseModel):
+    rich_text: list[NotionRichText] = Field(default_factory=list)
+    color: str = "default"
+    children: list[dict] = Field(default_factory=list)
+
+
+class NotionHeading(BaseModel):
+    rich_text: list[NotionRichText] = Field(default_factory=list)
+    color: str = "default"
+    is_toggleable: bool = False
+    children: list[dict] = Field(default_factory=list)
+
+
+class NotionBulletedListItem(BaseModel):
+    rich_text: list[NotionRichText] = Field(default_factory=list)
+    color: str = "default"
+    children: list[dict] = Field(default_factory=list)
+
+
+class NotionNumberedListItem(BaseModel):
+    rich_text: list[NotionRichText] = Field(default_factory=list)
+    color: str = "default"
+    children: list[dict] = Field(default_factory=list)
+
+
+class NotionToDo(BaseModel):
+    rich_text: list[NotionRichText] = Field(default_factory=list)
+    checked: bool = False
+    color: str = "default"
+    children: list[dict] = Field(default_factory=list)
+
+
+class NotionToggle(BaseModel):
+    rich_text: list[NotionRichText] = Field(default_factory=list)
+    color: str = "default"
+    children: list[dict] = Field(default_factory=list)
+
+
+class NotionCode(BaseModel):
+    rich_text: list[NotionRichText] = Field(default_factory=list)
+    language: str = "plain text"
+    caption: list[NotionRichText] = Field(default_factory=list)
+
+
+class NotionCallout(BaseModel):
+    rich_text: list[NotionRichText] = Field(default_factory=list)
+    icon: NotionIcon | None = None
+    color: str = "default"
+    children: list[dict] = Field(default_factory=list)
+
+
+class NotionQuote(BaseModel):
+    rich_text: list[NotionRichText] = Field(default_factory=list)
+    color: str = "default"
+    children: list[dict] = Field(default_factory=list)
+
+
+class NotionBlock(BaseModel):
+    object: str
+    id: str
+    parent: NotionParent
+    created_time: datetime
+    created_by: NotionUser
+    last_edited_time: datetime
+    last_edited_by: NotionUser
+    archived: bool
+    has_children: bool
+    type: str
+    paragraph: NotionParagraph | None = None
+    heading_1: NotionHeading | None = None
+    heading_2: NotionHeading | None = None
+    heading_3: NotionHeading | None = None
+    bulleted_list_item: NotionBulletedListItem | None = None
+    numbered_list_item: NotionNumberedListItem | None = None
+    quote: NotionQuote | None = None
+    to_do: NotionToDo | None = None
+    toggle: NotionToggle | None = None
+    template: dict | None = None
+    synced_block: dict | None = None
+    child_page: dict | None = None
+    child_database: dict | None = None
+    equation: dict | None = None
+    code: NotionCode | None = None
+    callout: NotionCallout | None = None
+    divider: dict | None = None
+    breadcrumb: dict | None = None
+    table_of_contents: dict | None = None
+    column_list: dict | None = None
+    column: dict | None = None
+    link_preview: dict | None = None
+    template_mention: dict | None = None
+    link_to_page: dict | None = None
+    table: dict | None = None
+    table_row: dict | None = None
+    embed: dict | None = None
+    bookmark: dict | None = None
+    image: dict | None = None
+    video: dict | None = None
+    pdf: dict | None = None
+    file: dict | None = None
+    audio: dict | None = None
+    unsupported: dict | None = None
+
+    @field_validator("created_time", "last_edited_time", mode="before")
+    @classmethod
+    def parse_datetime(cls, v):
+        if isinstance(v, str):
+            return datetime.fromisoformat(v.replace("Z", "+00:00")).astimezone(tz=tz)
+        return v
+
+    def get_plain_text(self) -> str:
+        """獲取區塊的純文本內容"""
+        if self.type == "paragraph" and self.paragraph:
+            return "".join([rt.plain_text for rt in self.paragraph.rich_text])
+        elif self.type in ["heading_1", "heading_2", "heading_3"]:
+            heading: NotionHeading = getattr(self, self.type)
+            if heading:
+                return "".join([rt.plain_text for rt in heading.rich_text])
+        elif self.type == "bulleted_list_item" and self.bulleted_list_item:
+            return "".join([rt.plain_text for rt in self.bulleted_list_item.rich_text])
+        elif self.type == "numbered_list_item" and self.numbered_list_item:
+            return "".join([rt.plain_text for rt in self.numbered_list_item.rich_text])
+        elif self.type == "to_do" and self.to_do:
+            return "".join([rt.plain_text for rt in self.to_do.rich_text])
+        elif self.type == "toggle" and self.toggle:
+            return "".join([rt.plain_text for rt in self.toggle.rich_text])
+        elif self.type == "quote" and self.quote:
+            return "".join([rt.plain_text for rt in self.quote.rich_text])
+        elif self.type == "code" and self.code:
+            return "".join([rt.plain_text for rt in self.code.rich_text])
+        elif self.type == "callout" and self.callout:
+            return "".join([rt.plain_text for rt in self.callout.rich_text])
+        else:
+            return ""
+
+    def embed_dc(self):
+        """為區塊建立 Discord embed"""
+        plain_text = self.get_plain_text()
+
+        # 根據區塊類型設定不同的顏色和標題
+        color_map = {
+            "paragraph": 0x2F3437,
+            "heading_1": 0x0080FF,
+            "heading_2": 0x4169E1,
+            "heading_3": 0x6495ED,
+            "bulleted_list_item": 0x32CD32,
+            "numbered_list_item": 0x32CD32,
+            "to_do": 0xFFD700,
+            "toggle": 0x9370DB,
+            "quote": 0x708090,
+            "code": 0x2F4F4F,
+            "callout": 0xFF6347,
+        }
+
+        type_names = {
+            "paragraph": "段落",
+            "heading_1": "標題 1",
+            "heading_2": "標題 2",
+            "heading_3": "標題 3",
+            "bulleted_list_item": "項目符號",
+            "numbered_list_item": "編號清單",
+            "to_do": "待辦事項",
+            "toggle": "摺疊",
+            "quote": "引用",
+            "code": "程式碼",
+            "callout": "標注",
+        }
+
+        embed = discord.Embed(
+            title=f"{type_names.get(self.type, self.type)}",
+            description=plain_text[:2000] if plain_text else "無內容",
+            color=color_map.get(self.type, 0x2F3437),
+            timestamp=self.last_edited_time,
+        )
+
+        embed.set_author(name="Notion 區塊", icon_url="https://www.notion.so/images/favicon.ico")
+        embed.add_field(name="建立時間", value=self.created_time.strftime("%Y/%m/%d %H:%M:%S"))
+        embed.add_field(name="最後編輯", value=self.last_edited_time.strftime("%Y/%m/%d %H:%M:%S"))
+        embed.add_field(name="有子區塊", value="是" if self.has_children else "否")
+
+        # 特殊處理某些區塊類型
+        if self.type == "to_do" and self.to_do:
+            embed.add_field(name="已完成", value="是" if self.to_do.checked else "否")
+        elif self.type == "code" and self.code:
+            embed.add_field(name="語言", value=self.code.language)
+
+        embed.set_footer(text=f"區塊 ID: {self.id}")
+        return embed
+
+
+class NotionQueryResponse(BaseModel):
+    object: str
+    results: list[NotionPage | NotionDatabase | NotionBlock]
+    next_cursor: str | None = None
+    has_more: bool
+    type: str | None = None
+    page_or_database: dict | None = None
+
+    @field_validator("results", mode="before")
+    @classmethod
+    def parse_results(cls, v):
+        parsed_results = []
+        for item in v:
+            try:
+                if item.get("object") == "page":
+                    parsed_results.append(NotionPage(**item))
+                elif item.get("object") == "database":
+                    parsed_results.append(NotionDatabase(**item))
+                elif item.get("object") == "block":
+                    parsed_results.append(NotionBlock(**item))
+                else:
+                    raise ValueError(f"未知的 Notion 物件類型: {item.get('object')}")
+            except Exception as e:
+                print(f"解析項目時發生錯誤: {e}")
+                print(f"項目數據: {item}")
+        return parsed_results

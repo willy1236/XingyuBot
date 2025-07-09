@@ -12,7 +12,7 @@ from pydantic_ai.messages import ModelMessage
 from pydantic_ai.models.gemini import GeminiModel, GeminiModelSettings
 from pydantic_ai.providers.google_gla import GoogleGLAProvider
 
-from starlib import Jsondb, sqldb
+from starlib import Jsondb, agent_log, sqldb
 from starlib.types import APIType
 
 SQLsettings: dict = Jsondb.config.get("SQLsettings")
@@ -21,7 +21,7 @@ mcp_servers = [MCPServerStdio("uvx", ["mcp-server-fetch"])]
 
 @dataclass
 class MyDeps:
-    discord_id: int
+    discord_id: int | None = None
     guild: Guild | None = None
     member: Member | None = None
 
@@ -29,36 +29,73 @@ class MyDeps:
 class Tools:
     @staticmethod
     def read_file(file_path: str) -> str:
-        print(f"Reading file: {file_path}")
+        agent_log.info(f"Reading file: {file_path}")
         with open(file_path, "r", encoding="utf-8") as file:
             return file.read()
 
     @staticmethod
     def list_files(directory: str) -> list:
-        print(f"Listing files in {directory}")
+        agent_log.info(f"Listing files in {directory}")
         return os.listdir(directory)
 
     @staticmethod
     def write_file(file_path: str, content: str) -> None:
-        print(f"Writing to file: {file_path}")
+        agent_log.info(f"Writing to file: {file_path}")
         with open(file_path, "w", encoding="utf-8") as file:
             file.write(content)
 
     @staticmethod
     def get_user_warning_info(discord_id: int) -> str:
-        """取得使用者的警告資訊"""
-        print(f"Getting user warning info for Discord ID: {discord_id}")
+        """
+        Retrieve and format warning information for a specific Discord user.
+
+        Args:
+            discord_id (int): The Discord user ID to retrieve warnings for.
+
+        Returns:
+            str: Formatted warning information string in Traditional Chinese.
+                 Returns "使用者沒有警告資訊。" if no warnings are found.
+                 Otherwise returns a formatted list of warnings including:
+                 - Warning reason
+                 - Warning ID
+                 - Warning type (localized)
+                 - Creation time
+        """
+        agent_log.info(f"Getting user warning info for Discord ID: {discord_id}")
         warnings = sqldb.get_warnings(discord_id)
         if not warnings:
-            print("No warnings found for user.")
+            agent_log.info("No warnings found for user.")
             return "使用者沒有警告資訊。"
         warning_info = f"使用者 {discord_id} 的警告資訊："
         for warning in warnings:
             warning_info += (
                 f"\n- {warning.reason} (ID: {warning.warning_id}, 類型: {Jsondb.get_tw(warning.moderate_type, 'warning_type')}, 時間: {warning.create_time})"
             )
-        print(warning_info)
+        agent_log.info(warning_info)
         return warning_info
+
+    @staticmethod
+    def get_user(discord_id: int) -> str:
+        """
+        Retrieve user information from the database and format it for display.
+        Args:
+            discord_id (int): The Discord ID of the user to retrieve information for.
+        Returns:
+            str: A formatted string containing the user's information in zh-tw,
+                 with an additional note if the user is the developer.
+        Note:
+            This function logs the retrieval process and queries the cloud database
+            for user information associated with the provided Discord ID.
+        """
+        agent_log.info(f"Getting user info for Discord ID: {discord_id}")
+        user = sqldb.get_cloud_user(discord_id)
+
+        agent_log.info(f"User: {user}")
+        text = f"使用者的資訊為 {str(user)}"
+
+        if user.discord_id == 419131103836635136:
+            text += "\n這是開發者的ID"
+        return text
 
     # @staticmethod
     # def rename_file(old_name: str, new_name: str) -> None:
@@ -115,17 +152,8 @@ async def system_prompt(ctx: RunContext[MyDeps]) -> str:
     if not ctx.deps:
         text += "使用者的Discord ID未知，使用者的名稱未知。"
 
-    user = sqldb.get_cloud_user(str(ctx.deps.discord_id))
-    print(f"User: {user}")
-    if not user:
-        text += "使用者的Discord ID未知，使用者的名稱未知。"
-    elif not user.name:
-        text += f"使用者的Discord ID是 {user.discord_id}，使用者的名稱未知。"
-    else:
-        text += f"使用者的資訊為 {str(user)}"
-
-    if user.discord_id == 419131103836635136:
-        text += "\n這是開發者的ID"
+    elif ctx.deps.discord_id:
+        text += Tools.get_user(ctx.deps.discord_id)
 
     # Discord Guild 資訊
     if ctx.deps.guild:

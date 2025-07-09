@@ -18,6 +18,7 @@ log = create_logger("star", log_level=log_level, file_log=file_log)
 apsc_log = create_logger("apscheduler", WARNING, format="%(asctime)s [apsc/%(levelname)s] %(message)s")
 twitch_log = create_logger("twitchBot", DEBUG, format="%(asctime)s [twitchBot/%(levelname)s] %(message)s")
 web_log = create_logger("web", log_level, format="%(asctime)s [web/%(levelname)s] %(message)s")
+agent_log = create_logger("agent", log_level, format="%(asctime)s [agent/%(levelname)s] %(message)s")
 
 # discord_log = create_logger("discord", WARNING, format="%(asctime)s [%(levelname)s] [discord] %(message)s")
 pywarnings = create_logger("py.warnings", ERROR, format="%(asctime)s [%(levelname)s] [py.warnings] %(message)s")

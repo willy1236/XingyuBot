@@ -521,7 +521,9 @@ class command(Cog_Extension):
         await ctx.respond(embed=embed, file=discord.File(image_buffer, filename="pie.png"))
 
     @commands.slash_command(description="共用「94共用啦」雲端資料夾", guild_ids=main_guilds)
-    async def drive(self, ctx, email: discord.Option(str, name="gmail帳戶", description="要使用的Gmail帳戶，留空以移除資料", required=False)):
+    async def drive(
+        self, ctx: discord.ApplicationContext, email: discord.Option(str, name="gmail帳戶", description="要使用的Gmail帳戶，留空以移除資料", required=False)
+    ):
         await ctx.defer()
         cuser = sclient.sqldb.get_cloud_user(ctx.author.id)
         fileId = "1bDtsLbOi5crIOkWUZbQmPq3dXUbwWEan"
@@ -549,7 +551,8 @@ class command(Cog_Extension):
         cuser.email = email
         cuser.drive_share_id = google_data["id"]
         sclient.sqldb.merge(cuser)
-        await ctx.respond(f"{ctx.author.mention}：已與 {email} 共用雲端資料夾")
+        msg = await ctx.respond(f"{ctx.author.mention}：已與 {email} 共用雲端資料夾")
+        await self.bot.report(f"{ctx.author.mention} 已使用 {email} 共用雲端資料夾", msg)
 
     @party.command(description="加入政黨")
     async def join(self, ctx: discord.ApplicationContext, party_id: discord.Option(int, name="政黨", description="要參加的政黨", choices=party_option)):

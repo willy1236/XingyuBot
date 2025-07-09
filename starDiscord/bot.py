@@ -56,10 +56,17 @@ class DiscordBot(discord.Bot):
         assert isinstance(error_report ,discord.abc.Messageable)
         await error_report.send(embed=embed)
 
-    async def report(self, msg: str):
+    async def report(self, msg: str, refer_msg: discord.Message | None = None):
         report_channel = self.get_channel(Jsondb.config.get("report_channel"))
         embed = BotEmbed.general(name="回報訊息")
         embed.add_field(name="訊息", value=msg, inline=True)
+        if refer_msg:
+            embed.add_field(name="參考訊息", value=f"[{refer_msg.content}]({refer_msg.jump_url})", inline=False)
+            embed.add_field(name="訊息ID", value=refer_msg.id, inline=True)
+            embed.add_field(name="來源頻道", value=f"{refer_msg.channel}\n{refer_msg.channel.id}", inline=True)
+            embed.add_field(name="來源群組", value=f"{refer_msg.guild}\n{refer_msg.guild.id}", inline=True)
+        else:
+            embed.add_field(name="訊息ID", value="無", inline=True)
 
         assert isinstance(report_channel ,discord.abc.Messageable)
         await report_channel.send(embed=embed)

@@ -460,16 +460,16 @@ class NotionAPI():
     def get_page(self,page_id:str):
         r = requests.get(f"{self.url}/pages/{page_id}",headers=self.headers)
         apidata = r.json()
-        if r.status_code == 200:
-            print(apidata)
+        if r.ok:
+            return NotionPage(**apidata)
         else:
-            print(apidata["message"])
+            return apidata["message"]
 
     def get_page_property(self,page_id:str,property_id:str):
         r = requests.get(f"{self.url}/pages/{page_id}/properties/{property_id}",headers=self.headers)
         apidata = r.json()
         if r.status_code == 200:
-            print(apidata)
+            return apidata
         else:
             print(apidata["message"])
 
@@ -477,29 +477,41 @@ class NotionAPI():
         r = requests.get(f"{self.url}/blocks/{block_id}",headers=self.headers)
         apidata = r.json()
         if r.status_code == 200:
-            print(apidata)
+            return NotionBlock(**apidata)
         else:
-            print(apidata["message"])
+            return apidata["message"]
 
     def get_block_children(self,block_id:str):
         r = requests.get(f"{self.url}/blocks/{block_id}/children",headers=self.headers)
         apidata = r.json()
         if r.status_code == 200:
-            return apidata
+            return NotionQueryResponse(**apidata)
         else:
-            print(apidata["message"])
+            return apidata["message"]
 
-    def search(self,title:str):
+    def search(self, title: str, page_size=100):
         """search by title"""
-        data = {
-            "query": title
-        }
-        r = requests.post(f"{self.url}/search",json=data,headers=self.headers)
+        data = {"query": title, "page_size": page_size}
+        r = requests.post(f"{self.url}/search", json=data, headers=self.headers)
         apidata = r.json()
-        if r.status_code == 200:
-            print(apidata)
+        if r.ok:
+            try:
+                return NotionQueryResponse(**apidata)
+            except Exception as e:
+                print(f"解析 Notion 搜尋結果時發生錯誤: {e}")
+                print(f"原始數據: {apidata}")
+                return None
         else:
-            print(apidata["message"])
+            return apidata["message"]
+
+    def get_database(self, database_id: str):
+        """取得Notion資料庫"""
+        r = requests.get(f"{self.url}/databases/{database_id}", headers=self.headers)
+        apidata = r.json()
+        if r.ok:
+            return NotionDatabase(**apidata)
+        else:
+            return apidata["message"]
 
 class RssHub():
     def __init__(self):
