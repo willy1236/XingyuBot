@@ -666,8 +666,7 @@ class NotionPage(BaseModel):
 
     def get_plain_text(self):
         """從頁面屬性中提取純文本"""
-        title = "未命名頁面"
-        for prop_name, prop_value in self.properties.items():
+        for prop_value in self.properties.values():
             if prop_value.type == "title" and prop_value.title:
                 return prop_value.title[0].plain_text if prop_value.title else ""
 
