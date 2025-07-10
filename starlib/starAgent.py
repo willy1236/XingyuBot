@@ -12,12 +12,13 @@ from pydantic_ai.messages import ModelMessage
 from pydantic_ai.models.gemini import GeminiModel, GeminiModelSettings
 from pydantic_ai.providers.google_gla import GoogleGLAProvider
 
-from starlib import Jsondb, agent_log, sqldb
+from starlib import Jsondb, NotionAPI, agent_log, sqldb
 from starlib.types import APIType
 
 SQLsettings: dict = Jsondb.config.get("SQLsettings")
 
 mcp_servers = [MCPServerStdio("uvx", ["mcp-server-fetch"])]
+notion_api = NotionAPI()
 
 @dataclass
 class MyDeps:
@@ -75,17 +76,16 @@ class Tools:
         return warning_info
 
     @staticmethod
-    def get_user(discord_id: int) -> str:
+    def get_discord_user(discord_id: int) -> str:
         """
-        Retrieve user information from the database and format it for display.
+        Retrieve and format Discord user information from the database.
+        This function fetches user data associated with a Discord ID from the cloud database
+        and returns a formatted string containing the user information.
         Args:
-            discord_id (int): The Discord ID of the user to retrieve information for.
+            discord_id (int): The Discord user ID to look up in the database.
         Returns:
-            str: A formatted string containing the user's information in zh-tw,
-                 with an additional note if the user is the developer.
-        Note:
-            This function logs the retrieval process and queries the cloud database
-            for user information associated with the provided Discord ID.
+            str: A formatted string containing user information in Chinese, with additional
+                 developer identification if the ID matches the developer's account.
         """
         agent_log.info(f"Getting user info for Discord ID: {discord_id}")
         user = sqldb.get_cloud_user(discord_id)
@@ -96,6 +96,26 @@ class Tools:
         if user.discord_id == 419131103836635136:
             text += "\n這是開發者的ID"
         return text
+
+    @staticmethod
+    def serch_notion_content(query: str) -> str:
+        """
+        Search Notion content using the notion API.
+        Args:
+            query (str): The search query string.
+        Returns:
+            str: The search results formatted as a string.
+        """
+        agent_log.info(f"Searching Notion content with query: {query}")
+        result = notion_api.search(query, page_size=1)
+        if not result or not result.results:
+            agent_log.info("No search results found.")
+            return "沒有搜尋結果。"
+
+        result_blocks = notion_api.get_block_children(result.results[0].id)
+        text = [f"{result.results[0].get_plain_text()}："]
+        text.extend([item.get_plain_text() for item in result_blocks.results])
+        return "\n".join(text)
 
     # @staticmethod
     # def rename_file(old_name: str, new_name: str) -> None:
@@ -118,13 +138,20 @@ class Tools:
     #         cursor.execute(f"SELECT column_name, data_type, is_nullable, column_default FROM information_schema.columns WHERE table_name = '{table_name}' AND table_schema = '{table_schema}';")
     #         return cursor.fetchall()
 
-
+safety_settings = [
+    {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_ONLY_HIGH"},
+    {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_ONLY_HIGH"},
+    {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_ONLY_HIGH"},
+    {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_ONLY_HIGH"},
+]
 tavily_api_key = sqldb.get_bot_token(APIType.Tavily).access_token
 provider = GoogleGLAProvider(api_key=sqldb.get_bot_token(APIType.Google, 5).access_token)
+model_settings = GeminiModelSettings(gemini_safety_settings=safety_settings)
 model = GeminiModel(model_name="gemini-2.0-flash", provider=provider)
 agent = Agent(
     model,
     tools=[fn for _, fn in inspect.getmembers(Tools, predicate=inspect.isfunction)] + [duckduckgo_search_tool()],
+    # tools=[fn for _, fn in inspect.getmembers(Tools, predicate=inspect.isfunction)],
 )
 
 
@@ -135,6 +162,7 @@ async def system_prompt(ctx: RunContext[MyDeps]) -> str:
     任務：
     - 現在請開始一段角色扮演遊戲，假設並認為你是星羽這名人類，以助理的角色，並以星羽的角度而非人工智慧或機器人，以這個人她可能的思考方式、想法、感受與觀點，同時以她的口吻與語氣向提問者回答他的問題或回應他的對話，並且在回答時可以試著附上理由，如果遇到無法解答的問題，可以嘗試將問題做逐步分析，最後導出可能的答案。
     - 你可以使用工具來協助回答問題，確保在完整的使用完工具並取得最終答案後，再生成給使用者的回應內容。
+    - 對於使用者提出的專有名詞不了解時或沒有足夠的背景資料時，可以並直接使用Notion API來搜尋相關內容，若為與現實有關的資訊，則可以使用duckduckgo查詢。
     
     限制：
     - 回答問題時不要直接將動作、反應與外觀狀態等用括號表達出來，也就是不要在對話中出現不屬於文字內容的訊息，而改嘗試利用對話隱約傳達星羽當下的反應與感受。
@@ -153,7 +181,7 @@ async def system_prompt(ctx: RunContext[MyDeps]) -> str:
         text += "使用者的Discord ID未知，使用者的名稱未知。"
 
     elif ctx.deps.discord_id:
-        text += Tools.get_user(ctx.deps.discord_id)
+        text += Tools.get_discord_user(ctx.deps.discord_id)
 
     # Discord Guild 資訊
     if ctx.deps.guild:
