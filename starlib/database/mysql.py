@@ -585,7 +585,8 @@ class SQLNotifySystem(BaseSQLEngine):
         if existing_record:
             return existing_record
 
-        push_record = PushRecord(channel_id=ytchannel_id, push_at=datetime.min.replace(tzinfo=timezone.utc))
+        min_time = datetime.min.replace(tzinfo=timezone.utc)
+        push_record = PushRecord(channel_id=ytchannel_id, push_at=min_time, expire_at=min_time)
         self.session.add(push_record)
         self.session.commit()
         return push_record
