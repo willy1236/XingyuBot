@@ -1,4 +1,4 @@
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 import discord
 from discord import Bot
@@ -329,12 +329,16 @@ class InviteRecord(AlchemyBasicSchema):
     invite_code: str = Column(String(255))
 
 
-class PushRecord(AlchemyBasicSchema):
+class PushRecord(BasicSchema, table=True):
     __tablename__ = "push_record"
 
-    channel_id: str = Column(String(255), primary_key=True)
-    push_at: datetime = Column(TIMESTAMP(True, 0))
-    expire_at: datetime = Column(TIMESTAMP(True, 0))
+    channel_id: str = Field(sa_column=Column(String(255), primary_key=True))
+    push_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0), default=datetime.min.replace(tzinfo=timezone.utc)))
+    expire_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0), default=datetime.min.replace(tzinfo=timezone.utc)))
+
+    @property
+    def is_expired(self) -> bool:
+        return self.expire_at < datetime.now(tz=tz) if self.expire_at else True
 
 
 class ReactionRoleMessage(AlchemyBasicSchema):

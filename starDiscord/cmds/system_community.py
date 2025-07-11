@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime
 
 import discord
@@ -5,13 +6,14 @@ from discord.commands import SlashCommandGroup
 from tweepy.errors import TooManyRequests
 
 from starlib import BotEmbed, ChoiceList, Jsondb, sclient, tz
-from starlib.instance import tw_api, twitter_api, yt_api
+from starlib.instance import tw_api, twitter_api, yt_api, yt_push
 from starlib.models.mysql import Community
-from starlib.types import CommunityType, NotifyCommunityType
+from starlib.types import APIType, CommunityType, NotifyCommunityType
 
 from ..extension import Cog_Extension
 
 twitch_notify_option = ChoiceList.set("twitch_notify_option")
+
 
 class system_community(Cog_Extension):
     twitch = SlashCommandGroup("twitch", "Twitch相關指令")
@@ -130,15 +132,15 @@ class system_community(Cog_Extension):
         if user:
             await ctx.respond(embed=user.desplay())
         else:
-            await ctx.respond(f"查詢不到 {twitch_user_login}",ephemeral=True)
+            await ctx.respond(f"查詢不到 {twitch_user_login}", ephemeral=True)
 
     @youtube.command(name="channel", description="取得youtube頻道的相關資訊")
     async def youtube_channel(self, ctx, ythandle: discord.Option(str, required=True, name="youtube帳號代碼", description="youtube頻道中以@開頭的代號")):
         channel = yt_api.get_channel(handle=ythandle)
         if channel:
-            await ctx.respond("查詢成功",embed=channel.embed())
+            await ctx.respond("查詢成功", embed=channel.embed())
         else:
-            await ctx.respond("查詢失敗",ephemeral=True)
+            await ctx.respond("查詢失敗", ephemeral=True)
 
     @youtube.command(name="set", description="設置youtube開台通知")
     async def youtube_set(
@@ -155,9 +157,13 @@ class system_community(Cog_Extension):
 
         ytchannel = yt_api.get_channel(handle=ythandle)
         if ytchannel:
-            sclient.sqldb.add_notify_community(NotifyCommunityType.Youtube, ytchannel.id, CommunityType.Youtube, guildid, channelid, roleid, msg, cache_time=datetime.now(tz=tz))
-            sclient.sqldb.merge(Community(id=ytchannel.id, type=CommunityType.Youtube, display_name=ytchannel.snippet.title, username=ytchannel.snippet.customUrl))
-            sclient.sqldb.add_push_record(ytchannel.id)
+            sclient.sqldb.add_notify_community(
+                NotifyCommunityType.Youtube, ytchannel.id, CommunityType.Youtube, guildid, channelid, roleid, msg, cache_time=datetime.now(tz=tz)
+            )
+            sclient.sqldb.merge(
+                Community(id=ytchannel.id, type=CommunityType.Youtube, display_name=ytchannel.snippet.title, username=ytchannel.snippet.customUrl)
+            )
+
             if role:
                 await ctx.respond(f"設定成功：{ytchannel.snippet.title}的通知將會發送在{channel.mention}並會通知{role.mention}")
             else:
@@ -167,6 +173,19 @@ class system_community(Cog_Extension):
                 await ctx.send(embed=BotEmbed.simple("溫馨提醒", f"我無法在{channel.mention}中發送訊息，請確認我有足夠的權限"))
         else:
             await ctx.respond(f"錯誤：找不到帳號代碼 {ythandle} 的頻道")
+            return
+
+        record = sclient.sqldb.get_push_record(ytchannel.id)
+        if record.is_expired:
+            callback_url = sclient.sqldb.get_bot_token(APIType.Google, 4).callback_uri
+            yt_push.add_push(ytchannel.id, callback_url)
+            await asyncio.sleep(3)
+            data = yt_push.get_push(ytchannel.id, callback_url)
+
+            if data.has_verify:
+                record.push_at = data.last_successful_verification
+                record.expire_at = data.expiration_time
+                sclient.sqldb.merge(record)
 
     @youtube.command(name="remove", description="移除youtube通知")
     async def youtube_remove(self, ctx, ythandle: discord.Option(str, required=True, name="youtube帳號代碼", description="youtube頻道中以@開頭的代號")):

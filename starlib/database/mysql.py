@@ -578,18 +578,11 @@ class SQLNotifySystem(BaseSQLEngine):
         result = self.session.exec(statement).all()
         return result
 
-    def add_push_record(self, ytchannel_id: str):
-        """新增推播紀錄"""
+    def get_push_record(self, ytchannel_id: str):
+        """取得推播紀錄"""
         stmt = select(PushRecord).where(PushRecord.channel_id == ytchannel_id)
-        existing_record = self.session.exec(stmt).one_or_none()
-        if existing_record:
-            return existing_record
-
-        min_time = datetime.min.replace(tzinfo=timezone.utc)
-        push_record = PushRecord(channel_id=ytchannel_id, push_at=min_time, expire_at=min_time)
-        self.session.add(push_record)
-        self.session.commit()
-        return push_record
+        result = self.session.exec(stmt).one_or_none()
+        return result or PushRecord(channel_id=ytchannel_id)
 
     def remove_push_record(self, ytchannel_id: str):
         """移除推播紀錄"""
