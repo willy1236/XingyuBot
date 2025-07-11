@@ -38,7 +38,7 @@ class system_community(Cog_Extension):
 
         twitch_user = tw_api.get_user(twitch_user_login)
         if twitch_user:
-            sclient.sqldb.add_notify_community(type, twitch_user.id, CommunityType.Twitch, guildid, channelid, roleid, msg, cache_time=datetime.now(tz=tz))
+            sclient.sqldb.add_notify_community(type, twitch_user.id, guildid, channelid, roleid, msg, cache_time=datetime.now(tz=tz))
             sclient.sqldb.merge(Community(id=twitch_user.id, type=CommunityType.Twitch, display_name=twitch_user.display_name, username=twitch_user.login))
 
             type_tw = Jsondb.get_tw(type.value, "twitch_notify_option")
@@ -157,9 +157,7 @@ class system_community(Cog_Extension):
 
         ytchannel = yt_api.get_channel(handle=ythandle)
         if ytchannel:
-            sclient.sqldb.add_notify_community(
-                NotifyCommunityType.Youtube, ytchannel.id, CommunityType.Youtube, guildid, channelid, roleid, msg, cache_time=datetime.now(tz=tz)
-            )
+            sclient.sqldb.add_notify_community(NotifyCommunityType.Youtube, ytchannel.id, guildid, channelid, roleid, msg, cache_time=datetime.now(tz=tz))
             sclient.sqldb.merge(
                 Community(id=ytchannel.id, type=CommunityType.Youtube, display_name=ytchannel.snippet.title, username=ytchannel.snippet.customUrl)
             )
@@ -261,7 +259,9 @@ class system_community(Cog_Extension):
             await ctx.respond(f"錯誤：查詢過於頻繁，請稍後再試\n（X/Twitter短時間內僅提供少少的次數故容易觸發）")
             return
 
-        sclient.sqldb.add_notify_community(NotifyCommunityType.TwitterTweet, api_twitter_user.data.id, CommunityType.Twitter, guildid, channelid, roleid, None, cache_time=datetime.now(tz=tz))
+        sclient.sqldb.add_notify_community(
+            NotifyCommunityType.TwitterTweet, api_twitter_user.data.id, guildid, channelid, roleid, None, cache_time=datetime.now(tz=tz)
+        )
         sclient.sqldb.merge(Community(id=str(api_twitter_user.data.id), type=CommunityType.Twitter, display_name=api_twitter_user.data.name, username=api_twitter_user.data.username))
 
         if role:

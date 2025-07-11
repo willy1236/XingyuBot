@@ -441,7 +441,6 @@ class SQLNotifySystem(BaseSQLEngine):
         self,
         notify_type: NotifyCommunityType,
         community_id: str,
-        community_type: CommunityType,
         guild_id: int,
         channel_id: int,
         role_id: int | None = None,
@@ -452,7 +451,7 @@ class SQLNotifySystem(BaseSQLEngine):
         community = NotifyCommunity(
             notify_type=notify_type,
             community_id=str(community_id),
-            community_type=community_type,
+            community_type=CommunityType.from_notify(notify_type),
             guild_id=guild_id,
             channel_id=channel_id,
             role_id=role_id,
