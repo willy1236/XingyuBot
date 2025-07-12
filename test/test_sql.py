@@ -2,7 +2,7 @@ from datetime import datetime
 
 from sqlalchemy import and_, delete, desc, func, or_, select
 
-from starlib import sqldb, tz
+from starlib import NotifyCommunityType, sqldb, tz
 from starlib.models.mysql import Post, ReactionRoleMessage, User
 
 # session = sqldb.alsession
@@ -33,4 +33,5 @@ from starlib.models.mysql import Post, ReactionRoleMessage, User
 
 # user = sqldb.get_dcuser_test_session(419131103836635136)
 # print(user.discord_id)
-print(sqldb.get_active_polls())
+caches = sqldb.get_community_caches(NotifyCommunityType.TwitchLive)
+print(caches)
