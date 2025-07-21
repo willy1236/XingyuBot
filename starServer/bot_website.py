@@ -85,22 +85,27 @@ async def prase_yt_push(content: str):
         if push_entry.published > cache.value or (ytcache is not None and video.snippet.liveBroadcastContent == "live"):
             # 透過published的時間來判斷是否為新影片
             web_log.info(f"New Youtube push entry {push_entry.yt_videoid}")
+            no_mention = False
 
             if ytcache is not None:
+                # 有ytcache：直播開始
                 web_log.info(f"Removing cached video {video.id} from database")
                 sqldb.remove_yt_cache(video.id)
 
             elif video.is_live_upcoming_with_time:
+                # 如果是即將開始的直播，則添加ytcache
                 assert video.liveStreamingDetails.scheduledStartTime is not None, "Scheduled start time should not be None for upcoming live videos"
                 web_log.info(f"Upcoming live video detected: {video.id} at {video.liveStreamingDetails.scheduledStartTime}")
                 sqldb.add_yt_cache(video.id, video.liveStreamingDetails.scheduledStartTime)
+                no_mention = True
 
             if push_entry.published > cache.value:
                 sqldb.set_community_cache(NotifyCommunityType.Youtube, push_entry.yt_channelid, push_entry.published)
 
             if sclient.bot:
                 asyncio.run_coroutine_threadsafe(
-                    sclient.bot.send_notify_communities(video.embed(), NotifyCommunityType.Youtube, push_entry.yt_channelid), sclient.bot.loop
+                    sclient.bot.send_notify_communities(video.embed(), NotifyCommunityType.Youtube, push_entry.yt_channelid, no_mention=no_mention),
+                    sclient.bot.loop,
                 )
             else:
                 web_log.warning("Bot not found.")

@@ -34,7 +34,7 @@ class task(Cog_Extension):
 
             scheduler.add_job(self.earthquake_check, "interval", minutes=3, jitter=30, misfire_grace_time=40)
             scheduler.add_job(self.weather_warning_check, "interval", minutes=15, jitter=30, misfire_grace_time=40)
-            scheduler.add_job(self.youtube_video, "interval", minutes=10, jitter=30, misfire_grace_time=40)
+            # scheduler.add_job(self.youtube_video, "interval", minutes=10, jitter=30, misfire_grace_time=40)
             scheduler.add_job(self.twitch_live, "interval", minutes=4, jitter=15, misfire_grace_time=20)
             scheduler.add_job(self.twitch_video, "interval", minutes=10, jitter=30, misfire_grace_time=40)
             scheduler.add_job(self.twitch_clip, "interval", minutes=5, jitter=30, misfire_grace_time=40)
@@ -253,7 +253,7 @@ class task(Cog_Extension):
 
             if results is None:
                 log.warning(f"twitter_tweets error / not found: {twitter_user_id}")
-                sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitterTweet, twitter_user_id)
+                # sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitterTweet, twitter_user_id)
             elif results.list:
                 tweets = results.list
                 tweets.reverse()

@@ -114,3 +114,8 @@ class PrivilegeLevel(IntEnum):
     Level1 = 1
     Level2 = 2
     Level3 = 3
+
+class YoutubeStatue(IntEnum):
+    Null = 0
+    Live = 1
+    Upcoming = 2

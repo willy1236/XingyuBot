@@ -286,6 +286,7 @@ class Poll(BasicSchema, table=True):
     show_name: bool | None
     check_results_in_advance: bool | None
     results_only_initiator: bool | None
+    can_change_vote: bool | None  # not implemented yet
 
 
 class PollOption(BasicSchema, table=True):
@@ -418,6 +419,12 @@ class ServerConfig(BasicSchema, table=False):
     guild_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
     timeout_after_warning_times: int | None = Field(default=0)
 
+class MemorialDay(BasicSchema, table=True):
+    __tablename__ = "memorial_days"
+
+    discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
+    date: date
+    name: str
 
 class Party(IdbaseSchema, table=True):
     __tablename__ = "party_datas"
