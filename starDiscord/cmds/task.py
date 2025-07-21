@@ -359,6 +359,7 @@ class task(Cog_Extension):
                 record.push_at = data.last_successful_verification
                 record.expire_at = data.expiration_time
                 sclient.sqldb.merge(record)
+                log.info("refresh_yt_push: %s 已更新到期為 %s", record.channel_id, record.expire_at)
                 await asyncio.sleep(1)
             else:
                 log.warning(f"refresh_yt_push failed: {record.channel_id}")

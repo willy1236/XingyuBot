@@ -18,7 +18,6 @@ from linebot.v3.messaging import ApiClient, Configuration, MessagingApi, ReplyMe
 from linebot.v3.webhooks import MessageEvent, TextMessageContent
 from linebot.v3.webhooks.models.message_event import MessageEvent
 
-from starDiscord.cmds.task import youtube_start_live_notify
 from starlib import BaseThread, Jsondb, sclient, sqldb, web_log
 from starlib.dataExtractor import DiscordOauth2, GoogleOauth2, TwitchOauth2
 from starlib.instance import yt_api
