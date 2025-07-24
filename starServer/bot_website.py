@@ -63,7 +63,8 @@ def main(request:Request):
     #     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     return HTMLResponse("這是一個目前沒有內容的主頁")
 
-@app.route("/keep_alive", methods=["GET"])
+@app.get("/keep_alive")
+@app.head("/keep_alive")
 def keep_alive(request:Request):
     return HTMLResponse(content="Bot is aLive!")
 
