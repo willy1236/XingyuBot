@@ -345,7 +345,7 @@ class YoutubeVideo(BaseModel):
                 embed.add_field(name="直播結束時間", value=self.liveStreamingDetails.actualEndTime.strftime("%Y/%m/%d %H:%M:%S"))
         else:
             embed.add_field(name="現況", value=ytvideo_lives.get(self.snippet.liveBroadcastContent, "未知"))
-            embed.add_field(name="上傳時間", value=self.snippet.publishedAt.strftime("%Y/%m/%d %H:%M:%S"), inline=False)
+            embed.add_field(name="上傳時間", value=self.snippet.publishedAt.strftime("%Y/%m/%d %H:%M:%S"))
 
         embed.set_image(url=self.snippet.thumbnails.high.url)
         return embed

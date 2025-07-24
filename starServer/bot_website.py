@@ -22,7 +22,7 @@ from starlib import BaseThread, Jsondb, sclient, sqldb, web_log
 from starlib.dataExtractor import DiscordOauth2, GoogleOauth2, TwitchOauth2
 from starlib.instance import yt_api
 from starlib.models import CloudUser, TwitchBotJoinChannel, YoutubePushEntry
-from starlib.types import APIType, NotifyCommunityType
+from starlib.types import APIType, NotifyCommunityType, YoutubeVideoStatue
 
 discord_oauth_settings = sqldb.get_bot_token(APIType.Discord)
 twitch_oauth_settings = sqldb.get_bot_token(APIType.Twitch)
@@ -83,7 +83,7 @@ async def prase_yt_push(content: str):
         ytcache = sqldb.get_yt_cache(push_entry.yt_videoid)
         if push_entry.published > cache.value or (ytcache is not None and video.snippet.liveBroadcastContent == "live"):
             # 透過published的時間來判斷是否為新影片
-            web_log.info(f"New Youtube push entry {push_entry.yt_videoid}")
+            web_log.info(f"New Youtube push entry %s created at %s", push_entry.yt_videoid, push_entry.published)
             no_mention = False
 
             if ytcache is not None:
@@ -96,6 +96,10 @@ async def prase_yt_push(content: str):
                 assert video.liveStreamingDetails.scheduledStartTime is not None, "Scheduled start time should not be None for upcoming live videos"
                 web_log.info(f"Upcoming live video detected: {video.id} at {video.liveStreamingDetails.scheduledStartTime}")
                 sqldb.add_yt_cache(video.id, video.liveStreamingDetails.scheduledStartTime)
+                no_mention = True
+            elif video.liveStreamingDetails and video.liveStreamingDetails.actualEndTime:
+                # 已經結束的直播
+                web_log.info(f"Live video ended: {video.id} at {video.liveStreamingDetails.actualEndTime}")
                 no_mention = True
 
             if push_entry.published > cache.value:

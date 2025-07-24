@@ -336,6 +336,7 @@ class PushRecord(BasicSchema, table=True):
     channel_id: str = Field(sa_column=Column(String(255), primary_key=True))
     push_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0), default=datetime.min.replace(tzinfo=timezone.utc)))
     expire_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0), default=datetime.min.replace(tzinfo=timezone.utc)))
+    secret: str | None = Field(sa_column=Column(String(255), nullable=True))
 
     @property
     def is_expired(self) -> bool:
@@ -407,7 +408,7 @@ class Post(AlchemyBasicSchema):
     title: str = Column(String, nullable=False)
     content: str = Column(String, nullable=False)
     created_at: datetime = Column(TIMESTAMP(precision=0), nullable=False)  # 只記錄到秒
-    user_id: int = Column(Integer, ForeignKey("stardb_basic.users.id"), nullable=False)
+    user_id: int = Column(Integer, ForeignKey(User.id), nullable=False)
 
     # 建立反向關聯
     user: User = relationship(back_populates="posts", init=False)
