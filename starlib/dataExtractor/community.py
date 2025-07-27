@@ -18,6 +18,7 @@ from ..errors import APIInvokeError, Forbidden
 from ..models.community import *
 from ..settings import tz
 from ..types import APIType
+from ..utils import log
 
 T = TypeVar("T")
 
@@ -346,7 +347,7 @@ class YoutubePush:
             try:
                 return datetime.strptime(time_str, "%a, %d %b %Y %H:%M:%S %z").astimezone(tz=tz)
             except ValueError as e:
-                print(f"時間格式錯誤: {e}")
+                log.error("時間格式錯誤: %s，原始時間字串: %s", e, time_str)
                 return None
 
         return YtSubscriptionDetails(
