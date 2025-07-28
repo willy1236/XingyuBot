@@ -94,10 +94,11 @@ class moderation(Cog_Extension):
         self,
         ctx: discord.ApplicationContext,
         channel: discord.Option(discord.VoiceChannel, name="動態語音大廳頻道", description="留空以移除設定", default=None),
+        default_room_name: discord.Option(str, name="預設房間名稱", description="當建立新語音頻道時的預設名稱，使用 {member} 代表建立者名稱", default=None),
     ):
         if channel:
             assert isinstance(channel, discord.VoiceChannel), "頻道必須是語音頻道"
-            sclient.sqldb.add_notify_channel(ctx.guild.id, NotifyChannelType.DynamicVoice, channel.id)
+            sclient.sqldb.add_dynamic_voice_lobby(ctx.guild.id, channel.id, default_room_name)
             await ctx.respond(
                 f"設定完成，已將 {channel.mention} 設定為動態語音大廳頻道\n記得將我的身分組位階調整到比其他使用者高，否則建立頻道後使用者會得不到權限\n並且可以設定大廳頻道的權限，讓動態語音頻道有預設的權限",
             )
@@ -120,7 +121,7 @@ class moderation(Cog_Extension):
             if not channel.permissions_for(ctx.guild.me).view_channel:
                 await ctx.send(embed=BotEmbed.simple("溫馨提醒", f"我無法查看 {channel.mention} 頻道（需求查看頻道）"), delete_after=10)
         else:
-            sclient.sqldb.remove_notify_channel(ctx.guild.id, NotifyChannelType.DynamicVoice)
+            sclient.sqldb.remove_dynamic_voice_lobby(ctx.guild.id)
             await ctx.respond(f"設定完成，已移除 動態語音大廳 頻道")
 
     @channel_notify.command(name="list", description="查看所有通知設定的頻道")

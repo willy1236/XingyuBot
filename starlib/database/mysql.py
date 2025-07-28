@@ -402,40 +402,6 @@ class SQLNotifySystem(BaseSQLEngine):
         result = self.session.exec(statement).all()
         return result
 
-    def get_all_dynamic_voice(self):
-        """取得目前所有的動態語音"""
-        statement = select(DynamicChannel.channel_id)
-        result = self.session.exec(statement).all()
-        return result
-
-    def add_dynamic_voice(self, channel_id, creator_id, guild_id):
-        """設定動態語音"""
-        voice = DynamicChannel(channel_id=channel_id, creator_id=creator_id, guild_id=guild_id)
-        self.session.add(voice)
-        self.session.commit()
-        if self.cache.get(DBCacheType.DynamicVoiceRoom) is not None:
-            self.cache[DBCacheType.DynamicVoiceRoom].append(channel_id)
-
-    def remove_dynamic_voice(self, channel_id):
-        """移除動態語音"""
-        stmt = delete(DynamicChannel).where(DynamicChannel.channel_id == channel_id)
-        self.session.exec(stmt)
-        self.session.commit()
-        if self.cache.get(DBCacheType.DynamicVoiceRoom) is not None:
-            self.cache[DBCacheType.DynamicVoiceRoom].remove(channel_id)
-
-    def batch_remove_dynamic_voice(self, channel_ids: list[int]):
-        """批次移除動態語音"""
-        if not channel_ids:
-            return
-        stmt = delete(DynamicChannel).where(DynamicChannel.channel_id.in_(channel_ids))
-        self.session.exec(stmt)
-        self.session.commit()
-        if self.cache.get(DBCacheType.DynamicVoiceRoom) is not None:
-            for channel_id in channel_ids:
-                if channel_id in self.cache[DBCacheType.DynamicVoiceRoom]:
-                    self.cache[DBCacheType.DynamicVoiceRoom].remove(channel_id)
-
     # * notify community
     def add_notify_community(
         self,
@@ -589,6 +555,69 @@ class SQLNotifySystem(BaseSQLEngine):
         self.session.exec(stmt)
         self.session.commit()
 
+class SQLDynamicVoiceSystem(BaseSQLEngine):
+    def add_dynamic_voice_lobby(self, guild_id: int, channel_id: int, default_room_name: str | None = None):
+        """新增動態語音大廳"""
+        lobby = DynamicVoiceLobby(guild_id=guild_id, channel_id=channel_id, default_room_name=default_room_name)
+        lobby = self.session.merge(lobby)
+        self.session.commit()
+        if self.cache.get(DBCacheType.DynamicVoiceLobby) is not None:
+            self.cache[DBCacheType.DynamicVoiceLobby][channel_id] = lobby
+
+    def get_all_dynamic_voice_lobby(self):
+        """取得目前所有的動態語音大廳"""
+        statement = select(DynamicVoiceLobby)
+        result = self.session.exec(statement).all()
+        return {i.channel_id: i for i in result}
+
+    def get_dynamic_voice_lobby(self, guild_id: int):
+        """取得指定伺服器的動態語音大廳"""
+        statement = select(DynamicVoiceLobby).where(DynamicVoiceLobby.guild_id == guild_id)
+        result = self.session.exec(statement).one_or_none()
+        return result
+
+    def remove_dynamic_voice_lobby(self, guild_id: int):
+        """移除動態語音大廳"""
+        lobby = self.get_dynamic_voice_lobby(guild_id)
+        stmt = delete(DynamicVoiceLobby).where(DynamicVoiceLobby.guild_id == guild_id)
+        self.session.exec(stmt)
+        self.session.commit()
+        if self.cache.get(DBCacheType.DynamicVoiceLobby) is not None and lobby is not None:
+            del self.cache[DBCacheType.DynamicVoiceLobby][lobby.channel_id]
+
+    def get_all_dynamic_voice(self):
+        """取得目前所有的動態語音"""
+        statement = select(DynamicChannel.channel_id)
+        result = self.session.exec(statement).all()
+        return result
+
+    def add_dynamic_voice(self, channel_id, creator_id, guild_id):
+        """設定動態語音"""
+        voice = DynamicChannel(channel_id=channel_id, creator_id=creator_id, guild_id=guild_id)
+        self.session.add(voice)
+        self.session.commit()
+        if self.cache.get(DBCacheType.DynamicVoiceRoom) is not None:
+            self.cache[DBCacheType.DynamicVoiceRoom].append(channel_id)
+
+    def remove_dynamic_voice(self, channel_id):
+        """移除動態語音"""
+        stmt = delete(DynamicChannel).where(DynamicChannel.channel_id == channel_id)
+        self.session.exec(stmt)
+        self.session.commit()
+        if self.cache.get(DBCacheType.DynamicVoiceRoom) is not None:
+            self.cache[DBCacheType.DynamicVoiceRoom].remove(channel_id)
+
+    def batch_remove_dynamic_voice(self, channel_ids: list[int]):
+        """批次移除動態語音"""
+        if not channel_ids:
+            return
+        stmt = delete(DynamicChannel).where(DynamicChannel.channel_id.in_(channel_ids))
+        self.session.exec(stmt)
+        self.session.commit()
+        if self.cache.get(DBCacheType.DynamicVoiceRoom) is not None:
+            for channel_id in channel_ids:
+                if channel_id in self.cache[DBCacheType.DynamicVoiceRoom]:
+                    self.cache[DBCacheType.DynamicVoiceRoom].remove(channel_id)
 
 class SQLRoleSaveSystem(BaseSQLEngine):
     # * role_save
@@ -1343,6 +1372,7 @@ class SQLEngine(
     SQLGameSystem,
     SQLPetSystem,
     SQLNotifySystem,
+    SQLDynamicVoiceSystem,
     SQLRoleSaveSystem,
     SQLWarningSystem,
     SQLPollSystem,
@@ -1357,13 +1387,13 @@ class SQLEngine(
 ):
     """SQL引擎"""
 
-    dict_type = [DBCacheType.DynamicVoice, DBCacheType.VoiceLog, DBCacheType.TwitchCmd]
+    dict_type = [DBCacheType.DynamicVoiceLobby, DBCacheType.VoiceLog, DBCacheType.TwitchCmd]
     list_type = [DBCacheType.DynamicVoiceRoom]
 
     def init_cache(self):
         """初始化快取"""
-        self.update_notify_channel(NotifyChannelType.DynamicVoice)
         self.update_notify_channel(NotifyChannelType.VoiceLog)
+        self.cache[DBCacheType.DynamicVoiceLobby] = self.get_all_dynamic_voice_lobby()
         self.cache[DBCacheType.DynamicVoiceRoom] = self.get_all_dynamic_voice()
         self.cache[DBCacheType.TwitchCmd] = self.get_raw_chat_command_all()
         log.debug("dbcache: init.")
@@ -1371,11 +1401,11 @@ class SQLEngine(
     @overload
     def __getitem__(self, key: Literal[DBCacheType.DynamicVoiceRoom]) -> list[int]: ...
     @overload
-    def __getitem__(
-        self, key: Literal[DBCacheType.DynamicVoice, DBCacheType.VoiceLog, NotifyChannelType.DynamicVoice, NotifyChannelType.VoiceLog]
-    ) -> dict[int, tuple[int, int | None]]: ...
+    def __getitem__(self, key: Literal[DBCacheType.VoiceLog, NotifyChannelType.VoiceLog]) -> dict[int, tuple[int, int | None]]: ...
     @overload
     def __getitem__(self, key: Literal[DBCacheType.TwitchCmd]) -> dict[int, dict[str, TwitchChatCommand]]: ...
+    @overload
+    def __getitem__(self, key: Literal[DBCacheType.DynamicVoiceLobby]) -> dict[int, DynamicVoiceLobby]: ...
     def __getitem__(self, key: DBCacheType | NotifyChannelType):
         if isinstance(key, NotifyChannelType):
             return self.cache[DBCacheType.from_notify_channel(key)]
@@ -1399,10 +1429,10 @@ class SQLEngine(
 
     def update_dynamic_voice(self, add_channel=None, remove_channel=None):
         """更新動態語音頻道"""
-        if add_channel and add_channel not in self.cache[DBCacheType.DynamicVoice]:
-            self.cache[DBCacheType.DynamicVoice].append(add_channel)
+        if add_channel and add_channel not in self.cache[DBCacheType.DynamicVoiceLobby]:
+            self.cache[DBCacheType.DynamicVoiceLobby].append(add_channel)
         if remove_channel:
-            self.cache[DBCacheType.DynamicVoice].remove(remove_channel)
+            self.cache[DBCacheType.DynamicVoiceLobby].remove(remove_channel)
 
     def getif_dynamic_voice_room(self, channel_id: int):
         """取得動態語音房間"""

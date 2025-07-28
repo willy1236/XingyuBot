@@ -18,7 +18,7 @@ class NotifyChannelType(IntEnum):
     JoinLog = 6
     MemberJoin = 7
     MemberLeave = 8
-    DynamicVoice = 9
+    # DynamicVoice = 9 # Deprecated, use DynamicVoiceLobby
     VoiceLog = 10
     WeatherWarning = 11
     SlightQuakeNotifications = 12
@@ -26,7 +26,7 @@ class NotifyChannelType(IntEnum):
 
 
 class DBCacheType(Enum):
-    DynamicVoice = "dynamic_voice"
+    DynamicVoiceLobby = "dynamic_voice"
     DynamicVoiceRoom = "dynamic_voice_room"
     VoiceLog = "voice_log"
     TwitchCmd = "twitch_cmd"
@@ -37,7 +37,6 @@ class DBCacheType(Enum):
 
 
 cache_dict = {
-    NotifyChannelType.DynamicVoice: DBCacheType.DynamicVoice,
     NotifyChannelType.VoiceLog: DBCacheType.VoiceLog,
 }
 
