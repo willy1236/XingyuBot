@@ -122,9 +122,9 @@ class DiscordBot(discord.Bot):
         embed: discord.Embed,
         notify_type: NotifyCommunityType,
         community_id: str,
-        defult_content: str = None,
+        default_content: str | None = None,
         no_mention: bool = False,
-        additional_content: str = None,
+        additional_content: str | None = None,
     ):
         """
         Sends notification messages to multiple Discord communities with embeds and role mentions.
@@ -153,7 +153,7 @@ class DiscordBot(discord.Bot):
         for guild_id, channel_id, role_id, message in guilds:
             channel = self.get_channel(channel_id)
             if channel:
-                text = message or defult_content
+                text = message or default_content
                 role = channel.guild.get_role(role_id)
                 if role and not no_mention:
                     text = f"{role.mention} {text}" if text is not None else f"{role.mention}"
@@ -161,36 +161,33 @@ class DiscordBot(discord.Bot):
                 if additional_content:
                     text = additional_content if text is None else f"{text}\n{additional_content}"
 
-                log.debug(f"send_notify_communities: {guild_id}/{channel_id}: {text}")
+                log.debug("send_notify_communities: %s/%s: %s", guild_id, channel_id, text)
                 try:
                     await channel.send(text, embed=embed)
                 except discord.Forbidden:
-                    log.warning(f"NotifyCommunity:{notify_type}, channel missing access: {guild_id}/{channel_id}")
+                    log.warning("NotifyCommunity:%s, channel missing access: %s/%s", notify_type, guild_id, channel_id)
                 await asyncio.sleep(0.5)
             else:
-                log.warning(f"NotifyCommunity:{notify_type}, channel not found: {guild_id}/{channel_id}")
+                log.warning("NotifyCommunity:%s, channel not found: %s/%s", notify_type, guild_id, channel_id)
 
-    async def send_notify_channel(self,
-                                  embed: discord.Embed,
-                                  notify_type: NotifyChannelType,
-                                  defult_content: str = None):
+    async def send_notify_channel(self, embed: discord.Embed, notify_type: NotifyChannelType, default_content: str | None = None):
         notify_channels = sqldb.get_notify_channel_by_type(notify_type)
         for no_channel in notify_channels:
             channel = self.get_channel(no_channel.channel_id)
             if channel:
                 role = channel.guild.get_role(no_channel.role_id)
                 if role:
-                    text = f"{defult_content} {role.mention}" if defult_content is not None else f"{role.mention}"
+                    text = f"{default_content} {role.mention}" if default_content is not None else f"{role.mention}"
                 else:
-                    text = defult_content
+                    text = default_content
 
                 try:
                     await channel.send(text, embed=embed)
                 except discord.Forbidden:
-                    log.warning(f"{notify_type} channel missing access: {no_channel.guild_id}/{no_channel.channel_id}")
+                    log.warning("%s channel missing access: %s/%s", notify_type, no_channel.guild_id, no_channel.channel_id)
                 await asyncio.sleep(0.5)
             else:
-                log.warning(f"{notify_type} not found: {no_channel.guild_id}/{no_channel.channel_id}")
+                log.warning("%s not found: %s/%s", notify_type, no_channel.guild_id, no_channel.channel_id)
 
     async def edit_notify_channel(self, embed: discord.Embed | list[discord.Embed], notify_type: NotifyChannelType, defult_content: str = None):
         records = sqldb.get_notify_channel_by_type(notify_type)
@@ -212,8 +209,7 @@ class DiscordBot(discord.Bot):
                 await asyncio.sleep(0.5)
 
             else:
-                log.warning(
-                    f"NotifyChannel:{notify_type}, channel not found: {i.guild_id}/{i.channel_id}")
+                log.warning("NotifyChannel:%s, channel not found: %s/%s", notify_type, i.guild_id, i.channel_id)
 
     def about_embed(self):
         embed = BotEmbed.bot(

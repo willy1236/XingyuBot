@@ -84,23 +84,23 @@ async def prase_yt_push(content: str):
         ytcache = sqldb.get_yt_cache(push_entry.yt_videoid)
         if push_entry.published > cache.value or (ytcache is not None and video.snippet.liveBroadcastContent == "live"):
             # 透過published的時間來判斷是否為新影片
-            web_log.info(f"New Youtube push entry %s created at %s", push_entry.yt_videoid, push_entry.published)
+            web_log.info("New Youtube push entry %s created at %s", push_entry.yt_videoid, push_entry.published)
             no_mention = False
 
             if ytcache is not None:
                 # 有ytcache：直播開始
-                web_log.info(f"Removing cached video {video.id} from database")
+                web_log.info("Removing cached video %s from database", video.id)
                 sqldb.remove_yt_cache(video.id)
 
             elif video.is_live_upcoming_with_time:
                 # 如果是即將開始的直播，則添加ytcache
                 assert video.liveStreamingDetails.scheduledStartTime is not None, "Scheduled start time should not be None for upcoming live videos"
-                web_log.info(f"Upcoming live video detected: {video.id} at {video.liveStreamingDetails.scheduledStartTime}")
+                web_log.info("Upcoming live video detected: %s at %s", video.id, video.liveStreamingDetails.scheduledStartTime)
                 sqldb.add_yt_cache(video.id, video.liveStreamingDetails.scheduledStartTime)
                 no_mention = True
             elif video.liveStreamingDetails and video.liveStreamingDetails.actualEndTime:
                 # 已經結束的直播
-                web_log.info(f"Live video ended: {video.id} at {video.liveStreamingDetails.actualEndTime}")
+                web_log.info("Live video ended: %s at %s", video.id, video.liveStreamingDetails.actualEndTime)
                 no_mention = True
 
             if push_entry.published > cache.value:

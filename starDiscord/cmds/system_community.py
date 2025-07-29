@@ -6,7 +6,7 @@ from discord.commands import SlashCommandGroup
 from tweepy.errors import TooManyRequests
 
 from starlib import BotEmbed, ChoiceList, Jsondb, sclient, tz
-from starlib.instance import tw_api, twitter_api, yt_api, yt_push, cli_api
+from starlib.instance import cli_api, tw_api, twitter_api, yt_api, yt_push
 from starlib.models.mysql import Community
 from starlib.types import APIType, CommunityType, NotifyCommunityType
 
@@ -295,6 +295,32 @@ class system_community(Cog_Extension):
                 await ctx.respond(f"X/Twitter名稱: {twitter_username} 的通知在 {channel.mention}")
         else:
             await ctx.respond(f"X/Twitter名稱: {twitter_username} 在此群組沒有設通知")
+
+    @twitter.command(name="list", description="確認群組內所有的x/twitter通知")
+    async def twitter_list(self, ctx):
+        guildid = ctx.guild.id
+        records = sclient.sqldb.get_notify_community_list(NotifyCommunityType.TwitterTweet, guildid)
+        if records:
+            embed = BotEmbed.general("X/Twitter通知列表", ctx.guild.icon.url if ctx.guild.icon else None)
+            for notify_record, community_record in records:
+                channel = self.bot.get_channel(notify_record.channel_id)
+                role = channel.guild.get_role(notify_record.role_id)
+                if role:
+                    embed.add_field(name=community_record.username, value=f"{channel.mention} {role.mention}")
+                else:
+                    embed.add_field(name=community_record.username, value=channel.mention)
+            await ctx.respond(embed=embed)
+        else:
+            await ctx.respond("此群組沒有設置任何X/Twitter通知")
+
+    @twitter.command(name="user", description="取得twitter使用者的相關資訊")
+    async def twitter_user(self, ctx, twitter_username: discord.Option(str, required=True, name="twitter使用者名稱", description="使用者名稱")):
+        user = cli_api.get_user_details(twitter_username)
+        if user:
+            await ctx.respond(embed=user.embed())
+        else:
+            await ctx.respond(f"查詢不到 {twitter_username}", ephemeral=True)
+
 
 def setup(bot):
     bot.add_cog(system_community(bot))

@@ -36,7 +36,7 @@ class TwitchUser(BaseModel):
         self.created_at = self.created_at.astimezone(tz=tz)
         return self
 
-    def desplay(self):
+    def embed(self):
         embed = discord.Embed(
             title=self.display_name,
             url=self.url,
@@ -482,6 +482,23 @@ class RettiwtTweetUser(BaseModel):
     @classmethod
     def parse_created_at(cls, v: str) -> datetime:
         return datetime.strptime(v, DATETIME_FORMAT)
+
+    def embed(self):
+        embed = discord.Embed(
+            title=self.fullName,
+            url=f"https://twitter.com/{self.userName}",
+            description=self.description,
+            color=0x1DA1F2,
+            timestamp=self.createdAt,
+        )
+        if self.profileImage:
+            embed.set_thumbnail(url=self.profileImage)
+        embed.add_field(name="用戶名", value=self.userName)
+        embed.add_field(name="創建時間", value=self.createdAt.strftime("%Y/%m/%d %H:%M:%S"))
+        embed.add_field(name="粉絲數", value=f"{self.followersCount:,}")
+        embed.add_field(name="關注數", value=f"{self.followingsCount:,}")
+        embed.add_field(name="貼文數", value=f"{self.statusesCount:,}")
+        return embed
 
 
 class RettiwtTweetEntity(BaseModel):
