@@ -6,7 +6,7 @@ from discord.commands import SlashCommandGroup
 from tweepy.errors import TooManyRequests
 
 from starlib import BotEmbed, ChoiceList, Jsondb, sclient, tz
-from starlib.instance import tw_api, twitter_api, yt_api, yt_push
+from starlib.instance import tw_api, twitter_api, yt_api, yt_push, cli_api
 from starlib.models.mysql import Community
 from starlib.types import APIType, CommunityType, NotifyCommunityType
 
@@ -253,21 +253,25 @@ class system_community(Cog_Extension):
         guildid = ctx.guild.id
         channelid = channel.id
         roleid = role.id if role else None
-        try:
-            api_twitter_user = twitter_api.get_user(username=twitter_username)
-        except TooManyRequests:
-            await ctx.respond(f"錯誤：查詢過於頻繁，請稍後再試\n（X/Twitter短時間內僅提供少少的次數故容易觸發）")
-            return
+
+        api_twitter_user = cli_api.get_user_details(twitter_username)
+        # try:
+        #     api_twitter_user = twitter_api.get_user(username=twitter_username)
+        # except TooManyRequests:
+        #     await ctx.respond(f"錯誤：查詢過於頻繁，請稍後再試\n（X/Twitter短時間內僅提供少少的次數故容易觸發）")
+        #     return
 
         sclient.sqldb.add_notify_community(
-            NotifyCommunityType.TwitterTweet, api_twitter_user.data.id, guildid, channelid, roleid, None, cache_time=datetime.now(tz=tz)
+            NotifyCommunityType.TwitterTweet, api_twitter_user.id, guildid, channelid, roleid, None, cache_time=datetime.now(tz=tz)
         )
-        sclient.sqldb.merge(Community(id=str(api_twitter_user.data.id), type=CommunityType.Twitter, display_name=api_twitter_user.data.name, username=api_twitter_user.data.username))
+        sclient.sqldb.merge(
+            Community(id=str(api_twitter_user.id), type=CommunityType.Twitter, display_name=api_twitter_user.fullName, username=api_twitter_user.userName)
+        )
 
         if role:
-            await ctx.respond(f"設定成功：{api_twitter_user.data.name}的通知將會發送在{channel.mention}並會通知{role.mention}")
+            await ctx.respond(f"設定成功：{api_twitter_user.fullName}的通知將會發送在{channel.mention}並會通知{role.mention}")
         else:
-            await ctx.respond(f"設定成功：{api_twitter_user.data.name}的通知將會發送在{channel.mention}")
+            await ctx.respond(f"設定成功：{api_twitter_user.fullName}的通知將會發送在{channel.mention}")
 
         if not channel.can_send():
             await ctx.send(embed=BotEmbed.simple("溫馨提醒", f"我無法在{channel.mention}中發送訊息，請確認我有足夠的權限"))

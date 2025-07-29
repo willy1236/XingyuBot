@@ -38,7 +38,7 @@ class task(Cog_Extension):
             scheduler.add_job(self.twitch_live, "interval", minutes=4, jitter=15, misfire_grace_time=20)
             scheduler.add_job(self.twitch_video, "interval", minutes=10, jitter=30, misfire_grace_time=40)
             scheduler.add_job(self.twitch_clip, "interval", minutes=5, jitter=30, misfire_grace_time=40)
-            scheduler.add_job(self.twitter_tweets_rss, "interval", minutes=10, jitter=30, misfire_grace_time=40)
+            scheduler.add_job(self.notify_twitter_tweet_updates, "interval", minutes=10, jitter=30, misfire_grace_time=40)
             # scheduler.add_job(self.get_mongodb_data,'interval',minutes=3,jitter=30,misfire_grace_time=40)
 
             if self.bot.user.id == 589744540240314368:
@@ -234,25 +234,25 @@ class task(Cog_Extension):
 
         sclient.sqldb.set_community_caches(NotifyCommunityType.Youtube, update_data)
 
-    async def twitter_tweets_rss(self):
-        log.debug("twitter_tweets start")
+    async def notify_twitter_tweet_updates(self):
+        log.debug("notify_twitter_tweet_updates start")
         caches = sclient.sqldb.get_community_caches(NotifyCommunityType.TwitterTweet)
         if not caches:
             return
 
         update_data: dict[str, datetime] = {}
         for twitter_user_id, cache in caches.items():
-            log.debug(f"twitter_tweets: {twitter_user_id}")
+            log.debug(f"notify_twitter_tweet_updates: {twitter_user_id}")
             # tweets = rss_hub.get_twitter(user_name, local=True, after=cache.value)
             try:
                 results = cli_api.get_user_timeline(twitter_user_id, after=cache.value)
             except subprocess.CalledProcessError as e:
                 log.error(e.stderr)
                 continue
-            log.debug(f"twitter_tweets data: {results}")
+            log.debug(f"notify_twitter_tweet_updates data: {results}")
 
             if results is None:
-                log.warning(f"twitter_tweets error / not found: {twitter_user_id}")
+                log.warning(f"notify_twitter_tweet_updates error / not found: {twitter_user_id}")
                 # sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitterTweet, twitter_user_id)
             elif results.list:
                 tweets = results.list

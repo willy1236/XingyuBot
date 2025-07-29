@@ -528,6 +528,25 @@ class RettiwtTweetTimeLineResponse(BaseModel):
     list: list[RettiwtTweetItem]
     next: dict | None = None
 
+class RettiwtTweetUserDetails(BaseModel):
+    id: str
+    userName: str
+    fullName: str
+    createdAt: datetime
+    description: str
+    isVerified: bool
+    likeCount: int
+    followersCount: int
+    followingsCount: int
+    statusesCount: int
+    pinnedTweet: int | None = None
+    profileBanner: HttpUrl | None = None
+    profileImage: HttpUrl | None = None
+
+    @field_validator("createdAt", mode="before")
+    @classmethod
+    def parse_created_at(cls, v: str) -> datetime:
+        return datetime.strptime(v, DATETIME_FORMAT).astimezone(tz=tz)
 
 # Notion API Models
 class NotionUser(BaseModel):

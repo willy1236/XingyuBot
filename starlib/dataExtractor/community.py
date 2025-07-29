@@ -565,3 +565,15 @@ class CLIInterface():
         if after:
             results.list = [i for i in results.list if i.createdAt > after]
         return results
+
+    def get_user_details(self, user_id_or_name: str) -> RettiwtTweetUser | None:
+        r = subprocess.run(
+            f'rettiwt -k "{self.rettiwt_api_key}" user details "{user_id_or_name}"', shell=True, capture_output=True, encoding="utf-8", check=False
+        )
+        r.check_returncode()
+        data = json.loads(r.stdout)
+
+        if data.get("name") == "VALIDATION_ERROR":
+            return None
+
+        return RettiwtTweetUser(**data)
