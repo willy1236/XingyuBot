@@ -430,8 +430,9 @@ class ServerConfig(BasicSchema, table=False):
 class MemorialDay(BasicSchema, table=True):
     __tablename__ = "memorial_days"
 
-    discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
-    date: date
+    day_id: int = Field(sa_column=Column(Integer, Identity(), primary_key=True))
+    discord_id: int = Field(sa_column=Column(BigInteger))
+    target_date: date
     name: str
 
 class Party(IdbaseSchema, table=True):

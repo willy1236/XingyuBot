@@ -2,7 +2,7 @@ import asyncio
 import math
 import random
 import re
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 
 import discord
 from discord.commands import OptionChoice, SlashCommandGroup
@@ -38,6 +38,7 @@ class command(Cog_Extension):
     registration = SlashCommandGroup("registration", "戶籍相關指令", guild_ids=happycamp_guild)
     giveaway = SlashCommandGroup("giveaway", "抽獎相關指令")
     register = SlashCommandGroup("register", "註冊相關指令")
+    date_cmd = SlashCommandGroup("date", "日期相關指令")
 
     @role.command(description="查詢加身分組的數量")
     async def count(
@@ -865,6 +866,16 @@ class command(Cog_Extension):
         embed = view.redraw_winner_giveaway(old_winner)
         await ctx.respond(embed=embed)
 
+    @date_cmd.command(name="add", description="新增紀念日")
+    async def date_add(
+        self,
+        ctx: discord.ApplicationContext,
+        date_str: discord.Option(str, name="日期", description="紀念日的日期，格式為YYYY-MM-DD"),
+        name: discord.Option(str, name="名稱", description="紀念日的名稱"),
+    ):
+        target_date = date.fromisoformat(date_str)
+        sclient.sqldb.add_date(ctx.author.id, target_date, name)
+        await ctx.respond(f"新增紀念日：{target_date} - {name}")
 
 def setup(bot):
     bot.add_cog(command(bot))

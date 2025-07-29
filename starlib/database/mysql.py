@@ -223,6 +223,13 @@ class SQLUserSystem(BaseSQLEngine):
         result = self.session.exec(stmt).all()
         return {i.discord_id: i.name for i in result}
 
+    def add_date(self, discord_id: int, target_date: date, name: str):
+        """新增紀念日"""
+        memorial_day = MemorialDay(discord_id=discord_id, target_date=target_date, name=name)
+        self.session.add(memorial_day)
+        self.session.commit()
+
+
 class SQLCurrencySystem(BaseSQLEngine):
     def get_coin(self, discord_id: int):
         """取得用戶擁有的貨幣數"""
