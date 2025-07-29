@@ -128,8 +128,8 @@ class event(Cog_Extension):
                 channel = bot.get_channel(id)
                 if not channel:
                     removed_ids.append(id)
-                    log.warning(f"Dynamic voice channel {id} not found")
 
+            log.warning("Dynamic voice channel %s not found", removed_ids)
             sclient.sqldb.batch_remove_dynamic_voice(removed_ids)
 
         log.info(">> Bot on_ready done. <<")
@@ -435,8 +435,8 @@ class event(Cog_Extension):
 
         # 離開日誌
         notify_data = sclient.sqldb.get_notify_channel(guildid, NotifyChannelType.LeaveLog)
-        log_channel_id = notify_data.channel_id if notify_data else None
-        if log_channel_id:
+        if notify_data:
+            log_channel_id = notify_data.channel_id
             channel = self.bot.get_channel(log_channel_id)
             description = f"{member.mention} 離開了伺服器"
             roles_mention = [r.mention for r in member.roles if not r.is_default()]
@@ -474,8 +474,8 @@ class event(Cog_Extension):
 
         # 加入日誌 / 警告系統：管理員通知
         notify_data = sclient.sqldb.get_notify_channel(guildid, NotifyChannelType.JoinLog)
-        log_channel_id = notify_data.channel_id if notify_data else None
-        if log_channel_id:
+        if notify_data:
+            log_channel_id = notify_data.channel_id
             dbdata = sclient.sqldb.get_warnings_count(member.id)
             description = f"{member.mention} ({member.id})\n共有 {dbdata} 筆跨群紀錄" if dbdata else f"{member.mention} 加入了伺服器"
             description += f"\n第 {member.guild.member_count} 位成員"

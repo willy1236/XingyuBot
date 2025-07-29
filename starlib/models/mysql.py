@@ -256,9 +256,9 @@ class DynamicVoiceLobby(BasicSchema, table=True):
 
     guild_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
     channel_id: int = Field(sa_column=Column(BigInteger))
-    default_room_name: str | None = Field(sa_column=Column(String(255), nullable=True, default="{member}的頻道"))
+    default_room_name: str | None = Field(sa_column=Column(String(255), nullable=True))
 
-class DynamicChannel(BasicSchema, table=True):
+class DynamicVoice(BasicSchema, table=True):
     __tablename__ = "dynamic_channel"
 
     channel_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
