@@ -202,6 +202,7 @@ class ApexAPI():
             return None
 
     def get_crafting(self):
+        # FIXME: 回傳錯誤資料
         params = {"auth": self.auth}
         r = requests.get(f"{self.url}/crafting", params=params)
         if r.ok:

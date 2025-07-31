@@ -494,8 +494,8 @@ class system_game(Cog_Extension):
     @apex.command(description="查詢Apex地圖資料")
     @commands.cooldown(rate=1, per=3)
     async def map(self, ctx):
-        embed = ApexAPI().get_map_rotation().embed()
-        await ctx.respond(content="查詢成功", embed=embed)
+        embeds = ApexAPI().get_map_rotation().embeds()
+        await ctx.respond(content="查詢成功", embeds=embeds)
 
     @apex.command(description="查詢Apex合成器內容資料")
     @commands.cooldown(rate=1, per=3)
