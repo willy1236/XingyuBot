@@ -519,7 +519,7 @@ class RssHub():
         self.url = "https://rsshub.app"
         self.url_local = "http://localhost:1200"
 
-    def get_twitter(self, username:str, local=False, after:datetime=None):
+    def get_twitter(self, username: str, local=False, after: datetime | None = None):
         """取得Twitter用戶的RSS"""
         #* api不支援id查詢 故使用username查詢
         if local:

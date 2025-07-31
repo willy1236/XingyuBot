@@ -134,7 +134,7 @@ class DiscordBot(discord.Bot):
             embed (discord.Embed): The Discord embed to include with the notification message.
             notify_type (NotifyCommunityType): The type of notification being sent.
             community_id (str): The ID of the community this notification is for.
-            defult_content (str, optional): Default text content to send if no custom message is configured.
+            default_content (str, optional): Default text content to send if no custom message is configured.
                 Defaults to None.
             no_mention (bool, optional): If True, disables role mentions in the message. Defaults to False.
             additional_content (str, optional): Extra content to append to the message. Defaults to None.
@@ -189,7 +189,7 @@ class DiscordBot(discord.Bot):
             else:
                 log.warning("%s not found: %s/%s", notify_type, no_channel.guild_id, no_channel.channel_id)
 
-    async def edit_notify_channel(self, embed: discord.Embed | list[discord.Embed], notify_type: NotifyChannelType, defult_content: str = None):
+    async def edit_notify_channel(self, embed: discord.Embed | list[discord.Embed], notify_type: NotifyChannelType, default_content: str = None):
         records = sqldb.get_notify_channel_by_type(notify_type)
         for i in records:
             channel = self.get_channel(i.channel_id)
@@ -200,12 +200,12 @@ class DiscordBot(discord.Bot):
                     msg = None
 
                 if msg and msg.author == self.user:
-                    await msg.edit(defult_content, embeds=embed if isinstance(embed, list) else [embed])
+                    await msg.edit(default_content, embeds=embed if isinstance(embed, list) else [embed])
                 else:
                     await channel.send(
                         embed=BotEmbed.simple("溫馨提醒", "此為定時通知，請將機器人的訊息保持在此頻道的最新訊息，以免機器人找不到訊息而重複發送")
                     )
-                    await channel.send(defult_content, embeds=embed if isinstance(embed, list) else [embed])
+                    await channel.send(default_content, embeds=embed if isinstance(embed, list) else [embed])
                 await asyncio.sleep(0.5)
 
             else:

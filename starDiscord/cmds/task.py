@@ -265,7 +265,7 @@ class task(Cog_Extension):
                         None,
                         NotifyCommunityType.TwitterTweet,
                         twitter_user_id,
-                        defult_content=f"{tweet.tweetBy.fullName} 轉推了推文↩️" if tweet.is_retweet else f"{tweet.tweetBy.fullName} 發布新推文",
+                        default_content=f"{tweet.tweetBy.fullName} 轉推了推文↩️" if tweet.is_retweet else f"{tweet.tweetBy.fullName} 發布新推文",
                         additional_content=tweet.url,
                     )
 
@@ -363,6 +363,7 @@ class task(Cog_Extension):
                 await asyncio.sleep(1)
             else:
                 log.warning(f"refresh_yt_push failed: {record.channel_id}")
+
 
 async def youtube_start_live_notify(bot: DiscordBot, video: YoutubeVideo):
     log.info(f"youtube_start_live_notify: {video.snippet.title}")
