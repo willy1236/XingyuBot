@@ -693,7 +693,7 @@ class command(Cog_Extension):
         dcuser = sclient.sqldb.get_dcuser(ctx.author.id)
         if dcuser.registrations_id:
             guild = self.bot.get_guild(dcuser.registration.guild_id)
-            embed.add_field(name="已註冊戶籍", value=f"{guild.name if guild else dcuser.registration.guild_id}", inline=False)
+            embed.add_field(name="已註冊戶籍", value=f"{guild.name}（{guild.id}）" if guild else dcuser.registration.guild_id, inline=False)
         else:
             embed.add_field(name="已註冊戶籍", value="沒有註冊戶籍", inline=False)
         await ctx.respond(embed=embed, ephemeral=True)
