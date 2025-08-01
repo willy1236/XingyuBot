@@ -676,6 +676,28 @@ class command(Cog_Extension):
 
         await ctx.respond("\n".join(results_text))
 
+    @commands.is_owner()
+    @registration.command(description="確認戶籍")
+    async def check(self, ctx: discord.ApplicationContext, member: discord.Option(discord.Member, required=True, name="成員")):
+        await ctx.defer()
+        from .bot_event import check_registration
+
+        embed = BotEmbed.simple("戶籍確認")
+        guild_id = check_registration(member)
+        guild = self.bot.get_guild(guild_id)
+        if guild_id:
+            embed.add_field(name="戶籍資格", value=f"{guild.name if guild else '伺服器'}（{guild_id}）", inline=False)
+        else:
+            embed.add_field(name="戶籍資格", value=f"目前尚無法取得", inline=False)
+
+        dcuser = sclient.sqldb.get_dcuser(ctx.author.id)
+        if dcuser.registrations_id:
+            guild = self.bot.get_guild(dcuser.registration.guild_id)
+            embed.add_field(name="已註冊戶籍", value=f"{guild.name if guild else dcuser.registration.guild_id}", inline=False)
+        else:
+            embed.add_field(name="已註冊戶籍", value="沒有註冊戶籍", inline=False)
+        await ctx.respond(embed=embed, ephemeral=True)
+
     @register.command(name="role", description="將身分組保存至資料庫")
     @commands.is_owner()
     async def register_role(

@@ -19,23 +19,6 @@ from starlib.utils.map import sunmon_area
 from ..extension import Cog_Extension
 
 
-# Note that custom_ids can only be up to 100 characters long.
-class PersistentView(discord.ui.View):
-    def __init__(self):
-        super().__init__(timeout=None)
-
-    @discord.ui.button(label="Green",style=discord.ButtonStyle.green,custom_id="persistent_view:green")
-    async def green(self, button: discord.ui.Button, interaction: discord.Interaction):
-        await interaction.response.send_message("This is green.", ephemeral=True)
-
-    @discord.ui.button(label="Red", style=discord.ButtonStyle.red, custom_id="persistent_view:red")
-    async def red(self, button: discord.ui.Button, interaction: discord.Interaction):
-        await interaction.response.send_message("This is red.", ephemeral=True)
-
-    @discord.ui.button(label="Grey", style=discord.ButtonStyle.grey, custom_id="persistent_view:grey")
-    async def grey(self, button: discord.ui.Button, interaction: discord.Interaction):
-        await interaction.response.send_message("This is grey.", ephemeral=True)
-
 class MyModal(discord.ui.Modal):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -49,25 +32,23 @@ class MyModal(discord.ui.Modal):
         embed.add_field(name="Long Input", value=self.children[1].value)
         await interaction.response.send_message(embeds=[embed])
 
-map_dict = {
-    "0": "⬛",
-    "1": "◻️",
-    "2": "🟨"
-}
+
+map_dict = {"0": "⬛", "1": "◻️", "2": "🟨"}
+
 
 class RPG_advanture_panel(discord.ui.View):
     def __init__(self):
         super().__init__()
         self.map_l = 14
         self.map_w = 14
-        self.area = sunmon_area(self.map_l,self.map_w)
+        self.area = sunmon_area(self.map_l, self.map_w)
         self.player_x = 0
         self.player_y = 0
         self.text = ""
 
     def map_display(self):
         self.text = ""
-        #area_display = copy.deepcopy(self.area)
+        # area_display = copy.deepcopy(self.area)
         area_display = []
         for i in self.area:
             row = []
@@ -79,33 +60,33 @@ class RPG_advanture_panel(discord.ui.View):
             self.text += " ".join(i) + "\n"
         return self.text
 
-    @discord.ui.button(label="↑",style=discord.ButtonStyle.green)
+    @discord.ui.button(label="↑", style=discord.ButtonStyle.green)
     async def up(self, button: discord.ui.Button, interaction: discord.Interaction):
         if self.player_y != 0 and self.area[self.player_y - 1][self.player_x] == "0":
             self.player_y -= 1
-            await interaction.response.edit_message(content=self.map_display(),view=self)
+            await interaction.response.edit_message(content=self.map_display(), view=self)
         else:
-            await interaction.response.edit_message(content=self.text,view=self)
+            await interaction.response.edit_message(content=self.text, view=self)
 
-    @discord.ui.button(label="↓",style=discord.ButtonStyle.green)
+    @discord.ui.button(label="↓", style=discord.ButtonStyle.green)
     async def down(self, button: discord.ui.Button, interaction: discord.Interaction):
         if self.player_y != self.map_l - 1 and self.area[self.player_y + 1][self.player_x] == "0":
             self.player_y += 1
-            if self.player_x == self.map_w-1 and self.player_y == self.map_l-1:
+            if self.player_x == self.map_w - 1 and self.player_y == self.map_l - 1:
                 self.disable_all_items()
                 await interaction.response.edit_message(content=f"恭喜完成~\n{self.map_display()}", view=self)
             else:
-                await interaction.response.edit_message(content=self.map_display(),view=self)
+                await interaction.response.edit_message(content=self.map_display(), view=self)
         else:
-            await interaction.response.edit_message(content=self.text,view=self)
+            await interaction.response.edit_message(content=self.text, view=self)
 
-    @discord.ui.button(label="←",style=discord.ButtonStyle.green)
+    @discord.ui.button(label="←", style=discord.ButtonStyle.green)
     async def left(self, button: discord.ui.Button, interaction: discord.Interaction):
         if self.player_x != 0 and self.area[self.player_y][self.player_x - 1] == "0":
             self.player_x -= 1
-            await interaction.response.edit_message(content=self.map_display(),view=self)
+            await interaction.response.edit_message(content=self.map_display(), view=self)
         else:
-            await interaction.response.edit_message(content=self.text,view=self)
+            await interaction.response.edit_message(content=self.text, view=self)
 
     @discord.ui.button(label="→", style=discord.ButtonStyle.green)
     async def right(self, button: discord.ui.Button, interaction: discord.Interaction):
@@ -197,34 +178,20 @@ class debug(Cog_Extension):
         await ctx.respond(embed=embed)
 
     @commands.is_owner()
-    @commands.slash_command(description="更改身分組", guild_ids=happycamp_guild)
-    async def roletest(self, ctx: discord.ApplicationContext, old_role: discord.Role):
+    @commands.slash_command(description="將舊身分組的成員替換到新身分組上", guild_ids=happycamp_guild)
+    async def roletest(self, ctx: discord.ApplicationContext, old_role: discord.Role, new_role: discord.Role):
         await ctx.defer()
-        guild = ctx.guild
-        # old_role = guild.get_role(984485859132854332)
-        new_role = guild.get_role(1250797750174351440)
-
         for member in old_role.members:
             await member.add_roles(new_role)
             await member.remove_roles(old_role)
             await asyncio.sleep(1)
 
-        await ctx.respond("完成", ephemeral=True)
+        await ctx.respond(f"已將 {old_role.mention} 的成員替換到 {new_role.mention} 上", ephemeral=True)
 
     @commands.is_owner()
     @commands.slash_command(description="測試指令", guild_ids=debug_guilds)
     async def attachmenttest(self, ctx: discord.ApplicationContext, att: discord.Option(discord.Attachment, required=True, name="附件")):
         await ctx.respond(file=discord.File(io.BytesIO(await att.read()), filename=att.filename), ephemeral=True)
-
-    @commands.is_owner()
-    @commands.slash_command(description="戶籍測試", guild_ids=debug_guilds)
-    async def residenttest(self, ctx: discord.ApplicationContext, member: discord.Option(discord.Member, required=True, name="成員")):
-        await ctx.defer()
-        from .bot_event import check_registration
-
-        guild_id = check_registration(member)
-        guild = self.bot.get_guild(guild_id)
-        await ctx.respond(f"{member.display_name}：{f'{guild}（{guild_id}）' if guild else guild_id}", ephemeral=True)
 
     @commands.is_owner()
     @commands.slash_command(description="伺服器偵測測試", guild_ids=debug_guilds)
