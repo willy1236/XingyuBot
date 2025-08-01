@@ -544,7 +544,7 @@ class event(Cog_Extension):
     @commands.Cog.listener()
     async def on_audit_log_entry(self, entry: discord.AuditLogEntry):
         if entry.guild.id == happycamp_guild[0] and entry.action == discord.AuditLogAction.member_update and entry.user != self.bot.user:
-            member: discord.Member = entry.target()
+            member: discord.Member = entry.target
             if member.timed_out and entry.user != member:
                 await asyncio.sleep(10)
                 await member.remove_timeout()

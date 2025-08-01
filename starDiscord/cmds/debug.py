@@ -12,7 +12,7 @@ from starDiscord.checks import has_privilege_level
 from starlib import BotEmbed, Jsondb, sclient, sqldb, tz
 from starlib.errors import *
 from starlib.instance import *
-from starlib.types import PrivilegeLevel
+from starlib.types import PrivilegeLevel, NotifyCommunityType
 from starlib.utils import get_arp_list
 from starlib.utils.map import sunmon_area
 
@@ -251,11 +251,29 @@ class debug(Cog_Extension):
 
     @commands.is_owner()
     @commands.slash_command(description="語音測試", guild_ids=debug_guilds)
-    async def voice_test(self, ctx: discord.ApplicationContext, category_test: discord.Option(discord.CategoryChannel, required=True, name="分類")):
-        guild: discord.Guild = ctx.guild
-        channel = self.bot.get_channel(1368534115229503518)
-        await channel.send(f"{ctx.author.mention} 測試", delete_after=5)
-        await ctx.respond("done")
+    async def notify_test(
+        self,
+        ctx: discord.ApplicationContext,
+        community_id=discord.Option(str, required=True, name="社群ID"),
+    ):
+        data = sqldb.get_notify_community_guild(NotifyCommunityType.TwitchLive, community_id)
+        embed = BotEmbed.sts()
+        for guild_id, channel_id, role_id, message in data:
+            guild = self.bot.get_guild(guild_id)
+            if not guild:
+                continue
+            channel = guild.get_channel(channel_id)
+            if not channel:
+                continue
+            role = guild.get_role(role_id) if role_id else None
+
+            embed.add_field(
+                name=guild.name,
+                value=f"頻道：{channel.mention}\n身分組：{role.mention if role else '無身分組'}\n訊息：{message if message else '無訊息'}",
+                inline=False,
+            )
+
+        await ctx.respond(embed=embed)
 
         # await channel.delete()
 

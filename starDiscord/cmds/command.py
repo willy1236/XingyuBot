@@ -799,7 +799,7 @@ class command(Cog_Extension):
     @giveaway.command(description="創建抽獎")
     async def create(
         self,
-        ctx,
+        ctx: discord.ApplicationContext,
         prize_name: discord.Option(str, name="獎品", description="抽獎獎品"),
         winner_count: discord.Option(int, name="中獎人數", description="預設為1", default=1, min_value=1, max_value=100),
         end_time: discord.Option(str, name="結束時間", description="格式為YYYY-MM-DD hh:mm:ss", required=False),
