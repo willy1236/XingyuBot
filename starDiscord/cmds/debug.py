@@ -261,15 +261,18 @@ class debug(Cog_Extension):
         for guild_id, channel_id, role_id, message in data:
             guild = self.bot.get_guild(guild_id)
             if not guild:
+                embed.add_field(
+                    name=f"無法找到伺服器 {guild_id}",
+                    value=f"頻道：{channel_id}\n身分組：{role_id if role_id else '無身分組'}\n訊息：{message if message else '無訊息'}",
+                    inline=False,
+                )
                 continue
-            channel = guild.get_channel(channel_id)
-            if not channel:
-                continue
-            role = guild.get_role(role_id) if role_id else None
 
+            channel = guild.get_channel(channel_id)
+            role = guild.get_role(role_id) if role_id else None
             embed.add_field(
                 name=guild.name,
-                value=f"頻道：{channel.mention}\n身分組：{role.mention if role else '無身分組'}\n訊息：{message if message else '無訊息'}",
+                value=f"頻道：{channel.mention if channel else channel_id}\n身分組：{(role.mention if role.guild == guild else role.name) if role else '無身分組'}\n訊息：{message if message else '無訊息'}",
                 inline=False,
             )
 

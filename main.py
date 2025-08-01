@@ -43,7 +43,7 @@ def run_twitch_bot():
     sclient.twitch_bot_thread = twitchbot_thread
     twitchbot_thread.start()
     log.info(">> twitchBot: online <<")
-    time.sleep(2)
+    time.sleep(1)
 
 def run_website():
     from starServer.bot_website import WebsiteThread
@@ -56,7 +56,7 @@ def run_website():
         log.info(">> website: online <<")
     except Exception:
         log.info(">> website: offline <<")
-    time.sleep(2)
+    time.sleep(1)
 
 def main():
     if api_website:
