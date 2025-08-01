@@ -272,7 +272,7 @@ class debug(Cog_Extension):
             role = guild.get_role(role_id) if role_id else None
             embed.add_field(
                 name=guild.name,
-                value=f"頻道：{channel.mention if channel else channel_id}\n身分組：{(role.mention if role.guild == guild else role.name) if role else '無身分組'}\n訊息：{message if message else '無訊息'}",
+                value=f"頻道：{channel.mention if channel else channel_id}\n身分組：{(role.mention if role.guild == ctx.guild else role.name) if role else '無身分組'}\n訊息：{message if message else '無訊息'}",
                 inline=False,
             )
 
