@@ -12,7 +12,7 @@ from starDiscord.checks import has_privilege_level
 from starlib import BotEmbed, Jsondb, sclient, sqldb, tz
 from starlib.errors import *
 from starlib.instance import *
-from starlib.types import PrivilegeLevel, NotifyCommunityType
+from starlib.types import NotifyCommunityType, PrivilegeLevel
 from starlib.utils import get_arp_list
 from starlib.utils.map import sunmon_area
 
@@ -254,7 +254,7 @@ class debug(Cog_Extension):
     async def notify_test(
         self,
         ctx: discord.ApplicationContext,
-        community_id=discord.Option(str, required=True, name="社群ID"),
+        community_id=discord.Option(str, required=True, description="社群ID"),
     ):
         data = sqldb.get_notify_community_guild(NotifyCommunityType.TwitchLive, community_id)
         embed = BotEmbed.sts()
