@@ -690,7 +690,7 @@ class command(Cog_Extension):
         else:
             embed.add_field(name="戶籍資格", value=f"目前尚無法取得", inline=False)
 
-        dcuser = sclient.sqldb.get_dcuser(ctx.author.id)
+        dcuser = sclient.sqldb.get_dcuser(member.id)
         if dcuser.registrations_id:
             guild = self.bot.get_guild(dcuser.registration.guild_id)
             embed.add_field(name="已註冊戶籍", value=f"{guild.name}（{guild.id}）" if guild else dcuser.registration.guild_id, inline=False)
