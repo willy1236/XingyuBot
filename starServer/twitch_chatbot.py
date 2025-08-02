@@ -495,7 +495,7 @@ async def run():
             twitch_log.warning(f"Error subscribing to channel prediction end: timeout.")
 
     sclient.twitch = twitch
-    return chat, twitch
+    return chat, twitch, eventsub
 
 
 class TwitchBotThread(BaseThread):
@@ -503,18 +503,21 @@ class TwitchBotThread(BaseThread):
         super().__init__(name="TwitchBotThread")
         self.chat: Chat = None
         self.twitch: Twitch = None
+        self.eventsub: EventSubWebhook = None
 
     def run(self):
         asyncio.run(run())
         self._stop_event.wait()
         self.chat.stop()
+        asyncio.run(self.eventsub.stop())
         asyncio.run(self.twitch.close())
 
 
 if __name__ == "__main__":
-    chat, twitch = asyncio.run(run())
+    chat, twitch, eventsub = asyncio.run(run())
     chat: Chat
     twitch: Twitch
+    eventsub: EventSubWebhook
 
     try:
         input("press ENTER to stop\n")
