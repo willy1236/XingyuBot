@@ -506,7 +506,7 @@ class TwitchBotThread(BaseThread):
         self.eventsub: EventSubWebhook = None
 
     def run(self):
-        asyncio.run(run())
+        self.chat, self.twitch, self.eventsub = asyncio.run(run())
         self._stop_event.wait()
         self.chat.stop()
         asyncio.run(self.eventsub.stop())
