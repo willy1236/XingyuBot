@@ -508,10 +508,27 @@ class TwitchBotThread(BaseThread):
     def run(self):
         self.chat, self.twitch, self.eventsub = asyncio.run(run())
         self._stop_event.wait()
-        self.chat.stop()
-        asyncio.run(self.eventsub.stop())
-        asyncio.run(self.twitch.close())
+        asyncio.run(self.cleanup())
 
+    async def cleanup(self):
+        """安全地清理所有資源"""
+        try:
+            if self.chat:
+                self.chat.stop()
+        except Exception as e:
+            twitch_log.warning(f"Error stopping chat: {e}")
+
+        try:
+            if self.eventsub:
+                await self.eventsub.stop()
+        except Exception as e:
+            twitch_log.warning(f"Error stopping eventsub: {e}")
+
+        try:
+            if self.twitch:
+                await self.twitch.close()
+        except Exception as e:
+            twitch_log.warning(f"Error closing twitch: {e}")
 
 if __name__ == "__main__":
     chat, twitch, eventsub = asyncio.run(run())
