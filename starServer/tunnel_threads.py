@@ -82,17 +82,27 @@ class LoopholeTwitchThread(BaseThread):
 class NgrokTwitchThread(BaseThread):
     def __init__(self):
         super().__init__(name="NgrokTwitchThread")
+        self.process = None
 
     def run(self):
         reconnection_times = 0
         callback_url = sqldb.get_bot_token(APIType.Twitch).callback_uri.split("://")[1]
         while not self._stop_event.is_set():
             log.info(f"Starting {self.name} {reconnection_times}")
-            result = subprocess.run(["ngrok", "http", f"--url={callback_url}", "14001"], capture_output=True, text=True)
-            log.info(f"Stdout: {result.stdout}")
-            log.error(f"Stderr: {result.stderr}")
-            log.info(f"Exit status: {result.returncode}")
-            time.sleep(30)
+            self.process = subprocess.Popen(["ngrok", "http", f"--url={callback_url}", "14001"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            stdout, stderr = self.process.communicate()
+            log.info(f"Stdout: {stdout}")
+            log.error(f"Stderr: {stderr}")
+            log.info(f"Exit status: {self.process.returncode}")
+
+            if not self._stop_event.is_set():
+                time.sleep(30)
+
             reconnection_times += 1
             if reconnection_times >= 5:
                 self._stop_event.set()
+
+    def stop(self):
+        super().stop()
+        if self.process and self.process.poll() is None:
+            self.process.terminate()
