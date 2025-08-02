@@ -467,7 +467,7 @@ class SQLNotifySystem(BaseSQLEngine):
                 self.session.rollback()
 
     def remove_notify_community(self, notify_type: NotifyCommunityType, community_id: str, guild_id: int | None = None):
-        """移除社群通知，同時判斷移除社群"""
+        """移除社群通知，同時判斷移除相關資料"""
         if guild_id is None:
             statement = delete(NotifyCommunity).where(NotifyCommunity.notify_type == notify_type, NotifyCommunity.community_id == community_id)
         else:
@@ -478,18 +478,27 @@ class SQLNotifySystem(BaseSQLEngine):
         self.session.commit()
 
         community_type = CommunityType.from_notify(notify_type)
-        if community_type is not None:
-            stmt = select(func.count()).where(NotifyCommunity.community_type == community_type, NotifyCommunity.community_id == community_id)
-            count = self.session.exec(stmt).one()
-            if not count:
-                # 刪除社群資料
-                stmt = delete(Community).where(Community.id == community_id, Community.type == community_type)
+        if community_type is None:
+            return
+
+        # 檢查是否還有其他通知使用此社群
+        stmt = select(func.count()).where(NotifyCommunity.community_type == community_type, NotifyCommunity.community_id == community_id)
+        count = self.session.exec(stmt).one()
+        if not count:
+            # 刪除社群資料
+            stmt = delete(Community).where(Community.id == community_id, Community.type == community_type)
+            self.session.exec(stmt)
+
+            # 刪除社群快取
+            stmt = delete(CommunityCache).where(CommunityCache.community_id == community_id, CommunityCache.notify_type == notify_type)
+            self.session.exec(stmt)
+
+            if community_type == CommunityType.Youtube:
+                # 刪除推播紀錄
+                stmt = delete(PushRecord).where(PushRecord.channel_id == community_id)
                 self.session.exec(stmt)
 
-                # 刪除社群快取
-                stmt = delete(CommunityCache).where(CommunityCache.community_id == community_id, CommunityCache.notify_type == notify_type)
-                self.session.exec(stmt)
-                self.session.commit()
+            self.session.commit()
 
     def get_notify_community(self, notify_type: NotifyCommunityType):
         """取得社群通知（依據社群）"""

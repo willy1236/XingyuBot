@@ -812,7 +812,7 @@ class command(Cog_Extension):
             embed.set_thumbnail(url=invite.guild.icon.url)
         await ctx.respond(embed=embed)
 
-    @commands.slash_command(description="TRPG故事")
+    @commands.slash_command(description="TRPG故事", guild_ids=happycamp_guild)
     async def trpgstory(self, ctx, plot_id: discord.Option(int, name="故事id", description="故事id", autocomplete=trpg_plot_autocomplete)):
         plot = sclient.sqldb.get_trpg_plot(plot_id)
         view = TRPGPlotView(plot, sclient.sqldb)

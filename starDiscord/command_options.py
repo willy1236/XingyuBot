@@ -17,7 +17,7 @@ mcss_server_actions = [
 ]
 
 try:
-    mcss_server_options = [OptionChoice(name=i.name, value=i.server_id) for i in instance.mcss_api.get_servers()] # type: ignore
+    mcss_server_options = [OptionChoice(name=i.name, value=i.server_id) for i in instance.mcss_api.get_servers()]
 except Exception:
     mcss_server_options = []
 

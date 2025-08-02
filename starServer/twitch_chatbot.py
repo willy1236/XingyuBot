@@ -90,9 +90,7 @@ async def on_stream_online(event: eventsub.StreamOnlineEvent):
         if not is_live:
             profile_image_url = tw_api.get_user_by_id(event.event.broadcaster_user_id).profile_image_url
             embed = live.embed(profile_image_url)
-            asyncio.run_coroutine_threadsafe(
-                sclient.bot.send_notify_communities(embed, NotifyCommunityType.TwitchLive, event.event.broadcaster_user_id), sclient.bot.loop
-            )
+            sclient.bot.submit(sclient.bot.send_notify_communities(embed, NotifyCommunityType.TwitchLive, event.event.broadcaster_user_id))
             sclient.sqldb.set_community_cache(NotifyCommunityType.TwitchLive, event.event.broadcaster_user_id, live.started_at)
 
 
@@ -503,12 +501,14 @@ async def run():
 class TwitchBotThread(BaseThread):
     def __init__(self):
         super().__init__(name="TwitchBotThread")
+        self.chat: Chat = None
+        self.twitch: Twitch = None
 
     def run(self):
         asyncio.run(run())
         self._stop_event.wait()
-        chat.stop()
-        asyncio.run(twitch.close())
+        self.chat.stop()
+        asyncio.run(self.twitch.close())
 
 
 if __name__ == "__main__":

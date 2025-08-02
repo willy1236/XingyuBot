@@ -16,12 +16,13 @@ class McssAPI:
         }
 
     def get_servers(self):
-        r = requests.get(f"{self.URL}/servers", headers=self.headers)
-        r.raise_for_status()
-        if r.ok:
+        try:
+            r = requests.get(f"{self.URL}/servers", headers=self.headers)
+            r.raise_for_status()
             return [McssServer(**i) for i in r.json()]
-        else:
-            log.error("[%s] %s", r.status_code, r.text)
+        except Exception as e:
+            log.error("McssAPI Failed to get servers: %s", e)
+            raise
 
     def get_server_detail(self, server_id: str):
         r = requests.get(f"{self.URL}/servers/{server_id}", headers=self.headers)
@@ -29,7 +30,7 @@ class McssAPI:
         if r.ok:
             return McssServer(**r.json())
         else:
-            log.error("[%s] %s", r.status_code, r.text)
+            log.error("McssAPI: [%s] %s", r.status_code, r.text)
 
     def excute_action(self, server_id: str, action: McssServerAction):
         data = {"action": McssServerAction(action).value}
@@ -38,7 +39,7 @@ class McssAPI:
         if r.ok:
             return True
         else:
-            log.error("[%s] %s", r.status_code, r.text)
+            log.error("McssAPI: [%s] %s", r.status_code, r.text)
             return False
 
     def excute_command(self, server_id: str, command: str):
@@ -48,4 +49,4 @@ class McssAPI:
         if r.ok:
             return r.text
         else:
-            log.error("[%s] %s", r.status_code, r.text)
+            log.error("McssAPI: [%s] %s", r.status_code, r.text)

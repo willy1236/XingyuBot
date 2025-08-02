@@ -217,7 +217,7 @@ class debug(Cog_Extension):
         await ctx.respond(text)
 
     @commands.is_owner()
-    @commands.slash_command(description="語音測試", guild_ids=debug_guilds)
+    @commands.slash_command(description="通知測試", guild_ids=debug_guilds)
     async def notify_test(
         self,
         ctx: discord.ApplicationContext,

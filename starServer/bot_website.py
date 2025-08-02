@@ -107,9 +107,8 @@ async def prase_yt_push(content: str):
                 sqldb.set_community_cache(NotifyCommunityType.Youtube, push_entry.yt_channelid, push_entry.published)
 
             if sclient.bot:
-                asyncio.run_coroutine_threadsafe(
-                    sclient.bot.send_notify_communities(video.embed(), NotifyCommunityType.Youtube, push_entry.yt_channelid, no_mention=no_mention),
-                    sclient.bot.loop,
+                sclient.bot.submit(
+                    sclient.bot.send_notify_communities(video.embed(), NotifyCommunityType.Youtube, push_entry.yt_channelid, no_mention=no_mention)
                 )
             else:
                 web_log.warning("Bot not found.")
@@ -272,13 +271,21 @@ async def to_googleauth(request: Request):
 class WebsiteThread(BaseThread):
     def __init__(self):
         super().__init__(name="WebsiteThread")
+        self.server = None
 
     def run(self):
         import uvicorn
 
         host = Jsondb.config.get("webip", "127.0.0.1")
-        uvicorn.run(app, host=host, port=14000)
-        # os.system('uvicorn bot_website:app --port 14000 --reload')
+        config = uvicorn.Config(app, host=host, port=14000)
+        self.server = uvicorn.Server(config)
+        self.server.run()
+
+    def stop(self):
+        """停止 web 伺服器"""
+        self._stop_event.set()
+        if self.server:
+            self.server.should_exit = True
 
 
 if __name__ == "__main__":

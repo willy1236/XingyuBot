@@ -1,6 +1,7 @@
 import asyncio
 import datetime
 import os
+from collections.abc import Coroutine
 
 import discord
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -30,6 +31,13 @@ class DiscordBot(discord.Bot):
     def run(self):
         token = sqldb.get_bot_token(APIType.Discord, self.bot_code).access_token
         super().run(token)
+
+    def submit(self, coro: Coroutine):
+        """
+        從其他 thread 將 coroutine 提交給主事件迴圈執行。
+        回傳 asyncio.Future，可以透過 .result() 等待結果。
+        """
+        return asyncio.run_coroutine_threadsafe(coro, self.loop)
 
     def load_all_extensions(self):
         for filename in os.listdir(self._COG_PATH):
@@ -203,7 +211,10 @@ class DiscordBot(discord.Bot):
                     await msg.edit(default_content, embeds=embed if isinstance(embed, list) else [embed])
                 else:
                     await channel.send(
-                        embed=BotEmbed.simple("溫馨提醒", "此為定時通知，請將機器人的訊息保持在此頻道的最新訊息，以免機器人找不到訊息而重複發送")
+                        embed=BotEmbed.simple(
+                            "溫馨提醒",
+                            "此為定時通知，請將我的訊息保持在此頻道的最新訊息，以免機器人找不到訊息而重複發送\n如果你想取消或重新設定這個通知，請使用 /channel set 指令",
+                        )
                     )
                     await channel.send(default_content, embeds=embed if isinstance(embed, list) else [embed])
                 await asyncio.sleep(0.5)

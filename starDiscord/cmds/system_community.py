@@ -195,7 +195,6 @@ class system_community(Cog_Extension):
             return
 
         sclient.sqldb.remove_notify_community(NotifyCommunityType.Youtube, ytchannel.id, guildid)
-        sclient.sqldb.remove_push_record(ytchannel.id)
         await ctx.respond(f"已移除頻道 {ytchannel.snippet.title} 的通知")
 
     @youtube.command(name="notify", description="確認youtube通知")
