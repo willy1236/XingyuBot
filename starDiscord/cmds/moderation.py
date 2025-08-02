@@ -47,13 +47,13 @@ class moderation(Cog_Extension):
             message = await ctx.channel.fetch_message(int(message_id))
             if message:
                 time = message.created_at
-                await ctx.respond(content=f"開始清除", delete_after=5)
+                await ctx.respond(content=f"開始清除")
                 await ctx.channel.purge(after=time)
             else:
                 await ctx.respond(content=f"沒有找到此訊息", ephemeral=True)
 
         elif num:
-            await ctx.respond(content=f"開始清除{num}則訊息", delete_after=5)
+            await ctx.respond(content=f"開始清除{num}則訊息")
             await ctx.channel.purge(limit=num)
         else:
             await ctx.respond(content=f"沒有提供任何資訊，所以沒有清除任何內容", delete_after=5)
