@@ -398,7 +398,7 @@ async def refresh_ip_last_seen():
     log.debug("refresh_ip_last_seen start")
     now = datetime.now(tz)
     arp_list = utils.get_arp_list()
-    sqldb.set_ips_last_seen({ip: now for ip in arp_list})
+    sqldb.set_ips_last_seen({ip_and_mac: now for ip_and_mac in arp_list})
 
 def setup(bot):
     bot.add_cog(task(bot))

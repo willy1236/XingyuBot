@@ -1310,10 +1310,10 @@ class SQLCacheSystem(BaseSQLEngine):
         return result
 
 class SQLNetwork(BaseSQLEngine):
-    def set_ips_last_seen(self, data: dict[str, datetime]):
+    def set_ips_last_seen(self, data: dict[tuple[str, str], datetime]):
         """設定IP最後出現時間"""
-        for ip, last_seen in data.items():
-            cache = IPLastSeen(ip=ip, last_seen=last_seen)
+        for (ip, mac), last_seen in data.items():
+            cache = IPLastSeen(ip=ip, mac=mac, last_seen=last_seen)
             self.session.merge(cache)
         self.session.commit()
 

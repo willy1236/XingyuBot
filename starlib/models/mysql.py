@@ -441,6 +441,7 @@ class IPLastSeen(BasicSchema, table=True):
     ip: str = Field(primary_key=True)
     last_seen: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
     discord_id: int | None = Field(sa_column=Column(BigInteger, nullable=True))
+    mac: str | None = Field(sa_column=Column(String(255), nullable=True))
 
     @property
     def is_expired(self) -> bool:
