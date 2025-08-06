@@ -1309,6 +1309,13 @@ class SQLCacheSystem(BaseSQLEngine):
         result = self.session.exec(stmt).one_or_none()
         return result
 
+class SQLNetwork(BaseSQLEngine):
+    def set_ips_last_seen(self, data: dict[str, datetime]):
+        """設定IP最後出現時間"""
+        for ip, last_seen in data.items():
+            cache = IPLastSeen(ip=ip, last_seen=last_seen)
+            self.session.merge(cache)
+        self.session.commit()
 
 class SQLTest(BaseSQLEngine):
     pass
@@ -1424,6 +1431,7 @@ class SQLEngine(
     SQLBackupSystem,
     SQLTokensSystem,
     SQLCacheSystem,
+    SQLNetwork,
     SQLTest,
 ):
     """SQL引擎"""

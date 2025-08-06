@@ -39,6 +39,7 @@ class task(Cog_Extension):
             scheduler.add_job(self.twitch_video, "interval", minutes=10, jitter=30, misfire_grace_time=40)
             scheduler.add_job(self.twitch_clip, "interval", minutes=5, jitter=30, misfire_grace_time=40)
             scheduler.add_job(self.notify_twitter_tweet_updates, "interval", minutes=10, jitter=30, misfire_grace_time=40)
+            scheduler.add_job(refresh_ip_last_seen, "interval", minutes=30, jitter=30, misfire_grace_time=40)
             # scheduler.add_job(self.get_mongodb_data,'interval',minutes=3,jitter=30,misfire_grace_time=40)
 
             if self.bot.user.id == 589744540240314368:
@@ -392,6 +393,12 @@ async def giveaway_auto_end(bot: discord.Bot, view: GiveawayView):
         log.warning(f"giveaway_auto_end: message not found {view.giveaway.message_id}")
         return
 
+async def refresh_ip_last_seen():
+    """定時更新IP最後出現時間"""
+    log.debug("refresh_ip_last_seen start")
+    now = datetime.now(tz)
+    arp_list = utils.get_arp_list()
+    sqldb.set_ips_last_seen({ip: now for ip in arp_list})
 
 def setup(bot):
     bot.add_cog(task(bot))
