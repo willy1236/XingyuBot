@@ -442,11 +442,7 @@ class IPLastSeen(BasicSchema, table=True):
     last_seen: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
     discord_id: int | None = Field(sa_column=Column(BigInteger, nullable=True))
     mac: str | None = Field(sa_column=Column(String(255), nullable=True))
-
-    @property
-    def is_expired(self) -> bool:
-        return self.last_seen < datetime.now(tz=tz) - timedelta(days=30)
-
+    name: str | None = Field(sa_column=Column(String(255), nullable=True))
 
 class Party(IdbaseSchema, table=True):
     __tablename__ = "party_datas"
