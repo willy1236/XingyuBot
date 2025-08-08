@@ -1,4 +1,4 @@
-poetry run python update.py
-poetry install --no-root
+uv run python update.py
+uv sync
 cd ../
-poetry run python main.py
+uv run python main.py
