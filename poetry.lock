@@ -3211,6 +3211,17 @@ files = [
 ]
 
 [[package]]
+name = "python-nmap"
+version = "0.7.1"
+description = "This is a python class to use nmap and access scan results from python3"
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "python-nmap-0.7.1.tar.gz", hash = "sha256:f75af6b91dd8e3b0c31f869db32163f62ada686945e5b7c25f84bc0f7fad3b64"},
+]
+
+[[package]]
 name = "pytz"
 version = "2025.2"
 description = "World timezone definitions, modern and historical"
@@ -4477,4 +4488,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12, <3.13"
-content-hash = "a34c3797ece7a39cf29134873947bac107642070c7618ecda015a0974df39862"
+content-hash = "8ccf9a50ccbd421fca638baaffa987af4bc9a226614e3e78994215c7acdf08dd"

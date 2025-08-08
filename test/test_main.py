@@ -120,22 +120,16 @@ if __name__ == "__main__":
 #         print(i)
 
 
-from starlib.dataExtractor.oauth import DiscordOauth2, GoogleOauth2, TwitchOauth2
-
 # print(setting)
 # print(GoogleOauth(setting, user_id="613747262291443742").list_playlists())
 # auth = DiscordOauth2(**setting, user_id="419131103836635136")
 # print(auth.refresh())
 # auth.save_token(auth.user_id)
-
 # auth = TwitchOauth2(**setting, user_id="689775663", scope=r"chat:read+channel:read:subscriptions+moderation:read+channel:read:redemptions+channel:manage:redemptions+channel:manage:raids+channel:read:vips+channel:bot+moderator:read:suspicious_users+channel:manage:polls+channel:manage:predictions")
 # print(auth.refresh())
 # # print(auth.get_authorization_url(force_verify=True))
 # print(auth.get_user("689775663"))
-
-#print(GoogleOauth2(user_id="112130059444606303598").get_authorization_url())
-
-
+# print(GoogleOauth2(user_id="112130059444606303598").get_authorization_url())
 # from tweepy import API, Client, OAuth2BearerHandler, Tweet
 # import shutil
 # # rettiwt_path = shutil.which("rettiwt")
@@ -151,14 +145,11 @@ from starlib.dataExtractor.oauth import DiscordOauth2, GoogleOauth2, TwitchOauth
 # except subprocess.CalledProcessError as e:
 #     print(e.output)
 #     print(e.stderr)
-
-
 #x_apiv2 = Client(Jsondb.get_token("x_api"), wait_on_rate_limit=True)
 # x_api = API(OAuth2BearerHandler(Jsondb.get_token("x_api")))
 #print(x_apiv2.get_user(username="Mochi_chan____").data.id)
 # for tweet in RssHub().get_twitter("", after=datetime.fromisoformat("2025-04-28T22:08:29+08:00"), local=True):
 #     print(tweet.published_parsed, tweet.title)
-
 #tweets = x_apiv2.get_users_tweets(1524040182861004800).data
 # tweets = x_apiv2.get_users_tweets(1530844907531010048).data
 # print(type(tweets))
@@ -167,3 +158,30 @@ from starlib.dataExtractor.oauth import DiscordOauth2, GoogleOauth2, TwitchOauth
 #     print(type(tweet))
 #     print(tweet.id, tweet.text, tweet.created_at, tweet.attachments, tweet.entities, tweet.public_metrics, tweet.context_annotations, tweet.geo, tweet.in_reply_to_user_id, tweet.referenced_tweets, tweet.source)
 
+import nmap
+
+from starlib.dataExtractor.oauth import DiscordOauth2, GoogleOauth2, TwitchOauth2
+
+# 建立掃描器
+nm = nmap.PortScanner()
+
+# 掃描整個區段，-sn 表示只做 ping 掃描
+scan_range = "yunmoprj.cloudns.be"
+nm.scan(hosts=scan_range, arguments="-sn")
+
+# 輸出存活主機
+print(f"掃描區段 {scan_range} 結果：")
+for host in nm.all_hosts():
+    # print(
+    #     f"主機：{host} ({nm[host].hostname()})"
+    #     f"，狀態：{nm[host].state()}"
+    #     f"，開放端口：{nm[host].all_tcp() if nm[host].all_tcp() else '無'}"
+    #     f"，協議：{nm[host].all_protocols() if nm[host].all_protocols() else '無'}"
+    #     f"，操作系統：{nm[host]['osmatch'][0]['name'] if 'osmatch' in nm[host] else '未知'}"
+    #     f"，MAC 地址：{nm[host]['addresses'].get('mac', '無')}"
+    #     f"，製造商：{nm[host]['vendor'].get(nm[host]['addresses'].get('mac', ''), '無')}"
+    #     f"，掃描時間：{nm[host].uptime() if 'uptime' in nm[host] else '未知'}"
+    #     f"，主機名稱: {nm[host].hostname()}"
+    # )
+
+    print(f"完整資料：{nm[host]}")

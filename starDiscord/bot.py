@@ -1,3 +1,4 @@
+# pyright: reportArgumentType=false, reportOptionalMemberAccess=false
 import asyncio
 import datetime
 import os
@@ -208,7 +209,7 @@ class DiscordBot(discord.Bot):
                     msg = None
 
                 if msg and msg.author == self.user:
-                    await msg.edit(default_content, embeds=embed if isinstance(embed, list) else [embed])
+                    await msg.edit(content=default_content, embeds=embed if isinstance(embed, list) else [embed])
                 else:
                     await channel.send(
                         embed=BotEmbed.simple(
@@ -233,8 +234,7 @@ class DiscordBot(discord.Bot):
             raise ValueError("Content and embed must provided at least one.")
         channel = self.get_channel(channel_id)
         if channel:
-            r = asyncio.run_coroutine_threadsafe(
-                channel.send(content=content, embed=embed), self.loop)
+            r = asyncio.run_coroutine_threadsafe(channel.send(content=content, embed=embed), self.loop)  # pyright: ignore[reportCallIssue]
             return r.result()
 
 # commands.Bot

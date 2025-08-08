@@ -1,48 +1,36 @@
-[tool.poetry]
+[project]
 name = "xingyubot"
-version = "0.2.14"
-description = "一個集結許多功能的DiscordBot"
-authors = ["威立 <66502303+willy1236@users.noreply.github.com>"]
+version = "0.1.0"
+description = "Add your description here"
 readme = "README.md"
-
-[tool.poetry.dependencies]
-python = ">=3.12, <3.13"
-py-cord = {extras = ["voice"], version = "^2.5.0"}
-requests = "^2.32.4"
-feedparser = "^6.0.11"
-pandas = "^2.2.3"
-psutil = "^6.1.0"
-beautifulsoup4 = "^4.12.3"
-gitpython = "^3.1.43"
-apscheduler = "^3.10.4"
-fastapi = "^0.115.4"
-uvicorn = "^0.32.0"
-yt-dlp = "^2024.11.4"
-matplotlib = "^3.9.2"
-google-api-python-client = "^2.151.0"
-google-auth-oauthlib = "^1.2.1"
-google-generativeai = "^0.8.3"
-mcrcon = "^0.7.0"
-twitchapi = "^4.3.1"
-pymongo = "^4.10.1"
-genshin = "^1.7.2"
-sqlmodel = "^0.0.24"
-line-bot-sdk = "^3.17.1"
-mcstatus = "^11.1.1"
-vosk = "^0.3.45"
-mwrogue = "^0.1.5"
-psycopg2 = "^2.9.10"
-tweepy = {extras = ["async"], version = "^4.15.0"}
-pydantic-ai-slim = {extras = ["duckduckgo", "mcp", "tavily", "vertexai"], version = "^0.3.2"}
-
-
-[tool.poetry.group.dev.dependencies]
-faker = "^24.9.0"
-genshin = {extras = ["cookies", "rsa"], version = "^1.7.1"}
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
-
-[tool.ruff.format]
-indent-style = "space"
+requires-python = "~=3.12.0"
+dependencies = [
+    "apscheduler>=3.11.0",
+    "beautifulsoup4>=4.13.4",
+    "fastapi>=0.116.1",
+    "feedparser>=6.0.11",
+    "genshin>=1.7.16",
+    "gitpython>=3.1.45",
+    "google-api-python-client>=2.178.0",
+    "google-auth-oauthlib>=1.2.2",
+    "google-generativeai>=0.8.5",
+    "line-bot-sdk>=3.18.0",
+    "matplotlib>=3.10.5",
+    "mcrcon>=0.7.0",
+    "mcstatus>=12.0.3",
+    "mwrogue>=0.1.5",
+    "pandas>=2.3.1",
+    "psutil>=7.0.0",
+    "psycopg2>=2.9.10",
+    "py-cord[voice]>=2.6.1",
+    "pydantic-ai-slim[duckduckgo,mcp,tavily,vertexai]>=0.6.2",
+    "pymongo>=4.14.0",
+    "python-nmap>=0.7.1",
+    "requests>=2.32.4",
+    "sqlmodel>=0.0.24",
+    "tweepy[async]>=4.16.0",
+    "twitchapi>=4.5.0",
+    "uvicorn>=0.35.0",
+    "vosk>=0.3.45",
+    "yt-dlp>=2025.7.21",
+]

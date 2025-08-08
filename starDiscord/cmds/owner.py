@@ -46,7 +46,7 @@ class SendMessageModal(discord.ui.Modal):
         message = await self.channel.send(self.children[0].value)
         await interaction.response.send_message(f"訊息發送成功", delete_after=5, ephemeral=True)
         if self.is_dm:
-            await self.bot.dm(interaction.client, message)
+            await self.bot.dm(message)
 
 
 class AnnoModal(discord.ui.Modal):
@@ -126,6 +126,7 @@ class BotPanel(discord.ui.View):
 class owner(Cog_Extension):
     twitch_chatbot = SlashCommandGroup("twitch_chatbot", "twitch機器人相關指令", guild_ids=debug_guilds)
     mcserver = SlashCommandGroup("mcserver", "Minecraft伺服器相關指令", guild_ids=main_guilds)
+    permission_cmd = SlashCommandGroup("permission", "權限相關指令", guild_ids=debug_guilds)
 
     # load
     # @bot.command()
@@ -253,13 +254,13 @@ class owner(Cog_Extension):
     #     else:
     #         ctx.send('參數錯誤:請輸入正確模式(add/remove)',delete_after=5)
 
-    @commands.slash_command(description="權限檢查", guild_ids=debug_guilds)
     @commands.is_owner()
-    async def permission(self, ctx, guild_id_str: str = None, channel_id_str: str = None):
+    @permission_cmd.command(name="view", description="查看權限", guild_ids=debug_guilds)
+    async def permission_view(self, ctx: discord.ApplicationContext, guild_id_str: str = None, channel_id_str: str = None):
         if guild_id_str:
             guild_id = int(guild_id_str)
             guild = self.bot.get_guild(guild_id)
-            member = guild.get_member(ctx.bot.user.id)
+            member = guild.me
             permission = member.guild_permissions
 
             embed = discord.Embed(title=guild.name, color=0xC4E9FF)
@@ -309,6 +310,19 @@ class owner(Cog_Extension):
         # permission.change_nickname
         # permission.use_slash_commands
         # permission.request_to_speak
+        await ctx.respond(embed=embed)
+
+    @commands.is_owner()
+    @permission_cmd.command(name="list", description="列出權限", guild_ids=debug_guilds)
+    async def permission_list(self, ctx: discord.ApplicationContext, channel: discord.abc.GuildChannel):
+        embed = discord.Embed(title="當前權限", color=discord.Color.blurple())
+        for target, overwrite in channel.overwrites.items():
+            target_name = target.name if isinstance(target, discord.Role) else target.display_name
+            texts = []
+            for perm, value in overwrite:
+                if value is not None:
+                    texts.append(f"{perm}: {'✅' if value else '❌'}")
+            embed.add_field(name=target_name, value="\n".join(texts), inline=False)
         await ctx.respond(embed=embed)
 
     # @bot.event
