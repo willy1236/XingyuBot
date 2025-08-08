@@ -256,10 +256,11 @@ class owner(Cog_Extension):
 
     @commands.is_owner()
     @permission_cmd.command(name="view", description="查看權限", guild_ids=debug_guilds)
-    async def permission_view(self, ctx: discord.ApplicationContext, guild_id_str: str = None, channel_id_str: str = None):
+    async def permission_view(self, ctx: discord.ApplicationContext, guild_id_str: str | None = None, channel_id_str: str | None = None):
         if guild_id_str:
             guild_id = int(guild_id_str)
             guild = self.bot.get_guild(guild_id)
+            assert guild is not None
             member = guild.me
             permission = member.guild_permissions
 
@@ -314,7 +315,12 @@ class owner(Cog_Extension):
 
     @commands.is_owner()
     @permission_cmd.command(name="list", description="列出權限", guild_ids=debug_guilds)
-    async def permission_list(self, ctx: discord.ApplicationContext, channel: discord.abc.GuildChannel):
+    async def permission_list(self, ctx: discord.ApplicationContext, channel_str: str):
+        channel = self.bot.get_channel(int(channel_str))
+        if not channel:
+            await ctx.respond("找不到頻道")
+            return
+
         embed = discord.Embed(title="當前權限", color=discord.Color.blurple())
         for target, overwrite in channel.overwrites.items():
             target_name = target.name if isinstance(target, discord.Role) else target.display_name
