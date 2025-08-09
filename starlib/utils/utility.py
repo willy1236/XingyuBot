@@ -15,30 +15,38 @@ from .funtions import find
 
 class BotEmbed:
     @staticmethod
-    def bot(bot:discord.Bot, title:str=None, description:str=None, url=None):
+    def bot(bot: discord.Bot, title: str | None = None, description: str | None = None, url: str | None = None):
         """機器人 格式"""
+        assert bot.user is not None, "Bot user must be set before creating an embed."
         embed = discord.Embed(title=title, description=description, color=0xc4e9ff, url=url)
-        embed.set_author(name=bot.user.name,icon_url=bot.user.display_avatar.url)
+        embed.set_author(name=bot.user.name, icon_url=bot.user.display_avatar.url)
         return embed
 
     @staticmethod
-    def user(user: discord.User, title: str = None, description: str = None, url=None):
+    def user(user: discord.User, title: str | None = None, description: str | None = None, url: str | None = None):
         """使用者 格式"""
         embed = discord.Embed(title=title, description=description, color=0x00FFFF, url=url)
         embed.set_author(name=user.name, icon_url=user.display_avatar.url)
         return embed
 
     @staticmethod
-    def simple(title:str=None, description:str=None, url=None):
+    def simple(title: str | None = None, description: str | None = None, url: str | None = None):
         """簡易:不帶作者"""
-        embed = discord.Embed(title=title, description=description, color=0xc4e9ff,url=url)
+        embed = discord.Embed(title=title, description=description, color=0xC4E9FF, url=url)
         return embed
 
     @staticmethod
-    def general(name:str=None, icon_url:str=None, url:str=None, title:str=None, description:str=None, title_url:str=None):
+    def general(
+        name: str | None = None,
+        icon_url: str | None = None,
+        url: str | None = None,
+        title: str | None = None,
+        description: str | None = None,
+        title_url: str | None = None,
+    ):
         """普通:自訂作者"""
         embed = discord.Embed(title=title, description=description, color=0xc4e9ff, url=title_url)
-        embed.set_author(name=name,icon_url=icon_url,url=url)
+        embed.set_author(name=name, icon_url=icon_url, url=url)
         return embed
 
     @staticmethod
@@ -48,10 +56,10 @@ class BotEmbed:
         return embed
 
     @staticmethod
-    def rpg(title:str=None,description:str=None):
+    def rpg(title: str | None = None, description: str | None = None):
         """RPG系統 格式"""
         embed = discord.Embed(title=title, description=description, color=0xc4e9ff)
-        embed.set_footer(text= "RPG系統（開發版） | 開發時期所有東西皆有可能重置")
+        embed.set_footer(text="RPG系統 | 開發時期所有東西皆有可能重置")
         return embed
 
     @staticmethod
@@ -83,13 +91,20 @@ class BotEmbed:
         return embed
 
     @staticmethod
-    def info(title: str = None, description: str = None, url: str = None):
+    def info(title: str | None = None, description: str | None = None, url: str | None = None):
         """一般資訊 格式"""
         embed = discord.Embed(title=title, description=description, color=0xC4E9FF, url=url)
         return embed
 
     @staticmethod
-    def simple_warn_sheet(warn_user:discord.User, moderate_user:discord.User, create_at:datetime=None, last=timedelta(seconds=15), reason:str=None, title="已被禁言"):
+    def simple_warn_sheet(
+        warn_user: discord.User,
+        moderate_user: discord.User,
+        create_at: datetime | None = None,
+        last: timedelta = timedelta(seconds=15),
+        reason: str | None = None,
+        title: str = "已被禁言",
+    ):
         """簡易警告表格"""
         if create_at is None:
             create_at = datetime.now()

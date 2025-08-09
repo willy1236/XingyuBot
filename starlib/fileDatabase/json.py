@@ -29,7 +29,7 @@ class BaseJsonHandler:
                 print(f">> Created json file: {filename} <<")
 
         with open(path, "r", encoding="utf-8") as jfile:
-            self.datas: dict[str, str | int | bool | dict | list] = json.load(jfile)
+            self.datas = json.load(jfile)
 
     def get(self, key: str, default: DataValue | None = None) -> DataValue | None:
         try:
@@ -40,7 +40,7 @@ class BaseJsonHandler:
         return data
 
     def write(self, key: str, value: DataValue | None) -> None:
-        self.datas[key] = value
+        self.datas[key] = value  # pyright: ignore[reportArgumentType]
         with open(f"{self._DBPATH}/{self.filename}.json", "w", encoding="utf-8") as jfile:
             json.dump(self.datas, jfile, indent=4)
 
@@ -53,7 +53,7 @@ class BaseJsonHandler:
         else:
             raise TypeError(
                 f"Expected dict at key '{key}', got {type(self.datas[key])}")
-        self.write(key, self.datas[key])
+        self.write(key, self.datas[key])  # pyright: ignore[reportArgumentType]
 
     def __getitem__(self, key: str) -> DataValue | None:
         return self.get(key)
@@ -126,7 +126,7 @@ class JsonDatabase():
         except KeyError as e:
             raise KeyError("此項目沒有在資料庫中") from e
 
-    def get_picture(self, pic_key) -> str:
+    def get_picture(self, pic_key: str) -> str:
         """取得圖片網址"""
         return self.picdata[pic_key]
 

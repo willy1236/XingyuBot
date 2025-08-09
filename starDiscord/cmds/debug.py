@@ -28,8 +28,8 @@ class MyModal(discord.ui.Modal):
 
     async def callback(self, interaction: discord.Interaction):
         embed = discord.Embed(title="Modal Results")
-        embed.add_field(name="Short Input", value=self.children[0].value)
-        embed.add_field(name="Long Input", value=self.children[1].value)
+        embed.add_field(name="Short Input", value=self.children[0].value)  # pyright: ignore[reportArgumentType]
+        embed.add_field(name="Long Input", value=self.children[1].value)  # pyright: ignore[reportArgumentType]
         await interaction.response.send_message(embeds=[embed])
 
 
@@ -110,14 +110,19 @@ class MySelectMenus(discord.ui.Select):
         )
         self.bot = bot
         self.guild = bot.get_guild(guild_id)
+        assert self.guild is not None, "Guild not found"
         for role_id in role_ids:
             role = self.guild.get_role(role_id)
+            assert role is not None, f"Role not found: {role_id}"
             self.append_option(discord.SelectOption(label=role.name, value=str(role.id), description=f"Role ID: {role.id}"))
 
     async def callback(self, interaction: discord.Interaction):
         lst = []
+        assert interaction.guild is not None, "Guild not found"
         for i in self.values:
+            assert isinstance(i, (str, int)), "Role ID type "
             role = interaction.guild.get_role(int(i))
+            assert role is not None, f"Role not found: {i}"
             lst.append(role.name)
         await interaction.response.send_message(f"Added role: {','.join(lst)}", ephemeral=True)
 
@@ -142,21 +147,21 @@ class debug(Cog_Extension):
 
     @commands.is_owner()
     @commands.slash_command(description="幫助測試", guild_ids=debug_guilds)
-    async def helptest(self, ctx: discord.ApplicationContext, arg: str = None):
+    async def helptest(self, ctx: discord.ApplicationContext, arg: str | None = None):
         if not arg:
             command_names_list = [command.name for command in self.bot.commands]
-            await ctx.send(f"{i}. {command.name}" for i, command in enumerate(self.bot.commands, 1))
+            # await ctx.send(f"{i}. {command.name}" for i, command in enumerate(self.bot.commands, 1))
             await ctx.respond(f"指令列表：{','.join(command_names_list)}")
         else:
-            command = self.bot.get_command(arg)  # type: ignore
-            if not command:
+            cmd = self.bot.get_command(arg)
+            if not cmd:
                 await ctx.respond(f"找不到指令：{arg}")
-            elif isinstance(command, discord.SlashCommandGroup):
-                await ctx.respond(f"指令：{command.name}\n描述：{command.description}")
+            elif isinstance(cmd, discord.SlashCommandGroup):
+                await ctx.respond(f"指令：{cmd.name}\n描述：{cmd.description}")
             else:
-                command: discord.SlashCommand
-                option_str = "\n> ".join([f"{option.name}：{option.description}" for option in command.options])
-                await ctx.respond(f"指令：{command.full_parent_name} {command.name}\n描述：{command.description}\n參數：\n> {option_str}")
+                assert isinstance(cmd, discord.SlashCommand)
+                option_str = "\n> ".join([f"{option.name}：{option.description}" for option in cmd.options])
+                await ctx.respond(f"指令：{cmd.full_parent_name} {cmd.name}\n描述：{cmd.description}\n參數：\n> {option_str}")
 
     @commands.slash_command(description="地圖生成測試")
     async def maptest(self, ctx: discord.ApplicationContext):
@@ -223,6 +228,7 @@ class debug(Cog_Extension):
         ctx: discord.ApplicationContext,
         community_id=discord.Option(str, required=True, description="社群ID"),
     ):
+        assert isinstance(community_id, str), "社群ID必須是字串"
         data = sqldb.get_notify_community_guild(NotifyCommunityType.TwitchLive, community_id)
         embed = BotEmbed.sts()
         for guild_id, channel_id, role_id, message in data:

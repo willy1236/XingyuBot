@@ -1,3 +1,4 @@
+# pyright: reportArgumentType=true
 import asyncio
 import platform
 from datetime import datetime, timedelta
@@ -10,7 +11,7 @@ from discord.commands import SlashCommandGroup
 from discord.ext import commands
 from mcstatus import JavaServer
 
-from starlib import BotEmbed, Jsondb, sclient
+from starlib import BotEmbed, Jsondb, log, sclient
 from starlib.instance import *
 from starlib.types import McssServerAction, McssServerStatues, NotifyChannelType
 from starlib.utils.utility import base64_to_buffer, converter, find_radmin_vpn_network, get_arp_list
@@ -64,18 +65,19 @@ class AnnoModal(discord.ui.Modal):
 
         for i in channels:
             channel = interaction.client.get_channel(i.channel_id)
-            if channel:
-                try:
-                    if i.role_id:
-                        role = channel.guild.get_role(i.role_id)
-                        await channel.send(role.mention, embed=embed)
-                    else:
-                        await channel.send(embed=embed)
-                    send_success += 1
-                except Exception:
-                    pass
-            else:
-                print(f"anno: {i.guild_id}/{i.channel_id}")
+            if not channel:
+                log.warning("anno: %s/%s", i.guild_id, i.channel_id)
+                continue
+
+            try:
+                role = channel.guild.get_role(i.role_id) if i.role_id else None
+                if role:
+                    await channel.send(role.mention, embed=embed)
+                else:
+                    await channel.send(embed=embed)
+                send_success += 1
+            except Exception:
+                log.error("anno: %s/%s", i.guild_id, i.channel_id, exc_info=True)
 
         await msg.edit_original_response(content=f"已向{send_success}/{len(channels)}個頻道發送公告")
 
@@ -95,18 +97,19 @@ class BotUpdateModal(discord.ui.Modal):
 
         for i in channels:
             channel = interaction.client.get_channel(i.channel_id)
-            if channel:
-                try:
-                    if i.role_id:
-                        role = channel.guild.get_role(i.role_id)
-                        await channel.send(role.mention, embed=embed)
-                    else:
-                        await channel.send(embed=embed)
-                    send_success += 1
-                except Exception:
-                    pass
-            else:
-                print(f"botupdate: {i.guild_id}/{i.channel_id}")
+            if not channel:
+                log.warning("botupdate: %s/%s", i.guild_id, i.channel_id)
+                continue
+
+            try:
+                role = channel.guild.get_role(i.role_id) if i.role_id else None
+                if role:
+                    await channel.send(role.mention, embed=embed)
+                else:
+                    await channel.send(embed=embed)
+                send_success += 1
+            except Exception:
+                log.error("botupdate: %s/%s", i.guild_id, i.channel_id, exc_info=True)
 
         await msg.edit_original_response(content=f"已向{send_success}/{len(channels)}個頻道發送公告")
 
@@ -265,29 +268,31 @@ class owner(Cog_Extension):
             permission = member.guild_permissions
 
             embed = discord.Embed(title=guild.name, color=0xC4E9FF)
-            embed.add_field(name="管理員", value=permission.administrator, inline=True)
-            embed.add_field(name="管理頻道", value=permission.manage_channels, inline=True)
-            embed.add_field(name="管理公會", value=permission.manage_guild, inline=True)
-            embed.add_field(name="管理訊息", value=permission.manage_messages, inline=True)
-            embed.add_field(name="管理暱稱", value=permission.manage_nicknames, inline=True)
-            embed.add_field(name="管理身分組", value=permission.manage_roles, inline=True)
-            embed.add_field(name="管理webhook", value=permission.manage_webhooks, inline=True)
-            embed.add_field(name="管理表情符號", value=permission.manage_emojis, inline=True)
-            embed.add_field(name="管理討論串", value=permission.manage_threads, inline=True)
-            embed.add_field(name="管理活動", value=permission.manage_events, inline=True)
-            embed.add_field(name="踢出成員", value=permission.kick_members, inline=True)
-            embed.add_field(name="封鎖成員", value=permission.ban_members, inline=True)
-            embed.add_field(name="禁言成員", value=permission.moderate_members, inline=True)
-            embed.add_field(name="觀看審核日誌", value=permission.view_audit_log, inline=True)
+            embed.add_field(name="管理員", value=str(permission.administrator), inline=True)
+            embed.add_field(name="管理頻道", value=str(permission.manage_channels), inline=True)
+            embed.add_field(name="管理公會", value=str(permission.manage_guild), inline=True)
+            embed.add_field(name="管理訊息", value=str(permission.manage_messages), inline=True)
+            embed.add_field(name="管理暱稱", value=str(permission.manage_nicknames), inline=True)
+            embed.add_field(name="管理身分組", value=str(permission.manage_roles), inline=True)
+            embed.add_field(name="管理webhook", value=str(permission.manage_webhooks), inline=True)
+            embed.add_field(name="管理表情符號", value=str(permission.manage_emojis), inline=True)
+            embed.add_field(name="管理討論串", value=str(permission.manage_threads), inline=True)
+            embed.add_field(name="管理活動", value=str(permission.manage_events), inline=True)
+            embed.add_field(name="踢出成員", value=str(permission.kick_members), inline=True)
+            embed.add_field(name="封鎖成員", value=str(permission.ban_members), inline=True)
+            embed.add_field(name="禁言成員", value=str(permission.moderate_members), inline=True)
+            embed.add_field(name="觀看審核日誌", value=str(permission.view_audit_log), inline=True)
 
         if channel_id_str:
             channel_id = int(channel_id_str)
             channel = self.bot.get_channel(channel_id)
+            assert isinstance(channel, discord.abc.GuildChannel)
 
             embed = discord.Embed(title=channel.name, color=0xC4E9FF)
-            embed.add_field(name="頻道", value=channel.permissions_for(channel.guild.me).manage_channels, inline=True)
-            embed.add_field(name="分類", value=channel.category.permissions_for(channel.guild.me).manage_channels, inline=True)
-            embed.add_field(name="伺服器", value=channel.guild.me.guild_permissions.manage_channels, inline=True)
+            embed.add_field(name="頻道", value=str(channel.permissions_for(channel.guild.me).manage_channels), inline=True)
+            if channel.category:
+                embed.add_field(name="分類", value=str(channel.category.permissions_for(channel.guild.me).manage_channels), inline=True)
+            embed.add_field(name="伺服器", value=str(channel.guild.me.guild_permissions.manage_channels), inline=True)
 
         # permission.create_instant_invite
         # permission.add_reactions
@@ -320,15 +325,14 @@ class owner(Cog_Extension):
         if not channel:
             await ctx.respond("找不到頻道")
             return
+        assert isinstance(channel, discord.abc.GuildChannel)
 
         embed = discord.Embed(title="當前權限", color=discord.Color.blurple())
         for target, overwrite in channel.overwrites.items():
             target_name = target.name if isinstance(target, discord.Role) else target.display_name
-            texts = []
-            for perm, value in overwrite:
-                if value is not None:
-                    texts.append(f"{perm}: {'✅' if value else '❌'}")
-            embed.add_field(name=target_name, value="\n".join(texts), inline=False)
+            texts = [f"{perm}: {'✅' if value else '❌'}" for perm, value in overwrite if value is not None]
+            if texts:
+                embed.add_field(name=target_name, value="\n".join(texts), inline=False)
         await ctx.respond(embed=embed)
 
     # @bot.event
@@ -494,7 +498,7 @@ class owner(Cog_Extension):
     async def getcommand(self, ctx: discord.ApplicationContext, name: discord.Option(str, name="指令名稱")):
         data = self.bot.get_application_command(name)
         if data:
-            await ctx.respond(embed=BotEmbed.simple(data.name, data.id))
+            await ctx.respond(embed=BotEmbed.simple(data.name, str(data.id)))
         else:
             await ctx.respond(embed=BotEmbed.simple("指令未找到"))
 
@@ -503,6 +507,7 @@ class owner(Cog_Extension):
     async def findmember(self, ctx: discord.ApplicationContext, guildid: discord.Option(str, name="伺服器id")):
         guild = self.bot.get_guild(int(guildid))
         guild_main = self.bot.get_guild(happycamp_guild[0])
+        assert isinstance(guild_main, discord.Guild)
         if not guild:
             await ctx.respond("伺服器未找到")
             return
@@ -510,15 +515,12 @@ class owner(Cog_Extension):
             await ctx.respond("伺服器重複")
             return
 
-        member = guild.members
-        member_main = guild_main.members
-        common_member = [element for element in member if element in member_main]
-        common_member_display = []
-        for member in common_member:
-            common_member_display.append(f"{member.mention} ({member.id})")
-
-        embed = BotEmbed.simple(f"{guild.name} 的共通成員", "\n".join(common_member_display))
-        await ctx.respond(embed=embed)
+        common_member_display = [f"{member.mention} ({member.id})" for member in guild.members if member in guild_main.members]
+        if common_member_display:
+            embed = BotEmbed.simple(f"{guild.name} 的共通成員", "\n".join(common_member_display))
+            await ctx.respond(embed=embed)
+        else:
+            await ctx.respond("沒有找到共通成員")
 
     @commands.slash_command(description="尋找id對象", guild_ids=debug_guilds + happycamp_guild)
     @commands.cooldown(rate=1, per=3)
@@ -535,71 +537,79 @@ class owner(Cog_Extension):
         channel_arg = self.bot.get_channel(int(channelid)) if channelid else None
 
         if channel_arg:
-            message: discord.PartialMessage = channel_arg.get_partial_message(id)
+            message = await channel_arg.fetch_message(id)
+            assert isinstance(message, discord.Message)
             if message:
-                embed = BotEmbed.simple(title=f"訊息在{channel_arg.name}頻道", description=f"ID:訊息")
-                embed.add_field(name="內容", value=message.content, inline=False)
-                embed.add_field(name="發送者", value=message.author.mention, inline=True)
-                embed.add_field(name="發送時間", value=message.created_at, inline=True)
-                embed.set_footer(text=f"id:{message.id}")
-                success += 1
+                embeds = [BotEmbed.simple(title=f"訊息", description=f"ID：訊息")]
+                embeds[0].add_field(name="內容", value=message.content, inline=False)
+                embeds[0].add_field(name="發送者", value=message.author.mention, inline=True)
+                embeds[0].add_field(name="頻道", value=channel_arg.mention, inline=True)
+                embeds[0].add_field(name="發送時間", value=message.created_at.isoformat(sep=" ", timespec="seconds"), inline=True)
+                embeds[0].set_footer(text=f"{message.id}")
+                if message.embeds:
+                    embeds += message.embeds
+                await ctx.respond(embeds=embeds)
+                return
 
         user = await self.bot.get_or_fetch_user(id)
         member = now_guild.get_member(id)
         if member:
-            embed = BotEmbed.simple(title=f"{member.name}#{member.discriminator}", description="ID:用戶(伺服器成員)")
-            embed.add_field(name="暱稱", value=member.nick, inline=False)
+            embed = BotEmbed.simple(title=f"{member.name}#{member.discriminator}", description="ID：用戶（伺服器成員）")
+            embed.add_field(name="暱稱", value=str(member.nick), inline=False)
             embed.add_field(name="最高身分組", value=member.top_role.mention, inline=True)
-            embed.add_field(name="目前狀態", value=member.raw_status, inline=True)
+            embed.add_field(name="目前狀態", value=str(member.raw_status), inline=True)
             if member.activity:
-                embed.add_field(name="目前活動", value=member.activity.name, inline=True)
-            embed.add_field(name="是否為機器人", value=member.bot, inline=False)
-            embed.add_field(name="是否為Discord官方", value=member.system, inline=True)
-            embed.add_field(name="是否被禁言", value=member.timed_out, inline=True)
-            embed.add_field(name="加入群組日期", value=member.joined_at, inline=False)
-            embed.add_field(name="帳號創建日期", value=member.created_at, inline=False)
+                embed.add_field(name="目前活動", value=str(member.activity.name), inline=True)
+            embed.add_field(name="是否為機器人", value=str(member.bot), inline=False)
+            embed.add_field(name="是否為Discord官方", value=str(member.system), inline=True)
+            embed.add_field(name="是否被禁言", value=str(member.timed_out), inline=True)
+            embed.add_field(name="加入群組日期", value=member.joined_at.isoformat(sep=" ", timespec="seconds") if member.joined_at else "未知", inline=False)
+            embed.add_field(name="帳號創建日期", value=member.created_at.isoformat(sep=" ", timespec="seconds"), inline=False)
             embed.set_thumbnail(url=member.display_avatar.url)
             embed.set_footer(text=f"id:{member.id}")
             success += 1
         elif user:
-            embed = BotEmbed.simple(title=f"{user.name}#{user.discriminator}", description="ID:用戶")
-            embed.add_field(name="是否為機器人", value=user.bot, inline=False)
-            embed.add_field(name="是否為Discord官方", value=user.system, inline=False)
-            embed.add_field(name="帳號創建日期", value=user.created_at, inline=False)
+            embed = BotEmbed.simple(title=f"{user.name}#{user.discriminator}", description="ID：用戶")
+            embed.add_field(name="是否為機器人", value=str(user.bot), inline=False)
+            embed.add_field(name="是否為Discord官方", value=str(user.system), inline=False)
+            embed.add_field(name="帳號創建日期", value=user.created_at.isoformat(sep=" ", timespec="seconds"), inline=False)
             embed.set_thumbnail(url=user.display_avatar.url)
             success += 1
 
         channel = self.bot.get_channel(id)
         if channel:
-            embed = BotEmbed.simple(title=channel.name, description="ID:頻道")
-            embed.add_field(name="所屬類別", value=channel.category, inline=False)
-            embed.add_field(name="所屬公會", value=channel.guild, inline=False)
-            embed.add_field(name="創建時間", value=channel.created_at, inline=False)
+            embed = BotEmbed.simple(title=channel.name, description="ID：頻道")
+            embed.add_field(name="所屬類別", value=str(channel.category), inline=False)
+            embed.add_field(name="所屬公會", value=str(channel.guild), inline=False)
+            embed.add_field(name="創建時間", value=channel.created_at.isoformat(sep=" ", timespec="seconds") if channel.created_at else "未知", inline=False)
             success += 1
 
         guild = self.bot.get_guild(id)
         if guild:
-            embed = BotEmbed.simple(title=guild.name, description="ID:伺服器")
-            embed.add_field(name="伺服器擁有者", value=guild.owner, inline=False)
-            embed.add_field(name="創建時間", value=guild.created_at, inline=False)
-            embed.add_field(name="驗證等級", value=guild.verification_level, inline=False)
-            embed.add_field(name="成員數", value=len(guild.members), inline=False)
-            embed.add_field(name="文字頻道數", value=len(guild.text_channels), inline=False)
-            embed.add_field(name="語音頻道數", value=len(guild.voice_channels), inline=False)
+            embed = BotEmbed.simple(title=guild.name, description="ID：伺服器")
+            embed.add_field(name="伺服器擁有者", value=str(guild.owner), inline=False)
+            embed.add_field(name="創建時間", value=guild.created_at.isoformat(sep=" ", timespec="seconds"), inline=False)
+            embed.add_field(name="驗證等級", value=str(guild.verification_level), inline=False)
+            embed.add_field(name="成員數", value=str(guild.member_count), inline=False)
+            embed.add_field(name="文字頻道數", value=str(len(guild.text_channels)), inline=False)
+            embed.add_field(name="語音頻道數", value=str(len(guild.voice_channels)), inline=False)
             embed.set_footer(text="頻道數可能因權限不足而有少算，敬請特別注意")
-            embed.set_thumbnail(url=guild.icon.url)
+            if guild.icon:
+                embed.set_thumbnail(url=guild.icon.url)
             success += 1
 
         if guildid:
             guildid = int(guildid)
             guild = self.bot.get_guild(guildid)
+            assert guild is not None, "Guild not found"
             role = guild.get_role(id)
             if role:
-                embed = BotEmbed.simple(title=role.name, description="ID:身分組")
-                embed.add_field(name="所屬伺服器", value=role.guild, inline=False)
-                embed.add_field(name="創建時間", value=role.created_at, inline=False)
-                embed.add_field(name="所屬層級位置", value=role.position, inline=False)
-                embed.add_field(name="顏色", value=role.color, inline=False)
+                embed = BotEmbed.simple(title=role.name, description="ID：身分組")
+                embed.add_field(name="所屬伺服器", value=str(role.guild), inline=False)
+                embed.add_field(name="創建時間", value=role.created_at.isoformat(sep=" ", timespec="seconds"), inline=False)
+                embed.add_field(name="所屬層級位置", value=str(role.position), inline=False)
+                embed.add_field(name="顏色", value=str(role.color), inline=False)
+                embed.add_field(name="權限值", value=str(role.permissions.value), inline=False)
                 if role.icon:
                     embed.set_thumbnail(url=role.icon.url)
                 success += 1
@@ -628,11 +638,15 @@ class owner(Cog_Extension):
         if not time or time > timedelta(days=7):
             await ctx.respond(f"錯誤：時間格式錯誤（不得超過7天）")
             return
+        assert isinstance(channel, discord.abc.GuildChannel), "頻道必須是伺服器頻道"
 
         user = channel.guild.get_member(int(userid))
+        if not user:
+            await ctx.respond(f"錯誤：找不到該用戶")
+            return
         await user.timeout_for(time, reason=reason)
 
-        moderate_user = self.bot.user
+        moderate_user = channel.guild.me
         create_time = datetime.now()
 
         timestamp = int((create_time + time).timestamp())

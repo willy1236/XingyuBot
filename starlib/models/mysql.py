@@ -24,7 +24,7 @@ class CloudUser(UserSchema, table=True):
     drive_share_id: str | None
     twitch_id: int | None = Field(unique=True)
     name: str | None
-    privilege_level: PrivilegeLevel | None = Field(sa_column=Column(SmallInteger, default=PrivilegeLevel.User))
+    privilege_level: PrivilegeLevel = Field(sa_column=Column(SmallInteger, default=PrivilegeLevel.User, nullable=True))
 
 
 class DiscordUser(UserSchema, table=True):
@@ -43,16 +43,16 @@ class UserPoint(UserSchema, table=True):
     __tablename__ = "user_point"
 
     discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True, autoincrement=False))
-    stardust: int | None = Field(default=0)
-    point: int | None = Field(default=0)
-    rcoin: int | None = Field(default=0)
+    stardust: int = Field(default=0)
+    point: int = Field(default=0)
+    rcoin: int = Field(default=0)
 
 class UserBet(UserSchema, table=True):
     __tablename__ = "user_bet"
 
     bet_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
     discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
-    bet_option: int = Field(sa_column=Column(SmallInteger, primary_key=True))
+    bet_option: int = Field(sa_column=Column(SmallInteger))
     bet_amount: int
     bet_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
 
@@ -134,7 +134,7 @@ class UserModerate(UserSchema, table=True):
         moderate_user = bot.get_user(self.moderate_user)
         guild = bot.get_guild(self.create_guild)
         name = f"編號：{self.warning_id}（{Jsondb.get_tw(self.moderate_type, 'warning_type')}）"
-        value = f"{guild.name if guild else self.create_guild}/{moderate_user.mention}\n{self.reason}\n{self.create_time}"
+        value = f"{guild.name if guild else self.create_guild}/{moderate_user.mention if moderate_user else f'<@{self.moderate_user}>'}\n{self.reason}\n{self.create_time}"
         if self.officially_given:
             value += "官方認證警告"
         if self.guild_only:
@@ -415,7 +415,7 @@ class Post(AlchemyBasicSchema):
     title: str = Column(String, nullable=False)
     content: str = Column(String, nullable=False)
     created_at: datetime = Column(TIMESTAMP(precision=0), nullable=False)  # 只記錄到秒
-    user_id: int = Column(Integer, ForeignKey(User.id), nullable=False)
+    user_id: int = Column(Integer, ForeignKey(User.id), nullable=False)  # type: ignore
 
     # 建立反向關聯
     user: User = relationship(back_populates="posts", init=False)
@@ -698,7 +698,7 @@ class WarningList(ListObject[UserModerate]):
         user = bot.get_user(self.discord_id) or user
         embed = BotEmbed.general(
             f"{user.name if user else f'<@{self.discord_id}>'} 的警告單列表（共{len(self.items)}筆）",
-            user.display_avatar.url,
+            user.display_avatar.url if user else None,
         )
         for i in self.items:
             name, value = i.display_embed_field(bot)

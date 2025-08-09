@@ -93,8 +93,7 @@ class DiscordBot(discord.Bot):
 
     async def dm(self, msg: discord.Message):
         dm_channel = self.get_channel(Jsondb.config.get("dm_channel"))
-        embed = BotEmbed.general(
-            name=msg.author.name, icon_url=msg.author.display_avatar.url, title="💭私訊", description=msg.content)
+        embed = BotEmbed.general(name=msg.author.name, icon_url=msg.author.display_avatar.url, title="💭私訊", description=msg.content)  # pyright: ignore[reportCallIssue]
         # embed.add_field(name='訊息內容', value=msg.content, inline=True)
         if msg.channel.recipient:
             embed.add_field(name="發送者", value=f"{msg.author}->{msg.channel.recipient}\n{msg.author.id}->{msg.channel.recipient.id}", inline=False)
