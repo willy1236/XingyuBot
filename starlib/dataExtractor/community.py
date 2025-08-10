@@ -161,7 +161,7 @@ class TwitchAPI:
         else:
             return None
 
-    def get_clips(self, broadcaster_id: int, started_at: datetime = None):
+    def get_clips(self, broadcaster_id: str, started_at: datetime | None = None):
         """
         取得twitch用戶的剪輯資訊\\
         *即使加入了started_at參數，Twitch API也會返回指定時間之前的clip，原因未知，需手動過濾資料*

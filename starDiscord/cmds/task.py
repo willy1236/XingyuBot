@@ -11,6 +11,7 @@ from requests.exceptions import ConnectTimeout, RequestException
 from starlib import BotEmbed, Jsondb, log, sclient, sqldb, tz, utils
 from starlib.instance import *
 from starlib.models.community import YoutubeVideo
+from starlib.models.mysql import UsersCountRecord
 from starlib.types import APIType, NotifyChannelType, NotifyCommunityType
 
 from ..bot import DiscordBot
@@ -42,8 +43,9 @@ class task(Cog_Extension):
             scheduler.add_job(refresh_ip_last_seen, "interval", minutes=20, jitter=30, misfire_grace_time=40)
             # scheduler.add_job(self.get_mongodb_data,'interval',minutes=3,jitter=30,misfire_grace_time=40)
 
-            if self.bot.user.id == 589744540240314368:
-                scheduler.add_job(self.birtday_task, "cron", month=10, day=16, hour=8, minute=0, second=0, jitter=30, misfire_grace_time=60)
+            if self.bot.user and self.bot.user.id == 589744540240314368:
+                scheduler.add_job(self.birthday_task, "cron", month=10, day=16, hour=8, minute=0, second=0, jitter=30, misfire_grace_time=60)
+                scheduler.add_job(record_users_count, "cron", hour=0, minute=0, second=0, jitter=30, misfire_grace_time=60)
                 # scheduler.add_job(self.new_years_eve_task, CronTrigger(month=1, day=1, hour=0, minute=0, second=0), misfire_grace_time=60)
 
         # 抽獎
@@ -139,17 +141,19 @@ class task(Cog_Extension):
         users_id = [user_id for user_id in caches.keys()]
         data = tw_api.get_lives(users_id)
         log.debug(f"twitch_live data: {data}")
-        update_data: dict[str, datetime] = {}
+        update_data: dict[str, datetime | None] = {}
 
         for user_id in users_id:
-            if data[user_id] and not caches[user_id]:
+            live_data = data[user_id]
+            cache_data = caches[user_id]
+            if live_data and not cache_data:
                 # 直播開始
-                update_data[user_id] = data[user_id].started_at
+                update_data[user_id] = live_data.started_at
 
-                embed = data[user_id].embed()
+                embed = live_data.embed()
                 await self.bot.send_notify_communities(embed, NotifyCommunityType.TwitchLive, user_id)
 
-            elif not data[user_id] and caches[user_id]:
+            elif not live_data and cache_data:
                 # 直播結束
                 update_data[user_id] = None
 
@@ -179,7 +183,7 @@ class task(Cog_Extension):
         if not caches:
             return
 
-        update_data: dict[str, datetime] = {}
+        update_data: dict[str, datetime | None] = {}
         for user_id, cache in caches.items():
             clips = tw_api.get_clips(user_id, started_at=cache.value)
             if clips:
@@ -340,23 +344,26 @@ class task(Cog_Extension):
             name="【快樂營中央選舉】投票階段", start_time=start_time, end_time=end_time, location="<#1163127708839071827>"
         )
 
-    async def birtday_task(self):
+    async def birthday_task(self):
         channel = self.bot.get_channel(566533708371329026)
+        assert channel, "Channel not found"
         await channel.send("今天是個特別的日子，別忘記了喔⭐")
 
     async def new_years_eve_task(self):
         channel = self.bot.get_channel(643764975663448064)
+        assert channel, "Channel not found"
         msg = await channel.send("新的一年 祝大家新年快樂~🎉\n來自快樂營的2025新年轟炸 @everyone ", allowed_mentions=discord.AllowedMentions(everyone=True))
         await msg.add_reaction("🎉")
 
     async def refresh_yt_push(self):
         callback_url = sqldb.get_bot_token(APIType.Google, 4).callback_uri
+        assert callback_url, "Callback URL is not set"
         for record in sclient.sqldb.get_expired_push_records():
             yt_push.add_push(record.channel_id, callback_url)
             await asyncio.sleep(3)
             data = yt_push.get_push(record.channel_id, callback_url)
 
-            if data.has_verify:
+            if data and data.has_verify:
                 record.push_at = data.last_successful_verification
                 record.expire_at = data.expiration_time
                 sclient.sqldb.merge(record)
@@ -399,6 +406,16 @@ async def refresh_ip_last_seen():
     now = datetime.now(tz)
     arp_list = utils.get_arp_list()
     sqldb.set_ips_last_seen({ip_and_mac: now for ip_and_mac in arp_list})
+
+async def record_users_count(bot: DiscordBot):
+    """定時記錄用戶數量"""
+    log.debug("record_users_count start")
+    users_count = len(bot.users)
+    servers_count = len(bot.guilds)
+    shard_id = bot.shard_id
+    record = UsersCountRecord(record_date=datetime.now(tz).date(), users_count=users_count, servers_count=servers_count, shard_id=shard_id)
+    sqldb.add(record)
+
 
 def setup(bot):
     bot.add_cog(task(bot))

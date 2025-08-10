@@ -616,6 +616,13 @@ class BackupMessage(BackupSchema, table=True):
         embed.add_field(name="Created at", value=self.created_at.strftime("%Y/%m/%d %H:%M:%S"))
         return embed
 
+class UsersCountRecord(BackupSchema, table=True):
+    __tablename__ = "users_count_backup"
+
+    record_date: date = Field(primary_key=True)
+    shard_id: int | None = Field(sa_column=Column(SmallInteger, nullable=True))
+    users_count: int
+    servers_count: int
 
 class OAuth2Token(TokensSchema, table=True):
     __tablename__ = "oauth_token"

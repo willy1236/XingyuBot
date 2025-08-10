@@ -1,3 +1,4 @@
+# pyright: reportArgumentType=false, reportCallIssue=false
 import inspect
 import os
 from dataclasses import dataclass
@@ -188,7 +189,8 @@ async def system_prompt(ctx: RunContext[MyDeps]) -> str:
         text += f"\n\nDiscord Guild 資訊：\n"
         text += f"Guild ID: {ctx.deps.guild.id}\n"
         text += f"Guild 名稱: {ctx.deps.guild.name}\n"
-        text += f"Guild 群主: {ctx.deps.guild.owner.name} (ID: {ctx.deps.guild.owner.id})\n"
+        if ctx.deps.guild.owner:
+            text += f"Guild 群主: {ctx.deps.guild.owner.name} (ID: {ctx.deps.guild.owner.id})\n"
 
     # Discord Member 資訊
     if ctx.deps.member:
