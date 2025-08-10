@@ -103,18 +103,20 @@ class event(Cog_Extension):
         # 反應身分組
         for react_message in sclient.sqldb.get_reaction_role_message_all():
             log.debug(f"Loading reaction role message: {react_message.message_id}")
-            message = bot.get_message(react_message.channel_id)
-            if not message:
-                channel = bot.get_channel(react_message.channel_id)
-                if channel:
-                    try:
-                        message = channel.get_partial_message(react_message.message_id) or await channel.fetch_message(react_message.message_id)
-                    except discord.errors.NotFound:
-                        message = None
+            channel = bot.get_channel(react_message.channel_id)
+            if channel:
+                assert isinstance(channel, discord.abc.Messageable)
+                try:
+                    message = await channel.fetch_message(react_message.message_id)
+                    await asyncio.sleep(1)
+                except discord.errors.NotFound:
+                    message = channel.get_partial_message(react_message.message_id)
+            else:
+                message = None
 
             if message:
                 react_roles = sclient.sqldb.get_reaction_roles_by_message(react_message.message_id)
-                bot.add_view(ReactionRoleView(message.id, react_roles))
+                bot.add_view(ReactionRoleView(react_message.message_id, react_roles))
                 log.debug(f"Loaded reaction role message: {react_message.message_id}")
             else:
                 sclient.sqldb.delete_reaction_role_message(react_message.message_id)
@@ -289,6 +291,7 @@ class event(Cog_Extension):
             guild = after.channel.guild
             category = after.channel.category
             lobby_data = sclient.sqldb[DBCacheType.DynamicVoiceLobby][after.channel.id]
+            me = after.channel.guild.me
             # permission = discord.Permissions.advanced()
             # permission.manage_channels = True
             # overwrites = discord.PermissionOverwrite({user:permission})
@@ -296,25 +299,24 @@ class event(Cog_Extension):
             overwrites = {
                 target: perms
                 for target, perms in after.channel.overwrites.items()
-                if (isinstance(target, discord.Member) and after.channel.guild.me.top_role > target.top_role)
-                or (isinstance(target, discord.Role) and after.channel.guild.me.top_role > target)
+                if (isinstance(target, discord.Member) and me.top_role > target.top_role) or (isinstance(target, discord.Role) and me.top_role > target)
             }
-            if after.channel.guild.me.top_role > member.top_role:
+            if me.top_role > member.top_role:
                 if member in overwrites:
-                    # * 注意成員位階比較高的情況
+                    # *注意成員位階比較高的情況
                     overwrites[member].manage_channels = True
                     overwrites[member].manage_roles = True
                     overwrites[member].view_channel = True
                 else:
                     overwrites[member] = discord.PermissionOverwrite(manage_channels=True, manage_roles=True, view_channel=True)
 
-            if self.bot.user in overwrites:
-                overwrites[self.bot.user].manage_channels = True
-                overwrites[self.bot.user].manage_roles = True
-                overwrites[self.bot.user].view_channel = True
-                overwrites[self.bot.user].send_messages = True
+            if me in overwrites:
+                overwrites[me].manage_channels = True
+                overwrites[me].manage_roles = True
+                overwrites[me].view_channel = True
+                overwrites[me].send_messages = True
             else:
-                overwrites[self.bot.user] = discord.PermissionOverwrite(manage_channels=True, manage_roles=True, view_channel=True, send_messages=True)
+                overwrites[me] = discord.PermissionOverwrite(manage_channels=True, manage_roles=True, view_channel=True, send_messages=True)
 
             channel_name = lobby_data.default_room_name.replace("{member}", member.name) if lobby_data.default_room_name is not None else f"{member.name}的頻道"
             try:
