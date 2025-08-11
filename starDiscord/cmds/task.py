@@ -45,7 +45,7 @@ class task(Cog_Extension):
 
             if self.bot.user and self.bot.user.id == 589744540240314368:
                 scheduler.add_job(self.birthday_task, "cron", month=10, day=16, hour=8, minute=0, second=0, jitter=30, misfire_grace_time=60)
-                scheduler.add_job(record_users_count, "cron", hour=0, minute=0, second=0, jitter=30, misfire_grace_time=60)
+                scheduler.add_job(record_users_count, "cron", args=[self.bot], hour=0, minute=0, second=0, jitter=30, misfire_grace_time=60)
                 # scheduler.add_job(self.new_years_eve_task, CronTrigger(month=1, day=1, hour=0, minute=0, second=0), misfire_grace_time=60)
 
         # 抽獎
