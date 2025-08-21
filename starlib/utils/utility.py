@@ -98,8 +98,8 @@ class BotEmbed:
 
     @staticmethod
     def simple_warn_sheet(
-        warn_user: discord.User,
-        moderate_user: discord.User,
+        warn_user: discord.abc.User,
+        moderate_user: discord.abc.User,
         create_at: datetime | None = None,
         last: timedelta = timedelta(seconds=15),
         reason: str | None = None,

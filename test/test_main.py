@@ -16,7 +16,6 @@ import google.generativeai as genai
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
-from faker import Faker
 from pydantic import AliasPath, BaseModel, ConfigDict, Field
 
 from starlib import *

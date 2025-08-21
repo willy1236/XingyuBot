@@ -11,7 +11,7 @@ from starlib import BotEmbed, Jsondb, log, sclient, tz
 from starlib.instance import *
 from starlib.models.mysql import DiscordUser
 from starlib.starAgent import ModelMessage, MyDeps, agent
-from starlib.types import DBCacheType, NotifyChannelType
+from starlib.types import DBCacheType, NotifyChannelType, PrivilegeLevel
 
 from ..extension import Cog_Extension
 from ..uiElement.view import GiveawayView, PollView, ReactionRoleView
@@ -241,18 +241,31 @@ class event(Cog_Extension):
     @commands.Cog.listener("on_message")
     async def agent_trigger(self, message: discord.Message):
         #AI agent
-        if message.guild and message.content and message.guild.id in ai_access_guilds and len(message.content) > 1 and message.content.startswith(".") and not message.content.startswith(".", 1, 2):
-            async with message.channel.typing():
-                global agent_history
-                history = agent_history.get(message.author.id, [])
-                deps = MyDeps(discord_id=message.author.id, member=message.author, guild=message.guild)
+        if not (
+            message.guild
+            and message.content
+            and message.guild.id in ai_access_guilds
+            and len(message.content) > 1
+            and message.content.startswith(".")
+            and not message.content.startswith(".", 1, 2)
+        ):
+            return
 
-                resp = await agent.run(message.content[1:], message_history=history, deps=deps)
-                if resp.output:
-                    agent_history[message.author.id] = list(resp.all_messages())
-                    await message.reply(resp.output, mention_author=False)
-                else:
-                    await message.add_reaction("❌")
+        cuser = sclient.sqldb.get_cloud_user(message.author.id)
+        if not cuser or cuser.privilege_level < PrivilegeLevel.Level3:
+            return
+
+        async with message.channel.typing():
+            global agent_history
+            history = agent_history.get(message.author.id, [])
+            deps = MyDeps(discord_id=message.author.id, member=message.author, guild=message.guild)
+
+            resp = await agent.run(message.content[1:], message_history=history, deps=deps)
+            if resp.output:
+                agent_history[message.author.id] = list(resp.all_messages())
+                await message.reply(resp.output, mention_author=False)
+            else:
+                await message.add_reaction("❌")
 
     @commands.Cog.listener("on_message")
     async def keyword_trigger(self, message: discord.Message):
