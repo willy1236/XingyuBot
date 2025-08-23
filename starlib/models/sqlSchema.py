@@ -9,16 +9,11 @@ OBJ = TypeVar("OBJ")
 class Base(MappedAsDataclass, DeclarativeBase):
     """subclasses will be converted to dataclasses"""
 
-<<<<<<< HEAD
     __abstract__ = True
     __dataclass_kwargs__ = {"kw_only": True}
 
     @staticmethod
     def auto_id_column(datatype=Integer):
-=======
-    @classmethod
-    def auto_id_column(cls, datatype = Integer):
->>>>>>> parent of 142c802 (feat: 新增投票功能的變更，允許用戶變更投票，更新資料庫模型)
         """返回標準的自增ID欄位設定"""
         return mapped_column(datatype, Identity(), primary_key=True, init=False)
         # return mapped_column(Integer, primary_key=True, autoincrement=True, init=False)
