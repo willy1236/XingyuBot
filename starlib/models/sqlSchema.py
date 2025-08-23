@@ -9,6 +9,9 @@ OBJ = TypeVar("OBJ")
 class Base(MappedAsDataclass, DeclarativeBase):
     """subclasses will be converted to dataclasses"""
 
+    __abstract__ = True
+    __dataclass_kwargs__ = {"kw_only": True}
+
     @staticmethod
     def auto_id_column(datatype=Integer):
         """返回標準的自增ID欄位設定"""
@@ -25,27 +28,35 @@ class BaseSchema(SQLModel):
 class DatabaseSchema(BaseSchema):
     __table_args__ = {"schema": "database"}
 
-class BasicSchema(BaseSchema):
-    __table_args__ = {"schema": "stardb_basic"}
+
 class AlchemyBasicSchema(Base):
     __abstract__ = True
     __table_args__ = {"schema": "stardb_basic"}
 
-class BackupSchema(BaseSchema):
+
+class AlchemyBackupSchema(Base):
+    __abstract__ = True
     __table_args__ = {"schema": "stardb_backup"}
 
-class IdbaseSchema(BaseSchema):
+
+class IdbaseSchema(Base):
+    __abstract__ = True
     __table_args__ = {"schema": "stardb_idbase"}
 
 
-class RPGSchema(BaseSchema):
+class RPGSchema(Base):
+    __abstract__ = True
     __table_args__ = {"schema": "stardb_rpg"}
 
-class TokensSchema(BaseSchema):
+
+class TokensSchema(Base):
+    __abstract__ = True
     __table_args__ = {"schema": "stardb_tokens"}
 
-class UserSchema(BaseSchema):
+class UserSchema(Base):
+    __abstract__ = True
     __table_args__ = {"schema": "stardb_user"}
 
-class CacheSchema(BaseSchema):
+class CacheSchema(Base):
+    __abstract__ = True
     __table_args__ = {"schema": "stardb_cache"}
