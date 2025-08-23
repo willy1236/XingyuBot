@@ -2,8 +2,13 @@ from datetime import date, datetime, timedelta, timezone
 
 import discord
 from discord import Bot
+<<<<<<< HEAD
 from sqlalchemy import BigInteger, Boolean, ForeignKey, ForeignKeyConstraint, Identity, Integer, Interval, SmallInteger, String, Text, Date
 from sqlalchemy.dialects.postgresql import TIMESTAMP, CIDR, MACADDR
+=======
+from sqlalchemy import BigInteger, Boolean, Column, ForeignKey, ForeignKeyConstraint, Identity, Integer, Interval, SmallInteger, String, Text
+from sqlalchemy.dialects.postgresql import TIMESTAMP
+>>>>>>> parent of 142c802 (feat: 新增投票功能的變更，允許用戶變更投票，更新資料庫模型)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlmodel import Field, Relationship
 
@@ -214,128 +219,130 @@ class TwitchPoint(UserSchema):
     point: int = mapped_column(default=0)
 
 
-class Community(AlchemyBasicSchema):
+class Community(BasicSchema, table=True):
     __tablename__ = "community_info"
 
-    id: str = mapped_column(String, primary_key=True)
-    type: CommunityType = mapped_column(Integer, primary_key=True)
-    username: str = mapped_column(String)
-    display_name: str | None = mapped_column(String)
+    id: str = Field(primary_key=True)
+    type: CommunityType = Field(sa_column=Column(Integer, primary_key=True))
+    username: str
+    display_name: str | None
 
 
-class NotifyChannel(AlchemyBasicSchema):
+class NotifyChannel(BasicSchema, table=True):
     __tablename__ = "notify_channel"
 
-    guild_id: int = mapped_column(BigInteger, primary_key=True)
-    notify_type: NotifyChannelType = mapped_column(Integer, primary_key=True)
-    channel_id: int = mapped_column(BigInteger)
-    role_id: int | None = mapped_column(BigInteger)
-    message: str | None = mapped_column(String)
+    guild_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
+    notify_type: NotifyChannelType = Field(sa_column=Column(Integer, primary_key=True))
+    channel_id: int = Field(sa_column=Column(BigInteger))
+    role_id: int | None = Field(sa_column=Column(BigInteger))
+    message: str | None
 
-class NotifyCommunity(AlchemyBasicSchema):
+class NotifyCommunity(BasicSchema, table=True):
     __tablename__ = "notify_community"
 
-    notify_type: NotifyCommunityType = mapped_column(Integer, primary_key=True)
-    community_id: str = mapped_column(String, primary_key=True)
-    community_type: CommunityType = mapped_column(Integer, primary_key=True)
-    guild_id: int = mapped_column(BigInteger, primary_key=True)
-    channel_id: int = mapped_column(BigInteger)
-    role_id: int | None = mapped_column(BigInteger)
-    message: str | None = mapped_column(String)
+    notify_type: NotifyCommunityType = Field(
+        sa_column=Column(Integer, primary_key=True)
+    )
+    community_id: str = Field(primary_key=True)
+    community_type: CommunityType = Field(sa_column=Column(Integer, primary_key=True))
+    guild_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
+    channel_id: int = Field(sa_column=Column(BigInteger))
+    role_id: int | None = Field(sa_column=Column(BigInteger))
+    message: str | None
 
-class DynamicVoiceLobby(AlchemyBasicSchema):
+class DynamicVoiceLobby(BasicSchema, table=True):
     __tablename__ = "dynamic_voice_lobby"
 
-    guild_id: int = mapped_column(BigInteger, primary_key=True)
-    channel_id: int = mapped_column(BigInteger)
-    default_room_name: str | None = mapped_column(String)
+    guild_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
+    channel_id: int = Field(sa_column=Column(BigInteger))
+    default_room_name: str | None = Field(sa_column=Column(String(255), nullable=True))
 
-class DynamicVoice(AlchemyBasicSchema):
+class DynamicVoice(BasicSchema, table=True):
     __tablename__ = "dynamic_channel"
 
-    channel_id: int = mapped_column(BigInteger, primary_key=True)
-    creator_id: int = mapped_column(BigInteger)
-    guild_id: int = mapped_column(BigInteger)
-    password: str | None = mapped_column(String)
+    channel_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
+    creator_id: int = Field(sa_column=Column(BigInteger))
+    guild_id: int = Field(sa_column=Column(BigInteger))
+    password: str | None = Field(sa_column=Column(String(255), nullable=True))
 
 
-class Bet(AlchemyBasicSchema):
+class Bet(BasicSchema, table=True):
     __tablename__ = "bet_data"
 
-    bet_id: int = mapped_column(BigInteger, primary_key=True)
-    title: str = mapped_column(String)
-    blue_title: str = mapped_column(String)
-    pink_title: str = mapped_column(String)
-    is_on: bool = mapped_column(Boolean)
-    created_at: datetime = mapped_column(TIMESTAMP(True, 0))
+    bet_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
+    title: str
+    blue_title: str
+    pink_title: str
+    is_on: bool
+    created_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
 
 
-class Poll(AlchemyBasicSchema):
+class Poll(BasicSchema, table=True):
     __tablename__ = "poll_data"
 
-    poll_id: int = Base.auto_id_column()
-    title: str = mapped_column(String)
-    creator_id: int = mapped_column(BigInteger)
-    created_at: datetime = mapped_column(TIMESTAMP(True, 0))
-    guild_id: int = mapped_column(BigInteger)
-    message_id: int | None = mapped_column(BigInteger)
-    end_at: datetime | None = mapped_column(TIMESTAMP(True, 0), default=None)
-    number_of_user_votes: int | None = mapped_column(Integer, default=0)
-    ban_alternate_account_voting: bool | None = mapped_column(Boolean, default=False)
-    show_name: bool | None = mapped_column(Boolean, default=False)
-    check_results_in_advance: bool | None = mapped_column(Boolean, default=True)
-    results_only_initiator: bool | None = mapped_column(Boolean, default=False)
-    can_change_vote: bool | None = mapped_column(Boolean, default=True)
+    poll_id: int = Field(sa_column=Column(Integer, Identity(), primary_key=True))
+    title: str
+    creator_id: int = Field(sa_column=Column(BigInteger))
+    created_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
+    guild_id: int = Field(sa_column=Column(BigInteger))
+    message_id: int | None = Field(sa_column=Column(BigInteger))
+    end_at: datetime | None = Field(sa_column=Column(TIMESTAMP(True, 0), nullable=True, default=None))
+    number_of_user_votes: int | None
+    ban_alternate_account_voting: bool | None
+    show_name: bool | None
+    check_results_in_advance: bool | None
+    results_only_initiator: bool | None
+    can_change_vote: bool | None  # not implemented yet
 
 
-class PollOption(AlchemyBasicSchema):
+class PollOption(BasicSchema, table=True):
     __tablename__ = "poll_options"
 
-    poll_id: int = mapped_column(Integer, primary_key=True)
-    option_id: int = mapped_column(Integer, primary_key=True)
-    option_name: str = mapped_column(String)
+    poll_id: int = Field(primary_key=True)
+    option_id: int = Field(primary_key=True)
+    option_name: str
 
-class PollRole(AlchemyBasicSchema):
+class PollRole(BasicSchema, table=True):
     __tablename__ = "poll_role"
 
-    poll_id: int = mapped_column(Integer, primary_key=True)
-    role_id: int = mapped_column(BigInteger, primary_key=True)
-    is_only_role: bool = mapped_column(Boolean)
-    role_magnification: int = mapped_column(Integer)
+    poll_id: int = Field(primary_key=True)
+    role_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
+    is_only_role: bool
+    role_magnification: int
 
-class TwitchBotJoinChannel(AlchemyBasicSchema):
+class TwitchBotJoinChannel(BasicSchema, table=True):
     __tablename__ = "twitch_bot_join_channel"
 
-    twitch_id: int = mapped_column(Integer, primary_key=True)
-    action_channel_id: int | None = mapped_column(BigInteger)
-    point_name: str | None = mapped_column(String)
+    twitch_id: int = Field(primary_key=True)
+    action_channel_id: int | None = Field(sa_column=Column(BigInteger))
+    point_name: str | None = Field(sa_column=Column(String(255)))
 
 
-class TwitchChatCommand(AlchemyBasicSchema):
+class TwitchChatCommand(BasicSchema, table=True):
     __tablename__ = "twitch_chat_command"
 
-    twitch_id: int = mapped_column(Integer, primary_key=True)
-    name: str = mapped_column(String, primary_key=True)
-    response: str = mapped_column(String)
+    twitch_id: int = Field(primary_key=True)
+    name: str = Field(primary_key=True)
+    response: str = Field(nullable=False)
 
 
 class InviteRecord(AlchemyBasicSchema):
     __tablename__ = "invite_record"
 
-    invited_user: int = mapped_column(BigInteger, primary_key=True)
-    invite_guild: int = mapped_column(BigInteger, primary_key=True)
-    inviter_user: int = mapped_column(BigInteger, primary_key=True)
-    invite_time: datetime = mapped_column(TIMESTAMP(True, 0))
-    invite_code: str = mapped_column(String)
+    invited_user: int = Column(BigInteger, primary_key=True)
+    invite_guild: int = Column(BigInteger, primary_key=True)
+    inviter_user: int = Column(BigInteger, primary_key=True)
+    invite_time: datetime = Column(TIMESTAMP(True, 0))
+    invite_code: str = Column(String(255))
 
 
-class PushRecord(AlchemyBasicSchema):
+class PushRecord(BasicSchema, table=True):
     __tablename__ = "push_record"
 
-    channel_id: str = mapped_column(String, primary_key=True)
-    push_at: datetime = mapped_column(TIMESTAMP(True, 0), default=datetime.min.replace(tzinfo=timezone.utc))
-    expire_at: datetime = mapped_column(TIMESTAMP(True, 0), default=datetime.min.replace(tzinfo=timezone.utc))
-    secret: str | None = mapped_column(String, default=None)
+    channel_id: str = Field(sa_column=Column(String(255), primary_key=True))
+    push_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0), default=datetime.min.replace(tzinfo=timezone.utc)))
+    expire_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0), default=datetime.min.replace(tzinfo=timezone.utc)))
+    secret: str | None = Field(sa_column=Column(String(255), nullable=True))
 
     @property
     def is_expired(self) -> bool:
@@ -345,37 +352,39 @@ class PushRecord(AlchemyBasicSchema):
 class ReactionRoleMessage(AlchemyBasicSchema):
     __tablename__ = "reaction_role_message"
 
-    guild_id: int = mapped_column(BigInteger, primary_key=True)
-    channel_id: int = mapped_column(BigInteger, primary_key=True)
-    message_id: int = mapped_column(BigInteger, primary_key=True)
+    guild_id: int = Column(BigInteger, primary_key=True)
+    channel_id: int = Column(BigInteger, primary_key=True)
+    message_id: int = Column(BigInteger, primary_key=True)
 
 
 class ReactionRole(AlchemyBasicSchema):
     __tablename__ = "reaction_role"
 
-    message_id: int = mapped_column(BigInteger, primary_key=True)
-    role_id: int = mapped_column(BigInteger, primary_key=True)
-    title: str = mapped_column(String)
-    description: str | None = mapped_column(String)
-    emoji: str | None = mapped_column(String)
-    style: int | None = mapped_column(Integer)
+    message_id: int = Column(BigInteger, primary_key=True)
+    role_id: int = Column(BigInteger, primary_key=True)
+    title: str = Column(String(255))
+    description: str | None = Column(String(255), nullable=True)
+    emoji: str | None = Column(String(255), nullable=True)
+    style: int | None = Column(Integer, nullable=True)
 
 
-class Giveaway(AlchemyBasicSchema):
+class Giveaway(BasicSchema, table=True):
     __tablename__ = "giveaway_data"
 
-    id: int = mapped_column(Integer, Identity(), primary_key=True)
-    guild_id: int = mapped_column(BigInteger)
-    channel_id: int = mapped_column(BigInteger)
-    message_id: int | None = mapped_column(BigInteger)
-    creator_id: int = mapped_column(BigInteger)
-    prize_name: str = mapped_column(String)
-    winner_count: int = mapped_column(Integer)
-    created_at: datetime = mapped_column(TIMESTAMP(True, 0))
-    end_at: datetime | None = mapped_column(TIMESTAMP(True, 0))
-    is_on: bool = mapped_column(Boolean, default=True)
-    description: str | None = mapped_column(String, default=None)
-    redraw_count: int = mapped_column(Integer, default=0)
+    id: int = Field(sa_column=Column(Integer, Identity(), primary_key=True))
+    guild_id: int = Field(sa_column=Column(BigInteger, nullable=False))
+    channel_id: int = Field(sa_column=Column(BigInteger, nullable=False))
+    message_id: int | None = Field(
+        sa_column=Column(BigInteger, nullable=True, default=None)
+    )
+    creator_id: int = Field(sa_column=Column(BigInteger, nullable=False))
+    prize_name: str = Field(sa_column=Column(String(255), nullable=False))
+    winner_count: int = Field(sa_column=Column(Integer, nullable=False))
+    created_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0), nullable=False))
+    end_at: datetime | None = Field(sa_column=Column(TIMESTAMP(True, 0), nullable=True))
+    is_on: bool = Field(sa_column=Column(Boolean, nullable=False, default=True))
+    description: str | None = Field(sa_column=Column(String(255), nullable=True, default=None))
+    redraw_count: int = Field(sa_column=Column(Integer, nullable=True, default=0))
 
 
 class GiveawayUser(UserSchema):
@@ -392,8 +401,7 @@ class User(AlchemyBasicSchema):
     __tablename__ = "users"
 
     id: int = Base.auto_id_column()
-    name: str = mapped_column(String, nullable=False)
-    age: int = mapped_column(Integer, nullable=False)
+    name: str = Column(String, nullable=False)
 
     # 建立關聯：一個使用者對應多篇貼文
     posts: list["Post"] = relationship(back_populates="user", init=False)
@@ -402,39 +410,46 @@ class User(AlchemyBasicSchema):
 class Post(AlchemyBasicSchema):
     __tablename__ = "posts"
 
-    id: Mapped[int] = Base.auto_id_column()
-    title: Mapped[str] = mapped_column(String, nullable=False)
-    content: Mapped[str] = mapped_column(String, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(TIMESTAMP(precision=0), nullable=False)
-    user_id: Mapped[int] = mapped_column(Integer, ForeignKey(User.id), nullable=False)  # type: ignore
-    tags: Mapped[str | None] = mapped_column(String, default=None)
+    id: int = Base.auto_id_column()
+    title: str = Column(String, nullable=False)
+    content: str = Column(String, nullable=False)
+    created_at: datetime = Column(TIMESTAMP(precision=0), nullable=False)  # 只記錄到秒
+    user_id: int = Column(Integer, ForeignKey(User.id), nullable=False)  # type: ignore
 
     # 建立反向關聯
     user: User = relationship(back_populates="posts", init=False)
 
 
-class ServerConfig(AlchemyBasicSchema):
+class ServerConfig(BasicSchema, table=False):
     __tablename__ = "server_config"
 
-    guild_id: int = mapped_column(BigInteger, primary_key=True)
-    timeout_after_warning_times: int | None = mapped_column(Integer)
+    guild_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
+    timeout_after_warning_times: int | None = Field(default=0)
 
-class MemorialDay(AlchemyBasicSchema):
+class MemorialDay(BasicSchema, table=True):
     __tablename__ = "memorial_days"
 
-    day_id: int = mapped_column(Integer, Identity(), primary_key=True)
-    discord_id: int = mapped_column(BigInteger)
-    target_date: date = mapped_column(Date)
-    name: str = mapped_column(String)
+    day_id: int = Field(sa_column=Column(Integer, Identity(), primary_key=True))
+    discord_id: int = Field(sa_column=Column(BigInteger))
+    target_date: date
+    name: str
 
-class IPLastSeen(AlchemyBasicSchema):
+class IPLastSeen(BasicSchema, table=True):
     __tablename__ = "ip_last_seen"
 
+<<<<<<< HEAD
     ip: str = mapped_column(CIDR, primary_key=True)
     last_seen: datetime = mapped_column(TIMESTAMP(True, 0))
     mac: str | None = mapped_column(MACADDR)
     discord_id: int | None = mapped_column(BigInteger, default=None)
     name: str | None = mapped_column(String, default=None)
+=======
+    ip: str = Field(primary_key=True)
+    last_seen: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
+    discord_id: int | None = Field(sa_column=Column(BigInteger, nullable=True))
+    mac: str | None = Field(sa_column=Column(String(255), nullable=True))
+    name: str | None = Field(sa_column=Column(String(255), nullable=True))
+>>>>>>> parent of 142c802 (feat: 新增投票功能的變更，允許用戶變更投票，更新資料庫模型)
 
 class Party(IdbaseSchema):
     __tablename__ = "party_datas"
