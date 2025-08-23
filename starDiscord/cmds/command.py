@@ -453,6 +453,7 @@ class command(Cog_Extension):
         results_only_initiator: discord.Option(bool, name="僅限發起人能查看結果", description="預設為false", default=False),
         ban_alternate_account_voting: discord.Option(bool, name="是否禁止小帳投票", description="僅供特定群組使用，預設為false", default=False),
         number_of_user_votes: discord.Option(int, name="一人最多可投票數", description="預設為1", default=1, min_value=1, max_value=20),
+        # can_change_vote: discord.Option(bool, name="是否允許變更投票", description="預設為true", default=True),
         only_role: discord.Option(
             str, name="限制身分組", description="若提供。則只有擁有身分組才能投票，多個身分組以英文,隔開，身分組可輸入id、提及、名稱等", default=None
         ),
@@ -480,8 +481,10 @@ class command(Cog_Extension):
             check_results_in_advance,
             results_only_initiator,
             number_of_user_votes,
+            can_change_vote=None,  # implemented in the future
             only_role_list=only_role_list,
             role_magnification_dict=role_magnification_dict,
+            bot=self.bot,
         )
         embed = view.embed(ctx.guild)
         message = await ctx.respond(embed=embed, view=view)

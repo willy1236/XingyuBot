@@ -8,8 +8,8 @@ from typing import TYPE_CHECKING, Any, Literal, ParamSpec, Self, TypeVar, overlo
 import discord
 import sqlalchemy
 from google.oauth2.credentials import Credentials
-from sqlalchemy import and_, delete, desc, func, not_, or_
-from sqlalchemy.engine import URL
+from sqlalchemy import and_, delete, desc, func, not_, or_, Select
+from sqlalchemy.engine import URL, Result, ScalarResult
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session as ALSession
 from sqlalchemy.orm import joinedload, sessionmaker
@@ -29,7 +29,7 @@ from ..utils import log
 T = TypeVar("T")
 P = ParamSpec("P")
 
-# 外部裝飾器定義（不依賴 self）
+# 外部裝飾器定義
 def with_session(func):
     @wraps(func)
     def wrapper(self: "BaseSQLEngine", *args, **kwargs):
@@ -41,10 +41,11 @@ def with_session(func):
 
 class BaseSQLEngine:
     def __init__(self,connection_url):
-        # self.alengine = sqlalchemy.create_engine(connection_url, echo=False)
-        # Base.metadata.create_all(self.alengine)
-        # Sessionmkr = sessionmaker(bind=self.alengine)
-        # self.alsession = Sessionmkr()
+        # TODO: change sqlmodel to sqlalchemy.
+        self.alengine = sqlalchemy.create_engine(connection_url, echo=False)
+        Base.metadata.create_all(self.alengine)
+        Sessionmkr = sessionmaker(bind=self.alengine)
+        self.alsession = Sessionmkr()
         self._local = threading.local()
 
         self.engine = create_engine(connection_url, echo=False, pool_pre_ping=True)
@@ -85,11 +86,11 @@ class BaseSQLEngine:
             self.cache[DBCacheType.from_notify_channel(key)] = value
         self.cache[key] = value
 
-    @property
-    def alsession(self) -> Session:
-        if not hasattr(self._local, "alsession"):
-            raise RuntimeError("Session not initialized. Use inside a session context.")
-        return self._local.alsession
+    # @property
+    # def alsession(self) -> Session:
+    #     if not hasattr(self._local, "alsession"):
+    #         raise RuntimeError("Session not initialized. Use inside a session context.")
+    #     return self._local.alsession
 
     @contextmanager
     def session_scope(self) -> Generator[None, None, None]:
@@ -147,6 +148,8 @@ class BaseSQLEngine:
     def get(self, db_obj: T, primary_keys: tuple) -> T | None:
         return self.session.get(db_obj, primary_keys)  # type: ignore
 
+    def exec_typed(self, stmt: Select[T]) -> Result[T]:  # type: ignore
+        return self.alsession.execute(stmt)
 
 class SQLUserSystem(BaseSQLEngine):
     # * User
@@ -825,14 +828,22 @@ class SQLPollSystem(BaseSQLEngine):
         self.session.add_all(lst)
         self.session.commit()
 
-    def set_user_poll(self, poll_id: int, discord_id: int, vote_option: int = None, vote_at: datetime = None, vote_magnification: int = 1, max_can_vote:int = None):
+    def set_user_poll(
+        self,
+        poll_id: int,
+        discord_id: int,
+        vote_option: int,
+        vote_at: datetime | None = None,
+        vote_magnification: int = 1,
+        max_can_vote: int | None = None,
+    ):
         """
         Sets the user's poll vote in the database.
 
         Args:
             poll_id (int): The ID of the poll.
             discord_id (int): The ID of the user on Discord.
-            vote_option (int, optional): The option the user voted for. Defaults to None.
+            vote_option (int): The option the user voted for.
             vote_at (datetime, optional): The timestamp of the vote. Defaults to None.
             vote_magnification (int, optional): The magnification of the vote. Defaults to 1.
             max_can_vote (int, optional): The maximum number of votes the user can cast. Defaults to None.
@@ -846,23 +857,21 @@ class SQLPollSystem(BaseSQLEngine):
         Raises:
             SQLNotFoundError: If the poll with the given ID is not found in the database.
         """
-        count = 0
-        if max_can_vote:
-            count = self.get_user_vote_count(poll_id,discord_id)
-            if count > max_can_vote:
-                return 2
-
-        vote = UserPoll(poll_id=poll_id,discord_id=discord_id,vote_option=vote_option,vote_at=vote_at,vote_magnification=vote_magnification)
+        count = self.get_user_vote_count(poll_id, discord_id) if max_can_vote else 0
         stmt = select(UserPoll).where(UserPoll.poll_id == poll_id, UserPoll.discord_id == discord_id, UserPoll.vote_option == vote_option)
         result = self.session.exec(stmt).one_or_none()
         if result:
-            self.session.delete(vote)
+            # 已投選項->取消
+            self.session.delete(result)
             text = -1
 
-        elif count == max_can_vote:
+        elif max_can_vote is not None and count >= max_can_vote:
+            # 未投選項+已達到最大投票數
             return 2
 
         else:
+            # 未投選項->投票
+            vote = UserPoll(poll_id=poll_id, discord_id=discord_id, vote_option=vote_option, vote_at=vote_at, vote_magnification=vote_magnification)
             self.session.add(vote)
             text = 1
 
@@ -871,8 +880,8 @@ class SQLPollSystem(BaseSQLEngine):
 
     def get_user_vote_count(self, poll_id, discord_id):
         stmt = select(func.count()).where(UserPoll.poll_id == poll_id, UserPoll.discord_id == discord_id)
-        result = self.session.exec(stmt).one_or_none()
-        return result or 0
+        result = self.session.exec(stmt).one()
+        return result
 
     def add_user_poll(self, poll_id: int, discord_id: int, vote_option: int, vote_at: datetime, vote_magnification: int = 1):
         self.session.merge(UserPoll(poll_id=poll_id, discord_id=discord_id, vote_option=vote_option, vote_at=vote_at, vote_magnification=vote_magnification))

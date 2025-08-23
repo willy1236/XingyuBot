@@ -80,7 +80,7 @@ class PollOptionButton(discord.ui.Button):
 
         if not view.role_dict or (have_only_role and can_vote):
             r = view.sqldb.set_user_poll(
-                self.option.poll_id, interaction.user.id, self.option.option_id, datetime.now(), vote_magnification, view.poll.number_of_user_votes
+                self.option.poll_id, interaction.user.id, self.option.option_id, datetime.now(tz), vote_magnification, view.poll.number_of_user_votes
             )
             if r == 2:
                 await interaction.response.send_message(f"{interaction.user.mention} 已投了 {view.poll.number_of_user_votes} 票而無法投票", ephemeral=True)
@@ -188,6 +188,7 @@ class PollView(discord.ui.View):
         check_results_in_advance=True,
         results_only_initiator=False,
         number_of_user_votes=1,
+        can_change_vote=True,
         only_role_list: list | None = None,
         role_magnification_dict: dict | None = None,
         bot: discord.Bot | None = None,
@@ -204,6 +205,7 @@ class PollView(discord.ui.View):
             check_results_in_advance=check_results_in_advance,
             results_only_initiator=results_only_initiator,
             number_of_user_votes=number_of_user_votes,
+            can_change_vote=can_change_vote,
         )
         sqldb.add(poll)
         sqldb.add_poll_option(poll.poll_id, options)
@@ -265,6 +267,8 @@ class PollView(discord.ui.View):
             else "\n- 結果將在結束時公佈"
         )
         description += f"\n- 可選擇 {self.poll.number_of_user_votes} 個選項"
+        if not self.poll.can_change_vote:
+            description += f"\n- 不允許變更投票"
         if self.poll.ban_alternate_account_voting:
             description += f"\n- 小帳不算有效票"
 
