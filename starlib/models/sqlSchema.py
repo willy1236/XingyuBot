@@ -29,10 +29,14 @@ class DatabaseSchema(BaseSchema):
     __table_args__ = {"schema": "database"}
 
 
-class AlchemyBasicSchema(Base):
+class BasicSchema(BaseSchema):
     __abstract__ = True
     __table_args__ = {"schema": "stardb_basic"}
 
+
+class AlchemyBasicSchema(Base):
+    __abstract__ = True
+    __table_args__ = {"schema": "stardb_basic"}
 
 class AlchemyBackupSchema(Base):
     __abstract__ = True

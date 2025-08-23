@@ -2,13 +2,8 @@ from datetime import date, datetime, timedelta, timezone
 
 import discord
 from discord import Bot
-<<<<<<< HEAD
-from sqlalchemy import BigInteger, Boolean, ForeignKey, ForeignKeyConstraint, Identity, Integer, Interval, SmallInteger, String, Text, Date
+from sqlalchemy import BigInteger, Boolean, ForeignKey, ForeignKeyConstraint, Identity, Integer, Interval, SmallInteger, String, Text, Date, Column
 from sqlalchemy.dialects.postgresql import TIMESTAMP, CIDR, MACADDR
-=======
-from sqlalchemy import BigInteger, Boolean, Column, ForeignKey, ForeignKeyConstraint, Identity, Integer, Interval, SmallInteger, String, Text
-from sqlalchemy.dialects.postgresql import TIMESTAMP
->>>>>>> parent of 142c802 (feat: 新增投票功能的變更，允許用戶變更投票，更新資料庫模型)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlmodel import Field, Relationship
 
@@ -437,19 +432,11 @@ class MemorialDay(BasicSchema, table=True):
 class IPLastSeen(BasicSchema, table=True):
     __tablename__ = "ip_last_seen"
 
-<<<<<<< HEAD
-    ip: str = mapped_column(CIDR, primary_key=True)
-    last_seen: datetime = mapped_column(TIMESTAMP(True, 0))
-    mac: str | None = mapped_column(MACADDR)
-    discord_id: int | None = mapped_column(BigInteger, default=None)
-    name: str | None = mapped_column(String, default=None)
-=======
     ip: str = Field(primary_key=True)
     last_seen: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
     discord_id: int | None = Field(sa_column=Column(BigInteger, nullable=True))
     mac: str | None = Field(sa_column=Column(String(255), nullable=True))
     name: str | None = Field(sa_column=Column(String(255), nullable=True))
->>>>>>> parent of 142c802 (feat: 新增投票功能的變更，允許用戶變更投票，更新資料庫模型)
 
 class Party(IdbaseSchema):
     __tablename__ = "party_datas"
