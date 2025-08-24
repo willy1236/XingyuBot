@@ -552,7 +552,7 @@ class CLIInterface():
     def __init__(self):
         self.rettiwt_api_key = sqldb.get_bot_token(APIType.Rettiwt).access_token
 
-    def get_user_timeline(self, user_id:str, after:datetime=None) -> RettiwtTweetTimeLineResponse | None:
+    def get_user_timeline(self, user_id: str, after: datetime | None = None) -> RettiwtTweetTimeLineResponse | None:
         # shutil.which("rettiwt")
         r = subprocess.run(f'rettiwt -k "{self.rettiwt_api_key}" user timeline "{user_id}" 10', shell=True, capture_output=True, encoding="utf-8", check=False)
         r.check_returncode()

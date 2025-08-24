@@ -478,10 +478,10 @@ class RettiwtTweetUser(BaseModel):
     profileBanner: HttpUrl | None
     profileImage: HttpUrl | None
 
-    @field_validator("createdAt", mode="before")
-    @classmethod
-    def parse_created_at(cls, v: str) -> datetime:
-        return datetime.strptime(v, DATETIME_FORMAT)
+    # @field_validator("createdAt", mode="before")
+    # @classmethod
+    # def parse_created_at(cls, v: str) -> datetime:
+    #     return datetime.strptime(v, DATETIME_FORMAT)
 
     def embed(self):
         embed = discord.Embed(
@@ -527,10 +527,10 @@ class RettiwtTweetItem(BaseModel):
     viewCount: int
     bookmarkCount: int
 
-    @field_validator("createdAt", mode="before")
-    @classmethod
-    def parse_created_at(cls, v: str) -> datetime:
-        return datetime.strptime(v, DATETIME_FORMAT).astimezone(tz=tz)
+    # @field_validator("createdAt", mode="before")
+    # @classmethod
+    # def parse_created_at(cls, v: str) -> datetime:
+    #     return datetime.strptime(v, DATETIME_FORMAT).astimezone(tz=tz)
 
     @property
     def url(self) -> str:
@@ -543,7 +543,7 @@ class RettiwtTweetItem(BaseModel):
 
 class RettiwtTweetTimeLineResponse(BaseModel):
     list: list[RettiwtTweetItem]
-    next: dict | None = None
+    next: str | None = None
 
 class RettiwtTweetUserDetails(BaseModel):
     id: str
@@ -560,10 +560,11 @@ class RettiwtTweetUserDetails(BaseModel):
     profileBanner: HttpUrl | None = None
     profileImage: HttpUrl | None = None
 
-    @field_validator("createdAt", mode="before")
-    @classmethod
-    def parse_created_at(cls, v: str) -> datetime:
-        return datetime.strptime(v, DATETIME_FORMAT).astimezone(tz=tz)
+    # @field_validator("createdAt", mode="before")
+    # @classmethod
+    # def parse_created_at(cls, v: str) -> datetime:
+    #     return datetime.strptime(v, DATETIME_FORMAT).astimezone(tz=tz)
+
 
 # Notion API Models
 class NotionUser(BaseModel):
