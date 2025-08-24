@@ -38,29 +38,29 @@ class AlchemyBasicSchema(Base):
     __abstract__ = True
     __table_args__ = {"schema": "stardb_basic"}
 
-class AlchemyBackupSchema(Base):
+class BackupSchema(BaseSchema):
     __abstract__ = True
     __table_args__ = {"schema": "stardb_backup"}
 
 
-class IdbaseSchema(Base):
+class IdbaseSchema(BaseSchema):
     __abstract__ = True
     __table_args__ = {"schema": "stardb_idbase"}
 
 
-class RPGSchema(Base):
+class RPGSchema(BaseSchema):
     __abstract__ = True
     __table_args__ = {"schema": "stardb_rpg"}
 
 
-class TokensSchema(Base):
+class TokensSchema(BaseSchema):
     __abstract__ = True
     __table_args__ = {"schema": "stardb_tokens"}
 
-class UserSchema(Base):
+class UserSchema(BaseSchema):
     __abstract__ = True
     __table_args__ = {"schema": "stardb_user"}
 
-class CacheSchema(Base):
+class CacheSchema(BaseSchema):
     __abstract__ = True
     __table_args__ = {"schema": "stardb_cache"}

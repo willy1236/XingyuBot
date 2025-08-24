@@ -1,3 +1,4 @@
+# pyright: reportArgumentType=false
 from datetime import date, datetime, timedelta, timezone
 
 import discord
@@ -15,94 +16,94 @@ from ..utils import BotEmbed
 from .sqlSchema import *
 
 
-class CloudUser(UserSchema):
+class CloudUser(UserSchema, table=True):
     __tablename__ = "cloud_user"
 
-    id: str | None = mapped_column(String, primary_key=True, default=None)
-    discord_id: int = mapped_column(BigInteger, primary_key=True, autoincrement=False, default=None)
-    email: str | None = mapped_column(String, default=None)
-    drive_share_id: str | None = mapped_column(String, default=None)
-    twitch_id: int | None = mapped_column(Integer, unique=True, default=None)
-    name: str | None = mapped_column(String, default=None)
-    privilege_level: PrivilegeLevel = mapped_column(SmallInteger, default=PrivilegeLevel.User, nullable=True)
+    id: str | None = Field(sa_column=Column(String, primary_key=True))
+    discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True, autoincrement=False))
+    email: str | None = Field(sa_column=Column(String))
+    drive_share_id: str | None = Field(sa_column=Column(String))
+    twitch_id: int | None = Field(sa_column=Column(Integer, unique=True))
+    name: str | None = Field(sa_column=Column(String))
+    privilege_level: PrivilegeLevel = Field(sa_column=Column(SmallInteger, nullable=True), default=PrivilegeLevel.User)
 
 
-class DiscordUser(UserSchema):
+class DiscordUser(UserSchema, table=True):
     __tablename__ = "user_discord"
 
-    discord_id: int = mapped_column(BigInteger, primary_key=True, autoincrement=False)
-    max_sign_consecutive_days: int | None = mapped_column(Integer, default=None)
-    meatball_times: int | None = mapped_column(Integer, default=None)
-    guaranteed: int | None = mapped_column(Integer, default=None)
-    registrations_id: int | None = mapped_column(Integer, ForeignKey("stardb_idbase.discord_registrations.registrations_id"), default=None)
+    discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True, autoincrement=False))
+    max_sign_consecutive_days: int | None = Field(sa_column=Column(Integer))
+    meatball_times: int | None = Field(sa_column=Column(Integer))
+    guaranteed: int | None = Field(sa_column=Column(Integer))
+    registrations_id: int | None = Field(sa_column=Column(Integer, ForeignKey("stardb_idbase.discord_registrations.registrations_id"), default=None))
 
-    registration: "DiscordRegistration" = relationship(back_populates="members", init=False)
+    registration: "DiscordRegistration" = Relationship(back_populates="members")
 
 
-class UserPoint(UserSchema):
+class UserPoint(UserSchema, table=True):
     __tablename__ = "user_point"
 
-    discord_id: int = mapped_column(BigInteger, primary_key=True, autoincrement=False)
-    stardust: int = mapped_column(Integer, default=0)
-    point: int = mapped_column(Integer, default=0)
-    rcoin: int = mapped_column(Integer, default=0)
+    discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
+    stardust: int = Field(sa_column=Column(Integer), default=0)
+    point: int = Field(sa_column=Column(Integer), default=0)
+    rcoin: int = Field(sa_column=Column(Integer), default=0)
 
-class UserBet(UserSchema):
+class UserBet(UserSchema, table=True):
     __tablename__ = "user_bet"
 
-    bet_id: int = mapped_column(BigInteger, primary_key=True)
-    discord_id: int = mapped_column(BigInteger, primary_key=True)
-    bet_option: int = mapped_column(SmallInteger)
-    bet_amount: int = mapped_column(Integer)
-    bet_at: datetime = mapped_column(TIMESTAMP(True, 0))
+    bet_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
+    discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
+    bet_option: int = Field(sa_column=Column(SmallInteger))
+    bet_amount: int = Field(sa_column=Column(Integer))
+    bet_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
 
-class UserGame(UserSchema):
+class UserGame(UserSchema, table=True):
     __tablename__ = "game_data"
 
-    discord_id: int = mapped_column(BigInteger, primary_key=True, autoincrement=False)
-    game: GameType = mapped_column(SmallInteger, primary_key=True, autoincrement=False)
-    player_name: str = mapped_column(String)
-    player_id: str | None = mapped_column(String)
-    account_id: str | None = mapped_column(String)
-    other_id: str | None = mapped_column(String)
+    discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True, autoincrement=False))
+    game: GameType = Field(sa_column=Column(SmallInteger, primary_key=True, autoincrement=False))
+    player_name: str = Field(sa_column=Column(String))
+    player_id: str | None = Field(sa_column=Column(String))
+    account_id: str | None = Field(sa_column=Column(String))
+    other_id: str | None = Field(sa_column=Column(String))
 
 
-class UserPoll(UserSchema):
+class UserPoll(UserSchema, table=True):
     __tablename__ = "user_poll"
 
-    poll_id: int = mapped_column(Integer, primary_key=True)
-    discord_id: int = mapped_column(BigInteger, primary_key=True)
-    vote_option: int = mapped_column(Integer, primary_key=True)
-    vote_at: datetime = mapped_column(TIMESTAMP(True, 0))
-    vote_magnification: int = mapped_column(Integer, default=1)
+    poll_id: int = Field(sa_column=Column(Integer, primary_key=True))
+    discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
+    vote_option: int = Field(sa_column=Column(Integer, primary_key=True))
+    vote_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
+    vote_magnification: int = Field(sa_column=Column(Integer), default=1)
 
-class UserAccount(UserSchema):
+class UserAccount(UserSchema, table=True):
     __tablename__ = "user_account"
 
-    main_account: int = mapped_column(BigInteger, primary_key=True)
-    alternate_account: int = mapped_column(BigInteger, primary_key=True)
+    main_account: int = Field(sa_column=Column(BigInteger, primary_key=True))
+    alternate_account: int = Field(sa_column=Column(BigInteger, primary_key=True))
 
-class UserParty(UserSchema):
+class UserParty(UserSchema, table=True):
     __tablename__ = "user_party"
 
-    discord_id: int = mapped_column(BigInteger, primary_key=True)
-    party_id: int = mapped_column(Integer, ForeignKey("stardb_idbase.party_datas.party_id"), primary_key=True)
+    discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
+    party_id: int = Field(sa_column=Column(Integer, ForeignKey("stardb_idbase.party_datas.party_id"), primary_key=True))
 
-    party: "Party" = relationship(back_populates="members", init=False)
+    party: "Party" = Relationship(back_populates="members")
 
-class UserModerate(UserSchema):
+class UserModerate(UserSchema, table=True):
     __tablename__ = "user_moderate"
 
-    warning_id: int = Base.auto_id_column()
-    discord_id: int = mapped_column(BigInteger)
-    moderate_type: WarningType = mapped_column(Integer)
-    moderate_user: int = mapped_column(BigInteger)
-    create_guild: int = mapped_column(BigInteger)
-    create_time: datetime = mapped_column(TIMESTAMP(True, 0))
-    reason: str | None = mapped_column(String)
-    last_time: timedelta | None = mapped_column(Interval)
-    guild_only: bool | None = mapped_column(Boolean)
-    officially_given: bool | None = mapped_column(Boolean)
+    warning_id: int = Field(sa_column=Column(Integer, Identity(), primary_key=True))
+    discord_id: int = Field(sa_column=Column(BigInteger))
+    moderate_type: WarningType = Field(sa_column=Column(Integer))
+    moderate_user: int = Field(sa_column=Column(BigInteger))
+    create_guild: int = Field(sa_column=Column(BigInteger))
+    create_time: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
+    reason: str | None = Field(sa_column=Column(String))
+    last_time: timedelta | None = Field(sa_column=Column(Interval))
+    guild_only: bool | None = Field(sa_column=Column(Boolean))
+    officially_given: bool | None = Field(sa_column=Column(Boolean))
 
     def embed(self, bot: Bot) -> discord.Embed:
         user = bot.get_user(self.discord_id)
@@ -136,82 +137,82 @@ class UserModerate(UserSchema):
         return name, value
 
 
-class RoleSave(UserSchema):
+class RoleSave(UserSchema, table=True):
     __tablename__ = "role_save"
 
-    discord_id: int = mapped_column(BigInteger, primary_key=True)
-    role_id: int = mapped_column(BigInteger, primary_key=True)
-    role_name: str = mapped_column(String)
-    time: date = mapped_column(Date)
+    discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
+    role_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
+    role_name: str = Field(sa_column=Column(String))
+    time: date = Field(sa_column=Column(Date))
 
 
-class Pet(UserSchema):
+class Pet(UserSchema, table=True):
     __tablename__ = "user_pet"
 
-    discord_id: int = mapped_column(BigInteger, primary_key=True)
-    pet_species: str = mapped_column(String)
-    pet_name: str = mapped_column(String)
-    food: int | None = mapped_column(Integer)
+    discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
+    pet_species: str = Field(sa_column=Column(String))
+    pet_name: str = Field(sa_column=Column(String))
+    food: int | None = Field(sa_column=Column(Integer))
 
-class LOLGameRecord(UserSchema):
+class LOLGameRecord(UserSchema, table=True):
     __tablename__ = "lol_game_record"
 
-    puuid: str = mapped_column(String, primary_key=True)
-    game_id: int = mapped_column(Integer, primary_key=True)
-    game_type: str = mapped_column(String)
-    game_mode: str = mapped_column(String)
-    champion_id: int = mapped_column(Integer)
-    teamId: int = mapped_column(SmallInteger)
-    timePlayed: timedelta = mapped_column(Interval)
-    totalTimeSpentDead: timedelta = mapped_column(Interval)
-    created_at: datetime = mapped_column(TIMESTAMP(True, 0))
-    win: bool = mapped_column(Boolean)
-    kills: int = mapped_column(Integer)
-    deaths: int = mapped_column(Integer)
-    assists: int = mapped_column(Integer)
-    visionScore: int = mapped_column(Integer)
-    damage_dealt: int = mapped_column(Integer)
-    damage_taken: int = mapped_column(Integer)
-    double_kills: int = mapped_column(Integer)
-    triple_kills: int = mapped_column(Integer)
-    quadra_kills: int = mapped_column(Integer)
-    penta_kills: int = mapped_column(Integer)
-    gold_earned: int = mapped_column(Integer)
-    total_minions_killed: int = mapped_column(Integer)
-    turretKills: int = mapped_column(Integer)
-    inhibitorKills: int = mapped_column(Integer)
-    baronKills: int = mapped_column(Integer)
-    dragonKills: int = mapped_column(Integer)
-    item0: int = mapped_column(Integer)
-    item1: int = mapped_column(Integer)
-    item2: int = mapped_column(Integer)
-    item3: int = mapped_column(Integer)
-    item4: int = mapped_column(Integer)
-    item5: int = mapped_column(Integer)
-    item6: int = mapped_column(Integer)
-    firstBloodKill: bool = mapped_column(Boolean)
-    firstTowerKill: bool = mapped_column(Boolean)
-    allInPings: int = mapped_column(Integer)
-    assistMePings: int = mapped_column(Integer)
-    basicPings: int = mapped_column(Integer)
-    commandPings: int = mapped_column(Integer)
-    dangerPings: int = mapped_column(Integer)
-    enemyMissingPings: int = mapped_column(Integer)
-    enemyVisionPings: int = mapped_column(Integer)
-    getBackPings: int = mapped_column(Integer)
-    holdPings: int = mapped_column(Integer)
-    needVisionPings: int = mapped_column(Integer)
-    onMyWayPings: int = mapped_column(Integer)
-    pushPings: int = mapped_column(Integer)
-    retreatPings: int = mapped_column(Integer)
-    visionClearedPings: int = mapped_column(Integer)
+    puuid: str = Field(sa_column=Column(String, primary_key=True))
+    game_id: int = Field(sa_column=Column(Integer, primary_key=True))
+    game_type: str = Field(sa_column=Column(String))
+    game_mode: str = Field(sa_column=Column(String))
+    champion_id: int = Field(sa_column=Column(Integer))
+    teamId: int = Field(sa_column=Column(SmallInteger))
+    timePlayed: timedelta = Field(sa_column=Column(Interval))
+    totalTimeSpentDead: timedelta = Field(sa_column=Column(Interval))
+    created_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
+    win: bool = Field(sa_column=Column(Boolean))
+    kills: int = Field(sa_column=Column(Integer))
+    deaths: int = Field(sa_column=Column(Integer))
+    assists: int = Field(sa_column=Column(Integer))
+    visionScore: int = Field(sa_column=Column(Integer))
+    damage_dealt: int = Field(sa_column=Column(Integer))
+    damage_taken: int = Field(sa_column=Column(Integer))
+    double_kills: int = Field(sa_column=Column(Integer))
+    triple_kills: int = Field(sa_column=Column(Integer))
+    quadra_kills: int = Field(sa_column=Column(Integer))
+    penta_kills: int = Field(sa_column=Column(Integer))
+    gold_earned: int = Field(sa_column=Column(Integer))
+    total_minions_killed: int = Field(sa_column=Column(Integer))
+    turretKills: int = Field(sa_column=Column(Integer))
+    inhibitorKills: int = Field(sa_column=Column(Integer))
+    baronKills: int = Field(sa_column=Column(Integer))
+    dragonKills: int = Field(sa_column=Column(Integer))
+    item0: int = Field(sa_column=Column(Integer))
+    item1: int = Field(sa_column=Column(Integer))
+    item2: int = Field(sa_column=Column(Integer))
+    item3: int = Field(sa_column=Column(Integer))
+    item4: int = Field(sa_column=Column(Integer))
+    item5: int = Field(sa_column=Column(Integer))
+    item6: int = Field(sa_column=Column(Integer))
+    firstBloodKill: bool = Field(sa_column=Column(Boolean))
+    firstTowerKill: bool = Field(sa_column=Column(Boolean))
+    allInPings: int = Field(sa_column=Column(Integer))
+    assistMePings: int = Field(sa_column=Column(Integer))
+    basicPings: int = Field(sa_column=Column(Integer))
+    commandPings: int = Field(sa_column=Column(Integer))
+    dangerPings: int = Field(sa_column=Column(Integer))
+    enemyMissingPings: int = Field(sa_column=Column(Integer))
+    enemyVisionPings: int = Field(sa_column=Column(Integer))
+    getBackPings: int = Field(sa_column=Column(Integer))
+    holdPings: int = Field(sa_column=Column(Integer))
+    needVisionPings: int = Field(sa_column=Column(Integer))
+    onMyWayPings: int = Field(sa_column=Column(Integer))
+    pushPings: int = Field(sa_column=Column(Integer))
+    retreatPings: int = Field(sa_column=Column(Integer))
+    visionClearedPings: int = Field(sa_column=Column(Integer))
 
-class TwitchPoint(UserSchema):
+class TwitchPoint(UserSchema, table=True):
     __tablename__ = "twitch_point"
 
-    twitch_id: int = mapped_column(primary_key=True)
-    broadcaster_id: int = mapped_column(primary_key=True)
-    point: int = mapped_column(default=0)
+    twitch_id: int = Field(sa_column=Column(primary_key=True))
+    broadcaster_id: int = Field(sa_column=Column(primary_key=True))
+    point: int = Field(default=0)
 
 
 class Community(BasicSchema, table=True):
@@ -281,7 +282,7 @@ class Poll(BasicSchema, table=True):
     created_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
     guild_id: int = Field(sa_column=Column(BigInteger))
     message_id: int | None = Field(sa_column=Column(BigInteger))
-    end_at: datetime | None = Field(sa_column=Column(TIMESTAMP(True, 0), nullable=True, default=None))
+    end_at: datetime | None = Field(sa_column=Column(TIMESTAMP(True, 0), nullable=True))
     number_of_user_votes: int | None
     ban_alternate_account_voting: bool | None
     show_name: bool | None
@@ -367,29 +368,27 @@ class Giveaway(BasicSchema, table=True):
     __tablename__ = "giveaway_data"
 
     id: int = Field(sa_column=Column(Integer, Identity(), primary_key=True))
-    guild_id: int = Field(sa_column=Column(BigInteger, nullable=False))
-    channel_id: int = Field(sa_column=Column(BigInteger, nullable=False))
-    message_id: int | None = Field(
-        sa_column=Column(BigInteger, nullable=True, default=None)
-    )
-    creator_id: int = Field(sa_column=Column(BigInteger, nullable=False))
-    prize_name: str = Field(sa_column=Column(String(255), nullable=False))
-    winner_count: int = Field(sa_column=Column(Integer, nullable=False))
-    created_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0), nullable=False))
-    end_at: datetime | None = Field(sa_column=Column(TIMESTAMP(True, 0), nullable=True))
-    is_on: bool = Field(sa_column=Column(Boolean, nullable=False, default=True))
-    description: str | None = Field(sa_column=Column(String(255), nullable=True, default=None))
-    redraw_count: int = Field(sa_column=Column(Integer, nullable=True, default=0))
+    guild_id: int = Field(sa_column=Column(BigInteger))
+    channel_id: int = Field(sa_column=Column(BigInteger))
+    message_id: int | None = Field(sa_column=Column(BigInteger))
+    creator_id: int = Field(sa_column=Column(BigInteger))
+    prize_name: str = Field(sa_column=Column(String))
+    winner_count: int = Field(sa_column=Column(Integer))
+    created_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
+    end_at: datetime | None = Field(sa_column=Column(TIMESTAMP(True, 0)))
+    is_on: bool = Field(sa_column=Column(Boolean), default=True)
+    description: str | None = Field(sa_column=Column(String(255)))
+    redraw_count: int = Field(sa_column=Column(Integer, nullable=True), default=0)
 
 
-class GiveawayUser(UserSchema):
+class GiveawayUser(UserSchema, table=True):
     __tablename__ = "user_giveaway"
 
-    giveaway_id: int = mapped_column(BigInteger, primary_key=True)
-    user_id: int = mapped_column(BigInteger, primary_key=True)
-    user_weight: int = mapped_column(Integer)
-    join_at: datetime = mapped_column(TIMESTAMP(True, 0))
-    is_winner: bool = mapped_column(Boolean, default=False)
+    giveaway_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
+    user_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
+    user_weight: int = Field(sa_column=Column(Integer))
+    join_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
+    is_winner: bool = Field(sa_column=Column(Boolean), default=False)
 
 
 class User(AlchemyBasicSchema):
@@ -399,7 +398,7 @@ class User(AlchemyBasicSchema):
     name: str = Column(String, nullable=False)
 
     # 建立關聯：一個使用者對應多篇貼文
-    posts: list["Post"] = relationship(back_populates="user", init=False)
+    posts: list["Post"] = Relationship(back_populates="user")
 
 
 class Post(AlchemyBasicSchema):
@@ -412,14 +411,14 @@ class Post(AlchemyBasicSchema):
     user_id: int = Column(Integer, ForeignKey(User.id), nullable=False)  # type: ignore
 
     # 建立反向關聯
-    user: User = relationship(back_populates="posts", init=False)
+    user: User = Relationship(back_populates="posts")
 
 
 class ServerConfig(BasicSchema, table=False):
     __tablename__ = "server_config"
 
     guild_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
-    timeout_after_warning_times: int | None = Field(default=0)
+    timeout_after_warning_times: int | None
 
 class MemorialDay(BasicSchema, table=True):
     __tablename__ = "memorial_days"
@@ -432,99 +431,99 @@ class MemorialDay(BasicSchema, table=True):
 class IPLastSeen(BasicSchema, table=True):
     __tablename__ = "ip_last_seen"
 
-    ip: str = Field(primary_key=True)
+    ip: str = Field(sa_column=Column(CIDR, primary_key=True))
     last_seen: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
-    discord_id: int | None = Field(sa_column=Column(BigInteger, nullable=True))
-    mac: str | None = Field(sa_column=Column(String(255), nullable=True))
-    name: str | None = Field(sa_column=Column(String(255), nullable=True))
+    discord_id: int | None = Field(sa_column=Column(BigInteger))
+    mac: str | None = Field(sa_column=Column(MACADDR))
+    name: str | None = Field(sa_column=Column(String))
 
-class Party(IdbaseSchema):
+class Party(IdbaseSchema, table=True):
     __tablename__ = "party_datas"
 
-    party_id: int = mapped_column(primary_key=True)
-    party_name: str = mapped_column(String)
-    role_id: int = mapped_column(BigInteger)
-    creator_id: int = mapped_column(BigInteger)
-    created_at: date = mapped_column(Date)
+    party_id: int = Field(sa_column=Column(primary_key=True))
+    party_name: str = Field(sa_column=Column(String))
+    role_id: int = Field(sa_column=Column(BigInteger))
+    creator_id: int = Field(sa_column=Column(BigInteger))
+    created_at: date = Field(sa_column=Column(Date))
 
-    members: list[UserParty] = relationship(back_populates="party", init=False)
+    members: list[UserParty] = Relationship(back_populates="party")
 
-class DiscordRegistration(IdbaseSchema):
+class DiscordRegistration(IdbaseSchema, table=True):
     __tablename__ = "discord_registrations"
 
-    registrations_id: int = mapped_column(primary_key=True)
-    guild_id: int = mapped_column(BigInteger)
-    role_id: int = mapped_column(BigInteger)
+    registrations_id: int = Field(sa_column=Column(primary_key=True))
+    guild_id: int = Field(sa_column=Column(BigInteger))
+    role_id: int = Field(sa_column=Column(BigInteger))
 
-    members: list[DiscordUser] = relationship(back_populates="registration", init=False)
+    members: list[DiscordUser] = Relationship(back_populates="registration")
 
 
-class TRPGStoryPlot(IdbaseSchema):
+class TRPGStoryPlot(IdbaseSchema, table=True):
     __tablename__ = "trpg_storyplots"
 
-    id: int = mapped_column(primary_key=True)
-    title: str = mapped_column(String)
-    content: str = mapped_column(Text)
-    options: list["TRPGStoryOption"] = relationship(back_populates="plot", init=False)
+    id: int = Field(sa_column=Column(primary_key=True))
+    title: str = Field(sa_column=Column(String))
+    content: str = Field(sa_column=Column(Text))
+    options: list["TRPGStoryOption"] = Relationship(back_populates="plot")
 
 
-class TRPGStoryOption(IdbaseSchema):
+class TRPGStoryOption(IdbaseSchema, table=True):
     __tablename__ = "trpg_plot_options"
 
-    plot_id: int = mapped_column(ForeignKey("stardb_idbase.trpg_storyplots.id"), primary_key=True)
-    option_id: int = mapped_column(primary_key=True)
-    option_title: str = mapped_column(String)
-    lead_to_plot: int | None = mapped_column(Integer)
-    check_ability: int | None = mapped_column(Integer)
-    san_check_fall_dice: str | None = mapped_column(String)
-    success_plot: int | None = mapped_column(Integer)
-    fail_plot: int | None = mapped_column(Integer)
-    plot: TRPGStoryPlot = relationship(back_populates="options", init=False)
+    plot_id: int = Field(sa_column=Column(ForeignKey("stardb_idbase.trpg_storyplots.id"), primary_key=True))
+    option_id: int = Field(sa_column=Column(primary_key=True))
+    option_title: str = Field(sa_column=Column(String))
+    lead_to_plot: int | None = Field(sa_column=Column(Integer))
+    check_ability: int | None = Field(sa_column=Column(Integer))
+    san_check_fall_dice: str | None = Field(sa_column=Column(String))
+    success_plot: int | None = Field(sa_column=Column(Integer))
+    fail_plot: int | None = Field(sa_column=Column(Integer))
+    plot: TRPGStoryPlot = Relationship(back_populates="options")
 
 
-class TRPGCharacter(IdbaseSchema):
+class TRPGCharacter(IdbaseSchema, table=True):
     __tablename__ = "trpg_characters"
 
-    discord_id: int = mapped_column(BigInteger, primary_key=True)
-    character_name: str = mapped_column(String)
+    discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
+    character_name: str = Field(sa_column=Column(String))
 
-    abilities: list["TRPGCharacterAbility"] = relationship(back_populates="character", init=False)
+    abilities: list["TRPGCharacterAbility"] = Relationship(back_populates="character")
 
 
-class TRPGCharacterAbility(IdbaseSchema):
+class TRPGCharacterAbility(IdbaseSchema, table=True):
     __tablename__ = "trpg_character_abilities"
 
-    discord_id: int = mapped_column(BigInteger, ForeignKey("stardb_idbase.trpg_characters.discord_id"), primary_key=True)
-    ability_id: int = mapped_column(ForeignKey("stardb_idbase.trpg_abilities.ability_id"), primary_key=True)
-    san_lower_limit: int | None = mapped_column(Integer)
-    value: int = mapped_column(Integer)
+    discord_id: int = Field(sa_column=Column(BigInteger, ForeignKey("stardb_idbase.trpg_characters.discord_id"), primary_key=True))
+    ability_id: int = Field(sa_column=Column(ForeignKey("stardb_idbase.trpg_abilities.ability_id"), primary_key=True))
+    san_lower_limit: int | None = Field(sa_column=Column(Integer))
+    value: int = Field(sa_column=Column(Integer))
 
-    character: TRPGCharacter = relationship(back_populates="abilities", init=False)
-    ability: "TRPGAbility" = relationship(back_populates="characters", init=False)
+    character: TRPGCharacter = Relationship(back_populates="abilities")
+    ability: "TRPGAbility" = Relationship(back_populates="characters")
 
 
-class TRPGAbility(IdbaseSchema):
+class TRPGAbility(IdbaseSchema, table=True):
     __tablename__ = "trpg_abilities"
 
-    ability_id: int = mapped_column(primary_key=True)
-    ability_name: str = mapped_column(String)
+    ability_id: int = Field(sa_column=Column(primary_key=True))
+    ability_name: str = Field(sa_column=Column(String))
 
-    characters: list[TRPGCharacterAbility] = relationship(back_populates="ability", init=False)
+    characters: list[TRPGCharacterAbility] = Relationship(back_populates="ability")
 
 
-class BackupRole(AlchemyBackupSchema):
+class BackupRole(BackupSchema, table=True):
     __tablename__ = "roles_backup"
 
-    role_id: int = mapped_column(BigInteger, primary_key=True)
-    role_name: str = mapped_column(String)
-    created_at: datetime = mapped_column(TIMESTAMP(True, 0))
-    guild_id: int = mapped_column(BigInteger)
-    colour_r: int = mapped_column(Integer)
-    colour_g: int = mapped_column(Integer)
-    colour_b: int = mapped_column(Integer)
-    description: str = mapped_column(String)
+    role_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
+    role_name: str = Field(sa_column=Column(String))
+    created_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
+    guild_id: int = Field(sa_column=Column(BigInteger))
+    colour_r: int = Field(sa_column=Column(Integer))
+    colour_g: int = Field(sa_column=Column(Integer))
+    colour_b: int = Field(sa_column=Column(Integer))
+    description: str = Field(sa_column=Column(String))
 
-    members: list["BackupRoleUser"] = relationship(back_populates="role", init=False)
+    members: list["BackupRoleUser"] = Relationship(back_populates="role")
 
     def embed(self, bot:Bot):
         embed = BotEmbed.simple(self.role_name,self.description)
@@ -540,21 +539,21 @@ class BackupRole(AlchemyBackupSchema):
 
         return embed
 
-class BackupRoleUser(AlchemyBackupSchema):
+class BackupRoleUser(BackupSchema, table=True):
     __tablename__ = "role_user_backup"
 
-    role_id: int = mapped_column(BigInteger, ForeignKey("stardb_backup.roles_backup.role_id"), primary_key=True)
-    discord_id: int = mapped_column(BigInteger, primary_key=True)
-    role: BackupRole = relationship(back_populates="members", init=False)
+    role_id: int = Field(sa_column=Column(BigInteger, ForeignKey("stardb_backup.roles_backup.role_id"), primary_key=True))
+    discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
+    role: BackupRole = Relationship(back_populates="members")
 
-class BackupCategory(AlchemyBackupSchema):
+class BackupCategory(BackupSchema, table=True):
     __tablename__ = "category_backup"
 
-    category_id: int = mapped_column(BigInteger, primary_key=True)
-    name: str = mapped_column(String)
-    created_at: datetime = mapped_column(TIMESTAMP(True, 0))
-    guild_id: int = mapped_column(BigInteger)
-    description: str | None = mapped_column(String)
+    category_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
+    name: str = Field(sa_column=Column(String))
+    created_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
+    guild_id: int = Field(sa_column=Column(BigInteger))
+    description: str | None = Field(sa_column=Column(String))
 
     def embed(self, bot: Bot):
         embed = BotEmbed.simple(self.name, self.description)
@@ -562,15 +561,15 @@ class BackupCategory(AlchemyBackupSchema):
         return embed
 
 
-class BackupChannel(AlchemyBackupSchema):
+class BackupChannel(BackupSchema, table=True):
     __tablename__ = "channel_backup"
 
-    channel_id: int = mapped_column(BigInteger, primary_key=True)
-    name: str = mapped_column(String)
-    created_at: datetime = mapped_column(TIMESTAMP(True, 0))
-    guild_id: int = mapped_column(BigInteger)
-    category_id: int | None = mapped_column(BigInteger)
-    description: str | None = mapped_column(String)
+    channel_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
+    name: str = Field(sa_column=Column(String))
+    created_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
+    guild_id: int = Field(sa_column=Column(BigInteger))
+    category_id: int | None = Field(sa_column=Column(BigInteger))
+    description: str | None = Field(sa_column=Column(String))
 
     def embed(self, bot: Bot):
         embed = BotEmbed.simple(self.name, self.description)
@@ -578,15 +577,15 @@ class BackupChannel(AlchemyBackupSchema):
         return embed
 
 
-class BackupMessage(AlchemyBackupSchema):
+class BackupMessage(BackupSchema, table=True):
     __tablename__ = "message_backup"
 
-    message_id: int = mapped_column(BigInteger, primary_key=True)
-    channel_id: int = mapped_column(BigInteger, primary_key=True)
-    content: str | None = mapped_column(Text)
-    created_at: datetime = mapped_column(TIMESTAMP(True, 0))
-    author_id: int = mapped_column(BigInteger)
-    description: str | None = mapped_column(String)
+    message_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
+    channel_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
+    content: str | None = Field(sa_column=Column(Text))
+    created_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
+    author_id: int = Field(sa_column=Column(BigInteger))
+    description: str | None = Field(sa_column=Column(String))
 
     def embed(self, bot: Bot):
         user = bot.get_user(self.author_id)
@@ -594,76 +593,76 @@ class BackupMessage(AlchemyBackupSchema):
         embed.add_field(name="Created at", value=self.created_at.strftime("%Y/%m/%d %H:%M:%S"))
         return embed
 
-class UsersCountRecord(AlchemyBackupSchema):
+class UsersCountRecord(BackupSchema, table=True):
     __tablename__ = "users_count_backup"
 
-    record_date: date = mapped_column(Date, primary_key=True)
-    shard_id: int | None = mapped_column(SmallInteger)
-    users_count: int = mapped_column(Integer)
-    servers_count: int = mapped_column(Integer)
+    record_date: date = Field(sa_column=Column(Date, primary_key=True))
+    shard_id: int | None = Field(sa_column=Column(SmallInteger))
+    users_count: int = Field(sa_column=Column(Integer))
+    servers_count: int = Field(sa_column=Column(Integer))
 
-class OAuth2Token(TokensSchema):
+class OAuth2Token(TokensSchema, table=True):
     __tablename__ = "oauth_token"
 
-    user_id: str = mapped_column(String, primary_key=True)
-    type: CommunityType = mapped_column(Integer, primary_key=True)
-    access_token: str = mapped_column(String)
-    refresh_token: str | None = mapped_column(String)
-    expires_at: datetime = mapped_column(TIMESTAMP(True, 0))
+    user_id: str = Field(sa_column=Column(String, primary_key=True))
+    type: CommunityType = Field(sa_column=Column(Integer, primary_key=True))
+    access_token: str = Field(sa_column=Column(String))
+    refresh_token: str | None = Field(sa_column=Column(String))
+    expires_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
 
     @property
     def valid(self):
         return self.expires_at > datetime.now(tz)
 
 
-class BotToken(TokensSchema):
+class BotToken(TokensSchema, table=True):
     __tablename__ = "bot_token"
 
-    api_type: APIType = mapped_column(SmallInteger, primary_key=True)
-    token_seq: int = mapped_column(SmallInteger, primary_key=True)
-    client_id: str | None = mapped_column(String)
-    client_secret: str | None = mapped_column(String)
-    access_token: str | None = mapped_column(String)
-    refresh_token: str | None = mapped_column(String)
-    revoke_token: str | None = mapped_column(String)
-    redirect_uri: str | None = mapped_column(String)
-    callback_uri: str | None = mapped_column(String)
-    expires_at: datetime | None = mapped_column(TIMESTAMP(True, 0))
+    api_type: APIType = Field(sa_column=Column(SmallInteger, primary_key=True))
+    token_seq: int = Field(sa_column=Column(SmallInteger, primary_key=True))
+    client_id: str | None = Field(sa_column=Column(String))
+    client_secret: str | None = Field(sa_column=Column(String))
+    access_token: str | None = Field(sa_column=Column(String))
+    refresh_token: str | None = Field(sa_column=Column(String))
+    revoke_token: str | None = Field(sa_column=Column(String))
+    redirect_uri: str | None = Field(sa_column=Column(String))
+    callback_uri: str | None = Field(sa_column=Column(String))
+    expires_at: datetime | None = Field(sa_column=Column(TIMESTAMP(True, 0)))
 
 
-class CommunityCache(CacheSchema):
+class CommunityCache(CacheSchema, table=True):
     """社群快取資料表"""
 
     __tablename__ = "community_cache"
 
-    notify_type: NotifyCommunityType = mapped_column(Integer, primary_key=True)
-    community_id: str = mapped_column(String, primary_key=True)
-    value: datetime = mapped_column(TIMESTAMP(True, 0))
+    notify_type: NotifyCommunityType = Field(sa_column=Column(Integer, primary_key=True))
+    community_id: str = Field(sa_column=Column(String, primary_key=True))
+    value: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
 
 
-class NotifyCache(CacheSchema):
+class NotifyCache(CacheSchema, table=True):
     """通知快取資料表"""
 
     __tablename__ = "notify_cache"
 
-    notify_type: NotifyChannelType = mapped_column(Integer, primary_key=True)
-    value: datetime = mapped_column(TIMESTAMP(True, 0))
+    notify_type: NotifyChannelType = Field(sa_column=Column(Integer, primary_key=True))
+    value: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
 
-class YoutubeCache(CacheSchema):
+class YoutubeCache(CacheSchema, table=True):
     """YouTube快取資料表"""
 
     __tablename__ = "youtube_cache"
 
-    video_id: str = mapped_column(String, primary_key=True)
-    scheduled_live_start: datetime = mapped_column(TIMESTAMP(True, 0))
+    video_id: str = Field(sa_column=Column(String, primary_key=True))
+    scheduled_live_start: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
 
-class LOLGameCache(CacheSchema):
+class LOLGameCache(CacheSchema, table=True):
     """LOL遊戲快取資料表"""
 
     __tablename__ = "lol_game_cache"
 
-    puuid: str = mapped_column(String, primary_key=True)
-    newest_game_time: datetime = mapped_column(TIMESTAMP(True, 0))
+    puuid: str = Field(sa_column=Column(String, primary_key=True))
+    newest_game_time: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
 
 class WarningList(ListObject[UserModerate]):
     def __init__(self, items: list[UserModerate], discord_id: int):

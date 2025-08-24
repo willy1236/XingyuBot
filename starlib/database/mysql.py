@@ -15,8 +15,6 @@ from sqlalchemy.orm import Session as ALSession
 from sqlalchemy.orm import joinedload, sessionmaker
 from sqlmodel import Session, SQLModel, create_engine, select, update
 
-from starlib.models.mysql import Community, NotifyCommunity
-
 from ..errors import *
 from ..fileDatabase import Jsondb
 from ..models.mysql import *
