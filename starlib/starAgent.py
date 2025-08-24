@@ -10,8 +10,8 @@ from pydantic_ai.common_tools.duckduckgo import duckduckgo_search_tool
 from pydantic_ai.common_tools.tavily import tavily_search_tool
 from pydantic_ai.mcp import MCPServerStdio
 from pydantic_ai.messages import ModelMessage
-from pydantic_ai.models.gemini import GeminiModel, GeminiModelSettings
-from pydantic_ai.providers.google_gla import GoogleGLAProvider
+from pydantic_ai.models.google import GoogleModel, GoogleModelSettings
+from pydantic_ai.providers.google import GoogleProvider
 
 from starlib import Jsondb, NotionAPI, agent_log, sqldb
 from starlib.types import APIType
@@ -146,9 +146,9 @@ safety_settings = [
     {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_ONLY_HIGH"},
 ]
 tavily_api_key = sqldb.get_bot_token(APIType.Tavily).access_token
-provider = GoogleGLAProvider(api_key=sqldb.get_bot_token(APIType.Google, 5).access_token)
-model_settings = GeminiModelSettings(gemini_safety_settings=safety_settings)
-model = GeminiModel(model_name="gemini-2.0-flash", provider=provider)
+provider = GoogleProvider(api_key=sqldb.get_bot_token(APIType.Google, 5).access_token)
+model_settings = GoogleModelSettings(gemini_safety_settings=safety_settings)
+model = GoogleModel(model_name="gemini-2.0-flash", provider=provider)
 agent = Agent(
     model,
     tools=[fn for _, fn in inspect.getmembers(Tools, predicate=inspect.isfunction)] + [duckduckgo_search_tool()],

@@ -1,5 +1,6 @@
 import json
 import subprocess
+import shutil
 from collections.abc import Iterator
 from datetime import timezone
 from typing import TypeVar
@@ -551,9 +552,10 @@ class RssHub():
 class CLIInterface():
     def __init__(self):
         self.rettiwt_api_key = sqldb.get_bot_token(APIType.Rettiwt).access_token
+        if shutil.which("rettiwt") is None:
+            log.warning("找不到rettiwt執行檔，請確認是否已安裝rettiwt並將其加入系統PATH中")
 
     def get_user_timeline(self, user_id: str, after: datetime | None = None) -> RettiwtTweetTimeLineResponse | None:
-        # shutil.which("rettiwt")
         r = subprocess.run(f'rettiwt -k "{self.rettiwt_api_key}" user timeline "{user_id}" 10', shell=True, capture_output=True, encoding="utf-8", check=False)
         r.check_returncode()
         data = json.loads(r.stdout)

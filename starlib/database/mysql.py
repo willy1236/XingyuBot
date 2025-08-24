@@ -1,3 +1,4 @@
+# pyright: reportArgumentType=false
 import threading
 from collections.abc import Callable, Generator
 from contextlib import contextmanager
