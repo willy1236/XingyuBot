@@ -118,7 +118,7 @@ class event(Cog_Extension):
                 react_roles = sclient.sqldb.get_reaction_roles_by_message(react_message.message_id)
                 bot.add_view(ReactionRoleView(react_message.message_id, react_roles))
                 log.debug(f"Loaded reaction role message: {react_message.message_id}")
-            else:
+            elif not debug_mode:
                 sclient.sqldb.delete_reaction_role_message(react_message.message_id)
                 log.debug(f"Deleted reaction role message: {react_message.message_id}")
 

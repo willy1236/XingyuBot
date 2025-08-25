@@ -247,34 +247,38 @@ class task(Cog_Extension):
 
         update_data: dict[str, datetime] = {}
         for twitter_user_id, cache in caches.items():
-            log.debug(f"notify_twitter_tweet_updates: {twitter_user_id}")
-            # tweets = rss_hub.get_twitter(user_name, local=True, after=cache.value)
             try:
+                log.debug(f"notify_twitter_tweet_updates: {twitter_user_id}")
+                # tweets = rss_hub.get_twitter(user_name, local=True, after=cache.value)
                 results = cli_api.get_user_timeline(twitter_user_id, after=cache.value)
+
+                log.debug(f"notify_twitter_tweet_updates data: {results}")
+
+                if results is None:
+                    log.warning(f"notify_twitter_tweet_updates error / not found: {twitter_user_id}")
+                    # sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitterTweet, twitter_user_id)
+                elif results.list:
+                    tweets = results.list
+                    tweets.reverse()
+                    newest = tweets[0].createdAt
+                    for tweet in tweets:
+                        newest = tweet.createdAt if tweet.createdAt > newest else newest
+                        # await self.bot.send_notify_communities(None, NotifyCommunityType.TwitterTweet, user_name, content=f"{tweet.author} 轉推了推文↩️\n{tweet.link}" if tweet.is_retweet else f"{tweet.author} 發布新推文\n{tweet.link}")
+                        await self.bot.send_notify_communities(
+                            None,
+                            NotifyCommunityType.TwitterTweet,
+                            twitter_user_id,
+                            default_content=f"{tweet.tweetBy.fullName} 轉推了推文↩️" if tweet.is_retweet else f"{tweet.tweetBy.fullName} 發布新推文",
+                            additional_content=tweet.url,
+                        )
+
+                    update_data[twitter_user_id] = newest + timedelta(seconds=1)
             except subprocess.CalledProcessError as e:
                 log.error(e.stderr)
                 continue
-            log.debug(f"notify_twitter_tweet_updates data: {results}")
-
-            if results is None:
-                log.warning(f"notify_twitter_tweet_updates error / not found: {twitter_user_id}")
-                # sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitterTweet, twitter_user_id)
-            elif results.list:
-                tweets = results.list
-                tweets.reverse()
-                newest = tweets[0].createdAt
-                for tweet in tweets:
-                    newest = tweet.createdAt if tweet.createdAt > newest else newest
-                    # await self.bot.send_notify_communities(None, NotifyCommunityType.TwitterTweet, user_name, content=f"{tweet.author} 轉推了推文↩️\n{tweet.link}" if tweet.is_retweet else f"{tweet.author} 發布新推文\n{tweet.link}")
-                    await self.bot.send_notify_communities(
-                        None,
-                        NotifyCommunityType.TwitterTweet,
-                        twitter_user_id,
-                        default_content=f"{tweet.tweetBy.fullName} 轉推了推文↩️" if tweet.is_retweet else f"{tweet.tweetBy.fullName} 發布新推文",
-                        additional_content=tweet.url,
-                    )
-
-                update_data[twitter_user_id] = newest + timedelta(seconds=1)
+            except Exception as e:
+                log.error(f"notify_twitter_tweet_updates error (id: %s): %s", twitter_user_id, e)
+                continue
 
         sclient.sqldb.set_community_caches(NotifyCommunityType.TwitterTweet, update_data)
 

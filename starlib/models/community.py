@@ -474,9 +474,9 @@ class RettiwtTweetUser(BaseModel):
     followersCount: int
     followingsCount: int
     statusesCount: int
-    pinnedTweet: str | None
-    profileBanner: HttpUrl | None
-    profileImage: HttpUrl | None
+    pinnedTweet: str | dict | None = None  # TODO: determine what content in this
+    profileBanner: HttpUrl | None = None
+    profileImage: HttpUrl | None = None
 
     # @field_validator("createdAt", mode="before")
     # @classmethod
