@@ -343,6 +343,7 @@ class YoutubePush:
             將時間字串轉換為 datetime，如果為 'n/a' 則返回 None。
             """
             time_str = get_text_from_dt(dt_text)
+            time_str = time_str.split(sep="\n", maxsplit=1)[0]
             if time_str.strip().lower() == "n/a":
                 return None
             try:

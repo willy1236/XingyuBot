@@ -361,7 +361,7 @@ class ReactionRole(AlchemyBasicSchema):
     title: str = Column(String(255))
     description: str | None = Column(String(255), nullable=True)
     emoji: str | None = Column(String(255), nullable=True)
-    style: int | None = Column(Integer, nullable=True)
+    style: int | None = Column(SmallInteger, nullable=True)
 
 
 class Giveaway(BasicSchema, table=True):
