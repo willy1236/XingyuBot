@@ -98,21 +98,21 @@ class BotEmbed:
 
     @staticmethod
     def simple_warn_sheet(
-        warn_user: discord.abc.User,
-        moderate_user: discord.abc.User,
+        warn_user: discord.User | discord.Member,
+        moderate_user: discord.abc.User | discord.Member | discord.ClientUser,
         create_at: datetime | None = None,
         last: timedelta = timedelta(seconds=15),
-        reason: str | None = None,
+        reason: str = "未提供原因",
         title: str = "已被禁言",
     ):
         """簡易警告表格"""
         if create_at is None:
             create_at = datetime.now()
-        timestamp = int((create_at + last).timestamp())
+        timestamp = create_at + last
         embed = discord.Embed(description=f"{warn_user.mention}：{reason}", color=0xc4e9ff)
         embed.set_author(name=f"{warn_user.name} {title}",icon_url=warn_user.display_avatar.url)
         embed.add_field(name="執行人員",value=moderate_user.mention)
-        embed.add_field(name="結束時間",value=f"<t:{timestamp}>（{last.total_seconds():0f}s）")
+        embed.add_field(name="結束時間", value=f"{discord.utils.format_dt(timestamp, style='t')}（{last.total_seconds():0f}s）")
         embed.timestamp = create_at
         return embed
 

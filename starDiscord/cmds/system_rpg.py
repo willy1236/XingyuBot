@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta
+
 import discord
 from discord.commands import SlashCommandGroup
 from discord.ext import commands
@@ -15,11 +17,14 @@ class system_rpg(Cog_Extension):
     async def rpgui(self, ctx: discord.ApplicationContext, member: discord.Option(discord.Member, name="用戶", description="留空以查詢自己", default=None)):
         user_dc:discord.Member = member or ctx.author
 
-        user = sclient.sqldb.get_user_rpg(user_dc.id)
-        if not user:
-            user = RPGUser(discord_id=user_dc.id)
-            sclient.sqldb.merge(user)
-        await ctx.respond(embed=user.embed(user_dc))
+        player = sclient.sqldb.get_rpg_player(user_dc.id)
+
+        time = datetime.now()
+        time = time.replace(year=2044)
+        description_list = [f"現在時間：{time.isoformat(sep=' ', timespec='seconds')}", f"天氣：晴"]
+        time_embed = BotEmbed.bot(self.bot, description="\n".join(description_list))
+        time_embed.set_footer(text="格瑞爾市 | 祝您有個愉快的一天")
+        await ctx.respond(embeds=[time_embed, player.embed(user_dc)])
 
     @commands.slash_command(description="開始冒險", guild_ids=happycamp_guild)
     async def advance(self, ctx: discord.ApplicationContext):

@@ -10,6 +10,58 @@ from ..utils import BotEmbed
 from .mysql import Field, relationship, SQLModel, mapped_column
 from .sqlSchema import RPGSchema
 
+class RPGPlayer(RPGSchema, table=True):
+    __tablename__ = "rpg_player"
+    discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
+    name: str
+    money: int = 100
+    health: int = 100
+    stress: int = 0
+
+    def embed(self, user_dc: discord.User):
+        embed = BotEmbed.general(name=user_dc.name, icon_url=user_dc.display_avatar.url)
+        embed.add_field(name="健康值", value=self.health)
+        embed.add_field(name="金錢", value=self.money)
+        embed.add_field(name="壓力", value=self.stress)
+        return embed
+
+
+class RPGUser(RPGSchema):
+    """
+    hp:生命 atk:攻擊 def(df):防禦\n
+    DEX=Dexterity敏捷\n
+    STR=Strength力量\n
+    INT=Intelligence智力\n
+    LUK=Lucky幸運\n
+    HRT=Hit rate命中率
+    """
+
+    __tablename__ = "rpg_user"
+
+    discord_id: int = mapped_column(BigInteger, primary_key=True, autoincrement=False)
+    hp: int = mapped_column(Integer, default=10)
+    maxhp: int = mapped_column(Integer, default=10)
+    atk: int = mapped_column(Integer, default=1)
+    pdef: int = mapped_column(Integer, default=0)
+    hrt: int = mapped_column(Integer, default=60)
+    dex: int = mapped_column(Integer, default=0)
+
+    equipments: list["RPGEquipment"] = relationship(back_populates="owner", init=False)
+    items: list["RPGPlayerItem"] = relationship(back_populates="user", init=False)
+
+    def embed(self, user_dc: discord.User):
+        embed = BotEmbed.general(name=user_dc.name, icon_url=user_dc.avatar.url if user_dc.avatar else None)
+        embed.add_field(name="生命/最大生命", value=f"{self.hp} / {self.maxhp}")
+        embed.add_field(name="攻擊力", value=self.atk)
+        embed.add_field(name="物理防禦力", value=self.pdef)
+        embed.add_field(name="命中率", value=f"{self.hrt}%")
+        embed.add_field(name="敏捷", value=self.dex)
+        return embed
+
+    def change_hp(self, value: int):
+        self.hp += value
+        if self.hp > self.maxhp:
+            self.hp = self.maxhp
 
 class RPGEquipmentSolt(RPGSchema):
     __tablename__ = "id_equipment_solt"
@@ -129,44 +181,6 @@ class RPGDungeonTreasureInfo(RPGSchema):
 
     dungeon: RPGDungeon = relationship(back_populates="treasures", init=False)
     item: RPGItemTemplate = relationship(back_populates="dungeon_treasures", init=False)
-
-
-class RPGUser(RPGSchema):
-    """
-    hp:生命 atk:攻擊 def(df):防禦\n
-    DEX=Dexterity敏捷\n
-    STR=Strength力量\n
-    INT=Intelligence智力\n
-    LUK=Lucky幸運\n
-    HRT=Hit rate命中率
-    """
-
-    __tablename__ = "rpg_user"
-
-    discord_id: int = mapped_column(BigInteger, primary_key=True, autoincrement=False)
-    hp: int = mapped_column(Integer, default=10)
-    maxhp: int = mapped_column(Integer, default=10)
-    atk: int = mapped_column(Integer, default=1)
-    pdef: int = mapped_column(Integer, default=0)
-    hrt: int = mapped_column(Integer, default=60)
-    dex: int = mapped_column(Integer, default=0)
-
-    equipments: list["RPGEquipment"] = relationship(back_populates="owner", init=False)
-    items: list["RPGPlayerItem"] = relationship(back_populates="user", init=False)
-
-    def embed(self, user_dc: discord.User):
-        embed = BotEmbed.general(name=user_dc.name, icon_url=user_dc.avatar.url if user_dc.avatar else None)
-        embed.add_field(name="生命/最大生命", value=f"{self.hp} / {self.maxhp}")
-        embed.add_field(name="攻擊力", value=self.atk)
-        embed.add_field(name="物理防禦力", value=self.pdef)
-        embed.add_field(name="命中率", value=f"{self.hrt}%")
-        embed.add_field(name="敏捷", value=self.dex)
-        return embed
-
-    def change_hp(self, value: int):
-        self.hp += value
-        if self.hp > self.maxhp:
-            self.hp = self.maxhp
 
 
 class RPGEquipment(RPGSchema):

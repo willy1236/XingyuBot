@@ -1,6 +1,4 @@
 import asyncio
-import copy
-import os
 import re
 from datetime import datetime, timedelta, timezone
 
@@ -9,16 +7,16 @@ from discord.ext import commands
 
 from starlib import BotEmbed, Jsondb, log, sclient, tz
 from starlib.instance import *
-from starlib.models.mysql import DiscordUser
 from starlib.starAgent import ModelMessage, MyDeps, agent
 from starlib.types import DBCacheType, NotifyChannelType, PrivilegeLevel
 
 from ..extension import Cog_Extension
-from ..uiElement.view import GiveawayView, PollView, ReactionRoleView
+from ..uiElement.view import PollView, ReactionRoleView
 
 keywords = {}
 
-voice_updata = Jsondb.config.get("voice_updata")
+config = Jsondb.config
+voice_updata = config.get("voice_updata")
 
 ai_access_guilds: list[int] = happycamp_guild + debug_guilds
 
@@ -26,7 +24,8 @@ guild_registration = sclient.sqldb.get_raw_resgistrations() if sclient.sqldb els
 
 agent_history: dict[int, list[ModelMessage]] = {}
 
-def check_registration(member:discord.Member):
+
+def check_registration(member: discord.Member):
     earlest = datetime.now(timezone.utc)
     earlest_guildid = None
     guild_list = guild_registration.keys()
@@ -39,44 +38,35 @@ def check_registration(member:discord.Member):
                 earlest_guildid = guild.id
     return earlest_guildid
 
-def check_event_stage(vc:discord.VoiceState):
+
+def check_event_stage(vc: discord.VoiceState):
     return vc.channel and vc.channel.category and vc.channel.category.id == 1097158160709591130
 
-def get_playing_ow2(member:discord.Member):
+
+def get_playing_ow2(member: discord.Member):
     if member.voice.channel.id != 703617778095095958:
         for activity in member.activities:
             if activity.name == "Overwatch 2":
                 return True
     return False
 
-def get_guildid(before:discord.VoiceState, after:discord.VoiceState):
+
+def get_guildid(before: discord.VoiceState, after: discord.VoiceState):
     if before.channel:
         return before.channel.guild.id
     elif after.channel:
         return after.channel.guild.id
     return
 
-def check_spam(message:discord.Message, user_id:int):
+
+def check_spam(message: discord.Message, user_id: int):
     return message.author.id == user_id
 
-config = Jsondb.config
 
 class event(Cog_Extension):
     @commands.Cog.listener()
     async def on_ready(self):
         bot = self.bot
-        log.info(f">> Bot online as {bot.user.name} <<")
-        log.info(f">> Py-cord's version: {discord.__version__} <<")
-        if bot.debug_mode:
-            await bot.change_presence(activity=discord.CustomActivity(name="開發模式啟用中"), status=discord.Status.dnd)
-            log.info(f">> Development mode: On <<")
-        else:
-            await bot.change_presence(activity=discord.CustomActivity(name=config.get("activity","/help")), status=discord.Status.online)
-
-        if len(os.listdir(bot._COG_PATH))-1 == len(bot.cogs):
-            log.info(">> Cogs all loaded <<")
-        else:
-            log.warning(f">> Cogs not all loaded, {len(bot.cogs)}/{len(os.listdir('./cmds'))} loaded<<")
 
         now = datetime.now(tz)
         if bot.bot_code == "1" and not bot.debug_mode:
@@ -134,7 +124,21 @@ class event(Cog_Extension):
             log.warning("Dynamic voice channel %s not found", removed_ids)
             sclient.sqldb.batch_remove_dynamic_voice(removed_ids)
 
-        log.info(">> Bot on_ready done. <<")
+        # Bot status
+        log.info(f">> Bot online as {bot.user.name} <<")
+        log.info(f">> Py-cord's version: {discord.__version__} <<")
+        if bot.debug_mode:
+            await bot.change_presence(activity=discord.CustomActivity(name="開發模式啟用中"), status=discord.Status.dnd)
+            log.info(f">> Development mode: On <<")
+        else:
+            await bot.change_presence(activity=discord.CustomActivity(name=config.get("activity", "/help")), status=discord.Status.online)
+
+        cog_path = bot._COG_PATH
+        total_cog_files = len([f for f in cog_path.iterdir() if f.is_file() and f.suffix == ".py"])
+        if total_cog_files == len(bot.cogs):
+            log.info(">> Cogs all loaded <<")
+        else:
+            log.warning(f">> Cogs not all loaded, {len(bot.cogs)}/{total_cog_files} loaded<<")
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
@@ -179,7 +183,7 @@ class event(Cog_Extension):
 
                         embed = BotEmbed.simple_warn_sheet(message.author, self.bot.user, last=last, reason=reason)
                         await message.channel.send(f"{message.author.mention} 貢丸很危險 不要打貢丸知道嗎", embed=embed)
-                        dbuser = sclient.sqldb.get_dcuser(message.author.id) or DiscordUser(discord_id=message.author.id)
+                        dbuser = sclient.sqldb.get_dcuser(message.author.id)
                         if dbuser.meatball_times is None:
                             dbuser.meatball_times = 1
                         else:
@@ -274,7 +278,11 @@ class event(Cog_Extension):
             word = message.content.lstrip("!")
             if word == "azusa":
                 bot_user = self.bot.get_user(1203368856647630878)
-                embed = BotEmbed.user(user=bot_user,description=f"你好~我是假裝成星羽的Azusa，是一個discord機器人喔~\n你不可以輸入 </help:1067700245015834638> 來查看所有指令的用法\n\n希望我能在discord上幫助到你喔~\n有任何建議與需求不可以使用 </feedback:1067700244848058386> 指令\n\n支援伺服器：https://discord.gg/ye5yrZhYGF")
+                assert bot_user
+                embed = BotEmbed.user(
+                    user=bot_user,
+                    description=f"你好~我是假裝成星羽的Azusa，是一個discord機器人喔~\n你不可以輸入 </help:1067700245015834638> 來查看所有指令的用法\n\n希望我能在discord上幫助到你喔~\n有任何建議與需求不可以使用 </feedback:1067700244848058386> 指令\n\n支援伺服器：https://discord.gg/ye5yrZhYGF",
+                )
                 embed.set_footer(text="此機器人由 XX12 負責搞事")
                 await message.reply(embed=embed)
             # elif word in keywords:

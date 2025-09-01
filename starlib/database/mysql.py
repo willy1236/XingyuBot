@@ -1047,27 +1047,32 @@ class SQLTwitchSystem(BaseSQLEngine):
 
 
 class SQLRPGSystem(BaseSQLEngine):
-    def get_user_rpg(self, discord_id):
+    def get_rpg_player(self, discord_id: int):
+        stmt = select(RPGPlayer).where(RPGPlayer.discord_id == discord_id)
+        result = self.session.exec(stmt).one_or_none()
+        return result or RPGPlayer(discord_id=discord_id)
+
+    def get_user_rpg(self, discord_id: int):
         stmt = select(RPGUser).where(RPGUser.discord_id == discord_id)
         result = self.session.exec(stmt).one_or_none()
         return result or RPGUser(discord_id=discord_id)
 
-    def get_rpg_dungeon(self, dungeon_id):
+    def get_rpg_dungeon(self, dungeon_id: int):
         stmt = select(RPGDungeon).where(RPGDungeon.id == dungeon_id)
         result = self.session.exec(stmt).one()
         return result
 
-    def get_monster(self, monster_id):
+    def get_monster(self, monster_id: int):
         stmt = select(Monster).where(Monster.id == monster_id)
         result = self.session.exec(stmt).one()
         return result
 
-    def get_player_item(self, discord_id, item_id):
+    def get_player_item(self, discord_id: int, item_id: int):
         stmt = select(RPGPlayerItem).where(RPGPlayerItem.discord_id == discord_id, RPGPlayerItem.item_id == item_id)
         result = self.session.exec(stmt).one_or_none()
         return result
 
-    def get_player_equipments(self, discord_id):
+    def get_player_equipments(self, discord_id: int):
         stmt = select(RPGEquipment).where(RPGEquipment.discord_id == discord_id)
         result = self.session.exec(stmt).all()
         return result

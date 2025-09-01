@@ -1,6 +1,6 @@
 import json
 import logging
-import os
+from pathlib import Path
 from typing import TYPE_CHECKING, TypeVar
 
 logger = logging.getLogger("star")
@@ -9,7 +9,7 @@ DataValue = TypeVar("DataValue", str, int, bool, dict, list)
 
 
 class BaseJsonHandler:
-    _DBPATH = "./database"
+    _DBPATH = Path("./database")
 
     if TYPE_CHECKING:
         datas: dict[str, str | int | bool | dict | list]
@@ -18,17 +18,17 @@ class BaseJsonHandler:
         self.filename: str = filename
 
         # create folder
-        if not os.path.isdir(self._DBPATH):
-            os.mkdir(self._DBPATH)
-            print(f">> Created folder: {self._DBPATH} <<")
+        if not self._DBPATH.exists():
+            self._DBPATH.mkdir(parents=True, exist_ok=True)
+            logger.info(">> Created folder: %s <<", self._DBPATH)
 
-        path = f"{self._DBPATH}/{filename}.json"
-        if not os.path.isfile(path):
-            with open(path, "w", encoding="utf-8") as jfile:
+        path = self._DBPATH / f"{filename}.json"
+        if not path.exists():
+            with path.open("w", encoding="utf-8") as jfile:
                 json.dump({}, jfile, indent=4)
-                print(f">> Created json file: {filename} <<")
+                logger.info(">> Created json file: %s <<", filename)
 
-        with open(path, "r", encoding="utf-8") as jfile:
+        with path.open("r", encoding="utf-8") as jfile:
             self.datas = json.load(jfile)
 
     def get(self, key: str, default: DataValue | None = None) -> DataValue | None:
@@ -41,7 +41,8 @@ class BaseJsonHandler:
 
     def write(self, key: str, value: DataValue | None) -> None:
         self.datas[key] = value  # pyright: ignore[reportArgumentType]
-        with open(f"{self._DBPATH}/{self.filename}.json", "w", encoding="utf-8") as jfile:
+        path = self._DBPATH / f"{self.filename}.json"
+        with path.open("w", encoding="utf-8") as jfile:
             json.dump(self.datas, jfile, indent=4)
 
     def update_dict(self, key: str, value: dict) -> None:
@@ -80,31 +81,31 @@ class JsonDatabase():
         "config",
     ]
 
-    _DBPATH = "./database"
+    _DBPATH = Path("./database")
     _PATH_DICT = {
-        "lol_jdict": f"{_DBPATH}/lol_dict.json",
-        "jdict": f"{_DBPATH}/dict.json",
-        "picdata": f"{_DBPATH}/picture.json",
-        "options": f"{_DBPATH}/command_option.json",
+        "lol_jdict": _DBPATH / "lol_dict.json",
+        "jdict": _DBPATH / "dict.json",
+        "picdata": _DBPATH / "picture.json",
+        "options": _DBPATH / "command_option.json",
     }
 
     def __init__(self, create_file=True):
         self.config = JsonConfig()
 
         # craete folder
-        if not os.path.isdir(self._DBPATH):
-            os.mkdir(self._DBPATH)
+        if not self._DBPATH.exists():
+            self._DBPATH.mkdir(parents=True, exist_ok=True)
             logger.info(">> Created folder: %s <<", self._DBPATH)
 
         for file, path in self._PATH_DICT.items():
-            if not os.path.isfile(path):
+            if not path.exists():
                 if not create_file:
                     continue
-                with open(path, "w", encoding="utf-8") as jfile:
+                with path.open("w", encoding="utf-8") as jfile:
                     json.dump({}, jfile, indent=4)
                     logger.info(">> Created json file: %s <<", file)
 
-            with open(path, mode="r", encoding="utf8") as jfile:
+            with path.open(mode="r", encoding="utf8") as jfile:
                 setattr(self, file, json.load(jfile))
 
     def write(self, file_name: str, data: dict):
@@ -121,11 +122,10 @@ class JsonDatabase():
         try:
             location = self._PATH_DICT[file_name]
             setattr(self, file_name, data)
-            with open(file=location, mode="w", encoding="utf8") as jfile:
+            with location.open(mode="w", encoding="utf8") as jfile:
                 json.dump(data, jfile, indent=4, ensure_ascii=False)
         except KeyError as e:
             raise KeyError("此項目沒有在資料庫中") from e
-
     def get_picture(self, pic_key: str) -> str:
         """取得圖片網址"""
         return self.picdata[pic_key]

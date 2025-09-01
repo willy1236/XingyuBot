@@ -1,8 +1,8 @@
 # pyright: reportArgumentType=false, reportOptionalMemberAccess=false
 import asyncio
 import datetime
-import os
 from collections.abc import Coroutine
+from pathlib import Path
 
 import discord
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -13,7 +13,7 @@ from starlib.types import APIType, NotifyChannelType, NotifyCommunityType
 
 
 class DiscordBot(discord.Bot):
-    _COG_PATH = "./starDiscord/cmds"
+    _COG_PATH = Path("./starDiscord/cmds")
 
     def __init__(self, bot_code):
         super().__init__(
@@ -41,9 +41,8 @@ class DiscordBot(discord.Bot):
         return asyncio.run_coroutine_threadsafe(coro, self.loop)
 
     def load_all_extensions(self):
-        for filename in os.listdir(self._COG_PATH):
-            if filename.endswith(".py"):
-                self.load_extension(f"starDiscord.cmds.{filename[:-3]}")
+        for filepath in self._COG_PATH.glob("*.py"):
+            self.load_extension(f"starDiscord.cmds.{filepath.stem}")
 
     @property
     def mention_owner(self):
@@ -82,9 +81,7 @@ class DiscordBot(discord.Bot):
 
     async def feedback(self, ctx: discord.ApplicationContext, msg: discord.Message):
         feedback_channel = self.get_channel(Jsondb.config.get("feedback_channel"))
-        embed = BotEmbed.general(
-            name=str(msg.author), icon_url=msg.author.display_avatar.url, title="💬回饋訊息", description=msg.content)
-        # embed.add_field(name='訊息內容', value=msg, inline=True)
+        embed = BotEmbed.general(name=str(msg.author), icon_url=msg.author.display_avatar.url, title="💬回饋訊息", description=msg.content)
         embed.add_field(name="發送者", value=f"{ctx.author}\n{ctx.author.id}", inline=False)
         embed.add_field(name="來源頻道", value=f"{ctx.channel}\n{ctx.channel.id}", inline=True)
         embed.add_field(name="來源群組", value=f"{ctx.guild}\n{ctx.guild.id}", inline=True)
@@ -94,7 +91,6 @@ class DiscordBot(discord.Bot):
     async def dm(self, msg: discord.Message):
         dm_channel = self.get_channel(Jsondb.config.get("dm_channel"))
         embed = BotEmbed.general(name=msg.author.name, icon_url=msg.author.display_avatar.url, title="💭私訊", description=msg.content)  # pyright: ignore[reportCallIssue]
-        # embed.add_field(name='訊息內容', value=msg.content, inline=True)
         if msg.channel.recipient:
             embed.add_field(name="發送者", value=f"{msg.author}->{msg.channel.recipient}\n{msg.author.id}->{msg.channel.recipient.id}", inline=False)
         else:
@@ -106,9 +102,7 @@ class DiscordBot(discord.Bot):
 
     async def mentioned(self, msg: discord.Message):
         dm_channel = self.get_channel(Jsondb.config.get("mentioned_channel"))
-        embed = BotEmbed.general(name=msg.author, icon_url=msg.author.display_avatar.url,
-                                 title="提及訊息", description=f"{msg.content}\n{msg.jump_url}")
-        # embed.add_field(name='訊息內容', value=msg.content, inline=True)
+        embed = BotEmbed.general(name=msg.author, icon_url=msg.author.display_avatar.url, title="提及訊息", description=f"{msg.content}\n{msg.jump_url}")
         embed.add_field(name="發送者", value=f"{msg.author}\n{msg.author.id}", inline=False)
         embed.add_field(name="來源頻道", value=f"{msg.channel}\n{msg.channel.id}", inline=True)
         embed.add_field(name="來源群組", value=f"{msg.guild}\n{msg.guild.id}", inline=True)
@@ -152,9 +146,6 @@ class DiscordBot(discord.Bot):
             discord.Forbidden: When the bot lacks permissions to send messages to a channel.
                 This exception is caught and logged as a warning.
         Note:
-            - Includes a 0.5 second delay between sends to avoid rate limiting
-            - Logs warnings for channels that cannot be found or accessed
-            - Role mentions are prepended to the message text unless no_mention is True
             - Additional content is appended with a newline separator if both text and additional_content exist
         """
         guilds = sqldb.get_notify_community_guild(notify_type, community_id)
