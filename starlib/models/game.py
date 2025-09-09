@@ -985,3 +985,8 @@ class DBDPlayer(SteamUser):
         embed.add_field(name="陷阱捕捉", value=self.beartrapcatches)
         embed.add_field(name="汙泥陷阱觸發", value=self.phantasmstriggered)
         return embed
+
+
+class MojangUser(BaseModel):
+    id: str
+    name: str

@@ -561,7 +561,7 @@ class CLIInterface():
         r.check_returncode()
         data = json.loads(r.stdout)
 
-        if data.get("name") == "VALIDATION_ERROR":
+        if data.get("name") == "VALIDATION_ERROR" or isinstance(data.get("list"), dict):
             return None
 
         results = RettiwtTweetTimeLineResponse(**data)
