@@ -1,4 +1,3 @@
-uv run python update.py
+uv run python scripts/update.py
 uv sync
-cd ../
 uv run python main.py

@@ -278,7 +278,8 @@ class system_community(Cog_Extension):
     @twitter.command(name="remove", description="移除x/twitter通知")
     async def twitter_remove(self, ctx, twitter_username: discord.Option(str, required=True, name="twitter使用者名稱", description="使用者名稱")):
         guildid = ctx.guild.id
-        sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitterTweet, twitter_username, guildid)
+        twitter_user = cli_api.get_user_details(twitter_username)
+        sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitterTweet, twitter_user.id, guildid)
         await ctx.respond(f"已移除 {twitter_username} 的通知")
 
     @twitter.command(name="notify", description="確認x/twitter通知")
