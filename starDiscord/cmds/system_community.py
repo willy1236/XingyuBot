@@ -97,7 +97,7 @@ class system_community(Cog_Extension):
         embed = BotEmbed.general("twitch通知", ctx.guild.icon.url if ctx.guild.icon else None)
         dbdata = (
             sclient.sqldb.get_notify_community_list(NotifyCommunityType.TwitchLive, guildid)
-            + sclient.sqldb.get_notify_community_list(NotifyCommunityType.TwitchVideo, guildid)
+            + sclient.sqldb.get_notify_community_list(NotifyCommunityType.TwitchVideo, guildid)  # pyright: ignore[reportOperatorIssue]
             + sclient.sqldb.get_notify_community_list(NotifyCommunityType.TwitchClip, guildid)
         )  # type: ignore
         for notify_data, community_data in dbdata:

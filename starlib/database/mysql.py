@@ -5,6 +5,7 @@ from contextlib import contextmanager
 from datetime import date, datetime, time, timedelta, timezone
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Literal, ParamSpec, Self, TypeVar, overload
+from ipaddress import IPv4Network
 
 import discord
 import sqlalchemy
@@ -1320,6 +1321,12 @@ class SQLNetwork(BaseSQLEngine):
             cache = IPLastSeen(ip=ip, mac=mac, last_seen=last_seen)
             self.session.merge(cache)
         self.session.commit()
+
+    def get_ips_last_seen(self, ip: str | IPv4Network):
+        stmt = select(IPLastSeen).where(IPLastSeen.ip == str(ip))
+        result = self.session.exec(stmt).one_or_none()
+        return result
+
 
 class SQLTest(BaseSQLEngine):
     pass

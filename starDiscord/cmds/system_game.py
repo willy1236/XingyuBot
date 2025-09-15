@@ -1,3 +1,4 @@
+import ipaddress
 import asyncio
 from datetime import date, datetime, timedelta
 
@@ -9,7 +10,7 @@ from discord.ext import commands, pages
 from starlib import BotEmbed, ChoiceList, Jsondb, csvdb, log, sclient, tz
 from starlib.dataExtractor import *
 from starlib.errors import APIInvokeError
-from starlib.models import LOLGameCache, LOLGameRecord, UserGame
+from starlib.models import LOLGameCache, LOLGameRecord, UserGame, IPLastSeen
 from starlib.types import GameType
 
 from ..extension import Cog_Extension
@@ -820,6 +821,35 @@ class system_game(Cog_Extension):
     #     else:
     #         await ctx.respond(f"沒有找到兌換碼",ephemeral=True)
 
+    @game.command(description="註冊Radmin VPN帳號")
+    async def radmin(
+        self,
+        ctx: discord.ApplicationContext,
+        ip_str: discord.Option(
+            str,
+            name="ipv4位置",
+            description="Radmin VPN分配給你的IP位址",
+        ),
+        name: discord.Option(str, name="使用者名稱", description="你的Radmin VPN名稱", required=False),
+    ):
+        await ctx.defer(ephemeral=True)
+        try:
+            ip = ipaddress.IPv4Network(ip_str)
+        except ipaddress.AddressValueError:
+            await ctx.respond(f"此IP位址格式錯誤，請確認後再試", ephemeral=True)
+            return
+        if not ip.subnet_of(ipaddress.IPv4Network("26.0.0.0/8")):
+            await ctx.respond(f"此IP位址不是Radmin VPN的位置", ephemeral=True)
+            return
+        account = sclient.sqldb.get_ips_last_seen(ip)
+        if account:
+            await ctx.respond(f"此IP位址已註冊過，請確認後再試", ephemeral=True)
+            return
+
+        now = datetime.now(tz)
+        account = IPLastSeen(ip=str(ip), last_seen=now, discord_id=ctx.author.id, name=name, registration_at=now)
+        sclient.sqldb.merge(account)
+        await ctx.respond(f"{ctx.author.mention} 註冊成功，IP：`{ip.network_address}`，使用者名稱：`{name if name else '未登記'}`", ephemeral=True)
 
 def setup(bot):
     bot.add_cog(system_game(bot))

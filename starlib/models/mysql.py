@@ -436,6 +436,7 @@ class IPLastSeen(BasicSchema, table=True):
     discord_id: int | None = Field(sa_column=Column(BigInteger))
     mac: str | None = Field(sa_column=Column(MACADDR))
     name: str | None = Field(sa_column=Column(String))
+    registration_at: datetime | None = Field(sa_column=Column(TIMESTAMP(True, 0)))
 
 class Party(IdbaseSchema, table=True):
     __tablename__ = "party_datas"
