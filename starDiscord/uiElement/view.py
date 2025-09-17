@@ -12,13 +12,13 @@ import numpy as np
 
 from starlib import BotEmbed, Jsondb, log, sqldb, tz
 from starlib.instance import mcss_api
-from starlib.models.mysql import Giveaway, GiveawayUser, Poll, PollRole
+from starlib.models.mysql import Giveaway, GiveawayUser, Poll, PollRole, TicketChannel
 from starlib.types import McssServerAction, McssServerStatues
 from starlib.utils.utility import find_radmin_vpn_network
 
 if TYPE_CHECKING:
     from starlib.database import SQLEngine
-    from starlib.models.mysql import PollOption, ReactionRole, TRPGStoryOption, TRPGStoryPlot
+    from starlib.models.mysql import PollOption, ReactionRoleOption, TRPGStoryOption, TRPGStoryPlot
 
 class DeletePetView(discord.ui.View):
     def __init__(self):
@@ -387,7 +387,7 @@ class PollView(discord.ui.View):
 
 
 class ReactionRoleButton(discord.ui.Button):
-    def __init__(self, dbdata: ReactionRole):
+    def __init__(self, dbdata: ReactionRoleOption):
         super().__init__(
             label=dbdata.title,
             style=dbdata.style if dbdata.style else discord.ButtonStyle.primary,
@@ -411,7 +411,7 @@ class ReactionRoleButton(discord.ui.Button):
 
 
 class ReactionRoleView(discord.ui.View):
-    def __init__(self, message_id, roles: list[ReactionRole]):
+    def __init__(self, message_id, roles: list[ReactionRoleOption]):
         super().__init__(timeout=None)
         self.message_id = message_id
 
@@ -709,3 +709,51 @@ class McServerPanel(discord.ui.View):
             await interaction.followup.send(f"伺服器IP位置：`{ip}:{port}`")
         else:
             await interaction.followup.send("伺服器未找到", ephemeral=True)
+
+class TicketCloseView(discord.ui.View):
+    def __init__(self, channel: discord.TextChannel, creator: discord.Member):
+        super().__init__(timeout=None)
+        self.channel = channel
+        self.creator = creator
+
+    @discord.ui.button(label="關閉頻道", style=discord.ButtonStyle.danger, custom_id="close_ticket_channel")
+    async def button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
+        if interaction.user == self.creator or (
+            self.creator.guild and await self.creator.guild.get_member(interaction.user.id).guild_permissions.manage_channels
+        ):
+            ticket = sqldb.get_ticket_channel(self.channel.id)
+            if ticket:
+                ticket.closed_at = datetime.now(tz)
+                ticket.closer_id = interaction.user.id
+                sqldb.merge(ticket)
+
+            # await self.channel.delete()
+            overwrites = self.channel.overwrites
+            for target in overwrites:
+                overwrites[target].send_messages = False
+            await self.channel.edit(overwrites=overwrites)
+            self.clear_items()
+            await interaction.response.send_message(content="頻道已鎖定", view=self)
+        else:
+            await interaction.response.send_message(content="只有工單建立者或管理員可以關閉頻道", ephemeral=True)
+
+
+class TicketLobbyView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    @discord.ui.button(label="建立私人頻道", style=discord.ButtonStyle.primary, custom_id="create_ticket_channel")
+    async def create_ticket_channel(self, button: discord.ui.Button, interaction: discord.Interaction):
+        channel = await interaction.channel.category.create_text_channel(
+            name=f"ticket-{interaction.user.name}", topic=f"Ticket channel for {interaction.user} ({interaction.user.id})"
+        )
+        msg = await channel.send(
+            f"{interaction.user.mention}，你好！請在此頻道描述你的問題，我們會盡快協助你。", view=TicketCloseView(channel, interaction.user)
+        )
+        sqldb.merge(
+            TicketChannel(
+                channel_id=channel.id, guild_id=interaction.guild.id, creator_id=interaction.user.id, created_at=datetime.now(tz), close_message_id=msg.id
+            )
+        )
+        await msg.pin()
+        await interaction.response.send_message(f"已建立私人頻道，請前往{channel.mention}進行對話", ephemeral=True)

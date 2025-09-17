@@ -52,6 +52,8 @@ class error(Cog_Extension):
                 else:
                     await ctx.respond(f"錯誤（debug）：```py\n{type(error.original)}：{error.original}```", ephemeral=True)
 
+            elif isinstance(error.original, NotImplementedError):
+                await ctx.respond(f"錯誤：此功能尚未實裝", ephemeral=True)
             else:
                 log.exception("%s, %s", error, type(error.original), exc_info=error.original)
 

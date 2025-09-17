@@ -353,7 +353,7 @@ class ReactionRoleMessage(AlchemyBasicSchema):
     message_id: int = Column(BigInteger, primary_key=True)
 
 
-class ReactionRole(AlchemyBasicSchema):
+class ReactionRoleOption(AlchemyBasicSchema):
     __tablename__ = "reaction_role"
 
     message_id: int = Column(BigInteger, primary_key=True)
@@ -437,6 +437,26 @@ class IPLastSeen(BasicSchema, table=True):
     mac: str | None = Field(sa_column=Column(MACADDR))
     name: str | None = Field(sa_column=Column(String))
     registration_at: datetime | None = Field(sa_column=Column(TIMESTAMP(True, 0)))
+
+class TicketChannelLobby(BasicSchema, table=True):
+    __tablename__ = "ticket_channel_lobby"
+    channel_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
+    category_id: int = Field(sa_column=Column(BigInteger))
+    guild_id: int = Field(sa_column=Column(BigInteger))
+    message_id: int = Field(sa_column=Column(BigInteger))
+
+
+class TicketChannel(BasicSchema, table=True):
+    __tablename__ = "ticket_channel"
+
+    channel_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
+    guild_id: int = Field(sa_column=Column(BigInteger))
+    creator_id: int = Field(sa_column=Column(BigInteger))
+    created_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
+    closed_at: datetime | None = Field(sa_column=Column(TIMESTAMP(True, 0)))
+    closer_id: int | None = Field(sa_column=Column(BigInteger))
+    close_message_id: int | None = Field(sa_column=Column(BigInteger))
+
 
 class Party(IdbaseSchema, table=True):
     __tablename__ = "party_datas"

@@ -659,6 +659,26 @@ class SQLDynamicVoiceSystem(BaseSQLEngine):
             for channel_id in channel_ids:
                 if channel_id in self[DBCacheType.DynamicVoiceRoom]:
                     self[DBCacheType.DynamicVoiceRoom].remove(channel_id)
+class SQLTicketSystem(BaseSQLEngine):
+    def get_all_ticket_lobbys(self):
+        stmt = select(TicketChannelLobby)
+        result = self.session.exec(stmt).all()
+        return result
+
+    def delete_ticket_lobby(self, channel_id: int):
+        stmt = delete(TicketChannelLobby).where(TicketChannelLobby.channel_id == channel_id)
+        self.session.exec(stmt)
+        self.session.commit()
+
+    def get_active_ticket_channels(self):
+        stmt = select(TicketChannel).where(TicketChannel.closed_at == None)
+        result = self.session.exec(stmt).all()
+        return result
+
+    def get_ticket_channel(self, channel_id: int):
+        stmt = select(TicketChannel).where(TicketChannel.channel_id == channel_id)
+        result = self.session.exec(stmt).one_or_none()
+        return result
 
 class SQLRoleSaveSystem(BaseSQLEngine):
     # * role_save
@@ -683,8 +703,8 @@ class SQLRoleSaveSystem(BaseSQLEngine):
         self.session.commit()
 
     #* ReactionRole
-    def get_reaction_roles_all(self) -> dict[int, list[ReactionRole]]:
-        stmt = select(ReactionRole)
+    def get_reaction_roles_all(self) -> dict[int, list[ReactionRoleOption]]:
+        stmt = select(ReactionRoleOption)
         result = self.session.exec(stmt).all()
         dct = dict()
         for i in result:
@@ -694,7 +714,7 @@ class SQLRoleSaveSystem(BaseSQLEngine):
         return dct
 
     def get_reaction_roles_by_message(self, message_id: int):
-        stmt = select(ReactionRole).where(ReactionRole.message_id == message_id)
+        stmt = select(ReactionRoleOption).where(ReactionRoleOption.message_id == message_id)
         result = self.session.exec(stmt).all()
         return result
 
@@ -712,12 +732,12 @@ class SQLRoleSaveSystem(BaseSQLEngine):
         stmt = delete(ReactionRoleMessage).where(ReactionRoleMessage.message_id == message_id)
         self.session.exec(stmt)
 
-        stmt = delete(ReactionRole).where(ReactionRole.message_id == message_id)
+        stmt = delete(ReactionRoleOption).where(ReactionRoleOption.message_id == message_id)
         self.session.exec(stmt)
         self.session.commit()
 
     def delete_reaction_role(self, message_id:int, role_id:int):
-        stmt = delete(ReactionRole).where(ReactionRole.message_id == message_id, ReactionRole.role_id == role_id)
+        stmt = delete(ReactionRoleOption).where(ReactionRoleOption.message_id == message_id, ReactionRoleOption.role_id == role_id)
         self.session.exec(stmt)
         self.session.commit()
 
@@ -1432,6 +1452,7 @@ class SQLEngine(
     SQLPetSystem,
     SQLNotifySystem,
     SQLDynamicVoiceSystem,
+    SQLTicketSystem,
     SQLRoleSaveSystem,
     SQLWarningSystem,
     SQLPollSystem,

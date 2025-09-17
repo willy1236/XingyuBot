@@ -165,7 +165,7 @@ from starlib.dataExtractor.oauth import DiscordOauth2, GoogleOauth2, TwitchOauth
 nm = nmap.PortScanner()
 
 # 掃描整個區段，-sn 表示只做 ping 掃描
-scan_range = "yunmoprj.cloudns.be"
+scan_range = ""
 nm.scan(hosts=scan_range, arguments="-sn")
 
 # 輸出存活主機

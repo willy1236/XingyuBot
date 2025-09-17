@@ -532,10 +532,10 @@ class TwitchBotThread(BaseThread):
 
 
 if __name__ == "__main__":
-    chat, twitch, eventsub = asyncio.run(run())
+    chat, twitch, eventsub_webhook = asyncio.run(run())
     chat: Chat
     twitch: Twitch
-    eventsub: EventSubWebhook
+    eventsub_webhook: EventSubWebhook
 
     try:
         input("press ENTER to stop\n")

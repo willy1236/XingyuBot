@@ -8,13 +8,13 @@ from discord.utils import format_dt
 
 from starlib import BotEmbed, ChoiceList, Jsondb, sclient
 from starlib.instance import debug_guilds
-from starlib.models.mysql import ReactionRole, ReactionRoleMessage
+from starlib.models.mysql import ReactionRoleOption, ReactionRoleMessage, TicketChannelLobby
 from starlib.types import NotifyChannelType, WarningType
 from starlib.utils import converter
 
 from ..extension import Cog_Extension
 from ..uiElement.modal import RuleMessageModal
-from ..uiElement.view import ReactionRoleView
+from ..uiElement.view import ReactionRoleView, TicketLobbyView
 
 set_option = ChoiceList.set("channel_set_option")
 ban_delete_message_seconds = [
@@ -31,6 +31,7 @@ class moderation(Cog_Extension):
     warning = SlashCommandGroup("warning", "警告相關指令")
     channel_notify = SlashCommandGroup("channel", "自動通知相關指令")
     react_role = SlashCommandGroup("reactrole", "反應身分組相關指令")
+    ticket_cmd = SlashCommandGroup("ticket", "私人頻道相關指令")
 
     @commands.slash_command(description="清理大量訊息")
     @commands.has_permissions(manage_messages=True)
@@ -361,7 +362,7 @@ class moderation(Cog_Extension):
         if not react_msg:
             sclient.sqldb.merge(ReactionRoleMessage(message.guild.id, message.channel.id, message.id))
 
-        sclient.sqldb.merge(ReactionRole(message.id, role.id, title, None, emoji, style))
+        sclient.sqldb.merge(ReactionRoleOption(message.id, role.id, title, None, emoji, style))
         react_roles = sclient.sqldb.get_reaction_roles_by_message(message.id)
         await message.edit(view=ReactionRoleView(message.id, react_roles))
 
@@ -413,6 +414,31 @@ class moderation(Cog_Extension):
         await channel.send(embed=embed)
         await ctx.respond("規則創建完成", ephemeral=True)
 
+    @ticket_cmd.command(name="setup", description="初始化私人頻道系統")
+    @commands.has_permissions(manage_channels=True)
+    @commands.guild_only()
+    async def ticket_setup(
+        self,
+        ctx: discord.ApplicationContext,
+        category: discord.Option(discord.CategoryChannel, name="分類", description="要將私人頻道放置於哪個分類下", required=True),
+        # role: discord.Option(discord.Role, name="管理身分組", description="擁有此身分組的使用者可以查看與管理所有私人頻道", required=True),
+        # prefix: discord.Option(str, name="頻道前綴", description="私人頻道的名稱前綴，後方會自動加上流水號", default="ticket"),
+        # max_channel: discord.Option(int, name="最大頻道數量", description="同時存在的私人頻道上限，超過後將無法再創建新的私人頻道", default=10, min_value=1),
+    ):
+        await ctx.defer()
+        assert isinstance(category, discord.CategoryChannel)
+        channel = await category.create_text_channel(name="開單頻道", reason="初始化私人頻道系統（測試版）")
+        embed = BotEmbed.general("私人頻道系統", self.bot.user.display_avatar.url if self.bot.user else None, description="點擊下方按鈕以建立私人頻道")
+        msg = await channel.send(embed=embed, view=TicketLobbyView())
+        sclient.sqldb.merge(
+            TicketChannelLobby(
+                channel_id=channel.id,
+                category_id=category.id,
+                guild_id=channel.guild.id,
+                message_id=msg.id,
+            )
+        )
+        await ctx.respond("私人頻道系統初始化完成", ephemeral=True)
 
 def setup(bot):
     bot.add_cog(moderation(bot))

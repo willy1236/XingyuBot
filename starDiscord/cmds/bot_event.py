@@ -11,7 +11,7 @@ from starlib.starAgent import ModelMessage, MyDeps, agent
 from starlib.types import DBCacheType, NotifyChannelType, PrivilegeLevel
 
 from ..extension import Cog_Extension
-from ..uiElement.view import PollView, ReactionRoleView
+from ..uiElement.view import PollView, ReactionRoleView, TicketLobbyView, TicketCloseView
 
 keywords = {}
 
@@ -87,7 +87,7 @@ class event(Cog_Extension):
                 poll.end_at = now
                 sclient.sqldb.merge(poll)
             else:
-                bot.add_view(PollView(poll, sqldb=sclient.sqldb, bot=bot))
+                bot.add_view(PollView(poll, sqldb=sclient.sqldb, bot=bot), message_id=poll.message_id)
                 log.debug(f"Loaded poll: {poll.poll_id}")
 
         # 反應身分組
@@ -106,7 +106,7 @@ class event(Cog_Extension):
 
             if message:
                 react_roles = sclient.sqldb.get_reaction_roles_by_message(react_message.message_id)
-                bot.add_view(ReactionRoleView(react_message.message_id, react_roles))
+                bot.add_view(ReactionRoleView(react_message.message_id, react_roles), message_id=react_message.message_id)
                 log.debug(f"Loaded reaction role message: {react_message.message_id}")
             elif not debug_mode:
                 sclient.sqldb.delete_reaction_role_message(react_message.message_id)
@@ -123,6 +123,37 @@ class event(Cog_Extension):
 
             log.warning("Dynamic voice channel %s not found", removed_ids)
             sclient.sqldb.batch_remove_dynamic_voice(removed_ids)
+
+        # 私人頻道大廳
+        ticket_lobbys = sclient.sqldb.get_all_ticket_lobbys()
+        for lobby in ticket_lobbys:
+            log.debug(f"Loading ticket lobby: {lobby.channel_id}")
+            channel = bot.get_channel(lobby.channel_id)
+            if channel:
+                assert isinstance(channel, discord.abc.Messageable)
+                try:
+                    message = await channel.fetch_message(lobby.message_id)
+                    await asyncio.sleep(1)
+                except discord.errors.NotFound:
+                    message = channel.get_partial_message(lobby.message_id)
+            else:
+                message = None
+
+            if message:
+                bot.add_view(TicketLobbyView(), message_id=lobby.message_id)
+                log.debug(f"Loaded ticket lobby: {lobby.channel_id}")
+            elif not debug_mode:
+                sclient.sqldb.delete_ticket_lobby(lobby.channel_id)
+                log.debug(f"Deleted ticket lobby: {lobby.channel_id}")
+
+        # 私人頻道
+        active_tickets = sclient.sqldb.get_active_ticket_channels()
+        for ticket in active_tickets:
+            log.debug(f"Loading ticket channel: {ticket.channel_id}")
+            channel = bot.get_channel(ticket.channel_id)
+            if channel:
+                bot.add_view(TicketCloseView(channel, bot.get_user(ticket.creator_id)), message_id=ticket.close_message_id)
+                log.debug(f"Loaded ticket channel: {ticket.channel_id}")
 
         # Bot status
         log.info(f">> Bot online as {bot.user.name} <<")
