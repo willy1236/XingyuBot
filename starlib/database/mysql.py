@@ -671,7 +671,7 @@ class SQLTicketSystem(BaseSQLEngine):
         self.session.commit()
 
     def get_active_ticket_channels(self):
-        stmt = select(TicketChannel).where(TicketChannel.closed_at == None)
+        stmt = select(TicketChannel).where(TicketChannel.closed_at.is_(None))
         result = self.session.exec(stmt).all()
         return result
 

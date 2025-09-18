@@ -69,7 +69,7 @@ class PollOptionButton(discord.ui.Button):
         vote_magnification = 1
         if view.role_dict:
             for roleid in view.role_dict:
-                if view.role_dict[roleid][0] == 1:
+                if view.role_dict[roleid][0]:
                     have_only_role = True
                     role = interaction.user.get_role(roleid)
                     if role:
@@ -710,50 +710,60 @@ class McServerPanel(discord.ui.View):
         else:
             await interaction.followup.send("伺服器未找到", ephemeral=True)
 
-class TicketCloseView(discord.ui.View):
+class TicketChannelView(discord.ui.View):
     def __init__(self, channel: discord.TextChannel, creator: discord.Member):
         super().__init__(timeout=None)
         self.channel = channel
         self.creator = creator
+        self.add_item(self.TicketCloseButton(channel.id))
 
-    @discord.ui.button(label="關閉頻道", style=discord.ButtonStyle.danger, custom_id="close_ticket_channel")
-    async def button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
-        if interaction.user == self.creator or (
-            self.creator.guild and await self.creator.guild.get_member(interaction.user.id).guild_permissions.manage_channels
-        ):
-            ticket = sqldb.get_ticket_channel(self.channel.id)
-            if ticket:
-                ticket.closed_at = datetime.now(tz)
-                ticket.closer_id = interaction.user.id
-                sqldb.merge(ticket)
+    class TicketCloseButton(discord.ui.Button):
+        def __init__(self, channel_id: int):
+            super().__init__(label="關閉頻道", style=discord.ButtonStyle.danger, custom_id=f"close_ticket_channel_{channel_id}")
 
-            # await self.channel.delete()
-            overwrites = self.channel.overwrites
-            for target in overwrites:
-                overwrites[target].send_messages = False
-            await self.channel.edit(overwrites=overwrites)
-            self.clear_items()
-            await interaction.response.send_message(content="頻道已鎖定", view=self)
-        else:
-            await interaction.response.send_message(content="只有工單建立者或管理員可以關閉頻道", ephemeral=True)
+        async def callback(self, interaction: discord.Interaction):
+            view: TicketChannelView = self.view
+            if interaction.user == view.creator or (
+                view.creator.guild and await view.creator.guild.get_member(interaction.user.id).guild_permissions.manage_channels
+            ):
+                ticket = sqldb.get_ticket_channel(view.channel.id)
+                if ticket:
+                    ticket.closed_at = datetime.now(tz)
+                    ticket.closer_id = interaction.user.id
+                    sqldb.merge(ticket)
+
+                # await self.channel.delete()
+                overwrites = view.channel.overwrites
+                for target in overwrites:
+                    overwrites[target].send_messages = False
+                await view.channel.edit(overwrites=overwrites)
+                view.clear_items()
+                await interaction.response.edit_message(view=view)
+                await interaction.followup.send(content=f"頻道已由{interaction.user.mention}鎖定")
+            else:
+                await interaction.response.send_message(content="只有頻道建立者或管理員可以關閉頻道", ephemeral=True)
 
 
 class TicketLobbyView(discord.ui.View):
-    def __init__(self):
+    def __init__(self, channel_id: int):
         super().__init__(timeout=None)
+        self.add_item(self.CreateTicketButton(channel_id))
 
-    @discord.ui.button(label="建立私人頻道", style=discord.ButtonStyle.primary, custom_id="create_ticket_channel")
-    async def create_ticket_channel(self, button: discord.ui.Button, interaction: discord.Interaction):
-        channel = await interaction.channel.category.create_text_channel(
-            name=f"ticket-{interaction.user.name}", topic=f"Ticket channel for {interaction.user} ({interaction.user.id})"
-        )
-        msg = await channel.send(
-            f"{interaction.user.mention}，你好！請在此頻道描述你的問題，我們會盡快協助你。", view=TicketCloseView(channel, interaction.user)
-        )
-        sqldb.merge(
-            TicketChannel(
-                channel_id=channel.id, guild_id=interaction.guild.id, creator_id=interaction.user.id, created_at=datetime.now(tz), close_message_id=msg.id
+    class CreateTicketButton(discord.ui.Button):
+        def __init__(self, channel_id: int):
+            super().__init__(label="建立私人頻道", style=discord.ButtonStyle.primary, custom_id=f"create_ticket_{channel_id}")
+
+        async def callback(self, interaction: discord.Interaction):
+            channel = await interaction.channel.category.create_text_channel(
+                name=f"ticket-{interaction.user.name}", topic=f"Ticket channel for {interaction.user} ({interaction.user.id})"
             )
-        )
-        await msg.pin()
-        await interaction.response.send_message(f"已建立私人頻道，請前往{channel.mention}進行對話", ephemeral=True)
+            msg = await channel.send(
+                f"{interaction.user.mention}，你好！請在此頻道描述你的問題，我們會盡快協助你。", view=TicketChannelView(channel, interaction.user)
+            )
+            sqldb.merge(
+                TicketChannel(
+                    channel_id=channel.id, guild_id=interaction.guild.id, creator_id=interaction.user.id, created_at=datetime.now(tz), close_message_id=msg.id
+                )
+            )
+            await msg.pin()
+            await interaction.response.send_message(f"已建立私人頻道，請前往{channel.mention}進行對話", ephemeral=True)

@@ -516,7 +516,7 @@ class TRPGCharacterAbility(IdbaseSchema, table=True):
 
     discord_id: int = Field(sa_column=Column(BigInteger, ForeignKey("stardb_idbase.trpg_characters.discord_id"), primary_key=True))
     ability_id: int = Field(sa_column=Column(ForeignKey("stardb_idbase.trpg_abilities.ability_id"), primary_key=True))
-    san_lower_limit: int | None = Field(sa_column=Column(Integer))
+    san_lower_limit: int = Field(sa_column=Column(Integer))
     value: int = Field(sa_column=Column(Integer))
 
     character: TRPGCharacter = Relationship(back_populates="abilities")

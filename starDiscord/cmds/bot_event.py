@@ -11,7 +11,7 @@ from starlib.starAgent import ModelMessage, MyDeps, agent
 from starlib.types import DBCacheType, NotifyChannelType, PrivilegeLevel
 
 from ..extension import Cog_Extension
-from ..uiElement.view import PollView, ReactionRoleView, TicketLobbyView, TicketCloseView
+from ..uiElement.view import PollView, ReactionRoleView, TicketLobbyView, TicketChannelView
 
 keywords = {}
 
@@ -140,7 +140,7 @@ class event(Cog_Extension):
                 message = None
 
             if message:
-                bot.add_view(TicketLobbyView(), message_id=lobby.message_id)
+                bot.add_view(TicketLobbyView(channel.id), message_id=lobby.message_id)
                 log.debug(f"Loaded ticket lobby: {lobby.channel_id}")
             elif not debug_mode:
                 sclient.sqldb.delete_ticket_lobby(lobby.channel_id)
@@ -152,7 +152,7 @@ class event(Cog_Extension):
             log.debug(f"Loading ticket channel: {ticket.channel_id}")
             channel = bot.get_channel(ticket.channel_id)
             if channel:
-                bot.add_view(TicketCloseView(channel, bot.get_user(ticket.creator_id)), message_id=ticket.close_message_id)
+                bot.add_view(TicketChannelView(channel, bot.get_user(ticket.creator_id)), message_id=ticket.close_message_id)
                 log.debug(f"Loaded ticket channel: {ticket.channel_id}")
 
         # Bot status

@@ -429,7 +429,7 @@ class moderation(Cog_Extension):
         assert isinstance(category, discord.CategoryChannel)
         channel = await category.create_text_channel(name="開單頻道", reason="初始化私人頻道系統（測試版）")
         embed = BotEmbed.general("私人頻道系統", self.bot.user.display_avatar.url if self.bot.user else None, description="點擊下方按鈕以建立私人頻道")
-        msg = await channel.send(embed=embed, view=TicketLobbyView())
+        msg = await channel.send(embed=embed, view=TicketLobbyView(channel.id))
         sclient.sqldb.merge(
             TicketChannelLobby(
                 channel_id=channel.id,
