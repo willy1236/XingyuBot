@@ -21,7 +21,7 @@ class CloudUser(UserSchema, table=True):
 
     id: str | None = Field(sa_column=Column(String, primary_key=True))
     discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True, autoincrement=False))
-    email: str | None = Field(sa_column=Column(String))
+    drive_gmail: str | None = Field(sa_column=Column(String))
     drive_share_id: str | None = Field(sa_column=Column(String))
     twitch_id: int | None = Field(sa_column=Column(Integer, unique=True))
     name: str | None = Field(sa_column=Column(String))
