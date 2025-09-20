@@ -12,7 +12,10 @@
         "Siphon": "岩漿虹吸管",
         "Zeus Station": "宙斯站",
         "Thunderdome": "雷鳴擂台",
-        "Fragment": "破碎東方"
+        "Fragment": "破碎東方",
+        "E-District": "電流區",
+        "Caustic Treatment": "腐蝕治療",
+        "Monument": "紀念碑"
     },
     "ApexEvent":{
         "Control": "控制",
