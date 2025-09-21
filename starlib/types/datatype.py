@@ -23,7 +23,7 @@ class NotifyChannelType(IntEnum):
     WeatherWarning = 11
     SlightQuakeNotifications = 12
     LeaveLog = 13
-
+    TyphoonWarning = 14
 
 class DBCacheType(Enum):
     DynamicVoiceLobby = "dynamic_voice"

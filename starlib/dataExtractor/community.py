@@ -430,8 +430,7 @@ class GoogleCloud:
 
     def list_file_permissions(self,fileId):
         service = build("drive", "v3", credentials=self.creds)
-        results = service.permissions().list(fileId=fileId).execute()
-        print(results)
+        results = service.permissions().list(fileId=fileId, fields="permissions(*)").execute()
         return results
 
     def add_file_permissions(self,fileId,emailAddress):

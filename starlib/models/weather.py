@@ -251,3 +251,56 @@ class WeatherWarningReport(BaseModel):
         embed.timestamp = datetime.now()
         embed.set_footer(text=f"中央氣象暑")
         return embed
+
+class TyphoonWarningAuthor(BaseModel):
+    name: str
+
+
+class TyphoonWarningLink(BaseModel):
+    rel: str
+    href: str
+    type: str
+
+
+class TyphoonWarningTag(BaseModel):
+    term: str
+    scheme: str | None = None
+    label: str | None = None
+
+
+class TyphoonWarningTitleDetail(BaseModel):
+    type: str
+    language: str | None = None
+    base: str
+    value: str
+
+
+class TyphoonWarningSummaryDetail(BaseModel):
+    type: str
+    language: str | None = None
+    base: str
+    value: str
+
+
+class TyphoonWarningReport(BaseModel):
+    id: str
+    guidislink: bool
+    link: str
+    title: str
+    title_detail: TyphoonWarningTitleDetail
+    updated: datetime
+    updated_parsed: list[int]
+    authors: list[TyphoonWarningAuthor]
+    author_detail: TyphoonWarningAuthor
+    author: str
+    links: list[TyphoonWarningLink]
+    summary: str
+    summary_detail: TyphoonWarningSummaryDetail
+    tags: list[TyphoonWarningTag]
+
+    def embed(self):
+        embed = BotEmbed.general("颱風警報", title=self.title, description=self.summary)
+        embed.add_field(name="發布時間", value=self.updated.strftime("%Y/%m/%d %H:%M"))
+        embed.timestamp = self.updated
+        embed.set_footer(text="NCDR")
+        return embed

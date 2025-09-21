@@ -32,6 +32,7 @@ class task(Cog_Extension):
             scheduler.add_job(self.weather_check, "cron", minute="20,35", second=30, jitter=30, misfire_grace_time=60)
             scheduler.add_job(self.apex_map_rotation, "cron", minute="0/15", second=10, jitter=30, misfire_grace_time=60)
             scheduler.add_job(self.refresh_yt_push, "cron", hour="2/3", jitter=30, misfire_grace_time=40)
+            scheduler.add_job(self.typhoon_warning_check, CronTrigger(minute=0, second=30, jitter=30), misfire_grace_time=40)
 
             scheduler.add_job(self.earthquake_check, "interval", minutes=3, jitter=30, misfire_grace_time=40)
             scheduler.add_job(self.weather_warning_check, "interval", minutes=15, jitter=30, misfire_grace_time=40)
@@ -118,6 +119,20 @@ class task(Cog_Extension):
             report_time = data.datasetInfo.issueTime
             await self.bot.send_notify_channel(data.embed(), NotifyChannelType.WeatherWarning)
         sclient.sqldb.set_notify_cache(NotifyChannelType.WeatherWarning, report_time)
+
+    async def typhoon_warning_check(self):
+        cache = sclient.sqldb.get_notify_cache(NotifyChannelType.TyphoonWarning)
+        report_time = cache.value if cache else datetime.now(tz) - timedelta(days=1)
+
+        apidatas = ncdr_rss.get_typhoon_warning(after=report_time)
+        if not apidatas:
+            return
+
+        datas = [i for i in apidatas if i.updated > report_time]
+        for data in datas:
+            report_time = data.updated
+            await self.bot.send_notify_channel(data.embed(), NotifyChannelType.TyphoonWarning)
+        sclient.sqldb.set_notify_cache(NotifyChannelType.TyphoonWarning, report_time)
 
     async def forecast_update(self):
         forecast = cwa_api.get_forecast()

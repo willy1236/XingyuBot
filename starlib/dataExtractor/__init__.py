@@ -21,6 +21,7 @@ __all__ = [
     "DBDInterface",
     "LOLMediaWikiAPI",
     "CWA_API",
+    "NCDRRSS",
     "YoutubeRSS",
     "DiscordOauth2",
     "YoutubePush",

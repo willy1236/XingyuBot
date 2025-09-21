@@ -1,4 +1,5 @@
 import requests
+import feedparser
 
 from ..database import sqldb
 from ..models.weather import *
@@ -88,3 +89,12 @@ class CWA_API():
 #             "dead":r3[9].text
 #         }
 #         return Covid19Report(dict)
+
+class NCDRRSS:
+    def get_typhoon_warning(self, after: datetime | None = None) -> list[TyphoonWarningReport]:
+        """從RSS取得颱風警報（由新到舊）"""
+        feed = feedparser.parse("https://alerts.ncdr.nat.gov.tw/RssAtomFeed.ashx?AlertType=5")
+        datas = [TyphoonWarningReport(**entry) for entry in feed["entries"]]
+        if after:
+            datas = [entry for entry in datas if entry.updated > after]
+        return datas

@@ -19,6 +19,7 @@ __all__ = [
     "cwa_api",
     "apexapi",
     "cli_api",
+    "ncdr_rss",
     "main_guilds",
     "happycamp_guild",
     "debug_guilds",
@@ -36,6 +37,7 @@ rss_hub = RssHub()
 cwa_api = CWA_API()
 apexapi = ApexAPI()
 cli_api = CLIInterface()
+ncdr_rss = NCDRRSS()
 
 # jsondb
 main_guilds: list[int] = Jsondb.config.get("main_guilds", [])
