@@ -92,9 +92,9 @@ class CWA_API():
 
 class NCDRRSS:
     def get_typhoon_warning(self, after: datetime | None = None) -> list[TyphoonWarningReport]:
-        """從RSS取得颱風警報（由新到舊）"""
+        """從RSS取得颱風警報（由舊到新）"""
         feed = feedparser.parse("https://alerts.ncdr.nat.gov.tw/RssAtomFeed.ashx?AlertType=5")
         datas = [TyphoonWarningReport(**entry) for entry in feed["entries"]]
         if after:
-            datas = [entry for entry in datas if entry.updated > after]
+            return [entry for entry in datas if entry.updated > after]
         return datas

@@ -32,7 +32,7 @@ class task(Cog_Extension):
             scheduler.add_job(self.weather_check, "cron", minute="20,35", second=30, jitter=30, misfire_grace_time=60)
             scheduler.add_job(self.apex_map_rotation, "cron", minute="0/15", second=10, jitter=30, misfire_grace_time=60)
             scheduler.add_job(self.refresh_yt_push, "cron", hour="2/3", jitter=30, misfire_grace_time=40)
-            scheduler.add_job(self.typhoon_warning_check, CronTrigger(minute=0, second=30, jitter=30), misfire_grace_time=40)
+            scheduler.add_job(self.typhoon_warning_check, CronTrigger(hour="*", minute=0, second=30, jitter=30), misfire_grace_time=40)
 
             scheduler.add_job(self.earthquake_check, "interval", minutes=3, jitter=30, misfire_grace_time=40)
             scheduler.add_job(self.weather_warning_check, "interval", minutes=15, jitter=30, misfire_grace_time=40)
