@@ -1,5 +1,6 @@
 import requests
 import feedparser
+import certifi
 
 from ..database import sqldb
 from ..models.weather import *
@@ -93,7 +94,10 @@ class CWA_API():
 class NCDRRSS:
     def get_typhoon_warning(self, after: datetime | None = None) -> list[TyphoonWarningReport]:
         """從RSS取得颱風警報（由舊到新）"""
-        feed = feedparser.parse("https://alerts.ncdr.nat.gov.tw/RssAtomFeed.ashx?AlertType=5")
+        response = requests.get("https://alerts.ncdr.nat.gov.tw/RssAtomFeed.ashx?AlertType=5", verify=certifi.where())
+        response.raise_for_status()
+
+        feed = feedparser.parse(response.content)
         if feed.bozo:
             raise feed.bozo_exception
         datas = [TyphoonWarningReport(**entry) for entry in feed["entries"]]
