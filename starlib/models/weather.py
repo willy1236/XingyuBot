@@ -299,7 +299,7 @@ class TyphoonWarningReport(BaseModel):
     tags: list[TyphoonWarningTag]
 
     def embed(self):
-        embed = BotEmbed.general("颱風警報", title=self.title, description=self.summary)
+        embed = BotEmbed.general("颱風警報", title=self.title, description=self.summary.replace("＊", "\n- "))
         embed.add_field(name="發布時間", value=self.updated.strftime("%Y/%m/%d %H:%M"))
         embed.timestamp = self.updated
         embed.set_footer(text="NCDR")
