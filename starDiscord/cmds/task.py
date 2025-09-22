@@ -125,6 +125,7 @@ class task(Cog_Extension):
         report_time = cache.value if cache else datetime.now(tz) - timedelta(days=1)
 
         apidatas = ncdr_rss.get_typhoon_warning(after=report_time)
+        log.info(f"typhoon_warning_check: found {len(apidatas)} new warnings, after {report_time}")
         if not apidatas:
             return
 
