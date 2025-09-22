@@ -94,6 +94,8 @@ class NCDRRSS:
     def get_typhoon_warning(self, after: datetime | None = None) -> list[TyphoonWarningReport]:
         """從RSS取得颱風警報（由舊到新）"""
         feed = feedparser.parse("https://alerts.ncdr.nat.gov.tw/RssAtomFeed.ashx?AlertType=5")
+        if feed.bozo:
+            raise feed.bozo_exception
         datas = [TyphoonWarningReport(**entry) for entry in feed["entries"]]
         if after:
             return [entry for entry in datas if entry.updated > after]
