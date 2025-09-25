@@ -498,12 +498,6 @@ class system_game(Cog_Extension):
         embeds = ApexAPI().get_map_rotation().embeds()
         await ctx.respond(content="查詢成功", embeds=embeds)
 
-    @apex.command(description="查詢Apex合成器內容資料")
-    @commands.cooldown(rate=1, per=3)
-    async def crafting(self, ctx):
-        embed = ApexAPI().get_crafting().embed()
-        await ctx.respond(content="查詢成功", embed=embed)
-
     # @apex.command(description='查詢Apex伺服器資料',enabled=False)
     # @commands.cooldown(rate=1,per=3)
     # async def server(self,ctx):
@@ -850,6 +844,30 @@ class system_game(Cog_Extension):
         account = IPLastSeen(ip=str(ip), last_seen=now, discord_id=ctx.author.id, name=name, registration_at=now)
         sclient.sqldb.merge(account)
         await ctx.respond(f"{ctx.author.mention} 註冊成功，IP：`{ip.network_address}`，使用者名稱：`{name if name else '未登記'}`", ephemeral=True)
+
+    @game.command(description="註冊ZeroTier帳號")
+    async def zerotier(
+        self,
+        ctx: discord.ApplicationContext,
+        address_str: discord.Option(
+            str,
+            name="address",
+            description="ZeroTier分配給你的位址",
+        ),
+    ):
+        await ctx.defer(ephemeral=True)
+        zt_api = ZeroTierAPI()
+        member = zt_api.authorize_member(Jsondb.config.get("zerotier_network_id"), address_str)
+        if not member:
+            await ctx.respond(f"ZeroTier帳號註冊失敗，請確認位址是否正確", ephemeral=True)
+            return
+
+        now = datetime.now(tz)
+        account = IPLastSeen(ip=str(member["config"]["ipAssignments"][0]), last_seen=now, discord_id=ctx.author.id, registration_at=now)
+        sclient.sqldb.merge(account)
+
+        await ctx.respond(f"ZeroTier帳號註冊成功，你的IP位址：`{member['config']['ipAssignments'][0]}`", ephemeral=True)
+
 
 def setup(bot):
     bot.add_cog(system_game(bot))

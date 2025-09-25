@@ -20,6 +20,7 @@ __all__ = [
     "SteamAPI",
     "DBDInterface",
     "LOLMediaWikiAPI",
+    "ZeroTierAPI",
     "CWA_API",
     "NCDRRSS",
     "YoutubeRSS",

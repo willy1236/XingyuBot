@@ -753,47 +753,6 @@ class ApexPlayer:
         embed.set_image(url=self.legends_selected_banner)
         return embed
 
-
-class ApexCrafting:
-    def __init__(self, data):
-        # self.daily = data[0]
-        self.weekly = data[0]
-
-        # self.daily_start = self.daily['startDate']
-        # self.daily_end = self.daily['endDate']
-        # self.daily_item = [ApexCraftingItem(i) for i in self.daily['bundleContent']]
-
-        self.weekly_start = self.weekly["startDate"]
-        self.weekly_end = self.weekly["endDate"]
-        self.weekly_item = [ApexCraftingItem(i) for i in self.weekly["bundleContent"]]
-
-    def embed(self):
-        embed = BotEmbed.simple("Apex合成器內容")
-        # text = ""
-        # for item in self.daily_item:
-        #     text += f"{item.name_tw} {item.cost}\n"
-        # embed.add_field(name="每日物品",value=text[:-1],inline=False)
-
-        text = ""
-        for item in self.weekly_item:
-            text += f"{item.name_tw} {item.cost}\n"
-        embed.add_field(name="每週物品", value=text[:-1], inline=False)
-        embed.timestamp = datetime.now()
-        embed.set_footer(text="更新時間")
-        return embed
-
-
-class ApexCraftingItem:
-    def __init__(self, data):
-        self.id = data.get("item")
-        self.cost = data.get("cost")
-        self.name = data.get("itemType").get("name")
-        self.name_tw = jdict["ApexCraftingItem"].get(self.name, self.name)
-        # self.rarity = data.get('itemType').get('rarity')
-        # self.asset = data.get('itemType').get('asset')
-        # self.rarityHex = data.get('itemType').get('rarityHex')
-
-
 class MapData(BaseModel):
     start: datetime
     end: datetime

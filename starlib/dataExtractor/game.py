@@ -201,17 +201,8 @@ class ApexAPI():
         else:
             return None
 
-    def get_crafting(self):
-        # FIXME: 回傳錯誤資料
-        params = {"auth": self.auth}
-        r = requests.get(f"{self.url}/crafting", params=params)
-        if r.ok:
-            return ApexCrafting(r.json())
-        else:
-            return None
-
     def get_map_rotation(self):
-        params={
+        params = {
             "auth": self.auth,
             "version": "2",
         }
@@ -230,11 +221,6 @@ class ApexAPI():
             return r.json()
         else:
             return None
-
-    def get_crafting_from_chche(self):
-        apex_crafting = Jsondb.get_cache("apex_crafting")
-        if apex_crafting:
-            return ApexCrafting(apex_crafting["data"])
 
     def get_server_status(self):
         params = {"auth": self.auth}
@@ -313,3 +299,52 @@ class MojangAPI:
             return None
         else:
             raise APIInvokeError("mojang_uuid", r.text)
+
+class ZeroTierAPI:
+    url = "https://api.zerotier.com/api/v1"
+
+    def __init__(self):
+        self.auth = sqldb.get_bot_token(APIType.ZeroTier).access_token
+        self.headers = {"Authorization": f"token {self.auth}", "Content-Type": "application/json"}
+
+    def get_networks(self):
+        r = requests.get(f"{self.url}/network", headers=self.headers)
+        if r.ok:
+            return r.json()
+        else:
+            raise APIInvokeError("zerotier_networks", r.text)
+
+    def get_network_members(self, network_id: str):
+        r = requests.get(f"{self.url}/network/{network_id}/member", headers=self.headers)
+        if r.ok:
+            return r.json()
+        else:
+            raise APIInvokeError("zerotier_network_members", r.text)
+
+    def get_unauthorized_members(self, network_id: str):
+        members = self.get_network_members(network_id)
+        return [member for member in members if not member["config"]["authorized"]]
+
+    def get_member(self, network_id: str, member_id: str):
+        r = requests.get(f"{self.url}/network/{network_id}/member/{member_id}", headers=self.headers)
+        if r.ok:
+            return r.json()
+        elif r.status_code == 404:
+            return None
+        else:
+            raise APIInvokeError("zerotier_get_member", r.text)
+
+    def authorize_member(self, network_id: str, member_id: str, name: str | None = None, description: str | None = None):
+        member = self.get_member(network_id, member_id)
+        if not member:
+            return None
+        member["config"]["authorized"] = True
+        if name:
+            member["name"] = name
+        if description:
+            member["description"] = description
+        r = requests.post(f"{self.url}/network/{network_id}/member/{member_id}", headers=self.headers, json=member)
+        if r.ok:
+            return r.json()
+        else:
+            raise APIInvokeError("zerotier_authorize_member", r.text)

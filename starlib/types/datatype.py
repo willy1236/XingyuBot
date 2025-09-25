@@ -23,7 +23,6 @@ class NotifyChannelType(IntEnum):
     WeatherWarning = 11
     SlightQuakeNotifications = 12
     LeaveLog = 13
-    TyphoonWarning = 14
 
 class DBCacheType(Enum):
     DynamicVoiceLobby = "dynamic_voice"
@@ -107,6 +106,7 @@ class APIType(IntEnum):
     Rettiwt = 14
     DocAccount = 15
     Tavily = 16
+    ZeroTier = 17
 
 class PrivilegeLevel(IntEnum):
     User = 0

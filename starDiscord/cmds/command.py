@@ -532,10 +532,10 @@ class command(Cog_Extension):
         cuser = sclient.sqldb.get_cloud_user(ctx.author.id)
         fileId = "1bDtsLbOi5crIOkWUZbQmPq3dXUbwWEan"
         if not email:
-            if cuser and cuser.email:
+            if cuser and cuser.drive_gmail:
                 GoogleCloud().remove_file_permissions(fileId, cuser.drive_share_id)
                 cuser.drive_share_id = None
-                cuser.email = None
+                cuser.drive_gmail = None
                 sclient.sqldb.merge(cuser)
                 await ctx.respond(f"{ctx.author.mention}：google帳戶移除完成")
             else:
@@ -552,7 +552,7 @@ class command(Cog_Extension):
             email += "@gmail.com"
 
         google_data = GoogleCloud().add_file_permissions(fileId, email)
-        cuser.email = email
+        cuser.drive_gmail = email
         cuser.drive_share_id = google_data["id"]
         sclient.sqldb.merge(cuser)
         msg = await ctx.respond(f"{ctx.author.mention}：已與 {email} 共用雲端資料夾")
