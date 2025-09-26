@@ -111,7 +111,7 @@ class UserModerate(UserSchema, table=True):
         guild = bot.get_guild(self.create_guild)
 
         name = f"{user.name if user else f'<@{self.discord_id}>'} 的警告單"
-        description = f"**編號：{self.warning_id}（{Jsondb.get_tw(self.moderate_type, 'warning_type')}）**\n- 被警告用戶：{user.mention if user else f'<@{self.discord_id}>'}\n- 管理員：{guild.name if guild else self.create_guild}/{moderate_user.mention if moderate_user else f'<@{self.moderate_user}>'}\n- 原因：{self.reason}\n- 時間：{self.create_time}"
+        description = f"**編號：{self.warning_id}（{Jsondb.get_tw(self.moderate_type, 'warning_type')}）**\n- 被警告用戶：{user.mention if user else f'<@{self.discord_id}>'}\n- 管理員：{guild.name if guild else self.create_guild}/{moderate_user.mention if moderate_user else f'<@{self.moderate_user}>'}\n- 原因：{self.reason}\n- 時間：{self.create_time.strftime('%Y-%m-%d %H:%M:%S')}"
         if self.last_time:
             description += f"\n- 禁言時長：{self.last_time}"
         if self.officially_given:
@@ -129,11 +129,14 @@ class UserModerate(UserSchema, table=True):
         moderate_user = bot.get_user(self.moderate_user)
         guild = bot.get_guild(self.create_guild)
         name = f"編號：{self.warning_id}（{Jsondb.get_tw(self.moderate_type, 'warning_type')}）"
-        value = f"{guild.name if guild else self.create_guild}/{moderate_user.mention if moderate_user else f'<@{self.moderate_user}>'}\n{self.reason}\n{self.create_time}"
-        if self.officially_given:
-            value += "官方認證警告"
-        if self.guild_only:
-            value += "伺服器內警告"
+        value = f"{guild.name if guild else self.create_guild}/{moderate_user.mention if moderate_user else f'<@{self.moderate_user}>'}\n{self.reason}\n{self.create_time.strftime('%Y-%m-%d %H:%M:%S')}"
+        if self.officially_given and self.guild_only:
+            value += "\n官方認證警告 & 伺服器內警告"
+        elif self.officially_given:
+            value += "\n官方認證警告"
+        elif self.guild_only:
+            value += "\n伺服器內警告"
+
         return name, value
 
 
@@ -456,7 +459,7 @@ class TicketChannel(BasicSchema, table=True):
     created_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
     closed_at: datetime | None = Field(sa_column=Column(TIMESTAMP(True, 0)))
     closer_id: int | None = Field(sa_column=Column(BigInteger))
-    close_message_id: int | None = Field(sa_column=Column(BigInteger))
+    view_message_id: int | None = Field(sa_column=Column(BigInteger))
 
 
 class Party(IdbaseSchema, table=True):

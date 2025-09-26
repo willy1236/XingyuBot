@@ -362,35 +362,10 @@ class command(Cog_Extension):
         # 更新資料庫
         sclient.sqldb.remove_bet(bet_id)
 
-    @commands.user_command(name="你是誰")
-    async def whois(self, ctx, member: discord.Member):
-        user = sclient.sqldb.get_dcuser(member.id) or DiscordUser(discord_id=member.id)
-        user_embed = BotEmbed.general(name="Discord資料", icon_url=member.avatar.url if member.avatar else None)
-        main_account_id = sclient.sqldb.get_main_account(member.id)
-        if main_account_id:
-            main_account = self.bot.get_user(main_account_id).mention or main_account_id
-            user_embed.description = f"{main_account} 的小帳"
-
-        coins = sclient.sqldb.get_coin(member.id)
-        user_embed.add_field(name="⭐星塵", value=coins.stardust)
-        user_embed.add_field(name="PT點數", value=coins.point)
-        user_embed.add_field(name="Rcoin", value=coins.rcoin)
-
-        if user.max_sign_consecutive_days:
-            user_embed.add_field(name="連續簽到最高天數", value=user.max_sign_consecutive_days)
-        if user.meatball_times:
-            user_embed.add_field(name="貢丸次數", value=user.meatball_times)
-        if user.registration:
-            guild = self.bot.get_guild(user.registration.guild_id)
-            user_embed.add_field(name="戶籍", value=guild.name if guild else user.registration.guild_id)
-
-        cuser = sclient.sqldb.get_cloud_user(member.id)
-        cloud_user_embed = BotEmbed.general("使用者資料", icon_url=member.avatar.url if member.avatar else None)
-        if cuser:
-            cloud_user_embed.add_field(name="雲端共用資料夾", value="已共用" if cuser.drive_share_id else "未共用")
-            cloud_user_embed.add_field(name="Twitch ID", value=cuser.twitch_id or "未設定")
-
-        await ctx.respond(embeds=[user_embed, cloud_user_embed], ephemeral=True)
+    @commands.user_command(name="成員資訊", description="查詢使用者的相關資訊")
+    async def whois(self, ctx: discord.ApplicationContext, member: discord.Member):
+        dbdata = sclient.sqldb.get_warnings(member.id, member.guild.id)
+        await ctx.respond(embed=dbdata.display(self.bot, member), ephemeral=True)
 
     @commands.user_command(name="禁言10秒")
     @commands.has_permissions(moderate_members=True)
