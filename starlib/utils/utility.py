@@ -240,7 +240,7 @@ def is_server_running_by_connect(host="localhost", port=25565):
         return False
 
 
-EXCLUDED_IPS = {"26.0.0.1", "26.255.255.255"}
+EXCLUDED_IPS = {"26.0.0.1", "26.255.255.255", "10.242.255.255"}
 
 
 def get_arp_list() -> list[tuple[str, str]]:
@@ -249,7 +249,7 @@ def get_arp_list() -> list[tuple[str, str]]:
     radmin_ips = []
 
     for line in output.splitlines():
-        match = re.search(r"(26\.\d+\.\d+\.\d+)\s+([\da-f\-]{17})", line, re.IGNORECASE)
+        match = re.search(r"((?:26|10)\.\d+\.\d+\.\d+)\s+([\da-f\-]{17})", line, re.IGNORECASE)
         if match:
             ip = match.group(1)
             mac = match.group(2)
