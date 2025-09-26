@@ -249,7 +249,7 @@ def get_arp_list() -> list[tuple[str, str]]:
     radmin_ips = []
 
     for line in output.splitlines():
-        match = re.search(r"((?:26|10)\.\d+\.\d+\.\d+)\s+([\da-f\-]{17})", line, re.IGNORECASE)
+        match = re.search(r"((?:26\.\d+\.\d+\.\d+|10\.242\.\d+\.\d+))\s+([\da-f\-]{17})", line, re.IGNORECASE)
         if match:
             ip = match.group(1)
             mac = match.group(2)
