@@ -321,6 +321,13 @@ class system_community(Cog_Extension):
         else:
             await ctx.respond(f"查詢不到 {twitter_username}", ephemeral=True)
 
+    @twitter.command(name="tweet", description="取得twitter使用者的最新推文")
+    async def twitter_tweet(self, ctx, tweet_id: discord.Option(str, required=True, name="推文id", description="推文的ID（數字）")):
+        tweet = cli_api.get_tweet_details(tweet_id)
+        if tweet:
+            await ctx.respond(embed=tweet.embed())
+        else:
+            await ctx.respond(f"查詢不到 {tweet_id} 的推文", ephemeral=True)
 
 def setup(bot):
     bot.add_cog(system_community(bot))

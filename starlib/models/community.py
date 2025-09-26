@@ -474,30 +474,42 @@ class RettiwtTweetUser(BaseModel):
     followersCount: int
     followingsCount: int
     statusesCount: int
-    pinnedTweet: str | dict | None = None  # TODO: determine what content in this
+    pinnedTweet: str | None = None
     profileBanner: HttpUrl | None = None
     profileImage: HttpUrl | None = None
+    location: str | None = None
 
     # @field_validator("createdAt", mode="before")
     # @classmethod
     # def parse_created_at(cls, v: str) -> datetime:
     #     return datetime.strptime(v, DATETIME_FORMAT)
 
+    @model_validator(mode="after")
+    def __post_init__(self):
+        self.createdAt = self.createdAt.astimezone(tz=tz)
+        return self
+
+    @property
+    def url(self) -> str:
+        return f"https://x.com/{self.userName}"
+
     def embed(self):
         embed = discord.Embed(
-            title=self.fullName,
-            url=f"https://twitter.com/{self.userName}",
+            url=self.url,
             description=self.description,
             color=0x1DA1F2,
             timestamp=self.createdAt,
         )
-        if self.profileImage:
-            embed.set_thumbnail(url=self.profileImage)
+        embed.set_author(name=self.fullName, url=self.url, icon_url=self.profileImage)
+        if self.profileBanner:
+            embed.set_image(url=self.profileBanner)
         embed.add_field(name="用戶名", value=self.userName)
         embed.add_field(name="創建時間", value=self.createdAt.strftime("%Y/%m/%d %H:%M:%S"))
         embed.add_field(name="粉絲數", value=f"{self.followersCount:,}")
         embed.add_field(name="關注數", value=f"{self.followingsCount:,}")
         embed.add_field(name="貼文數", value=f"{self.statusesCount:,}")
+        if self.location:
+            embed.set_footer(text=f"📍{self.location}")
         return embed
 
 
@@ -514,6 +526,7 @@ class RettiwtTweetMedia(BaseModel):
 
 class RettiwtTweetItem(BaseModel):
     id: str
+    conversationId: str
     createdAt: datetime
     tweetBy: RettiwtTweetUser
     entities: RettiwtTweetEntity
@@ -526,19 +539,48 @@ class RettiwtTweetItem(BaseModel):
     likeCount: int
     viewCount: int
     bookmarkCount: int
+    url: str
 
-    # @field_validator("createdAt", mode="before")
-    # @classmethod
-    # def parse_created_at(cls, v: str) -> datetime:
-    #     return datetime.strptime(v, DATETIME_FORMAT).astimezone(tz=tz)
+    @model_validator(mode="after")
+    def __post_init__(self):
+        self.createdAt = self.createdAt.astimezone(tz=tz)
+        return self
 
-    @property
-    def url(self) -> str:
-        return f"https://twitter.com/{self.tweetBy.userName}/status/{self.id}"
+    # @property
+    # def url(self) -> str:
+    #     return f"https://twitter.com/{self.tweetBy.userName}/status/{self.id}"
 
     @property
     def is_retweet(self) -> bool:
         return self.fullText.startswith("RT @")
+
+    def embed(self):
+        embed = discord.Embed(
+            title=f"{self.tweetBy.userName} 的{'推文' if not self.is_retweet else '轉推'}",
+            url=self.url,
+            description=self.fullText,
+            color=0x1DA1F2,
+            timestamp=self.createdAt,
+        )
+        embed.set_author(name=self.tweetBy.fullName, url=self.tweetBy.url, icon_url=self.tweetBy.profileImage)
+        embed.add_field(name="引用數", value=f"{self.quoteCount:,}")
+        embed.add_field(name="回覆數", value=f"{self.replyCount:,}")
+        embed.add_field(name="轉推數", value=f"{self.retweetCount:,}")
+        embed.add_field(name="按讚數", value=f"{self.likeCount:,}")
+        embed.add_field(name="觀看數", value=f"{self.viewCount:,}")
+        if self.entities.hashtags:
+            embed.add_field(name="Hashtags", value=", ".join(f"#{tag}" for tag in self.entities.hashtags), inline=False)
+        if self.entities.mentionedUsers:
+            embed.add_field(name="提及用戶", value=", ".join(f"@{user}" for user in self.entities.mentionedUsers), inline=False)
+        if self.entities.urls:
+            embed.add_field(name="連結", value=", ".join(self.entities.urls), inline=False)
+        if self.media:
+            media_urls = [media.url for media in self.media if media]
+            if media_urls:
+                embed.set_image(url=media_urls[0])  # 只顯示第一張圖片
+                if len(media_urls) > 1:
+                    embed.add_field(name="媒體連結", value=", ".join(media_urls), inline=False)
+        return embed
 
 
 class RettiwtTweetTimeLineResponse(BaseModel):

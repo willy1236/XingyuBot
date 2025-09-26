@@ -579,3 +579,13 @@ class CLIInterface():
             return None
 
         return RettiwtTweetUser(**data)
+
+    def get_tweet_details(self, tweet_id: str) -> RettiwtTweetItem | None:
+        r = subprocess.run(f'rettiwt -k "{self.rettiwt_api_key}" tweet details "{tweet_id}"', shell=True, capture_output=True, encoding="utf-8", check=False)
+        r.check_returncode()
+        data = json.loads(r.stdout)
+
+        if data.get("name") == "VALIDATION_ERROR":
+            return None
+
+        return RettiwtTweetItem(**data)
