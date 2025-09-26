@@ -1338,12 +1338,12 @@ class SQLNetwork(BaseSQLEngine):
     def set_ips_last_seen(self, data: dict[tuple[str, str], datetime]):
         """設定IP最後出現時間"""
         for (ip, mac), last_seen in data.items():
-            cache = IPLastSeen(ip=ip, mac=mac, last_seen=last_seen)
+            cache = UserIPDetails(ip=ip, mac=mac, last_seen=last_seen)
             self.session.merge(cache)
         self.session.commit()
 
     def get_ips_last_seen(self, ip: str | IPv4Network):
-        stmt = select(IPLastSeen).where(IPLastSeen.ip == str(ip))
+        stmt = select(UserIPDetails).where(UserIPDetails.ip == str(ip))
         result = self.session.exec(stmt).one_or_none()
         return result
 

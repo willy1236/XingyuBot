@@ -10,7 +10,7 @@ from discord.ext import commands, pages
 from starlib import BotEmbed, ChoiceList, Jsondb, csvdb, log, sclient, tz
 from starlib.dataExtractor import *
 from starlib.errors import APIInvokeError
-from starlib.models import LOLGameCache, LOLGameRecord, UserGame, IPLastSeen
+from starlib.models import LOLGameCache, LOLGameRecord, UserGame, UserIPDetails
 from starlib.types import GameType
 
 from ..extension import Cog_Extension
@@ -841,7 +841,7 @@ class system_game(Cog_Extension):
             return
 
         now = datetime.now(tz)
-        account = IPLastSeen(ip=str(ip), last_seen=now, discord_id=ctx.author.id, name=name, registration_at=now)
+        account = UserIPDetails(ip=str(ip), last_seen=now, discord_id=ctx.author.id, name=name, registration_at=now)
         sclient.sqldb.merge(account)
         await ctx.respond(f"{ctx.author.mention} 註冊成功，IP：`{ip.network_address}`，使用者名稱：`{name if name else '未登記'}`", ephemeral=True)
 
@@ -854,16 +854,19 @@ class system_game(Cog_Extension):
             name="address",
             description="ZeroTier分配給你的位址",
         ),
+        name: discord.Option(str, name="使用者名稱", description="'想在ZeroTier上顯示的名稱", required=False),
     ):
         await ctx.defer(ephemeral=True)
         zt_api = ZeroTierAPI()
-        member = zt_api.authorize_member(Jsondb.config.get("zerotier_network_id"), address_str)
+        member = zt_api.authorize_member(Jsondb.config.get("zerotier_network_id"), address_str, name=name)
         if not member:
             await ctx.respond(f"ZeroTier帳號註冊失敗，請確認位址是否正確", ephemeral=True)
             return
 
         now = datetime.now(tz)
-        account = IPLastSeen(ip=str(member["config"]["ipAssignments"][0]), last_seen=now, discord_id=ctx.author.id, registration_at=now)
+        account = UserIPDetails(
+            ip=str(member["config"]["ipAssignments"][0]), last_seen=now, discord_id=ctx.author.id, address=member["nodeId"], name=name, registration_at=now
+        )
         sclient.sqldb.merge(account)
 
         await ctx.respond(f"ZeroTier帳號註冊成功，你的IP位址：`{member['config']['ipAssignments'][0]}`", ephemeral=True)

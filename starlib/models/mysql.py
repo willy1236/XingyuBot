@@ -428,12 +428,13 @@ class MemorialDay(BasicSchema, table=True):
     target_date: date
     name: str
 
-class IPLastSeen(BasicSchema, table=True):
-    __tablename__ = "ip_last_seen"
+class UserIPDetails(BasicSchema, table=True):
+    __tablename__ = "user_ip_details"
 
     ip: str = Field(sa_column=Column(CIDR, primary_key=True))
     last_seen: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
     discord_id: int | None = Field(sa_column=Column(BigInteger))
+    address: str | None = Field(sa_column=Column(String))
     mac: str | None = Field(sa_column=Column(MACADDR))
     name: str | None = Field(sa_column=Column(String))
     registration_at: datetime | None = Field(sa_column=Column(TIMESTAMP(True, 0)))
