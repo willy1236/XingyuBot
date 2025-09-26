@@ -32,6 +32,7 @@ class task(Cog_Extension):
             scheduler.add_job(self.weather_check, "cron", minute="20,35", second=30, jitter=30, misfire_grace_time=60)
             scheduler.add_job(self.apex_map_rotation, "cron", minute="0/15", second=10, jitter=30, misfire_grace_time=60)
             scheduler.add_job(self.refresh_yt_push, "cron", hour="2/3", minute=0, second=0, jitter=30, misfire_grace_time=40)
+            scheduler.add_job(refresh_ip_last_seen, "cron", minute="0/20", second=0, jitter=30, misfire_grace_time=40)
             # scheduler.add_job(self.typhoon_warning_check, "cron", minute="0/15", second=30, jitter=30, misfire_grace_time=40)
 
             scheduler.add_job(self.earthquake_check, "interval", minutes=3, jitter=30, misfire_grace_time=40)
@@ -41,7 +42,6 @@ class task(Cog_Extension):
             scheduler.add_job(self.twitch_video, "interval", minutes=10, jitter=30, misfire_grace_time=40)
             scheduler.add_job(self.twitch_clip, "interval", minutes=5, jitter=30, misfire_grace_time=40)
             scheduler.add_job(self.notify_twitter_tweet_updates, "interval", minutes=10, jitter=30, misfire_grace_time=40)
-            scheduler.add_job(refresh_ip_last_seen, "interval", minutes=20, jitter=30, misfire_grace_time=40)
             # scheduler.add_job(self.get_mongodb_data,'interval',minutes=3,jitter=30,misfire_grace_time=40)
 
             if self.bot.user and self.bot.user.id == 589744540240314368:
