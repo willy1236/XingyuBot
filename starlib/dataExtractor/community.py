@@ -324,8 +324,7 @@ class YoutubePush:
         if r.ok:
             return self._parse_subscription_details(r.text)
         else:
-            print(r.text)
-            print(r.status_code)
+            log.warning(f"[{r.status_code}]{r.text}")
             return None
 
     @staticmethod
@@ -436,14 +435,12 @@ class GoogleCloud:
     def add_file_permissions(self,fileId,emailAddress):
         service = build("drive", "v3", credentials=self.creds)
         permission_dict = {"role": "reader", "type": "user", "emailAddress": emailAddress}
-        results = service.permissions().create(fileId=fileId,body=permission_dict).execute()
-        print(results)
+        results = service.permissions().create(fileId=fileId, body=permission_dict).execute()
         return results
 
     def remove_file_permissions(self,fileId,permissionId):
         service = build("drive", "v3", credentials=self.creds)
-        results = service.permissions().delete(fileId=fileId,permissionId=permissionId).execute()
-        print(results)
+        results = service.permissions().delete(fileId=fileId, permissionId=permissionId).execute()
         return results
 
 class NotionAPI():

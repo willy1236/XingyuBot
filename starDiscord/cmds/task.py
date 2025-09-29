@@ -378,7 +378,7 @@ class task(Cog_Extension):
     async def refresh_yt_push(self):
         callback_url = sqldb.get_bot_token(APIType.Google, 4).callback_uri
         assert callback_url, "Callback URL is not set"
-        for record in sclient.sqldb.get_expired_push_records():
+        for record in sclient.sqldb.get_expiring_push_records():
             yt_push.add_push(record.channel_id, callback_url)
             await asyncio.sleep(3)
             data = yt_push.get_push(record.channel_id, callback_url)
