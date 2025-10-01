@@ -121,7 +121,7 @@ class event(Cog_Extension):
                 if not channel:
                     removed_ids.append(id)
                 elif not channel.members:
-                    await channel.delete("動態語音：移除")
+                    await channel.delete(reason="動態語音：移除")
                     removed_ids.append(id)
 
             log.warning("Dynamic voice channel %s not found", removed_ids)
