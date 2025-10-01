@@ -120,6 +120,9 @@ class event(Cog_Extension):
                 channel = bot.get_channel(id)
                 if not channel:
                     removed_ids.append(id)
+                elif not channel.members:
+                    await channel.delete("動態語音：移除")
+                    removed_ids.append(id)
 
             log.warning("Dynamic voice channel %s not found", removed_ids)
             sclient.sqldb.batch_remove_dynamic_voice(removed_ids)
@@ -152,7 +155,7 @@ class event(Cog_Extension):
             log.debug(f"Loading ticket channel: {ticket.channel_id}")
             channel = bot.get_channel(ticket.channel_id)
             if channel:
-                bot.add_view(TicketChannelView(channel, bot.get_user(ticket.creator_id)), message_id=ticket.close_message_id)
+                bot.add_view(TicketChannelView(channel, bot.get_user(ticket.creator_id)), message_id=ticket.view_message_id)
                 log.debug(f"Loaded ticket channel: {ticket.channel_id}")
 
         # Bot status
