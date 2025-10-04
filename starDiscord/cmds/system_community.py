@@ -6,7 +6,7 @@ from discord.commands import SlashCommandGroup
 from tweepy.errors import TooManyRequests
 
 from starlib import BotEmbed, ChoiceList, Jsondb, sclient, tz
-from starlib.instance import cli_api, tw_api, twitter_api, yt_api, yt_push
+from starlib.instance import cli_api, tw_api, twitter_api, google_api, yt_push
 from starlib.models.mysql import Community
 from starlib.types import APIType, CommunityType, NotifyCommunityType
 
@@ -136,7 +136,7 @@ class system_community(Cog_Extension):
 
     @youtube.command(name="channel", description="取得youtube頻道的相關資訊")
     async def youtube_channel(self, ctx, ythandle: discord.Option(str, required=True, name="youtube帳號代碼", description="youtube頻道中以@開頭的代號")):
-        channel = yt_api.get_channel(handle=ythandle)
+        channel = google_api.get_channel(handle=ythandle)
         if channel:
             await ctx.respond("查詢成功", embed=channel.embed())
         else:
@@ -155,7 +155,7 @@ class system_community(Cog_Extension):
         channelid = channel.id
         roleid = role.id if role else None
 
-        ytchannel = yt_api.get_channel(handle=ythandle)
+        ytchannel = google_api.get_channel(handle=ythandle)
         if ytchannel:
             sclient.sqldb.add_notify_community(NotifyCommunityType.Youtube, ytchannel.id, guildid, channelid, roleid, msg, cache_time=datetime.now(tz=tz))
             sclient.sqldb.merge(
@@ -189,7 +189,7 @@ class system_community(Cog_Extension):
     async def youtube_remove(self, ctx, ythandle: discord.Option(str, required=True, name="youtube帳號代碼", description="youtube頻道中以@開頭的代號")):
         guildid = ctx.guild.id
 
-        ytchannel = yt_api.get_channel(handle=ythandle)
+        ytchannel = google_api.get_channel(handle=ythandle)
         if not ytchannel:
             await ctx.respond(f"錯誤：找不到帳號代碼 {ythandle} 的頻道")
             return
@@ -201,7 +201,7 @@ class system_community(Cog_Extension):
     async def youtube_notify(self, ctx, ythandle: discord.Option(str, required=True, name="youtube帳號代碼", description="youtube頻道中以@開頭的代號")):
         guildid = ctx.guild.id
 
-        ytchannel = yt_api.get_channel(handle=ythandle)
+        ytchannel = google_api.get_channel(handle=ythandle)
         if not ytchannel:
             await ctx.respond(f"錯誤：找不到帳號代碼 {ythandle} 的頻道")
             return

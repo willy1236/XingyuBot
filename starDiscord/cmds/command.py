@@ -11,7 +11,7 @@ from discord.ext import commands, pages
 from discord.utils import format_dt
 
 from starlib import BotEmbed, ChoiceList, log, sclient, tz
-from starlib.dataExtractor import GoogleCloud
+from starlib.dataExtractor import XingyuGoogleCloud
 from starlib.instance import *
 from starlib.models.mysql import DiscordUser, Giveaway
 from starlib.types import Coins
@@ -508,7 +508,7 @@ class command(Cog_Extension):
         fileId = "1bDtsLbOi5crIOkWUZbQmPq3dXUbwWEan"
         if not email:
             if cuser and cuser.drive_gmail:
-                GoogleCloud().remove_file_permissions(fileId, cuser.drive_share_id)
+                XingyuGoogleCloud().remove_file_permissions(fileId, cuser.drive_share_id)
                 cuser.drive_share_id = None
                 cuser.drive_gmail = None
                 sclient.sqldb.merge(cuser)
@@ -526,7 +526,7 @@ class command(Cog_Extension):
         if not r.search(email):
             email += "@gmail.com"
 
-        google_data = GoogleCloud().add_file_permissions(fileId, email)
+        google_data = XingyuGoogleCloud().add_file_permissions(fileId, email)
         cuser.drive_gmail = email
         cuser.drive_share_id = google_data["id"]
         sclient.sqldb.merge(cuser)

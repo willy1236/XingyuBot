@@ -186,7 +186,8 @@ class TwitchAPI:
             return None
 
 
-class YoutubeAPI:
+class GoogleAPI:
+    """無身分驗證的Google API"""
     BaseURL = "https://www.googleapis.com/youtube/v3"
 
     def __init__(self):
@@ -367,7 +368,9 @@ class YoutubePush:
         )
 
 
-class GoogleCloud:
+class XingyuGoogleCloud:
+    """以星羽身分運行的Google Cloud API"""
+
     def __init__(self):
         self.creds = self.get_creds()
 
@@ -377,7 +380,7 @@ class GoogleCloud:
         # The file token.json stores the user's access and refresh tokens, and is
         # created automatically when the authorization flow completes for the first
         # time.
-        creds = sqldb.get_google_credentials()
+        creds = sqldb.get_google_credentials(SCOPES)
         # if os.path.exists('database/google_token.json'):
         #     creds = Credentials.from_authorized_user_file('database/google_token.json', SCOPES)
 

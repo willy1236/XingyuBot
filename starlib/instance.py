@@ -12,7 +12,7 @@ from .types import APIType
 __all__ = [
     "mcss_api",
     "yt_rss",
-    "yt_api",
+    "google_api",
     "yt_push",
     "tw_api",
     "rss_hub",
@@ -29,7 +29,7 @@ __all__ = [
 # api
 mcss_api = McssAPI()
 yt_rss = YoutubeRSS()
-yt_api = YoutubeAPI()
+google_api = GoogleAPI()
 yt_push = YoutubePush()
 tw_api = TwitchAPI()
 twitter_api = tweepy.Client(sqldb.get_bot_token(APIType.Twitter).access_token)

@@ -50,3 +50,20 @@ class McssAPI:
             return r.text
         else:
             log.error("McssAPI: [%s] %s", r.status_code, r.text)
+
+class VirustotalAPI:
+    BASE_URL = "https://www.virustotal.com/api/v3"
+
+    def __init__(self):
+        self.headers = {
+            "x-apikey": sqldb.get_bot_token(APIType.Virustotal).access_token,
+        }
+
+    def get_url_report(self, url: str):
+        """取得網址的 Virustotal 報告"""
+        r = requests.post(f"{self.BASE_URL}/urls", headers=self.headers, json={"url": url})
+        r.raise_for_status()
+        if r.ok:
+            return r.json()
+        else:
+            log.error("VirustotalAPI: [%s] %s", r.status_code, r.text)

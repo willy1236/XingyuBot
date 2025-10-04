@@ -241,7 +241,7 @@ class task(Cog_Extension):
             video_id_list = [d.yt_videoid for d in rss_data]
             update_data[ytchannel_id] = rss_data[-1].uplood_at
 
-            api_videos = yt_api.get_video(video_id_list)
+            api_videos = google_api.get_video(video_id_list)
             # 發布通知
             for video in api_videos:
                 embed = video.embed()
@@ -396,7 +396,7 @@ class task(Cog_Extension):
 async def youtube_start_live_notify(bot: DiscordBot, video: YoutubeVideo):
     log.info(f"youtube_start_live_notify: {video.snippet.title}")
     for _ in range(30):
-        video_now = yt_api.get_video(video.id)[0]
+        video_now = google_api.get_video(video.id)[0]
         if video_now.snippet.liveBroadcastContent == "live":
             log.info(f"youtube_start_live_notify: {video_now.snippet.title} is live")
 

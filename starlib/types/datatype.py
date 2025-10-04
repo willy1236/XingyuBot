@@ -107,6 +107,7 @@ class APIType(IntEnum):
     DocAccount = 15
     Tavily = 16
     ZeroTier = 17
+    Virustotal = 18
 
 class PrivilegeLevel(IntEnum):
     User = 0

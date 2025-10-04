@@ -1197,7 +1197,20 @@ class SQLTokensSystem(BaseSQLEngine):
         stmt = select(BotToken).where(BotToken.api_type == api_type, BotToken.token_seq == token_seq).limit(1)
         return self.session.exec(stmt).one()
 
-    def get_google_credentials(self, token_seq: int = 2):
+    def get_google_credentials(self, scopes: list[str] = None, token_seq: int = 2):
+        """
+        Retrieve Google *OAuth2* credentials for API access.
+
+        This method fetches a bot token for Google API and constructs OAuth2 credentials
+        with the necessary parameters for Google Drive access.
+
+        Args:
+            token_seq (int, optional): The sequence number of the token to retrieve.
+                                     Defaults to 2.
+
+        Returns:
+            Credentials: An OAuth2 credentials object.
+        """
         token = self.get_bot_token(APIType.Google, token_seq)
         return Credentials(
             token=token.access_token,
@@ -1205,11 +1218,24 @@ class SQLTokensSystem(BaseSQLEngine):
             client_id=token.client_id,
             client_secret=token.client_secret,
             token_uri="https://oauth2.googleapis.com/token",
-            scopes=["https://www.googleapis.com/auth/drive"],
+            scopes=scopes or [],
             expiry=token.expires_at,
         )
 
     def get_google_client_config(self, token_seq: int = 3):
+        """
+        Retrieve Google OAuth2 client configuration used for authentication.
+        Args:
+            token_seq (int, optional): The token sequence number to use. Defaults to 3.
+        Returns:
+            dict: A dictionary containing Google OAuth2 client configuration with either
+                  "installed" or "web" key structure, including client_id, client_secret,
+                  and various OAuth2 URIs.
+                  For token_seq == 2:
+                  - Returns config with "installed" key and localhost redirect URI
+                  For other token_seq values:
+                  - Returns config with "web" key (no redirect URIs)
+        """
         token = self.get_bot_token(APIType.Google, token_seq)
         if token_seq in (2,):
             client_config = {

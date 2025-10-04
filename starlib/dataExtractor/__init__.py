@@ -11,8 +11,8 @@ from .weather import *
 
 __all__ = [
     "TwitchAPI",
-    "YoutubeAPI",
-    "GoogleCloud",
+    "GoogleAPI",
+    "XingyuGoogleCloud",
     "NotionAPI",
     "RiotAPI",
     "OsuAPI",

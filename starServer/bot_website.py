@@ -18,20 +18,20 @@ from linebot.v3.messaging import ApiClient, Configuration, MessagingApi, ReplyMe
 from linebot.v3.webhooks import MessageEvent, TextMessageContent
 from linebot.v3.webhooks.models.message_event import MessageEvent
 
-from starlib import BaseThread, Jsondb, sclient, sqldb, web_log
+from starlib import BaseThread, Jsondb, sclient, sqldb, web_log, utils
 from starlib.dataExtractor import DiscordOauth2, GoogleOauth2, TwitchOauth2
-from starlib.instance import yt_api
+from starlib.instance import google_api
 from starlib.models import CloudUser, TwitchBotJoinChannel, YoutubePushEntry
 from starlib.types import APIType, NotifyCommunityType, YoutubeVideoStatue
 
 discord_oauth_settings = sqldb.get_bot_token(APIType.Discord)
 twitch_oauth_settings = sqldb.get_bot_token(APIType.Twitch)
 google_oauth_settings = sqldb.get_bot_token(APIType.Google, 3)
-# linebot_token = sqldb.get_bot_token(APIType.Line)
+linebot_token = sqldb.get_bot_token(APIType.Line)
 docs_account = sqldb.get_bot_token(APIType.DocAccount)
 
-# configuration = Configuration(access_token=linebot_token.access_token)
-# handler = WebhookHandler(linebot_token.client_secret)
+configuration = Configuration(access_token=linebot_token.access_token)
+handler = WebhookHandler(linebot_token.client_secret)
 
 app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
 
@@ -78,7 +78,7 @@ async def prase_yt_push(content: str):
 
     for entry in feed["entries"]:
         push_entry = YoutubePushEntry(**entry)
-        video = yt_api.get_video(push_entry.yt_videoid)[0]
+        video = google_api.get_video(push_entry.yt_videoid)[0]
 
         cache = sqldb.get_community_cache_with_default(NotifyCommunityType.Youtube, push_entry.yt_channelid)
         ytcache = sqldb.get_yt_cache(push_entry.yt_videoid)
@@ -196,35 +196,61 @@ async def oauth_google(request: Request):
     return HTMLResponse(f"授權已完成，您現在可以關閉此頁面<br><br>Google ID：{auth.user_id}")
 
 
-# @app.post("/linebotcallback")
-# async def linebot_callback(request:Request):
-#     signature = request.headers.get('X-Line-Signature')
+@app.post("/callback/linebot")
+async def callback_linebot(request: Request):
+    signature = request.headers.get("X-Line-Signature")
 
-#     # get request body as text
-#     body = await request.body()
-#     body = body.decode('UTF-8')
-#     web_log.info("Request body: " + body)
+    # get request body as text
+    body = await request.body()
+    body = body.decode("UTF-8")
+    web_log.info("Request body: " + body)
 
-#     # handle webhook body
-#     try:
-#         handler.handle(body, signature)
-#     except InvalidSignatureError:
-#         web_log.info("Invalid signature. Please check your channel access token/channel secret.")
-#         raise HTTPException(status_code=400, detail="Invalid signature")
+    # handle webhook body
+    try:
+        handler.handle(body, signature)
+    except InvalidSignatureError:
+        web_log.info(f"{request.url.path}: Invalid signature. Please check your channel access token/channel secret.")
+        raise HTTPException(status_code=400, detail="Invalid signature")
 
-#     return 'OK'
+    return "OK"
 
-# @handler.add(MessageEvent, message=TextMessageContent)
-# def handle_message(event:MessageEvent):
-#     print(type(event))
-#     with ApiClient(configuration) as api_client:
-#         line_bot_api = MessagingApi(api_client)
-#         line_bot_api.reply_message_with_http_info(
-#             ReplyMessageRequest(
-#                 reply_token=event.reply_token,
-#                 messages=[TextMessage(text=event.message.text)]
-#             )
-#         )
+
+@handler.add(MessageEvent, message=TextMessageContent)
+def handle_message(event: MessageEvent):
+    print(type(event))
+    text = []
+    url = event.message.text
+    with ApiClient(configuration) as api_client:
+        data = utils.check_url_with_dns_whois(url)
+        if not data["format_valid"]:
+            text.append(f"網址: {data['original_url']} 格式錯誤，跳過")
+
+        else:
+            if url != data["final_url"]:
+                text.append(f"網址: {data['original_url']} -> {data['final_url']}")
+            else:
+                text.append(f"網址: {data['original_url']}")
+            text.append(f"網域: {data['domain']}")
+            text.append(f"註冊地: {data['whois_info']['country'] if data['whois_info'] and data['whois_info']['country'] else '未知'}")
+
+            if data["whois_info"] and data["whois_info"]["org"]:
+                if data["whois_info"]["org"] == "REDACTED FOR PRIVACY":
+                    text.append(f"註冊單位: 受隱私保護")
+                else:
+                    text.append(f"註冊單位: {data['whois_info']['org']}")
+
+            if data["whois_info"] and data["whois_info"]["creation_date"]:
+                if isinstance(data["whois_info"]["creation_date"], list):
+                    creation_date = data["whois_info"]["creation_date"][0]
+                else:
+                    creation_date = data["whois_info"]["creation_date"]
+
+            text.append(f"註冊時間: {creation_date if creation_date else '未知'}")
+            if data["suspicious_pattern"]:
+                text.append("警告: 網址長相可疑")
+
+        line_bot_api = MessagingApi(api_client)
+        line_bot_api.reply_message_with_http_info(ReplyMessageRequest(reply_token=event.reply_token, messages=[TextMessage(text="\n".join(text))]))
 
 
 @app.get("/to/discordauth")
