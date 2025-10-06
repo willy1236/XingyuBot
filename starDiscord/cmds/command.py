@@ -648,9 +648,9 @@ class command(Cog_Extension):
                 duser = DiscordUser(discord_id=member.id, registrations_id=resgistration.registrations_id)
                 sclient.sqldb.merge(duser)
 
-            results_text.append(f"{member.display_name}：已註冊戶籍至 {guild.name}")
-        else:
-            results_text.append(f"{member.display_name}：沒有可註冊的戶籍")
+                results_text.append(f"{member.display_name}：註冊戶籍至 {guild.name}")
+            else:
+                results_text.append(f"{member.display_name}：沒有可註冊的戶籍")
 
         await ctx.respond("\n".join(results_text))
 
