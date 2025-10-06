@@ -29,6 +29,7 @@ from ..utils import log
 T = TypeVar("T")
 P = ParamSpec("P")
 
+
 # 外部裝飾器定義（不依賴 self）
 def with_session(func):
     @wraps(func)
@@ -40,7 +41,7 @@ def with_session(func):
 
 
 class BaseSQLEngine:
-    def __init__(self,connection_url):
+    def __init__(self, connection_url):
         # self.alengine = sqlalchemy.create_engine(connection_url, echo=False)
         # Base.metadata.create_all(self.alengine)
         # Sessionmkr = sessionmaker(bind=self.alengine)
@@ -203,17 +204,17 @@ class SQLUserSystem(BaseSQLEngine):
         result = self.session.exec(stmt).all()
         return result
 
-    def get_raw_resgistrations(self):
+    def get_raw_registrations(self):
         stmt = select(DiscordRegistration)
         result = self.session.exec(stmt).all()
         return {i.guild_id: i.role_id for i in result}
 
-    def get_resgistration(self, registrations_id: int):
+    def get_registration(self, registrations_id: int):
         stmt = select(DiscordRegistration).where(DiscordRegistration.registrations_id == registrations_id)
         result = self.session.exec(stmt).one_or_none()
         return result
 
-    def get_resgistration_by_guildid(self,guild_id:int):
+    def get_registration_by_guildid(self, guild_id: int):
         stmt = select(DiscordRegistration).where(DiscordRegistration.guild_id == guild_id)
         result = self.session.exec(stmt).one_or_none()
         return result
@@ -293,6 +294,7 @@ class SQLCurrencySystem(BaseSQLEngine):
     #     if record:
     #         return ShopItem(record[0])
 
+
 class SQLBetSystem(BaseSQLEngine):
     def get_bet(self, bet_id: int):
         """取得指定的賭注資料"""
@@ -336,6 +338,7 @@ class SQLBetSystem(BaseSQLEngine):
 #         self.cursor.execute(f'DELETE FROM `database`.`bet_data` WHERE `bet_id` = %s;',(bet_id,))
 #         self.connection.commit()
 
+
 class SQLGameSystem(BaseSQLEngine):
     def get_user_game(self, discord_id: int, game: GameType):
         stmt = select(UserGame).where(UserGame.discord_id == discord_id, UserGame.game == game)
@@ -365,6 +368,7 @@ class SQLGameSystem(BaseSQLEngine):
         stmt = select(LOLGameRecord.win, func.count()).where(LOLGameRecord.puuid == puuid).group_by(LOLGameRecord.win).order_by(desc(func.count()))
         result = self.session.exec(stmt).all()
         return {i: cnt for i, cnt in result}
+
 
 class SQLPetSystem(BaseSQLEngine):
     def get_pet(self, discord_id: int):
@@ -595,6 +599,7 @@ class SQLNotifySystem(BaseSQLEngine):
         self.session.exec(stmt)
         self.session.commit()
 
+
 class SQLDynamicVoiceSystem(BaseSQLEngine):
     def add_dynamic_voice_lobby(self, guild_id: int, channel_id: int, default_room_name: str | None = None):
         """新增動態語音大廳"""
@@ -659,6 +664,8 @@ class SQLDynamicVoiceSystem(BaseSQLEngine):
             for channel_id in channel_ids:
                 if channel_id in self[DBCacheType.DynamicVoiceRoom]:
                     self[DBCacheType.DynamicVoiceRoom].remove(channel_id)
+
+
 class SQLTicketSystem(BaseSQLEngine):
     def get_all_ticket_lobbys(self):
         stmt = select(TicketChannelLobby)
@@ -680,6 +687,7 @@ class SQLTicketSystem(BaseSQLEngine):
         result = self.session.exec(stmt).one_or_none()
         return result
 
+
 class SQLRoleSaveSystem(BaseSQLEngine):
     # * role_save
     def get_role_save(self, discord_id: int):
@@ -693,16 +701,16 @@ class SQLRoleSaveSystem(BaseSQLEngine):
         return result
 
     def get_role_save_count_list(self):
-        stmt = select(RoleSave.discord_id,func.count()).select_from(RoleSave).group_by(RoleSave.discord_id).order_by(desc(func.count()))
+        stmt = select(RoleSave.discord_id, func.count()).select_from(RoleSave).group_by(RoleSave.discord_id).order_by(desc(func.count()))
         result = self.session.exec(stmt).all()
         return {i[0]: i[1] for i in result}
 
-    def add_role_save(self,discord_id:int,role:discord.Role):
+    def add_role_save(self, discord_id: int, role: discord.Role):
         role_save = RoleSave(discord_id=discord_id, role_id=role.id, role_name=role.name, time=role.created_at.date())
         self.session.merge(role_save)
         self.session.commit()
 
-    #* ReactionRole
+    # * ReactionRole
     def get_reaction_roles_all(self) -> dict[int, list[ReactionRoleOption]]:
         stmt = select(ReactionRoleOption)
         result = self.session.exec(stmt).all()
@@ -728,7 +736,7 @@ class SQLRoleSaveSystem(BaseSQLEngine):
         result = self.session.exec(stmt).one_or_none()
         return result
 
-    def delete_reaction_role_message(self, message_id:int):
+    def delete_reaction_role_message(self, message_id: int):
         stmt = delete(ReactionRoleMessage).where(ReactionRoleMessage.message_id == message_id)
         self.session.exec(stmt)
 
@@ -736,23 +744,44 @@ class SQLRoleSaveSystem(BaseSQLEngine):
         self.session.exec(stmt)
         self.session.commit()
 
-    def delete_reaction_role(self, message_id:int, role_id:int):
+    def delete_reaction_role(self, message_id: int, role_id: int):
         stmt = delete(ReactionRoleOption).where(ReactionRoleOption.message_id == message_id, ReactionRoleOption.role_id == role_id)
         self.session.exec(stmt)
         self.session.commit()
 
+
 class SQLWarningSystem(BaseSQLEngine):
-    #* warning
-    def add_warning(self, discord_id:int, moderate_type:WarningType, moderate_user:int, create_guild:int, create_time:datetime, reason:str=None, last_time:timedelta=None, guild_only=True) -> int:
+    # * warning
+    def add_warning(
+        self,
+        discord_id: int,
+        moderate_type: WarningType,
+        moderate_user: int,
+        create_guild: int,
+        create_time: datetime,
+        reason: str = None,
+        last_time: timedelta = None,
+        guild_only=True,
+    ) -> int:
         """給予用戶警告\n
         returns: 新增的warning_id
         """
-        warning = UserModerate(discord_id=discord_id,moderate_type=moderate_type,moderate_user=moderate_user,create_guild=create_guild,create_time=create_time,reason=reason,last_time=last_time,guild_only=guild_only, officially_given=create_guild in Jsondb.config["debug_guilds"]) #type: ignore
+        warning = UserModerate(
+            discord_id=discord_id,
+            moderate_type=moderate_type,
+            moderate_user=moderate_user,
+            create_guild=create_guild,
+            create_time=create_time,
+            reason=reason,
+            last_time=last_time,
+            guild_only=guild_only,
+            officially_given=create_guild in Jsondb.config["debug_guilds"],
+        )  # type: ignore
         self.session.add(warning)
         self.session.commit()
         return warning.warning_id
 
-    def get_warning(self,warning_id:int):
+    def get_warning(self, warning_id: int):
         """取得警告單"""
         stmt = select(UserModerate).where(UserModerate.warning_id == warning_id)
         result = self.session.exec(stmt).one_or_none()
@@ -769,7 +798,7 @@ class SQLWarningSystem(BaseSQLEngine):
         result = self.session.exec(stmt).all()
         return WarningList(result, discord_id)
 
-    def get_warnings_count(self,discord_id:int,guild_id:int=None):
+    def get_warnings_count(self, discord_id: int, guild_id: int = None):
         if guild_id:
             stmt = select(func.count()).where(UserModerate.discord_id == discord_id, UserModerate.create_guild == guild_id)
         else:
@@ -777,7 +806,7 @@ class SQLWarningSystem(BaseSQLEngine):
         result = self.session.exec(stmt).one()
         return result
 
-    def remove_warning(self,warning_id:int):
+    def remove_warning(self, warning_id: int):
         """移除用戶警告"""
         stmt = delete(UserModerate).where(UserModerate.warning_id == warning_id)
         self.session.exec(stmt)
@@ -786,11 +815,12 @@ class SQLWarningSystem(BaseSQLEngine):
     def get_warning_count(self, discord_id: int, guild_id: int) -> int:
         """查詢自上次禁言後的警告次數"""
         # 查找該用戶最後一次禁言的時間
-        last_ban_time_query = select(UserModerate).where(
-            UserModerate.discord_id == discord_id,
-            UserModerate.create_guild == guild_id,
-            UserModerate.moderate_type == WarningType.Timeout
-        ).order_by(desc(UserModerate.create_time)).limit(1)
+        last_ban_time_query = (
+            select(UserModerate)
+            .where(UserModerate.discord_id == discord_id, UserModerate.create_guild == guild_id, UserModerate.moderate_type == WarningType.Timeout)
+            .order_by(desc(UserModerate.create_time))
+            .limit(1)
+        )
 
         last_ban_time_result = self.session.exec(last_ban_time_query).first()
 
@@ -805,22 +835,23 @@ class SQLWarningSystem(BaseSQLEngine):
             UserModerate.discord_id == discord_id,
             UserModerate.create_guild == guild_id,
             UserModerate.moderate_type == WarningType.Warning,
-            UserModerate.create_time > last_ban_time
+            UserModerate.create_time > last_ban_time,
         )
 
         warning_count = self.session.exec(warning_count_query).one()
 
         return warning_count
 
+
 class SQLPollSystem(BaseSQLEngine):
-    #* poll
-    def remove_poll(self,poll_id:int):
+    # * poll
+    def remove_poll(self, poll_id: int):
         self.session.exec(delete(Poll).where(Poll.poll_id == poll_id))
         self.session.exec(delete(UserPoll).where(Poll.poll_id == poll_id))
         self.session.exec(delete(PollOption).where(Poll.poll_id == poll_id))
         self.session.commit()
 
-    def get_poll(self,poll_id:int):
+    def get_poll(self, poll_id: int):
         stmt = select(Poll).where(Poll.poll_id == poll_id)
         result = self.session.exec(stmt).one_or_none()
         return result
@@ -830,12 +861,12 @@ class SQLPollSystem(BaseSQLEngine):
         result = self.session.exec(stmt).all()
         return result
 
-    def get_poll_options(self,poll_id:int):
+    def get_poll_options(self, poll_id: int):
         stmt = select(PollOption).where(PollOption.poll_id == poll_id)
         result = self.session.exec(stmt).all()
         return result
 
-    def add_poll_option(self,poll_id:int,options:list):
+    def add_poll_option(self, poll_id: int, options: list):
         lst = list()
         count = 0
         for option in options:
@@ -845,7 +876,9 @@ class SQLPollSystem(BaseSQLEngine):
         self.session.add_all(lst)
         self.session.commit()
 
-    def set_user_poll(self, poll_id: int, discord_id: int, vote_option: int = None, vote_at: datetime = None, vote_magnification: int = 1, max_can_vote:int = None):
+    def set_user_poll(
+        self, poll_id: int, discord_id: int, vote_option: int = None, vote_at: datetime = None, vote_magnification: int = 1, max_can_vote: int = None
+    ):
         """
         Sets the user's poll vote in the database.
 
@@ -868,11 +901,11 @@ class SQLPollSystem(BaseSQLEngine):
         """
         count = 0
         if max_can_vote:
-            count = self.get_user_vote_count(poll_id,discord_id)
+            count = self.get_user_vote_count(poll_id, discord_id)
             if count > max_can_vote:
                 return 2
 
-        vote = UserPoll(poll_id=poll_id,discord_id=discord_id,vote_option=vote_option,vote_at=vote_at,vote_magnification=vote_magnification)
+        vote = UserPoll(poll_id=poll_id, discord_id=discord_id, vote_option=vote_option, vote_at=vote_at, vote_magnification=vote_magnification)
         stmt = select(UserPoll).where(UserPoll.poll_id == poll_id, UserPoll.discord_id == discord_id, UserPoll.vote_option == vote_option)
         result = self.session.exec(stmt).one_or_none()
         if result:
@@ -898,7 +931,7 @@ class SQLPollSystem(BaseSQLEngine):
         self.session.merge(UserPoll(poll_id=poll_id, discord_id=discord_id, vote_option=vote_option, vote_at=vote_at, vote_magnification=vote_magnification))
         self.session.commit()
 
-    def remove_user_poll(self,poll_id:int,discord_id:int):
+    def remove_user_poll(self, poll_id: int, discord_id: int):
         stmt = delete(UserPoll).where(UserPoll.poll_id == poll_id, UserPoll.discord_id == discord_id)
         self.session.exec(stmt)
         self.session.commit()
@@ -913,7 +946,7 @@ class SQLPollSystem(BaseSQLEngine):
         result = self.session.exec(stmt).all()
         return result
 
-    def get_users_poll(self,poll_id:int,include_alternatives_accounts=True):
+    def get_users_poll(self, poll_id: int, include_alternatives_accounts=True):
         if include_alternatives_accounts:
             stmt = select(UserPoll).where(UserPoll.poll_id == poll_id)
         else:
@@ -921,9 +954,7 @@ class SQLPollSystem(BaseSQLEngine):
                 select(UserPoll)
                 .select_from(UserPoll)
                 .join(UserAccount, UserPoll.discord_id == UserAccount.alternate_account)
-                .where(
-                    UserPoll.poll_id == poll_id, UserAccount.alternate_account is None
-                )
+                .where(UserPoll.poll_id == poll_id, UserAccount.alternate_account is None)
             )
         result = self.session.exec(stmt).all()
         return result
@@ -956,12 +987,12 @@ class SQLPollSystem(BaseSQLEngine):
         result = self.session.exec(stmt).one_or_none()
         return result
 
-    def get_giveaway_users(self, giveaway_id:int):
+    def get_giveaway_users(self, giveaway_id: int):
         stmt = select(GiveawayUser).where(GiveawayUser.giveaway_id == giveaway_id)
         result = self.session.exec(stmt).all()
         return result
 
-    def get_giveaway(self, giveaway_id:int):
+    def get_giveaway(self, giveaway_id: int):
         stmt = select(Giveaway).where(Giveaway.id == giveaway_id)
         result = self.session.exec(stmt).one_or_none()
         return result
@@ -971,14 +1002,14 @@ class SQLPollSystem(BaseSQLEngine):
         result = self.session.exec(stmt).all()
         return result
 
-    def set_giveaway_winner(self, giveaway_id:int, winners_id:list[int]):
+    def set_giveaway_winner(self, giveaway_id: int, winners_id: list[int]):
         for winner in winners_id:
-            stmt = update(GiveawayUser).where(GiveawayUser.giveaway_id == giveaway_id, GiveawayUser.user_id == winner).values(is_winner = True)
+            stmt = update(GiveawayUser).where(GiveawayUser.giveaway_id == giveaway_id, GiveawayUser.user_id == winner).values(is_winner=True)
             self.session.exec(stmt)
 
         self.session.commit()
 
-    def reset_giveaway_winner(self, giveaway_id:int):
+    def reset_giveaway_winner(self, giveaway_id: int):
         stmt = update(GiveawayUser).where(GiveawayUser.giveaway_id == giveaway_id).values(is_winner=False).where(GiveawayUser.is_winner)
         self.session.exec(stmt)
         self.session.commit()
@@ -1024,7 +1055,7 @@ class SQLTwitchSystem(BaseSQLEngine):
         result = self.session.exec(stmt).all()
         return {i.twitch_id: i for i in result}
 
-    def list_chat_command_by_channel(self, channel_id:int):
+    def list_chat_command_by_channel(self, channel_id: int):
         stmt = select(TwitchChatCommand).where(TwitchChatCommand.twitch_id == channel_id)
         result = self.session.exec(stmt).all()
         return result
@@ -1048,7 +1079,7 @@ class SQLTwitchSystem(BaseSQLEngine):
         return {i.name: i.response for i in result}
 
     def get_chat_command_names(self):
-        stmt = select(TwitchChatCommand.twitch_id,TwitchChatCommand.name)
+        stmt = select(TwitchChatCommand.twitch_id, TwitchChatCommand.name)
         return self.session.exec(stmt).all()
 
     def get_twitch_point(self, twitch_id: int, broadcaster_id: int):
@@ -1056,7 +1087,7 @@ class SQLTwitchSystem(BaseSQLEngine):
         result = self.session.exec(stmt).one_or_none()
         return result or TwitchPoint(twitch_id=twitch_id, broadcaster_id=broadcaster_id)
 
-    def update_twitch_point(self, twitch_id:int, broadcaster_id:int, point:int):
+    def update_twitch_point(self, twitch_id: int, broadcaster_id: int, point: int):
         stmt = select(TwitchPoint).where(TwitchPoint.twitch_id == twitch_id, TwitchPoint.broadcaster_id == broadcaster_id)
         result = self.session.exec(stmt).one_or_none()
         if result:
@@ -1098,6 +1129,7 @@ class SQLRPGSystem(BaseSQLEngine):
         result = self.session.exec(stmt).all()
         return result
 
+
 class SQLTRPGSystem(BaseSQLEngine):
     def get_trpg_plot(self, plot_id):
         stmt = select(TRPGStoryPlot).where(TRPGStoryPlot.id == plot_id)
@@ -1114,16 +1146,26 @@ class SQLTRPGSystem(BaseSQLEngine):
         result = self.session.exec(stmt).one()
         return result
 
+
 class SQLBackupSystem(BaseSQLEngine):
-    #* backup
-    def backup_role(self,role:discord.Role,description:str=None):
-        backup_role = BackupRole(role_id=role.id,role_name=role.name,created_at=role.created_at.astimezone(tz),guild_id=role.guild.id,colour_r=role.colour.r,colour_g=role.colour.g,colour_b=role.colour.b,description=description)
+    # * backup
+    def backup_role(self, role: discord.Role, description: str = None):
+        backup_role = BackupRole(
+            role_id=role.id,
+            role_name=role.name,
+            created_at=role.created_at.astimezone(tz),
+            guild_id=role.guild.id,
+            colour_r=role.colour.r,
+            colour_g=role.colour.g,
+            colour_b=role.colour.b,
+            description=description,
+        )
         self.session.add(backup_role)
         for member in role.members:
-            self.session.add(BackupRoleUser(role_id=role.id,discord_id=member.id))
+            self.session.add(BackupRoleUser(role_id=role.id, discord_id=member.id))
         self.session.commit()
 
-    def get_backup_roles_userlist(self,role_id:int):
+    def get_backup_roles_userlist(self, role_id: int):
         stmt = select(BackupRoleUser.discord_id).where(BackupRoleUser.role_id == role_id)
         result = self.session.exec(stmt).all()
         return result
@@ -1359,6 +1401,7 @@ class SQLCacheSystem(BaseSQLEngine):
         stmt = select(LOLGameCache).where(LOLGameCache.puuid == puuid)
         result = self.session.exec(stmt).one_or_none()
         return result
+
 
 class SQLNetwork(BaseSQLEngine):
     def set_ips_last_seen(self, data: dict[tuple[str, str], datetime]):

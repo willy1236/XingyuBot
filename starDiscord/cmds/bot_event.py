@@ -20,7 +20,7 @@ voice_updata = config.get("voice_updata")
 
 ai_access_guilds: list[int] = happycamp_guild + debug_guilds
 
-guild_registration = sclient.sqldb.get_raw_resgistrations() if sclient.sqldb else {}
+guild_registration = sclient.sqldb.get_raw_registrations() if sclient.sqldb else {}
 
 agent_history: dict[int, list[ModelMessage]] = {}
 
@@ -551,7 +551,8 @@ class event(Cog_Extension):
             earlest_guildid = check_registration(member)
             if earlest_guildid and earlest_guildid != happycamp_guild[0]:
                 from starlib.models.mysql import DiscordUser
-                dbdata = sclient.sqldb.get_resgistration_by_guildid(earlest_guildid)
+
+                dbdata = sclient.sqldb.get_registration_by_guildid(earlest_guildid)
                 user = DiscordUser(discord_id=member.id, registrations_id=dbdata.registrations_id)
                 sclient.sqldb.merge(user)
                 await member.add_roles(member.guild.get_role(dbdata.role_id), reason="加入的最早伺服器")

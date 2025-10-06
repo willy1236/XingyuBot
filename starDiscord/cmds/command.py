@@ -35,7 +35,7 @@ class command(Cog_Extension):
     role = SlashCommandGroup("role", "身分組管理指令", guild_ids=happycamp_guild)
     poll = SlashCommandGroup("poll", "投票相關指令")
     party = SlashCommandGroup("party", "政黨相關指令", guild_ids=happycamp_guild)
-    registration = SlashCommandGroup("registration", "戶籍相關指令", guild_ids=happycamp_guild)
+    registration_cmd = SlashCommandGroup("registration", "戶籍相關指令", guild_ids=happycamp_guild)
     giveaway = SlashCommandGroup("giveaway", "抽獎相關指令")
     register = SlashCommandGroup("register", "註冊相關指令")
     date_cmd = SlashCommandGroup("date", "日期相關指令")
@@ -574,7 +574,7 @@ class command(Cog_Extension):
             )
         await ctx.respond(embed=embed)
 
-    @registration.command(description="確認/更新戶籍")
+    @registration_cmd.command(description="確認/更新戶籍")
     @commands.cooldown(rate=1, per=10)
     async def update(self, ctx):
         user = sclient.sqldb.get_dcuser(ctx.author.id)
@@ -586,7 +586,7 @@ class command(Cog_Extension):
         guild_id = check_registration(ctx.author)
         if guild_id:
             guild = self.bot.get_guild(guild_id)
-            resgistration = sclient.sqldb.get_resgistration_by_guildid(guild_id)
+            resgistration = sclient.sqldb.get_registration_by_guildid(guild_id)
             role_guild = self.bot.get_guild(happycamp_guild[0])
             role = role_guild.get_role(resgistration.role_id)
 
@@ -601,26 +601,42 @@ class command(Cog_Extension):
         else:
             await ctx.respond("你沒有可註冊的戶籍")
 
-    @registration.command(description="設定戶籍")
+    @registration_cmd.command(description="設定戶籍")
     @commands.is_owner()
     @commands.cooldown(rate=1, per=10)
-    async def set(self, ctx, user: discord.Option(discord.Member, name="用戶"), registrations_id: discord.Option(int, name="戶籍id")):
-        resgistration = sclient.sqldb.get_resgistration(registrations_id)
-        guild = self.bot.get_guild(resgistration.guild_id)
+    async def set(self, ctx, user_dc: discord.Option(discord.Member, name="用戶"), registrations_id: discord.Option(int, name="戶籍id")):
+        assert isinstance(user_dc, discord.Member)
+        user = sclient.sqldb.get_dcuser(user_dc.id)
+        registration = sclient.sqldb.get_registration(registrations_id)
+        registration_guild = self.bot.get_guild(registration.guild_id)
 
-        role_guild = self.bot.get_guild(happycamp_guild[0])
-        role = role_guild.get_role(resgistration.role_id)
+        if not registration:
+            await ctx.respond("錯誤：沒有此戶籍id")
+            return
 
+        if user and user.registrations_id:
+            user_registration = user.registration
+            if user.registrations_id == registrations_id:
+                await ctx.respond(f"{user_dc.mention} 已經註冊戶籍至 {registration_guild.name if registration_guild else registration.guild_id} 了")
+                return
+            else:
+                try:
+                    old_role = user_dc.guild.get_role(user_registration.role_id)
+                    await user_dc.remove_roles(old_role)
+                except Exception:
+                    pass
+
+        role = user_dc.guild.get_role(registration.role_id)
         if role:
-            await role_guild.get_member(user.id).add_roles(role)
+            await user_dc.add_roles(role)
         from starlib.models.mysql import DiscordUser
 
-        duser = DiscordUser(discord_id=user.id, registrations_id=resgistration.registrations_id)
+        duser = DiscordUser(discord_id=user_dc.id, registrations_id=registration.registrations_id)
         sclient.sqldb.merge(duser)
 
-        await ctx.respond(f"已註冊戶籍至 {guild.name}")
+        await ctx.respond(f"已註冊戶籍至 {registration_guild.name}")
 
-    @registration.command(description="批量設定戶籍")
+    @registration_cmd.command(description="批量設定戶籍")
     @commands.cooldown(rate=1, per=10)
     async def batchset(self, ctx, role: discord.Option(discord.Role, name="要批量驗證的身分組")):
         await ctx.defer()
@@ -639,7 +655,7 @@ class command(Cog_Extension):
             guild_id = check_registration(member)
             if guild_id:
                 guild = self.bot.get_guild(guild_id)
-                resgistration = sclient.sqldb.get_resgistration_by_guildid(guild_id)
+                resgistration = sclient.sqldb.get_registration_by_guildid(guild_id)
                 role = role_guild.get_role(resgistration.role_id)
 
                 if role:
@@ -655,7 +671,7 @@ class command(Cog_Extension):
         await ctx.respond("\n".join(results_text))
 
     @commands.is_owner()
-    @registration.command(description="確認戶籍")
+    @registration_cmd.command(description="確認戶籍")
     async def check(self, ctx: discord.ApplicationContext, member: discord.Option(discord.Member, required=True, name="成員")):
         await ctx.defer()
         from .bot_event import check_registration
