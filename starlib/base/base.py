@@ -55,7 +55,7 @@ class BaseAPI(ABC):
     A base class for creating API clients.
     """
 
-    @abstractmethod
     @property
+    @abstractmethod
     def base_url(self) -> str:
         pass
