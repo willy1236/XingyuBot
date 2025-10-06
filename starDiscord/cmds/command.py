@@ -616,7 +616,7 @@ class command(Cog_Extension):
         from starlib.models.mysql import DiscordUser
 
         duser = DiscordUser(discord_id=user.id, registrations_id=resgistration.registrations_id)
-        sclient.sqldb.add(duser)
+        sclient.sqldb.merge(duser)
 
         await ctx.respond(f"已註冊戶籍至 {guild.name}")
 
