@@ -1,4 +1,5 @@
 import threading
+from abc import ABC, abstractmethod
 from typing import TypeVar
 
 T = TypeVar("T")
@@ -48,3 +49,13 @@ class ListObject(list[T]):
 
     def __iter__(self):
         return iter(self.items)
+
+class BaseAPI(ABC):
+    """
+    A base class for creating API clients.
+    """
+
+    @abstractmethod
+    @property
+    def base_url(self) -> str:
+        pass

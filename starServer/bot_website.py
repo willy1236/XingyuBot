@@ -217,38 +217,37 @@ async def callback_linebot(request: Request):
 
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event: MessageEvent):
-    print(type(event))
     text = []
     url = event.message.text
-    with ApiClient(configuration) as api_client:
-        data = utils.check_url_with_dns_whois(url)
-        if not data["format_valid"]:
-            text.append(f"網址: {data['original_url']} 格式錯誤，跳過")
-
+    data = utils.check_url_with_dns_whois(url)
+    if data["format_valid"]:
+        if url != data["final_url"]:
+            text.append(f"網址：{data['original_url']} -> {data['final_url']}")
         else:
-            if url != data["final_url"]:
-                text.append(f"網址: {data['original_url']} -> {data['final_url']}")
+            text.append(f"網址：{data['original_url']}")
+        text.append(f"網域：{data['domain']}")
+        text.append(f"註冊地：{data['whois_info']['country'] if data['whois_info'] and data['whois_info']['country'] else '未知'}")
+
+        if data["whois_info"] and data["whois_info"]["org"]:
+            if data["whois_info"]["org"] == "REDACTED FOR PRIVACY":
+                text.append(f"註冊單位：受隱私保護")
             else:
-                text.append(f"網址: {data['original_url']}")
-            text.append(f"網域: {data['domain']}")
-            text.append(f"註冊地: {data['whois_info']['country'] if data['whois_info'] and data['whois_info']['country'] else '未知'}")
+                text.append(f"註冊單位：{data['whois_info']['org']}")
 
-            if data["whois_info"] and data["whois_info"]["org"]:
-                if data["whois_info"]["org"] == "REDACTED FOR PRIVACY":
-                    text.append(f"註冊單位: 受隱私保護")
-                else:
-                    text.append(f"註冊單位: {data['whois_info']['org']}")
+        if data["whois_info"] and data["whois_info"]["creation_date"]:
+            if isinstance(data["whois_info"]["creation_date"], list):
+                creation_date = data["whois_info"]["creation_date"][0]
+            else:
+                creation_date = data["whois_info"]["creation_date"]
 
-            if data["whois_info"] and data["whois_info"]["creation_date"]:
-                if isinstance(data["whois_info"]["creation_date"], list):
-                    creation_date = data["whois_info"]["creation_date"][0]
-                else:
-                    creation_date = data["whois_info"]["creation_date"]
+        text.append(f"註冊時間：{creation_date if creation_date else '未知'}")
+        if data["suspicious_pattern"]:
+            text.append("警告：網址格式與常見釣魚網站相似")
 
-            text.append(f"註冊時間: {creation_date if creation_date else '未知'}")
-            if data["suspicious_pattern"]:
-                text.append("警告: 網址長相可疑")
+    else:
+        text.append(f"{url} 不是正確的網址格式")
 
+    with ApiClient(configuration) as api_client:
         line_bot_api = MessagingApi(api_client)
         line_bot_api.reply_message_with_http_info(ReplyMessageRequest(reply_token=event.reply_token, messages=[TextMessage(text="\n".join(text))]))
 

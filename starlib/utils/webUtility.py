@@ -1,5 +1,7 @@
 import re
 import socket
+import unicodedata
+import ssl
 
 import requests
 import whois
@@ -72,7 +74,6 @@ def check_url_with_dns_whois(url: str) -> dict:
     # Step 5: Whois 查詢
     try:
         w = whois.whois(domain)
-        print(w)
         result["whois_info"] = w
     except Exception as e:
         result["whois_info"] = f"Whois 查詢失敗: {e}"
@@ -81,8 +82,45 @@ def check_url_with_dns_whois(url: str) -> dict:
     if domain.count(".") > 3 or re.search(r"\d{5,}", domain):
         result["suspicious_pattern"] = True
 
+    # SSL 憑證檢查（嘗試）
+    try:
+        ctx = ssl.create_default_context()
+        with ctx.wrap_socket(socket.socket(), server_hostname=domain) as s:
+            s.settimeout(3)
+            s.connect((domain, 443))
+            cert = s.getpeercert()
+            result["ssl_cert_subject"] = cert.get("subject")
+            result["ssl_cert_issuer"] = cert.get("issuer")
+    except Exception as e:
+        result["ssl_error"] = f"TLS/SSL check failed: {e}"
+
     return result
 
+def contains_confusable_unicode(domain: str) -> bool:
+    """
+    偵測 domain 是否包含非 ASCII 且可能為同形字攻擊（簡單 heuristics）
+    - 若 domain 包含非 ASCII 字元或混合腳本（Latin + Cyrillic），回傳 True
+    """
+    has_non_ascii = any(ord(ch) > 127 for ch in domain)
+    if not has_non_ascii:
+        return False
+    # 檢查是否混合腳本（例如既有 Latin 又有 Cyrillic）
+    scripts = set()
+    for ch in domain:
+        try:
+            name = unicodedata.name(ch)
+        except ValueError:
+            continue
+        if "CYRILLIC" in name:
+            scripts.add("CYRILLIC")
+        elif "GREEK" in name:
+            scripts.add("GREEK")
+        elif "LATIN" in name:
+            scripts.add("LATIN")
+        else:
+            scripts.add("OTHER")
+    # 若存在 LATIN 且存在其他非 LATIN 腳本 -> 可疑
+    return ("LATIN" in scripts and len(scripts) > 1) or ("CYRILLIC" in scripts and "GREEK" in scripts) or True
 
 # def search_uri(uri: str, threat_type: webrisk_v1.ThreatType.MALWARE) -> SearchUrisResponse:
 #     """Checks whether a URI is on a given threatList.
