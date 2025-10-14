@@ -1417,6 +1417,23 @@ class SQLNetwork(BaseSQLEngine):
         return result
 
 
+class SQLVIPSystem(BaseSQLEngine):
+    def get_vip(self, discord_id: int):
+        stmt = select(HappycampVIP).where(HappycampVIP.discord_id == discord_id)
+        result = self.session.exec(stmt).one_or_none()
+        return result
+
+    def get_form(self, form_id: int):
+        stmt = select(HappycampApplicationForm).where(HappycampApplicationForm.form_id == form_id)
+        result = self.session.exec(stmt).one_or_none()
+        return result
+
+    def get_vip_channels(self):
+        stmt = select(HappycampVIPChannel)
+        result = self.session.exec(stmt).all()
+        return result
+
+
 class SQLTest(BaseSQLEngine):
     pass
 
@@ -1533,6 +1550,7 @@ class SQLEngine(
     SQLTokensSystem,
     SQLCacheSystem,
     SQLNetwork,
+    SQLVIPSystem,
     SQLTest,
 ):
     """SQL引擎"""

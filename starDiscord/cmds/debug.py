@@ -132,7 +132,11 @@ class MySelectMenusView(discord.ui.View):
         super().__init__()
         select = MySelectMenus(bot, guild_id, role_ids)
         self.add_item(select)
+        self.add_item(MySelect())
 
+class MySelect(discord.ui.Section):
+    def __init__(self):
+        super().__init__(discord.ui.TextDisplay(content="Choose a role"), accessory=discord.ui.Thumbnail(url="https://i.imgur.com/4M34hi2.png"))
 
 class debug(Cog_Extension):
     pass
@@ -143,7 +147,8 @@ class debug(Cog_Extension):
         # await ctx.defer()
         # command = self.bot.get_cog('command')
         # await command.dice(ctx,1,100)
-        await ctx.respond(view=MySelectMenusView(self.bot, ctx.guild.id, [865582049238843422, 866241387166433300, 870929961417068565]))
+        await ctx.respond(view=MySelectMenusView(self.bot, ctx.guild.id, [865582049238843422, 870929961417068565, 1424682854318735420]))
+        # await ctx.respond(view=MySelect())
 
     @commands.is_owner()
     @commands.slash_command(description="幫助測試", guild_ids=debug_guilds)

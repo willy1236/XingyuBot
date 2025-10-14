@@ -94,6 +94,8 @@ def check_url_with_dns_whois(url: str) -> dict:
     except Exception as e:
         result["ssl_error"] = f"TLS/SSL check failed: {e}"
 
+    result["contains_confusable_unicode"] = contains_confusable_unicode(domain)
+
     return result
 
 def contains_confusable_unicode(domain: str) -> bool:

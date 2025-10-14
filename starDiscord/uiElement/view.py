@@ -12,7 +12,7 @@ import numpy as np
 
 from starlib import BotEmbed, Jsondb, log, sqldb, tz
 from starlib.instance import mcss_api
-from starlib.models.mysql import Giveaway, GiveawayUser, Poll, PollRole, TicketChannel
+from starlib.models.mysql import Giveaway, GiveawayUser, Poll, PollRole, TicketChannel, HappycampApplicationForm, HappycampVIP
 from starlib.types import McssServerAction, McssServerStatues
 from starlib.utils.utility import find_radmin_vpn_network
 
@@ -767,3 +767,138 @@ class TicketLobbyView(discord.ui.View):
             )
             await msg.pin()
             await interaction.response.send_message(f"已建立私人頻道，請前往{channel.mention}進行對話", ephemeral=True)
+
+class VIPApplicationForm(discord.ui.Modal):
+    def __init__(self):
+        super().__init__(title="VIP申請表單")
+        self.add_item(discord.ui.InputText(label="請輸入你希望的VIP等級", style=discord.InputTextStyle.short, required=False))
+        self.add_item(discord.ui.InputText(label="請輸入你的備註", style=discord.InputTextStyle.long, required=False))
+
+    async def callback(self, interaction: discord.Interaction):
+        vip_level = self.children[0].value
+        remarks = self.children[1].value
+        form = HappycampApplicationForm(
+            discord_id=interaction.user.id, content=f"申請VIP等級：{vip_level}\n備註：{remarks}", submitted_at=datetime.now(tz), change_vip_level=vip_level
+        )
+        sqldb.add(form)
+
+        channel = interaction.client.get_channel(1427543821977128960)
+        if channel:
+            await channel.send(embed=form.embed())
+        else:
+            log.warning("無法找到VIP申請審核頻道，請確認頻道ID是否正確")
+
+        await interaction.response.send_message("申請提交完成", ephemeral=True)
+
+
+class VIPView(discord.ui.View):
+    def __init__(self):
+        super().__init__()
+
+    @discord.ui.button(label="取得當前等級", style=discord.ButtonStyle.primary)
+    async def button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
+        vip = sqldb.get_vip(interaction.user.id)
+        if not vip:
+            await interaction.response.send_message("你無法使用此功能", ephemeral=True)
+            return
+
+        description = f"- VIP等級：{vip.vip_level}\n- 取得時間：{vip.created_at}"
+        embed = BotEmbed.general("VIP系統", title=f"{interaction.user.name} 的VIP資訊", description=description)
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
+    @discord.ui.button(label="申請更高等級", style=discord.ButtonStyle.primary)
+    async def button2_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
+        vip = sqldb.get_vip(interaction.user.id)
+        if not vip:
+            await interaction.response.send_message("你無法使用此功能", ephemeral=True)
+            return
+
+        await interaction.response.send_modal(VIPApplicationForm())
+
+
+class VIPAuditView(discord.ui.View):
+    def __init__(
+        self,
+        form: HappycampApplicationForm,
+    ):
+        super().__init__()
+        self.form = form
+
+    async def on_timeout(self):
+        try:
+            await self.message.delete()
+        except discord.errors.NotFound:
+            pass
+        self.stop()
+
+    @discord.ui.button(label="通過", style=discord.ButtonStyle.success)
+    async def approve_button(self, button: discord.ui.Button, interaction: discord.Interaction):
+        remark = self.FormRemark()
+        await interaction.response.send_modal(remark)
+        if await remark.wait():
+            self.form.review_comment = remark.children[0].value
+            self.form.status = 1
+            self.form.reviewed_at = datetime.now(tz)
+            self.form.reviewer_id = interaction.user.id
+            sqldb.merge(self.form)
+            await interaction.edit_original_message(embed=self.form.embed())
+            await interaction.followup.send(content="已通過申請", ephemeral=True)
+
+            if self.form.change_vip_level is not None:
+                vip = sqldb.get_vip(self.form.discord_id)
+                if not vip:
+                    vip = HappycampVIP(
+                        discord_id=self.form.discord_id, vip_level=self.form.change_vip_level, created_at=datetime.now(tz), updated_at=datetime.now(tz)
+                    )
+                else:
+                    vip.vip_level = self.form.change_vip_level
+                    vip.updated_at = datetime.now(tz)
+
+                sqldb.merge(vip)
+
+                vip_channels = sqldb.get_vip_channels()
+                member = interaction.guild.get_member(self.form.discord_id)
+                assert member is not None, "會員不存在於伺服器中"
+                for vip_c in vip_channels:
+                    channel = interaction.guild.get_channel(vip_c.channel_id)
+                    if not channel:
+                        log.error(f"VIP頻道不存在，無法更新權限，頻道ID：{vip_c.channel_id}")
+                        continue
+
+                    overwrite = channel.overwrites_for(member)
+                    if vip.vip_level >= vip_c.vip_level and overwrite.view_channel is not True:
+                        await channel.set_permissions(member, overwrite=discord.PermissionOverwrite(view_channel=True, send_messages=True))
+                    elif overwrite.view_channel is True:
+                        await channel.set_permissions(member, overwrite=None)
+                # user = interaction.client.get_user(self.form.discord_id)
+                # if user:
+                #     try:
+                #         await user.send(f"你的VIP等級已被提升至 {self.form.change_vip_level}！")
+                #     except Exception as e:
+                #         log.error(f"無法傳送VIP等級提升通知給用戶 {self.form.discord_id}：{e}")
+
+        else:
+            await interaction.response.send_message("已取消審核", ephemeral=True)
+
+    @discord.ui.button(label="拒絕", style=discord.ButtonStyle.danger)
+    async def deny_button(self, button: discord.ui.Button, interaction: discord.Interaction):
+        remark = self.FormRemark()
+        await interaction.response.send_modal(remark)
+        if await remark.wait():
+            self.form.review_comment = remark.children[0].value
+            self.form.status = 2
+            self.form.reviewed_at = datetime.now(tz)
+            self.form.reviewer_id = interaction.user.id
+            sqldb.merge(self.form)
+            await interaction.edit_original_message(embed=self.form.embed())
+            await interaction.followup.send(content="已拒絕申請", ephemeral=True)
+        else:
+            await interaction.response.send_message("已取消審核", ephemeral=True)
+
+    class FormRemark(discord.ui.Modal):
+        def __init__(self):
+            super().__init__(title="審核意見")
+            self.add_item(discord.ui.InputText(label="請輸入審核意見", style=discord.InputTextStyle.long, required=False))
+
+        async def callback(self, interaction: discord.Interaction):
+            await interaction.response.send_message("已填入審核意見", ephemeral=True)

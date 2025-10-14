@@ -23,7 +23,7 @@ dependencies = [
     "pandas>=2.3.1",
     "psutil>=7.0.0",
     "psycopg2>=2.9.10",
-    "py-cord[voice]>=2.6.1",
+    "py-cord[voice]==2.7.0rc1",
     "pydantic-ai-slim[duckduckgo,google,mcp,tavily,vertexai]>=0.6.2",
     "pymongo>=4.14.0",
     "python-nmap>=0.7.1",

@@ -217,6 +217,57 @@ class TwitchPoint(UserSchema, table=True):
     broadcaster_id: int = Field(sa_column=Column(primary_key=True))
     point: int = Field(default=0)
 
+class HappycampVIP(HappycampSchema, table=True):
+    __tablename__ = "vip_info"
+
+    discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
+    vip_level: int = Field(sa_column=Column(Integer))
+    vip_admin: bool = Field(default=False)
+    created_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
+    updated_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
+
+
+class HappycampVIPChannel(HappycampSchema, table=True):
+    __tablename__ = "vip_channel"
+
+    channel_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
+    vip_level: int = Field(sa_column=Column(Integer, primary_key=True))
+
+
+class HappycampQuizRecord(HappycampSchema, table=True):
+    __tablename__ = "quiz_record"
+
+    record_id: int = Field(sa_column=Column(Integer, Identity(), primary_key=True))
+    discord_id: int = Field(sa_column=Column(BigInteger))
+    quiz_id: int = Field(sa_column=Column(Integer))
+    score: int = Field(sa_column=Column(Integer))
+    taken_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
+
+
+class HappycampApplicationForm(HappycampSchema, table=True):
+    __tablename__ = "application_form"
+
+    form_id: int = Field(sa_column=Column(Integer, Identity(), primary_key=True))
+    discord_id: int = Field(sa_column=Column(BigInteger))
+    content: str = Field(sa_column=Column(Text))
+    status: int = Field(sa_column=Column(SmallInteger), default=0)  # 0: pending, 1: approved, 2: rejected
+    submitted_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
+    reviewed_at: datetime | None = Field(sa_column=Column(TIMESTAMP(True, 0), nullable=True))
+    reviewer_id: int | None = Field(sa_column=Column(BigInteger, nullable=True))
+    review_comment: str | None = Field(sa_column=Column(Text, nullable=True))
+    change_vip_level: int | None = Field(sa_column=Column(Integer, nullable=True))
+
+    def embed(self):
+        user_mention = f"<@{self.discord_id}>"
+        status_dict = {0: "待審核", 1: "已通過", 2: "已拒絕"}
+        embed = BotEmbed.general(
+            name=f"申請表單 #{self.form_id} - {status_dict.get(self.status, '未知狀態')}",
+            description=f"- 申請人：{user_mention}\n- 提交時間：{self.submitted_at.strftime('%Y-%m-%d %H:%M:%S')}\n- 審核時間：{self.reviewed_at.strftime('%Y-%m-%d %H:%M:%S') if self.reviewed_at else '尚未審核'}\n- 審核者：{f'<@{self.reviewer_id}>' if self.reviewer_id else '尚未審核'}\n- 審核意見：{self.review_comment if self.review_comment else '無'}",
+            icon_url=None,
+        )
+        embed.add_field(name="申請內容", value=self.content or "無")
+        embed.add_field(name="變更 VIP 等級", value=str(self.change_vip_level) if self.change_vip_level is not None else "無")
+        return embed
 
 class Community(BasicSchema, table=True):
     __tablename__ = "community_info"

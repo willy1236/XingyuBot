@@ -64,3 +64,7 @@ class UserSchema(BaseSchema):
 class CacheSchema(BaseSchema):
     __abstract__ = True
     __table_args__ = {"schema": "stardb_cache"}
+
+class HappycampSchema(BaseSchema):
+    __abstract__ = True
+    __table_args__ = {"schema": "happycamp_data"}

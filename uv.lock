@@ -1295,14 +1295,15 @@ wheels = [
 
 [[package]]
 name = "py-cord"
-version = "2.6.1"
+version = "2.7.0rc1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
+    { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/27/c7/c539d69d5cfa1ea5891d596212f73d619e40c7fc9f02ae906f4147993b94/py_cord-2.6.1.tar.gz", hash = "sha256:36064f225f2c7bbddfe542d5ed581f2a5744f618e039093cf7cd2659a58bc79b", size = 965087, upload-time = "2024-09-15T19:36:39.245Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ba/b2/83d537c6b97cb7f49b1d92b7423f1823be9f3b3c400d2ba2cedd212252c7/py_cord-2.7.0rc1.tar.gz", hash = "sha256:cca759ebb0537cd3b69cd16e26287e667338a5283411c73ce61fa8f9892a7b40", size = 1102712, upload-time = "2025-08-30T21:19:43.182Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e7/90/2690ded84e34b15ca2619932a358c1b7dc6d28fe845dfbd01929fc33c9da/py_cord-2.6.1-py3-none-any.whl", hash = "sha256:e3d3b528c5e37b0e0825f5b884cbb9267860976c1e4878e28b55da8fd3af834b", size = 1089154, upload-time = "2024-09-15T19:36:35.34Z" },
+    { url = "https://files.pythonhosted.org/packages/5f/2d/d963daa0376aae1ba7917f680802ebae26ef5579a69bafbe5a22360f269a/py_cord-2.7.0rc1-py3-none-any.whl", hash = "sha256:c4c3b930ad3572ebf5827c5f473942a577841d19281bdf5a8383cfee210ec202", size = 1172688, upload-time = "2025-08-30T21:19:41.582Z" },
 ]
 
 [package.optional-dependencies]
@@ -2128,7 +2129,7 @@ requires-dist = [
     { name = "pandas", specifier = ">=2.3.1" },
     { name = "psutil", specifier = ">=7.0.0" },
     { name = "psycopg2", specifier = ">=2.9.10" },
-    { name = "py-cord", extras = ["voice"], specifier = ">=2.6.1" },
+    { name = "py-cord", extras = ["voice"], specifier = "==2.7.0rc1" },
     { name = "pydantic-ai-slim", extras = ["duckduckgo", "google", "mcp", "tavily", "vertexai"], specifier = ">=0.6.2" },
     { name = "pymongo", specifier = ">=4.14.0" },
     { name = "python-nmap", specifier = ">=0.7.1" },

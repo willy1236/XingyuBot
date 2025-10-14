@@ -18,7 +18,8 @@ from starlib.utils.utility import base64_to_buffer, converter, find_radmin_vpn_n
 
 from ..command_options import *
 from ..extension import Cog_Extension
-from ..uiElement.view import McServerPanel
+from ..uiElement.view import McServerPanel, VIPView, VIPAuditView
+from ..checks import is_vip_admin, has_vip
 
 if TYPE_CHECKING:
     from ..bot import DiscordBot
@@ -130,6 +131,7 @@ class owner(Cog_Extension):
     twitch_chatbot = SlashCommandGroup("twitch_chatbot", "twitch機器人相關指令", guild_ids=debug_guilds)
     mcserver = SlashCommandGroup("mcserver", "Minecraft伺服器相關指令", guild_ids=main_guilds)
     permission_cmd = SlashCommandGroup("permission", "權限相關指令", guild_ids=debug_guilds)
+    vip_cmd = SlashCommandGroup("vip", "VIP相關指令", guild_ids=debug_guilds)
 
     # load
     # @bot.command()
@@ -724,6 +726,21 @@ class owner(Cog_Extension):
     async def cache(self, ctx: discord.ApplicationContext):
         await ctx.defer()
         await ctx.respond(f"{sclient.sqldb.cache}")
+
+    @vip_cmd.command(name="panel", description="開啟專用面板")
+    @has_vip()
+    async def vip_panel(self, ctx: discord.ApplicationContext):
+        await ctx.respond("已開啟專用面板", view=VIPView(), ephemeral=True)
+
+    @vip_cmd.command(name="review", description="審核申請")
+    @is_vip_admin()
+    async def vip_review(self, ctx: discord.ApplicationContext, form_id: discord.Option(str, name="申請表單id", required=True)):
+        await ctx.defer()
+        form = sclient.sqldb.get_form(form_id)
+        if form:
+            await ctx.respond("已開啟申請審核面板", view=VIPAuditView(form=form), embed=form.embed(), ephemeral=True)
+        else:
+            await ctx.respond("找不到此申請表單", ephemeral=True)
 
 
 def setup(bot):
