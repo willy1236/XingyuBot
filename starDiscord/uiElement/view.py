@@ -18,7 +18,7 @@ from starlib.utils.utility import find_radmin_vpn_network
 
 if TYPE_CHECKING:
     from starlib.database import SQLEngine
-    from starlib.models.mysql import PollOption, ReactionRoleOption, TRPGStoryOption, TRPGStoryPlot
+    from starlib.models import PollOption, ReactionRoleOption, TRPGStoryOption, TRPGStoryPlot, McssServer
 
 class DeletePetView(discord.ui.View):
     def __init__(self):
@@ -626,10 +626,28 @@ class GiveawayView(discord.ui.View):
         await self.message.edit(embed=embed, view=self)
         self.stop()
 
+class McServerSelect(discord.ui.Select):
+    def __init__(self, servers: list[McssServer]):
+        options = [
+            discord.SelectOption(
+                label=server.name if server.name else f"伺服器 {server.server_id}", value=server.server_id, description=f"狀態：{str(server.status)}"
+            )
+            for server in servers
+        ]
+        super().__init__(placeholder="選擇伺服器", min_values=1, max_values=1, options=options)
+
+    async def callback(self, interaction: discord.Interaction):
+        view: McServerPanel = self.view
+        view.server_id = int(self.values[0])
+        embed = view.embed()
+        await interaction.response.edit_message(embed=embed, view=view)
+
+
 class McServerPanel(discord.ui.View):
-    def __init__(self, server_id):
+    def __init__(self):
         super().__init__(timeout=600)
-        self.server_id = server_id
+        self.server_id: str | None = None
+        self.add_item(McServerSelect(mcss_api.get_servers()))
 
     async def on_timeout(self):
         for item in self.children:
@@ -647,9 +665,14 @@ class McServerPanel(discord.ui.View):
         embed = server.embed()
         return embed
 
+
     @discord.ui.button(label="啟動伺服器", row=1, style=discord.ButtonStyle.primary)
     async def start_button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
         await interaction.response.defer()
+        if not self.server_id:
+            await interaction.followup.send("請先選擇伺服器", ephemeral=True)
+            return
+
         if server := mcss_api.get_server_detail(self.server_id):
             if server.status == McssServerStatues.Running:
                 await interaction.followup.send("伺服器已經在運行中", ephemeral=True)
@@ -673,6 +696,10 @@ class McServerPanel(discord.ui.View):
     @discord.ui.button(label="關閉伺服器", row=1, style=discord.ButtonStyle.danger)
     async def stop_button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
         await interaction.response.defer()
+        if not self.server_id:
+            await interaction.followup.send("請先選擇伺服器", ephemeral=True)
+            return
+
         if server := mcss_api.get_server_detail(self.server_id):
             if server.status == McssServerStatues.Stopped:
                 await interaction.followup.send("伺服器已經關閉", ephemeral=True)
@@ -696,6 +723,10 @@ class McServerPanel(discord.ui.View):
     @discord.ui.button(label="取得IP位置", row=1, style=discord.ButtonStyle.secondary)
     async def ip_button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
         await interaction.response.defer()
+        if not self.server_id:
+            await interaction.followup.send("請先選擇伺服器", ephemeral=True)
+            return
+
         if server := mcss_api.get_server_detail(self.server_id):
             ip = find_radmin_vpn_network()
             if not ip:
@@ -782,7 +813,7 @@ class VIPApplicationForm(discord.ui.Modal):
         )
         sqldb.add(form)
 
-        channel = interaction.client.get_channel(1427543821977128960)
+        channel = interaction.client.get_channel(Jsondb.config.get("vip_admin_channel"))
         if channel:
             await channel.send(embed=form.embed())
         else:

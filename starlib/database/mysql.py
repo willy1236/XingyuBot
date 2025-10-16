@@ -776,7 +776,7 @@ class SQLWarningSystem(BaseSQLEngine):
             last_time=last_time,
             guild_only=guild_only,
             officially_given=create_guild in Jsondb.config["debug_guilds"],  # pyright: ignore[reportOperatorIssue]
-        )  # type: ignore
+        )
         self.session.add(warning)
         self.session.commit()
         return warning.warning_id

@@ -462,7 +462,7 @@ class owner(Cog_Extension):
     @commands.has_guild_permissions(manage_channels=True)
     async def mcserver_panel(self, ctx: discord.ApplicationContext, server_id=mcss_server_option):
         await ctx.defer()
-        view = McServerPanel(server_id)
+        view = McServerPanel()
         await ctx.respond(view=view, embed=view.embed(), ephemeral=True)
 
     @mcserver.command(description="列出現在開啟的mc伺服器", guild_ids=debug_guilds)
