@@ -632,7 +632,7 @@ class McServerSelect(discord.ui.Select):
             discord.SelectOption(label=server.name if server.name else f"伺服器 {server.server_id}", value=server.server_id, description=server.description)
             for server in servers
         ]
-        super().__init__(placeholder="選擇伺服器", min_values=1, max_values=1, options=options, row=1)
+        super().__init__(placeholder="選擇伺服器", min_values=1, max_values=1, options=options, row=0)
 
     async def callback(self, interaction: discord.Interaction):
         view: McServerPanel = self.view
@@ -665,7 +665,7 @@ class McServerPanel(discord.ui.View):
         embed = server.embed()
         return embed
 
-    @discord.ui.button(label="啟動伺服器", row=2, style=discord.ButtonStyle.primary)
+    @discord.ui.button(label="啟動伺服器", row=1, style=discord.ButtonStyle.primary)
     async def start_button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
         await interaction.response.defer()
         if not self.server_id:
@@ -692,7 +692,7 @@ class McServerPanel(discord.ui.View):
 
         await interaction.followup.send("伺服器啟動超時，請確認伺服器狀態", ephemeral=True)
 
-    @discord.ui.button(label="關閉伺服器", row=2, style=discord.ButtonStyle.danger)
+    @discord.ui.button(label="關閉伺服器", row=1, style=discord.ButtonStyle.danger)
     async def stop_button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
         await interaction.response.defer()
         if not self.server_id:
@@ -719,7 +719,7 @@ class McServerPanel(discord.ui.View):
 
         await interaction.followup.send("伺服器關閉超時，請確認伺服器狀態", ephemeral=True)
 
-    @discord.ui.button(label="取得IP位置", row=2, style=discord.ButtonStyle.secondary)
+    @discord.ui.button(label="取得IP位置", row=1, style=discord.ButtonStyle.secondary)
     async def ip_button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
         await interaction.response.defer()
         if not self.server_id:
