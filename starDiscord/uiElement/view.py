@@ -658,6 +658,8 @@ class McServerPanel(discord.ui.View):
         self.stop()
 
     def embed(self):
+        if not self.server_id:
+            return BotEmbed.simple("請選擇伺服器", "使用下方的選單來選擇伺服器")
         server = mcss_api.get_server_detail(self.server_id)
         if not server:
             return BotEmbed.simple("伺服器未找到", "請確認伺服器ID是否正確")
