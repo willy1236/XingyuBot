@@ -158,7 +158,9 @@ async def oauth_discord(request: Request):
     jwt_token = jwt.encode(payload, Jsondb.config.get("jwt_secret"), algorithm="HS256")
 
     # 將 JWT 寫入 Cookie
-    response.set_cookie(key="jwt", value=jwt_token, httponly=True, secure=True, samesite="lax", max_age=7 * 24 * 60 * 60)
+    response.set_cookie(
+        key="jwt", value=jwt_token, httponly=True, secure=True, samesite="lax", max_age=7 * 24 * 60 * 60, domain=f".{Jsondb.config.get('base_domain')}"
+    )
 
     return response
     # return HTMLResponse(f"授權已完成，您現在可以關閉此頁面<br><br>Discord ID：{auth.user_id}")
