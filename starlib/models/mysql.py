@@ -19,7 +19,7 @@ from .sqlSchema import *
 class CloudUser(UserSchema, table=True):
     __tablename__ = "cloud_user"
 
-    id: str | None = Field(sa_column=Column(String, primary_key=True))
+    id: str | None = Field(sa_column=Column(String, unique=True))
     discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True, autoincrement=False))
     drive_gmail: str | None = Field(sa_column=Column(String))
     drive_share_id: str | None = Field(sa_column=Column(String))

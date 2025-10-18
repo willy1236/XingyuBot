@@ -9,9 +9,10 @@ from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, status
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.openapi.utils import get_openapi
 from fastapi.requests import Request
-from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, StreamingResponse, Response
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from google_auth_oauthlib.flow import Flow
+from jose import jwt
 from linebot.v3 import WebhookHandler
 from linebot.v3.exceptions import InvalidSignatureError
 from linebot.v3.messaging import ApiClient, Configuration, MessagingApi, ReplyMessageRequest, TextMessage
@@ -29,6 +30,7 @@ twitch_oauth_settings = sqldb.get_bot_token(APIType.Twitch)
 google_oauth_settings = sqldb.get_bot_token(APIType.Google, 3)
 linebot_token = sqldb.get_bot_token(APIType.Line)
 docs_account = sqldb.get_bot_token(APIType.DocAccount)
+BASE_WWW_URL = Jsondb.config.get("base_www_url", "http://localhost:3000")
 
 configuration = Configuration(access_token=linebot_token.access_token)
 handler = WebhookHandler(linebot_token.client_secret)
@@ -148,7 +150,18 @@ async def oauth_discord(request: Request):
             print(f"{connection.name}({connection.id})")
             sclient.sqldb.merge(CloudUser(discord_id=auth.user_id, twitch_id=connection.id))
 
-    return HTMLResponse(f"授權已完成，您現在可以關閉此頁面<br><br>Discord ID：{auth.user_id}")
+    user = auth.get_me()
+    response = RedirectResponse(f"{BASE_WWW_URL}/dashboard")
+
+    # 產生 JWT
+    payload = {"id": user.id, "username": user.username, "exp": datetime.now() + timedelta(days=7)}
+    jwt_token = jwt.encode(payload, Jsondb.config.get("jwt_secret"), algorithm="HS256")
+
+    # 將 JWT 寫入 Cookie
+    response.set_cookie(key="jwt", value=jwt_token, httponly=True, secure=True, samesite="lax", max_age=7 * 24 * 60 * 60)
+
+    return response
+    # return HTMLResponse(f"授權已完成，您現在可以關閉此頁面<br><br>Discord ID：{auth.user_id}")
 
 
 @app.get("/oauth/discordbot")
@@ -279,6 +292,10 @@ async def to_googleauth(request: Request):
     flow = Flow.from_client_config(config, scopes=scopes)
     url = flow.authorization_url()[0]
     return RedirectResponse(url=url)
+
+@app.get("/api/discord")
+async def api_discord(request: Request):
+    return JSONResponse(content={"status": "ok", "message": "Discord API is working"})
 
 
 # @app.get('/book/{book_id}',response_class=JSONResponse)

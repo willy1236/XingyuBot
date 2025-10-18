@@ -674,11 +674,11 @@ class McServerPanel(discord.ui.View):
 
         if server := mcss_api.get_server_detail(self.server_id):
             if server.status == McssServerStatues.Running:
-                await interaction.followup.send("伺服器已經在運行中", ephemeral=True)
+                await interaction.followup.send("🟢伺服器已經在運行中", ephemeral=True)
                 return
             elif server.status == McssServerStatues.Stopped:
                 mcss_api.excute_action(self.server_id, McssServerAction.Start)
-                await interaction.followup.send("伺服器啟動中...", ephemeral=True)
+                await interaction.followup.send("🟡已發送開啟指令，伺服器正在啟動...", ephemeral=True)
 
                 server = mcss_api.get_server_detail(self.server_id)
                 await interaction.edit_original_response(embed=server.embed())
@@ -686,7 +686,7 @@ class McServerPanel(discord.ui.View):
                     await asyncio.sleep(10)
                     server = mcss_api.get_server_detail(self.server_id)
                     if server and server.status == McssServerStatues.Running:
-                        await interaction.followup.send("伺服器啟動成功", ephemeral=True)
+                        await interaction.followup.send("🟢伺服器已開啟", ephemeral=True)
                         await interaction.edit_original_response(embed=server.embed())
                         return
 
@@ -701,11 +701,11 @@ class McServerPanel(discord.ui.View):
 
         if server := mcss_api.get_server_detail(self.server_id):
             if server.status == McssServerStatues.Stopped:
-                await interaction.followup.send("伺服器已經關閉", ephemeral=True)
+                await interaction.followup.send("🛑伺服器已處於關閉狀態", ephemeral=True)
                 return
             elif server.status == McssServerStatues.Running:
                 mcss_api.excute_action(self.server_id, McssServerAction.Stop)
-                await interaction.followup.send("伺服器關閉中...", ephemeral=True)
+                await interaction.followup.send("🟠伺服器正在關閉...", ephemeral=True)
 
                 server = mcss_api.get_server_detail(self.server_id)
                 await interaction.edit_original_response(embed=server.embed())
@@ -713,7 +713,7 @@ class McServerPanel(discord.ui.View):
                     await asyncio.sleep(10)
                     server = mcss_api.get_server_detail(self.server_id)
                     if server and server.status == McssServerStatues.Stopped:
-                        await interaction.followup.send("伺服器已關閉", ephemeral=True)
+                        await interaction.followup.send("🛑伺服器已關閉", ephemeral=True)
                         await interaction.edit_original_response(embed=server.embed())
                         return
 

@@ -460,7 +460,7 @@ class owner(Cog_Extension):
 
     @mcserver.command(description="開啟mc伺服器面板", name="panel")
     @commands.has_guild_permissions(manage_channels=True)
-    async def mcserver_panel(self, ctx: discord.ApplicationContext, server_id=mcss_server_option):
+    async def mcserver_panel(self, ctx: discord.ApplicationContext):
         await ctx.defer()
         view = McServerPanel()
         await ctx.respond(view=view, ephemeral=True)
