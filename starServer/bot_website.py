@@ -2,6 +2,7 @@ import asyncio
 import json
 import secrets
 from datetime import datetime, timedelta
+from pathlib import Path
 
 import feedparser
 from apscheduler.triggers.date import DateTrigger
@@ -31,6 +32,7 @@ google_oauth_settings = sqldb.get_bot_token(APIType.Google, 3)
 linebot_token = sqldb.get_bot_token(APIType.Line)
 docs_account = sqldb.get_bot_token(APIType.DocAccount)
 BASE_WWW_URL = Jsondb.config.get("base_www_url", "http://localhost:3000")
+BASE_DOMAIN = Jsondb.config.get("base_domain", "localhost")
 
 configuration = Configuration(access_token=linebot_token.access_token)
 handler = WebhookHandler(linebot_token.client_secret)
@@ -154,12 +156,12 @@ async def oauth_discord(request: Request):
     response = RedirectResponse(f"{BASE_WWW_URL}/dashboard")
 
     # 產生 JWT
-    payload = {"id": user.id, "username": user.username, "exp": datetime.now() + timedelta(days=7)}
+    payload = {"id": user.id, "username": user.username, "avatar": user.avatar, "exp": datetime.now() + timedelta(days=7)}
     jwt_token = jwt.encode(payload, Jsondb.config.get("jwt_secret"), algorithm="HS256")
 
     # 將 JWT 寫入 Cookie
     response.set_cookie(
-        key="jwt", value=jwt_token, httponly=True, secure=True, samesite="lax", max_age=7 * 24 * 60 * 60, domain=f".{Jsondb.config.get('base_domain')}"
+        key="jwt", value=jwt_token, httponly=True, secure=(request.url.scheme == "https"), samesite="lax", max_age=7 * 24 * 60 * 60, domain=f".{BASE_DOMAIN}"
     )
 
     return response
@@ -295,9 +297,31 @@ async def to_googleauth(request: Request):
     url = flow.authorization_url()[0]
     return RedirectResponse(url=url)
 
-@app.get("/api/discord")
-async def api_discord(request: Request):
-    return JSONResponse(content={"status": "ok", "message": "Discord API is working"})
+@app.get("/logout")
+async def logout(request: Request):
+    response = RedirectResponse(url=BASE_WWW_URL)
+    response.delete_cookie("jwt", domain=f".{BASE_DOMAIN}", httponly=True, secure=(request.url.scheme == "https"), samesite="lax", path="/")
+    return response
+
+
+# 添加一個驗證依賴函數
+async def verify_jwt(request: Request):
+    jwt_token = request.cookies.get("jwt")
+    if not jwt_token:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    try:
+        payload = jwt.decode(jwt_token, Jsondb.config.get("jwt_secret"), algorithms=["HS256"])
+        return payload
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="JWT expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid JWT")
+
+
+@app.get("/discord/data")
+async def api_discord(user_data: dict = Depends(verify_jwt)):
+    return JSONResponse(content={"status": "ok", "message": "Discord API is working", "user": user_data})
 
 
 # @app.get('/book/{book_id}',response_class=JSONResponse)
@@ -320,8 +344,31 @@ class WebsiteThread(BaseThread):
     def run(self):
         import uvicorn
 
-        host = Jsondb.config.get("webip", "127.0.0.1")
-        config = uvicorn.Config(app, host=host, port=14000)
+        # 使用 pathlib 處理路徑
+        cert_dir = Path(__file__).parent.parent / "database"
+        certfile = cert_dir / "server.crt"
+        keyfile = cert_dir / "server.key"
+
+        # 確保證書目錄存在
+        cert_dir.mkdir(exist_ok=True)
+
+        # 檢查證書文件是否存在
+        if certfile.exists() and keyfile.exists():
+            web_log.info(f"啟動 HTTPS 服務器 (使用證書: {certfile})")
+
+            host = Jsondb.config.get("webip", "127.0.0.1")
+            config = uvicorn.Config(
+                app,
+                host=host,
+                port=14000,
+                ssl_certfile=str(certfile),  # uvicorn 需要字符串路徑
+                ssl_keyfile=str(keyfile),
+            )
+        else:
+            web_log.info("啟動 HTTP 服務器")
+            host = Jsondb.config.get("webip", "127.0.0.1")
+            config = uvicorn.Config(app, host=host, port=14000)
+
         self.server = uvicorn.Server(config)
         self.server.run()
 
