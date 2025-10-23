@@ -10,6 +10,5 @@ twitch_token.json
 user_token.json
 member_names.json
 database/google_client_credentials.json
-database/server.crt
-database/server.csr
-database/server.key
+database/localhost+2.pem
+database/localhost+2-key.pem

@@ -160,9 +160,7 @@ async def oauth_discord(request: Request):
     jwt_token = jwt.encode(payload, Jsondb.config.get("jwt_secret"), algorithm="HS256")
 
     # 將 JWT 寫入 Cookie
-    response.set_cookie(
-        key="jwt", value=jwt_token, httponly=True, secure=(request.url.scheme == "https"), samesite="lax", max_age=7 * 24 * 60 * 60, domain=f".{BASE_DOMAIN}"
-    )
+    response.set_cookie(key="jwt", value=jwt_token, httponly=True, secure=True, samesite="lax", max_age=7 * 24 * 60 * 60, domain=f".{BASE_DOMAIN}")
 
     return response
     # return HTMLResponse(f"授權已完成，您現在可以關閉此頁面<br><br>Discord ID：{auth.user_id}")
@@ -300,7 +298,7 @@ async def to_googleauth(request: Request):
 @app.get("/logout")
 async def logout(request: Request):
     response = RedirectResponse(url=BASE_WWW_URL)
-    response.delete_cookie("jwt", domain=f".{BASE_DOMAIN}", httponly=True, secure=(request.url.scheme == "https"), samesite="lax", path="/")
+    response.delete_cookie("jwt", domain=f".{BASE_DOMAIN}", httponly=True, secure=True, samesite="lax", path="/")
     return response
 
 
@@ -346,8 +344,8 @@ class WebsiteThread(BaseThread):
 
         # 使用 pathlib 處理路徑
         cert_dir = Path(__file__).parent.parent / "database"
-        certfile = cert_dir / "server.crt"
-        keyfile = cert_dir / "server.key"
+        certfile = cert_dir / "localhost+2.pem"
+        keyfile = cert_dir / "localhost+2-key.pem"
 
         # 確保證書目錄存在
         cert_dir.mkdir(exist_ok=True)
