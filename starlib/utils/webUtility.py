@@ -65,6 +65,21 @@ def get_whois(domain):
 def check_suspicious_pattern(domain: str) -> bool:
     return bool(domain.count(".") > 3 or re.search(r"\d{5,}", domain))
 
+def check_cert_domain(domain: str, cert: dict):
+    """檢查 CN 與 SAN 是否與 domain 一致"""
+    subject = dict(x[0] for x in cert.get("subject", []))
+    cn = subject.get("commonName")
+
+    san = [entry[1] for entry in cert.get("subjectAltName", []) if entry[0] == "DNS"]
+
+    # 判斷是否有匹配 CN 或 SAN
+    matched = False
+    if domain == cn:
+        matched = True
+    elif domain in san:
+        matched = True
+
+    return matched, cn, san
 
 def get_ssl_subject(domain, port=443):
     """
@@ -92,6 +107,8 @@ def get_ssl_subject(domain, port=443):
                     for key, value in item:
                         issuer_data[key] = value
 
+                matched, cn, san = check_cert_domain(domain, cert)
+
                 result.update(
                     {
                         "subject": subject_data,
@@ -100,6 +117,7 @@ def get_ssl_subject(domain, port=443):
                         "serialNumber": cert.get("serialNumber"),
                         "notBefore": cert.get("notBefore"),
                         "notAfter": cert.get("notAfter"),
+                        "matched_cn_san": matched,
                     }
                 )
                 return result
@@ -131,100 +149,6 @@ def get_dns_records(domain):
     except Exception as e:
         res["TXT_error"] = str(e)
     return res
-
-
-def check_url_with_dns_whois(url_text: str) -> dict:
-    """
-    驗證網址，包含：
-    - 縮網址展開
-    - DNS 查詢
-    - Whois 查詢
-
-    參數:
-        url: 要檢查的網址
-
-    回傳: dict
-    """
-    url = check_url_format(url_text)
-    result = {
-        "original_url": url,
-        "redirect_urls": [
-            url,
-        ],
-        "final_url": None,
-        "format_valid": False,
-        "domain": None,
-        "resolved_ip": None,
-        "suspicious_pattern": False,
-        "whois_info": None,
-    }
-
-    # Step 1: 格式檢查
-    regex = re.compile(
-        r"^(?:http|ftp)s?://"
-        r"(?:[\w.-]+)"
-        r"(?:\.[a-zA-Z]{2,})+"
-        r"(?:[/?#].*)?$",
-        re.IGNORECASE,
-    )
-    if not re.match(regex, url):
-        return result  # 格式錯誤
-
-    result["format_valid"] = True
-
-    # Step 2: 縮網址展開
-    try:
-        resp = requests.head(url, allow_redirects=True, timeout=5)
-    except Exception:
-        try:
-            resp = requests.get(url, allow_redirects=True, timeout=5)
-        except Exception as e:
-            result["final_url"] = None
-            return result
-
-    final_url = resp.url
-    for resp in resp.history:
-        result["redirect_urls"].append(resp.headers.get("Location"))
-    result["final_url"] = final_url
-
-    # Step 3: 網域提取
-    parsed = urlparse(result["final_url"])
-    domain = parsed.netloc.split(":")[0]  # 移除 port
-    result["domain"] = domain
-
-    # Step 4: DNS 查詢
-    try:
-        ip_addr = socket.gethostbyname(domain)
-        result["resolved_ip"] = ip_addr
-    except Exception as e:
-        result["resolved_ip"] = f"DNS 查詢失敗: {e}"
-
-    # Step 5: Whois 查詢
-    try:
-        w = whois.whois(domain)
-        result["whois_info"] = w
-    except Exception as e:
-        result["whois_info"] = f"Whois 查詢失敗"
-
-    # Step 6: 可疑檢查
-    if domain.count(".") > 3 or re.search(r"\d{5,}", domain):
-        result["suspicious_pattern"] = True
-
-    # SSL 憑證檢查（嘗試）
-    try:
-        ctx = ssl.create_default_context()
-        with ctx.wrap_socket(socket.socket(), server_hostname=domain) as s:
-            s.settimeout(3)
-            s.connect((domain, 443))
-            cert = s.getpeercert()
-            result["ssl_cert_subject"] = cert.get("subject")
-            result["ssl_cert_issuer"] = cert.get("issuer")
-    except Exception as e:
-        result["ssl_error"] = f"TLS/SSL check failed: {e}"
-
-    result["contains_confusable_unicode"] = contains_confusable_unicode(domain)
-
-    return result
 
 def contains_confusable_unicode(domain: str) -> bool:
     """
@@ -270,20 +194,25 @@ def generate_url_report(url_text: str) -> list[str]:
     text.append(f"網址：{'\n-> '.join(url_redirects)}")
 
     domain = parse_domain(url)
-    text.append(f"網域：{domain}")
+    text.append(f"網域： {domain}")
 
     # whois 資訊
     whois_info = get_whois(domain)
     if whois_info.get("error"):
         text.append("取得 whois 資訊失敗")
     else:
-        text.append(f"註冊地：{whois_info.get('country', '未知')}")
+        text.append(f"whois 資訊：")
+        text.append(f"  註冊地：{whois_info.get('country', '未知')}")
 
         if whois_info["org"]:
             if whois_info["org"] == "REDACTED FOR PRIVACY":
-                text.append(f"註冊單位：受隱私保護")
+                text.append(f"  註冊單位：受隱私保護")
             else:
-                text.append(f"註冊單位：{whois_info['org']}")
+                text.append(f"  註冊單位： {whois_info['org']}")
+        else:
+            text.append(f"  註冊單位：未知")
+
+        text.append(f"  網域名稱註冊商：{whois_info.get('registrar', '未知')}")
 
         if whois_info["creation_date"]:
             if isinstance(whois_info["creation_date"], list):
@@ -291,7 +220,9 @@ def generate_url_report(url_text: str) -> list[str]:
             else:
                 creation_date = whois_info["creation_date"]
 
-        text.append(f"註冊時間：{creation_date if creation_date else '未知'}")
+            text.append(f"  註冊時間：{creation_date}")
+        else:
+            text.append(f"  註冊時間：未知")
 
     # SSL 憑證檢查
     ssl_subject = get_ssl_subject(domain)
@@ -304,12 +235,13 @@ def generate_url_report(url_text: str) -> list[str]:
         text.append(f"  組織名稱：{ssl_subject['subject'].get('organizationName', '未知')}")
         text.append(f"  國家代碼：{ssl_subject['subject'].get('countryName', '未知')}")
         text.append(f"  統一編號/組織註冊編號：{ssl_subject['subject'].get('serialNumber', '未知')}")
-        text.append(f"  主要網域名稱：{ssl_subject['subject'].get('commonName', '未知')}")
+        text.append(f"  主要網域名稱： {ssl_subject['subject'].get('commonName', '未知')}")
         text.append(f"  地址：{ssl_subject['subject'].get('streetAddress', '未知')}")
 
         text.append(f"SSL 證書發行者：")
         text.append(f"  組織名稱：{ssl_subject['issuer'].get('organizationName', '未知')}")
         text.append(f"  國家代碼：{ssl_subject['issuer'].get('countryName', '未知')}")
+        text.append(f"  CN/SAN一致檢查：{'匹配' if ssl_subject.get('matched_cn_san') else '不匹配'}")
     else:
         text.append(f"無法取得 SSL 證書資訊: {ssl_subject['error']}")
 
