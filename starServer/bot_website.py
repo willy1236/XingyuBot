@@ -233,15 +233,20 @@ async def callback_linebot(request: Request):
 
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event: MessageEvent):
-    report_lines = utils.generate_url_report(event.message.text)
-    report_text = "\n".join(report_lines)
+    url = utils.check_url_format(event.message.text)
+    if url:
+        report_lines = utils.generate_url_report(event.message.text)
+        report_text = "\n".join(report_lines)
+        text = "\n".join([report_text, "", "AI 分析結果:", line_agent.run_sync(report_text).output])
+    else:
+        text = "請提供一個有效的網址。"
 
     with ApiClient(configuration) as api_client:
         line_bot_api = MessagingApi(api_client)
         line_bot_api.reply_message_with_http_info(
             ReplyMessageRequest(
                 reply_token=event.reply_token,
-                messages=[TextMessage(text="\n".join([report_text, "", "AI 分析結果:", line_agent.run_sync(report_text).output]))],
+                messages=[TextMessage(text=text)],
             )
         )
 
