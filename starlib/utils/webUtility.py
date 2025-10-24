@@ -3,6 +3,7 @@ import socket
 import unicodedata
 import ssl
 import dns.resolver
+import certifi
 
 import requests
 import whois
@@ -79,7 +80,7 @@ def get_ssl_subject(domain, port=443):
     # 首先嘗試驗證證書
     is_valid = True
     try:
-        ctx_verify = ssl.create_default_context()
+        ctx_verify = ssl.create_default_context(cafile=certifi.where())
         with socket.create_connection((domain, port), timeout=5) as sock:
             with ctx_verify.wrap_socket(sock, server_hostname=domain) as ssock:
                 ssock.getpeercert()
@@ -92,7 +93,7 @@ def get_ssl_subject(domain, port=443):
 
     # 然後獲取證書資訊（不驗證）
     try:
-        ctx = ssl.create_default_context()
+        ctx = ssl.create_default_context(cafile=certifi.where())
         ctx.check_hostname = False
         ctx.verify_mode = ssl.CERT_NONE
 
