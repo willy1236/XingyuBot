@@ -11,7 +11,7 @@ from urllib.parse import urlparse
 
 def check_url_format(url: str) -> str | None:
     if not url.startswith(("http://", "https://")):
-        url = "http://" + url
+        url = "https://" + url
 
     regex = re.compile(
         r"^(?:http|ftp)s?://"
@@ -32,6 +32,7 @@ def parse_url_redirects(url: str) -> list[str] | None:
         try:
             resp = requests.get(url, allow_redirects=True, timeout=5)
         except Exception as e:
+            print(e)
             return None
     redirect_urls = [url]
     for resp in resp.history:
