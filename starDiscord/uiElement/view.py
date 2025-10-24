@@ -649,7 +649,10 @@ class McServerPanel(discord.ui.View):
 
     async def on_timeout(self):
         self.clear_items()
-        await self.message.edit(view=self)
+        if not self.server_id:
+            await self.message.delete()
+        else:
+            await self.message.edit(view=self)
         self.stop()
 
     def embed(self):
