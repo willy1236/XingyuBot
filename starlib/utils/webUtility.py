@@ -41,6 +41,8 @@ def parse_url_redirects(url: str) -> list[str] | None:
 
 
 def parse_domain(url: str) -> str | None:
+    if "://" not in url:
+        url = "http://" + url  # 補上暫時的 http://
     parsed = urlparse(url)
     return parsed.netloc.split(":")[0]  # 移除 port
 
@@ -67,18 +69,56 @@ def check_suspicious_pattern(domain: str) -> bool:
     return bool(domain.count(".") > 3 or re.search(r"\d{5,}", domain))
 
 def check_cert_domain(domain: str, cert: dict):
-    """檢查 CN 與 SAN 是否與 domain 一致"""
+    """檢查 CN 與 SAN 是否與 domain 一致（支援萬用字元，遵循 RFC 2818）"""
     subject = dict(x[0] for x in cert.get("subject", []))
     cn = subject.get("commonName")
 
     san = [entry[1] for entry in cert.get("subjectAltName", []) if entry[0] == "DNS"]
 
+    def match_wildcard(pattern: str, domain: str) -> bool:
+        """
+        檢查 domain 是否符合萬用字元模式（RFC 2818 規範）
+        """
+        # 轉換為小寫進行不區分大小寫比對
+        pattern = pattern.lower()
+        domain = domain.lower()
+
+        if not pattern.startswith("*."):
+            # 非萬用字元，直接比對
+            return pattern == domain
+
+        # 萬用字元只能在最左側標籤
+        pattern_parts = pattern.split(".")
+        domain_parts = domain.split(".")
+
+        # 確保網域至少有兩個部分（例如 www.example.com）
+        if len(domain_parts) < 2:
+            return False
+
+        # 移除萬用字元標籤
+        pattern_parts = pattern_parts[1:]  # 移除 "*"
+
+        # 網域部分數量必須匹配
+        if len(domain_parts) != len(pattern_parts) + 1:
+            return False
+
+        # 比對除了最左側標籤外的所有部分
+        return domain_parts[1:] == pattern_parts
+
     # 判斷是否有匹配 CN 或 SAN
     matched = False
-    if domain == cn:
+
+    # 根據 RFC 6125，如果存在 SAN，應該忽略 CN
+    # 但為了相容性，這裡兩者都檢查
+    if cn and match_wildcard(cn, domain):
         matched = True
-    elif domain in san:
-        matched = True
+
+    # 檢查 SAN
+    if not matched:
+        for san_entry in san:
+            if match_wildcard(san_entry, domain):
+                matched = True
+                break
 
     return matched, cn, san
 

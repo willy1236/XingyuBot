@@ -31,7 +31,7 @@ class task(Cog_Extension):
             scheduler.add_job(self.forecast_update, "cron", hour="0/3", minute=0, second=1, jitter=30, misfire_grace_time=60)
             scheduler.add_job(self.weather_check, "cron", minute="20,35", second=30, jitter=30, misfire_grace_time=60)
             scheduler.add_job(self.apex_map_rotation, "cron", minute="0/15", second=10, jitter=30, misfire_grace_time=60)
-            scheduler.add_job(self.refresh_yt_push, "cron", hour="2/3", minute=0, second=0, jitter=30, misfire_grace_time=40)
+            scheduler.add_job(refresh_yt_push, "cron", hour="2/3", minute=0, second=0, jitter=30, misfire_grace_time=40)
             scheduler.add_job(refresh_ip_last_seen, "cron", minute="0/20", second=0, jitter=30, misfire_grace_time=40)
             # scheduler.add_job(self.typhoon_warning_check, "cron", minute="0/15", second=30, jitter=30, misfire_grace_time=40)
 
@@ -375,22 +375,22 @@ class task(Cog_Extension):
         msg = await channel.send("新的一年 祝大家新年快樂~🎉\n來自快樂營的2025新年轟炸 @everyone ", allowed_mentions=discord.AllowedMentions(everyone=True))
         await msg.add_reaction("🎉")
 
-    async def refresh_yt_push(self):
-        callback_url = sqldb.get_bot_token(APIType.Google, 4).callback_uri
-        assert callback_url, "Callback URL is not set"
-        for record in sclient.sqldb.get_expiring_push_records():
-            yt_push.add_push(record.channel_id, callback_url)
-            await asyncio.sleep(3)
-            data = yt_push.get_push(record.channel_id, callback_url)
+async def refresh_yt_push():
+    callback_url = sqldb.get_bot_token(APIType.Google, 4).callback_uri
+    assert callback_url, "Callback URL is not set"
+    for record in sclient.sqldb.get_expiring_push_records():
+        yt_push.add_push(record.channel_id, callback_url)
+        await asyncio.sleep(3)
+        data = yt_push.get_push(record.channel_id, callback_url)
 
-            if data and data.has_verify:
-                record.push_at = data.last_successful_verification
-                record.expire_at = data.expiration_time
-                sclient.sqldb.merge(record)
-                log.info("refresh_yt_push: %s 已更新到期為 %s", record.channel_id, record.expire_at)
-                await asyncio.sleep(1)
-            else:
-                log.warning(f"refresh_yt_push failed: {record.channel_id}")
+        if data and data.has_verify:
+            record.push_at = data.last_successful_verification
+            record.expire_at = data.expiration_time
+            sclient.sqldb.merge(record)
+            log.info("refresh_yt_push: %s 已更新到期為 %s", record.channel_id, record.expire_at)
+            await asyncio.sleep(1)
+        else:
+            log.warning(f"refresh_yt_push failed: {record.channel_id}")
 
 
 async def youtube_start_live_notify(bot: DiscordBot, video: YoutubeVideo):
