@@ -25,6 +25,7 @@ from starlib.dataExtractor import DiscordOauth2, GoogleOauth2, TwitchOauth2
 from starlib.instance import google_api
 from starlib.models import CloudUser, TwitchBotJoinChannel, YoutubePushEntry
 from starlib.types import APIType, NotifyCommunityType, YoutubeVideoStatue
+from starlib.starAgent_line import line_agent
 
 discord_oauth_settings = sqldb.get_bot_token(APIType.Discord)
 twitch_oauth_settings = sqldb.get_bot_token(APIType.Twitch)
@@ -232,39 +233,17 @@ async def callback_linebot(request: Request):
 
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event: MessageEvent):
-    text = []
-    url = event.message.text
-    data = utils.check_url_with_dns_whois(url)
-    if data["format_valid"]:
-        if url != data["final_url"]:
-            text.append(f"網址：{data['original_url']} -> {data['final_url']}")
-        else:
-            text.append(f"網址：{data['original_url']}")
-        text.append(f"網域：{data['domain']}")
-        text.append(f"註冊地：{data['whois_info']['country'] if data['whois_info'] and data['whois_info']['country'] else '未知'}")
-
-        if data["whois_info"] and data["whois_info"]["org"]:
-            if data["whois_info"]["org"] == "REDACTED FOR PRIVACY":
-                text.append(f"註冊單位：受隱私保護")
-            else:
-                text.append(f"註冊單位：{data['whois_info']['org']}")
-
-        if data["whois_info"] and data["whois_info"]["creation_date"]:
-            if isinstance(data["whois_info"]["creation_date"], list):
-                creation_date = data["whois_info"]["creation_date"][0]
-            else:
-                creation_date = data["whois_info"]["creation_date"]
-
-        text.append(f"註冊時間：{creation_date if creation_date else '未知'}")
-        if data["suspicious_pattern"]:
-            text.append("警告：網址格式與常見釣魚網站相似")
-
-    else:
-        text.append(f"{url} 不是正確的網址格式")
+    report_lines = utils.generate_url_report(event.message.text)
+    report_text = "\n".join(report_lines)
 
     with ApiClient(configuration) as api_client:
         line_bot_api = MessagingApi(api_client)
-        line_bot_api.reply_message_with_http_info(ReplyMessageRequest(reply_token=event.reply_token, messages=[TextMessage(text="\n".join(text))]))
+        line_bot_api.reply_message_with_http_info(
+            ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[TextMessage(text="\n".join([report_text, "", "AI 分析結果:", line_agent.run_sync(report_text).output]))],
+            )
+        )
 
 
 @app.get("/to/discordauth")
