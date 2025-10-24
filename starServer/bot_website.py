@@ -232,12 +232,13 @@ async def callback_linebot(request: Request):
 
 
 @handler.add(MessageEvent, message=TextMessageContent)
-def handle_message(event: MessageEvent):
+async def handle_message(event: MessageEvent):
     url = utils.check_url_format(event.message.text)
     if url:
         report_lines = utils.generate_url_report(event.message.text)
         report_text = "\n".join(report_lines)
-        text = "\n".join([report_text, "", "AI 分析結果:", line_agent.run_sync(report_text).output])
+        ai_response = await line_agent.run(report_text)
+        text = "\n".join([report_text, "", "AI 分析結果:", ai_response.output])
     else:
         text = "請提供一個有效的網址。"
 
