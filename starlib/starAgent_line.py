@@ -17,7 +17,7 @@ safety_settings = [
 
 provider = GoogleProvider(api_key=sqldb.get_bot_token(APIType.Google, 5).access_token)
 model_settings = GoogleModelSettings(gemini_safety_settings=safety_settings)
-model = GoogleModel(model_name="gemini-2.5-flash", provider=provider)
+model = GoogleModel(model_name="gemini-2.0-flash", provider=provider)
 line_agent = Agent(model)
 
 
@@ -31,10 +31,10 @@ async def system_prompt(ctx: RunContext) -> str:
     
     輸出格式：
     - 你的回答應該分成以下幾個部分：
-      1. 該網址的安全評估結果（安全、可疑、危險等，在標題列出）
-      2. 來源可信度
-      3. 主要的風險因素（如可疑的重定向鏈、WHOIS 註冊地點異常、SSL 證書問題等）
-      4. 簡短的建議（如避免訪問該網址、使用安全工具檢查、或者指出最相近的詐騙手法等）
+      1. 該網址的安全評估結果（安全、相對安全、相對可疑、可疑、危險，在標題列出，並在底下附上主要原因）
+      2. 來源可信度（高、中高、中、中低、低，在標題列出，並在底下附上主要原因）
+      3. 主要的風險因素（如可疑的重定向鏈、WHOIS 註冊地點異常、SSL 證書問題、來源是不是屬於具公信力的組織等）
+      4. 簡短的建議（如避免訪問該網址、指出最相近的詐騙手法與預防方法等）
       
     限制：
     - 請避免使用過於技術性的術語，確保一般使用者也能理解你的分析與建議。
