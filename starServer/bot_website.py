@@ -213,7 +213,7 @@ async def oauth_google(request: Request):
 
 
 @app.post("/callback/linebot")
-async def callback_linebot(request: Request):
+async def callback_linebot(request: Request, background_tasks: BackgroundTasks):
     signature = request.headers.get("X-Line-Signature")
 
     # get request body as text
@@ -221,15 +221,24 @@ async def callback_linebot(request: Request):
     body = body.decode("UTF-8")
     web_log.info("Request body: " + body)
 
-    # handle webhook body
+    # # handle webhook body
+    # try:
+    #     handler.handle(body, signature)
+    # except InvalidSignatureError:
+    #     web_log.info(f"{request.url.path}: Invalid signature. Please check your channel access token/channel secret.")
+    #     raise HTTPException(status_code=400, detail="Invalid signature")
+    background_tasks.add_task(process_linebot_webhook, body, signature)
+    return "OK"
+
+
+def process_linebot_webhook(body: str, signature: str):
+    """在背景任務中處理 LINE Bot webhook"""
     try:
         handler.handle(body, signature)
     except InvalidSignatureError:
-        web_log.info(f"{request.url.path}: Invalid signature. Please check your channel access token/channel secret.")
-        raise HTTPException(status_code=400, detail="Invalid signature")
-
-    return "OK"
-
+        web_log.error("Invalid signature in LINE Bot webhook")
+    except Exception as e:
+        web_log.error(f"處理 LINE Bot 訊息時發生錯誤: {e}")
 
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event: MessageEvent):
@@ -237,8 +246,17 @@ def handle_message(event: MessageEvent):
     if url:
         report_lines = utils.generate_url_report(event.message.text)
         report_text = "\n".join(report_lines)
-        ai_response = line_agent.run_sync(report_text)
-        text = "\n".join([report_text, "", "AI 分析結果:", ai_response.output])
+        try:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            ai_response = loop.run_until_complete(line_agent.run(report_text))
+            text = "\n".join([report_text, "", "AI 分析結果:", ai_response.output])
+        except Exception as e:
+            web_log.error(f"Error in AI analysis: {e}")
+            text = "\n".join([report_text, "", "AI 分析結果: 無法取得分析結果"])
+        finally:
+            loop.close()
+
     else:
         text = "請提供一個有效的網址。"
 
