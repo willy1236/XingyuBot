@@ -76,29 +76,10 @@ def get_ssl_subject(domain, port=443):
         dict: 包含憑證主要資訊或錯誤訊息
     """
     result = {"domain": domain}
-
-    # 首先嘗試驗證證書
-    is_valid = True
     try:
         ctx_verify = ssl.create_default_context(cafile=certifi.where())
         with socket.create_connection((domain, port), timeout=5) as sock:
             with ctx_verify.wrap_socket(sock, server_hostname=domain) as ssock:
-                ssock.getpeercert()
-    except ssl.SSLCertVerificationError:
-        is_valid = False
-    except Exception:
-        is_valid = False
-
-    result["certificate_valid"] = is_valid
-
-    # 然後獲取證書資訊（不驗證）
-    try:
-        ctx = ssl.create_default_context(cafile=certifi.where())
-        ctx.check_hostname = False
-        ctx.verify_mode = ssl.CERT_NONE
-
-        with socket.create_connection((domain, port), timeout=5) as sock:
-            with ctx.wrap_socket(sock, server_hostname=domain) as ssock:
                 cert = ssock.getpeercert()
 
                 subject_data = {}
@@ -121,9 +102,7 @@ def get_ssl_subject(domain, port=443):
                         "notAfter": cert.get("notAfter"),
                     }
                 )
-
                 return result
-
     except socket.timeout:
         return {"domain": domain, "error": "連線逾時"}
     except socket.gaierror:
