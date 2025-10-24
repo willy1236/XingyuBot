@@ -247,15 +247,11 @@ def handle_message(event: MessageEvent):
         report_lines = utils.generate_url_report(event.message.text)
         report_text = "\n".join(report_lines)
         try:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            ai_response = loop.run_until_complete(line_agent.run(report_text))
+            ai_response = asyncio.run(line_agent.run(report_text))
             text = "\n".join([report_text, "", "AI 分析結果:", ai_response.output])
         except Exception as e:
             web_log.error(f"Error in AI analysis: {e}")
             text = "\n".join([report_text, "", "AI 分析結果: 無法取得分析結果"])
-        finally:
-            loop.close()
 
     else:
         text = "請提供一個有效的網址。"
