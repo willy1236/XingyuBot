@@ -74,8 +74,28 @@ def get_ssl_subject(domain, port=443):
     Returns:
         dict: 包含憑證主要資訊或錯誤訊息
     """
+    result = {"domain": domain}
+
+    # 首先嘗試驗證證書
+    is_valid = True
+    try:
+        ctx_verify = ssl.create_default_context()
+        with socket.create_connection((domain, port), timeout=5) as sock:
+            with ctx_verify.wrap_socket(sock, server_hostname=domain) as ssock:
+                ssock.getpeercert()
+    except ssl.SSLCertVerificationError:
+        is_valid = False
+    except Exception:
+        is_valid = False
+
+    result["certificate_valid"] = is_valid
+
+    # 然後獲取證書資訊（不驗證）
     try:
         ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+
         with socket.create_connection((domain, port), timeout=5) as sock:
             with ctx.wrap_socket(sock, server_hostname=domain) as ssock:
                 cert = ssock.getpeercert()
@@ -90,16 +110,25 @@ def get_ssl_subject(domain, port=443):
                     for key, value in item:
                         issuer_data[key] = value
 
-                return {
-                    "domain": domain,
-                    "subject": subject_data,
-                    "issuer": issuer_data,
-                    "version": cert.get("version"),
-                    "serialNumber": cert.get("serialNumber"),
-                    "notBefore": cert.get("notBefore"),
-                    "notAfter": cert.get("notAfter"),
-                }
+                result.update(
+                    {
+                        "subject": subject_data,
+                        "issuer": issuer_data,
+                        "version": cert.get("version"),
+                        "serialNumber": cert.get("serialNumber"),
+                        "notBefore": cert.get("notBefore"),
+                        "notAfter": cert.get("notAfter"),
+                    }
+                )
 
+                return result
+
+    except socket.timeout:
+        return {"domain": domain, "error": "連線逾時"}
+    except socket.gaierror:
+        return {"domain": domain, "error": "無法解析網域名稱"}
+    except ssl.SSLError as e:
+        return {"domain": domain, "error": f"SSL 錯誤: {str(e)}"}
     except Exception as e:
         return {"domain": domain, "error": str(e)}
 
@@ -288,6 +317,9 @@ def generate_url_report(url_text: str) -> list[str]:
     ssl_subject = get_ssl_subject(domain)
     assert ssl_subject is not None, "SSL 憑證資訊取得失敗"
     if not ssl_subject.get("error"):
+        if not ssl_subject.get("certificate_valid", True):
+            text.append("⚠️ SSL 證書驗證失敗")
+
         text.append(f"SSL 證書資訊：")
         text.append(f"  組織名稱：{ssl_subject['subject'].get('organizationName', '未知')}")
         text.append(f"  國家代碼：{ssl_subject['subject'].get('countryName', '未知')}")
