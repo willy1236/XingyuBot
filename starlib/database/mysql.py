@@ -1433,6 +1433,16 @@ class SQLVIPSystem(BaseSQLEngine):
         result = self.session.exec(stmt).all()
         return result
 
+class SQLVoiceSystem(BaseSQLEngine):
+    def get_voice_time(self, discord_id: int, guild_id: int):
+        stmt = select(VoiceTime).where(VoiceTime.discord_id == discord_id, VoiceTime.guild_id == guild_id)
+        result = self.session.exec(stmt).one_or_none()
+        return result or VoiceTime(discord_id=discord_id, guild_id=guild_id)
+
+    def get_voice_times(self, discord_ids: list[int], guild_id: int):
+        stmt = select(VoiceTime).where(VoiceTime.discord_id.in_(discord_ids), VoiceTime.guild_id == guild_id)
+        result = self.session.exec(stmt).all()
+        return {i.discord_id: i for i in result}
 
 class SQLTest(BaseSQLEngine):
     pass
@@ -1551,6 +1561,7 @@ class SQLEngine(
     SQLCacheSystem,
     SQLNetwork,
     SQLVIPSystem,
+    SQLVoiceSystem,
     SQLTest,
 ):
     """SQL引擎"""

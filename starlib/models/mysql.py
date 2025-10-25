@@ -512,6 +512,12 @@ class TicketChannel(BasicSchema, table=True):
     closer_id: int | None = Field(sa_column=Column(BigInteger))
     view_message_id: int | None = Field(sa_column=Column(BigInteger))
 
+class VoiceTime(BasicSchema, table=True):
+    __tablename__ = "voice_time"
+
+    discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
+    guild_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
+    total_minute: timedelta = Field(sa_column=Column(Interval, default=timedelta()))
 
 class Party(IdbaseSchema, table=True):
     __tablename__ = "party_datas"

@@ -11,13 +11,14 @@ from requests.exceptions import ConnectTimeout, RequestException
 from starlib import BotEmbed, Jsondb, log, sclient, sqldb, tz, utils
 from starlib.instance import *
 from starlib.models.community import YoutubeVideo
-from starlib.models.mysql import UsersCountRecord
+from starlib.models.mysql import UsersCountRecord, VoiceTime
 from starlib.types import APIType, NotifyChannelType, NotifyCommunityType
 
 from ..bot import DiscordBot
 from ..extension import Cog_Extension
 from ..uiElement.view import GiveawayView
 
+voice_times: dict[int, timedelta] = {}
 
 class task(Cog_Extension):
     def __init__(self, *args, **kwargs):
@@ -33,6 +34,8 @@ class task(Cog_Extension):
             scheduler.add_job(self.apex_map_rotation, "cron", minute="0/15", second=10, jitter=30, misfire_grace_time=60)
             scheduler.add_job(refresh_yt_push, "cron", hour="2/3", minute=0, second=0, jitter=30, misfire_grace_time=40)
             scheduler.add_job(refresh_ip_last_seen, "cron", minute="0/20", second=0, jitter=30, misfire_grace_time=40)
+            scheduler.add_job(self.add_voice_time, "cron", minute="*/1", second=30, jitter=15, misfire_grace_time=20)
+            scheduler.add_job(self.save_voice_time, "cron", hour="0/1", minute=0, second=0, jitter=30, misfire_grace_time=60)
             # scheduler.add_job(self.typhoon_warning_check, "cron", minute="0/15", second=30, jitter=30, misfire_grace_time=40)
 
             scheduler.add_job(self.earthquake_check, "interval", minutes=3, jitter=30, misfire_grace_time=40)
@@ -297,6 +300,36 @@ class task(Cog_Extension):
                 continue
 
         sclient.sqldb.set_community_caches(NotifyCommunityType.TwitterTweet, update_data)
+
+    async def add_voice_time(self):
+        log.debug("add_voice_time start")
+        guild = self.bot.get_guild(happycamp_guild[0])
+
+        for channel in guild.voice_channels:
+            for member in channel.members:
+                if not member.voice.deaf and not member.voice.mute:
+                    if voice_times.get(member.id) is None:
+                        voice_times[member.id] = timedelta(minutes=1)
+                    else:
+                        voice_times[member.id] += timedelta(minutes=1)
+
+    async def save_voice_time(self):
+        log.debug("save_voice_time start")
+        if not voice_times:
+            return
+
+        guild = self.bot.get_guild(happycamp_guild[0])
+        discord_ids = list(voice_times.keys())
+        voice_time_records = sclient.sqldb.get_voice_times(discord_ids, guild.id)
+
+        for discord_id, delta in voice_times.items():
+            if discord_id not in voice_time_records:
+                voice_time_records[discord_id] = VoiceTime(discord_id=discord_id, guild_id=guild.id, total_minute=int(delta.total_seconds() // 60))
+            else:
+                voice_time_records[discord_id].total_minute += delta
+
+        sqldb.batch_merge(list(voice_time_records.values()))
+        voice_times.clear()
 
     # async def get_mongodb_data(self):
     #     dbdata = mongedb.get_apidata()
