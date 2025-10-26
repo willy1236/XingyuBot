@@ -1,4 +1,12 @@
 {
+    "choice": {
+        "en-US": "choice",
+        "zh-TW": "選擇"
+    },
+    "choice_item": {
+        "en-US": "item",
+        "zh-TW": "東西"
+    },
     "choice_channel": {
         "en-US": "channel",
         "zh-TW": "頻道"

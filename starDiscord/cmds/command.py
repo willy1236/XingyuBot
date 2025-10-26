@@ -40,7 +40,7 @@ class command(Cog_Extension):
     giveaway = SlashCommandGroup("giveaway", "抽獎相關指令")
     register = SlashCommandGroup("register", "註冊相關指令")
     date_cmd = SlashCommandGroup("date", "日期相關指令")
-    choice_cmd = SlashCommandGroup("choice", "選擇相關指令")
+    choice_cmd = SlashCommandGroup("choice", "選擇相關指令", name_localizations=ChoiceList.name("choice"))
 
     @role.command(description="查詢加身分組的數量")
     async def count(
@@ -408,7 +408,7 @@ class command(Cog_Extension):
     def Autocomplete(ctx: discord.AutocompleteContext):
         return ["test"]
 
-    @choice_cmd.command(description="讓機器人選擇一樣東西")
+    @choice_cmd.command(description="讓機器人選擇一樣東西", name_localizations=ChoiceList.name("choice_item"))
     async def item(
         self,
         ctx,
