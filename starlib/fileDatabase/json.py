@@ -89,6 +89,7 @@ class JsonDatabase():
         "jdict": _DBPATH / "dict.json",
         "picdata": _DBPATH / "picture.json",
         "options": _DBPATH / "command_option.json",
+        "cmd_names": _DBPATH / "command_name.json",
     }
 
     def __init__(self, create_file=True):
