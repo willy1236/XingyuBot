@@ -324,7 +324,7 @@ class task(Cog_Extension):
 
         for discord_id, delta in voice_times.items():
             if discord_id not in voice_time_records:
-                voice_time_records[discord_id] = VoiceTime(discord_id=discord_id, guild_id=guild.id, total_minute=int(delta.total_seconds() // 60))
+                voice_time_records[discord_id] = VoiceTime(discord_id=discord_id, guild_id=guild.id, total_minute=delta)
             else:
                 voice_time_records[discord_id].total_minute += delta
 
