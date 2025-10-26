@@ -35,7 +35,7 @@ class task(Cog_Extension):
             scheduler.add_job(refresh_yt_push, "cron", hour="2/3", minute=0, second=0, jitter=30, misfire_grace_time=40)
             scheduler.add_job(refresh_ip_last_seen, "cron", minute="0/20", second=0, jitter=30, misfire_grace_time=40)
             scheduler.add_job(self.add_voice_time, "cron", minute="*/1", second=30, jitter=15, misfire_grace_time=20)
-            scheduler.add_job(self.save_voice_time, "cron", hour="0/1", minute=0, second=0, jitter=30, misfire_grace_time=60)
+            scheduler.add_job(self.save_voice_time, "cron", hour="0/1", minute="0/30", second=0, jitter=30, misfire_grace_time=60)
             # scheduler.add_job(self.typhoon_warning_check, "cron", minute="0/15", second=30, jitter=30, misfire_grace_time=40)
 
             scheduler.add_job(self.earthquake_check, "interval", minutes=3, jitter=30, misfire_grace_time=40)
@@ -306,6 +306,8 @@ class task(Cog_Extension):
         guild = self.bot.get_guild(happycamp_guild[0])
 
         for channel in guild.voice_channels:
+            if channel == guild.afk_channel:
+                continue
             for member in channel.members:
                 if not member.voice.deaf and not member.voice.mute:
                     if voice_times.get(member.id) is None:
@@ -314,6 +316,7 @@ class task(Cog_Extension):
                         voice_times[member.id] += timedelta(minutes=1)
 
     async def save_voice_time(self):
+        # 2025-10-26
         log.debug("save_voice_time start")
         if not voice_times:
             return
