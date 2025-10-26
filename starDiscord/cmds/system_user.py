@@ -3,6 +3,7 @@ from discord.commands import SlashCommandGroup
 from discord.ext import commands
 
 from starlib import BotEmbed, ChoiceList, Jsondb, sclient
+from starlib.instance import happycamp_guild
 from starlib.models.mysql import DiscordUser
 
 from ..extension import Cog_Extension
@@ -57,7 +58,15 @@ class system_user(Cog_Extension):
             cloud_user_embed.add_field(name="Twitch ID", value=cuser.twitch_id or "未設定")
             if cuser.name:
                 cloud_user_embed.add_field(name="註冊名稱", value=cuser.name)
-        await ctx.respond(embeds=[user_embed, cloud_user_embed])
+
+        embeds = [user_embed, cloud_user_embed]
+
+        if ctx.guild_id in happycamp_guild:
+            happycamp_embed = BotEmbed.general("快樂營使用者資料", icon_url=user_dc.avatar.url if user_dc.avatar else None)
+            happycamp_embed.add_field(name="累計語音時間", value=sclient.sqldb.get_voice_time(user_dc.id, ctx.guild_id).total_minute)
+            embeds.append(happycamp_embed)
+
+        await ctx.respond(embeds=embeds)
 
     @pet.command(description="查看寵物資訊")
     async def check(self, ctx, user_dc: discord.Option(discord.Member, name="用戶", description="可不輸入以查詢自己", default=None)):
