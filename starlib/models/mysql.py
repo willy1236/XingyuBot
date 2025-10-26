@@ -473,6 +473,7 @@ class ServerConfig(BasicSchema, table=False):
 
     guild_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
     timeout_after_warning_times: int | None
+    voice_time_counter: bool | None
 
 class MemorialDay(BasicSchema, table=True):
     __tablename__ = "memorial_days"

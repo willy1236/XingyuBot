@@ -96,5 +96,27 @@ class system_user(Cog_Extension):
             return
         await ctx.respond("你真的確定要放生寵物嗎?", view=DeletePetView())
 
+    @commands.slash_command(description="查看語音時間排行榜")
+    async def voice_time_leaderboard(self, ctx: discord.ApplicationContext):
+        # if ctx.guild_id not in happycamp_guild:
+        #     await ctx.respond("此指令僅限快樂營伺服器使用")
+        #     return
+
+        leaderboard = sclient.sqldb.get_voice_time_leaderboard(ctx.guild_id, limit=10)
+        if not leaderboard:
+            await ctx.respond("目前沒有語音時間紀錄")
+            return
+
+        embed = BotEmbed.general("語音時間排行榜", icon_url=ctx.guild.icon.url if ctx.guild.icon else None)
+        description_lines = []
+        for idx, record in enumerate(leaderboard, start=1):
+            user = self.bot.get_user(record.discord_id)
+            user_name = user.name if user else f"未知用戶({record.discord_id})"
+            description_lines.append(f"**{idx}. {user_name}** - {record.total_minute}")
+
+        embed.description = "\n".join(description_lines)
+        await ctx.respond(embed=embed)
+
+
 def setup(bot):
     bot.add_cog(system_user(bot))
