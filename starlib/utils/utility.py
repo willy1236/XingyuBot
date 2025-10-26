@@ -118,11 +118,16 @@ class BotEmbed:
 
 class ChoiceList():
     @staticmethod
-    def set(option_name):
+    def set(option_name: str):
         return [
             discord.OptionChoice(name=name_loc.get("en-US", name_loc.get("zh-TW")), value=value, name_localizations=name_loc)
             for value, name_loc in Jsondb.options[option_name].items()
         ]
+
+    @staticmethod
+    def name(cmd_name: str):
+        return Jsondb.cmd_names[cmd_name]
+
 
 class converter():
     @staticmethod

@@ -14,7 +14,7 @@ from mcstatus import JavaServer
 from starlib import BotEmbed, Jsondb, log, sclient
 from starlib.instance import *
 from starlib.types import McssServerAction, McssServerStatues, NotifyChannelType
-from starlib.utils.utility import base64_to_buffer, converter, find_radmin_vpn_network, get_arp_list
+from starlib.utils.utility import base64_to_buffer, converter, find_radmin_vpn_network, get_arp_list, ChoiceList
 
 from ..command_options import *
 from ..extension import Cog_Extension
@@ -129,7 +129,7 @@ class BotPanel(discord.ui.View):
 
 class owner(Cog_Extension):
     twitch_chatbot = SlashCommandGroup("twitch_chatbot", "twitch機器人相關指令", guild_ids=debug_guilds)
-    mcserver = SlashCommandGroup("mcserver", "Minecraft伺服器相關指令", guild_ids=main_guilds)
+    mcserver_cmd = SlashCommandGroup("mcserver", "Minecraft伺服器相關指令", guild_ids=main_guilds, name_localizations=ChoiceList.name("mcserver"))
     permission_cmd = SlashCommandGroup("permission", "權限相關指令", guild_ids=debug_guilds)
     vip_cmd = SlashCommandGroup("vip", "VIP相關指令", guild_ids=happycamp_guild + debug_guilds)
 
@@ -353,7 +353,7 @@ class owner(Cog_Extension):
     #         else:
     #             await channel.send('👍')
 
-    @mcserver.command(description="使用rcon mc伺服器指令", guild_ids=debug_guilds)
+    @mcserver_cmd.command(description="使用rcon mc伺服器指令", guild_ids=debug_guilds)
     @commands.is_owner()
     async def rcon(self, ctx: discord.ApplicationContext, command: str):
         settings = Jsondb.config.get("mc_server")
@@ -364,7 +364,7 @@ class owner(Cog_Extension):
             response = rcon.command(command)
             await ctx.respond(response if response else "指令已發送")
 
-    @mcserver.command(description="查詢mc伺服器")
+    @mcserver_cmd.command(description="查詢mc伺服器")
     @commands.cooldown(rate=1, per=3)
     async def quary(self, ctx: discord.ApplicationContext, ip: discord.Option(str, description="伺服器ip", default=None)):
         await ctx.defer()
@@ -403,14 +403,14 @@ class owner(Cog_Extension):
         except AttributeError:
             await ctx.respond(embed=embed)
 
-    @mcserver.command(description="執行mc伺服器指令", guild_ids=debug_guilds)
+    @mcserver_cmd.command(description="執行mc伺服器指令", guild_ids=debug_guilds)
     @commands.is_owner()
     async def cmd(self, ctx: discord.ApplicationContext, server_id=mcss_server_option, command=command_option):
         await ctx.defer()
         response = mcss_api.excute_command(server_id, command)
         await ctx.respond(response if response else "指令已發送")
 
-    @mcserver.command(description="執行mc伺服器操作")
+    @mcserver_cmd.command(description="執行mc伺服器操作")
     @commands.has_guild_permissions(manage_channels=True)
     async def actions(self, ctx: discord.ApplicationContext, server_id=mcss_server_option, execute_action=mcss_action_option):
         await ctx.defer()
@@ -458,14 +458,14 @@ class owner(Cog_Extension):
                     await msg.edit("🔴伺服器已關閉")
                     break
 
-    @mcserver.command(description="開啟mc伺服器面板", name="panel")
+    @mcserver_cmd.command(description="開啟mc伺服器面板", name="panel", name_localizations=ChoiceList.name("mcserver_panel"))
     @commands.has_guild_permissions(manage_channels=True)
     async def mcserver_panel(self, ctx: discord.ApplicationContext):
         await ctx.defer()
         view = McServerPanel()
         await ctx.respond(view=view, ephemeral=True)
 
-    @mcserver.command(description="列出現在開啟的mc伺服器", guild_ids=debug_guilds)
+    @mcserver_cmd.command(description="列出現在開啟的mc伺服器", guild_ids=debug_guilds)
     async def list(self, ctx: discord.ApplicationContext):
         await ctx.defer()
         arp_lst = get_arp_list()

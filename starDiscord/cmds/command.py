@@ -14,7 +14,7 @@ from discord.utils import format_dt
 from starlib import BotEmbed, ChoiceList, log, sclient, tz
 from starlib.dataExtractor import XingyuGoogleCloud
 from starlib.instance import *
-from starlib.models.mysql import DiscordUser, Giveaway
+from starlib.models.mysql import Giveaway
 from starlib.types import Coins
 from starlib.utils import converter, create_only_role_list, create_role_magification_dict, find, random_color
 
@@ -419,7 +419,7 @@ class command(Cog_Extension):
         result = random.choices(args, k=times)
         await ctx.respond(f"我選擇：{', '.join(result)}")
 
-    @choice_cmd.command(description="抽取頻道內的使用者")
+    @choice_cmd.command(description="抽取頻道內的使用者", name_localizations=ChoiceList.name("choice_channel"))
     async def channel(
         self,
         ctx: discord.ApplicationContext,

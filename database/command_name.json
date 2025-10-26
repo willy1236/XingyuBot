@@ -1,0 +1,14 @@
+{
+    "choice_channel": {
+        "en-US": "channel",
+        "zh-TW": "頻道"
+    },
+    "mcserver": {
+        "en-US": "mcserver",
+        "zh-TW": "麥塊伺服器"
+    },
+    "mcserver_panel": {
+        "en-US": "panel",
+        "zh-TW": "面板"
+    }
+}

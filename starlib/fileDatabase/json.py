@@ -69,7 +69,8 @@ class JsonDatabase():
         lol_jdict: dict
         jdict: dict
         picdata: dict
-        options: dict
+        options: dict[str, dict[str, str]]
+        cmd_names: dict[str, dict[str, str]]
 
         config: JsonConfig
 
@@ -78,6 +79,7 @@ class JsonDatabase():
         "jdict",
         "picdata",
         "options",
+        "cmd_names",
         "config",
     ]
 
