@@ -111,7 +111,7 @@ class system_user(Cog_Extension):
         description_lines = []
         for idx, record in enumerate(leaderboard, start=1):
             user = self.bot.get_user(record.discord_id)
-            user_name = user.name if user else f"未知用戶({record.discord_id})"
+            user_name = user.mention if user else f"未知用戶({record.discord_id})"
             description_lines.append(f"**{idx}. {user_name}** - {record.total_minute}")
 
         embed.description = "\n".join(description_lines)
