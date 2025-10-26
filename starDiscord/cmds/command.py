@@ -5,6 +5,7 @@ import re
 from datetime import date, datetime, timedelta
 
 import discord
+import numpy as np
 from discord.commands import OptionChoice, SlashCommandGroup
 from discord.errors import Forbidden, NotFound
 from discord.ext import commands, pages
@@ -39,6 +40,7 @@ class command(Cog_Extension):
     giveaway = SlashCommandGroup("giveaway", "抽獎相關指令")
     register = SlashCommandGroup("register", "註冊相關指令")
     date_cmd = SlashCommandGroup("date", "日期相關指令")
+    choice_cmd = SlashCommandGroup("choice", "選擇相關指令")
 
     @role.command(description="查詢加身分組的數量")
     async def count(
@@ -406,8 +408,8 @@ class command(Cog_Extension):
     def Autocomplete(ctx: discord.AutocompleteContext):
         return ["test"]
 
-    @commands.slash_command(description="讓機器人選擇一樣東西")
-    async def choice(
+    @choice_cmd.command(description="讓機器人選擇一樣東西")
+    async def item(
         self,
         ctx,
         args_str: discord.Option(str, name="選項", description="多個選項請用空格隔開"),
@@ -416,6 +418,43 @@ class command(Cog_Extension):
         args: list[str] = args_str.split()
         result = random.choices(args, k=times)
         await ctx.respond(f"我選擇：{', '.join(result)}")
+
+    @choice_cmd.command(description="抽取頻道內的使用者")
+    async def channel(
+        self,
+        ctx: discord.ApplicationContext,
+        channel: discord.Option(discord.VoiceChannel, name="頻道", description="要抽取的頻道，預設為目前頻道", default=None),
+        times: discord.Option(int, name="要抽取的人數", description="預設為頻道人數（不含機器人），可輸入1以上的數字", default=0, min_value=1),
+        duplicate: discord.Option(bool, name="是否允許抽到重複的人", description="預設為false", default=False),
+    ):
+        if not channel:
+            channel = ctx.channel
+            if not isinstance(channel, discord.VoiceChannel):
+                await ctx.respond("錯誤：請指定一個語音頻道或在語音頻道內使用此指令", ephemeral=True)
+                return
+
+        members = [member for member in channel.members if not member.bot]
+        if times == 0:
+            times = len(members)
+
+        if not members:
+            await ctx.respond("錯誤：此頻道沒有成員", ephemeral=True)
+            return
+
+        if not duplicate and times > len(members):
+            await ctx.respond("錯誤：抽取人數超過頻道成員數，請啟用允許重複抽取或降低抽取人數", ephemeral=True)
+            return
+
+        members_array = np.array(members)
+        indices = np.random.choice(len(members_array), size=times, replace=duplicate)
+        result = members_array[indices].tolist()
+
+        embed = BotEmbed.simple(
+            title="抽取結果",
+            description=f"從頻道 {channel.mention} 抽取了 {times} 人{'（允許重複）' if duplicate else ''}\n{'\n'.join([f'{i + 1}. {member.mention}' for i, member in enumerate(result)])}",
+        )
+
+        await ctx.respond(embed=embed)
 
     @poll.command(name="create", description="創建投票")
     async def create_poll(
