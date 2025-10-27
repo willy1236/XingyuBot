@@ -562,7 +562,9 @@ class CLIInterface():
 
         results = RettiwtTweetTimeLineResponse(**data)
         if after:
-            results.list = [i for i in results.list if i.createdAt > after]
+            results.list = [i for i in results.list if i.createdAt > after and i.tweetBy.id == user_id]
+        else:
+            results.list = [i for i in results.list if i.tweetBy.id == user_id]
         return results
 
     def get_user_details(self, user_id_or_name: str) -> RettiwtTweetUser | None:
