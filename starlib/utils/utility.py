@@ -126,6 +126,7 @@ class ChoiceList():
 
     @staticmethod
     def name(cmd_name: str):
+        """name_localizations 格式化"""
         return Jsondb.cmd_names[cmd_name]
 
 

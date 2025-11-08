@@ -28,12 +28,12 @@ ban_delete_message_seconds = [
 ]
 
 class moderation(Cog_Extension):
-    warning = SlashCommandGroup("warning", "警告相關指令")
-    channel_notify = SlashCommandGroup("channel", "自動通知相關指令")
-    react_role = SlashCommandGroup("reactrole", "反應身分組相關指令")
-    ticket_cmd = SlashCommandGroup("ticket", "私人頻道相關指令")
+    warning_cmd = SlashCommandGroup("warning", "警告相關指令", name_localizations=ChoiceList.name("warning"))
+    channel_cmd = SlashCommandGroup("channel", "自動通知相關指令", name_localizations=ChoiceList.name("channel"))
+    reactrole_cmd = SlashCommandGroup("reactrole", "反應身分組相關指令", name_localizations=ChoiceList.name("reactrole"))
+    ticket_cmd = SlashCommandGroup("ticket", "私人頻道相關指令", name_localizations=ChoiceList.name("ticket"))
 
-    @commands.slash_command(description="清理大量訊息")
+    @commands.slash_command(description="清理大量訊息", name_localizations=ChoiceList.name("clean"))
     @commands.has_permissions(manage_messages=True)
     @commands.bot_has_guild_permissions(manage_messages=True)
     @commands.guild_only()
@@ -59,7 +59,7 @@ class moderation(Cog_Extension):
         else:
             await ctx.respond(content=f"沒有提供任何資訊，所以沒有清除任何內容", delete_after=5)
 
-    @channel_notify.command(description="設定通知頻道，讓機器人發送通知")
+    @channel_cmd.command(description="設定通知頻道，讓機器人發送通知", name_localizations=ChoiceList.name("channel_set"))
     @commands.has_permissions(manage_channels=True)
     @commands.guild_only()
     async def set(
@@ -88,7 +88,11 @@ class moderation(Cog_Extension):
             sclient.sqldb.remove_notify_channel(guildid, notify_type)
             await ctx.respond(f"設定完成，已移除 {Jsondb.get_tw(notify_type, 'channel_set_option')} 頻道")
 
-    @channel_notify.command(description="設定動態語音大廳頻道，當有人進入時會自動建立新的語音頻道，並在沒人時自動刪除")
+    @channel_cmd.command(
+        name="voice",
+        description="設定動態語音大廳頻道，當有人進入時會自動建立新的語音頻道，並在沒人時自動刪除",
+        name_localizations=ChoiceList.name("channel_voice"),
+    )
     @commands.has_permissions(manage_channels=True)
     @commands.guild_only()
     async def voice(
@@ -125,10 +129,10 @@ class moderation(Cog_Extension):
             sclient.sqldb.remove_dynamic_voice_lobby(ctx.guild.id)
             await ctx.respond(f"設定完成，已移除 動態語音大廳 頻道")
 
-    @channel_notify.command(name="list", description="查看所有通知設定的頻道")
+    @channel_cmd.command(name="list", description="查看所有通知設定的頻道", name_localizations=ChoiceList.name("channel_list"))
     @commands.has_permissions(manage_channels=True)
     @commands.guild_only()
-    async def list_notify_channel(self, ctx: discord.ApplicationContext):
+    async def channel_list(self, ctx: discord.ApplicationContext):
         dbdata = sclient.sqldb.get_notify_channel_all(ctx.guild.id)
         embed = BotEmbed.general("通知頻道", ctx.guild.icon.url if ctx.guild.icon else None)
         for data in dbdata:
@@ -147,10 +151,10 @@ class moderation(Cog_Extension):
             embed.add_field(name=Jsondb.get_tw(notify_type, "channel_set_option"), value=text)
         await ctx.respond(embed=embed)
 
-    @warning.command(name="add", description="給予使用者警告，此警告可選擇連動至其他群組")
+    @warning_cmd.command(name="add", description="給予使用者警告，此警告可選擇連動至其他群組", name_localizations=ChoiceList.name("warning_add"))
     @commands.has_guild_permissions(manage_messages=True)
     @commands.guild_only()
-    async def add_notify_channel(
+    async def warning_add(
         self,
         ctx: discord.ApplicationContext,
         user: discord.Option(discord.User, name="用戶", description="要給予警告的用戶", required=True),
@@ -176,7 +180,7 @@ class moderation(Cog_Extension):
 
         await ctx.respond(user.mention, embed=embed, allowed_mentions=discord.AllowedMentions(users=True))
 
-    @warning.command(description="獲取使用者的所有警告")
+    @warning_cmd.command(name="list", description="獲取使用者的所有警告", name_localizations=ChoiceList.name("warning_list"))
     @commands.guild_only()
     async def list(
         self,
@@ -187,7 +191,7 @@ class moderation(Cog_Extension):
         dbdata = sclient.sqldb.get_warnings(user.id, ctx.guild.id if guild_only else None)
         await ctx.respond(embed=dbdata.display(self.bot, user))
 
-    @warning.command(description="查詢指定警告的資訊")
+    @warning_cmd.command(name="get", description="查詢指定警告的資訊", name_localizations=ChoiceList.name("warning_get"))
     @commands.guild_only()
     async def get(self, ctx: discord.ApplicationContext, warning_id: discord.Option(str, name="警告編號", description="要查詢的警告", required=True)):
         sheet = sclient.sqldb.get_warning(int(warning_id))
@@ -196,14 +200,14 @@ class moderation(Cog_Extension):
         else:
             await ctx.respond("查無此警告單")
 
-    @warning.command(name="remove", description="移除使用的指定警告")
+    @warning_cmd.command(name="remove", description="移除使用的指定警告", name_localizations=ChoiceList.name("warning_remove"))
     @commands.check_any(
         commands.has_guild_permissions(kick_members=True),
         commands.has_guild_permissions(ban_members=True),
         commands.has_guild_permissions(manage_messages=True),
     )
     @commands.guild_only()
-    async def remove_warning(
+    async def warning_remove(
         self, ctx: discord.ApplicationContext, warning_id: discord.Option(str, name="警告編號", description="要移除的警告", required=True)
     ):
         dbdata = sclient.sqldb.get_warning(int(warning_id))
@@ -309,7 +313,7 @@ class moderation(Cog_Extension):
         embed.timestamp = create_time
         await ctx.respond(embed=embed)
 
-    @react_role.command(description="編輯反應身分組訊息的文字")
+    @reactrole_cmd.command(description="編輯反應身分組訊息的文字", name_localizations=ChoiceList.name("reactrole_editmessage"))
     @commands.has_permissions(manage_roles=True)
     @commands.guild_only()
     async def editmessage(
@@ -332,7 +336,7 @@ class moderation(Cog_Extension):
         await message.edit(content=content)
         await ctx.respond("編輯完成", ephemeral=True)
 
-    @react_role.command(description="新增反應身分組")
+    @reactrole_cmd.command(description="新增反應身分組", name_localizations=ChoiceList.name("reactrole_add"))
     @commands.has_permissions(manage_roles=True)
     @commands.bot_has_permissions(manage_roles=True)
     @commands.guild_only()
@@ -368,7 +372,7 @@ class moderation(Cog_Extension):
 
         await ctx.respond(f"已新增 {title} 給 {role.mention}", ephemeral=True)
 
-    @react_role.command(description="移除反應身分組")
+    @reactrole_cmd.command(description="移除反應身分組", name_localizations=ChoiceList.name("reactrole_remove"))
     @commands.has_permissions(manage_roles=True)
     @commands.guild_only()
     async def remove(
@@ -414,7 +418,7 @@ class moderation(Cog_Extension):
         await channel.send(embed=embed)
         await ctx.respond("規則創建完成", ephemeral=True)
 
-    @ticket_cmd.command(name="setup", description="初始化私人頻道系統")
+    @ticket_cmd.command(name="setup", description="初始化私人頻道系統", name_localizations=ChoiceList.name("ticket_setup"))
     @commands.has_permissions(manage_channels=True)
     @commands.guild_only()
     async def ticket_setup(
