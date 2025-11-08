@@ -304,17 +304,20 @@ class YoutubePush:
         pass
 
     def add_push(self, channel_id: str, callback_url: str, secret: str = None):
-        data = {
-            "hub.callback": callback_url,
-            "hub.topic": f"https://www.youtube.com/xml/feeds/videos.xml?channel_id={channel_id}",
-            "hub.verify": "sync",
-            "hub.mode": "subscribe",
-            "hub.verify_token": None,
-            "hub.secret": secret,
-            "hub.lease_numbers": None,
-        }
-        r = requests.post("https://pubsubhubbub.appspot.com/subscribe", data=data)
-        r.raise_for_status()
+        try:
+            data = {
+                "hub.callback": callback_url,
+                "hub.topic": f"https://www.youtube.com/xml/feeds/videos.xml?channel_id={channel_id}",
+                "hub.verify": "sync",
+                "hub.mode": "subscribe",
+                "hub.verify_token": None,
+                "hub.secret": secret,
+                "hub.lease_numbers": None,
+            }
+            r = requests.post("https://pubsubhubbub.appspot.com/subscribe", data=data)
+            r.raise_for_status()
+        except Exception as e:
+            log.exception("Args: %a %s %s", channel_id, callback_url, secret)
 
     def get_push(self, channel_id: str, callback_url: str, secret: str = None):
         params = {"hub.callback": callback_url, "hub.topic": f"https://www.youtube.com/xml/feeds/videos.xml?channel_id={channel_id}", "hub.secret": secret}
