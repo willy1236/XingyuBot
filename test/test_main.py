@@ -24,15 +24,15 @@ from starlib.types import *
 if __name__ == "__main__":
     pass
 
-# cwa_api = CWA_API()
-# weather = cwa_api.get_weather_data()[0]
-# text = f"現在天氣： {weather.WeatherElement.Weather if weather.WeatherElement.Weather != '-99' else '--'}/{weather.WeatherElement.AirTemperature}°C"
-# if weather.WeatherElement.AirTemperature == weather.WeatherElement.DailyExtreme.DailyHigh.AirTemperature:
-#     text += f" （最高溫）"
-# elif weather.WeatherElement.AirTemperature == weather.WeatherElement.DailyExtreme.DailyLow.AirTemperature:
-#     text += f" （最低溫）"
-# print(text, weather.WeatherElement.DailyExtreme.DailyHigh.AirTemperature, weather.WeatherElement.DailyExtreme.DailyLow.AirTemperature)
-# print(weather.model_dump())
+    # cwa_api = CWA_API()
+    # weather_data = cwa_api.get_weather_data()[0]
+    # text = f"現在天氣： {weather_data.WeatherElement.Weather if weather_data.WeatherElement.Weather != '-99' else '--'}/{weather_data.WeatherElement.AirTemperature}°C"
+    # if weather_data.WeatherElement.AirTemperature == weather_data.WeatherElement.DailyExtreme.DailyHigh.AirTemperature:
+    #     text += f" （最高溫）"
+    # elif weather_data.WeatherElement.AirTemperature == weather_data.WeatherElement.DailyExtreme.DailyLow.AirTemperature:
+    #     text += f" （最低溫）"
+    # print(text, weather_data.WeatherElement.DailyExtreme.DailyHigh.AirTemperature, weather_data.WeatherElement.DailyExtreme.DailyLow.AirTemperature)
+    # print(weather_data.model_dump())
 
 
 # import nmap

@@ -59,6 +59,7 @@ class task(Cog_Extension):
                 # 將超過28天的抽獎自動關閉
                 giveaway.is_on = False
                 sclient.sqldb.merge(giveaway)
+                log.debug("Ended giveaway: %s", giveaway.id)
             else:
                 view = GiveawayView(giveaway, sqldb=sclient.sqldb, bot=self.bot)
                 self.bot.add_view(view)
@@ -66,8 +67,8 @@ class task(Cog_Extension):
                     job = scheduler.add_job(
                         giveaway_auto_end, DateTrigger(giveaway.end_at if giveaway.end_at > now else now + timedelta(seconds=10)), args=[self.bot, view]
                     )
-                    print(f"job: {job}")
-                log.debug(f"Loaded giveaway: {giveaway.id}")
+                    log.debug("job added: %s", job)
+                log.debug("Loaded giveaway: %s", giveaway.id)
         else:
             pass
 
@@ -83,7 +84,7 @@ class task(Cog_Extension):
             log.warning("earthquake_check timeout.")
             return
         except Exception as e:
-            log.error(f"earthquake_check error: {e}")
+            log.error("earthquake_check error: %s", exc_info=True)
             return
 
         if not earthquake_records:
@@ -443,7 +444,7 @@ async def youtube_start_live_notify(bot: DiscordBot, video: YoutubeVideo):
 
 
 async def giveaway_auto_end(bot: discord.Bot, view: GiveawayView):
-    log.debug(f"giveaway_auto_end: {view.giveaway.id}")
+    log.debug("giveaway_auto_end: id=%s", view.giveaway.id)
     if view.is_finished():
         return
 
@@ -453,7 +454,7 @@ async def giveaway_auto_end(bot: discord.Bot, view: GiveawayView):
         message = await channel.fetch_message(view.giveaway.message_id)
         await message.edit(embed=embed, view=view)
     except discord.NotFound:
-        log.warning(f"giveaway_auto_end: message not found {view.giveaway.message_id}")
+        log.warning("giveaway_auto_end: message %s not found", view.giveaway.message_id)
         return
 
 async def refresh_ip_last_seen():

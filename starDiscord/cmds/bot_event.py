@@ -86,13 +86,14 @@ class event(Cog_Extension):
                 # 將超過28天的投票自動關閉
                 poll.end_at = now
                 sclient.sqldb.merge(poll)
+                log.debug("Ended poll: %s", poll.poll_id)
             else:
                 bot.add_view(PollView(poll, sqldb=sclient.sqldb, bot=bot), message_id=poll.message_id)
-                log.debug(f"Loaded poll: {poll.poll_id}")
+                log.debug("Loaded poll: %s", poll.poll_id)
 
         # 反應身分組
         for react_message in sclient.sqldb.get_reaction_role_message_all():
-            log.debug(f"Loading reaction role message: {react_message.message_id}")
+            log.debug("Loading reaction role message: %s", react_message.message_id)
             channel = bot.get_channel(react_message.channel_id)
             if channel:
                 assert isinstance(channel, discord.abc.Messageable)
@@ -107,11 +108,10 @@ class event(Cog_Extension):
             if message:
                 react_roles = sclient.sqldb.get_reaction_roles_by_message(react_message.message_id)
                 bot.add_view(ReactionRoleView(react_message.message_id, react_roles), message_id=react_message.message_id)
-                log.debug(f"Loaded reaction role message: {react_message.message_id}")
+                log.debug("Loaded reaction role message: %s", react_message.message_id)
             elif not debug_mode:
                 sclient.sqldb.delete_reaction_role_message(react_message.message_id)
-                log.debug(f"Deleted reaction role message: {react_message.message_id}")
-
+                log.debug("Deleted reaction role message: %s", react_message.message_id)
         # 動態語音
         dynamic_voice_ids = sclient.sqldb.get_all_dynamic_voice()
         if dynamic_voice_ids:
@@ -124,13 +124,13 @@ class event(Cog_Extension):
                     await channel.delete(reason="動態語音：移除")
                     removed_ids.append(id)
 
-            log.warning("Dynamic voice channel %s not found", removed_ids)
+            log.warning("Dynamic voice channels not found and deleted: %s", removed_ids)
             sclient.sqldb.batch_remove_dynamic_voice(removed_ids)
 
         # 私人頻道大廳
         ticket_lobbys = sclient.sqldb.get_all_ticket_lobbys()
         for lobby in ticket_lobbys:
-            log.debug(f"Loading ticket lobby: {lobby.channel_id}")
+            log.debug("Loading ticket lobby: %s", lobby.channel_id)
             channel = bot.get_channel(lobby.channel_id)
             if channel:
                 assert isinstance(channel, discord.abc.Messageable)
@@ -144,10 +144,10 @@ class event(Cog_Extension):
 
             if message:
                 bot.add_view(TicketLobbyView(channel.id), message_id=lobby.message_id)
-                log.debug(f"Loaded ticket lobby: {lobby.channel_id}")
+                log.debug("Loaded ticket lobby: %s", lobby.channel_id)
             elif not debug_mode:
                 sclient.sqldb.delete_ticket_lobby(lobby.channel_id)
-                log.debug(f"Deleted ticket lobby: {lobby.channel_id}")
+                log.debug("Deleted ticket lobby: %s", lobby.channel_id)
 
         # 私人頻道
         active_tickets = sclient.sqldb.get_active_ticket_channels()

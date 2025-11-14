@@ -158,12 +158,12 @@ class GustInfo(BaseModel):
     Occurred_at: dict | None
 
 class TemperatureInfo(BaseModel):
-    AirTemperature: float = None
-    Occurred_at: ObsTime = None
+    AirTemperature: float | None = None
+    Occurred_at: ObsTime | None = None
 
 class DailyExtreme(BaseModel):
-    DailyHigh: TemperatureInfo = None
-    DailyLow: TemperatureInfo = None
+    DailyHigh: TemperatureInfo
+    DailyLow: TemperatureInfo
 
 class WeatherElement(BaseModel):
     Weather: str
