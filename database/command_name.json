@@ -9,7 +9,7 @@
     },
     "choice_channel": {
         "en-US": "channel",
-        "zh-TW": "頻道"
+        "zh-TW": "頻道抽選"
     },
     "mcserver": {
         "en-US": "mcserver",
@@ -84,8 +84,7 @@
         "zh-TW": "初始化"
     },
     "twitch": {
-        "en-US": "twitch",
-        "zh-TW": "twitch"
+        "en-US": "twitch"
     },
     "twitch_set": {
         "en-US": "set",
@@ -108,8 +107,7 @@
         "zh-TW": "使用者資訊"
     },
     "youtube": {
-        "en-US": "youtube",
-        "zh-TW": "youtube"
+        "en-US": "youtube"
     },
     "youtube_channel": {
         "en-US": "channel",
@@ -133,7 +131,7 @@
     },
     "twitter": {
         "en-US": "twitter",
-        "zh-TW": "twitter"
+        "zh-TW": "twitter推特"
     },
     "twitter_set": {
         "en-US": "set",
@@ -158,5 +156,112 @@
     "twitter_tweet": {
         "en-US": "tweet",
         "zh-TW": "最新推文"
+    },
+    "game": {
+        "en-US": "game",
+        "zh-TW": "遊戲資料"
+    },
+    "game_set": {
+        "en-US": "set",
+        "zh-TW": "設定帳號"
+    },
+    "game_player": {
+        "en-US": "player",
+        "zh-TW": "查詢玩家"
+    },
+    "game_radmin": {
+        "en-US": "radmin",
+        "zh-TW": "註冊radmin"
+    },
+    "game_zerotier": {
+        "en-US": "zerotier",
+        "zh-TW": "註冊zerotier"
+    },
+    "lol": {
+        "en-US": "lol",
+        "zh-TW": "英雄聯盟"
+    },
+    "lol_riot": {
+        "en-US": "riot",
+        "zh-TW": "riot帳號"
+    },
+    "lol_user": {
+        "en-US": "user",
+        "zh-TW": "玩家資訊"
+    },
+    "lol_match": {
+        "en-US": "match",
+        "zh-TW": "對戰資料"
+    },
+    "lol_playermatch": {
+        "en-US": "playermatch",
+        "zh-TW": "最近對戰"
+    },
+    "lol_masteries": {
+        "en-US": "masteries",
+        "zh-TW": "專精英雄"
+    },
+    "lol_rank": {
+        "en-US": "rank",
+        "zh-TW": "積分對戰"
+    },
+    "lol_recentmatches": {
+        "en-US": "recentmatches",
+        "zh-TW": "最近對戰"
+    },
+    "lol_activematches": {
+        "en-US": "activematches",
+        "zh-TW": "正在對戰"
+    },
+    "lol_recentplayer": {
+        "en-US": "recentplayer",
+        "zh-TW": "近期玩家"
+    },
+    "lol_progame": {
+        "en-US": "progame",
+        "zh-TW": "職業比賽"
+    },
+    "lol_setyearly": {
+        "en-US": "setyearly",
+        "zh-TW": "建立年度戰績資料"
+    },
+    "lol_yearly": {
+        "en-US": "yearly",
+        "zh-TW": "年度戰績資料"
+    },
+    "osu": {
+        "en-US": "osu"
+    },
+    "osu_user": {
+        "en-US": "user",
+        "zh-TW": "使用者資訊"
+    },
+    "osu_map": {
+        "en-US": "map",
+        "zh-TW": "圖譜資料"
+    },
+    "apex": {
+        "en-US": "apex",
+        "zh-TW": "apex英雄"
+    },
+    "apex_user": {
+        "en-US": "user"
+    },
+    "apex_map": {
+        "en-US": "map",
+        "zh-TW": "地圖資訊"
+    },
+    "dbd": {
+        "en-US": "dbd",
+        "zh-TW": "黎明死線dbd"
+    },
+    "dbd_user": {
+        "en-US": "user"
+    },
+    "steam": {
+        "en-US": "steam"
+    },
+    "steam_user": {
+        "en-US": "user"
     }
 }
