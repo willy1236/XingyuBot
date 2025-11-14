@@ -32,7 +32,7 @@ class task(Cog_Extension):
             scheduler.add_job(self.forecast_update, "cron", hour="0/3", minute=0, second=1, jitter=30, misfire_grace_time=60)
             scheduler.add_job(self.weather_check, "cron", minute="20,35", second=30, jitter=30, misfire_grace_time=60)
             scheduler.add_job(self.apex_map_rotation, "cron", minute="0/15", second=10, jitter=30, misfire_grace_time=60)
-            scheduler.add_job(refresh_yt_push, "cron", hour="2/3", minute=0, second=0, jitter=30, misfire_grace_time=40)
+            scheduler.add_job(refresh_yt_push, "cron", hour="2/12", minute=0, second=0, jitter=30, misfire_grace_time=40)
             scheduler.add_job(refresh_ip_last_seen, "cron", minute="0/20", second=0, jitter=30, misfire_grace_time=40)
             scheduler.add_job(self.add_voice_time, "cron", minute="*/1", second=30, jitter=15, misfire_grace_time=20)
             scheduler.add_job(self.save_voice_time, "cron", hour="0/1", minute="0/30", second=0, jitter=30, misfire_grace_time=60)
