@@ -459,7 +459,7 @@ class NotionAPI():
             "Content-Type": "application/json"
         }
 
-    def get_page(self,page_id:str):
+    def get_page(self, page_id: str):
         r = requests.get(f"{self.url}/pages/{page_id}",headers=self.headers)
         apidata = r.json()
         if r.ok:
@@ -467,7 +467,7 @@ class NotionAPI():
         else:
             return apidata["message"]
 
-    def get_page_property(self,page_id:str,property_id:str):
+    def get_page_property(self, page_id: str, property_id: str):
         r = requests.get(f"{self.url}/pages/{page_id}/properties/{property_id}",headers=self.headers)
         apidata = r.json()
         if r.status_code == 200:
@@ -475,7 +475,27 @@ class NotionAPI():
         else:
             print(apidata["message"])
 
-    def get_block(self,block_id:str):
+    def add_page(self, data: dict, database_id: str | None = None):
+        """新增Notion資料庫項目"""
+        if database_id is not None:
+            data["parent"] = {"database_id": database_id}
+        r = requests.post(f"{self.url}/pages", json=data, headers=self.headers)
+        apidata = r.json()
+        if r.ok:
+            return NotionPage(**apidata)
+        else:
+            return apidata["message"]
+
+    def update_page(self, page_id: str, data: dict):
+        """更新Notion頁面"""
+        r = requests.patch(f"{self.url}/pages/{page_id}", json=data, headers=self.headers)
+        apidata = r.json()
+        if r.ok:
+            return NotionPage(**apidata)
+        else:
+            return apidata["message"]
+
+    def get_block(self, block_id: str):
         r = requests.get(f"{self.url}/blocks/{block_id}",headers=self.headers)
         apidata = r.json()
         if r.status_code == 200:
@@ -483,11 +503,32 @@ class NotionAPI():
         else:
             return apidata["message"]
 
-    def get_block_children(self,block_id:str):
-        r = requests.get(f"{self.url}/blocks/{block_id}/children",headers=self.headers)
+    def get_block_children(self, block_or_page_id: str):
+        r = requests.get(f"{self.url}/blocks/{block_or_page_id}/children", headers=self.headers)
         apidata = r.json()
         if r.status_code == 200:
             return NotionQueryResponse(**apidata)
+        else:
+            return apidata["message"]
+
+    def update_block(self, block_id: str, data: dict):
+        """更新Notion區塊內容"""
+        r = requests.patch(f"{self.url}/blocks/{block_id}", json=data, headers=self.headers)
+        apidata = r.json()
+        if r.ok:
+            if apidata["object"] == "list":
+                return [NotionBlock(**i) for i in apidata["results"]]
+            else:
+                return NotionBlock(**apidata)
+        else:
+            return apidata["message"]
+
+    def delete_block(self, block_or_page_id: str):
+        """刪除Notion區塊或頁面"""
+        r = requests.delete(f"{self.url}/blocks/{block_or_page_id}", headers=self.headers)
+        apidata = r.json()
+        if r.ok:
+            return NotionBlock(**apidata)
         else:
             return apidata["message"]
 
@@ -514,6 +555,40 @@ class NotionAPI():
             return NotionDatabase(**apidata)
         else:
             return apidata["message"]
+
+    def add_page_title_content(self, title: str, content: str, database_id: str):
+        """新增Notion資料庫項目，僅設定標題與內容"""
+        data = {
+            "parent": {"database_id": database_id},
+            "properties": {
+                "名稱": NotionPropertyValue(
+                    id="title", type="title", title=[NotionRichText(type="text", text=NotionRichTextContent(content=title), plain_text=title)]
+                ).model_dump(exclude_none=True)
+            },
+            "children": [
+                {
+                    "object": "block",
+                    "type": "paragraph",
+                    "paragraph": {"rich_text": [NotionRichText(type="text", text=NotionRichTextContent(content=content)).model_dump(exclude_none=True)]},
+                }
+            ],
+        }
+
+        r = requests.post(f"{self.url}/pages", json=data, headers=self.headers)
+        apidata = r.json()
+        if r.ok:
+            return NotionPage(**apidata)
+        else:
+            return apidata["message"]
+
+    def update_page_content(self, page_id: str, content: str):
+        """更新Notion頁面內容"""
+        data = {
+            "paragraph": {"rich_text": [NotionRichText(type="text", text=NotionRichTextContent(content=content)).model_dump(exclude_none=True)]},
+        }
+        blocks = self.get_block_children(page_id)
+        return self.update_block(blocks.results[0].id, data)
+
 
 class RssHub():
     def __init__(self):

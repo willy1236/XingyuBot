@@ -647,7 +647,7 @@ class NotionRichText(BaseModel):
     mention: dict | None = None
     equation: dict | None = None
     annotations: NotionRichTextAnnotations | None = None
-    plain_text: str
+    plain_text: str | None = None
     href: str | None = None
     link: str | None = None
 
