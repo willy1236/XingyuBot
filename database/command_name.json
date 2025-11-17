@@ -263,5 +263,29 @@
     },
     "steam_user": {
         "en-US": "user"
+    },
+    "about": {
+        "en-US": "about",
+        "zh-TW": "關於機器人"
+    },
+    "info": {
+        "en-US": "info",
+        "zh-TW": "資訊"
+    },
+    "help": {
+        "en-US": "help",
+        "zh-TW": "幫助"
+    },
+    "timeout": {
+        "en-US": "timeout",
+        "zh-TW": "禁言"
+    },
+    "kick": {
+        "en-US": "kick",
+        "zh-TW": "踢出"
+    },
+    "ban": {
+        "en-US": "ban",
+        "zh-TW": "停權"
     }
 }

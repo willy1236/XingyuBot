@@ -214,7 +214,6 @@ model = GoogleModel(model_name="gemini-2.0-flash", provider=provider)
 agent = Agent(
     model,
     tools=[fn for _, fn in inspect.getmembers(Tools, predicate=inspect.isfunction)] + [duckduckgo_search_tool()],
-    # tools=[fn for _, fn in inspect.getmembers(Tools, predicate=inspect.isfunction)],
 )
 
 

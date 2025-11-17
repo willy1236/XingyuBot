@@ -23,16 +23,16 @@ info_data = {
 
 
 class help(Cog_Extension):
-    @commands.slash_command(description="關於機器人")
+    @commands.slash_command(description="關於機器人", name_localizations=ChoiceList.name("about"))
     async def about(self, ctx):
         await ctx.respond(embed=self.bot.about_embed())
 
-    @commands.slash_command(description="一些你可能會用到的資訊")
+    @commands.slash_command(description="一些你可能會用到的資訊", name_localizations=ChoiceList.name("info"))
     async def info(self, ctx, arg: discord.Option(str, name="選項", description="資訊名稱", choices=info_option)):
         title, text = info_data[arg].split("\n", 1)
         await ctx.respond(embed=BotEmbed.bot(self.bot, title=title, description=text))
 
-    @commands.slash_command(name="help", description="幫助指令")
+    @commands.slash_command(name="help", description="幫助指令", name_localizations=ChoiceList.name("help"))
     @commands.cooldown(rate=1,per=3)
     async def help_overview(
         self, ctx, arg: discord.Option(str, name="選項", description="指令類別（非必填）", default="help", choices=help_option, required=False)

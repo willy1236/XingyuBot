@@ -222,7 +222,7 @@ class moderation(Cog_Extension):
         else:
             await ctx.respond("查無此警告單")
 
-    @commands.slash_command(description="禁言使用者")
+    @commands.slash_command(description="禁言使用者", name_localizations=ChoiceList.name("timeout"))
     @commands.has_guild_permissions(moderate_members=True)
     @commands.bot_has_permissions(moderate_members=True)
     @commands.guild_only()
@@ -255,14 +255,14 @@ class moderation(Cog_Extension):
             embed.set_footer(text=f"編號 {warning_id}")
         await ctx.respond(user.mention, embed=embed, allowed_mentions=discord.AllowedMentions(users=True))
 
-    @commands.slash_command(description="踢除用戶")
+    @commands.slash_command(description="踢出用戶", name_localizations=ChoiceList.name("kick"))
     @commands.has_guild_permissions(kick_members=True)
     @commands.bot_has_permissions(kick_members=True)
     @commands.guild_only()
     async def kick(
         self,
         ctx: discord.ApplicationContext,
-        user: discord.Option(discord.Member, name="用戶", description="要踢除的用戶", required=True),
+        user: discord.Option(discord.Member, name="用戶", description="要踢出的用戶", required=True),
         reason: discord.Option(str, name="原因", description="限100字內", required=False),
         add_record: discord.Option(bool, name="是否要將此紀錄存入警告系統", description="將紀錄存入警告系統供其他群組檢視", default=False),
     ):
@@ -274,12 +274,12 @@ class moderation(Cog_Extension):
         if add_record and not user.bot:
             sclient.sqldb.add_warning(user.id, WarningType.Kick, moderate_user, ctx.guild.id, create_time, reason, guild_only=False)
 
-        embed = BotEmbed.general(f"{user.name} 已被踢除", user.display_avatar.url, description=f"{user.mention}：{reason}")
+        embed = BotEmbed.general(f"{user.name} 已被踢出", user.display_avatar.url, description=f"{user.mention}：{reason}")
         embed.add_field(name="執行人員", value=ctx.author.mention)
         embed.timestamp = create_time
         await ctx.respond(embed=embed)
 
-    @commands.slash_command(description="停權用戶")
+    @commands.slash_command(description="停權用戶", name_localizations=ChoiceList.name("ban"))
     @commands.has_guild_permissions(ban_members=True)
     @commands.bot_has_permissions(ban_members=True)
     @commands.guild_only()

@@ -42,7 +42,7 @@ class system_game(Cog_Extension):
     apex = SlashCommandGroup("apex", "Apex相關指令", name_localizations=ChoiceList.name("apex"))
     dbd = SlashCommandGroup("dbd", "Dead by Daylight相關指令", name_localizations=ChoiceList.name("dbd"))
     steam = SlashCommandGroup("steam", "Steam相關指令", name_localizations=ChoiceList.name("steam"))
-    hoyo = SlashCommandGroup("hoyo", "MiHaYo相關指令")
+    # hoyo = SlashCommandGroup("hoyo", "MiHaYo相關指令")
     match_cmd = SlashCommandGroup("match", "聯賽相關指令")
 
     @game.command(description="設定遊戲資料", name_localizations=ChoiceList.name("game_set"))
@@ -265,24 +265,6 @@ class system_game(Cog_Extension):
             return
         counts = df["tier"].value_counts()
         await ctx.channel.send(embed=BotEmbed.simple(title="查詢結果", description=str(counts)))
-
-        # dict = {
-        #     "RANKED_FLEX_SR": "彈性積分",
-        #     "RANKED_SOLO_5x5": "單/雙"
-        # }
-        # page = []
-        # lst = []
-        # i = 0
-        # for idx,data in df.iterrows():
-        #     lst.append(f'{data["name"]} {dict.get(data["queueType"])} {data["tier"]} {data["rank"]}')
-        #     if i % 20 == 9 or len(page) * 20 + i + 1 == len(df):
-        #         page.append(BotEmbed.simple(title="玩家 積分種類 排名",description="\n".join(lst)))
-        #         lst = []
-        #         i = 0
-        #     else:
-        #         i += 1
-        # paginator = pages.Paginator(pages=page, use_default_buttons=True)
-        # await paginator.send(ctx, target=ctx.channel)
 
     @lol.command(description="取得指定日期的League of Legends職業聯賽比賽結果", name_localizations=ChoiceList.name("lol_progame"))
     async def progame(self, ctx, match_date: discord.Option(str, name="日期", description="要查詢的日期，格式為YYYY-MM-DD", required=False)):
@@ -524,15 +506,15 @@ class system_game(Cog_Extension):
         else:
             await ctx.respond(content="查詢失敗:查無此ID", ephemeral=True)
 
-    @hoyo.command(description="如何設定cookies(需先設定才能使用其他功能)")
-    @commands.cooldown(rate=1, per=1)
-    async def help(self, ctx):
-        # embed = BotEmbed.simple(description="1.前往 https://www.hoyolab.com/ 並登入\n2.複製以下代碼```script:d=document.cookie; c=d.includes('account_id') || alert('過期或無效的Cookie,請先登出帳號再重新登入!'); c && document.write(d)```\n3.在網址列打上java後直接貼上複製的代碼\n4.找到`ltuid=`跟`ltoken=`並複製其中的內容\n5.使用指令 </hoyo set:1045323352421711947>")
+    # @hoyo.command(description="如何設定cookies(需先設定才能使用其他功能)")
+    # @commands.cooldown(rate=1, per=1)
+    # async def help(self, ctx):
+    #     embed = BotEmbed.simple(description="1.前往 https://www.hoyolab.com/ 並登入\n2.複製以下代碼```script:d=document.cookie; c=d.includes('account_id') || alert('過期或無效的Cookie,請先登出帳號再重新登入!'); c && document.write(d)```\n3.在網址列打上java後直接貼上複製的代碼\n4.找到`ltuid=`跟`ltoken=`並複製其中的內容\n5.使用指令 </hoyo set:1045323352421711947>")
 
-        # embed = BotEmbed.simple(description="1.前往 https://www.hoyolab.com/ 並登入\n2.F12->Application(應用程式)->Cookies->點開www.hoyolab.com\n3.找到`ltuid_v2`、`ltmid_v2`跟`ltoken_v2`\n4.使用指令 </hoyo set:1045323352421711947>並在彈出視窗中填入對應的資料")
-        # embed2 = BotEmbed.simple(description="擁有此cookie將可以使機器人以登入帳號的身分瀏覽與操作hoyolab的相關功能，但無法用於登入遊戲與改變遊戲中所持有的內容。\n若對此功能有疑慮，可隨時終止使用，cookie也可以隨時刪除，若使用此功能則代表您允許機器人進行上述操作，並自負相應的風險。")
-        embed = BotEmbed.deprecated()
-        await ctx.respond(embeds=[embed])
+    #     embed = BotEmbed.simple(description="1.前往 https://www.hoyolab.com/ 並登入\n2.F12->Application(應用程式)->Cookies->點開www.hoyolab.com\n3.找到`ltuid_v2`、`ltmid_v2`跟`ltoken_v2`\n4.使用指令 </hoyo set:1045323352421711947>並在彈出視窗中填入對應的資料")
+    #     embed2 = BotEmbed.simple(description="擁有此cookie將可以使機器人以登入帳號的身分瀏覽與操作hoyolab的相關功能，但無法用於登入遊戲與改變遊戲中所持有的內容。\n若對此功能有疑慮，可隨時終止使用，cookie也可以隨時刪除，若使用此功能則代表您允許機器人進行上述操作，並自負相應的風險。")
+    #     embed = BotEmbed.deprecated()
+    #     await ctx.respond(embeds=[embed])
 
     # @hoyo.command(description='設定cookies')
     # @commands.cooldown(rate=1,per=1)
