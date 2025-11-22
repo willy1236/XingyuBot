@@ -308,13 +308,14 @@ class YoutubePush:
             data = {
                 "hub.callback": callback_url,
                 "hub.topic": f"https://www.youtube.com/xml/feeds/videos.xml?channel_id={channel_id}",
-                "hub.verify": "sync",
+                "hub.verify": "async",
                 "hub.mode": "subscribe",
                 "hub.verify_token": None,
                 "hub.secret": secret,
                 "hub.lease_numbers": None,
             }
-            r = requests.post("https://pubsubhubbub.appspot.com/subscribe", data=data)
+            header = {"Content-Type": "application/x-www-form-urlencoded"}
+            r = requests.post("https://pubsubhubbub.appspot.com/subscribe", data=data, headers=header)
             r.raise_for_status()
         except Exception as e:
             log.exception("Args: %a %s %s", channel_id, callback_url, secret)

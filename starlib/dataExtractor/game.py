@@ -190,8 +190,8 @@ class OsuAPI:
 class ApexAPI():
     url = "https://api.mozambiquehe.re"
 
-    def __init__(self):
-        self.auth = sqldb.get_bot_token(APIType.ApexStatue).access_token
+    def __init__(self, auth: str | None = None):
+        self.auth = auth or sqldb.get_bot_token(APIType.ApexStatue).access_token
 
     def get_player(self, username: str, platform: str = "PC"):
         params = {"auth": self.auth, "player": username, "platform": platform}
@@ -207,12 +207,8 @@ class ApexAPI():
             "version": "2",
         }
         r = requests.get(f"{self.url}/maprotation", params=params)
-        if r.ok:
-            apidata = r.json()
-            if apidata:
-                return ApexMapRotation(**apidata)
-        else:
-            return None
+        r.raise_for_status()
+        return ApexMapRotation(**r.json())
 
     def get_raw_crafting(self) -> list | None:
         params = {"auth": self.auth}
