@@ -29,8 +29,6 @@ class RiotUser(BaseModel):
 
 
 class LOLPlayer(BaseModel):
-    id: str
-    accountId: str
     puuid: str
     profileIconId: int
     revisionDate: datetime
@@ -45,8 +43,6 @@ class LOLPlayer(BaseModel):
         embed = BotEmbed.general(name)
         embed.add_field(name="召喚師等級", value=self.summonerLevel, inline=False)
         embed.add_field(name="最後遊玩/修改資料時間", value=self.revisionDate.strftime("%Y/%m/%d %H:%M:%S"), inline=False)
-        embed.add_field(name="帳號ID", value=self.accountId, inline=False)
-        embed.add_field(name="召喚師ID", value=self.id, inline=False)
         embed.add_field(name="puuid", value=self.puuid, inline=False)
         try:
             embed.set_thumbnail(url=f"https://ddragon.leagueoflegends.com/cdn/15.10.1/img/profileicon/{self.profileIconId}.png")

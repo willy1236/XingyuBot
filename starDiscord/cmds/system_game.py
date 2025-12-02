@@ -80,9 +80,7 @@ class system_game(Cog_Extension):
             APIdata = riot_api.get_player_bypuuid(riot_user.puuid)
             if APIdata:
                 user_game.player_name = riot_user.fullname
-                user_game.player_id = APIdata.id
-                user_game.account_id = APIdata.accountId
-                user_game.other_id = APIdata.puuid
+                user_game.player_id = APIdata.puuid
             else:
                 await ctx.respond(f"錯誤:找不到此用戶", ephemeral=True)
                 return

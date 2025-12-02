@@ -29,27 +29,31 @@ class task(Cog_Extension):
     async def on_ready(self):
         scheduler = self.bot.scheduler
         if not Jsondb.config.get("debug_mode", True):
-            scheduler.add_job(self.forecast_update, "cron", hour="0/3", minute=0, second=1, jitter=30, misfire_grace_time=60)
-            scheduler.add_job(self.weather_check, "cron", minute="20,35", second=30, jitter=30, misfire_grace_time=60)
-            scheduler.add_job(self.apex_map_rotation, "cron", minute="0/15", second=10, jitter=30, misfire_grace_time=60)
-            scheduler.add_job(refresh_yt_push, "cron", hour="2/12", minute=0, second=0, jitter=30, misfire_grace_time=40)
-            scheduler.add_job(refresh_ip_last_seen, "cron", minute="0/20", second=0, jitter=30, misfire_grace_time=40)
-            scheduler.add_job(self.add_voice_time, "cron", minute="*/1", second=30, jitter=15, misfire_grace_time=20)
-            scheduler.add_job(self.save_voice_time, "cron", hour="0/1", minute="0/30", second=0, jitter=30, misfire_grace_time=60)
+            # 即時通知 - 保留misfire_grace_time
+            scheduler.add_job(self.forecast_update, "cron", hour="0/3", minute=0, second=1, misfire_grace_time=60)
+            scheduler.add_job(self.weather_check, "cron", minute="20,35", second=30, misfire_grace_time=60)
+            scheduler.add_job(self.apex_map_rotation, "cron", minute="0/15", second=10, misfire_grace_time=60)
+            scheduler.add_job(self.earthquake_check, "interval", minutes=3, misfire_grace_time=60)
+            scheduler.add_job(self.weather_warning_check, "interval", minutes=15, misfire_grace_time=120)
             # scheduler.add_job(self.typhoon_warning_check, "cron", minute="0/15", second=30, jitter=30, misfire_grace_time=40)
-
-            scheduler.add_job(self.earthquake_check, "interval", minutes=3, jitter=30, misfire_grace_time=40)
-            scheduler.add_job(self.weather_warning_check, "interval", minutes=15, jitter=30, misfire_grace_time=40)
-            scheduler.add_job(self.youtube_video, "interval", minutes=5, jitter=30, misfire_grace_time=40)
-            scheduler.add_job(self.twitch_live, "interval", minutes=4, jitter=15, misfire_grace_time=20)
-            scheduler.add_job(self.twitch_video, "interval", minutes=10, jitter=30, misfire_grace_time=40)
-            scheduler.add_job(self.twitch_clip, "interval", minutes=5, jitter=30, misfire_grace_time=40)
-            scheduler.add_job(self.notify_twitter_tweet_updates, "interval", minutes=10, jitter=30, misfire_grace_time=40)
+            # scheduler.add_job(self.youtube_video, "interval", minutes=5, jitter=30, misfire_grace_time=40)
+            scheduler.add_job(self.twitch_live, "interval", minutes=4, misfire_grace_time=20)
+            scheduler.add_job(self.twitch_video, "interval", minutes=10, misfire_grace_time=40)
+            scheduler.add_job(self.twitch_clip, "interval", minutes=5, misfire_grace_time=40)
+            scheduler.add_job(self.notify_twitter_tweet_updates, "interval", minutes=10, misfire_grace_time=40)
             # scheduler.add_job(self.get_mongodb_data,'interval',minutes=3,jitter=30,misfire_grace_time=40)
 
+            # 背景刷新 - 保留 jitter
+            scheduler.add_job(refresh_yt_push, "cron", hour="2/12", minute=0, second=0, jitter=300)
+            scheduler.add_job(refresh_ip_last_seen, "cron", minute="0/20", second=0, jitter=60)
+            scheduler.add_job(self.save_voice_time, "cron", hour="0/1", minute="0/30", second=0, jitter=60)
+
+            # 統計任務 - 保留 misfire_grace_time + max_instances
+            scheduler.add_job(self.add_voice_time, "cron", minute="*/1", second=30, misfire_grace_time=20, max_instances=1)
+
             if self.bot.user and self.bot.user.id == 589744540240314368:
-                scheduler.add_job(self.birthday_task, "cron", month=10, day=16, hour=8, minute=0, second=0, jitter=30, misfire_grace_time=60)
-                scheduler.add_job(record_users_count, "cron", args=[self.bot], hour=0, minute=0, second=0, jitter=30, misfire_grace_time=60)
+                scheduler.add_job(self.birthday_task, "cron", month=10, day=16, hour=8, minute=0, second=0, misfire_grace_time=60)
+                scheduler.add_job(record_users_count, "cron", args=[self.bot], hour=0, minute=0, second=0, jitter=240, max_instances=1)
                 # scheduler.add_job(self.new_years_eve_task, CronTrigger(month=1, day=1, hour=0, minute=0, second=0), misfire_grace_time=60)
 
         # 抽獎
@@ -84,7 +88,7 @@ class task(Cog_Extension):
             log.warning("earthquake_check timeout.")
             return
         except Exception as e:
-            log.error("earthquake_check error: %s", exc_info=True)
+            log.exception("earthquake_check error")
             return
 
         if not earthquake_records:
@@ -150,7 +154,7 @@ class task(Cog_Extension):
             if data:
                 await self.bot.edit_notify_channel(data.embeds(), NotifyChannelType.ApexRotation)
         except RequestException:
-            log.warning("連線失敗", exc_info=True)
+            log.exception("apex_map_rotation error")
 
     async def twitch_live(self):
         log.debug("twitch_live start")
