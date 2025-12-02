@@ -136,14 +136,7 @@ class OAuth2Base(ABC):
         if not self.scopes:
             return False
 
-        if isinstance(self.scopes, str):
-            scopes_list = self.scopes.split()
-        elif isinstance(self.scopes, list):
-            scopes_list = self.scopes
-        else:
-            return False
-
-        return scope_name in scopes_list
+        return scope_name in self.scopes
 
     def load_token_from_db(self, user_id):
         """
