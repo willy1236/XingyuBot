@@ -67,4 +67,4 @@ class CacheSchema(BaseSchema):
 
 class HappycampSchema(BaseSchema):
     __abstract__ = True
-    __table_args__ = {"schema": "happycamp_data"}
+    __table_args__ = {"schema": "happycamp"}
