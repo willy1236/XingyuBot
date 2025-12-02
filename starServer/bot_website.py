@@ -147,23 +147,27 @@ async def oauth_discord(request: Request):
     auth.exchange_code(code)
     auth.save_token(auth.user_id)
 
-    connections = auth.get_connections()
-    for connection in connections:
-        if connection.type == "twitch":
-            print(f"{connection.name}({connection.id})")
-            sclient.sqldb.merge(CloudUser(discord_id=auth.user_id, twitch_id=connection.id))
+    if auth.has_scope("connections"):
+        connections = auth.get_connections()
+        for connection in connections:
+            if connection.type == "twitch":
+                print(f"{connection.name}({connection.id})")
+                sclient.sqldb.merge(CloudUser(discord_id=auth.user_id, twitch_id=connection.id))
 
-    user = auth.get_me()
-    response = RedirectResponse(f"{BASE_WWW_URL}/dashboard")
+    if auth.has_scope("bot"):
+        return HTMLResponse(f"授權已完成，您現在可以關閉此頁面<br>感謝您使用星羽機器人！", 200)
+    else:
+        user = auth.get_me()
+        response = RedirectResponse(f"{BASE_WWW_URL}/dashboard")
 
-    # 產生 JWT
-    payload = {"id": user.id, "username": user.username, "avatar": user.avatar, "exp": datetime.now() + timedelta(days=7)}
-    jwt_token = jwt.encode(payload, Jsondb.config.get("jwt_secret"), algorithm="HS256")
+        # 產生 JWT
+        payload = {"id": user.id, "username": user.username, "avatar": user.avatar, "exp": datetime.now() + timedelta(days=7)}
+        jwt_token = jwt.encode(payload, Jsondb.config.get("jwt_secret"), algorithm="HS256")
 
-    # 將 JWT 寫入 Cookie
-    response.set_cookie(key="jwt", value=jwt_token, httponly=True, secure=True, samesite="lax", max_age=7 * 24 * 60 * 60, domain=f".{BASE_DOMAIN}")
+        # 將 JWT 寫入 Cookie
+        response.set_cookie(key="jwt", value=jwt_token, httponly=True, secure=True, samesite="lax", max_age=7 * 24 * 60 * 60, domain=f".{BASE_DOMAIN}")
 
-    return response
+        return response
     # return HTMLResponse(f"授權已完成，您現在可以關閉此頁面<br><br>Discord ID：{auth.user_id}")
 
 
@@ -277,6 +281,13 @@ async def to_discordauth(request: Request):
 async def to_twitchauth(request: Request):
     return RedirectResponse(
         url=f"https://id.twitch.tv/oauth2/authorize?client_id={twitch_oauth_settings.client_id}&redirect_uri={twitch_oauth_settings.redirect_uri}&response_type=code&scope=chat:read+channel:read:subscriptions+moderation:read+channel:read:redemptions+channel:manage:redemptions+channel:manage:raids+channel:read:vips+channel:bot+moderator:read:suspicious_users+channel:manage:polls+channel:manage:predictions&force_verify=true"
+    )
+
+
+@app.get("/to/discordbot")
+async def to_discordbot(request: Request):
+    return RedirectResponse(
+        url=f"https://discord.com/api/oauth2/authorize?client_id={discord_oauth_settings.client_id}&redirect_uri={discord_oauth_settings.redirect_uri}&response_type=code&scope=identify%20applications.commands.permissions.update%20bot"
     )
 
 

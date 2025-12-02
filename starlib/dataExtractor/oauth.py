@@ -129,6 +129,22 @@ class OAuth2Base(ABC):
         response.raise_for_status()
         return response.json()
 
+    def has_scope(self, scope_name: str) -> bool:
+        """
+        檢查目前的 access_token 是否擁有指定的 scope 權限。
+        """
+        if not self.scopes:
+            return False
+
+        if isinstance(self.scopes, str):
+            scopes_list = self.scopes.split()
+        elif isinstance(self.scopes, list):
+            scopes_list = self.scopes
+        else:
+            return False
+
+        return scope_name in scopes_list
+
     def load_token_from_db(self, user_id):
         """
         從資料庫取得指定使用者的OAuth token。
