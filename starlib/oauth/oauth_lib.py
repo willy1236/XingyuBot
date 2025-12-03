@@ -153,7 +153,7 @@ class OAuth2Base(ABC):
         expires_at = datetime.now(timezone.utc) + timedelta(seconds=token_data.get("expires_in", 0))
         sqldb.set_oauth(
             user_id=user_id,
-            community=self.community_type,
+            type=self.community_type,
             access_token=token_data["access_token"],  # pyright: ignore[reportTypedDictNotRequiredAccess]
             refresh_token=token_data.get("refresh_token"),
             expires_at=expires_at,
