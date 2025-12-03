@@ -158,7 +158,7 @@ async def oauth_discord(request: Request):
                 web_log.info(f"Discord connection: {connection.name}({connection.id})")
                 sclient.sqldb.merge(CloudUser(discord_id=user.id, twitch_id=connection.id))
 
-    if auth.has_scope("bot"):
+    if auth.has_scope("applications.commands"):
         return HTMLResponse(f"授權已完成，您現在可以關閉此頁面<br>感謝您使用星羽機器人！", 200)
     else:
         response = RedirectResponse(f"{BASE_WWW_URL}/dashboard")
@@ -248,13 +248,13 @@ def process_linebot_webhook(body: str, signature: str):
         web_log.error(f"處理 LINE Bot 訊息時發生錯誤: {e}")
 
 @handler.add(MessageEvent, message=TextMessageContent)
-def handle_message(event: MessageEvent):
+async def handle_message(event: MessageEvent):
     url = utils.check_url_format(event.message.text)
     if url:
         report_lines = utils.generate_url_report(event.message.text)
         report_text = "\n".join(report_lines)
         try:
-            ai_response = asyncio.run(line_agent.run(report_text))
+            ai_response = await line_agent.run(report_text)
             text = "\n".join([report_text, "", "AI 分析結果:", ai_response.output])
         except Exception as e:
             web_log.error(f"Error in AI analysis: {e}")
@@ -351,41 +351,41 @@ class WebsiteThread(BaseThread):
     def __init__(self):
         super().__init__(name="WebsiteThread")
         self.server = None
+        self.loop = None
 
     def run(self):
+        import asyncio
         import uvicorn
 
-        # 使用 pathlib 處理路徑
         cert_dir = Path(__file__).parent.parent / "database"
         certfile = cert_dir / "localhost+2.pem"
         keyfile = cert_dir / "localhost+2-key.pem"
 
-        # 確保證書目錄存在
-        cert_dir.mkdir(exist_ok=True)
+        host = Jsondb.config.get("webip", "127.0.0.1")
 
-        # 檢查證書文件是否存在
         if certfile.exists() and keyfile.exists():
-            web_log.info(f"啟動 HTTPS 服務器 (使用證書: {certfile})")
-
-            host = Jsondb.config.get("webip", "127.0.0.1")
             config = uvicorn.Config(
                 app,
                 host=host,
                 port=14000,
-                ssl_certfile=str(certfile),  # uvicorn 需要字符串路徑
+                ssl_certfile=str(certfile),
                 ssl_keyfile=str(keyfile),
             )
         else:
-            web_log.info("啟動 HTTP 服務器")
-            host = Jsondb.config.get("webip", "127.0.0.1")
             config = uvicorn.Config(app, host=host, port=14000)
 
         self.server = uvicorn.Server(config)
-        self.server.run()
+
+        # ⚠ 使用獨立 event loop，不使用 asyncio.run()
+        self.loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(self.loop)
+
+        try:
+            self.loop.run_until_complete(self.server.serve())
+        finally:
+            self.loop.close()
 
     def stop(self):
-        """停止 web 伺服器"""
-        self._stop_event.set()
         if self.server:
             self.server.should_exit = True
 

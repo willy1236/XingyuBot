@@ -160,7 +160,8 @@ class OAuth2Base(ABC):
         )
         # 更新快取的 token
         self.db_token = sqldb.get_oauth(user_id, self.community_type)
-        self.scopes = token_data.get("scope")
+        if token_data.get("scope"):
+            self.scopes = token_data.get("scope")
 
     def to_oauth_data(self) -> OAuthTokenData:
         """將資料庫中的 token 轉換為 OAuthTokenData 格式"""
