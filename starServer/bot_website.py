@@ -145,9 +145,9 @@ async def oauth_discord(request: Request):
         return HTMLResponse(f"授權失敗：{params}", 400)
 
     auth = DiscordOAuth.create_from_db(discord_oauth_settings)
-    token = await auth.exchange_code(code)
+    await auth.exchange_code(code)
     user = await auth.get_me()
-    auth.save_token_to_db(user.id, token)
+    auth.save_token_to_db(user.id)
 
     if auth.has_scope("connections"):
         connections = await auth.get_connections()

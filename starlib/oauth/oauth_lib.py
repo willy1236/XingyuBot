@@ -61,14 +61,18 @@ class OAuth2Base(ABC):
         return uri
 
     # ====== Basic functions ======
-    async def exchange_code(self, code: str) -> OAuthTokenData:
+    async def exchange_code(self, code: str, auto_load_token: bool = True) -> OAuthTokenData:
         """
         Exchange an authorization code for an OAuth token.
-        It won't save the token to the database; you need to call `save_token_to_db` yourself.
+        By default, it automatically loads the received token into
+        the current instance, but it does NOT save the token to the database - you must
+        call `save_token_to_db` separately to persist the token.
 
         Args:
             code (str): The authorization code received from the OAuth provider
                 after user authorization.
+            auto_load_token (bool): Whether to automatically load the received token
+                into the current instance. Default is True.
         Returns:
             OAuthTokenData: An object containing the OAuth token data, typically
                 including access_token, token_type, expires_in, refresh_token,
@@ -87,6 +91,11 @@ class OAuth2Base(ABC):
             code=code,
             redirect_uri=self.redirect_uri,
         )
+
+        if auto_load_token:
+            self.db_token = self.to_db_token(token)
+            self.scopes = token.get("scope")
+
         return token
 
     async def refresh(self, refresh_token: str) -> OAuthTokenData:
@@ -123,7 +132,7 @@ class OAuth2Base(ABC):
         self.db_token = token
         return token
 
-    def save_token_to_db(self, user_id: str, token_data: OAuthTokenData):
+    def save_token_to_db(self, user_id: str, token_data: OAuthTokenData | None = None):
         """
         Save OAuth token data to the database.
         It also updates the db_token and scopes attribute.
@@ -136,6 +145,11 @@ class OAuth2Base(ABC):
         Returns:
             None
         """
+        if token_data is None:
+            if not self.db_token:
+                raise Exception("No token data to save.")
+            token_data = self.to_oauth_data()
+
         expires_at = datetime.now(timezone.utc) + timedelta(seconds=token_data.get("expires_in", 0))
         sqldb.set_oauth(
             user_id=user_id,
@@ -159,3 +173,14 @@ class OAuth2Base(ABC):
             "token_type": "Bearer",
             "expires_in": int((self.db_token.expires_at - datetime.now(timezone.utc)).total_seconds()),
         }
+
+    def to_db_token(self, token_data: OAuthTokenData) -> OAuth2Token:
+        """將 OAuthTokenData 轉換為資料庫中的 OAuth2Token 格式"""
+        expires_at = datetime.now(timezone.utc) + timedelta(seconds=token_data.get("expires_in", 0))
+        return OAuth2Token(
+            user_id="",
+            community=self.community_type,
+            access_token=token_data["access_token"],  # pyright: ignore[reportTypedDictNotRequiredAccess]
+            refresh_token=token_data.get("refresh_token"),
+            expires_at=expires_at,
+        )
