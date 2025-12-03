@@ -22,6 +22,7 @@ from linebot.v3.webhooks.models.message_event import MessageEvent
 
 from starlib import BaseThread, Jsondb, sclient, sqldb, web_log, utils
 from starlib.dataExtractor import DiscordOauth2, GoogleOauth2, TwitchOauth2
+from starlib.oauth.discord_oauth import DiscordOAuth
 from starlib.instance import google_api
 from starlib.models import CloudUser, TwitchBotJoinChannel, YoutubePushEntry
 from starlib.types import APIType, NotifyCommunityType, YoutubeVideoStatue
@@ -143,21 +144,21 @@ async def oauth_discord(request: Request):
     if not code:
         return HTMLResponse(f"授權失敗：{params}", 400)
 
-    auth = DiscordOauth2.from_bot_token(discord_oauth_settings)
-    auth.exchange_code(code)
-    auth.save_token(auth.user_id)
+    auth = DiscordOAuth.create_from_db(discord_oauth_settings)
+    token = await auth.exchange_code(code)
+    user = await auth.get_me()
+    auth.save_token_to_db(user.id, token)
 
     if auth.has_scope("connections"):
-        connections = auth.get_connections()
+        connections = await auth.get_connections()
         for connection in connections:
             if connection.type == "twitch":
                 print(f"{connection.name}({connection.id})")
-                sclient.sqldb.merge(CloudUser(discord_id=auth.user_id, twitch_id=connection.id))
+                sclient.sqldb.merge(CloudUser(discord_id=user.id, twitch_id=connection.id))
 
     if auth.has_scope("bot"):
         return HTMLResponse(f"授權已完成，您現在可以關閉此頁面<br>感謝您使用星羽機器人！", 200)
     else:
-        user = auth.get_me()
         response = RedirectResponse(f"{BASE_WWW_URL}/dashboard")
 
         # 產生 JWT
