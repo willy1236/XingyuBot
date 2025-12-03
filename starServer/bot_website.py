@@ -148,12 +148,14 @@ async def oauth_discord(request: Request):
     await auth.exchange_code(code)
     user = await auth.get_me()
     auth.save_token_to_db(user.id)
+    web_log.info(f"Discord OAuth: User {user.username} ({user.id}) authorized.")
+    web_log.info(f"Discord OAuth scopes: {auth.scopes}")
 
     if auth.has_scope("connections"):
         connections = await auth.get_connections()
         for connection in connections:
             if connection.type == "twitch":
-                print(f"{connection.name}({connection.id})")
+                web_log.info(f"Discord connection: {connection.name}({connection.id})")
                 sclient.sqldb.merge(CloudUser(discord_id=user.id, twitch_id=connection.id))
 
     if auth.has_scope("bot"):
