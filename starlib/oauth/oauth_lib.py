@@ -159,7 +159,7 @@ class OAuth2Base(ABC):
         expires_at = datetime.now(timezone.utc) + timedelta(seconds=token_data.get("expires_in", 0))
         token = OAuthToken(
             user_id=user_id,
-            credential_id=self._credential_id,
+            client_credential_id=self._credential_id,
             access_token=token_data["access_token"],  # pyright: ignore[reportTypedDictNotRequiredAccess]
             refresh_token=token_data.get("refresh_token"),
             scope=token_data.get("scope"),
