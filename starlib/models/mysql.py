@@ -4,7 +4,7 @@ from datetime import date, datetime, timedelta, timezone
 import discord
 from discord import Bot
 from sqlalchemy import BigInteger, Boolean, ForeignKey, ForeignKeyConstraint, Identity, Integer, Interval, SmallInteger, String, Text, Date, Column
-from sqlalchemy.dialects.postgresql import TIMESTAMP, CIDR, MACADDR
+from sqlalchemy.dialects.postgresql import TIMESTAMP, CIDR, MACADDR, ARRAY
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlmodel import Field, Relationship
 
@@ -762,7 +762,7 @@ class OAuthToken(TokensSchema, table=True):
     client_credential_id: int = Field(sa_column=Column(Integer, ForeignKey("stardb_tokens.oauth_client.credential_id"), primary_key=True))
     access_token: str = Field(sa_column=Column(String))
     refresh_token: str = Field(sa_column=Column(String))
-    scope: str = Field(sa_column=Column(String))
+    scope: list[str] = Field(sa_column=Column(ARRAY(String)))
     expires_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
 
     @property

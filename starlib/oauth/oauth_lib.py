@@ -20,13 +20,14 @@ class OAuthTokenDict(TypedDict, total=False):
 class OAuth2Base(ABC):
     client: AsyncOAuth2Client
 
-    def __init__(self, client_id: str, client_secret: str, redirect_uri: str, scopes: str | None = None):
+    def __init__(self, client_id: str, client_secret: str, redirect_uri: str, scopes: list[str] | None = None):
         self.client_id = client_id
         self.client_secret = client_secret
         self.redirect_uri = redirect_uri
         self.scopes = scopes
         self.db_token: OAuthToken | None = None
         self._credential_id: int | None = None
+        self._client: AsyncOAuth2Client | None = None
 
     # ====== 子類別要提供的 ======
     @property
@@ -48,12 +49,15 @@ class OAuth2Base(ABC):
     # ====== Authlib OAuth Client ======
     @property
     def oauth_client(self) -> AsyncOAuth2Client:
-        return AsyncOAuth2Client(
-            client_id=self.client_id,
-            client_secret=self.client_secret,
-            redirect_uri=self.redirect_uri,
-            scope=self.scopes,
-        )
+        if self._client is None:
+            self._client = AsyncOAuth2Client(
+                client_id=self.client_id,
+                client_secret=self.client_secret,
+                redirect_uri=self.redirect_uri,
+                scope=self.scopes,
+            )
+            self._client.headers["Client-Id"] = self.client_id
+        return self._client
 
     # ====== Authorization URL ======
     def get_authorization_url(self) -> str:
@@ -91,11 +95,17 @@ class OAuth2Base(ABC):
             url=self.token_url,
             code=code,
             redirect_uri=self.redirect_uri,
+            client_id=self.client_id,
+            client_secret=self.client_secret,
         )
+
+        if token.get("message"):
+            raise Exception(f"OAuth Token Exchange Error: {token}")
 
         if auto_load_token:
             self.db_token = self.to_db_token(token)
-            self.scopes = token.get("scope")
+            self.db_token.client_credential_id = self._credential_id
+            self.scopes = self.db_token.scope
 
         return token
 
@@ -110,7 +120,7 @@ class OAuth2Base(ABC):
     def has_scope(self, scope: str) -> bool:
         if not self.scopes:
             return False
-        return scope in self.scopes.split(" ")
+        return scope in self.scopes
 
     # ====== Signed GET/POST ======
     async def api_get(self, token: OAuthTokenDict, path: str, params: dict | None = None) -> dict:
@@ -151,28 +161,29 @@ class OAuth2Base(ABC):
         """
         if not self._credential_id:
             raise Exception("OAuth client not initialized from DB.")
-        if token_data is None:
-            if not self.db_token:
-                raise Exception("No token data to save.")
-            token_data = self.to_oauth_data()
 
-        expires_at = datetime.now(timezone.utc) + timedelta(seconds=token_data.get("expires_in", 0))
-        token = OAuthToken(
-            user_id=user_id,
-            client_credential_id=self._credential_id,
-            access_token=token_data["access_token"],  # pyright: ignore[reportTypedDictNotRequiredAccess]
-            refresh_token=token_data.get("refresh_token"),
-            scope=token_data.get("scope"),
-            expires_at=expires_at,
-        )
-        sqldb.merge(token)
+        if token_data is not None:
+            expires_at = datetime.now(timezone.utc) + timedelta(seconds=token_data.get("expires_in", 0))
+            token = OAuthToken(
+                user_id=user_id,
+                client_credential_id=self._credential_id,
+                access_token=token_data["access_token"],  # pyright: ignore[reportTypedDictNotRequiredAccess]
+                refresh_token=token_data.get("refresh_token"),
+                scope=token_data.get("scope"),
+                expires_at=expires_at,
+            )
+            sqldb.merge(token)
+        elif self.db_token is not None:
+            self.db_token.user_id = user_id
+            sqldb.merge(self.db_token)
+        else:
+            raise Exception("No token data to save.")
 
         # 更新快取的 token
         self.db_token = sqldb.get_oauth_token(user_id, self._credential_id)
-        if token_data.get("scope"):
-            self.scopes = token_data.get("scope")
+        self.scopes = self.db_token.scope
 
-    def to_oauth_data(self) -> OAuthTokenDict:
+    def to_oauth_dict(self) -> OAuthTokenDict:
         """將資料庫中的 token 轉換為 OAuthTokenDict 格式"""
         if not self.db_token:
             raise Exception("No token loaded from database.")
@@ -182,16 +193,22 @@ class OAuth2Base(ABC):
             "refresh_token": self.db_token.refresh_token,
             "token_type": "Bearer",
             "expires_in": int((self.db_token.expires_at - datetime.now(timezone.utc)).total_seconds()),
+            "scope": " ".join(self.db_token.scope),
         }
 
     def to_db_token(self, token_data: OAuthTokenDict) -> OAuthToken:
         """將 OAuthTokenDict 轉換為資料庫中的 OAuthToken 格式"""
         expires_at = datetime.now(timezone.utc) + timedelta(seconds=token_data.get("expires_in", 0))
+        print(token_data.get("scope"))
+        scope = token_data.get("scope", [])
+        if isinstance(scope, str):
+            scope = scope.split(" ")
+
         return OAuthToken(
             user_id=token_data.get("user_id", ""),
             credential_id=self._credential_id or 0,
             access_token=token_data["access_token"],  # pyright: ignore[reportTypedDictNotRequiredAccess]
             refresh_token=token_data.get("refresh_token"),
-            scope=token_data.get("scope"),
+            scope=scope,
             expires_at=expires_at,
         )

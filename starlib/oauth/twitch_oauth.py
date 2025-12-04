@@ -11,5 +11,5 @@ class TwitchOAuth(OAuth2Base):
     community_type = CommunityType.Twitch
 
     async def get_me(self) -> TwitchUser:
-        data = await self.api_get(self.to_oauth_data(), "/users")
+        data = await self.api_get(self.to_oauth_dict(), "/users")
         return TwitchUser(**data["data"][0])

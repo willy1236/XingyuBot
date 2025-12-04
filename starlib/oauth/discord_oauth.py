@@ -11,9 +11,9 @@ class DiscordOAuth(OAuth2Base):
     community_type = CommunityType.Discord
 
     async def get_me(self):
-        data = await self.api_get(self.to_oauth_data(), "/users/@me")
+        data = await self.api_get(self.to_oauth_dict(), "/users/@me")
         return DiscordUser(**data)
 
     async def get_connections(self):
-        data = await self.api_get(self.to_oauth_data(), "/users/@me/connections")
+        data = await self.api_get(self.to_oauth_dict(), "/users/@me/connections")
         return [UserConnection(**i) for i in data]

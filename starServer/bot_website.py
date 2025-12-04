@@ -157,7 +157,7 @@ async def oauth_discord(request: Request):
                 web_log.info(f"Discord connection: {connection.name}({connection.id})")
                 sclient.sqldb.merge(CloudUser(discord_id=user.id, twitch_id=connection.id))
 
-    if auth.has_scope("applications.commands"):
+    if params.get("guild_id"):
         return HTMLResponse(f"授權已完成，您現在可以關閉此頁面<br>感謝您使用星羽機器人！", 200)
     else:
         response = RedirectResponse(f"{BASE_WWW_URL}/dashboard")
@@ -192,9 +192,10 @@ async def oauth_twitch(request: Request):
 
     auth = TwitchOAuth.create_from_db(twitch_oauth_client)
     await auth.exchange_code(code)
-    auth.save_token_to_db(auth.db_token.user_id)
-    sclient.sqldb.merge(TwitchBotJoinChannel(twitch_id=auth.db_token.user_id))
-    return HTMLResponse(f"授權已完成，您現在可以關閉此頁面<br>別忘了在聊天室輸入 /mod xingyu1016<br><br>Twitch ID：{auth.db_token.user_id}")
+    user = await auth.get_me()
+    auth.save_token_to_db(user.id)
+    sclient.sqldb.merge(TwitchBotJoinChannel(twitch_id=user.id))
+    return HTMLResponse(f"授權已完成，您現在可以關閉此頁面<br>別忘了在聊天室輸入 /mod xingyu1016<br><br>Twitch ID：{user.id}")
 
 
 @app.get("/oauth/google")
