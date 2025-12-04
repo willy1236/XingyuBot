@@ -1366,10 +1366,9 @@ class SQLTokensSystem(BaseSQLEngine):
         stmt = (
             select(OAuthToken)
             .join(Credential, OAuthToken.client_credential_id == Credential.id)
-            .join(BotOAuthToken, BotOAuthToken.credential_id == Credential.id)
             .where(Credential.source == source, Credential.source_seq == source_seq)
         )
-        result = self.session.exec(stmt).one_or_none()
+        result = self.session.exec(stmt).one()
         return result
 
     def get_websub_config(self, source: APIType, source_seq: int = 1):

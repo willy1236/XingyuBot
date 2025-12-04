@@ -199,7 +199,6 @@ class OAuth2Base(ABC):
     def to_db_token(self, token_data: OAuthTokenDict) -> OAuthToken:
         """將 OAuthTokenDict 轉換為資料庫中的 OAuthToken 格式"""
         expires_at = datetime.now(timezone.utc) + timedelta(seconds=token_data.get("expires_in", 0))
-        print(token_data.get("scope"))
         scope = token_data.get("scope", [])
         if isinstance(scope, str):
             scope = scope.split(" ")

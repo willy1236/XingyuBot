@@ -788,16 +788,6 @@ class WebsubInstance(TokensSchema, table=True):
     status: str | None = None
     hub_challenge: str | None = None
 
-
-class BotOAuthToken(TokensSchema, table=True):
-    """紀錄Bot OAuth對應的Token"""
-
-    __tablename__ = "bot_oauth_token"
-
-    user_id: str = Field(sa_column=Column(String, primary_key=True))
-    credential_id: int = Field(sa_column=Column(Integer, primary_key=True))
-
-
 class CommunityCache(CacheSchema, table=True):
     """社群快取資料表"""
 
