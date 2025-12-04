@@ -417,12 +417,14 @@ class task(Cog_Extension):
         await msg.add_reaction("🎉")
 
 async def refresh_yt_push():
-    callback_url = sqldb.get_bot_token(APIType.Google, 4).callback_uri
-    assert callback_url, "Callback URL is not set"
+    config = sqldb.get_websub_config(APIType.Google, 4)
+    assert config.callback_uri, "Callback URL is not set"
+    # TODO: 改用 WebSubInstance統一處理
     for record in sclient.sqldb.get_expiring_push_records():
-        yt_push.add_push(record.channel_id, callback_url)
+        # TODO: 需要處理 secret
+        yt_push.add_push(record.channel_id, config.callback_uri, config.hub_secret)
         await asyncio.sleep(3)
-        data = yt_push.get_push(record.channel_id, callback_url)
+        data = yt_push.get_push(record.channel_id, config.callback_uri, config.hub_secret)
 
         if data and data.has_verify:
             record.push_at = data.last_successful_verification

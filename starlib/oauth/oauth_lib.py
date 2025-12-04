@@ -4,12 +4,12 @@ from datetime import datetime, timedelta, timezone
 from typing import TypedDict
 
 from authlib.integrations.httpx_client import AsyncOAuth2Client
-from ..models.mysql import OAuth2Token, BotToken
+from ..models.mysql import OAuthClient, OAuthToken, OAuthToken
 from ..types import CommunityType
 from ..database import sqldb
 
 
-class OAuthTokenData(TypedDict, total=False):
+class OAuthTokenDict(TypedDict, total=False):
     access_token: str
     refresh_token: str | None
     token_type: str
@@ -25,7 +25,8 @@ class OAuth2Base(ABC):
         self.client_secret = client_secret
         self.redirect_uri = redirect_uri
         self.scopes = scopes
-        self.db_token: OAuth2Token | None = None
+        self.db_token: OAuthToken | None = None
+        self._credential_id: int | None = None
 
     # ====== 子類別要提供的 ======
     @property
@@ -61,7 +62,7 @@ class OAuth2Base(ABC):
         return uri
 
     # ====== Basic functions ======
-    async def exchange_code(self, code: str, auto_load_token: bool = True) -> OAuthTokenData:
+    async def exchange_code(self, code: str, auto_load_token: bool = True) -> OAuthTokenDict:
         """
         Exchange an authorization code for an OAuth token.
         By default, it automatically loads the received token into
@@ -98,7 +99,7 @@ class OAuth2Base(ABC):
 
         return token
 
-    async def refresh(self, refresh_token: str) -> OAuthTokenData:
+    async def refresh(self, refresh_token: str) -> OAuthTokenDict:
         client = self.oauth_client
         token = await client.refresh_token(
             url=self.token_url,
@@ -112,7 +113,7 @@ class OAuth2Base(ABC):
         return scope in self.scopes.split(" ")
 
     # ====== Signed GET/POST ======
-    async def api_get(self, token: OAuthTokenData, path: str, params: dict | None = None):
+    async def api_get(self, token: OAuthTokenDict, path: str, params: dict | None = None) -> dict:
         client = self.oauth_client
         client.token = token
         resp = await client.get(f"{self.api_url}{path}", params=params)
@@ -121,18 +122,21 @@ class OAuth2Base(ABC):
 
     # ====== Token DB Integration ======
     @classmethod
-    def create_from_db(cls, bot_token: BotToken, scopes: str | None = None):
-        instance = cls(client_id=bot_token.client_id, client_secret=bot_token.client_secret, redirect_uri=bot_token.redirect_uri, scopes=scopes)
+    def create_from_db(cls, oauth_client: OAuthClient, scopes: str | None = None):
+        instance = cls(client_id=oauth_client.client_id, client_secret=oauth_client.client_secret, redirect_uri=oauth_client.redirect_uri, scopes=scopes)
+        instance._credential_id = oauth_client.credential_id
         return instance
 
-    def load_token_from_db(self, user_id: str) -> OAuth2Token:
-        token = sqldb.get_oauth(user_id, self.community_type)
+    def load_token_from_db(self, user_id: str) -> OAuthToken:
+        if not self._credential_id:
+            raise Exception("OAuth client not initialized from DB.")
+        token = sqldb.get_oauth_token(user_id, self._credential_id)
         if not token:
             raise Exception("OAuth token not found.")
         self.db_token = token
         return token
 
-    def save_token_to_db(self, user_id: str, token_data: OAuthTokenData | None = None):
+    def save_token_to_db(self, user_id: str, token_data: OAuthTokenDict | None = None):
         """
         Save OAuth token data to the database.
         It also updates the db_token and scopes attribute.
@@ -145,26 +149,31 @@ class OAuth2Base(ABC):
         Returns:
             None
         """
+        if not self._credential_id:
+            raise Exception("OAuth client not initialized from DB.")
         if token_data is None:
             if not self.db_token:
                 raise Exception("No token data to save.")
             token_data = self.to_oauth_data()
 
         expires_at = datetime.now(timezone.utc) + timedelta(seconds=token_data.get("expires_in", 0))
-        sqldb.set_oauth(
+        token = OAuthToken(
             user_id=user_id,
-            type=self.community_type,
+            credential_id=self._credential_id,
             access_token=token_data["access_token"],  # pyright: ignore[reportTypedDictNotRequiredAccess]
             refresh_token=token_data.get("refresh_token"),
+            scope=token_data.get("scope"),
             expires_at=expires_at,
         )
+        sqldb.merge(token)
+
         # 更新快取的 token
-        self.db_token = sqldb.get_oauth(user_id, self.community_type)
+        self.db_token = sqldb.get_oauth_token(user_id, self._credential_id)
         if token_data.get("scope"):
             self.scopes = token_data.get("scope")
 
-    def to_oauth_data(self) -> OAuthTokenData:
-        """將資料庫中的 token 轉換為 OAuthTokenData 格式"""
+    def to_oauth_data(self) -> OAuthTokenDict:
+        """將資料庫中的 token 轉換為 OAuthTokenDict 格式"""
         if not self.db_token:
             raise Exception("No token loaded from database.")
 
@@ -175,13 +184,14 @@ class OAuth2Base(ABC):
             "expires_in": int((self.db_token.expires_at - datetime.now(timezone.utc)).total_seconds()),
         }
 
-    def to_db_token(self, token_data: OAuthTokenData) -> OAuth2Token:
-        """將 OAuthTokenData 轉換為資料庫中的 OAuth2Token 格式"""
+    def to_db_token(self, token_data: OAuthTokenDict) -> OAuthToken:
+        """將 OAuthTokenDict 轉換為資料庫中的 OAuthToken 格式"""
         expires_at = datetime.now(timezone.utc) + timedelta(seconds=token_data.get("expires_in", 0))
-        return OAuth2Token(
-            user_id="",
-            community=self.community_type,
+        return OAuthToken(
+            user_id=token_data.get("user_id", ""),
+            credential_id=self._credential_id or 0,
             access_token=token_data["access_token"],  # pyright: ignore[reportTypedDictNotRequiredAccess]
             refresh_token=token_data.get("refresh_token"),
+            scope=token_data.get("scope"),
             expires_at=expires_at,
         )

@@ -109,6 +109,15 @@ class APIType(IntEnum):
     ZeroTier = 17
     Virustotal = 18
 
+
+class CredentialType(IntEnum):
+    Id_Secret = 1
+    Bearer_Token = 2
+    Oauth2 = 3
+    WebSub = 4
+    LineBot = 5
+
+
 class PrivilegeLevel(IntEnum):
     User = 0
     Level1 = 1

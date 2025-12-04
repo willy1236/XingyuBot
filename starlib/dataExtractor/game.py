@@ -18,7 +18,7 @@ class RiotAPI():
     url_asia = "https://asia.api.riotgames.com"
 
     def __init__(self):
-        self.key = sqldb.get_bot_token(APIType.Riot).access_token
+        self.key = sqldb.get_access_token(APIType.Riot).access_token
         self._headers = {"X-Riot-Token": self.key}
 
         self._ddg_version = None
@@ -147,7 +147,7 @@ class OsuAPI:
         self._headers = self._get_headers()
 
     def _get_headers(self):
-        ous_token = sqldb.get_bot_token(APIType.Osu)
+        ous_token = sqldb.get_access_token(APIType.Osu)
         data = {"client_id": ous_token.client_id, "client_secret": ous_token.client_secret, "grant_type": "client_credentials", "scope": "public"}
         r = requests.post("https://osu.ppy.sh/oauth/token", data=data)
         token = r.json().get("access_token")
@@ -191,7 +191,7 @@ class ApexAPI():
     url = "https://api.mozambiquehe.re"
 
     def __init__(self, auth: str | None = None):
-        self.auth = auth or sqldb.get_bot_token(APIType.ApexStatue).access_token
+        self.auth = auth or sqldb.get_access_token(APIType.ApexStatue).access_token
 
     def get_player(self, username: str, platform: str = "PC"):
         params = {"auth": self.auth, "player": username, "platform": platform}
@@ -229,7 +229,7 @@ class ApexAPI():
 
 class SteamAPI():
     def __init__(self):
-        self.key = sqldb.get_bot_token(APIType.Steam).access_token
+        self.key = sqldb.get_access_token(APIType.Steam).access_token
 
     def get_user(self,userid):
         params = {"key": self.key, "steamids": userid}
@@ -300,7 +300,7 @@ class ZeroTierAPI:
     url = "https://api.zerotier.com/api/v1"
 
     def __init__(self):
-        self.auth = sqldb.get_bot_token(APIType.ZeroTier).access_token
+        self.auth = sqldb.get_access_token(APIType.ZeroTier).access_token
         self.headers = {"Authorization": f"token {self.auth}", "Content-Type": "application/json"}
 
     def get_networks(self):

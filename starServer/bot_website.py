@@ -21,23 +21,22 @@ from linebot.v3.webhooks import MessageEvent, TextMessageContent
 from linebot.v3.webhooks.models.message_event import MessageEvent
 
 from starlib import BaseThread, Jsondb, sclient, sqldb, web_log, utils
-from starlib.dataExtractor import DiscordOauth2, GoogleOauth2, TwitchOauth2
-from starlib.oauth.discord_oauth import DiscordOAuth
+from starlib.dataExtractor import GoogleOauth2, TwitchOauth2
+from starlib.oauth import DiscordOAuth, GoogleOAuth, TwitchOAuth
 from starlib.instance import google_api
 from starlib.models import CloudUser, TwitchBotJoinChannel, YoutubePushEntry
 from starlib.types import APIType, NotifyCommunityType, YoutubeVideoStatue
 from starlib.starAgent_line import line_agent
 
-discord_oauth_settings = sqldb.get_bot_token(APIType.Discord)
-twitch_oauth_settings = sqldb.get_bot_token(APIType.Twitch)
-google_oauth_settings = sqldb.get_bot_token(APIType.Google, 3)
-linebot_token = sqldb.get_bot_token(APIType.Line)
-docs_account = sqldb.get_bot_token(APIType.DocAccount)
+discord_oauth_client = sqldb.get_oauth_client(APIType.Discord, 4)
+twitch_oauth_client = sqldb.get_oauth_client(APIType.Twitch, 3)
+google_oauth_settings = sqldb.get_oauth_client(APIType.Google, 3)
+docs_account = sqldb.get_identifier_secret(APIType.DocAccount)
 BASE_WWW_URL = Jsondb.config.get("base_www_url", "http://localhost:3000")
 BASE_DOMAIN = Jsondb.config.get("base_domain", "localhost")
 
-configuration = Configuration(access_token=linebot_token.access_token)
-handler = WebhookHandler(linebot_token.client_secret)
+configuration = Configuration(access_token=sqldb.get_access_token(APIType.Line).access_token)
+handler = WebhookHandler(sqldb.get_identifier_secret(APIType.Line).client_secret)
 
 app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
 
@@ -144,7 +143,7 @@ async def oauth_discord(request: Request):
     if not code:
         return HTMLResponse(f"授權失敗：{params}", 400)
 
-    auth = DiscordOAuth.create_from_db(discord_oauth_settings)
+    auth = DiscordOAuth.create_from_db(discord_oauth_client)
     await auth.exchange_code(code)
     user = await auth.get_me()
     auth.save_token_to_db(user.id)
@@ -191,11 +190,11 @@ async def oauth_twitch(request: Request):
     if not code:
         return HTMLResponse(f"授權失敗：{params}", 400)
 
-    auth = TwitchOauth2.from_bot_token(twitch_oauth_settings)
-    auth.exchange_code(code)
-    auth.save_token(auth.user_id)
-    sclient.sqldb.merge(TwitchBotJoinChannel(twitch_id=auth.user_id))
-    return HTMLResponse(f"授權已完成，您現在可以關閉此頁面<br>別忘了在聊天室輸入 /mod xingyu1016<br><br>Twitch ID：{auth.user_id}")
+    auth = TwitchOAuth.create_from_db(twitch_oauth_client)
+    await auth.exchange_code(code)
+    auth.save_token_to_db(auth.db_token.user_id)
+    sclient.sqldb.merge(TwitchBotJoinChannel(twitch_id=auth.db_token.user_id))
+    return HTMLResponse(f"授權已完成，您現在可以關閉此頁面<br>別忘了在聊天室輸入 /mod xingyu1016<br><br>Twitch ID：{auth.db_token.user_id}")
 
 
 @app.get("/oauth/google")
@@ -205,7 +204,7 @@ async def oauth_google(request: Request):
     if not code:
         return HTMLResponse(f"授權失敗：{params}", 400)
 
-    auth = GoogleOauth2.from_bot_token(google_oauth_settings)
+    auth = GoogleOAuth.create_from_db(google_oauth_settings)
 
     # flow = Flow.from_client_secrets_file(
     #     'database/google_client_credentials.json',
@@ -213,10 +212,9 @@ async def oauth_google(request: Request):
     #     redirect_uri=auth.redirect_uri
     # )
     # flow.fetch_token(code=code)
-    auth.exchange_code(code)
-    auth.set_creds()
-    auth.save_token(auth.user_id)
-    return HTMLResponse(f"授權已完成，您現在可以關閉此頁面<br><br>Google ID：{auth.user_id}")
+    await auth.exchange_code(code)
+    auth.save_token_to_db(auth.db_token.user_id)
+    return HTMLResponse(f"授權已完成，您現在可以關閉此頁面<br><br>Google ID：{auth.db_token.user_id}")
 
 
 @app.post("/callback/linebot")
@@ -276,21 +274,21 @@ async def handle_message(event: MessageEvent):
 @app.get("/to/discordauth")
 async def to_discordauth(request: Request):
     return RedirectResponse(
-        url=f"https://discord.com/api/oauth2/authorize?client_id={discord_oauth_settings.client_id}&redirect_uri={discord_oauth_settings.redirect_uri}&response_type=code&scope=identify%20connections"
+        url=f"https://discord.com/api/oauth2/authorize?client_id={discord_oauth_client.client_id}&redirect_uri={discord_oauth_client.redirect_uri}&response_type=code&scope=identify%20connections"
     )
 
 
 @app.get("/to/twitchauth")
 async def to_twitchauth(request: Request):
     return RedirectResponse(
-        url=f"https://id.twitch.tv/oauth2/authorize?client_id={twitch_oauth_settings.client_id}&redirect_uri={twitch_oauth_settings.redirect_uri}&response_type=code&scope=chat:read+channel:read:subscriptions+moderation:read+channel:read:redemptions+channel:manage:redemptions+channel:manage:raids+channel:read:vips+channel:bot+moderator:read:suspicious_users+channel:manage:polls+channel:manage:predictions&force_verify=true"
+        url=f"https://id.twitch.tv/oauth2/authorize?client_id={twitch_oauth_client.client_id}&redirect_uri={twitch_oauth_client.redirect_uri}&response_type=code&scope=chat:read+channel:read:subscriptions+moderation:read+channel:read:redemptions+channel:manage:redemptions+channel:manage:raids+channel:read:vips+channel:bot+moderator:read:suspicious_users+channel:manage:polls+channel:manage:predictions&force_verify=true"
     )
 
 
 @app.get("/to/discordbot")
 async def to_discordbot(request: Request):
     return RedirectResponse(
-        url=f"https://discord.com/api/oauth2/authorize?client_id={discord_oauth_settings.client_id}&redirect_uri={discord_oauth_settings.redirect_uri}&response_type=code&scope=identify%20applications.commands.permissions.update%20bot"
+        url=f"https://discord.com/api/oauth2/authorize?client_id={discord_oauth_client.client_id}&redirect_uri={discord_oauth_client.redirect_uri}&response_type=code&scope=identify%20applications.commands.permissions.update%20bot"
     )
 
 

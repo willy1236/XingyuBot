@@ -1,6 +1,7 @@
 # twitch_oauth.py
 from .oauth_lib import OAuth2Base
 from ..types import CommunityType
+from ..models.community import TwitchUser
 
 
 class TwitchOAuth(OAuth2Base):
@@ -9,6 +10,6 @@ class TwitchOAuth(OAuth2Base):
     api_url = "https://api.twitch.tv/helix"
     community_type = CommunityType.Twitch
 
-    async def get_user(self, token):
-        params = {"id": token.get("user_id")}
-        return await self.api_get(token, "/users", params=params)
+    async def get_me(self) -> TwitchUser:
+        data = await self.api_get(self.to_oauth_data(), "/users")
+        return TwitchUser(**data["data"][0])

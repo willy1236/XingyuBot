@@ -43,7 +43,7 @@ class TwitchAPI:
     def __get_headers(self):
         TOKENURL = "https://id.twitch.tv/oauth2/token"
         # headers = {"Content-Type": "application/x-www-form-urlencoded"}
-        tokens = sqldb.get_bot_token(APIType.Twitch)
+        tokens = sqldb.get_identifier_secret(APIType.Twitch)
         params = {"client_id": tokens.client_id, "client_secret": tokens.client_secret, "grant_type": "client_credentials"}
 
         r = requests.post(TOKENURL, params=params)
@@ -191,7 +191,7 @@ class GoogleAPI:
     BaseURL = "https://www.googleapis.com/youtube/v3"
 
     def __init__(self):
-        self.__token = sqldb.get_bot_token(APIType.Google).access_token
+        self.__token = sqldb.get_access_token(APIType.Google).access_token
         self.__headers = {"x-goog-api-key": self.__token, "Accept": "application/json"}
 
     def get_channel_id(self, channel_handle: str) -> str | None:
@@ -377,7 +377,7 @@ class XingyuGoogleCloud:
 
     def get_creds(self):
         # If modifying these scopes, delete the file token.json.
-        SCOPES = ["https://www.googleapis.com/auth/drive"]
+        SCOPES = ["https://www.googleapis.com/auth/userinfo.profile", "https://www.googleapis.com/auth/drive"]
         # The file token.json stores the user's access and refresh tokens, and is
         # created automatically when the authorization flow completes for the first
         # time.
@@ -387,7 +387,7 @@ class XingyuGoogleCloud:
 
         # If there are no (valid) credentials available, let the user log in.
         if not creds or not creds.valid:
-            token = sqldb.get_bot_token(APIType.Google, 2)
+            token = sqldb.get_bot_oauth_token(APIType.Google, 2)
             if creds and creds.expired and creds.refresh_token:
                 creds.refresh(Request())
             else:
@@ -402,11 +402,14 @@ class XingyuGoogleCloud:
             token.access_token = creds.token
             token.refresh_token = creds.refresh_token
             token.expires_at = creds.expiry
-            token.client_id = creds.client_id
-            token.client_secret = creds.client_secret
             sqldb.merge(token)
 
         return creds
+
+    def get_me(self):
+        service = build("oauth2", "v2", credentials=self.creds)
+        user_info = service.userinfo().get().execute()
+        return user_info
 
     def list_drive_files(self):
         """Shows basic usage of the Drive v3 API.
@@ -453,7 +456,7 @@ class NotionAPI():
         self.url = "https://api.notion.com/v1"
 
     def _get_headers(self):
-        token = sqldb.get_bot_token(APIType.Notion).access_token
+        token = sqldb.get_access_token(APIType.Notion).access_token
         return {
             "Authorization": f"Bearer {token}",
             "Notion-Version": "2022-06-28",
@@ -627,7 +630,7 @@ class RssHub():
 
 class CLIInterface():
     def __init__(self):
-        self.rettiwt_api_key = sqldb.get_bot_token(APIType.Rettiwt).access_token
+        self.rettiwt_api_key = sqldb.get_access_token(APIType.Rettiwt).access_token
         if shutil.which("rettiwt") is None:
             log.warning("找不到rettiwt執行檔，請確認是否已安裝rettiwt並將其加入系統PATH中")
 

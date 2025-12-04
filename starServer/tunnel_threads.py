@@ -86,7 +86,7 @@ class NgrokTwitchThread(BaseThread):
 
     def run(self):
         reconnection_times = 0
-        callback_url = sqldb.get_bot_token(APIType.Twitch).callback_uri.split("://")[1]
+        callback_url = sqldb.get_oauth_client(APIType.Twitch).callback_uri.split("://")[1]
         while not self._stop_event.is_set():
             log.info(f"Starting {self.name} {reconnection_times}")
             self.process = subprocess.Popen(["ngrok", "http", f"--url={callback_url}", "14001"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)

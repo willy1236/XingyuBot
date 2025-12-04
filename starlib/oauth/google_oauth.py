@@ -7,6 +7,7 @@ from ..types import CommunityType
 
 
 class GoogleOAuth(OAuth2Base):
+    # FIXME: 重新補齊原本的功能
     auth_url = "https://accounts.google.com/o/oauth2/auth"
     token_url = "https://oauth2.googleapis.com/token"
     api_url = "https://www.googleapis.com/oauth2/v1"

@@ -173,12 +173,13 @@ class system_community(Cog_Extension):
             await ctx.respond(f"錯誤：找不到帳號代碼 {ythandle} 的頻道")
             return
 
+        # TODO: 回歸定時任務
         record = sclient.sqldb.get_push_record(ytchannel.id)
         if record.is_expired:
-            callback_url = sclient.sqldb.get_bot_token(APIType.Google, 4).callback_uri
-            yt_push.add_push(ytchannel.id, callback_url)
+            config = sclient.sqldb.get_websub_config(APIType.Google, 4)
+            yt_push.add_push(ytchannel.id, config.callback_uri, config.hub_secret)
             await asyncio.sleep(3)
-            data = yt_push.get_push(ytchannel.id, callback_url)
+            data = yt_push.get_push(ytchannel.id, config.callback_uri, config.hub_secret)
 
             if data.has_verify:
                 record.push_at = data.last_successful_verification

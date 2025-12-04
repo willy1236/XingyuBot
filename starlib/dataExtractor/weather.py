@@ -14,7 +14,7 @@ class CWA_API():
     BaseURL = "https://opendata.cwa.gov.tw/api/v1/rest/datastore"
 
     def __init__(self):
-        self.auth = sqldb.get_bot_token(APIType.CWA).access_token
+        self.auth = sqldb.get_access_token(APIType.CWA).access_token
 
     def get_earthquake_report(self,significant=True):
         params = {"Authorization": self.auth, "limit": 1}

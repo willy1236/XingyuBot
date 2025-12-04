@@ -315,9 +315,10 @@ async def modify_channel_information(cmd: ChatCommand):
 
 
 async def run():
-    jtoken = sqldb.get_bot_token(APIType.Twitch)
-    APP_ID = jtoken.client_id
-    APP_SECRET = jtoken.client_secret
+    app_config = sqldb.get_oauth_client(APIType.Twitch, 2)
+    app_token = sqldb.get_bot_oauth_token(APIType.Twitch, 2)
+    APP_ID = app_config.client_id
+    APP_SECRET = app_config.client_secret
 
     # validate_data = await validate_token(token)
     # if validate_data.get("client_id") != APP_ID:
@@ -328,14 +329,17 @@ async def run():
     # set up twitch api instance and add user authentication with some scopes
     twitch = await Twitch(APP_ID, APP_SECRET)
     try:
-        await twitch.set_user_authentication(jtoken.access_token, USER_SCOPE, jtoken.refresh_token)
+        await twitch.set_user_authentication(app_token.access_token, USER_SCOPE, app_token.refresh_token)
     except (InvalidTokenException, MissingScopeException) as e:
         auth = UserAuthenticator(twitch, USER_SCOPE)
         token, refresh_token = await auth.authenticate()  # type: ignore
-        jtoken.access_token = token
-        jtoken.refresh_token = refresh_token
-        sqldb.merge(jtoken)
-        await twitch.set_user_authentication(jtoken.access_token, USER_SCOPE, jtoken.refresh_token)
+        me = await first(twitch.get_users())
+        app_token.user_id = me.id
+        app_token.client_credential_id = app_config.credential_id
+        app_token.access_token = token
+        app_token.refresh_token = refresh_token
+        sqldb.merge(app_token)
+        await twitch.set_user_authentication(app_token.access_token, USER_SCOPE, app_token.refresh_token)
 
     # 使用自帶的函式處理token
     # helper = UserAuthenticationStorageHelper(twitch, USER_SCOPE)
@@ -375,7 +379,7 @@ async def run():
     chat.start()
     await asyncio.sleep(5)
 
-    eventsub = EventSubWebhook(jtoken.callback_uri, 14001, twitch)
+    eventsub = EventSubWebhook(app_config.callback_uri, 14001, twitch)
     # unsubscribe from all old events that might still be there
     # this will ensure we have a clean slate
     await eventsub.unsubscribe_all()

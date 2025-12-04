@@ -685,7 +685,7 @@ class UsersCountRecord(BackupSchema, table=True):
     servers_count: int = Field(sa_column=Column(Integer))
 
 class OAuth2Token(TokensSchema, table=True):
-    __tablename__ = "oauth_token"
+    __tablename__ = "oauth_token2"
 
     user_id: str = Field(sa_column=Column(String, primary_key=True))
     type: CommunityType = Field(sa_column=Column(Integer, primary_key=True))
@@ -699,7 +699,7 @@ class OAuth2Token(TokensSchema, table=True):
 
 
 class BotToken(TokensSchema, table=True):
-    __tablename__ = "bot_token"
+    __tablename__ = "bot_token2"
 
     api_type: APIType = Field(sa_column=Column(SmallInteger, primary_key=True))
     token_seq: int = Field(sa_column=Column(SmallInteger, primary_key=True))
@@ -711,6 +711,91 @@ class BotToken(TokensSchema, table=True):
     redirect_uri: str | None = Field(sa_column=Column(String))
     callback_uri: str | None = Field(sa_column=Column(String))
     expires_at: datetime | None = Field(sa_column=Column(TIMESTAMP(True, 0)))
+
+class Credential(TokensSchema, table=True):
+    __tablename__ = "credential"
+
+    id: int = Field(sa_column=Column(Integer, Identity(), primary_key=True))
+    type: CredentialType = Field(sa_column=Column(SmallInteger, nullable=False))
+    source: APIType = Field(sa_column=Column(SmallInteger, nullable=False))
+    source_seq: int
+    client_name: str
+    # created_at: datetime
+    # updated_at: datetime
+
+
+class IdentifierSecret(TokensSchema, table=True):
+    __tablename__ = "id_secret"
+
+    credential_id: int = Field(sa_column=Column(Integer, ForeignKey("stardb_tokens.credential.id"), primary_key=True))
+    client_id: str = Field(sa_column=Column(String, unique=True, nullable=False))
+    client_secret: str = Field(sa_column=Column(String, nullable=False))
+
+
+class AccessToken(TokensSchema, table=True):
+    __tablename__ = "access_token"
+
+    credential_id: int = Field(sa_column=Column(Integer, ForeignKey("stardb_tokens.credential.id"), primary_key=True))
+    access_token: str = Field(sa_column=Column(String, nullable=False))
+    expires_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
+
+    @property
+    def valid(self):
+        return not self.expires_at or self.expires_at > datetime.now(tz)
+
+
+class OAuthClient(TokensSchema, table=True):
+    __tablename__ = "oauth_client"
+
+    credential_id: int = Field(sa_column=Column(Integer, ForeignKey("stardb_tokens.credential.id"), primary_key=True))
+    client_id: str = Field(sa_column=Column(String, nullable=False))
+    client_secret: str = Field(sa_column=Column(String, nullable=False))
+    redirect_uri: str = Field(sa_column=Column(String, nullable=False))
+    callback_uri: str = Field(sa_column=Column(String))
+    grant_types: str = Field(sa_column=Column(String))
+
+
+class OAuthToken(TokensSchema, table=True):
+    __tablename__ = "oauth_token"
+
+    user_id: str = Field(sa_column=Column(String, primary_key=True))
+    client_credential_id: int = Field(sa_column=Column(Integer, ForeignKey("stardb_tokens.oauth_client.credential_id"), primary_key=True))
+    access_token: str = Field(sa_column=Column(String))
+    refresh_token: str = Field(sa_column=Column(String))
+    scope: str = Field(sa_column=Column(String))
+    expires_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
+
+    @property
+    def valid(self):
+        return self.expires_at > datetime.now(tz)
+
+
+class WebSubConfig(TokensSchema, table=True):
+    __tablename__ = "websub_config"
+    credential_id: int = Field(foreign_key="stardb_tokens.credential.id", primary_key=True)
+    callback_uri: str
+    hub_secret: str | None = None
+
+
+class WebsubInstance(TokensSchema, table=True):
+    __tablename__ = "websub_instance"
+    id: int | None = Field(default=None, primary_key=True)
+    config_id: int = Field(foreign_key="stardb_tokens.websub_config.credential_id")
+    topic: str
+    lease_seconds: int | None = None
+    expires_at: datetime | None = None
+    hub_mode: str | None = None
+    status: str | None = None
+    hub_challenge: str | None = None
+
+
+class BotOAuthToken(TokensSchema, table=True):
+    """紀錄Bot OAuth對應的Token"""
+
+    __tablename__ = "bot_oauth_token"
+
+    user_id: str = Field(sa_column=Column(String, primary_key=True))
+    credential_id: int = Field(sa_column=Column(Integer, primary_key=True))
 
 
 class CommunityCache(CacheSchema, table=True):

@@ -15,7 +15,7 @@ safety_settings = [
     {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_ONLY_HIGH"},
 ]
 
-provider = GoogleProvider(api_key=sqldb.get_bot_token(APIType.Google, 5).access_token)
+provider = GoogleProvider(api_key=sqldb.get_access_token(APIType.Google, 5).access_token)
 model_settings = GoogleModelSettings(gemini_safety_settings=safety_settings)
 model = GoogleModel(model_name="gemini-2.0-flash", provider=provider)
 line_agent = Agent(model)

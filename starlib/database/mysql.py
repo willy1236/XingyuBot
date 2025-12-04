@@ -53,7 +53,7 @@ class BaseSQLEngine:
         # SessionLocal = sessionmaker(bind=self.engine)
         # self.session:Session = SessionLocal()
 
-        Base.metadata.create_all(self.engine)
+        # Base.metadata.create_all(self.engine)
         SQLModel.metadata.create_all(self.engine)
         # SQLModel.metadata.drop_all(engine, schema="my_schema")
 
@@ -1225,19 +1225,19 @@ class SQLBackupSystem(BaseSQLEngine):
 
 
 class SQLTokensSystem(BaseSQLEngine):
-    def set_oauth(self, user_id: int, type: CommunityType, access_token: str, refresh_token: str = None, expires_at: datetime = None):
-        token = OAuth2Token(user_id=user_id, type=type, access_token=access_token, refresh_token=refresh_token, expires_at=expires_at)
-        self.session.merge(token)
-        self.session.commit()
+    # def set_oauth(self, user_id: int, type: CommunityType, access_token: str, refresh_token: str = None, expires_at: datetime = None):
+    #     token = OAuth2Token(user_id=user_id, type=type, access_token=access_token, refresh_token=refresh_token, expires_at=expires_at)
+    #     self.session.merge(token)
+    #     self.session.commit()
 
-    def get_oauth(self, user_id: str, type: CommunityType):
-        stmt = select(OAuth2Token).where(OAuth2Token.user_id == user_id, OAuth2Token.type == type)
-        result = self.session.exec(stmt).one_or_none()
-        return result
+    # def get_oauth(self, user_id: str, type: CommunityType):
+    #     stmt = select(OAuth2Token).where(OAuth2Token.user_id == user_id, OAuth2Token.type == type)
+    #     result = self.session.exec(stmt).one_or_none()
+    #     return result
 
-    def get_bot_token(self, api_type: APIType, token_seq: int = 1):
-        stmt = select(BotToken).where(BotToken.api_type == api_type, BotToken.token_seq == token_seq).limit(1)
-        return self.session.exec(stmt).one()
+    # def get_bot_token(self, api_type: APIType, token_seq: int = 1):
+    #     stmt = select(BotToken).where(BotToken.api_type == api_type, BotToken.token_seq == token_seq).limit(1)
+    #     return self.session.exec(stmt).one()
 
     def get_google_credentials(self, scopes: list[str] = None, token_seq: int = 2):
         """
@@ -1253,15 +1253,16 @@ class SQLTokensSystem(BaseSQLEngine):
         Returns:
             Credentials: An OAuth2 credentials object.
         """
-        token = self.get_bot_token(APIType.Google, token_seq)
+        client = self.get_oauth_client(APIType.Google, token_seq)
+        token = self.get_bot_oauth_token(APIType.Google, token_seq)
         return Credentials(
             token=token.access_token,
             refresh_token=token.refresh_token,
-            client_id=token.client_id,
-            client_secret=token.client_secret,
+            client_id=client.client_id,
+            client_secret=client.client_secret,
             token_uri="https://oauth2.googleapis.com/token",
             scopes=scopes or [],
-            expiry=token.expires_at,
+            expiry=token.expires_at.astimezone(timezone.utc).replace(tzinfo=None),
         )
 
     def get_google_client_config(self, token_seq: int = 3):
@@ -1273,13 +1274,9 @@ class SQLTokensSystem(BaseSQLEngine):
             dict: A dictionary containing Google OAuth2 client configuration with either
                   "installed" or "web" key structure, including client_id, client_secret,
                   and various OAuth2 URIs.
-                  For token_seq == 2:
-                  - Returns config with "installed" key and localhost redirect URI
-                  For other token_seq values:
-                  - Returns config with "web" key (no redirect URIs)
         """
-        token = self.get_bot_token(APIType.Google, token_seq)
-        if token_seq in (2,):
+        token = self.get_oauth_client(APIType.Google, token_seq)
+        if token.grant_types == "installed":
             client_config = {
                 "installed": {
                     "client_id": token.client_id,
@@ -1290,7 +1287,7 @@ class SQLTokensSystem(BaseSQLEngine):
                     "redirect_uris": ["http://localhost"],
                 }
             }
-        else:
+        elif token.grant_types == "web":
             client_config = {
                 "web": {
                     "client_id": token.client_id,
@@ -1303,6 +1300,61 @@ class SQLTokensSystem(BaseSQLEngine):
 
         return client_config
 
+    def get_credential(self, source: APIType, source_seq: int = 1):
+        stmt = select(Credential).where(Credential.source == source, Credential.source_seq == source_seq)
+        result = self.session.exec(stmt).one_or_none()
+        return result
+
+    def get_identifier_secret(self, source: APIType, source_seq: int = 1):
+        stmt = (
+            select(IdentifierSecret)
+            .join(Credential, IdentifierSecret.credential_id == Credential.id)
+            .where(Credential.source == source, Credential.source_seq == source_seq)
+        )
+        result = self.session.exec(stmt).one()
+        return result
+
+    def get_access_token(self, source: APIType, source_seq: int = 1):
+        stmt = (
+            select(AccessToken)
+            .join(Credential, AccessToken.credential_id == Credential.id)
+            .where(Credential.source == source, Credential.source_seq == source_seq)
+        )
+        result = self.session.exec(stmt).one()
+        return result
+
+    def get_oauth_client(self, source: APIType, source_seq: int = 1):
+        stmt = (
+            select(OAuthClient)
+            .join(Credential, OAuthClient.credential_id == Credential.id)
+            .where(Credential.source == source, Credential.source_seq == source_seq)
+        )
+        result = self.session.exec(stmt).one()
+        return result
+
+    def get_oauth_token(self, user_id: str, credential_id: int):
+        stmt = select(OAuthToken).where(OAuthToken.client_credential_id == credential_id, OAuthToken.user_id == user_id)
+        result = self.session.exec(stmt).one_or_none()
+        return result
+
+    def get_bot_oauth_token(self, source: APIType, source_seq: int = 1):
+        stmt = (
+            select(OAuthToken)
+            .join(Credential, OAuthToken.client_credential_id == Credential.id)
+            .join(BotOAuthToken, BotOAuthToken.credential_id == Credential.id)
+            .where(Credential.source == source, Credential.source_seq == source_seq)
+        )
+        result = self.session.exec(stmt).one_or_none()
+        return result
+
+    def get_websub_config(self, source: APIType, source_seq: int = 1):
+        stmt = (
+            select(WebSubConfig)
+            .join(Credential, WebSubConfig.credential_id == Credential.id)
+            .where(Credential.source == source, Credential.source_seq == source_seq)
+        )
+        result = self.session.exec(stmt).one()
+        return result
 
 class SQLCacheSystem(BaseSQLEngine):
     def set_community_caches(self, type: NotifyCommunityType, data: dict[str, datetime | None]):

@@ -15,6 +15,7 @@ import feedparser
 import pandas as pd
 import requests
 from pydantic import AliasPath, BaseModel, ConfigDict, Field
+from googleapiclient.discovery import build
 
 from starlib import *
 from starlib.database import SQLEngine
@@ -60,3 +61,19 @@ if __name__ == "__main__":
 #     # )
 
 #     print(f"完整資料：{nm[host]}")
+
+api = XingyuGoogleCloud()
+print(api.get_me())
+# from google_auth_oauthlib.flow import InstalledAppFlow
+
+# SCOPES = ["https://www.googleapis.com/auth/userinfo.profile", "https://www.googleapis.com/auth/drive"]
+# client_config = sqldb.get_google_client_config(2)
+# flow = InstalledAppFlow.from_client_config(client_config, scopes=SCOPES)
+# creds = flow.run_local_server(port=0)
+
+# print(creds.to_json())
+# creds = sqldb.get_google_credentials()
+# userinfo_service = build("oauth2", "v2", credentials=creds)
+# user_info = userinfo_service.userinfo().get().execute()
+# print("Google user id:", user_info.get("id"))
+# print(sqldb.get_bot_oauth_token(APIType.Google, 2))

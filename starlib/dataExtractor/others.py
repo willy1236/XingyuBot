@@ -12,7 +12,7 @@ class McssAPI:
 
     def __init__(self):
         self.headers = {
-            "apikey": sqldb.get_bot_token(APIType.MCSS).access_token,
+            "apikey": sqldb.get_access_token(APIType.MCSS).access_token,
         }
 
     def get_servers(self):
@@ -56,7 +56,7 @@ class VirustotalAPI:
 
     def __init__(self):
         self.headers = {
-            "x-apikey": sqldb.get_bot_token(APIType.Virustotal).access_token,
+            "x-apikey": sqldb.get_access_token(APIType.Virustotal).access_token,
         }
 
     def get_url_report(self, url: str):
