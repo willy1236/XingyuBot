@@ -115,31 +115,56 @@ class BaseSQLEngine:
 
     # * Base
     def add(self, db_obj):
-        self.session.add(db_obj)
-        self.session.commit()
+        try:
+            self.session.add(db_obj)
+            self.session.commit()
+        except SQLAlchemyError as e:
+            log.error("SQLAlchemy Add Error: %s", e)
+            self.session.rollback()
+            raise
 
     def batch_add(self, db_obj_list: list):
         if db_obj_list:
-            for db_obj in db_obj_list:
-                self.session.add(db_obj)
-            self.session.commit()
+            try:
+                for db_obj in db_obj_list:
+                    self.session.add(db_obj)
+                self.session.commit()
+            except SQLAlchemyError as e:
+                log.error("SQLAlchemy Batch Add Error: %s", e)
+                self.session.rollback()
+                raise
 
     def merge(self, db_obj: T):  # type: ignore
-        obj = self.session.merge(db_obj)
-        self.session.commit()
-        return obj
+        try:
+            obj = self.session.merge(db_obj)
+            self.session.commit()
+            return obj
+        except SQLAlchemyError as e:
+            log.error("SQLAlchemy Merge Error: %s", e)
+            self.session.rollback()
+            raise
 
     def batch_merge(self, db_obj_list: list[T]):
         if db_obj_list:
             lst: list[T] = list()
-            for db_obj in db_obj_list:
-                lst.append(self.session.merge(db_obj))
-            self.session.commit()
-            return lst
+            try:
+                for db_obj in db_obj_list:
+                    lst.append(self.session.merge(db_obj))
+                self.session.commit()
+                return lst
+            except SQLAlchemyError as e:
+                log.error("SQLAlchemy Batch Merge Error: %s", e)
+                self.session.rollback()
+                raise
 
     def delete(self, db_obj):
-        self.session.delete(db_obj)
-        self.session.commit()
+        try:
+            self.session.delete(db_obj)
+            self.session.commit()
+        except SQLAlchemyError as e:
+            log.error("SQLAlchemy Delete Error: %s", e)
+            self.session.rollback()
+            raise
 
     def expire(self, db_obj):
         # self.session.expunge(db_obj)

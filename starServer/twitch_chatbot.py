@@ -338,7 +338,7 @@ async def run():
         app_token.client_credential_id = app_config.credential_id
         app_token.access_token = token
         app_token.refresh_token = refresh_token
-        sqldb.merge(app_token)
+        app_token = sqldb.merge(app_token)
         await twitch.set_user_authentication(app_token.access_token, USER_SCOPE, app_token.refresh_token)
 
     # 使用自帶的函式處理token
