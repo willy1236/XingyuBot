@@ -654,9 +654,13 @@ class CLIInterface():
             f'rettiwt -k "{self.rettiwt_api_key}" user details "{user_id_or_name}"', shell=True, capture_output=True, encoding="utf-8", check=False
         )
         r.check_returncode()
-        data = json.loads(r.stdout)
+        try:
+            data = json.loads(r.stdout)
+        except json.JSONDecodeError:
+            log.error("get_user_details 解析JSON失敗，輸出內容：%s", r.stdout)
+            return None
 
-        if data.get("name") == "VALIDATION_ERROR":
+        if not data or data.get("name") == "VALIDATION_ERROR":
             return None
 
         return RettiwtTweetUser(**data)

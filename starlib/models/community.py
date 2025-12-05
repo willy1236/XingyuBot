@@ -468,7 +468,7 @@ class RettiwtTweetUser(BaseModel):
     userName: str
     fullName: str
     createdAt: datetime
-    description: str
+    description: str | None = None
     isVerified: bool
     likeCount: int
     followersCount: int
