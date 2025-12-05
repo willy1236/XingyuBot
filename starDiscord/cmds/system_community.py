@@ -255,6 +255,9 @@ class system_community(Cog_Extension):
         roleid = role.id if role else None
 
         api_twitter_user = cli_api.get_user_details(twitter_username)
+        if not api_twitter_user:
+            await ctx.respond(f"錯誤：查無此使用者 {twitter_username}")
+            return
         # try:
         #     api_twitter_user = twitter_api.get_user(username=twitter_username)
         # except TooManyRequests:
@@ -280,6 +283,9 @@ class system_community(Cog_Extension):
     async def twitter_remove(self, ctx, twitter_username: discord.Option(str, required=True, name="twitter使用者名稱", description="使用者名稱")):
         guildid = ctx.guild.id
         twitter_user = cli_api.get_user_details(twitter_username)
+        if not twitter_user:
+            await ctx.respond(f"錯誤：查無此使用者 {twitter_username}")
+            return
         sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitterTweet, twitter_user.id, guildid)
         await ctx.respond(f"已移除 {twitter_username} 的通知")
 

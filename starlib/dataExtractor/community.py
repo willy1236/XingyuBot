@@ -629,6 +629,7 @@ class RssHub():
                 raise APIInvokeError("rsshub_get_twitter", f"[{r.status_code}]")
 
 class CLIInterface():
+    # TODO: 針對rettiwt指令列介面進行全面測試
     def __init__(self):
         self.rettiwt_api_key = sqldb.get_access_token(APIType.Rettiwt).access_token
         if shutil.which("rettiwt") is None:
