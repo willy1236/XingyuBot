@@ -188,6 +188,7 @@ class TwitchAPI:
 
 class GoogleAPI:
     """無身分驗證的Google API"""
+
     BaseURL = "https://www.googleapis.com/youtube/v3"
 
     def __init__(self):
@@ -420,8 +421,7 @@ class XingyuGoogleCloud:
             service = build("drive", "v3", credentials=self.creds)
 
             # Call the Drive v3 API
-            results = service.files().list(
-                pageSize=10, fields="nextPageToken, files(id, name)").execute()
+            results = service.files().list(pageSize=10, fields="nextPageToken, files(id, name)").execute()
             items = results.get("files", [])
 
             if not items:
@@ -434,37 +434,34 @@ class XingyuGoogleCloud:
         except HttpError as error:
             print(f"An error occurred: {error}")
 
-    def list_file_permissions(self,fileId):
+    def list_file_permissions(self, fileId):
         service = build("drive", "v3", credentials=self.creds)
         results = service.permissions().list(fileId=fileId, fields="permissions(*)").execute()
         return results
 
-    def add_file_permissions(self,fileId,emailAddress):
+    def add_file_permissions(self, fileId, emailAddress):
         service = build("drive", "v3", credentials=self.creds)
         permission_dict = {"role": "reader", "type": "user", "emailAddress": emailAddress}
         results = service.permissions().create(fileId=fileId, body=permission_dict).execute()
         return results
 
-    def remove_file_permissions(self,fileId,permissionId):
+    def remove_file_permissions(self, fileId, permissionId):
         service = build("drive", "v3", credentials=self.creds)
         results = service.permissions().delete(fileId=fileId, permissionId=permissionId).execute()
         return results
 
-class NotionAPI():
+
+class NotionAPI:
     def __init__(self):
         self.headers = self._get_headers()
         self.url = "https://api.notion.com/v1"
 
     def _get_headers(self):
         token = sqldb.get_access_token(APIType.Notion).access_token
-        return {
-            "Authorization": f"Bearer {token}",
-            "Notion-Version": "2022-06-28",
-            "Content-Type": "application/json"
-        }
+        return {"Authorization": f"Bearer {token}", "Notion-Version": "2022-06-28", "Content-Type": "application/json"}
 
     def get_page(self, page_id: str):
-        r = requests.get(f"{self.url}/pages/{page_id}",headers=self.headers)
+        r = requests.get(f"{self.url}/pages/{page_id}", headers=self.headers)
         apidata = r.json()
         if r.ok:
             return NotionPage(**apidata)
@@ -472,7 +469,7 @@ class NotionAPI():
             return apidata["message"]
 
     def get_page_property(self, page_id: str, property_id: str):
-        r = requests.get(f"{self.url}/pages/{page_id}/properties/{property_id}",headers=self.headers)
+        r = requests.get(f"{self.url}/pages/{page_id}/properties/{property_id}", headers=self.headers)
         apidata = r.json()
         if r.status_code == 200:
             return apidata
@@ -500,7 +497,7 @@ class NotionAPI():
             return apidata["message"]
 
     def get_block(self, block_id: str):
-        r = requests.get(f"{self.url}/blocks/{block_id}",headers=self.headers)
+        r = requests.get(f"{self.url}/blocks/{block_id}", headers=self.headers)
         apidata = r.json()
         if r.status_code == 200:
             return NotionBlock(**apidata)
@@ -594,14 +591,14 @@ class NotionAPI():
         return self.update_block(blocks.results[0].id, data)
 
 
-class RssHub():
+class RssHub:
     def __init__(self):
         self.url = "https://rsshub.app"
         self.url_local = "http://localhost:1200"
 
     def get_twitter(self, username: str, local=False, after: datetime | None = None):
         """取得Twitter用戶的RSS"""
-        #* api不支援id查詢 故使用username查詢
+        # * api不支援id查詢 故使用username查詢
         if local:
             try:
                 r = requests.get(f"{self.url_local}/twitter/user/{username}")
@@ -628,7 +625,8 @@ class RssHub():
             else:
                 raise APIInvokeError("rsshub_get_twitter", f"[{r.status_code}]")
 
-class CLIInterface():
+
+class CLIInterface:
     # TODO: 針對rettiwt指令列介面進行全面測試
     def __init__(self):
         self.rettiwt_api_key = sqldb.get_access_token(APIType.Rettiwt).access_token
@@ -652,7 +650,11 @@ class CLIInterface():
 
     def get_user_details(self, user_id_or_name: str) -> RettiwtTweetUser | None:
         r = subprocess.run(
-            f'rettiwt -k "{self.rettiwt_api_key}" user details "{user_id_or_name}"', shell=True, capture_output=True, encoding="utf-8", check=False
+            f'rettiwt -k "{self.rettiwt_api_key}" user details "{user_id_or_name.removeprefix("@")}"',
+            shell=True,
+            capture_output=True,
+            encoding="utf-8",
+            check=False,
         )
         r.check_returncode()
         try:
