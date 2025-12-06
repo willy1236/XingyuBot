@@ -601,6 +601,7 @@ class RettiwtTweetUserDetails(BaseModel):
     pinnedTweet: int | None = None
     profileBanner: HttpUrl | None = None
     profileImage: HttpUrl | None = None
+    viewCount: int
 
     # @field_validator("createdAt", mode="before")
     # @classmethod
