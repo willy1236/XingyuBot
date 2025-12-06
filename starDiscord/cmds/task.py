@@ -297,6 +297,7 @@ class task(Cog_Extension):
                         )
 
                     update_data[twitter_user_id] = newest + timedelta(seconds=1)
+                await asyncio.sleep(1)
             except subprocess.CalledProcessError as e:
                 log.error(e.stderr)
                 continue
