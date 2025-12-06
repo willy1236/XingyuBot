@@ -753,6 +753,7 @@ class OAuthClient(TokensSchema, table=True):
     redirect_uri: str = Field(sa_column=Column(String, nullable=False))
     callback_uri: str = Field(sa_column=Column(String))
     grant_types: str = Field(sa_column=Column(String))
+    default_scopes: list[str] = Field(sa_column=Column(ARRAY(String)))
 
 
 class OAuthToken(TokensSchema, table=True):
