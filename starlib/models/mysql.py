@@ -48,6 +48,7 @@ class UserPoint(UserSchema, table=True):
     point: int = Field(sa_column=Column(Integer), default=0)
     rcoin: int = Field(sa_column=Column(Integer), default=0)
 
+
 class UserBet(UserSchema, table=True):
     __tablename__ = "user_bet"
 
@@ -56,6 +57,7 @@ class UserBet(UserSchema, table=True):
     bet_option: int = Field(sa_column=Column(SmallInteger))
     bet_amount: int = Field(sa_column=Column(Integer))
     bet_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
+
 
 class UserGame(UserSchema, table=True):
     __tablename__ = "game_data"
@@ -77,11 +79,13 @@ class UserPoll(UserSchema, table=True):
     vote_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
     vote_magnification: int = Field(sa_column=Column(Integer), default=1)
 
+
 class UserAccount(UserSchema, table=True):
     __tablename__ = "user_account"
 
     main_account: int = Field(sa_column=Column(BigInteger, primary_key=True))
     alternate_account: int = Field(sa_column=Column(BigInteger, primary_key=True))
+
 
 class UserParty(UserSchema, table=True):
     __tablename__ = "user_party"
@@ -90,6 +94,7 @@ class UserParty(UserSchema, table=True):
     party_id: int = Field(sa_column=Column(Integer, ForeignKey("stardb_idbase.party_datas.party_id"), primary_key=True))
 
     party: "Party" = Relationship(back_populates="members")
+
 
 class UserModerate(UserSchema, table=True):
     __tablename__ = "user_moderate"
@@ -157,6 +162,7 @@ class Pet(UserSchema, table=True):
     pet_name: str = Field(sa_column=Column(String))
     food: int | None = Field(sa_column=Column(Integer))
 
+
 class LOLGameRecord(UserSchema, table=True):
     __tablename__ = "lol_game_record"
 
@@ -210,12 +216,14 @@ class LOLGameRecord(UserSchema, table=True):
     retreatPings: int = Field(sa_column=Column(Integer))
     visionClearedPings: int = Field(sa_column=Column(Integer))
 
+
 class TwitchPoint(UserSchema, table=True):
     __tablename__ = "twitch_point"
 
     twitch_id: int = Field(sa_column=Column(primary_key=True))
     broadcaster_id: int = Field(sa_column=Column(primary_key=True))
     point: int = Field(default=0)
+
 
 class HappycampVIP(HappycampSchema, table=True):
     __tablename__ = "vip_info"
@@ -269,6 +277,7 @@ class HappycampApplicationForm(HappycampSchema, table=True):
         embed.add_field(name="變更 VIP 等級", value=str(self.change_vip_level) if self.change_vip_level is not None else "無")
         return embed
 
+
 class Community(BasicSchema, table=True):
     __tablename__ = "community_info"
 
@@ -287,12 +296,11 @@ class NotifyChannel(BasicSchema, table=True):
     role_id: int | None = Field(sa_column=Column(BigInteger))
     message: str | None
 
+
 class NotifyCommunity(BasicSchema, table=True):
     __tablename__ = "notify_community"
 
-    notify_type: NotifyCommunityType = Field(
-        sa_column=Column(Integer, primary_key=True)
-    )
+    notify_type: NotifyCommunityType = Field(sa_column=Column(Integer, primary_key=True))
     community_id: str = Field(primary_key=True)
     community_type: CommunityType = Field(sa_column=Column(Integer, primary_key=True))
     guild_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
@@ -300,12 +308,14 @@ class NotifyCommunity(BasicSchema, table=True):
     role_id: int | None = Field(sa_column=Column(BigInteger))
     message: str | None
 
+
 class DynamicVoiceLobby(BasicSchema, table=True):
     __tablename__ = "dynamic_voice_lobby"
 
     guild_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
     channel_id: int = Field(sa_column=Column(BigInteger))
     default_room_name: str | None = Field(sa_column=Column(String(255), nullable=True))
+
 
 class DynamicVoice(BasicSchema, table=True):
     __tablename__ = "dynamic_channel"
@@ -352,6 +362,7 @@ class PollOption(BasicSchema, table=True):
     option_id: int = Field(primary_key=True)
     option_name: str
 
+
 class PollRole(BasicSchema, table=True):
     __tablename__ = "poll_role"
 
@@ -359,6 +370,7 @@ class PollRole(BasicSchema, table=True):
     role_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
     is_only_role: bool
     role_magnification: int
+
 
 class TwitchBotJoinChannel(BasicSchema, table=True):
     __tablename__ = "twitch_bot_join_channel"
@@ -475,6 +487,7 @@ class ServerConfig(BasicSchema, table=False):
     timeout_after_warning_times: int | None
     voice_time_counter: bool | None
 
+
 class MemorialDay(BasicSchema, table=True):
     __tablename__ = "memorial_days"
 
@@ -482,6 +495,7 @@ class MemorialDay(BasicSchema, table=True):
     discord_id: int = Field(sa_column=Column(BigInteger))
     target_date: date
     name: str
+
 
 class UserIPDetails(BasicSchema, table=True):
     __tablename__ = "user_ip_details"
@@ -493,6 +507,7 @@ class UserIPDetails(BasicSchema, table=True):
     mac: str | None = Field(sa_column=Column(MACADDR))
     name: str | None = Field(sa_column=Column(String))
     registration_at: datetime | None = Field(sa_column=Column(TIMESTAMP(True, 0)))
+
 
 class TicketChannelLobby(BasicSchema, table=True):
     __tablename__ = "ticket_channel_lobby"
@@ -513,12 +528,14 @@ class TicketChannel(BasicSchema, table=True):
     closer_id: int | None = Field(sa_column=Column(BigInteger))
     view_message_id: int | None = Field(sa_column=Column(BigInteger))
 
+
 class VoiceTime(BasicSchema, table=True):
     __tablename__ = "voice_time"
 
     discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
     guild_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
     total_minute: timedelta = Field(sa_column=Column(Interval, default=timedelta()))
+
 
 class Party(IdbaseSchema, table=True):
     __tablename__ = "party_datas"
@@ -530,6 +547,7 @@ class Party(IdbaseSchema, table=True):
     created_at: date = Field(sa_column=Column(Date))
 
     members: list[UserParty] = Relationship(back_populates="party")
+
 
 class DiscordRegistration(IdbaseSchema, table=True):
     __tablename__ = "discord_registrations"
@@ -608,8 +626,8 @@ class BackupRole(BackupSchema, table=True):
 
     members: list["BackupRoleUser"] = Relationship(back_populates="role")
 
-    def embed(self, bot:Bot):
-        embed = BotEmbed.simple(self.role_name,self.description)
+    def embed(self, bot: Bot):
+        embed = BotEmbed.simple(self.role_name, self.description)
         embed.add_field(name="創建於", value=self.created_at.strftime("%Y/%m/%d %H:%M:%S"))
         embed.add_field(name="顏色", value=f"({self.colour_r}, {self.colour_g}, {self.colour_b})")
         if bot and self.members:
@@ -618,9 +636,10 @@ class BackupRole(BackupSchema, table=True):
                 user = bot.get_user(user.discord_id)
                 if user:
                     user_list.append(user.mention)
-            embed.add_field(name="成員", value=",".join(user_list),inline=False)
+            embed.add_field(name="成員", value=",".join(user_list), inline=False)
 
         return embed
+
 
 class BackupRoleUser(BackupSchema, table=True):
     __tablename__ = "role_user_backup"
@@ -628,6 +647,7 @@ class BackupRoleUser(BackupSchema, table=True):
     role_id: int = Field(sa_column=Column(BigInteger, ForeignKey("stardb_backup.roles_backup.role_id"), primary_key=True))
     discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
     role: BackupRole = Relationship(back_populates="members")
+
 
 class BackupCategory(BackupSchema, table=True):
     __tablename__ = "category_backup"
@@ -676,6 +696,7 @@ class BackupMessage(BackupSchema, table=True):
         embed.add_field(name="Created at", value=self.created_at.strftime("%Y/%m/%d %H:%M:%S"))
         return embed
 
+
 class UsersCountRecord(BackupSchema, table=True):
     __tablename__ = "users_count_backup"
 
@@ -683,6 +704,7 @@ class UsersCountRecord(BackupSchema, table=True):
     shard_id: int | None = Field(sa_column=Column(SmallInteger))
     users_count: int = Field(sa_column=Column(Integer))
     servers_count: int = Field(sa_column=Column(Integer))
+
 
 class OAuth2Token(TokensSchema, table=True):
     __tablename__ = "oauth_token2"
@@ -712,6 +734,7 @@ class BotToken(TokensSchema, table=True):
     callback_uri: str | None = Field(sa_column=Column(String))
     expires_at: datetime | None = Field(sa_column=Column(TIMESTAMP(True, 0)))
 
+
 class Credential(TokensSchema, table=True):
     __tablename__ = "credential"
 
@@ -727,7 +750,7 @@ class Credential(TokensSchema, table=True):
 class IdentifierSecret(TokensSchema, table=True):
     __tablename__ = "id_secret"
 
-    credential_id: int = Field(sa_column=Column(Integer, ForeignKey("stardb_tokens.credential.id"), primary_key=True))
+    credential_id: int = Field(sa_column=Column(Integer, ForeignKey("credentials.credential.id"), primary_key=True))
     client_id: str = Field(sa_column=Column(String, unique=True, nullable=False))
     client_secret: str = Field(sa_column=Column(String, nullable=False))
 
@@ -735,7 +758,7 @@ class IdentifierSecret(TokensSchema, table=True):
 class AccessToken(TokensSchema, table=True):
     __tablename__ = "access_token"
 
-    credential_id: int = Field(sa_column=Column(Integer, ForeignKey("stardb_tokens.credential.id"), primary_key=True))
+    credential_id: int = Field(sa_column=Column(Integer, ForeignKey("credentials.credential.id"), primary_key=True))
     access_token: str = Field(sa_column=Column(String, nullable=False))
     expires_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
 
@@ -747,7 +770,7 @@ class AccessToken(TokensSchema, table=True):
 class OAuthClient(TokensSchema, table=True):
     __tablename__ = "oauth_client"
 
-    credential_id: int = Field(sa_column=Column(Integer, ForeignKey("stardb_tokens.credential.id"), primary_key=True))
+    credential_id: int = Field(sa_column=Column(Integer, ForeignKey("credentials.credential.id"), primary_key=True))
     client_id: str = Field(sa_column=Column(String, nullable=False))
     client_secret: str = Field(sa_column=Column(String, nullable=False))
     redirect_uri: str = Field(sa_column=Column(String, nullable=False))
@@ -760,7 +783,7 @@ class OAuthToken(TokensSchema, table=True):
     __tablename__ = "oauth_token"
 
     user_id: str = Field(sa_column=Column(String, primary_key=True))
-    client_credential_id: int = Field(sa_column=Column(Integer, ForeignKey("stardb_tokens.oauth_client.credential_id"), primary_key=True))
+    client_credential_id: int = Field(sa_column=Column(Integer, ForeignKey("credentials.oauth_client.credential_id"), primary_key=True))
     access_token: str = Field(sa_column=Column(String))
     refresh_token: str = Field(sa_column=Column(String))
     scope: list[str] = Field(sa_column=Column(ARRAY(String)))
@@ -773,7 +796,7 @@ class OAuthToken(TokensSchema, table=True):
 
 class WebSubConfig(TokensSchema, table=True):
     __tablename__ = "websub_config"
-    credential_id: int = Field(foreign_key="stardb_tokens.credential.id", primary_key=True)
+    credential_id: int = Field(foreign_key="credentials.credential.id", primary_key=True)
     callback_uri: str
     hub_secret: str | None = None
 
@@ -781,13 +804,14 @@ class WebSubConfig(TokensSchema, table=True):
 class WebsubInstance(TokensSchema, table=True):
     __tablename__ = "websub_instance"
     id: int | None = Field(default=None, primary_key=True)
-    config_id: int = Field(foreign_key="stardb_tokens.websub_config.credential_id")
+    config_id: int = Field(foreign_key="credentials.websub_config.credential_id")
     topic: str
     lease_seconds: int | None = None
     expires_at: datetime | None = None
     hub_mode: str | None = None
     status: str | None = None
     hub_challenge: str | None = None
+
 
 class CommunityCache(CacheSchema, table=True):
     """社群快取資料表"""
@@ -807,6 +831,7 @@ class NotifyCache(CacheSchema, table=True):
     notify_type: NotifyChannelType = Field(sa_column=Column(Integer, primary_key=True))
     value: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
 
+
 class YoutubeCache(CacheSchema, table=True):
     """YouTube快取資料表"""
 
@@ -815,6 +840,7 @@ class YoutubeCache(CacheSchema, table=True):
     video_id: str = Field(sa_column=Column(String, primary_key=True))
     scheduled_live_start: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
 
+
 class LOLGameCache(CacheSchema, table=True):
     """LOL遊戲快取資料表"""
 
@@ -822,6 +848,7 @@ class LOLGameCache(CacheSchema, table=True):
 
     puuid: str = Field(sa_column=Column(String, primary_key=True))
     newest_game_time: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
+
 
 class WarningList(ListObject[UserModerate]):
     def __init__(self, items: list[UserModerate], discord_id: int):

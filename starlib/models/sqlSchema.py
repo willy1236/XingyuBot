@@ -55,7 +55,7 @@ class RPGSchema(BaseSchema):
 
 class TokensSchema(BaseSchema):
     __abstract__ = True
-    __table_args__ = {"schema": "stardb_tokens"}
+    __table_args__ = {"schema": "credentials"}
 
 class UserSchema(BaseSchema):
     __abstract__ = True
