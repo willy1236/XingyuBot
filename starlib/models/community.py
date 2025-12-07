@@ -537,7 +537,7 @@ class RettiwtTweetItem(BaseModel):
     replyCount: int
     retweetCount: int
     likeCount: int
-    viewCount: int
+    viewCount: int | None = None
     bookmarkCount: int
     url: str
 
@@ -567,7 +567,7 @@ class RettiwtTweetItem(BaseModel):
         embed.add_field(name="回覆數", value=f"{self.replyCount:,}")
         embed.add_field(name="轉推數", value=f"{self.retweetCount:,}")
         embed.add_field(name="按讚數", value=f"{self.likeCount:,}")
-        embed.add_field(name="觀看數", value=f"{self.viewCount:,}")
+        embed.add_field(name="觀看數", value=f"{self.viewCount:,}" if self.viewCount is not None else "N/A")
         if self.entities.hashtags:
             embed.add_field(name="Hashtags", value=", ".join(f"#{tag}" for tag in self.entities.hashtags), inline=False)
         if self.entities.mentionedUsers:
@@ -601,7 +601,6 @@ class RettiwtTweetUserDetails(BaseModel):
     pinnedTweet: int | None = None
     profileBanner: HttpUrl | None = None
     profileImage: HttpUrl | None = None
-    viewCount: int
 
     # @field_validator("createdAt", mode="before")
     # @classmethod
