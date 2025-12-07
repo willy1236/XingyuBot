@@ -3,7 +3,7 @@ from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from datetime import date, datetime, time, timedelta, timezone
 from functools import wraps
-from typing import TYPE_CHECKING, Any, Literal, ParamSpec, Self, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Literal, ParamSpec, TypeVar, overload
 from ipaddress import IPv4Network
 
 import discord

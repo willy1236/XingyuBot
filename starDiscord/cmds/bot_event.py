@@ -183,7 +183,7 @@ class event(Cog_Extension):
             if self.bot.user in message.mentions:
                 await self.bot.mentioned(message)
             # 被提及所有人回報
-            if message.mention_everyone:
+            if message.mention_everyone and not message.author.bot:
                 await self.bot.mention_everyone(message)
 
         #私人訊息回報
