@@ -11,7 +11,7 @@ from requests.exceptions import ConnectTimeout, RequestException
 from starlib import BotEmbed, Jsondb, log, sclient, sqldb, tz, utils
 from starlib.instance import *
 from starlib.models.community import YoutubeVideo
-from starlib.models.mysql import UsersCountRecord, VoiceTime
+from starlib.models.postgresql import UsersCountRecord, VoiceTime
 from starlib.types import APIType, NotifyChannelType, NotifyCommunityType
 
 from ..bot import DiscordBot

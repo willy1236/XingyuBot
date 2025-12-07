@@ -1,5 +1,4 @@
 # pyright: reportArgumentType=false
-import threading
 from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from datetime import date, datetime, time, timedelta, timezone
@@ -10,16 +9,17 @@ from ipaddress import IPv4Network
 import discord
 import sqlalchemy
 from google.oauth2.credentials import Credentials
-from sqlalchemy import and_, delete, desc, func, not_, or_
+from sqlalchemy import Engine, and_, delete, desc, func, not_, or_
 from sqlalchemy.engine import URL
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session as ALSession
-from sqlalchemy.orm import joinedload, sessionmaker
+from sqlalchemy.orm import joinedload, scoped_session, sessionmaker
+from sqlalchemy.orm.scoping import ScopedSession
 from sqlmodel import Session, SQLModel, create_engine, select, update
 
 from ..errors import *
 from ..fileDatabase import Jsondb
-from ..models.mysql import *
+from ..models.postgresql import *
 from ..models.rpg import *
 from ..models.sqlSchema import Base
 from ..settings import tz
@@ -30,37 +30,24 @@ T = TypeVar("T")
 P = ParamSpec("P")
 
 
-# 外部裝飾器定義（不依賴 self）
-def with_session(func):
-    @wraps(func)
-    def wrapper(self: "BaseSQLEngine", *args, **kwargs):
-        with self.session_scope():
-            return func(self, *args, **kwargs)
-
-    return wrapper
+def create_sql_repository(connection_url: URL):
+    engine = create_engine(connection_url, echo=False, pool_pre_ping=True)
+    SQLModel.metadata.create_all(engine)
+    session_factory = scoped_session(sessionmaker(bind=engine, class_=Session, autoflush=True, expire_on_commit=True))
+    return SQLRepository(engine, session_factory)
 
 
-class BaseSQLEngine:
-    def __init__(self, connection_url):
-        # self.alengine = sqlalchemy.create_engine(connection_url, echo=False)
-        # Base.metadata.create_all(self.alengine)
-        # Sessionmkr = sessionmaker(bind=self.alengine)
-        # self.alsession = Sessionmkr()
-        self._local = threading.local()
-
-        self.engine = create_engine(connection_url, echo=False, pool_pre_ping=True)
-        self.SessionLocal = sessionmaker(bind=self.engine, class_=Session, expire_on_commit=False)
-        # SessionLocal = sessionmaker(bind=self.engine)
-        # self.session:Session = SessionLocal()
-
-        # Base.metadata.create_all(self.engine)
-        SQLModel.metadata.create_all(self.engine)
-        # SQLModel.metadata.drop_all(engine, schema="my_schema")
-
-        # with Session(self.engine) as session:
-        self.session = Session(bind=self.engine)
-
+class BaseRepository:
+    def __init__(self, engine: Engine, session_factory: Session | ScopedSession):
+        self.engine = engine
+        self._session_factory = session_factory
         self.cache = dict()
+
+    @property
+    def session(self) -> Session:
+        if isinstance(self._session_factory, Session):
+            return self._session_factory
+        return self._session_factory()
 
     @overload
     def __getitem__(self, key: Literal[DBCacheType.DynamicVoiceRoom]) -> list[int]: ...
@@ -85,33 +72,6 @@ class BaseSQLEngine:
         if isinstance(key, NotifyChannelType):
             self.cache[DBCacheType.from_notify_channel(key)] = value
         self.cache[key] = value
-
-    @property
-    def alsession(self) -> Session:
-        if not hasattr(self._local, "alsession"):
-            raise RuntimeError("Session not initialized. Use inside a session context.")
-        return self._local.alsession
-
-    @contextmanager
-    def session_scope(self) -> Generator[None, None, None]:
-        self._local.alsession = self.SessionLocal()
-        try:
-            yield
-            self.alsession.commit()
-        except Exception:
-            self.alsession.rollback()
-            raise
-        finally:
-            self.alsession.close()
-            del self._local.alsession
-
-    def with_session(self, func: Callable[P, T]) -> Callable[P, T]:
-        @wraps(func)
-        def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
-            with self.session_scope():
-                return func(*args, **kwargs)
-
-        return wrapper
 
     # * Base
     def add(self, db_obj):
@@ -174,7 +134,7 @@ class BaseSQLEngine:
         return self.session.get(db_obj, primary_keys)  # type: ignore
 
 
-class SQLUserSystem(BaseSQLEngine):
+class SQLUserSystem(BaseRepository):
     # * User
     def get_cloud_user(self, discord_id: int):
         """
@@ -210,14 +170,6 @@ class SQLUserSystem(BaseSQLEngine):
         stmt = select(CloudUser.privilege_level).where(CloudUser.discord_id == discord_id)
         result = self.session.exec(stmt).one_or_none()
         return PrivilegeLevel(result) if result else PrivilegeLevel.User
-
-    @with_session
-    def get_dcuser_test_session(self, discord_id: int, with_registration: bool = False):
-        stmt = select(DiscordUser).where(DiscordUser.discord_id == discord_id)
-        if with_registration:
-            stmt = stmt.options(joinedload(DiscordUser.registration))
-        result = self.alsession.exec(stmt).one_or_none()
-        return result or DiscordUser(discord_id=discord_id)
 
     def get_main_account(self, alternate_account):
         stmt = select(UserAccount.main_account).where(UserAccount.alternate_account == alternate_account)
@@ -256,7 +208,7 @@ class SQLUserSystem(BaseSQLEngine):
         self.session.commit()
 
 
-class SQLCurrencySystem(BaseSQLEngine):
+class SQLCurrencySystem(BaseRepository):
     def get_coin(self, discord_id: int):
         """取得用戶擁有的貨幣數"""
         stmt = select(UserPoint).where(UserPoint.discord_id == discord_id)
@@ -320,7 +272,7 @@ class SQLCurrencySystem(BaseSQLEngine):
     #         return ShopItem(record[0])
 
 
-class SQLBetSystem(BaseSQLEngine):
+class SQLBetSystem(BaseRepository):
     def get_bet(self, bet_id: int):
         """取得指定的賭注資料"""
         stmt = select(Bet).where(Bet.bet_id == bet_id)
@@ -364,7 +316,7 @@ class SQLBetSystem(BaseSQLEngine):
 #         self.connection.commit()
 
 
-class SQLGameSystem(BaseSQLEngine):
+class SQLGameSystem(BaseRepository):
     def get_user_game(self, discord_id: int, game: GameType):
         stmt = select(UserGame).where(UserGame.discord_id == discord_id, UserGame.game == game)
         result = self.session.exec(stmt).one_or_none()
@@ -395,7 +347,7 @@ class SQLGameSystem(BaseSQLEngine):
         return {i: cnt for i, cnt in result}
 
 
-class SQLPetSystem(BaseSQLEngine):
+class SQLPetSystem(BaseRepository):
     def get_pet(self, discord_id: int):
         """取得寵物"""
         stmt = select(Pet).where(Pet.discord_id == discord_id)
@@ -416,7 +368,7 @@ class SQLPetSystem(BaseSQLEngine):
         self.session.commit()
 
 
-class SQLNotifySystem(BaseSQLEngine):
+class SQLNotifySystem(BaseRepository):
     # * notify channel
     def add_notify_channel(self, guild_id: int, notify_type: NotifyChannelType, channel_id: int, role_id: int = None, message: str = None):
         """設定自動通知頻道"""
@@ -625,7 +577,7 @@ class SQLNotifySystem(BaseSQLEngine):
         self.session.commit()
 
 
-class SQLDynamicVoiceSystem(BaseSQLEngine):
+class SQLDynamicVoiceSystem(BaseRepository):
     def add_dynamic_voice_lobby(self, guild_id: int, channel_id: int, default_room_name: str | None = None):
         """新增動態語音大廳"""
         lobby = DynamicVoiceLobby(guild_id=guild_id, channel_id=channel_id, default_room_name=default_room_name)
@@ -691,7 +643,7 @@ class SQLDynamicVoiceSystem(BaseSQLEngine):
                     self[DBCacheType.DynamicVoiceRoom].remove(channel_id)
 
 
-class SQLTicketSystem(BaseSQLEngine):
+class SQLTicketSystem(BaseRepository):
     def get_all_ticket_lobbys(self):
         stmt = select(TicketChannelLobby)
         result = self.session.exec(stmt).all()
@@ -713,7 +665,7 @@ class SQLTicketSystem(BaseSQLEngine):
         return result
 
 
-class SQLRoleSaveSystem(BaseSQLEngine):
+class SQLRoleSaveSystem(BaseRepository):
     # * role_save
     def get_role_save(self, discord_id: int):
         stmt = select(RoleSave).where(RoleSave.discord_id == discord_id).order_by(RoleSave.time, desc(RoleSave.role_id))
@@ -775,7 +727,7 @@ class SQLRoleSaveSystem(BaseSQLEngine):
         self.session.commit()
 
 
-class SQLWarningSystem(BaseSQLEngine):
+class SQLWarningSystem(BaseRepository):
     # * warning
     def add_warning(
         self,
@@ -868,7 +820,7 @@ class SQLWarningSystem(BaseSQLEngine):
         return warning_count
 
 
-class SQLPollSystem(BaseSQLEngine):
+class SQLPollSystem(BaseRepository):
     # * poll
     def remove_poll(self, poll_id: int):
         self.session.exec(delete(Poll).where(Poll.poll_id == poll_id))
@@ -1040,7 +992,7 @@ class SQLPollSystem(BaseSQLEngine):
         self.session.commit()
 
 
-class SQLElectionSystem(BaseSQLEngine):
+class SQLElectionSystem(BaseRepository):
     # * party
     def join_party(self, discord_id: int, party_id: int):
         up = UserParty(discord_id=discord_id, party_id=party_id)
@@ -1073,7 +1025,7 @@ class SQLElectionSystem(BaseSQLEngine):
         return result
 
 
-class SQLTwitchSystem(BaseSQLEngine):
+class SQLTwitchSystem(BaseRepository):
     # * twitch
     def get_bot_join_channel_all(self):
         stmt = select(TwitchBotJoinChannel)
@@ -1123,7 +1075,7 @@ class SQLTwitchSystem(BaseSQLEngine):
         self.session.commit()
 
 
-class SQLRPGSystem(BaseSQLEngine):
+class SQLRPGSystem(BaseRepository):
     def get_rpg_player(self, discord_id: int):
         stmt = select(RPGPlayer).where(RPGPlayer.discord_id == discord_id)
         result = self.session.exec(stmt).one_or_none()
@@ -1155,7 +1107,7 @@ class SQLRPGSystem(BaseSQLEngine):
         return result
 
 
-class SQLTRPGSystem(BaseSQLEngine):
+class SQLTRPGSystem(BaseRepository):
     def get_trpg_plot(self, plot_id):
         stmt = select(TRPGStoryPlot).where(TRPGStoryPlot.id == plot_id)
         result = self.session.exec(stmt).one()
@@ -1172,7 +1124,7 @@ class SQLTRPGSystem(BaseSQLEngine):
         return result
 
 
-class SQLBackupSystem(BaseSQLEngine):
+class SQLBackupSystem(BaseRepository):
     # * backup
     def backup_role(self, role: discord.Role, description: str = None):
         backup_role = BackupRole(
@@ -1249,7 +1201,7 @@ class SQLBackupSystem(BaseSQLEngine):
         self.session.commit()
 
 
-class SQLTokensSystem(BaseSQLEngine):
+class SQLTokensSystem(BaseRepository):
     # def set_oauth(self, user_id: int, type: CommunityType, access_token: str, refresh_token: str = None, expires_at: datetime = None):
     #     token = OAuth2Token(user_id=user_id, type=type, access_token=access_token, refresh_token=refresh_token, expires_at=expires_at)
     #     self.session.merge(token)
@@ -1380,7 +1332,8 @@ class SQLTokensSystem(BaseSQLEngine):
         result = self.session.exec(stmt).one()
         return result
 
-class SQLCacheSystem(BaseSQLEngine):
+
+class SQLCacheSystem(BaseRepository):
     def set_community_caches(self, type: NotifyCommunityType, data: dict[str, datetime | None]):
         """批量設定社群快取"""
         for community_id, value in data.items():
@@ -1479,7 +1432,7 @@ class SQLCacheSystem(BaseSQLEngine):
         return result
 
 
-class SQLNetwork(BaseSQLEngine):
+class SQLNetwork(BaseRepository):
     def set_ips_last_seen(self, data: dict[tuple[str, str], datetime]):
         """設定IP最後出現時間"""
         for (ip, mac), last_seen in data.items():
@@ -1493,7 +1446,7 @@ class SQLNetwork(BaseSQLEngine):
         return result
 
 
-class SQLVIPSystem(BaseSQLEngine):
+class SQLVIPSystem(BaseRepository):
     def get_vip(self, discord_id: int):
         stmt = select(HappycampVIP).where(HappycampVIP.discord_id == discord_id)
         result = self.session.exec(stmt).one_or_none()
@@ -1509,7 +1462,8 @@ class SQLVIPSystem(BaseSQLEngine):
         result = self.session.exec(stmt).all()
         return result
 
-class SQLServerConfigSystem(BaseSQLEngine):
+
+class SQLServerConfigSystem(BaseRepository):
     def get_server_config(self, guild_id: int):
         stmt = select(ServerConfig).where(ServerConfig.guild_id == guild_id)
         result = self.session.exec(stmt).one_or_none()
@@ -1531,7 +1485,7 @@ class SQLServerConfigSystem(BaseSQLEngine):
         return result
 
 
-class SQLTest(BaseSQLEngine):
+class SQLTest(BaseRepository):
     pass
 
 
@@ -1627,7 +1581,7 @@ class SQLTest(BaseSQLEngine):
 #             return Party(**records[0])
 
 
-class SQLEngine(
+class SQLRepository(
     SQLUserSystem,
     SQLCurrencySystem,
     SQLBetSystem,
@@ -1651,7 +1605,7 @@ class SQLEngine(
     SQLServerConfigSystem,
     SQLTest,
 ):
-    """SQL引擎"""
+    """綜合SQL資料庫存取類別"""
 
     dict_type = [DBCacheType.DynamicVoiceLobby, DBCacheType.VoiceLog, DBCacheType.TwitchCmd]
     list_type = [DBCacheType.DynamicVoiceRoom]

@@ -4,7 +4,7 @@ from discord.ext import commands
 
 from starlib import BotEmbed, ChoiceList, Jsondb, sclient
 from starlib.instance import happycamp_guild
-from starlib.models.mysql import DiscordUser
+from starlib.models.postgresql import DiscordUser
 
 from ..extension import Cog_Extension
 from ..uiElement.view import DeletePetView

@@ -8,7 +8,7 @@ from discord.utils import format_dt
 
 from starlib import BotEmbed, ChoiceList, Jsondb, sclient
 from starlib.instance import debug_guilds
-from starlib.models.mysql import ReactionRoleOption, ReactionRoleMessage, TicketChannelLobby
+from starlib.models.postgresql import ReactionRoleOption, ReactionRoleMessage, TicketChannelLobby
 from starlib.types import NotifyChannelType, WarningType
 from starlib.utils import converter
 

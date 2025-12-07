@@ -15,7 +15,7 @@ from twitchAPI.type import AuthScope, ChatEvent, EventSubSubscriptionError, Even
 
 from starlib import BaseThread, BotEmbed, Jsondb, sclient, sqldb, twitch_log
 from starlib.instance import tw_api
-from starlib.models.mysql import TwitchChatCommand
+from starlib.models.postgresql import TwitchChatCommand
 from starlib.types import APIType, NotifyCommunityType
 
 USER_SCOPE = [

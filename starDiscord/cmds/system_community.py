@@ -7,7 +7,7 @@ from tweepy.errors import TooManyRequests
 
 from starlib import BotEmbed, ChoiceList, Jsondb, sclient, tz
 from starlib.instance import cli_api, tw_api, twitter_api, google_api, yt_push
-from starlib.models.mysql import Community
+from starlib.models.postgresql import Community
 from starlib.types import APIType, CommunityType, NotifyCommunityType
 
 from ..extension import Cog_Extension

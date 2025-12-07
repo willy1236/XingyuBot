@@ -14,7 +14,7 @@ from discord.utils import format_dt
 from starlib import BotEmbed, ChoiceList, log, sclient, tz
 from starlib.dataExtractor import XingyuGoogleCloud
 from starlib.instance import *
-from starlib.models.mysql import Giveaway
+from starlib.models.postgresql import Giveaway
 from starlib.types import Coins
 from starlib.utils import converter, create_only_role_list, create_role_magification_dict, find, random_color
 
@@ -631,7 +631,7 @@ class command(Cog_Extension):
 
             if role:
                 await role_guild.get_member(ctx.author.id).add_roles(role)
-            from starlib.models.mysql import DiscordUser
+            from starlib.models.postgresql import DiscordUser
 
             duser = DiscordUser(discord_id=ctx.author.id, registrations_id=resgistration.registrations_id)
             sclient.sqldb.merge(duser)
@@ -668,7 +668,7 @@ class command(Cog_Extension):
         role = user_dc.guild.get_role(registration.role_id)
         if role:
             await user_dc.add_roles(role)
-        from starlib.models.mysql import DiscordUser
+        from starlib.models.postgresql import DiscordUser
 
         duser = DiscordUser(discord_id=user_dc.id, registrations_id=registration.registrations_id)
         sclient.sqldb.merge(duser)
@@ -681,7 +681,7 @@ class command(Cog_Extension):
         await ctx.defer()
         results_text = []
         role_guild = self.bot.get_guild(happycamp_guild[0])
-        from starlib.models.mysql import DiscordUser
+        from starlib.models.postgresql import DiscordUser
 
         for member in role.members:
             member: discord.Member

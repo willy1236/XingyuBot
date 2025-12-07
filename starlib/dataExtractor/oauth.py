@@ -13,7 +13,7 @@ from googleapiclient.errors import HttpError
 from ..database import debug_mode, sqldb
 from ..errors import SQLNotFoundError
 from ..models import DiscordUser, UserConnection
-from ..models.mysql import BotToken
+from ..models.postgresql import BotToken
 from ..settings import tz
 from ..types import CommunityType
 from ..utils import log

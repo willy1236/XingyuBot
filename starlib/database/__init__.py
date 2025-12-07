@@ -5,12 +5,12 @@
 from ..fileDatabase import Jsondb
 from ..utils import log
 from .mongodb import MongoDB
-from .mysql import SQLEngine
+from .postgresql import SQLRepository, create_sql_repository
 
 debug_mode = Jsondb.config.get("debug_mode",True)
 SQL_connection = Jsondb.config.get("SQL_connection")
 
-def create_sqlengine(connect_name:str | None) -> SQLEngine:
+def create_sqldb(connect_name: str | None) -> SQLRepository:
     if connect_name:
         SQLsettings = Jsondb.config.get(connect_name)
     else:
@@ -21,7 +21,6 @@ def create_sqlengine(connect_name:str | None) -> SQLEngine:
             from sqlalchemy.engine import URL
 
             connection_url = URL.create(
-                #drivername="mysql+mysqlconnector",
                 drivername="postgresql",
                 username=SQLsettings["user"],
                 password=SQLsettings["password"],
@@ -29,20 +28,21 @@ def create_sqlengine(connect_name:str | None) -> SQLEngine:
                 port=SQLsettings["port"],
                 database=SQLsettings["database"],
             )
-            sqlengine = SQLEngine(connection_url)
-            name = sqlengine.engine.dialect.name
-            version = sqlengine.engine.dialect.server_version_info
+            sqlrepository = create_sql_repository(connection_url)
+            name = sqlrepository.engine.dialect.name
+            version = sqlrepository.engine.dialect.server_version_info
             log.info(f'>> SQL connect: online ({name}, {version}, {SQLsettings["user"]} in {SQLsettings["host"]}) <<')
-        except Exception:
-            sqlengine = None
-            log.exception(">> SQL connect: offline <<")
+        except Exception as e:
+            sqlrepository = None
+            log.exception(">> SQL connect: offline <<", exc_info=e)
     else:
-        sqlengine = None
+        sqlrepository = None
         log.info(">> SQL connect: off <<")
 
-    return sqlengine # type: ignore
+    return sqlrepository  # pyright: ignore[reportReturnType]
 
-sqldb = create_sqlengine(SQL_connection)
+
+sqldb = create_sqldb(SQL_connection)
 
 Mongedb_connection = Jsondb.config.get("Mongedb_connection")
 def create_mongedb(should_connect) -> MongoDB:

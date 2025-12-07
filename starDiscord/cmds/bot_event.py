@@ -550,7 +550,7 @@ class event(Cog_Extension):
         if guildid == happycamp_guild[0]:
             earlest_guildid = check_registration(member)
             if earlest_guildid and earlest_guildid != happycamp_guild[0]:
-                from starlib.models.mysql import DiscordUser
+                from starlib.models.postgresql import DiscordUser
 
                 dbdata = sclient.sqldb.get_registration_by_guildid(earlest_guildid)
                 user = DiscordUser(discord_id=member.id, registrations_id=dbdata.registrations_id)

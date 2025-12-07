@@ -4,7 +4,7 @@
 """
 from .community import *
 from .game import *
-from .mysql import *
+from .postgresql import *
 from .oauth import *
 from .others import *
 from .push import *

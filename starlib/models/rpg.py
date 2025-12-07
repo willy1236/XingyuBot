@@ -7,7 +7,7 @@ from sqlalchemy import BigInteger, Column, DateTime, ForeignKey, Integer, String
 from ..base import ListObject
 from ..types import EquipmentSolt, ItemCategory, ShopItemMode
 from ..utils import BotEmbed
-from .mysql import Field, relationship, SQLModel, mapped_column
+from .postgresql import Field, relationship, SQLModel, mapped_column
 from .sqlSchema import RPGSchema
 
 class RPGPlayer(RPGSchema, table=True):

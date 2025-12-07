@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 from typing import TypedDict
 
 from authlib.integrations.httpx_client import AsyncOAuth2Client
-from ..models.mysql import OAuthClient, OAuthToken, OAuthToken
+from ..models.postgresql import OAuthClient, OAuthToken, OAuthToken
 from ..types import CommunityType
 from ..database import sqldb
 

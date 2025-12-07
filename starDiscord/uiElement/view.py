@@ -13,12 +13,12 @@ from discord.utils import format_dt
 
 from starlib import BotEmbed, Jsondb, log, sqldb, tz
 from starlib.instance import mcss_api
-from starlib.models.mysql import Giveaway, GiveawayUser, Poll, PollRole, TicketChannel, HappycampApplicationForm, HappycampVIP
+from starlib.models.postgresql import Giveaway, GiveawayUser, Poll, PollRole, TicketChannel, HappycampApplicationForm, HappycampVIP
 from starlib.types import McssServerAction, McssServerStatues
 from starlib.utils.utility import find_radmin_vpn_network
 
 if TYPE_CHECKING:
-    from starlib.database import SQLEngine
+    from starlib.database import SQLRepository
     from starlib.models import PollOption, ReactionRoleOption, TRPGStoryOption, TRPGStoryPlot, McssServer
 
 class DeletePetView(discord.ui.View):
@@ -153,7 +153,7 @@ class PollNowButton(discord.ui.Button):
 class PollView(discord.ui.View):
     if TYPE_CHECKING:
         poll: Poll
-        sqldb: SQLEngine
+        sqldb: SQLRepository
         bot: discord.Bot
 
     def __init__(self, poll: Poll, sqldb, bot):
@@ -474,7 +474,7 @@ class TRPGPlotButton(discord.ui.Button):
 
 
 class TRPGPlotView(discord.ui.View):
-    def __init__(self, plot: TRPGStoryPlot, sqldb: SQLEngine):
+    def __init__(self, plot: TRPGStoryPlot, sqldb: SQLRepository):
         super().__init__(timeout=None)
         self.plot = plot
         self.sqldb = sqldb
@@ -524,7 +524,7 @@ class GiveawayEndButton(discord.ui.Button):
 
 
 class GiveawayView(discord.ui.View):
-    def __init__(self, giveaway: Giveaway, sqldb: SQLEngine, bot: discord.Bot, timeout=None):
+    def __init__(self, giveaway: Giveaway, sqldb: SQLRepository, bot: discord.Bot, timeout=None):
         super().__init__(timeout=timeout)
         self.giveaway = giveaway
         self.sqldb = sqldb
