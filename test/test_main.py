@@ -18,7 +18,7 @@ from pydantic import AliasPath, BaseModel, ConfigDict, Field
 from googleapiclient.discovery import build
 
 from starlib import *
-from starlib.database import SQLEngine
+from starlib.database import SQLRepository
 from starlib.dataExtractor import *
 from starlib.types import *
 
@@ -62,8 +62,8 @@ if __name__ == "__main__":
 
 #     print(f"完整資料：{nm[host]}")
 
-api = XingyuGoogleCloud()
-print(api.get_me())
+# api = XingyuGoogleCloud()
+# print(api.get_me())
 # from google_auth_oauthlib.flow import InstalledAppFlow
 
 # SCOPES = ["https://www.googleapis.com/auth/userinfo.profile", "https://www.googleapis.com/auth/drive"]
@@ -77,3 +77,5 @@ print(api.get_me())
 # user_info = userinfo_service.userinfo().get().execute()
 # print("Google user id:", user_info.get("id"))
 # print(sqldb.get_bot_oauth_token(APIType.Google, 2))
+
+print(CLIInterface().get_user_timeline("1830924770889867267"))

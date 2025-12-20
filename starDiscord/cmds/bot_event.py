@@ -11,7 +11,7 @@ from starlib.starAgent import ModelMessage, MyDeps, agent
 from starlib.types import DBCacheType, NotifyChannelType, PrivilegeLevel
 
 from ..extension import Cog_Extension
-from ..uiElement.view import PollView, ReactionRoleView, TicketLobbyView, TicketChannelView
+from ..uiElement.view import PollView, ReactionRoleView, TicketChannelView, TicketLobbyView
 
 keywords = {}
 

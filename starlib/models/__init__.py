@@ -4,8 +4,8 @@
 """
 from .community import *
 from .game import *
-from .postgresql import *
 from .oauth import *
 from .others import *
+from .postgresql import *
 from .push import *
 from .weather import *

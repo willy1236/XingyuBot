@@ -639,6 +639,7 @@ class CLIInterface:
         data = json.loads(r.stdout)
 
         if data.get("name") == "VALIDATION_ERROR" or isinstance(data.get("list"), dict):
+            log.error("get_user_timeline 解析JSON失敗，輸出內容：%s", r.stdout)
             return None
 
         results = RettiwtTweetTimeLineResponse(**data)

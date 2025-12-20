@@ -1,21 +1,18 @@
-# pyright: reportArgumentType=false
 from collections.abc import Callable, Generator
-from contextlib import contextmanager
 from datetime import date, datetime, time, timedelta, timezone
-from functools import wraps
-from typing import TYPE_CHECKING, Any, Literal, ParamSpec, TypeVar, overload
 from ipaddress import IPv4Network
+from typing import TYPE_CHECKING, Literal, ParamSpec, TypeVar, overload
 
 import discord
-import sqlalchemy
 from google.oauth2.credentials import Credentials
-from sqlalchemy import Engine, and_, delete, desc, func, not_, or_
+from sqlalchemy import Engine, and_, desc, func, not_, or_
 from sqlalchemy.engine import URL
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
-from sqlalchemy.orm import Session as ALSession
+
+# from sqlalchemy.orm import Session as ALSession
 from sqlalchemy.orm import joinedload, scoped_session, sessionmaker
 from sqlalchemy.orm.scoping import ScopedSession
-from sqlmodel import Session, SQLModel, create_engine, select, update
+from sqlmodel import Session, SQLModel, create_engine, delete, select, update
 
 from ..errors import *
 from ..fileDatabase import Jsondb
@@ -94,7 +91,7 @@ class BaseRepository:
                 self.session.rollback()
                 raise
 
-    def merge(self, db_obj: T):  # type: ignore
+    def merge(self, db_obj: T) -> T:
         try:
             obj = self.session.merge(db_obj)
             self.session.commit()
@@ -104,7 +101,7 @@ class BaseRepository:
             self.session.rollback()
             raise
 
-    def batch_merge(self, db_obj_list: list[T]):
+    def batch_merge(self, db_obj_list: list[T]) -> list[T] | None:
         if db_obj_list:
             lst: list[T] = list()
             try:
@@ -131,10 +128,10 @@ class BaseRepository:
         self.session.expire(db_obj)
 
     def get(self, db_obj: T, primary_keys: tuple) -> T | None:
-        return self.session.get(db_obj, primary_keys)  # type: ignore
+        return self.session.get(db_obj, primary_keys)
 
 
-class SQLUserSystem(BaseRepository):
+class UserRepository(BaseRepository):
     # * User
     def get_cloud_user(self, discord_id: int):
         """
@@ -148,7 +145,7 @@ class SQLUserSystem(BaseRepository):
         """
         stmt = select(CloudUser).where(CloudUser.discord_id == discord_id)
         result = self.session.exec(stmt).one_or_none()
-        return result if result is not None else CloudUser(discord_id=discord_id)
+        return result or CloudUser(discord_id=discord_id)
 
     def get_dcuser(self, discord_id: int, with_registration: bool = False):
         stmt = select(DiscordUser).where(DiscordUser.discord_id == discord_id)
@@ -208,7 +205,7 @@ class SQLUserSystem(BaseRepository):
         self.session.commit()
 
 
-class SQLCurrencySystem(BaseRepository):
+class CurrencyRepository(BaseRepository):
     def get_coin(self, discord_id: int):
         """取得用戶擁有的貨幣數"""
         stmt = select(UserPoint).where(UserPoint.discord_id == discord_id)
@@ -241,30 +238,6 @@ class SQLCurrencySystem(BaseRepository):
     #     else:
     #         return "點數不足"
 
-    # def user_sign(self,discord_id:int):
-    #     '''新增簽到資料'''
-    #     time = date.today()
-    #     yesterday = time - timedelta(days=1)
-    #     self.cursor.execute(f"USE `stardb_user`;")
-
-    #     #檢測是否簽到過
-    #     self.cursor.execute(f"SELECT `discord_id` FROM `user_sign` WHERE `discord_id` = {discord_id} AND `date` = '{time}';")
-    #     record = self.cursor.fetchall()
-    #     if record:
-    #         return '已經簽到過了喔'
-
-    #     #更新最後簽到日期+計算連續簽到
-    #     self.cursor.execute(f"INSERT INTO `user_sign` VALUES(%s,%s,%s) ON DUPLICATE KEY UPDATE `consecutive_days` = CASE WHEN `date` = %s THEN `consecutive_days` + 1 ELSE 1 END, `date` = %s;",(discord_id,time,1,yesterday.isoformat(),time))
-    #     #更新最大連續簽到日
-    #     self.cursor.execute(f"UPDATE `user_discord` AS `data` JOIN `user_sign` AS `sign` ON `data`.`discord_id` = `sign`.`discord_id` SET `data`.`max_sign_consecutive_days` = `sign`.`consecutive_days` WHERE `sign`.`discord_id` = {discord_id} AND (`data`.`max_sign_consecutive_days` < `sign`.`consecutive_days` OR `data`.`max_sign_consecutive_days` IS NULL);")
-    #     self.connection.commit()
-
-    # def sign_add_coin(self,discord_id:int,scoin:int=0,Rcoin:int=0):
-    #     """簽到獎勵點數"""
-    #     self.cursor.execute(f"USE `stardb_user`;")
-    #     self.cursor.execute(f"INSERT INTO `user_point` SET discord_id = %s, scoin = %s,rcoin = %s ON DUPLICATE KEY UPDATE scoin = scoin + %s, rcoin = rcoin + %s",(discord_id,scoin,Rcoin,scoin,Rcoin))
-    #     self.connection.commit()
-
     # def get_scoin_shop_item(self,item_uid:int):
     #     self.cursor.execute(f"SELECT * FROM `stardb_idbase`.`scoin_shop` WHERE `item_uid` = {item_uid};")
     #     record = self.cursor.fetchall()
@@ -272,7 +245,7 @@ class SQLCurrencySystem(BaseRepository):
     #         return ShopItem(record[0])
 
 
-class SQLBetSystem(BaseRepository):
+class BetRepository(BaseRepository):
     def get_bet(self, bet_id: int):
         """取得指定的賭注資料"""
         stmt = select(Bet).where(Bet.bet_id == bet_id)
@@ -316,7 +289,7 @@ class SQLBetSystem(BaseRepository):
 #         self.connection.commit()
 
 
-class SQLGameSystem(BaseRepository):
+class GameRepository(BaseRepository):
     def get_user_game(self, discord_id: int, game: GameType):
         stmt = select(UserGame).where(UserGame.discord_id == discord_id, UserGame.game == game)
         result = self.session.exec(stmt).one_or_none()
@@ -347,7 +320,7 @@ class SQLGameSystem(BaseRepository):
         return {i: cnt for i, cnt in result}
 
 
-class SQLPetSystem(BaseRepository):
+class PetRepository(BaseRepository):
     def get_pet(self, discord_id: int):
         """取得寵物"""
         stmt = select(Pet).where(Pet.discord_id == discord_id)
@@ -368,7 +341,7 @@ class SQLPetSystem(BaseRepository):
         self.session.commit()
 
 
-class SQLNotifySystem(BaseRepository):
+class NotifyRepository(BaseRepository):
     # * notify channel
     def add_notify_channel(self, guild_id: int, notify_type: NotifyChannelType, channel_id: int, role_id: int = None, message: str = None):
         """設定自動通知頻道"""
@@ -577,7 +550,7 @@ class SQLNotifySystem(BaseRepository):
         self.session.commit()
 
 
-class SQLDynamicVoiceSystem(BaseRepository):
+class DynamicVoiceRepository(BaseRepository):
     def add_dynamic_voice_lobby(self, guild_id: int, channel_id: int, default_room_name: str | None = None):
         """新增動態語音大廳"""
         lobby = DynamicVoiceLobby(guild_id=guild_id, channel_id=channel_id, default_room_name=default_room_name)
@@ -643,7 +616,7 @@ class SQLDynamicVoiceSystem(BaseRepository):
                     self[DBCacheType.DynamicVoiceRoom].remove(channel_id)
 
 
-class SQLTicketSystem(BaseRepository):
+class TicketRepository(BaseRepository):
     def get_all_ticket_lobbys(self):
         stmt = select(TicketChannelLobby)
         result = self.session.exec(stmt).all()
@@ -665,7 +638,7 @@ class SQLTicketSystem(BaseRepository):
         return result
 
 
-class SQLRoleSaveSystem(BaseRepository):
+class RoleSaveRepository(BaseRepository):
     # * role_save
     def get_role_save(self, discord_id: int):
         stmt = select(RoleSave).where(RoleSave.discord_id == discord_id).order_by(RoleSave.time, desc(RoleSave.role_id))
@@ -727,7 +700,7 @@ class SQLRoleSaveSystem(BaseRepository):
         self.session.commit()
 
 
-class SQLWarningSystem(BaseRepository):
+class WarningRepository(BaseRepository):
     # * warning
     def add_warning(
         self,
@@ -820,7 +793,7 @@ class SQLWarningSystem(BaseRepository):
         return warning_count
 
 
-class SQLPollSystem(BaseRepository):
+class PollRepository(BaseRepository):
     # * poll
     def remove_poll(self, poll_id: int):
         self.session.exec(delete(Poll).where(Poll.poll_id == poll_id))
@@ -992,7 +965,7 @@ class SQLPollSystem(BaseRepository):
         self.session.commit()
 
 
-class SQLElectionSystem(BaseRepository):
+class ElectionRepository(BaseRepository):
     # * party
     def join_party(self, discord_id: int, party_id: int):
         up = UserParty(discord_id=discord_id, party_id=party_id)
@@ -1025,7 +998,7 @@ class SQLElectionSystem(BaseRepository):
         return result
 
 
-class SQLTwitchSystem(BaseRepository):
+class TwitchRepository(BaseRepository):
     # * twitch
     def get_bot_join_channel_all(self):
         stmt = select(TwitchBotJoinChannel)
@@ -1075,7 +1048,7 @@ class SQLTwitchSystem(BaseRepository):
         self.session.commit()
 
 
-class SQLRPGSystem(BaseRepository):
+class RPGRepository(BaseRepository):
     def get_rpg_player(self, discord_id: int):
         stmt = select(RPGPlayer).where(RPGPlayer.discord_id == discord_id)
         result = self.session.exec(stmt).one_or_none()
@@ -1107,7 +1080,7 @@ class SQLRPGSystem(BaseRepository):
         return result
 
 
-class SQLTRPGSystem(BaseRepository):
+class TRPGRepository(BaseRepository):
     def get_trpg_plot(self, plot_id):
         stmt = select(TRPGStoryPlot).where(TRPGStoryPlot.id == plot_id)
         result = self.session.exec(stmt).one()
@@ -1124,7 +1097,7 @@ class SQLTRPGSystem(BaseRepository):
         return result
 
 
-class SQLBackupSystem(BaseRepository):
+class BackupRepository(BaseRepository):
     # * backup
     def backup_role(self, role: discord.Role, description: str = None):
         backup_role = BackupRole(
@@ -1201,7 +1174,7 @@ class SQLBackupSystem(BaseRepository):
         self.session.commit()
 
 
-class SQLTokensSystem(BaseRepository):
+class TokensRepository(BaseRepository):
     # def set_oauth(self, user_id: int, type: CommunityType, access_token: str, refresh_token: str = None, expires_at: datetime = None):
     #     token = OAuth2Token(user_id=user_id, type=type, access_token=access_token, refresh_token=refresh_token, expires_at=expires_at)
     #     self.session.merge(token)
@@ -1333,7 +1306,7 @@ class SQLTokensSystem(BaseRepository):
         return result
 
 
-class SQLCacheSystem(BaseRepository):
+class CacheRepository(BaseRepository):
     def set_community_caches(self, type: NotifyCommunityType, data: dict[str, datetime | None]):
         """批量設定社群快取"""
         for community_id, value in data.items():
@@ -1432,7 +1405,7 @@ class SQLCacheSystem(BaseRepository):
         return result
 
 
-class SQLNetwork(BaseRepository):
+class NetworkRepository(BaseRepository):
     def set_ips_last_seen(self, data: dict[tuple[str, str], datetime]):
         """設定IP最後出現時間"""
         for (ip, mac), last_seen in data.items():
@@ -1446,7 +1419,7 @@ class SQLNetwork(BaseRepository):
         return result
 
 
-class SQLVIPSystem(BaseRepository):
+class VIPRepository(BaseRepository):
     def get_vip(self, discord_id: int):
         stmt = select(HappycampVIP).where(HappycampVIP.discord_id == discord_id)
         result = self.session.exec(stmt).one_or_none()
@@ -1463,7 +1436,7 @@ class SQLVIPSystem(BaseRepository):
         return result
 
 
-class SQLServerConfigSystem(BaseRepository):
+class ServerConfigRepository(BaseRepository):
     def get_server_config(self, guild_id: int):
         stmt = select(ServerConfig).where(ServerConfig.guild_id == guild_id)
         result = self.session.exec(stmt).one_or_none()
@@ -1485,7 +1458,7 @@ class SQLServerConfigSystem(BaseRepository):
         return result
 
 
-class SQLTest(BaseRepository):
+class TestRepository(BaseRepository):
     pass
 
 
@@ -1582,28 +1555,28 @@ class SQLTest(BaseRepository):
 
 
 class SQLRepository(
-    SQLUserSystem,
-    SQLCurrencySystem,
-    SQLBetSystem,
-    SQLGameSystem,
-    SQLPetSystem,
-    SQLNotifySystem,
-    SQLDynamicVoiceSystem,
-    SQLTicketSystem,
-    SQLRoleSaveSystem,
-    SQLWarningSystem,
-    SQLPollSystem,
-    SQLElectionSystem,
-    SQLTwitchSystem,
-    SQLRPGSystem,
-    SQLTRPGSystem,
-    SQLBackupSystem,
-    SQLTokensSystem,
-    SQLCacheSystem,
-    SQLNetwork,
-    SQLVIPSystem,
-    SQLServerConfigSystem,
-    SQLTest,
+    UserRepository,
+    CurrencyRepository,
+    BetRepository,
+    GameRepository,
+    PetRepository,
+    NotifyRepository,
+    DynamicVoiceRepository,
+    TicketRepository,
+    RoleSaveRepository,
+    WarningRepository,
+    PollRepository,
+    ElectionRepository,
+    TwitchRepository,
+    RPGRepository,
+    TRPGRepository,
+    BackupRepository,
+    TokensRepository,
+    CacheRepository,
+    NetworkRepository,
+    VIPRepository,
+    ServerConfigRepository,
+    TestRepository,
 ):
     """綜合SQL資料庫存取類別"""
 

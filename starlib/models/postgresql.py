@@ -1,10 +1,8 @@
-# pyright: reportArgumentType=false
 from datetime import date, datetime, timedelta, timezone
 
 import discord
-from discord import Bot
-from sqlalchemy import BigInteger, Boolean, ForeignKey, ForeignKeyConstraint, Identity, Integer, Interval, SmallInteger, String, Text, Date, Column
-from sqlalchemy.dialects.postgresql import TIMESTAMP, CIDR, MACADDR, ARRAY
+from sqlalchemy import BigInteger, Boolean, Column, Date, ForeignKey, ForeignKeyConstraint, Identity, Integer, Interval, SmallInteger, String, Text
+from sqlalchemy.dialects.postgresql import ARRAY, CIDR, MACADDR, TIMESTAMP
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlmodel import Field, Relationship
 
@@ -110,7 +108,7 @@ class UserModerate(UserSchema, table=True):
     guild_only: bool | None = Field(sa_column=Column(Boolean))
     officially_given: bool | None = Field(sa_column=Column(Boolean))
 
-    def embed(self, bot: Bot) -> discord.Embed:
+    def embed(self, bot: discord.Bot) -> discord.Embed:
         user = bot.get_user(self.discord_id)
         moderate_user = bot.get_user(self.moderate_user)
         guild = bot.get_guild(self.create_guild)
@@ -130,7 +128,7 @@ class UserModerate(UserSchema, table=True):
         )
         return embed
 
-    def display_embed_field(self, bot: Bot) -> tuple[str, str]:
+    def display_embed_field(self, bot: discord.Bot) -> tuple[str, str]:
         moderate_user = bot.get_user(self.moderate_user)
         guild = bot.get_guild(self.create_guild)
         name = f"編號：{self.warning_id}（{Jsondb.get_tw(self.moderate_type, 'warning_type')}）"
@@ -461,10 +459,11 @@ class User(AlchemyBasicSchema):
     __tablename__ = "users"
 
     id: int = Base.auto_id_column()
-    name: str = Column(String, nullable=False)
+    name: str = mapped_column(String, nullable=False, default=None)
+    age: int = mapped_column(Integer, default=None)
 
     # 建立關聯：一個使用者對應多篇貼文
-    posts: list["Post"] = Relationship(back_populates="user")
+    posts: list["Post"] = relationship(back_populates="user", init=False)
 
 
 class Post(AlchemyBasicSchema):
@@ -477,7 +476,7 @@ class Post(AlchemyBasicSchema):
     user_id: int = Column(Integer, ForeignKey(User.id), nullable=False)  # type: ignore
 
     # 建立反向關聯
-    user: User = Relationship(back_populates="posts")
+    user: User = relationship(back_populates="posts", init=False)
 
 
 class ServerConfig(BasicSchema, table=False):
@@ -626,7 +625,7 @@ class BackupRole(BackupSchema, table=True):
 
     members: list["BackupRoleUser"] = Relationship(back_populates="role")
 
-    def embed(self, bot: Bot):
+    def embed(self, bot: discord.Bot):
         embed = BotEmbed.simple(self.role_name, self.description)
         embed.add_field(name="創建於", value=self.created_at.strftime("%Y/%m/%d %H:%M:%S"))
         embed.add_field(name="顏色", value=f"({self.colour_r}, {self.colour_g}, {self.colour_b})")
@@ -658,7 +657,7 @@ class BackupCategory(BackupSchema, table=True):
     guild_id: int = Field(sa_column=Column(BigInteger))
     description: str | None = Field(sa_column=Column(String))
 
-    def embed(self, bot: Bot):
+    def embed(self, bot: discord.Bot):
         embed = BotEmbed.simple(self.name, self.description)
         embed.add_field(name="創建於", value=self.created_at.strftime("%Y/%m/%d %H:%M:%S"))
         return embed
@@ -674,7 +673,7 @@ class BackupChannel(BackupSchema, table=True):
     category_id: int | None = Field(sa_column=Column(BigInteger))
     description: str | None = Field(sa_column=Column(String))
 
-    def embed(self, bot: Bot):
+    def embed(self, bot: discord.Bot):
         embed = BotEmbed.simple(self.name, self.description)
         embed.add_field(name="創建於", value=self.created_at.strftime("%Y/%m/%d %H:%M:%S"))
         return embed
@@ -690,7 +689,7 @@ class BackupMessage(BackupSchema, table=True):
     author_id: int = Field(sa_column=Column(BigInteger))
     description: str | None = Field(sa_column=Column(String))
 
-    def embed(self, bot: Bot):
+    def embed(self, bot: discord.Bot):
         user = bot.get_user(self.author_id)
         embed = BotEmbed.simple(f"Message from {user.name if user else self.author_id}", self.content or "No content")
         embed.add_field(name="Created at", value=self.created_at.strftime("%Y/%m/%d %H:%M:%S"))
@@ -855,11 +854,11 @@ class WarningList(ListObject[UserModerate]):
         super().__init__(items)
         self.discord_id = discord_id
 
-    def display(self, bot: Bot, user: discord.User | None = None) -> discord.Embed:
+    def display(self, bot: discord.Bot, user: discord.User | None = None) -> discord.Embed:
         """生成警告單列表的嵌入消息
 
         Args:
-            bot (Bot): 由Bot取得使用者與伺服器訊息
+            bot (discord.Bot): 由Bot取得使用者與伺服器訊息
             user (discord.User | None, optional): 若機器人找不到使用者，則使用此參數指定使用者。預設為None。
 
         Returns:
