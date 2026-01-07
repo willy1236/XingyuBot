@@ -45,6 +45,7 @@ class GameType(IntEnum):
     Apex = 2
     Osu = 3
     Steam = 4
+    Minecraft = 5
 
 
 class CommunityType(IntEnum):

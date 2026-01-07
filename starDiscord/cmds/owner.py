@@ -14,12 +14,12 @@ from mcstatus import JavaServer
 from starlib import BotEmbed, Jsondb, log, sclient
 from starlib.instance import *
 from starlib.types import McssServerAction, McssServerStatues, NotifyChannelType
-from starlib.utils.utility import base64_to_buffer, converter, find_radmin_vpn_network, get_arp_list, ChoiceList
+from starlib.utils.utility import ChoiceList, base64_to_buffer, converter, find_radmin_vpn_network, get_arp_list
 
+from ..checks import PrivilegeLevel, has_privilege_level, has_vip, is_vip_admin
 from ..command_options import *
 from ..extension import Cog_Extension
-from ..uiElement.view import McServerPanel, VIPView, VIPAuditView
-from ..checks import is_vip_admin, has_vip
+from ..uiElement.view import McServerPanel, VIPAuditView, VIPView
 
 if TYPE_CHECKING:
     from ..bot import DiscordBot
@@ -412,7 +412,7 @@ class owner(Cog_Extension):
 
 
     @mcserver_cmd.command(description="開啟mc伺服器面板", name="panel", name_localizations=ChoiceList.name("mcserver_panel"))
-    @commands.has_guild_permissions(manage_channels=True)
+    @commands.check_any(has_privilege_level(PrivilegeLevel.Level3), commands.has_guild_permissions(manage_channels=True))  # pyright: ignore[reportArgumentType]
     async def mcserver_panel(self, ctx: discord.ApplicationContext):
         await ctx.defer()
         view = McServerPanel()
