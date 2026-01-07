@@ -412,7 +412,7 @@ class owner(Cog_Extension):
 
 
     @mcserver_cmd.command(description="開啟mc伺服器面板", name="panel", name_localizations=ChoiceList.name("mcserver_panel"))
-    @commands.check_any(has_privilege_level(PrivilegeLevel.Level3), commands.has_guild_permissions(manage_channels=True))  # pyright: ignore[reportArgumentType]
+    @commands.check_any(commands.check(has_privilege_level(PrivilegeLevel.Level3)), commands.has_guild_permissions(manage_channels=True))  # pyright: ignore[reportArgumentType]
     async def mcserver_panel(self, ctx: discord.ApplicationContext):
         await ctx.defer()
         view = McServerPanel()
