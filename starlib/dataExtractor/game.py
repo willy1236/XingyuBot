@@ -236,7 +236,7 @@ class SteamAPI():
         response = requests.get("https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/", params=params)
         if response.ok and response.json().get("response").get("players"):
             APIdata = response.json().get("response").get("players")[0]
-            return SteamUser(APIdata)
+            return SteamUser(**APIdata)
         else:
             return None
 
@@ -256,10 +256,10 @@ class DBDInterface(SteamAPI):
     def get_player(self,steamid):
         user = SteamAPI().get_user(steamid)
         if user:
-            params = {"steamid": user.id}
+            params = {"steamid": user.steamid}
             response = requests.get("https://dbd.tricky.lol/api/playerstats", params=params)
             if response.ok:
-                return DBDPlayer(response.json(),user.name)
+                return DBDPlayer(name=user.personaname, **response.json())
             else:
                 return None
         else:

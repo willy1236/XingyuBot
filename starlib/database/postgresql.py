@@ -1175,20 +1175,6 @@ class BackupRepository(BaseRepository):
 
 
 class TokensRepository(BaseRepository):
-    # def set_oauth(self, user_id: int, type: CommunityType, access_token: str, refresh_token: str = None, expires_at: datetime = None):
-    #     token = OAuth2Token(user_id=user_id, type=type, access_token=access_token, refresh_token=refresh_token, expires_at=expires_at)
-    #     self.session.merge(token)
-    #     self.session.commit()
-
-    # def get_oauth(self, user_id: str, type: CommunityType):
-    #     stmt = select(OAuth2Token).where(OAuth2Token.user_id == user_id, OAuth2Token.type == type)
-    #     result = self.session.exec(stmt).one_or_none()
-    #     return result
-
-    # def get_bot_token(self, api_type: APIType, token_seq: int = 1):
-    #     stmt = select(BotToken).where(BotToken.api_type == api_type, BotToken.token_seq == token_seq).limit(1)
-    #     return self.session.exec(stmt).one()
-
     def get_google_credentials(self, scopes: list[str] = None, token_seq: int = 2):
         """
         Retrieve Google *OAuth2* credentials for API access.

@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from functools import cached_property
-from typing import Any
+from typing import Any, ClassVar
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -849,19 +849,46 @@ class ApexStatus:
         pass
 
 
-class SteamUser:
-    def __init__(self, data):
-        self.id = data["steamid"]
-        self.name = data["personaname"]
-        self.profileurl = data["profileurl"]
-        self.avatar = data["avatarfull"]
+class SteamUser(BaseModel):
+    _PERSONA_STATES: ClassVar[dict] = {0: "離線", 1: "線上", 2: "忙碌", 3: "離開", 4: "打瞌睡", 5: "尋求交易", 6: "尋求遊玩"}
+    _VISIBILITY_STATES: ClassVar[dict] = {1: "私密", 2: "好友可見", 3: "公開"}
+
+    steamid: str
+    communityvisibilitystate: int
+    profilestate: int
+    personaname: str
+    profileurl: str
+    avatar: str
+    avatarmedium: str
+    avatarfull: str
+    avatarhash: str
+    lastlogoff: int
+    personastate: int
+    primaryclanid: str
+    timecreated: int
+    personastateflags: int
+    loccountrycode: str | None = None
 
     def embed(self):
-        embed = BotEmbed.simple(self.name)
-        embed.add_field(name="用戶id", value=self.id)
-        embed.add_field(name="個人檔案連結", value="[點我]({0})".format(self.profileurl))
-        embed.set_thumbnail(url=self.avatar)
+        embed = BotEmbed.simple(self.personaname)
+        embed.add_field(name="用戶id", value=self.steamid)
+        embed.add_field(name="個人檔案連結", value=f"[點我]({self.profileurl})")
+        embed.add_field(name="帳號狀態", value=self._get_persona_state(), inline=True)
+        embed.add_field(name="可見性", value=self._get_visibility_state(), inline=True)
+        if self.loccountrycode:
+            embed.add_field(name="國家", value=self.loccountrycode)
+        embed.add_field(name="帳號建立時間", value=f"<t:{self.timecreated}>", inline=False)
+        embed.add_field(name="最後離線時間", value=f"<t:{self.lastlogoff}>", inline=False)
+        embed.set_thumbnail(url=self.avatarfull)
         return embed
+
+    def _get_persona_state(self) -> str:
+        """將 personastate 轉換為可讀的狀態"""
+        return self._PERSONA_STATES.get(self.personastate, "未知")
+
+    def _get_visibility_state(self) -> str:
+        """將 communityvisibilitystate 轉換為可讀的可見性"""
+        return self._VISIBILITY_STATES.get(self.communityvisibilitystate, "未知")
 
 
 class SteamGame(BaseModel):
@@ -884,35 +911,33 @@ class SteamOwnedGame(BaseModel):
     games: list[SteamGame]
 
 
-class DBDPlayer(SteamUser):
-    def __init__(self, data, name=None):
-        # 基本資料
-        self.steamid = data["steamid"]
-        self.name = name
-        self.bloodpoints = data["bloodpoints"]
-        self.survivor_rank = data["survivor_rank"]
-        self.killer_rank = data["killer_rank"]
-        self.killer_perfectgames = data["killer_perfectgames"]
-        self.evilwithintierup = data["evilwithintierup"]
+class DBDPlayer(BaseModel):
+    steamid: str
+    name: str
+    bloodpoints: int
+    survivor_rank: int
+    killer_rank: int
+    killer_perfectgames: int
+    evilwithintierup: int
 
-        # 遊戲表現類
-        self.cagesofatonement = data["cagesofatonement"]
-        self.condemned = data["condemned"]
-        self.sacrificed = data["sacrificed"]
-        self.dreamstate = data["dreamstate"]
-        self.rbtsplaced = data["rbtsplaced"]
+    # 遊戲表現類
+    cagesofatonement: int
+    condemned: int
+    sacrificed: int
+    dreamstate: int
+    rbtsplaced: int
 
-        # 命中、陷阱類
-        self.blinkattacks = data["blinkattacks"]
-        self.chainsawhits = data["chainsawhits"]
-        self.shocked = data["shocked"]
-        self.hatchetsthrown = data["hatchetsthrown"]
-        self.lacerations = data["lacerations"]
-        self.possessedchains = data["possessedchains"]
-        self.lethalrushhits = data["lethalrushhits"]
-        self.uncloakattacks = data["uncloakattacks"]
-        self.beartrapcatches = data["beartrapcatches"]
-        self.phantasmstriggered = data["phantasmstriggered"]
+    # 命中、陷阱類
+    blinkattacks: int
+    chainsawhits: int
+    shocked: int
+    hatchetsthrown: int
+    lacerations: int
+    possessedchains: int
+    lethalrushhits: int
+    uncloakattacks: int
+    beartrapcatches: int
+    phantasmstriggered: int
 
     def embed(self):
         embed = BotEmbed.simple("DBD玩家資訊")
