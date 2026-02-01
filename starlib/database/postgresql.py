@@ -1404,6 +1404,10 @@ class NetworkRepository(BaseRepository):
         result = self.session.exec(stmt).one_or_none()
         return result
 
+    def get_user_ip_details(self, discord_id: int):
+        stmt = select(UserIPDetails).where(UserIPDetails.discord_id == discord_id)
+        result = self.session.exec(stmt).all()
+        return result
 
 class VIPRepository(BaseRepository):
     def get_vip(self, discord_id: int):

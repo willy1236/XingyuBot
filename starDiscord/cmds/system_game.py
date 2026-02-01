@@ -852,6 +852,24 @@ class system_game(Cog_Extension):
 
         await ctx.respond(f"ZeroTier帳號註冊成功，你的IP位址：`{member['config']['ipAssignments'][0]}`", ephemeral=True)
 
+    @game.command(description="查詢VPN登記資料", name_localizations=ChoiceList.name("game_vpn"))
+    async def vpn(self, ctx: discord.ApplicationContext):
+        await ctx.defer(ephemeral=True)
+        records = sclient.sqldb.get_user_ip_details(ctx.author.id)
+        if not records:
+            await ctx.respond("查無登記資料，請先登記Radmin或ZeroTier帳號", ephemeral=True)
+            return
+
+        embed = BotEmbed.simple(title="VPN登記資料")
+        for r in records:
+            value = f"最後上線時間：{r.last_seen.strftime('%Y-%m-%d %H:%M:%S')}\n註冊時間：{r.registration_at.strftime('%Y-%m-%d %H:%M:%S') if r.registration_at else '未知'}"
+            if r.address:
+                value += f"\nZeroTier位址：`{r.address}`"
+            embed.add_field(name=f"IP位址：`{r.ip}` 使用者名稱：`{r.name if r.name else '未登記'}`", value=value, inline=False)
+        embed.set_footer(text="資料可能不完整，請以實際VPN的紀錄為準")
+
+        await ctx.respond("查詢成功", embed=embed, ephemeral=True)
+
 
 def setup(bot):
     bot.add_cog(system_game(bot))

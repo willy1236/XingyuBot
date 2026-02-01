@@ -177,6 +177,10 @@
         "en-US": "zerotier",
         "zh-TW": "註冊zerotier"
     },
+    "game_vpn": {
+        "en-US": "vpn",
+        "zh-TW": "查詢vpn"
+    },
     "lol": {
         "en-US": "lol",
         "zh-TW": "英雄聯盟"

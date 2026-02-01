@@ -6,7 +6,10 @@ from sqlmodel import select
 from starlib import NotifyCommunityType, sqldb, tz
 from starlib.models.postgresql import Post, ReactionRoleMessage, User
 
-session = sqldb.alsession
+user = User(age=20)
+user.id = 3
+user = sqldb.merge(user)
+print(user)
 
 # # 建立使用者 - 不指定 id，讓資料庫自動生成
 # new_user = User(name="Alice", age=30)
