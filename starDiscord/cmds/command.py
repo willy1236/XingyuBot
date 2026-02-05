@@ -115,10 +115,15 @@ class command(Cog_Extension):
     async def save(self, ctx: discord.ApplicationContext):
         await ctx.defer()
         guild = self.bot.get_guild(happycamp_guild[0])
+        if not guild.get_role(877934319249797120):
+            await ctx.respond("錯誤：找不到「加身分組」身分組", delete_after=5)
+            return
 
         for role in guild.roles:
-            if role.id == 877934319249797120 or role.is_default():
+            if role.id == 877934319249797120:
                 break
+            elif role.is_default():
+                continue
 
             try:
                 # 1062
