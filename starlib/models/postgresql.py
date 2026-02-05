@@ -761,20 +761,6 @@ class UsersCountRecord(BackupSchema, table=True):
     servers_count: int = Field(sa_column=Column(Integer))
 
 
-class OAuth2Token(TokensSchema, table=True):
-    __tablename__ = "oauth_token2"
-
-    user_id: str = Field(sa_column=Column(String, primary_key=True))
-    type: CommunityType = Field(sa_column=Column(Integer, primary_key=True))
-    access_token: str = Field(sa_column=Column(String))
-    refresh_token: str | None = Field(sa_column=Column(String))
-    expires_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
-
-    @property
-    def valid(self):
-        return self.expires_at > datetime.now(tz)
-
-
 class BotToken(TokensSchema, table=True):
     __tablename__ = "bot_token2"
 

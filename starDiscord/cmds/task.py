@@ -474,7 +474,7 @@ async def refresh_ip_last_seen():
 async def record_users_count(bot: DiscordBot):
     """定時記錄用戶數量"""
     log.debug("record_users_count start")
-    users_count = len(bot.users)
+    users_count = sum(1 for _ in bot.get_all_members())
     servers_count = len(bot.guilds)
     shard_id = bot.shard_id
     record = UsersCountRecord(record_date=datetime.now(tz).date(), users_count=users_count, servers_count=servers_count, shard_id=shard_id)
