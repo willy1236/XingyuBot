@@ -1,7 +1,7 @@
 # discord_oauth.py
-from .oauth_lib import OAuth2Base
+from ..models.oauth import DiscordUser, UserConnection
 from ..types import CommunityType
-from ..models import DiscordUser, UserConnection
+from .oauth_lib import OAuth2Base
 
 
 class DiscordOAuth(OAuth2Base):

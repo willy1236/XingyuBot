@@ -15,7 +15,7 @@ from ..utils import BotEmbed
 from .sqlSchema import *
 
 
-class CloudUser(UserSchema, table=True):
+class CloudUserOld(UserSchema, table=True):
     __tablename__ = "cloud_user"
 
     id: str | None = Field(sa_column=Column(String, unique=True))
@@ -26,7 +26,7 @@ class CloudUser(UserSchema, table=True):
     name: str | None = Field(sa_column=Column(String))
     privilege_level: PrivilegeLevel = Field(sa_column=Column(SmallInteger, nullable=True), default=PrivilegeLevel.User)
 
-class CloudUser2(UsersSchema, table=True):
+class CloudUser(UsersSchema, table=True):
     __tablename__ = "cloud_user"
 
     id: int = Field(sa_column=Column(Integer, Identity(), primary_key=True))

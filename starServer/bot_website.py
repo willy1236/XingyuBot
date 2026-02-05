@@ -5,12 +5,13 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 import feedparser
+import uvicorn
 from apscheduler.triggers.date import DateTrigger
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, status
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.openapi.utils import get_openapi
 from fastapi.requests import Request
-from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, StreamingResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response, StreamingResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from google_auth_oauthlib.flow import Flow
 from jose import jwt
@@ -20,13 +21,13 @@ from linebot.v3.messaging import ApiClient, Configuration, MessagingApi, ReplyMe
 from linebot.v3.webhooks import MessageEvent, TextMessageContent
 from linebot.v3.webhooks.models.message_event import MessageEvent
 
-from starlib import BaseThread, Jsondb, sclient, sqldb, web_log, utils
+from starlib import BaseThread, Jsondb, sclient, sqldb, utils, web_log
 from starlib.dataExtractor import GoogleOauth2, TwitchOauth2
-from starlib.oauth import DiscordOAuth, GoogleOAuth, TwitchOAuth
 from starlib.instance import google_api
-from starlib.models import CloudUser, TwitchBotJoinChannel, YoutubePushEntry
-from starlib.types import APIType, NotifyCommunityType, YoutubeVideoStatue
+from starlib.models import CloudUserOld, ExternalAccount, TwitchBotJoinChannel, YoutubePushEntry
+from starlib.oauth import DiscordOAuth, GoogleOAuth, TwitchOAuth
 from starlib.starAgent_line import line_agent
+from starlib.types import APIType, NotifyCommunityType, PlatformType, YoutubeVideoStatue
 
 discord_oauth_client = sqldb.get_oauth_client(APIType.Discord, 4)
 twitch_oauth_client = sqldb.get_oauth_client(APIType.Twitch, 3)
@@ -64,8 +65,6 @@ async def openapi(username: str = Depends(get_current_username)):
 @app.head("/")
 def main(request:Request):
     web_log.debug(f"{request.client.host} - {request.method} - {request.url.path}")
-    # if not request.query_params or dict(request.query_params).get('code') != "200":
-    #     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     return HTMLResponse("這是一個目前沒有內容的主頁")
 
 @app.get("/keep_alive")
@@ -150,16 +149,24 @@ async def oauth_discord(request: Request):
     web_log.info(f"Discord OAuth: User {user.username} ({user.id}) authorized.")
     web_log.info(f"Discord OAuth scopes: {auth.scopes}")
 
+    cuser = sqldb.get_cloud_user_by_discord(user.id)
+    if not cuser:
+        # 如果資料庫沒有這個用戶，先創建一個新的 CloudUser
+        cuser = sqldb.add_cloud_user_by_discord(user.id, user.username)
+        web_log.info(f"Created new CloudUser for Discord ID {user.id} with username '{user.username}'")
+
     if auth.has_scope("connections"):
         connections = await auth.get_connections()
         for connection in connections:
             if connection.type == "twitch":
                 web_log.info(f"Discord connection: {connection.name}({connection.id})")
-                sclient.sqldb.merge(CloudUser(discord_id=user.id, twitch_id=connection.id))
+                sclient.sqldb.merge(ExternalAccount(user_id=cuser.id, platform=PlatformType.Twitch, external_id=connection.id, display_name=connection.name))
 
     if params.get("guild_id"):
+        # 機器人授權流程
         return HTMLResponse(f"授權已完成，您現在可以關閉此頁面<br>感謝您使用星羽機器人！", 200)
     else:
+        # 用戶授權流程，產生 JWT 並重定向到儀表板
         response = RedirectResponse(f"{BASE_WWW_URL}/dashboard")
 
         # 產生 JWT
@@ -353,9 +360,6 @@ class WebsiteThread(BaseThread):
         self.loop = None
 
     def run(self):
-        import asyncio
-        import uvicorn
-
         cert_dir = Path(__file__).parent.parent / "database"
         certfile = cert_dir / "localhost+2.pem"
         keyfile = cert_dir / "localhost+2-key.pem"

@@ -152,7 +152,7 @@ class UserRepository(BaseRepository):
         Returns:
             CloudUser: The CloudUser object if found.
         """
-        stmt = select(CloudUser2).join(ExternalAccount, CloudUser2.id == ExternalAccount.user_id).where(ExternalAccount.platform == PlatformType.Discord, ExternalAccount.external_id == str(discord_id))
+        stmt = select(CloudUser).join(ExternalAccount, CloudUser.id == ExternalAccount.user_id).where(ExternalAccount.platform == PlatformType.Discord, ExternalAccount.external_id == str(discord_id))
         result = self.session.exec(stmt).one_or_none()
         return result
 
@@ -166,7 +166,7 @@ class UserRepository(BaseRepository):
         Returns:
             CloudUser: The newly created CloudUser object.
         """
-        cloud_user = CloudUser2()
+        cloud_user = CloudUser()
         self.session.add(cloud_user)
         self.session.flush()  # 確保 id 已被分配
 
@@ -211,12 +211,12 @@ class UserRepository(BaseRepository):
         Returns:
             PrivilegeLevel: The privilege level of the user.
         """
-        stmt = select(CloudUser2.privilege_level).join(ExternalAccount, CloudUser2.id == ExternalAccount.user_id).where(ExternalAccount.platform == PlatformType.Discord, ExternalAccount.external_id == str(discord_id))
+        stmt = select(CloudUser.privilege_level).join(ExternalAccount, CloudUser.id == ExternalAccount.user_id).where(ExternalAccount.platform == PlatformType.Discord, ExternalAccount.external_id == str(discord_id))
         result = self.session.exec(stmt).one_or_none()
         if result:
             return PrivilegeLevel(result)
 
-        stmt = select(CloudUser.privilege_level).where(CloudUser.discord_id == discord_id)
+        stmt = select(CloudUserOld.privilege_level).where(CloudUserOld.discord_id == discord_id)
         result = self.session.exec(stmt).one_or_none()
         if result:
             return PrivilegeLevel(result)
@@ -253,7 +253,7 @@ class UserRepository(BaseRepository):
         return result
 
     def get_raw_user_names(self):
-        stmt = select(CloudUser).where(CloudUser.name is not None)
+        stmt = select(CloudUserOld).where(CloudUserOld.name is not None)
         result = self.session.exec(stmt).all()
         return {i.discord_id: i.name for i in result}
 

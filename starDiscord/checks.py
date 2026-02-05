@@ -4,7 +4,7 @@ import discord
 from discord.ext import commands
 
 from starlib import sqldb
-from starlib.models.postgresql import CloudUser2
+from starlib.models.postgresql import CloudUser
 from starlib.types import PrivilegeLevel
 
 from .uiElement.view import RegisterView
@@ -44,7 +44,7 @@ class RegisteredContext(discord.ApplicationContext):
     指令的ctx參數類型應設定為 RegisteredContext，以便在指令內使用 ctx.cuser 取得用戶資料
     """
 
-    cuser: CloudUser2
+    cuser: CloudUser
 
 
 def ensure_registered():

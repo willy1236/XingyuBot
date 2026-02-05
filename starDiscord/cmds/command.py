@@ -18,6 +18,7 @@ from starlib.models.postgresql import Giveaway
 from starlib.types import Coins
 from starlib.utils import converter, create_only_role_list, create_role_magification_dict, find, random_color
 
+from ..checks import RegisteredContext, ensure_registered
 from ..extension import Cog_Extension
 from ..uiElement.view import DeleteAddRoleView, GiveawayView, PollView, TRPGPlotView
 from .bot_event import check_registration
@@ -539,11 +540,10 @@ class command(Cog_Extension):
         await ctx.respond(embed=embed, file=discord.File(image_buffer, filename="pie.png"))
 
     @commands.slash_command(description="共用「94共用啦」雲端資料夾", guild_ids=main_guilds)
-    async def drive(
-        self, ctx: discord.ApplicationContext, email: discord.Option(str, name="gmail帳戶", description="要使用的Gmail帳戶，留空以移除資料", required=False)
-    ):
+    @ensure_registered()
+    async def drive(self, ctx: RegisteredContext, email: discord.Option(str, name="gmail帳戶", description="要使用的Gmail帳戶，留空以移除資料", required=False)):
         await ctx.defer()
-        cuser = sclient.sqldb.get_cloud_user(ctx.author.id)
+        cuser = sclient.sqldb.get_cloud_user_by_discord(ctx.author.id)
         fileId = "1bDtsLbOi5crIOkWUZbQmPq3dXUbwWEan"
         if not email:
             if cuser and cuser.drive_gmail:
@@ -556,21 +556,21 @@ class command(Cog_Extension):
                 await ctx.respond(f"{ctx.author.mention}：此帳號沒有設定過google帳戶")
 
             return
+        else:
+            if cuser and cuser.drive_share_id:
+                await ctx.respond(f"{ctx.author.mention}：此帳號已經共用雲端資料夾了")
+                return
 
-        if cuser and cuser.drive_share_id:
-            await ctx.respond(f"{ctx.author.mention}：此帳號已經共用雲端資料夾了")
-            return
+            r = re.compile(r"@gmail.com")
+            if not r.search(email):
+                email += "@gmail.com"
 
-        r = re.compile(r"@gmail.com")
-        if not r.search(email):
-            email += "@gmail.com"
-
-        google_data = XingyuGoogleCloud().add_file_permissions(fileId, email)
-        cuser.drive_gmail = email
-        cuser.drive_share_id = google_data["id"]
-        sclient.sqldb.merge(cuser)
-        msg = await ctx.respond(f"{ctx.author.mention}：已與 {email} 共用雲端資料夾")
-        await self.bot.report(f"{ctx.author.mention} 已使用 {email} 共用雲端資料夾", msg)
+            google_data = XingyuGoogleCloud().add_file_permissions(fileId, email)
+            cuser.drive_gmail = email
+            cuser.drive_share_id = google_data["id"]
+            sclient.sqldb.merge(cuser)
+            msg = await ctx.respond(f"{ctx.author.mention}：已與 {email} 共用雲端資料夾")
+            await self.bot.report(f"{ctx.author.mention} 已使用 {email} 共用雲端資料夾", msg)
 
     @party.command(description="加入政黨")
     async def join(self, ctx: discord.ApplicationContext, party_id: discord.Option(int, name="政黨", description="要參加的政黨", choices=party_option)):

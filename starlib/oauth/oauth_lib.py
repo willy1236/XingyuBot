@@ -4,9 +4,10 @@ from datetime import datetime, timedelta, timezone
 from typing import TypedDict
 
 from authlib.integrations.httpx_client import AsyncOAuth2Client
-from ..models.postgresql import OAuthClient, OAuthToken, OAuthToken
-from ..types import CommunityType
+
 from ..database import sqldb
+from ..models.postgresql import OAuthClient, OAuthToken
+from ..types import CommunityType
 
 
 class OAuthTokenDict(TypedDict, total=False):
@@ -133,7 +134,7 @@ class OAuth2Base(ABC):
     # ====== Token DB Integration ======
     @classmethod
     def create_from_db(cls, oauth_client: OAuthClient, scopes: str | None = None):
-        instance = cls(client_id=oauth_client.client_id, client_secret=oauth_client.client_secret, redirect_uri=oauth_client.redirect_uri, scopes=scopes)
+        instance = cls(client_id=oauth_client.client_id, client_secret=oauth_client.client_secret, redirect_uri=oauth_client.redirect_uri, scopes=scopes or oauth_client.default_scopes)
         instance._credential_id = oauth_client.credential_id
         return instance
 
