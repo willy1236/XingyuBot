@@ -498,6 +498,8 @@ async def run():
         except EventSubSubscriptionTimeout:
             twitch_log.warning(f"Error subscribing to channel prediction end: timeout.")
 
+        twitch_log.debug(f"eventsub for {user.login}(mod) done.")
+
     sclient.twitch = twitch
     return chat, twitch, eventsub
 

@@ -2,10 +2,16 @@ import asyncio
 import time
 
 import discord
+import truststore
 
+truststore.inject_into_ssl()
+
+# ruff: disable[E402]
 from starDiscord import DiscordBot
 from starlib import Jsondb, log, sclient
 from starServer.scheduler import run_scheduler_in_thread
+
+# ruff: enable[E402]
 
 config = Jsondb.config
 bot_code = config.get("bot_code")
