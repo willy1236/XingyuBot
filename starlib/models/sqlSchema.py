@@ -69,3 +69,7 @@ class HappycampSchema(BaseSchema):
 class UsersSchema(BaseSchema):
     __abstract__ = True
     __table_args__ = {"schema": "users"}
+
+class GuildsSchema(BaseSchema):
+    __abstract__ = True
+    __table_args__ = {"schema": "guilds"}

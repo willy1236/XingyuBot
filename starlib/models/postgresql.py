@@ -184,7 +184,7 @@ class UserModerate(UserSchema, table=True):
         return name, value
 
 
-class RoleSave(UserSchema, table=True):
+class RoleSaveOld(UserSchema, table=True):
     __tablename__ = "role_save"
 
     discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
@@ -192,6 +192,18 @@ class RoleSave(UserSchema, table=True):
     role_name: str = Field(sa_column=Column(String))
     time: date = Field(sa_column=Column(Date))
 
+class RoleSave(UsersSchema, table=True):
+    __tablename__ = "role_save"
+
+    role_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
+    role_name: str = Field(sa_column=Column(String))
+    created_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
+
+class RoleSaveMember(UsersSchema, table=True):
+    __tablename__ = "role_save_member"
+
+    discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
+    role_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
 
 class Pet(UserSchema, table=True):
     __tablename__ = "user_pet"

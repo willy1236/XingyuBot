@@ -41,9 +41,8 @@ class DeleteAddRoleView(discord.ui.View):
     async def on_timeout(self):
         try:
             self.clear_items()
-            for user in self.role.members:
-                sqldb.add_role_save(user.id, self.role)
-                log.info(f"{user} has been added to the role {self.role}")
+            sqldb.add_role_save(self.role)
+            log.info(f"Role {self.role} has been saved.")
             await self.message.edit(view=self)
         except discord.errors.NotFound:
             pass

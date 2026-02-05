@@ -232,11 +232,6 @@ class UserRepository(BaseRepository):
         result = self.session.exec(stmt).one_or_none()
         return result
 
-    def get_alternate_account(self, main_account):
-        stmt = select(UserAccount.alternate_account).where(UserAccount.main_account == main_account)
-        result = self.session.exec(stmt).all()
-        return result
-
     def get_raw_registrations(self):
         stmt = select(DiscordRegistration)
         result = self.session.exec(stmt).all()
@@ -700,24 +695,26 @@ class TicketRepository(BaseRepository):
 class RoleSaveRepository(BaseRepository):
     # * role_save
     def get_role_save(self, discord_id: int):
-        stmt = select(RoleSave).where(RoleSave.discord_id == discord_id).order_by(RoleSave.time, desc(RoleSave.role_id))
+        stmt = select(RoleSave).join(RoleSaveMember, RoleSaveMember.role_id == RoleSave.role_id).where(RoleSaveMember.discord_id == discord_id).order_by(RoleSave.created_at, desc(RoleSaveMember.role_id))
         result = self.session.exec(stmt).all()
         return result
 
     def get_role_save_count(self, discord_id: int):
-        stmt = select(func.count()).select_from(RoleSave).where(RoleSave.discord_id == discord_id)
+        stmt = select(func.count()).select_from(RoleSaveMember).where(RoleSaveMember.discord_id == discord_id)
         result = self.session.exec(stmt).one_or_none()
         return result
 
     def get_role_save_count_list(self):
-        stmt = select(RoleSave.discord_id, func.count()).select_from(RoleSave).group_by(RoleSave.discord_id).order_by(desc(func.count()))
+        stmt = select(RoleSaveMember.discord_id, func.count()).select_from(RoleSaveMember).join(RoleSave, RoleSaveMember.role_id == RoleSave.role_id).group_by(RoleSaveMember.discord_id).order_by(desc(func.count()))
         result = self.session.exec(stmt).all()
         return {i[0]: i[1] for i in result}
 
-    def add_role_save(self, discord_id: int, role: discord.Role):
-        role_save = RoleSave(discord_id=discord_id, role_id=role.id, role_name=role.name, time=role.created_at.date())
+    def add_role_save(self, role: discord.Role):
+        role_save = RoleSave(role_id=role.id, role_name=role.name, created_at=role.created_at)
         self.session.merge(role_save)
-        self.session.commit()
+        for member in role.members:
+            self.session.merge(RoleSaveMember(discord_id=member.id, role_id=role.id))
+        self.commit()
 
     # * ReactionRole
     def get_reaction_roles_all(self) -> dict[int, list[ReactionRoleOption]]:

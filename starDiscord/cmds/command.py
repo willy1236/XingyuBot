@@ -120,13 +120,12 @@ class command(Cog_Extension):
             if role.id == 877934319249797120 or role.is_default():
                 break
 
-            for user in role.members:
-                try:
-                    # 1062
-                    sclient.sqldb.add_role_save(user.id, role)
-                    log.info(f"新增:{role.name}")
-                except Exception as e:
-                    log.warning(f"儲存身分組時發生錯誤", role.name, exc_info=e)
+            try:
+                # 1062
+                sclient.sqldb.add_role_save(role)
+                log.info(f"新增：{role.name}")
+            except Exception as e:
+                log.warning(f"儲存身分組時發生錯誤", role.name, exc_info=e)
 
         await ctx.respond("身分組儲存完成", delete_after=5)
 
@@ -163,8 +162,8 @@ class command(Cog_Extension):
         page = [BotEmbed.simple(f"{user.name} 加身分組紀錄") for _ in range(math.ceil(len(record) / 10))]
         for i, data in enumerate(record):
             role_name = data.role_name
-            time = data.time
-            page[int(i / 10)].add_field(name=role_name, value=time, inline=False)
+            created_at = data.created_at
+            page[int(i / 10)].add_field(name=role_name, value=created_at.strftime("%Y/%m/%d %H:%M:%S"), inline=False)
 
         paginator = pages.Paginator(pages=page, use_default_buttons=True, loop_pages=True)
         await paginator.respond(ctx.interaction, ephemeral=False)
