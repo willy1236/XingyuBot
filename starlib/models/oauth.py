@@ -17,7 +17,6 @@ class DiscordUser(DiscordAuthModel):
     banner: str | None
     accent_color: int
     global_name: str
-    avatar_decoration_data: dict
     banner_color: str
     bot: bool | None = None
     system: bool | None = None

@@ -213,14 +213,8 @@ class UserRepository(BaseRepository):
         """
         stmt = select(CloudUser.privilege_level).join(ExternalAccount, CloudUser.id == ExternalAccount.user_id).where(ExternalAccount.platform == PlatformType.Discord, ExternalAccount.external_id == str(discord_id))
         result = self.session.exec(stmt).one_or_none()
-        if result:
-            return PrivilegeLevel(result)
+        return PrivilegeLevel(result) or PrivilegeLevel.User
 
-        stmt = select(CloudUserOld.privilege_level).where(CloudUserOld.discord_id == discord_id)
-        result = self.session.exec(stmt).one_or_none()
-        if result:
-            return PrivilegeLevel(result)
-        return PrivilegeLevel.User
 
     def get_discord_accounts(self, user_id: int):
         stmt = select(ExternalAccount).where(ExternalAccount.platform == PlatformType.Discord, ExternalAccount.user_id == user_id)
@@ -246,11 +240,6 @@ class UserRepository(BaseRepository):
         stmt = select(DiscordRegistration).where(DiscordRegistration.guild_id == guild_id)
         result = self.session.exec(stmt).one_or_none()
         return result
-
-    def get_raw_user_names(self):
-        stmt = select(CloudUserOld).where(CloudUserOld.name is not None)
-        result = self.session.exec(stmt).all()
-        return {i.discord_id: i.name for i in result}
 
     def add_date(self, discord_id: int, target_date: date, name: str):
         """新增紀念日"""
@@ -1482,11 +1471,11 @@ class VIPRepository(BaseRepository):
         return result
 
 
-class ServerConfigRepository(BaseRepository):
+class GuildSettingRepository(BaseRepository):
     def get_server_config(self, guild_id: int):
-        stmt = select(ServerConfig).where(ServerConfig.guild_id == guild_id)
+        stmt = select(GuildSetting).where(GuildSetting.guild_id == guild_id)
         result = self.session.exec(stmt).one_or_none()
-        return result or ServerConfig(guild_id=guild_id)
+        return result or GuildSetting(guild_id=guild_id)
 
     def get_voice_time(self, discord_id: int, guild_id: int):
         stmt = select(VoiceTime).where(VoiceTime.discord_id == discord_id, VoiceTime.guild_id == guild_id)
@@ -1621,7 +1610,7 @@ class SQLRepository(
     CacheRepository,
     NetworkRepository,
     VIPRepository,
-    ServerConfigRepository,
+    GuildSettingRepository,
     TestRepository,
 ):
     """綜合SQL資料庫存取類別"""

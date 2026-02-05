@@ -15,17 +15,6 @@ from ..utils import BotEmbed
 from .sqlSchema import *
 
 
-class CloudUserOld(UserSchema, table=True):
-    __tablename__ = "cloud_user"
-
-    id: str | None = Field(sa_column=Column(String, unique=True))
-    discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True, autoincrement=False))
-    drive_gmail: str | None = Field(sa_column=Column(String))
-    drive_share_id: str | None = Field(sa_column=Column(String))
-    twitch_id: int | None = Field(sa_column=Column(Integer, unique=True))
-    name: str | None = Field(sa_column=Column(String))
-    privilege_level: PrivilegeLevel = Field(sa_column=Column(SmallInteger, nullable=True), default=PrivilegeLevel.User)
-
 class CloudUser(UsersSchema, table=True):
     __tablename__ = "cloud_user"
 
@@ -66,6 +55,17 @@ class LinkCode(UsersSchema, table=True):
     user_id: int = Field(foreign_key="users.cloud_user.id", primary_key=True)
     code: str = Field(index=True)
     expires_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
+
+
+class DiscordStats(UsersSchema, table=True):
+    __tablename__ = "discord_stats"
+
+    user_id: int = Field(foreign_key="users.cloud_user.id", primary_key=True)
+    max_sign_consecutive_days: int | None = Field(sa_column=Column(Integer))
+    meatball_times: int | None = Field(sa_column=Column(Integer))
+    guaranteed: int | None = Field(sa_column=Column(Integer))
+    registrations_id: int | None = Field(sa_column=Column(Integer, ForeignKey("stardb_idbase.discord_registrations.registrations_id"), default=None))
+
 
 class DiscordUser(UserSchema, table=True):
     __tablename__ = "user_discord"
@@ -192,6 +192,7 @@ class RoleSaveOld(UserSchema, table=True):
     role_name: str = Field(sa_column=Column(String))
     time: date = Field(sa_column=Column(Date))
 
+
 class RoleSave(UsersSchema, table=True):
     __tablename__ = "role_save"
 
@@ -199,11 +200,13 @@ class RoleSave(UsersSchema, table=True):
     role_name: str = Field(sa_column=Column(String))
     created_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
 
+
 class RoleSaveMember(UsersSchema, table=True):
     __tablename__ = "role_save_member"
 
     discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
     role_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
+
 
 class Pet(UserSchema, table=True):
     __tablename__ = "user_pet"
@@ -532,8 +535,8 @@ class Post(AlchemyBasicSchema):
     user: User = relationship(back_populates="posts", init=False)
 
 
-class ServerConfig(BasicSchema, table=False):
-    __tablename__ = "server_config"
+class GuildSetting(GuildsSchema, table=False):
+    __tablename__ = "server_setting"
 
     guild_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
     timeout_after_warning_times: int | None
