@@ -291,5 +291,9 @@
     "ban": {
         "en-US": "ban",
         "zh-TW": "停權"
+    },
+    "link_code": {
+        "en-US": "link_code",
+        "zh-TW": "產生綁定碼"
     }
 }

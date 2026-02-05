@@ -13,13 +13,13 @@ from discord.utils import format_dt
 
 from starlib import BotEmbed, Jsondb, log, sqldb, tz
 from starlib.instance import mcss_api
-from starlib.models.postgresql import Giveaway, GiveawayUser, Poll, PollRole, TicketChannel, HappycampApplicationForm, HappycampVIP
+from starlib.models.postgresql import Giveaway, GiveawayUser, HappycampApplicationForm, HappycampVIP, Poll, PollRole, TicketChannel
 from starlib.types import McssServerAction, McssServerStatues
 from starlib.utils.utility import find_radmin_vpn_network
 
 if TYPE_CHECKING:
     from starlib.database import SQLRepository
-    from starlib.models import PollOption, ReactionRoleOption, TRPGStoryOption, TRPGStoryPlot, McssServer
+    from starlib.models import McssServer, PollOption, ReactionRoleOption, TRPGStoryOption, TRPGStoryPlot
 
 class DeletePetView(discord.ui.View):
     def __init__(self):
@@ -933,3 +933,19 @@ class VIPAuditView(discord.ui.View):
 
         async def callback(self, interaction: discord.Interaction):
             await interaction.response.send_message("已填入審核意見", ephemeral=True)
+
+class RegisterView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=60)
+
+    @discord.ui.button(label="直接開始（建立新用戶）", style=discord.ButtonStyle.green)
+    async def create_new(self, button: discord.ui.Button, interaction: discord.Interaction):
+        sqldb.add_cloud_user_by_discord(interaction.user.id, interaction.user.display_name)
+        await interaction.response.edit_message(content="✅ 註冊成功！請重新輸入指令。", view=None)
+        self.stop()
+
+    @discord.ui.button(label="我有其他帳號（進行綁定）", style=discord.ButtonStyle.secondary)
+    async def link_existing(self, button: discord.ui.Button, interaction: discord.Interaction):
+        from starDiscord.uiElement.modal import LinkAccountModal
+
+        await interaction.response.send_modal(LinkAccountModal())

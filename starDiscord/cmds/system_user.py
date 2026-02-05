@@ -6,6 +6,7 @@ from starlib import BotEmbed, ChoiceList, Jsondb, sclient
 from starlib.instance import happycamp_guild
 from starlib.models.postgresql import DiscordUser
 
+from ..checks import RegisteredContext, ensure_registered
 from ..extension import Cog_Extension
 from ..uiElement.view import DeletePetView
 
@@ -15,23 +16,13 @@ class system_user(Cog_Extension):
     pet = SlashCommandGroup("pet", "寵物相關指令")
 
     @commands.slash_command(description="查看用戶資訊")
-    async def ui(
-        self,
-        ctx: discord.ApplicationContext,
-        member: discord.Option(discord.Member, name="用戶", description="留空以查詢自己", default=None),
-        show_alt_account: discord.Option(bool, name="顯示小帳", description="顯示小帳，僅在查詢自己時可使用，此功能僅在特定情況下生效", default=False),
-    ):
+    @ensure_registered()
+    async def ui(self, ctx: RegisteredContext, member: discord.Option(discord.Member, name="用戶", description="留空以查詢自己", default=None)):
         user_dc:discord.Member = member or ctx.author
-        if user_dc != ctx.author and not await self.bot.is_owner(ctx.author):
-            show_alt_account = False
+        cuser = ctx.cuser
 
         user = sclient.sqldb.get_dcuser(user_dc.id) or DiscordUser(discord_id=user_dc.id)
         user_embed = BotEmbed.general(name="Discord資料", icon_url=user_dc.avatar.url if user_dc.avatar else None)
-        main_account_id = sclient.sqldb.get_main_account(user_dc.id)
-        if main_account_id:
-            main_account = self.bot.get_user(main_account_id).mention or main_account_id
-            user_embed.description = f"{main_account} 的小帳"
-
         coins = sclient.sqldb.get_coin(user_dc.id)
         user_embed.add_field(name="⭐星塵", value=coins.stardust)
         user_embed.add_field(name="PT點數", value=coins.point)
@@ -45,17 +36,14 @@ class system_user(Cog_Extension):
             guild = self.bot.get_guild(user.registration.guild_id)
             user_embed.add_field(name="戶籍", value=guild.name if guild else user.registration.guild_id)
 
-        if show_alt_account:
-            dbdata = sclient.sqldb.get_alternate_account(user_dc.id)
-            if dbdata:
-                alt_accounts = ", ".join([f"<@{i}>" for i in dbdata])
-                user_embed.add_field(name="小帳", value=f"{alt_accounts}", inline=False)
+        dbdata = sclient.sqldb.get_discord_accounts(cuser.id)
+        if len(dbdata) > 1:
+            alt_accounts = ", ".join([f"<@{i.external_id}>" for i in dbdata if int(i.external_id) != user_dc.id])
+            user_embed.add_field(name="綁定的其他 Discord 帳號", value=f"{alt_accounts}", inline=False)
 
-        cuser = sclient.sqldb.get_cloud_user(user_dc.id)
         cloud_user_embed = BotEmbed.general("使用者資料", icon_url=user_dc.avatar.url if user_dc.avatar else None)
         if cuser:
             cloud_user_embed.add_field(name="雲端共用資料夾", value="已共用" if cuser.drive_share_id else "未共用")
-            cloud_user_embed.add_field(name="Twitch ID", value=cuser.twitch_id or "未設定")
             if cuser.name:
                 cloud_user_embed.add_field(name="註冊名稱", value=cuser.name)
 
@@ -67,6 +55,14 @@ class system_user(Cog_Extension):
             embeds.append(happycamp_embed)
 
         await ctx.respond(embeds=embeds)
+
+    @commands.slash_command(description="取得綁定碼")
+    @ensure_registered()
+    async def link_code(self, ctx: RegisteredContext):
+        code = sclient.sqldb.get_or_create_link_code(ctx.cuser.id)
+        embed = BotEmbed.simple("綁定碼", f"請在新綁定帳號欲註冊時輸入：\n{code.code}\n綁定碼10分鐘內有效，可使用當前指令重新獲取")
+        embed.set_footer(text=f"擁有此綁定碼的人可以綁定你的帳號，請勿隨意提供給他人")
+        await ctx.respond(embed=embed, ephemeral=True)
 
     @pet.command(description="查看寵物資訊")
     async def check(self, ctx, user_dc: discord.Option(discord.Member, name="用戶", description="可不輸入以查詢自己", default=None)):

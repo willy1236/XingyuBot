@@ -1,3 +1,4 @@
+import secrets
 from collections.abc import Callable, Generator
 from datetime import date, datetime, time, timedelta, timezone
 from ipaddress import IPv4Network
@@ -45,6 +46,14 @@ class BaseRepository:
         if isinstance(self._session_factory, Session):
             return self._session_factory
         return self._session_factory()
+
+    def commit(self):
+        try:
+            self.session.commit()
+        except SQLAlchemyError as e:
+            log.error("SQLAlchemy Commit Error: %s", exc_info=True)
+            self.session.rollback()
+            raise
 
     @overload
     def __getitem__(self, key: Literal[DBCacheType.DynamicVoiceRoom]) -> list[int]: ...
@@ -133,7 +142,7 @@ class BaseRepository:
 
 class UserRepository(BaseRepository):
     # * User
-    def get_cloud_user(self, discord_id: int):
+    def get_cloud_user_by_discord(self, discord_id: int):
         """
         Retrieve a CloudUser from the database based on the provided Discord ID.
 
@@ -141,11 +150,49 @@ class UserRepository(BaseRepository):
             discord_id (int): The Discord ID of the user to retrieve.
 
         Returns:
-            CloudUser: The CloudUser object if found, otherwise a new CloudUser instance.
+            CloudUser: The CloudUser object if found.
         """
-        stmt = select(CloudUser).where(CloudUser.discord_id == discord_id)
+        stmt = select(CloudUser2).join(ExternalAccount, CloudUser2.id == ExternalAccount.user_id).where(ExternalAccount.platform == PlatformType.Discord, ExternalAccount.external_id == str(discord_id))
         result = self.session.exec(stmt).one_or_none()
-        return result or CloudUser(discord_id=discord_id)
+        return result
+
+    def add_cloud_user_by_discord(self, discord_id: int, display_name: str | None = None):
+        """
+        Add a new CloudUser to the database based on the provided Discord ID.
+
+        Args:
+            discord_id (int): The Discord ID of the user to add.
+
+        Returns:
+            CloudUser: The newly created CloudUser object.
+        """
+        cloud_user = CloudUser2()
+        self.session.add(cloud_user)
+        self.session.flush()  # 確保 id 已被分配
+
+        external_account = ExternalAccount(user_id=cloud_user.id, platform=PlatformType.Discord, external_id=str(discord_id), display_name=display_name)
+        self.session.add(external_account)
+        self.commit()
+        return cloud_user
+
+    def get_or_create_link_code(self, user_id: int):
+        """取得或創建綁定碼"""
+        stmt = select(LinkCode).where(LinkCode.user_id == user_id)
+        result = self.session.exec(stmt).one_or_none()
+        if result and result.expires_at > datetime.now(tz=tz):
+            return result
+
+        # 若無綁定碼或已過期，則創建新綁定碼
+        new_code = LinkCode(user_id=user_id, code=f"{secrets.randbelow(1000000):06d}", expires_at=datetime.now(tz=tz) + timedelta(minutes=10))
+        self.session.merge(new_code)
+        self.commit()
+        return new_code
+
+    def get_active_link_code(self, discord_id: str):
+        """取得有效的綁定碼"""
+        stmt = select(LinkCode).join(ExternalAccount, LinkCode.user_id == ExternalAccount.user_id).where(ExternalAccount.external_id == str(discord_id), LinkCode.expires_at > datetime.now(tz=tz))
+        result = self.session.exec(stmt).one_or_none()
+        return result
 
     def get_dcuser(self, discord_id: int, with_registration: bool = False):
         stmt = select(DiscordUser).where(DiscordUser.discord_id == discord_id)
@@ -164,9 +211,21 @@ class UserRepository(BaseRepository):
         Returns:
             PrivilegeLevel: The privilege level of the user.
         """
+        stmt = select(CloudUser2.privilege_level).join(ExternalAccount, CloudUser2.id == ExternalAccount.user_id).where(ExternalAccount.platform == PlatformType.Discord, ExternalAccount.external_id == str(discord_id))
+        result = self.session.exec(stmt).one_or_none()
+        if result:
+            return PrivilegeLevel(result)
+
         stmt = select(CloudUser.privilege_level).where(CloudUser.discord_id == discord_id)
         result = self.session.exec(stmt).one_or_none()
-        return PrivilegeLevel(result) if result else PrivilegeLevel.User
+        if result:
+            return PrivilegeLevel(result)
+        return PrivilegeLevel.User
+
+    def get_discord_accounts(self, user_id: int):
+        stmt = select(ExternalAccount).where(ExternalAccount.platform == PlatformType.Discord, ExternalAccount.user_id == user_id)
+        result = self.session.exec(stmt).all()
+        return result
 
     def get_main_account(self, alternate_account):
         stmt = select(UserAccount.main_account).where(UserAccount.alternate_account == alternate_account)

@@ -1,6 +1,6 @@
 import json
-import subprocess
 import shutil
+import subprocess
 from collections.abc import Iterator
 from datetime import timezone
 from typing import TypeVar

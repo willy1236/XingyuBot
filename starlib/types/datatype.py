@@ -1,4 +1,4 @@
-from enum import Enum, IntEnum
+from enum import IntEnum, StrEnum
 
 
 class NotifyCommunityType(IntEnum):
@@ -24,7 +24,7 @@ class NotifyChannelType(IntEnum):
     SlightQuakeNotifications = 12
     LeaveLog = 13
 
-class DBCacheType(Enum):
+class DBCacheType(StrEnum):
     DynamicVoiceLobby = "dynamic_voice"
     DynamicVoiceRoom = "dynamic_voice_room"
     VoiceLog = "voice_log"
@@ -38,6 +38,11 @@ class DBCacheType(Enum):
 cache_dict = {
     NotifyChannelType.VoiceLog: DBCacheType.VoiceLog,
 }
+
+
+class PlatformType(IntEnum):
+    Discord = 1
+    Twitch = 2
 
 
 class GameType(IntEnum):

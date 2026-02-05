@@ -1,10 +1,7 @@
-from typing import TypeVar
-
 from sqlalchemy import Identity, Integer
 from sqlalchemy.orm import DeclarativeBase, MappedAsDataclass, mapped_column
 from sqlmodel import SQLModel
 
-OBJ = TypeVar("OBJ")
 
 class Base(MappedAsDataclass, DeclarativeBase):
     """subclasses will be converted to dataclasses"""
@@ -68,3 +65,7 @@ class CacheSchema(BaseSchema):
 class HappycampSchema(BaseSchema):
     __abstract__ = True
     __table_args__ = {"schema": "happycamp"}
+
+class UsersSchema(BaseSchema):
+    __abstract__ = True
+    __table_args__ = {"schema": "users"}

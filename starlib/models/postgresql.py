@@ -1,10 +1,11 @@
 from datetime import date, datetime, timedelta, timezone
+from typing import Any
 
 import discord
-from sqlalchemy import BigInteger, Boolean, Column, Date, ForeignKey, ForeignKeyConstraint, Identity, Integer, Interval, SmallInteger, String, Text
+from sqlalchemy import JSON, BigInteger, Boolean, Column, Date, ForeignKey, ForeignKeyConstraint, Identity, Integer, Interval, SmallInteger, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import ARRAY, CIDR, MACADDR, TIMESTAMP
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlmodel import Field, Relationship
+from sqlmodel import Field, Relationship, text
 
 from ..base import ListObject
 from ..fileDatabase import Jsondb
@@ -25,6 +26,46 @@ class CloudUser(UserSchema, table=True):
     name: str | None = Field(sa_column=Column(String))
     privilege_level: PrivilegeLevel = Field(sa_column=Column(SmallInteger, nullable=True), default=PrivilegeLevel.User)
 
+class CloudUser2(UsersSchema, table=True):
+    __tablename__ = "cloud_user"
+
+    id: int = Field(sa_column=Column(Integer, Identity(), primary_key=True))
+    drive_gmail: str | None = Field(sa_column=Column(String))
+    drive_share_id: str | None = Field(sa_column=Column(String))
+    name: str | None = Field(sa_column=Column(String))
+    created_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0), default=datetime.now(tz), server_default=text("now()")))
+    privilege_level: PrivilegeLevel = Field(sa_column=Column(SmallInteger, nullable=True), default=PrivilegeLevel.User)
+
+
+class ExternalAccount(UsersSchema, table=True):
+    __tablename__ = "external_account"
+
+    id: int = Field(sa_column=Column(Integer, Identity(), primary_key=True))
+    user_id: int = Field(foreign_key="users.cloud_user.id", index=True)
+
+    # 平台類型與該平台的唯一 ID
+    platform: GameType = Field(sa_column=Column(SmallInteger, index=True))
+    external_id: str = Field(sa_column=Column(String, index=True))
+
+    # 顯示名稱 (例如 Discord 名稱或遊戲 ID)
+    display_name: str | None = Field(sa_column=Column(String))
+
+    # 使用 JSONB 儲存不同平台差異化的資料
+    platform_data: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+
+    __table_args__ = (
+        # 確保同一個平台下的 external_id 唯一，避免重複綁定
+        UniqueConstraint("platform", "external_id", name="unique_platform_account"),
+        {**UsersSchema.__table_args__},
+    )
+
+
+class LinkCode(UsersSchema, table=True):
+    __tablename__ = "link_code"
+
+    user_id: int = Field(foreign_key="users.cloud_user.id", primary_key=True)
+    code: str = Field(index=True)
+    expires_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
 
 class DiscordUser(UserSchema, table=True):
     __tablename__ = "user_discord"
