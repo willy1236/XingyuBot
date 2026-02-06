@@ -1,4 +1,5 @@
 # oauth_lib.py
+import secrets
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta, timezone
 from typing import TypedDict
@@ -61,13 +62,21 @@ class OAuth2Base(ABC):
         return self._client
 
     # ====== Authorization URL ======
-    def get_authorization_url(self) -> str:
+    def get_authorization_url(self, state: str | None = None, **kwargs) -> tuple[str, str]:
         client = self.oauth_client
-        uri, _ = client.create_authorization_url(self.auth_url)
-        return uri
+        uri, state = client.create_authorization_url(self.auth_url, state=state, **kwargs)
+        assert state is not None, "State should not be None after create_authorization_url"
+        return uri, state
+
+    @staticmethod
+    def verify_state(expected: str | None, actual: str | None) -> bool:
+        """驗證 OAuth state 參數是否匹配，用於防止 CSRF 攻擊。"""
+        if expected is None or actual is None:
+            return False
+        return secrets.compare_digest(expected, actual)
 
     # ====== Basic functions ======
-    async def exchange_code(self, code: str, auto_load_token: bool = True) -> OAuthTokenDict:
+    async def exchange_code(self, code: str) -> OAuthTokenDict:
         """
         Exchange an authorization code for an OAuth token.
         By default, it automatically loads the received token into
@@ -77,10 +86,8 @@ class OAuth2Base(ABC):
         Args:
             code (str): The authorization code received from the OAuth provider
                 after user authorization.
-            auto_load_token (bool): Whether to automatically load the received token
-                into the current instance. Default is True.
         Returns:
-            OAuthTokenData: An object containing the OAuth token data, typically
+            OAuthTokenDict: An dict containing the OAuth token data, typically
                 including access_token, token_type, expires_in, refresh_token,
                 and scope.
         Raises:
@@ -88,7 +95,6 @@ class OAuth2Base(ABC):
                 expired code, or other OAuth-related errors.
             NetworkError: If there are network-related issues during the
                 token exchange request.
-
         """
 
         client = self.oauth_client
@@ -103,10 +109,10 @@ class OAuth2Base(ABC):
         if token.get("message"):
             raise Exception(f"OAuth Token Exchange Error: {token}")
 
-        if auto_load_token:
-            self.db_token = self.to_db_token(token)
-            self.db_token.client_credential_id = self._credential_id
-            self.scopes = self.db_token.scope
+        # 自動載入 token 到目前的 instance
+        self.db_token = self.to_db_token(token)
+        self.db_token.client_credential_id = self._credential_id
+        self.scopes = self.db_token.scope
 
         return token
 
@@ -133,7 +139,7 @@ class OAuth2Base(ABC):
 
     # ====== Token DB Integration ======
     @classmethod
-    def create_from_db(cls, oauth_client: OAuthClient, scopes: str | None = None):
+    def create_from_db(cls, oauth_client: OAuthClient, scopes: list[str] | None = None):
         instance = cls(client_id=oauth_client.client_id, client_secret=oauth_client.client_secret, redirect_uri=oauth_client.redirect_uri, scopes=scopes or oauth_client.default_scopes)
         instance._credential_id = oauth_client.credential_id
         return instance

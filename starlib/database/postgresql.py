@@ -221,6 +221,17 @@ class UserRepository(BaseRepository):
         result = self.session.exec(stmt).all()
         return result
 
+    def upsert_external_account(self, user_id: int, platform: PlatformType, external_id: str, display_name: str | None = None):
+        """新增或更新外部帳號，以 (platform, external_id) 為唯一鍵。"""
+        stmt = select(ExternalAccount).where(ExternalAccount.platform == platform, ExternalAccount.external_id == external_id)
+        existing = self.session.exec(stmt).one_or_none()
+        if existing:
+            existing.user_id = user_id
+            existing.display_name = display_name
+        else:
+            self.session.add(ExternalAccount(user_id=user_id, platform=platform, external_id=external_id, display_name=display_name))
+        self.commit()
+
     def get_main_account(self, alternate_account):
         stmt = select(UserAccount.main_account).where(UserAccount.alternate_account == alternate_account)
         result = self.session.exec(stmt).one_or_none()

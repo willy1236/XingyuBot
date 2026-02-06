@@ -13,7 +13,6 @@ from fastapi.openapi.utils import get_openapi
 from fastapi.requests import Request
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response, StreamingResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
-from google_auth_oauthlib.flow import Flow
 from jose import jwt
 from linebot.v3 import WebhookHandler
 from linebot.v3.exceptions import InvalidSignatureError
@@ -142,6 +141,10 @@ async def oauth_discord(request: Request):
     if not code:
         return HTMLResponse(f"授權失敗：{params}", 400)
 
+    # 驗證 state 參數（CSRF 保護）
+    # if not OAuth2Base.verify_state(request.cookies.get("oauth_state"), params.get("state")):
+    #     return HTMLResponse("授權失敗：state 驗證失敗", 400)
+
     auth = DiscordOAuth.create_from_db(discord_oauth_client)
     await auth.exchange_code(code)
     user = await auth.get_me()
@@ -160,11 +163,13 @@ async def oauth_discord(request: Request):
         for connection in connections:
             if connection.type == "twitch":
                 web_log.info(f"Discord connection: {connection.name}({connection.id})")
-                sclient.sqldb.merge(ExternalAccount(user_id=cuser.id, platform=PlatformType.Twitch, external_id=connection.id, display_name=connection.name))
+                sclient.sqldb.upsert_external_account(user_id=cuser.id, platform=PlatformType.Twitch, external_id=connection.id, display_name=connection.name)
 
     if params.get("guild_id"):
         # 機器人授權流程
-        return HTMLResponse(f"授權已完成，您現在可以關閉此頁面<br>感謝您使用星羽機器人！", 200)
+        response = HTMLResponse(f"授權已完成，您現在可以關閉此頁面<br>感謝您使用星羽機器人！", 200)
+        response.delete_cookie("oauth_state")
+        return response
     else:
         # 用戶授權流程，產生 JWT 並重定向到儀表板
         response = RedirectResponse(f"{BASE_WWW_URL}/dashboard")
@@ -175,9 +180,9 @@ async def oauth_discord(request: Request):
 
         # 將 JWT 寫入 Cookie
         response.set_cookie(key="jwt", value=jwt_token, httponly=True, secure=True, samesite="lax", max_age=7 * 24 * 60 * 60, domain=f".{BASE_DOMAIN}")
+        response.delete_cookie("oauth_state")
 
         return response
-    # return HTMLResponse(f"授權已完成，您現在可以關閉此頁面<br><br>Discord ID：{auth.user_id}")
 
 
 @app.get("/oauth/discordbot")
@@ -197,12 +202,18 @@ async def oauth_twitch(request: Request):
     if not code:
         return HTMLResponse(f"授權失敗：{params}", 400)
 
+    # 驗證 state 參數（CSRF 保護）
+    if not TwitchOAuth.verify_state(request.cookies.get("oauth_state"), params.get("state")):
+        return HTMLResponse("授權失敗：state 驗證失敗", 400)
+
     auth = TwitchOAuth.create_from_db(twitch_oauth_client)
     await auth.exchange_code(code)
     user = await auth.get_me()
     auth.save_token_to_db(user.id)
     sclient.sqldb.merge(TwitchBotJoinChannel(twitch_id=user.id))
-    return HTMLResponse(f"授權已完成，您現在可以關閉此頁面<br>別忘了在聊天室輸入 /mod xingyu1016<br><br>Twitch ID：{user.id}")
+    response = HTMLResponse(f"授權已完成，您現在可以關閉此頁面<br>別忘了在聊天室輸入 /mod xingyu1016<br><br>Twitch ID：{user.id}")
+    response.delete_cookie("oauth_state")
+    return response
 
 
 @app.get("/oauth/google")
@@ -212,17 +223,16 @@ async def oauth_google(request: Request):
     if not code:
         return HTMLResponse(f"授權失敗：{params}", 400)
 
-    auth = GoogleOAuth.create_from_db(google_oauth_settings)
+    # 驗證 state 參數（CSRF 保護）
+    if not GoogleOAuth.verify_state(request.cookies.get("oauth_state"), params.get("state")):
+        return HTMLResponse("授權失敗：state 驗證失敗", 400)
 
-    # flow = Flow.from_client_secrets_file(
-    #     'database/google_client_credentials.json',
-    #     scopes=auth.scopes,
-    #     redirect_uri=auth.redirect_uri
-    # )
-    # flow.fetch_token(code=code)
+    auth = GoogleOAuth.create_from_db(google_oauth_settings)
     await auth.exchange_code(code)
     auth.save_token_to_db(auth.db_token.user_id)
-    return HTMLResponse(f"授權已完成，您現在可以關閉此頁面<br><br>Google ID：{auth.db_token.user_id}")
+    response = HTMLResponse(f"授權已完成，您現在可以關閉此頁面<br><br>Google ID：{auth.db_token.user_id}")
+    response.delete_cookie("oauth_state")
+    return response
 
 
 @app.post("/callback/linebot")
@@ -281,23 +291,42 @@ async def handle_message(event: MessageEvent):
 
 @app.get("/to/discordauth")
 async def to_discordauth(request: Request):
-    return RedirectResponse(
-        url=f"https://discord.com/api/oauth2/authorize?client_id={discord_oauth_client.client_id}&redirect_uri={discord_oauth_client.redirect_uri}&response_type=code&scope=identify%20connections"
-    )
+    auth = DiscordOAuth.create_from_db(discord_oauth_client, scopes=["identify", "connections"])
+    url, state = auth.get_authorization_url()
+    response = RedirectResponse(url=url)
+    response.set_cookie(key="oauth_state", value=state, httponly=True, secure=True, samesite="lax", max_age=600)
+    return response
 
 
 @app.get("/to/twitchauth")
 async def to_twitchauth(request: Request):
-    return RedirectResponse(
-        url=f"https://id.twitch.tv/oauth2/authorize?client_id={twitch_oauth_client.client_id}&redirect_uri={twitch_oauth_client.redirect_uri}&response_type=code&scope=chat:read+channel:read:subscriptions+moderation:read+channel:read:redemptions+channel:manage:redemptions+channel:manage:raids+channel:read:vips+channel:bot+moderator:read:suspicious_users+channel:manage:polls+channel:manage:predictions&force_verify=true"
-    )
+    twitch_scopes = [
+        "chat:read",
+        "channel:read:subscriptions",
+        "moderation:read",
+        "channel:read:redemptions",
+        "channel:manage:redemptions",
+        "channel:manage:raids",
+        "channel:read:vips",
+        "channel:bot",
+        "moderator:read:suspicious_users",
+        "channel:manage:polls",
+        "channel:manage:predictions",
+    ]
+    auth = TwitchOAuth.create_from_db(twitch_oauth_client, scopes=twitch_scopes)
+    url, state = auth.get_authorization_url(force_verify="true")
+    response = RedirectResponse(url=url)
+    response.set_cookie(key="oauth_state", value=state, httponly=True, secure=True, samesite="lax", max_age=600)
+    return response
 
 
 @app.get("/to/discordbot")
 async def to_discordbot(request: Request):
-    return RedirectResponse(
-        url=f"https://discord.com/api/oauth2/authorize?client_id={discord_oauth_client.client_id}&redirect_uri={discord_oauth_client.redirect_uri}&response_type=code&scope=identify%20applications.commands.permissions.update%20bot"
-    )
+    auth = DiscordOAuth.create_from_db(discord_oauth_client, scopes=["identify", "applications.commands.permissions.update", "bot"])
+    url, state = auth.get_authorization_url()
+    response = RedirectResponse(url=url)
+    response.set_cookie(key="oauth_state", value=state, httponly=True, secure=True, samesite="lax", max_age=600)
+    return response
 
 
 @app.get("/to/googleauth")
@@ -309,10 +338,11 @@ async def to_googleauth(request: Request):
         "openid",
         "https://www.googleapis.com/auth/youtube",
     ]
-    config = sqldb.get_google_client_config(3)
-    flow = Flow.from_client_config(config, scopes=scopes)
-    url = flow.authorization_url()[0]
-    return RedirectResponse(url=url)
+    auth = GoogleOAuth.create_from_db(google_oauth_settings, scopes=scopes)
+    url, state = auth.get_authorization_url(access_type="offline")
+    response = RedirectResponse(url=url)
+    response.set_cookie(key="oauth_state", value=state, httponly=True, secure=True, samesite="lax", max_age=600)
+    return response
 
 @app.get("/logout")
 async def logout(request: Request):
