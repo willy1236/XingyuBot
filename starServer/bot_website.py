@@ -323,7 +323,7 @@ async def to_twitchauth(request: Request):
 @app.get("/to/discordbot")
 async def to_discordbot(request: Request):
     auth = DiscordOAuth.create_from_db(discord_oauth_client, scopes=["identify", "applications.commands.permissions.update", "bot"])
-    url, state = auth.get_authorization_url()
+    url, state = auth.get_authorization_url(permissions="8")
     response = RedirectResponse(url=url)
     response.set_cookie(key="oauth_state", value=state, httponly=True, secure=True, samesite="lax", max_age=600)
     return response
