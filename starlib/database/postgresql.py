@@ -1642,6 +1642,7 @@ class SQLRepository(
         self[DBCacheType.DynamicVoiceLobby] = self.get_all_dynamic_voice_lobby()
         self[DBCacheType.DynamicVoiceRoom] = self.get_all_dynamic_voice()
         self[DBCacheType.TwitchCmd] = self.get_raw_chat_command_all()
+        self.refresh_voice_time_counter_cache()
         log.debug("SQLDB: cache init.")
 
     def update_notify_channel(self, notify_type: NotifyChannelType):
