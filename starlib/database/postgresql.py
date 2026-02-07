@@ -1493,7 +1493,7 @@ class GuildSettingRepository(BaseRepository):
     def get_voice_time_counter_guilds(self):
         stmt = select(GuildSetting.guild_id).where(GuildSetting.voice_time_counter)
         result = self.session.exec(stmt).all()
-        return result
+        return list(result)
 
     def get_voice_time(self, discord_id: int, guild_id: int):
         stmt = select(VoiceTime).where(VoiceTime.discord_id == discord_id, VoiceTime.guild_id == guild_id)
