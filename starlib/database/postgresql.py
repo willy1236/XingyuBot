@@ -63,6 +63,8 @@ class BaseRepository:
     def __getitem__(self, key: Literal[DBCacheType.TwitchCmd]) -> dict[int, dict[str, TwitchChatCommand]]: ...
     @overload
     def __getitem__(self, key: Literal[DBCacheType.DynamicVoiceLobby]) -> dict[int, DynamicVoiceLobby]: ...
+    @overload
+    def __getitem__(self, key: Literal[DBCacheType.VoiceTimeCounter]) -> list[int]: ...
     def __getitem__(self, key: DBCacheType | NotifyChannelType):
         """#**在使用 cache 時，若 key 找不到（通常為未執行初始化），會回傳 None，但在Type Hint中未標示**"""
         if isinstance(key, NotifyChannelType):
@@ -1483,10 +1485,15 @@ class VIPRepository(BaseRepository):
 
 
 class GuildSettingRepository(BaseRepository):
-    def get_server_config(self, guild_id: int):
+    def get_guild_setting(self, guild_id: int):
         stmt = select(GuildSetting).where(GuildSetting.guild_id == guild_id)
         result = self.session.exec(stmt).one_or_none()
         return result or GuildSetting(guild_id=guild_id)
+
+    def get_voice_time_counter_guilds(self):
+        stmt = select(GuildSetting.guild_id).where(GuildSetting.voice_time_counter)
+        result = self.session.exec(stmt).all()
+        return result
 
     def get_voice_time(self, discord_id: int, guild_id: int):
         stmt = select(VoiceTime).where(VoiceTime.discord_id == discord_id, VoiceTime.guild_id == guild_id)
@@ -1667,3 +1674,7 @@ class SQLRepository(
         if twitch_channel_id in self[DBCacheType.TwitchCmd]:
             return self[DBCacheType.TwitchCmd][twitch_channel_id].get(command)
         return None
+
+    def refresh_voice_time_counter_cache(self):
+        """刷新語音時間計數器快取"""
+        self[DBCacheType.VoiceTimeCounter] = self.get_voice_time_counter_guilds()

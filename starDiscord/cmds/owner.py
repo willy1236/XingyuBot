@@ -1,5 +1,4 @@
 # pyright: reportArgumentType=true
-import asyncio
 import platform
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
@@ -16,7 +15,7 @@ from starlib.instance import *
 from starlib.types import McssServerAction, McssServerStatues, NotifyChannelType
 from starlib.utils.utility import ChoiceList, base64_to_buffer, converter, find_radmin_vpn_network, get_arp_list
 
-from ..checks import PrivilegeLevel, has_privilege_level, has_vip, is_vip_admin
+from ..checks import PrivilegeLevel, ensure_registered, has_privilege_level, has_vip, is_vip_admin
 from ..command_options import *
 from ..extension import Cog_Extension
 from ..uiElement.view import McServerPanel, VIPAuditView, VIPView
@@ -24,17 +23,17 @@ from ..uiElement.view import McServerPanel, VIPAuditView, VIPView
 if TYPE_CHECKING:
     from ..bot import DiscordBot
 
+
 def server_status(ip, port):
     server = JavaServer.lookup(f"{ip}:{port}")
     status = server.status()
     latency = server.ping()
-    embed = BotEmbed.general(
-        f"{server.address.host}:{server.address.port}", title="伺服器已開啟", description=status.description.encode("iso-8859-1").decode("utf-8")
-    )
+    embed = BotEmbed.general(f"{server.address.host}:{server.address.port}", title="伺服器已開啟", description=status.description.encode("iso-8859-1").decode("utf-8"))
     embed.add_field(name="伺服器版本", value=status.version.name, inline=True)
     embed.add_field(name="在線玩家數", value=f"{status.players.online}/{status.players.max}", inline=True)
     embed.add_field(name="延遲", value=f"{latency:.2f} ms", inline=True)
     return embed
+
 
 class SendMessageModal(discord.ui.Modal):
     def __init__(self, channel, bot, is_dm, *args, **kwargs):
@@ -193,12 +192,12 @@ class owner(Cog_Extension):
     # send
     @commands.slash_command(description="發送訊息", guild_ids=debug_guilds)
     @commands.is_owner()
-    async def sendmesssage(self, ctx, id: discord.Option(str, required=True, name="頻道id", description="")):
+    async def sendmesssage(self, ctx: discord.ApplicationContext, id_str: discord.Option(str, required=True, name="頻道id", description="")):
         # modal = SendMessageModal(title="發送訊息")
         # await ctx.send_modal(modal)
         # msg = modal.children[0].value
         # await ctx.defer()
-        id = int(id)
+        id = int(id_str)
         channel = self.bot.get_channel(id)
         if channel:
             modal = SendMessageModal(title="發送訊息(頻道)", channel=channel, bot=self.bot, is_dm=False)
@@ -238,27 +237,6 @@ class owner(Cog_Extension):
         await message.edit(content=new_msg)
         await ctx.respond(f"訊息修改成功", delete_after=5, ephemeral=True)
 
-    #     await ctx.message.add_reaction('✅')
-
-    # #reaction
-    # @commands.slash_command(description='反應訊息',guild_ids=main_guild)
-    # @commands.is_owner()
-    # async def reaction(self,ctx,msgid:int,mod:str,*,emojiid):
-    #     message = await ctx.fetch_message(msgid)
-    #     channel = message.channel
-    #     emoji = find.emoji(emojiid)
-
-    #     if emoji == None:
-    #         await ctx.send(f'反應添加失敗:找不到表情符號',delete_after=5)
-    #     elif mod == 'add':
-    #         await message.add_reaction(emoji)
-    #         await ctx.send(f'反應添加完成,{channel.mention}',delete_after=10)
-    #     elif mod == 'remove':
-    #         await message.remove_reaction(emoji,member=self.bot.user)
-    #         await ctx.send(f'反應移除完成,{channel.mention}',delete_after=10)
-    #     else:
-    #         ctx.send('參數錯誤:請輸入正確模式(add/remove)',delete_after=5)
-
     @commands.is_owner()
     @permission_cmd.command(name="view", description="查看權限", guild_ids=debug_guilds)
     async def permission_view(self, ctx: discord.ApplicationContext, guild_id_str: str | None = None, channel_id_str: str | None = None):
@@ -295,29 +273,6 @@ class owner(Cog_Extension):
             if channel.category:
                 embed.add_field(name="分類", value=str(channel.category.permissions_for(channel.guild.me).manage_channels), inline=True)
             embed.add_field(name="伺服器", value=str(channel.guild.me.guild_permissions.manage_channels), inline=True)
-
-        # permission.create_instant_invite
-        # permission.add_reactions
-        # permission.priority_speaker
-        # permission.stream
-        # permission.read_messages
-        # permission.send_messages
-        # permission.send_tts_messages
-        # permission.embed_links
-        # permission.attach_files
-        # permission.read_message_history
-        # permission.mention_everyone
-        # permission.external_emojis
-        # permission.view_guild_insights
-        # permission.connect
-        # permission.speak
-        # permission.mute_members
-        # permission.deafen_members
-        # permission.move_members
-        # permission.use_voice_activation
-        # permission.change_nickname
-        # permission.use_slash_commands
-        # permission.request_to_speak
         await ctx.respond(embed=embed)
 
     @commands.is_owner()
@@ -412,6 +367,7 @@ class owner(Cog_Extension):
 
 
     @mcserver_cmd.command(description="開啟mc伺服器面板", name="panel", name_localizations=ChoiceList.name("mcserver_panel"))
+    @ensure_registered()
     @commands.check_any(commands.check(has_privilege_level(PrivilegeLevel.Level3)), commands.has_guild_permissions(manage_channels=True))  # pyright: ignore[reportArgumentType]
     async def mcserver_panel(self, ctx: discord.ApplicationContext):
         await ctx.defer()

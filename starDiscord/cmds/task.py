@@ -12,13 +12,13 @@ from starlib import BotEmbed, Jsondb, log, sclient, sqldb, tz, utils
 from starlib.instance import *
 from starlib.models.community import YoutubeVideo
 from starlib.models.postgresql import UsersCountRecord, VoiceTime
-from starlib.types import APIType, NotifyChannelType, NotifyCommunityType
+from starlib.types import APIType, DBCacheType, NotifyChannelType, NotifyCommunityType
 
 from ..bot import DiscordBot
 from ..extension import Cog_Extension
 from ..uiElement.view import GiveawayView
 
-voice_times: dict[int, timedelta] = {}
+voice_times: dict[int, dict[int, timedelta]] = {}
 
 class task(Cog_Extension):
     def __init__(self, *args, **kwargs):
@@ -47,6 +47,7 @@ class task(Cog_Extension):
             scheduler.add_job(refresh_yt_push, "cron", hour="2/12", minute=0, second=0, jitter=300)
             scheduler.add_job(refresh_ip_last_seen, "cron", minute="0/20", second=0, jitter=60, misfire_grace_time=90)
             scheduler.add_job(self.save_voice_time, "cron", hour="0/1", minute="0/30", second=0, jitter=60, misfire_grace_time=90)
+            scheduler.add_job(refresh_db_cache, "cron", hour="0/2", minute=0, second=0, jitter=60, misfire_grace_time=90)
 
             # 統計任務 - 保留 misfire_grace_time + max_instances
             scheduler.add_job(self.add_voice_time, "cron", minute="*/1", second=30, misfire_grace_time=20, max_instances=1)
@@ -309,35 +310,43 @@ class task(Cog_Extension):
 
     async def add_voice_time(self):
         log.debug("add_voice_time start")
-        guild = self.bot.get_guild(happycamp_guild[0])
-
-        for channel in guild.voice_channels:
-            if channel == guild.afk_channel:
+        for guild_id in sqldb[DBCacheType.VoiceTimeCounter]:
+            guild = self.bot.get_guild(guild_id)
+            if not guild:
+                log.warning(f"Guild not found for voice time counting: {guild_id}")
                 continue
-            for member in channel.members:
-                if not member.voice.deaf and not member.voice.mute:
-                    if voice_times.get(member.id) is None:
-                        voice_times[member.id] = timedelta(minutes=1)
-                    else:
-                        voice_times[member.id] += timedelta(minutes=1)
+            if voice_times.get(guild_id) is None:
+                voice_times[guild_id] = {}
+
+            for channel in guild.voice_channels:
+                if channel == guild.afk_channel:
+                    continue
+                for member in channel.members:
+                    if not member.voice.deaf and not member.voice.mute:
+                        if voice_times[guild_id].get(member.id) is None:
+                            voice_times[guild_id][member.id] = timedelta(minutes=1)
+                        else:
+                            voice_times[guild_id][member.id] += timedelta(minutes=1)
 
     async def save_voice_time(self):
         # 2025-10-26
         log.debug("save_voice_time start")
         if not voice_times:
             return
+        records_to_update: list[VoiceTime] = []
+        for guild_id, user_times in voice_times.items():
+            discord_ids = list(user_times.keys())
+            db_records = sclient.sqldb.get_voice_times(discord_ids, guild_id)
 
-        guild = self.bot.get_guild(happycamp_guild[0])
-        discord_ids = list(voice_times.keys())
-        voice_time_records = sclient.sqldb.get_voice_times(discord_ids, guild.id)
+            for discord_id, delta in user_times.items():
+                if discord_id not in db_records:
+                    db_records[discord_id] = VoiceTime(discord_id=discord_id, guild_id=guild_id, total_minute=delta)
+                else:
+                    db_records[discord_id].total_minute += delta
 
-        for discord_id, delta in voice_times.items():
-            if discord_id not in voice_time_records:
-                voice_time_records[discord_id] = VoiceTime(discord_id=discord_id, guild_id=guild.id, total_minute=delta)
-            else:
-                voice_time_records[discord_id].total_minute += delta
+            records_to_update.extend(db_records.values())
 
-        sqldb.batch_merge(list(voice_time_records.values()))
+        sqldb.batch_merge(records_to_update)
         voice_times.clear()
 
     # async def get_mongodb_data(self):
@@ -480,6 +489,8 @@ async def record_users_count(bot: DiscordBot):
     record = UsersCountRecord(record_date=datetime.now(tz).date(), users_count=users_count, servers_count=servers_count, shard_id=shard_id)
     sqldb.add(record)
 
+async def refresh_db_cache():
+    sqldb.refresh_voice_time_counter_cache()
 
 def setup(bot):
     bot.add_cog(task(bot))

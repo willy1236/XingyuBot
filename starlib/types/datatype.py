@@ -29,6 +29,7 @@ class DBCacheType(StrEnum):
     DynamicVoiceRoom = "dynamic_voice_room"
     VoiceLog = "voice_log"
     TwitchCmd = "twitch_cmd"
+    VoiceTimeCounter = "voice_time_counter"
 
     @classmethod
     def from_notify_channel(cls, key: NotifyChannelType):

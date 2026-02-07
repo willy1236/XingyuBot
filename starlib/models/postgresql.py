@@ -535,7 +535,7 @@ class Post(AlchemyBasicSchema):
     user: User = relationship(back_populates="posts", init=False)
 
 
-class GuildSetting(GuildsSchema, table=False):
+class GuildSetting(GuildsSchema, table=True):
     __tablename__ = "server_setting"
 
     guild_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
