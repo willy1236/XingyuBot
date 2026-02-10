@@ -1457,8 +1457,8 @@ class NetworkRepository(BaseRepository):
             self.session.merge(cache)
         self.session.commit()
 
-    def get_ips_last_seen(self, ip: str | IPv4Network):
-        stmt = select(UserIPDetails).where(UserIPDetails.ip == str(ip))
+    def get_registed_ips_last_seen(self, ip: str | IPv4Network):
+        stmt = select(UserIPDetails).where(UserIPDetails.ip == str(ip), UserIPDetails.discord_id is not None)
         result = self.session.exec(stmt).one_or_none()
         return result
 

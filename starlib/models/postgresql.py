@@ -22,7 +22,7 @@ class CloudUser(UsersSchema, table=True):
     drive_gmail: str | None = Field(sa_column=Column(String))
     drive_share_id: str | None = Field(sa_column=Column(String))
     name: str | None = Field(sa_column=Column(String))
-    created_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0), default=datetime.now(tz), server_default=text("now()")))
+    created_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0), server_default=text("now()")), default_factory=lambda: datetime.now(tz))
     privilege_level: PrivilegeLevel = Field(sa_column=Column(SmallInteger, nullable=True), default=PrivilegeLevel.User)
 
 

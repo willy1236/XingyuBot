@@ -819,7 +819,7 @@ class system_game(Cog_Extension):
         if not ip.subnet_of(ipaddress.IPv4Network("26.0.0.0/8")):
             await ctx.respond(f"此IP位址不是Radmin VPN的位置", ephemeral=True)
             return
-        account = sclient.sqldb.get_ips_last_seen(ip)
+        account = sclient.sqldb.get_registed_ips_last_seen(ip)
         if account:
             await ctx.respond(f"此IP位址已註冊過，請確認後再試", ephemeral=True)
             return
