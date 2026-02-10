@@ -958,12 +958,7 @@ class PollRepository(BaseRepository):
         if include_alternatives_accounts:
             stmt = select(UserPoll).where(UserPoll.poll_id == poll_id)
         else:
-            stmt = (
-                select(UserPoll)
-                .select_from(UserPoll)
-                .join(UserAccount, UserPoll.discord_id == UserAccount.alternate_account)
-                .where(UserPoll.poll_id == poll_id, UserAccount.alternate_account is None)
-            )
+            stmt = select(UserPoll).select_from(UserPoll).join(UserAccount, UserPoll.discord_id == UserAccount.alternate_account).where(UserPoll.poll_id == poll_id, UserAccount.alternate_account.is_(None))
         result = self.session.exec(stmt).all()
         return result
 
@@ -975,7 +970,7 @@ class PollRepository(BaseRepository):
                 select(UserPoll.vote_option, func.sum(UserPoll.vote_magnification))
                 .select_from(UserPoll)
                 .join(UserAccount, UserPoll.discord_id == UserAccount.alternate_account)
-                .where(UserPoll.poll_id == poll_id, UserAccount.alternate_account is None)
+                .where(UserPoll.poll_id == poll_id, UserAccount.alternate_account.is_(None))
                 .group_by(UserPoll.vote_option)
             )
         result = self.session.exec(stmt).all()
@@ -1458,7 +1453,7 @@ class NetworkRepository(BaseRepository):
         self.session.commit()
 
     def get_registed_ips_last_seen(self, ip: str | IPv4Network):
-        stmt = select(UserIPDetails).where(UserIPDetails.ip == str(ip), UserIPDetails.discord_id is not None)
+        stmt = select(UserIPDetails).where(UserIPDetails.ip == str(ip), UserIPDetails.discord_id.is_not(None))
         result = self.session.exec(stmt).one_or_none()
         return result
 
