@@ -13,6 +13,7 @@ from starlib.errors import APIInvokeError
 from starlib.models import LOLGameCache, LOLGameRecord, UserGame, UserIPDetails
 from starlib.types import GameType
 
+from ..checks import RegisteredContext, ensure_registered
 from ..extension import Cog_Extension
 from ..uiElement.modals import HoyolabCookiesModal
 
@@ -46,9 +47,10 @@ class system_game(Cog_Extension):
     match_cmd = SlashCommandGroup("match", "聯賽相關指令")
 
     @game.command(description="設定遊戲資料", name_localizations=ChoiceList.name("game_set"))
+    @ensure_registered()
     async def set(
         self,
-        ctx,
+        ctx: RegisteredContext,
         game: discord.Option(int, name="遊戲", description="要設定的遊戲", required=True, choices=game_option),
         value: discord.Option(str, name="資料", description="要設定的資料，留空以移除資料", default=None),
     ):
@@ -797,9 +799,10 @@ class system_game(Cog_Extension):
     #         await ctx.respond(f"沒有找到兌換碼",ephemeral=True)
 
     @game.command(description="註冊Radmin VPN帳號", name_localizations=ChoiceList.name("game_radmin"))
+    @ensure_registered()
     async def radmin(
         self,
-        ctx: discord.ApplicationContext,
+        ctx: RegisteredContext,
         ip_str: discord.Option(
             str,
             name="ipv4位置",
@@ -827,9 +830,10 @@ class system_game(Cog_Extension):
         await ctx.respond(f"{ctx.author.mention} 註冊成功，IP：`{ip.network_address}`，使用者名稱：`{name if name else '未登記'}`", ephemeral=True)
 
     @game.command(description="註冊ZeroTier帳號", name_localizations=ChoiceList.name("game_zerotier"))
+    @ensure_registered()
     async def zerotier(
         self,
-        ctx: discord.ApplicationContext,
+        ctx: RegisteredContext,
         address_str: discord.Option(
             str,
             name="address",
@@ -853,7 +857,8 @@ class system_game(Cog_Extension):
         await ctx.respond(f"ZeroTier帳號註冊成功，你的IP位址：`{member['config']['ipAssignments'][0]}`", ephemeral=True)
 
     @game.command(description="查詢VPN登記資料", name_localizations=ChoiceList.name("game_vpn"))
-    async def vpn(self, ctx: discord.ApplicationContext):
+    @ensure_registered()
+    async def vpn(self, ctx: RegisteredContext):
         await ctx.defer(ephemeral=True)
         records = sclient.sqldb.get_user_ip_details(ctx.author.id)
         if not records:

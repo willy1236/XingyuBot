@@ -547,7 +547,7 @@ class command(Cog_Extension):
     @ensure_registered()
     async def drive(self, ctx: RegisteredContext, email: discord.Option(str, name="gmail帳戶", description="要使用的Gmail帳戶，留空以移除資料", required=False)):
         await ctx.defer()
-        cuser = sclient.sqldb.get_cloud_user_by_discord(ctx.author.id)
+        cuser = ctx.cuser
         fileId = "1bDtsLbOi5crIOkWUZbQmPq3dXUbwWEan"
         if not email:
             if cuser and cuser.drive_gmail:

@@ -94,10 +94,6 @@ class system_user(Cog_Extension):
 
     @commands.slash_command(description="查看語音時間排行榜")
     async def voice_time_leaderboard(self, ctx: discord.ApplicationContext):
-        # if ctx.guild_id not in happycamp_guild:
-        #     await ctx.respond("此指令僅限快樂營伺服器使用")
-        #     return
-
         leaderboard = sclient.sqldb.get_voice_time_leaderboard(ctx.guild_id, limit=10)
         if not leaderboard:
             await ctx.respond("目前沒有語音時間紀錄")

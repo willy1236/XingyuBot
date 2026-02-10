@@ -15,9 +15,9 @@ class DiscordUser(DiscordAuthModel):
     public_flags: int
     flags: int
     banner: str | None
-    accent_color: int
+    accent_color: int | None = None
     global_name: str
-    banner_color: str
+    banner_color: str | None = None
     bot: bool | None = None
     system: bool | None = None
     mfa_enabled: bool
