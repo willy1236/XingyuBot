@@ -823,9 +823,11 @@ class system_game(Cog_Extension):
         if account:
             await ctx.respond(f"此IP位址已註冊過，請確認後再試", ephemeral=True)
             return
-
+        # TODO: ping test to confirm the IP is valid.
         now = datetime.now(tz)
-        account = UserIPDetails(ip=str(ip), last_seen=now, discord_id=ctx.author.id, name=name, registration_at=now)
+        account = UserIPDetails(ip=str(ip), last_seen=now, discord_id=ctx.author.id, registration_at=now)
+        if name:
+            account.name = name
         sclient.sqldb.merge(account)
         await ctx.respond(f"{ctx.author.mention} 註冊成功，IP：`{ip.network_address}`，使用者名稱：`{name if name else '未登記'}`", ephemeral=True)
 

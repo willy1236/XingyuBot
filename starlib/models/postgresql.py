@@ -761,7 +761,7 @@ class UsersCountRecord(BackupSchema, table=True):
     servers_count: int = Field(sa_column=Column(Integer))
 
 
-class BotToken(TokensSchema, table=True):
+class BotToken(TokensSchema, table=False):
     __tablename__ = "bot_token2"
 
     api_type: APIType = Field(sa_column=Column(SmallInteger, primary_key=True))

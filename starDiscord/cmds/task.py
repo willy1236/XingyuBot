@@ -483,8 +483,12 @@ async def refresh_ip_last_seen():
 async def record_users_count(bot: DiscordBot):
     """定時記錄用戶數量"""
     log.debug("record_users_count start")
-    users_count = len(bot.users)
-    servers_count = len(bot.guilds)
+    users_count = 0
+    servers_count = 0
+    for _ in range(3):
+        users_count = max(users_count, len(bot.users))
+        servers_count = max(servers_count, len(bot.guilds))
+        await asyncio.sleep(30)
     shard_id = bot.shard_id
     record = UsersCountRecord(record_date=datetime.now(tz).date(), users_count=users_count, servers_count=servers_count, shard_id=shard_id)
     sqldb.add(record)
