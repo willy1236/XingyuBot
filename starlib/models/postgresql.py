@@ -542,6 +542,13 @@ class GuildSetting(GuildsSchema, table=True):
     timeout_after_warning_times: int | None
     voice_time_counter: bool | None
 
+class GuildInternalConfig(GuildsSchema, table=True):
+    __tablename__ = "guild_internal_configs"
+
+    guild_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
+    enable_drive_share: bool = Field(sa_column=Column(Boolean, default=False))
+    enable_mcserver: bool = Field(sa_column=Column(Boolean, default=False))
+
 
 class MemorialDay(BasicSchema, table=True):
     __tablename__ = "memorial_days"

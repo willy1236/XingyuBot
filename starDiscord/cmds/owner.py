@@ -128,7 +128,7 @@ class BotPanel(discord.ui.View):
 
 class owner(Cog_Extension):
     twitch_chatbot = SlashCommandGroup("twitch_chatbot", "twitch機器人相關指令", guild_ids=debug_guilds)
-    mcserver_cmd = SlashCommandGroup("mcserver", "Minecraft伺服器相關指令", guild_ids=main_guilds, name_localizations=ChoiceList.name("mcserver"))
+    mcserver_cmd = SlashCommandGroup("mcserver", "Minecraft伺服器相關指令", guild_ids=mcserver_guilds, name_localizations=ChoiceList.name("mcserver"))
     permission_cmd = SlashCommandGroup("permission", "權限相關指令", guild_ids=debug_guilds)
     vip_cmd = SlashCommandGroup("vip", "VIP相關指令", guild_ids=happycamp_guild + debug_guilds)
 

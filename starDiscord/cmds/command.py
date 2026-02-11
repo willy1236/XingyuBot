@@ -543,7 +543,7 @@ class command(Cog_Extension):
         embed, image_buffer = view.results_embed(ctx.interaction, True)  # type: ignore
         await ctx.respond(embed=embed, file=discord.File(image_buffer, filename="pie.png"))
 
-    @commands.slash_command(description="共用「94共用啦」雲端資料夾", guild_ids=main_guilds)
+    @commands.slash_command(description="共用「94共用啦」雲端資料夾", guild_ids=drive_share_guilds)
     @ensure_registered()
     async def drive(self, ctx: RegisteredContext, email: discord.Option(str, name="gmail帳戶", description="要使用的Gmail帳戶，留空以移除資料", required=False)):
         await ctx.defer()

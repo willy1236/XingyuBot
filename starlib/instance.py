@@ -20,7 +20,8 @@ __all__ = [
     "apexapi",
     "cli_api",
     "ncdr_rss",
-    "main_guilds",
+    "drive_share_guilds",
+    "mcserver_guilds",
     "happycamp_guild",
     "debug_guilds",
     "debug_mode",
@@ -40,7 +41,9 @@ cli_api = CLIInterface()
 ncdr_rss = NCDRRSS()
 
 # jsondb
-main_guilds: list[int] = Jsondb.config.get("main_guilds", [])
+# main_guilds: list[int] = Jsondb.config.get("main_guilds", [])
+drive_share_guilds: list[int] = sqldb.get_enable_drive_share_guilds()
+mcserver_guilds: list[int] = sqldb.get_enable_mcserver_guilds()
 happycamp_guild: list[int] = Jsondb.config.get("happycamp_guild", [])
 debug_guilds: list[int] = Jsondb.config.get("debug_guilds", [])
 debug_mode: bool = Jsondb.config.get("debug_mode", True)

@@ -1488,7 +1488,7 @@ class GuildSettingRepository(BaseRepository):
     def get_voice_time_counter_guilds(self):
         stmt = select(GuildSetting.guild_id).where(GuildSetting.voice_time_counter)
         result = self.session.exec(stmt).all()
-        return result if result else []
+        return list(result) if result else []
 
     def get_voice_time(self, discord_id: int, guild_id: int):
         stmt = select(VoiceTime).where(VoiceTime.discord_id == discord_id, VoiceTime.guild_id == guild_id)
@@ -1504,6 +1504,16 @@ class GuildSettingRepository(BaseRepository):
         stmt = select(VoiceTime).where(VoiceTime.guild_id == guild_id).order_by(desc(VoiceTime.total_minute)).limit(limit)
         result = self.session.exec(stmt).all()
         return result
+
+    def get_enable_drive_share_guilds(self):
+        stmt = select(GuildInternalConfig.guild_id).where(GuildInternalConfig.enable_drive_share)
+        result = self.session.exec(stmt).all()
+        return list(result) if result else []
+
+    def get_enable_mcserver_guilds(self):
+        stmt = select(GuildInternalConfig.guild_id).where(GuildInternalConfig.enable_mcserver)
+        result = self.session.exec(stmt).all()
+        return list(result) if result else []
 
 
 class TestRepository(BaseRepository):
