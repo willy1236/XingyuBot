@@ -1,3 +1,5 @@
+"""not in use yet, may be used in the future for caching DB queries in repository classes"""
+
 from __future__ import annotations
 
 from collections.abc import Hashable

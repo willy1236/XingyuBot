@@ -6,9 +6,8 @@ from discord.commands import SlashCommandGroup
 from tweepy.errors import TooManyRequests
 
 from starlib import BotEmbed, ChoiceList, Jsondb, sclient, tz
+from starlib.database import APIType, Community, CommunityType, NotifyCommunityType
 from starlib.instance import cli_api, google_api, tw_api, twitter_api, yt_push
-from starlib.models.postgresql import Community
-from starlib.types import APIType, CommunityType, NotifyCommunityType
 
 from ..extension import Cog_Extension
 

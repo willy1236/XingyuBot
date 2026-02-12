@@ -6,9 +6,7 @@ from typing import TypedDict
 
 from authlib.integrations.httpx_client import AsyncOAuth2Client
 
-from ..database import sqldb
-from ..models.postgresql import OAuthClient, OAuthToken
-from ..types import CommunityType
+from starlib.database import CommunityType, OAuthClient, OAuthToken, sqldb
 
 
 class OAuthTokenDict(TypedDict, total=False):

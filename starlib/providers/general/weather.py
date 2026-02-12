@@ -1,22 +1,23 @@
-import requests
-import feedparser
 import certifi
+import feedparser
+import requests
 
-from ..database import sqldb
-from ..models.weather import *
-from ..types import APIType
+from starlib.database import APIType, sqldb
+
+from .models import *
 
 
-def sort_earthquakeReport(x:EarthquakeReport):
+def sort_earthquakeReport(x: EarthquakeReport):
     return x.originTime
 
-class CWA_API():
+
+class CWA_API:
     BaseURL = "https://opendata.cwa.gov.tw/api/v1/rest/datastore"
 
     def __init__(self):
         self.auth = sqldb.get_access_token(APIType.CWA).access_token
 
-    def get_earthquake_report(self,significant=True):
+    def get_earthquake_report(self, significant=True):
         params = {"Authorization": self.auth, "limit": 1}
 
         id = "E-A0015-001" if significant else "E-A0016-001"
@@ -28,7 +29,7 @@ class CWA_API():
         else:
             return None
 
-    def get_earthquake_report_auto(self,timeFrom:str=None, only_significant=False)-> list[EarthquakeReport]:
+    def get_earthquake_report_auto(self, timeFrom: str = None, only_significant=False) -> list[EarthquakeReport]:
         params = {"Authorization": self.auth, "timeFrom": timeFrom}
         records = list()
 
@@ -90,6 +91,7 @@ class CWA_API():
 #             "dead":r3[9].text
 #         }
 #         return Covid19Report(dict)
+
 
 class NCDRRSS:
     def get_typhoon_warning(self, after: datetime | None = None) -> list[TyphoonWarningReport]:

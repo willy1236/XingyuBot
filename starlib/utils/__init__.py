@@ -5,7 +5,7 @@
 from logging import DEBUG, ERROR, INFO, WARNING
 
 from ..fileDatabase import Jsondb
-from .funtions import *
+from .functions import *
 from .logger import create_logger
 from .utility import *
 from .webUtility import *

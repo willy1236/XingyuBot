@@ -10,9 +10,9 @@ from mcstatus import JavaServer
 
 from starDiscord.checks import has_privilege_level
 from starlib import BotEmbed, Jsondb, sclient, sqldb, tz
-from starlib.errors import *
+from starlib.database import NotifyCommunityType, PrivilegeLevel
+from starlib.exceptions import *
 from starlib.instance import *
-from starlib.types import NotifyCommunityType, PrivilegeLevel
 from starlib.utils import get_arp_list
 from starlib.utils.map import sunmon_area
 

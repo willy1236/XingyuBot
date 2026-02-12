@@ -9,8 +9,8 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from starlib.dataExtractor.community import CLIInterface  # noqa: E402
-from starlib.models.community import RettiwtTweetUser  # noqa: E402
+from starlib.providers.social.models import RettiwtTweetUser  # noqa: E402
+from starlib.providers.social.platforms import CLIInterface  # noqa: E402
 
 pytestmark = pytest.mark.integration
 

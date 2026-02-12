@@ -1,6 +1,7 @@
 # discord_oauth.py
-from ..models.oauth import DiscordUser, UserConnection
-from ..types import CommunityType
+from starlib.database import CommunityType
+
+from .models import DiscordUser, UserConnection
 from .oauth_lib import OAuth2Base
 
 

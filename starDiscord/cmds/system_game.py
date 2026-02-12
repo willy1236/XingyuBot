@@ -8,10 +8,9 @@ from discord.commands import SlashCommandGroup
 from discord.ext import commands, pages
 
 from starlib import BotEmbed, ChoiceList, Jsondb, csvdb, log, sclient, tz
-from starlib.dataExtractor import *
-from starlib.errors import APIInvokeError
-from starlib.models import LOLGameCache, LOLGameRecord, UserGame, UserIPDetails
-from starlib.types import GameType
+from starlib.database import GameType, LOLGameCache, LOLGameRecord, UserGame, UserIPDetails
+from starlib.exceptions import APIInvokeError
+from starlib.providers import *
 
 from ..checks import RegisteredContext, ensure_registered
 from ..extension import Cog_Extension

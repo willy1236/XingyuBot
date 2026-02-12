@@ -1,7 +1,8 @@
 # twitch_oauth.py
+from starlib.database import CommunityType
+from starlib.providers.social.models import TwitchUser
+
 from .oauth_lib import OAuth2Base
-from ..types import CommunityType
-from ..models.community import TwitchUser
 
 
 class TwitchOAuth(OAuth2Base):

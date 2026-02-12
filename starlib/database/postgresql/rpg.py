@@ -1,14 +1,44 @@
 import random
+from enum import IntEnum
 from typing import TYPE_CHECKING
 
 import discord
 from sqlalchemy import BigInteger, Column, DateTime, ForeignKey, Integer, String, Text
 
-from ..base import ListObject
-from ..types import EquipmentSolt, ItemCategory, ShopItemMode
-from ..utils import BotEmbed
-from .postgresql import Field, relationship, SQLModel, mapped_column
-from .sqlSchema import RPGSchema
+from starlib.base import ListObject
+from starlib.utils import BotEmbed
+
+from .models import Field, SQLModel, mapped_column, relationship
+from .schemas import RPGSchema
+
+
+class ShopItemMode(IntEnum):
+    sell = 1
+    buy = 2
+
+
+class ItemCategory(IntEnum):
+    general = 1
+    equipment = 2
+    potion = 3
+    erroritem = 4
+
+
+class EquipmentSolt(IntEnum):
+    none = 0
+    head = 1
+    body = 2
+    legging = 3
+    foot = 4
+    mainhand = 5
+    seconhand = 6
+
+
+class ActivitiesStatue(IntEnum):
+    none = 0
+    attack_city = 1
+    defence_city = 2
+
 
 class RPGPlayer(RPGSchema, table=True):
     __tablename__ = "rpg_player"
@@ -63,11 +93,13 @@ class RPGUser(RPGSchema):
         if self.hp > self.maxhp:
             self.hp = self.maxhp
 
+
 class RPGEquipmentSolt(RPGSchema):
     __tablename__ = "id_equipment_solt"
 
     solt_id: int = mapped_column(primary_key=True)
     solt_name: str = mapped_column(String)
+
 
 class RPGEquipmentTemplate(RPGSchema):
     __tablename__ = "id_equipment"
@@ -83,6 +115,7 @@ class RPGEquipmentTemplate(RPGSchema):
     initial_dex: int = mapped_column(Integer, default=0)
 
     equipments: list["RPGEquipment"] = relationship(back_populates="template", init=False)
+
 
 class RPGItemTemplate(RPGSchema):
     __tablename__ = "id_item"
@@ -262,14 +295,14 @@ class RPGPlayerWearingEquipment:
         self.mainhand = dict.get("5")
         self.seconhand = dict.get("6")
 
-    def desplay(self,user_dc:discord.User=None):
+    def desplay(self, user_dc: discord.User = None):
         embed = BotEmbed.simple(f"{user_dc.name} 角色裝備" if user_dc else "角色裝備")
-        embed.add_field(name="主手",value=f"[{self.mainhand.equipment_uid}]{self.mainhand.name}" if self.mainhand else "無")
-        embed.add_field(name="副手",value=f"[{self.seconhand.equipment_uid}]{self.seconhand.name}" if self.seconhand else "無")
-        embed.add_field(name="頭部",value=f"[{self.head.equipment_uid}]{self.head.name}" if self.head else "無")
-        embed.add_field(name="身體",value=f"[{self.body.equipment_uid}]{self.body.name}" if self.body else "無")
-        embed.add_field(name="腿部",value=f"[{self.legging.equipment_uid}]{self.legging.name}" if self.legging else "無")
-        embed.add_field(name="鞋子",value=f"[{self.foot.equipment_uid}]{self.foot.name}" if self.foot else "無")
+        embed.add_field(name="主手", value=f"[{self.mainhand.equipment_uid}]{self.mainhand.name}" if self.mainhand else "無")
+        embed.add_field(name="副手", value=f"[{self.seconhand.equipment_uid}]{self.seconhand.name}" if self.seconhand else "無")
+        embed.add_field(name="頭部", value=f"[{self.head.equipment_uid}]{self.head.name}" if self.head else "無")
+        embed.add_field(name="身體", value=f"[{self.body.equipment_uid}]{self.body.name}" if self.body else "無")
+        embed.add_field(name="腿部", value=f"[{self.legging.equipment_uid}]{self.legging.name}" if self.legging else "無")
+        embed.add_field(name="鞋子", value=f"[{self.foot.equipment_uid}]{self.foot.name}" if self.foot else "無")
         return embed
 
 
@@ -287,7 +320,7 @@ class MonsterEquipmentLoot:
 
 
 class MonsterLootList(ListObject):
-    def __init__(self,data):
+    def __init__(self, data):
         super().__init__()
         for i in data:
             self.append(MonsterEquipmentLoot(i))

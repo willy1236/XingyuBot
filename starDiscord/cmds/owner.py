@@ -11,8 +11,8 @@ from discord.ext import commands
 from mcstatus import JavaServer
 
 from starlib import BotEmbed, Jsondb, log, sclient
+from starlib.database import NotifyChannelType
 from starlib.instance import *
-from starlib.types import McssServerAction, McssServerStatues, NotifyChannelType
 from starlib.utils.utility import ChoiceList, base64_to_buffer, converter, find_radmin_vpn_network, get_arp_list
 
 from ..checks import PrivilegeLevel, ensure_registered, has_privilege_level, has_vip, is_vip_admin

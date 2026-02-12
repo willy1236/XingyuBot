@@ -4,9 +4,9 @@ from typing import Any, ClassVar
 
 from pydantic import BaseModel, Field, model_validator
 
-from ..fileDatabase import Jsondb, csvdb
-from ..settings import tz
-from ..utils import BotEmbed
+from ...fileDatabase import Jsondb, csvdb
+from ...settings import tz
+from ...utils import BotEmbed
 
 jdict = Jsondb.jdict
 lol_jdict = Jsondb.lol_jdict

@@ -5,8 +5,8 @@ import discord
 from discord.ext import pages
 
 from starlib import Jsondb, sqldb
-from starlib.models.rpg import Monster, MonsterInBattle, RPGEquipment, RPGPlayerItem
-from starlib.types import Coins
+from starlib.database import Coins
+from starlib.database.postgresql.rpg import Monster, MonsterInBattle, RPGEquipment, RPGPlayerItem
 from starlib.utils import BotEmbed
 
 

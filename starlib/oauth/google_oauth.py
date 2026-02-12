@@ -1,9 +1,11 @@
 # google_oauth.py
-from .oauth_lib import OAuth2Base
-from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
-from ..types import CommunityType
+
+from starlib.database import CommunityType
+
+from .oauth_lib import OAuth2Base
 
 
 class GoogleOAuth(OAuth2Base):

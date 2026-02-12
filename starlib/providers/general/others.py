@@ -1,9 +1,9 @@
 import requests
 
-from ..database import sqldb
-from ..models.others import McssServer
-from ..types import APIType, McssServerAction
-from ..utils import log
+from starlib.database import APIType, McssServerAction, sqldb
+from starlib.utils import log
+
+from .models import McssServer
 
 
 class McssAPI:
@@ -50,6 +50,7 @@ class McssAPI:
             return r.text
         else:
             log.error("McssAPI: [%s] %s", r.status_code, r.text)
+
 
 class VirustotalAPI:
     BASE_URL = "https://www.virustotal.com/api/v3"

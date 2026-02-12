@@ -15,14 +15,15 @@ from sqlalchemy.orm import joinedload, scoped_session, sessionmaker
 from sqlalchemy.orm.scoping import ScopedSession
 from sqlmodel import Session, SQLModel, create_engine, delete, select, update
 
-from ..errors import *
-from ..fileDatabase import Jsondb
-from ..models.postgresql import *
-from ..models.rpg import *
-from ..models.sqlSchema import Base
-from ..settings import tz
-from ..types import *
-from ..utils import log
+from starlib.exceptions import *
+from starlib.fileDatabase import Jsondb
+from starlib.settings import tz
+from starlib.utils import log
+
+from .enums import *
+from .models import *
+from .rpg import *
+from .schemas import Base
 
 T = TypeVar("T")
 P = ParamSpec("P")
@@ -217,7 +218,6 @@ class UserRepository(BaseRepository):
         result = self.session.exec(stmt).one_or_none()
         return PrivilegeLevel(result) or PrivilegeLevel.User
 
-
     def get_discord_accounts(self, user_id: int):
         stmt = select(ExternalAccount).where(ExternalAccount.platform == PlatformType.Discord, ExternalAccount.user_id == user_id)
         result = self.session.exec(stmt).all()
@@ -363,9 +363,7 @@ class GameRepository(BaseRepository):
 
     def get_lol_record_with_champion(self, puuid: str):
         """取得指定玩家的英雄戰績"""
-        stmt = (
-            select(LOLGameRecord.champion_id, func.count()).where(LOLGameRecord.puuid == puuid).group_by(LOLGameRecord.champion_id).order_by(desc(func.count()))
-        )
+        stmt = select(LOLGameRecord.champion_id, func.count()).where(LOLGameRecord.puuid == puuid).group_by(LOLGameRecord.champion_id).order_by(desc(func.count()))
         result = self.session.exec(stmt).all()
         return result
 
@@ -481,9 +479,7 @@ class NotifyRepository(BaseRepository):
         if guild_id is None:
             statement = delete(NotifyCommunity).where(NotifyCommunity.notify_type == notify_type, NotifyCommunity.community_id == community_id)
         else:
-            statement = delete(NotifyCommunity).where(
-                NotifyCommunity.notify_type == notify_type, NotifyCommunity.community_id == community_id, NotifyCommunity.guild_id == guild_id
-            )
+            statement = delete(NotifyCommunity).where(NotifyCommunity.notify_type == notify_type, NotifyCommunity.community_id == community_id, NotifyCommunity.guild_id == guild_id)
         self.session.exec(statement)
         self.session.commit()
 
@@ -824,10 +820,7 @@ class WarningRepository(BaseRepository):
         """查詢自上次禁言後的警告次數"""
         # 查找該用戶最後一次禁言的時間
         last_ban_time_query = (
-            select(UserModerate)
-            .where(UserModerate.discord_id == discord_id, UserModerate.create_guild == guild_id, UserModerate.moderate_type == WarningType.Timeout)
-            .order_by(desc(UserModerate.create_time))
-            .limit(1)
+            select(UserModerate).where(UserModerate.discord_id == discord_id, UserModerate.create_guild == guild_id, UserModerate.moderate_type == WarningType.Timeout).order_by(desc(UserModerate.create_time)).limit(1)
         )
 
         last_ban_time_result = self.session.exec(last_ban_time_query).first()
@@ -884,9 +877,7 @@ class PollRepository(BaseRepository):
         self.session.add_all(lst)
         self.session.commit()
 
-    def set_user_poll(
-        self, poll_id: int, discord_id: int, vote_option: int = None, vote_at: datetime = None, vote_magnification: int = 1, max_can_vote: int = None
-    ):
+    def set_user_poll(self, poll_id: int, discord_id: int, vote_option: int = None, vote_at: datetime = None, vote_magnification: int = 1, max_can_vote: int = None):
         """
         Sets the user's poll vote in the database.
 
@@ -1031,12 +1022,7 @@ class ElectionRepository(BaseRepository):
         self.session.commit()
 
     def get_all_party_data(self):
-        stmt = (
-            select(Party, func.count(UserParty.party_id).label("member_count"))
-            .join(UserParty, Party.party_id == UserParty.party_id, isouter=True)
-            .group_by(Party.party_id)
-            .order_by(Party.party_id)
-        )
+        stmt = select(Party, func.count(UserParty.party_id).label("member_count")).join(UserParty, Party.party_id == UserParty.party_id, isouter=True).group_by(Party.party_id).order_by(Party.party_id)
         result = self.session.exec(stmt).all()
         return result
 
@@ -1295,29 +1281,17 @@ class TokensRepository(BaseRepository):
         return result
 
     def get_identifier_secret(self, source: APIType, source_seq: int = 1):
-        stmt = (
-            select(IdentifierSecret)
-            .join(Credential, IdentifierSecret.credential_id == Credential.id)
-            .where(Credential.source == source, Credential.source_seq == source_seq)
-        )
+        stmt = select(IdentifierSecret).join(Credential, IdentifierSecret.credential_id == Credential.id).where(Credential.source == source, Credential.source_seq == source_seq)
         result = self.session.exec(stmt).one()
         return result
 
     def get_access_token(self, source: APIType, source_seq: int = 1):
-        stmt = (
-            select(AccessToken)
-            .join(Credential, AccessToken.credential_id == Credential.id)
-            .where(Credential.source == source, Credential.source_seq == source_seq)
-        )
+        stmt = select(AccessToken).join(Credential, AccessToken.credential_id == Credential.id).where(Credential.source == source, Credential.source_seq == source_seq)
         result = self.session.exec(stmt).one()
         return result
 
     def get_oauth_client(self, source: APIType, source_seq: int = 1):
-        stmt = (
-            select(OAuthClient)
-            .join(Credential, OAuthClient.credential_id == Credential.id)
-            .where(Credential.source == source, Credential.source_seq == source_seq)
-        )
+        stmt = select(OAuthClient).join(Credential, OAuthClient.credential_id == Credential.id).where(Credential.source == source, Credential.source_seq == source_seq)
         result = self.session.exec(stmt).one()
         return result
 
@@ -1327,20 +1301,12 @@ class TokensRepository(BaseRepository):
         return result
 
     def get_bot_oauth_token(self, source: APIType, source_seq: int = 1):
-        stmt = (
-            select(OAuthToken)
-            .join(Credential, OAuthToken.client_credential_id == Credential.id)
-            .where(Credential.source == source, Credential.source_seq == source_seq)
-        )
+        stmt = select(OAuthToken).join(Credential, OAuthToken.client_credential_id == Credential.id).where(Credential.source == source, Credential.source_seq == source_seq)
         result = self.session.exec(stmt).one()
         return result
 
     def get_websub_config(self, source: APIType, source_seq: int = 1):
-        stmt = (
-            select(WebSubConfig)
-            .join(Credential, WebSubConfig.credential_id == Credential.id)
-            .where(Credential.source == source, Credential.source_seq == source_seq)
-        )
+        stmt = select(WebSubConfig).join(Credential, WebSubConfig.credential_id == Credential.id).where(Credential.source == source, Credential.source_seq == source_seq)
         result = self.session.exec(stmt).one()
         return result
 
@@ -1461,6 +1427,7 @@ class NetworkRepository(BaseRepository):
         stmt = select(UserIPDetails).where(UserIPDetails.discord_id == discord_id)
         result = self.session.exec(stmt).all()
         return result
+
 
 class VIPRepository(BaseRepository):
     def get_vip(self, discord_id: int):

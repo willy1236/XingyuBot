@@ -11,8 +11,9 @@ from pydantic_ai.messages import ModelMessage
 from pydantic_ai.models.google import GoogleModel, GoogleModelSettings
 from pydantic_ai.providers.google import GoogleProvider
 
-from starlib import Jsondb, NotionAPI, NotionBlock, agent_log, sqldb
-from starlib.types import APIType
+from starlib import Jsondb, NotionAPI, agent_log, sqldb
+from starlib.database import APIType
+from starlib.providers.social.models import NotionBlock
 
 SQLsettings: dict = Jsondb.config.get("SQLsettings")
 

@@ -4,8 +4,8 @@ import discord
 from discord.ext import commands
 
 from starlib import sqldb
-from starlib.models.postgresql import CloudUser
-from starlib.types import PrivilegeLevel
+from starlib.database import PrivilegeLevel
+from starlib.database.postgresql.models import CloudUser
 
 from .uiElement.view import RegisterView
 

@@ -6,9 +6,9 @@ import discord
 from discord.ext import commands
 
 from starlib import BotEmbed, Jsondb, log, sclient, tz
+from starlib.database import DBCacheType, NotifyChannelType, PrivilegeLevel
 from starlib.instance import *
 from starlib.starAgent import ModelMessage, MyDeps, agent
-from starlib.types import DBCacheType, NotifyChannelType, PrivilegeLevel
 
 from ..extension import Cog_Extension
 from ..uiElement.view import PollView, ReactionRoleView, TicketChannelView, TicketLobbyView
@@ -550,7 +550,7 @@ class event(Cog_Extension):
         if guildid == happycamp_guild[0]:
             earlest_guildid = check_registration(member)
             if earlest_guildid and earlest_guildid != happycamp_guild[0]:
-                from starlib.models.postgresql import DiscordUser
+                from starlib.database.postgresql.models import DiscordUser
 
                 dbdata = sclient.sqldb.get_registration_by_guildid(earlest_guildid)
                 user = DiscordUser(discord_id=member.id, registrations_id=dbdata.registrations_id)

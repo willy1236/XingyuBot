@@ -14,9 +14,8 @@ from twitchAPI.twitch import Twitch
 from twitchAPI.type import AuthScope, ChatEvent, EventSubSubscriptionError, EventSubSubscriptionTimeout, InvalidTokenException, MissingScopeException
 
 from starlib import BaseThread, BotEmbed, Jsondb, sclient, sqldb, twitch_log
+from starlib.database import APIType, NotifyCommunityType, TwitchChatCommand
 from starlib.instance import tw_api
-from starlib.models.postgresql import TwitchChatCommand
-from starlib.types import APIType, NotifyCommunityType
 
 USER_SCOPE = [
     AuthScope.BITS_READ,

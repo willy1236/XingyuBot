@@ -6,15 +6,16 @@ from typing import TypeVar
 import discord
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, computed_field, field_validator, model_validator
 
-from ..fileDatabase import Jsondb
-from ..settings import tz
+from ...fileDatabase import Jsondb
+from ...settings import tz
 
 ytvideo_lives = {
     "live": "直播中",
     "upcoming": "即將直播",
-    "none": "新影片"
+    "none": "新影片",
     # 新影片或結束直播都是none
 }
+
 
 class TwitchUser(BaseModel):
     id: str
@@ -37,13 +38,7 @@ class TwitchUser(BaseModel):
         return self
 
     def embed(self):
-        embed = discord.Embed(
-            title=self.display_name,
-            url=self.url,
-            description=self.description,
-            color=0x6441a5,
-            timestamp=self.created_at
-        )
+        embed = discord.Embed(title=self.display_name, url=self.url, description=self.description, color=0x6441A5, timestamp=self.created_at)
         embed.set_image(url=self.offline_image_url)
         embed.set_author(name=self.login, icon_url=self.profile_image_url)
         embed.add_field(name="觀看數", value=self.view_count)
@@ -86,11 +81,10 @@ class TwitchStream(BaseModel):
             title=self.title,
             url=self.url,
             description=self.game_name,
-            color=0x6441a5,
+            color=0x6441A5,
             timestamp=self.started_at,
         )
-        embed.set_author(name=f"{self.user_name} 開台啦！",
-                         icon_url=profile_image_url or Jsondb.get_picture("twitch_001"))
+        embed.set_author(name=f"{self.user_name} 開台啦！", icon_url=profile_image_url or Jsondb.get_picture("twitch_001"))
         embed.set_image(url=self.live_thumbnail_url)
         embed.add_field(name="標籤", value=", ".join(self.tags))
         embed.set_footer(text="開始於")
@@ -124,15 +118,8 @@ class TwitchVideo(BaseModel):
         return self
 
     def embed(self):
-        embed = discord.Embed(
-            title=self.title,
-            url=self.url,
-            description=self.description,
-            color=0x6441a5,
-            timestamp=self.created_at
-        )
-        embed.set_author(name=f"{self.user_name}",
-                         icon_url=Jsondb.get_picture("twitch_001"))
+        embed = discord.Embed(title=self.title, url=self.url, description=self.description, color=0x6441A5, timestamp=self.created_at)
+        embed.set_author(name=f"{self.user_name}", icon_url=Jsondb.get_picture("twitch_001"))
         embed.set_image(url=self.thumbnail_url)
         embed.set_footer(text="上傳時間")
         return embed
@@ -164,14 +151,8 @@ class TwitchClip(BaseModel):
         return self
 
     def embed(self, original_video: TwitchVideo = None):
-        embed = discord.Embed(
-            title=self.title,
-            url=self.url,
-            color=0x6441a5,
-            timestamp=self.created_at
-        )
-        embed.set_author(name=f"{self.broadcaster_name}",
-                         icon_url=Jsondb.get_picture("twitch_001"))
+        embed = discord.Embed(title=self.title, url=self.url, color=0x6441A5, timestamp=self.created_at)
+        embed.set_author(name=f"{self.broadcaster_name}", icon_url=Jsondb.get_picture("twitch_001"))
         embed.set_image(url=self.thumbnail_url)
         embed.add_field(name="剪輯者", value=self.creator_name)
         if original_video:
@@ -266,17 +247,10 @@ class YoutubeChannel(BaseModel):
         return self
 
     def embed(self):
-        embed = discord.Embed(
-            title=self.snippet.title,
-            url=f"https://www.youtube.com/channel/{self.id}",
-            description=self.snippet.description,
-            color=0xff0000,
-            timestamp=self.snippet.publishedAt
-        )
+        embed = discord.Embed(title=self.snippet.title, url=f"https://www.youtube.com/channel/{self.id}", description=self.snippet.description, color=0xFF0000, timestamp=self.snippet.publishedAt)
         embed.set_image(url=self.snippet.thumbnails.default.url)
         embed.add_field(name="頻道創建時間", value=self.snippet.publishedAt.strftime("%Y/%m/%d %H:%M:%S"))
-        embed.add_field(
-            name="訂閱數", value=f"{self.statistics.subscriberCount:,}")
+        embed.add_field(name="訂閱數", value=f"{self.statistics.subscriberCount:,}")
         embed.add_field(name="影片數", value=f"{self.statistics.videoCount:,}")
         embed.add_field(name="觀看數", value=f"{self.statistics.viewCount:,}")
         embed.add_field(name="用戶代碼", value=self.snippet.customUrl)
@@ -308,18 +282,10 @@ class YoutubeVideo(BaseModel):
     def __post_init__(self):
         self.snippet.publishedAt = self.snippet.publishedAt.astimezone(tz=tz)
         if self.liveStreamingDetails:
-            self.liveStreamingDetails.actualStartTime = (
-                self.liveStreamingDetails.actualStartTime.astimezone(tz=tz) if self.liveStreamingDetails.actualStartTime else None
-            )
-            self.liveStreamingDetails.actualEndTime = (
-                self.liveStreamingDetails.actualEndTime.astimezone(tz=tz) if self.liveStreamingDetails.actualEndTime else None
-            )
-            self.liveStreamingDetails.scheduledStartTime = (
-                self.liveStreamingDetails.scheduledStartTime.astimezone(tz=tz) if self.liveStreamingDetails.scheduledStartTime else None
-            )
-            self.liveStreamingDetails.scheduledEndTime = (
-                self.liveStreamingDetails.scheduledEndTime.astimezone(tz=tz) if self.liveStreamingDetails.scheduledEndTime else None
-            )
+            self.liveStreamingDetails.actualStartTime = self.liveStreamingDetails.actualStartTime.astimezone(tz=tz) if self.liveStreamingDetails.actualStartTime else None
+            self.liveStreamingDetails.actualEndTime = self.liveStreamingDetails.actualEndTime.astimezone(tz=tz) if self.liveStreamingDetails.actualEndTime else None
+            self.liveStreamingDetails.scheduledStartTime = self.liveStreamingDetails.scheduledStartTime.astimezone(tz=tz) if self.liveStreamingDetails.scheduledStartTime else None
+            self.liveStreamingDetails.scheduledEndTime = self.liveStreamingDetails.scheduledEndTime.astimezone(tz=tz) if self.liveStreamingDetails.scheduledEndTime else None
         return self
 
     def embed(self):
@@ -365,12 +331,7 @@ class YoutubeVideo(BaseModel):
     @property
     def is_live_getting_startrd(self) -> bool:
         now = datetime.now(tz=tz)
-        return bool(
-            self.liveStreamingDetails
-            and self.liveStreamingDetails.actualStartTime
-            and not self.liveStreamingDetails.actualEndTime
-            and (now - self.liveStreamingDetails.actualStartTime) < timedelta(minutes=1)
-        )
+        return bool(self.liveStreamingDetails and self.liveStreamingDetails.actualStartTime and not self.liveStreamingDetails.actualEndTime and (now - self.liveStreamingDetails.actualStartTime) < timedelta(minutes=1))
 
 
 class YoutubeRSSVideo(BaseModel):
@@ -393,13 +354,7 @@ class YoutubeRSSVideo(BaseModel):
         return self
 
     def embed(self):
-        embed = discord.Embed(
-            title=self.title,
-            url=self.link,
-            description=self.author_name,
-            color=0xff0000,
-            timestamp=self.uplood_at
-        )
+        embed = discord.Embed(title=self.title, url=self.link, description=self.author_name, color=0xFF0000, timestamp=self.uplood_at)
         embed.add_field(name="上傳時間", value=self.uplood_at.strftime("%Y/%m/%d %H:%M:%S"), inline=False)
         # embed.add_field(name="更新時間",value=self.updated_at.strftime('%Y/%m/%d %H:%M:%S'),inline=True)
         embed.set_image(url=self.media_thumbnail[0].url)
@@ -586,6 +541,7 @@ class RettiwtTweetItem(BaseModel):
 class RettiwtTweetTimeLineResponse(BaseModel):
     list: list[RettiwtTweetItem]
     next: str | None = None
+
 
 class RettiwtTweetUserDetails(BaseModel):
     id: str

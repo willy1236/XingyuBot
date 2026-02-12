@@ -7,12 +7,13 @@ from sqlalchemy.dialects.postgresql import ARRAY, CIDR, MACADDR, TIMESTAMP
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlmodel import Field, Relationship, text
 
-from ..base import ListObject
-from ..fileDatabase import Jsondb
-from ..settings import tz
-from ..types import *
-from ..utils import BotEmbed
-from .sqlSchema import *
+from starlib.base import ListObject
+from starlib.fileDatabase import Jsondb
+from starlib.settings import tz
+from starlib.utils import BotEmbed
+
+from .enums import *
+from .schemas import *
 
 
 class CloudUser(UsersSchema, table=True):
@@ -541,6 +542,7 @@ class GuildSetting(GuildsSchema, table=True):
     guild_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
     timeout_after_warning_times: int | None
     voice_time_counter: bool | None
+
 
 class GuildInternalConfig(GuildsSchema, table=True):
     __tablename__ = "guild_internal_configs"

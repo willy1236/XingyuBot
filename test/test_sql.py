@@ -4,7 +4,7 @@ from sqlalchemy import and_, delete, desc, func, or_
 from sqlmodel import select
 
 from starlib import NotifyCommunityType, sqldb, tz
-from starlib.models.postgresql import Post, ReactionRoleMessage, User
+from starlib.database.postgresql.models import Post, ReactionRoleMessage, User
 
 user = User(age=20)
 user.id = 3

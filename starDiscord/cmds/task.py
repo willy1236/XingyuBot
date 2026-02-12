@@ -9,10 +9,9 @@ from discord.ext import commands, tasks
 from requests.exceptions import ConnectTimeout, RequestException
 
 from starlib import BotEmbed, Jsondb, log, sclient, sqldb, tz, utils
+from starlib.database import APIType, DBCacheType, NotifyChannelType, NotifyCommunityType, UsersCountRecord, VoiceTime
 from starlib.instance import *
-from starlib.models.community import YoutubeVideo
-from starlib.models.postgresql import UsersCountRecord, VoiceTime
-from starlib.types import APIType, DBCacheType, NotifyChannelType, NotifyCommunityType
+from starlib.providers.social.models import YoutubeVideo
 
 from ..bot import DiscordBot
 from ..extension import Cog_Extension

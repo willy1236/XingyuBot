@@ -12,9 +12,8 @@ import numpy as np
 from discord.utils import format_dt
 
 from starlib import BotEmbed, Jsondb, log, sqldb, tz
+from starlib.database import Giveaway, GiveawayUser, HappycampApplicationForm, HappycampVIP, McssServerAction, McssServerStatues, Poll, PollRole, TicketChannel
 from starlib.instance import mcss_api
-from starlib.models.postgresql import Giveaway, GiveawayUser, HappycampApplicationForm, HappycampVIP, Poll, PollRole, TicketChannel
-from starlib.types import McssServerAction, McssServerStatues
 from starlib.utils.utility import find_radmin_vpn_network
 
 if TYPE_CHECKING:

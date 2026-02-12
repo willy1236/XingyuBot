@@ -3,7 +3,7 @@ import subprocess
 import time
 
 from starlib import BaseThread, Jsondb, log, sqldb
-from starlib.types import APIType
+from starlib.database import APIType
 
 
 class ltThread(BaseThread):

@@ -5,14 +5,13 @@ import pandas as pd
 import requests
 from mwrogue.esports_client import EsportsClient
 
-from starlib.database import sqldb
-from starlib.errors import APIInvokeError
-from starlib.fileDatabase import Jsondb
-from starlib.models.game import *
-from starlib.types import APIType
+from starlib.database import APIType, sqldb
+from starlib.exceptions import APIInvokeError
+
+from .models import *
 
 
-class RiotAPI():
+class RiotAPI:
     url_tw2 = "https://tw2.api.riotgames.com"
     url_sea = "https://sea.api.riotgames.com"
     url_asia = "https://asia.api.riotgames.com"
@@ -178,7 +177,7 @@ class OsuAPI:
         else:
             return None
 
-    def get_user_scores(self,user_id):
+    def get_user_scores(self, user_id):
         """獲取Osu玩家分數"""
         r = requests.get(f"{self._url}/users/{user_id}/scores/recent", headers=self._headers)
         if r.status_code == 200:
@@ -187,7 +186,7 @@ class OsuAPI:
             return None
 
 
-class ApexAPI():
+class ApexAPI:
     url = "https://api.mozambiquehe.re"
 
     def __init__(self, auth: str | None = None):
@@ -227,11 +226,11 @@ class ApexAPI():
             return None
 
 
-class SteamAPI():
+class SteamAPI:
     def __init__(self):
         self.key = sqldb.get_access_token(APIType.Steam).access_token
 
-    def get_user(self,userid):
+    def get_user(self, userid):
         params = {"key": self.key, "steamids": userid}
         response = requests.get("https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/", params=params)
         if response.ok and response.json().get("response").get("players"):
@@ -240,7 +239,7 @@ class SteamAPI():
         else:
             return None
 
-    def get_owned_games(self,userid):
+    def get_owned_games(self, userid):
         params = {"key": self.key, "steamid": userid, "include_appinfo": 1}
         response = requests.get("https://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/", params=params)
         if response.ok:
@@ -249,11 +248,12 @@ class SteamAPI():
         else:
             return None
 
+
 class DBDInterface(SteamAPI):
     def __init__(self):
         super().__init__()
 
-    def get_player(self,steamid):
+    def get_player(self, steamid):
         user = SteamAPI().get_user(steamid)
         if user:
             params = {"steamid": user.steamid}
@@ -270,21 +270,17 @@ class LOLMediaWikiAPI:
     def __init__(self):
         self.site = EsportsClient("lol")
 
-    def get_date_games(self, date:date):
+    def get_date_games(self, date: date):
         response = self.site.cargo_client.query(
             tables="ScoreboardGames=SG, Tournaments=T",
             join_on="SG.OverviewPage=T.OverviewPage",
             fields="T.Name=Tournament, T.TournamentLevel, SG.Gamename, SG.DateTime_UTC, SG.Team1, SG.Team2, SG.Winner, SG.Patch, SG.Gamelength, SG.Team1Players, SG.Team2Players, SG.Team1Kills, SG.Team2Kills, SG.Team1Picks, SG.Team2Picks",
-            where="SG.DateTime_UTC >= '"
-            + str(date)
-            + " 00:00:00' AND SG.DateTime_UTC <= '"
-            + str(date + timedelta(1))
-            + " 00:00:00'"
-            + " AND T.TournamentLevel = 'Primary'",
+            where="SG.DateTime_UTC >= '" + str(date) + " 00:00:00' AND SG.DateTime_UTC <= '" + str(date + timedelta(1)) + " 00:00:00'" + " AND T.TournamentLevel = 'Primary'",
             order_by="SG.DateTime_UTC",
         )
 
         return [dict(r) for r in response]
+
 
 class MojangAPI:
     def get_uuid(self, username: str):
@@ -295,6 +291,7 @@ class MojangAPI:
             return None
         else:
             raise APIInvokeError("mojang_uuid", r.text)
+
 
 class ZeroTierAPI:
     url = "https://api.zerotier.com/api/v1"

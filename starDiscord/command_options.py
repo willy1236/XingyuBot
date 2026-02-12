@@ -1,7 +1,7 @@
 from discord import Option, OptionChoice
 
 from starlib import instance
-from starlib.types import McssServerAction
+from starlib.database import McssServerAction
 
 __all__ = [
     "mcss_server_option",

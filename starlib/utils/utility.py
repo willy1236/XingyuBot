@@ -10,7 +10,7 @@ import discord
 import psutil
 
 from ..fileDatabase import Jsondb
-from .funtions import find
+from .functions import find
 
 
 class BotEmbed:

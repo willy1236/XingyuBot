@@ -10,12 +10,10 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
-from ..database import debug_mode, sqldb
-from ..errors import SQLNotFoundError
+from ..database import BotToken, CommunityType, debug_mode, sqldb
+from ..exceptions import SQLNotFoundError
 from ..models import DiscordUser, UserConnection
-from ..models.postgresql import BotToken
 from ..settings import tz
-from ..types import CommunityType
 from ..utils import log
 
 
@@ -204,6 +202,7 @@ class OAuth2Base(ABC):
 
         return instance
 
+
 class DiscordOauth2(OAuth2Base):
     auth_url = "https://discord.com/api/oauth2/authorize"
     token_url = "https://discord.com/api/oauth2/token"
@@ -233,6 +232,7 @@ class DiscordOauth2(OAuth2Base):
         Retrieves the user connections.
         """
         return [UserConnection(**i) for i in self.get(f"{self.api_url}/users/@me/connections")]
+
 
 class TwitchOauth2(OAuth2Base):
     auth_url = "https://id.twitch.tv/oauth2/authorize"
@@ -380,9 +380,7 @@ class GoogleOauth2(OAuth2Base):
 
     def add_song_to_playlist(self, playlist_id, video_id):
         service = build("youtube", "v3", credentials=self.creds)
-        request = service.playlistItems().insert(
-            part="snippet", body={"snippet": {"playlistId": playlist_id, "resourceId": {"kind": "youtube#video", "videoId": video_id}}}
-        )
+        request = service.playlistItems().insert(part="snippet", body={"snippet": {"playlistId": playlist_id, "resourceId": {"kind": "youtube#video", "videoId": video_id}}})
         return request.execute()
 
     def remove_song_from_playlist(self, video_in_playlist_id):

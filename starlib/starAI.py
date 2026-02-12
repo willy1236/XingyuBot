@@ -10,10 +10,9 @@ import google.generativeai as genai
 from google.generativeai.types import file_types
 from PIL import Image
 
-from .database import sqldb
-from .errors import GenerateError
-from .fileDatabase import Jsondb
-from .types import APIType
+from starlib.database import APIType, sqldb
+from starlib.exceptions import GenerateError
+from starlib.fileDatabase import Jsondb
 
 genai.configure(api_key=sqldb.get_access_token(APIType.Google, 5).access_token)
 

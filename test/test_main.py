@@ -14,13 +14,12 @@ import discord
 import feedparser
 import pandas as pd
 import requests
-from pydantic import AliasPath, BaseModel, ConfigDict, Field
 from googleapiclient.discovery import build
+from pydantic import AliasPath, BaseModel, ConfigDict, Field
 
 from starlib import *
 from starlib.database import SQLRepository
-from starlib.dataExtractor import *
-from starlib.types import *
+from starlib.providers import *
 
 if __name__ == "__main__":
     pass

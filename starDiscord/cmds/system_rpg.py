@@ -6,7 +6,7 @@ from discord.ext import commands
 
 from starlib import BotEmbed, ChoiceList, sclient
 from starlib.instance import happycamp_guild
-from starlib.models.rpg import RPGUser
+from starlib.database.postgresql.rpg import RPGUser
 
 from ..extension import Cog_Extension
 from ..uiElement.RPGview import RPGAdvanceView, RPGEquipmentSelectView

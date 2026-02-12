@@ -8,8 +8,8 @@ import discord
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from starlib import BotEmbed, Jsondb, log, sqldb
+from starlib.database import APIType, NotifyChannelType, NotifyCommunityType
 from starlib.instance import debug_mode
-from starlib.types import APIType, NotifyChannelType, NotifyCommunityType
 
 
 class DiscordBot(discord.Bot):

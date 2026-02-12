@@ -14,12 +14,12 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
-from ..database import sqldb
-from ..errors import APIInvokeError, Forbidden
-from ..models.community import *
-from ..settings import tz
-from ..types import APIType
-from ..utils import log
+from starlib.database import APIType, sqldb
+from starlib.exceptions import APIInvokeError, Forbidden
+from starlib.settings import tz
+from starlib.utils import log
+
+from .models import *
 
 T = TypeVar("T")
 
@@ -135,9 +135,7 @@ class TwitchAPI:
         else:
             return None
 
-    def get_videos(
-        self, user_ids: str | list[str] = None, video_ids: str | list[str] = None, types: str | list[str] = "highlight", after: datetime = None
-    ) -> list[TwitchVideo] | None:
+    def get_videos(self, user_ids: str | list[str] = None, video_ids: str | list[str] = None, types: str | list[str] = "highlight", after: datetime = None) -> list[TwitchVideo] | None:
         """
         取得twitch用戶的影片資訊
         :param user_ids: list of users id
@@ -327,7 +325,7 @@ class YoutubePush:
         if r.ok:
             return self._parse_subscription_details(r.text)
         else:
-            log.warning(f"[{r.status_code}]{r.text}")
+            log.warning("[%s] %s", r.status_code, r.text)
             return None
 
     @staticmethod
@@ -561,11 +559,7 @@ class NotionAPI:
         """新增Notion資料庫項目，僅設定標題與內容"""
         data = {
             "parent": {"database_id": database_id},
-            "properties": {
-                "名稱": NotionPropertyValue(
-                    id="title", type="title", title=[NotionRichText(type="text", text=NotionRichTextContent(content=title), plain_text=title)]
-                ).model_dump(exclude_none=True)
-            },
+            "properties": {"名稱": NotionPropertyValue(id="title", type="title", title=[NotionRichText(type="text", text=NotionRichTextContent(content=title), plain_text=title)]).model_dump(exclude_none=True)},
             "children": [
                 {
                     "object": "block",

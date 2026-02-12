@@ -3,11 +3,9 @@
 """
 import tweepy
 
-from .database import sqldb
-from .dataExtractor import *
-from .dataExtractor.others import McssAPI
+from .database import APIType, sqldb
 from .fileDatabase import Jsondb
-from .types import APIType
+from .providers import *
 
 __all__ = [
     "mcss_api",

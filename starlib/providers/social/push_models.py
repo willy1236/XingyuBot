@@ -3,7 +3,7 @@ from datetime import datetime
 import discord
 from pydantic import AliasPath, BaseModel, ConfigDict, Field, HttpUrl, model_validator
 
-from ..settings import tz
+from ...settings import tz
 
 
 class TitleDetail(BaseModel):

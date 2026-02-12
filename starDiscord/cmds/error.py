@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 
 from starlib import Jsondb, log
-from starlib.errors import *
+from starlib.exceptions import *
 from starlib.instance import debug_guilds, debug_mode
 
 from ..extension import Cog_Extension

@@ -15,12 +15,14 @@ class Base(MappedAsDataclass, DeclarativeBase):
         return mapped_column(datatype, Identity(), primary_key=True, init=False)
         # return mapped_column(Integer, primary_key=True, autoincrement=True, init=False)
 
+
 class BaseSchema(SQLModel):
     __table_args__: dict[str, str]
 
     @property
     def forigen(self):
-        return f'{self.__table_args__["schema"]}.{self.__tablename__}'
+        return f"{self.__table_args__['schema']}.{self.__tablename__}"
+
 
 class DatabaseSchema(BaseSchema):
     __table_args__ = {"schema": "database"}
@@ -34,6 +36,7 @@ class BasicSchema(BaseSchema):
 class AlchemyBasicSchema(Base):
     __abstract__ = True
     __table_args__ = {"schema": "stardb_basic"}
+
 
 class BackupSchema(BaseSchema):
     __abstract__ = True
@@ -54,21 +57,26 @@ class TokensSchema(BaseSchema):
     __abstract__ = True
     __table_args__ = {"schema": "credentials"}
 
+
 class UserSchema(BaseSchema):
     __abstract__ = True
     __table_args__ = {"schema": "stardb_user"}
+
 
 class CacheSchema(BaseSchema):
     __abstract__ = True
     __table_args__ = {"schema": "stardb_cache"}
 
+
 class HappycampSchema(BaseSchema):
     __abstract__ = True
     __table_args__ = {"schema": "happycamp"}
 
+
 class UsersSchema(BaseSchema):
     __abstract__ = True
     __table_args__ = {"schema": "users"}
+
 
 class GuildsSchema(BaseSchema):
     __abstract__ = True

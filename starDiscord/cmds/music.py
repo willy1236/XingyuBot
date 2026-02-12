@@ -15,7 +15,7 @@ from discord.commands import SlashCommandGroup
 from discord.ext import commands, pages
 
 from starlib import BotEmbed, Jsondb, log
-from starlib.errors import *
+from starlib.exceptions import *
 
 from ..extension import Cog_Extension
 
