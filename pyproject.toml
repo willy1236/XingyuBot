@@ -1,0 +1,48 @@
+[project]
+name = "xingyubot"
+version = "1.1.0"
+description = "一個集結許多功能的DiscordBot"
+readme = "README.md"
+requires-python = "~=3.13.0"
+dependencies = [
+    "apscheduler>=3.11.0",
+    "authlib>=1.6.5",
+    "beautifulsoup4>=4.13.4",
+    "fastapi>=0.116.1",
+    "feedparser>=6.0.11",
+    "genshin>=1.7.16",
+    "gitpython>=3.1.45",
+    "google-api-python-client>=2.178.0",
+    "google-auth-oauthlib>=1.2.2",
+    "google-cloud-webrisk>=1.18.1",
+    "google-generativeai>=0.8.5",
+    "line-bot-sdk>=3.18.0",
+    "matplotlib>=3.10.5",
+    "mcrcon>=0.7.0",
+    "mcstatus>=12.0.3",
+    "mwrogue>=0.1.5",
+    "pandas>=2.3.1",
+    "psutil>=7.0.0",
+    "psycopg2>=2.9.10",
+    "py-cord[voice]>=2.7.0",
+    "pydantic-ai-slim[duckduckgo,google,mcp,tavily,vertexai]>=0.6.2",
+    "pymongo>=4.14.0",
+    "python-jose>=3.5.0",
+    "python-nmap>=0.7.1",
+    "python-whois>=0.9.5",
+    "requests>=2.32.4",
+    "sqlmodel>=0.0.24",
+    "truststore>=0.10.4",
+    "tweepy[async]>=4.16.0",
+    "twitchapi>=4.5.0",
+    "uvicorn>=0.35.0",
+    "vosk>=0.3.45",
+    "yt-dlp>=2025.7.21",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.1",
+    "pytest-cov>=6.2.1",
+    "pytest-mock>=3.14.1",
+]

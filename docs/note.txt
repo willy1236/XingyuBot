@@ -1,0 +1,2 @@
+embed顏色 0xc4e9ff
+稱號顏色 0xc7dfff

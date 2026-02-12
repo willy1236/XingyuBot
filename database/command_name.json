@@ -1,0 +1,299 @@
+{
+    "choice": {
+        "en-US": "choice",
+        "zh-TW": "選擇"
+    },
+    "choice_item": {
+        "en-US": "item",
+        "zh-TW": "東西"
+    },
+    "choice_channel": {
+        "en-US": "channel",
+        "zh-TW": "頻道抽選"
+    },
+    "mcserver": {
+        "en-US": "mcserver",
+        "zh-TW": "麥塊伺服器"
+    },
+    "mcserver_panel": {
+        "en-US": "panel",
+        "zh-TW": "面板"
+    },
+    "channel": {
+        "en-US": "channel",
+        "zh-TW": "頻道"
+    },
+    "channel_set": {
+        "en-US": "set",
+        "zh-TW": "設定通知"
+    },
+    "channel_voice": {
+        "en-US": "voice",
+        "zh-TW": "動態語音"
+    },
+    "channel_list": {
+        "en-US": "list",
+        "zh-TW": "查看頻道"
+    },
+    "clean": {
+        "en-US": "clean",
+        "zh-TW": "清理訊息"
+    },
+    "warning": {
+        "en-US": "warning",
+        "zh-TW": "警告"
+    },
+    "warning_add": {
+        "en-US": "add",
+        "zh-TW": "新增"
+    },
+    "warning_remove": {
+        "en-US": "remove",
+        "zh-TW": "移除"
+    },
+    "warning_get": {
+        "en-US": "get",
+        "zh-TW": "查詢"
+    },
+    "warning_list": {
+        "en-US": "list",
+        "zh-TW": "列表"
+    },
+    "reactrole": {
+        "en-US": "reactrole",
+        "zh-TW": "反應身分組"
+    },
+    "reactrole_editmessage": {
+        "en-US": "editmessage",
+        "zh-TW": "編輯訊息"
+    },
+    "reactrole_add": {
+        "en-US": "add",
+        "zh-TW": "新增反應"
+    },
+    "reactrole_remove": {
+        "en-US": "remove",
+        "zh-TW": "移除反應"
+    },
+    "ticket": {
+        "en-US": "ticket",
+        "zh-TW": "私人頻道"
+    },
+    "ticket_setup": {
+        "en-US": "setup",
+        "zh-TW": "初始化"
+    },
+    "twitch": {
+        "en-US": "twitch"
+    },
+    "twitch_set": {
+        "en-US": "set",
+        "zh-TW": "設置通知"
+    },
+    "twitch_remove": {
+        "en-US": "remove",
+        "zh-TW": "移除通知"
+    },
+    "twitch_notify": {
+        "en-US": "notify",
+        "zh-TW": "確認通知"
+    },
+    "twitch_list": {
+        "en-US": "list",
+        "zh-TW": "通知列表"
+    },
+    "twitch_user": {
+        "en-US": "user",
+        "zh-TW": "使用者資訊"
+    },
+    "youtube": {
+        "en-US": "youtube"
+    },
+    "youtube_channel": {
+        "en-US": "channel",
+        "zh-TW": "頻道資訊"
+    },
+    "youtube_set": {
+        "en-US": "set",
+        "zh-TW": "設置通知"
+    },
+    "youtube_remove": {
+        "en-US": "remove",
+        "zh-TW": "移除通知"
+    },
+    "youtube_notify": {
+        "en-US": "notify",
+        "zh-TW": "確認通知"
+    },
+    "youtube_list": {
+        "en-US": "list",
+        "zh-TW": "通知列表"
+    },
+    "twitter": {
+        "en-US": "twitter",
+        "zh-TW": "twitter推特"
+    },
+    "twitter_set": {
+        "en-US": "set",
+        "zh-TW": "設置通知"
+    },
+    "twitter_remove": {
+        "en-US": "remove",
+        "zh-TW": "移除通知"
+    },
+    "twitter_notify": {
+        "en-US": "notify",
+        "zh-TW": "確認通知"
+    },
+    "twitter_list": {
+        "en-US": "list",
+        "zh-TW": "通知列表"
+    },
+    "twitter_user": {
+        "en-US": "user",
+        "zh-TW": "使用者資訊"
+    },
+    "twitter_tweet": {
+        "en-US": "tweet",
+        "zh-TW": "最新推文"
+    },
+    "game": {
+        "en-US": "game",
+        "zh-TW": "遊戲資料"
+    },
+    "game_set": {
+        "en-US": "set",
+        "zh-TW": "設定帳號"
+    },
+    "game_player": {
+        "en-US": "player",
+        "zh-TW": "查詢玩家"
+    },
+    "game_radmin": {
+        "en-US": "radmin",
+        "zh-TW": "註冊radmin"
+    },
+    "game_zerotier": {
+        "en-US": "zerotier",
+        "zh-TW": "註冊zerotier"
+    },
+    "game_vpn": {
+        "en-US": "vpn",
+        "zh-TW": "查詢vpn"
+    },
+    "lol": {
+        "en-US": "lol",
+        "zh-TW": "英雄聯盟"
+    },
+    "lol_riot": {
+        "en-US": "riot",
+        "zh-TW": "riot帳號"
+    },
+    "lol_user": {
+        "en-US": "user",
+        "zh-TW": "玩家資訊"
+    },
+    "lol_match": {
+        "en-US": "match",
+        "zh-TW": "對戰資料"
+    },
+    "lol_playermatch": {
+        "en-US": "playermatch",
+        "zh-TW": "最近對戰"
+    },
+    "lol_masteries": {
+        "en-US": "masteries",
+        "zh-TW": "專精英雄"
+    },
+    "lol_rank": {
+        "en-US": "rank",
+        "zh-TW": "積分對戰"
+    },
+    "lol_recentmatches": {
+        "en-US": "recentmatches",
+        "zh-TW": "最近對戰"
+    },
+    "lol_activematches": {
+        "en-US": "activematches",
+        "zh-TW": "正在對戰"
+    },
+    "lol_recentplayer": {
+        "en-US": "recentplayer",
+        "zh-TW": "近期玩家"
+    },
+    "lol_progame": {
+        "en-US": "progame",
+        "zh-TW": "職業比賽"
+    },
+    "lol_setyearly": {
+        "en-US": "setyearly",
+        "zh-TW": "建立年度戰績資料"
+    },
+    "lol_yearly": {
+        "en-US": "yearly",
+        "zh-TW": "年度戰績資料"
+    },
+    "osu": {
+        "en-US": "osu"
+    },
+    "osu_user": {
+        "en-US": "user",
+        "zh-TW": "使用者資訊"
+    },
+    "osu_map": {
+        "en-US": "map",
+        "zh-TW": "圖譜資料"
+    },
+    "apex": {
+        "en-US": "apex",
+        "zh-TW": "apex英雄"
+    },
+    "apex_user": {
+        "en-US": "user"
+    },
+    "apex_map": {
+        "en-US": "map",
+        "zh-TW": "地圖資訊"
+    },
+    "dbd": {
+        "en-US": "dbd",
+        "zh-TW": "黎明死線dbd"
+    },
+    "dbd_user": {
+        "en-US": "user"
+    },
+    "steam": {
+        "en-US": "steam"
+    },
+    "steam_user": {
+        "en-US": "user"
+    },
+    "about": {
+        "en-US": "about",
+        "zh-TW": "關於機器人"
+    },
+    "info": {
+        "en-US": "info",
+        "zh-TW": "資訊"
+    },
+    "help": {
+        "en-US": "help",
+        "zh-TW": "幫助"
+    },
+    "timeout": {
+        "en-US": "timeout",
+        "zh-TW": "禁言"
+    },
+    "kick": {
+        "en-US": "kick",
+        "zh-TW": "踢出"
+    },
+    "ban": {
+        "en-US": "ban",
+        "zh-TW": "停權"
+    },
+    "link_code": {
+        "en-US": "link_code",
+        "zh-TW": "產生綁定碼"
+    }
+}

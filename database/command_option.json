@@ -1,0 +1,217 @@
+{
+    "channel_set_option": {
+        "1": {
+            "en-US": "All Announcements",
+            "zh-TW": "全群公告"
+        },
+        "2": {
+            "en-US": "Bot Updates",
+            "zh-TW": "機器人更新通知"   
+        },
+        "3": {
+            "en-US": "Significantly Earthquake Notifications",
+            "zh-TW": "顯著有感地震通知"
+        },
+        "12": {
+            "en-US": "Slight Earthquake Notifications",
+            "zh-TW": "小規模地震通知"
+        },
+        "4": {
+            "en-US": "Weather Forecast for Taiwan",
+            "zh-TW": "台灣各縣市天氣預報"
+        },
+        "11":{
+            "en-US": "Weather Warning for Taiwan",
+            "zh-TW": "天氣特警報"
+        },
+        "5":{
+            "en-US": "Apex Map Rotation",
+            "zh-TW": "Apex地圖輪替"
+        },
+        "6": {
+            "en-US": "Member Join Log",
+            "zh-TW": "成員加入日誌"
+        },
+        "13":{
+            "en-US": "Member Leave Log",
+            "zh-TW": "成員離開日誌"
+        },
+        "7": {
+            "en-US": "Member Join",
+            "zh-TW": "成員加入"
+        },
+        "8": {
+            "en-US": "Member Leave",
+            "zh-TW": "成員離開"
+        },
+        "10": {
+            "en-US": "Voice Log",
+            "zh-TW": "語音進出紀錄"
+        }
+    },
+    "game_set_option": {
+        "1": {
+            "en-US": "League of Legends",
+            "zh-TW": "League of Legends"
+        },
+        "2": {
+            "en-US": "Apex Legends",
+            "zh-TW": "Apex Legends"
+        },
+        "3": {
+            "en-US": "Osu",
+            "zh-TW": "Osu"
+        },
+        "4": {
+            "en-US": "Steam",
+            "zh-TW": "Steam"
+        }
+    },
+    "bet_option": {
+        "1": {
+            "en-US": "Blue Side",
+            "zh-TW": "藍藍幫"
+        },
+        "2": {
+            "en-US": "Pink Side",
+            "zh-TW": "粉紅幫"
+        }
+    },
+    "pet_option": {
+        "shark": {
+            "en-US": "Shark",
+            "zh-TW": "鯊魚"
+        },
+        "dog": {
+            "en-US": "Dog",
+            "zh-TW": "狗狗"
+        },
+        "cat": {
+            "en-US": "Cat",
+            "zh-TW": "貓貓"
+        },
+        "fox": {
+            "en-US": "Fox",
+            "zh-TW": "狐狸"
+        },
+        "wolf": {
+            "en-US": "Wolf",
+            "zh-TW": "狼"
+        },
+        "frog": {
+            "en-US": "Frog",
+            "zh-TW": "青蛙"
+        },
+        "rabbit": {
+            "en-US": "Rabbit",
+            "zh-TW": "兔子"
+        }
+    },
+    "info_option": {
+        "help": {
+            "zh-TW": "總表"
+        },
+        "vpn": {
+            "zh-TW": "vpn | vpn列表"
+        },
+        "vpn01": {
+            "zh-TW": "vpn | vpn安裝教學"
+        },
+        "share": {
+            "zh-TW": "share | 雲端共用資料夾"
+        },
+        "mc01": {
+            "zh-TW": "mc | minecraft資料夾"
+        },
+        "mc02": {
+            "zh-TW": "mc | 如何裝模組"
+        },
+        "trpg01": {
+            "zh-TW": "trpg | 參加房間"
+        },
+        "trpg02": {
+            "zh-TW": "trpg | 放入角色"
+        }
+    },
+    "help_option": {
+        "use": {
+            "zh-TW": "使用指令教學（use）"
+        },
+        "channel": {
+            "zh-TW": "通知系統（channel）"
+        },
+        "music": {
+            "zh-TW": "音樂系統（music）"
+        },
+        "pt": {
+            "zh-TW": "點數系統（pt）"
+        },
+        "game": {
+            "zh-TW": "遊戲查詢系統（game）"
+        },
+        "manage": {
+            "zh-TW": "伺服器管理系統（manage）"
+        },
+        "bet": {
+            "zh-TW": "賭盤系統（bet）"
+        },
+        "tool": {
+            "zh-TW": "綜合/實用工具（tool）"
+        },
+        "user": {
+            "zh-TW": "使用者系統（user）"
+        },
+        "social": {
+            "zh-TW": "社群（social）"
+        }
+    },
+    "position_option": {
+        "1": {
+            "zh-TW": "總統",
+            "en-US": "President"
+        },
+        "2": {
+            "zh-TW": "立法院長",
+            "en-US": "Legislative President"
+        },
+        "3": {
+            "zh-TW": "行政院長",
+            "en-US": "Executive President"
+        },
+        "4": {
+            "zh-TW": "司法院長",
+            "en-US": "Judiciary President"
+        }
+    },
+    "party_option": {
+        "1": {
+            "zh-TW": "阿拉花瓜黨"
+        },
+        "2": {
+            "zh-TW": "山珍海味黨"
+        },
+        "3": {
+            "zh-TW": "貢丸殲滅黨"
+        },
+        "4": {
+            "zh-TW": "全國林冠宇神聖階級運動"
+        },
+        "5": {
+            "zh-TW": "台中摃殘黨"
+        },
+        "6": {
+            "zh-TW": "無黨籍"
+        }
+    },
+    "twitch_notify_option": {
+        "1": {
+            "zh-TW": "開台通知"
+        },
+        "3": {
+            "zh-TW": "新影片通知"
+        },
+        "4": {
+            "zh-TW": "新剪輯通知"
+        }
+    }
+}
