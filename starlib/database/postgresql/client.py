@@ -1433,6 +1433,13 @@ class NetworkRepository(BaseRepository):
         result = self.session.exec(stmt).all()
         return result
 
+    def get_ips_not_exist_in_db(self, ips: list[str]):
+        # 查詢哪些 IP 已存在於資料庫中
+        stmt = select(UserIPDetails.ip).where(UserIPDetails.ip.in_(ips))
+        existing_ips = set(self.session.exec(stmt).all())
+        # 返回不存在於資料庫中的 IP
+        return [ip for ip in ips if ip not in existing_ips]
+
 
 class VIPRepository(BaseRepository):
     def get_vip(self, discord_id: int):

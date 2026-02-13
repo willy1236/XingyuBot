@@ -45,7 +45,7 @@ class task(Cog_Extension):
 
             # 背景刷新 - 保留 jitter
             scheduler.add_job(refresh_yt_push, "cron", hour="2/12", minute=0, second=0, jitter=300)
-            # scheduler.add_job(refresh_ip_last_seen_arp, "cron", minute="0/30", second=0, jitter=60, misfire_grace_time=90)
+            scheduler.add_job(refresh_ip_last_seen_arp, "cron", minute="0/20", second=0, jitter=60, misfire_grace_time=90)
             scheduler.add_job(refresh_ip_last_seen_nmap, "cron", minute=15, second=0, jitter=60, misfire_grace_time=90)
             scheduler.add_job(self.save_voice_time, "cron", hour="0/1", minute="0/30", second=0, jitter=60, misfire_grace_time=90)
             scheduler.add_job(refresh_db_cache, "cron", hour="0/2", minute=0, second=0, jitter=60, misfire_grace_time=90)
@@ -475,11 +475,14 @@ async def giveaway_auto_end(bot: discord.Bot, view: GiveawayView):
         return
 
 async def refresh_ip_last_seen_arp():
-    """定時更新IP最後出現時間"""
+    """找出不存在資料庫的IP並更新最後出現時間 (使用ARP)"""
     log.debug("refresh_ip_last_seen start")
     now = datetime.now(tz)
     arp_list = utils.get_arp_list()
-    sqldb.set_ips_last_seen({ip_and_mac: now for ip_and_mac in arp_list})
+    not_exist = [i for i in arp_list if i[0] in sqldb.get_ips_not_exist_in_db([ip for ip, _ in arp_list])]
+    not_exist_ip_details = [UserIPDetails(ip=i[0], last_seen=now, mac=i[1]) for i in not_exist]
+    sqldb.batch_merge(not_exist_ip_details)
+
 
 async def refresh_ip_last_seen_nmap():
     """定時更新IP最後出現時間 (使用Nmap)"""
