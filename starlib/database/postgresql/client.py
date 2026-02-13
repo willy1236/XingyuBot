@@ -1428,6 +1428,11 @@ class NetworkRepository(BaseRepository):
         result = self.session.exec(stmt).all()
         return result
 
+    def get_active_ips(self, active_threshold: datetime = datetime.min.replace(tzinfo=timezone.utc)):
+        stmt = select(UserIPDetails).where(UserIPDetails.last_seen > active_threshold)
+        result = self.session.exec(stmt).all()
+        return result
+
 
 class VIPRepository(BaseRepository):
     def get_vip(self, discord_id: int):

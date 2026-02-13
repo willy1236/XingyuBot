@@ -4,6 +4,7 @@ from datetime import date, datetime, timedelta
 
 import discord
 import genshin
+import nmap
 from discord.commands import SlashCommandGroup
 from discord.ext import commands, pages
 
@@ -822,7 +823,13 @@ class system_game(Cog_Extension):
         if account:
             await ctx.respond(f"此IP位址已註冊過，請確認後再試", ephemeral=True)
             return
-        # TODO: ping test to confirm the IP is valid.
+
+        nm = nmap.PortScanner()
+        nm.scan(hosts=str(ip.network_address), arguments="-sn")
+        if nm[str(ip.network_address)].state() != "up":
+            await ctx.respond(f"此IP位址目前不在線上，請確認後再試", ephemeral=True)
+            return
+
         now = datetime.now(tz)
         account = UserIPDetails(ip=str(ip), last_seen=now, discord_id=ctx.author.id, registration_at=now)
         if name:

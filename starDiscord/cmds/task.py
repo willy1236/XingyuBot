@@ -3,13 +3,14 @@ import subprocess
 from datetime import datetime, timedelta, timezone
 
 import discord
+import nmap
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.date import DateTrigger
 from discord.ext import commands, tasks
 from requests.exceptions import ConnectTimeout, RequestException
 
 from starlib import BotEmbed, Jsondb, log, sclient, sqldb, tz, utils
-from starlib.database import APIType, DBCacheType, NotifyChannelType, NotifyCommunityType, UsersCountRecord, VoiceTime
+from starlib.database import APIType, DBCacheType, NotifyChannelType, NotifyCommunityType, UserIPDetails, UsersCountRecord, VoiceTime
 from starlib.instance import *
 from starlib.providers.social.models import YoutubeVideo
 
@@ -44,7 +45,8 @@ class task(Cog_Extension):
 
             # 背景刷新 - 保留 jitter
             scheduler.add_job(refresh_yt_push, "cron", hour="2/12", minute=0, second=0, jitter=300)
-            scheduler.add_job(refresh_ip_last_seen, "cron", minute="0/20", second=0, jitter=60, misfire_grace_time=90)
+            # scheduler.add_job(refresh_ip_last_seen_arp, "cron", minute="0/30", second=0, jitter=60, misfire_grace_time=90)
+            scheduler.add_job(refresh_ip_last_seen_nmap, "cron", minute=15, second=0, jitter=60, misfire_grace_time=90)
             scheduler.add_job(self.save_voice_time, "cron", hour="0/1", minute="0/30", second=0, jitter=60, misfire_grace_time=90)
             scheduler.add_job(refresh_db_cache, "cron", hour="0/2", minute=0, second=0, jitter=60, misfire_grace_time=90)
 
@@ -472,12 +474,31 @@ async def giveaway_auto_end(bot: discord.Bot, view: GiveawayView):
         log.warning("giveaway_auto_end: message %s not found", view.giveaway.message_id)
         return
 
-async def refresh_ip_last_seen():
+async def refresh_ip_last_seen_arp():
     """定時更新IP最後出現時間"""
     log.debug("refresh_ip_last_seen start")
     now = datetime.now(tz)
     arp_list = utils.get_arp_list()
     sqldb.set_ips_last_seen({ip_and_mac: now for ip_and_mac in arp_list})
+
+async def refresh_ip_last_seen_nmap():
+    """定時更新IP最後出現時間 (使用Nmap)"""
+    log.debug("refresh_ip_last_seen_nmap start")
+    now = datetime.now(tz)
+    ips = sqldb.get_active_ips()
+    ips_string = " ".join([target.ip for target in ips])
+
+    nm = nmap.PortScanner()
+    nm.scan(hosts=ips_string, arguments="-sn --min-parallelism 3")
+
+    # 遍歷所有掃描到的主機 (Iterate through all discovered hosts)
+    active_ips = []
+    for host in nm.all_hosts():
+        if nm[host].state() == "up":
+            active_ips.append(UserIPDetails(ip=host, last_seen=now))
+
+    sqldb.batch_merge(active_ips)
+
 
 async def record_users_count(bot: DiscordBot):
     """定時記錄用戶數量"""
