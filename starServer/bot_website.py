@@ -21,9 +21,10 @@ from linebot.v3.webhooks import MessageEvent, TextMessageContent
 from linebot.v3.webhooks.models.message_event import MessageEvent
 
 from starlib import BaseThread, Jsondb, sclient, sqldb, utils, web_log
-from starlib.database import APIType, ExternalAccount, NotifyCommunityType, PlatformType, TwitchBotJoinChannel, YoutubePushEntry, YoutubeVideoStatue
+from starlib.database import APIType, ExternalAccount, NotifyCommunityType, PlatformType, TwitchBotJoinChannel
 from starlib.instance import google_api
 from starlib.oauth import DiscordOAuth, GoogleOAuth, TwitchOAuth
+from starlib.providers.social.push_models import YoutubePushEntry
 from starlib.starAgent_line import line_agent
 
 discord_oauth_client = sqldb.get_oauth_client(APIType.Discord, 4)
