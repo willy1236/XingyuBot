@@ -46,7 +46,7 @@ class task(Cog_Extension):
             # 背景刷新 - 保留 jitter
             scheduler.add_job(refresh_yt_push, "cron", hour="2/12", minute=0, second=0, jitter=300)
             scheduler.add_job(refresh_ip_last_seen_arp, "cron", minute="0/20", second=0, jitter=60, misfire_grace_time=90)
-            scheduler.add_job(refresh_ip_last_seen_nmap, "cron", minute=15, second=0, jitter=60, misfire_grace_time=90)
+            scheduler.add_job(refresh_ip_last_seen_nmap, "cron", minute="0/15", second=0, jitter=60, misfire_grace_time=90)
             scheduler.add_job(self.save_voice_time, "cron", hour="0/1", minute="0/30", second=0, jitter=60, misfire_grace_time=90)
             scheduler.add_job(refresh_db_cache, "cron", hour="0/2", minute=0, second=0, jitter=60, misfire_grace_time=90)
 
