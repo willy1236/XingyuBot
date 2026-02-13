@@ -1411,13 +1411,6 @@ class CacheRepository(BaseRepository):
 
 
 class NetworkRepository(BaseRepository):
-    def set_ips_last_seen(self, data: dict[tuple[str, str], datetime]):
-        """設定IP最後出現時間"""
-        for (ip, mac), last_seen in data.items():
-            cache = UserIPDetails(ip=ip, mac=mac, last_seen=last_seen)
-            self.session.merge(cache)
-        self.session.commit()
-
     def get_registed_ips_last_seen(self, ip: str | IPv4Network):
         stmt = select(UserIPDetails).where(UserIPDetails.ip == str(ip), UserIPDetails.discord_id.is_not(None))
         result = self.session.exec(stmt).one_or_none()
@@ -1432,13 +1425,6 @@ class NetworkRepository(BaseRepository):
         stmt = select(UserIPDetails).where(UserIPDetails.last_seen > active_threshold)
         result = self.session.exec(stmt).all()
         return result
-
-    def get_ips_not_exist_in_db(self, ips: list[str]):
-        # 查詢哪些 IP 已存在於資料庫中
-        stmt = select(UserIPDetails.ip).where(UserIPDetails.ip.in_(ips))
-        existing_ips = set(self.session.exec(stmt).all())
-        # 返回不存在於資料庫中的 IP
-        return [ip for ip in ips if ip not in existing_ips]
 
 
 class VIPRepository(BaseRepository):

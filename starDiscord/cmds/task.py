@@ -475,13 +475,12 @@ async def giveaway_auto_end(bot: discord.Bot, view: GiveawayView):
         return
 
 async def refresh_ip_last_seen_arp():
-    """找出不存在資料庫的IP並更新最後出現時間 (使用ARP)"""
+    """定時更新IP最後出現時間 (使用ARP)"""
     log.debug("refresh_ip_last_seen start")
     now = datetime.now(tz)
     arp_list = utils.get_arp_list()
-    not_exist = [i for i in arp_list if i[0] in sqldb.get_ips_not_exist_in_db([ip for ip, _ in arp_list])]
-    not_exist_ip_details = [UserIPDetails(ip=i[0], last_seen=now, mac=i[1]) for i in not_exist]
-    sqldb.batch_merge(not_exist_ip_details)
+    details_list = [UserIPDetails(ip=ip, mac=mac, last_seen=now) for ip, mac in arp_list]
+    sqldb.batch_merge(details_list)
 
 
 async def refresh_ip_last_seen_nmap():
