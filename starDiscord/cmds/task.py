@@ -487,7 +487,7 @@ async def refresh_ip_last_seen_nmap():
     """定時更新IP最後出現時間 (使用Nmap)"""
     log.debug("refresh_ip_last_seen_nmap start")
     now = datetime.now(tz)
-    ips = sqldb.get_active_ips()
+    ips = sqldb.get_active_ips(datetime(2025, 8, 11, 0, 0, 0, tzinfo=tz)) # 只掃描最近有活動的IP，減少掃描時間
     ips_string = " ".join([target.ip for target in ips])
 
     nm = nmap.PortScanner()
