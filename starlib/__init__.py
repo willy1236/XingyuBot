@@ -5,7 +5,7 @@ Discord機器人"星羽"用libary
 from datetime import timedelta, timezone
 
 from .base import *
-from .core import StarController, sclient
+from .core import StarEventBus, sclient
 from .database import sqldb
 from .exceptions import *
 from .fileDatabase import Jsondb, csvdb

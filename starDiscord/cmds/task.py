@@ -487,7 +487,7 @@ async def refresh_ip_last_seen_nmap():
     """定時更新IP最後出現時間 (使用Nmap)"""
     log.debug("refresh_ip_last_seen_nmap start")
     now = datetime.now(tz)
-    ips = sqldb.get_active_ips(datetime(2025, 8, 11, 0, 0, 0, tzinfo=tz)) # 只掃描最近有活動的IP，減少掃描時間
+    ips = sqldb.get_active_ips(datetime(2025, 8, 11, 0, 0, 0, tzinfo=tz))  # 現在設定指定時間，之後再改成動態計算過去30天
     ips_string = " ".join([target.ip for target in ips])
 
     nm = nmap.PortScanner()
@@ -507,10 +507,10 @@ async def record_users_count(bot: DiscordBot):
     log.debug("record_users_count start")
     users_count = 0
     servers_count = 0
-    for _ in range(3):
+    for _ in range(5):
         users_count = max(users_count, len(bot.users))
         servers_count = max(servers_count, len(bot.guilds))
-        await asyncio.sleep(30)
+        await asyncio.sleep(120)
     shard_id = bot.shard_id
     record = UsersCountRecord(record_date=datetime.now(tz).date(), users_count=users_count, servers_count=servers_count, shard_id=shard_id)
     sqldb.add(record)

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any
 
 import discord
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -68,20 +69,30 @@ class ElectionSystem():
 
         return embed
 
-class StarController:
+class StarEventBus:
     """整合各項系統的星羽資料管理物件 \\
     :attr sqldb: Mysql Database \\
     :attr starai: AI \\
     :attr bot: Discord Bot \\
     """
-    def __init__(self):
-        super().__init__()
-        self.sqldb = sqldb
-        self.bot:DiscordBot = None
-        self.twitch:Twitch = None
-        self.scheduler: AsyncIOScheduler = None
 
-        self.twitch_bot_thread: BaseThread = None
-        self.website_thread: BaseThread = None
-        self.tunnel_thread: BaseThread = None
-        self.twitchtunnel_thread: BaseThread = None
+    def __init__(self):
+        self.listeners: dict[str, list[Callable[..., Any]]] = {}
+
+        self.sqldb = sqldb
+        self.bot: DiscordBot | None = None
+        self.twitch: Twitch | None = None
+        self.scheduler: AsyncIOScheduler | None = None
+
+        self.twitch_bot_thread: BaseThread | None = None
+        self.website_thread: BaseThread | None = None
+        self.tunnel_thread: BaseThread | None = None
+        self.twitchtunnel_thread: BaseThread | None = None
+
+    def subscribe(self, event_type: str, handler: Callable[..., Any]) -> None:
+        self.listeners.setdefault(event_type, []).append(handler)
+
+    def publish(self, event_type: str, **kwargs: object) -> None:
+        for handler in self.listeners.get(event_type, []):
+            # 這裡可以使用背景任務執行，避免卡住主執行緒
+            handler(**kwargs)
