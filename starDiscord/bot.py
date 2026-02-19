@@ -8,6 +8,7 @@ import discord
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from starlib import BotEmbed, Jsondb, log, sqldb
+from starlib.core.model import TwitchStreamEvent
 from starlib.database import APIType, NotifyChannelType, NotifyCommunityType
 from starlib.instance import debug_mode
 
@@ -219,13 +220,12 @@ class DiscordBot(discord.Bot):
         embed.set_footer(text="此機器人由 威立 負責維護")
         return embed
 
-    def send_message(self, channel_id=566533708371329026, *, content=None, embed=None) -> discord.Message | None:
-        if not content and not embed:
+    async def on_twitch_stream_event(self, event: TwitchStreamEvent):
+        if not event.content and not event.embed:
             raise ValueError("Content and embed must provided at least one.")
-        channel = self.get_channel(channel_id)
+        channel = self.get_channel(event.to_discord_channel)
         if channel:
-            r = asyncio.run_coroutine_threadsafe(channel.send(content=content, embed=embed), self.loop)  # pyright: ignore[reportCallIssue]
-            return r.result()
+            await channel.send(content=event.content, embed=event.embed)
 
 # commands.Bot
 # shard_count=1,

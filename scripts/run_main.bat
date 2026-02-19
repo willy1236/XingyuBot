@@ -1,5 +1,6 @@
 @echo off
 chcp 65001
+
 :: 強制切換到腳本所在的目錄 (C:\google drive\github\XingyuBot\scripts)
 cd /d "%~dp0"
 

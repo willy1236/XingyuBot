@@ -13,8 +13,9 @@ from twitchAPI.object import eventsub
 from twitchAPI.twitch import Twitch
 from twitchAPI.type import AuthScope, ChatEvent, EventSubSubscriptionError, EventSubSubscriptionTimeout, InvalidTokenException, MissingScopeException
 
-from starlib import BaseThread, BotEmbed, Jsondb, sclient, sqldb, twitch_log
-from starlib.database import APIType, NotifyCommunityType, TwitchChatCommand
+from starlib import BaseThread, BotEmbed, Jsondb, sclient, twitch_log  # TODO: 全面改用 eventbus
+from starlib.core.model import TwitchStreamEvent
+from starlib.database import APIType, NotifyCommunityType, TwitchChatCommand, sqldb
 from starlib.instance import tw_api
 
 USER_SCOPE = [
@@ -61,31 +62,24 @@ chat:"Chat"
 # eventsub
 async def on_follow(event: eventsub.ChannelFollowEvent):
     #await chat.send_message(data.event.broadcaster_user_name,text = f'{data.event.user_name} now follows {data.event.broadcaster_user_name}!')
-    twitch_log.info(f"{event.event.user_name}({event.event.user_login}) now follows {event.event.broadcaster_user_name}!")
+    twitch_log.info(f"%s(%s) now follows %s!", event.event.user_name, event.event.user_login, event.event.broadcaster_user_name)
 
     channel_config = join_channels.get(int(event.event.broadcaster_user_id))
-    if not channel_config:
-        return
-
-    if channel_config.action_channel_id and sclient.bot:
-        sclient.bot.send_message(
-            channel_config.action_channel_id,
-            embed=BotEmbed.simple("新追隨", f"{event.event.user_name}({event.event.user_login}) 正在追隨 {event.event.broadcaster_user_name}!"),
-        )
+    if channel_config and channel_config.action_channel_id:
+        sclient.publish(TwitchStreamEvent(content=f"{event.event.user_name}({event.event.user_login}) 正在追隨 {event.event.broadcaster_user_name}!", to_discord_channel=channel_config.action_channel_id))
 
 
 async def on_stream_online(event: eventsub.StreamOnlineEvent):
-    twitch_log.info(f"{event.event.broadcaster_user_name} starting stream!")
+    twitch_log.info(f"%s starting stream!", event.event.broadcaster_user_name)
 
     live = tw_api.get_lives(event.event.broadcaster_user_id)[event.event.broadcaster_user_id]
     channel_config = join_channels.get(int(event.event.broadcaster_user_id))
     if channel_config and channel_config.action_channel_id:
         await chat.send_message(event.event.broadcaster_user_login, f"{event.event.broadcaster_user_name} 正在直播 {live.game_name}! {live.title}")
 
-    if sclient.bot:
-        sclient.bot.send_message(content=f"{event.event.broadcaster_user_name} 正在直播 {live.game_name}!")
+        sclient.publish(TwitchStreamEvent(content=f"{event.event.broadcaster_user_name} 正在直播 {live.game_name}!", to_discord_channel=channel_config.action_channel_id))
         is_live = bool(sclient.sqldb.get_community_cache(NotifyCommunityType.TwitchLive, event.event.broadcaster_user_id))
-        twitch_log.debug(f"{event.event.broadcaster_user_name} is live: {is_live}")
+        twitch_log.debug(f"%s is live: %s", event.event.broadcaster_user_name, is_live)
         if not is_live:
             profile_image_url = tw_api.get_user_by_id(event.event.broadcaster_user_id).profile_image_url
             embed = live.embed(profile_image_url)
@@ -94,13 +88,12 @@ async def on_stream_online(event: eventsub.StreamOnlineEvent):
 
 
 async def on_stream_offline(event: eventsub.StreamOfflineEvent):
-    twitch_log.info(f"{event.event.broadcaster_user_name} ending stream.")
-    if sclient.bot:
-        sclient.bot.send_message(content=f"{event.event.broadcaster_user_name} ending stream.")
+    twitch_log.info(f"%s ending stream.", event.event.broadcaster_user_name)
+    sclient.publish(TwitchStreamEvent(content=f"{event.event.broadcaster_user_name} ending stream."))
 
-        is_live = bool(sclient.sqldb.get_community_cache(NotifyCommunityType.TwitchLive, event.event.broadcaster_user_id))
-        if is_live:
-            sclient.sqldb.set_community_cache(NotifyCommunityType.TwitchLive, event.event.broadcaster_user_id, None)
+    is_live = bool(sclient.sqldb.get_community_cache(NotifyCommunityType.TwitchLive, event.event.broadcaster_user_id))
+    if is_live:
+        sclient.sqldb.set_community_cache(NotifyCommunityType.TwitchLive, event.event.broadcaster_user_id, None)
 
 
 async def on_channel_points_custom_reward_redemption_add(event: eventsub.ChannelPointsCustomRewardRedemptionAddEvent):
@@ -110,41 +103,36 @@ async def on_channel_points_custom_reward_redemption_add(event: eventsub.Channel
     twitch_log.info(text)
 
     channel_config = join_channels.get(int(event.event.broadcaster_user_id))
-    if channel_config.action_channel_id and sclient.bot:
-        sclient.bot.send_message(channel_config.action_channel_id, embed=BotEmbed.simple("兌換自訂獎勵",text))
+    if channel_config and channel_config.action_channel_id:
+        sclient.publish(TwitchStreamEvent(content=text, to_discord_channel=channel_config.action_channel_id))
 
 
 async def on_channel_points_custom_reward_redemption_update(event: eventsub.ChannelPointsCustomRewardRedemptionUpdateEvent):
-    twitch_log.info(f"{event.event.user_name}'s redemption of {event.event.reward.title} has been updated to {event.event.status}!")
+    twitch_log.info(f"%s's redemption of %s has been updated to %s!", event.event.user_name, event.event.reward.title, event.event.status)
 
 
 async def on_channel_raid(event:eventsub.ChannelRaidEvent):
-    twitch_log.info(f"{event.event.from_broadcaster_user_name} 帶了 {event.event.viewers} 位觀眾來 {event.event.to_broadcaster_user_name} 的頻道！")
+    twitch_log.info(f"%s 帶了 %s 位觀眾來 %s 的頻道！", event.event.from_broadcaster_user_name, event.event.viewers, event.event.to_broadcaster_user_name)
 
     channel_config = join_channels.get(int(event.event.to_broadcaster_user_id))
-    if channel_config.action_channel_id:
+    if channel_config and channel_config.action_channel_id:
         await chat.send_message(
             event.event.to_broadcaster_user_login,
             f"{event.event.from_broadcaster_user_name} 帶了 {event.event.viewers} 位觀眾降落在 {event.event.to_broadcaster_user_name} 的頻道！",
         )
 
-        if sclient.bot:
-            sclient.bot.send_message(
-                channel_config.action_channel_id,
-                embed=BotEmbed.simple(
-                    "揪團", f"{event.event.from_broadcaster_user_name} 帶了 {event.event.viewers} 位觀眾降落在 {event.event.to_broadcaster_user_name} 的頻道!"
-                ),
-            )
+        sclient.publish(
+            TwitchStreamEvent(content=f"{event.event.from_broadcaster_user_name} 帶了 {event.event.viewers} 位觀眾降落在 {event.event.to_broadcaster_user_name} 的頻道!", to_discord_channel=channel_config.action_channel_id)
+        )
 
 
 async def on_channel_subscribe(event: eventsub.ChannelSubscribeEvent):
-    twitch_log.info(f"{event.event.user_name} 在 {event.event.broadcaster_user_name} 的層級{event.event.tier[0]}新訂閱")
+    twitch_log.info(f"%s 在 %s 的層級%s新訂閱", event.event.user_name, event.event.broadcaster_user_name, event.event.tier[0])
 
     channel_config = join_channels.get(int(event.event.broadcaster_user_id))
-    if channel_config.action_channel_id and not event.event.is_gift:
+    if channel_config and channel_config.action_channel_id and not event.event.is_gift:
         # await chat.send_message(event.event.broadcaster_user_login, f"感謝 {event.event.user_name} 的訂閱！")
-        if sclient.bot:
-            sclient.bot.send_message(embed=BotEmbed.simple("subscribe", f"感謝 {event.event.user_name} 的訂閱！"))
+        sclient.publish(TwitchStreamEvent(content=f"感謝 {event.event.user_name} 的訂閱！", to_discord_channel=channel_config.action_channel_id))
 
 
 async def on_channel_subscription_message(event: eventsub.ChannelSubscriptionMessageEvent):
@@ -159,40 +147,33 @@ async def on_channel_subscription_message(event: eventsub.ChannelSubscriptionMes
         twitch_log.info(text)
 
     channel_config = join_channels.get(int(event.event.broadcaster_user_id))
-    if channel_config.action_channel_id:
+    if channel_config and channel_config.action_channel_id:
         chat_text = f"感謝 {event.event.user_name} 的訂閱！"
         if event.event.cumulative_months:
             chat_text += f"累積訂閱{event.event.cumulative_months}個月！"
         await chat.send_message(event.event.broadcaster_user_login, chat_text)
 
-        if sclient.bot:
-            sclient.bot.send_message(channel_config.action_channel_id, embed=BotEmbed.simple("新訂閱", "\n".join(texts)))
-            sclient.bot.send_message(embed=BotEmbed.simple("subscription_message", "\n".join(texts)))
+        sclient.publish(TwitchStreamEvent(content=f"感謝 {event.event.user_name} 的訂閱！\n累積訂閱{event.event.cumulative_months}個月！", to_discord_channel=channel_config.action_channel_id))
+        sclient.publish(TwitchStreamEvent(content="\n".join(texts), to_discord_channel=channel_config.action_channel_id))
 
 
 async def on_channel_subscription_gift(event: eventsub.ChannelSubscriptionGiftEvent):
     twitch_log.info(f"{event.event.user_name} 在 {event.event.broadcaster_user_name} 送出的{event.event.total}份層級{event.event.tier[0]}訂閱")
     channel_config = join_channels.get(int(event.event.broadcaster_user_id))
-    if channel_config.action_channel_id and not event.event.is_anonymous:
+    if channel_config and channel_config.action_channel_id and not event.event.is_anonymous:
         await chat.send_message(event.event.broadcaster_user_login, f"感謝 {event.event.user_name} 送出的{event.event.total}份訂閱！")
 
 
 async def on_channel_poll_begin(event: eventsub.ChannelPollBeginEvent):
     twitch_log.info(f"{event.event.broadcaster_user_name} 開始了投票：{event.event.title}")
-    if sclient.bot:
-        sclient.bot.send_message(embed=BotEmbed.general(event.event.broadcaster_user_name, description=f"{event.event.title}\n{event.event.choices}"))
+    sclient.publish(TwitchStreamEvent(content=f"{event.event.broadcaster_user_name} 開始了投票：{event.event.title}\n{event.event.choices}"))
 
 
 async def on_channel_prediction_begin(event: eventsub.ChannelPredictionEvent):
     twitch_log.info(
         f"{event.event.broadcaster_user_name} 開始了預測：{event.event.title}\n{event.event.outcomes[0].title} V.S. {event.event.outcomes[1].title}"
     )
-    if sclient.bot:
-        sclient.bot.send_message(
-            embed=BotEmbed.general(
-                event.event.broadcaster_user_name, description=f"{event.event.title}\n{event.event.outcomes[0].title} V.S. {event.event.outcomes[1].title}"
-            )
-        )
+    sclient.publish(TwitchStreamEvent(content=f"{event.event.broadcaster_user_name} 開始了預測：{event.event.title}\n{event.event.outcomes[0].title} V.S. {event.event.outcomes[1].title}"))
 
 
 async def on_channel_prediction_end(event: eventsub.ChannelPredictionEndEvent):
@@ -201,19 +182,14 @@ async def on_channel_prediction_end(event: eventsub.ChannelPredictionEndEvent):
         for outcome in event.event.outcomes:
             if outcome.id == event.event.winning_outcome_id:
                 twitch_log.info(f"{outcome.title} ({outcome.color}) 獲勝！{outcome.users}個人成功預測")
-                if sclient.bot:
-                    sclient.bot.send_message(
-                        embed=BotEmbed.general(
-                            event.event.broadcaster_user_name, description=f"{event.event.title}\n{outcome.title} 獲勝！{outcome.users}個人成功預測"
-                        )
-                    )
+                sclient.publish(TwitchStreamEvent(embed=BotEmbed.general(event.event.broadcaster_user_name, description=f"{event.event.title}\n{outcome.title} 獲勝！{outcome.users}個人成功預測")))
     else:
         twitch_log.info(f"{event.event.broadcaster_user_name} 取消了預測：{event.event.title}")
 
 
 # bot
 async def on_ready(ready_event: EventData):
-    twitch_log.info(f"Bot is ready as {ready_event.chat.username}, joining channels")
+    twitch_log.info("Bot is ready as %s, joining channels", ready_event.chat.username)
     # join our target channel, if you want to join multiple, either call join for each individually
     # or even better pass a list of channels as the argument
     if users_login:
@@ -222,46 +198,45 @@ async def on_ready(ready_event: EventData):
 
 # this will be called whenever a message in a channel was send by either the bot OR another user
 async def on_message(msg: ChatMessage):
-    twitch_log.info(f"in {msg.room.name}, {msg.user.name} said: {msg.text}")
+    twitch_log.info("in %s, %s said: %s", msg.room.name, msg.user.name, msg.text)
 
 
 async def on_sub(sub: ChatSub):
-    twitch_log.info(f"New subscription in {sub.room.name}:")
-    twitch_log.info(f"Type: {sub.sub_plan_name}")
-    twitch_log.info(f"Message: {sub.sub_message}")
-    twitch_log.info(f"System message: {sub.system_message}")
+    twitch_log.info("New subscription in %s:", sub.room.name)
+    twitch_log.info("Type: %s", sub.sub_plan_name)
+    twitch_log.info("Message: %s", sub.sub_message)
+    twitch_log.info("System message: %s", sub.system_message)
 
 
 async def on_bot_joined(event: JoinedEvent):
     await asyncio.sleep(1)
-    text = f"Joined bot in {event.room_name}"
+    text = "Joined bot in %s"
     if event.chat.is_mod(event.room_name):
         text += " as mod"
-    twitch_log.info(text)
+    twitch_log.info(text, event.room_name)
 
 
 async def on_bot_leaved(event: LeftEvent):
-    twitch_log.info(f"Leaved bot in {event.room_name}")
+    twitch_log.info("Leaved bot in %s", event.room_name)
 
 
 async def on_server_notice(event: NoticeEvent):
     if event.room:
-        twitch_log.info(f"Notice from server: {event.message} in {event.room.name}")
+        twitch_log.info("Notice from server: %s in %s", event.message, event.room.name)
     else:
-        twitch_log.info(f"Notice from server: {event.message}")
+        twitch_log.info("Notice from server: %s", event.message)
 
 
 async def on_whisper(event: WhisperEvent):
-    twitch_log.info(f"Whisper from {event.user.name}: {event.message}")
-    if sclient.bot:
-        sclient.bot.send_message(embed=BotEmbed.general(event.user.name, Jsondb.get_picture("twitch_001"), description=event.message))
+    twitch_log.info("Whisper from %s: %s", event.user.name, event.message)
+    sclient.publish(TwitchStreamEvent(embed=BotEmbed.general(event.user.name, Jsondb.get_picture("twitch_001"), description=event.message)))
 
 
 async def on_raid(event: dict):
     try:
-        twitch_log.info(f"Raid from {event['tags']['display-name']} with {event['tags']['msg-param-viewerCount']} viewers")
+        twitch_log.info("Raid from %s with %s viewers", event["tags"]["display-name"], event["tags"]["msg-param-viewerCount"])
     except Exception:
-        twitch_log.info(event)
+        twitch_log.warning(event)
 
 
 async def add_chat_command(cmd: ChatCommand):
@@ -499,7 +474,6 @@ async def run():
 
         twitch_log.debug(f"eventsub for {user.login}(mod) done.")
 
-    sclient.twitch = twitch
     return chat, twitch, eventsub
 
 
