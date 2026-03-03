@@ -341,10 +341,7 @@ class event(Cog_Extension):
     @commands.Cog.listener("on_voice_state_update")
     async def dynamic_room_trigger(self, member: discord.Member, before: discord.VoiceState, after: discord.VoiceState):
         # 動態語音
-        if not after.channel:
-            return
-        lobby_data = sclient.sqldb.cache.dynamic_voice_lobby.get(after.channel.id)
-        if lobby_data:
+        if after.channel and (lobby_data := sclient.sqldb.cache.dynamic_voice_lobby.get(after.channel.id)):
             # 新增
             guild = after.channel.guild
             category = after.channel.category
