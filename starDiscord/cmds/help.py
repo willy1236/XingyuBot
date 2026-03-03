@@ -11,7 +11,7 @@ help_option = ChoiceList.set("help_option")
 
 info_data = {
     "help": "總表 | info可用選項\n指令用法:/info <參數>\nvpn類\nvpn | vpn列表\nvpn01 | vpn使用教學\n\nminecraft類\nmc | minecraft總表\nmc01 | minecraft資料夾\nmc02 | 如何裝模組\n\n共用類\nshare | 雲端共用資料夾資訊",
-    "vpn": "vpn | vpn列表\nRadmin VPN\n名稱：`willy1236_1` 密：`123456987` | 一號房間\n\nzerotier\nID：`b15644912ed8306b` | 一號房間\n申請進入zerotier的房間後記得通知房間的管理員幫你認證喔\n如有需要列在此表上請聯絡擁有者",
+    "vpn": "vpn | vpn列表\nRadmin VPN\n名稱：`willy1236_1` 密：`123456987` | 一號房間\n\nzerotier\nID：`b15644912ed8306b` | 一號房間\n- 申請進入zerotier的房間後需要管理員或機器人幫你認證喔\n- 如有需要列在此表上請聯絡擁有者\n- 請記得完成改名與登記資料，以免大家不知道你是誰",
     "vpn01": "vpn01 | vpn安裝教學\nWindow版\n1. 下載Radmin vpn\nhttps://www.radmin-vpn.com/tw/\n2. 選擇 加入網路 並輸入名稱及密碼（如果不知道要輸入什麼可以使用`/info vpn`查詢）\n3. 記得 改名 讓大家知道你是誰\n4. 回到Discord輸入`/game radmin`登記你的相關資料\n\nMacOS/Window版\n1. 下載zerotier並安裝\nhttps://www.zerotier.com/download/\n2. 右下角小工具中找到zerotier並右鍵點擊\n3. 選擇Join New Network\n4. 輸入房間ID\n5. 回到右下角小工具，再次點擊右鍵開啟選單，點擊My Adderess: ... 複製Adderess\n6. 回到Discord輸入`/game zerotier`打上得到的Adderess\n\nIP依據開伺服器的方式不同分為\n區域網: xxx.xxx.xxx.xxx:ooooo\n伺服器: xxx.xxx.xxx.xxx\nx:開地圖的人的IP（VPN的IP）\no:公開至區網時會顯示的連接埠數字\n如果埠號為25565（Minecraft預設）則可以省略，伺服器不用連接埠數字同理，但若伺服器不是開在25565上一樣需要輸入數字喔",
     "share": "雲端共用資料夾 | 94共用啦\n可以在這裡下載或共用檔案\n請使用/drive或洽威立以取得雲端權限",
     "mc": "總表 | mc可用選項\nmc01 | minecraft資料夾\nmc02 | 如何裝模組",

@@ -112,7 +112,7 @@ class BotEmbed:
         embed = discord.Embed(description=f"{warn_user.mention}：{reason}", color=0xc4e9ff)
         embed.set_author(name=f"{warn_user.name} {title}",icon_url=warn_user.display_avatar.url)
         embed.add_field(name="執行人員",value=moderate_user.mention)
-        embed.add_field(name="結束時間", value=f"{discord.utils.format_dt(timestamp, style='t')}（{last.total_seconds():0f}s）")
+        embed.add_field(name="結束時間", value=f"{discord.utils.format_dt(timestamp, style='t')}（{last.total_seconds():.0f}s）")
         embed.timestamp = create_at
         return embed
 

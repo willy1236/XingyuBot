@@ -18,7 +18,8 @@ from starlib.utils.utility import find_radmin_vpn_network
 
 if TYPE_CHECKING:
     from starlib.database import SQLRepository
-    from starlib.models import McssServer, PollOption, ReactionRoleOption, TRPGStoryOption, TRPGStoryPlot
+    from starlib.database.postgresql.models import PollOption, ReactionRoleOption, TRPGStoryOption, TRPGStoryPlot
+    from starlib.providers import McssServer
 
 class DeletePetView(discord.ui.View):
     def __init__(self):

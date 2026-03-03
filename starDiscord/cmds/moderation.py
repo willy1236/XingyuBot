@@ -349,6 +349,7 @@ class moderation(Cog_Extension):
         message_id: discord.Option(str, name="訊息id", description="要設定的訊息id，若無則由機器人創建", required=False),
         text: discord.Option(str, name="訊息文字", description="機器人發送新訊息時的文字", default="請依自身喜好點選身分組"),
     ):
+        # TODO: 設定不同頻道訊息
         await ctx.defer()
         if message_id:
             message: discord.Message | None = self.bot.get_message(int(message_id)) or await ctx.channel.fetch_message(int(message_id))
