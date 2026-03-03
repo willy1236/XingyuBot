@@ -81,3 +81,7 @@ class UsersSchema(BaseSchema):
 class GuildsSchema(BaseSchema):
     __abstract__ = True
     __table_args__ = {"schema": "guilds"}
+
+class DiscordUsersSchema(BaseSchema):
+    __abstract__ = True
+    __table_args__ = {"schema": "discord_users"}

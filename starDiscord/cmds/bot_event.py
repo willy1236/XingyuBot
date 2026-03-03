@@ -341,11 +341,11 @@ class event(Cog_Extension):
     @commands.Cog.listener("on_voice_state_update")
     async def dynamic_room_trigger(self, member: discord.Member, before: discord.VoiceState, after: discord.VoiceState):
         # 動態語音
-        if after.channel and after.channel.id in sclient.sqldb[DBCacheType.DynamicVoiceLobby]:
+        lobby_data = sclient.sqldb.cache.dynamic_voice_lobby.get(after.channel.id)
+        if after.channel and lobby_data:
             # 新增
             guild = after.channel.guild
             category = after.channel.category
-            lobby_data = sclient.sqldb[DBCacheType.DynamicVoiceLobby][after.channel.id]
             me = after.channel.guild.me
             # permission = discord.Permissions.advanced()
             # permission.manage_channels = True
@@ -421,8 +421,8 @@ class event(Cog_Extension):
 
         # 語音進出紀錄
         if voice_updata:
-            voice_log_dict = sclient.sqldb[NotifyChannelType.VoiceLog]
-            if guildid in voice_log_dict:
+            voice_log_data = sclient.sqldb.cache.voice_log.get(guildid)
+            if voice_log_data is not None:
                 NowTime = datetime.now()
                 before_text = ""
                 after_text = ""
@@ -449,7 +449,7 @@ class event(Cog_Extension):
                 embed.set_author(name=username,icon_url=member.display_avatar.url)
                 embed.set_footer(text=member.guild.name)
 
-                await self.bot.get_channel(voice_log_dict[guildid][0]).send(embed=embed)
+                await self.bot.get_channel(voice_log_data[0]).send(embed=embed)
 
         # 舞台發言
         # if check_event_stage(before) or check_event_stage(after):
