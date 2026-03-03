@@ -311,7 +311,11 @@ class task(Cog_Extension):
 
     async def add_voice_time(self):
         log.debug("add_voice_time start")
-        for guild_id in sqldb[DBCacheType.VoiceTimeCounter]:
+        voice_time_counter = sqldb.cache.voice_time_counter.raw()
+        if not voice_time_counter:
+            log.debug("Voice time counter cache is empty")
+            return
+        for guild_id in voice_time_counter:
             guild = self.bot.get_guild(guild_id)
             if not guild:
                 log.warning(f"Guild not found for voice time counting: {guild_id}")
