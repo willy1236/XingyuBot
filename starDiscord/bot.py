@@ -73,7 +73,7 @@ class DiscordBot(discord.Bot):
             embed.add_field(name="參考訊息", value=f"[{refer_msg.content}]({refer_msg.jump_url})", inline=False)
             embed.add_field(name="訊息ID", value=refer_msg.id, inline=True)
             embed.add_field(name="來源頻道", value=f"{refer_msg.channel}\n{refer_msg.channel.id}", inline=True)
-            embed.add_field(name="來源群組", value=f"{refer_msg.guild}\n{refer_msg.guild.id}", inline=True)
+            embed.add_field(name="來源群組", value=f"{refer_msg.guild}\n{refer_msg.guild.id if refer_msg.guild else '無'}", inline=True)
         else:
             embed.add_field(name="訊息ID", value="無", inline=True)
 
