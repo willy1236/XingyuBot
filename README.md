@@ -149,8 +149,6 @@ scripts/run_main.bat
 - `SQLsettings`：PostgreSQL 連線設定
 - 各項 API Token 儲存於資料庫中
 
-## 授權
-
-本專案為私人專案。
+## 使用素材 
 
 [[使用素材]](/docs/material.md)
