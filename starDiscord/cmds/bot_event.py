@@ -381,14 +381,17 @@ class event(Cog_Extension):
                         overwrite.manage_roles = None
 
                     new_channel = await guild.create_voice_channel(name=channel_name, reason="動態語音：新增", category=category, overwrites=overwrites)
+                    log.debug("Created dynamic voice channel %s without manage_roles permission in %s", new_channel.id, guild.id)
                 except discord.errors.Forbidden as e:
                     await after.channel.send(f"{member.mention} 我無法創建動態語音頻道，請檢查我的權限", delete_after=10)
+                    log.debug("Failed to create dynamic voice channel %s in %s", new_channel.id, guild.id)
                     return
             sclient.sqldb.add_dynamic_voice(new_channel.id, member.id, guild.id)
             try:
                 await member.move_to(new_channel)
             except discord.errors.HTTPException:
                 await after.channel.send(f"{member.mention} 我無法把你移動至 {new_channel.mention}", delete_after=10)
+                log.debug("Failed to move member %s to dynamic voice channel %s in %s", member.id, new_channel.id, guild.id)
 
             await asyncio.sleep(2)
             # 檢查使用者是否進入
