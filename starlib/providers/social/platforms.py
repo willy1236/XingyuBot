@@ -635,8 +635,12 @@ class CLIInterface:
         try:
             results = RettiwtTweetTimeLineResponse(**data)
         except Exception as e:
-            log.error("get_user_timeline 解析JSON失敗，輸出內容：%s，錯誤訊息：%s", r.stdout, e)
+            log.error("get_user_timeline 解析JSON失敗", r.stdout, e)
+            log.error("輸出內容：%s", r.stdout)
+            log.error("錯誤內容：%s", r.stderr)
+            log.error("例外堆疊：", exc_info=True)
             return None
+
         if after:
             results.list = [i for i in results.list if i.createdAt > after and i.tweetBy.id == user_id]
         else:
