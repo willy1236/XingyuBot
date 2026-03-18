@@ -343,7 +343,7 @@ class BetRepository(BaseRepository):
 
 
 class GameRepository(BaseRepository):
-    def get_user_game(self, discord_id: int, game: GameType):
+    def get_user_game(self, discord_id: int, game: PlatformType):
         stmt = select(UserGame).where(UserGame.discord_id == discord_id, UserGame.game == game)
         result = self.session.exec(stmt).one_or_none()
         return result
@@ -353,7 +353,7 @@ class GameRepository(BaseRepository):
         result = self.session.exec(stmt).all()
         return result
 
-    def remove_user_game(self, discord_id: int, game: GameType):
+    def remove_user_game(self, discord_id: int, game: PlatformType):
         stmt = delete(UserGame).where(UserGame.discord_id == discord_id, UserGame.game == game)
         self.session.exec(stmt)
         self.session.commit()

@@ -49,6 +49,12 @@ class PlatformType(IntEnum):
     Google = 4
     Twitter = 5
 
+    LOL = 101
+    Apex = 102
+    Osu = 103
+    Steam = 104
+    Minecraft = 105
+
     @classmethod
     def from_notify(cls, key: NotifyCommunityType):
         return notify_to_platform_map.get(key)
@@ -61,12 +67,7 @@ notify_to_platform_map = {
     NotifyCommunityType.Youtube: PlatformType.Google,
     NotifyCommunityType.TwitterTweet: PlatformType.Twitter,
 }
-class GameType(IntEnum):
-    LOL = 1
-    Apex = 2
-    Osu = 3
-    Steam = 4
-    Minecraft = 5
+
 class McssServerAction(IntEnum):
     Unknown = 0
     Stop = 1

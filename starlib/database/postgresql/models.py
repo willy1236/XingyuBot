@@ -34,7 +34,7 @@ class ExternalAccount(UsersSchema, table=True):
     user_id: int = Field(foreign_key="users.cloud_user.id", index=True)
 
     # 平台類型與該平台的唯一 ID
-    platform: GameType = Field(sa_column=Column(SmallInteger, index=True))
+    platform: PlatformType = Field(sa_column=Column(SmallInteger, index=True))
     external_id: str = Field(sa_column=Column(String, index=True))
 
     # 顯示名稱 (例如 Discord 名稱或遊戲 ID)
@@ -103,7 +103,7 @@ class UserGame(UserSchema, table=True):
     __tablename__ = "game_data"
 
     discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True, autoincrement=False))
-    game: GameType = Field(sa_column=Column(SmallInteger, primary_key=True, autoincrement=False))
+    game: PlatformType = Field(sa_column=Column(SmallInteger, primary_key=True, autoincrement=False))
     player_name: str = Field(sa_column=Column(String))
     player_id: str | None = Field(sa_column=Column(String))
     account_id: str | None = Field(sa_column=Column(String))

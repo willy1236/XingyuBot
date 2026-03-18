@@ -9,7 +9,7 @@ from discord.commands import SlashCommandGroup
 from discord.ext import commands, pages
 
 from starlib import BotEmbed, ChoiceList, Jsondb, csvdb, log, sclient, tz
-from starlib.database import GameType, LOLGameCache, LOLGameRecord, UserGame, UserIPDetails
+from starlib.database import LOLGameCache, LOLGameRecord, PlatformType, UserGame, UserIPDetails
 from starlib.exceptions import APIInvokeError
 from starlib.providers import *
 
@@ -27,7 +27,7 @@ hoyo_game_option = [
 riot_api = RiotAPI()
 
 def get_riot_account_puuid(user: discord.User, riot_id: str = None) -> str | None:
-    user_game = sclient.sqldb.get_user_game(user.id, GameType.LOL)
+    user_game = sclient.sqldb.get_user_game(user.id, PlatformType.LOL)
     if user_game:
         return user_game.other_id
 
@@ -56,7 +56,7 @@ class system_game(Cog_Extension):
     ):
         await ctx.defer()
         id = str(ctx.author.id)
-        game = GameType(game)
+        game = PlatformType(game)
         if not value:
             sclient.sqldb.remove_user_game(id, game)
             await ctx.respond(f"已將{game}資料移除")
@@ -68,7 +68,7 @@ class system_game(Cog_Extension):
         if game in unneed_verify:
             user_game.player_name = value
 
-        elif game == GameType.Steam:
+        elif game == PlatformType.Steam:
             APIdata = SteamAPI().get_user(value)
             if APIdata:
                 user_game.player_name = APIdata.name
@@ -77,7 +77,7 @@ class system_game(Cog_Extension):
                 await ctx.respond(f"錯誤:找不到此用戶", ephemeral=True)
                 return
 
-        elif game == GameType.LOL:
+        elif game == PlatformType.LOL:
             riot_user = riot_api.get_riot_account_byname(value)
             APIdata = riot_api.get_player_bypuuid(riot_user.puuid)
             if APIdata:
@@ -87,7 +87,7 @@ class system_game(Cog_Extension):
                 await ctx.respond(f"錯誤:找不到此用戶", ephemeral=True)
                 return
 
-        elif game == GameType.Apex:
+        elif game == PlatformType.Apex:
             APIdata = ApexAPI().get_player(value)
             if APIdata:
                 user_game.player_name = APIdata.name
@@ -96,7 +96,7 @@ class system_game(Cog_Extension):
                 await ctx.respond(f"錯誤:找不到此用戶", ephemeral=True)
                 return
 
-        elif game == GameType.Osu:
+        elif game == PlatformType.Osu:
             APIdata = OsuAPI().get_player(value)
             if APIdata:
                 user_game.player_name = APIdata.name
@@ -137,7 +137,7 @@ class system_game(Cog_Extension):
         assert isinstance(riot_id, str) or riot_id is None, "riot_id must be a string or None"
 
         if not riot_id:
-            user_game = sclient.sqldb.get_user_game(ctx.author.id, GameType.LOL)
+            user_game = sclient.sqldb.get_user_game(ctx.author.id, PlatformType.LOL)
             if not user_game:
                 await ctx.respond("查詢失敗：無設定ID", ephemeral=True)
                 return
