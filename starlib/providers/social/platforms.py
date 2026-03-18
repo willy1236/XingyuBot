@@ -632,11 +632,11 @@ class CLIInterface:
         r.check_returncode()
         data = json.loads(r.stdout)
 
-        if data.get("name") == "VALIDATION_ERROR" or isinstance(data.get("list"), dict):
-            log.error("get_user_timeline 解析JSON失敗，輸出內容：%s", r.stdout)
+        try:
+            results = RettiwtTweetTimeLineResponse(**data)
+        except Exception as e:
+            log.error("get_user_timeline 解析JSON失敗，輸出內容：%s，錯誤訊息：%s", r.stdout, e)
             return None
-
-        results = RettiwtTweetTimeLineResponse(**data)
         if after:
             results.list = [i for i in results.list if i.createdAt > after and i.tweetBy.id == user_id]
         else:
