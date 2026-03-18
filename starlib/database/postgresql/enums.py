@@ -45,38 +45,28 @@ cache_dict = {
 class PlatformType(IntEnum):
     Discord = 1
     Twitch = 2
+    Spotify = 3
+    Google = 4
+    Twitter = 5
+
+    @classmethod
+    def from_notify(cls, key: NotifyCommunityType):
+        return notify_to_platform_map.get(key)
 
 
+notify_to_platform_map = {
+    NotifyCommunityType.TwitchLive: PlatformType.Twitch,
+    NotifyCommunityType.TwitchVideo: PlatformType.Twitch,
+    NotifyCommunityType.TwitchClip: PlatformType.Twitch,
+    NotifyCommunityType.Youtube: PlatformType.Google,
+    NotifyCommunityType.TwitterTweet: PlatformType.Twitter,
+}
 class GameType(IntEnum):
     LOL = 1
     Apex = 2
     Osu = 3
     Steam = 4
     Minecraft = 5
-
-
-class CommunityType(IntEnum):
-    Discord = 1
-    Twitch = 2
-    Spotify = 3
-    Youtube = 4
-    Google = 4
-    Twitter = 5
-
-    @classmethod
-    def from_notify(cls, key: NotifyCommunityType):
-        return notify_to_community_map.get(key)
-
-
-notify_to_community_map = {
-    NotifyCommunityType.TwitchLive: CommunityType.Twitch,
-    NotifyCommunityType.Youtube: CommunityType.Youtube,
-    NotifyCommunityType.TwitchVideo: CommunityType.Twitch,
-    NotifyCommunityType.TwitchClip: CommunityType.Twitch,
-    NotifyCommunityType.TwitterTweet: CommunityType.Twitter,
-}
-
-
 class McssServerAction(IntEnum):
     Unknown = 0
     Stop = 1

@@ -451,7 +451,7 @@ class NotifyRepository(BaseRepository):
         community = NotifyCommunity(
             notify_type=notify_type,
             community_id=str(community_id),
-            community_type=CommunityType.from_notify(notify_type),
+            community_type=PlatformType.from_notify(notify_type),
             guild_id=guild_id,
             channel_id=channel_id,
             role_id=role_id,
@@ -478,23 +478,23 @@ class NotifyRepository(BaseRepository):
         self.session.exec(statement)
         self.session.commit()
 
-        community_type = CommunityType.from_notify(notify_type)
-        if community_type is None:
+        detected_platform_type = PlatformType.from_notify(notify_type)
+        if detected_platform_type is None:
             return
 
         # 檢查是否還有其他通知使用此社群
-        stmt = select(func.count()).where(NotifyCommunity.community_type == community_type, NotifyCommunity.community_id == community_id)
+        stmt = select(func.count()).where(NotifyCommunity.community_type == detected_platform_type, NotifyCommunity.community_id == community_id)
         count = self.session.exec(stmt).one()
         if not count:
             # 刪除社群資料
-            stmt = delete(Community).where(Community.id == community_id, Community.type == community_type)
+            stmt = delete(Community).where(Community.id == community_id, Community.type == detected_platform_type)
             self.session.exec(stmt)
 
             # 刪除社群快取
             stmt = delete(CommunityCache).where(CommunityCache.community_id == community_id, CommunityCache.notify_type == notify_type)
             self.session.exec(stmt)
 
-            if community_type == CommunityType.Youtube:
+            if detected_platform_type == PlatformType.Google:
                 # 刪除推播紀錄
                 stmt = delete(PushRecord).where(PushRecord.channel_id == community_id)
                 self.session.exec(stmt)
@@ -569,9 +569,9 @@ class NotifyRepository(BaseRepository):
         result = self.session.exec(statement).one()
         return result
 
-    def update_community_name(self, community_type: CommunityType, community_id: str, username: str, display_name: str):
+    def update_community_name(self, platform_type: PlatformType, community_id: str, username: str, display_name: str):
         """更新社群名稱"""
-        stmt = select(Community).where(Community.id == community_id, Community.type == community_type)
+        stmt = select(Community).where(Community.id == community_id, Community.type == platform_type)
         community = self.session.exec(stmt).one_or_none()
         if community and (community.username != username or community.display_name != display_name):
             community.username = username

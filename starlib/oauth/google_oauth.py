@@ -3,7 +3,7 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 
-from starlib.database import CommunityType
+from starlib.database import PlatformType
 
 from .oauth_lib import OAuth2Base
 
@@ -13,7 +13,7 @@ class GoogleOAuth(OAuth2Base):
     auth_url = "https://accounts.google.com/o/oauth2/auth"
     token_url = "https://oauth2.googleapis.com/token"
     api_url = "https://www.googleapis.com/oauth2/v1"
-    community_type = CommunityType.Google
+    platform_type = PlatformType.Google
 
     def to_google_creds(self, token):
         return Credentials(

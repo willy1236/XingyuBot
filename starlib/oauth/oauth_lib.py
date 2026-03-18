@@ -6,7 +6,7 @@ from typing import TypedDict
 
 from authlib.integrations.httpx_client import AsyncOAuth2Client
 
-from starlib.database import CommunityType, OAuthClient, OAuthToken, sqldb
+from starlib.database import OAuthClient, OAuthToken, PlatformType, sqldb
 
 
 class OAuthTokenDict(TypedDict, total=False):
@@ -44,7 +44,7 @@ class OAuth2Base(ABC):
 
     @property
     @abstractmethod
-    def community_type(self) -> CommunityType: ...
+    def platform_type(self) -> PlatformType: ...
 
     # ====== Authlib OAuth Client ======
     @property

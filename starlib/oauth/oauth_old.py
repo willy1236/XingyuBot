@@ -10,11 +10,11 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
-from ..database import BotToken, CommunityType, debug_mode, sqldb
+from ..database import BotToken, PlatformType, debug_mode, sqldb
 from ..exceptions import SQLNotFoundError
-from ..models import DiscordUser, UserConnection
 from ..settings import tz
 from ..utils import log
+from .models import DiscordUser, UserConnection
 
 
 class OAuth2Base(ABC):
@@ -48,8 +48,8 @@ class OAuth2Base(ABC):
 
     @property
     @abstractmethod
-    def community_type(self) -> CommunityType:
-        """社群類型"""
+    def platform_type(self) -> PlatformType:
+        """平台類型"""
         pass
 
     @abstractmethod
@@ -207,7 +207,7 @@ class DiscordOauth2(OAuth2Base):
     auth_url = "https://discord.com/api/oauth2/authorize"
     token_url = "https://discord.com/api/oauth2/token"
     api_url = "https://discord.com/api/v9"
-    community_type = CommunityType.Discord
+    platform_type = PlatformType.Discord
 
     def __init__(self, client_id, client_secret, redirect_uri="http://127.0.0.1:14000/oauth/discord", scope=None, user_id=None):
         super().__init__(client_id, client_secret, redirect_uri, scope)
@@ -238,7 +238,7 @@ class TwitchOauth2(OAuth2Base):
     auth_url = "https://id.twitch.tv/oauth2/authorize"
     token_url = "https://id.twitch.tv/oauth2/token"
     api_url = "https://api.twitch.tv/helix"
-    community_type = CommunityType.Twitch
+    platform_type = PlatformType.Twitch
 
     def __init__(self, client_id, client_secret, redirect_uri="http://localhost:14000/oauth/twitch", scope=None, user_id=None):
         super().__init__(client_id, client_secret, redirect_uri, scope)
@@ -288,11 +288,11 @@ class GoogleOauth2(OAuth2Base):
     auth_url = "https://accounts.google.com/o/oauth2/auth"
     token_url = "https://oauth2.googleapis.com/token"
     api_url = "https://www.googleapis.com/oauth2/v1"
-    community_type = CommunityType.Google
+    platform_type = PlatformType.Google
 
     def __init__(self, client_id=None, client_secret=None, redirect_uri="https://localhost:14000/oauth/google", scopes=None, user_id=None):
         if not client_id or not client_secret:
-            token = sqldb.get_bot_token(CommunityType.Google, 3)
+            token = sqldb.get_bot_token(PlatformType.Google, 3)
             client_id = token.client_id
             client_secret = token.client_secret
 

@@ -337,7 +337,7 @@ class Community(BasicSchema, table=True):
     __tablename__ = "community_info"
 
     id: str = Field(primary_key=True)
-    type: CommunityType = Field(sa_column=Column(Integer, primary_key=True))
+    type: PlatformType = Field(sa_column=Column(Integer, primary_key=True))
     username: str
     display_name: str | None
 
@@ -357,7 +357,7 @@ class NotifyCommunity(BasicSchema, table=True):
 
     notify_type: NotifyCommunityType = Field(sa_column=Column(Integer, primary_key=True))
     community_id: str = Field(primary_key=True)
-    community_type: CommunityType = Field(sa_column=Column(Integer, primary_key=True))
+    community_type: PlatformType = Field(sa_column=Column(Integer, primary_key=True))
     guild_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
     channel_id: int = Field(sa_column=Column(BigInteger))
     role_id: int | None = Field(sa_column=Column(BigInteger))
