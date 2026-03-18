@@ -18,6 +18,7 @@ __all__ = [
     "OsuAPI",
     "ApexAPI",
     "SteamAPI",
+    "MojangAPI",
     "DBDInterface",
     "LOLMediaWikiAPI",
     "ZeroTierAPI",

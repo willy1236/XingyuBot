@@ -9,7 +9,7 @@ from discord.commands import SlashCommandGroup
 from discord.ext import commands, pages
 
 from starlib import BotEmbed, ChoiceList, Jsondb, csvdb, log, sclient, tz
-from starlib.database import LOLGameCache, LOLGameRecord, PlatformType, UserGame, UserIPDetails
+from starlib.database import LOLGameCache, LOLGameRecord, PlatformType, UserIPDetails
 from starlib.exceptions import APIInvokeError
 from starlib.providers import *
 
@@ -43,70 +43,9 @@ class system_game(Cog_Extension):
     apex = SlashCommandGroup("apex", "Apex相關指令", name_localizations=ChoiceList.name("apex"))
     dbd = SlashCommandGroup("dbd", "Dead by Daylight相關指令", name_localizations=ChoiceList.name("dbd"))
     steam = SlashCommandGroup("steam", "Steam相關指令", name_localizations=ChoiceList.name("steam"))
+    minecraft_cmd = SlashCommandGroup("minecraft", "Minecraft相關指令", name_localizations=ChoiceList.name("minecraft"))
     # hoyo = SlashCommandGroup("hoyo", "MiHaYo相關指令")
     match_cmd = SlashCommandGroup("match", "聯賽相關指令")
-
-    @game.command(description="設定遊戲資料", name_localizations=ChoiceList.name("game_set"))
-    @ensure_registered()
-    async def set(
-        self,
-        ctx: RegisteredContext,
-        game: discord.Option(int, name="遊戲", description="要設定的遊戲", required=True, choices=game_option),
-        value: discord.Option(str, name="資料", description="要設定的資料，留空以移除資料", default=None),
-    ):
-        await ctx.defer()
-        id = str(ctx.author.id)
-        game = PlatformType(game)
-        if not value:
-            sclient.sqldb.remove_user_game(id, game)
-            await ctx.respond(f"已將{game}資料移除")
-            return
-
-        user_game = UserGame(discord_id=ctx.author.id, game=game.value)
-
-        unneed_verify = []
-        if game in unneed_verify:
-            user_game.player_name = value
-
-        elif game == PlatformType.Steam:
-            APIdata = SteamAPI().get_user(value)
-            if APIdata:
-                user_game.player_name = APIdata.name
-                user_game.player_id = (APIdata.id,)
-            else:
-                await ctx.respond(f"錯誤:找不到此用戶", ephemeral=True)
-                return
-
-        elif game == PlatformType.LOL:
-            riot_user = riot_api.get_riot_account_byname(value)
-            APIdata = riot_api.get_player_bypuuid(riot_user.puuid)
-            if APIdata:
-                user_game.player_name = riot_user.fullname
-                user_game.player_id = APIdata.puuid
-            else:
-                await ctx.respond(f"錯誤:找不到此用戶", ephemeral=True)
-                return
-
-        elif game == PlatformType.Apex:
-            APIdata = ApexAPI().get_player(value)
-            if APIdata:
-                user_game.player_name = APIdata.name
-                user_game.player_id = APIdata.id
-            else:
-                await ctx.respond(f"錯誤:找不到此用戶", ephemeral=True)
-                return
-
-        elif game == PlatformType.Osu:
-            APIdata = OsuAPI().get_player(value)
-            if APIdata:
-                user_game.player_name = APIdata.name
-                user_game.player_id = APIdata.id
-            else:
-                await ctx.respond(f"錯誤:找不到此用戶", ephemeral=True)
-                return
-
-        sclient.sqldb.merge(user_game)
-        await ctx.respond(f"已將{ctx.author.mention}的 {Jsondb.get_tw(game.value, 'game_set_option')} 資料設定為 {user_game.player_name}")
 
     @game.command(description="查詢遊戲資料", name_localizations=ChoiceList.name("game_player"))
     async def player(self, ctx, user: discord.Option(discord.Member, name="用戶", description="要查詢的用戶", default=None)):
@@ -505,6 +444,22 @@ class system_game(Cog_Extension):
             await ctx.respond(content="查詢成功", embed=user.embed())
         else:
             await ctx.respond(content="查詢失敗:查無此ID", ephemeral=True)
+
+    @minecraft_cmd.command(name="set", description="設定Minecraft帳號資料", name_localizations=ChoiceList.name("minecraft_set"))
+    @ensure_registered()
+    @commands.cooldown(rate=1, per=1)
+    async def minecraft_set(self, ctx: RegisteredContext, username: discord.Option(str, name="玩家名稱", description="要設定的Minecraft玩家名稱，留空以刪除", default=None)):
+        if not username:
+            sclient.sqldb.remove_external_account(ctx.cuser.id, PlatformType.Minecraft)
+            await ctx.respond(content="已刪除Minecraft帳號資料", ephemeral=True)
+            return
+
+        user = MojangAPI().get_uuid(username)
+        if user:
+            sclient.sqldb.upsert_external_account(ctx.cuser.id, PlatformType.Minecraft, user.id, username)
+            await ctx.respond(content=f"設定成功 {user.name}", ephemeral=True)
+        else:
+            await ctx.respond(content="設定失敗：查無此玩家", ephemeral=True)
 
     # @hoyo.command(description="如何設定cookies(需先設定才能使用其他功能)")
     # @commands.cooldown(rate=1, per=1)

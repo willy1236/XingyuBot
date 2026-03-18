@@ -231,6 +231,13 @@ class UserRepository(BaseRepository):
             self.session.add(ExternalAccount(user_id=user_id, platform=platform, external_id=external_id, display_name=display_name))
         self.commit()
 
+    def remove_external_account(self, user_id: int, platform: PlatformType):
+        stmt = select(ExternalAccount).where(ExternalAccount.user_id == user_id, ExternalAccount.platform == platform)
+        existing = self.session.exec(stmt).one_or_none()
+        if existing:
+            self.session.delete(existing)
+            self.commit()
+
     def get_main_account(self, alternate_account):
         stmt = select(UserAccount.main_account).where(UserAccount.alternate_account == alternate_account)
         result = self.session.exec(stmt).one_or_none()

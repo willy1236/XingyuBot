@@ -286,11 +286,11 @@ class MojangAPI:
     def get_uuid(self, username: str):
         r = requests.get(f"https://api.mojang.com/users/profiles/minecraft/{username}")
         if r.ok:
-            return MojangUser(r.json())
+            return MojangUser(**r.json())
         elif r.status_code == 204:
             return None
         else:
-            raise APIInvokeError("mojang_uuid", r.text)
+            raise APIInvokeError("mojang_get_uuid", r.text)
 
 
 class ZeroTierAPI:
