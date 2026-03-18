@@ -99,17 +99,6 @@ class UserBet(UserSchema, table=True):
     bet_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
 
 
-class UserGame(UserSchema, table=True):
-    __tablename__ = "game_data"
-
-    discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True, autoincrement=False))
-    game: PlatformType = Field(sa_column=Column(SmallInteger, primary_key=True, autoincrement=False))
-    player_name: str = Field(sa_column=Column(String))
-    player_id: str | None = Field(sa_column=Column(String))
-    account_id: str | None = Field(sa_column=Column(String))
-    other_id: str | None = Field(sa_column=Column(String))
-
-
 class UserPoll(UserSchema, table=True):
     __tablename__ = "user_poll"
 

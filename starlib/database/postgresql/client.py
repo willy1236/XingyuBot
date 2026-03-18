@@ -350,21 +350,6 @@ class BetRepository(BaseRepository):
 
 
 class GameRepository(BaseRepository):
-    def get_user_game(self, discord_id: int, game: PlatformType):
-        stmt = select(UserGame).where(UserGame.discord_id == discord_id, UserGame.game == game)
-        result = self.session.exec(stmt).one_or_none()
-        return result
-
-    def get_user_game_all(self, discord_id: int):
-        stmt = select(UserGame).where(UserGame.discord_id == discord_id)
-        result = self.session.exec(stmt).all()
-        return result
-
-    def remove_user_game(self, discord_id: int, game: PlatformType):
-        stmt = delete(UserGame).where(UserGame.discord_id == discord_id, UserGame.game == game)
-        self.session.exec(stmt)
-        self.session.commit()
-
     def get_lol_record_with_champion(self, puuid: str):
         """取得指定玩家的英雄戰績"""
         stmt = select(LOLGameRecord.champion_id, func.count()).where(LOLGameRecord.puuid == puuid).group_by(LOLGameRecord.champion_id).order_by(desc(func.count()))
