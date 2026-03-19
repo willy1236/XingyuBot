@@ -14,7 +14,6 @@ from starlib.providers import *
 
 from ..checks import RegisteredContext, ensure_registered
 from ..extension import Cog_Extension
-from ..uiElement.modals import HoyolabCookiesModal
 
 game_option = ChoiceList.set("game_set_option")
 riot_api = RiotAPI()
