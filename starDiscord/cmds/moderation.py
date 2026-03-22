@@ -232,6 +232,14 @@ class moderation(Cog_Extension):
         time_last_str: discord.Option(str, name="時長", description="格式為30s、1h20m等，支援天(d)、小時(h)、分鐘(m)、秒(s)", required=True),
         reason: discord.Option(str, name="原因", description="限100字內", default="已禁言"),
         add_record: discord.Option(bool, name="是否要將此紀錄存入警告系統", description="將紀錄存入警告系統供其他群組檢視", default=False),
+        delete_message_seconds: discord.Option(
+            int,
+            name="刪除最近的訊息",
+            description="若提供，將刪除此使用者在整個伺服器指定秒數內的訊息",
+            default=None,
+            min_value=0,
+            max_value=604800,
+        ),
     ):
         await ctx.defer()
         time_last = converter.time_to_datetime(time_last_str)
@@ -241,6 +249,26 @@ class moderation(Cog_Extension):
 
         await user.timeout_for(time_last, reason=reason)
 
+        delete_status = None
+        if delete_message_seconds is not None and delete_message_seconds > 0:
+            after_time = discord.utils.utcnow() - timedelta(seconds=delete_message_seconds)
+            deleted_total = 0
+            skipped_channels = 0
+            for channel in ctx.guild.text_channels:
+                permissions = channel.permissions_for(ctx.guild.me)
+                if not (permissions.view_channel and permissions.read_message_history and permissions.manage_messages):
+                    skipped_channels += 1
+                    continue
+                try:
+                    deleted_messages = await channel.purge(limit=50, after=after_time, check=lambda m: m.author.id == user.id)
+                    deleted_total += len(deleted_messages)
+                except (discord.Forbidden, discord.HTTPException):
+                    skipped_channels += 1
+
+            delete_status = f"最近 {delete_message_seconds} 秒內全伺服器共刪除 {deleted_total} 則"
+            if skipped_channels:
+                delete_status += f"（略過 {skipped_channels} 個頻道）"
+
         moderate_user = ctx.user.id
         create_time = datetime.now()
         if add_record and not user.bot:
@@ -249,6 +277,8 @@ class moderation(Cog_Extension):
         embed = BotEmbed.general(f"{user.name} 已被禁言", user.display_avatar.url, description=f"{user.mention}：{reason}")
         embed.add_field(name="執行人員", value=ctx.author.mention)
         embed.add_field(name="結束時間", value=f"{format_dt(create_time + time_last, style='T')}（{time_last}）")
+        if delete_status:
+            embed.add_field(name="訊息刪除", value=delete_status)
         embed.timestamp = create_time
         if add_record:
             embed.set_footer(text=f"編號 {warning_id}")
