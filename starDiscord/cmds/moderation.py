@@ -278,7 +278,7 @@ class moderation(Cog_Extension):
         embed.add_field(name="執行人員", value=ctx.author.mention)
         embed.add_field(name="結束時間", value=f"{format_dt(create_time + time_last, style='T')}（{time_last}）")
         if delete_status:
-            embed.add_field(name="訊息刪除", value=delete_status)
+            embed.add_field(name="訊息刪除", value=delete_status, inline=False)
         embed.timestamp = create_time
         if add_record:
             embed.set_footer(text=f"編號 {warning_id}")
