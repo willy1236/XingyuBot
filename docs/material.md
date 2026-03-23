@@ -11,4 +11,4 @@ https://www.flaticon.com/free-icon/logo_15713413?term=twitch&page=1&position=26&
 https://www.flaticon.com/free-icon/dice_12907708?term=dice&page=1&position=65&origin=search&related_id=12907708
 
 - 頭像 / avatar
-https://www.pixiv.net/artworks/82368676
+https://www.pixiv.net/artworks/136540096
