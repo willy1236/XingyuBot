@@ -1,6 +1,5 @@
 import os
 import subprocess
-import time
 
 from starlib import BaseThread, Jsondb, log, sqldb
 from starlib.database import APIType
@@ -20,7 +19,7 @@ class ltThread(BaseThread):
             #self.process = psutil.Popen(cmd)
             #self.process.wait()
             log.info(f"Finished {self.name}")
-            time.sleep(5)
+            self._stop_event.wait(5)
             reconnection_times += 1
             if reconnection_times >= 5:
                 self._stop_event.set()
@@ -40,7 +39,7 @@ class ServeoThread(BaseThread):
             log.info(f"Stdout: {result.stdout}")
             log.error(f"Stderr: {result.stderr}")
             log.info(f"Exit status: {result.returncode}")
-            time.sleep(60)
+            self._stop_event.wait(60)
             reconnection_times += 1
             if reconnection_times >= 5:
                 self._stop_event.set()
@@ -57,7 +56,7 @@ class LoopholeThread(BaseThread):
             log.info(f"Stdout: {result.stdout}")
             log.error(f"Stderr: {result.stderr}")
             log.info(f"Exit status: {result.returncode}")
-            time.sleep(30)
+            self._stop_event.wait(30)
             reconnection_times += 1
             if reconnection_times >= 5:
                 self._stop_event.set()
@@ -74,7 +73,7 @@ class LoopholeTwitchThread(BaseThread):
             log.info(f"Stdout: {result.stdout}")
             log.error(f"Stderr: {result.stderr}")
             log.info(f"Exit status: {result.returncode}")
-            time.sleep(30)
+            self._stop_event.wait(30)
             reconnection_times += 1
             if reconnection_times >= 5:
                 self._stop_event.set()
@@ -95,8 +94,7 @@ class NgrokTwitchThread(BaseThread):
             log.error(f"Stderr: {stderr}")
             log.info(f"Exit status: {self.process.returncode}")
 
-            if not self._stop_event.is_set():
-                time.sleep(30)
+            self._stop_event.wait(30)
 
             reconnection_times += 1
             if reconnection_times >= 5:
