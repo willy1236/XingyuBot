@@ -635,10 +635,7 @@ class CLIInterface:
         try:
             results = RettiwtTweetTimeLineResponse(**data)
         except Exception as e:
-            log.error("get_user_timeline 解析JSON失敗", r.stdout, e)
-            log.error("輸出內容：%s", r.stdout)
-            log.error("錯誤內容：%s", r.stderr)
-            log.error("例外堆疊：", exc_info=True)
+            log.exception("解析Rettiwt輸出時發生錯誤，輸出內容：%s", r.stdout)
             return None
 
         if after:
@@ -659,7 +656,7 @@ class CLIInterface:
         try:
             data = json.loads(r.stdout)
         except json.JSONDecodeError:
-            log.error("get_user_details 解析JSON失敗，輸出內容：%s", r.stdout)
+            log.exception("get_user_details 解析JSON失敗，輸出內容：%s", r.stdout)
             return None
 
         if not data or data.get("name") == "VALIDATION_ERROR":
