@@ -62,8 +62,3 @@ def create_logger(
 
     return logger
 
-
-# ============ 統一日誌實例 ============
-# 使用單一 logger，通過日誌等級區分不同類型的訊息
-
-log = create_logger("starlib", log_level=logging.DEBUG, file_log=True, dir_path="./logs", format_str=DEFAULT_FORMAT, file_name="app")

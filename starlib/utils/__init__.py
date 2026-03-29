@@ -15,6 +15,7 @@ debug_mode = Jsondb.config.get("debug_mode",True)
 log_level = Jsondb.config.get("log_level",INFO)
 #log_level = DEBUG if debug_mode else INFO
 
+log = create_logger("starlib", log_level, file_log=True, dir_path="./logs")
 apsc_log = create_logger("apscheduler", WARNING, format_str="%(asctime)s [apsc/%(levelname)s] %(message)s")
 twitch_log = create_logger("twitchBot", DEBUG, format_str="%(asctime)s [twitchBot/%(levelname)s] %(message)s")
 web_log = create_logger("web", log_level, format_str="%(asctime)s [web/%(levelname)s] %(message)s")
