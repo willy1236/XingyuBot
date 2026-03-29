@@ -10,6 +10,8 @@
 - 1400: 請求相關錯誤
 """
 
+from .utils.logger import log
+
 
 class StarException(Exception):
     """
@@ -27,6 +29,20 @@ class StarException(Exception):
         self.message: str = message
         self.original: Exception | None = original
         self.original_message: str | None = original_message
+
+        # 自動記錄異常到日誌
+        self._log_exception()
+
+    def _log_exception(self):
+        """記錄異常到日誌系統"""
+        error_details = f"[{self.code}] {self.message}"
+
+        if self.original:
+            # 記錄異常及其堆棧追蹤
+            log.error(error_details, exc_info=self.original)
+        else:
+            # 未捕獲原始異常，記錄為警告
+            log.warning(error_details)
 
     def __repr__(self) -> str:
         if self.original_message:

@@ -33,18 +33,21 @@ class error(Cog_Extension):
             if isinstance(error.original, StarException):
                 await ctx.respond(error.original, ephemeral=True)
                 if error.original.original_message:
-                    log.error("%s, %s", error.original, type(error.original), exc_info=error.original)
+                    # StarException 已經自動記錄到日誌
+                    log.debug(f"捕獲 StarException: {error.original}")
 
                     if not debug_mode:
                         await self.bot.error(ctx,f"{error.original} ({error.original.original_message})")
 
             elif isinstance(error.original,discord.errors.Forbidden):
                 await ctx.respond(f"操作被拒：我缺少權限執行這項操作，可能為我的身分組位階較低或缺少必要權限", ephemeral=True)
+                log.warning(f"Discord 權限被拒: {error.original}")
             elif isinstance(error.original,discord.errors.NotFound):
                 await ctx.respond(f"未找到：給定的參數未找到", ephemeral=True)
+                log.warning(f"Discord 資源未找到: {error.original}")
 
             elif isinstance(error.original, (AttributeError, KeyError)):
-                log.exception("%s, %s", error.original, type(error.original), exc_info=error.original)
+                log.error(f"內部錯誤 - {type(error.original).__name__}: {error.original}", exc_info=error.original)
 
                 if not ctx.guild or ctx.guild.id not in debug_guilds:
                     await ctx.respond(f"錯誤：機器人內部錯誤（若發生此項錯誤請靜待修復）", ephemeral=True)
@@ -54,8 +57,9 @@ class error(Cog_Extension):
 
             elif isinstance(error.original, NotImplementedError):
                 await ctx.respond(f"錯誤：此功能尚未實裝", ephemeral=True)
+                log.warning(f"功能未實裝: {error.original}")
             else:
-                log.exception("%s, %s", error, type(error.original), exc_info=error.original)
+                log.error(f"未知錯誤 - {type(error.original).__name__}: {error.original}", exc_info=error.original)
 
                 if not ctx.guild or ctx.guild.id not in debug_guilds:
                     await ctx.respond(f"發生未知錯誤，請等待修復", ephemeral=True)
@@ -65,19 +69,21 @@ class error(Cog_Extension):
 
         elif isinstance(error,discord.ApplicationCommandError):
             await ctx.respond(f"{error}", ephemeral=True)
+            log.warning(f"ApplicationCommandError: {error}")
 
         elif isinstance(error,commands.errors.ArgumentParsingError):
             await ctx.respond(f"參數錯誤:{error}", ephemeral=True)
+            log.warning(f"參數解析錯誤: {error}")
 
         else:
             if not ctx.guild or ctx.guild.id not in debug_guilds:
                 await self.bot.error(ctx,error)
-            await ctx.respond(f"發生未知錯誤\n```{error.original}```", ephemeral=True)
-            log.error(f"{error},{type(error)}", exc_info=error)
+            await ctx.respond(f"發生未知錯誤\n```{error.original if hasattr(error, 'original') else error}```", ephemeral=True)
+            log.error(f"未分類的錯誤 - {type(error).__name__}: {error}", exc_info=error)
 
     @commands.Cog.listener()
     async def on_unknown_application_command(self, interaction: discord.Interaction):
-        log.warn(f"未知指令：{interaction.data}")
+        log.warning(f"未知指令：{interaction.data}")
         await interaction.response.send_message(f"未知指令：請再試一次", ephemeral=True)
 
     # @commands.Cog.listener()

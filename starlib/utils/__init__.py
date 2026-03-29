@@ -6,7 +6,7 @@ from logging import DEBUG, ERROR, INFO, WARNING
 
 from ..fileDatabase import Jsondb
 from .functions import *
-from .logger import create_logger
+from .logger import create_logger, log
 from .utility import *
 from .webUtility import *
 
@@ -15,9 +15,8 @@ debug_mode = Jsondb.config.get("debug_mode",True)
 log_level = Jsondb.config.get("log_level",INFO)
 #log_level = DEBUG if debug_mode else INFO
 
-log = create_logger("star", log_level=log_level, file_log=file_log)
-apsc_log = create_logger("apscheduler", WARNING, format="%(asctime)s [apsc/%(levelname)s] %(message)s")
-twitch_log = create_logger("twitchBot", DEBUG, format="%(asctime)s [twitchBot/%(levelname)s] %(message)s")
+apsc_log = create_logger("apscheduler", WARNING, format_str="%(asctime)s [apsc/%(levelname)s] %(message)s")
+twitch_log = create_logger("twitchBot", DEBUG, format_str="%(asctime)s [twitchBot/%(levelname)s] %(message)s")
 web_log = create_logger("web", log_level, format="%(asctime)s [web/%(levelname)s] %(message)s")
 agent_log = create_logger("agent", log_level, format="%(asctime)s [agent/%(levelname)s] %(message)s")
 
