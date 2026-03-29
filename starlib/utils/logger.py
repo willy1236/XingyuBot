@@ -7,8 +7,8 @@ timestamp = datetime.now().strftime("%Y-%m-%d %H_%M_%S")
 logging.captureWarnings(True)
 
 # 日誌格式常量
-DEFAULT_FORMAT = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
-DETAILED_FORMAT = "%(asctime)s [%(levelname)s] %(name)s [%(filename)s:%(lineno)d]: %(message)s"
+DEFAULT_FORMAT = "%(asctime)s [%(levelname)s/%(name)s] %(message)s"
+DETAILED_FORMAT = "%(asctime)s [%(levelname)s/%(name)s] [%(filename)s:%(lineno)d]: %(message)s"
 
 
 def create_logger(
