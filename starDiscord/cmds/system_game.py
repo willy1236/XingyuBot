@@ -9,7 +9,7 @@ from discord.ext import commands, pages
 
 from starlib import BotEmbed, ChoiceList, Jsondb, csvdb, log, sclient, tz
 from starlib.database import LOLGameCache, LOLGameRecord, PlatformType, UserIPDetails
-from starlib.exceptions import APIInvokeError
+from starlib.exceptions import APINetworkError
 from starlib.providers import *
 
 from ..checks import RegisteredContext, ensure_registered
@@ -108,7 +108,7 @@ class system_game(Cog_Extension):
         if match:
             await ctx.respond("查詢成功", embed=match.desplay())
         else:
-            raise APIInvokeError("playermatch occurred error while getting match data.")
+            raise APINetworkError("playermatch occurred error while getting match data.")
 
     @lol.command(description="查詢League of Legends專精英雄", name_localizations=ChoiceList.name("lol_masteries"))
     async def masteries(self, ctx, riot_id: discord.Option(str, name="riot_id", description="名稱#tag，留空則使用資料庫查詢", required=False)):

@@ -15,7 +15,7 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
 from starlib.database import APIType, sqldb
-from starlib.exceptions import APIInvokeError, Forbidden
+from starlib.exceptions import APINetworkError, Forbidden
 from starlib.settings import tz
 from starlib.utils import log
 
@@ -226,7 +226,7 @@ class GoogleAPI:
         if r.ok:
             return YoutubeChannel(**r.json().get("items")[0]) if r.json().get("items") else None
         else:
-            raise APIInvokeError("youtube_get_video", f"[{r.status_code}] {r.text}")
+            raise APINetworkError("youtube_get_channel", f"[{r.status_code}] {r.text}")
 
     def get_channelsection(self, channel_id: str):
         params = {"key": self.__token, "channelId": channel_id, "part": "contentDetails"}
@@ -256,7 +256,7 @@ class GoogleAPI:
         if r.ok:
             return YouTubeStream(**r.json()["items"][0]) if r.json()["items"] else None
         else:
-            raise APIInvokeError("youtube_get_stream", f"[{r.status_code}] {r.text}")
+            raise APINetworkError("youtube_get_stream", f"[{r.status_code}] {r.text}")
 
     def get_video(self, video_id: str | list) -> list[YoutubeVideo]:
         params = {"part": "snippet,liveStreamingDetails", "id": video_id}
@@ -264,7 +264,7 @@ class GoogleAPI:
         if r.ok:
             return [YoutubeVideo(**i) for i in r.json()["items"]] if r.json()["items"] else list()
         else:
-            raise APIInvokeError("youtube_get_video", f"[{r.status_code}] {r.text}")
+            raise APINetworkError("youtube_get_video", f"[{r.status_code}] {r.text}")
 
     def get_playlist(self, playlist_id: str | list):
         params = {"key": self.__token, "part": "snippet,contentDetails", "id": playlist_id}
@@ -617,7 +617,7 @@ class RssHub:
                 # 503可能為找不到用戶
                 return
             else:
-                raise APIInvokeError("rsshub_get_twitter", f"[{r.status_code}]")
+                raise APINetworkError("rsshub_get_twitter", f"[{r.status_code}]")
 
 
 class CLIInterface:

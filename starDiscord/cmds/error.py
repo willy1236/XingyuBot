@@ -31,13 +31,9 @@ class error(Cog_Extension):
         #指令執行時發生錯誤
         elif isinstance(error,discord.ApplicationCommandInvokeError):
             if isinstance(error.original, StarException):
-                await ctx.respond(error.original, ephemeral=True)
-                if error.original.original_message:
-                    # StarException 已經自動記錄到日誌
-                    log.debug(f"捕獲 StarException: {error.original}")
-
-                    if not debug_mode:
-                        await self.bot.error(ctx,f"{error.original} ({error.original.original_message})")
+                await ctx.respond("發生錯誤，請再試一次或連繫管理員協助", ephemeral=True)
+                if error.original.original_message and not debug_mode:
+                    await self.bot.error(ctx, f"{error.original} ({error.original.original_message})")
 
             elif isinstance(error.original,discord.errors.Forbidden):
                 await ctx.respond(f"操作被拒：我缺少權限執行這項操作，可能為我的身分組位階較低或缺少必要權限", ephemeral=True)

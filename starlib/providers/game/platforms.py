@@ -6,7 +6,7 @@ import requests
 from mwrogue.esports_client import EsportsClient
 
 from starlib.database import APIType, sqldb
-from starlib.exceptions import APIInvokeError
+from starlib.exceptions import APINetworkError
 
 from .models import *
 
@@ -36,7 +36,7 @@ class RiotAPI:
         elif r.status_code == 404:
             return None
         else:
-            raise APIInvokeError("lol_player_byname", r.text)
+            raise APINetworkError("lol_player_byname", r.text)
 
     def get_riot_account_bypuuid(self, puuid: str):
         r = requests.get(f"{self.url_asia}/riot/account/v1/accounts/by-puuid/{puuid}", headers=self._headers)
@@ -45,7 +45,7 @@ class RiotAPI:
         elif r.status_code == 404:
             return None
         else:
-            raise APIInvokeError("lol_player_bypuuid", r.text)
+            raise APINetworkError("lol_player_bypuuid", r.text)
 
     def get_player_bypuuid(self, puuid: str):
         r = requests.get(f"{self.url_tw2}/lol/summoner/v4/summoners/by-puuid/{puuid}", headers=self._headers)
@@ -54,7 +54,7 @@ class RiotAPI:
         elif r.status_code == 404:
             return None
         else:
-            raise APIInvokeError("lol_player_bypuuid", r.text)
+            raise APINetworkError("lol_player_bypuuid", r.text)
 
     def get_player_lol(self, riot_id: str):
         account = self.get_riot_account_byname(riot_id)
@@ -69,14 +69,14 @@ class RiotAPI:
         if r.ok:
             return r.json()
         else:
-            raise APIInvokeError("lol_player_match", r.text)
+            raise APINetworkError("lol_player_match", r.text)
 
     def get_match(self, matchId: str):
         r = requests.get(f"{self.url_sea}/lol/match/v5/matches/{matchId}", headers=self._headers)
         if r.ok:
             return LOLMatch(**r.json())
         else:
-            raise APIInvokeError("lol_match", r.text)
+            raise APINetworkError("lol_match", r.text)
 
     def get_summoner_masteries(self, puuid: str, count=5) -> list[LOLChampionMastery | None]:
         params = {"count": count}
@@ -86,7 +86,7 @@ class RiotAPI:
         elif r.status_code == 404:
             return []
         else:
-            raise APIInvokeError("lol_summoner_masteries", r.text)
+            raise APINetworkError("lol_summoner_masteries", r.text)
 
     def get_summoner_active_match(self, puuid: str):
         r = requests.get(f"{self.url_tw2}/lol/spectator/v5/active-games/by-summoner/{puuid}", headers=self._headers)
@@ -95,7 +95,7 @@ class RiotAPI:
         elif r.status_code == 404:
             return None
         else:
-            raise APIInvokeError(f"lol_summoner_active_match:{r.text}")
+            raise APINetworkError(f"lol_summoner_active_match:{r.text}")
 
     def get_summoner_rank(self, puuid: str):
         r = requests.get(f"{self.url_tw2}/lol/league/v4/entries/by-puuid/{puuid}", headers=self._headers)
@@ -104,7 +104,7 @@ class RiotAPI:
         elif r.status_code == 404:
             return []
         else:
-            raise APIInvokeError(f"get_summoner_rank:{r.text}")
+            raise APINetworkError(f"get_summoner_rank:{r.text}")
 
     def get_rank_dataframe(self, riot_name: str, count=20):
         user = self.get_riot_account_byname(riot_name)
@@ -136,7 +136,7 @@ class RiotAPI:
             apidata = r.json()
             return apidata if all else apidata[0]
         else:
-            raise APIInvokeError("ddragon_version", r.text)
+            raise APINetworkError("ddragon_version", r.text)
 
 
 class OsuAPI:
@@ -290,7 +290,7 @@ class MojangAPI:
         elif r.status_code == 204:
             return None
         else:
-            raise APIInvokeError("mojang_get_uuid", r.text)
+            raise APINetworkError("mojang_get_uuid", r.text)
 
 
 class ZeroTierAPI:
@@ -305,14 +305,14 @@ class ZeroTierAPI:
         if r.ok:
             return r.json()
         else:
-            raise APIInvokeError("zerotier_networks", r.text)
+            raise APINetworkError("zerotier_networks", r.text)
 
     def get_network_members(self, network_id: str):
         r = requests.get(f"{self.url}/network/{network_id}/member", headers=self.headers)
         if r.ok:
             return r.json()
         else:
-            raise APIInvokeError("zerotier_network_members", r.text)
+            raise APINetworkError("zerotier_network_members", r.text)
 
     def get_unauthorized_members(self, network_id: str):
         members = self.get_network_members(network_id)
@@ -325,7 +325,7 @@ class ZeroTierAPI:
         elif r.status_code == 404:
             return None
         else:
-            raise APIInvokeError("zerotier_get_member", r.text)
+            raise APINetworkError("zerotier_get_member", r.text)
 
     def authorize_member(self, network_id: str, member_id: str, name: str | None = None, description: str | None = None):
         member = self.get_member(network_id, member_id)
@@ -340,4 +340,4 @@ class ZeroTierAPI:
         if r.ok:
             return r.json()
         else:
-            raise APIInvokeError("zerotier_authorize_member", r.text)
+            raise APINetworkError("zerotier_authorize_member", r.text)

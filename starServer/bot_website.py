@@ -80,8 +80,12 @@ async def prase_yt_push(content: str):
 
     for entry in feed["entries"]:
         push_entry = YoutubePushEntry(**entry)
-        video = google_api.get_video(push_entry.yt_videoid)[0]
+        videos = google_api.get_video(push_entry.yt_videoid)
+        if not videos:
+            web_log.warning(f"Video {push_entry.yt_videoid} not found in YouTube API")
+            continue
 
+        video = videos[0]
         cache = sqldb.get_community_cache_with_default(NotifyCommunityType.Youtube, push_entry.yt_channelid)
         ytcache = sqldb.get_yt_cache(push_entry.yt_videoid)
         if push_entry.published > cache.value or (ytcache is not None and video.snippet.liveBroadcastContent == "live"):

@@ -4,6 +4,7 @@ import requests
 
 from starlib.database import APIType, sqldb
 
+from ..base import APICaller
 from .models import *
 
 
@@ -11,67 +12,47 @@ def sort_earthquakeReport(x: EarthquakeReport):
     return x.originTime
 
 
-class CWA_API:
-    BaseURL = "https://opendata.cwa.gov.tw/api/v1/rest/datastore"
+class CWA_API(APICaller):
+    base_url = "https://opendata.cwa.gov.tw/api/v1/rest/datastore"
 
     def __init__(self):
-        self.auth = sqldb.get_access_token(APIType.CWA).access_token
+        auth = sqldb.get_access_token(APIType.CWA).access_token
+        super().__init__(headers={"Authorization": auth})
 
     def get_earthquake_report(self, significant=True):
-        params = {"Authorization": self.auth, "limit": 1}
+        endpoint = "E-A0015-001" if significant else "E-A0016-001"
+        r = self.get(endpoint, params={"limit": 1})
 
-        id = "E-A0015-001" if significant else "E-A0016-001"
-        r = requests.get(f"{self.BaseURL}/{id}", params=params)
-
-        if r.ok:
-            data = r.json().get("records").get("Earthquake")[0]
-            return EarthquakeReport(**data)
-        else:
-            return None
+        data = r.json().get("records", {}).get("Earthquake") or []
+        return EarthquakeReport(**data[0]) if data else None
 
     def get_earthquake_report_auto(self, timeFrom: str = None, only_significant=False) -> list[EarthquakeReport]:
-        params = {"Authorization": self.auth, "timeFrom": timeFrom}
-        records = list()
+        params = {"timeFrom": timeFrom} if timeFrom else None
+        records: list[EarthquakeReport] = []
+        endpoints = ["E-A0015-001"] if only_significant else ["E-A0015-001", "E-A0016-001"]
 
-        r = requests.get(f"{self.BaseURL}/E-A0015-001", params=params, timeout=20)
-        r.raise_for_status()
-        data = r.json().get("records").get("Earthquake")
-        if data:
-            records += [EarthquakeReport(**i) for i in data]
+        for endpoint in endpoints:
+            r = self.get(endpoint, params=params, timeout=20)
+            data = r.json().get("records", {}).get("Earthquake") or []
+            records.extend(EarthquakeReport(**i) for i in data)
 
         if not only_significant:
-            r = requests.get(f"{self.BaseURL}/E-A0016-001", params=params, timeout=20)
-            data = r.json().get("records").get("Earthquake")
-            if data:
-                records += [EarthquakeReport(**i) for i in data]
-
             records.sort(key=sort_earthquakeReport)
         return records
 
     def get_forecast(self):
-        params = {"Authorization": self.auth}
-        r = requests.get(f"{self.BaseURL}/F-C0032-001", params=params)
-        if r.ok:
-            return Forecast(r.json())
-        else:
-            return None
+        r = self.get("F-C0032-001")
+        return Forecast(r.json())
 
     def get_weather_warning(self):
-        params = {"Authorization": self.auth}
-        r = requests.get(f"{self.BaseURL}/W-C0033-002", params=params)
-        if r.ok:
-            return [WeatherWarningReport(**i) for i in r.json().get("records").get("record")]
-        else:
-            return None
+        r = self.get("W-C0033-002")
+        return [WeatherWarningReport(**i) for i in (r.json().get("records", {}).get("record") or [])]
 
     def get_weather_data(self, StationId="C0Z100"):
         """取得無人氣象站氣象資料"""
-        params = {"Authorization": self.auth, "StationId": StationId}
-        r = requests.get(f"{self.BaseURL}/O-A0001-001", params=params)
-        if r.ok:
-            return [WeatherReport(**i) for i in r.json().get("records").get("Station")]
-        else:
-            return None
+        params = {"StationId": StationId}
+        r = self.get("O-A0001-001", params=params)
+        return [WeatherReport(**i) for i in (r.json().get("records", {}).get("Station") or [])]
 
 
 # class Covid19Client(WeatherClient):

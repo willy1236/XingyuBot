@@ -64,8 +64,8 @@ class ApiError(StarException):
         super().__init__(message, original, original_message)
 
 
-class APIInvokeError(ApiError):
-    """調用 API 時發生錯誤 (錯誤代碼: 1101)"""
+class APINetworkError(ApiError):
+    """調用 API 時發生錯誤的http請求錯誤 (錯誤代碼: 1101)"""
 
     code = 1101
 
