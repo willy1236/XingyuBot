@@ -38,7 +38,7 @@ class APICaller:
         endpoint: str,
         base_url: str | None = None,
         **kwargs,
-    ) -> requests.Response:
+    ) -> requests.Response | None:
         """Send an HTTP request and normalize network exceptions.
 
         Args:
@@ -48,19 +48,23 @@ class APICaller:
             **kwargs: Extra keyword arguments passed to ``requests.request``.
 
         Returns:
-            requests.Response: Response object returned by requests.
+            requests.Response | None: Response object returned by requests,
+                or ``None`` when status code is 404.
 
         Raises:
-            APINetworkError: If any ``requests.RequestException`` occurs.
+            APINetworkError: If request fails or response status is neither 200 nor 404.
         """
         if endpoint.startswith(("http://", "https://")):
             url = endpoint
         else:
             target_base = base_url or self.base_url
             url = f"{target_base.rstrip('/')}/{endpoint.lstrip('/')}"
+        request_headers = {**self.headers, **kwargs.pop("headers", {})}
 
         try:
-            response = requests.request(method, url, headers=self.headers, **kwargs)
+            response = requests.request(method, url, headers=request_headers, **kwargs)
+            if response.status_code == requests.codes.not_found:
+                return None
             if response.status_code != requests.codes.ok:
                 raise APINetworkError(
                     message=f"{method.upper()} {url} 回傳狀態碼 {response.status_code}",
@@ -81,7 +85,7 @@ class APICaller:
         params: dict | None = None,
         base_url: str | None = None,
         **kwargs,
-    ) -> requests.Response:
+    ) -> requests.Response | None:
         """Send a GET request.
 
         Args:
@@ -91,7 +95,8 @@ class APICaller:
             **kwargs: Extra keyword arguments passed to ``requests.request``.
 
         Returns:
-            requests.Response: Response object returned by requests.
+            requests.Response | None: Response object returned by requests,
+                or ``None`` when status code is 404.
 
         Raises:
             APINetworkError: If any ``requests.RequestException`` occurs.
@@ -104,7 +109,7 @@ class APICaller:
         data: dict | None = None,
         base_url: str | None = None,
         **kwargs,
-    ) -> requests.Response:
+    ) -> requests.Response | None:
         """Send a POST request.
 
         Args:
@@ -114,7 +119,8 @@ class APICaller:
             **kwargs: Extra keyword arguments passed to ``requests.request``.
 
         Returns:
-            requests.Response: Response object returned by requests.
+            requests.Response | None: Response object returned by requests,
+                or ``None`` when status code is 404.
 
         Raises:
             APINetworkError: If any ``requests.RequestException`` occurs.
@@ -127,7 +133,7 @@ class APICaller:
         data: dict | None = None,
         base_url: str | None = None,
         **kwargs,
-    ) -> requests.Response:
+    ) -> requests.Response | None:
         """Send a PUT request.
 
         Args:
@@ -137,7 +143,8 @@ class APICaller:
             **kwargs: Extra keyword arguments passed to ``requests.request``.
 
         Returns:
-            requests.Response: Response object returned by requests.
+            requests.Response | None: Response object returned by requests,
+                or ``None`` when status code is 404.
 
         Raises:
             APINetworkError: If any ``requests.RequestException`` occurs.
@@ -150,7 +157,7 @@ class APICaller:
         data: dict | None = None,
         base_url: str | None = None,
         **kwargs,
-    ) -> requests.Response:
+    ) -> requests.Response | None:
         """Send a PATCH request.
 
         Args:
@@ -160,12 +167,35 @@ class APICaller:
             **kwargs: Extra keyword arguments passed to ``requests.request``.
 
         Returns:
-            requests.Response: Response object returned by requests.
+            requests.Response | None: Response object returned by requests,
+                or ``None`` when status code is 404.
 
         Raises:
             APINetworkError: If any ``requests.RequestException`` occurs.
         """
         return self._request("PATCH", endpoint, json=data, base_url=base_url, **kwargs)
+
+    def delete(
+        self,
+        endpoint: str,
+        base_url: str | None = None,
+        **kwargs,
+    ) -> requests.Response | None:
+        """Send a DELETE request.
+
+        Args:
+            endpoint: Relative endpoint path or absolute URL.
+            base_url: Optional per-call base URL override.
+            **kwargs: Extra keyword arguments passed to ``requests.request``.
+
+        Returns:
+            requests.Response | None: Response object returned by requests,
+                or ``None`` when status code is 404.
+
+        Raises:
+            APINetworkError: If any ``requests.RequestException`` occurs.
+        """
+        return self._request("DELETE", endpoint, base_url=base_url, **kwargs)
 
 
 class APIResultCode(IntEnum):

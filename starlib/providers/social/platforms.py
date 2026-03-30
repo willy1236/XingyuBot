@@ -6,7 +6,6 @@ from datetime import timezone
 from typing import TypeVar
 
 import feedparser
-import requests
 from bs4 import BeautifulSoup
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -19,26 +18,22 @@ from starlib.exceptions import APINetworkError, Forbidden
 from starlib.settings import tz
 from starlib.utils import log
 
+from ..base import APICaller
 from .models import *
 
 T = TypeVar("T")
 
 
-class TwitchAPI:
+class TwitchAPI(APICaller):
     """
     與Twitch api交互相關
     """
 
-    BaseURL = "https://api.twitch.tv/helix"
+    base_url = "https://api.twitch.tv/helix"
 
     def __init__(self):
-        self._headers = None
-
-    @property
-    def headers(self):
-        if self._headers is None:
-            self._headers = self.__get_headers()
-        return self._headers
+        super().__init__()
+        self.headers = self.__get_headers()
 
     def __get_headers(self):
         TOKENURL = "https://id.twitch.tv/oauth2/token"
@@ -46,29 +41,24 @@ class TwitchAPI:
         tokens = sqldb.get_identifier_secret(APIType.Twitch)
         params = {"client_id": tokens.client_id, "client_secret": tokens.client_secret, "grant_type": "client_credentials"}
 
-        r = requests.post(TOKENURL, params=params)
+        r = self._request("POST", TOKENURL, params=params)
         apidata = r.json()
-        if r.ok:
-            headers = {"Authorization": f"Bearer {apidata['access_token']}", "Client-Id": tokens.client_id}
-            return headers
-        else:
-            raise Forbidden("在讀取Twitch API時發生錯誤", f"[{r.status_code}] {apidata['message']}")
+        headers = {"Authorization": f"Bearer {apidata['access_token']}", "Client-Id": tokens.client_id}
+        return headers
 
     def _build_request(self, endpoint: str, params: dict, model: T) -> Iterator[T]:
         after = True
         while after:
-            r = requests.get(f"{self.BaseURL}/{endpoint}", params=params, headers=self.headers)
-            r.raise_for_status()
+            r = self.get(endpoint, params=params)
             apidata = r.json()
-            if r.ok:
-                if apidata.get("pagination"):
-                    after = apidata["pagination"].get("cursor")
-                    params["after"] = after
-                else:
-                    after = None
+            if apidata.get("pagination"):
+                after = apidata["pagination"].get("cursor")
+                params["after"] = after
+            else:
+                after = None
 
-                for i in apidata["data"]:
-                    yield model(**i)
+            for i in apidata["data"]:
+                yield model(**i)
 
     def get_lives(self, users: str | list[str], use_user_logins=False) -> dict[str, TwitchStream | None]:
         """
@@ -81,7 +71,7 @@ class TwitchAPI:
             params["user_login"] = users
         else:
             params["user_id"] = users
-        r = requests.get(f"{self.BaseURL}/streams", params=params, headers=self.headers)
+        r = self.get("streams", params=params)
         apidata = r.json()
         dct = {}
 
@@ -105,7 +95,7 @@ class TwitchAPI:
         :param username: 用戶名稱（user_login）
         """
         params = {"login": username, "first": 1}
-        r = requests.get(f"{self.BaseURL}/users", params=params, headers=self.headers)
+        r = self.get("users", params=params)
         apidata = r.json()
         if apidata.get("data"):
             return TwitchUser(**apidata["data"][0])
@@ -128,7 +118,7 @@ class TwitchAPI:
         :param userid: 用戶id（user_id）
         """
         params = {"id": userid, "first": 1}
-        r = requests.get(f"{self.BaseURL}/users", params=params, headers=self.headers)
+        r = self.get("users", params=params)
         apidata = r.json()
         if apidata.get("data"):
             return TwitchUser(**apidata["data"][0])
@@ -150,7 +140,7 @@ class TwitchAPI:
         else:
             raise ValueError("must provide either user_ids or video_ids.")
 
-        r = requests.get(f"{self.BaseURL}/videos", params=params, headers=self.headers)
+        r = self.get("videos", params=params)
         apidata = r.json()
         if apidata.get("data"):
             results = [TwitchVideo(**i) for i in apidata["data"]]
@@ -173,7 +163,7 @@ class TwitchAPI:
             params["started_at"] = started_at.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
             params["ended_at"] = datetime.now(tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
-        r = requests.get(f"{self.BaseURL}/clips", params=params, headers=self.headers)
+        r = self.get("clips", params=params)
         apidata = r.json()
         if apidata.get("data"):
             if started_at:
@@ -184,14 +174,14 @@ class TwitchAPI:
             return None
 
 
-class GoogleAPI:
+class GoogleAPI(APICaller):
     """無身分驗證的Google API"""
 
-    BaseURL = "https://www.googleapis.com/youtube/v3"
+    base_url = "https://www.googleapis.com/youtube/v3"
 
     def __init__(self):
         self.__token = sqldb.get_access_token(APIType.Google).access_token
-        self.__headers = {"x-goog-api-key": self.__token, "Accept": "application/json"}
+        super().__init__(headers={"x-goog-api-key": self.__token, "Accept": "application/json"})
 
     def get_channel_id(self, channel_handle: str) -> str | None:
         """
@@ -204,16 +194,10 @@ class GoogleAPI:
             str | None: The ID of the channel if found, None otherwise.
         """
         params = {"forHandle": channel_handle, "part": "id", "maxResults": 1}
-        r = requests.get(f"{self.BaseURL}/channels", params=params, headers=self.__headers)
-        if r.ok:
-            data = r.json()
-            if data["pageInfo"]["totalResults"]:
-                return data["items"][0]["id"]
-            else:
-                return None
-        else:
-            print(r.text)
-            print(r.status_code)
+        data = self.get("channels", params=params).json()
+        if data["pageInfo"]["totalResults"]:
+            return data["items"][0]["id"]
+        return None
 
     def get_channel(self, channel_id: str = None, handle: str = None):
         """獲取Youtube頻道資訊
@@ -222,69 +206,42 @@ class GoogleAPI:
         兩者擇一提供即可
         """
         params = {"id": channel_id, "forHandle": handle, "part": "statistics,snippet", "maxResults": 1}
-        r = requests.get(f"{self.BaseURL}/channels", params=params, headers=self.__headers)
-        if r.ok:
-            return YoutubeChannel(**r.json().get("items")[0]) if r.json().get("items") else None
-        else:
-            raise APINetworkError("youtube_get_channel", f"[{r.status_code}] {r.text}")
+        data = self.get("channels", params=params).json()
+        return YoutubeChannel(**data.get("items")[0]) if data.get("items") else None
 
     def get_channelsection(self, channel_id: str):
         params = {"key": self.__token, "channelId": channel_id, "part": "contentDetails"}
-        r = requests.get(f"{self.BaseURL}/channelSections", params=params)
-        if r.status_code == 200:
-            print(r)
-            print(r.json())
-        else:
-            print(r.text)
-            print(r.status_code)
+        r = self.get("channelSections", params=params)
+        print(r)
+        print(r.json())
 
     def get_streams(self, channel_ids: list):
         print(",".join(channel_ids))
         params = {"key": self.__token, "part": "snippet", "channelId": ",".join(channel_ids), "eventType": "live", "type": "video"}
-        r = requests.get(f"{self.BaseURL}/search", params=params)
-        if r.ok:
-            print(r)
-            print(r.json())
-        else:
-            print(r.text)
-            print(r.status_code)
+        r = self.get("search", params=params)
+        print(r)
+        print(r.json())
 
     def get_stream(self, channel_id: str):
         """取得Youtube直播資訊（若無正在直播則回傳None）"""
         params = {"part": "snippet", "channelId": channel_id, "eventType": "live", "type": "video"}
-        r = requests.get(f"{self.BaseURL}/search", params=params, headers=self.__headers)
-        if r.ok:
-            return YouTubeStream(**r.json()["items"][0]) if r.json()["items"] else None
-        else:
-            raise APINetworkError("youtube_get_stream", f"[{r.status_code}] {r.text}")
+        data = self.get("search", params=params).json()
+        return YouTubeStream(**data["items"][0]) if data["items"] else None
 
     def get_video(self, video_id: str | list) -> list[YoutubeVideo]:
         params = {"part": "snippet,liveStreamingDetails", "id": video_id}
-        r = requests.get(f"{self.BaseURL}/videos", params=params, headers=self.__headers)
-        if r.ok:
-            return [YoutubeVideo(**i) for i in r.json()["items"]] if r.json()["items"] else list()
-        else:
-            raise APINetworkError("youtube_get_video", f"[{r.status_code}] {r.text}")
+        data = self.get("videos", params=params).json()
+        return [YoutubeVideo(**i) for i in data["items"]] if data["items"] else list()
 
     def get_playlist(self, playlist_id: str | list):
         params = {"key": self.__token, "part": "snippet,contentDetails", "id": playlist_id}
-        r = requests.get(f"{self.BaseURL}/playlists", params=params)
-        if r.ok:
-            return r.json()["items"][0] if r.json()["items"] else None
-        else:
-            print(r.text)
-            print(r.status_code)
-            return None
+        data = self.get("playlists", params=params).json()
+        return data["items"][0] if data["items"] else None
 
     def get_playlist_item(self, playlist_id: str | list):
         params = {"key": self.__token, "part": "snippet,contentDetails", "playlistId": playlist_id}
-        r = requests.get(f"{self.BaseURL}/playlistItems", params=params)
-        if r.ok:
-            return r.json()["items"][0] if r.json()["items"] else None
-        else:
-            print(r.text)
-            print(r.status_code)
-            return None
+        data = self.get("playlistItems", params=params).json()
+        return data["items"][0] if data["items"] else None
 
 
 class YoutubeRSS:
@@ -298,9 +255,11 @@ class YoutubeRSS:
             return results
 
 
-class YoutubePush:
+class YoutubePush(APICaller):
+    base_url = "https://pubsubhubbub.appspot.com"
+
     def __init__(self):
-        pass
+        super().__init__()
 
     def add_push(self, channel_id: str, callback_url: str, secret: str = None):
         try:
@@ -314,19 +273,14 @@ class YoutubePush:
                 "hub.lease_numbers": None,
             }
             header = {"Content-Type": "application/x-www-form-urlencoded"}
-            r = requests.post("https://pubsubhubbub.appspot.com/subscribe", data=data, headers=header)
-            r.raise_for_status()
+            self._request("POST", "subscribe", data=data, headers=header)
         except Exception as e:
             log.exception("Args: %a %s %s", channel_id, callback_url, secret)
 
     def get_push(self, channel_id: str, callback_url: str, secret: str = None):
         params = {"hub.callback": callback_url, "hub.topic": f"https://www.youtube.com/xml/feeds/videos.xml?channel_id={channel_id}", "hub.secret": secret}
-        r = requests.get("https://pubsubhubbub.appspot.com/subscription-details", params=params)
-        if r.ok:
-            return self._parse_subscription_details(r.text)
-        else:
-            log.warning("[%s] %s", r.status_code, r.text)
-            return None
+        r = self.get("subscription-details", params=params)
+        return self._parse_subscription_details(r.text)
 
     @staticmethod
     def _parse_subscription_details(html_content: str) -> YtSubscriptionDetails:
@@ -449,111 +403,82 @@ class XingyuGoogleCloud:
         return results
 
 
-class NotionAPI:
+class NotionAPI(APICaller):
+    base_url = "https://api.notion.com/v1"
+
     def __init__(self):
-        self.headers = self._get_headers()
-        self.url = "https://api.notion.com/v1"
+        super().__init__(headers=self._get_headers())
 
     def _get_headers(self):
         token = sqldb.get_access_token(APIType.Notion).access_token
         return {"Authorization": f"Bearer {token}", "Notion-Version": "2022-06-28", "Content-Type": "application/json"}
 
     def get_page(self, page_id: str):
-        r = requests.get(f"{self.url}/pages/{page_id}", headers=self.headers)
+        r = self.get(f"pages/{page_id}")
         apidata = r.json()
-        if r.ok:
-            return NotionPage(**apidata)
-        else:
-            return apidata["message"]
+        return NotionPage(**apidata)
 
     def get_page_property(self, page_id: str, property_id: str):
-        r = requests.get(f"{self.url}/pages/{page_id}/properties/{property_id}", headers=self.headers)
+        r = self.get(f"pages/{page_id}/properties/{property_id}")
         apidata = r.json()
-        if r.status_code == 200:
-            return apidata
-        else:
-            print(apidata["message"])
+        return apidata
 
     def add_page(self, data: dict, database_id: str | None = None):
         """新增Notion資料庫項目"""
         if database_id is not None:
             data["parent"] = {"database_id": database_id}
-        r = requests.post(f"{self.url}/pages", json=data, headers=self.headers)
+        r = self.post("pages", data=data)
         apidata = r.json()
-        if r.ok:
-            return NotionPage(**apidata)
-        else:
-            return apidata["message"]
+        return NotionPage(**apidata)
 
     def update_page(self, page_id: str, data: dict):
         """更新Notion頁面"""
-        r = requests.patch(f"{self.url}/pages/{page_id}", json=data, headers=self.headers)
+        r = self.patch(f"pages/{page_id}", data=data)
         apidata = r.json()
-        if r.ok:
-            return NotionPage(**apidata)
-        else:
-            return apidata["message"]
+        return NotionPage(**apidata)
 
     def get_block(self, block_id: str):
-        r = requests.get(f"{self.url}/blocks/{block_id}", headers=self.headers)
+        r = self.get(f"blocks/{block_id}")
         apidata = r.json()
-        if r.status_code == 200:
-            return NotionBlock(**apidata)
-        else:
-            return apidata["message"]
+        return NotionBlock(**apidata)
 
     def get_block_children(self, block_or_page_id: str):
-        r = requests.get(f"{self.url}/blocks/{block_or_page_id}/children", headers=self.headers)
+        r = self.get(f"blocks/{block_or_page_id}/children")
         apidata = r.json()
-        if r.status_code == 200:
-            return NotionQueryResponse(**apidata)
-        else:
-            return apidata["message"]
+        return NotionQueryResponse(**apidata)
 
     def update_block(self, block_id: str, data: dict):
         """更新Notion區塊內容"""
-        r = requests.patch(f"{self.url}/blocks/{block_id}", json=data, headers=self.headers)
+        r = self.patch(f"blocks/{block_id}", data=data)
         apidata = r.json()
-        if r.ok:
-            if apidata["object"] == "list":
-                return [NotionBlock(**i) for i in apidata["results"]]
-            else:
-                return NotionBlock(**apidata)
+        if apidata["object"] == "list":
+            return [NotionBlock(**i) for i in apidata["results"]]
         else:
-            return apidata["message"]
+            return NotionBlock(**apidata)
 
     def delete_block(self, block_or_page_id: str):
         """刪除Notion區塊或頁面"""
-        r = requests.delete(f"{self.url}/blocks/{block_or_page_id}", headers=self.headers)
+        r = self.delete(f"blocks/{block_or_page_id}")
         apidata = r.json()
-        if r.ok:
-            return NotionBlock(**apidata)
-        else:
-            return apidata["message"]
+        return NotionBlock(**apidata)
 
     def search(self, title: str, page_size=100):
         """search by title"""
         data = {"query": title, "page_size": page_size}
-        r = requests.post(f"{self.url}/search", json=data, headers=self.headers)
+        r = self.post("search", data=data)
         apidata = r.json()
-        if r.ok:
-            try:
-                return NotionQueryResponse(**apidata)
-            except Exception as e:
-                print(f"解析 Notion 搜尋結果時發生錯誤: {e}")
-                print(f"原始數據: {apidata}")
-                return None
-        else:
-            return apidata["message"]
+        try:
+            return NotionQueryResponse(**apidata)
+        except Exception as e:
+            print(f"解析 Notion 搜尋結果時發生錯誤: {e}")
+            print(f"原始數據: {apidata}")
+            return None
 
     def get_database(self, database_id: str):
         """取得Notion資料庫"""
-        r = requests.get(f"{self.url}/databases/{database_id}", headers=self.headers)
+        r = self.get(f"databases/{database_id}")
         apidata = r.json()
-        if r.ok:
-            return NotionDatabase(**apidata)
-        else:
-            return apidata["message"]
+        return NotionDatabase(**apidata)
 
     def add_page_title_content(self, title: str, content: str, database_id: str):
         """新增Notion資料庫項目，僅設定標題與內容"""
@@ -569,12 +494,9 @@ class NotionAPI:
             ],
         }
 
-        r = requests.post(f"{self.url}/pages", json=data, headers=self.headers)
+        r = self.post("pages", data=data)
         apidata = r.json()
-        if r.ok:
-            return NotionPage(**apidata)
-        else:
-            return apidata["message"]
+        return NotionPage(**apidata)
 
     def update_page_content(self, page_id: str, content: str):
         """更新Notion頁面內容"""
@@ -585,39 +507,32 @@ class NotionAPI:
         return self.update_block(blocks.results[0].id, data)
 
 
-class RssHub:
+class RssHub(APICaller):
+    base_url = "https://rsshub.app"
+
     def __init__(self):
-        self.url = "https://rsshub.app"
         self.url_local = "http://localhost:1200"
+        super().__init__()
 
     def get_twitter(self, username: str, local=False, after: datetime | None = None):
         """取得Twitter用戶的RSS"""
         # * api不支援id查詢 故使用username查詢
         if local:
             try:
-                r = requests.get(f"{self.url_local}/twitter/user/{username}")
-                r.raise_for_status()
-            except (requests.exceptions.ConnectionError, requests.exceptions.HTTPError):
-                r = requests.get(f"{self.url}/twitter/user/{username}")
+                r = self.get(f"twitter/user/{username}", base_url=self.url_local)
+            except APINetworkError:
+                r = self.get(f"twitter/user/{username}")
         else:
-            r = requests.get(f"{self.url}/twitter/user/{username}")
+            r = self.get(f"twitter/user/{username}")
 
-        if r.ok:
-            feeds = feedparser.parse(r.text)
-            results = [RssHubTwitterTweet(**feed) for feed in feeds.entries]
-            results.reverse()
+        feeds = feedparser.parse(r.text)
+        results = [RssHubTwitterTweet(**feed) for feed in feeds.entries]
+        results.reverse()
 
-            if after:
-                return [result for result in results if result.published_parsed > after]
-            else:
-                return results
-
+        if after:
+            return [result for result in results if result.published_parsed > after]
         else:
-            if r.status_code == 503:
-                # 503可能為找不到用戶
-                return
-            else:
-                raise APINetworkError("rsshub_get_twitter", f"[{r.status_code}]")
+            return results
 
 
 class CLIInterface:

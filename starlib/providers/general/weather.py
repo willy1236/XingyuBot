@@ -1,6 +1,5 @@
 import certifi
 import feedparser
-import requests
 
 from starlib.database import APIType, sqldb
 
@@ -22,6 +21,8 @@ class CWA_API(APICaller):
     def get_earthquake_report(self, significant=True):
         endpoint = "E-A0015-001" if significant else "E-A0016-001"
         r = self.get(endpoint, params={"limit": 1})
+        if r is None:
+            return None
 
         data = r.json().get("records", {}).get("Earthquake") or []
         return EarthquakeReport(**data[0]) if data else None
@@ -33,6 +34,8 @@ class CWA_API(APICaller):
 
         for endpoint in endpoints:
             r = self.get(endpoint, params=params, timeout=20)
+            if r is None:
+                continue
             data = r.json().get("records", {}).get("Earthquake") or []
             records.extend(EarthquakeReport(**i) for i in data)
 
@@ -42,16 +45,22 @@ class CWA_API(APICaller):
 
     def get_forecast(self):
         r = self.get("F-C0032-001")
+        if r is None:
+            return None
         return Forecast(r.json())
 
     def get_weather_warning(self):
         r = self.get("W-C0033-002")
+        if r is None:
+            return []
         return [WeatherWarningReport(**i) for i in (r.json().get("records", {}).get("record") or [])]
 
     def get_weather_data(self, StationId="C0Z100"):
         """取得無人氣象站氣象資料"""
         params = {"StationId": StationId}
         r = self.get("O-A0001-001", params=params)
+        if r is None:
+            return []
         return [WeatherReport(**i) for i in (r.json().get("records", {}).get("Station") or [])]
 
 
@@ -74,11 +83,12 @@ class CWA_API(APICaller):
 #         return Covid19Report(dict)
 
 
-class NCDRRSS:
+class NCDRRSS(APICaller):
+    base_url = "https://alerts.ncdr.nat.gov.tw"
+
     def get_typhoon_warning(self, after: datetime | None = None) -> list[TyphoonWarningReport]:
         """從RSS取得颱風警報（由舊到新）"""
-        response = requests.get("https://alerts.ncdr.nat.gov.tw/RssAtomFeed.ashx?AlertType=5", verify=certifi.where())
-        response.raise_for_status()
+        response = self.get("RssAtomFeed.ashx?AlertType=5", verify=certifi.where())
 
         feed = feedparser.parse(response.content)
         if feed.bozo:

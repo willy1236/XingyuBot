@@ -1,43 +1,37 @@
-import requests
-
 from starlib.fileDatabase import Jsondb
 
+from ..base import APICaller
 
-class JsonStorageAPI:
+
+class JsonStorageAPI(APICaller):
     """https://www.jsonstorage.net/"""
+
+    base_url = "https://api.jsonstorage.net/v1/json"
+
     def __init__(self):
-        self.url = "https://api.jsonstorage.net/v1/json"
+        super().__init__()
         tokens = Jsondb.get_token("jsonstorage_api")
         self.userId = tokens[0]
         self.itemId = tokens[1]
         self.token = tokens[2]
-        self.params = {
-            "apiKey":self.token
-        }
+        self.params = {"apiKey": self.token}
 
     def get(self):
-        r = requests.get(f"{self.url}/{self.userId}/{self.itemId}", params=self.params)
-        if r.status_code == 200:
-            return r.json()
-        else:
-            print(r.status_code, r.reason)
-            return None
+        r = super().get(f"{self.userId}/{self.itemId}", params=self.params)
+        return r.json()
 
     def post(self,data):
         """create a new json storage"""
-        r = requests.post(f"{self.url}", json=data, params=self.params)
+        r = super().post("", data=data, params=self.params)
         print(r.json())
 
     def put(self, data):
         """update current json data"""
-        r = requests.put(f"{self.url}/{self.userId}/{self.itemId}", json=data, params=self.params)
-        if r.status_code == 200:
-            print(r.json())
-        else:
-            print(r.status_code, r.reason)
+        r = super().put(f"{self.userId}/{self.itemId}", data=data, params=self.params)
+        print(r.json())
 
     def patch(self,data):
-        r = requests.patch(f"{self.url}/{self.userId}/{self.itemId}", json=data, params=self.params)
+        r = super().patch(f"{self.userId}/{self.itemId}", data=data, params=self.params)
         print(r.json())
 
     def append_data(self,data):
