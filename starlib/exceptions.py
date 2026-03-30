@@ -65,12 +65,12 @@ class ApiError(StarException):
 
 
 class APINetworkError(ApiError):
-    """調用 API 時發生錯誤的http請求錯誤 (錯誤代碼: 1101)"""
+    """調用 API 時發生Http請求錯誤 (錯誤代碼: 1101)"""
 
     code = 1101
 
     def __init__(self, message: str | None = None, original: Exception | None = None, original_message: str | None = None):
-        full_message = f"調用 API 時發生錯誤{f'：{message}' if message else ''}"
+        full_message = f"調用 API 時發生Http請求錯誤{f'：{message}' if message else ''}"
         super().__init__(full_message, original, original_message)
 
 
