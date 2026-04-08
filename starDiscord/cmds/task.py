@@ -217,15 +217,19 @@ class task(Cog_Extension):
                 broadcaster_id = clips[0].broadcaster_id
 
                 # 取得剪輯的來源影片（直播）
-                videos_dict = {clip.video_id: None for clip in clips}
-                api_video = tw_api.get_videos(video_ids=list(videos_dict.keys()))
-                if not api_video:
-                    continue
-                videos_dict = {video.id: video for video in api_video}
+                video_ids = [clip.video_id for clip in clips if clip.video_id]
+                videos_dict: dict[str, object] = {}
+                if video_ids:
+                    api_video = tw_api.get_videos(video_ids=list(set(video_ids)))
+                    videos_dict = {video.id: video for video in api_video} if api_video else {}
 
                 for clip in clips:
-                    video = videos_dict[clip.video_id]
                     newest = clip.created_at if clip.created_at > newest else newest
+                    if not clip.video_id:
+                        continue
+                    video = videos_dict.get(clip.video_id)
+                    if not video:
+                        continue
                     if clip.title != video.title:
                         embed = clip.embed(video)
                         await self.bot.send_notify_communities(embed, NotifyCommunityType.TwitchClip, broadcaster_id)
