@@ -28,7 +28,7 @@ class DiscordBot(discord.Bot):
         self.scheduler = AsyncIOScheduler()
 
         if bot_code != "1":
-            self.debug_guilds = Jsondb.config.get("debug_guilds")
+            self.debug_guilds = Jsondb.config.debug_guilds
 
     def run(self):
         token = sqldb.get_access_token(APIType.Discord, self.bot_code).access_token
@@ -50,7 +50,7 @@ class DiscordBot(discord.Bot):
         return f"<@{self.owner_id}>"
 
     async def error(self, ctx: discord.ApplicationContext, error: str) -> None:
-        error_report = self.get_channel(Jsondb.config.get("error_report"))
+        error_report = self.get_channel(Jsondb.config.error_report)
         embed = BotEmbed.general(
             name=str(ctx.author), icon_url=ctx.author.display_avatar.url, title="❌錯誤回報")
         embed.add_field(name="錯誤訊息", value=f"```py\n{error}```", inline=True)
@@ -66,7 +66,7 @@ class DiscordBot(discord.Bot):
         await error_report.send(embed=embed)
 
     async def report(self, msg: str, refer_msg: discord.Message | None = None):
-        report_channel = self.get_channel(Jsondb.config.get("report_channel"))
+        report_channel = self.get_channel(Jsondb.config.report_channel)
         embed = BotEmbed.general(name="回報訊息")
         embed.add_field(name="訊息", value=msg, inline=True)
         if refer_msg:
@@ -81,7 +81,7 @@ class DiscordBot(discord.Bot):
         await report_channel.send(embed=embed)
 
     async def feedback(self, ctx: discord.ApplicationContext, msg: discord.Message):
-        feedback_channel = self.get_channel(Jsondb.config.get("feedback_channel"))
+        feedback_channel = self.get_channel(Jsondb.config.feedback_channel)
         embed = BotEmbed.general(name=str(msg.author), icon_url=msg.author.display_avatar.url, title="💬回饋訊息", description=msg.content)
         embed.add_field(name="發送者", value=f"{ctx.author}\n{ctx.author.id}", inline=False)
         embed.add_field(name="來源頻道", value=f"{ctx.channel}\n{ctx.channel.id}", inline=True)
@@ -90,7 +90,7 @@ class DiscordBot(discord.Bot):
         await feedback_channel.send(embed=embed)
 
     async def dm(self, msg: discord.Message):
-        dm_channel = self.get_channel(Jsondb.config.get("dm_channel"))
+        dm_channel = self.get_channel(Jsondb.config.dm_channel)
         embed = BotEmbed.general(name=msg.author.name, icon_url=msg.author.display_avatar.url, title="💭私訊", description=msg.content)  # pyright: ignore[reportCallIssue]
         if msg.channel.recipient:
             embed.add_field(name="發送者", value=f"{msg.author}->{msg.channel.recipient}\n{msg.author.id}->{msg.channel.recipient.id}", inline=False)
@@ -102,7 +102,7 @@ class DiscordBot(discord.Bot):
         await dm_channel.send(embed=embed)
 
     async def mentioned(self, msg: discord.Message):
-        dm_channel = self.get_channel(Jsondb.config.get("mentioned_channel"))
+        dm_channel = self.get_channel(Jsondb.config.mentioned_channel)
         embed = BotEmbed.general(name=msg.author, icon_url=msg.author.display_avatar.url, title="提及訊息", description=f"{msg.content}\n{msg.jump_url}")
         embed.add_field(name="發送者", value=f"{msg.author}\n{msg.author.id}", inline=False)
         embed.add_field(name="來源頻道", value=f"{msg.channel}\n{msg.channel.id}", inline=True)
@@ -111,7 +111,7 @@ class DiscordBot(discord.Bot):
         await dm_channel.send(embed=embed)
 
     async def mention_everyone(self, msg: discord.Message):
-        dm_channel = self.get_channel(Jsondb.config.get("mention_everyone_channel"))
+        dm_channel = self.get_channel(Jsondb.config.mention_everyone_channel)
         embed = BotEmbed.general(name=msg.author, icon_url=msg.author.display_avatar.url,
                                  title="提及所有人訊息", description=f"{msg.content}\n{msg.jump_url}")
         embed.add_field(name="發送者", value=f"{msg.author}\n{msg.author.id}", inline=False)

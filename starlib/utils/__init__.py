@@ -10,9 +10,11 @@ from .logger import create_logger
 from .utility import *
 from .webUtility import *
 
-file_log = Jsondb.config.get("file_log")
-debug_mode = Jsondb.config.get("debug_mode",True)
-log_level = Jsondb.config.get("log_level",INFO)
+file_log = Jsondb.config.file_log
+debug_mode = Jsondb.config.debug_mode
+log_level = Jsondb.config.log_level
+if log_level is None:
+    raise RuntimeError("Missing config key: log_level")
 #log_level = DEBUG if debug_mode else INFO
 
 log = create_logger("starlib", log_level, file_log=True, dir_path="./logs")

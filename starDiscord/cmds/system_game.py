@@ -506,7 +506,7 @@ class system_game(Cog_Extension):
     ):
         await ctx.defer(ephemeral=True)
         zt_api = ZeroTierAPI()
-        member = zt_api.authorize_member(Jsondb.config.get("zerotier_network_id"), address_str, name=name)
+        member = zt_api.authorize_member(Jsondb.config.zerotier_network_id, address_str, name=name)
         if not member:
             await ctx.respond(f"ZeroTier帳號註冊失敗，請確認位址是否正確", ephemeral=True)
             return

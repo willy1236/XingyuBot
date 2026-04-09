@@ -39,9 +39,9 @@ cli_api = CLIInterface()
 ncdr_rss = NCDRRSS()
 
 # jsondb
-# main_guilds: list[int] = Jsondb.config.get("main_guilds", [])
+# main_guilds: list[int] = Jsondb.config.main_guilds
 drive_share_guilds: list[int] = sqldb.get_enable_drive_share_guilds()
 mcserver_guilds: list[int] = sqldb.get_enable_mcserver_guilds()
-happycamp_guild: list[int] = Jsondb.config.get("happycamp_guild", [])
-debug_guilds: list[int] = Jsondb.config.get("debug_guilds", [])
-debug_mode: bool = Jsondb.config.get("debug_mode", True)
+happycamp_guild: list[int] = Jsondb.config.happycamp_guild
+debug_guilds: list[int] = Jsondb.config.debug_guilds
+debug_mode: bool = Jsondb.config.debug_mode

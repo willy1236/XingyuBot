@@ -10,18 +10,28 @@ from .postgresql.client import SQLRepository, create_sql_repository
 from .postgresql.enums import *
 from .postgresql.models import *
 
-debug_mode = Jsondb.config.get("debug_mode",True)
-SQL_connection = Jsondb.config.get("SQL_connection")
+debug_mode = Jsondb.config.debug_mode
+SQL_connection = Jsondb.config.SQL_connection
 
 def create_sqldb(connect_name: str | None) -> SQLRepository:
     if connect_name:
-        SQLsettings = Jsondb.config.get(connect_name)
+        SQLsettings_obj = getattr(Jsondb.config, connect_name)
+        SQLsettings = SQLsettings_obj.model_dump() if hasattr(SQLsettings_obj, "model_dump") else SQLsettings_obj
     else:
+        SQLsettings = None
+
+    if SQLsettings is not None and not isinstance(SQLsettings, dict):
+        log.warning("Invalid SQL settings type for key '%s': %s", connect_name, type(SQLsettings).__name__)
         SQLsettings = None
 
     if SQLsettings is not None:
         try:
             from sqlalchemy.engine import URL
+
+            required_keys = {"user", "password", "host", "port", "database"}
+            if not required_keys.issubset(SQLsettings):
+                missing_keys = required_keys - set(SQLsettings.keys())
+                raise KeyError(f"Missing SQL settings keys: {sorted(missing_keys)}")
 
             connection_url = URL.create(
                 drivername="postgresql",
@@ -47,7 +57,7 @@ def create_sqldb(connect_name: str | None) -> SQLRepository:
 
 sqldb = create_sqldb(SQL_connection)
 
-Mongedb_connection = Jsondb.config.get("Mongedb_connection")
+Mongedb_connection = Jsondb.config.Mongedb_connection
 def create_mongedb(should_connect) -> MongoDB:
     if should_connect:
         url = Jsondb.get_token("mongodb_url")

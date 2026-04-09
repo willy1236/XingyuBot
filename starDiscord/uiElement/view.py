@@ -812,7 +812,7 @@ class VIPApplicationForm(discord.ui.Modal):
         )
         sqldb.add(form)
 
-        channel = interaction.client.get_channel(Jsondb.config.get("vip_admin_channel"))
+        channel = interaction.client.get_channel(Jsondb.config.vip_admin_channel)
         if channel:
             await channel.send(embed=form.embed())
         else:

@@ -15,7 +15,9 @@ from starlib import Jsondb, NotionAPI, agent_log, sqldb
 from starlib.database import APIType
 from starlib.providers.social.models import NotionBlock
 
-SQLsettings: dict = Jsondb.config.get("SQLsettings")
+if Jsondb.config.SQLsettings is None:
+    raise RuntimeError("Missing config key: SQLsettings")
+SQLsettings: dict = Jsondb.config.SQLsettings.model_dump()
 
 mcp_servers = load_mcp_servers("database/mcp_config.json")
 notion_api = NotionAPI()
@@ -129,7 +131,9 @@ class Tools:
             str: The result of the add operation.
         """
         agent_log.info(f"Adding Notion note with title: {title}")
-        database_id = Jsondb.config.get("notion_database_id")
+        database_id = Jsondb.config.notion_database_id
+        if database_id is None:
+            raise RuntimeError("Missing config key: notion_database_id")
         result = notion_api.add_page_title_content(title, content, database_id)
         agent_log.info(f"Add note result: {result}")
         return str(result)

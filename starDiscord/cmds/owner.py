@@ -165,7 +165,10 @@ class owner(Cog_Extension):
     async def statue(self, ctx, statue):
         config = Jsondb.config
         config.write("activity", statue)
-        await self.bot.change_presence(activity=discord.CustomActivity(name=config.get("activity")), status=discord.Status.online)
+        activity_name = config.activity
+        if activity_name is None:
+            raise RuntimeError("Missing config key: activity")
+        await self.bot.change_presence(activity=discord.CustomActivity(name=activity_name), status=discord.Status.online)
         await ctx.respond(f"狀態更改完成", delete_after=5)
 
     # shutdown
@@ -311,10 +314,18 @@ class owner(Cog_Extension):
     @mcserver_cmd.command(description="使用rcon mc伺服器指令", guild_ids=debug_guilds)
     @commands.is_owner()
     async def rcon(self, ctx: discord.ApplicationContext, command: str):
-        settings = Jsondb.config.get("mc_server")
-        host = settings.get("host")
-        port = settings.get("port")
-        password = settings.get("password")
+        settings = Jsondb.config.mc_server
+        if settings is None:
+            await ctx.respond("未設定 mc_server，請確認 setting.json", ephemeral=True)
+            return
+
+        host = settings.host
+        port = settings.port
+        password = settings.password
+        if not isinstance(host, str) or not isinstance(password, str) or not isinstance(port, int):
+            await ctx.respond("mc_server 設定格式錯誤，請確認 host/port/password", ephemeral=True)
+            return
+
         with mcrcon.MCRcon(host, password, port) as rcon:
             response = rcon.command(command)
             await ctx.respond(response if response else "指令已發送")

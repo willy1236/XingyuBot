@@ -31,8 +31,12 @@ discord_oauth_client = sqldb.get_oauth_client(APIType.Discord, 4)
 twitch_oauth_client = sqldb.get_oauth_client(APIType.Twitch, 3)
 google_oauth_settings = sqldb.get_oauth_client(APIType.Google, 3)
 docs_account = sqldb.get_identifier_secret(APIType.DocAccount)
-BASE_WWW_URL = Jsondb.config.get("base_www_url", "http://localhost:3000")
-BASE_DOMAIN = Jsondb.config.get("base_domain", "localhost")
+BASE_WWW_URL = Jsondb.config.base_www_url
+BASE_DOMAIN = Jsondb.config.base_domain
+if BASE_WWW_URL is None:
+    raise RuntimeError("Missing config key: base_www_url")
+if BASE_DOMAIN is None:
+    raise RuntimeError("Missing config key: base_domain")
 
 configuration = Configuration(access_token=sqldb.get_access_token(APIType.Line).access_token)
 handler = WebhookHandler(sqldb.get_identifier_secret(APIType.Line).client_secret)
@@ -179,7 +183,10 @@ async def oauth_discord(request: Request):
 
         # 產生 JWT
         payload = {"id": user.id, "username": user.username, "avatar": user.avatar, "exp": datetime.now() + timedelta(days=7)}
-        jwt_token = jwt.encode(payload, Jsondb.config.get("jwt_secret"), algorithm="HS256")
+        jwt_secret = Jsondb.config.jwt_secret
+        if jwt_secret is None:
+            raise RuntimeError("Missing config key: jwt_secret")
+        jwt_token = jwt.encode(payload, jwt_secret, algorithm="HS256")
 
         # 將 JWT 寫入 Cookie
         response.set_cookie(key="jwt", value=jwt_token, httponly=True, secure=True, samesite="lax", max_age=7 * 24 * 60 * 60, domain=f".{BASE_DOMAIN}")
@@ -361,7 +368,10 @@ async def verify_jwt(request: Request):
         raise HTTPException(status_code=401, detail="Unauthorized")
 
     try:
-        payload = jwt.decode(jwt_token, Jsondb.config.get("jwt_secret"), algorithms=["HS256"])
+        jwt_secret = Jsondb.config.jwt_secret
+        if jwt_secret is None:
+            raise HTTPException(status_code=500, detail="Missing config key: jwt_secret")
+        payload = jwt.decode(jwt_token, jwt_secret, algorithms=["HS256"])
         return payload
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="JWT expired")
@@ -397,7 +407,9 @@ class WebsiteThread(BaseThread):
         certfile = cert_dir / "localhost+2.pem"
         keyfile = cert_dir / "localhost+2-key.pem"
 
-        host = Jsondb.config.get("webip", "127.0.0.1")
+        host = Jsondb.config.webip
+        if host is None:
+            raise RuntimeError("Missing config key: webip")
 
         if certfile.exists() and keyfile.exists():
             config = uvicorn.Config(

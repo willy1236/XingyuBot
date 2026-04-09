@@ -15,9 +15,9 @@ from starServer.scheduler import run_scheduler_in_thread
 # ruff: enable[E402]
 
 config = Jsondb.config
-bot_code = config.get("bot_code")
-api_website = config.get("api_website")
-twitch_bot = config.get("twitch_bot", False)
+bot_code = config.bot_code
+api_website = config.api_website
+twitch_bot = config.twitch_bot
 
 
 def run_discord_bot():
