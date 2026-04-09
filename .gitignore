@@ -12,3 +12,4 @@ member_names.json
 database/google_client_credentials.json
 database/localhost+2.pem
 database/localhost+2-key.pem
+.env.test
