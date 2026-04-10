@@ -11,7 +11,6 @@ from .postgresql.client import SQLRepository, create_sql_repository
 from .postgresql.enums import *
 from .postgresql.models import *
 
-debug_mode = get_settings().DEBUG_MODE
 
 def create_sqldb() -> SQLRepository:
     try:

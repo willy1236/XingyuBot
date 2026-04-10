@@ -8,15 +8,12 @@ from discord.ext import commands
 from starlib import BotEmbed, Jsondb, log, sclient, tz
 from starlib.database import DBCacheType, NotifyChannelType, PrivilegeLevel
 from starlib.instance import *
-from starlib.settings import get_settings
 from starlib.starAgent import ModelMessage, MyDeps, agent
 
 from ..extension import Cog_Extension
 from ..uiElement.view import PollView, ReactionRoleView, TicketChannelView, TicketLobbyView
 
 keywords = {}
-
-voice_updata = get_settings().VOICE_UPDATE
 
 ai_access_guilds: list[int] = happycamp_guild + debug_guilds
 
@@ -423,36 +420,36 @@ class event(Cog_Extension):
         guildid = get_guildid(before, after)
 
         # 語音進出紀錄
-        if voice_updata:
-            voice_log_data = sclient.sqldb.cache.voice_log.get(guildid)
-            if voice_log_data is not None:
-                NowTime = datetime.now()
+        voice_log_data = sclient.sqldb.cache.voice_log.get(guildid)
+        if voice_log_data is not None:
+            NowTime = datetime.now()
+
+            if before.channel:
+                before_text = before.channel.mention if not sclient.sqldb.getif_dynamic_voice_room(before.channel.id) else before.channel.name + " (動態語音)"
+            else:
                 before_text = ""
+            if after.channel:
+                after_text = after.channel.mention if not sclient.sqldb.getif_dynamic_voice_room(after.channel.id) else after.channel.name + " (動態語音)"
+            else:
                 after_text = ""
-                if before.channel:
-                    before_text = (
-                        before.channel.mention if not sclient.sqldb.getif_dynamic_voice_room(before.channel.id) else before.channel.name + " (動態語音)"
-                    )
-                if after.channel:
-                    after_text = after.channel.mention if not sclient.sqldb.getif_dynamic_voice_room(after.channel.id) else after.channel.name + " (動態語音)"
 
-                if not before.channel:
-                    embed = discord.Embed(description=f"{member.mention} 進入語音", color=0x4AA0B5, timestamp=NowTime)
-                    embed.add_field(name="頻道", value=f"{after_text}", inline=False)
-                elif not after.channel:
-                    embed = discord.Embed(description=f"{member.mention} 離開語音", color=0x4AA0B5, timestamp=NowTime)
-                    embed.add_field(name="頻道", value=f"{before_text}", inline=False)
-                elif before.channel != after.channel:
-                    embed = discord.Embed(description=f"{member.mention} 更換語音", color=0x4AA0B5, timestamp=NowTime)
-                    embed.add_field(name="頻道", value=f"{before_text}->{after_text}", inline=False)
-                else:
-                    return
+            if not before.channel:
+                embed = discord.Embed(description=f"{member.mention} 進入語音", color=0x4AA0B5, timestamp=NowTime)
+                embed.add_field(name="頻道", value=f"{after_text}", inline=False)
+            elif not after.channel:
+                embed = discord.Embed(description=f"{member.mention} 離開語音", color=0x4AA0B5, timestamp=NowTime)
+                embed.add_field(name="頻道", value=f"{before_text}", inline=False)
+            elif before.channel != after.channel:
+                embed = discord.Embed(description=f"{member.mention} 更換語音", color=0x4AA0B5, timestamp=NowTime)
+                embed.add_field(name="頻道", value=f"{before_text}->{after_text}", inline=False)
+            else:
+                return
 
-                username = member.name if member.discriminator == "0" else member
-                embed.set_author(name=username,icon_url=member.display_avatar.url)
-                embed.set_footer(text=member.guild.name)
+            username = member.name if member.discriminator == "0" else member
+            embed.set_author(name=username, icon_url=member.display_avatar.url)
+            embed.set_footer(text=member.guild.name)
 
-                await self.bot.get_channel(voice_log_data[0]).send(embed=embed)
+            await self.bot.get_channel(voice_log_data[0]).send(embed=embed)
 
         # 舞台發言
         # if check_event_stage(before) or check_event_stage(after):

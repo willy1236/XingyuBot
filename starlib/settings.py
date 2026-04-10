@@ -13,7 +13,6 @@ class AppSettings(BaseSettings):
     BOT_CODE: str
 
     LOG_LEVEL: str | int = "INFO"
-    VOICE_UPDATE: bool = True
     API_WEBSITE: bool = False
     FILE_LOG: bool = False
     MONGODB_CONNECTION: bool = False
