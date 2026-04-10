@@ -16,8 +16,7 @@ from sqlalchemy.orm.scoping import ScopedSession
 from sqlmodel import Session, SQLModel, create_engine, delete, select, update
 
 from starlib.exceptions import *
-from starlib.fileDatabase import Jsondb
-from starlib.settings import tz
+from starlib.settings import get_settings, tz
 from starlib.utils import log
 
 from .cache import CacheStore
@@ -761,7 +760,7 @@ class WarningRepository(BaseRepository):
             reason=reason,
             last_time=last_time,
             guild_only=guild_only,
-            officially_given=create_guild in Jsondb.config["debug_guilds"],  # pyright: ignore[reportOperatorIssue]
+            officially_given=create_guild in get_settings().DEBUG_GUILDS,
         )
         self.session.add(warning)
         self.session.commit()
@@ -1463,6 +1462,28 @@ class GuildSettingRepository(BaseRepository):
         return list(result) if result else []
 
 
+class RuntimeConfigRepository(BaseRepository):
+    @staticmethod
+    def _get_bot_runtime_config_id(bot_code: str | int) -> int:
+        try:
+            return int(bot_code)
+        except (TypeError, ValueError) as exc:
+            raise RuntimeError(f"Invalid bot code: {bot_code}") from exc
+
+    def get_bot_activity(self, bot_code: str | int) -> str:
+        config_id = self._get_bot_runtime_config_id(bot_code)
+        config = self.session.get(BotRuntimeConfig, config_id)
+        if not config or not config.activity:
+            raise RuntimeError(f"Missing SQL config key: activity (bot_code={config_id})")
+        return config.activity
+
+    def set_bot_activity(self, bot_code: str | int, activity: str) -> BotRuntimeConfig:
+        config_id = self._get_bot_runtime_config_id(bot_code)
+        config = self.session.merge(BotRuntimeConfig(id=config_id, activity=activity, updated_at=datetime.now(tz)))
+        self.session.commit()
+        return config
+
+
 class TestRepository(BaseRepository):
     pass
 
@@ -1581,6 +1602,7 @@ class SQLRepository(
     NetworkRepository,
     VIPRepository,
     GuildSettingRepository,
+    RuntimeConfigRepository,
     TestRepository,
 ):
     """綜合SQL資料庫存取類別"""

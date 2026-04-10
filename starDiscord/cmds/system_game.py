@@ -11,6 +11,7 @@ from starlib import BotEmbed, ChoiceList, Jsondb, csvdb, log, sclient, tz
 from starlib.database import LOLGameCache, LOLGameRecord, PlatformType, UserIPDetails
 from starlib.exceptions import APINetworkError
 from starlib.providers import *
+from starlib.settings import get_settings
 
 from ..checks import RegisteredContext, ensure_registered
 from ..extension import Cog_Extension
@@ -506,7 +507,8 @@ class system_game(Cog_Extension):
     ):
         await ctx.defer(ephemeral=True)
         zt_api = ZeroTierAPI()
-        member = zt_api.authorize_member(Jsondb.config.zerotier_network_id, address_str, name=name)
+        zerotier_network_id = get_settings().ZEROTIER_NETWORK_ID
+        member = zt_api.authorize_member(zerotier_network_id, address_str, name=name)
         if not member:
             await ctx.respond(f"ZeroTier帳號註冊失敗，請確認位址是否正確", ephemeral=True)
             return

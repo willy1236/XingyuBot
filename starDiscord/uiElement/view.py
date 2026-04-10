@@ -13,7 +13,7 @@ from discord.utils import format_dt
 
 from starlib import BotEmbed, Jsondb, log, sqldb, tz
 from starlib.database import Giveaway, GiveawayUser, HappycampApplicationForm, HappycampVIP, McssServerAction, McssServerStatues, Poll, PollRole, TicketChannel
-from starlib.instance import mcss_api
+from starlib.instance import mcss_api, vip_admin_channel
 from starlib.utils.utility import find_radmin_vpn_network
 
 if TYPE_CHECKING:
@@ -812,7 +812,7 @@ class VIPApplicationForm(discord.ui.Modal):
         )
         sqldb.add(form)
 
-        channel = interaction.client.get_channel(Jsondb.config.vip_admin_channel)
+        channel = interaction.client.get_channel(vip_admin_channel)
         if channel:
             await channel.send(embed=form.embed())
         else:

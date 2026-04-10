@@ -13,7 +13,7 @@ from mcstatus import JavaServer
 from starlib import BotEmbed, Jsondb, log, sclient
 from starlib.database import NotifyChannelType
 from starlib.instance import *
-from starlib.settings import get_required_mc_server_env
+from starlib.settings import get_settings
 from starlib.utils.utility import ChoiceList, base64_to_buffer, converter, find_radmin_vpn_network, get_arp_list
 
 from ..checks import PrivilegeLevel, ensure_registered, has_privilege_level, has_vip, is_vip_admin
@@ -164,11 +164,8 @@ class owner(Cog_Extension):
     @commands.slash_command(description="更換bot狀態", guild_ids=debug_guilds)
     @commands.is_owner()
     async def statue(self, ctx, statue):
-        config = Jsondb.config
-        config.write("activity", statue)
-        activity_name = config.activity
-        if activity_name is None:
-            raise RuntimeError("Missing config key: activity")
+        sclient.sqldb.set_bot_activity(self.bot.bot_code, statue)
+        activity_name = sclient.sqldb.get_bot_activity(self.bot.bot_code)
         await self.bot.change_presence(activity=discord.CustomActivity(name=activity_name), status=discord.Status.online)
         await ctx.respond(f"狀態更改完成", delete_after=5)
 
@@ -316,14 +313,14 @@ class owner(Cog_Extension):
     @commands.is_owner()
     async def rcon(self, ctx: discord.ApplicationContext, command: str):
         try:
-            settings = get_required_mc_server_env()
+            settings = get_settings()
         except RuntimeError as exc:
             await ctx.respond(str(exc), ephemeral=True)
             return
 
-        host = str(settings["host"])
-        port = int(settings["port"])
-        password = str(settings["password"])
+        host = settings.MC_SERVER_HOST
+        port = settings.MC_SERVER_PORT
+        password = settings.MC_SERVER_PASSWORD
 
         with mcrcon.MCRcon(host, password, port) as rcon:
             response = rcon.command(command)

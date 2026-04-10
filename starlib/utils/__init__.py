@@ -5,16 +5,17 @@
 from logging import DEBUG, ERROR, INFO, WARNING
 
 from ..fileDatabase import Jsondb
+from ..settings import get_settings
 from .functions import *
 from .logger import create_logger
 from .utility import *
 from .webUtility import *
 
-file_log = Jsondb.config.file_log
-debug_mode = Jsondb.config.debug_mode
-log_level = Jsondb.config.log_level
-if log_level is None:
-    raise RuntimeError("Missing config key: log_level")
+settings = get_settings()
+
+file_log = settings.FILE_LOG
+debug_mode = settings.DEBUG_MODE
+log_level = settings.LOG_LEVEL
 #log_level = DEBUG if debug_mode else INFO
 
 log = create_logger("starlib", log_level, file_log=file_log, dir_path="./logs")

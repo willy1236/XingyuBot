@@ -2,13 +2,12 @@ import json
 import logging
 from collections.abc import Mapping
 from pathlib import Path
-from typing import TYPE_CHECKING, TypeVar, cast
+from typing import TYPE_CHECKING, cast
 
-from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
+from pydantic import BaseModel, ConfigDict, Field
 
 logger = logging.getLogger("star")
 
-DataValue = TypeVar("DataValue", str, int, bool, dict, list)
 JsonPrimitive = str | int | float | bool | None
 JsonValue = JsonPrimitive | dict[str, "JsonValue"] | list["JsonValue"]
 
@@ -115,102 +114,6 @@ class JsonCommandNamesModel(JsonContentModel):
         return cast(dict[str, JsonValue], dumped)
 
 
-class SQLConnectionModel(BaseModel):
-    host: str
-    port: str | int
-    user: str
-    password: str
-    database: str
-
-
-class McServerModel(BaseModel):
-    host: str
-    port: int
-    password: str
-
-
-class JsonConfigModel(JsonContentModel):
-    _path: Path | None = PrivateAttr(default=None)
-
-    task_report: int = 0
-    feedback_channel: int = 0
-    error_report: int = 0
-    report_channel: int = 0
-    dm_channel: int = 0
-    mentioned_channel: int = 0
-    mention_everyone_channel: int = 0
-    vip_admin_channel: int = 0
-
-    happycamp_guild: list[int] = Field(default_factory=list)
-    debug_guilds: list[int] = Field(default_factory=list)
-
-    debug_SQLsettings: SQLConnectionModel = Field(default_factory=lambda: SQLConnectionModel(host="", port="", user="", password="", database=""))
-    SQLsettings: SQLConnectionModel = Field(default_factory=lambda: SQLConnectionModel(host="", port="", user="", password="", database=""))
-    mc_server: McServerModel = Field(default_factory=lambda: McServerModel(host="", port=0, password=""))
-
-    bot_code: str = ""
-    activity: str = ""
-    debug_mode: bool = True
-    log_level: str | int = "INFO"
-    SQL_connection: str = ""
-    voice_updata: bool = True
-    api_website: bool = False
-    file_log: bool = False
-    Mongedb_connection: bool = False
-    twitch_bot: bool = False
-    webip: str = "127.0.0.1"
-    vosk_model_path: str = ""
-    zerotier_network_id: str = ""
-    jwt_secret: str = ""
-    base_domain: str = "localhost"
-    base_www_url: str = "http://localhost:3000"
-
-    @property
-    def datas(self) -> dict[str, JsonValue]:
-        return self.to_dict()
-
-    def bind_path(self, path: Path) -> None:
-        self._path = path
-
-    def _save(self) -> None:
-        if self._path is None:
-            return
-        with self._path.open("w", encoding="utf-8") as jfile:
-            json.dump(self.to_dict(), jfile, indent=4, ensure_ascii=False)
-
-    def get(self, key: str, default: DataValue | None = None) -> DataValue | None:
-        data = self.to_dict()
-        if key in data:
-            return cast(DataValue | None, data[key])
-        raise KeyError(f"Missing config key: {key}")
-
-    def write(self, key: str, value: JsonValue | None) -> None:
-        updated = self.to_dict()
-        updated[key] = value
-        validated = JsonConfigModel.from_mapping(updated)
-
-        # 覆寫當前 model 狀態，保持原本物件參考不變。
-        self.__dict__.clear()
-        self.__dict__.update(validated.__dict__)
-        self.__pydantic_fields_set__ = validated.__pydantic_fields_set__.copy()
-        self.__pydantic_extra__ = validated.__pydantic_extra__
-        self.__pydantic_private__ = validated.__pydantic_private__
-
-        self._save()
-
-    def update_dict(self, key: str, value: dict) -> None:
-        current = self.to_dict().get(key)
-        if current is None:
-            current = {}
-
-        if isinstance(current, dict):
-            current.update(value)
-            self.write(key, cast(JsonValue, current))
-            return
-
-        raise TypeError(f"Expected dict at key '{key}', got {type(current)}")
-
-
 class JsonDatabase:
     if TYPE_CHECKING:
         lol_jdict: JsonLolDictModel
@@ -218,7 +121,6 @@ class JsonDatabase:
         picdata: JsonPictureModel
         options: JsonOptionsModel
         cmd_names: JsonCommandNamesModel
-        config: JsonConfigModel
 
     __slots__ = [
         "lol_jdict",
@@ -226,7 +128,6 @@ class JsonDatabase:
         "picdata",
         "options",
         "cmd_names",
-        "config",
     ]
 
     _DBPATH = Path("./database")
@@ -251,16 +152,6 @@ class JsonDatabase:
         if not self._DBPATH.exists():
             self._DBPATH.mkdir(parents=True, exist_ok=True)
             logger.info(">> Created folder: %s <<", self._DBPATH)
-
-        setting_path = self._DBPATH / "setting.json"
-        if not setting_path.exists():
-            with setting_path.open("w", encoding="utf-8") as jfile:
-                json.dump({}, jfile, indent=4)
-                logger.info(">> Created json file: setting <<")
-
-        with setting_path.open("r", encoding="utf-8") as jfile:
-            self.config = JsonConfigModel.from_mapping(json.load(jfile))
-        self.config.bind_path(setting_path)
 
         for file, path in self._PATH_DICT.items():
             if not path.exists():

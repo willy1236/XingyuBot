@@ -3,7 +3,6 @@ token.json
 credentials.json
 database/token.json
 database/cache.json
-database/setting.json
 logs
 database/google_token.json
 twitch_token.json

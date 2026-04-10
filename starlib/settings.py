@@ -3,13 +3,21 @@ from datetime import timedelta, timezone
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import ValidationError
+from pydantic import Field, ValidationError
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 tz = timezone(timedelta(hours=8))
 
 class AppSettings(BaseSettings):
     APP_ENV: str = "development"
+    BOT_CODE: str
+
+    LOG_LEVEL: str | int = "INFO"
+    VOICE_UPDATE: bool = True
+    API_WEBSITE: bool = False
+    FILE_LOG: bool = False
+    MONGODB_CONNECTION: bool = False
+    TWITCH_BOT: bool = False
 
     DB_HOST: str
     DB_PORT: int
@@ -20,6 +28,25 @@ class AppSettings(BaseSettings):
     MC_SERVER_HOST: str
     MC_SERVER_PORT: int
     MC_SERVER_PASSWORD: str
+
+    ZEROTIER_NETWORK_ID: str
+    BASE_DOMAIN: str
+    BASE_WWW_URL: str
+
+    TASK_REPORT: int
+    FEEDBACK_CHANNEL: int
+    ERROR_REPORT: int
+    REPORT_CHANNEL: int
+    DM_CHANNEL: int
+    MENTIONED_CHANNEL: int
+    MENTION_EVERYONE_CHANNEL: int
+    VIP_ADMIN_CHANNEL: int
+
+    HAPPYCAMP_GUILD: list[int] = Field(default_factory=list)
+    DEBUG_GUILDS: list[int] = Field(default_factory=list)
+
+    DEBUG_MODE: bool = True
+    NOTION_DATABASE_ID: str
 
     JWT_SECRET: str
 
@@ -57,39 +84,3 @@ def get_settings() -> AppSettings:
         return AppSettings(**kwargs)
     except ValidationError as exc:
         raise RuntimeError(f"Invalid environment settings: {exc}") from exc
-
-
-def get_required_env(key: str) -> str:
-    settings = get_settings()
-    if hasattr(settings, key):
-        value = getattr(settings, key)
-        text = str(value).strip()
-    else:
-        raw = os.getenv(key, "")
-        text = raw.strip()
-
-    if not text:
-        raise RuntimeError(f"Missing required environment variable: {key}")
-    return text
-
-
-def get_required_sql_env() -> dict[str, str | int]:
-    settings = get_settings()
-
-    return {
-        "host": settings.DB_HOST,
-        "port": settings.DB_PORT,
-        "user": settings.DB_USER,
-        "password": settings.DB_PASSWORD,
-        "database": settings.DB_NAME,
-    }
-
-
-def get_required_mc_server_env() -> dict[str, str | int]:
-    settings = get_settings()
-
-    return {
-        "host": settings.MC_SERVER_HOST,
-        "port": settings.MC_SERVER_PORT,
-        "password": settings.MC_SERVER_PASSWORD,
-    }

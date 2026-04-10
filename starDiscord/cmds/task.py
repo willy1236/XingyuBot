@@ -28,7 +28,7 @@ class task(Cog_Extension):
     @commands.Cog.listener()
     async def on_ready(self):
         scheduler = self.bot.scheduler
-        if not Jsondb.config.debug_mode:
+        if not debug_mode:
             # 即時通知 - 保留misfire_grace_time
             scheduler.add_job(self.forecast_update, "cron", hour="0/3", minute=0, second=1, misfire_grace_time=60)
             scheduler.add_job(self.weather_check, "cron", minute="20,35", second=30, misfire_grace_time=60)

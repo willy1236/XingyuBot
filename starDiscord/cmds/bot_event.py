@@ -8,6 +8,7 @@ from discord.ext import commands
 from starlib import BotEmbed, Jsondb, log, sclient, tz
 from starlib.database import DBCacheType, NotifyChannelType, PrivilegeLevel
 from starlib.instance import *
+from starlib.settings import get_settings
 from starlib.starAgent import ModelMessage, MyDeps, agent
 
 from ..extension import Cog_Extension
@@ -15,8 +16,7 @@ from ..uiElement.view import PollView, ReactionRoleView, TicketChannelView, Tick
 
 keywords = {}
 
-config = Jsondb.config
-voice_updata = config.voice_updata
+voice_updata = get_settings().VOICE_UPDATE
 
 ai_access_guilds: list[int] = happycamp_guild + debug_guilds
 
@@ -165,9 +165,8 @@ class event(Cog_Extension):
             await bot.change_presence(activity=discord.CustomActivity(name="開發模式啟用中"), status=discord.Status.dnd)
             log.info(f">> Development mode: On <<")
         else:
-            if config.activity is None:
-                raise RuntimeError("Missing config key: activity")
-            await bot.change_presence(activity=discord.CustomActivity(name=config.activity), status=discord.Status.online)
+            activity_name = sclient.sqldb.get_bot_activity(bot.bot_code)
+            await bot.change_presence(activity=discord.CustomActivity(name=activity_name), status=discord.Status.online)
 
         cog_path = bot._COG_PATH
         total_cog_files = len([f for f in cog_path.iterdir() if f.is_file() and f.suffix == ".py"])
@@ -564,13 +563,13 @@ class event(Cog_Extension):
 
     @commands.Cog.listener()
     async def on_guild_join(self, guild:discord.Guild):
-        report_channel = self.bot.get_channel(Jsondb.config.report_channel)
-        await report_channel.send(f"公會異動：我加入了 {guild.name} ({guild.id})")
+        report_channel_obj = self.bot.get_channel(report_channel)
+        await report_channel_obj.send(f"公會異動：我加入了 {guild.name} ({guild.id})")
 
     @commands.Cog.listener()
     async def on_guild_remove(self, guild:discord.Guild):
-        report_channel = self.bot.get_channel(Jsondb.config.report_channel)
-        await report_channel.send(f"公會異動：我離開了 {guild.name} ({guild.id})")
+        report_channel_obj = self.bot.get_channel(report_channel)
+        await report_channel_obj.send(f"公會異動：我離開了 {guild.name} ({guild.id})")
 
     @commands.Cog.listener()
     async def on_member_update(self,before:discord.Member, after:discord.Member):

@@ -8,16 +8,17 @@ truststore.inject_into_ssl()
 
 # ruff: disable[E402]
 from starDiscord import DiscordBot
-from starlib import Jsondb, log, sclient
+from starlib import log, sclient
 from starlib.core.model import TwitchStreamEvent
+from starlib.settings import get_settings
 from starServer.scheduler import run_scheduler_in_thread
 
 # ruff: enable[E402]
 
-config = Jsondb.config
-bot_code = config.bot_code
-api_website = config.api_website
-twitch_bot = config.twitch_bot
+settings = get_settings()
+bot_code = settings.BOT_CODE
+api_website = settings.API_WEBSITE
+twitch_bot = settings.TWITCH_BOT
 
 
 def run_discord_bot():

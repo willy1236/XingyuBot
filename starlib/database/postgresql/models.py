@@ -541,6 +541,14 @@ class GuildInternalConfig(GuildsSchema, table=True):
     enable_mcserver: bool = Field(sa_column=Column(Boolean, default=False))
 
 
+class BotRuntimeConfig(BasicSchema, table=True):
+    __tablename__ = "bot_runtime_config"
+
+    id: int = Field(sa_column=Column(Integer, primary_key=True, autoincrement=False, default=1))
+    activity: str = Field(sa_column=Column(String, nullable=False))
+    updated_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0), server_default=text("now()")))
+
+
 class MemorialDay(BasicSchema, table=True):
     __tablename__ = "memorial_days"
 

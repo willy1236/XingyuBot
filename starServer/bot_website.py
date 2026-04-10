@@ -25,19 +25,16 @@ from starlib.database import APIType, ExternalAccount, NotifyCommunityType, Plat
 from starlib.instance import google_api
 from starlib.oauth import DiscordOAuth, GoogleOAuth, TwitchOAuth
 from starlib.providers.social.push_models import YoutubePushEntry
-from starlib.settings import get_required_env
+from starlib.settings import get_settings
 from starlib.starAgent_line import line_agent
 
 discord_oauth_client = sqldb.get_oauth_client(APIType.Discord, 4)
 twitch_oauth_client = sqldb.get_oauth_client(APIType.Twitch, 3)
 google_oauth_settings = sqldb.get_oauth_client(APIType.Google, 3)
 docs_account = sqldb.get_identifier_secret(APIType.DocAccount)
-BASE_WWW_URL = Jsondb.config.base_www_url
-BASE_DOMAIN = Jsondb.config.base_domain
-if BASE_WWW_URL is None:
-    raise RuntimeError("Missing config key: base_www_url")
-if BASE_DOMAIN is None:
-    raise RuntimeError("Missing config key: base_domain")
+SETTINGS = get_settings()
+BASE_WWW_URL = SETTINGS.BASE_WWW_URL
+BASE_DOMAIN = SETTINGS.BASE_DOMAIN
 
 configuration = Configuration(access_token=sqldb.get_access_token(APIType.Line).access_token)
 handler = WebhookHandler(sqldb.get_identifier_secret(APIType.Line).client_secret)
@@ -184,7 +181,7 @@ async def oauth_discord(request: Request):
 
         # 產生 JWT
         payload = {"id": user.id, "username": user.username, "avatar": user.avatar, "exp": datetime.now() + timedelta(days=7)}
-        jwt_secret = get_required_env("JWT_SECRET")
+        jwt_secret = SETTINGS.JWT_SECRET
         jwt_token = jwt.encode(payload, jwt_secret, algorithm="HS256")
 
         # 將 JWT 寫入 Cookie
@@ -367,7 +364,7 @@ async def verify_jwt(request: Request):
         raise HTTPException(status_code=401, detail="Unauthorized")
 
     try:
-        jwt_secret = get_required_env("JWT_SECRET")
+        jwt_secret = SETTINGS.JWT_SECRET
         payload = jwt.decode(jwt_token, jwt_secret, algorithms=["HS256"])
         return payload
     except jwt.ExpiredSignatureError:
@@ -404,20 +401,16 @@ class WebsiteThread(BaseThread):
         certfile = cert_dir / "localhost+2.pem"
         keyfile = cert_dir / "localhost+2-key.pem"
 
-        host = Jsondb.config.webip
-        if host is None:
-            raise RuntimeError("Missing config key: webip")
-
         if certfile.exists() and keyfile.exists():
             config = uvicorn.Config(
                 app,
-                host=host,
+                host="0.0.0.0",
                 port=14000,
                 ssl_certfile=str(certfile),
                 ssl_keyfile=str(keyfile),
             )
         else:
-            config = uvicorn.Config(app, host=host, port=14000)
+            config = uvicorn.Config(app, host="0.0.0.0", port=14000)
 
         self.server = uvicorn.Server(config)
 
