@@ -1,3 +1,4 @@
+# type: ignore
 import pytest
 
 import sentry_bootstrap as sentry_init

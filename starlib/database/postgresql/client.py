@@ -41,6 +41,7 @@ class BaseRepository:
         self.engine = engine
         self._session_factory = session_factory
         self.cache = CacheStore()
+        self._is_closed = False
 
     @property
     def session(self) -> Session:
@@ -137,6 +138,23 @@ class BaseRepository:
 
     def get(self, db_obj: T, primary_keys: tuple) -> T | None:
         return self.session.get(db_obj, primary_keys)
+
+    def shutdown(self) -> None:
+        """程式結束時釋放 SQL session 與連線池資源。"""
+        if self._is_closed:
+            return
+
+        try:
+            if isinstance(self._session_factory, ScopedSession):
+                self._session_factory.remove()
+            elif isinstance(self._session_factory, Session):
+                self._session_factory.close()
+        except Exception:
+            log.exception("SQL shutdown: failed to close session")
+        finally:
+            self.engine.dispose()
+            self._is_closed = True
+            log.debug("SQL shutdown: session removed and engine disposed.")
 
 
 class UserRepository(BaseRepository):

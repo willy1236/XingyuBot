@@ -1,4 +1,4 @@
-import asyncio
+import atexit
 import time
 
 import discord
@@ -72,6 +72,19 @@ def run_website():
         log.info(">> website: offline <<")
     time.sleep(1)
 
+
+def cleanup_on_exit() -> None:
+    """在程式結束時釋放全域資源。"""
+    db = getattr(sclient, "sqldb", None)
+    if db is None:
+        return
+
+    try:
+        db.shutdown()
+    except Exception:
+        log.exception(">> shutdown cleanup failed <<")
+
+
 def main():
     if api_website:
         run_website()
@@ -85,4 +98,5 @@ def main():
 
 
 if __name__ == "__main__":
+    atexit.register(cleanup_on_exit)
     main()
