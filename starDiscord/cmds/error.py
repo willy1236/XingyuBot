@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 
+from sentry_bootstrap import capture_exception_safe
 from starlib import Jsondb, log
 from starlib.exceptions import *
 from starlib.instance import debug_guilds, debug_mode
@@ -44,6 +45,11 @@ class error(Cog_Extension):
 
             elif isinstance(error.original, (AttributeError, KeyError)):
                 log.error(f"內部錯誤 - {type(error.original).__name__}: {error.original}", exc_info=error.original)
+                capture_exception_safe(
+                    error.original,
+                    tags={"service": "discord", "source": "on_application_command_error"},
+                    extras={"command": str(ctx.command), "guild_id": getattr(ctx.guild, "id", None)},
+                )
 
                 if not ctx.guild or ctx.guild.id not in debug_guilds:
                     await ctx.respond(f"錯誤：機器人內部錯誤（若發生此項錯誤請靜待修復）", ephemeral=True)
@@ -56,6 +62,11 @@ class error(Cog_Extension):
                 log.warning(f"功能未實裝: {error.original}")
             else:
                 log.error(f"未知錯誤 - {type(error.original).__name__}: {error.original}", exc_info=error.original)
+                capture_exception_safe(
+                    error.original,
+                    tags={"service": "discord", "source": "on_application_command_error"},
+                    extras={"command": str(ctx.command), "guild_id": getattr(ctx.guild, "id", None)},
+                )
 
                 if not ctx.guild or ctx.guild.id not in debug_guilds:
                     await ctx.respond(f"發生未知錯誤，請等待修復", ephemeral=True)
@@ -72,6 +83,11 @@ class error(Cog_Extension):
             log.warning(f"參數解析錯誤: {error}")
 
         else:
+            capture_exception_safe(
+                error if isinstance(error, Exception) else Exception(str(error)),
+                tags={"service": "discord", "source": "on_application_command_error_fallback"},
+                extras={"command": str(ctx.command), "guild_id": getattr(ctx.guild, "id", None)},
+            )
             if not ctx.guild or ctx.guild.id not in debug_guilds:
                 await self.bot.error(ctx,error)
             await ctx.respond(f"發生未知錯誤\n```{error.original if hasattr(error, 'original') else error}```", ephemeral=True)

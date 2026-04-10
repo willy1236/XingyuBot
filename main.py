@@ -4,7 +4,11 @@ import time
 import discord
 import truststore
 
+from sentry_bootstrap import init_sentry
+
 truststore.inject_into_ssl()
+
+init_sentry(service="main")
 
 # ruff: disable[E402]
 from starDiscord import DiscordBot

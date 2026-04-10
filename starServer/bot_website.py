@@ -20,6 +20,7 @@ from linebot.v3.messaging import ApiClient, Configuration, MessagingApi, ReplyMe
 from linebot.v3.webhooks import MessageEvent, TextMessageContent
 from linebot.v3.webhooks.models.message_event import MessageEvent
 
+from sentry_bootstrap import capture_exception_safe
 from starlib import BaseThread, Jsondb, sclient, sqldb, utils, web_log
 from starlib.database import APIType, ExternalAccount, NotifyCommunityType, PlatformType, TwitchBotJoinChannel
 from starlib.instance import google_api
@@ -40,6 +41,23 @@ configuration = Configuration(access_token=sqldb.get_access_token(APIType.Line).
 handler = WebhookHandler(sqldb.get_identifier_secret(APIType.Line).client_secret)
 
 app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
+
+
+@app.middleware("http")
+async def sentry_exception_middleware(request: Request, call_next):
+    try:
+        return await call_next(request)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        capture_exception_safe(
+            exc,
+            tags={"service": "website", "source": "middleware"},
+            extras={"path": request.url.path, "method": request.method},
+        )
+        web_log.exception("Unhandled website exception: %s", exc)
+        return JSONResponse(status_code=500, content={"detail": "Internal Server Error"})
+
 
 security = HTTPBasic()
 def get_current_username(credentials: HTTPBasicCredentials = Depends(security)):
@@ -267,6 +285,7 @@ def process_linebot_webhook(body: str, signature: str):
     except InvalidSignatureError:
         web_log.error("Invalid signature in LINE Bot webhook")
     except Exception as e:
+        capture_exception_safe(e, tags={"service": "website", "source": "linebot_webhook"})
         web_log.error(f"處理 LINE Bot 訊息時發生錯誤: {e}")
 
 @handler.add(MessageEvent, message=TextMessageContent)
@@ -279,6 +298,7 @@ async def handle_message(event: MessageEvent):
             ai_response = await line_agent.run(report_text)
             text = "\n".join([report_text, "", "AI 分析結果:", ai_response.output])
         except Exception as e:
+            capture_exception_safe(e, tags={"service": "website", "source": "line_agent"})
             web_log.error(f"Error in AI analysis: {e}")
             text = "\n".join([report_text, "", "AI 分析結果: 無法取得分析結果"])
 
@@ -420,6 +440,10 @@ class WebsiteThread(BaseThread):
 
         try:
             self.loop.run_until_complete(self.server.serve())
+        except Exception as exc:
+            capture_exception_safe(exc, tags={"service": "website", "source": "website_thread_run"})
+            web_log.exception("Website thread crashed: %s", exc)
+            raise
         finally:
             self.loop.close()
 

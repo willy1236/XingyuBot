@@ -13,6 +13,7 @@ from twitchAPI.object import eventsub
 from twitchAPI.twitch import Twitch
 from twitchAPI.type import AuthScope, ChatEvent, EventSubSubscriptionError, EventSubSubscriptionTimeout, InvalidTokenException, MissingScopeException
 
+from sentry_bootstrap import capture_exception_safe
 from starlib import BaseThread, BotEmbed, Jsondb, sclient, twitch_log  # TODO: 全面改用 eventbus
 from starlib.core.model import TwitchStreamEvent
 from starlib.database import APIType, NotifyCommunityType, TwitchChatCommand, sqldb
@@ -485,9 +486,14 @@ class TwitchBotThread(BaseThread):
         self.eventsub: EventSubWebhook = None
 
     def run(self):
-        self.chat, self.twitch, self.eventsub = asyncio.run(run())
-        self._stop_event.wait()
-        asyncio.run(self.cleanup())
+        try:
+            self.chat, self.twitch, self.eventsub = asyncio.run(run())
+            self._stop_event.wait()
+            asyncio.run(self.cleanup())
+        except Exception as exc:
+            capture_exception_safe(exc, tags={"service": "twitch", "source": "thread_run"})
+            twitch_log.exception("TwitchBotThread crashed: %s", exc)
+            raise
 
     async def cleanup(self):
         """安全地清理所有資源"""
@@ -495,18 +501,21 @@ class TwitchBotThread(BaseThread):
             if self.eventsub:
                 await self.eventsub.stop()
         except Exception as e:
+            capture_exception_safe(e, tags={"service": "twitch", "source": "cleanup_eventsub"})
             twitch_log.warning(f"Error stopping eventsub: {e}")
 
         try:
             if self.twitch:
                 await self.twitch.close()
         except Exception as e:
+            capture_exception_safe(e, tags={"service": "twitch", "source": "cleanup_twitch"})
             twitch_log.warning(f"Error closing twitch: {e}")
 
         try:
             if self.chat:
                 self.chat.stop()
         except Exception as e:
+            capture_exception_safe(e, tags={"service": "twitch", "source": "cleanup_chat"})
             twitch_log.warning(f"Error stopping chat: {e}")
 
 

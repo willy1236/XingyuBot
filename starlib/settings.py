@@ -49,6 +49,14 @@ class AppSettings(BaseSettings):
 
     JWT_SECRET: str
 
+    SENTRY_ENABLED: bool = False
+    SENTRY_DSN: str | None = None
+    SENTRY_ENVIRONMENT: str | None = None
+    SENTRY_RELEASE: str | None = None
+    SENTRY_DEBUG: bool = False
+    SENTRY_SEND_DEFAULT_PII: bool = False
+    SENTRY_TRACES_SAMPLE_RATE: float = 0.0
+
     model_config = SettingsConfigDict(
         env_file_encoding="utf-8",
         extra="ignore",

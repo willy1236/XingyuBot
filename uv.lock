@@ -1903,6 +1903,19 @@ wheels = [
 ]
 
 [[package]]
+name = "sentry-sdk"
+version = "2.57.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "certifi" },
+    { name = "urllib3" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/4f/87/46c0406d8b5ddd026f73adaf5ab75ce144219c41a4830b52df4b9ab55f7f/sentry_sdk-2.57.0.tar.gz", hash = "sha256:4be8d1e71c32fb27f79c577a337ac8912137bba4bcbc64a4ec1da4d6d8dc5199", size = 435288, upload-time = "2026-03-31T09:39:29.264Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c9/64/982e07b93219cb52e1cca5d272cb579e2f3eb001956c9e7a9a6d106c9473/sentry_sdk-2.57.0-py2.py3-none-any.whl", hash = "sha256:812c8bf5ff3d2f0e89c82f5ce80ab3a6423e102729c4706af7413fd1eb480585", size = 456489, upload-time = "2026-03-31T09:39:27.524Z" },
+]
+
+[[package]]
 name = "sgmllib3k"
 version = "1.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2301,6 +2314,7 @@ dependencies = [
     { name = "python-nmap" },
     { name = "python-whois" },
     { name = "requests" },
+    { name = "sentry-sdk" },
     { name = "sqlmodel" },
     { name = "truststore" },
     { name = "tweepy", extra = ["async"] },
@@ -2346,6 +2360,7 @@ requires-dist = [
     { name = "python-nmap", specifier = ">=0.7.1" },
     { name = "python-whois", specifier = ">=0.9.5" },
     { name = "requests", specifier = ">=2.32.4" },
+    { name = "sentry-sdk", specifier = ">=2.34.1" },
     { name = "sqlmodel", specifier = ">=0.0.24" },
     { name = "truststore", specifier = ">=0.10.4" },
     { name = "tweepy", extras = ["async"], specifier = ">=4.16.0" },
