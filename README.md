@@ -140,14 +140,31 @@ scripts/run_main.bat
 
 ## 設定
 
-機器人的設定透過 `database/setting.json` 進行配置，主要設定項包含：
+目前設定採用「JSON + `.env`」的單一規則：
 
-- `bot_code`：Bot 識別碼
-- `api_website`：是否啟動 Web API 服務
-- `twitch_bot`：是否啟動 Twitch Chat Bot
-- `debug_mode`：除錯模式開關
-- `SQLsettings`：PostgreSQL 連線設定
-- 各項 API Token 儲存於資料庫中
+1. `database/setting.json` 只保留非敏感設定，例如 `bot_code`、`api_website`、`twitch_bot`、`debug_mode`。
+2. SQL 連線、Minecraft RCON、JWT secret 這些敏感值全部改由 `.env` 提供。
+3. 啟動時會由 `pydantic_settings` 讀取並驗證，缺少必要欄位會直接失敗，不做 JSON fallback。
+
+環境檔載入規則：
+
+- 先讀 `APP_ENV`
+- 優先載入 `.env.{APP_ENV}`
+- 找不到時才讀 `.env`
+
+目前必填的環境變數：
+
+- `DB_HOST`
+- `DB_PORT`
+- `DB_USER`
+- `DB_PASSWORD`
+- `DB_NAME`
+- `MC_SERVER_HOST`
+- `MC_SERVER_PORT`
+- `MC_SERVER_PASSWORD`
+- `JWT_SECRET`
+
+可直接複製 [.env.example](.env.example) 建立本機設定檔。啟動腳本 [scripts/run_main.bat](scripts/run_main.bat) 會預設使用 `APP_ENV=production`。
 
 ## 使用素材 
 

@@ -13,3 +13,7 @@ database/google_client_credentials.json
 database/localhost+2.pem
 database/localhost+2-key.pem
 .env.test
+.env
+.env.*
+!.env.example
+!.env.*.example

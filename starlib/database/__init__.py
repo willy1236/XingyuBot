@@ -3,6 +3,7 @@
 處理資料庫連線與操作。
 """
 from starlib.fileDatabase import Jsondb
+from starlib.settings import get_required_sql_env
 from starlib.utils import log
 
 from .mongodb.client import MongoDB
@@ -15,23 +16,10 @@ SQL_connection = Jsondb.config.SQL_connection
 
 def create_sqldb(connect_name: str | None) -> SQLRepository:
     if connect_name:
-        SQLsettings_obj = getattr(Jsondb.config, connect_name)
-        SQLsettings = SQLsettings_obj.model_dump() if hasattr(SQLsettings_obj, "model_dump") else SQLsettings_obj
-    else:
-        SQLsettings = None
-
-    if SQLsettings is not None and not isinstance(SQLsettings, dict):
-        log.warning("Invalid SQL settings type for key '%s': %s", connect_name, type(SQLsettings).__name__)
-        SQLsettings = None
-
-    if SQLsettings is not None:
         try:
             from sqlalchemy.engine import URL
 
-            required_keys = {"user", "password", "host", "port", "database"}
-            if not required_keys.issubset(SQLsettings):
-                missing_keys = required_keys - set(SQLsettings.keys())
-                raise KeyError(f"Missing SQL settings keys: {sorted(missing_keys)}")
+            SQLsettings = get_required_sql_env()
 
             connection_url = URL.create(
                 drivername="postgresql",

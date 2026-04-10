@@ -25,6 +25,7 @@ from starlib.database import APIType, ExternalAccount, NotifyCommunityType, Plat
 from starlib.instance import google_api
 from starlib.oauth import DiscordOAuth, GoogleOAuth, TwitchOAuth
 from starlib.providers.social.push_models import YoutubePushEntry
+from starlib.settings import get_required_env
 from starlib.starAgent_line import line_agent
 
 discord_oauth_client = sqldb.get_oauth_client(APIType.Discord, 4)
@@ -183,9 +184,7 @@ async def oauth_discord(request: Request):
 
         # 產生 JWT
         payload = {"id": user.id, "username": user.username, "avatar": user.avatar, "exp": datetime.now() + timedelta(days=7)}
-        jwt_secret = Jsondb.config.jwt_secret
-        if jwt_secret is None:
-            raise RuntimeError("Missing config key: jwt_secret")
+        jwt_secret = get_required_env("JWT_SECRET")
         jwt_token = jwt.encode(payload, jwt_secret, algorithm="HS256")
 
         # 將 JWT 寫入 Cookie
@@ -368,9 +367,7 @@ async def verify_jwt(request: Request):
         raise HTTPException(status_code=401, detail="Unauthorized")
 
     try:
-        jwt_secret = Jsondb.config.jwt_secret
-        if jwt_secret is None:
-            raise HTTPException(status_code=500, detail="Missing config key: jwt_secret")
+        jwt_secret = get_required_env("JWT_SECRET")
         payload = jwt.decode(jwt_token, jwt_secret, algorithms=["HS256"])
         return payload
     except jwt.ExpiredSignatureError:

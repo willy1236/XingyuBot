@@ -123,6 +123,13 @@ def test_something(sample_user_ids, test_timezone):
 DATABASE_URL=postgresql://test:test@localhost:5432/xingyu_test
 LOG_LEVEL=DEBUG
 TESTING=true
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=test_db_password
+DB_NAME=xingyu_test
+MC_SERVER_PASSWORD=test_mc_rcon_password
+JWT_SECRET=test_jwt_secret
 ```
 
 ### pytest.ini

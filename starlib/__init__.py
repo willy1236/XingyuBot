@@ -1,9 +1,7 @@
-'''
+"""
 ## Xingyu Discord Bot Library
 Discord機器人"星羽"用libary
-'''
-from datetime import timedelta, timezone
-
+"""
 from .base import *
 from .core import StarEventBus, sclient
 from .database import sqldb

@@ -127,7 +127,6 @@ class McServerModel(BaseModel):
     host: str
     port: int
     password: str
-    server_id: str | None = None
 
 
 class JsonConfigModel(JsonContentModel):

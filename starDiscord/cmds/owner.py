@@ -13,6 +13,7 @@ from mcstatus import JavaServer
 from starlib import BotEmbed, Jsondb, log, sclient
 from starlib.database import NotifyChannelType
 from starlib.instance import *
+from starlib.settings import get_required_mc_server_env
 from starlib.utils.utility import ChoiceList, base64_to_buffer, converter, find_radmin_vpn_network, get_arp_list
 
 from ..checks import PrivilegeLevel, ensure_registered, has_privilege_level, has_vip, is_vip_admin
@@ -314,17 +315,15 @@ class owner(Cog_Extension):
     @mcserver_cmd.command(description="使用rcon mc伺服器指令", guild_ids=debug_guilds)
     @commands.is_owner()
     async def rcon(self, ctx: discord.ApplicationContext, command: str):
-        settings = Jsondb.config.mc_server
-        if settings is None:
-            await ctx.respond("未設定 mc_server，請確認 setting.json", ephemeral=True)
+        try:
+            settings = get_required_mc_server_env()
+        except RuntimeError as exc:
+            await ctx.respond(str(exc), ephemeral=True)
             return
 
-        host = settings.host
-        port = settings.port
-        password = settings.password
-        if not isinstance(host, str) or not isinstance(password, str) or not isinstance(port, int):
-            await ctx.respond("mc_server 設定格式錯誤，請確認 host/port/password", ephemeral=True)
-            return
+        host = str(settings["host"])
+        port = int(settings["port"])
+        password = str(settings["password"])
 
         with mcrcon.MCRcon(host, password, port) as rcon:
             response = rcon.command(command)
