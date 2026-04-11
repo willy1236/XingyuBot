@@ -52,7 +52,7 @@ class APICaller:
                 or ``None`` when status code is 404.
 
         Raises:
-            APINetworkError: If request fails or response status is neither 200 nor 404.
+            APINetworkError: If request fails or response status is neither 2xx nor 404.
         """
         if endpoint.startswith(("http://", "https://")):
             url = endpoint
@@ -65,7 +65,7 @@ class APICaller:
             response = requests.request(method, url, headers=request_headers, **kwargs)
             if response.status_code == requests.codes.not_found:
                 return None
-            if response.status_code != requests.codes.ok:
+            if not (200 <= response.status_code < 300):
                 raise APINetworkError(
                     message=f"{method.upper()} {url} 回傳狀態碼 {response.status_code}",
                     original=requests.HTTPError(f"HTTP {response.status_code}: {response.reason}", response=response),

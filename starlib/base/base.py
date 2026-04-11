@@ -49,13 +49,3 @@ class ListObject(list[T]):
 
     def __iter__(self):
         return iter(self.items)
-
-class BaseAPI(ABC):
-    """
-    A base class for creating API clients.
-    """
-
-    @property
-    @abstractmethod
-    def base_url(self) -> str:
-        pass
