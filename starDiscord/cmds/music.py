@@ -20,7 +20,7 @@ from starlib.exceptions import *
 from ..extension import Cog_Extension
 
 # Suppress noise about console usage from errors
-youtube_dl.utils.bug_reports_message = lambda: ""
+youtube_dl.utils.bug_reports_message = lambda before=";": ""
 
 ytdl_format_options = {
     "format": "bestaudio/best",
