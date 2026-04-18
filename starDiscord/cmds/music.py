@@ -23,7 +23,7 @@ from ..extension import Cog_Extension
 youtube_dl.utils.bug_reports_message = lambda: ""
 
 ytdl_format_options = {
-    # "format": "bestaudio/best",
+    "format": "bestaudio/best",
     "outtmpl": "%(extractor)s-%(id)s-%(title)s.%(ext)s",
     "restrictfilenames": True,
     "noplaylist": False,
@@ -47,19 +47,31 @@ class SongSource(enum.IntEnum):
     Spotify = 2
 
 class Song():
-    def __init__(self, url:str, source_path:str, title:str, requester:discord.Member=None, song_from=SongSource.Youtube_or_other):
+    def __init__(self, url: str, source_path: str, title: str, requester: discord.Member = None, song_from=SongSource.Youtube_or_other, headers: dict | None = None, duration: int | None = None):
         self.url = url
         self.source_path = source_path
         self.title = title
         self.requester = requester
         self.song_from = song_from
-        self.source = None
+        self.headers = headers or {}
+        self.duration = duration
 
-    async def get_source(self,volume = 0.5):
-        if not self.source:
-            source:discord.AudioSource = discord.FFmpegPCMAudio(self.source_path, **ffmpeg_options)
-            self.source = discord.PCMVolumeTransformer(source, volume)
-        return self.source
+    async def get_source(self, volume=0.5):
+        before_options = ffmpeg_options["before_options"]
+        if self.headers and self.source_path.startswith(("http://", "https://")):
+            header_lines = "".join(f"{k}: {v}\r\n" for k, v in self.headers.items())
+            header_lines = header_lines.replace('"', '\\"')
+            before_options = f'{before_options} -headers "{header_lines}"'
+
+        source = discord.PCMVolumeTransformer(
+            discord.FFmpegPCMAudio(
+                self.source_path,
+                before_options=before_options,
+                options=ffmpeg_options["options"],
+            ),
+            volume,
+        )
+        return source
 
     @classmethod
     async def from_url(cls, url:str, *, loop:asyncio.AbstractEventLoop=None, requester:discord.Member=None, song_from=SongSource.Youtube_or_other):
@@ -88,21 +100,41 @@ class Song():
             results = [results] # type: ignore
 
         for song_datas in results:
+            if not song_datas:
+                continue
+
             title = song_datas.get("title")
+            display_url = song_datas.get("webpage_url") or song_datas.get("original_url") or url
 
-            data = None
-            if song_datas["webpage_url_domain"] == "youtube.com":
-                #針對youtube的處理
-                for data in song_datas["formats"]:
-                    if data.get("format_note") == "medium":
-                        break
+            # 通用來源選流：先用已解出的 url，再退回 requested_formats/formats
+            source_path = song_datas.get("url")
+            headers = song_datas.get("http_headers")
+            duration = song_datas.get("duration")
+            if not source_path:
+                formats = song_datas.get("requested_formats") or song_datas.get("formats") or []
+                audio_format = next(
+                    (fmt for fmt in formats if isinstance(fmt, dict) and fmt.get("acodec") and fmt.get("acodec") != "none" and fmt.get("url")),
+                    None,
+                )
+                if not audio_format:
+                    audio_format = next(
+                        (fmt for fmt in formats if isinstance(fmt, dict) and fmt.get("url")),
+                        None,
+                    )
 
-            else:
-                data = song_datas["formats"][0]
+                source_path = audio_format.get("url") if audio_format else None
+                if audio_format and not headers:
+                    headers = audio_format.get("http_headers")
+                if audio_format and not duration:
+                    duration = audio_format.get("duration")
 
-            #filename = data["url"] if stream else ytdl.prepare_filename(data)
-            source_path = data.get("url")
-            lst.append(cls(url, source_path, title, requester=requester, song_from=song_from))
+            if not source_path:
+                continue
+
+            lst.append(cls(display_url, source_path, title or display_url, requester=requester, song_from=song_from, headers=headers, duration=duration))
+
+        if not lst:
+            raise MusicCommandError("找不到可播放的音訊來源，請嘗試其他連結")
 
         return lst
 
@@ -117,8 +149,12 @@ class MusicPlayer():
         volume: float
         nowplaying: Song
         skip_voters: list[int]
+        play_lock: asyncio.Lock
+        play_started_at: float | None
+        paused_at: float | None
+        paused_total: float
 
-    def __init__(self,vc:discord.VoiceClient,ctx:discord.ApplicationContext,loop):
+    def __init__(self, vc: discord.VoiceClient, ctx: discord.ApplicationContext, loop):
         self.vc = vc
         self.channel = ctx.channel
         self.loop = loop
@@ -128,6 +164,10 @@ class MusicPlayer():
         self.volume = 0.5
         self.nowplaying = None
         self.skip_voters = []
+        self.play_lock = asyncio.Lock()
+        self.play_started_at = None
+        self.paused_at = None
+        self.paused_total = 0.0
 
     async def play_next(self):
         """
@@ -139,16 +179,24 @@ class MusicPlayer():
         Raises:
             MusicPlayingError: If there is an error playing the next song.
         """
-        log.debug(f"{self.guildid}: play_next")
-        song = self.start_first_song()
-        try:
-            source = await song.get_source(self.volume)
+        async with self.play_lock:
+            # 避免多個流程同時啟動下一首，造成 after 與 play_next 互相搶跑
+            if self.vc.is_playing() or self.vc.is_paused():
+                return
 
-            embed = BotEmbed.simple(title="現在播放", description=f"[{song.title}]({song.url}) [{song.requester.mention}]")
-            await self.channel.send(embed=embed,silent=True)
-            self.vc.play(source, after=self.after, wait_finish=True)
-        except Exception as e:
-            raise MusicPlayingError(str(e)) from e
+            log.debug(f"{self.guildid}: play_next")
+            song = self.start_first_song()
+            try:
+                source = await song.get_source(self.volume)
+
+                embed = BotEmbed.simple(title="現在播放", description=f"[{song.title}]({song.url}) [{song.requester.mention}/{format_seconds(song.duration)}]")
+                await self.channel.send(embed=embed, silent=True)
+                self.play_started_at = time.monotonic()
+                self.paused_at = None
+                self.paused_total = 0.0
+                self.vc.play(source, after=self.after)
+            except Exception as e:
+                raise MusicPlayingError(str(e)) from e
 
     def after(self, error):
         """
@@ -160,10 +208,10 @@ class MusicPlayer():
         log.debug(f"{self.guildid}: after")
         # self.play_completed()
         if error:
-            raise MusicPlayingError(error)
+            log.error(f"{self.guildid}: 播放後回呼錯誤: {error}")
         time.sleep(1)
-        if self.playlist:
-            # 使用既有的bot協程
+        if self.playlist or self.songloop:
+            # 使用既有的bot loop
             asyncio.run_coroutine_threadsafe(self.play_next(), self.loop)
         else:
             asyncio.run_coroutine_threadsafe(self.wait_to_leave(), self.loop)
@@ -182,6 +230,9 @@ class MusicPlayer():
         - None
         """
         self.nowplaying = None
+        self.play_started_at = None
+        self.paused_at = None
+        self.paused_total = 0.0
         await asyncio.sleep(wait_for)
         if not self.vc.is_playing() and not self.nowplaying:
             await self.stop()
@@ -226,8 +277,50 @@ class MusicPlayer():
         """
         await self.vc.disconnect()
         self.playlist.clear()
+        self.play_started_at = None
+        self.paused_at = None
+        self.paused_total = 0.0
         del guild_playing[self.guildid]
         await self.channel.send("歌曲播放完畢 掰掰~")
+
+    def pause(self):
+        """
+        Pauses the currently playing song.
+
+        This method pauses the playback of the current song and updates the paused_at timestamp.
+
+        Parameters:
+        - None
+
+        Returns:
+        - None
+        """
+        if not self.vc.is_paused():
+            self.vc.pause()
+            self.on_paused()
+        else:
+            self.vc.resume()
+            self.on_resumed()
+
+    def on_paused(self):
+        if not self.paused_at:
+            self.paused_at = time.monotonic()
+
+    def on_resumed(self):
+        if self.paused_at:
+            self.paused_total += time.monotonic() - self.paused_at
+            self.paused_at = None
+
+    def get_elapsed_seconds(self) -> int:
+        if not self.play_started_at:
+            return 0
+
+        paused_total = self.paused_total
+        if self.paused_at:
+            paused_total += time.monotonic() - self.paused_at
+
+        elapsed = time.monotonic() - self.play_started_at - paused_total
+        return max(0, int(elapsed))
 
     def add_song(self, song: Song | list[Song]):
         """
@@ -283,6 +376,29 @@ class MusicPlayer():
 guild_playing = {}
 def get_player(guildid:str) -> MusicPlayer | None:
     return guild_playing.get(str(guildid))
+
+def format_seconds(total_seconds: int | None) -> str:
+    if total_seconds is None:
+        return "--:--"
+    total_seconds = int(total_seconds)
+    minutes, seconds = divmod(max(total_seconds, 0), 60)
+    hours, minutes = divmod(minutes, 60)
+    if hours:
+        return f"{hours}:{minutes:02}:{seconds:02}"
+    return f"{minutes:02}:{seconds:02}"
+
+
+def format_progress_bar(current_seconds: int, total_seconds: int | None, width: int = 16) -> tuple[str, str]:
+    if total_seconds is None:
+        return f"[{'-' * width}]", f"{format_seconds(current_seconds)} / {format_seconds(total)}"
+
+    total = max(int(total_seconds), 1)
+    current = max(0, min(current_seconds, total))
+    filled = int((current / total) * width)
+    progress_bar = f"[{'▅' * filled}{'-' * (width - filled)}]"
+    progress_text = f"{format_seconds(current)} / {format_seconds(total)}"
+    return progress_bar, progress_text
+
 
 def convert_audio(input_file, output_file):
     command = ["ffmpeg", "-i", input_file, "-ar", "16000", "-ac", "1", "-y", output_file]
@@ -379,12 +495,12 @@ class music(Cog_Extension):
         guildid = str(ctx.guild.id)
         vc = ctx.voice_client
 
-        if vc.recording:
+        if vc.is_recording():
             raise MusicCommandError("正在錄音時無法播放音樂")
 
         if url.startswith("https://open.spotify.com/"):
             # songfrom = SongSource.Spotify
-            raise MusicCommandError("不受支援的連結，請重新檢查網址是否正確")
+            raise MusicCommandError("spotify目前不受支援")
         else:
             # songfrom = SongSource.Youtube_or_other
             #抓取歌曲
@@ -403,8 +519,7 @@ class music(Cog_Extension):
         try:
             player.add_song(results)
 
-            if not vc.is_playing():
-                await asyncio.sleep(2)
+            if not vc.is_playing() and not vc.is_paused():
                 await player.play_next()
         except MusicPlayingError:
             raise
@@ -450,19 +565,29 @@ class music(Cog_Extension):
     @commands.guild_only()
     async def nowplaying(self,ctx: discord.ApplicationContext):
         player = get_player(ctx.guild.id)
+        if not player or not player.nowplaying:
+            await ctx.respond("目前沒有正在播放的歌曲")
+            return
+
         song = player.nowplaying
-        embed = BotEmbed.simple(title="現在播放", description=f"[{song.title}]({song.url}) [{song.requester.mention}]")
+        elapsed_seconds = player.get_elapsed_seconds()
+        progress_bar, progress_text = format_progress_bar(elapsed_seconds, song.duration)
+
+        embed = BotEmbed.simple(
+            title="現在播放",
+            description=f"[{song.title}]({song.url}) [{song.requester.mention}]\n{progress_bar} {progress_text}",
+        )
         await ctx.respond(embed=embed)
 
-    @commands.slash_command(description="歌單")
+    @commands.slash_command(description="待播歌單")
     @commands.guild_only()
     async def queue(self,ctx: discord.ApplicationContext):
         player = get_player(ctx.guild.id)
         playlist = player.get_full_playlist()
         if playlist:
-            page = [BotEmbed.simple(title="播放清單",description="") for _ in range(math.ceil(len(playlist) / 10))]
+            page = [BotEmbed.simple(title="待播歌單", description="") for _ in range(math.ceil(len(playlist) / 10))]
             for i, song in enumerate(playlist):
-                page[int(i / 10)].description += f"**{i+1}.** [{song.title}]({song.url}) [{song.requester.mention}]\n\n"
+                page[int(i / 10)].description += f"**{i + 1}.** [{song.title}]({song.url}) [{song.requester.mention}/{format_seconds(song.duration)}]\n\n"
 
             paginator = pages.Paginator(pages=page, use_default_buttons=True,loop_pages=True)
             await paginator.respond(ctx.interaction, ephemeral=False)
@@ -472,14 +597,18 @@ class music(Cog_Extension):
     @commands.slash_command(description="暫停/繼續播放歌曲")
     @commands.guild_only()
     async def pause(self, ctx: discord.ApplicationContext):
-        if not ctx.voice_client.is_paused():
-            await ctx.voice_client.pause()
+        player = get_player(ctx.guild.id)
+        if not player or not player.nowplaying:
+            await ctx.respond("目前沒有正在播放的歌曲")
+            return
+
+        player.pause()
+        if player.vc.is_paused():
             await ctx.respond("歌曲已暫停⏸️")
         else:
-            await ctx.voice_client.resume()
             await ctx.respond("歌曲已繼續▶️")
 
-    @commands.slash_command(description="循環/取消循環歌曲")
+    @commands.slash_command(description="循環/取消循環單首歌曲")
     @commands.guild_only()
     async def loop(self, ctx: discord.ApplicationContext):
         player = get_player(ctx.guild.id)
@@ -520,7 +649,7 @@ class music(Cog_Extension):
     @recording.command(description="開始錄音（實驗版）")
     async def start(self, ctx: discord.ApplicationContext):
         vc = ctx.voice_client
-        if vc.recording:
+        if vc.is_recording():
             raise MusicCommandError("已經在錄音了")
         if vc.is_playing():
             raise MusicCommandError("正在播放音樂時無法錄音")
@@ -530,7 +659,7 @@ class music(Cog_Extension):
     @recording.command(description="結束錄音")
     async def end(self, ctx: discord.ApplicationContext):
         vc = ctx.voice_client
-        if not vc.recording:
+        if not vc.is_recording():
             raise MusicCommandError("沒有在錄音")
         vc.stop_recording()
         await ctx.respond("結束錄音")
