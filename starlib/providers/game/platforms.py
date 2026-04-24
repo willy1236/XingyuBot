@@ -120,7 +120,7 @@ class OsuAPI(APICaller):
         self.headers = self._get_headers()
 
     def _get_headers(self):
-        ous_token = sqldb.get_access_token(APIType.Osu)
+        ous_token = sqldb.get_identifier_secret(APIType.Osu)
         data = {"client_id": ous_token.client_id, "client_secret": ous_token.client_secret, "grant_type": "client_credentials", "scope": "public"}
         r = self._request("POST", "https://osu.ppy.sh/oauth/token", data=data)
         token = r.json().get("access_token")
