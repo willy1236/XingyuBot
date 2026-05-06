@@ -11,15 +11,17 @@ truststore.inject_into_ssl()
 init_sentry(service="main")
 
 # ruff: disable[E402]
+from di import init_container
 from starDiscord import DiscordBot
 from starlib import log, sclient
 from starlib.core.model import TwitchStreamEvent
-from starlib.settings import get_settings
 from starServer.scheduler import run_scheduler_in_thread
 
 # ruff: enable[E402]
 
-settings = get_settings()
+container = init_container()
+settings = container.config()
+sqldb = container.sqldb()
 bot_code = settings.BOT_CODE
 api_website = settings.API_WEBSITE
 twitch_bot = settings.TWITCH_BOT
@@ -28,7 +30,7 @@ twitch_bot = settings.TWITCH_BOT
 def run_discord_bot():
     sclient.sqldb.init_cache()
     log.debug("Discord Bot start running...")
-    bot = DiscordBot(bot_code)
+    bot = DiscordBot(bot_code, sqldb)
     sclient.bot = bot
     bot.load_all_extensions()
 

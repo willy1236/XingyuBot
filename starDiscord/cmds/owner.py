@@ -63,7 +63,7 @@ class AnnoModal(discord.ui.Modal):
         embed.set_author(name="機器人全群公告", icon_url=Jsondb.get_picture("radio_001"))
         embed.set_footer(text="Bot Radio System")
         send_success = 0
-        channels = sclient.sqldb.get_notify_channel_by_type(NotifyChannelType.AllAnnouncements)
+        channels = self.bot.sqldb.get_notify_channel_by_type(NotifyChannelType.AllAnnouncements)
 
         for i in channels:
             channel = interaction.client.get_channel(i.channel_id)
@@ -95,7 +95,7 @@ class BotUpdateModal(discord.ui.Modal):
         embed.set_author(name="機器人更新通知", icon_url=Jsondb.get_picture("radio_001"))
         embed.set_footer(text="Bot Radio System")
         send_success = 0
-        channels = sclient.sqldb.get_notify_channel_by_type(NotifyChannelType.BotUpdates)
+        channels = self.bot.sqldb.get_notify_channel_by_type(NotifyChannelType.BotUpdates)
 
         for i in channels:
             channel = interaction.client.get_channel(i.channel_id)
@@ -165,8 +165,8 @@ class owner(Cog_Extension):
     @commands.slash_command(description="更換bot狀態", guild_ids=debug_guilds)
     @commands.is_owner()
     async def statue(self, ctx, statue):
-        sclient.sqldb.set_bot_activity(self.bot.bot_code, statue)
-        activity_name = sclient.sqldb.get_bot_activity(self.bot.bot_code)
+        self.bot.sqldb.set_bot_activity(self.bot.bot_code, statue)
+        activity_name = self.bot.sqldb.get_bot_activity(self.bot.bot_code)
         await self.bot.change_presence(activity=discord.CustomActivity(name=activity_name), status=discord.Status.online)
         await ctx.respond(f"狀態更改完成", delete_after=5)
 
@@ -642,7 +642,7 @@ class owner(Cog_Extension):
     @commands.is_owner()
     async def cache(self, ctx: discord.ApplicationContext):
         await ctx.defer()
-        await ctx.respond(f"{sclient.sqldb.cache}")
+        await ctx.respond(f"{self.bot.sqldb.cache}")
 
     @vip_cmd.command(name="panel", description="開啟專用面板")
     @has_vip()
@@ -653,7 +653,7 @@ class owner(Cog_Extension):
     @is_vip_admin()
     async def vip_review(self, ctx: discord.ApplicationContext, form_id: discord.Option(str, name="申請表單id", required=True)):
         await ctx.defer()
-        form = sclient.sqldb.get_form(form_id)
+        form = self.bot.sqldb.get_form(form_id)
         if form:
             await ctx.respond("已開啟申請審核面板", view=VIPAuditView(form=form), embed=BotEmbed.create(form), ephemeral=True)
         else:

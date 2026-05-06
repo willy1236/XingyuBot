@@ -7,8 +7,8 @@ import nmap
 from discord.commands import SlashCommandGroup
 from discord.ext import commands, pages
 
-from starlib import ChoiceList, Jsondb, csvdb, log, sclient, tz
-from starlib.database import LOLGameCache, LOLGameRecord, PlatformType, UserIPDetails
+from starlib import ChoiceList, Jsondb, csvdb, log, tz
+from starlib.database import LOLGameCache, LOLGameRecord, PlatformType, SQLRepository, UserIPDetails
 from starlib.exceptions import APINetworkError
 from starlib.providers import *
 from starlib.settings import get_settings
@@ -20,8 +20,8 @@ from ..uiElement.embeds import BotEmbed
 game_option = ChoiceList.set("game_set_option")
 riot_api = RiotAPI()
 
-def get_riot_account_puuid(user: discord.User, riot_id: str = None) -> str | None:
-    user_game = sclient.sqldb.get_user_game(user.id, PlatformType.LOL)
+def get_riot_account_puuid(sqldb: SQLRepository, user: discord.User, riot_id: str = None) -> str | None:
+    user_game = sqldb.get_user_game(user.id, PlatformType.LOL)
     if user_game:
         return user_game.other_id
 
@@ -46,7 +46,7 @@ class system_game(Cog_Extension):
         user = user or ctx.author
         userid = user.id
 
-        player_data = sclient.sqldb.get_user_game_all(userid)
+        player_data = self.bot.sqldb.get_user_game_all(userid)
         if player_data:
             embed = BotEmbed.user(user, "遊戲資料")
             for data in player_data:
@@ -69,7 +69,7 @@ class system_game(Cog_Extension):
         assert isinstance(riot_id, str) or riot_id is None, "riot_id must be a string or None"
 
         if not riot_id:
-            user_game = sclient.sqldb.get_user_game(ctx.author.id, PlatformType.LOL)
+            user_game = self.bot.sqldb.get_user_game(ctx.author.id, PlatformType.LOL)
             if not user_game:
                 await ctx.respond("查詢失敗：無設定ID", ephemeral=True)
                 return
@@ -259,7 +259,7 @@ class system_game(Cog_Extension):
             await ctx.respond("查詢失敗：查無此玩家", ephemeral=True)
             return
 
-        cache = sclient.sqldb.get_lol_cache(puuid)
+        cache = self.bot.sqldb.get_lol_cache(puuid)
         startTime = max(datetime(date.today().year, 1, 1, tzinfo=tz), cache.newest_game_time) if cache else datetime(date.today().year, 1, 1, tzinfo=tz)
 
         i = 0
@@ -347,9 +347,9 @@ class system_game(Cog_Extension):
             await asyncio.sleep(3)
 
         log.info(f"共查詢到{len(records)}場對戰")
-        sclient.sqldb.batch_merge(records)
+        self.bot.sqldb.batch_merge(records)
         cache = LOLGameCache(puuid=puuid, newest_game_time=newest_game_time)
-        sclient.sqldb.merge(cache)
+        self.bot.sqldb.merge(cache)
         await msg.edit(f"查詢完成，共查詢到{len(records)}場對戰，已儲存至資料庫。最新對戰時間：{newest_game_time.strftime('%Y-%m-%d %H:%M:%S')}")
 
     @lol.command(description="查詢今年度的戰績資料（目前需手動執行儲存資料後才能統計）", name_localizations=ChoiceList.name("lol_yearly"))
@@ -364,7 +364,7 @@ class system_game(Cog_Extension):
             return
 
         embed = BotEmbed.simple("2025年戰績統計")
-        lst = sclient.sqldb.get_lol_record_with_champion(puuid)
+        lst = self.bot.sqldb.get_lol_record_with_champion(puuid)
         champion_lst = []
         for id, count in lst[:10]:
             champion_name = csvdb.get_row(csvdb.lol_champion, "champion_id", id)
@@ -374,7 +374,7 @@ class system_game(Cog_Extension):
                 champion_lst.append(f"ID. {id}: {count} 場")
         embed.add_field(name="英雄遊玩次數", value="\n".join(champion_lst) if champion_lst else "無戰績資料", inline=False)
 
-        data = sclient.sqldb.get_lol_record_with_win(puuid)
+        data = self.bot.sqldb.get_lol_record_with_win(puuid)
         win_cnt = data.get(True, 0)
         lose_cnt = data.get(False, 0)
         win_rate = (win_cnt / (win_cnt + lose_cnt) * 100) if (win_cnt + lose_cnt) > 0 else 0
@@ -445,13 +445,13 @@ class system_game(Cog_Extension):
     @commands.cooldown(rate=1, per=1)
     async def minecraft_set(self, ctx: RegisteredContext, username: discord.Option(str, name="玩家名稱", description="要設定的Minecraft玩家名稱，留空以刪除", default=None)):
         if not username:
-            sclient.sqldb.remove_external_account(ctx.cuser.id, PlatformType.Minecraft)
+            self.bot.sqldb.remove_external_account(ctx.cuser.id, PlatformType.Minecraft)
             await ctx.respond(content="已刪除Minecraft帳號資料", ephemeral=True)
             return
 
         user = MojangAPI().get_uuid(username)
         if user:
-            sclient.sqldb.upsert_external_account(ctx.cuser.id, PlatformType.Minecraft, user.id, username)
+            self.bot.sqldb.upsert_external_account(ctx.cuser.id, PlatformType.Minecraft, user.id, username)
             await ctx.respond(content=f"設定成功 {user.name}", ephemeral=True)
         else:
             await ctx.respond(content="設定失敗：查無此玩家", ephemeral=True)
@@ -478,7 +478,7 @@ class system_game(Cog_Extension):
         if not ip.subnet_of(ipaddress.IPv4Network("26.0.0.0/8")):
             await ctx.respond(f"此IP位址不是Radmin VPN的位置", ephemeral=True)
             return
-        account = sclient.sqldb.get_registed_ips_last_seen(ip)
+        account = self.bot.sqldb.get_registed_ips_last_seen(ip)
         if account:
             await ctx.respond(f"此IP位址已註冊過，請確認後再試", ephemeral=True)
             return
@@ -493,7 +493,7 @@ class system_game(Cog_Extension):
         account = UserIPDetails(ip=str(ip), last_seen=now, discord_id=ctx.author.id, registration_at=now)
         if name:
             account.name = name
-        sclient.sqldb.merge(account)
+        self.bot.sqldb.merge(account)
         await ctx.respond(f"{ctx.author.mention} 註冊成功，IP：`{ip.network_address}`，使用者名稱：`{name if name else '未登記'}`", ephemeral=True)
 
     @game.command(description="註冊ZeroTier帳號", name_localizations=ChoiceList.name("game_zerotier"))
@@ -520,7 +520,7 @@ class system_game(Cog_Extension):
         account = UserIPDetails(
             ip=str(member["config"]["ipAssignments"][0]), last_seen=now, discord_id=ctx.author.id, address=member["nodeId"], name=name, registration_at=now
         )
-        sclient.sqldb.merge(account)
+        self.bot.sqldb.merge(account)
 
         await ctx.respond(f"ZeroTier帳號註冊成功，你的IP位址：`{member['config']['ipAssignments'][0]}`", ephemeral=True)
 
@@ -528,7 +528,7 @@ class system_game(Cog_Extension):
     @ensure_registered()
     async def vpn(self, ctx: RegisteredContext):
         await ctx.defer(ephemeral=True)
-        records = sclient.sqldb.get_user_ip_details(ctx.author.id)
+        records = self.bot.sqldb.get_user_ip_details(ctx.author.id)
         if not records:
             await ctx.respond("查無登記資料，請先登記Radmin或ZeroTier帳號", ephemeral=True)
             return

@@ -9,7 +9,6 @@ from discord.ext import commands, tasks
 from mcstatus import JavaServer
 
 from starDiscord.checks import has_privilege_level
-from starlib import Jsondb, sclient, sqldb, tz
 from starlib.database import NotifyCommunityType, PrivilegeLevel
 from starlib.exceptions import *
 from starlib.instance import *
@@ -235,7 +234,7 @@ class debug(Cog_Extension):
         community_id=discord.Option(str, required=True, description="社群ID"),
     ):
         assert isinstance(community_id, str), "社群ID必須是字串"
-        data = sqldb.get_notify_community_guild(NotifyCommunityType.TwitchLive, community_id)
+        data = self.bot.sqldb.get_notify_community_guild(NotifyCommunityType.TwitchLive, community_id)
         embed = BotEmbed.sts()
         for guild_id, channel_id, role_id, message in data:
             guild = self.bot.get_guild(guild_id)

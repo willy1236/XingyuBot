@@ -22,9 +22,9 @@ class system_user(Cog_Extension):
         user_dc:discord.Member = member or ctx.author
         cuser = ctx.cuser
 
-        user = sclient.sqldb.get_dcuser(user_dc.id) or DiscordUser(discord_id=user_dc.id)
+        user = self.bot.sqldb.get_dcuser(user_dc.id) or DiscordUser(discord_id=user_dc.id)
         user_embed = BotEmbed.general(name="Discord資料", icon_url=user_dc.avatar.url if user_dc.avatar else None)
-        coins = sclient.sqldb.get_coin(user_dc.id)
+        coins = self.bot.sqldb.get_coin(user_dc.id)
         user_embed.add_field(name="⭐星塵", value=coins.stardust)
         user_embed.add_field(name="PT點數", value=coins.point)
         user_embed.add_field(name="Rcoin", value=coins.rcoin)
@@ -37,7 +37,7 @@ class system_user(Cog_Extension):
             guild = self.bot.get_guild(user.registration.guild_id)
             user_embed.add_field(name="戶籍", value=guild.name if guild else user.registration.guild_id)
 
-        dbdata = sclient.sqldb.get_discord_accounts(cuser.id)
+        dbdata = self.bot.sqldb.get_discord_accounts(cuser.id)
         if len(dbdata) > 1:
             alt_accounts = ", ".join([f"<@{i.external_id}>" for i in dbdata if int(i.external_id) != user_dc.id])
             user_embed.add_field(name="綁定的其他 Discord 帳號", value=f"{alt_accounts}", inline=False)
@@ -52,7 +52,7 @@ class system_user(Cog_Extension):
 
         if ctx.guild_id in happycamp_guild:
             happycamp_embed = BotEmbed.general("快樂營使用者資料", icon_url=user_dc.avatar.url if user_dc.avatar else None)
-            happycamp_embed.add_field(name="累計語音時間", value=sclient.sqldb.get_voice_time(user_dc.id, ctx.guild_id).total_minute)
+            happycamp_embed.add_field(name="累計語音時間", value=self.bot.sqldb.get_voice_time(user_dc.id, ctx.guild_id).total_minute)
             embeds.append(happycamp_embed)
 
         await ctx.respond(embeds=embeds)
@@ -60,7 +60,7 @@ class system_user(Cog_Extension):
     @commands.slash_command(description="取得綁定碼")
     @ensure_registered()
     async def link_code(self, ctx: RegisteredContext):
-        code = sclient.sqldb.get_or_create_link_code(ctx.cuser.id)
+        code = self.bot.sqldb.get_or_create_link_code(ctx.cuser.id)
         embed = BotEmbed.simple("綁定碼", f"請在新綁定帳號欲註冊時輸入：\n{code.code}\n綁定碼10分鐘內有效，可使用當前指令重新獲取")
         embed.set_footer(text=f"擁有此綁定碼的人可以綁定你的帳號，請勿隨意提供給他人")
         await ctx.respond(embed=embed, ephemeral=True)
@@ -68,7 +68,7 @@ class system_user(Cog_Extension):
     @pet.command(description="查看寵物資訊")
     async def check(self, ctx, user_dc: discord.Option(discord.Member, name="用戶", description="可不輸入以查詢自己", default=None)):
         user_dc = user_dc or ctx.author
-        pet = sclient.sqldb.get_pet(user_dc.id)
+        pet = self.bot.sqldb.get_pet(user_dc.id)
         embed = pet.desplay(user_dc) if pet else BotEmbed.simple(f"{user_dc.name} 的寵物", "用戶沒有認養寵物")
         await ctx.respond(embed=embed)
 
@@ -79,7 +79,7 @@ class system_user(Cog_Extension):
         species: discord.Option(str, name="物種", description="想認養的寵物物種", choices=pet_option),
         name: discord.Option(str, name="寵物名", description="想幫寵物取的名子"),
     ):
-        r = sclient.sqldb.create_user_pet(ctx.author.id, species, name)
+        r = self.bot.sqldb.create_user_pet(ctx.author.id, species, name)
         if r:
             await ctx.respond(r)
         else:
@@ -87,7 +87,7 @@ class system_user(Cog_Extension):
 
     @pet.command(description="放生寵物")
     async def remove(self,ctx):
-        pet = sclient.sqldb.get_pet(ctx.author.id)
+        pet = self.bot.sqldb.get_pet(ctx.author.id)
         if not pet:
             await ctx.respond("你沒有寵物")
             return
@@ -95,7 +95,7 @@ class system_user(Cog_Extension):
 
     @commands.slash_command(description="查看語音時間排行榜")
     async def voice_time_leaderboard(self, ctx: discord.ApplicationContext):
-        leaderboard = sclient.sqldb.get_voice_time_leaderboard(ctx.guild_id, limit=10)
+        leaderboard = self.bot.sqldb.get_voice_time_leaderboard(ctx.guild_id, limit=10)
         if not leaderboard:
             await ctx.respond("目前沒有語音時間紀錄")
             return

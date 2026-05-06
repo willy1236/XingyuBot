@@ -65,6 +65,7 @@ class event(Cog_Extension):
     @commands.Cog.listener()
     async def on_ready(self):
         bot = self.bot
+        sqldb = self.bot.sqldb
 
         now = datetime.now(tz)
         if bot.bot_code == "1" and not bot.debug_mode:
@@ -77,20 +78,20 @@ class event(Cog_Extension):
                     await asyncio.sleep(1)
 
         # 投票介面
-        polls = sclient.sqldb.get_active_polls()
+        polls = sqldb.get_active_polls()
         days_poll_period = timedelta(days=28)
         for poll in polls:
             if now - poll.created_at > days_poll_period:
                 # 將超過28天的投票自動關閉
                 poll.end_at = now
-                sclient.sqldb.merge(poll)
+                sqldb.merge(poll)
                 log.debug("Ended poll: %s", poll.poll_id)
             else:
-                bot.add_view(PollView(poll, sqldb=sclient.sqldb, bot=bot), message_id=poll.message_id)
+                bot.add_view(PollView(poll, sqldb=sqldb, bot=bot), message_id=poll.message_id)
                 log.debug("Loaded poll: %s", poll.poll_id)
 
         # 反應身分組
-        for react_message in sclient.sqldb.get_reaction_role_message_all():
+        for react_message in sqldb.get_reaction_role_message_all():
             log.debug("Loading reaction role message: %s", react_message.message_id)
             channel = bot.get_channel(react_message.channel_id)
             if channel:
@@ -104,14 +105,14 @@ class event(Cog_Extension):
                 message = None
 
             if message:
-                react_roles = sclient.sqldb.get_reaction_roles_by_message(react_message.message_id)
+                react_roles = sqldb.get_reaction_roles_by_message(react_message.message_id)
                 bot.add_view(ReactionRoleView(react_message.message_id, react_roles), message_id=react_message.message_id)
                 log.debug("Loaded reaction role message: %s", react_message.message_id)
             elif not debug_mode:
-                sclient.sqldb.delete_reaction_role_message(react_message.message_id)
+                sqldb.delete_reaction_role_message(react_message.message_id)
                 log.debug("Deleted reaction role message: %s", react_message.message_id)
         # 動態語音
-        dynamic_voice_ids = sclient.sqldb.get_all_dynamic_voice()
+        dynamic_voice_ids = sqldb.get_all_dynamic_voice()
         if dynamic_voice_ids:
             removed_ids = []
             for id in dynamic_voice_ids:
@@ -123,10 +124,10 @@ class event(Cog_Extension):
                     removed_ids.append(id)
 
             log.warning("Dynamic voice channels not found and deleted: %s", removed_ids)
-            sclient.sqldb.batch_remove_dynamic_voice(removed_ids)
+            sqldb.batch_remove_dynamic_voice(removed_ids)
 
         # 私人頻道大廳
-        ticket_lobbys = sclient.sqldb.get_all_ticket_lobbys()
+        ticket_lobbys = sqldb.get_all_ticket_lobbys()
         for lobby in ticket_lobbys:
             log.debug("Loading ticket lobby: %s", lobby.channel_id)
             channel = bot.get_channel(lobby.channel_id)
@@ -144,11 +145,11 @@ class event(Cog_Extension):
                 bot.add_view(TicketLobbyView(channel.id), message_id=lobby.message_id)
                 log.debug("Loaded ticket lobby: %s", lobby.channel_id)
             elif not debug_mode:
-                sclient.sqldb.delete_ticket_lobby(lobby.channel_id)
+                sqldb.delete_ticket_lobby(lobby.channel_id)
                 log.debug("Deleted ticket lobby: %s", lobby.channel_id)
 
         # 私人頻道
-        active_tickets = sclient.sqldb.get_active_ticket_channels()
+        active_tickets = sqldb.get_active_ticket_channels()
         for ticket in active_tickets:
             log.debug(f"Loading ticket channel: {ticket.channel_id}")
             channel = bot.get_channel(ticket.channel_id)
@@ -163,7 +164,7 @@ class event(Cog_Extension):
             await bot.change_presence(activity=discord.CustomActivity(name="開發模式啟用中"), status=discord.Status.dnd)
             log.info(f">> Development mode: On <<")
         else:
-            activity_name = sclient.sqldb.get_bot_activity(bot.bot_code)
+            activity_name = sqldb.get_bot_activity(bot.bot_code)
             await bot.change_presence(activity=discord.CustomActivity(name=activity_name), status=discord.Status.online)
 
         cog_path = bot._COG_PATH
@@ -216,12 +217,12 @@ class event(Cog_Extension):
 
                         embed = BotEmbed.simple_warn_sheet(message.author, self.bot.user, last=last, reason=reason)
                         await message.channel.send(f"{message.author.mention} 貢丸很危險 不要打貢丸知道嗎", embed=embed)
-                        dbuser = sclient.sqldb.get_dcuser(message.author.id)
+                        dbuser = self.bot.sqldb.get_dcuser(message.author.id)
                         if dbuser.meatball_times is None:
                             dbuser.meatball_times = 1
                         else:
                             dbuser.meatball_times += 1
-                        sclient.sqldb.merge(dbuser)
+                        self.bot.sqldb.merge(dbuser)
                     except Exception as e:
                         log.error(e)
 
@@ -288,7 +289,7 @@ class event(Cog_Extension):
         ):
             return
 
-        cuser = sclient.sqldb.get_cloud_user(message.author.id)
+        cuser = self.bot.sqldb.get_cloud_user(message.author.id)
         if not cuser or cuser.privilege_level < PrivilegeLevel.Level3:
             return
 
@@ -340,7 +341,7 @@ class event(Cog_Extension):
     @commands.Cog.listener("on_voice_state_update")
     async def dynamic_room_trigger(self, member: discord.Member, before: discord.VoiceState, after: discord.VoiceState):
         # 動態語音
-        if after.channel and (lobby_data := sclient.sqldb.cache.dynamic_voice_lobby.get(after.channel.id)):
+        if after.channel and (lobby_data := self.bot.sqldb.cache.dynamic_voice_lobby.get(after.channel.id)):
             # 新增
             guild = after.channel.guild
             category = after.channel.category
@@ -385,7 +386,7 @@ class event(Cog_Extension):
                     await after.channel.send(f"{member.mention} 我無法創建動態語音頻道，請檢查我的權限", delete_after=10)
                     log.debug("Failed to create dynamic voice channel %s in %s", new_channel.id, guild.id)
                     return
-            sclient.sqldb.add_dynamic_voice(new_channel.id, member.id, guild.id)
+            self.bot.sqldb.add_dynamic_voice(new_channel.id, member.id, guild.id)
             try:
                 await member.move_to(new_channel)
             except discord.errors.HTTPException:
@@ -397,7 +398,7 @@ class event(Cog_Extension):
             if self.bot.get_channel(new_channel.id) and len(new_channel.members) == 0:
                 try:
                     await new_channel.delete(reason="動態語音：移除")
-                    sclient.sqldb.remove_dynamic_voice(new_channel.id)
+                    self.bot.sqldb.remove_dynamic_voice(new_channel.id)
                 except discord.errors.NotFound:
                     log.warning(f"動態語音頻道 {new_channel.id} 已經不存在")
                 except discord.errors.Forbidden:
@@ -405,10 +406,11 @@ class event(Cog_Extension):
             return
 
         # 移除
-        elif before.channel and not before.channel.members and sclient.sqldb.getif_dynamic_voice_room(before.channel.id):
+
+        elif before.channel and not before.channel.members and self.bot.sqldb.getif_dynamic_voice_room(before.channel.id):
             try:
                 await before.channel.delete(reason="動態語音：移除")
-                sclient.sqldb.remove_dynamic_voice(before.channel.id)
+                self.bot.sqldb.remove_dynamic_voice(before.channel.id)
             except discord.errors.Forbidden:
                 await before.channel.send(f"{member.mention} 我無法刪除動態語音頻道", delete_after=5)
                 return
@@ -421,16 +423,16 @@ class event(Cog_Extension):
         guildid = get_guildid(before, after)
 
         # 語音進出紀錄
-        voice_log_data = sclient.sqldb.cache.voice_log.get(guildid)
+        voice_log_data = self.bot.sqldb.cache.voice_log.get(guildid)
         if voice_log_data is not None:
             NowTime = datetime.now()
 
             if before.channel:
-                before_text = before.channel.mention if not sclient.sqldb.getif_dynamic_voice_room(before.channel.id) else before.channel.name + " (動態語音)"
+                before_text = before.channel.mention if not self.bot.sqldb.getif_dynamic_voice_room(before.channel.id) else before.channel.name + " (動態語音)"
             else:
                 before_text = ""
             if after.channel:
-                after_text = after.channel.mention if not sclient.sqldb.getif_dynamic_voice_room(after.channel.id) else after.channel.name + " (動態語音)"
+                after_text = after.channel.mention if not self.bot.sqldb.getif_dynamic_voice_room(after.channel.id) else after.channel.name + " (動態語音)"
             else:
                 after_text = ""
 
@@ -480,7 +482,7 @@ class event(Cog_Extension):
 
         #離開通知
         guildid = member.guild.id
-        dbdata = sclient.sqldb.get_notify_channel(guildid, NotifyChannelType.MemberLeave)
+        dbdata = self.bot.sqldb.get_notify_channel(guildid, NotifyChannelType.MemberLeave)
 
         if dbdata:
             username = member.name if member.discriminator == "0" else f"{member.name}#{member.discriminator}"
@@ -492,7 +494,7 @@ class event(Cog_Extension):
             await self.bot.get_channel(dbdata.channel_id).send(text)
 
         # 離開日誌
-        notify_data = sclient.sqldb.get_notify_channel(guildid, NotifyChannelType.LeaveLog)
+        notify_data = self.bot.sqldb.get_notify_channel(guildid, NotifyChannelType.LeaveLog)
         if notify_data:
             log_channel_id = notify_data.channel_id
             channel = self.bot.get_channel(log_channel_id)
@@ -514,7 +516,7 @@ class event(Cog_Extension):
 
         # 加入通知
         guildid = member.guild.id
-        dbdata = sclient.sqldb.get_notify_channel(guildid, NotifyChannelType.MemberJoin)
+        dbdata = self.bot.sqldb.get_notify_channel(guildid, NotifyChannelType.MemberJoin)
 
         if dbdata:
             username = member.name if member.discriminator == "0" else f"{member.name}#{member.discriminator}"
@@ -531,10 +533,10 @@ class event(Cog_Extension):
                 log.warning(f"Member join channel: {dbdata.channel_id} not found")
 
         # 加入日誌 / 警告系統：管理員通知
-        notify_data = sclient.sqldb.get_notify_channel(guildid, NotifyChannelType.JoinLog)
+        notify_data = self.bot.sqldb.get_notify_channel(guildid, NotifyChannelType.JoinLog)
         if notify_data:
             log_channel_id = notify_data.channel_id
-            dbdata = sclient.sqldb.get_warnings_count(member.id)
+            dbdata = self.bot.sqldb.get_warnings_count(member.id)
             description = f"{member.mention} ({member.id})\n共有 {dbdata} 筆跨群紀錄" if dbdata else f"{member.mention} 加入了伺服器"
             description += f"\n第 {member.guild.member_count} 位成員"
 
@@ -553,9 +555,9 @@ class event(Cog_Extension):
             if earlest_guildid and earlest_guildid != happycamp_guild[0]:
                 from starlib.database.postgresql.models import DiscordUser
 
-                dbdata = sclient.sqldb.get_registration_by_guildid(earlest_guildid)
+                dbdata = self.bot.sqldb.get_registration_by_guildid(earlest_guildid)
                 user = DiscordUser(discord_id=member.id, registrations_id=dbdata.registrations_id)
-                sclient.sqldb.merge(user)
+                self.bot.sqldb.merge(user)
                 await member.add_roles(member.guild.get_role(dbdata.role_id), reason="加入的最早伺服器")
 
 

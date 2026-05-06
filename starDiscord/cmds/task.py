@@ -9,12 +9,11 @@ from apscheduler.triggers.date import DateTrigger
 from discord.ext import commands, tasks
 from requests.exceptions import ConnectTimeout, RequestException
 
-from starlib import Jsondb, log, sclient, sqldb, tz, utils
+from starlib import log, tz, utils
 from starlib.database import APIType, DBCacheType, NotifyChannelType, NotifyCommunityType, UserIPDetails, UsersCountRecord, VoiceTime
 from starlib.instance import *
 from starlib.providers.social.models import YoutubeVideo
 
-from ..bot import DiscordBot
 from ..extension import Cog_Extension
 from ..uiElement.embeds import BotEmbed
 from ..uiElement.view import GiveawayView
@@ -45,35 +44,33 @@ class task(Cog_Extension):
             # scheduler.add_job(self.get_mongodb_data,'interval',minutes=3,jitter=30,misfire_grace_time=40)
 
             # 背景刷新 - 保留 jitter
-            scheduler.add_job(refresh_yt_push, "cron", hour="2/12", minute=0, second=0, jitter=300)
-            scheduler.add_job(refresh_ip_last_seen_arp, "cron", minute="0/20", second=0, jitter=60, misfire_grace_time=90)
-            scheduler.add_job(refresh_ip_last_seen_nmap, "cron", minute="0/15", second=0, jitter=60, misfire_grace_time=90)
+            scheduler.add_job(self.refresh_yt_push, "cron", hour="2/12", minute=0, second=0, jitter=300)
+            scheduler.add_job(self.refresh_ip_last_seen_arp, "cron", minute="0/20", second=0, jitter=60, misfire_grace_time=90)
+            scheduler.add_job(self.refresh_ip_last_seen_nmap, "cron", minute="0/15", second=0, jitter=60, misfire_grace_time=90)
             scheduler.add_job(self.save_voice_time, "cron", hour="0/1", minute="0/30", second=0, jitter=60, misfire_grace_time=90)
-            scheduler.add_job(refresh_db_cache, "cron", hour="0/2", minute=0, second=0, jitter=60, misfire_grace_time=90)
+            scheduler.add_job(self.refresh_db_cache, "cron", hour="0/2", minute=0, second=0, jitter=60, misfire_grace_time=90)
 
             # 統計任務 - 保留 misfire_grace_time + max_instances
             scheduler.add_job(self.add_voice_time, "cron", minute="*/1", second=30, misfire_grace_time=20, max_instances=1)
 
             if self.bot.user and self.bot.user.id == 589744540240314368:
                 scheduler.add_job(self.birthday_task, "cron", month=10, day=16, hour=8, minute=0, second=0, misfire_grace_time=60)
-                scheduler.add_job(record_users_count, "cron", args=[self.bot], hour=0, minute=0, second=0, jitter=240, max_instances=1)
+                scheduler.add_job(self.record_users_count, "cron", hour=0, minute=0, second=0, jitter=240, max_instances=1)
                 # scheduler.add_job(self.new_years_eve_task, CronTrigger(month=1, day=1, hour=0, minute=0, second=0), misfire_grace_time=60)
 
         # 抽獎
         now = datetime.now(tz)
-        for giveaway in sclient.sqldb.get_active_giveaways():
+        for giveaway in self.bot.sqldb.get_active_giveaways():
             if now - giveaway.created_at > timedelta(days=28):
                 # 將超過28天的抽獎自動關閉
                 giveaway.is_on = False
-                sclient.sqldb.merge(giveaway)
+                self.bot.sqldb.merge(giveaway)
                 log.debug("Ended giveaway: %s", giveaway.id)
             else:
-                view = GiveawayView(giveaway, sqldb=sclient.sqldb, bot=self.bot)
+                view = GiveawayView(giveaway, sqldb=self.bot.sqldb, bot=self.bot)
                 self.bot.add_view(view)
                 if giveaway.end_at:
-                    job = scheduler.add_job(
-                        giveaway_auto_end, DateTrigger(giveaway.end_at if giveaway.end_at > now else now + timedelta(seconds=10)), args=[self.bot, view]
-                    )
+                    job = scheduler.add_job(self.giveaway_auto_end, DateTrigger(giveaway.end_at if giveaway.end_at > now else now + timedelta(seconds=10)), args=[self.bot, view])
                     log.debug("job added: %s", job)
                 log.debug("Loaded giveaway: %s", giveaway.id)
         else:
@@ -83,7 +80,7 @@ class task(Cog_Extension):
             scheduler.start()
 
     async def earthquake_check(self):
-        cache = sclient.sqldb.get_notify_cache(NotifyChannelType.MajorQuakeNotifications)
+        cache = self.bot.sqldb.get_notify_cache(NotifyChannelType.MajorQuakeNotifications)
         timefrom = cache.value if cache else datetime.now(tz) - timedelta(days=1)
         try:
             earthquake_records = cwa_api.get_earthquake_report_auto(timefrom.strftime("%Y-%m-%dT%H:%M:%S"), True)
@@ -104,7 +101,7 @@ class task(Cog_Extension):
                 await self.bot.send_notify_channel(BotEmbed.create(data), NotifyChannelType.SlightQuakeNotifications, "小區域地震報告")
 
         timefrom = earthquake_records[-1].originTime + timedelta(seconds=1)
-        sclient.sqldb.set_notify_cache(NotifyChannelType.MajorQuakeNotifications, timefrom)
+        self.bot.sqldb.set_notify_cache(NotifyChannelType.MajorQuakeNotifications, timefrom)
 
     async def weather_check(self):
         weathers = cwa_api.get_weather_data()
@@ -123,16 +120,16 @@ class task(Cog_Extension):
         if not apidatas:
             return
 
-        cache = sclient.sqldb.get_notify_cache(NotifyChannelType.WeatherWarning)
+        cache = self.bot.sqldb.get_notify_cache(NotifyChannelType.WeatherWarning)
         report_time = cache.value if cache else datetime.now(tz) - timedelta(days=1)
         datas = [i for i in apidatas if i.datasetInfo.issueTime > report_time]
         for data in datas:
             report_time = data.datasetInfo.issueTime
             await self.bot.send_notify_channel(BotEmbed.create(data), NotifyChannelType.WeatherWarning)
-        sclient.sqldb.set_notify_cache(NotifyChannelType.WeatherWarning, report_time)
+        self.bot.sqldb.set_notify_cache(NotifyChannelType.WeatherWarning, report_time)
 
     async def typhoon_warning_check(self):
-        cache = sclient.sqldb.get_notify_cache(NotifyChannelType.TyphoonWarning)
+        cache = self.bot.sqldb.get_notify_cache(NotifyChannelType.TyphoonWarning)
         report_time = cache.value if cache else datetime.now(tz) - timedelta(days=1)
 
         apidatas = ncdr_rss.get_typhoon_warning(after=report_time)
@@ -144,7 +141,7 @@ class task(Cog_Extension):
         for data in datas:
             report_time = data.updated
             await self.bot.send_notify_channel(BotEmbed.create(data), NotifyChannelType.TyphoonWarning)
-        sclient.sqldb.set_notify_cache(NotifyChannelType.TyphoonWarning, report_time)
+        self.bot.sqldb.set_notify_cache(NotifyChannelType.TyphoonWarning, report_time)
 
     async def forecast_update(self):
         forecast = cwa_api.get_forecast()
@@ -155,13 +152,13 @@ class task(Cog_Extension):
         try:
             data = apexapi.get_map_rotation()
             if data:
-                await self.bot.edit_notify_channel(data.embeds(), NotifyChannelType.ApexRotation)
+                await self.bot.edit_notify_channel(BotEmbed.create(data), NotifyChannelType.ApexRotation)
         except RequestException:
             log.exception("apex_map_rotation error")
 
     async def twitch_live(self):
         log.debug("twitch_live start")
-        caches = sclient.sqldb.get_community_caches(NotifyCommunityType.TwitchLive)
+        caches = self.bot.sqldb.get_community_caches(NotifyCommunityType.TwitchLive)
         if not caches:
             return
 
@@ -184,10 +181,10 @@ class task(Cog_Extension):
                 # 直播結束
                 update_data[user_id] = None
 
-        sclient.sqldb.set_community_caches(NotifyCommunityType.TwitchLive, update_data)
+        self.bot.sqldb.set_community_caches(NotifyCommunityType.TwitchLive, update_data)
 
     async def twitch_video(self):
-        caches = sclient.sqldb.get_community_caches(NotifyCommunityType.TwitchVideo)
+        caches = self.bot.sqldb.get_community_caches(NotifyCommunityType.TwitchVideo)
         if not caches:
             return
 
@@ -203,10 +200,10 @@ class task(Cog_Extension):
                     embed = video.embed()
                     await self.bot.send_notify_communities(embed, NotifyCommunityType.TwitchVideo, video.user_id)
 
-        sclient.sqldb.set_community_caches(NotifyCommunityType.TwitchVideo, update_data)
+        self.bot.sqldb.set_community_caches(NotifyCommunityType.TwitchVideo, update_data)
 
     async def twitch_clip(self):
-        caches = sclient.sqldb.get_community_caches(NotifyCommunityType.TwitchClip)
+        caches = self.bot.sqldb.get_community_caches(NotifyCommunityType.TwitchClip)
         if not caches:
             return
 
@@ -237,10 +234,10 @@ class task(Cog_Extension):
 
                 update_data[broadcaster_id] = newest + timedelta(seconds=1)
 
-        sclient.sqldb.set_community_caches(NotifyCommunityType.TwitchClip, update_data)
+        self.bot.sqldb.set_community_caches(NotifyCommunityType.TwitchClip, update_data)
 
     async def youtube_video(self):
-        caches = sclient.sqldb.get_community_caches(NotifyCommunityType.Youtube)
+        caches = self.bot.sqldb.get_community_caches(NotifyCommunityType.Youtube)
         if not caches:
             return
 
@@ -264,15 +261,13 @@ class task(Cog_Extension):
 
                 if video.is_live_upcoming_with_time:
                     assert video.liveStreamingDetails.scheduledStartTime is not None, "Scheduled start time should not be None for upcoming live videos"
-                    self.bot.scheduler.add_job(
-                        youtube_start_live_notify, DateTrigger(video.liveStreamingDetails.scheduledStartTime + timedelta(seconds=30)), args=[self.bot, video]
-                    )
+                    self.bot.scheduler.add_job(self.youtube_start_live_notify, DateTrigger(video.liveStreamingDetails.scheduledStartTime + timedelta(seconds=30)), args=[self.bot, video])
 
-        sclient.sqldb.set_community_caches(NotifyCommunityType.Youtube, update_data)
+        self.bot.sqldb.set_community_caches(NotifyCommunityType.Youtube, update_data)
 
     async def notify_twitter_tweet_updates(self):
         log.debug("notify_twitter_tweet_updates start")
-        caches = sclient.sqldb.get_community_caches(NotifyCommunityType.TwitterTweet)
+        caches = self.bot.sqldb.get_community_caches(NotifyCommunityType.TwitterTweet)
         if not caches:
             return
 
@@ -312,11 +307,11 @@ class task(Cog_Extension):
                 log.error(f"notify_twitter_tweet_updates error (id: %s): %s", twitter_user_id, e)
                 continue
 
-        sclient.sqldb.set_community_caches(NotifyCommunityType.TwitterTweet, update_data)
+        self.bot.sqldb.set_community_caches(NotifyCommunityType.TwitterTweet, update_data)
 
     async def add_voice_time(self):
         log.debug("add_voice_time start")
-        voice_time_counter = sqldb.cache.voice_time_counter.raw()
+        voice_time_counter = self.bot.sqldb.cache.voice_time_counter.raw()
         if not voice_time_counter:
             log.debug("Voice time counter cache is empty")
             return
@@ -346,7 +341,7 @@ class task(Cog_Extension):
         records_to_update: list[VoiceTime] = []
         for guild_id, user_times in voice_times.items():
             discord_ids = list(user_times.keys())
-            db_records = sclient.sqldb.get_voice_times(discord_ids, guild_id)
+            db_records = self.bot.sqldb.get_voice_times(discord_ids, guild_id)
 
             for discord_id, delta in user_times.items():
                 if discord_id not in db_records:
@@ -356,74 +351,71 @@ class task(Cog_Extension):
 
             records_to_update.extend(db_records.values())
 
-        sqldb.batch_merge(records_to_update)
+        self.bot.sqldb.batch_merge(records_to_update)
         voice_times.clear()
 
-    # async def get_mongodb_data(self):
-    #     dbdata = mongedb.get_apidata()
+    # async def start_eletion(self):
+    #     log.info("start_eletion start")
+    #     session = utils.calculate_eletion_session(datetime.now())
+    #     channel = self.bot.get_channel(1163127708839071827)
 
-    async def start_eletion(self):
-        log.info("start_eletion start")
-        session = utils.calculate_eletion_session(datetime.now())
-        channel = self.bot.get_channel(1163127708839071827)
+    #     embed = sclient.election_format(session, self.bot)
+    #     await channel.send(embed=embed)
 
-        embed = sclient.election_format(session, self.bot)
-        await channel.send(embed=embed)
+    #     dbdata = sclient.sqldb.get_election_full_by_session(session)
+    #     results = {}
+    #     for position in Jsondb.options["position_option"].keys():
+    #         results[position] = []
 
-        dbdata = sclient.sqldb.get_election_full_by_session(session)
-        results = {}
-        for position in Jsondb.options["position_option"].keys():
-            results[position] = []
+    #     for data in dbdata:
+    #         user_id = data["discord_id"]
+    #         # party_name = i['party_name'] or "無黨籍"
+    #         position = data["position"]
 
-        for data in dbdata:
-            user_id = data["discord_id"]
-            # party_name = i['party_name'] or "無黨籍"
-            position = data["position"]
+    #         user = channel.guild.get_member(user_id)
+    #         username = user_id if not user else (user.display_name if user.display_name else (user.global_name if user.global_name else user.name))
+    #         if username not in results[position]:
+    #             results[position].append(username)
 
-            user = channel.guild.get_member(user_id)
-            username = user_id if not user else (user.display_name if user.display_name else (user.global_name if user.global_name else user.name))
-            if username not in results[position]:
-                results[position].append(username)
+    #     # count_data = sclient.get_election_count(session)
+    #     # count_dict = {}
+    #     # for data in count_data:
+    #     #     pos = data['position']
+    #     #     count = data['count']
+    #     #     count_dict[pos] = count
 
-        # count_data = sclient.get_election_count(session)
-        # count_dict = {}
-        # for data in count_data:
-        #     pos = data['position']
-        #     count = data['count']
-        #     count_dict[pos] = count
+    #     for position in Jsondb.options["position_option"].keys():
+    #         # count = count_dict[position]
+    #         if len(results[position]) <= 0:
+    #             continue
 
-        for position in Jsondb.options["position_option"].keys():
-            # count = count_dict[position]
-            if len(results[position]) <= 0:
-                continue
+    #         position_name = Jsondb.get_tw(position, "position_option")
+    #         title = f"第{session}屆中央選舉：{position_name}"
+    #         # options = [f"{i}號" for i in range(1,count + 1)]
+    #         i = 1
+    #         options = []
+    #         for username in results[position]:
+    #             options.append(f"{i}號 {username}")
+    #             i += 1
 
-            position_name = Jsondb.get_tw(position, "position_option")
-            title = f"第{session}屆中央選舉：{position_name}"
-            # options = [f"{i}號" for i in range(1,count + 1)]
-            i = 1
-            options = []
-            for username in results[position]:
-                options.append(f"{i}號 {username}")
-                i += 1
+    #         view = sclient.create_election_poll(title, options, self.bot.user.id, channel.guild.id, self.bot)
 
-            view = sclient.create_election_poll(title, options, self.bot.user.id, channel.guild.id, self.bot)
+    #         message = await channel.send(embed=view.embed(channel.guild), view=view)
+    #         await asyncio.sleep(1)
 
-            message = await channel.send(embed=view.embed(channel.guild), view=view)
-            await asyncio.sleep(1)
+    #     await channel.send(f"第{session}屆中央選舉投票已開始，請大家把握時間踴躍投票!")
 
-        await channel.send(f"第{session}屆中央選舉投票已開始，請大家把握時間踴躍投票!")
+    #     tz = timezone(timedelta(hours=8))
+    #     start_time = datetime.now(tz)
+    #     if start_time.hour < 20:
+    #         end_time = datetime(start_time.year, start_time.month, start_time.day, 20, 0, 0, tzinfo=tz)
+    #     else:
+    #         end_time = start_time + timedelta(days=1)
 
-        tz = timezone(timedelta(hours=8))
-        start_time = datetime.now(tz)
-        if start_time.hour < 20:
-            end_time = datetime(start_time.year, start_time.month, start_time.day, 20, 0, 0, tzinfo=tz)
-        else:
-            end_time = start_time + timedelta(days=1)
-
-        start_time += timedelta(seconds=10)
-        event = await channel.guild.create_scheduled_event(
-            name="【快樂營中央選舉】投票階段", start_time=start_time, end_time=end_time, location="<#1163127708839071827>"
-        )
+    #     start_time += timedelta(seconds=10)
+    #     event = await channel.guild.create_scheduled_event(
+    #         name="【快樂營中央選舉】投票階段", start_time=start_time, end_time=end_time, location="<#1163127708839071827>"
+    #     )
 
     async def birthday_task(self):
         channel = self.bot.get_channel(566533708371329026)
@@ -436,96 +428,92 @@ class task(Cog_Extension):
         msg = await channel.send("新的一年 祝大家新年快樂~🎉\n來自快樂營的2025新年轟炸 @everyone ", allowed_mentions=discord.AllowedMentions(everyone=True))
         await msg.add_reaction("🎉")
 
-async def refresh_yt_push():
-    config = sqldb.get_websub_config(APIType.Google, 4)
-    assert config.callback_uri, "Callback URL is not set"
-    # TODO: 改用 WebSubInstance統一處理
-    for record in sclient.sqldb.get_expiring_push_records():
-        # TODO: 需要處理 secret
-        yt_push.add_push(record.channel_id, config.callback_uri, config.hub_secret)
-        await asyncio.sleep(3)
-        data = yt_push.get_push(record.channel_id, config.callback_uri, config.hub_secret)
+    async def refresh_yt_push(self):
+        config = self.bot.sqldb.get_websub_config(APIType.Google, 4)
+        assert config.callback_uri, "Callback URL is not set"
+        # TODO: 改用 WebSubInstance統一處理
+        for record in self.bot.sqldb.get_expiring_push_records():
+            # TODO: 需要處理 secret
+            yt_push.add_push(record.channel_id, config.callback_uri, config.hub_secret)
+            await asyncio.sleep(3)
+            data = yt_push.get_push(record.channel_id, config.callback_uri, config.hub_secret)
 
-        if data and data.has_verify:
-            record.push_at = data.last_successful_verification
-            record.expire_at = data.expiration_time
-            sclient.sqldb.merge(record)
-            log.info("refresh_yt_push: %s 已更新到期為 %s", record.channel_id, record.expire_at)
-            await asyncio.sleep(1)
-        else:
-            log.warning(f"refresh_yt_push failed: {record.channel_id}")
+            if data and data.has_verify:
+                record.push_at = data.last_successful_verification
+                record.expire_at = data.expiration_time
+                self.bot.sqldb.merge(record)
+                log.info("refresh_yt_push: %s 已更新到期為 %s", record.channel_id, record.expire_at)
+                await asyncio.sleep(1)
+            else:
+                log.warning(f"refresh_yt_push failed: {record.channel_id}")
 
+    async def youtube_start_live_notify(self, video: YoutubeVideo):
+        log.info(f"youtube_start_live_notify: {video.snippet.title}")
+        for _ in range(30):
+            video_now = google_api.get_video(video.id)[0]
+            if video_now.snippet.liveBroadcastContent == "live":
+                log.info(f"youtube_start_live_notify: {video_now.snippet.title} is live")
 
-async def youtube_start_live_notify(bot: DiscordBot, video: YoutubeVideo):
-    log.info(f"youtube_start_live_notify: {video.snippet.title}")
-    for _ in range(30):
-        video_now = google_api.get_video(video.id)[0]
-        if video_now.snippet.liveBroadcastContent == "live":
-            log.info(f"youtube_start_live_notify: {video_now.snippet.title} is live")
+                embed = video_now.embed()
+                await self.bot.send_notify_communities(embed, NotifyCommunityType.Youtube, video_now.snippet.channelId)
+                break
+            await asyncio.sleep(120)
 
-            embed = video_now.embed()
-            await bot.send_notify_communities(embed, NotifyCommunityType.Youtube, video_now.snippet.channelId)
-            break
-        await asyncio.sleep(120)
+    async def giveaway_auto_end(self, view: GiveawayView):
+        log.debug("giveaway_auto_end: id=%s", view.giveaway.id)
+        if view.is_finished():
+            return
 
+        embed = view.end_giveaway()
+        channel = self.bot.get_channel(view.giveaway.channel_id)
+        try:
+            message = await channel.fetch_message(view.giveaway.message_id)
+            await message.edit(embed=embed, view=view)
+        except discord.NotFound:
+            log.warning("giveaway_auto_end: message %s not found", view.giveaway.message_id)
+            return
 
-async def giveaway_auto_end(bot: discord.Bot, view: GiveawayView):
-    log.debug("giveaway_auto_end: id=%s", view.giveaway.id)
-    if view.is_finished():
-        return
+    async def refresh_ip_last_seen_arp(self):
+        """定時更新IP最後出現時間 (使用ARP)"""
+        log.debug("refresh_ip_last_seen start")
+        now = datetime.now(tz)
+        arp_list = utils.get_arp_list()
+        details_list = [UserIPDetails(ip=ip, mac=mac, last_seen=now) for ip, mac in arp_list]
+        self.bot.sqldb.batch_merge(details_list)
 
-    embed = view.end_giveaway()
-    channel = bot.get_channel(view.giveaway.channel_id)
-    try:
-        message = await channel.fetch_message(view.giveaway.message_id)
-        await message.edit(embed=embed, view=view)
-    except discord.NotFound:
-        log.warning("giveaway_auto_end: message %s not found", view.giveaway.message_id)
-        return
+    async def refresh_ip_last_seen_nmap(self):
+        """定時更新IP最後出現時間 (使用Nmap)"""
+        log.debug("refresh_ip_last_seen_nmap start")
+        now = datetime.now(tz)
+        ips = self.bot.sqldb.get_active_ips(datetime(2025, 8, 11, 0, 0, 0, tzinfo=tz))  # 現在設定指定時間，之後再改成動態計算過去30天
+        ips_string = " ".join([target.ip for target in ips])
 
-async def refresh_ip_last_seen_arp():
-    """定時更新IP最後出現時間 (使用ARP)"""
-    log.debug("refresh_ip_last_seen start")
-    now = datetime.now(tz)
-    arp_list = utils.get_arp_list()
-    details_list = [UserIPDetails(ip=ip, mac=mac, last_seen=now) for ip, mac in arp_list]
-    sqldb.batch_merge(details_list)
+        nm = nmap.PortScanner()
+        nm.scan(hosts=ips_string, arguments="-sn --min-parallelism 3")
 
+        # 遍歷所有掃描到的主機 (Iterate through all discovered hosts)
+        active_ips = []
+        for host in nm.all_hosts():
+            if nm[host].state() == "up":
+                active_ips.append(UserIPDetails(ip=host, last_seen=now))
 
-async def refresh_ip_last_seen_nmap():
-    """定時更新IP最後出現時間 (使用Nmap)"""
-    log.debug("refresh_ip_last_seen_nmap start")
-    now = datetime.now(tz)
-    ips = sqldb.get_active_ips(datetime(2025, 8, 11, 0, 0, 0, tzinfo=tz))  # 現在設定指定時間，之後再改成動態計算過去30天
-    ips_string = " ".join([target.ip for target in ips])
+        self.bot.sqldb.batch_merge(active_ips)
 
-    nm = nmap.PortScanner()
-    nm.scan(hosts=ips_string, arguments="-sn --min-parallelism 3")
+    async def record_users_count(self):
+        """定時記錄用戶數量"""
+        log.debug("record_users_count start")
+        users_count = 0
+        servers_count = 0
+        for _ in range(5):
+            users_count = max(users_count, len(self.bot.users))
+            servers_count = max(servers_count, len(self.bot.guilds))
+            await asyncio.sleep(120)
+        shard_id = self.bot.shard_id
+        record = UsersCountRecord(record_date=datetime.now(tz).date(), users_count=users_count, servers_count=servers_count, shard_id=shard_id)
+        self.bot.sqldb.add(record)
 
-    # 遍歷所有掃描到的主機 (Iterate through all discovered hosts)
-    active_ips = []
-    for host in nm.all_hosts():
-        if nm[host].state() == "up":
-            active_ips.append(UserIPDetails(ip=host, last_seen=now))
-
-    sqldb.batch_merge(active_ips)
-
-
-async def record_users_count(bot: DiscordBot):
-    """定時記錄用戶數量"""
-    log.debug("record_users_count start")
-    users_count = 0
-    servers_count = 0
-    for _ in range(5):
-        users_count = max(users_count, len(bot.users))
-        servers_count = max(servers_count, len(bot.guilds))
-        await asyncio.sleep(120)
-    shard_id = bot.shard_id
-    record = UsersCountRecord(record_date=datetime.now(tz).date(), users_count=users_count, servers_count=servers_count, shard_id=shard_id)
-    sqldb.add(record)
-
-async def refresh_db_cache():
-    sqldb.refresh_voice_time_counter_cache()
+    async def refresh_db_cache(self):
+        self.bot.sqldb.refresh_voice_time_counter_cache()
 
 def setup(bot):
     bot.add_cog(task(bot))

@@ -130,7 +130,7 @@ class BotEmbed(BaseBotEmbed):
         return decorator
 
     @classmethod
-    def create(cls, model: Any) -> Any:
+    def create(cls, model: Any) -> discord.Embed:
         formatter = cls._registry.get(type(model))
         if not formatter:
             raise ValueError(f"找不到對應的 Embed 格式化工具: {type(model)}")

@@ -18,7 +18,7 @@ class system_rpg(Cog_Extension):
     async def rpgui(self, ctx: discord.ApplicationContext, member: discord.Option(discord.Member, name="用戶", description="留空以查詢自己", default=None)):
         user_dc:discord.Member = member or ctx.author
 
-        player = sclient.sqldb.get_rpg_player(user_dc.id)
+        player = self.bot.sqldb.get_rpg_player(user_dc.id)
 
         time = datetime.now()
         time = time.replace(year=2044)

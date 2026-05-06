@@ -7,9 +7,9 @@ from pathlib import Path
 import discord
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-from starlib import log, sqldb
+from starlib import log
 from starlib.core.model import TwitchStreamEvent
-from starlib.database import APIType, NotifyChannelType, NotifyCommunityType
+from starlib.database import APIType, NotifyChannelType, NotifyCommunityType, SQLRepository
 from starlib.instance import (
     debug_guilds,
     debug_mode,
@@ -39,13 +39,14 @@ from .uiElement.embeds import BotEmbed
 class DiscordBot(discord.Bot):
     _COG_PATH = Path("./starDiscord/cmds")
 
-    def __init__(self, bot_code):
+    def __init__(self, bot_code, sqldb: SQLRepository):
         super().__init__(
             owner_id=419131103836635136,
             intents=discord.Intents.all(),
             help_command=None
         )
 
+        self.sqldb = sqldb
         self.debug_mode = debug_mode
         self.bot_code = bot_code
         self.scheduler = AsyncIOScheduler()
@@ -54,7 +55,7 @@ class DiscordBot(discord.Bot):
             self.debug_guilds = debug_guilds
 
     def run(self):
-        token = sqldb.get_access_token(APIType.Discord, self.bot_code).access_token
+        token = self.sqldb.get_access_token(APIType.Discord, self.bot_code).access_token
         super().run(token)
 
     def submit(self, coro: Coroutine):
@@ -171,7 +172,7 @@ class DiscordBot(discord.Bot):
         Note:
             - Additional content is appended with a newline separator if both text and additional_content exist
         """
-        guilds = sqldb.get_notify_community_guild(notify_type, community_id)
+        guilds = self.sqldb.get_notify_community_guild(notify_type, community_id)
         for guild_id, channel_id, role_id, message in guilds:
             channel = self.get_channel(channel_id)
             if channel:
@@ -193,7 +194,7 @@ class DiscordBot(discord.Bot):
                 log.warning("NotifyCommunity:%s, channel not found: %s/%s", notify_type, guild_id, channel_id)
 
     async def send_notify_channel(self, embed: discord.Embed, notify_type: NotifyChannelType, default_content: str | None = None):
-        notify_channels = sqldb.get_notify_channel_by_type(notify_type)
+        notify_channels = self.sqldb.get_notify_channel_by_type(notify_type)
         for no_channel in notify_channels:
             channel = self.get_channel(no_channel.channel_id)
             if channel:
@@ -212,7 +213,7 @@ class DiscordBot(discord.Bot):
                 log.warning("%s not found: %s/%s", notify_type, no_channel.guild_id, no_channel.channel_id)
 
     async def edit_notify_channel(self, embed: discord.Embed | list[discord.Embed], notify_type: NotifyChannelType, default_content: str = None):
-        records = sqldb.get_notify_channel_by_type(notify_type)
+        records = self.sqldb.get_notify_channel_by_type(notify_type)
         for i in records:
             channel = self.get_channel(i.channel_id)
             if channel:

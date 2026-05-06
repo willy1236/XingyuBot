@@ -39,7 +39,7 @@ def create_sqldb() -> SQLRepository:
 
 sqldb = create_sqldb()
 
-Mongedb_connection = get_settings().MONGODB_CONNECTION
+
 def create_mongedb(should_connect) -> MongoDB:
     if should_connect:
         url = Jsondb.get_token("mongodb_url")
@@ -47,9 +47,8 @@ def create_mongedb(should_connect) -> MongoDB:
         log.info(">> MongoDB connect: on <<")
     else:
         mongedb = None
-    return mongedb # type: ignore
+    return mongedb  # type: ignore
 
-mongedb = create_mongedb(Mongedb_connection)
 
 __all__ = [
     "sqldb",
