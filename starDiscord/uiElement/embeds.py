@@ -37,8 +37,6 @@ from starlib.providers.general.models import (
 )
 from starlib.settings import tz
 
-from .bot_model import DMModel, ErrorReportModel, FeedbackModel, ReportModel, mentionModel
-
 
 class BaseBotEmbed:
     @staticmethod
@@ -140,66 +138,66 @@ class BotEmbed(BaseBotEmbed):
 
 
 # 註冊對應關係
-@BotEmbed.register(ErrorReportModel)
-def format_error_report_model(model: ErrorReportModel) -> discord.Embed:
-    embed = BaseBotEmbed.general(name=str(model.ctx.author), icon_url=model.ctx.author.display_avatar.url, title="❌錯誤回報")
-    embed.add_field(name="錯誤訊息", value=f"```py\n{model.error}```", inline=True)
-    if model.ctx.command:
-        embed.add_field(name="使用指令", value=f"```{model.ctx.command}```", inline=False)
-        embed.add_field(name="參數", value=f"```{model.ctx.selected_options}```", inline=False)
-    embed.add_field(name="使用者", value=f"{model.ctx.author}\n{model.ctx.author.id}", inline=False)
-    embed.add_field(name="發生頻道", value=f"{model.ctx.channel}\n{model.ctx.channel.id}", inline=True)
-    embed.add_field(name="發生群組", value=f"{model.ctx.guild}\n{model.ctx.guild.id}", inline=True)
-    embed.timestamp = datetime.now()
-    return embed
+# @BotEmbed.register(ErrorReportModel)
+# def format_error_report_model(model: ErrorReportModel) -> discord.Embed:
+#     embed = BaseBotEmbed.general(name=str(model.ctx.author), icon_url=model.ctx.author.display_avatar.url, title="❌錯誤回報")
+#     embed.add_field(name="錯誤訊息", value=f"```py\n{model.error}```", inline=True)
+#     if model.ctx.command:
+#         embed.add_field(name="使用指令", value=f"```{model.ctx.command}```", inline=False)
+#         embed.add_field(name="參數", value=f"```{model.ctx.selected_options}```", inline=False)
+#     embed.add_field(name="使用者", value=f"{model.ctx.author}\n{model.ctx.author.id}", inline=False)
+#     embed.add_field(name="發生頻道", value=f"{model.ctx.channel}\n{model.ctx.channel.id}", inline=True)
+#     embed.add_field(name="發生群組", value=f"{model.ctx.guild}\n{model.ctx.guild.id}", inline=True)
+#     embed.timestamp = datetime.now()
+#     return embed
 
 
-@BotEmbed.register(ReportModel)
-def format_report_model(model: ReportModel) -> discord.Embed:
-    embed = BaseBotEmbed.general(name=str(model.refer_msg.author), icon_url=model.refer_msg.author.display_avatar.url, title="📢使用者回報")
-    if model.refer_msg:
-        embed.add_field(name="回報訊息", value=f"```{model.msg}```", inline=True)
-        embed.add_field(name="回報對象", value=f"{model.refer_msg.author}\n{model.refer_msg.author.id}", inline=False)
-        embed.add_field(name="發生頻道", value=f"{model.refer_msg.channel}\n{model.refer_msg.channel.id}", inline=True)
-        embed.add_field(name="發生群組", value=f"{model.refer_msg.guild}\n{model.refer_msg.guild.id}", inline=True)
-    else:
-        embed.add_field(name="訊息ID", value="無", inline=True)
-    embed.timestamp = datetime.now()
-    return embed
+# @BotEmbed.register(ReportModel)
+# def format_report_model(model: ReportModel) -> discord.Embed:
+#     embed = BaseBotEmbed.general(name=str(model.refer_msg.author), icon_url=model.refer_msg.author.display_avatar.url, title="📢使用者回報")
+#     if model.refer_msg:
+#         embed.add_field(name="回報訊息", value=f"```{model.msg}```", inline=True)
+#         embed.add_field(name="回報對象", value=f"{model.refer_msg.author}\n{model.refer_msg.author.id}", inline=False)
+#         embed.add_field(name="發生頻道", value=f"{model.refer_msg.channel}\n{model.refer_msg.channel.id}", inline=True)
+#         embed.add_field(name="發生群組", value=f"{model.refer_msg.guild}\n{model.refer_msg.guild.id}", inline=True)
+#     else:
+#         embed.add_field(name="訊息ID", value="無", inline=True)
+#     embed.timestamp = datetime.now()
+#     return embed
 
 
-@BotEmbed.register(FeedbackModel)
-def format_feedback_model(model: FeedbackModel) -> discord.Embed:
-    embed = BaseBotEmbed.general(name=str(model.ctx.author), icon_url=model.ctx.author.display_avatar.url, title="💡使用者回饋")
-    embed.add_field(name="回饋訊息", value=f"{model.msg.content}", inline=True)
-    embed.add_field(name="回饋使用者", value=f"{model.ctx.author}\n{model.ctx.author.id}", inline=False)
-    embed.add_field(name="發生頻道", value=f"{model.msg.channel}\n{model.msg.channel.id}", inline=True)
-    embed.add_field(name="發生群組", value=f"{model.msg.guild}\n{model.msg.guild.id}", inline=True)
-    embed.timestamp = datetime.now()
-    return embed
+# @BotEmbed.register(FeedbackModel)
+# def format_feedback_model(model: FeedbackModel) -> discord.Embed:
+#     embed = BaseBotEmbed.general(name=str(model.ctx.author), icon_url=model.ctx.author.display_avatar.url, title="💡使用者回饋")
+#     embed.add_field(name="回饋訊息", value=f"{model.msg.content}", inline=True)
+#     embed.add_field(name="回饋使用者", value=f"{model.ctx.author}\n{model.ctx.author.id}", inline=False)
+#     embed.add_field(name="發生頻道", value=f"{model.msg.channel}\n{model.msg.channel.id}", inline=True)
+#     embed.add_field(name="發生群組", value=f"{model.msg.guild}\n{model.msg.guild.id}", inline=True)
+#     embed.timestamp = datetime.now()
+#     return embed
 
 
-@BotEmbed.register(DMModel)
-def format_dm_model(model: DMModel) -> discord.Embed:
-    embed = BaseBotEmbed.general(name=str(model.msg.author), icon_url=model.msg.author.display_avatar.url, title="📩使用者私訊")
-    embed.add_field(name="私訊內容", value=f"{model.msg.content}", inline=True)
-    if model.msg.channel.recipient:
-        embed.add_field(name="發送者", value=f"{model.msg.author}->{model.msg.channel.recipient}\n{model.msg.author.id}->{model.msg.channel.recipient.id}", inline=False)
-    else:
-        embed.add_field(name="發送者", value=f"{model.msg.author}\n{model.msg.author.id}", inline=False)
-    embed.timestamp = datetime.now()
-    return embed
+# @BotEmbed.register(DMModel)
+# def format_dm_model(model: DMModel) -> discord.Embed:
+#     embed = BaseBotEmbed.general(name=str(model.msg.author), icon_url=model.msg.author.display_avatar.url, title="📩使用者私訊")
+#     embed.add_field(name="私訊內容", value=f"{model.msg.content}", inline=True)
+#     if model.msg.channel.recipient:
+#         embed.add_field(name="發送者", value=f"{model.msg.author}->{model.msg.channel.recipient}\n{model.msg.author.id}->{model.msg.channel.recipient.id}", inline=False)
+#     else:
+#         embed.add_field(name="發送者", value=f"{model.msg.author}\n{model.msg.author.id}", inline=False)
+#     embed.timestamp = datetime.now()
+#     return embed
 
 
-@BotEmbed.register(mentionModel)
-def format_mention_model(model: mentionModel) -> discord.Embed:
-    embed = BaseBotEmbed.general(name=str(model.msg.author), icon_url=model.msg.author.display_avatar.url, title="📢使用者提及")
-    embed.add_field(name="提及內容", value=f"{model.msg.content}\n{model.msg.jump_url}", inline=True)
-    embed.add_field(name="提及使用者", value=f"{model.msg.author}\n{model.msg.author.id}", inline=False)
-    embed.add_field(name="發生頻道", value=f"{model.msg.channel}\n{model.msg.channel.id}", inline=True)
-    embed.add_field(name="發生群組", value=f"{model.msg.guild}\n{model.msg.guild.id}", inline=True)
-    embed.timestamp = datetime.now()
-    return embed
+# @BotEmbed.register(mentionModel)
+# def format_mention_model(model: mentionModel) -> discord.Embed:
+#     embed = BaseBotEmbed.general(name=str(model.msg.author), icon_url=model.msg.author.display_avatar.url, title="📢使用者提及")
+#     embed.add_field(name="提及內容", value=f"{model.msg.content}\n{model.msg.jump_url}", inline=True)
+#     embed.add_field(name="提及使用者", value=f"{model.msg.author}\n{model.msg.author.id}", inline=False)
+#     embed.add_field(name="發生頻道", value=f"{model.msg.channel}\n{model.msg.channel.id}", inline=True)
+#     embed.add_field(name="發生群組", value=f"{model.msg.guild}\n{model.msg.guild.id}", inline=True)
+#     embed.timestamp = datetime.now()
+#     return embed
 
 
 @BotEmbed.register(UserModerate)

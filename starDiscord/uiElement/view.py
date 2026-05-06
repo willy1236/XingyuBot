@@ -10,12 +10,13 @@ import discord
 import matplotlib
 import numpy as np
 from discord.utils import format_dt
-from embeds import BotEmbed
 
 from starlib import Jsondb, log, sqldb, tz
 from starlib.database import Giveaway, GiveawayUser, HappycampApplicationForm, HappycampVIP, McssServerAction, McssServerStatues, Poll, PollRole, TicketChannel
 from starlib.instance import mcss_api, vip_admin_channel
 from starlib.utils.utility import find_radmin_vpn_network
+
+from .embeds import BotEmbed
 
 if TYPE_CHECKING:
     from starlib.database import SQLRepository
@@ -74,15 +75,13 @@ class PollOptionButton(discord.ui.Button):
                     have_only_role = True
                     role = interaction.user.get_role(roleid)
                     if role:
-                        await channel.send(embed=BotEmbed.create(form))
+                        can_vote = True
 
-                        await interaction.edit_original_message(embed=BotEmbed.create(self.form))
+                if view.role_dict[roleid][1] > vote_magnification:
                     vote_magnification = view.role_dict[roleid][1]
-                        await interaction.response.edit_message(embed=BotEmbed.create(self.form))
+
         if not view.role_dict or (have_only_role and can_vote):
-                        await interaction.edit_original_message(embed=BotEmbed.create(self.form))
-                self.option.poll_id, interaction.user.id, self.option.option_id, datetime.now(tz), vote_magnification, view.poll.number_of_user_votes
-                        await interaction.response.edit_message(embed=BotEmbed.create(self.form))
+            r = view.sqldb.set_user_poll(self.option.poll_id, interaction.user.id, self.option.option_id, datetime.now(tz), vote_magnification, view.poll.number_of_user_votes)
             if r == 2:
                 await interaction.response.send_message(f"{interaction.user.mention} 已投了 {view.poll.number_of_user_votes} 票而無法投票", ephemeral=True)
             elif r == 1:

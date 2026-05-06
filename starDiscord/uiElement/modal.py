@@ -1,7 +1,9 @@
 import discord
 
-from starlib import BotEmbed, sqldb
+from starlib import sqldb
 from starlib.database import ExternalAccount, PlatformType
+
+from .embeds import BotEmbed
 
 
 class RuleMessageModal(discord.ui.Modal):

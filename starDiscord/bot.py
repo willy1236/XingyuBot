@@ -6,7 +6,6 @@ from pathlib import Path
 
 import discord
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from uiElement.embeds import BotEmbed
 
 from starlib import log, sqldb
 from starlib.core.model import TwitchStreamEvent
@@ -33,6 +32,8 @@ from starlib.instance import (
 from starlib.instance import (
     report_channel as report_channel_id,
 )
+
+from .uiElement.embeds import BotEmbed
 
 
 class DiscordBot(discord.Bot):
