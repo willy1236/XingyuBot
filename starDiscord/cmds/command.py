@@ -103,7 +103,7 @@ class command(Cog_Extension):
                 elif user and user.bot:
                     await ctx.respond("請不要加機器人身分組好嗎")
 
-        view = DeleteAddRoleView(new_role, ctx.author)
+        view = DeleteAddRoleView(self.bot, new_role, ctx.author)
         if added_user:
             view.message = await ctx.respond(f"已添加 {new_role.name} 給{' '.join(added_user)}", view=view)
         else:
@@ -492,6 +492,7 @@ class command(Cog_Extension):
         role_magnification_dict = await create_role_magification_dict(role_magnification, ctx) if role_magnification else {}
 
         view = PollView.create(
+            self.bot,
             title,
             options,
             ctx.author.id,
@@ -504,7 +505,6 @@ class command(Cog_Extension):
             can_change_vote=None,  # implemented in the future
             only_role_list=only_role_list,
             role_magnification_dict=role_magnification_dict,
-            bot=self.bot,
         )
         embed = view.embed(ctx.guild)
         message = await ctx.respond(embed=embed, view=view)
@@ -516,7 +516,7 @@ class command(Cog_Extension):
     async def view(self, ctx, poll_id: discord.Option(int, name="投票id", description="")):
         dbdata = self.bot.sqldb.get_poll(poll_id)
         if dbdata:
-            view = PollView(dbdata, sqldb=self.bot.sqldb, bot=self.bot)
+            view = PollView(dbdata, bot=self.bot)
             await ctx.respond(view=view, embed=view.embed(ctx.guild))
         else:
             await ctx.respond("錯誤：查無此ID")
@@ -540,7 +540,7 @@ class command(Cog_Extension):
 
         if is_owner:
             poll.show_name = show_name
-        view = PollView(poll, self.bot.sqldb, self.bot)
+        view = PollView(poll, self.bot)
         embed, image_buffer = view.results_embed(ctx.interaction, True)  # type: ignore
         await ctx.respond(embed=embed, file=discord.File(image_buffer, filename="pie.png"))
 
@@ -887,7 +887,7 @@ class command(Cog_Extension):
         )
         self.bot.sqldb.add(giveaway)
 
-        view = GiveawayView(giveaway, self.bot.sqldb, self.bot, timeout=int((end_at - now).total_seconds()) if end_at else None)
+        view = GiveawayView(giveaway, self.bot, timeout=int((end_at - now).total_seconds()) if end_at else None)
         message = await ctx.respond(embed=view.embed(), view=view)
         view.giveaway.message_id = message.id
         self.bot.sqldb.merge(view.giveaway)
@@ -922,7 +922,7 @@ class command(Cog_Extension):
         else:
             old_winner = None
 
-        view = GiveawayView(giveaway, self.bot.sqldb, self.bot)
+        view = GiveawayView(giveaway, self.bot)
         embed = view.redraw_winner_giveaway(old_winner)
         await ctx.respond(embed=embed)
 

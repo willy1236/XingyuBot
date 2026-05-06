@@ -91,7 +91,7 @@ class system_user(Cog_Extension):
         if not pet:
             await ctx.respond("你沒有寵物")
             return
-        await ctx.respond("你真的確定要放生寵物嗎?", view=DeletePetView())
+        await ctx.respond("你真的確定要放生寵物嗎?", view=DeletePetView(self.bot))
 
     @commands.slash_command(description="查看語音時間排行榜")
     async def voice_time_leaderboard(self, ctx: discord.ApplicationContext):

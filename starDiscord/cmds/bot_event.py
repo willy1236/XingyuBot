@@ -142,7 +142,7 @@ class event(Cog_Extension):
                 message = None
 
             if message:
-                bot.add_view(TicketLobbyView(channel.id), message_id=lobby.message_id)
+                bot.add_view(TicketLobbyView(self.bot, channel.id), message_id=lobby.message_id)
                 log.debug("Loaded ticket lobby: %s", lobby.channel_id)
             elif not debug_mode:
                 sqldb.delete_ticket_lobby(lobby.channel_id)
@@ -154,7 +154,7 @@ class event(Cog_Extension):
             log.debug(f"Loading ticket channel: {ticket.channel_id}")
             channel = bot.get_channel(ticket.channel_id)
             if channel:
-                bot.add_view(TicketChannelView(channel, bot.get_user(ticket.creator_id)), message_id=ticket.view_message_id)
+                bot.add_view(TicketChannelView(self.bot, channel, bot.get_user(ticket.creator_id)), message_id=ticket.view_message_id)
                 log.debug(f"Loaded ticket channel: {ticket.channel_id}")
 
         # Bot status

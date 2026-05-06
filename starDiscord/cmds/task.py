@@ -67,7 +67,7 @@ class task(Cog_Extension):
                 self.bot.sqldb.merge(giveaway)
                 log.debug("Ended giveaway: %s", giveaway.id)
             else:
-                view = GiveawayView(giveaway, sqldb=self.bot.sqldb, bot=self.bot)
+                view = GiveawayView(giveaway, bot=self.bot)
                 self.bot.add_view(view)
                 if giveaway.end_at:
                     job = scheduler.add_job(self.giveaway_auto_end, DateTrigger(giveaway.end_at if giveaway.end_at > now else now + timedelta(seconds=10)), args=[self.bot, view])

@@ -11,7 +11,7 @@ import matplotlib
 import numpy as np
 from discord.utils import format_dt
 
-from starlib import Jsondb, log, sqldb, tz
+from starlib import Jsondb, log, tz
 from starlib.database import Giveaway, GiveawayUser, HappycampApplicationForm, HappycampVIP, McssServerAction, McssServerStatues, Poll, PollRole, TicketChannel
 from starlib.instance import mcss_api, vip_admin_channel
 from starlib.utils.utility import find_radmin_vpn_network
@@ -23,27 +23,32 @@ if TYPE_CHECKING:
     from starlib.database.postgresql.models import PollOption, ReactionRoleOption, TRPGStoryOption, TRPGStoryPlot
     from starlib.providers import McssServer
 
+    from ..bot import DiscordBot
+
+
 class DeletePetView(discord.ui.View):
-    def __init__(self):
+    def __init__(self, bot: DiscordBot):
         super().__init__(timeout=30)
+        self.bot = bot
 
     @discord.ui.button(label="放生寵物", style=discord.ButtonStyle.danger)
     async def button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
         user = interaction.user
-        sqldb.remove_user_pet(user.id)
+        self.bot.sqldb.remove_user_pet(user.id)
         button.disabled = True
         await interaction.response.edit_message(content="寵物已放生", view=self)
 
 class DeleteAddRoleView(discord.ui.View):
-    def __init__(self, role: discord.Role, creater: discord.Member):
+    def __init__(self, bot: DiscordBot, role: discord.Role, creater: discord.Member):
         super().__init__(timeout=30)
+        self.bot = bot
         self.role = role
         self.creater = creater
 
     async def on_timeout(self):
         try:
             self.clear_items()
-            sqldb.add_role_save(self.role)
+            self.bot.sqldb.add_role_save(self.role)
             log.info(f"Role {self.role} has been saved.")
             await self.message.edit(view=self)
         except discord.errors.NotFound:
@@ -152,13 +157,12 @@ class PollNowButton(discord.ui.Button):
 class PollView(discord.ui.View):
     if TYPE_CHECKING:
         poll: Poll
-        sqldb: SQLRepository
-        bot: discord.Bot
+        bot: DiscordBot
 
-    def __init__(self, poll: Poll, sqldb, bot):
+    def __init__(self, poll: Poll, bot: DiscordBot):
         super().__init__(timeout=None)
         self.poll = poll
-        self.sqldb = sqldb
+        self.sqldb = bot.sqldb
         self.bot = bot
         self._role_dict = {}
         # TODO: change_vote (decide if user can change his/her vote or not)
@@ -179,6 +183,7 @@ class PollView(discord.ui.View):
     @classmethod
     def create(
         cls,
+        bot: DiscordBot,
         title: str,
         options: list,
         creator_id: int,
@@ -191,7 +196,6 @@ class PollView(discord.ui.View):
         can_change_vote=True,
         only_role_list: list | None = None,
         role_magnification_dict: dict | None = None,
-        bot: discord.Bot | None = None,
     ):
         """創建投票"""
         poll = Poll(
@@ -207,8 +211,8 @@ class PollView(discord.ui.View):
             number_of_user_votes=number_of_user_votes,
             can_change_vote=can_change_vote,
         )
-        sqldb.add(poll)
-        sqldb.add_poll_option(poll.poll_id, options)
+        bot.sqldb.add(poll)
+        bot.sqldb.add_poll_option(poll.poll_id, options)
 
         if only_role_list is None:
             only_role_list = []
@@ -228,11 +232,10 @@ class PollView(discord.ui.View):
         for role_id in poll_role_dict:
             is_only_role = poll_role_dict[role_id][0]
             role_magnification = poll_role_dict[role_id][1]
-            sqldb.merge(PollRole(poll_id=poll.poll_id, role_id=role_id, is_only_role=is_only_role, role_magnification=role_magnification))
+            bot.sqldb.merge(PollRole(poll_id=poll.poll_id, role_id=role_id, is_only_role=is_only_role, role_magnification=role_magnification))
 
-        if bot:
-            view = cls(poll, sqldb, bot)
-            return view
+        view = cls(poll, bot)
+        return view
 
     @property
     def role_dict(self) -> dict[int, tuple[bool, int]]:
@@ -523,10 +526,10 @@ class GiveawayEndButton(discord.ui.Button):
 
 
 class GiveawayView(discord.ui.View):
-    def __init__(self, giveaway: Giveaway, sqldb: SQLRepository, bot: discord.Bot, timeout=None):
+    def __init__(self, giveaway: Giveaway, bot: DiscordBot, timeout=None):
         super().__init__(timeout=timeout)
         self.giveaway = giveaway
-        self.sqldb = sqldb
+        self.sqldb = bot.sqldb
         self.bot = bot
         if giveaway.is_on:
             self.add_item(GiveawayJoinButton(giveaway))
@@ -741,8 +744,9 @@ class McServerPanel(discord.ui.View):
             await interaction.followup.send("伺服器未找到", ephemeral=True)
 
 class TicketChannelView(discord.ui.View):
-    def __init__(self, channel: discord.TextChannel, creator: discord.Member):
+    def __init__(self, bot: DiscordBot, channel: discord.TextChannel, creator: discord.Member):
         super().__init__(timeout=None)
+        self.bot = bot
         self.channel = channel
         self.creator = creator
         self.add_item(self.TicketCloseButton(channel.id))
@@ -756,11 +760,11 @@ class TicketChannelView(discord.ui.View):
             if interaction.user == view.creator or (
                 view.creator.guild and await view.creator.guild.get_member(interaction.user.id).guild_permissions.manage_channels
             ):
-                ticket = sqldb.get_ticket_channel(view.channel.id)
+                ticket = view.bot.sqldb.get_ticket_channel(view.channel.id)
                 if ticket:
                     ticket.closed_at = datetime.now(tz)
                     ticket.closer_id = interaction.user.id
-                    sqldb.merge(ticket)
+                    view.bot.sqldb.merge(ticket)
 
                 # await self.channel.delete()
                 overwrites = view.channel.overwrites
@@ -775,8 +779,9 @@ class TicketChannelView(discord.ui.View):
 
 
 class TicketLobbyView(discord.ui.View):
-    def __init__(self, channel_id: int):
+    def __init__(self, bot: DiscordBot, channel_id: int):
         super().__init__(timeout=None)
+        self.bot = bot
         self.add_item(self.CreateTicketButton(channel_id))
 
     class CreateTicketButton(discord.ui.Button):
@@ -784,23 +789,19 @@ class TicketLobbyView(discord.ui.View):
             super().__init__(label="建立私人頻道", style=discord.ButtonStyle.primary, custom_id=f"create_ticket_{channel_id}")
 
         async def callback(self, interaction: discord.Interaction):
+            view: TicketLobbyView = self.view
             channel = await interaction.channel.category.create_text_channel(
                 name=f"ticket-{interaction.user.name}", topic=f"Ticket channel for {interaction.user} ({interaction.user.id})"
             )
-            msg = await channel.send(
-                f"{interaction.user.mention}，你好！請在此頻道描述你的問題，我們會盡快協助你。", view=TicketChannelView(channel, interaction.user)
-            )
-            sqldb.merge(
-                TicketChannel(
-                    channel_id=channel.id, guild_id=interaction.guild.id, creator_id=interaction.user.id, created_at=datetime.now(tz), close_message_id=msg.id
-                )
-            )
+            msg = await channel.send(f"{interaction.user.mention}，你好！請在此頻道描述你的問題，我們會盡快協助你。", view=TicketChannelView(view.bot, channel, interaction.user))
+            view.bot.sqldb.merge(TicketChannel(channel_id=channel.id, guild_id=interaction.guild.id, creator_id=interaction.user.id, created_at=datetime.now(tz), close_message_id=msg.id))
             await msg.pin()
             await interaction.response.send_message(f"已建立私人頻道，請前往{channel.mention}進行對話", ephemeral=True)
 
 class VIPApplicationForm(discord.ui.Modal):
-    def __init__(self):
+    def __init__(self, bot: DiscordBot):
         super().__init__(title="VIP申請表單")
+        self.bot = bot
         self.add_item(discord.ui.InputText(label="請輸入你希望的VIP等級", style=discord.InputTextStyle.short, required=False))
         self.add_item(discord.ui.InputText(label="請輸入你的備註", style=discord.InputTextStyle.long, required=False))
 
@@ -810,9 +811,9 @@ class VIPApplicationForm(discord.ui.Modal):
         form = HappycampApplicationForm(
             discord_id=interaction.user.id, content=f"申請VIP等級：{vip_level}\n備註：{remarks}", submitted_at=datetime.now(tz), change_vip_level=vip_level
         )
-        sqldb.add(form)
+        self.bot.sqldb.add(form)
 
-        channel = interaction.client.get_channel(vip_admin_channel)
+        channel = self.bot.get_channel(vip_admin_channel)
         if channel:
             await channel.send(embed=BotEmbed.create(form))
         else:
@@ -822,12 +823,13 @@ class VIPApplicationForm(discord.ui.Modal):
 
 
 class VIPView(discord.ui.View):
-    def __init__(self):
+    def __init__(self, bot: DiscordBot):
         super().__init__()
+        self.bot = bot
 
     @discord.ui.button(label="取得當前等級", style=discord.ButtonStyle.primary)
     async def button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
-        vip = sqldb.get_vip(interaction.user.id)
+        vip = self.bot.sqldb.get_vip(interaction.user.id)
         if not vip:
             await interaction.response.send_message("你無法使用此功能", ephemeral=True)
             return
@@ -838,20 +840,22 @@ class VIPView(discord.ui.View):
 
     @discord.ui.button(label="申請更高等級", style=discord.ButtonStyle.primary)
     async def button2_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
-        vip = sqldb.get_vip(interaction.user.id)
+        vip = self.bot.sqldb.get_vip(interaction.user.id)
         if not vip:
             await interaction.response.send_message("你無法使用此功能", ephemeral=True)
             return
 
-        await interaction.response.send_modal(VIPApplicationForm())
+        await interaction.response.send_modal(VIPApplicationForm(self.bot))
 
 
 class VIPAuditView(discord.ui.View):
     def __init__(
         self,
+        bot: DiscordBot,
         form: HappycampApplicationForm,
     ):
         super().__init__()
+        self.bot = bot
         self.form = form
 
     async def on_timeout(self):
@@ -870,12 +874,12 @@ class VIPAuditView(discord.ui.View):
             self.form.status = 1
             self.form.reviewed_at = datetime.now(tz)
             self.form.reviewer_id = interaction.user.id
-            sqldb.merge(self.form)
+            self.bot.sqldb.merge(self.form)
             await interaction.edit_original_message(embed=BotEmbed.create(self.form))
             await interaction.followup.send(content="已通過申請", ephemeral=True)
 
             if self.form.change_vip_level is not None:
-                vip = sqldb.get_vip(self.form.discord_id)
+                vip = self.bot.sqldb.get_vip(self.form.discord_id)
                 if not vip:
                     vip = HappycampVIP(
                         discord_id=self.form.discord_id, vip_level=self.form.change_vip_level, created_at=datetime.now(tz), updated_at=datetime.now(tz)
@@ -884,9 +888,9 @@ class VIPAuditView(discord.ui.View):
                     vip.vip_level = self.form.change_vip_level
                     vip.updated_at = datetime.now(tz)
 
-                sqldb.merge(vip)
+                self.bot.sqldb.merge(vip)
 
-                vip_channels = sqldb.get_vip_channels()
+                vip_channels = self.bot.sqldb.get_vip_channels()
                 member = interaction.guild.get_member(self.form.discord_id)
                 assert member is not None, "會員不存在於伺服器中"
                 for vip_c in vip_channels:
@@ -919,7 +923,7 @@ class VIPAuditView(discord.ui.View):
             self.form.status = 2
             self.form.reviewed_at = datetime.now(tz)
             self.form.reviewer_id = interaction.user.id
-            sqldb.merge(self.form)
+            self.bot.sqldb.merge(self.form)
             await interaction.edit_original_message(embed=BotEmbed.create(self.form))
             await interaction.followup.send(content="已拒絕申請", ephemeral=True)
         else:
@@ -934,12 +938,13 @@ class VIPAuditView(discord.ui.View):
             await interaction.response.send_message("已填入審核意見", ephemeral=True)
 
 class RegisterView(discord.ui.View):
-    def __init__(self):
+    def __init__(self, bot: DiscordBot):
         super().__init__(timeout=60)
+        self.bot = bot
 
     @discord.ui.button(label="直接開始（建立新用戶）", style=discord.ButtonStyle.green)
     async def create_new(self, button: discord.ui.Button, interaction: discord.Interaction):
-        sqldb.add_cloud_user_by_discord(interaction.user.id, interaction.user.display_name)
+        self.bot.sqldb.add_cloud_user_by_discord(interaction.user.id, interaction.user.display_name)
         await interaction.response.edit_message(content="✅ 註冊成功！請重新輸入指令。", view=None)
         self.stop()
 
