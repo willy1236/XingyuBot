@@ -2,10 +2,11 @@ import discord
 from discord.commands import SlashCommandGroup
 from discord.ext import commands
 
-from starlib import BotEmbed, sclient
+from starlib import sclient
 from starlib.instance import debug_guilds
 
 from ..extension import Cog_Extension
+from ..uiElement.embeds import BotEmbed
 
 
 class system_economy(Cog_Extension):

@@ -7,7 +7,7 @@ import nmap
 from discord.commands import SlashCommandGroup
 from discord.ext import commands, pages
 
-from starlib import BotEmbed, ChoiceList, Jsondb, csvdb, log, sclient, tz
+from starlib import ChoiceList, Jsondb, csvdb, log, sclient, tz
 from starlib.database import LOLGameCache, LOLGameRecord, PlatformType, UserIPDetails
 from starlib.exceptions import APINetworkError
 from starlib.providers import *
@@ -15,6 +15,7 @@ from starlib.settings import get_settings
 
 from ..checks import RegisteredContext, ensure_registered
 from ..extension import Cog_Extension
+from ..uiElement.embeds import BotEmbed
 
 game_option = ChoiceList.set("game_set_option")
 riot_api = RiotAPI()
@@ -59,7 +60,7 @@ class system_game(Cog_Extension):
         api = RiotAPI()
         user = api.get_riot_account_byname(riot_id)
         if user:
-            await ctx.respond("查詢成功", embed=user.embed())
+            await ctx.respond("查詢成功", embed=BotEmbed.create(user))
         else:
             await ctx.respond("查詢失敗：查無此ID", ephemeral=True)
 
@@ -81,7 +82,9 @@ class system_game(Cog_Extension):
 
         player = riot_api.get_player_bypuuid(account.puuid)
         if player:
-            await ctx.respond("查詢成功", embed=player.embed(account.fullname))
+            embed = BotEmbed.create(player)
+            embed.set_author(name=account.fullname)
+            await ctx.respond("查詢成功", embed=embed)
         else:
             await ctx.respond("查詢失敗：查無此ID", ephemeral=True)
 
@@ -89,7 +92,7 @@ class system_game(Cog_Extension):
     async def match(self, ctx, matchid: discord.Option(str, name="對戰id", description="要查詢的對戰")):
         match = riot_api.get_match(matchid)
         if match:
-            await ctx.respond("查詢成功", embed=match.desplay())
+            await ctx.respond("查詢成功", embed=BotEmbed.create(match))
         else:
             await ctx.respond("查詢失敗:查無此ID", ephemeral=True)
 
@@ -107,7 +110,7 @@ class system_game(Cog_Extension):
 
         match = riot_api.get_match(match_list[0])
         if match:
-            await ctx.respond("查詢成功", embed=match.desplay())
+            await ctx.respond("查詢成功", embed=BotEmbed.create(match))
         else:
             raise APINetworkError("playermatch occurred error while getting match data.")
 
@@ -146,7 +149,7 @@ class system_game(Cog_Extension):
 
         rank_data = riot_api.get_summoner_rank(puuid)
         if rank_data:
-            embed_list = [rank.embed() for rank in rank_data]
+            embed_list = [BotEmbed.create(rank) for rank in rank_data]
         else:
             player = riot_api.get_riot_account_bypuuid(puuid)
             embed_list = [BotEmbed.simple(f"{player.fullname} 本季未進行過積分對戰")]
@@ -182,7 +185,7 @@ class system_game(Cog_Extension):
             await ctx.respond(f"{player.fullname} 沒有進行中的對戰", ephemeral=True)
             return
 
-        await ctx.respond("查詢成功", embed=active_match.desplay())
+        await ctx.respond("查詢成功", embed=BotEmbed.create(active_match))
 
     @lol.command(description="統計近20場League of Legends對戰的所有玩家牌位", name_localizations=ChoiceList.name("lol_recentplayer"))
     @commands.cooldown(rate=60, per=1)
@@ -384,7 +387,7 @@ class system_game(Cog_Extension):
     async def osu_user(self, ctx, username: discord.Option(str, name="玩家名稱", description="要查詢的玩家", default=None)):
         player = OsuAPI().get_player(username)
         if player:
-            await ctx.respond("查詢成功", embed=player.desplay())
+            await ctx.respond("查詢成功", embed=BotEmbed.create(player))
         else:
             await ctx.respond("查詢失敗:查無此玩家", ephemeral=True)
 
@@ -393,7 +396,7 @@ class system_game(Cog_Extension):
     async def osu_map(self, ctx, mapid: discord.Option(str, name="圖譜id", description="要查詢的圖譜ID", default=None)):
         map = OsuAPI().get_beatmap(mapid)
         if map:
-            await ctx.respond("查詢成功", embed=map.desplay())
+            await ctx.respond("查詢成功", embed=BotEmbed.create(map))
         else:
             await ctx.respond("查詢失敗:查無此圖譜", ephemeral=True)
 
@@ -402,14 +405,14 @@ class system_game(Cog_Extension):
     async def apex_user(self, ctx: discord.ApplicationContext, username: discord.Option(str, name="玩家名稱", description="要查詢的玩家")):
         player = ApexAPI().get_player(username)
         if player:
-            await ctx.respond(content="查詢成功", embed=player.desplay())
+            await ctx.respond(content="查詢成功", embed=BotEmbed.create(player))
         else:
             await ctx.respond(content="查詢失敗:查無此ID", ephemeral=True)
 
     @apex.command(description="查詢Apex地圖資料", name_localizations=ChoiceList.name("apex_map"))
     @commands.cooldown(rate=1, per=3)
     async def map(self, ctx):
-        embeds = ApexAPI().get_map_rotation().embeds()
+        embeds = BotEmbed.create(ApexAPI().get_map_rotation())
         await ctx.respond(content="查詢成功", embeds=embeds)
 
     # @apex.command(description='查詢Apex伺服器資料',enabled=False)
@@ -424,7 +427,7 @@ class system_game(Cog_Extension):
     async def dbd_user(self, ctx, userid: discord.Option(str, name="steamid", description="要查詢的玩家id", default=None)):
         player = DBDInterface().get_player(userid)
         if player:
-            await ctx.respond(content="查詢成功", embed=player.embed())
+            await ctx.respond(content="查詢成功", embed=BotEmbed.create(player))
         else:
             await ctx.respond(content="查詢失敗:查無此ID或個人資料設定私人", ephemeral=True)
 
@@ -433,7 +436,7 @@ class system_game(Cog_Extension):
     async def user(self, ctx, userid: discord.Option(str, name="用戶id", description="要查詢的用戶", default=None)):
         user = SteamAPI().get_user(userid)
         if user:
-            await ctx.respond(content="查詢成功", embed=user.embed())
+            await ctx.respond(content="查詢成功", embed=BotEmbed.create(user))
         else:
             await ctx.respond(content="查詢失敗:查無此ID", ephemeral=True)
 

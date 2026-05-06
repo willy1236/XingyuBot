@@ -2,9 +2,10 @@ import discord
 from discord.commands import SlashCommandGroup
 from discord.ext import commands, pages
 
-from starlib import BotEmbed, ChoiceList
+from starlib import ChoiceList
 
 from ..extension import Cog_Extension
+from ..uiElement.embeds import BotEmbed
 
 info_option = ChoiceList.set("info_option")
 help_option = ChoiceList.set("help_option")

@@ -6,12 +6,13 @@ from discord.commands import SlashCommandGroup
 from discord.ext import commands
 from discord.utils import format_dt
 
-from starlib import BotEmbed, ChoiceList, Jsondb, sclient
+from starlib import ChoiceList, Jsondb, sclient
 from starlib.database import NotifyChannelType, ReactionRoleMessage, ReactionRoleOption, TicketChannelLobby, WarningType
 from starlib.instance import debug_guilds
 from starlib.utils import converter
 
 from ..extension import Cog_Extension
+from ..uiElement.embeds import BotEmbed
 from ..uiElement.modal import RuleMessageModal
 from ..uiElement.view import ReactionRoleView, TicketLobbyView
 
@@ -195,7 +196,7 @@ class moderation(Cog_Extension):
     async def get(self, ctx: discord.ApplicationContext, warning_id: discord.Option(str, name="警告編號", description="要查詢的警告", required=True)):
         sheet = sclient.sqldb.get_warning(int(warning_id))
         if sheet and (ctx.guild.id == sheet.create_guild or ctx.guild.id in debug_guilds or ctx.guild.get_member(sheet.discord_id)):
-            await ctx.respond(embed=sheet.embed(self.bot))
+            await ctx.respond(embed=BotEmbed.create(sheet))
         else:
             await ctx.respond("查無此警告單")
 

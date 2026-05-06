@@ -6,7 +6,6 @@ from pydantic import BaseModel, Field, model_validator
 
 from ...fileDatabase import Jsondb, csvdb
 from ...settings import tz
-from ...utils import BotEmbed
 
 jdict = Jsondb.jdict
 lol_jdict = Jsondb.lol_jdict
@@ -21,12 +20,6 @@ class RiotUser(BaseModel):
     def fullname(self) -> str:
         return self.gameName + "#" + self.tagLine
 
-    def embed(self):
-        embed = BotEmbed.general(self.fullname)
-        embed.add_field(name="puuid", value=self.puuid, inline=False)
-        embed.timestamp = datetime.now()
-        return embed
-
 
 class LOLPlayer(BaseModel):
     puuid: str
@@ -38,19 +31,6 @@ class LOLPlayer(BaseModel):
     def __post_init__(self):
         self.revisionDate = self.revisionDate.astimezone(tz=tz)
         return self
-
-    def embed(self, name=None):
-        embed = BotEmbed.general(name)
-        embed.add_field(name="召喚師等級", value=self.summonerLevel, inline=False)
-        embed.add_field(name="最後遊玩/修改資料時間", value=self.revisionDate.strftime("%Y/%m/%d %H:%M:%S"), inline=False)
-        embed.add_field(name="puuid", value=self.puuid, inline=False)
-        try:
-            embed.set_thumbnail(url=f"https://ddragon.leagueoflegends.com/cdn/15.10.1/img/profileicon/{self.profileIconId}.png")
-        except Exception:
-            embed.set_thumbnail(url="https://i.imgur.com/B0TMreW.png")
-        embed.set_footer(text="puuid是全球唯一的ID，不隨帳號移動地區而改變")
-
-        return embed
 
 
 class LOLMatchMetadata(BaseModel):
@@ -331,7 +311,7 @@ class LOLParticipant(BaseModel):
         text += f"{name}(LV. {self.champLevel})\n"
         lane = lol_jdict["road"].get(self.lane) or self.lane
         if self.role != "NONE":
-            lane += f" {self.role}"
+            lane = f"{lane} {self.role}"
         text += f"{lane}\n"
         kda = round((self.kills + self.assists) / self.deaths, 2) if self.deaths > 0 else (self.kills + self.assists)
         text += f"{self.kills}/{self.deaths}/{self.assists} KDA: {kda}\n"
@@ -446,37 +426,6 @@ class LOLMatch(BaseModel):
         """獲取失敗隊伍的玩家"""
         return [p for p in self.info.participants if not p.win]
 
-    def desplay(self):
-        embed = BotEmbed.simple("LOL對戰")
-        gamemode = lol_jdict["mod"].get(self.info.gameMode) or self.info.gameMode
-        embed.add_field(name="遊戲模式", value=gamemode, inline=False)
-        embed.add_field(name="對戰ID", value=self.metadata.matchId, inline=False)
-        embed.add_field(name="遊戲版本", value=self.info.gameVersion, inline=False)
-        minutes = str(self.info.gameDuration // 60)
-        seconds = str(self.info.gameDuration % 60)
-        time = f"{minutes}:{seconds}"
-        embed.add_field(name="遊戲時長", value=time, inline=False)
-        blue = ""
-        red = ""
-        i = 0
-        for player in self.info.participants:
-            if i < 5:
-                blue += player.desplaytext()
-                if i != 4:
-                    blue += "\n"
-            else:
-                red += player.desplaytext()
-                if i != 9:
-                    red += "\n"
-            i += 1
-        if self.info.teams[0].win:
-            embed.add_field(name="藍方👑", value=blue, inline=True)
-            embed.add_field(name="紅方", value=red, inline=True)
-        else:
-            embed.add_field(name="藍方", value=blue, inline=True)
-            embed.add_field(name="紅方👑", value=red, inline=True)
-        return embed
-
 
 class LOLRewardConfig(BaseModel):
     rewardValue: str
@@ -521,13 +470,6 @@ class LOLPlayerRank(BaseModel):
     freshBlood: bool
     hotStreak: bool
 
-    def embed(self):
-        embed = BotEmbed.simple(lol_jdict["type"].get(self.queueType, self.queueType))
-        embed.add_field(name="牌位", value=f"{self.tier} {self.rank}")
-        embed.add_field(name="聯盟分數", value=self.leaguePoints)
-        embed.add_field(name="勝敗", value=f"{self.wins}/{self.losses} {(round(self.wins / (self.wins + self.losses), 3)) * 100}%")
-        return embed
-
 
 class LOLActiveMatch:
     def __init__(self, data):
@@ -540,39 +482,6 @@ class LOLActiveMatch:
         self.gameLength = data.get("gameLength")
         self.participants = [LOLLActiveMatchPlayer(i) for i in data.get("participants")]
         self.bannedChampions = [LOLBanChampion(i) for i in data.get("bannedChampions")]
-
-    def desplay(self):
-        embed = BotEmbed.simple("LOL對戰")
-        gamemode = lol_jdict["mod"].get(self.gameMode) or self.gameMode
-        embed.add_field(name="遊戲模式", value=gamemode, inline=False)
-        embed.add_field(name="開始時間", value=f"<t:{str(self.gameStartTime)[:-3]}>", inline=False)
-        if self.gameLength <= 0:
-            time = "尚未開始"
-        else:
-            minutes = str(self.gameLength // 60)
-            seconds = str(self.gameLength % 60)
-            time = f"{minutes}:{seconds}"
-        embed.add_field(name="遊戲時長", value=time, inline=False)
-
-        if self.bannedChampions:
-            ban_champions = [ban_champion.name for ban_champion in self.bannedChampions]
-            embed.add_field(name="禁用角色", value=" ".join(ban_champions), inline=False)
-        blue = ""
-        red = ""
-        i = 0
-        for player in self.participants:
-            if i < 5:
-                blue += player.desplaytext()
-                if i != 4:
-                    blue += "\n"
-            else:
-                red += player.desplaytext()
-                if i != 9:
-                    red += "\n"
-            i += 1
-        embed.add_field(name="藍方", value=blue, inline=True)
-        embed.add_field(name="紅方", value=red, inline=True)
-        return embed
 
 
 class LOLLActiveMatchPlayer:
@@ -643,23 +552,6 @@ class OsuPlayer:
         self.last_visit = self.e8_last_visit.strftime("%Y/%m/%d %H:%M:%S")
         self.url = f"https://osu.ppy.sh/users/{self.id}"
 
-    def desplay(self, dc_user=None):
-        embed = BotEmbed.general("Osu玩家資訊", url=self.url)
-        embed.add_field(name="名稱", value=self.name)
-        embed.add_field(name="id", value=self.id)
-        embed.add_field(name="全球排名", value=self.global_rank)
-        embed.add_field(name="地區排名", value=self.country_rank)
-        embed.add_field(name="pp", value=self.pp)
-        embed.add_field(name="國家", value=self.country)
-        embed.add_field(name="等級", value=f"{self.level}({self.max_level}%)")
-        embed.add_field(name="最多連擊數", value=self.max_combo)
-        if self.is_online:
-            embed.add_field(name="最後線上", value="Online")
-        else:
-            embed.add_field(name="最後線上", value=self.last_visit)
-        embed.set_thumbnail(url=self.avatar_url)
-        return embed
-
 
 class OsuBeatmap:
     def __init__(self, data):
@@ -681,22 +573,6 @@ class OsuBeatmap:
         self.od = data["accuracy"]
         self.hp = data["drain"]
         self.version = data["version"]
-
-    def desplay(self):
-        embed = BotEmbed.simple(title="Osu圖譜資訊")
-        embed.add_field(name="名稱", value=self.title)
-        embed.add_field(name="歌曲長度(秒)", value=self.time)
-        embed.add_field(name="星數", value=self.star)
-        embed.add_field(name="模式", value=self.mode)
-        embed.add_field(name="combo數", value=self.max_combo)
-        embed.add_field(name="圖譜狀態", value=self.status)
-        embed.add_field(name="圖譜id", value=self.id)
-        embed.add_field(name="圖譜組id", value=self.beatmapset_id)
-        embed.add_field(name="通過率", value=self.pass_rate)
-        embed.add_field(name="BPM", value=self.bpm)
-        embed.add_field(name="網址", value="[點我]({0})".format(self.url))
-        embed.set_image(url=self.cover)
-        return embed
 
 
 class OsuMultiplayer:
@@ -730,24 +606,6 @@ class ApexPlayer:
         self.legends_selected_tacker = data["legends"]["selected"]["data"]
         self.legends_selected_banner = data["legends"]["selected"]["ImgAssets"]["banner"].replace(" ", "%20")
 
-    def desplay(self, dc_user=None):
-        embed = BotEmbed.simple("Apex玩家資訊")
-        embed.add_field(name="名稱", value=self.name)
-        embed.add_field(name="id", value=self.id)
-        embed.add_field(name="平台", value=self.platform)
-        embed.add_field(name="等級", value=self.level)
-        embed.add_field(name="牌位階級", value=self.rank)
-        embed.add_field(name="牌位分數", value=self.rank_score)
-        embed.add_field(name="競技場牌位階級", value=self.arena_rank)
-        embed.add_field(name="競技場牌位分數", value=self.arena_score)
-        embed.add_field(name="目前狀態", value=self.now_state)
-        if self.bans["isActive"]:
-            embed.add_field(name="目前ban狀態", value=self.bans["remainingSeconds"])
-        else:
-            embed.add_field(name="目前ban狀態", value=self.bans["isActive"])
-        embed.add_field(name="目前選擇角色", value=self.legends_selected_name)
-        embed.set_image(url=self.legends_selected_banner)
-        return embed
 
 class MapData(BaseModel):
     start: datetime
@@ -785,58 +643,6 @@ class ApexMapRotation(BaseModel):
     ranked: RotationType | None = None
     ltm: RotationType
 
-    def embeds(self):
-        tl: dict = jdict["ApexMap"]
-        event_tl: dict = jdict["ApexEvent"]
-        now = datetime.now(tz=tz)
-        lst = list()
-        if self.ranked is not None:
-            embed_rank = BotEmbed.simple("Apex地圖：積分")
-            embed_rank.add_field(name="目前地圖", value=tl.get(self.ranked.current.map, self.ranked.current.map))
-            embed_rank.add_field(name="開始時間", value=self.ranked.current.start.strftime("%Y/%m/%d %H:%M"))
-            embed_rank.add_field(name="結束時間", value=self.ranked.current.end.strftime("%Y/%m/%d %H:%M"))
-            embed_rank.add_field(name="下張地圖", value=tl.get(self.ranked.next.map, self.ranked.next.map))
-            embed_rank.add_field(name="開始時間", value=self.ranked.next.start.strftime("%Y/%m/%d %H:%M"))
-            embed_rank.add_field(name="結束時間", value=self.ranked.next.end.strftime("%Y/%m/%d %H:%M"))
-            embed_rank.add_field(name="目前地圖剩餘時間", value=self.ranked.current.remainingTimer)
-            embed_rank.set_image(url=self.ranked.current.asset)
-            embed_rank.timestamp = now
-            embed_rank.set_footer(text="更新時間")
-            lst.append(embed_rank)
-
-        embed_battle_royale = BotEmbed.simple("Apex地圖：大逃殺")
-        embed_battle_royale.add_field(name="目前地圖", value=tl.get(self.battle_royale.current.map, self.battle_royale.current.map))
-        embed_battle_royale.add_field(name="開始時間", value=self.battle_royale.current.start.strftime("%Y/%m/%d %H:%M"))
-        embed_battle_royale.add_field(name="結束時間", value=self.battle_royale.current.end.strftime("%Y/%m/%d %H:%M"))
-        embed_battle_royale.add_field(name="下張地圖", value=tl.get(self.battle_royale.next.map, self.battle_royale.next.map))
-        embed_battle_royale.add_field(name="開始時間", value=self.battle_royale.next.start.strftime("%Y/%m/%d %H:%M"))
-        embed_battle_royale.add_field(name="結束時間", value=self.battle_royale.next.end.strftime("%Y/%m/%d %H:%M"))
-        embed_battle_royale.add_field(name="目前地圖剩餘時間", value=self.battle_royale.current.remainingTimer)
-        embed_battle_royale.set_image(url=self.battle_royale.current.asset)
-        embed_battle_royale.timestamp = now
-        embed_battle_royale.set_footer(text="更新時間")
-        lst.append(embed_battle_royale)
-
-        embed_ltm = BotEmbed.simple(f"Apex地圖：限時模式")
-        embed_ltm.add_field(
-            name="目前地圖",
-            value=f"{event_tl.get(self.ltm.current.eventName, self.ltm.current.eventName)}：{tl.get(self.ltm.current.map, self.ltm.current.map)}",
-        )
-        embed_ltm.add_field(name="開始時間", value=self.ltm.current.start.strftime("%Y/%m/%d %H:%M"))
-        embed_ltm.add_field(name="結束時間", value=self.ltm.current.end.strftime("%Y/%m/%d %H:%M"))
-        embed_ltm.add_field(
-            name="下張地圖", value=f"{event_tl.get(self.ltm.next.eventName, self.ltm.next.eventName)}：{tl.get(self.ltm.next.map, self.ltm.next.map)}"
-        )
-        embed_ltm.add_field(name="開始時間", value=self.ltm.next.start.strftime("%Y/%m/%d %H:%M"))
-        embed_ltm.add_field(name="結束時間", value=self.ltm.next.end.strftime("%Y/%m/%d %H:%M"))
-        embed_ltm.add_field(name="目前地圖剩餘時間", value=self.ltm.current.remainingTimer)
-        embed_ltm.set_image(url=self.ltm.current.asset)
-        embed_ltm.timestamp = now
-        embed_ltm.set_footer(text="更新時間")
-        lst.append(embed_ltm)
-
-        return lst
-
 
 class ApexStatus:
     def __init__(self, data):
@@ -844,9 +650,6 @@ class ApexStatus:
             print(i)
             for j in data[i]:
                 print(j)
-
-    def embed(self):
-        pass
 
 
 class SteamUser(BaseModel):
@@ -868,19 +671,6 @@ class SteamUser(BaseModel):
     timecreated: int
     personastateflags: int
     loccountrycode: str | None = None
-
-    def embed(self):
-        embed = BotEmbed.simple(self.personaname)
-        embed.add_field(name="用戶id", value=self.steamid)
-        embed.add_field(name="個人檔案連結", value=f"[點我]({self.profileurl})")
-        embed.add_field(name="帳號狀態", value=self._get_persona_state(), inline=True)
-        embed.add_field(name="可見性", value=self._get_visibility_state(), inline=True)
-        if self.loccountrycode:
-            embed.add_field(name="國家", value=self.loccountrycode)
-        embed.add_field(name="帳號建立時間", value=f"<t:{self.timecreated}>", inline=False)
-        embed.add_field(name="最後離線時間", value=f"<t:{self.lastlogoff}>", inline=False)
-        embed.set_thumbnail(url=self.avatarfull)
-        return embed
 
     def _get_persona_state(self) -> str:
         """將 personastate 轉換為可讀的狀態"""
@@ -938,33 +728,6 @@ class DBDPlayer(BaseModel):
     uncloakattacks: int
     beartrapcatches: int
     phantasmstriggered: int
-
-    def embed(self):
-        embed = BotEmbed.simple("DBD玩家資訊")
-        embed.add_field(name="玩家名稱", value=self.name)
-        embed.add_field(name="血點數", value=self.bloodpoints)
-        embed.add_field(name="倖存者等級", value=self.survivor_rank)
-        embed.add_field(name="殺手等級", value=self.killer_rank)
-        embed.add_field(name="升階次數", value=self.evilwithintierup)
-        embed.add_field(name="完美殺手場次", value=self.killer_perfectgames)
-
-        embed.add_field(name="勞改次數", value=self.cagesofatonement)
-        embed.add_field(name="詛咒次數", value=self.condemned)
-        embed.add_field(name="獻祭次數", value=self.sacrificed)
-        embed.add_field(name="送入夢境數", value=self.dreamstate)
-        embed.add_field(name="頭套安裝數", value=self.rbtsplaced)
-
-        embed.add_field(name="鬼影步命中", value=self.blinkattacks)
-        embed.add_field(name="電鋸衝刺命中", value=self.chainsawhits)
-        embed.add_field(name="電擊命中", value=self.shocked)
-        embed.add_field(name="斧頭命中", value=self.hatchetsthrown)
-        embed.add_field(name="飛刀命中", value=self.lacerations)
-        embed.add_field(name="鎖鏈命中", value=self.possessedchains)
-        embed.add_field(name="致命衝刺命中", value=self.lethalrushhits)
-        embed.add_field(name="喪鐘襲擊", value=self.uncloakattacks)
-        embed.add_field(name="陷阱捕捉", value=self.beartrapcatches)
-        embed.add_field(name="汙泥陷阱觸發", value=self.phantasmstriggered)
-        return embed
 
 
 class MojangUser(BaseModel):

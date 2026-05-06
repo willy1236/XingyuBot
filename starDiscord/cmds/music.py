@@ -14,10 +14,11 @@ import yt_dlp as youtube_dl
 from discord.commands import SlashCommandGroup
 from discord.ext import commands, pages
 
-from starlib import BotEmbed, Jsondb, log
+from starlib import log
 from starlib.exceptions import *
 
 from ..extension import Cog_Extension
+from ..uiElement.embeds import BotEmbed
 
 # Suppress noise about console usage from errors
 youtube_dl.utils.bug_reports_message = lambda before=";": ""

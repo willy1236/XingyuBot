@@ -9,7 +9,7 @@ from discord.ext import commands, tasks
 from mcstatus import JavaServer
 
 from starDiscord.checks import has_privilege_level
-from starlib import BotEmbed, Jsondb, sclient, sqldb, tz
+from starlib import Jsondb, sclient, sqldb, tz
 from starlib.database import NotifyCommunityType, PrivilegeLevel
 from starlib.exceptions import *
 from starlib.instance import *
@@ -17,6 +17,7 @@ from starlib.utils import get_arp_list
 from starlib.utils.map import sunmon_area
 
 from ..extension import Cog_Extension
+from ..uiElement.embeds import BotEmbed
 
 
 class MyModal(discord.ui.Modal):
@@ -119,7 +120,7 @@ class MySelectMenus(discord.ui.Select):
     async def callback(self, interaction: discord.Interaction):
         lst = []
         assert interaction.guild is not None, "Guild not found"
-        for i in self.values:
+        for i in self.values: # pyright: ignore[reportOptionalIterable]
             assert isinstance(i, (str, int)), "Role ID type "
             role = interaction.guild.get_role(int(i))
             assert role is not None, f"Role not found: {i}"

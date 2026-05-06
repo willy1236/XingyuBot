@@ -1,13 +1,13 @@
 import random
-from typing import TYPE_CHECKING
 
 import discord
 from discord.ext import pages
 
-from starlib import Jsondb, sqldb
+from starlib import sqldb
 from starlib.database import Coins
 from starlib.database.postgresql.rpg import Monster, MonsterInBattle, RPGEquipment, RPGPlayerItem
-from starlib.utils import BotEmbed
+
+from ..uiElement.embeds import BotEmbed
 
 
 class RPGAdvanceButton(discord.ui.Button):
@@ -65,7 +65,9 @@ class RPGAdvanceView(discord.ui.View):
         self.dungeon = sqldb.get_rpg_dungeon(dungeon_id)
         self.player = sqldb.get_user_rpg(userid)
         self.advance_times = 1
-        self.embed_list: list[discord.Embed] = [self.player.embed(user_dc), None]
+        player_embed = BotEmbed.create(self.player)
+        player_embed.set_author(name=user_dc.name, icon_url=user_dc.display_avatar.url)
+        self.embed_list: list[discord.Embed] = [player_embed, None]
         self.user_dc = user_dc
 
         self.wait_attack = False
@@ -95,7 +97,9 @@ class RPGAdvanceView(discord.ui.View):
             item.disabled = False
 
     def update_player_embed(self):
-        self.embed_list[0] = self.player.embed(self.user_dc)
+        player_embed = BotEmbed.create(self.player)
+        player_embed.set_author(name=self.user_dc.name, icon_url=self.user_dc.display_avatar.url)
+        self.embed_list[0] = player_embed
 
     async def update_message(self, interaction: discord.Interaction):
         if interaction.response.is_done():
@@ -309,7 +313,7 @@ class RPGEquipmentSelect(discord.ui.Select):
     async def callback(self, interaction: discord.Interaction):
         self.view: RPGEquipmentSelectView
         uid = int(self.values[0])
-        await interaction.response.edit_message(embed=next((item for item in self.bag if item.equipment_uid == uid), None).embed())
+        await interaction.response.edit_message(embed=BotEmbed.create(next((item for item in self.bag if item.equipment_uid == uid), None)))
 
 
 class RPGEquipmentSelectView(discord.ui.View):

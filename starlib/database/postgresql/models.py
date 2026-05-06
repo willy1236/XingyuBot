@@ -10,7 +10,6 @@ from sqlmodel import Field, Relationship, text
 from starlib.base import ListObject
 from starlib.fileDatabase import Jsondb
 from starlib.settings import tz
-from starlib.utils import BotEmbed
 
 from .enums import *
 from .schemas import *
@@ -138,26 +137,6 @@ class UserModerate(UserSchema, table=True):
     last_time: timedelta | None = Field(sa_column=Column(Interval))
     guild_only: bool | None = Field(sa_column=Column(Boolean))
     officially_given: bool | None = Field(sa_column=Column(Boolean))
-
-    def embed(self, bot: discord.Bot) -> discord.Embed:
-        user = bot.get_user(self.discord_id)
-        moderate_user = bot.get_user(self.moderate_user)
-        guild = bot.get_guild(self.create_guild)
-
-        name = f"{user.name if user else f'<@{self.discord_id}>'} 的警告單"
-        description = f"**編號：{self.warning_id}（{Jsondb.get_tw(self.moderate_type, 'warning_type')}）**\n- 被警告用戶：{user.mention if user else f'<@{self.discord_id}>'}\n- 管理員：{guild.name if guild else self.create_guild}/{moderate_user.mention if moderate_user else f'<@{self.moderate_user}>'}\n- 原因：{self.reason}\n- 時間：{self.create_time.strftime('%Y-%m-%d %H:%M:%S')}"
-        if self.last_time:
-            description += f"\n- 禁言時長：{self.last_time}"
-        if self.officially_given:
-            description += "\n- 官方認證警告"
-        if self.guild_only:
-            description += "\n- 伺服器內警告"
-        embed = BotEmbed.general(
-            name=name,
-            icon_url=user.display_avatar.url if user else None,
-            description=description,
-        )
-        return embed
 
     def display_embed_field(self, bot: discord.Bot) -> tuple[str, str]:
         moderate_user = bot.get_user(self.moderate_user)
@@ -308,18 +287,6 @@ class HappycampApplicationForm(HappycampSchema, table=True):
     reviewer_id: int | None = Field(sa_column=Column(BigInteger, nullable=True))
     review_comment: str | None = Field(sa_column=Column(Text, nullable=True))
     change_vip_level: int | None = Field(sa_column=Column(Integer, nullable=True))
-
-    def embed(self):
-        user_mention = f"<@{self.discord_id}>"
-        status_dict = {0: "待審核", 1: "已通過", 2: "已拒絕"}
-        embed = BotEmbed.general(
-            name=f"申請表單 #{self.form_id} - {status_dict.get(self.status, '未知狀態')}",
-            description=f"- 申請人：{user_mention}\n- 提交時間：{self.submitted_at.strftime('%Y-%m-%d %H:%M:%S')}\n- 審核時間：{self.reviewed_at.strftime('%Y-%m-%d %H:%M:%S') if self.reviewed_at else '尚未審核'}\n- 審核者：{f'<@{self.reviewer_id}>' if self.reviewer_id else '尚未審核'}\n- 審核意見：{self.review_comment if self.review_comment else '無'}",
-            icon_url=None,
-        )
-        embed.add_field(name="申請內容", value=self.content or "無")
-        embed.add_field(name="變更 VIP 等級", value=str(self.change_vip_level) if self.change_vip_level is not None else "無")
-        return embed
 
 
 class Community(BasicSchema, table=True):
@@ -687,20 +654,6 @@ class BackupRole(BackupSchema, table=True):
 
     members: list["BackupRoleUser"] = Relationship(back_populates="role")
 
-    def embed(self, bot: discord.Bot):
-        embed = BotEmbed.simple(self.role_name, self.description)
-        embed.add_field(name="創建於", value=self.created_at.strftime("%Y/%m/%d %H:%M:%S"))
-        embed.add_field(name="顏色", value=f"({self.colour_r}, {self.colour_g}, {self.colour_b})")
-        if bot and self.members:
-            user_list = list()
-            for user in self.members:
-                user = bot.get_user(user.discord_id)
-                if user:
-                    user_list.append(user.mention)
-            embed.add_field(name="成員", value=",".join(user_list), inline=False)
-
-        return embed
-
 
 class BackupRoleUser(BackupSchema, table=True):
     __tablename__ = "role_user_backup"
@@ -719,11 +672,6 @@ class BackupCategory(BackupSchema, table=True):
     guild_id: int = Field(sa_column=Column(BigInteger))
     description: str | None = Field(sa_column=Column(String))
 
-    def embed(self, bot: discord.Bot):
-        embed = BotEmbed.simple(self.name, self.description)
-        embed.add_field(name="創建於", value=self.created_at.strftime("%Y/%m/%d %H:%M:%S"))
-        return embed
-
 
 class BackupChannel(BackupSchema, table=True):
     __tablename__ = "channel_backup"
@@ -735,11 +683,6 @@ class BackupChannel(BackupSchema, table=True):
     category_id: int | None = Field(sa_column=Column(BigInteger))
     description: str | None = Field(sa_column=Column(String))
 
-    def embed(self, bot: discord.Bot):
-        embed = BotEmbed.simple(self.name, self.description)
-        embed.add_field(name="創建於", value=self.created_at.strftime("%Y/%m/%d %H:%M:%S"))
-        return embed
-
 
 class BackupMessage(BackupSchema, table=True):
     __tablename__ = "message_backup"
@@ -750,12 +693,6 @@ class BackupMessage(BackupSchema, table=True):
     created_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
     author_id: int = Field(sa_column=Column(BigInteger))
     description: str | None = Field(sa_column=Column(String))
-
-    def embed(self, bot: discord.Bot):
-        user = bot.get_user(self.author_id)
-        embed = BotEmbed.simple(f"Message from {user.name if user else self.author_id}", self.content or "No content")
-        embed.add_field(name="Created at", value=self.created_at.strftime("%Y/%m/%d %H:%M:%S"))
-        return embed
 
 
 class UsersCountRecord(BackupSchema, table=True):
@@ -913,10 +850,9 @@ class WarningList(ListObject[UserModerate]):
             discord.Embed
         """
         user = bot.get_user(self.discord_id) or user
-        embed = BotEmbed.general(
-            f"{user.name if user else f'<@{self.discord_id}>'} 的警告單列表（共{len(self.items)}筆）",
-            user.display_avatar.url if user else None,
-        )
+        embed = discord.Embed(title=f"{user.name if user else f'<@{self.discord_id}>'} 的警告單列表（共{len(self.items)}筆）", color=0xC4E9FF)
+        if user:
+            embed.set_author(name=user.name, icon_url=user.display_avatar.url)
         for i in self.items:
             name, value = i.display_embed_field(bot)
             embed.add_field(name=name, value=value)

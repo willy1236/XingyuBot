@@ -5,11 +5,12 @@ import discord
 from discord.commands import SlashCommandGroup
 from tweepy.errors import TooManyRequests
 
-from starlib import BotEmbed, ChoiceList, Jsondb, sclient, tz
+from starlib import ChoiceList, Jsondb, sclient, tz
 from starlib.database import APIType, Community, NotifyCommunityType, PlatformType
-from starlib.instance import cli_api, google_api, tw_api, twitter_api, yt_push
+from starlib.instance import cli_api, google_api, tw_api, yt_push
 
 from ..extension import Cog_Extension
+from ..uiElement.embeds import BotEmbed
 
 twitch_notify_option = ChoiceList.set("twitch_notify_option")
 

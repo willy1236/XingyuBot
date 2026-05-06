@@ -6,7 +6,6 @@ import discord
 from sqlalchemy import BigInteger, Column, DateTime, ForeignKey, Integer, String, Text
 
 from starlib.base import ListObject
-from starlib.utils import BotEmbed
 
 from .models import Field, SQLModel, mapped_column, relationship
 from .schemas import RPGSchema
@@ -48,13 +47,6 @@ class RPGPlayer(RPGSchema, table=True):
     health: int = 100
     stress: int = 0
 
-    def embed(self, user_dc: discord.User):
-        embed = BotEmbed.general(name=user_dc.name, icon_url=user_dc.display_avatar.url)
-        embed.add_field(name="健康值", value=self.health)
-        embed.add_field(name="金錢", value=self.money)
-        embed.add_field(name="壓力", value=self.stress)
-        return embed
-
 
 class RPGUser(RPGSchema):
     """
@@ -78,15 +70,6 @@ class RPGUser(RPGSchema):
 
     equipments: list["RPGEquipment"] = relationship(back_populates="owner", init=False)
     items: list["RPGPlayerItem"] = relationship(back_populates="user", init=False)
-
-    def embed(self, user_dc: discord.User):
-        embed = BotEmbed.general(name=user_dc.name, icon_url=user_dc.avatar.url if user_dc.avatar else None)
-        embed.add_field(name="生命/最大生命", value=f"{self.hp} / {self.maxhp}")
-        embed.add_field(name="攻擊力", value=self.atk)
-        embed.add_field(name="物理防禦力", value=self.pdef)
-        embed.add_field(name="命中率", value=f"{self.hrt}%")
-        embed.add_field(name="敏捷", value=self.dex)
-        return embed
 
     def change_hp(self, value: int):
         self.hp += value
@@ -234,15 +217,6 @@ class RPGEquipment(RPGSchema):
     template: RPGEquipmentTemplate = relationship(back_populates="equipments", init=False)
     owner: RPGUser = relationship(back_populates="equipments", init=False)
 
-    def embed(self):
-        embed = BotEmbed.rpg(self.customized_name if self.customized_name else self.template.name)
-        embed.add_field(name="生命", value=self.maxhp)
-        embed.add_field(name="攻擊力", value=self.atk)
-        embed.add_field(name="物理防禦力", value=self.pdef)
-        embed.add_field(name="命中率", value=f"{self.hrt}%")
-        embed.add_field(name="敏捷", value=self.dex)
-        return embed
-
 
 class RPGPlayerItem(RPGSchema):
     __tablename__ = "rpg_user_item_bag"
@@ -296,7 +270,7 @@ class RPGPlayerWearingEquipment:
         self.seconhand = dict.get("6")
 
     def desplay(self, user_dc: discord.User = None):
-        embed = BotEmbed.simple(f"{user_dc.name} 角色裝備" if user_dc else "角色裝備")
+        embed = discord.Embed(title=f"{user_dc.name} 角色裝備" if user_dc else "角色裝備", color=0xC4E9FF)
         embed.add_field(name="主手", value=f"[{self.mainhand.equipment_uid}]{self.mainhand.name}" if self.mainhand else "無")
         embed.add_field(name="副手", value=f"[{self.seconhand.equipment_uid}]{self.seconhand.name}" if self.seconhand else "無")
         embed.add_field(name="頭部", value=f"[{self.head.equipment_uid}]{self.head.name}" if self.head else "無")
@@ -355,6 +329,6 @@ class RPGCity:
         self.city_occupation_value = data.get("city_occupation_value")
 
     def desplay(self):
-        embed = BotEmbed.rpg(self.city_name)
+        embed = discord.Embed(title=self.city_name, color=0xC4E9FF)
         embed.add_field(name="座標", value=f"({self.coordinate_x},{self.coordinate_y})")
         return embed

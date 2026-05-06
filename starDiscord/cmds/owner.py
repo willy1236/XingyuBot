@@ -10,7 +10,7 @@ from discord.commands import SlashCommandGroup
 from discord.ext import commands
 from mcstatus import JavaServer
 
-from starlib import BotEmbed, Jsondb, log, sclient
+from starlib import Jsondb, log, sclient
 from starlib.database import NotifyChannelType
 from starlib.instance import *
 from starlib.settings import get_settings
@@ -19,6 +19,7 @@ from starlib.utils.utility import ChoiceList, base64_to_buffer, converter, find_
 from ..checks import PrivilegeLevel, ensure_registered, has_privilege_level, has_vip, is_vip_admin
 from ..command_options import *
 from ..extension import Cog_Extension
+from ..uiElement.embeds import BotEmbed
 from ..uiElement.view import McServerPanel, VIPAuditView, VIPView
 
 if TYPE_CHECKING:
@@ -654,7 +655,7 @@ class owner(Cog_Extension):
         await ctx.defer()
         form = sclient.sqldb.get_form(form_id)
         if form:
-            await ctx.respond("已開啟申請審核面板", view=VIPAuditView(form=form), embed=form.embed(), ephemeral=True)
+            await ctx.respond("已開啟申請審核面板", view=VIPAuditView(form=form), embed=BotEmbed.create(form), ephemeral=True)
         else:
             await ctx.respond("找不到此申請表單", ephemeral=True)
 

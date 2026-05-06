@@ -14,7 +14,8 @@ from twitchAPI.twitch import Twitch
 from twitchAPI.type import AuthScope, ChatEvent, EventSubSubscriptionError, EventSubSubscriptionTimeout, InvalidTokenException, MissingScopeException
 
 from sentry_bootstrap import capture_exception_safe
-from starlib import BaseThread, BotEmbed, Jsondb, sclient, twitch_log  # TODO: 全面改用 eventbus
+from starDiscord.uiElement.embeds import BotEmbed
+from starlib import BaseThread, Jsondb, sclient, twitch_log  # TODO: 全面改用 eventbus
 from starlib.core.model import TwitchStreamEvent
 from starlib.database import APIType, NotifyCommunityType, TwitchChatCommand, sqldb
 from starlib.instance import tw_api

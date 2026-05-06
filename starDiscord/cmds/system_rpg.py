@@ -4,11 +4,12 @@ import discord
 from discord.commands import SlashCommandGroup
 from discord.ext import commands
 
-from starlib import BotEmbed, ChoiceList, sclient
-from starlib.instance import happycamp_guild
+from starlib import sclient
 from starlib.database.postgresql.rpg import RPGUser
+from starlib.instance import happycamp_guild
 
 from ..extension import Cog_Extension
+from ..uiElement.embeds import BotEmbed
 from ..uiElement.RPGview import RPGAdvanceView, RPGEquipmentSelectView
 
 
@@ -24,7 +25,9 @@ class system_rpg(Cog_Extension):
         description_list = [f"現在時間：{time.isoformat(sep=' ', timespec='seconds')}", f"天氣：晴"]
         time_embed = BotEmbed.bot(self.bot, description="\n".join(description_list))
         time_embed.set_footer(text="格瑞爾市 | 祝您有個愉快的一天")
-        await ctx.respond(embeds=[time_embed, player.embed(user_dc)])
+        player_embed = BotEmbed.create(player)
+        player_embed.set_author(name=user_dc.name, icon_url=user_dc.display_avatar.url)
+        await ctx.respond(embeds=[time_embed, player_embed])
 
     @commands.slash_command(description="開始冒險", guild_ids=happycamp_guild)
     async def advance(self, ctx: discord.ApplicationContext):

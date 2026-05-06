@@ -11,7 +11,7 @@ from discord.errors import Forbidden, NotFound
 from discord.ext import commands, pages
 from discord.utils import format_dt
 
-from starlib import BotEmbed, ChoiceList, log, sclient, tz
+from starlib import ChoiceList, log, sclient, tz
 from starlib.database import Coins, Giveaway
 from starlib.database.postgresql.models import Giveaway
 from starlib.instance import *
@@ -20,6 +20,7 @@ from starlib.utils import converter, create_only_role_list, create_role_magifica
 
 from ..checks import RegisteredContext, ensure_registered
 from ..extension import Cog_Extension
+from ..uiElement.embeds import BotEmbed
 from ..uiElement.view import DeleteAddRoleView, GiveawayView, PollView, TRPGPlotView
 from .bot_event import check_registration
 
@@ -202,7 +203,7 @@ class command(Cog_Extension):
 
         page = [list() for _ in range(math.ceil(len(lst) / 3))]
         for i, role in enumerate(lst):
-            page[int(i / 3)].append(role.embed(self.bot))
+            page[int(i / 3)].append(BotEmbed.create(role))
 
         paginator = pages.Paginator(pages=page, use_default_buttons=True, loop_pages=True)
         await paginator.respond(ctx.interaction, ephemeral=False)

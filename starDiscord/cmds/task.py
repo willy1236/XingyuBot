@@ -9,13 +9,14 @@ from apscheduler.triggers.date import DateTrigger
 from discord.ext import commands, tasks
 from requests.exceptions import ConnectTimeout, RequestException
 
-from starlib import BotEmbed, Jsondb, log, sclient, sqldb, tz, utils
+from starlib import Jsondb, log, sclient, sqldb, tz, utils
 from starlib.database import APIType, DBCacheType, NotifyChannelType, NotifyCommunityType, UserIPDetails, UsersCountRecord, VoiceTime
 from starlib.instance import *
 from starlib.providers.social.models import YoutubeVideo
 
 from ..bot import DiscordBot
 from ..extension import Cog_Extension
+from ..uiElement.embeds import BotEmbed
 from ..uiElement.view import GiveawayView
 
 voice_times: dict[int, dict[int, timedelta]] = {}
@@ -98,9 +99,9 @@ class task(Cog_Extension):
 
         for data in earthquake_records:
             if data.is_significant:
-                await self.bot.send_notify_channel(data.embed(), NotifyChannelType.MajorQuakeNotifications, "顯著有感地震報告")
+                await self.bot.send_notify_channel(BotEmbed.create(data), NotifyChannelType.MajorQuakeNotifications, "顯著有感地震報告")
             else:
-                await self.bot.send_notify_channel(data.embed(), NotifyChannelType.SlightQuakeNotifications, "小區域地震報告")
+                await self.bot.send_notify_channel(BotEmbed.create(data), NotifyChannelType.SlightQuakeNotifications, "小區域地震報告")
 
         timefrom = earthquake_records[-1].originTime + timedelta(seconds=1)
         sclient.sqldb.set_notify_cache(NotifyChannelType.MajorQuakeNotifications, timefrom)
@@ -127,7 +128,7 @@ class task(Cog_Extension):
         datas = [i for i in apidatas if i.datasetInfo.issueTime > report_time]
         for data in datas:
             report_time = data.datasetInfo.issueTime
-            await self.bot.send_notify_channel(data.embed(), NotifyChannelType.WeatherWarning)
+            await self.bot.send_notify_channel(BotEmbed.create(data), NotifyChannelType.WeatherWarning)
         sclient.sqldb.set_notify_cache(NotifyChannelType.WeatherWarning, report_time)
 
     async def typhoon_warning_check(self):
@@ -142,13 +143,13 @@ class task(Cog_Extension):
         datas = [i for i in apidatas if i.updated > report_time]
         for data in datas:
             report_time = data.updated
-            await self.bot.send_notify_channel(data.embed(), NotifyChannelType.TyphoonWarning)
+            await self.bot.send_notify_channel(BotEmbed.create(data), NotifyChannelType.TyphoonWarning)
         sclient.sqldb.set_notify_cache(NotifyChannelType.TyphoonWarning, report_time)
 
     async def forecast_update(self):
         forecast = cwa_api.get_forecast()
         if forecast:
-            await self.bot.edit_notify_channel(forecast.embed(), NotifyChannelType.WeatherForecast, "6小時天氣預報")
+            await self.bot.edit_notify_channel(BotEmbed.create(forecast), NotifyChannelType.WeatherForecast, "6小時天氣預報")
 
     async def apex_map_rotation(self):
         try:

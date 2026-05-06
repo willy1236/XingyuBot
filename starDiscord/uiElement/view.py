@@ -10,8 +10,9 @@ import discord
 import matplotlib
 import numpy as np
 from discord.utils import format_dt
+from embeds import BotEmbed
 
-from starlib import BotEmbed, Jsondb, log, sqldb, tz
+from starlib import Jsondb, log, sqldb, tz
 from starlib.database import Giveaway, GiveawayUser, HappycampApplicationForm, HappycampVIP, McssServerAction, McssServerStatues, Poll, PollRole, TicketChannel
 from starlib.instance import mcss_api, vip_admin_channel
 from starlib.utils.utility import find_radmin_vpn_network
@@ -73,15 +74,15 @@ class PollOptionButton(discord.ui.Button):
                     have_only_role = True
                     role = interaction.user.get_role(roleid)
                     if role:
-                        can_vote = True
+                        await channel.send(embed=BotEmbed.create(form))
 
-                if view.role_dict[roleid][1] > vote_magnification:
+                        await interaction.edit_original_message(embed=BotEmbed.create(self.form))
                     vote_magnification = view.role_dict[roleid][1]
-
+                        await interaction.response.edit_message(embed=BotEmbed.create(self.form))
         if not view.role_dict or (have_only_role and can_vote):
-            r = view.sqldb.set_user_poll(
+                        await interaction.edit_original_message(embed=BotEmbed.create(self.form))
                 self.option.poll_id, interaction.user.id, self.option.option_id, datetime.now(tz), vote_magnification, view.poll.number_of_user_votes
-            )
+                        await interaction.response.edit_message(embed=BotEmbed.create(self.form))
             if r == 2:
                 await interaction.response.send_message(f"{interaction.user.mention} 已投了 {view.poll.number_of_user_votes} 票而無法投票", ephemeral=True)
             elif r == 1:
@@ -636,7 +637,7 @@ class McServerSelect(discord.ui.Select):
 
     async def callback(self, interaction: discord.Interaction):
         view: McServerPanel = self.view
-        view.server_id = self.values[0]
+        view.server_id = self.values[0] # pyright: ignore[reportOptionalSubscript]
         embed = view.embed()
         await interaction.response.edit_message(embed=embed, view=view)
 
@@ -662,7 +663,7 @@ class McServerPanel(discord.ui.View):
         if not server:
             return BotEmbed.simple("伺服器未找到", "請確認伺服器ID是否正確")
 
-        embed = server.embed()
+        embed = BotEmbed.create(server)
         return embed
 
     @discord.ui.button(label="啟動伺服器", style=discord.ButtonStyle.primary)
@@ -681,13 +682,13 @@ class McServerPanel(discord.ui.View):
                 await interaction.followup.send("🟡已發送開啟指令，伺服器正在啟動...", ephemeral=True)
 
                 server = mcss_api.get_server_detail(self.server_id)
-                await interaction.edit_original_response(embed=server.embed())
+                await interaction.edit_original_response(embed=BotEmbed.create(server))
                 for _ in range(20):
                     await asyncio.sleep(10)
                     server = mcss_api.get_server_detail(self.server_id)
                     if server and server.status == McssServerStatues.Running:
                         await interaction.followup.send("🟢伺服器已開啟", ephemeral=True)
-                        await interaction.edit_original_response(embed=server.embed())
+                        await interaction.edit_original_response(embed=BotEmbed.create(server))
                         return
 
         await interaction.followup.send("伺服器啟動超時，請確認伺服器狀態", ephemeral=True)
@@ -708,13 +709,13 @@ class McServerPanel(discord.ui.View):
                 await interaction.followup.send("🟠伺服器正在關閉...", ephemeral=True)
 
                 server = mcss_api.get_server_detail(self.server_id)
-                await interaction.edit_original_response(embed=server.embed())
+                await interaction.edit_original_response(embed=BotEmbed.create(server))
                 for _ in range(20):
                     await asyncio.sleep(10)
                     server = mcss_api.get_server_detail(self.server_id)
                     if server and server.status == McssServerStatues.Stopped:
                         await interaction.followup.send("🛑伺服器已關閉", ephemeral=True)
-                        await interaction.edit_original_response(embed=server.embed())
+                        await interaction.edit_original_response(embed=BotEmbed.create(server))
                         return
 
         await interaction.followup.send("伺服器關閉超時，請確認伺服器狀態", ephemeral=True)
@@ -814,7 +815,7 @@ class VIPApplicationForm(discord.ui.Modal):
 
         channel = interaction.client.get_channel(vip_admin_channel)
         if channel:
-            await channel.send(embed=form.embed())
+            await channel.send(embed=BotEmbed.create(form))
         else:
             log.warning("無法找到VIP申請審核頻道，請確認頻道ID是否正確")
 
@@ -871,7 +872,7 @@ class VIPAuditView(discord.ui.View):
             self.form.reviewed_at = datetime.now(tz)
             self.form.reviewer_id = interaction.user.id
             sqldb.merge(self.form)
-            await interaction.edit_original_message(embed=self.form.embed())
+            await interaction.edit_original_message(embed=BotEmbed.create(self.form))
             await interaction.followup.send(content="已通過申請", ephemeral=True)
 
             if self.form.change_vip_level is not None:
@@ -920,7 +921,7 @@ class VIPAuditView(discord.ui.View):
             self.form.reviewed_at = datetime.now(tz)
             self.form.reviewer_id = interaction.user.id
             sqldb.merge(self.form)
-            await interaction.edit_original_message(embed=self.form.embed())
+            await interaction.edit_original_message(embed=BotEmbed.create(self.form))
             await interaction.followup.send(content="已拒絕申請", ephemeral=True)
         else:
             await interaction.response.send_message("已取消審核", ephemeral=True)
