@@ -1,7 +1,6 @@
 import discord
 
-from starlib import sqldb
-from starlib.database import ExternalAccount, PlatformType
+from starlib.database import ExternalAccount, PlatformType, SQLRepository
 
 from .embeds import BotEmbed
 
@@ -16,8 +15,9 @@ class RuleMessageModal(discord.ui.Modal):
         await interaction.respond("完成填寫規則訊息", ephemeral=True)
 
 class LinkAccountModal(discord.ui.Modal):
-    def __init__(self):
+    def __init__(self, sqldb: SQLRepository):
         super().__init__(title="綁定現有帳號")
+        self.sqldb = sqldb
         self.add_item(discord.ui.InputText(label="舊帳號的 Discord ID", placeholder="例如: 123456789..."))
         self.add_item(discord.ui.InputText(label="驗證碼", placeholder="請從舊帳號使用 /get_link_code 取得"))
 
@@ -29,14 +29,14 @@ class LinkAccountModal(discord.ui.Modal):
         if not old_user:
             return await interaction.response.send_message("❌ 找不到該舊帳號的 Discord 用戶，請確認 ID 是否正確。", ephemeral=True)
 
-        active_link_code = sqldb.get_active_link_code(old_dc_id)
+        active_link_code = self.sqldb.get_active_link_code(old_dc_id)
         if not active_link_code or active_link_code.code != v_code:
             return await interaction.response.send_message("❌ 驗證碼錯誤或已過期，請重新嘗試。", ephemeral=True)
 
         # 綁定帳號
         new_link = ExternalAccount(user_id=active_link_code.user_id, platform=PlatformType.Discord, external_id=str(interaction.user.id), display_name=interaction.user.display_name)
-        sqldb.session.add(new_link)
-        sqldb.session.delete(active_link_code)  # 使用完畢後刪除驗證碼
-        sqldb.commit()
+        self.sqldb.session.add(new_link)
+        self.sqldb.session.delete(active_link_code)  # 使用完畢後刪除驗證碼
+        self.sqldb.commit()
 
         await interaction.response.send_message("✅ 帳號綁定成功！您現在可以使用現有進度了。", ephemeral=True)

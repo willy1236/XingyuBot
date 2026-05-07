@@ -17,8 +17,8 @@ from sentry_bootstrap import capture_exception_safe
 from starDiscord.uiElement.embeds import BotEmbed
 from starlib import BaseThread, Jsondb, sclient, twitch_log  # TODO: 全面改用 eventbus
 from starlib.core.model import TwitchStreamEvent
-from starlib.database import APIType, NotifyCommunityType, TwitchChatCommand, sqldb
-from starlib.instance import tw_api
+from starlib.database import APIType, NotifyCommunityType, TwitchChatCommand
+from starlib.instance import sqldb, tw_api
 
 USER_SCOPE = [
     AuthScope.BITS_READ,
@@ -56,7 +56,7 @@ USER_SCOPE = [
     AuthScope.WHISPERS_EDIT,
     ]
 
-join_channels = sclient.sqldb.get_bot_join_channel_all()
+join_channels = sqldb.get_bot_join_channel_all()
 TARGET_CHANNEL = {twitch_id: data.action_channel_id for twitch_id, data in join_channels.items()}
 TARGET_CHANNEL_IDS = [str(i) for i in TARGET_CHANNEL.keys()]
 
@@ -80,22 +80,22 @@ async def on_stream_online(event: eventsub.StreamOnlineEvent):
         await chat.send_message(event.event.broadcaster_user_login, f"{event.event.broadcaster_user_name} 正在直播 {live.game_name}! {live.title}")
 
         sclient.publish(TwitchStreamEvent(content=f"{event.event.broadcaster_user_name} 正在直播 {live.game_name}!", to_discord_channel=channel_config.action_channel_id))
-        is_live = bool(sclient.sqldb.get_community_cache(NotifyCommunityType.TwitchLive, event.event.broadcaster_user_id))
+        is_live = bool(sqldb.get_community_cache(NotifyCommunityType.TwitchLive, event.event.broadcaster_user_id))
         twitch_log.debug(f"%s is live: %s", event.event.broadcaster_user_name, is_live)
         if not is_live:
             profile_image_url = tw_api.get_user_by_id(event.event.broadcaster_user_id).profile_image_url
             embed = live.embed(profile_image_url)
             sclient.bot.submit(sclient.bot.send_notify_communities(embed, NotifyCommunityType.TwitchLive, event.event.broadcaster_user_id))
-            sclient.sqldb.set_community_cache(NotifyCommunityType.TwitchLive, event.event.broadcaster_user_id, live.started_at)
+            sqldb.set_community_cache(NotifyCommunityType.TwitchLive, event.event.broadcaster_user_id, live.started_at)
 
 
 async def on_stream_offline(event: eventsub.StreamOfflineEvent):
     twitch_log.info(f"%s ending stream.", event.event.broadcaster_user_name)
     sclient.publish(TwitchStreamEvent(content=f"{event.event.broadcaster_user_name} ending stream."))
 
-    is_live = bool(sclient.sqldb.get_community_cache(NotifyCommunityType.TwitchLive, event.event.broadcaster_user_id))
+    is_live = bool(sqldb.get_community_cache(NotifyCommunityType.TwitchLive, event.event.broadcaster_user_id))
     if is_live:
-        sclient.sqldb.set_community_cache(NotifyCommunityType.TwitchLive, event.event.broadcaster_user_id, None)
+        sqldb.set_community_cache(NotifyCommunityType.TwitchLive, event.event.broadcaster_user_id, None)
 
 
 async def on_channel_points_custom_reward_redemption_add(event: eventsub.ChannelPointsCustomRewardRedemptionAddEvent):

@@ -3,9 +3,9 @@ import random
 import discord
 from discord.ext import pages
 
-from starlib import sqldb
 from starlib.database import Coins
 from starlib.database.postgresql.rpg import Monster, MonsterInBattle, RPGEquipment, RPGPlayerItem
+from starlib.instance import sqldb
 
 from ..uiElement.embeds import BotEmbed
 

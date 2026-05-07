@@ -4,12 +4,9 @@ import asyncio
 from collections.abc import Callable
 from typing import TYPE_CHECKING
 
-import discord
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from starlib.base import BaseThread
-from starlib.database import sqldb
-from starlib.fileDatabase import Jsondb
 from starlib.settings import tz
 from starlib.utils import log
 
@@ -70,10 +67,9 @@ if TYPE_CHECKING:
 
 #         return embed
 
+
 class StarEventBus:
     """整合各項系統的星羽資料管理物件 \\
-    :attr sqldb: Mysql Database \\
-    :attr starai: AI \\
     :attr bot: Discord Bot \\
     """
 
@@ -81,7 +77,6 @@ class StarEventBus:
         # 資料結構改為：{ 事件型別: { 處理函式: 執行迴圈 } }
         self.listeners: dict[type[BaseEvent], dict[Callable, asyncio.AbstractEventLoop]] = {}
 
-        self.sqldb = sqldb
         self.bot: DiscordBot | None = None
         self.scheduler: AsyncIOScheduler | None = None
 

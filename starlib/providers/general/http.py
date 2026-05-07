@@ -1,4 +1,4 @@
-from starlib.fileDatabase import Jsondb
+from starlib.fileDatabase import JsonDatabase
 
 from ..base import APICaller
 
@@ -8,7 +8,7 @@ class JsonStorageAPI(APICaller):
 
     base_url = "https://api.jsonstorage.net/v1/json"
 
-    def __init__(self):
+    def __init__(self, Jsondb: JsonDatabase):
         super().__init__()
         tokens = Jsondb.get_token("jsonstorage_api")
         self.userId = tokens[0]

@@ -21,13 +21,12 @@ from linebot.v3.webhooks import MessageEvent, TextMessageContent
 from linebot.v3.webhooks.models.message_event import MessageEvent
 
 from sentry_bootstrap import capture_exception_safe
-from starlib import BaseThread, Jsondb, sclient, sqldb, utils, web_log
+from starlib import BaseThread, sclient, utils, web_log
 from starlib.database import APIType, ExternalAccount, NotifyCommunityType, PlatformType, TwitchBotJoinChannel
-from starlib.instance import google_api
+from starlib.instance import google_api, sqldb
 from starlib.oauth import DiscordOAuth, GoogleOAuth, TwitchOAuth
 from starlib.providers.social.push_models import YoutubePushEntry
 from starlib.settings import get_settings
-from starlib.starAgent_line import line_agent
 
 discord_oauth_client = sqldb.get_oauth_client(APIType.Discord, 4)
 twitch_oauth_client = sqldb.get_oauth_client(APIType.Twitch, 3)
@@ -168,7 +167,7 @@ async def oauth_discord(request: Request):
     # if not OAuth2Base.verify_state(request.cookies.get("oauth_state"), params.get("state")):
     #     return HTMLResponse("授權失敗：state 驗證失敗", 400)
 
-    auth = DiscordOAuth.create_from_db(discord_oauth_client)
+    auth = DiscordOAuth.create_from_db(sqldb, discord_oauth_client)
     await auth.exchange_code(code)
     user = await auth.get_me()
     auth.save_token_to_db(user.id)
@@ -230,7 +229,7 @@ async def oauth_twitch(request: Request):
     if not TwitchOAuth.verify_state(request.cookies.get("oauth_state"), params.get("state")):
         return HTMLResponse("授權失敗：state 驗證失敗", 400)
 
-    auth = TwitchOAuth.create_from_db(twitch_oauth_client)
+    auth = TwitchOAuth.create_from_db(sqldb, twitch_oauth_client)
     await auth.exchange_code(code)
     user = await auth.get_me()
     auth.save_token_to_db(user.id)
@@ -251,7 +250,7 @@ async def oauth_google(request: Request):
     if not GoogleOAuth.verify_state(request.cookies.get("oauth_state"), params.get("state")):
         return HTMLResponse("授權失敗：state 驗證失敗", 400)
 
-    auth = GoogleOAuth.create_from_db(google_oauth_settings)
+    auth = GoogleOAuth.create_from_db(sqldb, google_oauth_settings)
     await auth.exchange_code(code)
     auth.save_token_to_db(auth.db_token.user_id)
     response = HTMLResponse(f"授權已完成，您現在可以關閉此頁面<br><br>Google ID：{auth.db_token.user_id}")
@@ -292,15 +291,7 @@ def process_linebot_webhook(body: str, signature: str):
 async def handle_message(event: MessageEvent):
     url = utils.check_url_format(event.message.text)
     if url:
-        report_lines = utils.generate_url_report(event.message.text)
-        report_text = "\n".join(report_lines)
-        try:
-            ai_response = await line_agent.run(report_text)
-            text = "\n".join([report_text, "", "AI 分析結果:", ai_response.output])
-        except Exception as e:
-            capture_exception_safe(e, tags={"service": "website", "source": "line_agent"})
-            web_log.error(f"Error in AI analysis: {e}")
-            text = "\n".join([report_text, "", "AI 分析結果: 無法取得分析結果"])
+        text = f"你傳送了一個網址：{url}"
 
     else:
         text = "請提供一個有效的網址。"
@@ -317,7 +308,7 @@ async def handle_message(event: MessageEvent):
 
 @app.get("/to/discordauth")
 async def to_discordauth(request: Request):
-    auth = DiscordOAuth.create_from_db(discord_oauth_client, scopes=["identify", "connections"])
+    auth = DiscordOAuth.create_from_db(sqldb, discord_oauth_client, scopes=["identify", "connections"])
     url, state = auth.get_authorization_url()
     response = RedirectResponse(url=url)
     response.set_cookie(key="oauth_state", value=state, httponly=True, secure=True, samesite="lax", max_age=600)
@@ -339,7 +330,7 @@ async def to_twitchauth(request: Request):
         "channel:manage:polls",
         "channel:manage:predictions",
     ]
-    auth = TwitchOAuth.create_from_db(twitch_oauth_client, scopes=twitch_scopes)
+    auth = TwitchOAuth.create_from_db(sqldb, twitch_oauth_client, scopes=twitch_scopes)
     url, state = auth.get_authorization_url(force_verify="true")
     response = RedirectResponse(url=url)
     response.set_cookie(key="oauth_state", value=state, httponly=True, secure=True, samesite="lax", max_age=600)
@@ -348,7 +339,7 @@ async def to_twitchauth(request: Request):
 
 @app.get("/to/discordbot")
 async def to_discordbot(request: Request):
-    auth = DiscordOAuth.create_from_db(discord_oauth_client, scopes=["identify", "applications.commands.permissions.update", "bot"])
+    auth = DiscordOAuth.create_from_db(sqldb, discord_oauth_client, scopes=["identify", "applications.commands.permissions.update", "bot"])
     url, state = auth.get_authorization_url(permissions="8")
     response = RedirectResponse(url=url)
     response.set_cookie(key="oauth_state", value=state, httponly=True, secure=True, samesite="lax", max_age=600)
@@ -364,7 +355,7 @@ async def to_googleauth(request: Request):
         "openid",
         "https://www.googleapis.com/auth/youtube",
     ]
-    auth = GoogleOAuth.create_from_db(google_oauth_settings, scopes=scopes)
+    auth = GoogleOAuth.create_from_db(sqldb, google_oauth_settings, scopes=scopes)
     url, state = auth.get_authorization_url(access_type="offline")
     response = RedirectResponse(url=url)
     response.set_cookie(key="oauth_state", value=state, httponly=True, secure=True, samesite="lax", max_age=600)

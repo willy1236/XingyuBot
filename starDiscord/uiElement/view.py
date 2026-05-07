@@ -952,4 +952,4 @@ class RegisterView(discord.ui.View):
     async def link_existing(self, button: discord.ui.Button, interaction: discord.Interaction):
         from starDiscord.uiElement.modal import LinkAccountModal
 
-        await interaction.response.send_modal(LinkAccountModal())
+        await interaction.response.send_modal(LinkAccountModal(self.bot.sqldb))

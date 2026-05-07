@@ -1,7 +1,7 @@
 import certifi
 import feedparser
 
-from starlib.database import APIType, sqldb
+from starlib.database import APIType, SQLRepository
 
 from ..base import APICaller
 from .models import *
@@ -14,7 +14,7 @@ def sort_earthquakeReport(x: EarthquakeReport):
 class CWA_API(APICaller):
     base_url = "https://opendata.cwa.gov.tw/api/v1/rest/datastore"
 
-    def __init__(self):
+    def __init__(self, sqldb: SQLRepository):
         auth = sqldb.get_access_token(APIType.CWA).access_token
         super().__init__(headers={"Authorization": auth})
 

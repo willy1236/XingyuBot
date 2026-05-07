@@ -1,4 +1,4 @@
-from starlib.database import APIType, McssServerAction, sqldb
+from starlib.database import APIType, McssServerAction, SQLRepository
 
 from ..base import APICaller
 from .models import McssServer
@@ -8,7 +8,7 @@ class McssAPI(APICaller):
     PORT = 25560
     base_url = f"http://localhost:{PORT}/api/v2"
 
-    def __init__(self):
+    def __init__(self, sqldb: SQLRepository):
         super().__init__(headers={"apikey": sqldb.get_access_token(APIType.MCSS).access_token})
 
     def get_servers(self):
@@ -33,7 +33,7 @@ class McssAPI(APICaller):
 class VirustotalAPI(APICaller):
     base_url = "https://www.virustotal.com/api/v3"
 
-    def __init__(self):
+    def __init__(self, sqldb: SQLRepository):
         super().__init__(headers={"x-apikey": sqldb.get_access_token(APIType.Virustotal).access_token})
 
     def get_url_report(self, url: str):

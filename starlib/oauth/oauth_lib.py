@@ -6,7 +6,7 @@ from typing import TypedDict
 
 from authlib.integrations.httpx_client import AsyncOAuth2Client
 
-from starlib.database import OAuthClient, OAuthToken, PlatformType, sqldb
+from starlib.database import OAuthClient, OAuthToken, PlatformType, SQLRepository
 
 
 class OAuthTokenDict(TypedDict, total=False):
@@ -20,7 +20,8 @@ class OAuthTokenDict(TypedDict, total=False):
 class OAuth2Base(ABC):
     client: AsyncOAuth2Client
 
-    def __init__(self, client_id: str, client_secret: str, redirect_uri: str, scopes: list[str] | None = None):
+    def __init__(self, sqldb: SQLRepository, client_id: str, client_secret: str, redirect_uri: str, scopes: list[str] | None = None):
+        self.sqldb = sqldb
         self.client_id = client_id
         self.client_secret = client_secret
         self.redirect_uri = redirect_uri
@@ -137,15 +138,15 @@ class OAuth2Base(ABC):
 
     # ====== Token DB Integration ======
     @classmethod
-    def create_from_db(cls, oauth_client: OAuthClient, scopes: list[str] | None = None):
-        instance = cls(client_id=oauth_client.client_id, client_secret=oauth_client.client_secret, redirect_uri=oauth_client.redirect_uri, scopes=scopes or oauth_client.default_scopes)
+    def create_from_db(cls, sqldb: SQLRepository, oauth_client: OAuthClient, scopes: list[str] | None = None):
+        instance = cls(sqldb=sqldb, client_id=oauth_client.client_id, client_secret=oauth_client.client_secret, redirect_uri=oauth_client.redirect_uri, scopes=scopes or oauth_client.default_scopes)
         instance._credential_id = oauth_client.credential_id
         return instance
 
     def load_token_from_db(self, user_id: str) -> OAuthToken:
         if not self._credential_id:
             raise Exception("OAuth client not initialized from DB.")
-        token = sqldb.get_oauth_token(user_id, self._credential_id)
+        token = self.sqldb.get_oauth_token(user_id, self._credential_id)
         if not token:
             raise Exception("OAuth token not found.")
         self.db_token = token
@@ -177,15 +178,15 @@ class OAuth2Base(ABC):
                 scope=token_data.get("scope"),
                 expires_at=expires_at,
             )
-            sqldb.merge(token)
+            self.sqldb.merge(token)
         elif self.db_token is not None:
             self.db_token.user_id = user_id
-            sqldb.merge(self.db_token)
+            self.sqldb.merge(self.db_token)
         else:
             raise Exception("No token data to save.")
 
         # 更新快取的 token
-        self.db_token = sqldb.get_oauth_token(user_id, self._credential_id)
+        self.db_token = self.sqldb.get_oauth_token(user_id, self._credential_id)
         self.scopes = self.db_token.scope
 
     def to_oauth_dict(self) -> OAuthTokenDict:

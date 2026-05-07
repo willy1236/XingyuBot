@@ -11,13 +11,14 @@ from pydantic_ai.messages import ModelMessage
 from pydantic_ai.models.google import GoogleModel, GoogleModelSettings
 from pydantic_ai.providers.google import GoogleProvider
 
-from starlib import Jsondb, NotionAPI, agent_log, sqldb
+from starlib import Jsondb, NotionAPI, agent_log
 from starlib.database import APIType
+from starlib.instance import sqldb
 from starlib.providers.social.models import NotionBlock
 from starlib.settings import get_settings
 
 mcp_servers = load_mcp_servers("database/mcp_config.json")
-notion_api = NotionAPI()
+notion_api = NotionAPI(sqldb)
 
 
 @dataclass

@@ -22,7 +22,7 @@ Dependency Injection container base for XingyuBot.
 from dependency_injector import containers, providers
 
 from starlib.core import StarEventBus
-from starlib.database import create_mongedb, create_sqldb
+from starlib.database import create_sqldb
 from starlib.settings import get_settings
 
 
@@ -31,7 +31,6 @@ class Container(containers.DeclarativeContainer):
 
     - `config`: 由 `get_settings()` 建立的 `AppSettings` 實例
     - `sqldb`: 由既有 `create_sqldb()` 建立的 SQL repository
-    - `mongedb`: 由既有 `create_mongedb()` 建立（根據設定決定是否連線）
     - `sclient`: 事件匯流排（`StarEventBus`）單例
     """
 
@@ -41,9 +40,6 @@ class Container(containers.DeclarativeContainer):
 
     # reuse existing factory helpers from starlib.database
     sqldb = providers.Singleton(create_sqldb)
-
-    # create_mongedb(should_connect: bool) -> MongoDB | None
-    mongedb = providers.Factory(create_mongedb, should_connect=config.provided.MONGODB_CONNECTION)
 
     sclient = providers.Singleton(StarEventBus)
 

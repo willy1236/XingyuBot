@@ -1,8 +1,8 @@
 import os
 import subprocess
 
-from starlib import BaseThread, Jsondb, log, sqldb
-from starlib.database import APIType
+from starlib import BaseThread, log
+from starlib.database import APIType, SQLRepository
 
 
 class ltThread(BaseThread):
@@ -79,13 +79,14 @@ class LoopholeTwitchThread(BaseThread):
                 self._stop_event.set()
 
 class NgrokTwitchThread(BaseThread):
-    def __init__(self):
+    def __init__(self, sqldb):
         super().__init__(name="NgrokTwitchThread")
         self.process = None
+        self.sqldb = sqldb
 
     def run(self):
         reconnection_times = 0
-        callback_url = sqldb.get_oauth_client(APIType.Twitch, 2).callback_uri.split("://")[1]
+        callback_url = self.sqldb.get_oauth_client(APIType.Twitch, 2).callback_uri.split("://")[1]
         while not self._stop_event.is_set():
             log.info(f"Starting {self.name} {reconnection_times}")
             self.process = subprocess.Popen(["ngrok", "http", f"--url={callback_url}", "14001"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)

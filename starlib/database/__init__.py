@@ -2,11 +2,10 @@
 ### 模組：資料庫
 處理資料庫連線與操作。
 """
-from starlib.fileDatabase import Jsondb
+
 from starlib.settings import get_settings
 from starlib.utils import log
 
-from .mongodb.client import MongoDB
 from .postgresql.client import SQLRepository, create_sql_repository
 from .postgresql.enums import *
 from .postgresql.models import *
@@ -37,19 +36,8 @@ def create_sqldb() -> SQLRepository:
     return sqlrepository  # pyright: ignore[reportReturnType]
 
 
-sqldb = create_sqldb()
-
-
-def create_mongedb(should_connect) -> MongoDB:
-    if should_connect:
-        url = Jsondb.get_token("mongodb_url")
-        mongedb = MongoDB(url)
-        log.info(">> MongoDB connect: on <<")
-    else:
-        mongedb = None
-    return mongedb  # type: ignore
-
+# sqldb = create_sqldb()
 
 __all__ = [
-    "sqldb",
+    # "sqldb",
 ]

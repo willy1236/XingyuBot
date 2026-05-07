@@ -6,7 +6,7 @@ from discord.commands import SlashCommandGroup
 from discord.ext import commands
 from discord.utils import format_dt
 
-from starlib import ChoiceList, Jsondb, sclient
+from starlib import ChoiceList, Jsondb
 from starlib.database import NotifyChannelType, ReactionRoleMessage, ReactionRoleOption, TicketChannelLobby, WarningType
 from starlib.instance import debug_guilds
 from starlib.utils import converter

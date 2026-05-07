@@ -4,7 +4,7 @@
 
 import tweepy
 
-from .database import APIType, sqldb
+from .database import APIType, create_sqldb
 from .fileDatabase import Jsondb
 from .providers import *
 from .settings import get_settings
@@ -33,19 +33,20 @@ __all__ = [
     "mentioned_channel",
     "mention_everyone_channel",
     "vip_admin_channel",
+    "sqldb",
 ]
-
+sqldb = create_sqldb()
 # api
-mcss_api = McssAPI()
+mcss_api = McssAPI(sqldb)
 yt_rss = YoutubeRSS()
-google_api = GoogleAPI()
+google_api = GoogleAPI(sqldb)
 yt_push = YoutubePush()
-tw_api = TwitchAPI()
+tw_api = TwitchAPI(sqldb)
 twitter_api = tweepy.Client(sqldb.get_access_token(APIType.Twitter).access_token)
 rss_hub = RssHub()
-cwa_api = CWA_API()
-apexapi = ApexAPI()
-cli_api = CLIInterface()
+cwa_api = CWA_API(sqldb)
+apexapi = ApexAPI(sqldb)
+cli_api = CLIInterface(sqldb)
 ncdr_rss = NCDRRSS()
 
 settings = get_settings()

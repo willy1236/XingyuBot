@@ -3,10 +3,10 @@ import functools
 import discord
 from discord.ext import commands
 
-from starlib import sqldb
 from starlib.database import PrivilegeLevel
 from starlib.database.postgresql.cache import _MISSING, TTLCache
 from starlib.database.postgresql.models import CloudUser, HappycampVIP
+from starlib.instance import sqldb
 
 from .uiElement.view import RegisterView
 

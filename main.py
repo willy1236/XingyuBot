@@ -28,7 +28,7 @@ twitch_bot = settings.TWITCH_BOT
 
 
 def run_discord_bot():
-    sclient.sqldb.init_cache()
+    sqldb.init_cache()
     log.debug("Discord Bot start running...")
     bot = DiscordBot(sqldb, settings)
     sclient.bot = bot
@@ -47,7 +47,7 @@ def run_twitch_bot():
     from starServer.tunnel_threads import NgrokTwitchThread
 
     log.debug("Twitch tunnel start running...")
-    twitchtunnel_thread = NgrokTwitchThread()
+    twitchtunnel_thread = NgrokTwitchThread(sqldb)
     sclient.twitchtunnel_thread = twitchtunnel_thread
     twitchtunnel_thread.start()
     time.sleep(5)

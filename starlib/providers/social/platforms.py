@@ -13,7 +13,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
-from starlib.database import APIType, sqldb
+from starlib.database import APIType, SQLRepository
 from starlib.exceptions import APINetworkError, Forbidden
 from starlib.settings import tz
 from starlib.utils import log
@@ -31,14 +31,15 @@ class TwitchAPI(APICaller):
 
     base_url = "https://api.twitch.tv/helix"
 
-    def __init__(self):
+    def __init__(self, sqldb: SQLRepository):
         super().__init__()
+        self.sqldb = sqldb
         self.headers = self.__get_headers()
 
     def __get_headers(self):
         TOKENURL = "https://id.twitch.tv/oauth2/token"
         # headers = {"Content-Type": "application/x-www-form-urlencoded"}
-        tokens = sqldb.get_identifier_secret(APIType.Twitch)
+        tokens = self.sqldb.get_identifier_secret(APIType.Twitch)
         params = {"client_id": tokens.client_id, "client_secret": tokens.client_secret, "grant_type": "client_credentials"}
 
         r = self._request("POST", TOKENURL, params=params)
@@ -179,8 +180,9 @@ class GoogleAPI(APICaller):
 
     base_url = "https://www.googleapis.com/youtube/v3"
 
-    def __init__(self):
-        self.__token = sqldb.get_access_token(APIType.Google).access_token
+    def __init__(self, sqldb: SQLRepository):
+        self.sqldb = sqldb
+        self.__token = self.sqldb.get_access_token(APIType.Google).access_token
         super().__init__(headers={"x-goog-api-key": self.__token, "Accept": "application/json"})
 
     def get_channel_id(self, channel_handle: str) -> str | None:
@@ -325,7 +327,8 @@ class YoutubePush(APICaller):
 class XingyuGoogleCloud:
     """以星羽身分運行的Google Cloud API"""
 
-    def __init__(self):
+    def __init__(self, sqldb: SQLRepository):
+        self.sqldb = sqldb
         self.creds = self.get_creds()
 
     def get_creds(self):
@@ -334,17 +337,17 @@ class XingyuGoogleCloud:
         # The file token.json stores the user's access and refresh tokens, and is
         # created automatically when the authorization flow completes for the first
         # time.
-        creds = sqldb.get_google_credentials(SCOPES)
+        creds = self.sqldb.get_google_credentials(SCOPES)
         # if os.path.exists('database/google_token.json'):
         #     creds = Credentials.from_authorized_user_file('database/google_token.json', SCOPES)
 
         # If there are no (valid) credentials available, let the user log in.
         if not creds or not creds.valid:
-            token = sqldb.get_bot_oauth_token(APIType.Google, 2)
+            token = self.sqldb.get_bot_oauth_token(APIType.Google, 2)
             if creds and creds.expired and creds.refresh_token:
                 creds.refresh(Request())
             else:
-                client_config = sqldb.get_google_client_config()
+                client_config = self.sqldb.get_google_client_config()
                 flow = InstalledAppFlow.from_client_config(client_config, scopes=SCOPES)
                 # flow = InstalledAppFlow.from_client_secrets_file(
                 #     'database/credentials.json', SCOPES)
@@ -355,7 +358,7 @@ class XingyuGoogleCloud:
             token.access_token = creds.token
             token.refresh_token = creds.refresh_token
             token.expires_at = creds.expiry
-            sqldb.merge(token)
+            self.sqldb.merge(token)
 
         return creds
 
@@ -406,11 +409,12 @@ class XingyuGoogleCloud:
 class NotionAPI(APICaller):
     base_url = "https://api.notion.com/v1"
 
-    def __init__(self):
+    def __init__(self, sqldb: SQLRepository):
+        self.sqldb = sqldb
         super().__init__(headers=self._get_headers())
 
     def _get_headers(self):
-        token = sqldb.get_access_token(APIType.Notion).access_token
+        token = self.sqldb.get_access_token(APIType.Notion).access_token
         return {"Authorization": f"Bearer {token}", "Notion-Version": "2022-06-28", "Content-Type": "application/json"}
 
     def get_page(self, page_id: str):
@@ -537,8 +541,9 @@ class RssHub(APICaller):
 
 class CLIInterface:
     # TODO: 針對rettiwt指令列介面進行全面測試
-    def __init__(self):
-        self.rettiwt_api_key = sqldb.get_access_token(APIType.Rettiwt).access_token
+    def __init__(self, sqldb: SQLRepository):
+        self.sqldb = sqldb
+        self.rettiwt_api_key = self.sqldb.get_access_token(APIType.Rettiwt).access_token
         if shutil.which("rettiwt") is None:
             log.warning("找不到rettiwt執行檔，請確認是否已安裝rettiwt並將其加入系統PATH中")
 

@@ -3,14 +3,12 @@ import re
 from datetime import datetime, timedelta, timezone
 
 import discord
-from dependency_injector.wiring import Provide, inject
 from discord.ext import commands
 
 from di import Container as AppContainer
-from starlib import log, sclient, tz
+from starlib import log, tz
 from starlib.database import DBCacheType, NotifyChannelType, PrivilegeLevel
 from starlib.instance import *
-from starlib.starAgent import ModelMessage, MyDeps, agent
 
 from ..extension import Cog_Extension
 from ..uiElement.embeds import BotEmbed
@@ -18,9 +16,7 @@ from ..uiElement.view import PollView, ReactionRoleView, TicketChannelView, Tick
 
 keywords = {}
 
-guild_registration = sclient.sqldb.get_raw_registrations() if sclient.sqldb else {}
-
-agent_history: dict[int, list[ModelMessage]] = {}
+guild_registration = sqldb.get_raw_registrations() if sqldb else {}
 
 
 def check_registration(member: discord.Member):
@@ -275,36 +271,6 @@ class event(Cog_Extension):
     #             await message.reply(text,mention_author=False)
     #         else:
     #             await message.add_reaction('❌')
-
-    @commands.Cog.listener("on_message")
-    @inject
-    async def agent_trigger(self, message: discord.Message, ai_access_guilds: list = Provide[AppContainer.ai_access_guilds]):
-        #AI agent
-        if not (
-            message.guild
-            and message.content
-            and message.guild.id in ai_access_guilds
-            and len(message.content) > 1
-            and message.content.startswith(".")
-            and not message.content.startswith(".", 1, 2)
-        ):
-            return
-
-        cuser = self.bot.sqldb.get_cloud_user(message.author.id)
-        if not cuser or cuser.privilege_level < PrivilegeLevel.Level3:
-            return
-
-        async with message.channel.typing():
-            global agent_history
-            history = agent_history.get(message.author.id, [])
-            deps = MyDeps(discord_id=message.author.id, member=message.author, guild=message.guild)
-
-            resp = await agent.run(message.content[1:], message_history=history, deps=deps)
-            if resp.output:
-                agent_history[message.author.id] = list(resp.all_messages())
-                await message.reply(resp.output, mention_author=False)
-            else:
-                await message.add_reaction("❌")
 
     @commands.Cog.listener("on_message")
     async def keyword_trigger(self, message: discord.Message):

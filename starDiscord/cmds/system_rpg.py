@@ -4,7 +4,6 @@ import discord
 from discord.commands import SlashCommandGroup
 from discord.ext import commands
 
-from starlib import sclient
 from starlib.database.postgresql.rpg import RPGUser
 from starlib.instance import happycamp_guild
 

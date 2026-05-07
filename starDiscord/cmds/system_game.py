@@ -10,6 +10,7 @@ from discord.ext import commands, pages
 from starlib import ChoiceList, Jsondb, csvdb, log, tz
 from starlib.database import LOLGameCache, LOLGameRecord, PlatformType, SQLRepository, UserIPDetails
 from starlib.exceptions import APINetworkError
+from starlib.instance import sqldb
 from starlib.providers import *
 from starlib.settings import get_settings
 
@@ -18,7 +19,7 @@ from ..extension import Cog_Extension
 from ..uiElement.embeds import BotEmbed
 
 game_option = ChoiceList.set("game_set_option")
-riot_api = RiotAPI()
+riot_api = RiotAPI(sqldb)
 
 def get_riot_account_puuid(sqldb: SQLRepository, user: discord.User, riot_id: str = None) -> str | None:
     user_game = sqldb.get_user_game(user.id, PlatformType.LOL)
