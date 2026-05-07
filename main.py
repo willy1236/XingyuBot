@@ -30,7 +30,7 @@ twitch_bot = settings.TWITCH_BOT
 def run_discord_bot():
     sclient.sqldb.init_cache()
     log.debug("Discord Bot start running...")
-    bot = DiscordBot(bot_code, sqldb)
+    bot = DiscordBot(sqldb, settings)
     sclient.bot = bot
     bot.load_all_extensions()
 

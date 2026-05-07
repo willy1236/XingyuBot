@@ -11,7 +11,7 @@ from discord.errors import Forbidden, NotFound
 from discord.ext import commands, pages
 from discord.utils import format_dt
 
-from starlib import ChoiceList, log, sclient, tz
+from starlib import ChoiceList, log, tz
 from starlib.database import Coins, Giveaway
 from starlib.database.postgresql.models import Giveaway
 from starlib.instance import *
@@ -21,33 +21,33 @@ from starlib.utils import converter, create_only_role_list, create_role_magifica
 from ..checks import RegisteredContext, ensure_registered
 from ..extension import Cog_Extension
 from ..uiElement.embeds import BotEmbed
-from ..uiElement.view import DeleteAddRoleView, GiveawayView, PollView, TRPGPlotView
+from ..uiElement.view import DeleteAddRoleView, GiveawayView, PollView
 from .bot_event import check_registration
 
 bet_option = ChoiceList.set("bet_option")
 position_option = ChoiceList.set("position_option")
 party_option = ChoiceList.set("party_option")
 
-trpg_plot_start = [OptionChoice(name="劇情開始：米爾（威立）", value=1)]
-
-async def trpg_plot_autocomplete(ctx: discord.AutocompleteContext):
-    return trpg_plot_start if not ctx.options["故事id"] else []
 
 class command(Cog_Extension):
     bet = SlashCommandGroup("bet", "賭盤相關指令")
-    role = SlashCommandGroup("role", "身分組管理指令", guild_ids=happycamp_guild)
+    role = SlashCommandGroup("role", "身分組管理指令")
     poll = SlashCommandGroup("poll", "投票相關指令")
-    party = SlashCommandGroup("party", "政黨相關指令", guild_ids=happycamp_guild)
-    registration_cmd = SlashCommandGroup("registration", "戶籍相關指令", guild_ids=happycamp_guild)
+    party = SlashCommandGroup("party", "政黨相關指令")
+    registration_cmd = SlashCommandGroup("registration", "戶籍相關指令")
     giveaway = SlashCommandGroup("giveaway", "抽獎相關指令")
     register = SlashCommandGroup("register", "註冊相關指令")
     date_cmd = SlashCommandGroup("date", "日期相關指令")
     choice_cmd = SlashCommandGroup("choice", "選擇相關指令", name_localizations=ChoiceList.name("choice"))
 
+    def __init__(self, bot):
+        super().__init__(bot)
+        self.role.guild_ids = self.bot.settings.HAPPYCAMP_GUILD
+        self.party.guild_ids = self.bot.settings.HAPPYCAMP_GUILD
+        self.registration_cmd.guild_ids = self.bot.settings.HAPPYCAMP_GUILD
+
     @role.command(description="查詢加身分組的數量")
-    async def count(
-        self, ctx, user_list: discord.Option(str, required=False, name="要查詢的用戶", description="多個用戶請用空格隔開，或可輸入default查詢常用人選")
-    ):
+    async def count(self, ctx, user_list: discord.Option(str, required=False, name="要查詢的用戶", description="多個用戶請用空格隔開，或可輸入default查詢常用人選")):
         await ctx.defer()
         if not user_list:
             user_list = [ctx.author.id]
@@ -156,9 +156,7 @@ class command(Cog_Extension):
         await ctx.respond("身分組清理完成", delete_after=5)
 
     @role.command(description="查詢加身分組紀錄")
-    async def record(
-        self, ctx: discord.ApplicationContext, user: discord.Option(discord.Member, name="欲查詢的成員", description="留空以查詢自己", default=None)
-    ):
+    async def record(self, ctx: discord.ApplicationContext, user: discord.Option(discord.Member, name="欲查詢的成員", description="留空以查詢自己", default=None)):
         await ctx.defer()
         user = user or ctx.author
         record = self.bot.sqldb.get_role_save(user.id)
@@ -474,9 +472,7 @@ class command(Cog_Extension):
         ban_alternate_account_voting: discord.Option(bool, name="是否禁止小帳投票", description="僅供特定群組使用，預設為false", default=False),
         number_of_user_votes: discord.Option(int, name="一人最多可投票數", description="預設為1", default=1, min_value=1, max_value=20),
         # can_change_vote: discord.Option(bool, name="是否允許變更投票", description="預設為true", default=True),
-        only_role: discord.Option(
-            str, name="限制身分組", description="若提供。則只有擁有身分組才能投票，多個身分組以英文,隔開，身分組可輸入id、提及、名稱等", default=None
-        ),
+        only_role: discord.Option(str, name="限制身分組", description="若提供。則只有擁有身分組才能投票，多個身分組以英文,隔開，身分組可輸入id、提及、名稱等", default=None),
         role_magnification: discord.Option(
             str,
             name="身分組權重",
@@ -849,12 +845,6 @@ class command(Cog_Extension):
         if invite.guild.icon:
             embed.set_thumbnail(url=invite.guild.icon.url)
         await ctx.respond(embed=embed)
-
-    @commands.slash_command(description="TRPG故事", guild_ids=happycamp_guild)
-    async def trpgstory(self, ctx, plot_id: discord.Option(int, name="故事id", description="故事id", autocomplete=trpg_plot_autocomplete)):
-        plot = self.bot.sqldb.get_trpg_plot(plot_id)
-        view = TRPGPlotView(plot, self.bot.sqldb)
-        await ctx.respond(embed=view.embed(), view=view)
 
     @giveaway.command(description="創建抽獎")
     async def create(

@@ -3,8 +3,10 @@ import re
 from datetime import datetime, timedelta, timezone
 
 import discord
+from dependency_injector.wiring import Provide, inject
 from discord.ext import commands
 
+from di import Container as AppContainer
 from starlib import log, sclient, tz
 from starlib.database import DBCacheType, NotifyChannelType, PrivilegeLevel
 from starlib.instance import *
@@ -15,8 +17,6 @@ from ..uiElement.embeds import BotEmbed
 from ..uiElement.view import PollView, ReactionRoleView, TicketChannelView, TicketLobbyView
 
 keywords = {}
-
-ai_access_guilds: list[int] = happycamp_guild + debug_guilds
 
 guild_registration = sclient.sqldb.get_raw_registrations() if sclient.sqldb else {}
 
@@ -277,7 +277,8 @@ class event(Cog_Extension):
     #             await message.add_reaction('❌')
 
     @commands.Cog.listener("on_message")
-    async def agent_trigger(self, message: discord.Message):
+    @inject
+    async def agent_trigger(self, message: discord.Message, ai_access_guilds: list = Provide[AppContainer.ai_access_guilds]):
         #AI agent
         if not (
             message.guild
