@@ -11,6 +11,9 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from v2_starlib.base import AppSettings
 from v2_starlib.database import APIType, SQLRepository
+from v2_starlib.fileDatabase import JsonDatabase
+
+from .ui.embeds import BotEmbed
 
 if TYPE_CHECKING:
     from v2_starlib.database.postgresql.models import NotifyChannelType, NotifyCommunityType
@@ -21,11 +24,11 @@ log = logging.getLogger(__name__)
 class DiscordBot(discord.Bot):
     _COG_PATH = Path("./starDiscord/cmds")
 
-    def __init__(self, settings: AppSettings, sqldb: SQLRepository):
+    def __init__(self, settings: AppSettings, sqldb: SQLRepository, Jsondb: JsonDatabase):
         super().__init__(owner_id=419131103836635136, intents=discord.Intents.all(), help_command=None)
         self.settings = settings
         self.sqldb = sqldb
-        self.log = log
+        self.Jsondb = Jsondb
 
         self.debug_mode = settings.DEBUG_MODE
         self.bot_code = settings.BOT_CODE
