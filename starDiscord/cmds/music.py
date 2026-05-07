@@ -151,9 +151,6 @@ class MusicPlayer():
         nowplaying: Song
         skip_voters: list[int]
         play_lock: asyncio.Lock
-        play_started_at: float | None
-        paused_at: float | None
-        paused_total: float
 
     def __init__(self, vc: discord.VoiceClient, ctx: discord.ApplicationContext, loop):
         self.vc = vc
@@ -166,9 +163,6 @@ class MusicPlayer():
         self.nowplaying = None
         self.skip_voters = []
         self.play_lock = asyncio.Lock()
-        self.play_started_at = None
-        self.paused_at = None
-        self.paused_total = 0.0
 
     async def play_next(self):
         """
@@ -192,9 +186,6 @@ class MusicPlayer():
 
                 embed = BotEmbed.simple(title="現在播放", description=f"[{song.title}]({song.url}) [{song.requester.mention}/{format_seconds(song.duration)}]")
                 await self.channel.send(embed=embed, silent=True)
-                self.play_started_at = time.monotonic()
-                self.paused_at = None
-                self.paused_total = 0.0
                 self.vc.play(source, after=self.after)
             except Exception as e:
                 raise MusicPlayingError(str(e)) from e
@@ -231,9 +222,6 @@ class MusicPlayer():
         - None
         """
         self.nowplaying = None
-        self.play_started_at = None
-        self.paused_at = None
-        self.paused_total = 0.0
         await asyncio.sleep(wait_for)
         if not self.vc.is_playing() and not self.nowplaying:
             await self.stop()
@@ -278,9 +266,6 @@ class MusicPlayer():
         """
         await self.vc.disconnect()
         self.playlist.clear()
-        self.play_started_at = None
-        self.paused_at = None
-        self.paused_total = 0.0
         del guild_playing[self.guildid]
         await self.channel.send("歌曲播放完畢 掰掰~")
 
@@ -298,30 +283,22 @@ class MusicPlayer():
         """
         if not self.vc.is_paused():
             self.vc.pause()
-            self.on_paused()
+            # self.on_paused()
         else:
             self.vc.resume()
-            self.on_resumed()
+            # self.on_resumed()
 
-    def on_paused(self):
-        if not self.paused_at:
-            self.paused_at = time.monotonic()
+    # def on_paused(self):
+    #     if not self.paused_at:
+    #         self.paused_at = time.monotonic()
 
-    def on_resumed(self):
-        if self.paused_at:
-            self.paused_total += time.monotonic() - self.paused_at
-            self.paused_at = None
+    # def on_resumed(self):
+    #     if self.paused_at:
+    #         self.paused_total += time.monotonic() - self.paused_at
+    #         self.paused_at = None
 
     def get_elapsed_seconds(self) -> int:
-        if not self.play_started_at:
-            return 0
-
-        paused_total = self.paused_total
-        if self.paused_at:
-            paused_total += time.monotonic() - self.paused_at
-
-        elapsed = time.monotonic() - self.play_started_at - paused_total
-        return max(0, int(elapsed))
+        return int(self.vc.elapsed().total_seconds())
 
     def add_song(self, song: Song | list[Song]):
         """
