@@ -13,6 +13,7 @@ from v2_starlib.base import AppSettings
 from v2_starlib.database import APIType, SQLRepository
 from v2_starlib.database.postgresql.models import NotifyChannelType, NotifyCommunityType
 from v2_starlib.fileDatabase import JsonDatabase
+from v2_starlib.providers.client import ClientProvider
 from v2_starlib.pubsub import StarEventBus
 
 from .ui.embeds import BotEmbed
@@ -23,12 +24,13 @@ log = logging.getLogger(__name__)
 class DiscordBot(discord.Bot):
     _COG_PATH = Path("./v2_starDiscord/cmds")
 
-    def __init__(self, settings: AppSettings, sqldb: SQLRepository, Jsondb: JsonDatabase, event_bus: StarEventBus):
+    def __init__(self, settings: AppSettings, sqldb: SQLRepository, Jsondb: JsonDatabase, event_bus: StarEventBus, api: ClientProvider):
         super().__init__(owner_id=419131103836635136, intents=discord.Intents.all(), help_command=None)
         self.settings = settings
         self.sqldb = sqldb
         self.Jsondb = Jsondb
         self.event_bus = event_bus
+        self.api = api
 
         self.debug_mode = settings.DEBUG_MODE
         self.bot_code = settings.BOT_CODE

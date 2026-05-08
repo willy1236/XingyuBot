@@ -11,6 +11,7 @@ from v2_starDiscord.bot import DiscordBot
 from v2_starlib.base import get_settings
 from v2_starlib.database import create_sqldb
 from v2_starlib.fileDatabase import JsonDatabase
+from v2_starlib.providers.client import ClientProvider
 from v2_starlib.pubsub import StarEventBus
 from v2_starWeb import setup_star_server
 
@@ -25,16 +26,17 @@ async def main():
     sqldb = create_sqldb()
     Jsondb = JsonDatabase()
     sclient = StarEventBus()
+    client_provider = ClientProvider(sqldb)
 
     sqldb.init_cache()
     log.debug("Discord Bot start running...")
-    bot = DiscordBot(settings, sqldb, Jsondb, sclient)
+    bot = DiscordBot(settings, sqldb, Jsondb, sclient, client_provider)
     bot.load_all_extensions()
 
     # sclient.subscribe(TwitchStreamEvent, bot.on_twitch_stream_event, loop=bot.loop)
 
     web_app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
-    setup_star_server(web_app, bot, sqldb)
+    setup_star_server(web_app, bot, sqldb, client_provider.google_api)
     import uvicorn
 
     config = uvicorn.Config(web_app, host="0.0.0.0", port=14000)

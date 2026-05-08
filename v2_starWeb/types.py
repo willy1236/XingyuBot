@@ -4,6 +4,7 @@ from linebot.v3.messaging import Configuration
 
 from v2_starDiscord.bot import DiscordBot
 from v2_starlib.database import IdentifierSecret, OAuthClient, SQLRepository
+from v2_starlib.providers.social.platforms import GoogleAPI
 
 
 class StarState:
@@ -11,6 +12,7 @@ class StarState:
 
     bot: DiscordBot
     sqldb: SQLRepository
+    google_api: GoogleAPI
     discord_oauth_client: OAuthClient
     twitch_oauth_client: OAuthClient
     google_oauth_settings: OAuthClient

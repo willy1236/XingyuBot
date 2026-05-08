@@ -15,13 +15,14 @@ from fastapi.requests import Request
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response, StreamingResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from jose import jwt
-from v2_starlib.oauth import DiscordOAuth, GoogleOAuth, TwitchOAuth
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from sentry_bootstrap import capture_exception_safe
 from v2_starDiscord.bot import DiscordBot
-from v2_starlib import BaseThread, utils
+from v2_starlib import utils
 from v2_starlib.base import get_settings
 from v2_starlib.database import APIType, ExternalAccount, NotifyCommunityType, PlatformType, SQLRepository, TwitchBotJoinChannel
+from v2_starlib.oauth import DiscordOAuth, GoogleOAuth, TwitchOAuth
 from v2_starlib.providers.social.push_models import YoutubePushEntry
 
 from .types import StarRequest
@@ -30,24 +31,23 @@ SETTINGS = get_settings()
 BASE_WWW_URL = SETTINGS.BASE_WWW_URL
 BASE_DOMAIN = SETTINGS.BASE_DOMAIN
 
-router = APIRouter(prefix="/", tags=["WEB"])
+router = APIRouter(prefix="", tags=["WEB"])
 log = logging.getLogger(__name__)
 
-
-@router.middleware("http")
-async def sentry_exception_middleware(request: Request, call_next):
-    try:
-        return await call_next(request)
-    except HTTPException:
-        raise
-    except Exception as exc:
-        capture_exception_safe(
-            exc,
-            tags={"service": "website", "source": "middleware"},
-            extras={"path": request.url.path, "method": request.method},
-        )
-        log.exception("Unhandled website exception: %s", exc)
-        return JSONResponse(status_code=500, content={"detail": "Internal Server Error"})
+class SentryExceptionMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        try:
+            return await call_next(request)
+        except HTTPException:
+            raise
+        except Exception as exc:
+            capture_exception_safe(
+                exc,
+                tags={"service": "website", "source": "middleware"},
+                extras={"path": request.url.path, "method": request.method},
+            )
+            log.exception("Unhandled website exception: %s", exc)
+            return JSONResponse(status_code=500, content={"detail": "Internal Server Error"})
 
 
 security = HTTPBasic()
@@ -100,7 +100,7 @@ async def prase_yt_push(content: str, sqldb: SQLRepository, bot: DiscordBot):
 
     for entry in feed["entries"]:
         push_entry = YoutubePushEntry(**entry)
-        videos = google_api.get_video(push_entry.yt_videoid)
+        videos = bot.api.google_api.get_video(push_entry.yt_videoid)
         if not videos:
             log.warning("Video %s not found in YouTube API", push_entry.yt_videoid)
             continue
@@ -166,7 +166,7 @@ async def oauth_discord(request: StarRequest):
     # if not OAuth2Base.verify_state(request.cookies.get("oauth_state"), params.get("state")):
     #     return HTMLResponse("授權失敗：state 驗證失敗", 400)
 
-    auth = DiscordOAuth.create_from_db(request.app_state.discord_oauth_client)
+    auth = DiscordOAuth.create_from_db(request.app_state.sqldb, request.app_state.discord_oauth_client)
     await auth.exchange_code(code)
     user = await auth.get_me()
     auth.save_token_to_db(user.id)
@@ -228,7 +228,7 @@ async def oauth_twitch(request: StarRequest):
     if not TwitchOAuth.verify_state(request.cookies.get("oauth_state"), params.get("state")):
         return HTMLResponse("授權失敗：state 驗證失敗", 400)
 
-    auth = TwitchOAuth.create_from_db(request.app_state.twitch_oauth_client)
+    auth = TwitchOAuth.create_from_db(request.app_state.sqldb, request.app_state.twitch_oauth_client)
     await auth.exchange_code(code)
     user = await auth.get_me()
     auth.save_token_to_db(user.id)
@@ -249,7 +249,7 @@ async def oauth_google(request: StarRequest):
     if not GoogleOAuth.verify_state(request.cookies.get("oauth_state"), params.get("state")):
         return HTMLResponse("授權失敗：state 驗證失敗", 400)
 
-    auth = GoogleOAuth.create_from_db(request.app_state.google_oauth_settings)
+    auth = GoogleOAuth.create_from_db(request.app_state.sqldb, request.app_state.google_oauth_settings)
     await auth.exchange_code(code)
     auth.save_token_to_db(auth.db_token.user_id)
     response = HTMLResponse(f"授權已完成，您現在可以關閉此頁面<br><br>Google ID：{auth.db_token.user_id}")
