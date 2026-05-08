@@ -5,6 +5,7 @@ from datetime import date, datetime, time, timedelta, timezone
 from ipaddress import IPv4Network
 from typing import Literal, ParamSpec, TypeVar, overload
 
+import discord  # TODO: 移除對 discord 的直接依賴
 from google.oauth2.credentials import Credentials
 from sqlalchemy import Engine, and_, desc, func, not_, or_
 from sqlalchemy.engine import URL

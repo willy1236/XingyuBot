@@ -11,24 +11,24 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from v2_starlib.base import AppSettings
 from v2_starlib.database import APIType, SQLRepository
+from v2_starlib.database.postgresql.models import NotifyChannelType, NotifyCommunityType
 from v2_starlib.fileDatabase import JsonDatabase
+from v2_starlib.pubsub import StarEventBus
 
 from .ui.embeds import BotEmbed
-
-if TYPE_CHECKING:
-    from v2_starlib.database.postgresql.models import NotifyChannelType, NotifyCommunityType
 
 log = logging.getLogger(__name__)
 
 
 class DiscordBot(discord.Bot):
-    _COG_PATH = Path("./starDiscord/cmds")
+    _COG_PATH = Path("./v2_starDiscord/cmds")
 
-    def __init__(self, settings: AppSettings, sqldb: SQLRepository, Jsondb: JsonDatabase):
+    def __init__(self, settings: AppSettings, sqldb: SQLRepository, Jsondb: JsonDatabase, event_bus: StarEventBus):
         super().__init__(owner_id=419131103836635136, intents=discord.Intents.all(), help_command=None)
         self.settings = settings
         self.sqldb = sqldb
         self.Jsondb = Jsondb
+        self.event_bus = event_bus
 
         self.debug_mode = settings.DEBUG_MODE
         self.bot_code = settings.BOT_CODE
@@ -40,6 +40,10 @@ class DiscordBot(discord.Bot):
     def run(self):
         token = self.sqldb.get_access_token(APIType.Discord, self.bot_code).access_token
         super().run(token)
+
+    async def start(self):
+        token = self.sqldb.get_access_token(APIType.Discord, self.bot_code).access_token
+        await super().start(token)
 
     def submit(self, coro: Coroutine):
         """
@@ -226,12 +230,12 @@ class DiscordBot(discord.Bot):
         embed.set_footer(text="此機器人由 威立 負責維護")
         return embed
 
-    async def on_twitch_stream_event(self, event: TwitchStreamEvent):
-        if not event.content and not event.embed:
-            raise ValueError("Content and embed must provided at least one.")
-        channel = self.get_channel(event.to_discord_channel)
-        if channel:
-            await channel.send(content=event.content, embed=event.embed)
+    # async def on_twitch_stream_event(self, event: TwitchStreamEvent):
+    #     if not event.content and not event.embed:
+    #         raise ValueError("Content and embed must provided at least one.")
+    #     channel = self.get_channel(event.to_discord_channel)
+    #     if channel:
+    #         await channel.send(content=event.content, embed=event.embed)
 
 
 # commands.Bot

@@ -64,7 +64,7 @@ class AppSettings(BaseSettings):
 @lru_cache(maxsize=1)
 def _resolve_env_file() -> Path | None:
     """Resolve .env.{APP_ENV} first, fallback to .env."""
-    project_root = Path(__file__).resolve().parent.parent
+    project_root = Path(__file__).resolve().parent.parent.parent
     app_env = os.getenv("APP_ENV", "development").strip()
 
     env_file = project_root / f".env.{app_env}"

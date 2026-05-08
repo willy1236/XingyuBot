@@ -4,7 +4,7 @@ from typing import Generic, TypeVar
 import requests
 from pydantic import BaseModel, Field
 
-from starlib.exceptions import APINetworkError
+from v2_starlib.exceptions import APINetworkError
 
 T = TypeVar("T")
 

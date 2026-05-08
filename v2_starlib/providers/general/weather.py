@@ -3,7 +3,7 @@ from datetime import datetime
 import certifi
 import feedparser
 
-from starlib.database import APIType, SQLRepository
+from v2_starlib.database import APIType, SQLRepository
 
 from ..base import APICaller
 from .models import *
