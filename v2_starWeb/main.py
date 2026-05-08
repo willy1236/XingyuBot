@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 import secrets
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -7,43 +8,33 @@ from pathlib import Path
 import feedparser
 import uvicorn
 from apscheduler.triggers.date import DateTrigger
-from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, FastAPI, HTTPException, status
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.openapi.utils import get_openapi
 from fastapi.requests import Request
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response, StreamingResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from jose import jwt
-from linebot.v3 import WebhookHandler
-from linebot.v3.exceptions import InvalidSignatureError
-from linebot.v3.messaging import ApiClient, Configuration, MessagingApi, ReplyMessageRequest, TextMessage
-from linebot.v3.webhooks import MessageEvent, TextMessageContent
-from linebot.v3.webhooks.models.message_event import MessageEvent
+from v2_starlib.oauth import DiscordOAuth, GoogleOAuth, TwitchOAuth
 
 from sentry_bootstrap import capture_exception_safe
-from starlib import BaseThread, Jsondb, sclient, sqldb, utils, web_log
-from starlib.database import APIType, ExternalAccount, NotifyCommunityType, PlatformType, TwitchBotJoinChannel
-from starlib.instance import google_api
-from starlib.oauth import DiscordOAuth, GoogleOAuth, TwitchOAuth
-from starlib.providers.social.push_models import YoutubePushEntry
-from starlib.settings import get_settings
-from starlib.starAgent_line import line_agent
+from v2_starDiscord.bot import DiscordBot
+from v2_starlib import BaseThread, utils
+from v2_starlib.base import get_settings
+from v2_starlib.database import APIType, ExternalAccount, NotifyCommunityType, PlatformType, SQLRepository, TwitchBotJoinChannel
+from v2_starlib.providers.social.push_models import YoutubePushEntry
 
-discord_oauth_client = sqldb.get_oauth_client(APIType.Discord, 4)
-twitch_oauth_client = sqldb.get_oauth_client(APIType.Twitch, 3)
-google_oauth_settings = sqldb.get_oauth_client(APIType.Google, 3)
-docs_account = sqldb.get_identifier_secret(APIType.DocAccount)
+from .types import StarRequest
+
 SETTINGS = get_settings()
 BASE_WWW_URL = SETTINGS.BASE_WWW_URL
 BASE_DOMAIN = SETTINGS.BASE_DOMAIN
 
-configuration = Configuration(access_token=sqldb.get_access_token(APIType.Line).access_token)
-handler = WebhookHandler(sqldb.get_identifier_secret(APIType.Line).client_secret)
-
-app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
+router = APIRouter(prefix="/", tags=["WEB"])
+log = logging.getLogger(__name__)
 
 
-@app.middleware("http")
+@router.middleware("http")
 async def sentry_exception_middleware(request: Request, call_next):
     try:
         return await call_next(request)
@@ -55,12 +46,15 @@ async def sentry_exception_middleware(request: Request, call_next):
             tags={"service": "website", "source": "middleware"},
             extras={"path": request.url.path, "method": request.method},
         )
-        web_log.exception("Unhandled website exception: %s", exc)
+        log.exception("Unhandled website exception: %s", exc)
         return JSONResponse(status_code=500, content={"detail": "Internal Server Error"})
 
 
 security = HTTPBasic()
-def get_current_username(credentials: HTTPBasicCredentials = Depends(security)):
+
+
+def get_current_username(request: StarRequest, credentials: HTTPBasicCredentials = Depends(security)):
+    docs_account = request.app_state.docs_account
     correct_username = secrets.compare_digest(credentials.username, docs_account.client_id)
     correct_password = secrets.compare_digest(credentials.password, docs_account.client_secret)
     if not (correct_username and correct_password):
@@ -71,29 +65,35 @@ def get_current_username(credentials: HTTPBasicCredentials = Depends(security)):
         )
     return credentials.username
 
-@app.get("/docs", include_in_schema=False)
+
+@router.get("/docs", include_in_schema=False)
 async def get_documentation(username: str = Depends(get_current_username)):
     return get_swagger_ui_html(openapi_url="/openapi.json", title="docs")
 
-@app.get("/openapi.json", include_in_schema=False)
-async def openapi(username: str = Depends(get_current_username)):
-    return get_openapi(title="FastAPI", version="0.1.0", routes=app.routes)
 
-@app.get("/")
-@app.head("/")
-def main(request:Request):
-    web_log.debug(f"{request.client.host} - {request.method} - {request.url.path}")
+@router.get("/openapi.json", include_in_schema=False)
+async def openapi(username: str = Depends(get_current_username)):
+    return get_openapi(title="FastAPI", version="0.1.0", routes=router.routes)
+
+
+@router.get("/")
+@router.head("/")
+def main(request: Request):
+    log.debug("%s - %s - %s", request.client.host, request.method, request.url.path)
     return HTMLResponse("這是一個目前沒有內容的主頁")
 
-@app.get("/keep_alive")
-@app.head("/keep_alive")
-def keep_alive(request:Request):
+
+@router.get("/keep_alive")
+@router.head("/keep_alive")
+def keep_alive(request: Request):
     return HTMLResponse(content="Bot is aLive!")
+
 
 # print("[Warning] Server Received & Refused!")
 # print("[Warning] Error:", e)
 
-async def prase_yt_push(content: str):
+
+async def prase_yt_push(content: str, sqldb: SQLRepository, bot: DiscordBot):
     feed = feedparser.parse(content)
     # with open("test.json", "w", encoding="utf-8") as f:
     # 	json.dump(feed, f, ensure_ascii=False, indent=4)
@@ -102,7 +102,7 @@ async def prase_yt_push(content: str):
         push_entry = YoutubePushEntry(**entry)
         videos = google_api.get_video(push_entry.yt_videoid)
         if not videos:
-            web_log.warning(f"Video {push_entry.yt_videoid} not found in YouTube API")
+            log.warning("Video %s not found in YouTube API", push_entry.yt_videoid)
             continue
 
         video = videos[0]
@@ -110,37 +110,35 @@ async def prase_yt_push(content: str):
         ytcache = sqldb.get_yt_cache(push_entry.yt_videoid)
         if push_entry.published > cache.value or (ytcache is not None and video.snippet.liveBroadcastContent == "live"):
             # 透過published的時間來判斷是否為新影片
-            web_log.info("New Youtube push entry %s created at %s", push_entry.yt_videoid, push_entry.published)
+            log.info("New Youtube push entry %s created at %s", push_entry.yt_videoid, push_entry.published)
             no_mention = False
 
             if ytcache is not None:
                 # 有ytcache：直播開始
-                web_log.info("Removing cached video %s from database", video.id)
+                log.info("Removing cached video %s from database", video.id)
                 sqldb.remove_yt_cache(video.id)
 
             elif video.is_live_upcoming_with_time:
                 # 如果是即將開始的直播，則添加ytcache
                 assert video.liveStreamingDetails.scheduledStartTime is not None, "Scheduled start time should not be None for upcoming live videos"
-                web_log.info("Upcoming live video detected: %s at %s", video.id, video.liveStreamingDetails.scheduledStartTime)
+                log.info("Upcoming live video detected: %s at %s", video.id, video.liveStreamingDetails.scheduledStartTime)
                 sqldb.add_yt_cache(video.id, video.liveStreamingDetails.scheduledStartTime)
                 no_mention = True
             elif video.liveStreamingDetails and video.liveStreamingDetails.actualEndTime:
                 # 已經結束的直播
-                web_log.info("Live video ended: %s at %s", video.id, video.liveStreamingDetails.actualEndTime)
+                log.info("Live video ended: %s at %s", video.id, video.liveStreamingDetails.actualEndTime)
                 no_mention = True
 
             if push_entry.published > cache.value:
                 sqldb.set_community_cache(NotifyCommunityType.Youtube, push_entry.yt_channelid, push_entry.published)
 
-            if sclient.bot:
-                sclient.bot.submit(
-                    sclient.bot.send_notify_communities(video.embed(), NotifyCommunityType.Youtube, push_entry.yt_channelid, no_mention=no_mention)
-                )
+            if bot:
+                bot.submit(bot.send_notify_communities(video.embed(), NotifyCommunityType.Youtube, push_entry.yt_channelid, no_mention=no_mention))
             else:
-                web_log.warning("Bot not found.")
+                log.warning("Bot not found.")
 
 
-@app.get("/youtube_push")
+@router.get("/youtube_push")
 def youtube_push_get(request: Request):
     params = dict(request.query_params)
     if "hub.challenge" in params:
@@ -149,16 +147,16 @@ def youtube_push_get(request: Request):
         return HTMLResponse("OK")
 
 
-@app.post("/youtube_push")
-async def youtube_push_post(request: Request, background_task: BackgroundTasks):
+@router.post("/youtube_push")
+async def youtube_push_post(request: StarRequest, background_task: BackgroundTasks):
     body = await request.body()
     body = body.decode("UTF-8")
-    background_task.add_task(prase_yt_push, body)
+    background_task.add_task(prase_yt_push, body, request.app_state.sqldb, request.app_state.bot)
     return HTMLResponse("OK")
 
 
-@app.get("/oauth/discord")
-async def oauth_discord(request: Request):
+@router.get("/oauth/discord")
+async def oauth_discord(request: StarRequest):
     params = dict(request.query_params)
     code = params.get("code")
     if not code:
@@ -168,25 +166,25 @@ async def oauth_discord(request: Request):
     # if not OAuth2Base.verify_state(request.cookies.get("oauth_state"), params.get("state")):
     #     return HTMLResponse("授權失敗：state 驗證失敗", 400)
 
-    auth = DiscordOAuth.create_from_db(discord_oauth_client)
+    auth = DiscordOAuth.create_from_db(request.app_state.discord_oauth_client)
     await auth.exchange_code(code)
     user = await auth.get_me()
     auth.save_token_to_db(user.id)
-    web_log.info(f"Discord OAuth: User {user.username} ({user.id}) authorized.")
-    web_log.info(f"Discord OAuth scopes: {auth.scopes}")
+    log.info("Discord OAuth: User %s (%s) authorized.", user.username, user.id)
+    log.info("Discord OAuth scopes: %s", auth.scopes)
 
-    cuser = sqldb.get_cloud_user_by_discord(user.id)
+    cuser = request.app_state.sqldb.get_cloud_user_by_discord(user.id)
     if not cuser:
         # 如果資料庫沒有這個用戶，先創建一個新的 CloudUser
-        cuser = sqldb.add_cloud_user_by_discord(user.id, user.username)
-        web_log.info(f"Created new CloudUser for Discord ID {user.id} with username '{user.username}'")
+        cuser = request.app_state.sqldb.add_cloud_user_by_discord(user.id, user.username)
+        log.info("Created new CloudUser for Discord ID %s with username '%s'", user.id, user.username)
 
     if auth.has_scope("connections"):
         connections = await auth.get_connections()
         for connection in connections:
             if connection.type == "twitch":
-                web_log.info(f"Discord connection: {connection.name}({connection.id})")
-                sclient.sqldb.upsert_external_account(user_id=cuser.id, platform=PlatformType.Twitch, external_id=connection.id, display_name=connection.name)
+                log.info("Discord connection: %s(%s)", connection.name, connection.id)
+                request.app_state.sqldb.upsert_external_account(user_id=cuser.id, platform=PlatformType.Twitch, external_id=connection.id, display_name=connection.name)
 
     if params.get("guild_id"):
         # 機器人授權流程
@@ -209,8 +207,8 @@ async def oauth_discord(request: Request):
         return response
 
 
-@app.get("/oauth/discordbot")
-async def oauth_discordbot(request: Request):
+@router.get("/oauth/discordbot")
+async def oauth_discordbot(request: StarRequest):
     params = dict(request.query_params)
     code = params.get("code")
     if not code:
@@ -219,8 +217,8 @@ async def oauth_discordbot(request: Request):
     return HTMLResponse(f"授權已完成，您現在可以關閉此頁面<br>感謝您使用星羽機器人！", 200)
 
 
-@app.get("/oauth/twitch")
-async def oauth_twitch(request: Request):
+@router.get("/oauth/twitch")
+async def oauth_twitch(request: StarRequest):
     params = dict(request.query_params)
     code = params.get("code")
     if not code:
@@ -230,18 +228,18 @@ async def oauth_twitch(request: Request):
     if not TwitchOAuth.verify_state(request.cookies.get("oauth_state"), params.get("state")):
         return HTMLResponse("授權失敗：state 驗證失敗", 400)
 
-    auth = TwitchOAuth.create_from_db(twitch_oauth_client)
+    auth = TwitchOAuth.create_from_db(request.app_state.twitch_oauth_client)
     await auth.exchange_code(code)
     user = await auth.get_me()
     auth.save_token_to_db(user.id)
-    sclient.sqldb.merge(TwitchBotJoinChannel(twitch_id=user.id))
+    request.app_state.sqldb.merge(TwitchBotJoinChannel(twitch_id=user.id))
     response = HTMLResponse(f"授權已完成，您現在可以關閉此頁面<br>別忘了在聊天室輸入 /mod xingyu1016<br><br>Twitch ID：{user.id}")
     response.delete_cookie("oauth_state")
     return response
 
 
-@app.get("/oauth/google")
-async def oauth_google(request: Request):
+@router.get("/oauth/google")
+async def oauth_google(request: StarRequest):
     params = dict(request.query_params)
     code = params.get("code")
     if not code:
@@ -251,7 +249,7 @@ async def oauth_google(request: Request):
     if not GoogleOAuth.verify_state(request.cookies.get("oauth_state"), params.get("state")):
         return HTMLResponse("授權失敗：state 驗證失敗", 400)
 
-    auth = GoogleOAuth.create_from_db(google_oauth_settings)
+    auth = GoogleOAuth.create_from_db(request.app_state.google_oauth_settings)
     await auth.exchange_code(code)
     auth.save_token_to_db(auth.db_token.user_id)
     response = HTMLResponse(f"授權已完成，您現在可以關閉此頁面<br><br>Google ID：{auth.db_token.user_id}")
@@ -259,73 +257,17 @@ async def oauth_google(request: Request):
     return response
 
 
-@app.post("/callback/linebot")
-async def callback_linebot(request: Request, background_tasks: BackgroundTasks):
-    signature = request.headers.get("X-Line-Signature")
-
-    # get request body as text
-    body = await request.body()
-    body = body.decode("UTF-8")
-    web_log.info("Request body: " + body)
-
-    # # handle webhook body
-    # try:
-    #     handler.handle(body, signature)
-    # except InvalidSignatureError:
-    #     web_log.info(f"{request.url.path}: Invalid signature. Please check your channel access token/channel secret.")
-    #     raise HTTPException(status_code=400, detail="Invalid signature")
-    background_tasks.add_task(process_linebot_webhook, body, signature)
-    return "OK"
-
-
-def process_linebot_webhook(body: str, signature: str):
-    """在背景任務中處理 LINE Bot webhook"""
-    try:
-        handler.handle(body, signature)
-    except InvalidSignatureError:
-        web_log.error("Invalid signature in LINE Bot webhook")
-    except Exception as e:
-        capture_exception_safe(e, tags={"service": "website", "source": "linebot_webhook"})
-        web_log.error(f"處理 LINE Bot 訊息時發生錯誤: {e}")
-
-@handler.add(MessageEvent, message=TextMessageContent)
-async def handle_message(event: MessageEvent):
-    url = utils.check_url_format(event.message.text)
-    if url:
-        report_lines = utils.generate_url_report(event.message.text)
-        report_text = "\n".join(report_lines)
-        try:
-            ai_response = await line_agent.run(report_text)
-            text = "\n".join([report_text, "", "AI 分析結果:", ai_response.output])
-        except Exception as e:
-            capture_exception_safe(e, tags={"service": "website", "source": "line_agent"})
-            web_log.error(f"Error in AI analysis: {e}")
-            text = "\n".join([report_text, "", "AI 分析結果: 無法取得分析結果"])
-
-    else:
-        text = "請提供一個有效的網址。"
-
-    with ApiClient(configuration) as api_client:
-        line_bot_api = MessagingApi(api_client)
-        line_bot_api.reply_message_with_http_info(
-            ReplyMessageRequest(
-                reply_token=event.reply_token,
-                messages=[TextMessage(text=text)],
-            )
-        )
-
-
-@app.get("/to/discordauth")
-async def to_discordauth(request: Request):
-    auth = DiscordOAuth.create_from_db(discord_oauth_client, scopes=["identify", "connections"])
+@router.get("/to/discordauth")
+async def to_discordauth(request: StarRequest):
+    auth = DiscordOAuth.create_from_db(request.app_state.discord_oauth_client, scopes=["identify", "connections"])
     url, state = auth.get_authorization_url()
     response = RedirectResponse(url=url)
     response.set_cookie(key="oauth_state", value=state, httponly=True, secure=True, samesite="lax", max_age=600)
     return response
 
 
-@app.get("/to/twitchauth")
-async def to_twitchauth(request: Request):
+@router.get("/to/twitchauth")
+async def to_twitchauth(request: StarRequest):
     twitch_scopes = [
         "chat:read",
         "channel:read:subscriptions",
@@ -339,24 +281,24 @@ async def to_twitchauth(request: Request):
         "channel:manage:polls",
         "channel:manage:predictions",
     ]
-    auth = TwitchOAuth.create_from_db(twitch_oauth_client, scopes=twitch_scopes)
+    auth = TwitchOAuth.create_from_db(request.app_state.twitch_oauth_client, scopes=twitch_scopes)
     url, state = auth.get_authorization_url(force_verify="true")
     response = RedirectResponse(url=url)
     response.set_cookie(key="oauth_state", value=state, httponly=True, secure=True, samesite="lax", max_age=600)
     return response
 
 
-@app.get("/to/discordbot")
-async def to_discordbot(request: Request):
-    auth = DiscordOAuth.create_from_db(discord_oauth_client, scopes=["identify", "applications.commands.permissions.update", "bot"])
+@router.get("/to/discordbot")
+async def to_discordbot(request: StarRequest):
+    auth = DiscordOAuth.create_from_db(request.app_state.discord_oauth_client, scopes=["identify", "applications.commands.permissions.update", "bot"])
     url, state = auth.get_authorization_url(permissions="8")
     response = RedirectResponse(url=url)
     response.set_cookie(key="oauth_state", value=state, httponly=True, secure=True, samesite="lax", max_age=600)
     return response
 
 
-@app.get("/to/googleauth")
-async def to_googleauth(request: Request):
+@router.get("/to/googleauth")
+async def to_googleauth(request: StarRequest):
     # TODO: scopes存放整理
     scopes = [
         "https://www.googleapis.com/auth/userinfo.profile",
@@ -364,13 +306,14 @@ async def to_googleauth(request: Request):
         "openid",
         "https://www.googleapis.com/auth/youtube",
     ]
-    auth = GoogleOAuth.create_from_db(google_oauth_settings, scopes=scopes)
+    auth = GoogleOAuth.create_from_db(request.app_state.google_oauth_settings, scopes=scopes)
     url, state = auth.get_authorization_url(access_type="offline")
     response = RedirectResponse(url=url)
     response.set_cookie(key="oauth_state", value=state, httponly=True, secure=True, samesite="lax", max_age=600)
     return response
 
-@app.get("/logout")
+
+@router.get("/logout")
 async def logout(request: Request):
     response = RedirectResponse(url=BASE_WWW_URL)
     response.delete_cookie("jwt", domain=f".{BASE_DOMAIN}", httponly=True, secure=True, samesite="lax", path="/")
@@ -393,65 +336,55 @@ async def verify_jwt(request: Request):
         raise HTTPException(status_code=401, detail="Invalid JWT")
 
 
-@app.get("/discord/data")
+@router.get("/discord/data")
 async def api_discord(user_data: dict = Depends(verify_jwt)):
     return JSONResponse(content={"status": "ok", "message": "Discord API is working", "user": user_data})
 
 
-# @app.get('/book/{book_id}',response_class=JSONResponse)
-# def get_book_by_id(book_id: int):
-#     return {
-#         'book_id': book_id
-#     }
+# class WebsiteThread(BaseThread):
+#     def __init__(self):
+#         super().__init__(name="WebsiteThread")
+#         self.server = None
+#         self.loop = None
 
-# @app.get("/items/{id}", response_class=HTMLResponse)
-# async def read_item(request: Request, id: str):
-#     html_file = open().read()
-#     return html_file
+#     def run(self):
+#         cert_dir = Path(__file__).parent.parent / "database"
+#         certfile = cert_dir / "localhost+2.pem"
+#         keyfile = cert_dir / "localhost+2-key.pem"
+#         app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
+#         setup_star_server(app, None, sqldb)
 
+#         if certfile.exists() and keyfile.exists():
+#             config = uvicorn.Config(
+#                 app,
+#                 host="0.0.0.0",
+#                 port=14000,
+#                 ssl_certfile=str(certfile),
+#                 ssl_keyfile=str(keyfile),
+#             )
+#         else:
+#             config = uvicorn.Config(app, host="0.0.0.0", port=14000)
 
-class WebsiteThread(BaseThread):
-    def __init__(self):
-        super().__init__(name="WebsiteThread")
-        self.server = None
-        self.loop = None
+#         self.server = uvicorn.Server(config)
 
-    def run(self):
-        cert_dir = Path(__file__).parent.parent / "database"
-        certfile = cert_dir / "localhost+2.pem"
-        keyfile = cert_dir / "localhost+2-key.pem"
+#         # ⚠ 使用獨立 event loop，不使用 asyncio.run()
+#         self.loop = asyncio.new_event_loop()
+#         asyncio.set_event_loop(self.loop)
 
-        if certfile.exists() and keyfile.exists():
-            config = uvicorn.Config(
-                app,
-                host="0.0.0.0",
-                port=14000,
-                ssl_certfile=str(certfile),
-                ssl_keyfile=str(keyfile),
-            )
-        else:
-            config = uvicorn.Config(app, host="0.0.0.0", port=14000)
+#         try:
+#             self.loop.run_until_complete(self.server.serve())
+#         except Exception as exc:
+#             capture_exception_safe(exc, tags={"service": "website", "source": "website_thread_run"})
+#             log.exception("Website thread crashed: %s", exc)
+#             raise
+#         finally:
+#             self.loop.close()
 
-        self.server = uvicorn.Server(config)
-
-        # ⚠ 使用獨立 event loop，不使用 asyncio.run()
-        self.loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(self.loop)
-
-        try:
-            self.loop.run_until_complete(self.server.serve())
-        except Exception as exc:
-            capture_exception_safe(exc, tags={"service": "website", "source": "website_thread_run"})
-            web_log.exception("Website thread crashed: %s", exc)
-            raise
-        finally:
-            self.loop.close()
-
-    def stop(self):
-        if self.server:
-            self.server.should_exit = True
+#     def stop(self):
+#         if self.server:
+#             self.server.should_exit = True
 
 
-if __name__ == "__main__":
-    web = WebsiteThread()
-    web.start()
+# if __name__ == "__main__":
+#     web = WebsiteThread()
+#     web.start()

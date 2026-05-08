@@ -60,7 +60,7 @@ def run_twitch_bot():
     time.sleep(1)
 
 def run_website():
-    from starServer.bot_website import WebsiteThread
+    from v2_starWeb.main import WebsiteThread
 
     log.debug("website start running...")
     try:
