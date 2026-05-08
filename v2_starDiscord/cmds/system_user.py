@@ -50,7 +50,7 @@ class system_user(Cog_Extension):
 
         embeds = [user_embed, cloud_user_embed]
 
-        if ctx.guild_id in self.bot.happycamp_guild:
+        if ctx.guild_id == self.bot.happycamp_guild:
             happycamp_embed = BotEmbed.general("快樂營使用者資料", icon_url=user_dc.avatar.url if user_dc.avatar else None)
             happycamp_embed.add_field(name="累計語音時間", value=self.bot.sqldb.get_voice_time(user_dc.id, ctx.guild_id).total_minute)
             embeds.append(happycamp_embed)

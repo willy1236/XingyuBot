@@ -92,7 +92,7 @@ class AnnoModal(discord.ui.Modal):
                     await channel.send(embed=embed)
                 send_success += 1
             except Exception:
-                log.error("anno: %s/%s", i.guild_id, i.channel_id, exc_info=True)
+                log.exception("anno: %s/%s", i.guild_id, i.channel_id)
 
         await msg.edit_original_response(content=f"已向{send_success}/{len(channels)}個頻道發送公告")
 
@@ -126,7 +126,7 @@ class BotUpdateModal(discord.ui.Modal):
                     await channel.send(embed=embed)
                 send_success += 1
             except Exception:
-                log.error("botupdate: %s/%s", i.guild_id, i.channel_id, exc_info=True)
+                log.exception("botupdate: %s/%s", i.guild_id, i.channel_id)
 
         await msg.edit_original_response(content=f"已向{send_success}/{len(channels)}個頻道發送公告")
 
