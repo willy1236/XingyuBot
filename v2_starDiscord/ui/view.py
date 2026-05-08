@@ -3,8 +3,6 @@ from __future__ import annotations
 import asyncio
 import io
 import logging
-import random
-from datetime import datetime
 from typing import TYPE_CHECKING
 
 import discord

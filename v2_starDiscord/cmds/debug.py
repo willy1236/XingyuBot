@@ -8,7 +8,8 @@ import matplotlib.pyplot as plt
 from discord.ext import commands, tasks
 from mcstatus import JavaServer
 
-from starDiscord.checks import has_privilege_level
+from Instance import debug_guilds, happycamp_guild
+from v2_starDiscord.checks import has_privilege_level
 from v2_starlib.database import NotifyCommunityType, PrivilegeLevel
 from v2_starlib.exceptions import *
 from v2_starlib.utils.map import sunmon_area

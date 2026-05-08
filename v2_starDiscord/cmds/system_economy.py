@@ -2,6 +2,8 @@ import discord
 from discord.commands import SlashCommandGroup
 from discord.ext import commands
 
+from Instance import debug_guilds
+
 from ..extension import Cog_Extension
 from ..ui.embeds import BotEmbed
 

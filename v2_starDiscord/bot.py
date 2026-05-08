@@ -59,7 +59,7 @@ class DiscordBot(discord.Bot):
 
     def load_all_extensions(self):
         for filepath in self._COG_PATH.glob("*.py"):
-            self.load_extension(f"starDiscord.cmds.{filepath.stem}")
+            self.load_extension(f"v2_starDiscord.cmds.{filepath.stem}")
 
     @property
     def mention_owner(self):

@@ -6,6 +6,7 @@ import time
 import truststore
 from fastapi import FastAPI
 
+from Instance import Jsondb, sqldb
 from sentry_bootstrap import init_sentry
 from v2_starDiscord.bot import DiscordBot
 from v2_starlib.base import get_settings
@@ -23,8 +24,6 @@ log = logging.getLogger(__name__)
 
 async def main():
     settings = get_settings()
-    sqldb = create_sqldb()
-    Jsondb = JsonDatabase()
     sclient = StarEventBus()
     client_provider = ClientProvider(sqldb)
 

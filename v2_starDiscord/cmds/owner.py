@@ -11,8 +11,10 @@ from discord.commands import SlashCommandGroup
 from discord.ext import commands
 from mcstatus import JavaServer
 
+from Instance import debug_guilds, happycamp_guild, mcserver_guilds
 from v2_starlib.base import get_settings
-from v2_starlib.database import NotifyChannelType
+from v2_starlib.database import NotifyChannelType, SQLRepository
+from v2_starlib.fileDatabase import JsonDatabase
 from v2_starlib.utils.convert import base64_to_buffer
 from v2_starlib.utils.network import find_radmin_vpn_network, get_arp_list
 from v2_starlib.utils.time import nowtz, time_to_datetime
@@ -25,9 +27,6 @@ from ..ui.view import McServerPanel, VIPAuditView, VIPView
 from ..utils import ChoiceList
 
 if TYPE_CHECKING:
-    from v2_starlib.database import SQLRepository
-    from v2_starlib.fileDatabase import JsonDatabase
-
     from ..bot import DiscordBot
 
 log = logging.getLogger(__name__)

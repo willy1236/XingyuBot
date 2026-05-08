@@ -12,6 +12,7 @@ from discord.errors import Forbidden, NotFound
 from discord.ext import commands, pages
 from discord.utils import format_dt
 
+from Instance import drive_share_guilds, happycamp_guild
 from v2_starlib.database import Coins, Giveaway
 from v2_starlib.database.postgresql.models import Giveaway
 from v2_starlib.providers import XingyuGoogleCloud

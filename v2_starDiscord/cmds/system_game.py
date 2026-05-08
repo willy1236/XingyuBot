@@ -17,10 +17,12 @@ from v2_starlib.utils import nowtz
 from ..bot import DiscordBot
 from ..checks import RegisteredContext, ensure_registered
 from ..extension import Cog_Extension
-from ..ui.embeds import BotEmbed
+from ..ui.embeds import BotEmbed, to_embed
 from ..utils import ChoiceList
 
 game_option = ChoiceList.set("game_set_option")
+
+csvdb = None  # 佔位，實際上已經被移除，請勿使用
 
 
 def get_riot_account_puuid(bot: DiscordBot, user: discord.User, riot_id: str = None) -> str | None:
@@ -249,9 +251,9 @@ class system_game(Cog_Extension):
     @osu.command(name="user", description="查詢Osu用戶資料", name_localizations=ChoiceList.name("osu_user"))
     @commands.cooldown(rate=1, per=1)
     async def osu_user(self, ctx, username: discord.Option(str, name="玩家名稱", description="要查詢的玩家", default=None)):
-        player = self.osu_api.get_player(username)
+        player = self.bot.api.osu_api.get_player(username)
         if player:
-            await ctx.respond("查詢成功", embed=player.display())
+            await ctx.respond("查詢成功", embed=to_embed(player))
         else:
             await ctx.respond("查詢失敗:查無此玩家", ephemeral=True)
 
