@@ -475,10 +475,10 @@ class GiveawayEndButton(discord.ui.Button):
 
 
 class GiveawayView(discord.ui.View):
-    def __init__(self, giveaway: Giveaway, sqldb: SQLRepository, bot: DiscordBot, timeout=None):
+    def __init__(self, giveaway: Giveaway, bot: DiscordBot, timeout=None):
         super().__init__(timeout=timeout)
         self.giveaway = giveaway
-        self.sqldb = sqldb
+        self.sqldb = bot.sqldb
         self.bot = bot
         self.Jsondb = bot.Jsondb
         if giveaway.is_on:

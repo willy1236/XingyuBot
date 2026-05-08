@@ -1,0 +1,115 @@
+import logging
+
+import discord
+from discord.ext import commands
+
+from sentry_bootstrap import capture_exception_safe
+from v2_starlib.exceptions import *
+
+from ..extension import Cog_Extension
+
+log = logging.getLogger(__name__)
+
+
+class error(Cog_Extension):
+    @commands.Cog.listener()
+    async def on_application_command_error(self, ctx: discord.ApplicationContext, error: discord.DiscordException):
+        if isinstance(error, commands.CommandOnCooldown):
+            await ctx.respond(f"尚在冷卻：指令還在冷卻中(尚須{int(error.retry_after)}秒)", ephemeral=True)
+        elif isinstance(error, commands.errors.NotOwner):
+            await ctx.respond("缺少權限：你不是機器人擁有者", ephemeral=True)
+        elif isinstance(error, commands.errors.MissingPermissions):
+            permissions_tl = self.bot.Jsondb.jdict.get("permissions")
+            permissions = [permissions_tl.get(i, i) for i in error.missing_permissions]
+            text = ",".join(permissions)
+            await ctx.respond(f"缺少權限：你沒有權限來使用此指令\n缺少權限：{text}", ephemeral=True)
+        elif isinstance(error, commands.errors.BotMissingPermissions):
+            permissions_tl = self.bot.Jsondb.jdict.get("permissions")
+            permissions = [permissions_tl.get(i, i) for i in error.missing_permissions]
+            text = ",".join(permissions)
+            await ctx.respond(f"缺少權限：我沒有權限來使用此指令\n缺少權限：{text}", ephemeral=True)
+
+        elif isinstance(error, commands.errors.NoPrivateMessage):
+            await ctx.respond(f"頻道錯誤：此指令不可在私訊中使用", ephemeral=True)
+
+        # 指令執行時發生錯誤
+        elif isinstance(error, discord.ApplicationCommandInvokeError):
+            if isinstance(error.original, StarException):
+                await ctx.respond("發生錯誤，請再試一次或連繫管理員協助", ephemeral=True)
+                if error.original.original_message and not self.bot.debug_mode:
+                    await self.bot.error(ctx, f"{error.original} ({error.original.original_message})")
+
+            elif isinstance(error.original, discord.errors.Forbidden):
+                await ctx.respond(f"操作被拒：我缺少權限執行這項操作，可能為我的身分組位階較低或缺少必要權限", ephemeral=True)
+                log.warning("Discord 權限被拒: %s", error.original)
+            elif isinstance(error.original, discord.errors.NotFound):
+                await ctx.respond(f"未找到：給定的參數未找到", ephemeral=True)
+                log.warning("Discord 資源未找到: %s", error.original)
+
+            elif isinstance(error.original, (AttributeError, KeyError)):
+                log.error("內部錯誤 - %s: %s", type(error.original).__name__, error.original, exc_info=error.original)
+                capture_exception_safe(
+                    error.original,
+                    tags={"service": "discord", "source": "on_application_command_error"},
+                    extras={"command": str(ctx.command), "guild_id": getattr(ctx.guild, "id", None)},
+                )
+
+                if not ctx.guild or ctx.guild.id not in self.bot.debug_guilds:
+                    await ctx.respond(f"錯誤：機器人內部錯誤（若發生此項錯誤請靜待修復）", ephemeral=True)
+                    await self.bot.error(ctx, error)
+                else:
+                    await ctx.respond(f"錯誤（debug）：```py\n{type(error.original)}：{error.original}```", ephemeral=True)
+
+            elif isinstance(error.original, NotImplementedError):
+                await ctx.respond(f"錯誤：此功能尚未實裝", ephemeral=True)
+                log.warning("功能未實裝: %s", error.original)
+            else:
+                log.error("未知錯誤 - %s: %s", type(error.original).__name__, error.original, exc_info=error.original)
+                capture_exception_safe(
+                    error.original,
+                    tags={"service": "discord", "source": "on_application_command_error"},
+                    extras={"command": str(ctx.command), "guild_id": getattr(ctx.guild, "id", None)},
+                )
+
+                if not ctx.guild or ctx.guild.id not in self.bot.debug_guilds:
+                    await ctx.respond(f"發生未知錯誤，請等待修復", ephemeral=True)
+                    await self.bot.error(ctx, error)
+                else:
+                    await ctx.respond(f"發生未知錯誤（debug）：```py\n{error.original}```", ephemeral=True)
+
+        elif isinstance(error, discord.ApplicationCommandError):
+            await ctx.respond(f"{error}", ephemeral=True)
+            log.warning("ApplicationCommandError: %s", error)
+
+        elif isinstance(error, commands.errors.ArgumentParsingError):
+            await ctx.respond(f"參數錯誤:{error}", ephemeral=True)
+            log.warning("參數解析錯誤: %s", error)
+
+        else:
+            capture_exception_safe(
+                error if isinstance(error, Exception) else Exception(str(error)),
+                tags={"service": "discord", "source": "on_application_command_error_fallback"},
+                extras={"command": str(ctx.command), "guild_id": getattr(ctx.guild, "id", None)},
+            )
+            if not ctx.guild or ctx.guild.id not in self.bot.debug_guilds:
+                await self.bot.error(ctx, error)
+            await ctx.respond(f"發生未知錯誤\n```{error.original if hasattr(error, 'original') else error}```", ephemeral=True)
+            log.error("未分類的錯誤 - %s: %s", type(error).__name__, error, exc_info=error)
+
+    @commands.Cog.listener()
+    async def on_unknown_application_command(self, interaction: discord.Interaction):
+        log.warning("未知指令：%s", interaction.data)
+        await interaction.response.send_message("未知指令：請再試一次", ephemeral=True)
+
+    # @commands.Cog.listener()
+    # async def on_command_error(self,ctx,error):
+    #     if hasattr(ctx.command,'on_error'):
+    #         return
+
+    #     if isinstance(error,commands.errors.MissingRequiredArgument):
+    #         await ctx.send(f'遺失參數:遺失 {error.param} 參數')
+    #         print("遺失參數:",error.param)
+
+
+def setup(bot):
+    bot.add_cog(error(bot))

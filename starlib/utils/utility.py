@@ -130,21 +130,21 @@ class ChoiceList():
         return Jsondb.cmd_names[cmd_name]
 
 
-class converter():
+class converter:
     @staticmethod
-    def time_to_sec(arg:str):
+    def time_to_sec(arg: str):
         """10s->1,0用str相加 s則轉換後用int相乘"""
         dict = {"s": 1, "m": 60, "h": 3600}
-        n=0
+        n = 0
         m = ""
         for i in arg:
             try:
                 int(i)
-                m+=i
+                m += i
             except ValueError:
                 try:
-                    m=int(m)
-                    n=n+(m*dict[i])
+                    m = int(m)
+                    n = n + (m * dict[i])
                     m = ""
                 except KeyError:
                     raise KeyError
@@ -175,27 +175,28 @@ class converter():
         return timedelta(days=days, hours=hours, minutes=minutes, seconds=seconds)
 
 
-async def create_only_role_list(text_input:str,ctx):
+async def create_only_role_list(text_input: str, ctx):
     """投票系統：建立限制投票身分組清單"""
     only_role_list = []
     for i in text_input.split(","):
         if i.endswith(" "):
             i = i[:-1]
-        role = await find.role(ctx,i)
+        role = await find.role(ctx, i)
         if role:
             only_role_list.append(role.id)
     return only_role_list
 
-async def create_role_magification_dict(text_input:str,ctx) -> dict[int, int]:
+
+async def create_role_magification_dict(text_input: str, ctx) -> dict[int, int]:
     """投票系統：建立身分組權重列表"""
     role_magnification_dict = {}
     text = text_input.split(",")
-    for i in range(0,len(text),2):
+    for i in range(0, len(text), 2):
         if text[i].endswith(" "):
             text[i] = text[i][:-1]
         role = await find.role(ctx, text[i])
         if role:
-            role_magnification_dict[role.id] = int(text[i+1])
+            role_magnification_dict[role.id] = int(text[i + 1])
     return role_magnification_dict
 
 def calculate_eletion_session(current_date:datetime) -> int:

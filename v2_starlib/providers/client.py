@@ -20,3 +20,6 @@ class ClientProvider:
         self.apexapi = ApexAPI(sqldb)
         self.cli_api = CLIInterface(sqldb)
         self.ncdr_rss = NCDRRSS()
+        self.riot_api = RiotAPI(sqldb)
+        self.osu_api = OsuAPI(sqldb)
+        self.apexapi = ApexAPI(sqldb)

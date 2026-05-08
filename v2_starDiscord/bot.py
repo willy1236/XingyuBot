@@ -4,7 +4,6 @@ import datetime
 import logging
 from collections.abc import Coroutine
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import discord
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -15,6 +14,7 @@ from v2_starlib.database.postgresql.models import NotifyChannelType, NotifyCommu
 from v2_starlib.fileDatabase import JsonDatabase
 from v2_starlib.providers.client import ClientProvider
 from v2_starlib.pubsub import StarEventBus
+from v2_starlib.utils.time import nowtz
 
 from .ui.embeds import BotEmbed
 
@@ -34,7 +34,10 @@ class DiscordBot(discord.Bot):
 
         self.debug_mode = settings.DEBUG_MODE
         self.bot_code = settings.BOT_CODE
+        self.happycamp_guild = settings.HAPPYCAMP_GUILD[0]
         self.scheduler = AsyncIOScheduler()
+
+        self._guild_registration = {}
 
         if self.bot_code != "1":
             self.debug_guilds = settings.DEBUG_GUILDS
@@ -231,6 +234,19 @@ class DiscordBot(discord.Bot):
         )
         embed.set_footer(text="此機器人由 威立 負責維護")
         return embed
+
+    def check_registration(self, member: discord.Member):
+        earlest = nowtz()
+        earlest_guildid = None
+        guild_list = self._guild_registration.keys()
+        for guild in member.mutual_guilds:
+            if guild.id in guild_list:
+                join_time = guild.get_member(member.id).joined_at
+
+                if join_time and join_time < earlest:
+                    earlest = join_time
+                    earlest_guildid = guild.id
+        return earlest_guildid
 
     # async def on_twitch_stream_event(self, event: TwitchStreamEvent):
     #     if not event.content and not event.embed:
