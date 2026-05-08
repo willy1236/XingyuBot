@@ -12,6 +12,7 @@ import matplotlib
 import numpy as np
 from discord.utils import format_dt
 
+from v2_starlib.base import get_settings
 from v2_starlib.database import (
     Giveaway,
     GiveawayUser,
@@ -27,7 +28,7 @@ from v2_starlib.database import (
 from v2_starlib.utils.network import find_radmin_vpn_network
 from v2_starlib.utils.time import nowtz
 
-from .embeds import BotEmbed
+from .embeds import BotEmbed, to_embed
 
 if TYPE_CHECKING:
     from starlib.database import SQLRepository
@@ -579,7 +580,7 @@ class McServerSelect(discord.ui.Select):
     async def callback(self, interaction: discord.Interaction):
         view: McServerPanel = self.view
         view.server_id = self.values[0]  # pyright: ignore[reportOptionalSubscript]
-        embed = view.embed()
+        embed = to_embed(view)
         await interaction.response.edit_message(embed=embed, view=view)
 
 
@@ -606,7 +607,7 @@ class McServerPanel(discord.ui.View):
         if not server:
             return BotEmbed.simple("伺服器未找到", "請確認伺服器ID是否正確")
 
-        embed = server.embed()
+        embed = to_embed(server)
         return embed
 
     @discord.ui.button(label="啟動伺服器", style=discord.ButtonStyle.primary)
@@ -625,13 +626,13 @@ class McServerPanel(discord.ui.View):
                 await interaction.followup.send("🟡已發送開啟指令，伺服器正在啟動...", ephemeral=True)
 
                 server = self.mcss_api.get_server_detail(self.server_id)
-                await interaction.edit_original_response(embed=server.embed())
+                await interaction.edit_original_response(embed=to_embed(server))
                 for _ in range(20):
                     await asyncio.sleep(10)
                     server = self.mcss_api.get_server_detail(self.server_id)
                     if server and server.status == McssServerStatues.Running:
                         await interaction.followup.send("🟢伺服器已開啟", ephemeral=True)
-                        await interaction.edit_original_response(embed=server.embed())
+                        await interaction.edit_original_response(embed=to_embed(server))
                         return
 
         await interaction.followup.send("伺服器啟動超時，請確認伺服器狀態", ephemeral=True)
@@ -652,13 +653,13 @@ class McServerPanel(discord.ui.View):
                 await interaction.followup.send("🟠伺服器正在關閉...", ephemeral=True)
 
                 server = self.mcss_api.get_server_detail(self.server_id)
-                await interaction.edit_original_response(embed=server.embed())
+                await interaction.edit_original_response(embed=to_embed(server))
                 for _ in range(20):
                     await asyncio.sleep(10)
                     server = self.mcss_api.get_server_detail(self.server_id)
                     if server and server.status == McssServerStatues.Stopped:
                         await interaction.followup.send("🛑伺服器已關閉", ephemeral=True)
-                        await interaction.edit_original_response(embed=server.embed())
+                        await interaction.edit_original_response(embed=to_embed(server))
                         return
 
         await interaction.followup.send("伺服器關閉超時，請確認伺服器狀態", ephemeral=True)
@@ -750,9 +751,9 @@ class VIPApplicationForm(discord.ui.Modal):
         form = HappycampApplicationForm(discord_id=interaction.user.id, content=f"申請VIP等級：{vip_level}\n備註：{remarks}", submitted_at=nowtz(), change_vip_level=vip_level)
         self.sqldb.add(form)
 
-        channel = interaction.client.get_channel(vip_admin_channel)
+        channel = interaction.client.get_channel(get_settings().VIP_ADMIN_CHANNEL)
         if channel:
-            await channel.send(embed=form.embed())
+            await channel.send(embed=to_embed(form))
         else:
             log.warning("無法找到VIP申請審核頻道，請確認頻道ID是否正確")
 
@@ -808,7 +809,7 @@ class VIPAuditView(discord.ui.View):
             self.form.reviewed_at = nowtz()
             self.form.reviewer_id = interaction.user.id
             self.sqldb.merge(self.form)
-            await interaction.edit_original_message(embed=self.form.embed())
+            await interaction.edit_original_message(embed=to_embed(self.form))
             await interaction.followup.send(content="已通過申請", ephemeral=True)
 
             if self.form.change_vip_level is not None:
@@ -855,7 +856,7 @@ class VIPAuditView(discord.ui.View):
             self.form.reviewed_at = nowtz()
             self.form.reviewer_id = interaction.user.id
             self.sqldb.merge(self.form)
-            await interaction.edit_original_message(embed=self.form.embed())
+            await interaction.edit_original_message(embed=to_embed(self.form))
             await interaction.followup.send(content="已拒絕申請", ephemeral=True)
         else:
             await interaction.response.send_message("已取消審核", ephemeral=True)
