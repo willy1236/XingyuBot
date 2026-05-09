@@ -94,6 +94,7 @@ def keep_alive(request: Request):
 
 
 async def prase_yt_push(content: str, sqldb: SQLRepository, bot: DiscordBot):
+    # TODO: 這裡的 prase_yt_push 需要重構，現在的實現過於依賴外部狀態（如 sqldb 和 bot），不易測試和維護。建議將其拆分為更小的函數，並明確其輸入和輸出。
     feed = feedparser.parse(content)
     # with open("test.json", "w", encoding="utf-8") as f:
     # 	json.dump(feed, f, ensure_ascii=False, indent=4)

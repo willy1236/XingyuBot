@@ -1,6 +1,7 @@
 from discord.ext import commands
 
 from ..extension import Cog_Extension
+from ..ui.embeds import BotEmbed
 
 
 class weather(Cog_Extension):
@@ -9,7 +10,7 @@ class weather(Cog_Extension):
     async def earthquake(self, ctx):
         report = self.bot.api.cwa_api.get_earthquake_report()
         if report:
-            await ctx.respond("查詢成功", embed=report.embed())
+            await ctx.respond("查詢成功", embed=BotEmbed.format(report))
         else:
             await ctx.respond("查詢失敗", delete_after=5)
 
@@ -18,7 +19,7 @@ class weather(Cog_Extension):
     async def forecast(self, ctx):
         report = self.bot.api.cwa_api.get_forecast()
         if report:
-            await ctx.respond("查詢成功", embed=report.embed())
+            await ctx.respond("查詢成功", embed=BotEmbed.format(report))
         else:
             await ctx.respond("查詢失敗", delete_after=5)
 
@@ -27,7 +28,7 @@ class weather(Cog_Extension):
     async def weatherwarning(self, ctx):
         reports = self.bot.api.cwa_api.get_weather_warning()
         if reports:
-            await ctx.respond("查詢成功", embeds=[report.embed() for report in reports])
+            await ctx.respond("查詢成功", embeds=[BotEmbed.format(report) for report in reports])
         else:
             await ctx.respond("目前無發布中警特報", delete_after=5)
 

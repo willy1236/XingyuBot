@@ -128,7 +128,7 @@ class system_community(Cog_Extension):
     async def twitch_user(self, ctx, twitch_user_login: discord.Option(str, required=True, name="twitch使用者名稱", description="英文的使用者名稱")):
         user = self.bot.api.tw_api.get_user(twitch_user_login)
         if user:
-            await ctx.respond(embed=user.display())
+            await ctx.respond(embed=BotEmbed.format(user))
         else:
             await ctx.respond(f"查詢不到 {twitch_user_login}", ephemeral=True)
 
@@ -136,7 +136,7 @@ class system_community(Cog_Extension):
     async def youtube_channel(self, ctx, ythandle: discord.Option(str, required=True, name="youtube帳號代碼", description="youtube頻道中以@開頭的代號")):
         channel = self.bot.api.google_api.get_channel(handle=ythandle)
         if channel:
-            await ctx.respond("查詢成功", embed=channel.embed())
+            await ctx.respond("查詢成功", embed=BotEmbed.format(channel))
         else:
             await ctx.respond("查詢失敗", ephemeral=True)
 
@@ -316,7 +316,7 @@ class system_community(Cog_Extension):
     async def twitter_user(self, ctx, twitter_username: discord.Option(str, required=True, name="twitter使用者名稱", description="使用者名稱")):
         user = self.bot.api.cli_api.get_user_details(twitter_username)
         if user:
-            await ctx.respond(embed=user.embed())
+            await ctx.respond(embed=BotEmbed.format(user))
         else:
             await ctx.respond(f"查詢不到 {twitter_username}", ephemeral=True)
 
@@ -324,7 +324,7 @@ class system_community(Cog_Extension):
     async def twitter_tweet(self, ctx, tweet_id: discord.Option(str, required=True, name="推文id", description="推文的ID（數字）")):
         tweet = self.bot.api.cli_api.get_tweet_details(tweet_id)
         if tweet:
-            await ctx.respond(embed=tweet.embed())
+            await ctx.respond(embed=BotEmbed.format(tweet))
         else:
             await ctx.respond(f"查詢不到 {tweet_id} 的推文", ephemeral=True)
 

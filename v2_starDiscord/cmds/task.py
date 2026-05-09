@@ -16,6 +16,7 @@ from v2_starlib.utils import ensure_utc, get_arp_list, nowtz
 
 from ..bot import DiscordBot
 from ..extension import Cog_Extension
+from ..ui.embeds import BotEmbed
 from ..ui.view import GiveawayView
 
 voice_times: dict[int, dict[int, timedelta]] = {}
@@ -99,9 +100,9 @@ class task(Cog_Extension):
 
         for data in earthquake_records:
             if data.is_significant:
-                await self.bot.send_notify_channel(data.embed(), NotifyChannelType.MajorQuakeNotifications, "顯著有感地震報告")
+                await self.bot.send_notify_channel(BotEmbed.format(data), NotifyChannelType.MajorQuakeNotifications, "顯著有感地震報告")
             else:
-                await self.bot.send_notify_channel(data.embed(), NotifyChannelType.SlightQuakeNotifications, "小區域地震報告")
+                await self.bot.send_notify_channel(BotEmbed.format(data), NotifyChannelType.SlightQuakeNotifications, "小區域地震報告")
 
         timefrom = earthquake_records[-1].originTime + timedelta(seconds=1)
         self.bot.sqldb.set_notify_cache(NotifyChannelType.MajorQuakeNotifications, timefrom)
@@ -128,7 +129,7 @@ class task(Cog_Extension):
         datas = [i for i in apidatas if i.datasetInfo.issueTime > report_time]
         for data in datas:
             report_time = data.datasetInfo.issueTime
-            await self.bot.send_notify_channel(data.embed(), NotifyChannelType.WeatherWarning)
+            await self.bot.send_notify_channel(BotEmbed.format(data), NotifyChannelType.WeatherWarning)
         self.bot.sqldb.set_notify_cache(NotifyChannelType.WeatherWarning, report_time)
 
     async def typhoon_warning_check(self):
@@ -143,13 +144,13 @@ class task(Cog_Extension):
         datas = [i for i in apidatas if i.updated > report_time]
         for data in datas:
             report_time = data.updated
-            await self.bot.send_notify_channel(data.embed(), NotifyChannelType.TyphoonWarning)
+            await self.bot.send_notify_channel(BotEmbed.format(data), NotifyChannelType.TyphoonWarning)
         self.bot.sqldb.set_notify_cache(NotifyChannelType.TyphoonWarning, report_time)
 
     async def forecast_update(self):
         forecast = self.bot.api.cwa_api.get_forecast()
         if forecast:
-            await self.bot.edit_notify_channel(forecast.embed(), NotifyChannelType.WeatherForecast, "6小時天氣預報")
+            await self.bot.edit_notify_channel(BotEmbed.format(forecast), NotifyChannelType.WeatherForecast, "6小時天氣預報")
 
     async def apex_map_rotation(self):
         try:
@@ -177,7 +178,7 @@ class task(Cog_Extension):
                 # 直播開始
                 update_data[user_id] = live_data.started_at
 
-                embed = live_data.embed()
+                embed = BotEmbed.format(live_data)
                 await self.bot.send_notify_communities(embed, NotifyCommunityType.TwitchLive, user_id)
 
             elif not live_data and cache_data:
@@ -200,7 +201,7 @@ class task(Cog_Extension):
                 update_data[user_id] = videos[-1].created_at
 
                 for video in videos:
-                    embed = video.embed()
+                    embed = BotEmbed.format(video)
                     await self.bot.send_notify_communities(embed, NotifyCommunityType.TwitchVideo, video.user_id)
 
         self.bot.sqldb.set_community_caches(NotifyCommunityType.TwitchVideo, update_data)
@@ -232,7 +233,7 @@ class task(Cog_Extension):
                     if not video:
                         continue
                     if clip.title != video.title:
-                        embed = clip.embed(video)
+                        embed = BotEmbed.format(clip, video)
                         await self.bot.send_notify_communities(embed, NotifyCommunityType.TwitchClip, broadcaster_id)
 
                 update_data[broadcaster_id] = newest + timedelta(seconds=1)
@@ -259,7 +260,7 @@ class task(Cog_Extension):
             api_videos = self.bot.api.google_api.get_video(video_id_list)
             # 發布通知
             for video in api_videos:
-                embed = video.embed()
+                embed = BotEmbed.format(video)
                 await self.bot.send_notify_communities(embed, NotifyCommunityType.Youtube, ytchannel_id, no_mention=video.is_live_end)
 
                 if video.is_live_upcoming_with_time:
@@ -455,7 +456,7 @@ class task(Cog_Extension):
             if video_now.snippet.liveBroadcastContent == "live":
                 log.info("youtube_start_live_notify: %s is live", video_now.snippet.title)
 
-                embed = video_now.embed()
+                embed = BotEmbed.format(video_now)
                 await self.bot.send_notify_communities(embed, NotifyCommunityType.Youtube, video_now.snippet.channelId)
                 break
             await asyncio.sleep(120)

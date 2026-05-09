@@ -640,7 +640,8 @@ class owner(Cog_Extension):
         await ctx.defer()
         form = self.bot.sqldb.get_form(form_id)
         if form:
-            await ctx.respond("已開啟申請審核面板", view=VIPAuditView(form=form), embed=form.embed(), ephemeral=True)
+            view = VIPAuditView(form=form)
+            await ctx.respond("已開啟申請審核面板", view=view, embed=view.embed(), ephemeral=True)
         else:
             await ctx.respond("找不到此申請表單", ephemeral=True)
 

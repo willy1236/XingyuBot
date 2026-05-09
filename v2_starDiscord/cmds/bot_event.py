@@ -10,7 +10,7 @@ from v2_starlib.database import NotifyChannelType
 from v2_starlib.utils.time import nowtz
 
 from ..extension import Cog_Extension
-from ..ui.embeds import BotEmbed
+from ..ui.embeds import BotEmbed, to_embed
 from ..ui.view import PollView, ReactionRoleView, TicketChannelView, TicketLobbyView
 
 keywords = {}

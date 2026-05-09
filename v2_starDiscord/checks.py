@@ -83,7 +83,7 @@ def ensure_registered():
                 return await func(cog, ctx, *args, **kwargs)
             else:
                 # 未註冊，發送條款按鈕
-                view = RegisterView()
+                view = RegisterView(sqldb)
                 embed = discord.Embed(title="📝 註冊帳號", description="歡迎使用本服務！在開始之前，請先建立新帳號或綁定原有帳號", color=discord.Color.blue())
                 await ctx.respond(embed=embed, view=view, ephemeral=True)
                 return  # 中斷執行，不進入原本的指令內容

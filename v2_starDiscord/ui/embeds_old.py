@@ -1,10 +1,10 @@
 from collections.abc import Callable
 from datetime import datetime, timedelta
-from functools import singledispatch
 from typing import Any
 
 import discord
 
+from v2_starDiscord.bot import DiscordBot
 from v2_starlib.database.postgresql.models import (
     BackupCategory,
     BackupChannel,
@@ -36,12 +36,6 @@ from v2_starlib.providers.general.models import (
     weather_warning_emojis,
 )
 from v2_starlib.utils.time import nowtz
-
-
-@singledispatch
-def to_embed(model: Any, **kwargs) -> discord.Embed:
-    """預設處理：如果找不到對應的註冊，就噴出基本資訊"""
-    return discord.Embed(title="未定義顯示格式", description=str(model))
 
 
 class BaseBotEmbed:
@@ -125,26 +119,106 @@ class BotEmbed(BaseBotEmbed):
     提供了註冊模型對應格式化函數的功能，並繼承了 BaseBotEmbed 的所有靜態方法，以兼容之前的使用方式。
     """
 
-    _registry: dict[type, Callable[[Any], discord.Embed]] = {}
+    # 儲存單一轉換函式: {ModelType: Callable}
+    _single_formatters: dict[type, Callable[..., discord.Embed]] = {}
+    # 儲存列表轉換函式: {ModelType: Callable}
+    _list_formatters: dict[type, Callable[..., discord.Embed]] = {}
+
+    # 儲存單一轉換函式: {ModelType: Callable}
+    _single_formatters_lists: dict[type, Callable[..., list[discord.Embed]]] = {}
+    # 儲存列表轉換函式: {ModelType: Callable}
+    _list_formatters_lists: dict[type, Callable[..., list[discord.Embed]]] = {}
 
     @classmethod
-    def register(cls, model_class: type):
+    def register(cls, model_class: type, is_list: bool = False, return_list: bool = False):
         def decorator(func):
-            cls._registry[model_class] = func
+            if is_list:
+                if return_list:
+                    cls._list_formatters_lists[model_class] = func
+                else:
+                    cls._list_formatters[model_class] = func
+            else:
+                if return_list:
+                    cls._single_formatters_lists[model_class] = func
+                else:
+                    cls._single_formatters[model_class] = func
             return func
 
         return decorator
 
     @classmethod
-    def to_embed(cls, model: Any, **kwargs) -> discord.Embed:
-        formatter = cls._registry.get(type(model))
+    def format(cls, data: Any, **kwargs) -> discord.Embed:
+        """
+        統一的對外轉 Embed 介面，會自動辨識單一或列表。
+        """
+        # 1. 處理 列表 (List) 情況
+        if isinstance(data, list):
+            if not data:
+                return discord.Embed(title="無資料", description="列表內沒有任何項目。", color=discord.Color.gray())
+
+            first_item_type = type(data[0])
+            formatter = cls._list_formatters.get(first_item_type)
+
+            # 簡化點 1：如果沒定義 list 轉換器，自動幫忙轉成「預設列表樣式」，不用重寫！
+            if not formatter:
+                return cls._default_list_fallback(data, first_item_type, **kwargs)
+
+            return formatter(data, **kwargs)
+
+        # 2. 處理 單一 Model 情況
+        model_type = type(data)
+        formatter = cls._single_formatters.get(model_type)
         if not formatter:
-            raise ValueError(f"找不到對應的 Embed 格式化工具: {type(model)}")
-        return formatter(model, **kwargs)
+            return discord.Embed(title="未定義顯示格式", description=str(data))
+
+        return formatter(data, **kwargs)
+
+    @classmethod
+    def format_list(cls, data: Any, **kwargs) -> list[discord.Embed]:
+        """ """
+        # 1. 處理 列表 (List) 情況
+        if isinstance(data, list):
+            if not data:
+                return [discord.Embed(title="無資料", description="列表內沒有任何項目。", color=discord.Color.gray())]
+
+            first_item_type = type(data[0])
+            formatter = cls._list_formatters_lists.get(first_item_type)
+
+            # 簡化點 1：如果沒定義 list 轉換器，自動幫忙轉成「預設列表樣式」，不用重寫！
+            if not formatter:
+                return [cls._default_list_fallback(data, first_item_type, **kwargs)]
+
+            return formatter(data, **kwargs)
+
+        # 2. 處理 單一 Model 情況
+        model_type = type(data)
+        formatter = cls._single_formatters_lists.get(model_type)
+        if not formatter:
+            return [discord.Embed(title="未定義顯示格式", description=str(data))]
+
+        return formatter(data, **kwargs)
+
+    @classmethod
+    def _default_list_fallback(cls, data_list: list[Any], model_type: type, **kwargs) -> discord.Embed:
+        """
+        【簡化核心】預設的列表備援方案。
+        如果某個 Model 沒有特地寫 @register(Model, is_list=True)，
+        我們就自動調用單一轉換器，並將它們打包在一起，或者做成簡單的摘要。
+        """
+        embed = discord.Embed(title=f"📋 {model_type.__name__} 列表", color=0xC4E9FF)
+        descriptions = []
+        for idx, item in enumerate(data_list[:10], 1):
+            # 這裡您可以根據需求，嘗試調用單一轉換器的 title，或直接轉 string
+            descriptions.append(f"**{idx}.** {str(item)}")
+
+        embed.description = "\n".join(descriptions) or "無資料"
+        if len(data_list) > 10:
+            embed.set_footer(text=f"僅顯示前 10 筆項目 (總計: {len(data_list)} 筆)")
+        return embed
 
 
-@to_embed.register
-def _(model: UserModerate, Jsondb: JsonDatabase) -> discord.Embed:
+@BotEmbed.register(UserModerate)
+def _(model: UserModerate, Jsondb: JsonDatabase, **kwargs) -> discord.Embed:
     user_mention = f"<@{model.discord_id}>"
     moderator_mention = f"<@{model.moderate_user}>"
     warning_type = Jsondb.get_tw(model.moderate_type, "warning_type")
@@ -161,21 +235,30 @@ def _(model: UserModerate, Jsondb: JsonDatabase) -> discord.Embed:
     embed = discord.Embed(title=f"{user_mention} 的警告單", description=status_text, color=0xC4E9FF)
     return embed
 
-
-@to_embed.register
-def format_happycamp_application_form(model: HappycampApplicationForm, **kwargs) -> discord.Embed:
-    status_dict = {0: "待審核", 1: "已通過", 2: "已拒絕"}
-    embed = discord.Embed(
-        title=f"申請表單 #{model.form_id} - {status_dict.get(model.status, '未知狀態')}",
-        description=f"- 申請人：<@{model.discord_id}>\n- 提交時間：{model.submitted_at.strftime('%Y-%m-%d %H:%M:%S')}\n- 審核時間：{model.reviewed_at.strftime('%Y-%m-%d %H:%M:%S') if model.reviewed_at else '尚未審核'}\n- 審核者：{f'<@{model.reviewer_id}>' if model.reviewer_id else '尚未審核'}\n- 審核意見：{model.review_comment if model.review_comment else '無'}",
-        color=0xC4E9FF,
+@BotEmbed.register(UserModerate, is_list=True)
+def _(model: list[UserModerate], bot: DiscordBot, Jsondb: JsonDatabase, **kwargs) -> discord.Embed:
+    user = bot.get_user(model[0].discord_id)
+    embed = BotEmbed.general(
+        f"{user.name if user else f'<@{model[0].discord_id}>'} 的警告單列表（共{len(model)}筆）",
+        user.display_avatar.url if user else None,
     )
-    embed.add_field(name="申請內容", value=model.content or "無")
-    embed.add_field(name="變更 VIP 等級", value=str(model.change_vip_level) if model.change_vip_level is not None else "無")
+    for i in model:
+        moderate_user = bot.get_user(i.moderate_user)
+        guild = bot.get_guild(i.create_guild)
+        name = f"編號：{i.warning_id}（{Jsondb.get_tw(i.moderate_type, 'warning_type')}）"
+        value = f"{guild.name if guild else i.create_guild}/{moderate_user.mention if moderate_user else f'<@{i.moderate_user}>'}\n{i.reason}\n{i.create_time.strftime('%Y-%m-%d %H:%M:%S')}"
+        if i.officially_given and i.guild_only:
+            value += "\n官方認證警告 & 伺服器內警告"
+        elif i.officially_given:
+            value += "\n官方認證警告"
+        elif i.guild_only:
+            value += "\n伺服器內警告"
+
+        embed.add_field(name=name, value=value)
     return embed
 
 
-@to_embed.register
+@BotEmbed.register(BackupRole)
 def format_backup_role(model: BackupRole, **kwargs) -> discord.Embed:
     embed = BaseBotEmbed.simple(model.role_name, model.description)
     embed.add_field(name="創建於", value=model.created_at.strftime("%Y/%m/%d %H:%M:%S"))
@@ -185,28 +268,28 @@ def format_backup_role(model: BackupRole, **kwargs) -> discord.Embed:
     return embed
 
 
-@to_embed.register
+@BotEmbed.register(BackupCategory)
 def format_backup_category(model: BackupCategory, **kwargs) -> discord.Embed:
     embed = BaseBotEmbed.simple(model.name, model.description)
     embed.add_field(name="創建於", value=model.created_at.strftime("%Y/%m/%d %H:%M:%S"))
     return embed
 
 
-@to_embed.register
+@BotEmbed.register(BackupChannel)
 def format_backup_channel(model: BackupChannel, **kwargs) -> discord.Embed:
     embed = BaseBotEmbed.simple(model.name, model.description)
     embed.add_field(name="創建於", value=model.created_at.strftime("%Y/%m/%d %H:%M:%S"))
     return embed
 
 
-@to_embed.register
+@BotEmbed.register(BackupMessage)
 def format_backup_message(model: BackupMessage, **kwargs) -> discord.Embed:
     embed = BaseBotEmbed.simple(f"Message from <@{model.author_id}>", model.content or "No content")
     embed.add_field(name="Created at", value=model.created_at.strftime("%Y/%m/%d %H:%M:%S"))
     return embed
 
 
-@to_embed.register
+@BotEmbed.register(RiotUser)
 def format_riot_user(model: RiotUser, **kwargs) -> discord.Embed:
     embed = BaseBotEmbed.general(name=model.fullname)
     embed.add_field(name="puuid", value=model.puuid, inline=False)
@@ -214,7 +297,7 @@ def format_riot_user(model: RiotUser, **kwargs) -> discord.Embed:
     return embed
 
 
-@to_embed.register
+@BotEmbed.register(LOLPlayer)
 def format_lol_player(model: LOLPlayer, **kwargs) -> discord.Embed:
     embed = BaseBotEmbed.general(name=None)
     embed.add_field(name="召喚師等級", value=model.summonerLevel, inline=False)
@@ -228,7 +311,7 @@ def format_lol_player(model: LOLPlayer, **kwargs) -> discord.Embed:
     return embed
 
 
-@to_embed.register
+@BotEmbed.register(LOLMatch)
 def format_lol_match(model: LOLMatch, **kwargs) -> discord.Embed:
     embed = BaseBotEmbed.simple("LOL對戰")
     gamemode = model.info.gameMode
@@ -249,7 +332,7 @@ def format_lol_match(model: LOLMatch, **kwargs) -> discord.Embed:
     return embed
 
 
-@to_embed.register
+@BotEmbed.register(LOLActiveMatch)
 def format_lol_active_match(model: LOLActiveMatch, **kwargs) -> discord.Embed:
     embed = BaseBotEmbed.simple("LOL對戰")
     embed.add_field(name="遊戲模式", value=model.gameMode, inline=False)
@@ -271,7 +354,7 @@ def format_lol_active_match(model: LOLActiveMatch, **kwargs) -> discord.Embed:
     return embed
 
 
-@to_embed.register
+@BotEmbed.register(LOLPlayerRank)
 def format_lol_player_rank(model: LOLPlayerRank, Jsondb: JsonDatabase, **kwargs) -> discord.Embed:
     embed = BaseBotEmbed.simple(Jsondb.lol_jdict["type"].get(model.queueType, model.queueType))
     embed.add_field(name="牌位", value=f"{model.tier} {model.rank}")
@@ -280,7 +363,7 @@ def format_lol_player_rank(model: LOLPlayerRank, Jsondb: JsonDatabase, **kwargs)
     return embed
 
 
-@to_embed.register
+@BotEmbed.register(OsuPlayer)
 def format_osu_player(model: OsuPlayer, **kwargs) -> discord.Embed:
     embed = discord.Embed(title="Osu玩家資訊", url=model.url, color=0xC4E9FF)
     embed.add_field(name="名稱", value=model.name)
@@ -296,7 +379,7 @@ def format_osu_player(model: OsuPlayer, **kwargs) -> discord.Embed:
     return embed
 
 
-@to_embed.register
+@BotEmbed.register(OsuBeatmap)
 def format_osu_beatmap(model: OsuBeatmap, **kwargs) -> discord.Embed:
     embed = discord.Embed(title="Osu圖譜資訊", color=0xC4E9FF)
     embed.add_field(name="名稱", value=model.title)
@@ -314,7 +397,7 @@ def format_osu_beatmap(model: OsuBeatmap, **kwargs) -> discord.Embed:
     return embed
 
 
-@to_embed.register
+@BotEmbed.register(ApexPlayer)
 def format_apex_player(model: ApexPlayer, **kwargs) -> discord.Embed:
     embed = discord.Embed(title="Apex玩家資訊", color=0xC4E9FF)
     embed.add_field(name="名稱", value=model.name)
@@ -332,7 +415,7 @@ def format_apex_player(model: ApexPlayer, **kwargs) -> discord.Embed:
     return embed
 
 
-@to_embed.register
+@BotEmbed.register(ApexMapRotation)
 def format_apex_map_rotation(model: ApexMapRotation, Jsondb: JsonDatabase, **kwargs) -> list[discord.Embed]:
     tl: dict = Jsondb.jdict["ApexMap"]
     event_tl: dict = Jsondb.jdict["ApexEvent"]
@@ -388,7 +471,7 @@ def format_apex_map_rotation(model: ApexMapRotation, Jsondb: JsonDatabase, **kwa
     return embeds
 
 
-@to_embed.register
+@BotEmbed.register(SteamUser)
 def format_steam_user(model: SteamUser, **kwargs) -> discord.Embed:
     embed = discord.Embed(title=model.personaname, color=0xC4E9FF)
     embed.add_field(name="用戶id", value=model.steamid)
@@ -403,7 +486,7 @@ def format_steam_user(model: SteamUser, **kwargs) -> discord.Embed:
     return embed
 
 
-@to_embed.register
+@BotEmbed.register(DBDPlayer)
 def format_dbd_player(model: DBDPlayer, **kwargs) -> discord.Embed:
     embed = discord.Embed(title="DBD玩家資訊", color=0xC4E9FF)
     embed.add_field(name="玩家名稱", value=model.name)
@@ -430,7 +513,7 @@ def format_dbd_player(model: DBDPlayer, **kwargs) -> discord.Embed:
     return embed
 
 
-@to_embed.register
+@BotEmbed.register(EarthquakeReport)
 def format_earthquake_report(model: EarthquakeReport, **kwargs) -> discord.Embed:
     match model.reportColor:
         case "綠色":
@@ -459,7 +542,7 @@ def format_earthquake_report(model: EarthquakeReport, **kwargs) -> discord.Embed
     return embed
 
 
-@to_embed.register
+@BotEmbed.register(Forecast)
 def format_forecast(model: Forecast, **kwargs) -> discord.Embed:
     embed = BaseBotEmbed.general("天氣預報")
     for data in model.forecast_all:
@@ -470,7 +553,7 @@ def format_forecast(model: Forecast, **kwargs) -> discord.Embed:
     return embed
 
 
-@to_embed.register
+@BotEmbed.register(WeatherWarningReport)
 def format_weather_warning_report(model: WeatherWarningReport, **kwargs) -> discord.Embed:
     emoji = weather_warning_emojis.get(model.datasetInfo.datasetDescription, "🚨")
     embed = BaseBotEmbed.general("天氣警特報", title=f"{emoji}{model.datasetInfo.datasetDescription}", description=f"**{model.contents.content.contentText[1:]}**")
@@ -484,7 +567,7 @@ def format_weather_warning_report(model: WeatherWarningReport, **kwargs) -> disc
     return embed
 
 
-@to_embed.register
+@BotEmbed.register(TyphoonWarningReport)
 def format_typhoon_warning_report(model: TyphoonWarningReport, **kwargs) -> discord.Embed:
     embed = BaseBotEmbed.general("颱風警報", title=model.title, description=model.summary.replace("＊", "\n- "))
     embed.add_field(name="發布時間", value=model.updated.strftime("%Y/%m/%d %H:%M"))
@@ -493,7 +576,7 @@ def format_typhoon_warning_report(model: TyphoonWarningReport, **kwargs) -> disc
     return embed
 
 
-@to_embed.register
+@BotEmbed.register(McssServer)
 def format_mcss_server(model: McssServer, **kwargs) -> discord.Embed:
     embed = BaseBotEmbed.simple(model.name, model.description)
     embed.add_field(name="Minecraft類型", value=model.type)

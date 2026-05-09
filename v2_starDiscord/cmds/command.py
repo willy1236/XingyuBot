@@ -20,7 +20,7 @@ from v2_starlib.utils.time import convert_tz, nowtz
 
 from ..checks import RegisteredContext, ensure_registered
 from ..extension import Cog_Extension
-from ..ui.embeds import BotEmbed
+from ..ui.embeds import BotEmbed, to_embed
 from ..ui.view import DeleteAddRoleView, GiveawayView, PollView
 from ..utils import ChoiceList, create_only_role_list, create_role_magification_dict, find, random_color
 
@@ -204,7 +204,7 @@ class command(Cog_Extension):
 
         page = [list() for _ in range(math.ceil(len(lst) / 3))]
         for i, role in enumerate(lst):
-            page[int(i / 3)].append(role.embed(self.bot))
+            page[int(i / 3)].append(to_embed(role))
 
         paginator = pages.Paginator(pages=page, use_default_buttons=True, loop_pages=True)
         await paginator.respond(ctx.interaction, ephemeral=False)
@@ -374,7 +374,7 @@ class command(Cog_Extension):
     @commands.user_command(name="成員資訊", description="查詢使用者的相關資訊")
     async def whois(self, ctx: discord.ApplicationContext, member: discord.Member):
         dbdata = self.bot.sqldb.get_warnings(member.id, member.guild.id)
-        await ctx.respond(embed=dbdata.display(self.bot, member), ephemeral=True)
+        await ctx.respond(embed=to_embed(dbdata), ephemeral=True)
 
     @commands.user_command(name="禁言10秒")
     @commands.has_permissions(moderate_members=True)
@@ -491,6 +491,7 @@ class command(Cog_Extension):
         role_magnification_dict = await create_role_magification_dict(role_magnification, ctx) if role_magnification else {}
 
         view = PollView.create(
+            self.bot,
             title,
             options,
             ctx.author.id,
@@ -503,9 +504,8 @@ class command(Cog_Extension):
             can_change_vote=None,  # implemented in the future
             only_role_list=only_role_list,
             role_magnification_dict=role_magnification_dict,
-            bot=self.bot,
         )
-        embed = view.embed(ctx.guild)
+        embed = view.embed()
         message = await ctx.respond(embed=embed, view=view)
         view.poll.message_id = message.id
         self.bot.sqldb.merge(view.poll)
@@ -515,8 +515,8 @@ class command(Cog_Extension):
     async def view(self, ctx, poll_id: discord.Option(int, name="投票id", description="")):
         dbdata = self.bot.sqldb.get_poll(poll_id)
         if dbdata:
-            view = PollView(dbdata, sqldb=self.bot.sqldb, bot=self.bot)
-            await ctx.respond(view=view, embed=view.embed(ctx.guild))
+            view = PollView(dbdata, bot=self.bot)
+            await ctx.respond(view=view, embed=view.embed())
         else:
             await ctx.respond("錯誤：查無此ID")
 
@@ -540,7 +540,7 @@ class command(Cog_Extension):
         if is_owner:
             poll.show_name = show_name
         view = PollView(poll, self.bot)
-        embed, image_buffer = view.results_embed(ctx.interaction, True)  # type: ignore
+        embed, image_buffer = view.results_embed(True)
         await ctx.respond(embed=embed, file=discord.File(image_buffer, filename="pie.png"))
 
     @commands.slash_command(description="共用「94共用啦」雲端資料夾", guild_ids=drive_share_guilds)
@@ -551,7 +551,7 @@ class command(Cog_Extension):
         fileId = "1bDtsLbOi5crIOkWUZbQmPq3dXUbwWEan"
         if not email:
             if cuser and cuser.drive_gmail:
-                XingyuGoogleCloud().remove_file_permissions(fileId, cuser.drive_share_id)
+                XingyuGoogleCloud(self.bot.sqldb).remove_file_permissions(fileId, cuser.drive_share_id)
                 cuser.drive_share_id = None
                 cuser.drive_gmail = None
                 self.bot.sqldb.merge(cuser)
@@ -569,7 +569,7 @@ class command(Cog_Extension):
             if not r.search(email):
                 email += "@gmail.com"
 
-            google_data = XingyuGoogleCloud().add_file_permissions(fileId, email)
+            google_data = XingyuGoogleCloud(self.bot.sqldb).add_file_permissions(fileId, email)
             cuser.drive_gmail = email
             cuser.drive_share_id = google_data["id"]
             self.bot.sqldb.merge(cuser)

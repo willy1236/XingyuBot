@@ -251,9 +251,8 @@ class PollView(discord.ui.View):
             role_magnification = poll_role_dict[role_id][1]
             sqldb.merge(PollRole(poll_id=poll.poll_id, role_id=role_id, is_only_role=is_only_role, role_magnification=role_magnification))
 
-        if bot:
-            view = cls(poll, bot)
-            return view
+        view = cls(poll, bot)
+        return view
 
     @property
     def role_dict(self) -> dict[int, tuple[bool, int]]:
@@ -268,10 +267,11 @@ class PollView(discord.ui.View):
                     self._role_dict[role_id] = (is_only_role, role_magnification)
         return self._role_dict
 
-    def embed(self, guild: discord.Guild):
+    def embed(self):
         """guild: 提供投票所在的伺服器"""
         only_role_list = []
         role_magification_list = []
+        guild = self.bot.get_guild(self.poll.guild_id)
         for roleid in self.role_dict:
             role = guild.get_role(roleid)
             if self.role_dict[roleid][0] is True:
@@ -301,11 +301,10 @@ class PollView(discord.ui.View):
             embed.set_author(name=author.name, icon_url=author.avatar.url)
         return embed
 
-    def results_embed(self, interaction: discord.Interaction, with_chart=False) -> tuple[discord.Embed, io.BytesIO] | discord.Embed:
+    def results_embed(self, with_chart=False) -> tuple[discord.Embed, io.BytesIO] | discord.Embed:
         """
         Generate a Discord embed displaying poll results with vote counts and optionally voter names.
         Args:
-            interaction (discord.Interaction): The Discord interaction object used to access guild members
             with_chart (bool, optional): Whether to include a chart image with the embed. Defaults to False.
         Returns:
             tuple[discord.Embed, io.BytesIO] | discord.Embed:
@@ -324,6 +323,7 @@ class PollView(discord.ui.View):
         """
         vote_count_data = self.sqldb.get_poll_vote_count(self.poll.poll_id, not self.poll.ban_alternate_account_voting)
         options_data = self.sqldb.get_poll_options(self.poll.poll_id)
+        guild = self.bot.get_guild(self.poll.guild_id)
 
         if self.poll.show_name:
             user_vote_data = self.sqldb.get_users_poll(self.poll.poll_id, not self.poll.ban_alternate_account_voting)
@@ -336,7 +336,7 @@ class PollView(discord.ui.View):
                 vote_option = i.vote_option
                 vote_magnification = i.vote_magnification
 
-                user = interaction.guild.get_member(discord_id)
+                user = guild.get_member(discord_id)
                 username = user.mention if user else f"<@{discord_id}>"
                 if vote_magnification != 1:
                     username += f"({vote_magnification})"
@@ -797,6 +797,17 @@ class VIPAuditView(discord.ui.View):
             pass
         self.stop()
 
+    def embed(self):
+        status_dict = {0: "待審核", 1: "已通過", 2: "已拒絕"}
+        embed = discord.Embed(
+            title=f"申請表單 #{self.form.form_id} - {status_dict.get(self.form.status, '未知狀態')}",
+            description=f"- 申請人：<@{self.form.discord_id}>\n- 提交時間：{self.form.submitted_at.strftime('%Y-%m-%d %H:%M:%S')}\n- 審核時間：{self.form.reviewed_at.strftime('%Y-%m-%d %H:%M:%S') if self.form.reviewed_at else '尚未審核'}\n- 審核者：{f'<@{self.form.reviewer_id}>' if self.form.reviewer_id else '尚未審核'}\n- 審核意見：{self.form.review_comment if self.form.review_comment else '無'}",
+            color=0xC4E9FF,
+        )
+        embed.add_field(name="申請內容", value=self.form.content or "無")
+        embed.add_field(name="變更 VIP 等級", value=str(self.form.change_vip_level) if self.form.change_vip_level is not None else "無")
+        return embed
+
     @discord.ui.button(label="通過", style=discord.ButtonStyle.success)
     async def approve_button(self, button: discord.ui.Button, interaction: discord.Interaction):
         remark = self.FormRemark()
@@ -881,6 +892,6 @@ class RegisterView(discord.ui.View):
 
     @discord.ui.button(label="我有其他帳號（進行綁定）", style=discord.ButtonStyle.secondary)
     async def link_existing(self, button: discord.ui.Button, interaction: discord.Interaction):
-        from starDiscord.uiElement.modal import LinkAccountModal
+        from v2_starDiscord.ui.modal import LinkAccountModal
 
-        await interaction.response.send_modal(LinkAccountModal())
+        await interaction.response.send_modal(LinkAccountModal(self.sqldb))
