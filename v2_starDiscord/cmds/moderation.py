@@ -10,7 +10,7 @@ from v2_starlib.database import NotifyChannelType, ReactionRoleMessage, Reaction
 from v2_starlib.utils.time import nowtz, time_to_datetime
 
 from ..extension import Cog_Extension
-from ..ui.embeds import EmbedFactory
+from ..ui.embeds import BotEmbed
 from ..ui.embeds.postgresql import UserModerateCtx
 
 # from ..ui.embeds import BotEmbed
@@ -195,8 +195,8 @@ class moderation(Cog_Extension):
     async def get(self, ctx: discord.ApplicationContext, warning_id: discord.Option(str, name="警告編號", description="要查詢的警告", required=True)):
         sheet = self.bot.sqldb.get_warning(int(warning_id))
         if sheet and (ctx.guild.id == sheet.create_guild or ctx.guild.id in self.bot.debug_guilds or ctx.guild.get_member(sheet.discord_id)):
-            embed = EmbedFactory.to_embed(
-                sheet, 
+            embed = BotEmbed.to_embed(
+                sheet,
             )
             await ctx.respond(embed=BotEmbed.format(sheet, Jsondb=self.bot.Jsondb))
         else:

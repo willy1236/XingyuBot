@@ -8,17 +8,17 @@ from typing import overload
 
 import discord
 
+from v2_starDiscord.ui.embeds.base import BotEmbed as BotEmbed
 from v2_starDiscord.ui.embeds.base import EmptyContext as EmptyContext
-from v2_starDiscord.ui.embeds.base import EmbedFactory as EmbedFactory
-from v2_starlib.database.postgresql.models import UserModerate as UserModerate
 from v2_starDiscord.ui.embeds.postgresql import UserModerateCtx as UserModerateCtx
 from v2_starlib.database.postgresql.models import BackupRole as BackupRole
+from v2_starlib.database.postgresql.models import UserModerate as UserModerate
 
 # 已收錄模型：BackupRole, UserModerate
 # 已收錄 Context：EmptyContext, UserModerateCtx
 
 
-class EmbedFactory:
+class BotEmbed:
     # ── UserModerate ──
     @classmethod
     @overload

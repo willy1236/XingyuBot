@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime, timedelta
 from typing import Any
 
 import discord
@@ -49,8 +50,83 @@ class BaseTransformer[T_Model, T_Ctx]:
 
 # ── EmbedFactory ─────────────────────────────────────────────────────────────
 
+class BaseBotEmbed:
+    @staticmethod
+    def bot(bot: discord.Bot, title: str | None = None, description: str | None = None, url: str | None = None):
+        """機器人 格式"""
+        assert bot.user is not None, "Bot user must be set before creating an embed."
+        embed = discord.Embed(title=title, description=description, color=0xC4E9FF, url=url)
+        embed.set_author(name=bot.user.name, icon_url=bot.user.display_avatar.url)
+        return embed
 
-class EmbedFactory:
+    @staticmethod
+    def user(user: discord.User, title: str | None = None, description: str | None = None, url: str | None = None):
+        """使用者 格式"""
+        embed = discord.Embed(title=title, description=description, color=0x00FFFF, url=url)
+        embed.set_author(name=user.name, icon_url=user.display_avatar.url)
+        return embed
+
+    @staticmethod
+    def simple(title: str | None = None, description: str | None = None, url: str | None = None):
+        """簡易:不帶作者"""
+        embed = discord.Embed(title=title, description=description, color=0xC4E9FF, url=url)
+        return embed
+
+    @staticmethod
+    def general(
+        name: str | None = None,
+        icon_url: str | None = None,
+        url: str | None = None,
+        title: str | None = None,
+        description: str | None = None,
+        title_url: str | None = None,
+    ):
+        """普通:自訂作者"""
+        embed = discord.Embed(title=title, description=description, color=0xC4E9FF, url=title_url)
+        embed.set_author(name=name, icon_url=icon_url, url=url)
+        return embed
+
+    @staticmethod
+    def deprecated():
+        """棄用:展示棄用訊息"""
+        embed = discord.Embed(title="此功能目前為棄用狀態", description="此功能目前不開放使用，請洽機器人管理員或支援伺服器", color=0xC4E9FF)
+        return embed
+
+    @staticmethod
+    def rpg(title: str | None = None, description: str | None = None):
+        """RPG系統 格式"""
+        embed = discord.Embed(title=title, description=description, color=0xC4E9FF)
+        embed.set_footer(text="RPG系統 | 開發時期所有東西皆有可能重置")
+        return embed
+
+    @staticmethod
+    def info(title: str | None = None, description: str | None = None, url: str | None = None):
+        """一般資訊 格式"""
+        embed = discord.Embed(title=title, description=description, color=0xC4E9FF, url=url)
+        return embed
+
+    @staticmethod
+    def simple_warn_sheet(
+        warn_user: discord.User | discord.Member,
+        moderate_user: discord.abc.User | discord.Member | discord.ClientUser,
+        create_at: datetime | None = None,
+        last: timedelta = timedelta(seconds=15),
+        reason: str = "未提供原因",
+        title: str = "已被禁言",
+    ):
+        """簡易警告表格"""
+        if create_at is None:
+            create_at = datetime.now()
+        timestamp = create_at + last
+        embed = discord.Embed(description=f"{warn_user.mention}：{reason}", color=0xC4E9FF)
+        embed.set_author(name=f"{warn_user.name} {title}", icon_url=warn_user.display_avatar.url)
+        embed.add_field(name="執行人員", value=moderate_user.mention)
+        embed.add_field(name="結束時間", value=f"{discord.utils.format_dt(timestamp, style='t')}（{last.total_seconds():.0f}s）")
+        embed.timestamp = create_at
+        return embed
+
+
+class BotEmbed(BaseBotEmbed):
     """
     全專案唯一的萬用入口，所有方法皆為 classmethod。
 

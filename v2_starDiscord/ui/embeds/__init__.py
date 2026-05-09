@@ -1,1 +1,1 @@
-from .base import EmbedFactory
+from .base import BotEmbed
