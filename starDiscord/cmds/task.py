@@ -20,6 +20,11 @@ from ..uiElement.view import GiveawayView
 
 voice_times: dict[int, dict[int, timedelta]] = {}
 
+
+def _is_older_than_one_day(created_at: datetime) -> bool:
+    return datetime.now(tz) - created_at > timedelta(days=1)
+
+
 class task(Cog_Extension):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -176,8 +181,9 @@ class task(Cog_Extension):
                 # 直播開始
                 update_data[user_id] = live_data.started_at
 
-                embed = live_data.embed()
-                await self.bot.send_notify_communities(embed, NotifyCommunityType.TwitchLive, user_id)
+                if not _is_older_than_one_day(live_data.started_at):
+                    embed = live_data.embed()
+                    await self.bot.send_notify_communities(embed, NotifyCommunityType.TwitchLive, user_id)
 
             elif not live_data and cache_data:
                 # 直播結束
@@ -199,6 +205,8 @@ class task(Cog_Extension):
                 update_data[user_id] = videos[-1].created_at
 
                 for video in videos:
+                    if _is_older_than_one_day(video.created_at):
+                        continue
                     embed = video.embed()
                     await self.bot.send_notify_communities(embed, NotifyCommunityType.TwitchVideo, video.user_id)
 
@@ -231,6 +239,8 @@ class task(Cog_Extension):
                     if not video:
                         continue
                     if clip.title != video.title:
+                        if _is_older_than_one_day(clip.created_at):
+                            continue
                         embed = clip.embed(video)
                         await self.bot.send_notify_communities(embed, NotifyCommunityType.TwitchClip, broadcaster_id)
 
@@ -258,8 +268,9 @@ class task(Cog_Extension):
             api_videos = google_api.get_video(video_id_list)
             # 發布通知
             for video in api_videos:
-                embed = video.embed()
-                await self.bot.send_notify_communities(embed, NotifyCommunityType.Youtube, ytchannel_id, no_mention=video.is_live_end)
+                if not _is_older_than_one_day(video.snippet.publishedAt):
+                    embed = video.embed()
+                    await self.bot.send_notify_communities(embed, NotifyCommunityType.Youtube, ytchannel_id, no_mention=video.is_live_end)
 
                 if video.is_live_upcoming_with_time:
                     assert video.liveStreamingDetails.scheduledStartTime is not None, "Scheduled start time should not be None for upcoming live videos"
@@ -294,13 +305,14 @@ class task(Cog_Extension):
                     for tweet in tweets:
                         newest = tweet.createdAt if tweet.createdAt > newest else newest
                         # await self.bot.send_notify_communities(None, NotifyCommunityType.TwitterTweet, user_name, content=f"{tweet.author} 轉推了推文↩️\n{tweet.link}" if tweet.is_retweet else f"{tweet.author} 發布新推文\n{tweet.link}")
-                        await self.bot.send_notify_communities(
-                            None,
-                            NotifyCommunityType.TwitterTweet,
-                            twitter_user_id,
-                            default_content=f"{tweet.tweetBy.fullName} 轉推了推文↩️" if tweet.is_retweet else f"{tweet.tweetBy.fullName} 發布新推文",
-                            additional_content=tweet.url,
-                        )
+                        if not _is_older_than_one_day(tweet.createdAt):
+                            await self.bot.send_notify_communities(
+                                None,
+                                NotifyCommunityType.TwitterTweet,
+                                twitter_user_id,
+                                default_content=f"{tweet.tweetBy.fullName} 轉推了推文↩️" if tweet.is_retweet else f"{tweet.tweetBy.fullName} 發布新推文",
+                                additional_content=tweet.url,
+                            )
 
                     update_data[twitter_user_id] = newest + timedelta(seconds=1)
                 await asyncio.sleep(1)
@@ -457,6 +469,8 @@ async def refresh_yt_push():
 
 async def youtube_start_live_notify(bot: DiscordBot, video: YoutubeVideo):
     log.info(f"youtube_start_live_notify: {video.snippet.title}")
+    if _is_older_than_one_day(video.snippet.publishedAt):
+        return
     for _ in range(30):
         video_now = google_api.get_video(video.id)[0]
         if video_now.snippet.liveBroadcastContent == "live":
