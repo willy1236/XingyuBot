@@ -2,12 +2,17 @@ import atexit
 import logging
 import sys
 import time
+import warnings
 
 import discord
 import structlog
 import truststore
 
 from sentry_bootstrap import init_sentry
+
+# 壓制所有第三方套件（虛擬環境 .venv 中）的棄用警告
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+warnings.filterwarnings("ignore", category=UserWarning, module=".*")
 
 truststore.inject_into_ssl()
 
