@@ -45,7 +45,7 @@ class DeleteAddRoleView(discord.ui.View):
         try:
             self.clear_items()
             sqldb.add_role_save(self.role)
-            log.info(f"Role {self.role} has been saved.")
+            log.info("Role saved", extra={"role": str(self.role)})
             await self.message.edit(view=self)
         except discord.errors.NotFound:
             pass
@@ -426,7 +426,7 @@ class ReactionRoleView(discord.ui.View):
             await interaction.response.send_message(f"錯誤：我沒有權限給予或移除身分組，可能為我的身分組位階較低或缺少必要權限", ephemeral=True)
         else:
             await interaction.response.send_message(f"發生錯誤：{error}", ephemeral=True)
-            log.error(f"ReactionRoleView error: {item} / {error}")
+            log.error("ReactionRoleView error", extra={"item": str(item), "error": str(error)})
 
 
 class TRPGPlotButton(discord.ui.Button):
@@ -895,7 +895,7 @@ class VIPAuditView(discord.ui.View):
                 for vip_c in vip_channels:
                     channel = interaction.guild.get_channel(vip_c.channel_id)
                     if not channel:
-                        log.error(f"VIP頻道不存在，無法更新權限，頻道ID：{vip_c.channel_id}")
+                        log.error("VIP頻道不存在，無法更新權限", extra={"channel_id": vip_c.channel_id})
                         continue
 
                     overwrite = channel.overwrites_for(member)

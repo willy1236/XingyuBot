@@ -72,7 +72,7 @@ class task(Cog_Extension):
                 # 將超過28天的抽獎自動關閉
                 giveaway.is_on = False
                 sclient.sqldb.merge(giveaway)
-                log.debug("Ended giveaway: %s", giveaway.id)
+                log.debug("Ended giveaway", extra={"giveaway_id": giveaway.id})
             else:
                 view = GiveawayView(giveaway, sqldb=sclient.sqldb, bot=self.bot)
                 self.bot.add_view(view)
@@ -80,8 +80,8 @@ class task(Cog_Extension):
                     job = scheduler.add_job(
                         giveaway_auto_end, DateTrigger(giveaway.end_at if giveaway.end_at > now else now + timedelta(seconds=10)), args=[self.bot, view]
                     )
-                    log.debug("job added: %s", job)
-                log.debug("Loaded giveaway: %s", giveaway.id)
+                    log.debug("job added", extra={"job": str(job)})
+                log.debug("Loaded giveaway", extra={"giveaway_id": giveaway.id})
         else:
             pass
 
@@ -142,7 +142,7 @@ class task(Cog_Extension):
         report_time = cache.value if cache else datetime.now(tz) - timedelta(days=1)
 
         apidatas = ncdr_rss.get_typhoon_warning(after=report_time)
-        log.info(f"typhoon_warning_check: found {len(apidatas)} new warnings, after {report_time}")
+        log.info("typhoon_warning_check", extra={"found": len(apidatas), "after": report_time})
         if not apidatas:
             return
 
@@ -173,7 +173,7 @@ class task(Cog_Extension):
 
         users_id = [user_id for user_id in caches.keys()]
         data = tw_api.get_lives(users_id)
-        log.debug(f"twitch_live data: {data}")
+        log.debug("twitch_live data", extra={"data": data})
         update_data: dict[str, datetime | None] = {}
 
         for user_id in users_id:
@@ -291,14 +291,14 @@ class task(Cog_Extension):
         update_data: dict[str, datetime] = {}
         for twitter_user_id, cache in caches.items():
             try:
-                log.debug(f"notify_twitter_tweet_updates: {twitter_user_id}")
+                log.debug("notify_twitter_tweet_updates", extra={"twitter_user_id": twitter_user_id})
                 # tweets = rss_hub.get_twitter(user_name, local=True, after=cache.value)
                 results = cli_api.get_user_timeline(twitter_user_id, after=cache.value)
 
-                log.debug(f"notify_twitter_tweet_updates data: {results}")
+                log.debug("notify_twitter_tweet_updates data", extra={"results": results})
 
                 if results is None:
-                    log.warning(f"notify_twitter_tweet_updates error / not found: {twitter_user_id}")
+                    log.warning("notify_twitter_tweet_updates error / not found", extra={"twitter_user_id": twitter_user_id})
                     # sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitterTweet, twitter_user_id)
                 elif results.list:
                     tweets = results.list
@@ -322,7 +322,7 @@ class task(Cog_Extension):
                 log.error(e.stderr)
                 continue
             except Exception as e:
-                log.error(f"notify_twitter_tweet_updates error (id: %s): %s", twitter_user_id, e)
+                log.error("notify_twitter_tweet_updates error", extra={"twitter_user_id": twitter_user_id, "error": str(e)}, exc_info=e)
                 continue
 
         sclient.sqldb.set_community_caches(NotifyCommunityType.TwitterTweet, update_data)
@@ -336,7 +336,7 @@ class task(Cog_Extension):
         for guild_id in voice_time_counter:
             guild = self.bot.get_guild(guild_id)
             if not guild:
-                log.warning(f"Guild not found for voice time counting: {guild_id}")
+                log.warning("Guild not found for voice time counting", extra={"guild_id": guild_id})
                 continue
             if voice_times.get(guild_id) is None:
                 voice_times[guild_id] = {}
@@ -466,17 +466,17 @@ async def refresh_yt_push():
             log.info("refresh_yt_push: %s 已更新到期為 %s", record.channel_id, record.expire_at)
             await asyncio.sleep(1)
         else:
-            log.warning(f"refresh_yt_push failed: {record.channel_id}")
+            log.warning("refresh_yt_push failed", extra={"channel_id": record.channel_id})
 
 
 async def youtube_start_live_notify(bot: DiscordBot, video: YoutubeVideo):
-    log.info(f"youtube_start_live_notify: {video.snippet.title}")
+    log.info("youtube_start_live_notify", extra={"title": video.snippet.title})
     if _is_older_than_one_day(video.snippet.publishedAt):
         return
     for _ in range(30):
         video_now = google_api.get_video(video.id)[0]
         if video_now.snippet.liveBroadcastContent == "live":
-            log.info(f"youtube_start_live_notify: {video_now.snippet.title} is live")
+            log.info("youtube_start_live_notify is live", extra={"title": video_now.snippet.title})
 
             embed = video_now.embed()
             await bot.send_notify_communities(embed, NotifyCommunityType.Youtube, video_now.snippet.channelId)

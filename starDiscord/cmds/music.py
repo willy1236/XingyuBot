@@ -187,7 +187,7 @@ class MusicPlayer():
             if self.vc.is_playing() or self.vc.is_paused():
                 return
 
-            log.debug(f"{self.guildid}: play_next")
+            log.debug("Music play_next", extra={"guild_id": self.guildid})
             song = self.start_first_song()
             try:
                 source = await song.get_source(self.volume)
@@ -208,10 +208,10 @@ class MusicPlayer():
         Args:
             error (Exception): The error that occurred during playback, if any.
         """
-        log.debug(f"{self.guildid}: after")
+        log.debug("Music after", extra={"guild_id": self.guildid})
         # self.play_completed()
         if error:
-            log.error(f"{self.guildid}: 播放後回呼錯誤: {error}")
+            log.error("Music 播放後回呼錯誤", extra={"guild_id": self.guildid, "error": str(error)})
         time.sleep(1)
         if self.playlist or self.songloop:
             # 使用既有的bot loop
@@ -284,6 +284,7 @@ class MusicPlayer():
         self.paused_at = None
         self.paused_total = 0.0
         del guild_playing[self.guildid]
+        log.debug("Music stop", extra={"guild_id": self.guildid})
         await self.channel.send("歌曲播放完畢 掰掰~")
 
     def pause(self):

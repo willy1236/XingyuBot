@@ -160,7 +160,10 @@ class OAuth2Base(ABC):
         if sqldb:
             sqldb.set_oauth(user_id, self.community_type, self.access_token, self.refresh_token, self.expires_at)
         else:
-            log.warning(f"sqldb not found, token not saved. ({user_id=}, {self.community_type=})")
+            log.warning(
+                "sqldb not found, token not saved.",
+                extra={"user_id": user_id, "community_type": self.community_type},
+            )
 
     def refresh(self):
         """

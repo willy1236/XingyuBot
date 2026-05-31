@@ -151,7 +151,7 @@ class JsonDatabase:
         # create folder
         if not self._DBPATH.exists():
             self._DBPATH.mkdir(parents=True, exist_ok=True)
-            log.info(">> Created folder: %s <<", self._DBPATH)
+            log.info("Created folder", extra={"path": str(self._DBPATH)})
 
         for file, path in self._PATH_DICT.items():
             if not path.exists():
@@ -159,7 +159,7 @@ class JsonDatabase:
                     continue
                 with path.open("w", encoding="utf-8") as jfile:
                     json.dump({}, jfile, indent=4)
-                    log.info(">> Created json file: %s <<", file)
+                    log.info("Created json file", extra={"file": file})
 
             with path.open(mode="r", encoding="utf8") as jfile:
                 model_cls = self._MODEL_DICT[file]

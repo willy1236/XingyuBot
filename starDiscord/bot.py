@@ -184,14 +184,14 @@ class DiscordBot(discord.Bot):
                 if additional_content:
                     text = additional_content if text is None else f"{text}\n{additional_content}"
 
-                log.debug("send_notify_communities: %s/%s: %s", guild_id, channel_id, text)
+                log.debug("send_notify_communities started", extra={"guild_id": guild_id, "channel_id": channel_id, "text": text})
                 try:
                     await channel.send(text, embed=embed)
                 except discord.Forbidden:
-                    log.warning("NotifyCommunity:%s, channel missing access: %s/%s", notify_type, guild_id, channel_id)
+                    log.warning("NotifyCommunity: channel missing access", extra={"notify_type": notify_type, "guild_id": guild_id, "channel_id": channel_id})
                 await asyncio.sleep(0.5)
             else:
-                log.warning("NotifyCommunity:%s, channel not found: %s/%s", notify_type, guild_id, channel_id)
+                log.warning("NotifyCommunity: channel not found", extra={"notify_type": notify_type, "guild_id": guild_id, "channel_id": channel_id})
 
     async def send_notify_channel(self, embed: discord.Embed, notify_type: NotifyChannelType, default_content: str | None = None):
         notify_channels = sqldb.get_notify_channel_by_type(notify_type)
@@ -207,10 +207,10 @@ class DiscordBot(discord.Bot):
                 try:
                     await channel.send(text, embed=embed)
                 except discord.Forbidden:
-                    log.warning("%s channel missing access: %s/%s", notify_type, no_channel.guild_id, no_channel.channel_id)
+                    log.warning("channel missing access", extra={"notify_type": notify_type, "guild_id": no_channel.guild_id, "channel_id": no_channel.channel_id})
                 await asyncio.sleep(0.5)
             else:
-                log.warning("%s not found: %s/%s", notify_type, no_channel.guild_id, no_channel.channel_id)
+                log.warning("channel not found", extra={"notify_type": notify_type, "guild_id": no_channel.guild_id, "channel_id": no_channel.channel_id})
 
     async def edit_notify_channel(self, embed: discord.Embed | list[discord.Embed], notify_type: NotifyChannelType, default_content: str = None):
         records = sqldb.get_notify_channel_by_type(notify_type)
@@ -235,7 +235,7 @@ class DiscordBot(discord.Bot):
                 await asyncio.sleep(0.5)
 
             else:
-                log.warning("NotifyChannel:%s, channel not found: %s/%s", notify_type, i.guild_id, i.channel_id)
+                log.warning("NotifyChannel: channel not found", extra={"notify_type": notify_type, "guild_id": i.guild_id, "channel_id": i.channel_id})
 
     def about_embed(self):
         embed = BotEmbed.bot(

@@ -41,10 +41,10 @@ class StarException(Exception):
 
         if self.original:
             # 記錄異常及其堆棧追蹤
-            log.error(error_details, exc_info=self.original)
+            log.error("StarException occurred", extra={"error_details": error_details}, exc_info=self.original)
         else:
             # 未捕獲原始異常，記錄為警告
-            log.warning(error_details)
+            log.warning("StarException warning", extra={"error_details": error_details})
 
     def __repr__(self) -> str:
         if self.original_message:

@@ -105,7 +105,10 @@ class StarEventBus:
 
         # 防呆機制：檢查該函式是否已經訂閱過此事件
         if handler in self.listeners[event_type]:
-            log.warning(f"Handler {handler.__name__} already subscribed to {event_type.__name__}. Skipping.")
+            log.warning(
+                "Handler already subscribed. Skipping.",
+                extra={"handler": handler.__name__, "event_type": event_type.__name__},
+            )
             return False
 
         try:
@@ -115,7 +118,10 @@ class StarEventBus:
 
         # 將 handler 作為 key，確保唯一性
         self.listeners[event_type][handler] = current_loop
-        log.debug(f"Successfully registered handler {handler.__name__} to event type {event_type.__name__}")
+        log.debug(
+            "Successfully registered handler to event type",
+            extra={"handler": handler.__name__, "event_type": event_type.__name__},
+        )
         return True
 
     def unsubscribe(self, event_type: type[BaseEvent], handler: Callable) -> bool:
@@ -125,7 +131,10 @@ class StarEventBus:
         """
         if event_type in self.listeners and handler in self.listeners[event_type]:
             del self.listeners[event_type][handler]
-            log.debug(f"Successfully unsubscribed handler {handler.__name__} from event type {event_type.__name__}")
+            log.debug(
+                "Successfully unsubscribed handler from event type",
+                extra={"handler": handler.__name__, "event_type": event_type.__name__},
+            )
 
             # 順便清理空的字典，節省記憶體
             if not self.listeners[event_type]:
@@ -138,7 +147,14 @@ class StarEventBus:
         發布事件時，檢查所有訂閱者
         支援「多型訂閱」：如果你訂閱了 MinecraftEvent，也會收到 MCChatEvent
         """
-        log.info(f"Publishing event: %s from %s", event.__class__.__name__, event.source, extra={"event": event.model_dump()})
+        log.info(
+            "Publishing event",
+            extra={
+                "event_type": event.__class__.__name__,
+                "source": event.source,
+                "event": event.model_dump(),
+            },
+        )
         # 遍歷所有已註冊的事件類型（用 list 避免迭代中途字典被修改）
         for registered_type, handlers_dict in list(self.listeners.items()):
             # 關鍵：使用 isinstance 判斷 (多型)
@@ -157,8 +173,9 @@ class StarEventBus:
             exc = future.exception()
             if exc:
                 log.exception(
-                    f"Error in handler {handler_name} for event {event_name}",
+                    "Error in handler for event",
                     exc_info=exc,
+                    extra={"handler": handler_name, "event": event_name},
                 )
 
         try:
@@ -176,4 +193,7 @@ class StarEventBus:
                 else:
                     handler(event)
         except Exception:
-            log.exception(f"Error dispatching event {event_name} to handler {handler_name}")
+            log.exception(
+                "Error dispatching event to handler",
+                extra={"handler": handler_name, "event": event_name},
+            )

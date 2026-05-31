@@ -4,6 +4,7 @@ import sys
 import time
 
 import discord
+import structlog
 import truststore
 
 from sentry_bootstrap import init_sentry
@@ -25,15 +26,28 @@ settings = get_settings()
 bot_code = settings.BOT_CODE
 api_website = settings.API_WEBSITE
 twitch_bot = settings.TWITCH_BOT
-
 log_level = settings.LOG_LEVEL
-formatter = logging.Formatter(fmt="%(asctime)s [%(levelname)s][%(name)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
-handler = logging.StreamHandler(sys.stdout)
-handler.setFormatter(formatter)
-logging.basicConfig(handlers=[handler], level=logging.ERROR)
+def setup_logging():
+    shared_processors = [
+        structlog.contextvars.merge_contextvars,  # 合併上下文變數
+        structlog.processors.add_log_level,  # 加入日誌等級 (info, warn 等)
+        structlog.stdlib.add_logger_name,  # 加入 logger 名稱
+        structlog.stdlib.ExtraAdder(),  # 加入額外的上下文資訊（如函式名稱、行號等）
+        structlog.processors.TimeStamper(fmt="%Y-%m-%dT%H:%M:%S.%f%z", utc=False),  # 加入 ISO 時間戳記
+        structlog.processors.format_exc_info,  # 格式化異常資訊
+    ]
+    # formatter = logging.Formatter(fmt="%(asctime)s [%(levelname)s][%(name)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
+    formatter = structlog.stdlib.ProcessorFormatter(
+        foreign_pre_chain=shared_processors,
+        processor=structlog.dev.ConsoleRenderer(colors=True),
+    )
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setFormatter(formatter)
+    logging.basicConfig(handlers=[handler], level=logging.ERROR)
 
+setup_logging()
 log = logging.getLogger(__name__)
-log.setLevel(logging.INFO)
+log.setLevel(logging.DEBUG)
 logging.getLogger("starDiscord").setLevel(log_level)
 logging.getLogger("starlib").setLevel(log_level)
 
@@ -51,7 +65,7 @@ def run_discord_bot():
     except discord.errors.LoginFailure:
         log.error(">> Bot: Login failed <<")
     except Exception as e:
-        log.error(e)
+        log.exception(">> Bot: Unexpected error <<", exc_info=e)
 
 def run_twitch_bot():
     from starServer.tunnel_threads import NgrokTwitchThread
@@ -81,7 +95,7 @@ def run_website():
         server.start()
         log.info(">> website: online <<")
     except Exception:
-        log.info(">> website: offline <<")
+        log.exception(">> website: offline <<")
     time.sleep(1)
 
 

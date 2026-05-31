@@ -1,4 +1,5 @@
 import json
+import logging
 import shutil
 import subprocess
 from collections.abc import Iterator
@@ -16,10 +17,10 @@ from googleapiclient.errors import HttpError
 from starlib.database import APIType, sqldb
 from starlib.exceptions import APINetworkError, Forbidden
 from starlib.settings import tz
-import logging
 
 from ..base import APICaller
 from .models import *
+
 log = logging.getLogger(__name__)
 
 
@@ -277,7 +278,10 @@ class YoutubePush(APICaller):
             header = {"Content-Type": "application/x-www-form-urlencoded"}
             self._request("POST", "subscribe", data=data, headers=header)
         except Exception as e:
-            log.exception("Args: %a %s %s", channel_id, callback_url, secret)
+            log.exception(
+                "Push subscription error",
+                extra={"channel_id": channel_id, "callback_url": callback_url, "secret": secret},
+            )
 
     def get_push(self, channel_id: str, callback_url: str, secret: str = None):
         params = {"hub.callback": callback_url, "hub.topic": f"https://www.youtube.com/xml/feeds/videos.xml?channel_id={channel_id}", "hub.secret": secret}
@@ -305,7 +309,10 @@ class YoutubePush(APICaller):
             try:
                 return datetime.strptime(time_str, "%a, %d %b %Y %H:%M:%S %z").astimezone(tz=tz)
             except ValueError as e:
-                log.error("時間格式錯誤: %s，原始時間字串: %s，欄位: %s", e, time_str, dt_text)
+                log.error(
+                    "時間格式錯誤",
+                    extra={"error": str(e), "time_str": time_str, "field": dt_text},
+                )
                 return None
 
         return YtSubscriptionDetails(
@@ -552,7 +559,7 @@ class CLIInterface:
         try:
             results = RettiwtTweetTimeLineResponse(**data)
         except Exception as e:
-            log.exception("解析Rettiwt輸出時發生錯誤，輸出內容：%s", r.stdout)
+            log.exception("解析Rettiwt輸出時發生錯誤", extra={"output": r.stdout})
             return None
 
         if after:
@@ -573,7 +580,7 @@ class CLIInterface:
         try:
             data = json.loads(r.stdout)
         except json.JSONDecodeError:
-            log.exception("get_user_details 解析JSON失敗，輸出內容：%s", r.stdout)
+            log.exception("get_user_details 解析JSON失敗", extra={"output": r.stdout})
             return None
 
         if not data or data.get("name") == "VALIDATION_ERROR":

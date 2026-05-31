@@ -66,7 +66,7 @@ class Tools:
                  - Warning type (localized)
                  - Creation time
         """
-        log.info(f"Getting user warning info for Discord ID: {discord_id}")
+        log.info("Getting user warning info", extra={"discord_id": discord_id})
         warnings = sqldb.get_warnings(discord_id)
         if not warnings:
             log.info("No warnings found for user.")
@@ -91,10 +91,10 @@ class Tools:
             str: A formatted string containing user information in Chinese, with additional
                  developer identification if the ID matches the developer's account.
         """
-        log.info(f"Getting user info for Discord ID: {discord_id}")
+        log.info("Getting user info", extra={"discord_id": discord_id})
         user = sqldb.get_cloud_user(discord_id)
 
-        log.info(f"User: {user}")
+        log.info("User info", extra={"user": str(user)})
         text = f"- {str(user)}"
 
         if user.discord_id == 419131103836635136:
@@ -110,7 +110,7 @@ class Tools:
         Returns:
             str: The search results formatted as a string.
         """
-        log.info(f"Searching Notion content with query: {query}")
+        log.info("Searching Notion content", extra={"query": query})
         result = notion_api.search(query, page_size=1)
         if not result or not result.results:
             log.info("No search results found.")
@@ -131,11 +131,11 @@ class Tools:
         Returns:
             str: The result of the add operation.
         """
-        log.info(f"Adding Notion note with title: {title}")
+        log.info("Adding Notion note", extra={"title": title})
         settings = get_settings()
         database_id = settings.NOTION_DATABASE_ID
         result = notion_api.add_page_title_content(title, content, database_id)
-        log.info(f"Add note result: {result}")
+        log.info("Add note result", extra={"result": result})
         return str(result)
 
     @staticmethod
@@ -155,9 +155,9 @@ class Tools:
             return "沒有找到要更新的頁面。"
 
         page_id = page.results[0].id
-        log.info(f"Updating Notion note with page ID: {page_id}")
+        log.info("Updating Notion note", extra={"page_id": page_id})
         result = notion_api.update_page_content(page_id, content)
-        log.info(f"Update note result: {result}")
+        log.info("Update note result", extra={"result": result})
         if isinstance(result, (NotionBlock, list)):
             return "更新成功。"
         return str(result)
@@ -177,9 +177,9 @@ class Tools:
             return "沒有找到要刪除的頁面。"
 
         page_id = page.results[0].id
-        log.info(f"Deleting Notion note with page ID: {page_id}")
+        log.info("Deleting Notion note", extra={"page_id": page_id})
         result = notion_api.delete_block(page_id)
-        log.info(f"Delete note result: {result}")
+        log.info("Delete note result", extra={"result": result})
         if isinstance(result, (NotionBlock, list)):
             return "刪除成功。"
         return str(result)

@@ -86,14 +86,14 @@ class event(Cog_Extension):
                 # 將超過28天的投票自動關閉
                 poll.end_at = now
                 sclient.sqldb.merge(poll)
-                log.debug("Ended poll: %s", poll.poll_id)
+                log.debug("Ended poll", extra={"poll_id": poll.poll_id})
             else:
                 bot.add_view(PollView(poll, sqldb=sclient.sqldb, bot=bot), message_id=poll.message_id)
-                log.debug("Loaded poll: %s", poll.poll_id)
+                log.debug("Loaded poll", extra={"poll_id": poll.poll_id})
 
         # 反應身分組
         for react_message in sclient.sqldb.get_reaction_role_message_all():
-            log.debug("Loading reaction role message: %s", react_message.message_id)
+            log.debug("Loading reaction role message", extra={"message_id": react_message.message_id})
             channel = bot.get_channel(react_message.channel_id)
             if channel:
                 assert isinstance(channel, discord.abc.Messageable)
@@ -108,10 +108,10 @@ class event(Cog_Extension):
             if message:
                 react_roles = sclient.sqldb.get_reaction_roles_by_message(react_message.message_id)
                 bot.add_view(ReactionRoleView(react_message.message_id, react_roles), message_id=react_message.message_id)
-                log.debug("Loaded reaction role message: %s", react_message.message_id)
+                log.debug("Loaded reaction role message", extra={"message_id": react_message.message_id})
             elif not debug_mode:
                 sclient.sqldb.delete_reaction_role_message(react_message.message_id)
-                log.debug("Deleted reaction role message: %s", react_message.message_id)
+                log.debug("Deleted reaction role message", extra={"message_id": react_message.message_id})
         # 動態語音
         dynamic_voice_ids = sclient.sqldb.get_all_dynamic_voice()
         if dynamic_voice_ids:
@@ -124,13 +124,13 @@ class event(Cog_Extension):
                     await channel.delete(reason="動態語音：移除")
                     removed_ids.append(id)
 
-            log.warning("Dynamic voice channels not found and deleted: %s", removed_ids)
+            log.warning("Dynamic voice channels not found and deleted", extra={"removed_ids": removed_ids})
             sclient.sqldb.batch_remove_dynamic_voice(removed_ids)
 
         # 私人頻道大廳
         ticket_lobbys = sclient.sqldb.get_all_ticket_lobbys()
         for lobby in ticket_lobbys:
-            log.debug("Loading ticket lobby: %s", lobby.channel_id)
+            log.debug("Loading ticket lobby", extra={"channel_id": lobby.channel_id})
             channel = bot.get_channel(lobby.channel_id)
             if channel:
                 assert isinstance(channel, discord.abc.Messageable)
@@ -144,26 +144,25 @@ class event(Cog_Extension):
 
             if message:
                 bot.add_view(TicketLobbyView(channel.id), message_id=lobby.message_id)
-                log.debug("Loaded ticket lobby: %s", lobby.channel_id)
+                log.debug("Loaded ticket lobby", extra={"channel_id": lobby.channel_id})
             elif not debug_mode:
                 sclient.sqldb.delete_ticket_lobby(lobby.channel_id)
-                log.debug("Deleted ticket lobby: %s", lobby.channel_id)
+                log.debug("Deleted ticket lobby", extra={"channel_id": lobby.channel_id})
 
         # 私人頻道
         active_tickets = sclient.sqldb.get_active_ticket_channels()
         for ticket in active_tickets:
-            log.debug(f"Loading ticket channel: {ticket.channel_id}")
+            log.debug("Loading ticket channel", extra={"channel_id": ticket.channel_id})
             channel = bot.get_channel(ticket.channel_id)
             if channel:
                 bot.add_view(TicketChannelView(channel, bot.get_user(ticket.creator_id)), message_id=ticket.view_message_id)
-                log.debug(f"Loaded ticket channel: {ticket.channel_id}")
+                log.debug("Loaded ticket channel", extra={"channel_id": ticket.channel_id})
 
         # Bot status
-        log.info(f">> Bot online as {bot.user.name} <<")
-        log.info(f">> Py-cord's version: {discord.__version__} <<")
+        log.info(">> Bot online <<", extra={"bot_name": bot.user.name, "py-cord_version": discord.__version__})
         if bot.debug_mode:
             await bot.change_presence(activity=discord.CustomActivity(name="開發模式啟用中"), status=discord.Status.dnd)
-            log.info(f">> Development mode: On <<")
+            log.info("Development mode: On")
         else:
             activity_name = sclient.sqldb.get_bot_activity(bot.bot_code)
             await bot.change_presence(activity=discord.CustomActivity(name=activity_name), status=discord.Status.online)
@@ -173,7 +172,7 @@ class event(Cog_Extension):
         if total_cog_files == len(bot.cogs):
             log.info(">> Cogs all loaded <<")
         else:
-            log.warning(f">> Cogs not all loaded, {len(bot.cogs)}/{total_cog_files} loaded<<")
+            log.warning("Cogs not all loaded", extra={"loaded": len(bot.cogs), "total": total_cog_files})
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
@@ -225,7 +224,7 @@ class event(Cog_Extension):
                             dbuser.meatball_times += 1
                         sclient.sqldb.merge(dbuser)
                     except Exception as e:
-                        log.error(e)
+                        log.exception()
 
                 # 洗頻防制
                 # spam_count = 0
@@ -401,9 +400,9 @@ class event(Cog_Extension):
                     await new_channel.delete(reason="動態語音：移除")
                     sclient.sqldb.remove_dynamic_voice(new_channel.id)
                 except discord.errors.NotFound:
-                    log.warning(f"動態語音頻道 {new_channel.id} 已經不存在")
+                    log.warning("動態語音頻道已不存在", extra={"channel_id": new_channel.id})
                 except discord.errors.Forbidden:
-                    log.warning(f"無法刪除動態語音頻道 {new_channel.id}")
+                    log.warning("無法刪除動態語音頻道", extra={"channel_id": new_channel.id})
             return
 
         # 移除
@@ -530,7 +529,7 @@ class event(Cog_Extension):
             if channel:
                 await channel.send(text)
             else:
-                log.warning(f"Member join channel: {dbdata.channel_id} not found")
+                log.warning("Member join channel not found", extra={"channel_id": dbdata.channel_id})
 
         # 加入日誌 / 警告系統：管理員通知
         notify_data = sclient.sqldb.get_notify_channel(guildid, NotifyChannelType.JoinLog)
@@ -547,7 +546,7 @@ class event(Cog_Extension):
             if channel:
                 await channel.send(embed=embed)
             else:
-                log.warning(f"Member join log channel: {log_channel_id} not found")
+                log.warning("Member join log channel not found", extra={"channel_id": log_channel_id})
 
         # 快樂營戶籍註冊
         if guildid == happycamp_guild[0]:

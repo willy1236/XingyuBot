@@ -32,13 +32,6 @@ T = TypeVar("T")
 P = ParamSpec("P")
 
 
-def create_sql_repository(connection_url: URL):
-    engine = create_engine(connection_url, echo=False, pool_pre_ping=True)
-    SQLModel.metadata.create_all(engine)
-    session_factory = scoped_session(sessionmaker(bind=engine, class_=Session, autoflush=True, expire_on_commit=True))
-    return SQLRepository(engine, session_factory)
-
-
 class BaseRepository:
     def __init__(self, engine: Engine, session_factory: Session | ScopedSession):
         self.engine = engine
@@ -56,7 +49,7 @@ class BaseRepository:
         try:
             self.session.commit()
         except SQLAlchemyError as e:
-            log.error("SQLAlchemy Commit Error: %s", exc_info=True)
+            log.error("SQLAlchemy Commit Error", exc_info=True)
             self.session.rollback()
             raise
 
@@ -88,7 +81,7 @@ class BaseRepository:
             self.session.add(db_obj)
             self.session.commit()
         except SQLAlchemyError as e:
-            log.error("SQLAlchemy Add Error: %s", e)
+            log.error("SQLAlchemy Add Error", extra={"error": str(e)}, exc_info=True)
             self.session.rollback()
             raise
 
@@ -99,7 +92,7 @@ class BaseRepository:
                     self.session.add(db_obj)
                 self.session.commit()
             except SQLAlchemyError as e:
-                log.error("SQLAlchemy Batch Add Error: %s", e)
+                log.error("SQLAlchemy Batch Add Error", extra={"error": str(e)}, exc_info=True)
                 self.session.rollback()
                 raise
 
@@ -109,7 +102,7 @@ class BaseRepository:
             self.session.commit()
             return obj
         except SQLAlchemyError as e:
-            log.error("SQLAlchemy Merge Error: %s", e)
+            log.error("SQLAlchemy Merge Error", extra={"error": str(e)}, exc_info=True)
             self.session.rollback()
             raise
 
@@ -122,7 +115,7 @@ class BaseRepository:
                 self.session.commit()
                 return lst
             except SQLAlchemyError as e:
-                log.error("SQLAlchemy Batch Merge Error: %s", e)
+                log.error("SQLAlchemy Batch Merge Error", extra={"error": str(e)}, exc_info=True)
                 self.session.rollback()
                 raise
 
@@ -131,7 +124,7 @@ class BaseRepository:
             self.session.delete(db_obj)
             self.session.commit()
         except SQLAlchemyError as e:
-            log.error("SQLAlchemy Delete Error: %s", e)
+            log.error("SQLAlchemy Delete Error", extra={"error": str(e)}, exc_info=True)
             self.session.rollback()
             raise
 
@@ -1646,7 +1639,7 @@ class SQLRepository(
         for key in targets:
             if key in loaders:
                 loaders[key]()
-        log.debug("SQLDB: cache reloaded: %s", [k.value for k in targets])
+        log.debug("SQLDB: cache reloaded", extra={"targets": [k.value for k in targets]})
 
     def update_notify_channel(self, notify_type: NotifyChannelType):
         """更新通知頻道快取（全量重載指定類型）"""
@@ -1679,3 +1672,34 @@ class SQLRepository(
     def refresh_voice_time_counter_cache(self):
         """刷新語音時間計數器快取"""
         self.cache.voice_time_counter.load(self.get_voice_time_counter_guilds())
+
+def create_sqldb() -> SQLRepository:
+    try:
+        from sqlalchemy.engine import URL
+
+        settings = get_settings()
+
+        connection_url = URL.create(
+            drivername="postgresql",
+            username=settings.DB_USER,
+            password=settings.DB_PASSWORD,
+            host=settings.DB_HOST,
+            port=settings.DB_PORT,
+            database=settings.DB_NAME,
+        )
+        engine = create_engine(connection_url, echo=False, pool_pre_ping=True)
+        SQLModel.metadata.create_all(engine)
+        session_factory = scoped_session(sessionmaker(bind=engine, class_=Session, autoflush=True, expire_on_commit=True))
+        sqlrepository = SQLRepository(engine, session_factory)
+
+        name = sqlrepository.engine.dialect.name
+        version = sqlrepository.engine.dialect.server_version_info
+        log.info(
+            "SQL connect: online",
+            extra={"dialect": name, "version": version, "db_user": settings.DB_USER, "db_host": settings.DB_HOST},
+        )
+    except Exception as e:
+        sqlrepository = None
+        log.exception("SQL connect: offline", exc_info=e)
+
+    return sqlrepository  # pyright: ignore[reportReturnType]

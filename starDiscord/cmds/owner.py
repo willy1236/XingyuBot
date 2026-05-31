@@ -71,7 +71,7 @@ class AnnoModal(discord.ui.Modal):
         for i in channels:
             channel = interaction.client.get_channel(i.channel_id)
             if not channel:
-                log.warning("anno: %s/%s", i.guild_id, i.channel_id)
+                log.warning("anno: channel not found", extra={"guild_id": i.guild_id, "channel_id": i.channel_id})
                 continue
 
             try:
@@ -82,7 +82,7 @@ class AnnoModal(discord.ui.Modal):
                     await channel.send(embed=embed)
                 send_success += 1
             except Exception:
-                log.error("anno: %s/%s", i.guild_id, i.channel_id, exc_info=True)
+                log.error("anno: error sending to channel", extra={"guild_id": i.guild_id, "channel_id": i.channel_id}, exc_info=True)
 
         await msg.edit_original_response(content=f"已向{send_success}/{len(channels)}個頻道發送公告")
 
@@ -103,7 +103,7 @@ class BotUpdateModal(discord.ui.Modal):
         for i in channels:
             channel = interaction.client.get_channel(i.channel_id)
             if not channel:
-                log.warning("botupdate: %s/%s", i.guild_id, i.channel_id)
+                log.warning("botupdate: channel not found", extra={"guild_id": i.guild_id, "channel_id": i.channel_id})
                 continue
 
             try:
@@ -114,7 +114,7 @@ class BotUpdateModal(discord.ui.Modal):
                     await channel.send(embed=embed)
                 send_success += 1
             except Exception:
-                log.error("botupdate: %s/%s", i.guild_id, i.channel_id, exc_info=True)
+                log.error("botupdate: error sending to channel", extra={"guild_id": i.guild_id, "channel_id": i.channel_id}, exc_info=True)
 
         await msg.edit_original_response(content=f"已向{send_success}/{len(channels)}個頻道發送公告")
 

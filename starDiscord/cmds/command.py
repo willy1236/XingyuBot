@@ -130,9 +130,9 @@ class command(Cog_Extension):
             try:
                 # 1062
                 sclient.sqldb.add_role_save(role)
-                log.info(f"新增：{role.name}")
+                log.info("新增加身分組", extra={"role_name": role.name})
             except Exception as e:
-                log.warning(f"儲存身分組時發生錯誤", role.name, exc_info=e)
+                log.exception("儲存加身分組時發生錯誤", extra={"role_name": role.name})
 
         await ctx.respond("身分組儲存完成", delete_after=5)
 
@@ -150,7 +150,7 @@ class command(Cog_Extension):
                 break
             if role.is_default():
                 continue
-            log.info(f"已移除:{role.name}")
+            log.info("已移除", extra={"role_name": role.name})
             await role.delete()
             await asyncio.sleep(0.5)
 
