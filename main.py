@@ -19,18 +19,15 @@ truststore.inject_into_ssl()
 init_sentry(service="main")
 
 # ruff: disable[E402]
-from starDiscord import DiscordBot
-from starlib import sclient
-from starlib.core.model import TwitchStreamEvent
 from starlib.settings import get_settings
-
-# ruff: enable[E402]
 
 settings = get_settings()
 bot_code = settings.BOT_CODE
 api_website = settings.API_WEBSITE
 twitch_bot = settings.TWITCH_BOT
 log_level = settings.LOG_LEVEL
+
+
 def setup_logging():
     shared_processors = [
         structlog.contextvars.merge_contextvars,  # 合併上下文變數
@@ -49,6 +46,7 @@ def setup_logging():
     handler.setFormatter(formatter)
     logging.basicConfig(handlers=[handler], level=logging.ERROR)
 
+
 setup_logging()
 log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
@@ -57,6 +55,13 @@ logging.getLogger("starlib").setLevel(log_level)
 logging.getLogger("starServer.twitch_chatbot").setLevel(log_level)
 logging.getLogger("starServer.bot_website").setLevel(log_level)
 logging.getLogger("py.warnings").setLevel(logging.ERROR)
+
+from starDiscord import DiscordBot
+from starlib import sclient
+from starlib.core.model import TwitchStreamEvent
+
+# ruff: enable[E402]
+
 
 def run_discord_bot():
     sclient.sqldb.init_cache()

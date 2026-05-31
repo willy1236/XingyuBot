@@ -1695,9 +1695,11 @@ def create_sqldb() -> SQLRepository:
 
         name = sqlrepository.engine.dialect.name
         version = sqlrepository.engine.dialect.server_version_info
+        db_user = sqlrepository.engine.name
+        db_host = sqlrepository.engine.url.host
         log.info(
             "SQL connect: online",
-            extra={"dialect": name, "version": version, "db_user": settings.DB_USER, "db_host": settings.DB_HOST},
+            extra={"dialect": name, "version": version, "db_user": db_user, "db_host": db_host},
         )
     except Exception as e:
         sqlrepository = None
