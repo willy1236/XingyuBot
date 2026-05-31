@@ -7,7 +7,7 @@ import nmap
 from discord.commands import SlashCommandGroup
 from discord.ext import commands, pages
 
-from starlib import BotEmbed, ChoiceList, Jsondb, csvdb, sclient
+from starlib import BotEmbed, ChoiceList, Jsondb, sclient
 from starlib.database import PlatformType, UserIPDetails
 from starlib.exceptions import APINetworkError
 from starlib.providers import *
@@ -136,8 +136,7 @@ class system_game(Cog_Extension):
                 f"上次遊玩： <t:{int(data.lastPlayTime.timestamp())}>",
                 f"賽季里程碑： {data.championSeasonMilestone}",
             ]
-            champion_name = csvdb.get_row(csvdb.lol_champion, "champion_id", data.championId)
-            embed.add_field(name=champion_name.loc["name_tw"] if not champion_name.empty else f"ID: {data.championId}", value="\n".join(text_list), inline=False)
+            embed.add_field(f"ID: {data.championId}", value="\n".join(text_list), inline=False)
         await ctx.respond("查詢成功", embed=embed)
 
     @lol.command(description="查詢League of Legends的玩家積分資訊", name_localizations=ChoiceList.name("lol_rank"))
@@ -221,19 +220,11 @@ class system_game(Cog_Extension):
             value += f"\n`{r['Team1Players']}` vs `{r['Team2Players']}`"
             team1_picks = []
             for i in r["Team1Picks"].split(","):
-                champion_name = csvdb.get_row(csvdb.lol_champion, "name_en", i.replace(" ", ""))
-                if not champion_name.empty:
-                    team1_picks.append(champion_name.loc["name_tw"])
-                else:
-                    team1_picks.append(i)
+                team1_picks.append(i)
 
             team2_picks = []
             for i in r["Team2Picks"].split(","):
-                champion_name = csvdb.get_row(csvdb.lol_champion, "name_en", i.replace(" ", ""))
-                if not champion_name.empty:
-                    team2_picks.append(champion_name.loc["name_tw"])
-                else:
-                    team2_picks.append(i)
+                team2_picks.append(i)
             value += f"\n{','.join(team1_picks)} vs {','.join(team2_picks)}"
 
             embed.add_field(name=name, value=value, inline=False)

@@ -2,7 +2,7 @@ import json
 import logging
 from collections.abc import Mapping
 from pathlib import Path
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Self, cast
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -68,16 +68,6 @@ class JsonJdictModel(JsonContentModel):
     warning_type: dict[str, str] = Field(default_factory=dict)
 
 
-class JsonLolDictModel(JsonContentModel):
-    champion: dict[str, str] = Field(default_factory=dict)
-    road: dict[str, str] = Field(default_factory=dict)
-    mod: dict[str, str] = Field(default_factory=dict)
-    type: dict[str, str] = Field(default_factory=dict)
-    map: dict[str, str] = Field(default_factory=dict)
-    summoner_spell: dict[str, str] = Field(default_factory=dict)
-    runes: dict[str, str] = Field(default_factory=dict)
-
-
 class JsonPictureModel(JsonContentModel):
     radio_001: str
     lottery_001: str
@@ -115,24 +105,16 @@ class JsonCommandNamesModel(JsonContentModel):
 
 
 class JsonDatabase:
+    _instance: Self | None = None
+
     if TYPE_CHECKING:
-        lol_jdict: JsonLolDictModel
         jdict: JsonJdictModel
         picdata: JsonPictureModel
         options: JsonOptionsModel
         cmd_names: JsonCommandNamesModel
 
-    __slots__ = [
-        "lol_jdict",
-        "jdict",
-        "picdata",
-        "options",
-        "cmd_names",
-    ]
-
     _DBPATH = Path("./database")
     _PATH_DICT = {
-        "lol_jdict": _DBPATH / "lol_dict.json",
         "jdict": _DBPATH / "dict.json",
         "picdata": _DBPATH / "picture.json",
         "options": _DBPATH / "command_option.json",
@@ -140,14 +122,24 @@ class JsonDatabase:
     }
 
     _MODEL_DICT = {
-        "lol_jdict": JsonLolDictModel,
         "jdict": JsonJdictModel,
         "picdata": JsonPictureModel,
         "options": JsonOptionsModel,
         "cmd_names": JsonCommandNamesModel,
     }
 
+    def __new__(cls, *args, **kwargs) -> Self:
+        """單例模式"""
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+            # 標記未初始化，避免重複執行 __init__ 中的檔案 I/O
+            cls._instance._initialized = False
+        return cls._instance
+
     def __init__(self, create_file=True):
+        if getattr(self, "_initialized", False):
+            return
+
         # create folder
         if not self._DBPATH.exists():
             self._DBPATH.mkdir(parents=True, exist_ok=True)
@@ -165,26 +157,7 @@ class JsonDatabase:
                 model_cls = self._MODEL_DICT[file]
                 setattr(self, file, model_cls.from_mapping(json.load(jfile)))
 
-    def write(self, file_name: str, data: dict | JsonContentModel):
-        """
-        Writes the given data to the specified file in the JSON.
-
-        Args:
-            file_name (str): The name of the file to write the data to.
-            data (dict): The data to be written to the file.
-
-        Raises:
-            KeyError: If the specified file_name is not found in the JSON.
-        """
-        try:
-            location = self._PATH_DICT[file_name]
-            model_cls = self._MODEL_DICT[file_name]
-            model_data = data if isinstance(data, JsonContentModel) else model_cls.from_mapping(data)
-            setattr(self, file_name, model_data)
-            with location.open(mode="w", encoding="utf8") as jfile:
-                json.dump(model_data.to_dict(), jfile, indent=4, ensure_ascii=False)
-        except KeyError as e:
-            raise KeyError("此項目沒有在資料庫中") from e
+        self._initialized = True
 
     def get_picture(self, pic_key: str) -> str:
         """取得圖片網址"""

@@ -9,7 +9,6 @@ from discord.ext import commands
 from starlib import BotEmbed, sclient
 from starlib.database import DBCacheType, NotifyChannelType, PrivilegeLevel
 from starlib.instance import *
-from starlib.starAgent import ModelMessage, MyDeps, agent
 from starlib.utils import nowtz
 
 from ..extension import Cog_Extension
@@ -22,8 +21,6 @@ keywords = {}
 ai_access_guilds: list[int] = happycamp_guild + debug_guilds
 
 guild_registration = sclient.sqldb.get_raw_registrations() if sclient.sqldb else {}
-
-agent_history: dict[int, list[ModelMessage]] = {}
 
 
 def check_registration(member: discord.Member):
@@ -187,12 +184,12 @@ class event(Cog_Extension):
             if message.mention_everyone and not message.author.bot:
                 await self.bot.mention_everyone(message)
 
-        #私人訊息回報
-        if isinstance(message.channel,discord.DMChannel) and message.author != self.bot.user:
+        # 私人訊息回報
+        if isinstance(message.channel, discord.DMChannel) and message.author != self.bot.user:
             await self.bot.dm(message)
             return
 
-        #介紹
+        # 介紹
         if message.content == self.bot.user.mention:
             await message.reply(embed=self.bot.about_embed())
             return
@@ -212,9 +209,9 @@ class event(Cog_Extension):
                 if result:
                     try:
                         reason = "打出貢丸相關詞彙"
-                        #await message.delete(reason=reason)
+                        # await message.delete(reason=reason)
                         last = timedelta(seconds=60)
-                        await message.author.timeout_for(duration=last,reason=reason)
+                        await message.author.timeout_for(duration=last, reason=reason)
 
                         embed = BotEmbed.simple_warn_sheet(message.author, self.bot.user, last=last, reason=reason)
                         await message.channel.send(f"{message.author.mention} 貢丸很危險 不要打貢丸知道嗎", embed=embed)
@@ -276,35 +273,6 @@ class event(Cog_Extension):
     #             await message.reply(text,mention_author=False)
     #         else:
     #             await message.add_reaction('❌')
-
-    @commands.Cog.listener("on_message")
-    async def agent_trigger(self, message: discord.Message):
-        #AI agent
-        if not (
-            message.guild
-            and message.content
-            and message.guild.id in ai_access_guilds
-            and len(message.content) > 1
-            and message.content.startswith(".")
-            and not message.content.startswith(".", 1, 2)
-        ):
-            return
-
-        cuser = sclient.sqldb.get_cloud_user(message.author.id)
-        if not cuser or cuser.privilege_level < PrivilegeLevel.Level3:
-            return
-
-        async with message.channel.typing():
-            global agent_history
-            history = agent_history.get(message.author.id, [])
-            deps = MyDeps(discord_id=message.author.id, member=message.author, guild=message.guild)
-
-            resp = await agent.run(message.content[1:], message_history=history, deps=deps)
-            if resp.output:
-                agent_history[message.author.id] = list(resp.all_messages())
-                await message.reply(resp.output, mention_author=False)
-            else:
-                await message.add_reaction("❌")
 
     @commands.Cog.listener("on_message")
     async def keyword_trigger(self, message: discord.Message):

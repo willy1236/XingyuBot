@@ -671,6 +671,12 @@ class TRPGAbility(IdbaseSchema, table=True):
 
     characters: list[TRPGCharacterAbility] = Relationship(back_populates="ability")
 
+class WarningType(IdbaseSchema, table=True):
+    __tablename__ = "warning_type"
+
+    id: int = Field(sa_column=Column(SmallInteger, primary_key=True))
+    name: str = Field(sa_column=Column(String))
+
 
 class BackupRole(BackupSchema, table=True):
     __tablename__ = "roles_backup"
@@ -894,6 +900,108 @@ class LOLGameCache(CacheSchema, table=True):
 
     puuid: str = Field(sa_column=Column(String, primary_key=True))
     newest_game_time: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
+
+class LOLChampionLookup(LookupsSchema, table=True):
+    """LOL英雄名稱對照表"""
+
+    __tablename__ = "lol_champion"
+
+    id: int = Field(sa_column=Column(Integer, primary_key=True))
+    name_tw: str = Field(sa_column=Column(String))
+    name_en: str = Field(sa_column=Column(String))
+
+
+class LOLRoadLookup(LookupsSchema, table=True):
+    """LOL路線名稱對照表"""
+
+    __tablename__ = "lol_road"
+
+    name_en: str = Field(sa_column=Column(String, primary_key=True))
+    name_tw: str = Field(sa_column=Column(String))
+
+
+class LOLModLookup(LookupsSchema, table=True):
+    """LOL遊戲模式名稱對照表"""
+
+    __tablename__ = "lol_mod"
+
+    name_en: str = Field(sa_column=Column(String, primary_key=True))
+    name_tw: str = Field(sa_column=Column(String))
+
+
+class LOLTypeLookup(LookupsSchema, table=True):
+    """LOL遊戲類型名稱對照表"""
+
+    __tablename__ = "lol_type"
+
+    name_en: str = Field(sa_column=Column(String, primary_key=True))
+    name_tw: str = Field(sa_column=Column(String))
+
+
+class LOLMapLookup(LookupsSchema, table=True):
+    """LOL地圖名稱對照表"""
+
+    __tablename__ = "lol_map"
+
+    id: int = Field(sa_column=Column(Integer, primary_key=True))
+    name_tw: str = Field(sa_column=Column(String))
+    name_en: str = Field(sa_column=Column(String))
+
+
+class LOLSummonerSpellLookup(LookupsSchema, table=True):
+    """LOL召喚師技能名稱對照表"""
+
+    __tablename__ = "lol_summoner_spell"
+
+    id: int = Field(sa_column=Column(Integer, primary_key=True))
+    name_tw: str = Field(sa_column=Column(String))
+    name_en: str = Field(sa_column=Column(String))
+
+
+class LOLRuneLookup(LookupsSchema, table=True):
+    """LOL符文名稱對照表"""
+
+    __tablename__ = "lol_rune"
+
+    id: int = Field(sa_column=Column(Integer, primary_key=True))
+    name_tw: str = Field(sa_column=Column(String))
+    name_en: str = Field(sa_column=Column(String))
+
+
+class ApexMapLookup(LookupsSchema, table=True):
+    """Apex地圖名稱對照表"""
+
+    __tablename__ = "apex_map"
+
+    name_en: str = Field(sa_column=Column(String, primary_key=True))
+    name_tw: str = Field(sa_column=Column(String))
+
+
+class ApexEventLookup(LookupsSchema, table=True):
+    """Apex事件名稱對照表"""
+
+    __tablename__ = "apex_event"
+
+    name_en: str = Field(sa_column=Column(String, primary_key=True))
+    name_tw: str = Field(sa_column=Column(String))
+
+
+class ApexCraftingItem(LookupsSchema, table=True):
+    """Apex製作物品名稱對照表"""
+
+    __tablename__ = "apex_crafting_item"
+
+    name_en: str = Field(sa_column=Column(String, primary_key=True))
+    name_tw: str = Field(sa_column=Column(String))
+
+
+class DiscordPermissionLookup(LookupsSchema, table=True):
+    """Discord權限名稱對照表"""
+
+    __tablename__ = "discord_permission"
+
+    name_en: str = Field(sa_column=Column(String, primary_key=True))
+    name_tw: str = Field(sa_column=Column(String))
 
 
 class WarningList(ListObject[UserModerate]):

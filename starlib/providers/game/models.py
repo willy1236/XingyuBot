@@ -4,11 +4,10 @@ from typing import Any, ClassVar
 
 from pydantic import BaseModel, Field, model_validator
 
-from starlib.fileDatabase import Jsondb, csvdb
+from starlib.fileDatabase import Jsondb
 from starlib.utils import BotEmbed, convert_tz, nowtz
 
 jdict = Jsondb.jdict
-lol_jdict = Jsondb.lol_jdict
 
 
 class RiotUser(BaseModel):
@@ -325,10 +324,9 @@ class LOLParticipant(BaseModel):
 
     def desplaytext(self):
         text = f"`{self.riotIdGameName}#{self.riotIdTagline}(LV. {self.summonerLevel})`\n"
-        name_csv = csvdb.get_row(csvdb.lol_champion, "champion_id", self.championId)
-        name = name_csv.loc["name_tw"] if not name_csv.empty else self.championName
+        name = self.championName
         text += f"{name}(LV. {self.champLevel})\n"
-        lane = lol_jdict["road"].get(self.lane) or self.lane
+        lane = self.lane
         if self.role != "NONE":
             lane += f" {self.role}"
         text += f"{lane}\n"
@@ -447,7 +445,7 @@ class LOLMatch(BaseModel):
 
     def desplay(self):
         embed = BotEmbed.simple("LOL對戰")
-        gamemode = lol_jdict["mod"].get(self.info.gameMode) or self.info.gameMode
+        gamemode = self.info.gameMode
         embed.add_field(name="遊戲模式", value=gamemode, inline=False)
         embed.add_field(name="對戰ID", value=self.metadata.matchId, inline=False)
         embed.add_field(name="遊戲版本", value=self.info.gameVersion, inline=False)
@@ -521,7 +519,7 @@ class LOLPlayerRank(BaseModel):
     hotStreak: bool
 
     def embed(self):
-        embed = BotEmbed.simple(lol_jdict["type"].get(self.queueType, self.queueType))
+        embed = BotEmbed.simple(self.queueType)
         embed.add_field(name="牌位", value=f"{self.tier} {self.rank}")
         embed.add_field(name="聯盟分數", value=self.leaguePoints)
         embed.add_field(name="勝敗", value=f"{self.wins}/{self.losses} {(round(self.wins / (self.wins + self.losses), 3)) * 100}%")
@@ -542,7 +540,7 @@ class LOLActiveMatch:
 
     def desplay(self):
         embed = BotEmbed.simple("LOL對戰")
-        gamemode = lol_jdict["mod"].get(self.gameMode) or self.gameMode
+        gamemode = self.gameMode
         embed.add_field(name="遊戲模式", value=gamemode, inline=False)
         embed.add_field(name="開始時間", value=f"<t:{str(self.gameStartTime)[:-3]}>", inline=False)
         if self.gameLength <= 0:
@@ -592,16 +590,15 @@ class LOLLActiveMatchPlayer:
 
     def desplaytext(self):
         text = f"`{self.summonerName}`\n"
-        name_csv = csvdb.get_row(csvdb.lol_champion, "champion_id", self.championId)
-        name = name_csv.loc["name_tw"] if not name_csv.empty else self.championId
+        name = self.championName
         if not self.bot:
             text += f"{name}\n"
         else:
             text += f"{name}（機器人）\n"
 
-        text += f"召喚師技能：{lol_jdict['summoner_spell'].get(str(self.spell1Id))}/{lol_jdict['summoner_spell'].get(str(self.spell2Id))}\n"
-        text += f"主符文：{lol_jdict['runes'].get(str(self.perkStyle))}/{lol_jdict['runes'].get(str(self.mainperk))}\n"
-        text += f"副符文：{lol_jdict['runes'].get(str(self.perkSubStyle))}\n"
+        text += f"召喚師技能：{self.spell1Id}/{self.spell2Id}\n"
+        text += f"主符文：{self.perkStyle}/{self.mainperk}\n"
+        text += f"副符文：{self.perkSubStyle}\n"
 
         return text
 
@@ -618,8 +615,7 @@ class LOLBanChampion:
         self.championId = data.get("championId")
         self.teamId = data.get("teamId")
         self.pickTurn = data.get("pickTurn")
-        name_csv = csvdb.get_row(csvdb.lol_champion, "champion_id", self.championId)
-        name = name_csv.loc["name_tw"] if not name_csv.empty else str(self.championId)
+        name = str(self.championId)
         self.name = name
 
 
