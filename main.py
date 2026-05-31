@@ -52,6 +52,7 @@ logging.getLogger("starDiscord").setLevel(log_level)
 logging.getLogger("starlib").setLevel(log_level)
 logging.getLogger("starServer.twitch_chatbot").setLevel(log_level)
 logging.getLogger("starServer.bot_website").setLevel(log_level)
+logging.getLogger("py.warnings").setLevel(logging.ERROR)
 
 def run_discord_bot():
     sclient.sqldb.init_cache()
