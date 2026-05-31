@@ -1,14 +1,14 @@
+import logging
 import re
 import socket
-import unicodedata
 import ssl
-import dns.resolver
-import certifi
+import unicodedata
+from urllib.parse import urlparse
 
+import certifi
+import dns.resolver
 import requests
 import whois
-from urllib.parse import urlparse
-import logging
 
 log = logging.getLogger(__name__)
 
@@ -72,6 +72,7 @@ def get_whois(domain):
 def check_suspicious_pattern(domain: str) -> bool:
     return bool(domain.count(".") > 3 or re.search(r"\d{5,}", domain))
 
+
 def check_cert_domain(domain: str, cert: dict):
     """檢查 CN 與 SAN 是否與 domain 一致（支援萬用字元，遵循 RFC 2818）"""
     subject = dict(x[0] for x in cert.get("subject", []))
@@ -125,6 +126,7 @@ def check_cert_domain(domain: str, cert: dict):
                 break
 
     return matched, cn, san
+
 
 def get_ssl_subject(domain, port=443):
     """
@@ -195,6 +197,7 @@ def get_dns_records(domain):
         res["TXT_error"] = str(e)
     return res
 
+
 def contains_confusable_unicode(domain: str) -> bool:
     """
     偵測 domain 是否包含非 ASCII 且可能為同形字攻擊（簡單 heuristics）
@@ -220,6 +223,7 @@ def contains_confusable_unicode(domain: str) -> bool:
             scripts.add("OTHER")
     # 若存在 LATIN 且存在其他非 LATIN 腳本 -> 可疑
     return ("LATIN" in scripts and len(scripts) > 1) or ("CYRILLIC" in scripts and "GREEK" in scripts) or True
+
 
 def generate_url_report(url_text: str) -> list[str]:
     # data = check_url_with_dns_whois(url_text)
@@ -307,34 +311,3 @@ def generate_url_report(url_text: str) -> list[str]:
         text.append("警告：網址包含可疑的 Unicode 字元，可能為同形字攻擊")
 
     return text
-
-
-# def search_uri(uri: str, threat_type: webrisk_v1.ThreatType.MALWARE) -> SearchUrisResponse:
-#     """Checks whether a URI is on a given threatList.
-
-#     Multiple threatLists may be searched in a single query. The response will list all
-#     requested threatLists the URI was found to match. If the URI is not
-#     found on any of the requested ThreatList an empty response will be returned.
-
-#     Args:
-#         uri: The URI to be checked for matches
-#             Example: "http://testsafebrowsing.appspot.com/s/malware.html"
-#         threat_type: The ThreatLists to search in. Multiple ThreatLists may be specified.
-#             Example: threat_type = webrisk_v1.ThreatType.MALWARE
-
-#     Returns:
-#         SearchUrisResponse that contains a threat_type if the URI is present in the threatList.
-#     """
-#     api_key = sqldb.get_bot_token(APIType.Google, token_seq=1).access_token
-#     webrisk_client = webrisk_v1.WebRiskServiceClient(client_options={"api_key": api_key})
-
-#     request = webrisk_v1.SearchUrisRequest()
-#     request.threat_types = [threat_type]
-#     request.uri = uri
-
-#     response = webrisk_client.search_uris(request)
-#     if response.threat.threat_types:
-#         print(f"The URI has the following threat: {response}")
-#     else:
-#         print("The URL is safe!")
-#     return response

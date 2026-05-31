@@ -369,14 +369,6 @@ class owner(Cog_Extension):
         except AttributeError:
             await ctx.respond(embed=embed)
 
-    @mcserver_cmd.command(description="執行mc伺服器指令", guild_ids=debug_guilds)
-    @commands.is_owner()
-    async def cmd(self, ctx: discord.ApplicationContext, server_id=mcss_server_option, command=command_option):
-        await ctx.defer()
-        response = mcss_api.excute_command(server_id, command)
-        await ctx.respond(response if response else "指令已發送")
-
-
     @mcserver_cmd.command(description="開啟mc伺服器面板", name="panel", name_localizations=ChoiceList.name("mcserver_panel"))
     @ensure_registered()
     @commands.check_any(commands.check(has_privilege_level(PrivilegeLevel.Level2)), commands.has_guild_permissions(manage_channels=True))  # pyright: ignore[reportArgumentType]
