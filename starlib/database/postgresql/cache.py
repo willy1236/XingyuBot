@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import time
 from collections.abc import Hashable
 from dataclasses import dataclass, field
@@ -9,6 +10,9 @@ from typing import TYPE_CHECKING, Generic, TypeVar, overload
 
 from .enums import DBCacheType
 from .models import DynamicVoiceLobby, TwitchChatCommand
+
+log = logging.getLogger(__name__)
+
 
 if TYPE_CHECKING:
     from collections.abc import Callable

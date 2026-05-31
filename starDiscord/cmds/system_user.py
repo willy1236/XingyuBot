@@ -3,8 +3,8 @@ from discord.commands import SlashCommandGroup
 from discord.ext import commands
 
 from starlib import BotEmbed, ChoiceList, Jsondb, sclient
-from starlib.instance import happycamp_guild
 from starlib.database.postgresql.models import DiscordUser
+from starlib.instance import happycamp_guild
 
 from ..checks import RegisteredContext, ensure_registered
 from ..extension import Cog_Extension

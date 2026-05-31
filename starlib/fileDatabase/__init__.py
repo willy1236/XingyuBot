@@ -5,6 +5,10 @@
 
 from .csv import CsvDatabase
 from .json import JsonDatabase
+import logging
+
+log = logging.getLogger(__name__)
+
 
 Jsondb = JsonDatabase()
 csvdb = CsvDatabase()

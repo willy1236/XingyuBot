@@ -1,3 +1,4 @@
+import logging
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
@@ -10,11 +11,12 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
-from ..database import BotToken, PlatformType, debug_mode, sqldb
+from ..database import BotToken, PlatformType, sqldb
 from ..exceptions import SQLNotFoundError
 from ..settings import tz
-from ..utils import log
 from .models import DiscordUser, UserConnection
+
+log = logging.getLogger(__name__)
 
 
 class OAuth2Base(ABC):
@@ -337,7 +339,7 @@ class GoogleOauth2(OAuth2Base):
         elif self.access_token:
             self._creds = Credentials(token=self.access_token, refresh_token=self.refresh_token, expiry=self.expires_at.replace(tzinfo=None))
 
-        if debug_mode and (not self._creds or not self._creds.valid):
+        if not self._creds or not self._creds.valid:
             if self._creds and self._creds.expired and self._creds.refresh_token:
                 self._creds.refresh(Request())
             else:

@@ -1,5 +1,6 @@
 # type: ignore
 import hashlib
+import logging
 import re
 import time
 from io import BytesIO
@@ -13,6 +14,9 @@ from PIL import Image
 from starlib.database import APIType, sqldb
 from starlib.exceptions import GenerateError
 from starlib.fileDatabase import Jsondb
+
+log = logging.getLogger(__name__)
+
 
 genai.configure(api_key=sqldb.get_access_token(APIType.Google, 5).access_token)
 

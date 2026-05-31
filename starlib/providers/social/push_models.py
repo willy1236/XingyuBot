@@ -4,6 +4,10 @@ import discord
 from pydantic import AliasPath, BaseModel, ConfigDict, Field, HttpUrl, model_validator
 
 from ...settings import tz
+import logging
+
+log = logging.getLogger(__name__)
+
 
 
 class TitleDetail(BaseModel):

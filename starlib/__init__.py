@@ -2,6 +2,9 @@
 ## Xingyu Discord Bot Library
 Discord機器人"星羽"用libary
 """
+import logging
+import sys
+
 from .base import *
 from .core import StarEventBus, sclient
 from .database import sqldb
@@ -10,3 +13,5 @@ from .fileDatabase import Jsondb, csvdb
 from .providers import *
 from .settings import tz
 from .utils import *
+
+log = logging.getLogger(__name__)

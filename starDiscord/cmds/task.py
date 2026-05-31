@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import subprocess
 from datetime import datetime, timedelta, timezone
 
@@ -9,7 +10,7 @@ from apscheduler.triggers.date import DateTrigger
 from discord.ext import commands, tasks
 from requests.exceptions import ConnectTimeout, RequestException
 
-from starlib import BotEmbed, Jsondb, log, sclient, sqldb, tz, utils
+from starlib import BotEmbed, Jsondb, sclient, sqldb, tz, utils
 from starlib.database import APIType, DBCacheType, NotifyChannelType, NotifyCommunityType, UserIPDetails, UsersCountRecord, VoiceTime
 from starlib.instance import *
 from starlib.providers.social.models import YoutubeVideo
@@ -18,6 +19,7 @@ from ..bot import DiscordBot
 from ..extension import Cog_Extension
 from ..uiElement.view import GiveawayView
 
+log = logging.getLogger(__name__)
 voice_times: dict[int, dict[int, timedelta]] = {}
 
 

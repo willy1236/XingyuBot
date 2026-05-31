@@ -1,5 +1,5 @@
 import asyncio
-import json
+import logging
 import secrets
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -21,7 +21,7 @@ from linebot.v3.webhooks import MessageEvent, TextMessageContent
 from linebot.v3.webhooks.models.message_event import MessageEvent
 
 from sentry_bootstrap import capture_exception_safe
-from starlib import BaseThread, Jsondb, sclient, sqldb, utils, web_log
+from starlib import BaseThread, Jsondb, sclient, sqldb, utils
 from starlib.database import APIType, ExternalAccount, NotifyCommunityType, PlatformType, TwitchBotJoinChannel
 from starlib.instance import google_api
 from starlib.oauth import DiscordOAuth, GoogleOAuth, TwitchOAuth
@@ -41,6 +41,7 @@ configuration = Configuration(access_token=sqldb.get_access_token(APIType.Line).
 handler = WebhookHandler(sqldb.get_identifier_secret(APIType.Line).client_secret)
 
 app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
+log = logging.getLogger(__name__)
 
 
 @app.middleware("http")
@@ -55,7 +56,7 @@ async def sentry_exception_middleware(request: Request, call_next):
             tags={"service": "website", "source": "middleware"},
             extras={"path": request.url.path, "method": request.method},
         )
-        web_log.exception("Unhandled website exception: %s", exc)
+        log.exception("Unhandled website exception: %s", exc)
         return JSONResponse(status_code=500, content={"detail": "Internal Server Error"})
 
 
@@ -82,7 +83,7 @@ async def openapi(username: str = Depends(get_current_username)):
 @app.get("/")
 @app.head("/")
 def main(request:Request):
-    web_log.debug(f"{request.client.host} - {request.method} - {request.url.path}")
+    log.debug(f"{request.client.host} - {request.method} - {request.url.path}")
     return HTMLResponse("這是一個目前沒有內容的主頁")
 
 @app.get("/keep_alive")
@@ -102,7 +103,7 @@ async def prase_yt_push(content: str):
         push_entry = YoutubePushEntry(**entry)
         videos = google_api.get_video(push_entry.yt_videoid)
         if not videos:
-            web_log.warning(f"Video {push_entry.yt_videoid} not found in YouTube API")
+            log.warning(f"Video {push_entry.yt_videoid} not found in YouTube API")
             continue
 
         video = videos[0]
@@ -110,23 +111,23 @@ async def prase_yt_push(content: str):
         ytcache = sqldb.get_yt_cache(push_entry.yt_videoid)
         if push_entry.published > cache.value or (ytcache is not None and video.snippet.liveBroadcastContent == "live"):
             # 透過published的時間來判斷是否為新影片
-            web_log.info("New Youtube push entry %s created at %s", push_entry.yt_videoid, push_entry.published)
+            log.info("New Youtube push entry %s created at %s", push_entry.yt_videoid, push_entry.published)
             no_mention = False
 
             if ytcache is not None:
                 # 有ytcache：直播開始
-                web_log.info("Removing cached video %s from database", video.id)
+                log.info("Removing cached video %s from database", video.id)
                 sqldb.remove_yt_cache(video.id)
 
             elif video.is_live_upcoming_with_time:
                 # 如果是即將開始的直播，則添加ytcache
                 assert video.liveStreamingDetails.scheduledStartTime is not None, "Scheduled start time should not be None for upcoming live videos"
-                web_log.info("Upcoming live video detected: %s at %s", video.id, video.liveStreamingDetails.scheduledStartTime)
+                log.info("Upcoming live video detected: %s at %s", video.id, video.liveStreamingDetails.scheduledStartTime)
                 sqldb.add_yt_cache(video.id, video.liveStreamingDetails.scheduledStartTime)
                 no_mention = True
             elif video.liveStreamingDetails and video.liveStreamingDetails.actualEndTime:
                 # 已經結束的直播
-                web_log.info("Live video ended: %s at %s", video.id, video.liveStreamingDetails.actualEndTime)
+                log.info("Live video ended: %s at %s", video.id, video.liveStreamingDetails.actualEndTime)
                 no_mention = True
 
             if push_entry.published > cache.value:
@@ -137,7 +138,7 @@ async def prase_yt_push(content: str):
                     sclient.bot.send_notify_communities(video.embed(), NotifyCommunityType.Youtube, push_entry.yt_channelid, no_mention=no_mention)
                 )
             else:
-                web_log.warning("Bot not found.")
+                log.warning("Bot not found.")
 
 
 @app.get("/youtube_push")
@@ -172,20 +173,20 @@ async def oauth_discord(request: Request):
     await auth.exchange_code(code)
     user = await auth.get_me()
     auth.save_token_to_db(user.id)
-    web_log.info(f"Discord OAuth: User {user.username} ({user.id}) authorized.")
-    web_log.info(f"Discord OAuth scopes: {auth.scopes}")
+    log.info(f"Discord OAuth: User {user.username} ({user.id}) authorized.")
+    log.info(f"Discord OAuth scopes: {auth.scopes}")
 
     cuser = sqldb.get_cloud_user_by_discord(user.id)
     if not cuser:
         # 如果資料庫沒有這個用戶，先創建一個新的 CloudUser
         cuser = sqldb.add_cloud_user_by_discord(user.id, user.username)
-        web_log.info(f"Created new CloudUser for Discord ID {user.id} with username '{user.username}'")
+        log.info(f"Created new CloudUser for Discord ID {user.id} with username '{user.username}'")
 
     if auth.has_scope("connections"):
         connections = await auth.get_connections()
         for connection in connections:
             if connection.type == "twitch":
-                web_log.info(f"Discord connection: {connection.name}({connection.id})")
+                log.info(f"Discord connection: {connection.name}({connection.id})")
                 sclient.sqldb.upsert_external_account(user_id=cuser.id, platform=PlatformType.Twitch, external_id=connection.id, display_name=connection.name)
 
     if params.get("guild_id"):
@@ -266,7 +267,7 @@ async def callback_linebot(request: Request, background_tasks: BackgroundTasks):
     # get request body as text
     body = await request.body()
     body = body.decode("UTF-8")
-    web_log.info("Request body: " + body)
+    log.info("Request body: " + body)
 
     # # handle webhook body
     # try:
@@ -283,10 +284,10 @@ def process_linebot_webhook(body: str, signature: str):
     try:
         handler.handle(body, signature)
     except InvalidSignatureError:
-        web_log.error("Invalid signature in LINE Bot webhook")
+        log.error("Invalid signature in LINE Bot webhook")
     except Exception as e:
         capture_exception_safe(e, tags={"service": "website", "source": "linebot_webhook"})
-        web_log.error(f"處理 LINE Bot 訊息時發生錯誤: {e}")
+        log.error(f"處理 LINE Bot 訊息時發生錯誤: {e}")
 
 @handler.add(MessageEvent, message=TextMessageContent)
 async def handle_message(event: MessageEvent):
@@ -299,7 +300,7 @@ async def handle_message(event: MessageEvent):
             text = "\n".join([report_text, "", "AI 分析結果:", ai_response.output])
         except Exception as e:
             capture_exception_safe(e, tags={"service": "website", "source": "line_agent"})
-            web_log.error(f"Error in AI analysis: {e}")
+            log.error(f"Error in AI analysis: {e}")
             text = "\n".join([report_text, "", "AI 分析結果: 無法取得分析結果"])
 
     else:
@@ -442,7 +443,7 @@ class WebsiteThread(BaseThread):
             self.loop.run_until_complete(self.server.serve())
         except Exception as exc:
             capture_exception_safe(exc, tags={"service": "website", "source": "website_thread_run"})
-            web_log.exception("Website thread crashed: %s", exc)
+            log.exception("Website thread crashed: %s", exc)
             raise
         finally:
             self.loop.close()

@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import math
 import random
 import re
@@ -11,7 +12,7 @@ from discord.errors import Forbidden, NotFound
 from discord.ext import commands, pages
 from discord.utils import format_dt
 
-from starlib import BotEmbed, ChoiceList, log, sclient, tz
+from starlib import BotEmbed, ChoiceList, sclient, tz
 from starlib.database import Coins, Giveaway
 from starlib.database.postgresql.models import Giveaway
 from starlib.instance import *
@@ -23,6 +24,7 @@ from ..extension import Cog_Extension
 from ..uiElement.view import DeleteAddRoleView, GiveawayView, PollView, TRPGPlotView
 from .bot_event import check_registration
 
+log = logging.getLogger(__name__)
 bet_option = ChoiceList.set("bet_option")
 position_option = ChoiceList.set("position_option")
 party_option = ChoiceList.set("party_option")

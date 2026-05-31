@@ -1,3 +1,4 @@
+import logging
 import secrets
 from collections.abc import Callable, Generator
 from datetime import date, datetime, time, timedelta, timezone
@@ -17,13 +18,15 @@ from sqlmodel import Session, SQLModel, create_engine, delete, select, update
 
 from starlib.exceptions import *
 from starlib.settings import get_settings, tz
-from starlib.utils import log
 
 from .cache import CacheStore
 from .enums import *
 from .models import *
 from .rpg import *
 from .schemas import Base
+
+log = logging.getLogger(__name__)
+
 
 T = TypeVar("T")
 P = ParamSpec("P")

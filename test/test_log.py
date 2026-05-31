@@ -3,9 +3,6 @@ import sys
 
 import structlog
 
-log = logging.getLogger(__name__)
-
-
 # 1. 定義 structlog 的共享處理管線（保留字典格式）
 shared_processors = [
     structlog.contextvars.merge_contextvars,  # 合併上下文變數
@@ -49,3 +46,12 @@ structlog.configure(
     logger_factory=structlog.stdlib.LoggerFactory(),
     cache_logger_on_first_use=True,
 )
+
+# ==================== 測試使用 ====================
+log = structlog.get_logger()
+
+# 綁定上下文
+ctx_log = log.bind(request_id="req-999", user_id="user_test")
+
+ctx_log.info("user_login_success", status="active")
+ctx_log.warning("rate_limit_warning", remaining_attempts=2)

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from collections.abc import Callable
 from typing import TYPE_CHECKING
 
@@ -11,9 +12,12 @@ from starlib.base import BaseThread
 from starlib.database import sqldb
 from starlib.fileDatabase import Jsondb
 from starlib.settings import tz
-from starlib.utils import BotEmbed, log
+from starlib.utils import BotEmbed
 
 from .model import BaseEvent
+
+log = logging.getLogger(__name__)
+
 
 if TYPE_CHECKING:
     from starDiscord import DiscordBot

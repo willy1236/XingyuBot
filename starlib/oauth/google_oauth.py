@@ -1,4 +1,6 @@
 # google_oauth.py
+import logging
+
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
@@ -6,6 +8,8 @@ from googleapiclient.discovery import build
 from starlib.database import PlatformType
 
 from .oauth_lib import OAuth2Base
+
+log = logging.getLogger(__name__)
 
 
 class GoogleOAuth(OAuth2Base):

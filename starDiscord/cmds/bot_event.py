@@ -1,17 +1,20 @@
 import asyncio
+import logging
 import re
 from datetime import datetime, timedelta, timezone
 
 import discord
 from discord.ext import commands
 
-from starlib import BotEmbed, Jsondb, log, sclient, tz
+from starlib import BotEmbed, sclient, tz
 from starlib.database import DBCacheType, NotifyChannelType, PrivilegeLevel
 from starlib.instance import *
 from starlib.starAgent import ModelMessage, MyDeps, agent
 
 from ..extension import Cog_Extension
 from ..uiElement.view import PollView, ReactionRoleView, TicketChannelView, TicketLobbyView
+
+log = logging.getLogger(__name__)
 
 keywords = {}
 

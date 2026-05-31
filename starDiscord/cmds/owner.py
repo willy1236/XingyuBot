@@ -1,4 +1,5 @@
 # pyright: reportArgumentType=true
+import logging
 import platform
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
@@ -10,7 +11,7 @@ from discord.commands import SlashCommandGroup
 from discord.ext import commands
 from mcstatus import JavaServer
 
-from starlib import BotEmbed, Jsondb, log, sclient
+from starlib import BotEmbed, Jsondb, sclient
 from starlib.database import NotifyChannelType
 from starlib.instance import *
 from starlib.settings import get_settings
@@ -20,6 +21,9 @@ from ..checks import PrivilegeLevel, ensure_registered, has_privilege_level, has
 from ..command_options import *
 from ..extension import Cog_Extension
 from ..uiElement.view import McServerPanel, VIPAuditView, VIPView
+
+log = logging.getLogger(__name__)
+
 
 if TYPE_CHECKING:
     from ..bot import DiscordBot

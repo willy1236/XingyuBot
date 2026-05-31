@@ -1,5 +1,6 @@
 # pyright: reportArgumentType=false, reportCallIssue=false
 import inspect
+import logging
 from dataclasses import dataclass
 
 from discord import Guild, Member
@@ -11,10 +12,13 @@ from pydantic_ai.messages import ModelMessage
 from pydantic_ai.models.google import GoogleModel, GoogleModelSettings
 from pydantic_ai.providers.google import GoogleProvider
 
-from starlib import Jsondb, NotionAPI, agent_log, sqldb
+from starlib import Jsondb, NotionAPI, sqldb
 from starlib.database import APIType
 from starlib.providers.social.models import NotionBlock
 from starlib.settings import get_settings
+
+log = logging.getLogger(__name__)
+
 
 mcp_servers = load_mcp_servers("database/mcp_config.json")
 notion_api = NotionAPI()
@@ -62,17 +66,17 @@ class Tools:
                  - Warning type (localized)
                  - Creation time
         """
-        agent_log.info(f"Getting user warning info for Discord ID: {discord_id}")
+        log.info(f"Getting user warning info for Discord ID: {discord_id}")
         warnings = sqldb.get_warnings(discord_id)
         if not warnings:
-            agent_log.info("No warnings found for user.")
+            log.info("No warnings found for user.")
             return "使用者沒有警告資訊。"
         warning_info = f"使用者 {discord_id} 的警告資訊："
         for warning in warnings:
             warning_info += (
                 f"\n- {warning.reason} (ID: {warning.warning_id}, 類型: {Jsondb.get_tw(warning.moderate_type, 'warning_type')}, 時間: {warning.create_time})"
             )
-        agent_log.info(warning_info)
+        log.info(warning_info)
         return warning_info
 
     @staticmethod
@@ -87,10 +91,10 @@ class Tools:
             str: A formatted string containing user information in Chinese, with additional
                  developer identification if the ID matches the developer's account.
         """
-        agent_log.info(f"Getting user info for Discord ID: {discord_id}")
+        log.info(f"Getting user info for Discord ID: {discord_id}")
         user = sqldb.get_cloud_user(discord_id)
 
-        agent_log.info(f"User: {user}")
+        log.info(f"User: {user}")
         text = f"- {str(user)}"
 
         if user.discord_id == 419131103836635136:
@@ -106,10 +110,10 @@ class Tools:
         Returns:
             str: The search results formatted as a string.
         """
-        agent_log.info(f"Searching Notion content with query: {query}")
+        log.info(f"Searching Notion content with query: {query}")
         result = notion_api.search(query, page_size=1)
         if not result or not result.results:
-            agent_log.info("No search results found.")
+            log.info("No search results found.")
             return "沒有搜尋結果。"
 
         result_blocks = notion_api.get_block_children(result.results[0].id)
@@ -127,11 +131,11 @@ class Tools:
         Returns:
             str: The result of the add operation.
         """
-        agent_log.info(f"Adding Notion note with title: {title}")
+        log.info(f"Adding Notion note with title: {title}")
         settings = get_settings()
         database_id = settings.NOTION_DATABASE_ID
         result = notion_api.add_page_title_content(title, content, database_id)
-        agent_log.info(f"Add note result: {result}")
+        log.info(f"Add note result: {result}")
         return str(result)
 
     @staticmethod
@@ -147,13 +151,13 @@ class Tools:
         """
         page = notion_api.search(title, page_size=1)
         if not page or not page.results:
-            agent_log.info("No page found to update.")
+            log.info("No page found to update.")
             return "沒有找到要更新的頁面。"
 
         page_id = page.results[0].id
-        agent_log.info(f"Updating Notion note with page ID: {page_id}")
+        log.info(f"Updating Notion note with page ID: {page_id}")
         result = notion_api.update_page_content(page_id, content)
-        agent_log.info(f"Update note result: {result}")
+        log.info(f"Update note result: {result}")
         if isinstance(result, (NotionBlock, list)):
             return "更新成功。"
         return str(result)
@@ -169,13 +173,13 @@ class Tools:
         """
         page = notion_api.search(title, page_size=1)
         if not page or not page.results:
-            agent_log.info("No page found to delete.")
+            log.info("No page found to delete.")
             return "沒有找到要刪除的頁面。"
 
         page_id = page.results[0].id
-        agent_log.info(f"Deleting Notion note with page ID: {page_id}")
+        log.info(f"Deleting Notion note with page ID: {page_id}")
         result = notion_api.delete_block(page_id)
-        agent_log.info(f"Delete note result: {result}")
+        log.info(f"Delete note result: {result}")
         if isinstance(result, (NotionBlock, list)):
             return "刪除成功。"
         return str(result)

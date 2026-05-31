@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import io
+import logging
 import random
 from datetime import datetime
 from typing import TYPE_CHECKING
@@ -11,10 +12,12 @@ import matplotlib
 import numpy as np
 from discord.utils import format_dt
 
-from starlib import BotEmbed, Jsondb, log, sqldb, tz
+from starlib import BotEmbed, Jsondb, sqldb, tz
 from starlib.database import Giveaway, GiveawayUser, HappycampApplicationForm, HappycampVIP, McssServerAction, McssServerStatues, Poll, PollRole, TicketChannel
 from starlib.instance import mcss_api, vip_admin_channel
 from starlib.utils.utility import find_radmin_vpn_network
+
+log = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from starlib.database import SQLRepository

@@ -40,6 +40,7 @@ dependencies = [
     "uvicorn>=0.35.0",
     "vosk>=0.3.45",
     "yt-dlp>=2025.7.21",
+    "structlog>=25.5.0",
 ]
 
 [dependency-groups]

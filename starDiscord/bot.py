@@ -1,13 +1,14 @@
 # pyright: reportArgumentType=false, reportOptionalMemberAccess=false
 import asyncio
 import datetime
+import logging
 from collections.abc import Coroutine
 from pathlib import Path
 
 import discord
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-from starlib import BotEmbed, log, sqldb
+from starlib import BotEmbed, sqldb
 from starlib.core.model import TwitchStreamEvent
 from starlib.database import APIType, NotifyChannelType, NotifyCommunityType
 from starlib.instance import (
@@ -33,6 +34,7 @@ from starlib.instance import (
     report_channel as report_channel_id,
 )
 
+log = logging.getLogger(__name__)
 
 class DiscordBot(discord.Bot):
     _COG_PATH = Path("./starDiscord/cmds")

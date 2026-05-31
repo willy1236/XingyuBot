@@ -1,5 +1,6 @@
 import asyncio
 import ipaddress
+import logging
 from datetime import date, datetime, timedelta
 
 import discord
@@ -7,7 +8,7 @@ import nmap
 from discord.commands import SlashCommandGroup
 from discord.ext import commands, pages
 
-from starlib import BotEmbed, ChoiceList, Jsondb, csvdb, log, sclient, tz
+from starlib import BotEmbed, ChoiceList, Jsondb, csvdb, sclient, tz
 from starlib.database import LOLGameCache, LOLGameRecord, PlatformType, UserIPDetails
 from starlib.exceptions import APINetworkError
 from starlib.providers import *
@@ -15,6 +16,8 @@ from starlib.settings import get_settings
 
 from ..checks import RegisteredContext, ensure_registered
 from ..extension import Cog_Extension
+
+log = logging.getLogger(__name__)
 
 game_option = ChoiceList.set("game_set_option")
 riot_api = RiotAPI()

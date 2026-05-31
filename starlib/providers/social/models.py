@@ -8,6 +8,10 @@ from pydantic import BaseModel, ConfigDict, Field, HttpUrl, computed_field, fiel
 
 from ...fileDatabase import Jsondb
 from ...settings import tz
+import logging
+
+log = logging.getLogger(__name__)
+
 
 ytvideo_lives = {
     "live": "直播中",

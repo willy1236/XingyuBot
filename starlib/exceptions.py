@@ -10,7 +10,9 @@
 - 1400: 請求相關錯誤
 """
 
-from .utils import log
+import logging
+
+log = logging.getLogger(__name__)
 
 
 class StarException(Exception):

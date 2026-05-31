@@ -1,6 +1,7 @@
 # type: ignore
 import asyncio
 import enum
+import logging
 import math
 import random
 import subprocess
@@ -14,10 +15,12 @@ import yt_dlp as youtube_dl
 from discord.commands import SlashCommandGroup
 from discord.ext import commands, pages
 
-from starlib import BotEmbed, Jsondb, log
+from starlib import BotEmbed, Jsondb
 from starlib.exceptions import *
 
 from ..extension import Cog_Extension
+
+log = logging.getLogger(__name__)
 
 # Suppress noise about console usage from errors
 youtube_dl.utils.bug_reports_message = lambda before=";": ""

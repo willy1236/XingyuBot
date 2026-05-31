@@ -1,3 +1,4 @@
+import logging
 import os
 from datetime import timedelta, timezone
 from functools import lru_cache
@@ -5,6 +6,9 @@ from pathlib import Path
 
 from pydantic import Field, ValidationError
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+log = logging.getLogger(__name__)
+
 
 tz = timezone(timedelta(hours=8))
 

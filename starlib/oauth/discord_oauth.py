@@ -1,8 +1,12 @@
 # discord_oauth.py
+import logging
+
 from starlib.database import PlatformType
 
 from .models import DiscordUser, UserConnection
 from .oauth_lib import OAuth2Base
+
+log = logging.getLogger(__name__)
 
 
 class DiscordOAuth(OAuth2Base):

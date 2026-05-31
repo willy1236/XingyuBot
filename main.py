@@ -1,4 +1,6 @@
 import atexit
+import logging
+import sys
 import time
 
 import discord
@@ -12,7 +14,7 @@ init_sentry(service="main")
 
 # ruff: disable[E402]
 from starDiscord import DiscordBot
-from starlib import log, sclient
+from starlib import sclient
 from starlib.core.model import TwitchStreamEvent
 from starlib.settings import get_settings
 from starServer.scheduler import run_scheduler_in_thread
@@ -24,6 +26,16 @@ bot_code = settings.BOT_CODE
 api_website = settings.API_WEBSITE
 twitch_bot = settings.TWITCH_BOT
 
+log_level = settings.LOG_LEVEL
+formatter = logging.Formatter(fmt="%(asctime)s [%(levelname)s][%(name)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
+handler = logging.StreamHandler(sys.stdout)
+handler.setFormatter(formatter)
+logging.basicConfig(handlers=[handler], level=logging.ERROR)
+
+log = logging.getLogger(__name__)
+log.setLevel(logging.INFO)
+logging.getLogger("starDiscord").setLevel(log_level)
+logging.getLogger("starlib").setLevel(log_level)
 
 def run_discord_bot():
     sclient.sqldb.init_cache()

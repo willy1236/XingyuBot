@@ -1,4 +1,5 @@
 # oauth_lib.py
+import logging
 import secrets
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta, timezone
@@ -7,6 +8,8 @@ from typing import TypedDict
 from authlib.integrations.httpx_client import AsyncOAuth2Client
 
 from starlib.database import OAuthClient, OAuthToken, PlatformType, sqldb
+
+log = logging.getLogger(__name__)
 
 
 class OAuthTokenDict(TypedDict, total=False):

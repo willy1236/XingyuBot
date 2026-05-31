@@ -1,5 +1,8 @@
+import logging
 import math
 import random
+
+log = logging.getLogger(__name__)
 
 
 def generate_area(m, n):

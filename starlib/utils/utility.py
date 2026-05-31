@@ -1,5 +1,6 @@
 import base64
 import ipaddress
+import logging
 import re
 import socket
 import subprocess
@@ -11,6 +12,8 @@ import psutil
 
 from ..fileDatabase import Jsondb
 from .functions import find
+
+log = logging.getLogger(__name__)
 
 
 class BotEmbed:

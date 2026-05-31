@@ -16,10 +16,12 @@ from googleapiclient.errors import HttpError
 from starlib.database import APIType, sqldb
 from starlib.exceptions import APINetworkError, Forbidden
 from starlib.settings import tz
-from starlib.utils import log
+import logging
 
 from ..base import APICaller
 from .models import *
+log = logging.getLogger(__name__)
+
 
 T = TypeVar("T")
 

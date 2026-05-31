@@ -1,13 +1,16 @@
+import logging
+
 import discord
 from discord.ext import commands
 
 from sentry_bootstrap import capture_exception_safe
-from starlib import Jsondb, log
+from starlib import Jsondb
 from starlib.exceptions import *
 from starlib.instance import debug_guilds, debug_mode
 
 from ..extension import Cog_Extension
 
+log = logging.getLogger(__name__)
 permissions_tl = Jsondb.jdict.get("permissions")
 
 class error(Cog_Extension):

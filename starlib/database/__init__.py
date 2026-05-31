@@ -2,14 +2,17 @@
 ### 模組：資料庫
 處理資料庫連線與操作。
 """
+import logging
+
 from starlib.fileDatabase import Jsondb
 from starlib.settings import get_settings
-from starlib.utils import log
 
 from .mongodb.client import MongoDB
 from .postgresql.client import SQLRepository, create_sql_repository
 from .postgresql.enums import *
 from .postgresql.models import *
+
+log = logging.getLogger(__name__)
 
 
 def create_sqldb() -> SQLRepository:

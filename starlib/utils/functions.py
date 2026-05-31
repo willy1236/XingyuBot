@@ -1,6 +1,10 @@
+import logging
 import random
 
 from discord.ext import commands
+
+log = logging.getLogger(__name__)
+
 
 # (*args) 傳入多個參數->list
 # (**kwargs) 傳入多個參數->dict

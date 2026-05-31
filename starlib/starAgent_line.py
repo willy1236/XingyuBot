@@ -1,11 +1,16 @@
 # pyright: reportArgumentType=false, reportCallIssue=false
+import logging
+
 from pydantic_ai import Agent, RunContext
 from pydantic_ai.messages import ModelMessage
 from pydantic_ai.models.google import GoogleModel, GoogleModelSettings
 from pydantic_ai.providers.google import GoogleProvider
 
-from starlib import Jsondb, agent_log, sqldb
+from starlib import Jsondb, sqldb
 from starlib.database import APIType
+
+log = logging.getLogger(__name__)
+
 
 safety_settings = [
     {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_ONLY_HIGH"},

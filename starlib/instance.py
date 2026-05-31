@@ -2,12 +2,17 @@
 此處提供bot在初始化與執行時所需的設定與物件（如api等）
 """
 
+import logging
+
 import tweepy
 
 from .database import APIType, sqldb
 from .fileDatabase import Jsondb
 from .providers import *
 from .settings import get_settings
+
+log = logging.getLogger(__name__)
+
 
 __all__ = [
     "mcss_api",

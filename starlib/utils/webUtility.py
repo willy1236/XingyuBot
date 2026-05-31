@@ -1,13 +1,17 @@
+import logging
 import re
 import socket
-import unicodedata
 import ssl
-import dns.resolver
-import certifi
+import unicodedata
+from urllib.parse import urlparse
 
+import certifi
+import dns.resolver
 import requests
 import whois
-from urllib.parse import urlparse
+
+log = logging.getLogger(__name__)
+
 
 def check_url_format(url: str) -> str | None:
     if not url.startswith(("http://", "https://")):

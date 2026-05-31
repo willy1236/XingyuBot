@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, cast
 
 from pydantic import BaseModel, ConfigDict, Field
 
-logger = logging.getLogger("star")
+log = logging.getLogger(__name__)
 
 JsonPrimitive = str | int | float | bool | None
 JsonValue = JsonPrimitive | dict[str, "JsonValue"] | list["JsonValue"]
@@ -151,7 +151,7 @@ class JsonDatabase:
         # create folder
         if not self._DBPATH.exists():
             self._DBPATH.mkdir(parents=True, exist_ok=True)
-            logger.info(">> Created folder: %s <<", self._DBPATH)
+            log.info(">> Created folder: %s <<", self._DBPATH)
 
         for file, path in self._PATH_DICT.items():
             if not path.exists():
@@ -159,7 +159,7 @@ class JsonDatabase:
                     continue
                 with path.open("w", encoding="utf-8") as jfile:
                     json.dump({}, jfile, indent=4)
-                    logger.info(">> Created json file: %s <<", file)
+                    log.info(">> Created json file: %s <<", file)
 
             with path.open(mode="r", encoding="utf8") as jfile:
                 model_cls = self._MODEL_DICT[file]
