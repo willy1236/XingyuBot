@@ -12,12 +12,12 @@ from discord.errors import Forbidden, NotFound
 from discord.ext import commands, pages
 from discord.utils import format_dt
 
-from starlib import BotEmbed, ChoiceList, sclient, tz
+from starlib import BotEmbed, ChoiceList, sclient
 from starlib.database import Coins, Giveaway
 from starlib.database.postgresql.models import Giveaway
 from starlib.instance import *
 from starlib.providers import XingyuGoogleCloud
-from starlib.utils import converter, create_only_role_list, create_role_magification_dict, find, random_color
+from starlib.utils import convert_tz, create_only_role_list, create_role_magification_dict, find, nowtz, random_color
 
 from ..checks import RegisteredContext, ensure_registered
 from ..extension import Cog_Extension
@@ -867,9 +867,9 @@ class command(Cog_Extension):
         description: discord.Option(str, name="描述", description="關於抽獎的描述", required=False, default=None),
     ):
         await ctx.defer()
-        now = datetime.now(tz)
+        now = nowtz()
         if end_time:
-            end_at = datetime.strptime(end_time, "%Y-%m-%d %H:%M:%S").astimezone(tz)
+            end_at = convert_tz(datetime.strptime(end_time, "%Y-%m-%d %H:%M:%S"))
             if end_at < now:
                 await ctx.respond("錯誤：結束時間必須大於現在時間")
                 return
@@ -881,7 +881,7 @@ class command(Cog_Extension):
             channel_id=ctx.channel.id,
             prize_name=prize_name,
             winner_count=winner_count,
-            created_at=datetime.now(tz),
+            created_at=nowtz(),
             creator_id=ctx.author.id,
             end_at=end_at,
             description=description,

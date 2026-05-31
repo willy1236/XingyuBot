@@ -1,3 +1,4 @@
+import logging
 import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -6,9 +7,9 @@ from typing import TypeVar
 import discord
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, computed_field, field_validator, model_validator
 
-from ...fileDatabase import Jsondb
-from ...settings import tz
-import logging
+from starlib.base.types import UTCDateTime
+from starlib.fileDatabase import Jsondb
+from starlib.utils.time import convert_tz
 
 log = logging.getLogger(__name__)
 
@@ -32,13 +33,12 @@ class TwitchUser(BaseModel):
     offline_image_url: str | None = None
     view_count: int
     email: str | None = None
-    created_at: datetime
+    created_at: UTCDateTime
     url: str = None
 
     @model_validator(mode="after")
     def __post_init__(self):
         self.url = f"https://www.twitch.tv/{self.login}"
-        self.created_at = self.created_at.astimezone(tz=tz)
         return self
 
     def embed(self):
@@ -62,7 +62,7 @@ class TwitchStream(BaseModel):
     type: str
     title: str
     viewer_count: int
-    started_at: datetime
+    started_at: UTCDateTime
     language: str
     thumbnail_url: str
     tag_ids: list[str | None]
@@ -74,10 +74,8 @@ class TwitchStream(BaseModel):
     @model_validator(mode="after")
     def __post_init__(self):
         self.thumbnail_url = self.thumbnail_url.replace("{width}", "960").replace("{height}", "540")
-        self.started_at = self.started_at.astimezone(tz=tz)
         self.url = f"https://www.twitch.tv/{self.user_login}"
-        now = datetime.now(tz=tz)
-        self.live_thumbnail_url = f"{self.thumbnail_url}?t={int(now.timestamp())}"
+        self.live_thumbnail_url = f"{self.thumbnail_url}?t={int(datetime.now(timezone.utc).timestamp())}"
         return self
 
     def embed(self, profile_image_url: str = None):
@@ -103,8 +101,8 @@ class TwitchVideo(BaseModel):
     user_name: str
     title: str
     description: str
-    created_at: datetime
-    published_at: datetime
+    created_at: UTCDateTime
+    published_at: UTCDateTime
     url: str
     thumbnail_url: str
     viewable: str
@@ -116,8 +114,6 @@ class TwitchVideo(BaseModel):
 
     @model_validator(mode="after")
     def __post_init__(self):
-        self.created_at = self.created_at.astimezone(tz=tz)
-        self.published_at = self.published_at.astimezone(tz=tz)
         self.thumbnail_url = self.thumbnail_url.replace("%{width}", "960").replace("%{height}", "540")
         return self
 
@@ -142,7 +138,7 @@ class TwitchClip(BaseModel):
     language: str
     title: str
     view_count: int
-    created_at: datetime
+    created_at: UTCDateTime
     thumbnail_url: str
     duration: timedelta
     vod_offset: int | None = None
@@ -150,7 +146,6 @@ class TwitchClip(BaseModel):
 
     @model_validator(mode="after")
     def __post_init__(self):
-        self.created_at = self.created_at.astimezone(tz=tz)
         self.thumbnail_url = self.thumbnail_url.replace("{width}", "960").replace("{height}", "540")
         return self
 
@@ -191,7 +186,7 @@ class ChannelSnippet(BaseModel):
     title: str
     description: str
     customUrl: str
-    publishedAt: datetime
+    publishedAt: UTCDateTime
     thumbnails: YoutubeThumbnails
     localized: dict
     country: str | None = None
@@ -205,18 +200,18 @@ class ChannelStatistics(BaseModel):
 
 
 class StreamSnippet(BaseModel):
-    publishedAt: datetime
+    publishedAt: UTCDateTime
     channelId: str
     title: str
     description: str
     thumbnails: YoutubeThumbnails
     channelTitle: str
     liveBroadcastContent: str
-    publishTime: datetime
+    publishTime: UTCDateTime
 
 
 class VideoSnippet(BaseModel):
-    publishedAt: datetime
+    publishedAt: UTCDateTime
     channelId: str
     title: str
     description: str
@@ -230,10 +225,10 @@ class VideoSnippet(BaseModel):
 
 
 class LiveStreamingDetails(BaseModel):
-    actualStartTime: datetime | None = None
-    actualEndTime: datetime | None = None
-    scheduledStartTime: datetime | None = None
-    scheduledEndTime: datetime | None = None
+    actualStartTime: UTCDateTime | None = None
+    actualEndTime: UTCDateTime | None = None
+    scheduledStartTime: UTCDateTime | None = None
+    scheduledEndTime: UTCDateTime | None = None
     concurrentViewers: int | None = None
     activeLiveChatId: str | None = None
 
@@ -244,11 +239,6 @@ class YoutubeChannel(BaseModel):
     id: str
     snippet: ChannelSnippet
     statistics: ChannelStatistics
-
-    @model_validator(mode="after")
-    def __post_init__(self):
-        self.snippet.publishedAt = self.snippet.publishedAt.astimezone(tz=tz)
-        return self
 
     def embed(self):
         embed = discord.Embed(title=self.snippet.title, url=f"https://www.youtube.com/channel/{self.id}", description=self.snippet.description, color=0xFF0000, timestamp=self.snippet.publishedAt)
@@ -268,12 +258,6 @@ class YouTubeStream(BaseModel):
     id: IdInfo
     snippet: StreamSnippet
 
-    @model_validator(mode="after")
-    def __post_init__(self):
-        self.snippet.publishedAt = self.snippet.publishedAt.astimezone(tz=tz)
-        self.snippet.publishTime = self.snippet.publishTime.astimezone(tz=tz)
-        return self
-
 
 class YoutubeVideo(BaseModel):
     kind: str
@@ -281,16 +265,6 @@ class YoutubeVideo(BaseModel):
     id: str
     snippet: VideoSnippet
     liveStreamingDetails: LiveStreamingDetails | None = None
-
-    @model_validator(mode="after")
-    def __post_init__(self):
-        self.snippet.publishedAt = self.snippet.publishedAt.astimezone(tz=tz)
-        if self.liveStreamingDetails:
-            self.liveStreamingDetails.actualStartTime = self.liveStreamingDetails.actualStartTime.astimezone(tz=tz) if self.liveStreamingDetails.actualStartTime else None
-            self.liveStreamingDetails.actualEndTime = self.liveStreamingDetails.actualEndTime.astimezone(tz=tz) if self.liveStreamingDetails.actualEndTime else None
-            self.liveStreamingDetails.scheduledStartTime = self.liveStreamingDetails.scheduledStartTime.astimezone(tz=tz) if self.liveStreamingDetails.scheduledStartTime else None
-            self.liveStreamingDetails.scheduledEndTime = self.liveStreamingDetails.scheduledEndTime.astimezone(tz=tz) if self.liveStreamingDetails.scheduledEndTime else None
-        return self
 
     def embed(self):
         embed = discord.Embed(
@@ -334,7 +308,7 @@ class YoutubeVideo(BaseModel):
 
     @property
     def is_live_getting_startrd(self) -> bool:
-        now = datetime.now(tz=tz)
+        now = datetime.now(timezone.utc)
         return bool(self.liveStreamingDetails and self.liveStreamingDetails.actualStartTime and not self.liveStreamingDetails.actualEndTime and (now - self.liveStreamingDetails.actualStartTime) < timedelta(minutes=1))
 
 
@@ -347,15 +321,9 @@ class YoutubeRSSVideo(BaseModel):
     yt_channelid: str
     title: str
     author_name: str = Field(alias="author")
-    uplood_at: datetime = Field(alias="published")
-    updated_at: datetime = Field(alias="updated")
+    uplood_at: UTCDateTime = Field(alias="published")
+    updated_at: UTCDateTime = Field(alias="updated")
     media_thumbnail: list[YoutubeThumbnail]
-
-    @model_validator(mode="after")
-    def __post_init__(self):
-        self.uplood_at = self.uplood_at.astimezone(tz=tz)
-        self.updated_at = self.updated_at.astimezone(tz=tz)
-        return self
 
     def embed(self):
         embed = discord.Embed(title=self.title, url=self.link, description=self.author_name, color=0xFF0000, timestamp=self.uplood_at)
@@ -369,16 +337,16 @@ class YoutubeRSSVideo(BaseModel):
 class YtSubscriptionDetails:
     callback_url: str
     state: str
-    last_successful_verification: datetime
-    expiration_time: datetime
-    last_subscribe_request: datetime
-    last_unsubscribe_request: datetime | None
-    last_verification_error: datetime | None
-    last_delivery_error: datetime | None
-    last_item_delivered: datetime
+    last_successful_verification: UTCDateTime
+    expiration_time: UTCDateTime
+    last_subscribe_request: UTCDateTime
+    last_unsubscribe_request: UTCDateTime | None
+    last_verification_error: UTCDateTime | None
+    last_delivery_error: UTCDateTime | None
+    last_item_delivered: UTCDateTime | None
     aggregate_statistics: str
-    content_received: datetime | None
-    content_delivered: datetime | None
+    content_received: UTCDateTime | None
+    content_delivered: UTCDateTime | None
 
     @property
     def has_verify(self):
@@ -395,7 +363,7 @@ class RssHubTwitterTweet(BaseModel):
     id: str
     guidislink: bool
     published: str
-    published_parsed: datetime  # 特殊處理
+    published_parsed: UTCDateTime  # 特殊處理
     authors: list[dict]
     author: str
     author_detail: dict
@@ -407,7 +375,7 @@ class RssHubTwitterTweet(BaseModel):
             return v
         if isinstance(v, time.struct_time):
             # struct_time 轉成 datetime
-            return datetime(*v[:6], tzinfo=timezone.utc).astimezone(tz=tz)
+            return convert_tz(datetime(*v[:6], tzinfo=timezone.utc))
         if isinstance(v, dict):
             # 假如來的是 dict（像 JSON 會這樣），先轉成 tuple 再轉 datetime
             return datetime(*tuple(v.values())[:6])
@@ -426,7 +394,7 @@ class RettiwtTweetUser(BaseModel):
     id: str
     userName: str
     fullName: str
-    createdAt: datetime
+    createdAt: UTCDateTime
     description: str | None = None
     isVerified: bool
     likeCount: int
@@ -437,16 +405,6 @@ class RettiwtTweetUser(BaseModel):
     profileBanner: HttpUrl | None = None
     profileImage: HttpUrl | None = None
     location: str | None = None
-
-    # @field_validator("createdAt", mode="before")
-    # @classmethod
-    # def parse_created_at(cls, v: str) -> datetime:
-    #     return datetime.strptime(v, DATETIME_FORMAT)
-
-    @model_validator(mode="after")
-    def __post_init__(self):
-        self.createdAt = self.createdAt.astimezone(tz=tz)
-        return self
 
     @property
     def url(self) -> str:
@@ -486,7 +444,7 @@ class RettiwtTweetMedia(BaseModel):
 class RettiwtTweetItem(BaseModel):
     id: str
     conversationId: str
-    createdAt: datetime
+    createdAt: UTCDateTime
     tweetBy: RettiwtTweetUser
     entities: RettiwtTweetEntity
     media: list[RettiwtTweetMedia | None] = Field(default_factory=list)
@@ -499,11 +457,6 @@ class RettiwtTweetItem(BaseModel):
     viewCount: int | None = None
     bookmarkCount: int
     url: str
-
-    @model_validator(mode="after")
-    def __post_init__(self):
-        self.createdAt = self.createdAt.astimezone(tz=tz)
-        return self
 
     # @property
     # def url(self) -> str:
@@ -551,7 +504,7 @@ class RettiwtTweetUserDetails(BaseModel):
     id: str
     userName: str
     fullName: str
-    createdAt: datetime
+    createdAt: UTCDateTime
     description: str
     isVerified: bool
     likeCount: int
@@ -561,11 +514,6 @@ class RettiwtTweetUserDetails(BaseModel):
     pinnedTweet: int | None = None
     profileBanner: HttpUrl | None = None
     profileImage: HttpUrl | None = None
-
-    # @field_validator("createdAt", mode="before")
-    # @classmethod
-    # def parse_created_at(cls, v: str) -> datetime:
-    #     return datetime.strptime(v, DATETIME_FORMAT).astimezone(tz=tz)
 
 
 # Notion API Models
@@ -646,11 +594,11 @@ class NotionPropertyValue(BaseModel):
     # Rollup property
     rollup: dict | None = None
     # Created time property
-    created_time: datetime | None = None
+    created_time: UTCDateTime | None = None
     # Created by property
     created_by: NotionUser | None = None
     # Last edited time property
-    last_edited_time: datetime | None = None
+    last_edited_time: UTCDateTime | None = None
     # Last edited by property
     last_edited_by: NotionUser | None = None
     # Status property
@@ -664,7 +612,7 @@ class NotionPropertyValue(BaseModel):
     @classmethod
     def parse_datetime(cls, v):
         if isinstance(v, str):
-            return datetime.fromisoformat(v.replace("Z", "+00:00")).astimezone(tz=tz)
+            return convert_tz(datetime.fromisoformat(v.replace("Z", "+00:00")))
         return v
 
 
@@ -684,9 +632,9 @@ class NotionCover(BaseModel):
 class NotionPage(BaseModel):
     object: str
     id: str
-    created_time: datetime
+    created_time: UTCDateTime
     created_by: NotionUser
-    last_edited_time: datetime
+    last_edited_time: UTCDateTime
     last_edited_by: NotionUser
     cover: NotionCover | None = None
     icon: NotionIcon | None = None
@@ -700,7 +648,7 @@ class NotionPage(BaseModel):
     @classmethod
     def parse_datetime(cls, v):
         if isinstance(v, str):
-            return datetime.fromisoformat(v.replace("Z", "+00:00")).astimezone(tz=tz)
+            return convert_tz(datetime.fromisoformat(v.replace("Z", "+00:00")))
         return v
 
     def get_plain_text(self):
@@ -738,9 +686,9 @@ class NotionPage(BaseModel):
 class NotionDatabase(BaseModel):
     object: str
     id: str
-    created_time: datetime
+    created_time: UTCDateTime
     created_by: NotionUser
-    last_edited_time: datetime
+    last_edited_time: UTCDateTime
     last_edited_by: NotionUser
     title: list[NotionRichText] | None = None  # 可選字段
     description: list[NotionRichText] = Field(default_factory=list)
@@ -757,7 +705,7 @@ class NotionDatabase(BaseModel):
     @classmethod
     def parse_datetime(cls, v):
         if isinstance(v, str):
-            return datetime.fromisoformat(v.replace("Z", "+00:00")).astimezone(tz=tz)
+            return convert_tz(datetime.fromisoformat(v.replace("Z", "+00:00")))
         return v
 
     def embed(self):
@@ -841,9 +789,9 @@ class NotionBlock(BaseModel):
     object: str
     id: str
     parent: NotionParent
-    created_time: datetime
+    created_time: UTCDateTime
     created_by: NotionUser
-    last_edited_time: datetime
+    last_edited_time: UTCDateTime
     last_edited_by: NotionUser
     archived: bool
     has_children: bool
@@ -887,7 +835,7 @@ class NotionBlock(BaseModel):
     @classmethod
     def parse_datetime(cls, v):
         if isinstance(v, str):
-            return datetime.fromisoformat(v.replace("Z", "+00:00")).astimezone(tz=tz)
+            return convert_tz(datetime.fromisoformat(v.replace("Z", "+00:00")))
         return v
 
     def get_plain_text(self) -> str:

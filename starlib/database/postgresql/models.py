@@ -9,8 +9,7 @@ from sqlmodel import Field, Relationship, text
 
 from starlib.base import ListObject
 from starlib.fileDatabase import Jsondb
-from starlib.settings import tz
-from starlib.utils import BotEmbed
+from starlib.utils import BotEmbed, nowtz
 
 from .enums import *
 from .schemas import *
@@ -23,7 +22,7 @@ class CloudUser(UsersSchema, table=True):
     drive_gmail: str | None = Field(sa_column=Column(String))
     drive_share_id: str | None = Field(sa_column=Column(String))
     name: str | None = Field(sa_column=Column(String))
-    created_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0), server_default=text("now()")), default_factory=lambda: datetime.now(tz))
+    created_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0), server_default=text("now()")), default_factory=lambda: nowtz())
     privilege_level: PrivilegeLevel = Field(sa_column=Column(SmallInteger, nullable=True), default=PrivilegeLevel.User)
 
 
@@ -452,7 +451,7 @@ class PushRecord(BasicSchema, table=True):
 
     @property
     def is_expired(self) -> bool:
-        return self.expire_at < datetime.now(tz=tz) if self.expire_at else True
+        return self.expire_at < nowtz() if self.expire_at else True
 
 
 class ReactionRoleMessage(AlchemyBasicSchema):
@@ -811,7 +810,7 @@ class AccessToken(TokensSchema, table=True):
 
     @property
     def valid(self):
-        return not self.expires_at or self.expires_at > datetime.now(tz)
+        return not self.expires_at or self.expires_at > nowtz()
 
 
 class OAuthClient(TokensSchema, table=True):
@@ -838,7 +837,7 @@ class OAuthToken(TokensSchema, table=True):
 
     @property
     def valid(self):
-        return self.expires_at > datetime.now(tz)
+        return self.expires_at > nowtz()
 
 
 class WebSubConfig(TokensSchema, table=True):

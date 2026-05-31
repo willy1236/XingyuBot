@@ -6,10 +6,11 @@ from datetime import datetime, timedelta, timezone
 import discord
 from discord.ext import commands
 
-from starlib import BotEmbed, sclient, tz
+from starlib import BotEmbed, sclient
 from starlib.database import DBCacheType, NotifyChannelType, PrivilegeLevel
 from starlib.instance import *
 from starlib.starAgent import ModelMessage, MyDeps, agent
+from starlib.utils import nowtz
 
 from ..extension import Cog_Extension
 from ..uiElement.view import PollView, ReactionRoleView, TicketChannelView, TicketLobbyView
@@ -26,7 +27,7 @@ agent_history: dict[int, list[ModelMessage]] = {}
 
 
 def check_registration(member: discord.Member):
-    earlest = datetime.now(timezone.utc)
+    earlest = nowtz()
     earlest_guildid = None
     guild_list = guild_registration.keys()
     for guild in member.mutual_guilds:
@@ -68,7 +69,7 @@ class event(Cog_Extension):
     async def on_ready(self):
         bot = self.bot
 
-        now = datetime.now(tz)
+        now = nowtz()
         if bot.bot_code == "1" and not bot.debug_mode:
             # 移除過期邀請
             invites = await bot.get_guild(happycamp_guild[0]).invites()
@@ -502,9 +503,9 @@ class event(Cog_Extension):
             if roles_mention:
                 description += f"\n身分組：{', '.join(roles_mention)}"
             if member.joined_at:
-                description += f"\n加入時長：{timedelta(seconds=int((datetime.now(tz=tz) - member.joined_at).total_seconds()))}"
+                description += f"\n加入時長：{timedelta(seconds=int((nowtz() - member.joined_at).total_seconds()))}"
             embed = BotEmbed.general(name=member.name, title="成員離開", description=description, icon_url=member.display_avatar.url)
-            embed.timestamp = datetime.now(tz=tz)
+            embed.timestamp = nowtz()
             embed.set_footer(text=f"ID: {member.id}")
             await channel.send(embed=embed)
 
@@ -541,7 +542,7 @@ class event(Cog_Extension):
 
             channel = self.bot.get_channel(log_channel_id)
             embed = BotEmbed.general(name=member.name, title="成員加入", description=description, icon_url=member.display_avatar.url)
-            embed.timestamp = datetime.now(tz=tz)
+            embed.timestamp = nowtz()
             embed.set_footer(text=f"ID: {member.id}")
             if channel:
                 await channel.send(embed=embed)

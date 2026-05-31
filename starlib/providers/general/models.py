@@ -3,9 +3,10 @@ from datetime import datetime
 import discord
 from pydantic import AliasPath, BaseModel, ConfigDict, Field, model_validator
 
+from starlib.base.types import UTCDateTime
 from starlib.database.postgresql.enums import McssServerStatues
-from starlib.settings import tz
 from starlib.utils import BotEmbed
+from starlib.utils.time import convert_tz, nowtz
 
 weather_warning_emojis = {
     "大雨特報": "🌧️",
@@ -52,7 +53,7 @@ class EarthquakeReport(BaseModel):
 
     @model_validator(mode="after")
     def __post_init__(self):
-        self.originTime = self.originTime.astimezone(tz=tz)
+        self.originTime = convert_tz(self.originTime)
         return self
 
     @property
@@ -237,7 +238,7 @@ class DatasetInfo(BaseModel):
     datasetDescription: str
     datasetLanguage: str
     validTime: ValidTime
-    issueTime: datetime
+    issueTime: UTCDateTime
     update: datetime
 
 
@@ -250,10 +251,10 @@ class WeatherWarningReport(BaseModel):
 
     @model_validator(mode="after")
     def __post_init__(self):
-        self.datasetInfo.issueTime = self.datasetInfo.issueTime.astimezone(tz=tz)
-        self.datasetInfo.validTime.startTime = self.datasetInfo.validTime.startTime.astimezone(tz=tz)
-        self.datasetInfo.validTime.endTime = self.datasetInfo.validTime.endTime.astimezone(tz=tz)
-        self.datasetInfo.update = self.datasetInfo.update.astimezone(tz=tz)
+        self.datasetInfo.issueTime = convert_tz(self.datasetInfo.issueTime)
+        self.datasetInfo.validTime.startTime = convert_tz(self.datasetInfo.validTime.startTime)
+        self.datasetInfo.validTime.endTime = convert_tz(self.datasetInfo.validTime.endTime)
+        self.datasetInfo.update = convert_tz(self.datasetInfo.update)
         return self
 
     def embed(self):
@@ -265,7 +266,7 @@ class WeatherWarningReport(BaseModel):
         if self.hazardConditions:
             embed.add_field(name="涵蓋區域市", value=", ".join([i.locationName for i in self.hazardConditions.hazards.hazard[0].info.affectedAreas.location]))
 
-        embed.timestamp = datetime.now()
+        embed.timestamp = nowtz()
         embed.set_footer(text=f"中央氣象暑")
         return embed
 

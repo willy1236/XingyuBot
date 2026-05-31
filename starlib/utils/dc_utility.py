@@ -1,0 +1,220 @@
+import random
+from datetime import datetime, timedelta
+
+import discord
+from discord.ext import commands
+
+from ..fileDatabase import Jsondb
+
+
+class find:
+    """arg=要檢測的內容(名稱#0000,id,mention...)"""
+
+    @staticmethod
+    async def user(ctx, arg: str):
+        if arg:
+            try:
+                member = await commands.MemberConverter().convert(ctx, str(arg))
+            except commands.MemberNotFound:
+                member = None
+        else:
+            member = None
+        return member
+
+    @staticmethod
+    async def channel(ctx, arg: str):
+        if arg:
+            try:
+                channel = await commands.TextChannelConverter().convert(ctx, str(arg))
+            except commands.ChannelNotFound:
+                channel = None
+        else:
+            channel = None
+        return channel
+
+    @staticmethod
+    async def role(ctx, arg: str):
+        if arg:
+            try:
+                role = await commands.RoleConverter().convert(ctx, str(arg))
+            except commands.RoleNotFound:
+                role = None
+        else:
+            role = None
+        return role
+
+    @staticmethod
+    async def user2(ctx, arg: str):
+        try:
+            user = await commands.UserConverter().convert(ctx, str(arg))
+        except commands.UserNotFound:
+            user = None
+        return user
+
+    @staticmethod
+    async def emoji(ctx, arg: str):
+        try:
+            emoji = await commands.EmojiConverter().convert(ctx, str(arg))
+        except commands.EmojiNotFound:
+            emoji = None
+        return emoji
+
+    @staticmethod
+    async def guild(ctx, arg: str):
+        try:
+            guild = await commands.GuildConverter().convert(ctx, str(arg))
+        except commands.GuildNotFound:
+            guild = None
+        return guild
+
+
+class BotEmbed:
+    @staticmethod
+    def bot(bot: discord.Bot, title: str | None = None, description: str | None = None, url: str | None = None):
+        """機器人 格式"""
+        assert bot.user is not None, "Bot user must be set before creating an embed."
+        embed = discord.Embed(title=title, description=description, color=0xC4E9FF, url=url)
+        embed.set_author(name=bot.user.name, icon_url=bot.user.display_avatar.url)
+        return embed
+
+    @staticmethod
+    def user(user: discord.User, title: str | None = None, description: str | None = None, url: str | None = None):
+        """使用者 格式"""
+        embed = discord.Embed(title=title, description=description, color=0x00FFFF, url=url)
+        embed.set_author(name=user.name, icon_url=user.display_avatar.url)
+        return embed
+
+    @staticmethod
+    def simple(title: str | None = None, description: str | None = None, url: str | None = None):
+        """簡易:不帶作者"""
+        embed = discord.Embed(title=title, description=description, color=0xC4E9FF, url=url)
+        return embed
+
+    @staticmethod
+    def general(
+        name: str | None = None,
+        icon_url: str | None = None,
+        url: str | None = None,
+        title: str | None = None,
+        description: str | None = None,
+        title_url: str | None = None,
+    ):
+        """普通:自訂作者"""
+        embed = discord.Embed(title=title, description=description, color=0xC4E9FF, url=title_url)
+        embed.set_author(name=name, icon_url=icon_url, url=url)
+        return embed
+
+    @staticmethod
+    def deprecated():
+        """棄用:展示棄用訊息"""
+        embed = discord.Embed(title="此功能目前為棄用狀態", description="此功能目前不開放使用，請洽機器人管理員或支援伺服器", color=0xC4E9FF)
+        return embed
+
+    @staticmethod
+    def rpg(title: str | None = None, description: str | None = None):
+        """RPG系統 格式"""
+        embed = discord.Embed(title=title, description=description, color=0xC4E9FF)
+        embed.set_footer(text="RPG系統 | 開發時期所有東西皆有可能重置")
+        return embed
+
+    @staticmethod
+    def brs():
+        """Bot Radio System 格式"""
+        embed = discord.Embed(color=0xC4E9FF)
+        embed.set_author(name="Bot Radio System", icon_url=Jsondb.get_picture("radio_001"))
+        return embed
+
+    @staticmethod
+    def lottery():
+        """Lottery System格式"""
+        embed = discord.Embed(color=0xC4E9FF)
+        embed.set_author(name="Lottery System", icon_url=Jsondb.get_picture("lottery_001"))
+        return embed
+
+    @staticmethod
+    def star_radio():
+        """星系電台 格式"""
+        embed = discord.Embed(color=0xC4E9FF)
+        embed.set_author(name="Star Rd.", icon_url=Jsondb.get_picture("radio_001"))
+        return embed
+
+    @staticmethod
+    def sts():
+        """星光終端系統 格式"""
+        embed = discord.Embed(color=0xC4E9FF)
+        embed.set_author(name="「星光」終端系統", icon_url=Jsondb.get_picture("radio_001"))
+        return embed
+
+    @staticmethod
+    def info(title: str | None = None, description: str | None = None, url: str | None = None):
+        """一般資訊 格式"""
+        embed = discord.Embed(title=title, description=description, color=0xC4E9FF, url=url)
+        return embed
+
+    @staticmethod
+    def simple_warn_sheet(
+        warn_user: discord.User | discord.Member,
+        moderate_user: discord.abc.User | discord.Member | discord.ClientUser,
+        create_at: datetime | None = None,
+        last: timedelta = timedelta(seconds=15),
+        reason: str = "未提供原因",
+        title: str = "已被禁言",
+    ):
+        """簡易警告表格"""
+        if create_at is None:
+            create_at = datetime.now()
+        timestamp = create_at + last
+        embed = discord.Embed(description=f"{warn_user.mention}：{reason}", color=0xC4E9FF)
+        embed.set_author(name=f"{warn_user.name} {title}", icon_url=warn_user.display_avatar.url)
+        embed.add_field(name="執行人員", value=moderate_user.mention)
+        embed.add_field(name="結束時間", value=f"{discord.utils.format_dt(timestamp, style='t')}（{last.total_seconds():.0f}s）")
+        embed.timestamp = create_at
+        return embed
+
+
+class ChoiceList:  # TODO: 移動到starDiscord
+    @staticmethod
+    def set(option_name: str):
+        return [discord.OptionChoice(name=name_loc.get("en-US", name_loc.get("zh-TW")), value=value, name_localizations=name_loc) for value, name_loc in Jsondb.options[option_name].items()]
+
+    @staticmethod
+    def name(cmd_name: str):
+        """name_localizations 格式化"""
+        return Jsondb.cmd_names[cmd_name]
+
+
+def random_color(max: int):
+    """生成隨機顏色"""
+
+    return (random.randint(0, max), random.randint(0, max), random.randint(0, max))
+
+
+async def create_only_role_list(text_input: str, ctx):
+    """投票系統：建立限制投票身分組清單"""
+    only_role_list = []
+    for i in text_input.split(","):
+        if i.endswith(" "):
+            i = i[:-1]
+        role = await find.role(ctx, i)
+        if role:
+            only_role_list.append(role.id)
+    return only_role_list
+
+
+async def create_role_magification_dict(text_input: str, ctx) -> dict[int, int]:
+    """投票系統：建立身分組權重列表"""
+    role_magnification_dict = {}
+    text = text_input.split(",")
+    for i in range(0, len(text), 2):
+        if text[i].endswith(" "):
+            text[i] = text[i][:-1]
+        role = await find.role(ctx, text[i])
+        if role:
+            role_magnification_dict[role.id] = int(text[i + 1])
+    return role_magnification_dict
+
+
+def calculate_eletion_session(current_date: datetime) -> int:
+    """選舉屆數計算器"""
+    start_date = datetime(2023, 10, 11)
+    return (current_date.year - start_date.year) * 12 + current_date.month - start_date.month + 1

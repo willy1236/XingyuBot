@@ -23,7 +23,6 @@ from starDiscord import DiscordBot
 from starlib import sclient
 from starlib.core.model import TwitchStreamEvent
 from starlib.settings import get_settings
-from starServer.scheduler import run_scheduler_in_thread
 
 # ruff: enable[E402]
 
@@ -125,8 +124,6 @@ def main():
 
     if twitch_bot:
         run_twitch_bot()
-
-    run_scheduler_in_thread()
 
     run_discord_bot()
 

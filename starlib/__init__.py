@@ -11,7 +11,6 @@ from .database import sqldb
 from .exceptions import *
 from .fileDatabase import Jsondb, csvdb
 from .providers import *
-from .settings import tz
 from .utils import *
 
 log = logging.getLogger(__name__)

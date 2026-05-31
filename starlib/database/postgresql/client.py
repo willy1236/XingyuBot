@@ -17,7 +17,8 @@ from sqlalchemy.orm.scoping import ScopedSession
 from sqlmodel import Session, SQLModel, create_engine, delete, select, update
 
 from starlib.exceptions import *
-from starlib.settings import get_settings, tz
+from starlib.settings import get_settings
+from starlib.utils import convert_tz, nowtz
 
 from .cache import CacheStore
 from .enums import *
@@ -49,7 +50,7 @@ class BaseRepository:
         try:
             self.session.commit()
         except SQLAlchemyError as e:
-            log.error("SQLAlchemy Commit Error", exc_info=True)
+            log.exception("SQLAlchemy Commit Error")
             self.session.rollback()
             raise
 
@@ -81,7 +82,7 @@ class BaseRepository:
             self.session.add(db_obj)
             self.session.commit()
         except SQLAlchemyError as e:
-            log.error("SQLAlchemy Add Error", extra={"error": str(e)}, exc_info=True)
+            log.exception("SQLAlchemy Add Error", extra={"error": str(e)})
             self.session.rollback()
             raise
 
@@ -92,7 +93,7 @@ class BaseRepository:
                     self.session.add(db_obj)
                 self.session.commit()
             except SQLAlchemyError as e:
-                log.error("SQLAlchemy Batch Add Error", extra={"error": str(e)}, exc_info=True)
+                log.exception("SQLAlchemy Batch Add Error", extra={"error": str(e)})
                 self.session.rollback()
                 raise
 
@@ -102,7 +103,7 @@ class BaseRepository:
             self.session.commit()
             return obj
         except SQLAlchemyError as e:
-            log.error("SQLAlchemy Merge Error", extra={"error": str(e)}, exc_info=True)
+            log.exception("SQLAlchemy Merge Error", extra={"error": str(e)})
             self.session.rollback()
             raise
 
@@ -115,7 +116,7 @@ class BaseRepository:
                 self.session.commit()
                 return lst
             except SQLAlchemyError as e:
-                log.error("SQLAlchemy Batch Merge Error", extra={"error": str(e)}, exc_info=True)
+                log.exception("SQLAlchemy Batch Merge Error", extra={"error": str(e)})
                 self.session.rollback()
                 raise
 
@@ -124,7 +125,7 @@ class BaseRepository:
             self.session.delete(db_obj)
             self.session.commit()
         except SQLAlchemyError as e:
-            log.error("SQLAlchemy Delete Error", extra={"error": str(e)}, exc_info=True)
+            log.exception("SQLAlchemy Delete Error", extra={"error": str(e)})
             self.session.rollback()
             raise
 
@@ -192,18 +193,18 @@ class UserRepository(BaseRepository):
         """取得或創建綁定碼"""
         stmt = select(LinkCode).where(LinkCode.user_id == user_id)
         result = self.session.exec(stmt).one_or_none()
-        if result and result.expires_at > datetime.now(tz=tz):
+        if result and result.expires_at > nowtz():
             return result
 
         # 若無綁定碼或已過期，則創建新綁定碼
-        new_code = LinkCode(user_id=user_id, code=f"{secrets.randbelow(1000000):06d}", expires_at=datetime.now(tz=tz) + timedelta(minutes=10))
+        new_code = LinkCode(user_id=user_id, code=f"{secrets.randbelow(1000000):06d}", expires_at=nowtz() + timedelta(minutes=10))
         self.session.merge(new_code)
         self.commit()
         return new_code
 
     def get_active_link_code(self, discord_id: str):
         """取得有效的綁定碼"""
-        stmt = select(LinkCode).join(ExternalAccount, LinkCode.user_id == ExternalAccount.user_id).where(ExternalAccount.external_id == str(discord_id), LinkCode.expires_at > datetime.now(tz=tz))
+        stmt = select(LinkCode).join(ExternalAccount, LinkCode.user_id == ExternalAccount.user_id).where(ExternalAccount.external_id == str(discord_id), LinkCode.expires_at > nowtz())
         result = self.session.exec(stmt).one_or_none()
         return result
 
@@ -326,7 +327,7 @@ class BetRepository(BaseRepository):
         return result
 
     def place_bet(self, bet_id: int, discord_id: int, bet_option: int, bet_amount: int):
-        user_bet = UserBet(discord_id=discord_id, bet_id=bet_id, bet_option=bet_option, bet_amount=bet_amount, bet_time=datetime.now(tz=tz))
+        user_bet = UserBet(discord_id=discord_id, bet_id=bet_id, bet_option=bet_option, bet_amount=bet_amount, bet_time=nowtz())
         self.session.add(user_bet)
         self.session.commit()
         return user_bet
@@ -1137,7 +1138,7 @@ class BackupRepository(BaseRepository):
         backup_role = BackupRole(
             role_id=role.id,
             role_name=role.name,
-            created_at=role.created_at.astimezone(tz),
+            created_at=convert_tz(role.created_at),
             guild_id=role.guild.id,
             colour_r=role.colour.r,
             colour_g=role.colour.g,
@@ -1163,7 +1164,7 @@ class BackupRepository(BaseRepository):
         backup_category = BackupCategory(
             category_id=category.id,
             name=category.name,
-            created_at=category.created_at.astimezone(tz),
+            created_at=convert_tz(category.created_at),
             guild_id=category.guild.id,
             description=description,
         )
@@ -1174,7 +1175,7 @@ class BackupRepository(BaseRepository):
         backup_channel = BackupChannel(
             channel_id=channel.id,
             name=channel.name,
-            created_at=channel.created_at.astimezone(tz),
+            created_at=convert_tz(channel.created_at),
             guild_id=channel.guild.id,
             category_id=channel.category_id,
             description=description,
@@ -1187,7 +1188,7 @@ class BackupRepository(BaseRepository):
             message_id=message.id,
             channel_id=message.channel.id,
             content=message.content,
-            created_at=message.created_at.astimezone(tz),
+            created_at=convert_tz(message.created_at),
             author_id=message.author.id,
             description=description,
         )
@@ -1200,7 +1201,7 @@ class BackupRepository(BaseRepository):
                 message_id=message.id,
                 channel_id=message.channel.id,
                 content=message.content,
-                created_at=message.created_at.astimezone(tz),
+                created_at=convert_tz(message.created_at),
                 author_id=message.author.id,
                 description=None,
             )
@@ -1493,7 +1494,7 @@ class RuntimeConfigRepository(BaseRepository):
 
     def set_bot_activity(self, bot_code: str | int, activity: str) -> BotRuntimeConfig:
         config_id = self._get_bot_runtime_config_id(bot_code)
-        config = self.session.merge(BotRuntimeConfig(id=config_id, activity=activity, updated_at=datetime.now(tz)))
+        config = self.session.merge(BotRuntimeConfig(id=config_id, activity=activity, updated_at=nowtz()))
         self.session.commit()
         return config
 

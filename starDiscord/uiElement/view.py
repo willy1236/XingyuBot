@@ -12,10 +12,10 @@ import matplotlib
 import numpy as np
 from discord.utils import format_dt
 
-from starlib import BotEmbed, Jsondb, sqldb, tz
+from starlib import BotEmbed, Jsondb, sqldb
 from starlib.database import Giveaway, GiveawayUser, HappycampApplicationForm, HappycampVIP, McssServerAction, McssServerStatues, Poll, PollRole, TicketChannel
 from starlib.instance import mcss_api, vip_admin_channel
-from starlib.utils.utility import find_radmin_vpn_network
+from starlib.utils import find_radmin_vpn_network, nowtz
 
 log = logging.getLogger(__name__)
 
@@ -82,9 +82,7 @@ class PollOptionButton(discord.ui.Button):
                     vote_magnification = view.role_dict[roleid][1]
 
         if not view.role_dict or (have_only_role and can_vote):
-            r = view.sqldb.set_user_poll(
-                self.option.poll_id, interaction.user.id, self.option.option_id, datetime.now(tz), vote_magnification, view.poll.number_of_user_votes
-            )
+            r = view.sqldb.set_user_poll(self.option.poll_id, interaction.user.id, self.option.option_id, nowtz(), vote_magnification, view.poll.number_of_user_votes)
             if r == 2:
                 await interaction.response.send_message(f"{interaction.user.mention} 已投了 {view.poll.number_of_user_votes} 票而無法投票", ephemeral=True)
             elif r == 1:
@@ -103,7 +101,7 @@ class PollEndButton(discord.ui.Button):
         view: PollView = self.view
         if interaction.user.id == view.poll.creator_id or (view.bot and await view.bot.is_owner(interaction.user)):
             view.clear_items()
-            view.poll.end_at = datetime.now(tz)
+            view.poll.end_at = nowtz()
             view.poll = view.sqldb.merge(view.poll)
 
             embed, image_buffer = view.results_embed(interaction, True)  # type: ignore
@@ -200,7 +198,7 @@ class PollView(discord.ui.View):
         poll = Poll(
             title=title,
             creator_id=creator_id,
-            created_at=datetime.now(tz),
+            created_at=nowtz(),
             message_id=None,
             guild_id=guild_id,
             ban_alternate_account_voting=ban_alternate_account_voting,
@@ -507,7 +505,7 @@ class GiveawayJoinButton(discord.ui.Button):
             view.sqldb.delete(giveaway_user)
             await interaction.response.send_message(f"{interaction.user.mention} 離開了抽獎", ephemeral=True)
         else:
-            giveaway_user = GiveawayUser(giveaway_id=view.giveaway.id, user_id=interaction.user.id, user_weight=1, join_at=datetime.now(tz))
+            giveaway_user = GiveawayUser(giveaway_id=view.giveaway.id, user_id=interaction.user.id, user_weight=1, join_at=nowtz())
             view.sqldb.add(giveaway_user)
             await interaction.response.send_message(f"{interaction.user.mention} 參加了抽獎！", ephemeral=True)
 
@@ -559,7 +557,7 @@ class GiveawayView(discord.ui.View):
 
     def end_giveaway(self):
         if not self.giveaway.end_at:
-            self.giveaway.end_at = datetime.now(tz).replace(microsecond=0)
+            self.giveaway.end_at = nowtz().replace(microsecond=0)
         self.giveaway.is_on = False
         self.clear_items()
         joiner = self.sqldb.get_giveaway_users(self.giveaway.id)
@@ -761,7 +759,7 @@ class TicketChannelView(discord.ui.View):
             ):
                 ticket = sqldb.get_ticket_channel(view.channel.id)
                 if ticket:
-                    ticket.closed_at = datetime.now(tz)
+                    ticket.closed_at = nowtz()
                     ticket.closer_id = interaction.user.id
                     sqldb.merge(ticket)
 
@@ -795,7 +793,7 @@ class TicketLobbyView(discord.ui.View):
             )
             sqldb.merge(
                 TicketChannel(
-                    channel_id=channel.id, guild_id=interaction.guild.id, creator_id=interaction.user.id, created_at=datetime.now(tz), close_message_id=msg.id
+                    channel_id=channel.id, guild_id=interaction.guild.id, creator_id=interaction.user.id, created_at=nowtz(), close_message_id=msg.id
                 )
             )
             await msg.pin()
@@ -811,7 +809,7 @@ class VIPApplicationForm(discord.ui.Modal):
         vip_level = self.children[0].value
         remarks = self.children[1].value
         form = HappycampApplicationForm(
-            discord_id=interaction.user.id, content=f"申請VIP等級：{vip_level}\n備註：{remarks}", submitted_at=datetime.now(tz), change_vip_level=vip_level
+            discord_id=interaction.user.id, content=f"申請VIP等級：{vip_level}\n備註：{remarks}", submitted_at=nowtz(), change_vip_level=vip_level
         )
         sqldb.add(form)
 
@@ -871,7 +869,7 @@ class VIPAuditView(discord.ui.View):
         if await remark.wait():
             self.form.review_comment = remark.children[0].value
             self.form.status = 1
-            self.form.reviewed_at = datetime.now(tz)
+            self.form.reviewed_at = nowtz()
             self.form.reviewer_id = interaction.user.id
             sqldb.merge(self.form)
             await interaction.edit_original_message(embed=self.form.embed())
@@ -881,11 +879,11 @@ class VIPAuditView(discord.ui.View):
                 vip = sqldb.get_vip(self.form.discord_id)
                 if not vip:
                     vip = HappycampVIP(
-                        discord_id=self.form.discord_id, vip_level=self.form.change_vip_level, created_at=datetime.now(tz), updated_at=datetime.now(tz)
+                        discord_id=self.form.discord_id, vip_level=self.form.change_vip_level, created_at=nowtz(), updated_at=nowtz()
                     )
                 else:
                     vip.vip_level = self.form.change_vip_level
-                    vip.updated_at = datetime.now(tz)
+                    vip.updated_at = nowtz()
 
                 sqldb.merge(vip)
 
@@ -920,7 +918,7 @@ class VIPAuditView(discord.ui.View):
         if await remark.wait():
             self.form.review_comment = remark.children[0].value
             self.form.status = 2
-            self.form.reviewed_at = datetime.now(tz)
+            self.form.reviewed_at = nowtz()
             self.form.reviewer_id = interaction.user.id
             sqldb.merge(self.form)
             await interaction.edit_original_message(embed=self.form.embed())

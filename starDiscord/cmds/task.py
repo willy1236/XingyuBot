@@ -10,7 +10,7 @@ from apscheduler.triggers.date import DateTrigger
 from discord.ext import commands, tasks
 from requests.exceptions import ConnectTimeout, RequestException
 
-from starlib import BotEmbed, Jsondb, sclient, sqldb, tz, utils
+from starlib import Jsondb, sclient, sqldb, utils
 from starlib.database import APIType, DBCacheType, NotifyChannelType, NotifyCommunityType, UserIPDetails, UsersCountRecord, VoiceTime
 from starlib.instance import *
 from starlib.providers.social.models import YoutubeVideo
@@ -24,7 +24,7 @@ voice_times: dict[int, dict[int, timedelta]] = {}
 
 
 def _is_older_than_one_day(created_at: datetime) -> bool:
-    return datetime.now(tz) - created_at > timedelta(days=1)
+    return utils.nowtz() - created_at > timedelta(days=1)
 
 
 class task(Cog_Extension):
@@ -66,7 +66,7 @@ class task(Cog_Extension):
                 # scheduler.add_job(self.new_years_eve_task, CronTrigger(month=1, day=1, hour=0, minute=0, second=0), misfire_grace_time=60)
 
         # 抽獎
-        now = datetime.now(tz)
+        now = utils.nowtz()
         for giveaway in sclient.sqldb.get_active_giveaways():
             if now - giveaway.created_at > timedelta(days=28):
                 # 將超過28天的抽獎自動關閉
@@ -90,7 +90,7 @@ class task(Cog_Extension):
 
     async def earthquake_check(self):
         cache = sclient.sqldb.get_notify_cache(NotifyChannelType.MajorQuakeNotifications)
-        timefrom = cache.value if cache else datetime.now(tz) - timedelta(days=1)
+        timefrom = cache.value if cache else utils.nowtz() - timedelta(days=1)
         try:
             earthquake_records = cwa_api.get_earthquake_report_auto(timefrom.strftime("%Y-%m-%dT%H:%M:%S"), True)
         except ConnectTimeout:
@@ -130,7 +130,7 @@ class task(Cog_Extension):
             return
 
         cache = sclient.sqldb.get_notify_cache(NotifyChannelType.WeatherWarning)
-        report_time = cache.value if cache else datetime.now(tz) - timedelta(days=1)
+        report_time = cache.value if cache else utils.nowtz() - timedelta(days=1)
         datas = [i for i in apidatas if i.datasetInfo.issueTime > report_time]
         for data in datas:
             report_time = data.datasetInfo.issueTime
@@ -139,7 +139,7 @@ class task(Cog_Extension):
 
     async def typhoon_warning_check(self):
         cache = sclient.sqldb.get_notify_cache(NotifyChannelType.TyphoonWarning)
-        report_time = cache.value if cache else datetime.now(tz) - timedelta(days=1)
+        report_time = cache.value if cache else utils.nowtz() - timedelta(days=1)
 
         apidatas = ncdr_rss.get_typhoon_warning(after=report_time)
         log.info("typhoon_warning_check", extra={"found": len(apidatas), "after": report_time})
@@ -427,7 +427,7 @@ class task(Cog_Extension):
         await channel.send(f"第{session}屆中央選舉投票已開始，請大家把握時間踴躍投票!")
 
         tz = timezone(timedelta(hours=8))
-        start_time = datetime.now(tz)
+        start_time = utils.nowtz()
         if start_time.hour < 20:
             end_time = datetime(start_time.year, start_time.month, start_time.day, 20, 0, 0, tzinfo=tz)
         else:
@@ -501,7 +501,7 @@ async def giveaway_auto_end(bot: discord.Bot, view: GiveawayView):
 async def refresh_ip_last_seen_arp():
     """定時更新IP最後出現時間 (使用ARP)"""
     log.debug("refresh_ip_last_seen start")
-    now = datetime.now(tz)
+    now = utils.nowtz()
     arp_list = utils.get_arp_list()
     details_list = [UserIPDetails(ip=ip, mac=mac, last_seen=now) for ip, mac in arp_list]
     sqldb.batch_merge(details_list)
@@ -510,8 +510,8 @@ async def refresh_ip_last_seen_arp():
 async def refresh_ip_last_seen_nmap():
     """定時更新IP最後出現時間 (使用Nmap)"""
     log.debug("refresh_ip_last_seen_nmap start")
-    now = datetime.now(tz)
-    ips = sqldb.get_active_ips(datetime(2025, 8, 11, 0, 0, 0, tzinfo=tz))  # 現在設定指定時間，之後再改成動態計算過去30天
+    now = utils.nowtz()
+    ips = sqldb.get_active_ips(utils.nowtz().replace(year=2025, month=8, day=11, hour=0, minute=0, second=0))  # 現在設定指定時間，之後再改成動態計算過去30天
     ips_string = " ".join([target.ip for target in ips])
 
     nm = nmap.PortScanner()
@@ -536,7 +536,7 @@ async def record_users_count(bot: DiscordBot):
         servers_count = max(servers_count, len(bot.guilds))
         await asyncio.sleep(120)
     shard_id = bot.shard_id
-    record = UsersCountRecord(record_date=datetime.now(tz).date(), users_count=users_count, servers_count=servers_count, shard_id=shard_id)
+    record = UsersCountRecord(record_date=utils.nowtz().date(), users_count=users_count, servers_count=servers_count, shard_id=shard_id)
     sqldb.add(record)
 
 async def refresh_db_cache():

@@ -11,9 +11,10 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
+from starlib.utils import ensure_utc, nowtz
+
 from ..database import BotToken, PlatformType, sqldb
 from ..exceptions import SQLNotFoundError
-from ..settings import tz
 from .models import DiscordUser, UserConnection
 
 log = logging.getLogger(__name__)
@@ -61,7 +62,7 @@ class OAuth2Base(ABC):
 
     @property
     def expired(self):
-        return not (self.expires_at and self.expires_at > datetime.now(tz))
+        return not (self.expires_at and self.expires_at > nowtz())
 
     def get_authorization_url(self, state=None, **kwargs):
         params = {
@@ -115,7 +116,7 @@ class OAuth2Base(ABC):
         token_data = response.json()
         self.access_token = token_data.get("access_token")
         self.refresh_token = token_data.get("refresh_token")
-        self.expires_at = datetime.now(tz) + timedelta(seconds=token_data.get("expires_in", 0))
+        self.expires_at = nowtz() + timedelta(seconds=token_data.get("expires_in", 0))
         self.scopes = token_data.get("scope")
         return token_data
 
@@ -182,7 +183,7 @@ class OAuth2Base(ABC):
         token_data = response.json()
         self.access_token = token_data.get("access_token")
         self.refresh_token = token_data.get("refresh_token")
-        self.expires_at = datetime.now(tz) + timedelta(seconds=token_data.get("expires_in", 0))
+        self.expires_at = nowtz() + timedelta(seconds=token_data.get("expires_in", 0))
         self.scopes = token_data.get("scope")
         return token_data
 
@@ -313,7 +314,7 @@ class GoogleOauth2(OAuth2Base):
             self._creds.refresh(Request())
             self.access_token = self._creds.token
             self.refresh_token = self._creds.refresh_token
-            self.expires_at = self._creds.expiry.replace(tzinfo=timezone(timedelta(hours=0))).astimezone(tz)
+            self.expires_at = self._creds.expiry.replace(tzinfo=timezone(timedelta(hours=0)))
             self.save_token(self.user_id)
         return self._creds  # type: ignore
 
@@ -354,7 +355,7 @@ class GoogleOauth2(OAuth2Base):
 
                 self.access_token = self._creds.token
                 self.refresh_token = self._creds.refresh_token
-                self.expires_at = self._creds.expiry.replace(tzinfo=timezone(timedelta(hours=0))).astimezone(tz)
+                self.expires_at = ensure_utc(self._creds.expiry)
                 self.save_token(self.user_id)
 
     def get_me(self):

@@ -3,11 +3,7 @@ from datetime import datetime
 import discord
 from pydantic import AliasPath, BaseModel, ConfigDict, Field, HttpUrl, model_validator
 
-from ...settings import tz
-import logging
-
-log = logging.getLogger(__name__)
-
+from starlib.base.types import UTCDateTime
 
 
 class TitleDetail(BaseModel):
@@ -41,16 +37,14 @@ class YoutubePushEntry(BaseModel):
     author_detail: AuthorDetail
     href: HttpUrl
     author: str
-    published: datetime
+    published: UTCDateTime
     published_parsed: list[int]
-    updated: datetime
+    updated: UTCDateTime
     updated_parsed: list[int]
     thumbnail_url: HttpUrl | None = None
 
     @model_validator(mode="after")
     def __post_init__(self):
-        self.published = self.published.astimezone(tz)
-        self.updated = self.updated.astimezone(tz)
         self.thumbnail_url = f"https://i.ytimg.com/vi/{self.yt_videoid}/hqdefault.jpg"
         return self
 
@@ -71,7 +65,7 @@ class Feed(BaseModel):
     links: list[LinkItem]
     title: str
     title_detail: TitleDetail
-    updated: datetime
+    updated: UTCDateTime
     updated_parsed: list[int]
 
 

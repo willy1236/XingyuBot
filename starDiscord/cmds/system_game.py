@@ -7,11 +7,12 @@ import nmap
 from discord.commands import SlashCommandGroup
 from discord.ext import commands, pages
 
-from starlib import BotEmbed, ChoiceList, Jsondb, csvdb, sclient, tz
+from starlib import BotEmbed, ChoiceList, Jsondb, csvdb, sclient
 from starlib.database import PlatformType, UserIPDetails
 from starlib.exceptions import APINetworkError
 from starlib.providers import *
 from starlib.settings import get_settings
+from starlib.utils import nowtz
 
 from ..checks import RegisteredContext, ensure_registered
 from ..extension import Cog_Extension
@@ -352,7 +353,7 @@ class system_game(Cog_Extension):
             await ctx.respond(f"此IP位址目前不在線上，請確認後再試", ephemeral=True)
             return
 
-        now = datetime.now(tz)
+        now = nowtz()
         account = UserIPDetails(ip=str(ip), last_seen=now, discord_id=ctx.author.id, registration_at=now)
         if name:
             account.name = name
@@ -379,7 +380,7 @@ class system_game(Cog_Extension):
             await ctx.respond(f"ZeroTier帳號註冊失敗，請確認位址是否正確", ephemeral=True)
             return
 
-        now = datetime.now(tz)
+        now = nowtz()
         account = UserIPDetails(
             ip=str(member["config"]["ipAssignments"][0]), last_seen=now, discord_id=ctx.author.id, address=member["nodeId"], name=name, registration_at=now
         )

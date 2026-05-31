@@ -5,9 +5,10 @@ import discord
 from discord.commands import SlashCommandGroup
 from tweepy.errors import TooManyRequests
 
-from starlib import BotEmbed, ChoiceList, Jsondb, sclient, tz
+from starlib import BotEmbed, ChoiceList, Jsondb, sclient
 from starlib.database import APIType, Community, NotifyCommunityType, PlatformType
 from starlib.instance import cli_api, google_api, tw_api, twitter_api, yt_push
+from starlib.utils import nowtz
 
 from ..extension import Cog_Extension
 
@@ -37,7 +38,7 @@ class system_community(Cog_Extension):
 
         twitch_user = tw_api.get_user(twitch_user_login)
         if twitch_user:
-            sclient.sqldb.add_notify_community(type, twitch_user.id, guildid, channelid, roleid, msg, cache_time=datetime.now(tz=tz))
+            sclient.sqldb.add_notify_community(type, twitch_user.id, guildid, channelid, roleid, msg, cache_time=nowtz())
             sclient.sqldb.merge(Community(id=twitch_user.id, type=PlatformType.Twitch, display_name=twitch_user.display_name, username=twitch_user.login))
 
             type_tw = Jsondb.get_tw(type.value, "twitch_notify_option")
@@ -156,7 +157,7 @@ class system_community(Cog_Extension):
 
         ytchannel = google_api.get_channel(handle=ythandle)
         if ytchannel:
-            sclient.sqldb.add_notify_community(NotifyCommunityType.Youtube, ytchannel.id, guildid, channelid, roleid, msg, cache_time=datetime.now(tz=tz))
+            sclient.sqldb.add_notify_community(NotifyCommunityType.Youtube, ytchannel.id, guildid, channelid, roleid, msg, cache_time=nowtz())
             sclient.sqldb.merge(Community(id=ytchannel.id, type=PlatformType.Google, display_name=ytchannel.snippet.title, username=ytchannel.snippet.customUrl))
 
             if role:
@@ -261,9 +262,7 @@ class system_community(Cog_Extension):
         #     await ctx.respond(f"錯誤：查詢過於頻繁，請稍後再試\n（X/Twitter短時間內僅提供少少的次數故容易觸發）")
         #     return
 
-        sclient.sqldb.add_notify_community(
-            NotifyCommunityType.TwitterTweet, api_twitter_user.id, guildid, channelid, roleid, None, cache_time=datetime.now(tz=tz)
-        )
+        sclient.sqldb.add_notify_community(NotifyCommunityType.TwitterTweet, api_twitter_user.id, guildid, channelid, roleid, None, cache_time=nowtz())
         sclient.sqldb.merge(Community(id=str(api_twitter_user.id), type=PlatformType.Twitter, display_name=api_twitter_user.fullName, username=api_twitter_user.userName))
 
         if role:

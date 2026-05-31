@@ -9,7 +9,7 @@ from discord.utils import format_dt
 from starlib import BotEmbed, ChoiceList, Jsondb, sclient
 from starlib.database import NotifyChannelType, ReactionRoleMessage, ReactionRoleOption, TicketChannelLobby, WarningType
 from starlib.instance import debug_guilds
-from starlib.utils import converter
+from starlib.utils import time_to_datetime
 
 from ..extension import Cog_Extension
 from ..uiElement.modal import RuleMessageModal
@@ -242,7 +242,7 @@ class moderation(Cog_Extension):
         ),
     ):
         await ctx.defer()
-        time_last = converter.time_to_datetime(time_last_str)
+        time_last = time_to_datetime(time_last_str)
         if not time_last or time_last > timedelta(days=7):
             await ctx.respond(f"錯誤：時間格式錯誤（不得超過7天）")
             return

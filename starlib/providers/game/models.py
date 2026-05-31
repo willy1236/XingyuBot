@@ -4,9 +4,8 @@ from typing import Any, ClassVar
 
 from pydantic import BaseModel, Field, model_validator
 
-from ...fileDatabase import Jsondb, csvdb
-from ...settings import tz
-from ...utils import BotEmbed
+from starlib.fileDatabase import Jsondb, csvdb
+from starlib.utils import BotEmbed, convert_tz, nowtz
 
 jdict = Jsondb.jdict
 lol_jdict = Jsondb.lol_jdict
@@ -24,7 +23,7 @@ class RiotUser(BaseModel):
     def embed(self):
         embed = BotEmbed.general(self.fullname)
         embed.add_field(name="puuid", value=self.puuid, inline=False)
-        embed.timestamp = datetime.now()
+        embed.timestamp = nowtz()
         return embed
 
 
@@ -36,7 +35,7 @@ class LOLPlayer(BaseModel):
 
     @model_validator(mode="after")
     def __post_init__(self):
-        self.revisionDate = self.revisionDate.astimezone(tz=tz)
+        self.revisionDate = convert_tz(self.revisionDate)
         return self
 
     def embed(self, name=None):
@@ -765,8 +764,8 @@ class MapData(BaseModel):
 
     @model_validator(mode="after")
     def __post_init__(self):
-        self.start = self.start.astimezone(tz=tz)
-        self.end = self.end.astimezone(tz=tz)
+        self.start = convert_tz(self.start)
+        self.end = convert_tz(self.end)
         return self
 
 
@@ -788,7 +787,7 @@ class ApexMapRotation(BaseModel):
     def embeds(self):
         tl: dict = jdict["ApexMap"]
         event_tl: dict = jdict["ApexEvent"]
-        now = datetime.now(tz=tz)
+        now = nowtz()
         lst = list()
         if self.ranked is not None:
             embed_rank = BotEmbed.simple("Apex地圖：積分")

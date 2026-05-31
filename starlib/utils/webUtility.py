@@ -1,14 +1,14 @@
-import logging
 import re
 import socket
-import ssl
 import unicodedata
-from urllib.parse import urlparse
-
-import certifi
+import ssl
 import dns.resolver
+import certifi
+
 import requests
 import whois
+from urllib.parse import urlparse
+import logging
 
 log = logging.getLogger(__name__)
 

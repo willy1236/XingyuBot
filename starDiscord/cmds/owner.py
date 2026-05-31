@@ -15,7 +15,7 @@ from starlib import BotEmbed, Jsondb, sclient
 from starlib.database import NotifyChannelType
 from starlib.instance import *
 from starlib.settings import get_settings
-from starlib.utils.utility import ChoiceList, base64_to_buffer, converter, find_radmin_vpn_network, get_arp_list
+from starlib.utils import ChoiceList, base64_to_buffer, find_radmin_vpn_network, get_arp_list, time_to_datetime
 
 from ..checks import PrivilegeLevel, ensure_registered, has_privilege_level, has_vip, is_vip_admin
 from ..command_options import *
@@ -82,7 +82,7 @@ class AnnoModal(discord.ui.Modal):
                     await channel.send(embed=embed)
                 send_success += 1
             except Exception:
-                log.error("anno: error sending to channel", extra={"guild_id": i.guild_id, "channel_id": i.channel_id}, exc_info=True)
+                log.exception("anno: error sending to channel", extra={"guild_id": i.guild_id, "channel_id": i.channel_id})
 
         await msg.edit_original_response(content=f"已向{send_success}/{len(channels)}個頻道發送公告")
 
@@ -114,7 +114,7 @@ class BotUpdateModal(discord.ui.Modal):
                     await channel.send(embed=embed)
                 send_success += 1
             except Exception:
-                log.error("botupdate: error sending to channel", extra={"guild_id": i.guild_id, "channel_id": i.channel_id}, exc_info=True)
+                log.exception("botupdate: error sending to channel", extra={"guild_id": i.guild_id, "channel_id": i.channel_id})
 
         await msg.edit_original_response(content=f"已向{send_success}/{len(channels)}個頻道發送公告")
 
@@ -555,7 +555,7 @@ class owner(Cog_Extension):
         reason: discord.Option(str, name="原因", description="限100字內", required=False),
     ):
         await ctx.defer()
-        time = converter.time_to_datetime(time_last)
+        time = time_to_datetime(time_last)
         channel = self.bot.get_channel(int(channelid))
         if not time or time > timedelta(days=7):
             await ctx.respond(f"錯誤：時間格式錯誤（不得超過7天）")

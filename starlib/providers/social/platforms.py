@@ -16,7 +16,7 @@ from googleapiclient.errors import HttpError
 
 from starlib.database import APIType, sqldb
 from starlib.exceptions import APINetworkError, Forbidden
-from starlib.settings import tz
+from starlib.utils import convert_tz
 
 from ..base import APICaller
 from .models import *
@@ -307,7 +307,7 @@ class YoutubePush(APICaller):
             if time_str.strip().lower() == "n/a":
                 return None
             try:
-                return datetime.strptime(time_str, "%a, %d %b %Y %H:%M:%S %z").astimezone(tz=tz)
+                return convert_tz(datetime.strptime(time_str, "%a, %d %b %Y %H:%M:%S %z"))
             except ValueError as e:
                 log.error(
                     "時間格式錯誤",
