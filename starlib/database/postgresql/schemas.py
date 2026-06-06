@@ -58,9 +58,9 @@ class TokensSchema(BaseSchema):
     __table_args__ = {"schema": "credentials"}
 
 
-class UserSchema(BaseSchema):
+class DiscordUsersSchema(BaseSchema):
     __abstract__ = True
-    __table_args__ = {"schema": "stardb_user"}
+    __table_args__ = {"schema": "discord_users"}
 
 
 class CacheSchema(BaseSchema):
@@ -81,10 +81,6 @@ class UsersSchema(BaseSchema):
 class GuildsSchema(BaseSchema):
     __abstract__ = True
     __table_args__ = {"schema": "guilds"}
-
-class DiscordUsersSchema(BaseSchema):
-    __abstract__ = True
-    __table_args__ = {"schema": "discord_users"}
 
 class LookupsSchema(BaseSchema):
     __abstract__ = True

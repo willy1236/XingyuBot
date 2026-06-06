@@ -67,7 +67,7 @@ class DiscordStats(UsersSchema, table=True):
     registrations_id: int | None = Field(sa_column=Column(Integer, ForeignKey("stardb_idbase.discord_registrations.registrations_id"), default=None))
 
 
-class DiscordUser(UserSchema, table=True):
+class DiscordUser(DiscordUsersSchema, table=True):
     __tablename__ = "user_discord"
 
     discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True, autoincrement=False))
@@ -79,7 +79,7 @@ class DiscordUser(UserSchema, table=True):
     registration: "DiscordRegistration" = Relationship(back_populates="members")
 
 
-class UserPoint(UserSchema, table=True):
+class UserPoint(DiscordUsersSchema, table=True):
     __tablename__ = "user_point"
 
     discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
@@ -88,7 +88,7 @@ class UserPoint(UserSchema, table=True):
     rcoin: int = Field(sa_column=Column(Integer), default=0)
 
 
-class UserBet(UserSchema, table=True):
+class UserBet(DiscordUsersSchema, table=True):
     __tablename__ = "user_bet"
 
     bet_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
@@ -98,7 +98,7 @@ class UserBet(UserSchema, table=True):
     bet_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
 
 
-class UserPoll(UserSchema, table=True):
+class UserPoll(DiscordUsersSchema, table=True):
     __tablename__ = "user_poll"
 
     poll_id: int = Field(sa_column=Column(Integer, primary_key=True))
@@ -108,14 +108,14 @@ class UserPoll(UserSchema, table=True):
     vote_magnification: int = Field(sa_column=Column(Integer), default=1)
 
 
-class UserAccount(UserSchema, table=True):
+class UserAccount(DiscordUsersSchema, table=True):
     __tablename__ = "user_account"
 
     main_account: int = Field(sa_column=Column(BigInteger, primary_key=True))
     alternate_account: int = Field(sa_column=Column(BigInteger, primary_key=True))
 
 
-class UserParty(UserSchema, table=True):
+class UserParty(DiscordUsersSchema, table=True):
     __tablename__ = "user_party"
 
     discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
@@ -124,7 +124,7 @@ class UserParty(UserSchema, table=True):
     party: "Party" = Relationship(back_populates="members")
 
 
-class UserModerate(UserSchema, table=True):
+class UserModerate(DiscordUsersSchema, table=True):
     __tablename__ = "user_moderate"
 
     warning_id: int = Field(sa_column=Column(Integer, Identity(), primary_key=True))
@@ -172,17 +172,7 @@ class UserModerate(UserSchema, table=True):
 
         return name, value
 
-
-class RoleSaveOld(UserSchema, table=True):
-    __tablename__ = "role_save"
-
-    discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
-    role_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
-    role_name: str = Field(sa_column=Column(String))
-    time: date = Field(sa_column=Column(Date))
-
-
-class RoleSave(UsersSchema, table=True):
+class RoleSave(DiscordUsersSchema, table=True):
     __tablename__ = "role_save"
 
     role_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
@@ -190,14 +180,14 @@ class RoleSave(UsersSchema, table=True):
     created_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
 
 
-class RoleSaveMember(UsersSchema, table=True):
+class RoleSaveMember(DiscordUsersSchema, table=True):
     __tablename__ = "role_save_member"
 
     discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
     role_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
 
 
-class Pet(UserSchema, table=True):
+class Pet(DiscordUsersSchema, table=True):
     __tablename__ = "user_pet"
 
     discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
@@ -206,7 +196,7 @@ class Pet(UserSchema, table=True):
     food: int | None = Field(sa_column=Column(Integer))
 
 
-class LOLGameRecord(UserSchema, table=True):
+class LOLGameRecord(DiscordUsersSchema, table=True):
     __tablename__ = "lol_game_record"
 
     puuid: str = Field(sa_column=Column(String, primary_key=True))
@@ -260,7 +250,7 @@ class LOLGameRecord(UserSchema, table=True):
     visionClearedPings: int = Field(sa_column=Column(Integer))
 
 
-class TwitchPoint(UserSchema, table=True):
+class TwitchPoint(DiscordUsersSchema, table=True):
     __tablename__ = "twitch_point"
 
     twitch_id: int = Field(sa_column=Column(primary_key=True))
@@ -490,7 +480,7 @@ class Giveaway(BasicSchema, table=True):
     redraw_count: int = Field(sa_column=Column(Integer, nullable=True), default=0)
 
 
-class GiveawayUser(UserSchema, table=True):
+class GiveawayUser(DiscordUsersSchema, table=True):
     __tablename__ = "user_giveaway"
 
     giveaway_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
