@@ -57,16 +57,6 @@ class LinkCode(UsersSchema, table=True):
     expires_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
 
 
-class DiscordStats(UsersSchema, table=True):
-    __tablename__ = "discord_stats"
-
-    user_id: int = Field(foreign_key="users.cloud_user.id", primary_key=True)
-    max_sign_consecutive_days: int | None = Field(sa_column=Column(Integer))
-    meatball_times: int | None = Field(sa_column=Column(Integer))
-    guaranteed: int | None = Field(sa_column=Column(Integer))
-    registrations_id: int | None = Field(sa_column=Column(Integer, ForeignKey("stardb_idbase.discord_registrations.registrations_id"), default=None))
-
-
 class DiscordUser(DiscordUsersSchema, table=True):
     __tablename__ = "user_discord"
 
@@ -172,6 +162,7 @@ class UserModerate(DiscordUsersSchema, table=True):
 
         return name, value
 
+
 class RoleSave(DiscordUsersSchema, table=True):
     __tablename__ = "role_save"
 
@@ -194,60 +185,6 @@ class Pet(DiscordUsersSchema, table=True):
     pet_species: str = Field(sa_column=Column(String))
     pet_name: str = Field(sa_column=Column(String))
     food: int | None = Field(sa_column=Column(Integer))
-
-
-class LOLGameRecord(DiscordUsersSchema, table=True):
-    __tablename__ = "lol_game_record"
-
-    puuid: str = Field(sa_column=Column(String, primary_key=True))
-    game_id: int = Field(sa_column=Column(Integer, primary_key=True))
-    game_type: str = Field(sa_column=Column(String))
-    game_mode: str = Field(sa_column=Column(String))
-    champion_id: int = Field(sa_column=Column(Integer))
-    teamId: int = Field(sa_column=Column(SmallInteger))
-    timePlayed: timedelta = Field(sa_column=Column(Interval))
-    totalTimeSpentDead: timedelta = Field(sa_column=Column(Interval))
-    created_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
-    win: bool = Field(sa_column=Column(Boolean))
-    kills: int = Field(sa_column=Column(Integer))
-    deaths: int = Field(sa_column=Column(Integer))
-    assists: int = Field(sa_column=Column(Integer))
-    visionScore: int = Field(sa_column=Column(Integer))
-    damage_dealt: int = Field(sa_column=Column(Integer))
-    damage_taken: int = Field(sa_column=Column(Integer))
-    double_kills: int = Field(sa_column=Column(Integer))
-    triple_kills: int = Field(sa_column=Column(Integer))
-    quadra_kills: int = Field(sa_column=Column(Integer))
-    penta_kills: int = Field(sa_column=Column(Integer))
-    gold_earned: int = Field(sa_column=Column(Integer))
-    total_minions_killed: int = Field(sa_column=Column(Integer))
-    turretKills: int = Field(sa_column=Column(Integer))
-    inhibitorKills: int = Field(sa_column=Column(Integer))
-    baronKills: int = Field(sa_column=Column(Integer))
-    dragonKills: int = Field(sa_column=Column(Integer))
-    item0: int = Field(sa_column=Column(Integer))
-    item1: int = Field(sa_column=Column(Integer))
-    item2: int = Field(sa_column=Column(Integer))
-    item3: int = Field(sa_column=Column(Integer))
-    item4: int = Field(sa_column=Column(Integer))
-    item5: int = Field(sa_column=Column(Integer))
-    item6: int = Field(sa_column=Column(Integer))
-    firstBloodKill: bool = Field(sa_column=Column(Boolean))
-    firstTowerKill: bool = Field(sa_column=Column(Boolean))
-    allInPings: int = Field(sa_column=Column(Integer))
-    assistMePings: int = Field(sa_column=Column(Integer))
-    basicPings: int = Field(sa_column=Column(Integer))
-    commandPings: int = Field(sa_column=Column(Integer))
-    dangerPings: int = Field(sa_column=Column(Integer))
-    enemyMissingPings: int = Field(sa_column=Column(Integer))
-    enemyVisionPings: int = Field(sa_column=Column(Integer))
-    getBackPings: int = Field(sa_column=Column(Integer))
-    holdPings: int = Field(sa_column=Column(Integer))
-    needVisionPings: int = Field(sa_column=Column(Integer))
-    onMyWayPings: int = Field(sa_column=Column(Integer))
-    pushPings: int = Field(sa_column=Column(Integer))
-    retreatPings: int = Field(sa_column=Column(Integer))
-    visionClearedPings: int = Field(sa_column=Column(Integer))
 
 
 class TwitchPoint(DiscordUsersSchema, table=True):
