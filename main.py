@@ -58,7 +58,7 @@ logging.getLogger("py.warnings").setLevel(logging.ERROR)
 
 from starDiscord import DiscordBot
 from starlib import sclient
-from starlib.core.model import TwitchStreamEvent
+from starlib.pubsub.model import TwitchStreamEvent
 
 # ruff: enable[E402]
 
