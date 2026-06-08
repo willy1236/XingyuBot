@@ -35,7 +35,7 @@ class error(Cog_Extension):
         # 指令執行時發生錯誤
         elif isinstance(error, discord.ApplicationCommandInvokeError):
             if isinstance(error.original, StarException):
-                await ctx.respond("發生錯誤，請再試一次或連繫管理員協助", ephemeral=True)
+                await ctx.respond(str(error.original.message), ephemeral=True)
                 if error.original.original_message and not debug_mode:
                     await self.bot.error(ctx, f"{error.original} ({error.original.original_message})")
 
