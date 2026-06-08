@@ -25,7 +25,7 @@ log = logging.getLogger(__name__)
 # Suppress noise about console usage from errors
 youtube_dl.utils.bug_reports_message = lambda before=";": ""
 
-ytdl_format_options = {
+_BASE_YTDL_OPTIONS = {
     "format": "bestaudio/best",
     "outtmpl": "%(extractor)s-%(id)s-%(title)s.%(ext)s",
     "restrictfilenames": True,
@@ -40,9 +40,13 @@ ytdl_format_options = {
     "extractor_retries": 3,
 }
 
+ytdl_format_options = {**_BASE_YTDL_OPTIONS}
+ytdl_bilibili_options = {**_BASE_YTDL_OPTIONS, "http_headers": {"Referer": "https://www.bilibili.com"}}
+
 ffmpeg_options = {"before_options": "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5", "options": "-vn"}
 
 ytdl = youtube_dl.YoutubeDL(ytdl_format_options)
+ytdl_bilibili = youtube_dl.YoutubeDL(ytdl_bilibili_options)
 # model: Model = Model(vosk_model_path)
 
 class SongSource(enum.IntEnum):
@@ -92,7 +96,8 @@ class Song():
         - list[Song]: A list of Song objects created from the URL.
         """
         loop = loop or asyncio.get_event_loop()
-        results:dict | list[dict] = await loop.run_in_executor(None, lambda: ytdl.extract_info(url, download=False))  # type: ignore
+        extractor = ytdl_bilibili if "bilibili.com" in url or "b23.tv" in url else ytdl
+        results: dict | list[dict] = await loop.run_in_executor(None, lambda: extractor.extract_info(url, download=False))  # type: ignore
         lst:list["Song"] = []
 
         if  "entries" in results:
@@ -164,7 +169,7 @@ class MusicPlayer():
         self.guildid = str(ctx.guild.id)
         self.playlist = []
         self.songloop = False
-        self.volume = 0.5
+        self.volume = 0.75
         self.nowplaying = None
         self.skip_voters = []
         self.play_lock = asyncio.Lock()
