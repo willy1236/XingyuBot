@@ -9,6 +9,7 @@ import time
 import wave
 from datetime import datetime
 from typing import TYPE_CHECKING
+from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 import discord
 import yt_dlp as youtube_dl
@@ -38,6 +39,12 @@ _BASE_YTDL_OPTIONS = {
     "default_search": "auto",
     "source_address": "0.0.0.0",
     "extractor_retries": 3,
+    "playlistend": 50,
+    "socket_timeout": 15,
+    "http_headers": {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+        "Accept-Language": "zh-TW,zh;q=0.9,en;q=0.8",
+    },
 }
 
 ytdl_format_options = {**_BASE_YTDL_OPTIONS}
@@ -104,9 +111,26 @@ class Song():
         - list[Song]: A list of Song objects created from the URL.
         """
         loop = loop or asyncio.get_event_loop()
+        parsed = urlparse(url)
+        qs = parse_qs(parsed.query)
+        if qs.get("list", [""])[0].startswith("RD"):
+            # Youtube Mix 電台歌單
+            qs.pop("list", None)
+            qs.pop("start_radio", None)
+            url = urlunparse(parsed._replace(query=urlencode({k: v[0] for k, v in qs.items()})))
         extractor = ytdl_bilibili if "bilibili.com" in url or "b23.tv" in url else ytdl
-        results: dict | list[dict] = await loop.run_in_executor(None, lambda: extractor.extract_info(url, download=False))  # type: ignore
         lst:list["Song"] = []
+
+        results = None
+        for attempt in range(3):
+            results = await loop.run_in_executor(None, lambda: extractor.extract_info(url, download=False))  # type: ignore
+            if results is not None:
+                break
+            if attempt < 2:
+                await asyncio.sleep(2**attempt)
+
+        if not results:
+            return lst
 
         if  "entries" in results:
             # 處理歌單
@@ -508,7 +532,6 @@ class music(Cog_Extension):
     @commands.slash_command(description="播放音樂")
     @commands.guild_only()
     async def play(self, ctx: discord.ApplicationContext, url: str):
-        await ctx.defer()
         guildid = str(ctx.guild.id)
         vc = ctx.voice_client
 
@@ -525,6 +548,8 @@ class music(Cog_Extension):
                 results = await Song.from_url(url, requester=ctx.author)
             except youtube_dl.utils.DownloadError as e:
                 raise MusicCommandError("不受支援的連結，請重新檢查網址是否正確") from e
+        if not results:
+            raise MusicCommandError("歌曲擷取失敗，請重新檢查網址是否正確")
 
         #播放器設定
         player = guild_playing.get(guildid)
@@ -654,6 +679,7 @@ class music(Cog_Extension):
     @shuffle.before_invoke
     @recording.before_invoke
     async def ensure_voice(self, ctx: discord.ApplicationContext):
+        await ctx.defer()
         if not ctx.voice_client:
             if ctx.author.voice:
                 await ctx.author.voice.channel.connect(timeout=10,reconnect=False)
