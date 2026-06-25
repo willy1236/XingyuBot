@@ -10,5 +10,6 @@ uv sync
 
 :: 切換回專案根目錄執行主程式
 cd ..
-set APP_ENV=production
-uv run python main.py
+set APP_ENV=development
+set PYTHONWARNINGS=ignore::DeprecationWarning
+uv run python -W ignore -m main

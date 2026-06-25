@@ -10,6 +10,18 @@
             "env": {
                 "PYTHONPATH": "${workspaceFolder}"
             }
-        }
+        },
+        {
+            "name": "Python: Dynamic Module Debug",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "${fileBasenameNoExtension}", // 只取檔名，例如 main
+            "cwd": "${fileDirname}", // 動態將工作目錄切換到該檔案所在的資料夾
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}" // 確保全域專案根目錄仍在搜尋路徑中
+            },
+            "console": "integratedTerminal",
+            "justMyCode": true
+}
     ]
 }

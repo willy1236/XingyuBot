@@ -1,8 +1,20 @@
-import atexit
+import asyncio
+import inspect
 import logging
+import warnings
+
+asyncio.iscoroutinefunction = inspect.iscoroutinefunction  # 修正 asyncio.iscoroutinefunction 在 Python 3.11 之後的行為，避免第三方套件出現警告
+
+# 壓制所有第三方套件（虛擬環境 .venv 中）的棄用警告
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+warnings.filterwarnings("ignore", category=UserWarning, module=".*")
+logging.captureWarnings(False)
+logging.getLogger("py.warnings").setLevel(logging.ERROR)
+
+# ruff: disable[E402]
+import atexit
 import sys
 import time
-import warnings
 
 import discord
 import structlog
@@ -10,15 +22,10 @@ import truststore
 
 from sentry_bootstrap import init_sentry
 
-# 壓制所有第三方套件（虛擬環境 .venv 中）的棄用警告
-warnings.filterwarnings("ignore", category=DeprecationWarning)
-warnings.filterwarnings("ignore", category=UserWarning, module=".*")
-
 truststore.inject_into_ssl()
 
 init_sentry(service="main")
 
-# ruff: disable[E402]
 from starlib.settings import get_settings
 
 settings = get_settings()
