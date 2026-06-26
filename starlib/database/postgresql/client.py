@@ -238,6 +238,12 @@ class UserRepository(BaseRepository):
         result = self.session.exec(stmt).all()
         return result
 
+    def get_external_accounts(self, user_id: int) -> list[ExternalAccount]:
+        """取得該 cloud_user 綁定的所有外部帳號（不分平台）。"""
+        stmt = select(ExternalAccount).where(ExternalAccount.user_id == user_id)
+        result = self.session.exec(stmt).all()
+        return list(result)
+
     def upsert_external_account(self, user_id: int, platform: PlatformType, external_id: str, display_name: str | None = None):
         """新增或更新外部帳號，以 (platform, external_id) 為唯一鍵。"""
         stmt = select(ExternalAccount).where(ExternalAccount.platform == platform, ExternalAccount.external_id == external_id)
@@ -365,21 +371,6 @@ class BetRepository(BaseRepository):
 #         self.cursor.execute(f'DELETE FROM `stardb_user`.`user_bet` WHERE `bet_id` = %s;',(bet_id,))
 #         self.cursor.execute(f'DELETE FROM `database`.`bet_data` WHERE `bet_id` = %s;',(bet_id,))
 #         self.connection.commit()
-
-
-class GameRepository(BaseRepository):
-    def get_lol_record_with_champion(self, puuid: str):
-        """取得指定玩家的英雄戰績"""
-        stmt = select(LOLGameRecord.champion_id, func.count()).where(LOLGameRecord.puuid == puuid).group_by(LOLGameRecord.champion_id).order_by(desc(func.count()))
-        result = self.session.exec(stmt).all()
-        return result
-
-    def get_lol_record_with_win(self, puuid: str):
-        """取得指定玩家的勝率"""
-        stmt = select(LOLGameRecord.win, func.count()).where(LOLGameRecord.puuid == puuid).group_by(LOLGameRecord.win).order_by(desc(func.count()))
-        result = self.session.exec(stmt).all()
-        return {i: cnt for i, cnt in result}
-
 
 class PetRepository(BaseRepository):
     def get_pet(self, discord_id: int):
@@ -1603,7 +1594,6 @@ class SQLRepository(
     UserRepository,
     CurrencyRepository,
     BetRepository,
-    GameRepository,
     PetRepository,
     NotifyRepository,
     DynamicVoiceRepository,

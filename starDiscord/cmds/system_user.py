@@ -3,6 +3,7 @@ from discord.commands import SlashCommandGroup
 from discord.ext import commands
 
 from starlib import BotEmbed, ChoiceList, Jsondb, sclient
+from starlib.database.postgresql.enums import PlatformType
 from starlib.database.postgresql.models import DiscordUser
 from starlib.instance import happycamp_guild
 
@@ -12,43 +13,61 @@ from ..uiElement.view import DeletePetView
 
 pet_option = ChoiceList.set("pet_option")
 
+PLATFORM_DISPLAY_NAME = {
+    PlatformType.Discord: "Discord",
+    PlatformType.Twitch: "Twitch",
+    PlatformType.Google: "Google",
+}
+
 class system_user(Cog_Extension):
     pet = SlashCommandGroup("pet", "寵物相關指令")
 
-    @commands.slash_command(description="查看用戶資訊")
+    @commands.slash_command(description="查看使用者的基本資訊")
     @ensure_registered()
-    async def ui(self, ctx: RegisteredContext, member: discord.Option(discord.Member, name="用戶", description="留空以查詢自己", default=None)):
+    async def user_info(self, ctx: RegisteredContext, member: discord.Option(discord.Member, name="用戶", description="留空以查詢自己", default=None)):
         user_dc:discord.Member = member or ctx.author
         cuser = ctx.cuser
 
+        # cloud
+        cloud_user_embed = BotEmbed.general("使用者資料", icon_url=user_dc.avatar.url if user_dc.avatar else None)
+        cloud_user_embed.add_field(name="Cloud ID", value=cuser.id)
+        cloud_user_embed.add_field(name="雲端共用資料夾", value="已共用" if cuser.drive_share_id else "未共用")
+        if cuser.name:
+            cloud_user_embed.add_field(name="註冊名稱", value=cuser.name)
+        bound_accounts = sclient.sqldb.get_external_accounts(cuser.id)
+        if len(bound_accounts) > 1:
+            account_lines = []
+            for account in bound_accounts:
+                platform = PlatformType(account.platform)
+                if platform == PlatformType.Discord and int(account.external_id) == user_dc.id:
+                    continue
+                platform_name = PLATFORM_DISPLAY_NAME.get(platform, platform.name)
+                if platform == PlatformType.Discord:
+                    account_lines.append(f"{platform_name}：<@{account.external_id}>")
+                else:
+                    account_lines.append(f"{platform_name}：{account.display_name or account.external_id}")
+            if account_lines:
+                cloud_user_embed.add_field(name="綁定的帳號", value="\n".join(account_lines), inline=False)
+
+        # discord
         user = sclient.sqldb.get_dcuser(user_dc.id) or DiscordUser(discord_id=user_dc.id)
-        user_embed = BotEmbed.general(name="Discord資料", icon_url=user_dc.avatar.url if user_dc.avatar else None)
+        discord_user_embed = BotEmbed.general(name="Discord資料", icon_url=user_dc.avatar.url if user_dc.avatar else None)
         coins = sclient.sqldb.get_coin(user_dc.id)
-        user_embed.add_field(name="⭐星塵", value=coins.stardust)
-        user_embed.add_field(name="PT點數", value=coins.point)
-        user_embed.add_field(name="Rcoin", value=coins.rcoin)
+        discord_user_embed.add_field(name="⭐星塵", value=coins.stardust)
+        discord_user_embed.add_field(name="PT點數", value=coins.point)
+        discord_user_embed.add_field(name="Rcoin", value=coins.rcoin)
 
         if user.max_sign_consecutive_days:
-            user_embed.add_field(name="連續簽到最高天數", value=user.max_sign_consecutive_days)
+            discord_user_embed.add_field(name="連續簽到最高天數", value=user.max_sign_consecutive_days)
         if user.meatball_times:
-            user_embed.add_field(name="貢丸次數", value=user.meatball_times)
+            discord_user_embed.add_field(name="貢丸次數", value=user.meatball_times)
         if user.registration:
             guild = self.bot.get_guild(user.registration.guild_id)
-            user_embed.add_field(name="戶籍", value=guild.name if guild else user.registration.guild_id)
+            discord_user_embed.add_field(name="戶籍", value=guild.name if guild else user.registration.guild_id)
 
-        dbdata = sclient.sqldb.get_discord_accounts(cuser.id)
-        if len(dbdata) > 1:
-            alt_accounts = ", ".join([f"<@{i.external_id}>" for i in dbdata if int(i.external_id) != user_dc.id])
-            user_embed.add_field(name="綁定的其他 Discord 帳號", value=f"{alt_accounts}", inline=False)
+        embeds = [cloud_user_embed, discord_user_embed]
 
-        cloud_user_embed = BotEmbed.general("使用者資料", icon_url=user_dc.avatar.url if user_dc.avatar else None)
-        if cuser:
-            cloud_user_embed.add_field(name="雲端共用資料夾", value="已共用" if cuser.drive_share_id else "未共用")
-            if cuser.name:
-                cloud_user_embed.add_field(name="註冊名稱", value=cuser.name)
-
-        embeds = [user_embed, cloud_user_embed]
-
+        # HappyCamp
         if ctx.guild_id in happycamp_guild:
             happycamp_embed = BotEmbed.general("快樂營使用者資料", icon_url=user_dc.avatar.url if user_dc.avatar else None)
             happycamp_embed.add_field(name="累計語音時間", value=sclient.sqldb.get_voice_time(user_dc.id, ctx.guild_id).total_minute)
