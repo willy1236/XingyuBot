@@ -9,6 +9,8 @@ from authlib.integrations.httpx_client import AsyncOAuth2Client
 
 from starlib.database import OAuthClient, OAuthToken, PlatformType, sqldb
 
+from .models import PlatformUser
+
 log = logging.getLogger(__name__)
 
 
@@ -131,12 +133,17 @@ class OAuth2Base(ABC):
         return scope in self.scopes
 
     # ====== Signed GET/POST ======
-    async def api_get(self, token: OAuthTokenDict, path: str, params: dict | None = None) -> dict:
+    async def api_get(self, path: str, params: dict | None = None) -> dict:
+        if not self.db_token:
+            raise Exception("No token loaded.")
         client = self.oauth_client
-        client.token = token
+        client.token = self.to_oauth_dict()
         resp = await client.get(f"{self.api_url}{path}", params=params)
         resp.raise_for_status()
         return resp.json()
+
+    @abstractmethod
+    async def get_me(self) -> PlatformUser: ...
 
     # ====== Token DB Integration ======
     @classmethod

@@ -170,6 +170,10 @@ class UserRepository(BaseRepository):
         result = self.session.exec(stmt).one_or_none()
         return result
 
+    def get_cloud_user_by_id(self, cloud_user_id: int) -> CloudUser | None:
+        """Retrieve a CloudUser by its own primary key."""
+        return self.session.get(CloudUser, cloud_user_id)
+
     def add_cloud_user_by_discord(self, discord_id: int, display_name: str | None = None):
         """
         Add a new CloudUser to the database based on the provided Discord ID.

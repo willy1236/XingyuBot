@@ -198,8 +198,8 @@ async def oauth_discord(request: Request):
         # 用戶授權流程，產生 JWT 並重定向到儀表板
         response = RedirectResponse(f"{BASE_WWW_URL}/dashboard")
 
-        # 產生 JWT
-        payload = {"id": user.id, "username": user.username, "avatar": user.avatar, "exp": datetime.now() + timedelta(days=7)}
+        # 產生 JWT（id 為站內 cloud_user.id，Discord 自己的 ID 另外放在 discord_id）
+        payload = {"id": cuser.id, "discord_id": user.id, "username": user.username, "avatar": user.avatar, "exp": datetime.now() + timedelta(days=7)}
         jwt_secret = SETTINGS.JWT_SECRET
         jwt_token = jwt.encode(payload, jwt_secret, algorithm="HS256")
 
@@ -231,10 +231,19 @@ async def oauth_twitch(request: Request):
     if not TwitchOAuth.verify_state(request.cookies.get("oauth_state"), params.get("state")):
         return HTMLResponse("授權失敗：state 驗證失敗", 400)
 
+    # 確認已用 Discord 登入，並取得要綁定的 cloud_user
+    payload = decode_jwt_cookie(request)
+    if payload is None or not payload.get("id"):
+        return HTMLResponse("請先使用 Discord 登入後再綁定 Twitch 帳號", 401)
+    cloud_user_id = payload["id"]
+    if not sqldb.get_cloud_user_by_id(cloud_user_id):
+        return HTMLResponse("登入狀態異常，請重新登入後再試", 401)
+
     auth = TwitchOAuth.create_from_db(twitch_oauth_client)
     await auth.exchange_code(code)
     user = await auth.get_me()
     auth.save_token_to_db(user.id)
+    sclient.sqldb.upsert_external_account(user_id=cloud_user_id, platform=PlatformType.Twitch, external_id=user.id, display_name=user.display_name)
     sclient.sqldb.merge(TwitchBotJoinChannel(twitch_id=user.id))
     response = HTMLResponse(f"授權已完成，您現在可以關閉此頁面<br>別忘了在聊天室輸入 /mod xingyu1016<br><br>Twitch ID：{user.id}")
     response.delete_cookie("oauth_state")
@@ -252,10 +261,20 @@ async def oauth_google(request: Request):
     if not GoogleOAuth.verify_state(request.cookies.get("oauth_state"), params.get("state")):
         return HTMLResponse("授權失敗：state 驗證失敗", 400)
 
+    # 確認已用 Discord 登入，並取得要綁定的 cloud_user
+    payload = decode_jwt_cookie(request)
+    if payload is None or not payload.get("id"):
+        return HTMLResponse("請先使用 Discord 登入後再綁定 Google 帳號", 401)
+    cloud_user_id = payload["id"]
+    if not sqldb.get_cloud_user_by_id(cloud_user_id):
+        return HTMLResponse("登入狀態異常，請重新登入後再試", 401)
+
     auth = GoogleOAuth.create_from_db(google_oauth_settings)
     await auth.exchange_code(code)
-    auth.save_token_to_db(auth.db_token.user_id)
-    response = HTMLResponse(f"授權已完成，您現在可以關閉此頁面<br><br>Google ID：{auth.db_token.user_id}")
+    user = await auth.get_me()
+    auth.save_token_to_db(user.id)
+    sclient.sqldb.upsert_external_account(user_id=cloud_user_id, platform=PlatformType.Google, external_id=user.id, display_name=user.name)
+    response = HTMLResponse(f"授權已完成，您現在可以關閉此頁面<br><br>Google ID：{user.id}")
     response.delete_cookie("oauth_state")
     return response
 
@@ -327,6 +346,9 @@ async def to_discordauth(request: Request):
 
 @app.get("/to/twitchauth")
 async def to_twitchauth(request: Request):
+    if decode_jwt_cookie(request) is None:
+        return HTMLResponse("請先使用 Discord 登入後再綁定 Twitch 帳號", 401)
+
     twitch_scopes = [
         "chat:read",
         "channel:read:subscriptions",
@@ -358,6 +380,9 @@ async def to_discordbot(request: Request):
 
 @app.get("/to/googleauth")
 async def to_googleauth(request: Request):
+    if decode_jwt_cookie(request) is None:
+        return HTMLResponse("請先使用 Discord 登入後再綁定 Google 帳號", 401)
+
     # TODO: scopes存放整理
     scopes = [
         "https://www.googleapis.com/auth/userinfo.profile",
@@ -378,20 +403,23 @@ async def logout(request: Request):
     return response
 
 
-# 添加一個驗證依賴函數
-async def verify_jwt(request: Request):
+def decode_jwt_cookie(request: Request) -> dict | None:
+    """解析 jwt cookie，失敗時回傳 None（不拋例外，給需要自訂錯誤回應的路由用）。"""
     jwt_token = request.cookies.get("jwt")
     if not jwt_token:
-        raise HTTPException(status_code=401, detail="Unauthorized")
-
+        return None
     try:
-        jwt_secret = SETTINGS.JWT_SECRET
-        payload = jwt.decode(jwt_token, jwt_secret, algorithms=["HS256"])
-        return payload
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="JWT expired")
-    except jwt.InvalidTokenError:
-        raise HTTPException(status_code=401, detail="Invalid JWT")
+        return jwt.decode(jwt_token, SETTINGS.JWT_SECRET, algorithms=["HS256"])
+    except jwt.JWTError:
+        return None
+
+
+# 添加一個驗證依賴函數
+async def verify_jwt(request: Request):
+    payload = decode_jwt_cookie(request)
+    if payload is None:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    return payload
 
 
 @app.get("/discord/data")

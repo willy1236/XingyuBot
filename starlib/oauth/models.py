@@ -1,7 +1,21 @@
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, model_validator
 
 
-class DiscordAuthModel(BaseModel):
+class PlatformUser(BaseModel):
+    """Common base for OAuth `get_me()` results across platforms."""
+
+    id: str
+
+
+class GoogleUser(PlatformUser):
+    """User Data from Google Oauth `/userinfo` API."""
+
+    email: str | None = None
+    name: str | None = None
+    picture: str | None = None
+
+
+class DiscordAuthModel(PlatformUser):
     """A model that represents the data from Discord Oauth API."""
 
 

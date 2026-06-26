@@ -15,10 +15,10 @@ class DiscordOAuth(OAuth2Base):
     api_url = "https://discord.com/api/v10"
     platform_type = PlatformType.Discord
 
-    async def get_me(self):
-        data = await self.api_get(self.to_oauth_dict(), "/users/@me")
+    async def get_me(self) -> DiscordUser:
+        data = await self.api_get("/users/@me")
         return DiscordUser(**data)
 
-    async def get_connections(self):
-        data = await self.api_get(self.to_oauth_dict(), "/users/@me/connections")
+    async def get_connections(self) -> list[UserConnection]:
+        data = await self.api_get("/users/@me/connections")
         return [UserConnection(**i) for i in data]
