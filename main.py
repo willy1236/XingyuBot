@@ -87,13 +87,13 @@ def run_discord_bot():
         log.exception(">> Bot: Unexpected error <<", exc_info=e)
 
 def run_twitch_bot():
-    from starServer.tunnel_threads import NgrokTwitchThread
+    # from starServer.tunnel_threads import NgrokTwitchThread
 
-    log.debug("Twitch tunnel start running...")
-    twitchtunnel_thread = NgrokTwitchThread()
-    sclient.twitchtunnel_thread = twitchtunnel_thread
-    twitchtunnel_thread.start()
-    time.sleep(5)
+    # log.debug("Twitch tunnel start running...")
+    # twitchtunnel_thread = NgrokTwitchThread()
+    # sclient.twitchtunnel_thread = twitchtunnel_thread
+    # twitchtunnel_thread.start()
+    # time.sleep(5)
 
     from starServer.twitch_chatbot import TwitchBotThread
 
