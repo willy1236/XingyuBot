@@ -238,6 +238,12 @@ class UserRepository(BaseRepository):
         result = self.session.exec(stmt).all()
         return result
 
+    def get_external_account(self, user_id: int, platform: PlatformType):
+        """取得該 cloud_user 綁定的指定平台帳號"""
+        stmt = select(ExternalAccount).where(ExternalAccount.user_id == user_id, ExternalAccount.platform == platform)
+        result = self.session.exec(stmt).one_or_none()
+        return result
+
     def get_external_accounts(self, user_id: int) -> list[ExternalAccount]:
         """取得該 cloud_user 綁定的所有外部帳號（不分平台）。"""
         stmt = select(ExternalAccount).where(ExternalAccount.user_id == user_id)
