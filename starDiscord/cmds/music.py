@@ -39,7 +39,7 @@ _BASE_YTDL_OPTIONS = {
     "default_search": "auto",
     "source_address": "0.0.0.0",
     "extractor_retries": 3,
-    "playlistend": 50,
+    "playlistend": 200,
     "socket_timeout": 15,
     "http_headers": {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
@@ -172,9 +172,6 @@ class Song():
                 continue
 
             lst.append(cls(display_url, source_path, title or display_url, requester=requester, song_from=song_from, headers=headers, duration=duration))
-
-        if not lst:
-            raise MusicCommandError("找不到可播放的音訊來源，請嘗試其他連結")
 
         return lst
 

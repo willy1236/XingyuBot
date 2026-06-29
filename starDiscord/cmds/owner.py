@@ -437,6 +437,7 @@ class owner(Cog_Extension):
             await ctx.respond("沒有找到共通成員")
 
     @commands.slash_command(description="尋找id對象", guild_ids=debug_guilds + happycamp_guild)
+    @commands.is_owner()
     @commands.cooldown(rate=1, per=3)
     async def find(
         self,
@@ -465,7 +466,7 @@ class owner(Cog_Extension):
                 await ctx.respond(embeds=embeds)
                 return
 
-        user = await self.bot.get_or_fetch_user(id)
+        user = await self.bot.get_or_fetch(discord.User, id)
         member = now_guild.get_member(id)
         if member:
             embed = BotEmbed.simple(title=f"{member.name}#{member.discriminator}", description="ID：用戶（伺服器成員）")
@@ -487,6 +488,7 @@ class owner(Cog_Extension):
             embed.add_field(name="是否為機器人", value=str(user.bot), inline=False)
             embed.add_field(name="是否為Discord官方", value=str(user.system), inline=False)
             embed.add_field(name="帳號創建日期", value=user.created_at.isoformat(sep=" ", timespec="seconds"), inline=False)
+            embed.add_field(name="共同伺服器", value="\n".join([guild.name for guild in user.mutual_guilds]), inline=False)
             embed.set_thumbnail(url=user.display_avatar.url)
             success += 1
 
