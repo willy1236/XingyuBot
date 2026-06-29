@@ -469,7 +469,7 @@ class owner(Cog_Extension):
         user = await self.bot.get_or_fetch(discord.User, id)
         member = now_guild.get_member(id)
         if member:
-            embed = BotEmbed.simple(title=f"{member.name}#{member.discriminator}", description="ID：用戶（伺服器成員）")
+            embed = BotEmbed.simple(title=f"{member.name}#{member.discriminator}", description=f"ID：用戶（伺服器成員）\n{member.mention}")
             embed.add_field(name="暱稱", value=str(member.nick), inline=False)
             embed.add_field(name="最高身分組", value=member.top_role.mention, inline=True)
             embed.add_field(name="目前狀態", value=str(member.raw_status), inline=True)
@@ -478,16 +478,16 @@ class owner(Cog_Extension):
             embed.add_field(name="是否為機器人", value=str(member.bot), inline=False)
             embed.add_field(name="是否為Discord官方", value=str(member.system), inline=True)
             embed.add_field(name="是否被禁言", value=str(member.timed_out), inline=True)
-            embed.add_field(name="加入群組日期", value=member.joined_at.isoformat(sep=" ", timespec="seconds") if member.joined_at else "未知", inline=False)
-            embed.add_field(name="帳號創建日期", value=member.created_at.isoformat(sep=" ", timespec="seconds"), inline=False)
+            embed.add_field(name="加入群組日期", value=member.joined_at.astimezone().isoformat(sep=" ", timespec="seconds") if member.joined_at else "未知", inline=False)
+            embed.add_field(name="帳號創建日期", value=member.created_at.astimezone().isoformat(sep=" ", timespec="seconds"), inline=False)
             embed.set_thumbnail(url=member.display_avatar.url)
             embed.set_footer(text=f"id:{member.id}")
             success += 1
         elif user:
-            embed = BotEmbed.simple(title=f"{user.name}#{user.discriminator}", description="ID：用戶")
+            embed = BotEmbed.simple(title=f"{user.name}#{user.discriminator}", description=f"ID：用戶\n{user.mention}")
             embed.add_field(name="是否為機器人", value=str(user.bot), inline=False)
             embed.add_field(name="是否為Discord官方", value=str(user.system), inline=False)
-            embed.add_field(name="帳號創建日期", value=user.created_at.isoformat(sep=" ", timespec="seconds"), inline=False)
+            embed.add_field(name="帳號創建日期", value=user.created_at.astimezone().isoformat(sep=" ", timespec="seconds"), inline=False)
             embed.add_field(name="共同伺服器", value="\n".join([guild.name for guild in user.mutual_guilds]), inline=False)
             embed.set_thumbnail(url=user.display_avatar.url)
             success += 1
