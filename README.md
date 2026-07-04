@@ -138,6 +138,8 @@ uv run main.py
 scripts/run_main.bat
 ```
 
+這個啟動腳本會先執行 [scripts/run_update.bat](scripts/run_update.bat) 走 git 同步流程，再執行 `uv sync`；若更新失敗會直接中止，不會繼續啟動主程式。
+
 ## 設定
 
 目前設定採用 `.env` + SQL 的單一規則：

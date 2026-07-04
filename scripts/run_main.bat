@@ -5,8 +5,10 @@ chcp 65001
 cd /d "%~dp0"
 
 :: 執行更新與同步
-uv run python update.py
+call "%~dp0\run_update.bat"
+if errorlevel 1 exit /b 1
 uv sync
+if errorlevel 1 exit /b 1
 
 :: 切換回專案根目錄執行主程式
 cd ..
