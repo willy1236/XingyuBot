@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from functools import cached_property
 from typing import Any, ClassVar
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from starlib.fileDatabase import Jsondb
 from starlib.utils import BotEmbed, convert_tz, nowtz
@@ -128,8 +128,7 @@ class LOLChallenges(BaseModel):
     HealFromMapSources: float | None = None
     snowballsHit: int | None = None
 
-    class Config:
-        extra = "allow"  # 允許額外字段，因為 challenges 包含很多可選字段
+    model_config = ConfigDict(extra="allow")
 
 
 class LOLParticipant(BaseModel):

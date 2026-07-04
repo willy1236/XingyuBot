@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import ClassVar
 
 import discord
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class BaseEvent(BaseModel):
@@ -15,9 +15,7 @@ class BaseEvent(BaseModel):
     timestamp: datetime = Field(default_factory=datetime.now)
     source: str = "system"
 
-    # Pydantic 設定，允許任意類型
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 class TwitchStreamEvent(BaseEvent):
