@@ -406,6 +406,11 @@ class RettiwtTweetUser(BaseModel):
     profileImage: HttpUrl | None = None
     location: str | None = None
 
+    @field_validator("profileBanner", "profileImage", mode="before")
+    @classmethod
+    def empty_str_to_none(cls, v):
+        return None if v == "" else v
+
     @property
     def url(self) -> str:
         return f"https://x.com/{self.userName}"

@@ -49,3 +49,8 @@ dev = [
     "pytest-cov>=6.2.1",
     "pytest-mock>=3.14.1",
 ]
+
+[tool.pytest.ini_options]
+markers = [
+    "integration: tests that call external services or require live credentials",
+]
