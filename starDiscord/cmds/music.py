@@ -174,7 +174,13 @@ class music(Cog_Extension):
             raise MusicCommandError("已經在錄音了")
         if vc.is_playing():
             raise MusicCommandError("正在播放音樂時無法錄音")
-        vc.start_recording(discord.sinks.WaveSink(), recording_done)
+        try:
+            vc.start_recording(discord.sinks.WaveSink(), recording_done)
+        except AttributeError:
+            raise MusicCommandError(
+                "錄音功能目前因 Discord 語音端對端加密（DAVE）與 py-cord 尚未相容而無法使用，"
+                "詳見 https://github.com/Pycord-Development/pycord/issues/3139"
+            )
         await ctx.respond("開始錄音")
 
     @recording.command(description="結束錄音")
