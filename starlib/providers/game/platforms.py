@@ -336,5 +336,5 @@ class NetBirdAPI(APICaller):
         group = self.get_group(group_id)
         if not group:
             return []
-        peers = [self.get_peer(peer["id"]) for peer in group.get("peers", [])]
+        peers = [self.get_peer(peer["id"]) for peer in group.get("peers") or []]
         return [peer for peer in peers if peer]
