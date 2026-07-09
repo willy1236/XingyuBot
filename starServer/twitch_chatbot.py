@@ -16,9 +16,9 @@ from twitchAPI.type import AuthScope, ChatEvent, EventSubSubscriptionError, Even
 
 from sentry_bootstrap import capture_exception_safe
 from starlib import BaseThread, BotEmbed, Jsondb, sclient  # TODO: 全面改用 eventbus
-from starlib.pubsub.model import TwitchStreamEvent
 from starlib.database import APIType, NotifyCommunityType, TwitchChatCommand, sqldb
 from starlib.instance import tw_api
+from starlib.pubsub.model import TwitchStreamEvent
 
 log = logging.getLogger(__name__)
 
@@ -66,7 +66,7 @@ chat:"Chat"
 # eventsub
 async def on_follow(event: eventsub.ChannelFollowEvent):
     #await chat.send_message(data.event.broadcaster_user_name,text = f'{data.event.user_name} now follows {data.event.broadcaster_user_name}!')
-    log.info(f"%s(%s) now follows %s!", event.event.user_name, event.event.user_login, event.event.broadcaster_user_name)
+    log.info("%s(%s) now follows %s!", event.event.user_name, event.event.user_login, event.event.broadcaster_user_name)
 
     channel_config = join_channels.get(int(event.event.broadcaster_user_id))
     if channel_config and channel_config.action_channel_id:
@@ -74,7 +74,7 @@ async def on_follow(event: eventsub.ChannelFollowEvent):
 
 
 async def on_stream_online(event: eventsub.StreamOnlineEvent):
-    log.info(f"%s starting stream!", event.event.broadcaster_user_name)
+    log.info("%s starting stream!", event.event.broadcaster_user_name)
 
     live = tw_api.get_lives(event.event.broadcaster_user_id)[event.event.broadcaster_user_id]
     channel_config = join_channels.get(int(event.event.broadcaster_user_id))
@@ -83,7 +83,7 @@ async def on_stream_online(event: eventsub.StreamOnlineEvent):
 
         sclient.publish(TwitchStreamEvent(content=f"{event.event.broadcaster_user_name} 正在直播 {live.game_name}!", to_discord_channel=channel_config.action_channel_id))
         is_live = bool(sclient.sqldb.get_community_cache(NotifyCommunityType.TwitchLive, event.event.broadcaster_user_id))
-        log.debug(f"%s is live: %s", event.event.broadcaster_user_name, is_live)
+        log.debug("%s is live: %s", event.event.broadcaster_user_name, is_live)
         if not is_live:
             profile_image_url = tw_api.get_user_by_id(event.event.broadcaster_user_id).profile_image_url
             embed = live.embed(profile_image_url)
@@ -92,7 +92,7 @@ async def on_stream_online(event: eventsub.StreamOnlineEvent):
 
 
 async def on_stream_offline(event: eventsub.StreamOfflineEvent):
-    log.info(f"%s ending stream.", event.event.broadcaster_user_name)
+    log.info("%s ending stream.", event.event.broadcaster_user_name)
     sclient.publish(TwitchStreamEvent(content=f"{event.event.broadcaster_user_name} ending stream."))
 
     is_live = bool(sclient.sqldb.get_community_cache(NotifyCommunityType.TwitchLive, event.event.broadcaster_user_id))
@@ -112,11 +112,11 @@ async def on_channel_points_custom_reward_redemption_add(event: eventsub.Channel
 
 
 async def on_channel_points_custom_reward_redemption_update(event: eventsub.ChannelPointsCustomRewardRedemptionUpdateEvent):
-    log.info(f"%s's redemption of %s has been updated to %s!", event.event.user_name, event.event.reward.title, event.event.status)
+    log.info("%s's redemption of %s has been updated to %s!", event.event.user_name, event.event.reward.title, event.event.status)
 
 
 async def on_channel_raid(event:eventsub.ChannelRaidEvent):
-    log.info(f"%s 帶了 %s 位觀眾來 %s 的頻道！", event.event.from_broadcaster_user_name, event.event.viewers, event.event.to_broadcaster_user_name)
+    log.info("%s 帶了 %s 位觀眾來 %s 的頻道！", event.event.from_broadcaster_user_name, event.event.viewers, event.event.to_broadcaster_user_name)
 
     channel_config = join_channels.get(int(event.event.to_broadcaster_user_id))
     if channel_config and channel_config.action_channel_id:
@@ -131,7 +131,7 @@ async def on_channel_raid(event:eventsub.ChannelRaidEvent):
 
 
 async def on_channel_subscribe(event: eventsub.ChannelSubscribeEvent):
-    log.info(f"%s 在 %s 的層級%s新訂閱", event.event.user_name, event.event.broadcaster_user_name, event.event.tier[0])
+    log.info("%s 在 %s 的層級%s新訂閱", event.event.user_name, event.event.broadcaster_user_name, event.event.tier[0])
 
     channel_config = join_channels.get(int(event.event.broadcaster_user_id))
     if channel_config and channel_config.action_channel_id and not event.event.is_gift:
@@ -162,33 +162,31 @@ async def on_channel_subscription_message(event: eventsub.ChannelSubscriptionMes
 
 
 async def on_channel_subscription_gift(event: eventsub.ChannelSubscriptionGiftEvent):
-    log.info(f"{event.event.user_name} 在 {event.event.broadcaster_user_name} 送出的{event.event.total}份層級{event.event.tier[0]}訂閱")
+    log.info("%s 在 %s 的層級%s送出的%s份訂閱", event.event.user_name, event.event.broadcaster_user_name, event.event.tier[0], event.event.total)
     channel_config = join_channels.get(int(event.event.broadcaster_user_id))
     if channel_config and channel_config.action_channel_id and not event.event.is_anonymous:
         await chat.send_message(event.event.broadcaster_user_login, f"感謝 {event.event.user_name} 送出的{event.event.total}份訂閱！")
 
 
 async def on_channel_poll_begin(event: eventsub.ChannelPollBeginEvent):
-    log.info(f"{event.event.broadcaster_user_name} 開始了投票：{event.event.title}")
+    log.info("%s 開始了投票：{event.event.title}", event.event.broadcaster_user_name)
     sclient.publish(TwitchStreamEvent(content=f"{event.event.broadcaster_user_name} 開始了投票：{event.event.title}\n{event.event.choices}"))
 
 
 async def on_channel_prediction_begin(event: eventsub.ChannelPredictionEvent):
-    log.info(
-        f"{event.event.broadcaster_user_name} 開始了預測：{event.event.title}\n{event.event.outcomes[0].title} V.S. {event.event.outcomes[1].title}"
-    )
+    log.info("%s 開始了預測：{event.event.title}\n{event.event.outcomes[0].title} V.S. {event.event.outcomes[1].title}", event.event.broadcaster_user_name)
     sclient.publish(TwitchStreamEvent(content=f"{event.event.broadcaster_user_name} 開始了預測：{event.event.title}\n{event.event.outcomes[0].title} V.S. {event.event.outcomes[1].title}"))
 
 
 async def on_channel_prediction_end(event: eventsub.ChannelPredictionEndEvent):
     if event.event.status == "resolved":
-        log.info(f"{event.event.broadcaster_user_name} 結束了預測：{event.event.title}")
+        log.info("%s 結束了預測：{event.event.title}", event.event.broadcaster_user_name)
         for outcome in event.event.outcomes:
             if outcome.id == event.event.winning_outcome_id:
-                log.info(f"{outcome.title} ({outcome.color}) 獲勝！{outcome.users}個人成功預測")
+                log.info("%s (%s) 獲勝！%s個人成功預測", outcome.title, outcome.color, outcome.users)
                 sclient.publish(TwitchStreamEvent(embed=BotEmbed.general(event.event.broadcaster_user_name, description=f"{event.event.title}\n{outcome.title} 獲勝！{outcome.users}個人成功預測")))
     else:
-        log.info(f"{event.event.broadcaster_user_name} 取消了預測：{event.event.title}")
+        log.info("%s 取消了預測：{event.event.title}", event.event.broadcaster_user_name)
 
 
 # bot
@@ -284,7 +282,7 @@ async def list_chat_command(cmd: ChatCommand):
 async def respond_to_chat_command(cmd: ChatCommand):
     resp = sqldb.get_twitch_cmd_response_cache(cmd.room.room_id, cmd.text[1:])
     if resp:
-        log.debug(f"invoke_chat_command: {cmd.text[1:]} {resp.response}")
+        log.debug("invoke_chat_command: %s %s", cmd.text[1:], resp.response)
         await cmd.reply(resp.response)
 
 
@@ -351,13 +349,14 @@ async def run():
         succ = chat.register_command(
             cmd, respond_to_chat_command, [ChannelRestriction(allowed_channel=login_id_map.get(str(twitch_id))), ChannelCommandCooldown(cooldown_seconds=30)]
         )
-        log.debug(f"register command: {cmd} in {login_id_map.get(str(twitch_id))} is {succ}")
+        log.debug("register command: %s in %s is %s", cmd, login_id_map.get(str(twitch_id)), succ)
     # TODO: modify_channel_information
 
     chat.start()
     await asyncio.sleep(5)
 
     eventsub = EventSubWebhook(app_config.callback_uri, 14001, twitch)
+    eventsub.listen_channel_chat_message()
     # unsubscribe from all old events that might still be there
     # this will ensure we have a clean slate
     await eventsub.unsubscribe_all()
@@ -365,32 +364,32 @@ async def run():
     eventsub.start()
     await asyncio.sleep(3)
     for user in users:
-        log.debug(f"eventsub:{user.login}")
+        log.debug("eventsub:%s", user.login)
         try:
             subscription_id = await eventsub.listen_stream_online(user.id, on_stream_online)
             await asyncio.sleep(1)
         except EventSubSubscriptionError as e:
-            log.warning(f"Error subscribing stream online: {e}")
+            log.warning("Error subscribing stream online: %s", e)
         except EventSubSubscriptionTimeout:
-            log.warning(f"Error subscribing stream online: timeout.")
+            log.warning("Error subscribing stream online: timeout.")
 
         try:
             subscription_id = await eventsub.listen_stream_offline(user.id, on_stream_offline)
             await asyncio.sleep(1)
         except EventSubSubscriptionError as e:
-            log.warning(f"Error subscribing stream offline: {e}")
+            log.warning("Error subscribing stream offline: %s", e)
         except EventSubSubscriptionTimeout:
-            log.warning(f"Error subscribing stream offline: timeout.")
+            log.warning("Error subscribing stream offline: timeout.")
 
         try:
             subscription_id = await eventsub.listen_channel_raid(on_channel_raid, to_broadcaster_user_id=user.id)
             await asyncio.sleep(1)
         except EventSubSubscriptionError as e:
-            log.warning(f"Error subscribing channel raid: {e}")
+            log.warning("Error subscribing channel raid: %s", e)
         except EventSubSubscriptionTimeout:
-            log.warning(f"Error subscribing channel raid: timeout.")
+            log.warning("Error subscribing channel raid: timeout.")
 
-        log.debug(f"eventsub:{user.login} done.")
+        log.debug("eventsub:%s done.", user.login)
 
         if not chat.is_mod(user.login):
             continue
@@ -398,85 +397,85 @@ async def run():
         try:
             log.debug("listening to channel follow")
             subscription_id = await eventsub.listen_channel_follow_v2(user.id, me.id, on_follow)
-            log.debug(f"subscription_id: {subscription_id}")
+            log.debug("subscription_id: %s", subscription_id)
             await asyncio.sleep(1)
         except EventSubSubscriptionError as e:
-            log.warning(f"Error subscribing to channel follow: {e}")
+            log.warning("Error subscribing to channel follow: %s", e)
         except EventSubSubscriptionTimeout:
-            log.warning(f"Error subscribing to channel follow: timeout.")
+            log.warning("Error subscribing to channel follow: timeout.")
 
         try:
             log.debug("listening to channel points custom reward redemption add")
             subscription_id = await eventsub.listen_channel_points_custom_reward_redemption_add(user.id, on_channel_points_custom_reward_redemption_add)
-            log.debug(f"subscription_id: {subscription_id}")
+            log.debug("subscription_id: %s", subscription_id)
             await asyncio.sleep(1)
         except EventSubSubscriptionError as e:
-            log.warning(f"Error subscribing to channel points custom reward redemption add: {e}")
+            log.warning("Error subscribing to channel points custom reward redemption add: %s", e)
         except EventSubSubscriptionTimeout:
-            log.warning(f"Error subscribing to channel points custom reward redemption add: timeout.")
+            log.warning("Error subscribing to channel points custom reward redemption add: timeout.")
 
         try:
             log.debug("listening to channel points custom reward redemption update")
             subscription_id = await eventsub.listen_channel_points_custom_reward_redemption_update(user.id, on_channel_points_custom_reward_redemption_update)
-            log.debug(f"subscription_id: {subscription_id}")
+            log.debug("subscription_id: %s", subscription_id)
             await asyncio.sleep(1)
         except EventSubSubscriptionError as e:
-            log.warning(f"Error subscribing to channel points custom reward redemption update: {e}")
+            log.warning("Error subscribing to channel points custom reward redemption update: %s", e)
         except EventSubSubscriptionTimeout:
-            log.warning(f"Error subscribing to channel points custom reward redemption update: timeout.")
+            log.warning("Error subscribing to channel points custom reward redemption update: timeout.")
 
         try:
             log.debug("listening to channel subscribe")
             subscription_id = await eventsub.listen_channel_subscribe(user.id, on_channel_subscribe)
-            log.debug(f"subscription_id: {subscription_id}")
+            log.debug("subscription_id: %s", subscription_id)
             await asyncio.sleep(1)
         except EventSubSubscriptionError as e:
-            log.warning(f"Error subscribing to channel subscribe: {e}")
+            log.warning("Error subscribing to channel subscribe: %s", e)
         except EventSubSubscriptionTimeout:
-            log.warning(f"Error subscribing to channel subscribe: timeout.")
+            log.warning("Error subscribing to channel subscribe: timeout.")
 
         try:
             log.debug("listening to channel subscription message")
             subscription_id = await eventsub.listen_channel_subscription_message(user.id, on_channel_subscription_message)
-            log.debug(f"subscription_id: {subscription_id}")
+            log.debug("subscription_id: %s", subscription_id)
             await asyncio.sleep(1)
         except EventSubSubscriptionError as e:
-            log.warning(f"Error subscribing to channel subscription message: {e}")
+            log.warning("Error subscribing to channel subscription message: %s", e)
         except EventSubSubscriptionTimeout:
-            log.warning(f"Error subscribing to channel subscription message: timeout.")
+            log.warning("Error subscribing to channel subscription message: timeout.")
 
         try:
             log.debug("listening to channel subscription gift")
             subscription_id = await eventsub.listen_channel_subscription_gift(user.id, on_channel_subscription_gift)
-            log.debug(f"subscription_id: {subscription_id}")
+            log.debug("subscription_id: %s", subscription_id)
             await asyncio.sleep(1)
         except EventSubSubscriptionError as e:
-            log.warning(f"Error subscribing to channel subscription gift: {e}")
+            log.warning("Error subscribing to channel subscription gift: %s", e)
         except EventSubSubscriptionTimeout:
-            log.warning(f"Error subscribing to channel subscription gift: timeout.")
+            log.warning("Error subscribing to channel subscription gift: timeout.")
 
         # try:
         #     twitch_log.debug("listening to channel poll begin")
         #     await eventsub.listen_channel_poll_begin(user.id, on_channel_poll_begin)
         # except EventSubSubscriptionError as e:
-        #     twitch_log.warning(f"Error subscribing to channel poll begin: {e}")
+        #     twitch_log.warning("Error subscribing to channel poll begin: %s", e)
 
         # try:
         #     twitch_log.debug("listening to channel prediction begin")
         #     await eventsub.listen_channel_prediction_begin(user.id, on_channel_prediction_begin)
         # except EventSubSubscriptionError as e:
-        #     twitch_log.warning(f"Error subscribing to channel prediction begin: {e}")
+        #     twitch_log.warning("Error subscribing to channel prediction begin: %s", e)
 
         try:
             log.debug("listening to channel prediction end")
             subscription_id = await eventsub.listen_channel_prediction_end(user.id, on_channel_prediction_end)
-            log.debug(f"subscription_id: {subscription_id}")
+            log.debug("subscription_id: %s", subscription_id)
         except EventSubSubscriptionError as e:
-            log.warning(f"Error subscribing to channel prediction end: {e}")
+            log.warning("Error subscribing to channel prediction end: %s", e)
         except EventSubSubscriptionTimeout:
-            log.warning(f"Error subscribing to channel prediction end: timeout.")
+            log.warning("Error subscribing to channel prediction end: timeout.")
 
-        log.debug(f"eventsub for {user.login}(mod) done.")
+        log.debug("eventsub for %s(mod) done.", user.login)
 
     return chat, twitch, eventsub
 
@@ -505,21 +504,21 @@ class TwitchBotThread(BaseThread):
                 await self.eventsub.stop()
         except Exception as e:
             capture_exception_safe(e, tags={"service": "twitch", "source": "cleanup_eventsub"})
-            log.warning(f"Error stopping eventsub: {e}")
+            log.warning("Error stopping eventsub: %s", e)
 
         try:
             if self.twitch:
                 await self.twitch.close()
         except Exception as e:
             capture_exception_safe(e, tags={"service": "twitch", "source": "cleanup_twitch"})
-            log.warning(f"Error closing twitch: {e}")
+            log.warning("Error closing twitch: %s", e)
 
         try:
             if self.chat:
                 self.chat.stop()
         except Exception as e:
             capture_exception_safe(e, tags={"service": "twitch", "source": "cleanup_chat"})
-            log.warning(f"Error stopping chat: {e}")
+            log.warning("Error stopping chat: %s", e)
 
 
 if __name__ == "__main__":
