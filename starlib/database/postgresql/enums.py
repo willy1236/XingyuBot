@@ -108,6 +108,7 @@ class APIType(IntEnum):
     Tavily = 16
     ZeroTier = 17
     Virustotal = 18
+    NetBird = 19
 
 
 class CredentialType(IntEnum):

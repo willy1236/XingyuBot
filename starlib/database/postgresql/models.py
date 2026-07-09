@@ -57,6 +57,17 @@ class LinkCode(UsersSchema, table=True):
     expires_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
 
 
+class NetBirdBinding(UsersSchema, table=True):
+    __tablename__ = "netbird_binding"
+
+    user_id: int = Field(foreign_key="users.cloud_user.id", primary_key=True)
+    group_id: str = Field(sa_column=Column(String))
+    group_name: str | None = Field(sa_column=Column(String))
+    last_setup_key_id: str | None = Field(sa_column=Column(String))
+    created_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)), default_factory=lambda: nowtz())
+    updated_at: datetime | None = Field(sa_column=Column(TIMESTAMP(True, 0)))
+
+
 class DiscordUser(DiscordUsersSchema, table=True):
     __tablename__ = "user_discord"
 

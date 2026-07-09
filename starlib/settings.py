@@ -28,6 +28,7 @@ class AppSettings(BaseSettings):
     MC_SERVER_PASSWORD: str
 
     ZEROTIER_NETWORK_ID: str
+    NETBIRD_API_URL: str = "https://api.netbird.io"
     BASE_DOMAIN: str
     BASE_WWW_URL: str
 

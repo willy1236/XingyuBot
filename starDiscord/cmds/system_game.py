@@ -1,6 +1,7 @@
 import ipaddress
 import logging
 from datetime import date, datetime, timedelta
+from io import BytesIO
 
 import discord
 import nmap
@@ -8,7 +9,7 @@ from discord.commands import SlashCommandGroup
 from discord.ext import commands, pages
 
 from starlib import BotEmbed, ChoiceList, Jsondb, sclient
-from starlib.database import PlatformType, UserIPDetails
+from starlib.database import NetBirdBinding, PlatformType, UserIPDetails
 from starlib.exceptions import APINetworkError
 from starlib.providers import *
 from starlib.settings import get_settings
@@ -378,6 +379,68 @@ class system_game(Cog_Extension):
         sclient.sqldb.merge(account)
 
         await ctx.respond(f"ZeroTier帳號註冊成功，你的IP位址：`{member['config']['ipAssignments'][0]}`", ephemeral=True)
+
+    @game.command(description="取得NetBird安裝指令", name_localizations=ChoiceList.name("game_netbird_setup"))
+    @ensure_registered()
+    async def netbird_setup(self, ctx: RegisteredContext):
+        await ctx.defer(ephemeral=True)
+        group_name = f"user-{ctx.cuser.id}"
+        try:
+            api = NetBirdAPI()
+            binding = sclient.sqldb.get_netbird_binding(ctx.cuser.id)
+            group = None
+            if binding:
+                group = api.get_group(binding.group_id)
+            if not group:
+                group = api.find_group_by_name(group_name) or api.create_group(group_name)
+
+            setup_key = api.create_setup_key(group_name, auto_groups=[group["id"]])
+        except APINetworkError:
+            log.exception("NetBird setup failed")
+            await ctx.respond("NetBird API連線失敗，請稍後再試", ephemeral=True)
+            return
+
+        now = nowtz()
+        binding = NetBirdBinding(user_id=ctx.cuser.id, group_id=group["id"], group_name=group_name, last_setup_key_id=setup_key["id"], updated_at=now)
+        sclient.sqldb.merge(binding)
+
+        key = setup_key["key"]
+        command = f"netbird up --setup-key {key}"
+        bat_content = f"@echo off\r\nwhere netbird >nul 2>nul\r\nif errorlevel 1 (\r\n    echo 尚未安裝NetBird，請先至 https://netbird.io/downloads 下載安裝\r\n    pause\r\n    exit /b 1\r\n)\r\n{command}\r\npause\r\n"
+        file = discord.File(BytesIO(bat_content.encode("utf-8")), filename="netbird_setup.bat")
+        await ctx.respond(
+            f"請在你的裝置上執行以下指令（或直接執行附件的腳本）：\n```\n{command}\n```\n此金鑰24小時內有效且僅能使用一次，請勿分享給他人。",
+            file=file,
+            ephemeral=True,
+        )
+
+    @game.command(description="查詢NetBird節點資訊", name_localizations=ChoiceList.name("game_netbird"))
+    @ensure_registered()
+    async def netbird(self, ctx: RegisteredContext):
+        await ctx.defer(ephemeral=True)
+        binding = sclient.sqldb.get_netbird_binding(ctx.cuser.id)
+        if not binding:
+            await ctx.respond("尚未綁定NetBird，請先使用 </game netbird_setup:0> 取得安裝指令", ephemeral=True)
+            return
+
+        try:
+            peers = NetBirdAPI().get_peers_in_group(binding.group_id)
+        except APINetworkError:
+            log.exception("NetBird query failed")
+            await ctx.respond("NetBird API連線失敗，請稍後再試", ephemeral=True)
+            return
+
+        if not peers:
+            await ctx.respond("尚未偵測到節點，請先在裝置上執行安裝指令", ephemeral=True)
+            return
+
+        embed = BotEmbed.simple(title="NetBird節點")
+        for peer in peers:
+            last_seen = peer.get("last_seen", "")
+            value = f"IP位址：`{peer.get('ip')}`\n連線狀態：{'🟢 在線' if peer.get('connected') else '🔴 離線'}\n最後上線：{last_seen.replace('T', ' ')[:19] if last_seen else '未知'}\n系統：{peer.get('os', '未知')}（NetBird {peer.get('version', '未知')}）"
+            embed.add_field(name=peer.get("name", "未命名節點"), value=value, inline=False)
+
+        await ctx.respond("查詢成功", embed=embed, ephemeral=True)
 
     @game.command(description="查詢VPN登記資料", name_localizations=ChoiceList.name("game_vpn"))
     @ensure_registered()

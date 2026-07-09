@@ -181,6 +181,14 @@
         "en-US": "vpn",
         "zh-TW": "查詢vpn"
     },
+    "game_netbird_setup": {
+        "en-US": "netbird_setup",
+        "zh-TW": "註冊netbird"
+    },
+    "game_netbird": {
+        "en-US": "netbird",
+        "zh-TW": "查詢netbird"
+    },
     "lol": {
         "en-US": "lol",
         "zh-TW": "英雄聯盟"

@@ -268,6 +268,10 @@ class UserRepository(BaseRepository):
             self.session.delete(existing)
             self.commit()
 
+    def get_netbird_binding(self, user_id: int) -> NetBirdBinding | None:
+        """取得該 cloud_user 的 NetBird 綁定資料"""
+        return self.session.get(NetBirdBinding, user_id)
+
     def get_main_account(self, alternate_account):
         stmt = select(UserAccount.main_account).where(UserAccount.alternate_account == alternate_account)
         result = self.session.exec(stmt).one_or_none()

@@ -5,6 +5,7 @@ import pandas as pd
 from mwrogue.esports_client import EsportsClient
 
 from starlib.database import APIType, sqldb
+from starlib.settings import get_settings
 
 from ..base import APICaller
 from .models import *
@@ -290,3 +291,50 @@ class ZeroTierAPI(APICaller):
             member["description"] = description
         r = self.post(f"network/{network_id}/member/{member_id}", data=member)
         return r.json()
+
+
+class NetBirdAPI(APICaller):
+    def __init__(self):
+        token = sqldb.get_access_token(APIType.NetBird).access_token
+        super().__init__(
+            headers={"Authorization": f"Token {token}", "Content-Type": "application/json"},
+            base_url=f"{get_settings().NETBIRD_API_URL.rstrip('/')}/api",
+        )
+
+    def create_group(self, name: str) -> dict:
+        r = self.post("groups", data={"name": name, "peers": []})
+        return r.json()
+
+    def get_group(self, group_id: str) -> dict | None:
+        r = self.get(f"groups/{group_id}")
+        if r is None:
+            return None
+        return r.json()
+
+    def find_group_by_name(self, name: str) -> dict | None:
+        r = self.get("groups")
+        for group in r.json():
+            if group["name"] == name:
+                return group
+        return None
+
+    def create_setup_key(self, name: str, auto_groups: list[str], expires_in: int = 86400, usage_limit: int = 1) -> dict:
+        """建立setup key，回傳的 "key" 欄位為明文金鑰，僅在建立當下可取得"""
+        r = self.post(
+            "setup-keys",
+            data={"name": name, "type": "reusable", "expires_in": expires_in, "auto_groups": auto_groups, "usage_limit": usage_limit},
+        )
+        return r.json()
+
+    def get_peer(self, peer_id: str) -> dict | None:
+        r = self.get(f"peers/{peer_id}")
+        if r is None:
+            return None
+        return r.json()
+
+    def get_peers_in_group(self, group_id: str) -> list[dict]:
+        group = self.get_group(group_id)
+        if not group:
+            return []
+        peers = [self.get_peer(peer["id"]) for peer in group.get("peers", [])]
+        return [peer for peer in peers if peer]

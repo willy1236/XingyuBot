@@ -22,6 +22,7 @@ __all__ = [
     "DBDInterface",
     "LOLMediaWikiAPI",
     "ZeroTierAPI",
+    "NetBirdAPI",
     "CWA_API",
     "NCDRRSS",
     "YoutubeRSS",
