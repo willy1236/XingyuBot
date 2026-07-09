@@ -16,3 +16,5 @@ database/localhost+2-key.pem
 .env.*
 !.env.example
 !.env.*.example
+
+.claude/worktrees/
