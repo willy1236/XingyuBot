@@ -356,7 +356,6 @@ async def run():
     await asyncio.sleep(5)
 
     eventsub = EventSubWebhook(app_config.callback_uri, 14001, twitch)
-    eventsub.listen_channel_chat_message()
     # unsubscribe from all old events that might still be there
     # this will ensure we have a clean slate
     await eventsub.unsubscribe_all()
