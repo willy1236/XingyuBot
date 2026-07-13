@@ -54,7 +54,7 @@ class DiscordBot(discord.Bot):
             self.debug_guilds = debug_guilds
 
     def run(self):
-        token = sqldb.get_access_token(APIType.Discord, self.bot_code).access_token
+        token = sqldb.get_access_token(APIType.Discord, int(self.bot_code)).access_token
         super().run(token)
 
     def submit(self, coro: Coroutine):

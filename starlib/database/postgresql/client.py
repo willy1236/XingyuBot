@@ -1685,7 +1685,7 @@ def create_sqldb() -> SQLRepository:
         settings = get_settings()
 
         connection_url = URL.create(
-            drivername="postgresql",
+            drivername="postgresql+psycopg",
             username=settings.DB_USER,
             password=settings.DB_PASSWORD,
             host=settings.DB_HOST,
