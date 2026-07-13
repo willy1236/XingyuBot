@@ -201,8 +201,8 @@ class Pet(DiscordUsersSchema, table=True):
 class TwitchPoint(DiscordUsersSchema, table=True):
     __tablename__ = "twitch_point"
 
-    twitch_id: int = Field(sa_column=Column(primary_key=True))
-    broadcaster_id: int = Field(sa_column=Column(primary_key=True))
+    twitch_id: int = Field(sa_column=Column(Integer, primary_key=True))
+    broadcaster_id: int = Field(sa_column=Column(Integer, primary_key=True))
     point: int = Field(default=0)
 
 
@@ -550,7 +550,7 @@ class Party(IdbaseSchema, table=True):
 class DiscordRegistration(IdbaseSchema, table=True):
     __tablename__ = "discord_registrations"
 
-    registrations_id: int = Field(sa_column=Column(primary_key=True))
+    registrations_id: int = Field(sa_column=Column(Integer, primary_key=True))
     guild_id: int = Field(sa_column=Column(BigInteger))
     role_id: int = Field(sa_column=Column(BigInteger))
 
@@ -560,7 +560,7 @@ class DiscordRegistration(IdbaseSchema, table=True):
 class TRPGStoryPlot(IdbaseSchema, table=True):
     __tablename__ = "trpg_storyplots"
 
-    id: int = Field(sa_column=Column(primary_key=True))
+    id: int = Field(sa_column=Column(Integer, primary_key=True))
     title: str = Field(sa_column=Column(String))
     content: str = Field(sa_column=Column(Text))
     options: list["TRPGStoryOption"] = Relationship(back_populates="plot")
@@ -569,8 +569,8 @@ class TRPGStoryPlot(IdbaseSchema, table=True):
 class TRPGStoryOption(IdbaseSchema, table=True):
     __tablename__ = "trpg_plot_options"
 
-    plot_id: int = Field(sa_column=Column(ForeignKey("stardb_idbase.trpg_storyplots.id"), primary_key=True))
-    option_id: int = Field(sa_column=Column(primary_key=True))
+    plot_id: int = Field(sa_column=Column(Integer, ForeignKey("stardb_idbase.trpg_storyplots.id"), primary_key=True))
+    option_id: int = Field(sa_column=Column(Integer, primary_key=True))
     option_title: str = Field(sa_column=Column(String))
     lead_to_plot: int | None = Field(sa_column=Column(Integer))
     check_ability: int | None = Field(sa_column=Column(Integer))
@@ -593,7 +593,7 @@ class TRPGCharacterAbility(IdbaseSchema, table=True):
     __tablename__ = "trpg_character_abilities"
 
     discord_id: int = Field(sa_column=Column(BigInteger, ForeignKey("stardb_idbase.trpg_characters.discord_id"), primary_key=True))
-    ability_id: int = Field(sa_column=Column(ForeignKey("stardb_idbase.trpg_abilities.ability_id"), primary_key=True))
+    ability_id: int = Field(sa_column=Column(Integer, ForeignKey("stardb_idbase.trpg_abilities.ability_id"), primary_key=True))
     san_lower_limit: int = Field(sa_column=Column(Integer))
     value: int = Field(sa_column=Column(Integer))
 
@@ -604,7 +604,7 @@ class TRPGCharacterAbility(IdbaseSchema, table=True):
 class TRPGAbility(IdbaseSchema, table=True):
     __tablename__ = "trpg_abilities"
 
-    ability_id: int = Field(sa_column=Column(primary_key=True))
+    ability_id: int = Field(sa_column=Column(Integer, primary_key=True))
     ability_name: str = Field(sa_column=Column(String))
 
     characters: list[TRPGCharacterAbility] = Relationship(back_populates="ability")
