@@ -538,7 +538,7 @@ class VoiceTime(BasicSchema, table=True):
 class Party(IdbaseSchema, table=True):
     __tablename__ = "party_datas"
 
-    party_id: int = Field(sa_column=Column(primary_key=True))
+    party_id: int = Field(sa_column=Column(Integer, primary_key=True))
     party_name: str = Field(sa_column=Column(String))
     role_id: int = Field(sa_column=Column(BigInteger))
     creator_id: int = Field(sa_column=Column(BigInteger))
