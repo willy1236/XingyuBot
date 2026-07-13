@@ -7,7 +7,7 @@ from typing import Literal, ParamSpec, TypeVar, overload
 
 import discord
 from google.oauth2.credentials import Credentials
-from sqlalchemy import Engine, and_, desc, func, not_, or_
+from sqlalchemy import Engine, and_, desc, func, not_, or_, text
 from sqlalchemy.engine import URL
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
@@ -1693,6 +1693,13 @@ def create_sqldb() -> SQLRepository:
             database=settings.DB_NAME,
         )
         engine = create_engine(connection_url, echo=False, pool_pre_ping=True)
+
+        schemas = {table.schema for table in SQLModel.metadata.tables.values() if table.schema}
+        with engine.connect() as conn:
+            for schema in schemas:
+                conn.execute(text(f'CREATE SCHEMA IF NOT EXISTS "{schema}"'))
+            conn.commit()
+
         SQLModel.metadata.create_all(engine)
         session_factory = scoped_session(sessionmaker(bind=engine, class_=Session, autoflush=True, expire_on_commit=True))
         sqlrepository = SQLRepository(engine, session_factory)
