@@ -5,6 +5,10 @@ set -u
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR/.."
 
+echo "[Update Module] PWD: $(pwd)"
+echo "[Update Module] git dir: $(git rev-parse --git-dir 2>&1)"
+echo "[Update Module] branch raw: $(git rev-parse --abbrev-ref HEAD 2>&1)"
+
 CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null)"
 
 if [[ -z "$CURRENT_BRANCH" ]]; then
