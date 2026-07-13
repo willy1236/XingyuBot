@@ -3,19 +3,19 @@
 set -u
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$SCRIPT_DIR"
 
-./run_update.sh
+"$SCRIPT_DIR/run_update.sh"
 if [[ $? -ne 0 ]]; then
     exit 1
 fi
+
+cd "$SCRIPT_DIR/.."
 
 uv sync
 if [[ $? -ne 0 ]]; then
     exit 1
 fi
 
-cd "$SCRIPT_DIR/.."
 export APP_ENV=production
 export PYTHONWARNINGS=ignore::DeprecationWarning
 exec uv run python -W ignore -m main

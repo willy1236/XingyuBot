@@ -2,7 +2,8 @@
 # 走 git 同步流程：檢查分支、確認無本機變更，然後 fetch + fast-forward pull
 set -u
 
-cd "$(dirname "${BASH_SOURCE[0]}")"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR/.."
 
 CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null)"
 
