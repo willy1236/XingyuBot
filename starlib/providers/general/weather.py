@@ -20,7 +20,7 @@ class CWA_API(APICaller):
 
     def get_earthquake_report(self, significant=True):
         endpoint = "E-A0015-001" if significant else "E-A0016-001"
-        r = self.get(endpoint, params={"limit": 1})
+        r = self.get(endpoint, params={"limit": 1}, verify=False)
         if r is None:
             return None
 
@@ -33,7 +33,7 @@ class CWA_API(APICaller):
         endpoints = ["E-A0015-001"] if only_significant else ["E-A0015-001", "E-A0016-001"]
 
         for endpoint in endpoints:
-            r = self.get(endpoint, params=params, timeout=20)
+            r = self.get(endpoint, params=params, timeout=20, verify=False)
             if r is None:
                 continue
             data = r.json().get("records", {}).get("Earthquake") or []
@@ -44,13 +44,13 @@ class CWA_API(APICaller):
         return records
 
     def get_forecast(self):
-        r = self.get("F-C0032-001")
+        r = self.get("F-C0032-001", verify=False)
         if r is None:
             return None
         return Forecast(r.json())
 
     def get_weather_warning(self):
-        r = self.get("W-C0033-002")
+        r = self.get("W-C0033-002", verify=False)
         if r is None:
             return []
         return [WeatherWarningReport(**i) for i in (r.json().get("records", {}).get("record") or [])]
@@ -58,7 +58,7 @@ class CWA_API(APICaller):
     def get_weather_data(self, StationId="C0Z100"):
         """取得無人氣象站氣象資料"""
         params = {"StationId": StationId}
-        r = self.get("O-A0001-001", params=params)
+        r = self.get("O-A0001-001", params=params, verify=False)
         if r is None:
             return []
         return [WeatherReport(**i) for i in (r.json().get("records", {}).get("Station") or [])]
