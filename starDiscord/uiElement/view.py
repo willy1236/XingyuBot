@@ -13,8 +13,8 @@ import numpy as np
 from discord.utils import format_dt
 
 from starlib import BotEmbed, Jsondb, sqldb
-from starlib.database import Giveaway, GiveawayUser, HappycampApplicationForm, HappycampVIP, McssServerAction, McssServerStatues, Poll, PollRole, TicketChannel
-from starlib.instance import mcss_api, vip_admin_channel
+from starlib.database import Giveaway, GiveawayUser, HappycampApplicationForm, HappycampVIP, McsmInstanceStatus, McsmServerAction, Poll, PollRole, TicketChannel
+from starlib.instance import mcsm_api, vip_admin_channel
 from starlib.utils import find_radmin_vpn_network, nowtz
 
 log = logging.getLogger(__name__)
@@ -22,7 +22,7 @@ log = logging.getLogger(__name__)
 if TYPE_CHECKING:
     from starlib.database import SQLRepository
     from starlib.database.postgresql.models import PollOption, ReactionRoleOption, TRPGStoryOption, TRPGStoryPlot
-    from starlib.providers import McssServer
+    from starlib.providers import McsmInstance
 
 class DeletePetView(discord.ui.View):
     def __init__(self):
@@ -628,9 +628,9 @@ class GiveawayView(discord.ui.View):
         self.stop()
 
 class McServerSelect(discord.ui.Select):
-    def __init__(self, servers: list[McssServer]):
+    def __init__(self, servers: list[McsmInstance]):
         options = [
-            discord.SelectOption(label=server.name if server.name else f"伺服器 {server.server_id}", value=server.server_id, description=server.description)
+            discord.SelectOption(label=server.name if server.name else f"伺服器 {server.server_id}", value=server.server_id)
             for server in servers
         ]
         super().__init__(placeholder="選擇伺服器", min_values=1, max_values=1, options=options)
@@ -646,7 +646,7 @@ class McServerPanel(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=600)
         self.server_id: str | None = None
-        self.add_item(McServerSelect(mcss_api.get_servers()))
+        self.add_item(McServerSelect(mcsm_api.get_servers()))
 
     async def on_timeout(self):
         self.clear_items()
@@ -659,7 +659,7 @@ class McServerPanel(discord.ui.View):
     def embed(self):
         if not self.server_id:
             return BotEmbed.simple("請選擇伺服器", "使用下方的選單來選擇伺服器")
-        server = mcss_api.get_server_detail(self.server_id)
+        server = mcsm_api.get_server_detail(self.server_id)
         if not server:
             return BotEmbed.simple("伺服器未找到", "請確認伺服器ID是否正確")
 
@@ -673,20 +673,23 @@ class McServerPanel(discord.ui.View):
             await interaction.followup.send("請先選擇伺服器", ephemeral=True)
             return
 
-        if server := mcss_api.get_server_detail(self.server_id):
-            if server.status == McssServerStatues.Running:
+        if server := mcsm_api.get_server_detail(self.server_id):
+            if server.status == McsmInstanceStatus.Running:
                 await interaction.followup.send("🟢伺服器已經在運行中", ephemeral=True)
                 return
-            elif server.status == McssServerStatues.Stopped:
-                mcss_api.excute_action(self.server_id, McssServerAction.Start)
+            elif server.status == McsmInstanceStatus.Busy:
+                await interaction.followup.send("⚪伺服器忙碌中，請稍後再試", ephemeral=True)
+                return
+            elif server.status == McsmInstanceStatus.Stopped:
+                mcsm_api.excute_action(self.server_id, McsmServerAction.Start)
                 await interaction.followup.send("🟡已發送開啟指令，伺服器正在啟動...", ephemeral=True)
 
-                server = mcss_api.get_server_detail(self.server_id)
+                server = mcsm_api.get_server_detail(self.server_id)
                 await interaction.edit_original_response(embed=server.embed())
                 for _ in range(20):
                     await asyncio.sleep(10)
-                    server = mcss_api.get_server_detail(self.server_id)
-                    if server and server.status == McssServerStatues.Running:
+                    server = mcsm_api.get_server_detail(self.server_id)
+                    if server and server.status == McsmInstanceStatus.Running:
                         await interaction.followup.send("🟢伺服器已開啟", ephemeral=True)
                         await interaction.edit_original_response(embed=server.embed())
                         return
@@ -700,20 +703,23 @@ class McServerPanel(discord.ui.View):
             await interaction.followup.send("請先選擇伺服器", ephemeral=True)
             return
 
-        if server := mcss_api.get_server_detail(self.server_id):
-            if server.status == McssServerStatues.Stopped:
+        if server := mcsm_api.get_server_detail(self.server_id):
+            if server.status == McsmInstanceStatus.Stopped:
                 await interaction.followup.send("🛑伺服器已處於關閉狀態", ephemeral=True)
                 return
-            elif server.status == McssServerStatues.Running:
-                mcss_api.excute_action(self.server_id, McssServerAction.Stop)
+            elif server.status == McsmInstanceStatus.Busy:
+                await interaction.followup.send("⚪伺服器忙碌中，請稍後再試", ephemeral=True)
+                return
+            elif server.status == McsmInstanceStatus.Running:
+                mcsm_api.excute_action(self.server_id, McsmServerAction.Stop)
                 await interaction.followup.send("🟠伺服器正在關閉...", ephemeral=True)
 
-                server = mcss_api.get_server_detail(self.server_id)
+                server = mcsm_api.get_server_detail(self.server_id)
                 await interaction.edit_original_response(embed=server.embed())
                 for _ in range(20):
                     await asyncio.sleep(10)
-                    server = mcss_api.get_server_detail(self.server_id)
-                    if server and server.status == McssServerStatues.Stopped:
+                    server = mcsm_api.get_server_detail(self.server_id)
+                    if server and server.status == McsmInstanceStatus.Stopped:
                         await interaction.followup.send("🛑伺服器已關閉", ephemeral=True)
                         await interaction.edit_original_response(embed=server.embed())
                         return
@@ -727,7 +733,7 @@ class McServerPanel(discord.ui.View):
             await interaction.followup.send("請先選擇伺服器", ephemeral=True)
             return
 
-        if server := mcss_api.get_server_detail(self.server_id):
+        if server := mcsm_api.get_server_detail(self.server_id):
             ip = find_radmin_vpn_network()
             if not ip:
                 await interaction.followup.send("無法獲取Radmin VPN IP", ephemeral=True)

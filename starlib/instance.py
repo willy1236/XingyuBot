@@ -16,6 +16,7 @@ log = logging.getLogger(__name__)
 
 __all__ = [
     "mcss_api",
+    "mcsm_api",
     "yt_rss",
     "google_api",
     "yt_push",
@@ -42,6 +43,7 @@ __all__ = [
 
 # api
 mcss_api = McssAPI()
+mcsm_api = McsManagerAPI()
 yt_rss = YoutubeRSS()
 google_api = GoogleAPI()
 yt_push = YoutubePush()

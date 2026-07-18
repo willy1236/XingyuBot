@@ -1,10 +1,10 @@
 from datetime import datetime
 
 import discord
-from pydantic import AliasPath, BaseModel, ConfigDict, Field, model_validator
+from pydantic import AliasChoices, AliasPath, BaseModel, ConfigDict, Field, model_validator
 
 from starlib.base.types import UTCDateTime
-from starlib.database.postgresql.enums import McssServerStatues
+from starlib.database.postgresql.enums import McsmInstanceStatus, McssServerStatues
 from starlib.utils import BotEmbed
 from starlib.utils.time import convert_tz, nowtz
 
@@ -368,3 +368,34 @@ class McssServer(BaseModel):
                 if 25565 <= num <= 65535:
                     return num
         return None
+
+
+class McsmInstance(BaseModel):
+    """MCSManager 伺服器實例模型（欄位對照真實 `GET /api/instance` 回應確認）"""
+
+    model_config = ConfigDict(extra="ignore")
+
+    server_id: str = Field(validation_alias=AliasChoices("uuid", "instanceUuid"))
+    daemon_id: str = Field(alias="daemonId")
+    status: McsmInstanceStatus
+    name: str
+    port: int | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def extract_config_fields(cls, data: dict):
+        config = data.get("config") or {}
+        data.setdefault("name", config.get("nickname"))
+        data.setdefault("port", (config.get("pingConfig") or {}).get("port"))
+        return data
+
+    def embed(self):
+        embed = BotEmbed.simple(self.name)
+        embed.add_field(name="伺服器狀態", value=f"{self.status.value}（{str(self.status)}）")
+        if self.port:
+            embed.add_field(name="端口", value=str(self.port))
+        embed.set_footer(text=f"伺服器ID：{self.server_id}")
+        return embed
+
+    def find_port(self):
+        return self.port

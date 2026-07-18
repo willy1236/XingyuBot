@@ -89,6 +89,28 @@ class McssServerStatues(IntEnum):
         return mcss_server_statue_map.get(self.value)
 
 
+class McsmServerAction(IntEnum):
+    Unknown = 0
+    Stop = 1
+    Start = 2
+    Kill = 3
+    Restart = 4
+
+
+mcsm_instance_status_map = {-1: "忙碌中", 0: "離線", 1: "停止中", 2: "啟動中", 3: "啟動"}
+
+
+class McsmInstanceStatus(IntEnum):
+    Busy = -1
+    Stopped = 0
+    Stopping = 1
+    Starting = 2
+    Running = 3
+
+    def __str__(self):
+        return mcsm_instance_status_map.get(self.value)
+
+
 class APIType(IntEnum):
     Discord = 1
     CWA = 2
@@ -109,6 +131,7 @@ class APIType(IntEnum):
     ZeroTier = 17
     Virustotal = 18
     NetBird = 19
+    MCSMANAGER = 20
 
 
 class CredentialType(IntEnum):

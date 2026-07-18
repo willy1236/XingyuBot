@@ -30,4 +30,5 @@ __all__ = [
     "RssHub",
     "CLIInterface",
     "McssAPI",
+    "McsManagerAPI",
 ]
