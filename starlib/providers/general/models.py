@@ -1,7 +1,7 @@
 from datetime import datetime
 
 import discord
-from pydantic import AliasChoices, AliasPath, BaseModel, ConfigDict, Field, model_validator
+from pydantic import AliasPath, BaseModel, ConfigDict, Field, model_validator
 
 from starlib.base.types import UTCDateTime
 from starlib.database.postgresql.enums import McsmInstanceStatus, McssServerStatues
@@ -370,30 +370,127 @@ class McssServer(BaseModel):
         return None
 
 
+class McsmDockerConfig(BaseModel):
+    """對應 MCSManager `InstanceConfig.docker` 的 DockerConfig 型別"""
+
+    containerName: str
+    image: str
+    memory: int
+    ports: list[str]
+    extraVolumes: list
+    maxSpace: int | None = None
+    network: int | None = None
+    io: int | None = None
+    networkMode: str
+    networkAliases: list
+    cpusetCpus: str
+    cpuUsage: int
+    workingDir: str
+    changeWorkdir: bool
+    env: list
+
+
+class McsmTerminalOption(BaseModel):
+    haveColor: bool
+    pty: bool
+
+
+class McsmEventTask(BaseModel):
+    autoStart: bool
+    autoRestart: bool
+    ignore: bool
+
+
+class McsmPingConfig(BaseModel):
+    ip: str
+    port: int
+    type: int
+
+
+class McsmInstanceConfig(BaseModel):
+    """對應 MCSManager 官方文件的 InstanceConfig 型別"""
+
+    nickname: str
+    startCommand: str
+    stopCommand: str
+    cwd: str
+    ie: str
+    oe: str
+    createDatetime: int
+    lastDatetime: int
+    type: str
+    tag: list
+    endTime: int
+    fileCode: str
+    processType: str
+    updateCommand: str
+    actionCommandList: list
+    crlf: int
+    docker: McsmDockerConfig
+    enableRcon: bool
+    rconPassword: str
+    rconPort: int
+    rconIp: str
+    terminalOption: McsmTerminalOption
+    eventTask: McsmEventTask
+    pingConfig: McsmPingConfig
+
+
+class McsmInstanceInfo(BaseModel):
+    currentPlayers: int
+    fileLock: int
+    maxPlayers: int
+    openFrpStatus: bool
+    playersChart: list
+    version: str
+    mcPingOnline: bool = False
+    latency: float = 0
+    allocatedPorts: list = []
+
+
+class McsmProcessInfo(BaseModel):
+    cpu: float
+    memory: int
+    ppid: int
+    pid: int
+    ctime: float
+    elapsed: float
+    timestamp: float
+
+
 class McsmInstance(BaseModel):
-    """MCSManager 伺服器實例模型（欄位對照真實 `GET /api/instance` 回應確認）"""
+    """對應 MCSManager 官方文件的 InstanceDetail 型別（`GET /api/instance`）
 
-    model_config = ConfigDict(extra="ignore")
+    `daemon_id` 不是 InstanceDetail 的一部分（呼叫端已知道自己打的是哪個節點），
+    由 McsManagerAPI 在建立此物件前手動塞入。
+    """
 
-    server_id: str = Field(validation_alias=AliasChoices("uuid", "instanceUuid"))
+    server_id: str = Field(alias="instanceUuid")
     daemon_id: str = Field(alias="daemonId")
+    config: McsmInstanceConfig
+    info: McsmInstanceInfo
+    # 文件上寫 InstanceDetail[] 也是列表端點（GET service/remote_service_instances）的回應型別，
+    # 但實測列表端點回應不含 processInfo/space，只有單筆詳細查詢（GET instance）才有，故設為可選。
+    process_info: McsmProcessInfo | None = Field(default=None, alias="processInfo")
+    space: int | None = None
+    started: int
     status: McsmInstanceStatus
-    name: str
-    port: int | None = None
 
-    @model_validator(mode="before")
-    @classmethod
-    def extract_config_fields(cls, data: dict):
-        config = data.get("config") or {}
-        data.setdefault("name", config.get("nickname"))
-        data.setdefault("port", (config.get("pingConfig") or {}).get("port"))
-        return data
+    @property
+    def name(self) -> str:
+        return self.config.nickname
+
+    @property
+    def port(self) -> int:
+        return self.config.pingConfig.port
 
     def embed(self):
         embed = BotEmbed.simple(self.name)
         embed.add_field(name="伺服器狀態", value=f"{self.status.value}（{str(self.status)}）")
-        if self.port:
-            embed.add_field(name="端口", value=str(self.port))
+        embed.add_field(name="連接埠", value=str(self.port))
+        embed.add_field(name="在線玩家", value=f"{self.info.currentPlayers}/{self.info.maxPlayers}")
+        if self.info.mcPingOnline:
+            embed.add_field(name="Minecraft版本", value=self.info.version or "未知")
         embed.set_footer(text=f"伺服器ID：{self.server_id}")
         return embed
 
