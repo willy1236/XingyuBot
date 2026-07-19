@@ -1,4 +1,5 @@
 import ipaddress
+import platform
 import re
 import socket
 import subprocess
@@ -27,11 +28,17 @@ EXCLUDED_IPS = {"26.0.0.1", "26.255.255.255", "10.242.255.255"}
 
 def get_arp_list() -> list[tuple[str, str]]:
     # print("[*] 讀取 ARP 快取...")
-    output = subprocess.check_output("arp -a", shell=True, text=True)
-    radmin_ips = []
+    if platform.system() == "Windows":
+        output = subprocess.check_output("arp -a", shell=True, text=True)
+        pattern = r"((?:26\.\d+\.\d+\.\d+|10\.242\.\d+\.\d+))\s+([\da-f\-]{17})"
+    else:
+        # Ubuntu/Debian 預設不裝 net-tools，arp 指令可能不存在，改用 iproute2 的 ip neigh
+        output = subprocess.check_output("ip neigh show", shell=True, text=True)
+        pattern = r"((?:26\.\d+\.\d+\.\d+|10\.242\.\d+\.\d+))\s+dev\s+\S+\s+lladdr\s+([\da-f:]{17})"
 
+    radmin_ips = []
     for line in output.splitlines():
-        match = re.search(r"((?:26\.\d+\.\d+\.\d+|10\.242\.\d+\.\d+))\s+([\da-f\-]{17})", line, re.IGNORECASE)
+        match = re.search(pattern, line, re.IGNORECASE)
         if match:
             ip = match.group(1)
             mac = match.group(2)
