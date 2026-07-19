@@ -5,7 +5,6 @@ from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
 
 import discord
-import mcrcon
 import psutil
 from discord.commands import SlashCommandGroup
 from discord.ext import commands
@@ -312,23 +311,6 @@ class owner(Cog_Extension):
     #             await channel.send('👎')
     #         else:
     #             await channel.send('👍')
-
-    @mcserver_cmd.command(description="使用rcon mc伺服器指令", guild_ids=debug_guilds)
-    @commands.is_owner()
-    async def rcon(self, ctx: discord.ApplicationContext, command: str):
-        try:
-            settings = get_settings()
-        except RuntimeError as exc:
-            await ctx.respond(str(exc), ephemeral=True)
-            return
-
-        host = settings.MC_SERVER_HOST
-        port = settings.MC_SERVER_PORT
-        password = settings.MC_SERVER_PASSWORD
-
-        with mcrcon.MCRcon(host, password, port) as rcon:
-            response = rcon.command(command)
-            await ctx.respond(response if response else "指令已發送")
 
     @mcserver_cmd.command(description="查詢mc伺服器")
     @commands.cooldown(rate=1, per=3)

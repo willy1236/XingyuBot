@@ -1458,12 +1458,6 @@ wheels = [
 ]
 
 [[package]]
-name = "mcrcon"
-version = "0.7.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/77/48/6aa55387b45cb8f8c69c4034b3438bb5c5b89e45d975ff60539e9ae7d8b7/mcrcon-0.7.0.tar.gz", hash = "sha256:c2f1caf2467e283e0ccd2436f1ce21f04242b03c5fafb3860e3924d764a910d4", size = 4219, upload-time = "2021-07-30T06:59:32.832Z" }
-
-[[package]]
 name = "mcstatus"
 version = "14.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2914,7 +2908,6 @@ dependencies = [
     { name = "google-generativeai" },
     { name = "line-bot-sdk" },
     { name = "matplotlib" },
-    { name = "mcrcon" },
     { name = "mcstatus" },
     { name = "mwrogue" },
     { name = "pandas" },
@@ -2960,7 +2953,6 @@ requires-dist = [
     { name = "google-generativeai", specifier = ">=0.8.5" },
     { name = "line-bot-sdk", specifier = ">=3.18.0" },
     { name = "matplotlib", specifier = ">=3.10.5" },
-    { name = "mcrcon", specifier = ">=0.7.0" },
     { name = "mcstatus", specifier = ">=12.0.3" },
     { name = "mwrogue", specifier = ">=0.1.5" },
     { name = "pandas", specifier = ">=2.3.1" },

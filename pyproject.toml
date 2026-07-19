@@ -1,6 +1,6 @@
 [project]
 name = "xingyubot"
-version = "1.4.1"
+version = "1.4.2"
 description = "一個集結許多功能的DiscordBot"
 readme = "README.md"
 requires-python = ">=3.14, <4.0"
@@ -16,7 +16,6 @@ dependencies = [
     "google-generativeai>=0.8.5",
     "line-bot-sdk>=3.18.0",
     "matplotlib>=3.10.5",
-    "mcrcon>=0.7.0",
     "mcstatus>=12.0.3",
     "mwrogue>=0.1.5",
     "pandas>=2.3.1",
