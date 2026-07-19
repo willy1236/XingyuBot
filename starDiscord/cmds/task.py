@@ -1,7 +1,5 @@
 import asyncio
 import logging
-import os
-import platform
 import subprocess
 from datetime import datetime, timedelta, timezone
 
@@ -516,16 +514,13 @@ async def refresh_ip_last_seen_nmap():
     ips = sqldb.get_active_ips(utils.nowtz().replace(year=2025, month=8, day=11, hour=0, minute=0, second=0))  # 現在設定指定時間，之後再改成動態計算過去30天
     ips_string = " ".join([target.ip for target in ips])
 
-    if platform.system() == "Windows":
-        scan_arguments = "-sn --min-parallelism 3"
-    elif os.geteuid() == 0:
-        scan_arguments = "-sn --min-parallelism 3"
-    else:
-        log.warning("refresh_ip_last_seen_nmap: 非 root 權限，ARP scan 準確度可能降低")
-        scan_arguments = "-sn -PE --min-parallelism 3"
-
     nm = nmap.PortScanner()
-    nm.scan(hosts=ips_string, arguments=scan_arguments)
+    nm.scan(hosts=ips_string, arguments="-sn --min-parallelism 3")
+
+    if ips_string and not nm.all_hosts():
+        # ARP scan 在無 root/Npcap 權限時可能掃不到任何主機，改用 ICMP echo 重試
+        log.warning("refresh_ip_last_seen_nmap: ARP scan 未偵測到任何主機，改用 ICMP echo 重試")
+        nm.scan(hosts=ips_string, arguments="-sn -PE --min-parallelism 3")
 
     # 遍歷所有掃描到的主機 (Iterate through all discovered hosts)
     active_ips = []
