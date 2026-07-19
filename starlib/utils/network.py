@@ -1,4 +1,3 @@
-import ipaddress
 import platform
 import re
 import socket
@@ -49,15 +48,14 @@ def get_arp_list() -> list[tuple[str, str]]:
 
 
 def find_radmin_vpn_network():
+    # Windows 上 Radmin VPN 的介面名稱固定包含 "Radmin VPN"，
+    # 但 Linux（Ubuntu）上介面名稱不受此限（可能是 radmin0、tun0 等），
+    # 因此改以 Radmin VPN 固定使用的 26.0.0.0/8 網段判斷，兩個平台皆適用。
     interfaces = psutil.net_if_addrs()
     for iface_name, addrs in interfaces.items():
-        if "Radmin VPN" in iface_name:  # 名稱內含 Radmin VPN
-            for addr in addrs:
-                if addr.family.name == "AF_INET":  # IPv4
-                    ip = addr.address
-                    netmask = addr.netmask
-                    network = ipaddress.IPv4Network(f"{ip}/{netmask}", strict=False)
-
+        for addr in addrs:
+            if addr.family.name == "AF_INET":  # IPv4
+                ip = addr.address
+                if "Radmin VPN" in iface_name or ip.startswith("26."):
                     return ip
-                    return {"interface": iface_name, "ip": ip, "netmask": netmask, "network": network}
     return None
