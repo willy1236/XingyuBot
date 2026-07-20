@@ -512,7 +512,7 @@ async def refresh_ip_last_seen_nmap():
     log.debug("refresh_ip_last_seen_nmap start")
     now = utils.nowtz()
     ips = sqldb.get_active_ips(utils.nowtz().replace(year=2025, month=8, day=11, hour=0, minute=0, second=0))  # 現在設定指定時間，之後再改成動態計算過去30天
-    ips_string = " ".join([target.ip for target in ips])
+    ips_string = " ".join([str(target.ip) for target in ips])
 
     nm = nmap.PortScanner()
     nm.scan(hosts=ips_string, arguments="-sn --min-parallelism 3")
