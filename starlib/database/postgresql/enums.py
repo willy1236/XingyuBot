@@ -97,7 +97,7 @@ class McsmServerAction(IntEnum):
     Restart = 4
 
 
-mcsm_instance_status_map = {-1: "忙碌中", 0: "離線", 1: "停止中", 2: "啟動中", 3: "啟動"}
+mcsm_instance_status_map = {-1: "忙碌中", 0: "離線", 1: "停止中", 2: "啟動中", 3: "運行"}
 
 
 class McsmInstanceStatus(IntEnum):

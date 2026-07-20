@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import ClassVar
 
 import discord
 from pydantic import AliasPath, BaseModel, ConfigDict, Field, model_validator
@@ -358,7 +359,8 @@ class McssServer(BaseModel):
         embed.set_footer(text=f"伺服器ID：{self.server_id}")
         return embed
 
-    def find_port(self):
+    @property
+    def port(self):
         parts = self.name.split()
         if self.description is not None:
             parts += self.description.split()
@@ -465,6 +467,11 @@ class McsmInstance(BaseModel):
     由 McsManagerAPI 在建立此物件前手動塞入。
     """
 
+    type_dict: ClassVar[dict[str, str]] = {
+        "minecraft/java": "原版（vanilla）",
+        "minecraft/java/forge": "Forge",
+    }
+
     server_id: str = Field(alias="instanceUuid")
     daemon_id: str = Field(alias="daemonId")
     config: McsmInstanceConfig
@@ -491,8 +498,7 @@ class McsmInstance(BaseModel):
         embed.add_field(name="在線玩家", value=f"{self.info.currentPlayers}/{self.info.maxPlayers}")
         if self.info.mcPingOnline:
             embed.add_field(name="Minecraft版本", value=self.info.version or "未知")
-        embed.set_footer(text=f"伺服器ID：{self.server_id}")
+        embed.add_field(name="類型", value=self.type_dict.get(self.config.type, self.config.type))
+        embed.add_field(name="上次啟動時間", value=datetime.fromtimestamp(self.config.lastDatetime / 1000.0).astimezone().strftime("%Y-%m-%d %H:%M:%S"))
+        embed.set_footer(text=f"建立於 {datetime.fromtimestamp(self.config.createDatetime / 1000.0).astimezone().strftime('%Y-%m-%d %H:%M:%S')}")
         return embed
-
-    def find_port(self):
-        return self.port
