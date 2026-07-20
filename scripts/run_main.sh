@@ -4,10 +4,10 @@ set -u
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-"$SCRIPT_DIR/run_update.sh"
-if [[ $? -ne 0 ]]; then
-    exit 1
-fi
+# "$SCRIPT_DIR/run_update.sh"
+# if [[ $? -ne 0 ]]; then
+#     exit 1
+# fi
 
 cd "$SCRIPT_DIR/.."
 
