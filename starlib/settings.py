@@ -23,10 +23,6 @@ class AppSettings(BaseSettings):
     DB_PASSWORD: str
     DB_NAME: str
 
-    MC_SERVER_HOST: str
-    MC_SERVER_PORT: int
-    MC_SERVER_PASSWORD: str
-
     ZEROTIER_NETWORK_ID: str
     NETBIRD_API_URL: str = "https://api.netbird.io"
     BASE_DOMAIN: str
