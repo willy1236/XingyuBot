@@ -4,6 +4,7 @@ from pathlib import PurePath
 from typing import TYPE_CHECKING
 from uuid import UUID
 
+from sqlalchemy.exc import NoResultFound
 from twitchAPI.chat import Chat, ChatCommand, ChatMessage, ChatSub, EventData, JoinedEvent, LeftEvent, NoticeEvent, WhisperEvent
 from twitchAPI.chat.middleware import ChannelCommandCooldown, ChannelRestriction
 from twitchAPI.eventsub.webhook import EventSubWebhook
@@ -292,7 +293,6 @@ async def modify_channel_information(cmd: ChatCommand):
 
 async def run():
     app_config = sqldb.get_oauth_client(APIType.Twitch, 2)
-    app_token = sqldb.get_bot_oauth_token(APIType.Twitch, 2)
     APP_ID = app_config.client_id
     APP_SECRET = app_config.client_secret
 
@@ -305,17 +305,20 @@ async def run():
     # set up twitch api instance and add user authentication with some scopes
     twitch = await Twitch(APP_ID, APP_SECRET)
     try:
+        app_token = sqldb.get_bot_oauth_token(APIType.Twitch, 2)
         await twitch.set_user_authentication(app_token.access_token, USER_SCOPE, app_token.refresh_token)
-    except (InvalidTokenException, MissingScopeException) as e:
+    except (InvalidTokenException, MissingScopeException, NoResultFound) as e:
+        log.exception("Twitch token invalid or missing, re-authenticating")
         auth = UserAuthenticator(twitch, USER_SCOPE)
         token, refresh_token = await auth.authenticate()  # type: ignore
+        await twitch.set_user_authentication(token, USER_SCOPE, refresh_token)
         me = await first(twitch.get_users())
         app_token.user_id = me.id
         app_token.client_credential_id = app_config.credential_id
         app_token.access_token = token
         app_token.refresh_token = refresh_token
+        app_token.scope = twitch.get_user_auth_scope()
         app_token = sqldb.merge(app_token)
-        await twitch.set_user_authentication(app_token.access_token, USER_SCOPE, app_token.refresh_token)
 
     # 使用自帶的函式處理token
     # helper = UserAuthenticationStorageHelper(twitch, USER_SCOPE)

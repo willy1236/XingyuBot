@@ -130,7 +130,7 @@ class system_community(Cog_Extension):
     async def twitch_user(self, ctx, twitch_user_login: discord.Option(str, required=True, name="twitch使用者名稱", description="英文的使用者名稱")):
         user = tw_api.get_user(twitch_user_login)
         if user:
-            await ctx.respond(embed=user.desplay())
+            await ctx.respond(embed=user.embed())
         else:
             await ctx.respond(f"查詢不到 {twitch_user_login}", ephemeral=True)
 
