@@ -15,7 +15,7 @@ from discord.utils import format_dt
 from starlib import BotEmbed, Jsondb, sqldb
 from starlib.database import Giveaway, GiveawayUser, HappycampApplicationForm, HappycampVIP, McsmInstanceStatus, McsmServerAction, Poll, PollRole, TicketChannel
 from starlib.instance import mcsm_api, vip_admin_channel
-from starlib.utils import find_radmin_vpn_network, nowtz
+from starlib.utils import find_netbird_network, find_radmin_vpn_network, nowtz
 
 log = logging.getLogger(__name__)
 
@@ -736,16 +736,17 @@ class McServerPanel(discord.ui.View):
             return
 
         if server := mcsm_api.get_server_detail(self.server_id):
-            ip = find_radmin_vpn_network()
-            if not ip:
-                await interaction.followup.send("無法獲取Radmin VPN IP", ephemeral=True)
-                return
-
             port = server.port
             if port == 25565:
                 port = "25565（預設連接埠可省略）"
 
-            await interaction.followup.send(f"伺服器IP位置：`{ip}:{port}`")
+            radmin_ip = find_radmin_vpn_network()
+            netbird_ip = find_netbird_network()
+
+            radmin_line = f"Radmin VPN：`{radmin_ip}:{port}`" if radmin_ip else "Radmin VPN：找不到 Radmin VPN IP"
+            netbird_line = f"NetBird：`{netbird_ip}:{port}`" if netbird_ip else "NetBird：找不到 NetBird IP"
+
+            await interaction.followup.send(f"{radmin_line}\n{netbird_line}")
         else:
             await interaction.followup.send("伺服器未找到", ephemeral=True)
 

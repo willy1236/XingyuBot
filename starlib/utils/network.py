@@ -1,3 +1,4 @@
+import ipaddress
 import platform
 import re
 import socket
@@ -57,5 +58,19 @@ def find_radmin_vpn_network():
             if addr.family.name == "AF_INET":  # IPv4
                 ip = addr.address
                 if "Radmin VPN" in iface_name or ip.startswith("26."):
+                    return ip
+    return None
+
+
+NETBIRD_NETWORK = ipaddress.ip_network("100.73.0.0/16")
+
+
+def find_netbird_network():
+    interfaces = psutil.net_if_addrs()
+    for iface_name, addrs in interfaces.items():
+        for addr in addrs:
+            if addr.family.name == "AF_INET":  # IPv4
+                ip = addr.address
+                if "netbird" in iface_name.lower() or ipaddress.ip_address(ip) in NETBIRD_NETWORK:
                     return ip
     return None
