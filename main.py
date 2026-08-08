@@ -18,11 +18,8 @@ import time
 
 import discord
 import structlog
-import truststore
 
 from sentry_bootstrap import init_sentry
-
-# truststore.inject_into_ssl()  # 停用：懷疑與 Python 3.14 的 ssl 模組不相容，導致對外 HTTPS 請求間歇性 SSLError（見 opendata.cwa.gov.tw 逾時事件）
 
 init_sentry(service="main")
 
