@@ -467,10 +467,7 @@ class McsmInstance(BaseModel):
     由 McsManagerAPI 在建立此物件前手動塞入。
     """
 
-    type_dict: ClassVar[dict[str, str]] = {
-        "minecraft/java": "原版（vanilla）",
-        "minecraft/java/forge": "Forge",
-    }
+    type_dict: ClassVar[dict[str, str]] = {"minecraft/java": "原版（vanilla）", "minecraft/java/forge": "Forge", "minecraft/java/fabric": "Fabric", "minecraft/java/paper": "Paper"}
 
     server_id: str = Field(alias="instanceUuid")
     daemon_id: str = Field(alias="daemonId")
