@@ -559,12 +559,12 @@ class command(Cog_Extension):
                 sclient.sqldb.merge(cuser)
                 await ctx.respond(f"{ctx.author.mention}：google帳戶移除完成")
             else:
-                await ctx.respond(f"{ctx.author.mention}：此帳號沒有設定過google帳戶")
+                await ctx.respond(f"{ctx.author.mention}：此Discord帳號沒有設定過google帳戶")
 
             return
         else:
             if cuser and cuser.drive_share_id:
-                await ctx.respond(f"{ctx.author.mention}：此帳號已經共用雲端資料夾了")
+                await ctx.respond(f"{ctx.author.mention}：此Discord帳號已經共用雲端資料夾了")
                 return
 
             r = re.compile(r"@gmail.com")
