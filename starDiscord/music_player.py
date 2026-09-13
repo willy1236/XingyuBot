@@ -1,5 +1,6 @@
 import asyncio
 import concurrent.futures
+import enum
 import logging
 import random
 import time
@@ -218,6 +219,12 @@ class Song:
         return songs, skipped
 
 
+class LoopMode(enum.Enum):
+    OFF = "off"
+    SONG = "song"  # 重播目前歌曲
+    QUEUE = "queue"  # 播完的歌放回歌單尾端
+
+
 class MusicPlayer:
     if TYPE_CHECKING:
         vc: discord.VoiceClient
@@ -225,7 +232,7 @@ class MusicPlayer:
         loop: asyncio.AbstractEventLoop
         guildid: str
         playlist: list[Song]
-        songloop: bool
+        loop_mode: LoopMode
         volume: float
         nowplaying: Song | None
         skip_voters: list[int]
@@ -245,7 +252,7 @@ class MusicPlayer:
         self.loop = loop
         self.guildid = str(ctx.guild.id)
         self.playlist: list[Song] = []
-        self.songloop = False
+        self.loop_mode = LoopMode.OFF
         self.volume = 0.75
         self.nowplaying: Song | None = None
         self.skip_voters: list[int] = []
@@ -288,11 +295,12 @@ class MusicPlayer:
                     source = await song.get_source(self.volume)
                 except Exception:
                     log.warning("歌曲無法播放，略過", extra={"guild_id": self.guildid, "url": song.url}, exc_info=True)
-                    if self.songloop:
-                        self.songloop = False
+                    if self.loop_mode is LoopMode.SONG:
+                        self.loop_mode = LoopMode.OFF
                         await self._send(f"無法播放 {song.title}，已關閉循環並略過")
                     else:
                         await self._send(f"略過無法播放的歌曲：{song.title}")
+                    # 清掉 nowplaying：整張循環時不會把壞歌放回歌單
                     self.nowplaying = None
                     continue
 
@@ -315,12 +323,14 @@ class MusicPlayer:
                 return
 
     def _next_song(self) -> Song | None:
-        """決定下一首：循環模式重播目前歌曲（跳過時除外），否則從歌單取出。"""
+        """決定下一首：單首循環重播目前歌曲（跳過時除外）；整張循環先把目前歌曲放回歌單尾端再取下一首。"""
         skip_requested = self._skip_requested
         self._skip_requested = False
         self.skip_voters = []
-        if self.songloop and self.nowplaying and not skip_requested:
+        if self.loop_mode is LoopMode.SONG and self.nowplaying and not skip_requested:
             return self.nowplaying
+        if self.loop_mode is LoopMode.QUEUE and self.nowplaying:
+            self.playlist.append(self.nowplaying)
         self.nowplaying = self.playlist.pop(0) if self.playlist else None
         return self.nowplaying
 
@@ -343,10 +353,14 @@ class MusicPlayer:
         self._schedule(self._advance())
 
     async def _advance(self):
-        if self.songloop and self._quick_fail_count >= self.QUICK_FAIL_LIMIT:
-            self.songloop = False
+        if self.loop_mode is not LoopMode.OFF and self._listener_count() == 0:
+            # 循環模式不會自己播完，頻道沒人時繼續播只是浪費
+            await self.close("語音頻道已經沒有人，停止循環播放 掰掰~")
+            return
+        if self.loop_mode is not LoopMode.OFF and self._quick_fail_count >= self.QUICK_FAIL_LIMIT:
+            self.loop_mode = LoopMode.OFF
             self._quick_fail_count = 0
-            await self._send("此歌曲無法正常播放，已關閉循環")
+            await self._send("歌曲連續無法正常播放，已關閉循環")
         await self.play_next()
 
     def _schedule(self, coro):
@@ -411,13 +425,16 @@ class MusicPlayer:
         else:
             return "你已投票跳過歌曲"
 
-        listeners = sum(1 for member in self.vc.channel.members if not member.bot)
-        threshold = listeners // 3 + 1
+        threshold = self._listener_count() // 3 + 1
         if len(self.skip_voters) >= threshold:
             self._skip_requested = True
             self.vc.stop()
             return f"已達投票人數，跳過歌曲：{self.nowplaying.title}"
         return f"已成功投票，目前票數：{len(self.skip_voters)}/{threshold}"
+
+    def _listener_count(self) -> int:
+        """語音頻道內的真人數量（不含 bot）。"""
+        return sum(1 for member in self.vc.channel.members if not member.bot)
 
     def pause(self):
         if not self.vc.is_paused():

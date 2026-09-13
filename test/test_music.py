@@ -9,6 +9,7 @@ import yt_dlp
 
 from starDiscord import music_player
 from starDiscord.music_player import (
+    LoopMode,
     MusicPlayer,
     Song,
     format_progress_bar,
@@ -88,8 +89,9 @@ class TestFormatProgressBar:
 class FakeVoiceClient:
     """模擬 pycord VoiceClient：stop()/disconnect() 會觸發 after 回呼。"""
 
-    def __init__(self, members=()):
-        self.channel = SimpleNamespace(members=list(members))
+    def __init__(self, members=None):
+        # 預設頻道有一位真人聽眾
+        self.channel = SimpleNamespace(members=list(members) if members is not None else [SimpleNamespace(bot=False)])
         self.connected = True
         self.played: list = []
         self._playing = False
@@ -269,20 +271,20 @@ class TestMusicPlayerPlayback:
             player = _make_player()
             player.add_song([_song("a", requester_id=7), _song("b")])
             await player.play_next()
-            player.songloop = True
+            player.loop_mode = LoopMode.SONG
             player.skip_song(SimpleNamespace(id=7, mention="<@7>"))
             await _settle()
             return player
 
         player = asyncio.run(scenario())
         assert [s.title for s in player.vc.played] == ["a", "b"]
-        assert player.songloop
+        assert player.loop_mode is LoopMode.SONG
 
     def test_loop_turns_off_after_repeated_quick_failures(self):
         async def scenario():
             player = _make_player()
             player.add_song(_song("a"))
-            player.songloop = True
+            player.loop_mode = LoopMode.SONG
             await player.play_next()
             for _ in range(MusicPlayer.QUICK_FAIL_LIMIT):
                 player.vc.finish()
@@ -290,10 +292,72 @@ class TestMusicPlayerPlayback:
             return player
 
         player = asyncio.run(scenario())
-        assert not player.songloop
-        assert "此歌曲無法正常播放，已關閉循環" in player.channel.sent
+        assert player.loop_mode is LoopMode.OFF
+        assert "歌曲連續無法正常播放，已關閉循環" in player.channel.sent
         # 首播 + 失敗上限前的重播次數
         assert len(player.vc.played) == MusicPlayer.QUICK_FAIL_LIMIT
+
+    def test_queue_loop_requeues_finished_songs(self):
+        async def scenario():
+            player = _make_player()
+            player.add_song([_song("a"), _song("b")])
+            player.loop_mode = LoopMode.QUEUE
+            await player.play_next()
+            for _ in range(2):
+                player.vc.finish()
+                await _settle()
+            return player
+
+        player = asyncio.run(scenario())
+        assert [s.title for s in player.vc.played] == ["a", "b", "a"]
+        assert [s.title for s in player.playlist] == ["b"]
+        assert player.loop_mode is LoopMode.QUEUE
+
+    def test_loop_stops_when_channel_empty(self):
+        async def scenario():
+            player = _make_player(FakeVoiceClient([SimpleNamespace(bot=True)]))
+            player.add_song([_song("a"), _song("b")])
+            player.loop_mode = LoopMode.QUEUE
+            await player.play_next()
+            player.vc.finish()
+            await _settle()
+            return player
+
+        player = asyncio.run(scenario())
+        assert [s.title for s in player.vc.played] == ["a"]
+        assert player.closing
+        assert not player.vc.connected
+        assert "語音頻道已經沒有人，停止循環播放 掰掰~" in player.channel.sent
+
+    def test_no_loop_keeps_playing_when_channel_empty(self):
+        """未開循環時歌單終究會播完，照常播下一首。"""
+
+        async def scenario():
+            player = _make_player(FakeVoiceClient([]))
+            player.add_song([_song("a"), _song("b")])
+            await player.play_next()
+            player.vc.finish()
+            await _settle()
+            return player
+
+        player = asyncio.run(scenario())
+        assert [s.title for s in player.vc.played] == ["a", "b"]
+        assert not player.closing
+
+    def test_queue_loop_drops_unplayable_song(self):
+        async def scenario():
+            player = _make_player()
+            player.add_song([_song("bad1"), _song("good")])
+            player.loop_mode = LoopMode.QUEUE
+            await player.play_next()
+            player.vc.finish()
+            await _settle()
+            return player
+
+        player = asyncio.run(scenario())
+        assert [s.title for s in player.vc.played] == ["good", "good"]
+        assert all(s.title != "bad1" for s in player.playlist)
+        assert player.loop_mode is LoopMode.QUEUE
 
     def test_skip_vote_threshold_excludes_bots(self):
         async def scenario():

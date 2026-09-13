@@ -4,6 +4,7 @@ import re
 
 import discord
 import yt_dlp as youtube_dl
+from discord import OptionChoice
 from discord.commands import SlashCommandGroup
 from discord.ext import commands, pages
 
@@ -12,6 +13,7 @@ from starlib.exceptions import MusicCommandError, MusicPlayingError
 
 from ..extension import Cog_Extension
 from ..music_player import (
+    LoopMode,
     MusicPlayer,
     Song,
     format_progress_bar,
@@ -23,6 +25,17 @@ from ..music_player import (
 
 # 機器人不在語音頻道時，只有這些指令會自動加入
 _AUTO_JOIN_COMMANDS = {"play", "recording start"}
+
+_LOOP_MODE_OPTION = [
+    OptionChoice(name="關閉", value=LoopMode.OFF.value),
+    OptionChoice(name="單首循環", value=LoopMode.SONG.value),
+    OptionChoice(name="整張歌單循環", value=LoopMode.QUEUE.value),
+]
+_LOOP_MODE_REPLY = {
+    LoopMode.OFF: "循環已關閉",
+    LoopMode.SONG: "單首循環已開啟🔂",
+    LoopMode.QUEUE: "整張歌單循環已開啟🔁",
+}
 
 
 def _require_player(ctx: discord.ApplicationContext, *, need_playing: bool = False) -> MusicPlayer:
@@ -142,12 +155,16 @@ class music(Cog_Extension):
         player.pause()
         await ctx.respond("歌曲已暫停⏸️" if player.vc.is_paused() else "歌曲已繼續▶️")
 
-    @commands.slash_command(description="循環/取消循環單首歌曲")
+    @commands.slash_command(description="設定循環模式")
     @commands.guild_only()
-    async def loop(self, ctx: discord.ApplicationContext):
+    async def loop(
+        self,
+        ctx: discord.ApplicationContext,
+        mode: discord.Option(str, name="模式", description="循環模式", required=True, choices=_LOOP_MODE_OPTION),
+    ):
         player = _require_player(ctx)
-        player.songloop = not player.songloop
-        await ctx.respond("循環已開啟🔂" if player.songloop else "循環已關閉")
+        player.loop_mode = LoopMode(mode)
+        await ctx.respond(_LOOP_MODE_REPLY[player.loop_mode])
 
     @commands.slash_command(description="洗牌歌曲")
     @commands.guild_only()
