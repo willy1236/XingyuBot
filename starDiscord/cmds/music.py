@@ -1,4 +1,5 @@
 # type: ignore
+import math
 import re
 
 import discord
@@ -15,10 +16,20 @@ from ..music_player import (
     Song,
     format_progress_bar,
     format_seconds,
+    get_or_create_player,
     get_player,
-    guild_playing,
     recording_done,
 )
+
+# 機器人不在語音頻道時，只有這些指令會自動加入
+_AUTO_JOIN_COMMANDS = {"play", "recording start"}
+
+
+def _require_player(ctx: discord.ApplicationContext, *, need_playing: bool = False) -> MusicPlayer:
+    player = get_player(ctx.guild.id)
+    if not player or (need_playing and not player.nowplaying):
+        raise MusicCommandError("目前沒有播放中的歌曲")
+    return player
 
 
 class music(Cog_Extension):
@@ -36,7 +47,6 @@ class music(Cog_Extension):
     @commands.slash_command(description="播放音樂")
     @commands.guild_only()
     async def play(self, ctx: discord.ApplicationContext, url: str):
-        guildid = str(ctx.guild.id)
         vc = ctx.voice_client
 
         if vc.is_recording():
@@ -46,7 +56,7 @@ class music(Cog_Extension):
             raise MusicCommandError("spotify目前不受支援")
 
         try:
-            results = await Song.from_url(url, requester=ctx.author)
+            results, skipped = await Song.from_url(url, requester=ctx.author)
         except youtube_dl.utils.DownloadError as e:
             clean = re.sub(r"\x1b\[[0-9;]*m", "", str(e)).removeprefix("ERROR: ").strip()
             raise MusicCommandError(clean or "不受支援的連結，請重新檢查網址是否正確") from e
@@ -54,10 +64,7 @@ class music(Cog_Extension):
         if not results:
             raise MusicCommandError("歌曲擷取失敗，請重新檢查網址是否正確")
 
-        player = guild_playing.get(guildid)
-        if not player:
-            player = MusicPlayer(vc, ctx, self.bot.loop)
-            guild_playing[guildid] = player
+        player = get_or_create_player(vc, ctx, self.bot.loop)
 
         try:
             player.add_song(results)
@@ -68,34 +75,40 @@ class music(Cog_Extension):
         except Exception as e:
             raise MusicCommandError(e) from e
 
-        if len(results) == 1:
-            await ctx.respond(f"加入歌單: {results[0].title}")
-        else:
-            await ctx.respond(f"**{len(results)}** 首歌已加入歌單")
+        text = f"加入歌單: {results[0].title}" if len(results) == 1 else f"**{len(results)}** 首歌已加入歌單"
+        if skipped:
+            text += f"（已略過 {skipped} 首無法播放的歌曲）"
+        await ctx.respond(text)
 
     @commands.slash_command(description="跳過歌曲")
     @commands.guild_only()
     async def skip(self, ctx: discord.ApplicationContext):
-        player = get_player(ctx.guild.id)
+        player = _require_player(ctx, need_playing=True)
         await ctx.respond(player.skip_song(ctx.author))
 
     @commands.slash_command(description="停止播放並離開頻道")
     @commands.guild_only()
     async def stop(self, ctx: discord.ApplicationContext):
-        guildid = str(ctx.guild.id)
-        await ctx.voice_client.disconnect(force=True)
-        if guild_playing.get(guildid):
-            del guild_playing[guildid]
+        player = get_player(ctx.guild.id)
+        if player:
+            await player.close()
+        else:
+            await ctx.voice_client.disconnect(force=True)
         await ctx.respond("再見啦~👋")
+
+    @commands.Cog.listener("on_voice_state_update")
+    async def cleanup_on_voice_disconnect(self, member: discord.Member, before: discord.VoiceState, after: discord.VoiceState):
+        # 機器人被移出語音或連線中斷時收掉播放器，避免殘留綁著舊連線的 player
+        if member.id != self.bot.user.id or not before.channel or after.channel:
+            return
+        player = get_player(member.guild.id)
+        if player and not player.closing:
+            await player.close("我已離開語音頻道，歌單已清空")
 
     @commands.slash_command(description="現在播放")
     @commands.guild_only()
     async def nowplaying(self, ctx: discord.ApplicationContext):
-        player = get_player(ctx.guild.id)
-        if not player or not player.nowplaying:
-            await ctx.respond("目前沒有正在播放的歌曲")
-            return
-
+        player = _require_player(ctx, need_playing=True)
         song = player.nowplaying
         progress_bar, progress_text = format_progress_bar(player.get_elapsed_seconds(), song.duration)
         embed = BotEmbed.simple(
@@ -107,13 +120,12 @@ class music(Cog_Extension):
     @commands.slash_command(description="待播歌單")
     @commands.guild_only()
     async def queue(self, ctx: discord.ApplicationContext):
-        player = get_player(ctx.guild.id)
+        player = _require_player(ctx)
         playlist = player.get_full_playlist()
         if not playlist:
             await ctx.respond("歌單裡空無一物")
             return
 
-        import math
         page = [BotEmbed.simple(title="待播歌單", description="") for _ in range(math.ceil(len(playlist) / 10))]
         for i, song in enumerate(playlist):
             page[i // 10].description += (
@@ -126,24 +138,21 @@ class music(Cog_Extension):
     @commands.slash_command(description="暫停/繼續播放歌曲")
     @commands.guild_only()
     async def pause(self, ctx: discord.ApplicationContext):
-        player = get_player(ctx.guild.id)
-        if not player or not player.nowplaying:
-            await ctx.respond("目前沒有正在播放的歌曲")
-            return
+        player = _require_player(ctx, need_playing=True)
         player.pause()
         await ctx.respond("歌曲已暫停⏸️" if player.vc.is_paused() else "歌曲已繼續▶️")
 
     @commands.slash_command(description="循環/取消循環單首歌曲")
     @commands.guild_only()
     async def loop(self, ctx: discord.ApplicationContext):
-        player = get_player(ctx.guild.id)
+        player = _require_player(ctx)
         player.songloop = not player.songloop
         await ctx.respond("循環已開啟🔂" if player.songloop else "循環已關閉")
 
     @commands.slash_command(description="洗牌歌曲")
     @commands.guild_only()
     async def shuffle(self, ctx: discord.ApplicationContext):
-        player = get_player(ctx.guild.id)
+        player = _require_player(ctx)
         player.shuffle()
         await ctx.respond("歌單已隨機🔀")
 
@@ -159,6 +168,8 @@ class music(Cog_Extension):
     async def ensure_voice(self, ctx: discord.ApplicationContext):
         await ctx.defer()
         if not ctx.voice_client:
+            if ctx.command.qualified_name not in _AUTO_JOIN_COMMANDS:
+                raise discord.ApplicationCommandInvokeError(MusicCommandError("機器人目前不在語音頻道"))
             if ctx.author.voice:
                 await ctx.author.voice.channel.connect(timeout=10, reconnect=False)
             else:

@@ -2,10 +2,21 @@
 from __future__ import annotations
 
 import asyncio
+from types import SimpleNamespace
 
 import pytest
+import yt_dlp
 
-from starDiscord.music_player import Song, format_progress_bar, format_seconds
+from starDiscord import music_player
+from starDiscord.music_player import (
+    MusicPlayer,
+    Song,
+    format_progress_bar,
+    format_seconds,
+    get_or_create_player,
+    guild_playing,
+)
+from starlib.exceptions import MusicPlayingError
 
 # ─── format_seconds ───────────────────────────────────────────────────────────
 
@@ -71,6 +82,274 @@ class TestFormatProgressBar:
         assert "-" not in inner
 
 
+# ─── MusicPlayer 狀態機（以假的 VoiceClient 驅動，不碰網路與 ffmpeg） ─────────────
+
+
+class FakeVoiceClient:
+    """模擬 pycord VoiceClient：stop()/disconnect() 會觸發 after 回呼。"""
+
+    def __init__(self, members=()):
+        self.channel = SimpleNamespace(members=list(members))
+        self.connected = True
+        self.played: list = []
+        self._playing = False
+        self._after = None
+
+    def is_playing(self):
+        return self._playing
+
+    def is_paused(self):
+        return False
+
+    def play(self, source, after=None):
+        if not self.connected:
+            raise RuntimeError("Not connected to voice.")
+        self.played.append(source)
+        self._playing = True
+        self._after = after
+
+    def stop(self):
+        if self._playing:
+            self._playing = False
+            after, self._after = self._after, None
+            after(None)
+
+    def finish(self):
+        """模擬歌曲自然播完。"""
+        self.stop()
+
+    async def disconnect(self, force=False):
+        self.stop()
+        self.connected = False
+
+
+class FakeChannel:
+    def __init__(self):
+        self.sent: list[str] = []
+
+    async def send(self, content=None, **kwargs):
+        embed = kwargs.get("embed")
+        self.sent.append(content if content is not None else embed.title)
+
+
+def _song(title: str, requester_id: int = 1) -> Song:
+    requester = SimpleNamespace(id=requester_id, mention=f"<@{requester_id}>")
+    return Song(f"https://example.com/{title}", None, title, requester=requester)
+
+
+async def _fake_get_source(self, volume=0.5):
+    if self.title.startswith("bad"):
+        raise MusicPlayingError(f"無法取得串流：{self.title}")
+    return SimpleNamespace(title=self.title, cleanup=lambda: None)
+
+
+async def _settle(seconds: float = 0.05):
+    """讓 after 排入的背景協程跑完。"""
+    await asyncio.sleep(seconds)
+
+
+def _make_player(vc: FakeVoiceClient | None = None, guild_id: int = 1) -> MusicPlayer:
+    ctx = SimpleNamespace(channel=FakeChannel(), guild=SimpleNamespace(id=guild_id))
+    player = get_or_create_player(vc or FakeVoiceClient(), ctx, asyncio.get_running_loop())
+    player.after_delay = 0
+    player.leave_delay = 0.05
+    return player
+
+
+@pytest.fixture(autouse=True)
+def _isolate(monkeypatch):
+    monkeypatch.setattr(Song, "get_source", _fake_get_source)
+    guild_playing.clear()
+    yield
+    guild_playing.clear()
+
+
+class TestMusicPlayerLifecycle:
+    def test_close_does_not_play_next_song(self):
+        """/stop 時歌單還有歌：斷線觸發的 after 不應再播放或發「現在播放」。"""
+
+        async def scenario():
+            player = _make_player()
+            player.add_song([_song("a"), _song("b")])
+            await player.play_next()
+            await player.close()
+            await _settle()
+            return player
+
+        player = asyncio.run(scenario())
+        assert [s.title for s in player.vc.played] == ["a"]
+        assert player.channel.sent.count("現在播放") == 1
+        assert "1" not in guild_playing
+
+    def test_stale_player_replaced_when_voice_client_changes(self):
+        """被踢出語音後重新連線，應建立綁定新連線的播放器。"""
+
+        async def scenario():
+            old = _make_player(FakeVoiceClient())
+            old.add_song(_song("a"))
+            new = _make_player(FakeVoiceClient())
+            return old, new
+
+        old, new = asyncio.run(scenario())
+        assert new is not old
+        assert old.closing and not old.playlist
+        assert guild_playing["1"] is new
+
+    def test_close_does_not_remove_other_player(self):
+        async def scenario():
+            old = _make_player()
+            new = MusicPlayer(FakeVoiceClient(), SimpleNamespace(channel=FakeChannel(), guild=SimpleNamespace(id=1)), asyncio.get_running_loop())
+            guild_playing["1"] = new
+            await old.close()
+            return new
+
+        new = asyncio.run(scenario())
+        assert guild_playing["1"] is new
+
+    def test_new_song_during_leave_wait_cancels_leave(self):
+        async def scenario():
+            player = _make_player()
+            player.add_song(_song("a"))
+            await player.play_next()
+            player.vc.finish()
+            await _settle(0.01)  # 進入 wait_to_leave
+            player.add_song(_song("b"))
+            await player.play_next()
+            await _settle(0.1)  # 超過 leave_delay
+            return player
+
+        player = asyncio.run(scenario())
+        assert player.vc.connected
+        assert not player.closing
+        assert [s.title for s in player.vc.played] == ["a", "b"]
+
+    def test_leave_after_queue_finished(self):
+        async def scenario():
+            player = _make_player()
+            player.add_song(_song("a"))
+            await player.play_next()
+            player.vc.finish()
+            await _settle(0.15)
+            return player
+
+        player = asyncio.run(scenario())
+        assert player.closing
+        assert not player.vc.connected
+        assert "歌曲播放完畢 掰掰~" in player.channel.sent
+        assert "1" not in guild_playing
+
+
+class TestMusicPlayerPlayback:
+    def test_unplayable_song_is_skipped(self):
+        async def scenario():
+            player = _make_player()
+            player.add_song([_song("bad1"), _song("good")])
+            await player.play_next()
+            return player
+
+        player = asyncio.run(scenario())
+        assert [s.title for s in player.vc.played] == ["good"]
+        assert "略過無法播放的歌曲：bad1" in player.channel.sent
+        assert player.nowplaying.title == "good"
+
+    def test_all_unplayable_songs_lead_to_leave(self):
+        async def scenario():
+            player = _make_player()
+            player.add_song([_song("bad1"), _song("bad2")])
+            await player.play_next()
+            await _settle(0.15)
+            return player
+
+        player = asyncio.run(scenario())
+        assert player.vc.played == []
+        assert player.closing
+
+    def test_skip_in_loop_mode_moves_to_next_song(self):
+        async def scenario():
+            player = _make_player()
+            player.add_song([_song("a", requester_id=7), _song("b")])
+            await player.play_next()
+            player.songloop = True
+            player.skip_song(SimpleNamespace(id=7, mention="<@7>"))
+            await _settle()
+            return player
+
+        player = asyncio.run(scenario())
+        assert [s.title for s in player.vc.played] == ["a", "b"]
+        assert player.songloop
+
+    def test_loop_turns_off_after_repeated_quick_failures(self):
+        async def scenario():
+            player = _make_player()
+            player.add_song(_song("a"))
+            player.songloop = True
+            await player.play_next()
+            for _ in range(MusicPlayer.QUICK_FAIL_LIMIT):
+                player.vc.finish()
+                await _settle()
+            return player
+
+        player = asyncio.run(scenario())
+        assert not player.songloop
+        assert "此歌曲無法正常播放，已關閉循環" in player.channel.sent
+        # 首播 + 失敗上限前的重播次數
+        assert len(player.vc.played) == MusicPlayer.QUICK_FAIL_LIMIT
+
+    def test_skip_vote_threshold_excludes_bots(self):
+        async def scenario():
+            members = [SimpleNamespace(bot=False), SimpleNamespace(bot=False), SimpleNamespace(bot=True)]
+            player = _make_player(FakeVoiceClient(members))
+            player.add_song(_song("a", requester_id=99))
+            await player.play_next()
+            return player.skip_song(SimpleNamespace(id=1))
+
+        # 2 位真人 → 門檻 2//3+1 = 1，一票即跳過
+        assert asyncio.run(scenario()).startswith("已達投票人數")
+
+
+# ─── Song.from_url 解析（mock 掉 yt-dlp 擷取） ───────────────────────────────────
+
+
+class TestSongFromUrlParsing:
+    def test_playlist_skips_broken_entries(self, monkeypatch):
+        playlist = {
+            "entries": [
+                None,
+                {"_type": "url", "url": "https://www.youtube.com/watch?v=aaa", "title": "A", "duration": 100},
+                {"_type": "url", "url": "https://www.youtube.com/watch?v=bbb", "title": "[Private video]"},
+                {"webpage_url": "https://www.youtube.com/watch?v=ccc", "title": "C", "url": "https://stream/ccc"},
+            ]
+        }
+
+        async def fake_extract(url, opts):
+            assert opts["extract_flat"] == "in_playlist"
+            assert opts["ignoreerrors"] is True
+            return playlist
+
+        monkeypatch.setattr(music_player, "_extract", fake_extract)
+        songs, skipped = asyncio.run(Song.from_url("https://www.youtube.com/playlist?list=PL1"))
+
+        assert [s.title for s in songs] == ["A", "C"]
+        assert skipped == 2
+        assert songs[0].source_path is None
+        assert songs[0].url == "https://www.youtube.com/watch?v=aaa"
+        assert songs[1].source_path == "https://stream/ccc"
+
+    def test_single_failure_raises_download_error(self, monkeypatch):
+        calls = []
+
+        async def fake_extract(url, opts):
+            calls.append(opts["ignoreerrors"])
+            if opts["ignoreerrors"]:
+                return None
+            raise yt_dlp.utils.DownloadError("ERROR: Video unavailable")
+
+        monkeypatch.setattr(music_player, "_extract", fake_extract)
+        with pytest.raises(yt_dlp.utils.DownloadError):
+            asyncio.run(Song.from_url("https://www.youtube.com/watch?v=zzz"))
+        assert calls == [True, False]
+
+
 # ─── Integration tests（實際網路擷取，驗證回傳資料結構） ────────────────────────
 #
 # 執行方式：
@@ -96,7 +375,8 @@ _DEFAULT_MIX_URL = (
 class TestSongFromUrlIntegration:
     def test_custom_url(self, request):
         """
-        使用 --url 傳入的網址擷取，驗證回傳的每首歌均有 title / source_path。
+        使用 --url 傳入的網址擷取，驗證回傳的每首歌均有 title / url。
+        歌單為 flat 擷取，source_path 可能為 None（播放時才取串流）。
 
         若未傳入 --url，此測試會自動跳過。
         """
@@ -104,22 +384,19 @@ class TestSongFromUrlIntegration:
         if not url:
             pytest.skip("未傳入 --url，跳過自訂網址測試")
 
-        songs = asyncio.run(Song.from_url(url))
+        songs, skipped = asyncio.run(Song.from_url(url))
 
         assert songs, f"擷取失敗，回傳空清單（網址：{url}）"
         for song in songs:
             assert song.title, "title 不應為空"
-            assert song.url, "url 不應為空"
-            assert song.source_path.startswith("http"), (
-                f"source_path 應為 HTTP URL，實際為：{song.source_path!r}"
-            )
+            assert song.url.startswith("http"), f"url 應為 HTTP URL，實際為：{song.url!r}"
             assert song.duration is None or isinstance(song.duration, (int, float)), (
                 f"duration 型態錯誤：{type(song.duration)}"
             )
 
         # 印出結果，方便人工確認
         print(f"\n擷取網址：{url}")
-        print(f"共 {len(songs)} 首歌")
+        print(f"共 {len(songs)} 首歌，略過 {skipped} 首")
         for i, s in enumerate(songs, 1):
             duration_str = f"{int(s.duration)}s" if s.duration else "unknown"
             print(f"  {i}. [{duration_str}] {s.title}")
@@ -128,7 +405,7 @@ class TestSongFromUrlIntegration:
     def test_default_single_video(self, request):
         """單一影片網址應回傳 1 首歌，且基本欄位均有值。"""
         url = request.config.getoption("--url") or _DEFAULT_SINGLE_URL
-        songs = asyncio.run(Song.from_url(url))
+        songs, _ = asyncio.run(Song.from_url(url))
 
         assert songs, f"擷取失敗，回傳空清單（網址：{url}）"
         song = songs[0]
@@ -142,18 +419,26 @@ class TestSongFromUrlIntegration:
         """歌單或搜尋語法應回傳多首歌，每首均有基本欄位。"""
         # --url 若傳入則同時作為歌單測試，否則用預設搜尋語法
         url = request.config.getoption("--url") or _DEFAULT_PLAYLIST_URL
-        songs = asyncio.run(Song.from_url(url))
+        songs, _ = asyncio.run(Song.from_url(url))
 
         assert len(songs) >= 1
         for song in songs:
             assert song.title
-            assert song.source_path.startswith("http")
+            assert song.url.startswith("http")
+
+    def test_playlist_entry_stream_resolved_on_play(self, request):
+        """flat 項目沒有 source_path，播放前應能由 _fetch_fresh_stream 取得串流。"""
+        url = request.config.getoption("--url") or _DEFAULT_PLAYLIST_URL
+        songs, _ = asyncio.run(Song.from_url(url))
+
+        source_path, _ = asyncio.run(songs[0]._fetch_fresh_stream())
+        assert source_path and source_path.startswith("http")
 
     def test_youtube_mix_strips_radio_params(self, request):
         """YouTube Mix (list=RD*) 應自動去除電台參數後擷取。"""
         url = request.config.getoption("--url") or _DEFAULT_MIX_URL
-        songs = asyncio.run(Song.from_url(url))
+        songs, _ = asyncio.run(Song.from_url(url))
 
         assert songs, f"擷取失敗（網址：{url}）"
         for song in songs:
-            assert song.source_path.startswith("http")
+            assert song.url.startswith("http")
