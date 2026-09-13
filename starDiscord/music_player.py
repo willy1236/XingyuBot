@@ -11,6 +11,7 @@ from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 import discord
 import yt_dlp as youtube_dl
+from discord.voice.client import VoiceClient
 
 from starlib import BotEmbed
 from starlib.exceptions import MusicPlayingError
@@ -18,6 +19,20 @@ from starlib.exceptions import MusicPlayingError
 log = logging.getLogger(__name__)
 
 youtube_dl.utils.bug_reports_message = lambda before=";": ""
+
+
+def _patched_remove_ssrc(self: VoiceClient, *, user_id: int) -> None:
+    # py-cord 2.8.1 bug：未錄音時 _reader 是 MISSING，原版直接存取 speaking_timer 會拋 AttributeError，
+    # 使語音 websocket 收訊迴圈靜默中止，之後 DAVE 金鑰無法更新，bot 送出的聲音全被丟棄。
+    # 觸發條件：曾說過話的成員離開語音頻道。上游修正後即可移除。
+    ssrc = self._id_to_ssrc.pop(user_id, None)
+    if ssrc:
+        if self._reader:
+            self._reader.speaking_timer.drop_ssrc(ssrc)
+        self._ssrc_to_id.pop(ssrc, None)
+
+
+VoiceClient._remove_ssrc = _patched_remove_ssrc
 
 _USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
 
