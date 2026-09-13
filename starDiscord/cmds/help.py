@@ -14,9 +14,9 @@ info_data = {
     "vpn": "vpn | vpn列表\nRadmin VPN\n名稱：`willy1236_1` 密：`123456987` | 一號房間\n\nzerotier\nID：`b15644912ed8306b` | 一號房間\n- 申請進入zerotier的房間後需要管理員或機器人幫你認證喔\n- 如有需要列在此表上請聯絡擁有者\n- 請記得完成改名與登記資料，以免大家不知道你是誰",
     "vpn01": "vpn01 | vpn安裝教學\n### Window版：Radmin VPN\n1. 下載Radmin VPN\nhttps://www.radmin-vpn.com/tw/\n2. 選擇 加入網路 並輸入名稱及密碼（如果不知道要輸入什麼可以使用`/info vpn`查詢）\n3. 記得 改名 讓大家知道你是誰\n4. 回到Discord輸入`/game radmin`登記你的相關資料\n\n### MacOS/Window版：Netbird\n1. 下載Netbird並安裝\nhttps://app.netbird.io/install \n2. 回到dc輸入指令`/遊戲資料 註冊netbird`取得設置密鑰\n3. 打開終端機輸入設定指令或下載並執行提供的.bat檔\n4. 看到畫面上出現`connected`即完成，如果沒有出現可以輸入`netbird down`後再試一次\n\n### 舊版：Zerotier\n1. 下載Zerotier並安裝\nhttps://www.zerotier.com/download/\n2. 右下角小工具中找到zerotier並右鍵點擊\n3. 選擇Join New Network\n4. 輸入房間ID\n5. 回到右下角小工具，再次點擊右鍵開啟選單，點擊My Adderess: ... 複製Adderess\n6. 回到Discord輸入`/game zerotier`打上得到的Adderess\n\nIP依據開伺服器的方式不同分為\n區域網: xxx.xxx.xxx.xxx:ooooo\n伺服器: xxx.xxx.xxx.xxx\nx:開地圖的人的IP（VPN的IP）\no:公開至區網時會顯示的連接埠數字\n如果埠號為25565（Minecraft預設）則可以省略，伺服器不用連接埠數字同理，但若伺服器不是開在25565上一樣需要輸入數字喔",
     "share": "雲端共用資料夾 | 94共用啦\n可以在這裡下載或共用檔案\n請使用/drive或洽威立以取得雲端權限",
-    "mc": "總表 | mc可用選項\nmc01 | minecraft資料夾\nmc02 | 如何裝模組",
-    "mc01": "mc01 | minecraft資料夾\n資料夾開啟方式\n法1：\n在minecraft的選項中開啟 資源包\n選擇 開啟資料包資料夾\n法2：\n按下Ctrl+r 輸入 %AppData% 按確認\n選擇.minecraft\n\n資料夾名稱\nsaves 單人地圖存檔\nresourcepacks 資源包存檔\nscreenshots F2截圖圖片",
-    "mc02": "mc02 | 如何裝模組\n被你發現我還沒打內容了w\n既然你這麼想知道的話\nhttps://youtu.be/8gYBo_vcZFs",
+    "mc": "總表 | mc可用選項\nmc01 | Prism Launcher\nmc02 | minecraft資料夾",
+    "mc01": "mc01 | Prism Launcher\n下載網址：https://prismlauncher.org/download/windows/\n若不知道要選哪個版本就選第一個（x86-64 Windows的.exe）\n\n要玩模組：\n模組安裝包通常放在雲端共用資料夾中，使用/drive取得權限後下載\n下載後在Prism Launcher中新增實例，選擇匯入，選擇下載的zip檔案即可\n\n要玩原版：\n在Prism Launcher中選擇新增實例，選擇原版版本即可\n\n連線方式：\n須設定Radmin VPN或Netbird，並取得IP後才能連線，安裝方式與房間請查看/info的vpn選項",
+    "mc02": "mc02 | minecraft資料夾\n資料夾開啟方式\n法1：\n在minecraft的選項中開啟 資源包\n選擇 開啟資料包資料夾\n法2：\n按下Ctrl+r 輸入 %AppData% 按確認\n選擇.minecraft\n\n資料夾名稱\nsaves 單人地圖存檔\nresourcepacks 資源包存檔\nscreenshots F2截圖圖片",
     "trpg01": "trpg01 | 參加房間\nhttps://trpgline.com/zh-TW/admin\n房間管理->參與房間->輸入房號與密碼",
     "trpg02": "trpg02 | 放入角色\n左邊五個按鈕 選擇物件控制台 -> 點+ -> 新物件 -> 收藏夾 -> 選擇角色匯入物件\n右方點擊自己的齒輪 -> 操作角色 -> 選擇角色 -> 最後將角色拖到地圖上",
 }
