@@ -59,6 +59,9 @@ logging.getLogger("starlib").setLevel(log_level)
 logging.getLogger("starServer.twitch_chatbot").setLevel(log_level)
 logging.getLogger("starServer.bot_website").setLevel(log_level)
 logging.getLogger("py.warnings").setLevel(logging.ERROR)
+# 暫時：追查音樂播放沒有聲音的問題，查完移除
+logging.getLogger("discord.voice").setLevel(logging.DEBUG)
+logging.getLogger("discord.player").setLevel(logging.DEBUG)
 
 from starDiscord import DiscordBot
 from starlib import sclient
