@@ -31,7 +31,6 @@ _BASE_YTDL_OPTIONS = {
     "default_search": "auto",
     "source_address": "0.0.0.0",
     "extractor_retries": 3,
-    "playlistend": 200,
     "socket_timeout": 15,
     "http_headers": {
         "User-Agent": _USER_AGENT,
