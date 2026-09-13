@@ -59,6 +59,7 @@ logging.getLogger("starlib").setLevel(log_level)
 logging.getLogger("starServer.twitch_chatbot").setLevel(log_level)
 logging.getLogger("starServer.bot_website").setLevel(log_level)
 logging.getLogger("py.warnings").setLevel(logging.ERROR)
+logging.getLogger("discord").setLevel(logging.WARNING)
 
 from starDiscord import DiscordBot
 from starlib import sclient
