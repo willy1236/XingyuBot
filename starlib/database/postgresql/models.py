@@ -68,6 +68,52 @@ class NetBirdBinding(UsersSchema, table=True):
     updated_at: datetime | None = Field(sa_column=Column(TIMESTAMP(True, 0)))
 
 
+class MusicPlaylist(UsersSchema, table=True):
+    """使用者的個人歌單，綁定 CloudUser 讓多個 Discord 帳號共用"""
+
+    __tablename__ = "music_playlist"
+
+    id: int = Field(sa_column=Column(Integer, Identity(), primary_key=True))
+    user_id: int = Field(foreign_key="users.cloud_user.id", index=True)
+    name: str = Field(sa_column=Column(String, nullable=False))
+    created_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0), server_default=text("now()")), default_factory=lambda: nowtz())
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "name", name="unique_user_playlist_name"),
+        {**UsersSchema.__table_args__},
+    )
+
+
+class MusicPlaylistSource(UsersSchema, table=True):
+    """歌單匯入過的外部歌單，/playlist sync 時依此重新擷取"""
+
+    __tablename__ = "music_playlist_source"
+
+    id: int = Field(sa_column=Column(Integer, Identity(), primary_key=True))
+    playlist_id: int = Field(sa_column=Column(Integer, ForeignKey("users.music_playlist.id", ondelete="CASCADE"), index=True, nullable=False))
+    url: str = Field(sa_column=Column(String, nullable=False))
+    title: str | None = Field(sa_column=Column(String))
+    synced_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0), server_default=text("now()")), default_factory=lambda: nowtz())
+
+    __table_args__ = (
+        UniqueConstraint("playlist_id", "url", name="unique_playlist_source_url"),
+        {**UsersSchema.__table_args__},
+    )
+
+
+class MusicPlaylistSong(UsersSchema, table=True):
+    __tablename__ = "music_playlist_song"
+
+    id: int = Field(sa_column=Column(Integer, Identity(), primary_key=True))
+    playlist_id: int = Field(sa_column=Column(Integer, ForeignKey("users.music_playlist.id", ondelete="CASCADE"), index=True, nullable=False))
+    # 來自外部歌單的歌曲；手動加入的單曲為 None
+    source_id: int | None = Field(sa_column=Column(Integer, ForeignKey("users.music_playlist_source.id", ondelete="SET NULL"), index=True))
+    position: int = Field(sa_column=Column(Integer, nullable=False))
+    url: str = Field(sa_column=Column(String, nullable=False))
+    title: str = Field(sa_column=Column(String, nullable=False))
+    duration: int | None = Field(sa_column=Column(Integer))
+
+
 class DiscordUser(DiscordUsersSchema, table=True):
     __tablename__ = "user_discord"
 

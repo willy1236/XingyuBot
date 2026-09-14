@@ -1,5 +1,6 @@
 import logging
 import secrets
+from collections import defaultdict, deque
 from collections.abc import Callable, Generator
 from datetime import date, datetime, time, timedelta, timezone
 from ipaddress import IPv4Network
@@ -1482,6 +1483,140 @@ class GuildSettingRepository(BaseRepository):
         return list(result) if result else []
 
 
+class MusicPlaylistRepository(BaseRepository):
+    def get_music_playlists(self, user_id: int) -> list[MusicPlaylist]:
+        stmt = select(MusicPlaylist).where(MusicPlaylist.user_id == user_id).order_by(MusicPlaylist.id)
+        return list(self.session.exec(stmt).all())
+
+    def get_music_playlist(self, user_id: int, name: str) -> MusicPlaylist | None:
+        stmt = select(MusicPlaylist).where(MusicPlaylist.user_id == user_id, MusicPlaylist.name == name)
+        return self.session.exec(stmt).one_or_none()
+
+    def get_music_playlist_song_counts(self, user_id: int) -> dict[int, int]:
+        """取得使用者每個歌單的歌曲數（playlist_id → 數量）"""
+        stmt = (
+            select(MusicPlaylistSong.playlist_id, func.count())
+            .join(MusicPlaylist, MusicPlaylist.id == MusicPlaylistSong.playlist_id)
+            .where(MusicPlaylist.user_id == user_id)
+            .group_by(MusicPlaylistSong.playlist_id)
+        )
+        return {playlist_id: count for playlist_id, count in self.session.exec(stmt).all()}
+
+    def create_music_playlist(self, user_id: int, name: str) -> MusicPlaylist:
+        playlist = MusicPlaylist(user_id=user_id, name=name)
+        self.add(playlist)
+        return playlist
+
+    def delete_music_playlist(self, playlist_id: int):
+        self.session.exec(delete(MusicPlaylistSong).where(MusicPlaylistSong.playlist_id == playlist_id))
+        self.session.exec(delete(MusicPlaylistSource).where(MusicPlaylistSource.playlist_id == playlist_id))
+        self.session.exec(delete(MusicPlaylist).where(MusicPlaylist.id == playlist_id))
+        self.commit()
+
+    def get_music_playlist_sources(self, playlist_id: int) -> list[MusicPlaylistSource]:
+        stmt = select(MusicPlaylistSource).where(MusicPlaylistSource.playlist_id == playlist_id).order_by(MusicPlaylistSource.id)
+        return list(self.session.exec(stmt).all())
+
+    def get_music_playlist_source(self, playlist_id: int, url: str) -> MusicPlaylistSource | None:
+        stmt = select(MusicPlaylistSource).where(MusicPlaylistSource.playlist_id == playlist_id, MusicPlaylistSource.url == url)
+        return self.session.exec(stmt).one_or_none()
+
+    def create_music_playlist_source(self, playlist_id: int, url: str, title: str | None) -> MusicPlaylistSource:
+        source = MusicPlaylistSource(playlist_id=playlist_id, url=url, title=title)
+        self.add(source)
+        return source
+
+    def replace_music_playlist_source_songs(self, source: MusicPlaylistSource, songs: list[tuple[str, str, int | None]], title: str | None = None) -> tuple[int, int]:
+        """
+        以新擷取的歌曲取代歌單中來自此來源的歌曲，放在該來源第一首原本的位置（已無該來源歌曲時接在尾端），手動加入的歌曲位置不變。
+
+        以網址逐一配對舊資料列：仍存在的歌沿用原本的資料列（只更新順序與標題），只有新歌才新增資料列，避免每次同步都消耗 id。
+        同一網址出現多次時依出現順序一對一配對。
+
+        :return: (新增數, 移除數)
+        """
+        current = self.get_music_playlist_songs(source.playlist_id)
+        remaining: dict[str, deque[MusicPlaylistSong]] = defaultdict(deque)
+        for song in current:
+            if song.source_id == source.id:
+                remaining[song.url].append(song)
+
+        new: list[MusicPlaylistSong] = []
+        added = 0
+        for url, song_title, duration in songs:
+            if remaining[url]:
+                song = remaining[url].popleft()
+                song.title = song_title
+                song.duration = duration
+            else:
+                song = MusicPlaylistSong(playlist_id=source.playlist_id, source_id=source.id, position=0, url=url, title=song_title, duration=duration)
+                added += 1
+            new.append(song)
+        stale = [song for rows in remaining.values() for song in rows]
+
+        ordered: list[MusicPlaylistSong] = []
+        inserted = False
+        for song in current:
+            if song.source_id == source.id:
+                if not inserted:
+                    ordered.extend(new)
+                    inserted = True
+                continue
+            ordered.append(song)
+        if not inserted:
+            ordered.extend(new)
+
+        try:
+            for song in stale:
+                self.session.delete(song)
+            for position, song in enumerate(ordered):
+                song.position = position
+                self.session.add(song)
+            source.synced_at = nowtz()
+            if title:
+                source.title = title
+            self.session.add(source)
+            self.session.commit()
+        except SQLAlchemyError:
+            log.exception("SQLAlchemy Replace Playlist Source Error")
+            self.session.rollback()
+            raise
+
+        return added, len(stale)
+
+    def get_music_playlist_songs(self, playlist_id: int) -> list[MusicPlaylistSong]:
+        stmt = select(MusicPlaylistSong).where(MusicPlaylistSong.playlist_id == playlist_id).order_by(MusicPlaylistSong.position)
+        return list(self.session.exec(stmt).all())
+
+    def count_music_playlist_songs(self, playlist_id: int) -> int:
+        stmt = select(func.count()).select_from(MusicPlaylistSong).where(MusicPlaylistSong.playlist_id == playlist_id)
+        return self.session.exec(stmt).one()
+
+    def add_music_playlist_songs(self, playlist_id: int, songs: list[tuple[str, str, int | None]], source_id: int | None = None):
+        """將歌曲 (url, title, duration) 依序接在歌單尾端；source_id 為歌曲來自的外部歌單"""
+        stmt = select(func.max(MusicPlaylistSong.position)).where(MusicPlaylistSong.playlist_id == playlist_id)
+        last_position = self.session.exec(stmt).one()
+        start = 0 if last_position is None else last_position + 1
+        self.batch_add(
+            [
+                MusicPlaylistSong(playlist_id=playlist_id, source_id=source_id, position=start + i, url=url, title=title, duration=duration)
+                for i, (url, title, duration) in enumerate(songs)
+            ]
+        )
+
+    def remove_music_playlist_song(self, playlist_id: int, index: int) -> MusicPlaylistSong | None:
+        """刪除歌單第 index 首（從 0 起算）並重新編排順序，回傳被刪除的歌曲"""
+        songs = self.get_music_playlist_songs(playlist_id)
+        if not 0 <= index < len(songs):
+            return None
+        removed = songs.pop(index)
+        self.session.delete(removed)
+        for position, song in enumerate(songs):
+            song.position = position
+        self.commit()
+        return removed
+
+
 class RuntimeConfigRepository(BaseRepository):
     @staticmethod
     def _get_bot_runtime_config_id(bot_code: str | int) -> int:
@@ -1621,6 +1756,7 @@ class SQLRepository(
     NetworkRepository,
     VIPRepository,
     GuildSettingRepository,
+    MusicPlaylistRepository,
     RuntimeConfigRepository,
     TestRepository,
 ):

@@ -4,6 +4,7 @@ import asyncio
 import io
 import logging
 import random
+from collections.abc import Awaitable, Callable
 from datetime import datetime
 from typing import TYPE_CHECKING
 
@@ -958,3 +959,66 @@ class RegisterView(discord.ui.View):
         from starDiscord.uiElement.modal import LinkAccountModal
 
         await interaction.response.send_modal(LinkAccountModal())
+
+
+class OwnerOnlyView(discord.ui.View):
+    """只允許發起者操作的 View，逾時後停用所有元件"""
+
+    def __init__(self, owner_id: int, timeout: float = 60):
+        super().__init__(timeout=timeout, disable_on_timeout=True)
+        self.owner_id = owner_id
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if interaction.user.id != self.owner_id:
+            await interaction.response.send_message("只有發起指令的人可以操作", ephemeral=True)
+            return False
+        return True
+
+
+class MusicPlaylistSelect(discord.ui.Select):
+    def __init__(self, options: list[discord.SelectOption]):
+        super().__init__(placeholder="選擇要播放的歌單", min_values=1, max_values=1, options=options)
+
+    async def callback(self, interaction: discord.Interaction):
+        view: MusicPlaylistSelectView = self.view
+        assert isinstance(self.values, list)
+        view.disable_all_items()
+        view.stop()
+        await view.on_select(interaction, int(self.values[0]))
+
+
+class MusicPlaylistSelectView(OwnerOnlyView):
+    """
+    個人歌單下拉選單
+    :param playlists: (歌單 id, 名稱, 歌曲數) 清單，最多 25 筆
+    :param on_select: 選擇後呼叫的 coroutine，參數為 (interaction, 歌單 id)
+    """
+
+    def __init__(self, owner_id: int, playlists: list[tuple[int, str, int]], on_select: Callable[[discord.Interaction, int], Awaitable[None]]):
+        super().__init__(owner_id)
+        self.on_select = on_select
+        options = [discord.SelectOption(label=name[:100], value=str(playlist_id), description=f"{count} 首") for playlist_id, name, count in playlists]
+        self.add_item(MusicPlaylistSelect(options))
+
+
+class ConfirmView(OwnerOnlyView):
+    """確認／取消按鈕，結果存於 self.confirmed"""
+
+    def __init__(self, owner_id: int, confirm_label: str = "確認"):
+        super().__init__(owner_id, timeout=30)
+        self.confirmed: bool | None = None
+        self.children[0].label = confirm_label
+
+    @discord.ui.button(label="確認", style=discord.ButtonStyle.danger)
+    async def confirm(self, button: discord.ui.Button, interaction: discord.Interaction):
+        self.confirmed = True
+        self.disable_all_items()
+        await interaction.response.edit_message(view=self)
+        self.stop()
+
+    @discord.ui.button(label="取消", style=discord.ButtonStyle.secondary)
+    async def cancel(self, button: discord.ui.Button, interaction: discord.Interaction):
+        self.confirmed = False
+        self.disable_all_items()
+        await interaction.response.edit_message(view=self)
+        self.stop()

@@ -5,6 +5,7 @@ import logging
 import random
 import time
 import wave
+from dataclasses import dataclass
 from datetime import datetime
 from typing import TYPE_CHECKING
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
@@ -189,13 +190,24 @@ class Song:
 
         :return: (歌曲清單, 因無法播放而略過的數量)
         """
+        result = await cls.extract(url, requester=requester)
+        return result.songs, result.skipped
+
+    @classmethod
+    async def extract(cls, url: str, *, requester: discord.Member = None) -> "ExtractResult":
+        """同 from_url，另外帶出網址是否為歌單及其正規化網址與名稱。"""
         url = _strip_radio_params(url)
         results = await _extract(url, _ytdl_options(url, flat=True, ignoreerrors=True))
         if results is None:
             # ignoreerrors 會吞掉單曲失敗的原因，改用嚴格模式重抓讓 DownloadError 帶出錯誤訊息
             results = await _extract(url, _ytdl_options(url, flat=True))
         if not results:
-            return [], 0
+            return ExtractResult([], 0)
+
+        playlist_url = playlist_title = None
+        if results.get("_type") == "playlist":
+            playlist_url = results.get("webpage_url") or url
+            playlist_title = results.get("title")
 
         entries = results["entries"] if "entries" in results else [results]
         songs: list[Song] = []
@@ -231,7 +243,16 @@ class Song:
                 )
             )
 
-        return songs, skipped
+        return ExtractResult(songs, skipped, playlist_url, playlist_title)
+
+
+@dataclass
+class ExtractResult:
+    songs: list[Song]
+    skipped: int
+    # 網址為歌單時的正規化網址與歌單名稱；單曲為 None
+    playlist_url: str | None = None
+    playlist_title: str | None = None
 
 
 class LoopMode(enum.Enum):
