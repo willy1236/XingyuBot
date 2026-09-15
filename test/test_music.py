@@ -508,6 +508,32 @@ class TestSongFromUrlParsing:
             asyncio.run(Song.from_url("https://www.youtube.com/watch?v=zzz"))
         assert calls == [True, False]
 
+    def test_fresh_stream_fills_missing_title_and_duration(self, monkeypatch):
+        url = "https://www.bilibili.com/video/BV1xx"
+
+        async def fake_extract(u, opts):
+            return {"title": "真標題", "duration": 180, "url": "https://stream/x"}
+
+        monkeypatch.setattr(music_player, "_extract", fake_extract)
+        song = Song(url, None, url)
+        asyncio.run(song._fetch_fresh_stream())
+
+        assert song.title == "真標題"
+        assert song.duration == 180
+
+    def test_fresh_stream_keeps_existing_title_and_duration(self, monkeypatch):
+        url = "https://www.bilibili.com/video/BV1xx"
+
+        async def fake_extract(u, opts):
+            return {"title": "新標題", "duration": 180, "url": "https://stream/x"}
+
+        monkeypatch.setattr(music_player, "_extract", fake_extract)
+        song = Song(url, None, "原標題", duration=100)
+        asyncio.run(song._fetch_fresh_stream())
+
+        assert song.title == "原標題"
+        assert song.duration == 100
+
 
 # ─── Integration tests（實際網路擷取，驗證回傳資料結構） ────────────────────────
 #

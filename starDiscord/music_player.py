@@ -165,6 +165,11 @@ class Song:
                 info = next((e for e in info["entries"] if e), None)
             if info:
                 self.thumbnail = _thumbnail_from_info(info) or self.thumbnail
+                # flat 擷取（如 Bilibili 歌單）沒有標題與長度，播放前一併補上
+                if self.title == self.url and info.get("title"):
+                    self.title = info["title"]
+                if self.duration is None and info.get("duration"):
+                    self.duration = info["duration"]
                 source_path, headers = _extract_source_from_info(info)
                 if source_path:
                     return source_path, headers
