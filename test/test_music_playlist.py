@@ -259,7 +259,7 @@ class TestEnqueueAndPlay:
         async def scenario():
             vc = FakeVoiceClient()
             ctx = SimpleNamespace(channel=SimpleNamespace(send=_noop_send), guild=SimpleNamespace(id=1))
-            text = await music_cog._enqueue_and_play(vc, ctx, asyncio.get_running_loop(), songs, skipped)
+            text = await music_player.enqueue_and_play(vc, ctx, asyncio.get_running_loop(), songs, skipped)
             return vc, text
 
         return asyncio.run(scenario())
