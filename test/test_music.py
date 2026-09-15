@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 from types import SimpleNamespace
 
+import discord
 import pytest
 import yt_dlp
 
@@ -17,6 +18,7 @@ from starDiscord.music_player import (
     get_or_create_player,
     guild_playing,
 )
+from starDiscord.uiElement.music_panel import MusicPanelView
 from starlib.exceptions import MusicPlayingError
 
 # ─── format_seconds ───────────────────────────────────────────────────────────
@@ -371,6 +373,82 @@ class TestMusicPlayerPlayback:
         assert asyncio.run(scenario()).startswith("已達投票人數")
 
 
+# ─── 音樂控制面板（Components V2） ─────────────────────────────────────────────
+
+
+def _panel_items(view):
+    container = view.children[0]
+    return list(container.items), [item for item in view.walk_children() if isinstance(item, discord.ui.Button)]
+
+
+def _panel_text(view) -> str:
+    return "\n".join(item.content for item in view.walk_children() if isinstance(item, discord.ui.TextDisplay))
+
+
+class TestMusicPanel:
+    def test_section_with_thumbnail(self):
+        async def scenario():
+            player = _make_player()
+            song = _song("a")
+            song.thumbnail = "https://img/a"
+            player.add_song([song, _song("b")])
+            await player.play_next()
+            return MusicPanelView(1)
+
+        items, buttons = _panel_items(asyncio.run(scenario()))
+        assert isinstance(items[0], discord.ui.Section)
+        assert [b.label for b in buttons] == ["暫停", "跳過", "停止", "重新整理", "循環：關閉", "洗牌", "待播清單", "點歌", "我的歌單"]
+        assert not any(b.disabled for b in buttons)
+
+    def test_text_without_thumbnail_and_queue_preview(self):
+        async def scenario():
+            player = _make_player()
+            player.add_song([_song(t) for t in "abcdef"])
+            await player.play_next()
+            player.loop_mode = LoopMode.QUEUE
+            return MusicPanelView(1)
+
+        view = asyncio.run(scenario())
+        items, buttons = _panel_items(view)
+        assert isinstance(items[0], discord.ui.TextDisplay)
+        text = _panel_text(view)
+        assert "1. b" in text and "3. d" in text and "4. e" not in text
+        assert "共 5 首待播" in text
+        assert "循環：整張" in [b.label for b in buttons]
+
+    def test_no_player_shows_idle_panel(self):
+        async def scenario():
+            return MusicPanelView(1)
+
+        view = asyncio.run(scenario())
+        _, buttons = _panel_items(view)
+        assert [b.label for b in buttons] == ["點歌", "我的歌單", "重新整理"]
+        assert "目前沒有播放中的歌曲" in _panel_text(view)
+
+    def test_closed_player_shows_idle_panel(self):
+        async def scenario():
+            player = _make_player()
+            player.add_song(_song("a"))
+            await player.play_next()
+            view = MusicPanelView(1)
+            await player.close()
+            view.rebuild()
+            return view
+
+        _, buttons = _panel_items(asyncio.run(scenario()))
+        assert [b.label for b in buttons] == ["點歌", "我的歌單", "重新整理"]
+
+    def test_disable_all_items_reaches_nested_buttons(self):
+        async def scenario():
+            player = _make_player()
+            player.add_song(_song("a"))
+            await player.play_next()
+            return MusicPanelView(1).disable_all_items()
+
+        _, buttons = _panel_items(asyncio.run(scenario()))
+        assert buttons and all(b.disabled for b in buttons)
+
+
 # ─── Song.from_url 解析（mock 掉 yt-dlp 擷取） ───────────────────────────────────
 
 
@@ -398,6 +476,23 @@ class TestSongFromUrlParsing:
         assert songs[0].source_path is None
         assert songs[0].url == "https://www.youtube.com/watch?v=aaa"
         assert songs[1].source_path == "https://stream/ccc"
+
+    def test_thumbnail_from_entry(self, monkeypatch):
+        playlist = {
+            "entries": [
+                {"_type": "url", "url": "https://www.youtube.com/watch?v=aaa", "title": "A", "thumbnails": [{"url": "https://img/a-low"}, {"url": "https://img/a-high"}]},
+                {"webpage_url": "https://www.youtube.com/watch?v=bbb", "title": "B", "url": "https://stream/bbb", "thumbnail": "https://img/b"},
+                {"_type": "url", "url": "https://www.youtube.com/watch?v=ccc", "title": "C"},
+            ]
+        }
+
+        async def fake_extract(url, opts):
+            return playlist
+
+        monkeypatch.setattr(music_player, "_extract", fake_extract)
+        songs, _ = asyncio.run(Song.from_url("https://www.youtube.com/playlist?list=PL1"))
+
+        assert [s.thumbnail for s in songs] == ["https://img/a-high", "https://img/b", None]
 
     def test_single_failure_raises_download_error(self, monkeypatch):
         calls = []

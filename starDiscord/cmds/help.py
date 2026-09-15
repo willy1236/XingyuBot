@@ -115,6 +115,7 @@ class help(Cog_Extension):
             page[0].add_field(name="/stop", value="停止播放歌曲並讓機器人離開頻道", inline=False)
             page[0].add_field(name="/shuffle", value="隨機撥放", inline=False)
             page[0].add_field(name="/loop", value="循環歌曲", inline=False)
+            page[0].add_field(name="/music", value="開啟音樂控制面板，可點歌、播放個人歌單並用按鈕操作播放", inline=False)
             page.append(BotEmbed.simple("個人歌單（playlist）指令:", "歌單綁定帳號，同一帳號綁定的 Discord 帳號共用"))
             page[1].add_field(name="/playlist play [隨機]", value="從選單選擇歌單並播放", inline=False)
             page[1].add_field(name="/playlist create <歌單>", value="建立歌單", inline=False)

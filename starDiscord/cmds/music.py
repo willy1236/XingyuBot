@@ -1,10 +1,7 @@
 # type: ignore
 import math
-import random
-import re
 
 import discord
-import yt_dlp as youtube_dl
 from discord import OptionChoice
 from discord.commands import SlashCommandGroup
 from discord.ext import commands, pages
@@ -12,7 +9,7 @@ from discord.utils import format_dt
 
 from starlib import BotEmbed, sqldb
 from starlib.database import MusicPlaylist, MusicPlaylistSource
-from starlib.exceptions import MusicCommandError, MusicPlayingError
+from starlib.exceptions import MusicCommandError
 
 from ..checks import RegisteredContext, ensure_registered
 from ..extension import Cog_Extension
@@ -21,12 +18,16 @@ from ..music_player import (
     LoopMode,
     MusicPlayer,
     Song,
+    enqueue_and_play,
+    ensure_author_voice,
+    extract_songs,
     format_progress_bar,
     format_seconds,
-    get_or_create_player,
     get_player,
+    play_saved_playlist,
     recording_done,
 )
+from ..uiElement.music_panel import MusicPanelView
 from ..uiElement.view import ConfirmView, MusicPlaylistSelectView
 
 # 機器人不在語音頻道時，只有這些指令會自動加入
@@ -54,53 +55,6 @@ def _require_player(ctx: discord.ApplicationContext, *, need_playing: bool = Fal
     if not player or (need_playing and not player.nowplaying):
         raise MusicCommandError("目前沒有播放中的歌曲")
     return player
-
-
-async def _ensure_author_voice(voice_client: discord.VoiceClient | None, author: discord.Member, *, auto_join: bool) -> discord.VoiceClient:
-    """確認使用者跟機器人在同一語音頻道，機器人不在頻道且 auto_join 時自動加入。"""
-    if not voice_client:
-        if not auto_join:
-            raise MusicCommandError("機器人目前不在語音頻道")
-        if not author.voice:
-            raise MusicCommandError("請先連接到一個語音頻道")
-        return await author.voice.channel.connect(timeout=10, reconnect=False)
-    if not author.voice or voice_client.channel != author.voice.channel:
-        raise MusicCommandError("你必須要跟機器人在同一頻道才能使用指令")
-    return voice_client
-
-
-async def _extract_songs(url: str, requester: discord.Member) -> ExtractResult:
-    if url.startswith("https://open.spotify.com/"):
-        raise MusicCommandError("spotify目前不受支援")
-
-    try:
-        result = await Song.extract(url, requester=requester)
-    except youtube_dl.utils.DownloadError as e:
-        clean = re.sub(r"\x1b\[[0-9;]*m", "", str(e)).removeprefix("ERROR: ").strip()
-        raise MusicCommandError(clean or "不受支援的連結，請重新檢查網址是否正確") from e
-
-    if not result.songs:
-        raise MusicCommandError("歌曲擷取失敗，請重新檢查網址是否正確")
-    return result
-
-
-async def _enqueue_and_play(vc: discord.VoiceClient, ctx: discord.ApplicationContext, loop, songs: list[Song], skipped: int = 0) -> str:
-    """把歌曲加入伺服器佇列，沒在播放就開始播放，回傳給使用者的訊息。"""
-    player = get_or_create_player(vc, ctx, loop)
-
-    try:
-        player.add_song(songs)
-        if not vc.is_playing() and not vc.is_paused():
-            await player.play_next()
-    except MusicPlayingError:
-        raise
-    except Exception as e:
-        raise MusicCommandError(e) from e
-
-    text = f"加入歌單: {songs[0].title}" if len(songs) == 1 else f"**{len(songs)}** 首歌已加入歌單"
-    if skipped:
-        text += f"（已略過 {skipped} 首無法播放的歌曲）"
-    return text
 
 
 def _clean_playlist_name(name: str) -> str:
@@ -200,8 +154,8 @@ class music(Cog_Extension):
         if vc.is_recording():
             raise MusicCommandError("正在錄音時無法播放音樂")
 
-        result = await _extract_songs(url, ctx.author)
-        await ctx.respond(await _enqueue_and_play(vc, ctx, self.bot.loop, result.songs, result.skipped))
+        result = await extract_songs(url, ctx.author)
+        await ctx.respond(await enqueue_and_play(vc, ctx, self.bot.loop, result.songs, result.skipped))
 
     @commands.slash_command(description="跳過歌曲")
     @commands.guild_only()
@@ -283,6 +237,12 @@ class music(Cog_Extension):
         player.shuffle()
         await ctx.respond("歌單已隨機🔀")
 
+    @commands.slash_command(name="music", description="音樂控制面板")
+    @commands.guild_only()
+    async def music_panel(self, ctx: discord.ApplicationContext):
+        # 沒在播放也能開：面板只顯示點歌與個人歌單按鈕，語音頻道檢查交給各按鈕
+        await ctx.respond(view=MusicPanelView(ctx.guild.id))
+
     @play.before_invoke
     @skip.before_invoke
     @stop.before_invoke
@@ -295,7 +255,7 @@ class music(Cog_Extension):
     async def ensure_voice(self, ctx: discord.ApplicationContext):
         await ctx.defer()
         try:
-            await _ensure_author_voice(ctx.voice_client, ctx.author, auto_join=ctx.command.qualified_name in _AUTO_JOIN_COMMANDS)
+            await ensure_author_voice(ctx.voice_client, ctx.author, auto_join=ctx.command.qualified_name in _AUTO_JOIN_COMMANDS)
         except MusicCommandError as e:
             raise discord.ApplicationCommandInvokeError(e) from e
 
@@ -355,7 +315,7 @@ class music(Cog_Extension):
     ):
         name = _clean_playlist_name(name)
         await ctx.defer(ephemeral=True)
-        result = await _extract_songs(url, ctx.author)
+        result = await extract_songs(url, ctx.author)
         # 擷取成功後才建立歌單，避免連結無效時留下空歌單
         playlist = _get_or_create_playlist(ctx.cuser.id, name)
 
@@ -385,7 +345,7 @@ class music(Cog_Extension):
         lines = []
         for source in sources:
             try:
-                result = await _extract_songs(source.url, ctx.author)
+                result = await extract_songs(source.url, ctx.author)
             except MusicCommandError as e:
                 # 外部歌單被刪除或改為私人時保留舊的歌曲
                 lines.append(f"「{_source_name(source)}」同步失敗，保留原本的歌曲：{e.message}")
@@ -467,7 +427,7 @@ class music(Cog_Extension):
         async def on_select(interaction: discord.Interaction, playlist_id: int):
             await interaction.response.edit_message(content="載入歌單中…", view=view)
             try:
-                text = await self._play_saved_playlist(ctx, playlist_id, shuffle)
+                text = await play_saved_playlist(ctx, ctx.author, playlist_id, shuffle)
             except MusicCommandError as e:
                 await interaction.edit_original_response(content=str(e.message), view=None)
                 return
@@ -476,20 +436,6 @@ class music(Cog_Extension):
 
         view = MusicPlaylistSelectView(ctx.author.id, [(p.id, p.name, counts.get(p.id, 0)) for p in playlists], on_select)
         await ctx.respond("選擇要播放的歌單", view=view, ephemeral=True)
-
-    async def _play_saved_playlist(self, ctx: discord.ApplicationContext, playlist_id: int, shuffle: bool) -> str:
-        rows = sqldb.get_music_playlist_songs(playlist_id)
-        if not rows:
-            raise MusicCommandError("這個歌單還沒有歌曲")
-
-        vc = await _ensure_author_voice(ctx.guild.voice_client, ctx.author, auto_join=True)
-        if vc.is_recording():
-            raise MusicCommandError("正在錄音時無法播放音樂")
-
-        songs = [Song(row.url, None, row.title, requester=ctx.author, duration=row.duration) for row in rows]
-        if shuffle:
-            random.shuffle(songs)
-        return await _enqueue_and_play(vc, ctx, self.bot.loop, songs)
 
 
 def setup(bot):

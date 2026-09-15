@@ -3,6 +3,7 @@ import concurrent.futures
 import enum
 import logging
 import random
+import re
 import time
 import wave
 from dataclasses import dataclass
@@ -14,8 +15,8 @@ import discord
 import yt_dlp as youtube_dl
 from discord.voice.client import VoiceClient
 
-from starlib import BotEmbed
-from starlib.exceptions import MusicPlayingError
+from starlib import BotEmbed, sqldb
+from starlib.exceptions import MusicCommandError, MusicPlayingError
 
 log = logging.getLogger(__name__)
 
@@ -126,6 +127,14 @@ def _extract_source_from_info(info: dict) -> tuple[str | None, dict]:
     return source_path, headers
 
 
+def _thumbnail_from_info(info: dict) -> str | None:
+    """取出封面縮圖網址；flat 項目只有 thumbnails 清單，取最後一張（解析度最高）。"""
+    if thumbnail := info.get("thumbnail"):
+        return thumbnail
+    thumbnails = [t for t in info.get("thumbnails") or [] if isinstance(t, dict) and t.get("url")]
+    return thumbnails[-1]["url"] if thumbnails else None
+
+
 class Song:
     def __init__(
         self,
@@ -135,6 +144,7 @@ class Song:
         requester: discord.Member = None,
         headers: dict | None = None,
         duration: int | None = None,
+        thumbnail: str | None = None,
     ):
         self.url = url  # webpage_url — 用來顯示及重新擷取
         self.source_path = source_path  # 最後一次取到的串流 URL（快取）；歌單 flat 擷取時為 None
@@ -142,6 +152,7 @@ class Song:
         self.requester = requester
         self.headers = headers or {}
         self.duration = duration
+        self.thumbnail = thumbnail  # 封面縮圖網址；從 DB 歌單載入時為 None，播放前重新擷取時補上
 
     async def _fetch_fresh_stream(self) -> tuple[str | None, dict]:
         """
@@ -153,6 +164,7 @@ class Song:
             if info and "entries" in info:
                 info = next((e for e in info["entries"] if e), None)
             if info:
+                self.thumbnail = _thumbnail_from_info(info) or self.thumbnail
                 source_path, headers = _extract_source_from_info(info)
                 if source_path:
                     return source_path, headers
@@ -240,6 +252,7 @@ class Song:
                     requester=requester,
                     headers=headers,
                     duration=entry.get("duration"),
+                    thumbnail=_thumbnail_from_info(entry),
                 )
             )
 
@@ -528,6 +541,69 @@ def get_or_create_player(vc: discord.VoiceClient, ctx: discord.ApplicationContex
         player = MusicPlayer(vc, ctx, loop)
         guild_playing[guildid] = player
     return player
+
+
+async def extract_songs(url: str, requester: discord.Member) -> ExtractResult:
+    if url.startswith("https://open.spotify.com/"):
+        raise MusicCommandError("spotify目前不受支援")
+
+    try:
+        result = await Song.extract(url, requester=requester)
+    except youtube_dl.utils.DownloadError as e:
+        clean = re.sub(r"\x1b\[[0-9;]*m", "", str(e)).removeprefix("ERROR: ").strip()
+        raise MusicCommandError(clean or "不受支援的連結，請重新檢查網址是否正確") from e
+
+    if not result.songs:
+        raise MusicCommandError("歌曲擷取失敗，請重新檢查網址是否正確")
+    return result
+
+
+async def enqueue_and_play(vc: discord.VoiceClient, ctx: discord.ApplicationContext | discord.Interaction, loop, songs: list[Song], skipped: int = 0) -> str:
+    """把歌曲加入伺服器佇列，沒在播放就開始播放，回傳給使用者的訊息。ctx 只用到 channel 與 guild，也可傳 Interaction。"""
+    player = get_or_create_player(vc, ctx, loop)
+
+    try:
+        player.add_song(songs)
+        if not vc.is_playing() and not vc.is_paused():
+            await player.play_next()
+    except MusicPlayingError:
+        raise
+    except Exception as e:
+        raise MusicCommandError(e) from e
+
+    text = f"加入歌單: {songs[0].title}" if len(songs) == 1 else f"**{len(songs)}** 首歌已加入歌單"
+    if skipped:
+        text += f"（已略過 {skipped} 首無法播放的歌曲）"
+    return text
+
+
+async def play_saved_playlist(ctx: discord.ApplicationContext | discord.Interaction, member: discord.Member, playlist_id: int, shuffle: bool) -> str:
+    """把個人歌單整份加入佇列並播放，機器人不在語音頻道時自動加入。"""
+    rows = sqldb.get_music_playlist_songs(playlist_id)
+    if not rows:
+        raise MusicCommandError("這個歌單還沒有歌曲")
+
+    vc = await ensure_author_voice(ctx.guild.voice_client, member, auto_join=True)
+    if vc.is_recording():
+        raise MusicCommandError("正在錄音時無法播放音樂")
+
+    songs = [Song(row.url, None, row.title, requester=member, duration=row.duration) for row in rows]
+    if shuffle:
+        random.shuffle(songs)
+    return await enqueue_and_play(vc, ctx, asyncio.get_running_loop(), songs)
+
+
+async def ensure_author_voice(voice_client: discord.VoiceClient | None, author: discord.Member, *, auto_join: bool) -> discord.VoiceClient:
+    """確認使用者跟機器人在同一語音頻道，機器人不在頻道且 auto_join 時自動加入。"""
+    if not voice_client:
+        if not auto_join:
+            raise MusicCommandError("機器人目前不在語音頻道")
+        if not author.voice:
+            raise MusicCommandError("請先連接到一個語音頻道")
+        return await author.voice.channel.connect(timeout=10, reconnect=False)
+    if not author.voice or voice_client.channel != author.voice.channel:
+        raise MusicCommandError("你必須要跟機器人在同一頻道才能使用指令")
+    return voice_client
 
 
 def format_seconds(total_seconds: int | None) -> str:
