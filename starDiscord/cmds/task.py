@@ -8,10 +8,12 @@ import nmap
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.date import DateTrigger
 from discord.ext import commands, tasks
+from pydantic import ValidationError
 from requests.exceptions import ConnectTimeout, RequestException
 
 from starlib import Jsondb, sclient, sqldb, utils
 from starlib.database import APIType, DBCacheType, NotifyChannelType, NotifyCommunityType, UserIPDetails, UsersCountRecord, VoiceTime
+from starlib.exceptions import APINetworkError
 from starlib.instance import *
 from starlib.providers.social.models import YoutubeVideo
 
@@ -162,8 +164,13 @@ class task(Cog_Extension):
             data = apexapi.get_map_rotation()
             if data:
                 await self.bot.edit_notify_channel(data.embeds(), NotifyChannelType.ApexRotation)
-        except RequestException:
-            log.exception("apex_map_rotation error")
+        except APINetworkError as e:
+            if e.status_code == 429:
+                log.warning("apex_map_rotation rate limited")
+            else:
+                log.exception("apex_map_rotation error")
+        except ValidationError as e:
+            log.warning("apex_map_rotation 回應格式不符", extra={"error": str(e)})
 
     async def twitch_live(self):
         log.debug("twitch_live start")
@@ -455,9 +462,14 @@ async def refresh_yt_push():
     # TODO: 改用 WebSubInstance統一處理
     for record in sclient.sqldb.get_expiring_push_records():
         # TODO: 需要處理 secret
-        yt_push.add_push(record.channel_id, config.callback_uri, config.hub_secret)
+        if not yt_push.add_push(record.channel_id, config.callback_uri, config.hub_secret):
+            continue
         await asyncio.sleep(3)
-        data = yt_push.get_push(record.channel_id, config.callback_uri, config.hub_secret)
+        try:
+            data = yt_push.get_push(record.channel_id, config.callback_uri, config.hub_secret)
+        except APINetworkError:
+            log.warning("refresh_yt_push: 查詢訂閱狀態失敗", extra={"channel_id": record.channel_id}, exc_info=True)
+            continue
 
         if data and data.has_verify:
             record.push_at = data.last_successful_verification

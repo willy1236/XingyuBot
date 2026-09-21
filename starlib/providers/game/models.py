@@ -775,9 +775,9 @@ class RotationType(BaseModel):
 
 
 class ApexMapRotation(BaseModel):
-    battle_royale: RotationType
+    battle_royale: RotationType | None = None
     ranked: RotationType | None = None
-    ltm: RotationType
+    ltm: RotationType | None = None
 
     def embeds(self):
         tl: dict = jdict["ApexMap"]
@@ -803,36 +803,38 @@ class ApexMapRotation(BaseModel):
             embed_rank.set_footer(text="更新時間")
             lst.append(embed_rank)
 
-        embed_battle_royale = BotEmbed.simple("Apex地圖：大逃殺")
-        embed_battle_royale.add_field(name="目前地圖", value=tl.get(self.battle_royale.current.map, self.battle_royale.current.map))
-        embed_battle_royale.add_field(name="開始時間", value=dc_time(self.battle_royale.current.start))
-        embed_battle_royale.add_field(name="結束時間", value=dc_time(self.battle_royale.current.end))
-        embed_battle_royale.add_field(name="下張地圖", value=tl.get(self.battle_royale.next.map, self.battle_royale.next.map))
-        embed_battle_royale.add_field(name="開始時間", value=dc_time(self.battle_royale.next.start))
-        embed_battle_royale.add_field(name="結束時間", value=dc_time(self.battle_royale.next.end))
-        embed_battle_royale.add_field(name="目前地圖剩餘時間", value=f"<t:{int(self.battle_royale.current.end.timestamp())}:R>")
-        embed_battle_royale.set_image(url=self.battle_royale.current.asset)
-        embed_battle_royale.timestamp = now
-        embed_battle_royale.set_footer(text="更新時間")
-        lst.append(embed_battle_royale)
+        if self.battle_royale is not None:
+            embed_battle_royale = BotEmbed.simple("Apex地圖：大逃殺")
+            embed_battle_royale.add_field(name="目前地圖", value=tl.get(self.battle_royale.current.map, self.battle_royale.current.map))
+            embed_battle_royale.add_field(name="開始時間", value=dc_time(self.battle_royale.current.start))
+            embed_battle_royale.add_field(name="結束時間", value=dc_time(self.battle_royale.current.end))
+            embed_battle_royale.add_field(name="下張地圖", value=tl.get(self.battle_royale.next.map, self.battle_royale.next.map))
+            embed_battle_royale.add_field(name="開始時間", value=dc_time(self.battle_royale.next.start))
+            embed_battle_royale.add_field(name="結束時間", value=dc_time(self.battle_royale.next.end))
+            embed_battle_royale.add_field(name="目前地圖剩餘時間", value=f"<t:{int(self.battle_royale.current.end.timestamp())}:R>")
+            embed_battle_royale.set_image(url=self.battle_royale.current.asset)
+            embed_battle_royale.timestamp = now
+            embed_battle_royale.set_footer(text="更新時間")
+            lst.append(embed_battle_royale)
 
-        embed_ltm = BotEmbed.simple(f"Apex地圖：限時模式")
-        embed_ltm.add_field(
-            name="目前地圖",
-            value=f"{event_tl.get(self.ltm.current.eventName, self.ltm.current.eventName)}：{tl.get(self.ltm.current.map, self.ltm.current.map)}",
-        )
-        embed_ltm.add_field(name="開始時間", value=dc_time(self.ltm.current.start))
-        embed_ltm.add_field(name="結束時間", value=dc_time(self.ltm.current.end))
-        embed_ltm.add_field(
-            name="下張地圖", value=f"{event_tl.get(self.ltm.next.eventName, self.ltm.next.eventName)}：{tl.get(self.ltm.next.map, self.ltm.next.map)}"
-        )
-        embed_ltm.add_field(name="開始時間", value=dc_time(self.ltm.next.start))
-        embed_ltm.add_field(name="結束時間", value=dc_time(self.ltm.next.end))
-        embed_ltm.add_field(name="目前地圖剩餘時間", value=f"<t:{int(self.ltm.current.end.timestamp())}:R>")
-        embed_ltm.set_image(url=self.ltm.current.asset)
-        embed_ltm.timestamp = now
-        embed_ltm.set_footer(text="更新時間")
-        lst.append(embed_ltm)
+        if self.ltm is not None:
+            embed_ltm = BotEmbed.simple(f"Apex地圖：限時模式")
+            embed_ltm.add_field(
+                name="目前地圖",
+                value=f"{event_tl.get(self.ltm.current.eventName, self.ltm.current.eventName)}：{tl.get(self.ltm.current.map, self.ltm.current.map)}",
+            )
+            embed_ltm.add_field(name="開始時間", value=dc_time(self.ltm.current.start))
+            embed_ltm.add_field(name="結束時間", value=dc_time(self.ltm.current.end))
+            embed_ltm.add_field(
+                name="下張地圖", value=f"{event_tl.get(self.ltm.next.eventName, self.ltm.next.eventName)}：{tl.get(self.ltm.next.map, self.ltm.next.map)}"
+            )
+            embed_ltm.add_field(name="開始時間", value=dc_time(self.ltm.next.start))
+            embed_ltm.add_field(name="結束時間", value=dc_time(self.ltm.next.end))
+            embed_ltm.add_field(name="目前地圖剩餘時間", value=f"<t:{int(self.ltm.current.end.timestamp())}:R>")
+            embed_ltm.set_image(url=self.ltm.current.asset)
+            embed_ltm.timestamp = now
+            embed_ltm.set_footer(text="更新時間")
+            lst.append(embed_ltm)
 
         return lst
 

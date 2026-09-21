@@ -175,7 +175,9 @@ class system_community(Cog_Extension):
         record = sclient.sqldb.get_push_record(ytchannel.id)
         if record.is_expired:
             config = sclient.sqldb.get_websub_config(APIType.Google, 4)
-            yt_push.add_push(ytchannel.id, config.callback_uri, config.hub_secret)
+            if not yt_push.add_push(ytchannel.id, config.callback_uri, config.hub_secret):
+                await ctx.send(embed=BotEmbed.simple("溫馨提醒", "目前無法向 YouTube 訂閱推播，請稍後再重新設定一次"))
+                return
             await asyncio.sleep(3)
             data = yt_push.get_push(ytchannel.id, config.callback_uri, config.hub_secret)
 

@@ -2,6 +2,7 @@ import json
 import logging
 import shutil
 import subprocess
+import time
 from collections.abc import Iterator
 from datetime import timezone
 from typing import TypeVar
@@ -260,28 +261,37 @@ class YoutubeRSS:
 
 class YoutubePush(APICaller):
     base_url = "https://pubsubhubbub.appspot.com"
+    push_retries = 3
 
     def __init__(self):
         super().__init__()
 
-    def add_push(self, channel_id: str, callback_url: str, secret: str = None):
-        try:
-            data = {
-                "hub.callback": callback_url,
-                "hub.topic": f"https://www.youtube.com/xml/feeds/videos.xml?channel_id={channel_id}",
-                "hub.verify": "async",
-                "hub.mode": "subscribe",
-                "hub.verify_token": None,
-                "hub.secret": secret,
-                "hub.lease_numbers": None,
-            }
-            header = {"Content-Type": "application/x-www-form-urlencoded"}
-            self._request("POST", "subscribe", data=data, headers=header)
-        except Exception as e:
-            log.exception(
-                "Push subscription error",
-                extra={"channel_id": channel_id, "callback_url": callback_url, "secret": secret},
-            )
+    def add_push(self, channel_id: str, callback_url: str, secret: str = None) -> bool:
+        """向 hub 送出訂閱請求，hub 暫時故障（5xx、連線錯誤）時重試，回傳是否成功"""
+        data = {
+            "hub.callback": callback_url,
+            "hub.topic": f"https://www.youtube.com/xml/feeds/videos.xml?channel_id={channel_id}",
+            "hub.verify": "async",
+            "hub.mode": "subscribe",
+            "hub.verify_token": None,
+            "hub.secret": secret,
+            "hub.lease_numbers": None,
+        }
+        header = {"Content-Type": "application/x-www-form-urlencoded"}
+        for attempt in range(self.push_retries):
+            try:
+                self._request("POST", "subscribe", data=data, headers=header, timeout=15)
+                return True
+            except APINetworkError as e:
+                retryable = e.status_code is None or e.status_code >= 500
+                if not retryable or attempt == self.push_retries - 1:
+                    log.warning(
+                        "Push subscription error",
+                        extra={"channel_id": channel_id, "callback_url": callback_url, "status_code": e.status_code, "attempts": attempt + 1},
+                    )
+                    return False
+                time.sleep(2 ** (attempt + 1))
+        return False
 
     def get_push(self, channel_id: str, callback_url: str, secret: str = None):
         params = {"hub.callback": callback_url, "hub.topic": f"https://www.youtube.com/xml/feeds/videos.xml?channel_id={channel_id}", "hub.secret": secret}

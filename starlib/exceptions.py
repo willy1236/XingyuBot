@@ -10,10 +10,6 @@
 - 1400: 請求相關錯誤
 """
 
-import logging
-
-log = logging.getLogger(__name__)
-
 
 class StarException(Exception):
     """
@@ -31,20 +27,6 @@ class StarException(Exception):
         self.message: str = message
         self.original: Exception | None = original
         self.original_message: str | None = original_message
-
-        # 自動記錄異常到日誌
-        self._log_exception()
-
-    def _log_exception(self):
-        """記錄異常到日誌系統"""
-        error_details = f"[{self.code}] {self.message}"
-
-        if self.original:
-            # 記錄異常及其堆棧追蹤
-            log.error("StarException occurred", extra={"error_details": error_details}, exc_info=self.original)
-        else:
-            # 未捕獲原始異常，記錄為警告
-            log.warning("StarException warning", extra={"error_details": error_details})
 
     def __repr__(self) -> str:
         if self.original_message:
@@ -74,6 +56,12 @@ class APINetworkError(ApiError):
     def __init__(self, message: str | None = None, original: Exception | None = None, original_message: str | None = None):
         full_message = f"調用 API 時發生Http請求錯誤{f'：{message}' if message else ''}"
         super().__init__(full_message, original, original_message)
+
+    @property
+    def status_code(self) -> int | None:
+        """HTTP 狀態碼，連線層級的錯誤（無回應）為 None"""
+        response = getattr(self.original, "response", None)
+        return getattr(response, "status_code", None)
 
 
 class CommandError(StarException):
