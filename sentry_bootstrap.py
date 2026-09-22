@@ -43,6 +43,11 @@ _SCRUB_KEYS = {
     "api_key",
 }
 
+_SCRUB_SUBSTRINGS = ("token", "secret", "password", "passwd", "api_key", "apikey", "api-key", "auth", "dsn")
+
+# 只截斷使用者附加資料中的長文字（如 Discord 訊息內容），不動事件本身的錯誤訊息與 breadcrumbs
+_TRUNCATE_SECTIONS = {"extra"}
+
 _SENTRY_INITIALIZED = False
 
 
@@ -100,27 +105,27 @@ def _read_float(key: str, default: float) -> float:
 
 def _is_sensitive_key(key: str) -> bool:
     key_lower = key.lower()
-    return key_lower in _SCRUB_KEYS or "token" in key_lower
+    return key_lower in _SCRUB_KEYS or any(part in key_lower for part in _SCRUB_SUBSTRINGS)
 
 
-def _sanitize_data(data: Any) -> Any:
+def _sanitize_data(data: Any, *, truncate: bool = False) -> Any:
     if isinstance(data, Mapping):
         sanitized: dict[str, Any] = {}
         for k, v in data.items():
             key = str(k)
             if _is_sensitive_key(key):
                 sanitized[key] = "[Filtered]"
-            elif key in {"content", "message", "text"} and isinstance(v, str):
+            elif truncate and key in {"content", "message", "text"} and isinstance(v, str):
                 sanitized[key] = v[:120]
             else:
-                sanitized[key] = _sanitize_data(v)
+                sanitized[key] = _sanitize_data(v, truncate=truncate or key in _TRUNCATE_SECTIONS)
         return sanitized
 
     if isinstance(data, list):
-        return [_sanitize_data(item) for item in data]
+        return [_sanitize_data(item, truncate=truncate) for item in data]
 
     if isinstance(data, tuple):
-        return tuple(_sanitize_data(item) for item in data)
+        return tuple(_sanitize_data(item, truncate=truncate) for item in data)
 
     return data
 
@@ -179,14 +184,14 @@ def capture_exception_safe(exc: Exception, *, tags: dict[str, str] | None = None
         return
 
     if tags or extras:
-        with sentry_sdk.push_scope() as scope:
+        with sentry_sdk.new_scope() as scope:
             for key, value in (tags or {}).items():
                 scope.set_tag(key, value)
             for key, value in (extras or {}).items():
                 if _is_sensitive_key(key):
                     scope.set_extra(key, "[Filtered]")
                 else:
-                    scope.set_extra(key, _sanitize_data(value))
+                    scope.set_extra(key, _sanitize_data(value, truncate=True))
             sentry_sdk.capture_exception(exc)
         return
 
