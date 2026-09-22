@@ -107,10 +107,10 @@ async def prase_yt_push(content: str):
             continue
 
         video = videos[0]
-        cache = sqldb.get_community_cache_with_default(NotifyCommunityType.Youtube, push_entry.yt_channelid)
         ytcache = sqldb.get_yt_cache(push_entry.yt_videoid)
-        if push_entry.published > cache.value or (ytcache is not None and video.snippet.liveBroadcastContent == "live"):
-            # 透過published的時間來判斷是否為新影片
+        # 透過published的時間原子地搶佔快取，避免與 RSS 輪詢重複通知同一部影片
+        claimed = sqldb.claim_community_cache(NotifyCommunityType.Youtube, push_entry.yt_channelid, push_entry.published)
+        if claimed or (ytcache is not None and video.snippet.liveBroadcastContent == "live"):
             log.info("New Youtube push entry %s created at %s", push_entry.yt_videoid, push_entry.published)
             no_mention = False
 
@@ -129,9 +129,6 @@ async def prase_yt_push(content: str):
                 # 已經結束的直播
                 log.info("Live video ended: %s at %s", video.id, video.liveStreamingDetails.actualEndTime)
                 no_mention = True
-
-            if push_entry.published > cache.value:
-                sqldb.set_community_cache(NotifyCommunityType.Youtube, push_entry.yt_channelid, push_entry.published)
 
             if sclient.bot:
                 sclient.bot.submit(

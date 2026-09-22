@@ -9,6 +9,7 @@ from typing import Literal, ParamSpec, TypeVar, overload
 import discord
 from google.oauth2.credentials import Credentials
 from sqlalchemy import Engine, and_, desc, func, not_, or_, text
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.engine import URL
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
@@ -1332,6 +1333,19 @@ class CacheRepository(BaseRepository):
             cache = CommunityCache(community_id=community_id, notify_type=type, value=value)
             self.session.merge(cache)
         self.session.commit()
+
+    def claim_community_cache(self, type: NotifyCommunityType, community_id: str, value: datetime) -> bool:
+        """僅在 value 比現有快取新時原子地更新快取，回傳是否搶佔成功（用於避免多個來源重複通知）"""
+        stmt = pg_insert(CommunityCache).values(notify_type=type, community_id=community_id, value=value)
+        stmt = stmt.on_conflict_do_update(
+            index_elements=[CommunityCache.notify_type, CommunityCache.community_id],
+            set_={"value": stmt.excluded.value},
+            where=CommunityCache.value < stmt.excluded.value,
+        ).returning(CommunityCache.community_id)
+        # 驅動的 rowcount 不可靠（回傳 -1），改用 RETURNING 判斷是否有寫入
+        claimed = self.session.execute(stmt).first() is not None
+        self.session.commit()
+        return claimed
 
     def add_community_cache(self, type: NotifyCommunityType, community_id: str, value: datetime | None):
         """新增社群快取"""

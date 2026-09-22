@@ -45,7 +45,7 @@ class task(Cog_Extension):
             scheduler.add_job(self.earthquake_check, "interval", minutes=3, misfire_grace_time=60)
             scheduler.add_job(self.weather_warning_check, "interval", minutes=15, misfire_grace_time=120)
             # scheduler.add_job(self.typhoon_warning_check, "cron", minute="0/15", second=30, jitter=30, misfire_grace_time=40)
-            # scheduler.add_job(self.youtube_video, "interval", minutes=5, jitter=30, misfire_grace_time=40)
+            scheduler.add_job(self.youtube_video, "interval", minutes=5, jitter=30, misfire_grace_time=40)
             scheduler.add_job(self.twitch_live, "interval", minutes=4, misfire_grace_time=20)
             scheduler.add_job(self.twitch_video, "interval", minutes=10, misfire_grace_time=40)
             scheduler.add_job(self.twitch_clip, "interval", minutes=5, misfire_grace_time=40)
@@ -262,21 +262,26 @@ class task(Cog_Extension):
         if not caches:
             return
 
-        update_data: dict[str, datetime] = {}
         for ytchannel_id, cache in caches.items():
             # 抓取資料
-            rss_data = yt_rss.get_videos(ytchannel_id, cache.value)
+            rss_data = yt_rss.get_videos(ytchannel_id, cache.value if cache else None)
             if not rss_data:
                 continue
 
-            # 整理影片列表&儲存最後更新時間
+            # 由舊到新處理
             rss_data.reverse()
-            video_id_list = [d.yt_videoid for d in rss_data]
-            update_data[ytchannel_id] = rss_data[-1].uplood_at
+            api_videos = google_api.get_video([d.yt_videoid for d in rss_data]) or []
+            videos_dict = {video.id: video for video in api_videos}
 
-            api_videos = google_api.get_video(video_id_list)
-            # 發布通知
-            for video in api_videos:
+            for rss_video in rss_data:
+                video = videos_dict.get(rss_video.yt_videoid)
+                if not video:
+                    continue
+                # 原子地搶佔快取，web 推播已通知過的影片會在這裡被略過
+                if not sclient.sqldb.claim_community_cache(NotifyCommunityType.Youtube, ytchannel_id, rss_video.uplood_at):
+                    continue
+                log.info("youtube_video: RSS 補抓到新影片 %s", video.id)
+
                 if not _is_older_than_one_day(video.snippet.publishedAt):
                     embed = video.embed()
                     await self.bot.send_notify_communities(embed, NotifyCommunityType.Youtube, ytchannel_id, no_mention=video.is_live_end)
@@ -286,8 +291,6 @@ class task(Cog_Extension):
                     self.bot.scheduler.add_job(
                         youtube_start_live_notify, DateTrigger(video.liveStreamingDetails.scheduledStartTime + timedelta(seconds=30)), args=[self.bot, video]
                     )
-
-        sclient.sqldb.set_community_caches(NotifyCommunityType.Youtube, update_data)
 
     async def notify_twitter_tweet_updates(self):
         log.debug("notify_twitter_tweet_updates start")
