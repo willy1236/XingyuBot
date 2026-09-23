@@ -4,7 +4,7 @@ import hmac
 import html
 import logging
 import secrets
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import feedparser
@@ -220,7 +220,7 @@ async def oauth_discord(request: Request):
         response = RedirectResponse(f"{BASE_WWW_URL}/dashboard")
 
         # 產生 JWT（id 為站內 cloud_user.id，Discord 自己的 ID 另外放在 discord_id）
-        payload = {"id": cuser.id, "discord_id": user.id, "username": user.username, "avatar": user.avatar, "exp": datetime.now() + timedelta(days=7)}
+        payload = {"id": cuser.id, "discord_id": user.id, "username": user.username, "avatar": user.avatar, "exp": datetime.now(timezone.utc) + timedelta(days=7)}
         jwt_secret = SETTINGS.JWT_SECRET
         jwt_token = jwt.encode(payload, jwt_secret, algorithm="HS256")
 
