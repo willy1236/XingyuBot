@@ -308,31 +308,34 @@ class CurrencyRepository(BaseRepository):
         result = self.session.exec(stmt).one_or_none()
         return result if result is not None else UserPoint(discord_id=discord_id)
 
-    # def getif_coin(self,discord_id:int,amount:int,coin=Coins.Stardust) -> int | None:
-    #     """取得指定貨幣足夠的用戶
-    #     :return: 若足夠則回傳傳入的discord_id
-    #     """
-    #     coin = Coins(coin)
-    #     self.cursor.execute(f"USE `stardb_user`;")
-    #     self.cursor.execute(f'SELECT `discord_id` FROM `user_point` WHERE discord_id = %s AND `{coin.value}` >= %s;',(discord_id,amount))
-    #     records = self.cursor.fetchall()
-    #     if records:
-    #         return records[0].get("discord_id")
+    def transfer_scoin(self, giver_id: int, given_id: int, amount: int) -> str | None:
+        """轉移星塵
+        :param giver_id: 給予點數者
+        :param given_id: 被給予點數者
+        :param amount: 轉移的點數數量
+        :return: 成功回傳 None，失敗回傳錯誤訊息
+        """
+        session = self.session
+        try:
+            stmt = (
+                update(UserPoint)
+                .where(UserPoint.discord_id == giver_id, UserPoint.stardust >= amount)
+                .values(stardust=UserPoint.stardust - amount)
+            )
+            if session.exec(stmt).rowcount == 0:
+                session.rollback()
+                return "星塵不足"
 
-    # def transfer_scoin(self,giver_id:int,given_id:int,amount:int):
-    #     """轉移星幣
-    #     :param giver_id: 給予點數者
-    #     :param given_id: 被給予點數者
-    #     :param amount: 轉移的點數數量
-    #     """
-    #     records = self.getif_coin(giver_id,amount)
-    #     if records:
-    #         self.cursor.execute(f"UPDATE `user_point` SET scoin = scoin - %s WHERE discord_id = %s;",(amount,giver_id))
-    #         self.cursor.execute(f"INSERT INTO `user_point` SET discord_id = %s, scoin = %s ON DUPLICATE KEY UPDATE discord_id = %s, scoin = scoin + %s",(given_id,amount,given_id,amount))
-    #         self.connection.commit()
-    #         #self.cursor.execute(f"UPDATE `user_point` SET `point` = REPLACE(`欄位名`, '要被取代的欄位值', '取代後的欄位值') WHERE `欄位名` LIKE '%欄位值%';",(giver_id,amount))
-    #     else:
-    #         return "點數不足"
+            stmt = (
+                pg_insert(UserPoint)
+                .values(discord_id=given_id, stardust=amount)
+                .on_conflict_do_update(index_elements=[UserPoint.discord_id], set_={"stardust": UserPoint.stardust + amount})
+            )
+            session.exec(stmt)
+            session.commit()
+        except SQLAlchemyError:
+            session.rollback()
+            raise
 
     # def get_scoin_shop_item(self,item_uid:int):
     #     self.cursor.execute(f"SELECT * FROM `stardb_idbase`.`scoin_shop` WHERE `item_uid` = {item_uid};")

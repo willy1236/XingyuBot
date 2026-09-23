@@ -14,7 +14,7 @@ from fastapi.requests import Request
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response, StreamingResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from jose import jwt
-from linebot.v3 import WebhookHandler
+from linebot.v3 import WebhookParser
 from linebot.v3.exceptions import InvalidSignatureError
 from linebot.v3.messaging import ApiClient, Configuration, MessagingApi, ReplyMessageRequest, TextMessage
 from linebot.v3.webhooks import MessageEvent, TextMessageContent
@@ -38,7 +38,7 @@ BASE_WWW_URL = SETTINGS.BASE_WWW_URL
 BASE_DOMAIN = SETTINGS.BASE_DOMAIN
 
 configuration = Configuration(access_token=sqldb.get_access_token(APIType.Line).access_token)
-handler = WebhookHandler(sqldb.get_identifier_secret(APIType.Line).client_secret)
+parser = WebhookParser(sqldb.get_identifier_secret(APIType.Line).client_secret)
 
 app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
 log = logging.getLogger(__name__)
@@ -283,29 +283,23 @@ async def callback_linebot(request: Request, background_tasks: BackgroundTasks):
     # get request body as text
     body = await request.body()
     body = body.decode("UTF-8")
-    log.info("Request body: " + body)
 
-    # # handle webhook body
-    # try:
-    #     handler.handle(body, signature)
-    # except InvalidSignatureError:
-    #     web_log.info(f"{request.url.path}: Invalid signature. Please check your channel access token/channel secret.")
-    #     raise HTTPException(status_code=400, detail="Invalid signature")
     background_tasks.add_task(process_linebot_webhook, body, signature)
     return "OK"
 
 
-def process_linebot_webhook(body: str, signature: str):
+async def process_linebot_webhook(body: str, signature: str):
     """在背景任務中處理 LINE Bot webhook"""
     try:
-        handler.handle(body, signature)
+        for event in parser.parse(body, signature):
+            if isinstance(event, MessageEvent) and isinstance(event.message, TextMessageContent):
+                await handle_message(event)
     except InvalidSignatureError:
         log.error("Invalid signature in LINE Bot webhook")
     except Exception as e:
         capture_exception_safe(e, tags={"service": "website", "source": "linebot_webhook"})
         log.error(f"處理 LINE Bot 訊息時發生錯誤: {e}")
 
-@handler.add(MessageEvent, message=TextMessageContent)
 async def handle_message(event: MessageEvent):
     url = utils.check_url_format(event.message.text)
     if url:
@@ -322,11 +316,15 @@ async def handle_message(event: MessageEvent):
     else:
         text = "請提供一個有效的網址。"
 
+    await asyncio.to_thread(reply_line_message, event.reply_token, text)
+
+
+def reply_line_message(reply_token: str, text: str):
     with ApiClient(configuration) as api_client:
         line_bot_api = MessagingApi(api_client)
         line_bot_api.reply_message_with_http_info(
             ReplyMessageRequest(
-                reply_token=event.reply_token,
+                reply_token=reply_token,
                 messages=[TextMessage(text=text)],
             )
         )
