@@ -21,7 +21,7 @@ safety_settings = [
 
 provider = GoogleProvider(api_key=sqldb.get_access_token(APIType.Google, 5).access_token)
 model_settings = GoogleModelSettings(gemini_safety_settings=safety_settings)
-model = GoogleModel(model_name="gemini-2.0-flash", provider=provider)
+model = GoogleModel(model_name="gemini-3.6-flash", provider=provider)
 line_agent = Agent(model)
 
 
