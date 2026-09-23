@@ -1,4 +1,7 @@
 import asyncio
+import hashlib
+import hmac
+import html
 import logging
 import secrets
 from datetime import datetime, timedelta
@@ -33,6 +36,7 @@ discord_oauth_client = sqldb.get_oauth_client(APIType.Discord, 4)
 twitch_oauth_client = sqldb.get_oauth_client(APIType.Twitch, 3)
 google_oauth_settings = sqldb.get_oauth_client(APIType.Google, 3)
 docs_account = sqldb.get_identifier_secret(APIType.DocAccount)
+websub_config = sqldb.get_websub_config(APIType.Google, 4)
 SETTINGS = get_settings()
 BASE_WWW_URL = SETTINGS.BASE_WWW_URL
 BASE_DOMAIN = SETTINGS.BASE_DOMAIN
@@ -107,9 +111,11 @@ async def prase_yt_push(content: str):
             continue
 
         video = videos[0]
+        # 以 YouTube API 回傳的頻道為準，不信任 feed 自報的頻道 ID
+        channel_id = video.snippet.channelId
         ytcache = sqldb.get_yt_cache(push_entry.yt_videoid)
         # 透過published的時間原子地搶佔快取，避免與 RSS 輪詢重複通知同一部影片
-        claimed = sqldb.claim_community_cache(NotifyCommunityType.Youtube, push_entry.yt_channelid, push_entry.published)
+        claimed = sqldb.claim_community_cache(NotifyCommunityType.Youtube, channel_id, push_entry.published)
         if claimed or (ytcache is not None and video.snippet.liveBroadcastContent == "live"):
             log.info("New Youtube push entry %s created at %s", push_entry.yt_videoid, push_entry.published)
             no_mention = False
@@ -132,7 +138,7 @@ async def prase_yt_push(content: str):
 
             if sclient.bot:
                 sclient.bot.submit(
-                    sclient.bot.send_notify_communities(video.embed(), NotifyCommunityType.Youtube, push_entry.yt_channelid, no_mention=no_mention)
+                    sclient.bot.send_notify_communities(video.embed(), NotifyCommunityType.Youtube, channel_id, no_mention=no_mention)
                 )
             else:
                 log.warning("Bot not found.")
@@ -147,11 +153,29 @@ def youtube_push_get(request: Request):
         return HTMLResponse("OK")
 
 
+def verify_websub_signature(body: bytes, signature: str | None) -> bool:
+    """驗證 WebSub 的 X-Hub-Signature（sha1=<hex>），未設定 secret 時略過驗證"""
+    secret = websub_config.hub_secret if websub_config else None
+    if not secret:
+        log.warning("WebSub hub_secret is not configured, skipping signature verification")
+        return True
+    if not signature or "=" not in signature:
+        return False
+    algo, digest = signature.split("=", 1)
+    if algo not in ("sha1", "sha256", "sha384", "sha512"):
+        return False
+    expected = hmac.new(secret.encode(), body, getattr(hashlib, algo)).hexdigest()
+    return hmac.compare_digest(expected, digest)
+
+
 @app.post("/youtube_push")
 async def youtube_push_post(request: Request, background_task: BackgroundTasks):
     body = await request.body()
-    body = body.decode("UTF-8")
-    background_task.add_task(prase_yt_push, body)
+    if not verify_websub_signature(body, request.headers.get("X-Hub-Signature")):
+        # 依 WebSub 規範仍回 2xx，避免 hub 重送，但不處理內容
+        log.warning("Youtube push signature verification failed")
+        return HTMLResponse("OK")
+    background_task.add_task(prase_yt_push, body.decode("UTF-8"))
     return HTMLResponse("OK")
 
 
@@ -160,7 +184,7 @@ async def oauth_discord(request: Request):
     params = dict(request.query_params)
     code = params.get("code")
     if not code:
-        return HTMLResponse(f"授權失敗：{params}", 400)
+        return HTMLResponse(f"授權失敗：{html.escape(params.get('error', '缺少授權碼'))}", 400)
 
     # 驗證 state 參數（CSRF 保護）
     # if not OAuth2Base.verify_state(request.cookies.get("oauth_state"), params.get("state")):
@@ -212,7 +236,7 @@ async def oauth_discordbot(request: Request):
     params = dict(request.query_params)
     code = params.get("code")
     if not code:
-        return HTMLResponse(f"授權失敗：{params}", 400)
+        return HTMLResponse(f"授權失敗：{html.escape(params.get('error', '缺少授權碼'))}", 400)
 
     return HTMLResponse(f"授權已完成，您現在可以關閉此頁面<br>感謝您使用星羽機器人！", 200)
 
@@ -222,7 +246,7 @@ async def oauth_twitch(request: Request):
     params = dict(request.query_params)
     code = params.get("code")
     if not code:
-        return HTMLResponse(f"授權失敗：{params}", 400)
+        return HTMLResponse(f"授權失敗：{html.escape(params.get('error', '缺少授權碼'))}", 400)
 
     # 驗證 state 參數（CSRF 保護）
     if not TwitchOAuth.verify_state(request.cookies.get("oauth_state"), params.get("state")):
@@ -242,7 +266,7 @@ async def oauth_twitch(request: Request):
     auth.save_token_to_db(user.id)
     sclient.sqldb.upsert_external_account(user_id=cloud_user_id, platform=PlatformType.Twitch, external_id=user.id, display_name=user.display_name)
     sclient.sqldb.merge(TwitchBotJoinChannel(twitch_id=user.id))
-    response = HTMLResponse(f"授權已完成，您現在可以關閉此頁面<br>別忘了在聊天室輸入 /mod xingyu1016<br><br>Twitch ID：{user.id}")
+    response = HTMLResponse(f"授權已完成，您現在可以關閉此頁面<br>別忘了在聊天室輸入 /mod xingyu1016<br><br>Twitch ID：{html.escape(str(user.id))}")
     response.delete_cookie("oauth_state")
     return response
 
@@ -252,7 +276,7 @@ async def oauth_google(request: Request):
     params = dict(request.query_params)
     code = params.get("code")
     if not code:
-        return HTMLResponse(f"授權失敗：{params}", 400)
+        return HTMLResponse(f"授權失敗：{html.escape(params.get('error', '缺少授權碼'))}", 400)
 
     # 驗證 state 參數（CSRF 保護）
     if not GoogleOAuth.verify_state(request.cookies.get("oauth_state"), params.get("state")):
@@ -271,7 +295,7 @@ async def oauth_google(request: Request):
     user = await auth.get_me()
     auth.save_token_to_db(user.id)
     sclient.sqldb.upsert_external_account(user_id=cloud_user_id, platform=PlatformType.Google, external_id=user.id, display_name=user.name)
-    response = HTMLResponse(f"授權已完成，您現在可以關閉此頁面<br><br>Google ID：{user.id}")
+    response = HTMLResponse(f"授權已完成，您現在可以關閉此頁面<br><br>Google ID：{html.escape(str(user.id))}")
     response.delete_cookie("oauth_state")
     return response
 

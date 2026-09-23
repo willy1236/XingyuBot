@@ -522,13 +522,8 @@ async def refresh_ip_last_seen_arp():
     sqldb.batch_merge(details_list)
 
 
-async def refresh_ip_last_seen_nmap():
-    """定時更新IP最後出現時間 (使用Nmap)"""
-    log.debug("refresh_ip_last_seen_nmap start")
-    now = utils.nowtz()
-    ips = sqldb.get_active_ips(utils.nowtz().replace(year=2025, month=8, day=11, hour=0, minute=0, second=0))  # 現在設定指定時間，之後再改成動態計算過去30天
-    ips_string = " ".join([str(target.ip) for target in ips])
-
+def _nmap_scan_up_hosts(ips_string: str) -> list[str]:
+    """以 nmap 掃描主機並回傳在線的主機（同步阻塞，需在 thread 中執行）"""
     nm = nmap.PortScanner()
     nm.scan(hosts=ips_string, arguments="-sn --min-parallelism 3")
 
@@ -537,11 +532,18 @@ async def refresh_ip_last_seen_nmap():
         log.warning("refresh_ip_last_seen_nmap: ARP scan 未偵測到任何主機，改用 ICMP echo 重試")
         nm.scan(hosts=ips_string, arguments="-sn -PE --min-parallelism 3")
 
-    # 遍歷所有掃描到的主機 (Iterate through all discovered hosts)
-    active_ips = []
-    for host in nm.all_hosts():
-        if nm[host].state() == "up":
-            active_ips.append(UserIPDetails(ip=host, last_seen=now))
+    return [host for host in nm.all_hosts() if nm[host].state() == "up"]
+
+
+async def refresh_ip_last_seen_nmap():
+    """定時更新IP最後出現時間 (使用Nmap)"""
+    log.debug("refresh_ip_last_seen_nmap start")
+    now = utils.nowtz()
+    ips = sqldb.get_active_ips(utils.nowtz().replace(year=2025, month=8, day=11, hour=0, minute=0, second=0))  # 現在設定指定時間，之後再改成動態計算過去30天
+    ips_string = " ".join([str(target.ip) for target in ips])
+
+    up_hosts = await asyncio.to_thread(_nmap_scan_up_hosts, ips_string)
+    active_ips = [UserIPDetails(ip=host, last_seen=now) for host in up_hosts]
 
     sqldb.batch_merge(active_ips)
 

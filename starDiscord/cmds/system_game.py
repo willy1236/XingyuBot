@@ -1,3 +1,4 @@
+import asyncio
 import ipaddress
 import logging
 from datetime import date, datetime, timedelta
@@ -339,9 +340,11 @@ class system_game(Cog_Extension):
             await ctx.respond(f"此IP位址已註冊過，請確認後再試", ephemeral=True)
             return
 
+        host = str(ip.network_address)
         nm = nmap.PortScanner()
-        nm.scan(hosts=str(ip.network_address), arguments="-sn")
-        if nm[str(ip.network_address)].state() != "up":
+        await asyncio.to_thread(nm.scan, hosts=host, arguments="-sn")
+        # 主機離線時掃描結果不會包含該主機
+        if host not in nm.all_hosts() or nm[host].state() != "up":
             await ctx.respond(f"此IP位址目前不在線上，請確認後再試", ephemeral=True)
             return
 

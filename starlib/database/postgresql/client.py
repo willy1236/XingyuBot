@@ -1,3 +1,5 @@
+import functools
+import inspect
 import logging
 import secrets
 from collections import defaultdict, deque
@@ -35,7 +37,28 @@ T = TypeVar("T")
 P = ParamSpec("P")
 
 
+def _rollback_on_error(func: Callable) -> Callable:
+    """方法拋出 SQLAlchemyError 時 rollback session，避免 scoped session 卡在失敗的 transaction"""
+
+    @functools.wraps(func)
+    def wrapper(self: "BaseRepository", *args, **kwargs):
+        try:
+            return func(self, *args, **kwargs)
+        except SQLAlchemyError:
+            self.session.rollback()
+            raise
+
+    return wrapper
+
+
 class BaseRepository:
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        # 自動包裝子類別定義的公開方法，任何資料庫錯誤都會 rollback，後續指令不會持續拋 PendingRollbackError
+        for name, attr in list(vars(cls).items()):
+            if not name.startswith("_") and inspect.isfunction(attr):
+                setattr(cls, name, _rollback_on_error(attr))
+
     def __init__(self, engine: Engine, session_factory: Session | ScopedSession):
         self.engine = engine
         self._session_factory = session_factory
@@ -46,7 +69,11 @@ class BaseRepository:
     def session(self) -> Session:
         if isinstance(self._session_factory, Session):
             return self._session_factory
-        return self._session_factory()
+        session = self._session_factory()
+        if not session.is_active:
+            # 前一次 flush 失敗後尚未 rollback，先復原再使用
+            session.rollback()
+        return session
 
     def commit(self):
         try:

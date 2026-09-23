@@ -420,7 +420,11 @@ class event(Cog_Extension):
             embed.set_author(name=username, icon_url=member.display_avatar.url)
             embed.set_footer(text=member.guild.name)
 
-            await self.bot.get_channel(voice_log_data[0]).send(embed=embed)
+            log_channel = self.bot.get_channel(voice_log_data[0])
+            if log_channel is None:
+                log.debug("voice log channel %s not found in guild %s", voice_log_data[0], member.guild.id)
+                return
+            await log_channel.send(embed=embed)
 
         # 舞台發言
         # if check_event_stage(before) or check_event_stage(after):
