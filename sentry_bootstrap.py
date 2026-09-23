@@ -137,8 +137,22 @@ def _resolve_release() -> str | None:
         return None
 
 
+_CAPTURED_ATTR = "_xingyu_sentry_captured"
+
+
+def _already_captured(hint: dict[str, Any]) -> bool:
+    exc_info = hint.get("exc_info")
+    if not exc_info:
+        record = hint.get("log_record")
+        exc_info = getattr(record, "exc_info", None) if record is not None else None
+    exc = exc_info[1] if exc_info else None
+    return exc is not None and getattr(exc, _CAPTURED_ATTR, False)
+
+
 def before_send(event: dict[str, Any], hint: dict[str, Any]) -> dict[str, Any] | None:
-    del hint
+    # 同一個例外已經由 capture_exception_safe 回報過，後續的 log.exception / 執行緒整合等重複事件直接丟棄
+    if _already_captured(hint):
+        return None
     return _sanitize_data(event)
 
 
@@ -180,7 +194,16 @@ def init_sentry(service: str = "xingyubot") -> bool:
 
 
 def capture_exception_safe(exc: Exception, *, tags: dict[str, str] | None = None, extras: dict[str, Any] | None = None) -> None:
+    """帶 tags/extras 回報例外到 Sentry，每個例外只會回報一次。
+
+    專案慣例：
+    - 不需要 tags 時，直接 log.exception(...) / log.error(..., exc_info=e)，由 LoggingIntegration 回報。
+    - 需要 tags 時呼叫本函式，之後本地 log 一律帶 exc_info（同一例外的後續事件會在 before_send 被丟棄）。
+    - 不要用 log.error(f"...{e}") 記錄例外：沒有 exc_info 會變成另一筆無堆疊的訊息事件。
+    """
     if sentry_sdk is None:
+        return
+    if getattr(exc, _CAPTURED_ATTR, False):
         return
 
     if tags or extras:
@@ -193,6 +216,13 @@ def capture_exception_safe(exc: Exception, *, tags: dict[str, str] | None = None
                 else:
                     scope.set_extra(key, _sanitize_data(value, truncate=True))
             sentry_sdk.capture_exception(exc)
-        return
+    else:
+        sentry_sdk.capture_exception(exc)
+    _mark_captured(exc)
 
-    sentry_sdk.capture_exception(exc)
+
+def _mark_captured(exc: BaseException) -> None:
+    try:
+        setattr(exc, _CAPTURED_ATTR, True)
+    except (AttributeError, TypeError):
+        pass

@@ -392,7 +392,7 @@ class MusicPlayer:
         """由語音執行緒呼叫。"""
         log.debug("Music after", extra={"guild_id": self.guildid})
         if error:
-            log.error("Music 播放後回呼錯誤", extra={"guild_id": self.guildid, "error": str(error)})
+            log.error("Music 播放後回呼錯誤", extra={"guild_id": self.guildid}, exc_info=error)
         if self.closing:
             return
 

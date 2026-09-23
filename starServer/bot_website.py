@@ -322,7 +322,7 @@ async def process_linebot_webhook(body: str, signature: str):
         log.error("Invalid signature in LINE Bot webhook")
     except Exception as e:
         capture_exception_safe(e, tags={"service": "website", "source": "linebot_webhook"})
-        log.error(f"處理 LINE Bot 訊息時發生錯誤: {e}")
+        log.error("處理 LINE Bot 訊息時發生錯誤", exc_info=e)
 
 async def handle_message(event: MessageEvent):
     url = utils.check_url_format(event.message.text)
@@ -334,7 +334,7 @@ async def handle_message(event: MessageEvent):
             text = "\n".join([report_text, "", "AI 分析結果:", ai_response.output])
         except Exception as e:
             capture_exception_safe(e, tags={"service": "website", "source": "line_agent"})
-            log.error(f"Error in AI analysis: {e}")
+            log.error("Error in AI analysis", exc_info=e)
             text = "\n".join([report_text, "", "AI 分析結果: 無法取得分析結果"])
 
     else:

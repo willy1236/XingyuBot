@@ -425,7 +425,7 @@ class ReactionRoleView(discord.ui.View):
             await interaction.response.send_message(f"錯誤：我沒有權限給予或移除身分組，可能為我的身分組位階較低或缺少必要權限", ephemeral=True)
         else:
             await interaction.response.send_message(f"發生錯誤：{error}", ephemeral=True)
-            log.error("ReactionRoleView error", extra={"item": str(item), "error": str(error)})
+            log.error("ReactionRoleView error", extra={"item": str(item)}, exc_info=error)
 
 
 class TRPGPlotButton(discord.ui.Button):
