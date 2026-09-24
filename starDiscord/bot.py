@@ -57,6 +57,12 @@ class DiscordBot(discord.Bot):
         token = sqldb.get_access_token(APIType.Discord, int(self.bot_code)).access_token
         super().run(token)
 
+    async def close(self):
+        # 先停排程再關 session，避免關機途中觸發的定時任務打到已關閉的 HTTP session
+        if self.scheduler.running:
+            self.scheduler.shutdown(wait=False)
+        await super().close()
+
     def submit(self, coro: Coroutine):
         """
         從其他 thread 將 coroutine 提交給主事件迴圈執行。
