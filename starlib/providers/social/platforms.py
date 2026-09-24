@@ -565,6 +565,10 @@ class CLIInterface:
         r = subprocess.run(f'rettiwt -k "{self.rettiwt_api_key}" user timeline "{user_id}" 10', shell=True, capture_output=True, encoding="utf-8", check=False)
         r.check_returncode()
         data = json.loads(r.stdout)
+        if not data:
+            # rettiwt 不穩定，偶爾會回傳空物件，視為暫時性失敗等下次輪詢
+            log.warning("Rettiwt回傳空結果：user_id=%s", user_id)
+            return None
 
         try:
             results = RettiwtTweetTimeLineResponse(**data)
