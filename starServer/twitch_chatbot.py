@@ -77,7 +77,17 @@ async def on_follow(event: eventsub.ChannelFollowEvent):
 async def on_stream_online(event: eventsub.StreamOnlineEvent):
     log.info("%s starting stream!", event.event.broadcaster_user_name)
 
-    live = tw_api.get_lives(event.event.broadcaster_user_id)[event.event.broadcaster_user_id]
+    # stream.online 會在開台後數秒內送達，此時 Helix streams API 可能還查不到直播，稍等重試
+    live = None
+    for _ in range(3):
+        live = tw_api.get_lives(event.event.broadcaster_user_id)[event.event.broadcaster_user_id]
+        if live:
+            break
+        await asyncio.sleep(10)
+    if live is None:
+        log.warning("%s 開台但查不到直播資訊，略過開台通知", event.event.broadcaster_user_name)
+        return
+
     channel_config = join_channels.get(int(event.event.broadcaster_user_id))
     if channel_config and channel_config.action_channel_id:
         await chat.send_message(event.event.broadcaster_user_login, f"{event.event.broadcaster_user_name} 正在直播 {live.game_name}! {live.title}")
