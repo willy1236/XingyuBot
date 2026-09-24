@@ -9,7 +9,7 @@ from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.date import DateTrigger
 from discord.ext import commands, tasks
 from pydantic import ValidationError
-from requests.exceptions import ConnectTimeout, RequestException
+from requests.exceptions import RequestException
 
 from starlib import Jsondb, sclient, sqldb, utils
 from starlib.database import APIType, DBCacheType, NotifyChannelType, NotifyCommunityType, UserIPDetails, UsersCountRecord, VoiceTime
@@ -95,8 +95,9 @@ class task(Cog_Extension):
         timefrom = cache.value if cache else utils.nowtz() - timedelta(days=1)
         try:
             earthquake_records = cwa_api.get_earthquake_report_auto(timefrom.strftime("%Y-%m-%dT%H:%M:%S"), True)
-        except ConnectTimeout:
-            log.warning("earthquake_check timeout.")
+        except APINetworkError as e:
+            # 氣象署連線偶爾會逾時或被重置，等下一輪從快取時間點接著抓即可
+            log.warning("earthquake_check network error: %s", e)
             return
         except Exception as e:
             log.exception("earthquake_check error")
