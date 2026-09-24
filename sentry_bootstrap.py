@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 from collections.abc import Mapping
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
@@ -44,6 +45,9 @@ _SCRUB_KEYS = {
 }
 
 _SCRUB_SUBSTRINGS = ("token", "secret", "password", "passwd", "api_key", "apikey", "api-key", "auth", "dsn")
+
+# 指令列帶入的金鑰參數（如 rettiwt -k "<key>"），會出現在區域變數與 subprocess breadcrumbs 中
+_SECRET_ARG_PATTERN = re.compile(r"""((?:^|\s)(?:-k|--key|--api-key)\s+)("[^"]*"|'[^']*'|\S+)""")
 
 # 只截斷使用者附加資料中的長文字（如 Discord 訊息內容），不動事件本身的錯誤訊息與 breadcrumbs
 _TRUNCATE_SECTIONS = {"extra"}
@@ -120,6 +124,9 @@ def _sanitize_data(data: Any, *, truncate: bool = False) -> Any:
             else:
                 sanitized[key] = _sanitize_data(v, truncate=truncate or key in _TRUNCATE_SECTIONS)
         return sanitized
+
+    if isinstance(data, str):
+        return _SECRET_ARG_PATTERN.sub(r"\1[Filtered]", data)
 
     if isinstance(data, list):
         return [_sanitize_data(item, truncate=truncate) for item in data]
