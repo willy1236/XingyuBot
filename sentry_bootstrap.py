@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 import re
@@ -147,18 +148,25 @@ def _resolve_release() -> str | None:
 _CAPTURED_ATTR = "_xingyu_sentry_captured"
 
 
-def _already_captured(hint: dict[str, Any]) -> bool:
+def _exception_of(hint: dict[str, Any]) -> BaseException | None:
     exc_info = hint.get("exc_info")
     if not exc_info:
         record = hint.get("log_record")
         exc_info = getattr(record, "exc_info", None) if record is not None else None
-    exc = exc_info[1] if exc_info else None
+    return exc_info[1] if exc_info else None
+
+
+def _already_captured(hint: dict[str, Any]) -> bool:
+    exc = _exception_of(hint)
     return exc is not None and getattr(exc, _CAPTURED_ATTR, False)
 
 
 def before_send(event: dict[str, Any], hint: dict[str, Any]) -> dict[str, Any] | None:
     # 同一個例外已經由 capture_exception_safe 回報過，後續的 log.exception / 執行緒整合等重複事件直接丟棄
     if _already_captured(hint):
+        return None
+    # 任務在關機或重啟時被取消屬正常流程，apscheduler 會把 CancelledError 記成 error
+    if isinstance(_exception_of(hint), asyncio.CancelledError):
         return None
     return _sanitize_data(event)
 
