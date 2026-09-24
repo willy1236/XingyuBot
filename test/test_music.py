@@ -99,6 +99,9 @@ class FakeVoiceClient:
         self._playing = False
         self._after = None
 
+    def is_connected(self):
+        return self.connected
+
     def is_playing(self):
         return self._playing
 

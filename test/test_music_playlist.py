@@ -224,6 +224,10 @@ class FakeVoiceClient:
     def __init__(self):
         self.channel = SimpleNamespace(members=[SimpleNamespace(bot=False)])
         self.played: list = []
+        self.connected = True
+
+    def is_connected(self):
+        return self.connected
 
     def is_playing(self):
         return bool(self.played)
@@ -273,6 +277,18 @@ class TestEnqueueAndPlay:
         vc, text = self._run([_song("a"), _song("b")], skipped=3)
         assert text == "**2** 首歌已加入歌單（已略過 3 首無法播放的歌曲）"
         assert [s.title for s in vc.played] == ["a"]
+
+    def test_disconnected_voice_discards_player(self, fake_playback):
+        async def scenario():
+            vc = FakeVoiceClient()
+            vc.connected = False
+            ctx = SimpleNamespace(channel=SimpleNamespace(send=_noop_send), guild=SimpleNamespace(id=1))
+            await music_player.enqueue_and_play(vc, ctx, asyncio.get_running_loop(), [_song("a")], 0)
+            return vc
+
+        vc = asyncio.run(scenario())
+        assert vc.played == []
+        assert "1" not in guild_playing
 
 
 async def _noop_send(content=None, **kwargs):

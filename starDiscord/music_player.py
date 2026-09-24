@@ -336,6 +336,11 @@ class MusicPlayer:
         async with self.play_lock:
             if self.closing or self.vc.is_playing() or self.vc.is_paused():
                 return
+            if not self.vc.is_connected():
+                # 語音已被外部斷開（被踢出頻道、bot 關機或重連中），播放器無法再使用
+                log.warning("Music 語音已斷線，停用播放器", extra={"guild_id": self.guildid})
+                self.discard()
+                return
             self._cancel_leave()
 
             log.debug("Music play_next", extra={"guild_id": self.guildid})
