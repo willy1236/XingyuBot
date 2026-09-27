@@ -168,7 +168,17 @@ def before_send(event: dict[str, Any], hint: dict[str, Any]) -> dict[str, Any] |
     # 任務在關機或重啟時被取消屬正常流程，apscheduler 會把 CancelledError 記成 error
     if isinstance(_exception_of(hint), asyncio.CancelledError):
         return None
+    # py-cord 重連 gateway 時舊的 aiohttp 連線被 GC，asyncio 會記一筆 Unclosed connection，非本專案可處理
+    if _is_unclosed_gateway_connection(event):
+        return None
     return _sanitize_data(event)
+
+
+def _is_unclosed_gateway_connection(event: dict[str, Any]) -> bool:
+    if event.get("logger") != "asyncio":
+        return False
+    message = (event.get("logentry") or {}).get("formatted") or (event.get("logentry") or {}).get("message") or ""
+    return message.startswith("Unclosed connection") and "gateway.discord.gg" in message
 
 
 def init_sentry(service: str = "xingyubot") -> bool:
