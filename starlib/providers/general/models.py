@@ -113,19 +113,26 @@ class Covid19Report:
 
 class Forecast:
     def __init__(self, data):
-        all_data = data["records"]["location"]
         self.forecast_all = []
-        self.timestart = all_data[0]["weatherElement"][4]["time"][0]["startTime"]
-        self.timeend = all_data[0]["weatherElement"][4]["time"][0]["endTime"]
-        for pos in all_data:
-            name = pos["locationName"]
-            Wx = pos["weatherElement"][0]["time"][0]["parameter"]["parameterName"]
-            minT = pos["weatherElement"][2]["time"][0]["parameter"]["parameterName"]
-            Cl = pos["weatherElement"][3]["time"][0]["parameter"]["parameterName"]
-            maxT = pos["weatherElement"][4]["time"][0]["parameter"]["parameterName"]
+        self.timestart = None
+        self.timeend = None
+        for pos in data["records"]["location"]:
+            # CWA 偶爾會回傳缺少部分天氣要素的縣市，依 elementName 取值，缺資料就略過該縣市
+            elements = {e["elementName"]: e["time"] for e in pos["weatherElement"] if e.get("time")}
+            if not all(key in elements for key in ("Wx", "MinT", "CI", "MaxT")):
+                continue
 
-            forecast_one = {"name": name, "Wx": Wx, "minT": minT, "Cl": Cl, "maxT": maxT}
+            forecast_one = {
+                "name": pos["locationName"],
+                "Wx": elements["Wx"][0]["parameter"]["parameterName"],
+                "minT": elements["MinT"][0]["parameter"]["parameterName"],
+                "Cl": elements["CI"][0]["parameter"]["parameterName"],
+                "maxT": elements["MaxT"][0]["parameter"]["parameterName"],
+            }
             self.forecast_all.append(forecast_one)
+            if self.timestart is None:
+                self.timestart = elements["MaxT"][0]["startTime"]
+                self.timeend = elements["MaxT"][0]["endTime"]
 
     def embed(self):
         embed = BotEmbed.general("天氣預報")

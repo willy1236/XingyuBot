@@ -157,7 +157,7 @@ class task(Cog_Extension):
 
     async def forecast_update(self):
         forecast = cwa_api.get_forecast()
-        if forecast:
+        if forecast and forecast.forecast_all:
             await self.bot.edit_notify_channel(forecast.embed(), NotifyChannelType.WeatherForecast, "6小時天氣預報")
 
     async def apex_map_rotation(self):
