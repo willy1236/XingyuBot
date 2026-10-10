@@ -362,9 +362,14 @@ def reply_line_message(reply_token: str, text: str):
 
 
 @app.get("/to/discordauth")
-async def to_discordauth(request: Request, next: str | None = None):
-    """next：登入完成後要導回的網址，只接受 BASE_DOMAIN 底下的網址。"""
-    auth = DiscordOAuth.create_from_db(discord_oauth_client, scopes=["identify", "connections"])
+async def to_discordauth(request: Request, next: str | None = None, connections: bool = True):
+    """
+    next：登入完成後要導回的網址，只接受 BASE_DOMAIN 底下的網址。
+    connections：是否一併要求讀取 Discord 的第三方連結（用來自動綁定 Twitch）。
+    只需要登入的網站可以帶 connections=false，授權頁面就只會要求基本身分。
+    """
+    scopes = ["identify", "connections"] if connections else ["identify"]
+    auth = DiscordOAuth.create_from_db(discord_oauth_client, scopes=scopes)
     url, state = auth.get_authorization_url()
     response = RedirectResponse(url=url)
     response.set_cookie(key="oauth_state", value=state, httponly=True, secure=True, samesite="lax", max_age=600)
