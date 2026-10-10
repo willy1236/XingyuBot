@@ -32,6 +32,8 @@ from starlib.providers.social.push_models import YoutubePushEntry
 from starlib.settings import get_settings
 from starlib.starAgent_line import line_agent
 
+from starServer.redirects import is_allowed_return_url
+
 discord_oauth_client = sqldb.get_oauth_client(APIType.Discord, 4)
 twitch_oauth_client = sqldb.get_oauth_client(APIType.Twitch, 3)
 google_oauth_settings = sqldb.get_oauth_client(APIType.Google, 3)
@@ -216,8 +218,12 @@ async def oauth_discord(request: Request):
         response.delete_cookie("oauth_state")
         return response
     else:
-        # 用戶授權流程，產生 JWT 並重定向到儀表板
-        response = RedirectResponse(f"{BASE_WWW_URL}/dashboard")
+        # 用戶授權流程，產生 JWT 並重定向：有合法的回跳網址（/to/discordauth?next=）就回去，否則到儀表板
+        next_url = request.cookies.get("oauth_next")
+        if next_url and is_allowed_return_url(next_url, BASE_DOMAIN):
+            response = RedirectResponse(next_url)
+        else:
+            response = RedirectResponse(f"{BASE_WWW_URL}/dashboard")
 
         # 產生 JWT（id 為站內 cloud_user.id，Discord 自己的 ID 另外放在 discord_id）
         payload = {"id": cuser.id, "discord_id": user.id, "username": user.username, "avatar": user.avatar, "exp": datetime.now(timezone.utc) + timedelta(days=7)}
@@ -227,6 +233,7 @@ async def oauth_discord(request: Request):
         # 將 JWT 寫入 Cookie
         response.set_cookie(key="jwt", value=jwt_token, httponly=True, secure=True, samesite="lax", max_age=7 * 24 * 60 * 60, domain=f".{BASE_DOMAIN}")
         response.delete_cookie("oauth_state")
+        response.delete_cookie("oauth_next")
 
         return response
 
@@ -355,11 +362,17 @@ def reply_line_message(reply_token: str, text: str):
 
 
 @app.get("/to/discordauth")
-async def to_discordauth(request: Request):
+async def to_discordauth(request: Request, next: str | None = None):
+    """next：登入完成後要導回的網址，只接受 BASE_DOMAIN 底下的網址。"""
     auth = DiscordOAuth.create_from_db(discord_oauth_client, scopes=["identify", "connections"])
     url, state = auth.get_authorization_url()
     response = RedirectResponse(url=url)
     response.set_cookie(key="oauth_state", value=state, httponly=True, secure=True, samesite="lax", max_age=600)
+    if next and is_allowed_return_url(next, BASE_DOMAIN):
+        response.set_cookie(key="oauth_next", value=next, httponly=True, secure=True, samesite="lax", max_age=600)
+    else:
+        # 清掉上一次登入殘留的回跳網址，避免這次被導到不相干的地方
+        response.delete_cookie("oauth_next")
     return response
 
 
