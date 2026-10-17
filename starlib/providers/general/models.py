@@ -467,6 +467,18 @@ class McsmProcessInfo(BaseModel):
     timestamp: float
 
 
+class McsmServerSummary(BaseModel):
+    """`GET /api/auth?advanced=true` 回傳的 instance 清單項目。"""
+
+    server_id: str = Field(alias="instanceUuid")
+    daemon_id: str = Field(alias="daemonId")
+    nickname: str
+
+    @property
+    def name(self) -> str:
+        return self.nickname
+
+
 class McsmInstance(BaseModel):
     """對應 MCSManager 官方文件的 InstanceDetail 型別（`GET /api/instance`）
 

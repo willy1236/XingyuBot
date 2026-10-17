@@ -23,7 +23,7 @@ log = logging.getLogger(__name__)
 if TYPE_CHECKING:
     from starlib.database import SQLRepository
     from starlib.database.postgresql.models import PollOption, ReactionRoleOption, TRPGStoryOption, TRPGStoryPlot
-    from starlib.providers import McsmInstance
+    from starlib.providers.general.models import McsmServerSummary
 
 class DeletePetView(discord.ui.View):
     def __init__(self):
@@ -629,7 +629,7 @@ class GiveawayView(discord.ui.View):
         self.stop()
 
 class McServerSelect(discord.ui.Select):
-    def __init__(self, servers: list[McsmInstance]):
+    def __init__(self, servers: list[McsmServerSummary]):
         options = [
             discord.SelectOption(label=server.name if server.name else f"伺服器 {server.server_id}", value=server.server_id)
             for server in servers

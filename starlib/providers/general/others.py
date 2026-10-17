@@ -1,7 +1,7 @@
 from starlib.database import APIType, McsmServerAction, McssServerAction, sqldb
 
 from ..base import APICaller
-from .models import McsmInstance, McssServer
+from .models import McsmInstance, McsmServerSummary, McssServer
 
 
 class McssAPI(APICaller):
@@ -71,7 +71,7 @@ class McsManagerAPI(APICaller):
         r = self.get("auth", params={"apikey": self.apikey, "advanced": "true"})
         if r is None:
             return []
-        return [McsmInstance(**instance) for instance in r.json()["data"]["instances"]]
+        return [McsmServerSummary(**instance) for instance in r.json()["data"]["instances"]]
 
     def get_server_detail(self, server_id: str):
         r = self.get("instance", params={"apikey": self.apikey, "uuid": server_id, "daemonId": self.daemon_id})
