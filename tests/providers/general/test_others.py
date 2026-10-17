@@ -1,3 +1,4 @@
+from starlib.providers.general import others
 from starlib.providers.general.others import McsManagerAPI
 
 
@@ -33,3 +34,39 @@ def test_daemon_id_comes_from_visible_auth_instances(monkeypatch):
     assert api.daemon_id == "daemon-1"
     assert api.daemon_id == "daemon-1"
     assert requests == [("auth", {"apikey": "test-key"})]
+
+
+def test_get_servers_uses_advanced_auth_instances(monkeypatch):
+    api = McsManagerAPI.__new__(McsManagerAPI)
+    api.apikey = "test-key"
+    requests = []
+
+    def fake_get(endpoint, params):
+        requests.append((endpoint, params))
+        return FakeResponse(
+            {
+                "data": {
+                    "instances": [
+                        {
+                            "instanceUuid": "instance-a",
+                            "daemonId": "daemon-1",
+                            "config": {"nickname": "Server A"},
+                            "status": 0,
+                        }
+                    ]
+                }
+            }
+        )
+
+    monkeypatch.setattr(api, "get", fake_get)
+    monkeypatch.setattr(others, "McsmInstance", lambda **instance: instance)
+
+    assert api.get_servers() == [
+        {
+            "instanceUuid": "instance-a",
+            "daemonId": "daemon-1",
+            "config": {"nickname": "Server A"},
+            "status": 0,
+        }
+    ]
+    assert requests == [("auth", {"apikey": "test-key", "advanced": "true"})]

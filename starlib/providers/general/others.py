@@ -68,13 +68,10 @@ class McsManagerAPI(APICaller):
         return {daemon["uuid"] for daemon in daemons}
 
     def get_servers(self):
-        r = self.get(
-            "service/remote_service_instances",
-            params={"apikey": self.apikey, "daemonId": self.daemon_id, "page": 1, "page_size": 100},
-        )
+        r = self.get("auth", params={"apikey": self.apikey, "advanced": "true"})
         if r is None:
             return []
-        return [McsmInstance(**{**i, "daemonId": self.daemon_id}) for i in r.json()["data"]["data"]]
+        return [McsmInstance(**instance) for instance in r.json()["data"]["instances"]]
 
     def get_server_detail(self, server_id: str):
         r = self.get("instance", params={"apikey": self.apikey, "uuid": server_id, "daemonId": self.daemon_id})
