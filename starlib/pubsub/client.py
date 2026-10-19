@@ -90,6 +90,15 @@ class StarEventBus:
         self.tunnel_thread: BaseThread | None = None
         self.twitchtunnel_thread: BaseThread | None = None
 
+    def stop_threads(self, timeout: float = 10) -> None:
+        """通知所有背景 thread 停止，並在 timeout 內等待它們結束。"""
+        threads = [t for t in (self.twitch_bot_thread, self.website_thread, self.tunnel_thread, self.twitchtunnel_thread) if t]
+        for t in threads:
+            t.stop()
+        for t in threads:
+            if t.is_alive():
+                t.join(timeout)
+
     def subscribe(self, event_type: type[BaseEvent], handler: Callable, loop: asyncio.AbstractEventLoop = None) -> bool:
         """
         訂閱事件，若已註冊則忽略。

@@ -177,21 +177,8 @@ class owner(Cog_Extension):
     @commands.is_owner()
     async def shutdown(self, ctx):
         await ctx.respond(f"機器人關閉中")
-        if sclient.twitch_bot_thread:
-            sclient.twitch_bot_thread.stop()
-
-        if sclient.website_thread:
-            sclient.website_thread.stop()
-
-        if sclient.tunnel_thread:
-            sclient.tunnel_thread.stop()
-
-        if sclient.twitchtunnel_thread:
-            sclient.twitchtunnel_thread.stop()
-
+        # close() 完成後 bot.run() 會返回，背景 thread 由 main.py 統一停止
         await self.bot.close()
-        self.bot.loop.stop()
-        exit()
 
     # send
     @commands.slash_command(description="發送訊息", guild_ids=debug_guilds)

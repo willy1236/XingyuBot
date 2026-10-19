@@ -83,6 +83,10 @@ def run_discord_bot():
         log.error(">> Bot: Login failed <<")
     except Exception as e:
         log.exception(">> Bot: Unexpected error <<", exc_info=e)
+    finally:
+        # bot.run() 收到 SIGINT/SIGTERM 只會關閉 Discord，背景 thread 要另外停止，否則程式會卡在 join
+        log.info(">> stopping background threads <<")
+        sclient.stop_threads()
 
 def run_twitch_bot():
     # from starServer.tunnel_threads import NgrokTwitchThread

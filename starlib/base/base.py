@@ -9,7 +9,8 @@ class BaseThread(threading.Thread):
     A base class for creating custom threads.
     """
     def __init__(self, name):
-        super().__init__(name=name)
+        # daemon：stop() 後若 thread 在 timeout 內仍未結束，不阻擋程式退出
+        super().__init__(name=name, daemon=True)
         self._stop_event = threading.Event()
 
     def stop(self):
