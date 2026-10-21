@@ -41,13 +41,23 @@ def _to_identity(record: DiscordIdentity) -> BotIdentity:
 
 
 class IdentityResolver:
-    def __init__(self, directory: AccountDirectory, repo: "UserRepository", ttl: timedelta, backoff: timedelta = timedelta(minutes=1)):
+    def __init__(
+        self,
+        directory: AccountDirectory,
+        repo: "UserRepository",
+        ttl: timedelta,
+        backoff: timedelta = timedelta(minutes=1),
+        merge_backoff: timedelta = timedelta(minutes=10),
+    ):
         self._directory = directory
         self._repo = repo
         self._ttl = ttl
         # auth server 沒給答案後的一段時間內，有紀錄的人直接沿用，不必每次都等逾時
         self._backoff = backoff
         self._unavailable_until: datetime | None = None
+        # 搬資料失敗的人，這段時間內直接沿用舊紀錄，不重打 auth server、不重跑搬資料；只影響該使用者，重啟後清空
+        self._merge_backoff = merge_backoff
+        self._merge_retry_after: dict[int, datetime] = {}
 
     async def resolve(self, discord_id: int, *, create: bool = True) -> BotIdentity | None:
         record = self._repo.get_discord_identity(discord_id)
@@ -56,6 +66,12 @@ class IdentityResolver:
 
         if record and self._unavailable_until and nowtz() < self._unavailable_until:
             return _to_identity(record)
+
+        retry_after = self._merge_retry_after.get(discord_id)
+        if retry_after:
+            if record and nowtz() < retry_after:
+                return _to_identity(record)
+            del self._merge_retry_after[discord_id]
 
         try:
             account = await self._directory.find_by_discord(discord_id)
@@ -112,7 +128,9 @@ class IdentityResolver:
                 "identity: saving identity with merge failed, keeping the previous ID",
                 extra={"discord_id": discord_id, "old_id": str(merge_from), "new_id": str(account.account_id), "error_type": type(e).__name__},
             )
+            self._merge_retry_after[discord_id] = nowtz() + self._merge_backoff
             return previous
+        self._merge_retry_after.pop(discord_id, None)
         return _to_identity(saved)
 
     async def _merge_source_for_formal(self, discord_id: int, old_id: UUID, new_id: UUID) -> UUID | None:
