@@ -12,7 +12,8 @@ import pytest
 from starDiscord import checks
 from starDiscord.cmds import music
 from starDiscord.uiElement import music_panel
-from starlib.identity import BotIdentity, IdentityUnavailable
+from starlib.identity import BotIdentity, IdentityResolver, IdentityUnavailable
+from test_identity import DISCORD_ID, TTL, FakeDirectory, _account, expire, repo  # noqa: F401  (repo 為 fixture)
 
 
 def _identity(*, suspended=False) -> BotIdentity:
@@ -101,3 +102,49 @@ class TestPanelPlaylists:
         monkeypatch.setattr(music_panel.sqldb, "get_music_playlists", lambda *_: [])
         send = self._run(monkeypatch, _identity())
         assert "還沒有歌單" in send.await_args.args[0]
+
+
+class TestSuspensionLifecycle:
+    """真的 IdentityResolver 加假 directory 串 with_identity：TTL 內放行、過期後被擋、解除後恢復且資料還在"""
+
+    @staticmethod
+    def _call(monkeypatch, resolver):
+        async def real_resolve(discord_id, *, create=True):
+            return await resolver.resolve(discord_id, create=create)
+
+        monkeypatch.setattr(checks, "resolve_identity", real_resolve)
+        body = AsyncMock(return_value="done")
+        ctx = SimpleNamespace(author=SimpleNamespace(id=DISCORD_ID), respond=AsyncMock())
+        asyncio.run(checks.with_identity()(body)(None, ctx))
+        return body, ctx
+
+    def test_suspend_then_unsuspend(self, monkeypatch, repo):
+        directory = FakeDirectory()
+        resolver = IdentityResolver(directory, repo, TTL)
+        account = _account(suspended=False)
+        directory.accounts[DISCORD_ID] = account
+
+        body, _ = self._call(monkeypatch, resolver)
+        body.assert_awaited_once()
+        playlist = repo.create_music_playlist(account.account_id, "A")
+
+        # auth server 已停權，但 TTL 內仍用舊紀錄放行，也不會再打 auth server
+        directory.accounts[DISCORD_ID] = _account(account.account_id, suspended=True)
+        body, ctx = self._call(monkeypatch, resolver)
+        body.assert_awaited_once()
+        ctx.respond.assert_not_awaited()
+        assert directory.calls == 1
+
+        # TTL 過期後的下一次使用被擋
+        expire(repo)
+        body, ctx = self._call(monkeypatch, resolver)
+        body.assert_not_awaited()
+        ctx.respond.assert_awaited_once_with(checks.SUSPENDED_MESSAGE, ephemeral=True)
+
+        # 解除停權，過期後恢復，歌單還在
+        directory.accounts[DISCORD_ID] = _account(account.account_id, suspended=False)
+        expire(repo)
+        body, ctx = self._call(monkeypatch, resolver)
+        body.assert_awaited_once()
+        ctx.respond.assert_not_awaited()
+        assert repo.get_music_playlist(account.account_id, "A").id == playlist.id
