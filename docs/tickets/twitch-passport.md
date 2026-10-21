@@ -6,7 +6,7 @@
 
 - 技術棧：Python 3.13、py-cord、FastAPI（`starServer/bot_website.py`）、SQLModel／SQLAlchemy、PostgreSQL（`stardb`）。schema 靠啟動時 `SQLModel.metadata.create_all`，既有表加欄位要自己寫 SQL。部署在鯊魚伺服器 `/srv/XingyuBot`，systemd `xingyubot.service`。
 - 既有相關機制：
-  - 身分解析：[starlib/identity/](../../starlib/identity/) 的 `AccountDirectory` port＋`DomalyzeIdentityClient` adapter，打 auth server 內部 API `GET /v1/passports/{provider}/{subject}`。回應裡的 `passports` 是 `[{provider, subject, username}]`，目前 [client.py](../../starlib/identity/client.py) 的 `_parse_account` 沒有解析它。`IdentityResolver` 把結果存進 `users.discord_identity`，TTL 1 小時，auth server 連不上時沿用紀錄。
+  - 身分解析：[starlib/identity/](../../starlib/identity/) 的 `AccountDirectory` port＋`DomalyzeIdentityClient` adapter，打 auth server 內部 API `GET /v1/passports/{provider}/{subject}`。回應裡的 `passports` 是 `[{provider, subject, username}]`，[client.py](../../starlib/identity/client.py) 的 `_parse_account` 解析它，`Account.twitch_passports` 只含 provider 等於 `AUTH_TWITCH_PROVIDER` 的通行證。`IdentityResolver` 把結果存進 `users.discord_identity`，TTL 1 小時，auth server 連不上時沿用紀錄。
   - auth server 端（domalyze-identity `8de2d31`）：Twitch preset 的 `subject` 對應 OIDC `sub`，`username` 對應 `preferred_username`，也就是 Twitch 的顯示名稱；通行證的顯示名稱在本人每次用 Twitch 登入時更新。`provider` 值是管理員建立登入方式時填的 `login_provider.slug`，建立後不能改。`find_passport` 查到停權域民也會回 200，停權看回應的 `suspended`。
   - 外部綁定：`users.linked_account`（Minecraft、Twitch、Google，一個平台一人一筆）。寫入點只剩 `/minecraft` 指令的 `upsert_linked_account`；`merge_user_data` 會搬整張表。
   - `/user_info`：[system_user.py:28-63](../../starDiscord/cmds/system_user.py#L28-L63) 的「綁定的帳號」列出其他 Discord 帳號與 `get_linked_accounts()` 的所有列。
@@ -136,6 +136,7 @@ T-02 改 `bot_website.py`，T-03 改 `starlib/identity/twitch.py` 與 `system_us
 - [ ] 已登記頻道的實況主重新授權：token 更新，頻道原有的 `action_channel_id`、`point_name` 不變。
 - [ ] 授權的 Twitch 帳號沒連結到域民，或該域民停權中：顯示「請先註冊析域帳號並在帳號頁連結這個 Twitch」，不存 token、不登記頻道。
 - [ ] auth server 連不上：顯示「這次授權失敗，請稍後再試」，不存 token、不登記頻道。
+- [ ] 存 token 或登記頻道時資料庫出錯：顯示「這次授權失敗，請稍後再試」，記 log 並送 Sentry。
 - [ ] state cookie 缺少或不符、缺少授權碼、使用者在 Twitch 拒絕授權：顯示授權失敗。
 - [ ] 授權成功後 `linked_account` 沒有新增任何 Twitch 列。
 - [ ] 不是域民的實況主已登記的頻道照常運作，資料不被刪除。
@@ -144,9 +145,9 @@ T-02 改 `bot_website.py`，T-03 改 `starlib/identity/twitch.py` 與 `system_us
 - 資料：無新欄位。登記頻道改成「沒有才新增」，不再用 `merge(TwitchBotJoinChannel(twitch_id=...))`：SQLModel 物件的 `action_channel_id`、`point_name` 預設是 `None`，merge 會把既有設定蓋掉。
 - 後端（`starServer/bot_website.py`）：
   - `/to/twitchauth`：刪掉 `decode_jwt_cookie` 檢查，其餘照舊（scopes、`force_verify`、state cookie）。
-  - `/oauth/twitch` 流程：檢查 code → `TwitchOAuth.verify_state` → `exchange_code` → `get_me()` 取得 Twitch user ID → `lookup_twitch_member(user.id)` → 依結果分支。只有 `TwitchMember` 才 `save_token_to_db(user.id)` 並登記頻道。
+  - `/oauth/twitch` 流程：檢查 code → `TwitchOAuth.verify_state` → `exchange_code` → `get_me()` 取得 Twitch user ID → `lookup_twitch_member(user.id)` → 依結果分支。只有 `TwitchMember` 才 `save_token_to_db(user.id)` 並登記頻道；這兩步包在同一個 try，出錯時記 log、送 Sentry，回無法確認同一個 503 頁。
   - log：成功記 Twitch ID 與 `account_id`；拒絕與無法確認記 Twitch ID 與結果，方便管理員回答實況主的詢問。
-- 前端：沿用目前的純 `HTMLResponse`。成功 200；不是域民 403；無法確認 503；授權失敗 400。回應頁都刪 `oauth_state` cookie。
+- 前端：沿用目前的純 `HTMLResponse`。成功 200；不是域民 403；無法確認或資料庫寫入失敗 503；授權失敗 400。回應頁都刪 `oauth_state` cookie。
 
 ```mermaid
 sequenceDiagram
@@ -190,12 +191,16 @@ sequenceDiagram
 - [ ] 連結兩個 Twitch 時兩個都列出，順序同 auth server 回傳。
 - [ ] 查別人時也看得到對方的 Twitch。
 - [ ] auth server 連不上時不顯示 Twitch，其他欄位照常。
+- [ ] 停權中的域民不顯示 Twitch。
 - [ ] 臨時使用者沒有 Twitch 列。
 - [ ] `linked_account` 裡還留著的 Twitch 列不會出現在 `/user_info`，Minecraft、Google 照舊顯示，格式與 Twitch 一致。
 
 **實作設計**
 - 資料：無新欄位，bot 不保存 Twitch 清單。
-- 後端：`starlib/identity/twitch.py` 新增 `fetch_twitch_passports(discord_id: int) -> tuple[LinkedPassport, ...]`，用 `_get_directory().find_by_discord` 回的 `Account.twitch_passports`。查無此人回空 tuple；auth server 連不上、逾時等沒得到明確答案時也回空 tuple 並記 log，不 raise。`__init__.py` 匯出。
+- 後端：
+  - `starlib/identity/twitch.py` 新增 `fetch_twitch_passports(discord_id: int) -> tuple[LinkedPassport, ...]`，委派 `IdentityResolver.fetch_twitch_passports`，用 `find_by_discord` 回的 `Account.twitch_passports`。查無此人、停權中、auth server 連不上或逾時都回空 tuple，不 raise；連不上時記 log。`__init__.py` 匯出。
+  - 與身分解析共用 auth server 的 backoff：解析剛連不上的那段時間，即時查直接回空，不再各等一次逾時。
+  - `BotIdentity` 加選填欄位 `twitch_passports: tuple[LinkedPassport, ...] | None = None`，不寫入資料庫。解析時剛向 auth server 查過才有值（停權為空），`None` 代表這次沒查。`/user_info` 有值就直接用，沒有才呼叫 `fetch_twitch_passports`，避免 TTL 過期那次對同一個 ID 查兩次。
 - 前端（`system_user.py`）：
   - 指令開頭 `await ctx.defer()`：身分查詢加上即時查 Twitch，可能超過 Discord 的 3 秒回應期限。
   - 「綁定的帳號」在 Discord 帳號之後先列即時查到的 Twitch（`username` 為空時顯示 subject），再列 `get_linked_accounts()` 但跳過 `PlatformType.Twitch` 的列。
@@ -204,7 +209,7 @@ sequenceDiagram
 **依賴**：T-01（`Account.twitch_passports`、`LinkedPassport`）
 
 **風險 / 實作注意**：
-- 每次 `/user_info` 對正式域民多一次 auth server 請求，逾時沿用 1.5 秒；有 `defer` 所以不受 3 秒期限限制。
+- 每次 `/user_info` 對正式域民最多多一次 auth server 請求（解析剛查過時不多查），逾時沿用 1.5 秒；有 `defer` 所以不受 3 秒期限限制。auth server 掛掉時，身分解析與即時查共用 backoff，不會每次都卡滿逾時。
 - 身分紀錄在 TTL 內仍認為是正式域民、但 auth server 已查無此人時，即時查回空 tuple，不顯示 Twitch。
 
 **進度**：未完成
