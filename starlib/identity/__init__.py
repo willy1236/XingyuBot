@@ -1,0 +1,18 @@
+"""
+### 模組：身分解析
+由 Discord ID 取得使用者 ID，權威來源是 auth server。
+"""
+
+from .client import Account, AccountDirectory, DirectoryUnavailable, DomalyzeIdentityClient
+from .resolver import BotIdentity, IdentityResolver, IdentityUnavailable, resolve_identity
+
+__all__ = [
+    "Account",
+    "AccountDirectory",
+    "BotIdentity",
+    "DirectoryUnavailable",
+    "DomalyzeIdentityClient",
+    "IdentityResolver",
+    "IdentityUnavailable",
+    "resolve_identity",
+]
