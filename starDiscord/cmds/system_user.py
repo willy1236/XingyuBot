@@ -7,7 +7,9 @@ from starlib.database.postgresql.enums import PlatformType
 from starlib.database.postgresql.models import DiscordUser
 from starlib.instance import happycamp_guild
 
-from ..checks import RegisteredContext, ensure_registered
+from starlib.identity import IdentityUnavailable, resolve_identity
+
+from ..checks import with_identity
 from ..extension import Cog_Extension
 from ..uiElement.view import DeletePetView
 
@@ -17,37 +19,47 @@ PLATFORM_DISPLAY_NAME = {
     PlatformType.Discord: "Discord",
     PlatformType.Twitch: "Twitch",
     PlatformType.Google: "Google",
+    PlatformType.Minecraft: "Minecraft",
 }
 
 class system_user(Cog_Extension):
     pet = SlashCommandGroup("pet", "寵物相關指令")
 
     @commands.slash_command(description="查看使用者的基本資訊")
-    @ensure_registered()
-    async def user_info(self, ctx: RegisteredContext, member: discord.Option(discord.Member, name="用戶", description="留空以查詢自己", default=None)):
-        user_dc:discord.Member = member or ctx.author
-        cuser = ctx.cuser
+    @with_identity()
+    async def user_info(self, ctx: discord.ApplicationContext, member: discord.Option(discord.Member, name="用戶", description="留空以查詢自己", default=None)):
+        user_dc: discord.Member = member or ctx.author
 
-        # cloud
-        cloud_user_embed = BotEmbed.general("使用者資料", icon_url=user_dc.avatar.url if user_dc.avatar else None)
-        cloud_user_embed.add_field(name="Cloud ID", value=cuser.id)
-        cloud_user_embed.add_field(name="雲端共用資料夾", value="已共用" if cuser.drive_share_id else "未共用")
-        if cuser.name:
-            cloud_user_embed.add_field(name="註冊名稱", value=cuser.name)
-        bound_accounts = sclient.sqldb.get_external_accounts(cuser.id)
-        if len(bound_accounts) > 1:
+        # 析域帳號：查自己用 with_identity 取得的結果；查別人不替沒用過 bot 的人發臨時 ID，查不到視為未註冊
+        identity = ctx.identity
+        unavailable = False
+        if user_dc.id != ctx.author.id:
+            try:
+                identity = await resolve_identity(user_dc.id, create=False)
+            except IdentityUnavailable:
+                identity = None
+                unavailable = True
+
+        account_embed = BotEmbed.general("使用者資料", icon_url=user_dc.avatar.url if user_dc.avatar else None)
+        if unavailable:
+            account_embed.add_field(name="析域帳號", value="身分服務暫時無法連線")
+        elif identity is None or not identity.is_formal:
+            account_embed.add_field(name="析域帳號", value="未註冊")
+        else:
+            account_embed.add_field(name="析域帳號", value=identity.username or "已註冊")
+
+        if identity is not None:
+            account_embed.add_field(name="雲端共用資料夾", value="已共用" if sclient.sqldb.get_drive_share(identity.user_id) else "未共用")
             account_lines = []
-            for account in bound_accounts:
+            for discord_id in sclient.sqldb.get_discord_ids_by_user(identity.user_id):
+                if discord_id != user_dc.id:
+                    account_lines.append(f"Discord：<@{discord_id}>")
+            for account in sclient.sqldb.get_linked_accounts(identity.user_id):
                 platform = PlatformType(account.platform)
-                if platform == PlatformType.Discord and int(account.external_id) == user_dc.id:
-                    continue
                 platform_name = PLATFORM_DISPLAY_NAME.get(platform, platform.name)
-                if platform == PlatformType.Discord:
-                    account_lines.append(f"{platform_name}：<@{account.external_id}>")
-                else:
-                    account_lines.append(f"{platform_name}：{account.display_name or account.external_id}")
+                account_lines.append(f"{platform_name}：{account.display_name or account.external_id}")
             if account_lines:
-                cloud_user_embed.add_field(name="綁定的帳號", value="\n".join(account_lines), inline=False)
+                account_embed.add_field(name="綁定的帳號", value="\n".join(account_lines), inline=False)
 
         # discord
         user = sclient.sqldb.get_dcuser(user_dc.id) or DiscordUser(discord_id=user_dc.id)
@@ -65,7 +77,7 @@ class system_user(Cog_Extension):
             guild = self.bot.get_guild(user.registration.guild_id)
             discord_user_embed.add_field(name="戶籍", value=guild.name if guild else user.registration.guild_id)
 
-        embeds = [cloud_user_embed, discord_user_embed]
+        embeds = [account_embed, discord_user_embed]
 
         # HappyCamp
         if ctx.guild_id in happycamp_guild:
@@ -74,14 +86,6 @@ class system_user(Cog_Extension):
             embeds.append(happycamp_embed)
 
         await ctx.respond(embeds=embeds)
-
-    @commands.slash_command(description="取得綁定碼")
-    @ensure_registered()
-    async def link_code(self, ctx: RegisteredContext):
-        code = sclient.sqldb.get_or_create_link_code(ctx.cuser.id)
-        embed = BotEmbed.simple("綁定碼", f"請在新綁定帳號欲註冊時輸入：\n{code.code}\n綁定碼10分鐘內有效，可使用當前指令重新獲取")
-        embed.set_footer(text=f"擁有此綁定碼的人可以綁定你的帳號，請勿隨意提供給他人")
-        await ctx.respond(embed=embed, ephemeral=True)
 
     @pet.command(description="查看寵物資訊")
     async def check(self, ctx, user_dc: discord.Option(discord.Member, name="用戶", description="可不輸入以查詢自己", default=None)):
