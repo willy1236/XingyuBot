@@ -13,6 +13,7 @@ from sqlmodel import Session
 
 from starlib import sqldb
 from starlib.identity import Account, DirectoryUnavailable, DomalyzeIdentityClient, IdentityResolver, IdentityUnavailable, ResolvedAccount
+from starlib.database import LinkedAccount, PlatformType
 from starlib.database.postgresql.client import SQLRepository
 from starlib.utils import nowtz
 
@@ -213,6 +214,136 @@ class TestResolve:
         directory.accounts[DISCORD_ID] = account
 
         assert resolve(resolver, create=False).user_id == account.account_id
+
+
+D2 = DISCORD_ID + 1
+
+
+def _names(repo: SQLRepository, user_id: UUID) -> list[str]:
+    return sorted(p.name for p in repo.get_music_playlists(user_id))
+
+
+class TestIdentityChange:
+    """ID 改變時判斷要不要搬資料：假的 auth server，真實 PostgreSQL 上的 merge_user_data"""
+
+    def _formal(self, resolver, directory, discord_id=DISCORD_ID, account=None):
+        account = account or _account()
+        directory.accounts[discord_id] = account
+        resolve(resolver, discord_id)
+        return account
+
+    def test_temporary_to_formal_moves_data(self, resolver, repo, directory):
+        temporary = resolve(resolver)
+        repo.create_music_playlist(temporary.user_id, "mine")
+        repo.session.add(LinkedAccount(user_id=temporary.user_id, platform=PlatformType.Minecraft, external_id="mc-1"))
+        repo.commit()
+        account = _account()
+        directory.accounts[DISCORD_ID] = account
+        expire(repo)
+
+        identity = resolve(resolver)
+
+        assert identity.user_id == account.account_id and identity.is_formal
+        assert _names(repo, account.account_id) == ["mine"]
+        assert _names(repo, temporary.user_id) == []
+        assert repo.get_linked_account(account.account_id, PlatformType.Minecraft).external_id == "mc-1"
+        assert directory.account_calls == 0
+
+    def test_absorbed_account_moves_data_and_repoints_sibling_records(self, resolver, repo, directory):
+        a = self._formal(resolver, directory)
+        self._formal(resolver, directory, D2, account=a)
+        repo.create_music_playlist(a.account_id, "mine")
+        survivor = _account()
+        directory.accounts[D2] = survivor
+        directory.by_account_id[a.account_id] = ResolvedAccount(survivor, merged_from=a.account_id)
+        expire(repo, D2)
+
+        identity = resolve(resolver, D2)
+
+        assert identity.user_id == survivor.account_id
+        assert _names(repo, survivor.account_id) == ["mine"]
+        assert _names(repo, a.account_id) == []
+        assert repo.get_discord_identity(DISCORD_ID).user_id == survivor.account_id
+
+    def test_repointed_to_another_account_moves_nothing(self, resolver, repo, directory):
+        a = self._formal(resolver, directory)
+        self._formal(resolver, directory, D2, account=a)
+        b = _account()
+        repo.create_music_playlist(a.account_id, "a's")
+        repo.create_music_playlist(b.account_id, "b's")
+        directory.accounts[D2] = b
+        directory.by_account_id[a.account_id] = ResolvedAccount(a)  # 舊域民仍存在，沒有 mergedFrom
+        expire(repo, D2)
+
+        identity = resolve(resolver, D2)
+
+        assert identity.user_id == b.account_id
+        assert _names(repo, a.account_id) == ["a's"]
+        assert _names(repo, b.account_id) == ["b's"]
+        assert repo.get_discord_identity(DISCORD_ID).user_id == a.account_id
+        assert repo.get_discord_identity(D2).user_id == b.account_id
+
+    def test_previous_account_deleted_repoints_and_logs(self, resolver, repo, directory, caplog):
+        a = self._formal(resolver, directory)
+        b = _account()
+        repo.create_music_playlist(a.account_id, "a's")
+        directory.accounts[DISCORD_ID] = b  # by_account_id 沒有 a，視為已刪除
+        expire(repo)
+
+        with caplog.at_level("WARNING", logger="starlib.identity.resolver"):
+            identity = resolve(resolver)
+
+        assert identity.user_id == b.account_id
+        assert _names(repo, a.account_id) == ["a's"]
+        assert _names(repo, b.account_id) == []
+        assert any("no longer exists" in r.message and r.old_id == str(a.account_id) for r in caplog.records)
+
+    def test_absorbed_into_different_account_moves_nothing(self, resolver, repo, directory):
+        a = self._formal(resolver, directory)
+        repo.create_music_playlist(a.account_id, "a's")
+        c, d = _account(), _account()
+        directory.accounts[DISCORD_ID] = d
+        directory.by_account_id[a.account_id] = ResolvedAccount(c, merged_from=a.account_id)
+        expire(repo)
+
+        identity = resolve(resolver)
+
+        assert identity.user_id == d.account_id
+        assert _names(repo, a.account_id) == ["a's"]
+        assert _names(repo, d.account_id) == []
+
+    def test_cannot_check_previous_account_keeps_record_and_backs_off(self, resolver, repo, directory):
+        a = self._formal(resolver, directory)
+        repo.create_music_playlist(a.account_id, "a's")
+        directory.accounts[DISCORD_ID] = _account()
+        directory.account_unavailable = True
+        expire(repo)
+
+        identity = resolve(resolver)
+        resolve(resolver)
+
+        assert identity.user_id == a.account_id
+        assert repo.get_discord_identity(DISCORD_ID).user_id == a.account_id
+        assert _names(repo, a.account_id) == ["a's"]
+        assert directory.account_calls == 1  # 第二次在 backoff 內，不再等逾時
+
+        directory.account_unavailable = False
+        resolver._unavailable_until = None
+        assert resolve(resolver).user_id == directory.accounts[DISCORD_ID].account_id
+
+    def test_failed_move_keeps_data_and_record(self, resolver, repo, directory, monkeypatch):
+        temporary = resolve(resolver)
+        repo.create_music_playlist(temporary.user_id, "mine")
+        directory.accounts[DISCORD_ID] = _account()
+        expire(repo)
+        monkeypatch.setattr(SQLRepository, "_merge_user_data", lambda self, o, n: (_ for _ in ()).throw(RuntimeError("bug")))
+
+        with pytest.raises(RuntimeError):
+            resolve(resolver)
+
+        record = repo.get_discord_identity(DISCORD_ID)
+        assert record.user_id == temporary.user_id and not record.is_formal
+        assert _names(repo, temporary.user_id) == ["mine"]
 
 
 class TestTemporaryIdentityRace:
