@@ -30,7 +30,7 @@ class error(Cog_Extension):
             await ctx.respond(f"缺少權限：我沒有權限來使用此指令\n缺少權限：{text}", ephemeral=True)
 
         elif isinstance(error, commands.errors.CheckAnyFailure):
-            # check_any 全部沒過：每一項都是權限類檢查
+            # check_any 全部沒過：目前 check_any 只用來組權限類檢查
             await ctx.respond("權限錯誤：你沒有權限使用此指令", ephemeral=True)
             log.warning("CheckAnyFailure", extra={"command": str(ctx.command), "errors": [str(e) for e in error.errors]})
 
