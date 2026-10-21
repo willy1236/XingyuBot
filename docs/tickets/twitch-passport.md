@@ -227,11 +227,11 @@ sequenceDiagram
 - 不包含：Minecraft、Google 綁定（維持在 bot）。
 
 **驗收條件**
-- [ ] 上線前檢查完成，正式機的 `AUTH_TWITCH_PROVIDER` 與 auth server 的登入方式代號一致。
-- [ ] 上線後 `SELECT count(*) FROM users.linked_account WHERE platform = 2` 為 0。
-- [ ] 程式裡沒有以 `PlatformType.Twitch` 呼叫 `upsert_linked_account` 的路徑；`LinkedAccount` docstring 改為只寫 Minecraft、Google。
-- [ ] 本人在 auth server 連結自己的 Twitch 後，`/user_info` 顯示該 Twitch，且用它走 T-02 的授權成功。
-- [ ] 已登記頻道在部署重啟後照常運作。
+- [x] 上線前檢查完成，正式機的 `AUTH_TWITCH_PROVIDER` 與 auth server 的登入方式代號一致。
+- [x] 上線後 `SELECT count(*) FROM users.linked_account WHERE platform = 2` 為 0。
+- [x] 程式裡沒有以 `PlatformType.Twitch` 呼叫 `upsert_linked_account` 的路徑；`LinkedAccount` docstring 改為只寫 Minecraft、Google。
+- [x] 本人在 auth server 連結自己的 Twitch 後，`/user_info` 顯示該 Twitch，且用它走 T-02 的授權成功。
+- [x] 已登記頻道在部署重啟後照常運作。
 
 **實作設計**
 - 資料（部署時執行）：刪除前先 `SELECT` 確認只有 2 筆且都是本人的 `user_id`，再 `DELETE FROM users.linked_account WHERE platform = 2;`。沒有 schema 變更。
@@ -244,7 +244,10 @@ sequenceDiagram
 - 不設退回方案，出問題往前修。
 - 刪除前先在本機用正式資料的 dump 跑一次 `/user_info`，確認沒有其他地方讀 Twitch 列。
 
-**進度**：未完成
+**進度**：全部完成（2026-10-21）
+- commit：`1464c57`、`4604e1f`，以 `24c2245` 合進 main 上線；shark-ansible `6be19c4`、`b4eb53d`
+- 上線驗收依使用者在正式機回報：`/user_info` 顯示連結的 Twitch、`/to/twitchauth` 授權成功、既有頻道照常運作、Twitch 綁定已刪除
+- 上線時發現正式庫 Twitch `oauth_client`（`source_seq = 3`）的 `redirect_uri` 是 `localhost:14000`，授權後導不回網站；使用者已在正式庫與 Twitch Developer Console 改成對外網址
 
 ## 開工前待決
 
