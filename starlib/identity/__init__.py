@@ -6,7 +6,7 @@
 from .client import Account, AccountDirectory, DirectoryUnavailable, DomalyzeIdentityClient, LinkedPassport, ResolvedAccount
 from .privilege import privilege_of
 from .resolver import BotIdentity, IdentityResolver, IdentityUnavailable, resolve_identity
-from .twitch import MemberUnknown, NotMember, TwitchLookup, TwitchMember, lookup_twitch_member
+from .twitch import MemberUnknown, NotMember, TwitchLookup, TwitchMember, fetch_twitch_passports, lookup_twitch_member
 
 __all__ = [
     "Account",
@@ -22,6 +22,7 @@ __all__ = [
     "ResolvedAccount",
     "TwitchLookup",
     "TwitchMember",
+    "fetch_twitch_passports",
     "lookup_twitch_member",
     "privilege_of",
     "resolve_identity",
