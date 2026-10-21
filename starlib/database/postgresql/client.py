@@ -1,7 +1,6 @@
 import functools
 import inspect
 import logging
-import secrets
 from collections import defaultdict, deque
 from collections.abc import Callable, Generator
 from datetime import date, datetime, time, timedelta, timezone
@@ -186,117 +185,12 @@ class BaseRepository:
 
 class UserRepository(BaseRepository):
     # * User
-    def get_cloud_user_by_discord(self, discord_id: int):
-        """
-        Retrieve a CloudUser from the database based on the provided Discord ID.
-
-        Args:
-            discord_id (int): The Discord ID of the user to retrieve.
-
-        Returns:
-            CloudUser: The CloudUser object if found.
-        """
-        stmt = select(CloudUser).join(ExternalAccount, CloudUser.id == ExternalAccount.user_id).where(ExternalAccount.platform == PlatformType.Discord, ExternalAccount.external_id == str(discord_id))
-        result = self.session.exec(stmt).one_or_none()
-        return result
-
-    def get_cloud_user_by_id(self, cloud_user_id: int) -> CloudUser | None:
-        """Retrieve a CloudUser by its own primary key."""
-        return self.session.get(CloudUser, cloud_user_id)
-
-    def add_cloud_user_by_discord(self, discord_id: int, display_name: str | None = None):
-        """
-        Add a new CloudUser to the database based on the provided Discord ID.
-
-        Args:
-            discord_id (int): The Discord ID of the user to add.
-
-        Returns:
-            CloudUser: The newly created CloudUser object.
-        """
-        cloud_user = CloudUser()
-        self.session.add(cloud_user)
-        self.session.flush()  # 確保 id 已被分配
-
-        external_account = ExternalAccount(user_id=cloud_user.id, platform=PlatformType.Discord, external_id=str(discord_id), display_name=display_name)
-        self.session.add(external_account)
-        self.commit()
-        return cloud_user
-
-    def get_or_create_link_code(self, user_id: int):
-        """取得或創建綁定碼"""
-        stmt = select(LinkCode).where(LinkCode.user_id == user_id)
-        result = self.session.exec(stmt).one_or_none()
-        if result and result.expires_at > nowtz():
-            return result
-
-        # 若無綁定碼或已過期，則創建新綁定碼
-        new_code = LinkCode(user_id=user_id, code=f"{secrets.randbelow(1000000):06d}", expires_at=nowtz() + timedelta(minutes=10))
-        self.session.merge(new_code)
-        self.commit()
-        return new_code
-
-    def get_active_link_code(self, discord_id: str):
-        """取得有效的綁定碼"""
-        stmt = select(LinkCode).join(ExternalAccount, LinkCode.user_id == ExternalAccount.user_id).where(ExternalAccount.external_id == str(discord_id), LinkCode.expires_at > nowtz())
-        result = self.session.exec(stmt).one_or_none()
-        return result
-
     def get_dcuser(self, discord_id: int, with_registration: bool = False):
         stmt = select(DiscordUser).where(DiscordUser.discord_id == discord_id)
         if with_registration:
             stmt = stmt.options(joinedload(DiscordUser.registration))
         result = self.session.exec(stmt).one_or_none()
         return result or DiscordUser(discord_id=discord_id)
-
-    def get_cloud_user_privilege(self, discord_id: int):
-        """
-        Retrieve the privilege level of a CloudUser based on their Discord ID.
-
-        Args:
-            discord_id (int): The Discord ID of the user.
-
-        Returns:
-            PrivilegeLevel: The privilege level of the user.
-        """
-        stmt = select(CloudUser.privilege_level).join(ExternalAccount, CloudUser.id == ExternalAccount.user_id).where(ExternalAccount.platform == PlatformType.Discord, ExternalAccount.external_id == str(discord_id))
-        result = self.session.exec(stmt).one_or_none()
-        return PrivilegeLevel(result) or PrivilegeLevel.User
-
-    def get_discord_accounts(self, user_id: int):
-        stmt = select(ExternalAccount).where(ExternalAccount.platform == PlatformType.Discord, ExternalAccount.user_id == user_id)
-        result = self.session.exec(stmt).all()
-        return result
-
-    def get_external_account(self, user_id: int, platform: PlatformType):
-        """取得該 cloud_user 綁定的指定平台帳號"""
-        stmt = select(ExternalAccount).where(ExternalAccount.user_id == user_id, ExternalAccount.platform == platform)
-        result = self.session.exec(stmt).one_or_none()
-        return result
-
-    def get_external_accounts(self, user_id: int) -> list[ExternalAccount]:
-        """取得該 cloud_user 綁定的所有外部帳號（不分平台）。"""
-        stmt = select(ExternalAccount).where(ExternalAccount.user_id == user_id)
-        result = self.session.exec(stmt).all()
-        return list(result)
-
-    def upsert_external_account(self, user_id: int, platform: PlatformType, external_id: str, display_name: str | None = None):
-        """新增或更新外部帳號，以 (platform, external_id) 為唯一鍵。"""
-        stmt = select(ExternalAccount).where(ExternalAccount.platform == platform, ExternalAccount.external_id == external_id)
-        existing = self.session.exec(stmt).one_or_none()
-        if existing:
-            existing.user_id = user_id
-            existing.display_name = display_name
-        else:
-            self.session.add(ExternalAccount(user_id=user_id, platform=platform, external_id=external_id, display_name=display_name))
-        self.commit()
-
-    def remove_external_account(self, user_id: int, platform: PlatformType):
-        stmt = select(ExternalAccount).where(ExternalAccount.user_id == user_id, ExternalAccount.platform == platform)
-        existing = self.session.exec(stmt).one_or_none()
-        if existing:
-            self.session.delete(existing)
-            self.commit()
 
     def get_discord_identity(self, discord_id: int) -> DiscordIdentity | None:
         return self.session.get(DiscordIdentity, discord_id)

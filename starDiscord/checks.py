@@ -6,14 +6,11 @@ from discord.ext import commands
 from starlib import sqldb
 from starlib.database import PrivilegeLevel
 from starlib.database.postgresql.cache import _MISSING, TTLCache
-from starlib.database.postgresql.models import CloudUser, HappycampVIP
+from starlib.database.postgresql.models import HappycampVIP
 from starlib.identity import BotIdentity, IdentityUnavailable, privilege_of, resolve_identity
-
-from .uiElement.view import RegisterView
 
 SUSPENDED_MESSAGE = "你的析域帳號已停權，無法使用此功能"
 
-_user_cache: TTLCache[CloudUser] = TTLCache(ttl=300)
 _vip_cache: TTLCache[HappycampVIP | None] = TTLCache(ttl=300)
 
 
@@ -65,42 +62,6 @@ def is_vip_admin():
         raise discord.ApplicationCommandError("權限錯誤：你沒有權限使用此指令")
 
     return commands.check(predicate)
-
-class RegisteredContext(discord.ApplicationContext):
-    """
-    如果用戶已註冊，則此互動對象會有一個額外的屬性 cuser，代表該用戶的 CloudUser 資料
-    指令的ctx參數類型應設定為 RegisteredContext，以便在指令內使用 ctx.cuser 取得用戶資料
-    """
-
-    cuser: CloudUser
-
-
-def ensure_registered():
-    def decorator(func):
-        @functools.wraps(func)
-        async def wrapper(cog, ctx: discord.ApplicationContext, *args, **kwargs):
-            user = _user_cache.get(ctx.author.id)
-            if user is _MISSING:
-                user = sqldb.get_cloud_user_by_discord(ctx.author.id)
-                if user:
-                    # 只快取已註冊用戶；未註冊者不快取，確保註冊後立即生效
-                    _user_cache.set(ctx.author.id, user)
-
-            if user:
-                # 已註冊，執行原本的指令函式
-                ctx.cuser = user  # 將用戶資料附加到互動對象上，供指令內使用
-                return await func(cog, ctx, *args, **kwargs)
-            else:
-                # 未註冊，發送條款按鈕
-                view = RegisterView()
-                embed = discord.Embed(title="📝 註冊帳號", description="歡迎使用本服務！在開始之前，請先建立新帳號或綁定原有帳號", color=discord.Color.blue())
-                await ctx.respond(embed=embed, view=view, ephemeral=True)
-                return  # 中斷執行，不進入原本的指令內容
-
-        return wrapper
-
-    return decorator
-
 
 class IdentityContext(discord.ApplicationContext):
     """

@@ -14,7 +14,7 @@ from scripts.migrate_identity import MigrationAborted, format_report, migrate
 from starlib import sqldb
 from starlib.database import DriveShare, LinkedAccount, NetBirdBinding, PlatformType
 from starlib.database.postgresql.client import SQLRepository
-from starlib.database.postgresql.models import DiscordIdentity, MusicPlaylist
+from starlib.database.postgresql.models import DiscordIdentity
 
 from test_identity import FakeDirectory, _account
 
