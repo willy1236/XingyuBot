@@ -3,10 +3,18 @@ from typing import TypeVar
 
 import requests
 from pydantic import BaseModel, Field
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 from starlib.exceptions import APINetworkError
 
 T = TypeVar("T")
+
+# 只重試連線層的暫時性錯誤（如 TLS 握手時被 reset），預設僅限 idempotent method，不重試 HTTP 狀態碼
+_session = requests.Session()
+_retry_adapter = HTTPAdapter(max_retries=Retry(total=3, connect=3, read=2, status=0, backoff_factor=0.5))
+_session.mount("http://", _retry_adapter)
+_session.mount("https://", _retry_adapter)
 
 
 class APICaller:
@@ -62,7 +70,7 @@ class APICaller:
         request_headers = {**self.headers, **kwargs.pop("headers", {})}
 
         try:
-            response = requests.request(method, url, headers=request_headers, **kwargs)
+            response = _session.request(method, url, headers=request_headers, **kwargs)
             if response.status_code == requests.codes.not_found:
                 return None
             if not (200 <= response.status_code < 300):
