@@ -76,10 +76,39 @@ class DiscordIdentity(UsersSchema, table=True):
     checked_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0), nullable=False))
 
 
+class LinkedAccount(UsersSchema, table=True):
+    """使用者 ID 綁定的外部平台帳號（Minecraft、Twitch、Google），一個平台一人一筆；Discord 不放這裡"""
+
+    __tablename__ = "linked_account"
+
+    id: int = Field(sa_column=Column(Integer, Identity(), primary_key=True))
+    user_id: UUID = Field(sa_column=Column(PG_UUID(as_uuid=True), index=True, nullable=False))
+    platform: PlatformType = Field(sa_column=Column(SmallInteger, index=True, nullable=False))
+    external_id: str = Field(sa_column=Column(String, index=True, nullable=False))
+    display_name: str | None = Field(sa_column=Column(String))
+    platform_data: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+
+    __table_args__ = (
+        UniqueConstraint("platform", "external_id", name="unique_linked_platform_account"),
+        UniqueConstraint("user_id", "platform", name="unique_linked_user_platform"),
+        {**UsersSchema.__table_args__},
+    )
+
+
+class DriveShare(UsersSchema, table=True):
+    """「94共用啦」雲端資料夾的共用設定，一人一筆"""
+
+    __tablename__ = "drive_share"
+
+    user_id: UUID = Field(sa_column=Column(PG_UUID(as_uuid=True), primary_key=True))
+    gmail: str = Field(sa_column=Column(String, nullable=False))
+    share_id: str = Field(sa_column=Column(String, nullable=False))
+
+
 class NetBirdBinding(UsersSchema, table=True):
     __tablename__ = "netbird_binding"
 
-    user_id: int = Field(foreign_key="users.cloud_user.id", primary_key=True)
+    user_id: UUID = Field(sa_column=Column(PG_UUID(as_uuid=True), primary_key=True))
     group_id: str = Field(sa_column=Column(String))
     group_name: str | None = Field(sa_column=Column(String))
     last_setup_key_id: str | None = Field(sa_column=Column(String))

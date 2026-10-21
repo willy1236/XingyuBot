@@ -328,9 +328,53 @@ class UserRepository(BaseRepository):
         """
         log.info("merge_user_data: not implemented yet", extra={"old_id": str(old_id), "new_id": str(new_id)})
 
-    def get_netbird_binding(self, user_id: int) -> NetBirdBinding | None:
-        """取得該 cloud_user 的 NetBird 綁定資料"""
+    def get_netbird_binding(self, user_id: UUID) -> NetBirdBinding | None:
+        """取得該使用者 ID 的 NetBird 綁定資料"""
         return self.session.get(NetBirdBinding, user_id)
+
+    def get_linked_account(self, user_id: UUID, platform: PlatformType) -> LinkedAccount | None:
+        """取得該使用者綁定的指定平台帳號"""
+        stmt = select(LinkedAccount).where(LinkedAccount.user_id == user_id, LinkedAccount.platform == platform)
+        return self.session.exec(stmt).one_or_none()
+
+    def get_linked_accounts(self, user_id: UUID) -> list[LinkedAccount]:
+        """取得該使用者綁定的所有外部帳號（不分平台）。"""
+        stmt = select(LinkedAccount).where(LinkedAccount.user_id == user_id)
+        return list(self.session.exec(stmt).all())
+
+    def upsert_linked_account(self, user_id: UUID, platform: PlatformType, external_id: str, display_name: str | None = None):
+        """
+        新增或更新綁定帳號，以 (platform, external_id) 為唯一鍵：該帳號已被別人綁定時，綁定轉到 user_id。
+        一個平台一人一筆，user_id 在該平台原有的另一筆會被取代。
+        """
+        own = self.get_linked_account(user_id, platform)
+        if own and own.external_id != external_id:
+            self.session.delete(own)
+            self.session.flush()
+
+        stmt = select(LinkedAccount).where(LinkedAccount.platform == platform, LinkedAccount.external_id == external_id)
+        existing = self.session.exec(stmt).one_or_none()
+        if existing:
+            existing.user_id = user_id
+            existing.display_name = display_name
+        else:
+            self.session.add(LinkedAccount(user_id=user_id, platform=platform, external_id=external_id, display_name=display_name))
+        self.commit()
+
+    def remove_linked_account(self, user_id: UUID, platform: PlatformType):
+        existing = self.get_linked_account(user_id, platform)
+        if existing:
+            self.session.delete(existing)
+            self.commit()
+
+    def get_drive_share(self, user_id: UUID) -> DriveShare | None:
+        return self.session.get(DriveShare, user_id)
+
+    def remove_drive_share(self, user_id: UUID):
+        existing = self.session.get(DriveShare, user_id)
+        if existing:
+            self.session.delete(existing)
+            self.commit()
 
     def get_main_account(self, alternate_account):
         stmt = select(UserAccount.main_account).where(UserAccount.alternate_account == alternate_account)
