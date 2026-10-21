@@ -12,7 +12,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session
 
 from starlib import sqldb
-from starlib.identity import Account, DirectoryUnavailable, DomalyzeIdentityClient, IdentityResolver, IdentityUnavailable, ResolvedAccount
+from starlib.identity import Account, DirectoryUnavailable, DomalyzeIdentityClient, IdentityResolver, IdentityUnavailable, LinkedPassport, ResolvedAccount
 from starlib.database import LinkedAccount, PlatformType
 from starlib.database.postgresql.client import SQLRepository
 from starlib.utils import nowtz
@@ -400,7 +400,7 @@ class TestTemporaryIdentityRace:
 # ─── auth server adapter ────────────────────────────────────────────────────
 
 
-async def _with_server(handler, call):
+async def _with_server(handler, call, twitch_provider: str = "twitch"):
     app = web.Application()
     app.router.add_get("/v1/passports/{provider}/{id}", handler)
     app.router.add_get("/v1/accounts/{id}", handler)
@@ -410,7 +410,7 @@ async def _with_server(handler, call):
     await site.start()
     port = site._server.sockets[0].getsockname()[1]
     try:
-        return await call(DomalyzeIdentityClient(f"http://127.0.0.1:{port}/", "key", timeout=0.5))
+        return await call(DomalyzeIdentityClient(f"http://127.0.0.1:{port}/", "key", timeout=0.5, twitch_provider=twitch_provider))
     finally:
         await runner.cleanup()
 
@@ -485,6 +485,36 @@ class TestDomalyzeIdentityClient:
 
         assert result is None
         assert seen["path"] == "/v1/passports/twitch/a%20b%2Fc"
+
+    def test_twitch_passports_only_keep_configured_provider(self):
+        account_id = uuid4()
+        passports = [
+            {"provider": "discord", "subject": str(DISCORD_ID), "username": "w"},
+            {"provider": "twitch-main", "subject": "111", "username": "WillyTV"},
+            {"provider": "twitch-main", "subject": "222", "username": None},
+            {"provider": "twitch", "subject": "333", "username": "other"},
+        ]
+
+        async def handler(request):
+            return web.json_response({"accountId": str(account_id), "roles": [], "suspended": False, "passports": passports})
+
+        account = asyncio.run(_with_server(handler, lambda client: client.find_by_discord(DISCORD_ID), twitch_provider="twitch-main"))
+
+        assert account.twitch_passports == (LinkedPassport("111", "WillyTV"), LinkedPassport("222", None))
+
+    def test_missing_passports_is_empty(self):
+        async def handler(request):
+            return web.json_response({"accountId": str(uuid4()), "roles": [], "suspended": False})
+
+        assert _find(handler).twitch_passports == ()
+
+    @pytest.mark.parametrize("passports", [[{"subject": "1"}], ["twitch"], 5])
+    def test_malformed_passports_is_unavailable(self, passports):
+        async def handler(request):
+            return web.json_response({"accountId": str(uuid4()), "passports": passports})
+
+        with pytest.raises(DirectoryUnavailable):
+            _find(handler)
 
 
 def _find_account(handler, account_id: UUID):

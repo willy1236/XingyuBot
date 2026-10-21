@@ -16,11 +16,18 @@ NOT_FOUND_DETAIL = "account not found"
 
 
 @dataclass(frozen=True)
+class LinkedPassport:
+    subject: str  # Twitch 數字 user ID
+    username: str | None  # auth server 存的 Twitch 顯示名稱
+
+
+@dataclass(frozen=True)
 class Account:
     account_id: UUID
     username: str | None
     roles: tuple[str, ...]
     suspended: bool
+    twitch_passports: tuple[LinkedPassport, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -52,9 +59,10 @@ class AccountDirectory(Protocol):
 class DomalyzeIdentityClient:
     """以 `Authorization: Bearer <金鑰>` 呼叫 auth server 內部 API"""
 
-    def __init__(self, base_url: str, service_key: str, timeout: float = 1.5):
+    def __init__(self, base_url: str, service_key: str, timeout: float = 1.5, twitch_provider: str = "twitch"):
         # 逾時要短於 Discord 互動的 3 秒回應期限，連不上時才來得及回「稍後再試」
         self._base_url = base_url.rstrip("/")
+        self._twitch_provider = twitch_provider
         self._headers = {"Authorization": f"Bearer {service_key}"}
         self._timeout = aiohttp.ClientTimeout(total=timeout)
 
@@ -107,14 +115,18 @@ class DomalyzeIdentityClient:
             raise DirectoryUnavailable("malformed response")
         return data
 
-    @staticmethod
-    def _parse_account(data: dict, extra: dict) -> Account:
+    def _parse_account(self, data: dict, extra: dict) -> Account:
         try:
             return Account(
                 account_id=UUID(data["accountId"]),
                 username=data.get("username"),
                 roles=tuple(data.get("roles") or ()),
                 suspended=bool(data.get("suspended", False)),
+                twitch_passports=tuple(
+                    LinkedPassport(subject=str(p["subject"]), username=p.get("username"))
+                    for p in data.get("passports") or ()
+                    if p["provider"] == self._twitch_provider
+                ),
             )
         except (KeyError, TypeError, ValueError) as e:
             log.error("auth server: malformed response", extra=extra)

@@ -161,7 +161,7 @@ def _get_default() -> IdentityResolver:
         from starlib.settings import get_settings
 
         settings = get_settings()
-        directory = DomalyzeIdentityClient(settings.AUTH_INTERNAL_URL, settings.AUTH_SERVICE_KEY)
+        directory = DomalyzeIdentityClient(settings.AUTH_INTERNAL_URL, settings.AUTH_SERVICE_KEY, twitch_provider=settings.AUTH_TWITCH_PROVIDER)
         _default = IdentityResolver(directory, sqldb, timedelta(seconds=settings.IDENTITY_TTL_SECONDS))
     return _default
 
