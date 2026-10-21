@@ -82,6 +82,12 @@ class TestLinkedAccountRepository:
 
         assert {a.platform for a in repo.get_linked_accounts(user_id)} == {PlatformType.Minecraft, PlatformType.Google}
 
+    def test_twitch_is_rejected(self, repo, user_id):
+        with pytest.raises(ValueError):
+            repo.upsert_linked_account(user_id, PlatformType.Twitch, "tw-1")
+
+        assert repo.get_linked_account(user_id, PlatformType.Twitch) is None
+
     def test_remove(self, repo, user_id):
         repo.upsert_linked_account(user_id, PlatformType.Minecraft, "mc-1")
         repo.remove_linked_account(user_id, PlatformType.Minecraft)
