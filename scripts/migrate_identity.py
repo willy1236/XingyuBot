@@ -9,7 +9,7 @@
 - 兩個 cloud_user 的主帳號屬於同一位域民時，cloud_user.id 小的直接轉，其餘先轉到暫用 ID 再 merge_user_data。
 - 先查完所有人才寫入；auth server 沒給出明確答案就中止，不發任何臨時 ID。
 - 整個轉換在單一交易內，--dry-run 跑完整流程後 rollback，資料不變；新表若還不存在，import 時會先建好空表。
-- 舊表有新表收不下的資料（平台不在名單、external_id 為空、同人同平台兩筆）就中止並列出，不自行取捨。
+- 舊表有新表收不下的資料（平台不在名單、external_id 為空、Discord ID 不合法、同人同平台兩筆）就中止並列出，不自行取捨。
 - 舊表以 raw SQL 讀取，不依賴舊 model。
 """
 
@@ -19,6 +19,7 @@ import argparse
 import asyncio
 import json
 import sys
+import traceback
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from uuid import UUID, uuid4
@@ -72,8 +73,12 @@ LEGACY_CHECKS = {
     "平台不是 Discord／Twitch／Google／Minecraft": (
         "SELECT id FROM users.external_account WHERE platform IS NULL OR NOT (platform = :discord OR platform = ANY(:platforms)) ORDER BY id"
     ),
-    "external_id 是空的": "SELECT id FROM users.external_account WHERE external_id IS NULL ORDER BY id",
-    "Discord 的 external_id 不是數字": "SELECT id FROM users.external_account WHERE platform = :discord AND external_id !~ '^[0-9]+$' ORDER BY id",
+    "external_id 是空的": "SELECT id FROM users.external_account WHERE external_id IS NULL OR btrim(external_id) = '' ORDER BY id",
+    # 前導零會讓兩個字串轉成同一個 BigInteger，超過 19 位放不進 BigInteger
+    "Discord 的 external_id 不是合法的 Discord ID": (
+        "SELECT id FROM users.external_account WHERE platform = :discord "
+        "AND (external_id !~ '^[1-9][0-9]{0,18}$' OR external_id::numeric > 9223372036854775807) ORDER BY id"
+    ),
     "同一個 cloud_user 有兩筆同平台綁定": (
         "SELECT id FROM users.external_account e WHERE platform = ANY(:platforms) AND EXISTS "
         "(SELECT 1 FROM users.external_account o WHERE o.user_id = e.user_id AND o.platform = e.platform AND o.id <> e.id) ORDER BY id"
@@ -155,7 +160,10 @@ class Report:
         return [u for u in self.users if u.user_id is None]
 
     def to_dict(self) -> dict:
-        return json.loads(json.dumps(asdict(self), default=str))
+        data = asdict(self)
+        data["admins"] = [u.cloud_user_id for u in self.admins]
+        data["top_playlist_users"] = [u.cloud_user_id for u in self.top_playlist_users]
+        return json.loads(json.dumps(data, default=str))
 
 
 async def migrate(repo: SQLRepository, directory: AccountDirectory, *, dry_run: bool) -> Report:
@@ -341,6 +349,7 @@ def main() -> int:
         return 1
     except Exception as e:
         print(f"轉換失敗，已 rollback，資料庫沒有變動：{e!r}", file=sys.stderr)
+        traceback.print_exc()
         return 1
     print(format_report(report))
     if args.report:

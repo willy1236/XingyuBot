@@ -310,7 +310,11 @@ class TestSafety:
         [
             (PlatformType.Steam, ["steam-a"], "平台不是"),
             (PlatformType.Twitch, [None], "external_id 是空的"),
-            (PlatformType.Discord, ["not-a-number"], "不是數字"),
+            (None, ["x"], "平台不是"),
+            (PlatformType.Twitch, [" "], "external_id 是空的"),
+            (PlatformType.Discord, ["not-a-number"], "不是合法的 Discord ID"),
+            (PlatformType.Discord, ["0123"], "不是合法的 Discord ID"),
+            (PlatformType.Discord, ["99999999999999999999"], "不是合法的 Discord ID"),
             (PlatformType.Twitch, ["tw-a", "tw-b"], "兩筆同平台"),
         ],
     )
@@ -346,3 +350,4 @@ class TestReport:
         report = run(repo, directory, dry_run=True)
 
         assert [u.cloud_user_id for u in report.top_playlist_users] == cids[:1:-1]
+        assert report.to_dict()["top_playlist_users"] == cids[:1:-1]
