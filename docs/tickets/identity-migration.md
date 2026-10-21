@@ -212,11 +212,11 @@ T-03、T-05 技術上只依賴 T-01，建議等 T-02 先跑通 auth server 再�
 - 不包含：移除 `RegisterView`、`LinkAccountModal`（T-08，切換前其他舊指令還在用）。
 
 **驗收條件**
-- [ ] 臨時使用者看到「析域帳號：未註冊」，畫面上沒有任何 ID。
-- [ ] 正式使用者看到「析域帳號：<域民代號>」。
-- [ ] Minecraft／Twitch／Google 綁定列在「綁定的帳號」；bot 知道的同一域民其他 Discord 帳號也列出。
-- [ ] 查詢別人時顯示的是對方的資料，且不會替從沒用過 bot、也沒有析域帳號的人發臨時 ID（顯示未註冊）。
-- [ ] `/link_code` 指令已不存在。
+- [x] 臨時使用者看到「析域帳號：未註冊」，畫面上沒有任何 ID。
+- [x] 正式使用者看到「析域帳號：<域民代號>」。
+- [x] Minecraft／Twitch／Google 綁定列在「綁定的帳號」；bot 知道的同一域民其他 Discord 帳號也列出。
+- [x] 查詢別人時顯示的是對方的資料，且不會替從沒用過 bot、也沒有析域帳號的人發臨時 ID（顯示未註冊）。
+- [x] `/link_code` 指令已不存在。
 
 **實作設計**
 - 資料：無異動；讀 `discord_identity`（同 `user_id` 的其他 Discord ID）、`linked_account`、`drive_share`。
@@ -225,7 +225,22 @@ T-03、T-05 技術上只依賴 T-01，建議等 T-02 先跑通 auth server 再�
 
 **依賴**：T-03（`linked_account`、`drive_share` 表）
 
-**進度**：未完成
+**進度**：實作完成（2026-10-21）
+- commit：c6c1a1a、e1bd24a、b9900c9、4e86302
+- 使用者決定：
+  - 查別人時對方 `IdentityUnavailable`：帳號區塊顯示「身分服務暫時無法連線」，其餘 Discord 資料照常。
+  - 查別人時外部綁定與雲端資料夾照卡維持公開。
+  - 查別人時呼叫者自己也先過 `with_identity`：auth server 連不上且呼叫者沒用過 bot 時會被擋，沒用過 bot 的人會被發臨時 ID。
+- 已核可的實作細節：
+  - 正式但 `username` 為空顯示「已註冊」。
+  - 查別人時對方是 `None` 或 `IdentityUnavailable`，不顯示雲端資料夾與綁定欄位。
+  - 被停權的目標仍可被查看。
+  - `PLATFORM_DISPLAY_NAME` 補 Minecraft。
+- 驗收勾選依據 `test/test_user_info.py`（`TestUserInfoCommand`、`TestGetDiscordIdsByUser`，假 auth server 與真實 PostgreSQL）。
+- 範圍外觀察，留給 T-08：`modal.py:20` `LinkAccountModal` 的 placeholder 仍寫 `/get_link_code`。
+- 未驗：真 bot 上的 `/user_info` 實測。
+
+
 
 ### T-05 管理員權限改由 auth server 的身分組決定
 
@@ -286,8 +301,8 @@ T-03、T-05 技術上只依賴 T-01，建議等 T-02 先跑通 auth server 再�
 
 **進度**：實作完成（2026-10-21）
 - commit：d3441be、17c983e
-- `/game netbird`、`/minecraft set` 已透過 T-03 的 `with_identity` 繼承停權攔截，這部分由測試或審查確認。`/user_info` 待 T-04 改用 `with_identity` 後再驗。
-- 驗收勾選依據 `test/test_suspended.py`（`TestSuspensionLifecycle` 涵蓋 TTL 內放行、過期後擋下、解除後恢復且歌單還在）。第 1、2 條沒勾：`with_identity`、autocomplete、音樂面板的攔截有測試，但各指令本身與 `/user_info` 沒有逐一測。
+- `/game netbird`、`/minecraft set` 已透過 T-03 的 `with_identity` 繼承停權攔截，這部分由測試或審查確認。`/user_info` 的停權攔截已由 T-04 的 `test/test_user_info.py::test_suspended_caller_is_blocked` 驗證。
+- 驗收勾選依據 `test/test_suspended.py`（`TestSuspensionLifecycle` 涵蓋 TTL 內放行、過期後擋下、解除後恢復且歌單還在）。第 1、2 條沒勾：第 1 條列的 `/playlist`、`/game netbird`、`/minecraft set` 沒有逐一測（`/user_info` 已有測試）；第 2 條沒有測試涵蓋簽到、經濟、遊戲等指令不受停權影響。
 - 未驗：各指令在真 bot 上的停權攔截。
 
 ### T-07 註冊析域帳號後，bot 裡的資料自動接到正式帳號
@@ -299,14 +314,14 @@ T-03、T-05 技術上只依賴 T-01，建議等 T-02 先跑通 auth server 再�
 - 不包含：一次性舊資料轉換（T-08 會呼叫本卡的函式處理撞號）。
 
 **驗收條件**
-- [ ] 臨時使用者建了歌單、設了 Minecraft，接著註冊析域帳號；TTL 過期後再用 bot，歌單與綁定都在正式帳號底下。
-- [ ] 正式帳號已有同名歌單：搬過去的那份改名為「<原名> (2)」，再撞號就遞增，兩份都在。
-- [ ] 正式帳號已有 NetBird／Minecraft／Twitch／Google／雲端資料夾綁定：保留正式帳號那筆，舊 ID 那筆刪除。
-- [ ] 兩個域民在 auth server 合併後，被併掉那邊的 Discord 帳號再用 bot，資料搬到存續者。
-- [ ] 域民 A 的 Discord d2 改連到域民 B：d2 之後看到的是 B 的資料，A 的資料原封不動，A 的另一個 Discord d1 照常看到 A 的資料。
-- [ ] 舊域民已被刪除、通行證改連到別人：不搬資料，紀錄改指向新域民，記 log。
-- [ ] 合併時捨棄的 NetBird 綁定記 log（含舊群組 ID），NetBird 上的群組不動。
-- [ ] 搬資料中途失敗時整筆 rollback，紀錄維持舊 ID，下次使用再試。
+- [x] 臨時使用者建了歌單、設了 Minecraft，接著註冊析域帳號；TTL 過期後再用 bot，歌單與綁定都在正式帳號底下。
+- [x] 正式帳號已有同名歌單：搬過去的那份改名為「<原名> (2)」，再撞號就遞增，兩份都在。
+- [x] 正式帳號已有 NetBird／Minecraft／Twitch／Google／雲端資料夾綁定：保留正式帳號那筆，舊 ID 那筆刪除。
+- [x] 兩個域民在 auth server 合併後，被併掉那邊的 Discord 帳號再用 bot，資料搬到存續者。
+- [x] 域民 A 的 Discord d2 改連到域民 B：d2 之後看到的是 B 的資料，A 的資料原封不動，A 的另一個 Discord d1 照常看到 A 的資料。
+- [x] 舊域民已被刪除、通行證改連到別人：不搬資料，紀錄改指向新域民，記 log。
+- [x] 合併時捨棄的 NetBird 綁定記 log（含舊群組 ID），NetBird 上的群組不動。
+- [x] 搬資料中途失敗時整筆 rollback，紀錄維持舊 ID，下次使用再試。
 
 **實作設計**
 - 資料：無新表。
@@ -330,7 +345,22 @@ T-03、T-05 技術上只依賴 T-01，建議等 T-02 先跑通 auth server 再�
 
 **風險 / 實作注意**：同一人兩個 Discord 帳號同時觸發合併時，兩個交易會搶同一批歌單，用 `SELECT ... FOR UPDATE` 鎖 `old_id` 的歌單列或以 advisory lock 鎖 `old_id`。
 
-**進度**：未完成
+**進度**：實作完成（2026-10-21）
+- commit：df0ef2b、a477735、f4eaff6，審查修正 ca7c0d1、6e06073、020a1bd、5920c28、3ba9241、534cfe7
+- 使用者決定：
+  - 其他指向 `old_id` 的 `discord_identity` 改指新 ID 放進 `merge_user_data`：同交易一條 UPDATE，並把這些紀錄的 `checked_at` 設成 epoch，強迫下次重查。
+  - advisory lock 鎖 `old_id` 與 `new_id`，依 UUID 排序取鎖，並附兩條獨立連線的併發測試。
+  - `mergedFrom` 有值但 `accountId` ≠ 新 ID：當成改連，只改紀錄、不搬資料、記 log。
+  - 查舊 ID 連不上：套用既有的 `_unavailable_until` backoff。
+  - 搬資料失敗：回舊紀錄、這次照舊 ID 做完，並有 per-discord_id 的記憶體 backoff（10 分鐘，重啟清空）。
+  - 撞名改名截斷到 50 字（`MAX_PLAYLIST_NAME_LENGTH` 移到 `starlib` models）並去尾端空白。
+- 已核可的實作決定：
+  - 只用 advisory lock，不加 `FOR UPDATE`。
+  - `merge_user_data` 與 `save_discord_identity` 對任何 `Exception` 都 rollback：T-08 在更大的交易裡呼叫時，整個交易會被 rollback。
+- 驗收勾選依據 `test/test_identity.py`（`TestIdentityChange`、`TestFindByAccountId`）與 `test/test_merge_user_data.py`（含 `TestConcurrency` 兩條獨立連線），用假的 auth server 與真實 PostgreSQL。
+- 未驗：對真 auth server 的實測（尤其 `GET /v1/accounts/{id}` 的 `mergedFrom` 判斷）。
+
+
 
 ### T-08 既有使用者切換後保有原本的歌單與綁定
 
