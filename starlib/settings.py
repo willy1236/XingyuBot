@@ -45,6 +45,8 @@ class AppSettings(BaseSettings):
 
     AUTH_INTERNAL_URL: str = "http://127.0.0.1:8002"
     AUTH_SERVICE_KEY: str
+    # auth server 對外網址，提示使用者去註冊、連結帳號用
+    AUTH_PUBLIC_URL: str = "https://auth.domalyze.net"
     IDENTITY_TTL_SECONDS: int = 3600
     # auth server 管理頁的 Twitch 登入方式代號（login_provider.slug）
     AUTH_TWITCH_PROVIDER: str = "twitch"

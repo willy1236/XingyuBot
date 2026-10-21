@@ -141,6 +141,7 @@ class TestRejected:
 
         assert response.status_code == 403
         assert "請先註冊析域帳號並在帳號頁連結這個 Twitch" in response.text
+        assert 'href="https://auth.domalyze.net"' in response.text
         _assert_state_cookie_deleted(response)
         assert spy.saved_tokens == []
         channel = repo.get(TwitchBotJoinChannel, (TWITCH_ID,))

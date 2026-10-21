@@ -30,6 +30,7 @@ from starlib.identity import MemberUnknown, TwitchMember, lookup_twitch_member
 from starlib.instance import google_api
 from starlib.oauth import DiscordOAuth, TwitchOAuth
 from starlib.providers.social.push_models import YoutubePushEntry
+from starlib.settings import get_settings
 from starlib.starAgent_line import line_agent
 
 discord_oauth_client = sqldb.get_oauth_client(APIType.Discord, 4)
@@ -241,7 +242,8 @@ async def oauth_twitch(request: Request):
         return _twitch_oauth_page("這次授權失敗，請稍後再試", 503)
     if not isinstance(lookup, TwitchMember):
         log.info("Twitch OAuth: twitch_id=%s is not a member, refused", user.id)
-        return _twitch_oauth_page("請先註冊析域帳號並在帳號頁連結這個 Twitch", 403)
+        auth_url = html.escape(get_settings().AUTH_PUBLIC_URL)
+        return _twitch_oauth_page(f'請先註冊析域帳號並在帳號頁連結這個 Twitch：<a href="{auth_url}">{auth_url}</a>', 403)
 
     twitch_id = int(user.id)  # 在 try 外：Twitch ID 本來就是數字，格式錯誤不是資料庫寫入失敗
     try:
