@@ -301,6 +301,11 @@ class UserRepository(BaseRepository):
     def get_discord_identity(self, discord_id: int) -> DiscordIdentity | None:
         return self.session.get(DiscordIdentity, discord_id)
 
+    def get_discord_ids_by_user(self, user_id: UUID) -> list[int]:
+        """取得 bot 記錄中屬於同一個使用者 ID 的所有 Discord ID，由小到大排序。"""
+        stmt = select(DiscordIdentity.discord_id).where(DiscordIdentity.user_id == user_id).order_by(DiscordIdentity.discord_id)
+        return list(self.session.exec(stmt).all())
+
     def create_temporary_discord_identity(self, discord_id: int, user_id: UUID, checked_at: datetime) -> DiscordIdentity:
         """寫入臨時 ID 的紀錄；同時有其他請求先寫入時以先寫入的為準，回傳實際存下的紀錄。"""
         stmt = (
