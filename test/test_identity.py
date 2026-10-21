@@ -348,11 +348,44 @@ class TestIdentityChange:
         assert record.user_id == temporary.user_id and not record.is_formal
         assert _names(repo, temporary.user_id) == ["mine"]
 
-        # 下次使用再試，這次成功就搬過去
+        # 下次使用再試，這次成功就搬過去（先過 backoff）
         monkeypatch.undo()
+        resolver._merge_retry_after.clear()
         retried = resolve(resolver)
         assert retried.user_id == directory.accounts[DISCORD_ID].account_id
         assert _names(repo, retried.user_id) == ["mine"]
+
+    def test_failed_move_backs_off_only_that_user(self, resolver, repo, directory, monkeypatch):
+        temporary = resolve(resolver)
+        other = resolve(resolver, D2)
+        directory.accounts[DISCORD_ID] = _account()
+        directory.accounts[D2] = _account()
+        expire(repo)
+        expire(repo, D2)
+        monkeypatch.setattr(SQLRepository, "_merge_user_data", lambda self, o, n: (_ for _ in ()).throw(RuntimeError("bug")))
+
+        resolve(resolver)
+        calls = directory.calls
+        again = resolve(resolver)  # backoff 內：不打 auth server、不重跑搬資料
+
+        assert again == temporary
+        assert directory.calls == calls
+        # 別人不受影響：照常查 auth server，（搬資料同樣失敗）但不是被擋在 backoff 外
+        resolve(resolver, D2)
+        assert directory.calls == calls + 1
+        assert other.user_id == repo.get_discord_identity(D2).user_id
+
+    def test_backoff_expires_and_success_clears_it(self, directory, repo):
+        resolver = IdentityResolver(directory, repo, TTL, merge_backoff=timedelta(0))
+        temporary = resolve(resolver)
+        directory.accounts[DISCORD_ID] = _account()
+        expire(repo)
+        resolver._merge_retry_after[DISCORD_ID] = nowtz() - timedelta(seconds=1)
+
+        identity = resolve(resolver)
+
+        assert identity.user_id != temporary.user_id and identity.is_formal
+        assert DISCORD_ID not in resolver._merge_retry_after
 
 
 class TestTemporaryIdentityRace:
