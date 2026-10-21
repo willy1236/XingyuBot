@@ -175,11 +175,11 @@ T-03、T-05 技術上只依賴 T-01，建議等 T-02 先跑通 auth server 再�
 - 不包含：既有綁定的轉換（T-08）；`/user_info` 顯示（T-04）。
 
 **驗收條件**
-- [ ] 沒註冊的人執行 `/game netbird_setup` 拿到安裝指令，`/game netbird` 查得到自己的節點。
-- [ ] 沒註冊的人 `/minecraft set <玩家>` 成功，留空則刪除。
-- [ ] 同一個 Minecraft 帳號被另一人設定時，綁定轉到後設定的人，與現行行為相同。
+- [x] 沒註冊的人執行 `/game netbird_setup` 拿到安裝指令，`/game netbird` 查得到自己的節點。
+- [x] 沒註冊的人 `/minecraft set <玩家>` 成功，留空則刪除。
+- [x] 同一個 Minecraft 帳號被另一人設定時，綁定轉到後設定的人，與現行行為相同。
 - [ ] `/game radmin`、`/game zerotier`、`/game vpn` 對沒註冊的人正常運作。
-- [ ] `/drive` 設定與移除對沒註冊的人正常運作。
+- [x] `/drive` 設定與移除對沒註冊的人正常運作。
 
 **實作設計**
 - 資料：
@@ -191,7 +191,17 @@ T-03、T-05 技術上只依賴 T-01，建議等 T-02 先跑通 auth server 再�
 
 **依賴**：T-01（使用者 ID 來源）
 
-**進度**：未完成
+**進度**：實作完成（2026-10-21）
+- commit：6c3abf3、03db07e、d4da10e
+- 使用者決定：`/game radmin`、`zerotier`、`vpn` 只用 Discord ID，不掛任何身分 decorator（不用 `with_identity`，也不用 `ensure_registered`），停權與 auth server 斷線都不影響，依據是規格書第 101 行「只用 Discord ID 運作的功能不受影響」。範圍段「上述指令改用 `with_identity`」對這三個指令不適用，以這條為準。
+- 已核可的實作決定：
+  - `linked_account` 用 Identity `id` 當 PK。
+  - `upsert_linked_account` 因 `(user_id, platform)` 唯一鍵，先移除同人同平台的舊列，再依 `(platform, external_id)` 找列改 owner。
+  - 新增 `remove_drive_share`。
+  - `DriveShare` 的 `gmail`、`share_id` 設為 NOT NULL。
+- 開發機：`users.netbird_binding` 已改名為 `netbird_binding_legacy` 保留，`create_all` 建了新的 UUID 表。正式機部署前要等 T-08 轉換；先 import 新 code 的話，舊表會與 model 型別不符。
+- 驗收勾選依據 `test/test_identity_bindings.py`（假 NetBird、Mojang、Google 與真實 PostgreSQL）。第 4 條（radmin、zerotier、vpn）沒勾：vpn 有 callback 測試，radmin、zerotier 只有「沒有身分 decorator」的靜態斷言，完整流程要 nmap 與 ZeroTier。
+- 未驗：radmin、zerotier 對沒註冊的人的完整流程，以及其餘指令在真 bot 上的實測；測試都用假的外部 API。
 
 ### T-04 `/user_info` 顯示析域帳號狀態
 
@@ -227,12 +237,12 @@ T-03、T-05 技術上只依賴 T-01，建議等 T-02 先跑通 auth server 再�
 
 **驗收條件**
 - [ ] 對照表設定某身分組為 Level2 後，有該身分組的人能用 `/mcserver panel`，沒有的人收到權限錯誤。
-- [ ] 對照表沒設定時所有人都是一般使用者，bot 照常啟動。
-- [ ] 同時有多個對應身分組時取最高等級。
-- [ ] 臨時使用者一律當一般使用者。
+- [x] 對照表沒設定時所有人都是一般使用者，bot 照常啟動。
+- [x] 同時有多個對應身分組時取最高等級。
+- [x] 臨時使用者一律當一般使用者。
 - [ ] auth server 連不上、沒有紀錄的人當一般使用者；有紀錄的人沿用紀錄裡的身分組。
-- [ ] 停權中的人當一般使用者。
-- [ ] 沒用過 bot 的人執行權限指令時不會被發臨時 ID。
+- [x] 停權中的人當一般使用者。
+- [x] 沒用過 bot 的人執行權限指令時不會被發臨時 ID。
 
 **實作設計**
 - 資料：無異動，用 T-01 紀錄裡的 `roles`。
@@ -243,7 +253,16 @@ T-03、T-05 技術上只依賴 T-01，建議等 T-02 先跑通 auth server 再�
 
 **風險 / 實作注意**：`commands.check_any` 搭 async predicate 在 py-cord 可用，改完確認 `check_any(has_privilege_level, has_guild_permissions)` 兩邊仍是 OR。
 
-**進度**：未完成
+**進度**：實作完成（2026-10-21）
+- commit：0ca3c53、943d571、7aa1907
+- 使用者決定：
+  - 範圍擴大到 `starDiscord/cmds/error.py`，`CheckAnyFailure` 回權限錯誤。
+  - `PRIVILEGE_ROLES` 的鍵也驗證身分組代號規則。
+  - `CheckAnyFailure` 不補測試。
+- 發現：原本的 `/mcserver panel` 因雙層 `commands.check` 實際上不設防，現在已修正。`PRIVILEGE_ROLES` 設好之前，只有有 `manage_channels` 的人能用。
+- 實作細節：`VALID_PRIVILEGE_VALUES` 寫死在 `settings.py`，避免循環 import，由 `test_valid_values_match_enum` 守住。
+- 驗收勾選依據 `test/test_privilege.py`。沒勾的兩條：第 1 條要 `/mcserver panel` 本身的實測（測試只到 `has_privilege_level` 與 `check_any` 的 OR 行為）；第 5 條只測到連不上當一般使用者，「有紀錄的人沿用紀錄」是解析器行為，不在這三個測試檔內。
+- 未驗：`/mcserver panel` 的真 bot 實測。
 
 ### T-06 被停權的人不能用需要使用者 ID 的功能
 
@@ -256,8 +275,8 @@ T-03、T-05 技術上只依賴 T-01，建議等 T-02 先跑通 auth server 再�
 **驗收條件**
 - [ ] 停權中的人執行 `/playlist`、`/game netbird`、`/minecraft set`、`/user_info` 收到「你的析域帳號已停權，無法使用此功能」。
 - [ ] 停權中的人照常能用簽到、經濟、遊戲等只看 Discord ID 的指令。
-- [ ] 在 auth server 停權後，TTL 過期前 bot 仍放行，過期後的下一次使用被擋。
-- [ ] 解除停權後，TTL 過期後恢復使用，資料都還在。
+- [x] 在 auth server 停權後，TTL 過期前 bot 仍放行，過期後的下一次使用被擋。
+- [x] 解除停權後，TTL 過期後恢復使用，資料都還在。
 
 **實作設計**
 - 資料：無異動，用紀錄裡的 `suspended`。
@@ -265,7 +284,11 @@ T-03、T-05 技術上只依賴 T-01，建議等 T-02 先跑通 auth server 再�
 
 **依賴**：T-02（驗收要有歌單功能可擋；autocomplete 與面板由 T-02 改寫）
 
-**進度**：未完成
+**進度**：實作完成（2026-10-21）
+- commit：d3441be、17c983e
+- `/game netbird`、`/minecraft set` 已透過 T-03 的 `with_identity` 繼承停權攔截，這部分由測試或審查確認。`/user_info` 待 T-04 改用 `with_identity` 後再驗。
+- 驗收勾選依據 `test/test_suspended.py`（`TestSuspensionLifecycle` 涵蓋 TTL 內放行、過期後擋下、解除後恢復且歌單還在）。第 1、2 條沒勾：`with_identity`、autocomplete、音樂面板的攔截有測試，但各指令本身與 `/user_info` 沒有逐一測。
+- 未驗：各指令在真 bot 上的停權攔截。
 
 ### T-07 註冊析域帳號後，bot 裡的資料自動接到正式帳號
 
@@ -337,7 +360,7 @@ T-03、T-05 技術上只依賴 T-01，建議等 T-02 先跑通 auth server 再�
   - 主帳號是該 `cloud_user` 底下 `external_account.id` 最小的 Discord 列；表上沒有建立時間，以 identity 遞增順序當建立先後。
   - 沒有 Discord 列的 `cloud_user` 列入報告並略過。
   - 主帳號查 auth server 決定正式或臨時；撞到同一個正式 ID 時呼叫 `merge_user_data`。
-  - 移除：`CloudUser`／`ExternalAccount`／`LinkCode` model（移出 metadata，`create_all` 不再碰）、`get_cloud_user_*`、`*_link_code`、`*_external_account`、`get_discord_accounts`、`ensure_registered`、`RegisteredContext`、`_user_cache`、`RegisterView`、`LinkAccountModal`、`cache.py` docstring 裡的 `CloudUser`；`bot_website.py` 寫 `cloud_user` 的 Discord 登入與 Twitch／Google 綁定路由改回 503。
+  - 移除：`CloudUser`／`ExternalAccount`／`LinkCode` model（移出 metadata，`create_all` 不再碰）、`get_cloud_user_*`、`UserRepository.get_cloud_user_privilege`（T-05 之後已無呼叫者）、`*_link_code`、`*_external_account`、`get_discord_accounts`、`ensure_registered`、`RegisteredContext`、`_user_cache`、`RegisterView`、`LinkAccountModal`、`cache.py` docstring 裡的 `CloudUser`；`bot_website.py` 寫 `cloud_user` 的 Discord 登入與 Twitch／Google 綁定路由改回 503。
 - 部署：
   - `/etc/xingyubot/env` 加 `AUTH_INTERNAL_URL`、`AUTH_SERVICE_KEY`（值為 auth.env `INTERNAL_API_KEYS` 裡 `xingyubot` 那把）。
   - shark-ansible `docs/deploy-checklist.md` 的 XingyuBot 段補這兩個變數與切換步驟。
