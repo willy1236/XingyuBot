@@ -16,7 +16,7 @@ from starlib.providers import *
 from starlib.settings import get_settings
 from starlib.utils import nowtz
 
-from ..checks import RegisteredContext, ensure_registered
+from ..checks import IdentityContext, with_identity
 from ..extension import Cog_Extension
 
 log = logging.getLogger(__name__)
@@ -298,27 +298,27 @@ class system_game(Cog_Extension):
             await ctx.respond(content="查詢失敗:查無此ID", ephemeral=True)
 
     @minecraft_cmd.command(name="set", description="設定Minecraft帳號資料", name_localizations=ChoiceList.name("minecraft_set"))
-    @ensure_registered()
+    @with_identity()
     @commands.cooldown(rate=1, per=1)
-    async def minecraft_set(self, ctx: RegisteredContext, username: discord.Option(str, name="玩家名稱", description="要設定的Minecraft玩家名稱，留空以刪除", default=None)):
+    async def minecraft_set(self, ctx: IdentityContext, username: discord.Option(str, name="玩家名稱", description="要設定的Minecraft玩家名稱，留空以刪除", default=None)):
         if not username:
-            sclient.sqldb.remove_external_account(ctx.cuser.id, PlatformType.Minecraft)
+            sclient.sqldb.remove_linked_account(ctx.identity.user_id, PlatformType.Minecraft)
             await ctx.respond(content="已刪除Minecraft帳號資料", ephemeral=True)
             return
 
         user = MojangAPI().get_uuid(username)
         if user:
-            sclient.sqldb.upsert_external_account(ctx.cuser.id, PlatformType.Minecraft, user.id, username)
+            sclient.sqldb.upsert_linked_account(ctx.identity.user_id, PlatformType.Minecraft, user.id, username)
             await ctx.respond(content=f"設定成功 {user.name}", ephemeral=True)
         else:
             await ctx.respond(content="設定失敗：查無此玩家", ephemeral=True)
 
 
     @game.command(description="註冊Radmin VPN帳號", name_localizations=ChoiceList.name("game_radmin"))
-    @ensure_registered()
+    @with_identity()
     async def radmin(
         self,
-        ctx: RegisteredContext,
+        ctx: IdentityContext,
         ip_str: discord.Option(
             str,
             name="ipv4位置",
@@ -356,10 +356,10 @@ class system_game(Cog_Extension):
         await ctx.respond(f"{ctx.author.mention} 註冊成功，IP：`{ip.network_address}`，使用者名稱：`{name if name else '未登記'}`", ephemeral=True)
 
     @game.command(description="註冊ZeroTier帳號", name_localizations=ChoiceList.name("game_zerotier"))
-    @ensure_registered()
+    @with_identity()
     async def zerotier(
         self,
-        ctx: RegisteredContext,
+        ctx: IdentityContext,
         address_str: discord.Option(
             str,
             name="address",
@@ -384,13 +384,13 @@ class system_game(Cog_Extension):
         await ctx.respond(f"ZeroTier帳號註冊成功，你的IP位址：`{member['config']['ipAssignments'][0]}`", ephemeral=True)
 
     @game.command(description="取得NetBird安裝指令", name_localizations=ChoiceList.name("game_netbird_setup"))
-    @ensure_registered()
-    async def netbird_setup(self, ctx: RegisteredContext):
+    @with_identity()
+    async def netbird_setup(self, ctx: IdentityContext):
         await ctx.defer(ephemeral=True)
-        group_name = f"user-{ctx.cuser.id}"
+        group_name = f"user-{ctx.identity.user_id}"
         try:
             api = NetBirdAPI()
-            binding = sclient.sqldb.get_netbird_binding(ctx.cuser.id)
+            binding = sclient.sqldb.get_netbird_binding(ctx.identity.user_id)
             group = None
             if binding:
                 group = api.get_group(binding.group_id)
@@ -404,7 +404,7 @@ class system_game(Cog_Extension):
             return
 
         now = nowtz()
-        binding = NetBirdBinding(user_id=ctx.cuser.id, group_id=group["id"], group_name=group_name, last_setup_key_id=setup_key["id"], updated_at=now)
+        binding = NetBirdBinding(user_id=ctx.identity.user_id, group_id=group["id"], group_name=group_name, last_setup_key_id=setup_key["id"], updated_at=now)
         sclient.sqldb.merge(binding)
 
         key = setup_key["key"]
@@ -418,10 +418,10 @@ class system_game(Cog_Extension):
         )
 
     @game.command(description="查詢NetBird節點資訊", name_localizations=ChoiceList.name("game_netbird"))
-    @ensure_registered()
-    async def netbird(self, ctx: RegisteredContext):
+    @with_identity()
+    async def netbird(self, ctx: IdentityContext):
         await ctx.defer(ephemeral=True)
-        binding = sclient.sqldb.get_netbird_binding(ctx.cuser.id)
+        binding = sclient.sqldb.get_netbird_binding(ctx.identity.user_id)
         if not binding:
             await ctx.respond("尚未綁定NetBird，請先使用 </game netbird_setup:0> 取得安裝指令", ephemeral=True)
             return
@@ -446,8 +446,8 @@ class system_game(Cog_Extension):
         await ctx.respond("查詢成功", embed=embed, ephemeral=True)
 
     @game.command(description="查詢VPN登記資料", name_localizations=ChoiceList.name("game_vpn"))
-    @ensure_registered()
-    async def vpn(self, ctx: RegisteredContext):
+    @with_identity()
+    async def vpn(self, ctx: IdentityContext):
         await ctx.defer(ephemeral=True)
         records = sclient.sqldb.get_user_ip_details(ctx.author.id)
         if not records:
