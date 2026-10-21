@@ -176,6 +176,24 @@ class TestResolve:
             resolve(resolver)
         assert repo.get_discord_identity(DISCORD_ID) is None
 
+    def test_unavailable_backs_off_for_known_users(self, resolver, repo, directory):
+        directory.accounts[DISCORD_ID] = _account()
+        resolve(resolver)
+        expire(repo)
+        directory.unavailable = True
+        resolve(resolver)
+        resolve(resolver)
+
+        assert directory.calls == 2
+
+    def test_backoff_still_asks_for_unknown_users(self, resolver, directory):
+        directory.unavailable = True
+        for _ in range(2):
+            with pytest.raises(IdentityUnavailable):
+                resolve(resolver)
+
+        assert directory.calls == 2
+
     def test_create_false_not_found_returns_none(self, resolver, repo):
         assert resolve(resolver, create=False) is None
         assert repo.get_discord_identity(DISCORD_ID) is None
@@ -235,6 +253,20 @@ class TestDomalyzeIdentityClient:
             return web.json_response({"detail": "account not found"}, status=404)
 
         assert _find(handler) is None
+
+    def test_foreign_404_is_unavailable(self):
+        async def handler(request):
+            return web.json_response({"detail": "Not Found"}, status=404)
+
+        with pytest.raises(DirectoryUnavailable):
+            _find(handler)
+
+    def test_404_without_json_is_unavailable(self):
+        async def handler(request):
+            return web.Response(status=404, text="<html>not found</html>")
+
+        with pytest.raises(DirectoryUnavailable):
+            _find(handler)
 
     @pytest.mark.parametrize("status", [401, 500, 503])
     def test_error_status_is_unavailable(self, status):

@@ -10,6 +10,9 @@ import aiohttp
 
 log = logging.getLogger(__name__)
 
+# auth server 查無此人時回的 detail，見 domalyze-identity internal.py
+NOT_FOUND_DETAIL = "account not found"
+
 
 @dataclass(frozen=True)
 class Account:
@@ -32,7 +35,7 @@ class AccountDirectory(Protocol):
 class DomalyzeIdentityClient:
     """以 `Authorization: Bearer <金鑰>` 呼叫 auth server 內部 API"""
 
-    def __init__(self, base_url: str, service_key: str, timeout: float = 2.5):
+    def __init__(self, base_url: str, service_key: str, timeout: float = 1.5):
         # 逾時要短於 Discord 互動的 3 秒回應期限，連不上時才來得及回「稍後再試」
         self._base_url = base_url.rstrip("/")
         self._headers = {"Authorization": f"Bearer {service_key}"}
@@ -44,13 +47,18 @@ class DomalyzeIdentityClient:
             async with aiohttp.ClientSession(timeout=self._timeout, headers=self._headers) as session:
                 async with session.get(url) as resp:
                     if resp.status == 404:
-                        return None
+                        # 路徑錯、URL 指到別的服務也會 404，只有 auth server 自己的查無此人才算明確答案
+                        body = await resp.json(content_type=None)
+                        if isinstance(body, dict) and body.get("detail") == NOT_FOUND_DETAIL:
+                            return None
+                        log.error("auth server: unexpected 404", extra={"discord_id": discord_id})
+                        raise DirectoryUnavailable("unexpected 404")
                     if resp.status != 200:
                         # 401 代表金鑰設錯，當成查無此人會替所有人發臨時 ID
                         log.error("auth server: unexpected status", extra={"status": resp.status, "discord_id": discord_id})
                         raise DirectoryUnavailable(f"auth server returned {resp.status}")
                     data = await resp.json()
-        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+        except (aiohttp.ClientError, asyncio.TimeoutError, ValueError) as e:
             log.warning("auth server: unreachable", extra={"error": repr(e), "discord_id": discord_id})
             raise DirectoryUnavailable(str(e)) from e
 
