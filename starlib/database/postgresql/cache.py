@@ -33,7 +33,7 @@ class TTLCache(Generic[T]):
     -----
     ::
 
-        cache: TTLCache[CloudUser | None] = TTLCache(ttl=300)
+        cache: TTLCache[HappycampVIP | None] = TTLCache(ttl=300)
 
         user = cache.get(user_id)
         if user is _MISSING:

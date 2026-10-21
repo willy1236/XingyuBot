@@ -1,12 +1,12 @@
 import functools
 import inspect
 import logging
-import secrets
 from collections import defaultdict, deque
 from collections.abc import Callable, Generator
 from datetime import date, datetime, time, timedelta, timezone
 from ipaddress import IPv4Network
 from typing import Literal, ParamSpec, TypeVar, overload
+from uuid import UUID
 
 import discord
 from google.oauth2.credentials import Credentials
@@ -185,62 +185,6 @@ class BaseRepository:
 
 class UserRepository(BaseRepository):
     # * User
-    def get_cloud_user_by_discord(self, discord_id: int):
-        """
-        Retrieve a CloudUser from the database based on the provided Discord ID.
-
-        Args:
-            discord_id (int): The Discord ID of the user to retrieve.
-
-        Returns:
-            CloudUser: The CloudUser object if found.
-        """
-        stmt = select(CloudUser).join(ExternalAccount, CloudUser.id == ExternalAccount.user_id).where(ExternalAccount.platform == PlatformType.Discord, ExternalAccount.external_id == str(discord_id))
-        result = self.session.exec(stmt).one_or_none()
-        return result
-
-    def get_cloud_user_by_id(self, cloud_user_id: int) -> CloudUser | None:
-        """Retrieve a CloudUser by its own primary key."""
-        return self.session.get(CloudUser, cloud_user_id)
-
-    def add_cloud_user_by_discord(self, discord_id: int, display_name: str | None = None):
-        """
-        Add a new CloudUser to the database based on the provided Discord ID.
-
-        Args:
-            discord_id (int): The Discord ID of the user to add.
-
-        Returns:
-            CloudUser: The newly created CloudUser object.
-        """
-        cloud_user = CloudUser()
-        self.session.add(cloud_user)
-        self.session.flush()  # 確保 id 已被分配
-
-        external_account = ExternalAccount(user_id=cloud_user.id, platform=PlatformType.Discord, external_id=str(discord_id), display_name=display_name)
-        self.session.add(external_account)
-        self.commit()
-        return cloud_user
-
-    def get_or_create_link_code(self, user_id: int):
-        """取得或創建綁定碼"""
-        stmt = select(LinkCode).where(LinkCode.user_id == user_id)
-        result = self.session.exec(stmt).one_or_none()
-        if result and result.expires_at > nowtz():
-            return result
-
-        # 若無綁定碼或已過期，則創建新綁定碼
-        new_code = LinkCode(user_id=user_id, code=f"{secrets.randbelow(1000000):06d}", expires_at=nowtz() + timedelta(minutes=10))
-        self.session.merge(new_code)
-        self.commit()
-        return new_code
-
-    def get_active_link_code(self, discord_id: str):
-        """取得有效的綁定碼"""
-        stmt = select(LinkCode).join(ExternalAccount, LinkCode.user_id == ExternalAccount.user_id).where(ExternalAccount.external_id == str(discord_id), LinkCode.expires_at > nowtz())
-        result = self.session.exec(stmt).one_or_none()
-        return result
-
     def get_dcuser(self, discord_id: int, with_registration: bool = False):
         stmt = select(DiscordUser).where(DiscordUser.discord_id == discord_id)
         if with_registration:
@@ -248,58 +192,159 @@ class UserRepository(BaseRepository):
         result = self.session.exec(stmt).one_or_none()
         return result or DiscordUser(discord_id=discord_id)
 
-    def get_cloud_user_privilege(self, discord_id: int):
+    def get_discord_identity(self, discord_id: int) -> DiscordIdentity | None:
+        return self.session.get(DiscordIdentity, discord_id)
+
+    def get_discord_ids_by_user(self, user_id: UUID) -> list[int]:
+        """取得 bot 記錄中屬於同一個使用者 ID 的所有 Discord ID，由小到大排序。"""
+        stmt = select(DiscordIdentity.discord_id).where(DiscordIdentity.user_id == user_id).order_by(DiscordIdentity.discord_id)
+        return list(self.session.exec(stmt).all())
+
+    def create_temporary_discord_identity(self, discord_id: int, user_id: UUID, checked_at: datetime) -> DiscordIdentity:
+        """寫入臨時 ID 的紀錄；同時有其他請求先寫入時以先寫入的為準，回傳實際存下的紀錄。"""
+        stmt = (
+            pg_insert(DiscordIdentity)
+            .values(discord_id=discord_id, user_id=user_id, is_formal=False, username=None, roles=[], suspended=False, checked_at=checked_at)
+            .on_conflict_do_nothing(index_elements=["discord_id"])
+        )
+        self.session.exec(stmt)
+        self.commit()
+        return self.session.get(DiscordIdentity, discord_id, populate_existing=True)
+
+    def save_discord_identity(self, identity: DiscordIdentity, *, merge_from: UUID | None = None) -> DiscordIdentity:
+        """新增或更新紀錄；帶 merge_from 時先把該 ID 的資料併到 identity.user_id，兩者在同一個交易。"""
+        try:
+            if merge_from is not None and merge_from != identity.user_id:
+                self.merge_user_data(merge_from, identity.user_id)
+            saved = self.session.merge(identity)
+            self.commit()
+        except Exception:
+            # 搬到一半的資料不能被之後同一個 session 的 commit 提交；SQLAlchemyError 以外的例外 decorator 不會 rollback
+            self.session.rollback()
+            raise
+        return saved
+
+    def merge_user_data(self, old_id: UUID, new_id: UUID) -> None:
         """
-        Retrieve the privilege level of a CloudUser based on their Discord ID.
+        把 old_id 底下的業務資料併到 new_id，用於臨時 ID 轉正式與域民合併。
 
-        Args:
-            discord_id (int): The Discord ID of the user.
-
-        Returns:
-            PrivilegeLevel: The privilege level of the user.
+        只在目前的交易內操作、不 commit，由呼叫端與紀錄更新一起提交；失敗時整筆 rollback。
+        先對 old_id、new_id 取 advisory lock（依 UUID 排序，避免互相合併時死鎖），拿到鎖之後才讀資料，
+        所以同時觸發的第二個合併會在第一個提交後看到空的 old_id，變成什麼都不做。
+        規則見 docs/identity-migration-spec.md〈臨時轉正式與資料合併〉。
         """
-        stmt = select(CloudUser.privilege_level).join(ExternalAccount, CloudUser.id == ExternalAccount.user_id).where(ExternalAccount.platform == PlatformType.Discord, ExternalAccount.external_id == str(discord_id))
-        result = self.session.exec(stmt).one_or_none()
-        return PrivilegeLevel(result) or PrivilegeLevel.User
+        if old_id == new_id:
+            return
+        try:
+            self._merge_user_data(old_id, new_id)
+        except Exception:
+            self.session.rollback()
+            raise
 
-    def get_discord_accounts(self, user_id: int):
-        stmt = select(ExternalAccount).where(ExternalAccount.platform == PlatformType.Discord, ExternalAccount.user_id == user_id)
-        result = self.session.exec(stmt).all()
-        return result
+    def _merge_user_data(self, old_id: UUID, new_id: UUID) -> None:
+        conn = self.session.connection()
+        for uid in sorted((old_id, new_id), key=lambda u: u.int):
+            # 交易層級的鎖，commit 或 rollback 時自動釋放；取 UUID 前 64 位當 key
+            key = int.from_bytes(uid.bytes[:8], "big", signed=True)
+            conn.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": key})
 
-    def get_external_account(self, user_id: int, platform: PlatformType):
-        """取得該 cloud_user 綁定的指定平台帳號"""
-        stmt = select(ExternalAccount).where(ExternalAccount.user_id == user_id, ExternalAccount.platform == platform)
-        result = self.session.exec(stmt).one_or_none()
-        return result
+        extra = {"old_id": str(old_id), "new_id": str(new_id)}
 
-    def get_external_accounts(self, user_id: int) -> list[ExternalAccount]:
-        """取得該 cloud_user 綁定的所有外部帳號（不分平台）。"""
-        stmt = select(ExternalAccount).where(ExternalAccount.user_id == user_id)
-        result = self.session.exec(stmt).all()
-        return list(result)
+        # 歌單：全部搬過去，跟 new_id 同名的改名；歌曲與來源靠 playlist_id，不用動
+        playlists = self.session.exec(select(MusicPlaylist.id, MusicPlaylist.name).where(MusicPlaylist.user_id == old_id).order_by(MusicPlaylist.id)).all()
+        new_names = set(self.session.exec(select(MusicPlaylist.name).where(MusicPlaylist.user_id == new_id)).all())
+        taken = new_names | {name for _, name in playlists}
+        renamed = 0
+        for playlist_id, name in playlists:
+            target = name
+            if name in new_names:
+                n = 2
+                while True:
+                    suffix = f" ({n})"
+                    # 改名後也不能超過歌單名稱上限，否則之後加歌會被名稱檢查擋下
+                    target = f"{name[: MAX_PLAYLIST_NAME_LENGTH - len(suffix)].rstrip()}{suffix}"
+                    if target not in taken:
+                        break
+                    n += 1
+                taken.add(target)
+                renamed += 1
+            self.session.exec(update(MusicPlaylist).where(MusicPlaylist.id == playlist_id).values(user_id=new_id, name=target))
 
-    def upsert_external_account(self, user_id: int, platform: PlatformType, external_id: str, display_name: str | None = None):
-        """新增或更新外部帳號，以 (platform, external_id) 為唯一鍵。"""
-        stmt = select(ExternalAccount).where(ExternalAccount.platform == platform, ExternalAccount.external_id == external_id)
+        # 一人一筆的資料：new_id 已經有就保留它那筆，old_id 的捨棄
+        binding = self.session.exec(select(NetBirdBinding.group_id, NetBirdBinding.group_name).where(NetBirdBinding.user_id == old_id)).first()
+        if binding is not None:
+            if self.session.exec(select(NetBirdBinding.user_id).where(NetBirdBinding.user_id == new_id)).first() is None:
+                self.session.exec(update(NetBirdBinding).where(NetBirdBinding.user_id == old_id).values(user_id=new_id))
+            else:
+                # NetBird 上的群組不動，留 log 讓管理員自行整理
+                log.warning("merge_user_data: discarded netbird binding", extra={**extra, "group_id": binding[0], "group_name": binding[1]})
+                self.session.exec(delete(NetBirdBinding).where(NetBirdBinding.user_id == old_id))
+
+        if self.session.exec(select(DriveShare.user_id).where(DriveShare.user_id == old_id)).first() is not None:
+            if self.session.exec(select(DriveShare.user_id).where(DriveShare.user_id == new_id)).first() is None:
+                self.session.exec(update(DriveShare).where(DriveShare.user_id == old_id).values(user_id=new_id))
+            else:
+                self.session.exec(delete(DriveShare).where(DriveShare.user_id == old_id))
+
+        # 外部帳號綁定：一個平台一人一筆
+        new_platforms = set(self.session.exec(select(LinkedAccount.platform).where(LinkedAccount.user_id == new_id)).all())
+        if new_platforms:
+            self.session.exec(delete(LinkedAccount).where(LinkedAccount.user_id == old_id, LinkedAccount.platform.in_(new_platforms)))
+        self.session.exec(update(LinkedAccount).where(LinkedAccount.user_id == old_id).values(user_id=new_id))
+
+        # 合併時其他指向 old_id 的 Discord 紀錄一起改指新 ID
+        # roles、suspended、username 還是舊域民的值，checked_at 設得很早讓它們下次使用時就重查
+        self.session.exec(update(DiscordIdentity).where(DiscordIdentity.user_id == old_id).values(user_id=new_id, checked_at=datetime.fromtimestamp(0, timezone.utc)))
+
+        log.info("merge_user_data: merged", extra={**extra, "playlists": len(playlists), "renamed": renamed})
+
+    def get_netbird_binding(self, user_id: UUID) -> NetBirdBinding | None:
+        """取得該使用者 ID 的 NetBird 綁定資料"""
+        return self.session.get(NetBirdBinding, user_id)
+
+    def get_linked_account(self, user_id: UUID, platform: PlatformType) -> LinkedAccount | None:
+        """取得該使用者綁定的指定平台帳號"""
+        stmt = select(LinkedAccount).where(LinkedAccount.user_id == user_id, LinkedAccount.platform == platform)
+        return self.session.exec(stmt).one_or_none()
+
+    def get_linked_accounts(self, user_id: UUID) -> list[LinkedAccount]:
+        """取得該使用者綁定的所有外部帳號（不分平台）。"""
+        stmt = select(LinkedAccount).where(LinkedAccount.user_id == user_id)
+        return list(self.session.exec(stmt).all())
+
+    def upsert_linked_account(self, user_id: UUID, platform: PlatformType, external_id: str, display_name: str | None = None):
+        """
+        新增或更新綁定帳號，以 (platform, external_id) 為唯一鍵：該帳號已被別人綁定時，綁定轉到 user_id。
+        一個平台一人一筆，user_id 在該平台原有的另一筆會被取代。
+        """
+        own = self.get_linked_account(user_id, platform)
+        if own and own.external_id != external_id:
+            self.session.delete(own)
+            self.session.flush()
+
+        stmt = select(LinkedAccount).where(LinkedAccount.platform == platform, LinkedAccount.external_id == external_id)
         existing = self.session.exec(stmt).one_or_none()
         if existing:
             existing.user_id = user_id
             existing.display_name = display_name
         else:
-            self.session.add(ExternalAccount(user_id=user_id, platform=platform, external_id=external_id, display_name=display_name))
+            self.session.add(LinkedAccount(user_id=user_id, platform=platform, external_id=external_id, display_name=display_name))
         self.commit()
 
-    def remove_external_account(self, user_id: int, platform: PlatformType):
-        stmt = select(ExternalAccount).where(ExternalAccount.user_id == user_id, ExternalAccount.platform == platform)
-        existing = self.session.exec(stmt).one_or_none()
+    def remove_linked_account(self, user_id: UUID, platform: PlatformType):
+        existing = self.get_linked_account(user_id, platform)
         if existing:
             self.session.delete(existing)
             self.commit()
 
-    def get_netbird_binding(self, user_id: int) -> NetBirdBinding | None:
-        """取得該 cloud_user 的 NetBird 綁定資料"""
-        return self.session.get(NetBirdBinding, user_id)
+    def get_drive_share(self, user_id: UUID) -> DriveShare | None:
+        return self.session.get(DriveShare, user_id)
+
+    def remove_drive_share(self, user_id: UUID):
+        existing = self.session.get(DriveShare, user_id)
+        if existing:
+            self.session.delete(existing)
+            self.commit()
 
     def get_main_account(self, alternate_account):
         stmt = select(UserAccount.main_account).where(UserAccount.alternate_account == alternate_account)
@@ -1528,15 +1573,15 @@ class GuildSettingRepository(BaseRepository):
 
 
 class MusicPlaylistRepository(BaseRepository):
-    def get_music_playlists(self, user_id: int) -> list[MusicPlaylist]:
+    def get_music_playlists(self, user_id: UUID) -> list[MusicPlaylist]:
         stmt = select(MusicPlaylist).where(MusicPlaylist.user_id == user_id).order_by(MusicPlaylist.id)
         return list(self.session.exec(stmt).all())
 
-    def get_music_playlist(self, user_id: int, name: str) -> MusicPlaylist | None:
+    def get_music_playlist(self, user_id: UUID, name: str) -> MusicPlaylist | None:
         stmt = select(MusicPlaylist).where(MusicPlaylist.user_id == user_id, MusicPlaylist.name == name)
         return self.session.exec(stmt).one_or_none()
 
-    def get_music_playlist_song_counts(self, user_id: int) -> dict[int, int]:
+    def get_music_playlist_song_counts(self, user_id: UUID) -> dict[int, int]:
         """取得使用者每個歌單的歌曲數（playlist_id → 數量）"""
         stmt = (
             select(MusicPlaylistSong.playlist_id, func.count())
@@ -1546,7 +1591,7 @@ class MusicPlaylistRepository(BaseRepository):
         )
         return {playlist_id: count for playlist_id, count in self.session.exec(stmt).all()}
 
-    def create_music_playlist(self, user_id: int, name: str) -> MusicPlaylist:
+    def create_music_playlist(self, user_id: UUID, name: str) -> MusicPlaylist:
         playlist = MusicPlaylist(user_id=user_id, name=name)
         self.add(playlist)
         return playlist

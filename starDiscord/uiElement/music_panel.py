@@ -5,7 +5,9 @@ import discord
 
 from starlib import sqldb
 from starlib.exceptions import MusicCommandError, MusicPlayingError
+from starlib.identity import IdentityUnavailable, resolve_identity
 
+from ..checks import SUSPENDED_MESSAGE
 from ..music_player import (
     LoopMode,
     MusicPlayer,
@@ -17,7 +19,7 @@ from ..music_player import (
     get_player,
     play_saved_playlist,
 )
-from .view import MusicPlaylistSelectView, RegisterView
+from .view import MusicPlaylistSelectView
 
 PANEL_COLOR = 0xC4E9FF
 QUEUE_PREVIEW = 3
@@ -188,17 +190,20 @@ class MusicPanelView(discord.ui.DesignerView):
         await interaction.response.send_modal(AddSongModal(self, interaction.message))
 
     async def _open_playlists(self, interaction: discord.Interaction):
-        cuser = sqldb.get_cloud_user_by_discord(interaction.user.id)
-        if not cuser:
-            embed = discord.Embed(title="📝 註冊帳號", description="歡迎使用本服務！在開始之前，請先建立新帳號或綁定原有帳號", color=discord.Color.blue())
-            await interaction.response.send_message(embed=embed, view=RegisterView(), ephemeral=True)
+        try:
+            identity = await resolve_identity(interaction.user.id)
+        except IdentityUnavailable:
+            await interaction.response.send_message("身分服務暫時無法連線，請稍後再試", ephemeral=True)
+            return
+        if identity.suspended:
+            await interaction.response.send_message(SUSPENDED_MESSAGE, ephemeral=True)
             return
 
-        playlists = sqldb.get_music_playlists(cuser.id)
+        playlists = sqldb.get_music_playlists(identity.user_id)
         if not playlists:
             await interaction.response.send_message("你還沒有歌單，請先用 /playlist create 建立", ephemeral=True)
             return
-        counts = sqldb.get_music_playlist_song_counts(cuser.id)
+        counts = sqldb.get_music_playlist_song_counts(identity.user_id)
         panel_message = interaction.message
 
         async def on_select(select_interaction: discord.Interaction, playlist_id: int):

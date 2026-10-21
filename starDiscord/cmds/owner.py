@@ -16,7 +16,7 @@ from starlib.instance import *
 from starlib.settings import get_settings
 from starlib.utils import ChoiceList, base64_to_buffer, find_radmin_vpn_network, get_arp_list, time_to_datetime
 
-from ..checks import PrivilegeLevel, ensure_registered, has_privilege_level, has_vip, is_vip_admin
+from ..checks import PrivilegeLevel, has_privilege_level, has_vip, is_vip_admin
 from ..command_options import *
 from ..extension import Cog_Extension
 from ..uiElement.view import McServerPanel, VIPAuditView, VIPView
@@ -339,8 +339,7 @@ class owner(Cog_Extension):
             await ctx.respond(embed=embed)
 
     @mcserver_cmd.command(description="開啟mc伺服器面板", name="panel", name_localizations=ChoiceList.name("mcserver_panel"))
-    @ensure_registered()
-    @commands.check_any(commands.check(has_privilege_level(PrivilegeLevel.Level2)), commands.has_guild_permissions(manage_channels=True))  # pyright: ignore[reportArgumentType]
+    @commands.check_any(has_privilege_level(PrivilegeLevel.Level2), commands.has_guild_permissions(manage_channels=True))
     async def mcserver_panel(self, ctx: discord.ApplicationContext):
         await ctx.defer()
         view = McServerPanel()

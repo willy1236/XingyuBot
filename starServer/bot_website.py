@@ -4,7 +4,6 @@ import hmac
 import html
 import logging
 import secrets
-from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import feedparser
@@ -25,7 +24,7 @@ from linebot.v3.webhooks.models.message_event import MessageEvent
 
 from sentry_bootstrap import capture_exception_safe
 from starlib import BaseThread, Jsondb, sclient, sqldb, utils
-from starlib.database import APIType, ExternalAccount, NotifyCommunityType, PlatformType, TwitchBotJoinChannel
+from starlib.database import APIType, NotifyCommunityType
 from starlib.instance import google_api
 from starlib.oauth import DiscordOAuth, GoogleOAuth, TwitchOAuth
 from starlib.providers.social.push_models import YoutubePushEntry
@@ -186,10 +185,11 @@ async def oauth_discord(request: Request):
     if not code:
         return HTMLResponse(f"授權失敗：{html.escape(params.get('error', '缺少授權碼'))}", 400)
 
-    # 驗證 state 參數（CSRF 保護）
-    # if not OAuth2Base.verify_state(request.cookies.get("oauth_state"), params.get("state")):
-    #     return HTMLResponse("授權失敗：state 驗證失敗", 400)
+    if not params.get("guild_id"):
+        # 網站登入原本寫 cloud_user，身分改接 auth server 後暫停，待網站 OIDC 另案恢復
+        return HTMLResponse("網站登入與帳號綁定暫停服務", 503)
 
+    # 機器人授權流程
     auth = DiscordOAuth.create_from_db(discord_oauth_client)
     await auth.exchange_code(code)
     user = await auth.get_me()
@@ -197,38 +197,9 @@ async def oauth_discord(request: Request):
     log.info(f"Discord OAuth: User {user.username} ({user.id}) authorized.")
     log.info(f"Discord OAuth scopes: {auth.scopes}")
 
-    cuser = sqldb.get_cloud_user_by_discord(user.id)
-    if not cuser:
-        # 如果資料庫沒有這個用戶，先創建一個新的 CloudUser
-        cuser = sqldb.add_cloud_user_by_discord(user.id, user.username)
-        log.info(f"Created new CloudUser for Discord ID {user.id} with username '{user.username}'")
-
-    if auth.has_scope("connections"):
-        connections = await auth.get_connections()
-        for connection in connections:
-            if connection.type == "twitch":
-                log.info(f"Discord connection: {connection.name}({connection.id})")
-                sclient.sqldb.upsert_external_account(user_id=cuser.id, platform=PlatformType.Twitch, external_id=connection.id, display_name=connection.name)
-
-    if params.get("guild_id"):
-        # 機器人授權流程
-        response = HTMLResponse(f"授權已完成，您現在可以關閉此頁面<br>感謝您使用星羽機器人！", 200)
-        response.delete_cookie("oauth_state")
-        return response
-    else:
-        # 用戶授權流程，產生 JWT 並重定向到儀表板
-        response = RedirectResponse(f"{BASE_WWW_URL}/dashboard")
-
-        # 產生 JWT（id 為站內 cloud_user.id，Discord 自己的 ID 另外放在 discord_id）
-        payload = {"id": cuser.id, "discord_id": user.id, "username": user.username, "avatar": user.avatar, "exp": datetime.now(timezone.utc) + timedelta(days=7)}
-        jwt_secret = SETTINGS.JWT_SECRET
-        jwt_token = jwt.encode(payload, jwt_secret, algorithm="HS256")
-
-        # 將 JWT 寫入 Cookie
-        response.set_cookie(key="jwt", value=jwt_token, httponly=True, secure=True, samesite="lax", max_age=7 * 24 * 60 * 60, domain=f".{BASE_DOMAIN}")
-        response.delete_cookie("oauth_state")
-
-        return response
+    response = HTMLResponse(f"授權已完成，您現在可以關閉此頁面<br>感謝您使用星羽機器人！", 200)
+    response.delete_cookie("oauth_state")
+    return response
 
 
 @app.get("/oauth/discordbot")
@@ -243,61 +214,14 @@ async def oauth_discordbot(request: Request):
 
 @app.get("/oauth/twitch")
 async def oauth_twitch(request: Request):
-    params = dict(request.query_params)
-    code = params.get("code")
-    if not code:
-        return HTMLResponse(f"授權失敗：{html.escape(params.get('error', '缺少授權碼'))}", 400)
-
-    # 驗證 state 參數（CSRF 保護）
-    if not TwitchOAuth.verify_state(request.cookies.get("oauth_state"), params.get("state")):
-        return HTMLResponse("授權失敗：state 驗證失敗", 400)
-
-    # 確認已用 Discord 登入，並取得要綁定的 cloud_user
-    payload = decode_jwt_cookie(request)
-    if payload is None or not payload.get("id"):
-        return HTMLResponse("請先使用 Discord 登入後再綁定 Twitch 帳號", 401)
-    cloud_user_id = payload["id"]
-    if not sqldb.get_cloud_user_by_id(cloud_user_id):
-        return HTMLResponse("登入狀態異常，請重新登入後再試", 401)
-
-    auth = TwitchOAuth.create_from_db(twitch_oauth_client)
-    await auth.exchange_code(code)
-    user = await auth.get_me()
-    auth.save_token_to_db(user.id)
-    sclient.sqldb.upsert_external_account(user_id=cloud_user_id, platform=PlatformType.Twitch, external_id=user.id, display_name=user.display_name)
-    sclient.sqldb.merge(TwitchBotJoinChannel(twitch_id=user.id))
-    response = HTMLResponse(f"授權已完成，您現在可以關閉此頁面<br>別忘了在聊天室輸入 /mod xingyu1016<br><br>Twitch ID：{html.escape(str(user.id))}")
-    response.delete_cookie("oauth_state")
-    return response
+    # 網站登入原本寫 cloud_user，身分改接 auth server 後暫停，待網站 OIDC 另案恢復
+    return HTMLResponse("網站登入與帳號綁定暫停服務", 503)
 
 
 @app.get("/oauth/google")
 async def oauth_google(request: Request):
-    params = dict(request.query_params)
-    code = params.get("code")
-    if not code:
-        return HTMLResponse(f"授權失敗：{html.escape(params.get('error', '缺少授權碼'))}", 400)
-
-    # 驗證 state 參數（CSRF 保護）
-    if not GoogleOAuth.verify_state(request.cookies.get("oauth_state"), params.get("state")):
-        return HTMLResponse("授權失敗：state 驗證失敗", 400)
-
-    # 確認已用 Discord 登入，並取得要綁定的 cloud_user
-    payload = decode_jwt_cookie(request)
-    if payload is None or not payload.get("id"):
-        return HTMLResponse("請先使用 Discord 登入後再綁定 Google 帳號", 401)
-    cloud_user_id = payload["id"]
-    if not sqldb.get_cloud_user_by_id(cloud_user_id):
-        return HTMLResponse("登入狀態異常，請重新登入後再試", 401)
-
-    auth = GoogleOAuth.create_from_db(google_oauth_settings)
-    await auth.exchange_code(code)
-    user = await auth.get_me()
-    auth.save_token_to_db(user.id)
-    sclient.sqldb.upsert_external_account(user_id=cloud_user_id, platform=PlatformType.Google, external_id=user.id, display_name=user.name)
-    response = HTMLResponse(f"授權已完成，您現在可以關閉此頁面<br><br>Google ID：{html.escape(str(user.id))}")
-    response.delete_cookie("oauth_state")
-    return response
+    # 網站登入原本寫 cloud_user，身分改接 auth server 後暫停，待網站 OIDC 另案恢復
+    return HTMLResponse("網站登入與帳號綁定暫停服務", 503)
 
 
 @app.post("/callback/linebot")

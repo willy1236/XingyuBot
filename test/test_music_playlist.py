@@ -4,17 +4,19 @@ from __future__ import annotations
 
 import asyncio
 from types import SimpleNamespace
+from uuid import UUID, uuid4
 
 import pytest
 from sqlmodel import Session
 
-from starDiscord import music_player
+from starDiscord import checks, music_player
 from starDiscord.cmds import music as music_cog
 from starDiscord.music_player import ExtractResult, Song, guild_playing
+from starDiscord.uiElement import music_panel
 from starlib import sqldb
-from starlib.database import CloudUser
 from starlib.database.postgresql.client import SQLRepository
 from starlib.exceptions import MusicCommandError
+from starlib.identity import BotIdentity, IdentityUnavailable
 
 # ─── Repository ─────────────────────────────────────────────────────────────
 
@@ -35,10 +37,8 @@ def repo():
 
 
 @pytest.fixture
-def user_id(repo: SQLRepository) -> int:
-    user = CloudUser(name="playlist-test")
-    repo.add(user)
-    return user.id
+def user_id() -> UUID:
+    return uuid4()
 
 
 def _rows(n: int, prefix: str = "song") -> list[tuple[str, str, int | None]]:
@@ -357,3 +357,107 @@ class TestPlaylistName:
     def test_invalid(self, name):
         with pytest.raises(MusicCommandError):
             music_cog._clean_playlist_name(name)
+
+
+# ─── 身分入口 ───────────────────────────────────────────────────────────────
+
+
+def _identity(user_id: UUID | None = None) -> BotIdentity:
+    return BotIdentity(user_id=user_id or uuid4(), is_formal=False, username=None, roles=(), suspended=False)
+
+
+class _Responder:
+    def __init__(self):
+        self.messages: list[str] = []
+
+    async def __call__(self, content=None, **kwargs):
+        self.messages.append(content)
+
+
+class TestIdentityEntry:
+    def _autocomplete(self, value=""):
+        ctx = SimpleNamespace(interaction=SimpleNamespace(user=SimpleNamespace(id=1)), value=value)
+        return asyncio.run(music_cog._playlist_name_autocomplete(ctx))
+
+    def test_autocomplete_lists_own_playlists(self, monkeypatch):
+        identity = _identity()
+        seen = {}
+
+        async def fake_resolve(discord_id, *, create=True):
+            seen["create"] = create
+            return identity
+
+        monkeypatch.setattr(music_cog, "resolve_identity", fake_resolve)
+        monkeypatch.setattr(music_cog.sqldb, "get_music_playlists", lambda user_id: [SimpleNamespace(name="晨跑"), SimpleNamespace(name="睡前")] if user_id == identity.user_id else [])
+
+        assert self._autocomplete("晨") == ["晨跑"]
+        assert seen["create"] is False
+
+    def test_autocomplete_new_user_is_empty(self, monkeypatch):
+        async def fake_resolve(discord_id, *, create=True):
+            return None
+
+        monkeypatch.setattr(music_cog, "resolve_identity", fake_resolve)
+        assert self._autocomplete() == []
+
+    def test_autocomplete_unavailable_is_empty(self, monkeypatch):
+        async def fake_resolve(discord_id, *, create=True):
+            raise IdentityUnavailable
+
+        monkeypatch.setattr(music_cog, "resolve_identity", fake_resolve)
+        assert self._autocomplete() == []
+
+    def test_with_identity_attaches_identity(self, monkeypatch):
+        identity = _identity()
+
+        async def fake_resolve(discord_id, *, create=True):
+            return identity
+
+        monkeypatch.setattr(checks, "resolve_identity", fake_resolve)
+
+        @checks.with_identity()
+        async def command(cog, ctx):
+            return ctx.identity
+
+        ctx = SimpleNamespace(author=SimpleNamespace(id=1), respond=_Responder())
+        assert asyncio.run(command(None, ctx)) is identity
+        assert ctx.respond.messages == []
+
+    def test_with_identity_unavailable_stops_command(self, monkeypatch):
+        async def fake_resolve(discord_id, *, create=True):
+            raise IdentityUnavailable
+
+        monkeypatch.setattr(checks, "resolve_identity", fake_resolve)
+        called = []
+
+        @checks.with_identity()
+        async def command(cog, ctx):
+            called.append(True)
+
+        ctx = SimpleNamespace(author=SimpleNamespace(id=1), respond=_Responder())
+        asyncio.run(command(None, ctx))
+        assert called == []
+        assert ctx.respond.messages == ["身分服務暫時無法連線，請稍後再試"]
+
+    def test_panel_playlists_unavailable(self, monkeypatch):
+        async def fake_resolve(discord_id, *, create=True):
+            raise IdentityUnavailable
+
+        monkeypatch.setattr(music_panel, "resolve_identity", fake_resolve)
+        responder = _Responder()
+        interaction = SimpleNamespace(user=SimpleNamespace(id=1), response=SimpleNamespace(send_message=responder))
+
+        asyncio.run(music_panel.MusicPanelView._open_playlists(SimpleNamespace(), interaction))
+        assert responder.messages == ["身分服務暫時無法連線，請稍後再試"]
+
+    def test_panel_playlists_new_user_has_none(self, monkeypatch):
+        async def fake_resolve(discord_id, *, create=True):
+            return _identity()
+
+        monkeypatch.setattr(music_panel, "resolve_identity", fake_resolve)
+        monkeypatch.setattr(music_panel.sqldb, "get_music_playlists", lambda user_id: [])
+        responder = _Responder()
+        interaction = SimpleNamespace(user=SimpleNamespace(id=1), response=SimpleNamespace(send_message=responder))
+
+        asyncio.run(music_panel.MusicPanelView._open_playlists(SimpleNamespace(), interaction))
+        assert responder.messages == ["你還沒有歌單，請先用 /playlist create 建立"]

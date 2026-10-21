@@ -1,9 +1,11 @@
 from datetime import date, datetime, timedelta, timezone
 from typing import Any
+from uuid import UUID
 
 import discord
 from sqlalchemy import JSON, BigInteger, Boolean, Column, Date, ForeignKey, ForeignKeyConstraint, Identity, Integer, Interval, SmallInteger, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import ARRAY, CIDR, MACADDR, TIMESTAMP
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlmodel import Field, Relationship, text
 
@@ -15,52 +17,56 @@ from .enums import *
 from .schemas import *
 
 
-class CloudUser(UsersSchema, table=True):
-    __tablename__ = "cloud_user"
+class DiscordIdentity(UsersSchema, table=True):
+    """Discord 帳號對應的使用者 ID 快取；權威來源是 auth server，查無此人時存的是 bot 發的臨時 ID"""
+
+    __tablename__ = "discord_identity"
+
+    discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True, autoincrement=False))
+    # 一位域民可以有多個 Discord 帳號，不設唯一
+    user_id: UUID = Field(sa_column=Column(PG_UUID(as_uuid=True), index=True, nullable=False))
+    is_formal: bool = Field(sa_column=Column(Boolean, nullable=False))
+    # 域民代號，臨時 ID 為空
+    username: str | None = Field(sa_column=Column(String))
+    roles: list[str] = Field(default_factory=list, sa_column=Column(ARRAY(String), nullable=False, server_default="{}"))
+    suspended: bool = Field(default=False, sa_column=Column(Boolean, nullable=False, server_default="false"))
+    # 最後一次從 auth server 得到明確答案（200 或 404）的時間
+    checked_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0), nullable=False))
+
+
+class LinkedAccount(UsersSchema, table=True):
+    """使用者 ID 綁定的外部平台帳號（Minecraft、Twitch、Google），一個平台一人一筆；Discord 不放這裡"""
+
+    __tablename__ = "linked_account"
 
     id: int = Field(sa_column=Column(Integer, Identity(), primary_key=True))
-    drive_gmail: str | None = Field(sa_column=Column(String))
-    drive_share_id: str | None = Field(sa_column=Column(String))
-    name: str | None = Field(sa_column=Column(String))
-    created_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0), server_default=text("now()")), default_factory=lambda: nowtz())
-    privilege_level: PrivilegeLevel = Field(sa_column=Column(SmallInteger, nullable=True), default=PrivilegeLevel.User)
-
-
-class ExternalAccount(UsersSchema, table=True):
-    __tablename__ = "external_account"
-
-    id: int = Field(sa_column=Column(Integer, Identity(), primary_key=True))
-    user_id: int = Field(foreign_key="users.cloud_user.id", index=True)
-
-    # 平台類型與該平台的唯一 ID
-    platform: PlatformType = Field(sa_column=Column(SmallInteger, index=True))
-    external_id: str = Field(sa_column=Column(String, index=True))
-
-    # 顯示名稱 (例如 Discord 名稱或遊戲 ID)
+    user_id: UUID = Field(sa_column=Column(PG_UUID(as_uuid=True), index=True, nullable=False))
+    platform: PlatformType = Field(sa_column=Column(SmallInteger, index=True, nullable=False))
+    external_id: str = Field(sa_column=Column(String, index=True, nullable=False))
     display_name: str | None = Field(sa_column=Column(String))
-
-    # 使用 JSONB 儲存不同平台差異化的資料
     platform_data: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
 
     __table_args__ = (
-        # 確保同一個平台下的 external_id 唯一，避免重複綁定
-        UniqueConstraint("platform", "external_id", name="unique_platform_account"),
+        UniqueConstraint("platform", "external_id", name="unique_linked_platform_account"),
+        UniqueConstraint("user_id", "platform", name="unique_linked_user_platform"),
         {**UsersSchema.__table_args__},
     )
 
 
-class LinkCode(UsersSchema, table=True):
-    __tablename__ = "link_code"
+class DriveShare(UsersSchema, table=True):
+    """「94共用啦」雲端資料夾的共用設定，一人一筆"""
 
-    user_id: int = Field(foreign_key="users.cloud_user.id", primary_key=True)
-    code: str = Field(index=True)
-    expires_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
+    __tablename__ = "drive_share"
+
+    user_id: UUID = Field(sa_column=Column(PG_UUID(as_uuid=True), primary_key=True))
+    gmail: str = Field(sa_column=Column(String, nullable=False))
+    share_id: str = Field(sa_column=Column(String, nullable=False))
 
 
 class NetBirdBinding(UsersSchema, table=True):
     __tablename__ = "netbird_binding"
 
-    user_id: int = Field(foreign_key="users.cloud_user.id", primary_key=True)
+    user_id: UUID = Field(sa_column=Column(PG_UUID(as_uuid=True), primary_key=True))
     group_id: str = Field(sa_column=Column(String))
     group_name: str | None = Field(sa_column=Column(String))
     last_setup_key_id: str | None = Field(sa_column=Column(String))
@@ -68,13 +74,17 @@ class NetBirdBinding(UsersSchema, table=True):
     updated_at: datetime | None = Field(sa_column=Column(TIMESTAMP(True, 0)))
 
 
+# 歌單名稱長度上限；merge_user_data 撞名改名時也要遵守
+MAX_PLAYLIST_NAME_LENGTH = 50
+
+
 class MusicPlaylist(UsersSchema, table=True):
-    """使用者的個人歌單，綁定 CloudUser 讓多個 Discord 帳號共用"""
+    """使用者的個人歌單，綁使用者 ID（域民的 account_id 或臨時 ID），同一位域民的多個 Discord 帳號共用"""
 
     __tablename__ = "music_playlist"
 
     id: int = Field(sa_column=Column(Integer, Identity(), primary_key=True))
-    user_id: int = Field(foreign_key="users.cloud_user.id", index=True)
+    user_id: UUID = Field(sa_column=Column(PG_UUID(as_uuid=True), index=True, nullable=False))
     name: str = Field(sa_column=Column(String, nullable=False))
     created_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0), server_default=text("now()")), default_factory=lambda: nowtz())
 
