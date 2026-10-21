@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import threading
+from datetime import timedelta
 from uuid import UUID, uuid4
 
 import pytest
@@ -12,7 +13,7 @@ from sqlmodel import Session, delete, select
 from starlib import sqldb
 from starlib.database import DriveShare, LinkedAccount, NetBirdBinding, PlatformType
 from starlib.database.postgresql.client import SQLRepository
-from starlib.database.postgresql.models import DiscordIdentity, MusicPlaylist, MusicPlaylistSong, MusicPlaylistSource
+from starlib.database.postgresql.models import MAX_PLAYLIST_NAME_LENGTH, DiscordIdentity, MusicPlaylist, MusicPlaylistSong, MusicPlaylistSource
 from starlib.utils import nowtz
 
 from test_identity import repo  # noqa: F401  (fixture)
@@ -92,6 +93,21 @@ class TestPlaylists:
         repo.commit()
 
         assert names(repo, new) == ["fav", "fav (2)", "fav (3)"]
+
+    def test_renamed_name_stays_within_length_limit(self, repo, ids):
+        old, new = ids
+        long_name = "x" * MAX_PLAYLIST_NAME_LENGTH
+        playlist(repo, old, long_name)
+        playlist(repo, new, long_name)
+        playlist(repo, new, long_name[:-4] + " (2)")  # 截斷後的候選名稱已被佔用，要繼續遞增
+
+        repo.merge_user_data(old, new)
+        repo.commit()
+
+        merged = names(repo, new)
+        assert len(merged) == 3
+        assert all(len(n) <= MAX_PLAYLIST_NAME_LENGTH for n in merged)
+        assert long_name[:-4] + " (3)" in merged
 
     def test_noop_when_old_has_nothing(self, repo, ids):
         old, new = ids
@@ -173,6 +189,18 @@ class TestDiscordIdentities:
         assert repo.get_discord_identity(900000000000000102).user_id == new
         assert repo.get_discord_identity(900000000000000103).user_id == other
 
+    def test_repointed_records_are_marked_for_recheck(self, repo, ids):
+        """兄弟紀錄的 roles、suspended、username 還是舊域民的值，要強迫下次使用時重查"""
+        old, new = ids
+        repo.session.add(DiscordIdentity(discord_id=900000000000000104, user_id=old, is_formal=True, roles=["admin"], checked_at=nowtz()))
+        repo.commit()
+
+        repo.merge_user_data(old, new)
+        repo.commit()
+
+        record = repo.session.get(DiscordIdentity, 900000000000000104, populate_existing=True)
+        assert nowtz() - record.checked_at > timedelta(days=365)
+
 
 class TestRollback:
     @pytest.mark.parametrize("error", [SQLAlchemyError("boom"), RuntimeError("bug")])
@@ -242,6 +270,7 @@ class TestConcurrency:
             s2.close()
 
     def test_concurrent_merges_of_same_old_id_do_not_duplicate_or_lose_data(self):
+        """驗的是結果正確（不重複、不遺失），不是鎖：拿掉鎖，行鎖與唯一鍵也會讓它過。驗鎖的是 test_second_merge_waits_for_first_commit。"""
         old, new = uuid4(), uuid4()
         setup_session, setup = _independent_repo()
         s1, r1 = _independent_repo()

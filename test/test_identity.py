@@ -136,7 +136,7 @@ class TestResolve:
         assert identity.user_id == account.account_id
         assert repo.get_discord_identity(DISCORD_ID).user_id == account.account_id
 
-    def test_merge_failure_keeps_old_record(self, resolver, repo, directory, monkeypatch):
+    def test_merge_failure_keeps_old_record(self, resolver, repo, directory, monkeypatch, caplog):
         temporary = resolve(resolver)
 
         def fail(old, new):
@@ -146,9 +146,12 @@ class TestResolve:
         directory.accounts[DISCORD_ID] = _account()
         expire(repo)
 
-        with pytest.raises(SQLAlchemyError):
-            resolve(resolver)
+        with caplog.at_level("ERROR", logger="starlib.identity.resolver"):
+            identity = resolve(resolver)
 
+        # 這次照舊 ID 做完，不讓指令跟著失敗
+        assert identity == temporary
+        assert any(r.levelname == "ERROR" and r.discord_id == DISCORD_ID for r in caplog.records)
         record = repo.get_discord_identity(DISCORD_ID)
         assert record.user_id == temporary.user_id
         assert not record.is_formal
@@ -338,12 +341,18 @@ class TestIdentityChange:
         expire(repo)
         monkeypatch.setattr(SQLRepository, "_merge_user_data", lambda self, o, n: (_ for _ in ()).throw(RuntimeError("bug")))
 
-        with pytest.raises(RuntimeError):
-            resolve(resolver)
+        identity = resolve(resolver)
 
+        assert identity == temporary
         record = repo.get_discord_identity(DISCORD_ID)
         assert record.user_id == temporary.user_id and not record.is_formal
         assert _names(repo, temporary.user_id) == ["mine"]
+
+        # 下次使用再試，這次成功就搬過去
+        monkeypatch.undo()
+        retried = resolve(resolver)
+        assert retried.user_id == directory.accounts[DISCORD_ID].account_id
+        assert _names(repo, retried.user_id) == ["mine"]
 
 
 class TestTemporaryIdentityRace:
