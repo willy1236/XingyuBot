@@ -90,7 +90,7 @@ class IdentityResolver:
                     # 判斷不了就不動紀錄，下次再判斷；也不要讓每次互動都等一次逾時
                     self._unavailable_until = nowtz() + self._backoff
                     return _to_identity(record)
-        previous = _to_identity(record) if record else None
+        previous = _to_identity(record) if record else None  # 有 merge_from 就一定有 record
         try:
             saved = self._repo.save_discord_identity(
                 DiscordIdentity(
@@ -104,11 +104,14 @@ class IdentityResolver:
                 ),
                 merge_from=merge_from,
             )
-        except Exception:
-            if merge_from is None or previous is None:
+        except Exception as e:
+            if merge_from is None:
                 raise
             # 搬資料失敗時已整筆 rollback，紀錄與資料都還是舊 ID：這次照舊 ID 做完，下次使用再試，不讓指令跟著失敗
-            log.exception("identity: moving data failed, keeping the previous ID", extra={"discord_id": discord_id, "old_id": str(merge_from), "new_id": str(account.account_id)})
+            log.exception(
+                "identity: saving identity with merge failed, keeping the previous ID",
+                extra={"discord_id": discord_id, "old_id": str(merge_from), "new_id": str(account.account_id), "error_type": type(e).__name__},
+            )
             return previous
         return _to_identity(saved)
 
