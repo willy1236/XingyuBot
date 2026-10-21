@@ -1559,15 +1559,15 @@ class GuildSettingRepository(BaseRepository):
 
 
 class MusicPlaylistRepository(BaseRepository):
-    def get_music_playlists(self, user_id: int) -> list[MusicPlaylist]:
+    def get_music_playlists(self, user_id: UUID) -> list[MusicPlaylist]:
         stmt = select(MusicPlaylist).where(MusicPlaylist.user_id == user_id).order_by(MusicPlaylist.id)
         return list(self.session.exec(stmt).all())
 
-    def get_music_playlist(self, user_id: int, name: str) -> MusicPlaylist | None:
+    def get_music_playlist(self, user_id: UUID, name: str) -> MusicPlaylist | None:
         stmt = select(MusicPlaylist).where(MusicPlaylist.user_id == user_id, MusicPlaylist.name == name)
         return self.session.exec(stmt).one_or_none()
 
-    def get_music_playlist_song_counts(self, user_id: int) -> dict[int, int]:
+    def get_music_playlist_song_counts(self, user_id: UUID) -> dict[int, int]:
         """取得使用者每個歌單的歌曲數（playlist_id → 數量）"""
         stmt = (
             select(MusicPlaylistSong.playlist_id, func.count())
@@ -1577,7 +1577,7 @@ class MusicPlaylistRepository(BaseRepository):
         )
         return {playlist_id: count for playlist_id, count in self.session.exec(stmt).all()}
 
-    def create_music_playlist(self, user_id: int, name: str) -> MusicPlaylist:
+    def create_music_playlist(self, user_id: UUID, name: str) -> MusicPlaylist:
         playlist = MusicPlaylist(user_id=user_id, name=name)
         self.add(playlist)
         return playlist

@@ -88,12 +88,12 @@ class NetBirdBinding(UsersSchema, table=True):
 
 
 class MusicPlaylist(UsersSchema, table=True):
-    """使用者的個人歌單，綁定 CloudUser 讓多個 Discord 帳號共用"""
+    """使用者的個人歌單，綁使用者 ID（域民的 account_id 或臨時 ID），同一位域民的多個 Discord 帳號共用"""
 
     __tablename__ = "music_playlist"
 
     id: int = Field(sa_column=Column(Integer, Identity(), primary_key=True))
-    user_id: int = Field(foreign_key="users.cloud_user.id", index=True)
+    user_id: UUID = Field(sa_column=Column(PG_UUID(as_uuid=True), index=True, nullable=False))
     name: str = Field(sa_column=Column(String, nullable=False))
     created_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0), server_default=text("now()")), default_factory=lambda: nowtz())
 
