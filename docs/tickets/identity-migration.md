@@ -410,6 +410,7 @@ T-03、T-05 技術上只依賴 T-01，建議等 T-02 先跑通 auth server 再�
 - 使用者決定：
   - 撞號時誰的資料留下、沒有 Discord 列的 `cloud_user` 有資料、雲端資料夾只填一半，都視為不會發生：腳本遇到就中止並列出，不自行取捨（撞號仍照 T-07 合併，`cloud_user.id` 小的直接轉，其餘先轉到暫用 ID 再 `merge_user_data`）。
   - 只允許把正式資料複製到本機測試，不從本機連 shark 上的服務。
+  - `/oauth/twitch`、`/oauth/google` 改回 503 連帶停掉 Twitch 頻道登記與 YouTube token 儲存：接受。`/to/*auth` 入口維持開著，503 不補測試。
 - 已核可的實作決定：
   - 轉換前預檢舊表裡新表收不下的資料（平台不在 Discord／Twitch／Google／Minecraft、`external_id` 為空、Discord ID 不合法、同一人同平台兩筆），有就中止並列出 `external_account.id`。
   - `discord_identity` 沿用 auth server 回的 `suspended`。
