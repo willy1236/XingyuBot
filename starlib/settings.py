@@ -20,8 +20,6 @@ class AppSettings(BaseSettings):
 
     LOG_LEVEL: str | int = "INFO"
     API_WEBSITE: bool = False
-    FILE_LOG: bool = False
-    MONGODB_CONNECTION: bool = False
     TWITCH_BOT: bool = False
 
     DB_HOST: str
@@ -46,7 +44,6 @@ class AppSettings(BaseSettings):
     DEBUG_GUILDS: list[int] = Field(default_factory=list)
 
     DEBUG_MODE: bool = True
-    NOTION_DATABASE_ID: str
 
     AUTH_INTERNAL_URL: str = "http://127.0.0.1:8002"
     AUTH_SERVICE_KEY: str
@@ -56,13 +53,7 @@ class AppSettings(BaseSettings):
     # 身分組代號 -> PrivilegeLevel 數字，例如 {"some-role": 2}；沒設定時所有人都是一般使用者
     PRIVILEGE_ROLES: dict[str, int] = Field(default_factory=dict)
 
-    SENTRY_ENABLED: bool = False
-    SENTRY_DSN: str | None = None
-    SENTRY_ENVIRONMENT: str | None = None
-    SENTRY_RELEASE: str | None = None
-    SENTRY_DEBUG: bool = False
-    SENTRY_SEND_DEFAULT_PII: bool = False
-    SENTRY_TRACES_SAMPLE_RATE: float = 0.0
+    # SENTRY_* 由 sentry_bootstrap 在載入設定前直接讀環境變數，不放在這裡
 
     @field_validator("PRIVILEGE_ROLES")
     @classmethod
