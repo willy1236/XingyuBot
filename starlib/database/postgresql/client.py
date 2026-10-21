@@ -368,7 +368,7 @@ class UserRepository(BaseRepository):
                 while True:
                     suffix = f" ({n})"
                     # 改名後也不能超過歌單名稱上限，否則之後加歌會被名稱檢查擋下
-                    target = f"{name[: MAX_PLAYLIST_NAME_LENGTH - len(suffix)]}{suffix}"
+                    target = f"{name[: MAX_PLAYLIST_NAME_LENGTH - len(suffix)].rstrip()}{suffix}"
                     if target not in taken:
                         break
                     n += 1

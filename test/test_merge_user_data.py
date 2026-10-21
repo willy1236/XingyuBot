@@ -109,6 +109,19 @@ class TestPlaylists:
         assert all(len(n) <= MAX_PLAYLIST_NAME_LENGTH for n in merged)
         assert long_name[:-4] + " (3)" in merged
 
+    def test_truncation_does_not_leave_double_space(self, repo, ids):
+        old, new = ids
+        name = "x" * (MAX_PLAYLIST_NAME_LENGTH - 5) + " " + "tail"  # 保留 46 字時最後一個字是空白
+        assert len(name) == MAX_PLAYLIST_NAME_LENGTH
+        playlist(repo, old, name)
+        playlist(repo, new, name)
+
+        repo.merge_user_data(old, new)
+        repo.commit()
+
+        assert "  " not in "".join(names(repo, new))
+        assert "x" * (MAX_PLAYLIST_NAME_LENGTH - 5) + " (2)" in names(repo, new)
+
     def test_noop_when_old_has_nothing(self, repo, ids):
         old, new = ids
         playlist(repo, new, "mine")
