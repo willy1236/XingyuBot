@@ -1,5 +1,6 @@
 # type: ignore
 import math
+from uuid import UUID
 
 import discord
 from discord import OptionChoice
@@ -10,8 +11,9 @@ from discord.utils import format_dt
 from starlib import BotEmbed, sqldb
 from starlib.database import MusicPlaylist, MusicPlaylistSource
 from starlib.exceptions import MusicCommandError
+from starlib.identity import IdentityUnavailable, resolve_identity
 
-from ..checks import RegisteredContext, ensure_registered
+from ..checks import IdentityContext, with_identity
 from ..extension import Cog_Extension
 from ..music_player import (
     ExtractResult,
@@ -66,14 +68,14 @@ def _clean_playlist_name(name: str) -> str:
     return name
 
 
-def _get_playlist(user_id: int, name: str) -> MusicPlaylist:
+def _get_playlist(user_id: UUID, name: str) -> MusicPlaylist:
     playlist = sqldb.get_music_playlist(user_id, name.strip())
     if not playlist:
         raise MusicCommandError(f"找不到歌單「{name}」")
     return playlist
 
 
-def _get_or_create_playlist(user_id: int, name: str) -> MusicPlaylist:
+def _get_or_create_playlist(user_id: UUID, name: str) -> MusicPlaylist:
     name = _clean_playlist_name(name)
     playlist = sqldb.get_music_playlist(user_id, name)
     if playlist:
@@ -122,11 +124,15 @@ def _replace_source_songs(playlist: MusicPlaylist, source: MusicPlaylistSource, 
 
 
 async def _playlist_name_autocomplete(ctx: discord.AutocompleteContext) -> list[str]:
-    cuser = sqldb.get_cloud_user_by_discord(ctx.interaction.user.id)
-    if not cuser:
+    # 沒用過 bot 的人本來就沒有歌單，不必為了補全發臨時 ID
+    try:
+        identity = await resolve_identity(ctx.interaction.user.id, create=False)
+    except IdentityUnavailable:
+        return []
+    if identity is None:
         return []
     value = (ctx.value or "").lower()
-    return [p.name for p in sqldb.get_music_playlists(cuser.id) if value in p.name.lower()][:25]
+    return [p.name for p in sqldb.get_music_playlists(identity.user_id) if value in p.name.lower()][:25]
 
 
 def _playlist_name_option(**kwargs):
@@ -284,18 +290,18 @@ class music(Cog_Extension):
         await ctx.respond("結束錄音")
 
     @playlist.command(name="create", description="建立個人歌單")
-    @ensure_registered()
-    async def playlist_create(self, ctx: RegisteredContext, name: discord.Option(str, name="歌單", description="歌單名稱")):
+    @with_identity()
+    async def playlist_create(self, ctx: IdentityContext, name: discord.Option(str, name="歌單", description="歌單名稱")):
         name = _clean_playlist_name(name)
-        if sqldb.get_music_playlist(ctx.cuser.id, name):
+        if sqldb.get_music_playlist(ctx.identity.user_id, name):
             raise MusicCommandError(f"已經有名為「{name}」的歌單")
-        _get_or_create_playlist(ctx.cuser.id, name)
+        _get_or_create_playlist(ctx.identity.user_id, name)
         await ctx.respond(f"已建立歌單「{name}」", ephemeral=True)
 
     @playlist.command(name="delete", description="刪除個人歌單")
-    @ensure_registered()
-    async def playlist_delete(self, ctx: RegisteredContext, name: _playlist_name_option()):
-        playlist = _get_playlist(ctx.cuser.id, name)
+    @with_identity()
+    async def playlist_delete(self, ctx: IdentityContext, name: _playlist_name_option()):
+        playlist = _get_playlist(ctx.identity.user_id, name)
         view = ConfirmView(ctx.author.id, confirm_label="刪除")
         await ctx.respond(f"確定要刪除歌單「{playlist.name}」嗎？", view=view, ephemeral=True)
         await view.wait()
@@ -306,10 +312,10 @@ class music(Cog_Extension):
             await ctx.interaction.edit_original_response(content="已取消刪除", view=None)
 
     @playlist.command(name="add", description="把歌曲或整份歌單網址加入個人歌單（歌單不存在時自動建立）")
-    @ensure_registered()
+    @with_identity()
     async def playlist_add(
         self,
-        ctx: RegisteredContext,
+        ctx: IdentityContext,
         name: _playlist_name_option(),
         url: discord.Option(str, name="網址", description="單曲或歌單網址（YouTube、Bilibili 等）"),
     ):
@@ -317,7 +323,7 @@ class music(Cog_Extension):
         await ctx.defer(ephemeral=True)
         result = await extract_songs(url, ctx.author)
         # 擷取成功後才建立歌單，避免連結無效時留下空歌單
-        playlist = _get_or_create_playlist(ctx.cuser.id, name)
+        playlist = _get_or_create_playlist(ctx.identity.user_id, name)
 
         if not result.playlist_url:
             text = _save_songs(playlist, result.songs)
@@ -334,9 +340,9 @@ class music(Cog_Extension):
         await ctx.respond(text, ephemeral=True)
 
     @playlist.command(name="sync", description="重新擷取歌單匯入過的外部歌單（手動加入的歌曲不受影響）")
-    @ensure_registered()
-    async def playlist_sync(self, ctx: RegisteredContext, name: _playlist_name_option()):
-        playlist = _get_playlist(ctx.cuser.id, name)
+    @with_identity()
+    async def playlist_sync(self, ctx: IdentityContext, name: _playlist_name_option()):
+        playlist = _get_playlist(ctx.identity.user_id, name)
         sources = sqldb.get_music_playlist_sources(playlist.id)
         if not sources:
             raise MusicCommandError(f"歌單「{playlist.name}」沒有匯入過外部歌單")
@@ -357,41 +363,41 @@ class music(Cog_Extension):
 
     @playlist.command(name="save_current", description="把目前播放的歌存進個人歌單（歌單不存在時自動建立）")
     @commands.guild_only()
-    @ensure_registered()
-    async def playlist_save_current(self, ctx: RegisteredContext, name: _playlist_name_option()):
+    @with_identity()
+    async def playlist_save_current(self, ctx: IdentityContext, name: _playlist_name_option()):
         player = _require_player(ctx, need_playing=True)
-        playlist = _get_or_create_playlist(ctx.cuser.id, name)
+        playlist = _get_or_create_playlist(ctx.identity.user_id, name)
         await ctx.respond(_save_songs(playlist, [player.nowplaying]), ephemeral=True)
 
     @playlist.command(name="save_queue", description="把目前播放與待播歌單全部存進個人歌單（歌單不存在時自動建立）")
     @commands.guild_only()
-    @ensure_registered()
-    async def playlist_save_queue(self, ctx: RegisteredContext, name: _playlist_name_option()):
+    @with_identity()
+    async def playlist_save_queue(self, ctx: IdentityContext, name: _playlist_name_option()):
         player = _require_player(ctx)
         songs = ([player.nowplaying] if player.nowplaying else []) + player.get_full_playlist()
         if not songs:
             raise MusicCommandError("歌單裡空無一物")
-        playlist = _get_or_create_playlist(ctx.cuser.id, name)
+        playlist = _get_or_create_playlist(ctx.identity.user_id, name)
         await ctx.respond(_save_songs(playlist, songs), ephemeral=True)
 
     @playlist.command(name="remove", description="從個人歌單刪除一首歌")
-    @ensure_registered()
+    @with_identity()
     async def playlist_remove(
         self,
-        ctx: RegisteredContext,
+        ctx: IdentityContext,
         name: _playlist_name_option(),
         index: discord.Option(int, name="編號", description="歌曲編號（可用 /playlist show 查看）", min_value=1),
     ):
-        playlist = _get_playlist(ctx.cuser.id, name)
+        playlist = _get_playlist(ctx.identity.user_id, name)
         removed = sqldb.remove_music_playlist_song(playlist.id, index - 1)
         if not removed:
             raise MusicCommandError(f"歌單「{playlist.name}」沒有第 {index} 首歌")
         await ctx.respond(f"已從歌單「{playlist.name}」刪除 {removed.title}", ephemeral=True)
 
     @playlist.command(name="show", description="查看個人歌單內容")
-    @ensure_registered()
-    async def playlist_show(self, ctx: RegisteredContext, name: _playlist_name_option()):
-        playlist = _get_playlist(ctx.cuser.id, name)
+    @with_identity()
+    async def playlist_show(self, ctx: IdentityContext, name: _playlist_name_option()):
+        playlist = _get_playlist(ctx.identity.user_id, name)
         songs = sqldb.get_music_playlist_songs(playlist.id)
         if not songs:
             await ctx.respond(f"歌單「{playlist.name}」裡空無一物", ephemeral=True)
@@ -410,19 +416,19 @@ class music(Cog_Extension):
 
     @playlist.command(name="play", description="選擇個人歌單並播放")
     @commands.guild_only()
-    @ensure_registered()
+    @with_identity()
     async def playlist_play(
         self,
-        ctx: RegisteredContext,
+        ctx: IdentityContext,
         shuffle: discord.Option(bool, name="隨機", description="是否打亂播放順序", default=False),
     ):
         if not ctx.author.voice:
             raise MusicCommandError("請先連接到一個語音頻道")
 
-        playlists = sqldb.get_music_playlists(ctx.cuser.id)
+        playlists = sqldb.get_music_playlists(ctx.identity.user_id)
         if not playlists:
             raise MusicCommandError("你還沒有歌單，請先用 /playlist create 建立")
-        counts = sqldb.get_music_playlist_song_counts(ctx.cuser.id)
+        counts = sqldb.get_music_playlist_song_counts(ctx.identity.user_id)
 
         async def on_select(interaction: discord.Interaction, playlist_id: int):
             await interaction.response.edit_message(content="載入歌單中…", view=view)
