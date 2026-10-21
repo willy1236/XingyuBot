@@ -79,7 +79,17 @@ class IdentityResolver:
             record.checked_at = now
             return _to_identity(self._repo.save_discord_identity(record))
 
-        merge_from = record.user_id if record and record.user_id != account.account_id else None
+        merge_from = None
+        if record and record.user_id != account.account_id:
+            if not record.is_formal:
+                merge_from = record.user_id
+            else:
+                try:
+                    merge_from = await self._merge_source_for_formal(discord_id, record.user_id, account.account_id)
+                except DirectoryUnavailable:
+                    # 判斷不了就不動紀錄，下次再判斷；也不要讓每次互動都等一次逾時
+                    self._unavailable_until = nowtz() + self._backoff
+                    return _to_identity(record)
         saved = self._repo.save_discord_identity(
             DiscordIdentity(
                 discord_id=discord_id,
@@ -93,6 +103,23 @@ class IdentityResolver:
             merge_from=merge_from,
         )
         return _to_identity(saved)
+
+    async def _merge_source_for_formal(self, discord_id: int, old_id: UUID, new_id: UUID) -> UUID | None:
+        """原本是正式 ID、現在指到別的域民：舊 ID 已併入新域民才搬資料，否則只改紀錄。沒得到答案時 raise DirectoryUnavailable。"""
+        resolved = await self._directory.find_by_account_id(old_id)
+        extra = {"discord_id": discord_id, "old_id": str(old_id), "new_id": str(new_id)}
+        if resolved is None:
+            log.warning("identity: previous account no longer exists, repointing without moving data", extra=extra)
+            return None
+        if resolved.merged_from is None:
+            # 舊域民仍存在，這個 Discord 帳號只是改連到另一位域民，兩邊的資料都不動
+            log.info("identity: discord account repointed to another account", extra=extra)
+            return None
+        if resolved.account.account_id != new_id:
+            # 舊 ID 併入的是另一位域民，資料不屬於現在這位
+            log.warning("identity: previous account merged into a different account, repointing without moving data", extra={**extra, "merged_into": str(resolved.account.account_id)})
+            return None
+        return old_id
 
 
 _default: IdentityResolver | None = None

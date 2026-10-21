@@ -319,10 +319,15 @@ class UserRepository(BaseRepository):
 
     def save_discord_identity(self, identity: DiscordIdentity, *, merge_from: UUID | None = None) -> DiscordIdentity:
         """新增或更新紀錄；帶 merge_from 時先把該 ID 的資料併到 identity.user_id，兩者在同一個交易。"""
-        if merge_from is not None and merge_from != identity.user_id:
-            self.merge_user_data(merge_from, identity.user_id)
-        saved = self.session.merge(identity)
-        self.commit()
+        try:
+            if merge_from is not None and merge_from != identity.user_id:
+                self.merge_user_data(merge_from, identity.user_id)
+            saved = self.session.merge(identity)
+            self.commit()
+        except Exception:
+            # 搬到一半的資料不能被之後同一個 session 的 commit 提交；SQLAlchemyError 以外的例外 decorator 不會 rollback
+            self.session.rollback()
+            raise
         return saved
 
     def merge_user_data(self, old_id: UUID, new_id: UUID) -> None:
@@ -330,8 +335,69 @@ class UserRepository(BaseRepository):
         把 old_id 底下的業務資料併到 new_id，用於臨時 ID 轉正式與域民合併。
 
         只在目前的交易內操作、不 commit，由呼叫端與紀錄更新一起提交；失敗時整筆 rollback。
+        先對 old_id、new_id 取 advisory lock（依 UUID 排序，避免互相合併時死鎖），拿到鎖之後才讀資料，
+        所以同時觸發的第二個合併會在第一個提交後看到空的 old_id，變成什麼都不做。
+        規則見 docs/identity-migration-spec.md〈臨時轉正式與資料合併〉。
         """
-        log.info("merge_user_data: not implemented yet", extra={"old_id": str(old_id), "new_id": str(new_id)})
+        if old_id == new_id:
+            return
+        try:
+            self._merge_user_data(old_id, new_id)
+        except Exception:
+            self.session.rollback()
+            raise
+
+    def _merge_user_data(self, old_id: UUID, new_id: UUID) -> None:
+        conn = self.session.connection()
+        for uid in sorted((old_id, new_id), key=lambda u: u.int):
+            # 交易層級的鎖，commit 或 rollback 時自動釋放；取 UUID 前 64 位當 key
+            key = int.from_bytes(uid.bytes[:8], "big", signed=True)
+            conn.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": key})
+
+        extra = {"old_id": str(old_id), "new_id": str(new_id)}
+
+        # 歌單：全部搬過去，跟 new_id 同名的改名；歌曲與來源靠 playlist_id，不用動
+        playlists = self.session.exec(select(MusicPlaylist.id, MusicPlaylist.name).where(MusicPlaylist.user_id == old_id).order_by(MusicPlaylist.id)).all()
+        new_names = set(self.session.exec(select(MusicPlaylist.name).where(MusicPlaylist.user_id == new_id)).all())
+        taken = new_names | {name for _, name in playlists}
+        renamed = 0
+        for playlist_id, name in playlists:
+            target = name
+            if name in new_names:
+                n = 2
+                while f"{name} ({n})" in taken:
+                    n += 1
+                target = f"{name} ({n})"
+                taken.add(target)
+                renamed += 1
+            self.session.exec(update(MusicPlaylist).where(MusicPlaylist.id == playlist_id).values(user_id=new_id, name=target))
+
+        # 一人一筆的資料：new_id 已經有就保留它那筆，old_id 的捨棄
+        binding = self.session.exec(select(NetBirdBinding.group_id, NetBirdBinding.group_name).where(NetBirdBinding.user_id == old_id)).first()
+        if binding is not None:
+            if self.session.exec(select(NetBirdBinding.user_id).where(NetBirdBinding.user_id == new_id)).first() is None:
+                self.session.exec(update(NetBirdBinding).where(NetBirdBinding.user_id == old_id).values(user_id=new_id))
+            else:
+                # NetBird 上的群組不動，留 log 讓管理員自行整理
+                log.warning("merge_user_data: discarded netbird binding", extra={**extra, "group_id": binding[0], "group_name": binding[1]})
+                self.session.exec(delete(NetBirdBinding).where(NetBirdBinding.user_id == old_id))
+
+        if self.session.exec(select(DriveShare.user_id).where(DriveShare.user_id == old_id)).first() is not None:
+            if self.session.exec(select(DriveShare.user_id).where(DriveShare.user_id == new_id)).first() is None:
+                self.session.exec(update(DriveShare).where(DriveShare.user_id == old_id).values(user_id=new_id))
+            else:
+                self.session.exec(delete(DriveShare).where(DriveShare.user_id == old_id))
+
+        # 外部帳號綁定：一個平台一人一筆
+        new_platforms = set(self.session.exec(select(LinkedAccount.platform).where(LinkedAccount.user_id == new_id)).all())
+        if new_platforms:
+            self.session.exec(delete(LinkedAccount).where(LinkedAccount.user_id == old_id, LinkedAccount.platform.in_(new_platforms)))
+        self.session.exec(update(LinkedAccount).where(LinkedAccount.user_id == old_id).values(user_id=new_id))
+
+        # 合併時其他指向 old_id 的 Discord 紀錄一起改指新 ID
+        self.session.exec(update(DiscordIdentity).where(DiscordIdentity.user_id == old_id).values(user_id=new_id))
+
+        log.info("merge_user_data: merged", extra={**extra, "playlists": len(playlists), "renamed": renamed})
 
     def get_netbird_binding(self, user_id: UUID) -> NetBirdBinding | None:
         """取得該使用者 ID 的 NetBird 綁定資料"""
