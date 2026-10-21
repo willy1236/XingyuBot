@@ -118,9 +118,9 @@ T-02 改 `bot_website.py`，T-03 改 `resolver.py`、`discord_identity` 與 `sys
 - 上線前檢查的結果決定 `AUTH_TWITCH_PROVIDER` 的值與 subject 格式；檢查結果寫回這張卡。
 - `lookup_twitch_member` 不走 `IdentityResolver` 的 backoff，授權頁一次請求等一次逾時可以接受；網站不受 Discord 3 秒期限限制，逾時可沿用 1.5 秒。
 
-**進度**：實作完成（2026-10-21）
+**進度**：全部完成（2026-10-21）
 - commit：`79cfb61..9dc0148`
-- 未驗：上線前檢查（正式機 auth server 的 `login_provider.slug` 與一筆 Twitch 通行證的 `subject`）還沒做，`AUTH_TWITCH_PROVIDER` 目前是預設值 `twitch`
+- 上線前檢查：正式機 auth server 的 Twitch 登入方式 `slug` 是 `twitch`（kind `oidc`，已啟用），`AUTH_TWITCH_PROVIDER` 用預設值 `twitch` 即可；Twitch 通行證的 `subject` 是 Twitch 數字 user ID（如 `689775663`），`username` 是顯示名稱
 
 ### T-02 域民實況主不用網站登入就能授權 Twitch bot
 
