@@ -371,13 +371,13 @@ T-03、T-05 技術上只依賴 T-01，建議等 T-02 先跑通 auth server 再�
 - 不包含：網站登入恢復（規格非目標，另案 OIDC）；權限身分組的設定（T-05 已說明，之後另行設定）。
 
 **驗收條件**
-- [ ] 轉換腳本 `--dry-run` 列出每個 `cloud_user` 的主帳號、轉換結果（正式 `account_id` 或臨時）、各表要搬的筆數、`privilege_level > 0` 的管理員與其析域帳號，資料庫不變。
-- [ ] auth server 在轉換途中連不上：腳本中止並 rollback，不發任何臨時 ID。
+- [x] 轉換腳本 `--dry-run` 列出每個 `cloud_user` 的主帳號、轉換結果（正式 `account_id` 或臨時）、各表要搬的筆數、`privilege_level > 0` 的管理員與其析域帳號，資料庫不變。
+- [x] auth server 在轉換途中連不上：腳本中止並 rollback，不發任何臨時 ID。
 - [ ] 轉換後主帳號用 bot，看到原本的歌單與綁定；同一 `cloud_user` 的其他 Discord 帳號照一般流程拿到自己的 ID，資料不跟著走。
-- [ ] 兩個 `cloud_user` 的主帳號屬於同一位域民時，資料依 T-07 規則合併。
-- [ ] 歌單、歌曲、NetBird、各平台綁定、雲端資料夾的筆數轉換前後相符。
+- [x] 兩個 `cloud_user` 的主帳號屬於同一位域民時，資料依 T-07 規則合併。
+- [x] 歌單、歌曲、NetBird、各平台綁定、雲端資料夾的筆數轉換前後相符。
 - [ ] 所有管理員與 5 位歌單最多的使用者實際用 bot，資料都在。
-- [ ] 切換後沒有程式讀寫 `cloud_user`、`external_account`、`link_code`，兩張表資料仍在。
+- [x] 切換後沒有程式讀寫 `cloud_user`、`external_account`、`link_code`，兩張表資料仍在。
 
 **實作設計**
 - 資料：腳本在單一交易內：
@@ -405,7 +405,25 @@ T-03、T-05 技術上只依賴 T-01，建議等 T-02 先跑通 auth server 再�
 
 **風險 / 實作注意**：dry-run 報告保留一份，之後設定權限身分組時照它把管理員加回去。
 
-**進度**：未完成
+**進度**：實作完成，尚未上線（2026-10-21）
+- commit：0e129da、283f911、899c512，審查修正 7a3bebf、42cdde5
+- 使用者決定：
+  - 撞號時誰的資料留下、沒有 Discord 列的 `cloud_user` 有資料、雲端資料夾只填一半，都視為不會發生：腳本遇到就中止並列出，不自行取捨（撞號仍照 T-07 合併，`cloud_user.id` 小的直接轉，其餘先轉到暫用 ID 再 `merge_user_data`）。
+  - 只允許把正式資料複製到本機測試，不從本機連 shark 上的服務。
+- 已核可的實作決定：
+  - 轉換前預檢舊表裡新表收不下的資料（平台不在 Discord／Twitch／Google／Minecraft、`external_id` 為空、Discord ID 不合法、同一人同平台兩筆），有就中止並列出 `external_account.id`。
+  - `discord_identity` 沿用 auth server 回的 `suspended`。
+  - 報告（stdout 與 `--report` JSON）列出管理員與歌單最多的 5 位。
+  - `/oauth/discord` 帶 `guild_id` 的機器人授權流程照舊，只有網站登入回 503。
+- 驗收勾選依據 `test/test_migrate_identity.py`（暫時資料庫上建正式機的舊 DDL，假 auth server），以及正式機 `users` schema 的 pg_dump 還原到本機 `stardb_migtest` 後實跑：30 個 `cloud_user`，歌單 1、歌曲 0、NetBird 4、綁定 2、雲端資料夾 17，轉換前後相符，重跑被拒。第 7 條依據 grep 與舊 model 已移出 metadata，腳本不動兩張舊表。
+- 與卡片的差異：
+  - `--dry-run` 不改資料，但新版 code import 時 `create_all` 會先建好空的 `discord_identity`、`linked_account`、`drive_share`。
+  - 上線步驟 3 跑腳本前要先切到新版 code（腳本靠新版 model），bot 維持停止，跑完才啟動。
+  - 合併時捨棄的 NetBird／綁定／雲端資料夾會讓合併後筆數少於轉換前；腳本在合併前嚴格比對筆數，合併後只比對歌單、歌曲、來源。正式資料目前沒有撞號。
+- 未驗：
+  - 本機的「正式／臨時」是假 auth server 模擬的；真實結果要上線時在 shark 先跑 `--dry-run` 看報告。
+  - 第 3、6 條要在真 bot 上實測。
+  - `/etc/xingyubot/env` 的兩個變數、shark-ansible `docs/deploy-checklist.md`、上線五步驟都還沒做。
 
 ## 開工前待決
 
