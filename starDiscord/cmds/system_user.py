@@ -9,7 +9,7 @@ from starlib.instance import happycamp_guild
 
 from starlib.identity import IdentityUnavailable, resolve_identity
 
-from ..checks import RegisteredContext, ensure_registered, with_identity
+from ..checks import with_identity
 from ..extension import Cog_Extension
 from ..uiElement.view import DeletePetView
 
@@ -86,14 +86,6 @@ class system_user(Cog_Extension):
             embeds.append(happycamp_embed)
 
         await ctx.respond(embeds=embeds)
-
-    @commands.slash_command(description="取得綁定碼")
-    @ensure_registered()
-    async def link_code(self, ctx: RegisteredContext):
-        code = sclient.sqldb.get_or_create_link_code(ctx.cuser.id)
-        embed = BotEmbed.simple("綁定碼", f"請在新綁定帳號欲註冊時輸入：\n{code.code}\n綁定碼10分鐘內有效，可使用當前指令重新獲取")
-        embed.set_footer(text=f"擁有此綁定碼的人可以綁定你的帳號，請勿隨意提供給他人")
-        await ctx.respond(embed=embed, ephemeral=True)
 
     @pet.command(description="查看寵物資訊")
     async def check(self, ctx, user_dc: discord.Option(discord.Member, name="用戶", description="可不輸入以查詢自己", default=None)):
