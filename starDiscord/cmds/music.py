@@ -129,7 +129,7 @@ async def _playlist_name_autocomplete(ctx: discord.AutocompleteContext) -> list[
         identity = await resolve_identity(ctx.interaction.user.id, create=False)
     except IdentityUnavailable:
         return []
-    if identity is None:
+    if identity is None or identity.suspended:
         return []
     value = (ctx.value or "").lower()
     return [p.name for p in sqldb.get_music_playlists(identity.user_id) if value in p.name.lower()][:25]

@@ -7,6 +7,7 @@ from starlib import sqldb
 from starlib.exceptions import MusicCommandError, MusicPlayingError
 from starlib.identity import IdentityUnavailable, resolve_identity
 
+from ..checks import SUSPENDED_MESSAGE
 from ..music_player import (
     LoopMode,
     MusicPlayer,
@@ -193,6 +194,9 @@ class MusicPanelView(discord.ui.DesignerView):
             identity = await resolve_identity(interaction.user.id)
         except IdentityUnavailable:
             await interaction.response.send_message("身分服務暫時無法連線，請稍後再試", ephemeral=True)
+            return
+        if identity.suspended:
+            await interaction.response.send_message(SUSPENDED_MESSAGE, ephemeral=True)
             return
 
         playlists = sqldb.get_music_playlists(identity.user_id)
