@@ -116,6 +116,10 @@ class NetBirdBinding(UsersSchema, table=True):
     updated_at: datetime | None = Field(sa_column=Column(TIMESTAMP(True, 0)))
 
 
+# 歌單名稱長度上限；merge_user_data 撞名改名時也要遵守
+MAX_PLAYLIST_NAME_LENGTH = 50
+
+
 class MusicPlaylist(UsersSchema, table=True):
     """使用者的個人歌單，綁使用者 ID（域民的 account_id 或臨時 ID），同一位域民的多個 Discord 帳號共用"""
 

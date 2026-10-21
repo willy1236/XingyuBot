@@ -12,7 +12,7 @@ from sqlmodel import Session, delete, select
 from starlib import sqldb
 from starlib.database import DriveShare, LinkedAccount, NetBirdBinding, PlatformType
 from starlib.database.postgresql.client import SQLRepository
-from starlib.database.postgresql.models import DiscordIdentity, MusicPlaylist, MusicPlaylistSong, MusicPlaylistSource
+from starlib.database.postgresql.models import MAX_PLAYLIST_NAME_LENGTH, DiscordIdentity, MusicPlaylist, MusicPlaylistSong, MusicPlaylistSource
 from starlib.utils import nowtz
 
 from test_identity import repo  # noqa: F401  (fixture)
@@ -92,6 +92,21 @@ class TestPlaylists:
         repo.commit()
 
         assert names(repo, new) == ["fav", "fav (2)", "fav (3)"]
+
+    def test_renamed_name_stays_within_length_limit(self, repo, ids):
+        old, new = ids
+        long_name = "x" * MAX_PLAYLIST_NAME_LENGTH
+        playlist(repo, old, long_name)
+        playlist(repo, new, long_name)
+        playlist(repo, new, long_name[:-4] + " (2)")  # 截斷後的候選名稱已被佔用，要繼續遞增
+
+        repo.merge_user_data(old, new)
+        repo.commit()
+
+        merged = names(repo, new)
+        assert len(merged) == 3
+        assert all(len(n) <= MAX_PLAYLIST_NAME_LENGTH for n in merged)
+        assert long_name[:-4] + " (3)" in merged
 
     def test_noop_when_old_has_nothing(self, repo, ids):
         old, new = ids

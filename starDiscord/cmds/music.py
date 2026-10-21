@@ -9,7 +9,7 @@ from discord.ext import commands, pages
 from discord.utils import format_dt
 
 from starlib import BotEmbed, sqldb
-from starlib.database import MusicPlaylist, MusicPlaylistSource
+from starlib.database import MAX_PLAYLIST_NAME_LENGTH, MusicPlaylist, MusicPlaylistSource
 from starlib.exceptions import MusicCommandError
 from starlib.identity import IdentityUnavailable, resolve_identity
 
@@ -38,7 +38,6 @@ _AUTO_JOIN_COMMANDS = {"play", "recording start"}
 # 個人歌單上限：歌單數配合下拉選單最多 25 個選項
 MAX_PLAYLISTS = 25
 MAX_PLAYLIST_SONGS = 500
-MAX_PLAYLIST_NAME_LENGTH = 50
 
 _LOOP_MODE_OPTION = [
     OptionChoice(name="關閉", value=LoopMode.OFF.value),

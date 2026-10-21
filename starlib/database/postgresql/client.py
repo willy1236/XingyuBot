@@ -365,9 +365,13 @@ class UserRepository(BaseRepository):
             target = name
             if name in new_names:
                 n = 2
-                while f"{name} ({n})" in taken:
+                while True:
+                    suffix = f" ({n})"
+                    # 改名後也不能超過歌單名稱上限，否則之後加歌會被名稱檢查擋下
+                    target = f"{name[: MAX_PLAYLIST_NAME_LENGTH - len(suffix)]}{suffix}"
+                    if target not in taken:
+                        break
                     n += 1
-                target = f"{name} ({n})"
                 taken.add(target)
                 renamed += 1
             self.session.exec(update(MusicPlaylist).where(MusicPlaylist.id == playlist_id).values(user_id=new_id, name=target))
