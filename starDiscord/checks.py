@@ -11,6 +11,8 @@ from starlib.identity import BotIdentity, IdentityUnavailable, privilege_of, res
 
 from .uiElement.view import RegisterView
 
+SUSPENDED_MESSAGE = "你的析域帳號已停權，無法使用此功能"
+
 _user_cache: TTLCache[CloudUser] = TTLCache(ttl=300)
 _vip_cache: TTLCache[HappycampVIP | None] = TTLCache(ttl=300)
 
@@ -110,7 +112,7 @@ class IdentityContext(discord.ApplicationContext):
 
 
 def with_identity():
-    """取得使用者 ID 後才進入指令；沒註冊的人拿到臨時 ID，auth server 連不上又沒有紀錄時回覆稍後再試"""
+    """取得使用者 ID 後才進入指令；沒註冊的人拿到臨時 ID，auth server 連不上又沒有紀錄時回覆稍後再試，被停權的人直接擋下"""
 
     def decorator(func):
         @functools.wraps(func)
@@ -119,6 +121,9 @@ def with_identity():
                 ctx.identity = await resolve_identity(ctx.author.id)
             except IdentityUnavailable:
                 await ctx.respond("身分服務暫時無法連線，請稍後再試", ephemeral=True)
+                return
+            if ctx.identity.suspended:
+                await ctx.respond(SUSPENDED_MESSAGE, ephemeral=True)
                 return
             return await func(cog, ctx, *args, **kwargs)
 
