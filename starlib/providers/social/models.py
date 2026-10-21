@@ -1,8 +1,7 @@
 import logging
 import time
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
-from typing import TypeVar
+from datetime import UTC, datetime, timedelta
 
 import discord
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, computed_field, field_validator, model_validator
@@ -75,7 +74,7 @@ class TwitchStream(BaseModel):
     def __post_init__(self):
         self.thumbnail_url = self.thumbnail_url.replace("{width}", "960").replace("{height}", "540")
         self.url = f"https://www.twitch.tv/{self.user_login}"
-        self.live_thumbnail_url = f"{self.thumbnail_url}?t={int(datetime.now(timezone.utc).timestamp())}"
+        self.live_thumbnail_url = f"{self.thumbnail_url}?t={int(datetime.now(UTC).timestamp())}"
         return self
 
     def embed(self, profile_image_url: str = None):
@@ -308,7 +307,7 @@ class YoutubeVideo(BaseModel):
 
     @property
     def is_live_getting_startrd(self) -> bool:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         return bool(self.liveStreamingDetails and self.liveStreamingDetails.actualStartTime and not self.liveStreamingDetails.actualEndTime and (now - self.liveStreamingDetails.actualStartTime) < timedelta(minutes=1))
 
 
@@ -375,7 +374,7 @@ class RssHubTwitterTweet(BaseModel):
             return v
         if isinstance(v, time.struct_time):
             # struct_time 轉成 datetime
-            return convert_tz(datetime(*v[:6], tzinfo=timezone.utc))
+            return convert_tz(datetime(*v[:6], tzinfo=UTC))
         if isinstance(v, dict):
             # 假如來的是 dict（像 JSON 會這樣），先轉成 tuple 再轉 datetime
             return datetime(*tuple(v.values())[:6])
@@ -665,7 +664,7 @@ class NotionPage(BaseModel):
     def embed(self):
         title = "未命名頁面"
         # 尋找 title 屬性
-        for prop_name, prop_value in self.properties.items():
+        for prop_value in self.properties.values():
             if prop_value.type == "title" and prop_value.title:
                 title = prop_value.title[0].plain_text if prop_value.title else "未命名頁面"
                 break

@@ -1,23 +1,36 @@
 import asyncio
 import logging
-from pathlib import PurePath
-from typing import TYPE_CHECKING
-from uuid import UUID
 
 from sqlalchemy.exc import NoResultFound
-from twitchAPI.chat import Chat, ChatCommand, ChatMessage, ChatSub, EventData, JoinedEvent, LeftEvent, NoticeEvent, WhisperEvent
+from twitchAPI.chat import (
+    Chat,
+    ChatCommand,
+    ChatMessage,
+    ChatSub,
+    EventData,
+    JoinedEvent,
+    LeftEvent,
+    NoticeEvent,
+    WhisperEvent,
+)
 from twitchAPI.chat.middleware import ChannelCommandCooldown, ChannelRestriction
 from twitchAPI.eventsub.webhook import EventSubWebhook
-from twitchAPI.eventsub.websocket import EventSubWebsocket
 from twitchAPI.helper import first
-from twitchAPI.oauth import UserAuthenticationStorageHelper, UserAuthenticator, refresh_access_token, validate_token
+from twitchAPI.oauth import UserAuthenticator
 from twitchAPI.object import eventsub
 from twitchAPI.twitch import Twitch
-from twitchAPI.type import AuthScope, ChatEvent, EventSubSubscriptionError, EventSubSubscriptionTimeout, InvalidTokenException, MissingScopeException
+from twitchAPI.type import (
+    AuthScope,
+    ChatEvent,
+    EventSubSubscriptionError,
+    EventSubSubscriptionTimeout,
+    InvalidTokenException,
+    MissingScopeException,
+)
 
 from sentry_bootstrap import capture_exception_safe
 from starlib import BaseThread, BotEmbed, Jsondb, sclient  # TODO: 全面改用 eventbus
-from starlib.database import APIType, NotifyCommunityType, TwitchChatCommand, sqldb
+from starlib.database import APIType, NotifyCommunityType, sqldb
 from starlib.instance import tw_api
 from starlib.pubsub.model import TwitchStreamEvent
 
@@ -63,7 +76,7 @@ join_channels = sclient.sqldb.get_bot_join_channel_all()
 TARGET_CHANNEL = {twitch_id: data.action_channel_id for twitch_id, data in join_channels.items()}
 TARGET_CHANNEL_IDS = [str(i) for i in TARGET_CHANNEL.keys()]
 
-chat:"Chat"
+chat:Chat
 # eventsub
 async def on_follow(event: eventsub.ChannelFollowEvent):
     #await chat.send_message(data.event.broadcaster_user_name,text = f'{data.event.user_name} now follows {data.event.broadcaster_user_name}!')
@@ -317,7 +330,7 @@ async def run():
     try:
         app_token = sqldb.get_bot_oauth_token(APIType.Twitch, 2)
         await twitch.set_user_authentication(app_token.access_token, USER_SCOPE, app_token.refresh_token)
-    except (InvalidTokenException, MissingScopeException, NoResultFound) as e:
+    except (InvalidTokenException, MissingScopeException, NoResultFound):
         log.exception("Twitch token invalid or missing, re-authenticating")
         auth = UserAuthenticator(twitch, USER_SCOPE)
         token, refresh_token = await auth.authenticate()  # type: ignore

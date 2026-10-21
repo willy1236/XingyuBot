@@ -5,7 +5,7 @@ from __future__ import annotations
 import time
 from collections.abc import Hashable
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Generic, TypeVar, overload
+from typing import TYPE_CHECKING, TypeVar, overload
 
 from .enums import DBCacheType
 from .models import DynamicVoiceLobby, TwitchChatCommand
@@ -21,7 +21,7 @@ VT = TypeVar("VT")
 IT = TypeVar("IT")
 
 
-class TTLCache(Generic[T]):
+class TTLCache[T]:
     """Per-key TTL 快取，適用於 per-user 資料（如權限、VIP 狀態）。
 
     Parameters
@@ -65,7 +65,7 @@ class TTLCache(Generic[T]):
         self._store.pop(key, None)
 
 
-class DictCache(Generic[KT, VT]):
+class DictCache[KT, VT]:
     """字典型快取，支援全量載入、部分寫入與部分刪除"""
 
     def __init__(self) -> None:
@@ -115,7 +115,7 @@ class DictCache(Generic[KT, VT]):
         return iter(self._data or {})
 
 
-class ListCache(Generic[IT]):
+class ListCache[IT]:
     """清單型快取，支援全量載入、部分新增與部分刪除"""
 
     def __init__(self) -> None:
@@ -187,7 +187,7 @@ class CacheStore:
         return e.raw() if e is not None else None
 
 @dataclass
-class CacheSlot(Generic[T]):
+class CacheSlot[T]:
     # not in use.
     """宣告式快取描述符
 

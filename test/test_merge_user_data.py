@@ -9,14 +9,19 @@ from uuid import UUID, uuid4
 import pytest
 from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session, delete, select
+from test_identity import repo  # noqa: F401  (fixture)
 
 from starlib import sqldb
 from starlib.database import DriveShare, LinkedAccount, NetBirdBinding, PlatformType
 from starlib.database.postgresql.client import SQLRepository
-from starlib.database.postgresql.models import MAX_PLAYLIST_NAME_LENGTH, DiscordIdentity, MusicPlaylist, MusicPlaylistSong, MusicPlaylistSource
+from starlib.database.postgresql.models import (
+    MAX_PLAYLIST_NAME_LENGTH,
+    DiscordIdentity,
+    MusicPlaylist,
+    MusicPlaylistSong,
+    MusicPlaylistSource,
+)
 from starlib.utils import nowtz
-
-from test_identity import repo  # noqa: F401  (fixture)
 
 
 def playlist(repo: SQLRepository, user_id: UUID, name: str, songs: int = 0) -> MusicPlaylist:

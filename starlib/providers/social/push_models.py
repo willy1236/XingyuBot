@@ -1,7 +1,6 @@
-from datetime import datetime
 
 import discord
-from pydantic import AliasPath, BaseModel, ConfigDict, Field, HttpUrl, model_validator
+from pydantic import BaseModel, HttpUrl, model_validator
 
 from starlib.base.types import UTCDateTime
 

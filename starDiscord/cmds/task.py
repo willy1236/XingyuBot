@@ -5,14 +5,19 @@ from datetime import datetime, timedelta, timezone
 
 import discord
 import nmap
-from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.date import DateTrigger
-from discord.ext import commands, tasks
+from discord.ext import commands
 from pydantic import ValidationError
-from requests.exceptions import RequestException
 
 from starlib import Jsondb, sclient, sqldb, utils
-from starlib.database import APIType, DBCacheType, NotifyChannelType, NotifyCommunityType, UserIPDetails, UsersCountRecord, VoiceTime
+from starlib.database import (
+    APIType,
+    NotifyChannelType,
+    NotifyCommunityType,
+    UserIPDetails,
+    UsersCountRecord,
+    VoiceTime,
+)
 from starlib.exceptions import APINetworkError
 from starlib.instance import *
 from starlib.providers.social.models import YoutubeVideo
@@ -99,7 +104,7 @@ class task(Cog_Extension):
             # 氣象署連線偶爾會逾時或被重置，等下一輪從快取時間點接著抓即可
             log.warning("earthquake_check network error: %s", e)
             return
-        except Exception as e:
+        except Exception:
             log.exception("earthquake_check error")
             return
 
@@ -122,9 +127,9 @@ class task(Cog_Extension):
         weather = weathers[0]
         text = f"現在天氣： {weather.WeatherElement.Weather if weather.WeatherElement.Weather != '-99' else '--'}/{weather.WeatherElement.AirTemperature}°C"
         if weather.WeatherElement.AirTemperature == weather.WeatherElement.DailyExtreme.DailyHigh.AirTemperature:
-            text += f" （最高溫）"
+            text += " （最高溫）"
         elif weather.WeatherElement.AirTemperature == weather.WeatherElement.DailyExtreme.DailyLow.AirTemperature:
-            text += f" （最低溫）"
+            text += " （最低溫）"
         await self.bot.change_presence(activity=discord.CustomActivity(name=text))
 
     async def weather_warning_check(self):
@@ -432,7 +437,7 @@ class task(Cog_Extension):
 
             view = sclient.create_election_poll(title, options, self.bot.user.id, channel.guild.id, self.bot)
 
-            message = await channel.send(embed=view.embed(channel.guild), view=view)
+            await channel.send(embed=view.embed(channel.guild), view=view)
             await asyncio.sleep(1)
 
         await channel.send(f"第{session}屆中央選舉投票已開始，請大家把握時間踴躍投票!")
@@ -445,7 +450,7 @@ class task(Cog_Extension):
             end_time = start_time + timedelta(days=1)
 
         start_time += timedelta(seconds=10)
-        event = await channel.guild.create_scheduled_event(
+        await channel.guild.create_scheduled_event(
             name="【快樂營中央選舉】投票階段", start_time=start_time, end_time=end_time, location="<#1163127708839071827>"
         )
 

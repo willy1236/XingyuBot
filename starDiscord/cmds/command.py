@@ -8,13 +8,11 @@ from datetime import date, datetime, timedelta
 import discord
 import numpy as np
 from discord.commands import OptionChoice, SlashCommandGroup
-from discord.errors import Forbidden, NotFound
 from discord.ext import commands, pages
 from discord.utils import format_dt
 
 from starlib import BotEmbed, ChoiceList, sclient
 from starlib.database import Coins, DriveShare, Giveaway
-from starlib.database.postgresql.models import Giveaway
 from starlib.instance import *
 from starlib.providers import XingyuGoogleCloud
 from starlib.utils import convert_tz, create_only_role_list, create_role_magification_dict, find, nowtz, random_color
@@ -131,7 +129,7 @@ class command(Cog_Extension):
                 # 1062
                 sclient.sqldb.add_role_save(role)
                 log.info("新增加身分組", extra={"role_name": role.name})
-            except Exception as e:
+            except Exception:
                 log.exception("儲存加身分組時發生錯誤", extra={"role_name": role.name})
 
         await ctx.respond("身分組儲存完成", delete_after=5)
@@ -724,7 +722,7 @@ class command(Cog_Extension):
         if guild_id:
             embed.add_field(name="戶籍資格", value=f"{guild.name if guild else '伺服器'}（{guild_id}）", inline=False)
         else:
-            embed.add_field(name="戶籍資格", value=f"目前尚無法取得", inline=False)
+            embed.add_field(name="戶籍資格", value="目前尚無法取得", inline=False)
 
         dcuser = sclient.sqldb.get_dcuser(member.id)
         if dcuser.registrations_id:

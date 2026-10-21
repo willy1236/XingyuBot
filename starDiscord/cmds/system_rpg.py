@@ -1,11 +1,9 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 
 import discord
-from discord.commands import SlashCommandGroup
 from discord.ext import commands
 
-from starlib import BotEmbed, ChoiceList, sclient
-from starlib.database.postgresql.rpg import RPGUser
+from starlib import BotEmbed, sclient
 from starlib.instance import happycamp_guild
 
 from ..extension import Cog_Extension
@@ -21,7 +19,7 @@ class system_rpg(Cog_Extension):
 
         time = datetime.now()
         time = time.replace(year=2044)
-        description_list = [f"現在時間：{time.isoformat(sep=' ', timespec='seconds')}", f"天氣：晴"]
+        description_list = [f"現在時間：{time.isoformat(sep=' ', timespec='seconds')}", "天氣：晴"]
         time_embed = BotEmbed.bot(self.bot, description="\n".join(description_list))
         time_embed.set_footer(text="格瑞爾市 | 祝您有個愉快的一天")
         await ctx.respond(embeds=[time_embed, player.embed(user_dc)])

@@ -343,16 +343,16 @@ class LOLParticipant(BaseModel):
         text += f"Ping問號燈：{self.enemyMissingPings}\n"
 
         if self.firstBloodKill and self.firstTowerKill:
-            text += f"首殺+首塔🔪 "
+            text += "首殺+首塔🔪 "
         elif self.firstBloodKill:
-            text += f"首殺🔪 "
+            text += "首殺🔪 "
         elif self.firstTowerKill:
-            text += f"首塔🔪 "
+            text += "首塔🔪 "
 
         if self.gameEndedInEarlySurrender:
-            text += f"提早投降🏳️"
+            text += "提早投降🏳️"
         elif self.gameEndedInSurrender:
-            text += f"投降🏳️"
+            text += "投降🏳️"
         text += "\n"
 
         return text
@@ -688,7 +688,7 @@ class OsuBeatmap:
         embed.add_field(name="圖譜組id", value=self.beatmapset_id)
         embed.add_field(name="通過率", value=self.pass_rate)
         embed.add_field(name="BPM", value=self.bpm)
-        embed.add_field(name="網址", value="[點我]({0})".format(self.url))
+        embed.add_field(name="網址", value=f"[點我]({self.url})")
         embed.set_image(url=self.cover)
         return embed
 
@@ -818,7 +818,7 @@ class ApexMapRotation(BaseModel):
             lst.append(embed_battle_royale)
 
         if self.ltm is not None:
-            embed_ltm = BotEmbed.simple(f"Apex地圖：限時模式")
+            embed_ltm = BotEmbed.simple("Apex地圖：限時模式")
             embed_ltm.add_field(
                 name="目前地圖",
                 value=f"{event_tl.get(self.ltm.current.eventName, self.ltm.current.eventName)}：{tl.get(self.ltm.current.map, self.ltm.current.map)}",

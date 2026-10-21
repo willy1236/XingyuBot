@@ -1,10 +1,7 @@
 import asyncio
 import io
-from datetime import datetime, timedelta, timezone
 
 import discord
-import matplotlib
-import matplotlib.pyplot as plt
 from discord.ext import commands
 from mcstatus import JavaServer
 
@@ -214,9 +211,8 @@ class debug(Cog_Extension):
             try:
                 server = JavaServer(i[0], 25565)
                 status = server.status()
-                status.raw
                 text_lst.append(f"伺服器：{i[0]}，人數：{status.players.online}，版本：{status.version.name}")
-            except Exception as e:
+            except Exception:
                 text_lst.append(f"伺服器：{i[0]}，無法連線")
 
         if text_lst:

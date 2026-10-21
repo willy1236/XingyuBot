@@ -47,16 +47,16 @@ class moderation(Cog_Extension):
             message = await ctx.channel.fetch_message(int(message_id))
             if message:
                 time = message.created_at
-                await ctx.respond(content=f"開始清除")
+                await ctx.respond(content="開始清除")
                 await ctx.channel.purge(after=time)
             else:
-                await ctx.respond(content=f"沒有找到此訊息", ephemeral=True)
+                await ctx.respond(content="沒有找到此訊息", ephemeral=True)
 
         elif num:
             await ctx.respond(content=f"開始清除{num}則訊息")
             await ctx.channel.purge(limit=num)
         else:
-            await ctx.respond(content=f"沒有提供任何資訊，所以沒有清除任何內容", delete_after=5)
+            await ctx.respond(content="沒有提供任何資訊，所以沒有清除任何內容", delete_after=5)
 
     @channel_cmd.command(description="設定通知頻道，讓機器人發送通知", name_localizations=ChoiceList.name("channel_set"))
     @commands.has_permissions(manage_channels=True)
@@ -126,7 +126,7 @@ class moderation(Cog_Extension):
                 await ctx.send(embed=BotEmbed.simple("溫馨提醒", "\n".join(texts)), delete_after=5 * len(texts))
         else:
             sclient.sqldb.remove_dynamic_voice_lobby(ctx.guild.id)
-            await ctx.respond(f"設定完成，已移除 動態語音大廳 頻道")
+            await ctx.respond("設定完成，已移除 動態語音大廳 頻道")
 
     @channel_cmd.command(name="list", description="查看所有通知設定的頻道", name_localizations=ChoiceList.name("channel_list"))
     @commands.has_permissions(manage_channels=True)
@@ -244,7 +244,7 @@ class moderation(Cog_Extension):
         await ctx.defer()
         time_last = time_to_datetime(time_last_str)
         if not time_last or time_last > timedelta(days=7):
-            await ctx.respond(f"錯誤：時間格式錯誤（不得超過7天）")
+            await ctx.respond("錯誤：時間格式錯誤（不得超過7天）")
             return
 
         await user.timeout_for(time_last, reason=reason)

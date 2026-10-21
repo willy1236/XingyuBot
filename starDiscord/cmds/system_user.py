@@ -5,9 +5,8 @@ from discord.ext import commands
 from starlib import BotEmbed, ChoiceList, Jsondb, sclient
 from starlib.database.postgresql.enums import PlatformType
 from starlib.database.postgresql.models import DiscordUser
-from starlib.instance import happycamp_guild
-
 from starlib.identity import IdentityUnavailable, fetch_twitch_passports, resolve_identity
+from starlib.instance import happycamp_guild
 
 from ..checks import with_identity
 from ..extension import Cog_Extension

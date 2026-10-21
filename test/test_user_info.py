@@ -7,6 +7,7 @@ from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
+from test_identity import TTL, FakeDirectory, _account, expire, repo  # noqa: F401  (repo 為 fixture)
 
 from starDiscord import checks
 from starDiscord.cmds import system_user as user_cog
@@ -14,7 +15,6 @@ from starlib.database import DiscordIdentity, DriveShare, LinkedAccount, Platfor
 from starlib.identity import IdentityResolver, LinkedPassport
 from starlib.identity import twitch as twitch_module
 from starlib.utils import nowtz
-from test_identity import TTL, FakeDirectory, _account, expire, repo  # noqa: F401  (repo 為 fixture)
 
 CALLER = 900000000000000010
 TARGET = 900000000000000011

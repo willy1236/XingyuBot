@@ -1,6 +1,7 @@
 import os
 import shutil
 import sys
+from datetime import UTC
 from pathlib import Path
 
 import pytest
@@ -67,12 +68,12 @@ def test_get_user_timeline_live(cli_interface: CLIInterface):
 
 
 def test_get_user_timeline_after_filter(cli_interface: CLIInterface):
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     user = cli_interface.get_user_details(TEST_USER)
     assert user is not None
 
-    future = datetime(2099, 1, 1, tzinfo=timezone.utc)
+    future = datetime(2099, 1, 1, tzinfo=UTC)
     result = cli_interface.get_user_timeline(user.id, after=future)
 
     assert result is not None

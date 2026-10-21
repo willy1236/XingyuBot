@@ -3,12 +3,12 @@ from enum import IntEnum
 from typing import TYPE_CHECKING
 
 import discord
-from sqlalchemy import BigInteger, Column, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import BigInteger, Column, ForeignKey, Integer, String
 
 from starlib.base import ListObject
 from starlib.utils import BotEmbed
 
-from .models import Field, SQLModel, mapped_column, relationship
+from .models import Field, mapped_column, relationship
 from .schemas import RPGSchema
 
 
@@ -76,8 +76,8 @@ class RPGUser(RPGSchema):
     hrt: int = mapped_column(Integer, default=60)
     dex: int = mapped_column(Integer, default=0)
 
-    equipments: list["RPGEquipment"] = relationship(back_populates="owner", init=False)
-    items: list["RPGPlayerItem"] = relationship(back_populates="user", init=False)
+    equipments: list[RPGEquipment] = relationship(back_populates="owner", init=False)
+    items: list[RPGPlayerItem] = relationship(back_populates="user", init=False)
 
     def embed(self, user_dc: discord.User):
         embed = BotEmbed.general(name=user_dc.name, icon_url=user_dc.avatar.url if user_dc.avatar else None)
@@ -114,7 +114,7 @@ class RPGEquipmentTemplate(RPGSchema):
     initial_hrt: int = mapped_column(Integer, default=0)
     initial_dex: int = mapped_column(Integer, default=0)
 
-    equipments: list["RPGEquipment"] = relationship(back_populates="template", init=False)
+    equipments: list[RPGEquipment] = relationship(back_populates="template", init=False)
 
 
 class RPGItemTemplate(RPGSchema):
@@ -124,8 +124,8 @@ class RPGItemTemplate(RPGSchema):
     category_id: int = mapped_column(Integer)
     name: str = mapped_column(String)
 
-    items: list["RPGPlayerItem"] = relationship(back_populates="template")
-    dungeon_treasures: list["RPGDungeonTreasureInfo"] = relationship(back_populates="item", init=False)
+    items: list[RPGPlayerItem] = relationship(back_populates="template")
+    dungeon_treasures: list[RPGDungeonTreasureInfo] = relationship(back_populates="item", init=False)
 
 
 class MonsterInBattle:
@@ -152,9 +152,9 @@ class Monster(RPGSchema):
     dex: int = mapped_column(Integer, default=0)
     drop_money: int = mapped_column(Integer, default=0)
 
-    in_dungeon: list["RPGDungeonMonsterInfo"] = relationship(back_populates="monster", init=False)
-    equipmen_drops: list["MonsterEquipmentDrop"] = relationship(back_populates="monster", init=False)
-    item_drops: list["MonsterItemDrop"] = relationship(back_populates="monster", init=False)
+    in_dungeon: list[RPGDungeonMonsterInfo] = relationship(back_populates="monster", init=False)
+    equipmen_drops: list[MonsterEquipmentDrop] = relationship(back_populates="monster", init=False)
+    item_drops: list[MonsterItemDrop] = relationship(back_populates="monster", init=False)
 
     def create_monster(self):
         return MonsterInBattle(id=self.id, name=self.name, hp=self.hp, atk=self.atk, pdef=self.pdef, hrt=self.hrt, dex=self.dex)
@@ -188,8 +188,8 @@ class RPGDungeon(RPGSchema):
     name: str = mapped_column(String)
     description: str | None = mapped_column(String)
 
-    monsters: list["RPGDungeonMonsterInfo"] = relationship(back_populates="dungeon", init=False)
-    treasures: list["RPGDungeonTreasureInfo"] = relationship(back_populates="dungeon", init=False)
+    monsters: list[RPGDungeonMonsterInfo] = relationship(back_populates="dungeon", init=False)
+    treasures: list[RPGDungeonTreasureInfo] = relationship(back_populates="dungeon", init=False)
 
 
 class RPGDungeonMonsterInfo(RPGSchema):

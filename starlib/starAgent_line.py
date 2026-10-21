@@ -2,11 +2,10 @@
 import logging
 
 from pydantic_ai import Agent, RunContext
-from pydantic_ai.messages import ModelMessage
 from pydantic_ai.models.google import GoogleModel, GoogleModelSettings
 from pydantic_ai.providers.google import GoogleProvider
 
-from starlib import Jsondb, sqldb
+from starlib import sqldb
 from starlib.database import APIType
 
 log = logging.getLogger(__name__)
@@ -27,7 +26,7 @@ line_agent = Agent(model)
 
 @line_agent.system_prompt
 async def system_prompt(ctx: RunContext) -> str:
-    text = f"""
+    text = """
     任務：
     - 現在請你做為專業的詐騙防治專員，協助使用者分析與評估他們提供的網址是否具有詐騙風險，並給予簡易的說明與建議報告。
     - 你會獲得一份文字資料報告，內容包含該網址的重定向鏈、網域資訊、WHOIS 註冊資料與 SSL 證書資訊等，請根據這些資訊來評估網址的安全性。並告訴使用者該網址來自於哪個來源與來源可不可信。

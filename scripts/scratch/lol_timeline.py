@@ -1,5 +1,6 @@
 import json
 
+
 # 定義 Event 類別
 class Event:
     def __init__(self, event_data, participant_mapping):
@@ -50,7 +51,7 @@ class Event:
 
 
 # 讀取 JSON 檔案
-with open('test/Untitled-1.json', 'r', encoding='utf-8') as file:
+with open('test/Untitled-1.json', encoding='utf-8') as file:
     data = json.load(file)
 
 # 提取 frames

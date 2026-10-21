@@ -1,5 +1,5 @@
 from enum import IntEnum
-from typing import Generic, TypeVar
+from typing import TypeVar
 
 import requests
 from pydantic import BaseModel, Field
@@ -207,7 +207,7 @@ class APIResultCode(IntEnum):
     UNAUTHORIZED = 3
 
 
-class APIResult(BaseModel, Generic[T]):
+class APIResult[T](BaseModel):
     """not used yet."""
 
     "Result Pattern for API responses"

@@ -1,5 +1,6 @@
-from authlib.integrations.starlette_client import OAuth
 from typing import TypedDict, cast
+
+from authlib.integrations.starlette_client import OAuth
 
 
 class OAuthToken(TypedDict, total=False):
@@ -23,4 +24,4 @@ oauth.register(
 
 
 async def test(request):
-    token = cast(OAuthToken, await oauth.discord.authorize_access_token(request))
+    return cast(OAuthToken, await oauth.discord.authorize_access_token(request))

@@ -36,7 +36,7 @@ def time_to_sec(arg: str):
                 n = n + (m * dict[i])
                 m = ""
             except KeyError:
-                raise KeyError
+                raise
     return n
 
 

@@ -3,7 +3,14 @@
 由 Discord ID 取得使用者 ID、由 Twitch ID 查域民，權威來源是 auth server。
 """
 
-from .client import Account, AccountDirectory, DirectoryUnavailable, DomalyzeIdentityClient, LinkedPassport, ResolvedAccount
+from .client import (
+    Account,
+    AccountDirectory,
+    DirectoryUnavailable,
+    DomalyzeIdentityClient,
+    LinkedPassport,
+    ResolvedAccount,
+)
 from .privilege import privilege_of
 from .resolver import BotIdentity, IdentityResolver, IdentityUnavailable, resolve_identity
 from .twitch import MemberUnknown, NotMember, TwitchLookup, TwitchMember, fetch_twitch_passports, lookup_twitch_member

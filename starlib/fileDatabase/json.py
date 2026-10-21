@@ -18,7 +18,7 @@ class JsonContentModel(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     @classmethod
-    def from_mapping(cls, value: Mapping[str, JsonValue] | None) -> "JsonContentModel":
+    def from_mapping(cls, value: Mapping[str, JsonValue] | None) -> JsonContentModel:
         return cls.model_validate(dict(value or {}))
 
     def to_dict(self) -> dict[str, JsonValue]:
@@ -91,7 +91,7 @@ class JsonCommandNamesModel(JsonContentModel):
     commands: dict[str, LocaleTextModel] = Field(default_factory=dict)
 
     @classmethod
-    def from_mapping(cls, value: Mapping[str, JsonValue] | None) -> "JsonCommandNamesModel":
+    def from_mapping(cls, value: Mapping[str, JsonValue] | None) -> JsonCommandNamesModel:
         source = dict(value or {})
         commands: dict[str, LocaleTextModel] = {}
         for key, raw in source.items():

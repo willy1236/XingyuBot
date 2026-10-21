@@ -1,7 +1,7 @@
 import os
 import subprocess
 
-from starlib import BaseThread, Jsondb, log, sqldb
+from starlib import BaseThread, log, sqldb
 from starlib.database import APIType
 
 

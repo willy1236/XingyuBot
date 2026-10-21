@@ -12,6 +12,8 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session
 
 from starlib import sqldb
+from starlib.database import LinkedAccount, PlatformType
+from starlib.database.postgresql.client import SQLRepository
 from starlib.identity import (
     Account,
     DirectoryUnavailable,
@@ -26,8 +28,6 @@ from starlib.identity import (
     lookup_twitch_member,
 )
 from starlib.identity import resolver as resolver_module
-from starlib.database import LinkedAccount, PlatformType
-from starlib.database.postgresql.client import SQLRepository
 from starlib.settings import get_settings
 from starlib.utils import nowtz
 

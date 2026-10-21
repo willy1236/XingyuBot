@@ -9,7 +9,6 @@ import discord
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from starlib import BotEmbed, sqldb
-from starlib.pubsub.model import TwitchStreamEvent
 from starlib.database import APIType, NotifyChannelType, NotifyCommunityType
 from starlib.instance import (
     debug_guilds,
@@ -33,6 +32,7 @@ from starlib.instance import (
 from starlib.instance import (
     report_channel as report_channel_id,
 )
+from starlib.pubsub.model import TwitchStreamEvent
 
 log = logging.getLogger(__name__)
 

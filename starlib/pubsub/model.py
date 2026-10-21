@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import ClassVar
 
 import discord
 from pydantic import BaseModel, ConfigDict, Field

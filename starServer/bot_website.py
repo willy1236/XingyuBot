@@ -8,21 +8,23 @@ from pathlib import Path
 
 import feedparser
 import uvicorn
-from apscheduler.triggers.date import DateTrigger
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, status
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.openapi.utils import get_openapi
 from fastapi.requests import Request
-from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response, StreamingResponse
+from fastapi.responses import (
+    HTMLResponse,
+    JSONResponse,
+    RedirectResponse,
+)
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from linebot.v3 import WebhookParser
 from linebot.v3.exceptions import InvalidSignatureError
 from linebot.v3.messaging import ApiClient, Configuration, MessagingApi, ReplyMessageRequest, TextMessage
 from linebot.v3.webhooks import MessageEvent, TextMessageContent
-from linebot.v3.webhooks.models.message_event import MessageEvent
 
 from sentry_bootstrap import capture_exception_safe
-from starlib import BaseThread, Jsondb, sclient, sqldb, utils
+from starlib import BaseThread, sclient, sqldb, utils
 from starlib.database import APIType, NotifyCommunityType, TwitchBotJoinChannel
 from starlib.identity import MemberUnknown, TwitchMember, lookup_twitch_member
 from starlib.instance import google_api
@@ -192,7 +194,7 @@ async def oauth_discord(request: Request):
     log.info(f"Discord OAuth: User {user.username} ({user.id}) authorized.")
     log.info(f"Discord OAuth scopes: {auth.scopes}")
 
-    response = HTMLResponse(f"授權已完成，您現在可以關閉此頁面<br>感謝您使用星羽機器人！", 200)
+    response = HTMLResponse("授權已完成，您現在可以關閉此頁面<br>感謝您使用星羽機器人！", 200)
     response.delete_cookie("oauth_state")
     return response
 
@@ -204,7 +206,7 @@ async def oauth_discordbot(request: Request):
     if not code:
         return HTMLResponse(f"授權失敗：{html.escape(params.get('error', '缺少授權碼'))}", 400)
 
-    return HTMLResponse(f"授權已完成，您現在可以關閉此頁面<br>感謝您使用星羽機器人！", 200)
+    return HTMLResponse("授權已完成，您現在可以關閉此頁面<br>感謝您使用星羽機器人！", 200)
 
 
 def _twitch_oauth_page(message: str, status_code: int) -> HTMLResponse:

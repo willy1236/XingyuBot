@@ -33,9 +33,9 @@ class system_economy(Cog_Extension):
     ):
         giver:discord.Member = ctx.author
         if given == giver:
-            await ctx.respond(f"轉帳失敗：無法轉帳給自己", ephemeral=True)
+            await ctx.respond("轉帳失敗：無法轉帳給自己", ephemeral=True)
         elif given.bot is True:
-            await ctx.respond(f"轉帳失敗：無法轉帳給機器人", ephemeral=True)
+            await ctx.respond("轉帳失敗：無法轉帳給機器人", ephemeral=True)
         else:
             code = sclient.sqldb.transfer_scoin(giver.id,given.id,amount)
             if not code:

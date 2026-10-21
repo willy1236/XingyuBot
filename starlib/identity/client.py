@@ -1,6 +1,5 @@
 """auth server 內部 API：bot 用 Discord ID 或其他平台的通行證查域民。"""
 
-import asyncio
 import logging
 from dataclasses import dataclass
 from typing import Protocol
@@ -107,7 +106,7 @@ class DomalyzeIdentityClient:
                         log.error("auth server: unexpected status", extra={"status": resp.status, **extra})
                         raise DirectoryUnavailable(f"auth server returned {resp.status}")
                     data = await resp.json()
-        except (aiohttp.ClientError, asyncio.TimeoutError, ValueError) as e:
+        except (TimeoutError, aiohttp.ClientError, ValueError) as e:
             log.warning("auth server: unreachable", extra={"error": repr(e), **extra})
             raise DirectoryUnavailable(str(e)) from e
         if not isinstance(data, dict):

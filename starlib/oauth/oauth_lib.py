@@ -2,7 +2,7 @@
 import logging
 import secrets
 from abc import ABC, abstractmethod
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import TypedDict
 
 from authlib.integrations.httpx_client import AsyncOAuth2Client
@@ -178,7 +178,7 @@ class OAuth2Base(ABC):
             raise Exception("OAuth client not initialized from DB.")
 
         if token_data is not None:
-            expires_at = datetime.now(timezone.utc) + timedelta(seconds=token_data.get("expires_in", 0))
+            expires_at = datetime.now(UTC) + timedelta(seconds=token_data.get("expires_in", 0))
             token = OAuthToken(
                 user_id=user_id,
                 client_credential_id=self._credential_id,
@@ -207,13 +207,13 @@ class OAuth2Base(ABC):
             "access_token": self.db_token.access_token,
             "refresh_token": self.db_token.refresh_token,
             "token_type": "Bearer",
-            "expires_in": int((self.db_token.expires_at - datetime.now(timezone.utc)).total_seconds()),
+            "expires_in": int((self.db_token.expires_at - datetime.now(UTC)).total_seconds()),
             "scope": " ".join(self.db_token.scope),
         }
 
     def to_db_token(self, token_data: OAuthTokenDict) -> OAuthToken:
         """將 OAuthTokenDict 轉換為資料庫中的 OAuthToken 格式"""
-        expires_at = datetime.now(timezone.utc) + timedelta(seconds=token_data.get("expires_in", 0))
+        expires_at = datetime.now(UTC) + timedelta(seconds=token_data.get("expires_in", 0))
         scope = token_data.get("scope", [])
         if isinstance(scope, str):
             scope = scope.split(" ")

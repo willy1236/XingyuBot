@@ -277,7 +277,7 @@ class music(Cog_Extension):
             raise MusicCommandError(
                 "錄音功能目前因 Discord 語音端對端加密（DAVE）與 py-cord 尚未相容而無法使用，"
                 "詳見 https://github.com/Pycord-Development/pycord/issues/3139"
-            )
+            ) from None
         await ctx.respond("開始錄音")
 
     @recording.command(description="結束錄音")

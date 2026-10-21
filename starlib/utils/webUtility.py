@@ -39,8 +39,8 @@ def parse_url_redirects(url: str) -> list[str] | None:
             print(e)
             return None
     redirect_urls = [url]
-    for resp in resp.history:
-        redirect_urls.append(resp.headers.get("Location"))
+    for history_resp in resp.history:
+        redirect_urls.append(history_resp.headers.get("Location"))
     return redirect_urls
 
 
@@ -168,7 +168,7 @@ def get_ssl_subject(domain, port=443):
                     }
                 )
                 return result
-    except socket.timeout:
+    except TimeoutError:
         return {"domain": domain, "error": "連線逾時"}
     except socket.gaierror:
         return {"domain": domain, "error": "無法解析網域名稱"}
@@ -237,7 +237,7 @@ def generate_url_report(url_text: str) -> list[str]:
 
     url_redirects = parse_url_redirects(url)
     if url_redirects is None:
-        text.append(f"無法取得網址的重定向資訊")
+        text.append("無法取得網址的重定向資訊")
         return text
     url = url_redirects[-1] if url_redirects else url
     text.append(f"網址：{'\n-> '.join(url_redirects)}")
@@ -250,16 +250,16 @@ def generate_url_report(url_text: str) -> list[str]:
     if whois_info.get("error"):
         text.append("取得 whois 資訊失敗")
     else:
-        text.append(f"whois 資訊：")
+        text.append("whois 資訊：")
         text.append(f"  註冊地：{whois_info.get('country', '未知')}")
 
         if whois_info["org"]:
             if whois_info["org"] == "REDACTED FOR PRIVACY":
-                text.append(f"  註冊單位：受隱私保護")
+                text.append("  註冊單位：受隱私保護")
             else:
                 text.append(f"  註冊單位： {whois_info['org']}")
         else:
-            text.append(f"  註冊單位：未知")
+            text.append("  註冊單位：未知")
 
         text.append(f"  網域名稱註冊商：{whois_info.get('registrar', '未知')}")
 
@@ -271,7 +271,7 @@ def generate_url_report(url_text: str) -> list[str]:
 
             text.append(f"  註冊時間：{creation_date}")
         else:
-            text.append(f"  註冊時間：未知")
+            text.append("  註冊時間：未知")
 
     # SSL 憑證檢查
     ssl_subject = get_ssl_subject(domain)
@@ -280,14 +280,14 @@ def generate_url_report(url_text: str) -> list[str]:
         if not ssl_subject.get("certificate_valid", True):
             text.append("⚠️ SSL 證書驗證失敗")
 
-        text.append(f"SSL 證書資訊：")
+        text.append("SSL 證書資訊：")
         text.append(f"  組織名稱：{ssl_subject['subject'].get('organizationName', '未知')}")
         text.append(f"  國家代碼：{ssl_subject['subject'].get('countryName', '未知')}")
         text.append(f"  統一編號/組織註冊編號：{ssl_subject['subject'].get('serialNumber', '未知')}")
         text.append(f"  主要網域名稱： {ssl_subject['subject'].get('commonName', '未知')}")
         text.append(f"  地址：{ssl_subject['subject'].get('streetAddress', '未知')}")
 
-        text.append(f"SSL 證書發行者：")
+        text.append("SSL 證書發行者：")
         text.append(f"  組織名稱：{ssl_subject['issuer'].get('organizationName', '未知')}")
         text.append(f"  國家代碼：{ssl_subject['issuer'].get('countryName', '未知')}")
         text.append(f"  CN/SAN一致檢查：{'匹配' if ssl_subject.get('matched_cn_san') else '不匹配'}")

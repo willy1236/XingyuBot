@@ -4,19 +4,18 @@ import shutil
 import subprocess
 import time
 from collections.abc import Iterator
-from datetime import timezone
+from datetime import UTC
 from typing import TypeVar
 
 import feedparser
 from bs4 import BeautifulSoup
 from google.auth.transport.requests import Request
-from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
 from starlib.database import APIType, sqldb
-from starlib.exceptions import APINetworkError, Forbidden
+from starlib.exceptions import APINetworkError
 from starlib.utils import convert_tz
 
 from ..base import APICaller
@@ -164,8 +163,8 @@ class TwitchAPI(APICaller):
             "first": 5,
         }
         if started_at:
-            params["started_at"] = started_at.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-            params["ended_at"] = datetime.now(tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+            params["started_at"] = started_at.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+            params["ended_at"] = datetime.now(tz=UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
         r = self.get("clips", params=params)
         apidata = r.json()
@@ -572,7 +571,7 @@ class CLIInterface:
 
         try:
             results = RettiwtTweetTimeLineResponse(**data)
-        except Exception as e:
+        except Exception:
             log.exception("解析Rettiwt輸出時發生錯誤", extra={"output": r.stdout})
             return None
 

@@ -27,4 +27,4 @@ def base64_to_buffer(base64_string: str) -> BytesIO:
         buffer = BytesIO(binary_data)
         return buffer
     except Exception as e:
-        raise ValueError(f"Base64 解碼失敗: {str(e)}")
+        raise ValueError(f"Base64 解碼失敗: {str(e)}") from e

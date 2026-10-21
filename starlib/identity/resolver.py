@@ -51,7 +51,7 @@ class IdentityResolver:
     def __init__(
         self,
         directory: AccountDirectory,
-        repo: "UserRepository",
+        repo: UserRepository,
         ttl: timedelta,
         backoff: timedelta = timedelta(minutes=1),
         merge_backoff: timedelta = timedelta(minutes=10),

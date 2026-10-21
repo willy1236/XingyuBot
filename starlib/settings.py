@@ -1,12 +1,10 @@
 import os
 import re
-from datetime import timedelta, timezone
 from functools import lru_cache
 from pathlib import Path
 
 from pydantic import Field, ValidationError, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
-
 
 # 身分組代號規則（與 auth server 一致）
 ROLE_CODE_PATTERN = re.compile(r"^[a-z0-9][a-z0-9-]{0,63}$")

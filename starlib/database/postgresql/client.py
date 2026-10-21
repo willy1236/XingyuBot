@@ -2,8 +2,8 @@ import functools
 import inspect
 import logging
 from collections import defaultdict, deque
-from collections.abc import Callable, Generator
-from datetime import date, datetime, time, timedelta, timezone
+from collections.abc import Callable
+from datetime import UTC, date, datetime, timedelta
 from ipaddress import IPv4Network
 from typing import Literal, ParamSpec, TypeVar, overload
 from uuid import UUID
@@ -12,7 +12,6 @@ import discord
 from google.oauth2.credentials import Credentials
 from sqlalchemy import Engine, and_, desc, func, not_, or_, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
-from sqlalchemy.engine import URL
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 # from sqlalchemy.orm import Session as ALSession
@@ -28,7 +27,6 @@ from .cache import CacheStore
 from .enums import *
 from .models import *
 from .rpg import *
-from .schemas import Base
 
 log = logging.getLogger(__name__)
 
@@ -41,7 +39,7 @@ def _rollback_on_error(func: Callable) -> Callable:
     """方法拋出 SQLAlchemyError 時 rollback session，避免 scoped session 卡在失敗的 transaction"""
 
     @functools.wraps(func)
-    def wrapper(self: "BaseRepository", *args, **kwargs):
+    def wrapper(self: BaseRepository, *args, **kwargs):
         try:
             return func(self, *args, **kwargs)
         except SQLAlchemyError:
@@ -78,7 +76,7 @@ class BaseRepository:
     def commit(self):
         try:
             self.session.commit()
-        except SQLAlchemyError as e:
+        except SQLAlchemyError:
             log.exception("SQLAlchemy Commit Error")
             self.session.rollback()
             raise
@@ -294,7 +292,7 @@ class UserRepository(BaseRepository):
 
         # 合併時其他指向 old_id 的 Discord 紀錄一起改指新 ID
         # roles、suspended、username 還是舊域民的值，checked_at 設得很早讓它們下次使用時就重查
-        self.session.exec(update(DiscordIdentity).where(DiscordIdentity.user_id == old_id).values(user_id=new_id, checked_at=datetime.fromtimestamp(0, timezone.utc)))
+        self.session.exec(update(DiscordIdentity).where(DiscordIdentity.user_id == old_id).values(user_id=new_id, checked_at=datetime.fromtimestamp(0, UTC)))
 
         log.info("merge_user_data: merged", extra={**extra, "playlists": len(playlists), "renamed": renamed})
 
@@ -908,7 +906,7 @@ class WarningRepository(BaseRepository):
 
         # 如果該用戶沒有被禁言過，則最後禁言時間為當前時間
         if last_ban_time_result is None:
-            last_ban_time = datetime.min.replace(tzinfo=timezone.utc)
+            last_ban_time = datetime.min.replace(tzinfo=UTC)
         else:
             last_ban_time = last_ban_time_result.create_time
 
@@ -1318,7 +1316,7 @@ class TokensRepository(BaseRepository):
             client_secret=client.client_secret,
             token_uri="https://oauth2.googleapis.com/token",
             scopes=scopes or [],
-            expiry=token.expires_at.astimezone(timezone.utc).replace(tzinfo=None),
+            expiry=token.expires_at.astimezone(UTC).replace(tzinfo=None),
         )
 
     def get_google_client_config(self, token_seq: int = 3):
@@ -1459,7 +1457,7 @@ class CacheRepository(BaseRepository):
         """取得指定社群的快取"""
         stmt = select(CommunityCache).where(CommunityCache.notify_type == type, CommunityCache.community_id == community_id)
         result = self.session.exec(stmt).one_or_none()
-        return result or CommunityCache(community_id=community_id, notify_type=type, value=datetime.min.replace(tzinfo=timezone.utc))
+        return result or CommunityCache(community_id=community_id, notify_type=type, value=datetime.min.replace(tzinfo=UTC))
 
     def set_notify_cache(self, type: NotifyChannelType, value: datetime | None):
         """設定通知快取"""
@@ -1515,7 +1513,7 @@ class NetworkRepository(BaseRepository):
         result = self.session.exec(stmt).all()
         return result
 
-    def get_active_ips(self, active_threshold: datetime = datetime.min.replace(tzinfo=timezone.utc)):
+    def get_active_ips(self, active_threshold: datetime = datetime.min.replace(tzinfo=UTC)):
         stmt = select(UserIPDetails).where(UserIPDetails.last_seen > active_threshold)
         result = self.session.exec(stmt).all()
         return result

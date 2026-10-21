@@ -1,7 +1,5 @@
 import discord
 
-from starlib import BotEmbed
-
 
 class RuleMessageModal(discord.ui.Modal):
     def __init__(self):

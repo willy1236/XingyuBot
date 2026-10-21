@@ -3,20 +3,19 @@
 from __future__ import annotations
 
 import asyncio
-
 from uuid import UUID, uuid4
 
 import pytest
 from sqlalchemy import create_engine, text
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, SQLModel, select
+from test_identity import FakeDirectory, _account
 
 from scripts.migrate_identity import MigrationAborted, format_report, migrate
 from starlib import sqldb
 from starlib.database import DriveShare, LinkedAccount, NetBirdBinding, PlatformType
 from starlib.database.postgresql.client import SQLRepository
 from starlib.database.postgresql.models import DiscordIdentity
-
-from test_identity import FakeDirectory, _account
 
 # 正式機 users schema 的舊表，取自 pg_dump
 LEGACY_DDL = """
@@ -214,11 +213,11 @@ class TestConvert:
         run(repo, directory, dry_run=False)
         user_id = repo.get_discord_identity(101).user_id
 
-        with pytest.raises(Exception):
+        with pytest.raises(IntegrityError):
             repo.create_music_playlist(user_id, "fav")
         repo.session.rollback()
         repo.session.add(NetBirdBinding(user_id=user_id, group_id="dup"))
-        with pytest.raises(Exception):
+        with pytest.raises(IntegrityError):
             repo.session.flush()
         repo.session.rollback()
         constraints = repo.session.execute(

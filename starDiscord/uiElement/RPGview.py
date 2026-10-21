@@ -1,10 +1,8 @@
 import random
-from typing import TYPE_CHECKING
 
 import discord
-from discord.ext import pages
 
-from starlib import Jsondb, sqldb
+from starlib import sqldb
 from starlib.database import Coins
 from starlib.database.postgresql.rpg import Monster, MonsterInBattle, RPGEquipment, RPGPlayerItem
 from starlib.utils import BotEmbed
@@ -143,7 +141,7 @@ class RPGAdvanceView(discord.ui.View):
                     sqldb.merge(item)
                     embed.description += f"，獲得道具 {treasure.item.name} * {get_amount}"
                 else:
-                    embed.description += f"\n不知道是不是看錯了，你並沒有找到任何東西"
+                    embed.description += "\n不知道是不是看錯了，你並沒有找到任何東西"
 
             elif rd > 60 and rd <= 70:
                 embed.description += "踩到陷阱"

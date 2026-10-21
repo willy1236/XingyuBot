@@ -54,7 +54,7 @@ class RiotAPI(APICaller):
             return self.get_player_bypuuid(account.puuid)
 
     def get_player_matchs(self, puuid: str, count=5, start=0, startTime: datetime | None = None) -> list[str]:
-        params = {"start": 0, "count": count, "start": start}
+        params = {"count": count, "start": start}
         if startTime:
             params["startTime"] = int(startTime.timestamp())
         r = self.get(f"lol/match/v5/matches/by-puuid/{puuid}/ids", params=params, base_url=self.url_sea)

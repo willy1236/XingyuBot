@@ -201,7 +201,7 @@ class Song:
         )
 
     @classmethod
-    async def from_url(cls, url: str, *, requester: discord.Member = None) -> tuple[list["Song"], int]:
+    async def from_url(cls, url: str, *, requester: discord.Member = None) -> tuple[list[Song], int]:
         """
         擷取網址中的歌曲。歌單只取清單（flat），串流在播放時才由 get_source 取得。
 
@@ -211,7 +211,7 @@ class Song:
         return result.songs, result.skipped
 
     @classmethod
-    async def extract(cls, url: str, *, requester: discord.Member = None) -> "ExtractResult":
+    async def extract(cls, url: str, *, requester: discord.Member = None) -> ExtractResult:
         """同 from_url，另外帶出網址是否為歌單及其正規化網址與名稱。"""
         url = _strip_radio_params(url)
         results = await _extract(url, _ytdl_options(url, flat=True, ignoreerrors=True))
@@ -520,7 +520,7 @@ class MusicPlayer:
             paused_total += time.monotonic() - self.paused_at
         return max(0, int(time.monotonic() - self.play_started_at - paused_total))
 
-    def add_song(self, song: "Song | list[Song]"):
+    def add_song(self, song: Song | list[Song]):
         if isinstance(song, list):
             self.playlist.extend(song)
         else:

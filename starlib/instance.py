@@ -7,7 +7,6 @@ import logging
 import tweepy
 
 from .database import APIType, sqldb
-from .fileDatabase import Jsondb
 from .providers import *
 from .settings import get_settings
 

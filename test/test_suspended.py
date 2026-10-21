@@ -8,12 +8,12 @@ from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
+from test_identity import DISCORD_ID, TTL, FakeDirectory, _account, expire, repo  # noqa: F401  (repo 為 fixture)
 
 from starDiscord import checks
 from starDiscord.cmds import music
 from starDiscord.uiElement import music_panel
 from starlib.identity import BotIdentity, IdentityResolver, IdentityUnavailable
-from test_identity import DISCORD_ID, TTL, FakeDirectory, _account, expire, repo  # noqa: F401  (repo 為 fixture)
 
 
 def _identity(*, suspended=False) -> BotIdentity:

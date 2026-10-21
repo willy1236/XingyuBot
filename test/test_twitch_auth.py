@@ -2,18 +2,18 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
+from test_identity import repo  # noqa: F401  (repo 為 fixture)
 
 from starlib.database import TwitchBotJoinChannel
 from starlib.identity import MemberUnknown, NotMember, TwitchMember
 from starlib.oauth import TwitchOAuth
 from starlib.providers.social.models import TwitchUser
 from starServer import bot_website
-from test_identity import repo  # noqa: F401  (repo 為 fixture)
 
 TWITCH_ID = 2000000001
 STATE = "state-abc"
@@ -41,7 +41,7 @@ def _twitch_user() -> TwitchUser:
         description="",
         profile_image_url="https://example.invalid/p.png",
         view_count=0,
-        created_at=datetime(2020, 1, 1, tzinfo=timezone.utc),
+        created_at=datetime(2020, 1, 1, tzinfo=UTC),
     )
 
 

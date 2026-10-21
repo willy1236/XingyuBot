@@ -24,7 +24,7 @@ class MongoDB:
 if __name__ == "__main__":
     username = ""
     password = ""
-    url = f""
+    url = ""
     # Create a new client and connect to the server
     client = MongoClient(url, server_api=ServerApi("1"))
     # Send a ping to confirm a successful connection

@@ -1,7 +1,7 @@
 import asyncio
 import ipaddress
 import logging
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from io import BytesIO
 
 import discord
@@ -57,9 +57,9 @@ class system_game(Cog_Extension):
             embed = BotEmbed.user(user, "遊戲資料")
             for data in player_data:
                 embed.add_field(name=Jsondb.get_tw(data.game, "game_set_option"), value=data.player_name)
-            await ctx.respond(f"查詢成功", embed=embed)
+            await ctx.respond("查詢成功", embed=embed)
         else:
-            await ctx.respond(f"錯誤：找不到用戶或尚未註冊資料", ephemeral=True)
+            await ctx.respond("錯誤：找不到用戶或尚未註冊資料", ephemeral=True)
 
     @lol.command(description="查詢Riot帳號資料", name_localizations=ChoiceList.name("lol_riot"))
     async def riot(self, ctx, riot_id: discord.Option(str, name="riot_id", description="名稱#tag")):
@@ -329,14 +329,14 @@ class system_game(Cog_Extension):
         try:
             ip = ipaddress.IPv4Network(ip_str)
         except ipaddress.AddressValueError:
-            await ctx.respond(f"此IP位址格式錯誤，請確認後再試", ephemeral=True)
+            await ctx.respond("此IP位址格式錯誤，請確認後再試", ephemeral=True)
             return
         if not ip.subnet_of(ipaddress.IPv4Network("26.0.0.0/8")):
-            await ctx.respond(f"此IP位址不是Radmin VPN的位置", ephemeral=True)
+            await ctx.respond("此IP位址不是Radmin VPN的位置", ephemeral=True)
             return
         account = sclient.sqldb.get_registed_ips_last_seen(ip)
         if account:
-            await ctx.respond(f"此IP位址已註冊過，請確認後再試", ephemeral=True)
+            await ctx.respond("此IP位址已註冊過，請確認後再試", ephemeral=True)
             return
 
         host = str(ip.network_address)
@@ -344,7 +344,7 @@ class system_game(Cog_Extension):
         await asyncio.to_thread(nm.scan, hosts=host, arguments="-sn")
         # 主機離線時掃描結果不會包含該主機
         if host not in nm.all_hosts() or nm[host].state() != "up":
-            await ctx.respond(f"此IP位址目前不在線上，請確認後再試", ephemeral=True)
+            await ctx.respond("此IP位址目前不在線上，請確認後再試", ephemeral=True)
             return
 
         now = nowtz()
@@ -370,7 +370,7 @@ class system_game(Cog_Extension):
         zerotier_network_id = get_settings().ZEROTIER_NETWORK_ID
         member = zt_api.authorize_member(zerotier_network_id, address_str, name=name)
         if not member:
-            await ctx.respond(f"ZeroTier帳號註冊失敗，請確認位址是否正確", ephemeral=True)
+            await ctx.respond("ZeroTier帳號註冊失敗，請確認位址是否正確", ephemeral=True)
             return
 
         now = nowtz()

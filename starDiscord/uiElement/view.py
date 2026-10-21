@@ -5,7 +5,6 @@ import io
 import logging
 import random
 from collections.abc import Awaitable, Callable
-from datetime import datetime
 from typing import TYPE_CHECKING
 
 import discord
@@ -14,7 +13,17 @@ import numpy as np
 from discord.utils import format_dt
 
 from starlib import BotEmbed, Jsondb, sqldb
-from starlib.database import Giveaway, GiveawayUser, HappycampApplicationForm, HappycampVIP, McsmInstanceStatus, McsmServerAction, Poll, PollRole, TicketChannel
+from starlib.database import (
+    Giveaway,
+    GiveawayUser,
+    HappycampApplicationForm,
+    HappycampVIP,
+    McsmInstanceStatus,
+    McsmServerAction,
+    Poll,
+    PollRole,
+    TicketChannel,
+)
 from starlib.instance import mcsm_api, vip_admin_channel
 from starlib.utils import find_netbird_network, find_radmin_vpn_network, nowtz
 
@@ -109,7 +118,7 @@ class PollEndButton(discord.ui.Button):
 
             await interaction.response.edit_message(embed=embed, view=view, file=discord.File(image_buffer, filename="pie.png"))
         else:
-            await interaction.response.send_message(f"錯誤：只有投票發起人才能結算", ephemeral=True)
+            await interaction.response.send_message("錯誤：只有投票發起人才能結算", ephemeral=True)
 
 
 class PollResultButton(discord.ui.Button):
@@ -123,7 +132,7 @@ class PollResultButton(discord.ui.Button):
             await interaction.response.send_message(embed=embed, ephemeral=True)
 
         else:
-            await interaction.response.send_message(f"錯誤：此投票只有發起人才能查看結果", ephemeral=True)
+            await interaction.response.send_message("錯誤：此投票只有發起人才能查看結果", ephemeral=True)
 
 
 class PollCanenlButton(discord.ui.Button):
@@ -270,9 +279,9 @@ class PollView(discord.ui.View):
         )
         description += f"\n- 可選擇 {self.poll.number_of_user_votes} 個選項"
         if not self.poll.can_change_vote:
-            description += f"\n- 不允許變更投票"
+            description += "\n- 不允許變更投票"
         if self.poll.ban_alternate_account_voting:
-            description += f"\n- 小帳不算有效票"
+            description += "\n- 小帳不算有效票"
 
         if only_role_list:
             description += "\n- 可投票身分組：" + ",".join(only_role_list)
@@ -401,7 +410,7 @@ class ReactionRoleButton(discord.ui.Button):
     async def callback(self, interaction):
         role = interaction.guild.get_role(self.role_id)
         if not role:
-            await interaction.response.send_message(f"錯誤：身分組不存在，請聯絡管理員", ephemeral=True)
+            await interaction.response.send_message("錯誤：身分組不存在，請聯絡管理員", ephemeral=True)
             return
 
         if interaction.user.get_role(self.role_id):
@@ -422,7 +431,7 @@ class ReactionRoleView(discord.ui.View):
 
     async def on_error(self, error: Exception, item: discord.ui.Item, interaction: discord.Interaction):
         if isinstance(error, discord.Forbidden):
-            await interaction.response.send_message(f"錯誤：我沒有權限給予或移除身分組，可能為我的身分組位階較低或缺少必要權限", ephemeral=True)
+            await interaction.response.send_message("錯誤：我沒有權限給予或移除身分組，可能為我的身分組位階較低或缺少必要權限", ephemeral=True)
         else:
             await interaction.response.send_message(f"發生錯誤：{error}", ephemeral=True)
             log.error("ReactionRoleView error", extra={"item": str(item)}, exc_info=error)
@@ -444,9 +453,9 @@ class TRPGPlotButton(discord.ui.Button):
                 f"進行 {ability.ability.ability_name} 檢定：{rd} <= {ability.value}",
             ]
             if rd <= ability.value:
-                text_list.append(f"，成功！")
+                text_list.append("，成功！")
             else:
-                text_list.append(f"，失敗！")
+                text_list.append("，失敗！")
                 if self.option.check_ability == 1:
                     # 掉san
                     dice_n, dice = self.option.san_check_fall_dice.split("d")

@@ -13,7 +13,6 @@ from mcstatus import JavaServer
 from starlib import BotEmbed, Jsondb, sclient
 from starlib.database import NotifyChannelType
 from starlib.instance import *
-from starlib.settings import get_settings
 from starlib.utils import ChoiceList, base64_to_buffer, find_radmin_vpn_network, get_arp_list, time_to_datetime
 
 from ..checks import PrivilegeLevel, has_privilege_level, has_vip, is_vip_admin
@@ -49,7 +48,7 @@ class SendMessageModal(discord.ui.Modal):
 
     async def callback(self, interaction: discord.Interaction):
         message = await self.channel.send(self.children[0].value)
-        await interaction.response.send_message(f"訊息發送成功", delete_after=5, ephemeral=True)
+        await interaction.response.send_message("訊息發送成功", delete_after=5, ephemeral=True)
         if self.is_dm:
             await self.bot.dm(message)
 
@@ -60,7 +59,7 @@ class AnnoModal(discord.ui.Modal):
         self.add_item(discord.ui.InputText(label="要傳送的公告", style=discord.InputTextStyle.long))
 
     async def callback(self, interaction: discord.Interaction):
-        msg = await interaction.response.send_message(f"訊息發送中..")
+        msg = await interaction.response.send_message("訊息發送中..")
         embed = discord.Embed(description=self.children[0].value, color=0xC4E9FF, timestamp=datetime.now())
         embed.set_author(name="機器人全群公告", icon_url=Jsondb.get_picture("radio_001"))
         embed.set_footer(text="Bot Radio System")
@@ -92,7 +91,7 @@ class BotUpdateModal(discord.ui.Modal):
         self.add_item(discord.ui.InputText(label="要傳送的更新訊息", style=discord.InputTextStyle.long))
 
     async def callback(self, interaction: discord.Interaction):
-        msg = await interaction.response.send_message(f"訊息發送中..")
+        msg = await interaction.response.send_message("訊息發送中..")
         embed = discord.Embed(description=self.children[0].value, color=0xC4E9FF, timestamp=datetime.now())
         embed.set_author(name="機器人更新通知", icon_url=Jsondb.get_picture("radio_001"))
         embed.set_footer(text="Bot Radio System")
@@ -170,13 +169,13 @@ class owner(Cog_Extension):
         sclient.sqldb.set_bot_activity(self.bot.bot_code, statue)
         activity_name = sclient.sqldb.get_bot_activity(self.bot.bot_code)
         await self.bot.change_presence(activity=discord.CustomActivity(name=activity_name), status=discord.Status.online)
-        await ctx.respond(f"狀態更改完成", delete_after=5)
+        await ctx.respond("狀態更改完成", delete_after=5)
 
     # shutdown
     @commands.slash_command(description="關閉機器人", guild_ids=debug_guilds)
     @commands.is_owner()
     async def shutdown(self, ctx):
-        await ctx.respond(f"機器人關閉中")
+        await ctx.respond("機器人關閉中")
         # close() 完成後 bot.run() 會返回，背景 thread 由 main.py 統一停止
         await self.bot.close()
 
@@ -197,7 +196,7 @@ class owner(Cog_Extension):
             if user:
                 modal = SendMessageModal(title="發送訊息(私訊)", channel=channel, bot=self.bot, is_dm=True)
             else:
-                await ctx.respond(f"找不到此ID", ephemeral=True)
+                await ctx.respond("找不到此ID", ephemeral=True)
                 return
 
         await ctx.send_modal(modal)
@@ -226,7 +225,7 @@ class owner(Cog_Extension):
         await ctx.defer()
         message = await ctx.fetch_message(int(msgid))
         await message.edit(content=new_msg)
-        await ctx.respond(f"訊息修改成功", delete_after=5, ephemeral=True)
+        await ctx.respond("訊息修改成功", delete_after=5, ephemeral=True)
 
     @commands.is_owner()
     @permission_cmd.command(name="view", description="查看權限", guild_ids=debug_guilds)
@@ -310,19 +309,19 @@ class owner(Cog_Extension):
 
         try:
             server = JavaServer.lookup(ip)
-        except Exception as e:
+        except Exception:
             await ctx.respond(f"找不到伺服器：{ip}")
             return
 
         try:
             status = server.status()
-        except Exception as e:
-            await ctx.respond(f"無法獲取伺服器狀態")
+        except Exception:
+            await ctx.respond("無法獲取伺服器狀態")
             return
 
         try:
             latency = server.ping()
-        except Exception as e:
+        except Exception:
             latency = None
         full_ip = f"{server.address.host}:{server.address.port}" if server.address.port != 25565 else server.address.host
 
@@ -356,7 +355,7 @@ class owner(Cog_Extension):
                 status = server.status()
                 text_lst.append(f"伺服器：`{i[0]}`：版本：{status.version.name}，目前上線人數：{status.players.online}")
                 text_lst.append(f"- {status.description.encode('iso-8859-1').decode('utf-8')}")
-            except Exception as e:
+            except Exception:
                 pass
 
         if text_lst:
@@ -373,7 +372,7 @@ class owner(Cog_Extension):
         embed = BotEmbed.bot(self.bot, description=f"伺服器總數：{len(self.bot.guilds)}\n成員：{len(self.bot.users)}")
         embed_list.append(embed)
 
-        await ctx.respond(f"", embeds=embed_list, view=BotPanel(self.bot))
+        await ctx.respond("", embeds=embed_list, view=BotPanel(self.bot))
 
     @commands.slash_command(description="獲取指令", guild_ids=debug_guilds)
     @commands.is_owner()
@@ -423,7 +422,7 @@ class owner(Cog_Extension):
             message = await channel_arg.fetch_message(id)
             assert isinstance(message, discord.Message)
             if message:
-                embeds = [BotEmbed.simple(title=f"訊息", description=f"ID：訊息")]
+                embeds = [BotEmbed.simple(title="訊息", description="ID：訊息")]
                 embeds[0].add_field(name="內容", value=message.content, inline=False)
                 embeds[0].add_field(name="發送者", value=message.author.mention, inline=True)
                 embeds[0].add_field(name="頻道", value=channel_arg.mention, inline=True)
@@ -520,13 +519,13 @@ class owner(Cog_Extension):
         time = time_to_datetime(time_last)
         channel = self.bot.get_channel(int(channelid))
         if not time or time > timedelta(days=7):
-            await ctx.respond(f"錯誤：時間格式錯誤（不得超過7天）")
+            await ctx.respond("錯誤：時間格式錯誤（不得超過7天）")
             return
         assert isinstance(channel, discord.abc.GuildChannel), "頻道必須是伺服器頻道"
 
         user = channel.guild.get_member(int(userid))
         if not user:
-            await ctx.respond(f"錯誤：找不到該用戶")
+            await ctx.respond("錯誤：找不到該用戶")
             return
         await user.timeout_for(time, reason=reason)
 

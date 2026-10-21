@@ -101,7 +101,7 @@ class Covid19Report:
         self.dead = data["dead"]
 
     def desplay(self):
-        embed = BotEmbed.simple(f"台灣COVUD-19疫情")
+        embed = BotEmbed.simple("台灣COVUD-19疫情")
         embed.add_field(name="新增確診", value=self.new)
         embed.add_field(name="本土病例", value=self.local)
         embed.add_field(name="境外移入", value=self.outside)
@@ -275,7 +275,7 @@ class WeatherWarningReport(BaseModel):
             embed.add_field(name="涵蓋區域市", value=", ".join([i.locationName for i in self.hazardConditions.hazards.hazard[0].info.affectedAreas.location]))
 
         embed.timestamp = nowtz()
-        embed.set_footer(text=f"中央氣象暑")
+        embed.set_footer(text="中央氣象暑")
         return embed
 
 

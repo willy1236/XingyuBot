@@ -1,12 +1,26 @@
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
 import discord
-from sqlalchemy import JSON, BigInteger, Boolean, Column, Date, ForeignKey, ForeignKeyConstraint, Identity, Integer, Interval, SmallInteger, String, Text, UniqueConstraint
+from sqlalchemy import (
+    JSON,
+    BigInteger,
+    Boolean,
+    Column,
+    Date,
+    ForeignKey,
+    Identity,
+    Integer,
+    Interval,
+    SmallInteger,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.dialects.postgresql import ARRAY, CIDR, MACADDR, TIMESTAMP
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import mapped_column, relationship
 from sqlmodel import Field, Relationship, text
 
 from starlib.base import ListObject
@@ -133,7 +147,7 @@ class DiscordUser(DiscordUsersSchema, table=True):
     guaranteed: int | None = Field(sa_column=Column(Integer))
     registrations_id: int | None = Field(sa_column=Column(Integer, ForeignKey("stardb_idbase.discord_registrations.registrations_id"), default=None))
 
-    registration: "DiscordRegistration" = Relationship(back_populates="members")
+    registration: DiscordRegistration = Relationship(back_populates="members")
 
 
 class UserPoint(DiscordUsersSchema, table=True):
@@ -178,7 +192,7 @@ class UserParty(DiscordUsersSchema, table=True):
     discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
     party_id: int = Field(sa_column=Column(Integer, ForeignKey("stardb_idbase.party_datas.party_id"), primary_key=True))
 
-    party: "Party" = Relationship(back_populates="members")
+    party: Party = Relationship(back_populates="members")
 
 
 class UserModerate(DiscordUsersSchema, table=True):
@@ -439,8 +453,8 @@ class PushRecord(BasicSchema, table=True):
     __tablename__ = "push_record"
 
     channel_id: str = Field(sa_column=Column(String(255), primary_key=True))
-    push_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0), default=datetime.min.replace(tzinfo=timezone.utc)))
-    expire_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0), default=datetime.min.replace(tzinfo=timezone.utc)))
+    push_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0), default=datetime.min.replace(tzinfo=UTC)))
+    expire_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0), default=datetime.min.replace(tzinfo=UTC)))
     secret: str | None = Field(sa_column=Column(String(255), nullable=True))
 
     @property
@@ -502,7 +516,7 @@ class User(AlchemyBasicSchema):
     age: int = mapped_column(Integer, default=None)
 
     # 建立關聯：一個使用者對應多篇貼文
-    posts: list["Post"] = relationship(back_populates="user", init=False)
+    posts: list[Post] = relationship(back_populates="user", init=False)
 
 
 class Post(AlchemyBasicSchema):
@@ -619,7 +633,7 @@ class TRPGStoryPlot(IdbaseSchema, table=True):
     id: int = Field(sa_column=Column(Integer, primary_key=True))
     title: str = Field(sa_column=Column(String))
     content: str = Field(sa_column=Column(Text))
-    options: list["TRPGStoryOption"] = Relationship(back_populates="plot")
+    options: list[TRPGStoryOption] = Relationship(back_populates="plot")
 
 
 class TRPGStoryOption(IdbaseSchema, table=True):
@@ -642,7 +656,7 @@ class TRPGCharacter(IdbaseSchema, table=True):
     discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
     character_name: str = Field(sa_column=Column(String))
 
-    abilities: list["TRPGCharacterAbility"] = Relationship(back_populates="character")
+    abilities: list[TRPGCharacterAbility] = Relationship(back_populates="character")
 
 
 class TRPGCharacterAbility(IdbaseSchema, table=True):
@@ -654,7 +668,7 @@ class TRPGCharacterAbility(IdbaseSchema, table=True):
     value: int = Field(sa_column=Column(Integer))
 
     character: TRPGCharacter = Relationship(back_populates="abilities")
-    ability: "TRPGAbility" = Relationship(back_populates="characters")
+    ability: TRPGAbility = Relationship(back_populates="characters")
 
 
 class TRPGAbility(IdbaseSchema, table=True):
@@ -684,7 +698,7 @@ class BackupRole(BackupSchema, table=True):
     colour_b: int = Field(sa_column=Column(Integer))
     description: str = Field(sa_column=Column(String))
 
-    members: list["BackupRoleUser"] = Relationship(back_populates="role")
+    members: list[BackupRoleUser] = Relationship(back_populates="role")
 
     def embed(self, bot: discord.Bot):
         embed = BotEmbed.simple(self.role_name, self.description)

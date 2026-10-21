@@ -1,13 +1,13 @@
 import asyncio
 import logging
 import re
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 import discord
 from discord.ext import commands
 
 from starlib import BotEmbed, sclient
-from starlib.database import DBCacheType, NotifyChannelType, PrivilegeLevel
+from starlib.database import NotifyChannelType
 from starlib.instance import *
 from starlib.utils import nowtz
 
@@ -221,7 +221,7 @@ class event(Cog_Extension):
                         else:
                             dbuser.meatball_times += 1
                         sclient.sqldb.merge(dbuser)
-                    except Exception as e:
+                    except Exception:
                         log.exception()
 
                 # 洗頻防制
@@ -284,7 +284,7 @@ class event(Cog_Extension):
                 assert bot_user
                 embed = BotEmbed.user(
                     user=bot_user,
-                    description=f"你好~我是假裝成星羽的Azusa，是一個discord機器人喔~\n你不可以輸入 </help:1067700245015834638> 來查看所有指令的用法\n\n希望我能在discord上幫助到你喔~\n有任何建議與需求不可以使用 </feedback:1067700244848058386> 指令\n\n支援伺服器：https://discord.gg/ye5yrZhYGF",
+                    description="你好~我是假裝成星羽的Azusa，是一個discord機器人喔~\n你不可以輸入 </help:1067700245015834638> 來查看所有指令的用法\n\n希望我能在discord上幫助到你喔~\n有任何建議與需求不可以使用 </feedback:1067700244848058386> 指令\n\n支援伺服器：https://discord.gg/ye5yrZhYGF",
                 )
                 embed.set_footer(text="此機器人由 XX12 負責搞事")
                 await message.reply(embed=embed)
@@ -344,14 +344,14 @@ class event(Cog_Extension):
             channel_name = lobby_data.default_room_name.replace("{member}", member.name) if lobby_data.default_room_name is not None else f"{member.name}的頻道"
             try:
                 new_channel = await guild.create_voice_channel(name=channel_name, reason="動態語音：新增", category=category, overwrites=overwrites)
-            except discord.errors.Forbidden as e:
+            except discord.errors.Forbidden:
                 try:
                     for overwrite in overwrites.values():
                         overwrite.manage_roles = None
 
                     new_channel = await guild.create_voice_channel(name=channel_name, reason="動態語音：新增", category=category, overwrites=overwrites)
                     log.debug("Created dynamic voice channel %s without manage_roles permission in %s", new_channel.id, guild.id)
-                except discord.errors.Forbidden as e:
+                except discord.errors.Forbidden:
                     await after.channel.send(f"{member.mention} 我無法創建動態語音頻道，請檢查我的權限", delete_after=10)
                     log.debug("Failed to create dynamic voice channel from lobby %s in %s", after.channel.id, guild.id)
                     return
