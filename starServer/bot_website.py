@@ -24,7 +24,8 @@ from linebot.v3.webhooks.models.message_event import MessageEvent
 
 from sentry_bootstrap import capture_exception_safe
 from starlib import BaseThread, Jsondb, sclient, sqldb, utils
-from starlib.database import APIType, NotifyCommunityType
+from starlib.database import APIType, NotifyCommunityType, TwitchBotJoinChannel
+from starlib.identity import MemberUnknown, TwitchMember, lookup_twitch_member
 from starlib.instance import google_api
 from starlib.oauth import DiscordOAuth, GoogleOAuth, TwitchOAuth
 from starlib.providers.social.push_models import YoutubePushEntry
@@ -212,10 +213,53 @@ async def oauth_discordbot(request: Request):
     return HTMLResponse(f"授權已完成，您現在可以關閉此頁面<br>感謝您使用星羽機器人！", 200)
 
 
+def _twitch_oauth_page(message: str, status_code: int) -> HTMLResponse:
+    response = HTMLResponse(message, status_code)
+    response.delete_cookie("oauth_state")
+    return response
+
+
 @app.get("/oauth/twitch")
 async def oauth_twitch(request: Request):
-    # 網站登入原本寫 cloud_user，身分改接 auth server 後暫停，待網站 OIDC 另案恢復
-    return HTMLResponse("網站登入與帳號綁定暫停服務", 503)
+    params = dict(request.query_params)
+    code = params.get("code")
+    if not code:
+        return _twitch_oauth_page(f"授權失敗：{html.escape(params.get('error', '缺少授權碼'))}", 400)
+
+    if not TwitchOAuth.verify_state(request.cookies.get("oauth_state"), params.get("state")):
+        return _twitch_oauth_page("授權失敗：驗證碼不符或已過期，請重新開始授權", 400)
+
+    auth = TwitchOAuth.create_from_db(twitch_oauth_client)
+    try:
+        await auth.exchange_code(code)
+        user = await auth.get_me()
+    except Exception as exc:
+        capture_exception_safe(exc, tags={"service": "website", "source": "oauth_twitch"})
+        log.exception("Twitch OAuth failed: %s", exc)
+        return _twitch_oauth_page("授權失敗，請重新開始授權", 400)
+
+    # 只有析域域民才能授權；結果沒有明確答案時不存 token、不登記頻道
+    lookup = await lookup_twitch_member(user.id)
+    if isinstance(lookup, MemberUnknown):
+        log.warning("Twitch OAuth: member lookup unknown for twitch_id=%s", user.id)
+        return _twitch_oauth_page("這次授權失敗，請稍後再試", 503)
+    if not isinstance(lookup, TwitchMember):
+        log.info("Twitch OAuth: twitch_id=%s is not a member, refused", user.id)
+        return _twitch_oauth_page("請先註冊析域帳號並在帳號頁連結這個 Twitch", 403)
+
+    auth.save_token_to_db(user.id)
+    twitch_id = int(user.id)
+    # 已登記的頻道保留 action_channel_id、point_name，所以沒有才新增，不用 merge
+    if sqldb.get(TwitchBotJoinChannel, (twitch_id,)) is None:
+        sqldb.add(TwitchBotJoinChannel(twitch_id=twitch_id))
+    log.info("Twitch OAuth: twitch_id=%s authorized as account %s", user.id, lookup.account_id)
+
+    return _twitch_oauth_page(
+        "授權已完成，您現在可以關閉此頁面<br>"
+        "請在您的 Twitch 聊天室輸入 <code>/mod xingyu1016</code> 將機器人設為管理員<br>"
+        "頻道會在 Twitch 機器人重啟後生效<br>感謝您使用星羽機器人！",
+        200,
+    )
 
 
 @app.get("/oauth/google")
@@ -289,9 +333,6 @@ async def to_discordauth(request: Request):
 
 @app.get("/to/twitchauth")
 async def to_twitchauth(request: Request):
-    if decode_jwt_cookie(request) is None:
-        return HTMLResponse("請先使用 Discord 登入後再綁定 Twitch 帳號", 401)
-
     twitch_scopes = [
         "chat:read",
         "channel:read:subscriptions",
