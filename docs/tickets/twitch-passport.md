@@ -133,13 +133,13 @@ T-02 改 `bot_website.py`，T-03 改 `starlib/identity/twitch.py` 與 `system_us
 
 **驗收條件**
 - [ ] 沒有網站登入的域民實況主，從 `/to/twitchauth` 走完授權：token 存進資料庫、頻道登記進 `twitch_bot_join_channel`，完成頁提醒在聊天室把 bot 設為 mod、頻道於 Twitch bot 重啟後生效。重啟後 bot 進入該頻道。
-- [ ] 已登記頻道的實況主重新授權：token 更新，頻道原有的 `action_channel_id`、`point_name` 不變。
-- [ ] 授權的 Twitch 帳號沒連結到域民，或該域民停權中：顯示「請先註冊析域帳號並在帳號頁連結這個 Twitch」，不存 token、不登記頻道。
-- [ ] auth server 連不上：顯示「這次授權失敗，請稍後再試」，不存 token、不登記頻道。
+- [x] 已登記頻道的實況主重新授權：token 更新，頻道原有的 `action_channel_id`、`point_name` 不變。
+- [x] 授權的 Twitch 帳號沒連結到域民，或該域民停權中：顯示「請先註冊析域帳號並在帳號頁連結這個 Twitch」，不存 token、不登記頻道。
+- [x] auth server 連不上：顯示「這次授權失敗，請稍後再試」，不存 token、不登記頻道。
 - [ ] 存 token 或登記頻道時資料庫出錯：顯示「這次授權失敗，請稍後再試」，記 log 並送 Sentry。
-- [ ] state cookie 缺少或不符、缺少授權碼、使用者在 Twitch 拒絕授權：顯示授權失敗。
-- [ ] 授權成功後 `linked_account` 沒有新增任何 Twitch 列。
-- [ ] 不是域民的實況主已登記的頻道照常運作，資料不被刪除。
+- [x] state cookie 缺少或不符、缺少授權碼、使用者在 Twitch 拒絕授權：顯示授權失敗。
+- [x] 授權成功後 `linked_account` 沒有新增任何 Twitch 列。
+- [x] 不是域民的實況主已登記的頻道照常運作，資料不被刪除。
 
 **實作設計**
 - 資料：無新欄位。登記頻道改成「沒有才新增」，不再用 `merge(TwitchBotJoinChannel(twitch_id=...))`：SQLModel 物件的 `action_channel_id`、`point_name` 預設是 `None`，merge 會把既有設定蓋掉。
@@ -176,7 +176,9 @@ sequenceDiagram
 - `exchange_code` 在查域民之前就會拿到 token，拒絕時只是不存，記憶體裡的 token 隨請求結束丟掉。
 - 測試用假的 directory 注入 `lookup_twitch_member`，`TwitchOAuth` 用 monkeypatch 回固定的 `TwitchUser`。
 
-**進度**：未完成
+**進度**：實作完成（2026-10-21）
+- commit：`12cb36d..f403a45`（與 T-03 在同一條線上，T-02 為 `bee17ea`、`a0f1d4b`、`fc94d9d`、`f403a45`）
+- 未驗：重啟 Twitch bot 後確實進入新登記的頻道（需部署與人工）；資料庫出錯時確實送出 Sentry（目前測試只驗 503 頁與 cookie，沒驗 Sentry 呼叫）
 
 ### T-03 `/user_info` 顯示 auth server 上連結的 Twitch
 
@@ -187,13 +189,13 @@ sequenceDiagram
 - 不包含：刪除 `linked_account` 的 Twitch 列（T-04）；Minecraft、Google 的來源（不變）。
 
 **驗收條件**
-- [ ] 本人在 auth server 連結 Twitch 後，下一次 `/user_info` 的「綁定的帳號」就出現「Twitch：<auth server 存的顯示名稱>」；解除連結後下一次就消失。
-- [ ] 連結兩個 Twitch 時兩個都列出，順序同 auth server 回傳。
-- [ ] 查別人時也看得到對方的 Twitch。
-- [ ] auth server 連不上時不顯示 Twitch，其他欄位照常。
-- [ ] 停權中的域民不顯示 Twitch。
-- [ ] 臨時使用者沒有 Twitch 列。
-- [ ] `linked_account` 裡還留著的 Twitch 列不會出現在 `/user_info`，Minecraft、Google 照舊顯示，格式與 Twitch 一致。
+- [x] 本人在 auth server 連結 Twitch 後，下一次 `/user_info` 的「綁定的帳號」就出現「Twitch：<auth server 存的顯示名稱>」；解除連結後下一次就消失。
+- [x] 連結兩個 Twitch 時兩個都列出，順序同 auth server 回傳。
+- [x] 查別人時也看得到對方的 Twitch。
+- [x] auth server 連不上時不顯示 Twitch，其他欄位照常。
+- [x] 停權中的域民不顯示 Twitch。
+- [x] 臨時使用者沒有 Twitch 列。
+- [x] `linked_account` 裡還留著的 Twitch 列不會出現在 `/user_info`，Minecraft、Google 照舊顯示，格式與 Twitch 一致。
 
 **實作設計**
 - 資料：無新欄位，bot 不保存 Twitch 清單。
@@ -212,7 +214,9 @@ sequenceDiagram
 - 每次 `/user_info` 對正式域民最多多一次 auth server 請求（解析剛查過時不多查），逾時沿用 1.5 秒；有 `defer` 所以不受 3 秒期限限制。auth server 掛掉時，身分解析與即時查共用 backoff，不會每次都卡滿逾時。
 - 身分紀錄在 TTL 內仍認為是正式域民、但 auth server 已查無此人時，即時查回空 tuple，不顯示 Twitch。
 
-**進度**：未完成
+**進度**：全部完成（2026-10-21）
+- commit：`12cb36d..f403a45`（與 T-02 在同一條線上，T-03 為 `ac3d09c`、`71ea2c6`、`c477c5d`、`1089aca`、`ebe7e67`、`b327671`）
+- 未驗：與正式 auth server 的端到端確認留給 T-04 上線驗收
 
 ### T-04 上線：bot 不再保存 Twitch 綁定
 
