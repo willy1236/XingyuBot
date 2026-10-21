@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import threading
+from datetime import timedelta
 from uuid import UUID, uuid4
 
 import pytest
@@ -188,6 +189,18 @@ class TestDiscordIdentities:
         assert repo.get_discord_identity(900000000000000102).user_id == new
         assert repo.get_discord_identity(900000000000000103).user_id == other
 
+    def test_repointed_records_are_marked_for_recheck(self, repo, ids):
+        """兄弟紀錄的 roles、suspended、username 還是舊域民的值，要強迫下次使用時重查"""
+        old, new = ids
+        repo.session.add(DiscordIdentity(discord_id=900000000000000104, user_id=old, is_formal=True, roles=["admin"], checked_at=nowtz()))
+        repo.commit()
+
+        repo.merge_user_data(old, new)
+        repo.commit()
+
+        record = repo.session.get(DiscordIdentity, 900000000000000104, populate_existing=True)
+        assert nowtz() - record.checked_at > timedelta(days=365)
+
 
 class TestRollback:
     @pytest.mark.parametrize("error", [SQLAlchemyError("boom"), RuntimeError("bug")])
@@ -257,6 +270,7 @@ class TestConcurrency:
             s2.close()
 
     def test_concurrent_merges_of_same_old_id_do_not_duplicate_or_lose_data(self):
+        """驗的是結果正確（不重複、不遺失），不是鎖：拿掉鎖，行鎖與唯一鍵也會讓它過。驗鎖的是 test_second_merge_waits_for_first_commit。"""
         old, new = uuid4(), uuid4()
         setup_session, setup = _independent_repo()
         s1, r1 = _independent_repo()

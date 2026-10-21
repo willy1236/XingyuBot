@@ -399,7 +399,8 @@ class UserRepository(BaseRepository):
         self.session.exec(update(LinkedAccount).where(LinkedAccount.user_id == old_id).values(user_id=new_id))
 
         # 合併時其他指向 old_id 的 Discord 紀錄一起改指新 ID
-        self.session.exec(update(DiscordIdentity).where(DiscordIdentity.user_id == old_id).values(user_id=new_id))
+        # roles、suspended、username 還是舊域民的值，checked_at 設得很早讓它們下次使用時就重查
+        self.session.exec(update(DiscordIdentity).where(DiscordIdentity.user_id == old_id).values(user_id=new_id, checked_at=datetime.fromtimestamp(0, timezone.utc)))
 
         log.info("merge_user_data: merged", extra={**extra, "playlists": len(playlists), "renamed": renamed})
 
