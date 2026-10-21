@@ -151,7 +151,18 @@ class IdentityResolver:
         return old_id
 
 
+_directory: AccountDirectory | None = None
 _default: IdentityResolver | None = None
+
+
+def _get_directory() -> AccountDirectory:
+    global _directory
+    if _directory is None:
+        from starlib.settings import get_settings
+
+        settings = get_settings()
+        _directory = DomalyzeIdentityClient(settings.AUTH_INTERNAL_URL, settings.AUTH_SERVICE_KEY, twitch_provider=settings.AUTH_TWITCH_PROVIDER)
+    return _directory
 
 
 def _get_default() -> IdentityResolver:
@@ -160,9 +171,7 @@ def _get_default() -> IdentityResolver:
         from starlib.database import sqldb
         from starlib.settings import get_settings
 
-        settings = get_settings()
-        directory = DomalyzeIdentityClient(settings.AUTH_INTERNAL_URL, settings.AUTH_SERVICE_KEY, twitch_provider=settings.AUTH_TWITCH_PROVIDER)
-        _default = IdentityResolver(directory, sqldb, timedelta(seconds=settings.IDENTITY_TTL_SECONDS))
+        _default = IdentityResolver(_get_directory(), sqldb, timedelta(seconds=get_settings().IDENTITY_TTL_SECONDS))
     return _default
 
 
