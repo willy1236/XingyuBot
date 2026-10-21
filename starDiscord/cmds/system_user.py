@@ -56,9 +56,13 @@ class system_user(Cog_Extension):
             for discord_id in sclient.sqldb.get_discord_ids_by_user(identity.user_id):
                 if discord_id != user_dc.id:
                     account_lines.append(f"Discord：<@{discord_id}>")
-            # Twitch 以 auth server 為準，每次即時查；連不上就不顯示。臨時使用者不是域民，不必查
+            # Twitch 以 auth server 為準，每次即時查；連不上就不顯示。臨時使用者不是域民，不必查；
+            # 這次解析剛向 auth server 查過就直接用，不再查第二次
             if identity.is_formal:
-                for passport in await fetch_twitch_passports(user_dc.id):
+                passports = identity.twitch_passports
+                if passports is None:
+                    passports = await fetch_twitch_passports(user_dc.id)
+                for passport in passports:
                     account_lines.append(f"{PLATFORM_DISPLAY_NAME[PlatformType.Twitch]}：{passport.username or passport.subject}")
             for account in sclient.sqldb.get_linked_accounts(identity.user_id):
                 platform = PlatformType(account.platform)
