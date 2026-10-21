@@ -2,7 +2,7 @@
 
 import logging
 from dataclasses import dataclass
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Literal, overload
 from uuid import UUID, uuid4
 
@@ -41,24 +41,32 @@ def _to_identity(record: DiscordIdentity) -> BotIdentity:
 
 
 class IdentityResolver:
-    def __init__(self, directory: AccountDirectory, repo: "UserRepository", ttl: timedelta):
+    def __init__(self, directory: AccountDirectory, repo: "UserRepository", ttl: timedelta, backoff: timedelta = timedelta(minutes=1)):
         self._directory = directory
         self._repo = repo
         self._ttl = ttl
+        # auth server 沒給答案後的一段時間內，有紀錄的人直接沿用，不必每次都等逾時
+        self._backoff = backoff
+        self._unavailable_until: datetime | None = None
 
     async def resolve(self, discord_id: int, *, create: bool = True) -> BotIdentity | None:
         record = self._repo.get_discord_identity(discord_id)
         if record and nowtz() - record.checked_at < self._ttl:
             return _to_identity(record)
 
+        if record and self._unavailable_until and nowtz() < self._unavailable_until:
+            return _to_identity(record)
+
         try:
             account = await self._directory.find_by_discord(discord_id)
         except DirectoryUnavailable as e:
+            self._unavailable_until = nowtz() + self._backoff
             # 沒有明確答案時絕不發臨時 ID，否則已有正式帳號的人會被拆成兩份資料
             if record:
                 return _to_identity(record)
             raise IdentityUnavailable from e
 
+        self._unavailable_until = None
         now = nowtz()
         if account is None:
             if record is None:
