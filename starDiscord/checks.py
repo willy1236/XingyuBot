@@ -7,6 +7,7 @@ from starlib import sqldb
 from starlib.database import PrivilegeLevel
 from starlib.database.postgresql.cache import _MISSING, TTLCache
 from starlib.database.postgresql.models import CloudUser, HappycampVIP
+from starlib.identity import BotIdentity, IdentityUnavailable, resolve_identity
 
 from .uiElement.view import RegisterView
 
@@ -85,6 +86,33 @@ def ensure_registered():
                 embed = discord.Embed(title="📝 註冊帳號", description="歡迎使用本服務！在開始之前，請先建立新帳號或綁定原有帳號", color=discord.Color.blue())
                 await ctx.respond(embed=embed, view=view, ephemeral=True)
                 return  # 中斷執行，不進入原本的指令內容
+
+        return wrapper
+
+    return decorator
+
+
+class IdentityContext(discord.ApplicationContext):
+    """
+    經過 with_identity() 的指令會多一個屬性 identity，代表該 Discord 帳號對應的使用者 ID
+    指令的 ctx 參數類型應設定為 IdentityContext，以便在指令內使用 ctx.identity
+    """
+
+    identity: BotIdentity
+
+
+def with_identity():
+    """取得使用者 ID 後才進入指令；沒註冊的人拿到臨時 ID，auth server 連不上又沒有紀錄時回覆稍後再試"""
+
+    def decorator(func):
+        @functools.wraps(func)
+        async def wrapper(cog, ctx: discord.ApplicationContext, *args, **kwargs):
+            try:
+                ctx.identity = await resolve_identity(ctx.author.id)
+            except IdentityUnavailable:
+                await ctx.respond("身分服務暫時無法連線，請稍後再試", ephemeral=True)
+                return
+            return await func(cog, ctx, *args, **kwargs)
 
         return wrapper
 
