@@ -405,7 +405,7 @@ T-03、T-05 技術上只依賴 T-01，建議等 T-02 先跑通 auth server 再�
 
 **風險 / 實作注意**：dry-run 報告保留一份，之後設定權限身分組時照它把管理員加回去。
 
-**進度**：實作完成，尚未上線（2026-10-21）
+**進度**：已上線（2026-10-21）
 - commit：0e129da、283f911、899c512，審查修正 7a3bebf、42cdde5
 - 使用者決定：
   - 撞號時誰的資料留下、沒有 Discord 列的 `cloud_user` 有資料、雲端資料夾只填一半，都視為不會發生：腳本遇到就中止並列出，不自行取捨（撞號仍照 T-07 合併，`cloud_user.id` 小的直接轉，其餘先轉到暫用 ID 再 `merge_user_data`）。
@@ -421,10 +421,11 @@ T-03、T-05 技術上只依賴 T-01，建議等 T-02 先跑通 auth server 再�
   - `--dry-run` 不改資料，但新版 code import 時 `create_all` 會先建好空的 `discord_identity`、`linked_account`、`drive_share`。
   - 上線步驟 3 跑腳本前要先切到新版 code（腳本靠新版 model），bot 維持停止，跑完才啟動。
   - 合併時捨棄的 NetBird／綁定／雲端資料夾會讓合併後筆數少於轉換前；腳本在合併前嚴格比對筆數，合併後只比對歌單、歌曲、來源。正式資料目前沒有撞號。
-- 未驗：
-  - 本機的「正式／臨時」是假 auth server 模擬的；真實結果要上線時在 shark 先跑 `--dry-run` 看報告。
-  - 第 3、6 條要在真 bot 上實測。
-  - `/etc/xingyubot/env` 的兩個變數、shark-ansible `docs/deploy-checklist.md`、上線五步驟都還沒做。
+- 上線紀錄（2026-10-21）：`/etc/xingyubot/env` 補上兩個變數（第一次填的金鑰少一個字元，auth server 回 401、dry-run 中止且資料庫未變動，改由指令直接從 auth.env 取值後通過）→ 備份 → 停 bot → 部署 `3db9dd1` → dry-run → 正式轉換 → 啟動。30 個 `cloud_user` 中正式 1、臨時 29，沒有撞號、沒有略過，筆數前後相符。報告存在 shark 的 `~/identity-dry-run.json`、`~/identity-migration.json`。
+- 上線順序與卡片不同：先停 bot 再 push `main`，因為 service 每次啟動前會 `git pull` 且 `Restart=on-failure`，提早 push 的話 bot 一當掉就會拉新版、在舊 schema 上發臨時 ID，轉換腳本就會中止。
+- shark-ansible `docs/deploy-checklist.md` 不用改：XingyuBot 段寫的是「變數見 `.env.example`」，切換步驟只跑一次。
+- 待處理：管理員 cloud_user 1 的 `roles` 為空、cloud_user 6 尚未註冊；`PRIVILEGE_ROLES` 設定好之前 bot 裡沒有管理員。
+- 未驗：第 3、6 條要在真 bot 上實測。
 
 ## 開工前待決
 
