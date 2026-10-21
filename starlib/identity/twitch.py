@@ -1,13 +1,10 @@
-"""用 Twitch user ID 查域民：只以 auth server 為準，不寫入也不保存任何資料。"""
+"""Twitch 與域民互查：用 Twitch ID 查是不是域民，用 Discord ID 查域民連結的 Twitch；只以 auth server 為準，不寫入也不保存任何資料。"""
 
-import logging
 from dataclasses import dataclass
 from uuid import UUID
 
 from .client import DirectoryUnavailable, LinkedPassport
-from .resolver import _get_directory
-
-log = logging.getLogger(__name__)
+from .resolver import _get_default, _get_directory
 
 
 @dataclass(frozen=True)
@@ -43,11 +40,6 @@ async def lookup_twitch_member(twitch_id: str | int) -> TwitchLookup:
 async def fetch_twitch_passports(discord_id: int) -> tuple[LinkedPassport, ...]:
     """用 Discord ID 即時向 auth server 查該域民連結的 Twitch，順序同 auth server 回傳。
 
-    不 raise；查無此人回空 tuple，auth server 連不上、逾時等沒得到明確答案時也回空 tuple 並記 log。
+    不 raise；查無此人、停權中、auth server 連不上或逾時（與身分解析共用 backoff）都回空 tuple。
     """
-    try:
-        account = await _get_directory().find_by_discord(discord_id)
-    except DirectoryUnavailable:
-        log.warning("identity: twitch passports unavailable", extra={"discord_id": discord_id})
-        return ()
-    return () if account is None else account.twitch_passports
+    return await _get_default().fetch_twitch_passports(discord_id)
