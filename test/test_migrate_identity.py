@@ -304,3 +304,45 @@ class TestSafety:
 
         with pytest.raises(MigrationAborted, match="雲端資料夾"):
             run(repo, directory, dry_run=False)
+
+    @pytest.mark.parametrize(
+        ("platform", "external_ids", "problem"),
+        [
+            (PlatformType.Steam, ["steam-a"], "平台不是"),
+            (PlatformType.Twitch, [None], "external_id 是空的"),
+            (PlatformType.Discord, ["not-a-number"], "不是數字"),
+            (PlatformType.Twitch, ["tw-a", "tw-b"], "兩筆同平台"),
+        ],
+    )
+    def test_legacy_rows_new_tables_cannot_hold_abort(self, repo, directory, platform, external_ids, problem):
+        cid = cloud_user(repo, 101)
+        for external_id in external_ids:
+            repo.session.execute(
+                text("INSERT INTO users.external_account (user_id, platform, external_id) VALUES (:u, :p, :e)"),
+                {"u": cid, "p": platform, "e": external_id},
+            )
+        repo.session.commit()
+
+        with pytest.raises(MigrationAborted, match=problem):
+            run(repo, directory, dry_run=False)
+        assert user_id_type(repo) == "integer"
+
+
+class TestReport:
+    def test_suspension_is_carried_over(self, repo, directory):
+        cloud_user(repo, 101)
+        directory.accounts[101] = _account(suspended=True)
+
+        run(repo, directory, dry_run=False)
+
+        assert repo.get_discord_identity(101).suspended is True
+
+    def test_top_playlist_users(self, repo, directory):
+        cids = [cloud_user(repo, 100 + i) for i in range(7)]
+        for i, cid in enumerate(cids):
+            for n in range(i):
+                legacy_playlist(repo, cid, f"list {n}")
+
+        report = run(repo, directory, dry_run=True)
+
+        assert [u.cloud_user_id for u in report.top_playlist_users] == cids[:1:-1]

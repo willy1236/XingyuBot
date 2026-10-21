@@ -8,7 +8,9 @@
 - 每個 cloud_user 的主帳號是 external_account.id 最小的 Discord 列；主帳號查得到域民就轉到 account_id，查不到發臨時 ID。
 - 兩個 cloud_user 的主帳號屬於同一位域民時，cloud_user.id 小的直接轉，其餘先轉到暫用 ID 再 merge_user_data。
 - 先查完所有人才寫入；auth server 沒給出明確答案就中止，不發任何臨時 ID。
-- 整個轉換在單一交易內，--dry-run 跑完整流程後 rollback。舊表以 raw SQL 讀取，不依賴舊 model。
+- 整個轉換在單一交易內，--dry-run 跑完整流程後 rollback，資料不變；新表若還不存在，import 時會先建好空表。
+- 舊表有新表收不下的資料（平台不在名單、external_id 為空、同人同平台兩筆）就中止並列出，不自行取捨。
+- 舊表以 raw SQL 讀取，不依賴舊 model。
 """
 
 from __future__ import annotations
@@ -65,6 +67,19 @@ FROM users.cloud_user c
 ORDER BY c.id
 """
 
+# 舊 schema 允許、新表收不下或腳本沒有規則處理的資料；有命中就中止並列出 external_account.id
+LEGACY_CHECKS = {
+    "平台不是 Discord／Twitch／Google／Minecraft": (
+        "SELECT id FROM users.external_account WHERE platform IS NULL OR NOT (platform = :discord OR platform = ANY(:platforms)) ORDER BY id"
+    ),
+    "external_id 是空的": "SELECT id FROM users.external_account WHERE external_id IS NULL ORDER BY id",
+    "Discord 的 external_id 不是數字": "SELECT id FROM users.external_account WHERE platform = :discord AND external_id !~ '^[0-9]+$' ORDER BY id",
+    "同一個 cloud_user 有兩筆同平台綁定": (
+        "SELECT id FROM users.external_account e WHERE platform = ANY(:platforms) AND EXISTS "
+        "(SELECT 1 FROM users.external_account o WHERE o.user_id = e.user_id AND o.platform = e.platform AND o.id <> e.id) ORDER BY id"
+    ),
+}
+
 CONVERT = [
     "CREATE TEMP TABLE identity_map (cloud_user_id integer PRIMARY KEY, user_id uuid NOT NULL) ON COMMIT DROP",
     "INSERT INTO identity_map VALUES (:cloud_user_id, :user_id)",
@@ -112,6 +127,7 @@ class UserResult:
     is_formal: bool = False
     username: str | None = None
     roles: tuple[str, ...] = ()
+    suspended: bool = False
     # 與 cloud_user.id 較小的人屬於同一位域民，資料先轉到暫用 ID 再併入 user_id
     merged: bool = False
     counts: dict[str, int] = field(default_factory=dict)
@@ -127,6 +143,12 @@ class Report:
     @property
     def admins(self) -> list[UserResult]:
         return [u for u in self.users if u.privilege_level > 0]
+
+    @property
+    def top_playlist_users(self) -> list[UserResult]:
+        """歌單最多的 5 位，轉換後抽查用"""
+        owners = [u for u in self.users if u.counts.get("playlists")]
+        return sorted(owners, key=lambda u: -u.counts["playlists"])[:5]
 
     @property
     def skipped(self) -> list[UserResult]:
@@ -171,7 +193,13 @@ def _load_legacy_users(session) -> list[UserResult]:
         if session.execute(text(f"SELECT exists(SELECT 1 FROM users.{table})")).scalar():
             raise MigrationAborted(f"users.{table} 已有資料，轉換前應為空表")
 
-    rows = session.execute(text(LEGACY_USERS), {"discord": PlatformType.Discord, "platforms": list(LINKED_PLATFORMS)}).mappings()
+    params = {"discord": PlatformType.Discord, "platforms": list(LINKED_PLATFORMS)}
+    for problem, query in LEGACY_CHECKS.items():
+        ids = session.execute(text(query), params).scalars().all()
+        if ids:
+            raise MigrationAborted(f"external_account {problem}：id {ids}")
+
+    rows = session.execute(text(LEGACY_USERS), params).mappings()
     users = []
     for r in rows:
         counts = {k: r[k] for k in ("playlists", "netbird", "linked", "drive")}
@@ -200,6 +228,7 @@ async def _assign_ids(users: list[UserResult], directory: AccountDirectory) -> N
         u.is_formal = True
         u.username = account.username
         u.roles = account.roles
+        u.suspended = account.suspended
         u.merged = account.account_id in owners
         owners.add(account.account_id)
 
@@ -231,7 +260,7 @@ def _write(session, users: list[UserResult], before: dict[str, int]) -> list[tup
                 is_formal=u.is_formal,
                 username=u.username,
                 roles=list(u.roles),
-                suspended=False,
+                suspended=u.suspended,
                 checked_at=checked_at,
             )
         )
@@ -280,6 +309,10 @@ def format_report(report: Report) -> str:
     for u in report.admins:
         account = u.username or ("已註冊" if u.is_formal else "未註冊")
         lines.append(f"cloud_user {u.cloud_user_id}  Level {u.privilege_level}  discord {u.discord_id}  析域帳號 {account}  roles {list(u.roles)}")
+    lines.append("")
+    lines.append("== 歌單最多的使用者（抽查用）==")
+    for u in report.top_playlist_users:
+        lines.append(f"cloud_user {u.cloud_user_id}  discord {u.discord_id}  歌單 {u.counts['playlists']}")
     if report.skipped:
         lines.append("")
         lines.append("== 沒有 Discord 帳號而略過的 cloud_user ==")
@@ -292,6 +325,8 @@ def main() -> int:
     parser.add_argument("--dry-run", action="store_true", help="跑完整流程後 rollback，資料庫不變")
     parser.add_argument("--report", type=Path, help="另存一份 JSON 報告")
     args = parser.parse_args()
+    if args.report and not args.report.parent.is_dir():
+        parser.error(f"報告目錄不存在：{args.report.parent}")
 
     from starlib import sqldb
     from starlib.identity import DomalyzeIdentityClient
@@ -303,6 +338,9 @@ def main() -> int:
         report = asyncio.run(migrate(sqldb, directory, dry_run=args.dry_run))
     except MigrationAborted as e:
         print(f"轉換中止，資料庫沒有變動：{e}", file=sys.stderr)
+        return 1
+    except Exception as e:
+        print(f"轉換失敗，已 rollback，資料庫沒有變動：{e!r}", file=sys.stderr)
         return 1
     print(format_report(report))
     if args.report:
