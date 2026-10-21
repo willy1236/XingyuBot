@@ -240,7 +240,16 @@ class TestMinecraftCommand:
 
 
 class TestVpnCommand:
-    def test_vpn_works_for_unregistered(self, monkeypatch, cog_repo, temp_identity):
+    """vpn 只用 Discord ID，不掛身分 decorator：不需要 identity，auth server 連不上也照常運作。"""
+
+    @pytest.fixture(autouse=True)
+    def identity_must_not_be_resolved(self, monkeypatch):
+        async def boom(discord_id, *, create=True):
+            raise AssertionError("vpn 不應該解析身分")
+
+        monkeypatch.setattr(checks, "resolve_identity", boom)
+
+    def test_vpn_with_records(self, monkeypatch, cog_repo):
         now = nowtz()
         record = UserIPDetails(ip="26.0.0.1", last_seen=now, discord_id=1, registration_at=now)
         monkeypatch.setattr(cog_repo, "get_user_ip_details", lambda discord_id: [record])
@@ -249,29 +258,40 @@ class TestVpnCommand:
         call(GAME.vpn, make_cog(GAME), ctx)
         assert ctx.responses[-1].content == "查詢成功"
 
-    def test_vpn_without_records(self, monkeypatch, cog_repo, temp_identity):
+    def test_vpn_without_records(self, monkeypatch, cog_repo):
         monkeypatch.setattr(cog_repo, "get_user_ip_details", lambda discord_id: [])
         ctx = FakeCtx()
         call(GAME.vpn, make_cog(GAME), ctx)
         assert "查無登記資料" in ctx.text
 
+
+class TestIdentityUnavailable:
     def test_identity_unavailable_stops_before_command(self, monkeypatch, cog_repo):
         async def down(discord_id, *, create=True):
             raise IdentityUnavailable()
 
         monkeypatch.setattr(checks, "resolve_identity", down)
         ctx = FakeCtx()
-        call(GAME.vpn, make_cog(GAME), ctx)
+        call(GAME.netbird, make_cog(GAME), ctx)
         assert "暫時無法連線" in ctx.text
 
 
-@pytest.mark.parametrize("command", [GAME.radmin, GAME.zerotier, GAME.netbird_setup, GAME.netbird, GAME.vpn, GAME.minecraft_set, DRIVE_COG.drive])
+@pytest.mark.parametrize("command", [GAME.netbird_setup, GAME.netbird, GAME.minecraft_set, DRIVE_COG.drive])
 def test_commands_use_with_identity(command):
     """靜態斷言：decorator 已換成 with_identity，不再走 ensure_registered。"""
     wrapper_code = command.callback.__code__
     assert wrapper_code.co_filename.endswith("checks.py")
     assert "resolve_identity" in wrapper_code.co_names
     assert "RegisterView" not in wrapper_code.co_names
+
+
+@pytest.mark.parametrize("command", [GAME.radmin, GAME.zerotier, GAME.vpn])
+def test_discord_id_only_commands_have_no_identity_decorator(command):
+    """靜態斷言：只用 Discord ID 的指令不掛任何身分 decorator，停權或 auth server 異常都不影響。"""
+    code = command.callback.__code__
+    assert not code.co_filename.endswith("checks.py")
+    assert "resolve_identity" not in code.co_names
+    assert "RegisterView" not in code.co_names
 
 
 class TestDriveCommand:

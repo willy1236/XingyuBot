@@ -315,10 +315,9 @@ class system_game(Cog_Extension):
 
 
     @game.command(description="註冊Radmin VPN帳號", name_localizations=ChoiceList.name("game_radmin"))
-    @with_identity()
     async def radmin(
         self,
-        ctx: IdentityContext,
+        ctx: discord.ApplicationContext,
         ip_str: discord.Option(
             str,
             name="ipv4位置",
@@ -356,10 +355,9 @@ class system_game(Cog_Extension):
         await ctx.respond(f"{ctx.author.mention} 註冊成功，IP：`{ip.network_address}`，使用者名稱：`{name if name else '未登記'}`", ephemeral=True)
 
     @game.command(description="註冊ZeroTier帳號", name_localizations=ChoiceList.name("game_zerotier"))
-    @with_identity()
     async def zerotier(
         self,
-        ctx: IdentityContext,
+        ctx: discord.ApplicationContext,
         address_str: discord.Option(
             str,
             name="address",
@@ -446,8 +444,7 @@ class system_game(Cog_Extension):
         await ctx.respond("查詢成功", embed=embed, ephemeral=True)
 
     @game.command(description="查詢VPN登記資料", name_localizations=ChoiceList.name("game_vpn"))
-    @with_identity()
-    async def vpn(self, ctx: IdentityContext):
+    async def vpn(self, ctx: discord.ApplicationContext):
         await ctx.defer(ephemeral=True)
         records = sclient.sqldb.get_user_ip_details(ctx.author.id)
         if not records:
