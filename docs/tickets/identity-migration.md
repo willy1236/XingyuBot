@@ -1,6 +1,6 @@
 # XingyuBot 使用者身分改接 auth server 任務拆解
 
-來源規格：[docs/identity-migration-spec.md](../identity-migration-spec.md)
+來源規格：[docs/spec/identity-migration-spec.md](../spec/identity-migration-spec.md)
 
 ## 現況與前提
 

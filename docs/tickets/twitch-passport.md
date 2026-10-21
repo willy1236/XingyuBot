@@ -1,6 +1,6 @@
 # XingyuBot 的 Twitch 綁定與實況主授權改接 auth server 任務拆解
 
-來源規格：[docs/twitch-passport-spec.md](../twitch-passport-spec.md)
+來源規格：[docs/spec/twitch-passport-spec.md](../spec/twitch-passport-spec.md)
 
 ## 現況與前提
 
