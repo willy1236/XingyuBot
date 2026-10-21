@@ -40,6 +40,7 @@ dev = [
     "pytest>=8.4.1",
     "pytest-cov>=6.2.1",
     "pytest-mock>=3.14.1",
+    "ruff>=0.17.1",
 ]
 
 [tool.pytest.ini_options]
@@ -47,3 +48,21 @@ pythonpath = ["."]
 markers = [
     "integration: tests that call external services or require live credentials",
 ]
+
+[tool.ruff]
+target-version = "py314"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "UP", "B"]
+ignore = [
+    # FastAPI Depends、discord.Option 都必須寫在參數預設值
+    "B008",
+    # TODO: 既有大量 import *，改成明確 import 後再移除
+    "F403",
+    "F405",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# pytest fixture 以參數注入，會被誤判為重複定義
+"test/**" = ["F811"]
