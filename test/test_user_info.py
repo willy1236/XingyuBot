@@ -14,7 +14,7 @@ from starlib.database import DiscordIdentity, DriveShare, PlatformType
 from starlib.identity import IdentityResolver, LinkedPassport
 from starlib.identity import twitch as twitch_module
 from starlib.utils import nowtz
-from test_identity import TTL, FakeDirectory, _account, repo  # noqa: F401  (repo 為 fixture)
+from test_identity import TTL, FakeDirectory, _account, expire, repo  # noqa: F401  (repo 為 fixture)
 
 CALLER = 900000000000000010
 TARGET = 900000000000000011
@@ -50,9 +50,11 @@ class FakeCtx:
         self.guild_id = 0
         self.responses: list[SimpleNamespace] = []
         self.deferred = False
+        self.events: list[str] = []
 
     async def defer(self, **kwargs):
         self.deferred = True
+        self.events.append("defer")
 
     async def respond(self, content=None, **kwargs):
         self.responses.append(SimpleNamespace(content=content, **kwargs))
@@ -87,9 +89,9 @@ def env(monkeypatch, repo, directory):
     monkeypatch.setattr(checks, "resolve_identity", resolver.resolve)
     monkeypatch.setattr(user_cog, "resolve_identity", resolver.resolve)
     monkeypatch.setattr(user_cog, "sclient", SimpleNamespace(sqldb=repo))
-    # 即時查 Twitch 走真實的 fetch_twitch_passports，只把 auth server 換成假的
-    monkeypatch.setattr(twitch_module, "_get_directory", lambda: directory)
-    return SimpleNamespace(repo=repo, directory=directory)
+    # 即時查 Twitch 走真實的 fetch_twitch_passports，只把解析器換成用假 auth server 的那個
+    monkeypatch.setattr(twitch_module, "_get_default", lambda: resolver)
+    return SimpleNamespace(repo=repo, directory=directory, resolver=resolver)
 
 
 def run(ctx: FakeCtx, target=None):
@@ -134,8 +136,51 @@ class TestUserInfoCommand:
         assert f"<@{CALLER}>" not in text  # 被查的帳號自己不列
         assert "NotMine" not in text
 
-    def test_command_defers_before_slow_lookups(self, env):
-        assert run(FakeCtx()).deferred
+    def test_command_defers_before_slow_lookups(self, env, monkeypatch):
+        env.directory.accounts[CALLER] = _account(twitch_passports=(LinkedPassport("1", "streamer"),))
+        run(FakeCtx())  # 先有紀錄，之後 TTL 內解析不查 auth server，Twitch 才會走即時查
+        ctx = FakeCtx()
+        original = user_cog.fetch_twitch_passports
+
+        async def spy_fetch(discord_id):
+            ctx.events.append("fetch_twitch")
+            return await original(discord_id)
+
+        monkeypatch.setattr(user_cog, "fetch_twitch_passports", spy_fetch)
+
+        run(ctx)
+
+        assert ctx.deferred
+        assert ctx.events == ["defer", "fetch_twitch"]
+
+    def test_expired_ttl_reuses_twitch_from_same_resolution(self, env):
+        env.directory.accounts[CALLER] = _account(twitch_passports=(LinkedPassport("1", "streamer"),))
+
+        ctx = run(FakeCtx())
+
+        assert "Twitch：streamer" in ctx.account_text
+        assert env.directory.calls == 1  # 解析時已查到，不再為 Twitch 查第二次
+
+    def test_directory_down_backoff_is_shared_with_twitch_lookup(self, env):
+        env.directory.accounts[CALLER] = _account(twitch_passports=(LinkedPassport("1", "streamer"),))
+        run(FakeCtx())
+        expire(env.repo, CALLER)
+        env.directory.unavailable = True
+        calls = env.directory.calls
+
+        ctx = run(FakeCtx())
+
+        assert "Twitch" not in ctx.account_text
+        assert env.directory.calls == calls + 1  # 解析連不上後，Twitch 即時查直接略過，不再等一次逾時
+
+    def test_suspended_target_twitch_is_hidden(self, env):
+        env.directory.accounts[TARGET] = _account(username="target", suspended=True, twitch_passports=(LinkedPassport("2", "targetTV"),))
+
+        first = run(FakeCtx(), member(TARGET)).account_text  # 解析時剛查到
+        second = run(FakeCtx(), member(TARGET)).account_text  # TTL 內走即時查
+
+        assert "析域帳號\ntarget" in first
+        assert "targetTV" not in first and "targetTV" not in second
 
     def test_multiple_twitch_passports_listed_in_auth_server_order(self, env):
         env.directory.accounts[CALLER] = _account(twitch_passports=(LinkedPassport("2", "second"), LinkedPassport("1", "first")))
