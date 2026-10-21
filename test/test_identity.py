@@ -60,6 +60,10 @@ class FakeDirectory:
         self.account_unavailable = False
         self.account_calls = 0
 
+    async def find_by_passport(self, provider: str, subject: str) -> Account | None:
+        assert provider == "discord", "resolver 只用 Discord 查"
+        return await self.find_by_discord(int(subject))
+
     async def find_by_discord(self, discord_id: int) -> Account | None:
         self.calls += 1
         if self.unavailable:
@@ -522,7 +526,7 @@ class TestDomalyzeIdentityClient:
 
         assert _find(handler).twitch_passports == ()
 
-    @pytest.mark.parametrize("passports", [[{"subject": "1"}], ["twitch"], 5])
+    @pytest.mark.parametrize("passports", [[{"subject": "1"}], ["twitch"], 5, [{"provider": "twitch", "subject": None}], [{"provider": "twitch", "subject": 111}]])
     def test_malformed_passports_is_unavailable(self, passports):
         async def handler(request):
             return web.json_response({"accountId": str(uuid4()), "passports": passports})
