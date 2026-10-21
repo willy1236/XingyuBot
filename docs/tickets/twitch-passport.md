@@ -13,9 +13,9 @@
   - 實況主授權：`/to/twitchauth` 先要求網站 JWT cookie，再導去 Twitch，state 放 `oauth_state` cookie。`/oauth/twitch` 在身分改接後直接回 503。原本的 callback（commit `283f911` 之前）會 `save_token_to_db(user.id)`、寫 Twitch 綁定、`sqldb.merge(TwitchBotJoinChannel(twitch_id=user.id))`，完成頁提醒 `/mod xingyu1016`。
   - Twitch bot：[twitch_chatbot.py:62](../../starServer/twitch_chatbot.py#L62) 在模組載入時讀 `twitch_bot_join_channel`，所以新頻道要重啟才生效。`TwitchBotJoinChannel` 除了 `twitch_id` 還有 `action_channel_id`、`point_name`。
 - 這次會動到的既有部位：
-  - `starlib/identity/client.py`、`resolver.py`、`__init__.py`
+  - `starlib/identity/client.py`、`twitch.py`、`__init__.py`
   - `starlib/settings.py`、`.env.example`
-  - `starlib/database/postgresql/models.py`（`DiscordIdentity`、`LinkedAccount` docstring）、`client.py`（`save_discord_identity`）
+  - `starlib/database/postgresql/models.py`（`LinkedAccount` docstring）
   - `starDiscord/cmds/system_user.py`
   - `starServer/bot_website.py`（`/to/twitchauth`、`/oauth/twitch`）
   - `test/test_identity.py`、`test/test_user_info.py`
@@ -23,7 +23,7 @@
 - 已定案的技術前提：
   - Twitch 與域民的對應只以 auth server 為準，bot 不寫入也不保存 Twitch 綁定；Minecraft、Google 留在 `linked_account`。
   - 用 Twitch 查域民分三種結果：是域民、不是域民（含查無此人與停權）、暫時無法確認。查不到不發臨時 ID。
-  - `/user_info` 的 Twitch 最遲 1 小時反映；查自己時 auth server 連不上就顯示最近一次取得的結果。
+  - `/user_info` 的 Twitch 不存進 bot 的資料庫，每次執行時即時向 auth server 查，連結或解除後立即反映；auth server 連不上就不顯示 Twitch，其他欄位照常。
   - 實況主授權用 XingyuBot 自己的 Twitch app，不經過 auth server；不需網站登入，但 state 驗證保留；必須是域民，新登記與重新授權同一規則；無法確認時不保存、不登記；不寫任何身分綁定；已登記頻道不追溯。
   - 新頻道 Twitch bot 重啟後才生效。
   - `linked_account` 的 2 筆 Twitch 綁定上線時直接刪除，不搬；不設退回方案。
@@ -35,10 +35,11 @@
 ```mermaid
 flowchart LR
     UI["/user_info"] -->|resolve_identity| R[IdentityResolver]
-    R --> DB[(discord_identity<br/>+ twitch_passports)]
+    UI -->|fetch_twitch_passports| L
+    R --> DB[(discord_identity)]
     R -->|find_by_discord| A[DomalyzeIdentityClient]
     CB["/oauth/twitch"] -->|lookup_twitch_member| L[starlib/identity]
-    L -->|find_by_passport twitch| A
+    L -->|find_by_passport twitch<br/>find_by_discord| A
     A -->|GET /v1/passports/provider/subject| AUTH[auth server 127.0.0.1:8002]
     CB -->|域民才寫| TB[(oauth token<br/>twitch_bot_join_channel)]
 ```
@@ -60,7 +61,7 @@ flowchart TD
     T03 --> T04
 ```
 
-T-02 改 `bot_website.py`，T-03 改 `resolver.py`、`discord_identity` 與 `system_user.py`，部位不重疊。
+T-02 改 `bot_website.py`，T-03 改 `starlib/identity/twitch.py` 與 `system_user.py`，部位不重疊。
 
 ## 任務卡
 
@@ -70,7 +71,7 @@ T-02 改 `bot_website.py`，T-03 改 `resolver.py`、`discord_identity` 與 `sys
 
 **範圍**
 - 包含：auth server 回應的 `passports` 解析、`find_by_passport`、`lookup_twitch_member()`、provider 設定、上線前檢查。
-- 不包含：把 Twitch 清單存進 `discord_identity`（T-03）；授權流程（T-02）；查詢結果的快取，之後 Twitch 端功能需要時再加。
+- 不包含：`/user_info` 即時取 Twitch 清單（T-03）；授權流程（T-02）；查詢結果的快取，之後 Twitch 端功能需要時再加。
 
 **驗收條件**
 - [x] 用已連結到域民的 Twitch ID 查詢，回 `TwitchMember`，`account_id` 是該域民。
@@ -178,33 +179,33 @@ sequenceDiagram
 
 ### T-03 `/user_info` 顯示 auth server 上連結的 Twitch
 
-**使用者價值**：域民在 auth server 帳號頁連結或解除 Twitch 後，1 小時內 `/user_info` 跟著變；看到的 Twitch 綁定與 auth server 一致，不再是 bot 自己的那份。
+**使用者價值**：域民在 auth server 帳號頁連結或解除 Twitch 後，`/user_info` 立刻跟著變；看到的 Twitch 綁定與 auth server 一致，不再是 bot 自己的那份。
 
 **範圍**
-- 包含：`discord_identity` 存 Twitch 清單、resolver 寫入、`/user_info` 改讀。
+- 包含：`starlib/identity` 新增即時查 Twitch 清單的函式、`/user_info` 改讀它。
 - 不包含：刪除 `linked_account` 的 Twitch 列（T-04）；Minecraft、Google 的來源（不變）。
 
 **驗收條件**
-- [ ] 本人在 auth server 連結 Twitch 後，1 小時內 `/user_info` 的「綁定的帳號」出現「Twitch：<auth server 存的顯示名稱>」；解除連結後 1 小時內消失。
-- [ ] 連結兩個 Twitch 時兩個都列出。
+- [ ] 本人在 auth server 連結 Twitch 後，下一次 `/user_info` 的「綁定的帳號」就出現「Twitch：<auth server 存的顯示名稱>」；解除連結後下一次就消失。
+- [ ] 連結兩個 Twitch 時兩個都列出，順序同 auth server 回傳。
 - [ ] 查別人時也看得到對方的 Twitch。
-- [ ] 查自己時 auth server 連不上：顯示最近一次取得的 Twitch；從沒取得過就不顯示 Twitch。
+- [ ] auth server 連不上時不顯示 Twitch，其他欄位照常。
 - [ ] 臨時使用者沒有 Twitch 列。
 - [ ] `linked_account` 裡還留著的 Twitch 列不會出現在 `/user_info`，Minecraft、Google 照舊顯示，格式與 Twitch 一致。
 
 **實作設計**
-- 資料：`users.discord_identity` 加欄位 `twitch_passports` JSONB，`NOT NULL DEFAULT '[]'`，內容是 `[{"subject": ..., "username": ...}]`。既有表要手動 `ALTER TABLE`，SQL 寫進 T-04 的上線步驟。
-- 後端：
-  - `DiscordIdentity` model 加欄位；`BotIdentity` 加 `twitch_passports: tuple[LinkedPassport, ...]`，`_to_identity` 轉換。
-  - `IdentityResolver.resolve` 查到域民時把 `account.twitch_passports` 一併存進紀錄；404 時清成空（臨時 ID 或正式轉查無此人）。連不上時沿用紀錄，所以「最近一次取得的結果」自然成立。
-  - 刷新沿用既有 TTL（`IDENTITY_TTL_SECONDS` 3600），不另設計時器。
-- 前端（`system_user.py`）：「綁定的帳號」先列 `identity.twitch_passports`（`username` 為空時顯示 subject），再列 `get_linked_accounts()` 但跳過 `PlatformType.Twitch` 的列。
+- 資料：無新欄位，bot 不保存 Twitch 清單。
+- 後端：`starlib/identity/twitch.py` 新增 `fetch_twitch_passports(discord_id: int) -> tuple[LinkedPassport, ...]`，用 `_get_directory().find_by_discord` 回的 `Account.twitch_passports`。查無此人回空 tuple；auth server 連不上、逾時等沒得到明確答案時也回空 tuple 並記 log，不 raise。`__init__.py` 匯出。
+- 前端（`system_user.py`）：
+  - 指令開頭 `await ctx.defer()`：身分查詢加上即時查 Twitch，可能超過 Discord 的 3 秒回應期限。
+  - 「綁定的帳號」在 Discord 帳號之後先列即時查到的 Twitch（`username` 為空時顯示 subject），再列 `get_linked_accounts()` 但跳過 `PlatformType.Twitch` 的列。
+  - 只有 `identity.is_formal` 才查；臨時使用者、查無此人、身分服務暫時無法連線都不查。查別人時用被查者的 Discord ID。
 
 **依賴**：T-01（`Account.twitch_passports`、`LinkedPassport`）
 
 **風險 / 實作注意**：
-- 一位域民有兩個 Discord 帳號時，兩筆紀錄各自刷新，最多 1 小時內看到的 Twitch 清單可能不同，在規格的 1 小時容許內。
-- `merge_user_data` 改指 `discord_identity` 時不必處理這個欄位，`checked_at` 歸零後下次使用就會重抓。
+- 每次 `/user_info` 對正式域民多一次 auth server 請求，逾時沿用 1.5 秒；有 `defer` 所以不受 3 秒期限限制。
+- 身分紀錄在 TTL 內仍認為是正式域民、但 auth server 已查無此人時，即時查回空 tuple，不顯示 Twitch。
 
 **進度**：未完成
 
@@ -213,7 +214,7 @@ sequenceDiagram
 **使用者價值**：上線後 bot 資料庫裡沒有 Twitch 綁定、也沒有程式會再寫入，Twitch 與域民的對應只剩 auth server 一份。
 
 **範圍**
-- 包含：上線前檢查、`discord_identity` 加欄位、刪除 2 筆 Twitch 綁定、確認沒有寫入入口、部署與驗收、deploy checklist。
+- 包含：上線前檢查、刪除 2 筆 Twitch 綁定、確認沒有寫入入口、部署與驗收、deploy checklist。
 - 不包含：Minecraft、Google 綁定（維持在 bot）。
 
 **驗收條件**
@@ -224,11 +225,9 @@ sequenceDiagram
 - [ ] 已登記頻道在部署重啟後照常運作。
 
 **實作設計**
-- 資料（部署時依序執行）：
-  1. `ALTER TABLE users.discord_identity ADD COLUMN twitch_passports JSONB NOT NULL DEFAULT '[]';`
-  2. 刪除前先 `SELECT` 確認只有 2 筆且都是本人的 `user_id`，再 `DELETE FROM users.linked_account WHERE platform = 2;`
+- 資料（部署時執行）：刪除前先 `SELECT` 確認只有 2 筆且都是本人的 `user_id`，再 `DELETE FROM users.linked_account WHERE platform = 2;`。沒有 schema 變更。
 - 後端：`upsert_linked_account` 收到 `PlatformType.Twitch` 時 raise `ValueError`，防止日後有人再接回寫入。`scripts/migrate_identity.py` 的 `LINKED_PLATFORMS` 是已跑完的一次性轉換，不改。
-- 部署：shark-ansible `docs/deploy-checklist.md` 的 XingyuBot 段補上 `AUTH_TWITCH_PROVIDER` 與上面兩段 SQL。
+- 部署：shark-ansible `docs/deploy-checklist.md` 的 XingyuBot 段補上 `AUTH_TWITCH_PROVIDER` 與上面的 SQL。
 
 **依賴**：T-02、T-03（兩者都上線後才刪資料、做端到端驗收）
 
