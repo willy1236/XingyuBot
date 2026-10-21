@@ -504,13 +504,27 @@ class McsmInstance(BaseModel):
         return self.config.nickname
 
     @property
-    def port(self) -> int:
-        return self.config.pingConfig.port
+    def port(self) -> int | None:
+        # 優先使用 tag 手動指定的連接埠，格式為 "port:15637"
+        for tag in self.config.tag:
+            if isinstance(tag, str) and tag.lower().startswith("port:"):
+                value = tag.split(":", 1)[1].strip()
+                if value.isdigit():
+                    return int(value)
+        # pingConfig 只用於 Minecraft ping，非 MC instance 也會留著預設的 25565，不能當作實際連接埠
+        if self.config.type.startswith("minecraft"):
+            return self.config.pingConfig.port
+        # docker.ports 格式為 "主機埠:容器埠/協定"，取第一個主機埠
+        if self.config.processType == "docker" and self.config.docker.ports:
+            host_port = self.config.docker.ports[0].split(":")[0]
+            if host_port.isdigit():
+                return int(host_port)
+        return None
 
     def embed(self):
         embed = BotEmbed.simple(self.name)
         embed.add_field(name="伺服器狀態", value=f"{self.status.value}（{str(self.status)}）")
-        embed.add_field(name="連接埠", value=str(self.port))
+        embed.add_field(name="連接埠", value=str(self.port) if self.port else "未知")
         embed.add_field(name="在線玩家", value=f"{self.info.currentPlayers}/{self.info.maxPlayers}")
         if self.info.mcPingOnline:
             embed.add_field(name="Minecraft版本", value=self.info.version or "未知")

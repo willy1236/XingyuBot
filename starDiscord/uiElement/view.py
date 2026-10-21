@@ -738,14 +738,15 @@ class McServerPanel(discord.ui.View):
 
         if server := mcsm_api.get_server_detail(self.server_id):
             port = server.port
+            suffix = f":{port}" if port else ""
             if port == 25565:
-                port = "25565（預設連接埠可省略）"
+                suffix = ":25565（預設連接埠可省略）"
 
             radmin_ip = find_radmin_vpn_network()
             netbird_ip = find_netbird_network()
 
-            radmin_line = f"Radmin VPN：`{radmin_ip}:{port}`" if radmin_ip else "Radmin VPN：找不到 Radmin VPN IP"
-            netbird_line = f"NetBird：`{netbird_ip}:{port}`" if netbird_ip else "NetBird：找不到 NetBird IP"
+            radmin_line = f"Radmin VPN：`{radmin_ip}{suffix}`" if radmin_ip else "Radmin VPN：找不到 Radmin VPN IP"
+            netbird_line = f"NetBird：`{netbird_ip}{suffix}`" if netbird_ip else "NetBird：找不到 NetBird IP"
 
             await interaction.followup.send(f"{radmin_line}\n{netbird_line}")
         else:
