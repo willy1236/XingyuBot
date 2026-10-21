@@ -7,7 +7,7 @@ from starlib import sqldb
 from starlib.database import PrivilegeLevel
 from starlib.database.postgresql.cache import _MISSING, TTLCache
 from starlib.database.postgresql.models import CloudUser, HappycampVIP
-from starlib.identity import BotIdentity, IdentityUnavailable, resolve_identity
+from starlib.identity import BotIdentity, IdentityUnavailable, privilege_of, resolve_identity
 
 from .uiElement.view import RegisterView
 
@@ -24,18 +24,26 @@ def _get_vip_cached(user_id: int) -> HappycampVIP | None:
     return result  # type: ignore[return-value]
 
 
+class PrivilegeError(commands.CheckFailure, discord.ApplicationCommandError):
+    """權限等級不足。繼承 commands.CheckFailure 才會被 check_any 當成「這項沒過」而繼續看下一項，
+    同時繼承 ApplicationCommandError，單獨使用時 error.py 會直接顯示訊息。"""
+
+
 def has_privilege_level(privilege: PrivilegeLevel):
-    def predicate(ctx: discord.ApplicationContext):
-        cached_user = _user_cache.get(ctx.author.id)
-        if cached_user is not _MISSING:
-            user_privilege = cached_user.privilege_level  # type: ignore[union-attr]
-        else:
-            user_privilege = sqldb.get_cloud_user_privilege(ctx.author.id)
-        if user_privilege >= privilege:
+    """權限等級由 auth server 的身分組決定，對照表見設定 PRIVILEGE_ROLES。可直接放進 commands.check_any。"""
+
+    async def predicate(ctx: discord.ApplicationContext):
+        try:
+            # create=False：只是檢查權限，不替沒用過 bot 的人發臨時 ID
+            identity = await resolve_identity(ctx.author.id, create=False)
+        except IdentityUnavailable:
+            identity = None
+        if privilege_of(identity) >= privilege:
             return True
-        raise discord.ApplicationCommandError(f"權限錯誤：你沒有權限使用此指令，所需權限等級：{privilege.name}（{privilege.value}）")
+        raise PrivilegeError(f"權限錯誤：你沒有權限使用此指令，所需權限等級：{privilege.name}（{privilege.value}）")
 
     return commands.check(predicate)
+
 
 def has_vip():
     def predicate(ctx: discord.ApplicationContext):
