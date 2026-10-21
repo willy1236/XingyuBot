@@ -10,7 +10,7 @@ import pytest
 
 from starDiscord import checks
 from starDiscord.cmds import system_user as user_cog
-from starlib.database import DiscordIdentity, DriveShare, PlatformType
+from starlib.database import DiscordIdentity, DriveShare, LinkedAccount, PlatformType
 from starlib.identity import IdentityResolver, LinkedPassport
 from starlib.identity import twitch as twitch_module
 from starlib.utils import nowtz
@@ -238,7 +238,9 @@ class TestUserInfoCommand:
     def test_leftover_linked_account_twitch_row_is_hidden(self, env):
         account = _account()
         env.directory.accounts[CALLER] = account
-        env.repo.upsert_linked_account(account.account_id, PlatformType.Twitch, "tw-old", "oldstreamer")
+        # 上線前留下的舊資料，直接寫表模擬
+        env.repo.session.add(LinkedAccount(user_id=account.account_id, platform=PlatformType.Twitch, external_id="tw-old", display_name="oldstreamer"))
+        env.repo.commit()
         env.repo.upsert_linked_account(account.account_id, PlatformType.Minecraft, "mc-1", "Steve")
 
         text = run(FakeCtx()).account_text
