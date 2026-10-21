@@ -247,11 +247,16 @@ async def oauth_twitch(request: Request):
         log.info("Twitch OAuth: twitch_id=%s is not a member, refused", user.id)
         return _twitch_oauth_page("請先註冊析域帳號並在帳號頁連結這個 Twitch", 403)
 
-    auth.save_token_to_db(user.id)
-    twitch_id = int(user.id)
-    # 已登記的頻道保留 action_channel_id、point_name，所以沒有才新增，不用 merge
-    if sqldb.get(TwitchBotJoinChannel, (twitch_id,)) is None:
-        sqldb.add(TwitchBotJoinChannel(twitch_id=twitch_id))
+    try:
+        auth.save_token_to_db(user.id)
+        twitch_id = int(user.id)
+        # 已登記的頻道保留 action_channel_id、point_name，所以沒有才新增，不用 merge
+        if sqldb.get(TwitchBotJoinChannel, (twitch_id,)) is None:
+            sqldb.add(TwitchBotJoinChannel(twitch_id=twitch_id))
+    except Exception as exc:
+        capture_exception_safe(exc, tags={"service": "website", "source": "oauth_twitch"})
+        log.exception("Twitch OAuth: saving token or channel failed for twitch_id=%s: %s", user.id, exc)
+        return _twitch_oauth_page("這次授權失敗，請稍後再試", 503)
     log.info("Twitch OAuth: twitch_id=%s authorized as account %s", user.id, lookup.account_id)
 
     return _twitch_oauth_page(

@@ -203,3 +203,30 @@ class TestAuthorizationFailed:
         _assert_state_cookie_deleted(response)
         assert spy.lookup_calls == [] and spy.saved_tokens == []
         assert repo.get(TwitchBotJoinChannel, (TWITCH_ID,)) is None
+
+
+class TestStorageFailure:
+    def test_token_save_error_shows_failure_page(self, client, spy, repo, monkeypatch):
+        def broken_save(self, user_id, token_data=None):
+            raise RuntimeError("db down")
+
+        monkeypatch.setattr(TwitchOAuth, "save_token_to_db", broken_save)
+
+        response = _callback(client, code="c", state=STATE)
+
+        assert response.status_code == 503
+        assert "這次授權失敗，請稍後再試" in response.text
+        _assert_state_cookie_deleted(response)
+        assert repo.get(TwitchBotJoinChannel, (TWITCH_ID,)) is None
+
+    def test_channel_register_error_shows_failure_page(self, client, spy, repo, monkeypatch):
+        def broken_add(*args, **kwargs):
+            raise RuntimeError("db down")
+
+        monkeypatch.setattr(repo, "add", broken_add)
+
+        response = _callback(client, code="c", state=STATE)
+
+        assert response.status_code == 503
+        assert "這次授權失敗，請稍後再試" in response.text
+        _assert_state_cookie_deleted(response)
