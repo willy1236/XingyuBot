@@ -1,9 +1,10 @@
-"""auth server 內部 API：bot 用 Discord ID 查域民。"""
+"""auth server 內部 API：bot 用 Discord ID 或其他平台的通行證查域民。"""
 
 import asyncio
 import logging
 from dataclasses import dataclass
 from typing import Protocol
+from urllib.parse import quote
 from uuid import UUID
 
 import aiohttp
@@ -35,6 +36,10 @@ class DirectoryUnavailable(Exception):
 
 
 class AccountDirectory(Protocol):
+    async def find_by_passport(self, provider: str, subject: str) -> Account | None:
+        """provider 是 auth server 的登入方式代號；查無此人回 None，停權的域民照樣回傳；沒得到明確答案時 raise DirectoryUnavailable"""
+        ...
+
     async def find_by_discord(self, discord_id: int) -> Account | None:
         """查無此人回 None；沒得到明確答案時 raise DirectoryUnavailable"""
         ...
@@ -53,9 +58,13 @@ class DomalyzeIdentityClient:
         self._headers = {"Authorization": f"Bearer {service_key}"}
         self._timeout = aiohttp.ClientTimeout(total=timeout)
 
+    async def find_by_passport(self, provider: str, subject: str) -> Account | None:
+        extra = {"provider": provider, "subject": subject}
+        data = await self._get(f"/v1/passports/{quote(provider, safe='')}/{quote(subject, safe='')}", extra)
+        return None if data is None else self._parse_account(data, extra)
+
     async def find_by_discord(self, discord_id: int) -> Account | None:
-        data = await self._get(f"/v1/passports/discord/{discord_id}", {"discord_id": discord_id})
-        return None if data is None else self._parse_account(data, {"discord_id": discord_id})
+        return await self.find_by_passport("discord", str(discord_id))
 
     async def find_by_account_id(self, account_id: UUID) -> ResolvedAccount | None:
         data = await self._get(f"/v1/accounts/{account_id}", {"account_id": str(account_id)})

@@ -402,7 +402,7 @@ class TestTemporaryIdentityRace:
 
 async def _with_server(handler, call):
     app = web.Application()
-    app.router.add_get("/v1/passports/discord/{id}", handler)
+    app.router.add_get("/v1/passports/{provider}/{id}", handler)
     app.router.add_get("/v1/accounts/{id}", handler)
     runner = web.AppRunner(app)
     await runner.setup()
@@ -473,6 +473,18 @@ class TestDomalyzeIdentityClient:
 
         with pytest.raises(DirectoryUnavailable):
             asyncio.run(client.find_by_discord(DISCORD_ID))
+
+    def test_find_by_passport_encodes_path(self):
+        seen = {}
+
+        async def handler(request: web.Request):
+            seen["path"] = request.raw_path
+            return web.json_response({"detail": "account not found"}, status=404)
+
+        result = asyncio.run(_with_server(handler, lambda client: client.find_by_passport("twitch", "a b/c")))
+
+        assert result is None
+        assert seen["path"] == "/v1/passports/twitch/a%20b%2Fc"
 
 
 def _find_account(handler, account_id: UUID):
