@@ -4,6 +4,7 @@
 """
 
 from .client import Account, AccountDirectory, DirectoryUnavailable, DomalyzeIdentityClient
+from .privilege import privilege_of
 from .resolver import BotIdentity, IdentityResolver, IdentityUnavailable, resolve_identity
 
 __all__ = [
@@ -14,5 +15,6 @@ __all__ = [
     "DomalyzeIdentityClient",
     "IdentityResolver",
     "IdentityUnavailable",
+    "privilege_of",
     "resolve_identity",
 ]
