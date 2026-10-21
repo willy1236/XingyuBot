@@ -15,7 +15,6 @@ from fastapi.openapi.utils import get_openapi
 from fastapi.requests import Request
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response, StreamingResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
-from jose import jwt
 from linebot.v3 import WebhookParser
 from linebot.v3.exceptions import InvalidSignatureError
 from linebot.v3.messaging import ApiClient, Configuration, MessagingApi, ReplyMessageRequest, TextMessage
@@ -27,19 +26,14 @@ from starlib import BaseThread, Jsondb, sclient, sqldb, utils
 from starlib.database import APIType, NotifyCommunityType, TwitchBotJoinChannel
 from starlib.identity import MemberUnknown, TwitchMember, lookup_twitch_member
 from starlib.instance import google_api
-from starlib.oauth import DiscordOAuth, GoogleOAuth, TwitchOAuth
+from starlib.oauth import DiscordOAuth, TwitchOAuth
 from starlib.providers.social.push_models import YoutubePushEntry
-from starlib.settings import get_settings
 from starlib.starAgent_line import line_agent
 
 discord_oauth_client = sqldb.get_oauth_client(APIType.Discord, 4)
 twitch_oauth_client = sqldb.get_oauth_client(APIType.Twitch, 3)
-google_oauth_settings = sqldb.get_oauth_client(APIType.Google, 3)
 docs_account = sqldb.get_identifier_secret(APIType.DocAccount)
 websub_config = sqldb.get_websub_config(APIType.Google, 4)
-SETTINGS = get_settings()
-BASE_WWW_URL = SETTINGS.BASE_WWW_URL
-BASE_DOMAIN = SETTINGS.BASE_DOMAIN
 
 configuration = Configuration(access_token=sqldb.get_access_token(APIType.Line).access_token)
 parser = WebhookParser(sqldb.get_identifier_secret(APIType.Line).client_secret)
@@ -369,51 +363,8 @@ async def to_discordbot(request: Request):
 
 @app.get("/to/googleauth")
 async def to_googleauth(request: Request):
-    if decode_jwt_cookie(request) is None:
-        return HTMLResponse("請先使用 Discord 登入後再綁定 Google 帳號", 401)
-
-    # TODO: scopes存放整理
-    scopes = [
-        "https://www.googleapis.com/auth/userinfo.profile",
-        "https://www.googleapis.com/auth/userinfo.email",
-        "openid",
-        "https://www.googleapis.com/auth/youtube",
-    ]
-    auth = GoogleOAuth.create_from_db(google_oauth_settings, scopes=scopes)
-    url, state = auth.get_authorization_url(access_type="offline")
-    response = RedirectResponse(url=url)
-    response.set_cookie(key="oauth_state", value=state, httponly=True, secure=True, samesite="lax", max_age=600)
-    return response
-
-@app.get("/logout")
-async def logout(request: Request):
-    response = RedirectResponse(url=BASE_WWW_URL)
-    response.delete_cookie("jwt", domain=f".{BASE_DOMAIN}", httponly=True, secure=True, samesite="lax", path="/")
-    return response
-
-
-def decode_jwt_cookie(request: Request) -> dict | None:
-    """解析 jwt cookie，失敗時回傳 None（不拋例外，給需要自訂錯誤回應的路由用）。"""
-    jwt_token = request.cookies.get("jwt")
-    if not jwt_token:
-        return None
-    try:
-        return jwt.decode(jwt_token, SETTINGS.JWT_SECRET, algorithms=["HS256"])
-    except jwt.JWTError:
-        return None
-
-
-# 添加一個驗證依賴函數
-async def verify_jwt(request: Request):
-    payload = decode_jwt_cookie(request)
-    if payload is None:
-        raise HTTPException(status_code=401, detail="Unauthorized")
-    return payload
-
-
-@app.get("/discord/data")
-async def api_discord(user_data: dict = Depends(verify_jwt)):
-    return JSONResponse(content={"status": "ok", "message": "Discord API is working", "user": user_data})
+    # 綁定 Google 需要網站登入，與 /oauth/google 一起暫停，待網站 OIDC 另案恢復
+    return HTMLResponse("網站登入與帳號綁定暫停服務", 503)
 
 
 # @app.get('/book/{book_id}',response_class=JSONResponse)

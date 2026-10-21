@@ -32,8 +32,6 @@ class AppSettings(BaseSettings):
 
     ZEROTIER_NETWORK_ID: str
     NETBIRD_API_URL: str = "https://api.netbird.io"
-    BASE_DOMAIN: str
-    BASE_WWW_URL: str
 
     TASK_REPORT: int
     FEEDBACK_CHANNEL: int
@@ -49,8 +47,6 @@ class AppSettings(BaseSettings):
 
     DEBUG_MODE: bool = True
     NOTION_DATABASE_ID: str
-
-    JWT_SECRET: str
 
     AUTH_INTERNAL_URL: str = "http://127.0.0.1:8002"
     AUTH_SERVICE_KEY: str
