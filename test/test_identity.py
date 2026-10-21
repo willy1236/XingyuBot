@@ -83,6 +83,7 @@ def _account(account_id: UUID | None = None, **kwargs) -> Account:
         username=kwargs.get("username", "citizen"),
         roles=kwargs.get("roles", ("member",)),
         suspended=kwargs.get("suspended", False),
+        twitch_passports=tuple(kwargs.get("twitch_passports", ())),
     )
 
 
