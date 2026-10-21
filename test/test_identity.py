@@ -12,9 +12,23 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session
 
 from starlib import sqldb
-from starlib.identity import Account, DirectoryUnavailable, DomalyzeIdentityClient, IdentityResolver, IdentityUnavailable, LinkedPassport, ResolvedAccount
+from starlib.identity import (
+    Account,
+    DirectoryUnavailable,
+    DomalyzeIdentityClient,
+    IdentityResolver,
+    IdentityUnavailable,
+    LinkedPassport,
+    MemberUnknown,
+    NotMember,
+    ResolvedAccount,
+    TwitchMember,
+    lookup_twitch_member,
+)
+from starlib.identity import resolver as resolver_module
 from starlib.database import LinkedAccount, PlatformType
 from starlib.database.postgresql.client import SQLRepository
+from starlib.settings import get_settings
 from starlib.utils import nowtz
 
 TTL = timedelta(hours=1)
@@ -582,3 +596,70 @@ class TestFindByAccountId:
 
         with pytest.raises(DirectoryUnavailable):
             asyncio.run(client.find_by_account_id(uuid4()))
+
+
+# ─── 用 Twitch ID 查域民 ────────────────────────────────────────────────────
+
+
+def _lookup(monkeypatch, handler, twitch_id: str | int = "111"):
+    async def call(client):
+        monkeypatch.setattr(resolver_module, "_directory", client)
+        return await lookup_twitch_member(twitch_id)
+
+    return asyncio.run(_with_server(handler, call))
+
+
+class TestLookupTwitchMember:
+    def test_linked_twitch_returns_member(self, monkeypatch):
+        account_id = uuid4()
+        seen = {}
+
+        async def handler(request: web.Request):
+            seen["provider"] = request.match_info["provider"]
+            seen["id"] = request.match_info["id"]
+            return web.json_response({"accountId": str(account_id), "username": "willy", "roles": [], "suspended": False})
+
+        assert _lookup(monkeypatch, handler, 111) == TwitchMember(account_id=account_id, username="willy")
+        assert seen == {"provider": get_settings().AUTH_TWITCH_PROVIDER, "id": "111"}
+
+    def test_two_twitch_ids_of_one_member_return_same_account(self, monkeypatch):
+        account_id = uuid4()
+
+        async def handler(request):
+            if request.match_info["id"] in ("111", "222"):
+                return web.json_response({"accountId": str(account_id), "roles": [], "suspended": False})
+            return web.json_response({"detail": "account not found"}, status=404)
+
+        assert _lookup(monkeypatch, handler, "111").account_id == account_id
+        assert _lookup(monkeypatch, handler, "222").account_id == account_id
+
+    def test_unlinked_twitch_is_not_member(self, monkeypatch):
+        async def handler(request):
+            return web.json_response({"detail": "account not found"}, status=404)
+
+        assert isinstance(_lookup(monkeypatch, handler), NotMember)
+
+    def test_suspended_member_is_not_member(self, monkeypatch):
+        async def handler(request):
+            return web.json_response({"accountId": str(uuid4()), "roles": [], "suspended": True})
+
+        assert isinstance(_lookup(monkeypatch, handler), NotMember)
+
+    @pytest.mark.parametrize("status, body", [(401, {}), (500, {}), (503, {}), (404, {"detail": "Not Found"})])
+    def test_no_clear_answer_is_unknown(self, monkeypatch, status, body):
+        async def handler(request):
+            return web.json_response(body, status=status)
+
+        assert isinstance(_lookup(monkeypatch, handler), MemberUnknown)
+
+    def test_timeout_is_unknown(self, monkeypatch):
+        async def handler(request):
+            await asyncio.sleep(2)
+            return web.json_response({})
+
+        assert isinstance(_lookup(monkeypatch, handler), MemberUnknown)
+
+    def test_connection_refused_is_unknown(self, monkeypatch):
+        monkeypatch.setattr(resolver_module, "_directory", DomalyzeIdentityClient("http://127.0.0.1:9", "key", timeout=0.5))
+
+        assert isinstance(asyncio.run(lookup_twitch_member("111")), MemberUnknown)
