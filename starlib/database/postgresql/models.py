@@ -35,7 +35,7 @@ class DiscordIdentity(UsersSchema, table=True):
 
 
 class LinkedAccount(UsersSchema, table=True):
-    """使用者 ID 綁定的外部平台帳號（Minecraft、Twitch、Google），一個平台一人一筆；Discord 不放這裡"""
+    """使用者 ID 綁定的外部平台帳號（Minecraft、Google），一個平台一人一筆；Discord 不放這裡"""
 
     __tablename__ = "linked_account"
 

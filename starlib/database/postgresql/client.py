@@ -316,7 +316,10 @@ class UserRepository(BaseRepository):
         """
         新增或更新綁定帳號，以 (platform, external_id) 為唯一鍵：該帳號已被別人綁定時，綁定轉到 user_id。
         一個平台一人一筆，user_id 在該平台原有的另一筆會被取代。
+        Twitch 與域民的對應只以 auth server 為準，不接受寫入。
         """
+        if platform == PlatformType.Twitch:
+            raise ValueError("Twitch 綁定只存在 auth server，不寫入 linked_account")
         own = self.get_linked_account(user_id, platform)
         if own and own.external_id != external_id:
             self.session.delete(own)

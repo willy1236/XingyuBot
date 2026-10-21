@@ -1,7 +1,7 @@
 """由 Discord ID 取得使用者 ID：auth server 查得到用正式 account_id，明確查無此人才發臨時 ID。"""
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Literal, overload
 from uuid import UUID, uuid4
@@ -9,7 +9,7 @@ from uuid import UUID, uuid4
 from starlib.database.postgresql.models import DiscordIdentity
 from starlib.utils import nowtz
 
-from .client import AccountDirectory, DirectoryUnavailable, DomalyzeIdentityClient
+from .client import Account, AccountDirectory, DirectoryUnavailable, DomalyzeIdentityClient, LinkedPassport
 
 if TYPE_CHECKING:
     from starlib.database.postgresql.client import UserRepository
@@ -24,6 +24,8 @@ class BotIdentity:
     username: str | None
     roles: tuple[str, ...]
     suspended: bool
+    # 只有這次解析剛向 auth server 查過才有值（停權域民為空）；None 代表這次沒查，不等於沒有 Twitch。不寫入資料庫
+    twitch_passports: tuple[LinkedPassport, ...] | None = None
 
 
 class IdentityUnavailable(Exception):
@@ -38,6 +40,11 @@ def _to_identity(record: DiscordIdentity) -> BotIdentity:
         roles=tuple(record.roles or ()),
         suspended=record.suspended,
     )
+
+
+def _visible_twitch(account: Account | None) -> tuple[LinkedPassport, ...]:
+    """查無此人與停權的域民不顯示 Twitch，與 lookup_twitch_member 把停權當不是域民一致"""
+    return () if account is None or account.suspended else account.twitch_passports
 
 
 class IdentityResolver:
@@ -93,7 +100,7 @@ class IdentityResolver:
                 # 域民被刪除或通行證被移除：資料留在原 ID，交給管理員處理
                 log.warning("identity: formal account no longer found", extra={"discord_id": discord_id, "user_id": str(record.user_id)})
             record.checked_at = now
-            return _to_identity(self._repo.save_discord_identity(record))
+            return replace(_to_identity(self._repo.save_discord_identity(record)), twitch_passports=())
 
         merge_from = None
         if record and record.user_id != account.account_id:
@@ -131,7 +138,20 @@ class IdentityResolver:
             self._merge_retry_after[discord_id] = nowtz() + self._merge_backoff
             return previous
         self._merge_retry_after.pop(discord_id, None)
-        return _to_identity(saved)
+        return replace(_to_identity(saved), twitch_passports=_visible_twitch(account))
+
+    async def fetch_twitch_passports(self, discord_id: int) -> tuple[LinkedPassport, ...]:
+        """即時查該域民連結的 Twitch；與 resolve 共用 auth server 的 backoff，剛連不上的這段時間直接回空，不再各等一次逾時。不 raise。"""
+        if self._unavailable_until and nowtz() < self._unavailable_until:
+            return ()
+        try:
+            account = await self._directory.find_by_discord(discord_id)
+        except DirectoryUnavailable:
+            self._unavailable_until = nowtz() + self._backoff
+            log.warning("identity: twitch passports unavailable", extra={"discord_id": discord_id})
+            return ()
+        self._unavailable_until = None
+        return _visible_twitch(account)
 
     async def _merge_source_for_formal(self, discord_id: int, old_id: UUID, new_id: UUID) -> UUID | None:
         """原本是正式 ID、現在指到別的域民：舊 ID 已併入新域民才搬資料，否則只改紀錄。沒得到答案時 raise DirectoryUnavailable。"""
@@ -151,7 +171,18 @@ class IdentityResolver:
         return old_id
 
 
+_directory: AccountDirectory | None = None
 _default: IdentityResolver | None = None
+
+
+def _get_directory() -> AccountDirectory:
+    global _directory
+    if _directory is None:
+        from starlib.settings import get_settings
+
+        settings = get_settings()
+        _directory = DomalyzeIdentityClient(settings.AUTH_INTERNAL_URL, settings.AUTH_SERVICE_KEY, twitch_provider=settings.AUTH_TWITCH_PROVIDER)
+    return _directory
 
 
 def _get_default() -> IdentityResolver:
@@ -160,9 +191,7 @@ def _get_default() -> IdentityResolver:
         from starlib.database import sqldb
         from starlib.settings import get_settings
 
-        settings = get_settings()
-        directory = DomalyzeIdentityClient(settings.AUTH_INTERNAL_URL, settings.AUTH_SERVICE_KEY)
-        _default = IdentityResolver(directory, sqldb, timedelta(seconds=settings.IDENTITY_TTL_SECONDS))
+        _default = IdentityResolver(_get_directory(), sqldb, timedelta(seconds=get_settings().IDENTITY_TTL_SECONDS))
     return _default
 
 
