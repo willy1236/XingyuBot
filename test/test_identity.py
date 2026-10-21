@@ -12,7 +12,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session
 
 from starlib import sqldb
-from starlib.identity import Account, DirectoryUnavailable, DomalyzeIdentityClient, IdentityResolver, IdentityUnavailable
+from starlib.identity import Account, DirectoryUnavailable, DomalyzeIdentityClient, IdentityResolver, IdentityUnavailable, ResolvedAccount
 from starlib.database.postgresql.client import SQLRepository
 from starlib.utils import nowtz
 
@@ -40,12 +40,22 @@ class FakeDirectory:
         self.accounts: dict[int, Account] = {}
         self.unavailable = False
         self.calls = 0
+        # find_by_account_id 的回答：沒設定的 ID 視為查無此人
+        self.by_account_id: dict[UUID, ResolvedAccount] = {}
+        self.account_unavailable = False
+        self.account_calls = 0
 
     async def find_by_discord(self, discord_id: int) -> Account | None:
         self.calls += 1
         if self.unavailable:
             raise DirectoryUnavailable("down")
         return self.accounts.get(discord_id)
+
+    async def find_by_account_id(self, account_id: UUID) -> ResolvedAccount | None:
+        self.account_calls += 1
+        if self.account_unavailable or self.unavailable:
+            raise DirectoryUnavailable("down")
+        return self.by_account_id.get(account_id)
 
 
 def _account(account_id: UUID | None = None, **kwargs) -> Account:
@@ -220,6 +230,7 @@ class TestTemporaryIdentityRace:
 async def _with_server(handler, call):
     app = web.Application()
     app.router.add_get("/v1/passports/discord/{id}", handler)
+    app.router.add_get("/v1/accounts/{id}", handler)
     runner = web.AppRunner(app)
     await runner.setup()
     site = web.TCPSite(runner, "127.0.0.1", 0)
@@ -289,3 +300,70 @@ class TestDomalyzeIdentityClient:
 
         with pytest.raises(DirectoryUnavailable):
             asyncio.run(client.find_by_discord(DISCORD_ID))
+
+
+def _find_account(handler, account_id: UUID):
+    return asyncio.run(_with_server(handler, lambda client: client.find_by_account_id(account_id)))
+
+
+class TestFindByAccountId:
+    def test_live_account_has_no_merged_from(self):
+        account_id = uuid4()
+        seen = {}
+
+        async def handler(request: web.Request):
+            seen["auth"] = request.headers.get("Authorization")
+            seen["id"] = request.match_info["id"]
+            return web.json_response({"accountId": str(account_id), "username": "willy", "roles": ["admin"], "suspended": False, "isAdmin": True})
+
+        result = _find_account(handler, account_id)
+
+        assert result == ResolvedAccount(Account(account_id=account_id, username="willy", roles=("admin",), suspended=False))
+        assert result.merged_from is None
+        assert seen == {"auth": "Bearer key", "id": str(account_id)}
+
+    def test_absorbed_id_returns_survivor_with_merged_from(self):
+        old_id, survivor_id = uuid4(), uuid4()
+
+        async def handler(request):
+            return web.json_response({"accountId": str(survivor_id), "username": "w", "roles": [], "suspended": False, "mergedFrom": str(old_id)})
+
+        result = _find_account(handler, old_id)
+
+        assert result.account.account_id == survivor_id
+        assert result.merged_from == old_id
+
+    def test_not_found(self):
+        async def handler(request):
+            return web.json_response({"detail": "account not found"}, status=404)
+
+        assert _find_account(handler, uuid4()) is None
+
+    def test_foreign_404_is_unavailable(self):
+        async def handler(request):
+            return web.json_response({"detail": "Not Found"}, status=404)
+
+        with pytest.raises(DirectoryUnavailable):
+            _find_account(handler, uuid4())
+
+    @pytest.mark.parametrize("status", [401, 500, 503])
+    def test_error_status_is_unavailable(self, status):
+        async def handler(request):
+            return web.json_response({}, status=status)
+
+        with pytest.raises(DirectoryUnavailable):
+            _find_account(handler, uuid4())
+
+    @pytest.mark.parametrize("body", [{}, {"accountId": "not-a-uuid"}, {"accountId": str(uuid4()), "mergedFrom": "bad"}, [1]])
+    def test_malformed_is_unavailable(self, body):
+        async def handler(request):
+            return web.json_response(body)
+
+        with pytest.raises(DirectoryUnavailable):
+            _find_account(handler, uuid4())
+
+    def test_connection_refused_is_unavailable(self):
+        client = DomalyzeIdentityClient("http://127.0.0.1:9", "key", timeout=0.5)
+
+        with pytest.raises(DirectoryUnavailable):
+            asyncio.run(client.find_by_account_id(uuid4()))

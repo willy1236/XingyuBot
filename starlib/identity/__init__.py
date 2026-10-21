@@ -3,7 +3,7 @@
 由 Discord ID 取得使用者 ID，權威來源是 auth server。
 """
 
-from .client import Account, AccountDirectory, DirectoryUnavailable, DomalyzeIdentityClient
+from .client import Account, AccountDirectory, DirectoryUnavailable, DomalyzeIdentityClient, ResolvedAccount
 from .privilege import privilege_of
 from .resolver import BotIdentity, IdentityResolver, IdentityUnavailable, resolve_identity
 
@@ -15,6 +15,7 @@ __all__ = [
     "DomalyzeIdentityClient",
     "IdentityResolver",
     "IdentityUnavailable",
+    "ResolvedAccount",
     "privilege_of",
     "resolve_identity",
 ]
