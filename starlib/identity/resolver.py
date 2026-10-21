@@ -90,18 +90,26 @@ class IdentityResolver:
                     # 判斷不了就不動紀錄，下次再判斷；也不要讓每次互動都等一次逾時
                     self._unavailable_until = nowtz() + self._backoff
                     return _to_identity(record)
-        saved = self._repo.save_discord_identity(
-            DiscordIdentity(
-                discord_id=discord_id,
-                user_id=account.account_id,
-                is_formal=True,
-                username=account.username,
-                roles=list(account.roles),
-                suspended=account.suspended,
-                checked_at=now,
-            ),
-            merge_from=merge_from,
-        )
+        previous = _to_identity(record) if record else None
+        try:
+            saved = self._repo.save_discord_identity(
+                DiscordIdentity(
+                    discord_id=discord_id,
+                    user_id=account.account_id,
+                    is_formal=True,
+                    username=account.username,
+                    roles=list(account.roles),
+                    suspended=account.suspended,
+                    checked_at=now,
+                ),
+                merge_from=merge_from,
+            )
+        except Exception:
+            if merge_from is None or previous is None:
+                raise
+            # 搬資料失敗時已整筆 rollback，紀錄與資料都還是舊 ID：這次照舊 ID 做完，下次使用再試，不讓指令跟著失敗
+            log.exception("identity: moving data failed, keeping the previous ID", extra={"discord_id": discord_id, "old_id": str(merge_from), "new_id": str(account.account_id)})
+            return previous
         return _to_identity(saved)
 
     async def _merge_source_for_formal(self, discord_id: int, old_id: UUID, new_id: UUID) -> UUID | None:
