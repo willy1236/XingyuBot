@@ -45,6 +45,10 @@ class AppSettings(BaseSettings):
 
     JWT_SECRET: str
 
+    AUTH_INTERNAL_URL: str = "http://127.0.0.1:8002"
+    AUTH_SERVICE_KEY: str
+    IDENTITY_TTL_SECONDS: int = 3600
+
     SENTRY_ENABLED: bool = False
     SENTRY_DSN: str | None = None
     SENTRY_ENVIRONMENT: str | None = None

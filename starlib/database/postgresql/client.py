@@ -7,6 +7,7 @@ from collections.abc import Callable, Generator
 from datetime import date, datetime, time, timedelta, timezone
 from ipaddress import IPv4Network
 from typing import Literal, ParamSpec, TypeVar, overload
+from uuid import UUID
 
 import discord
 from google.oauth2.credentials import Credentials
@@ -296,6 +297,36 @@ class UserRepository(BaseRepository):
         if existing:
             self.session.delete(existing)
             self.commit()
+
+    def get_discord_identity(self, discord_id: int) -> DiscordIdentity | None:
+        return self.session.get(DiscordIdentity, discord_id)
+
+    def create_temporary_discord_identity(self, discord_id: int, user_id: UUID, checked_at: datetime) -> DiscordIdentity:
+        """寫入臨時 ID 的紀錄；同時有其他請求先寫入時以先寫入的為準，回傳實際存下的紀錄。"""
+        stmt = (
+            pg_insert(DiscordIdentity)
+            .values(discord_id=discord_id, user_id=user_id, is_formal=False, username=None, roles=[], suspended=False, checked_at=checked_at)
+            .on_conflict_do_nothing(index_elements=["discord_id"])
+        )
+        self.session.exec(stmt)
+        self.commit()
+        return self.session.get(DiscordIdentity, discord_id, populate_existing=True)
+
+    def save_discord_identity(self, identity: DiscordIdentity, *, merge_from: UUID | None = None) -> DiscordIdentity:
+        """新增或更新紀錄；帶 merge_from 時先把該 ID 的資料併到 identity.user_id，兩者在同一個交易。"""
+        if merge_from is not None and merge_from != identity.user_id:
+            self.merge_user_data(merge_from, identity.user_id)
+        saved = self.session.merge(identity)
+        self.commit()
+        return saved
+
+    def merge_user_data(self, old_id: UUID, new_id: UUID) -> None:
+        """
+        把 old_id 底下的業務資料併到 new_id，用於臨時 ID 轉正式與域民合併。
+
+        只在目前的交易內操作、不 commit，由呼叫端與紀錄更新一起提交；失敗時整筆 rollback。
+        """
+        log.info("merge_user_data: not implemented yet", extra={"old_id": str(old_id), "new_id": str(new_id)})
 
     def get_netbird_binding(self, user_id: int) -> NetBirdBinding | None:
         """取得該 cloud_user 的 NetBird 綁定資料"""

@@ -1,9 +1,11 @@
 from datetime import date, datetime, timedelta, timezone
 from typing import Any
+from uuid import UUID
 
 import discord
 from sqlalchemy import JSON, BigInteger, Boolean, Column, Date, ForeignKey, ForeignKeyConstraint, Identity, Integer, Interval, SmallInteger, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import ARRAY, CIDR, MACADDR, TIMESTAMP
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlmodel import Field, Relationship, text
 
@@ -55,6 +57,23 @@ class LinkCode(UsersSchema, table=True):
     user_id: int = Field(foreign_key="users.cloud_user.id", primary_key=True)
     code: str = Field(index=True)
     expires_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
+
+
+class DiscordIdentity(UsersSchema, table=True):
+    """Discord 帳號對應的使用者 ID 快取；權威來源是 auth server，查無此人時存的是 bot 發的臨時 ID"""
+
+    __tablename__ = "discord_identity"
+
+    discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True, autoincrement=False))
+    # 一位域民可以有多個 Discord 帳號，不設唯一
+    user_id: UUID = Field(sa_column=Column(PG_UUID(as_uuid=True), index=True, nullable=False))
+    is_formal: bool = Field(sa_column=Column(Boolean, nullable=False))
+    # 域民代號，臨時 ID 為空
+    username: str | None = Field(sa_column=Column(String))
+    roles: list[str] = Field(default_factory=list, sa_column=Column(ARRAY(String), nullable=False, server_default="{}"))
+    suspended: bool = Field(default=False, sa_column=Column(Boolean, nullable=False, server_default="false"))
+    # 最後一次從 auth server 得到明確答案（200 或 404）的時間
+    checked_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0), nullable=False))
 
 
 class NetBirdBinding(UsersSchema, table=True):
