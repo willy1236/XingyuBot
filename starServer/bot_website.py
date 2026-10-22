@@ -265,12 +265,6 @@ async def oauth_twitch(request: Request):
     )
 
 
-@app.get("/oauth/google")
-async def oauth_google(request: Request):
-    # 網站登入原本寫 cloud_user，身分改接 auth server 後暫停，待網站 OIDC 另案恢復
-    return HTMLResponse("網站登入與帳號綁定暫停服務", 503)
-
-
 @app.post("/callback/linebot")
 async def callback_linebot(request: Request, background_tasks: BackgroundTasks):
     signature = request.headers.get("X-Line-Signature")
@@ -363,12 +357,6 @@ async def to_discordbot(request: Request):
     response = RedirectResponse(url=url)
     response.set_cookie(key="oauth_state", value=state, httponly=True, secure=True, samesite="lax", max_age=600)
     return response
-
-
-@app.get("/to/googleauth")
-async def to_googleauth(request: Request):
-    # 綁定 Google 需要網站登入，與 /oauth/google 一起暫停，待網站 OIDC 另案恢復
-    return HTMLResponse("網站登入與帳號綁定暫停服務", 503)
 
 
 # @app.get('/book/{book_id}',response_class=JSONResponse)

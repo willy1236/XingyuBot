@@ -17,7 +17,6 @@ pet_option = ChoiceList.set("pet_option")
 PLATFORM_DISPLAY_NAME = {
     PlatformType.Discord: "Discord",
     PlatformType.Twitch: "Twitch",
-    PlatformType.Google: "Google",
     PlatformType.Minecraft: "Minecraft",
 }
 
@@ -65,8 +64,8 @@ class system_user(Cog_Extension):
                     account_lines.append(f"{PLATFORM_DISPLAY_NAME[PlatformType.Twitch]}：{passport.username or passport.subject}")
             for account in sclient.sqldb.get_linked_accounts(identity.user_id):
                 platform = PlatformType(account.platform)
-                if platform == PlatformType.Twitch:
-                    continue  # linked_account 殘留的 Twitch 列不顯示
+                if platform in (PlatformType.Twitch, PlatformType.Google):
+                    continue  # linked_account 殘留的 Twitch、Google 列不顯示
                 platform_name = PLATFORM_DISPLAY_NAME.get(platform, platform.name)
                 account_lines.append(f"{platform_name}：{account.display_name or account.external_id}")
             if account_lines:

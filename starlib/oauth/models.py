@@ -7,14 +7,6 @@ class PlatformUser(BaseModel):
     id: str
 
 
-class GoogleUser(PlatformUser):
-    """User Data from Google Oauth `/userinfo` API."""
-
-    email: str | None = None
-    name: str | None = None
-    picture: str | None = None
-
-
 class DiscordAuthModel(PlatformUser):
     """A model that represents the data from Discord Oauth API."""
 

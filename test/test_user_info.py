@@ -122,7 +122,6 @@ class TestUserInfoCommand:
         env.directory.accounts[CALLER] = account
         env.directory.accounts[OTHER] = account
         env.repo.upsert_linked_account(account.account_id, PlatformType.Minecraft, "mc-1", "Steve")
-        env.repo.upsert_linked_account(account.account_id, PlatformType.Google, "g-1", "a@gmail.com")
         env.repo.upsert_linked_account(uuid4(), PlatformType.Minecraft, "mc-other", "NotMine")
         # OTHER 要先有紀錄，bot 才「知道」這個 Discord 帳號
         run(FakeCtx(OTHER))
@@ -131,7 +130,6 @@ class TestUserInfoCommand:
 
         assert "Minecraft：Steve" in text
         assert "Twitch：streamer" in text
-        assert "Google：a@gmail.com" in text
         assert f"Discord：<@{OTHER}>" in text
         assert f"<@{CALLER}>" not in text  # 被查的帳號自己不列
         assert "NotMine" not in text
@@ -235,17 +233,19 @@ class TestUserInfoCommand:
         assert "Twitch" not in ctx.account_text
         assert env.directory.calls == calls  # 臨時使用者不是域民，不查 auth server
 
-    def test_leftover_linked_account_twitch_row_is_hidden(self, env):
+    def test_leftover_linked_account_twitch_and_google_rows_are_hidden(self, env):
         account = _account()
         env.directory.accounts[CALLER] = account
         # 上線前留下的舊資料，直接寫表模擬
         env.repo.session.add(LinkedAccount(user_id=account.account_id, platform=PlatformType.Twitch, external_id="tw-old", display_name="oldstreamer"))
+        env.repo.session.add(LinkedAccount(user_id=account.account_id, platform=PlatformType.Google, external_id="g-old", display_name="a@gmail.com"))
         env.repo.commit()
         env.repo.upsert_linked_account(account.account_id, PlatformType.Minecraft, "mc-1", "Steve")
 
         text = run(FakeCtx()).account_text
 
         assert "Twitch" not in text and "oldstreamer" not in text
+        assert "Google" not in text and "a@gmail.com" not in text
         assert "Minecraft：Steve" in text
 
     def test_no_bindings_has_no_bound_section(self, env):

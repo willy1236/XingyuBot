@@ -76,17 +76,12 @@ class TestLinkedAccountRepository:
         assert repo.get_linked_account(other, PlatformType.Minecraft) is None
         assert len(repo.get_linked_accounts(user_id)) == 1
 
-    def test_platforms_are_independent(self, repo, user_id):
-        repo.upsert_linked_account(user_id, PlatformType.Minecraft, "mc-1")
-        repo.upsert_linked_account(user_id, PlatformType.Google, "g-1")
-
-        assert {a.platform for a in repo.get_linked_accounts(user_id)} == {PlatformType.Minecraft, PlatformType.Google}
-
-    def test_twitch_is_rejected(self, repo, user_id):
+    @pytest.mark.parametrize("platform", [PlatformType.Twitch, PlatformType.Google])
+    def test_non_minecraft_is_rejected(self, repo, user_id, platform):
         with pytest.raises(ValueError):
-            repo.upsert_linked_account(user_id, PlatformType.Twitch, "tw-1")
+            repo.upsert_linked_account(user_id, platform, "x-1")
 
-        assert repo.get_linked_account(user_id, PlatformType.Twitch) is None
+        assert repo.get_linked_account(user_id, platform) is None
 
     def test_remove(self, repo, user_id):
         repo.upsert_linked_account(user_id, PlatformType.Minecraft, "mc-1")
