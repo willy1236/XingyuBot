@@ -305,39 +305,6 @@ class UserRepository(BaseRepository):
         stmt = select(LinkedAccount).where(LinkedAccount.user_id == user_id, LinkedAccount.platform == platform)
         return self.session.exec(stmt).one_or_none()
 
-    def get_linked_accounts(self, user_id: UUID) -> list[LinkedAccount]:
-        """取得該使用者綁定的所有外部帳號（不分平台）。"""
-        stmt = select(LinkedAccount).where(LinkedAccount.user_id == user_id)
-        return list(self.session.exec(stmt).all())
-
-    def upsert_linked_account(self, user_id: UUID, platform: PlatformType, external_id: str, display_name: str | None = None):
-        """
-        新增或更新綁定帳號，以 (platform, external_id) 為唯一鍵：該帳號已被別人綁定時，綁定轉到 user_id。
-        一個平台一人一筆，user_id 在該平台原有的另一筆會被取代。
-        只接受 Minecraft：Twitch 與域民的對應只以 auth server 為準，Google 綁定已廢除。
-        """
-        if platform != PlatformType.Minecraft:
-            raise ValueError(f"linked_account 只接受 Minecraft 綁定，收到 {platform.name}")
-        own = self.get_linked_account(user_id, platform)
-        if own and own.external_id != external_id:
-            self.session.delete(own)
-            self.session.flush()
-
-        stmt = select(LinkedAccount).where(LinkedAccount.platform == platform, LinkedAccount.external_id == external_id)
-        existing = self.session.exec(stmt).one_or_none()
-        if existing:
-            existing.user_id = user_id
-            existing.display_name = display_name
-        else:
-            self.session.add(LinkedAccount(user_id=user_id, platform=platform, external_id=external_id, display_name=display_name))
-        self.commit()
-
-    def remove_linked_account(self, user_id: UUID, platform: PlatformType):
-        existing = self.get_linked_account(user_id, platform)
-        if existing:
-            self.session.delete(existing)
-            self.commit()
-
     def get_drive_share(self, user_id: UUID) -> DriveShare | None:
         return self.session.get(DriveShare, user_id)
 

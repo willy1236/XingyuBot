@@ -49,7 +49,7 @@ class DiscordIdentity(UsersSchema, table=True):
 
 
 class LinkedAccount(UsersSchema, table=True):
-    """使用者 ID 綁定的外部平台帳號（目前只有 Minecraft），一個平台一人一筆；Discord 不放這裡"""
+    """舊的外部平台帳號綁定，一個平台一人一筆。已無寫入點：Twitch、Minecraft 改由 auth server 管理，Google 綁定已廢除"""
 
     __tablename__ = "linked_account"
 

@@ -12,8 +12,8 @@ from .client import (
     ResolvedAccount,
 )
 from .privilege import privilege_of
-from .resolver import BotIdentity, IdentityResolver, IdentityUnavailable, resolve_identity
-from .twitch import MemberUnknown, NotMember, TwitchLookup, TwitchMember, fetch_twitch_passports, lookup_twitch_member
+from .resolver import BotIdentity, IdentityResolver, IdentityUnavailable, LinkedPassports, fetch_linked_passports, resolve_identity
+from .twitch import MemberUnknown, NotMember, TwitchLookup, TwitchMember, lookup_twitch_member
 
 __all__ = [
     "Account",
@@ -24,12 +24,13 @@ __all__ = [
     "IdentityResolver",
     "IdentityUnavailable",
     "LinkedPassport",
+    "LinkedPassports",
     "MemberUnknown",
     "NotMember",
     "ResolvedAccount",
     "TwitchLookup",
     "TwitchMember",
-    "fetch_twitch_passports",
+    "fetch_linked_passports",
     "lookup_twitch_member",
     "privilege_of",
     "resolve_identity",

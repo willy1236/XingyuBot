@@ -16,8 +16,8 @@ NOT_FOUND_DETAIL = "account not found"
 
 @dataclass(frozen=True)
 class LinkedPassport:
-    subject: str  # Twitch 數字 user ID
-    username: str | None  # auth server 存的 Twitch 顯示名稱
+    subject: str  # 該平台的 user ID：Twitch 是數字 ID，Minecraft 是玩家 UUID
+    username: str | None  # auth server 存的顯示名稱或玩家名稱
 
 
 @dataclass(frozen=True)
@@ -27,6 +27,7 @@ class Account:
     roles: tuple[str, ...]
     suspended: bool
     twitch_passports: tuple[LinkedPassport, ...] = ()
+    minecraft_passports: tuple[LinkedPassport, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -58,10 +59,11 @@ class AccountDirectory(Protocol):
 class DomalyzeIdentityClient:
     """以 `Authorization: Bearer <金鑰>` 呼叫 auth server 內部 API"""
 
-    def __init__(self, base_url: str, service_key: str, timeout: float = 1.5, twitch_provider: str = "twitch"):
+    def __init__(self, base_url: str, service_key: str, timeout: float = 1.5, twitch_provider: str = "twitch", minecraft_provider: str = "minecraft"):
         # 逾時要短於 Discord 互動的 3 秒回應期限，連不上時才來得及回「稍後再試」；網站的 Twitch 授權也沿用
         self._base_url = base_url.rstrip("/")
         self._twitch_provider = twitch_provider
+        self._minecraft_provider = minecraft_provider
         self._headers = {"Authorization": f"Bearer {service_key}"}
         self._timeout = aiohttp.ClientTimeout(total=timeout)
 
@@ -116,14 +118,14 @@ class DomalyzeIdentityClient:
 
     def _parse_account(self, data: dict, extra: dict) -> Account:
         try:
+            passports = data.get("passports") or ()
             return Account(
                 account_id=UUID(data["accountId"]),
                 username=data.get("username"),
                 roles=tuple(data.get("roles") or ()),
                 suspended=bool(data.get("suspended", False)),
-                twitch_passports=tuple(
-                    _parse_passport(p) for p in data.get("passports") or () if p["provider"] == self._twitch_provider
-                ),
+                twitch_passports=tuple(_parse_passport(p) for p in passports if p["provider"] == self._twitch_provider),
+                minecraft_passports=tuple(_parse_passport(p) for p in passports if p["provider"] == self._minecraft_provider),
             )
         except (KeyError, TypeError, ValueError) as e:
             log.error("auth server: malformed response", extra=extra)

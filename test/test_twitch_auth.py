@@ -7,9 +7,10 @@ from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlmodel import select
 from test_identity import repo  # noqa: F401  (repo 為 fixture)
 
-from starlib.database import TwitchBotJoinChannel
+from starlib.database import LinkedAccount, TwitchBotJoinChannel
 from starlib.identity import MemberUnknown, NotMember, TwitchMember
 from starlib.oauth import TwitchOAuth
 from starlib.providers.social.models import TwitchUser
@@ -122,14 +123,13 @@ class TestMember:
         repo.expire(channel)
         assert (channel.action_channel_id, channel.point_name) == (123, "星幣")
 
-    def test_does_not_write_linked_account(self, client, spy, repo, monkeypatch):
-        calls = []
-        monkeypatch.setattr(repo, "upsert_linked_account", lambda *a, **k: calls.append((a, k)))
+    def test_does_not_write_linked_account(self, client, spy, repo):
+        before = len(repo.session.exec(select(LinkedAccount)).all())
 
         response = _callback(client, code="c", state=STATE)
 
         assert response.status_code == 200
-        assert calls == []
+        assert len(repo.session.exec(select(LinkedAccount)).all()) == before
 
 
 class TestRejected:

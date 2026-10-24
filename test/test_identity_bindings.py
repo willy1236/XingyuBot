@@ -1,4 +1,4 @@
-"""VPN、NetBird、Minecraft、雲端資料夾綁定：repository（真實 PostgreSQL，交易結束後 rollback）與改用 with_identity 的指令 callback。"""
+"""VPN、NetBird、雲端資料夾綁定：repository（真實 PostgreSQL，交易結束後 rollback）與改用 with_identity 的指令 callback。"""
 
 from __future__ import annotations
 
@@ -42,54 +42,7 @@ def user_id() -> UUID:
     return uuid4()
 
 
-class TestLinkedAccountRepository:
-    def test_upsert_and_get(self, repo, user_id):
-        repo.upsert_linked_account(user_id, PlatformType.Minecraft, "mc-1", "Steve")
-
-        account = repo.get_linked_account(user_id, PlatformType.Minecraft)
-        assert (account.external_id, account.display_name) == ("mc-1", "Steve")
-        assert [a.external_id for a in repo.get_linked_accounts(user_id)] == ["mc-1"]
-        assert repo.get_linked_account(user_id, PlatformType.Twitch) is None
-
-    def test_other_user_takes_over_account(self, repo, user_id):
-        other = uuid4()
-        repo.upsert_linked_account(user_id, PlatformType.Minecraft, "mc-1", "Steve")
-        repo.upsert_linked_account(other, PlatformType.Minecraft, "mc-1", "Steve")
-
-        assert repo.get_linked_account(user_id, PlatformType.Minecraft) is None
-        assert repo.get_linked_account(other, PlatformType.Minecraft).external_id == "mc-1"
-
-    def test_same_user_rebinding_replaces_old_row(self, repo, user_id):
-        repo.upsert_linked_account(user_id, PlatformType.Minecraft, "mc-1", "Steve")
-        repo.upsert_linked_account(user_id, PlatformType.Minecraft, "mc-2", "Alex")
-
-        assert [a.external_id for a in repo.get_linked_accounts(user_id)] == ["mc-2"]
-
-    def test_take_over_while_owning_another(self, repo, user_id):
-        """A 已綁 X，再設 B 持有的 Y：A 的 X 被取代，Y 轉給 A，B 剩下沒有。"""
-        other = uuid4()
-        repo.upsert_linked_account(user_id, PlatformType.Minecraft, "mc-x", "X")
-        repo.upsert_linked_account(other, PlatformType.Minecraft, "mc-y", "Y")
-        repo.upsert_linked_account(user_id, PlatformType.Minecraft, "mc-y", "Y")
-
-        assert repo.get_linked_account(user_id, PlatformType.Minecraft).external_id == "mc-y"
-        assert repo.get_linked_account(other, PlatformType.Minecraft) is None
-        assert len(repo.get_linked_accounts(user_id)) == 1
-
-    @pytest.mark.parametrize("platform", [PlatformType.Twitch, PlatformType.Google])
-    def test_non_minecraft_is_rejected(self, repo, user_id, platform):
-        with pytest.raises(ValueError):
-            repo.upsert_linked_account(user_id, platform, "x-1")
-
-        assert repo.get_linked_account(user_id, platform) is None
-
-    def test_remove(self, repo, user_id):
-        repo.upsert_linked_account(user_id, PlatformType.Minecraft, "mc-1")
-        repo.remove_linked_account(user_id, PlatformType.Minecraft)
-        repo.remove_linked_account(user_id, PlatformType.Minecraft)  # 沒有也不報錯
-
-        assert repo.get_linked_account(user_id, PlatformType.Minecraft) is None
-
+class TestLinkedAccountTable:
     def test_unique_user_platform_blocks_duplicates(self, repo, user_id):
         repo.session.add(LinkedAccount(user_id=user_id, platform=PlatformType.Minecraft, external_id="a"))
         repo.session.flush()
@@ -214,30 +167,10 @@ class TestNetBirdCommands:
         assert "尚未綁定NetBird" in ctx.text
 
 
-class TestMinecraftCommand:
-    @pytest.fixture(autouse=True)
-    def mojang(self, monkeypatch):
-        monkeypatch.setattr(game_cog, "MojangAPI", lambda: SimpleNamespace(get_uuid=lambda name: SimpleNamespace(id="mc-uuid", name=name)))
-
-    def test_set_and_clear(self, cog_repo, temp_identity):
-        ctx = FakeCtx()
-        call(GAME.minecraft_set, make_cog(GAME), ctx, "Steve")
-        assert "設定成功" in ctx.text
-        assert cog_repo.get_linked_account(temp_identity.user_id, PlatformType.Minecraft).external_id == "mc-uuid"
-
-        ctx = FakeCtx()
-        call(GAME.minecraft_set, make_cog(GAME), ctx, None)
-        assert "已刪除" in ctx.text
-        assert cog_repo.get_linked_account(temp_identity.user_id, PlatformType.Minecraft) is None
-
-    def test_account_moves_to_latest_setter(self, cog_repo, temp_identity):
-        earlier = uuid4()
-        cog_repo.upsert_linked_account(earlier, PlatformType.Minecraft, "mc-uuid", "Steve")
-
-        call(GAME.minecraft_set, make_cog(GAME), FakeCtx(), "Steve")
-
-        assert cog_repo.get_linked_account(earlier, PlatformType.Minecraft) is None
-        assert cog_repo.get_linked_account(temp_identity.user_id, PlatformType.Minecraft).external_id == "mc-uuid"
+def test_minecraft_set_command_removed():
+    """Minecraft 綁定改由 auth server 管理，bot 不再提供設定指令"""
+    assert not hasattr(GAME, "minecraft_set")
+    assert not hasattr(GAME, "minecraft_cmd")
 
 
 class TestVpnCommand:
@@ -277,7 +210,7 @@ class TestIdentityUnavailable:
         assert "暫時無法連線" in ctx.text
 
 
-@pytest.mark.parametrize("command", [GAME.netbird_setup, GAME.netbird, GAME.minecraft_set, DRIVE_COG.drive])
+@pytest.mark.parametrize("command", [GAME.netbird_setup, GAME.netbird, DRIVE_COG.drive])
 def test_commands_use_with_identity(command):
     """靜態斷言：decorator 已換成 with_identity，不再走 ensure_registered。"""
     wrapper_code = command.callback.__code__

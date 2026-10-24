@@ -5,7 +5,7 @@ from discord.ext import commands
 from starlib import BotEmbed, ChoiceList, Jsondb, sclient
 from starlib.database.postgresql.enums import PlatformType
 from starlib.database.postgresql.models import DiscordUser
-from starlib.identity import IdentityUnavailable, fetch_twitch_passports, resolve_identity
+from starlib.identity import IdentityUnavailable, fetch_linked_passports, resolve_identity
 from starlib.instance import happycamp_guild
 
 from ..checks import with_identity
@@ -26,7 +26,7 @@ class system_user(Cog_Extension):
     @commands.slash_command(description="查看使用者的基本資訊")
     @with_identity()
     async def user_info(self, ctx: discord.ApplicationContext, member: discord.Option(discord.Member, name="用戶", description="留空以查詢自己", default=None)):
-        # 身分查詢加上即時查 Twitch 可能超過 Discord 的 3 秒回應期限
+        # 身分查詢加上即時查外部帳號可能超過 Discord 的 3 秒回應期限
         await ctx.defer()
         user_dc: discord.Member = member or ctx.author
 
@@ -54,20 +54,15 @@ class system_user(Cog_Extension):
             for discord_id in sclient.sqldb.get_discord_ids_by_user(identity.user_id):
                 if discord_id != user_dc.id:
                     account_lines.append(f"Discord：<@{discord_id}>")
-            # Twitch 以 auth server 為準，每次即時查；連不上就不顯示。臨時使用者不是域民，不必查；
+            # Twitch、Minecraft 以 auth server 為準，每次即時查；連不上就不顯示。臨時使用者不是域民，不必查；
             # 這次解析剛向 auth server 查過就直接用，不再查第二次
             if identity.is_formal:
-                passports = identity.twitch_passports
+                passports = identity.passports
                 if passports is None:
-                    passports = await fetch_twitch_passports(user_dc.id)
-                for passport in passports:
-                    account_lines.append(f"{PLATFORM_DISPLAY_NAME[PlatformType.Twitch]}：{passport.username or passport.subject}")
-            for account in sclient.sqldb.get_linked_accounts(identity.user_id):
-                platform = PlatformType(account.platform)
-                if platform in (PlatformType.Twitch, PlatformType.Google):
-                    continue  # linked_account 殘留的 Twitch、Google 列不顯示
-                platform_name = PLATFORM_DISPLAY_NAME.get(platform, platform.name)
-                account_lines.append(f"{platform_name}：{account.display_name or account.external_id}")
+                    passports = await fetch_linked_passports(user_dc.id)
+                for platform, linked in ((PlatformType.Twitch, passports.twitch), (PlatformType.Minecraft, passports.minecraft)):
+                    for passport in linked:
+                        account_lines.append(f"{PLATFORM_DISPLAY_NAME[platform]}：{passport.username or passport.subject}")
             if account_lines:
                 account_embed.add_field(name="綁定的帳號", value="\n".join(account_lines), inline=False)
 

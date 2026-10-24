@@ -13,7 +13,7 @@ from starDiscord import checks
 from starDiscord.cmds import system_user as user_cog
 from starlib.database import DiscordIdentity, DriveShare, LinkedAccount, PlatformType
 from starlib.identity import IdentityResolver, LinkedPassport
-from starlib.identity import twitch as twitch_module
+from starlib.identity import resolver as resolver_module
 from starlib.utils import nowtz
 
 CALLER = 900000000000000010
@@ -89,8 +89,8 @@ def env(monkeypatch, repo, directory):
     monkeypatch.setattr(checks, "resolve_identity", resolver.resolve)
     monkeypatch.setattr(user_cog, "resolve_identity", resolver.resolve)
     monkeypatch.setattr(user_cog, "sclient", SimpleNamespace(sqldb=repo))
-    # 即時查 Twitch 走真實的 fetch_twitch_passports，只把解析器換成用假 auth server 的那個
-    monkeypatch.setattr(twitch_module, "_get_default", lambda: resolver)
+    # 即時查外部帳號走真實的 fetch_linked_passports，只把解析器換成用假 auth server 的那個
+    monkeypatch.setattr(resolver_module, "_get_default", lambda: resolver)
     return SimpleNamespace(repo=repo, directory=directory, resolver=resolver)
 
 
@@ -118,11 +118,10 @@ class TestUserInfoCommand:
         assert "未註冊" not in ctx.account_text
 
     def test_linked_accounts_and_other_discord_accounts(self, env):
-        account = _account(twitch_passports=(LinkedPassport("tw-1", "streamer"),))
+        account = _account(twitch_passports=(LinkedPassport("tw-1", "streamer"),), minecraft_passports=(LinkedPassport("mc-1", "Steve"),))
         env.directory.accounts[CALLER] = account
         env.directory.accounts[OTHER] = account
-        env.repo.upsert_linked_account(account.account_id, PlatformType.Minecraft, "mc-1", "Steve")
-        env.repo.upsert_linked_account(uuid4(), PlatformType.Minecraft, "mc-other", "NotMine")
+        env.directory.accounts[TARGET] = _account(minecraft_passports=(LinkedPassport("mc-other", "NotMine"),))
         # OTHER 要先有紀錄，bot 才「知道」這個 Discord 帳號
         run(FakeCtx(OTHER))
 
@@ -138,18 +137,18 @@ class TestUserInfoCommand:
         env.directory.accounts[CALLER] = _account(twitch_passports=(LinkedPassport("1", "streamer"),))
         run(FakeCtx())  # 先有紀錄，之後 TTL 內解析不查 auth server，Twitch 才會走即時查
         ctx = FakeCtx()
-        original = user_cog.fetch_twitch_passports
+        original = user_cog.fetch_linked_passports
 
         async def spy_fetch(discord_id):
-            ctx.events.append("fetch_twitch")
+            ctx.events.append("fetch_passports")
             return await original(discord_id)
 
-        monkeypatch.setattr(user_cog, "fetch_twitch_passports", spy_fetch)
+        monkeypatch.setattr(user_cog, "fetch_linked_passports", spy_fetch)
 
         run(ctx)
 
         assert ctx.deferred
-        assert ctx.events == ["defer", "fetch_twitch"]
+        assert ctx.events == ["defer", "fetch_passports"]
 
     def test_expired_ttl_reuses_twitch_from_same_resolution(self, env):
         env.directory.accounts[CALLER] = _account(twitch_passports=(LinkedPassport("1", "streamer"),))
@@ -185,6 +184,18 @@ class TestUserInfoCommand:
 
         assert "Twitch：second\nTwitch：first" in run(FakeCtx()).account_text
 
+    def test_minecraft_listed_after_twitch(self, env):
+        env.directory.accounts[CALLER] = _account(
+            twitch_passports=(LinkedPassport("1", "streamer"),), minecraft_passports=(LinkedPassport("uuid-1", "Steve"), LinkedPassport("uuid-2", None))
+        )
+
+        assert "Twitch：streamer\nMinecraft：Steve\nMinecraft：uuid-2" in run(FakeCtx()).account_text
+
+    def test_suspended_target_minecraft_is_hidden(self, env):
+        env.directory.accounts[TARGET] = _account(username="target", suspended=True, minecraft_passports=(LinkedPassport("uuid-1", "Steve"),))
+
+        assert "Steve" not in run(FakeCtx(), member(TARGET)).account_text
+
     def test_twitch_without_username_shows_subject(self, env):
         env.directory.accounts[CALLER] = _account(twitch_passports=(LinkedPassport("689775663", None),))
 
@@ -211,17 +222,15 @@ class TestUserInfoCommand:
         assert "Twitch" not in run(FakeCtx()).account_text
 
     def test_twitch_omitted_when_directory_down_but_rest_shown(self, env):
-        account = _account(username="citizen-a", twitch_passports=(LinkedPassport("1", "streamer"),))
+        account = _account(username="citizen-a", twitch_passports=(LinkedPassport("1", "streamer"),), minecraft_passports=(LinkedPassport("mc-1", "Steve"),))
         env.directory.accounts[CALLER] = account
-        env.repo.upsert_linked_account(account.account_id, PlatformType.Minecraft, "mc-1", "Steve")
         run(FakeCtx())  # 先有紀錄，TTL 內解析不打 auth server
         env.directory.unavailable = True
 
         ctx = run(FakeCtx())
 
-        assert "Twitch" not in ctx.account_text
+        assert "Twitch" not in ctx.account_text and "Minecraft" not in ctx.account_text
         assert "析域帳號\ncitizen-a" in ctx.account_text
-        assert "Minecraft：Steve" in ctx.account_text
         assert len(ctx.embeds) == 2
 
     def test_temporary_user_has_no_twitch_row_and_no_lookup(self, env):
@@ -233,20 +242,21 @@ class TestUserInfoCommand:
         assert "Twitch" not in ctx.account_text
         assert env.directory.calls == calls  # 臨時使用者不是域民，不查 auth server
 
-    def test_leftover_linked_account_twitch_and_google_rows_are_hidden(self, env):
-        account = _account()
+    def test_leftover_linked_account_rows_are_hidden(self, env):
+        account = _account(minecraft_passports=(LinkedPassport("mc-new", "NewSteve"),))
         env.directory.accounts[CALLER] = account
         # 上線前留下的舊資料，直接寫表模擬
         env.repo.session.add(LinkedAccount(user_id=account.account_id, platform=PlatformType.Twitch, external_id="tw-old", display_name="oldstreamer"))
         env.repo.session.add(LinkedAccount(user_id=account.account_id, platform=PlatformType.Google, external_id="g-old", display_name="a@gmail.com"))
+        env.repo.session.add(LinkedAccount(user_id=account.account_id, platform=PlatformType.Minecraft, external_id="mc-old", display_name="OldSteve"))
         env.repo.commit()
-        env.repo.upsert_linked_account(account.account_id, PlatformType.Minecraft, "mc-1", "Steve")
 
         text = run(FakeCtx()).account_text
 
         assert "Twitch" not in text and "oldstreamer" not in text
         assert "Google" not in text and "a@gmail.com" not in text
-        assert "Minecraft：Steve" in text
+        assert "OldSteve" not in text
+        assert "Minecraft：NewSteve" in text
 
     def test_no_bindings_has_no_bound_section(self, env):
         assert "綁定的帳號" not in run(FakeCtx()).account_text
@@ -260,11 +270,8 @@ class TestUserInfoCommand:
         assert "雲端共用資料夾\n已共用" in run(FakeCtx()).account_text
 
     def test_query_other_shows_their_data_not_callers(self, env):
-        caller_acc, target_acc = _account(username="caller"), _account(username="target")
-        env.directory.accounts[CALLER] = caller_acc
-        env.directory.accounts[TARGET] = target_acc
-        env.repo.upsert_linked_account(caller_acc.account_id, PlatformType.Minecraft, "mc-caller", "CallerMC")
-        env.repo.upsert_linked_account(target_acc.account_id, PlatformType.Minecraft, "mc-target", "TargetMC")
+        env.directory.accounts[CALLER] = _account(username="caller", minecraft_passports=(LinkedPassport("mc-caller", "CallerMC"),))
+        env.directory.accounts[TARGET] = _account(username="target", minecraft_passports=(LinkedPassport("mc-target", "TargetMC"),))
 
         text = run(FakeCtx(), member(TARGET)).account_text
 

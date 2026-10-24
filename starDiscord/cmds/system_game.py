@@ -43,7 +43,6 @@ class system_game(Cog_Extension):
     apex = SlashCommandGroup("apex", "Apex相關指令", name_localizations=ChoiceList.name("apex"))
     dbd = SlashCommandGroup("dbd", "Dead by Daylight相關指令", name_localizations=ChoiceList.name("dbd"))
     steam = SlashCommandGroup("steam", "Steam相關指令", name_localizations=ChoiceList.name("steam"))
-    minecraft_cmd = SlashCommandGroup("minecraft", "Minecraft相關指令", name_localizations=ChoiceList.name("minecraft"))
     match_cmd = SlashCommandGroup("match", "聯賽相關指令")
 
     @game.command(description="查詢遊戲資料", name_localizations=ChoiceList.name("game_player"))
@@ -296,23 +295,6 @@ class system_game(Cog_Extension):
             await ctx.respond(content="查詢成功", embed=user.embed())
         else:
             await ctx.respond(content="查詢失敗:查無此ID", ephemeral=True)
-
-    @minecraft_cmd.command(name="set", description="設定Minecraft帳號資料", name_localizations=ChoiceList.name("minecraft_set"))
-    @with_identity()
-    @commands.cooldown(rate=1, per=1)
-    async def minecraft_set(self, ctx: IdentityContext, username: discord.Option(str, name="玩家名稱", description="要設定的Minecraft玩家名稱，留空以刪除", default=None)):
-        if not username:
-            sclient.sqldb.remove_linked_account(ctx.identity.user_id, PlatformType.Minecraft)
-            await ctx.respond(content="已刪除Minecraft帳號資料", ephemeral=True)
-            return
-
-        user = MojangAPI().get_uuid(username)
-        if user:
-            sclient.sqldb.upsert_linked_account(ctx.identity.user_id, PlatformType.Minecraft, user.id, username)
-            await ctx.respond(content=f"設定成功 {user.name}", ephemeral=True)
-        else:
-            await ctx.respond(content="設定失敗：查無此玩家", ephemeral=True)
-
 
     @game.command(description="註冊Radmin VPN帳號", name_localizations=ChoiceList.name("game_radmin"))
     async def radmin(

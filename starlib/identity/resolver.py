@@ -18,14 +18,22 @@ log = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
+class LinkedPassports:
+    """域民在 auth server 連結的外部帳號，順序同 auth server 回傳"""
+
+    twitch: tuple[LinkedPassport, ...] = ()
+    minecraft: tuple[LinkedPassport, ...] = ()
+
+
+@dataclass(frozen=True)
 class BotIdentity:
     user_id: UUID
     is_formal: bool
     username: str | None
     roles: tuple[str, ...]
     suspended: bool
-    # 只有這次解析剛向 auth server 查過才有值（停權域民為空）；None 代表這次沒查，不等於沒有 Twitch。不寫入資料庫
-    twitch_passports: tuple[LinkedPassport, ...] | None = None
+    # 只有這次解析剛向 auth server 查過才有值（停權域民為空）；None 代表這次沒查，不等於沒有綁定。不寫入資料庫
+    passports: LinkedPassports | None = None
 
 
 class IdentityUnavailable(Exception):
@@ -42,9 +50,11 @@ def _to_identity(record: DiscordIdentity) -> BotIdentity:
     )
 
 
-def _visible_twitch(account: Account | None) -> tuple[LinkedPassport, ...]:
-    """查無此人與停權的域民不顯示 Twitch，與 lookup_twitch_member 把停權當不是域民一致"""
-    return () if account is None or account.suspended else account.twitch_passports
+def _visible_passports(account: Account | None) -> LinkedPassports:
+    """查無此人與停權的域民不顯示外部帳號，與 lookup_twitch_member 把停權當不是域民一致"""
+    if account is None or account.suspended:
+        return LinkedPassports()
+    return LinkedPassports(twitch=account.twitch_passports, minecraft=account.minecraft_passports)
 
 
 class IdentityResolver:
@@ -100,7 +110,7 @@ class IdentityResolver:
                 # 域民被刪除或通行證被移除：資料留在原 ID，交給管理員處理
                 log.warning("identity: formal account no longer found", extra={"discord_id": discord_id, "user_id": str(record.user_id)})
             record.checked_at = now
-            return replace(_to_identity(self._repo.save_discord_identity(record)), twitch_passports=())
+            return replace(_to_identity(self._repo.save_discord_identity(record)), passports=LinkedPassports())
 
         merge_from = None
         if record and record.user_id != account.account_id:
@@ -138,20 +148,20 @@ class IdentityResolver:
             self._merge_retry_after[discord_id] = nowtz() + self._merge_backoff
             return previous
         self._merge_retry_after.pop(discord_id, None)
-        return replace(_to_identity(saved), twitch_passports=_visible_twitch(account))
+        return replace(_to_identity(saved), passports=_visible_passports(account))
 
-    async def fetch_twitch_passports(self, discord_id: int) -> tuple[LinkedPassport, ...]:
-        """即時查該域民連結的 Twitch；與 resolve 共用 auth server 的 backoff，剛連不上的這段時間直接回空，不再各等一次逾時。不 raise。"""
+    async def fetch_passports(self, discord_id: int) -> LinkedPassports:
+        """即時查該域民連結的外部帳號；與 resolve 共用 auth server 的 backoff，剛連不上的這段時間直接回空，不再各等一次逾時。不 raise。"""
         if self._unavailable_until and nowtz() < self._unavailable_until:
-            return ()
+            return LinkedPassports()
         try:
             account = await self._directory.find_by_discord(discord_id)
         except DirectoryUnavailable:
             self._unavailable_until = nowtz() + self._backoff
-            log.warning("identity: twitch passports unavailable", extra={"discord_id": discord_id})
-            return ()
+            log.warning("identity: linked passports unavailable", extra={"discord_id": discord_id})
+            return LinkedPassports()
         self._unavailable_until = None
-        return _visible_twitch(account)
+        return _visible_passports(account)
 
     async def _merge_source_for_formal(self, discord_id: int, old_id: UUID, new_id: UUID) -> UUID | None:
         """原本是正式 ID、現在指到別的域民：舊 ID 已併入新域民才搬資料，否則只改紀錄。沒得到答案時 raise DirectoryUnavailable。"""
@@ -181,7 +191,12 @@ def _get_directory() -> AccountDirectory:
         from starlib.settings import get_settings
 
         settings = get_settings()
-        _directory = DomalyzeIdentityClient(settings.AUTH_INTERNAL_URL, settings.AUTH_SERVICE_KEY, twitch_provider=settings.AUTH_TWITCH_PROVIDER)
+        _directory = DomalyzeIdentityClient(
+            settings.AUTH_INTERNAL_URL,
+            settings.AUTH_SERVICE_KEY,
+            twitch_provider=settings.AUTH_TWITCH_PROVIDER,
+            minecraft_provider=settings.AUTH_MINECRAFT_PROVIDER,
+        )
     return _directory
 
 
@@ -207,3 +222,11 @@ async def resolve_identity(discord_id: int, *, create: bool = True) -> BotIdenti
     auth server 沒給出明確答案且沒有紀錄時 raise IdentityUnavailable。
     """
     return await _get_default().resolve(discord_id, create=create)
+
+
+async def fetch_linked_passports(discord_id: int) -> LinkedPassports:
+    """用 Discord ID 即時向 auth server 查該域民連結的 Twitch、Minecraft。
+
+    不 raise；查無此人、停權中、auth server 連不上或逾時（與身分解析共用 backoff）都回空。
+    """
+    return await _get_default().fetch_passports(discord_id)

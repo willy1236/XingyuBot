@@ -48,8 +48,9 @@ class AppSettings(BaseSettings):
     # auth server 對外網址，提示使用者去註冊、連結帳號用
     AUTH_PUBLIC_URL: str = "https://auth.domalyze.net"
     IDENTITY_TTL_SECONDS: int = 3600
-    # auth server 管理頁的 Twitch 登入方式代號（login_provider.slug）
+    # auth server 管理頁的 Twitch、Minecraft 登入方式代號（login_provider.slug）
     AUTH_TWITCH_PROVIDER: str = "twitch"
+    AUTH_MINECRAFT_PROVIDER: str = "minecraft"
     # 身分組代號 -> PrivilegeLevel 數字，例如 {"some-role": 2}；沒設定時所有人都是一般使用者
     PRIVILEGE_ROLES: dict[str, int] = Field(default_factory=dict)
 
