@@ -1,5 +1,7 @@
 import asyncio
 import logging
+import socket
+import threading
 
 from sqlalchemy.exc import NoResultFound
 from twitchAPI.chat import (
@@ -505,6 +507,17 @@ async def run():
     return chat, twitch, eventsub
 
 
+TWITCH_CHAT_HOST = "irc-ws.chat.twitch.tv"
+
+
+def _can_reach(host: str, port: int) -> bool:
+    try:
+        socket.create_connection((host, port), timeout=5).close()
+    except OSError:
+        return False
+    return True
+
+
 class TwitchBotThread(BaseThread):
     def __init__(self):
         super().__init__(name="TwitchBotThread")
@@ -515,12 +528,47 @@ class TwitchBotThread(BaseThread):
     def run(self):
         try:
             self.chat, self.twitch, self.eventsub = asyncio.run(run())
-            self._stop_event.wait()
+            self._watch_chat()
             asyncio.run(self.cleanup())
         except Exception as exc:
             capture_exception_safe(exc, tags={"service": "twitch", "source": "thread_run"})
             log.exception("TwitchBotThread crashed: %s", exc)
             raise
+
+    _CHAT_CHECK_INTERVAL = 60
+    # twitchAPI 自己的重連 backoff 合計約 255 秒，斷線超過這個時間才視為它已放棄
+    _CHAT_DEAD_CHECKS = 5
+    _CHAT_START_TIMEOUT = 300
+
+    def _watch_chat(self):
+        """等待停止訊號；期間若聊天室斷線且 twitchAPI 已放棄重連，就重啟 chat。"""
+        disconnected_checks = 0
+        while not self._stop_event.wait(self._CHAT_CHECK_INTERVAL):
+            if self.chat.is_connected():
+                disconnected_checks = 0
+                continue
+            disconnected_checks += 1
+            if disconnected_checks < self._CHAT_DEAD_CHECKS:
+                continue
+            if not _can_reach(TWITCH_CHAT_HOST, 443):
+                # 網路還沒恢復，重啟只會讓 chat.start() 卡在連線重試
+                continue
+            log.warning("Twitch chat 已斷線 %d 秒，重啟 chat", disconnected_checks * self._CHAT_CHECK_INTERVAL)
+            try:
+                self.chat.stop()
+            except Exception:
+                log.exception("Twitch chat 停止失敗，放棄自動重啟")
+                self._stop_event.wait()
+                return
+            # chat.start() 在連線失敗時會無限等待 startup，放到另一條 thread 並設上限
+            starter = threading.Thread(target=self.chat.start, name="TwitchChatRestart", daemon=True)
+            starter.start()
+            starter.join(self._CHAT_START_TIMEOUT)
+            if starter.is_alive():
+                log.error("Twitch chat 重啟逾時，放棄自動重啟，需重啟服務")
+                self._stop_event.wait()
+                return
+            disconnected_checks = 0
 
     async def cleanup(self):
         """安全地清理所有資源"""

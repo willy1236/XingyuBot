@@ -171,7 +171,32 @@ def before_send(event: dict[str, Any], hint: dict[str, Any]) -> dict[str, Any] |
     # py-cord 重連 gateway 時舊的 aiohttp 連線被 GC，asyncio 會記一筆 Unclosed connection，非本專案可處理
     if _is_unclosed_gateway_connection(event):
         return None
+    if _is_transient_network_error(_exception_of(hint)):
+        return None
+    # twitchAPI 聊天室重連失敗後會停止接收，由 TwitchBotThread 的 watchdog 重啟，不需另外回報
+    if _is_twitch_chat_reconnect_failure(event):
+        return None
     return _sanitize_data(event)
+
+
+def _is_transient_network_error(exc: BaseException | None) -> bool:
+    """連線層失敗（DNS、逾時、reset）或對方 5xx：定時任務下一輪會自動重試，只留本地 log。"""
+    if exc is None:
+        return False
+    # 延遲 import：本模組在 main.py 最先載入，此時還不能觸發 starlib 的初始化
+    from starlib.exceptions import APINetworkError
+
+    if not isinstance(exc, APINetworkError):
+        return False
+    status = exc.status_code
+    return status is None or status >= 500
+
+
+def _is_twitch_chat_reconnect_failure(event: dict[str, Any]) -> bool:
+    if event.get("logger") != "twitchAPI.chat":
+        return False
+    message = (event.get("logentry") or {}).get("message") or ""
+    return message.startswith("Connection to chat websocket lost")
 
 
 def _is_unclosed_gateway_connection(event: dict[str, Any]) -> bool:
