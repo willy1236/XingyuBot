@@ -43,6 +43,11 @@ dev = [
     "ruff>=0.17.1",
 ]
 
+[tool.uv]
+# tweepy 4.17 限制 oauthlib<4，但專案只用 bearer token 與 OAuth2 client 流程，
+# oauthlib 4.x 的 breaking changes 僅在 Provider 端，覆寫以修補安全漏洞。
+override-dependencies = ["oauthlib>=4.0.1"]
+
 [tool.pytest.ini_options]
 pythonpath = ["."]
 markers = [
