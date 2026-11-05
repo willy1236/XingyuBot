@@ -548,7 +548,12 @@ async def refresh_ip_last_seen_nmap():
     ips = sqldb.get_active_ips(utils.nowtz().replace(year=2025, month=8, day=11, hour=0, minute=0, second=0))  # 現在設定指定時間，之後再改成動態計算過去30天
     ips_string = " ".join([str(target.ip) for target in ips])
 
-    up_hosts = await asyncio.to_thread(_nmap_scan_up_hosts, ips_string)
+    try:
+        up_hosts = await asyncio.to_thread(_nmap_scan_up_hosts, ips_string)
+    except nmap.PortScannerError as e:
+        # 關機時 systemd 會對整個 cgroup 送 SIGTERM，nmap 被中斷後只輸出半份 XML；下一輪重掃即可
+        log.warning("refresh_ip_last_seen_nmap: nmap 掃描中斷或輸出不完整: %s", str(e)[:200])
+        return
     active_ips = [UserIPDetails(ip=host, last_seen=now) for host in up_hosts]
 
     sqldb.batch_merge(active_ips)
