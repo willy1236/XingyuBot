@@ -3,7 +3,6 @@ import random
 import discord
 
 from starlib import sqldb
-from starlib.database import Coins
 from starlib.database.postgresql.rpg import Monster, MonsterInBattle, RPGEquipment, RPGPlayerItem
 from starlib.utils import BotEmbed
 
@@ -274,19 +273,6 @@ class RPGAdvanceView(discord.ui.View):
         await self.update_message(interaction)
 
 
-class RPGbutton2(discord.ui.View):
-    def __init__(self, userid):
-        super().__init__()
-        self.userid = userid
-
-    @discord.ui.button(label="按我進行工作", style=discord.ButtonStyle.green)
-    async def button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
-        if interaction.user.id == self.userid:
-            user = sqldb.get_rpguser(interaction.user.id)
-            result = user.work()
-            await interaction.response.edit_message(content=result)
-
-
 class RPGEquipmentSelect(discord.ui.Select):
     def __init__(self, bag: list[RPGEquipment]):
         self.bag = bag
@@ -359,33 +345,10 @@ class RPGEquipmentSelectView(discord.ui.View):
                 num_back = len(self.embeds)
                 await self.change_page(interaction)
 
-    @discord.ui.button(label="售出裝備", style=discord.ButtonStyle.danger, row=1)
-    async def button3_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
-        if interaction.user.id == self.user_dc.id and self.now_item:
-            sqldb.sell_rpgplayer_equipment(self.user_dc.id, self.now_item.equipment_uid)
-            sqldb.update_coins(self.user_dc.id, "add", Coins.Rcoin, self.now_item.price)
-
-            del self.bag[self.paginator.current_page * self.item_per_page + self.now_page_item] # type: ignore
-            self.refresh_item_page()
-            await interaction.response.edit_message(content=f"已售出 {self.now_item.name} 並獲得 {self.now_item.price} Rcoin",embeds=[self.paginator.pages[self.paginator.current_page]])
-
     @discord.ui.button(label="當前頁面",style=discord.ButtonStyle.gray, row=1, custom_id="rpgequipment_now_page")
     async def button5_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
         if interaction.user.id == self.user_dc.id:
             await self.change_page(interaction)
-
-    @discord.ui.button(label="批量售出",style=discord.ButtonStyle.danger, row=1)
-    async def button4_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
-        if interaction.user.id == self.user_dc.id and self.now_item:
-            total_price, deleted_uids = sqldb.sell_rpgplayer_equipment(self.user_dc.id,equipment_id=self.now_item.item_id)
-            sqldb.update_coins(self.user_dc.id,"add",Coins.Rcoin,self.now_item.price)
-
-            self.bag = [equip for equip in self.bag if equip.equipment_uid not in deleted_uids]
-
-            self.refresh_item_page()
-            await interaction.response.edit_message(
-                content=f"已售出未穿著的所有 {self.now_item.name} 並獲得 {total_price} Rcoin", embeds=[self.paginator.pages[self.paginator.current_page]]
-            )
 
     @discord.ui.button(label="下一頁", style=discord.ButtonStyle.primary, row=1)
     async def button2_callback(self, button: discord.ui.Button, interaction: discord.Interaction):

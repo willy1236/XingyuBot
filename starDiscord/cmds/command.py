@@ -12,7 +12,7 @@ from discord.ext import commands, pages
 from discord.utils import format_dt
 
 from starlib import BotEmbed, ChoiceList, sclient
-from starlib.database import Coins, DriveShare, Giveaway
+from starlib.database import DriveShare, Giveaway
 from starlib.instance import *
 from starlib.providers import XingyuGoogleCloud
 from starlib.utils import create_only_role_list, create_role_magification_dict, find, nowtz, parse_datetime, random_color
@@ -290,84 +290,11 @@ class command(Cog_Extension):
             await ctx.respond("點數錯誤：你沒有那麼多點數", ephemeral=True)
             return
 
-        user_bet = sclient.sqldb.place_bet(bet_id, choice, money)
+        user_bet = sclient.sqldb.place_bet(bet_id, ctx.author.id, choice, money)
         if user_bet:
             user_coin.stardust -= money
             sclient.sqldb.merge(user_coin)
             await ctx.respond("下注完成!")
-
-    @bet.command(name="create", description="創建賭盤")
-    async def create_bet(
-        self,
-        ctx,
-        title: discord.Option(str, name="賭盤標題", description="", required=True),
-        pink: discord.Option(str, name="粉紅幫標題", description="", required=True),
-        blue: discord.Option(str, name="藍藍幫標題", description="", required=True),
-        time: discord.Option(int, name="賭盤開放時間", description="", required=True, min_value=10, max_value=600),
-    ):
-        bet_id: int = ctx.author.id
-        bet = sclient.sqldb.get_bet_data(bet_id)
-        if bet:
-            await ctx.respond("錯誤：你已經創建一個賭盤了喔", ephemeral=True)
-            return
-
-        sclient.sqldb.create_bet(bet_id, title, pink, blue)
-
-        embed = BotEmbed.simple(title="賭盤", description=f"編號: {bet_id}")
-        embed.add_field(name="賭盤內容", value=title, inline=False)
-        embed.add_field(name="粉紅幫", value=pink, inline=False)
-        embed.add_field(name="藍藍幫", value=blue, inline=False)
-        await ctx.respond(embed=embed)
-        await asyncio.sleep(delay=time)
-
-        await ctx.send(f"編號{bet_id}：下注時間結束")
-        sclient.sqldb.update_bet(bet_id)
-
-    @bet.command(description="結束賭盤")
-    async def end(self, ctx, end: discord.Option(str, name="獲勝下注顏色", description="", required=True, choices=bet_option)):
-        bet_id = str(ctx.author.id)
-        # 錯誤檢測
-        bet = sclient.sqldb.get_bet_data(bet_id)
-        if bet["IsOn"]:
-            await ctx.respond("錯誤：此賭盤的開放下注時間尚未結束", ephemeral=True)
-            return
-
-        # 計算雙方總點數
-        total = sclient.sqldb.get_bet_total(bet_id)
-
-        # 偵測是否兩邊皆有人下注
-        if total[0] and total[1]:
-            # 獲勝者設定
-            winners = sclient.sqldb.get_bet_winner(bet_id, end)
-            # 前置準備
-            pink_total = total[0]
-            blue_total = total[1]
-            if pink_total > blue_total:
-                mag = pink_total / blue_total
-            else:
-                mag = blue_total / pink_total
-            # 結果公布
-            if end == "pink":
-                await ctx.respond(f"編號{bet_id}：恭喜粉紅幫獲勝!")
-            elif end == "blue":
-                await ctx.respond(f"編號{bet_id}：恭喜藍藍幫獲勝!")
-            # 點數計算
-            for i in winners:
-                pt_add = i["money"] * (mag + 1)
-                sclient.sqldb.update_coins(i["user_id"], "add", Coins.Point, pt_add)
-
-        else:
-            users = sclient.sqldb.get_bet_winner(bet_id, "blue")
-            for i in users:
-                sclient.sqldb.update_coins(i["user_id"], "add", Coins.Point, i["money"])
-
-            users = sclient.sqldb.get_bet_winner(bet_id, "pink")
-            for i in users:
-                sclient.sqldb.update_coins(i["user_id"], "add", Coins.Point, i["money"])
-            await ctx.respond(f"編號{bet_id}：因為有一方沒有人選擇，所以此局平手，點數將歸還給所有人")
-
-        # 更新資料庫
-        sclient.sqldb.remove_bet(bet_id)
 
     @commands.user_command(name="成員資訊", description="查詢使用者的相關資訊")
     async def whois(self, ctx: discord.ApplicationContext, member: discord.Member):
