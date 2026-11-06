@@ -58,7 +58,7 @@ flowchart LR
 
 | # | 卡號 | 進度 | 標題 | 依賴 | 並行組 | 備註 |
 |---|---|---|---|---|---|---|
-| 1 | T-01 | 進行中 | [共用] `starlib/messaging`：提供跨 process 事件廣播與連線 | 無 | — | T-02～T-07 依賴 |
+| 1 | T-01 | 卡住 | [共用] `starlib/messaging`：提供跨 process 事件廣播與連線 | 無 | — | T-02～T-07 依賴 |
 | 2 | T-02 | 未完成 | Twitch bot 以獨立 process 執行，追隨通知經 Redis 送到 Discord | T-01 | — | 骨架切片；含上線驗收 2 |
 | 3 | T-03 | 未完成 | 突襲、訂閱、續訂、點數兌換、預測結果、私訊通知改走跨 process 事件 | T-02 | A | |
 | 4 | T-04 | 未完成 | 開台與下播通知改走跨 process 事件，開台通知原子搶佔 | T-02 | A | |
@@ -199,13 +199,14 @@ flowchart TD
 - 收回別的 consumer 事件的閒置門檻 120 秒要大於 handler 正常執行時間；開台通知要發多個伺服器，實作時量一下實際耗時。
 - `close()` 要在 process 結束前呼叫，否則進行中的 ack 可能沒送出，事件會重送一次，這在「寧可重複」的容許範圍內。Twitch 端由 T-02／T-05 的 `twitch_main.py`、Discord 端由 T-02 的 `main.py` 負責。
 
-**進度**：進行中
+**進度**：卡住
+- 卡在：第 3 輪審查又出現由上一輪修正引入的 non-blocking（`bus.py` 解析事件時的泛用 `except Exception` 只記 warning，事件 model 的程式錯誤不會進 Sentry），連續兩輪都是修正帶出新問題，依流程停下等使用者決定要不要再修一輪
 - commit：`starlib/messaging` 主體（runtime、connection、bus、events）、`capture_message_safe`、`REDIS_URL` 設定與 `redis` 依賴
 - commit：`test/test_messaging.py` 涵蓋全部驗收條件（以 TCP proxy 模擬 Redis 停止與恢復，時間常數在測試中縮短）
 - commit：`docs/messaging-contract.md` 共通段落
 - commit：第 1 輪審查修正（`close()` 等進行中的事件、loop 遇未預期例外不停止、補收回路徑的修剪測試）
 - commit：第 2 輪審查修正（`close()` 後取到的事件一律不處理、解析時的任何例外都 ack 掉、修正兩個不穩的測試）
-- 續做：第 3 輪審查
+- 續做：使用者決定後，處理第 3 輪的 non-blocking，或直接收尾（勾驗收條件、進度改完成）
 
 ### T-02 Twitch bot 以獨立 process 執行，追隨通知經 Redis 送到 Discord
 
