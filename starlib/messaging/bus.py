@@ -385,8 +385,10 @@ class MessageBus:
             try:
                 event = self._decode(sub, event_type, entry_id, fields) if sub is not None else None
             except Exception as exc:
-                # 例如事件 model 的 validator 拋出 pydantic 不會包裝的例外：當成格式錯誤 ack 掉，不卡住這條 stream
-                log.warning("%s 事件 %s 解析失敗，略過：%r", event_type, entry_id, exc)
+                # 格式錯誤在 _decode 內已處理；到這裡的是事件 model 的程式錯誤（例如 validator 拋出 pydantic 不會包裝的例外），
+                # 回報 Sentry 讓人發現，事件照樣 ack 掉，不卡住這條 stream
+                capture_exception_safe(exc, tags={**SENTRY_TAGS, "event_type": event_type})
+                log.error("%s 事件 %s 解析時發生未預期的錯誤，略過", event_type, entry_id, exc_info=exc)
                 event = None
             if sub is not None and event is not None:
                 await self._dispatch(sub, event, Delivery(redelivered=redelivered))

@@ -418,7 +418,7 @@ def test_non_coroutine_handler_does_not_stop_consuming(make_bus, handler_loop, r
     assert wait_until(lambda: pending_count(raw, prefix, Ping) == 0)
 
 
-def test_unexpected_decode_error_is_acked(make_bus, handler_loop, raw, prefix):
+def test_unexpected_decode_error_is_reported_and_acked(make_bus, handler_loop, raw, prefix, sentry):
     sender, receiver = make_bus(), make_bus()
     rec = Recorder()
     receiver.subscribe(Picky, rec, handler_loop)
@@ -431,6 +431,7 @@ def test_unexpected_decode_error_is_acked(make_bus, handler_loop, raw, prefix):
 
     assert wait_until(lambda: rec.ns == [1])
     assert wait_until(lambda: pending_count(raw, prefix, Picky) == 0)
+    assert [type(exc) for exc in sentry["handler"]] == [LookupError]
 
 
 def test_resubscribe_replaces_handler(make_bus, handler_loop):
