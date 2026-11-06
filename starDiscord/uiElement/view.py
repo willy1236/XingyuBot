@@ -607,7 +607,7 @@ class GiveawayView(discord.ui.View):
         description += f"\n- 抽出人數：{self.giveaway.winner_count} 人"
         description += f"\n- 舉辦人：<@{self.giveaway.creator_id}>"
         description += f"\n- 結束時間：{_format_dt_seconds(self.deadline)}（{format_dt(self.deadline, 'R')}）"
-        embed = BotEmbed.general("抽獎系統", Jsondb.get_picture("dice_001"), title=f"{self.giveaway.prize_name}", description=description)
+        embed = BotEmbed.simple(title=self.giveaway.prize_name, description=description)
         embed.set_footer(text=f"抽獎ID：{self.giveaway.id}")
         return embed
 
@@ -616,7 +616,7 @@ class GiveawayView(discord.ui.View):
         description += f"\n- 中獎人數：{min(self.giveaway.winner_count, joiner_count)} / {joiner_count} 人"
         description += f"\n- 舉辦人：<@{self.giveaway.creator_id}>"
         description += f"\n- 結束時間：{_format_dt_seconds(self.giveaway.end_at)}"
-        embed = BotEmbed.general("抽獎系統", Jsondb.get_picture("dice_001"), title=f"{self.giveaway.prize_name}", description=description)
+        embed = BotEmbed.simple(title=self.giveaway.prize_name, description=description)
         embed.set_footer(text=f"抽獎ID：{self.giveaway.id}")
         return embed
 
