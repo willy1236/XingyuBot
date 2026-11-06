@@ -33,6 +33,7 @@ dependencies = [
     "yt-dlp>=2026.8.19",
     "structlog>=25.5.0",
     "psycopg[binary]>=3.3.4",
+    "python-dateutil>=2.9.0.post0",
 ]
 
 [dependency-groups]

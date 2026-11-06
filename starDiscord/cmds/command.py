@@ -15,7 +15,7 @@ from starlib import BotEmbed, ChoiceList, sclient
 from starlib.database import Coins, DriveShare, Giveaway
 from starlib.instance import *
 from starlib.providers import XingyuGoogleCloud
-from starlib.utils import create_only_role_list, create_role_magification_dict, find, nowtz, random_color
+from starlib.utils import create_only_role_list, create_role_magification_dict, find, nowtz, parse_datetime, random_color
 
 from ..checks import IdentityContext, with_identity
 from ..extension import Cog_Extension
@@ -858,17 +858,17 @@ class command(Cog_Extension):
         ctx: discord.ApplicationContext,
         prize_name: discord.Option(str, name="獎品", description="抽獎獎品"),
         winner_count: discord.Option(int, name="中獎人數", description="預設為1", default=1, min_value=1, max_value=100),
-        end_time: discord.Option(str, name="結束時間", description="格式為YYYY-MM-DD hh:mm:ss", required=False),
+        end_time: discord.Option(str, name="結束時間", description="例：2026-11-07 20:00、11/7 晚上8點、明天 20:00、3d、2小時", required=False),
         description: discord.Option(str, name="描述", description="關於抽獎的描述", required=False, default=None),
     ):
         await ctx.defer()
         now = nowtz()
         if end_time:
-            try:
-                end_at = datetime.strptime(end_time, "%Y-%m-%d %H:%M:%S").replace(tzinfo=now.tzinfo)
-            except ValueError:
-                await ctx.respond("錯誤：結束時間格式應為 YYYY-MM-DD hh:mm:ss")
+            end_at = parse_datetime(end_time, now)
+            if end_at is None:
+                await ctx.respond("錯誤：無法辨認結束時間，可輸入如 2026-11-07 20:00、11/7 晚上8點、明天 20:00、3d、2小時")
                 return
+            end_at = end_at.replace(microsecond=0)
             if end_at < now:
                 await ctx.respond("錯誤：結束時間必須大於現在時間")
                 return
