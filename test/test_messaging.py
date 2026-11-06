@@ -305,7 +305,7 @@ def test_killed_during_handler_is_redelivered(make_bus, handler_loop, raw, prefi
     sender.publish(Ping(occurred_at=now(), n=1))
     assert stuck.started.wait(5)
 
-    first.close()
+    first.close(timeout=1)
     assert pending_count(raw, prefix, Ping) == 1
 
     restarted = make_bus()
@@ -365,6 +365,40 @@ def test_malformed_messages_are_acked_and_skipped(make_bus, handler_loop, raw, p
     assert sum("略過" in r.getMessage() for r in caplog.records) == 4
 
 
+def test_close_waits_for_running_handler(make_bus, handler_loop, raw, prefix):
+    sender, receiver = make_bus(), make_bus()
+    finished = threading.Event()
+
+    async def slow(event: BusEvent, delivery: Delivery) -> None:
+        await asyncio.sleep(0.5)
+        finished.set()
+
+    receiver.subscribe(Ping, slow, handler_loop)
+    receiver.start(SERVICE, "c1")
+    sender.publish(Ping(occurred_at=now(), n=1))
+    assert wait_until(lambda: pending_count(raw, prefix, Ping) == 1)
+
+    receiver.close(timeout=5)
+    assert finished.is_set()
+    assert pending_count(raw, prefix, Ping) == 0
+
+
+def test_non_coroutine_handler_does_not_stop_consuming(make_bus, handler_loop, raw, prefix, sentry):
+    sender, receiver = make_bus(), make_bus()
+    calls: list[int] = []
+
+    def not_async(event: BusEvent, delivery: Delivery) -> None:
+        calls.append(event.n)  # type: ignore[attr-defined]
+
+    receiver.subscribe(Ping, not_async, handler_loop)  # type: ignore[arg-type]
+    receiver.start(SERVICE, "c1")
+    sender.publish(Ping(occurred_at=now(), n=1))
+    sender.publish(Ping(occurred_at=now(), n=2))
+
+    assert wait_until(lambda: calls == [1, 2] and len(sentry["handler"]) == 2)
+    assert wait_until(lambda: pending_count(raw, prefix, Ping) == 0)
+
+
 def test_resubscribe_replaces_handler(make_bus, handler_loop):
     sender, receiver = make_bus(), make_bus()
     old, new = Recorder(), Recorder()
@@ -398,7 +432,7 @@ def test_trimmed_pending_event_is_acked(make_bus, handler_loop, raw, prefix):
     first.start(SERVICE, "c1")
     sender.publish(ShortLived(occurred_at=now(), n=1))
     assert stuck.started.wait(5)
-    first.close()
+    first.close(timeout=1)
 
     key = stream(prefix, ShortLived)
     assert wait_until(lambda: raw.xlen(key) == 0, timeout=5)
@@ -412,6 +446,25 @@ def test_trimmed_pending_event_is_acked(make_bus, handler_loop, raw, prefix):
     assert rec.received == []
 
 
+def test_trimmed_event_of_dead_consumer_is_acked_on_claim(make_bus, handler_loop, raw, prefix, monkeypatch):
+    monkeypatch.setattr(bus_module, "CLAIM_MIN_IDLE_MS", 300)
+    sender = make_bus()
+    dead = make_bus()
+    dead.subscribe(ShortLived, Recorder(block=threading.Event()), handler_loop)
+    dead.start(SERVICE, "dead")
+    sender.publish(ShortLived(occurred_at=now(), n=1))
+    assert wait_until(lambda: pending_count(raw, prefix, ShortLived) == 1)
+    dead.close(timeout=1)
+    assert wait_until(lambda: raw.xlen(stream(prefix, ShortLived)) == 0, timeout=5)
+
+    rec = Recorder()
+    alive = make_bus()
+    alive.subscribe(ShortLived, rec, handler_loop)
+    alive.start(SERVICE, "alive")
+    assert wait_until(lambda: pending_count(raw, prefix, ShortLived) == 0)
+    assert rec.received == []
+
+
 def test_long_handler_not_reclaimed_but_dead_consumer_is(make_bus, handler_loop, raw, prefix, monkeypatch):
     monkeypatch.setattr(bus_module, "CLAIM_MIN_IDLE_MS", 500)
     sender = make_bus()
@@ -421,7 +474,7 @@ def test_long_handler_not_reclaimed_but_dead_consumer_is(make_bus, handler_loop,
     dead.start(SERVICE, "dead")
     sender.publish(Ping(occurred_at=now(), n=1))
     assert wait_until(lambda: pending_count(raw, prefix, Ping) == 1)
-    dead.close()
+    dead.close(timeout=1)
 
     release = threading.Event()
     rec = Recorder(block=release)
