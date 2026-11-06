@@ -124,6 +124,8 @@ class RedisConnection:
         delay = RECONNECT_INITIAL_DELAY
         while not self._closed:
             if self._state is not _State.UP:
+                # 丟掉斷線前留在 pool 裡的連線，否則恢復後用到舊連線又會判成斷線一次
+                await self._client.connection_pool.disconnect()
                 try:
                     await self._client.ping()
                 except CONNECTION_ERRORS as exc:
