@@ -204,7 +204,8 @@ flowchart TD
 - commit：`test/test_messaging.py` 涵蓋全部驗收條件（以 TCP proxy 模擬 Redis 停止與恢復，時間常數在測試中縮短）
 - commit：`docs/messaging-contract.md` 共通段落
 - commit：第 1 輪審查修正（`close()` 等進行中的事件、loop 遇未預期例外不停止、補收回路徑的修剪測試）
-- 續做：第 2 輪審查
+- commit：第 2 輪審查修正（`close()` 後取到的事件一律不處理、解析時的任何例外都 ack 掉、修正兩個不穩的測試）
+- 續做：第 3 輪審查
 
 ### T-02 Twitch bot 以獨立 process 執行，追隨通知經 Redis 送到 Discord
 

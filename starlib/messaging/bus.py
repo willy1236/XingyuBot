@@ -303,7 +303,7 @@ class MessageBus:
                 queue.append((entry_id, fields))
             else:
                 await client.xack(stream, self._service, entry_id)
-        # 內容已被修剪的 entry 不會回傳，直接 ack 掉
+        # 內容已被修剪的 entry 不會回傳，直接 ack 掉。Redis 7 以上 XCLAIM 本身就會把它們移出待確認清單，這裡只是保險
         missing = [entry_id for entry_id in ids if entry_id not in returned]
         if missing:
             await client.xack(stream, self._service, *missing)
@@ -333,8 +333,6 @@ class MessageBus:
                         await self._handle_entry(client, event_type, entry_id, fields, redelivered=True)
                     continue
                 response = await client.xreadgroup(group, consumer, {stream: ">"}, count=1, block=READ_BLOCK_MS)
-                if self._stopping:
-                    return  # 取到但沒處理的事件留在待確認清單，下次啟動時重送
                 for entry_id, fields in _entries(response):
                     await self._handle_entry(client, event_type, entry_id, fields, redelivered=False)
             except BusUnavailable:
@@ -378,11 +376,18 @@ class MessageBus:
         *,
         redelivered: bool,
     ) -> None:
+        if self._stopping:
+            return  # close() 之後取到的事件不處理也不 ack，留在待確認清單，下次啟動時重送
         self._handling += 1
         self._idle.clear()
         try:
             sub = self._subs.get(event_type)
-            event = self._decode(sub, event_type, entry_id, fields) if sub is not None else None
+            try:
+                event = self._decode(sub, event_type, entry_id, fields) if sub is not None else None
+            except Exception as exc:
+                # 例如事件 model 的 validator 拋出 pydantic 不會包裝的例外：當成格式錯誤 ack 掉，不卡住這條 stream
+                log.warning("%s 事件 %s 解析失敗，略過：%r", event_type, entry_id, exc)
+                event = None
             if sub is not None and event is not None:
                 await self._dispatch(sub, event, Delivery(redelivered=redelivered))
             await client.xack(self._stream_key(event_type), self._service, entry_id)
