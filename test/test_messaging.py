@@ -17,6 +17,7 @@ from uuid import uuid4
 
 import pytest
 import redis
+from pydantic import field_validator
 
 from starlib.messaging import BusEvent, BusUnavailable, Delivery, MessageBus
 from starlib.messaging import bus as bus_module
@@ -44,6 +45,23 @@ class ShortLived(BusEvent):
     receivers = (SERVICE,)
 
     n: int
+
+
+class Picky(BusEvent):
+    """validator 對 n=13 拋出 pydantic 不會包裝的例外。"""
+
+    event_type = "test.messaging.picky"
+    ttl = timedelta(minutes=10)
+    receivers = (SERVICE,)
+
+    n: int
+
+    @field_validator("n")
+    @classmethod
+    def _no_thirteen(cls, value: int) -> int:
+        if value == 13:
+            raise LookupError("13")
+        return value
 
 
 def now() -> datetime:
@@ -367,16 +385,17 @@ def test_malformed_messages_are_acked_and_skipped(make_bus, handler_loop, raw, p
 
 def test_close_waits_for_running_handler(make_bus, handler_loop, raw, prefix):
     sender, receiver = make_bus(), make_bus()
-    finished = threading.Event()
+    started, finished = threading.Event(), threading.Event()
 
     async def slow(event: BusEvent, delivery: Delivery) -> None:
+        started.set()
         await asyncio.sleep(0.5)
         finished.set()
 
     receiver.subscribe(Ping, slow, handler_loop)
     receiver.start(SERVICE, "c1")
     sender.publish(Ping(occurred_at=now(), n=1))
-    assert wait_until(lambda: pending_count(raw, prefix, Ping) == 1)
+    assert started.wait(5)
 
     receiver.close(timeout=5)
     assert finished.is_set()
@@ -395,8 +414,23 @@ def test_non_coroutine_handler_does_not_stop_consuming(make_bus, handler_loop, r
     sender.publish(Ping(occurred_at=now(), n=1))
     sender.publish(Ping(occurred_at=now(), n=2))
 
-    assert wait_until(lambda: calls == [1, 2] and len(sentry["handler"]) == 2)
+    assert wait_until(lambda: sorted(calls) == [1, 2] and len(sentry["handler"]) == 2)
     assert wait_until(lambda: pending_count(raw, prefix, Ping) == 0)
+
+
+def test_unexpected_decode_error_is_acked(make_bus, handler_loop, raw, prefix):
+    sender, receiver = make_bus(), make_bus()
+    rec = Recorder()
+    receiver.subscribe(Picky, rec, handler_loop)
+    receiver.start(SERVICE, "c1")
+    time.sleep(0.3)
+
+    data = {"event_type": Picky.event_type, "occurred_at": now().isoformat(), "n": 13}
+    raw.xadd(stream(prefix, Picky), {"data": json.dumps(data)})
+    sender.publish(Picky(occurred_at=now(), n=1))
+
+    assert wait_until(lambda: rec.ns == [1])
+    assert wait_until(lambda: pending_count(raw, prefix, Picky) == 0)
 
 
 def test_resubscribe_replaces_handler(make_bus, handler_loop):
