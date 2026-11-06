@@ -58,7 +58,7 @@ flowchart LR
 
 | # | 卡號 | 進度 | 標題 | 依賴 | 並行組 | 備註 |
 |---|---|---|---|---|---|---|
-| 1 | T-01 | 卡住 | [共用] `starlib/messaging`：提供跨 process 事件廣播與連線 | 無 | — | T-02～T-07 依賴 |
+| 1 | T-01 | 完成 | [共用] `starlib/messaging`：提供跨 process 事件廣播與連線 | 無 | — | T-02～T-07 依賴 |
 | 2 | T-02 | 未完成 | Twitch bot 以獨立 process 執行，追隨通知經 Redis 送到 Discord | T-01 | — | 骨架切片；含上線驗收 2 |
 | 3 | T-03 | 未完成 | 突襲、訂閱、續訂、點數兌換、預測結果、私訊通知改走跨 process 事件 | T-02 | A | |
 | 4 | T-04 | 未完成 | 開台與下播通知改走跨 process 事件，開台通知原子搶佔 | T-02 | A | |
@@ -107,23 +107,23 @@ flowchart TD
 - 不包含：任何具體的 Twitch 事件（T-02～T-04）；請求／回應（T-06）；快取失效（T-07）。
 
 **驗收條件**（以 integration 測試驗證，需要本機 Redis，見〈開發環境與分支〉1；測試在同一個 process 內建立多個 `MessageBus` 實例模擬多個 process，每個測試用不重複的 key 前綴）
-- [ ] 發送一個事件，接收服務在跑時，handler 在它註冊時指定的 event loop 上收到內容相同的事件。
-- [ ] 從不同 thread、不同 event loop 呼叫 `publish`，都能送出，且呼叫端不會被阻塞超過 1 秒。
-- [ ] 同一個服務名稱、不同 consumer 名稱的兩個消費者，事件只被其中一個處理；兩個不同服務名稱各收到一次。
-- [ ] 接收服務沒在跑時發送事件，服務之後 `start()`，時效內的事件補送處理；已超過時效的不處理。
-- [ ] 接收服務從沒啟動過時發送的事件，服務第一次 `start()` 後照樣補送。
-- [ ] 先 `start()` 再 `subscribe()` 某事件類型：之後該類型的事件照樣收得到，`subscribe` 之前已在 Redis 的時效內事件也會處理。
-- [ ] handler 執行到一半 process 被殺掉，以同一個 consumer 名稱重啟後，該事件再處理一次，`Delivery.redelivered` 為 true。
-- [ ] handler 拋出例外：記 log、回報 Sentry，事件 ack 掉，不再重送。
-- [ ] 收到缺必要欄位、或 `event_type` 跟所在 stream 不符的訊息：記 log、ack 掉，後續事件照常處理；多出的欄位不影響處理。
-- [ ] 過期的事件在 1 分鐘內從 Redis 清掉，不必等消費者，也不必等下一次發送同類事件；已被清掉、但還在待確認清單裡的事件會被 ack 掉。
-- [ ] `REDIS_URL` 沒設定：process 照常啟動，記一次警告；所有操作都視為連不上。
-- [ ] Redis 沒開：`publish` 不拋例外，事件直接丟棄並記 warning；`start()` 不拋例外；Redis 恢復後 30 秒內自動連上，不必重啟 process 就能發送與消費。
-- [ ] Redis 連續斷線期間發送多個事件，Sentry 只收到一次斷線、一次恢復，個別失敗只記 warning log、不進 Sentry。
-- [ ] Redis 清空資料（`FLUSHALL`）後，bus 在 1 分鐘內重建 consumer group，之後發送的事件照常收到。
-- [ ] 同一事件類型再次 `subscribe` 會取代舊的 handler。
-- [ ] handler 執行超過 120 秒：同一事件不會被自己的 consumer 收回再處理一次；同服務另一個已停止的 consumer 留下的事件會被收回處理。
-- [ ] `on_connected` 在已連上之後才註冊：立即以 `reconnect=False` 呼叫一次；之後每次重連以 `reconnect=True` 呼叫。
+- [x] 發送一個事件，接收服務在跑時，handler 在它註冊時指定的 event loop 上收到內容相同的事件。
+- [x] 從不同 thread、不同 event loop 呼叫 `publish`，都能送出，且呼叫端不會被阻塞超過 1 秒。
+- [x] 同一個服務名稱、不同 consumer 名稱的兩個消費者，事件只被其中一個處理；兩個不同服務名稱各收到一次。
+- [x] 接收服務沒在跑時發送事件，服務之後 `start()`，時效內的事件補送處理；已超過時效的不處理。
+- [x] 接收服務從沒啟動過時發送的事件，服務第一次 `start()` 後照樣補送。
+- [x] 先 `start()` 再 `subscribe()` 某事件類型：之後該類型的事件照樣收得到，`subscribe` 之前已在 Redis 的時效內事件也會處理。
+- [x] handler 執行到一半 process 被殺掉，以同一個 consumer 名稱重啟後，該事件再處理一次，`Delivery.redelivered` 為 true。
+- [x] handler 拋出例外：記 log、回報 Sentry，事件 ack 掉，不再重送。
+- [x] 收到缺必要欄位、或 `event_type` 跟所在 stream 不符的訊息：記 log、ack 掉，後續事件照常處理；多出的欄位不影響處理。
+- [x] 過期的事件在 1 分鐘內從 Redis 清掉，不必等消費者，也不必等下一次發送同類事件；已被清掉、但還在待確認清單裡的事件會被 ack 掉。
+- [x] `REDIS_URL` 沒設定：process 照常啟動，記一次警告；所有操作都視為連不上。
+- [x] Redis 沒開：`publish` 不拋例外，事件直接丟棄並記 warning；`start()` 不拋例外；Redis 恢復後 30 秒內自動連上，不必重啟 process 就能發送與消費。
+- [x] Redis 連續斷線期間發送多個事件，Sentry 只收到一次斷線、一次恢復，個別失敗只記 warning log、不進 Sentry。
+- [x] Redis 清空資料（`FLUSHALL`）後，bus 在 1 分鐘內重建 consumer group，之後發送的事件照常收到。
+- [x] 同一事件類型再次 `subscribe` 會取代舊的 handler。
+- [x] handler 執行超過 120 秒：同一事件不會被自己的 consumer 收回再處理一次；同服務另一個已停止的 consumer 留下的事件會被收回處理。
+- [x] `on_connected` 在已連上之後才註冊：立即以 `reconnect=False` 呼叫一次；之後每次重連以 `reconnect=True` 呼叫。
 
 **實作設計**
 - 資料：不動資料庫。Redis 最低版本 7.0（需要 `XAUTOCLAIM`、`MINID` 與已刪除 entry 的回報）。
@@ -199,14 +199,10 @@ flowchart TD
 - 收回別的 consumer 事件的閒置門檻 120 秒要大於 handler 正常執行時間；開台通知要發多個伺服器，實作時量一下實際耗時。
 - `close()` 要在 process 結束前呼叫，否則進行中的 ack 可能沒送出，事件會重送一次，這在「寧可重複」的容許範圍內。Twitch 端由 T-02／T-05 的 `twitch_main.py`、Discord 端由 T-02 的 `main.py` 負責。
 
-**進度**：卡住
-- 卡在：第 3 輪審查又出現由上一輪修正引入的 non-blocking（`bus.py` 解析事件時的泛用 `except Exception` 只記 warning，事件 model 的程式錯誤不會進 Sentry），連續兩輪都是修正帶出新問題，依流程停下等使用者決定要不要再修一輪
-- commit：`starlib/messaging` 主體（runtime、connection、bus、events）、`capture_message_safe`、`REDIS_URL` 設定與 `redis` 依賴
-- commit：`test/test_messaging.py` 涵蓋全部驗收條件（以 TCP proxy 模擬 Redis 停止與恢復，時間常數在測試中縮短）
-- commit：`docs/messaging-contract.md` 共通段落
-- commit：第 1 輪審查修正（`close()` 等進行中的事件、loop 遇未預期例外不停止、補收回路徑的修剪測試）
-- commit：第 2 輪審查修正（`close()` 後取到的事件一律不處理、解析時的任何例外都 ack 掉、修正兩個不穩的測試）
-- 續做：使用者決定後，處理第 3 輪的 non-blocking，或直接收尾（勾驗收條件、進度改完成）
+**進度**：完成（最後 commit `c477195`）
+- 驗收：`test/test_messaging.py` 23 個 integration 測試涵蓋全部驗收條件；Redis 停止與恢復以 TCP proxy 模擬，時間常數在測試中縮短，實際秒數未驗；`FLUSHALL` 以刪除測試前綴的 key 模擬
+- 審查 3 輪，無 blocking；未修：`connection.py` 的 `_fire` 未保留 task 參照（nitpick）、`_handle_entry` 的 `_stopping` 檢查沒有測試守住
+- 與設計的差異：`close()` 先等已排入的發送與進行中的事件，最多 timeout 的一半，逾時才取消（事件之後重送）
 
 ### T-02 Twitch bot 以獨立 process 執行，追隨通知經 Redis 送到 Discord
 
