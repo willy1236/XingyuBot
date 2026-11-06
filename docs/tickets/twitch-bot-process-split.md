@@ -202,7 +202,8 @@ flowchart TD
 **進度**：進行中
 - commit：`starlib/messaging` 主體（runtime、connection、bus、events）、`capture_message_safe`、`REDIS_URL` 設定與 `redis` 依賴
 - commit：`test/test_messaging.py` 涵蓋全部驗收條件（以 TCP proxy 模擬 Redis 停止與恢復，時間常數在測試中縮短）
-- 續做：寫 `docs/messaging-contract.md`
+- commit：`docs/messaging-contract.md` 共通段落
+- 續做：完整 CI 與獨立審查
 
 ### T-02 Twitch bot 以獨立 process 執行，追隨通知經 Redis 送到 Discord
 
