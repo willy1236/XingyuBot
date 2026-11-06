@@ -271,6 +271,17 @@ def capture_exception_safe(exc: Exception, *, tags: dict[str, str] | None = None
     _mark_captured(exc)
 
 
+def capture_message_safe(message: str, *, level: str = "info", tags: dict[str, str] | None = None) -> None:
+    """回報沒有例外物件的事件（例如連線恢復）到 Sentry；沒裝 sentry-sdk 時不做事。"""
+    if sentry_sdk is None:
+        return
+
+    with sentry_sdk.new_scope() as scope:
+        for key, value in (tags or {}).items():
+            scope.set_tag(key, value)
+        sentry_sdk.capture_message(message, level=level)
+
+
 def _mark_captured(exc: BaseException) -> None:
     try:
         setattr(exc, _CAPTURED_ATTR, True)
