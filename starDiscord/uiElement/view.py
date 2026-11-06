@@ -301,12 +301,15 @@ class PollView(discord.ui.View):
             embed.set_author(name=author.name, icon_url=author.avatar.url)
         return embed
 
-    def results_embed(self, interaction: discord.Interaction, with_chart=False) -> tuple[discord.Embed, io.BytesIO] | discord.Embed:
+    def results_embed(
+        self, interaction: discord.Interaction, with_chart=False, show_name: bool | None = None
+    ) -> tuple[discord.Embed, io.BytesIO] | discord.Embed:
         """
         Generate a Discord embed displaying poll results with vote counts and optionally voter names.
         Args:
             interaction (discord.Interaction): The Discord interaction object used to access guild members
             with_chart (bool, optional): Whether to include a chart image with the embed. Defaults to False.
+            show_name (bool | None, optional): 覆寫是否顯示投票人，None 時依投票設定
         Returns:
             tuple[discord.Embed, io.BytesIO] | discord.Embed:
                 - If with_chart is True: Returns a tuple containing the embed and chart image as BytesIO
@@ -324,8 +327,10 @@ class PollView(discord.ui.View):
         """
         vote_count_data = self.sqldb.get_poll_vote_count(self.poll.poll_id, not self.poll.ban_alternate_account_voting)
         options_data = self.sqldb.get_poll_options(self.poll.poll_id)
+        if show_name is None:
+            show_name = self.poll.show_name
 
-        if self.poll.show_name:
+        if show_name:
             user_vote_data = self.sqldb.get_users_poll(self.poll.poll_id, not self.poll.ban_alternate_account_voting)
             user_vote_list = {}
             for i in range(1, len(options_data) + 1):
@@ -353,7 +358,7 @@ class PollView(discord.ui.View):
             count = vote_count_data.get(str(id), 0)
             text += f"{name}： {count}票\n"
 
-            if self.poll.show_name:
+            if show_name:
                 text += ",".join(user_vote_list[str(id)]) + "\n"
 
             if with_chart and count > 0:

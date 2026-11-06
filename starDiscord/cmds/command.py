@@ -529,7 +529,7 @@ class command(Cog_Extension):
     ):
         await ctx.defer()
         poll = sclient.sqldb.get_poll(poll_id)
-        is_owner = self.bot.is_owner(ctx.author)
+        is_owner = await self.bot.is_owner(ctx.author)
         if not poll:
             await ctx.respond("錯誤：查無此ID")
             return
@@ -537,10 +537,8 @@ class command(Cog_Extension):
             await ctx.respond("錯誤：你不是此投票的發起人")
             return
 
-        if is_owner:
-            poll.show_name = show_name
         view = PollView(poll, sclient.sqldb, self.bot)
-        embed, image_buffer = view.results_embed(ctx.interaction, True)  # type: ignore
+        embed, image_buffer = view.results_embed(ctx.interaction, True, show_name=show_name if is_owner else None)  # type: ignore
         await ctx.respond(embed=embed, file=discord.File(image_buffer, filename="pie.png"))
 
     @commands.slash_command(description="共用「94共用啦」雲端資料夾", guild_ids=drive_share_guilds)
