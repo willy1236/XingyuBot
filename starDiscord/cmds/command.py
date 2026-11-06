@@ -19,7 +19,7 @@ from starlib.utils import create_only_role_list, create_role_magification_dict, 
 
 from ..checks import IdentityContext, with_identity
 from ..extension import Cog_Extension
-from ..uiElement.view import DeleteAddRoleView, GiveawayView, PollView, TRPGPlotView
+from ..uiElement.view import GIVEAWAY_MENTIONS, DeleteAddRoleView, GiveawayView, PollView, TRPGPlotView
 from .bot_event import check_registration
 
 log = logging.getLogger(__name__)
@@ -928,7 +928,7 @@ class command(Cog_Extension):
 
         view = GiveawayView(giveaway, sclient.sqldb, self.bot)
         embed = view.redraw_winner_giveaway(old_winner)
-        await ctx.respond(embed=embed)
+        await ctx.respond(view.announcement(), embed=embed, allowed_mentions=GIVEAWAY_MENTIONS)
 
     @date_cmd.command(name="add", description="新增紀念日")
     async def date_add(

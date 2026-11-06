@@ -31,6 +31,7 @@ from starlib.instance import mcsm_api, vip_admin_channel
 from starlib.utils import find_netbird_network, find_radmin_vpn_network, nowtz
 
 log = logging.getLogger(__name__)
+GIVEAWAY_MENTIONS = discord.AllowedMentions(everyone=False, roles=False, users=True)
 
 if TYPE_CHECKING:
     from starlib.database import SQLRepository
@@ -544,6 +545,7 @@ class GiveawayEndButton(discord.ui.Button):
             await interaction.response.send_message("此抽獎已結束", ephemeral=True)
             return
         await interaction.response.edit_message(embed=embed, view=view)
+        await view.announce(interaction.message)
 
 
 class GiveawayView(discord.ui.View):
@@ -559,6 +561,8 @@ class GiveawayView(discord.ui.View):
         self.giveaway = giveaway
         self.sqldb = sqldb
         self.bot = bot
+        self.new_winners_id: list[int] = []
+        """最近一次開獎或重抽新抽出的中獎者"""
         if giveaway.is_on:
             self.add_item(GiveawayJoinButton(giveaway))
             self.add_item(GiveawayEndButton(giveaway))
@@ -589,6 +593,7 @@ class GiveawayView(discord.ui.View):
             channel = self.bot.get_channel(self.giveaway.channel_id) or await self.bot.fetch_channel(self.giveaway.channel_id)
             message = await channel.fetch_message(self.giveaway.message_id)
             await message.edit(embed=embed, view=self)
+            await self.announce(message)
         except (discord.NotFound, discord.Forbidden):
             log.warning("giveaway auto end: message not available", extra={"giveaway_id": self.giveaway.id, "message_id": self.giveaway.message_id})
 
@@ -639,6 +644,7 @@ class GiveawayView(discord.ui.View):
         embed = self.result_embed(len(joiner))
         if joiner:
             winners_id = self._draw(joiner, self.giveaway.winner_count)
+            self.new_winners_id = winners_id
             self.sqldb.set_giveaway_winner(self.giveaway.id, winners_id)
             embed.add_field(name="得獎者", value=", ".join(f"<@{i}>" for i in winners_id), inline=False)
 
@@ -660,7 +666,8 @@ class GiveawayView(discord.ui.View):
         joiner = self.sqldb.get_giveaway_users(self.giveaway.id)
         candidates = [i for i in joiner if not i.is_winner and i.user_id != excluded_id]
         winners_id = [i.user_id for i in joiner if i.is_winner]
-        winners_id.extend(self._draw(candidates, redraw_count))
+        self.new_winners_id = self._draw(candidates, redraw_count)
+        winners_id.extend(self.new_winners_id)
         self.sqldb.set_giveaway_winner(self.giveaway.id, winners_id)
 
         self.giveaway.redraw_count += 1
@@ -670,6 +677,22 @@ class GiveawayView(discord.ui.View):
         embed.add_field(name="得獎者", value=", ".join(f"<@{i}>" for i in winners_id) or "無", inline=False)
         embed.set_footer(text=f"抽獎ID：{self.giveaway.id}，重新抽獎第 {self.giveaway.redraw_count} 次")
         return embed
+
+    def announcement(self) -> str:
+        """開獎或重抽後要公告的文字，會 mention 新抽出的中獎者"""
+        prize = discord.utils.escape_mentions(self.giveaway.prize_name)
+        if not self.new_winners_id:
+            return f"抽獎「{prize}」已結束，沒有人參加" if not self.giveaway.redraw_count else f"抽獎「{prize}」重新抽獎：沒有可替補的參加者"
+        mentions = "、".join(f"<@{i}>" for i in self.new_winners_id)
+        prefix = "🎉 重新抽獎：" if self.giveaway.redraw_count else "🎉 "
+        return f"{prefix}恭喜 {mentions} 抽中「{prize}」！"
+
+    async def announce(self, message: discord.Message):
+        """回覆抽獎訊息公告中獎者，只允許 ping 使用者"""
+        try:
+            await message.reply(self.announcement(), allowed_mentions=GIVEAWAY_MENTIONS)
+        except discord.HTTPException:
+            log.warning("giveaway announce failed", extra={"giveaway_id": self.giveaway.id}, exc_info=True)
 
 
 class McServerSelect(discord.ui.Select):
