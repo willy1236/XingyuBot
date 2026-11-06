@@ -4,12 +4,15 @@ import asyncio
 import io
 import logging
 import random
+from datetime import datetime, timedelta
 from collections.abc import Awaitable, Callable
 from typing import TYPE_CHECKING
 
 import discord
 import matplotlib
 import numpy as np
+from apscheduler.jobstores.base import JobLookupError
+from apscheduler.triggers.date import DateTrigger
 from discord.utils import format_dt
 
 from starlib import BotEmbed, Jsondb, sqldb
@@ -31,6 +34,8 @@ log = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from starlib.database import SQLRepository
+
+    from ..bot import DiscordBot
     from starlib.database.postgresql.models import PollOption, ReactionRoleOption, TRPGStoryOption, TRPGStoryPlot
     from starlib.providers.general.models import McsmServerSummary
 
@@ -510,6 +515,10 @@ class GiveawayJoinButton(discord.ui.Button):
 
     async def callback(self, interaction: discord.Interaction):
         view: GiveawayView = self.view
+        if not view.giveaway.is_on:
+            await interaction.response.send_message("此抽獎已結束", ephemeral=True)
+            return
+
         giveaway_user = view.sqldb.get_user_in_giveaway(view.giveaway.id, interaction.user.id)
         if giveaway_user:
             view.sqldb.delete(giveaway_user)
@@ -526,16 +535,27 @@ class GiveawayEndButton(discord.ui.Button):
 
     async def callback(self, interaction: discord.Interaction):
         view: GiveawayView = self.view
-        if interaction.user.id == view.giveaway.creator_id or (view.bot and await view.bot.is_owner(interaction.user)):
-            embed = view.end_giveaway()
-            await interaction.message.edit(embed=embed, view=view)
-        else:
+        if interaction.user.id != view.giveaway.creator_id and not await view.bot.is_owner(interaction.user):
             await interaction.response.send_message("只有發起人才能結束抽獎！", ephemeral=True)
+            return
+
+        embed = view.end_giveaway()
+        if embed is None:
+            await interaction.response.send_message("此抽獎已結束", ephemeral=True)
+            return
+        await interaction.response.edit_message(embed=embed, view=view)
 
 
 class GiveawayView(discord.ui.View):
-    def __init__(self, giveaway: Giveaway, sqldb: SQLRepository, bot: discord.Bot, timeout=None):
-        super().__init__(timeout=timeout)
+    """抽獎訊息的按鈕與開獎邏輯
+
+    開獎只會發生一次：end_giveaway() 以 giveaway.is_on 判斷，按鈕結束與排程到期誰先觸發都只開獎一次。
+    """
+
+    MAX_DURATION = timedelta(days=28)
+
+    def __init__(self, giveaway: Giveaway, sqldb: SQLRepository, bot: DiscordBot):
+        super().__init__(timeout=None)
         self.giveaway = giveaway
         self.sqldb = sqldb
         self.bot = bot
@@ -543,13 +563,41 @@ class GiveawayView(discord.ui.View):
             self.add_item(GiveawayJoinButton(giveaway))
             self.add_item(GiveawayEndButton(giveaway))
 
+    @property
+    def deadline(self) -> datetime:
+        """實際開獎時間：設定的結束時間，未設定或超過上限時以建立後 28 天為準"""
+        limit = self.giveaway.created_at + self.MAX_DURATION
+        if self.giveaway.end_at and self.giveaway.end_at < limit:
+            return self.giveaway.end_at
+        return limit
+
+    @property
+    def _job_id(self) -> str:
+        return f"giveaway_end_{self.giveaway.id}"
+
+    def schedule_end(self):
+        """排程在 deadline 自動開獎，已過期則 10 秒後開獎"""
+        run_at = max(self.deadline, nowtz() + timedelta(seconds=10))
+        self.bot.scheduler.add_job(self.auto_end, DateTrigger(run_at), id=self._job_id, replace_existing=True)
+
+    async def auto_end(self):
+        embed = self.end_giveaway()
+        if embed is None:
+            return
+
+        try:
+            channel = self.bot.get_channel(self.giveaway.channel_id) or await self.bot.fetch_channel(self.giveaway.channel_id)
+            message = await channel.fetch_message(self.giveaway.message_id)
+            await message.edit(embed=embed, view=self)
+        except (discord.NotFound, discord.Forbidden):
+            log.warning("giveaway auto end: message not available", extra={"giveaway_id": self.giveaway.id, "message_id": self.giveaway.message_id})
+
     def embed(self):
         description = self.giveaway.description if self.giveaway.description else "按下下方按鈕開始抽獎！"
         description += f"\n- 抽出人數：{self.giveaway.winner_count} 人"
-        description += f"\n- 舉辦人：{self.bot.get_user(self.giveaway.creator_id).mention}"
+        description += f"\n- 舉辦人：<@{self.giveaway.creator_id}>"
         description += f"\n- 開始時間：{format_dt(self.giveaway.created_at)}"
-        if self.giveaway.end_at:
-            description += f"\n- 結束時間：{format_dt(self.giveaway.end_at)}"
+        description += f"\n- 結束時間：{format_dt(self.deadline)}"
         embed = BotEmbed.general("抽獎系統", Jsondb.get_picture("dice_001"), title=f"{self.giveaway.prize_name}", description=description)
         embed.set_footer(text=f"抽獎ID：{self.giveaway.id}")
         embed.timestamp = self.giveaway.created_at
@@ -557,85 +605,72 @@ class GiveawayView(discord.ui.View):
 
     def result_embed(self, joiner_count: int):
         description = self.giveaway.description or "抽獎結束" if joiner_count else "沒有參加抽獎的用戶"
-        description += f"\n- 中獎人數：{self.giveaway.winner_count} / {joiner_count} 人"
-        description += f"\n- 舉辦人：{self.bot.get_user(self.giveaway.creator_id).mention}"
+        description += f"\n- 中獎人數：{min(self.giveaway.winner_count, joiner_count)} / {joiner_count} 人"
+        description += f"\n- 舉辦人：<@{self.giveaway.creator_id}>"
         description += f"\n- 開始時間：{format_dt(self.giveaway.created_at)}"
         description += f"\n- 結束時間：{format_dt(self.giveaway.end_at)}"
         embed = BotEmbed.general("抽獎系統", Jsondb.get_picture("dice_001"), title=f"{self.giveaway.prize_name}", description=description)
         embed.set_footer(text=f"抽獎ID：{self.giveaway.id}")
         return embed
 
-    def end_giveaway(self):
-        if not self.giveaway.end_at:
-            self.giveaway.end_at = nowtz().replace(microsecond=0)
+    @staticmethod
+    def _draw(candidates: list[GiveawayUser], count: int) -> list[int]:
+        """依權重不重複抽出 count 人，候選人數不足時全數中獎"""
+        if len(candidates) <= count:
+            return [i.user_id for i in candidates]
+        weights = np.array([i.user_weight for i in candidates], dtype=float)
+        return np.random.choice([i.user_id for i in candidates], size=count, replace=False, p=weights / weights.sum()).tolist()
+
+    def end_giveaway(self) -> discord.Embed | None:
+        """開獎並回傳結果 embed；抽獎已結束時回傳 None"""
+        if not self.giveaway.is_on:
+            return None
+
+        self.giveaway.end_at = nowtz().replace(microsecond=0)
         self.giveaway.is_on = False
         self.clear_items()
-        joiner = self.sqldb.get_giveaway_users(self.giveaway.id)
-        joiner_ids = [i.user_id for i in joiner]
-        weights = [i.user_weight for i in joiner]
+        self.stop()
+        try:
+            self.bot.scheduler.remove_job(self._job_id)
+        except JobLookupError:
+            pass
 
-        embed = self.result_embed(len(joiner_ids))
-        if joiner_ids:
-            winners_id = (
-                np.random.choice(joiner_ids, size=self.giveaway.winner_count, replace=False, p=np.array(weights) / sum(weights)).tolist()
-                if len(joiner_ids) > self.giveaway.winner_count
-                else joiner_ids
-            )
+        joiner = list(self.sqldb.get_giveaway_users(self.giveaway.id))
+        embed = self.result_embed(len(joiner))
+        if joiner:
+            winners_id = self._draw(joiner, self.giveaway.winner_count)
             self.sqldb.set_giveaway_winner(self.giveaway.id, winners_id)
-
-            winners_mention = []
-            for i in winners_id:
-                user = self.bot.get_user(i)
-                if user:
-                    winners_mention.append(user.mention)
-                else:
-                    winners_mention.append(f"<@{i}>")
-            embed.add_field(name="得獎者", value=", ".join(winners_mention), inline=False)
+            embed.add_field(name="得獎者", value=", ".join(f"<@{i}>" for i in winners_id), inline=False)
 
         self.sqldb.merge(self.giveaway)
-
         return embed
 
     def redraw_winner_giveaway(self, old_winner: GiveawayUser | None = None):
+        """重新抽獎：未指定 old_winner 時全部重抽，否則取消其資格並從其他人抽出一名替補"""
         if not old_winner:
             self.sqldb.reset_giveaway_winner(self.giveaway.id)
             redraw_count = self.giveaway.winner_count
+            excluded_id = None
         else:
             redraw_count = 1
+            excluded_id = old_winner.user_id
             old_winner.is_winner = False
             self.sqldb.merge(old_winner)
 
         joiner = self.sqldb.get_giveaway_users(self.giveaway.id)
-        joiner_ids = [i.user_id for i in joiner if not i.is_winner]
-        weights = [i.user_weight for i in joiner if not i.is_winner]
+        candidates = [i for i in joiner if not i.is_winner and i.user_id != excluded_id]
         winners_id = [i.user_id for i in joiner if i.is_winner]
-        winners_id.extend(
-            (np.random.choice(joiner_ids, size=redraw_count, replace=False, p=np.array(weights) / sum(weights)).tolist())
-            if len(joiner_ids) > redraw_count
-            else joiner_ids
-        )
+        winners_id.extend(self._draw(candidates, redraw_count))
         self.sqldb.set_giveaway_winner(self.giveaway.id, winners_id)
-
-        winners_mention = []
-        for i in winners_id:
-            user = self.bot.get_user(i)
-            if user:
-                winners_mention.append(user.mention)
-            else:
-                winners_mention.append(f"<@{i}>")
 
         self.giveaway.redraw_count += 1
         self.sqldb.merge(self.giveaway)
 
         embed = self.result_embed(len(joiner))
-        embed.add_field(name="得獎者", value=", ".join(winners_mention), inline=False)
+        embed.add_field(name="得獎者", value=", ".join(f"<@{i}>" for i in winners_id) or "無", inline=False)
         embed.set_footer(text=f"抽獎ID：{self.giveaway.id}，重新抽獎第 {self.giveaway.redraw_count} 次")
         return embed
 
-    async def on_timeout(self):
-        embed = self.end_giveaway()
-        await self.message.edit(embed=embed, view=self)
-        self.stop()
 
 class McServerSelect(discord.ui.Select):
     def __init__(self, servers: list[McsmServerSummary]):

@@ -73,24 +73,11 @@ class task(Cog_Extension):
                 # scheduler.add_job(self.new_years_eve_task, CronTrigger(month=1, day=1, hour=0, minute=0, second=0), misfire_grace_time=60)
 
         # 抽獎
-        now = utils.nowtz()
         for giveaway in sclient.sqldb.get_active_giveaways():
-            if now - giveaway.created_at > timedelta(days=28):
-                # 將超過28天的抽獎自動關閉
-                giveaway.is_on = False
-                sclient.sqldb.merge(giveaway)
-                log.debug("Ended giveaway", extra={"giveaway_id": giveaway.id})
-            else:
-                view = GiveawayView(giveaway, sqldb=sclient.sqldb, bot=self.bot)
-                self.bot.add_view(view)
-                if giveaway.end_at:
-                    job = scheduler.add_job(
-                        giveaway_auto_end, DateTrigger(giveaway.end_at if giveaway.end_at > now else now + timedelta(seconds=10)), args=[self.bot, view]
-                    )
-                    log.debug("job added", extra={"job": str(job)})
-                log.debug("Loaded giveaway", extra={"giveaway_id": giveaway.id})
-        else:
-            pass
+            view = GiveawayView(giveaway, sqldb=sclient.sqldb, bot=self.bot)
+            self.bot.add_view(view)
+            view.schedule_end()
+            log.debug("Loaded giveaway", extra={"giveaway_id": giveaway.id})
 
         if not scheduler.running:
             scheduler.start()
@@ -504,20 +491,6 @@ async def youtube_start_live_notify(bot: DiscordBot, video: YoutubeVideo):
             break
         await asyncio.sleep(120)
 
-
-async def giveaway_auto_end(bot: discord.Bot, view: GiveawayView):
-    log.debug("giveaway_auto_end: id=%s", view.giveaway.id)
-    if view.is_finished():
-        return
-
-    embed = view.end_giveaway()
-    channel = bot.get_channel(view.giveaway.channel_id)
-    try:
-        message = await channel.fetch_message(view.giveaway.message_id)
-        await message.edit(embed=embed, view=view)
-    except discord.NotFound:
-        log.warning("giveaway_auto_end: message %s not found", view.giveaway.message_id)
-        return
 
 async def refresh_ip_last_seen_arp():
     """定時更新IP最後出現時間 (使用ARP)"""

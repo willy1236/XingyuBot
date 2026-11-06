@@ -15,7 +15,7 @@ from starlib import BotEmbed, ChoiceList, sclient
 from starlib.database import Coins, DriveShare, Giveaway
 from starlib.instance import *
 from starlib.providers import XingyuGoogleCloud
-from starlib.utils import convert_tz, create_only_role_list, create_role_magification_dict, find, nowtz, random_color
+from starlib.utils import create_only_role_list, create_role_magification_dict, find, nowtz, random_color
 
 from ..checks import IdentityContext, with_identity
 from ..extension import Cog_Extension
@@ -38,7 +38,7 @@ class command(Cog_Extension):
     poll = SlashCommandGroup("poll", "投票相關指令")
     party = SlashCommandGroup("party", "政黨相關指令", guild_ids=happycamp_guild)
     registration_cmd = SlashCommandGroup("registration", "戶籍相關指令", guild_ids=happycamp_guild)
-    giveaway = SlashCommandGroup("giveaway", "抽獎相關指令")
+    giveaway = SlashCommandGroup("giveaway", "抽獎相關指令", contexts={discord.InteractionContextType.guild})
     register = SlashCommandGroup("register", "註冊相關指令")
     date_cmd = SlashCommandGroup("date", "日期相關指令")
     choice_cmd = SlashCommandGroup("choice", "選擇相關指令", name_localizations=ChoiceList.name("choice"))
@@ -864,9 +864,16 @@ class command(Cog_Extension):
         await ctx.defer()
         now = nowtz()
         if end_time:
-            end_at = convert_tz(datetime.strptime(end_time, "%Y-%m-%d %H:%M:%S"))
+            try:
+                end_at = datetime.strptime(end_time, "%Y-%m-%d %H:%M:%S").replace(tzinfo=now.tzinfo)
+            except ValueError:
+                await ctx.respond("錯誤：結束時間格式應為 YYYY-MM-DD hh:mm:ss")
+                return
             if end_at < now:
                 await ctx.respond("錯誤：結束時間必須大於現在時間")
+                return
+            elif end_at > now + GiveawayView.MAX_DURATION:
+                await ctx.respond(f"錯誤：結束時間不可超過 {GiveawayView.MAX_DURATION.days} 天後")
                 return
         else:
             end_at = None
@@ -876,17 +883,18 @@ class command(Cog_Extension):
             channel_id=ctx.channel.id,
             prize_name=prize_name,
             winner_count=winner_count,
-            created_at=nowtz(),
+            created_at=now.replace(microsecond=0),
             creator_id=ctx.author.id,
             end_at=end_at,
             description=description,
         )
         sclient.sqldb.add(giveaway)
 
-        view = GiveawayView(giveaway, sclient.sqldb, self.bot, timeout=int((end_at - now).total_seconds()) if end_at else None)
+        view = GiveawayView(giveaway, sclient.sqldb, self.bot)
         message = await ctx.respond(embed=view.embed(), view=view)
         view.giveaway.message_id = message.id
         sclient.sqldb.merge(view.giveaway)
+        view.schedule_end()
 
     @giveaway.command(description="重新抽出中獎者，未指定中獎者為全部重抽，不會保留原本的中獎者")
     async def redraw(
@@ -903,7 +911,7 @@ class command(Cog_Extension):
         elif giveaway.is_on:
             await ctx.respond("錯誤：此抽獎尚未結束")
             return
-        elif giveaway.creator_id != ctx.author.id and not self.bot.is_owner(ctx.author):
+        elif giveaway.creator_id != ctx.author.id and not await self.bot.is_owner(ctx.author):
             await ctx.respond("錯誤：你不是此抽獎的發起人")
             return
 
