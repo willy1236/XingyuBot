@@ -80,6 +80,10 @@ class MessageBus:
         self._start_callbacks: list[Callable[[str, str], Awaitable[None]]] = []
         self._tasks: set[asyncio.Task[Any]] = set()
         self._publishes: set[asyncio.Task[None]] = set()
+        # close() 時讓正在處理的事件跑完、ack 後才取消讀取
+        self._stopping = False
+        self._handling = 0
+        self._idle: asyncio.Event
 
         self._runtime = BusRuntime(name=f"messaging[{key_prefix}]")
         self._conn: RedisConnection = self._runtime.run(self._init(get_settings().REDIS_URL)).result()
@@ -119,12 +123,13 @@ class MessageBus:
         self._runtime.call_soon(lambda: self._begin(service, consumer))
 
     def close(self, timeout: float = 5) -> None:
+        """先等已排入的發送與正在處理的事件完成（最多 timeout 的一半），再停止讀取、關閉連線。"""
+        if self._runtime.in_loop():
+            raise RuntimeError("不能在 bus loop 上呼叫 close()")
         with self._lock:
             if self._closed:
                 return
             self._closed = True
-        if self._runtime.in_loop():
-            raise RuntimeError("不能在 bus loop 上呼叫 close()")
         started = time.monotonic()
         try:
             self._runtime.run(self._shutdown(timeout)).result(timeout)
@@ -156,6 +161,8 @@ class MessageBus:
     # ── bus loop 內部 ────────────────────────────────────
 
     async def _init(self, url: str | None) -> RedisConnection:
+        self._idle = asyncio.Event()
+        self._idle.set()
         conn = RedisConnection(url)
         conn.add_callback(self._on_connected)
         self._spawn(self._maintain())
@@ -232,8 +239,14 @@ class MessageBus:
     async def _maintain(self) -> None:
         while True:
             await asyncio.sleep(MAINTENANCE_INTERVAL)
-            if self._conn.is_up:
+            if not self._conn.is_up:
+                continue
+            try:
                 await self._run_maintenance(claim=True)
+            except Exception as exc:
+                # 沒預期的例外不能讓維護停掉，否則修剪與收回事件都會跟著停
+                capture_exception_safe(exc, tags=SENTRY_TAGS)
+                log.error("messaging 維護任務發生未預期的錯誤", exc_info=exc)
 
     async def _run_maintenance(self, *, claim: bool) -> None:
         try:
@@ -303,7 +316,7 @@ class MessageBus:
         group, consumer = self._service, self._consumer
         # 加入讀取時、以及斷線恢復後，先讀回自己還沒 ack 的事件
         backlog = True
-        while True:
+        while not self._stopping:
             await self._conn.wait_up()
             try:
                 client = self._conn.client()
@@ -320,6 +333,8 @@ class MessageBus:
                         await self._handle_entry(client, event_type, entry_id, fields, redelivered=True)
                     continue
                 response = await client.xreadgroup(group, consumer, {stream: ">"}, count=1, block=READ_BLOCK_MS)
+                if self._stopping:
+                    return  # 取到但沒處理的事件留在待確認清單，下次啟動時重送
                 for entry_id, fields in _entries(response):
                     await self._handle_entry(client, event_type, entry_id, fields, redelivered=False)
             except BusUnavailable:
@@ -335,6 +350,12 @@ class MessageBus:
                 else:
                     log.warning("讀取 %s 事件失敗：%s", event_type, exc)
                     await asyncio.sleep(1)
+            except Exception as exc:
+                # 沒預期的例外不能讓這條 stream 停止消費
+                capture_exception_safe(exc, tags={**SENTRY_TAGS, "event_type": event_type})
+                log.error("讀取 %s 事件發生未預期的錯誤", event_type, exc_info=exc)
+                backlog = True
+                await asyncio.sleep(1)
 
     async def _recreate_group(self, stream: str, group: str) -> None:
         log.warning("consumer group %s 不在 %s 上（Redis 資料可能遺失），重新建立", group, stream)
@@ -357,11 +378,18 @@ class MessageBus:
         *,
         redelivered: bool,
     ) -> None:
-        sub = self._subs.get(event_type)
-        event = self._decode(sub, event_type, entry_id, fields) if sub is not None else None
-        if sub is not None and event is not None:
-            await self._dispatch(sub, event, Delivery(redelivered=redelivered))
-        await client.xack(self._stream_key(event_type), self._service, entry_id)
+        self._handling += 1
+        self._idle.clear()
+        try:
+            sub = self._subs.get(event_type)
+            event = self._decode(sub, event_type, entry_id, fields) if sub is not None else None
+            if sub is not None and event is not None:
+                await self._dispatch(sub, event, Delivery(redelivered=redelivered))
+            await client.xack(self._stream_key(event_type), self._service, entry_id)
+        finally:
+            self._handling -= 1
+            if self._handling == 0:
+                self._idle.set()
 
     @staticmethod
     def _decode(sub: _Subscription, event_type: str, entry_id: str, fields: dict[str, str] | None) -> BusEvent | None:
@@ -391,14 +419,14 @@ class MessageBus:
 
     @staticmethod
     async def _dispatch(sub: _Subscription, event: BusEvent, delivery: Delivery) -> None:
-        coro = sub.handler(event, delivery)
         try:
-            future = asyncio.run_coroutine_threadsafe(coro, sub.loop)
-        except RuntimeError as exc:
-            coro.close()
-            log.warning("%s 的 handler loop 已關閉，略過：%s", event.event_type, exc)
-            return
-        try:
+            coro = sub.handler(event, delivery)
+            try:
+                future = asyncio.run_coroutine_threadsafe(coro, sub.loop)
+            except RuntimeError as exc:
+                coro.close()
+                log.warning("%s 的 handler loop 已關閉，略過：%s", event.event_type, exc)
+                return
             await asyncio.wrap_future(future)
         except asyncio.CancelledError as exc:
             current = asyncio.current_task()
@@ -412,9 +440,10 @@ class MessageBus:
 
     async def _shutdown(self, timeout: float) -> None:
         current = asyncio.current_task()
-        # 先讓已排入的發送送完，再取消讀取與維護
-        if self._publishes:
-            await asyncio.wait(list(self._publishes), timeout=timeout / 2)
+        self._stopping = True
+        # 先讓已排入的發送、正在處理的事件完成，再取消讀取與維護；handler 卡住時逾時後照樣取消
+        waits: list[asyncio.Future[Any]] = [*self._publishes, asyncio.ensure_future(self._idle.wait())]
+        await asyncio.wait(waits, timeout=timeout / 2)
         others = [task for task in asyncio.all_tasks() if task is not current]
         for task in others:
             task.cancel()
