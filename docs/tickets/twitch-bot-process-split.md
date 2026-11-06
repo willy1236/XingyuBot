@@ -58,7 +58,7 @@ flowchart LR
 
 | # | 卡號 | 進度 | 標題 | 依賴 | 並行組 | 備註 |
 |---|---|---|---|---|---|---|
-| 1 | T-01 | 未完成 | [共用] `starlib/messaging`：提供跨 process 事件廣播與連線 | 無 | — | T-02～T-07 依賴 |
+| 1 | T-01 | 進行中 | [共用] `starlib/messaging`：提供跨 process 事件廣播與連線 | 無 | — | T-02～T-07 依賴 |
 | 2 | T-02 | 未完成 | Twitch bot 以獨立 process 執行，追隨通知經 Redis 送到 Discord | T-01 | — | 骨架切片；含上線驗收 2 |
 | 3 | T-03 | 未完成 | 突襲、訂閱、續訂、點數兌換、預測結果、私訊通知改走跨 process 事件 | T-02 | A | |
 | 4 | T-04 | 未完成 | 開台與下播通知改走跨 process 事件，開台通知原子搶佔 | T-02 | A | |
@@ -199,7 +199,9 @@ flowchart TD
 - 收回別的 consumer 事件的閒置門檻 120 秒要大於 handler 正常執行時間；開台通知要發多個伺服器，實作時量一下實際耗時。
 - `close()` 要在 process 結束前呼叫，否則進行中的 ack 可能沒送出，事件會重送一次，這在「寧可重複」的容許範圍內。Twitch 端由 T-02／T-05 的 `twitch_main.py`、Discord 端由 T-02 的 `main.py` 負責。
 
-**進度**：未完成
+**進度**：進行中
+- commit：`starlib/messaging` 主體（runtime、connection、bus、events）、`capture_message_safe`、`REDIS_URL` 設定與 `redis` 依賴
+- 續做：`test/test_messaging.py` 逐條對驗收條件寫 integration 測試；再寫 `docs/messaging-contract.md`
 
 ### T-02 Twitch bot 以獨立 process 執行，追隨通知經 Redis 送到 Discord
 

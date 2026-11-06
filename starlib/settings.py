@@ -54,6 +54,9 @@ class AppSettings(BaseSettings):
     # 身分組代號 -> PrivilegeLevel 數字，例如 {"some-role": 2}；沒設定時所有人都是一般使用者
     PRIVILEGE_ROLES: dict[str, int] = Field(default_factory=dict)
 
+    # 跨 process 訊息（starlib.messaging）用的 Redis，含密碼的 URL；沒設定時視為連不上
+    REDIS_URL: str | None = None
+
     # SENTRY_* 由 sentry_bootstrap 在載入設定前直接讀環境變數，不放在這裡
 
     @field_validator("PRIVILEGE_ROLES")
