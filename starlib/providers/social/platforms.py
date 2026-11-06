@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 import shutil
 import subprocess
 import time
@@ -553,16 +554,32 @@ class RssHub(APICaller):
             return results
 
 
+_TWITTER_ID_RE = re.compile(r"\d{1,25}")
+_TWITTER_NAME_RE = re.compile(r"\w{1,15}")
+
+
 class CLIInterface:
     # TODO: 針對rettiwt指令列介面進行全面測試
     def __init__(self):
         self.rettiwt_api_key = sqldb.get_access_token(APIType.Rettiwt).access_token
-        if shutil.which("rettiwt") is None:
+        self.rettiwt_path = shutil.which("rettiwt")
+        if self.rettiwt_path is None:
             log.warning("找不到rettiwt執行檔，請確認是否已安裝rettiwt並將其加入系統PATH中")
 
-    def get_user_timeline(self, user_id: str, after: datetime | None = None) -> RettiwtTweetTimeLineResponse | None:
-        r = subprocess.run(f'rettiwt -k "{self.rettiwt_api_key}" user timeline "{user_id}" 10', shell=True, capture_output=True, encoding="utf-8", check=False)
+    def _run(self, *args: str) -> subprocess.CompletedProcess[str]:
+        """執行 rettiwt，參數逐一傳入不經 shell，避免指令注入"""
+        if self.rettiwt_path is None:
+            raise FileNotFoundError("rettiwt")
+        r = subprocess.run(
+            [self.rettiwt_path, "-k", self.rettiwt_api_key, *args], capture_output=True, encoding="utf-8", check=False, timeout=30
+        )
         r.check_returncode()
+        return r
+
+    def get_user_timeline(self, user_id: str, after: datetime | None = None) -> RettiwtTweetTimeLineResponse | None:
+        if not _TWITTER_ID_RE.fullmatch(user_id):
+            return None
+        r = self._run("user", "timeline", user_id, "10")
         data = json.loads(r.stdout)
         if not data:
             # rettiwt 不穩定，偶爾會回傳空物件，視為暫時性失敗等下次輪詢
@@ -582,14 +599,10 @@ class CLIInterface:
         return results
 
     def get_user_details(self, user_id_or_name: str) -> RettiwtTweetUser | None:
-        r = subprocess.run(
-            f'rettiwt -k "{self.rettiwt_api_key}" user details "{user_id_or_name.removeprefix("@")}"',
-            shell=True,
-            capture_output=True,
-            encoding="utf-8",
-            check=False,
-        )
-        r.check_returncode()
+        user_id_or_name = user_id_or_name.removeprefix("@")
+        if not (_TWITTER_ID_RE.fullmatch(user_id_or_name) or _TWITTER_NAME_RE.fullmatch(user_id_or_name)):
+            return None
+        r = self._run("user", "details", user_id_or_name)
         try:
             data = json.loads(r.stdout)
         except json.JSONDecodeError:
@@ -602,8 +615,9 @@ class CLIInterface:
         return RettiwtTweetUser(**data)
 
     def get_tweet_details(self, tweet_id: str) -> RettiwtTweetItem | None:
-        r = subprocess.run(f'rettiwt -k "{self.rettiwt_api_key}" tweet details "{tweet_id}"', shell=True, capture_output=True, encoding="utf-8", check=False)
-        r.check_returncode()
+        if not _TWITTER_ID_RE.fullmatch(tweet_id):
+            return None
+        r = self._run("tweet", "details", tweet_id)
         data = json.loads(r.stdout)
 
         if data.get("name") == "VALIDATION_ERROR":
