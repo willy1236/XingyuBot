@@ -9,6 +9,7 @@ import discord
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from starlib import BotEmbed, sqldb
+from starlib.utils import nowtz
 from starlib.database import APIType, NotifyChannelType, NotifyCommunityType
 from starlib.instance import (
     debug_guilds,
@@ -109,13 +110,14 @@ class DiscordBot(discord.Bot):
         assert isinstance(report_channel ,discord.abc.Messageable)
         await report_channel.send(embed=embed)
 
-    async def feedback(self, ctx: discord.ApplicationContext, msg: discord.Message):
+    async def feedback(self, ctx: discord.ApplicationContext, text: str):
         feedback_channel = self.get_channel(feedback_channel_id)
-        embed = BotEmbed.general(name=str(msg.author), icon_url=msg.author.display_avatar.url, title="💬回饋訊息", description=msg.content)
+        embed = BotEmbed.general(name=str(ctx.author), icon_url=ctx.author.display_avatar.url, title="💬回饋訊息", description=text)
         embed.add_field(name="發送者", value=f"{ctx.author}\n{ctx.author.id}", inline=False)
         embed.add_field(name="來源頻道", value=f"{ctx.channel}\n{ctx.channel.id}", inline=True)
-        embed.add_field(name="來源群組", value=f"{ctx.guild}\n{ctx.guild.id}", inline=True)
-        embed.timestamp = msg.created_at
+        if ctx.guild:
+            embed.add_field(name="來源群組", value=f"{ctx.guild}\n{ctx.guild.id}", inline=True)
+        embed.timestamp = nowtz()
         await feedback_channel.send(embed=embed)
 
     async def dm(self, msg: discord.Message):

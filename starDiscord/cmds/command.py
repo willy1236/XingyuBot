@@ -406,7 +406,7 @@ class command(Cog_Extension):
     @commands.cooldown(rate=1, per=10)
     async def feedback(self, ctx: discord.ApplicationContext, text: discord.Option(str, name="訊息", description="要傳送的訊息內容，歡迎提供各項建議")):
         await ctx.defer()
-        await self.bot.feedback(self.bot, ctx, text)
+        await self.bot.feedback(ctx, text)
         await ctx.respond("訊息已發送!", ephemeral=True, delete_after=3)
 
     @staticmethod
