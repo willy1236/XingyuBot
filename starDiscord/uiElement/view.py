@@ -548,6 +548,11 @@ class GiveawayEndButton(discord.ui.Button):
         await view.announce(interaction.message)
 
 
+def _format_dt_seconds(dt: datetime) -> str:
+    """Discord 時間戳顯示到秒（日期 + 含秒時間）"""
+    return f"{format_dt(dt, 'd')} {format_dt(dt, 'T')}"
+
+
 class GiveawayView(discord.ui.View):
     """抽獎訊息的按鈕與開獎邏輯
 
@@ -601,19 +606,16 @@ class GiveawayView(discord.ui.View):
         description = self.giveaway.description if self.giveaway.description else "按下下方按鈕開始抽獎！"
         description += f"\n- 抽出人數：{self.giveaway.winner_count} 人"
         description += f"\n- 舉辦人：<@{self.giveaway.creator_id}>"
-        description += f"\n- 開始時間：{format_dt(self.giveaway.created_at)}"
-        description += f"\n- 結束時間：{format_dt(self.deadline)}"
+        description += f"\n- 結束時間：{_format_dt_seconds(self.deadline)}（{format_dt(self.deadline, 'R')}）"
         embed = BotEmbed.general("抽獎系統", Jsondb.get_picture("dice_001"), title=f"{self.giveaway.prize_name}", description=description)
         embed.set_footer(text=f"抽獎ID：{self.giveaway.id}")
-        embed.timestamp = self.giveaway.created_at
         return embed
 
     def result_embed(self, joiner_count: int):
         description = self.giveaway.description or "抽獎結束" if joiner_count else "沒有參加抽獎的用戶"
         description += f"\n- 中獎人數：{min(self.giveaway.winner_count, joiner_count)} / {joiner_count} 人"
         description += f"\n- 舉辦人：<@{self.giveaway.creator_id}>"
-        description += f"\n- 開始時間：{format_dt(self.giveaway.created_at)}"
-        description += f"\n- 結束時間：{format_dt(self.giveaway.end_at)}"
+        description += f"\n- 結束時間：{_format_dt_seconds(self.giveaway.end_at)}"
         embed = BotEmbed.general("抽獎系統", Jsondb.get_picture("dice_001"), title=f"{self.giveaway.prize_name}", description=description)
         embed.set_footer(text=f"抽獎ID：{self.giveaway.id}")
         return embed
