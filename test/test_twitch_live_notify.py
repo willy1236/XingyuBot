@@ -337,3 +337,90 @@ def test_poll_clears_with_time_taken_before_query_only_when_record_exists(monkey
     db.clear_twitch_live.assert_called_once_with("1", T0)  # 查詢前的時間，不是清除當下
     db.claim_twitch_live.assert_not_called()
     cog.bot.send_notify_communities.assert_not_awaited()
+
+
+# ---- Twitch 端：開台 handler 用 twitchAPI 查直播與頭像 ----
+
+
+def _helix_stream(**overrides):
+    from twitchAPI.object.api import Stream
+
+    data = {
+        "id": "s1", "user_id": "900000000000000004", "user_login": "host", "user_name": "主播",
+        "game_id": "g1", "game_name": "遊戲", "type": "live", "title": "標題", "viewer_count": 3,
+        "started_at": "2026-11-07T04:00:00Z", "language": "zh", "thumbnail_url": "https://x/{width}x{height}.jpg",
+        "tag_ids": [], "is_mature": False, "tags": ["中文"],
+    }
+    data.update(overrides)
+    return Stream(**data)
+
+
+async def _agen(*items):
+    for item in items:
+        yield item
+
+
+@pytest.fixture
+def online_bot(monkeypatch):
+    """載入 twitch_chatbot（模組層級查 DB 的部分先換掉），替換 twitch、chat、bus。"""
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock, MagicMock
+
+    monkeypatch.setattr(type(sqldb), "get_bot_join_channel_all", lambda self: {})
+    from starServer import twitch_chatbot as module
+
+    bus = MagicMock()
+    fake_twitch = MagicMock()
+    fake_twitch.get_users.side_effect = lambda user_ids: _agen(SimpleNamespace(profile_image_url="https://x/avatar.png"))
+    monkeypatch.setattr(module, "get_bus", lambda: bus)
+    monkeypatch.setattr(module, "chat", MagicMock(send_message=AsyncMock()), raising=False)
+    monkeypatch.setattr(module, "twitch", fake_twitch, raising=False)
+    monkeypatch.setattr(module, "join_channels", {})
+    event = SimpleNamespace(
+        metadata=SimpleNamespace(message_timestamp=T0),
+        event=SimpleNamespace(broadcaster_user_id="900000000000000004", broadcaster_user_login="host", broadcaster_user_name="主播"),
+    )
+    return module, fake_twitch, bus, event
+
+
+def test_online_publishes_helix_stream_and_discord_rebuilds_embed(online_bot):
+    import asyncio
+
+    from starlib.messaging.events.twitch_stream import TwitchStreamOnlineEvent
+    from starlib.providers.social.models import TwitchStream
+
+    module, fake_twitch, bus, event = online_bot
+    fake_twitch.get_streams.side_effect = lambda user_id: _agen(_helix_stream(tag_ids=None))
+    asyncio.run(module.on_stream_online(event))
+
+    published = bus.publish.call_args.args[0]
+    assert published.started_at == datetime(2026, 11, 7, 4, 0, tzinfo=UTC)
+    assert published.profile_image_url == "https://x/avatar.png"
+    assert published.tag_ids == []  # Helix 沒給 tag_ids 時送空陣列
+
+    # 經過線路格式後，Discord 端照 twitch_live_notify 的方式重建，縮圖佔位會被換掉
+    received = TwitchStreamOnlineEvent.model_validate_json(published.model_dump_json())
+    live = TwitchStream(
+        id=received.stream_id, user_id=received.broadcaster_id, user_login=received.user_login, user_name=received.broadcaster_name,
+        game_id=received.game_id, game_name=received.game_name, type=received.stream_type, title=received.title,
+        viewer_count=received.viewer_count, started_at=received.started_at, language=received.language,
+        thumbnail_url=received.thumbnail_url, tag_ids=received.tag_ids, tags=received.tags, is_mature=received.is_mature,
+    )
+    embed = live.embed(received.profile_image_url)
+    assert live.thumbnail_url == "https://x/960x540.jpg"
+    assert embed.author.icon_url == "https://x/avatar.png"
+
+
+def test_online_skips_when_stream_not_found(online_bot, monkeypatch):
+    import asyncio
+
+    module, fake_twitch, bus, event = online_bot
+    fake_twitch.get_streams.side_effect = lambda user_id: _agen()
+
+    async def no_sleep(_):
+        return None
+
+    monkeypatch.setattr(module.asyncio, "sleep", no_sleep)
+    asyncio.run(module.on_stream_online(event))
+    assert fake_twitch.get_streams.call_count == 3
+    bus.publish.assert_not_called()

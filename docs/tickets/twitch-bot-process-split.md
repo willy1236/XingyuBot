@@ -346,6 +346,7 @@ flowchart TD
 - 偏離卡片（使用者裁決 A）：輪詢查不到直播時，清除用的下播時間取「輪詢呼叫 `get_lives` 之前記下的時間」而非清除當下的「現在」，且只在 `cache_data` 存在時才清除。理由：避免 `get_lives` 回傳「沒直播」之後、Twitch 事件剛搶佔新開台的空檔被誤清而重複通知；`cache_data` 判斷避免每 4 分鐘對每個沒開台的訂閱社群多一次 DELETE
 - 偏離卡片（使用者裁決 B）：開台事件帶整個 `TwitchStream` 欄位加 `profile_image_url`，Discord 端一行重建並共用 `live.embed()`
 - 使用者裁決 C：Twitch 端 handler 不寫自動化測試，以 grep 與人工驗收
+- 上線後調整：開台 handler 查直播與頭像改用 twitchAPI 的 `get_streams`、`get_users`（async），不再用同步的 `tw_api` 卡住 EventSub loop；`twitch` 物件改為模組全域。`tag_ids`、`tags` 為 None 時送空陣列。因為轉換的是第三方物件，這部分補了 handler 測試（`test_twitch_live_notify.py` 的 `test_online_*`）
 - 補充偏離：下播 handler 用 try/finally，預設頻道發送失敗仍清除紀錄；`get_user_by_id` 失敗或回傳 None 時 `profile_image_url` 為 None
 - 需人工驗證（驗收第 1 條未勾）：真實開台／下播事件與 Twitch 聊天室訊息；`send_notify_communities` 多伺服器耗時是否小於 120 秒；事件與輪詢在實際環境的搶佔
 - 審查未修的 non-blocking：Discord 端 handler 內同步 DB 呼叫（與 T-02 一致）；Twitch 端每個頻道都同步查頭像（設計後果）；`send_notify_communities` 中途拋例外時剩餘伺服器不補送（bus 已記 Sentry，舊行為同樣風險）

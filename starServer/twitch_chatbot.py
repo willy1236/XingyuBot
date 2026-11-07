@@ -34,7 +34,6 @@ from twitchAPI.type import (
 from sentry_bootstrap import capture_exception_safe, capture_message_safe
 from starlib import BaseThread
 from starlib.database import APIType, sqldb
-from starlib.instance import tw_api
 from starlib.messaging import get_bus
 from starlib.messaging.events.twitch_activity import (
     TwitchPredictionResultEvent,
@@ -98,6 +97,8 @@ def load_join_channels() -> None:
     TARGET_CHANNEL_IDS = [str(i) for i in TARGET_CHANNEL.keys()]
 
 chat:Chat
+# run() 建立的 Twitch API 物件，handler 用它查 Helix
+twitch: Twitch
 # eventsub
 async def on_follow(event: eventsub.ChannelFollowEvent):
     #await chat.send_message(data.event.broadcaster_user_name,text = f'{data.event.user_name} now follows {data.event.broadcaster_user_name}!')
@@ -120,7 +121,7 @@ async def on_stream_online(event: eventsub.StreamOnlineEvent):
     # stream.online 會在開台後數秒內送達，此時 Helix streams API 可能還查不到直播，稍等重試
     live = None
     for _ in range(3):
-        live = tw_api.get_lives(event.event.broadcaster_user_id)[event.event.broadcaster_user_id]
+        live = await first(twitch.get_streams(user_id=[event.event.broadcaster_user_id]))
         if live:
             break
         await asyncio.sleep(10)
@@ -134,7 +135,7 @@ async def on_stream_online(event: eventsub.StreamOnlineEvent):
         await chat.send_message(event.event.broadcaster_user_login, f"{event.event.broadcaster_user_name} 正在直播 {live.game_name}! {live.title}")
 
     try:
-        user = tw_api.get_user_by_id(event.event.broadcaster_user_id)
+        user = await first(twitch.get_users(user_ids=[event.event.broadcaster_user_id]))
     except Exception:
         log.warning("%s 的頭像查詢失敗，開台通知改用預設圖", event.event.broadcaster_user_name, exc_info=True)
         user = None
@@ -154,8 +155,8 @@ async def on_stream_online(event: eventsub.StreamOnlineEvent):
             started_at=live.started_at,
             language=live.language,
             thumbnail_url=live.thumbnail_url,
-            tag_ids=live.tag_ids,
-            tags=live.tags,
+            tag_ids=live.tag_ids or [],
+            tags=live.tags or [],
             is_mature=live.is_mature,
         )
     )
@@ -411,6 +412,7 @@ async def run():
     #     jtoken['refresh'] = refresh_token
 
     # set up twitch api instance and add user authentication with some scopes
+    global twitch
     twitch = await Twitch(APP_ID, APP_SECRET)
     try:
         app_token = sqldb.get_bot_oauth_token(APIType.Twitch, 2)
