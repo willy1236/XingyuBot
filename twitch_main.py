@@ -16,7 +16,7 @@ from bootstrap import setup_runtime
 setup_runtime("twitch")
 
 from sentry_bootstrap import capture_exception_safe, flush_safe
-from starlib import sclient
+from starlib.database import sqldb
 from starlib.messaging import get_bus
 
 # ruff: enable[E402]
@@ -61,7 +61,7 @@ def _run() -> bool:
     from starServer.twitch_chatbot import TwitchBotThread
 
     # Twitch 自訂指令的快取（DBCacheType.TwitchCmd）在這裡載入
-    sclient.sqldb.init_cache()
+    sqldb.init_cache()
     if _shutdown.is_set():
         return False
 

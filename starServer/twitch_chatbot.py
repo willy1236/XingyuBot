@@ -32,7 +32,7 @@ from twitchAPI.type import (
 )
 
 from sentry_bootstrap import capture_exception_safe, capture_message_safe
-from starlib import BaseThread, sclient  # TODO: 全面改用 eventbus
+from starlib import BaseThread
 from starlib.database import APIType, sqldb
 from starlib.instance import tw_api
 from starlib.messaging import get_bus
@@ -93,7 +93,7 @@ TARGET_CHANNEL_IDS: list[str] = []
 
 def load_join_channels() -> None:
     global join_channels, TARGET_CHANNEL, TARGET_CHANNEL_IDS
-    join_channels = sclient.sqldb.get_bot_join_channel_all()
+    join_channels = sqldb.get_bot_join_channel_all()
     TARGET_CHANNEL = {twitch_id: data.action_channel_id for twitch_id, data in join_channels.items()}
     TARGET_CHANNEL_IDS = [str(i) for i in TARGET_CHANNEL.keys()]
 
@@ -354,7 +354,7 @@ async def add_chat_command(cmd: ChatCommand):
     if len(parameters) < 2:
         await cmd.reply("用法：!add_command <指令> <回覆>")
     else:
-        sclient.sqldb.add_twitch_cmd(cmd.room.room_id, parameters[0], parameters[1])
+        sqldb.add_twitch_cmd(cmd.room.room_id, parameters[0], parameters[1])
         cmd.chat.register_command(
             parameters[0], respond_to_chat_command, [ChannelRestriction(allowed_channel=cmd.room.name), ChannelCommandCooldown(cooldown_seconds=30)]
         )
@@ -366,7 +366,7 @@ async def remove_chat_command(cmd: ChatCommand):
     if len(parameters) < 1:
         await cmd.reply("用法：!remove_command <指令>")
     else:
-        sclient.sqldb.remove_twitch_cmd(cmd.room.room_id, parameters)
+        sqldb.remove_twitch_cmd(cmd.room.room_id, parameters)
         cmd.chat.unregister_command(parameters)
         await cmd.reply(f"已移除指令：{parameters}")
 
@@ -374,13 +374,13 @@ async def remove_chat_command(cmd: ChatCommand):
 async def list_chat_command(cmd: ChatCommand):
     parameters = cmd.parameter
     if len(parameters) < 1:
-        commands = sclient.sqldb.list_chat_command_by_channel(cmd.room.room_id)
+        commands = sqldb.list_chat_command_by_channel(cmd.room.room_id)
         if commands:
             await cmd.reply(f"指令列表：\n{', '.join([i.name for i in commands])}")
         else:
             await cmd.reply("目前沒有設定指令")
     else:
-        command = sclient.sqldb.get_chat_command(parameters, cmd.room.room_id)
+        command = sqldb.get_chat_command(parameters, cmd.room.room_id)
         if command:
             await cmd.reply(f"{command.name}：{command.response}")
         else:

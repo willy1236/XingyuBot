@@ -115,7 +115,7 @@ def test_import_does_not_touch_db():
 
 def test_load_join_channels_populates_module_globals(monkeypatch):
     data = {123: MagicMock(action_channel_id=456), 789: MagicMock(action_channel_id=None)}
-    monkeypatch.setattr(chatbot.sclient.sqldb, "get_bot_join_channel_all", lambda: data)
+    monkeypatch.setattr(chatbot.sqldb, "get_bot_join_channel_all", lambda: data)
     for name in ("join_channels", "TARGET_CHANNEL", "TARGET_CHANNEL_IDS"):
         monkeypatch.setattr(chatbot, name, getattr(chatbot, name))  # 登記，測試結束還原
 
@@ -184,7 +184,7 @@ def tm(monkeypatch, request):
     monkeypatch.setattr(module, "_thread", None)
     bus = MagicMock()
     monkeypatch.setattr(module, "get_bus", lambda: bus)
-    monkeypatch.setattr(module.sclient.sqldb, "init_cache", lambda: None)
+    monkeypatch.setattr(module.sqldb, "init_cache", lambda: None)
     monkeypatch.setattr(module, "capture_exception_safe", MagicMock())
     monkeypatch.setattr(module, "flush_safe", lambda timeout=2: None)
     exits = []
@@ -257,7 +257,7 @@ def test_main_thread_exception_reports_and_exits_nonzero(tm, monkeypatch):
     def boom():
         raise RuntimeError("db down")
 
-    monkeypatch.setattr(tm.sclient.sqldb, "init_cache", boom)
+    monkeypatch.setattr(tm.sqldb, "init_cache", boom)
 
     tm.main()
 
