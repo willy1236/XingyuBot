@@ -203,7 +203,7 @@ flowchart TD
 - 驗收：`test/test_messaging.py` 23 個 integration 測試涵蓋全部驗收條件；Redis 停止與恢復以 TCP proxy 模擬，時間常數在測試中縮短，實際秒數未驗；`FLUSHALL` 以刪除測試前綴的 key 模擬
 - 審查 3 輪，無 blocking；未修：`connection.py` 的 `_fire` 未保留 task 參照（nitpick）、`_handle_entry` 的 `_stopping` 檢查沒有測試守住
 - 與設計的差異：`close()` 先等已排入的發送與進行中的事件，最多 timeout 的一半，逾時才取消（事件之後重送）
-- 後續修正（T-02 審查發現，使用者裁決）：handler 的 loop 已關閉、或 handler 執行到一半被自己的 loop 取消時，不再 ack，事件留在待確認清單，下次啟動重送；handler 拋例外仍 ack。新增 2 個 integration 測試（共 25 個），契約文件的 ack 與重送段落已更新
+- 後續修正（T-02 審查發現，使用者裁決）：handler 的 loop 已關閉、或 handler 執行到一半被自己的 loop 取消時，不再 ack，事件留在待確認清單，下次啟動重送；handler 拋例外仍 ack。新增 integration 測試（共 26 個），契約文件的 ack 與重送段落已更新。審查發現不 ack 的事件會讓 backlog 每次從 "0" 重讀而熱迴圈，已改成用游標往後讀（每次連上或錯誤後重置為 "0"，每輪 backlog 每筆只看一次）；handler 自己拋 `CancelledError` 仍被當成取消而不 ack，重啟時只重送一次
 
 ### T-02 Twitch bot 以獨立 process 執行，追隨通知經 Redis 送到 Discord
 
