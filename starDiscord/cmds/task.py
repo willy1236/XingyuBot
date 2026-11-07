@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import subprocess
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 import discord
 import nmap
@@ -9,7 +9,7 @@ from apscheduler.triggers.date import DateTrigger
 from discord.ext import commands
 from pydantic import ValidationError
 
-from starlib import Jsondb, sclient, sqldb, utils
+from starlib import sclient, sqldb, utils
 from starlib.database import (
     APIType,
     NotifyChannelType,
@@ -55,7 +55,6 @@ class task(Cog_Extension):
             scheduler.add_job(self.twitch_video, "interval", minutes=10, misfire_grace_time=40)
             scheduler.add_job(self.twitch_clip, "interval", minutes=5, misfire_grace_time=40)
             scheduler.add_job(self.notify_twitter_tweet_updates, "interval", minutes=10, misfire_grace_time=40)
-            # scheduler.add_job(self.get_mongodb_data,'interval',minutes=3,jitter=30,misfire_grace_time=40)
 
             # 背景刷新 - 保留 jitter
             scheduler.add_job(refresh_yt_push, "cron", hour="2/12", minute=0, second=0, jitter=300)
@@ -370,72 +369,6 @@ class task(Cog_Extension):
 
         sqldb.batch_merge(records_to_update)
         voice_times.clear()
-
-    # async def get_mongodb_data(self):
-    #     dbdata = mongedb.get_apidata()
-
-    async def start_eletion(self):
-        log.info("start_eletion start")
-        session = utils.calculate_eletion_session(datetime.now())
-        channel = self.bot.get_channel(1163127708839071827)
-
-        embed = sclient.election_format(session, self.bot)
-        await channel.send(embed=embed)
-
-        dbdata = sclient.sqldb.get_election_full_by_session(session)
-        results = {}
-        for position in Jsondb.options["position_option"].keys():
-            results[position] = []
-
-        for data in dbdata:
-            user_id = data["discord_id"]
-            # party_name = i['party_name'] or "無黨籍"
-            position = data["position"]
-
-            user = channel.guild.get_member(user_id)
-            username = user_id if not user else (user.display_name if user.display_name else (user.global_name if user.global_name else user.name))
-            if username not in results[position]:
-                results[position].append(username)
-
-        # count_data = sclient.get_election_count(session)
-        # count_dict = {}
-        # for data in count_data:
-        #     pos = data['position']
-        #     count = data['count']
-        #     count_dict[pos] = count
-
-        for position in Jsondb.options["position_option"].keys():
-            # count = count_dict[position]
-            if len(results[position]) <= 0:
-                continue
-
-            position_name = Jsondb.get_tw(position, "position_option")
-            title = f"第{session}屆中央選舉：{position_name}"
-            # options = [f"{i}號" for i in range(1,count + 1)]
-            i = 1
-            options = []
-            for username in results[position]:
-                options.append(f"{i}號 {username}")
-                i += 1
-
-            view = sclient.create_election_poll(title, options, self.bot.user.id, channel.guild.id, self.bot)
-
-            await channel.send(embed=view.embed(channel.guild), view=view)
-            await asyncio.sleep(1)
-
-        await channel.send(f"第{session}屆中央選舉投票已開始，請大家把握時間踴躍投票!")
-
-        tz = timezone(timedelta(hours=8))
-        start_time = utils.nowtz()
-        if start_time.hour < 20:
-            end_time = datetime(start_time.year, start_time.month, start_time.day, 20, 0, 0, tzinfo=tz)
-        else:
-            end_time = start_time + timedelta(days=1)
-
-        start_time += timedelta(seconds=10)
-        await channel.guild.create_scheduled_event(
-            name="【快樂營中央選舉】投票階段", start_time=start_time, end_time=end_time, location="<#1163127708839071827>"
-        )
 
     async def birthday_task(self):
         channel = self.bot.get_channel(566533708371329026)
