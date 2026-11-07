@@ -2,7 +2,7 @@
 import discord
 from pydantic import BaseModel, HttpUrl, model_validator
 
-from starlib.base.types import UTCDateTime
+from starlib.base.types import LocalDateTime
 
 
 class TitleDetail(BaseModel):
@@ -36,9 +36,9 @@ class YoutubePushEntry(BaseModel):
     author_detail: AuthorDetail
     href: HttpUrl
     author: str
-    published: UTCDateTime
+    published: LocalDateTime
     published_parsed: list[int]
-    updated: UTCDateTime
+    updated: LocalDateTime
     updated_parsed: list[int]
     thumbnail_url: HttpUrl | None = None
 
@@ -64,7 +64,7 @@ class Feed(BaseModel):
     links: list[LinkItem]
     title: str
     title_detail: TitleDetail
-    updated: UTCDateTime
+    updated: LocalDateTime
     updated_parsed: list[int]
 
 

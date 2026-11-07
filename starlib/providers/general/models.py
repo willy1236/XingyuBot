@@ -4,7 +4,7 @@ from typing import ClassVar
 import discord
 from pydantic import AliasPath, BaseModel, ConfigDict, Field, model_validator
 
-from starlib.base.types import UTCDateTime
+from starlib.base.types import LocalDateTime
 from starlib.database.postgresql.enums import McsmInstanceStatus, McssServerStatues
 from starlib.utils import BotEmbed
 from starlib.utils.time import convert_tz, nowtz
@@ -246,7 +246,7 @@ class DatasetInfo(BaseModel):
     datasetDescription: str
     datasetLanguage: str
     validTime: ValidTime
-    issueTime: UTCDateTime
+    issueTime: LocalDateTime
     update: datetime
 
 

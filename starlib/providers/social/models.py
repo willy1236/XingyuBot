@@ -6,7 +6,7 @@ from datetime import UTC, datetime, timedelta
 import discord
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, computed_field, field_validator, model_validator
 
-from starlib.base.types import UTCDateTime
+from starlib.base.types import LocalDateTime
 from starlib.fileDatabase import Jsondb
 from starlib.utils.time import convert_tz
 
@@ -32,7 +32,7 @@ class TwitchUser(BaseModel):
     offline_image_url: str | None = None
     view_count: int
     email: str | None = None
-    created_at: UTCDateTime
+    created_at: LocalDateTime
     url: str = None
 
     @model_validator(mode="after")
@@ -61,7 +61,7 @@ class TwitchStream(BaseModel):
     type: str
     title: str
     viewer_count: int
-    started_at: UTCDateTime
+    started_at: LocalDateTime
     language: str
     thumbnail_url: str
     tag_ids: list[str | None]
@@ -100,8 +100,8 @@ class TwitchVideo(BaseModel):
     user_name: str
     title: str
     description: str
-    created_at: UTCDateTime
-    published_at: UTCDateTime
+    created_at: LocalDateTime
+    published_at: LocalDateTime
     url: str
     thumbnail_url: str
     viewable: str
@@ -137,7 +137,7 @@ class TwitchClip(BaseModel):
     language: str
     title: str
     view_count: int
-    created_at: UTCDateTime
+    created_at: LocalDateTime
     thumbnail_url: str
     duration: timedelta
     vod_offset: int | None = None
@@ -185,7 +185,7 @@ class ChannelSnippet(BaseModel):
     title: str
     description: str
     customUrl: str
-    publishedAt: UTCDateTime
+    publishedAt: LocalDateTime
     thumbnails: YoutubeThumbnails
     localized: dict
     country: str | None = None
@@ -199,18 +199,18 @@ class ChannelStatistics(BaseModel):
 
 
 class StreamSnippet(BaseModel):
-    publishedAt: UTCDateTime
+    publishedAt: LocalDateTime
     channelId: str
     title: str
     description: str
     thumbnails: YoutubeThumbnails
     channelTitle: str
     liveBroadcastContent: str
-    publishTime: UTCDateTime
+    publishTime: LocalDateTime
 
 
 class VideoSnippet(BaseModel):
-    publishedAt: UTCDateTime
+    publishedAt: LocalDateTime
     channelId: str
     title: str
     description: str
@@ -224,10 +224,10 @@ class VideoSnippet(BaseModel):
 
 
 class LiveStreamingDetails(BaseModel):
-    actualStartTime: UTCDateTime | None = None
-    actualEndTime: UTCDateTime | None = None
-    scheduledStartTime: UTCDateTime | None = None
-    scheduledEndTime: UTCDateTime | None = None
+    actualStartTime: LocalDateTime | None = None
+    actualEndTime: LocalDateTime | None = None
+    scheduledStartTime: LocalDateTime | None = None
+    scheduledEndTime: LocalDateTime | None = None
     concurrentViewers: int | None = None
     activeLiveChatId: str | None = None
 
@@ -320,8 +320,8 @@ class YoutubeRSSVideo(BaseModel):
     yt_channelid: str
     title: str
     author_name: str = Field(alias="author")
-    uplood_at: UTCDateTime = Field(alias="published")
-    updated_at: UTCDateTime = Field(alias="updated")
+    uplood_at: LocalDateTime = Field(alias="published")
+    updated_at: LocalDateTime = Field(alias="updated")
     media_thumbnail: list[YoutubeThumbnail]
 
     def embed(self):
@@ -336,16 +336,16 @@ class YoutubeRSSVideo(BaseModel):
 class YtSubscriptionDetails:
     callback_url: str
     state: str
-    last_successful_verification: UTCDateTime
-    expiration_time: UTCDateTime
-    last_subscribe_request: UTCDateTime
-    last_unsubscribe_request: UTCDateTime | None
-    last_verification_error: UTCDateTime | None
-    last_delivery_error: UTCDateTime | None
-    last_item_delivered: UTCDateTime | None
+    last_successful_verification: LocalDateTime
+    expiration_time: LocalDateTime
+    last_subscribe_request: LocalDateTime
+    last_unsubscribe_request: LocalDateTime | None
+    last_verification_error: LocalDateTime | None
+    last_delivery_error: LocalDateTime | None
+    last_item_delivered: LocalDateTime | None
     aggregate_statistics: str
-    content_received: UTCDateTime | None
-    content_delivered: UTCDateTime | None
+    content_received: LocalDateTime | None
+    content_delivered: LocalDateTime | None
 
     @property
     def has_verify(self):
@@ -362,7 +362,7 @@ class RssHubTwitterTweet(BaseModel):
     id: str
     guidislink: bool
     published: str
-    published_parsed: UTCDateTime  # 特殊處理
+    published_parsed: LocalDateTime  # 特殊處理
     authors: list[dict]
     author: str
     author_detail: dict
@@ -393,7 +393,7 @@ class RettiwtTweetUser(BaseModel):
     id: str
     userName: str
     fullName: str
-    createdAt: UTCDateTime
+    createdAt: LocalDateTime
     description: str | None = None
     isVerified: bool
     likeCount: int
@@ -448,7 +448,7 @@ class RettiwtTweetMedia(BaseModel):
 class RettiwtTweetItem(BaseModel):
     id: str
     conversationId: str
-    createdAt: UTCDateTime
+    createdAt: LocalDateTime
     tweetBy: RettiwtTweetUser
     entities: RettiwtTweetEntity
     media: list[RettiwtTweetMedia | None] = Field(default_factory=list)
@@ -508,7 +508,7 @@ class RettiwtTweetUserDetails(BaseModel):
     id: str
     userName: str
     fullName: str
-    createdAt: UTCDateTime
+    createdAt: LocalDateTime
     description: str
     isVerified: bool
     likeCount: int
@@ -598,11 +598,11 @@ class NotionPropertyValue(BaseModel):
     # Rollup property
     rollup: dict | None = None
     # Created time property
-    created_time: UTCDateTime | None = None
+    created_time: LocalDateTime | None = None
     # Created by property
     created_by: NotionUser | None = None
     # Last edited time property
-    last_edited_time: UTCDateTime | None = None
+    last_edited_time: LocalDateTime | None = None
     # Last edited by property
     last_edited_by: NotionUser | None = None
     # Status property
@@ -636,9 +636,9 @@ class NotionCover(BaseModel):
 class NotionPage(BaseModel):
     object: str
     id: str
-    created_time: UTCDateTime
+    created_time: LocalDateTime
     created_by: NotionUser
-    last_edited_time: UTCDateTime
+    last_edited_time: LocalDateTime
     last_edited_by: NotionUser
     cover: NotionCover | None = None
     icon: NotionIcon | None = None
@@ -690,9 +690,9 @@ class NotionPage(BaseModel):
 class NotionDatabase(BaseModel):
     object: str
     id: str
-    created_time: UTCDateTime
+    created_time: LocalDateTime
     created_by: NotionUser
-    last_edited_time: UTCDateTime
+    last_edited_time: LocalDateTime
     last_edited_by: NotionUser
     title: list[NotionRichText] | None = None  # 可選字段
     description: list[NotionRichText] = Field(default_factory=list)
@@ -793,9 +793,9 @@ class NotionBlock(BaseModel):
     object: str
     id: str
     parent: NotionParent
-    created_time: UTCDateTime
+    created_time: LocalDateTime
     created_by: NotionUser
-    last_edited_time: UTCDateTime
+    last_edited_time: LocalDateTime
     last_edited_by: NotionUser
     archived: bool
     has_children: bool

@@ -96,8 +96,8 @@ def parse_datetime(text: str, now: datetime | None = None) -> datetime | None:
     return result
 
 
-def ensure_utc(dt: datetime) -> datetime:
-    """將 datetime 轉換為 UTC，若無時區則賦予 UTC 後轉換"""
+def ensure_local_tz(dt: datetime) -> datetime:
+    """將 datetime 統一成 UTC+8；沒有時區的 datetime 視為 UTC+8 時間，有時區的轉換到 UTC+8"""
     if dt.tzinfo is None:
         return dt.replace(tzinfo=_tz)
     return dt.astimezone(_tz)
