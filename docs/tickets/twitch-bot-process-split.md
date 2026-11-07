@@ -60,7 +60,7 @@ flowchart LR
 |---|---|---|---|---|---|---|
 | 1 | T-01 | 完成 | [共用] `starlib/messaging`：提供跨 process 事件廣播與連線 | 無 | — | T-02～T-07 依賴 |
 | 2 | T-02 | 待手動驗收 | Twitch bot 以獨立 process 執行，追隨通知經 Redis 送到 Discord | T-01 | — | 骨架切片；含上線驗收 2 |
-| 3 | T-03 | 未完成 | 突襲、訂閱、續訂、點數兌換、預測結果、私訊通知改走跨 process 事件 | T-02 | A | |
+| 3 | T-03 | 進行中 | 突襲、訂閱、續訂、點數兌換、預測結果、私訊通知改走跨 process 事件 | T-02 | A | |
 | 4 | T-04 | 進行中 | 開台與下播通知改走跨 process 事件，開台通知原子搶佔 | T-02 | A | |
 | 5 | T-05 | 未完成 | Twitch bot 斷線放棄或 crash 時自動重啟，停止時乾淨收尾 | T-02 | A | 含 audit P3 |
 | 6 | T-06 | 未完成 | 服務之間能發請求並在 5 秒內拿到回應或「無法處理」 | T-01 | B | 只建機制 |
@@ -295,7 +295,13 @@ flowchart TD
 - 續訂的兩則要在同一個 handler 裡依序 `await`，不能拆成兩個事件。
 - 「逐字相同」的測試：把現有字串組法當期望值寫進測試，直接呼叫 handler 驗輸出，不需要 Redis。
 
-**進度**：未完成
+**進度**：進行中（分支 `feat/t03-activity-events`）
+- 已完成：`starlib/messaging/events/twitch_activity.py` 六個事件 model；`twitch_notify.py` 六個 handler 與訂閱／取消訂閱，測試 `test/test_twitch_activity.py`（`test_twitch_notify.py` 兩條訂閱測試改成涵蓋全部事件）
+- 已完成：`twitch_chatbot.py` 六個 handler 改 publish、poll／prediction_begin 只記 log，Twitch 端測試併入 `test/test_twitch_activity.py`
+- 已完成：契約文件六段（`docs/messaging-contract.md`）
+- 已完成：merge T-04 後的 feat/twitch-process-split（解衝突：events 匯入行、twitch_chatbot import 區、總覽表）
+- 續做：驗收條件打勾與最終狀態由主 agent 處理
+- 使用者決定（偏離卡上「逐字相同」）：`cumulative_months` 為 None 時，Discord 文字省略含它的句子（續訂第一則的「累積訂閱N個月！」與第二則的「他已經訂閱 N 個月了」），不印 None
 
 ### T-04 開台與下播通知改走跨 process 事件，開台通知原子搶佔
 
