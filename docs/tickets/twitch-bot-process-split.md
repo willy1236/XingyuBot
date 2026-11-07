@@ -255,7 +255,8 @@ flowchart TD
 - 已完成：`bootstrap.py`、`main.py` 不再啟動 Twitch bot、`twitch_main.py`、`TwitchBotThread.ready`、`TwitchFollowEvent`、`get_twitch_join_channel`、`twitch_notify.py` Cog 與 helper、`on_ready` 啟動 bus、契約文件九段標題；`test/test_twitch_notify.py` 11 個測試通過
 - 與設計的差異：Discord 端的 `get_bus().close()` 提前到 `DiscordBot.close()` 開頭（loop 還在跑時，用 executor 呼叫），`main.py` 的 `finally` 保留作兜底。原設計只在 `stop_threads()` 之後關，那時 py-cord 已關閉 loop，關機時間窗內讀到的事件會被誤 ack 而遺失（使用者裁決改 T-02）
 - 已手動驗證並勾選：條件 1、3、5、6（6：停掉 bot 後發送事件，重啟後補發；本機 dev bot＋真實 Redis，從另一個 process 發送追隨事件，使用者在 Discord 頻道確認收到訊息）
-- 續做：條件 2（Twitch 真實 OAuth）、4、7（`/reload`）、8（停 Redis）尚未驗
+- 條件 8 只驗了 Discord 端與發送端（Twitch 聊天室與真實 Twitch 事件需 OAuth，未驗，不勾選）：Redis 容器停止期間 Discord bot 沒停、只記 warning，另一個 process 發送事件不拋例外；重啟容器 1 分鐘後發送的追隨事件送到 Discord 頻道，bot 日誌顯示「Redis 連線恢復」
+- 續做：條件 2（Twitch 真實 OAuth）、4、7（`/reload`）、8（Twitch 端）尚未驗
 - 審查另列未處理：收到 SIGTERM／Ctrl+C 時 py-cord 先取消所有 task，進行中的 handler 被取消後事件仍被 ack（非回歸，T-05 處理信號時一併考慮，或改 T-01 讓取消不 ack）、`bus.close` 失敗時 `super().close()` 被跳過與測試未驗 executor（nitpick）、`/unload twitch_notify` 後 handler 仍掛在 bus 上（T-01 介面沒有 unsubscribe）、gateway 重連期間 `get_channel` 暫時拿不到會誤報
 
 ### T-03 突襲、訂閱、續訂、點數兌換、預測結果、私訊通知改走跨 process 事件
