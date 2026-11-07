@@ -113,27 +113,81 @@ Twitch 頻道被追隨。Discord 端依該頻道的通知頻道設定發送，�
 
 #### twitch.raid
 
-待補（T-03）。
+其他實況主帶觀眾突襲 Twitch 頻道。Discord 端依被突襲頻道的通知頻道設定發送，沒設定就不發。時效 10 分鐘。
+
+| 欄位 | 型別 | 說明 |
+|---|---|---|
+| `to_broadcaster_id` | string | 被突襲頻道的 Twitch ID |
+| `to_broadcaster_name` | string | 被突襲頻道的顯示名稱 |
+| `from_broadcaster_name` | string | 發起突襲的實況主顯示名稱 |
+| `viewers` | integer | 突襲帶來的觀眾數 |
+
+`occurred_at` 是 EventSub 的 `message_timestamp`。
 
 #### twitch.subscribe
 
-待補（T-03）。
+新訂閱。贈送訂閱（`is_gift`）不發送此事件。Discord 端依通知頻道設定發送，沒設定就不發。
+
+| 欄位 | 型別 | 說明 |
+|---|---|---|
+| `broadcaster_id` | string | 被訂閱頻道的 Twitch ID |
+| `user_name` | string | 訂閱者的顯示名稱 |
+
+`occurred_at` 是 EventSub 的 `message_timestamp`。
 
 #### twitch.subscription_message
 
-待補（T-03）。
+續訂訊息。Discord 端依通知頻道設定發送，沒設定就不發；同一個事件依序發兩則訊息（感謝、訂閱細節），不拆成兩個事件。`cumulative_months` 為 null 時，Discord 端省略含累積月數的句子。
+
+| 欄位 | 型別 | 說明 |
+|---|---|---|
+| `broadcaster_id` | string | 被訂閱頻道的 Twitch ID |
+| `broadcaster_name` | string | 被訂閱頻道的顯示名稱 |
+| `user_name` | string | 訂閱者的顯示名稱 |
+| `tier` | string | Twitch 原始層級值：`"1000"`、`"2000"`、`"3000"`；接收端顯示時取第一個字元 |
+| `duration_months` | integer | 這次訂閱的月數 |
+| `cumulative_months` | integer \| null | 累積訂閱月數；訂閱者不分享時為 null |
+| `message` | string \| null | 訂閱者附的訊息；沒有時為 null |
+
+`occurred_at` 是 EventSub 的 `message_timestamp`。
 
 #### twitch.redemption
 
-待補（T-03）。
+頻道點數兌換。Discord 端依通知頻道設定發送，沒設定就不發。
+
+| 欄位 | 型別 | 說明 |
+|---|---|---|
+| `broadcaster_id` | string | 頻道的 Twitch ID |
+| `user_name` | string | 兌換者的顯示名稱 |
+| `user_login` | string | 兌換者的 login |
+| `reward_title` | string | 兌換項目名稱 |
+| `user_input` | string \| null | 兌換者輸入的文字；沒有（或空字串）時為 null |
+
+`occurred_at` 是 EventSub 的 `message_timestamp`。
 
 #### twitch.prediction_result
 
-待補（T-03）。
+預測結束且有獲勝選項（`resolved`）。取消的預測不發送。Discord 端固定發到預設頻道，不依通知頻道設定。
+
+| 欄位 | 型別 | 說明 |
+|---|---|---|
+| `broadcaster_name` | string | 頻道的顯示名稱 |
+| `title` | string | 預測標題 |
+| `outcome_title` | string | 獲勝選項名稱 |
+| `users` | integer | 成功預測的人數 |
+
+`occurred_at` 是 EventSub 的 `message_timestamp`。
 
 #### twitch.whisper
 
-待補（T-03）。
+Twitch bot 收到的私訊。Discord 端固定發到預設頻道，不依通知頻道設定。
+
+| 欄位 | 型別 | 說明 |
+|---|---|---|
+| `user_name` | string | 傳私訊者的顯示名稱 |
+| `message` | string | 私訊內容 |
+
+私訊沒有 EventSub 的 `message_timestamp`，`occurred_at` 是 Twitch bot 收到時的 UTC 時間。
 
 #### twitch.stream_online
 
