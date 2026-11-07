@@ -9,8 +9,7 @@ import json
 import logging
 import threading
 import time
-import weakref
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Coroutine
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import uuid4
@@ -58,9 +57,11 @@ class _Server:
         self._service = ""
         self._consumer = ""
         self._tasks: set[asyncio.Task[None]] = set()
+        self._lock = threading.Lock()
 
     def register(self, method: str, handler: RpcHandler, loop: asyncio.AbstractEventLoop) -> None:
-        self._handlers[method] = (handler, loop)
+        with self._lock:
+            self._handlers[method] = (handler, loop)
 
     def _stream(self) -> str:
         return f"{self._bus.key_prefix}:rpc:{self._service}"
@@ -69,11 +70,13 @@ class _Server:
 
     async def on_start(self, service: str, consumer: str) -> None:
         self._service, self._consumer = service, consumer
-        loop = asyncio.get_running_loop()
-        for coro in (self._consume(), self._maintain()):
-            task = loop.create_task(coro)
-            self._tasks.add(task)
-            task.add_done_callback(self._tasks.discard)
+        self._spawn(self._consume())
+        self._spawn(self._maintain())
+
+    def _spawn(self, coro: Coroutine[Any, Any, None]) -> None:
+        task = asyncio.get_running_loop().create_task(coro)
+        self._tasks.add(task)
+        task.add_done_callback(self._tasks.discard)
 
     async def _consume(self) -> None:
         group = self._service
@@ -92,7 +95,8 @@ class _Server:
                     )
                     for _, entries in response or []:
                         for entry_id, fields in entries:
-                            await self._process(client, entry_id, fields)
+                            # 每筆請求各自一個 task，慢的 handler 不會讓後面的請求在佇列裡過期
+                            self._spawn(self._process(client, entry_id, fields))
             except asyncio.CancelledError:
                 raise
             except CONNECTION_ERRORS as exc:
@@ -113,14 +117,13 @@ class _Server:
                 raise
 
     async def _drain(self, client: aioredis.Redis) -> None:
-        """上次當機時留在自己待確認清單的請求：不補做，過期的丟棄、還沒過期的照常處理，一律 ack。"""
+        """上次當機或 ack 失敗時留在自己待確認清單的請求：不補做，一律直接 ack。"""
         while True:
             response = await client.xreadgroup(self._service, self._consumer, {self._stream(): "0"}, count=DRAIN_BATCH)
-            entries = [entry for _, batch in response or [] for entry in batch]
-            if not entries:
+            entry_ids = [entry_id for _, batch in response or [] for entry_id, _ in batch]
+            if not entry_ids:
                 return
-            for entry_id, fields in entries:
-                await self._process(client, entry_id, fields)
+            await client.xack(self._stream(), self._service, *entry_ids)
 
     async def _maintain(self) -> None:
         """定期清掉過期請求；不做補送。"""
@@ -139,12 +142,16 @@ class _Server:
             await self._handle(client, fields)
         except asyncio.CancelledError:
             raise
-        except CONNECTION_ERRORS:
-            raise
+        except CONNECTION_ERRORS as exc:
+            log.warning("處理請求 %s 時 Redis 連不上：%r", entry_id, exc)
+            return  # 沒 ack，下次啟動時由 _drain 清掉
         except Exception as exc:
             capture_exception_safe(exc, tags=SENTRY_TAGS)
             log.error("處理請求 %s 時發生未預期的錯誤", entry_id, exc_info=exc)
-        await client.xack(self._stream(), self._service, entry_id)
+        try:
+            await client.xack(self._stream(), self._service, entry_id)
+        except (*CONNECTION_ERRORS, ResponseError) as exc:
+            log.warning("確認請求 %s 失敗：%r", entry_id, exc)
 
     async def _handle(self, client: aioredis.Redis, fields: dict[str, str] | None) -> None:
         request = self._parse(fields)
@@ -181,7 +188,8 @@ class _Server:
 
     async def _run(self, method: str, payload: dict[str, Any], remaining: float) -> str | None:
         """執行 handler，回傳要寫回的 JSON；超過期限（發送端已放棄）回傳 None。"""
-        entry = self._handlers.get(method)
+        with self._lock:
+            entry = self._handlers.get(method)
         if entry is None:
             return _error_reply(f"沒有這個方法：{method}")
         handler, loop = entry
@@ -196,6 +204,13 @@ class _Server:
         except TimeoutError:
             log.warning("請求 %s 執行超過期限，放棄回應", method)
             return None
+        except asyncio.CancelledError:
+            current = asyncio.current_task()
+            if current is not None and current.cancelling():
+                raise  # bus 自己被取消（關閉中）
+            # handler 在它自己的 loop 上被取消（例如那個 loop 正在關閉）：回錯誤，不讓消費者停掉
+            log.warning("請求 %s 的 handler 被取消", method)
+            return _error_reply(f"{method} 的 handler 被取消")
         except Exception as exc:
             capture_exception_safe(exc, tags={**SENTRY_TAGS, "rpc_method": method})
             log.error("處理請求 %s 時 handler 拋出例外", method, exc_info=exc)
@@ -216,7 +231,7 @@ def _trim_floor() -> int:
     return int((time.time() - REQUEST_TIMEOUT) * 1000)
 
 
-_servers: weakref.WeakKeyDictionary[MessageBus, _Server] = weakref.WeakKeyDictionary()
+_servers: dict[MessageBus, _Server] = {}
 _servers_lock = threading.Lock()
 
 
@@ -253,7 +268,22 @@ def request(
     future 的結果是處理端的回傳值；對方無法處理時是 RpcUnavailable，處理端出錯時是 RpcHandlerError。
     """
     bus = bus or get_bus()
-    return bus.run(_request(bus, service, method, payload))
+    inner = bus.run(_request(bus, service, method, payload))
+    outer: concurrent.futures.Future[dict[str, Any]] = concurrent.futures.Future()
+
+    def relay(done: concurrent.futures.Future[dict[str, Any]]) -> None:
+        # bus 已關閉或關閉時被取消，對呼叫端來說也是「無法處理」
+        if done.cancelled():
+            outer.set_exception(RpcUnavailable("bus 已關閉"))
+        elif isinstance(exc := done.exception(), RuntimeError):
+            outer.set_exception(RpcUnavailable(f"bus 已關閉：{exc}"))
+        elif exc is not None:
+            outer.set_exception(exc)
+        else:
+            outer.set_result(done.result())
+
+    inner.add_done_callback(relay)
+    return outer
 
 
 async def _request(bus: MessageBus, service: str, method: str, payload: dict[str, Any]) -> dict[str, Any]:

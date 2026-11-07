@@ -221,6 +221,46 @@ def test_request_from_other_threads(make_bus, handler_loop):
     assert sorted(r["echo"]["n"] for r in results) == list(range(5))
 
 
+def test_cancelled_handler_does_not_stop_consumer(make_bus, handler_loop):
+    server, client = make_bus(), make_bus()
+
+    async def cancelled(payload: dict) -> dict:
+        raise asyncio.CancelledError
+
+    handle("cancel", cancelled, handler_loop, bus=server)
+    handle("echo", echo, handler_loop, bus=server)
+    server.start(SERVER, "c1")
+
+    with pytest.raises(RpcHandlerError):
+        request(SERVER, "cancel", {}, bus=client).result(10)
+    assert request(SERVER, "echo", {"n": 1}, bus=client).result(10) == {"echo": {"n": 1}}
+
+
+def test_slow_requests_do_not_block_later_ones(make_bus, handler_loop):
+    server, client = make_bus(), make_bus()
+
+    async def slow(payload: dict) -> dict:
+        await asyncio.sleep(0.5)
+        return payload
+
+    handle("slow", slow, handler_loop, bus=server)
+    server.start(SERVER, "c1")
+
+    started = time.monotonic()
+    futures = [request(SERVER, "slow", {"n": n}, bus=client) for n in range(12)]
+
+    assert [f.result(10) for f in futures] == [{"n": n} for n in range(12)]
+    assert time.monotonic() - started < 3
+
+
+def test_request_on_closed_bus_is_unavailable(make_bus):
+    client = make_bus()
+    client.close(timeout=2)
+
+    with pytest.raises(RpcUnavailable):
+        request(SERVER, "echo", {}, bus=client).result(5)
+
+
 def _group_info(raw, stream: str) -> dict | None:
     try:
         groups = raw.xinfo_groups(stream)

@@ -7,7 +7,6 @@ import asyncio
 import json
 import logging
 import threading
-import weakref
 from collections.abc import Awaitable, Callable
 from typing import Any
 
@@ -54,6 +53,7 @@ class _Listener:
 
     async def _listen(self, *, invalidate_all: bool) -> None:
         delay = RESUBSCRIBE_INITIAL_DELAY
+        reported = False  # 同一段持續失敗只回報 Sentry 一次，訂閱成功後才重置
         while True:
             try:
                 client = await self._bus.get_client()
@@ -65,6 +65,7 @@ class _Listener:
                     # 之後在這條訂閱自己中斷後重新訂閱，也要丟掉一次
                     invalidate_all = True
                     delay = RESUBSCRIBE_INITIAL_DELAY
+                    reported = False
                     await self._pump(pubsub)
                 finally:
                     await _close_quietly(pubsub)
@@ -76,8 +77,10 @@ class _Listener:
             except CONNECTION_ERRORS as exc:
                 log.warning("快取失效的訂閱中斷，%.0f 秒後重新訂閱：%r", delay, exc)
             except Exception as exc:
-                capture_exception_safe(exc, tags=SENTRY_TAGS)
-                log.error("快取失效的訂閱發生未預期的錯誤", exc_info=exc)
+                if not reported:
+                    reported = True
+                    capture_exception_safe(exc, tags=SENTRY_TAGS)
+                log.warning("快取失效的訂閱發生未預期的錯誤，%.0f 秒後重新訂閱：%r", delay, exc)
             await asyncio.sleep(delay)
             delay = min(delay * 2, RESUBSCRIBE_MAX_DELAY)
 
@@ -136,7 +139,7 @@ async def _close_quietly(pubsub: aioredis.client.PubSub) -> None:
         log.debug("關閉 Pub/Sub 連線失敗：%r", exc)
 
 
-_listeners: weakref.WeakKeyDictionary[MessageBus, _Listener] = weakref.WeakKeyDictionary()
+_listeners: dict[MessageBus, _Listener] = {}
 _listeners_lock = threading.Lock()
 
 
