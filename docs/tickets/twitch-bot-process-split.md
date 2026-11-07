@@ -62,7 +62,7 @@ flowchart LR
 | 2 | T-02 | 待手動驗收 | Twitch bot 以獨立 process 執行，追隨通知經 Redis 送到 Discord | T-01 | — | 骨架切片；含上線驗收 2 |
 | 3 | T-03 | 完成 | 突襲、訂閱、續訂、點數兌換、預測結果、私訊通知改走跨 process 事件 | T-02 | A | |
 | 4 | T-04 | 待手動驗收 | 開台與下播通知改走跨 process 事件，開台通知原子搶佔 | T-02 | A | |
-| 5 | T-05 | 未完成 | Twitch bot 斷線放棄或 crash 時自動重啟，停止時乾淨收尾 | T-02 | A | 含 audit P3 |
+| 5 | T-05 | 待手動驗收 | Twitch bot 斷線放棄或 crash 時自動重啟，停止時乾淨收尾 | T-02 | A | 含 audit P3 |
 | 6 | T-06 | 未完成 | 服務之間能發請求並在 5 秒內拿到回應或「無法處理」 | T-01 | B | 只建機制 |
 | 7 | T-07 | 未完成 | 服務能通知所有實例丟掉指定快取 | T-01 | B | 只建機制 |
 | 8 | T-08 | 未完成 | 上線：正式機以兩個 service 執行 | T-03～T-07 | — | 上線切換 |
@@ -359,14 +359,14 @@ flowchart TD
 - 不包含：systemd unit 的 `Restart=` 設定與 UptimeRobot 設定（shark-ansible／使用者，T-08 交接）。
 
 **驗收條件**
-- [ ] 模擬重啟聊天室逾時：回報 Sentry，process 以非 0 結束。
-- [ ] 模擬停止聊天室失敗：同上。
-- [ ] 網路不通時聊天室斷線：繼續等待，不結束 process。
-- [ ] 啟動流程拋出例外：回報 Sentry，以非 0 結束。
-- [ ] 個別 EventSub 或聊天室指令 handler 拋例外：記 log，process 繼續執行。
-- [ ] 異常結束時清理卡住（例如 `chat.stop()` 不返回）：process 在 15 秒內結束。
+- [x] 模擬重啟聊天室逾時：回報 Sentry，process 以非 0 結束。
+- [x] 模擬停止聊天室失敗：同上。
+- [x] 網路不通時聊天室斷線：繼續等待，不結束 process。
+- [x] 啟動流程拋出例外：回報 Sentry，以非 0 結束。
+- [x] 個別 EventSub 或聊天室指令 handler 拋例外：記 log，process 繼續執行。
+- [x] 異常結束時清理卡住（例如 `chat.stop()` 不返回）：process 在 15 秒內結束。
 - [ ] 送 SIGTERM，或在 Windows 按 Ctrl+C：停止 EventSub、關閉 Twitch API、停止聊天室、關閉 bus 後以 0 結束。
-- [ ] `import starServer.twitch_chatbot` 不會呼叫 `sqldb`（經由 `starlib.instance` 連帶的查詢不算）；所有 handler，包含贈送訂閱，在啟動後照常讀得到 `join_channels`。
+- [x] `import starServer.twitch_chatbot` 不會呼叫 `sqldb`（經由 `starlib.instance` 連帶的查詢不算）；所有 handler，包含贈送訂閱，在啟動後照常讀得到 `join_channels`。
 
 **實作設計**
 - 後端：
@@ -385,7 +385,11 @@ flowchart TD
 
 **風險 / 實作注意**：`asyncio.run(run())` 跑在 `TwitchBotThread` 裡，信號只會送到主 thread，所以要由主 thread 轉成 `stop()`。`os._exit` 不會跑 atexit 與 Sentry 的 flush，呼叫前先 `sentry_sdk.flush(timeout=2)`。
 
-**進度**：未完成
+**進度**：待手動驗收（實作 commit `9869086`）
+- 已完成：`TwitchBotThread.abnormal`、`_watch_chat` 兩處放棄重連改回報 Sentry 後異常結束、`run()` 未捕捉例外異常結束；`load_join_channels()` 取代模組層級查 DB；`twitch_main.py` 的信號處理、每秒醒來的等待迴圈、異常路徑限時清理後 `os._exit(1)`；`sentry_bootstrap.flush_safe`；`test/test_twitch_lifecycle.py` 13 個測試
+- 驗收：除 SIGTERM／Ctrl+C 外都有自動測試；信號以直接呼叫 handler 模擬，真實 SIGTERM 與 Windows Ctrl+C 未驗，未勾選。「個別 handler 拋例外」以讀 twitchAPI 原始碼確認（EventSub 與聊天室 handler 都由 `create_task` 執行，例外不會傳到 loop 外），未另寫測試
+- 與設計的差異：收到信號後，等 Twitch bot 收尾最多 15 秒，逾時視為異常走 `os._exit(1)`，避免啟動階段（例如等 OAuth）收到信號卡住
+- 需人工驗證：實機送 SIGTERM／按 Ctrl+C 後 exit code 為 0；全套測試另有 7 個既有失敗（`test_community`、`test_sentry_noise`），與本卡無關
 
 ### T-06 服務之間能發請求並在 5 秒內拿到回應或「無法處理」
 
