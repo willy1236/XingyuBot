@@ -204,6 +204,8 @@ class DiscordBot(discord.Bot):
                     await channel.send(text, embed=embed)
                 except discord.Forbidden:
                     log.warning("NotifyCommunity: channel missing access", extra={"notify_type": notify_type, "guild_id": guild_id, "channel_id": channel_id})
+                except discord.HTTPException as e:
+                    log.warning("NotifyCommunity: send failed: %s", e, extra={"notify_type": notify_type, "guild_id": guild_id, "channel_id": channel_id})
                 await asyncio.sleep(0.5)
             else:
                 log.warning("NotifyCommunity: channel not found", extra={"notify_type": notify_type, "guild_id": guild_id, "channel_id": channel_id})
@@ -223,6 +225,8 @@ class DiscordBot(discord.Bot):
                     await channel.send(text, embed=embed)
                 except discord.Forbidden:
                     log.warning("channel missing access", extra={"notify_type": notify_type, "guild_id": no_channel.guild_id, "channel_id": no_channel.channel_id})
+                except discord.HTTPException as e:
+                    log.warning("NotifyChannel: send failed: %s", e, extra={"notify_type": notify_type, "guild_id": no_channel.guild_id, "channel_id": no_channel.channel_id})
                 await asyncio.sleep(0.5)
             else:
                 log.warning("channel not found", extra={"notify_type": notify_type, "guild_id": no_channel.guild_id, "channel_id": no_channel.channel_id})
@@ -232,21 +236,27 @@ class DiscordBot(discord.Bot):
         for i in records:
             channel = self.get_channel(i.channel_id)
             if channel:
+                embeds = embed if isinstance(embed, list) else [embed]
                 try:
-                    msg = await channel.fetch_message(channel.last_message_id)
-                except discord.NotFound:
                     msg = None
+                    if channel.last_message_id is not None:
+                        try:
+                            msg = await channel.fetch_message(channel.last_message_id)
+                        except discord.NotFound:
+                            msg = None
 
-                if msg and msg.author == self.user:
-                    await msg.edit(content=default_content, embeds=embed if isinstance(embed, list) else [embed])
-                else:
-                    await channel.send(
-                        embed=BotEmbed.simple(
-                            "溫馨提醒",
-                            "此為定時通知，請將我的訊息保持在此頻道的最新訊息，以免機器人找不到訊息而重複發送\n如果你想取消或重新設定這個通知，請使用 /channel set 指令",
+                    if msg and msg.author == self.user:
+                        await msg.edit(content=default_content, embeds=embeds)
+                    else:
+                        await channel.send(
+                            embed=BotEmbed.simple(
+                                "溫馨提醒",
+                                "此為定時通知，請將我的訊息保持在此頻道的最新訊息，以免機器人找不到訊息而重複發送\n如果你想取消或重新設定這個通知，請使用 /channel set 指令",
+                            )
                         )
-                    )
-                    await channel.send(default_content, embeds=embed if isinstance(embed, list) else [embed])
+                        await channel.send(default_content, embeds=embeds)
+                except discord.HTTPException as e:
+                    log.warning("NotifyChannel: edit failed: %s", e, extra={"notify_type": notify_type, "guild_id": i.guild_id, "channel_id": i.channel_id})
                 await asyncio.sleep(0.5)
 
             else:
