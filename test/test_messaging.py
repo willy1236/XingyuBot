@@ -483,6 +483,29 @@ def test_unsubscribe_while_event_in_flight_acks_it_and_keeps_later_ones(make_bus
     assert wait_until(lambda: pending_count(raw, prefix, Ping) == 0)
 
 
+def test_event_read_after_unsubscribe_is_not_acked_and_redelivered_on_resubscribe(
+    make_bus, handler_loop, raw, prefix, monkeypatch
+):
+    """reader 還卡在 XREADGROUP 時取消訂閱，之後才到的事件被讀進待確認清單：不處理也不 ack，重新 subscribe 後讀回。"""
+    monkeypatch.setattr(bus_module, "READ_BLOCK_MS", 3000)
+    sender, receiver = make_bus(), make_bus()
+    first = Recorder()
+    receiver.subscribe(Ping, first, handler_loop)
+    receiver.start(SERVICE, "c1")
+    time.sleep(0.5)  # reader 進入阻塞讀取
+
+    receiver.unsubscribe(Ping, first)
+    time.sleep(0.2)
+    sender.publish(Ping(occurred_at=now(), n=1))
+    assert wait_until(lambda: pending_count(raw, prefix, Ping) == 1)
+    assert not first.received
+
+    second = Recorder()
+    receiver.subscribe(Ping, second, handler_loop)
+    assert wait_until(lambda: second.ns == [1])
+    assert wait_until(lambda: pending_count(raw, prefix, Ping) == 0)
+
+
 def test_unsubscribe_with_replaced_handler_does_nothing(make_bus, handler_loop):
     """/reload 時新 Cog 已取代舊 handler，舊 Cog 的 unsubscribe 不能把新的拿掉。"""
     sender, receiver = make_bus(), make_bus()
