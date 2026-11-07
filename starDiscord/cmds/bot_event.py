@@ -9,6 +9,7 @@ from discord.ext import commands
 from starlib import BotEmbed, sclient
 from starlib.database import NotifyChannelType
 from starlib.instance import *
+from starlib.messaging import get_bus
 from starlib.utils import nowtz
 
 from ..extension import Cog_Extension
@@ -65,6 +66,9 @@ class event(Cog_Extension):
     @commands.Cog.listener()
     async def on_ready(self):
         bot = self.bot
+
+        # 開始消費其他 process 送來的事件；on_ready 可能觸發多次，start 冪等
+        get_bus().start("discord")
 
         now = nowtz()
         if bot.bot_code == "1" and not bot.debug_mode:

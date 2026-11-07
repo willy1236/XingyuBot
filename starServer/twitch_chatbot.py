@@ -34,6 +34,8 @@ from sentry_bootstrap import capture_exception_safe
 from starlib import BaseThread, BotEmbed, Jsondb, sclient  # TODO: 全面改用 eventbus
 from starlib.database import APIType, NotifyCommunityType, sqldb
 from starlib.instance import tw_api
+from starlib.messaging import get_bus
+from starlib.messaging.events.twitch_follow import TwitchFollowEvent
 from starlib.pubsub.model import TwitchStreamEvent
 
 log = logging.getLogger(__name__)
@@ -84,9 +86,15 @@ async def on_follow(event: eventsub.ChannelFollowEvent):
     #await chat.send_message(data.event.broadcaster_user_name,text = f'{data.event.user_name} now follows {data.event.broadcaster_user_name}!')
     log.info("%s(%s) now follows %s!", event.event.user_name, event.event.user_login, event.event.broadcaster_user_name)
 
-    channel_config = join_channels.get(int(event.event.broadcaster_user_id))
-    if channel_config and channel_config.action_channel_id:
-        sclient.publish(TwitchStreamEvent(content=f"{event.event.user_name}({event.event.user_login}) 正在追隨 {event.event.broadcaster_user_name}!", to_discord_channel=channel_config.action_channel_id))
+    get_bus().publish(
+        TwitchFollowEvent(
+            occurred_at=event.metadata.message_timestamp,
+            broadcaster_id=event.event.broadcaster_user_id,
+            broadcaster_name=event.event.broadcaster_user_name,
+            follower_name=event.event.user_name,
+            follower_login=event.event.user_login,
+        )
+    )
 
 
 async def on_stream_online(event: eventsub.StreamOnlineEvent):
@@ -524,10 +532,13 @@ class TwitchBotThread(BaseThread):
         self.chat: Chat = None
         self.twitch: Twitch = None
         self.eventsub: EventSubWebhook = None
+        # run() 初始化完成、進入 _watch_chat 之前 set；呼叫端等它之後才開始消費事件
+        self.ready = threading.Event()
 
     def run(self):
         try:
             self.chat, self.twitch, self.eventsub = asyncio.run(run())
+            self.ready.set()
             self._watch_chat()
             asyncio.run(self.cleanup())
         except Exception as exc:
