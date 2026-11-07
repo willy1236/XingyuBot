@@ -60,8 +60,8 @@ flowchart LR
 |---|---|---|---|---|---|---|
 | 1 | T-01 | 完成 | [共用] `starlib/messaging`：提供跨 process 事件廣播與連線 | 無 | — | T-02～T-07 依賴 |
 | 2 | T-02 | 待手動驗收 | Twitch bot 以獨立 process 執行，追隨通知經 Redis 送到 Discord | T-01 | — | 骨架切片；含上線驗收 2 |
-| 3 | T-03 | 進行中 | 突襲、訂閱、續訂、點數兌換、預測結果、私訊通知改走跨 process 事件 | T-02 | A | |
-| 4 | T-04 | 進行中 | 開台與下播通知改走跨 process 事件，開台通知原子搶佔 | T-02 | A | |
+| 3 | T-03 | 完成 | 突襲、訂閱、續訂、點數兌換、預測結果、私訊通知改走跨 process 事件 | T-02 | A | |
+| 4 | T-04 | 待手動驗收 | 開台與下播通知改走跨 process 事件，開台通知原子搶佔 | T-02 | A | |
 | 5 | T-05 | 未完成 | Twitch bot 斷線放棄或 crash 時自動重啟，停止時乾淨收尾 | T-02 | A | 含 audit P3 |
 | 6 | T-06 | 未完成 | 服務之間能發請求並在 5 秒內拿到回應或「無法處理」 | T-01 | B | 只建機制 |
 | 7 | T-07 | 未完成 | 服務能通知所有實例丟掉指定快取 | T-01 | B | 只建機制 |
@@ -274,11 +274,11 @@ flowchart TD
 - 不包含：開台、下播（T-04）。投票開始、預測開始維持不訂閱，它們 handler 裡的 `sclient.publish` 改成只記 log，讓 T-08 移除 `TwitchStreamEvent` 時沒有呼叫端。
 
 **驗收條件**
-- [ ] 用測試觸發這六種事件，Discord 收到的通知文字跟拆開前逐字相同：突襲、訂閱、續訂（依序兩則）、點數兌換發到頻道設定的通知頻道；預測結果、私訊發到預設頻道 `566533708371329026`。
-- [ ] 預測結果與私訊的 embed 跟拆開前相同（標題、描述、私訊的圖片）。
-- [ ] 沒設定通知頻道的 Twitch 頻道，突襲、訂閱、續訂、點數兌換都不發到 Discord。
-- [ ] Twitch 聊天室的行為跟拆開前相同：突襲、續訂、贈送訂閱的聊天室訊息，只在該頻道有設定通知頻道時發送；Redis 停掉時照常發送，不會被事件發送拖慢。
-- [ ] 各事件的補送時效：突襲 10 分鐘，其餘 1 小時。
+- [x] 用測試觸發這六種事件，Discord 收到的通知文字跟拆開前逐字相同：突襲、訂閱、續訂（依序兩則）、點數兌換發到頻道設定的通知頻道；預測結果、私訊發到預設頻道 `566533708371329026`。
+- [x] 預測結果與私訊的 embed 跟拆開前相同（標題、描述、私訊的圖片）。
+- [x] 沒設定通知頻道的 Twitch 頻道，突襲、訂閱、續訂、點數兌換都不發到 Discord。
+- [x] Twitch 聊天室的行為跟拆開前相同：突襲、續訂、贈送訂閱的聊天室訊息，只在該頻道有設定通知頻道時發送；Redis 停掉時照常發送，不會被事件發送拖慢。
+- [x] 各事件的補送時效：突襲 10 分鐘，其餘 1 小時。
 
 **實作設計**
 - 後端（Twitch 端）：`on_channel_raid`、`on_channel_subscribe`、`on_channel_subscription_message`、`on_channel_points_custom_reward_redemption_add`、`on_channel_prediction_end`、`on_whisper` 改成發送結構化事件。
@@ -295,13 +295,13 @@ flowchart TD
 - 續訂的兩則要在同一個 handler 裡依序 `await`，不能拆成兩個事件。
 - 「逐字相同」的測試：把現有字串組法當期望值寫進測試，直接呼叫 handler 驗輸出，不需要 Redis。
 
-**進度**：進行中（分支 `feat/t03-activity-events`）
-- 已完成：`starlib/messaging/events/twitch_activity.py` 六個事件 model；`twitch_notify.py` 六個 handler 與訂閱／取消訂閱，測試 `test/test_twitch_activity.py`（`test_twitch_notify.py` 兩條訂閱測試改成涵蓋全部事件）
-- 已完成：`twitch_chatbot.py` 六個 handler 改 publish、poll／prediction_begin 只記 log，Twitch 端測試併入 `test/test_twitch_activity.py`
-- 已完成：契約文件六段（`docs/messaging-contract.md`）
-- 已完成：merge T-04 後的 feat/twitch-process-split（解衝突：events 匯入行、twitch_chatbot import 區、總覽表）
-- 續做：驗收條件打勾與最終狀態由主 agent 處理
-- 使用者決定（偏離卡上「逐字相同」）：`cumulative_months` 為 None 時，Discord 文字省略含它的句子（續訂第一則的「累積訂閱N個月！」與第二則的「他已經訂閱 N 個月了」），不印 None
+**進度**：完成（實作 commit `7a1d4cc` 起，審查 1 輪，無 blocking）
+- 已完成：`starlib/messaging/events/twitch_activity.py` 六個事件 model；`twitch_notify.py` 六個 handler 與訂閱／取消訂閱，測試 `test/test_twitch_activity.py`；`twitch_chatbot.py` 六個 handler 改 publish、投票開始與預測開始只記 log，Twitch 端測試併入同一個測試檔；契約文件六段（`docs/messaging-contract.md`）
+- 驗收：五條皆有單元測試，包含真實 `MessageBus` 在 Redis 不可用時 handler 於 1 秒內返回
+- 偏離卡片（使用者裁決）：`cumulative_months` 為 None 時，Discord 文字省略含它的句子（續訂第一則的「累積訂閱N個月！」與第二則的「他已經訂閱 N 個月了」），不印 None
+- 偏離卡片：驗收 2 的「標題」措辭以現有 code 為準，即 embed 的作者列與描述（私訊另有作者列圖片）
+- 偏離卡片：既有兩條 Cog 訂閱測試（`test_twitch_notify.py`）改寫成涵蓋全部事件，不另加一條
+- 審查未修的 nitpick：預設頻道找不到時只記 warning、不回報 Sentry（與 `resolve_action_channel` 不對稱）
 
 ### T-04 開台與下播通知改走跨 process 事件，開台通知原子搶佔
 
@@ -313,15 +313,15 @@ flowchart TD
 
 **驗收條件**
 - [ ] 有設定通知頻道的頻道開台：Twitch 聊天室與通知頻道各收到一則跟拆開前逐字相同的文字；訂閱開台通知的伺服器收到帶實況主頭像的開台 embed。沒設定通知頻道時三件都不做。
-- [ ] 通知頻道設定了但已不存在、或發到通知頻道失敗：記 log、回報 Sentry，開台通知照樣搶佔與發送。
-- [ ] 同一次開台，Twitch bot 事件與輪詢都偵測到，訂閱開台通知只發一次，不論誰先。
-- [ ] Discord bot 停止超過 10 分鐘後重啟：開台事件被丟掉，輪詢在下一輪搶到並補發（不帶頭像）。
-- [ ] 開台事件處理到一半 process 被殺掉，重啟後補送的同一事件照樣發送，之後的輪詢不會再發一次。
-- [ ] 開台超過一天的直播，輪詢搶佔並寫入紀錄但不發通知。
-- [ ] 上一次下播沒清掉紀錄（例如下播事件過期），新的一次開台仍然搶得到並發送。
-- [ ] 下播：預設頻道收到一則跟拆開前相同的文字；紀錄的開台時間早於下播時才清除；下播事件晚於下一次開台處理時，不會清掉新開台的紀錄。
-- [ ] 新增 integration 測試（沿用 `test/test_identity.py` 的交易 rollback 寫法）：Twitch 搶佔在紀錄為空值時算搶到；`claim_community_cache` 在空值時仍然搶不到，YouTube 行為不變。
-- [ ] Twitch bot 不再讀寫 `community_cache`。
+- [x] 通知頻道設定了但已不存在、或發到通知頻道失敗：記 log、回報 Sentry，開台通知照樣搶佔與發送。
+- [x] 同一次開台，Twitch bot 事件與輪詢都偵測到，訂閱開台通知只發一次，不論誰先。
+- [x] Discord bot 停止超過 10 分鐘後重啟：開台事件被丟掉，輪詢在下一輪搶到並補發（不帶頭像）。
+- [x] 開台事件處理到一半 process 被殺掉，重啟後補送的同一事件照樣發送，之後的輪詢不會再發一次。
+- [x] 開台超過一天的直播，輪詢搶佔並寫入紀錄但不發通知。
+- [x] 上一次下播沒清掉紀錄（例如下播事件過期），新的一次開台仍然搶得到並發送。
+- [x] 下播：預設頻道收到一則跟拆開前相同的文字；紀錄的開台時間早於下播時才清除；下播事件晚於下一次開台處理時，不會清掉新開台的紀錄。
+- [x] 新增 integration 測試（沿用 `test/test_identity.py` 的交易 rollback 寫法）：Twitch 搶佔在紀錄為空值時算搶到；`claim_community_cache` 在空值時仍然搶不到，YouTube 行為不變。
+- [x] Twitch bot 不再讀寫 `community_cache`。
 
 **實作設計**
 - 資料：沿用 `community_cache`（`notify_type=TwitchLive`、`community_id`、`value`），不改表。`client.py` 新增 Twitch 專用的兩個方法，`claim_community_cache` 不動：
@@ -341,14 +341,14 @@ flowchart TD
 
 **風險 / 實作注意**：`send_notify_communities` 會發多個伺服器，執行時間要小於 T-01 的 min-idle 120 秒。
 
-**進度**：進行中
-- 已完成：`client.py` 的 `claim_twitch_live`、`clear_twitch_live` 與 integration 測試（`test/test_twitch_live_notify.py`）
-- 使用者裁決（偏離卡上字面）：輪詢查不到直播時，清除用的下播時間取「輪詢呼叫 `get_lives` 之前記下的時間」而非清除當下的「現在」，且只在 `cache_data` 存在時才清除。理由：避免 `get_lives` 回傳「沒直播」之後、Twitch 事件剛搶佔新開台的空檔被誤清而重複通知；`cache_data` 判斷避免每 4 分鐘對每個沒開台的訂閱社群多一次 DELETE
-- 使用者裁決：開台事件帶整個 `TwitchStream` 欄位加 `profile_image_url`，Discord 端一行重建並共用 `live.embed()`；Twitch 端 handler 不寫自動化測試，以 grep 與人工驗收
-- 已完成：`events/twitch_stream.py`（含 `events/__init__.py` 匯入）、`starDiscord/cmds/twitch_live_notify.py` Cog 與 handler 測試
-- 已完成：`task.twitch_live` 改用搶佔與清除，含單元測試
-- 已完成：`twitch_chatbot.py` 開台、下播 handler 改發事件（頭像查詢失敗時 `profile_image_url` 為 None），契約文件兩段
-- 續做：merge `feat/twitch-process-split` 最新 tip、跑涵蓋測試、交審查；驗收條件打勾與人工驗證（Twitch 端 handler、聊天室訊息、真實開台）留給主 agent
+**進度**：待手動驗收（實作 commit `ccf6af7` 起，審查 1 輪，無 blocking）
+- 已完成：`client.py` 的 `claim_twitch_live`、`clear_twitch_live` 與 integration 測試（`test/test_twitch_live_notify.py`）；`events/twitch_stream.py`（含 `events/__init__.py` 匯入）；`starDiscord/cmds/twitch_live_notify.py` Cog 與 handler 測試；`task.twitch_live` 改用搶佔與清除，含單元測試；`twitch_chatbot.py` 開台、下播 handler 改發事件；契約文件兩段
+- 偏離卡片（使用者裁決 A）：輪詢查不到直播時，清除用的下播時間取「輪詢呼叫 `get_lives` 之前記下的時間」而非清除當下的「現在」，且只在 `cache_data` 存在時才清除。理由：避免 `get_lives` 回傳「沒直播」之後、Twitch 事件剛搶佔新開台的空檔被誤清而重複通知；`cache_data` 判斷避免每 4 分鐘對每個沒開台的訂閱社群多一次 DELETE
+- 偏離卡片（使用者裁決 B）：開台事件帶整個 `TwitchStream` 欄位加 `profile_image_url`，Discord 端一行重建並共用 `live.embed()`
+- 使用者裁決 C：Twitch 端 handler 不寫自動化測試，以 grep 與人工驗收
+- 補充偏離：下播 handler 用 try/finally，預設頻道發送失敗仍清除紀錄；`get_user_by_id` 失敗或回傳 None 時 `profile_image_url` 為 None
+- 需人工驗證（驗收第 1 條未勾）：真實開台／下播事件與 Twitch 聊天室訊息；`send_notify_communities` 多伺服器耗時是否小於 120 秒；事件與輪詢在實際環境的搶佔
+- 審查未修的 non-blocking：Discord 端 handler 內同步 DB 呼叫（與 T-02 一致）；Twitch 端每個頻道都同步查頭像（設計後果）；`send_notify_communities` 中途拋例外時剩餘伺服器不補送（bus 已記 Sentry，舊行為同樣風險）
 
 ### T-05 Twitch bot 斷線放棄或 crash 時自動重啟，停止時乾淨收尾
 
