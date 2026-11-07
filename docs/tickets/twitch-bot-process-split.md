@@ -61,7 +61,7 @@ flowchart LR
 | 1 | T-01 | 完成 | [共用] `starlib/messaging`：提供跨 process 事件廣播與連線 | 無 | — | T-02～T-07 依賴 |
 | 2 | T-02 | 待手動驗收 | Twitch bot 以獨立 process 執行，追隨通知經 Redis 送到 Discord | T-01 | — | 骨架切片；含上線驗收 2 |
 | 3 | T-03 | 進行中 | 突襲、訂閱、續訂、點數兌換、預測結果、私訊通知改走跨 process 事件 | T-02 | A | |
-| 4 | T-04 | 未完成 | 開台與下播通知改走跨 process 事件，開台通知原子搶佔 | T-02 | A | |
+| 4 | T-04 | 進行中 | 開台與下播通知改走跨 process 事件，開台通知原子搶佔 | T-02 | A | |
 | 5 | T-05 | 未完成 | Twitch bot 斷線放棄或 crash 時自動重啟，停止時乾淨收尾 | T-02 | A | 含 audit P3 |
 | 6 | T-06 | 未完成 | 服務之間能發請求並在 5 秒內拿到回應或「無法處理」 | T-01 | B | 只建機制 |
 | 7 | T-07 | 未完成 | 服務能通知所有實例丟掉指定快取 | T-01 | B | 只建機制 |
@@ -299,7 +299,8 @@ flowchart TD
 - 已完成：`starlib/messaging/events/twitch_activity.py` 六個事件 model；`twitch_notify.py` 六個 handler 與訂閱／取消訂閱，測試 `test/test_twitch_activity.py`（`test_twitch_notify.py` 兩條訂閱測試改成涵蓋全部事件）
 - 已完成：`twitch_chatbot.py` 六個 handler 改 publish、poll／prediction_begin 只記 log，Twitch 端測試併入 `test/test_twitch_activity.py`
 - 已完成：契約文件六段（`docs/messaging-contract.md`）
-- 續做：merge `feat/twitch-process-split` 後跑測試；驗收條件打勾由主 agent 處理
+- 已完成：merge T-04 後的 feat/twitch-process-split（解衝突：events 匯入行、twitch_chatbot import 區、總覽表）
+- 續做：驗收條件打勾與最終狀態由主 agent 處理
 - 使用者決定（偏離卡上「逐字相同」）：`cumulative_months` 為 None 時，Discord 文字省略含它的句子（續訂第一則的「累積訂閱N個月！」與第二則的「他已經訂閱 N 個月了」），不印 None
 
 ### T-04 開台與下播通知改走跨 process 事件，開台通知原子搶佔
@@ -340,7 +341,14 @@ flowchart TD
 
 **風險 / 實作注意**：`send_notify_communities` 會發多個伺服器，執行時間要小於 T-01 的 min-idle 120 秒。
 
-**進度**：未完成
+**進度**：進行中
+- 已完成：`client.py` 的 `claim_twitch_live`、`clear_twitch_live` 與 integration 測試（`test/test_twitch_live_notify.py`）
+- 使用者裁決（偏離卡上字面）：輪詢查不到直播時，清除用的下播時間取「輪詢呼叫 `get_lives` 之前記下的時間」而非清除當下的「現在」，且只在 `cache_data` 存在時才清除。理由：避免 `get_lives` 回傳「沒直播」之後、Twitch 事件剛搶佔新開台的空檔被誤清而重複通知；`cache_data` 判斷避免每 4 分鐘對每個沒開台的訂閱社群多一次 DELETE
+- 使用者裁決：開台事件帶整個 `TwitchStream` 欄位加 `profile_image_url`，Discord 端一行重建並共用 `live.embed()`；Twitch 端 handler 不寫自動化測試，以 grep 與人工驗收
+- 已完成：`events/twitch_stream.py`（含 `events/__init__.py` 匯入）、`starDiscord/cmds/twitch_live_notify.py` Cog 與 handler 測試
+- 已完成：`task.twitch_live` 改用搶佔與清除，含單元測試
+- 已完成：`twitch_chatbot.py` 開台、下播 handler 改發事件（頭像查詢失敗時 `profile_image_url` 為 None），契約文件兩段
+- 續做：merge `feat/twitch-process-split` 最新 tip、跑涵蓋測試、交審查；驗收條件打勾與人工驗證（Twitch 端 handler、聊天室訊息、真實開台）留給主 agent
 
 ### T-05 Twitch bot 斷線放棄或 crash 時自動重啟，停止時乾淨收尾
 

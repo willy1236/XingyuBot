@@ -191,11 +191,39 @@ Twitch bot 收到的私訊。Discord 端固定發到預設頻道，不依通知�
 
 #### twitch.stream_online
 
-待補（T-04）。
+Twitch 頻道開台。Twitch bot 在聊天室發完訊息後送出。Discord 端依該頻道的通知頻道設定處理：沒設定就整個不做（開台通知交給輪詢）；有設定則發一則文字到通知頻道，再對 `community_cache`（`notify_type=TwitchLive`）做原子搶佔，搶到才發給訂閱開台通知的伺服器（帶實況主頭像的 embed）。補送回來的同一事件（`Delivery.redelivered`）視為已搶到。
+
+| 欄位 | 型別 | 說明 |
+|---|---|---|
+| `broadcaster_id` | string | 開台頻道的 Twitch ID |
+| `broadcaster_name` | string | 開台頻道的顯示名稱 |
+| `profile_image_url` | string \| null | 實況主頭像網址，查不到時為 null |
+| `stream_id` | string | 直播 ID（Helix streams 的 `id`） |
+| `user_login` | string | 開台頻道的 login |
+| `game_id` | string | 遊戲 ID |
+| `game_name` | string | 遊戲名稱 |
+| `stream_type` | string | 直播類型（Helix 的 `type`，例如 `live`） |
+| `title` | string | 直播標題 |
+| `viewer_count` | integer | 觀看人數 |
+| `started_at` | string | 開始直播的時間（ISO 8601，含時區）；搶佔以它比較新舊 |
+| `language` | string | 直播語言 |
+| `thumbnail_url` | string | 直播縮圖網址（可含 `{width}`、`{height}` 佔位） |
+| `tag_ids` | array | 標籤 ID，缺少時為空陣列 |
+| `tags` | array | 標籤名稱，缺少時為空陣列 |
+| `is_mature` | boolean | 是否為成人內容，缺少時為 false |
+
+`occurred_at` 是 EventSub 的 `message_timestamp`；超過 10 分鐘的事件不補送，改由輪詢補發（不帶頭像）。
 
 #### twitch.stream_offline
 
-待補（T-04）。
+Twitch 頻道下播。Discord 端發一則文字到預設頻道，再清除該頻道的開台紀錄；只在紀錄的開台時間早於 `occurred_at`（或為空值）時才清，晚於它的新開台紀錄不動。
+
+| 欄位 | 型別 | 說明 |
+|---|---|---|
+| `broadcaster_id` | string | 下播頻道的 Twitch ID |
+| `broadcaster_name` | string | 下播頻道的顯示名稱 |
+
+`occurred_at` 是 EventSub 的 `message_timestamp`；超過 5 分鐘的事件不補送。
 
 ## 請求／回應
 
