@@ -3,6 +3,7 @@
 import ast
 import asyncio
 import importlib
+import signal
 import threading
 import time
 from pathlib import Path
@@ -115,6 +116,8 @@ def test_import_does_not_touch_db():
 def test_load_join_channels_populates_module_globals(monkeypatch):
     data = {123: MagicMock(action_channel_id=456), 789: MagicMock(action_channel_id=None)}
     monkeypatch.setattr(chatbot.sclient.sqldb, "get_bot_join_channel_all", lambda: data)
+    for name in ("join_channels", "TARGET_CHANNEL", "TARGET_CHANNEL_IDS"):
+        monkeypatch.setattr(chatbot, name, getattr(chatbot, name))  # 登記，測試結束還原
 
     chatbot.load_join_channels()
 
@@ -169,11 +172,14 @@ class FakeThread:
 
 
 @pytest.fixture
-def tm(monkeypatch):
+def tm(monkeypatch, request):
     import bootstrap
 
     monkeypatch.setattr(bootstrap, "setup_runtime", lambda service: None)
     module = importlib.import_module("twitch_main")
+    # main() 會替換 SIGINT／SIGTERM handler，測試結束要還原
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        request.addfinalizer(lambda sig=sig, previous=signal.getsignal(sig): signal.signal(sig, previous))
     module._shutdown.clear()
     monkeypatch.setattr(module, "_thread", None)
     bus = MagicMock()
@@ -205,6 +211,22 @@ def test_sigterm_stops_thread_and_exits_zero(tm, monkeypatch):
     tm.bus.start.assert_called_once_with("twitch")
     tm.bus.close.assert_called_once()
     assert tm.exits == []
+
+
+def test_signal_during_thread_construction_still_stops_thread(tm, monkeypatch):
+    fake = FakeThread()
+
+    def factory():
+        tm._on_signal(15, None)  # handler 此時 _thread 還是 None，只能設旗標
+        return fake
+
+    monkeypatch.setattr(chatbot, "TwitchBotThread", factory)
+
+    with pytest.raises(SystemExit) as info:
+        tm.main()
+
+    assert info.value.code == 0
+    assert fake.stopped.is_set()
 
 
 def test_startup_failure_exits_nonzero_without_hanging(tm, monkeypatch):

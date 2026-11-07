@@ -75,6 +75,8 @@ def _run() -> bool:
             return True  # 啟動失敗：ready 永遠不會 set
         if _shutdown.is_set():
             break
+    if _shutdown.is_set():
+        thread.stop()  # 信號可能搶在 _thread 賦值之前到達
     if thread.ready.is_set():
         # 初始化完成才開始消費，避免事件進來時 handler 還沒就緒
         get_bus().start("twitch")
