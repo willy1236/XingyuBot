@@ -101,6 +101,7 @@ def get_whois(domain):
             "name": w.name,  # registrant name
             "org": w.org,  # registrant organization (可能為 None)
             "emails": w.emails,
+            "country": w.country,
         }
     except Exception as e:
         return {"error": str(e)}
@@ -237,29 +238,28 @@ def get_dns_records(domain):
 
 def contains_confusable_unicode(domain: str) -> bool:
     """
-    偵測 domain 是否包含非 ASCII 且可能為同形字攻擊（簡單 heuristics）
-    - 若 domain 包含非 ASCII 字元或混合腳本（Latin + Cyrillic），回傳 True
+    偵測 domain 是否可能為同形字攻擊（簡單 heuristics）
+    - 同一個標籤內混用 Latin、Cyrillic、Greek 其中兩種以上時回傳 True（例如用 Cyrillic 的 а 冒充 apple）
+    - 頂級網域是 ASCII，但其他標籤整個由 Cyrillic 或 Greek 組成時也回傳 True（例如 ѕсоре.com）
+    - 純中日韓等單一腳本的國際化網域不視為可疑
     """
-    has_non_ascii = any(ord(ch) > 127 for ch in domain)
-    if not has_non_ascii:
+    if all(ord(ch) <= 127 for ch in domain):
         return False
-    # 檢查是否混合腳本（例如既有 Latin 又有 Cyrillic）
-    scripts = set()
-    for ch in domain:
-        try:
-            name = unicodedata.name(ch)
-        except ValueError:
-            continue
-        if "CYRILLIC" in name:
-            scripts.add("CYRILLIC")
-        elif "GREEK" in name:
-            scripts.add("GREEK")
-        elif "LATIN" in name:
-            scripts.add("LATIN")
-        else:
-            scripts.add("OTHER")
-    # 若存在 LATIN 且存在其他非 LATIN 腳本 -> 可疑
-    return ("LATIN" in scripts and len(scripts) > 1) or ("CYRILLIC" in scripts and "GREEK" in scripts) or True
+    labels = domain.split(".")
+    ascii_tld = labels[-1].isascii()
+    for label in labels:
+        scripts = set()
+        for ch in label:
+            try:
+                name = unicodedata.name(ch)
+            except ValueError:
+                continue
+            for script in ("LATIN", "CYRILLIC", "GREEK"):
+                if name.startswith(script):
+                    scripts.add(script)
+        if len(scripts) > 1 or (ascii_tld and scripts and scripts <= {"CYRILLIC", "GREEK"}):
+            return True
+    return False
 
 
 def generate_url_report(url_text: str) -> list[str]:
@@ -291,7 +291,7 @@ def generate_url_report(url_text: str) -> list[str]:
         text.append("取得 whois 資訊失敗")
     else:
         text.append("whois 資訊：")
-        text.append(f"  註冊地：{whois_info.get('country', '未知')}")
+        text.append(f"  註冊地：{whois_info.get('country') or '未知'}")
 
         if whois_info["org"]:
             if whois_info["org"] == "REDACTED FOR PRIVACY":
@@ -317,9 +317,6 @@ def generate_url_report(url_text: str) -> list[str]:
     ssl_subject = get_ssl_subject(domain)
     assert ssl_subject is not None, "SSL 憑證資訊取得失敗"
     if not ssl_subject.get("error"):
-        if not ssl_subject.get("certificate_valid", True):
-            text.append("⚠️ SSL 證書驗證失敗")
-
         text.append("SSL 證書資訊：")
         text.append(f"  組織名稱：{ssl_subject['subject'].get('organizationName', '未知')}")
         text.append(f"  國家代碼：{ssl_subject['subject'].get('countryName', '未知')}")
