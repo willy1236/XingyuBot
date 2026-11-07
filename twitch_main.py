@@ -33,6 +33,9 @@ def main() -> None:
     try:
         thread.join()
     finally:
+        # Ctrl+C 打斷 join 時，要讓 Twitch bot 自己清理（eventsub、api、chat），再關 bus
+        thread.stop()
+        thread.join(10)
         get_bus().close()
 
 
