@@ -2,6 +2,7 @@ import asyncio
 import logging
 import socket
 import threading
+import time
 from datetime import UTC, datetime
 
 from sqlalchemy.exc import NoResultFound
@@ -16,7 +17,6 @@ from twitchAPI.chat import (
     NoticeEvent,
     WhisperEvent,
 )
-from twitchAPI.chat.middleware import ChannelCommandCooldown, ChannelRestriction
 from twitchAPI.eventsub.webhook import EventSubWebhook
 from twitchAPI.helper import first
 from twitchAPI.oauth import UserAuthenticator
@@ -33,7 +33,7 @@ from twitchAPI.type import (
 
 from sentry_bootstrap import capture_exception_safe, capture_message_safe
 from starlib import BaseThread
-from starlib.database import APIType, sqldb
+from starlib.database import APIType, OAuthToken, sqldb
 from starlib.messaging import get_bus
 from starlib.messaging.events.twitch_activity import (
     TwitchPredictionResultEvent,
@@ -271,16 +271,22 @@ async def on_channel_subscription_gift(event: eventsub.ChannelSubscriptionGiftEv
 
 
 async def on_channel_poll_begin(event: eventsub.ChannelPollBeginEvent):
-    log.info("%s 開始了投票：{event.event.title}", event.event.broadcaster_user_name)
+    log.info("%s 開始了投票：%s", event.event.broadcaster_user_name, event.event.title)
 
 
 async def on_channel_prediction_begin(event: eventsub.ChannelPredictionEvent):
-    log.info("%s 開始了預測：{event.event.title}\n{event.event.outcomes[0].title} V.S. {event.event.outcomes[1].title}", event.event.broadcaster_user_name)
+    log.info(
+        "%s 開始了預測：%s\n%s V.S. %s",
+        event.event.broadcaster_user_name,
+        event.event.title,
+        event.event.outcomes[0].title,
+        event.event.outcomes[1].title,
+    )
 
 
 async def on_channel_prediction_end(event: eventsub.ChannelPredictionEndEvent):
     if event.event.status == "resolved":
-        log.info("%s 結束了預測：{event.event.title}", event.event.broadcaster_user_name)
+        log.info("%s 結束了預測：%s", event.event.broadcaster_user_name, event.event.title)
         for outcome in event.event.outcomes:
             if outcome.id == event.event.winning_outcome_id:
                 log.info("%s (%s) 獲勝！%s個人成功預測", outcome.title, outcome.color, outcome.users)
@@ -294,7 +300,7 @@ async def on_channel_prediction_end(event: eventsub.ChannelPredictionEndEvent):
                     )
                 )
     else:
-        log.info("%s 取消了預測：{event.event.title}", event.event.broadcaster_user_name)
+        log.info("%s 取消了預測：%s", event.event.broadcaster_user_name, event.event.title)
 
 
 # bot
@@ -309,6 +315,7 @@ async def on_ready(ready_event: EventData):
 # this will be called whenever a message in a channel was send by either the bot OR another user
 async def on_message(msg: ChatMessage):
     log.info("in %s, %s said: %s", msg.room.name, msg.user.name, msg.text)
+    await respond_to_chat_command(msg)
 
 
 async def on_sub(sub: ChatSub):
@@ -362,23 +369,23 @@ async def add_chat_command(cmd: ChatCommand):
     if len(parameters) < 2:
         await cmd.reply("用法：!add_command <指令> <回覆>")
     else:
-        sqldb.add_twitch_cmd(cmd.room.room_id, parameters[0], parameters[1])
-        cmd.chat.register_command(
-            parameters[0], respond_to_chat_command, [ChannelRestriction(allowed_channel=cmd.room.name), ChannelCommandCooldown(cooldown_seconds=30)]
-        )
-        await cmd.reply(f"已新增指令：{parameters[0]}")
+        name = parameters[0].removeprefix("!").lower()
+        if name in BUILTIN_COMMANDS:
+            await cmd.reply(f"{name} 是內建指令，無法覆蓋")
+            return
+        sqldb.add_twitch_cmd(cmd.room.room_id, name, parameters[1])
+        await cmd.reply(f"已新增指令：{name}")
 
 
 async def remove_chat_command(cmd: ChatCommand):
     if not _can_manage_commands(cmd):
         return
-    parameters = cmd.parameter
-    if len(parameters) < 1:
+    name = cmd.parameter.strip().removeprefix("!").lower()
+    if not name:
         await cmd.reply("用法：!remove_command <指令>")
     else:
-        sqldb.remove_twitch_cmd(cmd.room.room_id, parameters)
-        cmd.chat.unregister_command(parameters)
-        await cmd.reply(f"已移除指令：{parameters}")
+        sqldb.remove_twitch_cmd(cmd.room.room_id, name)
+        await cmd.reply(f"已移除指令：{name}")
 
 
 async def list_chat_command(cmd: ChatCommand):
@@ -397,11 +404,29 @@ async def list_chat_command(cmd: ChatCommand):
             await cmd.reply(f"{parameters} 不存在")
 
 
-async def respond_to_chat_command(cmd: ChatCommand):
-    resp = sqldb.get_twitch_cmd_response_cache(cmd.room.room_id, cmd.text[1:])
-    if resp:
-        log.debug("invoke_chat_command: %s %s", cmd.text[1:], resp.response)
-        await cmd.reply(resp.response)
+# 內建指令由 chat.register_command 處理，自訂指令不可同名
+BUILTIN_COMMANDS = frozenset({"add_cmd", "remove_cmd", "list_cmd"})
+CUSTOM_COMMAND_COOLDOWN = 30
+# (頻道 ID, 指令名稱) -> 上次回應的 monotonic 時間
+_custom_command_last_used: dict[tuple[str, str], float] = {}
+
+
+async def respond_to_chat_command(msg: ChatMessage):
+    """自訂指令依頻道各自查快取，同名指令在不同頻道互不影響；每個頻道的每個指令冷卻 30 秒。"""
+    parts = msg.text.removeprefix("!").split(maxsplit=1) if msg.text.startswith("!") else []
+    if not parts or parts[0].lower() in BUILTIN_COMMANDS:
+        return
+    name = parts[0].lower()
+    resp = sqldb.get_twitch_cmd_response_cache(msg.room.room_id, name)
+    if not resp:
+        return
+    key = (msg.room.room_id, name)
+    now = time.monotonic()
+    if now - _custom_command_last_used.get(key, -CUSTOM_COMMAND_COOLDOWN) < CUSTOM_COMMAND_COOLDOWN:
+        return
+    _custom_command_last_used[key] = now
+    log.debug("invoke_chat_command: %s %s", name, resp.response)
+    await msg.reply(resp.response)
 
 
 async def modify_channel_information(cmd: ChatCommand):
@@ -432,12 +457,15 @@ async def run():
         token, refresh_token = await auth.authenticate()  # type: ignore
         await twitch.set_user_authentication(token, USER_SCOPE, refresh_token)
         me = await first(twitch.get_users())
-        app_token.user_id = me.id
-        app_token.client_credential_id = app_config.credential_id
-        app_token.access_token = token
-        app_token.refresh_token = refresh_token
-        app_token.scope = twitch.get_user_auth_scope()
-        app_token = sqldb.merge(app_token)
+        sqldb.merge(
+            OAuthToken(
+                user_id=me.id,
+                client_credential_id=app_config.credential_id,
+                access_token=token,
+                refresh_token=refresh_token,
+                scope=twitch.get_user_auth_scope(),
+            )
+        )
 
     # 使用自帶的函式處理token
     # helper = UserAuthenticationStorageHelper(twitch, USER_SCOPE)
@@ -447,7 +475,6 @@ async def run():
     users = [user async for user in twitch.get_users(user_ids=TARGET_CHANNEL_IDS)]
     global users_login
     users_login = [user.login for user in users]
-    login_id_map = {user.id: user.login for user in users}
 
     # create chat instance
     global chat
@@ -467,11 +494,6 @@ async def run():
     chat.register_command("add_cmd", add_chat_command)
     chat.register_command("remove_cmd", remove_chat_command)
     chat.register_command("list_cmd", list_chat_command)
-    for twitch_id, cmd in sqldb.get_chat_command_names():
-        succ = chat.register_command(
-            cmd, respond_to_chat_command, [ChannelRestriction(allowed_channel=login_id_map.get(str(twitch_id))), ChannelCommandCooldown(cooldown_seconds=30)]
-        )
-        log.debug("register command: %s in %s is %s", cmd, login_id_map.get(str(twitch_id)), succ)
     # TODO: modify_channel_information
 
     chat.start()
