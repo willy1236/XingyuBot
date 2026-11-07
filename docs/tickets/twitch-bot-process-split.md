@@ -296,8 +296,8 @@ flowchart TD
 - 「逐字相同」的測試：把現有字串組法當期望值寫進測試，直接呼叫 handler 驗輸出，不需要 Redis。
 
 **進度**：進行中（分支 `feat/t03-activity-events`）
-- 已完成：`starlib/messaging/events/twitch_activity.py` 六個事件 model
-- 續做：`twitch_notify.py` 六個 handler 與測試 `test/test_twitch_activity.py`；`twitch_chatbot.py` 六個 handler 與 poll／prediction_begin 改成只記 log；契約文件六段
+- 已完成：`starlib/messaging/events/twitch_activity.py` 六個事件 model；`twitch_notify.py` 六個 handler 與訂閱／取消訂閱，測試 `test/test_twitch_activity.py`（`test_twitch_notify.py` 兩條訂閱測試改成涵蓋全部事件）
+- 續做：`twitch_chatbot.py` 六個 handler 與 poll／prediction_begin 改成只記 log；契約文件六段
 - 使用者決定（偏離卡上「逐字相同」）：`cumulative_months` 為 None 時，Discord 文字省略含它的句子（續訂第一則的「累積訂閱N個月！」與第二則的「他已經訂閱 N 個月了」），不印 None
 
 ### T-04 開台與下播通知改走跨 process 事件，開台通知原子搶佔

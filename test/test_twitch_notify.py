@@ -103,9 +103,9 @@ def test_cog_subscribes_follow_event_on_bot_loop(monkeypatch):
     monkeypatch.setattr(twitch_notify, "get_bus", lambda: bus)
     bot = MagicMock()
     TwitchNotify(bot)
-    (event_cls, _handler) = bus.subscribe.call_args.args
-    assert event_cls is TwitchFollowEvent
-    assert bus.subscribe.call_args.kwargs["loop"] is bot.loop
+    subscribed = {call.args[0]: call for call in bus.subscribe.call_args_list}
+    assert TwitchFollowEvent in subscribed
+    assert all(call.kwargs["loop"] is bot.loop for call in subscribed.values())
 
 
 def test_cog_unload_unsubscribes_its_handler(monkeypatch):
@@ -113,7 +113,7 @@ def test_cog_unload_unsubscribes_its_handler(monkeypatch):
     monkeypatch.setattr(twitch_notify, "get_bus", lambda: bus)
     cog = TwitchNotify(MagicMock())
     cog.cog_unload()
-    bus.unsubscribe.assert_called_once_with(TwitchFollowEvent, cog.on_follow)
+    bus.unsubscribe.assert_any_call(TwitchFollowEvent, cog.on_follow)
 
 
 @pytest.mark.integration
