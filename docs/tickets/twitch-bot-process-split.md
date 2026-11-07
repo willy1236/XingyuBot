@@ -213,11 +213,11 @@ flowchart TD
 - 不包含：其他事件（T-03、T-04）；結束碼、信號與 crash 處理、模組層級查 DB（T-05）；請求／回應（T-06）；正式機啟動腳本與移除 `TwitchStreamEvent`（T-08）。
 
 **驗收條件**
-- [ ] 本機只跑 `python -m main`，Discord bot 正常啟動，不會帶起 Twitch bot。
+- [x] 本機只跑 `python -m main`，Discord bot 正常啟動，不會帶起 Twitch bot。
 - [ ] 本機另外跑 `python -m twitch_main`，Twitch bot 加入頻道，聊天室的內建指令與自訂指令照常回應。
-- [ ] 有設定通知頻道的 Twitch 頻道被追隨時，該 Discord 頻道收到的文字跟拆開前逐字相同；沒設定通知頻道時不發，也不記錯誤。
+- [x] 有設定通知頻道的 Twitch 頻道被追隨時，該 Discord 頻道收到的文字跟拆開前逐字相同；沒設定通知頻道時不發，也不記錯誤。
 - [ ] 通知頻道設定了但頻道已不存在：不發，記 log 並回報 Sentry。
-- [ ] 在 DB 改了某 Twitch 頻道的 `TwitchBotJoinChannel.action_channel_id`，不重啟任何 bot，下一次追隨就發到新頻道。
+- [x] 在 DB 改了某 Twitch 頻道的 `TwitchBotJoinChannel.action_channel_id`，不重啟任何 bot，下一次追隨就發到新頻道。
 - [ ] Discord bot 停止期間發生的追隨，1 小時內重啟 Discord bot，就緒後補發；超過 1 小時的不發。
 - [ ] `/reload twitch_notify` 之後，追隨通知照常送達，且只送一次。
 - [ ] 上線驗收 2：Redis 停止期間，Twitch 聊天室指令與 Discord 指令都正常，兩個 bot 都沒停；Redis 重新啟動 1 分鐘之後發生的追隨能送到 Discord，不需重啟任何 bot。
@@ -254,7 +254,8 @@ flowchart TD
 **進度**：待手動驗收（實作 commit `ad1a652` 起，審查 2 輪，無 blocking）
 - 已完成：`bootstrap.py`、`main.py` 不再啟動 Twitch bot、`twitch_main.py`、`TwitchBotThread.ready`、`TwitchFollowEvent`、`get_twitch_join_channel`、`twitch_notify.py` Cog 與 helper、`on_ready` 啟動 bus、契約文件九段標題；`test/test_twitch_notify.py` 11 個測試通過
 - 與設計的差異：Discord 端的 `get_bus().close()` 提前到 `DiscordBot.close()` 開頭（loop 還在跑時，用 executor 呼叫），`main.py` 的 `finally` 保留作兜底。原設計只在 `stop_threads()` 之後關，那時 py-cord 已關閉 loop，關機時間窗內讀到的事件會被誤 ack 而遺失（使用者裁決改 T-02）
-- 續做：本機手動跑一輪驗收條件 1、2、5、6、7、8（Redis 已在本機 6379）；驗收條件尚未勾選
+- 已手動驗證並勾選：條件 1、3、5（本機 dev bot＋真實 Redis，從另一個 process 發送追隨事件，使用者在 Discord 頻道確認收到訊息）
+- 續做：停掉本機 bot 後驗條件 6（停機期間補發）；條件 2（Twitch 真實 OAuth）、4、7（`/reload`）、8（停 Redis）尚未驗
 - 審查另列未處理：收到 SIGTERM／Ctrl+C 時 py-cord 先取消所有 task，進行中的 handler 被取消後事件仍被 ack（非回歸，T-05 處理信號時一併考慮，或改 T-01 讓取消不 ack）、`bus.close` 失敗時 `super().close()` 被跳過與測試未驗 executor（nitpick）、`/unload twitch_notify` 後 handler 仍掛在 bus 上（T-01 介面沒有 unsubscribe）、gateway 重連期間 `get_channel` 暫時拿不到會誤報
 
 ### T-03 突襲、訂閱、續訂、點數兌換、預測結果、私訊通知改走跨 process 事件
