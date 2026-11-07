@@ -68,6 +68,7 @@ class APICaller:
             target_base = base_url or self.base_url
             url = f"{target_base.rstrip('/')}/{endpoint.lstrip('/')}"
         request_headers = {**self.headers, **kwargs.pop("headers", {})}
+        kwargs.setdefault("timeout", 15)
 
         try:
             response = _session.request(method, url, headers=request_headers, **kwargs)
