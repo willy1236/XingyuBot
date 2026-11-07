@@ -380,6 +380,16 @@ class moderation(Cog_Extension):
         text: discord.Option(str, name="訊息文字", description="機器人發送新訊息時的文字", default="請依自身喜好點選身分組"),
     ):
         # TODO: 設定不同頻道訊息
+        if role.is_default() or role.managed:
+            await ctx.respond("無法設定 @everyone 或由整合服務管理的身分組", ephemeral=True)
+            return
+        if role >= ctx.guild.me.top_role:
+            await ctx.respond("此身分組不低於我的最高身分組，我無法發放", ephemeral=True)
+            return
+        if ctx.author.id != ctx.guild.owner_id and role >= ctx.author.top_role:
+            await ctx.respond("只能設定低於你最高身分組的身分組", ephemeral=True)
+            return
+
         await ctx.defer()
         if message_id:
             message: discord.Message | None = self.bot.get_message(int(message_id)) or await ctx.channel.fetch_message(int(message_id))
