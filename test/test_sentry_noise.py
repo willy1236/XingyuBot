@@ -8,6 +8,7 @@ import pytest
 import requests
 
 from starlib.exceptions import APINetworkError, StarException
+from starlib.providers import base as providers_base
 from starlib.providers.game.models import ApexMapRotation
 from starlib.providers.social import platforms
 from starlib.providers.social.platforms import YoutubePush
@@ -43,14 +44,14 @@ def push(monkeypatch):
 
 def test_add_push_retries_until_success(push, monkeypatch):
     request = MagicMock(side_effect=[_response(503), _response(503), _response(202)])
-    monkeypatch.setattr(requests, "request", request)
+    monkeypatch.setattr(providers_base._session, "request", request)
     assert push.add_push("UC1", "https://cb", "s3cret") is True
     assert request.call_count == 3
 
 
 def test_add_push_gives_up_without_leaking_secret(push, monkeypatch, caplog):
     request = MagicMock(return_value=_response(503))
-    monkeypatch.setattr(requests, "request", request)
+    monkeypatch.setattr(providers_base._session, "request", request)
     with caplog.at_level(logging.DEBUG):
         assert push.add_push("UC1", "https://cb", "s3cret") is False
     assert request.call_count == push.push_retries
@@ -60,7 +61,7 @@ def test_add_push_gives_up_without_leaking_secret(push, monkeypatch, caplog):
 
 def test_add_push_does_not_retry_client_error(push, monkeypatch):
     request = MagicMock(return_value=_response(400))
-    monkeypatch.setattr(requests, "request", request)
+    monkeypatch.setattr(providers_base._session, "request", request)
     assert push.add_push("UC1", "https://cb") is False
     assert request.call_count == 1
 
