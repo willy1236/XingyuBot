@@ -227,8 +227,72 @@ Twitch 頻道下播。Discord 端發一則文字到預設頻道，再清除該�
 
 ## 請求／回應
 
-待補（T-06）。
+一個服務向另一個服務發請求，5 秒內拿到回應，或明確得到「無法處理」。請求不補送、不重送。
+
+```mermaid
+sequenceDiagram
+    participant A as 發送端
+    participant R as Redis
+    participant B as 處理端（服務 svc 的某個實例）
+    A->>R: XADD xingyubot:rpc:svc data={request_id, method, payload, reply_to, deadline}
+    A->>R: BLPOP reply_to（最多等到 deadline）
+    B->>R: XREADGROUP svc ... （同服務多實例只有一個收到）
+    B->>B: deadline 已過 → 丟棄，不執行、不回應
+    B->>B: 執行 method 的 handler
+    B->>R: RPUSH reply_to 回應；EXPIRE reply_to 30
+    B->>R: XACK
+    R-->>A: 回應
+```
+
+### 請求
+
+`XADD` 到 `<prefix>:rpc:<service>`，只有一個欄位 `data`，值是 UTF-8 JSON object：
+
+| 欄位 | 型別 | 說明 |
+|---|---|---|
+| `request_id` | string | UUID4 |
+| `method` | string | 請求種類 |
+| `payload` | object | 請求內容，由 method 定義 |
+| `reply_to` | string | 回應 key，必須是 `<prefix>:rpc:reply:<request_id>`；處理端拒絕寫到其他範圍的 key |
+| `deadline` | string | 發送時間加 5 秒，ISO 8601 且含時區 |
+
+- consumer group 名稱＝服務名稱，同服務多個實例只有一個處理一個請求；consumer 名稱同〈事件〉。
+- 只有註冊過 handler 的服務才消費自己的請求 stream。沒在跑、或沒註冊任何 handler 的服務，發給它的請求逾時。
+- 發送端 `XADD` 時順手以 `MINID` 精確修剪 5 秒以前的請求，處理端每 30 秒也修剪一次，所以對方沒在跑時 stream 不會一直長大。
+- 處理端啟動時先處理並 ack 自己待確認清單裡的舊請求（已過期的丟棄），不補做、不重送。
+
+### 回應
+
+回應是 `reply_to` 這個 List 裡的一個 JSON 字串，每個請求一個 key，並發的請求不會拿到彼此的回應。處理端 `RPUSH` 後設 TTL 30 秒；發送端 `BLPOP` 取走，取走後 key 隨之消失。
+
+| 情況 | 內容 |
+|---|---|
+| 成功 | `{"ok": true, "result": object}` |
+| 處理端出錯（handler 拋例外、沒有這個 `method`、回傳值不是 object 或無法序列化） | `{"ok": false, "error": string}` |
+
+### 發送端結果
+
+| 結果 | 條件 |
+|---|---|
+| 回傳 `result` | 收到 `ok: true` |
+| `RpcHandlerError` | 收到 `ok: false`，或回應格式錯誤；message 是 `error` |
+| `RpcUnavailable` | Redis 連不上（立即，不等 5 秒）、Redis 操作失敗、或 5 秒內沒有回應 |
+
+處理端收到已超過 `deadline` 的請求，不執行也不回應；handler 執行超過 `deadline` 時取消並放棄回應。
 
 ## 快取失效
 
-待補（T-07）。
+一個服務通知所有服務的所有實例丟掉某個快取。
+
+- 走 Redis Pub/Sub 頻道 `<prefix>:cache-invalidate`：每個訂閱的實例都收到一次，發送端自己也收到；訊息不保存，沒在訂閱的實例收不到。
+- 訊息是 JSON object：
+
+  | 欄位 | 型別 | 說明 |
+  |---|---|---|
+  | `cache` | string | 快取名稱 |
+  | `key` | string \| null | 失效的 key；null 表示整個快取 |
+
+- 格式不符（不是 JSON、缺欄位、型別不符）的訊息略過並記 log。
+- 接收端對沒註冊的快取名稱略過。
+- 斷線期間可能漏收，所以接收端每次斷線重連（重新訂閱）後，對自己註冊的所有快取做一次「整個快取失效」；第一次連上不做。
+- Redis 連不上時發送端不拋例外，記 warning 後丟棄。
