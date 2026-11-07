@@ -170,7 +170,13 @@ def test_discord_close_closes_bus_before_super_close(monkeypatch):
 
     order: list[str] = []
     bus = MagicMock()
-    bus.close.side_effect = lambda: order.append("bus.close")
+    close_threads: list[int] = []
+
+    def fake_bus_close():
+        order.append("bus.close")
+        close_threads.append(threading.get_ident())
+
+    bus.close.side_effect = fake_bus_close
     monkeypatch.setattr(bot_module, "get_bus", lambda: bus)
 
     async def fake_super_close(self):
@@ -186,3 +192,31 @@ def test_discord_close_closes_bus_before_super_close(monkeypatch):
 
     asyncio.run(run())
     assert order == ["bus.close", "super.close"]
+    # 不能在 loop thread 上關：handler 需要 loop 才能結束，會被自己卡住
+    assert close_threads[0] != threading.get_ident()
+
+
+def test_discord_close_still_closes_bot_when_bus_close_fails(monkeypatch):
+    import discord
+
+    from starDiscord import bot as bot_module
+
+    bus = MagicMock()
+    bus.close.side_effect = RuntimeError("boom")
+    monkeypatch.setattr(bot_module, "get_bus", lambda: bus)
+    closed = []
+
+    async def fake_super_close(self):
+        closed.append(True)
+
+    monkeypatch.setattr(discord.Bot, "close", fake_super_close)
+
+    async def run():
+        fake = bot_module.DiscordBot.__new__(bot_module.DiscordBot)
+        fake.scheduler = SimpleNamespace(running=False)
+        fake.loop = asyncio.get_running_loop()
+        with pytest.raises(RuntimeError):
+            await fake.close()
+
+    asyncio.run(run())
+    assert closed == [True]

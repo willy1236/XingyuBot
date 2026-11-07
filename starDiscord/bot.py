@@ -67,8 +67,10 @@ class DiscordBot(discord.Bot):
         # 這段時間讀到的事件會被誤 ack 而遺失。/shutdown 這類走 close() 的路徑，進行中的 handler 會正常跑完並 ack；
         # 收到信號時 py-cord 會先取消 loop 上所有 task，進行中的 handler 被取消，事件仍會被 ack（T-05 處理信號）。
         # close() 會阻塞，丟到 executor 避免卡住 loop（handler 需要 loop 才能結束）
-        await self.loop.run_in_executor(None, get_bus().close)
-        await super().close()
+        try:
+            await self.loop.run_in_executor(None, get_bus().close)
+        finally:
+            await super().close()
 
     def submit(self, coro: Coroutine):
         """
