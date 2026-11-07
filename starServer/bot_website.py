@@ -292,7 +292,7 @@ async def process_linebot_webhook(body: str, signature: str):
 async def handle_message(event: MessageEvent):
     url = utils.check_url_format(event.message.text)
     if url:
-        report_lines = utils.generate_url_report(event.message.text)
+        report_lines = await asyncio.to_thread(utils.generate_url_report, event.message.text)
         report_text = "\n".join(report_lines)
         try:
             ai_response = await line_agent.run(report_text)

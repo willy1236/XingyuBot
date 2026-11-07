@@ -1,9 +1,10 @@
+import ipaddress
 import logging
 import re
 import socket
 import ssl
 import unicodedata
-from urllib.parse import urlparse
+from urllib.parse import urljoin, urlparse
 
 import certifi
 import dns.resolver
@@ -29,26 +30,62 @@ def check_url_format(url: str) -> str | None:
     return None
 
 
-def parse_url_redirects(url: str) -> list[str] | None:
+_MAX_REDIRECTS = 10
+_REDIRECT_STATUS = {301, 302, 303, 307, 308}
+
+
+def is_public_host(host: str | None) -> bool:
+    """網域解析出的每個位址都必須是公開位址，避免 bot 被用來連線內網"""
+    if not host:
+        return False
     try:
-        resp = requests.head(url, allow_redirects=True, timeout=5)
-    except Exception:
+        infos = socket.getaddrinfo(host, None)
+    except (socket.gaierror, UnicodeError, OSError):
+        return False
+    if not infos:
+        return False
+    for info in infos:
+        addr = ipaddress.ip_address(info[4][0].split("%")[0])
+        if not addr.is_global:
+            return False
+    return True
+
+
+def _fetch_no_redirect(url: str) -> requests.Response | None:
+    try:
+        return requests.head(url, allow_redirects=False, timeout=5)
+    except requests.RequestException:
         try:
-            resp = requests.get(url, allow_redirects=True, timeout=5)
-        except Exception as e:
-            print(e)
+            resp = requests.get(url, allow_redirects=False, timeout=5, stream=True)
+            resp.close()
+            return resp
+        except requests.RequestException as e:
+            log.info("parse_url_redirects: request failed: %s", e)
             return None
+
+
+def parse_url_redirects(url: str) -> list[str] | None:
+    """逐跳跟隨轉址；遇到非公開位址的主機就停在該網址、不對它發出請求"""
     redirect_urls = [url]
-    for history_resp in resp.history:
-        redirect_urls.append(history_resp.headers.get("Location"))
+    current = url
+    for _ in range(_MAX_REDIRECTS):
+        if not is_public_host(parse_domain(current)):
+            return redirect_urls
+        resp = _fetch_no_redirect(current)
+        if resp is None:
+            return None
+        location = resp.headers.get("Location")
+        if resp.status_code not in _REDIRECT_STATUS or not location:
+            return redirect_urls
+        current = urljoin(current, location)
+        redirect_urls.append(current)
     return redirect_urls
 
 
 def parse_domain(url: str) -> str | None:
     if "://" not in url:
         url = "http://" + url  # 補上暫時的 http://
-    parsed = urlparse(url)
-    return parsed.netloc.split(":")[0]  # 移除 port
+    return urlparse(url).hostname
 
 
 def get_whois(domain):
@@ -244,6 +281,9 @@ def generate_url_report(url_text: str) -> list[str]:
 
     domain = parse_domain(url)
     text.append(f"網域： {domain}")
+    if not is_public_host(domain):
+        text.append("⚠️ 網址指向無法解析或非公開的網路位址，已停止後續檢查")
+        return text
 
     # whois 資訊
     whois_info = get_whois(domain)
