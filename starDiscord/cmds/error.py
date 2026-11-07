@@ -55,6 +55,11 @@ class error(Cog_Extension):
                 await ctx.respond("未找到：給定的參數未找到", ephemeral=True)
                 log.warning("Discord 資源未找到", extra={"error": str(error.original)})
 
+            elif isinstance(error.original, ValueError):
+                # 指令內以 int()、fromisoformat 等解析使用者輸入，格式錯誤時視為使用者錯誤，不回報 Sentry
+                await ctx.respond("參數格式錯誤：請確認輸入的數字、日期或時間格式", ephemeral=True)
+                log.warning("參數格式錯誤", extra={"command": str(ctx.command), "error": str(error.original)}, exc_info=error.original)
+
             elif isinstance(error.original, (AttributeError, KeyError)):
                 log.error("內部錯誤", extra={"type": type(error.original).__name__, "error": str(error.original)}, exc_info=error.original)
                 capture_exception_safe(
