@@ -389,6 +389,7 @@ flowchart TD
 - 已完成：`TwitchBotThread.abnormal`、`_watch_chat` 兩處放棄重連改回報 Sentry 後異常結束、`run()` 未捕捉例外異常結束；`load_join_channels()` 取代模組層級查 DB；`twitch_main.py` 的信號處理、每秒醒來的等待迴圈、異常路徑限時清理後 `os._exit(1)`；`sentry_bootstrap.flush_safe`；`test/test_twitch_lifecycle.py` 13 個測試
 - 驗收：除 SIGTERM／Ctrl+C 外都有自動測試；信號以直接呼叫 handler 模擬，真實 SIGTERM 與 Windows Ctrl+C 未驗，未勾選。「個別 handler 拋例外」以讀 twitchAPI 原始碼確認（EventSub 與聊天室 handler 都由 `create_task` 執行，例外不會傳到 loop 外），未另寫測試
 - 與設計的差異：收到信號後，等 Twitch bot 收尾最多 15 秒，逾時視為異常走 `os._exit(1)`，避免啟動階段（例如等 OAuth）收到信號卡住
+- 審查：第 1 輪無 blocking；2 條 non-blocking 已修（信號搶在 thread 建立前到達時未呼叫 `stop()`、測試未還原信號 handler）；nitpick 已順手修模組全域還原，AST 檢查較弱（不含預設參數與 decorator）未修；note：handler 例外驗收只靠讀原始碼、正常收尾 `bus.close()` 無時限、重啟 chat 等待期間不看 `_stop_event`（既有行為）
 - 需人工驗證：實機送 SIGTERM／按 Ctrl+C 後 exit code 為 0；全套測試另有 7 個既有失敗（`test_community`、`test_sentry_noise`），與本卡無關
 
 ### T-06 服務之間能發請求並在 5 秒內拿到回應或「無法處理」
