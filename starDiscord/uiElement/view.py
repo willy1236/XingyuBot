@@ -376,16 +376,23 @@ class PollView(discord.ui.View):
     def generate_chart(self, labels, sizes):
         import matplotlib.pyplot as plt
 
+        # 字形：依序選用主機上有的中文字型，Linux 主機沒有微軟正黑體時改用 Noto 等字型
+        matplotlib.rcParams["font.family"] = "sans-serif"
+        matplotlib.rcParams["font.sans-serif"] = [
+            "Microsoft JhengHei",
+            "Noto Sans CJK TC",
+            "Noto Sans TC",
+            "PingFang TC",
+            "WenQuanYi Zen Hei",
+            "DejaVu Sans",
+        ]
+
         fig, ax = plt.subplots()
 
         # 圖表製作
         def data_string(s, d) -> str:
             t = int(round(s / 100.0 * float(sum(d))))  # 透過百分比反推原本的數值
             return f"{t}\n（{s:.1f}%）"
-
-        # 字形
-        matplotlib.rc("font", family="Microsoft JhengHei")
-        matplotlib.rcParams["font.sans-serif"] = ["Microsoft JhengHei"]
 
         # 設置顏色
         colors = ["gold", "yellowgreen", "lightcoral", "lightskyblue"]
@@ -402,7 +409,10 @@ class PollView(discord.ui.View):
         # plt.title()
 
         image_buffer = io.BytesIO()
-        plt.savefig(image_buffer, format="png", dpi=200, bbox_inches="tight")
+        try:
+            fig.savefig(image_buffer, format="png", dpi=200, bbox_inches="tight")
+        finally:
+            plt.close(fig)
         image_buffer.seek(0)
 
         return image_buffer

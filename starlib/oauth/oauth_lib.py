@@ -34,6 +34,18 @@ class OAuth2Base(ABC):
         self._credential_id: int | None = None
         self._client: AsyncOAuth2Client | None = None
 
+    async def aclose(self) -> None:
+        """關閉底層的 httpx 連線；每次請求建立的 instance 用完要呼叫，或改用 async with。"""
+        if self._client is not None:
+            await self._client.aclose()
+            self._client = None
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *exc_info) -> None:
+        await self.aclose()
+
     # ====== 子類別要提供的 ======
     @property
     @abstractmethod
