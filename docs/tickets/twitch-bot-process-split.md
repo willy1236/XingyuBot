@@ -339,7 +339,8 @@ flowchart TD
 - 已完成：`client.py` 的 `claim_twitch_live`、`clear_twitch_live` 與 integration 測試（`test/test_twitch_live_notify.py`）
 - 使用者裁決（偏離卡上字面）：輪詢查不到直播時，清除用的下播時間取「輪詢呼叫 `get_lives` 之前記下的時間」而非清除當下的「現在」，且只在 `cache_data` 存在時才清除。理由：避免 `get_lives` 回傳「沒直播」之後、Twitch 事件剛搶佔新開台的空檔被誤清而重複通知；`cache_data` 判斷避免每 4 分鐘對每個沒開台的訂閱社群多一次 DELETE
 - 使用者裁決：開台事件帶整個 `TwitchStream` 欄位加 `profile_image_url`，Discord 端一行重建並共用 `live.embed()`；Twitch 端 handler 不寫自動化測試，以 grep 與人工驗收
-- 續做：`events/twitch_stream.py`（已建檔）、`twitch_live_notify.py` Cog 與測試、`task.twitch_live`、`twitch_chatbot.py` handler、契約文件兩段
+- 已完成：`events/twitch_stream.py`（含 `events/__init__.py` 匯入）、`starDiscord/cmds/twitch_live_notify.py` Cog 與 handler 測試
+- 續做：`task.twitch_live`、`twitch_chatbot.py` handler、契約文件兩段
 
 ### T-05 Twitch bot 斷線放棄或 crash 時自動重啟，停止時乾淨收尾
 
