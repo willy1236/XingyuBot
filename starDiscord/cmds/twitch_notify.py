@@ -54,6 +54,9 @@ class TwitchNotify(Cog_Extension):
         bus = get_bus()
         bus.subscribe(TwitchFollowEvent, self.on_follow, loop=bot.loop)
 
+    def cog_unload(self) -> None:
+        get_bus().unsubscribe(TwitchFollowEvent, self.on_follow)
+
     async def on_follow(self, event: TwitchFollowEvent, delivery: Delivery) -> None:
         channel = resolve_action_channel(self.bot, event.broadcaster_id)
         if isinstance(channel, NotConfigured | ChannelMissing):

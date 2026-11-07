@@ -108,6 +108,14 @@ def test_cog_subscribes_follow_event_on_bot_loop(monkeypatch):
     assert bus.subscribe.call_args.kwargs["loop"] is bot.loop
 
 
+def test_cog_unload_unsubscribes_its_handler(monkeypatch):
+    bus = MagicMock()
+    monkeypatch.setattr(twitch_notify, "get_bus", lambda: bus)
+    cog = TwitchNotify(MagicMock())
+    cog.cog_unload()
+    bus.unsubscribe.assert_called_once_with(TwitchFollowEvent, cog.on_follow)
+
+
 @pytest.mark.integration
 def test_get_twitch_join_channel_reads_latest_config():
     """同一個 session 內設定被改過，下一次查詢要拿到新值（不被 identity map 擋住）。"""

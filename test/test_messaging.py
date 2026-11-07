@@ -415,6 +415,42 @@ def test_unacked_event_is_not_reprocessed_in_a_hot_loop(make_bus, handler_loop, 
     assert len(runs) == 1
 
 
+def test_unsubscribe_stops_reading_and_keeps_events_for_later(make_bus, handler_loop, raw, prefix):
+    sender, receiver = make_bus(), make_bus()
+    first = Recorder()
+    receiver.subscribe(Ping, first, handler_loop)
+    receiver.start(SERVICE, "c1")
+    sender.publish(Ping(occurred_at=now(), n=1))
+    assert wait_until(lambda: first.received)
+
+    receiver.unsubscribe(Ping, first)
+    time.sleep(1)  # 等 reader 停下來
+    sender.publish(Ping(occurred_at=now(), n=2))
+    time.sleep(1)
+    assert first.ns == [1]
+    # 沒人處理的事件留在 Redis，不被 ack 也不被丟掉
+    assert raw.xlen(stream(prefix, Ping)) == 2
+    assert pending_count(raw, prefix, Ping) == 0
+
+    second = Recorder()
+    receiver.subscribe(Ping, second, handler_loop)
+    assert wait_until(lambda: second.ns == [2])
+
+
+def test_unsubscribe_with_replaced_handler_does_nothing(make_bus, handler_loop):
+    """/reload 時新 Cog 已取代舊 handler，舊 Cog 的 unsubscribe 不能把新的拿掉。"""
+    sender, receiver = make_bus(), make_bus()
+    old, new = Recorder(), Recorder()
+    receiver.subscribe(Ping, old, handler_loop)
+    receiver.subscribe(Ping, new, handler_loop)
+    receiver.start(SERVICE, "c1")
+    receiver.unsubscribe(Ping, old)
+    time.sleep(0.5)
+    sender.publish(Ping(occurred_at=now(), n=1))
+    assert wait_until(lambda: new.received)
+    assert not old.received
+
+
 def test_handler_exception_is_reported_and_acked(make_bus, handler_loop, raw, prefix, sentry):
     sender, receiver = make_bus(), make_bus()
     rec = Recorder(fail=True)

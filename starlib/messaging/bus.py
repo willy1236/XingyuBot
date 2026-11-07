@@ -113,6 +113,16 @@ class MessageBus:
         sub = _Subscription(event_cls, handler, loop)
         self._runtime.call_soon(lambda: self._add_subscription(sub))
 
+    def unsubscribe[E: BusEvent](self, event_cls: type[E], handler: Handler[E]) -> None:
+        """取消 subscribe。只在目前註冊的就是這個 handler 時才移除（已被新的取代就什麼都不做）。
+
+        移除後不再讀這個事件類型，事件留在 Redis，等有人再 subscribe 或過期；進行中的 handler 被取消時事件不 ack，之後重送。
+        """
+        event_type = getattr(event_cls, "event_type", None)
+        if event_type is None:
+            return
+        self._runtime.call_soon(lambda: self._remove_subscription(event_type, handler))
+
     def start(self, service: str, consumer: str | None = None) -> None:
         """以 service 身分開始消費；呼叫端要在「能實際處理事件」之後才呼叫；重複呼叫無效果。"""
         with self._lock:
@@ -204,6 +214,15 @@ class MessageBus:
         self._subs[sub.event_cls.event_type] = sub
         if self._service is not None:
             self._ensure_reader(sub.event_cls.event_type)
+
+    def _remove_subscription(self, event_type: str, handler: Handler[Any]) -> None:
+        sub = self._subs.get(event_type)
+        if sub is None or sub.handler != handler:
+            return
+        del self._subs[event_type]
+        reader = self._readers.pop(event_type, None)
+        if reader is not None:
+            reader.cancel()
 
     def _begin(self, service: str, consumer: str) -> None:
         self._service = service

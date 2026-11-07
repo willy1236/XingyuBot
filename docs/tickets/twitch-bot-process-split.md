@@ -170,6 +170,8 @@ flowchart TD
           # 執行緒安全，可從任何 thread／loop 呼叫；交給 bus loop 後立即返回，永不拋例外
       def subscribe(self, event_cls: type[E], handler: Handler[E], loop: asyncio.AbstractEventLoop) -> None
           # handler 在 loop 上執行；start 前後都可呼叫；同一事件類型再次 subscribe 會取代舊的 handler
+      def unsubscribe(self, event_cls: type[E], handler: Handler[E]) -> None
+          # 只在目前註冊的就是這個 handler 時移除；移除後不再讀該事件類型，事件留在 Redis 等下次 subscribe 或過期
       def start(self, service: str, consumer: str | None = None) -> None
           # 以 service 身分開始消費；呼叫端要在「能實際處理事件」之後才呼叫；重複呼叫無效果
       def close(self, timeout: float = 5) -> None
@@ -204,6 +206,7 @@ flowchart TD
 - 審查 3 輪，無 blocking；未修：`connection.py` 的 `_fire` 未保留 task 參照（nitpick）、`_handle_entry` 的 `_stopping` 檢查沒有測試守住
 - 與設計的差異：`close()` 先等已排入的發送與進行中的事件，最多 timeout 的一半，逾時才取消（事件之後重送）
 - 後續修正（T-02 審查發現，使用者裁決）：handler 的 loop 已關閉、或 handler 執行到一半被自己的 loop 取消時，不再 ack，事件留在待確認清單，下次啟動重送；handler 拋例外仍 ack。新增 integration 測試（共 26 個），契約文件的 ack 與重送段落已更新。審查發現不 ack 的事件會讓 backlog 每次從 "0" 重讀而熱迴圈，已改成用游標往後讀（每次連上或錯誤後重置為 "0"，每輪 backlog 每筆只看一次）；handler 自己拋 `CancelledError` 仍被當成取消而不 ack，重啟時只重送一次
+- 後續修正（T-02 審查發現）：新增 `MessageBus.unsubscribe(event_cls, handler)`，Cog 的 `cog_unload` 用它取消訂閱，`/unload` 之後不再收事件；只在目前註冊的是同一個 handler 時才移除，避免 `/reload` 時舊 Cog 把新的拿掉；新增 3 個測試
 
 ### T-02 Twitch bot 以獨立 process 執行，追隨通知經 Redis 送到 Discord
 
@@ -259,7 +262,8 @@ flowchart TD
 - 條件 8 只驗了 Discord 端與發送端（Twitch 聊天室與真實 Twitch 事件需 OAuth，未驗，不勾選）：Redis 容器停止期間 Discord bot 沒停、只記 warning，另一個 process 發送事件不拋例外；重啟容器 1 分鐘後發送的追隨事件送到 Discord 頻道，bot 日誌顯示「Redis 連線恢復」
 - 續做：條件 2（Twitch 真實 OAuth）、4、7（`/reload`）、8（Twitch 端）尚未驗
 - 審查項處理：信號關機時 handler 被取消後事件被 ack（使用者裁決改 T-01，見 T-01 進度「後續修正」）、`bus.close` 失敗時 `super().close()` 被跳過、測試未驗 executor，皆已修
-- 審查另列未處理：`/unload twitch_notify` 後 handler 仍掛在 bus 上（T-01 介面沒有 unsubscribe）、gateway 重連期間 `get_channel` 暫時拿不到會誤報
+- 審查項處理：`/unload twitch_notify` 後 handler 仍掛在 bus 上，已加 `unsubscribe` 與 `cog_unload`
+- 審查另列未處理：gateway 重連期間 `get_channel` 暫時拿不到會誤報
 
 ### T-03 突襲、訂閱、續訂、點數兌換、預測結果、私訊通知改走跨 process 事件
 
