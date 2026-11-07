@@ -2,6 +2,7 @@ import asyncio
 
 import discord
 from discord.commands import SlashCommandGroup
+from discord.ext import commands
 
 from starlib import BotEmbed, ChoiceList, Jsondb, sclient
 from starlib.database import APIType, Community, NotifyCommunityType, PlatformType
@@ -19,6 +20,8 @@ class system_community(Cog_Extension):
     twitter = SlashCommandGroup("twitter", "twitter相關指令", name_localizations=ChoiceList.name("twitter"))
 
     @twitch.command(name="set", description="設置twitch開台通知", name_localizations=ChoiceList.name("twitch_set"))
+    @commands.has_permissions(manage_channels=True)
+    @commands.guild_only()
     async def twitch_set(
         self,
         ctx,
@@ -52,6 +55,8 @@ class system_community(Cog_Extension):
             await ctx.respond(f"錯誤：找不到用戶 {twitch_user_login}")
 
     @twitch.command(name="remove", description="移除twitch開台通知", name_localizations=ChoiceList.name("twitch_remove"))
+    @commands.has_permissions(manage_channels=True)
+    @commands.guild_only()
     async def twitch_remove(
         self,
         ctx,
@@ -141,6 +146,8 @@ class system_community(Cog_Extension):
             await ctx.respond("查詢失敗", ephemeral=True)
 
     @youtube.command(name="set", description="設置youtube開台通知", name_localizations=ChoiceList.name("youtube_set"))
+    @commands.has_permissions(manage_channels=True)
+    @commands.guild_only()
     async def youtube_set(
         self,
         ctx,
@@ -185,6 +192,8 @@ class system_community(Cog_Extension):
                 sclient.sqldb.merge(record)
 
     @youtube.command(name="remove", description="移除youtube通知", name_localizations=ChoiceList.name("youtube_remove"))
+    @commands.has_permissions(manage_channels=True)
+    @commands.guild_only()
     async def youtube_remove(self, ctx, ythandle: discord.Option(str, required=True, name="youtube帳號代碼", description="youtube頻道中以@開頭的代號")):
         guildid = ctx.guild.id
 
@@ -241,6 +250,8 @@ class system_community(Cog_Extension):
         await ctx.respond(embed=embed)
 
     @twitter.command(name="set", description="設置x/twitter通知", name_localizations=ChoiceList.name("twitter_set"))
+    @commands.has_permissions(manage_channels=True)
+    @commands.guild_only()
     async def twitter_set(
         self,
         ctx,
@@ -274,6 +285,8 @@ class system_community(Cog_Extension):
             await ctx.send(embed=BotEmbed.simple("溫馨提醒", f"我無法在{channel.mention}中發送訊息，請確認我有足夠的權限"))
 
     @twitter.command(name="remove", description="移除x/twitter通知", name_localizations=ChoiceList.name("twitter_remove"))
+    @commands.has_permissions(manage_channels=True)
+    @commands.guild_only()
     async def twitter_remove(self, ctx, twitter_username: discord.Option(str, required=True, name="twitter使用者名稱", description="使用者名稱")):
         guildid = ctx.guild.id
         twitter_user = cli_api.get_user_details(twitter_username)
