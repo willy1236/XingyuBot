@@ -67,6 +67,9 @@ class system_community(Cog_Extension):
     ):
         guildid = ctx.guild.id
         twitch_user = tw_api.get_user(twitch_user_login)
+        if not twitch_user:
+            await ctx.respond(f"錯誤：找不到用戶 {twitch_user_login}")
+            return
 
         if not notify_type or notify_type == NotifyCommunityType.TwitchLive:
             sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitchLive, twitch_user.id, guildid)

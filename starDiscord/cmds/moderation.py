@@ -271,6 +271,7 @@ class moderation(Cog_Extension):
 
         moderate_user = ctx.user.id
         create_time = datetime.now()
+        warning_id = None
         if add_record and not user.bot:
             warning_id = sclient.sqldb.add_warning(user.id, WarningType.Timeout, moderate_user, ctx.guild.id, create_time, reason, time_last, guild_only=False)
 
@@ -280,7 +281,7 @@ class moderation(Cog_Extension):
         if delete_status:
             embed.add_field(name="訊息刪除", value=delete_status, inline=False)
         embed.timestamp = create_time
-        if add_record:
+        if warning_id is not None:
             embed.set_footer(text=f"編號 {warning_id}")
         await ctx.respond(user.mention, embed=embed, allowed_mentions=discord.AllowedMentions(users=True))
 

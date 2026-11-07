@@ -133,7 +133,7 @@ class PollResultButton(discord.ui.Button):
 
     async def callback(self, interaction):
         view: PollView = self.view
-        if not view.poll.results_only_initiator:
+        if not view.poll.results_only_initiator or interaction.user.id == view.poll.creator_id:
             embed = view.results_embed(interaction)
             await interaction.response.send_message(embed=embed, ephemeral=True)
 
