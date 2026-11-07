@@ -59,7 +59,7 @@ flowchart LR
 | # | 卡號 | 進度 | 標題 | 依賴 | 並行組 | 備註 |
 |---|---|---|---|---|---|---|
 | 1 | T-01 | 完成 | [共用] `starlib/messaging`：提供跨 process 事件廣播與連線 | 無 | — | T-02～T-07 依賴 |
-| 2 | T-02 | 審查中 | Twitch bot 以獨立 process 執行，追隨通知經 Redis 送到 Discord | T-01 | — | 骨架切片；含上線驗收 2 |
+| 2 | T-02 | 待手動驗收 | Twitch bot 以獨立 process 執行，追隨通知經 Redis 送到 Discord | T-01 | — | 骨架切片；含上線驗收 2 |
 | 3 | T-03 | 未完成 | 突襲、訂閱、續訂、點數兌換、預測結果、私訊通知改走跨 process 事件 | T-02 | A | |
 | 4 | T-04 | 未完成 | 開台與下播通知改走跨 process 事件，開台通知原子搶佔 | T-02 | A | |
 | 5 | T-05 | 未完成 | Twitch bot 斷線放棄或 crash 時自動重啟，停止時乾淨收尾 | T-02 | A | 含 audit P3 |
@@ -251,11 +251,11 @@ flowchart TD
 - 這張卡完成後，其他事件的舊路徑（`sclient.publish(TwitchStreamEvent)`）已經沒有訂閱者，T-03、T-04 完成前那些通知會漏發。所以 T-01～T-08 都在 `feat/twitch-process-split` 分支上做，見〈開發環境與分支〉2。
 - 本機驗收需要 Redis，見〈開發環境與分支〉1。
 
-**進度**：審查中（實作 commit `ad1a652` 起，第 1 輪修正完成，等第 2 輪）
+**進度**：待手動驗收（實作 commit `ad1a652` 起，審查 2 輪，無 blocking）
 - 已完成：`bootstrap.py`、`main.py` 不再啟動 Twitch bot、`twitch_main.py`、`TwitchBotThread.ready`、`TwitchFollowEvent`、`get_twitch_join_channel`、`twitch_notify.py` Cog 與 helper、`on_ready` 啟動 bus、契約文件九段標題；`test/test_twitch_notify.py` 11 個測試通過
 - 與設計的差異：Discord 端的 `get_bus().close()` 提前到 `DiscordBot.close()` 開頭（loop 還在跑時，用 executor 呼叫），`main.py` 的 `finally` 保留作兜底。原設計只在 `stop_threads()` 之後關，那時 py-cord 已關閉 loop，關機時間窗內讀到的事件會被誤 ack 而遺失（使用者裁決改 T-02）
-- 續做：第 2 輪審查後，本機手動跑一輪驗收條件 1、2、5、6、7、8（Redis 已在本機 6379）；驗收條件尚未勾選
-- 審查另列未處理：`/unload twitch_notify` 後 handler 仍掛在 bus 上（T-01 介面沒有 unsubscribe）、gateway 重連期間 `get_channel` 暫時拿不到會誤報
+- 續做：本機手動跑一輪驗收條件 1、2、5、6、7、8（Redis 已在本機 6379）；驗收條件尚未勾選
+- 審查另列未處理：收到 SIGTERM／Ctrl+C 時 py-cord 先取消所有 task，進行中的 handler 被取消後事件仍被 ack（非回歸，T-05 處理信號時一併考慮，或改 T-01 讓取消不 ack）、`bus.close` 失敗時 `super().close()` 被跳過與測試未驗 executor（nitpick）、`/unload twitch_notify` 後 handler 仍掛在 bus 上（T-01 介面沒有 unsubscribe）、gateway 重連期間 `get_channel` 暫時拿不到會誤報
 
 ### T-03 突襲、訂閱、續訂、點數兌換、預測結果、私訊通知改走跨 process 事件
 
