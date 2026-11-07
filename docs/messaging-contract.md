@@ -84,7 +84,64 @@ sequenceDiagram
 
 ### 事件清單
 
-各事件的欄位由實作該事件的任務卡補上。
+| event_type | 接收服務 | 時效 | 說明 |
+|---|---|---|---|
+| `twitch.follow` | discord | 1 小時 | Twitch 頻道被追隨 |
+| `twitch.raid` | discord | 10 分鐘 | 突襲 |
+| `twitch.subscribe` | discord | 1 小時 | 訂閱 |
+| `twitch.subscription_message` | discord | 1 小時 | 續訂訊息 |
+| `twitch.redemption` | discord | 1 小時 | 點數兌換 |
+| `twitch.prediction_result` | discord | 1 小時 | 預測結果 |
+| `twitch.whisper` | discord | 1 小時 | 私訊 |
+| `twitch.stream_online` | discord | 10 分鐘 | 開台 |
+| `twitch.stream_offline` | discord | 5 分鐘 | 下播 |
+
+目的 Discord 頻道不在事件裡，由 Discord 端處理事件時依 `TwitchBotJoinChannel` 決定。
+
+#### twitch.follow
+
+Twitch 頻道被追隨。Discord 端依該頻道的通知頻道設定發送，沒設定就不發。
+
+| 欄位 | 型別 | 說明 |
+|---|---|---|
+| `broadcaster_id` | string | 被追隨頻道的 Twitch ID |
+| `broadcaster_name` | string | 被追隨頻道的顯示名稱 |
+| `follower_name` | string | 追隨者的顯示名稱 |
+| `follower_login` | string | 追隨者的 login |
+
+`occurred_at` 是 EventSub 的 `message_timestamp`。
+
+#### twitch.raid
+
+待補（T-03）。
+
+#### twitch.subscribe
+
+待補（T-03）。
+
+#### twitch.subscription_message
+
+待補（T-03）。
+
+#### twitch.redemption
+
+待補（T-03）。
+
+#### twitch.prediction_result
+
+待補（T-03）。
+
+#### twitch.whisper
+
+待補（T-03）。
+
+#### twitch.stream_online
+
+待補（T-04）。
+
+#### twitch.stream_offline
+
+待補（T-04）。
 
 ## 請求／回應
 

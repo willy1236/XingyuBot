@@ -41,3 +41,6 @@ class BusEvent(BaseModel):
 
 
 __all__ = ["BusEvent", "registry"]
+
+# 具體事件：匯入後才會登錄（要放在 BusEvent 定義之後）
+from . import twitch_follow  # noqa: E402,F401

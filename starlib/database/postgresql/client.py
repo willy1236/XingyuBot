@@ -1090,6 +1090,11 @@ class TwitchRepository(BaseRepository):
         result = self.session.exec(stmt).all()
         return {i.twitch_id: i for i in result}
 
+    def get_twitch_join_channel(self, twitch_id: int | str) -> TwitchBotJoinChannel | None:
+        """查單一 Twitch 頻道的設定。每次都重讀資料庫，避開 scoped session 的 identity map 拿到舊設定。"""
+        stmt = select(TwitchBotJoinChannel).where(TwitchBotJoinChannel.twitch_id == int(twitch_id)).execution_options(populate_existing=True)
+        return self.session.exec(stmt).one_or_none()
+
     def list_chat_command_by_channel(self, channel_id: int):
         stmt = select(TwitchChatCommand).where(TwitchChatCommand.twitch_id == channel_id)
         result = self.session.exec(stmt).all()
