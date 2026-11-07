@@ -32,10 +32,11 @@ from twitchAPI.type import (
 
 from sentry_bootstrap import capture_exception_safe
 from starlib import BaseThread, BotEmbed, Jsondb, sclient  # TODO: 全面改用 eventbus
-from starlib.database import APIType, NotifyCommunityType, sqldb
+from starlib.database import APIType, sqldb
 from starlib.instance import tw_api
 from starlib.messaging import get_bus
 from starlib.messaging.events.twitch_follow import TwitchFollowEvent
+from starlib.messaging.events.twitch_stream import TwitchStreamOfflineEvent, TwitchStreamOnlineEvent
 from starlib.pubsub.model import TwitchStreamEvent
 
 log = logging.getLogger(__name__)
@@ -111,27 +112,48 @@ async def on_stream_online(event: eventsub.StreamOnlineEvent):
         log.warning("%s 開台但查不到直播資訊，略過開台通知", event.event.broadcaster_user_name)
         return
 
+    # 聊天室訊息只看有沒有設定通知頻道；Discord 端的通知頻道與開台通知由 Discord bot 處理事件時決定
     channel_config = join_channels.get(int(event.event.broadcaster_user_id))
     if channel_config and channel_config.action_channel_id:
         await chat.send_message(event.event.broadcaster_user_login, f"{event.event.broadcaster_user_name} 正在直播 {live.game_name}! {live.title}")
 
-        sclient.publish(TwitchStreamEvent(content=f"{event.event.broadcaster_user_name} 正在直播 {live.game_name}!", to_discord_channel=channel_config.action_channel_id))
-        is_live = bool(sclient.sqldb.get_community_cache(NotifyCommunityType.TwitchLive, event.event.broadcaster_user_id))
-        log.debug("%s is live: %s", event.event.broadcaster_user_name, is_live)
-        if not is_live:
-            profile_image_url = tw_api.get_user_by_id(event.event.broadcaster_user_id).profile_image_url
-            embed = live.embed(profile_image_url)
-            sclient.bot.submit(sclient.bot.send_notify_communities(embed, NotifyCommunityType.TwitchLive, event.event.broadcaster_user_id))
-            sclient.sqldb.set_community_cache(NotifyCommunityType.TwitchLive, event.event.broadcaster_user_id, live.started_at)
+    try:
+        user = tw_api.get_user_by_id(event.event.broadcaster_user_id)
+    except Exception:
+        log.warning("%s 的頭像查詢失敗，開台通知改用預設圖", event.event.broadcaster_user_name, exc_info=True)
+        user = None
+    get_bus().publish(
+        TwitchStreamOnlineEvent(
+            occurred_at=event.metadata.message_timestamp,
+            broadcaster_id=event.event.broadcaster_user_id,
+            broadcaster_name=event.event.broadcaster_user_name,
+            profile_image_url=user.profile_image_url if user else None,
+            stream_id=live.id,
+            user_login=live.user_login,
+            game_id=live.game_id,
+            game_name=live.game_name,
+            stream_type=live.type,
+            title=live.title,
+            viewer_count=live.viewer_count,
+            started_at=live.started_at,
+            language=live.language,
+            thumbnail_url=live.thumbnail_url,
+            tag_ids=live.tag_ids,
+            tags=live.tags,
+            is_mature=live.is_mature,
+        )
+    )
 
 
 async def on_stream_offline(event: eventsub.StreamOfflineEvent):
     log.info("%s ending stream.", event.event.broadcaster_user_name)
-    sclient.publish(TwitchStreamEvent(content=f"{event.event.broadcaster_user_name} ending stream."))
-
-    is_live = bool(sclient.sqldb.get_community_cache(NotifyCommunityType.TwitchLive, event.event.broadcaster_user_id))
-    if is_live:
-        sclient.sqldb.set_community_cache(NotifyCommunityType.TwitchLive, event.event.broadcaster_user_id, None)
+    get_bus().publish(
+        TwitchStreamOfflineEvent(
+            occurred_at=event.metadata.message_timestamp,
+            broadcaster_id=event.event.broadcaster_user_id,
+            broadcaster_name=event.event.broadcaster_user_name,
+        )
+    )
 
 
 async def on_channel_points_custom_reward_redemption_add(event: eventsub.ChannelPointsCustomRewardRedemptionAddEvent):
