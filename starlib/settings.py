@@ -18,7 +18,6 @@ class AppSettings(BaseSettings):
 
     LOG_LEVEL: str | int = "INFO"
     API_WEBSITE: bool = False
-    TWITCH_BOT: bool = False
 
     DB_HOST: str
     DB_PORT: int
