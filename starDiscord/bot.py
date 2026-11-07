@@ -37,6 +37,12 @@ from starlib.utils import nowtz
 
 log = logging.getLogger(__name__)
 
+
+def _truncate(text: str, limit: int = 1000) -> str:
+    """embed 欄位上限 1024 字，保留程式碼區塊標記的空間"""
+    return text if len(text) <= limit else text[: limit - 3] + "..."
+
+
 class DiscordBot(discord.Bot):
     _COG_PATH = Path("./starDiscord/cmds")
 
@@ -86,39 +92,51 @@ class DiscordBot(discord.Bot):
     def mention_owner(self):
         return f"<@{self.owner_id}>"
 
+    def _report_channel(self, channel_id: int | None, purpose: str) -> discord.abc.Messageable | None:
+        """取得回報用頻道；頻道不存在時只記 log，回報失敗不應再引發例外。"""
+        channel = self.get_channel(channel_id) if channel_id else None
+        if not isinstance(channel, discord.abc.Messageable):
+            log.warning("找不到%s頻道，略過回報", purpose, extra={"channel_id": channel_id})
+            return None
+        return channel
+
     async def error(self, ctx: discord.ApplicationContext, error: str) -> None:
-        error_report_channel = self.get_channel(error_report_id)
+        error_report_channel = self._report_channel(error_report_id, "錯誤回報")
+        if error_report_channel is None:
+            return
         embed = BotEmbed.general(
             name=str(ctx.author), icon_url=ctx.author.display_avatar.url, title="❌錯誤回報")
-        embed.add_field(name="錯誤訊息", value=f"```py\n{error}```", inline=True)
+        embed.add_field(name="錯誤訊息", value=f"```py\n{_truncate(str(error))}```", inline=True)
         if ctx.command:
             embed.add_field(name="使用指令", value=f"```{ctx.command}```", inline=False)
-            embed.add_field(name="參數", value=f"```{ctx.selected_options}```", inline=False)
+            embed.add_field(name="參數", value=f"```{_truncate(str(ctx.selected_options))}```", inline=False)
         embed.add_field(name="使用者", value=f"{ctx.author}\n{ctx.author.id}", inline=False)
         embed.add_field(name="發生頻道", value=f"{ctx.channel}\n{ctx.channel.id}", inline=True)
-        embed.add_field(name="發生群組", value=f"{ctx.guild}\n{ctx.guild.id}", inline=True)
+        embed.add_field(name="發生群組", value=f"{ctx.guild}\n{ctx.guild.id}" if ctx.guild else "私訊", inline=True)
         embed.timestamp = datetime.datetime.now()
 
-        assert isinstance(error_report_channel, discord.abc.Messageable)
         await error_report_channel.send(embed=embed)
 
     async def report(self, msg: str, refer_msg: discord.Message | None = None):
-        report_channel = self.get_channel(report_channel_id)
+        report_channel = self._report_channel(report_channel_id, "回報")
+        if report_channel is None:
+            return
         embed = BotEmbed.general(name="回報訊息")
-        embed.add_field(name="訊息", value=msg, inline=True)
+        embed.add_field(name="訊息", value=_truncate(msg), inline=True)
         if refer_msg:
-            embed.add_field(name="參考訊息", value=f"[{refer_msg.content}]({refer_msg.jump_url})", inline=False)
+            embed.add_field(name="參考訊息", value=f"[{_truncate(refer_msg.content, 900)}]({refer_msg.jump_url})", inline=False)
             embed.add_field(name="訊息ID", value=refer_msg.id, inline=True)
             embed.add_field(name="來源頻道", value=f"{refer_msg.channel}\n{refer_msg.channel.id}", inline=True)
             embed.add_field(name="來源群組", value=f"{refer_msg.guild}\n{refer_msg.guild.id if refer_msg.guild else '無'}", inline=True)
         else:
             embed.add_field(name="訊息ID", value="無", inline=True)
 
-        assert isinstance(report_channel ,discord.abc.Messageable)
         await report_channel.send(embed=embed)
 
     async def feedback(self, ctx: discord.ApplicationContext, text: str):
-        feedback_channel = self.get_channel(feedback_channel_id)
+        feedback_channel = self._report_channel(feedback_channel_id, "回饋")
+        if feedback_channel is None:
+            return
         embed = BotEmbed.general(name=str(ctx.author), icon_url=ctx.author.display_avatar.url, title="💬回饋訊息", description=text)
         embed.add_field(name="發送者", value=f"{ctx.author}\n{ctx.author.id}", inline=False)
         embed.add_field(name="來源頻道", value=f"{ctx.channel}\n{ctx.channel.id}", inline=True)
@@ -128,7 +146,9 @@ class DiscordBot(discord.Bot):
         await feedback_channel.send(embed=embed)
 
     async def dm(self, msg: discord.Message):
-        dm_channel = self.get_channel(dm_channel_id)
+        dm_channel = self._report_channel(dm_channel_id, "私訊紀錄")
+        if dm_channel is None:
+            return
         embed = BotEmbed.general(name=msg.author.name, icon_url=msg.author.display_avatar.url, title="💭私訊", description=msg.content)  # pyright: ignore[reportCallIssue]
         if msg.channel.recipient:
             embed.add_field(name="發送者", value=f"{msg.author}->{msg.channel.recipient}\n{msg.author.id}->{msg.channel.recipient.id}", inline=False)
@@ -140,11 +160,13 @@ class DiscordBot(discord.Bot):
         await dm_channel.send(embed=embed)
 
     async def mentioned(self, msg: discord.Message):
-        dm_channel = self.get_channel(mentioned_channel_id)
+        dm_channel = self._report_channel(mentioned_channel_id, "提及紀錄")
+        if dm_channel is None:
+            return
         embed = BotEmbed.general(name=msg.author, icon_url=msg.author.display_avatar.url, title="提及訊息", description=f"{msg.content}\n{msg.jump_url}")
         embed.add_field(name="發送者", value=f"{msg.author}\n{msg.author.id}", inline=False)
         embed.add_field(name="來源頻道", value=f"{msg.channel}\n{msg.channel.id}", inline=True)
-        embed.add_field(name="來源群組", value=f"{msg.guild}\n{msg.guild.id}", inline=True)
+        embed.add_field(name="來源群組", value=f"{msg.guild}\n{msg.guild.id}" if msg.guild else "私訊", inline=True)
         embed.timestamp = msg.created_at
         await dm_channel.send(embed=embed)
 
