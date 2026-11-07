@@ -350,7 +350,14 @@ async def on_raid(event: dict):
         log.warning(event)
 
 
+def _can_manage_commands(cmd: ChatCommand) -> bool:
+    """只有實況主與該頻道的 mod 能新增、移除自訂指令。"""
+    return cmd.user.mod or cmd.user.name == cmd.room.name
+
+
 async def add_chat_command(cmd: ChatCommand):
+    if not _can_manage_commands(cmd):
+        return
     parameters = cmd.parameter.split(maxsplit=1)
     if len(parameters) < 2:
         await cmd.reply("用法：!add_command <指令> <回覆>")
@@ -363,6 +370,8 @@ async def add_chat_command(cmd: ChatCommand):
 
 
 async def remove_chat_command(cmd: ChatCommand):
+    if not _can_manage_commands(cmd):
+        return
     parameters = cmd.parameter
     if len(parameters) < 1:
         await cmd.reply("用法：!remove_command <指令>")
