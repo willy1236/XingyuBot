@@ -842,9 +842,9 @@ class TicketChannelView(discord.ui.View):
 
         async def callback(self, interaction: discord.Interaction):
             view: TicketChannelView = self.view
-            if interaction.user == view.creator or (
-                view.creator.guild and await view.creator.guild.get_member(interaction.user.id).guild_permissions.manage_channels
-            ):
+            is_creator = view.creator is not None and interaction.user.id == view.creator.id
+            is_admin = isinstance(interaction.user, discord.Member) and interaction.user.guild_permissions.manage_channels
+            if is_creator or is_admin:
                 ticket = sqldb.get_ticket_channel(view.channel.id)
                 if ticket:
                     ticket.closed_at = nowtz()
@@ -873,15 +873,21 @@ class TicketLobbyView(discord.ui.View):
             super().__init__(label="建立私人頻道", style=discord.ButtonStyle.primary, custom_id=f"create_ticket_{channel_id}")
 
         async def callback(self, interaction: discord.Interaction):
-            channel = await interaction.channel.category.create_text_channel(
-                name=f"ticket-{interaction.user.name}", topic=f"Ticket channel for {interaction.user} ({interaction.user.id})"
+            category = interaction.channel.category
+            # 沿用分類的覆寫（保留管理身分組的可見權限），再把頻道改成只有建立者與 bot 看得到
+            overwrites = dict(category.overwrites)
+            overwrites[interaction.guild.default_role] = discord.PermissionOverwrite(view_channel=False)
+            overwrites[interaction.user] = discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True)
+            overwrites[interaction.guild.me] = discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True)
+            channel = await category.create_text_channel(
+                name=f"ticket-{interaction.user.name}", topic=f"Ticket channel for {interaction.user} ({interaction.user.id})", overwrites=overwrites
             )
             msg = await channel.send(
                 f"{interaction.user.mention}，你好！請在此頻道描述你的問題，我們會盡快協助你。", view=TicketChannelView(channel, interaction.user)
             )
             sqldb.merge(
                 TicketChannel(
-                    channel_id=channel.id, guild_id=interaction.guild.id, creator_id=interaction.user.id, created_at=nowtz(), close_message_id=msg.id
+                    channel_id=channel.id, guild_id=interaction.guild.id, creator_id=interaction.user.id, created_at=nowtz(), view_message_id=msg.id
                 )
             )
             await msg.pin()
