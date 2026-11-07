@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import asyncio
 from datetime import UTC, datetime, timedelta
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -206,3 +207,170 @@ def test_cog_subscribes_and_unsubscribes_all_six_events(monkeypatch):
     assert {TwitchRaidEvent, TwitchSubscribeEvent, TwitchSubscriptionMessageEvent, TwitchRedemptionEvent, TwitchPredictionResultEvent, TwitchWhisperEvent} <= subscribed
     cog.cog_unload()
     assert subscribed == {call.args[0] for call in bus.unsubscribe.call_args_list}
+
+
+# ---- Twitch 端：handler 發送的事件與聊天室行為 ----
+
+
+@pytest.fixture
+def chatbot(monkeypatch):
+    """載入 twitch_chatbot（模組層級會查 DB，先換掉）；替換 bus 與 chat，記錄呼叫順序。"""
+    from starlib import sclient
+
+    monkeypatch.setattr(type(sclient.sqldb), "get_bot_join_channel_all", lambda self: {})
+    from starServer import twitch_chatbot as module
+
+    calls: list[str] = []
+    bus = MagicMock()
+    bus.publish.side_effect = lambda event: calls.append("publish")
+    fake_chat = MagicMock()
+    fake_chat.send_message = AsyncMock(side_effect=lambda *a, **k: calls.append("chat"))
+    monkeypatch.setattr(module, "get_bus", lambda: bus)
+    monkeypatch.setattr(module, "chat", fake_chat, raising=False)
+    monkeypatch.setattr(module, "join_channels", {int(TWITCH_ID): MagicMock(action_channel_id=123)})
+    module.test_calls = calls
+    module.test_bus = bus
+    module.test_chat = fake_chat
+    return module
+
+
+def eventsub_event(**data):
+    return SimpleNamespace(metadata=SimpleNamespace(message_timestamp=NOW), event=SimpleNamespace(**data))
+
+
+def published(chatbot):
+    return [call.args[0] for call in chatbot.test_bus.publish.call_args_list]
+
+
+def raid_payload():
+    return eventsub_event(
+        from_broadcaster_user_name="突襲者",
+        to_broadcaster_user_id=TWITCH_ID,
+        to_broadcaster_user_login="host",
+        to_broadcaster_user_name="主播",
+        viewers=42,
+    )
+
+
+def test_raid_chat_then_publish(chatbot):
+    run(chatbot.on_channel_raid(raid_payload()))
+    assert chatbot.test_calls == ["chat", "publish"]
+    chatbot.test_chat.send_message.assert_awaited_once_with("host", "突襲者 帶了 42 位觀眾降落在 主播 的頻道！")
+    assert published(chatbot) == [raid()]  # 與 Discord 端測試用的事件同欄位，occurred_at 取 message_timestamp
+
+
+def test_raid_without_action_channel_skips_chat_but_still_publishes(chatbot, monkeypatch):
+    monkeypatch.setattr(chatbot, "join_channels", {})
+    run(chatbot.on_channel_raid(raid_payload()))
+    chatbot.test_chat.send_message.assert_not_awaited()
+    assert len(published(chatbot)) == 1
+
+
+def test_gift_subscribe_is_not_published(chatbot):
+    payload = eventsub_event(broadcaster_user_id=TWITCH_ID, broadcaster_user_name="主播", user_name="訂閱者", tier="1000", is_gift=True)
+    run(chatbot.on_channel_subscribe(payload))
+    chatbot.test_bus.publish.assert_not_called()
+
+
+def test_subscribe_published_regardless_of_action_channel(chatbot, monkeypatch):
+    monkeypatch.setattr(chatbot, "join_channels", {})
+    payload = eventsub_event(broadcaster_user_id=TWITCH_ID, broadcaster_user_name="主播", user_name="訂閱者", tier="1000", is_gift=False)
+    run(chatbot.on_channel_subscribe(payload))
+    assert published(chatbot) == [subscribe()]
+
+
+def sub_message_payload(**overrides):
+    data = dict(
+        broadcaster_user_id=TWITCH_ID,
+        broadcaster_user_login="host",
+        broadcaster_user_name="主播",
+        user_name="訂閱者",
+        tier="2000",
+        duration_months=3,
+        cumulative_months=7,
+        message=SimpleNamespace(text="加油"),
+    )
+    return eventsub_event(**{**data, **overrides})
+
+
+def test_subscription_message_chat_then_publish(chatbot):
+    run(chatbot.on_channel_subscription_message(sub_message_payload()))
+    assert chatbot.test_calls == ["chat", "publish"]
+    chatbot.test_chat.send_message.assert_awaited_once_with("host", "感謝 訂閱者 的訂閱！累積訂閱7個月！")
+    assert published(chatbot) == [sub_message()]
+
+
+def test_subscription_message_without_cumulative_or_message(chatbot):
+    run(chatbot.on_channel_subscription_message(sub_message_payload(cumulative_months=None, message=None)))
+    (sent,) = published(chatbot)
+    assert sent.cumulative_months is None
+    assert sent.message is None
+    chatbot.test_chat.send_message.assert_awaited_once_with("host", "感謝 訂閱者 的訂閱！")
+
+
+def test_gift_subscription_chat_only(chatbot):
+    payload = eventsub_event(
+        broadcaster_user_id=TWITCH_ID, broadcaster_user_login="host", broadcaster_user_name="主播", user_name="贈送者", tier="1000", total=5, is_anonymous=False
+    )
+    run(chatbot.on_channel_subscription_gift(payload))
+    chatbot.test_chat.send_message.assert_awaited_once_with("host", "感謝 贈送者 送出的5份訂閱！")
+    chatbot.test_bus.publish.assert_not_called()
+
+
+def test_redemption_published_regardless_of_action_channel(chatbot, monkeypatch):
+    monkeypatch.setattr(chatbot, "join_channels", {})
+    payload = eventsub_event(
+        broadcaster_user_id=TWITCH_ID, user_name="兌換者", user_login="redeemer", reward=SimpleNamespace(title="喝水"), user_input="謝謝"
+    )
+    run(chatbot.on_channel_points_custom_reward_redemption_add(payload))
+    assert published(chatbot) == [redemption(user_input="謝謝")]
+
+
+def prediction_payload(status="resolved"):
+    outcomes = [
+        SimpleNamespace(id="a", title="不會", color="PINK", users=2),
+        SimpleNamespace(id="b", title="會", color="BLUE", users=5),
+    ]
+    return eventsub_event(broadcaster_user_name="主播", title="會贏嗎", status=status, winning_outcome_id="b", outcomes=outcomes)
+
+
+def test_prediction_resolved_publishes_winner(chatbot):
+    run(chatbot.on_channel_prediction_end(prediction_payload()))
+    assert published(chatbot) == [TwitchPredictionResultEvent(occurred_at=NOW, broadcaster_name="主播", title="會贏嗎", outcome_title="會", users=5)]
+
+
+def test_prediction_canceled_publishes_nothing(chatbot):
+    run(chatbot.on_channel_prediction_end(prediction_payload("canceled")))
+    chatbot.test_bus.publish.assert_not_called()
+
+
+def test_whisper_publishes_with_receive_time(chatbot):
+    before = datetime.now(UTC)
+    run(chatbot.on_whisper(SimpleNamespace(user=SimpleNamespace(name="路人"), message="哈囉")))
+    (sent,) = published(chatbot)
+    assert (sent.user_name, sent.message) == ("路人", "哈囉")
+    assert before <= sent.occurred_at <= datetime.now(UTC)
+
+
+def test_poll_and_prediction_begin_only_log(chatbot):
+    poll = eventsub_event(broadcaster_user_name="主播", title="投票", choices=[])
+    prediction = eventsub_event(broadcaster_user_name="主播", title="預測", outcomes=[SimpleNamespace(title="甲"), SimpleNamespace(title="乙")])
+    run(chatbot.on_channel_poll_begin(poll))
+    run(chatbot.on_channel_prediction_begin(prediction))
+    chatbot.test_bus.publish.assert_not_called()
+
+
+def test_publish_is_not_blocked_by_unreachable_redis(chatbot, monkeypatch):
+    """真正的 bus.publish 在 Redis 沒開時也立即返回、不拋例外（T-01 介面），handler 不會被拖慢。"""
+    import time
+
+    from starlib.messaging import MessageBus
+
+    bus = MessageBus(f"test-activity-{id(chatbot)}")
+    try:
+        monkeypatch.setattr(chatbot, "get_bus", lambda: bus)
+        started = time.monotonic()
+        run(chatbot.on_channel_raid(raid_payload()))
+        assert time.monotonic() - started < 1
+    finally:
+        bus.close()

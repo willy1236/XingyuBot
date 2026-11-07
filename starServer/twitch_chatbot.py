@@ -2,6 +2,7 @@ import asyncio
 import logging
 import socket
 import threading
+from datetime import UTC, datetime
 
 from sqlalchemy.exc import NoResultFound
 from twitchAPI.chat import (
@@ -31,10 +32,18 @@ from twitchAPI.type import (
 )
 
 from sentry_bootstrap import capture_exception_safe
-from starlib import BaseThread, BotEmbed, Jsondb, sclient  # TODO: 全面改用 eventbus
+from starlib import BaseThread, sclient  # TODO: 全面改用 eventbus
 from starlib.database import APIType, NotifyCommunityType, sqldb
 from starlib.instance import tw_api
 from starlib.messaging import get_bus
+from starlib.messaging.events.twitch_activity import (
+    TwitchPredictionResultEvent,
+    TwitchRaidEvent,
+    TwitchRedemptionEvent,
+    TwitchSubscribeEvent,
+    TwitchSubscriptionMessageEvent,
+    TwitchWhisperEvent,
+)
 from starlib.messaging.events.twitch_follow import TwitchFollowEvent
 from starlib.pubsub.model import TwitchStreamEvent
 
@@ -140,9 +149,17 @@ async def on_channel_points_custom_reward_redemption_add(event: eventsub.Channel
         text += f" ({event.event.user_input})"
     log.info(text)
 
-    channel_config = join_channels.get(int(event.event.broadcaster_user_id))
-    if channel_config and channel_config.action_channel_id:
-        sclient.publish(TwitchStreamEvent(content=text, to_discord_channel=channel_config.action_channel_id))
+    # Discord 通知不論通知頻道設定都送出，由 Discord 端決定發不發、發到哪
+    get_bus().publish(
+        TwitchRedemptionEvent(
+            occurred_at=event.metadata.message_timestamp,
+            broadcaster_id=event.event.broadcaster_user_id,
+            user_name=event.event.user_name,
+            user_login=event.event.user_login,
+            reward_title=event.event.reward.title,
+            user_input=event.event.user_input or None,
+        )
+    )
 
 
 async def on_channel_points_custom_reward_redemption_update(event: eventsub.ChannelPointsCustomRewardRedemptionUpdateEvent):
@@ -159,18 +176,29 @@ async def on_channel_raid(event:eventsub.ChannelRaidEvent):
             f"{event.event.from_broadcaster_user_name} 帶了 {event.event.viewers} 位觀眾降落在 {event.event.to_broadcaster_user_name} 的頻道！",
         )
 
-        sclient.publish(
-            TwitchStreamEvent(content=f"{event.event.from_broadcaster_user_name} 帶了 {event.event.viewers} 位觀眾降落在 {event.event.to_broadcaster_user_name} 的頻道!", to_discord_channel=channel_config.action_channel_id)
+    get_bus().publish(
+        TwitchRaidEvent(
+            occurred_at=event.metadata.message_timestamp,
+            to_broadcaster_id=event.event.to_broadcaster_user_id,
+            to_broadcaster_name=event.event.to_broadcaster_user_name,
+            from_broadcaster_name=event.event.from_broadcaster_user_name,
+            viewers=event.event.viewers,
         )
+    )
 
 
 async def on_channel_subscribe(event: eventsub.ChannelSubscribeEvent):
     log.info("%s 在 %s 的層級%s新訂閱", event.event.user_name, event.event.broadcaster_user_name, event.event.tier[0])
 
-    channel_config = join_channels.get(int(event.event.broadcaster_user_id))
-    if channel_config and channel_config.action_channel_id and not event.event.is_gift:
-        # await chat.send_message(event.event.broadcaster_user_login, f"感謝 {event.event.user_name} 的訂閱！")
-        sclient.publish(TwitchStreamEvent(content=f"感謝 {event.event.user_name} 的訂閱！", to_discord_channel=channel_config.action_channel_id))
+    # 贈送訂閱不通知 Discord；其餘不論通知頻道設定都送出，由 Discord 端決定發不發
+    if not event.event.is_gift:
+        get_bus().publish(
+            TwitchSubscribeEvent(
+                occurred_at=event.metadata.message_timestamp,
+                broadcaster_id=event.event.broadcaster_user_id,
+                user_name=event.event.user_name,
+            )
+        )
 
 
 async def on_channel_subscription_message(event: eventsub.ChannelSubscriptionMessageEvent):
@@ -191,8 +219,18 @@ async def on_channel_subscription_message(event: eventsub.ChannelSubscriptionMes
             chat_text += f"累積訂閱{event.event.cumulative_months}個月！"
         await chat.send_message(event.event.broadcaster_user_login, chat_text)
 
-        sclient.publish(TwitchStreamEvent(content=f"感謝 {event.event.user_name} 的訂閱！\n累積訂閱{event.event.cumulative_months}個月！", to_discord_channel=channel_config.action_channel_id))
-        sclient.publish(TwitchStreamEvent(content="\n".join(texts), to_discord_channel=channel_config.action_channel_id))
+    get_bus().publish(
+        TwitchSubscriptionMessageEvent(
+            occurred_at=event.metadata.message_timestamp,
+            broadcaster_id=event.event.broadcaster_user_id,
+            broadcaster_name=event.event.broadcaster_user_name,
+            user_name=event.event.user_name,
+            tier=event.event.tier,
+            duration_months=event.event.duration_months,
+            cumulative_months=event.event.cumulative_months,
+            message=event.event.message.text if event.event.message else None,
+        )
+    )
 
 
 async def on_channel_subscription_gift(event: eventsub.ChannelSubscriptionGiftEvent):
@@ -204,12 +242,10 @@ async def on_channel_subscription_gift(event: eventsub.ChannelSubscriptionGiftEv
 
 async def on_channel_poll_begin(event: eventsub.ChannelPollBeginEvent):
     log.info("%s 開始了投票：{event.event.title}", event.event.broadcaster_user_name)
-    sclient.publish(TwitchStreamEvent(content=f"{event.event.broadcaster_user_name} 開始了投票：{event.event.title}\n{event.event.choices}"))
 
 
 async def on_channel_prediction_begin(event: eventsub.ChannelPredictionEvent):
     log.info("%s 開始了預測：{event.event.title}\n{event.event.outcomes[0].title} V.S. {event.event.outcomes[1].title}", event.event.broadcaster_user_name)
-    sclient.publish(TwitchStreamEvent(content=f"{event.event.broadcaster_user_name} 開始了預測：{event.event.title}\n{event.event.outcomes[0].title} V.S. {event.event.outcomes[1].title}"))
 
 
 async def on_channel_prediction_end(event: eventsub.ChannelPredictionEndEvent):
@@ -218,7 +254,15 @@ async def on_channel_prediction_end(event: eventsub.ChannelPredictionEndEvent):
         for outcome in event.event.outcomes:
             if outcome.id == event.event.winning_outcome_id:
                 log.info("%s (%s) 獲勝！%s個人成功預測", outcome.title, outcome.color, outcome.users)
-                sclient.publish(TwitchStreamEvent(embed=BotEmbed.general(event.event.broadcaster_user_name, description=f"{event.event.title}\n{outcome.title} 獲勝！{outcome.users}個人成功預測")))
+                get_bus().publish(
+                    TwitchPredictionResultEvent(
+                        occurred_at=event.metadata.message_timestamp,
+                        broadcaster_name=event.event.broadcaster_user_name,
+                        title=event.event.title,
+                        outcome_title=outcome.title,
+                        users=outcome.users,
+                    )
+                )
     else:
         log.info("%s 取消了預測：{event.event.title}", event.event.broadcaster_user_name)
 
@@ -265,7 +309,8 @@ async def on_server_notice(event: NoticeEvent):
 
 async def on_whisper(event: WhisperEvent):
     log.info("Whisper from %s: %s", event.user.name, event.message)
-    sclient.publish(TwitchStreamEvent(embed=BotEmbed.general(event.user.name, Jsondb.get_picture("twitch_001"), description=event.message)))
+    # WhisperEvent 沒有 EventSub 的 message_timestamp，以收到時間為事件時間
+    get_bus().publish(TwitchWhisperEvent(occurred_at=datetime.now(UTC), user_name=event.user.name, message=event.message))
 
 
 async def on_raid(event: dict):
