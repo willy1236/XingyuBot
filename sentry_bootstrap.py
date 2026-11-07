@@ -282,6 +282,16 @@ def capture_message_safe(message: str, *, level: str = "info", tags: dict[str, s
         sentry_sdk.capture_message(message, level=level)
 
 
+def flush_safe(timeout: float = 2) -> None:
+    """process 用 os._exit 結束前送出 Sentry 佇列；沒裝 sentry-sdk 時不做事。"""
+    if sentry_sdk is None:
+        return
+    try:
+        sentry_sdk.flush(timeout=timeout)
+    except Exception:
+        pass
+
+
 def _mark_captured(exc: BaseException) -> None:
     try:
         setattr(exc, _CAPTURED_ATTR, True)

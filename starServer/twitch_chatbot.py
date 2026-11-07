@@ -31,7 +31,7 @@ from twitchAPI.type import (
     MissingScopeException,
 )
 
-from sentry_bootstrap import capture_exception_safe
+from sentry_bootstrap import capture_exception_safe, capture_message_safe
 from starlib import BaseThread, sclient  # TODO: 全面改用 eventbus
 from starlib.database import APIType, sqldb
 from starlib.instance import tw_api
@@ -85,9 +85,17 @@ USER_SCOPE = [
     AuthScope.WHISPERS_EDIT,
     ]
 
-join_channels = sclient.sqldb.get_bot_join_channel_all()
-TARGET_CHANNEL = {twitch_id: data.action_channel_id for twitch_id, data in join_channels.items()}
-TARGET_CHANNEL_IDS = [str(i) for i in TARGET_CHANNEL.keys()]
+# import 時不查 DB，由 run() 開頭的 load_join_channels() 填入；handler 繼續以模組全域讀取
+join_channels: dict = {}
+TARGET_CHANNEL: dict = {}
+TARGET_CHANNEL_IDS: list[str] = []
+
+
+def load_join_channels() -> None:
+    global join_channels, TARGET_CHANNEL, TARGET_CHANNEL_IDS
+    join_channels = sclient.sqldb.get_bot_join_channel_all()
+    TARGET_CHANNEL = {twitch_id: data.action_channel_id for twitch_id, data in join_channels.items()}
+    TARGET_CHANNEL_IDS = [str(i) for i in TARGET_CHANNEL.keys()]
 
 chat:Chat
 # eventsub
@@ -391,6 +399,7 @@ async def modify_channel_information(cmd: ChatCommand):
 
 
 async def run():
+    load_join_channels()
     app_config = sqldb.get_oauth_client(APIType.Twitch, 2)
     APP_ID = app_config.client_id
     APP_SECRET = app_config.client_secret
@@ -600,17 +609,21 @@ class TwitchBotThread(BaseThread):
         self.eventsub: EventSubWebhook = None
         # run() 初始化完成、進入 _watch_chat 之前 set；呼叫端等它之後才開始消費事件
         self.ready = threading.Event()
+        # 異常結束（放棄重連、未捕捉例外）時為 True；此時 thread 不做 cleanup，由呼叫端限時清理後以非 0 結束
+        self.abnormal = False
 
     def run(self):
         try:
             self.chat, self.twitch, self.eventsub = asyncio.run(run())
             self.ready.set()
             self._watch_chat()
-            asyncio.run(self.cleanup())
         except Exception as exc:
             capture_exception_safe(exc, tags={"service": "twitch", "source": "thread_run"})
-            log.exception("TwitchBotThread crashed: %s", exc)
-            raise
+            log.error("TwitchBotThread crashed", exc_info=exc)
+            self.abnormal = True
+            return
+        if not self.abnormal:
+            asyncio.run(self.cleanup())
 
     _CHAT_CHECK_INTERVAL = 60
     # twitchAPI 自己的重連 backoff 合計約 255 秒，斷線超過這個時間才視為它已放棄
@@ -633,17 +646,20 @@ class TwitchBotThread(BaseThread):
             log.warning("Twitch chat 已斷線 %d 秒，重啟 chat", disconnected_checks * self._CHAT_CHECK_INTERVAL)
             try:
                 self.chat.stop()
-            except Exception:
-                log.exception("Twitch chat 停止失敗，放棄自動重啟")
-                self._stop_event.wait()
+            except Exception as exc:
+                capture_exception_safe(exc, tags={"service": "twitch", "source": "watch_chat_stop"})
+                log.error("Twitch chat 停止失敗，放棄自動重啟", exc_info=exc)
+                self.abnormal = True
                 return
             # chat.start() 在連線失敗時會無限等待 startup，放到另一條 thread 並設上限
             starter = threading.Thread(target=self.chat.start, name="TwitchChatRestart", daemon=True)
             starter.start()
             starter.join(self._CHAT_START_TIMEOUT)
             if starter.is_alive():
-                log.error("Twitch chat 重啟逾時，放棄自動重啟，需重啟服務")
-                self._stop_event.wait()
+                message = "Twitch chat 重啟逾時，放棄自動重啟"
+                log.warning(message)
+                capture_message_safe(message, level="error", tags={"service": "twitch", "source": "watch_chat_restart"})
+                self.abnormal = True
                 return
             disconnected_checks = 0
 
