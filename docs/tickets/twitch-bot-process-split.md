@@ -203,6 +203,7 @@ flowchart TD
 - 驗收：`test/test_messaging.py` 23 個 integration 測試涵蓋全部驗收條件；Redis 停止與恢復以 TCP proxy 模擬，時間常數在測試中縮短，實際秒數未驗；`FLUSHALL` 以刪除測試前綴的 key 模擬
 - 審查 3 輪，無 blocking；未修：`connection.py` 的 `_fire` 未保留 task 參照（nitpick）、`_handle_entry` 的 `_stopping` 檢查沒有測試守住
 - 與設計的差異：`close()` 先等已排入的發送與進行中的事件，最多 timeout 的一半，逾時才取消（事件之後重送）
+- 後續修正（T-02 審查發現，使用者裁決）：handler 的 loop 已關閉、或 handler 執行到一半被自己的 loop 取消時，不再 ack，事件留在待確認清單，下次啟動重送；handler 拋例外仍 ack。新增 2 個 integration 測試（共 25 個），契約文件的 ack 與重送段落已更新
 
 ### T-02 Twitch bot 以獨立 process 執行，追隨通知經 Redis 送到 Discord
 
@@ -257,7 +258,8 @@ flowchart TD
 - 已手動驗證並勾選：條件 1、3、5、6（6：停掉 bot 後發送事件，重啟後補發；本機 dev bot＋真實 Redis，從另一個 process 發送追隨事件，使用者在 Discord 頻道確認收到訊息）
 - 條件 8 只驗了 Discord 端與發送端（Twitch 聊天室與真實 Twitch 事件需 OAuth，未驗，不勾選）：Redis 容器停止期間 Discord bot 沒停、只記 warning，另一個 process 發送事件不拋例外；重啟容器 1 分鐘後發送的追隨事件送到 Discord 頻道，bot 日誌顯示「Redis 連線恢復」
 - 續做：條件 2（Twitch 真實 OAuth）、4、7（`/reload`）、8（Twitch 端）尚未驗
-- 審查另列未處理：收到 SIGTERM／Ctrl+C 時 py-cord 先取消所有 task，進行中的 handler 被取消後事件仍被 ack（非回歸，T-05 處理信號時一併考慮，或改 T-01 讓取消不 ack）、`bus.close` 失敗時 `super().close()` 被跳過與測試未驗 executor（nitpick）、`/unload twitch_notify` 後 handler 仍掛在 bus 上（T-01 介面沒有 unsubscribe）、gateway 重連期間 `get_channel` 暫時拿不到會誤報
+- 審查項處理：信號關機時 handler 被取消後事件被 ack（使用者裁決改 T-01，見 T-01 進度「後續修正」）、`bus.close` 失敗時 `super().close()` 被跳過、測試未驗 executor，皆已修
+- 審查另列未處理：`/unload twitch_notify` 後 handler 仍掛在 bus 上（T-01 介面沒有 unsubscribe）、gateway 重連期間 `get_channel` 暫時拿不到會誤報
 
 ### T-03 突襲、訂閱、續訂、點數兌換、預測結果、私訊通知改走跨 process 事件
 
