@@ -160,3 +160,29 @@ def test_follow_event_travels_between_two_buses():
         receiver.close()
         loop.call_soon_threadsafe(loop.stop)
         thread.join(5)
+
+
+def test_discord_close_closes_bus_before_super_close(monkeypatch):
+    """關機時 bus 要在 loop 還活著時先關，否則關機時間窗內讀到的事件會被誤 ack。"""
+    import discord
+
+    from starDiscord import bot as bot_module
+
+    order: list[str] = []
+    bus = MagicMock()
+    bus.close.side_effect = lambda: order.append("bus.close")
+    monkeypatch.setattr(bot_module, "get_bus", lambda: bus)
+
+    async def fake_super_close(self):
+        order.append("super.close")
+
+    monkeypatch.setattr(discord.Bot, "close", fake_super_close)
+
+    async def run():
+        fake = bot_module.DiscordBot.__new__(bot_module.DiscordBot)
+        fake.scheduler = SimpleNamespace(running=False)
+        fake.loop = asyncio.get_running_loop()
+        await fake.close()
+
+    asyncio.run(run())
+    assert order == ["bus.close", "super.close"]

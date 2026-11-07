@@ -42,7 +42,7 @@ def run_discord_bot():
         # bot.run() 收到 SIGINT/SIGTERM 只會關閉 Discord，背景 thread 要另外停止，否則程式會卡在 join
         log.info(">> stopping background threads <<")
         sclient.stop_threads()
-        get_bus().close()
+        get_bus().close()  # 正常情況 DiscordBot.close() 已關過（冪等）；這裡兜底啟動失敗等沒走到 close 的路徑
 
 def run_website():
     from starServer.bot_website import WebsiteThread

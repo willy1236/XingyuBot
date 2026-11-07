@@ -9,6 +9,7 @@ import discord
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from starlib import BotEmbed, sqldb
+from starlib.messaging import get_bus
 from starlib.utils import nowtz
 from starlib.database import APIType, NotifyChannelType, NotifyCommunityType
 from starlib.instance import (
@@ -62,6 +63,10 @@ class DiscordBot(discord.Bot):
         # 先停排程再關 session，避免關機途中觸發的定時任務打到已關閉的 HTTP session
         if self.scheduler.running:
             self.scheduler.shutdown(wait=False)
+        # 趁 loop 還在跑時先關 bus：進行中的 handler 在這個 loop 上正常跑完並 ack，
+        # 之後不再讀新事件。等 bot.run() 回傳、loop 已關閉才關，這段時間讀到的事件會被誤 ack 而遺失。
+        # close() 會阻塞，丟到 executor 避免卡住 loop（handler 需要 loop 才能結束）
+        await self.loop.run_in_executor(None, get_bus().close)
         await super().close()
 
     def submit(self, coro: Coroutine):
