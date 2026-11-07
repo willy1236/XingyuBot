@@ -172,26 +172,22 @@ class task(Cog_Extension):
             return
 
         users_id = [user_id for user_id in caches.keys()]
+        # 下播時間取查詢之前的時間：查詢到清除之間才開台的紀錄，開台時間會晚於它，不會被誤清
+        checked_at = utils.nowtz()
         data = tw_api.get_lives(users_id)
         log.debug("twitch_live data", extra={"data": data})
-        update_data: dict[str, datetime | None] = {}
 
         for user_id in users_id:
             live_data = data[user_id]
-            cache_data = caches[user_id]
-            if live_data and not cache_data:
-                # 直播開始
-                update_data[user_id] = live_data.started_at
-
-                if not _is_older_than_one_day(live_data.started_at):
+            if live_data:
+                # 直播中：與 Twitch bot 的開台事件搶佔，搶到的才發；超過一天的開台照樣寫入紀錄但不發
+                claimed = sclient.sqldb.claim_twitch_live(user_id, live_data.started_at)
+                if claimed and not _is_older_than_one_day(live_data.started_at):
                     embed = live_data.embed()
                     await self.bot.send_notify_communities(embed, NotifyCommunityType.TwitchLive, user_id)
-
-            elif not live_data and cache_data:
+            elif caches[user_id]:
                 # 直播結束
-                update_data[user_id] = None
-
-        sclient.sqldb.set_community_caches(NotifyCommunityType.TwitchLive, update_data)
+                sclient.sqldb.clear_twitch_live(user_id, checked_at)
 
     async def twitch_video(self):
         caches = sclient.sqldb.get_community_caches(NotifyCommunityType.TwitchVideo)

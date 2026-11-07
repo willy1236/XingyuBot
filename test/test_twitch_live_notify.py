@@ -274,3 +274,66 @@ def test_cog_subscribes_and_unsubscribes_both_events(monkeypatch):
     assert all(c.kwargs["loop"] is bot.loop for c in bus.subscribe.call_args_list)
     cog.cog_unload()
     assert {c.args for c in bus.unsubscribe.call_args_list} == {(TwitchStreamOnlineEvent, cog.on_stream_online), (TwitchStreamOfflineEvent, cog.on_stream_offline)}
+
+
+# ---- 輪詢 task.twitch_live ----
+
+from starDiscord.cmds import task as task_module  # noqa: E402
+
+
+def poll_cog(monkeypatch, lives: dict, caches: dict, db, now=T0):
+    cog = task_module.task(MagicMock())
+    cog.bot.send_notify_communities = AsyncMock()
+    db.get_community_caches.return_value = caches
+    monkeypatch.setattr(task_module.sclient, "sqldb", db)
+    monkeypatch.setattr(task_module, "tw_api", MagicMock(get_lives=MagicMock(side_effect=lambda ids: {i: lives.get(i) for i in ids})))
+    monkeypatch.setattr(task_module.utils, "nowtz", lambda: now)
+    return cog
+
+
+def stream_for(started_at):
+    from starlib.providers.social.models import TwitchStream
+
+    e = online_event(started_at=started_at)
+    return TwitchStream(
+        id=e.stream_id, user_id=e.broadcaster_id, user_login=e.user_login, user_name=e.broadcaster_name, game_id=e.game_id,
+        game_name=e.game_name, type=e.stream_type, title=e.title, viewer_count=e.viewer_count, started_at=e.started_at,
+        language=e.language, thumbnail_url=e.thumbnail_url, tag_ids=e.tag_ids, tags=e.tags, is_mature=e.is_mature,
+    )
+
+
+def test_poll_notifies_when_claim_won_without_avatar(monkeypatch, db):
+    started = T0 - timedelta(minutes=5)
+    cog = poll_cog(monkeypatch, {"1": stream_for(started)}, {"1": None}, db, now=T0)
+    run(cog.twitch_live())
+    db.claim_twitch_live.assert_called_once_with("1", started)
+    embed = cog.bot.send_notify_communities.await_args.args[0]
+    assert embed.author.name == "主播 開台啦！"
+    assert embed.author.icon_url != "https://example.com/avatar.png"
+
+
+def test_poll_claims_even_when_cache_record_exists_and_skips_when_lost(monkeypatch, db):
+    """不再看 cache_data：事件先搶到時輪詢搶不到，不重複發。"""
+    db.claim_twitch_live.return_value = False
+    cog = poll_cog(monkeypatch, {"1": stream_for(T0)}, {"1": MagicMock()}, db)
+    run(cog.twitch_live())
+    db.claim_twitch_live.assert_called_once()
+    cog.bot.send_notify_communities.assert_not_awaited()
+
+
+def test_poll_claims_but_does_not_notify_stream_older_than_one_day(monkeypatch, db):
+    started = T0 - timedelta(days=2)
+    cog = poll_cog(monkeypatch, {"1": stream_for(started)}, {"1": None}, db, now=T0)
+    run(cog.twitch_live())
+    db.claim_twitch_live.assert_called_once_with("1", started)
+    cog.bot.send_notify_communities.assert_not_awaited()
+
+
+def test_poll_clears_with_time_taken_before_query_only_when_record_exists(monkeypatch, db):
+    times = iter([T0, T0 + timedelta(seconds=30)])
+    cog = poll_cog(monkeypatch, {}, {"1": MagicMock(), "2": None}, db)
+    monkeypatch.setattr(task_module.utils, "nowtz", lambda: next(times))
+    run(cog.twitch_live())
+    db.clear_twitch_live.assert_called_once_with("1", T0)  # 查詢前的時間，不是清除當下
+    db.claim_twitch_live.assert_not_called()
+    cog.bot.send_notify_communities.assert_not_awaited()
