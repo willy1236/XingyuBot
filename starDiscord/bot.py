@@ -63,9 +63,9 @@ class DiscordBot(discord.Bot):
         # 先停排程再關 session，避免關機途中觸發的定時任務打到已關閉的 HTTP session
         if self.scheduler.running:
             self.scheduler.shutdown(wait=False)
-        # 趁 loop 還在跑時先關 bus，之後不再讀新事件；等 bot.run() 回傳、loop 已關閉才關，
-        # 這段時間讀到的事件會被誤 ack 而遺失。/shutdown 這類走 close() 的路徑，進行中的 handler 會正常跑完並 ack；
-        # 收到信號時 py-cord 會先取消 loop 上所有 task，進行中的 handler 被取消，事件仍會被 ack（T-05 處理信號）。
+        # 趁 loop 還在跑時先關 bus，之後不再讀新事件。等 bot.run() 回傳、loop 已關閉才關，
+        # 這段時間讀到的事件 handler 排不進 loop，bus 不 ack，留待下次啟動重送（見 docs/messaging-contract.md）；
+        # 先關的好處是進行中的 handler 能正常跑完並 ack，不必重送。
         # close() 會阻塞，丟到 executor 避免卡住 loop（handler 需要 loop 才能結束）
         try:
             await self.loop.run_in_executor(None, get_bus().close)

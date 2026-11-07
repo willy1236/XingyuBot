@@ -316,6 +316,9 @@ class MessageBus:
         group, consumer = self._service, self._consumer
         # 加入讀取時、以及斷線恢復後，先讀回自己還沒 ack 的事件
         backlog = True
+        # backlog 用游標往後讀：沒 ack 的事件（handler 的 loop 已關閉或被取消）讀回來處理完仍留在待確認清單，
+        # 每次都從 "0" 讀會一直讀回同一筆，造成熱迴圈
+        cursor = "0"
         while not self._stopping:
             await self._conn.wait_up()
             try:
@@ -326,10 +329,11 @@ class MessageBus:
                     await self._handle_entry(client, event_type, entry_id, fields, redelivered=True)
                     continue
                 if backlog:
-                    entries = _entries(await client.xreadgroup(group, consumer, {stream: "0"}, count=CLAIM_BATCH))
+                    entries = _entries(await client.xreadgroup(group, consumer, {stream: cursor}, count=CLAIM_BATCH))
                     if not entries:
                         backlog = False
                     for entry_id, fields in entries:
+                        cursor = entry_id
                         await self._handle_entry(client, event_type, entry_id, fields, redelivered=True)
                     continue
                 response = await client.xreadgroup(group, consumer, {stream: ">"}, count=1, block=READ_BLOCK_MS)
@@ -340,9 +344,9 @@ class MessageBus:
             except CONNECTION_ERRORS as exc:
                 self._conn.report_failure(exc)
                 log.warning("讀取 %s 事件失敗：%r", event_type, exc)
-                backlog = True
+                backlog, cursor = True, "0"
             except ResponseError as exc:
-                backlog = True
+                backlog, cursor = True, "0"
                 if _is_missing_group(exc):
                     await self._recreate_group(stream, group)
                 else:
@@ -352,7 +356,7 @@ class MessageBus:
                 # 沒預期的例外不能讓這條 stream 停止消費
                 capture_exception_safe(exc, tags={**SENTRY_TAGS, "event_type": event_type})
                 log.error("讀取 %s 事件發生未預期的錯誤", event_type, exc_info=exc)
-                backlog = True
+                backlog, cursor = True, "0"
                 await asyncio.sleep(1)
 
     async def _recreate_group(self, stream: str, group: str) -> None:

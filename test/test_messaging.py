@@ -390,6 +390,31 @@ def test_handler_cancelled_on_its_loop_leaves_event_pending_and_redelivers(make_
     assert wait_until(lambda: pending_count(raw, prefix, Ping) == 0)
 
 
+def test_unacked_event_is_not_reprocessed_in_a_hot_loop(make_bus, handler_loop, raw, prefix):
+    """handler 自己讓 CancelledError 傳出來（不 ack）：重啟讀回 backlog 時，每次啟動只處理一次，不會一直讀回同一筆。"""
+    runs: list[int] = []
+
+    async def cancelling(event: BusEvent, delivery: Delivery) -> None:
+        runs.append(1)
+        raise asyncio.CancelledError
+
+    sender, first = make_bus(), make_bus()
+    first.subscribe(Ping, cancelling, handler_loop)
+    first.start(SERVICE, "c1")
+    sender.publish(Ping(occurred_at=now(), n=1))
+    assert wait_until(lambda: runs)
+    first.close(timeout=1)
+    assert pending_count(raw, prefix, Ping) == 1
+
+    runs.clear()
+    restarted = make_bus()
+    restarted.subscribe(Ping, cancelling, handler_loop)
+    restarted.start(SERVICE, "c1")
+    assert wait_until(lambda: runs)
+    time.sleep(1.5)
+    assert len(runs) == 1
+
+
 def test_handler_exception_is_reported_and_acked(make_bus, handler_loop, raw, prefix, sentry):
     sender, receiver = make_bus(), make_bus()
     rec = Recorder(fail=True)
