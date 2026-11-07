@@ -261,6 +261,18 @@ def test_request_on_closed_bus_is_unavailable(make_bus):
         request(SERVER, "echo", {}, bus=client).result(5)
 
 
+def test_cancelling_request_future_does_not_log_error(make_bus, caplog):
+    client = make_bus()
+
+    with caplog.at_level(logging.ERROR):
+        future = request(SERVER, "echo", {}, bus=client)
+        future.cancel()
+        client.close(timeout=2)  # inner 隨 bus 關閉而結束，relay 此時面對已取消的 outer
+        time.sleep(0.3)
+
+    assert not [r for r in caplog.records if r.levelno >= logging.ERROR]
+
+
 def _group_info(raw, stream: str) -> dict | None:
     try:
         groups = raw.xinfo_groups(stream)

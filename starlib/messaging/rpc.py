@@ -144,7 +144,7 @@ class _Server:
             raise
         except CONNECTION_ERRORS as exc:
             log.warning("處理請求 %s 時 Redis 連不上：%r", entry_id, exc)
-            return  # 沒 ack，下次啟動時由 _drain 清掉
+            return  # 沒 ack，下次啟動或重連時由 _drain 清掉
         except Exception as exc:
             capture_exception_safe(exc, tags=SENTRY_TAGS)
             log.error("處理請求 %s 時發生未預期的錯誤", entry_id, exc_info=exc)
@@ -272,6 +272,9 @@ def request(
     outer: concurrent.futures.Future[dict[str, Any]] = concurrent.futures.Future()
 
     def relay(done: concurrent.futures.Future[dict[str, Any]]) -> None:
+        # 呼叫端可能已取消 outer（wait_for 逾時等），這時沒有人在等結果
+        if outer.cancelled():
+            return
         # bus 已關閉或關閉時被取消，對呼叫端來說也是「無法處理」
         if done.cancelled():
             outer.set_exception(RpcUnavailable("bus 已關閉"))
