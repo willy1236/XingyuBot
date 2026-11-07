@@ -3,7 +3,9 @@ import logging
 import socket
 import threading
 import time
+from collections.abc import Coroutine
 from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy.exc import NoResultFound
 from twitchAPI.chat import (
@@ -433,6 +435,19 @@ async def modify_channel_information(cmd: ChatCommand):
     pass
 
 
+async def _listen(name: str, subscribe: Coroutine[Any, Any, str]) -> None:
+    """訂閱一個 EventSub 事件；訂閱失敗只記 warning，不影響其他事件。每次訂閱後間隔 1 秒避免觸發速率限制。"""
+    try:
+        subscription_id = await subscribe
+        log.debug("listening to %s, subscription_id: %s", name, subscription_id)
+        await asyncio.sleep(1)
+    except EventSubSubscriptionError as e:
+        log.warning("Error subscribing to %s: %s", name, e)
+    except EventSubSubscriptionTimeout:
+        log.warning("Error subscribing to %s: timeout.", name)
+
+
+
 async def run():
     load_join_channels()
     app_config = sqldb.get_oauth_client(APIType.Twitch, 2)
@@ -508,116 +523,29 @@ async def run():
     await asyncio.sleep(3)
     for user in users:
         log.debug("eventsub:%s", user.login)
-        try:
-            subscription_id = await eventsub.listen_stream_online(user.id, on_stream_online)
-            await asyncio.sleep(1)
-        except EventSubSubscriptionError as e:
-            log.warning("Error subscribing stream online: %s", e)
-        except EventSubSubscriptionTimeout:
-            log.warning("Error subscribing stream online: timeout.")
-
-        try:
-            subscription_id = await eventsub.listen_stream_offline(user.id, on_stream_offline)
-            await asyncio.sleep(1)
-        except EventSubSubscriptionError as e:
-            log.warning("Error subscribing stream offline: %s", e)
-        except EventSubSubscriptionTimeout:
-            log.warning("Error subscribing stream offline: timeout.")
-
-        try:
-            subscription_id = await eventsub.listen_channel_raid(on_channel_raid, to_broadcaster_user_id=user.id)
-            await asyncio.sleep(1)
-        except EventSubSubscriptionError as e:
-            log.warning("Error subscribing channel raid: %s", e)
-        except EventSubSubscriptionTimeout:
-            log.warning("Error subscribing channel raid: timeout.")
-
+        await _listen("stream online", eventsub.listen_stream_online(user.id, on_stream_online))
+        await _listen("stream offline", eventsub.listen_stream_offline(user.id, on_stream_offline))
+        await _listen("channel raid", eventsub.listen_channel_raid(on_channel_raid, to_broadcaster_user_id=user.id))
         log.debug("eventsub:%s done.", user.login)
 
+        # 以下事件需要 bot 是該頻道的 mod 才能訂閱
         if not chat.is_mod(user.login):
             continue
 
-        try:
-            log.debug("listening to channel follow")
-            subscription_id = await eventsub.listen_channel_follow_v2(user.id, me.id, on_follow)
-            log.debug("subscription_id: %s", subscription_id)
-            await asyncio.sleep(1)
-        except EventSubSubscriptionError as e:
-            log.warning("Error subscribing to channel follow: %s", e)
-        except EventSubSubscriptionTimeout:
-            log.warning("Error subscribing to channel follow: timeout.")
-
-        try:
-            log.debug("listening to channel points custom reward redemption add")
-            subscription_id = await eventsub.listen_channel_points_custom_reward_redemption_add(user.id, on_channel_points_custom_reward_redemption_add)
-            log.debug("subscription_id: %s", subscription_id)
-            await asyncio.sleep(1)
-        except EventSubSubscriptionError as e:
-            log.warning("Error subscribing to channel points custom reward redemption add: %s", e)
-        except EventSubSubscriptionTimeout:
-            log.warning("Error subscribing to channel points custom reward redemption add: timeout.")
-
-        try:
-            log.debug("listening to channel points custom reward redemption update")
-            subscription_id = await eventsub.listen_channel_points_custom_reward_redemption_update(user.id, on_channel_points_custom_reward_redemption_update)
-            log.debug("subscription_id: %s", subscription_id)
-            await asyncio.sleep(1)
-        except EventSubSubscriptionError as e:
-            log.warning("Error subscribing to channel points custom reward redemption update: %s", e)
-        except EventSubSubscriptionTimeout:
-            log.warning("Error subscribing to channel points custom reward redemption update: timeout.")
-
-        try:
-            log.debug("listening to channel subscribe")
-            subscription_id = await eventsub.listen_channel_subscribe(user.id, on_channel_subscribe)
-            log.debug("subscription_id: %s", subscription_id)
-            await asyncio.sleep(1)
-        except EventSubSubscriptionError as e:
-            log.warning("Error subscribing to channel subscribe: %s", e)
-        except EventSubSubscriptionTimeout:
-            log.warning("Error subscribing to channel subscribe: timeout.")
-
-        try:
-            log.debug("listening to channel subscription message")
-            subscription_id = await eventsub.listen_channel_subscription_message(user.id, on_channel_subscription_message)
-            log.debug("subscription_id: %s", subscription_id)
-            await asyncio.sleep(1)
-        except EventSubSubscriptionError as e:
-            log.warning("Error subscribing to channel subscription message: %s", e)
-        except EventSubSubscriptionTimeout:
-            log.warning("Error subscribing to channel subscription message: timeout.")
-
-        try:
-            log.debug("listening to channel subscription gift")
-            subscription_id = await eventsub.listen_channel_subscription_gift(user.id, on_channel_subscription_gift)
-            log.debug("subscription_id: %s", subscription_id)
-            await asyncio.sleep(1)
-        except EventSubSubscriptionError as e:
-            log.warning("Error subscribing to channel subscription gift: %s", e)
-        except EventSubSubscriptionTimeout:
-            log.warning("Error subscribing to channel subscription gift: timeout.")
-
-        # try:
-        #     twitch_log.debug("listening to channel poll begin")
-        #     await eventsub.listen_channel_poll_begin(user.id, on_channel_poll_begin)
-        # except EventSubSubscriptionError as e:
-        #     twitch_log.warning("Error subscribing to channel poll begin: %s", e)
-
-        # try:
-        #     twitch_log.debug("listening to channel prediction begin")
-        #     await eventsub.listen_channel_prediction_begin(user.id, on_channel_prediction_begin)
-        # except EventSubSubscriptionError as e:
-        #     twitch_log.warning("Error subscribing to channel prediction begin: %s", e)
-
-        try:
-            log.debug("listening to channel prediction end")
-            subscription_id = await eventsub.listen_channel_prediction_end(user.id, on_channel_prediction_end)
-            log.debug("subscription_id: %s", subscription_id)
-        except EventSubSubscriptionError as e:
-            log.warning("Error subscribing to channel prediction end: %s", e)
-        except EventSubSubscriptionTimeout:
-            log.warning("Error subscribing to channel prediction end: timeout.")
-
+        await _listen("channel follow", eventsub.listen_channel_follow_v2(user.id, me.id, on_follow))
+        await _listen(
+            "channel points custom reward redemption add",
+            eventsub.listen_channel_points_custom_reward_redemption_add(user.id, on_channel_points_custom_reward_redemption_add),
+        )
+        await _listen(
+            "channel points custom reward redemption update",
+            eventsub.listen_channel_points_custom_reward_redemption_update(user.id, on_channel_points_custom_reward_redemption_update),
+        )
+        await _listen("channel subscribe", eventsub.listen_channel_subscribe(user.id, on_channel_subscribe))
+        await _listen("channel subscription message", eventsub.listen_channel_subscription_message(user.id, on_channel_subscription_message))
+        await _listen("channel subscription gift", eventsub.listen_channel_subscription_gift(user.id, on_channel_subscription_gift))
+        # channel poll begin、channel prediction begin 目前不訂閱，需要時比照加上 _listen
+        await _listen("channel prediction end", eventsub.listen_channel_prediction_end(user.id, on_channel_prediction_end))
         log.debug("eventsub for %s(mod) done.", user.login)
 
     return chat, twitch, eventsub
