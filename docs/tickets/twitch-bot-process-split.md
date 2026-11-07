@@ -65,7 +65,7 @@ flowchart LR
 | 5 | T-05 | 待手動驗收 | Twitch bot 斷線放棄或 crash 時自動重啟，停止時乾淨收尾 | T-02 | A | 含 audit P3 |
 | 6 | T-06 | 完成 | 服務之間能發請求並在 5 秒內拿到回應或「無法處理」 | T-01 | B | 只建機制 |
 | 7 | T-07 | 完成 | 服務能通知所有實例丟掉指定快取 | T-01 | B | 只建機制 |
-| 8 | T-08 | 待上線 | 上線：正式機以兩個 service 執行 | T-03～T-07 | — | 上線切換 |
+| 8 | T-08 | 待手動驗收 | 上線：正式機以兩個 service 執行 | T-03～T-07 | — | 上線切換 |
 
 ```mermaid
 flowchart TD
@@ -501,10 +501,12 @@ flowchart TD
 
 **風險 / 實作注意**：上線順序照規格〈上線與回退〉，否則會同時有兩個 Twitch bot 搶 port 14001、互相清掉 EventSub 訂閱。
 
-**進度**：程式與文件完成，待正式機上線
+**進度**：已上線，待上線驗收
 - 已完成：`scripts/run_twitch.sh`、`run_twitch.bat`；移除 `TwitchStreamEvent`、`on_twitch_stream_event`、`twitch_bot_thread`；README 改成兩個入口與 Redis；`docs/deploy-twitch-split.md`。`.env.example` 在 T-01 時已加 `REDIS_URL`、沒有 `TWITCH_BOT`
 - 交接文件補充：兩個 unit 都在 `ExecStartPre` 做 `git pull`，建議 Twitch unit 加 `After=xingyubot.service` 避免同時重啟搶 git lock；正式機 env 的 `TWITCH_BOT` 在確定不回退前保留，回退後舊版要靠它啟動 Twitch bot；回退多一步 `disable` Twitch unit
-- 待做：shark-ansible 實作、依〈上線與回退〉上線、上線驗收 1、2；T-02、T-04、T-05 的待手動驗收項目可一併在正式機確認
+- 已上線（2026-11-07）：shark-ansible `2684ceb`（redis role、`xingyubot-twitch.service`），照〈上線與回退〉順序部署；`redis-server` 8.0.5、`xingyubot`、`xingyubot-twitch` 皆 active，兩邊 bus 都連上 Redis 並開始消費
+- 上線觀察：ansible 部署 unit 後的 restart handler 在 Twitch bot 啟動中送 SIGTERM，15 秒內收不完尾而以 exit 1 結束，只發生在第一次部署；Twitch bot 從啟動到 online 約 55 秒（EventSub 逐一訂閱）；`subscription missing proper authorization` 與 twitchAPI 的 `utcnow` DeprecationWarning 拆分前就有
+- 待做：上線驗收 1（追隨、開台、下播實際事件抽查）、上線驗收 2（停 Redis 期間照常運作、重啟 1 分鐘後事件送達），使用者陸續驗；T-02、T-04、T-05 的待手動驗收項目可一併確認
 
 ## 開發環境與分支
 
