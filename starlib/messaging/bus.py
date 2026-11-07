@@ -61,8 +61,8 @@ type _Entry = tuple[str, dict[str, str] | None]
 class MessageBus:
     """跨 process 事件 bus。正式程式用 get_bus()；直接建立只給測試，同一 process 可以有多個實例。
 
-    invariant：handler 回傳或拋例外都會 ack；只有 process 在 handler 執行中結束才會重送，
-    所以同一事件可能被處理兩次，handler 要能承受。
+    invariant：handler 回傳或拋例外都會 ack；handler 的 loop 已關閉或被取消、或 process 在 handler 執行中結束，
+    事件不 ack，下次啟動重送。所以同一事件可能被處理兩次，handler 要能承受。
     """
 
     def __init__(self, key_prefix: str = DEFAULT_KEY_PREFIX) -> None:
@@ -116,7 +116,8 @@ class MessageBus:
     def unsubscribe[E: BusEvent](self, event_cls: type[E], handler: Handler[E]) -> None:
         """取消 subscribe。只在目前註冊的就是這個 handler 時才移除（已被新的取代就什麼都不做）。
 
-        移除後不再讀這個事件類型，事件留在 Redis，等有人再 subscribe 或過期；進行中的 handler 被取消時事件不 ack，之後重送。
+        移除後不再讀這個事件類型，事件留在 Redis，等有人再 subscribe 或過期。進行中的 handler 會跑完並 ack；
+        reader 在跑完之後才停下，所以 unsubscribe 後馬上 subscribe（/reload）時，reader 直接接手新的 handler。
         """
         event_type = getattr(event_cls, "event_type", None)
         if event_type is None:
@@ -219,10 +220,8 @@ class MessageBus:
         sub = self._subs.get(event_type)
         if sub is None or sub.handler != handler:
             return
+        # 只移除登記；reader 在迴圈開頭發現沒有 handler 才自行結束，進行中的事件不被打斷
         del self._subs[event_type]
-        reader = self._readers.pop(event_type, None)
-        if reader is not None:
-            reader.cancel()
 
     def _begin(self, service: str, consumer: str) -> None:
         self._service = service
@@ -339,13 +338,19 @@ class MessageBus:
         # 每次都從 "0" 讀會一直讀回同一筆，造成熱迴圈
         cursor = "0"
         while not self._stopping:
+            if event_type not in self._subs:
+                # 已取消訂閱：結束這條 reader（要比對是不是自己，避免移掉重新 subscribe 後開的新 reader）
+                if self._readers.get(event_type) is asyncio.current_task():
+                    del self._readers[event_type]
+                return
             await self._conn.wait_up()
             try:
                 client = self._conn.client()
                 claimed = self._claimed.get(event_type)
                 if claimed:
                     entry_id, fields = claimed.popleft()
-                    await self._handle_entry(client, event_type, entry_id, fields, redelivered=True)
+                    if not await self._handle_entry(client, event_type, entry_id, fields, redelivered=True):
+                        backlog, cursor = True, "0"
                     continue
                 if backlog:
                     entries = _entries(await client.xreadgroup(group, consumer, {stream: cursor}, count=CLAIM_BATCH))
@@ -353,11 +358,15 @@ class MessageBus:
                         backlog = False
                     for entry_id, fields in entries:
                         cursor = entry_id
-                        await self._handle_entry(client, event_type, entry_id, fields, redelivered=True)
+                        if not await self._handle_entry(client, event_type, entry_id, fields, redelivered=True):
+                            backlog, cursor = True, "0"
+                            break
                     continue
                 response = await client.xreadgroup(group, consumer, {stream: ">"}, count=1, block=READ_BLOCK_MS)
                 for entry_id, fields in _entries(response):
-                    await self._handle_entry(client, event_type, entry_id, fields, redelivered=False)
+                    if not await self._handle_entry(client, event_type, entry_id, fields, redelivered=False):
+                        backlog, cursor = True, "0"
+                        break
             except BusUnavailable:
                 continue
             except CONNECTION_ERRORS as exc:
@@ -398,9 +407,13 @@ class MessageBus:
         fields: dict[str, str] | None,
         *,
         redelivered: bool,
-    ) -> None:
+    ) -> bool:
+        """處理一筆事件。回傳 False 表示讀到時已沒有 handler（取消訂閱），事件沒處理也沒 ack，呼叫端要把 backlog 重置，
+        之後重新 subscribe 時才讀得回來。"""
         if self._stopping:
-            return  # close() 之後取到的事件不處理也不 ack，留在待確認清單，下次啟動時重送
+            return True  # close() 之後取到的事件不處理也不 ack，留在待確認清單，下次啟動時重送
+        if event_type not in self._subs:
+            return False
         self._handling += 1
         self._idle.clear()
         try:
@@ -415,12 +428,13 @@ class MessageBus:
                 event = None
             if sub is not None and event is not None:
                 if not await self._dispatch(sub, event, Delivery(redelivered=redelivered)):
-                    return  # handler 沒有機會處理完（loop 已關閉或被取消），不 ack，留在待確認清單，下次啟動時重送
+                    return True  # handler 沒有機會處理完（loop 已關閉或被取消），不 ack，留在待確認清單，下次啟動時重送
             await client.xack(self._stream_key(event_type), self._service, entry_id)
         finally:
             self._handling -= 1
             if self._handling == 0:
                 self._idle.set()
+        return True
 
     @staticmethod
     def _decode(sub: _Subscription, event_type: str, entry_id: str, fields: dict[str, str] | None) -> BusEvent | None:

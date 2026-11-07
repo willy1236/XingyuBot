@@ -437,6 +437,52 @@ def test_unsubscribe_stops_reading_and_keeps_events_for_later(make_bus, handler_
     assert wait_until(lambda: second.ns == [2])
 
 
+def test_reload_order_with_event_in_flight_processes_it_once(make_bus, handler_loop, raw, prefix):
+    """py-cord 的 /reload：先 unsubscribe 舊 handler 再 subscribe 新的，且舊 handler 正在處理事件。
+    進行中的事件由舊 handler 跑完並 ack，只處理一次；之後的事件交給新 handler。"""
+    sender, receiver = make_bus(), make_bus()
+    release = threading.Event()
+    old, new = Recorder(block=release), Recorder()
+    receiver.subscribe(Ping, old, handler_loop)
+    receiver.start(SERVICE, "c1")
+    sender.publish(Ping(occurred_at=now(), n=1))
+    assert old.started.wait(5)
+
+    receiver.unsubscribe(Ping, old)
+    receiver.subscribe(Ping, new, handler_loop)
+    time.sleep(0.5)
+    release.set()
+    assert wait_until(lambda: pending_count(raw, prefix, Ping) == 0)
+
+    sender.publish(Ping(occurred_at=now(), n=2))
+    assert wait_until(lambda: new.ns == [2])
+    time.sleep(0.5)
+    assert old.ns == [1]
+    assert new.ns == [2]
+
+
+def test_unsubscribe_while_event_in_flight_acks_it_and_keeps_later_ones(make_bus, handler_loop, raw, prefix):
+    sender, receiver = make_bus(), make_bus()
+    release = threading.Event()
+    first = Recorder(block=release)
+    receiver.subscribe(Ping, first, handler_loop)
+    receiver.start(SERVICE, "c1")
+    sender.publish(Ping(occurred_at=now(), n=1))
+    assert first.started.wait(5)
+
+    receiver.unsubscribe(Ping, first)
+    sender.publish(Ping(occurred_at=now(), n=2))
+    release.set()
+    assert wait_until(lambda: pending_count(raw, prefix, Ping) == 0)
+    time.sleep(1)
+    assert first.ns == [1]
+
+    second = Recorder()
+    receiver.subscribe(Ping, second, handler_loop)
+    assert wait_until(lambda: second.ns == [2])
+    assert wait_until(lambda: pending_count(raw, prefix, Ping) == 0)
+
+
 def test_unsubscribe_with_replaced_handler_does_nothing(make_bus, handler_loop):
     """/reload 時新 Cog 已取代舊 handler，舊 Cog 的 unsubscribe 不能把新的拿掉。"""
     sender, receiver = make_bus(), make_bus()
