@@ -336,6 +336,60 @@ def test_killed_during_handler_is_redelivered(make_bus, handler_loop, raw, prefi
     assert wait_until(lambda: pending_count(raw, prefix, Ping) == 0)
 
 
+def test_handler_loop_closed_leaves_event_pending_and_redelivers(make_bus, raw, prefix):
+    """handler 的 loop 已關閉（例如收到信號、py-cord 已關掉 loop）：事件不 ack，下次啟動重送。"""
+    sender, first = make_bus(), make_bus()
+    dead = LoopThread()
+    dead.stop()
+    dead.loop.close()
+    first.subscribe(Ping, Recorder(), dead.loop)
+    first.start(SERVICE, "c1")
+    sender.publish(Ping(occurred_at=now(), n=1))
+    assert wait_until(lambda: pending_count(raw, prefix, Ping) == 1)
+    time.sleep(0.5)  # 之後也不會被 ack
+    assert pending_count(raw, prefix, Ping) == 1
+    first.close(timeout=1)
+
+    live = LoopThread()
+    try:
+        restarted = make_bus()
+        rec = Recorder()
+        restarted.subscribe(Ping, rec, live.loop)
+        restarted.start(SERVICE, "c1")
+        assert wait_until(lambda: rec.received)
+        assert rec.received[0][1] == Delivery(redelivered=True)
+        assert wait_until(lambda: pending_count(raw, prefix, Ping) == 0)
+    finally:
+        live.stop()
+
+
+def test_handler_cancelled_on_its_loop_leaves_event_pending_and_redelivers(make_bus, handler_loop, raw, prefix):
+    """handler 執行到一半被它自己的 loop 取消（例如收到信號時 py-cord 取消所有 task）：事件不 ack，下次啟動重送。"""
+    sender, first = make_bus(), make_bus()
+    stuck = Recorder(block=threading.Event())
+    first.subscribe(Ping, stuck, handler_loop)
+    first.start(SERVICE, "c1")
+    sender.publish(Ping(occurred_at=now(), n=1))
+    assert stuck.started.wait(5)
+
+    def cancel_all() -> None:
+        for task in asyncio.all_tasks(handler_loop):
+            task.cancel()
+
+    handler_loop.call_soon_threadsafe(cancel_all)
+    time.sleep(1)
+    assert pending_count(raw, prefix, Ping) == 1
+    first.close(timeout=1)
+
+    restarted = make_bus()
+    rec = Recorder()
+    restarted.subscribe(Ping, rec, handler_loop)
+    restarted.start(SERVICE, "c1")
+    assert wait_until(lambda: rec.received)
+    assert rec.received[0][1] == Delivery(redelivered=True)
+    assert wait_until(lambda: pending_count(raw, prefix, Ping) == 0)
+
+
 def test_handler_exception_is_reported_and_acked(make_bus, handler_loop, raw, prefix, sentry):
     sender, receiver = make_bus(), make_bus()
     rec = Recorder(fail=True)

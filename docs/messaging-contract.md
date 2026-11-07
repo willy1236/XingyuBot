@@ -68,13 +68,13 @@ sequenceDiagram
         C->>R: XREADGROUP COUNT 1 BLOCK ... STREAMS <stream> >
         R-->>C: 新事件
         C->>C: 檢查格式與時效、執行 handler
-        C->>R: XACK（handler 成功或失敗都 ack）
+        C->>R: XACK（handler 成功或拋例外都 ack；handler 的 loop 已關閉或被取消則不 ack）
     end
 ```
 
-- handler 回傳或拋例外都會 ack。只有 process 在 handler 執行中結束才會重送：同一個 consumer 重啟後先讀回自己沒 ack 的事件，標成重送。
+- handler 回傳或拋例外都會 ack。handler 的 event loop 已關閉，或 handler 執行到一半被取消（例如收到信號時 loop 上的 task 被全部取消），不 ack，事件留在待確認清單。process 在 handler 執行中結束同樣不 ack。這些事件在同一個 consumer 重啟後先被讀回，標成重送。
 - 同服務其他 consumer 留下的事件，閒置超過 120 秒就被收回：`XPENDING <stream> <group> IDLE 120000 - + 100` 列出後，略過自己的，其餘 `XCLAIM` 到自己並標成重送；沒回傳內容的（已被修剪）直接 `XACK`。不用 `XAUTOCLAIM`，因為它無法排除自己正在處理的事件。handler 正常執行時間要小於 120 秒。
-- 每條 stream 一次只取一筆，處理完、ack 後才讀下一筆，所以當機時待確認清單裡最多只有正在處理的那一筆。
+- 每條 stream 一次只取一筆，處理完、ack 後才讀下一筆，所以當機時待確認清單裡只有正在處理的那一筆；handler 的 loop 已關閉時，之後讀到的事件也會留在待確認清單，等下次啟動一起重送。
 - 寧可重複不要漏：同一事件可能被處理兩次，接收端要能承受。不保證跨事件的順序。
 
 ### Redis 連不上時

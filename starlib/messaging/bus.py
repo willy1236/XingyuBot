@@ -391,7 +391,8 @@ class MessageBus:
                 log.error("%s 事件 %s 解析時發生未預期的錯誤，略過", event_type, entry_id, exc_info=exc)
                 event = None
             if sub is not None and event is not None:
-                await self._dispatch(sub, event, Delivery(redelivered=redelivered))
+                if not await self._dispatch(sub, event, Delivery(redelivered=redelivered)):
+                    return  # handler 沒有機會處理完（loop 已關閉或被取消），不 ack，留在待確認清單，下次啟動時重送
             await client.xack(self._stream_key(event_type), self._service, entry_id)
         finally:
             self._handling -= 1
@@ -425,25 +426,31 @@ class MessageBus:
         return event
 
     @staticmethod
-    async def _dispatch(sub: _Subscription, event: BusEvent, delivery: Delivery) -> None:
+    async def _dispatch(sub: _Subscription, event: BusEvent, delivery: Delivery) -> bool:
+        """交給 handler 執行。回傳 False 表示 handler 沒有機會處理完（它的 loop 已關閉或被取消），事件不該 ack。
+
+        handler 自己拋例外算處理過了：記 log、回報 Sentry，照樣回傳 True。
+        """
         try:
             coro = sub.handler(event, delivery)
             try:
                 future = asyncio.run_coroutine_threadsafe(coro, sub.loop)
             except RuntimeError as exc:
                 coro.close()
-                log.warning("%s 的 handler loop 已關閉，略過：%s", event.event_type, exc)
-                return
+                log.warning("%s 的 handler loop 已關閉，事件留待重送：%s", event.event_type, exc)
+                return False
             await asyncio.wrap_future(future)
         except asyncio.CancelledError as exc:
             current = asyncio.current_task()
             if current is not None and current.cancelling():
                 raise
-            # handler 在它自己的 loop 上被取消（例如那個 loop 正在關閉），當成 handler 失敗
-            log.warning("%s 事件的 handler 被取消：%r", event.event_type, exc)
+            # handler 在它自己的 loop 上被取消（例如收到信號，那個 loop 正在關閉）：處理到哪裡不明，留待重送
+            log.warning("%s 事件的 handler 被取消，事件留待重送：%r", event.event_type, exc)
+            return False
         except Exception as exc:
             capture_exception_safe(exc, tags={**SENTRY_TAGS, "event_type": event.event_type})
             log.error("處理 %s 事件時發生錯誤", event.event_type, exc_info=exc)
+        return True
 
     async def _shutdown(self, timeout: float) -> None:
         current = asyncio.current_task()
