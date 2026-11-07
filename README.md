@@ -61,7 +61,8 @@
 
 ```plaintext
 XingyuBot/
-├── main.py                      # 程式進入點，啟動各服務
+├── main.py                      # Discord bot 進入點（含 web、排程）
+├── twitch_main.py               # Twitch bot 進入點（獨立 process）
 ├── pyproject.toml               # 專案設定與依賴管理
 ├── starDiscord/                 # Discord Bot 模組
 │   ├── bot.py                   # Bot 主類別（基於 Py-cord）
@@ -82,6 +83,7 @@ XingyuBot/
 │   │   ├── general/             #   通用 API（天氣、Google Cloud、Notion 等）
 │   │   └── web.py               #   HTTP 請求工具
 │   ├── fileDatabase/            # 檔案資料庫（JSON、CSV）
+│   ├── messaging/               # 跨 process 通訊（Redis：事件、請求／回應、快取失效）
 │   ├── oauth/                   # OAuth 認證模組（Discord、Twitch、Google）
 │   ├── utils/                   # 工具函式與日誌系統
 │   ├── exceptions.py            # 自訂例外
@@ -120,25 +122,34 @@ XingyuBot/
 
 - Python ~3.13.0
 - PostgreSQL
+- Redis 7.0 以上：Discord bot 與 Twitch bot 之間的跨 process 通訊，設定見 `.env` 的 `REDIS_URL`。沒開 Redis 兩個 bot 仍會啟動，但 Twitch 事件送不到 Discord
 - FFmpeg（音樂功能需要）
 
 ## 安裝與執行
+
+Discord bot 與 Twitch bot 是兩個獨立的 process，需要哪個就啟動哪個：
 
 ```bash
 # 安裝依賴
 uv sync
 
-# 啟動機器人
-uv run main.py
+# 啟動 Discord bot（含 web 與排程）
+uv run python -m main
+
+# 啟動 Twitch bot
+uv run python -m twitch_main
 ```
 
 或使用提供的腳本：
 
 ```bash
-scripts/run_main.bat
+scripts/run_main.bat     # Discord bot
+scripts/run_twitch.bat   # Twitch bot
 ```
 
-這個啟動腳本會先執行 [scripts/run_update.bat](scripts/run_update.bat) 走 git 同步流程，再執行 `uv sync`；若更新失敗會直接中止，不會繼續啟動主程式。
+[scripts/run_main.bat](scripts/run_main.bat) 會先執行 [scripts/run_update.bat](scripts/run_update.bat) 走 git 同步流程，再執行 `uv sync`；若更新失敗會直接中止，不會繼續啟動主程式。[scripts/run_twitch.bat](scripts/run_twitch.bat) 只做 `uv sync`，git 更新交給 `run_main.bat`。正式機用對應的 `.sh` 版本，由 systemd 呼叫，部署方式見 [docs/deploy-twitch-split.md](docs/deploy-twitch-split.md)。
+
+跨 process 訊息的格式見 [docs/messaging-contract.md](docs/messaging-contract.md)。
 
 ## 設定
 

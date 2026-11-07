@@ -1,6 +1,5 @@
 from datetime import datetime
 
-import discord
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -15,13 +14,3 @@ class BaseEvent(BaseModel):
     source: str = "system"
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
-
-
-class TwitchStreamEvent(BaseEvent):
-    """
-    Twitch 直播事件，包含直播開始、結束、訂閱等相關事件。
-    """
-
-    content: str | None = None
-    to_discord_channel: int = 566533708371329026
-    embed: discord.Embed | None = None

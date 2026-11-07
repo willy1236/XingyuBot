@@ -9,8 +9,6 @@ import discord
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from starlib import BotEmbed, sqldb
-from starlib.messaging import get_bus
-from starlib.utils import nowtz
 from starlib.database import APIType, NotifyChannelType, NotifyCommunityType
 from starlib.instance import (
     debug_guilds,
@@ -34,7 +32,8 @@ from starlib.instance import (
 from starlib.instance import (
     report_channel as report_channel_id,
 )
-from starlib.pubsub.model import TwitchStreamEvent
+from starlib.messaging import get_bus
+from starlib.utils import nowtz
 
 log = logging.getLogger(__name__)
 
@@ -258,13 +257,6 @@ class DiscordBot(discord.Bot):
             self, description="你好~我是星羽，你可以輸入 </help:1067700245015834638> 來查看所有指令的用法\n\n希望我能在discord上幫助到你喔~\n有任何建議、需求、協助與合作可以使用 </feedback:1067700244848058386> 指令\n\n支援伺服器：https://discord.gg/P4jqdcMxkH")
         embed.set_footer(text="此機器人由 威立 負責維護")
         return embed
-
-    async def on_twitch_stream_event(self, event: TwitchStreamEvent):
-        if not event.content and not event.embed:
-            raise ValueError("Content and embed must provided at least one.")
-        channel = self.get_channel(event.to_discord_channel)
-        if channel:
-            await channel.send(content=event.content, embed=event.embed)
 
 # commands.Bot
 # shard_count=1,
