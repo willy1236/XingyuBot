@@ -341,7 +341,8 @@ flowchart TD
 - 使用者裁決：開台事件帶整個 `TwitchStream` 欄位加 `profile_image_url`，Discord 端一行重建並共用 `live.embed()`；Twitch 端 handler 不寫自動化測試，以 grep 與人工驗收
 - 已完成：`events/twitch_stream.py`（含 `events/__init__.py` 匯入）、`starDiscord/cmds/twitch_live_notify.py` Cog 與 handler 測試
 - 已完成：`task.twitch_live` 改用搶佔與清除，含單元測試
-- 續做：`twitch_chatbot.py` 開台、下播 handler、契約文件兩段
+- 已完成：`twitch_chatbot.py` 開台、下播 handler 改發事件（頭像查詢失敗時 `profile_image_url` 為 None），契約文件兩段
+- 續做：merge `feat/twitch-process-split` 最新 tip、跑涵蓋測試、交審查；驗收條件打勾與人工驗證（Twitch 端 handler、聊天室訊息、真實開台）留給主 agent
 
 ### T-05 Twitch bot 斷線放棄或 crash 時自動重啟，停止時乾淨收尾
 
