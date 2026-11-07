@@ -1395,6 +1395,30 @@ class CacheRepository(BaseRepository):
         self.session.commit()
         return claimed
 
+    def claim_twitch_live(self, community_id: str, started_at: datetime) -> bool:
+        """原子地搶佔 Twitch 開台通知：沒有紀錄、紀錄為空值、或紀錄的開台時間比 started_at 舊時才算搶到。
+        與 claim_community_cache 不同，空值算搶到（YouTube 的搶佔維持不變）。"""
+        stmt = pg_insert(CommunityCache).values(notify_type=NotifyCommunityType.TwitchLive, community_id=community_id, value=started_at)
+        stmt = stmt.on_conflict_do_update(
+            index_elements=[CommunityCache.notify_type, CommunityCache.community_id],
+            set_={"value": stmt.excluded.value},
+            where=or_(CommunityCache.value.is_(None), CommunityCache.value < stmt.excluded.value),
+        ).returning(CommunityCache.community_id)
+        claimed = self.session.execute(stmt).first() is not None
+        self.session.commit()
+        return claimed
+
+    def clear_twitch_live(self, community_id: str, offline_at: datetime) -> None:
+        """清除 Twitch 開台紀錄，只在紀錄的開台時間早於 offline_at（或為空值）時才清，避免清掉較晚的新開台。"""
+        self.session.exec(
+            delete(CommunityCache).where(
+                CommunityCache.notify_type == NotifyCommunityType.TwitchLive,
+                CommunityCache.community_id == community_id,
+                or_(CommunityCache.value.is_(None), CommunityCache.value < offline_at),
+            )
+        )
+        self.session.commit()
+
     def add_community_cache(self, type: NotifyCommunityType, community_id: str, value: datetime | None):
         """新增社群快取"""
         cache = CommunityCache(community_id=community_id, notify_type=type, value=value)
