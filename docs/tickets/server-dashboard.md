@@ -186,7 +186,7 @@
 
 **進度**：後端完成（分支 `feat/server-dashboard-backend`，測試 `uv run pytest test/test_dashboard_auth.py`）；前端與 shark-ansible 部署未做。
 - 開工時實測「Discord 發新 token 舊 token 會不會失效」：未做，需要真實 Discord 憑證，留待有憑證的人測。結果出來要記在這裡。
-- 實作時的取捨：登入換 token 失敗回 400 純文字頁；登出時 Discord 撤銷失敗不擋登出，本地 session 與 token 仍刪除；`client.py` 新增公開的 `release_session()` 給 `run_db` 用。
+- 實作時的取捨：登入換 token 失敗回 400 純文字頁；登出時 Discord 撤銷失敗不擋登出，本地 session 與 token 仍刪除，所以授權會殘留到 token 自然到期，本地已無 token 可重試；`client.py` 新增公開的 `release_session()` 給 `run_db` 用。
 
 ### T-02 管理員能看到可管理的伺服器清單
 
