@@ -192,6 +192,16 @@ class TestSettings:
         with pytest.raises(ValueError, match="DASHBOARD_FRONTEND_URL"):
             AppSettings(**self.BASE, API_WEBSITE=True, _env_file=None)
 
+    def test_trailing_slash_is_stripped(self):
+        s = AppSettings(
+            **self.BASE,
+            DASHBOARD_FRONTEND_URL="https://domalyze.net/",
+            DASHBOARD_ALLOWED_ORIGINS=["https://domalyze.net/", "https://www.domalyze.net"],
+            _env_file=None,
+        )
+        assert s.DASHBOARD_FRONTEND_URL == "https://domalyze.net"
+        assert s.DASHBOARD_ALLOWED_ORIGINS == ["https://domalyze.net", "https://www.domalyze.net"]
+
     def test_ok_with_website(self):
         s = AppSettings(
             **self.BASE,

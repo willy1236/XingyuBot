@@ -73,6 +73,17 @@ class AppSettings(BaseSettings):
                 raise ValueError(f"PRIVILEGE_ROLES 的等級不合法：{role!r} -> {level!r}")
         return value
 
+    @field_validator("DASHBOARD_FRONTEND_URL")
+    @classmethod
+    def _strip_frontend_url_slash(cls, value: str | None) -> str | None:
+        return value.rstrip("/") if value else value
+
+    @field_validator("DASHBOARD_ALLOWED_ORIGINS")
+    @classmethod
+    def _strip_origins_slash(cls, value: list[str]) -> list[str]:
+        # Origin header 不帶尾斜線，設定寫了尾斜線會讓 CORS 與 CSRF 比對全部失敗
+        return [origin.rstrip("/") for origin in value]
+
     @model_validator(mode="after")
     def _require_dashboard_settings(self) -> AppSettings:
         if self.API_WEBSITE:
