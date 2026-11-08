@@ -162,6 +162,9 @@ async def _handle_login(request: Request, cookie: OAuthCookie) -> Response:
         log.exception("Dashboard login failed: %s", exc)
         return HTMLResponse("授權失敗，請重新開始登入", 400)
 
+    from .guilds import invalidate  # guilds 匯入 auth，延後匯入避免循環
+
+    invalidate(user.id)
     name = user.global_name or user.username
     old_session_id = request.cookies.get(SESSION_COOKIE)
     session_id = await run_db(lambda: create_session(user.id, name, user.avatar, old_session_id))
@@ -216,6 +219,9 @@ async def logout(request: Request, info: SessionInfo = Depends(require_session))
             capture_exception_safe(exc, tags={"service": "website", "source": "dashboard_logout_revoke"})
             log.warning("Dashboard logout: revoke failed for %s: %s", info.discord_user_id, exc)
     await run_db(lambda: delete_user_sessions(info.discord_user_id))
+    from .guilds import invalidate  # guilds 匯入 auth，延後匯入避免循環
+
+    invalidate(info.discord_user_id)
 
     request.state.dashboard_renew_session = None
     response = JSONResponse({"ok": True})
