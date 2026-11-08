@@ -718,7 +718,7 @@ class McServerSelect(discord.ui.Select):
             discord.SelectOption(label=server.name if server.name else f"伺服器 {server.server_id}", value=server.server_id)
             for server in servers
         ]
-        super().__init__(placeholder="選擇伺服器", min_values=1, max_values=1, options=options)
+        super().__init__(placeholder="選擇伺服器", min_values=1, max_values=1, options=options, row=2)
 
     async def callback(self, interaction: discord.Interaction):
         view: McServerPanel = self.view
@@ -734,7 +734,7 @@ class McServerPanel(discord.ui.View):
         super().__init__(timeout=600)
         self.server_id: str | None = None
         self.add_item(McServerSelect(mcsm_api.get_servers()))
-        self.update_button = discord.ui.Button(label="更新伺服器", style=discord.ButtonStyle.success, disabled=True)
+        self.update_button = discord.ui.Button(label="更新伺服器", style=discord.ButtonStyle.success, disabled=True, row=1)
         self.update_button.callback = self.update_button_callback
 
     def _sync_update_button(self, server: McsmInstance | None):
