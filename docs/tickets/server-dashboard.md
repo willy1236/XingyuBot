@@ -61,7 +61,7 @@
 | 4 | T-04 | 完成 | [共用] 通知編輯：選項、衝突比對、表單暫存 | T-03 | A | T-06、T-07 依賴 |
 | 5 | T-05 | 完成 | [共用] 通知範例內容：預覽與測試共用 | T-03 | A | T-06、T-07、T-08 依賴 |
 | 6 | T-09 | 完成 | 管理員能從清單邀請 bot 並回到後台 | T-02 | A | 依賴只到 T-02，可以提早與 T-03 並行 |
-| 7 | T-06 | 未完成 | 管理員能新增、修改、刪除頻道通知 | T-04、T-05 | B | |
+| 7 | T-06 | 進行中 | 管理員能新增、修改、刪除頻道通知 | T-04、T-05 | B | |
 | 8 | T-07 | 未完成 | 管理員能新增、修改、刪除社群推播 | T-04、T-05 | B | |
 | 9 | T-08 | 未完成 | 管理員能發送測試通知 | T-06、T-07 | — | |
 
@@ -455,7 +455,9 @@
 
 **風險 / 實作注意**：條件式寫入的 `original` 只含該種類用得到的欄位，沒打勾的欄位不放進 WHERE，否則用指令設的值會讓比對永遠失敗。
 
-**進度**：未完成
+**進度**：進行中
+- 後端已完成（`channel_notifies.py`、`client.py` 的 `insert_notify_channel`／`update_notify_channel_if`／`delete_notify_channel_if`／`get_notify_channel_fresh`、`test/test_dashboard_channel_notifies.py`）。
+- 續做：domalyze_frontend 的 `channel-notify-section.tsx` 新增按鈕、編輯表單、刪除確認，接 `registerDraft`／`consumeDraft`、`ConflictNotice`、`NotifyPreview`。
 
 ### T-07 管理員能新增、修改、刪除社群推播
 

@@ -477,6 +477,64 @@ class NotifyRepository(BaseRepository):
         if DBCacheType.from_notify_channel(notify_type) == DBCacheType.VoiceLog:
             self.cache.voice_log.delete(guild_id)
 
+    def insert_notify_channel(self, guild_id: int, notify_type: NotifyChannelType, channel_id: int, role_id: int | None = None, message: str | None = None):
+        """後台用：只新增不覆蓋的 add_notify_channel。
+
+        Raises:
+            DataExistError: 這個伺服器已設定過這個種類。
+        """
+        self.session.add(NotifyChannel(guild_id=guild_id, notify_type=notify_type, channel_id=channel_id, role_id=role_id, message=message))
+        try:
+            self.session.commit()
+        except IntegrityError as e:
+            self.session.rollback()
+            raise DataExistError(original=e) from e
+
+        if DBCacheType.from_notify_channel(notify_type) == DBCacheType.VoiceLog:
+            self.cache.voice_log.set(guild_id, (channel_id, role_id))
+
+    @staticmethod
+    def _notify_channel_match(guild_id: int, notify_type: NotifyChannelType, original: dict[str, int | str | None]):
+        """條件式寫入的 WHERE：主鍵加上 original 有的欄位，NULL 也能比對。"""
+        conditions = [NotifyChannel.guild_id == guild_id, NotifyChannel.notify_type == notify_type]
+        for field, value in original.items():
+            conditions.append(getattr(NotifyChannel, field).is_not_distinct_from(value))
+        return conditions
+
+    def update_notify_channel_if(self, guild_id: int, notify_type: NotifyChannelType, original: dict[str, int | str | None], values: dict[str, int | str | None]) -> int:
+        """後台用：資料庫目前的值等於 original 才更新 values 裡的欄位（比對與寫入在同一條 SQL），回傳影響的列數，0 表示已被改過或刪除。
+
+        original、values 的鍵是 channel_id、role_id、message 中該種類用得到的欄位，沒列出的欄位不比對也不動。
+        """
+        stmt = update(NotifyChannel).where(*self._notify_channel_match(guild_id, notify_type, original)).values(**values)
+        count = self.session.exec(stmt).rowcount
+        self.session.commit()
+
+        if count and DBCacheType.from_notify_channel(notify_type) == DBCacheType.VoiceLog:
+            row = self.get_notify_channel_fresh(guild_id, notify_type)
+            if row is not None:
+                self.cache.voice_log.set(guild_id, (row.channel_id, row.role_id))
+        return count
+
+    def delete_notify_channel_if(self, guild_id: int, notify_type: NotifyChannelType, original: dict[str, int | str | None]) -> int:
+        """後台用：資料庫目前的值等於 original 才刪除，回傳影響的列數，0 表示已被改過或刪除。"""
+        stmt = delete(NotifyChannel).where(*self._notify_channel_match(guild_id, notify_type, original))
+        count = self.session.exec(stmt).rowcount
+        self.session.commit()
+
+        if count and DBCacheType.from_notify_channel(notify_type) == DBCacheType.VoiceLog:
+            self.cache.voice_log.delete(guild_id)
+        return count
+
+    def get_notify_channel_fresh(self, guild_id: int, notify_type: NotifyChannelType):
+        """後台用：get_notify_channel 加 populate_existing，讀得到其他 thread 剛寫入的值。"""
+        statement = (
+            select(NotifyChannel)
+            .where(NotifyChannel.guild_id == guild_id, NotifyChannel.notify_type == notify_type)
+            .execution_options(populate_existing=True)
+        )
+        return self.session.exec(statement).one_or_none()
+
     def get_notify_channel(self, guild_id: int, notify_type: NotifyChannelType):
         """取得自動通知頻道"""
         statement = select(NotifyChannel).where(NotifyChannel.guild_id == guild_id, NotifyChannel.notify_type == notify_type)
