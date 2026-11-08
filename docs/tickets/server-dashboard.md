@@ -55,7 +55,7 @@
 
 | # | 卡號 | 進度 | 標題 | 依賴 | 並行組 | 備註 |
 |---|---|---|---|---|---|---|
-| 1 | T-01 | 後端完成，前端與部署未做 | 管理員能用 Discord 登入、登出後台 | 無 | — | 骨架切片，含地基：路由、CORS、session、OAuth 分流、錯誤格式與 fetch wrapper |
+| 1 | T-01 | 部分完成 | 管理員能用 Discord 登入、登出後台 | 無 | — | 骨架切片，含地基：路由、CORS、session、OAuth 分流、錯誤格式與 fetch wrapper |
 | 2 | T-02 | 未完成 | 管理員能看到可管理的伺服器清單 | T-01 | — | |
 | 3 | T-03 | 未完成 | 管理員能看到伺服器的通知一覽 | T-02 | — | 含存取檢查與有效性判斷，T-04～T-09 共用 |
 | 4 | T-04 | 未完成 | [共用] 通知編輯：選項、衝突比對、表單暫存 | T-03 | A | T-06、T-07 依賴 |
@@ -95,15 +95,15 @@
 **驗收條件**
 - [ ] 官網 header 有「管理後台」入口，360px 寬也看得到。未登入點下去導向 Discord 授權，完成後進入後台，看到自己的 Discord 頭像與名稱。
 - [ ] 未登入時直接打開 `/dashboard/guilds/<任意 id>`，完成 Discord 授權後回到該網址的佔位頁。
-- [ ] 在 Discord 授權頁按取消，回到官網首頁。
-- [ ] 登出後回到網站需要重新登入，保存的 Discord 授權已向 Discord 撤銷。
-- [ ] 在兩台裝置登入，於其中一台登出後，另一台也需要重新登入。
-- [ ] 登入超過 30 天、但中間持續有使用，不需要重新登入；最後一次使用超過 30 天後需要重新登入。
-- [ ] 登出後改用另一個 Discord 帳號登入，後台顯示的是新帳號。
-- [ ] 沒設自訂頭像、也沒設顯示名稱的 Discord 帳號能登入，header 顯示 Discord 預設頭像與 username。
-- [ ] `/to/discordauth` 已不存在。
+- [x] 在 Discord 授權頁按取消，回到官網首頁。
+- [x] 登出後回到網站需要重新登入，保存的 Discord 授權已向 Discord 撤銷。
+- [x] 在兩台裝置登入，於其中一台登出後，另一台也需要重新登入。
+- [x] 登入超過 30 天、但中間持續有使用，不需要重新登入；最後一次使用超過 30 天後需要重新登入。
+- [x] 登出後改用另一個 Discord 帳號登入，後台顯示的是新帳號。
+- [x] 沒設自訂頭像、也沒設顯示名稱的 Discord 帳號能登入，header 顯示 Discord 預設頭像與 username。
+- [x] `/to/discordauth` 已不存在。
 - [ ] 在 `www.domalyze.net` 與 `domalyze.net` 都能登入並使用後台。
-- [ ] 用官網首頁的邀請按鈕邀請 bot 之後，後台仍維持登入，`OAuthToken` 裡後台的 token 沒有被覆寫。
+- [x] 用官網首頁的邀請按鈕邀請 bot 之後，後台仍維持登入，`OAuthToken` 裡後台的 token 沒有被覆寫。
 
 **實作設計**
 - 資料：
@@ -184,8 +184,16 @@
 - 沒有 `dashboard_oauth` 時，`/oauth/discord` 帶 `guild_id` 的行為保持不變；T-09 會再擴充這個分支。
 - 開工時實測：Discord 對同一使用者發新 token 時，舊 token 會不會失效。會失效的話，用官網首頁邀請 bot 後，使用者下次操作後台會看到「需要重新授權」，這是〈決策紀錄〉第 3 題接受的代價；實測結果記在卡上。
 
-**進度**：後端完成（分支 `feat/server-dashboard-backend`，測試 `uv run pytest test/test_dashboard_auth.py`）；前端與 shark-ansible 部署未做。
-- 開工時實測「Discord 發新 token 舊 token 會不會失效」：未做，需要真實 Discord 憑證，留待有憑證的人測。結果出來要記在這裡。
+**進度**：部分完成（2026-11-08）
+- commit：XingyuBot `305f535`、domalyze_frontend `52c3aac`、shark-ansible `acc216c`，都已合併進各 repo 本機 main。
+- 未驗：
+  - 需真實 Discord 的項目：完整授權流程（含第 1、2 條驗收的授權完成後回到後台）、Discord 新 token 是否讓舊 token 失效的實測（結果出來要記在這裡）。
+  - 需部署後才能驗：在 `www.domalyze.net` 與 `domalyze.net` 實際登入（本機只驗過兩個 origin 的 CORS 與 CSRF）。
+- 未完成的部署工作：
+  - domalyze-frontend 的主機 `web.env` 與 GitHub Secret `PROJECT_ENV_FILE`：`NEXT_PUBLIC_BASE_API_URL=https://api.domalyze.net`、移除 `JWT_SECRET`。
+  - shark-ansible 部署（含 `routes.yml` 的 `/dashboard/`）。
+  - xingyubot 正式環境 env 的 `DASHBOARD_FRONTEND_URL`、`DASHBOARD_ALLOWED_ORIGINS`。
+  - 以上完成後做真實整合驗證。
 - 實作時的取捨：登入換 token 失敗回 400 純文字頁；登出時 Discord 撤銷失敗不擋登出，本地 session 與 token 仍刪除，所以授權會殘留到 token 自然到期，本地已無 token 可重試；`client.py` 新增公開的 `release_session()` 給 `run_db` 用。
 
 ### T-02 管理員能看到可管理的伺服器清單
