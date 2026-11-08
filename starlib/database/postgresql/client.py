@@ -501,6 +501,26 @@ class NotifyRepository(BaseRepository):
         result = self.session.exec(statement).all()
         return result
 
+    def get_dashboard_notifies(self, guild_id: int):
+        """後台一覽用：伺服器的所有頻道通知，以及社群推播（附帳號名稱，缺 Community 的孤兒列也列出，名稱為 None）。
+
+        加 populate_existing，讀得到指令在其他 thread 剛寫入的值。
+        """
+        channels = self.session.exec(
+            select(NotifyChannel).where(NotifyChannel.guild_id == guild_id).execution_options(populate_existing=True)
+        ).all()
+        communities = self.session.exec(
+            select(NotifyCommunity, Community)
+            .join(
+                Community,
+                and_(NotifyCommunity.community_id == Community.id, NotifyCommunity.community_type == Community.type),
+                isouter=True,
+            )
+            .where(NotifyCommunity.guild_id == guild_id)
+            .execution_options(populate_existing=True)
+        ).all()
+        return channels, communities
+
     # * notify community
     def add_notify_community(
         self,
