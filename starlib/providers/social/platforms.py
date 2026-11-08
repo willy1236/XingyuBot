@@ -100,6 +100,8 @@ class TwitchAPI(APICaller):
         """
         params = {"login": username, "first": 1}
         r = self.get("users", params=params)
+        if r is None:
+            return None
         apidata = r.json()
         if apidata.get("data"):
             return TwitchUser(**apidata["data"][0])
@@ -123,6 +125,8 @@ class TwitchAPI(APICaller):
         """
         params = {"id": userid, "first": 1}
         r = self.get("users", params=params)
+        if r is None:
+            return None
         apidata = r.json()
         if apidata.get("data"):
             return TwitchUser(**apidata["data"][0])
@@ -210,7 +214,10 @@ class GoogleAPI(APICaller):
         兩者擇一提供即可
         """
         params = {"id": channel_id, "forHandle": handle, "part": "statistics,snippet", "maxResults": 1}
-        data = self.get("channels", params=params).json()
+        r = self.get("channels", params=params)
+        if r is None:
+            return None
+        data = r.json()
         return YoutubeChannel(**data.get("items")[0]) if data.get("items") else None
 
     def get_channelsection(self, channel_id: str):
@@ -598,7 +605,12 @@ class CLIInterface:
             results.list = [i for i in results.list if i.tweetBy.id == user_id]
         return results
 
-    def get_user_details(self, user_id_or_name: str) -> RettiwtTweetUser | None:
+    def get_user_details(self, user_id_or_name: str, strict: bool = False) -> RettiwtTweetUser | None:
+        """取得 Twitter 使用者。
+
+        回 None 表示使用者不存在或格式不合法。rettiwt 的輸出無法解析時，預設也回 None（維持原行為）；
+        strict 為真時改拋 json.JSONDecodeError，讓呼叫端分辨「不存在」與「暫時無法查詢」。
+        """
         user_id_or_name = user_id_or_name.removeprefix("@")
         if not (_TWITTER_ID_RE.fullmatch(user_id_or_name) or _TWITTER_NAME_RE.fullmatch(user_id_or_name)):
             return None
@@ -607,6 +619,8 @@ class CLIInterface:
             data = json.loads(r.stdout)
         except json.JSONDecodeError:
             log.exception("get_user_details 解析JSON失敗", extra={"output": r.stdout})
+            if strict:
+                raise
             return None
 
         if not data or data.get("name") == "VALIDATION_ERROR":

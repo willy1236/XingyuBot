@@ -4,14 +4,26 @@ import discord
 from discord.commands import SlashCommandGroup
 from discord.ext import commands
 
-from starlib import BotEmbed, ChoiceList, Jsondb, sclient
-from starlib.database import APIType, Community, NotifyCommunityType, PlatformType
-from starlib.instance import cli_api, google_api, tw_api, yt_push
-from starlib.utils import nowtz
+from starlib import BotEmbed, ChoiceList, Jsondb, notify_settings, sclient
+from starlib.database import NotifyCommunityType, PlatformType
+from starlib.instance import cli_api, google_api, tw_api
+from starlib.notify_settings import LookupFailure
 
 from ..extension import Cog_Extension
 
 twitch_notify_option = ChoiceList.set("twitch_notify_option")
+
+LOOKUP_UNAVAILABLE = "目前無法向平台查詢，請稍後再試"
+
+
+async def resolve_account(platform: PlatformType, text: str, not_found: str) -> notify_settings.AccountInfo | str:
+    """查詢帳號；失敗時回傳要告訴使用者的錯誤訊息。查詢會阻塞數十秒，放到 thread 執行。"""
+    try:
+        return await asyncio.to_thread(notify_settings.resolve_account, platform, text)
+    except LookupFailure as e:
+        if e.reason == "platform_unavailable":
+            return LOOKUP_UNAVAILABLE
+        return not_found if e.reason == "not_found" else f"錯誤：格式不支援 {text}"
 
 
 class system_community(Cog_Extension):
@@ -37,22 +49,21 @@ class system_community(Cog_Extension):
         roleid = role.id if role else None
         type = NotifyCommunityType(notify_type)
 
-        twitch_user = tw_api.get_user(twitch_user_login)
-        if twitch_user:
-            sclient.sqldb.add_notify_community(type, twitch_user.id, guildid, channelid, roleid, msg, cache_time=nowtz())
-            sclient.sqldb.merge(Community(id=twitch_user.id, type=PlatformType.Twitch, display_name=twitch_user.display_name, username=twitch_user.login))
+        account = await resolve_account(PlatformType.Twitch, twitch_user_login, f"錯誤：找不到用戶 {twitch_user_login}")
+        if isinstance(account, str):
+            await ctx.respond(account)
+            return
 
-            type_tw = Jsondb.get_tw(type.value, "twitch_notify_option")
-            if role:
-                await ctx.respond(f"設定成功：{twitch_user.display_name}({twitch_user.login})的{type_tw}將會發送在{channel.mention}並會通知{role.mention}")
-            else:
-                await ctx.respond(f"設定成功：{twitch_user.display_name}({twitch_user.login})的{type_tw}將會發送在{channel.mention}")
+        await asyncio.to_thread(notify_settings.set_notify, account, type, guildid, channelid, roleid, msg)
 
-            if not channel.can_send():
-                await ctx.send(embed=BotEmbed.simple("溫馨提醒", f"我無法在{channel.mention}中發送訊息，請確認我有足夠的權限"))
-
+        type_tw = Jsondb.get_tw(type.value, "twitch_notify_option")
+        if role:
+            await ctx.respond(f"設定成功：{account.display_name}({account.username})的{type_tw}將會發送在{channel.mention}並會通知{role.mention}")
         else:
-            await ctx.respond(f"錯誤：找不到用戶 {twitch_user_login}")
+            await ctx.respond(f"設定成功：{account.display_name}({account.username})的{type_tw}將會發送在{channel.mention}")
+
+        if not channel.can_send():
+            await ctx.send(embed=BotEmbed.simple("溫馨提醒", f"我無法在{channel.mention}中發送訊息，請確認我有足夠的權限"))
 
     @twitch.command(name="remove", description="移除twitch開台通知", name_localizations=ChoiceList.name("twitch_remove"))
     @commands.has_permissions(manage_channels=True)
@@ -66,22 +77,19 @@ class system_community(Cog_Extension):
         ),
     ):
         guildid = ctx.guild.id
-        twitch_user = tw_api.get_user(twitch_user_login)
-        if not twitch_user:
-            await ctx.respond(f"錯誤：找不到用戶 {twitch_user_login}")
+        account = await resolve_account(PlatformType.Twitch, twitch_user_login, f"錯誤：找不到用戶 {twitch_user_login}")
+        if isinstance(account, str):
+            await ctx.respond(account)
             return
 
-        if not notify_type or notify_type == NotifyCommunityType.TwitchLive:
-            sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitchLive, twitch_user.id, guildid)
-        if not notify_type or notify_type == NotifyCommunityType.TwitchVideo:
-            sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitchVideo, twitch_user.id, guildid)
-        if not notify_type or notify_type == NotifyCommunityType.TwitchClip:
-            sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitchClip, twitch_user.id, guildid)
+        for t in (NotifyCommunityType.TwitchLive, NotifyCommunityType.TwitchVideo, NotifyCommunityType.TwitchClip):
+            if not notify_type or notify_type == t:
+                await asyncio.to_thread(notify_settings.remove_notify, t, account.id, guildid)
 
         if notify_type:
-            await ctx.respond(f"已移除 {twitch_user.display_name}({twitch_user.login}) 的通知")
+            await ctx.respond(f"已移除 {account.display_name}({account.username}) 的通知")
         else:
-            await ctx.respond(f"已移除 {twitch_user.display_name}({twitch_user.login}) 的所有通知")
+            await ctx.respond(f"已移除 {account.display_name}({account.username}) 的所有通知")
 
     @twitch.command(name="notify", description="確認twitch開台通知", name_localizations=ChoiceList.name("twitch_notify"))
     async def twitch_notify(self, ctx, twitch_user_login: discord.Option(str, required=True, name="twitch使用者名稱", description="英文的使用者名稱")):
@@ -163,36 +171,24 @@ class system_community(Cog_Extension):
         channelid = channel.id
         roleid = role.id if role else None
 
-        ytchannel = google_api.get_channel(handle=ythandle)
-        if ytchannel:
-            sclient.sqldb.add_notify_community(NotifyCommunityType.Youtube, ytchannel.id, guildid, channelid, roleid, msg, cache_time=nowtz())
-            sclient.sqldb.merge(Community(id=ytchannel.id, type=PlatformType.Google, display_name=ytchannel.snippet.title, username=ytchannel.snippet.customUrl))
-
-            if role:
-                await ctx.respond(f"設定成功：{ytchannel.snippet.title}的通知將會發送在{channel.mention}並會通知{role.mention}")
-            else:
-                await ctx.respond(f"設定成功：{ytchannel.snippet.title}的通知將會發送在{channel.mention}")
-
-            if not channel.can_send():
-                await ctx.send(embed=BotEmbed.simple("溫馨提醒", f"我無法在{channel.mention}中發送訊息，請確認我有足夠的權限"))
-        else:
-            await ctx.respond(f"錯誤：找不到帳號代碼 {ythandle} 的頻道")
+        account = await resolve_account(PlatformType.Google, ythandle, f"錯誤：找不到帳號代碼 {ythandle} 的頻道")
+        if isinstance(account, str):
+            await ctx.respond(account)
             return
 
-        # TODO: 回歸定時任務
-        record = sclient.sqldb.get_push_record(ytchannel.id)
-        if record.is_expired:
-            config = sclient.sqldb.get_websub_config(APIType.Google, 4)
-            if not yt_push.add_push(ytchannel.id, config.callback_uri, config.hub_secret):
-                await ctx.send(embed=BotEmbed.simple("溫馨提醒", "目前無法向 YouTube 訂閱推播，請稍後再重新設定一次"))
-                return
-            await asyncio.sleep(3)
-            data = yt_push.get_push(ytchannel.id, config.callback_uri, config.hub_secret)
+        await asyncio.to_thread(notify_settings.set_notify, account, NotifyCommunityType.Youtube, guildid, channelid, roleid, msg)
 
-            if data.has_verify:
-                record.push_at = data.last_successful_verification
-                record.expire_at = data.expiration_time
-                sclient.sqldb.merge(record)
+        if role:
+            await ctx.respond(f"設定成功：{account.display_name}的通知將會發送在{channel.mention}並會通知{role.mention}")
+        else:
+            await ctx.respond(f"設定成功：{account.display_name}的通知將會發送在{channel.mention}")
+
+        if not channel.can_send():
+            await ctx.send(embed=BotEmbed.simple("溫馨提醒", f"我無法在{channel.mention}中發送訊息，請確認我有足夠的權限"))
+
+        # TODO: 回歸定時任務
+        if await asyncio.to_thread(notify_settings.ensure_youtube_push, account.id) == "failed":
+            await ctx.send(embed=BotEmbed.simple("溫馨提醒", "目前無法向 YouTube 訂閱推播，請稍後再重新設定一次"))
 
     @youtube.command(name="remove", description="移除youtube通知", name_localizations=ChoiceList.name("youtube_remove"))
     @commands.has_permissions(manage_channels=True)
@@ -200,13 +196,13 @@ class system_community(Cog_Extension):
     async def youtube_remove(self, ctx, ythandle: discord.Option(str, required=True, name="youtube帳號代碼", description="youtube頻道中以@開頭的代號")):
         guildid = ctx.guild.id
 
-        ytchannel = google_api.get_channel(handle=ythandle)
-        if not ytchannel:
-            await ctx.respond(f"錯誤：找不到帳號代碼 {ythandle} 的頻道")
+        account = await resolve_account(PlatformType.Google, ythandle, f"錯誤：找不到帳號代碼 {ythandle} 的頻道")
+        if isinstance(account, str):
+            await ctx.respond(account)
             return
 
-        sclient.sqldb.remove_notify_community(NotifyCommunityType.Youtube, ytchannel.id, guildid)
-        await ctx.respond(f"已移除頻道 {ytchannel.snippet.title} 的通知")
+        await asyncio.to_thread(notify_settings.remove_notify, NotifyCommunityType.Youtube, account.id, guildid)
+        await ctx.respond(f"已移除頻道 {account.display_name} 的通知")
 
     @youtube.command(name="notify", description="確認youtube通知", name_localizations=ChoiceList.name("youtube_notify"))
     async def youtube_notify(self, ctx, ythandle: discord.Option(str, required=True, name="youtube帳號代碼", description="youtube頻道中以@開頭的代號")):
@@ -266,23 +262,17 @@ class system_community(Cog_Extension):
         channelid = channel.id
         roleid = role.id if role else None
 
-        api_twitter_user = cli_api.get_user_details(twitter_username)
-        if not api_twitter_user:
-            await ctx.respond(f"錯誤：查無此使用者 {twitter_username}")
+        account = await resolve_account(PlatformType.Twitter, twitter_username, f"錯誤：查無此使用者 {twitter_username}")
+        if isinstance(account, str):
+            await ctx.respond(account)
             return
-        # try:
-        #     api_twitter_user = twitter_api.get_user(username=twitter_username)
-        # except TooManyRequests:
-        #     await ctx.respond(f"錯誤：查詢過於頻繁，請稍後再試\n（X/Twitter短時間內僅提供少少的次數故容易觸發）")
-        #     return
 
-        sclient.sqldb.add_notify_community(NotifyCommunityType.TwitterTweet, api_twitter_user.id, guildid, channelid, roleid, None, cache_time=nowtz())
-        sclient.sqldb.merge(Community(id=str(api_twitter_user.id), type=PlatformType.Twitter, display_name=api_twitter_user.fullName, username=api_twitter_user.userName))
+        await asyncio.to_thread(notify_settings.set_notify, account, NotifyCommunityType.TwitterTweet, guildid, channelid, roleid, None)
 
         if role:
-            await ctx.respond(f"設定成功：{api_twitter_user.fullName}的通知將會發送在{channel.mention}並會通知{role.mention}")
+            await ctx.respond(f"設定成功：{account.display_name}的通知將會發送在{channel.mention}並會通知{role.mention}")
         else:
-            await ctx.respond(f"設定成功：{api_twitter_user.fullName}的通知將會發送在{channel.mention}")
+            await ctx.respond(f"設定成功：{account.display_name}的通知將會發送在{channel.mention}")
 
         if not channel.can_send():
             await ctx.send(embed=BotEmbed.simple("溫馨提醒", f"我無法在{channel.mention}中發送訊息，請確認我有足夠的權限"))
@@ -292,11 +282,11 @@ class system_community(Cog_Extension):
     @commands.guild_only()
     async def twitter_remove(self, ctx, twitter_username: discord.Option(str, required=True, name="twitter使用者名稱", description="使用者名稱")):
         guildid = ctx.guild.id
-        twitter_user = cli_api.get_user_details(twitter_username)
-        if not twitter_user:
-            await ctx.respond(f"錯誤：查無此使用者 {twitter_username}")
+        account = await resolve_account(PlatformType.Twitter, twitter_username, f"錯誤：查無此使用者 {twitter_username}")
+        if isinstance(account, str):
+            await ctx.respond(account)
             return
-        sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitterTweet, twitter_user.id, guildid)
+        await asyncio.to_thread(notify_settings.remove_notify, NotifyCommunityType.TwitterTweet, account.id, guildid)
         await ctx.respond(f"已移除 {twitter_username} 的通知")
 
     @twitter.command(name="notify", description="確認x/twitter通知", name_localizations=ChoiceList.name("twitter_notify"))

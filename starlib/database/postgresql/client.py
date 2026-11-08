@@ -612,6 +612,108 @@ class NotifyRepository(BaseRepository):
             except IntegrityError:
                 self.session.rollback()
 
+    @_rollback_on_error
+    def insert_notify_communities(
+        self,
+        community: Community,
+        notify_types: list[NotifyCommunityType],
+        guild_id: int,
+        channel_id: int,
+        role_id: int | None = None,
+        message: str | None = None,
+        cache_time: datetime | None = None,
+    ):
+        """批次新增同一個帳號的社群推播，只新增不覆蓋，寫入 NotifyCommunity、Community、CommunityCache，一個交易完成。
+
+        Raises:
+            NotifyCommunityExistsError: 任一種類已存在，一筆都不寫入，附上全部已存在的種類。
+        """
+        existing = self._existing_notify_communities(community, notify_types, guild_id)
+        if existing:
+            raise NotifyCommunityExistsError(existing)
+
+        for notify_type in notify_types:
+            self.session.add(
+                NotifyCommunity(
+                    notify_type=notify_type,
+                    community_id=community.id,
+                    community_type=community.type,
+                    guild_id=guild_id,
+                    channel_id=channel_id,
+                    role_id=role_id,
+                    message=message,
+                )
+            )
+        self.session.merge(community)
+        if cache_time is not None:
+            for notify_type in notify_types:
+                # 帳號已被其他伺服器訂閱時快取已存在，不算衝突
+                self.session.exec(
+                    pg_insert(CommunityCache).values(community_id=community.id, notify_type=notify_type, value=cache_time).on_conflict_do_nothing()
+                )
+        try:
+            self.session.commit()
+        except IntegrityError as e:
+            # 只當作 SELECT 之後被別人搶先寫入的後備
+            self.session.rollback()
+            raise NotifyCommunityExistsError(self._existing_notify_communities(community, notify_types, guild_id)) from e
+
+    def _existing_notify_communities(self, community: Community, notify_types: list[NotifyCommunityType], guild_id: int) -> list[NotifyCommunityType]:
+        stmt = select(NotifyCommunity.notify_type).where(
+            NotifyCommunity.community_id == community.id,
+            NotifyCommunity.community_type == community.type,
+            NotifyCommunity.guild_id == guild_id,
+            NotifyCommunity.notify_type.in_(notify_types),  # pyright: ignore[reportAttributeAccessIssue]
+        ).execution_options(populate_existing=True)
+        return sorted(self.session.exec(stmt).all())
+
+    @staticmethod
+    def _notify_community_match(notify_type: NotifyCommunityType, community_id: str, guild_id: int, original: dict[str, int | str | None]):
+        """條件式寫入的 WHERE：主鍵加上 original 有的欄位，NULL 也能比對。"""
+        conditions = [
+            NotifyCommunity.notify_type == notify_type,
+            NotifyCommunity.community_id == community_id,
+            NotifyCommunity.community_type == PlatformType.from_notify(notify_type),
+            NotifyCommunity.guild_id == guild_id,
+        ]
+        for field, value in original.items():
+            conditions.append(getattr(NotifyCommunity, field).is_not_distinct_from(value))
+        return conditions
+
+    @_rollback_on_error
+    def update_notify_community_if(
+        self, notify_type: NotifyCommunityType, community_id: str, guild_id: int, original: dict[str, int | str | None], values: dict[str, int | str | None]
+    ) -> int:
+        """後台用：目前的值等於 original 才更新 values 的欄位（頻道、身分組、自訂文字），回傳影響的列數，0 表示已被改過或刪除。"""
+        stmt = update(NotifyCommunity).where(*self._notify_community_match(notify_type, community_id, guild_id, original)).values(**values)
+        count = self.session.exec(stmt).rowcount
+        self.session.commit()
+        return count
+
+    @_rollback_on_error
+    def delete_notify_community_if(self, notify_type: NotifyCommunityType, community_id: str, guild_id: int, original: dict[str, int | str | None]) -> int:
+        """後台用：目前的值等於 original 才刪除，成功後做跟 remove_notify_community 相同的清理，回傳影響的列數。"""
+        stmt = delete(NotifyCommunity).where(*self._notify_community_match(notify_type, community_id, guild_id, original))
+        count = self.session.exec(stmt).rowcount
+        self.session.commit()
+        if count:
+            self._cleanup_community(notify_type, community_id)
+        return count
+
+    def get_notify_community_fresh(self, notify_type: NotifyCommunityType, community_id: str, guild_id: int):
+        """後台用：讀出該筆推播目前的值（populate_existing），不存在回 None。"""
+        stmt = (
+            select(NotifyCommunity)
+            .where(
+                NotifyCommunity.notify_type == notify_type,
+                NotifyCommunity.community_id == community_id,
+                NotifyCommunity.community_type == PlatformType.from_notify(notify_type),
+                NotifyCommunity.guild_id == guild_id,
+            )
+            .execution_options(populate_existing=True)
+        )
+        return self.session.exec(stmt).one_or_none()
+
     def remove_notify_community(self, notify_type: NotifyCommunityType, community_id: str, guild_id: int | None = None):
         """移除社群通知，同時判斷移除相關資料"""
         if guild_id is None:
@@ -620,29 +722,25 @@ class NotifyRepository(BaseRepository):
             statement = delete(NotifyCommunity).where(NotifyCommunity.notify_type == notify_type, NotifyCommunity.community_id == community_id, NotifyCommunity.guild_id == guild_id)
         self.session.exec(statement)
         self.session.commit()
+        self._cleanup_community(notify_type, community_id)
 
-        detected_platform_type = PlatformType.from_notify(notify_type)
-        if detected_platform_type is None:
+    def _cleanup_community(self, notify_type: NotifyCommunityType, community_id: str):
+        """移除推播後的清理：該種類已沒人訂閱就刪該種類的輪詢快取；整個平台都沒人訂閱再刪帳號資料與 YouTube 推播紀錄。"""
+        platform = PlatformType.from_notify(notify_type)
+        if platform is None:
             return
 
-        # 檢查是否還有其他通知使用此社群
-        stmt = select(func.count()).where(NotifyCommunity.community_type == detected_platform_type, NotifyCommunity.community_id == community_id)
-        count = self.session.exec(stmt).one()
-        if not count:
-            # 刪除社群資料
-            stmt = delete(Community).where(Community.id == community_id, Community.type == detected_platform_type)
-            self.session.exec(stmt)
+        stmt = select(func.count()).where(NotifyCommunity.notify_type == notify_type, NotifyCommunity.community_id == community_id)
+        if not self.session.exec(stmt).one():
+            self.session.exec(delete(CommunityCache).where(CommunityCache.community_id == community_id, CommunityCache.notify_type == notify_type))
 
-            # 刪除社群快取
-            stmt = delete(CommunityCache).where(CommunityCache.community_id == community_id, CommunityCache.notify_type == notify_type)
-            self.session.exec(stmt)
+        stmt = select(func.count()).where(NotifyCommunity.community_type == platform, NotifyCommunity.community_id == community_id)
+        if not self.session.exec(stmt).one():
+            self.session.exec(delete(Community).where(Community.id == community_id, Community.type == platform))
+            if platform == PlatformType.Google:
+                self.session.exec(delete(PushRecord).where(PushRecord.channel_id == community_id))
 
-            if detected_platform_type == PlatformType.Google:
-                # 刪除推播紀錄
-                stmt = delete(PushRecord).where(PushRecord.channel_id == community_id)
-                self.session.exec(stmt)
-
-            self.session.commit()
+        self.session.commit()
 
     def get_notify_community(self, notify_type: NotifyCommunityType):
         """取得社群通知（依據社群）"""

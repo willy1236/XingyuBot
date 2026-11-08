@@ -102,6 +102,14 @@ class DataExistError(DatabaseError):
         super().__init__(message, original, original_message)
 
 
+class NotifyCommunityExistsError(DataExistError):
+    """要新增的社群推播已存在 (錯誤代碼: 1201)；`notify_types` 是已存在的推播種類"""
+
+    def __init__(self, notify_types: list):
+        super().__init__("要新增的社群推播已存在")
+        self.notify_types = notify_types
+
+
 class SQLNotFoundError(DatabaseError):
     """資料庫查詢結果為空 (錯誤代碼: 1202)"""
 
