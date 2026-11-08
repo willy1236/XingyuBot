@@ -58,12 +58,14 @@ class GuildPerms:
 
 # user_id -> (抓取時間, 清單)。過期的項目保留，Discord 暫時不可用時沿用
 _cache: dict[str, tuple[float, list[UserGuild]]] = {}
-_locks: dict[str, asyncio.Lock] = {}
 
 
 def invalidate(user_id: str) -> None:
     """清掉該使用者的快取，下一次請求一定重抓。登入、登出與邀請 bot 之後呼叫。"""
     _cache.pop(user_id, None)
+
+
+auth.on_auth_change(invalidate)
 
 
 def _reauth() -> DashboardError:
@@ -107,7 +109,7 @@ async def _refresh(oauth: DiscordOAuth, user_id: str, old: OAuthToken) -> None:
 
 
 async def _fetch(user_id: str) -> list[UserGuild]:
-    client = await auth._get_oauth_client()
+    client = await auth.get_oauth_client()
     row = await run_db(lambda: _load_token(user_id, client.credential_id))
     if row is None or "guilds" not in row.scope:
         raise _reauth()
@@ -148,9 +150,8 @@ async def get_user_guilds(user_id: str, refresh: bool = False) -> list[UserGuild
     Raises:
         DashboardError: 401 reauth_required（授權失效），或 502 discord_unavailable（Discord 暫時不可用且沒有舊快取）。
     """
-    lock = _locks.setdefault(user_id, asyncio.Lock())
     # 同一個使用者的重抓與 refresh 序列化：refresh token 用一次就換新，同時 refresh 第二次會失敗而被誤判成授權失效
-    async with lock:
+    async with auth.user_lock(user_id):
         entry = _cache.get(user_id)
         if entry is not None and not refresh and time.monotonic() - entry[0] < CACHE_TTL:
             return entry[1]

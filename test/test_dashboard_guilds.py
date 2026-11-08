@@ -26,7 +26,7 @@ from starlib import sclient
 from starlib.database import OAuthToken
 from starlib.oauth import DiscordOAuth, oauth_lib
 from starlib.utils import nowtz
-from starServer.dashboard import guilds
+from starServer.dashboard import auth, guilds
 from starServer.dashboard.errors import DashboardError
 
 ADMIN = 0x8
@@ -52,7 +52,7 @@ def discord(monkeypatch, dashboard_env, repo) -> FakeDiscord:  # noqa: F811
     monkeypatch.setattr(guilds, "sqldb", repo)
     monkeypatch.setattr(oauth_lib, "sqldb", repo)  # save_token_to_db 用的
     guilds._cache.clear()
-    guilds._locks.clear()
+    auth._user_locks.clear()
 
     async def api_get(self, path, params=None):
         assert path == "/users/@me/guilds"

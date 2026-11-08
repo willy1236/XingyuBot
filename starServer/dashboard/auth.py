@@ -4,6 +4,7 @@
 bot_website 先呼叫 handle_dashboard_oauth，回 None 才走原本的處理。
 """
 
+import asyncio
 import base64
 import hmac
 import json
@@ -98,7 +99,7 @@ def _delete_oauth_cookie(response: Response) -> None:
 _oauth_client_cache = None
 
 
-async def _get_oauth_client():
+async def get_oauth_client():
     global _oauth_client_cache
     if _oauth_client_cache is None:
         _oauth_client_cache = await run_db(lambda: sqldb.get_oauth_client(APIType.Discord, config.DISCORD_OAUTH_SEQ))
@@ -106,7 +107,29 @@ async def _get_oauth_client():
 
 
 async def new_discord_oauth(scopes: list[str] | None = None) -> DiscordOAuth:
-    return DiscordOAuth.create_from_db(await _get_oauth_client(), scopes=scopes)
+    return DiscordOAuth.create_from_db(await get_oauth_client(), scopes=scopes)
+
+
+# ====== 同一個使用者的 token 讀寫序列化 ======
+_user_locks: dict[str, asyncio.Lock] = {}
+
+
+def user_lock(user_id: str) -> asyncio.Lock:
+    """同一個使用者的 token refresh 與登出共用的鎖：避免登出刪掉 token 後，進行中的 refresh 又把新 token 寫回去。"""
+    return _user_locks.setdefault(user_id, asyncio.Lock())
+
+
+# 使用者的授權狀態改變（登入、登出）時要通知的函式，例如清伺服器清單快取
+_auth_change_hooks: list[Callable[[str], None]] = []
+
+
+def on_auth_change(hook: Callable[[str], None]) -> None:
+    _auth_change_hooks.append(hook)
+
+
+def _notify_auth_change(user_id: str) -> None:
+    for hook in _auth_change_hooks:
+        hook(user_id)
 
 
 # ====== 登入入口 ======
@@ -162,9 +185,7 @@ async def _handle_login(request: Request, cookie: OAuthCookie) -> Response:
         log.exception("Dashboard login failed: %s", exc)
         return HTMLResponse("授權失敗，請重新開始登入", 400)
 
-    from .guilds import invalidate  # guilds 匯入 auth，延後匯入避免循環
-
-    invalidate(user.id)
+    _notify_auth_change(user.id)
     name = user.global_name or user.username
     old_session_id = request.cookies.get(SESSION_COOKIE)
     session_id = await run_db(lambda: create_session(user.id, name, user.avatar, old_session_id))
@@ -209,8 +230,11 @@ async def logout(request: Request, info: SessionInfo = Depends(require_session))
 
     Discord 端撤銷失敗（網路或授權早已失效）不擋登出，本地資料仍照常清掉。
     """
-    client = await _get_oauth_client()
-    access_token = await run_db(lambda: _delete_token(info.discord_user_id, client.credential_id))
+    client = await get_oauth_client()
+    async with user_lock(info.discord_user_id):
+        access_token = await run_db(lambda: _delete_token(info.discord_user_id, client.credential_id))
+        await run_db(lambda: delete_user_sessions(info.discord_user_id))
+        _notify_auth_change(info.discord_user_id)
     if access_token is not None:
         try:
             async with DiscordOAuth.create_from_db(client) as auth:
@@ -218,10 +242,6 @@ async def logout(request: Request, info: SessionInfo = Depends(require_session))
         except Exception as exc:
             capture_exception_safe(exc, tags={"service": "website", "source": "dashboard_logout_revoke"})
             log.warning("Dashboard logout: revoke failed for %s: %s", info.discord_user_id, exc)
-    await run_db(lambda: delete_user_sessions(info.discord_user_id))
-    from .guilds import invalidate  # guilds 匯入 auth，延後匯入避免循環
-
-    invalidate(info.discord_user_id)
 
     request.state.dashboard_renew_session = None
     response = JSONResponse({"ok": True})
