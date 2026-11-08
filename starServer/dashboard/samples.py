@@ -25,7 +25,7 @@ from .notify_fields import NotifySpec, parse_key
 SAMPLE_MEMBER_ID = 100000000000000000
 SAMPLE_MEMBER_MENTION = f"<@{SAMPLE_MEMBER_ID}>"
 SAMPLE_MEMBER_NAME = "範例成員"
-SAMPLE_TWEET_URL = "https://x.com/example/status/1234567890"
+SAMPLE_TWEET_URL = "https://x.com/example/status/0"
 
 _TZ = timezone(timedelta(hours=8))
 
