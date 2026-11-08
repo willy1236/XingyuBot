@@ -189,6 +189,7 @@
 - 未驗：
   - 需真實 Discord 的項目：完整授權流程（含第 1、2 條驗收的授權完成後回到後台）、Discord 新 token 是否讓舊 token 失效的實測（結果出來要記在這裡）。
   - 需部署後才能驗：在 `www.domalyze.net` 與 `domalyze.net` 實際登入（本機只驗過兩個 origin 的 CORS 與 CSRF）。
+- 正式環境的前端網域改為 `xingyu.domalyze.net`，`domalyze.net` 與 `www` 保留給之後的工作室網頁，目前由 Traefik 302 導向星羽網站；所以正式環境的 `DASHBOARD_FRONTEND_URL` 是 `https://xingyu.domalyze.net`，`DASHBOARD_ALLOWED_ORIGINS` 是 `["https://xingyu.domalyze.net"]`，上方設計與驗收條件中的 `domalyze.net`／`www.domalyze.net` 以此為準。
 - 未完成的部署工作：
   - domalyze-frontend 的主機 `web.env` 與 GitHub Secret `PROJECT_ENV_FILE`：`NEXT_PUBLIC_BASE_API_URL=https://api.domalyze.net`、移除 `JWT_SECRET`。
   - shark-ansible 部署（含 `routes.yml` 的 `/dashboard/`）。
