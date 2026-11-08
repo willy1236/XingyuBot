@@ -116,7 +116,9 @@ async def to_dashboard_login(next: str | None = None, origin: str | None = None)
         url, state = auth.get_authorization_url()
     cookie = OAuthCookie(state=state, purpose="login", next=sanitize_next(next), origin=sanitize_origin(origin))
     response = RedirectResponse(url=url)
-    response.set_cookie(OAUTH_COOKIE, _encode_cookie(cookie), max_age=OAUTH_COOKIE_MAX_AGE, httponly=True, secure=True, samesite="lax")
+    response.set_cookie(
+        OAUTH_COOKIE, _encode_cookie(cookie), max_age=OAUTH_COOKIE_MAX_AGE, httponly=True, secure=True, samesite="lax"
+    )
     return response
 
 

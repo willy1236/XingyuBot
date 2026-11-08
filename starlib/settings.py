@@ -76,7 +76,9 @@ class AppSettings(BaseSettings):
     @model_validator(mode="after")
     def _require_dashboard_settings(self) -> AppSettings:
         if self.API_WEBSITE:
-            missing = [name for name in ("DASHBOARD_FRONTEND_URL", "DASHBOARD_ALLOWED_ORIGINS") if not getattr(self, name)]
+            missing = [
+                name for name in ("DASHBOARD_FRONTEND_URL", "DASHBOARD_ALLOWED_ORIGINS") if not getattr(self, name)
+            ]
             if missing:
                 raise ValueError(f"API_WEBSITE=true 時必須設定：{', '.join(missing)}")
         return self

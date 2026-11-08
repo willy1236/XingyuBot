@@ -193,7 +193,13 @@ class TestSettings:
             AppSettings(**self.BASE, API_WEBSITE=True, _env_file=None)
 
     def test_ok_with_website(self):
-        s = AppSettings(**self.BASE, API_WEBSITE=True, DASHBOARD_FRONTEND_URL=FRONTEND, DASHBOARD_ALLOWED_ORIGINS=ORIGINS, _env_file=None)
+        s = AppSettings(
+            **self.BASE,
+            API_WEBSITE=True,
+            DASHBOARD_FRONTEND_URL=FRONTEND,
+            DASHBOARD_ALLOWED_ORIGINS=ORIGINS,
+            _env_file=None,
+        )
         assert s.DASHBOARD_ALLOWED_ORIGINS == ORIGINS
 
 
@@ -218,7 +224,21 @@ class TestSanitize:
     def test_next_ok(self, value):
         assert auth.sanitize_next(value) == value
 
-    @pytest.mark.parametrize("value", [None, "", "/", "//evil.com", "https://evil.com", "/dashboardx", "/dash", "/dashboard\\evil", "/dashboard/\r\nx", "dashboard"])
+    @pytest.mark.parametrize(
+        "value",
+        [
+            None,
+            "",
+            "/",
+            "//evil.com",
+            "https://evil.com",
+            "/dashboardx",
+            "/dash",
+            "/dashboard\\evil",
+            "/dashboard/\r\nx",
+            "dashboard",
+        ],
+    )
     def test_next_rejected(self, value):
         assert auth.sanitize_next(value) == "/dashboard"
 
@@ -285,7 +305,11 @@ class TestCors:
     def test_preflight(self, client):
         r = client.options(
             "/dashboard/echo",
-            headers={"Origin": FRONTEND, "Access-Control-Request-Method": "PUT", "Access-Control-Request-Headers": "content-type"},
+            headers={
+                "Origin": FRONTEND,
+                "Access-Control-Request-Method": "PUT",
+                "Access-Control-Request-Headers": "content-type",
+            },
         )
         assert r.status_code == 200
         assert r.headers["access-control-allow-origin"] == FRONTEND
@@ -294,7 +318,9 @@ class TestCors:
         assert "content-type" in r.headers["access-control-allow-headers"].lower()
 
     def test_disallowed_origin_gets_no_header(self, client):
-        r = client.options("/dashboard/echo", headers={"Origin": "https://evil.example", "Access-Control-Request-Method": "PUT"})
+        r = client.options(
+            "/dashboard/echo", headers={"Origin": "https://evil.example", "Access-Control-Request-Method": "PUT"}
+        )
         assert "access-control-allow-origin" not in r.headers
 
     def test_500_carries_cors_header(self, client):
@@ -338,7 +364,9 @@ class TestRunDb:
 # ====== 登入入口 ======
 class TestLoginEntry:
     def test_redirects_to_discord_with_scopes_and_cookie(self, client):
-        r = client.get("/to/dashboard-login", params={"next": "/dashboard/guilds/9", "origin": "https://www.domalyze.net"})
+        r = client.get(
+            "/to/dashboard-login", params={"next": "/dashboard/guilds/9", "origin": "https://www.domalyze.net"}
+        )
         assert r.status_code == 307
         location = r.headers["location"]
         assert location.startswith("https://discord.com/api/oauth2/authorize")
@@ -397,7 +425,9 @@ class TestLoginCallback:
         assert r.headers["location"] == f"{FRONTEND}/dashboard"
 
     def test_state_mismatch_returns_none(self, spy):
-        request = SimpleNamespace(cookies={"dashboard_oauth": encode_cookie(state="other")}, query_params={"code": "c", "state": STATE})
+        request = SimpleNamespace(
+            cookies={"dashboard_oauth": encode_cookie(state="other")}, query_params={"code": "c", "state": STATE}
+        )
         assert asyncio.run(auth.handle_dashboard_oauth(request)) is None  # pyright: ignore[reportArgumentType]
 
     def test_exchange_failure_does_not_create_session(self, client, spy, repo):  # noqa: F811
@@ -547,7 +577,12 @@ class TestRevokeToken:
         oauth = DiscordOAuth(client_id="c", client_secret="s", redirect_uri="r")
         oauth._client = FakeClient()  # pyright: ignore[reportAttributeAccessIssue]
         asyncio.run(oauth.revoke_token("tok"))
-        assert seen == {"url": "https://discord.com/api/oauth2/token/revoke", "token": "tok", "hint": "access_token", "checked": True}
+        assert seen == {
+            "url": "https://discord.com/api/oauth2/token/revoke",
+            "token": "tok",
+            "hint": "access_token",
+            "checked": True,
+        }
 
 
 # ====== 自動掃描 ======
@@ -569,7 +604,15 @@ class TestAutoDiscovery:
             return {"ok": 2}
 
         monkeypatch.setitem(sys.modules, "starServer.dashboard.fake_card", module)
-        monkeypatch.setattr(dashboard.pkgutil, "iter_modules", lambda path: [SimpleNamespace(name="fake_card"), SimpleNamespace(name="errors"), SimpleNamespace(name="_private")])
+        monkeypatch.setattr(
+            dashboard.pkgutil,
+            "iter_modules",
+            lambda path: [
+                SimpleNamespace(name="fake_card"),
+                SimpleNamespace(name="errors"),
+                SimpleNamespace(name="_private"),
+            ],
+        )
         app = FastAPI()
         dashboard.install(app)
         c = TestClient(app)

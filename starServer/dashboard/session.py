@@ -31,7 +31,9 @@ def _now() -> datetime:
 
 
 def set_session_cookie(response, session_id: str) -> None:
-    response.set_cookie(SESSION_COOKIE, session_id, max_age=int(SESSION_TTL.total_seconds()), httponly=True, secure=True, samesite="lax")
+    response.set_cookie(
+        SESSION_COOKIE, session_id, max_age=int(SESSION_TTL.total_seconds()), httponly=True, secure=True, samesite="lax"
+    )
 
 
 def delete_session_cookie(response) -> None:

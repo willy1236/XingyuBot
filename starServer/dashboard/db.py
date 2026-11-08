@@ -8,6 +8,7 @@ sqldb 是 thread-local 的 scoped_session，讀完不 commit 會一直佔住連�
 import asyncio
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
+
 from starlib import sqldb
 
 _executor = ThreadPoolExecutor(max_workers=3, thread_name_prefix="dashboard-db")
