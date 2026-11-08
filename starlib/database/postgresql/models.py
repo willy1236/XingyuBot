@@ -854,6 +854,19 @@ class OAuthToken(TokensSchema, table=True):
         return self.expires_at > nowtz()
 
 
+class DashboardSession(TokensSchema, table=True):
+    """伺服器管理後台的登入 session；名稱與頭像在登入時存下，之後不再用使用者的授權去查。"""
+
+    __tablename__ = "dashboard_session"
+
+    session_id: str = Field(sa_column=Column(String, primary_key=True))
+    discord_user_id: str = Field(sa_column=Column(String, nullable=False, index=True))
+    name: str = Field(sa_column=Column(String, nullable=False))
+    avatar: str | None = Field(default=None, sa_column=Column(String))
+    created_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0), nullable=False), default_factory=lambda: nowtz())
+    last_used_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0), nullable=False), default_factory=lambda: nowtz())
+
+
 class WebSubConfig(TokensSchema, table=True):
     __tablename__ = "websub_config"
     credential_id: int = Field(foreign_key="credentials.credential.id", primary_key=True)

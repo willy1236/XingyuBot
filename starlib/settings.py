@@ -3,7 +3,7 @@ import re
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import Field, ValidationError, field_validator
+from pydantic import Field, ValidationError, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # 身分組代號規則（與 auth server 一致）
@@ -56,6 +56,11 @@ class AppSettings(BaseSettings):
     # 跨 process 訊息（starlib.messaging）用的 Redis，含密碼的 URL；沒設定時視為連不上
     REDIS_URL: str | None = None
 
+    # 伺服器管理後台：前端網址（登入後導回、取消授權回首頁）與 CORS／CSRF 允許的 origin（JSON 陣列）。
+    # AppSettings 也被 twitch_main.py 與本機 .env 共用，所以只在 API_WEBSITE=true 時要求必填
+    DASHBOARD_FRONTEND_URL: str | None = None
+    DASHBOARD_ALLOWED_ORIGINS: list[str] = Field(default_factory=list)
+
     # SENTRY_* 由 sentry_bootstrap 在載入設定前直接讀環境變數，不放在這裡
 
     @field_validator("PRIVILEGE_ROLES")
@@ -67,6 +72,14 @@ class AppSettings(BaseSettings):
             if level not in VALID_PRIVILEGE_VALUES:
                 raise ValueError(f"PRIVILEGE_ROLES 的等級不合法：{role!r} -> {level!r}")
         return value
+
+    @model_validator(mode="after")
+    def _require_dashboard_settings(self) -> AppSettings:
+        if self.API_WEBSITE:
+            missing = [name for name in ("DASHBOARD_FRONTEND_URL", "DASHBOARD_ALLOWED_ORIGINS") if not getattr(self, name)]
+            if missing:
+                raise ValueError(f"API_WEBSITE=true 時必須設定：{', '.join(missing)}")
+        return self
 
     model_config = SettingsConfigDict(
         env_file_encoding="utf-8",

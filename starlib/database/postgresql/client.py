@@ -73,6 +73,15 @@ class BaseRepository:
             session.rollback()
         return session
 
+    def release_session(self) -> None:
+        """釋放目前 thread 的 session，把連線還給連線池。
+
+        scoped_session 讀完不 commit 會一直佔住連線；在 executor 之類的 thread 用完 sqldb 後呼叫。
+        固定單一 Session（測試）時什麼都不做。
+        """
+        if isinstance(self._session_factory, ScopedSession):
+            self._session_factory.remove()
+
     def commit(self):
         try:
             self.session.commit()
