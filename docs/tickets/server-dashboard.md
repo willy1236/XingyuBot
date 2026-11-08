@@ -459,6 +459,7 @@
 - commit：XingyuBot `37e7a97`，domalyze_frontend `277244a`，尚未 push 與部署。
 - 已自動驗證：後端 `test/test_dashboard_channel_notifies.py`（條件式寫入、衝突、失效欄位、不用欄位不動）、前端型別檢查、`npm test`、`npm run build`。驗收條件的畫面操作、指令互通與多人衝突尚未在瀏覽器驗證，所以未打勾。
 - 實作時的取捨：新增入口是區塊標題旁的種類下拉；前端的種類表寫在 `lib/dashboard-channel-notifies.ts`，與後端 `notify_fields.py` 各存一份，欄位以打勾為準。所有頻道通知表單共用一個暫存鍵，同時只開一個表單。刪除按鈕放在編輯表單內，確認用瀏覽器 `confirm`；刪除遇到已被修改時，表單換成最新內容請使用者確認，不走「以我的內容覆蓋」。條件式寫入以 `IS NOT DISTINCT FROM` 比對，後端新增 `get_notify_channel_fresh` 讀取衝突時的目前值。
+- 獨立審查 1 輪：0 條 blocking，已修 2 條 non-blocking（`insert_notify_channel` 只在 unique violation 時視為已存在；切換表單前先確認）。未修的 nitpick：後端以 code point、前端以 UTF-16 計 2000 字上限，含 emoji 時前端較嚴。
 
 ### T-07 管理員能新增、修改、刪除社群推播
 
@@ -541,6 +542,7 @@
 - 已自動驗證：`test/test_dashboard_community_notifies.py`（輸入解析、平台錯誤分類、批次新增整批擋下、條件式寫入、各種類輪詢快取的清理、端點、YouTube 訂閱失敗仍存入）、前端型別檢查、`npm test`、`npm run build`。畫面操作、真實平台查詢、通知實際發送尚未驗證，驗收條件未打勾。
 - 待手動驗證：`/twitch set|remove`、`/youtube set|remove`、`/twitter set|remove` 改走設定服務後的行為；YouTube 訂閱的實際耗時。
 - 實作時的取捨：指令與後台共用 `starlib/notify_settings.py`，查詢帳號放 thread（`asyncio.to_thread`）；`CLIInterface.get_user_details` 新增 `strict` 參數，JSON 解析失敗時拋例外，預設仍回 None，其他呼叫端行為不變；Twitch 與 YouTube 的 404 原本會對 None 呼叫 `.json()` 而丟 AttributeError，改為回 None。`remove_notify_community` 的清理改成依種類判斷，並抽成 `_cleanup_community`，後台刪除共用。頻道與身分組的欄位轉換與驗證抽成 `dashboard/notify_input.py`，T-06 的 `channel_notifies.py` 也改用它。`already_exists` 的 409 多回 `current`，讓只勾一種時能直接顯示衝突提示。YouTube 推播訂閱失敗時回應帶 `push: "failed"`，前端用 `alert` 提示。
+- 獨立審查 1 輪：0 條 blocking，已修 non-blocking：Twitter 保留路徑只對網址生效；指令 set 在已存在時也補輪詢快取，競態時改走修改；`_cleanup_community` 的刪除帶 NOT EXISTS 在同一條 SQL；前端重新新增沿用一般錯誤處理；切換表單前先確認；補 `platforms.py` 404 與 `strict` 的單元測試。未修：YouTube 訂閱失敗用 `alert` 提示；上線驗收要確認反向代理對 `/dashboard` 的 timeout 大於 90 秒（`routes.yml`，這次 diff 看不到）。
 
 ### T-08 管理員能發送測試通知
 
