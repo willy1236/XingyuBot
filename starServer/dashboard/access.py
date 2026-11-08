@@ -1,7 +1,7 @@
 """伺服器存取檢查與 bot 端的 Discord 讀取，T-04～T-09 共用。"""
 
 import asyncio
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 
 import discord
 from fastapi import Depends
@@ -13,8 +13,8 @@ from .guilds import guild_perms
 from .session import SessionInfo, require_session
 
 
-async def on_guild[T](guild_id: int, fn: Callable[[discord.Guild], T]) -> T:
-    """在 bot 的事件迴圈上對該伺服器執行 fn（讀 Discord 物件一律經這裡）。
+async def on_guild_async[T](guild_id: int, fn: Callable[[discord.Guild], Awaitable[T]]) -> T:
+    """在 bot 的事件迴圈上對該伺服器執行 coroutine fn（需要 await Discord 呼叫時用，例如發訊息）。
 
     Raises:
         DashboardError: 503 bot_unavailable（bot 尚未 ready）；404 bot_not_in_guild（bot 不在該伺服器）。
@@ -27,9 +27,22 @@ async def on_guild[T](guild_id: int, fn: Callable[[discord.Guild], T]) -> T:
         guild = bot.get_guild(guild_id)
         if guild is None:
             raise DashboardError(404, "bot_not_in_guild")
-        return fn(guild)
+        return await fn(guild)
 
     return await asyncio.wrap_future(bot.submit(_run()))
+
+
+async def on_guild[T](guild_id: int, fn: Callable[[discord.Guild], T]) -> T:
+    """在 bot 的事件迴圈上對該伺服器執行 fn（讀 Discord 物件一律經這裡）。
+
+    Raises:
+        DashboardError: 503 bot_unavailable（bot 尚未 ready）；404 bot_not_in_guild（bot 不在該伺服器）。
+    """
+
+    async def _call(guild: discord.Guild) -> T:
+        return fn(guild)
+
+    return await on_guild_async(guild_id, _call)
 
 
 async def require_guild_access(guild_id: int, info: SessionInfo = Depends(require_session)) -> int:

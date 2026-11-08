@@ -9,6 +9,7 @@ from starlib import sqldb
 
 from .access import on_guild, require_guild_access
 from .db import run_db
+from .notify_cooldown import cooldown_key, remaining
 from .notify_fields import CHANNEL_SPECS, COMMUNITY_SPECS, NotifySpec, channel_spec, community_spec
 from .validity import channel_invalid_reason, role_invalid_reason
 
@@ -73,6 +74,11 @@ def _item(guild: discord.Guild, row: _Row) -> dict:
         item["message"] = row.message
         values["message"] = row.message
     item["values"] = values
+    # 定時通知不提供測試；其餘附上剩餘冷卻秒數，按鈕一載入就是正確狀態
+    item["testable"] = not spec.scheduled
+    item["cooldown"] = (
+        0 if spec.scheduled else remaining(cooldown_key(guild.id, spec.key, row.account[0] if row.account else None))
+    )
     if row.account is not None:
         # 缺 Community 的孤兒列（或 username 為空）名稱與括號都顯示帳號 ID，仍可照常修改與刪除
         account_id, username, display_name = row.account

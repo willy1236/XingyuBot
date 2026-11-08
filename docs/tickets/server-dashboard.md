@@ -63,7 +63,7 @@
 | 6 | T-09 | 完成 | 管理員能從清單邀請 bot 並回到後台 | T-02 | A | 依賴只到 T-02，可以提早與 T-03 並行 |
 | 7 | T-06 | 待驗收 | 管理員能新增、修改、刪除頻道通知 | T-04、T-05 | B | |
 | 8 | T-07 | 待驗收 | 管理員能新增、修改、刪除社群推播 | T-04、T-05 | B | |
-| 9 | T-08 | 未完成 | 管理員能發送測試通知 | T-06、T-07 | — | |
+| 9 | T-08 | 待驗收 | 管理員能發送測試通知 | T-06、T-07 | — | |
 
 並行組的部位切分：
 
@@ -581,7 +581,10 @@
 
 **依賴**：T-06、T-07（測試按鈕要加在這兩張卡擴充過的區塊元件上）。T-05 的範例內容經由它們間接滿足。
 
-**進度**：未完成
+**進度**：實作完成，待正式環境驗收（2026-11-08）
+- commit：XingyuBot 與 domalyze_frontend 各一筆 `feat(dashboard): 測試通知（T-08 ...）`，尚未 push 與部署。
+- 已自動驗證：後端 `test/test_dashboard_test_notify.py`（內容與標示、`{member}` 代入按下者、`AllowedMentions.none()`、定時通知 400、冷卻 429 與一覽的冷卻欄位、發送失敗不計冷卻、頻道失效先回原因、bot 不在、Origin 檢查）、前端型別檢查、`npm test`。畫面操作、真實發送、多人冷卻尚未在瀏覽器驗證，驗收條件未打勾。
+- 實作時的取捨：冷卻獨立成 `dashboard/notify_cooldown.py`，一覽（`notifies.py`）與端點（`test_notify.py`）共用；佔位期間第二個請求回 429，`retry_after` 固定 3 秒。一覽每筆多回 `testable`（定時通知為 false）與 `cooldown`（剩餘秒數）。`access.py` 新增 `on_guild_async`，讓需要 await Discord 呼叫（`fetch_member`、`channel.send`）的邏輯在 bot 事件迴圈上執行，`on_guild` 改為包裝它。發送前先用 `channel_invalid_reason` 檢查頻道，失效直接回 502 `send_failed` 附原因；`Forbidden` 與其他 `HTTPException` 也轉成 `send_failed`。設定已被刪除時回 409 `conflict`（`deleted: true`）。測試訊息第一行是 `【測試通知】`。前端的 `TestNotifyButton` 放在兩個區塊每筆的編輯按鈕下方，倒數以伺服器回傳的秒數為準。
 
 ### T-09 管理員能從清單邀請 bot 並回到後台
 
