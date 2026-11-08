@@ -57,6 +57,16 @@ def _touch(session_id: str) -> SessionInfo | None:
     return SessionInfo(row.session_id, row.discord_user_id, row.name, row.avatar)
 
 
+def lookup_session(session_id: str | None) -> SessionInfo | None:
+    """只讀地查 session：不續期、不刪除；沒帶、不存在或已過期回 None。"""
+    if not session_id:
+        return None
+    row = sqldb.session.get(DashboardSession, session_id, populate_existing=True)
+    if row is None or _now() - row.last_used_at > SESSION_TTL:
+        return None
+    return SessionInfo(row.session_id, row.discord_user_id, row.name, row.avatar)
+
+
 def create_session(discord_user_id: str, name: str, avatar: str | None, replace_session_id: str | None = None) -> str:
     """建立新 session。cookie 帶著的舊 session（不論是不是同一個帳號）一併刪掉，換帳號時就不會留著舊帳號的 session。"""
     s = sqldb.session
