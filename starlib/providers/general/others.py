@@ -1,3 +1,5 @@
+import time
+
 from starlib.database import APIType, McsmServerAction, McssServerAction, sqldb
 
 from ..base import APICaller
@@ -81,6 +83,14 @@ class McsManagerAPI(APICaller):
         endpoint = self._action_endpoint[McsmServerAction(action)]
         self.get(f"protected_instance/{endpoint}", params={"apikey": self.apikey, "uuid": server_id, "daemonId": self.daemon_id})
         return True
+
+    def update_server(self, server_id: str):
+        """讓 MCSManager 在背景執行實例設定的更新指令，實例須為停止狀態，執行期間狀態為 Busy。"""
+        self.post(
+            "protected_instance/asynchronous",
+            data={"time": int(time.time() * 1000)},
+            params={"apikey": self.apikey, "uuid": server_id, "daemonId": self.daemon_id, "task_name": "update"},
+        )
 
     def excute_command(self, server_id: str, command: str):
         r = self.get(

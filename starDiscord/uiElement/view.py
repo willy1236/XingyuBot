@@ -38,7 +38,7 @@ if TYPE_CHECKING:
 
     from ..bot import DiscordBot
     from starlib.database.postgresql.models import PollOption, ReactionRoleOption, TRPGStoryOption, TRPGStoryPlot
-    from starlib.providers.general.models import McsmServerSummary
+    from starlib.providers.general.models import McsmInstance, McsmServerSummary
 
 class DeletePetView(discord.ui.View):
     def __init__(self):
@@ -724,8 +724,8 @@ class McServerSelect(discord.ui.Select):
         view: McServerPanel = self.view
         assert isinstance(self.values, list)
         view.server_id = self.values[0]
-        embed = view.embed()
         view.enable_all_items()
+        embed = view.embed()
         await interaction.response.edit_message(embed=embed, view=view)
 
 
@@ -734,6 +734,23 @@ class McServerPanel(discord.ui.View):
         super().__init__(timeout=600)
         self.server_id: str | None = None
         self.add_item(McServerSelect(mcsm_api.get_servers()))
+        self.update_button = discord.ui.Button(label="更新伺服器", style=discord.ButtonStyle.success, disabled=True)
+        self.update_button.callback = self.update_button_callback
+
+    def _sync_update_button(self, server: McsmInstance | None):
+        """只在伺服器有設定更新指令時顯示更新按鈕，且只有停止狀態可按。"""
+        if self.is_finished():
+            return
+        has_update_command = server is not None and bool(server.config.updateCommand.strip())
+        if has_update_command and self.update_button not in self.children:
+            self.add_item(self.update_button)
+        elif not has_update_command and self.update_button in self.children:
+            self.remove_item(self.update_button)
+        self.update_button.disabled = server is None or server.status != McsmInstanceStatus.Stopped
+
+    async def _show_server(self, interaction: discord.Interaction, server: McsmInstance):
+        self._sync_update_button(server)
+        await interaction.edit_original_response(embed=server.embed(), view=self)
 
     async def on_timeout(self):
         self.clear_items()
@@ -750,6 +767,7 @@ class McServerPanel(discord.ui.View):
         if not self.server_id:
             return BotEmbed.simple("請選擇伺服器", "使用下方的選單來選擇伺服器")
         server = mcsm_api.get_server_detail(self.server_id)
+        self._sync_update_button(server)
         if not server:
             return BotEmbed.simple("伺服器未找到", "請確認伺服器ID是否正確")
 
@@ -764,6 +782,7 @@ class McServerPanel(discord.ui.View):
             return
 
         if server := mcsm_api.get_server_detail(self.server_id):
+            await self._show_server(interaction, server)
             if server.status == McsmInstanceStatus.Running:
                 await interaction.followup.send("🟢伺服器已經在運行中", ephemeral=True)
                 return
@@ -775,13 +794,13 @@ class McServerPanel(discord.ui.View):
                 await interaction.followup.send("🟡已發送開啟指令，伺服器正在啟動...", ephemeral=True)
 
                 server = mcsm_api.get_server_detail(self.server_id)
-                await interaction.edit_original_response(embed=server.embed())
+                await self._show_server(interaction, server)
                 for _ in range(20):
                     await asyncio.sleep(10)
                     server = mcsm_api.get_server_detail(self.server_id)
                     if server and server.status == McsmInstanceStatus.Running:
                         await interaction.followup.send("🟢伺服器已開啟", ephemeral=True)
-                        await interaction.edit_original_response(embed=server.embed())
+                        await self._show_server(interaction, server)
                         return
 
         await interaction.followup.send("伺服器啟動超時，請確認伺服器狀態", ephemeral=True)
@@ -794,6 +813,7 @@ class McServerPanel(discord.ui.View):
             return
 
         if server := mcsm_api.get_server_detail(self.server_id):
+            await self._show_server(interaction, server)
             if server.status == McsmInstanceStatus.Stopped:
                 await interaction.followup.send("🛑伺服器已處於關閉狀態", ephemeral=True)
                 return
@@ -805,16 +825,47 @@ class McServerPanel(discord.ui.View):
                 await interaction.followup.send("🟠伺服器正在關閉...", ephemeral=True)
 
                 server = mcsm_api.get_server_detail(self.server_id)
-                await interaction.edit_original_response(embed=server.embed())
+                await self._show_server(interaction, server)
                 for _ in range(20):
                     await asyncio.sleep(10)
                     server = mcsm_api.get_server_detail(self.server_id)
                     if server and server.status == McsmInstanceStatus.Stopped:
                         await interaction.followup.send("🛑伺服器已關閉", ephemeral=True)
-                        await interaction.edit_original_response(embed=server.embed())
+                        await self._show_server(interaction, server)
                         return
 
         await interaction.followup.send("伺服器關閉超時，請確認伺服器狀態", ephemeral=True)
+
+    async def update_button_callback(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+        server = mcsm_api.get_server_detail(self.server_id)
+        if not server:
+            await interaction.followup.send("伺服器未找到", ephemeral=True)
+            return
+
+        await self._show_server(interaction, server)
+        if not server.config.updateCommand.strip():
+            await interaction.followup.send("此伺服器沒有設定更新指令", ephemeral=True)
+            return
+        if server.status != McsmInstanceStatus.Stopped:
+            await interaction.followup.send("只有伺服器停止運行時才能更新", ephemeral=True)
+            return
+
+        mcsm_api.update_server(self.server_id)
+        await interaction.followup.send("🔄已發送更新指令，伺服器正在更新...", ephemeral=True)
+
+        # interaction token 15 分鐘後失效，輪詢要在那之前結束
+        for _ in range(80):
+            await asyncio.sleep(10)
+            server = mcsm_api.get_server_detail(self.server_id)
+            if server:
+                await self._show_server(interaction, server)
+                if server.status != McsmInstanceStatus.Busy:
+                    # MCSManager 更新失敗時同樣回到停止狀態，API 無法區分成敗
+                    await interaction.followup.send("✅更新流程已結束，結果請查看 MCSManager 終端輸出", ephemeral=True)
+                    return
+
+        await interaction.followup.send("更新仍未結束，請到 MCSManager 確認進度", ephemeral=True)
 
     @discord.ui.button(label="取得IP位置", style=discord.ButtonStyle.secondary, disabled=True)
     async def ip_button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
