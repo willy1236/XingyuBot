@@ -62,7 +62,7 @@
 | 5 | T-05 | 完成 | [共用] 通知範例內容：預覽與測試共用 | T-03 | A | T-06、T-07、T-08 依賴 |
 | 6 | T-09 | 完成 | 管理員能從清單邀請 bot 並回到後台 | T-02 | A | 依賴只到 T-02，可以提早與 T-03 並行 |
 | 7 | T-06 | 待驗收 | 管理員能新增、修改、刪除頻道通知 | T-04、T-05 | B | |
-| 8 | T-07 | 未完成 | 管理員能新增、修改、刪除社群推播 | T-04、T-05 | B | |
+| 8 | T-07 | 待驗收 | 管理員能新增、修改、刪除社群推播 | T-04、T-05 | B | |
 | 9 | T-08 | 未完成 | 管理員能發送測試通知 | T-06、T-07 | — | |
 
 並行組的部位切分：
@@ -536,7 +536,11 @@
 - Twitter 的查詢 API 次數很少，查詢只在按下查詢按鈕時送出，不隨輸入即時查詢。
 - 指令改呼叫設定服務後，要手動測一次 `/twitch set`、`/youtube set`、`/twitter set` 與對應的 remove，確認行為不變。
 
-**進度**：未完成
+**進度**：實作完成，待正式環境驗收（2026-11-08）
+- commit：XingyuBot `0d93bfa` 與後續的 already_exists 補值，domalyze_frontend 見最新一筆 `feat(dashboard): 社群推播新增流程、編輯與刪除（T-07 前端）`，尚未 push 與部署。
+- 已自動驗證：`test/test_dashboard_community_notifies.py`（輸入解析、平台錯誤分類、批次新增整批擋下、條件式寫入、各種類輪詢快取的清理、端點、YouTube 訂閱失敗仍存入）、前端型別檢查、`npm test`、`npm run build`。畫面操作、真實平台查詢、通知實際發送尚未驗證，驗收條件未打勾。
+- 待手動驗證：`/twitch set|remove`、`/youtube set|remove`、`/twitter set|remove` 改走設定服務後的行為；YouTube 訂閱的實際耗時。
+- 實作時的取捨：指令與後台共用 `starlib/notify_settings.py`，查詢帳號放 thread（`asyncio.to_thread`）；`CLIInterface.get_user_details` 新增 `strict` 參數，JSON 解析失敗時拋例外，預設仍回 None，其他呼叫端行為不變；Twitch 與 YouTube 的 404 原本會對 None 呼叫 `.json()` 而丟 AttributeError，改為回 None。`remove_notify_community` 的清理改成依種類判斷，並抽成 `_cleanup_community`，後台刪除共用。頻道與身分組的欄位轉換與驗證抽成 `dashboard/notify_input.py`，T-06 的 `channel_notifies.py` 也改用它。`already_exists` 的 409 多回 `current`，讓只勾一種時能直接顯示衝突提示。YouTube 推播訂閱失敗時回應帶 `push: "failed"`，前端用 `alert` 提示。
 
 ### T-08 管理員能發送測試通知
 
