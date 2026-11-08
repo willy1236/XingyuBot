@@ -46,4 +46,6 @@ def commit(key: str) -> None:
 
 
 def release(key: str) -> None:
-    _state.pop(key, None)
+    """移除佔位；已 commit 的不動（訊息已送出後請求才被取消時，仍要計入冷卻）。"""
+    if key in _state and _state[key] is None:
+        del _state[key]

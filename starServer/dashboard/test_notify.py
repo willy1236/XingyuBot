@@ -16,7 +16,7 @@ from .access import on_guild_async, require_guild_access
 from .conflict import Conflict
 from .db import run_db
 from .errors import DashboardError
-from .notify_cooldown import acquire, commit, cooldown_key, release
+from .notify_cooldown import COOLDOWN_SECONDS, acquire, commit, cooldown_key, release
 from .notify_fields import NotifySpec, parse_key
 from .notify_input import field_names
 from .samples import build_sample
@@ -79,15 +79,15 @@ async def send_test_notify(body: SendTestBody, guild_id: int = Depends(require_g
     key = cooldown_key(guild_id, spec.key, account_id)
     acquire(key)
     try:
-        await on_guild_async(guild_id, lambda guild: _send(guild, spec, values, int(info.discord_user_id)))
+        await on_guild_async(guild_id, lambda guild: _send(guild, spec, values, int(info.discord_user_id), key))
     except BaseException:
         release(key)
         raise
-    commit(key)
-    return {"ok": True}
+    return {"ok": True, "cooldown": COOLDOWN_SECONDS}
 
 
-async def _send(guild: discord.Guild, spec: NotifySpec, values: dict, user_id: int) -> None:
+async def _send(guild: discord.Guild, spec: NotifySpec, values: dict, user_id: int, key: str) -> None:
+    """在 bot 的事件迴圈上發送；送出後立刻 commit 冷卻，中間沒有 await，web 端取消請求也不會漏計。"""
     channel_id = values["channel_id"]
     if (reason := channel_invalid_reason(guild, channel_id, spec.scheduled)) is not None:  # pyright: ignore[reportArgumentType]
         raise _failure(reason)
@@ -103,3 +103,4 @@ async def _send(guild: discord.Guild, spec: NotifySpec, values: dict, user_id: i
         raise _failure("bot 沒有在該頻道發訊息的權限") from None
     except discord.HTTPException as e:
         raise _failure(f"Discord 回傳錯誤：{e.text or e.status}") from None
+    commit(key)

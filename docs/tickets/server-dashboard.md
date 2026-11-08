@@ -585,6 +585,7 @@
 - commit：XingyuBot 與 domalyze_frontend 各一筆 `feat(dashboard): 測試通知（T-08 ...）`，尚未 push 與部署。
 - 已自動驗證：後端 `test/test_dashboard_test_notify.py`（內容與標示、`{member}` 代入按下者、`AllowedMentions.none()`、定時通知 400、冷卻 429 與一覽的冷卻欄位、發送失敗不計冷卻、頻道失效先回原因、bot 不在、Origin 檢查）、前端型別檢查、`npm test`。畫面操作、真實發送、多人冷卻尚未在瀏覽器驗證，驗收條件未打勾。
 - 實作時的取捨：冷卻獨立成 `dashboard/notify_cooldown.py`，一覽（`notifies.py`）與端點（`test_notify.py`）共用；佔位期間第二個請求回 429，`retry_after` 固定 3 秒。一覽每筆多回 `testable`（定時通知為 false）與 `cooldown`（剩餘秒數）。`access.py` 新增 `on_guild_async`，讓需要 await Discord 呼叫（`fetch_member`、`channel.send`）的邏輯在 bot 事件迴圈上執行，`on_guild` 改為包裝它。發送前先用 `channel_invalid_reason` 檢查頻道，失效直接回 502 `send_failed` 附原因；`Forbidden` 與其他 `HTTPException` 也轉成 `send_failed`。設定已被刪除時回 409 `conflict`（`deleted: true`）。測試訊息第一行是 `【測試通知】`。前端的 `TestNotifyButton` 放在兩個區塊每筆的編輯按鈕下方，倒數以伺服器回傳的秒數為準。
+- 獨立審查 1 輪：0 條 blocking，已修 non-blocking：冷卻的 commit 搬到 bot loop 內、送出後立即執行，`release` 只移除佔位，所以請求在訊息送出後才被取消仍會計入冷卻；成功回應帶 `cooldown`，前端不再硬編碼 60 秒；補測試（同時按下的佔位、非預期例外釋放、bot 未 ready、其他 HTTPException、member 三個分支、缺帳號 409、403、未登入）。未修：佔位沒有 TTL（目前所有路徑都會釋放）；`TestNotifyButton` 沒有前端單元測試；冷卻中的請求仍會先讀一次 DB。
 
 ### T-09 管理員能從清單邀請 bot 並回到後台
 

@@ -196,5 +196,77 @@ class TestEndpoint:
         assert (res.status_code, res.json()["error"]) == (404, "bot_not_in_guild")
 
     def test_requires_origin(self, client):
-        res = client.post(f"/dashboard/guilds/{GUILD_ID}/notifies/test", json={"kind": "channel", "notify_type": "channel:1"})
+        res = client.post(
+            f"/dashboard/guilds/{GUILD_ID}/notifies/test", json={"kind": "channel", "notify_type": "channel:1"}
+        )
         assert res.status_code == 400
+
+    def test_pending_blocks_concurrent_press(self, client, sent):
+        client.repo.add_notify_channel(GUILD_ID, T.JoinLog, OK_CHANNEL)
+        notify_cooldown.acquire(notify_cooldown.cooldown_key(GUILD_ID, "channel:6", None))  # 另一個請求正在發送
+        res = self.post(client, kind="channel", notify_type="channel:6")
+        assert (res.status_code, res.json()) == (
+            429,
+            {"error": "cooldown", "retry_after": notify_cooldown.PENDING_RETRY_SECONDS},
+        )
+        assert sent.calls == []
+
+    def test_unexpected_error_releases_placeholder(self, client, sent):
+        client.repo.add_notify_channel(GUILD_ID, T.JoinLog, OK_CHANNEL)
+        sent.error = RuntimeError("boom")
+        assert self.post(client, kind="channel", notify_type="channel:6").status_code == 500
+        assert notify_cooldown.remaining(notify_cooldown.cooldown_key(GUILD_ID, "channel:6", None)) == 0
+
+    def test_release_keeps_committed_cooldown(self):
+        notify_cooldown.acquire("k")
+        notify_cooldown.commit("k")
+        notify_cooldown.release("k")  # 訊息已送出後請求才被取消
+        assert notify_cooldown.remaining("k") > 0
+
+    def test_other_http_error_reason(self, client, sent):
+        client.repo.add_notify_channel(GUILD_ID, T.JoinLog, OK_CHANNEL)
+        sent.error = discord.HTTPException(SimpleNamespace(status=500, reason="x"), "server down")
+        res = self.post(client, kind="channel", notify_type="channel:6")
+        assert res.status_code == 502 and res.json()["reason"].startswith("Discord 回傳錯誤：")
+
+    def test_bot_unavailable(self, client, monkeypatch):
+        client.repo.add_notify_channel(GUILD_ID, T.JoinLog, OK_CHANNEL)
+        monkeypatch.setattr(sclient, "bot", fake_bot(fake_guild(), ready=False))
+        res = self.post(client, kind="channel", notify_type="channel:6")
+        assert (res.status_code, res.json()["error"]) == (503, "bot_unavailable")
+        assert notify_cooldown.remaining(notify_cooldown.cooldown_key(GUILD_ID, "channel:6", None)) == 0
+
+    def test_member_falls_back_to_sample_when_unfetchable(self, client, sent, monkeypatch):
+        client.repo.add_notify_channel(GUILD_ID, T.MemberJoin, OK_CHANNEL, None, "歡迎 {member}")
+        monkeypatch.setattr(test_notify, "_fetch_member", lambda guild, uid: _none())
+        assert self.post(client, kind="channel", notify_type="channel:7").status_code == 200
+        assert "歡迎 <@100000000000000000>" in sent.calls[0][0]
+
+    def test_get_member_hit_skips_fetch(self, client, sent, monkeypatch):
+        client.repo.add_notify_channel(GUILD_ID, T.MemberJoin, OK_CHANNEL, None, "{member}")
+        guild = sclient.bot.get_guild(GUILD_ID)
+        guild.get_member = lambda uid: SimpleNamespace(
+            mention="<@cached>", name="c", discriminator="0", display_name="c"
+        )
+        assert self.post(client, kind="channel", notify_type="channel:7").status_code == 200
+        assert sent.calls[0][0].endswith("<@cached>")
+
+    def test_community_missing_account_is_conflict(self, client, sent):
+        res = self.post(client, kind="community", notify_type="community:5", account_id="nobody")
+        assert (res.status_code, res.json()["deleted"]) == (409, True)
+        assert sent.calls == []
+
+    def test_no_permission(self, client, discord_env):
+        discord_env.guilds = []
+        client.repo.add_notify_channel(GUILD_ID, T.JoinLog, OK_CHANNEL)
+        res = self.post(client, kind="channel", notify_type="channel:6")
+        assert res.status_code == 403
+
+    def test_requires_session(self, client):
+        client.cookies.clear()
+        res = self.post(client, kind="channel", notify_type="channel:6")
+        assert res.status_code == 401
+
+
+async def _none():
+    return None
