@@ -55,7 +55,7 @@
 
 | # | 卡號 | 進度 | 標題 | 依賴 | 並行組 | 備註 |
 |---|---|---|---|---|---|---|
-| 1 | T-01 | 未完成 | 管理員能用 Discord 登入、登出後台 | 無 | — | 骨架切片，含地基：路由、CORS、session、OAuth 分流、錯誤格式與 fetch wrapper |
+| 1 | T-01 | 後端完成，前端與部署未做 | 管理員能用 Discord 登入、登出後台 | 無 | — | 骨架切片，含地基：路由、CORS、session、OAuth 分流、錯誤格式與 fetch wrapper |
 | 2 | T-02 | 未完成 | 管理員能看到可管理的伺服器清單 | T-01 | — | |
 | 3 | T-03 | 未完成 | 管理員能看到伺服器的通知一覽 | T-02 | — | 含存取檢查與有效性判斷，T-04～T-09 共用 |
 | 4 | T-04 | 未完成 | [共用] 通知編輯：選項、衝突比對、表單暫存 | T-03 | A | T-06、T-07 依賴 |
@@ -184,7 +184,9 @@
 - 沒有 `dashboard_oauth` 時，`/oauth/discord` 帶 `guild_id` 的行為保持不變；T-09 會再擴充這個分支。
 - 開工時實測：Discord 對同一使用者發新 token 時，舊 token 會不會失效。會失效的話，用官網首頁邀請 bot 後，使用者下次操作後台會看到「需要重新授權」，這是〈決策紀錄〉第 3 題接受的代價；實測結果記在卡上。
 
-**進度**：未完成
+**進度**：後端完成（分支 `feat/server-dashboard-backend`，測試 `uv run pytest test/test_dashboard_auth.py`）；前端與 shark-ansible 部署未做。
+- 開工時實測「Discord 發新 token 舊 token 會不會失效」：未做，需要真實 Discord 憑證，留待有憑證的人測。結果出來要記在這裡。
+- 實作時的取捨：登入換 token 失敗回 400 純文字頁；登出時 Discord 撤銷失敗不擋登出，本地 session 與 token 仍刪除；`client.py` 新增公開的 `release_session()` 給 `run_db` 用。
 
 ### T-02 管理員能看到可管理的伺服器清單
 
