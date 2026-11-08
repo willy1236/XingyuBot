@@ -306,7 +306,7 @@
 - commit：XingyuBot `e468427`、domalyze_frontend `e77d19c` 與 `2514524`，未 push、未部署。
 - 已驗證：後端測試 `test/test_dashboard_notifies.py`（假 Discord、真實 PostgreSQL）涵蓋欄位對照、有效性判斷、孤兒列、未打勾欄位不輸出、403／404／503／無 session；前端 `tsc` 與 `next build` 通過。獨立審查 1 輪，blocking 1 條（測試 fixture import 被 ruff 誤刪）已修。
 - 未驗：`/channel list` 與各平台 list 指令比對、真實 Discord 權限的失效標示、360px 版面、一筆都沒有的畫面、無權限與 bot 不在的導回，需人工或部署後驗收；專案 eslint 設定本身載入失敗（既有問題），前端沒跑 lint。
-- 孤兒列檢查：本機未查正式 DB，需在正式環境跑 `SELECT n.* FROM notify_community n LEFT JOIN community_info c ON c.id = n.community_id AND c.type = n.community_type WHERE c.id IS NULL;` 並記在這裡。
+- 孤兒列檢查：2026-11-08 查正式 DB（`stardb`，`stardb_basic.notify_community` LEFT JOIN `community_info`），0 筆孤兒列。
 - 實作時的取捨：存取檢查放 `dashboard/access.py`（含 `on_guild`，讀 Discord 物件一律經它）而非 `notifies.py`，避免後續卡互相 import 路由模組；討論串當頻道時失效原因會顯示「頻道不存在」，未特別區分。
 
 ### T-04 [共用] 通知編輯：選項、衝突比對、表單暫存
