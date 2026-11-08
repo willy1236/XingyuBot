@@ -16,6 +16,7 @@ from fastapi.responses import (
     HTMLResponse,
     JSONResponse,
     RedirectResponse,
+    Response,
 )
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from linebot.v3 import WebhookParser
@@ -32,6 +33,9 @@ from starlib.oauth import DiscordOAuth, TwitchOAuth
 from starlib.providers.social.push_models import YoutubePushEntry
 from starlib.settings import get_settings
 from starlib.starAgent_line import line_agent
+from starServer import dashboard
+from starServer.dashboard import config as dashboard_config
+from starServer.dashboard.auth import handle_dashboard_oauth
 
 discord_oauth_client = sqldb.get_oauth_client(APIType.Discord, 4)
 twitch_oauth_client = sqldb.get_oauth_client(APIType.Twitch, 3)
@@ -60,6 +64,9 @@ async def sentry_exception_middleware(request: Request, call_next):
         log.exception("Unhandled website exception: %s", exc)
         return JSONResponse(status_code=500, content={"detail": "Internal Server Error"})
 
+
+# 必須在 sentry_exception_middleware 之後：CORS 才會在最外層，500 回應也帶得到 CORS header
+dashboard.install(app)
 
 security = HTTPBasic()
 def get_current_username(credentials: HTTPBasicCredentials = Depends(security)):
@@ -178,26 +185,33 @@ async def youtube_push_post(request: Request, background_task: BackgroundTasks):
 
 @app.get("/oauth/discord")
 async def oauth_discord(request: Request):
-    params = dict(request.query_params)
-    code = params.get("code")
-    if not code:
-        return HTMLResponse(f"授權失敗：{html.escape(params.get('error', '缺少授權碼'))}", 400)
-
-    if not params.get("guild_id"):
-        # 網站登入原本寫 cloud_user，身分改接 auth server 後暫停，待網站 OIDC 另案恢復
-        return HTMLResponse("網站登入與帳號綁定暫停服務", 503)
-
-    # 機器人授權流程
-    auth = DiscordOAuth.create_from_db(discord_oauth_client)
-    await auth.exchange_code(code)
-    user = await auth.get_me()
-    auth.save_token_to_db(user.id)
-    log.info(f"Discord OAuth: User {user.username} ({user.id}) authorized.")
-    log.info(f"Discord OAuth scopes: {auth.scopes}")
-
-    response = HTMLResponse("授權已完成，您現在可以關閉此頁面<br>感謝您使用星羽機器人！", 200)
-    response.delete_cookie("oauth_state")
+    # 後台的登入流程（dashboard_oauth cookie 且 state 相符）；回 None 才走下面原本的處理
+    response = await handle_dashboard_oauth(request)
+    if response is None:
+        response = _oauth_discord_fallback(request)
+        # 有 dashboard_oauth 但 state 不符時，也一併清掉
+        if "dashboard_oauth" in request.cookies:
+            response.delete_cookie("dashboard_oauth", httponly=True, secure=True, samesite="lax")
     return response
+
+
+def _oauth_discord_fallback(request: Request) -> Response:
+    params = dict(request.query_params)
+    frontend = dashboard_config.frontend_url()
+
+    if params.get("guild_id"):
+        # 機器人授權流程。這個流程存下的 token 沒有任何地方讀取，而且會蓋掉後台的 token，所以不換 token、不存
+        if not params.get("code"):
+            return HTMLResponse(f"授權失敗：{html.escape(params.get('error', '缺少授權碼'))}", 400)
+        log.info("Discord OAuth: bot added to guild %s", params["guild_id"])
+        response = HTMLResponse("授權已完成，您現在可以關閉此頁面<br>感謝您使用星羽機器人！", 200)
+        response.delete_cookie("oauth_state")
+        return response
+
+    if params.get("error"):
+        return RedirectResponse(url=f"{frontend}/")
+    # 例如在 Discord 頁停超過 10 分鐘、dashboard_oauth 已過期：交給後台頁重新走登入
+    return RedirectResponse(url=f"{frontend}/dashboard")
 
 
 @app.get("/oauth/discordbot")
@@ -317,15 +331,6 @@ def reply_line_message(reply_token: str, text: str):
                 messages=[TextMessage(text=text)],
             )
         )
-
-
-@app.get("/to/discordauth")
-async def to_discordauth(request: Request):
-    auth = DiscordOAuth.create_from_db(discord_oauth_client, scopes=["identify", "connections"])
-    url, state = auth.get_authorization_url()
-    response = RedirectResponse(url=url)
-    response.set_cookie(key="oauth_state", value=state, httponly=True, secure=True, samesite="lax", max_age=600)
-    return response
 
 
 @app.get("/to/twitchauth")
