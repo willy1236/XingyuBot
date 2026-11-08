@@ -10,7 +10,7 @@ from uuid import UUID
 
 import discord
 from google.oauth2.credentials import Credentials
-from sqlalchemy import Engine, and_, desc, func, not_, or_, text
+from sqlalchemy import Engine, and_, desc, exists, func, not_, or_, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
@@ -488,6 +488,9 @@ class NotifyRepository(BaseRepository):
             self.session.commit()
         except IntegrityError as e:
             self.session.rollback()
+            # 只有主鍵（unique violation, 23505）衝突才算已存在，其他約束錯誤照實往外拋
+            if getattr(e.orig, "sqlstate", None) != "23505":
+                raise
             raise DataExistError(original=e) from e
 
         if DBCacheType.from_notify_channel(notify_type) == DBCacheType.VoiceLog:
@@ -725,20 +728,23 @@ class NotifyRepository(BaseRepository):
         self._cleanup_community(notify_type, community_id)
 
     def _cleanup_community(self, notify_type: NotifyCommunityType, community_id: str):
-        """移除推播後的清理：該種類已沒人訂閱就刪該種類的輪詢快取；整個平台都沒人訂閱再刪帳號資料與 YouTube 推播紀錄。"""
+        """移除推播後的清理：該種類已沒人訂閱就刪該種類的輪詢快取；整個平台都沒人訂閱再刪帳號資料與 YouTube 推播紀錄。
+
+        每個 DELETE 都帶 NOT EXISTS，判斷與刪除在同一條 SQL，不會刪掉清理期間剛被別人新增的推播所需的資料。
+        """
         platform = PlatformType.from_notify(notify_type)
         if platform is None:
             return
 
-        stmt = select(func.count()).where(NotifyCommunity.notify_type == notify_type, NotifyCommunity.community_id == community_id)
-        if not self.session.exec(stmt).one():
-            self.session.exec(delete(CommunityCache).where(CommunityCache.community_id == community_id, CommunityCache.notify_type == notify_type))
+        type_subscribed = exists().where(NotifyCommunity.notify_type == notify_type, NotifyCommunity.community_id == community_id)
+        self.session.exec(
+            delete(CommunityCache).where(CommunityCache.community_id == community_id, CommunityCache.notify_type == notify_type, ~type_subscribed)
+        )
 
-        stmt = select(func.count()).where(NotifyCommunity.community_type == platform, NotifyCommunity.community_id == community_id)
-        if not self.session.exec(stmt).one():
-            self.session.exec(delete(Community).where(Community.id == community_id, Community.type == platform))
-            if platform == PlatformType.Google:
-                self.session.exec(delete(PushRecord).where(PushRecord.channel_id == community_id))
+        platform_subscribed = exists().where(NotifyCommunity.community_type == platform, NotifyCommunity.community_id == community_id)
+        self.session.exec(delete(Community).where(Community.id == community_id, Community.type == platform, ~platform_subscribed))
+        if platform == PlatformType.Google:
+            self.session.exec(delete(PushRecord).where(PushRecord.channel_id == community_id, ~platform_subscribed))
 
         self.session.commit()
 

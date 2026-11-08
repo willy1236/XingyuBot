@@ -59,6 +59,11 @@ class TestParseInput:
     def test_twitter(self, text):
         assert parse_input(P.Twitter, text).value.lower() == "foo"
 
+    def test_twitter_reserved_word_only_blocked_in_urls(self):
+        # 真的有人叫 search；直接輸入名稱不能被保留路徑擋掉
+        assert parse_input(P.Twitter, "search") == ParsedInput("name", "search")
+        assert parse_input(P.Twitter, "@login") == ParsedInput("name", "login")
+
     def test_twitter_numeric_is_id(self):
         assert parse_input(P.Twitter, "12345") == ParsedInput("id", "12345")
 
@@ -285,6 +290,13 @@ class TestSettingsService:
         row = notify_row(repo, N.TwitchLive)
         assert (row.channel_id, row.role_id, row.message) == (6, 7, "b")
 
+    def test_set_notify_on_existing_backfills_missing_cache(self, apis, repo):
+        notify_settings.set_notify(TW, N.TwitchLive, GUILD_ID, 5, None, None)
+        repo.session.exec(CommunityCache.__table__.delete())  # 舊的清理 bug 留下的狀態
+        repo.session.commit()
+        notify_settings.set_notify(TW, N.TwitchLive, GUILD_ID, 6, None, None)
+        assert cache_types(repo) == {N.TwitchLive}
+
     def test_ensure_push_flows(self, apis, repo):
         # 沒有紀錄：訂閱並存下驗證時間，保留原有欄位
         repo.session.merge(PushRecord(channel_id=YT.id, secret="keep"))
@@ -466,3 +478,29 @@ class TestEndpoints:
     def test_bot_not_in_guild(self, client, monkeypatch):
         monkeypatch.setattr(sclient, "bot", fake_bot(None))
         assert self.resolve(client).status_code == 404
+
+
+class TestPlatformEdges:
+    """直接測真實的 platforms 類別，不是整個 api 被換掉的情況。"""
+
+    def test_twitch_and_youtube_404_return_none(self, monkeypatch):
+        from starlib.providers.social.platforms import GoogleAPI, TwitchAPI
+
+        monkeypatch.setattr(TwitchAPI, "get", lambda self, *a, **k: None)
+        monkeypatch.setattr(GoogleAPI, "get", lambda self, *a, **k: None)
+        twitch = TwitchAPI.__new__(TwitchAPI)
+        google = GoogleAPI.__new__(GoogleAPI)
+        assert twitch.get_user("foo") is None
+        assert twitch.get_user_by_id("1") is None
+        assert google.get_channel(handle="@foo") is None
+
+    def test_twitter_unparsable_output_strict(self, monkeypatch):
+        from starlib.providers.social.platforms import CLIInterface
+
+        cli = CLIInterface.__new__(CLIInterface)
+        monkeypatch.setattr(cli, "_run", lambda *a: SimpleNamespace(stdout="not json"), raising=False)
+        assert cli.get_user_details("foo") is None  # 預設維持原行為
+        import json
+
+        with pytest.raises(json.JSONDecodeError):
+            cli.get_user_details("foo", strict=True)

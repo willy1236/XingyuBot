@@ -15,7 +15,7 @@ from typing import Literal
 from urllib.parse import urlsplit
 
 from starlib.database import APIType, Community, NotifyCommunityType, PlatformType, sqldb
-from starlib.exceptions import APINetworkError
+from starlib.exceptions import APINetworkError, NotifyCommunityExistsError
 from starlib.instance import cli_api, google_api, tw_api, yt_push
 from starlib.utils import nowtz
 
@@ -122,7 +122,8 @@ def parse_input(platform: PlatformType, text: str) -> ParsedInput:
 
     # Twitter
     name = (segments[0] if segments else text).removeprefix("@")
-    if name.lower() in _TWITTER_RESERVED:
+    # 保留路徑只對網址生效；直接輸入的名稱照舊交給平台查
+    if segments is not None and name.lower() in _TWITTER_RESERVED:
         raise LookupFailure("unsupported_format")
     if _TWITTER_ID.fullmatch(name):
         return ParsedInput("id", name)
@@ -196,10 +197,14 @@ def add_notifies(
 def set_notify(account: AccountInfo, notify_type: NotifyCommunityType, guild_id: int, channel_id: int, role_id: int | None, message: str | None) -> None:
     """指令用：該筆已存在就修改頻道、身分組、自訂文字，否則新增。"""
     if sqldb.get_notify_community_fresh(notify_type, account.id, guild_id) is None:
-        add_notifies(account, [notify_type], guild_id, channel_id, role_id, message)
-    else:
-        sqldb.add_notify_community(notify_type, account.id, guild_id, channel_id, role_id, message)
-        sqldb.merge(account.to_community())
+        try:
+            add_notifies(account, [notify_type], guild_id, channel_id, role_id, message)
+            return
+        except NotifyCommunityExistsError:
+            pass  # 檢查與新增之間被別人搶先，改走修改
+    # 帶 cache_time：舊資料缺輪詢快取時，重跑指令可以補回來（已存在的快取不會被覆蓋）
+    sqldb.add_notify_community(notify_type, account.id, guild_id, channel_id, role_id, message, cache_time=nowtz())
+    sqldb.merge(account.to_community())
 
 
 def remove_notify(notify_type: NotifyCommunityType, account_id: str, guild_id: int) -> None:
