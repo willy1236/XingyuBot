@@ -58,7 +58,7 @@
 | 1 | T-01 | 完成 | 管理員能用 Discord 登入、登出後台 | 無 | — | 骨架切片，含地基：路由、CORS、session、OAuth 分流、錯誤格式與 fetch wrapper |
 | 2 | T-02 | 完成 | 管理員能看到可管理的伺服器清單 | T-01 | — | |
 | 3 | T-03 | 完成 | 管理員能看到伺服器的通知一覽 | T-02 | — | 含存取檢查與有效性判斷，T-04～T-09 共用 |
-| 4 | T-04 | 未完成 | [共用] 通知編輯：選項、衝突比對、表單暫存 | T-03 | A | T-06、T-07 依賴 |
+| 4 | T-04 | 實作完成，待部署驗收 | [共用] 通知編輯：選項、衝突比對、表單暫存 | T-03 | A | T-06、T-07 依賴 |
 | 5 | T-05 | 未完成 | [共用] 通知範例內容：預覽與測試共用 | T-03 | A | T-06、T-07、T-08 依賴 |
 | 6 | T-09 | 未完成 | 管理員能從清單邀請 bot 並回到後台 | T-02 | A | 依賴只到 T-02，可以提早與 T-03 並行 |
 | 7 | T-06 | 未完成 | 管理員能新增、修改、刪除頻道通知 | T-04、T-05 | B | |
@@ -319,12 +319,12 @@
 - 不包含：各類通知的表單與寫入，留到 T-06、T-07。
 
 **驗收條件**
-- [ ] 頻道選項與身分組選項，只包含 T-03 有效性判斷認為有效的頻道與身分組。
-- [ ] 衝突比對：傳入的原始值與資料庫目前的值不同，或那一筆已被刪除，就回報衝突並附上目前的值；值相同才允許寫入。
-- [ ] 選項 API 收到 `bot_not_in_guild`、`no_permission` 時，由 wrapper 提示並導回清單。
-- [ ] domalyze_frontend 加入 vitest 與 jsdom，`package.json` 新增 `npm test`，CI 的 deploy workflow 在 build 前跑 `npm test`。
-- [ ] 暫存介面有單元測試：註冊的表單在 wrapper 導向前被存下；同一個帳號回來時 `consumeDraft` 取得內容；不同帳號時取不到；收到 `no_permission` 時暫存被清掉。
-- [ ] 選項 API 與衝突比對服務有單元測試。
+- [x] 頻道選項與身分組選項，只包含 T-03 有效性判斷認為有效的頻道與身分組。
+- [x] 衝突比對：傳入的原始值與資料庫目前的值不同，或那一筆已被刪除，就回報衝突並附上目前的值；值相同才允許寫入。
+- [x] 選項 API 收到 `bot_not_in_guild`、`no_permission` 時，由 wrapper 提示並導回清單。
+- [x] domalyze_frontend 加入 vitest 與 jsdom，`package.json` 新增 `npm test`，CI 的 deploy workflow 在 build 前跑 `npm test`。
+- [x] 暫存介面有單元測試：註冊的表單在 wrapper 導向前被存下；同一個帳號回來時 `consumeDraft` 取得內容；不同帳號時取不到；收到 `no_permission` 時暫存被清掉。
+- [x] 選項 API 與衝突比對服務有單元測試。
 - [ ] 表單實際的暫存與還原，在 T-06、T-07 各自驗收。
 
 **實作設計**
@@ -347,7 +347,9 @@
 
 **風險 / 實作注意**：「比對打開時的值」偵測不到 A→B→A 的變化，也就是改過又改回原值的情況。規格沒有要求偵測這種情況。
 
-**進度**：未完成
+**進度**：實作完成（2026-11-08），尚未部署
+- 實作時的取捨：衝突比對放 `dashboard/conflict.py`，`Conflict.to_error()` 產生 409（`{"error":"conflict","deleted":bool,"current":{...}|null}`），T-06、T-07 直接 raise；`check_conflict` 只比對 `original` 有的欄位，兩邊都轉字串後比。暫存介面的 `userId` 不由 `registerDraft` 傳入，改由 layout 呼叫 `createDraftHooks(me.id)` 設定，`consumeDraft(entryKey)` 取出時就刪除，帳號不符也一併刪除。選項 API 的頻道依 position 排序、身分組由高到低；`color` 為 `#rrggbb`，沒設為 null。前端另有 `lib/dashboard-options.ts`（`useNotifyOptions`）供表單載入選項；選單在目前的值不在選項內時會顯示「（無法使用）」。`npm test` 為 `vitest run`。
+- 驗收條件中選項 API 的 `bot_not_in_guild`、`no_permission` 沿用 T-01 wrapper 既有處理，後端已有測試。
 
 ### T-05 [共用] 通知範例內容：預覽與測試共用
 
