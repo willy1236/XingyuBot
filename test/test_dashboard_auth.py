@@ -436,6 +436,15 @@ class TestLoginCallback:
         assert r.status_code == 400
         assert not repo.session.exec(select(DashboardSession)).all()
 
+    def test_login_deletes_expired_sessions_only(self, client, spy, repo):  # noqa: F811
+        make_session(repo, user_id=OTHER_ID, session_id="expired", last_used_ago=timedelta(days=31))
+        make_session(repo, user_id=OTHER_ID, session_id="active", last_used_ago=timedelta(days=29))
+        login(client, spy)
+        ids = {row.session_id for row in repo.session.exec(select(DashboardSession)).all()}
+        assert "expired" not in ids
+        assert "active" in ids
+        assert len(ids) == 2
+
     def test_switching_account_deletes_old_session(self, client, spy, repo):  # noqa: F811
         make_session(repo, user_id=OTHER_ID, session_id="old")
         client.cookies.set("dashboard_session", "old")

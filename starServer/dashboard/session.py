@@ -60,6 +60,8 @@ def _touch(session_id: str) -> SessionInfo | None:
 def create_session(discord_user_id: str, name: str, avatar: str | None, replace_session_id: str | None = None) -> str:
     """建立新 session。cookie 帶著的舊 session（不論是不是同一個帳號）一併刪掉，換帳號時就不會留著舊帳號的 session。"""
     s = sqldb.session
+    # 順手清掉已過期的 session，沒有人再用到的列才不會一直留在表裡
+    s.execute(delete(DashboardSession).where(DashboardSession.last_used_at < _now() - SESSION_TTL))  # pyright: ignore[reportArgumentType]
     if replace_session_id:
         s.execute(delete(DashboardSession).where(DashboardSession.session_id == replace_session_id))  # pyright: ignore[reportArgumentType]
     session_id = secrets.token_urlsafe(32)
