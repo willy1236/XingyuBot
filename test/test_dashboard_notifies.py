@@ -10,7 +10,8 @@ import discord
 import pytest
 from fastapi.testclient import TestClient
 from test_dashboard_auth import dashboard_env, make_app, make_session  # noqa: F401  (fixture 與 helper)
-from test_dashboard_guilds import MANAGE_CHANNELS, MANAGE_GUILD, g, seed_token  # noqa: F401
+from test_dashboard_guilds import MANAGE_CHANNELS, MANAGE_GUILD, g, seed_token
+from test_dashboard_guilds import discord as discord_env  # noqa: F401  (fixture)
 from test_identity import repo  # noqa: F401
 
 from starlib import sclient
