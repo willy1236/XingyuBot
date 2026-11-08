@@ -392,7 +392,12 @@ class TestEndpoints:
     def test_create_existing_blocks_batch_and_lists_existing(self, client):
         self.create(client, ["community:1"])
         res = self.create(client, ["community:1", "community:3", "community:4"], {"channel_id": "15"})
-        assert (res.status_code, res.json()) == (409, {"error": "already_exists", "existing": ["community:1"]})
+        assert res.status_code == 409
+        assert res.json() == {
+            "error": "already_exists",
+            "existing": ["community:1"],
+            "current": {"community:1": {"channel_id": str(OK_CHANNEL), "role_id": None, "message": None}},
+        }
         assert notify_row(client.repo, N.TwitchVideo) is None
 
     def test_create_validates_fields(self, client):

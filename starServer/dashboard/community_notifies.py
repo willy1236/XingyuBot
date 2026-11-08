@@ -154,7 +154,17 @@ async def create(body: CreateBody, guild_id: int = Depends(require_guild_access)
         await run_db(_write)
     except NotifyCommunityExistsError as e:
         keys = [f"community:{int(t)}" for t in e.notify_types]
-        raise DashboardError(409, "already_exists", existing=keys) from None
+
+        def _current() -> dict:
+            result = {}
+            for key in keys:
+                spec = parse_key(key)
+                row = sqldb.get_notify_community_fresh(spec.community_type, account.id, guild_id)
+                if row is not None:
+                    result[key] = {name: None if (v := getattr(row, name)) is None else str(v) for name in field_names(spec)}
+            return result
+
+        raise DashboardError(409, "already_exists", existing=keys, current=await run_db(_current)) from None
     push = await _ensure_youtube_push(account.id) if platform == PlatformType.Google else None
     return _response(push)
 
