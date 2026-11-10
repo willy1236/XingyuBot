@@ -845,12 +845,91 @@ class NotifyRepository(BaseRepository):
 
 
 class DynamicVoiceRepository(BaseRepository):
+    def _sync_lobby_cache(self, guild_id: int, old_channel_id: int | None, lobby: DynamicVoiceLobby | None):
+        """讓 cache 裡這個伺服器只剩一個大廳 key：先刪舊的，再設新的（lobby 為 None 只刪）。
+
+        cache 存與 session 無關的 transient instance：session 是 expire_on_commit，
+        web thread 寫入後 session 被釋放，若存 session 內的 instance，bot 讀屬性會拋 DetachedInstanceError。
+        """
+        if old_channel_id is not None and (lobby is None or old_channel_id != lobby.channel_id):
+            self.cache.dynamic_voice_lobby.delete(old_channel_id)
+        if lobby is not None:
+            self.cache.dynamic_voice_lobby.set(
+                lobby.channel_id,
+                DynamicVoiceLobby(guild_id=guild_id, channel_id=lobby.channel_id, default_room_name=lobby.default_room_name),
+            )
+
     def add_dynamic_voice_lobby(self, guild_id: int, channel_id: int, default_room_name: str | None = None):
-        """新增動態語音大廳"""
-        lobby = DynamicVoiceLobby(guild_id=guild_id, channel_id=channel_id, default_room_name=default_room_name)
-        lobby = self.session.merge(lobby)
+        """新增或覆蓋動態語音大廳，換大廳時舊頻道立即停止開房"""
+        old = self.get_dynamic_voice_lobby_fresh(guild_id)
+        old_channel_id = old.channel_id if old is not None else None
+        self.session.merge(DynamicVoiceLobby(guild_id=guild_id, channel_id=channel_id, default_room_name=default_room_name))
         self.session.commit()
-        self.cache.dynamic_voice_lobby.set(channel_id, lobby)
+        self._sync_lobby_cache(guild_id, old_channel_id, DynamicVoiceLobby(guild_id=guild_id, channel_id=channel_id, default_room_name=default_room_name))
+
+    def insert_dynamic_voice_lobby(self, guild_id: int, channel_id: int, default_room_name: str | None = None):
+        """後台用：只新增不覆蓋的 add_dynamic_voice_lobby。
+
+        Raises:
+            DataExistError: 這個伺服器已設定過大廳。
+        """
+        self.session.add(DynamicVoiceLobby(guild_id=guild_id, channel_id=channel_id, default_room_name=default_room_name))
+        try:
+            self.session.commit()
+        except IntegrityError as e:
+            self.session.rollback()
+            # 只有主鍵（unique violation, 23505）衝突才算已存在，其他約束錯誤照實往外拋
+            if getattr(e.orig, "sqlstate", None) != "23505":
+                raise
+            raise DataExistError(original=e) from e
+        self._sync_lobby_cache(guild_id, None, DynamicVoiceLobby(guild_id=guild_id, channel_id=channel_id, default_room_name=default_room_name))
+
+    @staticmethod
+    def _dynamic_voice_lobby_match(guild_id: int, original: dict[str, int | str | None]):
+        """條件式寫入的 WHERE：主鍵加上 original 有的欄位（channel_id、default_room_name），NULL 也能比對。"""
+        conditions = [DynamicVoiceLobby.guild_id == guild_id]
+        for field, value in original.items():
+            conditions.append(getattr(DynamicVoiceLobby, field).is_not_distinct_from(value))
+        return conditions
+
+    def update_dynamic_voice_lobby_if(self, guild_id: int, original: dict[str, int | str | None], values: dict[str, int | str | None]) -> int:
+        """後台用：資料庫目前的值等於 original 才更新 values 裡的欄位（比對與寫入在同一條 SQL），回傳影響的列數，0 表示已被改過或刪除。
+
+        original、values 的鍵是資料表欄位 channel_id、default_room_name。
+        """
+        old = self.get_dynamic_voice_lobby_fresh(guild_id)
+        old_channel_id = old.channel_id if old is not None else None
+        stmt = update(DynamicVoiceLobby).where(*self._dynamic_voice_lobby_match(guild_id, original)).values(**values)
+        count = self.session.exec(stmt).rowcount
+        self.session.commit()
+
+        if count:
+            new = self.get_dynamic_voice_lobby_fresh(guild_id)
+            if new is not None:
+                self._sync_lobby_cache(guild_id, old_channel_id, new)
+        return count
+
+    def delete_dynamic_voice_lobby_if(self, guild_id: int, original: dict[str, int | str | None]) -> int:
+        """後台用：資料庫目前的值等於 original 才刪除，回傳影響的列數，0 表示已被改過或刪除。"""
+        old = self.get_dynamic_voice_lobby_fresh(guild_id)
+        old_channel_id = old.channel_id if old is not None else None
+        stmt = delete(DynamicVoiceLobby).where(*self._dynamic_voice_lobby_match(guild_id, original))
+        count = self.session.exec(stmt).rowcount
+        self.session.commit()
+
+        if count:
+            self._sync_lobby_cache(guild_id, old_channel_id, None)
+        return count
+
+    def get_dynamic_voice_lobby_fresh(self, guild_id: int):
+        """後台用：get_dynamic_voice_lobby 加 populate_existing，讀得到其他 thread 剛寫入的值。"""
+        statement = select(DynamicVoiceLobby).where(DynamicVoiceLobby.guild_id == guild_id).execution_options(populate_existing=True)
+        return self.session.exec(statement).one_or_none()
+
+    def get_dynamic_voice_rooms_fresh(self, guild_id: int):
+        """後台用：該伺服器的動態房間紀錄（populate_existing）。"""
+        statement = select(DynamicVoice).where(DynamicVoice.guild_id == guild_id).execution_options(populate_existing=True)
+        return list(self.session.exec(statement).all())
 
     def get_all_dynamic_voice_lobby(self):
         """取得目前所有的動態語音大廳"""
@@ -866,13 +945,13 @@ class DynamicVoiceRepository(BaseRepository):
 
     def remove_dynamic_voice_lobby(self, guild_id: int):
         """移除動態語音大廳"""
-        lobby = self.get_dynamic_voice_lobby(guild_id)
+        # 用 fresh 讀舊值：本 thread 的 session 可能還留著網頁改之前的舊值，不 fresh 會刪錯 cache key
+        lobby = self.get_dynamic_voice_lobby_fresh(guild_id)
+        old_channel_id = lobby.channel_id if lobby is not None else None
         stmt = delete(DynamicVoiceLobby).where(DynamicVoiceLobby.guild_id == guild_id)
         self.session.exec(stmt)
         self.session.commit()
-
-        if lobby is not None:
-            self.cache.dynamic_voice_lobby.delete(lobby.channel_id)
+        self._sync_lobby_cache(guild_id, old_channel_id, None)
 
     def get_all_dynamic_voice(self):
         """取得目前所有的動態語音"""
