@@ -10,6 +10,7 @@ from dataclasses import dataclass
 
 import discord
 from fastapi import APIRouter, Depends
+from pydantic import BaseModel, Field
 
 from starlib import sqldb
 
@@ -93,3 +94,54 @@ async def get_rooms(guild_id: int = Depends(require_guild_access)):
         # 頻道已被刪除的殘留紀錄自動清掉，不顯示給管理員
         await run_db(lambda: sqldb.batch_remove_dynamic_voice(gone))
     return {"rooms": rooms}
+
+
+# ====== 清除空房 ======
+class ClearBody(BaseModel):
+    #: Discord ID 用字串
+    channel_ids: list[int] = Field(min_length=1)
+
+
+async def _clear_one(guild: discord.Guild, channel_id: int) -> dict:
+    """在 bot 的事件迴圈上清除一間房，回傳這筆的結果。刪除前重新確認房內沒人。"""
+    try:
+        channel = await _resolve_channel(guild, channel_id)
+    except discord.HTTPException as e:
+        return {"id": str(channel_id), "name": None, "status": "failed", "reason": e.text or str(e)}
+    if channel is None:
+        return {"id": str(channel_id), "name": None, "status": "cleared"}
+
+    result = {"id": str(channel_id), "name": channel.name}
+    if channel.members:  # pyright: ignore[reportAttributeAccessIssue]
+        return {**result, "status": "skipped_occupied"}
+    try:
+        await channel.delete(reason="動態語音：管理員從後台清除")
+    except discord.NotFound:
+        pass  # 已經不在了，視為清除成功
+    except discord.Forbidden:
+        return {**result, "status": "failed", "reason": "bot 沒有刪除這個頻道的權限"}
+    except discord.HTTPException as e:
+        return {**result, "status": "failed", "reason": e.text or str(e)}
+    return {**result, "status": "cleared"}
+
+
+@router.post("/guilds/{guild_id}/dynamic-voice/rooms/clear")
+async def clear_rooms(body: ClearBody, guild_id: int = Depends(require_guild_access)):
+    requested = list(dict.fromkeys(body.channel_ids))
+    owned = {r.channel_id for r in await run_db(lambda: _load_records(guild_id))}
+    valid = [cid for cid in requested if cid in owned]
+
+    async def _clear(guild: discord.Guild) -> dict[int, dict]:
+        return {cid: await _clear_one(guild, cid) for cid in valid}
+
+    cleared_by_id = await on_guild_async(guild_id, _clear) if valid else {}
+    cleared_ids = [cid for cid, r in cleared_by_id.items() if r["status"] == "cleared"]
+    if cleared_ids:
+        await run_db(lambda: sqldb.batch_remove_dynamic_voice(cleared_ids))
+
+    # 有人的房間一律逐筆回 skipped_occupied，整個請求仍是 200
+    results = [
+        cleared_by_id[cid] if cid in cleared_by_id else {"id": str(cid), "name": None, "status": "failed", "reason": "不是動態房間"}
+        for cid in requested
+    ]
+    return {"results": results}

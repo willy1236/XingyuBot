@@ -1,4 +1,4 @@
-"""動態語音後台 T-04：房間清單。"""
+"""動態語音後台 T-04、T-05：房間清單與清除空房。"""
 
 from __future__ import annotations
 
@@ -156,3 +156,100 @@ class TestListRooms:
         client.monkeypatch.setattr(sclient, "bot", fake_bot(None))
         assert client.get(URL).status_code == 404
 
+
+class TestClearRooms:
+    def post(self, client, ids):
+        return client.post(f"{URL}/clear", json={"channel_ids": [str(i) for i in ids]}, headers={"Origin": FRONTEND})
+
+    def remaining(self, client):
+        return sorted(r.channel_id for r in client.repo.get_dynamic_voice_rooms_fresh(GUILD_ID))
+
+    def results(self, res):
+        return {r["id"]: r for r in res.json()["results"]}
+
+    def test_clears_empty_and_skips_occupied(self, client):
+        empty1, empty2, busy = FakeRoom(1, "空1"), FakeRoom(2, "空2"), FakeRoom(3, "有人", members=2)
+        use_guild(client, FakeGuild([empty1, empty2, busy]))
+        for r in (empty1, empty2, busy):
+            add_record(client, r.id)
+        res = self.post(client, [1, 2, 3])
+        assert res.status_code == 200
+        out = self.results(res)
+        assert [out[k]["status"] for k in ("1", "2", "3")] == ["cleared", "cleared", "skipped_occupied"]
+        assert (empty1.deleted, empty2.deleted, busy.deleted) == (True, True, False)
+        assert self.remaining(client) == [3]
+        assert 1 not in client.repo.cache.dynamic_voice_room
+
+    def test_result_has_name(self, client):
+        use_guild(client, FakeGuild([FakeRoom(1, "空房")]))
+        add_record(client, 1)
+        assert self.post(client, [1]).json() == {"results": [{"id": "1", "name": "空房", "status": "cleared"}]}
+
+    def test_forbidden_fails_that_room_only(self, client):
+        locked = FakeRoom(1, "刪不掉", delete_error=http_error(discord.Forbidden, 403, "Missing Permissions"))
+        fine = FakeRoom(2, "可以")
+        use_guild(client, FakeGuild([locked, fine]))
+        add_record(client, 1)
+        add_record(client, 2)
+        out = self.results(self.post(client, [1, 2]))
+        assert out["1"] == {"id": "1", "name": "刪不掉", "status": "failed", "reason": "bot 沒有刪除這個頻道的權限"}
+        assert out["2"]["status"] == "cleared"
+        assert self.remaining(client) == [1]  # 失敗的紀錄保留
+
+    def test_other_http_error_carries_discord_message(self, client):
+        broken = FakeRoom(1, "壞掉", delete_error=http_error(discord.HTTPException, 500, "Internal Error"))
+        use_guild(client, FakeGuild([broken]))
+        add_record(client, 1)
+        out = self.results(self.post(client, [1]))
+        assert out["1"]["status"] == "failed"
+        assert "Internal Error" in out["1"]["reason"]
+
+    def test_already_gone_counts_as_cleared(self, client):
+        use_guild(client, FakeGuild([]))
+        add_record(client, 1)
+        assert self.results(self.post(client, [1]))["1"]["status"] == "cleared"
+        assert self.remaining(client) == []
+
+    def test_delete_not_found_counts_as_cleared(self, client):
+        gone = FakeRoom(1, "剛被刪", delete_error=http_error(discord.NotFound, 404))
+        use_guild(client, FakeGuild([gone]))
+        add_record(client, 1)
+        assert self.results(self.post(client, [1]))["1"]["status"] == "cleared"
+        assert self.remaining(client) == []
+
+    def test_not_a_dynamic_room_is_failed_and_untouched(self, client):
+        other = FakeRoom(9, "一般頻道")
+        use_guild(client, FakeGuild([other]))
+        out = self.results(self.post(client, [9]))
+        assert out["9"] == {"id": "9", "name": None, "status": "failed", "reason": "不是動態房間"}
+        assert other.deleted is False
+
+    def test_other_guild_room_is_rejected(self, client):
+        other = FakeRoom(9, "別的伺服器的房間")
+        use_guild(client, FakeGuild([other]))
+        client.repo.add_dynamic_voice(9, CREATOR, GUILD_ID + 1)
+        assert self.results(self.post(client, [9]))["9"]["status"] == "failed"
+        assert other.deleted is False
+
+    def test_duplicate_ids_processed_once(self, client):
+        room = FakeRoom(1, "空房")
+        use_guild(client, FakeGuild([room]))
+        add_record(client, 1)
+        assert len(self.post(client, [1, 1]).json()["results"]) == 1
+
+    def test_empty_request_rejected(self, client):
+        use_guild(client, FakeGuild([]))
+        assert self.post(client, []).status_code == 400
+
+    def test_invalid_id_rejected(self, client):
+        use_guild(client, FakeGuild([]))
+        res = client.post(f"{URL}/clear", json={"channel_ids": ["abc"]}, headers={"Origin": FRONTEND})
+        assert res.status_code == 400
+
+    def test_requires_manage_channels(self, client):
+        room = FakeRoom(1, "空房")
+        use_guild(client, FakeGuild([room]))
+        add_record(client, 1)
+        client.discord_env.guilds = [g(str(GUILD_ID), "guild", 0)]
+        assert self.post(client, [1]).status_code == 403
+        assert room.deleted is False
