@@ -784,9 +784,9 @@ flowchart LR
 
 **依賴**：S-01（區塊權限與導覽）
 
-**進度**：實作完成（2026-11-10）
-- commit：XingyuBot `feat/dashboard-giveaways`（e34ab00）；domalyze_frontend `feat/dashboard-giveaways`（1cedf9b）
-- 已驗：API 層（`test/test_dashboard_giveaways.py`，真實 PostgreSQL、假 Discord）涵蓋排序、分頁、90 天、他服 404、403、已離開成員；前端 type-check、vitest、`next build --webpack`
+**進度**：實作完成（2026-11-10）；審查修正完成（2026-11-11）
+- commit：XingyuBot `feat/dashboard-giveaways`（e34ab00 與後續審查修正）；domalyze_frontend `feat/dashboard-giveaways`（1cedf9b 與後續審查修正）
+- 已驗：API 層（`test/test_dashboard_giveaways.py`，真實 PostgreSQL、假 Discord）涵蓋排序、分頁、90 天、他服 404、403、已離開成員、清單發起人／頻道名稱；前端 type-check、vitest、`next build --webpack`
 - 未驗（需人工）：頁面實際畫面、與真實 Discord 抽獎結果一致、空清單說明；未打勾的條目待人工確認
 
 ### G-02 管理員能提前結束與重抽
@@ -801,29 +801,29 @@ flowchart LR
 - 不包含：從後台發起抽獎（非目標）。
 
 **驗收條件**
-- [x] 不是發起人的管理員在後台提前結束，抽獎訊息更新為結果，原頻道出現回覆公告。
-- [x] 抽獎訊息被刪後提前結束，照樣開獎，原頻道出現一則一般訊息公告。
-- [x] 拔掉 bot 在原頻道的 Send Messages 後重抽，照樣重抽，看到沒有公告的原因。
-- [x] 指定一位中獎者重抽，他的資格取消並抽出替補，原頻道出現公告，重抽次數加一，抽獎訊息上的結果更新。
-- [x] 提前結束時剛好到期自動開獎，顯示最新結果，不會開獎兩次。
-- [x] `/giveaway redraw` 執行後，抽獎訊息被回覆公告並更新結果，下指令的人收到只有自己看得到的完成提示。
+- [ ] 不是發起人的管理員在後台提前結束，抽獎訊息更新為結果，原頻道出現回覆公告。
+- [ ] 抽獎訊息被刪後提前結束，照樣開獎，原頻道出現一則一般訊息公告。
+- [ ] 拔掉 bot 在原頻道的 Send Messages 後重抽，照樣重抽，看到沒有公告的原因。
+- [ ] 指定一位中獎者重抽，他的資格取消並抽出替補，原頻道出現公告，重抽次數加一，抽獎訊息上的結果更新。
+- [ ] 提前結束時剛好到期自動開獎，顯示最新結果，不會開獎兩次。
+- [ ] `/giveaway redraw` 執行後，抽獎訊息被回覆公告並更新結果，下指令的人收到只有自己看得到的完成提示。
 
 **實作設計**
 - 後端：`giveaways.py` 新增 `POST .../giveaways/{id}/end` 與 `POST .../giveaways/{id}/redraw`（body `{ winner_user_id? }`），在 bot loop 上執行：
   - 每次重新從 DB 讀 `Giveaway`，建立 `GiveawayView` 再呼叫 `end_giveaway`／`redraw_winner_giveaway`。
-  - 新增 `GiveawayView.publish(bot)`：讀原訊息；讀得到就 edit embed 並 `announce`（reply），讀不到就 `channel.send(announcement)`，頻道不在或沒權限就回原因。end 與 redraw 共用，`auto_end` 也改用它。
-- bot：`command.py` 的 `/giveaway redraw` 改用 `publish`，指令回覆改成 ephemeral 的完成提示。
+  - 新增 `GiveawayView.publish(bot)`：讀原訊息；讀得到就 edit embed 並 `announce`（reply），訊息被刪（NotFound）就 `channel.send(announcement)`，Forbidden／其他錯誤、頻道不在或沒權限就回原因。end 與 redraw 共用，`auto_end` 也改用它。
+- bot：`command.py` 的 `/giveaway redraw` 改用 `publish`，指令回覆改成 ephemeral 的完成提示；沒有可替補的參加者時完成提示要講清楚。
 - 前端：G-01 詳情的 `actions` 放「提前結束」「重抽」與確認視窗；重抽可以選「全部重抽」或指定中獎者。
 
 **依賴**：G-01（詳情與插槽）
 
 **風險 / 實作注意**：`end_giveaway` 只看 instance 上的 `is_on`，排程 job 的 instance 是舊的。web 提前結束與到期同時發生時，可能開獎兩次。實作時要在開獎前重新從 DB 讀 `is_on`，並在 bot loop 上序列化（兩邊都在 bot loop 執行，用每個抽獎一把 `asyncio.Lock`）。web 結束後要移除排程 job，`end_giveaway` 已處理。
 
-**進度**：實作完成（2026-11-10）
-- commit：XingyuBot `feat/dashboard-giveaways`（a09d254）；domalyze_frontend `feat/dashboard-giveaways`（提前結束與重抽操作）
-- 已驗：後端以假 Discord 物件驗證訊息更新、回覆公告、改發一般訊息、頻道不在、Forbidden、已結束視為成功、重複開獎競態、`/giveaway redraw` callback（`test/test_dashboard_giveaways_write.py`）；前端 type-check、vitest、build
-- 未驗（需人工）：打勾條目只在假 Discord 下驗過，真實 Discord 上的訊息／公告、拔掉 Send Messages、到期與按鈕同時觸發需人工；前端確認視窗操作
-- 途中決定：鎖與重讀放在 `GiveawayView`（`giveaway_lock`、`reload`），到期自動開獎、發起人按鈕、後台、指令共用；POST 回 `{status, announce_failure, announce_failure_text}`，前端結束後重新載入詳情
+**進度**：實作完成（2026-11-10）；審查修正完成（2026-11-11）
+- commit：XingyuBot `feat/dashboard-giveaways`（a09d254 與後續審查修正）；domalyze_frontend `feat/dashboard-giveaways`（b3ba38c 與後續審查修正）
+- 已驗：後端以假 Discord 物件驗證訊息更新、回覆公告、改發一般訊息、頻道不在、Forbidden、已結束視為成功、重複開獎競態、重抽無替補告知、`/giveaway redraw` callback（`test/test_dashboard_giveaways_write.py`）；前端 type-check、vitest、build
+- 未驗（需人工）：上述六條驗收需真實 Discord／後台畫面確認；前端確認視窗操作、手機寬度
+- 途中決定：鎖與重讀放在 `GiveawayView`（`giveaway_lock`、`reload`），到期自動開獎、發起人按鈕、後台、指令共用；POST 回 `{status, announce_failure, announce_failure_text, no_replacement}`，前端結束後重新載入詳情
 
 ## 開工前待決
 
