@@ -679,7 +679,7 @@ class TRPGAbility(IdbaseSchema, table=True):
 
     characters: list[TRPGCharacterAbility] = Relationship(back_populates="ability")
 
-class WarningType(IdbaseSchema, table=True):
+class WarningTypeRow(IdbaseSchema, table=True):
     __tablename__ = "warning_type"
 
     id: int = Field(sa_column=Column(SmallInteger, primary_key=True))
