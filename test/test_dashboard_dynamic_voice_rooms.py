@@ -241,6 +241,11 @@ class TestClearRooms:
         use_guild(client, FakeGuild([]))
         assert self.post(client, []).status_code == 400
 
+    def test_too_many_ids_rejected(self, client):
+        use_guild(client, FakeGuild([]))
+        assert self.post(client, list(range(1, 102))).status_code == 400
+        assert self.post(client, list(range(1, 101))).status_code == 200
+
     def test_invalid_id_rejected(self, client):
         use_guild(client, FakeGuild([]))
         res = client.post(f"{URL}/clear", json={"channel_ids": ["abc"]}, headers={"Origin": FRONTEND})

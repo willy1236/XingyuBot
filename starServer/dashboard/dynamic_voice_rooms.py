@@ -98,8 +98,8 @@ async def get_rooms(guild_id: int = Depends(require_guild_access)):
 
 # ====== 清除空房 ======
 class ClearBody(BaseModel):
-    #: Discord ID 用字串
-    channel_ids: list[int] = Field(min_length=1)
+    #: Discord ID，JSON 可送字串，pydantic 轉成 int；一次最多 100 間
+    channel_ids: list[int] = Field(min_length=1, max_length=100)
 
 
 async def _clear_one(guild: discord.Guild, channel_id: int) -> dict:
