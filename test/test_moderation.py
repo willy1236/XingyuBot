@@ -223,3 +223,28 @@ def test_announcement_auto_timeout_failure_reason(db, monkeypatch):
     res = moderation.PunishResult(ok=True, warning_id=77, auto_timeout=AutoTimeoutResult(ok=False, error="權限不足"))
     embed = announcement(res, make_member(), ACTOR)["embed"]
     assert "權限不足" in embed.fields[0].value
+
+
+def test_record_write_failure_keeps_ok_and_skips_hook(db):
+    called = []
+
+    async def hook(guild, target, warning_id):
+        called.append(1)
+
+    register_after_warning(hook)
+    db.add_warning.side_effect = RuntimeError("db down")
+    member = make_member()
+    res = run(punish(make_guild(member), WarningType.Warning, member, ACTOR, "r", cross_guild=False, via_dashboard=False))
+    assert res.ok and res.warning_id is None and "紀錄寫入失敗" in res.error
+    assert res.auto_timeout is None and called == []
+    kick = run(punish(make_guild(member), WarningType.Kick, member, ACTOR, "r", cross_guild=False, via_dashboard=False))
+    assert kick.ok and kick.warning_id is None
+    member.kick.assert_awaited_once()
+
+
+def test_announcement_works_without_record(db, monkeypatch):
+    monkeypatch.setattr(moderation.sclient, "bot", object(), raising=False)
+    res = moderation.PunishResult(ok=True, error="動作已執行，但紀錄寫入失敗")
+    data = announcement(res, make_member(), ACTOR)
+    assert data["content"] == "<@10>" and data["embed"] is not None
+    db.get_warning.assert_not_called()

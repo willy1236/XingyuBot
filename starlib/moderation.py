@@ -154,9 +154,14 @@ async def punish(
     if target.bot:
         return result
 
-    result.warning_id = sclient.sqldb.add_warning(
-        target.id, kind, actor.id, guild.id, nowtz(), reason, duration if kind == WarningType.Timeout else None, guild_only=not cross_guild
-    )
+    try:
+        result.warning_id = sclient.sqldb.add_warning(
+            target.id, kind, actor.id, guild.id, nowtz(), reason, duration if kind == WarningType.Timeout else None, guild_only=not cross_guild
+        )
+    except Exception:
+        log.exception("punish: action done but add_warning failed")
+        result.error = "動作已執行，但紀錄寫入失敗"
+        return result
 
     if kind == WarningType.Warning and _after_warning is not None:
         try:
