@@ -32,9 +32,26 @@ CACHE_TTL = 600
 # token 剩不到這麼久就先 refresh，避免送出請求途中過期
 REFRESH_MARGIN = timedelta(seconds=60)
 
+# Discord permission bits（https://discord.com/developers/docs/topics/permissions）
+KICK_MEMBERS = 0x2
+BAN_MEMBERS = 0x4
 ADMINISTRATOR = 0x8
 MANAGE_CHANNELS = 0x10
 MANAGE_GUILD = 0x20
+MANAGE_MESSAGES = 0x2000
+MANAGE_ROLES = 0x10000000
+MODERATE_MEMBERS = 0x10000000000
+
+#: 進入伺服器頁的條件：擁有其中任一項（Administrator 與擁有者視同全部）
+ENTRY_BITS = (
+    MANAGE_CHANNELS,
+    MANAGE_ROLES,
+    MANAGE_GUILD,
+    MANAGE_MESSAGES,
+    KICK_MEMBERS,
+    BAN_MEMBERS,
+    MODERATE_MEMBERS,
+)
 
 
 @dataclass(frozen=True)
@@ -52,8 +69,27 @@ class UserGuild:
 
 @dataclass(frozen=True)
 class GuildPerms:
-    manage_channels: bool
-    manage_guild: bool
+    """使用者在某伺服器的權限：permission bits，full 為 True（Administrator 或擁有者）時視同全部。"""
+
+    bits: int = 0
+    full: bool = False
+
+    def has_any(self, bits: tuple[int, ...]) -> bool:
+        """是否擁有 bits 其中任一項；bits 為空時視為沒有任何權限滿足。"""
+        return self.full or any(self.bits & b for b in bits)
+
+    @property
+    def manage_channels(self) -> bool:
+        return self.has_any((MANAGE_CHANNELS,))
+
+    @property
+    def manage_guild(self) -> bool:
+        return self.has_any((MANAGE_GUILD,))
+
+
+def can_enter(perms: GuildPerms) -> bool:
+    """是否符合進入伺服器頁的條件（擁有 ENTRY_BITS 任一項）。"""
+    return perms.has_any(ENTRY_BITS)
 
 
 # user_id -> (抓取時間, 清單)。過期的項目保留，Discord 暫時不可用時沿用
@@ -172,10 +208,8 @@ async def guild_perms(user_id: str, guild_id: str | int) -> GuildPerms:
     gid = str(guild_id)
     for g in await get_user_guilds(user_id):
         if g.id == gid:
-            if g.full_access:
-                return GuildPerms(True, True)
-            return GuildPerms(bool(g.permissions & MANAGE_CHANNELS), bool(g.permissions & MANAGE_GUILD))
-    return GuildPerms(False, False)
+            return GuildPerms(g.permissions, g.full_access)
+    return GuildPerms()
 
 
 async def bot_guild_ids() -> set[str]:
@@ -209,7 +243,7 @@ async def list_guilds(refresh: int = 0, info: SessionInfo = Depends(require_sess
     not_invited: list[UserGuild] = []
     for g in guilds:
         if g.id in bot_ids:
-            if g.full_access or g.permissions & MANAGE_CHANNELS:
+            if can_enter(GuildPerms(g.permissions, g.full_access)):
                 invited.append(g)
         elif g.full_access or g.permissions & MANAGE_GUILD:
             not_invited.append(g)

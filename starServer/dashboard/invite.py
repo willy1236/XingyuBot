@@ -18,7 +18,7 @@ from sentry_bootstrap import capture_exception_safe
 from . import auth
 from .db import run_db
 from .errors import DashboardError
-from .guilds import bot_guild_ids, guild_perms, invalidate
+from .guilds import bot_guild_ids, can_enter, guild_perms, invalidate
 from .session import SESSION_COOKIE, create_session, lookup_session, set_session_cookie
 
 log = logging.getLogger(__name__)
@@ -124,9 +124,9 @@ async def _same_account_target(user_id: str, guild_id: str | None, origin: str) 
         perms = await guild_perms(user_id, guild_id)
     except DashboardError:
         return f"{origin}/dashboard"
-    if perms.manage_channels:
+    if can_enter(perms):
         return f"{origin}/dashboard/guilds/{guild_id}"
-    return f"{origin}/dashboard?notice=need_manage_channels"
+    return f"{origin}/dashboard?notice=need_permissions"
 
 
 auth.register_oauth_purpose("invite", _handle_invite)
