@@ -119,6 +119,13 @@ async def punish(
     audit = audit_reason(actor, reason, via_dashboard)
     result = PunishResult(ok=False)
 
+    if target.bot:
+        result.error = "不能對機器人執行"
+        return result
+    if target.id == actor.id:
+        result.error = "不能對自己執行"
+        return result
+
     if kind in (WarningType.Timeout, WarningType.Kick):
         member = target if isinstance(target, discord.Member) else guild.get_member(target.id)
         if member is None:
@@ -151,12 +158,15 @@ async def punish(
         return result
 
     result.ok = True
-    if target.bot:
-        return result
 
-    result.warning_id = sclient.sqldb.add_warning(
-        target.id, kind, actor.id, guild.id, nowtz(), reason, duration if kind == WarningType.Timeout else None, guild_only=not cross_guild
-    )
+    try:
+        result.warning_id = sclient.sqldb.add_warning(
+            target.id, kind, actor.id, guild.id, nowtz(), reason, duration if kind == WarningType.Timeout else None, guild_only=not cross_guild
+        )
+    except Exception:
+        log.exception("punish: action done but add_warning failed")
+        result.error = "動作已執行，但紀錄寫入失敗"
+        return result
 
     if kind == WarningType.Warning and _after_warning is not None:
         try:

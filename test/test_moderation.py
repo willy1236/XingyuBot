@@ -79,11 +79,23 @@ def test_success_writes_one_record(db, kind, cross_guild):
     assert (args[6] == HOUR) is (kind == WarningType.Timeout)
 
 
-def test_bot_target_executes_without_record(db):
-    member = make_member(bot=True)
-    res = run(punish(make_guild(member), WarningType.Kick, member, ACTOR, "r", cross_guild=True, via_dashboard=False))
-    assert res.ok and res.warning_id is None
-    member.kick.assert_awaited_once()
+@pytest.mark.parametrize("kind", [WarningType.Warning, WarningType.Timeout, WarningType.Kick, WarningType.Ban])
+@pytest.mark.parametrize("who", ["bot", "self"])
+def test_bot_or_self_target_is_blocked(db, kind, who):
+    member = make_member(uid=99 if who == "self" else 10, bot=who == "bot")
+    guild = make_guild(member)
+    called = []
+
+    async def hook(guild, target, warning_id):
+        called.append(1)
+
+    register_after_warning(hook)
+    res = run(punish(guild, kind, member, ACTOR, "r", cross_guild=True, duration=HOUR, via_dashboard=False))
+    assert not res.ok and res.error and res.warning_id is None and called == []
+    member.kick.assert_not_awaited()
+    member.timeout_for.assert_not_awaited()
+    guild.ban.assert_not_awaited()
+    guild.fetch_ban.assert_not_awaited()
     db.add_warning.assert_not_called()
 
 
@@ -223,3 +235,28 @@ def test_announcement_auto_timeout_failure_reason(db, monkeypatch):
     res = moderation.PunishResult(ok=True, warning_id=77, auto_timeout=AutoTimeoutResult(ok=False, error="權限不足"))
     embed = announcement(res, make_member(), ACTOR)["embed"]
     assert "權限不足" in embed.fields[0].value
+
+
+def test_record_write_failure_keeps_ok_and_skips_hook(db):
+    called = []
+
+    async def hook(guild, target, warning_id):
+        called.append(1)
+
+    register_after_warning(hook)
+    db.add_warning.side_effect = RuntimeError("db down")
+    member = make_member()
+    res = run(punish(make_guild(member), WarningType.Warning, member, ACTOR, "r", cross_guild=False, via_dashboard=False))
+    assert res.ok and res.warning_id is None and "紀錄寫入失敗" in res.error
+    assert res.auto_timeout is None and called == []
+    kick = run(punish(make_guild(member), WarningType.Kick, member, ACTOR, "r", cross_guild=False, via_dashboard=False))
+    assert kick.ok and kick.warning_id is None
+    member.kick.assert_awaited_once()
+
+
+def test_announcement_works_without_record(db, monkeypatch):
+    monkeypatch.setattr(moderation.sclient, "bot", object(), raising=False)
+    res = moderation.PunishResult(ok=True, error="動作已執行，但紀錄寫入失敗")
+    data = announcement(res, make_member(), ACTOR)
+    assert data["content"] == "<@10>" and data["embed"] is not None
+    db.get_warning.assert_not_called()
