@@ -574,7 +574,7 @@ class GiveawayView(discord.ui.View):
     開獎只會發生一次：end_giveaway() 以 giveaway.is_on 判斷，按鈕結束與排程到期誰先觸發都只開獎一次。
     """
 
-    MAX_DURATION = timedelta(days=28)
+    MAX_DURATION = Giveaway.MAX_DURATION
 
     def __init__(self, giveaway: Giveaway, sqldb: SQLRepository, bot: DiscordBot):
         super().__init__(timeout=None)
@@ -589,11 +589,8 @@ class GiveawayView(discord.ui.View):
 
     @property
     def deadline(self) -> datetime:
-        """實際開獎時間：設定的結束時間，未設定或超過上限時以建立後 28 天為準"""
-        limit = self.giveaway.created_at + self.MAX_DURATION
-        if self.giveaway.end_at and self.giveaway.end_at < limit:
-            return self.giveaway.end_at
-        return limit
+        """實際開獎時間，算法在 Giveaway.deadline"""
+        return self.giveaway.deadline
 
     @property
     def _job_id(self) -> str:

@@ -59,7 +59,7 @@
 | 5 | R-01 | 未完成 | 管理員能看到反應身分組一覽 | S-01 | A | |
 | 6 | P-01 | 未完成 | 管理員能看到私人頻道大廳與頻道清單 | S-01 | A | 含資料欄位與測試版資料對應 |
 | 7 | B-01 | 未完成 | 管理員能開關語音時數統計並看排行榜 | S-01 | A | |
-| 8 | G-01 | 未完成 | 管理員能看抽獎清單、參加者與中獎者 | S-01 | A | |
+| 8 | G-01 | 進行中 | 管理員能看抽獎清單、參加者與中獎者 | S-01 | A | |
 | 9 | W-04 | 未完成 | 用指令懲處一律留紀錄，公告格式統一 | S-03 | A | 只動指令 |
 | 10 | W-02 | 未完成 | 管理員能從後台警告、禁言、踢出、停權 | W-01、S-03 | B | |
 | 11 | W-03 | 未完成 | 管理員能移除本伺服器的紀錄 | W-01 | B | 用 W-01 留的列動作插槽，與 W-02 不重疊 |
@@ -784,7 +784,9 @@ flowchart LR
 
 **依賴**：S-01（區塊權限與導覽）
 
-**進度**：未完成
+**進度**：進行中
+- commit：XingyuBot `feat/dashboard-giveaways`（後端 GET 清單／詳情、`Giveaway.deadline`、repository、測試）
+- 續做：前端 `lib/dashboard-giveaways.ts`、`app/dashboard/guilds/[id]/giveaways/page.tsx`、`giveaway-list.tsx`、`giveaway-detail.tsx`（保留 `actions` 插槽）、`guild-nav` 旗標
 
 ### G-02 管理員能提前結束與重抽
 
