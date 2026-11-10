@@ -122,10 +122,16 @@ class TestInviteCallback:
         assert res.headers["location"] == f"{FRONTEND}/dashboard/guilds/{GUILD}"
         assert env.saved == [USER_ID]
 
-    def test_manage_guild_only_gets_notice(self, env, repo, discord_env, dashboard_env):  # noqa: F811
-        discord_env.guilds = [g(GUILD, "guild", MANAGE_GUILD)]
+    @pytest.mark.parametrize("permissions", [MANAGE_GUILD, 0x4, 0x10000000])  # Manage Server、Ban、Manage Roles
+    def test_any_entry_permission_goes_to_guild_page(self, env, repo, discord_env, dashboard_env, permissions):  # noqa: F811
+        discord_env.guilds = [g(GUILD, "guild", permissions)]
         res = callback(client_with_session(repo))
-        assert res.headers["location"] == f"{FRONTEND}/dashboard?notice=need_manage_channels"
+        assert res.headers["location"] == f"{FRONTEND}/dashboard/guilds/{GUILD}"
+
+    def test_without_entry_permission_gets_notice(self, env, repo, discord_env, dashboard_env):  # noqa: F811
+        discord_env.guilds = [g(GUILD, "guild", 0x400)]  # 只有 View Channel
+        res = callback(client_with_session(repo))
+        assert res.headers["location"] == f"{FRONTEND}/dashboard?notice=need_permissions"
 
     def test_actual_guild_wins_when_user_changed_selection(self, env, repo, discord_env, dashboard_env):  # noqa: F811
         discord_env.guilds = [g("2002", "other", MANAGE_GUILD | MANAGE_CHANNELS)]
