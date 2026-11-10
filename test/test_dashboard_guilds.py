@@ -32,6 +32,11 @@ from starServer.dashboard.errors import DashboardError
 ADMIN = 0x8
 MANAGE_CHANNELS = 0x10
 MANAGE_GUILD = 0x20
+KICK = 0x2
+BAN = 0x4
+MANAGE_MESSAGES = 0x2000
+MANAGE_ROLES = 0x10000000
+MODERATE = 0x10000000000
 
 
 def g(gid: str, name: str, permissions: int = 0, owner: bool = False, icon: str | None = None) -> dict:
@@ -112,20 +117,23 @@ class TestListEndpoint:
         discord.guilds = [
             g("1", "banana", MANAGE_CHANNELS),  # 已邀請、有 Manage Channels
             g("2", "Apple", ADMIN),  # 已邀請、Administrator
-            g("3", "cherry", MANAGE_GUILD),  # 已邀請但只有 Manage Server → 不出現
+            g("3", "cherry", MANAGE_GUILD),  # 已邀請、Manage Server（符合進入條件）
             g("4", "delta", MANAGE_GUILD),  # 未邀請、Manage Server
             g("5", "echo", MANAGE_CHANNELS),  # 未邀請但只有 Manage Channels → 不出現
             g("6", "foxtrot", 0, owner=True),  # 未邀請、擁有者
             g("7", "golf", 0),  # 未邀請、無權限 → 不出現
             g("8", "hotel", 0, owner=True, icon="a_abc"),  # 已邀請、擁有者
+            g("9", "india", BAN),  # 已邀請、只有 Ban Members
+            g("10", "juliet", MANAGE_ROLES),  # 已邀請、只有 Manage Roles
+            g("11", "kilo", 0),  # 已邀請但沒有任何相關權限 → 不出現
         ]
-        monkeypatch.setattr(sclient, "bot", fake_bot([1, 2, 3, 8]))
+        monkeypatch.setattr(sclient, "bot", fake_bot([1, 2, 3, 8, 9, 10, 11]))
         res = client.get("/dashboard/guilds")
         assert res.status_code == 200
         body = res.json()
-        assert [x["name"] for x in body["invited"]] == ["Apple", "banana", "hotel"]
+        assert [x["name"] for x in body["invited"]] == ["Apple", "banana", "cherry", "hotel", "india", "juliet"]
         assert [x["name"] for x in body["not_invited"]] == ["delta", "foxtrot"]
-        assert body["invited"][2]["icon_url"] == "https://cdn.discordapp.com/icons/8/a_abc.gif"
+        assert body["invited"][3]["icon_url"] == "https://cdn.discordapp.com/icons/8/a_abc.gif"
         assert body["invited"][0]["icon_url"] is None
 
     def test_bot_not_ready(self, client, monkeypatch):
@@ -248,6 +256,24 @@ class TestService:
         assert perms(4) == (True, True)
         assert perms(5) == (False, False)
         assert perms(999) == (False, False)
+
+    def test_permission_bits_match_discord_docs(self):
+        assert guilds.KICK_MEMBERS == 1 << 1
+        assert guilds.BAN_MEMBERS == 1 << 2
+        assert guilds.MANAGE_MESSAGES == 1 << 13
+        assert guilds.MANAGE_ROLES == 1 << 28
+        assert guilds.MODERATE_MEMBERS == 1 << 40
+
+    @pytest.mark.parametrize("bit", [MANAGE_CHANNELS, MANAGE_ROLES, MANAGE_GUILD, MANAGE_MESSAGES, KICK, BAN, MODERATE])
+    def test_can_enter_with_any_entry_bit(self, bit):
+        assert guilds.can_enter(guilds.GuildPerms(bit))
+
+    def test_can_enter_rejects_unrelated_bits(self):
+        assert not guilds.can_enter(guilds.GuildPerms(0))
+        assert not guilds.can_enter(guilds.GuildPerms(0x400 | 0x800))  # View Channel、Send Messages
+
+    def test_can_enter_full_access(self):
+        assert guilds.can_enter(guilds.GuildPerms(0, True))
 
 
 # ====== token refresh ======
