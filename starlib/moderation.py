@@ -119,6 +119,13 @@ async def punish(
     audit = audit_reason(actor, reason, via_dashboard)
     result = PunishResult(ok=False)
 
+    if target.bot:
+        result.error = "不能對機器人執行"
+        return result
+    if target.id == actor.id:
+        result.error = "不能對自己執行"
+        return result
+
     if kind in (WarningType.Timeout, WarningType.Kick):
         member = target if isinstance(target, discord.Member) else guild.get_member(target.id)
         if member is None:
@@ -151,8 +158,6 @@ async def punish(
         return result
 
     result.ok = True
-    if target.bot:
-        return result
 
     try:
         result.warning_id = sclient.sqldb.add_warning(

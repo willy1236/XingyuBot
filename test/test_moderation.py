@@ -79,11 +79,23 @@ def test_success_writes_one_record(db, kind, cross_guild):
     assert (args[6] == HOUR) is (kind == WarningType.Timeout)
 
 
-def test_bot_target_executes_without_record(db):
-    member = make_member(bot=True)
-    res = run(punish(make_guild(member), WarningType.Kick, member, ACTOR, "r", cross_guild=True, via_dashboard=False))
-    assert res.ok and res.warning_id is None
-    member.kick.assert_awaited_once()
+@pytest.mark.parametrize("kind", [WarningType.Warning, WarningType.Timeout, WarningType.Kick, WarningType.Ban])
+@pytest.mark.parametrize("who", ["bot", "self"])
+def test_bot_or_self_target_is_blocked(db, kind, who):
+    member = make_member(uid=99 if who == "self" else 10, bot=who == "bot")
+    guild = make_guild(member)
+    called = []
+
+    async def hook(guild, target, warning_id):
+        called.append(1)
+
+    register_after_warning(hook)
+    res = run(punish(guild, kind, member, ACTOR, "r", cross_guild=True, duration=HOUR, via_dashboard=False))
+    assert not res.ok and res.error and res.warning_id is None and called == []
+    member.kick.assert_not_awaited()
+    member.timeout_for.assert_not_awaited()
+    guild.ban.assert_not_awaited()
+    guild.fetch_ban.assert_not_awaited()
     db.add_warning.assert_not_called()
 
 
