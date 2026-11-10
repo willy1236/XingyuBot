@@ -9,6 +9,8 @@ DELETE /dashboard/guilds/{id}/dynamic-voice          body `{original}`
 大廳 cache 由 repository 方法同步，這裡不碰。
 """
 
+from dataclasses import asdict
+
 import discord
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
@@ -24,6 +26,11 @@ from .errors import DashboardError
 from .session import SessionInfo, require_session
 
 router = APIRouter(prefix="/dashboard")
+
+
+def _permission_issues(channel: discord.VoiceChannel) -> list[dict]:
+    """bot 在該大廳缺少的權限，轉成 JSON 用的 dict；在 bot 的事件迴圈上呼叫。"""
+    return [asdict(i) for i in lobby_permission_issues(channel)]
 
 
 def lobby_view(guild: discord.Guild, channel_id: int, template: str | None) -> dict:
@@ -50,7 +57,7 @@ def lobby_view(guild: discord.Guild, channel_id: int, template: str | None) -> d
         "template_invalid": "超過 100 個字元的上限" if room_template_too_long(template) else None,
         "permission_issues": []
         if invalid
-        else [{"permission": i.permission, "scope": i.scope, "consequence": i.consequence} for i in lobby_permission_issues(channel)],  # pyright: ignore[reportArgumentType]
+        else _permission_issues(channel),
     }
 
 
@@ -119,7 +126,7 @@ def _options(guild: discord.Guild, user_id: int) -> dict:
                 "id": str(c.id),
                 "name": c.name,
                 "category": c.category.name if c.category is not None else None,
-                "permission_issues": [{"permission": i.permission, "scope": i.scope, "consequence": i.consequence} for i in lobby_permission_issues(c)],
+                "permission_issues": _permission_issues(c),
             }
             for c in guild.voice_channels
             if c.id not in sqldb.cache.dynamic_voice_room
