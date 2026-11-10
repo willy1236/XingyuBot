@@ -520,7 +520,7 @@ class NotifyRepository(BaseRepository):
         return count
 
     def delete_notify_channel_if(self, guild_id: int, notify_type: NotifyChannelType, original: dict[str, int | str | None]) -> int:
-        """後台用：資料庫目前的值等於 original 才刪除，回傳影響的列數，0 表示已被改過或刪除。"""
+        """後台用：資料庫目前的值等於 original（要含 channel_id，cache 的舊 key 取自它）才刪除，回傳影響的列數，0 表示已被改過或刪除。"""
         stmt = delete(NotifyChannel).where(*self._notify_channel_match(guild_id, notify_type, original))
         count = self.session.exec(stmt).rowcount
         self.session.commit()
@@ -895,10 +895,9 @@ class DynamicVoiceRepository(BaseRepository):
     def update_dynamic_voice_lobby_if(self, guild_id: int, original: dict[str, int | str | None], values: dict[str, int | str | None]) -> int:
         """後台用：資料庫目前的值等於 original 才更新 values 裡的欄位（比對與寫入在同一條 SQL），回傳影響的列數，0 表示已被改過或刪除。
 
-        original、values 的鍵是資料表欄位 channel_id、default_room_name。
+        original、values 的鍵是資料表欄位 channel_id、default_room_name；original 要含 channel_id。
+        條件式寫入成功代表 DB 當下的 channel_id 就是 original 的值，cache 要刪的舊 key 直接取它，不另外事前讀取（會有競態）。
         """
-        old = self.get_dynamic_voice_lobby_fresh(guild_id)
-        old_channel_id = old.channel_id if old is not None else None
         stmt = update(DynamicVoiceLobby).where(*self._dynamic_voice_lobby_match(guild_id, original)).values(**values)
         count = self.session.exec(stmt).rowcount
         self.session.commit()
@@ -906,19 +905,17 @@ class DynamicVoiceRepository(BaseRepository):
         if count:
             new = self.get_dynamic_voice_lobby_fresh(guild_id)
             if new is not None:
-                self._sync_lobby_cache(guild_id, old_channel_id, new)
+                self._sync_lobby_cache(guild_id, int(original["channel_id"]), new)
         return count
 
     def delete_dynamic_voice_lobby_if(self, guild_id: int, original: dict[str, int | str | None]) -> int:
-        """後台用：資料庫目前的值等於 original 才刪除，回傳影響的列數，0 表示已被改過或刪除。"""
-        old = self.get_dynamic_voice_lobby_fresh(guild_id)
-        old_channel_id = old.channel_id if old is not None else None
+        """後台用：資料庫目前的值等於 original（要含 channel_id，cache 的舊 key 取自它）才刪除，回傳影響的列數，0 表示已被改過或刪除。"""
         stmt = delete(DynamicVoiceLobby).where(*self._dynamic_voice_lobby_match(guild_id, original))
         count = self.session.exec(stmt).rowcount
         self.session.commit()
 
         if count:
-            self._sync_lobby_cache(guild_id, old_channel_id, None)
+            self._sync_lobby_cache(guild_id, int(original["channel_id"]), None)
         return count
 
     def get_dynamic_voice_lobby_fresh(self, guild_id: int):

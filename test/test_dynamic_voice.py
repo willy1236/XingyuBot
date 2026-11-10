@@ -124,6 +124,15 @@ class TestLobbyRepository:
         repo.remove_dynamic_voice_lobby(GUILD_ID)
         assert self.keys(repo) == set()
 
+    def test_conditional_write_drops_cache_key_of_original(self, repo):  # noqa: F811
+        # cache 的舊 key 取自 original，不是事前讀到的值：事前讀取與 original 不同（被別的 thread 搶先改過）時也刪對
+        repo.add_dynamic_voice_lobby(GUILD_ID, 1)
+        repo.cache.dynamic_voice_lobby.set(7, DynamicVoiceLobby(guild_id=GUILD_ID, channel_id=7, default_room_name=None))
+        assert repo.update_dynamic_voice_lobby_if(GUILD_ID, {"channel_id": 1}, {"channel_id": 2}) == 1
+        assert self.keys(repo) == {2, 7}  # 刪的是 original 的 1，沒有碰其他 key
+        assert repo.delete_dynamic_voice_lobby_if(GUILD_ID, {"channel_id": 2}) == 1
+        assert self.keys(repo) == {7}
+
     def test_remove_clears_cache(self, repo):  # noqa: F811
         repo.add_dynamic_voice_lobby(GUILD_ID, 1)
         repo.remove_dynamic_voice_lobby(GUILD_ID)
