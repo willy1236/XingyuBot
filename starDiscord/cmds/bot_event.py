@@ -123,8 +123,15 @@ class event(Cog_Extension):
                 if not channel:
                     removed_ids.append(id)
                 elif not channel.members:
-                    await channel.delete(reason="動態語音：移除")
-                    removed_ids.append(id)
+                    try:
+                        await channel.delete(reason="動態語音：移除")
+                    except discord.NotFound:
+                        removed_ids.append(id)  # 已被刪除，視同清掉
+                    except discord.Forbidden:
+                        # 刪不掉的留著紀錄（可到網頁清除），不中斷其他房間與後續步驟
+                        log.warning("No permission to delete dynamic voice channel", extra={"channel_id": id})
+                    else:
+                        removed_ids.append(id)
 
             log.warning("Dynamic voice channels not found and deleted", extra={"removed_ids": removed_ids})
             sclient.sqldb.batch_remove_dynamic_voice(removed_ids)

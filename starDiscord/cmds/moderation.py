@@ -8,6 +8,7 @@ from discord.utils import format_dt
 
 from starlib import BotEmbed, ChoiceList, Jsondb, sclient
 from starlib.database import NotifyChannelType, ReactionRoleMessage, ReactionRoleOption, TicketChannelLobby, WarningType
+from starlib.dynamic_voice import lobby_permission_issues
 from starlib.instance import debug_guilds
 from starlib.utils import time_to_datetime
 
@@ -106,21 +107,7 @@ class moderation(Cog_Extension):
             await ctx.respond(
                 f"設定完成，已將 {channel.mention} 設定為動態語音大廳頻道\n記得將我的身分組位階調整到比其他使用者高，否則建立頻道後使用者會得不到權限\n並且可以設定大廳頻道的權限，讓動態語音頻道有預設的權限",
             )
-            texts = []
-            if not channel.category.permissions_for(ctx.guild.me).manage_channels:
-                texts.append(f"我無法在 {channel.category.mention} 中創建語音頻道（需求管理頻道）")
-
-            if not channel.permissions_for(ctx.guild.me).manage_roles:
-                #! 管理身分組權限需要經過額外的OAuth驗證
-                texts.append(f"我無法在 {channel.mention} 中管理身分組（需求管理身分組）")
-
-            if not channel.permissions_for(ctx.guild.me).move_members:
-                texts.append(f"我無法把 {channel.mention} 中的使用者移至他們的房間（需求移動成員）")
-
-            if not channel.permissions_for(ctx.guild.me).send_messages:
-                texts.append(f"我無法在 {channel.mention} 中發送訊息（需求發送訊息）")
-            if not channel.permissions_for(ctx.guild.me).view_channel:
-                texts.append(f"我無法查看 {channel.mention} 頻道（需求查看頻道）")
+            texts = [f"我缺少「{i.permission}」權限，{i.consequence}" for i in lobby_permission_issues(channel)]
 
             if texts:
                 await ctx.send(embed=BotEmbed.simple("溫馨提醒", "\n".join(texts)), delete_after=5 * len(texts))
