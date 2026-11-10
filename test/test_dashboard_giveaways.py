@@ -103,9 +103,18 @@ class TestList:
         assert row["participant_count"] == 1
         assert row["creator_id"] == str(CREATOR)
         assert row["creator_name"] == "發起人"
+        assert row["channel_name"] == "抽獎頻道"
         assert row["message_url"] == f"https://discord.com/channels/{GUILD_ID}/500/900"
         # 進行中顯示預計開獎時間（deadline）
         assert row["ends_at"] == gw.deadline.isoformat()
+
+    def test_missing_channel_name_is_null(self, client):
+        gw = add_giveaway(client, is_on=True)
+        gw.channel_id = 999
+        client.repo.merge(gw)
+        row = client.get(URL).json()["giveaways"][0]
+        assert row["channel_id"] == "999"
+        assert row["channel_name"] is None
 
     def test_default_hides_older_than_90_days_but_all_shows_them(self, client):
         add_giveaway(client, prize="很久以前", created_days_ago=100, ended_days_ago=99)
@@ -168,6 +177,15 @@ class TestDetail:
         assert member["left"] is False
         # 已離開的成員仍列出，只有 ID
         left = body["participants"][2]
+        assert left["left"] is True
+        assert left["name"] is None
+
+    def test_left_member_name_ignored_even_if_bot_knows_user(self, client):
+        # 成員已離開本服，但 bot 在其他伺服器仍看得到使用者時，也不回名稱
+        gw = add_giveaway(client)
+        join(client, gw.id, LEFT)
+        sclient.bot.get_user = lambda uid: SimpleNamespace(name="跨服名稱") if uid == LEFT else None
+        left = client.get(f"{URL}/{gw.id}").json()["participants"][0]
         assert left["left"] is True
         assert left["name"] is None
 

@@ -113,25 +113,29 @@ async def list_giveaways(
     since = None if all else nowtz() - timedelta(days=RECENT_DAYS)
     active, ended, has_next = await run_db(lambda: _load_list(guild_id, since, page))
 
-    def _names(guild: discord.Guild) -> dict[int, str | None]:
-        return {r.creator_id: _member_name(guild, r.creator_id) for r in active + ended}
+    def _labels(guild: discord.Guild) -> dict[int, tuple[str | None, str | None]]:
+        # creator_name、channel_name：成員／頻道不在本伺服器時為 None
+        out: dict[int, tuple[str | None, str | None]] = {}
+        for r in active + ended:
+            channel = guild.get_channel(r.channel_id)
+            out[r.id] = (_member_name(guild, r.creator_id), channel.name if channel is not None else None)
+        return out
 
-    names = await on_guild(guild_id, _names)
+    labels = await on_guild(guild_id, _labels)
     rows = []
     for r in active + ended:
         item = _summary(guild_id, r)
-        item["creator_name"] = names.get(r.creator_id)
+        creator_name, channel_name = labels.get(r.id, (None, None))
+        item["creator_name"] = creator_name
+        item["channel_name"] = channel_name
         rows.append(item)
     return {"giveaways": rows, "page": page, "has_next": has_next, "all": all, "recent_days": RECENT_DAYS}
 
 
 def _member_name(guild: discord.Guild, user_id: int) -> str | None:
+    """只回本伺服器成員的顯示名稱。已離開的成員即使 bot 在其他伺服器仍看得到使用者，也不回名稱，讓前端標成已離開。"""
     member = guild.get_member(user_id)
-    if member is not None:
-        return member.display_name
-    bot = sclient.bot
-    user = bot.get_user(user_id) if bot is not None else None
-    return user.name if user is not None else None
+    return member.display_name if member is not None else None
 
 
 def _load_detail(guild_id: int, giveaway_id: int):
@@ -194,6 +198,7 @@ def _result(outcome: GiveawayOutcome) -> dict:
         "status": outcome.status,
         "announce_failure": outcome.announce_failure,
         "announce_failure_text": outcome.announce_failure_text,
+        "no_replacement": outcome.no_replacement,
     }
 
 
@@ -205,6 +210,7 @@ async def _run(guild_id: int, giveaway_id: int, action) -> GiveawayOutcome:
     bot = sclient.bot
 
     async def _go(_guild: discord.Guild) -> GiveawayOutcome:
+        # 刻意例外：在 bot loop 上直接讀 DB（不經 run_db），才能與 GiveawayView 共用同一把鎖與 bot thread 的 session。
         giveaway = sqldb.get_giveaway_fresh(giveaway_id)
         # 其他伺服器的抽獎一律當作不存在
         if giveaway is None or giveaway.guild_id != guild_id:
