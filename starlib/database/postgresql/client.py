@@ -1304,6 +1304,36 @@ class PollRepository(BaseRepository):
         result = self.session.exec(stmt).one_or_none()
         return result
 
+    def get_giveaway_fresh(self, giveaway_id: int):
+        """讀出抽獎目前的值（populate_existing）；長駐的 GiveawayView 與排程 job 持有的 instance 可能已過期，開獎或重抽前用它重讀。"""
+        stmt = select(Giveaway).where(Giveaway.id == giveaway_id).execution_options(populate_existing=True)
+        return self.session.exec(stmt).one_or_none()
+
+    def list_active_guild_giveaways(self, guild_id: int):
+        """後台用：該伺服器進行中的抽獎，依預計開獎時間（結束時間，未設定排最後）由近到遠。"""
+        stmt = (
+            select(Giveaway)
+            .where(Giveaway.guild_id == guild_id, Giveaway.is_on)
+            .order_by(Giveaway.end_at.asc().nulls_last(), Giveaway.id.asc())
+            .execution_options(populate_existing=True)
+        )
+        return list(self.session.exec(stmt).all())
+
+    def list_guild_giveaways(self, guild_id: int, since: datetime | None, offset: int, limit: int):
+        """後台用：該伺服器已結束的抽獎，依結束時間由新到舊；since 不為 None 時只列這個時間之後建立的。"""
+        stmt = select(Giveaway).where(Giveaway.guild_id == guild_id, not_(Giveaway.is_on))
+        if since is not None:
+            stmt = stmt.where(Giveaway.created_at >= since)
+        stmt = stmt.order_by(Giveaway.end_at.desc().nulls_last(), Giveaway.id.desc()).offset(offset).limit(limit)
+        return list(self.session.exec(stmt.execution_options(populate_existing=True)).all())
+
+    def count_giveaway_users(self, giveaway_ids: list[int]) -> dict[int, int]:
+        """後台用：各抽獎的參加人數，沒有人參加的抽獎不在結果裡。"""
+        if not giveaway_ids:
+            return {}
+        stmt = select(GiveawayUser.giveaway_id, func.count()).where(GiveawayUser.giveaway_id.in_(giveaway_ids)).group_by(GiveawayUser.giveaway_id)
+        return {gid: count for gid, count in self.session.exec(stmt).all()}
+
     def get_active_giveaways(self):
         stmt = select(Giveaway).where(Giveaway.is_on)
         result = self.session.exec(stmt).all()

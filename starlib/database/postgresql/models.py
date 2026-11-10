@@ -1,5 +1,5 @@
 from datetime import UTC, date, datetime, timedelta
-from typing import Any
+from typing import Any, ClassVar
 from uuid import UUID
 
 import discord
@@ -496,6 +496,17 @@ class Giveaway(BasicSchema, table=True):
     is_on: bool = Field(sa_column=Column(Boolean), default=True)
     description: str | None = Field(sa_column=Column(String(255)))
     redraw_count: int = Field(sa_column=Column(Integer, nullable=True), default=0)
+
+    MAX_DURATION: ClassVar[timedelta] = timedelta(days=28)
+    """抽獎最長持續時間，超過或未設定結束時間時以建立後這段時間為準"""
+
+    @property
+    def deadline(self) -> datetime:
+        """實際開獎時間：設定的結束時間，未設定或超過上限時以建立後 28 天為準"""
+        limit = self.created_at + self.MAX_DURATION
+        if self.end_at and self.end_at < limit:
+            return self.end_at
+        return limit
 
 
 class GiveawayUser(DiscordUsersSchema, table=True):

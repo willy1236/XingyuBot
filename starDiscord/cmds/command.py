@@ -15,11 +15,18 @@ from starlib import BotEmbed, ChoiceList, sclient
 from starlib.database import DriveShare, Giveaway
 from starlib.instance import *
 from starlib.providers import XingyuGoogleCloud
-from starlib.utils import create_only_role_list, create_role_magification_dict, find, nowtz, parse_datetime, random_color
+from starlib.utils import (
+    create_only_role_list,
+    create_role_magification_dict,
+    find,
+    nowtz,
+    parse_datetime,
+    random_color,
+)
 
 from ..checks import IdentityContext, with_identity
 from ..extension import Cog_Extension
-from ..uiElement.view import GIVEAWAY_MENTIONS, DeleteAddRoleView, GiveawayView, PollView, TRPGPlotView
+from ..uiElement.view import DeleteAddRoleView, GiveawayView, PollView, TRPGPlotView
 from .bot_event import check_registration
 
 log = logging.getLogger(__name__)
@@ -828,7 +835,7 @@ class command(Cog_Extension):
         giveaway_id: discord.Option(int, name="抽獎id", description="抽獎id"),
         winner: discord.Option(discord.Member, name="中獎者", description="此中獎者的中獎資格將被取消並另行抽出替補者", required=False),
     ):
-        await ctx.defer()
+        await ctx.defer(ephemeral=True)
         giveaway = sclient.sqldb.get_giveaway(giveaway_id)
         if not giveaway:
             await ctx.respond("錯誤：查無此ID")
@@ -840,20 +847,23 @@ class command(Cog_Extension):
             await ctx.respond("錯誤：你不是此抽獎的發起人")
             return
 
-        if winner:
-            old_winner = sclient.sqldb.get_user_in_giveaway(giveaway_id, winner.id)
-            if not old_winner:
-                await ctx.respond("錯誤：用戶沒有參加此抽獎")
-                return
-            elif not old_winner.is_winner:
-                await ctx.respond("錯誤：此用戶不是中獎者")
-                return
-        else:
-            old_winner = None
-
+        # 回覆抽獎訊息公告並更新訊息上的結果，與後台重抽相同
         view = GiveawayView(giveaway, sclient.sqldb, self.bot)
-        embed = view.redraw_winner_giveaway(old_winner)
-        await ctx.respond(view.announcement(), embed=embed, allowed_mentions=GIVEAWAY_MENTIONS)
+        outcome = await view.redraw(winner.id if winner else None)
+        match outcome.status:
+            case "ok":
+                if outcome.announce_failure_text:
+                    await ctx.respond(f"已重新抽獎，但{outcome.announce_failure_text}")
+                else:
+                    await ctx.respond("已重新抽獎，並在抽獎訊息公告新的中獎者")
+            case "not_participant":
+                await ctx.respond("錯誤：用戶沒有參加此抽獎")
+            case "not_winner":
+                await ctx.respond("錯誤：此用戶不是中獎者")
+            case "not_ended":
+                await ctx.respond("錯誤：此抽獎尚未結束")
+            case _:
+                await ctx.respond("錯誤：查無此ID")
 
     @date_cmd.command(name="add", description="新增紀念日")
     async def date_add(

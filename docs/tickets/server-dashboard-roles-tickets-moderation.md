@@ -59,14 +59,14 @@
 | 5 | R-01 | 未完成 | 管理員能看到反應身分組一覽 | S-01 | A | |
 | 6 | P-01 | 未完成 | 管理員能看到私人頻道大廳與頻道清單 | S-01 | A | 含資料欄位與測試版資料對應 |
 | 7 | B-01 | 未完成 | 管理員能開關語音時數統計並看排行榜 | S-01 | A | |
-| 8 | G-01 | 未完成 | 管理員能看抽獎清單、參加者與中獎者 | S-01 | A | |
+| 8 | G-01 | 實作完成 | 管理員能看抽獎清單、參加者與中獎者 | S-01 | A | |
 | 9 | W-04 | 未完成 | 用指令懲處一律留紀錄，公告格式統一 | S-03 | A | 只動指令 |
 | 10 | W-02 | 未完成 | 管理員能從後台警告、禁言、踢出、停權 | W-01、S-03 | B | |
 | 11 | W-03 | 未完成 | 管理員能移除本伺服器的紀錄 | W-01 | B | 用 W-01 留的列動作插槽，與 W-02 不重疊 |
 | 12 | R-02 | 未完成 | 管理員能發新的反應身分組訊息，並編輯按鈕與內容 | R-01、S-02 | B | |
 | 13 | P-02 | 未完成 | 管理員能新增、修改、移除私人頻道大廳 | P-01、S-02 | B | |
 | 14 | B-02 | 未完成 | 警告累計 N 次自動禁言 | B-01、S-03、W-02、W-04 | C | 含 `/server setting` |
-| 15 | G-02 | 未完成 | 管理員能提前結束與重抽 | G-01 | B | 含 `/giveaway redraw` 修改 |
+| 15 | G-02 | 實作完成 | 管理員能提前結束與重抽 | G-01 | B | 含 `/giveaway redraw` 修改 |
 | 16 | R-03 | 未完成 | 管理員能把反應身分組掛到 bot 既有的訊息 | R-02 | C | |
 | 17 | R-04 | 未完成 | 管理員能刪除反應身分組、處理失效並重新發送 | R-02 | C | 含重啟清理移除與舊內容回填 |
 | 18 | P-03 | 未完成 | 成員開單時套用大廳的命名、限制與可見範圍 | P-02 | C | |
@@ -769,10 +769,10 @@ flowchart LR
 
 **驗收條件**
 - [ ] 有 Manage Messages 的使用者看到這個伺服器的抽獎，進行中的在最上面，顯示預計開獎時間。
-- [ ] 預設看不到 90 天前建立的抽獎，切換成全部後看得到；進行中的不受限。
+- [x] 預設看不到 90 天前建立的抽獎，切換成全部後看得到；進行中的不受限。
 - [ ] 點進一個抽獎，參加者名單、中獎者與 Discord 上的結果一致，重抽次數正確。
 - [ ] 沒有抽獎時顯示說明。
-- [ ] 沒有 Manage Messages 的使用者看不到區塊，直接呼叫 API 回 403。
+- [x] 沒有 Manage Messages 的使用者看不到區塊，直接呼叫 API 回 403。
 
 **實作設計**
 - 資料：repository 新增 `list_guild_giveaways(guild_id, since, offset, limit)`、`list_active_guild_giveaways(guild_id)`。預計開獎時間沿用 `GiveawayView.deadline` 的算法，抽成 `Giveaway` 的 property 或 `starlib` 函式，不在 web 重寫。
@@ -784,7 +784,10 @@ flowchart LR
 
 **依賴**：S-01（區塊權限與導覽）
 
-**進度**：未完成
+**進度**：實作完成（2026-11-10）
+- commit：XingyuBot `feat/dashboard-giveaways`（e34ab00）；domalyze_frontend `feat/dashboard-giveaways`（1cedf9b）
+- 已驗：API 層（`test/test_dashboard_giveaways.py`，真實 PostgreSQL、假 Discord）涵蓋排序、分頁、90 天、他服 404、403、已離開成員；前端 type-check、vitest、`next build --webpack`
+- 未驗（需人工）：頁面實際畫面、與真實 Discord 抽獎結果一致、空清單說明；未打勾的條目待人工確認
 
 ### G-02 管理員能提前結束與重抽
 
@@ -798,12 +801,12 @@ flowchart LR
 - 不包含：從後台發起抽獎（非目標）。
 
 **驗收條件**
-- [ ] 不是發起人的管理員在後台提前結束，抽獎訊息更新為結果，原頻道出現回覆公告。
-- [ ] 抽獎訊息被刪後提前結束，照樣開獎，原頻道出現一則一般訊息公告。
-- [ ] 拔掉 bot 在原頻道的 Send Messages 後重抽，照樣重抽，看到沒有公告的原因。
-- [ ] 指定一位中獎者重抽，他的資格取消並抽出替補，原頻道出現公告，重抽次數加一，抽獎訊息上的結果更新。
-- [ ] 提前結束時剛好到期自動開獎，顯示最新結果，不會開獎兩次。
-- [ ] `/giveaway redraw` 執行後，抽獎訊息被回覆公告並更新結果，下指令的人收到只有自己看得到的完成提示。
+- [x] 不是發起人的管理員在後台提前結束，抽獎訊息更新為結果，原頻道出現回覆公告。
+- [x] 抽獎訊息被刪後提前結束，照樣開獎，原頻道出現一則一般訊息公告。
+- [x] 拔掉 bot 在原頻道的 Send Messages 後重抽，照樣重抽，看到沒有公告的原因。
+- [x] 指定一位中獎者重抽，他的資格取消並抽出替補，原頻道出現公告，重抽次數加一，抽獎訊息上的結果更新。
+- [x] 提前結束時剛好到期自動開獎，顯示最新結果，不會開獎兩次。
+- [x] `/giveaway redraw` 執行後，抽獎訊息被回覆公告並更新結果，下指令的人收到只有自己看得到的完成提示。
 
 **實作設計**
 - 後端：`giveaways.py` 新增 `POST .../giveaways/{id}/end` 與 `POST .../giveaways/{id}/redraw`（body `{ winner_user_id? }`），在 bot loop 上執行：
@@ -816,7 +819,11 @@ flowchart LR
 
 **風險 / 實作注意**：`end_giveaway` 只看 instance 上的 `is_on`，排程 job 的 instance 是舊的。web 提前結束與到期同時發生時，可能開獎兩次。實作時要在開獎前重新從 DB 讀 `is_on`，並在 bot loop 上序列化（兩邊都在 bot loop 執行，用每個抽獎一把 `asyncio.Lock`）。web 結束後要移除排程 job，`end_giveaway` 已處理。
 
-**進度**：未完成
+**進度**：實作完成（2026-11-10）
+- commit：XingyuBot `feat/dashboard-giveaways`（a09d254）；domalyze_frontend `feat/dashboard-giveaways`（提前結束與重抽操作）
+- 已驗：後端以假 Discord 物件驗證訊息更新、回覆公告、改發一般訊息、頻道不在、Forbidden、已結束視為成功、重複開獎競態、`/giveaway redraw` callback（`test/test_dashboard_giveaways_write.py`）；前端 type-check、vitest、build
+- 未驗（需人工）：打勾條目只在假 Discord 下驗過，真實 Discord 上的訊息／公告、拔掉 Send Messages、到期與按鈕同時觸發需人工；前端確認視窗操作
+- 途中決定：鎖與重讀放在 `GiveawayView`（`giveaway_lock`、`reload`），到期自動開獎、發起人按鈕、後台、指令共用；POST 回 `{status, announce_failure, announce_failure_text}`，前端結束後重新載入詳情
 
 ## 開工前待決
 
