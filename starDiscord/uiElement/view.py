@@ -4,6 +4,7 @@ import asyncio
 import io
 import logging
 import random
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from collections.abc import Awaitable, Callable
 from typing import TYPE_CHECKING
@@ -525,12 +526,46 @@ class TRPGPlotView(discord.ui.View):
         self.stop()
 
 
+_giveaway_locks: dict[int, asyncio.Lock] = {}
+
+
+def giveaway_lock(giveaway_id: int) -> asyncio.Lock:
+    """每個抽獎一把鎖：開獎與重抽（含訊息與公告）在 bot 的事件迴圈上序列化，同一個抽獎不會同時處理兩次。"""
+    return _giveaway_locks.setdefault(giveaway_id, asyncio.Lock())
+
+
+#: 公告沒有送出的原因
+ANNOUNCE_FAILURE_TEXT = {
+    "channel_missing": "原頻道已不存在，沒有發出公告",
+    "no_permission": "bot 在原頻道沒有發言權限，沒有發出公告",
+    "failed": "公告送出失敗",
+}
+
+
+@dataclass
+class GiveawayOutcome:
+    """GiveawayView.finish／redraw 的結果。
+
+    status: ok 已處理；already_ended 開獎時抽獎已經結束（視為成功）；not_found、not_ended（重抽時抽獎還沒結束）、
+    not_participant、not_winner（指定的重抽對象不是參加者／中獎者）。
+    announce_failure: 抽獎已處理但沒有公告時的原因代碼（ANNOUNCE_FAILURE_TEXT 的 key），公告成功為 None。
+    """
+
+    status: str
+    announce_failure: str | None = None
+
+    @property
+    def announce_failure_text(self) -> str | None:
+        return ANNOUNCE_FAILURE_TEXT.get(self.announce_failure) if self.announce_failure else None
+
+
 class GiveawayJoinButton(discord.ui.Button):
     def __init__(self, giveaway: Giveaway):
         super().__init__(label="參加抽獎", style=discord.ButtonStyle.primary, custom_id=f"giveaway_join_{giveaway.id}")
 
     async def callback(self, interaction: discord.Interaction):
         view: GiveawayView = self.view
+        view.reload()
         if not view.giveaway.is_on:
             await interaction.response.send_message("此抽獎已結束", ephemeral=True)
             return
@@ -555,7 +590,9 @@ class GiveawayEndButton(discord.ui.Button):
             await interaction.response.send_message("只有發起人才能結束抽獎！", ephemeral=True)
             return
 
-        embed = view.end_giveaway()
+        async with giveaway_lock(view.giveaway.id):
+            view.reload()
+            embed = view.end_giveaway()
         if embed is None:
             await interaction.response.send_message("此抽獎已結束", ephemeral=True)
             return
@@ -601,18 +638,76 @@ class GiveawayView(discord.ui.View):
         run_at = max(self.deadline, nowtz() + timedelta(seconds=10))
         self.bot.scheduler.add_job(self.auto_end, DateTrigger(run_at), id=self._job_id, replace_existing=True)
 
-    async def auto_end(self):
-        embed = self.end_giveaway()
-        if embed is None:
-            return
+    def reload(self) -> bool:
+        """從資料庫重讀抽獎。長駐的 view 與排程 job 持有的 instance 可能已過期，開獎或重抽前一定要重讀。"""
+        fresh = self.sqldb.get_giveaway_fresh(self.giveaway.id)
+        if fresh is None:
+            return False
+        self.giveaway = fresh
+        return True
 
+    async def auto_end(self):
+        await self.finish()
+
+    async def finish(self) -> GiveawayOutcome:
+        """開獎並更新抽獎訊息、公告（到期自動開獎與後台提前結束共用）。抽獎已結束時不會再開一次。"""
+        async with giveaway_lock(self.giveaway.id):
+            if not self.reload():
+                return GiveawayOutcome("not_found")
+            embed = self.end_giveaway()
+            if embed is None:
+                return GiveawayOutcome("already_ended")
+            return GiveawayOutcome("ok", await self.publish(embed))
+
+    async def redraw(self, winner_id: int | None = None) -> GiveawayOutcome:
+        """重抽並更新抽獎訊息、公告（`/giveaway redraw` 與後台共用）。winner_id 未指定時整批重抽。"""
+        async with giveaway_lock(self.giveaway.id):
+            if not self.reload():
+                return GiveawayOutcome("not_found")
+            if self.giveaway.is_on:
+                return GiveawayOutcome("not_ended")
+            old_winner = None
+            if winner_id is not None:
+                old_winner = self.sqldb.get_user_in_giveaway(self.giveaway.id, winner_id)
+                if old_winner is None:
+                    return GiveawayOutcome("not_participant")
+                if not old_winner.is_winner:
+                    return GiveawayOutcome("not_winner")
+            embed = self.redraw_winner_giveaway(old_winner)
+            return GiveawayOutcome("ok", await self.publish(embed))
+
+    async def publish(self, embed: discord.Embed) -> str | None:
+        """把結果更新到抽獎訊息並公告；回傳沒有公告的原因代碼，公告成功為 None。
+
+        讀得到原訊息就更新 embed 並回覆公告；訊息被刪或讀不到就在原頻道發一般訊息；頻道不在或不能發言則只回傳原因。
+        """
+        channel_id = self.giveaway.channel_id
         try:
-            channel = self.bot.get_channel(self.giveaway.channel_id) or await self.bot.fetch_channel(self.giveaway.channel_id)
-            message = await channel.fetch_message(self.giveaway.message_id)
+            channel = self.bot.get_channel(channel_id) or await self.bot.fetch_channel(channel_id)
+        except discord.NotFound:
+            return "channel_missing"
+        except discord.Forbidden:
+            return "no_permission"
+        except discord.HTTPException:
+            log.warning("giveaway publish: fetch channel failed", extra={"giveaway_id": self.giveaway.id}, exc_info=True)
+            return "failed"
+
+        message = None
+        if self.giveaway.message_id:
+            try:
+                message = await channel.fetch_message(self.giveaway.message_id)
+            except discord.NotFound:
+                pass
+            except discord.HTTPException:
+                log.warning("giveaway publish: fetch message failed", extra={"giveaway_id": self.giveaway.id}, exc_info=True)
+
+        if message is None:
+            return await self._send(channel.send)
+        try:
             await message.edit(embed=embed, view=self)
-            await self.announce(message)
-        except (discord.NotFound, discord.Forbidden):
-            log.warning("giveaway auto end: message not available", extra={"giveaway_id": self.giveaway.id, "message_id": self.giveaway.message_id})
+        except discord.HTTPException:
+            log.warning("giveaway publish: edit message failed", extra={"giveaway_id": self.giveaway.id}, exc_info=True)
+        return await self._send(message.reply)
 
     def embed(self):
         description = self.giveaway.description if self.giveaway.description else "按下下方按鈕開始抽獎！"
@@ -701,12 +796,20 @@ class GiveawayView(discord.ui.View):
         prefix = "🎉 重新抽獎：" if self.giveaway.redraw_count else "🎉 "
         return f"{prefix}恭喜 {mentions} 抽中「{prize}」！"
 
-    async def announce(self, message: discord.Message):
-        """回覆抽獎訊息公告中獎者，只允許 ping 使用者"""
+    async def _send(self, send: Callable[..., Awaitable]) -> str | None:
+        """送出公告（send 是 channel.send 或 message.reply），只允許 ping 使用者；回傳失敗原因代碼"""
         try:
-            await message.reply(self.announcement(), allowed_mentions=GIVEAWAY_MENTIONS)
+            await send(self.announcement(), allowed_mentions=GIVEAWAY_MENTIONS)
+        except discord.Forbidden:
+            return "no_permission"
         except discord.HTTPException:
             log.warning("giveaway announce failed", extra={"giveaway_id": self.giveaway.id}, exc_info=True)
+            return "failed"
+        return None
+
+    async def announce(self, message: discord.Message):
+        """回覆抽獎訊息公告中獎者，回傳失敗原因代碼"""
+        return await self._send(message.reply)
 
 
 class McServerSelect(discord.ui.Select):

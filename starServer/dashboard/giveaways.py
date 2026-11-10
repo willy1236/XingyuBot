@@ -1,6 +1,8 @@
 """抽獎區塊：
 GET /dashboard/guilds/{id}/giveaways?all=&page=   抽獎清單（進行中全部在第 1 頁頂端，已結束每頁 20 筆）
 GET /dashboard/guilds/{id}/giveaways/{giveaway_id}  單一抽獎的詳情、參加者與中獎者
+POST /dashboard/guilds/{id}/giveaways/{giveaway_id}/end     提前結束（body 無）
+POST /dashboard/guilds/{id}/giveaways/{giveaway_id}/redraw  重抽，body `{winner_user_id?}`，未指定為整批重抽
 
 權限一律經 `require_section(Section.GIVEAWAYS)`。資料以資料庫為準，Discord 只用來補成員名稱與頻道名稱。
 """
@@ -10,11 +12,13 @@ from datetime import datetime, timedelta
 
 import discord
 from fastapi import APIRouter, Depends, Query
+from pydantic import BaseModel
 
+from starDiscord.uiElement.view import GiveawayOutcome, GiveawayView
 from starlib import sclient, sqldb
 from starlib.utils import nowtz
 
-from .access import Section, on_guild, require_section
+from .access import Section, on_guild, on_guild_async, require_section
 from .db import run_db
 from .errors import DashboardError
 
@@ -177,3 +181,61 @@ async def get_giveaway(giveaway_id: int, guild_id: int = Depends(require_section
         "participants": info["participants"],
         "winners": [p for p in info["participants"] if p["is_winner"]],
     }
+
+
+# ====== 提前結束與重抽 ======
+class RedrawBody(BaseModel):
+    #: 指定要取消資格的中獎者（Discord ID，可送字串）；省略為整批重抽，已離開伺服器的中獎者也可以指定
+    winner_user_id: int | None = None
+
+
+def _result(outcome: GiveawayOutcome) -> dict:
+    return {
+        "status": outcome.status,
+        "announce_failure": outcome.announce_failure,
+        "announce_failure_text": outcome.announce_failure_text,
+    }
+
+
+async def _run(guild_id: int, giveaway_id: int, action) -> GiveawayOutcome:
+    """在 bot 的事件迴圈上處理抽獎：每次都重新從資料庫讀，建立 GiveawayView 後交給 action。
+
+    開獎與重抽的鎖、重讀 is_on 在 GiveawayView 內，與到期自動開獎、發起人按鈕、`/giveaway redraw` 共用同一套。
+    """
+    bot = sclient.bot
+
+    async def _go(_guild: discord.Guild) -> GiveawayOutcome:
+        giveaway = sqldb.get_giveaway_fresh(giveaway_id)
+        # 其他伺服器的抽獎一律當作不存在
+        if giveaway is None or giveaway.guild_id != guild_id:
+            raise DashboardError(404, "giveaway_not_found")
+        return await action(GiveawayView(giveaway, sqldb, bot))
+
+    return await on_guild_async(guild_id, _go)
+
+
+@router.post("/guilds/{guild_id}/giveaways/{giveaway_id}/end")
+async def end_giveaway(giveaway_id: int, guild_id: int = Depends(require_section(Section.GIVEAWAYS, "end"))):
+    """提前結束。抽獎已經結束（剛好到期或發起人剛按下）視為成功，status 為 already_ended。"""
+    outcome = await _run(guild_id, giveaway_id, lambda view: view.finish())
+    if outcome.status == "not_found":
+        raise DashboardError(404, "giveaway_not_found")
+    return _result(outcome)
+
+
+@router.post("/guilds/{guild_id}/giveaways/{giveaway_id}/redraw")
+async def redraw_giveaway(
+    giveaway_id: int,
+    body: RedrawBody | None = None,
+    guild_id: int = Depends(require_section(Section.GIVEAWAYS, "redraw")),
+):
+    winner_id = body.winner_user_id if body else None
+    outcome = await _run(guild_id, giveaway_id, lambda view: view.redraw(winner_id))
+    match outcome.status:
+        case "not_found":
+            raise DashboardError(404, "giveaway_not_found")
+        case "not_ended":
+            raise DashboardError(409, "giveaway_not_ended")
+        case "not_participant" | "not_winner":
+            raise DashboardError(409, outcome.status)
+    return _result(outcome)

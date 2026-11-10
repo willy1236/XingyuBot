@@ -66,7 +66,7 @@
 | 12 | R-02 | 未完成 | 管理員能發新的反應身分組訊息，並編輯按鈕與內容 | R-01、S-02 | B | |
 | 13 | P-02 | 未完成 | 管理員能新增、修改、移除私人頻道大廳 | P-01、S-02 | B | |
 | 14 | B-02 | 未完成 | 警告累計 N 次自動禁言 | B-01、S-03、W-02、W-04 | C | 含 `/server setting` |
-| 15 | G-02 | 未完成 | 管理員能提前結束與重抽 | G-01 | B | 含 `/giveaway redraw` 修改 |
+| 15 | G-02 | 進行中 | 管理員能提前結束與重抽 | G-01 | B | 含 `/giveaway redraw` 修改 |
 | 16 | R-03 | 未完成 | 管理員能把反應身分組掛到 bot 既有的訊息 | R-02 | C | |
 | 17 | R-04 | 未完成 | 管理員能刪除反應身分組、處理失效並重新發送 | R-02 | C | 含重啟清理移除與舊內容回填 |
 | 18 | P-03 | 未完成 | 成員開單時套用大廳的命名、限制與可見範圍 | P-02 | C | |
@@ -784,9 +784,9 @@ flowchart LR
 
 **依賴**：S-01（區塊權限與導覽）
 
-**進度**：進行中
-- commit：XingyuBot `feat/dashboard-giveaways`（後端 GET 清單／詳情、`Giveaway.deadline`、repository、測試）
-- 續做：前端 `lib/dashboard-giveaways.ts`、`app/dashboard/guilds/[id]/giveaways/page.tsx`、`giveaway-list.tsx`、`giveaway-detail.tsx`（保留 `actions` 插槽）、`guild-nav` 旗標
+**進度**：實作完成，待驗證（2026-11-10）
+- commit：XingyuBot `feat/dashboard-giveaways`（e34ab00）；domalyze_frontend `feat/dashboard-giveaways`（前端頁面）
+- 續做：收尾驗證打勾（第 6 步）
 
 ### G-02 管理員能提前結束與重抽
 
@@ -818,7 +818,10 @@ flowchart LR
 
 **風險 / 實作注意**：`end_giveaway` 只看 instance 上的 `is_on`，排程 job 的 instance 是舊的。web 提前結束與到期同時發生時，可能開獎兩次。實作時要在開獎前重新從 DB 讀 `is_on`，並在 bot loop 上序列化（兩邊都在 bot loop 執行，用每個抽獎一把 `asyncio.Lock`）。web 結束後要移除排程 job，`end_giveaway` 已處理。
 
-**進度**：未完成
+**進度**：進行中
+- commit：XingyuBot `feat/dashboard-giveaways`（後端 `GiveawayView.finish／redraw／publish`、鎖、POST end／redraw、`/giveaway redraw`）
+- 途中決定：鎖與重讀放在 `GiveawayView` 內（`giveaway_lock`），到期自動開獎、發起人按鈕、後台、指令共用；POST 回 `{status, announce_failure, announce_failure_text}`，前端結束後重新載入詳情
+- 續做：前端 `giveaway-actions.tsx`（提前結束／重抽與確認視窗）接進 `app/dashboard/guilds/[id]/giveaways/page.tsx` 的 `actions` 插槽、`lib/dashboard-giveaways.ts` 加 `endGiveaway`／`redrawGiveaway`
 
 ## 開工前待決
 
