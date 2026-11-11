@@ -756,6 +756,16 @@ flowchart LR
   - 實際 Discord 行為：大廳訊息送出與更新、`add_view` 後免重啟生效、新建頻道、逐頻道套用與刪除覆寫、鎖定中頻道的權限、拿掉開單按鈕；`bot_event.py` 重啟後已移除的大廳不再載入 view（沒有自動測試，需真的重啟 bot）。
   - 兩個瀏覽器同時編輯的衝突畫面、畫面本身（桌面與 360px）、表單暫存在登入過期導向後的還原；前端只過 jsdom 測試。
   - 大廳底下頻道很多時逐頻道套用的耗時。
+- 審查：dev-review 第 1 輪（範圍 main...feat/dashboard-p02），無 blocking；8 條 non-blocking 全部修正，nitpick（`failureLabel` 無呼叫端、`set_lobby_manager_roles` 無呼叫端、大廳頻道名稱查兩次）與 note 不處理：
+  - 回滾刪除新建的大廳頻道帶稽核原因（`_delete_quietly` 加 `reason`，頻道才傳）。
+  - 移除與修改交錯：`starDiscord/ticket_lobby.py` 新增 `lobby_lock(channel_id)`，每大廳一把 `asyncio.Lock`，`save_lobby`（換頻道時同時鎖舊與新，依 ID 排序取鎖）與 `remove_lobby` 整個流程含還原都持有；`remove_lobby` 在鎖內重讀訊息 ID（等鎖期間修改可能重發了訊息），簽名改為 `remove_lobby(guild, lobby_channel_id) -> bool`。**P-03 開單要沿用 `lobby_lock`**。
+  - `mark_lobby_removed` 與 `unassign_lobby_tickets` 合成 `remove_ticket_lobby(channel_id) -> bool`，同一交易；兩個舊方法移除（卡片〈實作設計〉原列五個函式，這兩個由合併後的取代）。
+  - 修改時大廳頻道讀不到訊息（`fetch_message` 得 Forbidden）：不改走發新訊息，回 400 `bot_missing_permission`（欄位 `lobby_channel`，說明要補 View Channel 與 Read Message History）；規格的 bot 權限表不動，補不補 Read Message History 留給使用者決定。
+  - 移除大廳遇 Forbidden：仍標示移除，回應 `button_removed: false`，前端視窗說明按鈕還在、需補權限或手動刪訊息；其他 Discord 錯誤仍不移除。
+  - `apply_manager_role_changes` 單一頻道部分成功時，已成功的部分仍寫回 `locked_overwrites_json`。
+  - 前端：修改時 `lobby_channel` 欄位錯誤一律顯示，並改成要求重新選頻道；沒有對應欄位的錯誤改用提示；暫存存 `channelInvalid`／`messageInvalid`；編輯時顯示大廳頻道的 bot 權限警告。
+  - 驗證：後端 `test_dashboard_tickets*.py`、`test_ticket_lobby.py`、`test_tickets_lib.py` 通過（新增每大廳鎖的交錯測試，拿掉鎖時會失敗）；前端 vitest、tsc、eslint、next build 通過。
+
 
 ### P-03 成員開單時套用大廳的命名、限制與可見範圍
 
