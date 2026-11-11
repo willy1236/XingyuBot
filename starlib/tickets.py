@@ -17,9 +17,14 @@ LobbyInvalidReason = Literal["channel_deleted", "category_deleted", "message_del
 class LobbyRef(Protocol):
     """檢查大廳需要的欄位；`TicketChannelLobby` 與後台不綁 session 的快照都符合。"""
 
-    channel_id: int
-    message_id: int
-    ticket_category_id: int | None
+    @property
+    def channel_id(self) -> int: ...
+
+    @property
+    def message_id(self) -> int: ...
+
+    @property
+    def ticket_category_id(self) -> int | None: ...
 
 
 @dataclass(frozen=True)
