@@ -765,7 +765,12 @@ flowchart LR
   - `apply_manager_role_changes` 單一頻道部分成功時，已成功的部分仍寫回 `locked_overwrites_json`。
   - 前端：修改時 `lobby_channel` 欄位錯誤一律顯示，並改成要求重新選頻道；沒有對應欄位的錯誤改用提示；暫存存 `channelInvalid`／`messageInvalid`；編輯時顯示大廳頻道的 bot 權限警告。
   - 驗證：後端 `test_dashboard_tickets*.py`、`test_ticket_lobby.py`、`test_tickets_lib.py` 通過（新增每大廳鎖的交錯測試，拿掉鎖時會失敗）；前端 vitest、tsc、eslint、next build 通過。
-
+- 審查：第 2 輪放行，剩 1 條 non-blocking 已修；之後不再送審：
+  - 移除大廳回 `button_removed: false` 時，說明視窗會因一覽重新載入（大廳列卸載）立刻消失。改成按鈕沒拿掉時先不重新載入，關閉說明視窗後才呼叫 `onDone`（`reloadOnClose`）；補不 mock `onDone` 的測試（渲染 `TicketLobbyManager`，DELETE 之後一覽回空），拿掉修正時該測試會失敗。
+- 使用者決定（2026-11-11）：
+  - 移除大廳遇 Forbidden 時仍標示移除、按鈕保留並提示的做法，使用者已確認。P-03 開單要檢查 `removed_at`（P-03 卡範圍已涵蓋）。
+  - 依使用者決定補入權限表：大廳頻道的 Read Message History，後果是無法更新或移除大廳訊息，排在 View Channel 之後。規格書〈bot 權限警告〉表、`starlib/tickets.py` 的權限表與相關測試（逐項、順序）已同步；前端的警告來自 API，沒有寫死項目。
+- 完整驗證（第 2 輪後，修正與權限表補列都在內）：見 worker 回報。
 
 ### P-03 成員開單時套用大廳的命名、限制與可見範圍
 
