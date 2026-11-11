@@ -178,10 +178,11 @@ async def punish(
 
 
 def auto_timeout_text(auto: AutoTimeoutResult) -> str:
-    """自動禁言結果的說明（公告與指令回覆共用）：成功寫中文時長，失敗寫原因。"""
+    """自動禁言結果的說明（公告與指令回覆共用）：成功寫中文時長，失敗寫原因；禁言已執行但紀錄沒寫入時一併帶出原因。"""
     if not auto.ok:
         return f"失敗：{auto.error}"
-    return f"已禁言 {format_seconds(int(auto.duration.total_seconds()))}" if auto.duration is not None else "已禁言"
+    text = f"已禁言 {format_seconds(int(auto.duration.total_seconds()))}" if auto.duration is not None else "已禁言"
+    return f"{text}\n注意：{auto.error}" if auto.error else text
 
 
 def announcement(result: PunishResult, target: discord.User | discord.Member, actor: discord.Member | discord.User) -> dict:
