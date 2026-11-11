@@ -56,19 +56,19 @@
 | 2 | S-02 | 實作完成 | [共用] 訊息編輯器：內容格式、驗證、預覽與轉換 | 無 | S | R-02、P-02 依賴 |
 | 3 | S-03 | 實作完成 | [共用] 懲處服務：執行、寫紀錄、公告與稽核原因 | 無 | S | W-02、W-04、B-02 依賴 |
 | 4 | W-01 | 實作完成 | 管理員能看懲處紀錄並查詢成員的跨群紀錄 | S-01 | A | 骨架切片：第一個只靠權限放寬才進得來的區塊 |
-| 5 | R-01 | 未完成 | 管理員能看到反應身分組一覽 | S-01 | A | |
+| 5 | R-01 | 實作完成 | 管理員能看到反應身分組一覽 | S-01 | A | |
 | 6 | P-01 | 未完成 | 管理員能看到私人頻道大廳與頻道清單 | S-01 | A | 含資料欄位與測試版資料對應 |
 | 7 | B-01 | 未完成 | 管理員能開關語音時數統計並看排行榜 | S-01 | A | |
 | 8 | G-01 | 實作完成 | 管理員能看抽獎清單、參加者與中獎者 | S-01 | A | |
 | 9 | W-04 | 實作完成 | 用指令懲處一律留紀錄，公告格式統一 | S-03 | A | 只動指令 |
 | 10 | W-02 | 實作完成 | 管理員能從後台警告、禁言、踢出、停權 | W-01、S-03 | B | |
 | 11 | W-03 | 實作完成 | 管理員能移除本伺服器的紀錄 | W-01 | B | 用 W-01 留的列動作插槽，與 W-02 不重疊 |
-| 12 | R-02 | 未完成 | 管理員能發新的反應身分組訊息，並編輯按鈕與內容 | R-01、S-02 | B | |
+| 12 | R-02 | 實作完成 | 管理員能發新的反應身分組訊息，並編輯按鈕與內容 | R-01、S-02 | B | |
 | 13 | P-02 | 未完成 | 管理員能新增、修改、移除私人頻道大廳 | P-01、S-02 | B | |
 | 14 | B-02 | 未完成 | 警告累計 N 次自動禁言 | B-01、S-03、W-02、W-04 | C | 含 `/server setting` |
 | 15 | G-02 | 實作完成 | 管理員能提前結束與重抽 | G-01 | B | 含 `/giveaway redraw` 修改 |
-| 16 | R-03 | 未完成 | 管理員能把反應身分組掛到 bot 既有的訊息 | R-02 | C | |
-| 17 | R-04 | 未完成 | 管理員能刪除反應身分組、處理失效並重新發送 | R-02 | C | 含重啟清理移除與舊內容回填 |
+| 16 | R-03 | 實作完成 | 管理員能把反應身分組掛到 bot 既有的訊息 | R-02 | C | |
+| 17 | R-04 | 實作完成 | 管理員能刪除反應身分組、處理失效並重新發送 | R-02 | C | 含重啟清理移除與舊內容回填 |
 | 18 | P-03 | 未完成 | 成員開單時套用大廳的命名、限制與可見範圍 | P-02 | C | |
 | 19 | P-04 | 未完成 | 私人頻道能鎖定、重開、刪除 | P-03 | D | |
 | 20 | P-05 | 未完成 | `/ticket setup` 支援大廳的全部設定 | P-02 | C | 只動 `ticket_setup`，呼叫 `save_lobby` |
@@ -390,12 +390,12 @@ flowchart LR
 - 不包含：新增、編輯（R-02）；刪除、重新發送（R-04）。
 
 **驗收條件**
-- [ ] 用指令建立的反應身分組出現在一覽，依頻道位置、訊息時間排序。
-- [ ] 刪除某按鈕的身分組後，該按鈕標示失效；把身分組調到不低於 bot 也標示失效；自訂 emoji 被刪也標示失效。
-- [ ] 訊息或頻道在 Discord 被刪，整則標示失效。
-- [ ] 拔掉 bot 的 Manage Roles，看到缺少的權限與後果；頻道層級的 View／Send／Embed／Read History 同樣。
-- [ ] 沒有任何反應身分組時顯示說明。
-- [ ] 只有 Manage Roles 的使用者看得到這個區塊。
+- [x] 用指令建立的反應身分組出現在一覽，依頻道位置、訊息時間排序。
+- [x] 刪除某按鈕的身分組後，該按鈕標示失效；把身分組調到不低於 bot 也標示失效；自訂 emoji 被刪也標示失效。
+- [x] 訊息或頻道在 Discord 被刪，整則標示失效。
+- [x] 拔掉 bot 的 Manage Roles，看到缺少的權限與後果；頻道層級的 View／Send／Embed／Read History 同樣。
+- [x] 沒有任何反應身分組時顯示說明。
+- [x] 只有 Manage Roles 的使用者看得到這個區塊。
 
 **實作設計**
 - 資料：`ReactionRoleOption` 新增 `position: int`（排序），`ReactionRoleMessage` 新增 `content_json: str | None`（R-02 起寫入）。都是 `AlchemyBasicSchema`，用 `Column` 加欄位。手動 ALTER：
@@ -425,7 +425,23 @@ flowchart LR
 
 **風險 / 實作注意**：`fetch_message` 有 rate limit；一覽載入時間跟訊息數成正比。目前資料量小，先逐則查。
 
-**進度**：未完成
+**進度**：實作完成（2026-11-11）
+- commit：XingyuBot `feat/dashboard-r01` 與 domalyze_frontend `feat/dashboard-r01`（hash 見 worker 回報，本進度回寫與實作同一個 commit）
+- 決策：
+  - 端點測試 monkeypatch 假 repository，不碰 DB；`list_guild_reaction_roles`／`get_reaction_roles_by_message` 依 position 排序的 SQL 在 R-02 用真實 DB 一起驗過（`test_dashboard_reaction_roles_write.py` 的 `TestRepository`）。
+  - 一覽排序：已存在的頻道依「分類位置、頻道位置」，同頻道依訊息 ID（即訊息時間）由小到大，頻道已刪除的排最後。
+  - 讀不到訊息（缺 Read Message History 等，非 NotFound）不標失效，摘要為 null，由權限警告說明原因。
+  - 自訂 emoji 只認這個伺服器的 emoji（`guild.get_emoji`）；`role_issue` 回中文原因字串，與 `/reactrole add` 的訊息一致；`bot_permission_issues` 的缺權限項目順序為 Manage Roles、View Channel、Send Messages、Embed Links、Read Message History，頻道已刪除時只檢查伺服器層級。
+  - 前端 `ReactionRoleItem` 另外匯出，供 R-02、R-04 與測試使用；插槽為 `ReactionRoleSection` 的 `headerActions`、`actions`。
+- 驗證：後端 `test/test_dashboard_reaction_roles.py` 32 項通過；前端 vitest 164 項（含 `dashboard-reaction-roles.test.ts`、`reaction-role-section.test.tsx`）與 `tsc --noEmit` 通過；勾選項依 API 測試（失效標示、整則失效、權限警告、`require_section` 的 403）
+- 未驗：
+  - 本機 DB 的 ALTER 與回填 SQL 已由使用者執行（正式環境部署時仍要手動執行）；回填結果、view 按鈕順序未驗。
+  - 「依頻道位置、訊息時間排序」與「用指令建立的出現在一覽」只驗到端點排序邏輯，未用真實資料驗。
+  - 「沒有任何反應身分組時顯示說明」、360px 與實際畫面（無瀏覽器驗證，只過 render 測試）；ESLint 未執行。
+  - `test/test_dashboard_*.py` 全跑有 8 項失敗（`test_dashboard_auth.py` 6 項、`test_dashboard_invite.py` 2 項，登入與邀請 callback），在 `main` 上同樣失敗，與本卡無關：本機庫有既存的 session／身分資料（`MultipleResultsFound`、ID 不符）。
+- 備註：`/reactrole add` 新增的按鈕「排在最後」與 `moderation.py` 以位置參數建構 `ReactionRoleMessage`／`ReactionRoleOption`（`AlchemyBasicSchema` 是 kw_only dataclass，會 TypeError）兩件事，已在 R-02 處理。
+- 審查：dev-review 一輪（範圍 main..feat/dashboard-r04），無與本卡相關的問題
+- 人工驗證：2026-11-11 使用者在本機 Discord 與瀏覽器照驗收清單試過，無問題；驗收條件全部勾選。
 
 ### R-02 管理員能發新的反應身分組訊息，並編輯按鈕與內容
 
@@ -436,16 +452,16 @@ flowchart LR
 - 不包含：掛到既有訊息（R-03）；刪除、失效處理、重新發送（R-04）。
 
 **驗收條件**
-- [ ] 選頻道、編排文字與 embed、加三顆按鈕後存檔，Discord 上出現相同內容的訊息；按按鈕取得身分組，再按一次移除。
-- [ ] 調整順序後存檔，Discord 的按鈕順序跟著改，第 6 顆在第二列；最多 25 顆。
-- [ ] 同一身分組不能出現兩次。
-- [ ] 位階不低於 bot、不低於操作者的身分組，以及 `@everyone`、managed，在選單中停用並說明原因；伺服器擁有者只受 bot 位階限制。
-- [ ] 選了帶 Administrator 等危險權限的身分組，看到警告，仍可存。
-- [ ] 留著失效按鈕或別人設的高位階按鈕仍可存檔；高位階按鈕只能刪除，不能修改；失效按鈕可以修改（例如換成有效的身分組）或刪除。
-- [ ] 至少一顆按鈕才能存。
-- [ ] A、B 同時編輯同一則，後存的被擋下並看到最新版本，輸入內容保留。
-- [ ] `/reactrole add` 新增的按鈕在網頁上排在最後；用 `/reactrole editmessage` 改內容後，網頁編輯器帶入新內容。
-- [ ] 直接呼叫 API 設定不能發放的身分組、超過 25 顆，被拒絕。
+- [x] 選頻道、編排文字與 embed、加三顆按鈕後存檔，Discord 上出現相同內容的訊息；按按鈕取得身分組，再按一次移除。
+- [x] 調整順序後存檔，Discord 的按鈕順序跟著改，第 6 顆在第二列；最多 25 顆。
+- [x] 同一身分組不能出現兩次。
+- [x] 位階不低於 bot、不低於操作者的身分組，以及 `@everyone`、managed，在選單中停用並說明原因；伺服器擁有者只受 bot 位階限制。
+- [x] 選了帶 Administrator 等危險權限的身分組，看到警告，仍可存。
+- [x] 留著失效按鈕或別人設的高位階按鈕仍可存檔；高位階按鈕只能刪除，不能修改；失效按鈕可以修改（例如換成有效的身分組）或刪除。
+- [x] 至少一顆按鈕才能存。
+- [x] A、B 同時編輯同一則，後存的被擋下並看到最新版本，輸入內容保留。
+- [x] `/reactrole add` 新增的按鈕在網頁上排在最後；用 `/reactrole editmessage` 改內容後，網頁編輯器帶入新內容。
+- [x] 直接呼叫 API 設定不能發放的身分組、超過 25 顆，被拒絕。
 
 **實作設計**
 - 資料：`content_json` 存 S-02 的 `to_json`；`position` 依表單順序寫入。repository 新增 `replace_reaction_role_message(guild_id, channel_id, message_id, content_json, options)`，在同一個交易內刪掉該訊息舊的 options 再插入；同時提供 `original` 條件式比對的讀取 `get_reaction_role_snapshot(message_id)`。
@@ -465,7 +481,34 @@ flowchart LR
 
 **風險 / 實作注意**：新增時先送訊息再寫 DB；DB 失敗時刪掉剛送出的訊息並記 log。修改時 DB 失敗，把 Discord 訊息改回原內容與原按鈕，回錯誤請管理員重試；改回也失敗時記 log。
 
-**進度**：未完成
+**進度**：實作完成（2026-11-11）
+- commit：XingyuBot `feat/dashboard-r02` 與 domalyze_frontend `feat/dashboard-r02`（hash 見 worker 回報，本進度回寫與實作同一個 commit）
+- 決策：
+  - 端點的 `original` 比對：按鈕快照（`role_id`、`title`、`emoji`、`style`，依順序）序列化成字串後交給 `check_conflict`，與 `content_json` 一起比；409 的 `current` 回與 `GET /{message_id}` 相同形狀的最新內容（已刪除時 `deleted: true`、`current: null`），前端不必再多打一次請求。
+  - 端點回傳：`POST` 回 `{message_id, jump_url}`，`PUT` 回最新的編輯用內容。
+  - 新增流程為「先送出內容、再 edit 掛上 view、再寫 DB」，因為按鈕的 `custom_id` 含訊息 ID，送出前不知道；DB 失敗或掛 view 失敗都會刪掉剛送出的訊息。送出時 `allowed_mentions` 設為 none，避免編輯器的內容 ping 到 `@everyone` 或身分組。
+  - 位階規則：只對新增或有變動的按鈕檢查 `role_issue` 與操作者位階；既有按鈕位階不低於操作者且被修改（標題、emoji、樣式任一變動）回 400 `locked_button`；沒變動的按鈕（含失效、位階過高）一律放行，可以刪除與調整順序。失效按鈕只改標題而身分組仍無效會被擋下，必須換成有效的身分組或刪除。
+  - emoji 只對新增或有變動的按鈕檢查是否屬於本伺服器；既有按鈕沒變動時，即使 emoji 已失效也放行（Discord 若拒絕該 emoji，整次存檔回 502 `discord_error`）。
+  - `content_locked` 的原因代碼除了 `multiple_embeds`、`has_attachments`，另加 `message_unavailable`（沒有存下的內容、訊息又讀不到）；`content_locked` 時 `message` 必須為 null，否則 400 `content_locked`。
+  - 危險權限清單放在 `starlib/reaction_roles.py` 的 `DANGEROUS_PERMISSIONS`（Administrator、Manage Server／Roles／Channels／Webhooks／Messages／Nicknames、Kick／Ban／Moderate Members、Mention Everyone、View Audit Log），`/options` 另外回 `dangerous_permissions` 供警告文字使用。
+  - 指令：`/reactrole add` 的新按鈕 position 為 max+1（重新設定同一身分組沿用原 position），訊息沒有 `content_json` 時用 `from_message` 存下；`/reactrole editmessage` 改完文字後同步更新 `content_json`（沒有存下的內容時改用 `from_message` 讀回編輯後的訊息）。兩處的 `ReactionRoleMessage`／`ReactionRoleOption` 都改成關鍵字參數。
+  - 模型：`ReactionRoleOption.position`、`ReactionRoleMessage.content_json` 改用 `mapped_column(..., default=...)`。R-01 的 `Column(..., default=...)` 在 `AlchemyBasicSchema` 的 dataclass 下，沒傳該欄位時會把 Column 當 SQL 運算式寫進 INSERT，真實 DB 的 `merge` 會失敗。
+  - 前端：新增 `reaction-role-form.tsx`（表單）與 `reaction-role-manager.tsx`（一覽加表單，放進 R-01 的 `headerActions` 與每則 `actions`）；整份表單的暫存用單一 key `reaction-roles:form`，內含訊息 ID 與模式；失效的整則訊息不顯示「編輯」，留給 R-04。
+- 驗證：
+  - 後端 `uv run pytest test/test_dashboard_reaction_roles*.py` 100 項通過（新增 `test_dashboard_reaction_roles_write.py` 68 項）。涵蓋新增流程（送訊息、`add_view`、寫 DB、DB 失敗與掛 view 失敗時刪掉訊息）、修改流程（409 衝突、DB 失敗時改回原內容）、25 顆上限與至少一顆、同身分組重複、`role_issue` 與操作者位階（擁有者只受 bot 位階限制）、`locked_button`、失效按鈕可改可刪、`content_locked`、非本伺服器 emoji 400、超長內容 400、`/options` 的 `disabled_reason` 與 `dangerous`、第 6 顆在第二列。
+  - repository 用真實 PostgreSQL 驗：`list_guild_reaction_roles`／`get_reaction_roles_by_message` 依 position 排序、新欄位預設值、`get_reaction_role_snapshot`、`replace_reaction_role_message`（同交易刪舊插新、重編 position、`content_json` 為 None 時保留原值、失敗時整筆還原）。
+  - `test/test_dashboard_*.py` 全跑 665 通過、8 失敗，失敗的就是 main 上已失敗的 `test_dashboard_auth.py` 6 項與 `test_dashboard_invite.py` 2 項。
+  - 前端 `npx vitest run` 199 項通過（新增 `reaction-role-form.test.tsx` 13 項、`dashboard-reaction-roles.test.ts` 補充）；`npx tsc --noEmit` 通過。
+- 未驗：
+  - 實際 Discord 行為：真的送出訊息、按按鈕取得與移除身分組、第 6 顆換列、`add_view` 後免重啟生效、DB 失敗時把訊息改回原內容；端點測試用假 Discord 物件，只驗到呼叫內容。
+  - 兩個瀏覽器同時編輯的衝突畫面、畫面本身（桌面與 360px）、表單暫存在登入過期導向後的還原；前端只過 jsdom 測試，沒有在瀏覽器操作。
+  - `/reactrole add`、`/reactrole editmessage` 的指令流程沒有自動化測試，只過 import 與靜態檢查。
+  - ESLint 設定載入時出錯（`Converting circular structure to JSON`，既有問題），lint 未執行。
+  - 最後一次寫入（DB）與 Discord 編輯之間的競態沒有鎖：衝突比對在編輯 Discord 之前，兩個管理員幾乎同時存檔仍可能互相覆蓋，與其他區塊的 `check_conflict` 做法相同。
+- 審查：dev-review 一輪（範圍 main..feat/dashboard-r04），blocking 1 條
+  - 已修（blocking）：用指令建立、沒指定樣式的按鈕（DB 為 None）在網頁往返被當成有變動，失效按鈕與高位階按鈕會擋住整次存檔（XingyuBot `fix/dashboard-r-review1`（hash 見 worker 回報））。`_Btn.key()` 把 None 當 1，與 `ReactionRoleButton` 一致；補端點測試：既有按鈕 style 為 None、身分組已刪除或位階過高，原樣送回 style=1 仍可存，不回 `locked_button`，真的改樣式仍被擋
+  - 已修（nitpick）：`_detail` 的 `locked_reason` 在按鈕因操作者位階被鎖時，改用 `operator_rank_issue` 的原因（原本可能顯示 bot 位階的原因）；同一個 commit
+- 人工驗證：2026-11-11 使用者在本機 Discord 與瀏覽器照驗收清單試過，無問題；驗收條件全部勾選；依回饋調整新增按鈕文字與表單間距（domalyze_frontend 37aff27）。
 
 ### R-03 管理員能把反應身分組掛到 bot 既有的訊息
 
@@ -476,10 +519,10 @@ flowchart LR
 - 不包含：發新訊息與按鈕編輯本身（R-02，本卡沿用其表單與寫入）。
 
 **驗收條件**
-- [ ] 選頻道後列出最近 100 則中 bot 發的訊息，最多 25 則；帶其他互動元件的不列；已是反應身分組的列出，點了進入編輯；這兩類不算進 25 則。
-- [ ] 貼上 bot 一則只有文字與一般 embed 的訊息連結並加按鈕，訊息下方出現按鈕；編輯器帶入原內容，修改後 Discord 跟著改。
-- [ ] 貼上別的伺服器的連結，或不是 bot 發的訊息，被擋下並看到原因。
-- [ ] 掛到有兩則 embed 的訊息，只能管理按鈕，內容欄停用並說明原因。
+- [x] 選頻道後列出最近 100 則中 bot 發的訊息，最多 25 則；帶其他互動元件的不列；已是反應身分組的列出，點了進入編輯；這兩類不算進 25 則。
+- [x] 貼上 bot 一則只有文字與一般 embed 的訊息連結並加按鈕，訊息下方出現按鈕；編輯器帶入原內容，修改後 Discord 跟著改。
+- [x] 貼上別的伺服器的連結，或不是 bot 發的訊息，被擋下並看到原因。
+- [x] 掛到有兩則 embed 的訊息，只能管理按鈕，內容欄停用並說明原因。
 
 **實作設計**
 - 後端：`reaction_roles.py`：
@@ -490,7 +533,26 @@ flowchart LR
 
 **依賴**：R-02（表單與寫入流程）
 
-**進度**：未完成
+**進度**：實作完成（2026-11-11）
+- commit：XingyuBot `feat/dashboard-r03` 與 domalyze_frontend `feat/dashboard-r03`（hash 見 worker 回報，本進度回寫與實作同一個 commit）
+- 決策：
+  - `GET /candidates` 與 `GET /resolve` 的錯誤一律 400（找不到訊息為 404），`error` 為代碼、`message` 為中文原因：`invalid_link`（不是訊息連結）、`wrong_guild`（連結的伺服器不同，或頻道不屬於本伺服器）、`message_not_found`、`not_bot_message`、`has_components`、`bot_missing_permission`（缺 View Channel／Read Message History）。`/resolve` 對已是反應身分組的訊息回 200 `status: "reaction_role"`，前端轉到編輯。
+  - `/candidates` 掃最近 100 則（新到舊），只留 bot 發的；已登記的標 `reaction_role` 且不限數量，未登記且帶 components 的排除，其餘標 `free` 最多 25 則（取最近的）。
+  - `/resolve` 回 `{ status: "free", content, content_locked, channel, jump_url, summary, message_id }`；`content_locked` 是 S-02 `from_message` 的原因代碼（`multiple_embeds`、`has_attachments`）。
+  - `POST` 改成 `{ target, message, buttons }`，`target` 為 `{kind: "new", channel_id}` 或 `{kind: "existing", channel_id, message_id}`，不再收頂層 `channel_id`。新訊息 `message` 必填（否則 400 `invalid_request`，欄位 `message`）。
+  - 掛到既有訊息時：重新取訊息檢查（頻道屬於本伺服器、bot 發的、沒有其他 components），已登記的回 400 `already_reaction_role` 並附 `message_id`，前端轉到編輯；內容不能改時 `message` 必須為 null，否則 400 `content_locked`，`content_json` 記 null、編輯原訊息只帶 `view`；內容可改且 `message` 為 null 時沿用原內容並以讀回結果記錄 `content_json`。
+  - DB 寫入失敗時把 view 拿掉並還原內容（內容有改的話），回 500 `save_failed`；Discord 編輯失敗回 502 `discord_error`，不寫 DB。
+  - 前端：`reaction-role-form.tsx` 第一步加「要怎麼放」（發新訊息／掛到既有訊息）、候選清單與連結輸入，選定訊息前不顯示內容與按鈕；表單暫存新增 `source`、`existing`（舊暫存視為新訊息）；`reaction-role-manager.tsx` 的新增按鈕改名並接 `onOpenExisting`，選到已是反應身分組的訊息時開啟那則的編輯。
+- 驗證：
+  - 後端 `uv run pytest test/test_dashboard_reaction_roles*.py` 134 項通過（新增 `test_dashboard_reaction_roles_attach.py` 34 項：候選清單的 bot 篩選、其他 components 排除、`reaction_role` 狀態、25 則上限與前兩類不計入、只掃 100 則；`/resolve` 各原因；`target.kind=existing` 編輯原訊息、`content_locked`、`content_json` 為 null、DB 與 Discord 失敗；R-02 的 `FakeRepo` 補 `list_guild_reaction_roles`、`FakeMessage` 補 author／components）。
+  - `test/test_dashboard_*.py` 全跑 699 通過、8 失敗，失敗的就是 main 上已失敗的 `test_dashboard_auth.py` 6 項與 `test_dashboard_invite.py` 2 項。
+  - 前端 `npx vitest run` 212 項通過（`reaction-role-form.test.tsx` 新增「掛到既有訊息」13 項）；`npx tsc --noEmit` 通過。
+- 未驗：
+  - 實際 Discord 行為：`channel.history`、對真實 bot 訊息加按鈕、按鈕運作、`components` 在 py-cord 對各種元件的判斷、DB 失敗時 `view=None` 是否真的拿掉按鈕；端點測試用假 Discord 物件。
+  - 候選清單與連結輸入的畫面（桌面與 360px）、無瀏覽器操作；ESLint 未執行（既有設定載入錯誤）。
+  - 兩則以上 embed 的訊息實際掛按鈕後的畫面。
+- 審查：dev-review 一輪（範圍 main..feat/dashboard-r04），無與本卡相關的問題
+- 人工驗證：2026-11-11 使用者在本機 Discord 與瀏覽器照驗收清單試過，無問題；驗收條件全部勾選。
 
 ### R-04 管理員能刪除反應身分組、處理失效並重新發送
 
@@ -501,12 +563,12 @@ flowchart LR
 - 不包含：一覽的失效偵測（R-01）。
 
 **驗收條件**
-- [ ] 刪除時選「只拿掉按鈕」，訊息還在、按鈕消失；選「刪除訊息」，訊息消失；兩者紀錄都移除。
-- [ ] 在 Discord 刪掉反應身分組訊息後重啟 bot，網頁仍看得到紀錄並標示失效。
-- [ ] 失效的訊息重新發送到另一頻道，新訊息有原內容與有效按鈕，按鈕可運作；失效的按鈕被略過並告知是哪幾顆。
-- [ ] 原頻道被刪時，重新發送必須重新選頻道。
-- [ ] 上線前就存在、訊息還在的紀錄，上線後重新發送有原本的內容；上線前訊息已不在的，顯示「沒有可重新發送的內容」，只能移除紀錄或重新編排。
-- [ ] 多 embed 或附件的訊息失效後，重新發送必須用編輯器重新編排內容。
+- [x] 刪除時選「只拿掉按鈕」，訊息還在、按鈕消失；選「刪除訊息」，訊息消失；兩者紀錄都移除。
+- [x] 在 Discord 刪掉反應身分組訊息後重啟 bot，網頁仍看得到紀錄並標示失效。
+- [x] 失效的訊息重新發送到另一頻道，新訊息有原內容與有效按鈕，按鈕可運作；失效的按鈕被略過並告知是哪幾顆。
+- [x] 原頻道被刪時，重新發送必須重新選頻道。
+- [x] 上線前就存在、訊息還在的紀錄，上線後重新發送有原本的內容；上線前訊息已不在的，顯示「沒有可重新發送的內容」，只能移除紀錄或重新編排。
+- [x] 多 embed 或附件的訊息失效後，重新發送必須用編輯器重新編排內容。
 
 **實作設計**
 - 資料：重新發送時，在同一交易內把 `ReactionRoleMessage` 與 `ReactionRoleOption` 的 message_id（與 channel_id）換成新訊息，repository 新增 `move_reaction_role_message(old_id, new_channel_id, new_id)`。
@@ -521,7 +583,30 @@ flowchart LR
 
 **依賴**：R-02（content_json 與寫入流程）
 
-**進度**：未完成
+**進度**：實作完成（2026-11-11）
+- commit：XingyuBot `feat/dashboard-r04` 與 domalyze_frontend `feat/dashboard-r04`（hash 見 worker 回報，本進度回寫與實作同一個 commit）
+- 決策：
+  - `DELETE /{message_id}`：body `{mode, original}`，`original` 與 PUT 相同形狀；衝突回 409（紀錄已被刪除時 `deleted: true`），`current` 的按鈕不帶位階鎖定欄位。訊息或頻道不存在視為成功；Discord 其他錯誤回 502 `discord_error` 且不移除紀錄；DB 失敗回 500 `save_failed`。成功回 `{deleted: true}`。
+  - `POST /{message_id}/resend`：body `{channel_id?, message?}`。`channel_id` 省略時用原頻道，原頻道已不在時回 400 並指出 `channel_id`；`message` 有給就以它為準並寫入 `content_json`，沒給就用存下的內容，兩者都沒有回 400 `invalid_request`（欄位 `message`，「沒有可重新發送的內容」）。成功回 `{message_id, channel_id, jump_url, skipped}`。
+  - 卡片沒寫、新增的限制：訊息在 Discord 上還在時重新發送回 400 `message_exists`（否則舊訊息的按鈕會因紀錄換成新 ID 而失效）；沒有任何有效按鈕時回 400 `no_valid_buttons` 並附 `skipped`。
+  - 略過的按鈕：`role_issue` 不為 null（身分組不存在、`@everyone`／managed、不低於 bot）或自訂 emoji 已不存在；`skipped` 每項含 `role_id`、`role_name`、`title`、`reason`。
+  - repository：`move_reaction_role_message(old_id, new_channel_id, new_id, content_json=None, keep_role_ids=None)`，同交易換訊息 ID 與頻道、依 `keep_role_ids` 刪掉略過的按鈕並重編 position（比卡片寫的簽名多兩個選用參數）；另新增 `set_reaction_role_content(message_id, content_json)`，只在 `content_json` 為 null 時寫入，供上線回填。
+  - `bot_event.py`：反應身分組載入抽成模組函式 `load_reaction_role_views(bot, sqldb)` 以便測試。頻道或訊息不在（NotFound）只略過 `add_view`；讀不到但不是 NotFound（缺權限等）無法判斷，照常 `add_view`、不回填。`content_json` 為 null 且讀得到時用 `from_message` 回填，多 embed 或附件維持 null。這是順便改正：原本訊息 NotFound 時用 partial message 仍會 `add_view`。
+  - 前端：新增 `reaction-role-delete-button.tsx`、`reaction-role-resend-button.tsx`，接進 `reaction-role-manager.tsx` 的 `actions`。失效的訊息顯示「重新發送」與「移除紀錄」，其他顯示「編輯」「刪除」。兩個視窗開啟時先載入 `GET /{message_id}`（刪除取衝突比對的原值；重新發送取內容與按鈕）。刪除遇到衝突不用 `ConflictNotice`（「以我的內容覆蓋」不適用），改成更新為最新版本並請使用者再確認一次。重新發送視窗不做表單暫存。
+  - 前端失效訊息在一覽的「編輯」一併隱藏頻道已刪除的情況（原本只看 `invalid`）。
+- 驗證：
+  - 後端 `uv run pytest test/test_dashboard_reaction_roles*.py` 全過（新增 `test_dashboard_reaction_roles_delete.py` 48 項：DELETE 兩種 mode、訊息或頻道已不存在、`original` 衝突、Discord 與 DB 失敗、權限；resend 換頻道與換 ID、略過按鈕並回報、`content_json` 為 null 時 `message` 必填、原頻道不在必須選頻道、DB 與掛 view 失敗時刪掉新訊息；`move_reaction_role_message` 與 `set_reaction_role_content` 用真實 DB 驗同交易更新與失敗還原；`load_reaction_role_views` 的略過、回填與維持 null）。
+  - `test/test_dashboard_*.py` 全跑 747 通過、8 失敗，失敗的就是 main 上已失敗的 `test_dashboard_auth.py` 6 項與 `test_dashboard_invite.py` 2 項。
+  - 前端 `npx vitest run` 229 項通過（新增 `reaction-role-delete-resend.test.tsx` 17 項）；`npx tsc --noEmit` 通過。
+- 未驗：
+  - 實際 Discord 行為：真的刪訊息、`edit(view=None)` 拿掉按鈕、重新發送後按鈕可運作、重啟 bot 後失效紀錄仍在且網頁標示失效、上線回填；端點與載入函式用假 Discord 物件。
+  - 對話框畫面（桌面與 360px）、鍵盤操作與焦點，只過 jsdom 測試；ESLint 未執行（既有設定載入錯誤）。
+  - `edit(view=None)` 之後 bot 記憶體裡該訊息的 persistent view 沒有移除，重啟後才消失；紀錄已刪，按鈕被按下時 bot 查不到紀錄。
+- 審查：dev-review 一輪（範圍 main..feat/dashboard-r04），無 blocking
+  - 已修（non-blocking）：重新發送時 `move_reaction_role_message` 回傳是否有移動；紀錄已被並發的重新發送或移除處理掉時，端點刪掉剛送出的訊息、停掉 view，回 409 `conflict`（`deleted: true`）；前端顯示說明並在關閉視窗後重新載入一覽（XingyuBot `fix/dashboard-r-review1`（hash 見 worker 回報）；domalyze_frontend `fix/dashboard-r-review1` 的 b56989e）；補真實 DB 與端點測試
+  - 已修（note）：重新發送讀舊訊息遇到 Forbidden 回 400 `bot_missing_permission`（欄位 `channel_id`），其他 HTTP 錯誤回 502 `discord_error`，只有讀得到才回 `message_exists`；前端沿用既有的 `bot_missing_permission` 文字顯示；補端點與前端測試
+  - 未修的 note：刪除遇到衝突時，視窗只換掉原值並提示再按一次，不顯示最新內容；刪除對象是整則，不用 ConflictNotice 的決定合理，若要貼近規格可在提示下列出最新的按鈕清單
+- 人工驗證：2026-11-11 使用者在本機 Discord 與瀏覽器照驗收清單試過，無問題；驗收條件全部勾選。
 
 ### P-01 管理員能看到私人頻道大廳與頻道清單
 
