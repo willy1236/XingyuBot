@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 
 import discord
@@ -67,8 +68,11 @@ class FakeRole:
 
 
 class FakeMessage:
-    def __init__(self, mid: int, content: str = "", embeds=(), attachments=()):
+    def __init__(self, mid: int, content: str = "", embeds=(), attachments=(), author_id: int = 1, components=()):
         self.id = mid
+        self.author = SimpleNamespace(id=author_id)  # bot 的 id 是 1（FakeGuild.me）
+        self.components = list(components)
+        self.created_at = datetime(2026, 11, 11, tzinfo=UTC) + timedelta(minutes=mid)
         self.content = content
         self.embeds = list(embeds)
         self.attachments = list(attachments)
@@ -102,6 +106,10 @@ class FakeTextChannel(FakeChannel):
         self.fail_send = False
         self.fail_edit_new = False
         self._next = 9000
+
+    async def history(self, limit: int = 100):
+        for mid in sorted(self.messages, reverse=True)[:limit]:
+            yield self.messages[mid]
 
     async def send(self, **kwargs):
         if self.fail_send:
@@ -193,6 +201,19 @@ class FakeRepo:
         m = self.messages.get(message_id)
         return None if m is None else json.loads(json.dumps(m))
 
+    def list_guild_reaction_roles(self, guild_id: int):
+        return [
+            (
+                SimpleNamespace(channel_id=m["channel_id"], message_id=mid),
+                [
+                    SimpleNamespace(role_id=b["role_id"], title=b["title"], emoji=b["emoji"], style=b["style"], position=i)
+                    for i, b in enumerate(m["buttons"])
+                ],
+            )
+            for mid, m in self.messages.items()
+            if m["guild_id"] == guild_id
+        ]
+
     def replace_reaction_role_message(self, guild_id, channel_id, message_id, content_json, options):
         self.replace_calls += 1
         if self.fail_replace:
@@ -270,7 +291,9 @@ def put(client, mid: int, buttons: list[dict], message: dict | None = TEXT, orig
 
 def post(client, buttons: list[dict], message: dict = TEXT, channel: int | str = 501):
     return client.post(
-        URL, json={"channel_id": str(channel), "message": message, "buttons": buttons}, headers={"Origin": FRONTEND}
+        URL,
+        json={"target": {"kind": "new", "channel_id": str(channel)}, "message": message, "buttons": buttons},
+        headers={"Origin": FRONTEND},
     )
 
 

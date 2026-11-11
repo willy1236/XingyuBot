@@ -67,7 +67,7 @@
 | 13 | P-02 | 未完成 | 管理員能新增、修改、移除私人頻道大廳 | P-01、S-02 | B | |
 | 14 | B-02 | 未完成 | 警告累計 N 次自動禁言 | B-01、S-03、W-02、W-04 | C | 含 `/server setting` |
 | 15 | G-02 | 實作完成 | 管理員能提前結束與重抽 | G-01 | B | 含 `/giveaway redraw` 修改 |
-| 16 | R-03 | 未完成 | 管理員能把反應身分組掛到 bot 既有的訊息 | R-02 | C | |
+| 16 | R-03 | 實作完成 | 管理員能把反應身分組掛到 bot 既有的訊息 | R-02 | C | |
 | 17 | R-04 | 未完成 | 管理員能刪除反應身分組、處理失效並重新發送 | R-02 | C | 含重啟清理移除與舊內容回填 |
 | 18 | P-03 | 未完成 | 成員開單時套用大廳的命名、限制與可見範圍 | P-02 | C | |
 | 19 | P-04 | 未完成 | 私人頻道能鎖定、重開、刪除 | P-03 | D | |
@@ -527,7 +527,24 @@ flowchart LR
 
 **依賴**：R-02（表單與寫入流程）
 
-**進度**：未完成
+**進度**：實作完成（2026-11-11）
+- commit：XingyuBot `feat/dashboard-r03` 與 domalyze_frontend `feat/dashboard-r03`（hash 見 worker 回報，本進度回寫與實作同一個 commit）
+- 決策：
+  - `GET /candidates` 與 `GET /resolve` 的錯誤一律 400（找不到訊息為 404），`error` 為代碼、`message` 為中文原因：`invalid_link`（不是訊息連結）、`wrong_guild`（連結的伺服器不同，或頻道不屬於本伺服器）、`message_not_found`、`not_bot_message`、`has_components`、`bot_missing_permission`（缺 View Channel／Read Message History）。`/resolve` 對已是反應身分組的訊息回 200 `status: "reaction_role"`，前端轉到編輯。
+  - `/candidates` 掃最近 100 則（新到舊），只留 bot 發的；已登記的標 `reaction_role` 且不限數量，未登記且帶 components 的排除，其餘標 `free` 最多 25 則（取最近的）。
+  - `/resolve` 回 `{ status: "free", content, content_locked, channel, jump_url, summary, message_id }`；`content_locked` 是 S-02 `from_message` 的原因代碼（`multiple_embeds`、`has_attachments`）。
+  - `POST` 改成 `{ target, message, buttons }`，`target` 為 `{kind: "new", channel_id}` 或 `{kind: "existing", channel_id, message_id}`，不再收頂層 `channel_id`。新訊息 `message` 必填（否則 400 `invalid_request`，欄位 `message`）。
+  - 掛到既有訊息時：重新取訊息檢查（頻道屬於本伺服器、bot 發的、沒有其他 components），已登記的回 400 `already_reaction_role` 並附 `message_id`，前端轉到編輯；內容不能改時 `message` 必須為 null，否則 400 `content_locked`，`content_json` 記 null、編輯原訊息只帶 `view`；內容可改且 `message` 為 null 時沿用原內容並以讀回結果記錄 `content_json`。
+  - DB 寫入失敗時把 view 拿掉並還原內容（內容有改的話），回 500 `save_failed`；Discord 編輯失敗回 502 `discord_error`，不寫 DB。
+  - 前端：`reaction-role-form.tsx` 第一步加「要怎麼放」（發新訊息／掛到既有訊息）、候選清單與連結輸入，選定訊息前不顯示內容與按鈕；表單暫存新增 `source`、`existing`（舊暫存視為新訊息）；`reaction-role-manager.tsx` 的新增按鈕改名並接 `onOpenExisting`，選到已是反應身分組的訊息時開啟那則的編輯。
+- 驗證：
+  - 後端 `uv run pytest test/test_dashboard_reaction_roles*.py` 134 項通過（新增 `test_dashboard_reaction_roles_attach.py` 34 項：候選清單的 bot 篩選、其他 components 排除、`reaction_role` 狀態、25 則上限與前兩類不計入、只掃 100 則；`/resolve` 各原因；`target.kind=existing` 編輯原訊息、`content_locked`、`content_json` 為 null、DB 與 Discord 失敗；R-02 的 `FakeRepo` 補 `list_guild_reaction_roles`、`FakeMessage` 補 author／components）。
+  - `test/test_dashboard_*.py` 全跑 699 通過、8 失敗，失敗的就是 main 上已失敗的 `test_dashboard_auth.py` 6 項與 `test_dashboard_invite.py` 2 項。
+  - 前端 `npx vitest run` 212 項通過（`reaction-role-form.test.tsx` 新增「掛到既有訊息」13 項）；`npx tsc --noEmit` 通過。
+- 未驗：
+  - 實際 Discord 行為：`channel.history`、對真實 bot 訊息加按鈕、按鈕運作、`components` 在 py-cord 對各種元件的判斷、DB 失敗時 `view=None` 是否真的拿掉按鈕；端點測試用假 Discord 物件。
+  - 候選清單與連結輸入的畫面（桌面與 360px）、無瀏覽器操作；ESLint 未執行（既有設定載入錯誤）。
+  - 兩則以上 embed 的訊息實際掛按鈕後的畫面。
 
 ### R-04 管理員能刪除反應身分組、處理失效並重新發送
 

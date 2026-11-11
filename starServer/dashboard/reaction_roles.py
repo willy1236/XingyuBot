@@ -2,7 +2,9 @@
 GET /dashboard/guilds/{id}/reaction-roles   一覽：每則訊息的頻道、內容摘要、按鈕、失效標示與 bot 權限警告
 GET /dashboard/guilds/{id}/reaction-roles/options        編輯器用：頻道、身分組（含停用原因與危險權限）、自訂 emoji
 GET /dashboard/guilds/{id}/reaction-roles/{message_id}   編輯用：內容、衝突比對的原值、按鈕
-POST /dashboard/guilds/{id}/reaction-roles               發新訊息
+GET /dashboard/guilds/{id}/reaction-roles/candidates?channel_id=  掛到既有訊息：頻道最近 bot 發的訊息
+GET /dashboard/guilds/{id}/reaction-roles/resolve?link=           掛到既有訊息：解析訊息連結
+POST /dashboard/guilds/{id}/reaction-roles               發新訊息，或掛到 bot 既有的訊息（target.kind）
 PUT /dashboard/guilds/{id}/reaction-roles/{message_id}   修改內容與按鈕，立即更新 Discord
 
 權限一律經 `require_section(Section.REACTION_ROLES)`。紀錄以資料庫為準，Discord 只用來判斷失效與補名稱。
@@ -10,10 +12,13 @@ PUT /dashboard/guilds/{id}/reaction-roles/{message_id}   修改內容與按鈕�
 
 import json
 import logging
+import re
 from dataclasses import asdict, dataclass
 
 import discord
 from fastapi import APIRouter, Depends
+from typing import Literal
+
 from pydantic import BaseModel, ValidationError
 
 from starDiscord.uiElement.view import ReactionRoleView
@@ -169,9 +174,21 @@ class OriginalIn(BaseModel):
     buttons: list[ButtonIn]
 
 
-class CreateBody(BaseModel):
+class NewTarget(BaseModel):
+    kind: Literal["new"]
     channel_id: int | str
-    message: MessageContent
+
+
+class ExistingTarget(BaseModel):
+    kind: Literal["existing"]
+    channel_id: int | str
+    message_id: int | str
+
+
+class CreateBody(BaseModel):
+    target: NewTarget | ExistingTarget
+    #: 新訊息必填；掛到既有訊息時，內容不能改（content_locked）必須為 null
+    message: MessageContent | None = None
     buttons: list[ButtonIn]
 
 
@@ -416,6 +433,127 @@ async def get_options(
     return await on_guild(guild_id, lambda guild: _options_payload(guild, _actor(guild, info)))
 
 
+CANDIDATE_HISTORY = 100
+MAX_CANDIDATES = 25
+_LINK = re.compile(
+    r"^\s*<?https?://(?:(?:ptb|canary)\.)?discord(?:app)?\.com/channels/(\d+)/(\d+)/(\d+)/?>?\s*$"
+)
+
+_TARGET_REASONS = {
+    "wrong_guild": "這則訊息不屬於這個伺服器",
+    "not_bot_message": "只能掛在我發的訊息上",
+    "has_components": "這則訊息已經帶有其他按鈕或互動元件，不能掛反應身分組",
+    "message_not_found": "找不到這則訊息",
+    "bot_missing_permission": "我看不到這個頻道的訊息，請確認我有 View Channel 與 Read Message History",
+}
+
+
+def _target_error(code: str, **extra) -> DashboardError:
+    return DashboardError(400 if code != "message_not_found" else 404, code, message=_TARGET_REASONS[code], **extra)
+
+
+async def _fetch_target(guild: discord.Guild, channel_id: int, message_id: int) -> tuple[object, discord.Message]:
+    """取得要掛的既有訊息；頻道不屬於本伺服器、訊息不存在、讀不到都丟對應的錯誤。"""
+    channel = guild.get_channel(channel_id)
+    if channel is None or channel not in guild.text_channels:
+        raise _target_error("wrong_guild")
+    try:
+        return channel, await channel.fetch_message(message_id)
+    except discord.NotFound:
+        raise _target_error("message_not_found") from None
+    except discord.Forbidden:
+        raise _target_error("bot_missing_permission") from None
+    except discord.HTTPException as e:
+        raise _discord_error(e) from None
+
+
+def _ensure_attachable(guild: discord.Guild, message: discord.Message) -> None:
+    """bot 發的、沒有其他互動元件（已是反應身分組的由呼叫端先處理）。"""
+    if message.author.id != guild.me.id:
+        raise _target_error("not_bot_message")
+    if message.components:
+        raise _target_error("has_components")
+
+
+def _candidate_summary(message: discord.Message) -> str:
+    return _summarize(message) or "（沒有文字內容）"
+
+
+@router.get("/guilds/{guild_id}/reaction-roles/candidates")
+async def list_candidates(channel_id: int, guild_id: int = Depends(require_section(Section.REACTION_ROLES))):
+    registered = {m.message_id for m in await run_db(lambda: _load(guild_id))}
+
+    async def _read_candidates(guild: discord.Guild) -> dict:
+        channel = guild.get_channel(channel_id)
+        if channel is None or channel not in guild.text_channels:
+            raise DashboardError(400, "invalid_request", fields=[_field("channel_id", "找不到這個文字頻道")])
+        items: list[dict] = []
+        free = 0
+        try:
+            async for m in channel.history(limit=CANDIDATE_HISTORY):
+                if m.author.id != guild.me.id:
+                    continue
+                if m.id in registered:
+                    status = "reaction_role"
+                elif m.components:
+                    continue
+                else:
+                    if free >= MAX_CANDIDATES:
+                        continue
+                    free += 1
+                    status = "free"
+                items.append(
+                    {
+                        "message_id": str(m.id),
+                        "summary": _candidate_summary(m),
+                        "created_at": m.created_at.isoformat(),
+                        "status": status,
+                    }
+                )
+        except discord.Forbidden:
+            raise _target_error("bot_missing_permission") from None
+        except discord.HTTPException as e:
+            raise _discord_error(e) from None
+        return {"messages": items}
+
+    return await on_guild_async(guild_id, _read_candidates)
+
+
+@router.get("/guilds/{guild_id}/reaction-roles/resolve")
+async def resolve_link(link: str, guild_id: int = Depends(require_section(Section.REACTION_ROLES))):
+    found = _LINK.match(link)
+    if found is None:
+        raise DashboardError(400, "invalid_link", message="不是 Discord 訊息連結")
+    link_guild, channel_id, message_id = (int(x) for x in found.groups())
+    if link_guild != guild_id:
+        raise _target_error("wrong_guild")
+    registered = await run_db(lambda: sqldb.get_reaction_role_snapshot(message_id)) is not None
+
+    async def _resolve(guild: discord.Guild) -> dict:
+        channel, message = await _fetch_target(guild, channel_id, message_id)
+        if message.author.id != guild.me.id:
+            raise _target_error("not_bot_message")
+        base = {
+            "message_id": str(message_id),
+            "channel": {"id": str(channel_id), "name": channel.name},  # pyright: ignore[reportAttributeAccessIssue]
+            "jump_url": message.jump_url,
+            "summary": _candidate_summary(message),
+        }
+        if registered:
+            return {**base, "status": "reaction_role"}
+        if message.components:
+            raise _target_error("has_components")
+        content, locked = from_message(message)
+        return {
+            **base,
+            "status": "free",
+            "content": content.model_dump() if content is not None else None,
+            "content_locked": locked,
+        }
+
+    return await on_guild_async(guild_id, _resolve)
+
+
 @router.get("/guilds/{guild_id}/reaction-roles/{message_id}")
 async def get_reaction_role(
     message_id: int,
@@ -434,17 +572,28 @@ async def create_reaction_role(
     guild_id: int = Depends(require_section(Section.REACTION_ROLES)),
     info: SessionInfo = Depends(require_session),
 ):
-    ensure_valid_message(body.message)
+    if body.message is not None:
+        ensure_valid_message(body.message)
     buttons = _parse_buttons(body.buttons)
-    channel_id = _to_int(body.channel_id)
+    channel_id = _to_int(body.target.channel_id)
     if channel_id is None:
-        raise DashboardError(400, "invalid_request", fields=[_field("channel_id", "必須是 Discord ID")])
+        raise DashboardError(400, "invalid_request", fields=[_field("target.channel_id", "必須是 Discord ID")])
+    if isinstance(body.target, ExistingTarget):
+        target_message_id = _to_int(body.target.message_id)
+        if target_message_id is None:
+            raise DashboardError(400, "invalid_request", fields=[_field("target.message_id", "必須是 Discord ID")])
+        return await on_guild_async(
+            guild_id, lambda guild: _attach(guild, info, guild_id, channel_id, target_message_id, body.message, buttons)
+        )
+    if body.message is None:
+        raise DashboardError(400, "invalid_request", fields=[_field("message", "新訊息必須有內容")])
+    message_content = body.message
 
     async def _create(guild: discord.Guild) -> dict:
         actor = _actor(guild, info)
         channel = guild.get_channel(channel_id)
         if channel is None or channel not in guild.text_channels:
-            raise DashboardError(400, "invalid_request", fields=[_field("channel_id", "找不到這個文字頻道")])
+            raise DashboardError(400, "invalid_request", fields=[_field("target.channel_id", "找不到這個文字頻道")])
         missing = [
             i for i in bot_permission_issues(guild, channel) if i.permission in ("View Channel", "Send Messages")
         ]
@@ -452,12 +601,12 @@ async def create_reaction_role(
             raise DashboardError(
                 400,
                 "bot_missing_permission",
-                fields=[_field("channel_id", f"我在這個頻道缺少 {missing[0].permission}")],
+                fields=[_field("target.channel_id", f"我在這個頻道缺少 {missing[0].permission}")],
             )
         _check_buttons(guild, actor, buttons, {})
 
         try:
-            sent = await channel.send(**to_send_kwargs(body.message), allowed_mentions=discord.AllowedMentions.none())
+            sent = await channel.send(**to_send_kwargs(message_content), allowed_mentions=discord.AllowedMentions.none())
         except discord.HTTPException as e:
             raise _discord_error(e) from None
         view = ReactionRoleView(sent.id, _db_options(sent.id, buttons))
@@ -467,7 +616,7 @@ async def create_reaction_role(
             await _delete_quietly(sent)
             raise _discord_error(e) from None
         sclient.bot.add_view(view, message_id=sent.id)  # pyright: ignore[reportOptionalMemberAccess]
-        content_json = to_json(body.message)
+        content_json = to_json(message_content)
         try:
             await run_db(
                 lambda: sqldb.replace_reaction_role_message(
@@ -482,6 +631,58 @@ async def create_reaction_role(
         return {"message_id": str(sent.id), "jump_url": sent.jump_url}
 
     return await on_guild_async(guild_id, _create)
+
+
+async def _attach(
+    guild: discord.Guild,
+    info: SessionInfo,
+    guild_id: int,
+    channel_id: int,
+    message_id: int,
+    content: MessageContent | None,
+    buttons: list[_Btn],
+) -> dict:
+    """掛到 bot 既有的訊息：編輯原訊息加上按鈕。內容不能改時 content 必須為 null，content_json 記 null。"""
+    actor = _actor(guild, info)
+    _, message = await _fetch_target(guild, channel_id, message_id)
+    if message.author.id != guild.me.id:
+        raise _target_error("not_bot_message")
+    if await run_db(lambda: sqldb.get_reaction_role_snapshot(message_id)) is not None:
+        raise DashboardError(
+            400, "already_reaction_role", message="這則訊息已經是反應身分組，請改用編輯", message_id=str(message_id)
+        )
+    if message.components:
+        raise _target_error("has_components")
+    current, locked = from_message(message)
+    if locked is not None and content is not None:
+        raise DashboardError(400, "content_locked", reason=locked)
+    if locked is None and content is None:
+        content = current
+    _check_buttons(guild, actor, buttons, {})
+
+    old_edit = {"content": message.content or None, "embeds": list(message.embeds)} if content is not None else {}
+    view = ReactionRoleView(message_id, _db_options(message_id, buttons))
+    try:
+        await message.edit(**(to_send_kwargs(content) if content is not None else {}), view=view)
+    except discord.HTTPException as e:
+        raise _discord_error(e) from None
+    sclient.bot.add_view(view, message_id=message_id)  # pyright: ignore[reportOptionalMemberAccess]
+    content_json = to_json(content) if content is not None else None
+    try:
+        await run_db(
+            lambda: sqldb.replace_reaction_role_message(
+                guild_id, channel_id, message_id, content_json, _db_options(message_id, buttons)
+            )
+        )
+    except Exception:
+        log.exception("Reaction role attach: DB write failed, restoring message", extra={"message_id": message_id})
+        view.stop()
+        try:
+            await message.edit(**old_edit, view=None)
+        except discord.HTTPException:
+            log.exception("Reaction role attach: restore failed", extra={"message_id": message_id})
+        raise DashboardError(500, "save_failed") from None
+    return {"message_id": str(message_id), "jump_url": message.jump_url}
 
 
 @router.put("/guilds/{guild_id}/reaction-roles/{message_id}")
