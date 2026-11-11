@@ -169,7 +169,7 @@ class event(Cog_Extension):
                 message = None
 
             if message:
-                bot.add_view(TicketLobbyView(channel.id), message_id=lobby.message_id)
+                bot.add_view(TicketLobbyView(channel.id, lobby.button_label, lobby.button_emoji), message_id=lobby.message_id)
                 log.debug("Loaded ticket lobby", extra={"channel_id": lobby.channel_id})
             else:
                 # 大廳頻道不在了：保留紀錄，後台會標示失效，由管理員重新選頻道或移除大廳

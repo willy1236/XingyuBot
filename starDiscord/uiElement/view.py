@@ -29,6 +29,7 @@ from starlib.database import (
     TicketChannel,
 )
 from starlib.instance import mcsm_api, vip_admin_channel
+from starlib.tickets import DEFAULT_BUTTON_LABEL
 from starlib.utils import find_netbird_network, find_radmin_vpn_network, nowtz
 
 log = logging.getLogger(__name__)
@@ -1049,13 +1050,18 @@ class TicketChannelView(discord.ui.View):
 
 
 class TicketLobbyView(discord.ui.View):
-    def __init__(self, channel_id: int):
+    def __init__(self, channel_id: int, label: str | None = None, emoji: str | None = None):
         super().__init__(timeout=None)
-        self.add_item(self.CreateTicketButton(channel_id))
+        self.add_item(self.CreateTicketButton(channel_id, label, emoji))
 
     class CreateTicketButton(discord.ui.Button):
-        def __init__(self, channel_id: int):
-            super().__init__(label="建立私人頻道", style=discord.ButtonStyle.primary, custom_id=f"create_ticket_{channel_id}")
+        def __init__(self, channel_id: int, label: str | None = None, emoji: str | None = None):
+            super().__init__(
+                label=label or DEFAULT_BUTTON_LABEL,
+                emoji=discord.PartialEmoji.from_str(emoji) if emoji else None,
+                style=discord.ButtonStyle.primary,
+                custom_id=f"create_ticket_{channel_id}",
+            )
 
         async def callback(self, interaction: discord.Interaction):
             category = interaction.channel.category
