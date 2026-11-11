@@ -1091,6 +1091,51 @@ class RoleSaveRepository(BaseRepository):
             self.session.add(option)
         self.commit()
 
+    def move_reaction_role_message(
+        self,
+        old_id: int,
+        new_channel_id: int,
+        new_id: int,
+        content_json: str | None = None,
+        keep_role_ids: list[int] | None = None,
+    ) -> None:
+        """重新發送後，同一個交易內把訊息紀錄與按鈕換成新訊息。
+
+        keep_role_ids 不為 None 時，只保留這些身分組的按鈕（略過的失效按鈕刪除），position 依清單順序重編；
+        content_json 為 None 時保留原本存的內容。紀錄不存在時什麼都不做。
+        """
+        row = self.session.exec(select(ReactionRoleMessage).where(ReactionRoleMessage.message_id == old_id)).one_or_none()
+        if row is None:
+            return
+        content = content_json if content_json is not None else row.content_json
+        self.session.exec(
+            update(ReactionRoleMessage)
+            .where(ReactionRoleMessage.message_id == old_id)
+            .values(channel_id=new_channel_id, message_id=new_id, content_json=content)
+        )
+        if keep_role_ids is not None:
+            self.session.exec(
+                delete(ReactionRoleOption).where(ReactionRoleOption.message_id == old_id, ReactionRoleOption.role_id.not_in(keep_role_ids))
+            )
+            for position, role_id in enumerate(keep_role_ids):
+                self.session.exec(
+                    update(ReactionRoleOption)
+                    .where(ReactionRoleOption.message_id == old_id, ReactionRoleOption.role_id == role_id)
+                    .values(position=position)
+                )
+        self.session.exec(update(ReactionRoleOption).where(ReactionRoleOption.message_id == old_id).values(message_id=new_id))
+        self.commit()
+
+    def set_reaction_role_content(self, message_id: int, content_json: str) -> bool:
+        """只在 content_json 為 null 時寫入（上線回填用）；回傳是否有寫入。"""
+        result = self.session.exec(
+            update(ReactionRoleMessage)
+            .where(ReactionRoleMessage.message_id == message_id, ReactionRoleMessage.content_json.is_(None))
+            .values(content_json=content_json)
+        )
+        self.commit()
+        return result.rowcount > 0
+
     def get_reaction_role_message_all(self):
         stmt = select(ReactionRoleMessage)
         result = self.session.exec(stmt).all()

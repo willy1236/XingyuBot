@@ -9,6 +9,7 @@ from discord.ext import commands
 from starlib import BotEmbed, sclient
 from starlib.database import NotifyChannelType
 from starlib.instance import *
+from starlib.message_content import from_message, to_json
 from starlib.messaging import get_bus
 from starlib.utils import nowtz
 
@@ -62,6 +63,41 @@ def check_spam(message: discord.Message, user_id: int):
     return message.author.id == user_id
 
 
+async def load_reaction_role_views(bot, sqldb) -> None:
+    """載入反應身分組的 view。頻道或訊息已不存在時只略過 add_view，不刪紀錄（由後台處理失效）。
+
+    紀錄還沒有 content_json 且訊息讀得到時，用 from_message 回填；多 embed 或附件的維持 null。
+    """
+    for react_message in sqldb.get_reaction_role_message_all():
+        log.debug("Loading reaction role message", extra={"message_id": react_message.message_id})
+        channel = bot.get_channel(react_message.channel_id)
+        if not channel:
+            log.debug("Skipped reaction role message: channel gone", extra={"message_id": react_message.message_id})
+            continue
+        assert isinstance(channel, discord.abc.Messageable)
+        message = None
+        try:
+            message = await channel.fetch_message(react_message.message_id)
+            await asyncio.sleep(1)
+        except discord.errors.NotFound:
+            log.debug("Skipped reaction role message: message gone", extra={"message_id": react_message.message_id})
+            continue
+        except discord.errors.HTTPException:
+            # 缺權限等讀不到的情況無法判斷訊息是否還在，照常載入 view，只是不回填內容
+            log.warning("Cannot fetch reaction role message", extra={"message_id": react_message.message_id})
+
+        if message is not None and react_message.content_json is None:
+            content, reason = from_message(message)
+            if content is not None:
+                sqldb.set_reaction_role_content(react_message.message_id, to_json(content))
+            else:
+                log.debug("Reaction role content not backfilled", extra={"message_id": react_message.message_id, "reason": reason})
+
+        react_roles = sqldb.get_reaction_roles_by_message(react_message.message_id)
+        bot.add_view(ReactionRoleView(react_message.message_id, react_roles), message_id=react_message.message_id)
+        log.debug("Loaded reaction role message", extra={"message_id": react_message.message_id})
+
+
 class event(Cog_Extension):
     @commands.Cog.listener()
     async def on_ready(self):
@@ -94,26 +130,7 @@ class event(Cog_Extension):
                 log.debug("Loaded poll", extra={"poll_id": poll.poll_id})
 
         # 反應身分組
-        for react_message in sclient.sqldb.get_reaction_role_message_all():
-            log.debug("Loading reaction role message", extra={"message_id": react_message.message_id})
-            channel = bot.get_channel(react_message.channel_id)
-            if channel:
-                assert isinstance(channel, discord.abc.Messageable)
-                try:
-                    message = await channel.fetch_message(react_message.message_id)
-                    await asyncio.sleep(1)
-                except discord.errors.NotFound:
-                    message = channel.get_partial_message(react_message.message_id)
-            else:
-                message = None
-
-            if message:
-                react_roles = sclient.sqldb.get_reaction_roles_by_message(react_message.message_id)
-                bot.add_view(ReactionRoleView(react_message.message_id, react_roles), message_id=react_message.message_id)
-                log.debug("Loaded reaction role message", extra={"message_id": react_message.message_id})
-            elif not debug_mode:
-                sclient.sqldb.delete_reaction_role_message(react_message.message_id)
-                log.debug("Deleted reaction role message", extra={"message_id": react_message.message_id})
+        await load_reaction_role_views(bot, sclient.sqldb)
         # 動態語音
         dynamic_voice_ids = sclient.sqldb.get_all_dynamic_voice()
         if dynamic_voice_ids:

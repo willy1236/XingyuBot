@@ -6,6 +6,8 @@ GET /dashboard/guilds/{id}/reaction-roles/candidates?channel_id=  掛到既有�
 GET /dashboard/guilds/{id}/reaction-roles/resolve?link=           掛到既有訊息：解析訊息連結
 POST /dashboard/guilds/{id}/reaction-roles               發新訊息，或掛到 bot 既有的訊息（target.kind）
 PUT /dashboard/guilds/{id}/reaction-roles/{message_id}   修改內容與按鈕，立即更新 Discord
+DELETE /dashboard/guilds/{id}/reaction-roles/{message_id}   刪除整則（刪訊息或只拿掉按鈕），移除紀錄
+POST /dashboard/guilds/{id}/reaction-roles/{message_id}/resend   失效的訊息重新發送到指定頻道
 
 權限一律經 `require_section(Section.REACTION_ROLES)`。紀錄以資料庫為準，Discord 只用來判斷失效與補名稱。
 """
@@ -751,3 +753,183 @@ async def update_reaction_role(
         return await _detail(guild, actor, fresh, message_id)
 
     return await on_guild_async(guild_id, _update)
+
+
+# ====== 刪除與重新發送 ======
+class DeleteBody(BaseModel):
+    #: delete_message：刪掉 Discord 訊息；remove_buttons：訊息留著，只拿掉按鈕
+    mode: Literal["delete_message", "remove_buttons"]
+    original: OriginalIn
+
+
+class ResendBody(BaseModel):
+    #: 省略時用原頻道；原頻道已被刪除時必須指定
+    channel_id: int | str | None = None
+    #: 存下的內容不存在或不可用時必填；有給就以這份內容為準
+    message: MessageContent | None = None
+
+
+async def _conflict_current(guild: discord.Guild, snap: dict, message_id: int) -> dict:
+    """409 的 current：與 GET /{message_id} 相同形狀；刪除不需要操作者，所以不帶位階鎖定欄位。"""
+    content, locked = await _content_state(guild, snap, message_id)
+    channel = guild.get_channel(snap["channel_id"])
+    return {
+        "message_id": str(message_id),
+        "channel": {
+            "id": str(snap["channel_id"]),
+            "name": channel.name if channel is not None else None,
+            "invalid": channel is None,
+        },
+        "content": content.model_dump() if content is not None else None,
+        "content_json": snap["content_json"],
+        "content_locked": locked,
+        "buttons": [
+            {"role_id": str(b["role_id"]), "title": b["title"], "emoji": b["emoji"], "style": b["style"]}
+            for b in snap["buttons"]
+        ],
+    }
+
+
+@router.delete("/guilds/{guild_id}/reaction-roles/{message_id}")
+async def delete_reaction_role(
+    message_id: int,
+    body: DeleteBody,
+    guild_id: int = Depends(require_section(Section.REACTION_ROLES)),
+):
+    original = {
+        "content_json": body.original.content_json,
+        "buttons": _canon([b.model_dump() for b in body.original.buttons]),
+    }
+
+    async def _delete(guild: discord.Guild) -> dict:
+        snap = await run_db(lambda: sqldb.get_reaction_role_snapshot(message_id))
+        if snap is None or snap["guild_id"] != guild_id:
+            raise Conflict(None).to_error()
+        if check_conflict(_snapshot_current(snap), original) is not None:
+            raise DashboardError(409, "conflict", deleted=False, current=await _conflict_current(guild, snap, message_id))
+
+        channel = guild.get_channel(snap["channel_id"])
+        if channel is not None:
+            try:
+                message = await channel.fetch_message(message_id)  # pyright: ignore[reportAttributeAccessIssue]
+                if body.mode == "delete_message":
+                    await message.delete()
+                else:
+                    await message.edit(view=None)
+            except discord.NotFound:
+                pass  # 訊息已不存在，視為成功
+            except discord.HTTPException as e:
+                raise _discord_error(e) from None
+        try:
+            await run_db(lambda: sqldb.delete_reaction_role_message(message_id))
+        except Exception:
+            log.exception("Reaction role delete: DB write failed", extra={"message_id": message_id})
+            raise DashboardError(500, "save_failed") from None
+        return {"deleted": True}
+
+    return await on_guild_async(guild_id, _delete)
+
+
+def _resend_split(guild: discord.Guild, buttons: list[dict]) -> tuple[list[dict], list[dict]]:
+    """(可發送的按鈕, 略過的按鈕)。身分組失效或自訂 emoji 失效的略過。"""
+    kept: list[dict] = []
+    skipped: list[dict] = []
+    for b in buttons:
+        role = guild.get_role(b["role_id"])
+        reason = role_issue(guild, role)
+        if reason is None and not emoji_valid(guild, b["emoji"]):
+            reason = "自訂 emoji 已不存在"
+        if reason is None:
+            kept.append(b)
+        else:
+            skipped.append(
+                {
+                    "role_id": str(b["role_id"]),
+                    "role_name": role.name if role is not None else None,
+                    "title": b["title"],
+                    "reason": reason,
+                }
+            )
+    return kept, skipped
+
+
+@router.post("/guilds/{guild_id}/reaction-roles/{message_id}/resend")
+async def resend_reaction_role(
+    message_id: int,
+    body: ResendBody,
+    guild_id: int = Depends(require_section(Section.REACTION_ROLES)),
+):
+    if body.message is not None:
+        ensure_valid_message(body.message)
+    new_channel_id = _to_int(body.channel_id) if body.channel_id is not None else None
+    if body.channel_id is not None and new_channel_id is None:
+        raise DashboardError(400, "invalid_request", fields=[_field("channel_id", "必須是 Discord ID")])
+
+    async def _resend(guild: discord.Guild) -> dict:
+        snap = await run_db(lambda: sqldb.get_reaction_role_snapshot(message_id))
+        if snap is None or snap["guild_id"] != guild_id:
+            raise DashboardError(404, "not_found")
+
+        old_channel = guild.get_channel(snap["channel_id"])
+        if old_channel is not None:
+            gone, _ = await _fetch(old_channel, message_id)
+            if not gone:
+                raise DashboardError(400, "message_exists", message="這則訊息還在，不需要重新發送")
+
+        content = body.message if body.message is not None else _stored_content(snap["content_json"])
+        if content is None:
+            raise DashboardError(
+                400,
+                "invalid_request",
+                message="沒有可重新發送的內容，請用編輯器重新編排",
+                fields=[_field("message", "沒有可重新發送的內容，請用編輯器重新編排")],
+            )
+
+        channel_id = new_channel_id if new_channel_id is not None else snap["channel_id"]
+        channel = guild.get_channel(channel_id)
+        if channel is None or channel not in guild.text_channels:
+            raise DashboardError(400, "invalid_request", fields=[_field("channel_id", "找不到這個文字頻道，請重新選擇")])
+        missing = [i for i in bot_permission_issues(guild, channel) if i.permission in ("View Channel", "Send Messages")]
+        if missing:
+            raise DashboardError(
+                400,
+                "bot_missing_permission",
+                fields=[_field("channel_id", f"我在這個頻道缺少 {missing[0].permission}")],
+            )
+
+        kept, skipped = _resend_split(guild, snap["buttons"])
+        if not kept:
+            raise DashboardError(400, "no_valid_buttons", message="沒有任何有效的按鈕可以重新發送", skipped=skipped)
+
+        try:
+            sent = await channel.send(**to_send_kwargs(content), allowed_mentions=discord.AllowedMentions.none())
+        except discord.HTTPException as e:
+            raise _discord_error(e) from None
+        options = _db_options(sent.id, [_Btn(b["role_id"], b["title"], b["emoji"] or None, b["style"]) for b in kept])
+        view = ReactionRoleView(sent.id, options)
+        try:
+            await sent.edit(view=view)
+        except discord.HTTPException as e:
+            await _delete_quietly(sent)
+            raise _discord_error(e) from None
+        sclient.bot.add_view(view, message_id=sent.id)  # pyright: ignore[reportOptionalMemberAccess]
+        content_json = to_json(body.message) if body.message is not None else None
+        try:
+            await run_db(
+                lambda: sqldb.move_reaction_role_message(
+                    message_id, channel_id, sent.id, content_json, [b["role_id"] for b in kept]
+                )
+            )
+        except Exception:
+            log.exception("Reaction role resend: DB write failed, deleting message", extra={"message_id": sent.id})
+            view.stop()
+            await _delete_quietly(sent)
+            raise DashboardError(500, "save_failed") from None
+        return {
+            "message_id": str(sent.id),
+            "channel_id": str(channel_id),
+            "jump_url": sent.jump_url,
+            "skipped": skipped,
+        }
+
+    return await on_guild_async(guild_id, _resend)
