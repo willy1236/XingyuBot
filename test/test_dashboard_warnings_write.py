@@ -69,11 +69,12 @@ def make_guild():
     guild = MagicMock(spec=discord.Guild)
     guild.id = GUILD_ID
     guild.me = make_member(1, "bot")
-    guild.members = {
+    guild.by_id = {
         m.id: m
         for m in (make_member(ME, "admin"), make_member(ALICE, "alice"), make_member(BOT_USER, "somebot", bot=True))
     }
-    guild.get_member = lambda uid: guild.members.get(uid)
+    guild.members = list(guild.by_id.values())
+    guild.get_member = lambda uid: guild.by_id.get(uid)
     guild.channels = {CHANNEL: make_channel(CHANNEL, "公告"), 701: make_channel(701, "沒權限", valid=False)}
     guild.get_channel = lambda cid: guild.channels.get(cid)
     guild.text_channels = list(guild.channels.values())
@@ -201,16 +202,16 @@ class TestRecord:
             client, kind="timeout", user_id=str(ALICE), duration_seconds=600, delete_message_seconds=3600
         ).json()
         assert body["result"]["deleted_summary"] == "最近 3600 秒內全伺服器共刪除 3 則（略過 1 個頻道）"
-        client.guild.members[ALICE].timeout_for.assert_awaited_once()
+        client.guild.by_id[ALICE].timeout_for.assert_awaited_once()
         assert client.repo.get_warnings(ALICE, GUILD_ID)[0].last_time.total_seconds() == 600
 
     def test_audit_reason_prefix(self, client):
         post(client, kind="kick", user_id=str(ALICE), reason="吵")
-        reason = client.guild.members[ALICE].kick.await_args.kwargs["reason"]
+        reason = client.guild.by_id[ALICE].kick.await_args.kwargs["reason"]
         assert reason.startswith("admin 透過後台：")
 
     def test_kick_forbidden_shows_error_and_writes_nothing(self, client):
-        client.guild.members[ALICE].kick.side_effect = http_error(discord.Forbidden)
+        client.guild.by_id[ALICE].kick.side_effect = http_error(discord.Forbidden)
         body = post(client, kind="kick", user_id=str(ALICE)).json()
         assert body["result"]["ok"] is False
         assert "位階" in body["result"]["error"]
@@ -308,7 +309,7 @@ class TestAnnounce:
         assert len(client.repo.get_warnings(ALICE, GUILD_ID)) == 1
 
     def test_failed_punish_does_not_announce(self, client):
-        client.guild.members[ALICE].kick.side_effect = http_error(discord.Forbidden)
+        client.guild.by_id[ALICE].kick.side_effect = http_error(discord.Forbidden)
         body = post(client, kind="kick", user_id=str(ALICE), announce_channel_id=str(CHANNEL)).json()
         assert body["announce_error"] is None
         client.guild.channels[CHANNEL].send.assert_not_awaited()
@@ -327,7 +328,7 @@ class TestOptions:
 
 class TestMemberSearchFlagsBots:
     def test_bot_flag(self, client):
-        client.guild.members[BOT_USER].display_name = "somebot"
+        client.guild.by_id[BOT_USER].display_name = "somebot"
         found = client.get(f"{URL}/member-search", params={"q": "some"}).json()["members"]
         assert [(m["id"], m["bot"]) for m in found] == [(str(BOT_USER), True)]
         found = client.get(f"{URL}/member-search", params={"q": "alice"}).json()["members"]
