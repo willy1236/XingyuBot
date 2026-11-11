@@ -65,7 +65,7 @@
 | 11 | W-03 | 實作完成 | 管理員能移除本伺服器的紀錄 | W-01 | B | 用 W-01 留的列動作插槽，與 W-02 不重疊 |
 | 12 | R-02 | 實作完成 | 管理員能發新的反應身分組訊息，並編輯按鈕與內容 | R-01、S-02 | B | |
 | 13 | P-02 | 未完成 | 管理員能新增、修改、移除私人頻道大廳 | P-01、S-02 | B | |
-| 14 | B-02 | 未完成 | 警告累計 N 次自動禁言 | B-01、S-03、W-02、W-04 | C | 含 `/server setting` |
+| 14 | B-02 | 實作完成 | 警告累計 N 次自動禁言 | B-01、S-03、W-02、W-04 | C | 含 `/server setting` |
 | 15 | G-02 | 實作完成 | 管理員能提前結束與重抽 | G-01 | B | 含 `/giveaway redraw` 修改 |
 | 16 | R-03 | 實作完成 | 管理員能把反應身分組掛到 bot 既有的訊息 | R-02 | C | |
 | 17 | R-04 | 實作完成 | 管理員能刪除反應身分組、處理失效並重新發送 | R-02 | C | 含重啟清理移除與舊內容回填 |
@@ -877,7 +877,11 @@ flowchart LR
 
 **依賴**：B-01（設定頁與 API）、S-03（hook 與 punish）、W-02（後台警告與結果畫面）、W-04（`/warning add` 已改走 punish，指令觸發才驗得到）
 
-**進度**：未完成
+**進度**：實作完成（2026-11-11）
+- commit：XingyuBot `feat/dashboard-b02`（31ca77b、91a2279、f2f82ad、61e6d33）；domalyze_frontend `feat/dashboard-b02`（340efd3、a362755）
+- 手動 ALTER：本機開發 DB 已執行；正式 DB 部署時由人執行
+- 已驗：`test/test_auto_timeout.py`（真實 PostgreSQL 計數、假 Discord）涵蓋觸發與歸零、跨群警告計入、N 調低後下次觸發、移除自動禁言紀錄後重算、`/timeout` 不存入後歸零、他服紀錄不計入、對象不在伺服器不觸發、Discord 拒絕時警告保留且不寫禁言紀錄、未啟用不觸發；`test/test_dashboard_settings.py` 涵蓋新欄位、NULL 預設、範圍驗證、欄位涵蓋檢查、衝突；`test/test_server_setting_command.py` 涵蓋 `/server setting`；前端 type-check、eslint、vitest、`next build --webpack`
+- 未驗（需人工）：頁面實際畫面；真實 Discord 上網頁與 `/warning add` 累計後被禁言；bot 缺 Moderate Members 時的回覆與設定畫面警告；`/server setting` 與網頁互通；沒有 Manage Server 不能用指令；未打勾的條目待人工確認
 
 ### G-01 管理員能看抽獎清單、參加者與中獎者
 
