@@ -13,8 +13,15 @@ from starlib.database.postgresql.models import AUTO_TIMEOUT_DEFAULT_SECONDS, AUT
 from starlib.dynamic_voice import lobby_permission_issues
 from starlib.instance import debug_guilds
 from starlib.message_content import from_json, from_message, to_json
-from starlib.moderation import PunishResult, announcement, audit_reason, delete_recent_messages, punish
-from starlib.utils import nowtz, time_to_datetime
+from starlib.moderation import (
+    PunishResult,
+    announcement,
+    audit_reason,
+    auto_timeout_text,
+    delete_recent_messages,
+    punish,
+)
+from starlib.utils import format_seconds, nowtz, time_to_datetime
 
 from ..extension import Cog_Extension
 from ..uiElement.modal import RuleMessageModal
@@ -242,6 +249,7 @@ class moderation(Cog_Extension):
 
         time = nowtz()
         record_error = None
+        auto = None
         if user.id == ctx.author.id:
             # 只有 owner 能走到這裡；punish 不允許對自己執行，沿用現行寫法
             warning_id = sclient.sqldb.add_warning(user.id, WarningType.Warning, ctx.author.id, ctx.guild.id, time, reason, None, not add_record)
@@ -252,6 +260,7 @@ class moderation(Cog_Extension):
                 return
             warning_id = result.warning_id
             record_error = result.error
+            auto = result.auto_timeout
         embed = BotEmbed.general(f"{user.name} 已被警告", user.display_avatar.url, description=f"{user.mention}：{reason}")
         embed.add_field(name="執行人員", value=ctx.author.mention)
         embed.add_field(name="存入跨群警告系統", value=add_record)
@@ -260,6 +269,8 @@ class moderation(Cog_Extension):
             embed.set_footer(text=f"編號 {warning_id}")
         if record_error:
             embed.add_field(name="注意", value=record_error, inline=False)
+        if auto is not None:
+            embed.add_field(name="自動禁言", value=auto_timeout_text(auto), inline=False)
 
         await ctx.respond(user.mention, embed=embed, allowed_mentions=discord.AllowedMentions(users=True))
 
@@ -611,7 +622,7 @@ class moderation(Cog_Extension):
         if duration is not None:
             seconds = auto_timeout_module.parse_duration(duration)
             if seconds is None:
-                await ctx.respond("錯誤：禁言時長格式錯誤，需為 1 分鐘到 7 天，例如 30m、1h20m", ephemeral=True)
+                await ctx.respond("錯誤：禁言時長格式錯誤，需為整分鐘、1 分鐘到 7 天，例如 30m、1h20m", ephemeral=True)
                 return
             values["auto_timeout_seconds"] = seconds
         if voice_time_counter is not None:
@@ -638,7 +649,7 @@ class moderation(Cog_Extension):
         embed.add_field(name="語音時數統計", value="開啟" if row is not None and row.voice_time_counter else "關閉")
         embed.add_field(
             name="自動禁言",
-            value=f"警告累計 {auto.times} 次禁言 {auto_timeout_module.format_seconds(auto.seconds)}" if auto.enabled else f"關閉（啟用時為累計 {auto.times} 次禁言 {auto_timeout_module.format_seconds(auto.seconds)}）",
+            value=f"警告累計 {auto.times} 次禁言 {format_seconds(auto.seconds)}" if auto.enabled else f"關閉（啟用時為累計 {auto.times} 次禁言 {format_seconds(auto.seconds)}）",
             inline=False,
         )
         issue = auto_timeout_module.moderate_members_issue(ctx.guild)

@@ -235,6 +235,8 @@ class TestAutoTimeout:
             ({"auto_timeout_times": 21}, "auto_timeout_times"),
             ({"auto_timeout_seconds": 59}, "auto_timeout_seconds"),
             ({"auto_timeout_seconds": 604801}, "auto_timeout_seconds"),
+            ({"auto_timeout_seconds": 90}, "auto_timeout_seconds"),
+            ({"auto_timeout_seconds": 3601}, "auto_timeout_seconds"),
         ],
     )
     def test_range_validation(self, client, values, field):

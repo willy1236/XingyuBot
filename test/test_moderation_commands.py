@@ -12,7 +12,7 @@ import pytest
 
 from starDiscord.cmds import moderation as cmd
 from starlib.database import WarningType
-from starlib.moderation import PunishResult
+from starlib.moderation import AutoTimeoutResult, PunishResult
 
 
 def run(coro):
@@ -163,3 +163,29 @@ def test_kick_shows_record_failure(env):
     ctx = make_ctx()
     run(env.cog.kick.callback(env.cog, ctx, make_member(), "r", False))
     assert any(f.value == RECORD_FAILED for f in embed.fields)
+
+
+@pytest.mark.parametrize(
+    "auto,expected",
+    [
+        (AutoTimeoutResult(ok=True, duration=timedelta(minutes=10)), "已禁言 10 分鐘"),
+        (AutoTimeoutResult(ok=True, duration=timedelta(minutes=10), error="動作已執行，但紀錄寫入失敗"), "已禁言 10 分鐘\n注意：動作已執行，但紀錄寫入失敗"),
+        (AutoTimeoutResult(ok=False, error="機器人權限不足"), "失敗：機器人權限不足"),
+    ],
+)
+def test_warning_add_reply_shows_auto_timeout(env, auto, expected):
+    env.punish.return_value = PunishResult(ok=True, warning_id=7, auto_timeout=auto)
+    ctx, user = make_ctx(), make_member()
+    ctx.guild.members = [user]
+    env.cog.bot.is_owner = AsyncMock(return_value=False)
+    run(env.cog.warning_add.callback(env.cog, ctx, user, "r", False))
+    fields = {f.name: f.value for f in ctx.respond.call_args.kwargs["embed"].fields}
+    assert fields["自動禁言"] == expected
+
+
+def test_warning_add_reply_has_no_auto_timeout_field_when_not_triggered(env):
+    ctx, user = make_ctx(), make_member()
+    ctx.guild.members = [user]
+    env.cog.bot.is_owner = AsyncMock(return_value=False)
+    run(env.cog.warning_add.callback(env.cog, ctx, user, "r", False))
+    assert all(f.name != "自動禁言" for f in ctx.respond.call_args.kwargs["embed"].fields)

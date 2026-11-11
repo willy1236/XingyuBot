@@ -227,6 +227,27 @@ def test_announcement_mentions_target_and_has_record_embed(db, monkeypatch):
     db.get_warning.assert_called_once_with(77)
 
 
+@pytest.mark.parametrize("duration,text", [(timedelta(minutes=10), "10 分鐘"), (timedelta(hours=1, minutes=30), "1 小時 30 分鐘"), (timedelta(days=7), "7 天")])
+def test_announcement_auto_timeout_duration_in_chinese(db, monkeypatch, duration, text):
+    row = MagicMock()
+    row.embed.return_value = discord.Embed()
+    db.get_warning.return_value = row
+    monkeypatch.setattr(moderation.sclient, "bot", object(), raising=False)
+    res = moderation.PunishResult(ok=True, warning_id=77, auto_timeout=AutoTimeoutResult(ok=True, duration=duration))
+    value = announcement(res, make_member(), ACTOR)["embed"].fields[0].value
+    assert value == f"已禁言 {text}"
+
+
+def test_announcement_auto_timeout_done_but_record_failed_shows_error(db, monkeypatch):
+    row = MagicMock()
+    row.embed.return_value = discord.Embed()
+    db.get_warning.return_value = row
+    monkeypatch.setattr(moderation.sclient, "bot", object(), raising=False)
+    auto = AutoTimeoutResult(ok=True, duration=timedelta(minutes=10), error="動作已執行，但紀錄寫入失敗")
+    value = announcement(moderation.PunishResult(ok=True, warning_id=77, auto_timeout=auto), make_member(), ACTOR)["embed"].fields[0].value
+    assert value == "已禁言 10 分鐘\n注意：動作已執行，但紀錄寫入失敗"
+
+
 def test_announcement_auto_timeout_failure_reason(db, monkeypatch):
     row = MagicMock()
     row.embed.return_value = discord.Embed()

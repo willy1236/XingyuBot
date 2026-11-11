@@ -4,6 +4,7 @@
 判斷與執行都讀 Discord 物件，須在 bot 事件迴圈上呼叫。
 """
 
+import asyncio
 import logging
 import re
 from dataclasses import dataclass
@@ -25,6 +26,10 @@ from starlib.pubsub import sclient
 from starlib.utils import time_to_datetime
 
 log = logging.getLogger(__name__)
+
+#: 每位成員一把鎖（guild_id, user_id）：同一成員幾乎同時收到兩筆警告時，第二筆等第一筆禁言與寫紀錄做完再算，不會禁言兩次。
+#: 只在 bot 的事件迴圈上使用；鎖只在自動禁言啟用且有人被警告時才建立，每把只是個小物件，不另外清理。
+_locks: dict[tuple[int, int], asyncio.Lock] = {}
 
 
 @dataclass(frozen=True)
@@ -52,29 +57,20 @@ def valid_times(times: int) -> bool:
 
 
 def valid_seconds(seconds: int) -> bool:
-    return AUTO_TIMEOUT_SECONDS_RANGE[0] <= seconds <= AUTO_TIMEOUT_SECONDS_RANGE[1]
+    """自動禁言時長：1 分鐘到 7 天，且為整分鐘（網頁只提供分鐘以上的單位，兩邊才一致）。"""
+    return AUTO_TIMEOUT_SECONDS_RANGE[0] <= seconds <= AUTO_TIMEOUT_SECONDS_RANGE[1] and seconds % 60 == 0
 
 
 _DURATION = re.compile(r"(\d+[dhms])+")
 
 
 def parse_duration(text: str) -> int | None:
-    """解析 `/timeout` 同格式的時長（如 30s、1h20m、7d）成秒數；格式錯誤或超出自動禁言範圍回 None。"""
+    """解析 `/timeout` 同格式的時長（如 30s、1h20m、7d）成秒數；格式錯誤、不是整分鐘或超出自動禁言範圍回 None。"""
     text = text.strip().lower()
     if not _DURATION.fullmatch(text):
         return None
     seconds = int(time_to_datetime(text).total_seconds())
     return seconds if valid_seconds(seconds) else None
-
-
-def format_seconds(seconds: int) -> str:
-    """秒數轉成中文時長，例如 600 → 10 分鐘、5400 → 1 小時 30 分鐘。"""
-    parts = []
-    for unit, size in (("天", 86400), ("小時", 3600), ("分鐘", 60), ("秒", 1)):
-        count, seconds = divmod(seconds, size)
-        if count:
-            parts.append(f"{count} {unit}")
-    return " ".join(parts) or "0 秒"
 
 
 def moderate_members_issue(guild: discord.Guild) -> LobbyPermIssue | None:
@@ -95,7 +91,13 @@ async def after_warning(guild: discord.Guild, target: discord.User | discord.Mem
     member = target if isinstance(target, discord.Member) else guild.get_member(target.id)
     if member is None:
         return None
-    if sclient.sqldb.get_warning_count(target.id, guild.id) < setting.times:
+    async with _locks.setdefault((guild.id, target.id), asyncio.Lock()):
+        return await _trigger(guild, member, setting)
+
+
+async def _trigger(guild: discord.Guild, member: discord.Member, setting: AutoTimeoutSetting) -> AutoTimeoutResult | None:
+    """持有該成員的鎖時呼叫：計數、禁言、寫紀錄一氣呵成，下一筆警告的計數會看到這次的禁言紀錄。"""
+    if sclient.sqldb.get_warning_count(member.id, guild.id) < setting.times:
         return None
 
     duration = timedelta(seconds=setting.seconds)
@@ -110,7 +112,7 @@ async def after_warning(guild: discord.Guild, target: discord.User | discord.Mem
         via_dashboard=False,
     )
     if not result.ok:
-        log.info("auto timeout failed", extra={"guild_id": guild.id, "user_id": target.id, "error": result.error})
+        log.info("auto timeout failed", extra={"guild_id": guild.id, "user_id": member.id, "error": result.error})
         return AutoTimeoutResult(ok=False, error=result.error)
     # 禁言已執行但紀錄沒寫入時，error 帶著原因，計數不會歸零
     return AutoTimeoutResult(ok=True, duration=duration, error=result.error)

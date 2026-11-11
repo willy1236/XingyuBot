@@ -15,7 +15,7 @@ from test_identity import repo  # noqa: F401  (fixture)
 from starlib import auto_timeout, moderation
 from starlib.database import GuildSetting, UserModerate, WarningType
 from starlib.moderation import punish, register_after_warning
-from starlib.utils import nowtz
+from starlib.utils import format_seconds, nowtz
 
 GUILD_ID = 910000000000000001
 TARGET = 910000000000000002
@@ -79,14 +79,14 @@ class TestSettingHelpers:
 
     @pytest.mark.parametrize(
         "text,seconds",
-        [("10m", 600), ("1h20m", 4800), ("30s", None), ("59s", None), ("60s", 60), ("7d", 604800), ("8d", None), ("10", None), ("abc", None), ("", None), ("5m3", None)],
+        [("10m", 600), ("1h20m", 4800), ("30s", None), ("59s", None), ("60s", 60), ("90s", None), ("1m30s", None), ("7d", 604800), ("8d", None), ("10", None), ("abc", None), ("", None), ("5m3", None)],
     )
     def test_parse_duration(self, text, seconds):
         assert auto_timeout.parse_duration(text) == seconds
 
     @pytest.mark.parametrize("seconds,text", [(600, "10 分鐘"), (5400, "1 小時 30 分鐘"), (604800, "7 天"), (0, "0 秒")])
     def test_format_seconds(self, seconds, text):
-        assert auto_timeout.format_seconds(seconds) == text
+        assert format_seconds(seconds) == text
 
     @pytest.mark.parametrize("times,ok", [(0, False), (1, True), (20, True), (21, False)])
     def test_valid_times(self, times, ok):
@@ -183,6 +183,27 @@ class TestTrigger:
         assert not res.auto_timeout.ok and "權限不足" in res.auto_timeout.error
         assert records(db, WarningType.Timeout) == []
         assert len(records(db, WarningType.Warning)) == 1
+
+    def test_simultaneous_warnings_time_out_only_once(self, db):
+        configure(db, times=2)
+        member = make_member()
+
+        async def slow_timeout(*args, **kwargs):
+            await asyncio.sleep(0.05)  # 讓另一筆警告在禁言執行期間寫入
+
+        member.timeout_for.side_effect = slow_timeout
+        guild = make_guild(member)
+
+        async def both():
+            first = punish(guild, WarningType.Warning, member, ADMIN, "a", cross_guild=False, via_dashboard=False)
+            second = punish(guild, WarningType.Warning, member, ADMIN, "b", cross_guild=False, via_dashboard=False)
+            return await asyncio.gather(first, second)
+
+        warn(guild, member)  # 先累計 1 次，之後任一筆新警告都會達到 N
+        results = run(both())
+        assert sum(1 for r in results if r.auto_timeout is not None and r.auto_timeout.ok) == 1
+        assert member.timeout_for.await_count == 1
+        assert len(records(db, WarningType.Timeout)) == 1
 
     def test_register_installs_hook(self):
         register_after_warning(None)

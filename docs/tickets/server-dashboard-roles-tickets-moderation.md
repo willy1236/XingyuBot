@@ -865,14 +865,14 @@ flowchart LR
     ADD COLUMN auto_timeout_seconds integer;
   ```
 
-  - 預設與範圍集中在 `models.py` 的 `AUTO_TIMEOUT_*` 常數：3 次、10 分鐘；N 為 1～20，時長為 60～604800 秒。`timeout_after_warning_times` 與 `auto_timeout_seconds` 為 NULL 時視為預設值，沒有設定列等同全部預設（不啟用）。
+  - 預設與範圍集中在 `models.py` 的 `AUTO_TIMEOUT_*` 常數：3 次、10 分鐘；N 為 1～20，時長為 60～604800 秒且為整分鐘（網頁只提供分鐘以上的單位）。`timeout_after_warning_times` 與 `auto_timeout_seconds` 為 NULL 時視為預設值，沒有設定列等同全部預設（不啟用）。
   - `update_guild_setting_if` 比對時，`voice_time_counter`、`timeout_after_warning_times`、`auto_timeout_seconds` 的 NULL 用 `coalesce` 換成預設值；新增 `upsert_guild_setting(guild_id, values)` 給指令用（沒有設定列就新增，有就只更新帶的欄位，不比對衝突）。
   - `WarningRepository.get_warning_count` 沿用「只算本伺服器發出的 Warning、晚於該成員在本伺服器最後一筆 Timeout」的規則，先後改用自增的 `warning_id` 判斷：`create_time` 只到秒，同一秒內的紀錄分不出先後。它依賴 S-03 修好的 `WarningType`。
 - 後端：
   - 新增 `starlib/auto_timeout.py`：有效設定換算、驗證、時長解析、Moderate Members 檢查，以及 `after_warning` hook 與 `register()`。`starDiscord/cmds/moderation.py` 的 `setup(bot)` 呼叫 `register()`，對 S-03 的 `register_after_warning` 註冊。
   - 判斷：設定啟用、對象在伺服器內、計數 ≥ N，就用 S-03 `punish(kind=Timeout, actor=bot, cross_guild=False, via_dashboard=False)`，原因「累計 N 次警告自動禁言」。對象不在伺服器不算觸發，hook 回 None，不顯示失敗；bot 缺權限或位階不夠時回失敗與原因，不寫禁言紀錄。
   - `settings.py` 的 GET 多回 `auto_timeout_enabled`、`auto_timeout_times`、`auto_timeout_seconds`（有效值）與 `permission_issues`（bot 缺 Moderate Members 時含一筆）。PUT 的 `values`、`original` 欄位都可省略，只寫入、比對有帶的欄位，`values` 裡的欄位 `original` 也要帶，沒帶或 `values` 為空回 400 `invalid_request`；語音時數開關與自動禁言表單各送自己的欄位。範圍驗證不過回 400 `invalid_request`，附 `field`。409 的 `current` 只含 `original` 有帶的欄位。
-- bot：新增 `/server setting` 指令（放 `moderation.py`，新的 `server_cmd` group，`command_name.json` 加 `server`、`server_setting`），需要 Manage Server。選項：語音時數統計、自動禁言、警告次數、禁言時長，只填要改的項目；時長用 `/timeout` 同格式，解析包在 `parse_duration`（格式錯誤或不在 1 分鐘～7 天回說明，不寫入）。啟用自動禁言時，次數與時長還是 NULL 就寫入預設值。不帶任何選項時顯示目前設定；回覆皆為只有自己看得到。寫入後刷新 `voice_time_counter` cache。
+- bot：新增 `/server setting` 指令（放 `moderation.py`，新的 `server_cmd` group，`command_name.json` 加 `server`、`server_setting`），需要 Manage Server。選項：語音時數統計、自動禁言、警告次數、禁言時長，只填要改的項目；時長用 `/timeout` 同格式，解析包在 `parse_duration`（格式錯誤、不是整分鐘或不在 1 分鐘～7 天回說明，不寫入）。啟用自動禁言時，次數與時長還是 NULL 就寫入預設值。不帶任何選項時顯示目前設定；回覆皆為只有自己看得到。寫入後刷新 `voice_time_counter` cache。
 - 前端：`settings-section.tsx` 的 `extra` 插槽放自動禁言表單；bot 缺 Moderate Members 時表單上方顯示警告；W-02 的結果顯示 `auto_timeout`（已完成，沿用）。`lib/dashboard-settings.ts` 的 `SettingValues` 欄位皆為可選，語音時數開關改成只送 `voice_time_counter`。
 
 **依賴**：B-01（設定頁與 API）、S-03（hook 與 punish）、W-02（後台警告與結果畫面）、W-04（`/warning add` 已改走 punish，指令觸發才驗得到）
