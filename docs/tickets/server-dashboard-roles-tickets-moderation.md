@@ -734,7 +734,8 @@ flowchart LR
 **進度**：實作中（2026-11-11）
 - commit：XingyuBot `feat/dashboard-p02`、domalyze_frontend `feat/dashboard-p02`（hash 見 worker 回報）
 - 已完成：`ensure_guild_available`（access.py，tickets `_read` 改用）；`TicketRepository` 的大廳寫入函式與 `get_all_ticket_lobbys` 過濾 `removed_at`（client.py）
-- 續做：`starlib/tickets.py` 的純邏輯（前綴正規化、預設內容、`build_ticket_overwrites`、套用管理身分組、權限檢查拆分）
+- 已完成：`starlib/tickets.py` 的純邏輯（前綴正規化、預設內容、`build_ticket_overwrites`、套用管理身分組、權限檢查拆分）
+- 續做：`TicketLobbyView` 帶按鈕文字與 emoji、`bot_event.py` 帶入；`starDiscord/ticket_lobby.py` 的 `save_lobby`
 
 ### P-03 成員開單時套用大廳的命名、限制與可見範圍
 
