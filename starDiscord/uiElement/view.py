@@ -650,8 +650,21 @@ class GiveawayView(discord.ui.View):
         self.giveaway = fresh
         return True
 
+    @staticmethod
+    def missing_permissions(channel: discord.abc.Messageable, perms: discord.Permissions) -> list[str]:
+        """開獎時 bot 要讀原訊息、編輯並公告；回傳 perms 在 channel 缺少的權限名稱（中文），齊全時為空 list"""
+        send = ("send_messages_in_threads", "在討論串發送訊息") if isinstance(channel, discord.Thread) else ("send_messages", "發送訊息")
+        required = [("view_channel", "檢視頻道"), ("read_message_history", "讀取訊息歷史"), send]
+        return [label for attr, label in required if not getattr(perms, attr)]
+
     async def auto_end(self):
-        await self.finish()
+        outcome = await self.finish()
+        # 排程沒有人看回傳值，開獎沒完成或沒公告到都要留紀錄，否則訊息停在進行中卻查不到原因
+        if outcome.status not in ("ok", "already_ended") or outcome.announce_failure:
+            log.error(
+                "giveaway auto end did not publish",
+                extra={"giveaway_id": self.giveaway.id, "status": outcome.status, "announce_failure": outcome.announce_failure},
+            )
 
     async def finish(self) -> GiveawayOutcome:
         """開獎並更新抽獎訊息、公告（到期自動開獎與後台提前結束共用）。抽獎已結束時不會再開一次。"""

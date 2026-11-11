@@ -793,6 +793,11 @@ class command(Cog_Extension):
         end_time: discord.Option(str, name="結束時間", description="例：2026-11-07 20:00、11/7 晚上8點、明天 20:00、3d、2小時", required=False),
         description: discord.Option(str, name="描述", description="關於抽獎的描述", required=False, default=None),
     ):
+        # 建立抽獎走 interaction 不需要頻道權限，但開獎時要讀原訊息並公告，缺權限會開獎後訊息停在進行中
+        if missing := GiveawayView.missing_permissions(ctx.channel, ctx.app_permissions):
+            await ctx.respond(f"錯誤：我在這個頻道缺少權限：{'、'.join(missing)}，開獎時會無法更新抽獎訊息與公告", ephemeral=True)
+            return
+
         await ctx.defer()
         now = nowtz()
         if end_time:
