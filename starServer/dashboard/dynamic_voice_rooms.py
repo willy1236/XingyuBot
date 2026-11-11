@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field
 
 from starlib import sqldb
 
-from .access import on_guild_async, require_guild_access
+from .access import ensure_guild_available, on_guild_async, require_guild_access
 from .db import run_db
 
 log = logging.getLogger(__name__)
@@ -65,6 +65,7 @@ async def get_rooms(guild_id: int = Depends(require_guild_access)):
     records = await run_db(lambda: _load_records(guild_id))
 
     async def _read(guild: discord.Guild) -> tuple[list[dict], list[int]]:
+        ensure_guild_available(guild)
         rooms: list[dict] = []
         gone: list[int] = []
         for record in records:
@@ -132,6 +133,8 @@ async def clear_rooms(body: ClearBody, guild_id: int = Depends(require_guild_acc
     valid = [cid for cid in requested if cid in owned]
 
     async def _clear(guild: discord.Guild) -> dict[int, dict]:
+        # unavailable 時語音狀態是空的，每間房看起來都沒人，不能據此刪除
+        ensure_guild_available(guild)
         return {cid: await _clear_one(guild, cid) for cid in valid}
 
     cleared_by_id = await on_guild_async(guild_id, _clear) if valid else {}
