@@ -184,6 +184,27 @@ class TestTrigger:
         assert records(db, WarningType.Timeout) == []
         assert len(records(db, WarningType.Warning)) == 1
 
+    def test_simultaneous_warnings_time_out_only_once(self, db):
+        configure(db, times=2)
+        member = make_member()
+
+        async def slow_timeout(*args, **kwargs):
+            await asyncio.sleep(0.05)  # 讓另一筆警告在禁言執行期間寫入
+
+        member.timeout_for.side_effect = slow_timeout
+        guild = make_guild(member)
+
+        async def both():
+            first = punish(guild, WarningType.Warning, member, ADMIN, "a", cross_guild=False, via_dashboard=False)
+            second = punish(guild, WarningType.Warning, member, ADMIN, "b", cross_guild=False, via_dashboard=False)
+            return await asyncio.gather(first, second)
+
+        warn(guild, member)  # 先累計 1 次，之後任一筆新警告都會達到 N
+        results = run(both())
+        assert sum(1 for r in results if r.auto_timeout is not None and r.auto_timeout.ok) == 1
+        assert member.timeout_for.await_count == 1
+        assert len(records(db, WarningType.Timeout)) == 1
+
     def test_register_installs_hook(self):
         register_after_warning(None)
         auto_timeout.register()
