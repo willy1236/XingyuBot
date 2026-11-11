@@ -549,10 +549,12 @@ class GiveawayOutcome:
     status: ok 已處理；already_ended 開獎時抽獎已經結束（視為成功）；not_found、not_ended（重抽時抽獎還沒結束）、
     not_participant、not_winner（指定的重抽對象不是參加者／中獎者）。
     announce_failure: 抽獎已處理但沒有公告時的原因代碼（ANNOUNCE_FAILURE_TEXT 的 key），公告成功為 None。
+    no_replacement: 重抽時沒抽出新中獎者（沒有可替補的參加者）。
     """
 
     status: str
     announce_failure: str | None = None
+    no_replacement: bool = False
 
     @property
     def announce_failure_text(self) -> str | None:
@@ -590,13 +592,15 @@ class GiveawayEndButton(discord.ui.Button):
             await interaction.response.send_message("只有發起人才能結束抽獎！", ephemeral=True)
             return
 
+        # 先 defer：若鎖被其他開獎／公告佔住，避免超過 Discord 的 3 秒回應期限
+        await interaction.response.defer()
         async with giveaway_lock(view.giveaway.id):
             view.reload()
             embed = view.end_giveaway()
         if embed is None:
-            await interaction.response.send_message("此抽獎已結束", ephemeral=True)
+            await interaction.followup.send("此抽獎已結束", ephemeral=True)
             return
-        await interaction.response.edit_message(embed=embed, view=view)
+        await interaction.edit_original_response(embed=embed, view=view)
         await view.announce(interaction.message)
 
 
@@ -674,12 +678,13 @@ class GiveawayView(discord.ui.View):
                 if not old_winner.is_winner:
                     return GiveawayOutcome("not_winner")
             embed = self.redraw_winner_giveaway(old_winner)
-            return GiveawayOutcome("ok", await self.publish(embed))
+            return GiveawayOutcome("ok", await self.publish(embed), no_replacement=not self.new_winners_id)
 
     async def publish(self, embed: discord.Embed) -> str | None:
         """把結果更新到抽獎訊息並公告；回傳沒有公告的原因代碼，公告成功為 None。
 
-        讀得到原訊息就更新 embed 並回覆公告；訊息被刪或讀不到就在原頻道發一般訊息；頻道不在或不能發言則只回傳原因。
+        讀得到原訊息就更新 embed 並回覆公告；訊息被刪（NotFound）或沒有訊息 ID 就在原頻道發一般訊息；
+        讀訊息時 Forbidden 或其他錯誤、頻道不在或不能發言則只回傳原因，不另發公告。
         """
         channel_id = self.giveaway.channel_id
         try:
@@ -693,16 +698,22 @@ class GiveawayView(discord.ui.View):
             return "failed"
 
         message = None
+        message_deleted = self.giveaway.message_id is None
         if self.giveaway.message_id:
             try:
                 message = await channel.fetch_message(self.giveaway.message_id)
             except discord.NotFound:
-                pass
+                message_deleted = True
+            except discord.Forbidden:
+                return "no_permission"
             except discord.HTTPException:
                 log.warning("giveaway publish: fetch message failed", extra={"giveaway_id": self.giveaway.id}, exc_info=True)
+                return "failed"
 
         if message is None:
-            return await self._send(channel.send)
+            if message_deleted:
+                return await self._send(channel.send)
+            return "failed"
         try:
             await message.edit(embed=embed, view=self)
         except discord.HTTPException:

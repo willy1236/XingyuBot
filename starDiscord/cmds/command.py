@@ -852,7 +852,11 @@ class command(Cog_Extension):
         outcome = await view.redraw(winner.id if winner else None)
         match outcome.status:
             case "ok":
-                if outcome.announce_failure_text:
+                if outcome.no_replacement and outcome.announce_failure_text:
+                    await ctx.respond(f"已重新抽獎，但沒有可替補的參加者；{outcome.announce_failure_text}")
+                elif outcome.no_replacement:
+                    await ctx.respond("已重新抽獎，但沒有可替補的參加者")
+                elif outcome.announce_failure_text:
                     await ctx.respond(f"已重新抽獎，但{outcome.announce_failure_text}")
                 else:
                     await ctx.respond("已重新抽獎，並在抽獎訊息公告新的中獎者")

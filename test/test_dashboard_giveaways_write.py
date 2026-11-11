@@ -44,12 +44,20 @@ class FakeMessage:
 
 
 class FakeChannel:
-    def __init__(self, message: FakeMessage | None, send_error: Exception | None = None):
+    def __init__(
+        self,
+        message: FakeMessage | None,
+        send_error: Exception | None = None,
+        fetch_error: Exception | None = None,
+    ):
         self.message = message
         self.send_error = send_error
+        self.fetch_error = fetch_error
         self.sent: list[str] = []
 
     async def fetch_message(self, mid: int):
+        if self.fetch_error is not None:
+            raise self.fetch_error
         if self.message is None:
             raise http_error(discord.NotFound, 404, "Unknown Message")
         return self.message
@@ -138,7 +146,12 @@ class TestEnd:
         message = client.bot.channel.message
         r = post(client, gw.id, "end")
         assert r.status_code == 200
-        assert r.json() == {"status": "ok", "announce_failure": None, "announce_failure_text": None}
+        assert r.json() == {
+            "status": "ok",
+            "announce_failure": None,
+            "announce_failure_text": None,
+            "no_replacement": False,
+        }
         assert stored(client, gw.id).is_on is False
         assert len(winners_of(client, gw.id)) == 1
         assert len(message.edits) == 1
@@ -202,6 +215,7 @@ class TestRedraw:
         r = post(client, gw.id, "redraw")
         assert r.status_code == 200
         assert r.json()["status"] == "ok"
+        assert r.json()["no_replacement"] is False
         assert stored(client, gw.id).redraw_count == 1
         assert len(winners_of(client, gw.id)) == 1
         assert len(message.edits) == 1 and len(message.replies) == 1
@@ -218,11 +232,31 @@ class TestRedraw:
         assert f"<@{MEMBER}>" in message.replies[0]
         assert len(message.edits) == 1
 
+    def test_no_replacement_tells_admin(self, client):
+        # 只有一位參加者且已是中獎者：取消資格後沒有人可替補
+        gw = ended_with_winner(client, winner=MEMBER, others=())
+        message = client.bot.channel.message
+        r = post(client, gw.id, "redraw", {"winner_user_id": str(MEMBER)}).json()
+        assert r["status"] == "ok"
+        assert r["no_replacement"] is True
+        assert winners_of(client, gw.id) == set()
+        assert stored(client, gw.id).redraw_count == 1
+        assert "沒有可替補" in message.replies[0]
+
     def test_message_deleted_sends_plain_message(self, client):
         gw = ended_with_winner(client)
         client.bot.channel = FakeChannel(None)
         assert post(client, gw.id, "redraw").json()["announce_failure"] is None
         assert len(client.bot.channel.sent) == 1
+
+    def test_fetch_message_forbidden_does_not_send_plain(self, client):
+        gw = ended_with_winner(client)
+        channel = FakeChannel(FakeMessage(), fetch_error=http_error(discord.Forbidden, 403, "Missing Access"))
+        client.bot.channel = channel
+        r = post(client, gw.id, "redraw").json()
+        assert r["announce_failure"] == "no_permission"
+        assert channel.sent == []
+        assert stored(client, gw.id).redraw_count == 1
 
     def test_reply_forbidden_still_redraws(self, client):
         gw = ended_with_winner(client)
@@ -347,6 +381,7 @@ class TestRedrawCommand:
         assert defers == [{"ephemeral": True}]
         assert len(responses) == 1
         assert "已重新抽獎" in responses[0][0]
+        assert "沒有可替補" not in responses[0][0]
         assert len(message.replies) == 1 and len(message.edits) == 1
         assert stored(client, gw.id).redraw_count == 1
 
@@ -355,6 +390,13 @@ class TestRedrawCommand:
         client.bot.channel = None
         responses, _ = self.run(client, monkeypatch, gw.id)
         assert "已重新抽獎，但" in responses[0][0]
+        assert stored(client, gw.id).redraw_count == 1
+
+    def test_reports_no_replacement(self, client, monkeypatch):
+        gw = ended_with_winner(client, winner=MEMBER, others=())
+        responses, _ = self.run(client, monkeypatch, gw.id, winner_id=MEMBER)
+        assert responses[0][0] == "已重新抽獎，但沒有可替補的參加者"
+        assert winners_of(client, gw.id) == set()
         assert stored(client, gw.id).redraw_count == 1
 
     def test_only_creator(self, client, monkeypatch):
