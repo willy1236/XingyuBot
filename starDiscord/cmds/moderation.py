@@ -13,7 +13,14 @@ from starlib.database.postgresql.models import AUTO_TIMEOUT_DEFAULT_SECONDS, AUT
 from starlib.dynamic_voice import lobby_permission_issues
 from starlib.instance import debug_guilds
 from starlib.message_content import from_json, from_message, to_json
-from starlib.moderation import PunishResult, announcement, audit_reason, auto_timeout_text, delete_recent_messages, punish
+from starlib.moderation import (
+    PunishResult,
+    announcement,
+    audit_reason,
+    auto_timeout_text,
+    delete_recent_messages,
+    punish,
+)
 from starlib.utils import format_seconds, nowtz, time_to_datetime
 
 from ..extension import Cog_Extension
