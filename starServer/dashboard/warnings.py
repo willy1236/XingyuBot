@@ -2,8 +2,10 @@
 GET /dashboard/guilds/{id}/warnings?member=&kind=&page=       本伺服器發出的紀錄，由新到舊，每頁 50 筆
 GET /dashboard/guilds/{id}/warnings/members/{user_id}         成員的跨群紀錄（只能查目前在本伺服器的成員）
 GET /dashboard/guilds/{id}/warnings/member-search?q=          以名稱或 ID 搜尋本伺服器成員，最多 25 位
+GET /dashboard/guilds/{id}/warnings/options                   可公告的文字頻道
+POST /dashboard/guilds/{id}/warnings                          警告、禁言、踢出、停權，權限依種類
 
-權限一律經 `require_section(Section.WARNINGS, "view")`。紀錄以資料庫為準，Discord 只用來補名稱與頭像。
+讀取一律經 `require_section(Section.WARNINGS)`。紀錄以資料庫為準，Discord 只用來補名稱與頭像。
 """
 
 from dataclasses import dataclass
@@ -11,13 +13,17 @@ from datetime import datetime, timedelta
 
 import discord
 from fastapi import APIRouter, Depends, Query
+from pydantic import BaseModel
 
 from starlib import sclient, sqldb
 from starlib.database import UserModerate, WarningType
+from starlib.moderation import MAX_TIMEOUT, AutoTimeoutResult, PunishResult, announcement, punish
 
-from .access import Section, on_guild, require_section
+from .access import Section, on_guild, on_guild_async, require_section
 from .db import run_db
 from .errors import DashboardError
+from .session import SessionInfo, require_session
+from .validity import channel_invalid_reason
 
 router = APIRouter(prefix="/dashboard")
 
@@ -166,7 +172,13 @@ async def search_members(
                 found.append(m)
         found.sort(key=lambda m: m.display_name.lower())
         return [
-            {"id": str(m.id), "name": m.display_name, "username": m.name, "avatar_url": m.display_avatar.url}
+            {
+                "id": str(m.id),
+                "name": m.display_name,
+                "username": m.name,
+                "avatar_url": m.display_avatar.url,
+                "bot": bool(getattr(m, "bot", False)),
+            }
             for m in found[:SEARCH_LIMIT]
         ]
 
@@ -187,3 +199,168 @@ async def member_records(user_id: int, guild_id: int = Depends(require_section(S
     rows = await run_db(_load)
     items = await on_guild(guild_id, lambda guild: [_item(guild, r) for r in rows])
     return {"member": person, "warnings": items}
+
+
+MAX_REASON = 100
+MIN_TIMEOUT_SECONDS = 60
+#: 停權可選的刪訊息秒數，與 `/ban` 的選項一致；禁言是 0 到 7 天
+BAN_DELETE_SECONDS = (0, 3600, 21600, 43200, 86400, 259200, 604800)
+MAX_DELETE_SECONDS = int(MAX_TIMEOUT.total_seconds())
+MAX_SNOWFLAKE = 2**63 - 1
+
+#: 各種類要求的動作權限；請求 body 才知道種類，所以在 handler 內依序檢查
+_KIND_ACTIONS = {"warning": "add", "timeout": "timeout", "kick": "kick", "ban": "ban"}
+_KIND_PERMISSION = {k: require_section(Section.WARNINGS, a) for k, a in _KIND_ACTIONS.items()}
+_REASON_REQUIRED = ("warning", "ban")
+_MEMBER_ONLY = ("timeout", "kick")
+
+
+@router.get("/guilds/{guild_id}/warnings/options")
+async def punish_options(guild_id: int = Depends(require_section(Section.WARNINGS))):
+    """可公告的文字頻道：bot 能檢視、發言與嵌入連結的頻道。"""
+
+    def _channels(guild: discord.Guild) -> list[dict]:
+        return [
+            {"id": str(c.id), "name": c.name}
+            for c in sorted(guild.text_channels, key=lambda c: (c.position, c.id))
+            if channel_invalid_reason(guild, c.id, False) is None
+        ]
+
+    return {"channels": await on_guild(guild_id, _channels)}
+
+
+class PunishBody(BaseModel):
+    kind: str
+    user_id: int | str
+    reason: str | None = None
+    cross_guild: bool = False
+    duration_seconds: int | None = None
+    delete_message_seconds: int | None = None
+    announce_channel_id: int | str | None = None
+
+
+def _field(path: str, reason: str) -> dict:
+    return {"path": path, "reason": reason}
+
+
+def _snowflake(value: int | str | None, path: str, errors: list[dict]) -> int | None:
+    try:
+        number = int(value)  # pyright: ignore[reportArgumentType]
+    except TypeError, ValueError:
+        errors.append(_field(path, "必須是 Discord ID"))
+        return None
+    if not 0 < number <= MAX_SNOWFLAKE:
+        errors.append(_field(path, "必須是 Discord ID"))
+        return None
+    return number
+
+
+def _validate(body: PunishBody) -> tuple[int, int | None, timedelta | None, int | None]:
+    """回傳 (user_id, announce_channel_id, duration, delete_message_seconds)；不合規則丟 400 並附 fields。"""
+    errors: list[dict] = []
+    user_id = _snowflake(body.user_id, "user_id", errors)
+    announce_id = None
+    if body.announce_channel_id not in (None, ""):
+        announce_id = _snowflake(body.announce_channel_id, "announce_channel_id", errors)
+
+    reason = (body.reason or "").strip()
+    if len(reason) > MAX_REASON:
+        errors.append(_field("reason", f"原因不得超過 {MAX_REASON} 字"))
+    if body.kind in _REASON_REQUIRED and not reason:
+        errors.append(_field("reason", "必須填寫原因"))
+
+    duration = None
+    if body.kind == "timeout":
+        seconds = body.duration_seconds
+        if seconds is None or not MIN_TIMEOUT_SECONDS <= seconds <= MAX_DELETE_SECONDS:
+            errors.append(_field("duration_seconds", "禁言時長必須在 1 分鐘到 7 天之間"))
+        else:
+            duration = timedelta(seconds=seconds)
+
+    delete_seconds = None
+    if body.kind in ("timeout", "ban") and body.delete_message_seconds:
+        delete_seconds = body.delete_message_seconds
+        if body.kind == "ban" and delete_seconds not in BAN_DELETE_SECONDS:
+            errors.append(_field("delete_message_seconds", "不是有效的選項"))
+        elif body.kind == "timeout" and not 0 <= delete_seconds <= MAX_DELETE_SECONDS:
+            errors.append(_field("delete_message_seconds", "必須在 0 到 7 天之間"))
+
+    if errors:
+        raise DashboardError(400, "invalid_request", fields=errors)
+    return user_id, announce_id, duration, delete_seconds  # pyright: ignore[reportReturnType]
+
+
+async def _resolve_user(guild: discord.Guild, user_id: int, must_be_member: bool) -> discord.User | discord.Member:
+    member = guild.get_member(user_id)
+    if member is not None:
+        return member
+    if must_be_member:
+        raise DashboardError(400, "not_member")
+    try:
+        return await sclient.bot.fetch_user(user_id)  # pyright: ignore[reportOptionalMemberAccess]
+    except discord.HTTPException:
+        raise DashboardError(400, "user_not_found") from None
+
+
+def _auto_timeout(auto: AutoTimeoutResult | None) -> dict | None:
+    if auto is None:
+        return None
+    return {
+        "ok": auto.ok,
+        "duration_seconds": int(auto.duration.total_seconds()) if auto.duration is not None else None,
+        "error": auto.error,
+    }
+
+
+def _result(result: PunishResult) -> dict:
+    return {
+        "ok": result.ok,
+        "error": result.error,
+        "warning_id": result.warning_id,
+        "already": result.already,
+        "deleted_summary": result.deleted_summary,
+        "auto_timeout": _auto_timeout(result.auto_timeout),
+    }
+
+
+async def _announce(guild: discord.Guild, channel_id: int, result: PunishResult, target, actor) -> str | None:
+    """發送公告；失敗回原因，不影響已寫的紀錄。"""
+    if (reason := channel_invalid_reason(guild, channel_id, False)) is not None:
+        return reason
+    try:
+        await guild.get_channel(channel_id).send(**announcement(result, target, actor))  # pyright: ignore[reportOptionalMemberAccess,reportAttributeAccessIssue]
+    except discord.HTTPException as e:
+        return f"公告發送失敗：{e}"
+    return None
+
+
+@router.post("/guilds/{guild_id}/warnings")
+async def create_punishment(guild_id: int, body: PunishBody, info: SessionInfo = Depends(require_session)):
+    if body.kind not in _KIND_ACTIONS:
+        raise DashboardError(400, "invalid_request", fields=[_field("kind", "不是有效的種類")])
+    await _KIND_PERMISSION[body.kind](guild_id, info)
+    user_id, announce_id, duration, delete_seconds = _validate(body)
+    kind = _KIND_NAMES[body.kind]
+    reason = (body.reason or "").strip() or None
+
+    async def _run(guild: discord.Guild) -> dict:
+        target = await _resolve_user(guild, user_id, body.kind in _MEMBER_ONLY)
+        actor_id = int(info.discord_user_id)
+        actor = guild.get_member(actor_id) or await _resolve_user(guild, actor_id, False)
+        result = await punish(
+            guild,
+            kind,
+            target,
+            actor,
+            reason,
+            cross_guild=body.cross_guild,
+            duration=duration,
+            delete_message_seconds=delete_seconds,
+            via_dashboard=True,
+        )
+        announce_error = None
+        if announce_id is not None and result.ok and not result.already:
+            announce_error = await _announce(guild, announce_id, result, target, actor)
+        return {"result": _result(result), "announce_error": announce_error}
+
+    return await on_guild_async(guild_id, _run)
