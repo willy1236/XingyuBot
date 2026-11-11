@@ -172,7 +172,13 @@ async def search_members(
                 found.append(m)
         found.sort(key=lambda m: m.display_name.lower())
         return [
-            {"id": str(m.id), "name": m.display_name, "username": m.name, "avatar_url": m.display_avatar.url}
+            {
+                "id": str(m.id),
+                "name": m.display_name,
+                "username": m.name,
+                "avatar_url": m.display_avatar.url,
+                "bot": bool(getattr(m, "bot", False)),
+            }
             for m in found[:SEARCH_LIMIT]
         ]
 

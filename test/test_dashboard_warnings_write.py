@@ -39,6 +39,7 @@ def http_error(cls=discord.HTTPException):
 def make_member(uid: int, name: str, bot: bool = False):
     m = MagicMock(spec=discord.Member)
     m.id, m.bot, m.name, m.display_name, m.mention = uid, bot, name, name, f"<@{uid}>"
+    m.global_name = None
     m.display_avatar = SimpleNamespace(url=f"https://cdn/{uid}.png")
     m.timeout_for, m.kick = AsyncMock(), AsyncMock()
     return m
@@ -322,3 +323,12 @@ class TestOptions:
     def test_no_entry_permission_is_403(self, client):
         client.discord_env.guilds = [g(str(GUILD_ID), "guild", 0)]
         assert client.get(f"{URL}/options").status_code == 403
+
+
+class TestMemberSearchFlagsBots:
+    def test_bot_flag(self, client):
+        client.guild.members[BOT_USER].display_name = "somebot"
+        found = client.get(f"{URL}/member-search", params={"q": "some"}).json()["members"]
+        assert [(m["id"], m["bot"]) for m in found] == [(str(BOT_USER), True)]
+        found = client.get(f"{URL}/member-search", params={"q": "alice"}).json()["members"]
+        assert [(m["id"], m["bot"]) for m in found] == [(str(ALICE), False)]
