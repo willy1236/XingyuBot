@@ -34,6 +34,35 @@ def role_issue(guild: discord.Guild, role: discord.Role | None) -> str | None:
     return None
 
 
+#: 身分組帶有這些權限時，任何人按下按鈕都會取得；只警告不擋，與 `/reactrole add` 一致
+DANGEROUS_PERMISSIONS = (
+    "administrator",
+    "manage_guild",
+    "manage_roles",
+    "manage_channels",
+    "manage_webhooks",
+    "manage_messages",
+    "manage_nicknames",
+    "kick_members",
+    "ban_members",
+    "moderate_members",
+    "mention_everyone",
+    "view_audit_log",
+)
+
+
+def dangerous_permissions(role: discord.Role) -> list[str]:
+    """身分組帶有的危險權限（discord.Permissions 的屬性名稱），沒有回空 list。"""
+    return [name for name in DANGEROUS_PERMISSIONS if getattr(role.permissions, name, False)]
+
+
+def operator_rank_issue(guild: discord.Guild, actor: discord.Member, role: discord.Role) -> str | None:
+    """操作者不能設定這個身分組的原因（中文），可以回 None。伺服器擁有者不受位階限制。"""
+    if actor.id != guild.owner_id and role >= actor.top_role:
+        return "只能設定低於你最高身分組的身分組"
+    return None
+
+
 def emoji_valid(guild: discord.Guild, emoji: str | None) -> bool:
     """按鈕的 emoji 是否可用。沒設定與 Unicode emoji 一律有效；自訂 emoji 必須還在這個伺服器。"""
     if not emoji:

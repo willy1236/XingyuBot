@@ -469,7 +469,7 @@ class ReactionRoleMessage(AlchemyBasicSchema):
     channel_id: int = Column(BigInteger, primary_key=True)
     message_id: int = Column(BigInteger, primary_key=True)
     #: 訊息內容的 JSON（R-02 起寫入，供重新發送用）；舊資料與指令建立的紀錄為 None
-    content_json: str | None = Column(Text, nullable=True, default=None)
+    content_json: str | None = mapped_column(Text, nullable=True, default=None)
 
 
 class ReactionRoleOption(AlchemyBasicSchema):
@@ -482,7 +482,7 @@ class ReactionRoleOption(AlchemyBasicSchema):
     emoji: str | None = Column(String(255), nullable=True)
     style: int | None = Column(SmallInteger, nullable=True)
     #: 按鈕在訊息裡的順序，由小到大
-    position: int = Column(SmallInteger, nullable=False, default=0)
+    position: int = mapped_column(SmallInteger, nullable=False, default=0)
 
 
 class Giveaway(BasicSchema, table=True):

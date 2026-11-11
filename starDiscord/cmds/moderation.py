@@ -10,6 +10,7 @@ from starlib import BotEmbed, ChoiceList, Jsondb, sclient
 from starlib.database import NotifyChannelType, ReactionRoleMessage, ReactionRoleOption, TicketChannelLobby, WarningType
 from starlib.dynamic_voice import lobby_permission_issues
 from starlib.instance import debug_guilds
+from starlib.message_content import from_json, from_message, to_json
 from starlib.moderation import PunishResult, announcement, audit_reason, delete_recent_messages, punish
 from starlib.utils import nowtz, time_to_datetime
 
@@ -404,6 +405,26 @@ class moderation(Cog_Extension):
         result = await _punish_command(ctx, WarningType.Ban, user, reason, add_record, delete_message_seconds=delete_message_seconds)
         await _respond_kick_ban(ctx, result, user, "已被停權", reason)
 
+    @staticmethod
+    def _store_content_after_edit(react_msg: ReactionRoleMessage, edited: discord.Message, content: str) -> None:
+        """`/reactrole editmessage` 改完文字後，同步 bot 記住的訊息內容（重新發送用）。"""
+        stored = None
+        if react_msg.content_json:
+            try:
+                stored = from_json(react_msg.content_json)
+            except ValueError:  # pydantic 的 ValidationError 是 ValueError 的子類別
+                stored = None
+        if stored is not None:
+            stored.content = content
+        else:
+            stored, _ = from_message(edited)
+        if stored is not None:
+            sclient.sqldb.merge(
+                ReactionRoleMessage(
+                    guild_id=react_msg.guild_id, channel_id=react_msg.channel_id, message_id=react_msg.message_id, content_json=to_json(stored)
+                )
+            )
+
     @reactrole_cmd.command(description="編輯反應身分組訊息的文字", name_localizations=ChoiceList.name("reactrole_editmessage"))
     @commands.has_permissions(manage_roles=True)
     @commands.guild_only()
@@ -424,7 +445,8 @@ class moderation(Cog_Extension):
             await ctx.respond("請先新增反應身分組", ephemeral=True)
             return
 
-        await message.edit(content=content)
+        edited = await message.edit(content=content)
+        self._store_content_after_edit(react_msg, edited, content)
         await ctx.respond("編輯完成", ephemeral=True)
 
     @reactrole_cmd.command(description="新增反應身分組", name_localizations=ChoiceList.name("reactrole_add"))
@@ -465,10 +487,25 @@ class moderation(Cog_Extension):
             message = await ctx.channel.send(text)
 
         react_msg = sclient.sqldb.get_reaction_role_message(message.id)
-        if not react_msg:
-            sclient.sqldb.merge(ReactionRoleMessage(message.guild.id, message.channel.id, message.id))
+        if not react_msg or react_msg.content_json is None:
+            content, _ = from_message(message)
+            sclient.sqldb.merge(
+                ReactionRoleMessage(
+                    guild_id=message.guild.id,
+                    channel_id=message.channel.id,
+                    message_id=message.id,
+                    content_json=to_json(content) if content else None,
+                )
+            )
 
-        sclient.sqldb.merge(ReactionRoleOption(message.id, role.id, title, None, emoji, style))
+        existing = {r.role_id: r for r in sclient.sqldb.get_reaction_roles_by_message(message.id)}
+        if role.id in existing:
+            position = existing[role.id].position
+        else:
+            position = max((r.position for r in existing.values()), default=-1) + 1
+        sclient.sqldb.merge(
+            ReactionRoleOption(message_id=message.id, role_id=role.id, title=title, description=None, emoji=emoji, style=style, position=position)
+        )
         react_roles = sclient.sqldb.get_reaction_roles_by_message(message.id)
         await message.edit(view=ReactionRoleView(message.id, react_roles))
 

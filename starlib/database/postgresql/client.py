@@ -1058,6 +1058,39 @@ class RoleSaveRepository(BaseRepository):
             by_message.setdefault(o.message_id, []).append(o)
         return [(m, by_message.get(m.message_id, [])) for m in messages]
 
+    def get_reaction_role_snapshot(self, message_id: int) -> dict | None:
+        """一則反應身分組訊息目前的狀態，供編輯時比對衝突；不存在回 None。按鈕依 position 排序。"""
+        message = self.get_reaction_role_message(message_id)
+        if message is None:
+            return None
+        return {
+            "guild_id": message.guild_id,
+            "channel_id": message.channel_id,
+            "content_json": message.content_json,
+            "buttons": [
+                {"role_id": o.role_id, "title": o.title, "emoji": o.emoji, "style": o.style}
+                for o in self.get_reaction_roles_by_message(message_id)
+            ],
+        }
+
+    def replace_reaction_role_message(
+        self, guild_id: int, channel_id: int, message_id: int, content_json: str | None, options: list[ReactionRoleOption]
+    ) -> None:
+        """同一個交易內寫入訊息紀錄並以 options 取代全部按鈕；position 依 options 的順序重編。
+
+        紀錄不存在就新增；content_json 為 None 時保留原本存的內容。
+        """
+        existing = self.session.get(ReactionRoleMessage, (guild_id, channel_id, message_id))
+        if existing is None:
+            self.session.add(ReactionRoleMessage(guild_id=guild_id, channel_id=channel_id, message_id=message_id, content_json=content_json))
+        elif content_json is not None:
+            existing.content_json = content_json
+        self.session.exec(delete(ReactionRoleOption).where(ReactionRoleOption.message_id == message_id))
+        for position, option in enumerate(options):
+            option.position = position
+            self.session.add(option)
+        self.commit()
+
     def get_reaction_role_message_all(self):
         stmt = select(ReactionRoleMessage)
         result = self.session.exec(stmt).all()

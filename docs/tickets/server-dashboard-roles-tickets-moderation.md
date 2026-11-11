@@ -63,7 +63,7 @@
 | 9 | W-04 | 實作完成 | 用指令懲處一律留紀錄，公告格式統一 | S-03 | A | 只動指令 |
 | 10 | W-02 | 實作完成 | 管理員能從後台警告、禁言、踢出、停權 | W-01、S-03 | B | |
 | 11 | W-03 | 實作完成 | 管理員能移除本伺服器的紀錄 | W-01 | B | 用 W-01 留的列動作插槽，與 W-02 不重疊 |
-| 12 | R-02 | 未完成 | 管理員能發新的反應身分組訊息，並編輯按鈕與內容 | R-01、S-02 | B | |
+| 12 | R-02 | 實作完成 | 管理員能發新的反應身分組訊息，並編輯按鈕與內容 | R-01、S-02 | B | |
 | 13 | P-02 | 未完成 | 管理員能新增、修改、移除私人頻道大廳 | P-01、S-02 | B | |
 | 14 | B-02 | 未完成 | 警告累計 N 次自動禁言 | B-01、S-03、W-02、W-04 | C | 含 `/server setting` |
 | 15 | G-02 | 實作完成 | 管理員能提前結束與重抽 | G-01 | B | 含 `/giveaway redraw` 修改 |
@@ -428,18 +428,18 @@ flowchart LR
 **進度**：實作完成（2026-11-11）
 - commit：XingyuBot `feat/dashboard-r01` 與 domalyze_frontend `feat/dashboard-r01`（hash 見 worker 回報，本進度回寫與實作同一個 commit）
 - 決策：
-  - 端點測試 monkeypatch 假 repository，不碰 DB：本機測試庫沒有新欄位，ALTER 不在本機執行；`list_guild_reaction_roles`／`get_reaction_roles_by_message` 依 position 排序的 SQL 因此未驗。
+  - 端點測試 monkeypatch 假 repository，不碰 DB；`list_guild_reaction_roles`／`get_reaction_roles_by_message` 依 position 排序的 SQL 在 R-02 用真實 DB 一起驗過（`test_dashboard_reaction_roles_write.py` 的 `TestRepository`）。
   - 一覽排序：已存在的頻道依「分類位置、頻道位置」，同頻道依訊息 ID（即訊息時間）由小到大，頻道已刪除的排最後。
   - 讀不到訊息（缺 Read Message History 等，非 NotFound）不標失效，摘要為 null，由權限警告說明原因。
   - 自訂 emoji 只認這個伺服器的 emoji（`guild.get_emoji`）；`role_issue` 回中文原因字串，與 `/reactrole add` 的訊息一致；`bot_permission_issues` 的缺權限項目順序為 Manage Roles、View Channel、Send Messages、Embed Links、Read Message History，頻道已刪除時只檢查伺服器層級。
   - 前端 `ReactionRoleItem` 另外匯出，供 R-02、R-04 與測試使用；插槽為 `ReactionRoleSection` 的 `headerActions`、`actions`。
 - 驗證：後端 `test/test_dashboard_reaction_roles.py` 32 項通過；前端 vitest 164 項（含 `dashboard-reaction-roles.test.ts`、`reaction-role-section.test.tsx`）與 `tsc --noEmit` 通過；勾選項依 API 測試（失效標示、整則失效、權限警告、`require_section` 的 403）
 - 未驗：
-  - **本機 DB 需先執行卡內 ALTER 與回填 SQL 才能驗與跑 bot**（ORM 已含新欄位，未 ALTER 的庫上讀寫這兩張表會 UndefinedColumn）；依 position 排序的 SQL、回填結果、view 按鈕順序都未驗。
+  - 本機 DB 的 ALTER 與回填 SQL 已由使用者執行（正式環境部署時仍要手動執行）；回填結果、view 按鈕順序未驗。
   - 「依頻道位置、訊息時間排序」與「用指令建立的出現在一覽」只驗到端點排序邏輯，未用真實資料驗。
   - 「沒有任何反應身分組時顯示說明」、360px 與實際畫面（無瀏覽器驗證，只過 render 測試）；ESLint 未執行。
   - `test/test_dashboard_*.py` 全跑有 8 項失敗（`test_dashboard_auth.py` 6 項、`test_dashboard_invite.py` 2 項，登入與邀請 callback），在 `main` 上同樣失敗，與本卡無關：本機庫有既存的 session／身分資料（`MultipleResultsFound`、ID 不符）。
-- 備註：`/reactrole add` 新增的按鈕「排在最後」（規格的指令配合修改）不在本卡範圍，現況新增的按鈕 position 為預設 0；`moderation.py` 現行以位置參數建構 `ReactionRoleMessage`／`ReactionRoleOption`，而 `AlchemyBasicSchema` 是 kw_only dataclass，這兩處呼叫在現行程式碼就會 TypeError，R-02 動 `reactrole_cmd` 時一併處理。
+- 備註：`/reactrole add` 新增的按鈕「排在最後」與 `moderation.py` 以位置參數建構 `ReactionRoleMessage`／`ReactionRoleOption`（`AlchemyBasicSchema` 是 kw_only dataclass，會 TypeError）兩件事，已在 R-02 處理。
 
 ### R-02 管理員能發新的反應身分組訊息，並編輯按鈕與內容
 
@@ -479,7 +479,30 @@ flowchart LR
 
 **風險 / 實作注意**：新增時先送訊息再寫 DB；DB 失敗時刪掉剛送出的訊息並記 log。修改時 DB 失敗，把 Discord 訊息改回原內容與原按鈕，回錯誤請管理員重試；改回也失敗時記 log。
 
-**進度**：未完成
+**進度**：實作完成（2026-11-11）
+- commit：XingyuBot `feat/dashboard-r02` 與 domalyze_frontend `feat/dashboard-r02`（hash 見 worker 回報，本進度回寫與實作同一個 commit）
+- 決策：
+  - 端點的 `original` 比對：按鈕快照（`role_id`、`title`、`emoji`、`style`，依順序）序列化成字串後交給 `check_conflict`，與 `content_json` 一起比；409 的 `current` 回與 `GET /{message_id}` 相同形狀的最新內容（已刪除時 `deleted: true`、`current: null`），前端不必再多打一次請求。
+  - 端點回傳：`POST` 回 `{message_id, jump_url}`，`PUT` 回最新的編輯用內容。
+  - 新增流程為「先送出內容、再 edit 掛上 view、再寫 DB」，因為按鈕的 `custom_id` 含訊息 ID，送出前不知道；DB 失敗或掛 view 失敗都會刪掉剛送出的訊息。送出時 `allowed_mentions` 設為 none，避免編輯器的內容 ping 到 `@everyone` 或身分組。
+  - 位階規則：只對新增或有變動的按鈕檢查 `role_issue` 與操作者位階；既有按鈕位階不低於操作者且被修改（標題、emoji、樣式任一變動）回 400 `locked_button`；沒變動的按鈕（含失效、位階過高）一律放行，可以刪除與調整順序。失效按鈕只改標題而身分組仍無效會被擋下，必須換成有效的身分組或刪除。
+  - emoji 只對新增或有變動的按鈕檢查是否屬於本伺服器；既有按鈕沒變動時，即使 emoji 已失效也放行（Discord 若拒絕該 emoji，整次存檔回 502 `discord_error`）。
+  - `content_locked` 的原因代碼除了 `multiple_embeds`、`has_attachments`，另加 `message_unavailable`（沒有存下的內容、訊息又讀不到）；`content_locked` 時 `message` 必須為 null，否則 400 `content_locked`。
+  - 危險權限清單放在 `starlib/reaction_roles.py` 的 `DANGEROUS_PERMISSIONS`（Administrator、Manage Server／Roles／Channels／Webhooks／Messages／Nicknames、Kick／Ban／Moderate Members、Mention Everyone、View Audit Log），`/options` 另外回 `dangerous_permissions` 供警告文字使用。
+  - 指令：`/reactrole add` 的新按鈕 position 為 max+1（重新設定同一身分組沿用原 position），訊息沒有 `content_json` 時用 `from_message` 存下；`/reactrole editmessage` 改完文字後同步更新 `content_json`（沒有存下的內容時改用 `from_message` 讀回編輯後的訊息）。兩處的 `ReactionRoleMessage`／`ReactionRoleOption` 都改成關鍵字參數。
+  - 模型：`ReactionRoleOption.position`、`ReactionRoleMessage.content_json` 改用 `mapped_column(..., default=...)`。R-01 的 `Column(..., default=...)` 在 `AlchemyBasicSchema` 的 dataclass 下，沒傳該欄位時會把 Column 當 SQL 運算式寫進 INSERT，真實 DB 的 `merge` 會失敗。
+  - 前端：新增 `reaction-role-form.tsx`（表單）與 `reaction-role-manager.tsx`（一覽加表單，放進 R-01 的 `headerActions` 與每則 `actions`）；整份表單的暫存用單一 key `reaction-roles:form`，內含訊息 ID 與模式；失效的整則訊息不顯示「編輯」，留給 R-04。
+- 驗證：
+  - 後端 `uv run pytest test/test_dashboard_reaction_roles*.py` 100 項通過（新增 `test_dashboard_reaction_roles_write.py` 68 項）。涵蓋新增流程（送訊息、`add_view`、寫 DB、DB 失敗與掛 view 失敗時刪掉訊息）、修改流程（409 衝突、DB 失敗時改回原內容）、25 顆上限與至少一顆、同身分組重複、`role_issue` 與操作者位階（擁有者只受 bot 位階限制）、`locked_button`、失效按鈕可改可刪、`content_locked`、非本伺服器 emoji 400、超長內容 400、`/options` 的 `disabled_reason` 與 `dangerous`、第 6 顆在第二列。
+  - repository 用真實 PostgreSQL 驗：`list_guild_reaction_roles`／`get_reaction_roles_by_message` 依 position 排序、新欄位預設值、`get_reaction_role_snapshot`、`replace_reaction_role_message`（同交易刪舊插新、重編 position、`content_json` 為 None 時保留原值、失敗時整筆還原）。
+  - `test/test_dashboard_*.py` 全跑 665 通過、8 失敗，失敗的就是 main 上已失敗的 `test_dashboard_auth.py` 6 項與 `test_dashboard_invite.py` 2 項。
+  - 前端 `npx vitest run` 199 項通過（新增 `reaction-role-form.test.tsx` 13 項、`dashboard-reaction-roles.test.ts` 補充）；`npx tsc --noEmit` 通過。
+- 未驗：
+  - 實際 Discord 行為：真的送出訊息、按按鈕取得與移除身分組、第 6 顆換列、`add_view` 後免重啟生效、DB 失敗時把訊息改回原內容；端點測試用假 Discord 物件，只驗到呼叫內容。
+  - 兩個瀏覽器同時編輯的衝突畫面、畫面本身（桌面與 360px）、表單暫存在登入過期導向後的還原；前端只過 jsdom 測試，沒有在瀏覽器操作。
+  - `/reactrole add`、`/reactrole editmessage` 的指令流程沒有自動化測試，只過 import 與靜態檢查。
+  - ESLint 設定載入時出錯（`Converting circular structure to JSON`，既有問題），lint 未執行。
+  - 最後一次寫入（DB）與 Discord 編輯之間的競態沒有鎖：衝突比對在編輯 Discord 之前，兩個管理員幾乎同時存檔仍可能互相覆蓋，與其他區塊的 `check_conflict` 做法相同。
 
 ### R-03 管理員能把反應身分組掛到 bot 既有的訊息
 
