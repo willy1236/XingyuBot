@@ -274,7 +274,11 @@ flowchart LR
 **進度**：實作完成（2026-11-11）
 - commit：XingyuBot `feat/dashboard-w01` 的 4437c90、62e1db7（含本進度回寫）；domalyze_frontend `feat/dashboard-w01` 的 fecc8d7、05386d2、aa75f03
 - 驗證：後端 `test/test_dashboard_warnings.py` 17 項、前端 vitest 100 項與 `tsc --noEmit` 通過；清單與展開的勾選依 API 測試（欄位、排序、分頁、篩選、警告單與 `embed()` 一致、跨群、`not_member` 400）與列元件的 render 測試
-- 未驗：獨立審查（第 5 步）；「沒有紀錄時顯示說明」、成員搜尋下拉與 360px 的實際畫面（無瀏覽器驗證，頁面與元件只過型別與 render 測試）；ESLint 在本機對未改動的檔案也因設定錯誤無法執行；S-01 的「只有 Ban 者端到端進入並停在警告」只驗到 `visibleNavItems`／`firstSection`，未用真實 Discord 權限驗
+- 未驗：「沒有紀錄時顯示說明」、成員搜尋下拉與 360px 的實際畫面（無瀏覽器驗證，頁面與元件只過型別與 render 測試）；ESLint 在本機對未改動的檔案也因設定錯誤無法執行；S-01 的「只有 Ban 者端到端進入並停在警告」只驗到 `visibleNavItems`／`firstSection`，未用真實 Discord 權限驗
+- 審查：dev-review 三輪（第 1 輪後端 d7d4cfd..47764a5、前端 50b2b84..c7f3567 無 blocking；第 2 輪、第 3 輪對本卡無 blocking）
+  - 已修（non-blocking）：警告清單 reload 時取消舊請求（domalyze_frontend d9c9ebb）；nitpick 一併修：空清單說明（d9c9ebb）、`search_members` 加括號（XingyuBot 60865a2）
+  - 未修的 note：成員搜尋 debounce 期間先顯示「找不到成員」
+  - 範圍外觀察：`UserModerate.embed` 的 `create_time` 未轉固定時區，舊資料是 naive、新資料是 `nowtz`，警告單時間可能不一致
 - 備註：`sheet` 的 title 取 `embed.author.name`（`BotEmbed.general` 的標題放在 author）；成員搜尋只比對 bot 快取的 `guild.members`，快取不全時可能漏人，但可改輸入 ID 篩選
 ### W-02 管理員能從後台警告、禁言、踢出、停權
 
@@ -314,7 +318,11 @@ flowchart LR
 - commit：XingyuBot `feat/dashboard-w02`、domalyze_frontend `feat/dashboard-w02`
 - 決策：`POST` 的權限依 body 的 kind 在 handler 內檢查（`require_section(warnings, <action>)` 逐種類預先建好），種類不合法回 400 `invalid_request`；對象解析失敗回 400 `user_not_found`、禁言／踢出對象不在伺服器回 400 `not_member`；被 `punish` 拒絕（bot、自己、Discord 拒絕）回 200，結果放在 `result.ok=false` 與 `result.error`。公告只在 `result.ok` 且非 `already` 時發送。W-01 的成員搜尋結果多一個 `bot` 欄位，讓選擇器停用機器人。成員選擇器從 `warning-list.tsx` 抽成 `member-picker.tsx` 共用，沒有權限的種類不出現在分頁籤，一種都沒有時整個按鈕不顯示。
 - 驗證：後端 `test/test_dashboard_warnings_write.py`（走真的 `punish`、真實 PostgreSQL、假 Discord）；前端 `lib/dashboard-warnings.test.ts` 與 `punish-form.test.tsx`，`tsc --noEmit` 通過
-- 未驗：「完成後清單更新」只接了 `reload`，沒有互動測試；瀏覽器實際畫面（分頁籤、成員選擇器的 ID 與機器人限制、360px）與真實 Discord 的動作、公告、刪訊息；獨立審查（第 5 步）；ESLint 在本機因設定錯誤無法執行
+- 未驗：「完成後清單更新」只接了 `reload`，沒有互動測試；瀏覽器實際畫面（分頁籤、成員選擇器的 ID 與機器人限制、360px）與真實 Discord 的動作、公告、刪訊息；ESLint 在本機因設定錯誤無法執行
+- 審查：dev-review 三輪（第 1 輪後端 d7d4cfd..47764a5、前端 50b2b84..c7f3567 無 blocking；第 3 輪無 blocking）
+  - 已修（non-blocking）：網頁禁言時長與禁言刪訊息秒數可自訂，與指令一致（domalyze_frontend d9c9ebb）；nitpick 一併修：懲處對話框關閉時清結果（d9c9ebb）
+  - 第 2 輪 blocking 1 條已修：自訂秒數切分頁後顯示與送出不一致（domalyze_frontend e557558）
+  - 未修的 note：`PUNISH_ERRORS` 的 `no_permission` 是死碼（`dashboardFetch` 先攔下，S-01 既有行為）；切到禁言或踢出一律清掉對象；`/warning add` 紀錄寫入失敗時文案「已被警告＋動作已執行，但紀錄寫入失敗」語意誤導（S-03 `punish` 既有文案）
 
 ### W-03 管理員能移除本伺服器的紀錄
 
@@ -340,7 +348,9 @@ flowchart LR
 - commit：XingyuBot `feat/dashboard-w03`、domalyze_frontend `feat/dashboard-w03`
 - 決策：權限用 `require_section(warnings, "remove")`（S-01 已定義 Kick、Ban、Manage Messages 其一）；先查紀錄再比對 `create_guild`，所以他群的紀錄即使不存在於本群也回 403，而不存在的紀錄回 `{ ok: true, already: true }`。前端新增 `remove-warning-button.tsx` 放進 `rowActions`，紀錄不是本伺服器發出時不顯示；確認視窗寫明不會解除禁言或停權。
 - 驗證：後端 `test/test_dashboard_warnings_write.py` 的 `TestRemove`（三種權限各自可移除、無權限 403、他群 403 且保留、已移除回 already、不碰 Discord 的停權與禁言）；前端 `lib/dashboard-warnings.test.ts` 與 `remove-warning-button.test.tsx`，`tsc --noEmit` 通過。勾選的兩項依這些測試
-- 未驗：「二次確認、確認後清單不再顯示」與「已被移除時更新清單」只驗到 API 行為與確認視窗的 render，沒有點擊互動與瀏覽器實際畫面；獨立審查（第 5 步）；ESLint 在本機因設定錯誤無法執行
+- 未驗：「二次確認、確認後清單不再顯示」與「已被移除時更新清單」只驗到 API 行為與確認視窗的 render，沒有點擊互動與瀏覽器實際畫面；ESLint 在本機因設定錯誤無法執行
+- 審查：dev-review 三輪（第 1 輪後端 d7d4cfd..47764a5、前端 50b2b84..c7f3567 無 blocking；第 2 輪 blocking 1 條在 W-02 的對話框、與本卡無關；第 3 輪無 blocking）
+  - 未修的 note：`REMOVE_ERRORS` 的 `no_permission` 是死碼（`dashboardFetch` 先攔下，S-01 既有行為）
 
 
 ### W-04 用指令懲處一律留紀錄，公告格式統一
@@ -365,7 +375,11 @@ flowchart LR
 **進度**：實作完成（2026-11-11），只動後端 XingyuBot，前端無改動
 - commit：feat/dashboard-w04
 - 決策：對象是 bot 或執行者自己時 punish 會拒絕，但現行指令允許，這些情況由 `moderation.py` 的 `_punish_command` 走保留路徑（照舊執行 Discord 動作，bot 不寫紀錄、自己依「一律寫紀錄」寫只在本伺服器的紀錄），不改 S-03 介面。`/warning add` 的 owner 警告自己同樣保留現行寫法，這種情況不觸發 after-warning hook。
-- 未驗：真實 Discord 環境的指令行為；獨立審查（第 5 步）
+- 未驗：真實 Discord 環境的指令行為
+- 審查：dev-review 三輪（第 1 輪後端 d7d4cfd..47764a5 無 blocking；第 2 輪、第 3 輪無 blocking）
+  - 已修（non-blocking）：指令在紀錄寫入失敗時顯示原因（XingyuBot 60865a2）；nitpick 一併修：常數命名（60865a2）
+  - 未修的 nitpick：本卡 commit 夾帶無關的換行重排
+  - 未修的 note：`/warning add` 紀錄寫入失敗時文案「已被警告＋動作已執行，但紀錄寫入失敗」語意誤導（S-03 `punish` 既有文案）
 
 ### R-01 管理員能看到反應身分組一覽
 
