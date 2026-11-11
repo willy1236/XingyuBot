@@ -56,7 +56,7 @@
 | 2 | S-02 | 實作完成 | [共用] 訊息編輯器：內容格式、驗證、預覽與轉換 | 無 | S | R-02、P-02 依賴 |
 | 3 | S-03 | 實作完成 | [共用] 懲處服務：執行、寫紀錄、公告與稽核原因 | 無 | S | W-02、W-04、B-02 依賴 |
 | 4 | W-01 | 實作完成 | 管理員能看懲處紀錄並查詢成員的跨群紀錄 | S-01 | A | 骨架切片：第一個只靠權限放寬才進得來的區塊 |
-| 5 | R-01 | 未完成 | 管理員能看到反應身分組一覽 | S-01 | A | |
+| 5 | R-01 | 實作完成 | 管理員能看到反應身分組一覽 | S-01 | A | |
 | 6 | P-01 | 未完成 | 管理員能看到私人頻道大廳與頻道清單 | S-01 | A | 含資料欄位與測試版資料對應 |
 | 7 | B-01 | 未完成 | 管理員能開關語音時數統計並看排行榜 | S-01 | A | |
 | 8 | G-01 | 實作完成 | 管理員能看抽獎清單、參加者與中獎者 | S-01 | A | |
@@ -391,11 +391,11 @@ flowchart LR
 
 **驗收條件**
 - [ ] 用指令建立的反應身分組出現在一覽，依頻道位置、訊息時間排序。
-- [ ] 刪除某按鈕的身分組後，該按鈕標示失效；把身分組調到不低於 bot 也標示失效；自訂 emoji 被刪也標示失效。
-- [ ] 訊息或頻道在 Discord 被刪，整則標示失效。
-- [ ] 拔掉 bot 的 Manage Roles，看到缺少的權限與後果；頻道層級的 View／Send／Embed／Read History 同樣。
+- [x] 刪除某按鈕的身分組後，該按鈕標示失效；把身分組調到不低於 bot 也標示失效；自訂 emoji 被刪也標示失效。
+- [x] 訊息或頻道在 Discord 被刪，整則標示失效。
+- [x] 拔掉 bot 的 Manage Roles，看到缺少的權限與後果；頻道層級的 View／Send／Embed／Read History 同樣。
 - [ ] 沒有任何反應身分組時顯示說明。
-- [ ] 只有 Manage Roles 的使用者看得到這個區塊。
+- [x] 只有 Manage Roles 的使用者看得到這個區塊。
 
 **實作設計**
 - 資料：`ReactionRoleOption` 新增 `position: int`（排序），`ReactionRoleMessage` 新增 `content_json: str | None`（R-02 起寫入）。都是 `AlchemyBasicSchema`，用 `Column` 加欄位。手動 ALTER：
@@ -425,7 +425,21 @@ flowchart LR
 
 **風險 / 實作注意**：`fetch_message` 有 rate limit；一覽載入時間跟訊息數成正比。目前資料量小，先逐則查。
 
-**進度**：未完成
+**進度**：實作完成（2026-11-11）
+- commit：XingyuBot `feat/dashboard-r01` 與 domalyze_frontend `feat/dashboard-r01`（hash 見 worker 回報，本進度回寫與實作同一個 commit）
+- 決策：
+  - 端點測試 monkeypatch 假 repository，不碰 DB：本機測試庫沒有新欄位，ALTER 不在本機執行；`list_guild_reaction_roles`／`get_reaction_roles_by_message` 依 position 排序的 SQL 因此未驗。
+  - 一覽排序：已存在的頻道依「分類位置、頻道位置」，同頻道依訊息 ID（即訊息時間）由小到大，頻道已刪除的排最後。
+  - 讀不到訊息（缺 Read Message History 等，非 NotFound）不標失效，摘要為 null，由權限警告說明原因。
+  - 自訂 emoji 只認這個伺服器的 emoji（`guild.get_emoji`）；`role_issue` 回中文原因字串，與 `/reactrole add` 的訊息一致；`bot_permission_issues` 的缺權限項目順序為 Manage Roles、View Channel、Send Messages、Embed Links、Read Message History，頻道已刪除時只檢查伺服器層級。
+  - 前端 `ReactionRoleItem` 另外匯出，供 R-02、R-04 與測試使用；插槽為 `ReactionRoleSection` 的 `headerActions`、`actions`。
+- 驗證：後端 `test/test_dashboard_reaction_roles.py` 32 項通過；前端 vitest 164 項（含 `dashboard-reaction-roles.test.ts`、`reaction-role-section.test.tsx`）與 `tsc --noEmit` 通過；勾選項依 API 測試（失效標示、整則失效、權限警告、`require_section` 的 403）
+- 未驗：
+  - **本機 DB 需先執行卡內 ALTER 與回填 SQL 才能驗與跑 bot**（ORM 已含新欄位，未 ALTER 的庫上讀寫這兩張表會 UndefinedColumn）；依 position 排序的 SQL、回填結果、view 按鈕順序都未驗。
+  - 「依頻道位置、訊息時間排序」與「用指令建立的出現在一覽」只驗到端點排序邏輯，未用真實資料驗。
+  - 「沒有任何反應身分組時顯示說明」、360px 與實際畫面（無瀏覽器驗證，只過 render 測試）；ESLint 未執行。
+  - `test/test_dashboard_*.py` 全跑有 8 項失敗（`test_dashboard_auth.py` 6 項、`test_dashboard_invite.py` 2 項，登入與邀請 callback），在 `main` 上同樣失敗，與本卡無關：本機庫有既存的 session／身分資料（`MultipleResultsFound`、ID 不符）。
+- 備註：`/reactrole add` 新增的按鈕「排在最後」（規格的指令配合修改）不在本卡範圍，現況新增的按鈕 position 為預設 0；`moderation.py` 現行以位置參數建構 `ReactionRoleMessage`／`ReactionRoleOption`，而 `AlchemyBasicSchema` 是 kw_only dataclass，這兩處呼叫在現行程式碼就會 TypeError，R-02 動 `reactrole_cmd` 時一併處理。
 
 ### R-02 管理員能發新的反應身分組訊息，並編輯按鈕與內容
 

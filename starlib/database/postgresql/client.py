@@ -1039,9 +1039,24 @@ class RoleSaveRepository(BaseRepository):
         return dct
 
     def get_reaction_roles_by_message(self, message_id: int):
-        stmt = select(ReactionRoleOption).where(ReactionRoleOption.message_id == message_id)
+        stmt = select(ReactionRoleOption).where(ReactionRoleOption.message_id == message_id).order_by(ReactionRoleOption.position, ReactionRoleOption.role_id)
         result = self.session.exec(stmt).all()
         return result
+
+    def list_guild_reaction_roles(self, guild_id: int) -> list[tuple[ReactionRoleMessage, list[ReactionRoleOption]]]:
+        """這個伺服器所有反應身分組訊息與其按鈕（按鈕依 position 排序）；順序為訊息 ID 由小到大。"""
+        messages = self.session.exec(select(ReactionRoleMessage).where(ReactionRoleMessage.guild_id == guild_id).order_by(ReactionRoleMessage.message_id)).all()
+        if not messages:
+            return []
+        options = self.session.exec(
+            select(ReactionRoleOption)
+            .where(ReactionRoleOption.message_id.in_([m.message_id for m in messages]))
+            .order_by(ReactionRoleOption.position, ReactionRoleOption.role_id)
+        ).all()
+        by_message: dict[int, list[ReactionRoleOption]] = {}
+        for o in options:
+            by_message.setdefault(o.message_id, []).append(o)
+        return [(m, by_message.get(m.message_id, [])) for m in messages]
 
     def get_reaction_role_message_all(self):
         stmt = select(ReactionRoleMessage)
