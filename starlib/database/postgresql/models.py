@@ -609,6 +609,25 @@ class TicketChannelLobby(BasicSchema, table=True):
     category_id: int = Field(sa_column=Column(BigInteger))
     guild_id: int = Field(sa_column=Column(BigInteger))
     message_id: int = Field(sa_column=Column(BigInteger))
+    #: 私人頻道所在的分類；`category_id` 是大廳頻道自己的分類，兩者語意不同。舊資料由 ALTER 回填為 category_id
+    ticket_category_id: int | None = Field(default=None, sa_column=Column(BigInteger, nullable=True))
+    name_prefix: str = Field(default="ticket", sa_column=Column(String(20), nullable=False, default="ticket", server_default="ticket"))
+    one_per_user: bool = Field(default=True, sa_column=Column(Boolean, nullable=False, default=True, server_default=text("true")))
+    max_open: int | None = Field(default=None, sa_column=Column(Integer, nullable=True))
+    next_number: int = Field(default=1, sa_column=Column(Integer, nullable=False, default=1, server_default=text("1")))
+    #: 大廳訊息內容的 JSON（P-02 起寫入）；None 沿用預設內容
+    content_json: str | None = Field(default=None, sa_column=Column(Text, nullable=True))
+    button_label: str | None = Field(default=None, sa_column=Column(String(80), nullable=True))
+    button_emoji: str | None = Field(default=None, sa_column=Column(String(100), nullable=True))
+    #: 大廳被移除的時間（P-02 寫入）；非 None 的大廳不列出也不能開單
+    removed_at: datetime | None = Field(default=None, sa_column=Column(TIMESTAMP(True, 0), nullable=True))
+
+
+class TicketLobbyManagerRole(BasicSchema, table=True):
+    __tablename__ = "ticket_lobby_manager_role"
+
+    lobby_channel_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
+    role_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
 
 
 class TicketChannel(BasicSchema, table=True):
@@ -621,6 +640,12 @@ class TicketChannel(BasicSchema, table=True):
     closed_at: datetime | None = Field(sa_column=Column(TIMESTAMP(True, 0)))
     closer_id: int | None = Field(sa_column=Column(BigInteger))
     view_message_id: int | None = Field(sa_column=Column(BigInteger))
+    #: 所屬大廳的頻道 ID；None 表示未歸屬
+    lobby_channel_id: int | None = Field(default=None, sa_column=Column(BigInteger, nullable=True))
+    #: 流水號（P-03 起寫入）；既有頻道為 None
+    number: int | None = Field(default=None, sa_column=Column(Integer, nullable=True))
+    #: 鎖定前各覆寫目標的 send_messages（P-04 寫入）；None 表示沒有保存值
+    locked_overwrites_json: str | None = Field(default=None, sa_column=Column(Text, nullable=True))
 
 
 class VoiceTime(BasicSchema, table=True):
