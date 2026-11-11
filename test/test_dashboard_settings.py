@@ -25,6 +25,7 @@ ALICE, BOB, LEFT = 8001, 8002, 8003
 class FakeGuild:
     def __init__(self):
         self.id = GUILD_ID
+        self.me = SimpleNamespace(guild_permissions=SimpleNamespace(moderate_members=True))
         self.members = {
             ALICE: SimpleNamespace(display_name="愛麗絲", display_avatar=SimpleNamespace(url="https://cdn/a.png")),
             BOB: SimpleNamespace(display_name="鮑伯", display_avatar=SimpleNamespace(url="https://cdn/b.png")),
@@ -51,11 +52,11 @@ def client(discord_env, repo, dashboard_env, monkeypatch) -> TestClient:  # noqa
 
 
 def put(client, values: bool, original: bool):
-    return client.put(
-        URL,
-        json={"values": {"voice_time_counter": values}, "original": {"voice_time_counter": original}},
-        headers={"Origin": FRONTEND},
-    )
+    return put_fields(client, {"voice_time_counter": values}, {"voice_time_counter": original})
+
+
+def put_fields(client, values: dict, original: dict):
+    return client.put(URL, json={"values": values, "original": original}, headers={"Origin": FRONTEND})
 
 
 def add_time(client, uid: int, minutes: int):
@@ -64,7 +65,14 @@ def add_time(client, uid: int, minutes: int):
 
 class TestGet:
     def test_no_setting_row_is_off_and_empty(self, client):
-        assert client.get(URL).json() == {"voice_time_counter": False, "leaderboard": []}
+        assert client.get(URL).json() == {
+            "voice_time_counter": False,
+            "auto_timeout_enabled": False,
+            "auto_timeout_times": 3,
+            "auto_timeout_seconds": 600,
+            "permission_issues": [],
+            "leaderboard": [],
+        }
 
     def test_null_column_is_off(self, client):
         client.repo.add(GuildSetting(guild_id=GUILD_ID, timeout_after_warning_times=None, voice_time_counter=None))
@@ -150,7 +158,7 @@ class TestPut:
         res = put(client, True, False)  # 打開表單時是關的，現在已被別人開了
         assert res.status_code == 409
         assert res.json()["error"] == "conflict" and res.json()["deleted"] is False
-        assert res.json()["current"] == {"voice_time_counter": True}
+        assert res.json()["current"] == {"voice_time_counter": True}  # 只回 original 有帶的欄位
 
     def test_conflict_when_no_row_but_original_true(self, client):
         assert put(client, False, True).status_code == 409
@@ -169,3 +177,76 @@ class TestPut:
     def test_invalid_body(self, client):
         res = client.put(URL, json={"values": {}, "original": {}}, headers={"Origin": FRONTEND})
         assert res.status_code in (400, 422)
+
+
+class TestAutoTimeout:
+    def row(self, client):
+        return client.repo.get_guild_setting_fresh(GUILD_ID)
+
+    def test_get_returns_stored_values(self, client):
+        client.repo.add(GuildSetting(guild_id=GUILD_ID, timeout_after_warning_times=5, voice_time_counter=None, auto_timeout_enabled=True, auto_timeout_seconds=900))
+        body = client.get(URL).json()
+        assert (body["auto_timeout_enabled"], body["auto_timeout_times"], body["auto_timeout_seconds"]) == (True, 5, 900)
+
+    def test_get_null_columns_use_defaults(self, client):
+        client.repo.add(GuildSetting(guild_id=GUILD_ID, timeout_after_warning_times=None, voice_time_counter=None, auto_timeout_enabled=True, auto_timeout_seconds=None))
+        body = client.get(URL).json()
+        assert (body["auto_timeout_times"], body["auto_timeout_seconds"]) == (3, 600)
+
+    def test_permission_issue_when_bot_lacks_moderate_members(self, client, monkeypatch):
+        guild = FakeGuild()
+        guild.me.guild_permissions.moderate_members = False
+        monkeypatch.setattr(sclient, "bot", fake_bot(guild))
+        issues = client.get(URL).json()["permission_issues"]
+        assert [i["permission"] for i in issues] == ["Moderate Members"]
+
+    def test_enable_without_row_inserts(self, client):
+        fields = {"auto_timeout_enabled": True, "auto_timeout_times": 2, "auto_timeout_seconds": 3600}
+        original = {"auto_timeout_enabled": False, "auto_timeout_times": 3, "auto_timeout_seconds": 600}
+        res = put_fields(client, fields, original)
+        assert res.status_code == 200 and res.json()["auto_timeout_times"] == 2
+        row = self.row(client)
+        assert (row.auto_timeout_enabled, row.timeout_after_warning_times, row.auto_timeout_seconds) == (True, 2, 3600)
+
+    def test_original_matches_defaults_when_columns_null(self, client):
+        client.repo.add(GuildSetting(guild_id=GUILD_ID, timeout_after_warning_times=None, voice_time_counter=None, auto_timeout_enabled=False, auto_timeout_seconds=None))
+        res = put_fields(client, {"auto_timeout_times": 4, "auto_timeout_seconds": 120}, {"auto_timeout_times": 3, "auto_timeout_seconds": 600})
+        assert res.status_code == 200
+        assert (self.row(client).timeout_after_warning_times, self.row(client).auto_timeout_seconds) == (4, 120)
+
+    def test_each_form_only_touches_its_own_fields(self, client):
+        client.repo.add(GuildSetting(guild_id=GUILD_ID, timeout_after_warning_times=5, voice_time_counter=False, auto_timeout_enabled=True, auto_timeout_seconds=900))
+        assert put(client, True, False).status_code == 200
+        row = self.row(client)
+        assert (row.voice_time_counter, row.timeout_after_warning_times, row.auto_timeout_enabled, row.auto_timeout_seconds) == (True, 5, True, 900)
+        assert put_fields(client, {"auto_timeout_enabled": False}, {"auto_timeout_enabled": True}).status_code == 200
+        assert self.row(client).voice_time_counter is True
+
+    def test_conflict_returns_only_compared_fields(self, client):
+        client.repo.add(GuildSetting(guild_id=GUILD_ID, timeout_after_warning_times=7, voice_time_counter=None, auto_timeout_enabled=False, auto_timeout_seconds=None))
+        res = put_fields(client, {"auto_timeout_times": 4}, {"auto_timeout_times": 3})
+        assert res.status_code == 409 and res.json()["current"] == {"auto_timeout_times": 7}
+        assert self.row(client).timeout_after_warning_times == 7
+
+    @pytest.mark.parametrize(
+        "values,field",
+        [
+            ({"auto_timeout_times": 0}, "auto_timeout_times"),
+            ({"auto_timeout_times": 21}, "auto_timeout_times"),
+            ({"auto_timeout_seconds": 59}, "auto_timeout_seconds"),
+            ({"auto_timeout_seconds": 604801}, "auto_timeout_seconds"),
+        ],
+    )
+    def test_range_validation(self, client, values, field):
+        res = put_fields(client, values, {k: 3 for k in values})
+        assert res.status_code == 400 and res.json()["field"] == field
+        assert self.row(client) is None
+
+    @pytest.mark.parametrize("values,original", [({}, {}), ({"auto_timeout_times": 3}, {}), ({"auto_timeout_times": 3}, {"voice_time_counter": False})])
+    def test_values_must_be_covered_by_original(self, client, values, original):
+        assert put_fields(client, values, original).status_code == 400
+
+    def test_boundaries_accepted(self, client):
+        res = put_fields(client, {"auto_timeout_times": 20, "auto_timeout_seconds": 604800}, {"auto_timeout_times": 3, "auto_timeout_seconds": 600})
+        assert res.status_code == 200
+        assert put_fields(client, {"auto_timeout_times": 1, "auto_timeout_seconds": 60}, {"auto_timeout_times": 20, "auto_timeout_seconds": 604800}).status_code == 200

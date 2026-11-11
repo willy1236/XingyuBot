@@ -65,7 +65,7 @@
 | 11 | W-03 | 實作完成 | 管理員能移除本伺服器的紀錄 | W-01 | B | 用 W-01 留的列動作插槽，與 W-02 不重疊 |
 | 12 | R-02 | 實作完成 | 管理員能發新的反應身分組訊息，並編輯按鈕與內容 | R-01、S-02 | B | |
 | 13 | P-02 | 未完成 | 管理員能新增、修改、移除私人頻道大廳 | P-01、S-02 | B | |
-| 14 | B-02 | 未完成 | 警告累計 N 次自動禁言 | B-01、S-03、W-02、W-04 | C | 含 `/server setting` |
+| 14 | B-02 | 實作完成 | 警告累計 N 次自動禁言 | B-01、S-03、W-02、W-04 | C | 含 `/server setting` |
 | 15 | G-02 | 實作完成 | 管理員能提前結束與重抽 | G-01 | B | 含 `/giveaway redraw` 修改 |
 | 16 | R-03 | 實作完成 | 管理員能把反應身分組掛到 bot 既有的訊息 | R-02 | C | |
 | 17 | R-04 | 實作完成 | 管理員能刪除反應身分組、處理失效並重新發送 | R-02 | C | 含重啟清理移除與舊內容回填 |
@@ -857,7 +857,7 @@ flowchart LR
 - [ ] `/server setting` 改的設定，網頁看得到，反之亦然；不帶選項時顯示目前設定；沒有 Manage Server 不能用。
 
 **實作設計**
-- 資料：`GuildSetting` 新增 `auto_timeout_enabled: bool`（預設 false）、`auto_timeout_seconds: int | None`；沿用 `timeout_after_warning_times` 當 N。手動 ALTER：
+- 資料：`GuildSetting` 新增 `auto_timeout_enabled: bool`（NOT NULL，預設 false）、`auto_timeout_seconds: int | None`；沿用 `timeout_after_warning_times` 當 N。手動 ALTER：
 
   ```sql
   ALTER TABLE guilds.server_setting
@@ -865,17 +865,23 @@ flowchart LR
     ADD COLUMN auto_timeout_seconds integer;
   ```
 
-  `WarningRepository.get_warning_count` 的邏輯已經是「只算 Warning、晚於最後一筆本伺服器禁言」，沿用並接上呼叫；它依賴 S-03 修好的 `WarningType`。
+  - 預設與範圍集中在 `models.py` 的 `AUTO_TIMEOUT_*` 常數：3 次、10 分鐘；N 為 1～20，時長為 60～604800 秒。`timeout_after_warning_times` 與 `auto_timeout_seconds` 為 NULL 時視為預設值，沒有設定列等同全部預設（不啟用）。
+  - `update_guild_setting_if` 比對時，`voice_time_counter`、`timeout_after_warning_times`、`auto_timeout_seconds` 的 NULL 用 `coalesce` 換成預設值；新增 `upsert_guild_setting(guild_id, values)` 給指令用（沒有設定列就新增，有就只更新帶的欄位，不比對衝突）。
+  - `WarningRepository.get_warning_count` 沿用「只算本伺服器發出的 Warning、晚於該成員在本伺服器最後一筆 Timeout」的規則，先後改用自增的 `warning_id` 判斷：`create_time` 只到秒，同一秒內的紀錄分不出先後。它依賴 S-03 修好的 `WarningType`。
 - 後端：
-  - 新增 `starlib/auto_timeout.py`，在 bot 啟動時對 S-03 `register_after_warning` 註冊。
-  - 判斷：設定啟用、對象是成員、計數 ≥ N，就用 S-03 `punish(kind=Timeout, actor=bot, cross_guild=False, via_dashboard=False)`，原因「累計 N 次警告自動禁言」。
-  - `settings.py` 擴充自動禁言欄位、範圍驗證與 `permission_issues`（Moderate Members）。
-- bot：新增 `/server setting` 指令（放 `moderation.py`，新的 `server_cmd` group），參數照規格；時長解析沿用 `time_to_datetime`。
-- 前端：`settings-section.tsx` 插槽放自動禁言表單；W-02 的結果顯示 `auto_timeout`。
+  - 新增 `starlib/auto_timeout.py`：有效設定換算、驗證、時長解析、Moderate Members 檢查，以及 `after_warning` hook 與 `register()`。`starDiscord/cmds/moderation.py` 的 `setup(bot)` 呼叫 `register()`，對 S-03 的 `register_after_warning` 註冊。
+  - 判斷：設定啟用、對象在伺服器內、計數 ≥ N，就用 S-03 `punish(kind=Timeout, actor=bot, cross_guild=False, via_dashboard=False)`，原因「累計 N 次警告自動禁言」。對象不在伺服器不算觸發，hook 回 None，不顯示失敗；bot 缺權限或位階不夠時回失敗與原因，不寫禁言紀錄。
+  - `settings.py` 的 GET 多回 `auto_timeout_enabled`、`auto_timeout_times`、`auto_timeout_seconds`（有效值）與 `permission_issues`（bot 缺 Moderate Members 時含一筆）。PUT 的 `values`、`original` 欄位都可省略，只寫入、比對有帶的欄位，`values` 裡的欄位 `original` 也要帶，沒帶或 `values` 為空回 400 `invalid_request`；語音時數開關與自動禁言表單各送自己的欄位。範圍驗證不過回 400 `invalid_request`，附 `field`。409 的 `current` 只含 `original` 有帶的欄位。
+- bot：新增 `/server setting` 指令（放 `moderation.py`，新的 `server_cmd` group，`command_name.json` 加 `server`、`server_setting`），需要 Manage Server。選項：語音時數統計、自動禁言、警告次數、禁言時長，只填要改的項目；時長用 `/timeout` 同格式，解析包在 `parse_duration`（格式錯誤或不在 1 分鐘～7 天回說明，不寫入）。啟用自動禁言時，次數與時長還是 NULL 就寫入預設值。不帶任何選項時顯示目前設定；回覆皆為只有自己看得到。寫入後刷新 `voice_time_counter` cache。
+- 前端：`settings-section.tsx` 的 `extra` 插槽放自動禁言表單；bot 缺 Moderate Members 時表單上方顯示警告；W-02 的結果顯示 `auto_timeout`（已完成，沿用）。`lib/dashboard-settings.ts` 的 `SettingValues` 欄位皆為可選，語音時數開關改成只送 `voice_time_counter`。
 
 **依賴**：B-01（設定頁與 API）、S-03（hook 與 punish）、W-02（後台警告與結果畫面）、W-04（`/warning add` 已改走 punish，指令觸發才驗得到）
 
-**進度**：未完成
+**進度**：實作完成（2026-11-11）
+- commit：XingyuBot `feat/dashboard-b02`（31ca77b、91a2279、f2f82ad、61e6d33）；domalyze_frontend `feat/dashboard-b02`（340efd3、a362755）
+- 手動 ALTER：本機開發 DB 已執行；正式 DB 部署時由人執行
+- 已驗：`test/test_auto_timeout.py`（真實 PostgreSQL 計數、假 Discord）涵蓋觸發與歸零、跨群警告計入、N 調低後下次觸發、移除自動禁言紀錄後重算、`/timeout` 不存入後歸零、他服紀錄不計入、對象不在伺服器不觸發、Discord 拒絕時警告保留且不寫禁言紀錄、未啟用不觸發；`test/test_dashboard_settings.py` 涵蓋新欄位、NULL 預設、範圍驗證、欄位涵蓋檢查、衝突；`test/test_server_setting_command.py` 涵蓋 `/server setting`；前端 type-check、eslint、vitest、`next build --webpack`
+- 未驗（需人工）：頁面實際畫面；真實 Discord 上網頁與 `/warning add` 累計後被禁言；bot 缺 Moderate Members 時的回覆與設定畫面警告；`/server setting` 與網頁互通；沒有 Manage Server 不能用指令；未打勾的條目待人工確認
 
 ### G-01 管理員能看抽獎清單、參加者與中獎者
 

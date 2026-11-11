@@ -43,6 +43,14 @@
         "en-US": "warning",
         "zh-TW": "警告"
     },
+    "server": {
+        "en-US": "server",
+        "zh-TW": "伺服器"
+    },
+    "server_setting": {
+        "en-US": "setting",
+        "zh-TW": "設定"
+    },
     "warning_add": {
         "en-US": "add",
         "zh-TW": "新增"
