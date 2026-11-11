@@ -1235,31 +1235,23 @@ class WarningRepository(BaseRepository):
         self.session.commit()
 
     def get_warning_count(self, discord_id: int, guild_id: int) -> int:
-        """查詢自上次禁言後的警告次數"""
-        # 查找該用戶最後一次禁言的時間
-        last_ban_time_query = (
-            select(UserModerate).where(UserModerate.discord_id == discord_id, UserModerate.create_guild == guild_id, UserModerate.moderate_type == WarningType.Timeout).order_by(desc(UserModerate.create_time)).limit(1)
-        )
+        """查詢自上次禁言後的警告次數：本伺服器發出的警告，且晚於該成員在本伺服器的最後一筆禁言紀錄。
 
-        last_ban_time_result = self.session.exec(last_ban_time_query).first()
+        先後順序用自增的 warning_id 判斷，create_time 只到秒，同一秒內的紀錄分不出先後。
+        """
+        last_timeout_id = self.session.exec(
+            select(func.max(UserModerate.warning_id)).where(
+                UserModerate.discord_id == discord_id, UserModerate.create_guild == guild_id, UserModerate.moderate_type == WarningType.Timeout
+            )
+        ).one()
 
-        # 如果該用戶沒有被禁言過，則最後禁言時間為當前時間
-        if last_ban_time_result is None:
-            last_ban_time = datetime.min.replace(tzinfo=UTC)
-        else:
-            last_ban_time = last_ban_time_result.create_time
-
-        # 查找該用戶在最後一次禁言後的警告次數
-        warning_count_query = select(func.count()).where(
+        stmt = select(func.count()).where(
             UserModerate.discord_id == discord_id,
             UserModerate.create_guild == guild_id,
             UserModerate.moderate_type == WarningType.Warning,
-            UserModerate.create_time > last_ban_time,
+            UserModerate.warning_id > (last_timeout_id or 0),
         )
-
-        warning_count = self.session.exec(warning_count_query).one()
-
-        return warning_count
+        return self.session.exec(stmt).one()
 
 
 class PollRepository(BaseRepository):
@@ -1961,23 +1953,34 @@ class GuildSettingRepository(BaseRepository):
                 raise
             raise DataExistError(original=e) from e
 
-    #: 資料庫允許 NULL，但 NULL 與 False 同義的布林欄位：條件式寫入比對時 NULL 視為 False
-    _NULL_IS_FALSE = frozenset({"voice_time_counter"})
+    #: 資料庫允許 NULL，但 NULL 與預設值同義的欄位：條件式寫入比對時 NULL 視為預設值
+    _NULL_DEFAULTS: dict[str, int | bool] = {
+        "voice_time_counter": False,
+        "timeout_after_warning_times": AUTO_TIMEOUT_DEFAULT_TIMES,
+        "auto_timeout_seconds": AUTO_TIMEOUT_DEFAULT_SECONDS,
+    }
 
     def update_guild_setting_if(self, guild_id: int, original: dict[str, int | bool | None], values: dict[str, int | bool | None]) -> int:
         """後台用：資料庫目前的值等於 original 才更新 values 裡的欄位（比對與寫入在同一條 SQL），回傳影響的列數，0 表示已被改過或沒有設定列。
 
-        original、values 的鍵是 GuildSetting 的欄位；NULL 也能比對，布林欄位 voice_time_counter 的 NULL 視為 False。
+        original、values 的鍵是 GuildSetting 的欄位；NULL 也能比對，`_NULL_DEFAULTS` 裡的欄位 NULL 視為預設值。
         """
         conditions = [GuildSetting.guild_id == guild_id]
         for field, value in original.items():
             column = getattr(GuildSetting, field)
-            if field in self._NULL_IS_FALSE:
-                column = func.coalesce(column, False)
+            if field in self._NULL_DEFAULTS:
+                column = func.coalesce(column, self._NULL_DEFAULTS[field])
             conditions.append(column.is_not_distinct_from(value))
         count = self.session.exec(update(GuildSetting).where(*conditions).values(**values)).rowcount
         self.session.commit()
         return count
+
+    def upsert_guild_setting(self, guild_id: int, values: dict[str, int | bool | None]) -> None:
+        """指令用：沒有設定列就新增，有就只更新 values 裡的欄位（無衝突比對）。"""
+        stmt = pg_insert(GuildSetting).values(guild_id=guild_id, **values)
+        stmt = stmt.on_conflict_do_update(index_elements=[GuildSetting.guild_id], set_=values) if values else stmt.on_conflict_do_nothing()
+        self.session.exec(stmt)
+        self.session.commit()
 
     def get_voice_time_counter_guilds(self):
         stmt = select(GuildSetting.guild_id).where(GuildSetting.voice_time_counter)

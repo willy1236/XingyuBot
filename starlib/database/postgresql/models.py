@@ -547,12 +547,23 @@ class Post(AlchemyBasicSchema):
     user: User = relationship(back_populates="posts", init=False)
 
 
+#: 自動禁言設定的預設與範圍：資料庫欄位為 NULL 時視為預設值；後台與 `/server setting` 共用同一組驗證
+AUTO_TIMEOUT_DEFAULT_TIMES = 3
+AUTO_TIMEOUT_DEFAULT_SECONDS = 600
+AUTO_TIMEOUT_TIMES_RANGE = (1, 20)
+AUTO_TIMEOUT_SECONDS_RANGE = (60, 7 * 24 * 3600)
+
+
 class GuildSetting(GuildsSchema, table=True):
     __tablename__ = "server_setting"
 
     guild_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
+    #: 警告累計幾次自動禁言（自動禁言的 N）；NULL 視為預設
     timeout_after_warning_times: int | None
     voice_time_counter: bool | None
+    auto_timeout_enabled: bool = Field(default=False, sa_column=Column(Boolean, nullable=False, server_default=text("false")))
+    #: 自動禁言時長（秒）；NULL 視為預設
+    auto_timeout_seconds: int | None = Field(default=None, sa_column=Column(Integer))
 
 
 class GuildInternalConfig(GuildsSchema, table=True):
