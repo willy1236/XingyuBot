@@ -57,7 +57,7 @@
 | 3 | S-03 | 實作完成 | [共用] 懲處服務：執行、寫紀錄、公告與稽核原因 | 無 | S | W-02、W-04、B-02 依賴 |
 | 4 | W-01 | 實作完成 | 管理員能看懲處紀錄並查詢成員的跨群紀錄 | S-01 | A | 骨架切片：第一個只靠權限放寬才進得來的區塊 |
 | 5 | R-01 | 實作完成 | 管理員能看到反應身分組一覽 | S-01 | A | |
-| 6 | P-01 | 未完成 | 管理員能看到私人頻道大廳與頻道清單 | S-01 | A | 含資料欄位與測試版資料對應 |
+| 6 | P-01 | 進行中 | 管理員能看到私人頻道大廳與頻道清單 | S-01 | A | 含資料欄位與測試版資料對應 |
 | 7 | B-01 | 實作完成，待人工驗證 | 管理員能開關語音時數統計並看排行榜 | S-01 | A | |
 | 8 | G-01 | 實作完成 | 管理員能看抽獎清單、參加者與中獎者 | S-01 | A | |
 | 9 | W-04 | 實作完成 | 用指令懲處一律留紀錄，公告格式統一 | S-03 | A | 只動指令 |
@@ -660,9 +660,21 @@ flowchart LR
 
 **依賴**：S-01（區塊權限與導覽）
 
-**風險 / 實作注意**：`ticket_channel_lobby.category_id` 是大廳頻道的分類，新欄位 `ticket_category_id` 是私人頻道的分類。兩者語意不同，不能混用。
+**風險 / 實作注意**：
+- `ticket_channel_lobby.category_id` 是大廳頻道的分類，新欄位 `ticket_category_id` 是私人頻道的分類。兩者語意不同，不能混用。
+- **部署順序：先執行 ALTER，再部署 code。** model 加欄位後，bot 啟動時 `bot_event.py` 的 `get_all_ticket_lobbys` 就會讀新欄位，沒先 ALTER 會在 `on_ready` 噴 `UndefinedColumn`，後面的私人頻道載入與 Bot status 全部跳過。回填腳本在 ALTER 之後、部署之後手動跑一次。
 
-**進度**：未完成
+**進度**：進行中（2026-11-11，分支 `feat/dashboard-p01`）
+- 已做：資料欄位、新表與 repository 查詢方法（本機 DB 已執行卡上 ALTER，`localhost`）。
+- 續做：`starlib/tickets.py` 與 `starServer/dashboard/tickets.py`、`bot_event.py` 不再刪大廳紀錄、`ticket_setup` 寫 `ticket_category_id`、回填腳本、前端。
+- 實作決定（與卡片描述的落差與處理，範圍與驗收條件不變）：
+  - 資料表是 SQLModel（`BasicSchema`），不是 R-01 的 `AlchemyBasicSchema`；新欄位用 `Field(sa_column=Column(..., default=...))`，Python 端預設值才會在 `TicketChannelLobby(...)` 不傳新欄位時寫入。
+  - 拿掉大廳紀錄刪除的位置是 `bot_event.py` 的 `elif not debug_mode:` 分支，而不是卡上寫的 156–159 行；`delete_ticket_lobby` 保留給 P-02。
+  - `/ticket setup`（`ticket_setup`）多寫 `ticket_category_id=category.id` 一行，避免 P-01 到 P-05 之間新建的大廳該欄為空；其餘留給 P-05。
+  - `lobby_invalid_reason` 做成 async，含大廳訊息檢查（只有 `NotFound` 算失效，同 R-01）；同時有多項失效只回第一個（頻道、分類、訊息的順序）。
+  - 回填腳本用 bot token 以 HTTP 讀頻道（不連 gateway），附 `--dry-run`，已刪除的頻道略過。
+  - `PermissionIssue` 直接沿用 `starlib/reaction_roles.py`，`starlib/tickets.py` 的子類多一個 `target`（分類或大廳頻道）。
+  - 大廳一覽只列 `removed_at` 為空的大廳；GET 載入時只有 `guild.get_channel` 回空的私人頻道才刪紀錄。
 
 ### P-02 管理員能新增、修改、移除私人頻道大廳
 

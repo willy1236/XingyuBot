@@ -1002,6 +1002,56 @@ class TicketRepository(BaseRepository):
         result = self.session.exec(stmt).one_or_none()
         return result
 
+    def list_guild_ticket_lobbies(self, guild_id: int) -> list[tuple[TicketChannelLobby, list[int]]]:
+        """後台用：該伺服器還沒移除的大廳與各自的管理身分組 ID（依 role_id）；順序為大廳頻道 ID 由小到大。"""
+        lobbies = self.session.exec(
+            select(TicketChannelLobby)
+            .where(TicketChannelLobby.guild_id == guild_id, TicketChannelLobby.removed_at.is_(None))
+            .order_by(TicketChannelLobby.channel_id)
+            .execution_options(populate_existing=True)
+        ).all()
+        if not lobbies:
+            return []
+        roles = self.session.exec(
+            select(TicketLobbyManagerRole)
+            .where(TicketLobbyManagerRole.lobby_channel_id.in_([lobby.channel_id for lobby in lobbies]))
+            .order_by(TicketLobbyManagerRole.role_id)
+        ).all()
+        by_lobby: dict[int, list[int]] = {}
+        for r in roles:
+            by_lobby.setdefault(r.lobby_channel_id, []).append(r.role_id)
+        return [(lobby, by_lobby.get(lobby.channel_id, [])) for lobby in lobbies]
+
+    def list_guild_ticket_channels(self, guild_id: int) -> list[TicketChannel]:
+        """後台用：該伺服器所有還有紀錄的私人頻道（含已鎖定），依建立時間由舊到新。"""
+        stmt = (
+            select(TicketChannel)
+            .where(TicketChannel.guild_id == guild_id)
+            .order_by(TicketChannel.created_at, TicketChannel.channel_id)
+            .execution_options(populate_existing=True)
+        )
+        return list(self.session.exec(stmt).all())
+
+    def delete_ticket_channels(self, channel_ids: list[int]) -> None:
+        """移除私人頻道的紀錄（頻道已在 Discord 被刪除時用）。"""
+        if not channel_ids:
+            return
+        self.session.exec(delete(TicketChannel).where(TicketChannel.channel_id.in_(channel_ids)))
+        self.session.commit()
+
+    def list_unassigned_ticket_channels(self) -> list[TicketChannel]:
+        """回填腳本用：還沒歸屬大廳的私人頻道。"""
+        return list(self.session.exec(select(TicketChannel).where(TicketChannel.lobby_channel_id.is_(None))).all())
+
+    def list_all_active_ticket_lobbies(self) -> list[TicketChannelLobby]:
+        """回填腳本用：所有伺服器還沒移除的大廳。"""
+        return list(self.session.exec(select(TicketChannelLobby).where(TicketChannelLobby.removed_at.is_(None))).all())
+
+    def set_ticket_channel_lobby(self, channel_id: int, lobby_channel_id: int) -> None:
+        """回填腳本用：寫入私人頻道所屬的大廳。"""
+        self.session.exec(update(TicketChannel).where(TicketChannel.channel_id == channel_id).values(lobby_channel_id=lobby_channel_id))
+        self.session.commit()
+
 
 class RoleSaveRepository(BaseRepository):
     # * role_save
