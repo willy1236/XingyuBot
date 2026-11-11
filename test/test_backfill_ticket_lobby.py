@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+import asyncio
 from datetime import UTC, datetime
 from types import SimpleNamespace
 
+import discord
+
+from scripts import backfill_ticket_lobby
 from scripts.backfill_ticket_lobby import plan_backfill
 
 GUILD = 1
@@ -51,3 +55,38 @@ class TestPlanBackfill:
 
     def test_already_assigned_untouched(self):
         assert plan_backfill([lobby(10, 100)], [ticket(1, lobby_channel_id=99)], {1: 100}) == {}
+
+
+class FakeClient:
+    """假的 discord.Client：bot 只在 GUILD 這個伺服器；頻道 1 存在，2 被刪除"""
+
+    def __init__(self, *args, **kwargs):
+        self.fetched: list[int] = []
+
+    async def login(self, token):
+        pass
+
+    async def close(self):
+        pass
+
+    async def fetch_guilds(self, **kwargs):
+        yield SimpleNamespace(id=GUILD)
+
+    async def fetch_channel(self, cid: int):
+        self.fetched.append(cid)
+        if cid == 2:
+            raise discord.NotFound(SimpleNamespace(status=404, reason="Not Found"), "unknown channel")
+        return SimpleNamespace(category_id=100)
+
+
+class TestFetchCategories:
+    def test_skips_guilds_the_bot_is_not_in_and_deleted_channels(self, monkeypatch, capsys):
+        client = FakeClient()
+        monkeypatch.setattr(backfill_ticket_lobby.discord, "Client", lambda **kw: client)
+        tickets = [ticket(1), ticket(2), ticket(3, guild=OTHER_GUILD)]
+        result = asyncio.run(backfill_ticket_lobby.fetch_categories("token", tickets))
+        assert result == {1: 100}
+        assert client.fetched == [1, 2]  # 別的伺服器的紀錄不打 API
+        out = capsys.readouterr().out
+        assert "3（伺服器 2）：這個 bot 不在該伺服器" in out
+        assert "2（伺服器 1）：頻道已不存在" in out

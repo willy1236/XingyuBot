@@ -59,21 +59,29 @@ def plan_backfill(
     return plan
 
 
-async def fetch_categories(token: str, channel_ids: list[int]) -> dict[int, int | None]:
-    """用 HTTP 讀頻道所在的分類 ID；頻道不存在或讀不到的不放進結果。"""
+async def fetch_categories(token: str, tickets: Iterable[TicketChannel]) -> dict[int, int | None]:
+    """用 HTTP 讀頻道所在的分類 ID；頻道不存在或讀不到的不放進結果。
+
+    不在這個 bot 所在伺服器的紀錄直接略過（可能是另一個 bot 的伺服器，讀不到不代表頻道被刪）。
+    """
     client = discord.Client(intents=discord.Intents.none())
     await client.login(token)
     result: dict[int, int | None] = {}
     try:
-        for channel_id in channel_ids:
+        bot_guild_ids = {guild.id async for guild in client.fetch_guilds(limit=None, with_counts=False)}
+        for ticket in tickets:
+            where = f"{ticket.channel_id}（伺服器 {ticket.guild_id}）"
+            if ticket.guild_id not in bot_guild_ids:
+                print(f"略過 {where}：這個 bot 不在該伺服器")
+                continue
             try:
-                channel = await client.fetch_channel(channel_id)
+                channel = await client.fetch_channel(ticket.channel_id)
             except discord.NotFound:
-                print(f"略過 {channel_id}：頻道已不存在")
+                print(f"略過 {where}：頻道已不存在")
             except (discord.Forbidden, discord.HTTPException) as e:
-                print(f"略過 {channel_id}：讀不到頻道（{e}）")
+                print(f"略過 {where}：讀不到頻道（{e}）")
             else:
-                result[channel_id] = getattr(channel, "category_id", None)
+                result[ticket.channel_id] = getattr(channel, "category_id", None)
     finally:
         await client.close()
     return result
@@ -93,12 +101,12 @@ def main() -> int:
         return 0
 
     token = sqldb.get_access_token(APIType.Discord, bot_code).access_token
-    categories = asyncio.run(fetch_categories(token, [t.channel_id for t in tickets]))
+    categories = asyncio.run(fetch_categories(token, tickets))
     plan = plan_backfill(lobbies, tickets, categories)
 
     for ticket in tickets:
         target = plan.get(ticket.channel_id)
-        print(f"{ticket.channel_id} -> {target if target is not None else '未歸屬'}")
+        print(f"{ticket.channel_id}（伺服器 {ticket.guild_id}） -> {target if target is not None else '未歸屬'}")
     if args.dry_run:
         print(f"dry-run：會歸屬 {len(plan)} 個，不寫入")
         return 0
