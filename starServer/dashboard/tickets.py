@@ -312,6 +312,17 @@ def _error(e: LobbyError) -> DashboardError:
                 "invalid_request",
                 fields=[_field("lobby_channel", "目前的大廳頻道還在，不能更換；請移除這個大廳後重新新增")],
             )
+        case "channel_access":
+            return DashboardError(
+                400,
+                "bot_missing_permission",
+                fields=[
+                    _field(
+                        "lobby_channel",
+                        "我在大廳頻道缺少 View Channel 或 Read Message History 權限，讀不到大廳訊息，無法更新；請補上權限後再儲存",
+                    )
+                ],
+            )
         case "lobby_exists":
             return DashboardError(400, "invalid_request", fields=[_field("lobby_channel", "這個頻道已經是大廳")])
         case "discord_error":
@@ -585,9 +596,10 @@ async def delete_lobby(channel_id: int, body: DeleteBody, guild_id: int = Depend
         if check_conflict(_current(snap), original) is not None:
             raise await _conflict(guild, guild_id, channel_id)
         try:
-            await remove_lobby(guild, channel_id, snap["message_id"])
+            button_removed = await remove_lobby(guild, channel_id)
         except LobbyError as e:
             raise _error(e) from None
-        return {"removed": True}
+        # 按鈕沒拿掉（bot 對大廳頻道缺權限）時大廳仍已移除，成員不能再開單；由畫面說明要補權限或手動刪訊息
+        return {"removed": True, "button_removed": button_removed}
 
     return await on_guild_async(guild_id, _delete)

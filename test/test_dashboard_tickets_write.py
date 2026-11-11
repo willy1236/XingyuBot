@@ -258,7 +258,7 @@ class TestGetLobby:
     def test_not_found_and_removed(self, client):
         assert client.get(f"{LOBBIES}/{LOBBY_A}").status_code == 404
         add_lobby(client)
-        client.repo.mark_lobby_removed(LOBBY_A)
+        client.repo.remove_ticket_lobby(LOBBY_A)
         assert client.get(f"{LOBBIES}/{LOBBY_A}").status_code == 404
 
     def test_other_guild_is_not_found(self, client):
@@ -319,7 +319,7 @@ class TestCreate:
 
     def test_removed_lobby_channel_can_be_set_again(self, client):
         add_lobby(client, next_number=4)
-        client.repo.mark_lobby_removed(LOBBY_A)
+        client.repo.remove_ticket_lobby(LOBBY_A)
         assert client.post(LOBBIES, json=body()).status_code == 200
         snap = client.repo.get_ticket_lobby_snapshot(LOBBY_A)
         assert (snap["removed_at"], snap["next_number"], snap["manager_role_ids"]) == (None, 4, [ROLE_1])
@@ -440,7 +440,7 @@ class TestUpdate:
     def test_removed_lobby_is_deleted_conflict(self, client):
         add_lobby(client)
         original = client.get(f"{LOBBIES}/{LOBBY_A}").json()["original"]
-        client.repo.mark_lobby_removed(LOBBY_A)
+        client.repo.remove_ticket_lobby(LOBBY_A)
         r = self.put(client, original=original)
         assert (r.status_code, r.json()["deleted"]) == (409, True)
 
@@ -516,7 +516,7 @@ class TestDelete:
         old = add_lobby(client)
         add_ticket_for(client, T1)
         r = self.delete(client)
-        assert (r.status_code, r.json()) == (200, {"removed": True})
+        assert (r.status_code, r.json()) == (200, {"removed": True, "button_removed": True})
         assert old.edits == [{"view": None}]
         assert not old.deleted and not client.guild.lobby.deleted
         assert client.get(URL).json()["lobbies"] == []
@@ -535,7 +535,7 @@ class TestDelete:
     def test_already_removed_is_deleted_conflict(self, client):
         add_lobby(client)
         original = client.get(f"{LOBBIES}/{LOBBY_A}").json()["original"]
-        client.repo.mark_lobby_removed(LOBBY_A)
+        client.repo.remove_ticket_lobby(LOBBY_A)
         r = self.delete(client, original)
         assert (r.status_code, r.json()["deleted"]) == (409, True)
 
@@ -575,3 +575,30 @@ def _original_of(client) -> dict:
         "button_emoji": snap["button_emoji"],
         "manager_role_ids": role_ids,
     }
+
+
+class TestReviewFixes:
+    def test_update_with_unreadable_lobby_channel_explains_missing_permission(self, client):
+        add_lobby(client)
+        original = client.get(f"{LOBBIES}/{LOBBY_A}").json()["original"]
+
+        async def forbidden(mid):
+            raise discord.Forbidden(SimpleNamespace(status=403, reason="no"), "missing")
+
+        client.guild.lobby.fetch_message = forbidden
+        r = client.put(f"{LOBBIES}/{LOBBY_A}", json={**body(), "original": original})
+        assert (r.status_code, r.json()["error"]) == (400, "bot_missing_permission")
+        assert "Read Message History" in r.json()["fields"][0]["reason"]
+        assert client.guild.lobby.sent == []
+
+    def test_remove_without_access_still_removes_and_says_button_is_left(self, client):
+        old = add_lobby(client)
+        original = client.get(f"{LOBBIES}/{LOBBY_A}").json()["original"]
+
+        async def forbidden(**kwargs):
+            raise discord.Forbidden(SimpleNamespace(status=403, reason="no"), "missing")
+
+        old.edit = forbidden
+        r = client.request("DELETE", f"{LOBBIES}/{LOBBY_A}", json={"original": original})
+        assert (r.status_code, r.json()) == (200, {"removed": True, "button_removed": False})
+        assert client.repo.get_ticket_lobby_snapshot(LOBBY_A)["removed_at"] is not None

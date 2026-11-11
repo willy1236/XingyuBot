@@ -45,6 +45,7 @@ class FakeMessage:
         self.edits: list[dict] = []
         self.deleted = False
         self.fail_edit = False
+        self.view = None
 
     @property
     def jump_url(self) -> str:
@@ -53,9 +54,16 @@ class FakeMessage:
     async def edit(self, **kwargs):
         if self.fail_edit:
             raise http_error()
+        await asyncio.sleep(0)  # 讓同時進行的流程有機會交錯
         self.edits.append(kwargs)
+        if "content" in kwargs:
+            self.content = kwargs["content"]
+        if "embeds" in kwargs:
+            self.embeds = list(kwargs["embeds"])
+        if "view" in kwargs:
+            self.view = kwargs["view"]
 
-    async def delete(self):
+    async def delete(self, *, reason=None):
         self.deleted = True
 
 
@@ -88,8 +96,9 @@ class FakeChannel:
     async def set_permissions(self, role, *, overwrite, reason=None):
         self.permission_calls.append((role.id, overwrite, reason))
 
-    async def delete(self):
+    async def delete(self, *, reason=None):
         self.deleted = True
+        self.delete_reason = reason
 
 
 class FakeGuild:
@@ -128,6 +137,8 @@ class FakeBot:
 @pytest.fixture
 def env(repo, monkeypatch):  # noqa: F811
     monkeypatch.setattr(ticket_lobby, "sqldb", repo)
+    # 鎖綁定第一次發生等待時的事件迴圈；每個測試用自己的迴圈，所以每次換一組鎖
+    monkeypatch.setattr(ticket_lobby, "_locks", {})
     bot = FakeBot()
     monkeypatch.setattr(sclient, "bot", bot)
     return SimpleNamespace(guild=FakeGuild(), bot=bot, repo=repo)
@@ -234,7 +245,7 @@ class TestCreate:
 
     def test_removed_lobby_is_overwritten_keeping_next_number(self, env):
         add_old_lobby(env, next_number=9)
-        env.repo.mark_lobby_removed(LOBBY_A)
+        env.repo.remove_ticket_lobby(LOBBY_A)
         run(save_lobby(env.guild, values()))
         snap = env.repo.get_ticket_lobby_snapshot(LOBBY_A)
         assert (snap["name_prefix"], snap["next_number"], snap["removed_at"]) == ("report", 9, None)
@@ -266,6 +277,7 @@ class TestCreate:
             run(save_lobby(env.guild, values(channel=NewChannel("x", CATEGORY_TICKET))))
         assert e.value.code == "discord_error"
         assert env.guild.channels[LOBBY_NEW].deleted
+        assert env.guild.channels[LOBBY_NEW].delete_reason == "測試 透過後台：大廳"
         assert env.repo.get_ticket_lobby_snapshot(LOBBY_NEW) is None
 
     def test_create_channel_failure(self, env):
@@ -285,6 +297,7 @@ class TestCreate:
         created = env.guild.channels[LOBBY_NEW]
         assert created.sent[0][0].deleted
         assert created.deleted
+        assert created.delete_reason == "測試 透過後台：大廳"
 
 
 class TestUpdate:
@@ -341,7 +354,7 @@ class TestUpdate:
 
     def test_removed_lobby_is_deleted_conflict(self, env):
         add_old_lobby(env)
-        env.repo.mark_lobby_removed(LOBBY_A)
+        env.repo.remove_ticket_lobby(LOBBY_A)
         with pytest.raises(LobbyConflict) as e:
             run(save_lobby(env.guild, values(previous_channel_id=LOBBY_A, original=self.original())))
         assert e.value.deleted
@@ -354,13 +367,26 @@ class TestUpdate:
         assert result.message_id == env.guild.lobby.sent[0][0].id
         assert env.repo.get_ticket_lobby_snapshot(LOBBY_A)["message_id"] == result.message_id
 
-    def test_fetch_error_other_than_not_found_is_not_resent(self, env):
+    def test_forbidden_fetch_is_a_readable_error_and_not_resent(self, env):
         add_old_lobby(env)
 
         async def forbidden(mid):
             raise discord.Forbidden(SimpleNamespace(status=403, reason="no"), "missing")
 
         env.guild.lobby.fetch_message = forbidden  # pyright: ignore[reportAttributeAccessIssue]
+        with pytest.raises(LobbyError) as e:
+            run(save_lobby(env.guild, values(previous_channel_id=LOBBY_A, original=self.original())))
+        assert e.value.code == "channel_access"
+        assert env.guild.lobby.sent == []
+        assert env.repo.get_ticket_lobby_snapshot(LOBBY_A)["name_prefix"] == "old"
+
+    def test_other_fetch_errors_are_discord_errors(self, env):
+        add_old_lobby(env)
+
+        async def broken(mid):
+            raise http_error()
+
+        env.guild.lobby.fetch_message = broken  # pyright: ignore[reportAttributeAccessIssue]
         with pytest.raises(LobbyError) as e:
             run(save_lobby(env.guild, values(previous_channel_id=LOBBY_A, original=self.original())))
         assert e.value.code == "discord_error"
@@ -467,7 +493,7 @@ class TestRemove:
     def test_removes_button_marks_removed_and_unassigns(self, env):
         old = add_old_lobby(env)
         add_ticket(env, T1)
-        run(remove_lobby(env.guild, LOBBY_A, OLD_MESSAGE))
+        run(remove_lobby(env.guild, LOBBY_A))
         assert old.edits == [{"view": None}]
         assert env.repo.get_ticket_lobby_snapshot(LOBBY_A)["removed_at"] is not None
         assert env.repo.get_ticket_channel(T1).lobby_channel_id is None
@@ -476,22 +502,147 @@ class TestRemove:
     def test_missing_message_or_channel_is_ok(self, env):
         add_old_lobby(env)
         del env.guild.lobby.messages[OLD_MESSAGE]
-        run(remove_lobby(env.guild, LOBBY_A, OLD_MESSAGE))
+        run(remove_lobby(env.guild, LOBBY_A))
         assert env.repo.get_ticket_lobby_snapshot(LOBBY_A)["removed_at"] is not None
 
     def test_missing_channel_is_ok(self, env):
         add_old_lobby(env)
         del env.guild.channels[LOBBY_A]
-        run(remove_lobby(env.guild, LOBBY_A, OLD_MESSAGE))
+        run(remove_lobby(env.guild, LOBBY_A))
         assert env.repo.get_ticket_lobby_snapshot(LOBBY_A)["removed_at"] is not None
+
+    def test_forbidden_still_removes_lobby_and_reports_button_left(self, env):
+        old = add_old_lobby(env)
+
+        async def forbidden(**kwargs):
+            raise discord.Forbidden(SimpleNamespace(status=403, reason="no"), "missing")
+
+        old.edit = forbidden  # pyright: ignore[reportAttributeAccessIssue]
+        add_ticket(env, T1)
+        assert run(remove_lobby(env.guild, LOBBY_A)) is False
+        assert env.repo.get_ticket_lobby_snapshot(LOBBY_A)["removed_at"] is not None
+        assert env.repo.get_ticket_channel(T1).lobby_channel_id is None
+
+    def test_already_removed_is_a_noop(self, env):
+        add_old_lobby(env)
+        env.repo.remove_ticket_lobby(LOBBY_A)
+        assert run(remove_lobby(env.guild, LOBBY_A)) is True
 
     def test_edit_failure_keeps_lobby(self, env):
         old = add_old_lobby(env)
         old.fail_edit = True
         with pytest.raises(LobbyError) as e:
-            run(remove_lobby(env.guild, LOBBY_A, OLD_MESSAGE))
+            run(remove_lobby(env.guild, LOBBY_A))
         assert e.value.code == "discord_error"
         assert env.repo.get_ticket_lobby_snapshot(LOBBY_A)["removed_at"] is None
+
+
+class TestConcurrency:
+    """同一個大廳的修改與移除互相序列化（每大廳一把鎖）"""
+
+    def original(self):
+        return TestUpdate().original()
+
+    def test_two_updates_loser_restores_winners_content(self, env):
+        msg = add_old_lobby(env)
+
+        async def both():
+            a = asyncio.create_task(
+                save_lobby(
+                    env.guild,
+                    values(
+                        previous_channel_id=LOBBY_A,
+                        original=self.original(),
+                        name_prefix="a",
+                        message=MessageContent(content="A 的內容"),
+                    ),
+                )
+            )
+            b = asyncio.create_task(
+                save_lobby(
+                    env.guild,
+                    values(
+                        previous_channel_id=LOBBY_A,
+                        original=self.original(),
+                        name_prefix="b",
+                        message=MessageContent(content="B 的內容"),
+                    ),
+                )
+            )
+            return await asyncio.gather(a, b, return_exceptions=True)
+
+        a, b = run(both())
+        assert not isinstance(a, BaseException)
+        assert isinstance(b, LobbyConflict)
+        assert env.repo.get_ticket_lobby_snapshot(LOBBY_A)["name_prefix"] == "a"
+        # 敗方的還原用的是勝方存檔後的內容，不會蓋回舊內容
+        assert msg.content == "A 的內容"
+        assert msg.view is not None
+
+    def test_remove_then_update_does_not_bring_the_button_back(self, env):
+        msg = add_old_lobby(env)
+
+        async def both():
+            removing = asyncio.create_task(remove_lobby(env.guild, LOBBY_A))
+            updating = asyncio.create_task(
+                save_lobby(env.guild, values(previous_channel_id=LOBBY_A, original=self.original()))
+            )
+            return await asyncio.gather(removing, updating, return_exceptions=True)
+
+        removed, updated = run(both())
+        assert removed is True
+        assert isinstance(updated, LobbyConflict)
+        assert updated.deleted
+        assert msg.view is None
+        assert msg.edits == [{"view": None}]
+
+    def test_update_then_remove_ends_without_button(self, env):
+        msg = add_old_lobby(env)
+
+        async def both():
+            updating = asyncio.create_task(
+                save_lobby(env.guild, values(previous_channel_id=LOBBY_A, original=self.original()))
+            )
+            removing = asyncio.create_task(remove_lobby(env.guild, LOBBY_A))
+            return await asyncio.gather(updating, removing, return_exceptions=True)
+
+        updated, removed = run(both())
+        assert not isinstance(updated, BaseException)
+        assert removed is True
+        assert msg.view is None
+        assert env.repo.get_ticket_lobby_snapshot(LOBBY_A)["removed_at"] is not None
+
+    def test_remove_uses_the_message_resent_by_a_concurrent_update(self, env):
+        add_old_lobby(env)
+        del env.guild.lobby.messages[OLD_MESSAGE]  # 修改會重發大廳訊息
+
+        async def both():
+            updating = asyncio.create_task(
+                save_lobby(env.guild, values(previous_channel_id=LOBBY_A, original=self.original()))
+            )
+            removing = asyncio.create_task(remove_lobby(env.guild, LOBBY_A))
+            return await asyncio.gather(updating, removing, return_exceptions=True)
+
+        run(both())
+        [(new_message, _)] = env.guild.lobby.sent
+        assert new_message.view is None
+
+    def test_two_creates_on_one_channel_only_one_wins(self, env):
+        async def both():
+            return await asyncio.gather(
+                save_lobby(env.guild, values()), save_lobby(env.guild, values()), return_exceptions=True
+            )
+
+        first, second = run(both())
+        assert not isinstance(first, BaseException)
+        assert isinstance(second, LobbyError) and second.code == "lobby_exists"
+        assert len(env.guild.lobby.sent) == 1
+
+    def test_lock_is_shared_per_lobby(self):
+        from starDiscord.ticket_lobby import lobby_lock
+
+        assert lobby_lock(LOBBY_A) is lobby_lock(LOBBY_A)
+        assert lobby_lock(LOBBY_A) is not lobby_lock(LOBBY_NEW)
 
 
 class TestView:

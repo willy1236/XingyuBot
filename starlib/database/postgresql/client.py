@@ -1132,20 +1132,19 @@ class TicketRepository(BaseRepository):
         self._replace_lobby_manager_roles(channel_id, role_ids)
         self.session.commit()
 
-    def mark_lobby_removed(self, channel_id: int) -> bool:
-        """標記大廳已移除；原本就不在使用中回 False。"""
+    def remove_ticket_lobby(self, channel_id: int) -> bool:
+        """移除大廳：標記已移除，底下的私人頻道改為未歸屬，同一個交易。原本就不在使用中回 False，什麼都不寫。"""
         result = self.session.exec(
             update(TicketChannelLobby)
             .where(TicketChannelLobby.channel_id == channel_id, TicketChannelLobby.removed_at.is_(None))
             .values(removed_at=nowtz())
         )
-        self.session.commit()
-        return result.rowcount == 1
-
-    def unassign_lobby_tickets(self, channel_id: int) -> None:
-        """大廳底下的私人頻道改為未歸屬。"""
+        if result.rowcount != 1:
+            self.session.rollback()
+            return False
         self.session.exec(update(TicketChannel).where(TicketChannel.lobby_channel_id == channel_id).values(lobby_channel_id=None))
         self.session.commit()
+        return True
 
     def move_ticket_lobby(self, old_channel_id: int, new_channel_id: int, values: dict, manager_role_ids: list[int]) -> bool:
         """大廳換到另一個頻道（原頻道被刪除時重新選頻道）：同一交易搬主鍵、管理身分組與底下私人頻道的歸屬，保留 `next_number`。

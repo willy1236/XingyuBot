@@ -4,7 +4,10 @@
 全部讀寫 Discord 物件，必須在 bot 的事件迴圈上呼叫。錯誤一律丟 `LobbyError`，由呼叫端轉成自己的回應。
 """
 
+import asyncio
 import logging
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from typing import Literal
 
@@ -22,6 +25,7 @@ LobbyErrorCode = Literal[
     "channel_not_found",
     "category_not_found",
     "channel_in_use",
+    "channel_access",
     "lobby_exists",
     "conflict",
     "discord_error",
@@ -104,9 +108,42 @@ def _http_error(e: discord.HTTPException) -> LobbyError:
     return LobbyError("discord_error", e.text or str(e))
 
 
-async def _delete_quietly(target: discord.Message | discord.abc.GuildChannel, what: str) -> None:
+_locks: dict[int, asyncio.Lock] = {}
+
+
+def lobby_lock(channel_id: int) -> asyncio.Lock:
+    """每個大廳一把鎖（bot 是單一 process）：同一個大廳的修改、移除與開單（P-03）互相序列化。
+
+    新增、修改、移除在整個流程（含失敗時的還原）都持有這把鎖，才不會出現「移除完成後，另一個修改把按鈕加回去」
+    或「兩個修改交錯，敗方的還原蓋掉勝方的內容」。
+    """
+    return _locks.setdefault(channel_id, asyncio.Lock())
+
+
+@asynccontextmanager
+async def _locked(*channel_ids: int | None) -> AsyncIterator[None]:
+    """依 ID 由小到大取得多個大廳的鎖（換頻道時同時鎖舊的與新的），避免兩邊互等。"""
+    locks = [lobby_lock(i) for i in sorted({i for i in channel_ids if i is not None})]
+    acquired: list[asyncio.Lock] = []
     try:
-        await target.delete()
+        for lock in locks:
+            await lock.acquire()
+            acquired.append(lock)
+        yield
+    finally:
+        for lock in reversed(acquired):
+            lock.release()
+
+
+async def _delete_quietly(
+    target: discord.Message | discord.abc.GuildChannel, what: str, reason: str | None = None
+) -> None:
+    """還原用的刪除；頻道帶稽核原因（訊息的刪除沒有這個參數）。"""
+    try:
+        if isinstance(target, discord.Message):
+            await target.delete()
+        else:
+            await target.delete(reason=reason)
     except discord.HTTPException:
         log.exception("Ticket lobby: failed to delete %s", what)
 
@@ -117,6 +154,12 @@ def _bot_avatar(guild: discord.Guild) -> str | None:
 
 
 async def save_lobby(guild: discord.Guild, v: LobbyValues) -> SaveResult:
+    """新增或修改大廳，持有該大廳（換頻道時含新頻道）的鎖；說明見 `_save_lobby`。"""
+    async with _locked(v.previous_channel_id, v.channel if isinstance(v.channel, int) else None):
+        return await _save_lobby(guild, v)
+
+
+async def _save_lobby(guild: discord.Guild, v: LobbyValues) -> SaveResult:
     """新增或修改大廳：建立（或沿用）大廳頻道、發送或更新大廳訊息、寫資料庫，修改時再把管理身分組的增減套用到底下的私人頻道。
 
     - 新增：同頻道有已移除的大廳時覆寫它（保留流水號）。
@@ -180,6 +223,9 @@ async def save_lobby(guild: discord.Guild, v: LobbyValues) -> SaveResult:
                 edited = await channel.fetch_message(old["message_id"])  # pyright: ignore[reportAttributeAccessIssue]
             except discord.NotFound:
                 edited = None
+            except discord.Forbidden:
+                # 缺 Read Message History 或 View Channel：讀不到不代表訊息被刪，不能改發新訊息
+                raise LobbyError("channel_access") from None
             if edited is not None:
                 restore = {
                     "content": edited.content or None,
@@ -191,7 +237,7 @@ async def save_lobby(guild: discord.Guild, v: LobbyValues) -> SaveResult:
             sent = await channel.send(**kwargs, view=view, allowed_mentions=discord.AllowedMentions.none())  # pyright: ignore[reportAttributeAccessIssue]
     except discord.HTTPException as e:
         if created is not None:
-            await _delete_quietly(created, "created channel")
+            await _delete_quietly(created, "created channel", v.reason)
         raise _http_error(e) from None
     message = sent or edited
     assert message is not None
@@ -207,7 +253,7 @@ async def save_lobby(guild: discord.Guild, v: LobbyValues) -> SaveResult:
             except discord.HTTPException:
                 log.exception("Ticket lobby: failed to restore message", extra={"message_id": edited.id})
         if created is not None:
-            await _delete_quietly(created, "created channel")
+            await _delete_quietly(created, "created channel", v.reason)
 
     # 4. 資料庫
     values = {
@@ -261,26 +307,38 @@ async def save_lobby(guild: discord.Guild, v: LobbyValues) -> SaveResult:
     return SaveResult(target_id, message.id, message.jump_url, failures)
 
 
-async def remove_lobby(guild: discord.Guild, lobby_channel_id: int, message_id: int) -> None:
-    """移除大廳：拿掉大廳訊息的開單按鈕（訊息與頻道保留），標記已移除，底下的私人頻道改為未歸屬。
+async def remove_lobby(guild: discord.Guild, lobby_channel_id: int) -> bool:
+    """移除大廳：拿掉大廳訊息的開單按鈕（訊息與頻道保留），標記已移除，底下的私人頻道改為未歸屬（同一個交易）。
 
     訊息或頻道已不存在視為已拿掉。呼叫端須先確認伺服器不是 unavailable，頻道不在快取才代表真的被刪。
+    bot 對大廳頻道缺權限（Forbidden）時，仍然標示移除，讓大廳不再接受開單；按鈕沒拿掉，回傳 False 讓呼叫端說明。
+
+    Returns:
+        按鈕是否已拿掉（或訊息本來就不在）。
 
     Raises:
-        LobbyError: discord_error（拿不掉按鈕）、save_failed（資料庫寫入失敗）。
+        LobbyError: discord_error（其他 Discord 錯誤，大廳沒有移除）、save_failed（資料庫寫入失敗）。
     """
-    channel = guild.get_channel(lobby_channel_id)
-    if channel is not None:
+    async with _locked(lobby_channel_id):
+        # 訊息 ID 在鎖裡重讀：等鎖期間若有修改重發了大廳訊息，要拿掉的是新的那則
+        snap = _db(lambda: sqldb.get_ticket_lobby_snapshot(lobby_channel_id))
+        if snap is None or snap["removed_at"] is not None:
+            return True
+        button_removed = True
+        channel = guild.get_channel(lobby_channel_id)
+        if channel is not None:
+            try:
+                message = await channel.fetch_message(snap["message_id"])  # pyright: ignore[reportAttributeAccessIssue]
+                await message.edit(view=None)
+            except discord.NotFound:
+                pass
+            except discord.Forbidden:
+                button_removed = False
+            except discord.HTTPException as e:
+                raise _http_error(e) from None
         try:
-            message = await channel.fetch_message(message_id)  # pyright: ignore[reportAttributeAccessIssue]
-            await message.edit(view=None)
-        except discord.NotFound:
-            pass
-        except discord.HTTPException as e:
-            raise _http_error(e) from None
-    try:
-        _db(lambda: sqldb.mark_lobby_removed(lobby_channel_id))
-        _db(lambda: sqldb.unassign_lobby_tickets(lobby_channel_id))
-    except Exception:
-        log.exception("Ticket lobby: DB write failed on remove", extra={"channel_id": lobby_channel_id})
-        raise LobbyError("save_failed") from None
+            _db(lambda: sqldb.remove_ticket_lobby(lobby_channel_id))
+        except Exception:
+            log.exception("Ticket lobby: DB write failed on remove", extra={"channel_id": lobby_channel_id})
+            raise LobbyError("save_failed") from None
+        return button_removed

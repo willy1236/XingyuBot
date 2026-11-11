@@ -471,7 +471,7 @@ class TestLobbyWriteRepository:
     def test_insert_overwrites_removed_lobby_keeping_next_number(self, repo):  # noqa: F811
         add_lobby(repo, next_number=7, name_prefix="old")
         repo.set_lobby_manager_roles(LOBBY_A, [99])
-        assert repo.mark_lobby_removed(LOBBY_A)
+        assert repo.remove_ticket_lobby(LOBBY_A)
         assert repo.insert_ticket_lobby(dict(self.VALUES, message_id=MESSAGE_B), [10])
         snap = repo.get_ticket_lobby_snapshot(LOBBY_A)
         assert (snap["name_prefix"], snap["message_id"], snap["removed_at"], snap["next_number"]) == ("report", MESSAGE_B, None, 7)
@@ -497,25 +497,32 @@ class TestLobbyWriteRepository:
 
     def test_update_if_ignores_removed_lobby(self, repo):  # noqa: F811
         add_lobby(repo)
-        repo.mark_lobby_removed(LOBBY_A)
+        repo.remove_ticket_lobby(LOBBY_A)
         assert not repo.update_ticket_lobby_if(LOBBY_A, {}, {"name_prefix": "new"})
 
-    def test_mark_removed_hides_lobby_and_startup_load(self, repo):  # noqa: F811
+    def test_remove_hides_lobby_and_startup_load(self, repo):  # noqa: F811
         add_lobby(repo)
         add_lobby(repo, cid=LOBBY_B, message=MESSAGE_B)
-        assert repo.mark_lobby_removed(LOBBY_A)
-        assert not repo.mark_lobby_removed(LOBBY_A)
+        assert repo.remove_ticket_lobby(LOBBY_A)
+        assert not repo.remove_ticket_lobby(LOBBY_A)
         assert [lobby.channel_id for lobby, _ in repo.list_guild_ticket_lobbies(GUILD_ID)] == [LOBBY_B]
         assert LOBBY_A not in {lobby.channel_id for lobby in repo.get_all_ticket_lobbys()}
         assert LOBBY_B in {lobby.channel_id for lobby in repo.get_all_ticket_lobbys()}
 
-    def test_unassign_lobby_tickets(self, repo):  # noqa: F811
+    def test_remove_unassigns_only_its_tickets_in_the_same_transaction(self, repo):  # noqa: F811
         add_lobby(repo)
         add_ticket(repo, T1, LOBBY_A)
         add_ticket(repo, T2, LOBBY_B)
-        repo.unassign_lobby_tickets(LOBBY_A)
+        assert repo.remove_ticket_lobby(LOBBY_A)
         assert repo.get_ticket_channel(T1).lobby_channel_id is None
         assert repo.get_ticket_channel(T2).lobby_channel_id == LOBBY_B
+
+    def test_remove_already_removed_changes_nothing(self, repo):  # noqa: F811
+        add_lobby(repo)
+        repo.remove_ticket_lobby(LOBBY_A)
+        add_ticket(repo, T1, LOBBY_A)  # 已移除的大廳不會再動到頻道
+        assert not repo.remove_ticket_lobby(LOBBY_A)
+        assert repo.get_ticket_channel(T1).lobby_channel_id == LOBBY_A
 
     def test_move_lobby_keeps_number_and_tickets(self, repo):  # noqa: F811
         add_lobby(repo, next_number=5, name_prefix="old")
@@ -540,14 +547,14 @@ class TestLobbyWriteRepository:
         add_lobby(repo, next_number=5)
         add_lobby(repo, cid=LOBBY_B, message=MESSAGE_B, next_number=99)
         repo.set_lobby_manager_roles(LOBBY_B, [77])
-        repo.mark_lobby_removed(LOBBY_B)
+        repo.remove_ticket_lobby(LOBBY_B)
         assert repo.move_ticket_lobby(LOBBY_A, LOBBY_B, {"name_prefix": "new"}, [10])
         snap = repo.get_ticket_lobby_snapshot(LOBBY_B)
         assert (snap["next_number"], snap["removed_at"], snap["manager_role_ids"]) == (5, None, [10])
 
     def test_move_lobby_rejects_removed_source(self, repo):  # noqa: F811
         add_lobby(repo)
-        repo.mark_lobby_removed(LOBBY_A)
+        repo.remove_ticket_lobby(LOBBY_A)
         assert not repo.move_ticket_lobby(LOBBY_A, LOBBY_B, {}, [])
 
     def test_locked_overwrites_roundtrip(self, repo):  # noqa: F811
