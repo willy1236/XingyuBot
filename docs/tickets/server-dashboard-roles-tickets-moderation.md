@@ -64,7 +64,7 @@
 | 10 | W-02 | 實作完成 | 管理員能從後台警告、禁言、踢出、停權 | W-01、S-03 | B | |
 | 11 | W-03 | 實作完成 | 管理員能移除本伺服器的紀錄 | W-01 | B | 用 W-01 留的列動作插槽，與 W-02 不重疊 |
 | 12 | R-02 | 實作完成 | 管理員能發新的反應身分組訊息，並編輯按鈕與內容 | R-01、S-02 | B | |
-| 13 | P-02 | 實作中 | 管理員能新增、修改、移除私人頻道大廳 | P-01、S-02 | B | |
+| 13 | P-02 | 實作完成，待人工驗證 | 管理員能新增、修改、移除私人頻道大廳 | P-01、S-02 | B | |
 | 14 | B-02 | 實作完成，待人工驗證 | 警告累計 N 次自動禁言 | B-01、S-03、W-02、W-04 | C | 含 `/server setting` |
 | 15 | G-02 | 實作完成 | 管理員能提前結束與重抽 | G-01 | B | 含 `/giveaway redraw` 修改 |
 | 16 | R-03 | 實作完成 | 管理員能把反應身分組掛到 bot 既有的訊息 | R-02 | C | |
@@ -703,15 +703,15 @@ flowchart LR
 
 **驗收條件**
 - [ ] 建立兩個大廳，各自不同的管理身分組與前綴，存檔後 Discord 上各出現大廳訊息與開單按鈕。
-- [ ] 同一個頻道不能設成兩個大廳。
-- [ ] 前綴處理後不是 1 到 20 字元時不能存；不同大廳可用相同前綴。
+- [x] 同一個頻道不能設成兩個大廳。
+- [x] 前綴處理後不是 1 到 20 字元時不能存；不同大廳可用相同前綴。
 - [ ] 新增一個管理身分組後，該大廳既有的私人頻道對它可見；已鎖定的頻道它看得到但不能發言，重開後可以。
 - [ ] 移除一個管理身分組後，它在既有頻道上的覆寫被刪除。
 - [ ] 移除大廳時出現確認視窗；確認後大廳訊息還在但沒有開單按鈕，大廳頻道還在；底下頻道改列「未歸屬」，大廳不再出現在一覽。
-- [ ] 已移除的大廳頻道可以再設成新的大廳。
+- [x] 已移除的大廳頻道可以再設成新的大廳。
 - [ ] 刪掉大廳頻道後，重新選頻道存檔，大廳訊息重新發出並可開單。
-- [ ] 權限不足時看到警告，仍然可以存檔。
-- [ ] A、B 同時編輯同一個大廳，後存的被擋下。
+- [x] 權限不足時看到警告，仍然可以存檔。
+- [x] A、B 同時編輯同一個大廳，後存的被擋下。
 
 **實作設計**
 - 資料：repository 新增 `insert_ticket_lobby`、`update_ticket_lobby_if(channel_id, original, values)`、`set_lobby_manager_roles(channel_id, role_ids)`、`mark_lobby_removed(channel_id)`、`unassign_lobby_tickets(channel_id)`。
@@ -731,13 +731,31 @@ flowchart LR
 
 **風險 / 實作注意**：大廳底下頻道很多時，套用管理身分組會逐頻道呼叫 Discord，可能要數秒。部分頻道失敗時，大廳設定照存，回應列出套用失敗的頻道與原因，畫面提示補權限後重存。
 
-**進度**：實作中（2026-11-11）
-- commit：XingyuBot `feat/dashboard-p02`、domalyze_frontend `feat/dashboard-p02`（hash 見 worker 回報）
-- 已完成：`ensure_guild_available`（access.py，tickets `_read` 改用）；`TicketRepository` 的大廳寫入函式與 `get_all_ticket_lobbys` 過濾 `removed_at`（client.py）
-- 已完成：`starlib/tickets.py` 的純邏輯（前綴正規化、預設內容、`build_ticket_overwrites`、套用管理身分組、權限檢查拆分）
-- 已完成：`TicketLobbyView` 帶按鈕文字與 emoji、`bot_event.py` 帶入；`starDiscord/ticket_lobby.py` 的 `save_lobby`、`remove_lobby`
-- 已完成：`starServer/dashboard/tickets.py` 的 options、GET 詳細、POST、PUT、DELETE 端點與測試（後端全部完成）
-- 續做：前端（domalyze_frontend `feat/dashboard-p02`）：`lib/dashboard-tickets.ts` 的 API 與型別、多選身分組元件、`ticket-lobby-form.tsx`、`ticket-lobby-manager.tsx`、tickets 頁面改接
+**進度**：實作完成，待人工驗證（2026-11-11）
+- commit：XingyuBot `feat/dashboard-p02` 與 domalyze_frontend `feat/dashboard-p02`（hash 見 worker 回報，本進度回寫與最後一個 commit 同時提交）
+- 實作決定（與卡片描述的落差與處理，範圍與驗收條件不變）：
+  - `save_lobby` 放 `starDiscord/ticket_lobby.py`，不放 `starlib/tickets.py`：它要建 `TicketLobbyView`，放 starlib 會讓 starlib 反向依賴 starDiscord（starServer 的 `reaction_roles.py`、`giveaways.py` 本來就 import starDiscord，同一模式）。介面 `save_lobby(guild, values: LobbyValues) -> SaveResult`，錯誤丟 `LobbyError`（`LobbyConflict` 表示被別人改過或已移除）；另有 `remove_lobby(guild, lobby_channel_id, message_id)`。**P-03／P-05 改從 starDiscord 的位置 import**（P-05 的 `ticket_setup` 呼叫 `starDiscord.ticket_lobby.save_lobby`）。不依賴 view 的純邏輯仍在 `starlib/tickets.py`：`normalize_prefix`／`prefix_error`、`default_lobby_content`、`build_ticket_overwrites`、`apply_manager_role_changes`、權限檢查（拆成 `category_permission_issues`、`lobby_channel_permission_issues`，`bot_permission_issues` 順序不變）、`open_overwrite`／`locked_overwrite`／`overwrite_key`。
+  - 卡上沒有編輯用的讀取：新增 `GET .../tickets/lobbies/{channel_id}`，回設定、`content`、`invalid_reason` 與衝突比對的 `original`（`ticket_category_id`、`name_prefix`、`one_per_user`、`max_open`、`content_json`、`button_label`、`button_emoji`、`manager_role_ids`）。`content_json` 為 null 時 `content` 由 `default_lobby_content` 產生，`original.content_json` 仍是 null；`PUT`、`DELETE` 的衝突回應 `current` 與這個形狀相同。
+  - 失效大廳「重選頻道」要搬主鍵：新增 `move_ticket_lobby`，同一交易搬大廳主鍵、管理身分組與底下私人頻道的歸屬，保留 `next_number`。只在原大廳頻道已被刪除時允許換頻道，頻道還在時回 400 `lobby_channel`（要換請移除後重新新增）；新頻道已有還在使用的大廳回 400 `lobby_channel`，有已移除的舊列則被取代。
+  - 重新設定已移除的大廳：覆寫舊列並清掉 `removed_at`，只保留 `next_number`，其餘（管理身分組、訊息、按鈕）以新值為準。
+  - 套用管理身分組：鎖定中的頻道一律給 view 與 read history（不給 send）；`locked_overwrites_json` 不為 null 時另記 `role:<id>: true`，為 null 時不動 JSON。移除身分組時刪覆寫，鎖定頻道的 JSON 一併刪掉該鍵，重開時才不會復活。已被刪除的身分組略過（Discord 已清掉覆寫）。
+  - 欄位規則：前綴照卡片規則處理，保留 Unicode 字母數字，前後端用同一組案例測試；`max_open` 1 到 10000；按鈕文字 80 字；emoji 只對有變動的檢查是否屬於本伺服器；管理身分組只檢查新增的（必須存在、非 @everyone、非整合服務管理），已設定的（含已被刪除的）照舊放行才能移除。同一頻道已是大廳回 400 `invalid_request`，欄位 `lobby_channel`。
+  - 稽核原因：新建頻道與 `set_permissions` 帶 `audit_reason(actor, ..., via_dashboard=True)`；訊息的發送與編輯沒有 reason 參數。
+  - 伺服器 unavailable：`access.py` 新增 `ensure_guild_available`，`GET /tickets`（P-01 的內嵌檢查改用它）、options、詳細、POST、PUT、DELETE 都回 503 `guild_unavailable`，不依快取判斷存在與否做破壞性動作。
+  - `get_all_ticket_lobbys` 過濾 `removed_at`（P-01 審查留下的 note）；`bot_event.py` 載入 view 時帶入大廳的按鈕文字與 emoji。
+  - 寫入順序：先 Discord、後資料庫。資料庫寫入失敗或衝突時，剛送出的訊息刪除、剛編輯的訊息改回原內容、剛新建的頻道刪除。修改用 `update_ticket_lobby_if` 一個 UPDATE 比對大廳欄位；管理身分組的比對在端點先做，兩個管理員幾乎同時存檔仍可能在這兩步之間互相覆蓋（與其他區塊相同）。
+  - 套用管理身分組部分失敗：大廳設定照存，回應 `failures: [{channel_id, reason}]`；前端改顯示結果頁列出頻道，按關閉才離開（一覽已重新載入）。
+  - `build_ticket_overwrites` 已實作並單元測試，P-02 自己沒有呼叫者，P-03 接線。
+  - 前端：新增 `ticket-lobby-form.tsx`、`ticket-lobby-remove-button.tsx`、`ticket-lobby-manager.tsx`（接進 P-01 的 `headerActions`、`lobbyActions` 插槽，`tickets/page.tsx` 改用它）與 `role-multi-select.tsx`（新的多選元件，不改既有單選的 `role-select.tsx`）；`conflict-notice.tsx` 補大廳欄位的標籤。表單暫存 key 為 `tickets:form`。
+  - 沒有 schema 變更，不需要 ALTER。
+- 驗證：
+  - 後端 `uv run pytest test/test_dashboard_*.py test/test_ticket_lobby.py test/test_tickets_lib.py test/test_backfill_ticket_lobby.py` 946 通過、8 失敗，失敗的是 main 上已失敗的 `test_dashboard_auth.py` 6 項與 `test_dashboard_invite.py` 2 項。新增：`test_tickets_lib.py` 24 項（前綴、預設內容、覆寫、套用管理身分組）、`test_ticket_lobby.py` 28 項（`save_lobby`、`remove_lobby`、按鈕 view，假 Discord 加真實 PostgreSQL）、`test_dashboard_tickets_write.py` 45 項（端點、驗證、衝突、503、部分失敗）、`test_dashboard_tickets.py` 補真實 PostgreSQL 的 repository 13 項。ruff 對本次改動的檔案通過。
+  - 前端 `npx vitest run` 335 項通過（新增 `ticket-lobby-form.test.tsx` 22 項、`ticket-lobby-manager.test.tsx` 3 項、`dashboard-tickets-write.test.ts`）；`npx tsc --noEmit`、`npx eslint .`、`npx next build` 通過。
+  - 勾選的驗收條件依端點與 render 測試（假 Discord 物件）。
+- 未驗：
+  - 實際 Discord 行為：大廳訊息送出與更新、`add_view` 後免重啟生效、新建頻道、逐頻道套用與刪除覆寫、鎖定中頻道的權限、拿掉開單按鈕；`bot_event.py` 重啟後已移除的大廳不再載入 view（沒有自動測試，需真的重啟 bot）。
+  - 兩個瀏覽器同時編輯的衝突畫面、畫面本身（桌面與 360px）、表單暫存在登入過期導向後的還原；前端只過 jsdom 測試。
+  - 大廳底下頻道很多時逐頻道套用的耗時。
 
 ### P-03 成員開單時套用大廳的命名、限制與可見範圍
 
