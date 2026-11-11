@@ -128,6 +128,17 @@ class TestDelete:
         assert delete(client, 900, mode, orig).status_code == 200
         assert 900 not in client.repo.messages
 
+    @pytest.mark.parametrize("mode", ["delete_message", "remove_buttons"])
+    def test_unavailable_changes_nothing(self, client, mode):
+        """unavailable 時頻道快取是空的：只刪紀錄會留下仍可按的訊息"""
+        message = seed(client, 900, [btn(ROLE_OK)], content=MessageContent(content="歡迎"))
+        orig = original(client, 900)
+        client.guild.unavailable = True
+        r = delete(client, 900, mode, orig)
+        assert (r.status_code, r.json()["error"]) == (503, "guild_unavailable")
+        assert message.deleted is False and message.edits == []
+        assert 900 in client.repo.messages
+
     def test_conflict_when_buttons_changed(self, client):
         message = seed(client, 900, [btn(ROLE_OK, "活動")], content=MessageContent(content="歡迎"))
         orig = original(client, 900)
@@ -309,6 +320,15 @@ class TestResend:
         client.guild.text_channels = [client.guild.other_channel]
         assert resend(client, 900, 502).status_code == 400
         assert resend(client, 900, 502, message={"content": "新排", "embed": None}).status_code == 200
+
+    def test_unavailable_does_not_resend_or_move(self, client):
+        """unavailable 時頻道快取是空的，會誤判原訊息已刪除而重複發送並搬走紀錄"""
+        seed(client, 900, [btn(ROLE_OK)], content=CONTENT)
+        client.guild.unavailable = True
+        r = resend(client, 900, 502)
+        assert (r.status_code, r.json()["error"]) == (503, "guild_unavailable")
+        assert client.guild.other_channel.sent == [] and client.repo.moves == []
+        assert 900 in client.repo.messages
 
     def test_message_still_exists_rejected(self, client):
         seed(client, 900, [btn(ROLE_OK)], content=CONTENT)

@@ -35,7 +35,7 @@ from starlib.reaction_roles import (
     role_issue,
 )
 
-from .access import Section, on_guild, on_guild_async, require_section
+from .access import Section, ensure_guild_available, on_guild, on_guild_async, require_section
 from .conflict import Conflict, check_conflict
 from .db import run_db
 from .errors import DashboardError
@@ -803,6 +803,7 @@ async def delete_reaction_role(
     }
 
     async def _delete(guild: discord.Guild) -> dict:
+        ensure_guild_available(guild)  # 頻道快取是空的會漏掉 Discord 訊息，只刪紀錄會留下仍可按的孤兒按鈕
         snap = await run_db(lambda: sqldb.get_reaction_role_snapshot(message_id))
         if snap is None or snap["guild_id"] != guild_id:
             raise Conflict(None).to_error()
@@ -867,6 +868,7 @@ async def resend_reaction_role(
         raise DashboardError(400, "invalid_request", fields=[_field("channel_id", "必須是 Discord ID")])
 
     async def _resend(guild: discord.Guild) -> dict:
+        ensure_guild_available(guild)  # 頻道快取是空的會誤判原訊息已刪除，重複發送並搬走紀錄
         snap = await run_db(lambda: sqldb.get_reaction_role_snapshot(message_id))
         if snap is None or snap["guild_id"] != guild_id:
             raise DashboardError(404, "not_found")
