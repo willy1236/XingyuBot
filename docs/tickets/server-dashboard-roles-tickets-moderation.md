@@ -58,7 +58,7 @@
 | 4 | W-01 | 實作完成 | 管理員能看懲處紀錄並查詢成員的跨群紀錄 | S-01 | A | 骨架切片：第一個只靠權限放寬才進得來的區塊 |
 | 5 | R-01 | 實作完成 | 管理員能看到反應身分組一覽 | S-01 | A | |
 | 6 | P-01 | 未完成 | 管理員能看到私人頻道大廳與頻道清單 | S-01 | A | 含資料欄位與測試版資料對應 |
-| 7 | B-01 | 未完成 | 管理員能開關語音時數統計並看排行榜 | S-01 | A | |
+| 7 | B-01 | 實作完成 | 管理員能開關語音時數統計並看排行榜 | S-01 | A | |
 | 8 | G-01 | 實作完成 | 管理員能看抽獎清單、參加者與中獎者 | S-01 | A | |
 | 9 | W-04 | 實作完成 | 用指令懲處一律留紀錄，公告格式統一 | S-03 | A | 只動指令 |
 | 10 | W-02 | 實作完成 | 管理員能從後台警告、禁言、踢出、停權 | W-01、S-03 | B | |
@@ -816,16 +816,22 @@ flowchart LR
 - [ ] 已離開的成員顯示「已離開的成員」。
 
 **實作設計**
-- 資料：`GuildSettingRepository` 新增 `update_guild_setting_if(guild_id, original, values)` 與 `insert_guild_setting`；寫入後呼叫 `refresh_voice_time_counter_cache`。`get_voice_time_leaderboard` 呼叫時給 limit 20。
+- 資料：`GuildSettingRepository` 新增 `update_guild_setting_if(guild_id, original, values)`、`insert_guild_setting` 與 `get_guild_setting_fresh`；寫入後呼叫 `refresh_voice_time_counter_cache`。`get_voice_time_leaderboard` 呼叫時給 limit 20。
+  - `voice_time_counter` 在資料庫可為 NULL，也可能沒有設定列，一律視為 False：GET 回 false；`update_guild_setting_if` 對這個欄位用 `coalesce(voice_time_counter, false)` 比對；沒有設定列時，`original` 為 false 走 `insert_guild_setting`，撞主鍵或 `original` 為 true 都回 409 `conflict`。PUT 只更新 body 帶的欄位，不覆蓋 `timeout_after_warning_times`。
 - 後端：新增 `starServer/dashboard/settings.py`：
   - `GET /dashboard/guilds/{id}/settings` 回 `{ voice_time_counter, leaderboard:[{member, minutes}] }`，B-02 會加上自動禁言欄位。
+    - `member` 沿用 G-01 參與者格式 `{ id, name, avatar_url, left }`，`left` 為 true 時前端顯示「已離開的成員」；`minutes` 是總分鐘數的整數。
+    - 時數每 30 分鐘才由 `save_voice_time` 寫入資料庫，所以排行榜要併入 `starDiscord/cmds/task.py` 的 `voice_times[guild_id]`（尚未存檔的分鐘）：在 `on_guild`（bot loop，與 `add_voice_time`、`save_voice_time` 同一個 loop）內讀資料庫前 20 名，加上有未存檔分鐘的成員（用 `get_voice_times` 補讀他們的資料庫時數），合併後重新排序取前 20。整段沒有 await，所以不會與存檔交錯而重複或漏算。不改 `add_voice_time`、`save_voice_time` 的排程與寫入邏輯。
   - `PUT /dashboard/guilds/{id}/settings`：body `{ values, original }`。
   - 權限 `require_section(settings)`。
-- 前端：新增 `app/dashboard/guilds/[id]/settings/page.tsx`、`components/dashboard/settings-section.tsx`（保留放自動禁言表單的插槽）、`lib/dashboard-settings.ts`。`guild-nav` 的 settings 改成 `ready: true`。
+- 前端：新增 `app/dashboard/guilds/[id]/settings/page.tsx`、`components/dashboard/settings-section.tsx`（保留放自動禁言表單的插槽）、`lib/dashboard-settings.ts`。`lib/dashboard-sections.ts` 的 `NAV_ITEMS` 把 settings 改成 `ready: true`，並同步 `lib/dashboard-sections.test.ts` 的預期清單。
 
 **依賴**：S-01（區塊權限與導覽）
 
-**進度**：未完成
+**進度**：實作完成（2026-11-11）
+- commit：XingyuBot `feat/dashboard-b01`（658522c、0e733b6）；domalyze_frontend `feat/dashboard-b01`（3345bc6、47f6040）
+- 已驗：API 層（`test/test_dashboard_settings.py`，真實 PostgreSQL、假 Discord）涵蓋 GET 的無設定列／NULL／開啟、排行榜排序與前 20 名、已離開成員、他服不列入、併入未存檔分鐘（含不在資料庫前 20 名者）、PUT 的新增／更新／NULL 比對／衝突／快取刷新、403；前端 type-check、eslint、vitest、`next build --webpack`
+- 未驗（需人工）：頁面實際畫面；開啟後在真實 Discord 語音頻道待幾分鐘，重新整理後排行榜出現時數；關閉後時數不再增加並顯示註明；已離開成員顯示；未打勾的條目待人工確認
 
 ### B-02 警告累計 N 次自動禁言
 

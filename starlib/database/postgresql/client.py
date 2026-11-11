@@ -1940,6 +1940,45 @@ class GuildSettingRepository(BaseRepository):
         result = self.session.exec(stmt).one_or_none()
         return result or GuildSetting(guild_id=guild_id)
 
+    def get_guild_setting_fresh(self, guild_id: int) -> GuildSetting | None:
+        """後台用：讀得到其他 thread 剛寫入的值（populate_existing）；沒有設定列回 None。"""
+        stmt = select(GuildSetting).where(GuildSetting.guild_id == guild_id).execution_options(populate_existing=True)
+        return self.session.exec(stmt).one_or_none()
+
+    def insert_guild_setting(self, guild_id: int, values: dict[str, int | bool | None]):
+        """後台用：只新增不覆蓋的設定列，values 的鍵是 GuildSetting 的欄位。
+
+        Raises:
+            DataExistError: 這個伺服器已有設定列。
+        """
+        self.session.add(GuildSetting(guild_id=guild_id, **values))
+        try:
+            self.session.commit()
+        except IntegrityError as e:
+            self.session.rollback()
+            # 只有主鍵（unique violation, 23505）衝突才算已存在，其他約束錯誤照實往外拋
+            if getattr(e.orig, "sqlstate", None) != "23505":
+                raise
+            raise DataExistError(original=e) from e
+
+    #: 資料庫允許 NULL，但 NULL 與 False 同義的布林欄位：條件式寫入比對時 NULL 視為 False
+    _NULL_IS_FALSE = frozenset({"voice_time_counter"})
+
+    def update_guild_setting_if(self, guild_id: int, original: dict[str, int | bool | None], values: dict[str, int | bool | None]) -> int:
+        """後台用：資料庫目前的值等於 original 才更新 values 裡的欄位（比對與寫入在同一條 SQL），回傳影響的列數，0 表示已被改過或沒有設定列。
+
+        original、values 的鍵是 GuildSetting 的欄位；NULL 也能比對，布林欄位 voice_time_counter 的 NULL 視為 False。
+        """
+        conditions = [GuildSetting.guild_id == guild_id]
+        for field, value in original.items():
+            column = getattr(GuildSetting, field)
+            if field in self._NULL_IS_FALSE:
+                column = func.coalesce(column, False)
+            conditions.append(column.is_not_distinct_from(value))
+        count = self.session.exec(update(GuildSetting).where(*conditions).values(**values)).rowcount
+        self.session.commit()
+        return count
+
     def get_voice_time_counter_guilds(self):
         stmt = select(GuildSetting.guild_id).where(GuildSetting.voice_time_counter)
         result = self.session.exec(stmt).all()
