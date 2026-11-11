@@ -57,7 +57,7 @@
 | 3 | S-03 | 實作完成 | [共用] 懲處服務：執行、寫紀錄、公告與稽核原因 | 無 | S | W-02、W-04、B-02 依賴 |
 | 4 | W-01 | 實作完成 | 管理員能看懲處紀錄並查詢成員的跨群紀錄 | S-01 | A | 骨架切片：第一個只靠權限放寬才進得來的區塊 |
 | 5 | R-01 | 實作完成 | 管理員能看到反應身分組一覽 | S-01 | A | |
-| 6 | P-01 | 進行中 | 管理員能看到私人頻道大廳與頻道清單 | S-01 | A | 含資料欄位與測試版資料對應 |
+| 6 | P-01 | 實作完成，待人工驗證 | 管理員能看到私人頻道大廳與頻道清單 | S-01 | A | 含資料欄位與測試版資料對應 |
 | 7 | B-01 | 實作完成，待人工驗證 | 管理員能開關語音時數統計並看排行榜 | S-01 | A | |
 | 8 | G-01 | 實作完成 | 管理員能看抽獎清單、參加者與中獎者 | S-01 | A | |
 | 9 | W-04 | 實作完成 | 用指令懲處一律留紀錄，公告格式統一 | S-03 | A | 只動指令 |
@@ -617,13 +617,13 @@ flowchart LR
 - 不包含：大廳設定（P-02）、開單規則（P-03）、鎖定重開刪除（P-04）。
 
 **驗收條件**
-- [ ] 既有測試版大廳顯示預設設定：分類等於大廳頻道的分類、無管理身分組、前綴 `ticket`、每人一張開啟、不限上限。
+- [x] 既有測試版大廳顯示預設設定：分類等於大廳頻道的分類、無管理身分組、前綴 `ticket`、每人一張開啟、不限上限。
 - [ ] 既有 `ticket-<名稱>` 頻道依分類歸到大廳；對不到或對到多個的列在「未歸屬的私人頻道」。
-- [ ] 每筆顯示頻道名稱、建立者、建立時間、狀態；已鎖定的顯示鎖定者與時間。
-- [ ] 在 Discord 手動刪除私人頻道後重新整理，清單不再顯示。
+- [x] 每筆顯示頻道名稱、建立者、建立時間、狀態；已鎖定的顯示鎖定者與時間。
+- [x] 在 Discord 手動刪除私人頻道後重新整理，清單不再顯示。
 - [ ] 刪掉大廳頻道後重啟 bot，大廳仍在一覽並標示失效。
-- [ ] 拔掉 bot 在分類的 Manage Channels，看到缺少的權限與後果。
-- [ ] 只有 Manage Channels 的使用者看得到這個區塊。
+- [x] 拔掉 bot 在分類的 Manage Channels，看到缺少的權限與後果。
+- [x] 只有 Manage Channels 的使用者看得到這個區塊。
 
 **實作設計**
 - 資料：
@@ -664,9 +664,8 @@ flowchart LR
 - `ticket_channel_lobby.category_id` 是大廳頻道的分類，新欄位 `ticket_category_id` 是私人頻道的分類。兩者語意不同，不能混用。
 - **部署順序：先執行 ALTER，再部署 code。** model 加欄位後，bot 啟動時 `bot_event.py` 的 `get_all_ticket_lobbys` 就會讀新欄位，沒先 ALTER 會在 `on_ready` 噴 `UndefinedColumn`，後面的私人頻道載入與 Bot status 全部跳過。回填腳本在 ALTER 之後、部署之後手動跑一次。
 
-**進度**：進行中（2026-11-11，分支 `feat/dashboard-p01`）
-- 已做：資料欄位、新表與 repository 查詢方法（本機 DB 已執行卡上 ALTER，`localhost`）。
-- 續做：`starlib/tickets.py` 與 `starServer/dashboard/tickets.py`、`bot_event.py` 不再刪大廳紀錄、`ticket_setup` 寫 `ticket_category_id`、回填腳本、前端。
+**進度**：實作完成，待人工驗證（2026-11-11）
+- commit：XingyuBot `feat/dashboard-p01` 與 domalyze_frontend `feat/dashboard-p01`（hash 見 worker 回報，本進度回寫與最後一個 commit 同時提交）
 - 實作決定（與卡片描述的落差與處理，範圍與驗收條件不變）：
   - 資料表是 SQLModel（`BasicSchema`），不是 R-01 的 `AlchemyBasicSchema`；新欄位用 `Field(sa_column=Column(..., default=...))`，Python 端預設值才會在 `TicketChannelLobby(...)` 不傳新欄位時寫入。
   - 拿掉大廳紀錄刪除的位置是 `bot_event.py` 的 `elif not debug_mode:` 分支，而不是卡上寫的 156–159 行；`delete_ticket_lobby` 保留給 P-02。
@@ -675,6 +674,15 @@ flowchart LR
   - 回填腳本用 bot token 以 HTTP 讀頻道（不連 gateway），附 `--dry-run`，已刪除的頻道略過。
   - `PermissionIssue` 直接沿用 `starlib/reaction_roles.py`，`starlib/tickets.py` 的子類多一個 `target`（分類或大廳頻道）。
   - 大廳一覽只列 `removed_at` 為空的大廳；GET 載入時只有 `guild.get_channel` 回空的私人頻道才刪紀錄。
+- 驗證：
+  - 後端 `test/test_dashboard_tickets.py` 37 項（端點、`lobby_invalid_reason`、`bot_permission_issues`、真實 PostgreSQL 的 repository）與 `test/test_backfill_ticket_lobby.py` 8 項通過；`test/test_dashboard_*.py` 等相關測試全跑 913 通過、8 項失敗，失敗是 R-01 已記載的 `test_dashboard_auth.py` 6 項與 `test_dashboard_invite.py` 2 項，與本卡無關。
+  - 前端 vitest 277 項、`tsc --noEmit`、ESLint、`next build` 通過。
+  - 本機 DB（`localhost`）已執行本卡 ALTER；既有的一個測試版大廳讀回 `ticket_category_id` 等於 `category_id`、前綴 `ticket`、每人一張、無上限。回填腳本對本機 DB 跑過 `--dry-run`（所列 6 個私人頻道在 Discord 都已不存在，全部略過，沒有寫入）。
+  - 勾選的驗收條件依 API 與 render 測試；「刪掉大廳頻道後重啟 bot」與「依分類歸屬」需人工驗證。
+- 未驗：
+  - `bot_event.py` 的 `on_ready` 不再刪大廳紀錄（沒有自動測試，需真的重啟 bot）。
+  - 回填腳本對真實存在的頻道歸屬（本機的私人頻道在 Discord 都已刪除）、正式環境的 ALTER 與回填。
+  - 360px 與實際畫面（只過 render 測試）。
 
 ### P-02 管理員能新增、修改、移除私人頻道大廳
 
