@@ -222,3 +222,35 @@ class TestApplyManagerRoleChanges:
         )
         assert len(failures) == 1
         assert updates == {}
+
+
+class PartialChannel(FakeChannel):
+    """第 n 次 set_permissions 之後開始失敗"""
+
+    def __init__(self, cid, fail_after):
+        super().__init__(cid)
+        self.fail_after = fail_after
+
+    async def set_permissions(self, role, *, overwrite, reason=None):
+        if len(self.calls) >= self.fail_after:
+            raise forbidden()
+        await super().set_permissions(role, overwrite=overwrite, reason=reason)
+
+
+class TestPartialSuccess:
+    def test_successful_part_is_still_written_back(self):
+        # 新增 10 成功、移除 20 失敗：10 的覆寫已經在 Discord 上，JSON 必須跟上
+        guild = FakeGuild(roles=[FakeRole(10), FakeRole(20)], channels=[PartialChannel(2, fail_after=1)])
+        t = ticket(2, closed=True, saved={"role:20": True})
+        failures, updates = asyncio.run(apply_manager_role_changes(guild, [t], [10], [20], "r"))  # pyright: ignore[reportArgumentType]
+        assert [f.channel_id for f in failures] == [2]
+        assert json.loads(updates[2]) == {"role:20": True, "role:10": True}
+
+    def test_removed_part_succeeds_before_added_fails(self):
+        # 兩個都新增、第二個失敗：只有第一個寫進 JSON
+        guild = FakeGuild(roles=[FakeRole(10), FakeRole(11)], channels=[PartialChannel(2, fail_after=1)])
+        failures, updates = asyncio.run(
+            apply_manager_role_changes(guild, [ticket(2, closed=True, saved={})], [10, 11], [], "r")  # pyright: ignore[reportArgumentType]
+        )
+        assert len(failures) == 1
+        assert json.loads(updates[2]) == {"role:10": True}

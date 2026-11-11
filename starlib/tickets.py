@@ -214,7 +214,7 @@ async def apply_manager_role_changes(
     - 新增：開啟中的頻道給查看、發言、讀紀錄；已鎖定的只給查看與讀紀錄，`locked_overwrites_json` 不為 None 時另記 `role:<id>: true`，重開後才能發言。
     - 移除：刪掉覆寫；已鎖定的頻道一併刪掉 `locked_overwrites_json` 裡該身分組的鍵，重開時才不會復活。
     - 頻道或身分組不在 guild 快取：略過（身分組被刪時 Discord 已清掉覆寫）。呼叫端須先確認伺服器不是 unavailable。
-    - 單一頻道失敗不中斷，記在回傳的失敗清單。
+    - 單一頻道失敗不中斷，記在回傳的失敗清單；該頻道已成功的部分仍會反映在回傳的 JSON。
 
     Returns:
         (失敗清單, 需要寫回資料庫的 `locked_overwrites_json`：頻道 ID → 新 JSON)
@@ -228,28 +228,31 @@ async def apply_manager_role_changes(
         if channel is None:
             continue
         locked = ticket.closed_at is not None
+        # 已經成功的部分要記下來：同一個頻道中途失敗時，成功的那些覆寫仍要反映在 locked_overwrites_json
+        done_added: list[discord.Role] = []
+        done_removed: list[discord.Role] = []
         try:
             for role in added_roles:
                 await channel.set_permissions(
                     role, overwrite=locked_overwrite() if locked else open_overwrite(), reason=reason
                 )
+                done_added.append(role)
             for role in removed_roles:
                 await channel.set_permissions(role, overwrite=None, reason=reason)
+                done_removed.append(role)
         except discord.Forbidden:
             failures.append(ApplyFailure(ticket.channel_id, "我缺少這個頻道的 Manage Roles 或 Manage Channels 權限"))
-            continue
         except discord.HTTPException as e:
             failures.append(ApplyFailure(ticket.channel_id, e.text or str(e)))
-            continue
-        if locked and ticket.locked_overwrites_json is not None:
+        if locked and ticket.locked_overwrites_json is not None and (done_added or done_removed):
             try:
                 saved = json.loads(ticket.locked_overwrites_json)
             except ValueError:
                 log.warning("Invalid locked_overwrites_json", extra={"channel_id": ticket.channel_id})
                 continue
-            for role in added_roles:
+            for role in done_added:
                 saved[overwrite_key("role", role.id)] = True
-            for role in removed_roles:
+            for role in done_removed:
                 saved.pop(overwrite_key("role", role.id), None)
             json_updates[ticket.channel_id] = json.dumps(saved, ensure_ascii=False)
     return failures, json_updates
