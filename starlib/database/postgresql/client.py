@@ -1115,6 +1115,17 @@ class WarningRepository(BaseRepository):
         result = self.session.exec(stmt).all()
         return WarningList(result, discord_id)
 
+    def list_guild_warnings(self, guild_id: int, member_id: int | None, kind: WarningType | None, offset: int, limit: int) -> tuple[list[UserModerate], int]:
+        """後台用：該伺服器發出的紀錄（不論是否跨群），依 create_time 由新到舊；回傳 (該頁紀錄, 符合條件的總數)。"""
+        conditions = [UserModerate.create_guild == guild_id]
+        if member_id is not None:
+            conditions.append(UserModerate.discord_id == member_id)
+        if kind is not None:
+            conditions.append(UserModerate.moderate_type == kind)
+        total = self.session.exec(select(func.count()).select_from(UserModerate).where(*conditions)).one()
+        stmt = select(UserModerate).where(*conditions).order_by(UserModerate.create_time.desc(), UserModerate.warning_id.desc()).offset(offset).limit(limit)
+        return list(self.session.exec(stmt.execution_options(populate_existing=True)).all()), total
+
     def get_warnings_count(self, discord_id: int, guild_id: int = None):
         if guild_id:
             stmt = select(func.count()).where(UserModerate.discord_id == discord_id, UserModerate.create_guild == guild_id)
