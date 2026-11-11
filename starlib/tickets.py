@@ -74,6 +74,7 @@ _REQUIRED_PERMISSIONS: list[tuple[Literal["category", "lobby_channel"], str, str
     ("category", "manage_channels", "Manage Channels", "無法建立或刪除私人頻道"),
     ("category", "manage_roles", "Manage Roles", "無法設定私人頻道的可見範圍，也無法鎖定、重開"),
     ("lobby_channel", "view_channel", "View Channel", "無法發送或更新大廳訊息"),
+    ("lobby_channel", "read_message_history", "Read Message History", "無法更新或移除大廳訊息"),
     ("lobby_channel", "send_messages", "Send Messages", "無法發送大廳訊息"),
     ("lobby_channel", "embed_links", "Embed Links", "大廳訊息的 embed 無法顯示"),
     ("category", "manage_messages", "Manage Messages", "無法置頂私人頻道的操作訊息"),
@@ -109,7 +110,7 @@ def lobby_channel_permission_issues(
 
 
 def bot_permission_issues(guild: discord.Guild, lobby: LobbyRef) -> list[TicketPermissionIssue]:
-    """bot 缺少的權限，全部具備回空 list；順序固定（分類的 Manage Channels、Manage Roles，大廳頻道的 View、Send、Embed，分類的 Manage Messages）。
+    """bot 缺少的權限，全部具備回空 list；順序固定（分類的 Manage Channels、Manage Roles，大廳頻道的 View、Read Message History、Send、Embed，分類的 Manage Messages）。
 
     分類或大廳頻道已不存在時略過該位置，由 `lobby_invalid_reason` 說明。
     """

@@ -200,6 +200,7 @@
 | Manage Channels | 私人頻道所在分類 | 無法建立或刪除私人頻道 |
 | Manage Roles | 私人頻道所在分類 | 無法設定私人頻道的可見範圍，也無法鎖定、重開 |
 | View Channel | 大廳頻道 | 無法發送或更新大廳訊息 |
+| Read Message History | 大廳頻道 | 無法更新或移除大廳訊息 |
 | Send Messages | 大廳頻道 | 無法發送大廳訊息 |
 | Embed Links | 大廳頻道 | 大廳訊息的 embed 無法顯示 |
 | Manage Messages | 私人頻道所在分類 | 無法置頂私人頻道的操作訊息 |

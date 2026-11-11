@@ -116,12 +116,13 @@ class TestPermissionIssues:
     def test_split_by_target(self):
         guild = FakeGuild()
         category = FakeChannel(1, manage_channels=False, manage_roles=True, manage_messages=False)
-        lobby = FakeChannel(2, view_channel=True, send_messages=False, embed_links=False)
+        lobby = FakeChannel(2, view_channel=True, read_message_history=False, send_messages=False, embed_links=False)
         assert [i.permission for i in category_permission_issues(guild, category)] == [
             "Manage Channels",
             "Manage Messages",
         ]
         assert [i.permission for i in lobby_channel_permission_issues(guild, lobby)] == [
+            "Read Message History",
             "Send Messages",
             "Embed Links",
         ]

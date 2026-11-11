@@ -21,7 +21,7 @@ from starlib.tickets import bot_permission_issues, lobby_invalid_reason
 from starServer.dashboard import tickets
 
 URL = f"/dashboard/guilds/{GUILD_ID}/tickets"
-ALL_CHANNEL_PERMS = dict(view_channel=True, send_messages=True, embed_links=True)
+ALL_CHANNEL_PERMS = dict(view_channel=True, read_message_history=True, send_messages=True, embed_links=True)
 ALL_CATEGORY_PERMS = dict(manage_channels=True, manage_roles=True, manage_messages=True)
 
 # 測試資料用不會與真實資料重疊的大 ID，伺服器也用自己的 ID（GUILD_ID 沒有真實資料）
@@ -358,6 +358,7 @@ class TestBotPermissionIssues:
             (CATEGORY_A, "manage_channels", "Manage Channels", "category", "無法建立或刪除私人頻道"),
             (CATEGORY_A, "manage_roles", "Manage Roles", "category", "無法設定私人頻道的可見範圍，也無法鎖定、重開"),
             (LOBBY_A, "view_channel", "View Channel", "lobby_channel", "無法發送或更新大廳訊息"),
+            (LOBBY_A, "read_message_history", "Read Message History", "lobby_channel", "無法更新或移除大廳訊息"),
             (LOBBY_A, "send_messages", "Send Messages", "lobby_channel", "無法發送大廳訊息"),
             (LOBBY_A, "embed_links", "Embed Links", "lobby_channel", "大廳訊息的 embed 無法顯示"),
             (CATEGORY_A, "manage_messages", "Manage Messages", "category", "無法置頂私人頻道的操作訊息"),
@@ -378,6 +379,7 @@ class TestBotPermissionIssues:
             "Manage Channels",
             "Manage Roles",
             "View Channel",
+            "Read Message History",
             "Send Messages",
             "Embed Links",
             "Manage Messages",

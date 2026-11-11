@@ -46,6 +46,7 @@ ALL_PERMS = dict(
     manage_roles=True,
     manage_messages=True,
     view_channel=True,
+    read_message_history=True,
     send_messages=True,
     embed_links=True,
 )
