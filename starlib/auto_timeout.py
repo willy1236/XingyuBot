@@ -52,14 +52,15 @@ def valid_times(times: int) -> bool:
 
 
 def valid_seconds(seconds: int) -> bool:
-    return AUTO_TIMEOUT_SECONDS_RANGE[0] <= seconds <= AUTO_TIMEOUT_SECONDS_RANGE[1]
+    """自動禁言時長：1 分鐘到 7 天，且為整分鐘（網頁只提供分鐘以上的單位，兩邊才一致）。"""
+    return AUTO_TIMEOUT_SECONDS_RANGE[0] <= seconds <= AUTO_TIMEOUT_SECONDS_RANGE[1] and seconds % 60 == 0
 
 
 _DURATION = re.compile(r"(\d+[dhms])+")
 
 
 def parse_duration(text: str) -> int | None:
-    """解析 `/timeout` 同格式的時長（如 30s、1h20m、7d）成秒數；格式錯誤或超出自動禁言範圍回 None。"""
+    """解析 `/timeout` 同格式的時長（如 30s、1h20m、7d）成秒數；格式錯誤、不是整分鐘或超出自動禁言範圍回 None。"""
     text = text.strip().lower()
     if not _DURATION.fullmatch(text):
         return None

@@ -611,7 +611,7 @@ class moderation(Cog_Extension):
         if duration is not None:
             seconds = auto_timeout_module.parse_duration(duration)
             if seconds is None:
-                await ctx.respond("錯誤：禁言時長格式錯誤，需為 1 分鐘到 7 天，例如 30m、1h20m", ephemeral=True)
+                await ctx.respond("錯誤：禁言時長格式錯誤，需為整分鐘、1 分鐘到 7 天，例如 30m、1h20m", ephemeral=True)
                 return
             values["auto_timeout_seconds"] = seconds
         if voice_time_counter is not None:

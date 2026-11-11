@@ -551,7 +551,7 @@ class Post(AlchemyBasicSchema):
 AUTO_TIMEOUT_DEFAULT_TIMES = 3
 AUTO_TIMEOUT_DEFAULT_SECONDS = 600
 AUTO_TIMEOUT_TIMES_RANGE = (1, 20)
-AUTO_TIMEOUT_SECONDS_RANGE = (60, 7 * 24 * 3600)
+AUTO_TIMEOUT_SECONDS_RANGE = (60, 7 * 24 * 3600)  # 須為整分鐘
 
 
 class GuildSetting(GuildsSchema, table=True):

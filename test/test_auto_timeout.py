@@ -79,7 +79,7 @@ class TestSettingHelpers:
 
     @pytest.mark.parametrize(
         "text,seconds",
-        [("10m", 600), ("1h20m", 4800), ("30s", None), ("59s", None), ("60s", 60), ("7d", 604800), ("8d", None), ("10", None), ("abc", None), ("", None), ("5m3", None)],
+        [("10m", 600), ("1h20m", 4800), ("30s", None), ("59s", None), ("60s", 60), ("90s", None), ("1m30s", None), ("7d", 604800), ("8d", None), ("10", None), ("abc", None), ("", None), ("5m3", None)],
     )
     def test_parse_duration(self, text, seconds):
         assert auto_timeout.parse_duration(text) == seconds

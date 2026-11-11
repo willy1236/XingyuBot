@@ -94,7 +94,7 @@ def test_disable_auto_timeout(env):
     assert "關閉" in fields(respond)["自動禁言"]
 
 
-@pytest.mark.parametrize("duration", ["10", "abc", "30s", "8d", "5m3"])
+@pytest.mark.parametrize("duration", ["10", "abc", "30s", "8d", "5m3", "90s", "1m30s"])
 def test_invalid_duration_is_rejected_without_writing(env, duration):
     respond = call(env, voice=True, duration=duration)
     assert "時長格式錯誤" in respond.call_args.args[0] and respond.call_args.kwargs["ephemeral"] is True
