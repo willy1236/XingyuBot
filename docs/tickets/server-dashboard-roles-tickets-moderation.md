@@ -736,7 +736,8 @@ flowchart LR
 - 已完成：`ensure_guild_available`（access.py，tickets `_read` 改用）；`TicketRepository` 的大廳寫入函式與 `get_all_ticket_lobbys` 過濾 `removed_at`（client.py）
 - 已完成：`starlib/tickets.py` 的純邏輯（前綴正規化、預設內容、`build_ticket_overwrites`、套用管理身分組、權限檢查拆分）
 - 已完成：`TicketLobbyView` 帶按鈕文字與 emoji、`bot_event.py` 帶入；`starDiscord/ticket_lobby.py` 的 `save_lobby`、`remove_lobby`
-- 續做：`starServer/dashboard/tickets.py` 的 options、GET 詳細、POST、PUT、DELETE 端點與測試
+- 已完成：`starServer/dashboard/tickets.py` 的 options、GET 詳細、POST、PUT、DELETE 端點與測試（後端全部完成）
+- 續做：前端（domalyze_frontend `feat/dashboard-p02`）：`lib/dashboard-tickets.ts` 的 API 與型別、多選身分組元件、`ticket-lobby-form.tsx`、`ticket-lobby-manager.tsx`、tickets 頁面改接
 
 ### P-03 成員開單時套用大廳的命名、限制與可見範圍
 

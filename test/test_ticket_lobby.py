@@ -177,7 +177,7 @@ def add_ticket(env, cid, *, closed=False, saved=None):
     env.repo.merge(
         TicketChannel(
             channel_id=cid,
-            guild_id=GUILD_ID,
+            guild_id=env.guild.id,
             creator_id=7,
             created_at=CREATED,
             closed_at=CREATED if closed else None,
