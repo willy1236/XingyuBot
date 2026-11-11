@@ -15,7 +15,7 @@ from test_identity import repo  # noqa: F401  (fixture)
 from starlib import auto_timeout, moderation
 from starlib.database import GuildSetting, UserModerate, WarningType
 from starlib.moderation import punish, register_after_warning
-from starlib.utils import nowtz
+from starlib.utils import format_seconds, nowtz
 
 GUILD_ID = 910000000000000001
 TARGET = 910000000000000002
@@ -86,7 +86,7 @@ class TestSettingHelpers:
 
     @pytest.mark.parametrize("seconds,text", [(600, "10 分鐘"), (5400, "1 小時 30 分鐘"), (604800, "7 天"), (0, "0 秒")])
     def test_format_seconds(self, seconds, text):
-        assert auto_timeout.format_seconds(seconds) == text
+        assert format_seconds(seconds) == text
 
     @pytest.mark.parametrize("times,ok", [(0, False), (1, True), (20, True), (21, False)])
     def test_valid_times(self, times, ok):

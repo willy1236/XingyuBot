@@ -14,7 +14,7 @@ from starlib.dynamic_voice import lobby_permission_issues
 from starlib.instance import debug_guilds
 from starlib.message_content import from_json, from_message, to_json
 from starlib.moderation import PunishResult, announcement, audit_reason, delete_recent_messages, punish
-from starlib.utils import nowtz, time_to_datetime
+from starlib.utils import format_seconds, nowtz, time_to_datetime
 
 from ..extension import Cog_Extension
 from ..uiElement.modal import RuleMessageModal
@@ -638,7 +638,7 @@ class moderation(Cog_Extension):
         embed.add_field(name="語音時數統計", value="開啟" if row is not None and row.voice_time_counter else "關閉")
         embed.add_field(
             name="自動禁言",
-            value=f"警告累計 {auto.times} 次禁言 {auto_timeout_module.format_seconds(auto.seconds)}" if auto.enabled else f"關閉（啟用時為累計 {auto.times} 次禁言 {auto_timeout_module.format_seconds(auto.seconds)}）",
+            value=f"警告累計 {auto.times} 次禁言 {format_seconds(auto.seconds)}" if auto.enabled else f"關閉（啟用時為累計 {auto.times} 次禁言 {format_seconds(auto.seconds)}）",
             inline=False,
         )
         issue = auto_timeout_module.moderate_members_issue(ctx.guild)

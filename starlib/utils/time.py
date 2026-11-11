@@ -155,3 +155,13 @@ def time_to_datetime(arg: str):
                 seconds = m
             m = ""
     return timedelta(days=days, hours=hours, minutes=minutes, seconds=seconds)
+
+
+def format_seconds(seconds: int) -> str:
+    """秒數轉成中文時長，例如 600 → 10 分鐘、5400 → 1 小時 30 分鐘。"""
+    parts = []
+    for unit, size in (("天", 86400), ("小時", 3600), ("分鐘", 60), ("秒", 1)):
+        count, seconds = divmod(seconds, size)
+        if count:
+            parts.append(f"{count} {unit}")
+    return " ".join(parts) or "0 秒"

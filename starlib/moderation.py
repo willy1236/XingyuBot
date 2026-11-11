@@ -13,7 +13,7 @@ import discord
 
 from starlib.database import WarningType
 from starlib.pubsub import sclient
-from starlib.utils import BotEmbed, nowtz
+from starlib.utils import BotEmbed, format_seconds, nowtz
 
 log = logging.getLogger(__name__)
 
@@ -177,6 +177,13 @@ async def punish(
     return result
 
 
+def auto_timeout_text(auto: AutoTimeoutResult) -> str:
+    """自動禁言結果的說明（公告與指令回覆共用）：成功寫中文時長，失敗寫原因。"""
+    if not auto.ok:
+        return f"失敗：{auto.error}"
+    return f"已禁言 {format_seconds(int(auto.duration.total_seconds()))}" if auto.duration is not None else "已禁言"
+
+
 def announcement(result: PunishResult, target: discord.User | discord.Member, actor: discord.Member | discord.User) -> dict:
     """產生公告訊息的 send 參數：@ 對象加上含紀錄編號的警告單 embed。"""
     embed = None
@@ -191,9 +198,7 @@ def announcement(result: PunishResult, target: discord.User | discord.Member, ac
     if result.deleted_summary:
         embed.add_field(name="訊息刪除", value=result.deleted_summary, inline=False)
     if result.auto_timeout is not None:
-        auto = result.auto_timeout
-        value = f"已禁言 {auto.duration}" if auto.ok else f"失敗：{auto.error}"
-        embed.add_field(name="自動禁言", value=value, inline=False)
+        embed.add_field(name="自動禁言", value=auto_timeout_text(result.auto_timeout), inline=False)
 
     return {
         "content": target.mention,
