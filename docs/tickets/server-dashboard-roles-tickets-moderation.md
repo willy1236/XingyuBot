@@ -816,12 +816,15 @@ flowchart LR
 - [ ] 已離開的成員顯示「已離開的成員」。
 
 **實作設計**
-- 資料：`GuildSettingRepository` 新增 `update_guild_setting_if(guild_id, original, values)` 與 `insert_guild_setting`；寫入後呼叫 `refresh_voice_time_counter_cache`。`get_voice_time_leaderboard` 呼叫時給 limit 20。
+- 資料：`GuildSettingRepository` 新增 `update_guild_setting_if(guild_id, original, values)`、`insert_guild_setting` 與 `get_guild_setting_fresh`；寫入後呼叫 `refresh_voice_time_counter_cache`。`get_voice_time_leaderboard` 呼叫時給 limit 20。
+  - `voice_time_counter` 在資料庫可為 NULL，也可能沒有設定列，一律視為 False：GET 回 false；`update_guild_setting_if` 對這個欄位用 `coalesce(voice_time_counter, false)` 比對；沒有設定列時，`original` 為 false 走 `insert_guild_setting`，撞主鍵或 `original` 為 true 都回 409 `conflict`。PUT 只更新 body 帶的欄位，不覆蓋 `timeout_after_warning_times`。
 - 後端：新增 `starServer/dashboard/settings.py`：
   - `GET /dashboard/guilds/{id}/settings` 回 `{ voice_time_counter, leaderboard:[{member, minutes}] }`，B-02 會加上自動禁言欄位。
+    - `member` 沿用 G-01 參與者格式 `{ id, name, avatar_url, left }`，`left` 為 true 時前端顯示「已離開的成員」；`minutes` 是總分鐘數的整數。
+    - 時數每 30 分鐘才由 `save_voice_time` 寫入資料庫，所以排行榜要併入 `starDiscord/cmds/task.py` 的 `voice_times[guild_id]`（尚未存檔的分鐘）：在 `on_guild`（bot loop，與 `add_voice_time`、`save_voice_time` 同一個 loop）內讀資料庫前 20 名，加上有未存檔分鐘的成員（用 `get_voice_times` 補讀他們的資料庫時數），合併後重新排序取前 20。整段沒有 await，所以不會與存檔交錯而重複或漏算。不改 `add_voice_time`、`save_voice_time` 的排程與寫入邏輯。
   - `PUT /dashboard/guilds/{id}/settings`：body `{ values, original }`。
   - 權限 `require_section(settings)`。
-- 前端：新增 `app/dashboard/guilds/[id]/settings/page.tsx`、`components/dashboard/settings-section.tsx`（保留放自動禁言表單的插槽）、`lib/dashboard-settings.ts`。`guild-nav` 的 settings 改成 `ready: true`。
+- 前端：新增 `app/dashboard/guilds/[id]/settings/page.tsx`、`components/dashboard/settings-section.tsx`（保留放自動禁言表單的插槽）、`lib/dashboard-settings.ts`。`lib/dashboard-sections.ts` 的 `NAV_ITEMS` 把 settings 改成 `ready: true`，並同步 `lib/dashboard-sections.test.ts` 的預期清單。
 
 **依賴**：S-01（區塊權限與導覽）
 
