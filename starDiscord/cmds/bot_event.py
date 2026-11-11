@@ -171,9 +171,9 @@ class event(Cog_Extension):
             if message:
                 bot.add_view(TicketLobbyView(channel.id), message_id=lobby.message_id)
                 log.debug("Loaded ticket lobby", extra={"channel_id": lobby.channel_id})
-            elif not debug_mode:
-                sclient.sqldb.delete_ticket_lobby(lobby.channel_id)
-                log.debug("Deleted ticket lobby", extra={"channel_id": lobby.channel_id})
+            else:
+                # 大廳頻道不在了：保留紀錄，後台會標示失效，由管理員重新選頻道或移除大廳
+                log.warning("Ticket lobby channel not found", extra={"channel_id": lobby.channel_id})
 
         # 私人頻道
         active_tickets = sclient.sqldb.get_active_ticket_channels()
