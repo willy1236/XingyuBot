@@ -983,7 +983,8 @@ class DynamicVoiceRepository(BaseRepository):
 
 class TicketRepository(BaseRepository):
     def get_all_ticket_lobbys(self):
-        stmt = select(TicketChannelLobby)
+        """bot 啟動載入開單 view 用：不含已移除的大廳。"""
+        stmt = select(TicketChannelLobby).where(TicketChannelLobby.removed_at.is_(None))
         result = self.session.exec(stmt).all()
         return result
 
@@ -1050,6 +1051,139 @@ class TicketRepository(BaseRepository):
     def set_ticket_channel_lobby(self, channel_id: int, lobby_channel_id: int) -> None:
         """回填腳本用：寫入私人頻道所屬的大廳。"""
         self.session.exec(update(TicketChannel).where(TicketChannel.channel_id == channel_id).values(lobby_channel_id=lobby_channel_id))
+        self.session.commit()
+
+
+    # ====== 後台：大廳寫入（P-02） ======
+    def get_ticket_lobby_snapshot(self, channel_id: int) -> dict | None:
+        """大廳目前的設定（含已移除的），不綁 session；不存在回 None。`manager_role_ids` 依 role_id 排序。"""
+        lobby = self.session.exec(
+            select(TicketChannelLobby).where(TicketChannelLobby.channel_id == channel_id).execution_options(populate_existing=True)
+        ).one_or_none()
+        if lobby is None:
+            return None
+        roles = self.session.exec(
+            select(TicketLobbyManagerRole.role_id).where(TicketLobbyManagerRole.lobby_channel_id == channel_id).order_by(TicketLobbyManagerRole.role_id)
+        ).all()
+        return {
+            "channel_id": lobby.channel_id,
+            "guild_id": lobby.guild_id,
+            "message_id": lobby.message_id,
+            "category_id": lobby.category_id,
+            "ticket_category_id": lobby.ticket_category_id,
+            "name_prefix": lobby.name_prefix,
+            "one_per_user": lobby.one_per_user,
+            "max_open": lobby.max_open,
+            "next_number": lobby.next_number,
+            "content_json": lobby.content_json,
+            "button_label": lobby.button_label,
+            "button_emoji": lobby.button_emoji,
+            "removed_at": lobby.removed_at,
+            "manager_role_ids": list(roles),
+        }
+
+    def _replace_lobby_manager_roles(self, lobby_channel_id: int, role_ids: list[int]) -> None:
+        self.session.exec(delete(TicketLobbyManagerRole).where(TicketLobbyManagerRole.lobby_channel_id == lobby_channel_id))
+        for role_id in sorted(set(role_ids)):
+            self.session.add(TicketLobbyManagerRole(lobby_channel_id=lobby_channel_id, role_id=role_id))
+
+    def insert_ticket_lobby(self, values: dict, manager_role_ids: list[int]) -> bool:
+        """新增大廳與管理身分組。`values` 含 `channel_id`、`guild_id`、`message_id`、`category_id` 與各設定欄位，不含 `next_number`。
+
+        同頻道有已移除的列時覆寫它並清掉 `removed_at`，保留 `next_number`（流水號不回收）；已有還在使用的大廳回 False，什麼都不寫。
+        """
+        try:
+            row = self.session.get(TicketChannelLobby, values["channel_id"], populate_existing=True)
+            if row is not None and row.removed_at is None:
+                self.session.rollback()
+                return False
+            if row is None:
+                self.session.add(TicketChannelLobby(**values))
+            else:
+                for key, value in values.items():
+                    setattr(row, key, value)
+                row.removed_at = None
+            self._replace_lobby_manager_roles(values["channel_id"], manager_role_ids)
+            self.session.commit()
+        except IntegrityError:
+            self.session.rollback()
+            return False
+        return True
+
+    def update_ticket_lobby_if(self, channel_id: int, original: dict, values: dict, manager_role_ids: list[int] | None = None) -> bool:
+        """大廳目前的欄位都等於 `original` 才更新（一個 UPDATE 判斷，不會覆蓋同時的修改）；`manager_role_ids` 不為 None 時同一交易換掉管理身分組。
+
+        已移除、不存在或有欄位不同回 False，什麼都不寫。
+        """
+        conditions = [TicketChannelLobby.channel_id == channel_id, TicketChannelLobby.removed_at.is_(None)]
+        for key, value in original.items():
+            column = getattr(TicketChannelLobby, key)
+            conditions.append(column.is_(None) if value is None else column == value)
+        result = self.session.exec(update(TicketChannelLobby).where(*conditions).values(**values))
+        if result.rowcount != 1:
+            self.session.rollback()
+            return False
+        if manager_role_ids is not None:
+            self._replace_lobby_manager_roles(channel_id, manager_role_ids)
+        self.session.commit()
+        return True
+
+    def set_lobby_manager_roles(self, channel_id: int, role_ids: list[int]) -> None:
+        self._replace_lobby_manager_roles(channel_id, role_ids)
+        self.session.commit()
+
+    def mark_lobby_removed(self, channel_id: int) -> bool:
+        """標記大廳已移除；原本就不在使用中回 False。"""
+        result = self.session.exec(
+            update(TicketChannelLobby)
+            .where(TicketChannelLobby.channel_id == channel_id, TicketChannelLobby.removed_at.is_(None))
+            .values(removed_at=nowtz())
+        )
+        self.session.commit()
+        return result.rowcount == 1
+
+    def unassign_lobby_tickets(self, channel_id: int) -> None:
+        """大廳底下的私人頻道改為未歸屬。"""
+        self.session.exec(update(TicketChannel).where(TicketChannel.lobby_channel_id == channel_id).values(lobby_channel_id=None))
+        self.session.commit()
+
+    def move_ticket_lobby(self, old_channel_id: int, new_channel_id: int, values: dict, manager_role_ids: list[int]) -> bool:
+        """大廳換到另一個頻道（原頻道被刪除時重新選頻道）：同一交易搬主鍵、管理身分組與底下私人頻道的歸屬，保留 `next_number`。
+
+        `values` 是要寫入的欄位（不含 `channel_id`、`guild_id`、`next_number`）。新頻道已有還在使用的大廳、或原大廳不在使用中回 False；
+        新頻道上有已移除的舊列則刪掉它。
+        """
+        old = self.session.exec(select(TicketChannelLobby).where(TicketChannelLobby.channel_id == old_channel_id)).one_or_none()
+        if old is None or old.removed_at is not None:
+            self.session.rollback()
+            return False
+        target = self.session.exec(select(TicketChannelLobby).where(TicketChannelLobby.channel_id == new_channel_id)).one_or_none()
+        if target is not None and target.removed_at is None:
+            self.session.rollback()
+            return False
+        try:
+            if target is not None:
+                self.session.exec(delete(TicketChannelLobby).where(TicketChannelLobby.channel_id == new_channel_id))
+            self.session.exec(update(TicketChannelLobby).where(TicketChannelLobby.channel_id == old_channel_id).values(channel_id=new_channel_id, **values))
+            self.session.exec(delete(TicketLobbyManagerRole).where(TicketLobbyManagerRole.lobby_channel_id.in_([old_channel_id, new_channel_id])))
+            for role_id in sorted(set(manager_role_ids)):
+                self.session.add(TicketLobbyManagerRole(lobby_channel_id=new_channel_id, role_id=role_id))
+            self.session.exec(update(TicketChannel).where(TicketChannel.lobby_channel_id == old_channel_id).values(lobby_channel_id=new_channel_id))
+            self.session.commit()
+        except IntegrityError:
+            self.session.rollback()
+            return False
+        return True
+
+    def list_lobby_ticket_channels(self, lobby_channel_id: int) -> list[TicketChannel]:
+        """大廳底下還有紀錄的私人頻道（含已鎖定）。"""
+        stmt = select(TicketChannel).where(TicketChannel.lobby_channel_id == lobby_channel_id).order_by(TicketChannel.channel_id).execution_options(populate_existing=True)
+        return list(self.session.exec(stmt).all())
+
+    def set_ticket_locked_overwrites(self, updates: dict[int, str]) -> None:
+        """寫入私人頻道鎖定前的覆寫（JSON）。"""
+        for channel_id, value in updates.items():
+            self.session.exec(update(TicketChannel).where(TicketChannel.channel_id == channel_id).values(locked_overwrites_json=value))
         self.session.commit()
 
 
