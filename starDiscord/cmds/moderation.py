@@ -600,6 +600,7 @@ class moderation(Cog_Extension):
             TicketChannelLobby(
                 channel_id=channel.id,
                 category_id=category.id,
+                ticket_category_id=category.id,
                 guild_id=channel.guild.id,
                 message_id=msg.id,
             )
