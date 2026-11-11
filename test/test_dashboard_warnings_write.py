@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
@@ -333,3 +334,49 @@ class TestMemberSearchFlagsBots:
         assert [(m["id"], m["bot"]) for m in found] == [(str(BOT_USER), True)]
         found = client.get(f"{URL}/member-search", params={"q": "alice"}).json()["members"]
         assert [(m["id"], m["bot"]) for m in found] == [(str(ALICE), False)]
+
+
+class TestRemove:
+    def _add(self, client, guild_id=GUILD_ID, kind=WarningType.Ban) -> int:
+        return client.repo.add_warning(ALICE, kind, ME, guild_id, datetime.now(UTC), "理由")
+
+    def _delete(self, client, warning_id: int):
+        return client.delete(f"{URL}/{warning_id}", headers={"Origin": FRONTEND})
+
+    @pytest.mark.parametrize("bit", [KICK, BAN, MANAGE_MESSAGES])
+    def test_any_of_three_permissions_can_remove(self, client, bit):
+        client.discord_env.guilds = [g(str(GUILD_ID), "guild", bit)]
+        wid = self._add(client)
+        response = self._delete(client, wid)
+        assert response.status_code == 200
+        assert response.json() == {"ok": True}
+        assert client.repo.get_warning(wid) is None
+
+    def test_without_any_of_them_is_403(self, client):
+        client.discord_env.guilds = [g(str(GUILD_ID), "guild", MODERATE | 0x10)]
+        wid = self._add(client)
+        response = self._delete(client, wid)
+        assert response.status_code == 403
+        assert response.json()["error"] == "no_permission"
+        assert client.repo.get_warning(wid) is not None
+
+    def test_other_guild_record_is_403_and_kept(self, client):
+        wid = self._add(client, guild_id=GUILD_ID + 1)
+        response = self._delete(client, wid)
+        assert response.status_code == 403
+        assert response.json()["error"] == "not_this_guild"
+        assert client.repo.get_warning(wid) is not None
+
+    def test_missing_record_is_ok_already(self, client):
+        wid = self._add(client)
+        assert self._delete(client, wid).json() == {"ok": True}
+        response = self._delete(client, wid)
+        assert response.status_code == 200
+        assert response.json() == {"ok": True, "already": True}
+
+    def test_removing_ban_does_not_touch_discord(self, client):
+        wid = self._add(client)
+        self._delete(client, wid)
+        client.guild.unban.assert_not_called()
+        for m in client.guild.by_id.values():
+            m.timeout_for.assert_not_called()

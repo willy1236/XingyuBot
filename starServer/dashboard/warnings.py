@@ -4,6 +4,7 @@ GET /dashboard/guilds/{id}/warnings/members/{user_id}         成員的跨群紀
 GET /dashboard/guilds/{id}/warnings/member-search?q=          以名稱或 ID 搜尋本伺服器成員，最多 25 位
 GET /dashboard/guilds/{id}/warnings/options                   可公告的文字頻道
 POST /dashboard/guilds/{id}/warnings                          警告、禁言、踢出、停權，權限依種類
+DELETE /dashboard/guilds/{id}/warnings/{warning_id}           移除本伺服器發出的紀錄，不連帶解除禁言或停權
 
 讀取一律經 `require_section(Section.WARNINGS)`。紀錄以資料庫為準，Discord 只用來補名稱與頭像。
 """
@@ -364,3 +365,20 @@ async def create_punishment(guild_id: int, body: PunishBody, info: SessionInfo =
         return {"result": _result(result), "announce_error": announce_error}
 
     return await on_guild_async(guild_id, _run)
+
+
+@router.delete("/guilds/{guild_id}/warnings/{warning_id}")
+async def remove_warning(warning_id: int, guild_id: int = Depends(require_section(Section.WARNINGS, "remove"))):
+    """移除本伺服器發出的紀錄；只刪資料，不解除已執行的禁言或停權。紀錄已不存在視為成功。"""
+
+    def _remove() -> bool:
+        row = sqldb.get_warning(warning_id)
+        if row is None:
+            return False
+        if row.create_guild != guild_id:
+            raise DashboardError(403, "not_this_guild")
+        sqldb.remove_warning(warning_id)
+        return True
+
+    removed = await run_db(_remove)
+    return {"ok": True} if removed else {"ok": True, "already": True}
