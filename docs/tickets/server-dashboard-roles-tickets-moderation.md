@@ -679,6 +679,10 @@ flowchart LR
   - 前端 vitest 277 項、`tsc --noEmit`、ESLint、`next build` 通過。
   - 本機 DB（`localhost`）已執行本卡 ALTER；既有的一個測試版大廳讀回 `ticket_category_id` 等於 `category_id`、前綴 `ticket`、每人一張、無上限。回填腳本對本機 DB 跑過 `--dry-run`（所列 6 個私人頻道在 Discord 都已不存在，全部略過，沒有寫入）。
   - 勾選的驗收條件依 API 與 render 測試；「刪掉大廳頻道後重啟 bot」與「依分類歸屬」需人工驗證。
+- 審查：dev-review 第 1 輪（範圍 main..feat/dashboard-p01），修正：
+  - blocking：伺服器 unavailable 時頻道快取是空的，GET 會把該伺服器全部私人頻道紀錄當成已刪除。`starServer/dashboard/tickets.py` 的 `_read` 在 `guild.unavailable` 時回 503 `guild_unavailable`，不刪紀錄也不回傳誤標失效的清單。
+  - non-blocking：`LobbyRef` Protocol 成員改 `@property`；大廳訊息檢查改 `asyncio.gather` 並行；回填腳本只讀該 bot 所在伺服器的紀錄，輸出帶伺服器 ID。
+  - 未修：兩條 nitpick（`role="status"` 用在靜態內容、`categoryText` 對非分類頻道仍顯示名稱）與兩條 note（`bot_event` 的 `get_all_ticket_lobbys` 不過濾 `removed_at` 留給 P-02）。
 - 未驗：
   - `bot_event.py` 的 `on_ready` 不再刪大廳紀錄（沒有自動測試，需真的重啟 bot）。
   - 回填腳本對真實存在的頻道歸屬（本機的私人頻道在 Discord 都已刪除）、正式環境的 ALTER 與回填。
