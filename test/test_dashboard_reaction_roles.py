@@ -57,6 +57,8 @@ class FakeChannel:
         return SimpleNamespace(**self.perms)
 
     async def fetch_message(self, mid: int):
+        if getattr(self, "fetch_error", None) is not None:
+            raise self.fetch_error
         if self.forbidden:
             raise discord.Forbidden(SimpleNamespace(status=403, reason="Forbidden"), "missing access")
         if mid not in self.messages:

@@ -1098,15 +1098,15 @@ class RoleSaveRepository(BaseRepository):
         new_id: int,
         content_json: str | None = None,
         keep_role_ids: list[int] | None = None,
-    ) -> None:
+    ) -> bool:
         """重新發送後，同一個交易內把訊息紀錄與按鈕換成新訊息。
 
         keep_role_ids 不為 None 時，只保留這些身分組的按鈕（略過的失效按鈕刪除），position 依清單順序重編；
-        content_json 為 None 時保留原本存的內容。紀錄不存在時什麼都不做。
+        content_json 為 None 時保留原本存的內容。紀錄不存在時什麼都不做；回傳是否有移動。
         """
         row = self.session.exec(select(ReactionRoleMessage).where(ReactionRoleMessage.message_id == old_id)).one_or_none()
         if row is None:
-            return
+            return False
         content = content_json if content_json is not None else row.content_json
         self.session.exec(
             update(ReactionRoleMessage)
@@ -1125,6 +1125,7 @@ class RoleSaveRepository(BaseRepository):
                 )
         self.session.exec(update(ReactionRoleOption).where(ReactionRoleOption.message_id == old_id).values(message_id=new_id))
         self.commit()
+        return True
 
     def set_reaction_role_content(self, message_id: int, content_json: str) -> bool:
         """只在 content_json 為 null 時寫入（上線回填用）；回傳是否有寫入。"""

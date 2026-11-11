@@ -388,6 +388,12 @@ class TestDetail:
         assert gone["role"] == {"id": str(ROLE_GONE), "name": None, "invalid": True} and gone["locked"] is False
         assert emoji["emoji_invalid"] is True
 
+    def test_locked_reason_is_operator_rank_when_role_also_above_bot(self, client):
+        seed(client, 900, [btn(ROLE_ABOVE, "管理")], content=MessageContent(content="x"))
+        (button,) = client.get(f"{URL}/900").json()["buttons"]
+        assert button["locked"] is True
+        assert button["locked_reason"] == "只能設定低於你最高身分組的身分組"
+
     def test_not_found_or_other_guild(self, client):
         assert client.get(f"{URL}/12345").status_code == 404
         seed(client, 900, [btn(ROLE_OK)], content=MessageContent(content="x"))
@@ -715,6 +721,25 @@ class TestUpdate:
         # 刪除
         assert put(client, 900, [btn(ROLE_OK, "活動")]).status_code == 200
         assert [b["role_id"] for b in client.repo.messages[900]["buttons"]] == [ROLE_OK]
+
+    def test_command_button_without_style_round_trips_as_unchanged(self, client):
+        # /reactrole add 沒指定樣式時 DB 為 None；網頁表單載入時顯示成 1 並原樣送回，不能算有變動
+        seed(
+            client,
+            900,
+            [btn(ROLE_GONE, "已刪除", None, None), btn(ROLE_HIGH, "幹部", None, None), btn(ROLE_OK, "活動", None, None)],
+            content=OLD,
+        )
+        orig = original(client, 900)
+        assert [b["style"] for b in orig["buttons"]] == [None, None, None]
+        same = [btn(ROLE_GONE, "已刪除", None, 1), btn(ROLE_HIGH, "幹部", None, 1), btn(ROLE_OK, "活動", None, 1)]
+        r = put(client, 900, same, {"content": "只改內容", "embed": None}, orig=orig)
+        assert r.status_code == 200, r.text
+        # 失效與高位階按鈕都沒被當成修改；之後只刪別顆也一樣
+        assert put(client, 900, same[:2]).status_code == 200
+        # 真的改樣式仍會被擋
+        r = put(client, 900, [btn(ROLE_HIGH, "幹部", None, 3)])
+        assert r.status_code == 400 and r.json()["error"] == "locked_button"
 
     def test_owner_can_modify_high_button(self, client):
         client.guild.owner_id = ACTOR_ID

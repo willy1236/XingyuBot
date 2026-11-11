@@ -51,7 +51,9 @@ class DeleteRepo(FakeRepo):
         self.moves.append((old_id, new_channel_id, new_id, content_json, keep_role_ids))
         if self.fail_move:
             raise RuntimeError("db down")
-        m = self.messages.pop(old_id)
+        m = self.messages.pop(old_id, None)
+        if m is None:
+            return False
         m["channel_id"] = new_channel_id
         if content_json is not None:
             m["content_json"] = content_json
@@ -59,6 +61,7 @@ class DeleteRepo(FakeRepo):
             by_role = {b["role_id"]: b for b in m["buttons"]}
             m["buttons"] = [by_role[r] for r in keep_role_ids]
         self.messages[new_id] = m
+        return True
 
 
 @pytest.fixture
@@ -313,6 +316,36 @@ class TestResend:
         assert r.status_code == 400 and r.json()["error"] == "message_exists"
         assert client.guild.other_channel.sent == [] and 900 in client.repo.messages
 
+    def test_message_unreadable_forbidden_is_bot_missing_permission(self, client):
+        seed(client, 900, [btn(ROLE_OK)], content=CONTENT)
+        client.guild.channel.forbidden = True
+        r = resend(client, 900, 502)
+        assert r.status_code == 400 and r.json()["error"] == "bot_missing_permission"
+        assert r.json()["fields"][0]["path"] == "channel_id"
+        assert client.guild.other_channel.sent == [] and 900 in client.repo.messages
+
+    def test_message_unreadable_http_error_is_discord_error(self, client):
+        seed(client, 900, [btn(ROLE_OK)], content=CONTENT)
+        client.guild.channel.fetch_error = http_error(500)
+        r = resend(client, 900, 502)
+        assert r.status_code == 502 and r.json()["error"] == "discord_error"
+        assert client.guild.other_channel.sent == [] and 900 in client.repo.messages
+
+    def test_record_removed_concurrently_deletes_new_message(self, client):
+        self.seed_gone(client)
+        original_move = client.repo.move_reaction_role_message
+
+        def removed_first(*args, **kwargs):
+            client.repo.messages.pop(900)  # 另一位管理員先移除了紀錄
+            return original_move(*args, **kwargs)
+
+        client.repo.move_reaction_role_message = removed_first
+        r = resend(client, 900, 502)
+        assert r.status_code == 409
+        assert r.json()["error"] == "conflict" and r.json()["deleted"] is True
+        assert client.guild.other_channel.sent[0].deleted is True
+        assert client.repo.messages == {}
+
     def test_unknown_record_404(self, client):
         assert resend(client, 12345, 502).status_code == 404
 
@@ -364,7 +397,7 @@ class TestMoveRepository:
     def test_moves_message_and_options_in_one_transaction(self, repo):  # noqa: F811
         old, new = 8_810_000_000_000_100, 8_810_000_000_000_101
         repo.replace_reaction_role_message(R_GUILD, R_CHANNEL, old, "舊內容", [option(old, 1, "a"), option(old, 2, "b"), option(old, 3, "c")])
-        repo.move_reaction_role_message(old, R_CHANNEL + 1, new)
+        assert repo.move_reaction_role_message(old, R_CHANNEL + 1, new) is True
         assert repo.get_reaction_role_snapshot(old) is None
         assert repo.get_reaction_roles_by_message(old) == []
         snap = repo.get_reaction_role_snapshot(new)
@@ -403,7 +436,7 @@ class TestMoveRepository:
         assert repo.get_reaction_role_snapshot(taken)["content_json"] == "b"
 
     def test_unknown_message_is_noop(self, repo):  # noqa: F811
-        repo.move_reaction_role_message(8_810_000_000_000_600, R_CHANNEL, 8_810_000_000_000_601)
+        assert repo.move_reaction_role_message(8_810_000_000_000_600, R_CHANNEL, 8_810_000_000_000_601) is False
         assert repo.get_reaction_role_snapshot(8_810_000_000_000_601) is None
 
     def test_set_reaction_role_content_only_when_null(self, repo):  # noqa: F811

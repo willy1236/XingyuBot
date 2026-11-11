@@ -440,6 +440,7 @@ flowchart LR
   - 「沒有任何反應身分組時顯示說明」、360px 與實際畫面（無瀏覽器驗證，只過 render 測試）；ESLint 未執行。
   - `test/test_dashboard_*.py` 全跑有 8 項失敗（`test_dashboard_auth.py` 6 項、`test_dashboard_invite.py` 2 項，登入與邀請 callback），在 `main` 上同樣失敗，與本卡無關：本機庫有既存的 session／身分資料（`MultipleResultsFound`、ID 不符）。
 - 備註：`/reactrole add` 新增的按鈕「排在最後」與 `moderation.py` 以位置參數建構 `ReactionRoleMessage`／`ReactionRoleOption`（`AlchemyBasicSchema` 是 kw_only dataclass，會 TypeError）兩件事，已在 R-02 處理。
+- 審查：dev-review 一輪（範圍 main..feat/dashboard-r04），無與本卡相關的問題
 
 ### R-02 管理員能發新的反應身分組訊息，並編輯按鈕與內容
 
@@ -503,6 +504,9 @@ flowchart LR
   - `/reactrole add`、`/reactrole editmessage` 的指令流程沒有自動化測試，只過 import 與靜態檢查。
   - ESLint 設定載入時出錯（`Converting circular structure to JSON`，既有問題），lint 未執行。
   - 最後一次寫入（DB）與 Discord 編輯之間的競態沒有鎖：衝突比對在編輯 Discord 之前，兩個管理員幾乎同時存檔仍可能互相覆蓋，與其他區塊的 `check_conflict` 做法相同。
+- 審查：dev-review 一輪（範圍 main..feat/dashboard-r04），blocking 1 條
+  - 已修（blocking）：用指令建立、沒指定樣式的按鈕（DB 為 None）在網頁往返被當成有變動，失效按鈕與高位階按鈕會擋住整次存檔（XingyuBot `fix/dashboard-r-review1`（hash 見 worker 回報））。`_Btn.key()` 把 None 當 1，與 `ReactionRoleButton` 一致；補端點測試：既有按鈕 style 為 None、身分組已刪除或位階過高，原樣送回 style=1 仍可存，不回 `locked_button`，真的改樣式仍被擋
+  - 已修（nitpick）：`_detail` 的 `locked_reason` 在按鈕因操作者位階被鎖時，改用 `operator_rank_issue` 的原因（原本可能顯示 bot 位階的原因）；同一個 commit
 
 ### R-03 管理員能把反應身分組掛到 bot 既有的訊息
 
@@ -545,6 +549,7 @@ flowchart LR
   - 實際 Discord 行為：`channel.history`、對真實 bot 訊息加按鈕、按鈕運作、`components` 在 py-cord 對各種元件的判斷、DB 失敗時 `view=None` 是否真的拿掉按鈕；端點測試用假 Discord 物件。
   - 候選清單與連結輸入的畫面（桌面與 360px）、無瀏覽器操作；ESLint 未執行（既有設定載入錯誤）。
   - 兩則以上 embed 的訊息實際掛按鈕後的畫面。
+- 審查：dev-review 一輪（範圍 main..feat/dashboard-r04），無與本卡相關的問題
 
 ### R-04 管理員能刪除反應身分組、處理失效並重新發送
 
@@ -594,6 +599,10 @@ flowchart LR
   - 實際 Discord 行為：真的刪訊息、`edit(view=None)` 拿掉按鈕、重新發送後按鈕可運作、重啟 bot 後失效紀錄仍在且網頁標示失效、上線回填；端點與載入函式用假 Discord 物件。
   - 對話框畫面（桌面與 360px）、鍵盤操作與焦點，只過 jsdom 測試；ESLint 未執行（既有設定載入錯誤）。
   - `edit(view=None)` 之後 bot 記憶體裡該訊息的 persistent view 沒有移除，重啟後才消失；紀錄已刪，按鈕被按下時 bot 查不到紀錄。
+- 審查：dev-review 一輪（範圍 main..feat/dashboard-r04），無 blocking
+  - 已修（non-blocking）：重新發送時 `move_reaction_role_message` 回傳是否有移動；紀錄已被並發的重新發送或移除處理掉時，端點刪掉剛送出的訊息、停掉 view，回 409 `conflict`（`deleted: true`）；前端顯示說明並在關閉視窗後重新載入一覽（XingyuBot `fix/dashboard-r-review1`（hash 見 worker 回報）；domalyze_frontend `fix/dashboard-r-review1` 的 b56989e）；補真實 DB 與端點測試
+  - 已修（note）：重新發送讀舊訊息遇到 Forbidden 回 400 `bot_missing_permission`（欄位 `channel_id`），其他 HTTP 錯誤回 502 `discord_error`，只有讀得到才回 `message_exists`；前端沿用既有的 `bot_missing_permission` 文字顯示；補端點與前端測試
+  - 未修的 note：刪除遇到衝突時，視窗只換掉原值並提示再按一次，不顯示最新內容；刪除對象是整則，不用 ConflictNotice 的決定合理，若要貼近規格可在提示下列出最新的按鈕清單
 
 ### P-01 管理員能看到私人頻道大廳與頻道清單
 

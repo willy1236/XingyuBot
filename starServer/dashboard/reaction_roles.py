@@ -160,8 +160,9 @@ class _Btn:
     emoji: str | None
     style: int | None
 
-    def key(self) -> tuple[str, str | None, int | None]:
-        return (self.title, self.emoji, self.style)
+    def key(self) -> tuple[str, str | None, int]:
+        # 指令建立時樣式可不填（DB 為 None），ReactionRoleButton 把 None 當 primary(1)；比對時同樣看待，網頁送回 1 才不會被當成有變動
+        return (self.title, self.emoji, 1 if self.style is None else self.style)
 
 
 class ButtonIn(BaseModel):
@@ -344,8 +345,8 @@ async def _detail(guild: discord.Guild, actor: discord.Member, snap: dict, messa
     content, locked = await _content_state(guild, snap, message_id)
     buttons = []
     for b in snap["buttons"]:
-        role, reason = _role_state(guild, actor, b["role_id"])
-        rank_locked = role is not None and operator_rank_issue(guild, actor, role) is not None
+        role = guild.get_role(b["role_id"])
+        rank_reason = operator_rank_issue(guild, actor, role) if role is not None else None
         buttons.append(
             {
                 "role_id": str(b["role_id"]),
@@ -358,8 +359,8 @@ async def _detail(guild: discord.Guild, actor: discord.Member, snap: dict, messa
                 "emoji": b["emoji"],
                 "emoji_invalid": not emoji_valid(guild, b["emoji"]),
                 "style": b["style"],
-                "locked": rank_locked,
-                "locked_reason": reason if rank_locked else None,
+                "locked": rank_reason is not None,
+                "locked_reason": rank_reason,
             }
         )
     return {
@@ -872,8 +873,16 @@ async def resend_reaction_role(
 
         old_channel = guild.get_channel(snap["channel_id"])
         if old_channel is not None:
-            gone, _ = await _fetch(old_channel, message_id)
-            if not gone:
+            try:
+                await old_channel.fetch_message(message_id)  # pyright: ignore[reportAttributeAccessIssue]
+            except discord.NotFound:
+                pass
+            except discord.Forbidden:
+                reason = "我讀不到原本頻道的訊息，無法確認它是否還在，請確認我有 View Channel 與 Read Message History"
+                raise DashboardError(400, "bot_missing_permission", message=reason, fields=[_field("channel_id", reason)]) from None
+            except discord.HTTPException as e:
+                raise _discord_error(e) from None
+            else:
                 raise DashboardError(400, "message_exists", message="這則訊息還在，不需要重新發送")
 
         content = body.message if body.message is not None else _stored_content(snap["content_json"])
@@ -915,7 +924,7 @@ async def resend_reaction_role(
         sclient.bot.add_view(view, message_id=sent.id)  # pyright: ignore[reportOptionalMemberAccess]
         content_json = to_json(body.message) if body.message is not None else None
         try:
-            await run_db(
+            moved = await run_db(
                 lambda: sqldb.move_reaction_role_message(
                     message_id, channel_id, sent.id, content_json, [b["role_id"] for b in kept]
                 )
@@ -925,6 +934,10 @@ async def resend_reaction_role(
             view.stop()
             await _delete_quietly(sent)
             raise DashboardError(500, "save_failed") from None
+        if not moved:  # 並發的重新發送或移除紀錄先處理掉了，紀錄已不在；剛送出的訊息不能留著
+            view.stop()
+            await _delete_quietly(sent)
+            raise Conflict(None).to_error()
         return {
             "message_id": str(sent.id),
             "channel_id": str(channel_id),
