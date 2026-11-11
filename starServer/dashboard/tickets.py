@@ -5,6 +5,7 @@ GET /dashboard/guilds/{id}/tickets   大廳一覽（設定、失效標示、bot 
 載入時，Discord 已不存在的私人頻道直接刪紀錄（不顯示，也不再占用名額）。
 """
 
+import asyncio
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -16,6 +17,7 @@ from starlib.tickets import bot_permission_issues, lobby_invalid_reason
 
 from .access import Section, on_guild_async, require_section
 from .db import run_db
+from .errors import DashboardError
 
 router = APIRouter(prefix="/dashboard")
 
@@ -137,7 +139,11 @@ async def _lobby_item(guild: discord.Guild, lobby: _Lobby, tickets: list[_Ticket
 
 
 async def _read(guild: discord.Guild, lobbies: list[_Lobby], tickets: list[_Ticket]) -> tuple[dict, list[int]]:
-    # 只有 guild.get_channel 回 None 才視為已刪除；bot 已 ready 且在該伺服器（require_section 保證）
+    # 伺服器 unavailable（Discord outage）時 guild 在快取裡但頻道是空的，這時「頻道不在」不代表已刪除；
+    # 不能據此刪紀錄，清單也會全部誤標失效，所以整個請求回 503
+    if guild.unavailable:
+        raise DashboardError(503, "guild_unavailable")
+    # 只有 guild.get_channel 回 None 才視為已刪除
     gone = [t.channel_id for t in tickets if guild.get_channel(t.channel_id) is None]
     gone_set = set(gone)
     alive = [t for t in tickets if t.channel_id not in gone_set]
@@ -150,7 +156,8 @@ async def _read(guild: discord.Guild, lobbies: list[_Lobby], tickets: list[_Tick
         else:
             unassigned.append(t)
     ordered = sorted(lobbies, key=lambda lobby: _sort_key(guild.get_channel(lobby.channel_id)))
-    items = [await _lobby_item(guild, lobby, by_lobby[lobby.channel_id]) for lobby in ordered]
+    # 每個大廳要打一次 Discord 讀大廳訊息，並行處理
+    items = await asyncio.gather(*(_lobby_item(guild, lobby, by_lobby[lobby.channel_id]) for lobby in ordered))
     return {"lobbies": items, "unassigned": [_ticket_item(guild, t) for t in unassigned]}, gone
 
 

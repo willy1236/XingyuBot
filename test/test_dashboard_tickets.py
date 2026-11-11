@@ -80,6 +80,7 @@ def category(cid: int, name: str, **perms) -> FakeChannel:
 class FakeGuild:
     def __init__(self):
         self.id = GUILD_ID
+        self.unavailable = False
         self.me = SimpleNamespace()
         a = lobby_channel(LOBBY_A, "開單", position=1)
         a.messages.add(MESSAGE_A)
@@ -282,6 +283,16 @@ class TestTickets:
         assert client.repo.get_ticket_channel(T1) is not None
         assert client.repo.get_ticket_channel(T2) is None
         assert client.repo.get_ticket_channel(T3) is None
+
+    def test_unavailable_guild_returns_503_and_keeps_records(self, client):
+        """伺服器 unavailable 時頻道快取是空的：不能當成已刪除而刪紀錄"""
+        add_lobby(client.repo)
+        add_ticket(client.repo, T1, LOBBY_A)
+        client.guild.unavailable = True
+        client.guild.channels.clear()
+        r = client.get(URL)
+        assert (r.status_code, r.json()["error"]) == (503, "guild_unavailable")
+        assert client.repo.get_ticket_channel(T1) is not None
 
     def test_other_guild_untouched(self, client):
         add_ticket(client.repo, T1, None, guild_id=GUILD_ID + 1)  # 另一個伺服器，頻道不在這個 guild 的快取
