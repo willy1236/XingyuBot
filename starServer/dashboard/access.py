@@ -57,6 +57,18 @@ async def on_guild[T](guild_id: int, fn: Callable[[discord.Guild], T]) -> T:
     return await on_guild_async(guild_id, _call)
 
 
+def ensure_guild_available(guild: discord.Guild) -> None:
+    """伺服器 unavailable（Discord outage）時 guild 在快取裡但頻道與身分組是空的，快取判斷「不存在」不可信。
+
+    依快取決定刪除、覆寫或標示失效的端點，進入後先呼叫這個函式。
+
+    Raises:
+        DashboardError: 503 guild_unavailable。
+    """
+    if guild.unavailable:
+        raise DashboardError(503, "guild_unavailable")
+
+
 class Section(StrEnum):
     """伺服器頁的區塊；宣告順序即側欄顯示順序。"""
 
