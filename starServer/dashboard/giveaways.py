@@ -4,7 +4,8 @@ GET /dashboard/guilds/{id}/giveaways/{giveaway_id}  單一抽獎的詳情、參�
 POST /dashboard/guilds/{id}/giveaways/{giveaway_id}/end     提前結束（body 無）
 POST /dashboard/guilds/{id}/giveaways/{giveaway_id}/redraw  重抽，body `{winner_user_id?}`，未指定為整批重抽
 
-權限一律經 `require_section(Section.GIVEAWAYS)`。資料以資料庫為準，Discord 只用來補成員名稱與頻道名稱。
+權限一律經 `require_section(Section.GIVEAWAYS)`。資料以資料庫為準，Discord 只用來補成員名稱、頻道名稱，
+以及 bot 在抽獎頻道缺少的權限（`missing_permissions`，開獎與重抽時要讀原訊息並公告）。
 """
 
 from dataclasses import dataclass
@@ -113,22 +114,15 @@ async def list_giveaways(
     since = None if all else nowtz() - timedelta(days=RECENT_DAYS)
     active, ended, has_next = await run_db(lambda: _load_list(guild_id, since, page))
 
-    def _labels(guild: discord.Guild) -> dict[int, tuple[str | None, str | None]]:
-        # creator_name、channel_name：成員／頻道不在本伺服器時為 None
-        out: dict[int, tuple[str | None, str | None]] = {}
-        for r in active + ended:
-            channel = guild.get_channel(r.channel_id)
-            out[r.id] = (_member_name(guild, r.creator_id), channel.name if channel is not None else None)
-        return out
+    def _labels(guild: discord.Guild) -> dict[int, dict]:
+        return {
+            r.id: {"creator_name": _member_name(guild, r.creator_id), **_channel_info(guild, r.channel_id)}
+            for r in active + ended
+        }
 
     labels = await on_guild(guild_id, _labels)
-    rows = []
-    for r in active + ended:
-        item = _summary(guild_id, r)
-        creator_name, channel_name = labels.get(r.id, (None, None))
-        item["creator_name"] = creator_name
-        item["channel_name"] = channel_name
-        rows.append(item)
+    empty = {"creator_name": None, "channel_name": None, "missing_permissions": None}
+    rows = [{**_summary(guild_id, r), **labels.get(r.id, empty)} for r in active + ended]
     return {"giveaways": rows, "page": page, "has_next": has_next, "all": all, "recent_days": RECENT_DAYS}
 
 
@@ -136,6 +130,17 @@ def _member_name(guild: discord.Guild, user_id: int) -> str | None:
     """只回本伺服器成員的顯示名稱。已離開的成員即使 bot 在其他伺服器仍看得到使用者，也不回名稱，讓前端標成已離開。"""
     member = guild.get_member(user_id)
     return member.display_name if member is not None else None
+
+
+def _channel_info(guild: discord.Guild, channel_id: int) -> dict:
+    """channel_name 與 missing_permissions（bot 在該頻道缺少的權限名稱，齊全為空 list）；頻道不在本伺服器時兩者皆為 None"""
+    channel = guild.get_channel_or_thread(channel_id)
+    if channel is None:
+        return {"channel_name": None, "missing_permissions": None}
+    return {
+        "channel_name": channel.name,
+        "missing_permissions": GiveawayView.missing_permissions(channel, channel.permissions_for(guild.me)),
+    }
 
 
 def _load_detail(guild_id: int, giveaway_id: int):
@@ -156,7 +161,6 @@ async def get_giveaway(giveaway_id: int, guild_id: int = Depends(require_section
     row, participants = loaded
 
     def _read(guild: discord.Guild) -> dict:
-        channel = guild.get_channel(row.channel_id)
         out = []
         for user_id, join_at, is_winner in participants:
             member = guild.get_member(user_id)
@@ -171,7 +175,7 @@ async def get_giveaway(giveaway_id: int, guild_id: int = Depends(require_section
                 }
             )
         return {
-            "channel_name": channel.name if channel is not None else None,
+            **_channel_info(guild, row.channel_id),
             "creator_name": _member_name(guild, row.creator_id),
             "participants": out,
         }
@@ -181,6 +185,7 @@ async def get_giveaway(giveaway_id: int, guild_id: int = Depends(require_section
         **_summary(guild_id, row),
         "description": row.description,
         "channel_name": info["channel_name"],
+        "missing_permissions": info["missing_permissions"],
         "creator_name": info["creator_name"],
         "participants": info["participants"],
         "winners": [p for p in info["participants"] if p["is_winner"]],

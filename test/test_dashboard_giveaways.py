@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import timedelta
 from types import SimpleNamespace
 
+import discord
 import pytest
 from fastapi.testclient import TestClient
 from test_dashboard_auth import dashboard_env, make_app, make_session  # noqa: F401  (fixture 與 helper)
@@ -24,6 +25,18 @@ MEMBER = 7002
 LEFT = 7003
 
 
+ALL_PERMS = discord.Permissions(view_channel=True, read_message_history=True, send_messages=True)
+
+
+class FakeChannel:
+    def __init__(self, name: str, perms: discord.Permissions):
+        self.name = name
+        self.perms = perms
+
+    def permissions_for(self, member):
+        return self.perms
+
+
 class FakeGuild:
     def __init__(self):
         self.id = GUILD_ID
@@ -31,12 +44,13 @@ class FakeGuild:
             CREATOR: SimpleNamespace(display_name="發起人", display_avatar=SimpleNamespace(url="https://cdn/c.png")),
             MEMBER: SimpleNamespace(display_name="成員", display_avatar=SimpleNamespace(url="https://cdn/m.png")),
         }
-        self.channels = {500: SimpleNamespace(name="抽獎頻道")}
+        self.me = SimpleNamespace(display_name="bot")
+        self.channels = {500: FakeChannel("抽獎頻道", ALL_PERMS)}
 
     def get_member(self, uid: int):
         return self.members.get(uid)
 
-    def get_channel(self, cid: int):
+    def get_channel_or_thread(self, cid: int):
         return self.channels.get(cid)
 
 
@@ -46,11 +60,13 @@ def client(discord_env, repo, dashboard_env, monkeypatch) -> TestClient:  # noqa
     make_session(repo)
     discord_env.guilds = [g(str(GUILD_ID), "guild", MANAGE_MESSAGES)]
     monkeypatch.setattr(giveaways, "sqldb", repo)
-    bot = fake_bot(FakeGuild())
+    guild = FakeGuild()
+    bot = fake_bot(guild)
     bot.get_user = lambda uid: None
     monkeypatch.setattr(sclient, "bot", bot)
     c = TestClient(make_app(), base_url="https://testserver", follow_redirects=False)
     c.cookies.set("dashboard_session", "sid")
+    c.guild = guild  # pyright: ignore[reportAttributeAccessIssue]
     c.repo = repo  # pyright: ignore[reportAttributeAccessIssue]
     c.discord_env = discord_env  # pyright: ignore[reportAttributeAccessIssue]
     c.monkeypatch = monkeypatch  # pyright: ignore[reportAttributeAccessIssue]
@@ -104,6 +120,7 @@ class TestList:
         assert row["creator_id"] == str(CREATOR)
         assert row["creator_name"] == "發起人"
         assert row["channel_name"] == "抽獎頻道"
+        assert row["missing_permissions"] == []
         assert row["message_url"] == f"https://discord.com/channels/{GUILD_ID}/500/900"
         # 進行中顯示預計開獎時間（deadline）
         assert row["ends_at"] == gw.deadline.isoformat()
@@ -115,6 +132,13 @@ class TestList:
         row = client.get(URL).json()["giveaways"][0]
         assert row["channel_id"] == "999"
         assert row["channel_name"] is None
+        assert row["missing_permissions"] is None
+
+    def test_reports_missing_bot_permissions(self, client):
+        add_giveaway(client, is_on=True)
+        client.guild.channels[500].perms = discord.Permissions(send_messages=True)
+        row = client.get(URL).json()["giveaways"][0]
+        assert row["missing_permissions"] == ["檢視頻道", "讀取訊息歷史"]
 
     def test_default_hides_older_than_90_days_but_all_shows_them(self, client):
         add_giveaway(client, prize="很久以前", created_days_ago=100, ended_days_ago=99)
@@ -166,6 +190,7 @@ class TestDetail:
         body = client.get(f"{URL}/{gw.id}").json()
         assert body["prize_name"] == "大獎"
         assert body["channel_name"] == "抽獎頻道"
+        assert body["missing_permissions"] == []
         assert body["creator_name"] == "發起人"
         assert body["redraw_count"] == 0
         # 依加入時間排序
