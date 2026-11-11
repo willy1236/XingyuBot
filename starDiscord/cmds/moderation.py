@@ -7,7 +7,9 @@ from discord.ext import commands
 from discord.utils import format_dt
 
 from starlib import BotEmbed, ChoiceList, Jsondb, sclient
+from starlib import auto_timeout as auto_timeout_module
 from starlib.database import NotifyChannelType, ReactionRoleMessage, ReactionRoleOption, TicketChannelLobby, WarningType
+from starlib.database.postgresql.models import AUTO_TIMEOUT_DEFAULT_SECONDS, AUTO_TIMEOUT_DEFAULT_TIMES
 from starlib.dynamic_voice import lobby_permission_issues
 from starlib.instance import debug_guilds
 from starlib.message_content import from_json, from_message, to_json
@@ -95,6 +97,7 @@ class moderation(Cog_Extension):
     channel_cmd = SlashCommandGroup("channel", "自動通知相關指令", name_localizations=ChoiceList.name("channel"))
     reactrole_cmd = SlashCommandGroup("reactrole", "反應身分組相關指令", name_localizations=ChoiceList.name("reactrole"))
     ticket_cmd = SlashCommandGroup("ticket", "私人頻道相關指令", name_localizations=ChoiceList.name("ticket"))
+    server_cmd = SlashCommandGroup("server", "伺服器設定相關指令", name_localizations=ChoiceList.name("server"))
 
     @commands.slash_command(description="清理大量訊息", name_localizations=ChoiceList.name("clean"))
     @commands.has_permissions(manage_messages=True)
@@ -592,6 +595,58 @@ class moderation(Cog_Extension):
         )
         await ctx.respond("私人頻道系統初始化完成", ephemeral=True)
 
+    @server_cmd.command(name="setting", description="查看或修改伺服器設定，只填要改的項目；不填任何項目則顯示目前設定", name_localizations=ChoiceList.name("server_setting"))
+    @commands.has_guild_permissions(manage_guild=True)
+    @commands.guild_only()
+    async def server_setting(
+        self,
+        ctx: discord.ApplicationContext,
+        voice_time_counter: discord.Option(bool, name="語音時數統計", description="是否統計成員的語音時數", required=False),
+        auto_timeout: discord.Option(bool, name="自動禁言", description="警告累計到指定次數時是否自動禁言", required=False),
+        times: discord.Option(int, name="警告次數", description="累計幾次警告自動禁言（1～20）", required=False, min_value=1, max_value=20),
+        duration: discord.Option(str, name="禁言時長", description="格式為30s、1h20m等，支援天(d)、小時(h)、分鐘(m)、秒(s)，1分鐘到7天", required=False),
+    ):
+        db = sclient.sqldb
+        values: dict[str, bool | int] = {}
+        if duration is not None:
+            seconds = auto_timeout_module.parse_duration(duration)
+            if seconds is None:
+                await ctx.respond("錯誤：禁言時長格式錯誤，需為 1 分鐘到 7 天，例如 30m、1h20m", ephemeral=True)
+                return
+            values["auto_timeout_seconds"] = seconds
+        if voice_time_counter is not None:
+            values["voice_time_counter"] = voice_time_counter
+        if auto_timeout is not None:
+            values["auto_timeout_enabled"] = auto_timeout
+        if times is not None:
+            values["timeout_after_warning_times"] = times
+
+        if values:
+            if auto_timeout:
+                # 啟用時次數與時長還沒設定過就寫入預設值，之後在設定裡看到的就是實際生效的值
+                row = db.get_guild_setting_fresh(ctx.guild.id)
+                if (row is None or row.timeout_after_warning_times is None) and times is None:
+                    values["timeout_after_warning_times"] = AUTO_TIMEOUT_DEFAULT_TIMES
+                if (row is None or row.auto_timeout_seconds is None) and duration is None:
+                    values["auto_timeout_seconds"] = AUTO_TIMEOUT_DEFAULT_SECONDS
+            db.upsert_guild_setting(ctx.guild.id, values)
+            db.refresh_voice_time_counter_cache()
+
+        row = db.get_guild_setting_fresh(ctx.guild.id)
+        auto = auto_timeout_module.effective_setting(row)
+        embed = BotEmbed.general("伺服器設定" if not values else "伺服器設定已更新", ctx.guild.icon.url if ctx.guild.icon else None)
+        embed.add_field(name="語音時數統計", value="開啟" if row is not None and row.voice_time_counter else "關閉")
+        embed.add_field(
+            name="自動禁言",
+            value=f"警告累計 {auto.times} 次禁言 {auto_timeout_module.format_seconds(auto.seconds)}" if auto.enabled else f"關閉（啟用時為累計 {auto.times} 次禁言 {auto_timeout_module.format_seconds(auto.seconds)}）",
+            inline=False,
+        )
+        issue = auto_timeout_module.moderate_members_issue(ctx.guild)
+        if auto.enabled and issue:
+            embed.add_field(name="注意", value=f"機器人缺少 {issue.permission}：{issue.consequence}", inline=False)
+        await ctx.respond(embed=embed, ephemeral=True)
+
 
 def setup(bot):
+    auto_timeout_module.register()
     bot.add_cog(moderation(bot))
