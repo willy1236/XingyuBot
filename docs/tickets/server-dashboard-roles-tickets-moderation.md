@@ -55,7 +55,7 @@
 | 1 | S-01 | 實作完成 | [共用] 伺服器頁的區塊權限與導覽 | 無 | S | 所有 R／P／B／W／G 卡依賴 |
 | 2 | S-02 | 實作完成 | [共用] 訊息編輯器：內容格式、驗證、預覽與轉換 | 無 | S | R-02、P-02 依賴 |
 | 3 | S-03 | 實作完成 | [共用] 懲處服務：執行、寫紀錄、公告與稽核原因 | 無 | S | W-02、W-04、B-02 依賴 |
-| 4 | W-01 | 未完成 | 管理員能看懲處紀錄並查詢成員的跨群紀錄 | S-01 | A | 骨架切片：第一個只靠權限放寬才進得來的區塊 |
+| 4 | W-01 | 進行中 | 管理員能看懲處紀錄並查詢成員的跨群紀錄 | S-01 | A | 骨架切片：第一個只靠權限放寬才進得來的區塊 |
 | 5 | R-01 | 未完成 | 管理員能看到反應身分組一覽 | S-01 | A | |
 | 6 | P-01 | 未完成 | 管理員能看到私人頻道大廳與頻道清單 | S-01 | A | 含資料欄位與測試版資料對應 |
 | 7 | B-01 | 未完成 | 管理員能開關語音時數統計並看排行榜 | S-01 | A | |
@@ -271,7 +271,9 @@ flowchart LR
 
 **依賴**：S-01（區塊權限與導覽）
 
-**進度**：未完成
+**進度**：進行中（2026-11-11）
+- 後端完成：XingyuBot `feat/dashboard-w01`（`list_guild_warnings`、`starServer/dashboard/warnings.py`、`test/test_dashboard_warnings.py`）
+- 續做：前端 domalyze_frontend `feat/dashboard-w01`，`lib/dashboard-warnings.ts`、`warning-list.tsx`、`member-records.tsx`、`warnings/page.tsx`，並把 `guild-nav` 的 warnings 旗標改成 true
 
 ### W-02 管理員能從後台警告、禁言、踢出、停權
 
