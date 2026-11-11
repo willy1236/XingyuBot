@@ -165,10 +165,8 @@ async def search_members(
             return []
         found = []
         for m in guild.members:
-            if (
-                text.isdigit()
-                and str(m.id) == text
-                or any(text in (n or "").lower() for n in (m.name, m.display_name, getattr(m, "global_name", None)))
+            if (text.isdigit() and str(m.id) == text) or any(
+                text in (n or "").lower() for n in (m.name, m.display_name, getattr(m, "global_name", None))
             ):
                 found.append(m)
         found.sort(key=lambda m: m.display_name.lower())
@@ -206,7 +204,9 @@ MAX_REASON = 100
 MIN_TIMEOUT_SECONDS = 60
 #: 停權可選的刪訊息秒數，與 `/ban` 的選項一致；禁言是 0 到 7 天
 BAN_DELETE_SECONDS = (0, 3600, 21600, 43200, 86400, 259200, 604800)
-MAX_DELETE_SECONDS = int(MAX_TIMEOUT.total_seconds())
+MAX_TIMEOUT_SECONDS = int(MAX_TIMEOUT.total_seconds())
+#: 禁言時順便刪訊息的秒數上限，目前與禁言時長上限同為 7 天，但是兩個獨立的限制
+MAX_TIMEOUT_DELETE_SECONDS = 604800
 MAX_SNOWFLAKE = 2**63 - 1
 
 #: 各種類要求的動作權限；請求 body 才知道種類，所以在 handler 內依序檢查
@@ -273,7 +273,7 @@ def _validate(body: PunishBody) -> tuple[int, int | None, timedelta | None, int 
     duration = None
     if body.kind == "timeout":
         seconds = body.duration_seconds
-        if seconds is None or not MIN_TIMEOUT_SECONDS <= seconds <= MAX_DELETE_SECONDS:
+        if seconds is None or not MIN_TIMEOUT_SECONDS <= seconds <= MAX_TIMEOUT_SECONDS:
             errors.append(_field("duration_seconds", "禁言時長必須在 1 分鐘到 7 天之間"))
         else:
             duration = timedelta(seconds=seconds)
@@ -283,7 +283,7 @@ def _validate(body: PunishBody) -> tuple[int, int | None, timedelta | None, int 
         delete_seconds = body.delete_message_seconds
         if body.kind == "ban" and delete_seconds not in BAN_DELETE_SECONDS:
             errors.append(_field("delete_message_seconds", "不是有效的選項"))
-        elif body.kind == "timeout" and not 0 <= delete_seconds <= MAX_DELETE_SECONDS:
+        elif body.kind == "timeout" and not 0 <= delete_seconds <= MAX_TIMEOUT_DELETE_SECONDS:
             errors.append(_field("delete_message_seconds", "必須在 0 到 7 天之間"))
 
     if errors:

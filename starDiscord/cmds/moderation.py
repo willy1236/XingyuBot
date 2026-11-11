@@ -78,7 +78,10 @@ async def _respond_kick_ban(ctx: discord.ApplicationContext, result: PunishResul
     if not result.ok:
         await ctx.respond(f"錯誤：{result.error}")
     elif result.warning_id is not None or not user.bot:
-        await ctx.respond(**announcement(result, user, ctx.author))
+        payload = announcement(result, user, ctx.author)
+        if result.error:
+            payload["embed"].add_field(name="注意", value=result.error, inline=False)
+        await ctx.respond(**payload)
     else:
         embed = BotEmbed.general(f"{user.name} {title_suffix}", user.display_avatar.url, description=f"{user.mention}：{reason}")
         embed.add_field(name="執行人員", value=ctx.author.mention)
@@ -234,6 +237,7 @@ class moderation(Cog_Extension):
             return
 
         time = nowtz()
+        record_error = None
         if user.id == ctx.author.id:
             # 只有 owner 能走到這裡；punish 不允許對自己執行，沿用現行寫法
             warning_id = sclient.sqldb.add_warning(user.id, WarningType.Warning, ctx.author.id, ctx.guild.id, time, reason, None, not add_record)
@@ -243,11 +247,15 @@ class moderation(Cog_Extension):
                 await ctx.respond(result.error)
                 return
             warning_id = result.warning_id
+            record_error = result.error
         embed = BotEmbed.general(f"{user.name} 已被警告", user.display_avatar.url, description=f"{user.mention}：{reason}")
         embed.add_field(name="執行人員", value=ctx.author.mention)
         embed.add_field(name="存入跨群警告系統", value=add_record)
         embed.timestamp = time
-        embed.set_footer(text=f"編號 {warning_id}")
+        if warning_id is not None:
+            embed.set_footer(text=f"編號 {warning_id}")
+        if record_error:
+            embed.add_field(name="注意", value=record_error, inline=False)
 
         await ctx.respond(user.mention, embed=embed, allowed_mentions=discord.AllowedMentions(users=True))
 
@@ -352,6 +360,8 @@ class moderation(Cog_Extension):
         embed.timestamp = create_time
         if result.warning_id is not None:
             embed.set_footer(text=f"編號 {result.warning_id}")
+        if result.error:
+            embed.add_field(name="注意", value=result.error, inline=False)
         await ctx.respond(user.mention, embed=embed, allowed_mentions=discord.AllowedMentions(users=True))
 
     @commands.slash_command(description="踢出用戶", name_localizations=ChoiceList.name("kick"))

@@ -127,3 +127,39 @@ def test_warning_add_owner_self_keeps_legacy(env):
     run(env.cog.warning_add.callback(env.cog, ctx, user, "r", False))
     env.punish.assert_not_awaited()
     env.db.add_warning.assert_called_once()
+
+
+RECORD_FAILED = "動作已執行，但紀錄寫入失敗"
+
+
+def _record_failed(env):
+    env.punish.return_value = PunishResult(ok=True, warning_id=None, error=RECORD_FAILED)
+
+
+def test_timeout_shows_record_failure(env):
+    _record_failed(env)
+    ctx = make_ctx()
+    run(env.cog.timeout.callback(env.cog, ctx, make_member(), "1h", "r", False, None))
+    embed = ctx.respond.call_args.kwargs["embed"]
+    assert embed.footer is None
+    assert any(f.value == RECORD_FAILED for f in embed.fields)
+
+
+def test_warning_add_shows_record_failure_without_none_footer(env):
+    _record_failed(env)
+    ctx, user = make_ctx(), make_member()
+    ctx.guild.members = [user]
+    env.cog.bot.is_owner = AsyncMock(return_value=False)
+    run(env.cog.warning_add.callback(env.cog, ctx, user, "r", False))
+    embed = ctx.respond.call_args.kwargs["embed"]
+    assert embed.footer is None
+    assert any(f.value == RECORD_FAILED for f in embed.fields)
+
+
+def test_kick_shows_record_failure(env):
+    _record_failed(env)
+    embed = discord.Embed()
+    cmd.announcement.return_value = {"content": "<@10>", "embed": embed}
+    ctx = make_ctx()
+    run(env.cog.kick.callback(env.cog, ctx, make_member(), "r", False))
+    assert any(f.value == RECORD_FAILED for f in embed.fields)
