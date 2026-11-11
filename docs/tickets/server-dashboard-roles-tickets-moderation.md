@@ -785,7 +785,7 @@ flowchart LR
 **依賴**：S-01（區塊權限與導覽）
 
 **進度**：實作完成（2026-11-10）；審查修正完成（2026-11-11）
-- commit：XingyuBot `feat/dashboard-giveaways`（e34ab00 與後續審查修正）；domalyze_frontend `feat/dashboard-giveaways`（1cedf9b 與後續審查修正）
+- commit：XingyuBot `feat/dashboard-giveaways`（e34ab00、c51bfac）；domalyze_frontend `feat/dashboard-giveaways`（1cedf9b、3754b1d）
 - 已驗：API 層（`test/test_dashboard_giveaways.py`，真實 PostgreSQL、假 Discord）涵蓋排序、分頁、90 天、他服 404、403、已離開成員、清單發起人／頻道名稱；前端 type-check、vitest、`next build --webpack`
 - 未驗（需人工）：頁面實際畫面、與真實 Discord 抽獎結果一致、空清單說明；未打勾的條目待人工確認
 
@@ -820,7 +820,7 @@ flowchart LR
 **風險 / 實作注意**：`end_giveaway` 只看 instance 上的 `is_on`，排程 job 的 instance 是舊的。web 提前結束與到期同時發生時，可能開獎兩次。實作時要在開獎前重新從 DB 讀 `is_on`，並在 bot loop 上序列化（兩邊都在 bot loop 執行，用每個抽獎一把 `asyncio.Lock`）。web 結束後要移除排程 job，`end_giveaway` 已處理。
 
 **進度**：實作完成（2026-11-10）；審查修正完成（2026-11-11）
-- commit：XingyuBot `feat/dashboard-giveaways`（a09d254 與後續審查修正）；domalyze_frontend `feat/dashboard-giveaways`（b3ba38c 與後續審查修正）
+- commit：XingyuBot `feat/dashboard-giveaways`（a09d254、9e6007f）；domalyze_frontend `feat/dashboard-giveaways`（b3ba38c、3754b1d）
 - 已驗：後端以假 Discord 物件驗證訊息更新、回覆公告、改發一般訊息、頻道不在、Forbidden、已結束視為成功、重複開獎競態、重抽無替補告知、`/giveaway redraw` callback（`test/test_dashboard_giveaways_write.py`）；前端 type-check、vitest、build
 - 未驗（需人工）：上述六條驗收需真實 Discord／後台畫面確認；前端確認視窗操作、手機寬度
 - 途中決定：鎖與重讀放在 `GiveawayView`（`giveaway_lock`、`reload`），到期自動開獎、發起人按鈕、後台、指令共用；POST 回 `{status, announce_failure, announce_failure_text, no_replacement}`，前端結束後重新載入詳情
