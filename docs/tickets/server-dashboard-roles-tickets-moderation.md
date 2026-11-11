@@ -62,7 +62,7 @@
 | 8 | G-01 | 實作完成 | 管理員能看抽獎清單、參加者與中獎者 | S-01 | A | |
 | 9 | W-04 | 實作完成 | 用指令懲處一律留紀錄，公告格式統一 | S-03 | A | 只動指令 |
 | 10 | W-02 | 實作完成 | 管理員能從後台警告、禁言、踢出、停權 | W-01、S-03 | B | |
-| 11 | W-03 | 未完成 | 管理員能移除本伺服器的紀錄 | W-01 | B | 用 W-01 留的列動作插槽，與 W-02 不重疊 |
+| 11 | W-03 | 實作完成 | 管理員能移除本伺服器的紀錄 | W-01 | B | 用 W-01 留的列動作插槽，與 W-02 不重疊 |
 | 12 | R-02 | 未完成 | 管理員能發新的反應身分組訊息，並編輯按鈕與內容 | R-01、S-02 | B | |
 | 13 | P-02 | 未完成 | 管理員能新增、修改、移除私人頻道大廳 | P-01、S-02 | B | |
 | 14 | B-02 | 未完成 | 警告累計 N 次自動禁言 | B-01、S-03、W-02、W-04 | C | 含 `/server setting` |
@@ -325,9 +325,9 @@ flowchart LR
 - 不包含：解除禁言或停權（規格明定不連帶）。
 
 **驗收條件**
-- [ ] 有 Kick、Ban、Manage Messages 其一才看得到移除；直接呼叫 API 沒有權限時回 403。
+- [x] 有 Kick、Ban、Manage Messages 其一才看得到移除；直接呼叫 API 沒有權限時回 403。
 - [ ] 移除要二次確認；確認後清單不再顯示，原本的停權不受影響。
-- [ ] 別的伺服器發出的紀錄沒有移除按鈕，直接呼叫 API 回 403。
+- [x] 別的伺服器發出的紀錄沒有移除按鈕，直接呼叫 API 回 403。
 - [ ] 要移除的紀錄已被移除，顯示成功並更新清單。
 
 **實作設計**
@@ -336,7 +336,12 @@ flowchart LR
 
 **依賴**：W-01（清單與列插槽）
 
-**進度**：未完成
+**進度**：實作完成（2026-11-11），後端 XingyuBot 與前端 domalyze_frontend 都有改動
+- commit：XingyuBot `feat/dashboard-w03`、domalyze_frontend `feat/dashboard-w03`
+- 決策：權限用 `require_section(warnings, "remove")`（S-01 已定義 Kick、Ban、Manage Messages 其一）；先查紀錄再比對 `create_guild`，所以他群的紀錄即使不存在於本群也回 403，而不存在的紀錄回 `{ ok: true, already: true }`。前端新增 `remove-warning-button.tsx` 放進 `rowActions`，紀錄不是本伺服器發出時不顯示；確認視窗寫明不會解除禁言或停權。
+- 驗證：後端 `test/test_dashboard_warnings_write.py` 的 `TestRemove`（三種權限各自可移除、無權限 403、他群 403 且保留、已移除回 already、不碰 Discord 的停權與禁言）；前端 `lib/dashboard-warnings.test.ts` 與 `remove-warning-button.test.tsx`，`tsc --noEmit` 通過。勾選的兩項依這些測試
+- 未驗：「二次確認、確認後清單不再顯示」與「已被移除時更新清單」只驗到 API 行為與確認視窗的 render，沒有點擊互動與瀏覽器實際畫面；獨立審查（第 5 步）；ESLint 在本機因設定錯誤無法執行
+
 
 ### W-04 用指令懲處一律留紀錄，公告格式統一
 
