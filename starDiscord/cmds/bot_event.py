@@ -14,7 +14,8 @@ from starlib.messaging import get_bus
 from starlib.utils import nowtz
 
 from ..extension import Cog_Extension
-from ..uiElement.view import PollView, ReactionRoleView, TicketChannelView, TicketLobbyView
+from ..ticket_channel import restore_ticket_views
+from ..uiElement.view import PollView, ReactionRoleView, TicketLobbyView
 
 log = logging.getLogger(__name__)
 
@@ -175,14 +176,8 @@ class event(Cog_Extension):
                 # 大廳頻道不在了：保留紀錄，後台會標示失效，由管理員重新選頻道或移除大廳
                 log.warning("Ticket lobby channel not found", extra={"channel_id": lobby.channel_id})
 
-        # 私人頻道
-        active_tickets = sclient.sqldb.get_active_ticket_channels()
-        for ticket in active_tickets:
-            log.debug("Loading ticket channel", extra={"channel_id": ticket.channel_id})
-            channel = bot.get_channel(ticket.channel_id)
-            if channel:
-                bot.add_view(TicketChannelView(channel, bot.get_user(ticket.creator_id)), message_id=ticket.view_message_id)
-                log.debug("Loaded ticket channel", extra={"channel_id": ticket.channel_id})
+        # 私人頻道（含已鎖定）：載入操作按鈕，置頂訊息還是舊按鈕的換成新的
+        await restore_ticket_views(bot)
 
         # Bot status
         log.info(">> Bot online <<", extra={"bot_name": bot.user.name, "py-cord_version": discord.__version__})

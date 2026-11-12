@@ -1,4 +1,4 @@
-"""私人頻道大廳的建立、更新與移除：網頁後台與 `/ticket setup`（P-05）共用。
+"""私人頻道大廳的建立、更新與移除（網頁後台與 `/ticket setup`（P-05）共用），以及成員從大廳開單。
 
 依賴 `TicketLobbyView`，所以放在 starDiscord；不依賴 view 的規則在 `starlib/tickets.py`。
 全部讀寫 Discord 物件，必須在 bot 的事件迴圈上呼叫。錯誤一律丟 `LobbyError`，由呼叫端轉成自己的回應。
@@ -14,10 +14,19 @@ from typing import Literal
 import discord
 
 from starlib import sclient, sqldb
+from starlib.database import TicketChannel
 from starlib.message_content import MessageContent, from_json, to_json, to_send_kwargs
-from starlib.tickets import ApplyFailure, apply_manager_role_changes, default_lobby_content
+from starlib.moderation import audit_reason
+from starlib.tickets import (
+    ApplyFailure,
+    apply_manager_role_changes,
+    build_ticket_overwrites,
+    default_lobby_content,
+    lobby_invalid_reason,
+)
+from starlib.utils import nowtz
 
-from .uiElement.view import TicketLobbyView
+from .uiElement.view import TicketChannelView, TicketLobbyView
 
 log = logging.getLogger(__name__)
 
@@ -342,3 +351,114 @@ async def remove_lobby(guild: discord.Guild, lobby_channel_id: int) -> bool:
             log.exception("Ticket lobby: DB write failed on remove", extra={"channel_id": lobby_channel_id})
             raise LobbyError("save_failed") from None
         return button_removed
+
+
+# ====== 開單（P-03） ======
+OpenRefusal = Literal["lobby_removed", "lobby_invalid", "already_open", "full", "discord_error", "save_failed"]
+
+
+class TicketOpenError(Exception):
+    """開單被拒或失敗。`existing_channel_id` 是 already_open 時使用者已有的頻道；`message` 是 Discord 回的說明（discord_error 時）。"""
+
+    def __init__(self, code: OpenRefusal, *, existing_channel_id: int | None = None, message: str | None = None):
+        super().__init__(code, existing_channel_id, message)
+        self.code = code
+        self.existing_channel_id = existing_channel_id
+        self.message = message
+
+
+@dataclass(frozen=True)
+class _LobbySettings:
+    channel_id: int
+    message_id: int
+    ticket_category_id: int | None
+    manager_role_ids: list[int]
+
+
+def ticket_channel_name(prefix: str, number: int) -> str:
+    """私人頻道名稱「前綴-四位流水號」；超過 9999 照常往上加。"""
+    return f"{prefix}-{number:04d}"
+
+
+async def open_ticket(guild: discord.Guild, lobby_channel_id: int, creator: discord.Member) -> discord.TextChannel:
+    """從大廳開一張私人頻道，持有該大廳的鎖，同時按下的人依序處理，不會超過限制。
+
+    1. 大廳已移除（或不屬於這個伺服器）、失效（`lobby_invalid_reason`）時拒絕。
+    2. 先清掉大廳底下 Discord 已不存在的私人頻道紀錄，再檢查每人一張與上限（未刪除的都算，含已鎖定）。
+    3. 取流水號（不回收），在大廳設定的分類用 `build_ticket_overwrites` 建立頻道，送出並置頂操作訊息，寫入紀錄。
+       頻道建立後送訊息或寫資料庫失敗時刪除頻道；置頂失敗只記 log。
+
+    Raises:
+        TicketOpenError: 見 `OpenRefusal`。
+    """
+    async with lobby_lock(lobby_channel_id):
+        return await _open_ticket(guild, lobby_channel_id, creator)
+
+
+async def _open_ticket(guild: discord.Guild, lobby_channel_id: int, creator: discord.Member) -> discord.TextChannel:
+    snap = _db(lambda: sqldb.get_ticket_lobby_snapshot(lobby_channel_id))
+    if snap is None or snap["removed_at"] is not None or snap["guild_id"] != guild.id:
+        raise TicketOpenError("lobby_removed")
+    lobby = _LobbySettings(snap["channel_id"], snap["message_id"], snap["ticket_category_id"], snap["manager_role_ids"])
+    if await lobby_invalid_reason(guild, lobby) is not None:
+        raise TicketOpenError("lobby_invalid")
+
+    def check_limits() -> tuple[int | None, int]:
+        gone = [t.channel_id for t in sqldb.list_lobby_ticket_channels(lobby_channel_id) if guild.get_channel(t.channel_id) is None]
+        sqldb.delete_ticket_channels(gone)
+        existing = sqldb.find_user_ticket(lobby_channel_id, creator.id) if snap["one_per_user"] else None
+        return existing, sqldb.count_open_lobby_tickets(lobby_channel_id)
+
+    existing, count = _db(check_limits)
+    if existing is not None:
+        raise TicketOpenError("already_open", existing_channel_id=existing)
+    if snap["max_open"] is not None and count >= snap["max_open"]:
+        raise TicketOpenError("full")
+
+    number = _db(lambda: sqldb.take_ticket_number(lobby_channel_id))
+    if number is None:
+        raise TicketOpenError("lobby_removed")
+    category = guild.get_channel(lobby.ticket_category_id)  # pyright: ignore[reportArgumentType]
+    reason = audit_reason(creator, f"從大廳 {lobby_channel_id} 開立私人頻道", via_dashboard=False)
+    try:
+        channel = await category.create_text_channel(  # pyright: ignore[reportAttributeAccessIssue, reportOptionalMemberAccess]
+            name=ticket_channel_name(snap["name_prefix"], number),
+            topic=f"Ticket channel for {creator} ({creator.id})",
+            overwrites=build_ticket_overwrites(category, lobby, creator, guild.me),  # pyright: ignore[reportArgumentType]
+            reason=reason,
+        )
+    except discord.HTTPException as e:
+        raise TicketOpenError("discord_error", message=e.text or str(e)) from None
+
+    try:
+        msg = await channel.send(
+            f"{creator.mention}，你好！請在此頻道描述你的問題，我們會盡快協助你。", view=TicketChannelView(channel.id, locked=False)
+        )
+    except discord.HTTPException as e:
+        await _delete_quietly(channel, "ticket channel", reason)
+        raise TicketOpenError("discord_error", message=e.text or str(e)) from None
+
+    try:
+        _db(
+            lambda: sqldb.merge(
+                TicketChannel(
+                    channel_id=channel.id,
+                    guild_id=guild.id,
+                    creator_id=creator.id,
+                    created_at=nowtz(),
+                    view_message_id=msg.id,
+                    lobby_channel_id=lobby_channel_id,
+                    number=number,
+                )
+            )
+        )
+    except Exception:
+        log.exception("Ticket: DB write failed on open", extra={"lobby_channel_id": lobby_channel_id})
+        await _delete_quietly(channel, "ticket channel", reason)
+        raise TicketOpenError("save_failed") from None
+
+    try:
+        await msg.pin()
+    except discord.HTTPException:
+        log.warning("Ticket: failed to pin the control message", extra={"channel_id": channel.id})
+    return channel

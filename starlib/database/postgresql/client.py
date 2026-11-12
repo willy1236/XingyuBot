@@ -993,11 +993,6 @@ class TicketRepository(BaseRepository):
         self.session.exec(stmt)
         self.session.commit()
 
-    def get_active_ticket_channels(self):
-        stmt = select(TicketChannel).where(TicketChannel.closed_at.is_(None))
-        result = self.session.exec(stmt).all()
-        return result
-
     def get_ticket_channel(self, channel_id: int):
         stmt = select(TicketChannel).where(TicketChannel.channel_id == channel_id)
         result = self.session.exec(stmt).one_or_none()
@@ -1184,6 +1179,79 @@ class TicketRepository(BaseRepository):
         for channel_id, value in updates.items():
             self.session.exec(update(TicketChannel).where(TicketChannel.channel_id == channel_id).values(locked_overwrites_json=value))
         self.session.commit()
+
+    # ====== 開單（P-03） ======
+    def count_open_lobby_tickets(self, lobby_id: int) -> int:
+        """大廳底下還沒刪除的私人頻道數，含已鎖定（開單上限以此判斷）。"""
+        stmt = select(func.count()).select_from(TicketChannel).where(TicketChannel.lobby_channel_id == lobby_id)
+        return self.session.exec(stmt).one()
+
+    def find_user_ticket(self, lobby_id: int, user_id: int) -> int | None:
+        """使用者在該大廳還沒刪除的私人頻道（含已鎖定）的頻道 ID，沒有回 None；有多張時回最早建立的。"""
+        stmt = (
+            select(TicketChannel.channel_id)
+            .where(TicketChannel.lobby_channel_id == lobby_id, TicketChannel.creator_id == user_id)
+            .order_by(TicketChannel.created_at, TicketChannel.channel_id)
+            .limit(1)
+        )
+        return self.session.exec(stmt).first()
+
+    def take_ticket_number(self, lobby_id: int) -> int | None:
+        """取得大廳的下一個流水號並遞增（單一 UPDATE ... RETURNING，號碼不回收）；大廳不存在或已移除回 None。"""
+        stmt = (
+            update(TicketChannelLobby)
+            .where(TicketChannelLobby.channel_id == lobby_id, TicketChannelLobby.removed_at.is_(None))
+            .values(next_number=TicketChannelLobby.next_number + 1)
+            .returning(TicketChannelLobby.next_number)
+        )
+        taken = self.session.exec(stmt).scalar_one_or_none()
+        self.session.commit()
+        return None if taken is None else taken - 1
+
+    # ====== 鎖定、重開與刪除（P-04） ======
+    def get_ticket_snapshot(self, channel_id: int) -> dict | None:
+        """私人頻道目前的紀錄，不綁 session；不存在回 None。"""
+        t = self.session.exec(
+            select(TicketChannel).where(TicketChannel.channel_id == channel_id).execution_options(populate_existing=True)
+        ).one_or_none()
+        if t is None:
+            return None
+        return {
+            "channel_id": t.channel_id,
+            "guild_id": t.guild_id,
+            "creator_id": t.creator_id,
+            "closed_at": t.closed_at,
+            "closer_id": t.closer_id,
+            "view_message_id": t.view_message_id,
+            "lobby_channel_id": t.lobby_channel_id,
+            "locked_overwrites_json": t.locked_overwrites_json,
+        }
+
+    def lock_ticket_record(self, channel_id: int, closer_id: int, closed_at: datetime, locked_overwrites_json: str) -> bool:
+        """記錄鎖定（鎖定者、時間、鎖定前的覆寫）；紀錄不存在或已鎖定回 False，什麼都不寫。"""
+        result = self.session.exec(
+            update(TicketChannel)
+            .where(TicketChannel.channel_id == channel_id, TicketChannel.closed_at.is_(None))
+            .values(closed_at=closed_at, closer_id=closer_id, locked_overwrites_json=locked_overwrites_json)
+        )
+        ok = result.rowcount == 1
+        self.session.commit()
+        return ok
+
+    def reopen_ticket_record(self, channel_id: int) -> bool:
+        """記錄重開：清掉鎖定者、時間與保存的覆寫；紀錄不存在或未鎖定回 False，什麼都不寫。"""
+        result = self.session.exec(
+            update(TicketChannel)
+            .where(TicketChannel.channel_id == channel_id, TicketChannel.closed_at.is_not(None))
+            .values(closed_at=None, closer_id=None, locked_overwrites_json=None)
+        )
+        ok = result.rowcount == 1
+        self.session.commit()
+        return ok
+
+    def list_all_ticket_channels(self) -> list[TicketChannel]:
+        """bot 啟動載入私人頻道按鈕用：所有伺服器還有紀錄的私人頻道（含已鎖定）。"""
+        return list(self.session.exec(select(TicketChannel).order_by(TicketChannel.channel_id)).all())
 
 
 class RoleSaveRepository(BaseRepository):
