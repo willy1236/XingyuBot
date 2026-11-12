@@ -71,7 +71,7 @@
 | 17 | R-04 | 實作完成 | 管理員能刪除反應身分組、處理失效並重新發送 | R-02 | C | 含重啟清理移除與舊內容回填 |
 | 18 | P-03 | 實作完成，待人工驗證 | 成員開單時套用大廳的命名、限制與可見範圍 | P-02 | C | |
 | 19 | P-04 | 實作完成，待人工驗證 | 私人頻道能鎖定、重開、刪除 | P-03 | D | |
-| 20 | P-05 | 未完成 | `/ticket setup` 支援大廳的全部設定 | P-02 | C | 只動 `ticket_setup`，呼叫 `save_lobby` |
+| 20 | P-05 | 實作完成，待人工驗證 | `/ticket setup` 支援大廳的全部設定 | P-02 | C | 只動 `ticket_setup`，呼叫 `save_lobby` |
 
 ```mermaid
 flowchart LR
@@ -893,10 +893,10 @@ flowchart LR
 
 **驗收條件**
 - [ ] 用 `/ticket setup` 對新頻道設定管理身分組、前綴、上限，網頁上看到相同設定，Discord 出現大廳訊息。
-- [ ] 對既有大廳只填前綴，其他設定不變。
-- [ ] 填了一個管理身分組，原本在後台設的四個被取代成這一個。
-- [ ] 用「清空上限」後，網頁顯示不限。
-- [ ] 沒有 Manage Channels 的人不能使用。
+- [x] 對既有大廳只填前綴，其他設定不變。
+- [x] 填了一個管理身分組，原本在後台設的四個被取代成這一個。
+- [x] 用「清空上限」後，網頁顯示不限。
+- [x] 沒有 Manage Channels 的人不能使用。
 
 **實作設計**
 - bot：`moderation.py` 的 `ticket_setup` 改寫參數，寫入走 P-02 的 repository 方法與大廳訊息更新邏輯。呼叫 P-02 的 `starlib/tickets.py` `save_lobby(guild, values)`。修改既有大廳時沒有衝突比對。
@@ -904,7 +904,28 @@ flowchart LR
 **依賴**：P-02（大廳寫入邏輯）
 
 
-**進度**：未完成
+**進度**：實作完成，待人工驗證（2026-11-12）
+- commit：XingyuBot `feat/dashboard-p05`（從 `feat/dashboard-p04` 開出；hash 見 worker 回報，本進度回寫與最後一個 commit 同時提交）；本卡只動 bot，domalyze_frontend 沒有變更。
+- 實作決定（與卡片描述的落差與處理，範圍與驗收條件不變）：
+  - `save_lobby` 實際在 `starDiscord/ticket_lobby.py`（P-02 已記載），`ticket_setup` 從那裡 import；選項轉成 `LobbyValues` 的規則放 `moderation.py` 的 `_ticket_setup_values`，回 `LobbyValues` 或全部錯誤說明。
+  - 選項（全部選填）：頻道、新頻道名稱、新頻道分類、私人頻道分類、管理身分組1～3、清空管理身分組、前綴、每人一張、上限、清空上限、訊息文字、按鈕文字、按鈕emoji。
+  - 辨識：「頻道」是還在使用中的大廳時修改，其他情況（不是大廳、已移除的大廳）都是新增；已移除的大廳比照 P-02 覆寫舊列、清掉 `removed_at`、只保留流水號。「頻道」與「新頻道名稱」擇一，都沒填或都填、只填「新頻道分類」都回錯誤。失效大廳換頻道只在後台做。
+  - 新增時沒填的用預設值（無管理身分組、前綴 `ticket`、每人一張、不限、預設大廳訊息與按鈕）。私人頻道分類沒填時用大廳頻道所在的分類；新建頻道時「新頻道分類」與「私人頻道分類」缺一個就用另一個，都沒填回錯誤。修改時沒填的沿用現值；現值的私人頻道分類已被刪除時要重新填。
+  - 修改的衝突比對：指令在呼叫 `save_lobby` 前讀大廳現值，合併有填的選項後，把現值當 `original` 傳入；讀取到寫入之間被後台改過時 `save_lobby` 丟 `LobbyConflict`，回覆「請重新執行指令」，不會用舊值蓋掉別人改的欄位（管理身分組與後台相同，不在 UPDATE 內比對）。
+  - 衝突參數：填了管理身分組又選清空管理身分組、填了上限又選清空上限都回錯誤。「清空」選了 False 等於沒選。三個管理身分組填了同一個時去重，不算錯誤。
+  - 欄位規則與後台相同：前綴用 `prefix_error`／`normalize_prefix`，上限 1～10000，按鈕文字 80 字，emoji 只對有變動的檢查是否屬於本伺服器，管理身分組只檢查新加的（不能是 @everyone 或整合服務管理的，已設定的照舊放行）。上限、按鈕文字長度、emoji 長度的常數從 `starServer/dashboard/tickets.py` 搬到 `starlib/tickets.py`（`MAX_OPEN_LIMIT`、`MAX_BUTTON_LABEL`、`MAX_BUTTON_EMOJI`），後台改 import，行為不變。訊息文字、按鈕文字、按鈕emoji 填空白回錯誤（指令沒有清空這三項的選項）。
+  - 訊息文字：只改訊息的 `content`，embed 沿用現值（後台設的或預設 embed），embed 只能在後台編輯；合併後用 `message_content.validate` 檢查 Discord 上限。
+  - 權限從 `has_permissions`（指令所在頻道的權限）改成 `has_guild_permissions(manage_channels=True)`，與後台區塊同樣看伺服器層級的 Manage Channels，避免頻道覆寫放行。
+  - 回覆：先 `defer(ephemeral=True)`（套用管理身分組可能超過 3 秒），之後一律只有本人看得到。成功時 embed 列出大廳頻道、私人頻道分類、管理身分組、前綴、每人一張、上限、開單按鈕，有套用管理身分組失敗的私人頻道時列出頻道與原因，bot 缺權限時列出 `bot_permission_issues` 的警告（仍然存檔）。錯誤時列出全部不合規則的選項，或 `LobbyError` 對應的說明（讀不到大廳訊息要補 View Channel／Read Message History、被別人修改、Discord 錯誤、儲存失敗）。
+  - 稽核原因 `audit_reason(actor, "以 /ticket setup 新增|修改私人頻道大廳", via_dashboard=False)`。
+  - 沒有 schema 變更，不需要 ALTER。
+- 驗證：
+  - 新增 `test/test_ticket_setup_command.py` 42 項（假 Discord 加真實 PostgreSQL，直接呼叫指令 callback）：新增（既有頻道設管理身分組、前綴、上限與預設值、新建頻道與分類、分類預設、沒有分類被拒、訊息文字與按鈕、已移除的大廳重新設定保留流水號）、修改（只改前綴其餘不變且原位更新訊息、一個身分組取代四個、清空上限、清空管理身分組並刪掉既有頻道的覆寫、套用失敗列在回覆、鎖定中頻道只給查看、訊息文字保留後台 embed、已設定的整合服務身分組放行、未變動的 emoji 不重檢、分類被刪要重選、讀取後被改過回衝突、讀不到大廳訊息）、衝突參數（填了又清空、頻道與新頻道名稱、只填新頻道分類、都沒填、多個錯誤一起列出）、欄位驗證（前綴、上限範圍、按鈕文字、emoji、訊息文字、@everyone 與整合服務身分組、空白新頻道名稱，都不寫入也不動 Discord）、bot 權限警告、沒有伺服器層級 Manage Channels 被擋。
+  - `uv run pytest test/test_dashboard_*.py test/test_ticket_lobby.py test/test_tickets_lib.py test/test_backfill_ticket_lobby.py test/test_ticket_open.py test/test_ticket_actions.py test/test_ticket_setup_command.py test/test_server_setting_command.py test/test_moderation_commands.py` 1151 通過、8 失敗，失敗的是 main 上已失敗的 `test_dashboard_auth.py` 6 項與 `test_dashboard_invite.py` 2 項。ruff check 對本次改動的檔案通過。
+  - 勾選的驗收條件依上述自動測試（假 Discord 物件；「網頁上看到」以後台讀取的同一份資料庫紀錄判斷）。
+- 未驗：
+  - 實際 Discord 行為：指令選項的註冊與顯示（中文選項名稱、上限與長度限制）、大廳訊息實際出現、`defer` 後的 ephemeral 回覆、新建頻道與套用管理身分組的實際效果。
+  - 後台畫面實際顯示指令設定的結果。
 
 ### B-01 管理員能開關語音時數統計並看排行榜
 

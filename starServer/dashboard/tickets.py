@@ -30,6 +30,9 @@ from starlib.message_content import MessageContent, from_json
 from starlib.moderation import audit_reason
 from starlib.reaction_roles import emoji_valid
 from starlib.tickets import (
+    MAX_BUTTON_EMOJI,
+    MAX_BUTTON_LABEL,
+    MAX_OPEN_LIMIT,
     bot_permission_issues,
     category_permission_issues,
     default_lobby_content,
@@ -196,9 +199,6 @@ async def list_tickets(guild_id: int = Depends(require_section(Section.TICKETS))
 
 
 # ====== 編輯 ======
-MAX_BUTTON_LABEL = 80  # Discord 按鈕 label 上限
-MAX_BUTTON_EMOJI = 100  # 欄位長度
-MAX_OPEN_LIMIT = 10000
 MAX_CHANNEL_NAME = 100  # Discord 頻道名稱上限
 #: 大廳設定中參與衝突比對的資料庫欄位（管理身分組另外比對）
 _ORIGINAL_COLUMNS = (

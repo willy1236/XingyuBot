@@ -23,6 +23,12 @@ log = logging.getLogger(__name__)
 DEFAULT_BUTTON_LABEL = "建立私人頻道"
 #: 私人頻道名稱前綴（正規化後）的最大長度
 MAX_PREFIX_LENGTH = 20
+#: 同時開啟上限的範圍上限（下限 1，不限制存 null）
+MAX_OPEN_LIMIT = 10000
+#: 開單按鈕文字的上限（Discord 按鈕 label）
+MAX_BUTTON_LABEL = 80
+#: 開單按鈕 emoji 的上限（欄位長度）
+MAX_BUTTON_EMOJI = 100
 
 #: 大廳失效的原因：大廳頻道被刪、私人頻道所在的分類被刪（或從未設定）、大廳訊息被刪
 LobbyInvalidReason = Literal["channel_deleted", "category_deleted", "message_deleted"]
