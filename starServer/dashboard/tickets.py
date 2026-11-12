@@ -5,6 +5,8 @@ GET /dashboard/guilds/{id}/tickets/lobbies/{channel_id}   編輯用：設定、�
 POST /dashboard/guilds/{id}/tickets/lobbies   新增大廳（既有頻道或讓 bot 新建）
 PUT /dashboard/guilds/{id}/tickets/lobbies/{channel_id}   修改設定，立即更新大廳訊息；失效的大廳可重選頻道
 DELETE /dashboard/guilds/{id}/tickets/lobbies/{channel_id}   移除大廳：拿掉開單按鈕，底下的私人頻道改列未歸屬
+POST /dashboard/guilds/{id}/tickets/channels/{channel_id}/lock|reopen   鎖定、重開私人頻道
+DELETE /dashboard/guilds/{id}/tickets/channels/{channel_id}   刪除私人頻道（對話無法復原）
 
 權限一律經 `require_section(Section.TICKETS)`。紀錄以資料庫為準，Discord 只用來判斷失效與補名稱。
 載入時，Discord 已不存在的私人頻道直接刪紀錄（不顯示，也不再占用名額）。
@@ -21,6 +23,7 @@ import discord
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
+from starDiscord.ticket_channel import TicketActionError, TicketState, delete_ticket, lock_ticket, reopen_ticket
 from starDiscord.ticket_lobby import LobbyConflict, LobbyError, LobbyValues, NewChannel, remove_lobby, save_lobby
 from starlib import sqldb
 from starlib.message_content import MessageContent, from_json
@@ -603,3 +606,78 @@ async def delete_lobby(channel_id: int, body: DeleteBody, guild_id: int = Depend
         return {"removed": True, "button_removed": button_removed}
 
     return await on_guild_async(guild_id, _delete)
+
+
+# ====== 鎖定、重開與刪除私人頻道（P-04） ======
+def _action_error(e: TicketActionError) -> DashboardError:
+    match e.code:
+        case "not_found":
+            return DashboardError(404, "not_found")
+        case "channel_gone":
+            # 頻道已在 Discord 被刪除，紀錄已清掉；畫面重新載入清單即可
+            return DashboardError(404, "not_found", message="這個私人頻道已在 Discord 被刪除")
+        case "bot_missing_permission":
+            return DashboardError(
+                400, "bot_missing_permission", message="我缺少這個頻道的 Manage Roles 或 Manage Channels 權限"
+            )
+        case "discord_error":
+            return DashboardError(502, "discord_error", message=e.message)
+        case _:
+            return DashboardError(500, "save_failed")
+
+
+def _state(s: TicketState) -> dict:
+    return {"channel_id": str(s.channel_id), "status": s.status, "changed": s.changed}
+
+
+async def _ticket_action(guild_id: int, info: SessionInfo, run) -> dict:
+    """權限已由 `require_section` 檢查（Manage Channels）；目標已是要求狀態時回 `changed: false`。"""
+
+    async def _do(guild: discord.Guild) -> dict:
+        ensure_guild_available(guild)
+        actor = _actor(guild, info)
+        try:
+            return _state(await run(guild, actor))
+        except TicketActionError as e:
+            raise _action_error(e) from None
+
+    return await on_guild_async(guild_id, _do)
+
+
+@router.post("/guilds/{guild_id}/tickets/channels/{channel_id}/lock")
+async def lock_channel(
+    channel_id: int,
+    guild_id: int = Depends(require_section(Section.TICKETS)),
+    info: SessionInfo = Depends(require_session),
+):
+    return await _ticket_action(
+        guild_id,
+        info,
+        lambda guild, actor: lock_ticket(guild, channel_id, actor, audit_reason(actor, "鎖定私人頻道", True)),
+    )
+
+
+@router.post("/guilds/{guild_id}/tickets/channels/{channel_id}/reopen")
+async def reopen_channel(
+    channel_id: int,
+    guild_id: int = Depends(require_section(Section.TICKETS)),
+    info: SessionInfo = Depends(require_session),
+):
+    return await _ticket_action(
+        guild_id,
+        info,
+        lambda guild, actor: reopen_ticket(guild, channel_id, actor, audit_reason(actor, "重新開啟私人頻道", True)),
+    )
+
+
+@router.delete("/guilds/{guild_id}/tickets/channels/{channel_id}")
+async def delete_channel(
+    channel_id: int,
+    guild_id: int = Depends(require_section(Section.TICKETS)),
+    info: SessionInfo = Depends(require_session),
+):
+    return await _ticket_action(
+        guild_id,
+        info,
+        lambda guild, actor: delete_ticket(guild, channel_id, audit_reason(actor, "刪除私人頻道", True)),
+    )

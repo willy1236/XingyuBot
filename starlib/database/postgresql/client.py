@@ -1213,6 +1213,51 @@ class TicketRepository(BaseRepository):
         self.session.commit()
         return None if taken is None else taken - 1
 
+    # ====== 鎖定、重開與刪除（P-04） ======
+    def get_ticket_snapshot(self, channel_id: int) -> dict | None:
+        """私人頻道目前的紀錄，不綁 session；不存在回 None。"""
+        t = self.session.exec(
+            select(TicketChannel).where(TicketChannel.channel_id == channel_id).execution_options(populate_existing=True)
+        ).one_or_none()
+        if t is None:
+            return None
+        return {
+            "channel_id": t.channel_id,
+            "guild_id": t.guild_id,
+            "creator_id": t.creator_id,
+            "closed_at": t.closed_at,
+            "closer_id": t.closer_id,
+            "view_message_id": t.view_message_id,
+            "lobby_channel_id": t.lobby_channel_id,
+            "locked_overwrites_json": t.locked_overwrites_json,
+        }
+
+    def lock_ticket_record(self, channel_id: int, closer_id: int, closed_at: datetime, locked_overwrites_json: str) -> bool:
+        """記錄鎖定（鎖定者、時間、鎖定前的覆寫）；紀錄不存在或已鎖定回 False，什麼都不寫。"""
+        result = self.session.exec(
+            update(TicketChannel)
+            .where(TicketChannel.channel_id == channel_id, TicketChannel.closed_at.is_(None))
+            .values(closed_at=closed_at, closer_id=closer_id, locked_overwrites_json=locked_overwrites_json)
+        )
+        ok = result.rowcount == 1
+        self.session.commit()
+        return ok
+
+    def reopen_ticket_record(self, channel_id: int) -> bool:
+        """記錄重開：清掉鎖定者、時間與保存的覆寫；紀錄不存在或未鎖定回 False，什麼都不寫。"""
+        result = self.session.exec(
+            update(TicketChannel)
+            .where(TicketChannel.channel_id == channel_id, TicketChannel.closed_at.is_not(None))
+            .values(closed_at=None, closer_id=None, locked_overwrites_json=None)
+        )
+        ok = result.rowcount == 1
+        self.session.commit()
+        return ok
+
+    def list_all_ticket_channels(self) -> list[TicketChannel]:
+        """bot 啟動載入私人頻道按鈕用：所有伺服器還有紀錄的私人頻道（含已鎖定）。"""
+        return list(self.session.exec(select(TicketChannel).order_by(TicketChannel.channel_id)).all())
+
 
 class RoleSaveRepository(BaseRepository):
     # * role_save

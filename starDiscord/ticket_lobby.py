@@ -432,7 +432,7 @@ async def _open_ticket(guild: discord.Guild, lobby_channel_id: int, creator: dis
 
     try:
         msg = await channel.send(
-            f"{creator.mention}，你好！請在此頻道描述你的問題，我們會盡快協助你。", view=TicketChannelView(channel, creator)
+            f"{creator.mention}，你好！請在此頻道描述你的問題，我們會盡快協助你。", view=TicketChannelView(channel.id, locked=False)
         )
     except discord.HTTPException as e:
         await _delete_quietly(channel, "ticket channel", reason)

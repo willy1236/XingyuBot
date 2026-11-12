@@ -257,3 +257,116 @@ async def apply_manager_role_changes(
                 saved.pop(overwrite_key("role", role.id), None)
             json_updates[ticket.channel_id] = json.dumps(saved, ensure_ascii=False)
     return failures, json_updates
+
+
+# ====== 鎖定、重開與刪除（P-04） ======
+TicketAction = Literal["lock", "reopen", "delete"]
+
+
+def allowed_ticket_actions(*, is_creator: bool, is_manager: bool, manage_channels: bool) -> set[TicketAction]:
+    """Discord 內按鈕的權限（規格〈鎖定、重開與刪除〉的對照表）。
+
+    `is_creator`、`is_manager` 只在私人頻道屬於還在使用的大廳時才傳 True：未歸屬或大廳已移除的頻道只剩伺服器層級
+    Manage Channels 的人能操作。後台的權限另由區塊權限（Manage Channels）判斷，不經這裡。
+    """
+    if manage_channels or is_manager:
+        return {"lock", "reopen", "delete"}
+    if is_creator:
+        return {"lock"}
+    return set()
+
+
+def raw_overwrites(channel: discord.abc.GuildChannel) -> list[tuple[str, discord.abc.Snowflake, discord.PermissionOverwrite]]:
+    """頻道的全部覆寫：(鍵, 套用時的對象, 覆寫)。鍵見 `overwrite_key`。
+
+    讀 Discord 原始的覆寫清單，不用 `channel.overwrites`：後者會略過不在成員快取的成員，整批 `edit` 時那些覆寫會被刪掉。
+    不在快取的成員用 `discord.Object`（py-cord 會當成成員覆寫送出）；已刪除的身分組略過（Discord 已清掉覆寫）。
+    """
+    guild = channel.guild
+    result: list[tuple[str, discord.abc.Snowflake, discord.PermissionOverwrite]] = []
+    for ow in channel._overwrites:  # noqa: SLF001 見 docstring
+        overwrite = discord.PermissionOverwrite.from_pair(discord.Permissions(ow.allow), discord.Permissions(ow.deny))
+        if ow.is_role():
+            role = guild.get_role(ow.id)
+            if role is not None:
+                result.append((overwrite_key("role", ow.id), role, overwrite))
+        else:
+            target = guild.get_member(ow.id) or discord.Object(ow.id)
+            result.append((overwrite_key("member", ow.id), target, overwrite))
+    return result
+
+
+def _with_send(overwrite: discord.PermissionOverwrite, value: bool | None) -> discord.PermissionOverwrite:
+    allow, deny = overwrite.pair()
+    copied = discord.PermissionOverwrite.from_pair(allow, deny)
+    copied.send_messages = value
+    return copied
+
+
+def locked_overwrites(channel: discord.abc.GuildChannel, me: discord.abc.Snowflake) -> tuple[dict, dict[str, bool | None]]:
+    """鎖定後的覆寫：bot 以外所有覆寫對象都不能發言，其他權限不變；bot 的成員覆寫確保能發言（沒有就加上）。
+
+    Returns:
+        (要整批套用的覆寫, 要存進 `locked_overwrites_json` 的鎖定前 `send_messages`；bot 不記)
+    """
+    me_key = overwrite_key("member", me.id)
+    overwrites: dict = {}
+    saved: dict[str, bool | None] = {}
+    bot_overwrite = discord.PermissionOverwrite()
+    for key, target, overwrite in raw_overwrites(channel):
+        if key == me_key:
+            bot_overwrite = overwrite
+            continue
+        saved[key] = overwrite.send_messages
+        overwrites[target] = _with_send(overwrite, False)
+    overwrites[me] = _with_send(bot_overwrite, True)
+    return overwrites, saved
+
+
+def reopened_overwrites(
+    channel: discord.abc.GuildChannel,
+    me: discord.abc.Snowflake,
+    saved: dict[str, bool | None] | None,
+    *,
+    creator_id: int,
+    manager_role_ids: Iterable[int],
+) -> dict:
+    """重開後的覆寫：只改 `send_messages`，其他權限不變；bot 的覆寫不動。
+
+    - 有保存值（`saved` 不為 None）：恢復成鎖定前的值；鎖定後才加上的對象（沒有保存值）維持現狀。
+    - 沒有保存值（測試版鎖定的頻道）：建立者、管理身分組與 bot 恢復發言（測試版鎖定時連 bot 也鎖），
+      其餘回到所在分類對該對象的 `send_messages`（分類沒有覆寫該對象時為未設定）。
+
+    Args:
+        manager_role_ids: 所屬大廳現行的管理身分組；未歸屬或大廳已移除時傳空的。
+    """
+    me_key = overwrite_key("member", me.id)
+    managers = {overwrite_key("role", rid) for rid in manager_role_ids}
+    creator = overwrite_key("member", creator_id)
+    category_send: dict[str, bool | None] = {}
+    category = getattr(channel, "category", None)
+    if saved is None and category is not None:
+        category_send = {key: o.send_messages for key, _, o in raw_overwrites(category)}
+    overwrites: dict = {}
+    for key, target, overwrite in raw_overwrites(channel):
+        if key == me_key:
+            overwrites[target] = overwrite if saved is not None else _with_send(overwrite, True)
+        elif saved is not None:
+            overwrites[target] = _with_send(overwrite, saved[key]) if key in saved else overwrite
+        elif key == creator or key in managers:
+            overwrites[target] = _with_send(overwrite, True)
+        else:
+            overwrites[target] = _with_send(overwrite, category_send.get(key))
+    return overwrites
+
+
+def parse_locked_overwrites(raw: str | None) -> dict[str, bool | None] | None:
+    """讀 `locked_overwrites_json`；null 或格式錯誤回 None（照預設規則重開）。"""
+    if raw is None:
+        return None
+    try:
+        value = json.loads(raw)
+    except ValueError:
+        log.warning("Invalid locked_overwrites_json")
+        return None
+    return value if isinstance(value, dict) else None

@@ -70,7 +70,7 @@
 | 16 | R-03 | 實作完成 | 管理員能把反應身分組掛到 bot 既有的訊息 | R-02 | C | |
 | 17 | R-04 | 實作完成 | 管理員能刪除反應身分組、處理失效並重新發送 | R-02 | C | 含重啟清理移除與舊內容回填 |
 | 18 | P-03 | 實作完成，待人工驗證 | 成員開單時套用大廳的命名、限制與可見範圍 | P-02 | C | |
-| 19 | P-04 | 未完成 | 私人頻道能鎖定、重開、刪除 | P-03 | D | |
+| 19 | P-04 | 實作完成，待人工驗證 | 私人頻道能鎖定、重開、刪除 | P-03 | D | |
 | 20 | P-05 | 未完成 | `/ticket setup` 支援大廳的全部設定 | P-02 | C | 只動 `ticket_setup`，呼叫 `save_lobby` |
 
 ```mermaid
@@ -837,12 +837,12 @@ flowchart LR
 - 不包含：開單（P-03）。
 
 **驗收條件**
-- [ ] 建立者按鎖定後，建立者與管理身分組都不能發言，bot 仍可發言；建立者沒有可按的重開；管理身分組按重開後恢復發言。
-- [ ] 沒權限的人按重開或刪除，只有本人看得到提示。
-- [ ] 從後台刪除，確認視窗寫明對話無法復原，確認後頻道消失、清單不再顯示。
-- [ ] 測試版已鎖定的頻道重開後，建立者、管理身分組、bot 可發言，其餘回到分類覆寫。
+- [x] 建立者按鎖定後，建立者與管理身分組都不能發言，bot 仍可發言；建立者沒有可按的重開；管理身分組按重開後恢復發言。
+- [x] 沒權限的人按重開或刪除，只有本人看得到提示。
+- [x] 從後台刪除，確認視窗寫明對話無法復原，確認後頻道消失、清單不再顯示。
+- [x] 測試版已鎖定的頻道重開後，建立者、管理身分組、bot 可發言，其餘回到分類覆寫。
 - [ ] 上線後既有開啟中的頻道，置頂訊息變成新的鎖定按鈕；置頂訊息已不在的，只能從後台操作。
-- [ ] 移除大廳後，原管理身分組在 Discord 內按鎖定、重開、刪除都被拒絕；有 Manage Channels 的人可以。
+- [x] 移除大廳後，原管理身分組在 Discord 內按鎖定、重開、刪除都被拒絕；有 Manage Channels 的人可以。
 
 **實作設計**
 - 資料：鎖定時把鎖定前每個覆寫目標的 `send_messages` 存進 `locked_overwrites_json`，重開時恢復後清空；`closed_at`、`closer_id` 沿用。
@@ -855,7 +855,31 @@ flowchart LR
 
 **依賴**：P-03（開單建立的置頂訊息與覆寫規則）
 
-**進度**：未完成
+**進度**：實作完成，待人工驗證（2026-11-12）
+- commit：XingyuBot `feat/dashboard-p04`（從 `feat/dashboard-p03` 開出）與 domalyze_frontend `feat/dashboard-p04`（hash 見 worker 回報，本進度回寫與最後一個 commit 同時提交）
+- 實作決定（與卡片描述的落差與處理，範圍與驗收條件不變）：
+  - 流程放新檔 `starDiscord/ticket_channel.py` 的 `lock_ticket(guild, channel_id, actor, reason)`、`reopen_ticket(...)`、`delete_ticket(guild, channel_id, reason)`，回 `TicketState(channel_id, status, changed)`，失敗丟 `TicketActionError`（`not_found`、`channel_gone`、`bot_missing_permission`、`discord_error`、`save_failed`）。它們要換置頂訊息的 view，比照 P-02 不放 starlib；不依賴 view 的純邏輯放 `starlib/tickets.py`：`allowed_ticket_actions`（權限對照表）、`raw_overwrites`、`locked_overwrites`、`reopened_overwrites`、`parse_locked_overwrites`。按鈕與後台都呼叫 `ticket_channel` 的函式。
+  - 並行：同一頻道一把 `asyncio.Lock`（`ticket_lock`），另外持有所屬大廳的 `lobby_lock`，與 P-02 套用管理身分組（同樣改這個頻道的覆寫與 `locked_overwrites_json`）互斥。取鎖順序固定「頻道 → 大廳」，大廳端只取大廳鎖，不會互等；等大廳鎖期間頻道被搬到別的大廳或改為未歸屬時，重讀後換鎖。
+  - 覆寫讀 Discord 原始清單（`channel._overwrites`），不用 `channel.overwrites`：後者略過不在成員快取的成員，整批 `edit` 會刪掉那些覆寫。不在快取的成員用 `discord.Object` 送出。鎖定與重開都是一次 `channel.edit(overwrites=...)`，只改 `send_messages`，其他權限不變。
+  - 鎖定：bot 以外所有覆寫對象 `send_messages=False`，鎖定前的值（true／false／null）存進 `locked_overwrites_json`；bot 的成員覆寫確保 `send_messages=True`，沒有就加上（不記入 JSON）。
+  - 重開：有保存值時恢復，鎖定後才加上、沒有保存值的對象維持現狀（P-02 在鎖定中加入管理身分組會記 `true`，重開後可發言），然後清空 `closed_at`、`closer_id`、`locked_overwrites_json`。`locked_overwrites_json` 為 null 或格式錯誤時用預設規則：建立者、所屬大廳現行的管理身分組（未歸屬或大廳已移除時沒有）、bot 恢復發言（測試版鎖定時連 bot 也鎖了）；其餘對象的 `send_messages` 改成所在分類對該對象的值，分類沒覆寫該對象時為未設定。「回到分類覆寫」只套在 `send_messages`，不動 view 等權限，否則 @everyone 會恢復看得到。
+  - 寫入順序：先 Discord、後資料庫；資料庫寫入失敗（或條件 UPDATE 沒命中）時把覆寫還原並回 `save_failed`。repository 新增 `get_ticket_snapshot`、`lock_ticket_record`（條件 `closed_at IS NULL`）、`reopen_ticket_record`（條件 `closed_at IS NOT NULL`）、`list_all_ticket_channels`。置頂訊息換按鈕失敗、頻道內公告失敗只記 log。
+  - 目標已是要求狀態：已鎖定再鎖、開啟中再重開回 `changed: false`，不動 Discord。刪除時沒有紀錄或頻道已不在也算成功；沒有紀錄時不動 Discord，不會刪到不是私人頻道的頻道。頻道在 Discord 已被刪除時，鎖定與重開清掉紀錄並回 `channel_gone`（後台 404 `not_found`，畫面重新載入清單）。
+  - 按鈕權限：建立者只在頻道屬於還在使用的大廳時算數。規格〈既有資料〉寫明未歸屬的頻道「只有伺服器層級 Manage Channels 的人能操作」，卡片也寫「移除大廳後只剩 Manage Channels」，所以未歸屬與大廳已移除時，建立者也不能鎖定。
+  - 兩態按鈕 `TicketChannelView(channel_id, locked)`：開啟中是「鎖定頻道」（`ticket_lock_<id>`），鎖定後是「重新開啟」（`ticket_reopen_<id>`）與「刪除頻道」（`ticket_delete_<id>`），`timeout=None`。按下沒有權限的按鈕回只有本人看得到的提示；有權限時先 `defer(ephemeral=True)` 再執行。Discord 內的刪除照規格「刪除前要二次確認」，先回一則只有本人看得到的確認訊息（寫明對話無法復原），按「確認刪除」才刪，確認時再檢查一次權限。鎖定、重開後在頻道內公告操作者（不 mention 通知）。
+  - `bot_event.py`：原本只載入開啟中頻道的區塊改呼叫 `restore_ticket_views(bot)`，含已鎖定的頻道依狀態載入 view。一次性的置頂訊息更新以按鈕的 custom_id 判斷：與目前狀態的新按鈕不同（測試版的「關閉頻道」、測試版鎖定後清空的按鈕）才 `edit`，已是新按鈕就不動，所以只會改一次，不需要 schema 旗標；訊息讀不到的略過（只能從後台操作）。代價是每次啟動對每個私人頻道讀一次置頂訊息。
+  - 後台：`POST .../tickets/channels/{channel_id}/lock|reopen`、`DELETE .../tickets/channels/{channel_id}`，都用 `require_section(Section.TICKETS)` 與 `ensure_guild_available`（unavailable 回 503），回 `{ channel_id, status, changed }`；錯誤 404 `not_found`、400 `bot_missing_permission`、502 `discord_error`、500 `save_failed`。稽核原因 `audit_reason(actor, ..., via_dashboard=True)`，按鈕為 False。
+  - 前端：新增 `components/dashboard/ticket-row-actions.tsx`，接進 `ticket-lobby-manager.tsx` 的 `ticketActions` 插槽（大廳底下與未歸屬的列都有）。開啟中顯示鎖定與刪除，已鎖定顯示重開與刪除；後台的刪除不限已鎖定（規格表沒有限制，Discord 內只有鎖定後才出現刪除按鈕）。刪除用 `<dialog>` 確認，寫明「裡面的對話無法復原」。完成或回 `not_found` 時重新載入清單。API client 在 `lib/dashboard-tickets.ts` 的 `runTicketAction`、`ticketActionErrorText`、`ticketRowActions`。
+  - 沒有 schema 變更，不需要 ALTER。
+- 驗證：
+  - 新增 `test/test_ticket_actions.py` 55 項（假 Discord 加真實 PostgreSQL）：權限對照表逐項（建立者只能鎖、管理身分組與 Manage Channels 三者皆可、其他人都不行、別的大廳的管理身分組不算、大廳移除後與未歸屬只剩 Manage Channels）、鎖定（除 bot 外不能發言、其他權限不變、保存值內容、不在快取的成員覆寫保留、bot 沒有覆寫時補上、按鈕換成重開與刪除、已鎖定視為成功、不存在／他伺服器、頻道已刪、Forbidden、其他 Discord 錯誤、資料庫失敗還原、置頂訊息不在仍鎖定）、重開（恢復成鎖定前、鎖定中加入的管理身分組可發言、已開啟視為成功、測試版預設規則、大廳已移除時不恢復管理身分組、JSON 格式錯誤用預設規則、資料庫失敗還原、頻道已刪）、刪除（含開啟中、沒有紀錄不動 Discord、他伺服器的紀錄不刪、已刪除、NotFound、Forbidden 保留紀錄）、並行（同時兩個鎖定、鎖定與重開交錯、等大廳鎖；拿掉頻道鎖或大廳鎖時對應測試會失敗）、按鈕（兩態 custom_id、建立者按重開與刪除被拒且只有本人看得到、陌生人按鎖定被拒、建立者鎖定後管理身分組重開、大廳移除後管理身分組被拒而 Manage Channels 可以、刪除的二次確認）、啟動載入（舊按鈕換新只做一次、測試版鎖定的頻道換成重開與刪除、訊息或頻道不在略過）、repository。
+  - 新增 `test/test_dashboard_tickets_actions.py` 18 項：只有 Manage Roles 時 403、沒有 session 401、unavailable 503 不動任何東西、鎖定、重開、刪除與已是要求狀態、404（不存在、他伺服器、頻道已刪）、400 bot 缺權限、502、操作者不在伺服器 403、稽核原因帶「透過後台」。
+  - 後端與前端的完整測試結果見 worker 回報。
+  - 勾選的驗收條件依上述自動測試（假 Discord 物件）。
+- 未驗：
+  - 實際 Discord 行為：覆寫在 Discord 上的實際效果（含 Administrator 與擁有者不受影響）、按鈕的 ephemeral 顯示與 `defer` 後的流程、置頂訊息換按鈕、頻道刪除。
+  - `bot_event.py` 重啟後載入與一次性更新（沒有對 `on_ready` 的自動測試，`restore_ticket_views` 本身有測）；正式資料上測試版鎖定的頻道重開。
+  - 後台畫面（桌面與 360px）、確認視窗；前端只過 jsdom 測試。
 
 ### P-05 `/ticket setup` 支援大廳的全部設定
 

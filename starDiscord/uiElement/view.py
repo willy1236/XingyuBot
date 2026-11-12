@@ -1015,37 +1015,115 @@ class McServerPanel(discord.ui.View):
             await interaction.followup.send("伺服器未找到", ephemeral=True)
 
 class TicketChannelView(discord.ui.View):
-    def __init__(self, channel: discord.TextChannel, creator: discord.Member):
+    """私人頻道置頂操作訊息的按鈕：開啟中是鎖定；鎖定後換成重開與刪除。custom_id 帶頻道 ID，重啟後由 bot_event 重新載入。
+
+    按鈕權限照規格的對照表（`starlib.tickets.allowed_ticket_actions`），沒有權限只有本人看得到提示。
+    """
+
+    def __init__(self, channel_id: int, locked: bool):
         super().__init__(timeout=None)
-        self.channel = channel
-        self.creator = creator
-        self.add_item(self.TicketCloseButton(channel.id))
+        if locked:
+            self.add_item(TicketActionButton("reopen", channel_id))
+            self.add_item(TicketActionButton("delete", channel_id))
+        else:
+            self.add_item(TicketActionButton("lock", channel_id))
 
-    class TicketCloseButton(discord.ui.Button):
-        def __init__(self, channel_id: int):
-            super().__init__(label="關閉頻道", style=discord.ButtonStyle.danger, custom_id=f"close_ticket_channel_{channel_id}")
 
-        async def callback(self, interaction: discord.Interaction):
-            view: TicketChannelView = self.view
-            is_creator = view.creator is not None and interaction.user.id == view.creator.id
-            is_admin = isinstance(interaction.user, discord.Member) and interaction.user.guild_permissions.manage_channels
-            if is_creator or is_admin:
-                ticket = sqldb.get_ticket_channel(view.channel.id)
-                if ticket:
-                    ticket.closed_at = nowtz()
-                    ticket.closer_id = interaction.user.id
-                    sqldb.merge(ticket)
+_TICKET_BUTTONS = {
+    "lock": ("鎖定頻道", discord.ButtonStyle.secondary),
+    "reopen": ("重新開啟", discord.ButtonStyle.primary),
+    "delete": ("刪除頻道", discord.ButtonStyle.danger),
+}
+_TICKET_DENIED = {
+    "lock": "只有頻道建立者、這個大廳的管理身分組或有管理頻道權限的人可以鎖定",
+    "reopen": "只有這個大廳的管理身分組或有管理頻道權限的人可以重新開啟",
+    "delete": "只有這個大廳的管理身分組或有管理頻道權限的人可以刪除",
+}
 
-                # await self.channel.delete()
-                overwrites = view.channel.overwrites
-                for target in overwrites:
-                    overwrites[target].send_messages = False
-                await view.channel.edit(overwrites=overwrites)
-                view.clear_items()
-                await interaction.response.edit_message(view=view)
-                await interaction.followup.send(content=f"頻道已由{interaction.user.mention}鎖定")
+
+def ticket_action_error_text(e) -> str:
+    """鎖定、重開、刪除失敗時只給本人看的說明。"""
+    match e.code:
+        case "not_found" | "channel_gone":
+            return "找不到這個私人頻道的紀錄"
+        case "bot_missing_permission":
+            return "我缺少這個頻道的 Manage Roles 或 Manage Channels 權限，請通知管理員"
+        case "discord_error":
+            return f"操作失敗：{e.message}"
+        case _:
+            return "操作失敗，請稍後再試"
+
+
+async def _ticket_allowed(interaction: discord.Interaction, action: str, channel_id: int) -> bool:
+    """檢查按的人能不能做這個動作；不能時回覆只有本人看得到的提示。"""
+    from ..ticket_channel import member_ticket_actions
+
+    member = interaction.user
+    if not isinstance(member, discord.Member) or action not in member_ticket_actions(interaction.guild, channel_id, member):
+        await interaction.response.send_message(_TICKET_DENIED[action], ephemeral=True)
+        return False
+    return True
+
+
+class TicketActionButton(discord.ui.Button):
+    def __init__(self, action: str, channel_id: int):
+        label, style = _TICKET_BUTTONS[action]
+        super().__init__(label=label, style=style, custom_id=f"ticket_{action}_{channel_id}")
+        self.action = action
+        self.channel_id = channel_id
+
+    async def callback(self, interaction: discord.Interaction):
+        # 流程在 ticket_channel（它依賴本模組的 view，放函式內 import 避免循環）
+        from starlib.moderation import audit_reason
+
+        from ..ticket_channel import TicketActionError, lock_ticket, reopen_ticket
+
+        if not await _ticket_allowed(interaction, self.action, self.channel_id):
+            return
+        if self.action == "delete":
+            await interaction.response.send_message(
+                "確定要刪除這個私人頻道嗎？頻道與對話都會刪除，對話無法復原。",
+                view=TicketDeleteConfirmView(self.channel_id),
+                ephemeral=True,
+            )
+            return
+        await interaction.response.defer(ephemeral=True)
+        guild, actor = interaction.guild, interaction.user
+        try:
+            if self.action == "lock":
+                state = await lock_ticket(guild, self.channel_id, actor, audit_reason(actor, "鎖定私人頻道", via_dashboard=False))
             else:
-                await interaction.response.send_message(content="只有頻道建立者或管理員可以關閉頻道", ephemeral=True)
+                state = await reopen_ticket(guild, self.channel_id, actor, audit_reason(actor, "重新開啟私人頻道", via_dashboard=False))
+        except TicketActionError as e:
+            await interaction.followup.send(ticket_action_error_text(e), ephemeral=True)
+            return
+        if state.changed:
+            text = "已鎖定頻道" if state.status == "locked" else "已重新開啟頻道"
+        else:
+            text = "頻道已經是鎖定狀態" if state.status == "locked" else "頻道已經是開啟狀態"
+        await interaction.followup.send(text, ephemeral=True)
+
+
+class TicketDeleteConfirmView(discord.ui.View):
+    """刪除私人頻道的二次確認（只有按刪除的人看得到）。"""
+
+    def __init__(self, channel_id: int):
+        super().__init__(timeout=60)
+        self.channel_id = channel_id
+
+    @discord.ui.button(label="確認刪除（對話無法復原）", style=discord.ButtonStyle.danger)
+    async def confirm(self, button: discord.ui.Button, interaction: discord.Interaction):
+        from starlib.moderation import audit_reason
+
+        from ..ticket_channel import TicketActionError, delete_ticket
+
+        if not await _ticket_allowed(interaction, "delete", self.channel_id):
+            return
+        await interaction.response.edit_message(content="正在刪除頻道……", view=None)
+        try:
+            await delete_ticket(interaction.guild, self.channel_id, audit_reason(interaction.user, "刪除私人頻道", via_dashboard=False))
+        except TicketActionError as e:
+            await interaction.followup.send(ticket_action_error_text(e), ephemeral=True)
 
 
 class TicketLobbyView(discord.ui.View):
