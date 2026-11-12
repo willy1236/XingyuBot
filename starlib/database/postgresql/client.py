@@ -993,11 +993,6 @@ class TicketRepository(BaseRepository):
         self.session.exec(stmt)
         self.session.commit()
 
-    def get_active_ticket_channels(self):
-        stmt = select(TicketChannel).where(TicketChannel.closed_at.is_(None))
-        result = self.session.exec(stmt).all()
-        return result
-
     def get_ticket_channel(self, channel_id: int):
         stmt = select(TicketChannel).where(TicketChannel.channel_id == channel_id)
         result = self.session.exec(stmt).one_or_none()

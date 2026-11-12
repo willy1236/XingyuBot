@@ -367,12 +367,14 @@ def reopened_overwrites(
 
 
 def parse_locked_overwrites(raw: str | None) -> dict[str, bool | None] | None:
-    """讀 `locked_overwrites_json`；null 或格式錯誤回 None（照預設規則重開）。"""
+    """讀 `locked_overwrites_json`；null 或格式錯誤（不是 JSON 物件、值不是 true／false／null）回 None（照預設規則重開）。"""
     if raw is None:
         return None
     try:
         value = json.loads(raw)
     except ValueError:
+        value = None
+    if not isinstance(value, dict) or not all(v is None or isinstance(v, bool) for v in value.values()):
         log.warning("Invalid locked_overwrites_json")
         return None
-    return value if isinstance(value, dict) else None
+    return value

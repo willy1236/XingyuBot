@@ -622,8 +622,11 @@ def _action_error(e: TicketActionError) -> DashboardError:
             )
         case "discord_error":
             return DashboardError(502, "discord_error", message=e.message)
-        case _:
+        case "save_failed":
             return DashboardError(500, "save_failed")
+        case _:
+            # failed（非預期錯誤，已記 log）；forbidden 只在按鈕重新檢查權限時出現，後台不會遇到
+            return DashboardError(500, "action_failed")
 
 
 def _state(s: TicketState) -> dict:

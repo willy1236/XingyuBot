@@ -103,6 +103,9 @@ class FakeCategory:
 
 
 class FakeTicketChannel:
+    """py-cord 的行為：`edit`、`set_permissions` 只改 Discord 上的狀態（`truth`），不更新本地快取 `_overwrites`；
+    快取要等 gateway 事件（`sync()`）。`guild.fetch_channel` 回一份帶最新覆寫的新物件。"""
+
     type = discord.ChannelType.text
 
     def __init__(self, guild, cid: int, overwrites: dict[tuple[str, int], discord.PermissionOverwrite]):
@@ -119,16 +122,33 @@ class FakeTicketChannel:
         self.fail_delete: Exception | None = None
 
     def set_overwrites(self, overwrites):
-        self._overwrites = [RawOverwrite(tid, 0 if kind == "role" else 1, o) for (kind, tid), o in overwrites.items()]
+        """設定 Discord 上的覆寫並同步快取（測試的前置狀態）。"""
+        self.truth = {"ows": [RawOverwrite(tid, 0 if kind == "role" else 1, o) for (kind, tid), o in overwrites.items()]}
+        self.sync()
+
+    def sync(self):
+        """模擬 gateway 的 CHANNEL_UPDATE 到達：快取追上 Discord 上的狀態。"""
+        self._overwrites = list(self.truth["ows"])
+
+    def fetched(self):
+        copy = object.__new__(FakeTicketChannel)
+        copy.__dict__.update(self.__dict__)
+        copy._overwrites = list(self.truth["ows"])
+        return copy
 
     def state(self) -> dict[str, discord.PermissionOverwrite]:
-        """目前的覆寫：鍵 → 覆寫"""
+        """Discord 上目前的覆寫：鍵 → 覆寫"""
         return {
             overwrite_key("role" if o.is_role() else "member", o.id): discord.PermissionOverwrite.from_pair(
                 discord.Permissions(o.allow), discord.Permissions(o.deny)
             )
-            for o in self._overwrites
+            for o in self.truth["ows"]
         }
+
+    async def set_permissions(self, target, *, overwrite=None, reason=None):
+        kind = 0 if target.id in self.guild.roles else 1
+        rest = [o for o in self.truth["ows"] if o.id != target.id]
+        self.truth["ows"] = rest if overwrite is None else [*rest, RawOverwrite(target.id, kind, overwrite)]
 
     def send_of(self, key: str):
         return self.state()[key].send_messages
@@ -140,9 +160,7 @@ class FakeTicketChannel:
         if self.fail_edit is not None:
             raise self.fail_edit
         self.edits.append((overwrites, reason))
-        self._overwrites = [
-            RawOverwrite(t.id, 0 if t.id in self.guild.roles else 1, o) for t, o in overwrites.items()
-        ]
+        self.truth["ows"] = [RawOverwrite(t.id, 0 if t.id in self.guild.roles else 1, o) for t, o in overwrites.items()]
 
     async def send(self, text, **kwargs):
         self.sent.append(text)
@@ -174,9 +192,18 @@ class FakeGuild:
         self.me = self.members[BOT]
         self.category = FakeCategory(self)
         self.channels: dict[int, object] = {CATEGORY: self.category}
+        self.fail_fetch: Exception | None = None
 
     def get_channel(self, cid):
         return self.channels.get(cid)
+
+    async def fetch_channel(self, cid):
+        if self.fail_fetch is not None:
+            raise self.fail_fetch
+        channel = self.channels.get(cid)
+        if not isinstance(channel, FakeTicketChannel):
+            raise http_error(discord.NotFound, 404)
+        return channel.fetched()
 
     def get_role(self, rid):
         return self.roles.get(rid)
@@ -207,6 +234,7 @@ def env(repo, monkeypatch):  # noqa: F811
     # 鎖綁定第一次等待時的事件迴圈；每個測試用自己的迴圈
     monkeypatch.setattr(ticket_channel, "_locks", {})
     monkeypatch.setattr(ticket_lobby, "_locks", {})
+    monkeypatch.setattr(ticket_channel, "_messages_refreshed", False)
     views: list[tuple[int | None, discord.ui.View]] = []
     monkeypatch.setattr(sclient, "bot", SimpleNamespace(add_view=lambda v, message_id=None: views.append((message_id, v))))
     guild = FakeGuild()
@@ -377,7 +405,6 @@ class TestLock:
         assert json.loads(s["locked_overwrites_json"])[f"role:{ROLE_MANAGER}"] is True
         [edit] = channel.messages[CONTROL].edits
         assert custom_ids(edit["view"]) == [f"ticket_reopen_{TICKET}", f"ticket_delete_{TICKET}"]
-        assert env.views[-1][0] == CONTROL
         assert any("鎖定" in t for t in channel.sent)
 
     def test_already_locked_is_success_without_changes(self, env):
@@ -657,6 +684,9 @@ class FakeResponse:
     async def edit_message(self, **kwargs):
         self.edited = kwargs
 
+    def is_done(self):
+        return bool(self.messages) or self.deferred is not None or self.edited is not None
+
 
 class FakeFollowup:
     def __init__(self):
@@ -667,7 +697,7 @@ class FakeFollowup:
 
 
 def interaction(env, user):
-    return SimpleNamespace(guild=env.guild, user=user, response=FakeResponse(), followup=FakeFollowup())
+    return SimpleNamespace(guild=env.guild, user=user, channel_id=TICKET, response=FakeResponse(), followup=FakeFollowup())
 
 
 def patch_member_type(monkeypatch):
@@ -808,3 +838,191 @@ class TestRepository:
         add_ticket(env, TICKET_2, closed=True)
         ids = {t.channel_id for t in env.repo.list_all_ticket_channels()}
         assert {TICKET, TICKET_2} <= ids
+
+
+# ====== 快取延遲（覆寫快取要等 gateway 事件才更新） ======
+
+
+class TestStaleCache:
+    """鎖定、重開前向 Discord 讀最新覆寫；改回讀快取時這些測試會失敗。"""
+
+    def apply(self, env, added=(), removed=()):
+        from starlib.tickets import apply_manager_role_changes
+
+        t = SimpleNamespace(channel_id=TICKET, closed_at=None, locked_overwrites_json=None)
+        failures, _ = run(apply_manager_role_changes(env.guild, [t], list(added), list(removed), "p02"))
+        assert failures == []
+
+    def test_lock_right_after_manager_role_removed(self, env):
+        channel = add_ticket(env)
+        self.apply(env, removed=[ROLE_MANAGER])  # 快取裡仍有 ROLE_MANAGER
+        run(lock_ticket(env.guild, TICKET, member(env, ADMIN), "r"))
+        assert f"role:{ROLE_MANAGER}" not in channel.state()
+        assert f"role:{ROLE_MANAGER}" not in json.loads(snap(env)["locked_overwrites_json"])
+
+    def test_lock_right_after_manager_role_added(self, env):
+        channel = add_ticket(env)
+        self.apply(env, added=[ROLE_OTHER])  # 快取裡還沒有 ROLE_OTHER
+        run(lock_ticket(env.guild, TICKET, member(env, ADMIN), "r"))
+        ow = channel.state()[f"role:{ROLE_OTHER}"]
+        assert (ow.view_channel, ow.send_messages) == (True, False)
+        assert json.loads(snap(env)["locked_overwrites_json"])[f"role:{ROLE_OTHER}"] is True
+
+    def test_lock_right_after_reopen_keeps_pre_lock_values(self, env):
+        channel = add_ticket(env)
+        before = channel.state()
+        admin = member(env, ADMIN)
+        run(lock_ticket(env.guild, TICKET, admin, "r"))
+        run(reopen_ticket(env.guild, TICKET, admin, "r"))
+        run(lock_ticket(env.guild, TICKET, admin, "r"))  # 快取還停在第一次鎖定前
+        assert json.loads(snap(env)["locked_overwrites_json"])[f"member:{CREATOR}"] is True
+        run(reopen_ticket(env.guild, TICKET, admin, "r"))
+        assert channel.state() == before
+
+    def test_restore_uses_the_fresh_overwrites(self, env, monkeypatch):
+        channel = add_ticket(env)
+        self.apply(env, added=[ROLE_OTHER])
+        fresh = channel.state()
+        monkeypatch.setattr(env.repo, "lock_ticket_record", lambda *a: False)
+        with pytest.raises(TicketActionError):
+            run(lock_ticket(env.guild, TICKET, member(env, ADMIN), "r"))
+        assert channel.state() == fresh
+
+    def test_fetch_not_found_removes_record(self, env):
+        add_ticket(env)
+        env.guild.fail_fetch = http_error(discord.NotFound, 404)
+        with pytest.raises(TicketActionError) as e:
+            run(lock_ticket(env.guild, TICKET, member(env, ADMIN), "r"))
+        assert e.value.code == "channel_gone" and snap(env) is None
+
+    def test_fetch_forbidden(self, env):
+        add_ticket(env)
+        env.guild.fail_fetch = http_error(discord.Forbidden, 403)
+        with pytest.raises(TicketActionError) as e:
+            run(lock_ticket(env.guild, TICKET, member(env, ADMIN), "r"))
+        assert e.value.code == "bot_missing_permission" and snap(env)["closed_at"] is None
+
+
+# ====== 非預期錯誤與格式錯誤的保存值 ======
+
+
+class TestUnexpectedErrors:
+    @pytest.mark.parametrize("raw", ['{"role:1": "x"}', '{"role:1": 1}', "[true]", '"x"'])
+    def test_wrong_value_types_fall_back_to_default_rule(self, env, raw):
+        from starlib.tickets import parse_locked_overwrites
+
+        assert parse_locked_overwrites(raw) is None
+        channel = add_ticket(env, closed=True, overwrites={("member", CREATOR): LOCKED})
+        env.repo.set_ticket_locked_overwrites({TICKET: raw})
+        run(reopen_ticket(env.guild, TICKET, member(env, ADMIN), "r"))
+        assert channel.send_of(f"member:{CREATOR}") is True
+
+    def test_valid_values_are_kept(self):
+        from starlib.tickets import parse_locked_overwrites
+
+        assert parse_locked_overwrites('{"role:1": true, "role:2": false, "member:3": null}') == {
+            "role:1": True,
+            "role:2": False,
+            "member:3": None,
+        }
+
+    def test_db_read_failure_becomes_failed(self, env, monkeypatch):
+        add_ticket(env)
+
+        def boom(*a):
+            raise RuntimeError("db down")
+
+        monkeypatch.setattr(env.repo, "get_ticket_snapshot", boom)
+        with pytest.raises(TicketActionError) as e:
+            run(lock_ticket(env.guild, TICKET, member(env, ADMIN), "r"))
+        assert e.value.code == "failed"
+
+    def test_button_replies_on_unexpected_error(self, env, monkeypatch):
+        patch_member_type(monkeypatch)
+        add_ticket(env)
+        inter = interaction(env, member(env, ADMIN, manage_channels=True))
+
+        async def boom(*a, **k):
+            raise RuntimeError("unexpected")
+
+        monkeypatch.setattr(ticket_channel, "lock_ticket", boom)
+        run(TicketActionButton("lock", TICKET).callback(inter))
+        [(text, kwargs)] = inter.followup.messages
+        assert "操作失敗" in text and kwargs["ephemeral"] is True
+
+    def test_button_replies_when_permission_check_fails(self, env, monkeypatch):
+        patch_member_type(monkeypatch)
+        add_ticket(env)
+        inter = interaction(env, member(env, ADMIN, manage_channels=True))
+
+        def boom(*a):
+            raise RuntimeError("db down")
+
+        monkeypatch.setattr(env.repo, "get_ticket_snapshot", boom)
+        run(TicketActionButton("lock", TICKET).callback(inter))
+        [(text, kwargs)] = inter.response.messages
+        assert "操作失敗" in text and kwargs["ephemeral"] is True
+
+
+# ====== 鎖內重新檢查權限 ======
+
+
+class TestRecheckInsideLock:
+    def test_creator_refused_when_lobby_removed_while_waiting(self, env):
+        add_ticket(env)
+        creator = member(env, CREATOR)
+
+        async def scenario():
+            async with ticket_lobby.lobby_lock(LOBBY):
+                task = asyncio.create_task(lock_ticket(env.guild, TICKET, creator, "r", check_member=True))
+                for _ in range(5):
+                    await asyncio.sleep(0)
+                env.repo.remove_ticket_lobby(LOBBY)
+            return await asyncio.gather(task, return_exceptions=True)
+
+        [result] = run(scenario())
+        assert isinstance(result, TicketActionError) and result.code == "forbidden"
+        assert snap(env)["closed_at"] is None
+
+    def test_dashboard_call_does_not_check_member(self, env):
+        add_ticket(env, lobby=None)
+        # 後台的權限由區塊權限判斷；操作者不必有 Discord 內按鈕的權限
+        assert run(lock_ticket(env.guild, TICKET, member(env, STRANGER), "r")).changed
+
+    def test_delete_rechecks_member(self, env):
+        add_ticket(env, closed=True, saved={})
+        with pytest.raises(TicketActionError) as e:
+            run(delete_ticket(env.guild, TICKET, "r", member=member(env, CREATOR)))
+        assert e.value.code == "forbidden" and TICKET in env.guild.channels
+
+
+class TestRestoreOnReconnect:
+    def test_second_ready_only_registers_views(self, env):
+        channel = add_ticket(env)
+        channel.messages[CONTROL] = FakeMessage(CONTROL, [f"close_ticket_channel_{TICKET}"])
+        calls: list[int] = []
+        original = channel.fetch_message
+
+        async def counting(mid):
+            calls.append(mid)
+            return await original(mid)
+
+        channel.fetch_message = counting
+        views: list = []
+        bot = SimpleNamespace(get_channel=env.guild.get_channel, add_view=lambda v, message_id=None: views.append(message_id))
+        run(restore_ticket_views(bot))
+        run(restore_ticket_views(bot))
+        assert calls == [CONTROL] and views == [CONTROL, CONTROL]
+
+    def test_unexpected_error_on_one_channel_does_not_stop_the_rest(self, env):
+        broken = add_ticket(env, TICKET)
+        ok = add_ticket(env, TICKET_2)
+        ok.messages[CONTROL] = FakeMessage(CONTROL, ["old"])
+
+        async def boom(mid):
+            raise RuntimeError("weird channel")
+
+        broken.fetch_message = boom
+        bot = SimpleNamespace(get_channel=env.guild.get_channel, add_view=lambda v, message_id=None: None)
+        run(restore_ticket_views(bot))
+        assert ok.messages[CONTROL].edits

@@ -822,6 +822,10 @@ flowchart LR
   - 實際 Discord 行為：頻道實際建立在設定的分類、覆寫在 Discord 上的實際可見與發言（含 Administrator）、置頂、按鈕回覆的 ephemeral 顯示、`defer` 後的互動流程。
   - 正式資料上的測試版大廳（`ticket_category_id` 由 ALTER 回填）開單。
 
+- 審查：dev-review 第 1 輪（P-03～P-05 一起審，範圍 XingyuBot `main...feat/dashboard-p05`、domalyze_frontend `main...feat/dashboard-p04`），blocking 0、non-blocking 4、nitpick 4、note 5；之後不再送審。
+  - 已修：nitpick 2 `ticket_open_refusal_text` 的參數在 `TYPE_CHECKING` 下標註 `TicketOpenError`。
+  - 本卡其餘發現都屬 P-04（見 P-04〈進度〉）；note 1（取鎖順序不會死鎖）、note 2（`_locks` 只增不減，數量不大）不處理。
+
 ### P-04 私人頻道能鎖定、重開、刪除
 
 **使用者價值**：處理完的私人頻道可以鎖起來保留、需要時重開，不要了就刪掉，不必手動改 Discord 權限。
@@ -881,6 +885,19 @@ flowchart LR
   - `bot_event.py` 重啟後載入與一次性更新（沒有對 `on_ready` 的自動測試，`restore_ticket_views` 本身有測）；正式資料上測試版鎖定的頻道重開。
   - 後台畫面（桌面與 360px）、確認視窗；前端只過 jsdom 測試。
 
+- 審查：dev-review 第 1 輪（P-03～P-05 一起審，範圍 XingyuBot `main...feat/dashboard-p05`、domalyze_frontend `main...feat/dashboard-p04`），blocking 0、non-blocking 4、nitpick 4、note 5；之後不再送審。
+  - 已修（XingyuBot `feat/dashboard-p05` 上的「P-04 審查」commit；domalyze_frontend `feat/dashboard-p04` 的 `a917212`）：
+    - N1：鎖定、重開讀的是 py-cord 的覆寫快取，要等 gateway 的 CHANNEL_UPDATE 才更新，剛釋放大廳鎖的 P-02 套用管理身分組、或剛做完的重開，整批 `edit(overwrites=)` 可能把那些變更蓋掉。改成計算前先 `guild.fetch_channel` 讀最新覆寫，計算、送出與失敗還原都用這份；讀不到（NotFound）時刪紀錄回 `channel_gone`，Forbidden 回 `bot_missing_permission`。測試替身改成 `edit`、`set_permissions` 只改 Discord 上的狀態、不同步快取，補「P-02 移除／新增管理身分組後立刻鎖定」「重開後立刻再鎖定」「還原用最新覆寫」等 6 項，拿掉 fetch 時其中 5 項失敗。
+    - N2：`parse_locked_overwrites` 檢查是 JSON 物件且每個值都是 true／false／null，否則回 None 走預設規則。`_run_locked` 把 `TicketActionError` 以外的例外記 log 後轉成新的錯誤碼 `failed`（後台 500 `action_failed`）；按鈕流程包一層，非預期例外記 log 並回只有本人看得到的「操作失敗」（已 defer 用 followup），不會停在「思考中」。
+    - N3：`restore_ticket_views` 迴圈內也攔 `Exception` 記 log，單一頻道出錯不中斷 `on_ready`；置頂訊息的一次性更新用模組旗標只在第一次 ready 做，重連時只重新 `add_view`。
+    - N4：按鈕的權限除了鎖外先檢查（立刻回提示），`lock_ticket`／`reopen_ticket` 加 `check_member=True`、`delete_ticket` 加 `member=`，在取得鎖後重新檢查，沒有權限回新的錯誤碼 `forbidden`；後台不傳，不檢查。拿掉鎖內檢查時對應的 2 項測試失敗。
+    - nitpick 1：刪除已無呼叫者的 `get_active_ticket_channels`。
+    - nitpick 2：`ticket_action_error_text` 的參數標註 `TicketActionError`。
+    - nitpick 3：`_set_control_message` 拿掉重複的 `add_view`（`message.edit(view=)` 已 `store_view`）。
+    - nitpick 4：前端遇到 `not_found` 直接重新載入清單，不再先顯示一閃即逝的錯誤。
+  - 未修：note 2（`_locks` 只增不減，數量不大）；note 3（大廳移除後，有保存值的頻道重開會恢復原管理身分組鎖定前的發言權，預設規則則不恢復；兩者都符合「恢復到鎖定前的發言權限」，留給人工驗證對照）。其餘 note 是確認，不需處理。
+  - 修正後驗證：見下方〈完整驗證〉。
+
 ### P-05 `/ticket setup` 支援大廳的全部設定
 
 **使用者價值**：習慣用指令的管理員也能設定新的大廳選項，指令與網頁改的是同一份設定。
@@ -926,6 +943,9 @@ flowchart LR
 - 未驗：
   - 實際 Discord 行為：指令選項的註冊與顯示（中文選項名稱、上限與長度限制）、大廳訊息實際出現、`defer` 後的 ephemeral 回覆、新建頻道與套用管理身分組的實際效果。
   - 後台畫面實際顯示指令設定的結果。
+
+- 審查：dev-review 第 1 輪（P-03～P-05 一起審，範圍 XingyuBot `main...feat/dashboard-p05`、domalyze_frontend `main...feat/dashboard-p04`），blocking 0、non-blocking 4、nitpick 4、note 5；之後不再送審。本卡沒有發現（`/ticket setup` 改用 `has_guild_permissions`、只改有填的選項等都符合）。
+- 完整驗證（P-03～P-05 審查修正後）：後端 `uv run pytest test/test_dashboard_*.py test/test_ticket_lobby.py test/test_tickets_lib.py test/test_backfill_ticket_lobby.py test/test_ticket_open.py test/test_ticket_actions.py test/test_ticket_setup_command.py test/test_server_setting_command.py test/test_moderation_commands.py` 1170 通過、8 失敗，失敗的只有已知的 `test_dashboard_auth.py` 6 項與 `test_dashboard_invite.py` 2 項；ruff 對改動檔通過。前端 vitest 355 項、`tsc --noEmit`、`eslint .`、`next build` 通過。
 
 ### B-01 管理員能開關語音時數統計並看排行榜
 

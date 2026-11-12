@@ -40,6 +40,8 @@ if TYPE_CHECKING:
     from starlib.providers.general.models import McsmInstance, McsmServerSummary
 
     from ..bot import DiscordBot
+    from ..ticket_channel import TicketActionError
+    from ..ticket_lobby import TicketOpenError
 
 class DeletePetView(discord.ui.View):
     def __init__(self):
@@ -1041,11 +1043,13 @@ _TICKET_DENIED = {
 }
 
 
-def ticket_action_error_text(e) -> str:
+def ticket_action_error_text(e: TicketActionError) -> str:
     """鎖定、重開、刪除失敗時只給本人看的說明。"""
     match e.code:
         case "not_found" | "channel_gone":
             return "找不到這個私人頻道的紀錄"
+        case "forbidden":
+            return "你已經沒有這個動作的權限（大廳設定可能剛被修改）"
         case "bot_missing_permission":
             return "我缺少這個頻道的 Manage Roles 或 Manage Channels 權限，請通知管理員"
         case "discord_error":
@@ -1054,15 +1058,39 @@ def ticket_action_error_text(e) -> str:
             return "操作失敗，請稍後再試"
 
 
+async def _ticket_reply(interaction: discord.Interaction, text: str) -> None:
+    """只給本人看的回覆；已 defer 或已回應過時改用 followup。"""
+    if interaction.response.is_done():
+        await interaction.followup.send(text, ephemeral=True)
+    else:
+        await interaction.response.send_message(text, ephemeral=True)
+
+
 async def _ticket_allowed(interaction: discord.Interaction, action: str, channel_id: int) -> bool:
-    """檢查按的人能不能做這個動作；不能時回覆只有本人看得到的提示。"""
+    """先在鎖外檢查按的人能不能做這個動作，不能時立刻回只有本人看得到的提示（動作本身會在鎖內再檢查一次）。"""
     from ..ticket_channel import member_ticket_actions
 
     member = interaction.user
     if not isinstance(member, discord.Member) or action not in member_ticket_actions(interaction.guild, channel_id, member):
-        await interaction.response.send_message(_TICKET_DENIED[action], ephemeral=True)
+        await _ticket_reply(interaction, _TICKET_DENIED[action])
         return False
     return True
+
+
+async def _ticket_guard(interaction: discord.Interaction, run: Callable[[], Awaitable[None]]) -> None:
+    """執行按鈕流程；`TicketActionError` 以外的例外記 log 並回「操作失敗」，按鈕不會停在「思考中」。"""
+    from ..ticket_channel import TicketActionError
+
+    try:
+        await run()
+    except TicketActionError as e:
+        await _ticket_reply(interaction, ticket_action_error_text(e))
+    except Exception:
+        log.exception("Ticket button failed", extra={"channel_id": interaction.channel_id})
+        try:
+            await _ticket_reply(interaction, "操作失敗，請稍後再試")
+        except discord.HTTPException:
+            log.exception("Ticket button: failed to reply")
 
 
 class TicketActionButton(discord.ui.Button):
@@ -1073,10 +1101,13 @@ class TicketActionButton(discord.ui.Button):
         self.channel_id = channel_id
 
     async def callback(self, interaction: discord.Interaction):
+        await _ticket_guard(interaction, lambda: self._run(interaction))
+
+    async def _run(self, interaction: discord.Interaction):
         # 流程在 ticket_channel（它依賴本模組的 view，放函式內 import 避免循環）
         from starlib.moderation import audit_reason
 
-        from ..ticket_channel import TicketActionError, lock_ticket, reopen_ticket
+        from ..ticket_channel import lock_ticket, reopen_ticket
 
         if not await _ticket_allowed(interaction, self.action, self.channel_id):
             return
@@ -1089,14 +1120,12 @@ class TicketActionButton(discord.ui.Button):
             return
         await interaction.response.defer(ephemeral=True)
         guild, actor = interaction.guild, interaction.user
-        try:
-            if self.action == "lock":
-                state = await lock_ticket(guild, self.channel_id, actor, audit_reason(actor, "鎖定私人頻道", via_dashboard=False))
-            else:
-                state = await reopen_ticket(guild, self.channel_id, actor, audit_reason(actor, "重新開啟私人頻道", via_dashboard=False))
-        except TicketActionError as e:
-            await interaction.followup.send(ticket_action_error_text(e), ephemeral=True)
-            return
+        if self.action == "lock":
+            reason = audit_reason(actor, "鎖定私人頻道", via_dashboard=False)
+            state = await lock_ticket(guild, self.channel_id, actor, reason, check_member=True)
+        else:
+            reason = audit_reason(actor, "重新開啟私人頻道", via_dashboard=False)
+            state = await reopen_ticket(guild, self.channel_id, actor, reason, check_member=True)
         if state.changed:
             text = "已鎖定頻道" if state.status == "locked" else "已重新開啟頻道"
         else:
@@ -1113,17 +1142,19 @@ class TicketDeleteConfirmView(discord.ui.View):
 
     @discord.ui.button(label="確認刪除（對話無法復原）", style=discord.ButtonStyle.danger)
     async def confirm(self, button: discord.ui.Button, interaction: discord.Interaction):
+        await _ticket_guard(interaction, lambda: self._run(interaction))
+
+    async def _run(self, interaction: discord.Interaction):
         from starlib.moderation import audit_reason
 
-        from ..ticket_channel import TicketActionError, delete_ticket
+        from ..ticket_channel import delete_ticket
 
         if not await _ticket_allowed(interaction, "delete", self.channel_id):
             return
         await interaction.response.edit_message(content="正在刪除頻道……", view=None)
-        try:
-            await delete_ticket(interaction.guild, self.channel_id, audit_reason(interaction.user, "刪除私人頻道", via_dashboard=False))
-        except TicketActionError as e:
-            await interaction.followup.send(ticket_action_error_text(e), ephemeral=True)
+        member = interaction.user
+        reason = audit_reason(member, "刪除私人頻道", via_dashboard=False)
+        await delete_ticket(interaction.guild, self.channel_id, reason, member=member)
 
 
 class TicketLobbyView(discord.ui.View):
@@ -1153,7 +1184,7 @@ class TicketLobbyView(discord.ui.View):
             await interaction.followup.send(f"已建立私人頻道，請前往{channel.mention}進行對話", ephemeral=True)
 
 
-def ticket_open_refusal_text(e) -> str:
+def ticket_open_refusal_text(e: TicketOpenError) -> str:
     """開單被拒時只給本人看的說明。"""
     match e.code:
         case "already_open":

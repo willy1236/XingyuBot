@@ -17,7 +17,7 @@ from typing import Literal
 
 import discord
 
-from starlib import sclient, sqldb
+from starlib import sqldb
 from starlib.tickets import (
     TicketAction,
     allowed_ticket_actions,
@@ -33,7 +33,9 @@ from .uiElement.view import TicketChannelView
 
 log = logging.getLogger(__name__)
 
-TicketActionErrorCode = Literal["not_found", "channel_gone", "bot_missing_permission", "discord_error", "save_failed"]
+TicketActionErrorCode = Literal[
+    "not_found", "channel_gone", "forbidden", "bot_missing_permission", "discord_error", "save_failed", "failed"
+]
 
 
 class TicketActionError(Exception):
@@ -42,7 +44,9 @@ class TicketActionError(Exception):
     - channel_gone：頻道已在 Discord 被刪除，紀錄已一併移除。
     - bot_missing_permission：bot 缺 Manage Roles／Manage Channels，Discord 拒絕。
     - discord_error：其他 Discord 錯誤，`message` 是 Discord 回的說明。
+    - forbidden：按鈕的操作者在取得鎖之後重新檢查，已沒有這個動作的權限（例如等鎖期間大廳被移除）。
     - save_failed：資料庫寫入失敗，Discord 上的變更已還原。
+    - failed：其他非預期的錯誤（例如讀資料庫失敗），已記 log。
     """
 
     def __init__(self, code: TicketActionErrorCode, message: str | None = None):
@@ -79,17 +83,25 @@ async def _run_locked[T](channel_id: int, fn: Callable[[], Awaitable[T]]) -> T:
     """持有頻道鎖與所屬大廳的鎖執行 `fn`。
 
     等大廳鎖的期間頻道可能被搬到別的大廳（大廳換頻道）或改為未歸屬（移除大廳），取到後重讀，歸屬變了就換鎖重來。
+    `TicketActionError` 以外的例外記 log 後轉成 `failed`。
     """
-    async with ticket_lock(channel_id):
-        while True:
-            snap = _db(lambda: sqldb.get_ticket_snapshot(channel_id))
-            lobby_id = snap["lobby_channel_id"] if snap is not None else None
-            if lobby_id is None:
-                return await fn()
-            async with lobby_lock(lobby_id):
-                again = _db(lambda: sqldb.get_ticket_snapshot(channel_id))
-                if again is None or again["lobby_channel_id"] == lobby_id:
+    try:
+        async with ticket_lock(channel_id):
+            while True:
+                snap = _db(lambda: sqldb.get_ticket_snapshot(channel_id))
+                lobby_id = snap["lobby_channel_id"] if snap is not None else None
+                if lobby_id is None:
                     return await fn()
+                async with lobby_lock(lobby_id):
+                    again = _db(lambda: sqldb.get_ticket_snapshot(channel_id))
+                    if again is None or again["lobby_channel_id"] == lobby_id:
+                        return await fn()
+    except TicketActionError:
+        raise
+    except Exception:
+        # 讀資料庫失敗等非預期錯誤也要轉成呼叫端認得的錯誤，按鈕才不會停在「思考中」
+        log.exception("Ticket: action failed", extra={"channel_id": channel_id})
+        raise TicketActionError("failed") from None
 
 
 def _manager_role_ids(snap: dict) -> list[int]:
@@ -123,6 +135,28 @@ def _load(guild: discord.Guild, channel_id: int) -> tuple[dict, discord.abc.Guil
     return snap, channel
 
 
+async def _fetch_fresh(guild: discord.Guild, channel_id: int) -> discord.abc.GuildChannel:
+    """向 Discord 讀頻道目前的覆寫，計算與還原都用這份。
+
+    不用快取：py-cord 的覆寫快取要等 gateway 的 CHANNEL_UPDATE 才更新（`set_permissions`、`edit` 都不改本地快取），
+    剛釋放大廳鎖的 P-02 套用管理身分組、或剛做完的重開，快取可能還是舊的，整批 `edit(overwrites=)` 會把那些變更蓋掉。
+    頻道已不在時刪紀錄並丟 channel_gone。
+    """
+    try:
+        return await guild.fetch_channel(channel_id)  # pyright: ignore[reportReturnType]
+    except discord.NotFound:
+        _db(lambda: sqldb.delete_ticket_channels([channel_id]))
+        raise TicketActionError("channel_gone") from None
+    except discord.HTTPException as e:
+        raise _http_error(e) from None
+
+
+def _check_member(guild: discord.Guild, channel_id: int, member: discord.Member | None, action: TicketAction) -> None:
+    """按鈕的操作者在鎖內重新檢查權限（等鎖期間大廳可能被移除、管理身分組可能被改）；後台傳 None 不檢查。"""
+    if member is not None and action not in member_ticket_actions(guild, channel_id, member):
+        raise TicketActionError("forbidden")
+
+
 async def _set_control_message(channel: discord.abc.GuildChannel, message_id: int | None, locked: bool) -> None:
     """把置頂的操作訊息換成對應狀態的按鈕；訊息不在或改不了只記 log（之後只能從後台操作）。"""
     if message_id is None:
@@ -132,9 +166,8 @@ async def _set_control_message(channel: discord.abc.GuildChannel, message_id: in
         message = channel.get_partial_message(message_id)  # pyright: ignore[reportAttributeAccessIssue]
         await message.edit(view=view)
     except discord.HTTPException:
+        # py-cord 的 edit 成功時已登記這個 view（store_view），不必再 add_view
         log.warning("Ticket: failed to update the control message", extra={"channel_id": channel.id})
-        return
-    sclient.bot.add_view(view, message_id=message_id)  # pyright: ignore[reportOptionalMemberAccess]
 
 
 async def _notify(channel: discord.abc.GuildChannel, text: str) -> None:
@@ -161,10 +194,13 @@ async def _restore(channel: discord.abc.GuildChannel, before: dict, reason: str)
         log.exception("Ticket: failed to restore overwrites", extra={"channel_id": channel.id})
 
 
-async def lock_ticket(guild: discord.Guild, channel_id: int, actor: discord.Member, reason: str) -> TicketState:
+async def lock_ticket(
+    guild: discord.Guild, channel_id: int, actor: discord.Member, reason: str, *, check_member: bool = False
+) -> TicketState:
     """鎖定：bot 以外所有覆寫對象都不能發言，鎖定前的 `send_messages` 存進 `locked_overwrites_json`。
 
     已鎖定時什麼都不做（`changed=False`）。資料庫寫入失敗時還原覆寫。操作訊息換成重開與刪除按鈕，頻道內公告鎖定者。
+    `check_member`：按鈕呼叫時為 True，在鎖內重新檢查 `actor` 的權限。
 
     Raises:
         TicketActionError: 見 `TicketActionErrorCode`。
@@ -174,8 +210,10 @@ async def lock_ticket(guild: discord.Guild, channel_id: int, actor: discord.Memb
         snap, channel = _load(guild, channel_id)
         if channel is None:
             raise TicketActionError("channel_gone")
+        _check_member(guild, channel_id, actor if check_member else None, "lock")
         if snap["closed_at"] is not None:
             return TicketState(channel_id, "locked", False)
+        channel = await _fetch_fresh(guild, channel_id)
         overwrites, saved = locked_overwrites(channel, guild.me)
         before = await _apply(channel, overwrites, reason)
         try:
@@ -193,10 +231,13 @@ async def lock_ticket(guild: discord.Guild, channel_id: int, actor: discord.Memb
     return await _run_locked(channel_id, run)
 
 
-async def reopen_ticket(guild: discord.Guild, channel_id: int, actor: discord.Member, reason: str) -> TicketState:
+async def reopen_ticket(
+    guild: discord.Guild, channel_id: int, actor: discord.Member, reason: str, *, check_member: bool = False
+) -> TicketState:
     """重開：恢復鎖定前的發言權限後清空保存值；沒有保存值（測試版鎖定）時照預設規則恢復，見 `reopened_overwrites`。
 
     未鎖定時什麼都不做（`changed=False`）。資料庫寫入失敗時還原覆寫。操作訊息換回鎖定按鈕，頻道內公告重開者。
+    `check_member`：按鈕呼叫時為 True，在鎖內重新檢查 `actor` 的權限。
 
     Raises:
         TicketActionError: 見 `TicketActionErrorCode`。
@@ -206,8 +247,10 @@ async def reopen_ticket(guild: discord.Guild, channel_id: int, actor: discord.Me
         snap, channel = _load(guild, channel_id)
         if channel is None:
             raise TicketActionError("channel_gone")
+        _check_member(guild, channel_id, actor if check_member else None, "reopen")
         if snap["closed_at"] is None:
             return TicketState(channel_id, "open", False)
+        channel = await _fetch_fresh(guild, channel_id)
         overwrites = reopened_overwrites(
             channel,
             guild.me,
@@ -231,11 +274,14 @@ async def reopen_ticket(guild: discord.Guild, channel_id: int, actor: discord.Me
     return await _run_locked(channel_id, run)
 
 
-async def delete_ticket(guild: discord.Guild, channel_id: int, reason: str) -> TicketState:
+async def delete_ticket(
+    guild: discord.Guild, channel_id: int, reason: str, *, member: discord.Member | None = None
+) -> TicketState:
     """刪除 Discord 頻道與紀錄（對話無法復原）。
 
     沒有紀錄或頻道已不在時視為已刪除（`changed=False`）；沒有紀錄時不動 Discord，不會刪到不是私人頻道的頻道。
     頻道刪除後紀錄刪除失敗只記 log，下次載入清單時會清掉。
+    `member`：按鈕呼叫時傳操作者，在鎖內重新檢查權限；後台傳 None。
 
     Raises:
         TicketActionError: bot_missing_permission、discord_error。
@@ -248,6 +294,7 @@ async def delete_ticket(guild: discord.Guild, channel_id: int, reason: str) -> T
             return TicketState(channel_id, "deleted", False)
         if channel is None:
             return TicketState(channel_id, "deleted", False)
+        _check_member(guild, channel_id, member, "delete")
         try:
             await channel.delete(reason=reason)
         except discord.NotFound:
@@ -296,25 +343,37 @@ def _custom_ids(message: discord.Message) -> list[str]:
     ]
 
 
+#: 置頂訊息的一次性更新是否已在這個 process 做過；重連時 on_ready 會再觸發，只重新登記 view
+_messages_refreshed = False
+
+
 async def restore_ticket_views(bot: discord.Bot) -> None:
     """bot 啟動時：所有還有紀錄的私人頻道（含已鎖定）依狀態載入操作按鈕。
 
-    置頂操作訊息還是舊按鈕（上線前的「關閉頻道」或狀態不符）時換成新按鈕，已是新按鈕就不動，所以只會更新一次。
-    頻道或訊息已不在的略過：頻道紀錄由後台載入時清除，訊息不在的頻道只能從後台操作。
+    第一次 ready 時另外檢查置頂操作訊息：還是舊按鈕（上線前的「關閉頻道」或狀態不符）時換成新按鈕，已是新按鈕就不動；
+    之後的 ready（重連）只重新登記 view，不再逐一讀訊息。
+    頻道或訊息已不在的略過：頻道紀錄由後台載入時清除，訊息不在的頻道只能從後台操作。單一頻道的錯誤只記 log，不中斷 on_ready。
     """
+    global _messages_refreshed
+    refresh = not _messages_refreshed
+    _messages_refreshed = True
     tickets = _db(
         lambda: [(t.channel_id, t.view_message_id, t.closed_at is not None) for t in sqldb.list_all_ticket_channels()]
     )
     for channel_id, message_id, locked in tickets:
-        channel = bot.get_channel(channel_id)
-        if channel is None or message_id is None:
-            continue
-        view = TicketChannelView(channel_id, locked)
-        bot.add_view(view, message_id=message_id)
         try:
+            channel = bot.get_channel(channel_id)
+            if channel is None or message_id is None:
+                continue
+            view = TicketChannelView(channel_id, locked)
+            bot.add_view(view, message_id=message_id)
+            if not refresh:
+                continue
             message = await channel.fetch_message(message_id)  # pyright: ignore[reportAttributeAccessIssue]
             if _custom_ids(message) != [item.custom_id for item in view.children]:  # pyright: ignore[reportAttributeAccessIssue]
                 await message.edit(view=view)
                 log.info("Ticket control message updated", extra={"channel_id": channel_id})
         except discord.HTTPException:
             log.warning("Ticket control message unavailable", extra={"channel_id": channel_id})
+        except Exception:
+            log.exception("Ticket: failed to restore the control view", extra={"channel_id": channel_id})
