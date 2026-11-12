@@ -1185,6 +1185,34 @@ class TicketRepository(BaseRepository):
             self.session.exec(update(TicketChannel).where(TicketChannel.channel_id == channel_id).values(locked_overwrites_json=value))
         self.session.commit()
 
+    # ====== 開單（P-03） ======
+    def count_open_lobby_tickets(self, lobby_id: int) -> int:
+        """大廳底下還沒刪除的私人頻道數，含已鎖定（開單上限以此判斷）。"""
+        stmt = select(func.count()).select_from(TicketChannel).where(TicketChannel.lobby_channel_id == lobby_id)
+        return self.session.exec(stmt).one()
+
+    def find_user_ticket(self, lobby_id: int, user_id: int) -> int | None:
+        """使用者在該大廳還沒刪除的私人頻道（含已鎖定）的頻道 ID，沒有回 None；有多張時回最早建立的。"""
+        stmt = (
+            select(TicketChannel.channel_id)
+            .where(TicketChannel.lobby_channel_id == lobby_id, TicketChannel.creator_id == user_id)
+            .order_by(TicketChannel.created_at, TicketChannel.channel_id)
+            .limit(1)
+        )
+        return self.session.exec(stmt).first()
+
+    def take_ticket_number(self, lobby_id: int) -> int | None:
+        """取得大廳的下一個流水號並遞增（單一 UPDATE ... RETURNING，號碼不回收）；大廳不存在或已移除回 None。"""
+        stmt = (
+            update(TicketChannelLobby)
+            .where(TicketChannelLobby.channel_id == lobby_id, TicketChannelLobby.removed_at.is_(None))
+            .values(next_number=TicketChannelLobby.next_number + 1)
+            .returning(TicketChannelLobby.next_number)
+        )
+        taken = self.session.exec(stmt).scalar_one_or_none()
+        self.session.commit()
+        return None if taken is None else taken - 1
+
 
 class RoleSaveRepository(BaseRepository):
     # * role_save

@@ -69,7 +69,7 @@
 | 15 | G-02 | 實作完成 | 管理員能提前結束與重抽 | G-01 | B | 含 `/giveaway redraw` 修改 |
 | 16 | R-03 | 實作完成 | 管理員能把反應身分組掛到 bot 既有的訊息 | R-02 | C | |
 | 17 | R-04 | 實作完成 | 管理員能刪除反應身分組、處理失效並重新發送 | R-02 | C | 含重啟清理移除與舊內容回填 |
-| 18 | P-03 | 未完成 | 成員開單時套用大廳的命名、限制與可見範圍 | P-02 | C | |
+| 18 | P-03 | 實作完成，待人工驗證 | 成員開單時套用大廳的命名、限制與可見範圍 | P-02 | C | |
 | 19 | P-04 | 未完成 | 私人頻道能鎖定、重開、刪除 | P-03 | D | |
 | 20 | P-05 | 未完成 | `/ticket setup` 支援大廳的全部設定 | P-02 | C | 只動 `ticket_setup`，呼叫 `save_lobby` |
 
@@ -786,12 +786,12 @@ flowchart LR
 - 不包含：鎖定重開刪除的行為（P-04）。
 
 **驗收條件**
-- [ ] 從大廳 A 開單得到 `<前綴A>-0001`，只有建立者、A 的管理身分組、bot 看得到；三者都能發言。
-- [ ] 每人一張開啟時，同一人在同一大廳開第二張，被告知已有的頻道；在另一大廳仍能開。
-- [ ] 上限 2、已有兩張（含已鎖定）時，第三人被告知已額滿；刪除一張後可開。
-- [ ] 私人頻道在 Discord 被手動刪除後，沒打開後台，建立者直接再開單，成功開出新頻道。
-- [ ] 兩人同時按下、上限只剩 1 時，只開出一張。
-- [ ] 刪除的號碼不回收；超過 9999 照常往上加。
+- [x] 從大廳 A 開單得到 `<前綴A>-0001`，只有建立者、A 的管理身分組、bot 看得到；三者都能發言。
+- [x] 每人一張開啟時，同一人在同一大廳開第二張，被告知已有的頻道；在另一大廳仍能開。
+- [x] 上限 2、已有兩張（含已鎖定）時，第三人被告知已額滿；刪除一張後可開。
+- [x] 私人頻道在 Discord 被手動刪除後，沒打開後台，建立者直接再開單，成功開出新頻道。
+- [x] 兩人同時按下、上限只剩 1 時，只開出一張。
+- [x] 刪除的號碼不回收；超過 9999 照常往上加。
 
 **實作設計**
 - 資料：repository 新增 `count_open_lobby_tickets(lobby_id)`、`find_user_ticket(lobby_id, user_id)`、`take_ticket_number(lobby_id)`（`UPDATE ... SET next_number = next_number + 1 RETURNING`）。
@@ -802,7 +802,25 @@ flowchart LR
 
 **依賴**：P-02（`TicketLobbyView` 已改為讀大廳設定；同一個類別不並行改）
 
-**進度**：未完成
+**進度**：實作完成，待人工驗證（2026-11-12）
+- commit：XingyuBot `feat/dashboard-p03`（hash 見 worker 回報，本進度回寫與最後一個 commit 同時提交）；本卡只動後端與 bot，domalyze_frontend 沒有變更。
+- 實作決定（與卡片描述的落差與處理，範圍與驗收條件不變）：
+  - 開單流程放 `starDiscord/ticket_lobby.py` 的 `open_ticket(guild, lobby_channel_id, creator) -> TextChannel`，被拒或失敗丟 `TicketOpenError`（`code`：`lobby_removed`、`lobby_invalid`、`already_open`（帶 `existing_channel_id`）、`full`、`discord_error`、`save_failed`）。它要送 `TicketChannelView`，與 `save_lobby` 同理不放 starlib；`CreateTicketButton.callback` 只負責 defer、呼叫與回覆（只有本人看得到），函式內 import 避免與 `ticket_lobby` 循環。
+  - 鎖沿用 P-02 的 `lobby_lock(channel_id)`：開單整個流程（讀設定、清紀錄、檢查限制、取號、建頻道、寫紀錄）都持有，與同一大廳的修改、移除也互相序列化。
+  - 檢查順序：大廳不存在、已移除或不屬於這個伺服器 → `lobby_removed`；`lobby_invalid_reason` 有值（分類被刪或未設定、大廳頻道或訊息被刪）→ `lobby_invalid`；清掉大廳底下 `guild.get_channel` 回空的私人頻道紀錄；每人一張用 `find_user_ticket`，上限用 `count_open_lobby_tickets`，兩者都以大廳為單位、含已鎖定，未歸屬的頻道不算。被拒時不消耗流水號。
+  - `take_ticket_number` 是單一 `UPDATE ... SET next_number = next_number + 1 ... RETURNING`，條件含 `removed_at IS NULL`，回傳取到的號碼（遞增前的值），大廳已移除回 None。號碼在建頻道前取，建立失敗時號碼不回收。名稱 `ticket_channel_name(prefix, number)` 為 `f"{prefix}-{number:04d}"`。
+  - `find_user_ticket` 回頻道 ID（不回 ORM 物件，不綁 session）；有多張時回最早建立的。
+  - 頻道開在 `ticket_category_id`，覆寫用 `build_ticket_overwrites`（大廳快照帶 `manager_role_ids`）；topic 沿用測試版格式。稽核原因照指令的慣例 `audit_reason(creator, "從大廳 <id> 開立私人頻道", via_dashboard=False)`。
+  - 置頂操作訊息照舊送現有的 `TicketChannelView`（兩態按鈕屬 P-04），紀錄寫入 `lobby_channel_id`、`number`、`view_message_id`。順序：建頻道 → 送訊息 → 寫紀錄 → 置頂；送訊息或寫資料庫失敗時刪掉剛建的頻道（帶稽核原因），置頂失敗（缺 Manage Messages）只記 log，頻道照常開出。
+  - 按鈕先 `defer(ephemeral=True)` 再 followup：等鎖與建頻道可能超過 3 秒的互動回應期限。
+  - 順手修 `view.py` 既有的 ruff I001（import 排序）並拿掉已不用的 `TicketChannel` import。沒有 schema 變更，不需要 ALTER。
+- 驗證：
+  - 新增 `test/test_ticket_open.py` 39 項（假 Discord 加真實 PostgreSQL）：命名與流水號（四位補零、超過 9999、各大廳各自遞增、刪除後不回收）、覆寫內容（複製分類覆寫、@everyone 看不到、建立者與該大廳管理身分組與 bot 能查看發言讀紀錄、其他大廳的管理身分組不在內、已刪除的身分組略過）、每人一張（同大廳被拒並回已有頻道、含已鎖定、另一大廳可開、關閉時可開多張）、上限（含已鎖定、手動刪除一張後可開、以大廳為單位、未歸屬不算）、手動刪除後再開、同時按下（上限 1 兩人與同一人連按，都只開一張；把鎖換成每次新建的鎖時這兩項會失敗）、已移除／不存在／他伺服器／分類被刪／訊息被刪／未設分類的大廳不能開、Discord 與資料庫失敗的還原、置頂失敗、按鈕回覆只給本人、repository 三個方法。
+  - `uv run pytest test/test_dashboard_*.py test/test_ticket_lobby.py test/test_tickets_lib.py test/test_backfill_ticket_lobby.py test/test_ticket_open.py` 1000 通過、8 失敗，失敗的是 main 上已失敗的 `test_dashboard_auth.py` 6 項與 `test_dashboard_invite.py` 2 項。ruff 對本次改動的檔案通過。
+  - 勾選的驗收條件依上述自動測試（假 Discord 物件）。
+- 未驗：
+  - 實際 Discord 行為：頻道實際建立在設定的分類、覆寫在 Discord 上的實際可見與發言（含 Administrator）、置頂、按鈕回覆的 ephemeral 顯示、`defer` 後的互動流程。
+  - 正式資料上的測試版大廳（`ticket_category_id` 由 ALTER 回填）開單。
 
 ### P-04 私人頻道能鎖定、重開、刪除
 

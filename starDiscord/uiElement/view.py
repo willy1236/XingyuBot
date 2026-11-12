@@ -4,9 +4,9 @@ import asyncio
 import io
 import logging
 import random
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from collections.abc import Awaitable, Callable
 from typing import TYPE_CHECKING
 
 import discord
@@ -26,7 +26,6 @@ from starlib.database import (
     McsmServerAction,
     Poll,
     PollRole,
-    TicketChannel,
 )
 from starlib.instance import mcsm_api, vip_admin_channel
 from starlib.tickets import DEFAULT_BUTTON_LABEL
@@ -37,10 +36,10 @@ GIVEAWAY_MENTIONS = discord.AllowedMentions(everyone=False, roles=False, users=T
 
 if TYPE_CHECKING:
     from starlib.database import SQLRepository
-
-    from ..bot import DiscordBot
     from starlib.database.postgresql.models import PollOption, ReactionRoleOption, TRPGStoryOption, TRPGStoryPlot
     from starlib.providers.general.models import McsmInstance, McsmServerSummary
+
+    from ..bot import DiscordBot
 
 class DeletePetView(discord.ui.View):
     def __init__(self):
@@ -1064,25 +1063,33 @@ class TicketLobbyView(discord.ui.View):
             )
 
         async def callback(self, interaction: discord.Interaction):
-            category = interaction.channel.category
-            # 沿用分類的覆寫（保留管理身分組的可見權限），再把頻道改成只有建立者與 bot 看得到
-            overwrites = dict(category.overwrites)
-            overwrites[interaction.guild.default_role] = discord.PermissionOverwrite(view_channel=False)
-            overwrites[interaction.user] = discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True)
-            overwrites[interaction.guild.me] = discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True)
-            channel = await category.create_text_channel(
-                name=f"ticket-{interaction.user.name}", topic=f"Ticket channel for {interaction.user} ({interaction.user.id})", overwrites=overwrites
-            )
-            msg = await channel.send(
-                f"{interaction.user.mention}，你好！請在此頻道描述你的問題，我們會盡快協助你。", view=TicketChannelView(channel, interaction.user)
-            )
-            sqldb.merge(
-                TicketChannel(
-                    channel_id=channel.id, guild_id=interaction.guild.id, creator_id=interaction.user.id, created_at=nowtz(), view_message_id=msg.id
-                )
-            )
-            await msg.pin()
-            await interaction.response.send_message(f"已建立私人頻道，請前往{channel.mention}進行對話", ephemeral=True)
+            # 開單流程在 ticket_lobby（它依賴本模組的 view，放函式內 import 避免循環）
+            from ..ticket_lobby import TicketOpenError, open_ticket
+
+            await interaction.response.defer(ephemeral=True)
+            try:
+                channel = await open_ticket(interaction.guild, interaction.channel_id, interaction.user)
+            except TicketOpenError as e:
+                await interaction.followup.send(ticket_open_refusal_text(e), ephemeral=True)
+                return
+            await interaction.followup.send(f"已建立私人頻道，請前往{channel.mention}進行對話", ephemeral=True)
+
+
+def ticket_open_refusal_text(e) -> str:
+    """開單被拒時只給本人看的說明。"""
+    match e.code:
+        case "already_open":
+            return f"你在這個大廳已經有私人頻道了：<#{e.existing_channel_id}>"
+        case "full":
+            return "這個大廳的私人頻道目前已額滿，請稍後再試"
+        case "lobby_removed":
+            return "這個大廳已停止開單"
+        case "lobby_invalid":
+            return "這個大廳目前無法開單，請通知管理員檢查大廳設定"
+        case "discord_error":
+            return f"建立私人頻道失敗，請通知管理員檢查我的權限：{e.message}"
+        case _:
+            return "建立私人頻道失敗，請稍後再試"
 
 class VIPApplicationForm(discord.ui.Modal):
     def __init__(self):
