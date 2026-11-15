@@ -49,6 +49,8 @@ _SCRUB_SUBSTRINGS = ("token", "secret", "password", "passwd", "api_key", "apikey
 
 # 指令列帶入的金鑰參數（如 rettiwt -k "<key>"），會出現在區域變數與 subprocess breadcrumbs 中
 _SECRET_ARG_PATTERN = re.compile(r"""((?:^|\s)(?:-k|--key|--api-key)\s+)("[^"]*"|'[^']*'|\S+)""")
+# 指令列表的 repr（如 subprocess 例外訊息中的 ['rettiwt', '-k', '<key>']）
+_SECRET_ARG_LIST_PATTERN = re.compile(r"""((["'])(?:-k|--key|--api-key)\2,\s*)("[^"]*"|'[^']*')""")
 
 # 只截斷使用者附加資料中的長文字（如 Discord 訊息內容），不動事件本身的錯誤訊息與 breadcrumbs
 _TRUNCATE_SECTIONS = {"extra"}
@@ -127,6 +129,7 @@ def _sanitize_data(data: Any, *, truncate: bool = False) -> Any:
         return sanitized
 
     if isinstance(data, str):
+        data = _SECRET_ARG_LIST_PATTERN.sub(r"\1'[Filtered]'", data)
         return _SECRET_ARG_PATTERN.sub(r"\1[Filtered]", data)
 
     if isinstance(data, list):

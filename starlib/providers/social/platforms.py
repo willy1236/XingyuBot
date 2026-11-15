@@ -34,18 +34,27 @@ class TwitchAPI(APICaller):
     """
 
     base_url = "https://api.twitch.tv/helix"
+    _TOKEN_URL = "https://id.twitch.tv/oauth2/token"
 
     def __init__(self):
         super().__init__()
         self.headers = self.__get_headers()
 
+    def _request(self, method: str, endpoint: str, base_url: str | None = None, **kwargs):
+        # app access token 會過期（或被 Twitch 撤銷），遇 401 換新 token 後重試一次
+        try:
+            return super()._request(method, endpoint, base_url, **kwargs)
+        except APINetworkError as e:
+            if e.status_code != 401 or endpoint == self._TOKEN_URL:
+                raise
+        self.headers = self.__get_headers()
+        return super()._request(method, endpoint, base_url, **kwargs)
+
     def __get_headers(self):
-        TOKENURL = "https://id.twitch.tv/oauth2/token"
-        # headers = {"Content-Type": "application/x-www-form-urlencoded"}
         tokens = sqldb.get_identifier_secret(APIType.Twitch)
         params = {"client_id": tokens.client_id, "client_secret": tokens.client_secret, "grant_type": "client_credentials"}
 
-        r = self._request("POST", TOKENURL, params=params)
+        r = self._request("POST", self._TOKEN_URL, params=params)
         apidata = r.json()
         headers = {"Authorization": f"Bearer {apidata['access_token']}", "Client-Id": tokens.client_id}
         return headers
@@ -577,10 +586,19 @@ class CLIInterface:
         """執行 rettiwt，參數逐一傳入不經 shell，避免指令注入"""
         if self.rettiwt_path is None:
             raise FileNotFoundError("rettiwt")
-        r = subprocess.run(
-            [self.rettiwt_path, "-k", self.rettiwt_api_key, *args], capture_output=True, encoding="utf-8", check=False, timeout=30
-        )
-        r.check_returncode()
+        # subprocess 的例外訊息會帶完整指令，改拋遮蔽金鑰的版本；在 except 區塊外拋出，原例外不會掛在 __context__ 上
+        redacted_cmd = [self.rettiwt_path, "-k", "[Filtered]", *args]
+        timed_out = False
+        try:
+            r = subprocess.run(
+                [self.rettiwt_path, "-k", self.rettiwt_api_key, *args], capture_output=True, encoding="utf-8", check=False, timeout=30
+            )
+        except subprocess.TimeoutExpired:
+            timed_out = True
+        if timed_out:
+            raise subprocess.TimeoutExpired(redacted_cmd, 30)
+        if r.returncode != 0:
+            raise subprocess.CalledProcessError(r.returncode, redacted_cmd, r.stdout, r.stderr)
         return r
 
     def get_user_timeline(self, user_id: str, after: datetime | None = None) -> RettiwtTweetTimeLineResponse | None:
