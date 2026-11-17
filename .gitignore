@@ -18,3 +18,5 @@ database/localhost+2-key.pem
 !.env.*.example
 
 .claude/worktrees/
+.orca/
+.playwright-mcp/
