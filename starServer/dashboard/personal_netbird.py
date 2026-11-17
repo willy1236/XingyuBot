@@ -1,11 +1,12 @@
 """個人區的 NetBird 節點與安裝指令（T-09）。"""
 
+import asyncio
 import logging
 
 from fastapi import APIRouter, Depends
 
 from starlib.exceptions import APINetworkError
-from starlib.netbird_setup import create_setup, list_peers
+from starlib.netbird_setup import fetch_peers, plan_peers, plan_setup, request_setup_key, save_setup
 
 from .db import run_db
 from .errors import DashboardError
@@ -34,14 +35,17 @@ async def get_netbird(scope: PersonalScope = Depends(require_personal())):
     if scope.tool_user_id is None:
         return result
     user_id = scope.tool_user_id
+    # DB 讀與 NetBird HTTP 分開：HTTP 等待期間不佔 DB 連線與 dashboard executor
+    query = await run_db(lambda: plan_peers(user_id))
+    if query is None:
+        return result
     try:
-        peers = await run_db(lambda: list_peers(user_id))
+        peers = await asyncio.to_thread(fetch_peers, query)
     except APINetworkError:
         log.exception("NetBird query failed")
         raise DashboardError(502, "netbird_unavailable")
-    if peers is not None:
-        result["bound"] = True
-        result["peers"] = [_peer(p) for p in peers]
+    result["bound"] = True
+    result["peers"] = [_peer(p) for p in peers]
     return result
 
 
@@ -49,10 +53,14 @@ async def get_netbird(scope: PersonalScope = Depends(require_personal())):
 async def setup_netbird(scope: PersonalScope = Depends(require_personal(write=True))):
     """按下才產生；setup key 只出現在這次回應。"""
     user_id = scope.tool_user_id
-    assert user_id is not None  # tools_writable 時 tool_user_id 一定是 account_id
+    if user_id is None:  # tools_writable 時 tool_user_id 一定是 account_id，防禦用
+        raise DashboardError(403, "domalyze_required")
+    plan = await run_db(lambda: plan_setup(user_id))
     try:
-        setup = await run_db(lambda: create_setup(user_id))
+        key = await asyncio.to_thread(request_setup_key, plan)
     except APINetworkError:
         log.exception("NetBird setup failed")
         raise DashboardError(502, "netbird_unavailable")
+    # NetBird 全部成功後才寫入綁定
+    setup = await run_db(lambda: save_setup(user_id, key))
     return {"command": setup.command, "bat": setup.bat}
