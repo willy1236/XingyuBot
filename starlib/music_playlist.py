@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from starlib.database import MAX_PLAYLIST_NAME_LENGTH, MusicPlaylist, MusicPlaylistSource, sqldb
-from starlib.exceptions import MusicCommandError
+from starlib.exceptions import MusicCommandError, MusicPlaylistConflict
 
 # 個人歌單上限：歌單數配合下拉選單最多 25 個選項
 MAX_PLAYLISTS = 25
@@ -57,29 +57,36 @@ def clean_playlist_name(name: str) -> str:
 
 def get_or_create_playlist(user_id: UUID, name: str) -> MusicPlaylist:
     name = clean_playlist_name(name)
-    playlist = sqldb.get_music_playlist(user_id, name)
-    if playlist:
-        return playlist
-    if len(sqldb.get_music_playlists(user_id)) >= MAX_PLAYLISTS:
-        raise MusicCommandError(f"歌單數量已達上限 {MAX_PLAYLISTS} 個")
-    return sqldb.create_music_playlist(user_id, name)
+    with sqldb.lock_music_playlist_names(user_id):
+        playlist = sqldb.get_music_playlist(user_id, name)
+        if playlist:
+            return playlist
+        if len(sqldb.get_music_playlists(user_id)) >= MAX_PLAYLISTS:
+            raise MusicCommandError(f"歌單數量已達上限 {MAX_PLAYLISTS} 個")
+        return sqldb.create_music_playlist(user_id, name)
 
 
 def create_playlist(user_id: UUID, name: str) -> MusicPlaylist:
     """建立新歌單；同名已存在時拋錯。"""
     name = clean_playlist_name(name)
-    if sqldb.get_music_playlist(user_id, name):
-        raise MusicCommandError(f"已經有名為「{name}」的歌單")
-    return get_or_create_playlist(user_id, name)
+    with sqldb.lock_music_playlist_names(user_id):
+        if sqldb.get_music_playlist(user_id, name):
+            raise MusicCommandError(f"已經有名為「{name}」的歌單")
+        return get_or_create_playlist(user_id, name)
 
 
 def rename_playlist(playlist: MusicPlaylist, name: str, expected_version: int | None = None) -> None:
     name = clean_playlist_name(name)
-    if name == playlist.name:
-        return
-    if sqldb.get_music_playlist(playlist.user_id, name):
-        raise MusicCommandError(f"已經有名為「{name}」的歌單")
-    sqldb.rename_music_playlist(playlist.id, name, expected_version)
+    # 先名稱空間、再歌單（與 merge_user_data 同一個順序），取鎖之後才檢查版本與重名
+    with sqldb.lock_music_playlist_names(playlist.user_id), sqldb.lock_music_playlist(playlist.id, expected_version):
+        current = sqldb.get_music_playlist_by_id(playlist.id)
+        if current is None:
+            raise MusicPlaylistConflict(deleted=True)
+        if name == current.name:
+            return
+        if sqldb.get_music_playlist(current.user_id, name):
+            raise MusicCommandError(f"已經有名為「{name}」的歌單")
+        sqldb.rename_music_playlist(playlist.id, name)
 
 
 def playlist_room(playlist: MusicPlaylist) -> int:
@@ -104,9 +111,10 @@ def _saved_text(playlist: MusicPlaylist, saved: list[SongRow], dropped: int) -> 
 
 def save_songs(playlist: MusicPlaylist, songs: list[SongRow], expected_version: int | None = None) -> str:
     """把歌曲存進歌單（超過上限的部分捨棄），回傳給使用者的訊息。"""
-    to_save = songs[: playlist_room(playlist)]
-    sqldb.add_music_playlist_songs(playlist.id, to_save, expected_version=expected_version)
-    return _saved_text(playlist, to_save, len(songs) - len(to_save))
+    with sqldb.lock_music_playlist(playlist.id, expected_version):
+        to_save = songs[: playlist_room(playlist)]
+        sqldb.add_music_playlist_songs(playlist.id, to_save)
+        return _saved_text(playlist, to_save, len(songs) - len(to_save))
 
 
 def _sync_text(source: MusicPlaylistSource, result: tuple[int, int, int]) -> str:
@@ -122,19 +130,20 @@ def _sync(playlist: MusicPlaylist, updates: list[tuple[MusicPlaylistSource, Extr
 
 def add_extracted(playlist: MusicPlaylist, extracted: Extracted, expected_version: int | None = None) -> str:
     """把擷取到的單曲或外部歌單加進歌單，回傳給使用者的訊息。同一個外部歌單再加一次時改為同步，避免重複加入。"""
-    if not extracted.playlist_url:
-        text = save_songs(playlist, extracted.songs, expected_version)
-    elif source := sqldb.get_music_playlist_source(playlist.id, extracted.playlist_url):
-        result = _sync(playlist, [(source, extracted)], expected_version)[0]
-        text = "此來源已存在，已同步：" + _sync_text(source, result)
-    else:
-        to_save = extracted.songs[: playlist_room(playlist)]  # 歌單已滿時先擋下，不留下沒有歌曲的來源
-        sqldb.import_music_playlist_source(playlist.id, extracted.playlist_url, extracted.playlist_title, to_save, expected_version)
-        text = _saved_text(playlist, to_save, len(extracted.songs) - len(to_save)) + "，之後可用 /playlist sync 同步外部歌單的更新"
+    with sqldb.lock_music_playlist(playlist.id, expected_version):
+        if not extracted.playlist_url:
+            text = save_songs(playlist, extracted.songs)
+        elif source := sqldb.get_music_playlist_source(playlist.id, extracted.playlist_url):
+            result = _sync(playlist, [(source, extracted)], None)[0]
+            text = "此來源已存在，已同步：" + _sync_text(source, result)
+        else:
+            to_save = extracted.songs[: playlist_room(playlist)]  # 歌單已滿時先擋下，不留下沒有歌曲的來源
+            sqldb.import_music_playlist_source(playlist.id, extracted.playlist_url, extracted.playlist_title, to_save)
+            text = _saved_text(playlist, to_save, len(extracted.songs) - len(to_save)) + "，之後可用 /playlist sync 同步外部歌單的更新"
 
-    if extracted.skipped:
-        text += f"（已略過 {extracted.skipped} 首無法播放的歌曲）"
-    return text
+        if extracted.skipped:
+            text += f"（已略過 {extracted.skipped} 首無法播放的歌曲）"
+        return text
 
 
 async def fetch_sources(sources: list[MusicPlaylistSource], extract: Callable[[str], Awaitable[Extracted]]) -> list[SourceFetch]:

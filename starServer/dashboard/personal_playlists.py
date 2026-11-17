@@ -209,12 +209,13 @@ async def sync_playlist(playlist_id: int, body: VersionBody, scope: PersonalScop
     fetched = await playlists.fetch_sources([SimpleNamespace(id=i, url=url) for i, url in refs], extract)
 
     def action(playlist):
-        current = {s.id: s for s in sqldb.get_music_playlist_sources(playlist.id)}
-        if len(current) != len(fetched) or any(item.source.id not in current for item in fetched):
-            # 擷取期間來源被增減過，等同歌單被改過
-            raise MusicPlaylistConflict()
-        rebuilt = [playlists.SourceFetch(current[item.source.id], item.extracted, item.error) for item in fetched]
-        return {"messages": playlists.apply_sync(playlist, rebuilt, body.version)}
+        with sqldb.lock_music_playlist(playlist.id, body.version):
+            current = {s.id: s for s in sqldb.get_music_playlist_sources(playlist.id)}
+            if len(current) != len(fetched) or any(item.source.id not in current for item in fetched):
+                # 擷取期間來源被增減過，等同歌單被改過
+                raise MusicPlaylistConflict()
+            rebuilt = [playlists.SourceFetch(current[item.source.id], item.extracted, item.error) for item in fetched]
+            return {"messages": playlists.apply_sync(playlist, rebuilt)}
 
     return await _write(scope, playlist_id, action)
 
