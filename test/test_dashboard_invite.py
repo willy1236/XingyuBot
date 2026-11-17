@@ -138,7 +138,7 @@ class TestInviteCallback:
     def test_without_entry_permission_gets_notice(self, env, repo, discord_env):  # noqa: F811
         discord_env.guilds = [g(GUILD, "guild", 0x400)]  # 只有 View Channel
         res = callback(client_with_session(repo))
-        assert res.headers["location"] == f"{FRONTEND}/dashboard?notice=need_permissions"
+        assert res.headers["location"] == f"{FRONTEND}/dashboard/guilds?notice=need_permissions"
 
     def test_actual_guild_wins(self, env, repo, discord_env):  # noqa: F811
         discord_env.guilds = [g("2002", "other", MANAGE_GUILD | MANAGE_CHANNELS)]
@@ -150,28 +150,28 @@ class TestInviteCallback:
         c = client_with_session(repo)
         c.cookies.set("dashboard_oauth", encode_cookie(purpose="invite", next="/dashboard"))
         res = c.get("/oauth/discord", params={"error": "access_denied", "state": STATE})
-        assert res.headers["location"] == f"{FRONTEND}/dashboard"
+        assert res.headers["location"] == f"{FRONTEND}/dashboard/guilds"
 
     def test_bot_not_visible_yet_shows_pending(self, env, repo):  # noqa: F811
         sclient.bot = FakeBot(set())
         res = callback(client_with_session(repo))
-        assert res.headers["location"] == f"{FRONTEND}/dashboard?notice=invite_pending"
+        assert res.headers["location"] == f"{FRONTEND}/dashboard/guilds?notice=invite_pending"
 
     def test_bot_not_ready_shows_pending(self, env, repo):  # noqa: F811
         sclient.bot = FakeBot({GUILD}, ready=False)
         res = callback(client_with_session(repo))
-        assert res.headers["location"] == f"{FRONTEND}/dashboard?notice=invite_pending"
+        assert res.headers["location"] == f"{FRONTEND}/dashboard/guilds?notice=invite_pending"
 
     def test_without_guild_id_goes_to_list(self, env, repo):  # noqa: F811
         res = callback(client_with_session(repo), guild_id=None)
-        assert res.headers["location"] == f"{FRONTEND}/dashboard"
+        assert res.headers["location"] == f"{FRONTEND}/dashboard/guilds"
 
     def test_session_account_decides_and_session_unchanged(self, env, repo, discord_env):  # noqa: F811
         """Discord 邀請頁登入哪個帳號都不影響：以 session 的帳號判斷權限，session 不換。"""
         c = client_with_session(repo, user_id=OTHER_USER)
         discord_env.guilds = [g(GUILD, "guild", 0x400)]
         res = callback(c)
-        assert res.headers["location"] == f"{FRONTEND}/dashboard?notice=need_permissions"
+        assert res.headers["location"] == f"{FRONTEND}/dashboard/guilds?notice=need_permissions"
         assert "dashboard_session=" not in "".join(set_cookies(res))
         repo.session.expire_all()
         assert repo.session.get(DashboardSession, "sid", populate_existing=True).discord_user_id == OTHER_USER
@@ -179,7 +179,7 @@ class TestInviteCallback:
     def test_no_session_goes_to_login(self, env, repo):  # noqa: F811
         c = TestClient(make_app(), base_url="https://testserver", follow_redirects=False)
         res = callback(c)
-        assert res.headers["location"] == f"{FRONTEND}/dashboard-login?next=%2Fdashboard"
+        assert res.headers["location"] == f"{FRONTEND}/dashboard-login?next=%2Fdashboard%2Fguilds"
         assert "dashboard_session=" not in "".join(set_cookies(res))
 
     def test_no_token_saved(self, env, repo, dashboard_env):  # noqa: F811

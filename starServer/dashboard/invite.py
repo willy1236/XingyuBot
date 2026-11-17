@@ -42,8 +42,8 @@ def invite_redirect(url: str, state: str, origin: str | None) -> RedirectRespons
 
 
 def _login_redirect(origin: str) -> RedirectResponse:
-    """沒有 session：導向前端的登入頁，登入後回到後台。"""
-    return RedirectResponse(url=f"{origin}/dashboard-login?{urlencode({'next': '/dashboard'})}")
+    """沒有 session：導向前端的登入頁，登入後回到伺服器清單。"""
+    return RedirectResponse(url=f"{origin}/dashboard-login?{urlencode({'next': '/dashboard/guilds'})}")
 
 
 async def _wait_for_bot(guild_id: str) -> bool:
@@ -64,7 +64,7 @@ async def _handle_invite(request: Request, cookie: auth.OAuthCookie) -> Response
     params = request.query_params
     origin = cookie.origin
     if params.get("error") or not params.get("code"):
-        return RedirectResponse(url=f"{origin}/dashboard")
+        return RedirectResponse(url=f"{origin}/dashboard/guilds")
 
     # Discord 邀請頁登入的可能是另一個帳號；去向一律以 session 的帳號為準，不改 session
     session_id = request.cookies.get(SESSION_COOKIE)
@@ -79,16 +79,16 @@ async def _handle_invite(request: Request, cookie: auth.OAuthCookie) -> Response
 
 async def _same_account_target(user_id: str, guild_id: str | None, origin: str) -> str:
     if not guild_id or not guild_id.isdigit():
-        return f"{origin}/dashboard"
+        return f"{origin}/dashboard/guilds"
     if not await _wait_for_bot(guild_id):
-        return f"{origin}/dashboard?notice=invite_pending"
+        return f"{origin}/dashboard/guilds?notice=invite_pending"
     try:
         perms = await guild_perms(user_id, guild_id)
     except DashboardError:
-        return f"{origin}/dashboard"
+        return f"{origin}/dashboard/guilds"
     if can_enter(perms):
         return f"{origin}/dashboard/guilds/{guild_id}"
-    return f"{origin}/dashboard?notice=need_permissions"
+    return f"{origin}/dashboard/guilds?notice=need_permissions"
 
 
 auth.register_oauth_purpose("invite", _handle_invite)
