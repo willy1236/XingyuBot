@@ -26,7 +26,7 @@ from starlib.oauth.models import DiscordUser
 from starlib.settings import AppSettings
 from starlib.utils import nowtz
 from starServer import bot_website, dashboard
-from starServer.dashboard import auth, config, db, session
+from starServer.dashboard import auth, config, db, discord_users, session
 
 FRONTEND = "https://domalyze.net"
 ORIGINS = ["https://domalyze.net", "https://www.domalyze.net"]
@@ -58,6 +58,7 @@ def dashboard_env(monkeypatch, repo):  # noqa: F811
     monkeypatch.setattr(session, "_followed", {})
     monkeypatch.setattr(session, "_inflight", {})
     monkeypatch.setattr(session, "_unavailable_until", 0.0)
+    monkeypatch.setattr(discord_users, "_fetched", {})
     return fake_client
 
 
