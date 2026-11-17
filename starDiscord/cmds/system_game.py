@@ -10,8 +10,9 @@ from discord.commands import SlashCommandGroup
 from discord.ext import commands, pages
 
 from starlib import BotEmbed, ChoiceList, sclient
-from starlib.database import NetBirdBinding, UserIPDetails
+from starlib.database import UserIPDetails
 from starlib.exceptions import APINetworkError
+from starlib.netbird_setup import create_setup, list_peers
 from starlib.providers import *
 from starlib.settings import get_settings
 from starlib.utils import nowtz
@@ -339,30 +340,15 @@ class system_game(Cog_Extension):
     @with_identity()
     async def netbird_setup(self, ctx: IdentityContext):
         await ctx.defer(ephemeral=True)
-        group_name = f"user-{ctx.identity.user_id}"
         try:
-            api = NetBirdAPI()
-            binding = sclient.sqldb.get_netbird_binding(ctx.identity.user_id)
-            group = None
-            if binding:
-                group = api.get_group(binding.group_id)
-            if not group:
-                group = api.find_group_by_name(group_name) or api.create_group(group_name)
-
-            setup_key = api.create_setup_key(group_name, auto_groups=[group["id"]])
+            setup = create_setup(ctx.identity.user_id)
         except APINetworkError:
             log.exception("NetBird setup failed")
             await ctx.respond("NetBird API連線失敗，請稍後再試", ephemeral=True)
             return
 
-        now = nowtz()
-        binding = NetBirdBinding(user_id=ctx.identity.user_id, group_id=group["id"], group_name=group_name, last_setup_key_id=setup_key["id"], updated_at=now)
-        sclient.sqldb.merge(binding)
-
-        key = setup_key["key"]
-        command = f"netbird up --setup-key {key}"
-        bat_content = f"@echo off\r\nwhere netbird >nul 2>nul\r\nif errorlevel 1 (\r\n    echo 尚未安裝NetBird，請先至 https://netbird.io/downloads 下載安裝\r\n    pause\r\n    exit /b 1\r\n)\r\n{command}\r\npause\r\n"
-        file = discord.File(BytesIO(bat_content.encode("utf-8")), filename="netbird_setup.bat")
+        command = setup.command
+        file = discord.File(BytesIO(setup.bat.encode("utf-8")), filename="netbird_setup.bat")
         await ctx.respond(
             f"請在你的裝置上執行以下指令（或直接執行附件的腳本）：\n```\n{command}\n```\n此金鑰24小時內有效且僅能使用一次，請勿分享給他人。",
             file=file,
@@ -373,16 +359,15 @@ class system_game(Cog_Extension):
     @with_identity()
     async def netbird(self, ctx: IdentityContext):
         await ctx.defer(ephemeral=True)
-        binding = sclient.sqldb.get_netbird_binding(ctx.identity.user_id)
-        if not binding:
-            await ctx.respond("尚未綁定NetBird，請先使用 </game netbird_setup:0> 取得安裝指令", ephemeral=True)
-            return
-
         try:
-            peers = NetBirdAPI().get_peers_in_group(binding.group_id)
+            peers = list_peers(ctx.identity.user_id)
         except APINetworkError:
             log.exception("NetBird query failed")
             await ctx.respond("NetBird API連線失敗，請稍後再試", ephemeral=True)
+            return
+
+        if peers is None:
+            await ctx.respond("尚未綁定NetBird，請先使用 </game netbird_setup:0> 取得安裝指令", ephemeral=True)
             return
 
         if not peers:
