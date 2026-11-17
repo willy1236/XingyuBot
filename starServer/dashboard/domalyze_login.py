@@ -25,13 +25,13 @@ from fastapi.responses import JSONResponse, RedirectResponse, Response
 from pydantic import BaseModel
 
 from sentry_bootstrap import capture_exception_safe
-from starlib import sclient
 from starlib.identity import Account, DirectoryUnavailable
 from starlib.identity.resolver import get_directory
 
 from . import config
 from .auth import avatar_url, sanitize_next, sanitize_origin
 from .db import run_db
+from .discord_users import fetch_discord_user
 from .errors import DashboardError
 from .session import SESSION_COOKIE, create_session, remember_account, set_session_cookie
 
@@ -161,20 +161,8 @@ class Candidate:
 
 
 async def _candidate(discord_id: int) -> Candidate:
-    """在 bot 的事件迴圈上取 Discord 使用者：先查快取，沒有再向 Discord 查；都失敗時只有 Discord ID。"""
-    bot = sclient.bot
-    if bot is None:
-        return Candidate(discord_id, None, None)
-
-    async def _get() -> Candidate:
-        user = bot.get_user(discord_id) or await bot.fetch_user(discord_id)
-        return Candidate(discord_id, user.global_name or user.name, user.avatar.key if user.avatar else None)
-
-    try:
-        return await asyncio.wrap_future(bot.submit(_get()))
-    except Exception as exc:
-        log.warning("Domalyze login: Discord user %s unavailable: %r", discord_id, exc)
-        return Candidate(discord_id, None, None)
+    profile = await fetch_discord_user(discord_id)
+    return Candidate(discord_id, None, None) if profile is None else Candidate(discord_id, profile.name, profile.avatar)
 
 
 # ====== 待選資料 ======
