@@ -15,11 +15,12 @@ from fastapi.responses import JSONResponse
 from fastapi.testclient import TestClient
 from pydantic import BaseModel
 from sqlmodel import select
-from test_identity import repo  # noqa: F401  (repo 為 fixture)
+from test_identity import FakeDirectory, repo  # noqa: F401  (repo 為 fixture)
 
 from starlib import sqldb as real_sqldb
 from starlib.database import APIType, DashboardSession, OAuthToken
 from starlib.database.postgresql.client import SQLRepository
+from starlib.identity import resolver as resolver_module
 from starlib.oauth import DiscordOAuth
 from starlib.oauth.models import DiscordUser
 from starlib.settings import AppSettings
@@ -49,8 +50,13 @@ def dashboard_env(monkeypatch, repo):  # noqa: F811
         redirect_uri="https://api.example.test/oauth/discord",
         default_scopes=["identify"],
         credential_id=credential_id,
+        # 假的 auth server：預設查無此人，各測試可設定 directory.accounts
+        directory=FakeDirectory(),
     )
     monkeypatch.setattr(auth, "_oauth_client_cache", fake_client)
+    monkeypatch.setattr(resolver_module, "_directory", fake_client.directory)
+    monkeypatch.setattr(session, "_followed", {})
+    monkeypatch.setattr(session, "_unavailable_until", 0.0)
     return fake_client
 
 

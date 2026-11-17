@@ -28,6 +28,7 @@ from .session import (
     create_session,
     delete_session_cookie,
     delete_user_sessions,
+    follow_account,
     require_session,
     set_session_cookie,
 )
@@ -164,6 +165,8 @@ async def _handle_login(request: Request, cookie: OAuthCookie) -> Response:
     name = user.global_name or user.username
     old_session_id = request.cookies.get(SESSION_COOKIE)
     session_id = await run_db(lambda: create_session(user.id, name, user.avatar, old_session_id))
+    # 立即確認一次析域帳號，登入後的第一個請求就帶得到
+    await follow_account(SessionInfo(session_id, user.id, name, user.avatar), force=True)
     log.info("Dashboard login: user %s (%s)", user.username, user.id)
 
     response = RedirectResponse(url=f"{cookie.origin}{cookie.next}")
@@ -185,7 +188,13 @@ def avatar_url(user_id: str, avatar: str | None) -> str:
 
 @router.get("/me")
 async def me(info: SessionInfo = Depends(require_session)):
-    return {"id": info.discord_user_id, "name": info.name, "avatar_url": avatar_url(info.discord_user_id, info.avatar)}
+    account = None if info.account_id is None else {"username": info.account_username}
+    return {
+        "id": info.discord_user_id,
+        "name": info.name,
+        "avatar_url": avatar_url(info.discord_user_id, info.avatar),
+        "account": account,
+    }
 
 
 @router.post("/logout")

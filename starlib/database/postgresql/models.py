@@ -916,6 +916,9 @@ class DashboardSession(TokensSchema, table=True):
     avatar: str | None = Field(default=None, sa_column=Column(String))
     created_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0), nullable=False), default_factory=lambda: nowtz())
     last_used_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0), nullable=False), default_factory=lambda: nowtz())
+    # 這個 session 帶的析域帳號（auth server 暫時不可用時以此為準）；via_domalyze 表示是析域登入建立的
+    account_id: UUID | None = Field(default=None, sa_column=Column(PG_UUID(as_uuid=True)))
+    via_domalyze: bool = Field(default=False, sa_column=Column(Boolean, nullable=False, server_default=text("false")))
 
 
 class WebSubConfig(TokensSchema, table=True):
