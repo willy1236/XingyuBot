@@ -13,7 +13,7 @@ from sqlmodel import Session
 from starDiscord import checks
 from starDiscord.cmds import command as command_cog
 from starDiscord.cmds import system_game as game_cog
-from starlib import sqldb
+from starlib import netbird_setup, sqldb
 from starlib.database import DriveShare, LinkedAccount, NetBirdBinding, PlatformType, UserIPDetails
 from starlib.database.postgresql.client import SQLRepository
 from starlib.identity import BotIdentity, IdentityUnavailable
@@ -121,6 +121,7 @@ def cog_repo(monkeypatch, repo):
     fake = SimpleNamespace(sqldb=repo)
     monkeypatch.setattr(game_cog, "sclient", fake)
     monkeypatch.setattr(command_cog, "sclient", fake)
+    monkeypatch.setattr(netbird_setup, "sqldb", repo)
     return repo
 
 
@@ -148,7 +149,7 @@ class FakeNetBirdAPI:
 class TestNetBirdCommands:
     def test_setup_then_query_for_unregistered(self, monkeypatch, cog_repo, temp_identity):
         api = FakeNetBirdAPI()
-        monkeypatch.setattr(game_cog, "NetBirdAPI", lambda: api)
+        monkeypatch.setattr(netbird_setup, "NetBirdAPI", lambda: api)
 
         ctx = FakeCtx()
         call(GAME.netbird_setup, make_cog(GAME), ctx)

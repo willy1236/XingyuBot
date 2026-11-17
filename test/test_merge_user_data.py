@@ -31,6 +31,11 @@ def playlist(repo: SQLRepository, user_id: UUID, name: str, songs: int = 0) -> M
     return pl
 
 
+def _version(repo: SQLRepository, playlist_id: int) -> int:
+    repo.session.expire_all()
+    return repo.session.exec(select(MusicPlaylist.version).where(MusicPlaylist.id == playlist_id)).one()
+
+
 def names(repo: SQLRepository, user_id: UUID) -> list[str]:
     return sorted(p.name for p in repo.get_music_playlists(user_id))
 
@@ -54,7 +59,7 @@ class TestPlaylists:
     def test_all_moved_with_songs_and_sources(self, repo, ids):
         old, new = ids
         pl = playlist(repo, old, "road trip", songs=3)
-        repo.create_music_playlist_source(pl.id, "https://example.com/list", "list")
+        repo.import_music_playlist_source(pl.id, "https://example.com/list", "list", [])
         playlist(repo, new, "mine")
 
         repo.merge_user_data(old, new)
@@ -64,6 +69,21 @@ class TestPlaylists:
         assert names(repo, new) == ["mine", "road trip"]
         assert repo.count_music_playlist_songs(pl.id) == 3
         assert len(repo.get_music_playlist_sources(pl.id)) == 1
+
+    def test_moved_playlists_bump_version(self, repo, ids):
+        old, new = ids
+        moved = playlist(repo, old, "road trip", songs=1)
+        renamed = playlist(repo, old, "fav")
+        playlist(repo, new, "fav")
+        kept = playlist(repo, new, "mine")
+        before = {pl.id: _version(repo, pl.id) for pl in (moved, renamed, kept)}
+
+        repo.merge_user_data(old, new)
+        repo.commit()
+
+        assert _version(repo, moved.id) == before[moved.id] + 1
+        assert _version(repo, renamed.id) == before[renamed.id] + 1
+        assert _version(repo, kept.id) == before[kept.id]
 
     def test_same_name_is_renamed_and_both_kept(self, repo, ids):
         old, new = ids
