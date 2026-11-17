@@ -1,4 +1,4 @@
-"""auth server 內部 API：bot 用 Discord ID 或其他平台的通行證查域民。"""
+"""auth server 內部 API：bot 用 Discord ID、域民代號或其他平台的通行證查域民。"""
 
 import logging
 from dataclasses import dataclass
@@ -12,6 +12,8 @@ log = logging.getLogger(__name__)
 
 # auth server 查無此人時回的 detail，見 domalyze-identity internal.py
 NOT_FOUND_DETAIL = "account not found"
+# auth server 的 Discord 登入方式代號
+DISCORD_PROVIDER = "discord"
 
 
 @dataclass(frozen=True)
@@ -28,6 +30,12 @@ class Account:
     suspended: bool
     twitch_passports: tuple[LinkedPassport, ...] = ()
     minecraft_passports: tuple[LinkedPassport, ...] = ()
+    discord_passports: tuple[LinkedPassport, ...] = ()
+
+    @property
+    def discord_ids(self) -> tuple[int, ...]:
+        """連結的 Discord ID，依數值由小到大。"""
+        return tuple(sorted(int(p.subject) for p in self.discord_passports))
 
 
 @dataclass(frozen=True)
@@ -55,6 +63,10 @@ class AccountDirectory(Protocol):
         """被併掉的 ID 回存續者並帶 merged_from；查無此人（含已刪除）回 None；沒得到明確答案時 raise DirectoryUnavailable"""
         ...
 
+    async def find_by_username(self, username: str) -> Account | None:
+        """用目前的域民代號查；查無此人回 None，停權的域民照樣回傳；沒得到明確答案時 raise DirectoryUnavailable"""
+        ...
+
 
 class DomalyzeIdentityClient:
     """以 `Authorization: Bearer <金鑰>` 呼叫 auth server 內部 API"""
@@ -73,7 +85,12 @@ class DomalyzeIdentityClient:
         return None if data is None else self._parse_account(data, extra)
 
     async def find_by_discord(self, discord_id: int) -> Account | None:
-        return await self.find_by_passport("discord", str(discord_id))
+        return await self.find_by_passport(DISCORD_PROVIDER, str(discord_id))
+
+    async def find_by_username(self, username: str) -> Account | None:
+        extra = {"username": username}
+        data = await self._get(f"/v1/accounts?username={quote(username, safe='')}", extra)
+        return None if data is None else self._parse_account(data, extra)
 
     async def find_by_account_id(self, account_id: UUID) -> ResolvedAccount | None:
         data = await self._get(f"/v1/accounts/{account_id}", {"account_id": str(account_id)})
@@ -126,6 +143,7 @@ class DomalyzeIdentityClient:
                 suspended=bool(data.get("suspended", False)),
                 twitch_passports=tuple(_parse_passport(p) for p in passports if p["provider"] == self._twitch_provider),
                 minecraft_passports=tuple(_parse_passport(p) for p in passports if p["provider"] == self._minecraft_provider),
+                discord_passports=tuple(_parse_discord_passport(p) for p in passports if p["provider"] == DISCORD_PROVIDER),
             )
         except (KeyError, TypeError, ValueError) as e:
             log.error("auth server: malformed response", extra=extra)
@@ -137,3 +155,10 @@ def _parse_passport(data: dict) -> LinkedPassport:
     if not isinstance(subject, str) or not subject:
         raise TypeError("passport subject must be a non-empty string")
     return LinkedPassport(subject=subject, username=data.get("username"))
+
+
+def _parse_discord_passport(data: dict) -> LinkedPassport:
+    passport = _parse_passport(data)
+    if not passport.subject.isdigit():
+        raise ValueError("discord passport subject must be a numeric ID")
+    return passport

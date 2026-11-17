@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from .client import DirectoryUnavailable
-from .resolver import _get_directory
+from .resolver import get_directory
 
 
 @dataclass(frozen=True)
@@ -29,7 +29,7 @@ async def lookup_twitch_member(twitch_id: str | int) -> TwitchLookup:
     from starlib.settings import get_settings
 
     try:
-        account = await _get_directory().find_by_passport(get_settings().AUTH_TWITCH_PROVIDER, str(twitch_id))
+        account = await get_directory().find_by_passport(get_settings().AUTH_TWITCH_PROVIDER, str(twitch_id))
     except DirectoryUnavailable:
         return MemberUnknown()
     if account is None or account.suspended:

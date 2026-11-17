@@ -76,6 +76,11 @@ class FakeDirectory:
             raise DirectoryUnavailable("down")
         return self.by_account_id.get(account_id)
 
+    async def find_by_username(self, username: str) -> Account | None:
+        if self.unavailable:
+            raise DirectoryUnavailable("down")
+        return next((a for a in self.accounts.values() if a.username == username), None)
+
 
 def _account(account_id: UUID | None = None, **kwargs) -> Account:
     return Account(
@@ -424,6 +429,7 @@ async def _with_server(handler, call, twitch_provider: str = "twitch", minecraft
     app = web.Application()
     app.router.add_get("/v1/passports/{provider}/{id}", handler)
     app.router.add_get("/v1/accounts/{id}", handler)
+    app.router.add_get("/v1/accounts", handler)
     runner = web.AppRunner(app)
     await runner.setup()
     site = web.TCPSite(runner, "127.0.0.1", 0)
@@ -541,6 +547,58 @@ class TestDomalyzeIdentityClient:
 
         with pytest.raises(DirectoryUnavailable):
             _find(handler)
+
+
+class TestDiscordPassports:
+    def test_discord_passports_parsed_and_sorted(self):
+        passports = [
+            {"provider": "discord", "subject": "900", "username": "b"},
+            {"provider": "discord", "subject": "20", "username": None},
+            {"provider": "twitch", "subject": "111", "username": "t"},
+        ]
+
+        async def handler(request):
+            return web.json_response({"accountId": str(uuid4()), "roles": [], "suspended": False, "passports": passports})
+
+        account = _find(handler)
+        assert account.discord_passports == (LinkedPassport("900", "b"), LinkedPassport("20", None))
+        assert account.discord_ids == (20, 900)
+        assert account.twitch_passports == (LinkedPassport("111", "t"),)
+
+    def test_non_numeric_discord_subject_is_unavailable(self):
+        async def handler(request):
+            return web.json_response({"accountId": str(uuid4()), "passports": [{"provider": "discord", "subject": "abc"}]})
+
+        with pytest.raises(DirectoryUnavailable):
+            _find(handler)
+
+
+class TestFindByUsername:
+    def test_found(self):
+        account_id = uuid4()
+        seen = {}
+
+        async def handler(request: web.Request):
+            seen["path"] = request.path
+            seen["username"] = request.query.get("username")
+            return web.json_response({"accountId": str(account_id), "username": "a b", "roles": [], "suspended": True})
+
+        account = asyncio.run(_with_server(handler, lambda client: client.find_by_username("a b")))
+        assert (account.account_id, account.username, account.suspended) == (account_id, "a b", True)
+        assert seen == {"path": "/v1/accounts", "username": "a b"}
+
+    def test_not_found(self):
+        async def handler(request):
+            return web.json_response({"detail": "account not found"}, status=404)
+
+        assert asyncio.run(_with_server(handler, lambda client: client.find_by_username("nobody"))) is None
+
+    def test_error_is_unavailable(self):
+        async def handler(request):
+            return web.json_response({}, status=500)
+
+        with pytest.raises(DirectoryUnavailable):
+            asyncio.run(_with_server(handler, lambda client: client.find_by_username("x")))
 
 
 def _find_account(handler, account_id: UUID):
