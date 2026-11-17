@@ -2273,6 +2273,11 @@ class MusicPlaylistRepository(BaseRepository):
         stmt = select(MusicPlaylist).where(MusicPlaylist.user_id == user_id, MusicPlaylist.name == name)
         return self.session.exec(stmt).one_or_none()
 
+    def get_music_playlist_by_id(self, playlist_id: int) -> MusicPlaylist | None:
+        """依 id 取得歌單；一律重新讀資料庫，不用 session 裡快取的舊值。"""
+        stmt = select(MusicPlaylist).where(MusicPlaylist.id == playlist_id).execution_options(populate_existing=True)
+        return self.session.exec(stmt).one_or_none()
+
     def get_music_playlist_song_counts(self, user_id: UUID) -> dict[int, int]:
         """取得使用者每個歌單的歌曲數（playlist_id → 數量）"""
         stmt = (
