@@ -206,15 +206,26 @@ class TestSettings:
         assert s.DASHBOARD_FRONTEND_URL == "https://domalyze.net"
         assert s.DASHBOARD_ALLOWED_ORIGINS == ["https://domalyze.net", "https://www.domalyze.net"]
 
+    WEBSITE = dict(
+        API_WEBSITE=True,
+        DASHBOARD_FRONTEND_URL=FRONTEND,
+        DASHBOARD_ALLOWED_ORIGINS=ORIGINS,
+        DASHBOARD_OIDC_CLIENT_ID="xingyu-website",
+        DASHBOARD_OIDC_CLIENT_SECRET="s",
+        DASHBOARD_OIDC_REDIRECT_URI="https://api.domalyze.net/oauth/domalyze",
+    )
+
     def test_ok_with_website(self):
-        s = AppSettings(
-            **self.BASE,
-            API_WEBSITE=True,
-            DASHBOARD_FRONTEND_URL=FRONTEND,
-            DASHBOARD_ALLOWED_ORIGINS=ORIGINS,
-            _env_file=None,
-        )
+        s = AppSettings(**self.BASE, **self.WEBSITE, _env_file=None)
         assert s.DASHBOARD_ALLOWED_ORIGINS == ORIGINS
+        assert s.DASHBOARD_OIDC_ISSUER == "https://auth.domalyze.net"
+
+    @pytest.mark.parametrize(
+        "name", ["DASHBOARD_OIDC_CLIENT_ID", "DASHBOARD_OIDC_CLIENT_SECRET", "DASHBOARD_OIDC_REDIRECT_URI"]
+    )
+    def test_oidc_required_with_website(self, name):
+        with pytest.raises(ValueError, match=name):
+            AppSettings(**self.BASE, **{**self.WEBSITE, name: None}, _env_file=None)
 
 
 # ====== DiscordUser、頭像 ======
