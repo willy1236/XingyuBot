@@ -62,6 +62,8 @@ def _run() -> bool:
 
     # Twitch 自訂指令的快取（DBCacheType.TwitchCmd）在這裡載入
     sqldb.init_cache()
+    # main thread 之後只等 Twitch bot 結束；import starlib 與 init_cache 讀過的表不釋放就會一直被鎖住
+    sqldb.release_session()
     if _shutdown.is_set():
         return False
 
