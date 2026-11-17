@@ -2308,6 +2308,7 @@ class MusicPlaylistRepository(BaseRepository):
         stmt = select(MusicPlaylist.version).where(MusicPlaylist.id == playlist_id).with_for_update()
         current = self.session.exec(stmt).first()
         if expected_version is not None and current != expected_version:
+            self.session.rollback()  # 不寫入就不留著鎖
             raise MusicPlaylistConflict(deleted=current is None)
 
     @contextmanager
@@ -2469,18 +2470,18 @@ class MusicPlaylistRepository(BaseRepository):
         self.commit()
 
     def remove_music_playlist_song(self, playlist_id: int, index: int) -> MusicPlaylistSong | None:
-        """刪除歌單第 index 首（從 0 起算）並重新編排順序，回傳被刪除的歌曲"""
-        self._lock_music_playlist(playlist_id, None)
-        songs = self.get_music_playlist_songs(playlist_id)
-        if not 0 <= index < len(songs):
-            return None
-        removed = songs.pop(index)
-        self.session.delete(removed)
-        for position, song in enumerate(songs):
-            song.position = position
-        self._bump_music_playlist(playlist_id)
-        self.commit()
-        return removed
+        """刪除歌單第 index 首（從 0 起算）並重新編排順序，回傳被刪除的歌曲；編號超出範圍回 None"""
+        with self.lock_music_playlist(playlist_id):  # 編號超出範圍而提早 return 時也要放掉鎖
+            songs = self.get_music_playlist_songs(playlist_id)
+            if not 0 <= index < len(songs):
+                return None
+            removed = songs.pop(index)
+            self.session.delete(removed)
+            for position, song in enumerate(songs):
+                song.position = position
+            self._bump_music_playlist(playlist_id)
+            self.commit()
+            return removed
 
     def remove_music_playlist_songs(self, playlist_id: int, song_ids: list[int], expected_version: int | None = None) -> int:
         """刪除指定的歌曲並重新編排順序，回傳實際刪除的數量；不在這份歌單裡的 id 忽略。"""
@@ -2503,14 +2504,14 @@ class MusicPlaylistRepository(BaseRepository):
 
     def reorder_music_playlist_songs(self, playlist_id: int, song_ids: list[int], expected_version: int | None = None) -> None:
         """依 song_ids 的順序重排；必須剛好是歌單目前所有歌曲的 id，否則拋 ValueError。"""
-        self._lock_music_playlist(playlist_id, expected_version)
-        songs = {song.id: song for song in self.get_music_playlist_songs(playlist_id)}
-        if len(song_ids) != len(songs) or set(song_ids) != songs.keys():
-            raise ValueError("song_ids does not match the playlist songs")
-        for position, song_id in enumerate(song_ids):
-            songs[song_id].position = position
-        self._bump_music_playlist(playlist_id)
-        self.commit()
+        with self.lock_music_playlist(playlist_id, expected_version):
+            songs = {song.id: song for song in self.get_music_playlist_songs(playlist_id)}
+            if len(song_ids) != len(songs) or set(song_ids) != songs.keys():
+                raise ValueError("song_ids does not match the playlist songs")
+            for position, song_id in enumerate(song_ids):
+                songs[song_id].position = position
+            self._bump_music_playlist(playlist_id)
+            self.commit()
 
 
 class RuntimeConfigRepository(BaseRepository):

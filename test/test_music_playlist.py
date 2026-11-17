@@ -326,12 +326,14 @@ class TestLocking:
             return repository
 
         yield make, users
-        cleaner = make()
+        # 先關掉測試用的連線（放掉可能殘留的鎖），再用新連線清資料，失敗的測試才不會卡住
+        for repository in repos:
+            repository.session.close()
+        cleaner = SQLRepository(sqldb.engine, Session(sqldb.engine))
         for uid in users:
             for p in cleaner.get_music_playlists(uid):
                 cleaner.delete_music_playlist(p.id)
-        for repository in repos:
-            repository.session.close()
+        cleaner.session.close()
 
     @staticmethod
     def _run(fn):
@@ -346,7 +348,7 @@ class TestLocking:
             finally:
                 done.set()
 
-        thread = threading.Thread(target=target)
+        thread = threading.Thread(target=target, daemon=True)
         thread.start()
         return thread, done, outcome
 
@@ -378,6 +380,38 @@ class TestLocking:
         thread, done, _ = self._run(lambda: writer.add_music_playlist_songs(pid, _rows(1)))
         assert done.wait(10)
         thread.join()
+
+    @pytest.mark.parametrize(
+        "no_write",
+        [
+            lambda repo, pid: repo.remove_music_playlist_song(pid, 99),
+            lambda repo, pid: repo.remove_music_playlist_songs(pid, [999999]),
+            lambda repo, pid: repo.add_music_playlist_songs(pid, []),
+            lambda repo, pid: repo.sync_music_playlist_sources(pid, [], 500),
+            lambda repo, pid: repo.reorder_music_playlist_songs(pid, [1]),
+            lambda repo, pid: repo.rename_music_playlist(pid, "B", expected_version=9),
+            lambda repo, pid: repo.delete_music_playlist(pid, expected_version=9),
+        ],
+        ids=["remove_song_out_of_range", "remove_unknown_ids", "add_nothing", "sync_nothing", "reorder_mismatch", "rename_stale", "delete_stale"],
+    )
+    def test_no_write_paths_do_not_keep_the_lock(self, real, no_write):
+        """沒有寫入的路徑（提早 return、輸入不符、版本過期）離開後，另一條連線要能立刻取得同一列的鎖。"""
+        make, users = real
+        first, second = make(), make()
+        uid = uuid4()
+        users.append(uid)
+        pid = first.create_music_playlist(uid, "A").id
+        first.add_music_playlist_songs(pid, _rows(1))
+
+        try:
+            no_write(first, pid)
+        except (ValueError, MusicPlaylistConflict):
+            pass
+
+        thread, done, outcome = self._run(lambda: second.add_music_playlist_songs(pid, _rows(1, "other")))
+        assert done.wait(5), "第一條連線沒有放掉列鎖"
+        thread.join()
+        assert outcome == [None]
 
     def test_limit_is_checked_after_taking_the_lock(self, real, monkeypatch):
         make, users = real
