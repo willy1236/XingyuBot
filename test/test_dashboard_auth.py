@@ -57,7 +57,6 @@ def dashboard_env(monkeypatch, repo):  # noqa: F811
 class Spy:
     def __init__(self):
         self.revoked: list[str] = []
-        self.revoke_error: Exception | None = None
         self.user = DiscordUser(id=USER_ID, username="someone", global_name="Some One", avatar="abc")
         self.exchange_error: Exception | None = None
         self.saved: list[str] = []
@@ -89,8 +88,6 @@ def spy(monkeypatch, dashboard_env, repo) -> Spy:  # noqa: F811
         )
 
     async def revoke_token(self, token, token_type_hint="access_token"):
-        if spy.revoke_error:
-            raise spy.revoke_error
         spy.revoked.append(token)
 
     monkeypatch.setattr(DiscordOAuth, "exchange_code", exchange_code)
@@ -380,7 +377,7 @@ class TestLoginEntry:
         assert r.status_code == 307
         location = r.headers["location"]
         assert location.startswith("https://discord.com/api/oauth2/authorize")
-        assert "scope=identify+guilds" in location or "scope=identify%20guilds" in location
+        assert "scope=identify&" in location or location.endswith("scope=identify")
         cookie = next(c for c in set_cookies(r) if c.startswith("dashboard_oauth="))
         assert "HttpOnly" in cookie and "Secure" in cookie and "SameSite=lax" in cookie and "Max-Age=600" in cookie
         payload = json.loads(base64.urlsafe_b64decode(client.cookies["dashboard_oauth"]))
@@ -414,7 +411,7 @@ class TestLoginCallback:
         assert any(c.startswith("dashboard_oauth=") and "Max-Age=0" in c for c in cookies)
         row = repo.session.exec(select(DashboardSession)).one()
         assert (row.discord_user_id, row.name, row.avatar) == (USER_ID, "Some One", "abc")
-        assert spy.saved == [USER_ID]
+        assert spy.saved == []  # 不保存 Discord 授權
 
     def test_name_falls_back_to_username_and_default_avatar(self, client, spy, repo):  # noqa: F811
         spy.user = DiscordUser(id=USER_ID, username="plain", global_name=None, avatar=None)
@@ -536,38 +533,24 @@ class TestLogout:
             )
         )
 
-    def test_logout_revokes_and_invalidates_all_devices(self, client, spy, repo, dashboard_env):  # noqa: F811
+    def test_logout_invalidates_all_devices_without_revoking(self, client, spy, repo, dashboard_env):  # noqa: F811
         make_session(repo, session_id="a")
         make_session(repo, session_id="b")
         make_session(repo, user_id=OTHER_ID, session_id="other")
-        self._token(repo, dashboard_env)
+        self._token(repo, dashboard_env)  # 舊版留下的 token
         client.cookies.set("dashboard_session", "a")
 
         r = client.post("/dashboard/logout", headers={"Origin": FRONTEND})
 
         assert r.status_code == 200
-        assert spy.revoked == ["tok-" + USER_ID]
+        assert spy.revoked == []
         assert any(c.startswith("dashboard_session=") and "Max-Age=0" in c for c in set_cookies(r))
         assert not any("Max-Age=2592000" in c for c in set_cookies(r))
         repo.session.expire_all()
         assert repo.session.get(DashboardSession, "b", populate_existing=True) is None
         assert repo.session.get(DashboardSession, "other", populate_existing=True) is not None
-        assert repo.get_oauth_token(USER_ID, dashboard_env.credential_id) is None
         client.cookies.set("dashboard_session", "b")
         assert client.get("/dashboard/me").status_code == 401
-
-    def test_revoke_failure_still_logs_out(self, client, spy, repo, dashboard_env):  # noqa: F811
-        make_session(repo)
-        self._token(repo, dashboard_env)
-        spy.revoke_error = Exception("discord down")
-        client.cookies.set("dashboard_session", "sid")
-
-        r = client.post("/dashboard/logout", headers={"Origin": FRONTEND})
-
-        assert r.status_code == 200
-        repo.session.expire_all()
-        assert repo.session.get(DashboardSession, "sid", populate_existing=True) is None
-        assert repo.get_oauth_token(USER_ID, dashboard_env.credential_id) is None
 
     def test_logout_requires_origin(self, client, repo):  # noqa: F811
         make_session(repo)
