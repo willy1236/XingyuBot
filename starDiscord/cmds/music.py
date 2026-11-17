@@ -9,17 +9,16 @@ from discord.ext import commands, pages
 from discord.utils import format_dt
 
 from starlib import BotEmbed, sqldb
-from starlib.database import MAX_PLAYLIST_NAME_LENGTH, MusicPlaylist, MusicPlaylistSource
+from starlib import music_playlist as playlists
+from starlib.database import MusicPlaylist
 from starlib.exceptions import MusicCommandError
 from starlib.identity import IdentityUnavailable, resolve_identity
 
 from ..checks import IdentityContext, with_identity
 from ..extension import Cog_Extension
 from ..music_player import (
-    ExtractResult,
     LoopMode,
     MusicPlayer,
-    Song,
     enqueue_and_play,
     ensure_author_voice,
     extract_songs,
@@ -34,10 +33,6 @@ from ..uiElement.view import ConfirmView, MusicPlaylistSelectView
 
 # 機器人不在語音頻道時，只有這些指令會自動加入
 _AUTO_JOIN_COMMANDS = {"play", "recording start"}
-
-# 個人歌單上限：歌單數配合下拉選單最多 25 個選項
-MAX_PLAYLISTS = 25
-MAX_PLAYLIST_SONGS = 500
 
 _LOOP_MODE_OPTION = [
     OptionChoice(name="關閉", value=LoopMode.OFF.value),
@@ -58,13 +53,8 @@ def _require_player(ctx: discord.ApplicationContext, *, need_playing: bool = Fal
     return player
 
 
-def _clean_playlist_name(name: str) -> str:
-    name = name.strip()
-    if not name:
-        raise MusicCommandError("歌單名稱不可為空")
-    if len(name) > MAX_PLAYLIST_NAME_LENGTH:
-        raise MusicCommandError(f"歌單名稱最多 {MAX_PLAYLIST_NAME_LENGTH} 個字")
-    return name
+def _song_rows(songs) -> list[playlists.SongRow]:
+    return [(song.url, song.title, song.duration) for song in songs]
 
 
 def _get_playlist(user_id: UUID, name: str) -> MusicPlaylist:
@@ -72,54 +62,6 @@ def _get_playlist(user_id: UUID, name: str) -> MusicPlaylist:
     if not playlist:
         raise MusicCommandError(f"找不到歌單「{name}」")
     return playlist
-
-
-def _get_or_create_playlist(user_id: UUID, name: str) -> MusicPlaylist:
-    name = _clean_playlist_name(name)
-    playlist = sqldb.get_music_playlist(user_id, name)
-    if playlist:
-        return playlist
-    if len(sqldb.get_music_playlists(user_id)) >= MAX_PLAYLISTS:
-        raise MusicCommandError(f"歌單數量已達上限 {MAX_PLAYLISTS} 個")
-    return sqldb.create_music_playlist(user_id, name)
-
-
-def _playlist_room(playlist: MusicPlaylist) -> int:
-    room = MAX_PLAYLIST_SONGS - sqldb.count_music_playlist_songs(playlist.id)
-    if room <= 0:
-        raise MusicCommandError(f"歌單「{playlist.name}」已達上限 {MAX_PLAYLIST_SONGS} 首")
-    return room
-
-
-def _song_rows(songs: list[Song]) -> list[tuple[str, str, int | None]]:
-    return [(song.url, song.title, song.duration) for song in songs]
-
-
-def _overflow_text(dropped: int) -> str:
-    return f"（歌單已滿 {MAX_PLAYLIST_SONGS} 首，略過 {dropped} 首）" if dropped else ""
-
-
-def _save_songs(playlist: MusicPlaylist, songs: list[Song], source_id: int | None = None) -> str:
-    """把歌曲存進歌單（超過上限的部分捨棄），回傳給使用者的訊息。"""
-    to_save = songs[: _playlist_room(playlist)]
-    sqldb.add_music_playlist_songs(playlist.id, _song_rows(to_save), source_id=source_id)
-    text = f"已將 {to_save[0].title} 加入歌單「{playlist.name}」" if len(to_save) == 1 else f"已將 **{len(to_save)}** 首歌加入歌單「{playlist.name}」"
-    return text + _overflow_text(len(songs) - len(to_save))
-
-
-def _source_name(source: MusicPlaylistSource) -> str:
-    return source.title or source.url
-
-
-def _replace_source_songs(playlist: MusicPlaylist, source: MusicPlaylistSource, result: ExtractResult) -> str:
-    """以重新擷取的結果取代歌單中來自此來源的歌曲，回傳給使用者的訊息。"""
-    songs = sqldb.get_music_playlist_songs(playlist.id)
-    old_count = sum(1 for song in songs if song.source_id == source.id)
-    room = MAX_PLAYLIST_SONGS - len(songs) + old_count
-    to_save = result.songs[: max(room, 0)]
-
-    added, removed = sqldb.replace_music_playlist_source_songs(source, _song_rows(to_save), result.playlist_title)
-    return f"「{_source_name(source)}」新增 {added} 首、移除 {removed} 首" + _overflow_text(len(result.songs) - len(to_save))
 
 
 async def _playlist_name_autocomplete(ctx: discord.AutocompleteContext) -> list[str]:
@@ -291,10 +233,7 @@ class music(Cog_Extension):
     @playlist.command(name="create", description="建立個人歌單")
     @with_identity()
     async def playlist_create(self, ctx: IdentityContext, name: discord.Option(str, name="歌單", description="歌單名稱")):
-        name = _clean_playlist_name(name)
-        if sqldb.get_music_playlist(ctx.identity.user_id, name):
-            raise MusicCommandError(f"已經有名為「{name}」的歌單")
-        _get_or_create_playlist(ctx.identity.user_id, name)
+        name = playlists.create_playlist(ctx.identity.user_id, name).name
         await ctx.respond(f"已建立歌單「{name}」", ephemeral=True)
 
     @playlist.command(name="delete", description="刪除個人歌單")
@@ -318,24 +257,12 @@ class music(Cog_Extension):
         name: _playlist_name_option(),
         url: discord.Option(str, name="網址", description="單曲或歌單網址（YouTube、Bilibili 等）"),
     ):
-        name = _clean_playlist_name(name)
+        name = playlists.clean_playlist_name(name)
         await ctx.defer(ephemeral=True)
         result = await extract_songs(url, ctx.author)
         # 擷取成功後才建立歌單，避免連結無效時留下空歌單
-        playlist = _get_or_create_playlist(ctx.identity.user_id, name)
-
-        if not result.playlist_url:
-            text = _save_songs(playlist, result.songs)
-        elif source := sqldb.get_music_playlist_source(playlist.id, result.playlist_url):
-            # 同一個外部歌單再貼一次時改為同步，避免重複加入
-            text = "此來源已存在，已同步：" + _replace_source_songs(playlist, source, result)
-        else:
-            _playlist_room(playlist)  # 歌單已滿時先擋下，不留下沒有歌曲的來源
-            source = sqldb.create_music_playlist_source(playlist.id, result.playlist_url, result.playlist_title)
-            text = _save_songs(playlist, result.songs, source_id=source.id) + "，之後可用 /playlist sync 同步外部歌單的更新"
-
-        if result.skipped:
-            text += f"（已略過 {result.skipped} 首無法播放的歌曲）"
+        playlist = playlists.get_or_create_playlist(ctx.identity.user_id, name)
+        text = playlists.add_extracted(playlist, playlists.Extracted.of(result))
         await ctx.respond(text, ephemeral=True)
 
     @playlist.command(name="sync", description="重新擷取歌單匯入過的外部歌單（手動加入的歌曲不受影響）")
@@ -347,16 +274,11 @@ class music(Cog_Extension):
             raise MusicCommandError(f"歌單「{playlist.name}」沒有匯入過外部歌單")
 
         await ctx.defer(ephemeral=True)
-        lines = []
-        for source in sources:
-            try:
-                result = await extract_songs(source.url, ctx.author)
-            except MusicCommandError as e:
-                # 外部歌單被刪除或改為私人時保留舊的歌曲
-                lines.append(f"「{_source_name(source)}」同步失敗，保留原本的歌曲：{e.message}")
-                continue
-            lines.append(_replace_source_songs(playlist, source, result))
 
+        async def extract(url: str) -> playlists.Extracted:
+            return playlists.Extracted.of(await extract_songs(url, ctx.author))
+
+        lines = playlists.apply_sync(playlist, await playlists.fetch_sources(sources, extract))
         text = "\n".join(lines)
         await ctx.respond(text if len(text) <= 2000 else text[:1997] + "…", ephemeral=True)
 
@@ -365,8 +287,8 @@ class music(Cog_Extension):
     @with_identity()
     async def playlist_save_current(self, ctx: IdentityContext, name: _playlist_name_option()):
         player = _require_player(ctx, need_playing=True)
-        playlist = _get_or_create_playlist(ctx.identity.user_id, name)
-        await ctx.respond(_save_songs(playlist, [player.nowplaying]), ephemeral=True)
+        playlist = playlists.get_or_create_playlist(ctx.identity.user_id, name)
+        await ctx.respond(playlists.save_songs(playlist, _song_rows([player.nowplaying])), ephemeral=True)
 
     @playlist.command(name="save_queue", description="把目前播放與待播歌單全部存進個人歌單（歌單不存在時自動建立）")
     @commands.guild_only()
@@ -376,8 +298,8 @@ class music(Cog_Extension):
         songs = ([player.nowplaying] if player.nowplaying else []) + player.get_full_playlist()
         if not songs:
             raise MusicCommandError("歌單裡空無一物")
-        playlist = _get_or_create_playlist(ctx.identity.user_id, name)
-        await ctx.respond(_save_songs(playlist, songs), ephemeral=True)
+        playlist = playlists.get_or_create_playlist(ctx.identity.user_id, name)
+        await ctx.respond(playlists.save_songs(playlist, _song_rows(songs)), ephemeral=True)
 
     @playlist.command(name="remove", description="從個人歌單刪除一首歌")
     @with_identity()
@@ -406,7 +328,7 @@ class music(Cog_Extension):
         page = [BotEmbed.simple(title=title, description="") for _ in range(math.ceil(len(songs) / 10))]
         sources = sqldb.get_music_playlist_sources(playlist.id)
         if sources:
-            source_lines = [f"[{_source_name(s)}]({s.url})（上次同步 {format_dt(s.synced_at, 'R')}）" for s in sources]
+            source_lines = [f"[{playlists.source_name(s)}]({s.url})（上次同步 {format_dt(s.synced_at, 'R')}）" for s in sources]
             page[0].description = "來源：\n" + "\n".join(source_lines) + "\n\n"
         for i, song in enumerate(songs):
             page[i // 10].description += f"**{i + 1}.** [{song.title}]({song.url}) [{format_seconds(song.duration)}]\n\n"

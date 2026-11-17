@@ -154,6 +154,16 @@ class MusicPlayingError(VoiceError):
         super().__init__(full_message, original, original_message)
 
 
+class MusicPlaylistConflict(StarException):
+    """歌單在呼叫端讀取之後被改過或已被刪除"""
+
+    code = 1303
+
+    def __init__(self, deleted: bool = False):
+        super().__init__("歌單已被修改")
+        self.deleted = deleted
+
+
 class RequestError(StarException):
     """請求相關錯誤基類 (錯誤代碼: 1400)"""
     code = 1400
