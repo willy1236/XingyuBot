@@ -275,7 +275,7 @@ class UserRepository(BaseRepository):
                     n += 1
                 taken.add(target)
                 renamed += 1
-            self.session.exec(update(MusicPlaylist).where(MusicPlaylist.id == playlist_id).values(user_id=new_id, name=target))
+            self.session.exec(update(MusicPlaylist).where(MusicPlaylist.id == playlist_id).values(user_id=new_id, name=target, version=MusicPlaylist.version + 1))
 
         # 一人一筆的資料：new_id 已經有就保留它那筆，old_id 的捨棄
         binding = self.session.exec(select(NetBirdBinding.group_id, NetBirdBinding.group_name).where(NetBirdBinding.user_id == old_id)).first()
@@ -2288,7 +2288,29 @@ class MusicPlaylistRepository(BaseRepository):
         self.add(playlist)
         return playlist
 
-    def delete_music_playlist(self, playlist_id: int):
+    def _bump_music_playlist(self, playlist_id: int) -> None:
+        """歌單、歌曲或來源有寫入時加一版；不 commit，和那次寫入在同一個交易裡。"""
+        self.session.exec(update(MusicPlaylist).where(MusicPlaylist.id == playlist_id).values(version=MusicPlaylist.version + 1))
+
+    def _lock_music_playlist(self, playlist_id: int, expected_version: int | None) -> None:
+        """鎖住歌單那一列，`expected_version` 不為 None 時要求版本相符，否則拋 MusicPlaylistConflict。
+
+        鎖在 commit 或 rollback 才釋放，所以版本檢查與之後的寫入之間，別的寫入進不來。
+        """
+        if expected_version is None:
+            return
+        stmt = select(MusicPlaylist.version).where(MusicPlaylist.id == playlist_id).with_for_update()
+        current = self.session.exec(stmt).first()
+        if current != expected_version:
+            raise MusicPlaylistConflict(deleted=current is None)
+
+    def rename_music_playlist(self, playlist_id: int, name: str, expected_version: int | None = None) -> None:
+        self._lock_music_playlist(playlist_id, expected_version)
+        self.session.exec(update(MusicPlaylist).where(MusicPlaylist.id == playlist_id).values(name=name, version=MusicPlaylist.version + 1))
+        self.commit()
+
+    def delete_music_playlist(self, playlist_id: int, expected_version: int | None = None):
+        self._lock_music_playlist(playlist_id, expected_version)
         self.session.exec(delete(MusicPlaylistSong).where(MusicPlaylistSong.playlist_id == playlist_id))
         self.session.exec(delete(MusicPlaylistSource).where(MusicPlaylistSource.playlist_id == playlist_id))
         self.session.exec(delete(MusicPlaylist).where(MusicPlaylist.id == playlist_id))
@@ -2304,10 +2326,27 @@ class MusicPlaylistRepository(BaseRepository):
 
     def create_music_playlist_source(self, playlist_id: int, url: str, title: str | None) -> MusicPlaylistSource:
         source = MusicPlaylistSource(playlist_id=playlist_id, url=url, title=title)
-        self.add(source)
+        self.session.add(source)
+        self._bump_music_playlist(playlist_id)
+        self.commit()
         return source
 
-    def replace_music_playlist_source_songs(self, source: MusicPlaylistSource, songs: list[tuple[str, str, int | None]], title: str | None = None) -> tuple[int, int]:
+    def import_music_playlist_source(
+        self, playlist_id: int, url: str, title: str | None, songs: list[tuple[str, str, int | None]], expected_version: int | None = None
+    ) -> MusicPlaylistSource:
+        """建立來源並把它的歌曲接在歌單尾端，整件事在同一個交易裡完成。"""
+        self._lock_music_playlist(playlist_id, expected_version)
+        source = MusicPlaylistSource(playlist_id=playlist_id, url=url, title=title)
+        self.session.add(source)
+        self.session.flush()
+        self._append_music_playlist_songs(playlist_id, songs, source.id)
+        self._bump_music_playlist(playlist_id)
+        self.commit()
+        return source
+
+    def replace_music_playlist_source_songs(
+        self, source: MusicPlaylistSource, songs: list[tuple[str, str, int | None]], title: str | None = None, expected_version: int | None = None
+    ) -> tuple[int, int]:
         """
         以新擷取的歌曲取代歌單中來自此來源的歌曲，放在該來源第一首原本的位置（已無該來源歌曲時接在尾端），手動加入的歌曲位置不變。
 
@@ -2316,6 +2355,7 @@ class MusicPlaylistRepository(BaseRepository):
 
         :return: (新增數, 移除數)
         """
+        self._lock_music_playlist(source.playlist_id, expected_version)
         current = self.get_music_playlist_songs(source.playlist_id)
         remaining: dict[str, deque[MusicPlaylistSong]] = defaultdict(deque)
         for song in current:
@@ -2357,6 +2397,7 @@ class MusicPlaylistRepository(BaseRepository):
             if title:
                 source.title = title
             self.session.add(source)
+            self._bump_music_playlist(source.playlist_id)
             self.session.commit()
         except SQLAlchemyError:
             log.exception("SQLAlchemy Replace Playlist Source Error")
@@ -2373,20 +2414,27 @@ class MusicPlaylistRepository(BaseRepository):
         stmt = select(func.count()).select_from(MusicPlaylistSong).where(MusicPlaylistSong.playlist_id == playlist_id)
         return self.session.exec(stmt).one()
 
-    def add_music_playlist_songs(self, playlist_id: int, songs: list[tuple[str, str, int | None]], source_id: int | None = None):
-        """將歌曲 (url, title, duration) 依序接在歌單尾端；source_id 為歌曲來自的外部歌單"""
+    def _append_music_playlist_songs(self, playlist_id: int, songs: list[tuple[str, str, int | None]], source_id: int | None) -> None:
         stmt = select(func.max(MusicPlaylistSong.position)).where(MusicPlaylistSong.playlist_id == playlist_id)
         last_position = self.session.exec(stmt).one()
         start = 0 if last_position is None else last_position + 1
-        self.batch_add(
-            [
-                MusicPlaylistSong(playlist_id=playlist_id, source_id=source_id, position=start + i, url=url, title=title, duration=duration)
-                for i, (url, title, duration) in enumerate(songs)
-            ]
-        )
+        for i, (url, title, duration) in enumerate(songs):
+            self.session.add(MusicPlaylistSong(playlist_id=playlist_id, source_id=source_id, position=start + i, url=url, title=title, duration=duration))
 
-    def remove_music_playlist_song(self, playlist_id: int, index: int) -> MusicPlaylistSong | None:
+    def add_music_playlist_songs(
+        self, playlist_id: int, songs: list[tuple[str, str, int | None]], source_id: int | None = None, expected_version: int | None = None
+    ):
+        """將歌曲 (url, title, duration) 依序接在歌單尾端；source_id 為歌曲來自的外部歌單"""
+        if not songs:
+            return
+        self._lock_music_playlist(playlist_id, expected_version)
+        self._append_music_playlist_songs(playlist_id, songs, source_id)
+        self._bump_music_playlist(playlist_id)
+        self.commit()
+
+    def remove_music_playlist_song(self, playlist_id: int, index: int, expected_version: int | None = None) -> MusicPlaylistSong | None:
         """刪除歌單第 index 首（從 0 起算）並重新編排順序，回傳被刪除的歌曲"""
+        self._lock_music_playlist(playlist_id, expected_version)
         songs = self.get_music_playlist_songs(playlist_id)
         if not 0 <= index < len(songs):
             return None
@@ -2394,8 +2442,39 @@ class MusicPlaylistRepository(BaseRepository):
         self.session.delete(removed)
         for position, song in enumerate(songs):
             song.position = position
+        self._bump_music_playlist(playlist_id)
         self.commit()
         return removed
+
+    def remove_music_playlist_songs(self, playlist_id: int, song_ids: list[int], expected_version: int | None = None) -> int:
+        """刪除指定的歌曲並重新編排順序，回傳實際刪除的數量；不在這份歌單裡的 id 忽略。"""
+        self._lock_music_playlist(playlist_id, expected_version)
+        targets = set(song_ids)
+        kept: list[MusicPlaylistSong] = []
+        removed = 0
+        for song in self.get_music_playlist_songs(playlist_id):
+            if song.id in targets:
+                self.session.delete(song)
+                removed += 1
+            else:
+                kept.append(song)
+        for position, song in enumerate(kept):
+            song.position = position
+        if removed:
+            self._bump_music_playlist(playlist_id)
+        self.commit()
+        return removed
+
+    def reorder_music_playlist_songs(self, playlist_id: int, song_ids: list[int], expected_version: int | None = None) -> None:
+        """依 song_ids 的順序重排；必須剛好是歌單目前所有歌曲的 id，否則拋 ValueError。"""
+        self._lock_music_playlist(playlist_id, expected_version)
+        songs = {song.id: song for song in self.get_music_playlist_songs(playlist_id)}
+        if len(song_ids) != len(songs) or set(song_ids) != songs.keys():
+            raise ValueError("song_ids does not match the playlist songs")
+        for position, song_id in enumerate(song_ids):
+            songs[song_id].position = position
+        self._bump_music_playlist(playlist_id)
+        self.commit()
 
 
 class RuntimeConfigRepository(BaseRepository):

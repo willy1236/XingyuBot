@@ -7,15 +7,16 @@ from types import SimpleNamespace
 from uuid import UUID, uuid4
 
 import pytest
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from starDiscord import checks, music_player
 from starDiscord.cmds import music as music_cog
 from starDiscord.music_player import ExtractResult, Song, guild_playing
 from starDiscord.uiElement import music_panel
 from starlib import sqldb
+from starlib.database import MusicPlaylist
 from starlib.database.postgresql.client import SQLRepository
-from starlib.exceptions import MusicCommandError
+from starlib.exceptions import MusicCommandError, MusicPlaylistConflict
 from starlib.identity import BotIdentity, IdentityUnavailable
 
 # ─── Repository ─────────────────────────────────────────────────────────────
@@ -172,6 +173,133 @@ class TestMusicPlaylistSource:
         repo.delete_music_playlist(playlist.id)
 
         assert repo.get_music_playlist_sources(playlist.id) == []
+
+
+def _version(repo, playlist_id: int) -> int:
+    repo.session.expire_all()
+    return repo.session.exec(select(MusicPlaylist.version).where(MusicPlaylist.id == playlist_id)).one()
+
+
+class TestMusicPlaylistVersion:
+    @pytest.fixture
+    def playlist(self, repo, user_id):
+        return repo.create_music_playlist(user_id, "A")
+
+    def test_starts_at_zero(self, repo, playlist):
+        assert _version(repo, playlist.id) == 0
+
+    def test_every_write_bumps_once(self, repo, playlist):
+        pid = playlist.id
+        repo.add_music_playlist_songs(pid, _rows(3))
+        assert _version(repo, pid) == 1
+        source = repo.create_music_playlist_source(pid, "https://example.com/list", None)
+        assert _version(repo, pid) == 2
+        repo.add_music_playlist_songs(pid, _rows(1, "src"), source_id=source.id)
+        assert _version(repo, pid) == 3
+        repo.replace_music_playlist_source_songs(source, _rows(2, "src"))
+        assert _version(repo, pid) == 4
+        repo.remove_music_playlist_song(pid, 0)
+        assert _version(repo, pid) == 5
+        repo.rename_music_playlist(pid, "B")
+        assert _version(repo, pid) == 6
+        ids = [s.id for s in repo.get_music_playlist_songs(pid)]
+        repo.reorder_music_playlist_songs(pid, ids[::-1])
+        assert _version(repo, pid) == 7
+        repo.remove_music_playlist_songs(pid, ids[:1])
+        assert _version(repo, pid) == 8
+
+    def test_noop_does_not_bump(self, repo, playlist):
+        repo.add_music_playlist_songs(playlist.id, [])
+        repo.remove_music_playlist_song(playlist.id, 3)
+        repo.remove_music_playlist_songs(playlist.id, [999])
+        assert _version(repo, playlist.id) == 0
+
+    def test_import_source_is_one_bump(self, repo, playlist):
+        source = repo.import_music_playlist_source(playlist.id, "https://example.com/list", "外部", _rows(3, "src"))
+
+        assert _version(repo, playlist.id) == 1
+        assert [s.source_id for s in repo.get_music_playlist_songs(playlist.id)] == [source.id] * 3
+
+    def test_matching_version_writes_and_stale_version_is_rejected(self, repo, playlist):
+        repo.add_music_playlist_songs(playlist.id, _rows(1), expected_version=0)
+        assert _version(repo, playlist.id) == 1
+
+        with pytest.raises(MusicPlaylistConflict) as exc:
+            repo.add_music_playlist_songs(playlist.id, _rows(1, "late"), expected_version=0)
+        assert exc.value.deleted is False
+        assert repo.count_music_playlist_songs(playlist.id) == 1
+        assert _version(repo, playlist.id) == 1
+
+    @pytest.mark.parametrize(
+        "write",
+        [
+            lambda repo, pid: repo.rename_music_playlist(pid, "B", expected_version=9),
+            lambda repo, pid: repo.remove_music_playlist_song(pid, 0, expected_version=9),
+            lambda repo, pid: repo.remove_music_playlist_songs(pid, [1], expected_version=9),
+            lambda repo, pid: repo.reorder_music_playlist_songs(pid, [], expected_version=9),
+            lambda repo, pid: repo.import_music_playlist_source(pid, "https://x/l", None, _rows(1), expected_version=9),
+            lambda repo, pid: repo.delete_music_playlist(pid, expected_version=9),
+        ],
+    )
+    def test_every_checked_write_rejects_stale_version(self, repo, playlist, write):
+        repo.add_music_playlist_songs(playlist.id, _rows(2))
+
+        with pytest.raises(MusicPlaylistConflict):
+            write(repo, playlist.id)
+        assert repo.count_music_playlist_songs(playlist.id) == 2
+        assert repo.get_music_playlist_sources(playlist.id) == []
+
+    def test_replace_source_rejects_stale_version(self, repo, playlist):
+        source = repo.import_music_playlist_source(playlist.id, "https://example.com/list", None, _rows(2, "src"))
+
+        with pytest.raises(MusicPlaylistConflict):
+            repo.replace_music_playlist_source_songs(source, [], expected_version=0)
+        assert repo.count_music_playlist_songs(playlist.id) == 2
+
+    def test_deleted_playlist_reports_deleted(self, repo, playlist):
+        repo.delete_music_playlist(playlist.id)
+
+        with pytest.raises(MusicPlaylistConflict) as exc:
+            repo.rename_music_playlist(playlist.id, "B", expected_version=0)
+        assert exc.value.deleted is True
+
+
+class TestMusicPlaylistEditing:
+    @pytest.fixture
+    def playlist(self, repo, user_id):
+        playlist = repo.create_music_playlist(user_id, "A")
+        repo.add_music_playlist_songs(playlist.id, _rows(4))
+        return playlist
+
+    def test_rename(self, repo, playlist, user_id):
+        repo.rename_music_playlist(playlist.id, "B")
+
+        assert repo.get_music_playlist(user_id, "B").id == playlist.id
+        assert repo.get_music_playlist(user_id, "A") is None
+
+    def test_remove_songs_compacts_positions(self, repo, playlist):
+        ids = [s.id for s in repo.get_music_playlist_songs(playlist.id)]
+
+        assert repo.remove_music_playlist_songs(playlist.id, [ids[0], ids[2], 99999]) == 2
+
+        songs = repo.get_music_playlist_songs(playlist.id)
+        assert [s.id for s in songs] == [ids[1], ids[3]]
+        assert [s.position for s in songs] == [0, 1]
+
+    def test_reorder(self, repo, playlist):
+        ids = [s.id for s in repo.get_music_playlist_songs(playlist.id)]
+        order = [ids[2], ids[0], ids[3], ids[1]]
+
+        repo.reorder_music_playlist_songs(playlist.id, order)
+
+        assert [s.id for s in repo.get_music_playlist_songs(playlist.id)] == order
+
+    @pytest.mark.parametrize("pick", [lambda ids: ids[:-1], lambda ids: [*ids, 99999], lambda ids: [ids[0]] * len(ids)])
+    def test_reorder_requires_exact_song_set(self, repo, playlist, pick):
+        ids = [s.id for s in repo.get_music_playlist_songs(playlist.id)]
+
+        with pytest.raises(ValueError):
+            repo.reorder_music_playlist_songs(playlist.id, pick(ids))
 
 
 # ─── Song.extract ────────────────────────────────────────────────────────────
