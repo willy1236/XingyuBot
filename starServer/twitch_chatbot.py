@@ -1,9 +1,10 @@
 import asyncio
+import functools
 import logging
 import socket
 import threading
 import time
-from collections.abc import Coroutine
+from collections.abc import Callable, Coroutine
 from datetime import UTC, datetime
 from typing import Any
 
@@ -364,6 +365,20 @@ def _can_manage_commands(cmd: ChatCommand) -> bool:
     return cmd.user.mod or cmd.user.name == cmd.room.name
 
 
+def _releases_session[**P](func: Callable[P, Coroutine[Any, Any, None]]) -> Callable[P, Coroutine[Any, Any, None]]:
+    """指令跑完釋放 session，讀取開的交易才不會一直握著表的鎖。"""
+
+    @functools.wraps(func)
+    async def wrapper(*args: P.args, **kwargs: P.kwargs) -> None:
+        try:
+            await func(*args, **kwargs)
+        finally:
+            sqldb.release_session()
+
+    return wrapper
+
+
+@_releases_session
 async def add_chat_command(cmd: ChatCommand):
     if not _can_manage_commands(cmd):
         return
@@ -379,6 +394,7 @@ async def add_chat_command(cmd: ChatCommand):
         await cmd.reply(f"已新增指令：{name}")
 
 
+@_releases_session
 async def remove_chat_command(cmd: ChatCommand):
     if not _can_manage_commands(cmd):
         return
@@ -390,6 +406,7 @@ async def remove_chat_command(cmd: ChatCommand):
         await cmd.reply(f"已移除指令：{name}")
 
 
+@_releases_session
 async def list_chat_command(cmd: ChatCommand):
     parameters = cmd.parameter
     if len(parameters) < 1:
@@ -481,6 +498,8 @@ async def run():
                 scope=twitch.get_user_auth_scope(),
             )
         )
+    # 這條 thread 之後一直跑 event loop，不釋放的話讀過的表會被 idle in transaction 的連線鎖住
+    sqldb.release_session()
 
     # 使用自帶的函式處理token
     # helper = UserAuthenticationStorageHelper(twitch, USER_SCOPE)
