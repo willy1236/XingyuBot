@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import threading
 from uuid import uuid4
 
 import pytest
@@ -28,16 +29,18 @@ class FakeNetBird:
     groups: dict[str, dict] = {}
     peers: dict[str, list[dict]] = {}
     calls: list[str] = []
+    threads: set[str] = set()
 
     def __init__(self):
         pass
 
     @classmethod
     def reset(cls):
-        cls.down, cls.groups, cls.peers, cls.calls = False, {}, {}, []
+        cls.down, cls.groups, cls.peers, cls.calls, cls.threads = False, {}, {}, [], set()
 
     def _check(self, name):
         type(self).calls.append(name)
+        type(self).threads.add(threading.current_thread().name)
         if self.down:
             raise APINetworkError("down")
 
@@ -139,6 +142,18 @@ class TestGet:
         netbird.down = True
         res = client.get("/dashboard/personal/netbird")
         assert (res.status_code, res.json()) == (502, {"error": "netbird_unavailable"})
+
+
+class TestHttpOutsideDbExecutor:
+    """NetBird 的 HTTP 等待不能佔著 dashboard 專屬的 DB executor。"""
+
+    def test_get_and_setup(self, client, directory, repo, netbird):  # noqa: F811
+        acc = uuid4()
+        directory.accounts[OWN] = account(acc)
+        bind(repo, acc)
+        client.get("/dashboard/personal/netbird")
+        client.post("/dashboard/personal/netbird/setup", headers=HEADERS)
+        assert netbird.threads and not any(t.startswith("dashboard-db") for t in netbird.threads)
 
 
 class TestSetup:
