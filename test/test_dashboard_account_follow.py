@@ -230,3 +230,14 @@ class TestFollowedLifecycle:
         c = TestClient(make_app(), base_url="https://testserver", follow_redirects=False)
         login(c, spy)
         assert "long-gone" not in session._followed and "recent" in session._followed
+
+    def test_logout_during_check_does_not_restore_entry(self, repo, directory, clock):  # noqa: F811
+        make_session(repo)
+
+        async def find_then_logout(discord_id):
+            await asyncio.to_thread(session.delete_user_sessions, USER_ID)
+            return None
+
+        directory.find_by_discord = find_then_logout
+        asyncio.run(session.follow_account(SessionInfo("sid", USER_ID, "n", None)))
+        assert "sid" not in session._followed

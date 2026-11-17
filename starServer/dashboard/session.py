@@ -141,6 +141,8 @@ def delete_user_sessions(discord_user_id: str) -> None:
     ).scalars()
     for session_id in deleted:
         _followed.pop(session_id, None)
+        # 進行中的確認跑完時看到自己已不在 _inflight，就不會把結果寫回 _followed
+        _inflight.pop(session_id, None)
     s.commit()
 
 
@@ -207,7 +209,8 @@ async def _refresh(info: SessionInfo, previous: _Followed | None, now: float) ->
         result = _fallback(info, previous, now)
     if result.account_id != info.account_id:
         await run_db(lambda: _save_account_id(info.session_id, result.account_id))
-    _followed[info.session_id] = result
+    if _inflight.get(info.session_id) is asyncio.current_task():
+        _followed[info.session_id] = result
     return result
 
 
