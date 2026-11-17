@@ -11,8 +11,9 @@ from sqlmodel import Session, select
 
 from starDiscord import checks, music_player
 from starDiscord.cmds import music as music_cog
-from starDiscord.music_player import ExtractResult, Song, guild_playing
+from starDiscord.music_player import Song, guild_playing
 from starDiscord.uiElement import music_panel
+from starlib import music_playlist as mp
 from starlib import sqldb
 from starlib.database import MusicPlaylist
 from starlib.database.postgresql.client import SQLRepository
@@ -423,68 +424,165 @@ async def _noop_send(content=None, **kwargs):
     return None
 
 
+@pytest.fixture
+def mp_repo(repo, monkeypatch):
+    """starlib.music_playlist 改用綁在測試交易上的 repository。"""
+    monkeypatch.setattr(mp, "sqldb", repo)
+    return repo
+
+
+def _extracted(n: int, prefix: str = "s", **kwargs) -> mp.Extracted:
+    return mp.Extracted(_rows(n, prefix), **kwargs)
+
+
 class TestSaveSongs:
-    @pytest.fixture
-    def saved(self, monkeypatch):
-        saved: list = []
-        monkeypatch.setattr(music_cog.sqldb, "add_music_playlist_songs", lambda playlist_id, rows, source_id=None: saved.extend(rows))
-        return saved
+    def test_saves_url_title_duration(self, mp_repo, user_id):
+        playlist = mp_repo.create_music_playlist(user_id, "A")
 
-    def test_saves_url_title_duration(self, monkeypatch, saved):
-        monkeypatch.setattr(music_cog.sqldb, "count_music_playlist_songs", lambda playlist_id: 0)
-        playlist = SimpleNamespace(id=1, name="A")
+        text = mp.save_songs(playlist, [("https://example.com/a", "a", 100)])
 
-        text = music_cog._save_songs(playlist, [_song("a")])
-
-        assert saved == [("https://example.com/a", "a", 100)]
+        assert [(s.url, s.title, s.duration) for s in mp_repo.get_music_playlist_songs(playlist.id)] == [("https://example.com/a", "a", 100)]
         assert text == "已將 a 加入歌單「A」"
 
-    def test_truncates_at_limit(self, monkeypatch, saved):
-        monkeypatch.setattr(music_cog.sqldb, "count_music_playlist_songs", lambda playlist_id: music_cog.MAX_PLAYLIST_SONGS - 1)
-        playlist = SimpleNamespace(id=1, name="A")
+    def test_truncates_at_limit(self, mp_repo, user_id):
+        playlist = mp_repo.create_music_playlist(user_id, "A")
+        mp_repo.add_music_playlist_songs(playlist.id, _rows(mp.MAX_PLAYLIST_SONGS - 1))
 
-        text = music_cog._save_songs(playlist, [_song("a"), _song("b"), _song("c")])
+        text = mp.save_songs(playlist, _rows(3, "new"))
 
-        assert [row[1] for row in saved] == ["a"]
+        assert mp_repo.count_music_playlist_songs(playlist.id) == mp.MAX_PLAYLIST_SONGS
         assert "略過 2 首" in text
 
-    def test_full_playlist_raises(self, monkeypatch, saved):
-        monkeypatch.setattr(music_cog.sqldb, "count_music_playlist_songs", lambda playlist_id: music_cog.MAX_PLAYLIST_SONGS)
+    def test_full_playlist_raises(self, mp_repo, user_id):
+        playlist = mp_repo.create_music_playlist(user_id, "A")
+        mp_repo.add_music_playlist_songs(playlist.id, _rows(mp.MAX_PLAYLIST_SONGS))
 
         with pytest.raises(MusicCommandError):
-            music_cog._save_songs(SimpleNamespace(id=1, name="A"), [_song("a")])
-        assert saved == []
+            mp.save_songs(playlist, _rows(1, "new"))
+        assert mp_repo.count_music_playlist_songs(playlist.id) == mp.MAX_PLAYLIST_SONGS
+
+    def test_stale_version_is_rejected(self, mp_repo, user_id):
+        playlist = mp_repo.create_music_playlist(user_id, "A")
+        mp_repo.add_music_playlist_songs(playlist.id, _rows(1))
+
+        with pytest.raises(MusicPlaylistConflict):
+            mp.save_songs(playlist, _rows(1, "late"), expected_version=0)
+        assert mp_repo.count_music_playlist_songs(playlist.id) == 1
 
 
-class TestReplaceSourceSongs:
-    def test_counts_old_source_songs_as_free_room(self, monkeypatch):
+class TestAddExtracted:
+    def test_single_songs_are_plain_songs(self, mp_repo, user_id):
+        playlist = mp_repo.create_music_playlist(user_id, "A")
+
+        text = mp.add_extracted(playlist, _extracted(2, skipped=1))
+
+        assert text == "已將 **2** 首歌加入歌單「A」（已略過 1 首無法播放的歌曲）"
+        assert mp_repo.get_music_playlist_sources(playlist.id) == []
+
+    def test_external_playlist_creates_source_once_then_syncs(self, mp_repo, user_id):
+        playlist = mp_repo.create_music_playlist(user_id, "A")
+        extracted = _extracted(3, playlist_url="https://x/list", playlist_title="外部")
+
+        first = mp.add_extracted(playlist, extracted)
+        second = mp.add_extracted(playlist, _extracted(2, playlist_url="https://x/list", playlist_title="外部"))
+
+        assert first.endswith("，之後可用 /playlist sync 同步外部歌單的更新")
+        assert second == "此來源已存在，已同步：「外部」新增 0 首、移除 1 首"
+        assert len(mp_repo.get_music_playlist_sources(playlist.id)) == 1
+        assert mp_repo.count_music_playlist_songs(playlist.id) == 2
+
+    def test_full_playlist_does_not_leave_empty_source(self, mp_repo, user_id):
+        playlist = mp_repo.create_music_playlist(user_id, "A")
+        mp_repo.add_music_playlist_songs(playlist.id, _rows(mp.MAX_PLAYLIST_SONGS))
+
+        with pytest.raises(MusicCommandError):
+            mp.add_extracted(playlist, _extracted(1, playlist_url="https://x/list"))
+        assert mp_repo.get_music_playlist_sources(playlist.id) == []
+
+    def test_stale_version_leaves_nothing_behind(self, mp_repo, user_id):
+        playlist = mp_repo.create_music_playlist(user_id, "A")
+        mp_repo.add_music_playlist_songs(playlist.id, _rows(1))
+
+        with pytest.raises(MusicPlaylistConflict):
+            mp.add_extracted(playlist, _extracted(3, playlist_url="https://x/list"), expected_version=0)
+        assert mp_repo.get_music_playlist_sources(playlist.id) == []
+        assert mp_repo.count_music_playlist_songs(playlist.id) == 1
+
+
+class TestSync:
+    def test_counts_old_source_songs_as_free_room(self, mp_repo, user_id):
         """同步時舊的來源歌曲會被取代，計算上限時要扣回來。"""
-        source = SimpleNamespace(id=7, title="外部", url="https://x/list")
-        existing = [SimpleNamespace(source_id=7)] * 3 + [SimpleNamespace(source_id=None)] * (music_cog.MAX_PLAYLIST_SONGS - 3)
-        captured = {}
+        playlist = mp_repo.create_music_playlist(user_id, "A")
+        source = mp_repo.import_music_playlist_source(playlist.id, "https://x/list", "外部", _rows(3, "old"))
+        mp_repo.add_music_playlist_songs(playlist.id, _rows(mp.MAX_PLAYLIST_SONGS - 3, "manual"))
 
-        def fake_replace(src, rows, title):
-            captured["rows"] = rows
-            return len(rows), 0
+        [text] = mp.apply_sync(playlist, [mp.SourceFetch(source, _extracted(5))])
 
-        monkeypatch.setattr(music_cog.sqldb, "get_music_playlist_songs", lambda playlist_id: existing)
-        monkeypatch.setattr(music_cog.sqldb, "replace_music_playlist_source_songs", fake_replace)
+        assert "新增 3 首" in text and "略過 2 首" in text
+        assert mp_repo.count_music_playlist_songs(playlist.id) == mp.MAX_PLAYLIST_SONGS
 
-        result = ExtractResult([_song(f"s{i}") for i in range(5)], 0, source.url, "外部")
-        text = music_cog._replace_source_songs(SimpleNamespace(id=1, name="A"), source, result)
+    def test_all_sources_in_one_write_and_failures_keep_songs(self, mp_repo, user_id):
+        playlist = mp_repo.create_music_playlist(user_id, "A")
+        a = mp_repo.import_music_playlist_source(playlist.id, "https://x/a", "甲", _rows(2, "a"))
+        b = mp_repo.import_music_playlist_source(playlist.id, "https://x/b", "乙", _rows(2, "b"))
+        before = _version(mp_repo, playlist.id)
 
-        assert [row[1] for row in captured["rows"]] == ["s0", "s1", "s2"]
-        assert "略過 2 首" in text
+        lines = mp.apply_sync(playlist, [mp.SourceFetch(a, _extracted(3, "a")), mp.SourceFetch(b, error="私人歌單")])
+
+        assert lines == ["「甲」新增 1 首、移除 0 首", "「乙」同步失敗，保留原本的歌曲：私人歌單"]
+        assert _version(mp_repo, playlist.id) == before + 1
+        assert mp_repo.count_music_playlist_songs(playlist.id) == 5
+
+    def test_stale_version_changes_nothing(self, mp_repo, user_id):
+        playlist = mp_repo.create_music_playlist(user_id, "A")
+        a = mp_repo.import_music_playlist_source(playlist.id, "https://x/a", "甲", _rows(2, "a"))
+        b = mp_repo.import_music_playlist_source(playlist.id, "https://x/b", "乙", _rows(2, "b"))
+
+        with pytest.raises(MusicPlaylistConflict):
+            mp.apply_sync(playlist, [mp.SourceFetch(a, _extracted(5, "a")), mp.SourceFetch(b, _extracted(5, "b"))], expected_version=0)
+        assert mp_repo.count_music_playlist_songs(playlist.id) == 4
+
+    def test_fetch_sources_records_command_errors(self):
+        async def extract(url):
+            if url == "https://x/bad":
+                raise MusicCommandError("不受支援的連結")
+            return _extracted(1)
+
+        good, bad = SimpleNamespace(url="https://x/ok"), SimpleNamespace(url="https://x/bad")
+
+        fetched = asyncio.run(mp.fetch_sources([good, bad], extract))
+
+        assert [(f.source, f.error) for f in fetched] == [(good, None), (bad, "不受支援的連結")]
+        assert fetched[0].extracted is not None and fetched[1].extracted is None
 
 
 class TestPlaylistName:
     def test_strips(self):
-        assert music_cog._clean_playlist_name("  我的歌  ") == "我的歌"
+        assert mp.clean_playlist_name("  我的歌  ") == "我的歌"
 
-    @pytest.mark.parametrize("name", ["", "   ", "x" * (music_cog.MAX_PLAYLIST_NAME_LENGTH + 1)])
+    @pytest.mark.parametrize("name", ["", "   ", "x" * (mp.MAX_PLAYLIST_NAME_LENGTH + 1)])
     def test_invalid(self, name):
         with pytest.raises(MusicCommandError):
-            music_cog._clean_playlist_name(name)
+            mp.clean_playlist_name(name)
+
+    def test_create_rejects_duplicate_and_over_limit(self, mp_repo, user_id):
+        mp.create_playlist(user_id, "A")
+
+        with pytest.raises(MusicCommandError):
+            mp.create_playlist(user_id, " A ")
+        for i in range(mp.MAX_PLAYLISTS - 1):
+            mp.create_playlist(user_id, f"p{i}")
+        with pytest.raises(MusicCommandError):
+            mp.create_playlist(user_id, "one more")
+
+    def test_rename_rejects_duplicate(self, mp_repo, user_id):
+        a = mp.create_playlist(user_id, "A")
+        mp.create_playlist(user_id, "B")
+
+        with pytest.raises(MusicCommandError):
+            mp.rename_playlist(a, "B")
+        mp.rename_playlist(a, "C")
+        assert mp_repo.get_music_playlist(user_id, "C").id == a.id
 
 
 # ─── 身分入口 ───────────────────────────────────────────────────────────────

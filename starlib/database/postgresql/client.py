@@ -2344,18 +2344,8 @@ class MusicPlaylistRepository(BaseRepository):
         self.commit()
         return source
 
-    def replace_music_playlist_source_songs(
-        self, source: MusicPlaylistSource, songs: list[tuple[str, str, int | None]], title: str | None = None, expected_version: int | None = None
-    ) -> tuple[int, int]:
-        """
-        以新擷取的歌曲取代歌單中來自此來源的歌曲，放在該來源第一首原本的位置（已無該來源歌曲時接在尾端），手動加入的歌曲位置不變。
-
-        以網址逐一配對舊資料列：仍存在的歌沿用原本的資料列（只更新順序與標題），只有新歌才新增資料列，避免每次同步都消耗 id。
-        同一網址出現多次時依出現順序一對一配對。
-
-        :return: (新增數, 移除數)
-        """
-        self._lock_music_playlist(source.playlist_id, expected_version)
+    def _replace_source_songs(self, source: MusicPlaylistSource, songs: list[tuple[str, str, int | None]], title: str | None) -> tuple[int, int]:
+        """替換單一來源的歌曲但不 commit，也不遞增版本；呼叫端負責。"""
         current = self.get_music_playlist_songs(source.playlist_id)
         remaining: dict[str, deque[MusicPlaylistSong]] = defaultdict(deque)
         for song in current:
@@ -2387,24 +2377,60 @@ class MusicPlaylistRepository(BaseRepository):
         if not inserted:
             ordered.extend(new)
 
-        try:
-            for song in stale:
-                self.session.delete(song)
-            for position, song in enumerate(ordered):
-                song.position = position
-                self.session.add(song)
-            source.synced_at = nowtz()
-            if title:
-                source.title = title
-            self.session.add(source)
-            self._bump_music_playlist(source.playlist_id)
-            self.session.commit()
-        except SQLAlchemyError:
-            log.exception("SQLAlchemy Replace Playlist Source Error")
-            self.session.rollback()
-            raise
-
+        for song in stale:
+            self.session.delete(song)
+        for position, song in enumerate(ordered):
+            song.position = position
+            self.session.add(song)
+        source.synced_at = nowtz()
+        if title:
+            source.title = title
+        self.session.add(source)
         return added, len(stale)
+
+    def replace_music_playlist_source_songs(
+        self, source: MusicPlaylistSource, songs: list[tuple[str, str, int | None]], title: str | None = None, expected_version: int | None = None
+    ) -> tuple[int, int]:
+        """
+        以新擷取的歌曲取代歌單中來自此來源的歌曲，放在該來源第一首原本的位置（已無該來源歌曲時接在尾端），手動加入的歌曲位置不變。
+
+        以網址逐一配對舊資料列：仍存在的歌沿用原本的資料列（只更新順序與標題），只有新歌才新增資料列，避免每次同步都消耗 id。
+        同一網址出現多次時依出現順序一對一配對。
+
+        :return: (新增數, 移除數)
+        """
+        self._lock_music_playlist(source.playlist_id, expected_version)
+        result = self._replace_source_songs(source, songs, title)
+        self._bump_music_playlist(source.playlist_id)
+        self.commit()
+        return result
+
+    def sync_music_playlist_sources(
+        self,
+        playlist_id: int,
+        updates: list[tuple[MusicPlaylistSource, list[tuple[str, str, int | None]], str | None]],
+        max_songs: int,
+        expected_version: int | None = None,
+    ) -> list[tuple[int, int, int]]:
+        """
+        一次替換多個來源的歌曲，整件事在同一個交易、同一次版本遞增完成。歌單總數不超過 max_songs，超過的部分捨棄。
+
+        :param updates: (來源, 重新擷取的歌曲, 新的來源標題)
+        :return: 每個來源的 (新增數, 移除數, 因上限捨棄數)
+        """
+        self._lock_music_playlist(playlist_id, expected_version)
+        results = []
+        for source, songs, title in updates:
+            current = self.get_music_playlist_songs(playlist_id)
+            old_count = sum(1 for song in current if song.source_id == source.id)
+            room = max(max_songs - len(current) + old_count, 0)
+            to_save = songs[:room]
+            added, removed = self._replace_source_songs(source, to_save, title)
+            results.append((added, removed, len(songs) - len(to_save)))
+        if updates:
+            self._bump_music_playlist(playlist_id)
+        self.commit()
+        return results
 
     def get_music_playlist_songs(self, playlist_id: int) -> list[MusicPlaylistSong]:
         stmt = select(MusicPlaylistSong).where(MusicPlaylistSong.playlist_id == playlist_id).order_by(MusicPlaylistSong.position)
