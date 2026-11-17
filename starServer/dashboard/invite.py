@@ -1,7 +1,8 @@
-"""從後台清單邀請 bot：/to/dashboard-invite 與 /oauth/discord 的 purpose=invite 分支。
+"""從後台邀請 bot：統一邀請流程（/to/discordbot?origin=）的後台分支，與 /oauth/discord 的 purpose=invite handler。
 
-流程：/to/dashboard-invite 寫 dashboard_oauth cookie（purpose=invite）並導向 Discord 的 bot 授權頁，
+流程：/to/discordbot 帶 origin 時呼叫 invite_redirect，寫 dashboard_oauth cookie（purpose=invite）並導向 Discord 的邀請頁，
 完成後 Discord 回到 /oauth/discord，由 auth.handle_dashboard_oauth 分流到這裡的 handler。
+網站不交換 code、不保存 Discord 授權；去向依 session 的 Discord 帳號在實際加入的伺服器的權限決定。
 """
 
 import asyncio
@@ -9,46 +10,25 @@ import logging
 import time
 from urllib.parse import urlencode
 
-from fastapi import APIRouter
 from fastapi.requests import Request
-from fastapi.responses import HTMLResponse, RedirectResponse, Response
-
-from sentry_bootstrap import capture_exception_safe
+from fastapi.responses import RedirectResponse, Response
 
 from . import auth
 from .db import run_db
 from .errors import DashboardError
 from .guilds import bot_guild_ids, can_enter, guild_perms
-from .session import SESSION_COOKIE, create_session, lookup_session, set_session_cookie
+from .session import SESSION_COOKIE, lookup_session
 
 log = logging.getLogger(__name__)
 
-to_router = APIRouter()
-
-INVITE_SCOPES = ["bot", "identify", "guilds"]
 #: 授權完成後等 bot 看到新伺服器的上限與輪詢間隔（秒）
 WAIT_SECONDS = 5.0
 POLL_INTERVAL = 0.5
 
 
-def _login_redirect(origin: str) -> RedirectResponse:
-    query = urlencode({"next": "/dashboard", "origin": origin})
-    return RedirectResponse(url=f"/to/dashboard-login?{query}")
-
-
-@to_router.get("/to/dashboard-invite")
-async def to_dashboard_invite(request: Request, guild_id: str | None = None, origin: str | None = None):
-    origin = auth.sanitize_origin(origin)
-    session_id = request.cookies.get(SESSION_COOKIE)
-    if await run_db(lambda: lookup_session(session_id)) is None:
-        return _login_redirect(origin)
-
-    extra = {"permissions": "8"}
-    if guild_id and guild_id.isdigit():
-        extra |= {"guild_id": guild_id, "disable_guild_select": "false"}
-    async with await auth.new_discord_oauth(INVITE_SCOPES) as oauth:
-        url, state = oauth.get_authorization_url(**extra)
-    cookie = auth.OAuthCookie(state=state, purpose="invite", next="/dashboard", origin=origin)
+def invite_redirect(url: str, state: str, origin: str | None) -> RedirectResponse:
+    """導向 Discord 邀請頁，並記下這次邀請從後台發起：完成後回到 origin 的後台。"""
+    cookie = auth.OAuthCookie(state=state, purpose="invite", next="/dashboard", origin=auth.sanitize_origin(origin))
     response = RedirectResponse(url=url)
     response.set_cookie(
         auth.OAUTH_COOKIE,
@@ -59,6 +39,11 @@ async def to_dashboard_invite(request: Request, guild_id: str | None = None, ori
         samesite="lax",
     )
     return response
+
+
+def _login_redirect(origin: str) -> RedirectResponse:
+    query = urlencode({"next": "/dashboard", "origin": origin})
+    return RedirectResponse(url=f"/to/dashboard-login?{query}")
 
 
 async def _wait_for_bot(guild_id: str) -> bool:
@@ -77,40 +62,19 @@ async def _wait_for_bot(guild_id: str) -> bool:
 
 async def _handle_invite(request: Request, cookie: auth.OAuthCookie) -> Response:
     params = request.query_params
-    code = params.get("code")
     origin = cookie.origin
-    if params.get("error") or not code:
+    if params.get("error") or not params.get("code"):
         return RedirectResponse(url=f"{origin}/dashboard")
 
-    try:
-        async with await auth.new_discord_oauth(INVITE_SCOPES) as oauth:
-            await oauth.exchange_code(code)
-            user = await oauth.get_me()
-            await run_db(lambda: oauth.save_token_to_db(user.id))
-    except Exception as exc:
-        capture_exception_safe(exc, tags={"service": "website", "source": "dashboard_invite"})
-        log.exception("Dashboard invite failed: %s", exc)
-        return HTMLResponse("授權失敗，請重新開始邀請", 400)
+    # Discord 邀請頁登入的可能是另一個帳號；去向一律以 session 的帳號為準，不改 session
+    session_id = request.cookies.get(SESSION_COOKIE)
+    info = await run_db(lambda: lookup_session(session_id))
+    if info is None:
+        return _login_redirect(origin)
 
-    old_id = request.cookies.get(SESSION_COOKIE)
-    old = await run_db(lambda: lookup_session(old_id))
-    same_account = old is not None and old.discord_user_id == user.id
-    new_session_id: str | None = None
-    if not same_account:
-        name = user.global_name or user.username
-        new_session_id = await run_db(lambda: create_session(user.id, name, user.avatar, old_id))
-
-    # Discord 邀請頁登入的是另一個帳號：以該帳號登入，回清單
-    if old is not None and not same_account:
-        target = f"{origin}/dashboard"
-    else:
-        target = await _same_account_target(user.id, params.get("guild_id"), origin)
-
-    log.info("Dashboard invite: user %s guild %s", user.id, params.get("guild_id"))
-    response = RedirectResponse(url=target)
-    if new_session_id is not None:
-        set_session_cookie(response, new_session_id)
-    return response
+    guild_id = params.get("guild_id")
+    log.info("Dashboard invite: user %s guild %s", info.discord_user_id, guild_id)
+    return RedirectResponse(url=await _same_account_target(info.discord_user_id, guild_id, origin))
 
 
 async def _same_account_target(user_id: str, guild_id: str | None, origin: str) -> str:
