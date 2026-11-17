@@ -1,32 +1,28 @@
-"""伺服器管理後台 T-02：伺服器清單、權限判斷、快取與 token refresh（假 Discord，真實 PostgreSQL）。"""
+"""伺服器管理後台：伺服器清單與權限判斷（假 bot，真實 PostgreSQL）。
+
+其他 test_dashboard_*.py 共用這裡的 `discord` fixture 與 `g()`：`discord.guilds` 是 bot 成員快取裡這位使用者的資料，
+各檔自己的假 bot 只要提供 get_guild，權限由正式的 `_member_perms` 依這份資料判斷。
+"""
 
 from __future__ import annotations
 
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
-from datetime import timedelta
 from types import SimpleNamespace
 
-import httpx
+import discord as dpy
 import pytest
-from authlib.integrations.base_client.errors import OAuthError
 from fastapi.testclient import TestClient
-from sqlmodel import select
 from test_dashboard_auth import (  # noqa: F401  (fixture 與 helper)
     USER_ID,
     dashboard_env,
-    login,
     make_app,
     make_session,
-    spy,
 )
 from test_identity import repo  # noqa: F401
 
 from starlib import sclient
-from starlib.database import OAuthToken
-from starlib.oauth import DiscordOAuth, oauth_lib
-from starlib.utils import nowtz
-from starServer.dashboard import auth, guilds
+from starServer.dashboard import guilds
 from starServer.dashboard.errors import DashboardError
 
 ADMIN = 0x8
@@ -39,67 +35,56 @@ MANAGE_ROLES = 0x10000000
 MODERATE = 0x10000000000
 
 
-def g(gid: str, name: str, permissions: int = 0, owner: bool = False, icon: str | None = None) -> dict:
-    return {"id": gid, "name": name, "icon": icon, "owner": owner, "permissions": str(permissions)}
+def g(gid: str, name: str, permissions: int = 0, owner: bool = False) -> dict:
+    """使用者在伺服器 gid 的成員資料：permissions 是 guild_permissions 的 bits，owner 表示是伺服器擁有者。"""
+    return {"id": gid, "name": name, "owner": owner, "permissions": permissions}
 
 
 class FakeDiscord:
     def __init__(self):
+        # 使用者是成員的伺服器；不在這裡的伺服器視為不是成員
         self.guilds: list[dict] = []
-        self.calls = 0
-        self.error: Exception | None = None
-        self.delay = 0.0
 
 
 @pytest.fixture
 def discord(monkeypatch, dashboard_env, repo) -> FakeDiscord:  # noqa: F811
     fake = FakeDiscord()
-    monkeypatch.setattr(guilds, "sqldb", repo)
-    monkeypatch.setattr(oauth_lib, "sqldb", repo)  # save_token_to_db 用的
-    guilds._cache.clear()
-    auth._user_locks.clear()
+    real_member_perms = guilds._member_perms
 
-    async def api_get(self, path, params=None):
-        assert path == "/users/@me/guilds"
-        fake.calls += 1
-        if fake.delay:
-            await asyncio.sleep(fake.delay)
-        if fake.error:
-            raise fake.error
-        return list(fake.guilds)
+    def member_perms(guild, user_id: int) -> guilds.GuildPerms:
+        """把各檔自己的假伺服器換成帶有 fake.guilds 成員資料的伺服器，再交給正式的判斷。"""
+        entry = next((e for e in fake.guilds if e["id"] == str(guild.id)), None)
+        members = [member(user_id, entry["permissions"])] if entry else []
+        owner_id = user_id if entry and entry["owner"] else 1
+        return real_member_perms(bot_guild(guild.id, "guild", members, owner_id=owner_id), user_id)
 
-    monkeypatch.setattr(DiscordOAuth, "api_get", api_get)
+    monkeypatch.setattr(guilds, "_member_perms", member_perms)
     return fake
 
 
-def seed_token(repo, credential_id, *, scope=("identify", "guilds"), expires_in=timedelta(days=7), user_id=USER_ID):  # noqa: F811
-    repo.merge(
-        OAuthToken(
-            user_id=user_id,
-            client_credential_id=credential_id,
-            access_token="access-old",
-            refresh_token="refresh-old",
-            scope=list(scope),
-            expires_at=nowtz() + expires_in,
-        )
+# ====== 假 bot（成員快取） ======
+def member(user_id: str | int, permissions: int = 0):
+    return SimpleNamespace(id=int(user_id), guild_permissions=dpy.Permissions(permissions))
+
+
+def bot_guild(gid: int, name: str, members=(), owner_id: int = 1, icon: str | None = None):
+    by_id = {m.id: m for m in members}
+    return SimpleNamespace(
+        id=gid,
+        name=name,
+        owner_id=owner_id,
+        icon=SimpleNamespace(url=icon) if icon else None,
+        get_member=by_id.get,
     )
 
 
-@pytest.fixture
-def token(repo, dashboard_env):  # noqa: F811
-    seed_token(repo, dashboard_env.credential_id)
-
-
-def http_error(status: int) -> httpx.HTTPStatusError:
-    req = httpx.Request("GET", "https://discord.com")
-    return httpx.HTTPStatusError("x", request=req, response=httpx.Response(status, request=req))
-
-
-def fake_bot(ids: list[int], ready: bool = True):
+def fake_bot(guild_list=(), ready: bool = True):
     pool = ThreadPoolExecutor(max_workers=1)
+    by_id = {x.id: x for x in guild_list}
     return SimpleNamespace(
         is_ready=lambda: ready,
-        guilds=[SimpleNamespace(id=i) for i in ids],
+        guilds=list(guild_list),
+        get_guild=by_id.get,
         submit=lambda coro: pool.submit(asyncio.run, coro),
     )
 
@@ -107,34 +92,47 @@ def fake_bot(ids: list[int], ready: bool = True):
 # ====== GET /dashboard/guilds ======
 class TestListEndpoint:
     @pytest.fixture
-    def client(self, discord, token, repo) -> TestClient:  # noqa: F811
+    def client(self, repo, dashboard_env) -> TestClient:  # noqa: F811
         make_session(repo)
         c = TestClient(make_app(), base_url="https://testserver", follow_redirects=False)
         c.cookies.set("dashboard_session", "sid")
         return c
 
-    def test_groups_filter_and_sort(self, client, discord, monkeypatch):
-        discord.guilds = [
-            g("1", "banana", MANAGE_CHANNELS),  # 已邀請、有 Manage Channels
-            g("2", "Apple", ADMIN),  # 已邀請、Administrator
-            g("3", "cherry", MANAGE_GUILD),  # 已邀請、Manage Server（符合進入條件）
-            g("4", "delta", MANAGE_GUILD),  # 未邀請、Manage Server
-            g("5", "echo", MANAGE_CHANNELS),  # 未邀請但只有 Manage Channels → 不出現
-            g("6", "foxtrot", 0, owner=True),  # 未邀請、擁有者
-            g("7", "golf", 0),  # 未邀請、無權限 → 不出現
-            g("8", "hotel", 0, owner=True, icon="a_abc"),  # 已邀請、擁有者
-            g("9", "india", BAN),  # 已邀請、只有 Ban Members
-            g("10", "juliet", MANAGE_ROLES),  # 已邀請、只有 Manage Roles
-            g("11", "kilo", 0),  # 已邀請但沒有任何相關權限 → 不出現
+    def test_only_bot_guilds_user_can_enter_sorted(self, client, monkeypatch):
+        icon = "https://cdn.discordapp.com/icons/8/a_abc.gif"
+        bot_guilds = [
+            bot_guild(1, "banana", [member(USER_ID, MANAGE_CHANNELS)]),
+            bot_guild(2, "Apple", [member(USER_ID, ADMIN)]),
+            bot_guild(3, "cherry", [member(USER_ID, MANAGE_GUILD)]),
+            bot_guild(8, "hotel", [member(USER_ID)], owner_id=int(USER_ID), icon=icon),  # 擁有者
+            bot_guild(9, "india", [member(USER_ID, BAN)]),
+            bot_guild(10, "juliet", [member(USER_ID, MANAGE_ROLES)]),
+            bot_guild(11, "kilo", [member(USER_ID, 0x400)]),  # 只有 View Channel → 不出現
+            bot_guild(12, "lima", [member("42", ADMIN)]),  # 不是成員 → 不出現
         ]
-        monkeypatch.setattr(sclient, "bot", fake_bot([1, 2, 3, 8, 9, 10, 11]))
+        monkeypatch.setattr(sclient, "bot", fake_bot(bot_guilds))
         res = client.get("/dashboard/guilds")
         assert res.status_code == 200
         body = res.json()
-        assert [x["name"] for x in body["invited"]] == ["Apple", "banana", "cherry", "hotel", "india", "juliet"]
-        assert [x["name"] for x in body["not_invited"]] == ["delta", "foxtrot"]
-        assert body["invited"][3]["icon_url"] == "https://cdn.discordapp.com/icons/8/a_abc.gif"
-        assert body["invited"][0]["icon_url"] is None
+        assert list(body) == ["guilds"]
+        assert [x["name"] for x in body["guilds"]] == ["Apple", "banana", "cherry", "hotel", "india", "juliet"]
+        assert body["guilds"][3] == {"id": "8", "name": "hotel", "icon_url": icon}
+        assert body["guilds"][0]["icon_url"] is None
+
+    def test_empty(self, client, monkeypatch):
+        monkeypatch.setattr(sclient, "bot", fake_bot([]))
+        assert client.get("/dashboard/guilds").json() == {"guilds": []}
+
+    def test_reflects_bot_state_every_request(self, client, monkeypatch):
+        """權限被拔掉或 bot 被踢出，下一次請求就反映，不經過快取。"""
+        guild = bot_guild(1, "a", [member(USER_ID, MANAGE_CHANNELS)])
+        monkeypatch.setattr(sclient, "bot", fake_bot([guild]))
+        assert [x["id"] for x in client.get("/dashboard/guilds").json()["guilds"]] == ["1"]
+        guild.get_member = {int(USER_ID): member(USER_ID)}.get
+        assert client.get("/dashboard/guilds").json() == {"guilds": []}
+        guild.get_member = {int(USER_ID): member(USER_ID, MANAGE_CHANNELS)}.get
+        monkeypatch.setattr(sclient, "bot", fake_bot([]))
+        assert client.get("/dashboard/guilds").json() == {"guilds": []}
 
     def test_bot_not_ready(self, client, monkeypatch):
         monkeypatch.setattr(sclient, "bot", None)
@@ -143,120 +141,53 @@ class TestListEndpoint:
         monkeypatch.setattr(sclient, "bot", fake_bot([], ready=False))
         assert client.get("/dashboard/guilds").json() == {"error": "bot_unavailable"}
 
-    def test_refresh_param_skips_cache(self, client, discord, monkeypatch):
-        monkeypatch.setattr(sclient, "bot", fake_bot([1]))
-        discord.guilds = [g("1", "a", MANAGE_CHANNELS)]
-        client.get("/dashboard/guilds")
-        client.get("/dashboard/guilds")
-        assert discord.calls == 1
-        discord.guilds = []
-        assert client.get("/dashboard/guilds?refresh=1").json()["invited"] == []
-        assert discord.calls == 2
-
-    def test_bot_membership_not_cached(self, client, discord, monkeypatch):
-        discord.guilds = [g("1", "a", MANAGE_CHANNELS | MANAGE_GUILD)]
-        monkeypatch.setattr(sclient, "bot", fake_bot([]))
-        assert client.get("/dashboard/guilds").json()["not_invited"][0]["id"] == "1"
-        monkeypatch.setattr(sclient, "bot", fake_bot([1]))
-        body = client.get("/dashboard/guilds").json()
-        assert body["invited"][0]["id"] == "1" and body["not_invited"] == []
-        assert discord.calls == 1
-
-    def test_reauth_required(self, client, discord, monkeypatch):
-        monkeypatch.setattr(sclient, "bot", fake_bot([]))
-        discord.error = http_error(401)
-        res = client.get("/dashboard/guilds")
-        assert (res.status_code, res.json()) == (401, {"error": "reauth_required"})
-
     def test_requires_session(self):
         c = TestClient(make_app(), base_url="https://testserver")
         assert c.get("/dashboard/guilds").json() == {"error": "session_expired"}
 
 
-# ====== 快取與錯誤 ======
-class TestService:
-    def test_cache_ttl(self, discord, token):
-        discord.guilds = [g("1", "a")]
-        asyncio.run(guilds.get_user_guilds(USER_ID))
-        asyncio.run(guilds.get_user_guilds(USER_ID))
-        assert discord.calls == 1
-        stamp, data = guilds._cache[USER_ID]
-        guilds._cache[USER_ID] = (stamp - guilds.CACHE_TTL - 1, data)
-        asyncio.run(guilds.get_user_guilds(USER_ID))
-        assert discord.calls == 2
+# ====== guild_perms ======
+class TestGuildPerms:
+    def perms(self, monkeypatch, guild, gid: str | int = 1):
+        monkeypatch.setattr(sclient, "bot", fake_bot([guild]))
+        return asyncio.run(guilds.guild_perms(USER_ID, gid))
 
-    def test_invalidate(self, discord, token):
-        discord.guilds = [g("1", "a")]
-        asyncio.run(guilds.get_user_guilds(USER_ID))
-        guilds.invalidate(USER_ID)
-        asyncio.run(guilds.get_user_guilds(USER_ID))
-        assert discord.calls == 2
+    def test_member(self, monkeypatch):
+        p = self.perms(monkeypatch, bot_guild(1, "a", [member(USER_ID, MANAGE_CHANNELS | BAN)]))
+        assert (p.bits, p.full) == (MANAGE_CHANNELS | BAN, False)
+        assert p.manage_channels and not p.manage_guild
 
-    def test_no_token(self, discord):
+    def test_not_member(self, monkeypatch):
+        assert self.perms(monkeypatch, bot_guild(1, "a", [member("42", ADMIN)])) == guilds.GuildPerms()
+
+    def test_owner(self, monkeypatch):
+        p = self.perms(monkeypatch, bot_guild(1, "a", [member(USER_ID)], owner_id=int(USER_ID)))
+        assert p.full and p.manage_guild
+
+    def test_owner_not_yet_in_member_cache(self, monkeypatch):
+        assert self.perms(monkeypatch, bot_guild(1, "a", [], owner_id=int(USER_ID))).full
+
+    def test_administrator(self, monkeypatch):
+        p = self.perms(monkeypatch, bot_guild(1, "a", [member(USER_ID, ADMIN)]))
+        assert p.full and p.manage_channels
+
+    def test_accepts_str_guild_id(self, monkeypatch):
+        assert self.perms(monkeypatch, bot_guild(1, "a", [member(USER_ID, BAN)]), gid="1").bits == BAN
+
+    def test_bot_not_in_guild(self, monkeypatch):
         with pytest.raises(DashboardError) as e:
-            asyncio.run(guilds.get_user_guilds(USER_ID))
-        assert e.value.code == "reauth_required"
+            self.perms(monkeypatch, bot_guild(1, "a", [member(USER_ID, ADMIN)]), gid=999)
+        assert (e.value.status, e.value.code) == (404, "bot_not_in_guild")
 
-    def test_token_without_guilds_scope(self, discord, repo, dashboard_env):  # noqa: F811
-        seed_token(repo, dashboard_env.credential_id, scope=("identify",))
+    @pytest.mark.parametrize("bot", [None, fake_bot([], ready=False)])
+    def test_bot_unavailable(self, monkeypatch, bot):
+        monkeypatch.setattr(sclient, "bot", bot)
         with pytest.raises(DashboardError) as e:
-            asyncio.run(guilds.get_user_guilds(USER_ID))
-        assert e.value.code == "reauth_required"
-        assert discord.calls == 0
+            asyncio.run(guilds.guild_perms(USER_ID, 1))
+        assert (e.value.status, e.value.code) == (503, "bot_unavailable")
 
-    def test_reauth_not_cached_and_drops_old_cache(self, discord, token):
-        discord.guilds = [g("1", "a")]
-        asyncio.run(guilds.get_user_guilds(USER_ID))
-        discord.error = http_error(401)
-        with pytest.raises(DashboardError):
-            asyncio.run(guilds.get_user_guilds(USER_ID, refresh=True))
-        assert USER_ID not in guilds._cache
 
-    @pytest.mark.parametrize("error", [http_error(429), http_error(500), httpx.ConnectError("x")])
-    def test_unavailable_without_cache(self, discord, token, error):
-        discord.error = error
-        with pytest.raises(DashboardError) as e:
-            asyncio.run(guilds.get_user_guilds(USER_ID))
-        assert (e.value.status, e.value.code) == (502, "discord_unavailable")
-        assert USER_ID not in guilds._cache
-
-    def test_unavailable_uses_stale_cache(self, discord, token):
-        discord.guilds = [g("1", "a")]
-        asyncio.run(guilds.get_user_guilds(USER_ID))
-        discord.error = http_error(429)
-        result = asyncio.run(guilds.get_user_guilds(USER_ID, refresh=True))
-        assert [x.id for x in result] == ["1"]
-
-    def test_single_flight(self, discord, token):
-        discord.guilds = [g("1", "a")]
-        discord.delay = 0.05
-
-        async def run():
-            return await asyncio.gather(*(guilds.get_user_guilds(USER_ID) for _ in range(3)))
-
-        asyncio.run(run())
-        assert discord.calls == 1
-
-    def test_guild_perms(self, discord, token):
-        discord.guilds = [
-            g("1", "a", MANAGE_CHANNELS),
-            g("2", "b", MANAGE_GUILD),
-            g("3", "c", ADMIN),
-            g("4", "d", 0, owner=True),
-            g("5", "e", 0),
-        ]
-
-        def perms(gid):
-            p = asyncio.run(guilds.guild_perms(USER_ID, gid))
-            return p.manage_channels, p.manage_guild
-
-        assert perms(1) == (True, False)
-        assert perms("2") == (False, True)
-        assert perms(3) == (True, True)
-        assert perms(4) == (True, True)
-        assert perms(5) == (False, False)
-        assert perms(999) == (False, False)
-
+class TestPermissionBits:
     def test_permission_bits_match_discord_docs(self):
         assert guilds.KICK_MEMBERS == 1 << 1
         assert guilds.BAN_MEMBERS == 1 << 2
@@ -274,93 +205,3 @@ class TestService:
 
     def test_can_enter_full_access(self):
         assert guilds.can_enter(guilds.GuildPerms(0, True))
-
-
-# ====== token refresh ======
-class TestRefresh:
-    @pytest.fixture
-    def refresh_calls(self, monkeypatch) -> list[str]:
-        calls: list[str] = []
-
-        async def refresh(self, refresh_token):
-            calls.append(refresh_token)
-            return {
-                "access_token": "access-new",
-                "refresh_token": "refresh-new",
-                "token_type": "Bearer",
-                "expires_in": 604800,
-                "scope": "identify guilds",  # Discord 回空白分隔字串
-            }
-
-        monkeypatch.setattr(DiscordOAuth, "refresh", refresh)
-        return calls
-
-    def test_expired_token_is_refreshed_and_saved(self, discord, repo, dashboard_env, refresh_calls):  # noqa: F811
-        seed_token(repo, dashboard_env.credential_id, expires_in=timedelta(seconds=-5))
-        discord.guilds = [g("1", "a")]
-        asyncio.run(guilds.get_user_guilds(USER_ID))
-        assert refresh_calls == ["refresh-old"]
-        row = repo.session.exec(
-            select(OAuthToken).where(
-                OAuthToken.user_id == USER_ID, OAuthToken.client_credential_id == dashboard_env.credential_id
-            )
-        ).one()
-        repo.session.refresh(row)
-        assert row.scope == ["identify", "guilds"]  # 陣列，不是字串
-        assert row.client_credential_id == dashboard_env.credential_id
-        assert (row.access_token, row.refresh_token) == ("access-new", "refresh-new")
-        assert row.expires_at > nowtz() + timedelta(days=6)
-
-    def test_valid_token_not_refreshed(self, discord, token, refresh_calls):
-        discord.guilds = []
-        asyncio.run(guilds.get_user_guilds(USER_ID))
-        assert refresh_calls == []
-
-    def test_refresh_rejected_means_reauth(self, discord, repo, dashboard_env, monkeypatch):  # noqa: F811
-        seed_token(repo, dashboard_env.credential_id, expires_in=timedelta(seconds=-5))
-
-        async def refresh(self, refresh_token):
-            raise OAuthError(error="invalid_grant")
-
-        monkeypatch.setattr(DiscordOAuth, "refresh", refresh)
-        with pytest.raises(DashboardError) as e:
-            asyncio.run(guilds.get_user_guilds(USER_ID))
-        assert e.value.code == "reauth_required"
-
-    def test_refresh_network_error_is_unavailable(self, discord, repo, dashboard_env, monkeypatch):  # noqa: F811
-        seed_token(repo, dashboard_env.credential_id, expires_in=timedelta(seconds=-5))
-
-        async def refresh(self, refresh_token):
-            raise httpx.ConnectError("x")
-
-        monkeypatch.setattr(DiscordOAuth, "refresh", refresh)
-        with pytest.raises(DashboardError) as e:
-            asyncio.run(guilds.get_user_guilds(USER_ID))
-        assert e.value.code == "discord_unavailable"
-
-    def test_concurrent_requests_refresh_once(self, discord, repo, dashboard_env, refresh_calls):  # noqa: F811
-        seed_token(repo, dashboard_env.credential_id, expires_in=timedelta(seconds=-5))
-        discord.guilds = []
-
-        async def run():
-            await asyncio.gather(*(guilds.get_user_guilds(USER_ID) for _ in range(3)))
-
-        asyncio.run(run())
-        assert len(refresh_calls) == 1
-
-
-# ====== 登入、登出清快取 ======
-def test_logout_and_login_invalidate(discord, token, repo, spy):  # noqa: F811
-    discord.guilds = [g("1", "a")]
-    asyncio.run(guilds.get_user_guilds(USER_ID))
-    assert USER_ID in guilds._cache
-
-    make_session(repo)
-    client = TestClient(make_app(), base_url="https://testserver", follow_redirects=False)
-    client.cookies.set("dashboard_session", "sid")
-    assert client.post("/dashboard/logout", headers={"Origin": "https://domalyze.net"}).status_code == 200
-    assert USER_ID not in guilds._cache
-
-    guilds._cache[USER_ID] = (0.0, [])
-    login(client, spy)
-    assert USER_ID not in guilds._cache

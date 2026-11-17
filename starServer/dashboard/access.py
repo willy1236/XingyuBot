@@ -113,18 +113,17 @@ def section_actions(perms: GuildPerms, section: Section) -> list[str]:
 
 
 def require_section(section: Section, action: str | None = None):
-    """dependency factory：依序確認 session、使用者有該區塊（動作）的權限、bot 在該伺服器；回傳 guild_id。
+    """dependency factory：依序確認 session、bot 在該伺服器、使用者有該區塊（動作）的權限；回傳 guild_id。
 
     action 省略時只要求進入該區塊（`view`）。
 
-    錯誤：401 session_expired／reauth_required、403 no_permission、404 bot_not_in_guild、503 bot_unavailable。
+    錯誤：401 session_expired、403 no_permission、404 bot_not_in_guild、503 bot_unavailable。
     """
     bits = SECTION_RULES[section][action or "view"]  # 寫錯動作名稱在 import 時就失敗
 
     async def dependency(guild_id: int, info: SessionInfo = Depends(require_session)) -> int:
         if not (await guild_perms(info.discord_user_id, guild_id)).has_any(bits):
             raise DashboardError(403, "no_permission")
-        await on_guild(guild_id, lambda _guild: None)
         return guild_id
 
     return dependency

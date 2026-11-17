@@ -60,6 +60,11 @@ class AppSettings(BaseSettings):
     # AppSettings 也被 twitch_main.py 與本機 .env 共用，所以只在 API_WEBSITE=true 時要求必填
     DASHBOARD_FRONTEND_URL: str | None = None
     DASHBOARD_ALLOWED_ORIGINS: list[str] = Field(default_factory=list)
+    # 析域登入：auth server（Hydra）的 OIDC client，client 設定在 domalyze-identity 的 identity-clients.toml（xingyu-website）
+    DASHBOARD_OIDC_CLIENT_ID: str | None = None
+    DASHBOARD_OIDC_CLIENT_SECRET: str | None = None
+    DASHBOARD_OIDC_REDIRECT_URI: str | None = None
+    DASHBOARD_OIDC_ISSUER: str = "https://auth.domalyze.net"
 
     # SENTRY_* 由 sentry_bootstrap 在載入設定前直接讀環境變數，不放在這裡
 
@@ -88,7 +93,15 @@ class AppSettings(BaseSettings):
     def _require_dashboard_settings(self) -> AppSettings:
         if self.API_WEBSITE:
             missing = [
-                name for name in ("DASHBOARD_FRONTEND_URL", "DASHBOARD_ALLOWED_ORIGINS") if not getattr(self, name)
+                name
+                for name in (
+                    "DASHBOARD_FRONTEND_URL",
+                    "DASHBOARD_ALLOWED_ORIGINS",
+                    "DASHBOARD_OIDC_CLIENT_ID",
+                    "DASHBOARD_OIDC_CLIENT_SECRET",
+                    "DASHBOARD_OIDC_REDIRECT_URI",
+                )
+                if not getattr(self, name)
             ]
             if missing:
                 raise ValueError(f"API_WEBSITE=true 時必須設定：{', '.join(missing)}")

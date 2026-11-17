@@ -36,6 +36,7 @@ from starlib.starAgent_line import line_agent
 from starServer import dashboard
 from starServer.dashboard import config as dashboard_config
 from starServer.dashboard.auth import handle_dashboard_oauth
+from starServer.dashboard.invite import invite_redirect as dashboard_invite_redirect
 
 discord_oauth_client = sqldb.get_oauth_client(APIType.Discord, 4)
 twitch_oauth_client = sqldb.get_oauth_client(APIType.Twitch, 3)
@@ -356,9 +357,12 @@ async def to_twitchauth(request: Request):
 
 
 @app.get("/to/discordbot")
-async def to_discordbot(request: Request):
+async def to_discordbot(request: Request, origin: str | None = None):
+    """統一的邀請入口。帶 origin 表示從後台發起，完成後回到該 origin 的後台；不帶時完成後顯示授權完成頁。"""
     auth = DiscordOAuth.create_from_db(discord_oauth_client, scopes=["identify", "applications.commands.permissions.update", "bot"])
     url, state = auth.get_authorization_url(permissions="8")
+    if origin is not None:
+        return dashboard_invite_redirect(url, state, origin)
     response = RedirectResponse(url=url)
     response.set_cookie(key="oauth_state", value=state, httponly=True, secure=True, samesite="lax", max_age=600)
     return response

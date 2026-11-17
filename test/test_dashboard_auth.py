@@ -15,17 +15,18 @@ from fastapi.responses import JSONResponse
 from fastapi.testclient import TestClient
 from pydantic import BaseModel
 from sqlmodel import select
-from test_identity import repo  # noqa: F401  (repo 為 fixture)
+from test_identity import FakeDirectory, repo  # noqa: F401  (repo 為 fixture)
 
 from starlib import sqldb as real_sqldb
 from starlib.database import APIType, DashboardSession, OAuthToken
 from starlib.database.postgresql.client import SQLRepository
+from starlib.identity import resolver as resolver_module
 from starlib.oauth import DiscordOAuth
 from starlib.oauth.models import DiscordUser
 from starlib.settings import AppSettings
 from starlib.utils import nowtz
 from starServer import bot_website, dashboard
-from starServer.dashboard import auth, config, db, session
+from starServer.dashboard import auth, config, db, discord_users, session
 
 FRONTEND = "https://domalyze.net"
 ORIGINS = ["https://domalyze.net", "https://www.domalyze.net"]
@@ -49,15 +50,21 @@ def dashboard_env(monkeypatch, repo):  # noqa: F811
         redirect_uri="https://api.example.test/oauth/discord",
         default_scopes=["identify"],
         credential_id=credential_id,
+        # 假的 auth server：預設查無此人，各測試可設定 directory.accounts
+        directory=FakeDirectory(),
     )
     monkeypatch.setattr(auth, "_oauth_client_cache", fake_client)
+    monkeypatch.setattr(resolver_module, "_directory", fake_client.directory)
+    monkeypatch.setattr(session, "_followed", {})
+    monkeypatch.setattr(session, "_inflight", {})
+    monkeypatch.setattr(session, "_unavailable_until", 0.0)
+    monkeypatch.setattr(discord_users, "_fetched", {})
     return fake_client
 
 
 class Spy:
     def __init__(self):
         self.revoked: list[str] = []
-        self.revoke_error: Exception | None = None
         self.user = DiscordUser(id=USER_ID, username="someone", global_name="Some One", avatar="abc")
         self.exchange_error: Exception | None = None
         self.saved: list[str] = []
@@ -89,8 +96,6 @@ def spy(monkeypatch, dashboard_env, repo) -> Spy:  # noqa: F811
         )
 
     async def revoke_token(self, token, token_type_hint="access_token"):
-        if spy.revoke_error:
-            raise spy.revoke_error
         spy.revoked.append(token)
 
     monkeypatch.setattr(DiscordOAuth, "exchange_code", exchange_code)
@@ -202,15 +207,26 @@ class TestSettings:
         assert s.DASHBOARD_FRONTEND_URL == "https://domalyze.net"
         assert s.DASHBOARD_ALLOWED_ORIGINS == ["https://domalyze.net", "https://www.domalyze.net"]
 
+    WEBSITE = dict(
+        API_WEBSITE=True,
+        DASHBOARD_FRONTEND_URL=FRONTEND,
+        DASHBOARD_ALLOWED_ORIGINS=ORIGINS,
+        DASHBOARD_OIDC_CLIENT_ID="xingyu-website",
+        DASHBOARD_OIDC_CLIENT_SECRET="s",
+        DASHBOARD_OIDC_REDIRECT_URI="https://api.domalyze.net/oauth/domalyze",
+    )
+
     def test_ok_with_website(self):
-        s = AppSettings(
-            **self.BASE,
-            API_WEBSITE=True,
-            DASHBOARD_FRONTEND_URL=FRONTEND,
-            DASHBOARD_ALLOWED_ORIGINS=ORIGINS,
-            _env_file=None,
-        )
+        s = AppSettings(**self.BASE, **self.WEBSITE, _env_file=None)
         assert s.DASHBOARD_ALLOWED_ORIGINS == ORIGINS
+        assert s.DASHBOARD_OIDC_ISSUER == "https://auth.domalyze.net"
+
+    @pytest.mark.parametrize(
+        "name", ["DASHBOARD_OIDC_CLIENT_ID", "DASHBOARD_OIDC_CLIENT_SECRET", "DASHBOARD_OIDC_REDIRECT_URI"]
+    )
+    def test_oidc_required_with_website(self, name):
+        with pytest.raises(ValueError, match=name):
+            AppSettings(**self.BASE, **{**self.WEBSITE, name: None}, _env_file=None)
 
 
 # ====== DiscordUser、頭像 ======
@@ -380,7 +396,7 @@ class TestLoginEntry:
         assert r.status_code == 307
         location = r.headers["location"]
         assert location.startswith("https://discord.com/api/oauth2/authorize")
-        assert "scope=identify+guilds" in location or "scope=identify%20guilds" in location
+        assert "scope=identify&" in location or location.endswith("scope=identify")
         cookie = next(c for c in set_cookies(r) if c.startswith("dashboard_oauth="))
         assert "HttpOnly" in cookie and "Secure" in cookie and "SameSite=lax" in cookie and "Max-Age=600" in cookie
         payload = json.loads(base64.urlsafe_b64decode(client.cookies["dashboard_oauth"]))
@@ -414,7 +430,7 @@ class TestLoginCallback:
         assert any(c.startswith("dashboard_oauth=") and "Max-Age=0" in c for c in cookies)
         row = repo.session.exec(select(DashboardSession)).one()
         assert (row.discord_user_id, row.name, row.avatar) == (USER_ID, "Some One", "abc")
-        assert spy.saved == [USER_ID]
+        assert spy.saved == []  # 不保存 Discord 授權
 
     def test_name_falls_back_to_username_and_default_avatar(self, client, spy, repo):  # noqa: F811
         spy.user = DiscordUser(id=USER_ID, username="plain", global_name=None, avatar=None)
@@ -536,38 +552,24 @@ class TestLogout:
             )
         )
 
-    def test_logout_revokes_and_invalidates_all_devices(self, client, spy, repo, dashboard_env):  # noqa: F811
+    def test_logout_invalidates_all_devices_without_revoking(self, client, spy, repo, dashboard_env):  # noqa: F811
         make_session(repo, session_id="a")
         make_session(repo, session_id="b")
         make_session(repo, user_id=OTHER_ID, session_id="other")
-        self._token(repo, dashboard_env)
+        self._token(repo, dashboard_env)  # 舊版留下的 token
         client.cookies.set("dashboard_session", "a")
 
         r = client.post("/dashboard/logout", headers={"Origin": FRONTEND})
 
         assert r.status_code == 200
-        assert spy.revoked == ["tok-" + USER_ID]
+        assert spy.revoked == []
         assert any(c.startswith("dashboard_session=") and "Max-Age=0" in c for c in set_cookies(r))
         assert not any("Max-Age=2592000" in c for c in set_cookies(r))
         repo.session.expire_all()
         assert repo.session.get(DashboardSession, "b", populate_existing=True) is None
         assert repo.session.get(DashboardSession, "other", populate_existing=True) is not None
-        assert repo.get_oauth_token(USER_ID, dashboard_env.credential_id) is None
         client.cookies.set("dashboard_session", "b")
         assert client.get("/dashboard/me").status_code == 401
-
-    def test_revoke_failure_still_logs_out(self, client, spy, repo, dashboard_env):  # noqa: F811
-        make_session(repo)
-        self._token(repo, dashboard_env)
-        spy.revoke_error = Exception("discord down")
-        client.cookies.set("dashboard_session", "sid")
-
-        r = client.post("/dashboard/logout", headers={"Origin": FRONTEND})
-
-        assert r.status_code == 200
-        repo.session.expire_all()
-        assert repo.session.get(DashboardSession, "sid", populate_existing=True) is None
-        assert repo.get_oauth_token(USER_ID, dashboard_env.credential_id) is None
 
     def test_logout_requires_origin(self, client, repo):  # noqa: F811
         make_session(repo)

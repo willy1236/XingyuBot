@@ -77,9 +77,13 @@ CREATE TABLE users.netbird_binding (
 """
 
 
+# 快照之後的部署步驟對既有表手動加的欄位（create_all 不會補既有表的欄位）
+LATER_ALTERS = "ALTER TABLE users.music_playlist ADD COLUMN version integer NOT NULL DEFAULT 0;"
+
+
 @pytest.fixture
 def repo():
-    """舊 schema 的暫時資料庫：先建舊表，再照 bot 啟動時一樣 create_all 補新表"""
+    """舊 schema 的暫時資料庫：先建舊表並補上之後部署加的欄位，再照 bot 啟動時一樣 create_all 補新表"""
     name = f"migtest_{uuid4().hex[:12]}"
     admin = sqldb.engine.execution_options(isolation_level="AUTOCOMMIT")
     with admin.connect() as conn:
@@ -91,6 +95,7 @@ def repo():
             for schema in {t.schema for t in SQLModel.metadata.tables.values() if t.schema}:
                 conn.execute(text(f'CREATE SCHEMA "{schema}"'))
             conn.execute(text(LEGACY_DDL))
+            conn.execute(text(LATER_ALTERS))
         SQLModel.metadata.create_all(engine)
         yield SQLRepository(engine, session)
     finally:

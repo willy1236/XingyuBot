@@ -16,7 +16,7 @@ from test_dashboard_auth import (  # noqa: F401  (fixture 與 helper)
     make_app,
     make_session,
 )
-from test_dashboard_guilds import MANAGE_CHANNELS, MANAGE_ROLES, g, seed_token
+from test_dashboard_guilds import MANAGE_CHANNELS, MANAGE_ROLES, g
 from test_dashboard_guilds import discord as discord_env  # noqa: F401  (fixture)
 from test_dashboard_notifies import GUILD_ID
 from test_dashboard_reaction_roles import (
@@ -231,7 +231,6 @@ class FakeRepo:
 
 @pytest.fixture
 def client(discord_env, dashboard_env, repo, monkeypatch) -> TestClient:  # noqa: F811
-    seed_token(repo, dashboard_env.credential_id)
     make_session(repo)
     discord_env.guilds = [g(str(GUILD_ID), "guild", MANAGE_ROLES)]
     fake_repo = FakeRepo()

@@ -185,7 +185,8 @@ _directory: AccountDirectory | None = None
 _default: IdentityResolver | None = None
 
 
-def _get_directory() -> AccountDirectory:
+def get_directory() -> AccountDirectory:
+    """共用的 auth server client（行程內單例）。"""
     global _directory
     if _directory is None:
         from starlib.settings import get_settings
@@ -206,7 +207,7 @@ def _get_default() -> IdentityResolver:
         from starlib.database import sqldb
         from starlib.settings import get_settings
 
-        _default = IdentityResolver(_get_directory(), sqldb, timedelta(seconds=get_settings().IDENTITY_TTL_SECONDS))
+        _default = IdentityResolver(get_directory(), sqldb, timedelta(seconds=get_settings().IDENTITY_TTL_SECONDS))
     return _default
 
 

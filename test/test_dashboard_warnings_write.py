@@ -11,13 +11,13 @@ import pytest
 from fastapi.testclient import TestClient
 from test_dashboard_auth import FRONTEND, USER_ID, dashboard_env, make_app, make_session  # noqa: F401  (fixture 與 helper)
 from test_dashboard_guilds import discord as discord_env  # noqa: F401  (fixture)
-from test_dashboard_guilds import g, seed_token
+from test_dashboard_guilds import g
 from test_dashboard_notifies import GUILD_ID, fake_bot
 from test_identity import repo  # noqa: F401
 
 from starlib import moderation, sclient
 from starlib.database import UserModerate, WarningType
-from starServer.dashboard import guilds, warnings
+from starServer.dashboard import warnings
 
 KICK = 0x2
 BAN = 0x4
@@ -85,7 +85,6 @@ def make_guild():
 
 @pytest.fixture
 def client(discord_env, repo, dashboard_env, monkeypatch) -> TestClient:  # noqa: F811
-    seed_token(repo, dashboard_env.credential_id)
     make_session(repo)
     discord_env.guilds = [g(str(GUILD_ID), "guild", ALL)]
     guild = make_guild()
@@ -135,7 +134,6 @@ class TestPermission:
         assert response.json()["error"] == "no_permission"
         assert records(client) == []
         client.discord_env.guilds = [g(str(GUILD_ID), "guild", bit)]
-        guilds._cache.clear()
         assert post(client, kind=kind, user_id=str(ALICE), **extra).status_code == 200
 
     def test_unknown_kind_is_400(self, client):
