@@ -42,8 +42,8 @@ def invite_redirect(url: str, state: str, origin: str | None) -> RedirectRespons
 
 
 def _login_redirect(origin: str) -> RedirectResponse:
-    query = urlencode({"next": "/dashboard", "origin": origin})
-    return RedirectResponse(url=f"/to/dashboard-login?{query}")
+    """沒有 session：導向前端的登入頁，登入後回到後台。"""
+    return RedirectResponse(url=f"{origin}/dashboard-login?{urlencode({'next': '/dashboard'})}")
 
 
 async def _wait_for_bot(guild_id: str) -> bool:

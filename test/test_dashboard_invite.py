@@ -179,9 +179,7 @@ class TestInviteCallback:
     def test_no_session_goes_to_login(self, env, repo):  # noqa: F811
         c = TestClient(make_app(), base_url="https://testserver", follow_redirects=False)
         res = callback(c)
-        loc = urlparse(res.headers["location"])
-        assert loc.path == "/to/dashboard-login"
-        assert parse_qs(loc.query) == {"next": ["/dashboard"], "origin": [FRONTEND]}
+        assert res.headers["location"] == f"{FRONTEND}/dashboard-login?next=%2Fdashboard"
         assert "dashboard_session=" not in "".join(set_cookies(res))
 
     def test_no_token_saved(self, env, repo, dashboard_env):  # noqa: F811
