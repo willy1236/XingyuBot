@@ -59,7 +59,7 @@ class TestPlaylists:
     def test_all_moved_with_songs_and_sources(self, repo, ids):
         old, new = ids
         pl = playlist(repo, old, "road trip", songs=3)
-        repo.create_music_playlist_source(pl.id, "https://example.com/list", "list")
+        repo.import_music_playlist_source(pl.id, "https://example.com/list", "list", [])
         playlist(repo, new, "mine")
 
         repo.merge_user_data(old, new)

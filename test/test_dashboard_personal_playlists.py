@@ -220,6 +220,13 @@ class TestCreateRenameDelete:
         assert repo.get_music_playlist(account_id, "新名字").id == mine.id
         assert repo.get_music_playlist(account_id, "我的歌") is None
 
+    def test_rename_to_same_name_with_stale_version_is_conflict(self, client, mine, repo):
+        repo.add_music_playlist_songs(mine.id, _rows(1, "cmd"))
+
+        res = client.patch(f"{BASE}/{mine.id}", json={"name": "我的歌", "version": 1}, headers=HEADERS)
+
+        assert res.status_code == 409 and res.json()["current"]["version"] == 2
+
     def test_delete(self, client, mine, repo):
         res = client.delete(f"{BASE}/{mine.id}?version=1", headers=HEADERS)
 
@@ -320,13 +327,13 @@ class TestConflict:
         assert (res.status_code, res.json()) == (404, {"error": "not_found"})
 
     def test_deleted_between_check_and_write(self, client, mine, repo, monkeypatch):
-        real = repo.rename_music_playlist
+        real = repo.lock_music_playlist
 
-        def delete_then_rename(playlist_id, name, expected_version=None):
+        def delete_then_lock(playlist_id, expected_version=None):
             repo.delete_music_playlist(playlist_id)
-            return real(playlist_id, name, expected_version)
+            return real(playlist_id, expected_version)
 
-        monkeypatch.setattr(repo, "rename_music_playlist", delete_then_rename)
+        monkeypatch.setattr(repo, "lock_music_playlist", delete_then_lock)
 
         res = client.patch(f"{BASE}/{mine.id}", json={"name": "x", "version": 1}, headers=HEADERS)
 

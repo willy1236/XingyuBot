@@ -3,6 +3,7 @@ import inspect
 import logging
 from collections import defaultdict, deque
 from collections.abc import Callable
+from contextlib import contextmanager
 from datetime import UTC, date, datetime, timedelta
 from ipaddress import IPv4Network
 from typing import Literal, ParamSpec, TypeVar, overload
@@ -248,12 +249,14 @@ class UserRepository(BaseRepository):
             self.session.rollback()
             raise
 
+    def _advisory_lock_user(self, user_id: UUID) -> None:
+        """使用者層級的交易鎖，commit 或 rollback 時自動釋放；取 UUID 前 64 位當 key"""
+        key = int.from_bytes(user_id.bytes[:8], "big", signed=True)
+        self.session.connection().execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": key})
+
     def _merge_user_data(self, old_id: UUID, new_id: UUID) -> None:
-        conn = self.session.connection()
         for uid in sorted((old_id, new_id), key=lambda u: u.int):
-            # 交易層級的鎖，commit 或 rollback 時自動釋放；取 UUID 前 64 位當 key
-            key = int.from_bytes(uid.bytes[:8], "big", signed=True)
-            conn.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": key})
+            self._advisory_lock_user(uid)
 
         extra = {"old_id": str(old_id), "new_id": str(new_id)}
 
@@ -2298,16 +2301,42 @@ class MusicPlaylistRepository(BaseRepository):
         self.session.exec(update(MusicPlaylist).where(MusicPlaylist.id == playlist_id).values(version=MusicPlaylist.version + 1))
 
     def _lock_music_playlist(self, playlist_id: int, expected_version: int | None) -> None:
-        """鎖住歌單那一列，`expected_version` 不為 None 時要求版本相符，否則拋 MusicPlaylistConflict。
+        """鎖住歌單那一列；`expected_version` 不為 None 時另外要求版本相符，否則拋 MusicPlaylistConflict。
 
-        鎖在 commit 或 rollback 才釋放，所以版本檢查與之後的寫入之間，別的寫入進不來。
+        一律取鎖（不帶版本的指令端寫入也是），同一份歌單的寫入才會排隊；鎖在 commit 或 rollback 才釋放。
         """
-        if expected_version is None:
-            return
         stmt = select(MusicPlaylist.version).where(MusicPlaylist.id == playlist_id).with_for_update()
         current = self.session.exec(stmt).first()
-        if current != expected_version:
+        if expected_version is not None and current != expected_version:
             raise MusicPlaylistConflict(deleted=current is None)
+
+    @contextmanager
+    def lock_music_playlist(self, playlist_id: int, expected_version: int | None = None):
+        """先鎖歌單再檢查與寫入：區塊內的讀取（上限、來源是否已存在）與寫入同一個交易，不會被並行的寫入插隊。
+
+        區塊內的寫入方法自己會 commit；正常離開時再 commit 一次（沒有寫入也要放掉鎖），拋例外時 rollback。
+        """
+        try:
+            self._lock_music_playlist(playlist_id, expected_version)
+            yield
+            self.session.commit()
+        except BaseException:
+            self.session.rollback()
+            raise
+
+    @contextmanager
+    def lock_music_playlist_names(self, user_id: UUID):
+        """鎖住這位使用者的歌單名稱空間：建立、改名前先取鎖再檢查重名與數量上限，不會並行撞到唯一鍵。
+
+        與 merge_user_data 用同一把鎖，合併中的改名不會和網頁或指令的建立、改名交錯。
+        """
+        try:
+            self._advisory_lock_user(user_id)
+            yield
+            self.session.commit()
+        except BaseException:
+            self.session.rollback()
+            raise
 
     def rename_music_playlist(self, playlist_id: int, name: str, expected_version: int | None = None) -> None:
         self._lock_music_playlist(playlist_id, expected_version)
@@ -2328,13 +2357,6 @@ class MusicPlaylistRepository(BaseRepository):
     def get_music_playlist_source(self, playlist_id: int, url: str) -> MusicPlaylistSource | None:
         stmt = select(MusicPlaylistSource).where(MusicPlaylistSource.playlist_id == playlist_id, MusicPlaylistSource.url == url)
         return self.session.exec(stmt).one_or_none()
-
-    def create_music_playlist_source(self, playlist_id: int, url: str, title: str | None) -> MusicPlaylistSource:
-        source = MusicPlaylistSource(playlist_id=playlist_id, url=url, title=title)
-        self.session.add(source)
-        self._bump_music_playlist(playlist_id)
-        self.commit()
-        return source
 
     def import_music_playlist_source(
         self, playlist_id: int, url: str, title: str | None, songs: list[tuple[str, str, int | None]], expected_version: int | None = None
@@ -2393,23 +2415,6 @@ class MusicPlaylistRepository(BaseRepository):
         self.session.add(source)
         return added, len(stale)
 
-    def replace_music_playlist_source_songs(
-        self, source: MusicPlaylistSource, songs: list[tuple[str, str, int | None]], title: str | None = None, expected_version: int | None = None
-    ) -> tuple[int, int]:
-        """
-        以新擷取的歌曲取代歌單中來自此來源的歌曲，放在該來源第一首原本的位置（已無該來源歌曲時接在尾端），手動加入的歌曲位置不變。
-
-        以網址逐一配對舊資料列：仍存在的歌沿用原本的資料列（只更新順序與標題），只有新歌才新增資料列，避免每次同步都消耗 id。
-        同一網址出現多次時依出現順序一對一配對。
-
-        :return: (新增數, 移除數)
-        """
-        self._lock_music_playlist(source.playlist_id, expected_version)
-        result = self._replace_source_songs(source, songs, title)
-        self._bump_music_playlist(source.playlist_id)
-        self.commit()
-        return result
-
     def sync_music_playlist_sources(
         self,
         playlist_id: int,
@@ -2463,9 +2468,9 @@ class MusicPlaylistRepository(BaseRepository):
         self._bump_music_playlist(playlist_id)
         self.commit()
 
-    def remove_music_playlist_song(self, playlist_id: int, index: int, expected_version: int | None = None) -> MusicPlaylistSong | None:
+    def remove_music_playlist_song(self, playlist_id: int, index: int) -> MusicPlaylistSong | None:
         """刪除歌單第 index 首（從 0 起算）並重新編排順序，回傳被刪除的歌曲"""
-        self._lock_music_playlist(playlist_id, expected_version)
+        self._lock_music_playlist(playlist_id, None)
         songs = self.get_music_playlist_songs(playlist_id)
         if not 0 <= index < len(songs):
             return None

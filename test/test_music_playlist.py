@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import threading
 from types import SimpleNamespace
 from uuid import UUID, uuid4
 
@@ -96,6 +97,15 @@ class TestMusicPlaylistRepository:
         assert repo.get_music_playlist_songs(playlist.id) == []
 
 
+def _source(repo, playlist_id: int, url: str = "https://example.com/list", title: str | None = None):
+    return repo.import_music_playlist_source(playlist_id, url, title, [])
+
+
+def _replace(repo, source, rows, title: str | None = None) -> tuple[int, int]:
+    [(added, removed, _dropped)] = repo.sync_music_playlist_sources(source.playlist_id, [(source, rows, title)], 500)
+    return added, removed
+
+
 class TestMusicPlaylistSource:
     @pytest.fixture
     def playlist(self, repo, user_id):
@@ -108,48 +118,48 @@ class TestMusicPlaylistSource:
 
     def test_replace_keeps_manual_songs_in_place(self, repo, playlist):
         repo.add_music_playlist_songs(playlist.id, _rows(1, "manual_a"))
-        source = repo.create_music_playlist_source(playlist.id, "https://example.com/list", "外部")
+        source = _source(repo, playlist.id, "https://example.com/list", "外部")
         repo.add_music_playlist_songs(playlist.id, _rows(3, "src"), source_id=source.id)
         repo.add_music_playlist_songs(playlist.id, _rows(1, "manual_b"))
 
         # 外部歌單刪掉 src0、加入 new0
-        added, removed = repo.replace_music_playlist_source_songs(source, [*_rows(3, "src")[1:], *_rows(1, "new")], "外部改名")
+        added, removed = _replace(repo, source, [*_rows(3, "src")[1:], *_rows(1, "new")], "外部改名")
 
         assert (added, removed) == (1, 1)
         assert self._titles(repo, playlist) == ["manual_a0", "src1", "src2", "new0", "manual_b0"]
         assert repo.get_music_playlist_source(playlist.id, "https://example.com/list").title == "外部改名"
 
     def test_replace_appends_when_source_songs_all_removed(self, repo, playlist):
-        source = repo.create_music_playlist_source(playlist.id, "https://example.com/list", None)
+        source = _source(repo, playlist.id, "https://example.com/list", None)
         repo.add_music_playlist_songs(playlist.id, _rows(1, "src"), source_id=source.id)
         repo.add_music_playlist_songs(playlist.id, _rows(1, "manual"))
         repo.remove_music_playlist_song(playlist.id, 0)
 
-        added, removed = repo.replace_music_playlist_source_songs(source, _rows(2, "src"))
+        added, removed = _replace(repo, source, _rows(2, "src"))
 
         assert (added, removed) == (2, 0)
         assert self._titles(repo, playlist) == ["manual0", "src0", "src1"]
 
     def test_replace_only_touches_own_source(self, repo, playlist):
-        a = repo.create_music_playlist_source(playlist.id, "https://example.com/a", None)
-        b = repo.create_music_playlist_source(playlist.id, "https://example.com/b", None)
+        a = _source(repo, playlist.id, "https://example.com/a", None)
+        b = _source(repo, playlist.id, "https://example.com/b", None)
         repo.add_music_playlist_songs(playlist.id, _rows(2, "a"), source_id=a.id)
         repo.add_music_playlist_songs(playlist.id, _rows(2, "b"), source_id=b.id)
 
-        repo.replace_music_playlist_source_songs(a, [])
+        _replace(repo, a, [])
 
         assert self._titles(repo, playlist) == ["b0", "b1"]
         assert [s.url for s in repo.get_music_playlist_sources(playlist.id)] == ["https://example.com/a", "https://example.com/b"]
 
     def test_replace_reuses_rows_for_existing_songs(self, repo, playlist):
         """沒變的歌沿用原本的資料列，同步不消耗新 id。"""
-        source = repo.create_music_playlist_source(playlist.id, "https://example.com/list", None)
+        source = _source(repo, playlist.id, "https://example.com/list", None)
         repo.add_music_playlist_songs(playlist.id, _rows(3, "src"), source_id=source.id)
         before = {s.url: s.id for s in repo.get_music_playlist_songs(playlist.id)}
 
         # 順序反轉、標題更新，但歌都一樣
         rows = [(url, f"{title}-new", duration) for url, title, duration in reversed(_rows(3, "src"))]
-        added, removed = repo.replace_music_playlist_source_songs(source, rows)
+        added, removed = _replace(repo, source, rows)
 
         songs = repo.get_music_playlist_songs(playlist.id)
         assert (added, removed) == (0, 0)
@@ -157,19 +167,19 @@ class TestMusicPlaylistSource:
         assert [s.title for s in songs] == ["src2-new", "src1-new", "src0-new"]
 
     def test_replace_matches_duplicate_urls_one_to_one(self, repo, playlist):
-        source = repo.create_music_playlist_source(playlist.id, "https://example.com/list", None)
+        source = _source(repo, playlist.id, "https://example.com/list", None)
         dup = ("https://example.com/dup", "dup", 60)
         repo.add_music_playlist_songs(playlist.id, [dup, dup], source_id=source.id)
 
-        added, removed = repo.replace_music_playlist_source_songs(source, [dup, dup, dup])
+        added, removed = _replace(repo, source, [dup, dup, dup])
         assert (added, removed) == (1, 0)
 
-        added, removed = repo.replace_music_playlist_source_songs(source, [dup])
+        added, removed = _replace(repo, source, [dup])
         assert (added, removed) == (0, 2)
         assert self._titles(repo, playlist) == ["dup"]
 
     def test_delete_playlist_removes_sources(self, repo, playlist):
-        repo.create_music_playlist_source(playlist.id, "https://example.com/list", None)
+        _source(repo, playlist.id, "https://example.com/list", None)
 
         repo.delete_music_playlist(playlist.id)
 
@@ -193,11 +203,11 @@ class TestMusicPlaylistVersion:
         pid = playlist.id
         repo.add_music_playlist_songs(pid, _rows(3))
         assert _version(repo, pid) == 1
-        source = repo.create_music_playlist_source(pid, "https://example.com/list", None)
+        source = _source(repo, pid, "https://example.com/list", None)
         assert _version(repo, pid) == 2
         repo.add_music_playlist_songs(pid, _rows(1, "src"), source_id=source.id)
         assert _version(repo, pid) == 3
-        repo.replace_music_playlist_source_songs(source, _rows(2, "src"))
+        _replace(repo, source, _rows(2, "src"))
         assert _version(repo, pid) == 4
         repo.remove_music_playlist_song(pid, 0)
         assert _version(repo, pid) == 5
@@ -235,7 +245,6 @@ class TestMusicPlaylistVersion:
         "write",
         [
             lambda repo, pid: repo.rename_music_playlist(pid, "B", expected_version=9),
-            lambda repo, pid: repo.remove_music_playlist_song(pid, 0, expected_version=9),
             lambda repo, pid: repo.remove_music_playlist_songs(pid, [1], expected_version=9),
             lambda repo, pid: repo.reorder_music_playlist_songs(pid, [], expected_version=9),
             lambda repo, pid: repo.import_music_playlist_source(pid, "https://x/l", None, _rows(1), expected_version=9),
@@ -254,7 +263,7 @@ class TestMusicPlaylistVersion:
         source = repo.import_music_playlist_source(playlist.id, "https://example.com/list", None, _rows(2, "src"))
 
         with pytest.raises(MusicPlaylistConflict):
-            repo.replace_music_playlist_source_songs(source, [], expected_version=0)
+            repo.sync_music_playlist_sources(source.playlist_id, [(source, [], None)], 500, expected_version=0)
         assert repo.count_music_playlist_songs(playlist.id) == 2
 
     def test_deleted_playlist_reports_deleted(self, repo, playlist):
@@ -301,6 +310,128 @@ class TestMusicPlaylistEditing:
 
         with pytest.raises(ValueError):
             repo.reorder_music_playlist_songs(playlist.id, pick(ids))
+
+
+class TestLocking:
+    """並行寫入：用獨立連線（真的 commit），測試結束刪掉建立過的歌單。"""
+
+    @pytest.fixture
+    def real(self, monkeypatch):
+        repos: list[SQLRepository] = []
+        users: list[UUID] = []
+
+        def make() -> SQLRepository:
+            repository = SQLRepository(sqldb.engine, Session(sqldb.engine))
+            repos.append(repository)
+            return repository
+
+        yield make, users
+        cleaner = make()
+        for uid in users:
+            for p in cleaner.get_music_playlists(uid):
+                cleaner.delete_music_playlist(p.id)
+        for repository in repos:
+            repository.session.close()
+
+    @staticmethod
+    def _run(fn):
+        """在另一條 thread 跑 fn；回傳 (thread, done event, 結果或例外的 list)。"""
+        done, outcome = threading.Event(), []
+
+        def target():
+            try:
+                outcome.append(fn())
+            except BaseException as e:  # noqa: BLE001
+                outcome.append(e)
+            finally:
+                done.set()
+
+        thread = threading.Thread(target=target)
+        thread.start()
+        return thread, done, outcome
+
+    def test_command_write_waits_for_locked_playlist(self, real):
+        make, users = real
+        holder, writer = make(), make()
+        uid = uuid4()
+        users.append(uid)
+        pid = holder.create_music_playlist(uid, "A").id
+
+        with holder.lock_music_playlist(pid):
+            thread, done, outcome = self._run(lambda: writer.add_music_playlist_songs(pid, _rows(1)))  # 不帶版本，如同指令端
+            assert not done.wait(0.5)
+        assert done.wait(10)
+        thread.join()
+        assert outcome == [None]
+        assert writer.count_music_playlist_songs(pid) == 1
+
+    def test_failed_block_releases_the_lock(self, real):
+        make, users = real
+        holder, writer = make(), make()
+        uid = uuid4()
+        users.append(uid)
+        pid = holder.create_music_playlist(uid, "A").id
+
+        with pytest.raises(RuntimeError), holder.lock_music_playlist(pid):
+            raise RuntimeError("boom")
+
+        thread, done, _ = self._run(lambda: writer.add_music_playlist_songs(pid, _rows(1)))
+        assert done.wait(10)
+        thread.join()
+
+    def test_limit_is_checked_after_taking_the_lock(self, real, monkeypatch):
+        make, users = real
+        holder, writer = make(), make()
+        monkeypatch.setattr(mp, "sqldb", writer)
+        uid = uuid4()
+        users.append(uid)
+        playlist = holder.create_music_playlist(uid, "A")
+        pid = playlist.id
+        holder.add_music_playlist_songs(pid, _rows(mp.MAX_PLAYLIST_SONGS - 1))
+
+        with holder.lock_music_playlist(pid):
+            thread, done, outcome = self._run(lambda: mp.save_songs(writer.get_music_playlist_by_id(pid), _rows(1, "web")))
+            assert not done.wait(0.5)
+            holder.add_music_playlist_songs(pid, _rows(1, "cmd"))  # 別的寫入先補滿
+        assert done.wait(10)
+        thread.join()
+        assert isinstance(outcome[0], MusicCommandError)
+        assert holder.count_music_playlist_songs(pid) == mp.MAX_PLAYLIST_SONGS
+
+    def test_same_name_created_concurrently_is_a_command_error(self, real, monkeypatch):
+        make, users = real
+        holder, writer = make(), make()
+        monkeypatch.setattr(mp, "sqldb", writer)
+        uid = uuid4()
+        users.append(uid)
+
+        with holder.lock_music_playlist_names(uid):
+            thread, done, outcome = self._run(lambda: mp.create_playlist(uid, "X"))
+            assert not done.wait(0.5)
+            holder.create_music_playlist(uid, "X")
+        assert done.wait(10)
+        thread.join()
+        assert isinstance(outcome[0], MusicCommandError)
+        assert [p.name for p in holder.get_music_playlists(uid)] == ["X"]
+
+    def test_same_external_playlist_added_concurrently_syncs_instead_of_duplicating(self, real, monkeypatch):
+        make, users = real
+        holder, writer = make(), make()
+        monkeypatch.setattr(mp, "sqldb", writer)
+        uid = uuid4()
+        users.append(uid)
+        pid = holder.create_music_playlist(uid, "A").id
+
+        with holder.lock_music_playlist(pid):
+            thread, done, outcome = self._run(
+                lambda: mp.add_extracted(writer.get_music_playlist_by_id(pid), _extracted(2, playlist_url="https://x/list", playlist_title="外部"))
+            )
+            assert not done.wait(0.5)
+            holder.import_music_playlist_source(pid, "https://x/list", "外部", _rows(2, "s"))
+        assert done.wait(10)
+        thread.join()
+        assert isinstance(outcome[0], str) and outcome[0].startswith("此來源已存在，已同步")
+        assert len(holder.get_music_playlist_sources(pid)) == 1
 
 
 # ─── Song.extract ────────────────────────────────────────────────────────────
@@ -574,6 +705,16 @@ class TestPlaylistName:
             mp.create_playlist(user_id, f"p{i}")
         with pytest.raises(MusicCommandError):
             mp.create_playlist(user_id, "one more")
+
+    def test_rename_to_same_name_still_checks_version(self, mp_repo, user_id):
+        a = mp.create_playlist(user_id, "A")
+        mp_repo.add_music_playlist_songs(a.id, _rows(1))
+
+        with pytest.raises(MusicPlaylistConflict):
+            mp.rename_playlist(a, "A", expected_version=0)
+
+        mp.rename_playlist(a, "A", expected_version=1)
+        assert _version(mp_repo, a.id) == 1
 
     def test_rename_rejects_duplicate(self, mp_repo, user_id):
         a = mp.create_playlist(user_id, "A")
