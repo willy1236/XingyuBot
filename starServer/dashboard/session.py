@@ -4,6 +4,7 @@ session 的身分一律是一個 Discord 帳號，析域帳號是附帶欄位。
 auth server 暫時不可用時沿用上次結果，重啟後則以資料庫的 account_id 為準。
 """
 
+import asyncio
 import dataclasses
 import secrets
 import time
@@ -115,6 +116,7 @@ def create_session(
     if replace_session_id:
         s.execute(delete(DashboardSession).where(DashboardSession.session_id == replace_session_id))  # pyright: ignore[reportArgumentType]
         _followed.pop(replace_session_id, None)
+    _prune_followed()
     session_id = secrets.token_urlsafe(32)
     s.add(
         DashboardSession(
@@ -132,7 +134,13 @@ def create_session(
 
 def delete_user_sessions(discord_user_id: str) -> None:
     s = sqldb.session
-    s.execute(delete(DashboardSession).where(DashboardSession.discord_user_id == discord_user_id))  # pyright: ignore[reportArgumentType]
+    deleted = s.execute(
+        delete(DashboardSession)
+        .where(DashboardSession.discord_user_id == discord_user_id)  # pyright: ignore[reportArgumentType]
+        .returning(DashboardSession.session_id)  # pyright: ignore[reportArgumentType]
+    ).scalars()
+    for session_id in deleted:
+        _followed.pop(session_id, None)
     s.commit()
 
 
@@ -148,8 +156,17 @@ class _Followed:
 
 # session ID -> 最近一次確認結果
 _followed: dict[str, _Followed] = {}
+# session ID -> 進行中的確認；同一個 session 同時到的請求共用同一次
+_inflight: dict[str, asyncio.Task[_Followed]] = {}
 # auth server 不可用後，這個時間點（monotonic）之前不再查詢
 _unavailable_until = 0.0
+
+
+def _prune_followed() -> None:
+    """清掉超過 session 有效期沒再確認的項目：那些 session 已過期，或已在別處被刪除。"""
+    cutoff = time.monotonic() - SESSION_TTL.total_seconds()
+    for session_id in [k for k, v in _followed.items() if v.checked_at < cutoff]:
+        del _followed[session_id]
 
 
 def _save_account_id(session_id: str, account_id: UUID | None) -> None:
@@ -180,9 +197,34 @@ async def _check(info: SessionInfo, now: float) -> _Followed:
     return _Followed(now, account.account_id, account.username, account.discord_ids, False)
 
 
+async def _refresh(info: SessionInfo, previous: _Followed | None, now: float) -> _Followed:
+    """向 auth server 重新確認並記下結果；帳號有變就寫回資料庫。不 raise DirectoryUnavailable。"""
+    global _unavailable_until
+    try:
+        result = await _check(info, now)
+    except DirectoryUnavailable:
+        _unavailable_until = now + FOLLOW_INTERVAL
+        result = _fallback(info, previous, now)
+    if result.account_id != info.account_id:
+        await run_db(lambda: _save_account_id(info.session_id, result.account_id))
+    _followed[info.session_id] = result
+    return result
+
+
+async def _refresh_once(info: SessionInfo, previous: _Followed | None, now: float) -> _Followed:
+    task = _inflight.get(info.session_id)
+    if task is None:
+        task = asyncio.ensure_future(_refresh(info, previous, now))
+        _inflight[info.session_id] = task
+        task.add_done_callback(
+            lambda t: _inflight.pop(info.session_id) if _inflight.get(info.session_id) is t else None
+        )
+    # shield：一個請求被取消時，不連帶取消其他請求共用的確認
+    return await asyncio.shield(task)
+
+
 async def follow_account(info: SessionInfo, *, force: bool = False) -> SessionInfo:
     """補上 session 的析域帳號；距上次確認超過 60 秒（或 force）才向 auth server 重新確認。不 raise。"""
-    global _unavailable_until
     if info.via_domalyze:
         # 析域登入的 session 由 T-04 補上跟隨規則，先沿用資料庫的 account_id
         return info
@@ -193,15 +235,9 @@ async def follow_account(info: SessionInfo, *, force: bool = False) -> SessionIn
         result = previous
     elif now < _unavailable_until:
         result = _fallback(info, previous, now)
+        _followed[info.session_id] = result
     else:
-        try:
-            result = await _check(info, now)
-        except DirectoryUnavailable:
-            _unavailable_until = now + FOLLOW_INTERVAL
-            result = _fallback(info, previous, now)
-        if result.account_id != info.account_id:
-            await run_db(lambda: _save_account_id(info.session_id, result.account_id))
-    _followed[info.session_id] = result
+        result = await _refresh_once(info, previous, now)
     return dataclasses.replace(
         info,
         account_id=result.account_id,

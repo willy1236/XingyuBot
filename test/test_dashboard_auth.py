@@ -56,6 +56,7 @@ def dashboard_env(monkeypatch, repo):  # noqa: F811
     monkeypatch.setattr(auth, "_oauth_client_cache", fake_client)
     monkeypatch.setattr(resolver_module, "_directory", fake_client.directory)
     monkeypatch.setattr(session, "_followed", {})
+    monkeypatch.setattr(session, "_inflight", {})
     monkeypatch.setattr(session, "_unavailable_until", 0.0)
     return fake_client
 

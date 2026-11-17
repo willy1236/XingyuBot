@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from types import SimpleNamespace
 from uuid import uuid4
 
@@ -192,3 +193,40 @@ class TestFollow:
     def test_unavailable_without_account_stays_empty(self, client, directory):
         directory.unavailable = True
         assert probe(client) == {"account_id": None, "username": None, "discord_ids": [], "stale": True}
+
+
+class TestFollowedLifecycle:
+    def test_concurrent_requests_share_one_check(self, directory, clock):
+        calls = []
+
+        async def slow_find(discord_id):
+            calls.append(discord_id)
+            await asyncio.sleep(0.05)
+            return None
+
+        directory.find_by_discord = slow_find
+        info = SessionInfo("sid", USER_ID, "n", None)
+
+        async def run():
+            return await asyncio.gather(*(session.follow_account(info) for _ in range(3)))
+
+        results = asyncio.run(run())
+        assert len(calls) == 1
+        assert all(r.account_id is None for r in results)
+        assert session._inflight == {}
+
+    def test_logout_clears_followed(self, client, repo):  # noqa: F811
+        make_session(repo, session_id="other-device")
+        probe(client)
+        session._followed["other-device"] = session._followed["sid"]
+        assert client.post("/dashboard/logout", headers={"Origin": "https://domalyze.net"}).status_code == 200
+        assert "sid" not in session._followed and "other-device" not in session._followed
+
+    def test_stale_entries_pruned_on_login(self, repo, spy, clock):  # noqa: F811
+        session._followed["long-gone"] = session._Followed(
+            clock.now - session.SESSION_TTL.total_seconds() - 1, None, None, (), False
+        )
+        session._followed["recent"] = session._Followed(clock.now, None, None, (), False)
+        c = TestClient(make_app(), base_url="https://testserver", follow_redirects=False)
+        login(c, spy)
+        assert "long-gone" not in session._followed and "recent" in session._followed
