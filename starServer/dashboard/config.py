@@ -16,4 +16,9 @@ def allowed_origins() -> list[str]:
 def oidc_settings():
     """析域登入的 OIDC client 設定：(issuer, client_id, client_secret, redirect_uri)。"""
     s = get_settings()
-    return s.DASHBOARD_OIDC_ISSUER.rstrip("/"), s.DASHBOARD_OIDC_CLIENT_ID, s.DASHBOARD_OIDC_CLIENT_SECRET, s.DASHBOARD_OIDC_REDIRECT_URI
+    return (
+        s.DASHBOARD_OIDC_ISSUER.rstrip("/"),
+        s.DASHBOARD_OIDC_CLIENT_ID,
+        s.DASHBOARD_OIDC_CLIENT_SECRET,
+        s.DASHBOARD_OIDC_REDIRECT_URI,
+    )
