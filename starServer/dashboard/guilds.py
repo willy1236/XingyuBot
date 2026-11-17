@@ -64,12 +64,17 @@ def can_enter(perms: GuildPerms) -> bool:
 
 
 def _member_perms(guild: discord.Guild, user_id: int) -> GuildPerms:
-    """依 bot 的成員快取判斷使用者在該伺服器的權限；不是成員視同沒有。須在 bot 的事件迴圈上呼叫。"""
+    """依 bot 的成員快取判斷使用者在該伺服器的權限；不是成員視同沒有。須在 bot 的事件迴圈上呼叫。
+
+    擁有者不靠成員快取判斷：大型伺服器剛加入時成員還沒載入完，擁有者邀請後仍要能直接進入。
+    """
+    if guild.owner_id == user_id:
+        return GuildPerms(0, True)
     member = guild.get_member(user_id)
     if member is None:
         return GuildPerms()
     perms = member.guild_permissions
-    return GuildPerms(perms.value, guild.owner_id == member.id or perms.administrator)
+    return GuildPerms(perms.value, perms.administrator)
 
 
 def _ready_bot():

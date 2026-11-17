@@ -1,7 +1,7 @@
 """伺服器管理後台：伺服器清單與權限判斷（假 bot，真實 PostgreSQL）。
 
 其他 test_dashboard_*.py 共用這裡的 `discord` fixture 與 `g()`：`discord.guilds` 是 bot 成員快取裡這位使用者的資料，
-各檔自己的假 bot 只要提供 get_guild，權限一律依這份資料判斷。
+各檔自己的假 bot 只要提供 get_guild，權限由正式的 `_member_perms` 依這份資料判斷。
 """
 
 from __future__ import annotations
@@ -49,13 +49,14 @@ class FakeDiscord:
 @pytest.fixture
 def discord(monkeypatch, dashboard_env, repo) -> FakeDiscord:  # noqa: F811
     fake = FakeDiscord()
+    real_member_perms = guilds._member_perms
 
     def member_perms(guild, user_id: int) -> guilds.GuildPerms:
-        for entry in fake.guilds:
-            if entry["id"] == str(guild.id):
-                bits = entry["permissions"]
-                return guilds.GuildPerms(bits, entry["owner"] or bool(bits & ADMIN))
-        return guilds.GuildPerms()
+        """把各檔自己的假伺服器換成帶有 fake.guilds 成員資料的伺服器，再交給正式的判斷。"""
+        entry = next((e for e in fake.guilds if e["id"] == str(guild.id)), None)
+        members = [member(user_id, entry["permissions"])] if entry else []
+        owner_id = user_id if entry and entry["owner"] else 1
+        return real_member_perms(bot_guild(guild.id, "guild", members, owner_id=owner_id), user_id)
 
     monkeypatch.setattr(guilds, "_member_perms", member_perms)
     return fake
@@ -162,6 +163,9 @@ class TestGuildPerms:
     def test_owner(self, monkeypatch):
         p = self.perms(monkeypatch, bot_guild(1, "a", [member(USER_ID)], owner_id=int(USER_ID)))
         assert p.full and p.manage_guild
+
+    def test_owner_not_yet_in_member_cache(self, monkeypatch):
+        assert self.perms(monkeypatch, bot_guild(1, "a", [], owner_id=int(USER_ID))).full
 
     def test_administrator(self, monkeypatch):
         p = self.perms(monkeypatch, bot_guild(1, "a", [member(USER_ID, ADMIN)]))

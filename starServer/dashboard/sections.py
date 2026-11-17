@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Depends
 
-from .access import Section, on_guild, section_actions
+from .access import Section, section_actions
 from .errors import DashboardError
 from .guilds import can_enter, guild_perms
 from .session import SessionInfo, require_session
@@ -16,7 +16,6 @@ async def list_sections(guild_id: int, info: SessionInfo = Depends(require_sessi
     perms = await guild_perms(info.discord_user_id, guild_id)
     if not can_enter(perms):
         raise DashboardError(403, "no_permission")
-    await on_guild(guild_id, lambda _guild: None)
     sections = [
         {"key": section.value, "actions": actions}
         for section in Section
