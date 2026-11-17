@@ -18,7 +18,7 @@ from sentry_bootstrap import capture_exception_safe
 from . import auth
 from .db import run_db
 from .errors import DashboardError
-from .guilds import bot_guild_ids, can_enter, guild_perms, invalidate
+from .guilds import bot_guild_ids, can_enter, guild_perms
 from .session import SESSION_COOKIE, create_session, lookup_session, set_session_cookie
 
 log = logging.getLogger(__name__)
@@ -91,8 +91,6 @@ async def _handle_invite(request: Request, cookie: auth.OAuthCookie) -> Response
         capture_exception_safe(exc, tags={"service": "website", "source": "dashboard_invite"})
         log.exception("Dashboard invite failed: %s", exc)
         return HTMLResponse("授權失敗，請重新開始邀請", 400)
-
-    invalidate(user.id)
 
     old_id = request.cookies.get(SESSION_COOKIE)
     old = await run_db(lambda: lookup_session(old_id))

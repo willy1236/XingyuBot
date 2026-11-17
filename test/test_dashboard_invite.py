@@ -46,6 +46,11 @@ class FakeBot:
 
         return [SimpleNamespace(id=int(i)) for i in self.guilds_ids]
 
+    def get_guild(self, gid):
+        from types import SimpleNamespace
+
+        return SimpleNamespace(id=gid) if str(gid) in self.guilds_ids else None
+
     def submit(self, coro):
         import asyncio
         from concurrent.futures import ThreadPoolExecutor
@@ -145,13 +150,6 @@ class TestInviteCallback:
         res = c.get("/oauth/discord", params={"error": "access_denied", "state": STATE})
         assert res.headers["location"] == f"{FRONTEND}/dashboard"
         assert env.saved == []
-
-    def test_cache_is_refreshed_after_invite(self, env, repo, discord_env, dashboard_env):  # noqa: F811
-        from starServer.dashboard import guilds
-
-        guilds._cache[USER_ID] = (10**12, [])
-        callback(client_with_session(repo))
-        assert guilds._cache[USER_ID][1] != []
 
     def test_bot_not_visible_yet_shows_pending(self, env, repo, dashboard_env):  # noqa: F811
         sclient.bot = FakeBot(set())

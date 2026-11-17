@@ -117,7 +117,7 @@ def require_section(section: Section, action: str | None = None):
 
     action 省略時只要求進入該區塊（`view`）。
 
-    錯誤：401 session_expired／reauth_required、403 no_permission、404 bot_not_in_guild、503 bot_unavailable。
+    錯誤：401 session_expired、403 no_permission、404 bot_not_in_guild、503 bot_unavailable。
     """
     bits = SECTION_RULES[section][action or "view"]  # 寫錯動作名稱在 import 時就失敗
 

@@ -10,7 +10,7 @@ import discord
 import pytest
 from fastapi.testclient import TestClient
 from test_dashboard_auth import dashboard_env, make_app, make_session  # noqa: F401  (fixture 與 helper)
-from test_dashboard_guilds import MANAGE_CHANNELS, MANAGE_GUILD, g, seed_token
+from test_dashboard_guilds import MANAGE_CHANNELS, MANAGE_GUILD, g
 from test_dashboard_guilds import discord as discord_env  # noqa: F401  (fixture)
 from test_identity import repo  # noqa: F401
 
@@ -164,7 +164,6 @@ def fake_bot(guild=None, ready: bool = True):
 class TestNotifiesEndpoint:
     @pytest.fixture
     def client(self, discord_env, repo, dashboard_env, monkeypatch) -> TestClient:  # noqa: F811
-        seed_token(repo, dashboard_env.credential_id)
         make_session(repo)
         discord_env.guilds = [g(str(GUILD_ID), "guild", MANAGE_CHANNELS)]
         monkeypatch.setattr(notifies, "sqldb", repo)

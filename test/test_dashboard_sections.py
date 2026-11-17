@@ -20,13 +20,11 @@ from test_dashboard_guilds import (
     MANAGE_ROLES,
     MODERATE,
     g,
-    seed_token,
 )
 from test_dashboard_guilds import discord as discord_env  # noqa: F401  (fixture)
 from test_identity import repo  # noqa: F401
 
 from starlib import sclient
-from starServer.dashboard import guilds
 from starServer.dashboard.access import SECTION_RULES, Section, require_guild_access, require_section
 
 GUILD_ID = 1001
@@ -43,7 +41,6 @@ def fake_bot(in_guild: bool = True, ready: bool = True):
 
 @pytest.fixture
 def client(discord_env, repo, dashboard_env, monkeypatch) -> TestClient:  # noqa: F811
-    seed_token(repo, dashboard_env.credential_id)
     make_session(repo)
     monkeypatch.setattr(sclient, "bot", fake_bot())
     app = make_app()
@@ -60,7 +57,6 @@ def client(discord_env, repo, dashboard_env, monkeypatch) -> TestClient:  # noqa
 
 
 def sections(client, discord_env, permissions: int, owner: bool = False):  # noqa: F811
-    guilds._cache.clear()
     discord_env.guilds = [g(str(GUILD_ID), "guild", permissions, owner=owner)]
     res = client.get(f"/dashboard/guilds/{GUILD_ID}/sections")
     return res.status_code, res.json()
@@ -137,7 +133,6 @@ class TestRequireSection:
         return client.get(f"/dashboard/guilds/{GUILD_ID}/probe-{probe}")
 
     def set_perms(self, discord_env, permissions):  # noqa: F811
-        guilds._cache.clear()
         discord_env.guilds = [g(str(GUILD_ID), "guild", permissions)]
 
     def test_action_needs_its_own_permission(self, client, discord_env):  # noqa: F811
