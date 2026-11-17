@@ -2,6 +2,7 @@
 
 session 的身分一律是一個 Discord 帳號，析域帳號是附帶欄位。帳號跟隨的確認結果存在記憶體（以 session ID 為 key），
 auth server 暫時不可用時沿用上次結果，重啟後則以資料庫的 account_id 為準。
+Discord 登入的 session 只跟著帳號升級或降級；析域登入的 session 在域民停權、查無或不再連結這個 Discord 時失效。
 """
 
 import asyncio
@@ -17,7 +18,7 @@ from sqlalchemy import delete, update
 
 from starlib import sqldb
 from starlib.database import DashboardSession
-from starlib.identity import DirectoryUnavailable
+from starlib.identity import Account, DirectoryUnavailable
 from starlib.identity.resolver import get_directory
 from starlib.utils import nowtz
 
@@ -154,6 +155,8 @@ class _Followed:
     account_username: str | None
     discord_ids: tuple[int, ...]
     stale: bool
+    #: 析域登入的 session 已失效（只在確認當下使用，不存進 _followed）
+    revoked: bool = False
 
 
 # session ID -> 最近一次確認結果
@@ -169,6 +172,20 @@ def _prune_followed() -> None:
     cutoff = time.monotonic() - SESSION_TTL.total_seconds()
     for session_id in [k for k, v in _followed.items() if v.checked_at < cutoff]:
         del _followed[session_id]
+
+
+def remember_account(session_id: str, account: Account) -> None:
+    """記下剛登入時已查到的析域帳號，登入後的第一個請求不必再向 auth server 確認。"""
+    _followed[session_id] = _Followed(
+        time.monotonic(), account.account_id, account.username, account.discord_ids, False
+    )
+
+
+def _delete_session(session_id: str) -> None:
+    s = sqldb.session
+    s.execute(delete(DashboardSession).where(DashboardSession.session_id == session_id))  # pyright: ignore[reportArgumentType]
+    s.commit()
+    _followed.pop(session_id, None)
 
 
 def _save_account_id(session_id: str, account_id: UUID | None) -> None:
@@ -189,10 +206,18 @@ def _fallback(info: SessionInfo, previous: _Followed | None, now: float) -> _Fol
 
 async def _check(info: SessionInfo, now: float) -> _Followed:
     """Discord 登入的 session：以這個 Discord 目前連結、未停權的域民為準（合併後就是存續帳號）。
+    析域登入的 session：以 session 的域民為準（合併後改帶存續帳號）；查無、停權或不再連結這個 Discord 時失效。
 
     Raises:
         DirectoryUnavailable: auth server 沒給出明確答案。
     """
+    if info.via_domalyze:
+        resolved = None if info.account_id is None else await get_directory().find_by_account_id(info.account_id)
+        account = None if resolved is None else resolved.account
+        if account is None or account.suspended or int(info.discord_user_id) not in account.discord_ids:
+            return _Followed(now, None, None, (), False, revoked=True)
+        return _Followed(now, account.account_id, account.username, account.discord_ids, False)
+
     account = await get_directory().find_by_discord(int(info.discord_user_id))
     if account is None or account.suspended:
         return _Followed(now, None, None, (), False)
@@ -200,13 +225,16 @@ async def _check(info: SessionInfo, now: float) -> _Followed:
 
 
 async def _refresh(info: SessionInfo, previous: _Followed | None, now: float) -> _Followed:
-    """向 auth server 重新確認並記下結果；帳號有變就寫回資料庫。不 raise DirectoryUnavailable。"""
+    """向 auth server 重新確認並記下結果；帳號有變就寫回資料庫，失效就刪除 session。不 raise DirectoryUnavailable。"""
     global _unavailable_until
     try:
         result = await _check(info, now)
     except DirectoryUnavailable:
         _unavailable_until = now + FOLLOW_INTERVAL
         result = _fallback(info, previous, now)
+    if result.revoked:
+        await run_db(lambda: _delete_session(info.session_id))
+        return result
     if result.account_id != info.account_id:
         await run_db(lambda: _save_account_id(info.session_id, result.account_id))
     if _inflight.get(info.session_id) is asyncio.current_task():
@@ -227,11 +255,11 @@ async def _refresh_once(info: SessionInfo, previous: _Followed | None, now: floa
 
 
 async def follow_account(info: SessionInfo, *, force: bool = False) -> SessionInfo:
-    """補上 session 的析域帳號；距上次確認超過 60 秒（或 force）才向 auth server 重新確認。不 raise。"""
-    if info.via_domalyze:
-        # 析域登入的 session 由 T-04 補上跟隨規則，先沿用資料庫的 account_id
-        return info
+    """補上 session 的析域帳號；距上次確認超過 60 秒（或 force）才向 auth server 重新確認。
 
+    Raises:
+        DashboardError: 401 session_expired，析域登入的 session 已失效（已刪除）。
+    """
     now = time.monotonic()
     previous = _followed.get(info.session_id)
     if previous is not None and not force and now - previous.checked_at < FOLLOW_INTERVAL:
@@ -241,6 +269,8 @@ async def follow_account(info: SessionInfo, *, force: bool = False) -> SessionIn
         _followed[info.session_id] = result
     else:
         result = await _refresh_once(info, previous, now)
+    if result.revoked:
+        raise DashboardError(401, "session_expired")
     return dataclasses.replace(
         info,
         account_id=result.account_id,
@@ -264,7 +294,11 @@ async def require_session(request: Request) -> SessionInfo:
         request.state.dashboard_clear_cookie = True
         raise DashboardError(401, "session_expired")
     request.state.dashboard_renew_session = info.session_id
-    return await follow_account(info)
+    try:
+        return await follow_account(info)
+    except DashboardError:
+        request.state.dashboard_clear_cookie = True
+        raise
 
 
 async def session_cookie_middleware(request: Request, call_next):
