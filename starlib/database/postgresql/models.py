@@ -101,6 +101,8 @@ class MusicPlaylist(UsersSchema, table=True):
     user_id: UUID = Field(sa_column=Column(PG_UUID(as_uuid=True), index=True, nullable=False))
     name: str = Field(sa_column=Column(String, nullable=False))
     created_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0), server_default=text("now()")), default_factory=lambda: nowtz())
+    #: 歌單、歌曲或來源每次寫入時加一，網頁以它偵測衝突
+    version: int = Field(sa_column=Column(Integer, nullable=False, server_default=text("0")), default=0)
 
     __table_args__ = (
         UniqueConstraint("user_id", "name", name="unique_user_playlist_name"),
@@ -336,6 +338,25 @@ class Community(BasicSchema, table=True):
     type: PlatformType = Field(sa_column=Column(Integer, primary_key=True))
     username: str
     display_name: str | None
+
+
+class WebsiteWeeklyActivity(BasicSchema, table=True):
+    """網站每週有使用的 Discord，以及當週是否連結析域帳號（null 表示當時查不到）"""
+
+    __tablename__ = "website_weekly_activity"
+
+    week_start: date = Field(sa_column=Column(Date, primary_key=True))
+    discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
+    linked: bool | None = Field(sa_column=Column(Boolean, nullable=True))
+
+
+class WebsiteLinkClick(BasicSchema, table=True):
+    """網站個人區「連結析域帳號」入口每週被按下的次數"""
+
+    __tablename__ = "website_link_click"
+
+    week_start: date = Field(sa_column=Column(Date, primary_key=True))
+    count: int = Field(sa_column=Column(Integer, nullable=False, server_default=text("0")), default=0)
 
 
 class NotifyChannel(BasicSchema, table=True):
