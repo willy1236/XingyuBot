@@ -404,10 +404,24 @@ class BetRepository(BaseRepository):
         return result
 
     def place_bet(self, bet_id: int, discord_id: int, bet_option: int, bet_amount: int):
-        user_bet = UserBet(discord_id=discord_id, bet_id=bet_id, bet_option=bet_option, bet_amount=bet_amount, bet_time=nowtz())
+        user_bet = UserBet(discord_id=discord_id, bet_id=bet_id, bet_option=bet_option, bet_amount=bet_amount, bet_at=nowtz())
         self.session.add(user_bet)
         self.session.commit()
         return user_bet
+
+    def list_user_bets(self, discord_id: int, offset: int, limit: int) -> tuple[list[tuple[UserBet, Bet | None]], int]:
+        """個人區用：該 Discord 的下注，依下注時間由新到舊；回傳 (該頁 (下注, 賭盤)，賭盤已不存在時為 None；總數)。"""
+        total = self.session.exec(select(func.count()).select_from(UserBet).where(UserBet.discord_id == discord_id)).one()
+        stmt = (
+            select(UserBet, Bet)
+            .select_from(UserBet)
+            .join(Bet, UserBet.bet_id == Bet.bet_id, isouter=True)
+            .where(UserBet.discord_id == discord_id)
+            .order_by(UserBet.bet_at.desc().nulls_last(), UserBet.bet_id.desc())
+            .offset(offset)
+            .limit(limit)
+        )
+        return [(u, b) for u, b in self.session.exec(stmt.execution_options(populate_existing=True)).all()], total
 
 
 #     def create_bet(self,bet_id:int,title:str,pink:str,blue:str):
@@ -1474,6 +1488,18 @@ class WarningRepository(BaseRepository):
         stmt = select(UserModerate).where(*conditions).order_by(UserModerate.create_time.desc(), UserModerate.warning_id.desc()).offset(offset).limit(limit)
         return list(self.session.exec(stmt.execution_options(populate_existing=True)).all()), total
 
+    def list_user_warnings(self, discord_id: int, offset: int, limit: int) -> tuple[list[UserModerate], int]:
+        """個人區用：該 Discord 收到的所有紀錄，依 create_time 由新到舊；回傳 (該頁紀錄, 總數)。"""
+        total = self.session.exec(select(func.count()).select_from(UserModerate).where(UserModerate.discord_id == discord_id)).one()
+        stmt = (
+            select(UserModerate)
+            .where(UserModerate.discord_id == discord_id)
+            .order_by(UserModerate.create_time.desc(), UserModerate.warning_id.desc())
+            .offset(offset)
+            .limit(limit)
+        )
+        return list(self.session.exec(stmt.execution_options(populate_existing=True)).all()), total
+
     def get_warnings_count(self, discord_id: int, guild_id: int = None):
         if guild_id:
             stmt = select(func.count()).where(UserModerate.discord_id == discord_id, UserModerate.create_guild == guild_id)
@@ -1639,7 +1665,48 @@ class PollRepository(BaseRepository):
         result = self.session.exec(stmt).all()
         return result
 
+    def list_user_polls(self, discord_id: int, offset: int, limit: int) -> tuple[list[tuple[Poll | None, int, datetime, list[str]]], int]:
+        """個人區用：該 Discord 參與過的投票，以投票為單位（複選合併成一筆）依最早投票時間由新到舊分頁。
+
+        回傳 (該頁 [(投票（已刪除時為 None）, poll_id, 最早一筆的 vote_at, 選項文字依 option_id 排序]，投票總數)。
+        """
+        mine = UserPoll.discord_id == discord_id
+        total = self.session.exec(select(func.count(func.distinct(UserPoll.poll_id))).where(mine)).one()
+        first_at = func.min(UserPoll.vote_at)
+        page = self.session.exec(
+            select(UserPoll.poll_id, first_at).where(mine).group_by(UserPoll.poll_id).order_by(first_at.desc(), UserPoll.poll_id.desc()).offset(offset).limit(limit)
+        ).all()
+        if not page:
+            return [], total
+        ids = [poll_id for poll_id, _ in page]
+        polls = {p.poll_id: p for p in self.session.exec(select(Poll).where(Poll.poll_id.in_(ids)).execution_options(populate_existing=True)).all()}
+        options: dict[int, list[tuple[int, str]]] = {}
+        rows = self.session.exec(
+            select(UserPoll.poll_id, UserPoll.vote_option, PollOption.option_name)
+            .select_from(UserPoll)
+            .join(PollOption, and_(UserPoll.vote_option == PollOption.option_id, UserPoll.poll_id == PollOption.poll_id), isouter=True)
+            .where(mine, UserPoll.poll_id.in_(ids))
+            .order_by(UserPoll.vote_option)
+        ).all()
+        for poll_id, option_id, name in rows:
+            options.setdefault(poll_id, []).append((option_id, name if name is not None else str(option_id)))
+        return [(polls.get(poll_id), poll_id, at, [n for _, n in options.get(poll_id, [])]) for poll_id, at in page], total
+
     # * Giveaway
+    def list_user_giveaways(self, discord_id: int, offset: int, limit: int) -> tuple[list[tuple[GiveawayUser, Giveaway | None]], int]:
+        """個人區用：該 Discord 參加過的抽獎，依參加時間由新到舊；回傳 (該頁 (參加紀錄, 抽獎，已刪除時為 None)，總數)。"""
+        total = self.session.exec(select(func.count()).select_from(GiveawayUser).where(GiveawayUser.user_id == discord_id)).one()
+        stmt = (
+            select(GiveawayUser, Giveaway)
+            .select_from(GiveawayUser)
+            .join(Giveaway, GiveawayUser.giveaway_id == Giveaway.id, isouter=True)
+            .where(GiveawayUser.user_id == discord_id)
+            .order_by(GiveawayUser.join_at.desc(), GiveawayUser.giveaway_id.desc())
+            .offset(offset)
+            .limit(limit)
+        )
+        return [(u, g) for u, g in self.session.exec(stmt.execution_options(populate_existing=True)).all()], total
+
     def get_user_in_giveaway(self, giveaway_id: int, discord_id: int):
         stmt = select(GiveawayUser).where(GiveawayUser.giveaway_id == giveaway_id, GiveawayUser.user_id == discord_id)
         result = self.session.exec(stmt).one_or_none()
@@ -2246,6 +2313,11 @@ class GuildSettingRepository(BaseRepository):
         result = self.session.exec(stmt).one_or_none()
         return result or VoiceTime(discord_id=discord_id, guild_id=guild_id)
 
+    def list_voice_times(self, discord_id: int) -> list[VoiceTime]:
+        """該 Discord 在所有伺服器的語音時數，由多到少。"""
+        stmt = select(VoiceTime).where(VoiceTime.discord_id == discord_id).order_by(desc(VoiceTime.total_minute), VoiceTime.guild_id)
+        return list(self.session.exec(stmt.execution_options(populate_existing=True)).all())
+
     def get_voice_times(self, discord_ids: list[int], guild_id: int):
         stmt = select(VoiceTime).where(VoiceTime.discord_id.in_(discord_ids), VoiceTime.guild_id == guild_id)
         result = self.session.exec(stmt).all()
@@ -2514,6 +2586,57 @@ class MusicPlaylistRepository(BaseRepository):
             self.commit()
 
 
+class WebsiteStatsRepository(BaseRepository):
+    """網站個人區的每週使用與連結入口點擊統計（T-10）"""
+
+    def record_website_activity(self, week_start: date, discord_id: int) -> None:
+        """記下這個 Discord 本週有使用網站；已記錄過則不動（linked 維持原值）。"""
+        stmt = pg_insert(WebsiteWeeklyActivity).values(week_start=week_start, discord_id=discord_id).on_conflict_do_nothing()
+        self.session.exec(stmt)
+        self.commit()
+
+    def add_website_link_click(self, week_start: date) -> None:
+        stmt = pg_insert(WebsiteLinkClick).values(week_start=week_start, count=1)
+        stmt = stmt.on_conflict_do_update(index_elements=[WebsiteLinkClick.week_start], set_={"count": WebsiteLinkClick.count + 1})
+        self.session.exec(stmt)
+        self.commit()
+
+    def get_unsettled_website_activity(self, before: date) -> list[tuple[date, int]]:
+        """已結束（week_start 早於 before）而 linked 仍為 null 的列。"""
+        stmt = (
+            select(WebsiteWeeklyActivity.week_start, WebsiteWeeklyActivity.discord_id)
+            .where(WebsiteWeeklyActivity.week_start < before, WebsiteWeeklyActivity.linked.is_(None))  # pyright: ignore[reportOptionalMemberAccess]
+            .order_by(WebsiteWeeklyActivity.week_start, WebsiteWeeklyActivity.discord_id)
+        )
+        return [(row[0], row[1]) for row in self.session.exec(stmt).all()]
+
+    def set_website_activity_linked(self, week_start: date, discord_id: int, linked: bool) -> None:
+        stmt = (
+            update(WebsiteWeeklyActivity)
+            .where(WebsiteWeeklyActivity.week_start == week_start, WebsiteWeeklyActivity.discord_id == discord_id)  # pyright: ignore[reportArgumentType]
+            .values(linked=linked)
+        )
+        self.session.exec(stmt)
+        self.commit()
+
+    def get_website_weekly_stats(self, since: date) -> list[tuple[date, int, int, int, int]]:
+        """week_start 不早於 since 的每週統計，新到舊：(week_start, 使用帳號數, 已連結數, 尚未計算數, 點擊次數)。"""
+        activity = (
+            select(
+                WebsiteWeeklyActivity.week_start,
+                func.count().label("total"),
+                func.count().filter(WebsiteWeeklyActivity.linked.is_(True)).label("linked"),  # pyright: ignore[reportOptionalMemberAccess]
+                func.count().filter(WebsiteWeeklyActivity.linked.is_(None)).label("pending"),  # pyright: ignore[reportOptionalMemberAccess]
+            )
+            .where(WebsiteWeeklyActivity.week_start >= since)
+            .group_by(WebsiteWeeklyActivity.week_start)
+        )
+        weeks: dict[date, list[int]] = {row[0]: [row[1], row[2], row[3], 0] for row in self.session.exec(activity).all()}
+        for row in self.session.exec(select(WebsiteLinkClick.week_start, WebsiteLinkClick.count).where(WebsiteLinkClick.week_start >= since)).all():
+            weeks.setdefault(row[0], [0, 0, 0, 0])[3] = row[1]
+        return [(week, *values) for week, values in sorted(weeks.items(), reverse=True)]  # pyright: ignore[reportReturnType]
+
+
 class RuntimeConfigRepository(BaseRepository):
     @staticmethod
     def _get_bot_runtime_config_id(bot_code: str | int) -> int:
@@ -2654,6 +2777,7 @@ class SQLRepository(
     VIPRepository,
     GuildSettingRepository,
     MusicPlaylistRepository,
+    WebsiteStatsRepository,
     RuntimeConfigRepository,
     TestRepository,
 ):

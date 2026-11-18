@@ -1,5 +1,18 @@
-"""個人區「連結析域帳號」入口的點擊紀錄（T-10）。"""
+"""個人區「連結析域帳號」入口的點擊紀錄（T-10）。
 
-from fastapi import APIRouter
+POST /dashboard/personal/link-click  該週點擊次數加一；只需要 session，不需要析域帳號。
+"""
+
+from fastapi import APIRouter, Depends
+
+from starlib import website_stats
+
+from .db import run_db
+from .session import SessionInfo, require_session
 
 router = APIRouter(prefix="/dashboard")
+
+
+@router.post("/personal/link-click", status_code=204)
+async def link_click(_: SessionInfo = Depends(require_session)) -> None:
+    await run_db(website_stats.record_link_click)
