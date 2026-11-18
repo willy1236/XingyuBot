@@ -39,10 +39,12 @@ def _check_scope(discord_id: int, scope: PersonalScope) -> None:
 
 
 async def _guild_names(guild_ids: set[int]) -> dict[int, str | None]:
-    """bot 所在伺服器的名稱；bot 不可用或已離開該伺服器時為 None。"""
+    """bot 所在伺服器的名稱；已離開的伺服器為 None。bot 尚未 ready 時回 503，避免把暫時狀態誤判成已離開。"""
+    if not guild_ids:
+        return {}
     bot = sclient.bot
-    if bot is None or not guild_ids:
-        return dict.fromkeys(guild_ids)
+    if bot is None or not bot.is_ready():
+        raise DashboardError(503, "bot_unavailable")
 
     async def _names() -> dict[int, str | None]:
         result = {}
@@ -51,14 +53,12 @@ async def _guild_names(guild_ids: set[int]) -> dict[int, str | None]:
             result[gid] = None if guild is None else guild.name
         return result
 
-    try:
-        return await asyncio.wrap_future(bot.submit(_names()))
-    except Exception:
-        return dict.fromkeys(guild_ids)
+    return await asyncio.wrap_future(bot.submit(_names()))
 
 
-def _iso(value: datetime) -> str:
-    return value.isoformat()
+def _iso(value: datetime | None) -> str | None:
+    """舊版 /bet place 寫入的下注沒有時間（NULL）。"""
+    return None if value is None else value.isoformat()
 
 
 # ====== voice ======
@@ -71,7 +71,7 @@ async def voice_records(discord_id: int, scope: PersonalScope = Depends(require_
 
 
 # ====== 分頁類 ======
-# 各類回傳 (已轉成純資料的列, 總數, 需要查名稱的伺服器 ID)；轉成 JSON 時才補伺服器名稱。
+# 各類回傳 (已轉成純資料的列, 總數)；列裡的 guild_id 在 paged_records 換成伺服器名稱。
 _Page = tuple[list[dict], int]
 
 
@@ -125,7 +125,7 @@ def _giveaways(discord_id: int, offset: int, limit: int) -> _Page:
             "id": entry.giveaway_id,
             "guild_id": None if giveaway is None else giveaway.guild_id,
             "prize": None if giveaway is None else giveaway.prize_name,
-            "result": "pending" if giveaway is not None and giveaway.is_on else ("won" if entry.is_winner else "lost"),
+            "result": "deleted" if giveaway is None else "pending" if giveaway.is_on else ("won" if entry.is_winner else "lost"),
             "at": _iso(entry.join_at),
         }
         for entry, giveaway in rows

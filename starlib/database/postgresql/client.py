@@ -404,7 +404,7 @@ class BetRepository(BaseRepository):
         return result
 
     def place_bet(self, bet_id: int, discord_id: int, bet_option: int, bet_amount: int):
-        user_bet = UserBet(discord_id=discord_id, bet_id=bet_id, bet_option=bet_option, bet_amount=bet_amount, bet_time=nowtz())
+        user_bet = UserBet(discord_id=discord_id, bet_id=bet_id, bet_option=bet_option, bet_amount=bet_amount, bet_at=nowtz())
         self.session.add(user_bet)
         self.session.commit()
         return user_bet
@@ -417,7 +417,7 @@ class BetRepository(BaseRepository):
             .select_from(UserBet)
             .join(Bet, UserBet.bet_id == Bet.bet_id, isouter=True)
             .where(UserBet.discord_id == discord_id)
-            .order_by(UserBet.bet_at.desc(), UserBet.bet_id.desc())
+            .order_by(UserBet.bet_at.desc().nulls_last(), UserBet.bet_id.desc())
             .offset(offset)
             .limit(limit)
         )
