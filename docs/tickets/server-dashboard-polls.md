@@ -51,7 +51,7 @@
 | # | 卡號 | 進度 | 標題 | 依賴 | 並行組 | 備註 |
 |---|---|---|---|---|---|---|
 | 1 | V-00 | 完成 | [共用] 投票核心：資料欄位、結果與可見範圍、結算、建立 | 無 | — | 其餘卡都依賴 |
-| 2 | V-01 | 進行中 | 管理員能看投票清單與詳細頁 | V-00 | — | 骨架切片 |
+| 2 | V-01 | 實作完成，待最終回報 | 管理員能看投票清單與詳細頁 | V-00 | — | 骨架切片 |
 | 3 | V-02 | 未完成 | 發起人能從後台結算與刪除投票 | V-01 | A | |
 | 4 | V-03 | 未完成 | 管理員能從後台發起投票 | V-01 | A | |
 | 5 | V-05 | 未完成 | 管理員能匯出投票結果 | V-01 | A | |
@@ -97,7 +97,7 @@
   - repository 新增：
     - `get_poll_fresh(poll_id)`：`populate_existing`，與 `get_giveaway_fresh` 同一個做法。
     - 投票身分組沿用既有的 `get_poll_role(poll_id, is_only_role=None)`，不新增同義方法。
-- `delete_poll(poll_id)`：同一個 transaction 刪 `UserPoll`、`PollOption`、`PollRole`、`Poll`，條件各自用該表的 poll_id。V-00 的 `create_and_send` 發送失敗時用它回滾，V-02 直接沿用，只需移除寫壞的 `remove_poll`。
+    - `delete_poll(poll_id)`：同一個 transaction 刪 `UserPoll`、`PollOption`、`PollRole`、`Poll`，條件各自用該表的 poll_id。V-00 的 `create_and_send` 發送失敗時用它回滾，V-02 直接沿用，只需移除寫壞的 `remove_poll`。
     - `poll_vote_rows(poll_id, include_alt: bool)`：成員、選項、權重、投票時間。
     - `count_poll_voters(polls: list[Poll]) -> dict[int, int]`：各投票不重複的成員數，依各投票自己的 `ban_alternate_account_voting` 排除小帳。
 - 後端：新增 `starlib/polls.py`，純函式，web 與 bot 共用。
@@ -129,8 +129,8 @@
 - `poll_lock` 以 poll_id 為 key，寫法同 `giveaway_lock`。
 - `remove_poll` 留給 V-02 取代，這張卡不碰。
 
-**進度**：進行中
-- 狀態：進行中
+**進度**：完成
+- 狀態：完成
 - 已完成：資料欄位與 repository、`starlib/polls.py` 與單元測試、`Section.POLLS`（commit 63554b3）；`view.py`（`finish`／`publish`／`create_and_send`）、`command.py`、`bot_event.py`（commit dd79b8d）；DB 測試 `test/test_dashboard_polls_core.py` 在本機 dev DB 通過。
 - 續做：無。
 
@@ -175,9 +175,10 @@
 
 **依賴**：V-00（欄位、`PollResults`、可見範圍、Section）
 
-**進度**：進行中
-- 狀態：後端完成（`starServer/dashboard/polls.py`、`test/test_dashboard_polls.py`，本機 dev DB 通過），前端由另一位 worker 負責。
-- 續做：前端。
+**進度**：實作完成，待最終回報
+- 狀態：實作完成，待最終回報
+- 已完成：後端 `starServer/dashboard/polls.py`、`test/test_dashboard_polls.py`（本機 dev DB 通過）；前端在 domalyze_frontend 的 commit b1fe773、c6dc408。
+- 續做：驗收條件尚未打勾。
 
 ### V-02 發起人能從後台結算與刪除投票
 
