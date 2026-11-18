@@ -78,6 +78,7 @@ class Section(StrEnum):
     TICKETS = "tickets"
     WARNINGS = "warnings"
     GIVEAWAYS = "giveaways"
+    POLLS = "polls"
     SETTINGS = "settings"
 
 
@@ -99,6 +100,14 @@ SECTION_RULES: dict[Section, dict[str, tuple[int, ...]]] = {
         "view": (MANAGE_MESSAGES,),
         "end": (MANAGE_MESSAGES,),
         "redraw": (MANAGE_MESSAGES,),
+    },
+    # 結算、刪除另外要求操作者是發起人（見 starlib.polls.can_manage），不在這裡判斷
+    Section.POLLS: {
+        "view": (MANAGE_MESSAGES,),
+        "create": (MANAGE_MESSAGES,),
+        "end": (MANAGE_MESSAGES,),
+        "delete": (MANAGE_MESSAGES,),
+        "export": (MANAGE_MESSAGES,),
     },
     Section.SETTINGS: {"view": (MANAGE_GUILD,)},
 }

@@ -50,7 +50,7 @@
 
 | # | 卡號 | 進度 | 標題 | 依賴 | 並行組 | 備註 |
 |---|---|---|---|---|---|---|
-| 1 | V-00 | 未完成 | [共用] 投票核心：資料欄位、結果與可見範圍、結算、建立 | 無 | — | 其餘卡都依賴 |
+| 1 | V-00 | 進行中 | [共用] 投票核心：資料欄位、結果與可見範圍、結算、建立 | 無 | — | 其餘卡都依賴 |
 | 2 | V-01 | 未完成 | 管理員能看投票清單與詳細頁 | V-00 | — | 骨架切片 |
 | 3 | V-02 | 未完成 | 發起人能從後台結算與刪除投票 | V-01 | A | |
 | 4 | V-03 | 未完成 | 管理員能從後台發起投票 | V-01 | A | |
@@ -96,7 +96,8 @@
   - 既有投票的 channel_id 維持 null，代表「頻道未知」。它們的 message_id 是 interaction ID，不能拿來找訊息，所以 channel_id 為 null 的投票一律當作沒有訊息。
   - repository 新增：
     - `get_poll_fresh(poll_id)`：`populate_existing`，與 `get_giveaway_fresh` 同一個做法。
-    - `get_poll_roles(poll_id)`。
+    - 投票身分組沿用既有的 `get_poll_role(poll_id, is_only_role=None)`，不新增同義方法。
+- `delete_poll(poll_id)`：同一個 transaction 刪 `UserPoll`、`PollOption`、`PollRole`、`Poll`，條件各自用該表的 poll_id。V-00 的 `create_and_send` 發送失敗時用它回滾，V-02 直接沿用，只需移除寫壞的 `remove_poll`。
     - `poll_vote_rows(poll_id, include_alt: bool)`：成員、選項、權重、投票時間。
     - `count_poll_voters(polls: list[Poll]) -> dict[int, int]`：各投票不重複的成員數，依各投票自己的 `ban_alternate_account_voting` 排除小帳。
 - 後端：新增 `starlib/polls.py`，純函式，web 與 bot 共用。
@@ -104,9 +105,9 @@
   - `viewer_role(poll, user_id, *, is_owner, creator_in_guild) -> "creator" | "member"`：發起人、bot owner，以及發起人不在伺服器時的管理員，都算 creator。
   - `visibility(poll, role) -> (counts: bool, names: bool)`：照規格〈結果的可見範圍〉的表。`check_results_in_advance` 為 false 時，一律歸為「結束才公佈」。匿名投票的 names 恆為 false。
   - `can_manage(role) -> bool`：結算、刪除用，就是 role 為 creator。
-  - `validate_poll_input(title: str, options: list[str], number_of_user_votes: int, role_weights: dict[int, int], deadline: datetime | None, now: datetime)`：回傳欄位錯誤清單。限制是標題 45 字以內，選項 1–20 項、每項 80 字以內、不重複，每人可投票數在 1 到選項數之間，權重 1–10。deadline 有值時，秒數捨去後必須晚於 now，且不超過 now 加 30 天。指令與後台都只經這個函式驗證。
+  - `validate_poll_input(title: str, options: list[str], number_of_user_votes: int, role_weights: dict[int, int], deadline: datetime | None, now: datetime)`：回傳欄位錯誤清單。限制是標題與選項先去掉前後空白，標題不得為空且 45 字以內，選項 1–20 項、每項不得為空且 80 字以內、不重複，每人可投票數在 1 到選項數之間，權重 1–10。deadline 有值時，秒數捨去後必須晚於 now，且不超過 now 加 30 天。指令與後台都只經這個函式驗證。
 - bot（`view.py`）：
-  - `PollView` 加 `reload()`、`poll_lock(poll_id)`，以及 `async finish() -> PollOutcome`。`finish` 在鎖內重讀；已結算時回 `already_ended`，否則設 `end_at`、呼叫 `publish`。
+  - `PollView` 加 `reload()`、`poll_lock(poll_id)`，以及 `async finish(edit: Callable[..., Awaitable] | None = None) -> PollOutcome`。`finish` 在鎖內重讀；已結算時回 `already_ended`，否則設 `end_at`、呼叫 `publish`。`edit` 是呼叫端提供的更新訊息方式：`PollEndButton` 傳入以 `interaction.edit_original_response` 更新的函式，`publish` 有 `edit` 時用它、不 fetch 訊息，所以舊投票（channel_id 為 null）與缺少讀取訊息歷史權限時，按鈕結算照樣更新得了訊息；不傳時照下面的 fetch 流程（V-02、V-04 呼叫 `finish()` 不帶參數）。
   - `publish`：channel_id 或 message_id 為 null 時回 `message_unknown`。抓得到訊息就清掉按鈕，換成結果 embed 與圓餅圖。失敗時依情況回 `channel_missing`、`message_missing`、`no_permission`、`failed`。這五種代碼都寫進 `message_failure`，成功時清成 null。頻道用 `get_channel_or_thread`／`fetch_channel` 取得，討論串也適用。
   - `results_embed(guild, with_chart=False, show_name: bool | None = None)`：改成吃 `guild` 而不是 interaction，保留 `show_name` 覆寫參數，資料來源是 `PollResults`。呼叫點有 `PollResultButton`、`/poll result`（`command.py` 約 475 行）與 `publish`，都要改。
   - `PollEndButton` 改用 `finish`，權限判斷不變。callback 先 `interaction.response.defer()` 再呼叫 `finish`，與 `GiveawayEndButton` 相同；`already_ended` 時用 followup 回 ephemeral 的「此投票已結算」。
@@ -118,7 +119,7 @@
 - 前端：`lib/dashboard-sections.ts` 的 `SectionKey` 加 `"polls"`。`NAV_ITEMS` 在抽獎後面插入 `{ key: "polls", label: "投票", path: "/polls", ready: false }`，並同步更新 `lib/dashboard-sections.test.ts` 裡斷言 key 清單的測試。
 - 介面：
   - `starlib/polls.py`：`PollResults.load(sqldb, poll) -> PollResults`，含 `options: list[{option_id, name, count}]`、`voter_count: int`、`votes: list[{user_id, option_id, weight, voted_at}]`；`viewer_role`、`visibility`、`can_manage`、`validate_poll_input`，錯誤格式為 `[{"path", "reason"}]`，與 `reaction_roles._field` 相同。
-  - `view.py`：`PollView.finish() -> PollOutcome(status: "ok" | "already_ended" | "not_found", message_failure: str | None)`；`PollView.create_and_send(send: Callable[[discord.Embed, PollView], Awaitable[discord.Message]], channel_id: int, *, creator_id: int, guild_id: int, title: str, options: list[str], show_name: bool, check_results_in_advance: bool, results_only_initiator: bool, number_of_user_votes: int, ban_alternate_account_voting: bool, only_roles: list[int], role_weights: dict[int, int], deadline: datetime | None = None) -> Poll`。`can_change_vote` 一律存 None，與現行指令相同，兩種來源的訊息外觀一致。驗證不在這裡做，呼叫端先跑 `validate_poll_input`。失敗時丟 `PollSendError(code)`，code 為 `channel_missing`、`no_permission`、`failed`；`PollView.missing_permissions(channel, perms) -> list[str]`；`MESSAGE_FAILURE_TEXT: dict[str, str]`，原因代碼對應的中文。
+  - `view.py`：`PollView.finish(edit=None) -> PollOutcome(status: "ok" | "already_ended" | "not_found", message_failure: str | None)`；`PollView.create_and_send(send: Callable[[discord.Embed, PollView], Awaitable[discord.Message]], channel_id: int, *, creator_id: int, guild_id: int, title: str, options: list[str], show_name: bool, check_results_in_advance: bool, results_only_initiator: bool, number_of_user_votes: int, ban_alternate_account_voting: bool, only_roles: list[int], role_weights: dict[int, int], deadline: datetime | None = None) -> Poll`。`can_change_vote` 一律存 None，與現行指令相同，兩種來源的訊息外觀一致。驗證不在這裡做，呼叫端先跑 `validate_poll_input`。失敗時丟 `PollSendError(code)`，code 為 `channel_missing`、`no_permission`、`failed`；`PollView.missing_permissions(channel, perms) -> list[str]`；`MESSAGE_FAILURE_TEXT: dict[str, str]`，原因代碼對應的中文。
   - 呼叫順序：結算一律經 `finish`，不直接改 `end_at`。`finish` 必須在 bot loop 上執行。
 
 **依賴**：無
@@ -128,7 +129,10 @@
 - `poll_lock` 以 poll_id 為 key，寫法同 `giveaway_lock`。
 - `remove_poll` 留給 V-02 取代，這張卡不碰。
 
-**進度**：未完成
+**進度**：進行中
+- 狀態：進行中
+- 已完成：資料欄位與 repository、`starlib/polls.py` 與單元測試、`Section.POLLS`。
+- 續做：`view.py`（`finish`／`publish`／`create_and_send`）、`command.py`、`bot_event.py`。
 
 ### V-01 管理員能看投票清單與詳細頁
 
@@ -196,7 +200,7 @@
 - [ ] 拿掉星羽在頻道的權限後刪除，資料照樣刪除，畫面說明訊息沒刪掉；之後有人按那則訊息的按鈕，收到「此投票已不存在」，bot 重啟後再按也一樣。
 
 **實作設計**
-- 資料：repository 新增 `delete_poll(poll_id)`，在同一個 transaction 刪 `Poll`、`PollOption`、`PollRole`、`UserPoll`，條件各自用該表的 poll_id。移除寫壞的 `remove_poll`。
+- 資料：`delete_poll(poll_id)` 已在 V-00 提供（同一個 transaction 刪四張表，條件各自用該表的 poll_id），這張卡直接使用。移除寫壞的 `remove_poll`。
 - 後端：新增 `starServer/dashboard/polls_actions.py`。
   - `POST .../polls/{poll_id:int}/end`（`require_section(Section.POLLS, "end")`）：在 bot loop 上重讀，算出 `viewer_role`，`can_manage` 為否時回 403 `not_poll_manager`，否則呼叫 `PollView.finish()`。回傳 `{status, message_failure, message_failure_text}`。
   - `DELETE .../polls/{poll_id:int}`（`require_section(Section.POLLS, "delete")`）：發起人判斷同上。在 bot loop 上先刪訊息：channel_id 為 null 時跳過，記 `message_unknown`；NotFound 視為成功；Forbidden 等錯誤記下原因。接著 `run_db(delete_poll)`，再移除排程 job `poll_end_{id}`（V-04 起才有，job 不在時忽略）。不呼叫 view 的 `stop()`：已註冊的 view 要留著，留在 Discord 上的按鈕才會走到 callback 回「此投票已不存在」。回傳 `{status: "ok" | "already_deleted", message_failure, message_failure_text}`。

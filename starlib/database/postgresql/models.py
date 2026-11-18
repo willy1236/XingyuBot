@@ -439,6 +439,12 @@ class Poll(BasicSchema, table=True):
     check_results_in_advance: bool | None
     results_only_initiator: bool | None
     can_change_vote: bool | None  # not implemented yet
+    #: 投票訊息所在頻道；舊投票為 None（頻道未知，message_id 也不是訊息 ID）
+    channel_id: int | None = Field(default=None, sa_column=Column(BigInteger, nullable=True))
+    #: 截止時間（V-04 起寫入）
+    deadline: datetime | None = Field(default=None, sa_column=Column(TIMESTAMP(True, 0), nullable=True))
+    #: 結算時訊息沒能更新的原因代碼，沒問題時為 None
+    message_failure: str | None = Field(default=None)
 
 
 class PollOption(BasicSchema, table=True):
