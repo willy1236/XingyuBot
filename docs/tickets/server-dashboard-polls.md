@@ -55,7 +55,7 @@
 | 3 | V-02 | 實作完成 | 發起人能從後台結算與刪除投票 | V-01 | A | |
 | 4 | V-03 | 實作完成 | 管理員能從後台發起投票 | V-01 | A | |
 | 5 | V-05 | 實作完成 | 管理員能匯出投票結果 | V-01 | A | |
-| 6 | V-04 | 未完成 | 投票可以設截止時間並自動結算 | V-03、V-02 | — | 在 V-03 的表單加欄位；與 V-02 都改 `view.py` |
+| 6 | V-04 | 實作完成 | 投票可以設截止時間並自動結算 | V-03、V-02 | — | 在 V-03 的表單加欄位；與 V-02 都改 `view.py` |
 
 並行組 A 的分工：V-02、V-03、V-05 各自新增 router 檔，分別是 `polls_actions.py`、`polls_create.py`、`polls_export.py`。前端的部分：V-01 先建好兩個空元件 `poll-actions.tsx`、`poll-export-link.tsx`，並放進詳細頁；V-02、V-05 只改各自的元件檔。V-03 用自己的頁面，以及 `poll-list.tsx` 的發起按鈕。三張卡互不重疊。
 
@@ -286,10 +286,10 @@
 **驗收條件**
 - [ ] `/poll create` 設 2 分鐘後截止，訊息上顯示截止時間，到時自動結算，訊息改成結果。
 - [ ] 後台發起時選了截止時間，清單與詳細頁顯示截止時間，到時自動結算。
-- [ ] 截止時間設在過去或超過建立後 30 天，後台與指令都會擋下。
-- [ ] 截止前停掉 bot、過了截止時間再啟動，上線後自動補結算。
+- [x] 截止時間設在過去或超過建立後 30 天，後台與指令都會擋下。
+- [x] 截止前停掉 bot、過了截止時間再啟動，上線後自動補結算。
 - [ ] 到期前在 Discord 刪掉投票訊息，到期後照樣結算，詳細頁標示「訊息未更新」與原因。
-- [ ] 截止前手動結算後，到期時不會再結算一次。
+- [x] 截止前手動結算後，到期時不會再結算一次。
 
 **實作設計**
 - 資料：寫入 V-00 新增的 `Poll.deadline`。
@@ -308,9 +308,9 @@
 
 **風險 / 實作注意**：排程只存在記憶體，所以 bot 重啟時一定要重排，job 不能只在建立時排一次。job 的移除放在 `finish` 裡：狀態為 ok 時呼叫 `bot.scheduler.remove_job("poll_end_{id}")`，job 不存在（例如正是 `auto_end` 自己觸發的那次）時忽略 `JobLookupError`。刪除時的移除寫在 V-02。
 
-**進度**：後端與 bot 實作完成（前端由另一位 worker 負責，未含）
-- commit：view.py 的 `schedule_end`／`auto_end`／`finish` 移除 job／`embed` 截止時間／`create_and_send` 排程 8f4da1e（測試 `test/test_dashboard_polls_deadline.py`）；`bot_event.py` 啟動載入抽成 `load_poll_views`，有 deadline 的重排程、跳過 30 天規則 355c6ed；`/poll create` 的「截止時間」選項 82cc1e5；`polls_create.py` body 加 `deadline` 45c8d8a；審查修正：poll_end job 設 `misfire_grace_time=None`（本 commit）
-- 續做：前端 `poll-form.tsx` 與清單／詳細頁（前端 worker）
+**進度**：實作完成（2026-11-19）
+- commit：view.py 的 `schedule_end`／`auto_end`／`finish` 移除 job／`embed` 截止時間／`create_and_send` 排程 8f4da1e（測試 `test/test_dashboard_polls_deadline.py`）；`bot_event.py` 啟動載入抽成 `load_poll_views`，有 deadline 的重排程、跳過 30 天規則 355c6ed；`/poll create` 的「截止時間」選項 82cc1e5；`polls_create.py` body 加 `deadline` 45c8d8a；審查修正：poll_end job 設 `misfire_grace_time=None`，8c77af3；前端（domalyze_frontend 分支 dashboard-polls）2de6c9f、0a76c14
+- 續做：無
 - 決定：`validate_poll_input` 的 deadline 驗證 V-00 已實作，本卡不改；「不足 1 分鐘」只在指令端判斷（解析結果距現在不到 60 秒就拒收，文案「截止時間至少要在 1 分鐘後」）。`finish` 只在 poll 有 deadline 時才移除 job。指令與後台存入的 deadline 去掉微秒。`bot.scheduler` 在 `DiscordBot.__init__` 建立，早於 on_ready，啟動排程可行。
 - 未驗：待人工驗證——Discord 實機的 2 分鐘截止自動結算、停機後重啟補結算、訊息顯示的截止時間。後端行為已有自動測試。
 
