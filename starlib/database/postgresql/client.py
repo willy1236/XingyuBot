@@ -1,6 +1,7 @@
 import functools
 import inspect
 import logging
+import threading
 from collections import defaultdict, deque
 from collections.abc import Callable
 from contextlib import contextmanager
@@ -11,7 +12,7 @@ from uuid import UUID
 
 import discord
 from google.oauth2.credentials import Credentials
-from sqlalchemy import Engine, and_, desc, exists, func, not_, or_, text
+from sqlalchemy import Engine, and_, desc, event, exists, func, not_, or_, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
@@ -36,33 +37,96 @@ T = TypeVar("T")
 P = ParamSpec("P")
 
 
-def _rollback_on_error(func: Callable) -> Callable:
-    """方法拋出 SQLAlchemyError 時 rollback session，避免 scoped session 卡在失敗的 transaction"""
+# session.info 的 key：交易裡有已 flush 的寫入或取了鎖，方法結束時不能自動結束交易
+_KEEP_TRANSACTION = "keep_transaction"
+# 每個 thread 目前在幾層 repository 方法裡；只有最外層結束時才收掉交易
+_call_depth = threading.local()
+
+
+def _transaction_boundary(func: Callable) -> Callable:
+    """包裝 repository 的公開方法：
+
+    - 拋出 SQLAlchemyError 時 rollback，scoped session 不會卡在失敗的 transaction。
+    - 最外層的方法結束時結束唯讀交易，連線不會停在 idle in transaction 握著讀過的表的鎖。
+    """
 
     @functools.wraps(func)
     def wrapper(self: BaseRepository, *args, **kwargs):
+        depth = getattr(_call_depth, "value", 0)
+        _call_depth.value = depth + 1
         try:
             return func(self, *args, **kwargs)
         except SQLAlchemyError:
             self.session.rollback()
             raise
+        finally:
+            _call_depth.value = depth
+            if depth == 0:
+                self._end_read_transaction()
 
     return wrapper
 
 
+def _wrap_public_methods(cls: type) -> None:
+    for name, attr in list(vars(cls).items()):
+        if not name.startswith("_") and inspect.isfunction(attr):
+            setattr(cls, name, _transaction_boundary(attr))
+
+
+def _keep_after_flush(session: Session, flush_context) -> None:
+    session.info[_KEEP_TRANSACTION] = True
+
+
+def _clear_keep_on_end(session: Session, transaction) -> None:
+    if transaction.parent is None:
+        session.info.pop(_KEEP_TRANSACTION, None)
+
+
 class BaseRepository:
+    """資料庫存取的基底類別。
+
+    公開方法都會被自動包裝（見 `_transaction_boundary`）：bot 的 event loop thread 會一直持有同一個 scoped session，
+    讀完不結束交易就會停在 idle in transaction，擋住 ALTER 之類要拿表鎖的操作，所以最外層方法結束時，
+    交易若只有讀取就 commit 掉（不 expire 已載入的物件）。有未 flush 或已 flush 未 commit 的寫入、
+    或呼叫過 `_keep_transaction_open()`（取 advisory／FOR UPDATE 鎖的方法）時保持交易，由呼叫端 commit 或 rollback。
+    """
+
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
-        # 自動包裝子類別定義的公開方法，任何資料庫錯誤都會 rollback，後續指令不會持續拋 PendingRollbackError
-        for name, attr in list(vars(cls).items()):
-            if not name.startswith("_") and inspect.isfunction(attr):
-                setattr(cls, name, _rollback_on_error(attr))
+        _wrap_public_methods(cls)
 
     def __init__(self, engine: Engine, session_factory: Session | ScopedSession):
         self.engine = engine
         self._session_factory = session_factory
         self.cache = CacheStore()
         self._is_closed = False
+        if isinstance(session_factory, ScopedSession):
+            maker = session_factory.session_factory
+            event.listen(maker, "after_flush", _keep_after_flush)
+            event.listen(maker, "after_transaction_end", _clear_keep_on_end)
+
+    def _keep_transaction_open(self) -> None:
+        """目前的交易取了鎖或要跨方法延續，方法結束時不自動結束，直到 commit 或 rollback。"""
+        self.session.info[_KEEP_TRANSACTION] = True
+
+    def _end_read_transaction(self) -> None:
+        """目前 thread 的交易若只有讀取就結束它，把連線還給連線池；固定單一 Session（測試）時什麼都不做。"""
+        factory = self._session_factory
+        if not isinstance(factory, ScopedSession) or not factory.registry.has():
+            return
+        session = factory()
+        if not session.in_transaction() or session.info.get(_KEEP_TRANSACTION) or session.new or session.dirty or session.deleted:
+            return
+        expire_on_commit = session.expire_on_commit
+        # 唯讀交易沒有東西要寫，commit 只是結束交易；不 expire，呼叫端拿到的物件之後讀屬性不必再查一次
+        session.expire_on_commit = False
+        try:
+            session.commit()
+        except SQLAlchemyError:
+            log.exception("SQL: failed to end read transaction")
+            session.rollback()
+        finally:
+            session.expire_on_commit = expire_on_commit
 
     @property
     def session(self) -> Session:
@@ -191,6 +255,10 @@ class BaseRepository:
             log.debug("SQL shutdown: session removed and engine disposed.")
 
 
+# BaseRepository 自己的公開方法（get、add、merge…）也要包裝，__init_subclass__ 只處理子類別
+_wrap_public_methods(BaseRepository)
+
+
 class UserRepository(BaseRepository):
     # * User
     def get_dcuser(self, discord_id: int, with_registration: bool = False):
@@ -252,6 +320,7 @@ class UserRepository(BaseRepository):
     def _advisory_lock_user(self, user_id: UUID) -> None:
         """使用者層級的交易鎖，commit 或 rollback 時自動釋放；取 UUID 前 64 位當 key"""
         key = int.from_bytes(user_id.bytes[:8], "big", signed=True)
+        self._keep_transaction_open()
         self.session.connection().execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": key})
 
     def _merge_user_data(self, old_id: UUID, new_id: UUID) -> None:
@@ -635,7 +704,6 @@ class NotifyRepository(BaseRepository):
             except IntegrityError:
                 self.session.rollback()
 
-    @_rollback_on_error
     def insert_notify_communities(
         self,
         community: Community,
@@ -703,7 +771,6 @@ class NotifyRepository(BaseRepository):
             conditions.append(getattr(NotifyCommunity, field).is_not_distinct_from(value))
         return conditions
 
-    @_rollback_on_error
     def update_notify_community_if(
         self, notify_type: NotifyCommunityType, community_id: str, guild_id: int, original: dict[str, int | str | None], values: dict[str, int | str | None]
     ) -> int:
@@ -713,7 +780,6 @@ class NotifyRepository(BaseRepository):
         self.session.commit()
         return count
 
-    @_rollback_on_error
     def delete_notify_community_if(self, notify_type: NotifyCommunityType, community_id: str, guild_id: int, original: dict[str, int | str | None]) -> int:
         """後台用：目前的值等於 original 才刪除，成功後做跟 remove_notify_community 相同的清理，回傳影響的列數。"""
         stmt = delete(NotifyCommunity).where(*self._notify_community_match(notify_type, community_id, guild_id, original))
@@ -2381,6 +2447,7 @@ class MusicPlaylistRepository(BaseRepository):
         一律取鎖（不帶版本的指令端寫入也是），同一份歌單的寫入才會排隊；鎖在 commit 或 rollback 才釋放。
         """
         stmt = select(MusicPlaylist.version).where(MusicPlaylist.id == playlist_id).with_for_update()
+        self._keep_transaction_open()
         current = self.session.exec(stmt).first()
         if expected_version is not None and current != expected_version:
             self.session.rollback()  # 不寫入就不留著鎖

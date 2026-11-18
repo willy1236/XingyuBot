@@ -379,14 +379,12 @@ class TestRunDb:
         assert repo.session.is_active
 
     def test_release_session_removes_scoped(self):
-        removed = []
+        from sqlalchemy.orm import scoped_session, sessionmaker
 
-        from sqlalchemy.orm.scoping import ScopedSession
-
-        scoped = ScopedSession.__new__(ScopedSession)
-        scoped.remove = lambda: removed.append(1)  # pyright: ignore[reportAttributeAccessIssue]
+        scoped = scoped_session(sessionmaker(bind=real_sqldb.engine))
+        scoped()
         SQLRepository(real_sqldb.engine, scoped).release_session()
-        assert removed == [1]
+        assert not scoped.registry.has()
 
 
 # ====== 登入入口 ======
