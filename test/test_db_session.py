@@ -163,3 +163,16 @@ def test_plain_session_untouched():
         repo = SQLRepository(sqldb.engine, session)
         repo.get_bot_join_channel_all()
         assert session.in_transaction()
+
+
+def test_lock_survives_loop_iteration(scoped):
+    """區塊內 await 讓 loop 跑下一輪時，不能把 FOR UPDATE 鎖的交易收掉"""
+    repo, _ = scoped
+
+    async def bot_handler():
+        with repo.lock_music_playlist(-1):
+            await asyncio.sleep(0)
+            assert repo.session.in_transaction()
+        assert not repo.session.in_transaction()
+
+    asyncio.run(bot_handler())
