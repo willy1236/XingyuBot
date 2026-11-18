@@ -52,9 +52,9 @@
 |---|---|---|---|---|---|---|
 | 1 | V-00 | 實作完成 | [共用] 投票核心：資料欄位、結果與可見範圍、結算、建立 | 無 | — | 其餘卡都依賴 |
 | 2 | V-01 | 實作完成 | 管理員能看投票清單與詳細頁 | V-00 | — | 骨架切片 |
-| 3 | V-02 | 未完成 | 發起人能從後台結算與刪除投票 | V-01 | A | |
-| 4 | V-03 | 未完成 | 管理員能從後台發起投票 | V-01 | A | |
-| 5 | V-05 | 未完成 | 管理員能匯出投票結果 | V-01 | A | |
+| 3 | V-02 | 實作完成 | 發起人能從後台結算與刪除投票 | V-01 | A | |
+| 4 | V-03 | 實作完成 | 管理員能從後台發起投票 | V-01 | A | |
+| 5 | V-05 | 實作完成 | 管理員能匯出投票結果 | V-01 | A | |
 | 6 | V-04 | 未完成 | 投票可以設截止時間並自動結算 | V-03、V-02 | — | 在 V-03 的表單加欄位；與 V-02 都改 `view.py` |
 
 並行組 A 的分工：V-02、V-03、V-05 各自新增 router 檔，分別是 `polls_actions.py`、`polls_create.py`、`polls_export.py`。前端的部分：V-01 先建好兩個空元件 `poll-actions.tsx`、`poll-export-link.tsx`，並放進詳細頁；V-02、V-05 只改各自的元件檔。V-03 用自己的頁面，以及 `poll-list.tsx` 的發起按鈕。三張卡互不重疊。
@@ -191,12 +191,12 @@
 
 **驗收條件**
 - [ ] 發起人在後台結算，Discord 訊息改成結果，詳細頁顯示最新結果。
-- [ ] 非發起人的管理員看不到結算、刪除按鈕，直接呼叫 API 回 403 `not_poll_manager`；發起人離開伺服器後重新整理，按鈕出現且操作成功。
-- [ ] bot owner 在後台可以結算、刪除任何投票。
-- [ ] 先在 Discord 刪掉投票訊息再從後台結算，投票照樣結算，並顯示訊息沒有更新的原因。
+- [x] 非發起人的管理員看不到結算、刪除按鈕，直接呼叫 API 回 403 `not_poll_manager`；發起人離開伺服器後重新整理，按鈕出現且操作成功。
+- [x] bot owner 在後台可以結算、刪除任何投票。
+- [x] 先在 Discord 刪掉投票訊息再從後台結算，投票照樣結算，並顯示訊息沒有更新的原因。
 - [ ] 發起人剛在 Discord 按了結算，後台再按結算，視為成功並顯示最新結果。
 - [ ] 刪除前的確認視窗寫明無法復原；刪除後 Discord 訊息消失，回到清單，個人區不再顯示這筆投票，公開頁的投票參與次數減少。
-- [ ] 本功能上線前建立的投票，從後台結算時照樣結算並說明訊息沒有更新；刪除時照樣刪除資料。
+- [x] 本功能上線前建立的投票，從後台結算時照樣結算並說明訊息沒有更新；刪除時照樣刪除資料。
 - [ ] 360px 寬的畫面能完成結算與刪除。
 - [ ] 拿掉星羽在頻道的權限後刪除，資料照樣刪除，畫面說明訊息沒刪掉；之後有人按那則訊息的按鈕，收到「此投票已不存在」，bot 重啟後再按也一樣。
 
@@ -214,9 +214,10 @@
 
 **風險 / 實作注意**：刪訊息與刪資料不在同一個 transaction。先刪訊息再刪資料：資料刪除失敗時，訊息已經不在，回 500 讓使用者重試，重試時 NotFound 視為成功。
 
-**進度**：後端與 bot 實作中（前端 `poll-actions.tsx` 由前端 worker 負責）
+**進度**：實作完成（2026-11-18）
 - 已定案：投票按鈕的檢查寫成 `reply_poll_gone`／`poll_is_gone`，view callback 與 `on_interaction` 共用，兩邊都容忍 interaction 已被回應；`on_interaction` 在 `interaction.view` 不為 None（view store 已接手）時跳過；custom_id 用 regex 精確比對（`poll_` 前綴與 `poll_result_` 重疊）；刪除時頻道不存在視為訊息已不在，不當作失敗；刪除不取 `poll_lock`。
-- commit：（1）31b103d 移除 `remove_poll`、五個按鈕的「此投票已不存在」檢查；（2）2384dba `polls_actions.py` 的結算與刪除；（3）順手修的既有 bug：`PollView.embed()` 發起人沒有自訂頭像時 `author.avatar.url` 會 AttributeError，改用 `display_avatar.url`（V-03 worker 發現，`/poll create` 與後台建立都會遇到），bc358ff；（4）2da1d04 `bot_event.py` 的 `on_interaction` listener；（5）審查後修正：`PollView.finish` 在更新訊息期間投票被後台刪掉時，第二次寫入的 `StaleDataError` 改視為 `not_found`（後台回 404 `poll_not_found`、按鈕回「此投票已不存在」）
+- commit：（1）31b103d 移除 `remove_poll`、五個按鈕的「此投票已不存在」檢查；（2）2384dba `polls_actions.py` 的結算與刪除；（3）順手修的既有 bug：`PollView.embed()` 發起人沒有自訂頭像時 `author.avatar.url` 會 AttributeError，改用 `display_avatar.url`（V-03 worker 發現，`/poll create` 與後台建立都會遇到），bc358ff；（4）2da1d04 `bot_event.py` 的 `on_interaction` listener；（5）審查後修正：`PollView.finish` 在更新訊息期間投票被後台刪掉時，第二次寫入的 `StaleDataError` 改視為 `not_found`（後台回 404 `poll_not_found`、按鈕回「此投票已不存在」），43b55f7；測試用的假成員補 `display_avatar`，814e6a3；前端（domalyze_frontend 分支 dashboard-polls）61229aa、1a00118
+- 續做：無
 - 未驗：待人工驗證——後台結算／刪除在 Discord 實機的訊息更新與消失、bot 重啟後按已刪除投票的按鈕收到「此投票已不存在」、拿掉頻道權限後刪除的提示。前端部分由前端 worker 負責。
 
 ### V-03 管理員能從後台發起投票
@@ -233,9 +234,9 @@
 
 **驗收條件**
 - [ ] 從後台發起一個投票，指定頻道出現投票訊息，發起人顯示為操作的管理員；他在 Discord 上能按「結算投票」。
-- [ ] 選項重複、超過 20 項、標題超過 45 字、每人可投數超過選項數、權重超出 1–10 時，表單擋下並指出欄位；直接呼叫 API 也一樣被擋。
-- [ ] bot 沒有發言權限的頻道在選單上停用並標示原因；直接呼叫 API 指定這個頻道，回錯誤，投票沒有建立。
-- [ ] 操作者自己不能發言的頻道停用；直接呼叫 API 也被擋。
+- [x] 選項重複、超過 20 項、標題超過 45 字、每人可投數超過選項數、權重超出 1–10 時，表單擋下並指出欄位；直接呼叫 API 也一樣被擋。
+- [x] bot 沒有發言權限的頻道在選單上停用並標示原因；直接呼叫 API 指定這個頻道，回錯誤，投票沒有建立。
+- [x] 操作者自己不能發言的頻道停用；直接呼叫 API 也被擋。
 - [ ] 360px 寬的畫面能完成發起。
 
 **實作設計**
@@ -258,8 +259,9 @@
 
 **風險 / 實作注意**：`create_and_send` 由 V-00 提供，這張卡不改它；需要調整的話回 V-00 的介面討論。
 
-**進度**：後端與 bot 部分完成（2026-11-18）；前端由另一位 worker 負責
-- commit：c2b3e8b 後端 `polls_create.py` 與測試；審查修正 a3b4b4b
+**進度**：實作完成（2026-11-18）
+- commit：後端 c2b3e8b `polls_create.py` 與測試；審查修正 a3b4b4b；前端（domalyze_frontend 分支 dashboard-polls）06b4bab、9c00164、1744573
+- 續做：無
 - 決定：
   - 星羽與操作者的發言檢查只看 view_channel + send_messages，缺 read_message_history 仍可建立。
   - bot 缺發言權限 → 400 `bot_missing_permission`；操作者缺權限、欄位或頻道／身分組不合 → 400 `invalid_request`，全部欄位錯誤彙整在同一個 fields。
@@ -318,9 +320,9 @@
 
 **驗收條件**
 - [ ] 實名投票的匯出檔用 Excel 開啟中文正常，開頭是各選項票數，空一列後是逐票明細，內容與當下詳細頁一致；已離開的成員寫「已離開的成員」。
-- [ ] 匿名投票的匯出檔只有各選項票數。
+- [x] 匿名投票的匯出檔只有各選項票數。
 - [ ] 「結果將在結束時公佈」的投票進行中時，詳細頁沒有匯出按鈕，直接呼叫 API 回 403。
-- [ ] 檔名含投票 ID 與標題，時間以台灣時間顯示。
+- [x] 檔名含投票 ID 與標題，時間以台灣時間顯示。
 - [ ] 360px 寬的畫面能完成匯出。
 
 **實作設計**
@@ -333,8 +335,9 @@
 
 **依賴**：V-01（詳細頁、`poll-export-link.tsx`）
 
-**進度**：後端實作完成（2026-11-18），前端由另一位 worker 負責
-- commit：後端 `polls_export.py` 與測試 `test/test_dashboard_polls_export.py`（hash 見 git log）
+**進度**：實作完成（2026-11-18）
+- commit：後端 5960f19 `polls_export.py`、efff6f1 測試 `test/test_dashboard_polls_export.py`；前端（domalyze_frontend 分支 dashboard-polls）4e7c64a、da280af、7412693
+- 續做：無
 - 決定：從 `polls.py` 直接匯入 `_load_detail`、`_member_name`，不複製；成員名稱與選項名稱以 `=`、`+`、`-`、`@`、Tab、CR 開頭時前面補單引號，防試算表公式注入，數字欄不動；時間格式 `YYYY-MM-DD HH:MM:SS`；`Content-Disposition` 同時送 ASCII fallback `filename` 與 `filename*`；看不到票數回 403 `results_hidden`。
 - 未驗：Excel 開啟中文與 360px 畫面（前端）待人工驗證；後端行為已有自動測試。
 
