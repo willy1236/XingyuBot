@@ -10,6 +10,8 @@ import re
 from dataclasses import dataclass
 from uuid import UUID
 
+from googleapiclient.errors import HttpError
+
 from starlib.database import DriveShare
 from starlib.providers import XingyuGoogleCloud
 
@@ -28,6 +30,15 @@ def normalize_gmail(raw: str) -> str | None:
     if not _GMAIL.match(value):
         return None
     return value if "@" in value else f"{value}@gmail.com"
+
+
+def _revoke(google: XingyuGoogleCloud, permission_id: str) -> None:
+    """收回權限；Google 端已不存在（404，例如被手動移除）視為已收回。"""
+    try:
+        google.remove_file_permissions(DRIVE_FOLDER_ID, permission_id)
+    except HttpError as e:
+        if e.resp.status != 404:
+            raise
 
 
 @dataclass(frozen=True)
@@ -58,10 +69,10 @@ def request_share(plan: SharePlan, gmail: str) -> str | None:
     new_id = plan.google.add_file_permissions(DRIVE_FOLDER_ID, gmail)["id"]
     if plan.old_share_id is not None:
         try:
-            plan.google.remove_file_permissions(DRIVE_FOLDER_ID, plan.old_share_id)
+            _revoke(plan.google, plan.old_share_id)
         except Exception:
             try:
-                plan.google.remove_file_permissions(DRIVE_FOLDER_ID, new_id)
+                _revoke(plan.google, new_id)
             except Exception:
                 log.exception("Rollback of new drive permission failed", extra={"gmail": gmail})
             raise
@@ -83,7 +94,7 @@ def set_drive_share(user_id: UUID, gmail: str) -> DriveShare:
 def request_remove(plan: SharePlan) -> None:
     """HTTP 段：收回目前的共用權限；沒有設定時什麼都不做。"""
     if plan.old_share_id is not None:
-        plan.google.remove_file_permissions(DRIVE_FOLDER_ID, plan.old_share_id)
+        _revoke(plan.google, plan.old_share_id)
 
 
 def remove_drive_share(user_id: UUID) -> bool:
