@@ -1,5 +1,158 @@
-"""個人區的紀錄：語音時數、警告、投票、賭盤與抽獎（T-06）。"""
+"""個人區的紀錄：語音時數、警告、投票、賭盤與抽獎（T-06）。
 
-from fastapi import APIRouter
+GET /dashboard/personal/records/voice?discord_id=                          各伺服器的語音分鐘數，由多到少
+GET /dashboard/personal/records/{warnings|polls|bets|giveaways}?discord_id=&offset=&limit=   由新到舊，回 {items, total}
+
+`discord_id` 必須在個人區可見範圍內。紀錄以資料庫為準，Discord 只用來補伺服器名稱，bot 已離開的伺服器名稱為 null。
+"""
+
+import asyncio
+from collections.abc import Callable
+from datetime import datetime
+from typing import Literal
+
+from fastapi import APIRouter, Depends, Query
+
+from starlib import sclient, sqldb
+from starlib.database import WarningType
+
+from .db import run_db
+from .errors import DashboardError
+from .personal import PersonalScope, require_personal
 
 router = APIRouter(prefix="/dashboard")
+
+PAGE_SIZE = 20
+
+_WARNING_KEYS = {
+    WarningType.Warning: "warning",
+    WarningType.Timeout: "timeout",
+    WarningType.Kick: "kick",
+    WarningType.Ban: "ban",
+}
+_BET_SIDES = {1: "blue_title", 2: "pink_title"}
+
+
+def _check_scope(discord_id: int, scope: PersonalScope) -> None:
+    if discord_id not in scope.discord_ids:
+        raise DashboardError(403, "no_permission")
+
+
+async def _guild_names(guild_ids: set[int]) -> dict[int, str | None]:
+    """bot 所在伺服器的名稱；bot 不可用或已離開該伺服器時為 None。"""
+    bot = sclient.bot
+    if bot is None or not guild_ids:
+        return dict.fromkeys(guild_ids)
+
+    async def _names() -> dict[int, str | None]:
+        result = {}
+        for gid in guild_ids:
+            guild = bot.get_guild(gid)
+            result[gid] = None if guild is None else guild.name
+        return result
+
+    try:
+        return await asyncio.wrap_future(bot.submit(_names()))
+    except Exception:
+        return dict.fromkeys(guild_ids)
+
+
+def _iso(value: datetime) -> str:
+    return value.isoformat()
+
+
+# ====== voice ======
+@router.get("/personal/records/voice")
+async def voice_records(discord_id: int, scope: PersonalScope = Depends(require_personal())):
+    _check_scope(discord_id, scope)
+    rows = await run_db(lambda: [(v.guild_id, int(v.total_minute.total_seconds() // 60)) for v in sqldb.list_voice_times(discord_id)])
+    names = await _guild_names({gid for gid, _ in rows})
+    return {"items": [{"guild_name": names[gid], "minutes": minutes} for gid, minutes in rows]}
+
+
+# ====== 分頁類 ======
+# 各類回傳 (已轉成純資料的列, 總數, 需要查名稱的伺服器 ID)；轉成 JSON 時才補伺服器名稱。
+_Page = tuple[list[dict], int]
+
+
+def _warnings(discord_id: int, offset: int, limit: int) -> _Page:
+    rows, total = sqldb.list_user_warnings(discord_id, offset, limit)
+    return [
+        {
+            "id": w.warning_id,
+            "guild_id": w.create_guild,
+            "type": _WARNING_KEYS.get(WarningType(w.moderate_type), "warning"),
+            "at": _iso(w.create_time),
+            "reason": w.reason,
+            "duration_seconds": None if w.last_time is None else int(w.last_time.total_seconds()),
+        }
+        for w in rows
+    ], total
+
+
+def _polls(discord_id: int, offset: int, limit: int) -> _Page:
+    rows, total = sqldb.list_user_polls(discord_id, offset, limit)
+    return [
+        {
+            "id": poll_id,
+            "guild_id": None if poll is None else poll.guild_id,
+            "title": None if poll is None else poll.title,
+            "options": options,
+            "at": _iso(at),
+        }
+        for poll, poll_id, at, options in rows
+    ], total
+
+
+def _bets(discord_id: int, offset: int, limit: int) -> _Page:
+    rows, total = sqldb.list_user_bets(discord_id, offset, limit)
+    return [
+        {
+            "id": user_bet.bet_id,
+            "title": None if bet is None else bet.title,
+            "option": None if bet is None else getattr(bet, _BET_SIDES.get(user_bet.bet_option, ""), None),
+            "amount": user_bet.bet_amount,
+            "at": _iso(user_bet.bet_at),
+        }
+        for user_bet, bet in rows
+    ], total
+
+
+def _giveaways(discord_id: int, offset: int, limit: int) -> _Page:
+    rows, total = sqldb.list_user_giveaways(discord_id, offset, limit)
+    return [
+        {
+            "id": entry.giveaway_id,
+            "guild_id": None if giveaway is None else giveaway.guild_id,
+            "prize": None if giveaway is None else giveaway.prize_name,
+            "result": "pending" if giveaway is not None and giveaway.is_on else ("won" if entry.is_winner else "lost"),
+            "at": _iso(entry.join_at),
+        }
+        for entry, giveaway in rows
+    ], total
+
+
+_KINDS: dict[str, Callable[[int, int, int], _Page]] = {
+    "warnings": _warnings,
+    "polls": _polls,
+    "bets": _bets,
+    "giveaways": _giveaways,
+}
+
+
+@router.get("/personal/records/{kind}")
+async def paged_records(
+    kind: Literal["warnings", "polls", "bets", "giveaways"],
+    discord_id: int,
+    offset: int = Query(0, ge=0),
+    limit: int = Query(PAGE_SIZE, ge=1, le=PAGE_SIZE),
+    scope: PersonalScope = Depends(require_personal()),
+):
+    _check_scope(discord_id, scope)
+    items, total = await run_db(lambda: _KINDS[kind](discord_id, offset, limit))
+    if any("guild_id" in item for item in items):
+        names = await _guild_names({i["guild_id"] for i in items if i["guild_id"] is not None})
+        for item in items:
+            gid = item.pop("guild_id")
+            item["guild_name"] = None if gid is None else names.get(gid)
+    return {"items": items, "total": total}
