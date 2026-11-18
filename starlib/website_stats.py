@@ -51,18 +51,24 @@ async def settle_weeks() -> int:
 
     auth server 不可用時留 null 並停止這一輪，下次排程再補。
     """
-    pending = sqldb.get_unsettled_website_activity(current_week_start())
-    directory = get_directory()
-    settled = 0
-    for week, discord_id in pending:
-        try:
-            account = await directory.find_by_discord(discord_id)
-        except DirectoryUnavailable:
-            log.warning("website link rate: auth server unavailable, %d rows left", len(pending) - settled)
-            break
-        sqldb.set_website_activity_linked(week, discord_id, account is not None and not account.suspended)
-        settled += 1
-    return settled
+    try:
+        pending = sqldb.get_unsettled_website_activity(current_week_start())
+        # 讀完先放掉交易，等 auth server 回應時不握著 website_weekly_activity 的鎖
+        sqldb.release_session()
+        directory = get_directory()
+        settled = 0
+        for week, discord_id in pending:
+            try:
+                account = await directory.find_by_discord(discord_id)
+            except DirectoryUnavailable:
+                log.warning("website link rate: auth server unavailable, %d rows left", len(pending) - settled)
+                break
+            sqldb.set_website_activity_linked(week, discord_id, account is not None and not account.suspended)
+            settled += 1
+        return settled
+    finally:
+        # 排程在 bot 的 loop 上跑，session 不釋放會一直停在 idle in transaction
+        sqldb.release_session()
 
 
 @dataclass(frozen=True)

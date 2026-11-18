@@ -120,6 +120,31 @@ class TestSettle:
         assert _rows(repo) == {(LAST, 1): True}
 
 
+class TestSessionRelease:
+    @pytest.mark.parametrize("pending", [False, True])
+    def test_session_released_after_settle(self, now, repo, dashboard_env, monkeypatch, pending):
+        calls = []
+        monkeypatch.setattr(repo, "release_session", lambda: calls.append(1))
+        if pending:
+            repo.record_website_activity(LAST, 1)
+        asyncio.run(website_stats.settle_weeks())
+        assert calls  # 沒有待結算列時也要釋放讀取開的交易
+
+    def test_session_released_when_error(self, now, repo, dashboard_env, monkeypatch):
+        calls = []
+        monkeypatch.setattr(repo, "release_session", lambda: calls.append(1))
+        repo.record_website_activity(LAST, 1)
+        dashboard_env.directory.unavailable = False
+
+        async def boom(discord_id):
+            raise RuntimeError("boom")
+
+        monkeypatch.setattr(dashboard_env.directory, "find_by_discord", boom)
+        with pytest.raises(RuntimeError):
+            asyncio.run(website_stats.settle_weeks())
+        assert calls
+
+
 class TestReport:
     def test_rate_clicks_and_pending(self, now, repo):
         for did, linked in [(1, True), (2, False), (3, True)]:
