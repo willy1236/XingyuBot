@@ -296,6 +296,9 @@ class UserRepository(BaseRepository):
             else:
                 self.session.exec(delete(DriveShare).where(DriveShare.user_id == old_id))
 
+        # 公開頁設定：一律以存續帳號為準，被併帳號的不搬
+        self.session.exec(delete(PublicProfile).where(PublicProfile.user_id == old_id))
+
         # 外部帳號綁定：一個平台一人一筆
         new_platforms = set(self.session.exec(select(LinkedAccount.platform).where(LinkedAccount.user_id == new_id)).all())
         if new_platforms:
@@ -2586,6 +2589,32 @@ class MusicPlaylistRepository(BaseRepository):
             self.commit()
 
 
+class PublicProfileRepository(BaseRepository):
+    """公開頁設定與公開頁用的統計（T-11）"""
+
+    def get_public_profile(self, user_id: UUID) -> PublicProfile | None:
+        return self.session.get(PublicProfile, user_id, populate_existing=True)
+
+    def save_public_profile(self, user_id: UUID, enabled: bool, sections: list[str]) -> PublicProfile:
+        stmt = pg_insert(PublicProfile).values(user_id=user_id, enabled=enabled, sections=sections)
+        stmt = stmt.on_conflict_do_update(index_elements=[PublicProfile.user_id], set_={"enabled": enabled, "sections": sections})
+        self.session.exec(stmt)
+        self.commit()
+        return self.session.get(PublicProfile, user_id, populate_existing=True)
+
+    def get_voice_total_minutes(self, discord_id: int) -> int:
+        """該 Discord 在所有伺服器的語音總分鐘數（與 list_voice_times 逐筆取整後相加的結果一致）。"""
+        return sum(int(v.total_minute.total_seconds() // 60) for v in self.list_voice_times(discord_id))
+
+    def count_user_participation(self, discord_id: int) -> dict[str, int]:
+        """該 Discord 參與過的投票（複選算一次）、賭盤、抽獎次數，與個人區紀錄的 total 一致。"""
+        return {
+            "polls": self.session.exec(select(func.count(func.distinct(UserPoll.poll_id))).where(UserPoll.discord_id == discord_id)).one(),
+            "bets": self.session.exec(select(func.count()).select_from(UserBet).where(UserBet.discord_id == discord_id)).one(),
+            "giveaways": self.session.exec(select(func.count()).select_from(GiveawayUser).where(GiveawayUser.user_id == discord_id)).one(),
+        }
+
+
 class WebsiteStatsRepository(BaseRepository):
     """網站個人區的每週使用與連結入口點擊統計（T-10）"""
 
@@ -2778,6 +2807,7 @@ class SQLRepository(
     GuildSettingRepository,
     MusicPlaylistRepository,
     WebsiteStatsRepository,
+    PublicProfileRepository,
     RuntimeConfigRepository,
     TestRepository,
 ):
