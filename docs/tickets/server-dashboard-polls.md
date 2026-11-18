@@ -214,7 +214,9 @@
 
 **風險 / 實作注意**：刪訊息與刪資料不在同一個 transaction。先刪訊息再刪資料：資料刪除失敗時，訊息已經不在，回 500 讓使用者重試，重試時 NotFound 視為成功。
 
-**進度**：未完成
+**進度**：後端與 bot 實作中（前端 `poll-actions.tsx` 由前端 worker 負責）
+- 已定案：投票按鈕的檢查寫成 `reply_poll_gone`／`poll_is_gone`，view callback 與 `on_interaction` 共用，兩邊都容忍 interaction 已被回應；`on_interaction` 在 `interaction.view` 不為 None（view store 已接手）時跳過；custom_id 用 regex 精確比對（`poll_` 前綴與 `poll_result_` 重疊）；刪除時頻道不存在視為訊息已不在，不當作失敗；刪除不取 `poll_lock`。
+- commit：（1）移除 `remove_poll`、五個按鈕的「此投票已不存在」檢查
 
 ### V-03 管理員能從後台發起投票
 
