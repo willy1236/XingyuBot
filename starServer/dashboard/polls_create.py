@@ -6,6 +6,8 @@ POST /dashboard/guilds/{id}/polls          由星羽在指定頻道發出投票�
 欄位驗證交給 `starlib.polls.validate_poll_input`，建立與發送交給 `PollView.create_and_send`，發送失敗不留資料。
 """
 
+from datetime import datetime
+
 import discord
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
@@ -51,6 +53,8 @@ class CreateBody(BaseModel):
     number_of_user_votes: int = 1
     only_roles: list[int | str] = []
     role_weights: list[RoleWeightIn] = []
+    #: 帶時區的 ISO 字串；省略或 null 代表沒有截止時間
+    deadline: datetime | None = None
 
 
 def _field(path: str, reason: str) -> dict:
@@ -162,7 +166,7 @@ async def create_poll(
 
     async def _create(guild: discord.Guild) -> dict:
         actor = _actor(guild, info)
-        validated = validate_poll_input(title, options, body.number_of_user_votes, weight_ids, None, nowtz())
+        validated = validate_poll_input(title, options, body.number_of_user_votes, weight_ids, body.deadline, nowtz())
         errors = [{**e, "path": _form_path(e["path"], weight_index)} for e in validated] + id_errors
         for role_id in only_roles:
             errors += _role_errors(guild, "only_roles", role_id)
@@ -201,6 +205,7 @@ async def create_poll(
                 ban_alternate_account_voting=False,
                 only_roles=only_roles,
                 role_weights=weight_ids,
+                deadline=body.deadline.replace(microsecond=0) if body.deadline else None,
             )
         except PollSendError as e:
             raise DashboardError(

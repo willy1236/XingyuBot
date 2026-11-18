@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import timedelta
+from datetime import datetime, timedelta
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
+import discord
 import pytest
 from apscheduler.jobstores.base import JobLookupError
+from test_dashboard_auth import dashboard_env  # noqa: F401
+from test_dashboard_guilds import discord as discord_env  # noqa: F401
 from test_dashboard_polls_core import (  # noqa: F401
     CHANNEL_ID,
     GUILD_ID,
@@ -17,13 +20,16 @@ from test_dashboard_polls_core import (  # noqa: F401
     FakeMessage,
     add_poll,
     fake_chart,
+    http_error,
     stored,
 )
+from test_dashboard_polls_create import HEADERS, URL, client, poll_count, post  # noqa: F401
 from test_identity import repo  # noqa: F401
 
 from starDiscord.cmds import bot_event
 from starDiscord.cmds import command as cmd
 from starDiscord.uiElement.view import PollView
+from starlib import sclient
 from starlib.utils import nowtz
 
 
@@ -262,3 +268,58 @@ class TestCreateCommand:
     def test_over_30_days_is_rejected(self, env):
         self.call(env, "31d")
         assert "截止時間最長為 30 天後" in self.error_text(env)
+
+
+class TestDashboardCreate:
+    """後台發起帶 deadline：驗證、存入、排程"""
+
+    @pytest.fixture
+    def api(self, client):
+        client.scheduler = FakeScheduler()
+        sclient.bot.scheduler = client.scheduler  # type: ignore[union-attr]
+        return client
+
+    def future(self, **delta) -> datetime:
+        return nowtz() + timedelta(**delta)
+
+    def test_deadline_is_saved_and_scheduled(self, api):
+        deadline = self.future(hours=2).replace(microsecond=0)
+        r = post(api, deadline=deadline.isoformat())
+        assert r.status_code == 200, r.text
+        poll_id = r.json()["poll_id"]
+        api.repo.session.expire_all()
+        assert api.repo.get_poll(poll_id).deadline == deadline
+        assert api.scheduler.jobs[f"poll_end_{poll_id}"]["run_at"] == deadline
+        embed = api.guild.channels[500].sent[0]["embed"]
+        assert f"<t:{int(deadline.timestamp())}:f>" in embed.description
+
+    @pytest.mark.parametrize("value", [None, "omit"])
+    def test_without_deadline(self, api, value):
+        r = post(api) if value == "omit" else post(api, deadline=None)
+        assert r.status_code == 200
+        api.repo.session.expire_all()
+        assert api.repo.get_poll(r.json()["poll_id"]).deadline is None
+        assert api.scheduler.jobs == {}
+
+    @pytest.mark.parametrize(
+        ("deadline", "reason"),
+        [
+            (lambda: (nowtz() - timedelta(minutes=5)).isoformat(), "截止時間必須晚於現在"),
+            (lambda: (nowtz() + timedelta(days=30, minutes=2)).isoformat(), "截止時間最長為 30 天後"),
+            (lambda: (nowtz() + timedelta(hours=1)).replace(tzinfo=None).isoformat(), "截止時間必須包含時區"),
+        ],
+    )
+    def test_invalid_deadline_is_rejected(self, api, deadline, reason):
+        r = post(api, deadline=deadline())
+        assert r.status_code == 400
+        assert r.json()["error"] == "invalid_request"
+        assert {"path": "deadline", "reason": reason} in r.json()["fields"]
+        assert poll_count(api) == api.before
+        assert api.scheduler.jobs == {}
+
+    def test_send_failure_does_not_schedule(self, api):
+        api.guild.channels[500].send_error = http_error(discord.Forbidden, 403)
+        r = post(api, deadline=self.future(hours=1).isoformat())
+        assert r.status_code == 400
+        assert api.scheduler.jobs == {}
+        assert poll_count(api) == api.before
