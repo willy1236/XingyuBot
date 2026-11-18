@@ -404,7 +404,12 @@ class PollView(discord.ui.View):
                 return PollOutcome("already_ended")
             self.poll.end_at = nowtz()
             self.poll = self.sqldb.merge(self.poll)
-            failure = await self.publish(edit)
+            try:
+                failure = await self.publish(edit)
+            except Exception:
+                # end_at 已寫入：非預期錯誤也要記成 message_failure，不能讓投票停在「已結算但訊息沒變、也沒有失敗原因」
+                log.exception("poll publish: unexpected error", extra={"poll_id": self.poll.poll_id})
+                failure = "failed"
             if failure != self.poll.message_failure:
                 self.poll.message_failure = failure
                 try:
@@ -426,9 +431,11 @@ class PollView(discord.ui.View):
         embed, image_buffer = self.results_embed(guild, True)  # type: ignore
         self.clear_items()
 
+        files = [discord.File(image_buffer, filename="pie.png")] if image_buffer else []
+
         async def _edit(edit_message: Callable[..., Awaitable]) -> str | None:
             try:
-                await edit_message(embed=embed, view=self, file=discord.File(image_buffer, filename="pie.png"))
+                await edit_message(embed=embed, view=self, files=files)
             except discord.NotFound:
                 return "message_missing"
             except discord.Forbidden:
@@ -516,11 +523,11 @@ class PollView(discord.ui.View):
             embed.set_author(name=author.name, icon_url=author.display_avatar.url)
         return embed
 
-    def results_embed(self, guild: discord.Guild | None, with_chart=False, show_name: bool | None = None) -> tuple[discord.Embed, io.BytesIO] | discord.Embed:
+    def results_embed(self, guild: discord.Guild | None, with_chart=False, show_name: bool | None = None) -> tuple[discord.Embed, io.BytesIO | None] | discord.Embed:
         """產生結果 embed（各選項票數，實名投票另列投票人與權重）。
 
         guild: 用來查成員，查不到的成員以 <@id> 顯示
-        with_chart: True 時一併回傳圓餅圖（只含票數大於 0 的選項）
+        with_chart: True 時一併回傳圓餅圖（只含票數大於 0 的選項）；沒有人投票時圖為 None
         show_name: 覆寫是否顯示投票人，None 時依投票設定
         """
         results = PollResults.load(self.sqldb, self.poll)
@@ -554,7 +561,10 @@ class PollView(discord.ui.View):
             return embed, self.generate_chart(labels, sizes)
         return embed
 
-    def generate_chart(self, labels, sizes):
+    def generate_chart(self, labels, sizes) -> io.BytesIO | None:
+        """畫圓餅圖；沒有任何票時回傳 None（matplotlib 對全為 0 的資料會丟 ValueError）"""
+        if not sum(sizes):
+            return None
         import matplotlib.pyplot as plt
 
         # 字形：依序選用主機上有的中文字型，Linux 主機沒有微軟正黑體時改用 Noto 等字型
