@@ -71,7 +71,7 @@ class FakeGuild:
             id=OPERATOR,
             name="管理員",
             display_name="管理員",
-            avatar=SimpleNamespace(url="https://cdn.example/a.png"),
+            display_avatar=SimpleNamespace(url="https://cdn.example/a.png"),
         )
         self.channels = {
             500: FakeChannel(500, "一般", position=1),

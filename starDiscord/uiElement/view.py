@@ -80,6 +80,33 @@ class DeleteAddRoleView(discord.ui.View):
         else:
             await interaction.response.send_message(content="只有使用此指令的用戶可以刪除", ephemeral=True)
 
+POLL_GONE_TEXT = "此投票已不存在"
+
+
+async def reply_poll_gone(interaction: discord.Interaction) -> None:
+    """投票已被刪除時的回應：ephemeral 告知，並嘗試移除訊息上的按鈕（失敗忽略）。
+
+    view callback 與 bot_event 的 on_interaction 都可能回應同一個 interaction，先到者回，後到者的錯誤忽略。
+    """
+    try:
+        await interaction.response.send_message(POLL_GONE_TEXT, ephemeral=True)
+    except (discord.InteractionResponded, discord.HTTPException):
+        pass
+    if interaction.message is not None:
+        try:
+            await interaction.message.edit(view=None)
+        except discord.HTTPException:
+            pass
+
+
+async def poll_is_gone(interaction: discord.Interaction, view: PollView) -> bool:
+    """投票按鈕 callback 的開頭檢查：投票已不存在時回覆並回傳 True（同時把 view.poll 更新為最新資料）。"""
+    if view.reload():
+        return False
+    await reply_poll_gone(interaction)
+    return True
+
+
 class PollOptionButton(discord.ui.Button):
     def __init__(self, option: PollOption, custom_id: str, row: int = None):
         super().__init__(label=option.option_name, custom_id=custom_id, row=row)
@@ -87,6 +114,8 @@ class PollOptionButton(discord.ui.Button):
 
     async def callback(self, interaction):
         view: PollView = self.view
+        if await poll_is_gone(interaction, view):
+            return
         can_vote = False
         have_only_role = False
         vote_magnification = 1
@@ -119,6 +148,8 @@ class PollEndButton(discord.ui.Button):
 
     async def callback(self, interaction):
         view: PollView = self.view
+        if await poll_is_gone(interaction, view):
+            return
         if interaction.user.id == view.poll.creator_id or (view.bot and await view.bot.is_owner(interaction.user)):
             # 先 defer：若鎖被其他結算佔住，避免超過 Discord 的 3 秒回應期限
             await interaction.response.defer()
@@ -140,6 +171,8 @@ class PollResultButton(discord.ui.Button):
 
     async def callback(self, interaction):
         view: PollView = self.view
+        if await poll_is_gone(interaction, view):
+            return
         if not view.poll.results_only_initiator or interaction.user.id == view.poll.creator_id:
             embed = view.results_embed(interaction.guild)
             await interaction.response.send_message(embed=embed, ephemeral=True)
@@ -154,6 +187,8 @@ class PollCanenlButton(discord.ui.Button):
 
     async def callback(self, interaction):
         view: PollView = self.view
+        if await poll_is_gone(interaction, view):
+            return
         view.sqldb.remove_user_poll(view.poll.poll_id, interaction.user.id)
         await interaction.response.send_message(f"{interaction.user.mention} 已取消投票", ephemeral=True)
 
@@ -164,6 +199,8 @@ class PollNowButton(discord.ui.Button):
 
     async def callback(self, interaction):
         view: PollView = self.view
+        if await poll_is_gone(interaction, view):
+            return
         dbdata = view.sqldb.get_user_poll(view.poll.poll_id, interaction.user.id)
         if dbdata:
             vote_mag = dbdata[0][0].vote_magnification
@@ -436,7 +473,7 @@ class PollView(discord.ui.View):
 
         author = guild.get_member(self.poll.creator_id)
         if author:
-            embed.set_author(name=author.name, icon_url=author.avatar.url)
+            embed.set_author(name=author.name, icon_url=author.display_avatar.url)
         return embed
 
     def results_embed(self, guild: discord.Guild | None, with_chart=False, show_name: bool | None = None) -> tuple[discord.Embed, io.BytesIO] | discord.Embed:

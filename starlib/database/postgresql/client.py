@@ -1539,12 +1539,6 @@ class WarningRepository(BaseRepository):
 
 class PollRepository(BaseRepository):
     # * poll
-    def remove_poll(self, poll_id: int):
-        self.session.exec(delete(Poll).where(Poll.poll_id == poll_id))
-        self.session.exec(delete(UserPoll).where(Poll.poll_id == poll_id))
-        self.session.exec(delete(PollOption).where(Poll.poll_id == poll_id))
-        self.session.commit()
-
     def get_poll(self, poll_id: int):
         stmt = select(Poll).where(Poll.poll_id == poll_id)
         result = self.session.exec(stmt).one_or_none()
