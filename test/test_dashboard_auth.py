@@ -18,6 +18,7 @@ from sqlmodel import select
 from test_identity import FakeDirectory, repo  # noqa: F401  (repo 為 fixture)
 
 from starlib import sqldb as real_sqldb
+from starlib import website_stats
 from starlib.database import APIType, DashboardSession, OAuthToken
 from starlib.database.postgresql.client import SQLRepository
 from starlib.identity import resolver as resolver_module
@@ -39,8 +40,9 @@ OTHER_ID = "222222222222222222"
 def dashboard_env(monkeypatch, repo):  # noqa: F811
     monkeypatch.setattr(config, "frontend_url", lambda: FRONTEND)
     monkeypatch.setattr(config, "allowed_origins", lambda: ORIGINS)
-    for module in (db, session, auth):
+    for module in (db, session, auth, website_stats):
         monkeypatch.setattr(module, "sqldb", repo)
+    monkeypatch.setattr(website_stats, "_recorded", (website_stats.date.min, set()))
     # 不讀真實的 oauth client，但 credential_id 要是真的（OAuthToken 有外鍵）
     credential_id = real_sqldb.get_oauth_client(APIType.Discord, 4).credential_id
     real_sqldb.release_session()
