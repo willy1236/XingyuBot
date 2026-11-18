@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import io
 from datetime import timedelta
 from types import SimpleNamespace
 
@@ -20,6 +21,12 @@ GUILD_ID = 1001
 CHANNEL_ID = 500
 MESSAGE_ID = 900
 CREATOR = 7001
+
+
+@pytest.fixture(autouse=True)
+def fake_chart(monkeypatch):
+    """圓餅圖的繪製不在這裡測；matplotlib 的視窗後端在無 Tk 的環境會失敗"""
+    monkeypatch.setattr(PollView, "generate_chart", lambda self, labels, sizes: io.BytesIO(b"png"))
 
 
 def http_error(cls, status: int):

@@ -400,7 +400,7 @@ class PollView(discord.ui.View):
         for roleid in self.role_dict:
             role = guild.get_role(roleid)
             if self.role_dict[roleid][0] is True:
-                only_role_list.append(role.mention if role else roleid)
+                only_role_list.append(role.mention if role else str(roleid))
             if self.role_dict[roleid][1] > 1:
                 mag = self.role_dict[roleid][1]
                 role_magification_list.append(f"{role.mention}({mag})" if role else f"{roleid}({mag})")
