@@ -12,9 +12,9 @@ from discord.ext import commands, pages
 from discord.utils import format_dt
 
 from starlib import BotEmbed, ChoiceList, sclient
-from starlib.database import DriveShare, Giveaway
+from starlib.database import Giveaway
+from starlib.drive_share import remove_drive_share, set_drive_share
 from starlib.instance import *
-from starlib.providers import XingyuGoogleCloud
 from starlib.utils import (
     create_only_role_list,
     create_role_magification_dict,
@@ -480,19 +480,15 @@ class command(Cog_Extension):
     async def drive(self, ctx: IdentityContext, email: discord.Option(str, name="gmail帳戶", description="要使用的Gmail帳戶，留空以移除資料", required=False)):
         await ctx.defer()
         user_id = ctx.identity.user_id
-        share = sclient.sqldb.get_drive_share(user_id)
-        fileId = "1bDtsLbOi5crIOkWUZbQmPq3dXUbwWEan"
         if not email:
-            if share:
-                XingyuGoogleCloud().remove_file_permissions(fileId, share.share_id)
-                sclient.sqldb.remove_drive_share(user_id)
+            if remove_drive_share(user_id):
                 await ctx.respond(f"{ctx.author.mention}：google帳戶移除完成")
             else:
                 await ctx.respond(f"{ctx.author.mention}：此Discord帳號沒有設定過google帳戶")
 
             return
         else:
-            if share:
+            if sclient.sqldb.get_drive_share(user_id):
                 await ctx.respond(f"{ctx.author.mention}：此Discord帳號已經共用雲端資料夾了")
                 return
 
@@ -500,8 +496,7 @@ class command(Cog_Extension):
             if not r.search(email):
                 email += "@gmail.com"
 
-            google_data = XingyuGoogleCloud().add_file_permissions(fileId, email)
-            sclient.sqldb.merge(DriveShare(user_id=user_id, gmail=email, share_id=google_data["id"]))
+            set_drive_share(user_id, email)
             msg = await ctx.respond(f"{ctx.author.mention}：已與 {email} 共用雲端資料夾")
             await self.bot.report(f"{ctx.author.mention} 已使用 {email} 共用雲端資料夾", msg)
 
