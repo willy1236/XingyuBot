@@ -322,7 +322,10 @@
 
 **依賴**：V-01（詳細頁、`poll-export-link.tsx`）
 
-**進度**：未完成
+**進度**：後端進行中（2026-11-18），前端由另一位 worker 負責
+- commit：後端 `polls_export.py`（本 commit）
+- 決定：從 `polls.py` 直接匯入 `_load_detail`、`_member_name`，不複製；成員名稱與選項名稱以 `=`、`+`、`-`、`@`、Tab、CR 開頭時前面補單引號，防試算表公式注入，數字欄不動；時間格式 `YYYY-MM-DD HH:MM:SS`；`Content-Disposition` 同時送 ASCII fallback `filename` 與 `filename*`；看不到票數回 403 `results_hidden`。
+- 續做：後端測試 `test/test_dashboard_polls_export.py`
 
 ## 開工前待決
 
