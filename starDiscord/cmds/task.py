@@ -9,7 +9,7 @@ from apscheduler.triggers.date import DateTrigger
 from discord.ext import commands
 from pydantic import ValidationError
 
-from starlib import sclient, sqldb, utils
+from starlib import sclient, sqldb, utils, website_stats
 from starlib.database import (
     APIType,
     NotifyChannelType,
@@ -32,6 +32,14 @@ voice_times: dict[int, dict[int, timedelta]] = {}
 
 def _is_older_than_one_day(created_at: datetime) -> bool:
     return utils.nowtz() - created_at > timedelta(days=1)
+
+
+async def settle_website_link_rate():
+    """結算已結束的週的析域帳號連結狀態；auth server 不可用時留待下一小時。"""
+    try:
+        await website_stats.settle_weeks()
+    except Exception:
+        log.exception("settle_website_link_rate failed")
 
 
 class task(Cog_Extension):
@@ -62,6 +70,7 @@ class task(Cog_Extension):
             scheduler.add_job(refresh_ip_last_seen_nmap, "cron", minute="0/15", second=0, jitter=60, misfire_grace_time=90)
             scheduler.add_job(self.save_voice_time, "cron", hour="0/1", minute="0/30", second=0, jitter=60, misfire_grace_time=90)
             scheduler.add_job(refresh_db_cache, "cron", hour="0/2", minute=0, second=0, jitter=60, misfire_grace_time=90)
+            scheduler.add_job(settle_website_link_rate, "cron", minute=5, second=0, jitter=60, misfire_grace_time=300, max_instances=1)
 
             # 統計任務 - 保留 misfire_grace_time + max_instances
             scheduler.add_job(self.add_voice_time, "cron", minute="*/1", second=30, misfire_grace_time=20, max_instances=1)

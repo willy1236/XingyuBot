@@ -7,6 +7,7 @@ Discord 登入的 session 只跟著帳號升級或降級；析域登入的 sessi
 
 import asyncio
 import dataclasses
+import logging
 import secrets
 import time
 from dataclasses import dataclass
@@ -16,7 +17,7 @@ from uuid import UUID
 from fastapi.requests import Request
 from sqlalchemy import delete, update
 
-from starlib import sqldb
+from starlib import sqldb, website_stats
 from starlib.database import DashboardSession
 from starlib.identity import Account, DirectoryUnavailable
 from starlib.identity.resolver import get_directory
@@ -24,6 +25,8 @@ from starlib.utils import nowtz
 
 from .db import run_db
 from .errors import DashboardError
+
+log = logging.getLogger(__name__)
 
 SESSION_COOKIE = "dashboard_session"
 SESSION_TTL = timedelta(days=30)
@@ -295,10 +298,22 @@ async def require_session(request: Request) -> SessionInfo:
         raise DashboardError(401, "session_expired")
     request.state.dashboard_renew_session = info.session_id
     try:
-        return await follow_account(info)
+        info = await follow_account(info)
     except DashboardError:
         request.state.dashboard_clear_cookie = True
         raise
+    await _record_activity(int(info.discord_user_id))
+    return info
+
+
+async def _record_activity(discord_id: int) -> None:
+    """記下這個 Discord 本週有使用網站（T-10 連結率統計）；記錄失敗不影響請求。"""
+    if not website_stats.needs_recording(discord_id):
+        return
+    try:
+        await run_db(lambda: website_stats.record_activity(discord_id))
+    except Exception:
+        log.exception("record website activity failed")
 
 
 async def session_cookie_middleware(request: Request, call_next):

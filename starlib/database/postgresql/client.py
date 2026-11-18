@@ -2586,6 +2586,57 @@ class MusicPlaylistRepository(BaseRepository):
             self.commit()
 
 
+class WebsiteStatsRepository(BaseRepository):
+    """網站個人區的每週使用與連結入口點擊統計（T-10）"""
+
+    def record_website_activity(self, week_start: date, discord_id: int) -> None:
+        """記下這個 Discord 本週有使用網站；已記錄過則不動（linked 維持原值）。"""
+        stmt = pg_insert(WebsiteWeeklyActivity).values(week_start=week_start, discord_id=discord_id).on_conflict_do_nothing()
+        self.session.exec(stmt)
+        self.commit()
+
+    def add_website_link_click(self, week_start: date) -> None:
+        stmt = pg_insert(WebsiteLinkClick).values(week_start=week_start, count=1)
+        stmt = stmt.on_conflict_do_update(index_elements=[WebsiteLinkClick.week_start], set_={"count": WebsiteLinkClick.count + 1})
+        self.session.exec(stmt)
+        self.commit()
+
+    def get_unsettled_website_activity(self, before: date) -> list[tuple[date, int]]:
+        """已結束（week_start 早於 before）而 linked 仍為 null 的列。"""
+        stmt = (
+            select(WebsiteWeeklyActivity.week_start, WebsiteWeeklyActivity.discord_id)
+            .where(WebsiteWeeklyActivity.week_start < before, WebsiteWeeklyActivity.linked.is_(None))  # pyright: ignore[reportOptionalMemberAccess]
+            .order_by(WebsiteWeeklyActivity.week_start, WebsiteWeeklyActivity.discord_id)
+        )
+        return [(row[0], row[1]) for row in self.session.exec(stmt).all()]
+
+    def set_website_activity_linked(self, week_start: date, discord_id: int, linked: bool) -> None:
+        stmt = (
+            update(WebsiteWeeklyActivity)
+            .where(WebsiteWeeklyActivity.week_start == week_start, WebsiteWeeklyActivity.discord_id == discord_id)  # pyright: ignore[reportArgumentType]
+            .values(linked=linked)
+        )
+        self.session.exec(stmt)
+        self.commit()
+
+    def get_website_weekly_stats(self, since: date) -> list[tuple[date, int, int, int, int]]:
+        """week_start 不早於 since 的每週統計，新到舊：(week_start, 使用帳號數, 已連結數, 尚未計算數, 點擊次數)。"""
+        activity = (
+            select(
+                WebsiteWeeklyActivity.week_start,
+                func.count().label("total"),
+                func.count().filter(WebsiteWeeklyActivity.linked.is_(True)).label("linked"),  # pyright: ignore[reportOptionalMemberAccess]
+                func.count().filter(WebsiteWeeklyActivity.linked.is_(None)).label("pending"),  # pyright: ignore[reportOptionalMemberAccess]
+            )
+            .where(WebsiteWeeklyActivity.week_start >= since)
+            .group_by(WebsiteWeeklyActivity.week_start)
+        )
+        weeks: dict[date, list[int]] = {row[0]: [row[1], row[2], row[3], 0] for row in self.session.exec(activity).all()}
+        for row in self.session.exec(select(WebsiteLinkClick.week_start, WebsiteLinkClick.count).where(WebsiteLinkClick.week_start >= since)).all():
+            weeks.setdefault(row[0], [0, 0, 0, 0])[3] = row[1]
+        return [(week, *values) for week, values in sorted(weeks.items(), reverse=True)]  # pyright: ignore[reportReturnType]
+
+
 class RuntimeConfigRepository(BaseRepository):
     @staticmethod
     def _get_bot_runtime_config_id(bot_code: str | int) -> int:
@@ -2726,6 +2777,7 @@ class SQLRepository(
     VIPRepository,
     GuildSettingRepository,
     MusicPlaylistRepository,
+    WebsiteStatsRepository,
     RuntimeConfigRepository,
     TestRepository,
 ):
