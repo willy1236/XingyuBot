@@ -22,6 +22,8 @@ CHANNEL_ID = 500
 MESSAGE_ID = 900
 CREATOR = 7001
 
+REAL_GENERATE_CHART = PollView.generate_chart
+
 
 @pytest.fixture(autouse=True)
 def fake_chart(monkeypatch):
@@ -130,8 +132,31 @@ class TestFinish:
         assert row.message_failure is None
         [edit] = message.edits
         assert "甲： 2票" in edit["embed"].description
-        assert edit["file"].filename == "pie.png"
+        assert [f.filename for f in edit["files"]] == ["pie.png"]
         assert len(edit["view"].children) == 0
+
+    def test_no_votes_ends_without_chart(self, repo, monkeypatch):  # noqa: F811
+        """沒有人投票：matplotlib 對全 0 的資料會丟 ValueError，結算要照常完成、不附圖"""
+        monkeypatch.setattr(PollView, "generate_chart", REAL_GENERATE_CHART)
+        message = FakeMessage()
+        poll = add_poll(repo, votes=False)
+        (outcome,) = run_finish(repo, poll, FakeBot(FakeChannel(message)))
+        assert (outcome.status, outcome.message_failure) == ("ok", None)
+        [edit] = message.edits
+        assert edit["files"] == []
+        assert "甲： 0票" in edit["embed"].description
+
+    def test_unexpected_publish_error_is_recorded_as_failed(self, repo, monkeypatch):  # noqa: F811
+        def boom(self, labels, sizes):
+            raise ValueError("chart broke")
+
+        monkeypatch.setattr(PollView, "generate_chart", boom)
+        poll = add_poll(repo)
+        (outcome,) = run_finish(repo, poll, FakeBot(FakeChannel(FakeMessage())))
+        assert (outcome.status, outcome.message_failure) == ("ok", "failed")
+        row = stored(repo, poll.poll_id)
+        assert row.end_at is not None
+        assert row.message_failure == "failed"
 
     def test_unknown_channel_records_message_unknown(self, repo):  # noqa: F811
         poll = add_poll(repo, channel_id=None)

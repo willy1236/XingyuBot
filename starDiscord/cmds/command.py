@@ -506,7 +506,10 @@ class command(Cog_Extension):
 
         view = PollView(poll, sclient.sqldb, self.bot)
         embed, image_buffer = view.results_embed(ctx.guild, True, show_name=show_name if is_owner else None)  # type: ignore
-        await ctx.respond(embed=embed, file=discord.File(image_buffer, filename="pie.png"))
+        if image_buffer:
+            await ctx.respond(embed=embed, file=discord.File(image_buffer, filename="pie.png"))
+        else:
+            await ctx.respond(embed=embed)
 
     @commands.slash_command(description="共用「94共用啦」雲端資料夾", guild_ids=drive_share_guilds)
     @with_identity()
