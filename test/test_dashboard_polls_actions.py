@@ -160,6 +160,29 @@ class TestEnd:
         assert end(acl, other.poll_id).status_code == 404
         assert end(acl, 999999).json() == {"error": "poll_not_found"}
 
+    def test_deleted_while_ending_is_404(self, acl, monkeypatch):
+        """結算更新訊息時投票被刪掉：回 404 poll_not_found，不是 500"""
+        from sqlalchemy.orm.exc import StaleDataError
+
+        poll = add_poll(acl)
+        as_creator(acl, poll)
+        real_merge = acl.repo.merge
+
+        def merge(obj):
+            if acl.repo.get_poll(obj.poll_id) is None:
+                raise StaleDataError("UPDATE matched 0 rows")
+            return real_merge(obj)
+
+        async def edit(**kwargs):
+            acl.repo.delete_poll(poll.poll_id)
+            raise http_error(discord.NotFound, 404)
+
+        acl.message.edit = edit
+        monkeypatch.setattr(acl.repo, "merge", merge)
+        r = end(acl, poll.poll_id)
+        assert r.status_code == 404
+        assert r.json() == {"error": "poll_not_found"}
+
     def test_requires_manage_messages(self, acl):
         acl.discord_env.guilds = []
         poll = add_poll(acl)
