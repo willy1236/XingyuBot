@@ -255,7 +255,15 @@
 
 **風險 / 實作注意**：`create_and_send` 由 V-00 提供，這張卡不改它；需要調整的話回 V-00 的介面討論。
 
-**進度**：未完成
+**進度**：後端與 bot 部分完成（2026-11-18）；前端由另一位 worker 負責
+- commit：後端 `starServer/dashboard/polls_create.py` 與 `test/test_dashboard_polls_create.py`（本進度欄隨該 commit 提交）
+- 決定：
+  - 星羽與操作者的發言檢查只看 view_channel + send_messages，缺 read_message_history 仍可建立。
+  - bot 缺發言權限 → 400 `bot_missing_permission`；操作者缺權限、欄位或頻道／身分組不合 → 400 `invalid_request`，全部欄位錯誤彙整在同一個 fields。
+  - 發送失敗 → 400 `poll_send_failed`，附 `message_failure`、`message_failure_text`。
+  - fields 的 path 轉成表單命名：`options.N`、`role_weights.N.weight`；身分組不存在、是 @everyone 或 managed、重複設定權重時 path 為 `only_roles`、`role_weights`。
+  - POST 的 id 欄位（channel_id、only_roles、role_id）接受數字或數字字串；回應的 Discord ID 一律字串，`poll_id` 是數字。
+- 未驗：待人工驗證——Discord 實機從後台發起後的訊息、發起人按「結算投票」、討論串以外頻道的實際發言權限判斷。
 
 ### V-04 投票可以設截止時間並自動結算
 
