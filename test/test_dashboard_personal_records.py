@@ -42,8 +42,12 @@ NOW = nowtz().replace(microsecond=0)
 
 
 class FakeBot:
-    def __init__(self):
+    def __init__(self, ready: bool = True):
+        self.ready = ready
         self._pool = ThreadPoolExecutor(max_workers=1)
+
+    def is_ready(self):
+        return self.ready
 
     def get_guild(self, gid: int):
         return SimpleNamespace(name="快樂營") if gid == HERE else None
@@ -191,15 +195,33 @@ class TestPolls:
 
 
 class TestBets:
-    def test_fields(self, client, repo):  # noqa: F811
-        repo.session.add(Bet(bet_id=50, title="誰會贏", blue_title="藍隊", pink_title="粉隊", is_on=False, created_at=NOW))
-        repo.session.add(UserBet(bet_id=50, discord_id=OWN, bet_option=2, bet_amount=30, bet_at=NOW))
-        repo.session.add(UserBet(bet_id=50, discord_id=OTHER, bet_option=1, bet_amount=5, bet_at=NOW))
+    def test_fields_via_place_bet(self, client, repo):  # noqa: F811
+        repo.session.add(Bet(bet_id=50, title="誰會贏", blue_title="藍隊", pink_title="粉隊", is_on=True, created_at=NOW))
         repo.session.commit()
-        assert get(client, "bets").json() == {
-            "items": [{"id": 50, "title": "誰會贏", "option": "粉隊", "amount": 30, "at": NOW.isoformat()}],
-            "total": 1,
+        repo.place_bet(50, OWN, 2, 30)
+        repo.place_bet(50, OTHER, 1, 5)
+        item = get(client, "bets").json()["items"][0]
+        assert get(client, "bets").json()["total"] == 1
+        assert {k: item[k] for k in ("id", "title", "option", "amount")} == {
+            "id": 50,
+            "title": "誰會贏",
+            "option": "粉隊",
+            "amount": 30,
         }
+        assert item["at"] is not None
+
+    def test_null_time_sorted_last(self, client, repo):  # noqa: F811
+        repo.session.add_all(
+            [
+                Bet(bet_id=50, title="舊", blue_title="藍", pink_title="粉", is_on=False, created_at=NOW),
+                Bet(bet_id=51, title="新", blue_title="藍", pink_title="粉", is_on=False, created_at=NOW),
+                UserBet(bet_id=50, discord_id=OWN, bet_option=1, bet_amount=1, bet_at=None),
+                UserBet(bet_id=51, discord_id=OWN, bet_option=1, bet_amount=1, bet_at=NOW),
+            ]
+        )
+        repo.session.commit()
+        items = get(client, "bets").json()["items"]
+        assert [(i["title"], i["at"]) for i in items] == [("新", NOW.isoformat()), ("舊", None)]
 
 
 class TestGiveaways:
@@ -226,3 +248,25 @@ class TestGiveaways:
             ("獎B", "lost", "快樂營"),
             ("獎A", "won", "快樂營"),
         ]
+
+    def test_deleted_giveaway(self, client, repo):  # noqa: F811
+        repo.session.add(GiveawayUser(giveaway_id=9999, user_id=OWN, user_weight=1, join_at=NOW, is_winner=False))
+        repo.session.commit()
+        item = get(client, "giveaways").json()["items"][0]
+        assert (item["result"], item["prize"], item["guild_name"]) == ("deleted", None, None)
+
+
+class TestBotNotReady:
+    def test_no_records_needs_no_names(self, client, monkeypatch):
+        monkeypatch.setattr(sclient, "bot", FakeBot(ready=False))
+        res = get(client, "voice")
+        assert res.status_code == 200  # 沒有任何紀錄時不需要伺服器名稱
+        res = get(client, "warnings")
+        assert res.status_code == 200
+
+    def test_with_records_503(self, client, repo, monkeypatch):  # noqa: F811
+        repo.session.add(VoiceTime(discord_id=OWN, guild_id=HERE, total_minute=timedelta(minutes=1)))
+        repo.session.commit()
+        monkeypatch.setattr(sclient, "bot", FakeBot(ready=False))
+        res = get(client, "voice")
+        assert (res.status_code, res.json()) == (503, {"error": "bot_unavailable"})
