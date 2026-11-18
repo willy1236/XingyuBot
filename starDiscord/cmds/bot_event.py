@@ -19,6 +19,9 @@ from ..uiElement.view import PollView, ReactionRoleView, TicketLobbyView
 
 log = logging.getLogger(__name__)
 
+#: 保留背景 task 的參照，避免執行中被回收
+_background_tasks: set[asyncio.Task] = set()
+
 keywords = {}
 
 ai_access_guilds: list[int] = happycamp_guild + debug_guilds
@@ -119,15 +122,17 @@ class event(Cog_Extension):
 
         # 投票介面
         polls = sclient.sqldb.get_active_polls()
-        days_poll_period = timedelta(days=28)
+        days_poll_period = timedelta(days=30)
         for poll in polls:
+            view = PollView(poll, sqldb=sclient.sqldb, bot=bot)
             if now - poll.created_at > days_poll_period:
-                # 將超過28天的投票自動關閉
-                poll.end_at = now
-                sclient.sqldb.merge(poll)
-                log.debug("Ended poll", extra={"poll_id": poll.poll_id})
+                # 將超過30天的投票結算並更新訊息
+                task = asyncio.create_task(view.finish())
+                _background_tasks.add(task)
+                task.add_done_callback(_background_tasks.discard)
+                log.debug("Ending poll", extra={"poll_id": poll.poll_id})
             else:
-                bot.add_view(PollView(poll, sqldb=sclient.sqldb, bot=bot), message_id=poll.message_id)
+                bot.add_view(view, message_id=poll.message_id)
                 log.debug("Loaded poll", extra={"poll_id": poll.poll_id})
 
         # 反應身分組

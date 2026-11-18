@@ -119,7 +119,7 @@
 - 前端：`lib/dashboard-sections.ts` 的 `SectionKey` 加 `"polls"`。`NAV_ITEMS` 在抽獎後面插入 `{ key: "polls", label: "投票", path: "/polls", ready: false }`，並同步更新 `lib/dashboard-sections.test.ts` 裡斷言 key 清單的測試。
 - 介面：
   - `starlib/polls.py`：`PollResults.load(sqldb, poll) -> PollResults`，含 `options: list[{option_id, name, count}]`、`voter_count: int`、`votes: list[{user_id, option_id, weight, voted_at}]`；`viewer_role`、`visibility`、`can_manage`、`validate_poll_input`，錯誤格式為 `[{"path", "reason"}]`，與 `reaction_roles._field` 相同。
-  - `view.py`：`PollView.finish(edit=None) -> PollOutcome(status: "ok" | "already_ended" | "not_found", message_failure: str | None)`；`PollView.create_and_send(send: Callable[[discord.Embed, PollView], Awaitable[discord.Message]], channel_id: int, *, creator_id: int, guild_id: int, title: str, options: list[str], show_name: bool, check_results_in_advance: bool, results_only_initiator: bool, number_of_user_votes: int, ban_alternate_account_voting: bool, only_roles: list[int], role_weights: dict[int, int], deadline: datetime | None = None) -> Poll`。`can_change_vote` 一律存 None，與現行指令相同，兩種來源的訊息外觀一致。驗證不在這裡做，呼叫端先跑 `validate_poll_input`。失敗時丟 `PollSendError(code)`，code 為 `channel_missing`、`no_permission`、`failed`；`PollView.missing_permissions(channel, perms) -> list[str]`；`MESSAGE_FAILURE_TEXT: dict[str, str]`，原因代碼對應的中文。
+  - `view.py`：`PollView.finish(edit=None) -> PollOutcome(status: "ok" | "already_ended" | "not_found", message_failure: str | None)`；`PollView.create_and_send(send: Callable[[discord.Embed, PollView], Awaitable[discord.Message]], channel_id: int, *, bot: DiscordBot, creator_id: int, guild_id: int, title: str, options: list[str], show_name: bool, check_results_in_advance: bool, results_only_initiator: bool, number_of_user_votes: int, ban_alternate_account_voting: bool, only_roles: list[int], role_weights: dict[int, int], deadline: datetime | None = None) -> Poll`。建立 view 與取得伺服器都需要 `bot`，所以加上 keyword 參數 `bot`。`can_change_vote` 一律存 None，與現行指令相同，兩種來源的訊息外觀一致。驗證不在這裡做，呼叫端先跑 `validate_poll_input`。失敗時丟 `PollSendError(code)`，code 為 `channel_missing`、`no_permission`、`failed`；`PollView.missing_permissions(channel, perms) -> list[str]`；`MESSAGE_FAILURE_TEXT: dict[str, str]`，原因代碼對應的中文。
   - 呼叫順序：結算一律經 `finish`，不直接改 `end_at`。`finish` 必須在 bot loop 上執行。
 
 **依賴**：無
@@ -131,8 +131,8 @@
 
 **進度**：進行中
 - 狀態：進行中
-- 已完成：資料欄位與 repository、`starlib/polls.py` 與單元測試、`Section.POLLS`。
-- 續做：`view.py`（`finish`／`publish`／`create_and_send`）、`command.py`、`bot_event.py`。
+- 已完成：資料欄位與 repository、`starlib/polls.py` 與單元測試、`Section.POLLS`（commit 63554b3）；`view.py`（`finish`／`publish`／`create_and_send`）、`command.py`、`bot_event.py`。
+- 續做：DB 測試（待本機 dev DB 執行 ALTER 後驗證）。
 
 ### V-01 管理員能看投票清單與詳細頁
 
