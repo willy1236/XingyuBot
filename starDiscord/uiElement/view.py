@@ -15,6 +15,7 @@ import numpy as np
 from apscheduler.jobstores.base import JobLookupError
 from apscheduler.triggers.date import DateTrigger
 from discord.utils import format_dt
+from sqlalchemy.orm.exc import StaleDataError
 
 from starlib import BotEmbed, Jsondb, sqldb
 from starlib.database import (
@@ -379,7 +380,11 @@ class PollView(discord.ui.View):
             failure = await self.publish(edit)
             if failure != self.poll.message_failure:
                 self.poll.message_failure = failure
-                self.poll = self.sqldb.merge(self.poll)
+                try:
+                    self.poll = self.sqldb.merge(self.poll)
+                except StaleDataError:
+                    # 更新訊息期間投票被後台刪掉（刪除不取 poll_lock）：資料已不在，與一開始就不存在同樣處理
+                    return PollOutcome("not_found")
             return PollOutcome("ok", failure)
 
     async def publish(self, edit: Callable[..., Awaitable] | None = None) -> str | None:

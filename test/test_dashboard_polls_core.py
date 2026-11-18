@@ -224,6 +224,30 @@ class TestFinish:
         assert outcome.status == "not_found"
 
 
+class TestDeletedDuringFinish:
+    """更新訊息期間投票被後台刪掉：第二次寫入 0 rows matched，視為 not_found，不丟 StaleDataError"""
+
+    def test_stale_second_write_is_not_found(self, repo, monkeypatch):  # noqa: F811
+        from sqlalchemy.orm.exc import StaleDataError
+
+        poll = add_poll(repo)
+        real_merge = repo.merge
+
+        def merge(obj):
+            if repo.get_poll(obj.poll_id) is None:
+                raise StaleDataError("UPDATE matched 0 rows")
+            return real_merge(obj)
+
+        async def edit(**kwargs):
+            repo.delete_poll(poll.poll_id)
+            raise http_error(discord.NotFound, 404)
+
+        monkeypatch.setattr(repo, "merge", merge)
+        (outcome,) = run_finish(repo, poll, FakeBot(None), edit=edit)
+        assert outcome.status == "not_found"
+        assert stored(repo, poll.poll_id) is None
+
+
 class TestDeletePoll:
     def test_removes_all_related_rows_only_for_that_poll(self, repo):  # noqa: F811
         poll = add_poll(repo)
