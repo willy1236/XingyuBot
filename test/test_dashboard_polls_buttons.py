@@ -107,3 +107,17 @@ def test_reply_poll_gone_without_message():
     interaction.message = None
     asyncio.run(reply_poll_gone(interaction))  # type: ignore[arg-type]
     assert interaction.sent == [(POLL_GONE_TEXT, True)]
+
+
+def test_embed_author_without_custom_avatar(repo):  # noqa: F811
+    """發起人沒有自訂頭像（avatar 為 None）時，embed 改用預設頭像，不會 AttributeError"""
+    poll = add_poll(repo)
+    member = SimpleNamespace(name="發起人", avatar=None, display_avatar=SimpleNamespace(url="https://cdn/default.png"))
+    guild = SimpleNamespace(get_member=lambda uid: member, get_role=lambda rid: None)
+
+    async def go():
+        return PollView(poll, repo, FakeBot(None)).embed(guild)  # type: ignore[arg-type]
+
+    embed = asyncio.run(go())
+    assert embed.author.name == "發起人"
+    assert embed.author.icon_url == "https://cdn/default.png"

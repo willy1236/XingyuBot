@@ -473,7 +473,7 @@ class PollView(discord.ui.View):
 
         author = guild.get_member(self.poll.creator_id)
         if author:
-            embed.set_author(name=author.name, icon_url=author.avatar.url)
+            embed.set_author(name=author.name, icon_url=author.display_avatar.url)
         return embed
 
     def results_embed(self, guild: discord.Guild | None, with_chart=False, show_name: bool | None = None) -> tuple[discord.Embed, io.BytesIO] | discord.Embed:
