@@ -56,7 +56,10 @@ class PollResults:
         totals: dict[int, int] = {}
         for vote in votes:
             totals[vote.option_id] = totals.get(vote.option_id, 0) + vote.weight
-        options = [OptionCount(o.option_id, o.option_name, totals.get(o.option_id, 0)) for o in sorted(sqldb.get_poll_options(poll.poll_id), key=lambda o: o.option_id)]
+        options = [
+            OptionCount(o.option_id, o.option_name, totals.get(o.option_id, 0))
+            for o in sorted(sqldb.get_poll_options(poll.poll_id), key=lambda o: o.option_id)
+        ]
         return cls(options=options, voter_count=len({v.user_id for v in votes}), votes=votes)
 
 

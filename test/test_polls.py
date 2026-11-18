@@ -39,7 +39,9 @@ class TestVisibility:
         assert results_mode(p) == "after_end"
         assert visibility(p, "creator") == (False, False)
 
-    @pytest.mark.parametrize("p", [poll(check=False), poll(only_initiator=True), poll(check=False, only_initiator=True)])
+    @pytest.mark.parametrize(
+        "p", [poll(check=False), poll(only_initiator=True), poll(check=False, only_initiator=True)]
+    )
     def test_ended_shows_everyone(self, p):
         p.end_at = NOW
         assert visibility(p, "member") == (True, True)
@@ -72,7 +74,14 @@ class TestViewerRole:
 
 
 def valid(**overrides):
-    args = {"title": "標題", "options": ["甲", "乙"], "number_of_user_votes": 1, "role_weights": {}, "deadline": None, "now": NOW}
+    args = {
+        "title": "標題",
+        "options": ["甲", "乙"],
+        "number_of_user_votes": 1,
+        "role_weights": {},
+        "deadline": None,
+        "now": NOW,
+    }
     args.update(overrides)
     return validate_poll_input(**args)
 

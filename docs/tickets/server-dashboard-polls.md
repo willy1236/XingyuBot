@@ -51,7 +51,7 @@
 | # | 卡號 | 進度 | 標題 | 依賴 | 並行組 | 備註 |
 |---|---|---|---|---|---|---|
 | 1 | V-00 | 進行中 | [共用] 投票核心：資料欄位、結果與可見範圍、結算、建立 | 無 | — | 其餘卡都依賴 |
-| 2 | V-01 | 未完成 | 管理員能看投票清單與詳細頁 | V-00 | — | 骨架切片 |
+| 2 | V-01 | 進行中 | 管理員能看投票清單與詳細頁 | V-00 | — | 骨架切片 |
 | 3 | V-02 | 未完成 | 發起人能從後台結算與刪除投票 | V-01 | A | |
 | 4 | V-03 | 未完成 | 管理員能從後台發起投票 | V-01 | A | |
 | 5 | V-05 | 未完成 | 管理員能匯出投票結果 | V-01 | A | |
@@ -131,8 +131,8 @@
 
 **進度**：進行中
 - 狀態：進行中
-- 已完成：資料欄位與 repository、`starlib/polls.py` 與單元測試、`Section.POLLS`（commit 63554b3）；`view.py`（`finish`／`publish`／`create_and_send`）、`command.py`、`bot_event.py`。
-- 續做：DB 測試（待本機 dev DB 執行 ALTER 後驗證）。
+- 已完成：資料欄位與 repository、`starlib/polls.py` 與單元測試、`Section.POLLS`（commit 63554b3）；`view.py`（`finish`／`publish`／`create_and_send`）、`command.py`、`bot_event.py`（commit dd79b8d）；DB 測試 `test/test_dashboard_polls_core.py` 已寫好。
+- 續做：本機 dev DB 還沒執行卡上的 ALTER，DB 測試尚未驗證。
 
 ### V-01 管理員能看投票清單與詳細頁
 
@@ -175,7 +175,9 @@
 
 **依賴**：V-00（欄位、`PollResults`、可見範圍、Section）
 
-**進度**：未完成
+**進度**：進行中
+- 狀態：後端完成（`starServer/dashboard/polls.py`、`test/test_dashboard_polls.py`），前端由另一位 worker 負責。
+- 續做：本機 dev DB 還沒執行 ALTER，DB 測試尚未驗證。
 
 ### V-02 發起人能從後台結算與刪除投票
 
