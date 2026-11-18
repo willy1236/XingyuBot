@@ -10,6 +10,7 @@ from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
+from googleapiclient.errors import HttpError
 from test_dashboard_auth import FRONTEND, USER_ID, dashboard_env, make_app, make_session  # noqa: F401
 from test_dashboard_domalyze_login import OTHER_ID, account
 from test_dashboard_personal import directory, identity  # noqa: F401
@@ -61,6 +62,7 @@ class FakeGoogle:
 
     fail_add = False
     fail_remove_ids: set[str] = set()
+    gone_ids: set[str] = set()
     permissions: dict[str, str] = {}  # permission id -> email
     calls: list[tuple] = []
     threads: set[str] = set()
@@ -68,8 +70,9 @@ class FakeGoogle:
 
     @classmethod
     def reset(cls):
-        cls.fail_add, cls.fail_remove_ids, cls.permissions, cls.calls, cls.threads, cls.counter = (
+        cls.fail_add, cls.fail_remove_ids, cls.gone_ids, cls.permissions, cls.calls, cls.threads, cls.counter = (
             False,
+            set(),
             set(),
             {},
             [],
@@ -90,6 +93,8 @@ class FakeGoogle:
     def remove_file_permissions(self, file_id, permission_id):
         type(self).calls.append(("remove", permission_id))
         type(self).threads.add(threading.current_thread().name)
+        if permission_id in self.gone_ids:
+            raise HttpError(SimpleNamespace(status=404, reason="Not Found"), b"{}")
         if permission_id in self.fail_remove_ids:
             raise RuntimeError("google down")
         type(self).permissions.pop(permission_id, None)
@@ -245,6 +250,34 @@ class TestSet:
 
     def test_requires_origin(self, client, acc):
         assert client.put("/dashboard/personal/drive", json={"gmail": "abc"}).status_code == 400
+
+
+class TestDbFailure:
+    def test_db_error_after_google_is_not_reported_as_drive_failed(self, client, acc, repo, google, monkeypatch):  # noqa: F811
+        def boom(*a, **k):
+            raise RuntimeError("db down")
+
+        monkeypatch.setattr(drive_share.sqldb, "merge", boom)
+        client_no_raise = TestClient(client.app, base_url="https://testserver", raise_server_exceptions=False)
+        client_no_raise.cookies.set("dashboard_session", "sid")
+        res = client_no_raise.put("/dashboard/personal/drive", json={"gmail": "abc"}, headers=HEADERS)
+        assert res.status_code == 500 and res.json().get("error") != "drive_failed"
+        assert google.calls == [("add", "abc@gmail.com")]
+
+
+class TestGoneOnGoogle:
+    def test_replace_when_old_already_removed(self, client, acc, repo, google):  # noqa: F811
+        share(repo, acc)
+        google.gone_ids = {"old-id"}
+        assert put(client, "new").json()["gmail"] == "new@gmail.com"
+        assert google.permissions == {"p1": "new@gmail.com"}
+
+    def test_remove_when_already_removed(self, client, acc, repo, google):  # noqa: F811
+        share(repo, acc)
+        google.gone_ids = {"old-id"}
+        assert client.delete("/dashboard/personal/drive", headers=HEADERS).json()["gmail"] is None
+        repo.session.expire_all()
+        assert repo.get_drive_share(acc) is None
 
 
 class TestRemove:

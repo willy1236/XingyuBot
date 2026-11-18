@@ -58,6 +58,15 @@ async def _require_eligible(scope: PersonalScope) -> None:
         raise DashboardError(403, "not_eligible")
 
 
+async def _save(write):
+    """Google 已變更後的 DB 寫入；失敗時照一般錯誤處理（500），但記下 Google 端與 DB 已不一致。"""
+    try:
+        await run_db(write)
+    except Exception:
+        log.exception("Drive share changed on Google but DB write failed")
+        raise
+
+
 @router.get("/personal/drive")
 async def get_drive(scope: PersonalScope = Depends(require_personal())):
     if not await _eligible(scope):
@@ -77,14 +86,14 @@ async def put_drive(body: DriveBody, scope: PersonalScope = Depends(require_pers
     if gmail is None:
         raise DashboardError(400, "invalid_gmail")
     user_id = scope.tool_user_id
+    plan = await run_db(lambda: plan_share(user_id))
+    # Google 的 HTTP 在 DB executor 外執行，全部成功後才寫入
     try:
-        plan = await run_db(lambda: plan_share(user_id))
-        # Google 的 HTTP 在 DB executor 外執行，全部成功後才寫入
         share_id = await asyncio.to_thread(request_share, plan, gmail)
-        await run_db(lambda: save_share(user_id, gmail, share_id))
     except Exception:
         log.exception("Drive share failed")
         raise DashboardError(502, "drive_failed") from None
+    await _save(lambda: save_share(user_id, gmail, share_id))
     return await _state(scope)
 
 
@@ -92,12 +101,12 @@ async def put_drive(body: DriveBody, scope: PersonalScope = Depends(require_pers
 async def delete_drive(scope: PersonalScope = Depends(require_personal(write=True))):
     await _require_eligible(scope)
     user_id = scope.tool_user_id
+    plan = await run_db(lambda: plan_share(user_id))
     try:
-        plan = await run_db(lambda: plan_share(user_id))
         await asyncio.to_thread(request_remove, plan)
-        if plan.old_share_id is not None:
-            await run_db(lambda: sqldb.remove_drive_share(user_id))
     except Exception:
         log.exception("Drive unshare failed")
         raise DashboardError(502, "drive_failed") from None
+    if plan.old_share_id is not None:
+        await _save(lambda: sqldb.remove_drive_share(user_id))
     return await _state(scope)
