@@ -77,6 +77,20 @@ class DriveShare(UsersSchema, table=True):
     share_id: str = Field(sa_column=Column(String, nullable=False))
 
 
+#: 公開頁可勾選的區塊，順序即顯示順序
+PUBLIC_PROFILE_SECTIONS = ("points", "pets", "voice", "participation", "playlists", "discord_names")
+
+
+class PublicProfile(UsersSchema, table=True):
+    """域民公開頁的設定，一人一筆；沒有紀錄等同未開啟"""
+
+    __tablename__ = "public_profile"
+
+    user_id: UUID = Field(sa_column=Column(PG_UUID(as_uuid=True), primary_key=True))
+    enabled: bool = Field(sa_column=Column(Boolean, nullable=False, server_default=text("false")), default=False)
+    sections: list[str] = Field(sa_column=Column(ARRAY(String), nullable=False, server_default=text("'{}'")), default_factory=list)
+
+
 class NetBirdBinding(UsersSchema, table=True):
     __tablename__ = "netbird_binding"
 
