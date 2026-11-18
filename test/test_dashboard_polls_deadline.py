@@ -18,6 +18,7 @@ from test_dashboard_polls_core import (  # noqa: F401
 )
 from test_identity import repo  # noqa: F401
 
+from starDiscord.cmds import bot_event
 from starDiscord.uiElement.view import PollView
 from starlib.utils import nowtz
 
@@ -138,3 +139,63 @@ class TestEmbed:
     def test_embed_without_deadline(self, repo):  # noqa: F811
         view, _ = self.make_view(repo, None)
         assert "截止時間" not in view.embed(FakeBot(None).guild).description  # type: ignore[arg-type]
+
+
+class LoadBot(SchedBot):
+    def __init__(self, channel: FakeChannel | None):
+        super().__init__(channel)
+        self.views: list[PollView] = []
+
+    def add_view(self, view, message_id=None):
+        self.views.append(view)
+
+
+def run_load(repo, bot):  # noqa: F811
+    async def go():
+        bot_event.load_poll_views(bot, repo, nowtz())
+        await asyncio.sleep(0.2)  # 讓 create_task 的結算跑完
+
+    asyncio.run(go())
+
+
+class TestStartupLoad:
+    def test_expired_deadline_is_rescheduled_for_catch_up(self, repo):  # noqa: F811
+        poll = with_deadline(repo, add_poll(repo), timedelta(hours=-3))
+        bot = LoadBot(FakeChannel(FakeMessage()))
+        run_load(repo, bot)
+        assert len(bot.views) == 1
+        run_at = bot.scheduler.jobs[f"poll_end_{poll.poll_id}"]["run_at"]
+        assert run_at > nowtz()
+        assert stored(repo, poll.poll_id).end_at is None
+
+    def test_future_deadline_is_rescheduled_at_deadline(self, repo):  # noqa: F811
+        poll = with_deadline(repo, add_poll(repo), timedelta(hours=3))
+        bot = LoadBot(None)
+        run_load(repo, bot)
+        assert bot.scheduler.jobs[f"poll_end_{poll.poll_id}"]["run_at"] == poll.deadline
+
+    def test_catch_up_job_ends_poll(self, repo):  # noqa: F811
+        message = FakeMessage()
+        poll = with_deadline(repo, add_poll(repo), timedelta(hours=-3))
+        bot = LoadBot(FakeChannel(message))
+        run_load(repo, bot)
+        asyncio.run(bot.scheduler.jobs[f"poll_end_{poll.poll_id}"]["func"]())
+        assert stored(repo, poll.poll_id).end_at is not None
+        assert len(message.edits) == 1
+
+    def test_poll_with_deadline_skips_30_day_rule(self, repo):  # noqa: F811
+        poll = with_deadline(repo, add_poll(repo, created_days_ago=31), timedelta(hours=3))
+        bot = LoadBot(FakeChannel(FakeMessage()))
+        run_load(repo, bot)
+        assert stored(repo, poll.poll_id).end_at is None
+        assert len(bot.views) == 1
+
+    def test_30_day_rule_still_ends_poll_without_deadline(self, repo):  # noqa: F811
+        old = add_poll(repo, created_days_ago=31)
+        recent = add_poll(repo, created_days_ago=29)
+        bot = LoadBot(FakeChannel(FakeMessage()))
+        run_load(repo, bot)
+        assert stored(repo, old.poll_id).end_at is not None
+        assert stored(repo, recent.poll_id).end_at is None
+        assert len(bot.views) == 1
+        assert bot.scheduler.jobs == {}
