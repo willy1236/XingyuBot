@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import asyncio
 from datetime import timedelta
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock
 
+import pytest
 from apscheduler.jobstores.base import JobLookupError
 from test_dashboard_polls_core import (  # noqa: F401
     CHANNEL_ID,
@@ -19,6 +22,7 @@ from test_dashboard_polls_core import (  # noqa: F401
 from test_identity import repo  # noqa: F401
 
 from starDiscord.cmds import bot_event
+from starDiscord.cmds import command as cmd
 from starDiscord.uiElement.view import PollView
 from starlib.utils import nowtz
 
@@ -199,3 +203,62 @@ class TestStartupLoad:
         assert stored(repo, recent.poll_id).end_at is None
         assert len(bot.views) == 1
         assert bot.scheduler.jobs == {}
+
+
+class TestCreateCommand:
+    """`/poll create` 的截止時間選項：解析、驗證、傳給 create_and_send"""
+
+    @pytest.fixture
+    def env(self, monkeypatch):
+        send = AsyncMock()
+        monkeypatch.setattr(cmd.PollView, "create_and_send", send)
+        ctx = MagicMock()
+        ctx.guild.id = GUILD_ID
+        ctx.channel_id = CHANNEL_ID
+        ctx.author.id = 7001
+        ctx.respond = AsyncMock()
+        return SimpleNamespace(ctx=ctx, send=send, cog=cmd.command(MagicMock()))
+
+    def call(self, env, end_time):
+        asyncio.run(
+            env.cog.create_poll.callback(env.cog, env.ctx, "標題", "甲,乙", False, True, False, False, 1, None, None, end_time)
+        )
+
+    def error_text(self, env) -> str:
+        env.send.assert_not_called()
+        [call] = env.ctx.respond.call_args_list
+        assert call.kwargs["ephemeral"] is True
+        return call.args[0]
+
+    def test_duration_is_passed_as_deadline(self, env):
+        before = nowtz()
+        self.call(env, "2m")
+        deadline = env.send.call_args.kwargs["deadline"]
+        assert timedelta(seconds=60) < deadline - before <= timedelta(seconds=121)
+        assert deadline.microsecond == 0
+
+    def test_no_end_time_means_no_deadline(self, env):
+        self.call(env, None)
+        assert env.send.call_args.kwargs["deadline"] is None
+
+    def test_absolute_datetime_is_accepted(self, env):
+        target = (nowtz() + timedelta(days=2)).replace(second=0, microsecond=0)
+        self.call(env, target.strftime("%Y-%m-%d %H:%M"))
+        assert env.send.call_args.kwargs["deadline"] == target
+
+    def test_unparsable_is_rejected(self, env):
+        self.call(env, "亂打一通")
+        assert "無法辨認截止時間" in self.error_text(env)
+
+    @pytest.mark.parametrize("text", ["30s", "59秒"])
+    def test_under_one_minute_is_rejected(self, env, text):
+        self.call(env, text)
+        assert "截止時間至少要在 1 分鐘後" in self.error_text(env)
+
+    def test_past_time_is_rejected(self, env):
+        self.call(env, (nowtz() - timedelta(days=1)).strftime("%Y-%m-%d %H:%M"))
+        assert "截止時間至少要在 1 分鐘後" in self.error_text(env)
+
+    def test_over_30_days_is_rejected(self, env):
+        self.call(env, "31d")
+        assert "截止時間最長為 30 天後" in self.error_text(env)

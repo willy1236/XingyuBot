@@ -309,8 +309,8 @@
 **風險 / 實作注意**：排程只存在記憶體，所以 bot 重啟時一定要重排，job 不能只在建立時排一次。job 的移除放在 `finish` 裡：狀態為 ok 時呼叫 `bot.scheduler.remove_job("poll_end_{id}")`，job 不存在（例如正是 `auto_end` 自己觸發的那次）時忽略 `JobLookupError`。刪除時的移除寫在 V-02。
 
 **進度**：進行中（後端與 bot；前端由另一位 worker 負責）
-- commit：view.py 的 `schedule_end`／`auto_end`／`finish` 移除 job／`embed` 截止時間／`create_and_send` 排程8f4da1e（測試 `test/test_dashboard_polls_deadline.py`）；`bot_event.py` 啟動載入抽成 `load_poll_views`，有 deadline 的重排程、跳過 30 天規則（本 commit）
-- 續做：`/poll create` 截止時間選項、`polls_create.py` 的 deadline
+- commit：view.py 的 `schedule_end`／`auto_end`／`finish` 移除 job／`embed` 截止時間／`create_and_send` 排程 8f4da1e（測試 `test/test_dashboard_polls_deadline.py`）；`bot_event.py` 啟動載入抽成 `load_poll_views`，有 deadline 的重排程、跳過 30 天規則 355c6ed；`/poll create` 的「截止時間」選項（本 commit）
+- 續做：`polls_create.py` 的 deadline
 - 決定：`validate_poll_input` 的 deadline 驗證 V-00 已實作，本卡不改；「不足 1 分鐘」只在指令端判斷（解析結果距現在不到 60 秒就拒收，文案「截止時間至少要在 1 分鐘後」）。`finish` 只在 poll 有 deadline 時才移除 job。
 
 ### V-05 管理員能匯出投票結果

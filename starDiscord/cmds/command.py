@@ -38,6 +38,9 @@ from ..uiElement.view import (
 from .bot_event import check_registration
 
 log = logging.getLogger(__name__)
+
+#: 投票截止時間距現在至少要有的時間，不足的時長（如 30s）拒收
+POLL_MIN_DEADLINE = timedelta(minutes=1)
 bet_option = ChoiceList.set("bet_option")
 position_option = ChoiceList.set("position_option")
 party_option = ChoiceList.set("party_option")
@@ -424,13 +427,26 @@ class command(Cog_Extension):
             description="若提供，擁有身分組的用戶票數將乘指定倍數，取最高，格式為：身分組1,權重,身分組2,權重...，身分組可輸入id、提及、名稱等",
             default=None,
         ),
+        end_time: discord.Option(str, name="截止時間", description="例：2026-11-07 20:00、11/7 晚上8點、明天 20:00、3d、2小時，最長 30 天", required=False, default=None),
     ):
         title = title.strip()
         option_list = [o.strip() for o in options.split(",")]
         only_role_list = await create_only_role_list(only_role, ctx) if only_role else []
         role_magnification_dict = await create_role_magification_dict(role_magnification, ctx) if role_magnification else {}
 
-        errors = validate_poll_input(title, option_list, number_of_user_votes, role_magnification_dict, None, nowtz())
+        now = nowtz()
+        deadline = None
+        if end_time:
+            deadline = parse_datetime(end_time, now)
+            if deadline is None:
+                await ctx.respond("錯誤：無法辨認截止時間，可輸入如 2026-11-07 20:00、11/7 晚上8點、明天 20:00、3d、2小時", ephemeral=True)
+                return
+            if deadline - now < POLL_MIN_DEADLINE:
+                await ctx.respond("錯誤：截止時間至少要在 1 分鐘後", ephemeral=True)
+                return
+            deadline = deadline.replace(microsecond=0)
+
+        errors = validate_poll_input(title, option_list, number_of_user_votes, role_magnification_dict, deadline, now)
         if errors:
             await ctx.respond("錯誤：" + "；".join(e["reason"] for e in errors), ephemeral=True)
             return
@@ -456,6 +472,7 @@ class command(Cog_Extension):
                 ban_alternate_account_voting=ban_alternate_account_voting,
                 only_roles=only_role_list,
                 role_weights=role_magnification_dict,
+                deadline=deadline,
             )
         except PollSendError as e:
             await ctx.respond(f"錯誤：投票沒有建立，{MESSAGE_FAILURE_TEXT.get(e.code, e.code)}", ephemeral=True)
