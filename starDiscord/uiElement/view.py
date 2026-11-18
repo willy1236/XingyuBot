@@ -361,7 +361,8 @@ class PollView(discord.ui.View):
         if self.poll.deadline is None:
             return
         run_at = max(self.poll.deadline, nowtz() + timedelta(seconds=10))
-        self.bot.scheduler.add_job(self.auto_end, DateTrigger(run_at), id=self._job_id, replace_existing=True)
+        # misfire_grace_time=None：event loop 被阻塞（如繪製圓餅圖）而晚執行時照樣執行，預設 1 秒會讓 job 被跳過、投票停在進行中；finish 在鎖內重讀，晚執行沒有副作用
+        self.bot.scheduler.add_job(self.auto_end, DateTrigger(run_at), id=self._job_id, replace_existing=True, misfire_grace_time=None)
 
     async def auto_end(self):
         """排程到期的結算；沒有人看回傳值，結算沒完成要留紀錄"""

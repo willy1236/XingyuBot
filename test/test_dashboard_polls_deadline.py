@@ -37,8 +37,8 @@ class FakeScheduler:
     def __init__(self):
         self.jobs: dict[str, dict] = {}
 
-    def add_job(self, func, trigger, id, replace_existing=False):
-        self.jobs[id] = {"func": func, "run_at": trigger.run_date}
+    def add_job(self, func, trigger, id, replace_existing=False, **kwargs):
+        self.jobs[id] = {"func": func, "run_at": trigger.run_date, **kwargs}
 
     def remove_job(self, job_id):
         if job_id not in self.jobs:
@@ -72,6 +72,13 @@ class TestSchedule:
         bot = SchedBot(None)
         build(poll, repo, bot).schedule_end()  # type: ignore[arg-type]
         assert bot.scheduler.jobs[f"poll_end_{poll.poll_id}"]["run_at"] == poll.deadline
+
+    def test_job_never_misfires(self, repo):  # noqa: F811
+        """event loop 被阻塞超過 1 秒時 job 不能被 APScheduler 跳過"""
+        poll = with_deadline(repo, add_poll(repo), timedelta(hours=1))
+        bot = SchedBot(None)
+        build(poll, repo, bot).schedule_end()
+        assert bot.scheduler.jobs[f"poll_end_{poll.poll_id}"]["misfire_grace_time"] is None
 
     def test_expired_deadline_scheduled_in_10_seconds(self, repo):  # noqa: F811
         poll = with_deadline(repo, add_poll(repo), timedelta(hours=-1))
