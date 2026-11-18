@@ -10,7 +10,7 @@ import discord
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
-from starDiscord.uiElement.view import MESSAGE_FAILURE_TEXT, PollSendError, PollView
+from starDiscord.uiElement.view import PollSendError, PollView
 from starlib import sclient
 from starlib.polls import validate_poll_input
 from starlib.utils import nowtz
@@ -23,6 +23,13 @@ router = APIRouter(prefix="/dashboard")
 
 #: 可發起投票的頻道類型：文字頻道與公告頻道（不含討論串、論壇、語音）
 CHANNEL_TYPES = {discord.ChannelType.text: "text", discord.ChannelType.news: "news"}
+
+#: 發送失敗的原因（PollSendError.code）。不用 view.MESSAGE_FAILURE_TEXT，那是結算更新訊息的文案
+SEND_FAILURE_TEXT = {
+    "channel_missing": "頻道已不存在",
+    "no_permission": "星羽在這個頻道沒有發言權限",
+    "failed": "發送投票訊息時發生錯誤",
+}
 
 BOT_CANNOT_SPEAK = "星羽在這個頻道不能發言"
 OPERATOR_CANNOT_SPEAK = "你在這個頻道不能發言"
@@ -200,7 +207,7 @@ async def create_poll(
                 400,
                 "poll_send_failed",
                 message_failure=e.code,
-                message_failure_text=MESSAGE_FAILURE_TEXT.get(e.code),
+                message_failure_text=SEND_FAILURE_TEXT.get(e.code),
             ) from None
         return {
             "poll_id": poll.poll_id,

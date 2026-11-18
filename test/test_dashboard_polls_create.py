@@ -241,21 +241,21 @@ class TestCreate:
         assert not client.guild.channels[503].sent
 
     @pytest.mark.parametrize(
-        ("cls", "status", "code"),
+        ("cls", "status", "code", "text"),
         [
-            (discord.Forbidden, 403, "no_permission"),
-            (discord.NotFound, 404, "channel_missing"),
-            (discord.HTTPException, 500, "failed"),
+            (discord.Forbidden, 403, "no_permission", "星羽在這個頻道沒有發言權限"),
+            (discord.NotFound, 404, "channel_missing", "頻道已不存在"),
+            (discord.HTTPException, 500, "failed", "發送投票訊息時發生錯誤"),
         ],
     )
-    def test_send_failure_creates_nothing(self, client, cls, status, code):
+    def test_send_failure_creates_nothing(self, client, cls, status, code, text):
         client.guild.channels[500].send_error = cls(SimpleNamespace(status=status, reason=""), "")
         r = post(client)
         assert r.status_code == 400
         assert r.json() == {
             "error": "poll_send_failed",
             "message_failure": code,
-            "message_failure_text": view_module.MESSAGE_FAILURE_TEXT[code],
+            "message_failure_text": text,
         }
         assert poll_count(client) == client.before
 
