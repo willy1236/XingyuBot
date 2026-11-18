@@ -259,7 +259,7 @@
 **風險 / 實作注意**：`create_and_send` 由 V-00 提供，這張卡不改它；需要調整的話回 V-00 的介面討論。
 
 **進度**：後端與 bot 部分完成（2026-11-18）；前端由另一位 worker 負責
-- commit：c2b3e8b 後端 `polls_create.py` 與測試；審查修正 FIXHASH
+- commit：c2b3e8b 後端 `polls_create.py` 與測試；審查修正 a3b4b4b
 - 決定：
   - 星羽與操作者的發言檢查只看 view_channel + send_messages，缺 read_message_history 仍可建立。
   - bot 缺發言權限 → 400 `bot_missing_permission`；操作者缺權限、欄位或頻道／身分組不合 → 400 `invalid_request`，全部欄位錯誤彙整在同一個 fields。
