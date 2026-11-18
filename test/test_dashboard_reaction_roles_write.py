@@ -135,6 +135,7 @@ class FakeEmoji:
 class FakeGuild:
     def __init__(self):
         self.id = GUILD_ID
+        self.unavailable = False
         self.owner_id = OWNER_ID
         self.me = SimpleNamespace(
             id=1, top_role=FakeRole(1, "bot", BOT_TOP), guild_permissions=SimpleNamespace(manage_roles=True)

@@ -43,6 +43,7 @@ class FakeRoom:
 class FakeGuild:
     def __init__(self, cached: list[FakeRoom], uncached: list[FakeRoom] = (), fetch_error: Exception | None = None):
         self.id = GUILD_ID
+        self.unavailable = False
         self._cached = {r.id: r for r in cached}
         self._uncached = {r.id: r for r in uncached}
         self.fetch_error = fetch_error
@@ -156,6 +157,17 @@ class TestListRooms:
         assert client.get(URL).status_code == 404
 
 
+    def test_unavailable_guild_returns_503_and_keeps_records(self, client):
+        """伺服器 unavailable 時快取與語音狀態都是空的：不能當成已刪除而刪紀錄"""
+        guild = FakeGuild([])
+        guild.unavailable = True
+        use_guild(client, guild)
+        add_record(client, 1)
+        r = client.get(URL)
+        assert (r.status_code, r.json()["error"]) == (503, "guild_unavailable")
+        assert [x.channel_id for x in client.repo.get_dynamic_voice_rooms_fresh(GUILD_ID)] == [1]
+
+
 class TestClearRooms:
     def post(self, client, ids):
         return client.post(f"{URL}/clear", json={"channel_ids": [str(i) for i in ids]}, headers={"Origin": FRONTEND})
@@ -202,6 +214,18 @@ class TestClearRooms:
         out = self.results(self.post(client, [1]))
         assert out["1"]["status"] == "failed"
         assert "Internal Error" in out["1"]["reason"]
+
+    def test_unavailable_guild_deletes_nothing(self, client):
+        """unavailable 時語音狀態是空的，有人的房間也會看起來沒人：不能刪頻道也不能刪紀錄"""
+        room = FakeRoom(1, "有人")
+        guild = FakeGuild([room])
+        guild.unavailable = True
+        use_guild(client, guild)
+        add_record(client, 1)
+        r = self.post(client, [1])
+        assert (r.status_code, r.json()["error"]) == (503, "guild_unavailable")
+        assert room.deleted is False
+        assert self.remaining(client) == [1]
 
     def test_already_gone_counts_as_cleared(self, client):
         use_guild(client, FakeGuild([]))
