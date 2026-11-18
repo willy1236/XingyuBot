@@ -409,6 +409,20 @@ class BetRepository(BaseRepository):
         self.session.commit()
         return user_bet
 
+    def list_user_bets(self, discord_id: int, offset: int, limit: int) -> tuple[list[tuple[UserBet, Bet | None]], int]:
+        """個人區用：該 Discord 的下注，依下注時間由新到舊；回傳 (該頁 (下注, 賭盤)，賭盤已不存在時為 None；總數)。"""
+        total = self.session.exec(select(func.count()).select_from(UserBet).where(UserBet.discord_id == discord_id)).one()
+        stmt = (
+            select(UserBet, Bet)
+            .select_from(UserBet)
+            .join(Bet, UserBet.bet_id == Bet.bet_id, isouter=True)
+            .where(UserBet.discord_id == discord_id)
+            .order_by(UserBet.bet_at.desc(), UserBet.bet_id.desc())
+            .offset(offset)
+            .limit(limit)
+        )
+        return [(u, b) for u, b in self.session.exec(stmt.execution_options(populate_existing=True)).all()], total
+
 
 #     def create_bet(self,bet_id:int,title:str,pink:str,blue:str):
 #         self.cursor.execute(f"USE `database`;")
@@ -1474,6 +1488,18 @@ class WarningRepository(BaseRepository):
         stmt = select(UserModerate).where(*conditions).order_by(UserModerate.create_time.desc(), UserModerate.warning_id.desc()).offset(offset).limit(limit)
         return list(self.session.exec(stmt.execution_options(populate_existing=True)).all()), total
 
+    def list_user_warnings(self, discord_id: int, offset: int, limit: int) -> tuple[list[UserModerate], int]:
+        """個人區用：該 Discord 收到的所有紀錄，依 create_time 由新到舊；回傳 (該頁紀錄, 總數)。"""
+        total = self.session.exec(select(func.count()).select_from(UserModerate).where(UserModerate.discord_id == discord_id)).one()
+        stmt = (
+            select(UserModerate)
+            .where(UserModerate.discord_id == discord_id)
+            .order_by(UserModerate.create_time.desc(), UserModerate.warning_id.desc())
+            .offset(offset)
+            .limit(limit)
+        )
+        return list(self.session.exec(stmt.execution_options(populate_existing=True)).all()), total
+
     def get_warnings_count(self, discord_id: int, guild_id: int = None):
         if guild_id:
             stmt = select(func.count()).where(UserModerate.discord_id == discord_id, UserModerate.create_guild == guild_id)
@@ -1639,7 +1665,48 @@ class PollRepository(BaseRepository):
         result = self.session.exec(stmt).all()
         return result
 
+    def list_user_polls(self, discord_id: int, offset: int, limit: int) -> tuple[list[tuple[Poll | None, int, datetime, list[str]]], int]:
+        """個人區用：該 Discord 參與過的投票，以投票為單位（複選合併成一筆）依最早投票時間由新到舊分頁。
+
+        回傳 (該頁 [(投票（已刪除時為 None）, poll_id, 最早一筆的 vote_at, 選項文字依 option_id 排序]，投票總數)。
+        """
+        mine = UserPoll.discord_id == discord_id
+        total = self.session.exec(select(func.count(func.distinct(UserPoll.poll_id))).where(mine)).one()
+        first_at = func.min(UserPoll.vote_at)
+        page = self.session.exec(
+            select(UserPoll.poll_id, first_at).where(mine).group_by(UserPoll.poll_id).order_by(first_at.desc(), UserPoll.poll_id.desc()).offset(offset).limit(limit)
+        ).all()
+        if not page:
+            return [], total
+        ids = [poll_id for poll_id, _ in page]
+        polls = {p.poll_id: p for p in self.session.exec(select(Poll).where(Poll.poll_id.in_(ids)).execution_options(populate_existing=True)).all()}
+        options: dict[int, list[tuple[int, str]]] = {}
+        rows = self.session.exec(
+            select(UserPoll.poll_id, UserPoll.vote_option, PollOption.option_name)
+            .select_from(UserPoll)
+            .join(PollOption, and_(UserPoll.vote_option == PollOption.option_id, UserPoll.poll_id == PollOption.poll_id), isouter=True)
+            .where(mine, UserPoll.poll_id.in_(ids))
+            .order_by(UserPoll.vote_option)
+        ).all()
+        for poll_id, option_id, name in rows:
+            options.setdefault(poll_id, []).append((option_id, name if name is not None else str(option_id)))
+        return [(polls.get(poll_id), poll_id, at, [n for _, n in options.get(poll_id, [])]) for poll_id, at in page], total
+
     # * Giveaway
+    def list_user_giveaways(self, discord_id: int, offset: int, limit: int) -> tuple[list[tuple[GiveawayUser, Giveaway | None]], int]:
+        """個人區用：該 Discord 參加過的抽獎，依參加時間由新到舊；回傳 (該頁 (參加紀錄, 抽獎，已刪除時為 None)，總數)。"""
+        total = self.session.exec(select(func.count()).select_from(GiveawayUser).where(GiveawayUser.user_id == discord_id)).one()
+        stmt = (
+            select(GiveawayUser, Giveaway)
+            .select_from(GiveawayUser)
+            .join(Giveaway, GiveawayUser.giveaway_id == Giveaway.id, isouter=True)
+            .where(GiveawayUser.user_id == discord_id)
+            .order_by(GiveawayUser.join_at.desc(), GiveawayUser.giveaway_id.desc())
+            .offset(offset)
+            .limit(limit)
+        )
+        return [(u, g) for u, g in self.session.exec(stmt.execution_options(populate_existing=True)).all()], total
+
     def get_user_in_giveaway(self, giveaway_id: int, discord_id: int):
         stmt = select(GiveawayUser).where(GiveawayUser.giveaway_id == giveaway_id, GiveawayUser.user_id == discord_id)
         result = self.session.exec(stmt).one_or_none()
@@ -2245,6 +2312,11 @@ class GuildSettingRepository(BaseRepository):
         stmt = select(VoiceTime).where(VoiceTime.discord_id == discord_id, VoiceTime.guild_id == guild_id)
         result = self.session.exec(stmt).one_or_none()
         return result or VoiceTime(discord_id=discord_id, guild_id=guild_id)
+
+    def list_voice_times(self, discord_id: int) -> list[VoiceTime]:
+        """該 Discord 在所有伺服器的語音時數，由多到少。"""
+        stmt = select(VoiceTime).where(VoiceTime.discord_id == discord_id).order_by(desc(VoiceTime.total_minute), VoiceTime.guild_id)
+        return list(self.session.exec(stmt.execution_options(populate_existing=True)).all())
 
     def get_voice_times(self, discord_ids: list[int], guild_id: int):
         stmt = select(VoiceTime).where(VoiceTime.discord_id.in_(discord_ids), VoiceTime.guild_id == guild_id)
