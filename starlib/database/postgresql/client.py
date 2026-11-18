@@ -1539,16 +1539,55 @@ class WarningRepository(BaseRepository):
 
 class PollRepository(BaseRepository):
     # * poll
-    def remove_poll(self, poll_id: int):
-        self.session.exec(delete(Poll).where(Poll.poll_id == poll_id))
-        self.session.exec(delete(UserPoll).where(Poll.poll_id == poll_id))
-        self.session.exec(delete(PollOption).where(Poll.poll_id == poll_id))
-        self.session.commit()
-
     def get_poll(self, poll_id: int):
         stmt = select(Poll).where(Poll.poll_id == poll_id)
         result = self.session.exec(stmt).one_or_none()
         return result
+
+    def delete_poll(self, poll_id: int):
+        """刪除投票與它的選項、身分組設定、成員的票（同一個 transaction）；投票不存在時什麼都不做。"""
+        self.session.exec(delete(UserPoll).where(UserPoll.poll_id == poll_id))
+        self.session.exec(delete(PollOption).where(PollOption.poll_id == poll_id))
+        self.session.exec(delete(PollRole).where(PollRole.poll_id == poll_id))
+        self.session.exec(delete(Poll).where(Poll.poll_id == poll_id))
+        self.session.commit()
+
+    def get_poll_fresh(self, poll_id: int):
+        """讀出投票目前的值（populate_existing）；長駐的 PollView 與排程 job 持有的 instance 可能已過期，結算前用它重讀。"""
+        stmt = select(Poll).where(Poll.poll_id == poll_id).execution_options(populate_existing=True)
+        return self.session.exec(stmt).one_or_none()
+
+    def poll_vote_rows(self, poll_id: int, include_alt: bool) -> list[tuple[int, int, int, datetime]]:
+        """逐票：(成員 ID, 選項 ID, 權重, 投票時間)，依投票時間排序；include_alt 為 False 時排除小帳。"""
+        votes = self.get_users_poll(poll_id, include_alt)
+        return [(v.discord_id, v.vote_option, v.vote_magnification or 1, v.vote_at) for v in sorted(votes, key=lambda v: (v.vote_at, v.discord_id, v.vote_option))]
+
+    def count_poll_voters(self, polls: list[Poll]) -> dict[int, int]:
+        """後台用：各投票不重複的成員數，依各投票自己的 ban_alternate_account_voting 排除小帳；沒人投票的不在結果裡。"""
+        result: dict[int, int] = {}
+        for ban_alt in (False, True):
+            ids = [p.poll_id for p in polls if bool(p.ban_alternate_account_voting) == ban_alt]
+            if not ids:
+                continue
+            stmt = select(UserPoll.poll_id, func.count(func.distinct(UserPoll.discord_id))).select_from(UserPoll)
+            if ban_alt:
+                stmt = stmt.join(UserAccount, UserPoll.discord_id == UserAccount.alternate_account, isouter=True).where(UserAccount.alternate_account.is_(None))
+            stmt = stmt.where(UserPoll.poll_id.in_(ids)).group_by(UserPoll.poll_id)
+            result.update({poll_id: count for poll_id, count in self.session.exec(stmt).all()})
+        return result
+
+    def list_active_guild_polls(self, guild_id: int):
+        """後台用：該伺服器進行中的投票，依建立時間由新到舊。"""
+        stmt = select(Poll).where(Poll.guild_id == guild_id, Poll.end_at.is_(None)).order_by(Poll.created_at.desc(), Poll.poll_id.desc()).execution_options(populate_existing=True)
+        return list(self.session.exec(stmt).all())
+
+    def list_guild_polls(self, guild_id: int, since: datetime | None, offset: int, limit: int):
+        """後台用：該伺服器已結算的投票，依結算時間由新到舊；since 不為 None 時只列這個時間之後建立的。"""
+        stmt = select(Poll).where(Poll.guild_id == guild_id, Poll.end_at.is_not(None))
+        if since is not None:
+            stmt = stmt.where(Poll.created_at >= since)
+        stmt = stmt.order_by(Poll.end_at.desc(), Poll.poll_id.desc()).offset(offset).limit(limit)
+        return list(self.session.exec(stmt.execution_options(populate_existing=True)).all())
 
     def get_active_polls(self):
         stmt = select(Poll).where(Poll.end_at.is_(None))

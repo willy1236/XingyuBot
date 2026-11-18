@@ -90,6 +90,7 @@ class TestSectionsEndpoint:
         assert body["sections"] == [
             {"key": "warnings", "actions": ["view", "add", "remove"]},
             {"key": "giveaways", "actions": ["view", "end", "redraw"]},
+            {"key": "polls", "actions": ["view", "create", "end", "delete", "export"]},
         ]
 
     def test_moderate_and_kick(self, client, discord_env):  # noqa: F811

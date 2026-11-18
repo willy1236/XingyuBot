@@ -15,6 +15,7 @@ import numpy as np
 from apscheduler.jobstores.base import JobLookupError
 from apscheduler.triggers.date import DateTrigger
 from discord.utils import format_dt
+from sqlalchemy.orm.exc import StaleDataError
 
 from starlib import BotEmbed, Jsondb, sqldb
 from starlib.database import (
@@ -28,6 +29,7 @@ from starlib.database import (
     PollRole,
 )
 from starlib.instance import mcsm_api, vip_admin_channel
+from starlib.polls import PollResults
 from starlib.tickets import DEFAULT_BUTTON_LABEL
 from starlib.utils import find_netbird_network, find_radmin_vpn_network, nowtz
 
@@ -79,6 +81,33 @@ class DeleteAddRoleView(discord.ui.View):
         else:
             await interaction.response.send_message(content="只有使用此指令的用戶可以刪除", ephemeral=True)
 
+POLL_GONE_TEXT = "此投票已不存在"
+
+
+async def reply_poll_gone(interaction: discord.Interaction) -> None:
+    """投票已被刪除時的回應：ephemeral 告知，並嘗試移除訊息上的按鈕（失敗忽略）。
+
+    view callback 與 bot_event 的 on_interaction 都可能回應同一個 interaction，先到者回，後到者的錯誤忽略。
+    """
+    try:
+        await interaction.response.send_message(POLL_GONE_TEXT, ephemeral=True)
+    except (discord.InteractionResponded, discord.HTTPException):
+        pass
+    if interaction.message is not None:
+        try:
+            await interaction.message.edit(view=None)
+        except discord.HTTPException:
+            pass
+
+
+async def poll_is_gone(interaction: discord.Interaction, view: PollView) -> bool:
+    """投票按鈕 callback 的開頭檢查：投票已不存在時回覆並回傳 True（同時把 view.poll 更新為最新資料）。"""
+    if view.reload():
+        return False
+    await reply_poll_gone(interaction)
+    return True
+
+
 class PollOptionButton(discord.ui.Button):
     def __init__(self, option: PollOption, custom_id: str, row: int = None):
         super().__init__(label=option.option_name, custom_id=custom_id, row=row)
@@ -86,6 +115,8 @@ class PollOptionButton(discord.ui.Button):
 
     async def callback(self, interaction):
         view: PollView = self.view
+        if await poll_is_gone(interaction, view):
+            return
         can_vote = False
         have_only_role = False
         vote_magnification = 1
@@ -118,14 +149,19 @@ class PollEndButton(discord.ui.Button):
 
     async def callback(self, interaction):
         view: PollView = self.view
+        if await poll_is_gone(interaction, view):
+            return
         if interaction.user.id == view.poll.creator_id or (view.bot and await view.bot.is_owner(interaction.user)):
-            view.clear_items()
-            view.poll.end_at = nowtz()
-            view.poll = view.sqldb.merge(view.poll)
-
-            embed, image_buffer = view.results_embed(interaction, True)  # type: ignore
-
-            await interaction.response.edit_message(embed=embed, view=view, file=discord.File(image_buffer, filename="pie.png"))
+            # 先 defer：若鎖被其他結算佔住，避免超過 Discord 的 3 秒回應期限
+            await interaction.response.defer()
+            # 用按鈕的 interaction 更新訊息，舊投票與缺少讀取訊息歷史權限時也更新得了
+            outcome = await view.finish(edit=interaction.edit_original_response)
+            if outcome.status == "already_ended":
+                await interaction.followup.send("此投票已結算", ephemeral=True)
+            elif outcome.status == "not_found":
+                await interaction.followup.send("此投票已不存在", ephemeral=True)
+            elif outcome.message_failure:
+                await interaction.followup.send(f"投票已結算，但{outcome.message_failure_text}", ephemeral=True)
         else:
             await interaction.response.send_message("錯誤：只有投票發起人才能結算", ephemeral=True)
 
@@ -136,8 +172,10 @@ class PollResultButton(discord.ui.Button):
 
     async def callback(self, interaction):
         view: PollView = self.view
+        if await poll_is_gone(interaction, view):
+            return
         if not view.poll.results_only_initiator or interaction.user.id == view.poll.creator_id:
-            embed = view.results_embed(interaction)
+            embed = view.results_embed(interaction.guild)
             await interaction.response.send_message(embed=embed, ephemeral=True)
 
         else:
@@ -150,6 +188,8 @@ class PollCanenlButton(discord.ui.Button):
 
     async def callback(self, interaction):
         view: PollView = self.view
+        if await poll_is_gone(interaction, view):
+            return
         view.sqldb.remove_user_poll(view.poll.poll_id, interaction.user.id)
         await interaction.response.send_message(f"{interaction.user.mention} 已取消投票", ephemeral=True)
 
@@ -160,6 +200,8 @@ class PollNowButton(discord.ui.Button):
 
     async def callback(self, interaction):
         view: PollView = self.view
+        if await poll_is_gone(interaction, view):
+            return
         dbdata = view.sqldb.get_user_poll(view.poll.poll_id, interaction.user.id)
         if dbdata:
             vote_mag = dbdata[0][0].vote_magnification
@@ -167,6 +209,48 @@ class PollNowButton(discord.ui.Button):
             await interaction.response.send_message(f"{interaction.user.mention} 投給 {options_name} {vote_mag}票", ephemeral=True)
         else:
             await interaction.response.send_message(f"{interaction.user.mention} 沒有投給任何選項", ephemeral=True)
+
+
+_poll_locks: dict[int, asyncio.Lock] = {}
+
+
+def poll_lock(poll_id: int) -> asyncio.Lock:
+    """每個投票一把鎖：結算（含訊息更新）在 bot 的事件迴圈上序列化，同一個投票只結算一次。"""
+    return _poll_locks.setdefault(poll_id, asyncio.Lock())
+
+
+#: 結算時訊息沒能更新的原因（message_failure 的值）
+MESSAGE_FAILURE_TEXT = {
+    "message_unknown": "投票建立於功能更新前，找不到投票訊息",
+    "channel_missing": "投票所在頻道已不存在",
+    "message_missing": "投票訊息已被刪除",
+    "no_permission": "星羽在頻道缺少權限，無法讀取或編輯投票訊息",
+    "failed": "更新投票訊息時發生錯誤",
+}
+
+
+@dataclass
+class PollOutcome:
+    """PollView.finish 的結果。
+
+    status: ok 已結算；already_ended 呼叫時投票已經結算（視為成功）；not_found 投票不存在。
+    message_failure: 已結算但訊息沒能更新時的原因代碼（MESSAGE_FAILURE_TEXT 的 key），更新成功為 None。
+    """
+
+    status: str
+    message_failure: str | None = None
+
+    @property
+    def message_failure_text(self) -> str | None:
+        return MESSAGE_FAILURE_TEXT.get(self.message_failure) if self.message_failure else None
+
+
+class PollSendError(Exception):
+    """建立投票時訊息沒能送出；code 為 channel_missing、no_permission、failed"""
+
+    def __init__(self, code: str):
+        super().__init__(code)
+        self.code = code
 
 
 class PollView(discord.ui.View):
@@ -197,62 +281,188 @@ class PollView(discord.ui.View):
             i += 1
 
     @classmethod
-    def create(
+    async def create_and_send(
         cls,
-        title: str,
-        options: list,
+        send: Callable[[discord.Embed, PollView], Awaitable[discord.Message]],
+        channel_id: int,
+        *,
+        bot: DiscordBot,
         creator_id: int,
         guild_id: int,
-        ban_alternate_account_voting=False,
-        show_name=False,
-        check_results_in_advance=True,
-        results_only_initiator=False,
-        number_of_user_votes=1,
-        can_change_vote=True,
-        only_role_list: list | None = None,
-        role_magnification_dict: dict | None = None,
-        bot: discord.Bot | None = None,
-    ):
-        """創建投票"""
+        title: str,
+        options: list[str],
+        show_name: bool,
+        check_results_in_advance: bool,
+        results_only_initiator: bool,
+        number_of_user_votes: int,
+        ban_alternate_account_voting: bool,
+        only_roles: list[int],
+        role_weights: dict[int, int],
+        deadline: datetime | None = None,
+    ) -> Poll:
+        """寫入投票、呼叫 send(embed, view) 發出訊息，再存訊息 ID 與 channel_id。
+
+        send 由呼叫端決定（指令沿用 interaction 回應，後台用 channel.send），必須回傳送出的訊息。
+        欄位驗證不在這裡，呼叫端先跑 `starlib.polls.validate_poll_input`。
+        發送失敗時刪掉剛寫的資料並丟出 PollSendError。
+        """
         poll = Poll(
             title=title,
             creator_id=creator_id,
             created_at=nowtz(),
             message_id=None,
+            channel_id=channel_id,
             guild_id=guild_id,
             ban_alternate_account_voting=ban_alternate_account_voting,
             show_name=show_name,
             check_results_in_advance=check_results_in_advance,
             results_only_initiator=results_only_initiator,
             number_of_user_votes=number_of_user_votes,
-            can_change_vote=can_change_vote,
+            can_change_vote=None,  # implemented in the future
+            deadline=deadline,
         )
         sqldb.add(poll)
-        sqldb.add_poll_option(poll.poll_id, options)
+        message = None
+        try:
+            sqldb.add_poll_option(poll.poll_id, options)
+            for role_id in set(only_roles) | set(role_weights):
+                sqldb.merge(PollRole(poll_id=poll.poll_id, role_id=role_id, is_only_role=role_id in only_roles, role_magnification=role_weights.get(role_id, 1)))
 
-        if only_role_list is None:
-            only_role_list = []
-        if role_magnification_dict is None:
-            role_magnification_dict = {}
-
-        poll_role_dict = {}
-        for role_id in only_role_list:
-            poll_role_dict[role_id] = [True, 1]
-
-        for role_id in role_magnification_dict:
-            if role_id in poll_role_dict:
-                poll_role_dict[role_id][1] = role_magnification_dict[role_id]
-            else:
-                poll_role_dict[role_id] = [False, role_magnification_dict[role_id]]
-
-        for role_id in poll_role_dict:
-            is_only_role = poll_role_dict[role_id][0]
-            role_magnification = poll_role_dict[role_id][1]
-            sqldb.merge(PollRole(poll_id=poll.poll_id, role_id=role_id, is_only_role=is_only_role, role_magnification=role_magnification))
-
-        if bot:
             view = cls(poll, sqldb, bot)
-            return view
+            message = await send(view.embed(bot.get_guild(guild_id)), view)
+            poll.message_id = message.id
+            sqldb.merge(poll)
+            if poll.deadline is not None:
+                view.schedule_end()
+        except Exception as e:
+            if message is not None:
+                # 訊息已發出才失敗：刪掉訊息，不在頻道留下沒有資料的投票
+                try:
+                    await message.delete()
+                except discord.HTTPException:
+                    log.warning("poll create: delete orphan message failed", extra={"poll_id": poll.poll_id}, exc_info=True)
+            sqldb.delete_poll(poll.poll_id)
+            if isinstance(e, discord.NotFound):
+                raise PollSendError("channel_missing") from e
+            if isinstance(e, discord.Forbidden):
+                raise PollSendError("no_permission") from e
+            if isinstance(e, discord.HTTPException):
+                log.warning("poll create: send failed", extra={"guild_id": guild_id, "channel_id": channel_id}, exc_info=True)
+                raise PollSendError("failed") from e
+            raise
+        return poll
+
+    @property
+    def _job_id(self) -> str:
+        return f"poll_end_{self.poll.poll_id}"
+
+    def schedule_end(self):
+        """排程在 deadline 自動結算，已過期則 10 秒後結算。排程只存在記憶體，bot 啟動時要重排"""
+        if self.poll.deadline is None:
+            return
+        run_at = max(self.poll.deadline, nowtz() + timedelta(seconds=10))
+        # misfire_grace_time=None：event loop 被阻塞（如繪製圓餅圖）而晚執行時照樣執行，預設 1 秒會讓 job 被跳過、投票停在進行中；finish 在鎖內重讀，晚執行沒有副作用
+        self.bot.scheduler.add_job(self.auto_end, DateTrigger(run_at), id=self._job_id, replace_existing=True, misfire_grace_time=None)
+
+    async def auto_end(self):
+        """排程到期的結算；沒有人看回傳值，結算沒完成要留紀錄"""
+        try:
+            outcome = await self.finish()
+        except Exception:
+            log.exception("poll auto end failed", extra={"poll_id": self.poll.poll_id})
+            return
+        if outcome.status not in ("ok", "already_ended") or outcome.message_failure:
+            log.error(
+                "poll auto end did not publish",
+                extra={"poll_id": self.poll.poll_id, "status": outcome.status, "message_failure": outcome.message_failure},
+            )
+
+    def reload(self) -> bool:
+        """從資料庫重讀投票。長駐的 view 與排程 job 持有的 instance 可能已過期，結算前一定要重讀。"""
+        fresh = self.sqldb.get_poll_fresh(self.poll.poll_id)
+        if fresh is None:
+            return False
+        self.poll = fresh
+        return True
+
+    @staticmethod
+    def missing_permissions(channel: discord.abc.Messageable, perms: discord.Permissions) -> list[str]:
+        """結算時 bot 要讀取並編輯投票訊息；回傳 perms 在 channel 缺少的權限名稱（中文），齊全時為空 list"""
+        send = ("send_messages_in_threads", "在討論串發送訊息") if isinstance(channel, discord.Thread) else ("send_messages", "發送訊息")
+        required = [("view_channel", "檢視頻道"), ("read_message_history", "讀取訊息歷史"), send]
+        return [label for attr, label in required if not getattr(perms, attr)]
+
+    async def finish(self, edit: Callable[..., Awaitable] | None = None) -> PollOutcome:
+        """結算投票並更新訊息（按鈕、指令、後台與排程共用）。投票已結算時不會再結算一次，必須在 bot loop 上執行。
+
+        edit: 呼叫端提供的更新訊息方式（按鈕傳 interaction.edit_original_response），有的話不用 fetch 訊息。
+        """
+        async with poll_lock(self.poll.poll_id):
+            if not self.reload():
+                return PollOutcome("not_found")
+            if self.poll.end_at is not None:
+                return PollOutcome("already_ended")
+            self.poll.end_at = nowtz()
+            self.poll = self.sqldb.merge(self.poll)
+            failure = await self.publish(edit)
+            if failure != self.poll.message_failure:
+                self.poll.message_failure = failure
+                try:
+                    self.poll = self.sqldb.merge(self.poll)
+                except StaleDataError:
+                    # 更新訊息期間投票被後台刪掉（刪除不取 poll_lock）：資料已不在，與一開始就不存在同樣處理
+                    return PollOutcome("not_found")
+            if self.poll.deadline is not None:
+                # 截止前手動結算：移除排程，到期時就不會再來一次；自動結算觸發的那次 job 已不在
+                try:
+                    self.bot.scheduler.remove_job(self._job_id)
+                except JobLookupError:
+                    pass
+            return PollOutcome("ok", failure)
+
+    async def publish(self, edit: Callable[..., Awaitable] | None = None) -> str | None:
+        """把結果更新到投票訊息（清掉按鈕、換成結果與圓餅圖）；回傳沒能更新的原因代碼，成功為 None。"""
+        guild = self.bot.get_guild(self.poll.guild_id)
+        embed, image_buffer = self.results_embed(guild, True)  # type: ignore
+        self.clear_items()
+
+        async def _edit(edit_message: Callable[..., Awaitable]) -> str | None:
+            try:
+                await edit_message(embed=embed, view=self, file=discord.File(image_buffer, filename="pie.png"))
+            except discord.NotFound:
+                return "message_missing"
+            except discord.Forbidden:
+                return "no_permission"
+            except discord.HTTPException:
+                log.warning("poll publish: edit message failed", extra={"poll_id": self.poll.poll_id}, exc_info=True)
+                return "failed"
+            return None
+
+        if edit is not None:
+            return await _edit(edit)
+
+        channel_id, message_id = self.poll.channel_id, self.poll.message_id
+        if channel_id is None or message_id is None:
+            return "message_unknown"
+        try:
+            channel = (guild.get_channel_or_thread(channel_id) if guild else None) or await self.bot.fetch_channel(channel_id)
+        except discord.NotFound:
+            return "channel_missing"
+        except discord.Forbidden:
+            return "no_permission"
+        except discord.HTTPException:
+            log.warning("poll publish: fetch channel failed", extra={"poll_id": self.poll.poll_id}, exc_info=True)
+            return "failed"
+        try:
+            message = await channel.fetch_message(message_id)
+        except discord.NotFound:
+            return "message_missing"
+        except discord.Forbidden:
+            return "no_permission"
+        except discord.HTTPException:
+            log.warning("poll publish: fetch message failed", extra={"poll_id": self.poll.poll_id}, exc_info=True)
+            return "failed"
+        return await _edit(message.edit)
 
     @property
     def role_dict(self) -> dict[int, tuple[bool, int]]:
@@ -274,7 +484,7 @@ class PollView(discord.ui.View):
         for roleid in self.role_dict:
             role = guild.get_role(roleid)
             if self.role_dict[roleid][0] is True:
-                only_role_list.append(role.mention if role else roleid)
+                only_role_list.append(role.mention if role else str(roleid))
             if self.role_dict[roleid][1] > 1:
                 mag = self.role_dict[roleid][1]
                 role_magification_list.append(f"{role.mention}({mag})" if role else f"{roleid}({mag})")
@@ -291,6 +501,8 @@ class PollView(discord.ui.View):
             description += "\n- 不允許變更投票"
         if self.poll.ban_alternate_account_voting:
             description += "\n- 小帳不算有效票"
+        if self.poll.deadline is not None:
+            description += f"\n- 截止時間：{format_dt(self.poll.deadline, 'f')}（{format_dt(self.poll.deadline, 'R')}）"
 
         if only_role_list:
             description += "\n- 可投票身分組：" + ",".join(only_role_list)
@@ -301,80 +513,46 @@ class PollView(discord.ui.View):
 
         author = guild.get_member(self.poll.creator_id)
         if author:
-            embed.set_author(name=author.name, icon_url=author.avatar.url)
+            embed.set_author(name=author.name, icon_url=author.display_avatar.url)
         return embed
 
-    def results_embed(
-        self, interaction: discord.Interaction, with_chart=False, show_name: bool | None = None
-    ) -> tuple[discord.Embed, io.BytesIO] | discord.Embed:
+    def results_embed(self, guild: discord.Guild | None, with_chart=False, show_name: bool | None = None) -> tuple[discord.Embed, io.BytesIO] | discord.Embed:
+        """產生結果 embed（各選項票數，實名投票另列投票人與權重）。
+
+        guild: 用來查成員，查不到的成員以 <@id> 顯示
+        with_chart: True 時一併回傳圓餅圖（只含票數大於 0 的選項）
+        show_name: 覆寫是否顯示投票人，None 時依投票設定
         """
-        Generate a Discord embed displaying poll results with vote counts and optionally voter names.
-        Args:
-            interaction (discord.Interaction): The Discord interaction object used to access guild members
-            with_chart (bool, optional): Whether to include a chart image with the embed. Defaults to False.
-            show_name (bool | None, optional): 覆寫是否顯示投票人，None 時依投票設定
-        Returns:
-            tuple[discord.Embed, io.BytesIO] | discord.Embed:
-                - If with_chart is True: Returns a tuple containing the embed and chart image as BytesIO
-                - If with_chart is False: Returns only the Discord embed
-        The embed includes:
-            - Poll title as the embed title
-            - Vote counts for each option
-            - Voter names (if show_name is enabled) with vote magnification indicators
-            - Poll ID in the footer
-        Notes:
-            - Retrieves vote count data and poll options from the database
-            - If show_name is enabled, displays voter mentions for each option
-            - Vote magnification is shown in parentheses when not equal to 1
-            - Chart generation is optional and only includes options with votes > 0
-        """
-        vote_count_data = self.sqldb.get_poll_vote_count(self.poll.poll_id, not self.poll.ban_alternate_account_voting)
-        options_data = self.sqldb.get_poll_options(self.poll.poll_id)
+        results = PollResults.load(self.sqldb, self.poll)
         if show_name is None:
-            show_name = self.poll.show_name
+            show_name = bool(self.poll.show_name)
 
+        voters: dict[int, list[str]] = {}
         if show_name:
-            user_vote_data = self.sqldb.get_users_poll(self.poll.poll_id, not self.poll.ban_alternate_account_voting)
-            user_vote_list = {}
-            for i in range(1, len(options_data) + 1):
-                user_vote_list[str(i)] = []
-
-            for i in user_vote_data:
-                discord_id = i.discord_id
-                vote_option = i.vote_option
-                vote_magnification = i.vote_magnification
-
-                user = interaction.guild.get_member(discord_id)
-                username = user.mention if user else f"<@{discord_id}>"
-                if vote_magnification != 1:
-                    username += f"({vote_magnification})"
-                user_vote_list[str(vote_option)].append(username)
+            for vote in results.votes:
+                member = guild.get_member(vote.user_id) if guild else None
+                name = member.mention if member else f"<@{vote.user_id}>"
+                if vote.weight != 1:
+                    name += f"({vote.weight})"
+                voters.setdefault(vote.option_id, []).append(name)
 
         text = ""
-        if with_chart:
-            labels = []
-            sizes = []
-
-        for option in options_data:
-            name = option.option_name
-            id = option.option_id
-            count = vote_count_data.get(str(id), 0)
-            text += f"{name}： {count}票\n"
-
+        labels = []
+        sizes = []
+        for option in results.options:
+            text += f"{option.name}： {option.count}票\n"
             if show_name:
-                text += ",".join(user_vote_list[str(id)]) + "\n"
-
-            if with_chart and count > 0:
-                labels.append(name)
-                sizes.append(count)
+                text += ",".join(voters.get(option.option_id, [])) + "\n"
+            if option.count > 0:
+                labels.append(option.name)
+                sizes.append(option.count)
 
         embed = BotEmbed.simple(self.poll.title, description=text)
         embed.set_footer(text=f"投票ID：{self.poll.poll_id}")
 
         if with_chart:
             return embed, self.generate_chart(labels, sizes)
-        else:
-            return embed
+        return embed
 
     def generate_chart(self, labels, sizes):
         import matplotlib.pyplot as plt

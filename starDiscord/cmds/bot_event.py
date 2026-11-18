@@ -15,9 +15,22 @@ from starlib.utils import nowtz
 
 from ..extension import Cog_Extension
 from ..ticket_channel import restore_ticket_views
-from ..uiElement.view import PollView, ReactionRoleView, TicketLobbyView
+from ..uiElement.view import PollView, ReactionRoleView, TicketLobbyView, reply_poll_gone
 
 log = logging.getLogger(__name__)
+
+#: 保留背景 task 的參照，避免執行中被回收
+_background_tasks: set[asyncio.Task] = set()
+
+#: 投票按鈕的 custom_id（見 view.py 的各個 Poll*Button），第一個群組是 poll_id。`poll_` 開頭的有兩種，所以整串比對
+POLL_BUTTON_ID = re.compile(r"^(?:poll_(\d+)_\d+|poll_result_(\d+)|end_poll_(\d+)|vote_canenl_(\d+)|vote_now_(\d+))$")
+
+
+def poll_id_of_button(custom_id: str | None) -> int | None:
+    """投票按鈕的 custom_id 對應的 poll_id；不是投票按鈕時為 None"""
+    m = POLL_BUTTON_ID.match(custom_id or "")
+    return int(next(g for g in m.groups() if g)) if m else None
+
 
 keywords = {}
 
@@ -62,6 +75,25 @@ def get_guildid(before: discord.VoiceState, after: discord.VoiceState):
 
 def check_spam(message: discord.Message, user_id: int):
     return message.author.id == user_id
+
+
+def load_poll_views(bot, sqldb, now: datetime) -> None:
+    """載入進行中的投票：有截止時間的重排程（已到期的 10 秒後補結算），其餘超過 30 天的結算並更新訊息"""
+    for poll in sqldb.get_active_polls():
+        view = PollView(poll, sqldb=sqldb, bot=bot)
+        if poll.deadline is not None:
+            # 有 deadline 的投票不套 30 天規則：到期結算本來就在 30 天內
+            bot.add_view(view, message_id=poll.message_id)
+            view.schedule_end()
+            log.debug("Loaded poll with deadline", extra={"poll_id": poll.poll_id})
+        elif now - poll.created_at > timedelta(days=30):
+            task = asyncio.create_task(view.finish())
+            _background_tasks.add(task)
+            task.add_done_callback(_background_tasks.discard)
+            log.debug("Ending poll", extra={"poll_id": poll.poll_id})
+        else:
+            bot.add_view(view, message_id=poll.message_id)
+            log.debug("Loaded poll", extra={"poll_id": poll.poll_id})
 
 
 async def load_reaction_role_views(bot, sqldb) -> None:
@@ -118,17 +150,7 @@ class event(Cog_Extension):
                     await asyncio.sleep(1)
 
         # 投票介面
-        polls = sclient.sqldb.get_active_polls()
-        days_poll_period = timedelta(days=28)
-        for poll in polls:
-            if now - poll.created_at > days_poll_period:
-                # 將超過28天的投票自動關閉
-                poll.end_at = now
-                sclient.sqldb.merge(poll)
-                log.debug("Ended poll", extra={"poll_id": poll.poll_id})
-            else:
-                bot.add_view(PollView(poll, sqldb=sclient.sqldb, bot=bot), message_id=poll.message_id)
-                log.debug("Loaded poll", extra={"poll_id": poll.poll_id})
+        load_poll_views(bot, sclient.sqldb, now)
 
         # 反應身分組
         await load_reaction_role_views(bot, sclient.sqldb)
@@ -194,6 +216,20 @@ class event(Cog_Extension):
             log.info(">> Cogs all loaded <<")
         else:
             log.warning("Cogs not all loaded", extra={"loaded": len(bot.cogs), "total": total_cog_files})
+
+    @commands.Cog.listener()
+    async def on_interaction(self, interaction: discord.Interaction):
+        """投票被刪除後 bot 重啟，留在 Discord 上的按鈕沒有 view 接，這裡回「此投票已不存在」。
+
+        py-cord 先把 component interaction 交給已註冊的 view（並設定 interaction.view）才派送這個事件，
+        所以 view 接得到的一律跳過，正常投票不會多查資料庫。
+        """
+        if interaction.type != discord.InteractionType.component or interaction.view is not None or interaction.response.is_done():
+            return
+        poll_id = poll_id_of_button((interaction.data or {}).get("custom_id"))
+        if poll_id is None or sclient.sqldb.get_poll_fresh(poll_id) is not None:
+            return
+        await reply_poll_gone(interaction)
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
