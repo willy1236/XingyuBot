@@ -13,7 +13,7 @@ from sqlmodel import Session
 from starDiscord import checks
 from starDiscord.cmds import command as command_cog
 from starDiscord.cmds import system_game as game_cog
-from starlib import netbird_setup, sqldb
+from starlib import drive_share, netbird_setup, sqldb
 from starlib.database import DriveShare, LinkedAccount, NetBirdBinding, PlatformType, UserIPDetails
 from starlib.database.postgresql.client import SQLRepository
 from starlib.identity import BotIdentity, IdentityUnavailable
@@ -122,6 +122,7 @@ def cog_repo(monkeypatch, repo):
     monkeypatch.setattr(game_cog, "sclient", fake)
     monkeypatch.setattr(command_cog, "sclient", fake)
     monkeypatch.setattr(netbird_setup, "sqldb", repo)
+    monkeypatch.setattr(drive_share, "sqldb", repo)
     return repo
 
 
@@ -242,7 +243,7 @@ class TestDriveCommand:
             def remove_file_permissions(self, file_id, share_id):
                 calls.removed.append(share_id)
 
-        monkeypatch.setattr(command_cog, "XingyuGoogleCloud", FakeGoogle)
+        monkeypatch.setattr(drive_share, "XingyuGoogleCloud", FakeGoogle)
         return calls
 
     def test_set_then_remove_for_unregistered(self, cog_repo, temp_identity, google):
