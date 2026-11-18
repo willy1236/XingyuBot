@@ -77,6 +77,25 @@ def check_spam(message: discord.Message, user_id: int):
     return message.author.id == user_id
 
 
+def load_poll_views(bot, sqldb, now: datetime) -> None:
+    """載入進行中的投票：有截止時間的重排程（已到期的 10 秒後補結算），其餘超過 30 天的結算並更新訊息"""
+    for poll in sqldb.get_active_polls():
+        view = PollView(poll, sqldb=sqldb, bot=bot)
+        if poll.deadline is not None:
+            # 有 deadline 的投票不套 30 天規則：到期結算本來就在 30 天內
+            bot.add_view(view, message_id=poll.message_id)
+            view.schedule_end()
+            log.debug("Loaded poll with deadline", extra={"poll_id": poll.poll_id})
+        elif now - poll.created_at > timedelta(days=30):
+            task = asyncio.create_task(view.finish())
+            _background_tasks.add(task)
+            task.add_done_callback(_background_tasks.discard)
+            log.debug("Ending poll", extra={"poll_id": poll.poll_id})
+        else:
+            bot.add_view(view, message_id=poll.message_id)
+            log.debug("Loaded poll", extra={"poll_id": poll.poll_id})
+
+
 async def load_reaction_role_views(bot, sqldb) -> None:
     """載入反應身分組的 view。頻道或訊息已不存在時只略過 add_view，不刪紀錄（由後台處理失效）。
 
@@ -131,19 +150,7 @@ class event(Cog_Extension):
                     await asyncio.sleep(1)
 
         # 投票介面
-        polls = sclient.sqldb.get_active_polls()
-        days_poll_period = timedelta(days=30)
-        for poll in polls:
-            view = PollView(poll, sqldb=sclient.sqldb, bot=bot)
-            if now - poll.created_at > days_poll_period:
-                # 將超過30天的投票結算並更新訊息
-                task = asyncio.create_task(view.finish())
-                _background_tasks.add(task)
-                task.add_done_callback(_background_tasks.discard)
-                log.debug("Ending poll", extra={"poll_id": poll.poll_id})
-            else:
-                bot.add_view(view, message_id=poll.message_id)
-                log.debug("Loaded poll", extra={"poll_id": poll.poll_id})
+        load_poll_views(bot, sclient.sqldb, now)
 
         # 反應身分組
         await load_reaction_role_views(bot, sclient.sqldb)
