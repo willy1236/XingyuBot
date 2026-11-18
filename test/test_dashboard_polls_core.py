@@ -13,7 +13,7 @@ from sqlmodel import select
 from test_identity import repo  # noqa: F401
 
 from starDiscord.uiElement import view as view_module
-from starDiscord.uiElement.view import PollSendError, PollView
+from starDiscord.uiElement.view import PollEndButton, PollSendError, PollView
 from starlib.database import Poll, PollOption, PollRole
 from starlib.utils import nowtz
 
@@ -313,6 +313,91 @@ class TestCreateAndSend:
         repo.session.expire_all()
         assert len(repo.session.exec(select(Poll)).all()) == before
         assert repo.session.exec(select(PollOption).where(PollOption.option_name == "丙")).all() == []
+
+
+class TestEndButton:
+    def click(self, repo, poll, *, edit=None, user_id=CREATOR):  # noqa: F811
+        followups: list[tuple[str, bool]] = []
+
+        async def defer():
+            pass
+
+        async def default_edit(**kwargs):
+            pass
+
+        async def followup(text, ephemeral=False):
+            followups.append((text, ephemeral))
+
+        interaction = SimpleNamespace(
+            user=SimpleNamespace(id=user_id),
+            response=SimpleNamespace(defer=defer),
+            edit_original_response=edit or default_edit,
+            followup=SimpleNamespace(send=followup),
+        )
+
+        async def go():
+            view = PollView(poll, repo, FakeBot(None))  # type: ignore[arg-type]
+            button = next(c for c in view.children if isinstance(c, PollEndButton))
+            await button.callback(interaction)
+
+        asyncio.run(go())
+        return followups
+
+    def test_success_has_no_followup(self, repo):  # noqa: F811
+        assert self.click(repo, add_poll(repo)) == []
+
+    def test_message_failure_is_told_to_the_clicker(self, repo):  # noqa: F811
+        async def edit(**kwargs):
+            raise http_error(discord.NotFound, 404)
+
+        poll = add_poll(repo)
+        assert self.click(repo, poll, edit=edit) == [("投票已結算，但投票訊息已被刪除", True)]
+        assert stored(repo, poll.poll_id).end_at is not None
+
+    def test_already_ended(self, repo):  # noqa: F811
+        poll = add_poll(repo)
+        self.click(repo, poll)
+        assert self.click(repo, poll) == [("此投票已結算", True)]
+
+
+class TestCreateAndSendOrphan:
+    @pytest.mark.parametrize("delete_error", [None, http_error(discord.Forbidden, 403)])
+    def test_db_failure_after_send_deletes_message_and_poll(self, repo, monkeypatch, delete_error):  # noqa: F811
+        monkeypatch.setattr(view_module, "sqldb", repo)
+        message = SimpleNamespace(id=777, deleted=False)
+
+        async def delete():
+            if delete_error:
+                raise delete_error
+            message.deleted = True
+
+        message.delete = delete
+
+        async def send(embed, view):
+            return message
+
+        real_merge = repo.merge
+
+        def merge(obj):
+            if isinstance(obj, Poll):
+                raise RuntimeError("db down")
+            return real_merge(obj)
+
+        monkeypatch.setattr(repo, "merge", merge)
+        before = len(repo.session.exec(select(Poll)).all())
+
+        async def go():
+            kwargs = create_kwargs()
+            kwargs["bot"].get_guild = lambda gid: SimpleNamespace(
+                get_member=lambda uid: None, get_role=lambda rid: None
+            )
+            await PollView.create_and_send(send, CHANNEL_ID, **kwargs)
+
+        with pytest.raises(RuntimeError, match="db down"):
+            asyncio.run(go())
+        assert message.deleted is (delete_error is None)
+        repo.session.expire_all()
+        assert len(repo.session.exec(select(Poll)).all()) == before
 
 
 class TestMissingPermissions:

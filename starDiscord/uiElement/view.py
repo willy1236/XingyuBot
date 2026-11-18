@@ -128,6 +128,8 @@ class PollEndButton(discord.ui.Button):
                 await interaction.followup.send("此投票已結算", ephemeral=True)
             elif outcome.status == "not_found":
                 await interaction.followup.send("此投票已不存在", ephemeral=True)
+            elif outcome.message_failure:
+                await interaction.followup.send(f"投票已結算，但{outcome.message_failure_text}", ephemeral=True)
         else:
             await interaction.response.send_message("錯誤：只有投票發起人才能結算", ephemeral=True)
 
@@ -282,6 +284,7 @@ class PollView(discord.ui.View):
             deadline=deadline,
         )
         sqldb.add(poll)
+        message = None
         try:
             sqldb.add_poll_option(poll.poll_id, options)
             for role_id in set(only_roles) | set(role_weights):
@@ -292,6 +295,12 @@ class PollView(discord.ui.View):
             poll.message_id = message.id
             sqldb.merge(poll)
         except Exception as e:
+            if message is not None:
+                # 訊息已發出才失敗：刪掉訊息，不在頻道留下沒有資料的投票
+                try:
+                    await message.delete()
+                except discord.HTTPException:
+                    log.warning("poll create: delete orphan message failed", extra={"poll_id": poll.poll_id}, exc_info=True)
             sqldb.delete_poll(poll.poll_id)
             if isinstance(e, discord.NotFound):
                 raise PollSendError("channel_missing") from e
