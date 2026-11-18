@@ -1,3 +1,4 @@
+import asyncio
 import functools
 import inspect
 import logging
@@ -89,6 +90,10 @@ class BaseRepository:
     讀完不結束交易就會停在 idle in transaction，擋住 ALTER 之類要拿表鎖的操作，所以最外層方法結束時，
     交易若只有讀取就 commit 掉（不 expire 已載入的物件）。有未 flush 或已 flush 未 commit 的寫入、
     或呼叫過 `_keep_transaction_open()`（取 advisory／FOR UPDATE 鎖的方法）時保持交易，由呼叫端 commit 或 rollback。
+
+    repository 方法以外開的交易（讀已 expire 物件的屬性、lazy load、直接用 `session`）：在有 event loop 的 thread 上，
+    排到 loop 的下一輪照同樣的規則結束；沒有 loop 的 thread（executor）用完要自己呼叫 `release_session()`。
+    `@contextmanager` 的方法在進入區塊前就回傳，包裝管不到區塊內，區塊要自己 commit 或 rollback。
     """
 
     def __init_subclass__(cls, **kwargs):
@@ -104,6 +109,17 @@ class BaseRepository:
             maker = session_factory.session_factory
             event.listen(maker, "after_flush", _keep_after_flush)
             event.listen(maker, "after_transaction_end", _clear_keep_on_end)
+            event.listen(maker, "after_begin", self._end_later_if_outside_call)
+
+    def _end_later_if_outside_call(self, session: Session, transaction, connection) -> None:
+        """repository 方法以外開的交易，排到目前 thread 的 event loop 下一輪再結束；沒有 loop 時不處理。"""
+        if getattr(_call_depth, "value", 0):
+            return
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            return
+        loop.call_soon(self._end_read_transaction)
 
     def _keep_transaction_open(self) -> None:
         """目前的交易取了鎖或要跨方法延續，方法結束時不自動結束，直到 commit 或 rollback。"""
@@ -141,7 +157,8 @@ class BaseRepository:
     def release_session(self) -> None:
         """釋放目前 thread 的 session，把連線還給連線池。
 
-        scoped_session 讀完不 commit 會一直佔住連線；在 executor 之類的 thread 用完 sqldb 後呼叫。
+        repository 方法結束時已會收掉唯讀交易；沒有 event loop 的 thread（executor）用完 sqldb 後仍要呼叫，
+        收掉方法以外開的交易（lazy load、讀已 expire 的屬性、直接用 `session`）。
         固定單一 Session（測試）時什麼都不做。
         """
         if isinstance(self._session_factory, ScopedSession):

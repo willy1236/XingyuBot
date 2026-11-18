@@ -1,18 +1,19 @@
 """BaseRepository 的交易邊界：bot 的 event loop thread 一直持有同一個 scoped session，讀完要結束交易，
 連線才不會停在 idle in transaction 握著讀過的表的鎖（真實 PostgreSQL）。"""
 
+import asyncio
 from uuid import uuid4
 
 import pytest
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import scoped_session, sessionmaker
-from sqlmodel import Session, select
+from sqlmodel import Session, delete, select
 
 from starlib import sqldb
 from starlib.database import TwitchBotJoinChannel
 from starlib.database.postgresql.client import SQLRepository
 
-# 不會跟真實資料撞到的 twitch_id；只 flush 不 commit，測試結束 rollback
+# 不會跟真實資料撞到的 twitch_id；寫入的資料測試結束時清掉
 _TEST_TWITCH_ID = -987654321
 
 
@@ -60,14 +61,55 @@ def test_read_ends_transaction(scoped):
     assert idle_in_transaction() == 0
 
 
-def test_returned_objects_stay_loaded(scoped):
+@pytest.fixture
+def committed_row(scoped):
     repo, _ = scoped
-    repo.session.add(TwitchBotJoinChannel(twitch_id=_TEST_TWITCH_ID, point_name="p"))
-    repo.session.flush()
-    repo.session.rollback()
-    rows = repo.read_join_channels()
+    row = repo.merge(TwitchBotJoinChannel(twitch_id=_TEST_TWITCH_ID, point_name="p"))
+    try:
+        yield row
+    finally:
+        repo.session.rollback()
+        repo.session.exec(delete(TwitchBotJoinChannel).where(TwitchBotJoinChannel.twitch_id == _TEST_TWITCH_ID))
+        repo.session.commit()
+
+
+def test_returned_objects_stay_loaded(scoped, committed_row):
+    repo, _ = scoped
+    repo.session.expire_all()
+    rows = [r for r in repo.read_join_channels() if r.twitch_id == _TEST_TWITCH_ID]
+    assert rows
     # 讀屬性不能因為 commit 時 expire 而再開一個交易
-    [r.point_name for r in rows]
+    assert rows[0].point_name == "p"
+    assert not repo.session.in_transaction()
+
+
+def test_transaction_outside_call_ends_on_next_loop_iteration(scoped, committed_row):
+    repo, idle_in_transaction = scoped
+
+    async def bot_handler():
+        # 寫入 commit 後物件已 expire，讀屬性會在 repository 方法以外開交易
+        assert committed_row.point_name == "p"
+        assert repo.session.in_transaction()
+        await asyncio.sleep(0)
+        assert not repo.session.in_transaction()
+        assert idle_in_transaction() == 0
+
+    asyncio.run(bot_handler())
+
+
+def test_lock_music_playlist_keeps_row_lock(scoped):
+    repo, _ = scoped
+    with repo.lock_music_playlist(-1):
+        repo.read_join_channels()  # 區塊內的讀取不能提前放掉 FOR UPDATE 鎖
+        assert repo.session.in_transaction()
+    assert not repo.session.in_transaction()
+
+
+def test_lock_playlist_names_keeps_advisory_lock(scoped):
+    repo, _ = scoped
+    with repo.lock_music_playlist_names(uuid4()):
+        repo.read_join_channels()
+        assert repo.session.in_transaction()
     assert not repo.session.in_transaction()
 
 
