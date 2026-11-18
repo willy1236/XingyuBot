@@ -332,6 +332,8 @@ class PollView(discord.ui.View):
             message = await send(view.embed(bot.get_guild(guild_id)), view)
             poll.message_id = message.id
             sqldb.merge(poll)
+            if poll.deadline is not None:
+                view.schedule_end()
         except Exception as e:
             if message is not None:
                 # 訊息已發出才失敗：刪掉訊息，不在頻道留下沒有資料的投票
@@ -349,6 +351,30 @@ class PollView(discord.ui.View):
                 raise PollSendError("failed") from e
             raise
         return poll
+
+    @property
+    def _job_id(self) -> str:
+        return f"poll_end_{self.poll.poll_id}"
+
+    def schedule_end(self):
+        """排程在 deadline 自動結算，已過期則 10 秒後結算。排程只存在記憶體，bot 啟動時要重排"""
+        if self.poll.deadline is None:
+            return
+        run_at = max(self.poll.deadline, nowtz() + timedelta(seconds=10))
+        self.bot.scheduler.add_job(self.auto_end, DateTrigger(run_at), id=self._job_id, replace_existing=True)
+
+    async def auto_end(self):
+        """排程到期的結算；沒有人看回傳值，結算沒完成要留紀錄"""
+        try:
+            outcome = await self.finish()
+        except Exception:
+            log.exception("poll auto end failed", extra={"poll_id": self.poll.poll_id})
+            return
+        if outcome.status not in ("ok", "already_ended") or outcome.message_failure:
+            log.error(
+                "poll auto end did not publish",
+                extra={"poll_id": self.poll.poll_id, "status": outcome.status, "message_failure": outcome.message_failure},
+            )
 
     def reload(self) -> bool:
         """從資料庫重讀投票。長駐的 view 與排程 job 持有的 instance 可能已過期，結算前一定要重讀。"""
@@ -385,6 +411,12 @@ class PollView(discord.ui.View):
                 except StaleDataError:
                     # 更新訊息期間投票被後台刪掉（刪除不取 poll_lock）：資料已不在，與一開始就不存在同樣處理
                     return PollOutcome("not_found")
+            if self.poll.deadline is not None:
+                # 截止前手動結算：移除排程，到期時就不會再來一次；自動結算觸發的那次 job 已不在
+                try:
+                    self.bot.scheduler.remove_job(self._job_id)
+                except JobLookupError:
+                    pass
             return PollOutcome("ok", failure)
 
     async def publish(self, edit: Callable[..., Awaitable] | None = None) -> str | None:
@@ -468,6 +500,8 @@ class PollView(discord.ui.View):
             description += "\n- 不允許變更投票"
         if self.poll.ban_alternate_account_voting:
             description += "\n- 小帳不算有效票"
+        if self.poll.deadline is not None:
+            description += f"\n- 截止時間：{format_dt(self.poll.deadline, 'f')}（{format_dt(self.poll.deadline, 'R')}）"
 
         if only_role_list:
             description += "\n- 可投票身分組：" + ",".join(only_role_list)
