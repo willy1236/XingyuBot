@@ -1,29 +1,15 @@
 import asyncio
-import functools
 import logging
 import socket
 import threading
-import time
-from collections.abc import Callable, Coroutine
-from datetime import UTC, datetime
+from collections.abc import Coroutine
 from typing import Any
 
 from sqlalchemy.exc import NoResultFound
-from twitchAPI.chat import (
-    Chat,
-    ChatCommand,
-    ChatMessage,
-    ChatSub,
-    EventData,
-    JoinedEvent,
-    LeftEvent,
-    NoticeEvent,
-    WhisperEvent,
-)
+from twitchAPI.chat import Chat, EventData
 from twitchAPI.eventsub.webhook import EventSubWebhook
 from twitchAPI.helper import first
 from twitchAPI.oauth import UserAuthenticator
-from twitchAPI.object import eventsub
 from twitchAPI.twitch import Twitch
 from twitchAPI.type import (
     AuthScope,
@@ -37,17 +23,7 @@ from twitchAPI.type import (
 from sentry_bootstrap import capture_exception_safe, capture_message_safe
 from starlib import BaseThread
 from starlib.database import APIType, OAuthToken, sqldb
-from starlib.messaging import get_bus
-from starlib.messaging.events.twitch_activity import (
-    TwitchPredictionResultEvent,
-    TwitchRaidEvent,
-    TwitchRedemptionEvent,
-    TwitchSubscribeEvent,
-    TwitchSubscriptionMessageEvent,
-    TwitchWhisperEvent,
-)
-from starlib.messaging.events.twitch_follow import TwitchFollowEvent
-from starlib.messaging.events.twitch_stream import TwitchStreamOfflineEvent, TwitchStreamOnlineEvent
+from starServer.twitch_bot import commands, events, state
 
 log = logging.getLogger(__name__)
 
@@ -87,250 +63,6 @@ USER_SCOPE = [
     AuthScope.WHISPERS_EDIT,
 ]
 
-# import 時不查 DB，由 run() 開頭的 load_join_channels() 填入；handler 繼續以模組全域讀取
-join_channels: dict = {}
-TARGET_CHANNEL: dict = {}
-TARGET_CHANNEL_IDS: list[str] = []
-
-
-def load_join_channels() -> None:
-    global join_channels, TARGET_CHANNEL, TARGET_CHANNEL_IDS
-    join_channels = sqldb.get_bot_join_channel_all()
-    TARGET_CHANNEL = {twitch_id: data.action_channel_id for twitch_id, data in join_channels.items()}
-    TARGET_CHANNEL_IDS = [str(i) for i in TARGET_CHANNEL.keys()]
-
-
-chat: Chat
-# run() 建立的 Twitch API 物件，handler 用它查 Helix
-twitch: Twitch
-
-
-# eventsub
-async def on_follow(event: eventsub.ChannelFollowEvent):
-    # await chat.send_message(data.event.broadcaster_user_name,text = f'{data.event.user_name} now follows {data.event.broadcaster_user_name}!')
-    log.info("%s(%s) now follows %s!", event.event.user_name, event.event.user_login, event.event.broadcaster_user_name)
-
-    get_bus().publish(
-        TwitchFollowEvent(
-            occurred_at=event.metadata.message_timestamp,
-            broadcaster_id=event.event.broadcaster_user_id,
-            broadcaster_name=event.event.broadcaster_user_name,
-            follower_name=event.event.user_name,
-            follower_login=event.event.user_login,
-        )
-    )
-
-
-async def on_stream_online(event: eventsub.StreamOnlineEvent):
-    log.info("%s starting stream!", event.event.broadcaster_user_name)
-
-    # stream.online 會在開台後數秒內送達，此時 Helix streams API 可能還查不到直播，稍等重試
-    live = None
-    for _ in range(3):
-        live = await first(twitch.get_streams(user_id=[event.event.broadcaster_user_id]))
-        if live:
-            break
-        await asyncio.sleep(10)
-    if live is None:
-        log.warning("%s 開台但查不到直播資訊，略過開台通知", event.event.broadcaster_user_name)
-        return
-
-    # 聊天室訊息只看有沒有設定通知頻道；Discord 端的通知頻道與開台通知由 Discord bot 處理事件時決定
-    channel_config = join_channels.get(int(event.event.broadcaster_user_id))
-    if channel_config and channel_config.action_channel_id:
-        await chat.send_message(
-            event.event.broadcaster_user_login,
-            f"{event.event.broadcaster_user_name} 正在直播 {live.game_name}! {live.title}",
-        )
-
-    try:
-        user = await first(twitch.get_users(user_ids=[event.event.broadcaster_user_id]))
-    except Exception:
-        log.warning("%s 的頭像查詢失敗，開台通知改用預設圖", event.event.broadcaster_user_name, exc_info=True)
-        user = None
-    get_bus().publish(
-        TwitchStreamOnlineEvent(
-            occurred_at=event.metadata.message_timestamp,
-            broadcaster_id=event.event.broadcaster_user_id,
-            broadcaster_name=event.event.broadcaster_user_name,
-            profile_image_url=user.profile_image_url if user else None,
-            stream_id=live.id,
-            user_login=live.user_login,
-            game_id=live.game_id,
-            game_name=live.game_name,
-            stream_type=live.type,
-            title=live.title,
-            viewer_count=live.viewer_count,
-            started_at=live.started_at,
-            language=live.language,
-            thumbnail_url=live.thumbnail_url,
-            tag_ids=live.tag_ids or [],
-            tags=live.tags or [],
-            is_mature=live.is_mature,
-        )
-    )
-
-
-async def on_stream_offline(event: eventsub.StreamOfflineEvent):
-    log.info("%s ending stream.", event.event.broadcaster_user_name)
-    get_bus().publish(
-        TwitchStreamOfflineEvent(
-            occurred_at=event.metadata.message_timestamp,
-            broadcaster_id=event.event.broadcaster_user_id,
-            broadcaster_name=event.event.broadcaster_user_name,
-        )
-    )
-
-
-async def on_channel_points_custom_reward_redemption_add(event: eventsub.ChannelPointsCustomRewardRedemptionAddEvent):
-    text = f"{event.event.user_name}({event.event.user_login}) 兌換了 {event.event.reward.title}!"
-    if event.event.user_input:
-        text += f" ({event.event.user_input})"
-    log.info(text)
-
-    # Discord 通知不論通知頻道設定都送出，由 Discord 端決定發不發、發到哪
-    get_bus().publish(
-        TwitchRedemptionEvent(
-            occurred_at=event.metadata.message_timestamp,
-            broadcaster_id=event.event.broadcaster_user_id,
-            user_name=event.event.user_name,
-            user_login=event.event.user_login,
-            reward_title=event.event.reward.title,
-            user_input=event.event.user_input or None,
-        )
-    )
-
-
-async def on_channel_points_custom_reward_redemption_update(
-    event: eventsub.ChannelPointsCustomRewardRedemptionUpdateEvent,
-):
-    log.info(
-        "%s's redemption of %s has been updated to %s!",
-        event.event.user_name,
-        event.event.reward.title,
-        event.event.status,
-    )
-
-
-async def on_channel_raid(event: eventsub.ChannelRaidEvent):
-    log.info(
-        "%s 帶了 %s 位觀眾來 %s 的頻道！",
-        event.event.from_broadcaster_user_name,
-        event.event.viewers,
-        event.event.to_broadcaster_user_name,
-    )
-
-    channel_config = join_channels.get(int(event.event.to_broadcaster_user_id))
-    if channel_config and channel_config.action_channel_id:
-        await chat.send_message(
-            event.event.to_broadcaster_user_login,
-            f"{event.event.from_broadcaster_user_name} 帶了 {event.event.viewers} 位觀眾降落在 {event.event.to_broadcaster_user_name} 的頻道！",
-        )
-
-    get_bus().publish(
-        TwitchRaidEvent(
-            occurred_at=event.metadata.message_timestamp,
-            to_broadcaster_id=event.event.to_broadcaster_user_id,
-            to_broadcaster_name=event.event.to_broadcaster_user_name,
-            from_broadcaster_name=event.event.from_broadcaster_user_name,
-            viewers=event.event.viewers,
-        )
-    )
-
-
-async def on_channel_subscribe(event: eventsub.ChannelSubscribeEvent):
-    log.info("%s 在 %s 的層級%s新訂閱", event.event.user_name, event.event.broadcaster_user_name, event.event.tier[0])
-
-    # 贈送訂閱不通知 Discord；其餘不論通知頻道設定都送出，由 Discord 端決定發不發
-    if not event.event.is_gift:
-        get_bus().publish(
-            TwitchSubscribeEvent(
-                occurred_at=event.metadata.message_timestamp,
-                broadcaster_id=event.event.broadcaster_user_id,
-                user_name=event.event.user_name,
-            )
-        )
-
-
-async def on_channel_subscription_message(event: eventsub.ChannelSubscriptionMessageEvent):
-    texts = [
-        f"{event.event.user_name} 在 {event.event.broadcaster_user_name} 的{event.event.duration_months}個月 層級{event.event.tier[0]}訂閱",
-        f"他已經訂閱 {event.event.cumulative_months} 個月了",
-    ]
-    if event.event.message:
-        texts.append(f"訊息：{event.event.message.text}")
-
-    for text in texts:
-        log.info(text)
-
-    channel_config = join_channels.get(int(event.event.broadcaster_user_id))
-    if channel_config and channel_config.action_channel_id:
-        chat_text = f"感謝 {event.event.user_name} 的訂閱！"
-        if event.event.cumulative_months:
-            chat_text += f"累積訂閱{event.event.cumulative_months}個月！"
-        await chat.send_message(event.event.broadcaster_user_login, chat_text)
-
-    get_bus().publish(
-        TwitchSubscriptionMessageEvent(
-            occurred_at=event.metadata.message_timestamp,
-            broadcaster_id=event.event.broadcaster_user_id,
-            broadcaster_name=event.event.broadcaster_user_name,
-            user_name=event.event.user_name,
-            tier=event.event.tier,
-            duration_months=event.event.duration_months,
-            cumulative_months=event.event.cumulative_months,
-            message=event.event.message.text if event.event.message else None,
-        )
-    )
-
-
-async def on_channel_subscription_gift(event: eventsub.ChannelSubscriptionGiftEvent):
-    log.info(
-        "%s 在 %s 的層級%s送出的%s份訂閱",
-        event.event.user_name,
-        event.event.broadcaster_user_name,
-        event.event.tier[0],
-        event.event.total,
-    )
-    channel_config = join_channels.get(int(event.event.broadcaster_user_id))
-    if channel_config and channel_config.action_channel_id and not event.event.is_anonymous:
-        await chat.send_message(
-            event.event.broadcaster_user_login, f"感謝 {event.event.user_name} 送出的{event.event.total}份訂閱！"
-        )
-
-
-async def on_channel_poll_begin(event: eventsub.ChannelPollBeginEvent):
-    log.info("%s 開始了投票：%s", event.event.broadcaster_user_name, event.event.title)
-
-
-async def on_channel_prediction_begin(event: eventsub.ChannelPredictionEvent):
-    log.info(
-        "%s 開始了預測：%s\n%s V.S. %s",
-        event.event.broadcaster_user_name,
-        event.event.title,
-        event.event.outcomes[0].title,
-        event.event.outcomes[1].title,
-    )
-
-
-async def on_channel_prediction_end(event: eventsub.ChannelPredictionEndEvent):
-    if event.event.status == "resolved":
-        log.info("%s 結束了預測：%s", event.event.broadcaster_user_name, event.event.title)
-        for outcome in event.event.outcomes:
-            if outcome.id == event.event.winning_outcome_id:
-                log.info("%s (%s) 獲勝！%s個人成功預測", outcome.title, outcome.color, outcome.users)
-                get_bus().publish(
-                    TwitchPredictionResultEvent(
-                        occurred_at=event.metadata.message_timestamp,
-                        broadcaster_name=event.event.broadcaster_user_name,
-                        title=event.event.title,
-                        outcome_title=outcome.title,
-                        users=outcome.users,
-                    )
-                )
-    else:
-        log.info("%s 取消了預測：%s", event.event.broadcaster_user_name, event.event.title)
-
 
 # bot
 async def on_ready(ready_event: EventData):
@@ -339,145 +71,6 @@ async def on_ready(ready_event: EventData):
     # or even better pass a list of channels as the argument
     if users_login:
         await ready_event.chat.join_room(users_login)
-
-
-# this will be called whenever a message in a channel was send by either the bot OR another user
-async def on_message(msg: ChatMessage):
-    log.info("in %s, %s said: %s", msg.room.name, msg.user.name, msg.text)
-    await respond_to_chat_command(msg)
-
-
-async def on_sub(sub: ChatSub):
-    log.info("New subscription in %s:", sub.room.name)
-    log.info("Type: %s", sub.sub_plan_name)
-    log.info("Message: %s", sub.sub_message)
-    log.info("System message: %s", sub.system_message)
-
-
-async def on_bot_joined(event: JoinedEvent):
-    await asyncio.sleep(1)
-    text = "Joined bot in %s"
-    if event.chat.is_mod(event.room_name):
-        text += " as mod"
-    log.info(text, event.room_name)
-
-
-async def on_bot_leaved(event: LeftEvent):
-    log.info("Leaved bot in %s", event.room_name)
-
-
-async def on_server_notice(event: NoticeEvent):
-    if event.room:
-        log.info("Notice from server: %s in %s", event.message, event.room.name)
-    else:
-        log.info("Notice from server: %s", event.message)
-
-
-async def on_whisper(event: WhisperEvent):
-    log.info("Whisper from %s: %s", event.user.name, event.message)
-    # WhisperEvent 沒有 EventSub 的 message_timestamp，以收到時間為事件時間
-    get_bus().publish(
-        TwitchWhisperEvent(occurred_at=datetime.now(UTC), user_name=event.user.name, message=event.message)
-    )
-
-
-async def on_raid(event: dict):
-    try:
-        log.info("Raid from %s with %s viewers", event["tags"]["display-name"], event["tags"]["msg-param-viewerCount"])
-    except Exception:
-        log.warning(event)
-
-
-def _can_manage_commands(cmd: ChatCommand) -> bool:
-    """只有實況主與該頻道的 mod 能新增、移除自訂指令。"""
-    return cmd.user.mod or cmd.user.name == cmd.room.name
-
-
-def _releases_session[**P](func: Callable[P, Coroutine[Any, Any, None]]) -> Callable[P, Coroutine[Any, Any, None]]:
-    """指令跑完釋放 session，讀取開的交易才不會一直握著表的鎖。"""
-
-    @functools.wraps(func)
-    async def wrapper(*args: P.args, **kwargs: P.kwargs) -> None:
-        try:
-            await func(*args, **kwargs)
-        finally:
-            sqldb.release_session()
-
-    return wrapper
-
-
-@_releases_session
-async def add_chat_command(cmd: ChatCommand):
-    if not _can_manage_commands(cmd):
-        return
-    parameters = cmd.parameter.split(maxsplit=1)
-    if len(parameters) < 2:
-        await cmd.reply("用法：!add_command <指令> <回覆>")
-    else:
-        name = parameters[0].removeprefix("!").lower()
-        if name in BUILTIN_COMMANDS:
-            await cmd.reply(f"{name} 是內建指令，無法覆蓋")
-            return
-        sqldb.add_twitch_cmd(cmd.room.room_id, name, parameters[1])
-        await cmd.reply(f"已新增指令：{name}")
-
-
-@_releases_session
-async def remove_chat_command(cmd: ChatCommand):
-    if not _can_manage_commands(cmd):
-        return
-    name = cmd.parameter.strip().removeprefix("!").lower()
-    if not name:
-        await cmd.reply("用法：!remove_command <指令>")
-    else:
-        sqldb.remove_twitch_cmd(cmd.room.room_id, name)
-        await cmd.reply(f"已移除指令：{name}")
-
-
-@_releases_session
-async def list_chat_command(cmd: ChatCommand):
-    parameters = cmd.parameter
-    if len(parameters) < 1:
-        commands = sqldb.list_chat_command_by_channel(cmd.room.room_id)
-        if commands:
-            await cmd.reply(f"指令列表：\n{', '.join([i.name for i in commands])}")
-        else:
-            await cmd.reply("目前沒有設定指令")
-    else:
-        command = sqldb.get_chat_command(parameters, cmd.room.room_id)
-        if command:
-            await cmd.reply(f"{command.name}：{command.response}")
-        else:
-            await cmd.reply(f"{parameters} 不存在")
-
-
-# 內建指令由 chat.register_command 處理，自訂指令不可同名
-BUILTIN_COMMANDS = frozenset({"add_cmd", "remove_cmd", "list_cmd"})
-CUSTOM_COMMAND_COOLDOWN = 30
-# (頻道 ID, 指令名稱) -> 上次回應的 monotonic 時間
-_custom_command_last_used: dict[tuple[str, str], float] = {}
-
-
-async def respond_to_chat_command(msg: ChatMessage):
-    """自訂指令依頻道各自查快取，同名指令在不同頻道互不影響；每個頻道的每個指令冷卻 30 秒。"""
-    parts = msg.text.removeprefix("!").split(maxsplit=1) if msg.text.startswith("!") else []
-    if not parts or parts[0].lower() in BUILTIN_COMMANDS:
-        return
-    name = parts[0].lower()
-    resp = sqldb.get_twitch_cmd_response_cache(msg.room.room_id, name)
-    if not resp:
-        return
-    key = (msg.room.room_id, name)
-    now = time.monotonic()
-    if now - _custom_command_last_used.get(key, -CUSTOM_COMMAND_COOLDOWN) < CUSTOM_COMMAND_COOLDOWN:
-        return
-    _custom_command_last_used[key] = now
-    log.debug("invoke_chat_command: %s %s", name, resp.response)
-    await msg.reply(resp.response)
-
-
-async def modify_channel_information(cmd: ChatCommand):
-    pass
 
 
 async def _listen(name: str, subscribe: Coroutine[Any, Any, str]) -> None:
@@ -493,7 +86,7 @@ async def _listen(name: str, subscribe: Coroutine[Any, Any, str]) -> None:
 
 
 async def run():
-    load_join_channels()
+    state.load_join_channels()
     app_config = sqldb.get_oauth_client(APIType.Twitch, 2)
     APP_ID = app_config.client_id
     APP_SECRET = app_config.client_secret
@@ -505,8 +98,7 @@ async def run():
     #     jtoken['refresh'] = refresh_token
 
     # set up twitch api instance and add user authentication with some scopes
-    global twitch
-    twitch = await Twitch(APP_ID, APP_SECRET)
+    twitch = state.twitch = await Twitch(APP_ID, APP_SECRET)
     try:
         app_token = sqldb.get_bot_oauth_token(APIType.Twitch, 2)
         await twitch.set_user_authentication(app_token.access_token, USER_SCOPE, app_token.refresh_token)
@@ -533,28 +125,27 @@ async def run():
     # await helper.bind()
 
     me = await first(twitch.get_users())
-    users = [user async for user in twitch.get_users(user_ids=TARGET_CHANNEL_IDS)]
+    users = [user async for user in twitch.get_users(user_ids=state.TARGET_CHANNEL_IDS)]
     global users_login
     users_login = [user.login for user in users]
 
     # create chat instance
-    global chat
-    chat = await Chat(twitch)
+    chat = state.chat = await Chat(twitch)
 
     # register the handlers for the events you want
     chat.register_event(ChatEvent.READY, on_ready)
-    chat.register_event(ChatEvent.MESSAGE, on_message)
-    chat.register_event(ChatEvent.SUB, on_sub)
-    chat.register_event(ChatEvent.JOINED, on_bot_joined)
-    chat.register_event(ChatEvent.LEFT, on_bot_leaved)
-    chat.register_event(ChatEvent.NOTICE, on_server_notice)
-    chat.register_event(ChatEvent.WHISPER, on_whisper)
-    chat.register_event(ChatEvent.RAID, on_raid)
+    chat.register_event(ChatEvent.MESSAGE, commands.on_message)
+    chat.register_event(ChatEvent.SUB, events.on_sub)
+    chat.register_event(ChatEvent.JOINED, events.on_bot_joined)
+    chat.register_event(ChatEvent.LEFT, events.on_bot_leaved)
+    chat.register_event(ChatEvent.NOTICE, events.on_server_notice)
+    chat.register_event(ChatEvent.WHISPER, events.on_whisper)
+    chat.register_event(ChatEvent.RAID, events.on_raid)
 
     # chat.register_command_middleware(ChannelRestriction(allowed_channel=[]))
-    chat.register_command("add_cmd", add_chat_command)
-    chat.register_command("remove_cmd", remove_chat_command)
-    chat.register_command("list_cmd", list_chat_command)
+    chat.register_command("add_cmd", commands.add_chat_command)
+    chat.register_command("remove_cmd", commands.remove_chat_command)
+    chat.register_command("list_cmd", commands.list_chat_command)
     # TODO: modify_channel_information
 
     chat.start()
@@ -569,40 +160,42 @@ async def run():
     await asyncio.sleep(3)
     for user in users:
         log.debug("eventsub:%s", user.login)
-        await _listen("stream online", eventsub.listen_stream_online(user.id, on_stream_online))
-        await _listen("stream offline", eventsub.listen_stream_offline(user.id, on_stream_offline))
-        await _listen("channel raid", eventsub.listen_channel_raid(on_channel_raid, to_broadcaster_user_id=user.id))
+        await _listen("stream online", eventsub.listen_stream_online(user.id, events.on_stream_online))
+        await _listen("stream offline", eventsub.listen_stream_offline(user.id, events.on_stream_offline))
+        await _listen(
+            "channel raid", eventsub.listen_channel_raid(events.on_channel_raid, to_broadcaster_user_id=user.id)
+        )
         log.debug("eventsub:%s done.", user.login)
 
         # 以下事件需要 bot 是該頻道的 mod 才能訂閱
         if not chat.is_mod(user.login):
             continue
 
-        await _listen("channel follow", eventsub.listen_channel_follow_v2(user.id, me.id, on_follow))
+        await _listen("channel follow", eventsub.listen_channel_follow_v2(user.id, me.id, events.on_follow))
         await _listen(
             "channel points custom reward redemption add",
             eventsub.listen_channel_points_custom_reward_redemption_add(
-                user.id, on_channel_points_custom_reward_redemption_add
+                user.id, events.on_channel_points_custom_reward_redemption_add
             ),
         )
         await _listen(
             "channel points custom reward redemption update",
             eventsub.listen_channel_points_custom_reward_redemption_update(
-                user.id, on_channel_points_custom_reward_redemption_update
+                user.id, events.on_channel_points_custom_reward_redemption_update
             ),
         )
-        await _listen("channel subscribe", eventsub.listen_channel_subscribe(user.id, on_channel_subscribe))
+        await _listen("channel subscribe", eventsub.listen_channel_subscribe(user.id, events.on_channel_subscribe))
         await _listen(
             "channel subscription message",
-            eventsub.listen_channel_subscription_message(user.id, on_channel_subscription_message),
+            eventsub.listen_channel_subscription_message(user.id, events.on_channel_subscription_message),
         )
         await _listen(
             "channel subscription gift",
-            eventsub.listen_channel_subscription_gift(user.id, on_channel_subscription_gift),
+            eventsub.listen_channel_subscription_gift(user.id, events.on_channel_subscription_gift),
         )
         # channel poll begin、channel prediction begin 目前不訂閱，需要時比照加上 _listen
         await _listen(
-            "channel prediction end", eventsub.listen_channel_prediction_end(user.id, on_channel_prediction_end)
+            "channel prediction end", eventsub.listen_channel_prediction_end(user.id, events.on_channel_prediction_end)
         )
         log.debug("eventsub for %s(mod) done.", user.login)
 

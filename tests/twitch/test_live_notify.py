@@ -403,12 +403,13 @@ async def _agen(*items):
 
 @pytest.fixture
 def online_bot(monkeypatch):
-    """載入 twitch_chatbot（模組層級查 DB 的部分先換掉），替換 twitch、chat、bus。"""
+    """載入 twitch_bot.events，替換 twitch、chat、bus。"""
     from types import SimpleNamespace
     from unittest.mock import AsyncMock, MagicMock
 
     monkeypatch.setattr(type(sqldb), "get_bot_join_channel_all", lambda self: {})
-    from starServer import twitch_chatbot as module
+    from starServer.twitch_bot import events as module
+    from starServer.twitch_bot import state
 
     bus = MagicMock()
     fake_twitch = MagicMock()
@@ -416,9 +417,9 @@ def online_bot(monkeypatch):
         SimpleNamespace(profile_image_url="https://x/avatar.png")
     )
     monkeypatch.setattr(module, "get_bus", lambda: bus)
-    monkeypatch.setattr(module, "chat", MagicMock(send_message=AsyncMock()), raising=False)
-    monkeypatch.setattr(module, "twitch", fake_twitch, raising=False)
-    monkeypatch.setattr(module, "join_channels", {})
+    monkeypatch.setattr(state, "chat", MagicMock(send_message=AsyncMock()), raising=False)
+    monkeypatch.setattr(state, "twitch", fake_twitch, raising=False)
+    monkeypatch.setattr(state, "join_channels", {})
     event = SimpleNamespace(
         metadata=SimpleNamespace(message_timestamp=T0),
         event=SimpleNamespace(

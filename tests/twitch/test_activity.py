@@ -252,11 +252,12 @@ def test_cog_subscribes_and_unsubscribes_all_six_events(monkeypatch):
 
 @pytest.fixture
 def chatbot(monkeypatch):
-    """載入 twitch_chatbot（模組層級會查 DB，先換掉）；替換 bus 與 chat，記錄呼叫順序。"""
+    """載入 twitch_bot.events；替換 bus 與 chat，記錄呼叫順序。"""
     from starlib import sclient
 
     monkeypatch.setattr(type(sclient.sqldb), "get_bot_join_channel_all", lambda self: {})
-    from starServer import twitch_chatbot as module
+    from starServer.twitch_bot import events as module
+    from starServer.twitch_bot import state
 
     calls: list[str] = []
     bus = MagicMock()
@@ -264,8 +265,8 @@ def chatbot(monkeypatch):
     fake_chat = MagicMock()
     fake_chat.send_message = AsyncMock(side_effect=lambda *a, **k: calls.append("chat"))
     monkeypatch.setattr(module, "get_bus", lambda: bus)
-    monkeypatch.setattr(module, "chat", fake_chat, raising=False)
-    monkeypatch.setattr(module, "join_channels", {int(TWITCH_ID): MagicMock(action_channel_id=123)})
+    monkeypatch.setattr(state, "chat", fake_chat, raising=False)
+    monkeypatch.setattr(state, "join_channels", {int(TWITCH_ID): MagicMock(action_channel_id=123)})
     module.test_calls = calls
     module.test_bus = bus
     module.test_chat = fake_chat
@@ -298,7 +299,7 @@ def test_raid_chat_then_publish(chatbot):
 
 
 def test_raid_without_action_channel_skips_chat_but_still_publishes(chatbot, monkeypatch):
-    monkeypatch.setattr(chatbot, "join_channels", {})
+    monkeypatch.setattr(chatbot.state, "join_channels", {})
     run(chatbot.on_channel_raid(raid_payload()))
     chatbot.test_chat.send_message.assert_not_awaited()
     assert len(published(chatbot)) == 1
@@ -313,7 +314,7 @@ def test_gift_subscribe_is_not_published(chatbot):
 
 
 def test_subscribe_published_regardless_of_action_channel(chatbot, monkeypatch):
-    monkeypatch.setattr(chatbot, "join_channels", {})
+    monkeypatch.setattr(chatbot.state, "join_channels", {})
     payload = eventsub_event(
         broadcaster_user_id=TWITCH_ID, broadcaster_user_name="主播", user_name="訂閱者", tier="1000", is_gift=False
     )
@@ -366,7 +367,7 @@ def test_gift_subscription_chat_only(chatbot):
 
 
 def test_redemption_published_regardless_of_action_channel(chatbot, monkeypatch):
-    monkeypatch.setattr(chatbot, "join_channels", {})
+    monkeypatch.setattr(chatbot.state, "join_channels", {})
     payload = eventsub_event(
         broadcaster_user_id=TWITCH_ID,
         user_name="兌換者",

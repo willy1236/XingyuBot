@@ -322,7 +322,10 @@
 - Helix Get Moderators 要用實況主 token（`moderation:read`），一律經這張卡新增的 `starlib/twitch_tokens.py` 取得。
 - twitchAPI 的 `chat.join_room` 與 `leave_room` 必須在 Chat 的 event loop 上呼叫。
 
-**進度**：未完成
+**進度**：進行中（2026-11-19）
+- 已定案：Twitch bot 各模組共用的 `chat`、`twitch`、`join_channels` 放 `starServer/twitch_bot/state.py`（避免 `channels` 與 `events` 循環 import）；聊天室 IRC 事件（`on_sub`、`on_whisper` 等）併入 `events.py`；`on_message` 在 `commands.py`；既有測試只改 patch 目標。
+- commit：（1）純搬移 `twitch_bot/{state,events,commands}.py`，`twitch_chatbot.py` 只留 `run()`、`TwitchBotThread`
+- 續做：抽出 `channels.subscribe_channel` 與訂閱 id 記錄；`timers.py` 與 `start()`／`stop()` 接線；`twitch_tokens.py`；`twitch_control.py`；契約文件；等 W-01 合入後做 enabled 載入與 `sync_channel`／`channel_status`、RPC 註冊
 
 ### W-03 實況主能啟用與停用 bot
 

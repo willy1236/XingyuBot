@@ -12,6 +12,7 @@ from unittest.mock import MagicMock
 import pytest
 
 import starServer.twitch_chatbot as chatbot
+from starServer.twitch_bot import state
 
 
 def make_thread(monkeypatch, *, connected=False, reachable=True) -> chatbot.TwitchBotThread:
@@ -141,8 +142,10 @@ def test_stop_eventsub_unsubscribes_without_cross_loop_shutdown():
     assert eventsub._closing is True
 
 
-def test_import_does_not_touch_db():
-    tree = ast.parse(Path(chatbot.__file__).read_text(encoding="utf-8"))
+@pytest.mark.parametrize("module", ["twitch_chatbot", "twitch_bot/state", "twitch_bot/events", "twitch_bot/commands"])
+def test_import_does_not_touch_db(module):
+    path = Path(chatbot.__file__).parent / f"{module}.py"
+    tree = ast.parse(path.read_text(encoding="utf-8"))
     for node in tree.body:
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Import, ast.ImportFrom)):
             continue
@@ -152,15 +155,15 @@ def test_import_does_not_touch_db():
 
 def test_load_join_channels_populates_module_globals(monkeypatch):
     data = {123: MagicMock(action_channel_id=456), 789: MagicMock(action_channel_id=None)}
-    monkeypatch.setattr(chatbot.sqldb, "get_bot_join_channel_all", lambda: data)
+    monkeypatch.setattr(state.sqldb, "get_bot_join_channel_all", lambda: data)
     for name in ("join_channels", "TARGET_CHANNEL", "TARGET_CHANNEL_IDS"):
-        monkeypatch.setattr(chatbot, name, getattr(chatbot, name))  # 登記，測試結束還原
+        monkeypatch.setattr(state, name, getattr(state, name))  # 登記，測試結束還原
 
-    chatbot.load_join_channels()
+    state.load_join_channels()
 
-    assert chatbot.join_channels is data
-    assert chatbot.TARGET_CHANNEL == {123: 456, 789: None}
-    assert chatbot.TARGET_CHANNEL_IDS == ["123", "789"]
+    assert state.join_channels is data
+    assert state.TARGET_CHANNEL == {123: 456, 789: None}
+    assert state.TARGET_CHANNEL_IDS == ["123", "789"]
 
 
 # ---- twitch_main ----
