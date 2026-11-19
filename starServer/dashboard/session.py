@@ -426,10 +426,11 @@ async def follow_account[S: SessionInfo](info: S, *, force: bool = False) -> S:
 
 
 async def lookup_followed_session(session_id: str | None) -> SessionInfo | None:
-    """只讀地查 session 並補上帳號跟隨的結果，給整頁導覽的端點（/to/*）用，這些端點不能回 JSON 錯誤。
+    """查 session 並補上帳號跟隨的結果，給整頁導覽的端點（/to/*）用，這些端點不能回 JSON 錯誤。
 
     析域登入的頻道清單（twitch_channels）與帳號資訊要跟隨後才有，`lookup_session` 沒有。
-    沒帶、不存在、已過期，或析域帳號已停權或查無（session 失效）時回 None；不續期、不刪除 session。
+    沒帶、不存在、已過期，或析域帳號已停權或查無（session 失效）時回 None。
+    不續期；但帳號跟隨照常運作：析域帳號失效時會刪除 session，帳號有變（例如合併）時會把新的 account_id 寫回 session。
     """
     info = await run_db(lambda: lookup_session(session_id))
     if info is None:

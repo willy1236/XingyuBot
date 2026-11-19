@@ -24,7 +24,6 @@ from starlib.utils import nowtz
 
 from . import config
 from .auth import OAUTH_COOKIE_MAX_AGE, OAuthCookie, decode_cookie, encode_cookie, sanitize_next, sanitize_origin
-from .channels import channel_page_path
 from .db import run_db
 from .session import SESSION_COOKIE, TwitchIdentity, create_session, set_session_cookie
 
@@ -156,8 +155,8 @@ async def _handle_login(request: Request, cookie: OAuthCookie) -> Response:
         return login_page
 
     log.info("Dashboard Twitch login: %s (%s)", user.login, user.id)
-    next_path = channel_page_path(user.id) if cookie.next == "/dashboard" else cookie.next
-    response = RedirectResponse(url=f"{cookie.origin}{next_path}")
+    # 落地頁是 next（預設 /dashboard）：「我的」是所有登入方式共通的入口，有什麼就看什麼，不直接導到頻道頁
+    response = RedirectResponse(url=f"{cookie.origin}{cookie.next}")
     set_session_cookie(response, session_id)
     return response
 

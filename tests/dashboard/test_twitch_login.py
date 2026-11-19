@@ -143,7 +143,7 @@ class TestLogin:
         response = _callback(site, code="c")
 
         assert response.status_code == 307
-        assert response.headers["location"] == f"{FRONTEND}/dashboard/twitch/{TWITCH_ID}"
+        assert response.headers["location"] == f"{FRONTEND}/dashboard"
         (row,) = _sessions(repo)
         assert (row.login_method, row.discord_user_id, row.twitch_user_id) == ("twitch", None, str(TWITCH_ID))
         assert (row.twitch_login, row.twitch_name, row.account_id) == ("streamer", "Streamer", None)
