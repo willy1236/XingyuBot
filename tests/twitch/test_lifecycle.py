@@ -104,6 +104,43 @@ def test_normal_stop_runs_cleanup(monkeypatch, sentry):
     assert cleaned and not thread.abnormal and thread.ready.is_set()
 
 
+def test_cleanup_runs_once_when_called_concurrently(monkeypatch, sentry):
+    thread = make_thread(monkeypatch)
+    thread.twitch = MagicMock()
+    started, release = threading.Event(), threading.Event()
+    calls = []
+
+    async def slow_stop(eventsub):
+        calls.append(eventsub)
+        started.set()
+        await asyncio.to_thread(release.wait, 2)
+
+    monkeypatch.setattr(chatbot, "_stop_eventsub", slow_stop)
+    thread.eventsub = MagicMock()
+    thread.twitch.close = MagicMock(side_effect=lambda: asyncio.sleep(0))
+    first = threading.Thread(target=asyncio.run, args=(thread.cleanup(),))
+    first.start()
+    started.wait(2)
+    asyncio.run(thread.cleanup())
+    release.set()
+    first.join(2)
+
+    assert len(calls) == 1
+    thread.chat.stop.assert_called_once()
+    sentry[0].assert_not_called()
+
+
+def test_stop_eventsub_unsubscribes_without_cross_loop_shutdown():
+    eventsub = MagicMock(unsubscribe_on_stop=True, _closing=False)
+    eventsub.unsubscribe_all_known = MagicMock(side_effect=lambda: asyncio.sleep(0))
+
+    asyncio.run(chatbot._stop_eventsub(eventsub))
+
+    eventsub.unsubscribe_all_known.assert_called_once()
+    eventsub.stop.assert_not_called()
+    assert eventsub._closing is True
+
+
 def test_import_does_not_touch_db():
     tree = ast.parse(Path(chatbot.__file__).read_text(encoding="utf-8"))
     for node in tree.body:

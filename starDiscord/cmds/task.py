@@ -358,7 +358,10 @@ class task(Cog_Extension):
                     update_data[twitter_user_id] = newest + timedelta(seconds=1)
                 await asyncio.sleep(1)
             except subprocess.CalledProcessError as e:
-                log.error(e.stderr)
+                log.error(
+                    "notify_twitter_tweet_updates rettiwt failed",
+                    extra={"twitter_user_id": twitter_user_id, "returncode": e.returncode, "stderr": e.stderr},
+                )
                 continue
             except Exception as e:
                 log.error(
