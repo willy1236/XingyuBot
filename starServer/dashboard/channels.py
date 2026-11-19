@@ -1,18 +1,21 @@
 """實況主後台的頻道端點。
 
 GET /dashboard/channels              這個 session 可以管理的頻道與 bot 狀態
-GET /dashboard/channels/{twitch_id}  單一頻道的基本資料、bot 狀態與轉發 Discord 的可用情形
+GET /dashboard/channels/{twitch_id}  單一頻道的基本資料、bot 狀態、轉發 Discord 的可用情形與 health（權限問題與暫停的功能）
 
 頻道端點只用 require_channel 判斷可不可以管理某頻道，依據是 SessionInfo.twitch_channels，不自己查；
 修改設定的端點改用 require_enabled_channel，bot 還沒啟用（或已停用）時回 409 channel_not_enabled。
 權限不足回 403 channel_forbidden，不用 no_permission：前端在全域把 no_permission 當成伺服器權限處理。
 """
 
+import asyncio
+
 from fastapi import APIRouter, Depends
 
 from starlib import sqldb
 from starlib.database import TwitchBotJoinChannel
 
+from .channel_health import channel_health
 from .db import run_db
 from .errors import DashboardError
 from .session import SessionInfo, TwitchIdentity, require_any_session
@@ -105,5 +108,9 @@ async def get_channel(
     channel: TwitchIdentity = Depends(require_channel),
     info: SessionInfo = Depends(require_any_session),
 ):
-    states = await run_db(lambda: _states([twitch_id]))
-    return {**_channel_json(channel, states[twitch_id]), "forward_access": forward_access(info)}
+    states, health = await asyncio.gather(run_db(lambda: _states([twitch_id])), channel_health(twitch_id))
+    return {
+        **_channel_json(channel, states[twitch_id]),
+        "forward_access": forward_access(info),
+        "health": health.to_json(),
+    }

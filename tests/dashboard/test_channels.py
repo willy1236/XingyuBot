@@ -7,12 +7,14 @@ from fastapi.testclient import TestClient
 
 from starlib.database import TwitchBotJoinChannel
 from starServer.dashboard import channels
+from starServer.dashboard.channel_health import ChannelHealth
 from starServer.dashboard.session import SessionInfo, TwitchIdentity
 from tests.helpers.dashboard_auth import make_app, make_session, make_twitch_session
 
 pytestmark = pytest.mark.usefixtures("dashboard_env")
 
 CHANNEL_ID = "777"
+HEALTH = ChannelHealth("partial", ("not_mod",), ("follow_response", "follow_forward"))
 
 
 @pytest.fixture(autouse=True)
@@ -22,6 +24,15 @@ def _channels_db(monkeypatch, repo):
     if existing is not None:
         repo.session.delete(existing)
         repo.session.flush()
+
+
+@pytest.fixture(autouse=True)
+def _health(monkeypatch):
+    # health 的判定會打 Twitch 與 bot，內容由 test_channel_health 驗；這裡只驗端點帶出它
+    async def fake(twitch_id: int) -> ChannelHealth:
+        return HEALTH
+
+    monkeypatch.setattr(channels, "channel_health", fake)
 
 
 def client_for(session_id: str) -> TestClient:
@@ -68,7 +79,7 @@ class TestListChannels:
 
 
 class TestGetChannel:
-    def test_returns_channel_state_and_forward_access(self, repo):
+    def test_returns_channel_state_forward_access_and_health(self, repo):
         sid = make_twitch_session(repo, twitch_id=CHANNEL_ID)
 
         r = client_for(sid).get(f"/dashboard/channels/{CHANNEL_ID}")
@@ -82,6 +93,11 @@ class TestGetChannel:
             "inactive",
         )
         assert body["forward_access"] == "need_domalyze"
+        assert body["health"] == {
+            "state": "partial",
+            "issues": ["not_mod"],
+            "paused_features": ["follow_response", "follow_forward"],
+        }
 
     def test_other_channel_is_forbidden(self, repo):
         sid = make_twitch_session(repo, twitch_id=CHANNEL_ID)
