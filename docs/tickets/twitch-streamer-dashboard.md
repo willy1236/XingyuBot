@@ -580,6 +580,14 @@
   - 新增卡上沒列的檔案：`lib/dashboard-channel-automod.ts`（元件取資料用）；改了卡上沒列的 `starServer/dashboard/twitch_control.py`（`check_template`）與 `starServer/twitch_bot/events.py`（開台資訊）。
 - 審查後修正（第 1 輪）：Q1 開台事件先用 `event.started_at` 記為開台（分類與標題留空），查不到直播時不再沿用上一場下播的 None。
 - 審查後修正（第 1 輪）：Q3 `get_raw_chat_command_all`、`get_raw_chat_command_channel` 改存與 session 無關的複本，指令快取不再因 commit 過期或 session 釋放而失效。
+- 審查後修正（第 1 輪）：Q2 四張新表（`twitch_timer`、`twitch_event_response`、`twitch_channel_audit`、`twitch_automod_block`）的 `twitch_id` 改 `bigint`。新表還沒上正式機，由 `create_all` 直接建成 bigint，不需要 ALTER；本機 DB 已建的表套了：
+  ```sql
+  ALTER TABLE stardb_basic.twitch_timer ALTER COLUMN twitch_id TYPE bigint;
+  ALTER TABLE stardb_basic.twitch_event_response ALTER COLUMN twitch_id TYPE bigint;
+  ALTER TABLE stardb_basic.twitch_channel_audit ALTER COLUMN twitch_id TYPE bigint;
+  ALTER TABLE stardb_basic.twitch_automod_block ALTER COLUMN twitch_id TYPE bigint;
+  ```
+  上方正式機要執行的 ALTER 不變（只有既有的兩張表）。
 - 未驗：真實 Twitch 的 Check AutoMod Status 回應格式與速率限制行為、實際聊天室發言；瀏覽器裡的頻道總覽畫面。
 - pyright：新檔只有 `twitch_audit.py` 一個 `__table_args__` 的 reportCallIssue，與既有 `models.py` 覆寫 `__table_args__` 的寫法同源；`models.py` 本身的既有錯誤未處理。
 

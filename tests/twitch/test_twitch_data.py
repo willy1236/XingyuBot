@@ -158,3 +158,8 @@ def test_新表的_twitch_id_是_64_位元(repo):
     repo.session.flush()
     assert len(repo.list_twitch_timers(big)) == 1
     assert len(repo.list_twitch_automod_blocks(big)) == 1
+
+
+def test_事件回應的_twitch_id_也是_64_位元(repo):
+    repo.save_twitch_event_response(TwitchEventResponse(twitch_id=3_000_000_000, event_kind="raid", template="t"))
+    assert len(repo.list_twitch_event_responses(3_000_000_000)) == 1

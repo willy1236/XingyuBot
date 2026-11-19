@@ -528,7 +528,7 @@ class TwitchTimer(BasicSchema, table=True):
     __tablename__ = "twitch_timer"
 
     id: int | None = Field(default=None, sa_column=Column(Integer, Identity(), primary_key=True))
-    twitch_id: int = Field(sa_column=Column(Integer, index=True, nullable=False))
+    twitch_id: int = Field(sa_column=Column(BigInteger, index=True, nullable=False))
     message: str = Field(nullable=False)
     interval_minutes: int = Field(sa_column=Column(Integer, nullable=False))
     min_chat_lines: int = Field(default=0, sa_column=Column(Integer, nullable=False, server_default=text("0")))
@@ -543,7 +543,7 @@ class TwitchEventResponse(BasicSchema, table=True):
 
     __tablename__ = "twitch_event_response"
 
-    twitch_id: int = Field(primary_key=True)
+    twitch_id: int = Field(sa_column=Column(BigInteger, primary_key=True, autoincrement=False))
     #: stream_online、follow、subscribe、resubscribe、gift、raid
     event_kind: str = Field(primary_key=True)
     enabled: bool = Field(default=True, sa_column=Column(Boolean, nullable=False, server_default=text("true")))
@@ -563,7 +563,7 @@ class TwitchChannelAudit(BasicSchema, table=True):
     )
 
     id: int | None = Field(default=None, sa_column=Column(Integer, Identity(), primary_key=True))
-    twitch_id: int = Field(sa_column=Column(Integer, nullable=False))
+    twitch_id: int = Field(sa_column=Column(BigInteger, nullable=False))
     at: datetime = Field(default_factory=nowtz, sa_column=Column(TIMESTAMP(True, 0), nullable=False))
     #: twitch、discord
     actor_platform: str = Field(nullable=False)
@@ -590,7 +590,7 @@ class TwitchAutomodBlock(BasicSchema, table=True):
     )
 
     id: int | None = Field(default=None, sa_column=Column(Integer, Identity(), primary_key=True))
-    twitch_id: int = Field(sa_column=Column(Integer, nullable=False))
+    twitch_id: int = Field(sa_column=Column(BigInteger, nullable=False))
     at: datetime = Field(default_factory=nowtz, sa_column=Column(TIMESTAMP(True, 0), nullable=False))
     #: command、timer、event_response
     source_kind: str = Field(nullable=False)
