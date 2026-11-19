@@ -1,6 +1,6 @@
 """Twitch 事件回應（開台、追隨、訂閱、續訂、贈訂、Raid）的預設文字、驗證與寫入。
 
-後台端點與 bot 的事件 handler 都經這裡：預設文字與可用變數只有一份，沒有資料列的事件視為開啟並使用預設文字。
+後台端點與 bot 的事件 handler 都經這裡：預設文字與可用變數只有一份，沒有資料列的事件視為關閉並使用預設文字（發言要實況主主動開啟）。
 每次寫入在同一個交易內：取頻道的鎖、讀目前的設定、比對編輯衝突、驗證、寫入、`twitch_audit.record_change`、commit，
 最後通知 Twitch bot 重讀該頻道的事件回應。驗證不過 raise `EventResponseInvalid`，不認得的事件種類 raise `UnknownEventKind`，
 後台的編輯衝突由呼叫端傳入的 `verify` 判斷。這些函式是同步的，要在 DB worker thread 上呼叫。
@@ -54,7 +54,7 @@ _VARIABLES: dict[str, tuple[str, ...]] = {
     "raid": ("user", "viewers", "channel"),
 }
 
-#: 比對編輯衝突用的欄位形狀；已被刪除（恢復預設）的設定就是預設值，所以永遠有目前的值
+#: 比對編輯衝突用的欄位形狀；沒有資料列的設定就是關閉加預設文字，所以永遠有目前的值
 type Verify = Callable[[dict[str, str | None]], None]
 
 
@@ -63,7 +63,7 @@ class EventResponse:
     kind: str
     enabled: bool
     template: str
-    #: 沒有資料列，正在使用預設文字並開啟
+    #: 文字就是預設文字（可能是沒有資料列，也可能是開啟時恢復預設而存了一列）
     is_default: bool
 
     @property
@@ -85,13 +85,13 @@ class UnknownEventKind(Exception):
 
 
 def default_response(kind: str) -> EventResponse:
-    return EventResponse(kind, True, DEFAULTS[kind], True)
+    return EventResponse(kind, False, DEFAULTS[kind], True)
 
 
 def _effective(kind: str, row: TwitchEventResponse | None) -> EventResponse:
     if row is None:
         return default_response(kind)
-    return EventResponse(kind, row.enabled, row.template, False)
+    return EventResponse(kind, row.enabled, row.template, row.template == DEFAULTS[kind])
 
 
 def comparable(values: dict[str, Any]) -> dict[str, str | None]:
@@ -163,33 +163,23 @@ def _transaction[**P, R](func: Callable[P, R]) -> Callable[P, R]:
     return wrapper
 
 
-@_transaction
-def save(
+def _write(
     twitch_id: int,
     actor: AuditActor,
     source: AuditSource,
     kind: str,
+    row: TwitchEventResponse | None,
     enabled: bool,
     template: str,
-    verify: Verify | None = None,
 ) -> EventResponse:
-    """設定一種事件的開關與文字。
-
-    開啟且文字與預設相同時等於恢復預設（刪除資料列，之後調整預設文字會一起生效）；
-    有效設定沒有變時不寫入也不留紀錄。
-    """
-    validate(kind, template)
-    row = _begin(twitch_id, kind)
+    """把有效設定寫成 (enabled, template)：沒變就什麼都不做；關閉且文字是預設等於沒有設定，刪除資料列。"""
     current = _effective(kind, row)
-    if verify is not None:
-        verify(comparable({"enabled": current.enabled, "template": current.template}))
-    reset_to_default = enabled and template == DEFAULTS[kind]
-    result = default_response(kind) if reset_to_default else EventResponse(kind, enabled, template, False)
-    if (result.enabled, result.template, result.is_default) == (current.enabled, current.template, current.is_default):
+    result = EventResponse(kind, enabled, template, template == DEFAULTS[kind])
+    if (result.enabled, result.template) == (current.enabled, current.template):
         sqldb.session.rollback()
         return current
-    if reset_to_default:
-        assert row is not None  # 有效設定有變又回到預設，代表原本有資料列
+    if not enabled and result.is_default:
+        assert row is not None  # 有效設定有變又回到「關閉加預設文字」，代表原本有資料列
         before = _snapshot(row.enabled, row.template)
         sqldb.session.delete(row)
         sqldb.session.flush()
@@ -214,21 +204,36 @@ def save(
 
 
 @_transaction
-def reset(
-    twitch_id: int, actor: AuditActor, source: AuditSource, kind: str, verify: Verify | None = None
+def save(
+    twitch_id: int,
+    actor: AuditActor,
+    source: AuditSource,
+    kind: str,
+    enabled: bool,
+    template: str,
+    verify: Verify | None = None,
 ) -> EventResponse:
-    """恢復預設：刪除該列。已經是預設時什麼都不做（冪等）。"""
-    _check_kind(kind)
+    """設定一種事件的開關與文字。
+
+    關閉且文字與預設相同時等於沒有設定（刪除資料列，之後調整預設文字會一起生效）；
+    有效設定沒有變時不寫入也不留紀錄。
+    """
+    validate(kind, template)
     row = _begin(twitch_id, kind)
     if verify is not None:
         current = _effective(kind, row)
         verify(comparable({"enabled": current.enabled, "template": current.template}))
-    if row is None:
-        sqldb.session.rollback()
-        return default_response(kind)
-    before = _snapshot(row.enabled, row.template)
-    sqldb.session.delete(row)
-    sqldb.session.flush()
-    record_change(twitch_id, actor, source, "event_response", kind, "delete", before, None)
-    _finish(twitch_id)
-    return default_response(kind)
+    return _write(twitch_id, actor, source, kind, row, enabled, template)
+
+
+@_transaction
+def reset(
+    twitch_id: int, actor: AuditActor, source: AuditSource, kind: str, verify: Verify | None = None
+) -> EventResponse:
+    """恢復預設文字，保留目前的開關：關閉時等於刪除資料列，開啟時存預設文字。文字已經是預設時什麼都不做（冪等）。"""
+    _check_kind(kind)
+    row = _begin(twitch_id, kind)
+    current = _effective(kind, row)
+    if verify is not None:
+        verify(comparable({"enabled": current.enabled, "template": current.template}))
+    return _write(twitch_id, actor, source, kind, row, current.enabled, DEFAULTS[kind])

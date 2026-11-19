@@ -54,7 +54,8 @@ def values(enabled=True, template="歡迎 {user}") -> dict:
     return {"enabled": enabled, "template": template}
 
 
-DEFAULT = values(template=DEFAULT_FOLLOW)
+#: 沒有設定過的有效值：關閉加預設文字
+DEFAULT = values(enabled=False, template=DEFAULT_FOLLOW)
 
 
 def put(client, kind="follow", new=None, original=None):
@@ -70,12 +71,12 @@ def rows(client) -> dict:
     return {r["kind"]: r for r in client.get(URL).json()["event_responses"]}
 
 
-def test_沒設定過時六種預設開啟_附可用變數(client):
+def test_沒設定過時六種預設文字且關閉_附可用變數(client):
     r = client.get(URL)
     assert r.status_code == 200
     items = r.json()["event_responses"]
     assert [i["kind"] for i in items] == list(twitch_event_responses.KINDS)
-    assert all(i["enabled"] and i["is_default"] for i in items)
+    assert all(not i["enabled"] and i["is_default"] for i in items)
     assert [v["token"] for v in rows(client)["gift"]["variables"]] == ["{user}", "{amount}", "{channel}"]
 
 
@@ -102,16 +103,30 @@ def test_設定後有紀錄_通知_bot(client, invalidated):
     assert (entry.actor.platform, entry.actor.id) == ("twitch", str(CHANNEL_ID))
 
 
-def test_恢復預設刪列並留紀錄(client):
+def test_開啟時恢復預設只換文字_保留開關(client):
     put(client)
     r = delete(client, original=values())
-    assert r.status_code == 200 and r.json()["event_response"]["is_default"] is True
+    event = r.json()["event_response"]
+    assert r.status_code == 200 and (event["enabled"], event["is_default"], event["template"]) == (
+        True,
+        True,
+        DEFAULT_FOLLOW,
+    )
+    assert rows(client)["follow"]["enabled"] is True
+    assert list_changes(CHANNEL_ID)[0].action == "update"
+    assert delete(client, original=values(template=DEFAULT_FOLLOW)).status_code == 200  # 文字已是預設，冪等
+
+
+def test_關閉時恢復預設刪列並留紀錄(client):
+    put(client, new=values(enabled=False))
+    r = delete(client, original=values(enabled=False))
+    assert r.status_code == 200 and r.json()["event_response"]["enabled"] is False
     assert rows(client)["follow"]["is_default"]
     assert list_changes(CHANNEL_ID)[0].action == "delete"
-    assert delete(client).status_code == 200  # 已是預設，冪等
+    assert delete(client).status_code == 200  # 已是沒有設定，冪等
 
 
-def test_文字改回預設等於恢復預設(client):
+def test_關閉且文字改回預設等於沒有設定(client):
     put(client)
     r = put(client, new=DEFAULT, original=values())
     assert r.status_code == 200 and r.json()["event_response"]["is_default"] is True
@@ -141,8 +156,9 @@ def test_AutoMod_擋下或無法檢查時不儲存(client):
 
 def test_只切換開關或用預設文字不花_AutoMod_額度(client):
     twitch_control.check_template.return_value = "unavailable"
-    assert put(client, new=values(enabled=False, template=DEFAULT_FOLLOW)).status_code == 200
-    assert put(client, new=DEFAULT, original=values(enabled=False, template=DEFAULT_FOLLOW)).status_code == 200
+    enabled_default = values(template=DEFAULT_FOLLOW)
+    assert put(client, new=enabled_default).status_code == 200  # 只開啟、文字是預設
+    assert put(client, new=DEFAULT, original=enabled_default).status_code == 200  # 只關閉
     twitch_control.check_template.assert_not_awaited()
 
 
@@ -156,10 +172,10 @@ def test_後台編輯時別處改了同一種事件_回_409_不覆蓋(client):
     assert delete(client).status_code == 409
 
 
-def test_以有效值比對_已是預設時原始值是預設不算衝突(client):
+def test_恢復預設後再編輯_以新的有效值比對(client):
     put(client)
     delete(client, original=values())
-    assert put(client, new=values(template="新的")).status_code == 200
+    assert put(client, new=values(template="新的"), original=values(template=DEFAULT_FOLLOW)).status_code == 200
 
 
 def test_頻道沒啟用時唯讀(client, repo):

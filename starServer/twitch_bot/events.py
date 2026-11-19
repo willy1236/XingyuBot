@@ -83,14 +83,14 @@ def _load(twitch_id: int) -> dict[str, EventResponse]:
 
 
 async def _response(twitch_id: int, kind: str) -> EventResponse:
-    """頻道這種事件目前有效的設定；讀不到時退回預設文字並視為開啟，不讓 DB 出錯讓回應整個消失。"""
+    """頻道這種事件目前有效的設定；讀不到時視為關閉，不因 DB 出錯在聊天室發言。"""
     loaded = _responses.get(twitch_id)
     if loaded is None:
         version = _version
         try:
             loaded = await asyncio.to_thread(_load, twitch_id)
         except Exception:
-            log.warning("讀取 %s 的事件回應失敗，改用預設文字", twitch_id, exc_info=True)
+            log.warning("讀取 %s 的事件回應失敗，視為關閉", twitch_id, exc_info=True)
             return twitch_event_responses.default_response(kind)
         if version == _version:
             _responses[twitch_id] = loaded

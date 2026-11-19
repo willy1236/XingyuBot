@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import asyncio
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
@@ -267,9 +268,11 @@ def chatbot(monkeypatch):
     fake_chat.send_message = AsyncMock(side_effect=lambda *a, **k: calls.append("chat"))
     monkeypatch.setattr(module, "get_bus", lambda: bus)
     monkeypatch.setattr(state, "chat", fake_chat, raising=False)
-    # 事件回應走預設設定，不查資料庫
+    # 事件回應全部開啟並使用預設文字，不查資料庫（沒有設定時預設是關閉）
     monkeypatch.setattr(
-        module, "_load", lambda twitch_id: {k: default_response(k) for k in twitch_event_responses.KINDS}
+        module,
+        "_load",
+        lambda twitch_id: {k: replace(default_response(k), enabled=True) for k in twitch_event_responses.KINDS},
     )
     monkeypatch.setattr(module, "_responses", {})
     module.test_calls = calls
@@ -311,8 +314,8 @@ def test_raid_responds_without_forward_config(chatbot, monkeypatch):
 
 
 def test_raid_response_disabled_skips_chat_but_still_publishes(chatbot, monkeypatch):
-    disabled = {k: default_response(k) for k in twitch_event_responses.KINDS}
-    disabled["raid"] = twitch_event_responses.EventResponse("raid", False, "x", False)
+    disabled = {k: replace(default_response(k), enabled=True) for k in twitch_event_responses.KINDS}
+    disabled["raid"] = default_response("raid")
     monkeypatch.setattr(chatbot, "_load", lambda twitch_id: disabled)
     run(chatbot.on_channel_raid(raid_payload()))
     chatbot.test_chat.send_message.assert_not_awaited()

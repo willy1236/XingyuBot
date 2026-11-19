@@ -36,10 +36,10 @@ def by_kind():
     return {r.kind: r for r in responses.list_responses(TWITCH_ID)}
 
 
-def test_沒有資料列時六種都是預設且開啟():
+def test_沒有資料列時六種都是預設文字且關閉():
     rows = responses.list_responses(TWITCH_ID)
     assert [r.kind for r in rows] == list(responses.KINDS)
-    assert all(r.enabled and r.is_default and r.template == responses.DEFAULTS[r.kind] for r in rows)
+    assert all(not r.enabled and r.is_default and r.template == responses.DEFAULTS[r.kind] for r in rows)
 
 
 def test_每種事件的預設文字只用自己列出的變數():
@@ -74,22 +74,24 @@ def test_改文字與關閉記成_update():
     assert by_kind()["follow"].enabled is False
 
 
-def test_關閉時沿用預設文字也存成資料列():
+def test_關閉且文字是預設_等於沒有設定_刪列():
+    save(enabled=False, template="自訂")
     result = save(enabled=False, template=responses.DEFAULTS["follow"])
-    assert result.is_default is False
-    assert by_kind()["follow"].enabled is False
-
-
-def test_開啟且文字與預設相同_等於恢復預設_刪列():
-    save()
-    result = save(template=responses.DEFAULTS["follow"])
-    assert result.is_default is True
-    assert by_kind()["follow"].is_default
+    assert (result.enabled, result.is_default) == (False, True)
+    assert by_kind()["follow"].is_default and not by_kind()["follow"].enabled
     assert list_changes(TWITCH_ID)[0].action == "delete"
 
 
+def test_開啟且文字是預設_存成一列_之後仍是開啟():
+    result = save(template=responses.DEFAULTS["follow"])
+    assert (result.enabled, result.is_default) == (True, True)
+    assert by_kind()["follow"].enabled is True
+    [entry] = list_changes(TWITCH_ID)
+    assert entry.action == "create" and entry.after == {"enabled": True, "template": responses.DEFAULTS["follow"]}
+
+
 def test_有效設定沒變時不寫入也不留紀錄(invalidated):
-    save(template=responses.DEFAULTS["follow"])  # 本來就是預設
+    save(enabled=False, template=responses.DEFAULTS["follow"])  # 本來就是關閉加預設文字
     assert list_changes(TWITCH_ID) == [] and invalidated == []
     save()
     invalidated.clear()
@@ -97,15 +99,27 @@ def test_有效設定沒變時不寫入也不留紀錄(invalidated):
     assert len(list_changes(TWITCH_ID)) == 1 and invalidated == []
 
 
-def test_恢復預設刪列並留紀錄_已是預設時冪等(invalidated):
+def test_開啟時恢復預設只換文字_保留開關(invalidated):
     save()
     result = responses.reset(TWITCH_ID, ACTOR, "dashboard", "follow")
-    assert result.is_default and by_kind()["follow"].is_default
+    assert (result.enabled, result.template, result.is_default) == (True, responses.DEFAULTS["follow"], True)
+    assert by_kind()["follow"].enabled is True
     [entry, _] = list_changes(TWITCH_ID)
-    assert (entry.action, entry.before, entry.after) == ("delete", {"enabled": True, "template": "歡迎 {user}"}, None)
+    assert entry.action == "update"
+    assert entry.before == {"enabled": True, "template": "歡迎 {user}"}
+    assert entry.after == {"enabled": True, "template": responses.DEFAULTS["follow"]}
     invalidated.clear()
-    responses.reset(TWITCH_ID, ACTOR, "dashboard", "follow")
+    responses.reset(TWITCH_ID, ACTOR, "dashboard", "follow")  # 文字已是預設，冪等
     assert len(list_changes(TWITCH_ID)) == 2 and invalidated == []
+
+
+def test_關閉時恢復預設等於刪列(invalidated):
+    save(enabled=False, template="自訂")
+    result = responses.reset(TWITCH_ID, ACTOR, "dashboard", "follow")
+    assert (result.enabled, result.is_default) == (False, True)
+    [entry, _] = list_changes(TWITCH_ID)
+    assert (entry.action, entry.after) == ("delete", None)
+    assert invalidated[-1] == ("twitch_event_response", str(TWITCH_ID))
 
 
 @pytest.mark.parametrize("template", ["", "   ", "a" * 501])
@@ -132,10 +146,10 @@ def test_verify_以有效值為準_有衝突就不寫入():
 
     with pytest.raises(RuntimeError):
         save(verify=verify)
-    assert seen == [{"enabled": "true", "response": responses.DEFAULTS["follow"]}]
+    assert seen == [{"enabled": "false", "response": responses.DEFAULTS["follow"]}]
     assert by_kind()["follow"].is_default and list_changes(TWITCH_ID) == []
 
 
 def test_各頻道互不影響():
     save()
-    assert responses.list_responses(TWITCH_ID + 1)[1].is_default
+    assert not responses.list_responses(TWITCH_ID + 1)[1].enabled

@@ -70,7 +70,21 @@ def follow_event(name="小明"):
     )
 
 
-def test_沒有設定時用預設文字():
+def enable(kind):
+    """開啟事件並使用預設文字（沒有設定時預設是關閉）。"""
+    save(kind, template=twitch_event_responses.DEFAULTS[kind])
+
+
+def test_沒有設定時預設關閉_不發言_bus_事件照發(monkeypatch):
+    bus = MagicMock()
+    monkeypatch.setattr(events, "get_bus", lambda: bus)
+    run(events.on_follow(follow_event()))
+    assert sent() == []
+    assert bus.publish.call_count == 1
+
+
+def test_開啟後用預設文字():
+    enable("follow")
     run(events.on_follow(follow_event()))
     assert sent() == ["感謝 小明 的追隨！"]
     assert state.chat.send_message.await_args.args[0] == "host"
@@ -89,6 +103,7 @@ def test_關閉的事件不發言():
 
 
 def test_收到失效通知後改用新文字_沒收到前沿用快取(clock):
+    enable("follow")
     run(events.on_follow(follow_event()))
     save("follow")
     clock.now += 60
@@ -124,6 +139,7 @@ def test_讀取途中收到失效通知_舊值不存進快取(monkeypatch):
 
 
 def test_追隨回應每個頻道_10_秒內只回一則_不排隊(clock):
+    enable("follow")
     run(events.on_follow(follow_event("甲")))
     clock.now += 9.9
     run(events.on_follow(follow_event("乙")))
@@ -142,7 +158,7 @@ def test_追隨限流不影響其他頻道與_bus_事件(monkeypatch):
     assert events._follow_response_due(TWITCH_ID + 1)
 
 
-def test_讀取設定失敗時退回預設文字_bus_事件照發(monkeypatch):
+def test_讀取設定失敗時視為關閉_不發言_bus_事件照發(monkeypatch):
     def broken(twitch_id):
         raise RuntimeError("db down")
 
@@ -150,11 +166,12 @@ def test_讀取設定失敗時退回預設文字_bus_事件照發(monkeypatch):
     monkeypatch.setattr(events, "_load", broken)
     monkeypatch.setattr(events, "get_bus", lambda: bus)
     run(events.on_follow(follow_event()))
-    assert sent() == ["感謝 小明 的追隨！"]
+    assert sent() == []
     assert bus.publish.call_count == 1
 
 
 def test_發言出錯不擋_bus_事件(monkeypatch):
+    enable("follow")
     bus = MagicMock()
     monkeypatch.setattr(events, "get_bus", lambda: bus)
     monkeypatch.setattr(speech, "say", AsyncMock(side_effect=RuntimeError("boom")))
@@ -199,6 +216,7 @@ def test_開台回應代入分類與標題(monkeypatch):
             started_at=datetime.now(UTC),
         ),
     )
+    enable("stream_online")
     run(events.on_stream_online(event))
     assert sent() == ["主播 正在直播 遊戲！標題"]
 
