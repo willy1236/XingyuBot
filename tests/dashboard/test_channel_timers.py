@@ -192,6 +192,16 @@ def test_編輯記前後值並通知(client, invalidated):
     )
 
 
+def test_編輯沒有變更時不留紀錄也不通知(client, invalidated):
+    timer = post(client).json()["timer"]
+    invalidated.clear()
+    r = put(client, timer["id"], values(), original_of(timer))
+    assert r.status_code == 200
+    assert r.json()["timer"] == timer
+    assert [e.action for e in list_changes(CHANNEL_ID)] == ["create"]
+    assert invalidated == []
+
+
 def test_編輯時資料已被改過回_409_且不寫入(client):
     timer = post(client).json()["timer"]
     put(client, timer["id"], values(message="別人改的"), original_of(timer))

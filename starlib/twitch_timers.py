@@ -167,10 +167,19 @@ def create(twitch_id: int, actor: AuditActor, fields: TimerFields) -> TwitchTime
 def update(
     twitch_id: int, actor: AuditActor, timer_id: int, fields: TimerFields, verify: Verify | None = None
 ) -> TwitchTimer:
-    """編輯計時訊息。"""
+    """編輯計時訊息；欄位都沒變時什麼都不做（不寫入、不留修改紀錄、不通知 bot）。"""
     validate(fields)
     row = _locate(_begin(twitch_id), timer_id, verify)
     before = snapshot(row)
+    if before == {
+        "message": fields.message,
+        "interval_minutes": fields.interval_minutes,
+        "min_chat_lines": fields.min_chat_lines,
+        "enabled": fields.enabled,
+    }:
+        # 沒有變更：不寫入、不留紀錄、不通知 bot，rollback 只為了釋放鎖
+        sqldb.session.rollback()
+        return row
     row.message = fields.message
     row.interval_minutes = fields.interval_minutes
     row.min_chat_lines = fields.min_chat_lines

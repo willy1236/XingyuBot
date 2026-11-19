@@ -102,6 +102,16 @@ def test_編輯後紀錄前後值_並通知(invalidated):
     assert invalidated[-1] == ("twitch_timer", str(TWITCH_ID))
 
 
+def test_編輯沒有變更時不寫入_不留紀錄_不通知(invalidated):
+    row = make()
+    updated_at = row.updated_at
+    invalidated.clear()
+    result = twitch_timers.update(TWITCH_ID, ACTOR, row.id, TimerFields("追隨喔", 10))
+    assert result.updated_at == updated_at
+    assert [e.action for e in list_changes(TWITCH_ID)] == ["create"]
+    assert invalidated == []
+
+
 def test_編輯與刪除不存在的計時訊息():
     with pytest.raises(TimerMissing):
         twitch_timers.update(TWITCH_ID, ACTOR, 999999999, TimerFields("x", 5))

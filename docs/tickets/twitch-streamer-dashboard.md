@@ -771,10 +771,11 @@
 - 完整 CI：待合併回 main 前跑。
 - pyright：`starlib/twitch_timers.py` 一處 `TwitchTimer(...)` 的 `__table_args__`（同 W-04 所述 `models.py` 寫法同源）。
 - 未驗：真實 Twitch 聊天室的定時發送、開台與下播時機、bot 重啟時直播中的頻道；瀏覽器裡的計時訊息頁畫面。
-- 審查後修正（第 1 輪，審查報告 review-b4-r1）：修正中
-  - B1（blocking）首次 tick 前就開台，`on_stream_online` 把設定寫成空清單而不再重讀：設定沒載入過就不動，交給下一次 tick 載入；補「先開台、後第一次 tick」測試。（本 commit）
-  - Q4 查開台狀態的 await 途中收到上下播事件時，以事件為準，不被舊的查詢結果蓋掉。（本 commit）
-  - Q3 編輯沒有變更時不寫入、不留紀錄、不通知 bot（比照 W-07）：尚未修。
+- 審查後修正（第 1 輪，審查報告 review-b4-r1）：已修，待再審
+  - B1（blocking）首次 tick 前就開台，`on_stream_online` 把設定寫成空清單而不再重讀：設定沒載入過就不動，交給下一次 tick 載入；補「先開台、後第一次 tick」測試。（5c39bc51）
+  - Q4 查開台狀態的 await 途中收到上下播事件時，以事件為準，不被舊的查詢結果蓋掉。（5c39bc51）
+  - Q3 編輯沒有變更時不寫入、不留紀錄、不通知 bot（比照 W-07）：`twitch_timers.update` 欄位都沒變時 rollback 並直接回傳；補 starlib 與端點測試。（本 commit）
+  - 未修：nitpick（`{channel}` 代入 login、新增先花 AutoMod 額度才檢查上限）。
 
 ### W-07 實況主能設定事件回應
 
