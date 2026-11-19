@@ -75,3 +75,18 @@ def test_invalidate_uses_twitch_id_string_as_key(monkeypatch, cache):
     control.invalidate(cache, TWITCH_ID)
 
     mock.assert_called_once_with(cache, str(TWITCH_ID))
+
+
+def test_broadcaster_token_runs_on_dashboard_db_executor(monkeypatch):
+    """web 端取 token 的 DB 工作走 run_db（後台專屬、限制連線數的 executor），不走 asyncio 預設 executor。"""
+    seen = []
+
+    async def fake_run_db(fn):
+        seen.append("run_db")
+        return fn()
+
+    monkeypatch.setattr(control, "run_db", fake_run_db)
+    monkeypatch.setattr(control.twitch_tokens, "broadcaster_token_blocking", lambda twitch_id: f"token-{twitch_id}")
+
+    assert run(control.broadcaster_token(TWITCH_ID)) == f"token-{TWITCH_ID}"
+    assert seen == ["run_db"]

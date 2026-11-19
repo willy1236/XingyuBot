@@ -148,7 +148,8 @@ def test_concurrent_callers_refresh_once(store, post):
     post.side_effect = slow
     results: list[str | TokenInvalid] = []
     threads = [
-        threading.Thread(target=lambda: results.append(twitch_tokens._broadcaster_token(TWITCH_ID))) for _ in range(8)
+        threading.Thread(target=lambda: results.append(twitch_tokens.broadcaster_token_blocking(TWITCH_ID)))
+        for _ in range(8)
     ]
     for thread in threads:
         thread.start()
@@ -157,3 +158,10 @@ def test_concurrent_callers_refresh_once(store, post):
 
     assert results == ["access-1"] * 8
     assert post.call_count == 1
+
+
+def test_unexpected_error_is_reported_as_unavailable_not_raised(monkeypatch):
+    monkeypatch.setattr(twitch_tokens, "_broadcaster_token", MagicMock(side_effect=RuntimeError("db down")))
+
+    assert twitch_tokens.broadcaster_token_blocking(TWITCH_ID) == TokenInvalid("unavailable")
+    assert run(broadcaster_token(TWITCH_ID)) == TokenInvalid("unavailable")

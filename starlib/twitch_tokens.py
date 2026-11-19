@@ -34,9 +34,18 @@ class TokenInvalid:
 
 
 async def broadcaster_token(twitch_id: int) -> str | TokenInvalid:
-    """回傳實況主可用的 access token；快過期（10 分鐘內）時先用 refresh token 換新並寫回 DB。不 raise。"""
+    """回傳實況主可用的 access token；快過期（10 分鐘內）時先用 refresh token 換新並寫回 DB。不 raise。
+
+    DB 與續期的同步工作丟到 asyncio 預設 executor，給 Twitch bot 用。web 端有自己限制連線數的 executor，
+    要用 `starServer.dashboard.twitch_control.broadcaster_token`，它經 `run_db` 呼叫 `broadcaster_token_blocking`。
+    """
+    return await asyncio.to_thread(broadcaster_token_blocking, twitch_id)
+
+
+def broadcaster_token_blocking(twitch_id: int) -> str | TokenInvalid:
+    """`broadcaster_token` 的同步版：會讀寫 DB、續期時最多等 Twitch 5 秒，要在 worker thread 上呼叫。不 raise。"""
     try:
-        return await asyncio.to_thread(_broadcaster_token, twitch_id)
+        return _broadcaster_token(twitch_id)
     except Exception:
         log.exception("取得實況主 %s 的 token 失敗", twitch_id)
         return TokenInvalid("unavailable")

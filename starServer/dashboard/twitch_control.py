@@ -7,7 +7,10 @@ import asyncio
 from dataclasses import dataclass
 from typing import Literal
 
+from starlib import twitch_tokens
 from starlib.messaging import cache_invalidation, rpc
+from starlib.twitch_tokens import TokenInvalid
+from starServer.dashboard.db import run_db
 
 SERVICE = "twitch"
 
@@ -79,6 +82,11 @@ async def channel_status(twitch_id: int) -> ChannelStatus | BotOffline:
             ok=list(subscriptions["ok"]), failed=list(subscriptions["failed"]), pending=bool(subscriptions["pending"])
         ),
     )
+
+
+async def broadcaster_token(twitch_id: int) -> str | TokenInvalid:
+    """實況主的 Twitch token，快過期時先續期。DB 工作走後台專屬的 executor（`run_db`），不佔 asyncio 預設 executor。不 raise。"""
+    return await run_db(lambda: twitch_tokens.broadcaster_token_blocking(twitch_id))
 
 
 def invalidate(cache: CacheName, twitch_id: int) -> None:
