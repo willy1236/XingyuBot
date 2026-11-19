@@ -470,9 +470,20 @@
 - Add Channel Moderator 的 API 有速率限制，且帳號要已在聊天室出現過才能被設為 mod。失敗時不擋啟用：啟用照常完成，記 Sentry，後台提示「請在聊天室輸入 `/mod xingyu1016`」，W-08 會持續標示「bot 不是 mod」直到修好。
 - `twitch_chatbot.USER_SCOPE` 是 bot 帳號自己的 scope，不要拿來要求實況主；實況主的 scope 以上面列的清單為準。
 
-**進度**：實作中（2026-11-19）
-- commit：後端 84eebc1a、e4ec1f61、（本 commit：啟用與停用）
-- 續做：前端三態標籤（`lib/dashboard-channel.ts`）、`channel-activation.tsx`（按鈕與 notice，由 `channel-status.tsx` 引入）、`useReloadChannel`；之後 merge 工作分支、回報。
+**進度**：實作完成（2026-11-19），待審查；驗收條件尚未勾（自動測試覆蓋後端各分支與前端標籤、操作元件的靜態輸出，真 Twitch 與真 Redis 的端到端、360px 版面待人工驗證）
+- commit：後端 84eebc1a、e4ec1f61、cb3f9407；前端（domalyze_frontend）8dddb47、629a39f
+- 實作時的決定：
+  - 啟用入口是整頁導覽：session 無效導向 `{origin}/dashboard-login?next=/dashboard/channels/<id>`；不是自己的頻道導向頻道頁，由 `ChannelAccessGuard` 顯示「沒有這個頻道的權限」；`channel` 不是數字導向 `/dashboard/channels`。所以前端 notice 不含 `session_expired`、`channel_forbidden`。
+  - 授權網址帶 `force_verify=true`，瀏覽器已登入另一個 Twitch 帳號時才能換帳號。
+  - notice 代碼：`wrong_account`、`bot_offline`、`mod_failed`、`enable_failed`，同時發生時以逗號分隔（`mod_failed,bot_offline`）。使用者取消授權不帶 notice。
+  - 設 mod 用剛換到的實況主 token 直接 POST Helix（不經 `twitch_tokens`）；bot 的 user id 取自 `get_bot_oauth_token(Twitch, 2).user_id` 並快取。401、403、422（bot 是 VIP）、429、其他非 2xx、網路錯誤都歸為 `mod_failed`，記 Sentry；400「already a moderator」視為成功。
+  - `sync_channel` 丟 `RpcHandlerError`（bot 內部出錯）時與 `BotOffline` 同樣帶 `bot_offline`；停用端點回 200 `{state, bot_offline}`。
+  - 停用只把 `enabled` 改 `disabled`；已是 `disabled` 再停用仍會通知 bot（補上沒完成的離開）；`inactive` 或沒有頻道列不動、不通知。停用保留 `OAuthToken`。
+  - 前端狀態標籤分未啟用、已啟用、已停用；按鈕與 notice 在新檔 `channel-activation.tsx`，由 `channel-status.tsx` 在帶 `channelId` 時引入，留在頁首；不改 `app/dashboard/channels/[id]/page.tsx`。`ChannelAccessGuard` 加 `useReloadChannel()`，停用成功後重新載入頻道資料。停用用行內二段式確認。
+  - `OAuthCookie` 加 `channel_id`（None 不編碼，既有 cookie 內容不變）；`find_channel` 抽出給 `/to/*` 用；`_record_channel` 改公開 `record_channel(user, state=None)`。
+  - 舊 `/oauth/twitch` 沒有後台 cookie 時回 200 的「請到星羽後台啟用」頁；`/to/twitchauth` 導向 `{frontend}/dashboard-login`；`bot_website.py` 同時移除不再使用的 Twitch client 與域民查詢；`tests/twitch/test_auth.py` 改寫為新行為。
+- 未驗：真實 Twitch 授權（含 `force_verify`、Add Channel Moderator 含 VIP 情形）、真 Redis 的 bot 離線到上線、360px 版面；頁首在桌面寬度的側欄（13rem）裡 notice 較擠，待人工看。
+- 沒有 ALTER。
 
 ### W-04 [共用] bot 發言管線與修改紀錄
 
