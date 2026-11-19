@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from starlib import twitch_audit, twitch_commands
-from starlib.database import TwitchChatCommand
+from starlib.database import TwitchBotJoinChannel, TwitchChatCommand
 from starlib.messaging import cache_invalidation
 from starlib.twitch_audit import list_changes
 from starServer.twitch_bot import commands
@@ -34,6 +34,12 @@ def _env(monkeypatch, repo):
     for module in (commands, twitch_commands, twitch_audit):
         monkeypatch.setattr(module, "sqldb", repo)
     monkeypatch.setattr(cache_invalidation, "invalidate", lambda *a, **k: None)
+    # 本機 DB 可能留有手動測試的頻道列；在外層交易內換成 enabled 的，測完隨 rollback 還原
+    existing = repo.session.get(TwitchBotJoinChannel, TWITCH_ID)
+    if existing is not None:
+        repo.session.delete(existing)
+        repo.session.flush()
+    repo.add(TwitchBotJoinChannel(twitch_id=TWITCH_ID, state="enabled"))
     monkeypatch.setattr(commands, "_global_used", {})
     monkeypatch.setattr(commands, "_user_used", {})
     clock = Clock()
@@ -262,6 +268,28 @@ def test_管理指令只有實況主與_mod_能用(repo):
     assert twitch_commands.list_commands(TWITCH_ID) == []
     run(commands.add_chat_command(command("hi x", BROADCASTER)))
     assert twitch_commands.find(TWITCH_ID, "hi") is not None
+
+
+@pytest.mark.parametrize("state", ["inactive", "disabled", None])
+def test_頻道不是_enabled_時管理指令拒絕寫入(repo, state):
+    """後台刪除或停用資料後、bot 離開聊天室之前，聊天室的管理指令不能把資料寫回去。"""
+    add(repo, response="原本")
+    row = repo.session.get(TwitchBotJoinChannel, TWITCH_ID)
+    if state is None:
+        repo.delete(row)
+    else:
+        row.state = state
+        repo.merge(row)
+    for handler, text in (
+        (commands.add_chat_command, "new 新的"),
+        (commands.edit_chat_command, "hi 新的"),
+        (commands.remove_chat_command, "hi"),
+    ):
+        cmd = command(text, BROADCASTER)
+        run(handler(cmd))
+        assert replied(cmd) == "星羽目前未啟用，無法修改指令"
+    assert [(c.name, c.response) for c in twitch_commands.list_commands(TWITCH_ID)] == [("hi", "原本")]
+    assert list_changes(TWITCH_ID) == []
 
 
 def test_add_cmd_同名或同別名拒絕不覆蓋_與內建同名拒絕(repo):
