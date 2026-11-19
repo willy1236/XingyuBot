@@ -124,3 +124,37 @@ def test_依_twitch_id_刪除頻道資料_不碰修改紀錄與其他頻道(repo
 
     assert counts(TWITCH_ID) == [0, 0, 0, 0, 1, 0]
     assert counts(OTHER_ID) == [1, 1, 1, 1, 1, 1]
+
+
+def test_指令快取存與_session_無關的複本(repo):
+    """回歸：快取存 session 內的 instance，session 釋放或 commit 後讀屬性會 DetachedInstanceError 或多一次 SELECT。"""
+    from sqlalchemy.orm import object_session
+
+    repo.save_twitch_chat_command(TwitchChatCommand(twitch_id=TWITCH_ID, name="hi", response="a", aliases=["h"]))
+    for rows in (
+        repo.get_raw_chat_command_channel(TWITCH_ID),
+        repo.get_raw_chat_command_all()[TWITCH_ID],
+    ):
+        assert object_session(rows["hi"]) is None
+        assert (rows["hi"].response, rows["hi"].aliases) == ("a", ["h"])
+
+
+def test_新表的_twitch_id_是_64_位元(repo):
+    big = 3_000_000_000  # 超過 int32
+    repo.save_twitch_timer(TwitchTimer(twitch_id=big, message="m", interval_minutes=5))
+    repo.add_twitch_automod_block(big, "command", "hi", "x", "automod")
+    repo.session.add(
+        TwitchChannelAudit(
+            twitch_id=big,
+            actor_platform="twitch",
+            actor_id="1",
+            actor_name="a",
+            source="dashboard",
+            target_kind="command",
+            target_key="hi",
+            action="create",
+        )
+    )
+    repo.session.flush()
+    assert len(repo.list_twitch_timers(big)) == 1
+    assert len(repo.list_twitch_automod_blocks(big)) == 1

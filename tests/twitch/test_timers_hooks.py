@@ -25,7 +25,10 @@ def stream_event():
     return SimpleNamespace(
         metadata=SimpleNamespace(message_timestamp=datetime.now(UTC)),
         event=SimpleNamespace(
-            broadcaster_user_id=str(TWITCH_ID), broadcaster_user_login="host", broadcaster_user_name="主播"
+            broadcaster_user_id=str(TWITCH_ID),
+            broadcaster_user_login="host",
+            broadcaster_user_name="主播",
+            started_at=datetime.now(UTC),
         ),
     )
 

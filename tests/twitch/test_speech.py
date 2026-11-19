@@ -245,7 +245,10 @@ def test_開台與下播事件維護開台資訊(monkeypatch):
     event = SimpleNamespace(
         metadata=SimpleNamespace(message_timestamp=NOW),
         event=SimpleNamespace(
-            broadcaster_user_id=str(TWITCH_ID), broadcaster_user_login="host", broadcaster_user_name="主播"
+            broadcaster_user_id=str(TWITCH_ID),
+            broadcaster_user_login="host",
+            broadcaster_user_name="主播",
+            started_at=started,
         ),
     )
     run(events.on_stream_online(event))
@@ -253,3 +256,30 @@ def test_開台與下播事件維護開台資訊(monkeypatch):
     run(events.on_stream_offline(event))
     assert speech.current_stream(TWITCH_ID) is None
     assert speech._live == {TWITCH_ID: None}
+
+
+def test_開台後查不到直播資訊_仍以事件的開台時間記為開台(monkeypatch):
+    """回歸：查不到直播時曾留著上一場下播的 None，整場 {uptime} 都是「未開台」，也不會再查。"""
+    monkeypatch.setattr(events, "get_bus", lambda: MagicMock())
+    monkeypatch.setattr(events.timers, "on_stream_online", AsyncMock())
+    monkeypatch.setattr(events.asyncio, "sleep", AsyncMock())
+    started = NOW - timedelta(minutes=2)
+
+    async def no_streams(user_id):
+        return
+        yield
+
+    state.twitch.get_streams = no_streams
+    speech.set_offline(TWITCH_ID)  # 上一場下播
+    event = SimpleNamespace(
+        metadata=SimpleNamespace(message_timestamp=NOW),
+        event=SimpleNamespace(
+            broadcaster_user_id=str(TWITCH_ID),
+            broadcaster_user_login="host",
+            broadcaster_user_name="主播",
+            started_at=started,
+        ),
+    )
+    run(events.on_stream_online(event))
+    assert speech.current_stream(TWITCH_ID) == StreamInfo(started, "", "")
+    assert speech.render("{uptime}", run(speech.prepare("{uptime}", ctx()))) == "2 分"

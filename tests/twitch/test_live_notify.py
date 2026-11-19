@@ -423,7 +423,10 @@ def online_bot(monkeypatch):
     event = SimpleNamespace(
         metadata=SimpleNamespace(message_timestamp=T0),
         event=SimpleNamespace(
-            broadcaster_user_id="900000000000000004", broadcaster_user_login="host", broadcaster_user_name="主播"
+            broadcaster_user_id="900000000000000004",
+            broadcaster_user_login="host",
+            broadcaster_user_name="主播",
+            started_at=T0,
         ),
     )
     return module, fake_twitch, bus, event

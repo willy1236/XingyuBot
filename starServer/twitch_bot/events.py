@@ -51,6 +51,8 @@ async def on_follow(event: eventsub.ChannelFollowEvent):
 async def on_stream_online(event: eventsub.StreamOnlineEvent):
     log.info("%s starting stream!", event.event.broadcaster_user_name)
 
+    # 先用事件帶的開台時間記為開台（分類與標題留空），查不到直播時 {uptime} 才不會沿用上一場下播的狀態
+    speech.set_live(int(event.event.broadcaster_user_id), speech.StreamInfo(event.event.started_at, "", ""))
     # stream.online 會在開台後數秒內送達，此時 Helix streams API 可能還查不到直播，稍等重試
     live = None
     for _ in range(3):

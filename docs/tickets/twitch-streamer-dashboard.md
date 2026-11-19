@@ -578,6 +578,7 @@
   - `client.py`：新增的寫入函式不 commit，由呼叫端與 `record_change` 同一個交易提交；`add_twitch_automod_block` 自己 commit 並刪掉超出 100 筆的舊紀錄。計時訊息與事件回應只提供資料存取，快取與失效 handler 留在 W-06、W-07 的 bot 模組；沒有動 `cache.py`、`enums.py`。`delete_twitch_channel_data(twitch_id)` 刪指令、計時訊息、事件回應、擋下紀錄與 `twitch_point`（`broadcaster_id`），不 commit，不碰修改紀錄、token 與 `TwitchBotJoinChannel`。
   - 既有 bug：`get_raw_chat_command_channel` 原本回 `{名稱: 回應字串}`，`add_twitch_cmd`／`remove_twitch_cmd` 之後該頻道的指令快取變成字串，觸發指令會 AttributeError；改回整列並補回歸測試。`add_twitch_cmd` 覆寫既有指令時只改回應與 `updated_at`，保留其他欄位。
   - 新增卡上沒列的檔案：`lib/dashboard-channel-automod.ts`（元件取資料用）；改了卡上沒列的 `starServer/dashboard/twitch_control.py`（`check_template`）與 `starServer/twitch_bot/events.py`（開台資訊）。
+- 審查後修正（第 1 輪）：Q1 開台事件先用 `event.started_at` 記為開台（分類與標題留空），查不到直播時不再沿用上一場下播的 None。
 - 未驗：真實 Twitch 的 Check AutoMod Status 回應格式與速率限制行為、實際聊天室發言；瀏覽器裡的頻道總覽畫面。
 - pyright：新檔只有 `twitch_audit.py` 一個 `__table_args__` 的 reportCallIssue，與既有 `models.py` 覆寫 `__table_args__` 的寫法同源；`models.py` 本身的既有錯誤未處理。
 
