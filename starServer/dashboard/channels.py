@@ -3,7 +3,8 @@
 GET /dashboard/channels              這個 session 可以管理的頻道與 bot 狀態
 GET /dashboard/channels/{twitch_id}  單一頻道的基本資料、bot 狀態與轉發 Discord 的可用情形
 
-頻道端點只用 require_channel 判斷可不可以管理某頻道，依據是 SessionInfo.twitch_channels，不自己查。
+頻道端點只用 require_channel 判斷可不可以管理某頻道，依據是 SessionInfo.twitch_channels，不自己查；
+修改設定的端點改用 require_enabled_channel，bot 還沒啟用（或已停用）時回 409 channel_not_enabled。
 權限不足回 403 channel_forbidden，不用 no_permission：前端在全域把 no_permission 當成伺服器權限處理。
 """
 
@@ -39,6 +40,18 @@ async def require_channel(twitch_id: int, info: SessionInfo = Depends(require_an
     channel = find_channel(info, twitch_id)
     if channel is None:
         raise DashboardError(403, "channel_forbidden")
+    return channel
+
+
+async def require_enabled_channel(twitch_id: int, channel: TwitchIdentity = Depends(require_channel)) -> TwitchIdentity:
+    """修改頻道設定的端點用：同 `require_channel`，另外要求 bot 已在這個頻道啟用，沒啟用時唯讀。
+
+    Raises:
+        DashboardError: 401 session_expired；403 channel_forbidden；409 channel_not_enabled（state 不是 enabled）。
+    """
+    states = await run_db(lambda: _states([twitch_id]))
+    if states[twitch_id] != "enabled":
+        raise DashboardError(409, "channel_not_enabled")
     return channel
 
 
