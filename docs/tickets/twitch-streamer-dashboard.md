@@ -470,8 +470,9 @@
 - Add Channel Moderator 的 API 有速率限制，且帳號要已在聊天室出現過才能被設為 mod。失敗時不擋啟用：啟用照常完成，記 Sentry，後台提示「請在聊天室輸入 `/mod xingyu1016`」，W-08 會持續標示「bot 不是 mod」直到修好。
 - `twitch_chatbot.USER_SCOPE` 是 bot 帳號自己的 scope，不要拿來要求實況主；實況主的 scope 以上面列的清單為準。
 
-**進度**：實作完成（2026-11-19），審查修正中（第 1 輪：S1、S2）；驗收條件尚未勾（自動測試覆蓋後端各分支與前端標籤、操作元件的靜態輸出，真 Twitch 與真 Redis 的端到端、360px 版面待人工驗證）
-- commit：後端 84eebc1a、e4ec1f61、cb3f9407；前端（domalyze_frontend）8dddb47、629a39f
+**進度**：實作完成（2026-11-19），審查第 1 輪修正完成（S1、S2），待複審；驗收條件尚未勾（自動測試覆蓋後端各分支與前端標籤、操作元件的靜態輸出，真 Twitch 與真 Redis 的端到端、360px 版面待人工驗證）
+- commit：後端 84eebc1a、e4ec1f61、cb3f9407、2aeabae1；前端（domalyze_frontend）8dddb47、629a39f
+- 審查第 1 輪修正：後端 276d9f2e（S2：Add Moderator 回 400 時改 GET moderators 確認 bot 是否在名單，不比對訊息字串）；前端 649349d（S1：停用成功且 `bot_offline` 時顯示 `disable_bot_offline` 提示）；真實 Twitch 的 400 行為仍待人工驗證
 - 實作時的決定：
   - 啟用入口是整頁導覽：session 無效導向 `{origin}/dashboard-login?next=/dashboard/channels/<id>`；不是自己的頻道導向頻道頁，由 `ChannelAccessGuard` 顯示「沒有這個頻道的權限」；`channel` 不是數字導向 `/dashboard/channels`。所以前端 notice 不含 `session_expired`、`channel_forbidden`。
   - 授權網址帶 `force_verify=true`，瀏覽器已登入另一個 Twitch 帳號時才能換帳號。
