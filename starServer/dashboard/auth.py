@@ -50,6 +50,8 @@ class OAuthCookie(BaseModel):
     purpose: str
     next: str = "/dashboard"
     origin: str = ""
+    #: Twitch 啟用 bot 時要啟用的頻道（purpose=enable）；其他流程沒有
+    channel_id: str | None = None
 
 
 # purpose -> handler(request, cookie)；T-09 在 invite.py 註冊 invite
@@ -83,7 +85,7 @@ def sanitize_origin(value: str | None) -> str:
 
 
 def encode_cookie(cookie: OAuthCookie) -> str:
-    return base64.urlsafe_b64encode(cookie.model_dump_json().encode()).decode()
+    return base64.urlsafe_b64encode(cookie.model_dump_json(exclude_none=True).encode()).decode()
 
 
 def decode_cookie(raw: str) -> OAuthCookie | None:

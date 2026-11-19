@@ -22,16 +22,24 @@ router = APIRouter(prefix="/dashboard")
 DEFAULT_STATE = "inactive"
 
 
+def find_channel(info: SessionInfo, twitch_id: int) -> TwitchIdentity | None:
+    """這個 session 可管理的頻道；不在清單裡回 None。不 raise，給整頁導覽的端點（/to/*）用。"""
+    for channel in info.twitch_channels:
+        if channel.id == str(twitch_id):
+            return channel
+    return None
+
+
 async def require_channel(twitch_id: int, info: SessionInfo = Depends(require_any_session)) -> TwitchIdentity:
     """頻道端點的 dependency：回傳 session 可管理的那個頻道。
 
     Raises:
         DashboardError: 401 session_expired；403 channel_forbidden（不在這個 session 可管理的頻道裡）。
     """
-    for channel in info.twitch_channels:
-        if channel.id == str(twitch_id):
-            return channel
-    raise DashboardError(403, "channel_forbidden")
+    channel = find_channel(info, twitch_id)
+    if channel is None:
+        raise DashboardError(403, "channel_forbidden")
+    return channel
 
 
 def forward_access(info: SessionInfo) -> str:

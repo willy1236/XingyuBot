@@ -68,6 +68,11 @@ async def to_dashboard_twitch_login(next: str | None = None, origin: str | None 
     async with await new_twitch_oauth([]) as auth:
         url, state = auth.get_authorization_url()
     cookie = OAuthCookie(state=state, purpose="login", next=sanitize_next(next), origin=sanitize_origin(origin))
+    return redirect_to_twitch(url, cookie)
+
+
+def redirect_to_twitch(url: str, cookie: OAuthCookie) -> RedirectResponse:
+    """導向 Twitch 授權頁，並寫下這次授權的 dashboard_twitch_oauth cookie。"""
     response = RedirectResponse(url=url)
     response.set_cookie(
         TWITCH_OAUTH_COOKIE,
@@ -104,8 +109,11 @@ async def handle_dashboard_twitch_oauth(request: Request) -> Response | None:
     return response
 
 
-def _record_channel(user: TwitchUser) -> None:
-    """登入時登記頻道：沒有就新增 inactive 的一列，有就只更新顯示欄位，不動 state、指令、轉發設定。"""
+def record_channel(user: TwitchUser, state: str | None = None) -> None:
+    """登記頻道：沒有就新增一列（預設 inactive），有就更新顯示欄位。
+
+    state 只在有指定時才寫入；不指定就不動 state、指令與轉發設定。
+    """
     twitch_id = int(user.id)
     row = sqldb.get(TwitchBotJoinChannel, (twitch_id,))
     if row is None:
@@ -116,9 +124,12 @@ def _record_channel(user: TwitchUser) -> None:
                 display_name=user.display_name,
                 avatar_url=user.profile_image_url,
                 first_seen_at=nowtz(),
+                **({"state": state} if state is not None else {}),
             )
         )
         return
+    if state is not None:
+        row.state = state
     row.login = user.login
     row.display_name = user.display_name
     row.avatar_url = user.profile_image_url
@@ -151,7 +162,7 @@ async def _handle_login(request: Request, cookie: OAuthCookie) -> Response:
 
 
 def _create_login_session(user: TwitchUser, old_session_id: str | None) -> str:
-    _record_channel(user)
+    record_channel(user)
     identity = TwitchIdentity(user.id, user.login, user.display_name, user.profile_image_url)
     return create_session(None, user.display_name, user.profile_image_url, old_session_id, twitch=identity)
 

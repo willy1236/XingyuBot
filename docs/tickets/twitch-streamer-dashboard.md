@@ -470,7 +470,9 @@
 - Add Channel Moderator 的 API 有速率限制，且帳號要已在聊天室出現過才能被設為 mod。失敗時不擋啟用：啟用照常完成，記 Sentry，後台提示「請在聊天室輸入 `/mod xingyu1016`」，W-08 會持續標示「bot 不是 mod」直到修好。
 - `twitch_chatbot.USER_SCOPE` 是 bot 帳號自己的 scope，不要拿來要求實況主；實況主的 scope 以上面列的清單為準。
 
-**進度**：未完成
+**進度**：實作中（2026-11-19）
+- commit：後端 PLACEHOLDER
+- 續做：關閉舊 `/oauth/twitch` 與 `/to/twitchauth`（`bot_website.py`，改寫 `tests/twitch/test_auth.py`），再做 `channel_activation.py`（啟用入口、`enable` handler、停用端點）；之後前端 `channel-activation.tsx`、三態標籤、notice。
 
 ### W-04 [共用] bot 發言管線與修改紀錄
 
