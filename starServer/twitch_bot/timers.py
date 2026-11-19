@@ -244,10 +244,12 @@ async def _check_channel(twitch_id: int, login: str) -> None:
         return
     if twitch_id not in _online:
         online = await _resolve_online(twitch_id, login)
+        if twitch_id not in _configs:  # 查詢途中頻道被忘掉了（離開聊天室），下次 tick 再重新載入
+            return
         # 查詢途中若已收到開台或下播事件，以事件為準，不被可能已過時的查詢結果蓋掉
         if twitch_id not in _online:
             _online[twitch_id] = online
-            _apply(twitch_id, _configs.get(twitch_id, []))
+            _apply(twitch_id, _configs[twitch_id])
     if not _online[twitch_id]:
         return
     now = _now()

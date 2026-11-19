@@ -774,8 +774,9 @@
 - 審查後修正（第 1 輪，審查報告 review-b4-r1）：已修，待再審
   - B1（blocking）首次 tick 前就開台，`on_stream_online` 把設定寫成空清單而不再重讀：設定沒載入過就不動，交給下一次 tick 載入；補「先開台、後第一次 tick」測試。（5c39bc51）
   - Q4 查開台狀態的 await 途中收到上下播事件時，以事件為準，不被舊的查詢結果蓋掉。（5c39bc51）
-  - Q3 編輯沒有變更時不寫入、不留紀錄、不通知 bot（比照 W-07）：`twitch_timers.update` 欄位都沒變時 rollback 並直接回傳；補 starlib 與端點測試。（本 commit）
+  - Q3 編輯沒有變更時不寫入、不留紀錄、不通知 bot（比照 W-07）：`twitch_timers.update` 欄位都沒變時 rollback 並直接回傳；補 starlib 與端點測試。（4d082d58）
   - 未修：nitpick（`{channel}` 代入 login、新增先花 AutoMod 額度才檢查上限）。
+- 審查後修正（第 2 輪，審查報告 review-b4-r2）：N1 查開台狀態途中頻道被忘掉（離開聊天室並收到失效通知）時，寫回前確認設定還在，不在就直接結束，不再寫成空清單；補測試。（本 commit）
 
 ### W-07 實況主能設定事件回應
 
