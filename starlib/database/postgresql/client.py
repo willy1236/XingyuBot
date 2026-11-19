@@ -2304,19 +2304,25 @@ class TwitchRepository(BaseRepository):
         result = self.session.exec(stmt).one_or_none()
         return result
 
+    @staticmethod
+    def _transient_command(row: TwitchChatCommand) -> TwitchChatCommand:
+        """與 session 無關的複本。快取存 session 內的 instance 會在 commit 後過期、session 釋放後拋 DetachedInstanceError。"""
+        return TwitchChatCommand(**row.model_dump())
+
     def get_raw_chat_command_all(self):
+        """全部頻道的指令，供快取載入：{twitch_id: {名稱: 指令}}，指令是與 session 無關的複本。"""
         stmt = select(TwitchChatCommand)
         result = self.session.exec(stmt).all()
         dct = {i.twitch_id: dict() for i in result}
         for i in result:
-            dct[i.twitch_id][i.name] = i
+            dct[i.twitch_id][i.name] = self._transient_command(i)
         return dct
 
     def get_raw_chat_command_channel(self, twitch_id: int):
-        """單一頻道的指令，形狀與 `get_raw_chat_command_all` 的單頻道部分相同：名稱對整列。"""
+        """單一頻道的指令，形狀與 `get_raw_chat_command_all` 的單頻道部分相同：名稱對指令複本。"""
         stmt = select(TwitchChatCommand).where(TwitchChatCommand.twitch_id == twitch_id)
         result = self.session.exec(stmt).all()
-        return {i.name: i for i in result}
+        return {i.name: self._transient_command(i) for i in result}
 
     def get_chat_command_names(self):
         stmt = select(TwitchChatCommand.twitch_id, TwitchChatCommand.name)

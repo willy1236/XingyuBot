@@ -579,6 +579,7 @@
   - 既有 bug：`get_raw_chat_command_channel` 原本回 `{名稱: 回應字串}`，`add_twitch_cmd`／`remove_twitch_cmd` 之後該頻道的指令快取變成字串，觸發指令會 AttributeError；改回整列並補回歸測試。`add_twitch_cmd` 覆寫既有指令時只改回應與 `updated_at`，保留其他欄位。
   - 新增卡上沒列的檔案：`lib/dashboard-channel-automod.ts`（元件取資料用）；改了卡上沒列的 `starServer/dashboard/twitch_control.py`（`check_template`）與 `starServer/twitch_bot/events.py`（開台資訊）。
 - 審查後修正（第 1 輪）：Q1 開台事件先用 `event.started_at` 記為開台（分類與標題留空），查不到直播時不再沿用上一場下播的 None。
+- 審查後修正（第 1 輪）：Q3 `get_raw_chat_command_all`、`get_raw_chat_command_channel` 改存與 session 無關的複本，指令快取不再因 commit 過期或 session 釋放而失效。
 - 未驗：真實 Twitch 的 Check AutoMod Status 回應格式與速率限制行為、實際聊天室發言；瀏覽器裡的頻道總覽畫面。
 - pyright：新檔只有 `twitch_audit.py` 一個 `__table_args__` 的 reportCallIssue，與既有 `models.py` 覆寫 `__table_args__` 的寫法同源；`models.py` 本身的既有錯誤未處理。
 
