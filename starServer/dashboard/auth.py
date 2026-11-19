@@ -24,12 +24,14 @@ from . import config
 from .db import run_db
 from .session import (
     SESSION_COOKIE,
+    DiscordSessionInfo,
     SessionInfo,
     create_session,
     delete_session_cookie,
+    delete_twitch_user_sessions,
     delete_user_sessions,
     follow_account,
-    require_session,
+    require_any_session,
     set_session_cookie,
 )
 
@@ -166,7 +168,7 @@ async def _handle_login(request: Request, cookie: OAuthCookie) -> Response:
     old_session_id = request.cookies.get(SESSION_COOKIE)
     session_id = await run_db(lambda: create_session(user.id, name, user.avatar, old_session_id))
     # 立即確認一次析域帳號，登入後的第一個請求就帶得到
-    await follow_account(SessionInfo(session_id, user.id, name, user.avatar), force=True)
+    await follow_account(DiscordSessionInfo(session_id, user.id, name, user.avatar), force=True)
     log.info("Dashboard login: user %s (%s)", user.username, user.id)
 
     response = RedirectResponse(url=f"{cookie.origin}{cookie.next}")
@@ -187,20 +189,32 @@ def avatar_url(user_id: str, avatar: str | None) -> str:
 
 
 @router.get("/me")
-async def me(info: SessionInfo = Depends(require_session)):
+async def me(info: SessionInfo = Depends(require_any_session)):
     account = None if info.account_id is None else {"username": info.account_username}
+    if info.discord_user_id is not None:
+        avatar = avatar_url(info.discord_user_id, info.avatar)
+    else:
+        avatar = info.avatar
     return {
-        "id": info.discord_user_id,
+        "id": info.identity_key,
         "name": info.name,
-        "avatar_url": avatar_url(info.discord_user_id, info.avatar),
+        "avatar_url": avatar,
+        "discord": None if info.discord_user_id is None else {"id": info.discord_user_id},
+        "twitch": None if info.twitch is None else {"id": info.twitch.id, "login": info.twitch.login},
         "account": account,
+        "login_method": info.login_method,
     }
 
 
 @router.post("/logout")
-async def logout(request: Request, info: SessionInfo = Depends(require_session)):
-    """刪除該使用者所有裝置的 session 並清 cookie。網站不保存 Discord 授權，Discord 端的授權不受影響。"""
-    await run_db(lambda: delete_user_sessions(info.discord_user_id))
+async def logout(request: Request, info: SessionInfo = Depends(require_any_session)):
+    """刪除這個登入身分所有裝置的 session 並清 cookie：Twitch 登入以 Twitch 帳號為單位，其餘以 Discord 帳號為單位。
+    網站不保存 Discord 授權，Discord 端的授權不受影響。"""
+    twitch, discord_id = info.twitch, info.discord_user_id
+    if info.login_method == "twitch" and twitch is not None:
+        await run_db(lambda: delete_twitch_user_sessions(twitch.id))
+    elif discord_id is not None:
+        await run_db(lambda: delete_user_sessions(discord_id))
 
     request.state.dashboard_renew_session = None
     response = JSONResponse({"ok": True})

@@ -39,7 +39,7 @@ from .conflict import Conflict, check_conflict
 from .db import run_db
 from .errors import DashboardError
 from .message_input import ensure_valid_message
-from .session import SessionInfo, require_session
+from .session import DiscordSessionInfo, require_session
 
 log = logging.getLogger(__name__)
 
@@ -258,7 +258,7 @@ def _snapshot_current(snap: dict) -> dict:
     return {"content_json": snap["content_json"], "buttons": _canon(snap["buttons"])}
 
 
-def _actor(guild: discord.Guild, info: SessionInfo) -> discord.Member:
+def _actor(guild: discord.Guild, info: DiscordSessionInfo) -> discord.Member:
     member = guild.get_member(int(info.discord_user_id))
     if member is None:
         raise DashboardError(403, "no_permission")
@@ -430,7 +430,8 @@ async def _delete_quietly(message: discord.Message) -> None:
 
 @router.get("/guilds/{guild_id}/reaction-roles/options")
 async def get_options(
-    guild_id: int = Depends(require_section(Section.REACTION_ROLES)), info: SessionInfo = Depends(require_session)
+    guild_id: int = Depends(require_section(Section.REACTION_ROLES)),
+    info: DiscordSessionInfo = Depends(require_session),
 ):
     return await on_guild(guild_id, lambda guild: _options_payload(guild, _actor(guild, info)))
 
@@ -558,7 +559,7 @@ async def resolve_link(link: str, guild_id: int = Depends(require_section(Sectio
 async def get_reaction_role(
     message_id: int,
     guild_id: int = Depends(require_section(Section.REACTION_ROLES)),
-    info: SessionInfo = Depends(require_session),
+    info: DiscordSessionInfo = Depends(require_session),
 ):
     snap = await run_db(lambda: sqldb.get_reaction_role_snapshot(message_id))
     if snap is None or snap["guild_id"] != guild_id:
@@ -570,7 +571,7 @@ async def get_reaction_role(
 async def create_reaction_role(
     body: CreateBody,
     guild_id: int = Depends(require_section(Section.REACTION_ROLES)),
-    info: SessionInfo = Depends(require_session),
+    info: DiscordSessionInfo = Depends(require_session),
 ):
     if body.message is not None:
         ensure_valid_message(body.message)
@@ -637,7 +638,7 @@ async def create_reaction_role(
 
 async def _attach(
     guild: discord.Guild,
-    info: SessionInfo,
+    info: DiscordSessionInfo,
     guild_id: int,
     channel_id: int,
     message_id: int,
@@ -692,7 +693,7 @@ async def update_reaction_role(
     message_id: int,
     body: UpdateBody,
     guild_id: int = Depends(require_section(Section.REACTION_ROLES)),
-    info: SessionInfo = Depends(require_session),
+    info: DiscordSessionInfo = Depends(require_session),
 ):
     if body.message is not None:
         ensure_valid_message(body.message)

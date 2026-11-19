@@ -7,10 +7,12 @@ from sqlalchemy import (
     JSON,
     BigInteger,
     Boolean,
+    CheckConstraint,
     Column,
     Date,
     ForeignKey,
     Identity,
+    Index,
     Integer,
     Interval,
     SmallInteger,
@@ -978,12 +980,32 @@ class OAuthToken(TokensSchema, table=True):
 
 
 class DashboardSession(TokensSchema, table=True):
-    """伺服器管理後台的登入 session；名稱與頭像在登入時存下，之後不再用使用者的授權去查。"""
+    """後台的登入 session；名稱與頭像在登入時存下，之後不再用使用者的授權去查。
+
+    身分是 Discord 帳號或 Twitch 帳號至少一個；析域登入但帳號沒有連結 Discord 時，兩者皆空，由 account_id 代表身分。
+    """
 
     __tablename__ = "dashboard_session"
+    __table_args__ = (
+        CheckConstraint(
+            "discord_user_id IS NOT NULL OR twitch_user_id IS NOT NULL "
+            "OR (login_method = 'domalyze' AND account_id IS NOT NULL)",
+            name="ck_dashboard_session_identity",
+        ),
+        Index("ix_dashboard_session_twitch_user_id", "twitch_user_id"),
+        {**TokensSchema.__table_args__},
+    )
 
     session_id: str = Field(sa_column=Column(String, primary_key=True))
-    discord_user_id: str = Field(sa_column=Column(String, nullable=False, index=True))
+    discord_user_id: str | None = Field(default=None, sa_column=Column(String, nullable=True, index=True))
+    twitch_user_id: str | None = Field(default=None, sa_column=Column(String))
+    twitch_login: str | None = Field(default=None, sa_column=Column(String))
+    twitch_name: str | None = Field(default=None, sa_column=Column(String))
+    twitch_avatar: str | None = Field(default=None, sa_column=Column(String))
+    #: discord、domalyze 或 twitch；via_domalyze 與它同步寫入
+    login_method: str = Field(
+        default="discord", sa_column=Column(String, nullable=False, server_default=text("'discord'"))
+    )
     name: str = Field(sa_column=Column(String, nullable=False))
     avatar: str | None = Field(default=None, sa_column=Column(String))
     created_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0), nullable=False), default_factory=lambda: nowtz())

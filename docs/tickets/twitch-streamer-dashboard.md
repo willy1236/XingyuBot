@@ -185,7 +185,35 @@
 - `domalyze_login._start_session`、`auth._handle_login` 呼叫 `create_session` 的地方要補 `login_method`。
 - `_check` 與 `_fallback` 假設 `discord_user_id` 不為 None，要在 Twitch-only 的分支前先返回。
 
-**進度**：未完成
+**進度**：進行中（後端完成，前端續做）
+- commit：後端 `feat(dashboard): session 支援 Twitch 身分`
+- 實作時的決定：
+  - 型別：新增 `DiscordSessionInfo(SessionInfo)`，`require_session` 回傳它；14 個模組的 `info: SessionInfo` 標註改成 `DiscordSessionInfo`（只改型別標註與 import，邏輯不變），pyright 才不會對 `int(info.discord_user_id)` 報錯。`follow_account` 改成泛型，保留傳入的型別。
+  - `create_session` 自己推導 `login_method`（帶 `twitch` 是 `twitch`、`via_domalyze` 是 `domalyze`、其餘 `discord`），呼叫端不傳；`domalyze_login._start_session`、`auth._handle_login` 因此不必補。身分組合不合法時 `ValueError`。
+  - `SessionInfo.identity_key` 實作三種主身分 key；`/dashboard/me` 的 `id` 用它。
+  - 登出：`login_method == "twitch"` 刪同一 Twitch 帳號的 session，其餘刪同一 Discord 帳號的 session；沒有 Discord 的析域 session 尚未處理（W-10）。
+  - `invite.py`：沒有 Discord 身分時導回 `/dashboard`。
+- ALTER（已套到本機 DB；正式機先手動執行，再部署 code）：
+  ```sql
+  BEGIN;
+  ALTER TABLE credentials.dashboard_session
+      ALTER COLUMN discord_user_id DROP NOT NULL,
+      ADD COLUMN twitch_user_id varchar,
+      ADD COLUMN twitch_login   varchar,
+      ADD COLUMN twitch_name    varchar,
+      ADD COLUMN twitch_avatar  varchar,
+      ADD COLUMN login_method   varchar NOT NULL DEFAULT 'discord';
+  UPDATE credentials.dashboard_session SET login_method = 'domalyze' WHERE via_domalyze;
+  ALTER TABLE credentials.dashboard_session
+      ADD CONSTRAINT ck_dashboard_session_identity CHECK (
+          discord_user_id IS NOT NULL
+          OR twitch_user_id IS NOT NULL
+          OR (login_method = 'domalyze' AND account_id IS NOT NULL)
+      );
+  CREATE INDEX ix_dashboard_session_twitch_user_id ON credentials.dashboard_session (twitch_user_id);
+  COMMIT;
+  ```
+- 續做：前端（`DashboardUser`、NAV、`discord_required` 導向、`DashboardUserContext`）。
 
 ### W-01 實況主能用 Twitch 登入並進到自己的頻道後台
 

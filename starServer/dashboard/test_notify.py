@@ -20,7 +20,7 @@ from .notify_cooldown import COOLDOWN_SECONDS, acquire, commit, cooldown_key, re
 from .notify_fields import NotifySpec, parse_key
 from .notify_input import field_names
 from .samples import build_sample
-from .session import SessionInfo, require_session
+from .session import DiscordSessionInfo, require_session
 from .validity import channel_invalid_reason
 
 router = APIRouter(prefix="/dashboard")
@@ -62,7 +62,9 @@ def _failure(reason: str) -> DashboardError:
 
 @router.post("/guilds/{guild_id}/notifies/test")
 async def send_test_notify(
-    body: SendTestBody, guild_id: int = Depends(require_guild_access), info: SessionInfo = Depends(require_session)
+    body: SendTestBody,
+    guild_id: int = Depends(require_guild_access),
+    info: DiscordSessionInfo = Depends(require_session),
 ):
     try:
         spec = parse_key(body.notify_type)

@@ -23,7 +23,7 @@ from .access import Section, on_guild_async, require_section
 from .db import run_db
 from .errors import DashboardError
 from .polls import _load_detail, _member_name
-from .session import SessionInfo, require_session
+from .session import DiscordSessionInfo, require_session
 
 router = APIRouter(prefix="/dashboard")
 
@@ -59,7 +59,7 @@ def _content_disposition(filename: str) -> str:
 async def export_poll(
     poll_id: int,
     guild_id: int = Depends(require_section(Section.POLLS, "export")),
-    info: SessionInfo = Depends(require_session),
+    info: DiscordSessionInfo = Depends(require_session),
 ):
     loaded = await run_db(lambda: _load_detail(guild_id, poll_id))
     if loaded is None:

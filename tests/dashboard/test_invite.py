@@ -25,6 +25,7 @@ from tests.helpers.dashboard_auth import (
     encode_cookie,
     make_app,
     make_session,
+    make_twitch_session,
     set_cookies,
 )
 from tests.helpers.dashboard_guilds import MANAGE_CHANNELS, MANAGE_GUILD, g
@@ -122,6 +123,12 @@ class TestInviteEntry:
 
 # ====== 回到 /oauth/discord ======
 class TestInviteCallback:
+    def test_twitch_only_session_goes_back_to_dashboard(self, env, repo):
+        c = TestClient(make_app(), base_url="https://testserver", follow_redirects=False)
+        c.cookies.set("dashboard_session", make_twitch_session(repo))
+        res = callback(c)
+        assert res.headers["location"] == f"{FRONTEND}/dashboard"
+
     def test_manager_goes_to_guild_page(self, env, repo):
         res = callback(client_with_session(repo))
         assert res.headers["location"] == f"{FRONTEND}/dashboard/guilds/{GUILD}"

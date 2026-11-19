@@ -23,7 +23,7 @@ from .access import on_guild, require_guild_access
 from .conflict import Conflict
 from .db import run_db
 from .errors import DashboardError
-from .session import SessionInfo, require_session
+from .session import DiscordSessionInfo, require_session
 
 router = APIRouter(prefix="/dashboard")
 
@@ -135,7 +135,7 @@ def _options(guild: discord.Guild, user_id: int) -> dict:
 
 @router.get("/guilds/{guild_id}/dynamic-voice/options")
 async def get_dynamic_voice_options(
-    guild_id: int = Depends(require_guild_access), info: SessionInfo = Depends(require_session)
+    guild_id: int = Depends(require_guild_access), info: DiscordSessionInfo = Depends(require_session)
 ):
     return await on_guild(guild_id, lambda guild: _options(guild, int(info.discord_user_id)))
 

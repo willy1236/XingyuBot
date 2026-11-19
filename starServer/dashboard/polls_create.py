@@ -19,7 +19,7 @@ from starlib.utils import nowtz
 
 from .access import Section, on_guild, on_guild_async, require_section
 from .errors import DashboardError
-from .session import SessionInfo, require_session
+from .session import DiscordSessionInfo, require_session
 
 router = APIRouter(prefix="/dashboard")
 
@@ -77,7 +77,7 @@ def _to_int(value: int | str) -> int | None:
         return None
 
 
-def _actor(guild: discord.Guild, info: SessionInfo) -> discord.Member:
+def _actor(guild: discord.Guild, info: DiscordSessionInfo) -> discord.Member:
     member = guild.get_member(int(info.discord_user_id))
     if member is None:
         raise DashboardError(403, "no_permission")
@@ -120,7 +120,8 @@ def _options_payload(guild: discord.Guild, actor: discord.Member) -> dict:
 
 @router.get("/guilds/{guild_id}/polls/options")
 async def get_options(
-    guild_id: int = Depends(require_section(Section.POLLS, "create")), info: SessionInfo = Depends(require_session)
+    guild_id: int = Depends(require_section(Section.POLLS, "create")),
+    info: DiscordSessionInfo = Depends(require_session),
 ):
     return await on_guild(guild_id, lambda guild: _options_payload(guild, _actor(guild, info)))
 
@@ -138,7 +139,7 @@ def _role_errors(guild: discord.Guild, path: str, role_id: int | None) -> list[d
 async def create_poll(
     body: CreateBody,
     guild_id: int = Depends(require_section(Section.POLLS, "create")),
-    info: SessionInfo = Depends(require_session),
+    info: DiscordSessionInfo = Depends(require_session),
 ):
     title = body.title.strip()
     options = [o.strip() for o in body.options]
