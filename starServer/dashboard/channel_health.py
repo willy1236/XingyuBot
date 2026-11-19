@@ -15,7 +15,7 @@ W-12 的營運入口也用 `channel_health` 判斷頻道狀態。
 import asyncio
 import logging
 from dataclasses import dataclass
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 import httpx
 
@@ -127,7 +127,10 @@ _bot_user_id_cache: str | None = None
 def _bot_user_id() -> str:
     global _bot_user_id_cache
     if _bot_user_id_cache is None:
-        _bot_user_id_cache = sqldb.get_bot_oauth_token(APIType.Twitch, BOT_OAUTH_SEQ).user_id
+        user_id = sqldb.get_bot_oauth_token(APIType.Twitch, BOT_OAUTH_SEQ).user_id
+        if user_id is None:
+            raise RuntimeError("bot 帳號的 OAuthToken 沒有 user_id")
+        _bot_user_id_cache = user_id
     return _bot_user_id_cache
 
 
@@ -250,7 +253,7 @@ def _judge(access: _Access, status: twitch_control.ChannelStatus | twitch_contro
             if failed:
                 issues.add("subscription_failed")
     paused = tuple(f.code for f in FEATURES if _paused(f, issues, failed))
-    ordered = tuple(issue for issue in ISSUE_ORDER if issue in issues)
+    ordered: tuple[Issue, ...] = tuple(issue for issue in ISSUE_ORDER if issue in issues)
     return ChannelHealth("partial" if paused else "enabled", ordered, paused)
 
 
@@ -262,6 +265,6 @@ async def channel_health(twitch_id: int) -> ChannelHealth:
     row = await run_db(lambda: sqldb.get(TwitchBotJoinChannel, (twitch_id,)))
     state = "inactive" if row is None else row.state
     if state != "enabled":
-        return ChannelHealth(state)
+        return ChannelHealth(cast(HealthState, state))
     access, status = await asyncio.gather(_check_access(twitch_id), _bot_status(twitch_id))
     return _judge(access, status)
