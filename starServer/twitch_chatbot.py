@@ -2,8 +2,6 @@ import asyncio
 import logging
 import socket
 import threading
-from collections.abc import Coroutine
-from typing import Any
 
 from sqlalchemy.exc import NoResultFound
 from twitchAPI.chat import Chat, EventData
@@ -14,8 +12,6 @@ from twitchAPI.twitch import Twitch
 from twitchAPI.type import (
     AuthScope,
     ChatEvent,
-    EventSubSubscriptionError,
-    EventSubSubscriptionTimeout,
     InvalidTokenException,
     MissingScopeException,
 )
@@ -23,7 +19,7 @@ from twitchAPI.type import (
 from sentry_bootstrap import capture_exception_safe, capture_message_safe
 from starlib import BaseThread
 from starlib.database import APIType, OAuthToken, sqldb
-from starServer.twitch_bot import commands, events, state
+from starServer.twitch_bot import channels, commands, events, state
 
 log = logging.getLogger(__name__)
 
@@ -71,18 +67,6 @@ async def on_ready(ready_event: EventData):
     # or even better pass a list of channels as the argument
     if users_login:
         await ready_event.chat.join_room(users_login)
-
-
-async def _listen(name: str, subscribe: Coroutine[Any, Any, str]) -> None:
-    """訂閱一個 EventSub 事件；訂閱失敗只記 warning，不影響其他事件。每次訂閱後間隔 1 秒避免觸發速率限制。"""
-    try:
-        subscription_id = await subscribe
-        log.debug("listening to %s, subscription_id: %s", name, subscription_id)
-        await asyncio.sleep(1)
-    except EventSubSubscriptionError as e:
-        log.warning("Error subscribing to %s: %s", name, e)
-    except EventSubSubscriptionTimeout:
-        log.warning("Error subscribing to %s: timeout.", name)
 
 
 async def run():
@@ -158,46 +142,12 @@ async def run():
     # start the eventsub client
     eventsub.start()
     await asyncio.sleep(3)
+    state.eventsub = eventsub
+    state.bot_user_id = me.id
     for user in users:
         log.debug("eventsub:%s", user.login)
-        await _listen("stream online", eventsub.listen_stream_online(user.id, events.on_stream_online))
-        await _listen("stream offline", eventsub.listen_stream_offline(user.id, events.on_stream_offline))
-        await _listen(
-            "channel raid", eventsub.listen_channel_raid(events.on_channel_raid, to_broadcaster_user_id=user.id)
-        )
+        await channels.subscribe_channel(user, is_mod=chat.is_mod(user.login))
         log.debug("eventsub:%s done.", user.login)
-
-        # 以下事件需要 bot 是該頻道的 mod 才能訂閱
-        if not chat.is_mod(user.login):
-            continue
-
-        await _listen("channel follow", eventsub.listen_channel_follow_v2(user.id, me.id, events.on_follow))
-        await _listen(
-            "channel points custom reward redemption add",
-            eventsub.listen_channel_points_custom_reward_redemption_add(
-                user.id, events.on_channel_points_custom_reward_redemption_add
-            ),
-        )
-        await _listen(
-            "channel points custom reward redemption update",
-            eventsub.listen_channel_points_custom_reward_redemption_update(
-                user.id, events.on_channel_points_custom_reward_redemption_update
-            ),
-        )
-        await _listen("channel subscribe", eventsub.listen_channel_subscribe(user.id, events.on_channel_subscribe))
-        await _listen(
-            "channel subscription message",
-            eventsub.listen_channel_subscription_message(user.id, events.on_channel_subscription_message),
-        )
-        await _listen(
-            "channel subscription gift",
-            eventsub.listen_channel_subscription_gift(user.id, events.on_channel_subscription_gift),
-        )
-        # channel poll begin、channel prediction begin 目前不訂閱，需要時比照加上 _listen
-        await _listen(
-            "channel prediction end", eventsub.listen_channel_prediction_end(user.id, events.on_channel_prediction_end)
-        )
-        log.debug("eventsub for %s(mod) done.", user.login)
 
     return chat, twitch, eventsub
 

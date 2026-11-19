@@ -1,6 +1,7 @@
 """Twitch bot 各模組共用的執行期狀態；import 時不查 DB，由 run() 開頭的 load_join_channels() 填入。"""
 
 from twitchAPI.chat import Chat
+from twitchAPI.eventsub.webhook import EventSubWebhook
 from twitchAPI.twitch import Twitch
 
 from starlib.database import sqldb
@@ -20,3 +21,6 @@ def load_join_channels() -> None:
 chat: Chat
 # run() 建立的 Twitch API 物件，handler 用它查 Helix
 twitch: Twitch
+# run() 建立的 EventSub webhook 與 bot 自己的使用者 ID
+eventsub: EventSubWebhook
+bot_user_id: str
