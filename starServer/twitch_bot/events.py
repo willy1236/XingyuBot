@@ -2,13 +2,17 @@
 
 import asyncio
 import logging
+import time
+from collections.abc import Callable
 from datetime import UTC, datetime
 
-from twitchAPI.chat import ChatSub, JoinedEvent, LeftEvent, NoticeEvent, WhisperEvent
+from twitchAPI.chat import ChatEvent, ChatSub, EventData, JoinedEvent, LeftEvent, NoticeEvent, WhisperEvent
 from twitchAPI.helper import first
 from twitchAPI.object import eventsub
 
-from starlib.messaging import get_bus
+from starlib import twitch_event_responses
+from starlib.database import sqldb
+from starlib.messaging import cache_invalidation, get_bus
 from starlib.messaging.events.twitch_activity import (
     TwitchPredictionResultEvent,
     TwitchRaidEvent,
@@ -19,23 +23,121 @@ from starlib.messaging.events.twitch_activity import (
 )
 from starlib.messaging.events.twitch_follow import TwitchFollowEvent
 from starlib.messaging.events.twitch_stream import TwitchStreamOfflineEvent, TwitchStreamOnlineEvent
+from starlib.twitch_event_responses import EventResponse
 from starServer.twitch_bot import speech, state, timers
 
 log = logging.getLogger(__name__)
 
 
+#: 匿名贈訂的贈送者在回應裡的名稱
+ANONYMOUS = "匿名"
+#: 追隨回應的間隔：同一個頻道在這段秒數內只感謝第一位追隨者
+FOLLOW_RESPONSE_INTERVAL = 10.0
+
+#: 現在的時間（秒，monotonic）；測試可以換掉
+_now: Callable[[], float] = time.monotonic
+#: 頻道 ID -> 上次發出追隨回應的時間；重啟歸零
+_follow_last: dict[int, float] = {}
+#: 頻道 ID -> 六種事件回應的有效設定；用到才讀，設定改了就丟掉
+_responses: dict[int, dict[str, EventResponse]] = {}
+#: 每次收到失效通知加一；讀取途中收到通知時，讀到的舊值不存進快取
+_version = 0
+
+
 def start() -> None:
-    """Twitch bot 初始化完成後呼叫一次；需要註冊快取失效 handler 等啟動工作的功能在這裡做。"""
+    """Twitch bot 初始化完成後呼叫一次：註冊事件回應的快取失效 handler。
+
+    Chat 重啟後 READY 會在新的 loop 上再來一次（handler 沿用），這時要把 handler 改綁到新的 loop。
+    """
+    _register(state.loop)
+    state.chat.register_event(ChatEvent.READY, _on_ready)
 
 
 def stop() -> None:
     """Twitch bot 收尾時呼叫。"""
 
 
+async def _on_ready(_: EventData) -> None:
+    _register(asyncio.get_running_loop())
+
+
+def _register(loop: asyncio.AbstractEventLoop) -> None:
+    cache_invalidation.on_invalidate("twitch_event_response", _on_invalidated, loop)
+
+
+async def _on_invalidated(key: str | None) -> None:
+    """事件回應改了（任何一個實例）：丟掉該頻道的快取，key 為 None 時全部丟掉；下次用到再讀。"""
+    global _version
+    _version += 1
+    if key is None:
+        _responses.clear()
+    else:
+        _responses.pop(int(key), None)
+
+
+def _load(twitch_id: int) -> dict[str, EventResponse]:
+    try:
+        return {r.kind: r for r in twitch_event_responses.list_responses(twitch_id)}
+    finally:
+        sqldb.release_session()
+
+
+async def _response(twitch_id: int, kind: str) -> EventResponse:
+    """頻道這種事件目前有效的設定；讀不到時退回預設文字並視為開啟，不讓 DB 出錯讓回應整個消失。"""
+    loaded = _responses.get(twitch_id)
+    if loaded is None:
+        version = _version
+        try:
+            loaded = await asyncio.to_thread(_load, twitch_id)
+        except Exception:
+            log.warning("讀取 %s 的事件回應失敗，改用預設文字", twitch_id, exc_info=True)
+            return twitch_event_responses.default_response(kind)
+        if version == _version:
+            _responses[twitch_id] = loaded
+    return loaded[kind]
+
+
+async def _respond(
+    kind: str, twitch_id: int, login: str, channel: str, *, user: str | None = None, **event: str
+) -> None:
+    """依頻道的事件回應設定在聊天室發言：關閉就不發。任何錯誤只記 log，不影響後面的 bus 事件發布。
+
+    login 是聊天室名稱，channel 是頻道的顯示名稱（`{channel}`）；event 是 `{months}`、`{amount}`、`{viewers}`。
+    """
+    try:
+        response = await _response(twitch_id, kind)
+        if not response.enabled:
+            return
+        ctx = speech.SpeechContext(twitch_id, channel, user=user, event=event)
+        await speech.say(login, twitch_id, response.template, ctx, source_kind="event_response", source_key=kind)
+    except Exception:
+        log.exception("%s 的 %s 事件回應失敗", twitch_id, kind)
+
+
+def _follow_response_due(twitch_id: int) -> bool:
+    """追隨回應的限流：頻道在間隔內已回應過就丟掉這次，不排隊；通過就記下時間。"""
+    now = _now()
+    last = _follow_last.get(twitch_id)
+    if last is not None and now - last < FOLLOW_RESPONSE_INTERVAL:
+        return False
+    _follow_last[twitch_id] = now
+    return True
+
+
 # eventsub
 async def on_follow(event: eventsub.ChannelFollowEvent):
     # await state.chat.send_message(data.event.broadcaster_user_name,text = f'{data.event.user_name} now follows {data.event.broadcaster_user_name}!')
     log.info("%s(%s) now follows %s!", event.event.user_name, event.event.user_login, event.event.broadcaster_user_name)
+
+    broadcaster_id = int(event.event.broadcaster_user_id)
+    if _follow_response_due(broadcaster_id):
+        await _respond(
+            "follow",
+            broadcaster_id,
+            event.event.broadcaster_user_login,
+            event.event.broadcaster_user_name,
+            user=event.event.user_name,
+        )
 
     get_bus().publish(
         TwitchFollowEvent(
@@ -68,13 +170,13 @@ async def on_stream_online(event: eventsub.StreamOnlineEvent):
     )
     await timers.on_stream_online(int(event.event.broadcaster_user_id))
 
-    # 聊天室訊息只看有沒有設定通知頻道；Discord 端的通知頻道與開台通知由 Discord bot 處理事件時決定
-    channel_config = state.join_channels.get(int(event.event.broadcaster_user_id))
-    if channel_config and channel_config.action_channel_id:
-        await state.chat.send_message(
-            event.event.broadcaster_user_login,
-            f"{event.event.broadcaster_user_name} 正在直播 {live.game_name}! {live.title}",
-        )
+    # 聊天室訊息只看事件回應的開關；Discord 端的通知頻道與開台通知由 Discord bot 處理事件時決定
+    await _respond(
+        "stream_online",
+        int(event.event.broadcaster_user_id),
+        event.event.broadcaster_user_login,
+        event.event.broadcaster_user_name,
+    )
 
     try:
         user = await first(state.twitch.get_users(user_ids=[event.event.broadcaster_user_id]))
@@ -155,12 +257,14 @@ async def on_channel_raid(event: eventsub.ChannelRaidEvent):
         event.event.to_broadcaster_user_name,
     )
 
-    channel_config = state.join_channels.get(int(event.event.to_broadcaster_user_id))
-    if channel_config and channel_config.action_channel_id:
-        await state.chat.send_message(
-            event.event.to_broadcaster_user_login,
-            f"{event.event.from_broadcaster_user_name} 帶了 {event.event.viewers} 位觀眾降落在 {event.event.to_broadcaster_user_name} 的頻道！",
-        )
+    await _respond(
+        "raid",
+        int(event.event.to_broadcaster_user_id),
+        event.event.to_broadcaster_user_login,
+        event.event.to_broadcaster_user_name,
+        user=event.event.from_broadcaster_user_name,
+        viewers=str(event.event.viewers),
+    )
 
     get_bus().publish(
         TwitchRaidEvent(
@@ -176,8 +280,15 @@ async def on_channel_raid(event: eventsub.ChannelRaidEvent):
 async def on_channel_subscribe(event: eventsub.ChannelSubscribeEvent):
     log.info("%s 在 %s 的層級%s新訂閱", event.event.user_name, event.event.broadcaster_user_name, event.event.tier[0])
 
-    # 贈送訂閱不通知 Discord；其餘不論通知頻道設定都送出，由 Discord 端決定發不發
+    # 贈送訂閱的收禮者不回應也不通知 Discord，由贈訂事件回應一次；其餘不論通知頻道設定都送出，由 Discord 端決定發不發
     if not event.event.is_gift:
+        await _respond(
+            "subscribe",
+            int(event.event.broadcaster_user_id),
+            event.event.broadcaster_user_login,
+            event.event.broadcaster_user_name,
+            user=event.event.user_name,
+        )
         get_bus().publish(
             TwitchSubscribeEvent(
                 occurred_at=event.metadata.message_timestamp,
@@ -198,12 +309,14 @@ async def on_channel_subscription_message(event: eventsub.ChannelSubscriptionMes
     for text in texts:
         log.info(text)
 
-    channel_config = state.join_channels.get(int(event.event.broadcaster_user_id))
-    if channel_config and channel_config.action_channel_id:
-        chat_text = f"感謝 {event.event.user_name} 的訂閱！"
-        if event.event.cumulative_months:
-            chat_text += f"累積訂閱{event.event.cumulative_months}個月！"
-        await state.chat.send_message(event.event.broadcaster_user_login, chat_text)
+    await _respond(
+        "resubscribe",
+        int(event.event.broadcaster_user_id),
+        event.event.broadcaster_user_login,
+        event.event.broadcaster_user_name,
+        user=event.event.user_name,
+        months=str(event.event.cumulative_months or event.event.duration_months),
+    )
 
     get_bus().publish(
         TwitchSubscriptionMessageEvent(
@@ -227,11 +340,14 @@ async def on_channel_subscription_gift(event: eventsub.ChannelSubscriptionGiftEv
         event.event.tier[0],
         event.event.total,
     )
-    channel_config = state.join_channels.get(int(event.event.broadcaster_user_id))
-    if channel_config and channel_config.action_channel_id and not event.event.is_anonymous:
-        await state.chat.send_message(
-            event.event.broadcaster_user_login, f"感謝 {event.event.user_name} 送出的{event.event.total}份訂閱！"
-        )
+    await _respond(
+        "gift",
+        int(event.event.broadcaster_user_id),
+        event.event.broadcaster_user_login,
+        event.event.broadcaster_user_name,
+        user=ANONYMOUS if event.event.is_anonymous else event.event.user_name,
+        amount=str(event.event.total),
+    )
 
 
 async def on_channel_poll_begin(event: eventsub.ChannelPollBeginEvent):

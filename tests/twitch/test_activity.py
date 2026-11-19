@@ -14,7 +14,7 @@ import pytest
 
 from starDiscord.cmds import twitch_notify
 from starDiscord.cmds.twitch_notify import ChannelMissing, NotConfigured, TwitchNotify
-from starlib import Jsondb
+from starlib import Jsondb, twitch_event_responses
 from starlib.messaging import Delivery
 from starlib.messaging.events import registry
 from starlib.messaging.events.twitch_activity import (
@@ -25,6 +25,7 @@ from starlib.messaging.events.twitch_activity import (
     TwitchSubscriptionMessageEvent,
     TwitchWhisperEvent,
 )
+from starlib.twitch_event_responses import default_response
 
 NOW = datetime.now(UTC)
 DELIVERY = Delivery(redelivered=False)
@@ -266,7 +267,11 @@ def chatbot(monkeypatch):
     fake_chat.send_message = AsyncMock(side_effect=lambda *a, **k: calls.append("chat"))
     monkeypatch.setattr(module, "get_bus", lambda: bus)
     monkeypatch.setattr(state, "chat", fake_chat, raising=False)
-    monkeypatch.setattr(state, "join_channels", {int(TWITCH_ID): MagicMock(action_channel_id=123)})
+    # 事件回應走預設設定，不查資料庫
+    monkeypatch.setattr(
+        module, "_load", lambda twitch_id: {k: default_response(k) for k in twitch_event_responses.KINDS}
+    )
+    monkeypatch.setattr(module, "_responses", {})
     module.test_calls = calls
     module.test_bus = bus
     module.test_chat = fake_chat
@@ -298,27 +303,49 @@ def test_raid_chat_then_publish(chatbot):
     assert published(chatbot) == [raid()]  # 與 Discord 端測試用的事件同欄位，occurred_at 取 message_timestamp
 
 
-def test_raid_without_action_channel_skips_chat_but_still_publishes(chatbot, monkeypatch):
-    monkeypatch.setattr(chatbot.state, "join_channels", {})
+def test_raid_responds_without_forward_config(chatbot, monkeypatch):
+    monkeypatch.setattr(chatbot.state, "join_channels", {})  # 沒設定轉發 Discord 的頻道
+    run(chatbot.on_channel_raid(raid_payload()))
+    chatbot.test_chat.send_message.assert_awaited_once()
+    assert len(published(chatbot)) == 1
+
+
+def test_raid_response_disabled_skips_chat_but_still_publishes(chatbot, monkeypatch):
+    disabled = {k: default_response(k) for k in twitch_event_responses.KINDS}
+    disabled["raid"] = twitch_event_responses.EventResponse("raid", False, "x", False)
+    monkeypatch.setattr(chatbot, "_load", lambda twitch_id: disabled)
     run(chatbot.on_channel_raid(raid_payload()))
     chatbot.test_chat.send_message.assert_not_awaited()
     assert len(published(chatbot)) == 1
 
 
-def test_gift_subscribe_is_not_published(chatbot):
+def test_gift_subscribe_is_not_published_nor_answered(chatbot):
     payload = eventsub_event(
-        broadcaster_user_id=TWITCH_ID, broadcaster_user_name="主播", user_name="訂閱者", tier="1000", is_gift=True
+        broadcaster_user_id=TWITCH_ID,
+        broadcaster_user_login="host",
+        broadcaster_user_name="主播",
+        user_name="訂閱者",
+        tier="1000",
+        is_gift=True,
     )
     run(chatbot.on_channel_subscribe(payload))
     chatbot.test_bus.publish.assert_not_called()
+    chatbot.test_chat.send_message.assert_not_awaited()
 
 
-def test_subscribe_published_regardless_of_action_channel(chatbot, monkeypatch):
+def test_subscribe_answered_then_published_regardless_of_action_channel(chatbot, monkeypatch):
     monkeypatch.setattr(chatbot.state, "join_channels", {})
     payload = eventsub_event(
-        broadcaster_user_id=TWITCH_ID, broadcaster_user_name="主播", user_name="訂閱者", tier="1000", is_gift=False
+        broadcaster_user_id=TWITCH_ID,
+        broadcaster_user_login="host",
+        broadcaster_user_name="主播",
+        user_name="訂閱者",
+        tier="1000",
+        is_gift=False,
     )
     run(chatbot.on_channel_subscribe(payload))
+    assert chatbot.test_calls == ["chat", "publish"]
+    chatbot.test_chat.send_message.assert_awaited_once_with("host", "感謝 訂閱者 的訂閱！")
     assert published(chatbot) == [subscribe()]
 
 
@@ -339,7 +366,7 @@ def sub_message_payload(**overrides):
 def test_subscription_message_chat_then_publish(chatbot):
     run(chatbot.on_channel_subscription_message(sub_message_payload()))
     assert chatbot.test_calls == ["chat", "publish"]
-    chatbot.test_chat.send_message.assert_awaited_once_with("host", "感謝 訂閱者 的訂閱！累積訂閱7個月！")
+    chatbot.test_chat.send_message.assert_awaited_once_with("host", "感謝 訂閱者 的訂閱！累積訂閱 7 個月！")
     assert published(chatbot) == [sub_message()]
 
 
@@ -348,7 +375,8 @@ def test_subscription_message_without_cumulative_or_message(chatbot):
     (sent,) = published(chatbot)
     assert sent.cumulative_months is None
     assert sent.message is None
-    chatbot.test_chat.send_message.assert_awaited_once_with("host", "感謝 訂閱者 的訂閱！")
+    # 沒有累積月數時用這次的訂閱月數，不會送出字面的 {months}
+    chatbot.test_chat.send_message.assert_awaited_once_with("host", "感謝 訂閱者 的訂閱！累積訂閱 3 個月！")
 
 
 def test_gift_subscription_chat_only(chatbot):
@@ -362,8 +390,22 @@ def test_gift_subscription_chat_only(chatbot):
         is_anonymous=False,
     )
     run(chatbot.on_channel_subscription_gift(payload))
-    chatbot.test_chat.send_message.assert_awaited_once_with("host", "感謝 贈送者 送出的5份訂閱！")
+    chatbot.test_chat.send_message.assert_awaited_once_with("host", "感謝 贈送者 送出 5 份訂閱！")
     chatbot.test_bus.publish.assert_not_called()
+
+
+def test_anonymous_gift_subscription_is_answered_as_anonymous(chatbot):
+    payload = eventsub_event(
+        broadcaster_user_id=TWITCH_ID,
+        broadcaster_user_login="host",
+        broadcaster_user_name="主播",
+        user_name="ANONYMOUS",
+        tier="1000",
+        total=5,
+        is_anonymous=True,
+    )
+    run(chatbot.on_channel_subscription_gift(payload))
+    chatbot.test_chat.send_message.assert_awaited_once_with("host", "感謝 匿名 送出 5 份訂閱！")
 
 
 def test_redemption_published_regardless_of_action_channel(chatbot, monkeypatch):

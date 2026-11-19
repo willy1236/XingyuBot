@@ -805,7 +805,7 @@
   - P-1：續訂回應維持只聽 `channel.subscription.message`（沒分享續訂訊息的續訂沒有事件），後台續訂那列加一行提示「觀眾發出續訂訊息時才會回應」。
   - P-2：照 W-05 做編輯衝突比對：PUT、DELETE 帶 `original`，用 `conflict.check_conflict`，409 形狀同 W-05；衝突比對以有效值（含預設）為準。
   - P-3：追隨回應每個頻道 10 秒內最多一則，期間內多的追隨不回應（丟棄、不排隊），bus 事件不受影響；狀態放 bot 記憶體，重啟歸零。
-- 續做：`events.py`（`_respond`、快取與失效 handler、追隨 10 秒限流）與 `test_activity.py` 改寫，最後前端。
+- 續做：前端（`lib/dashboard-channel-events.ts`、`event-response-list.tsx`、events 頁、`conflict-notice.tsx` 欄位標籤），之後 merge 工作分支、跑檢查、勾驗收條件。
 - commit：
   - 後端：ef78b889（`starlib/twitch_event_responses.py`）、aa7a94e1（後台端點）
 
