@@ -19,6 +19,9 @@ from .session import SessionInfo, TwitchIdentity, require_any_session
 
 router = APIRouter(prefix="/dashboard")
 
+#: 前端的頻道後台網址（後端 API 仍在 /dashboard/channels）；後端組出的導回網址都從這裡來
+CHANNEL_LIST_PATH = "/dashboard/twitch"
+
 #: 還沒有頻道列（例如析域帳號連結但從沒登入過）也視為未啟用
 DEFAULT_STATE = "inactive"
 
@@ -53,6 +56,11 @@ async def require_enabled_channel(twitch_id: int, channel: TwitchIdentity = Depe
     if states[twitch_id] != "enabled":
         raise DashboardError(409, "channel_not_enabled")
     return channel
+
+
+def channel_page_path(twitch_id: int | str) -> str:
+    """前端頻道頁的路徑。"""
+    return f"{CHANNEL_LIST_PATH}/{twitch_id}"
 
 
 def forward_access(info: SessionInfo) -> str:

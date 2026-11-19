@@ -24,6 +24,7 @@ from starlib.utils import nowtz
 
 from . import config
 from .auth import OAUTH_COOKIE_MAX_AGE, OAuthCookie, decode_cookie, encode_cookie, sanitize_next, sanitize_origin
+from .channels import channel_page_path
 from .db import run_db
 from .session import SESSION_COOKIE, TwitchIdentity, create_session, set_session_cookie
 
@@ -155,7 +156,7 @@ async def _handle_login(request: Request, cookie: OAuthCookie) -> Response:
         return login_page
 
     log.info("Dashboard Twitch login: %s (%s)", user.login, user.id)
-    next_path = f"/dashboard/channels/{user.id}" if cookie.next == "/dashboard" else cookie.next
+    next_path = channel_page_path(user.id) if cookie.next == "/dashboard" else cookie.next
     response = RedirectResponse(url=f"{cookie.origin}{next_path}")
     set_session_cookie(response, session_id)
     return response

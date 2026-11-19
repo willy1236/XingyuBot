@@ -22,7 +22,7 @@ from starlib.messaging.rpc import RpcHandlerError
 
 from . import twitch_control
 from .auth import OAuthCookie, sanitize_origin
-from .channels import DEFAULT_STATE, find_channel, require_channel
+from .channels import CHANNEL_LIST_PATH, DEFAULT_STATE, channel_page_path, find_channel, require_channel
 from .db import run_db
 from .errors import DashboardError
 from .session import SESSION_COOKIE, SessionInfo, TwitchIdentity, follow_account, lookup_session
@@ -59,7 +59,7 @@ _bot_user_id_cache: str | None = None
 
 
 def _channel_url(origin: str, channel_id: int | str) -> str:
-    return f"{origin}/dashboard/channels/{channel_id}"
+    return f"{origin}{channel_page_path(channel_id)}"
 
 
 def _with_notice(url: str, *notices: str) -> str:
@@ -67,7 +67,7 @@ def _with_notice(url: str, *notices: str) -> str:
 
 
 def _login_url(origin: str, channel_id: int | str) -> str:
-    return f"{origin}/dashboard-login?{urlencode({'next': f'/dashboard/channels/{channel_id}'})}"
+    return f"{origin}/dashboard-login?{urlencode({'next': channel_page_path(channel_id)})}"
 
 
 async def _channel_session(request: Request) -> SessionInfo | None:
@@ -90,7 +90,7 @@ async def _channel_session(request: Request) -> SessionInfo | None:
 async def to_dashboard_twitch_enable(request: Request, channel: str | None = None, origin: str | None = None):
     origin = sanitize_origin(origin)
     if channel is None or not channel.isdecimal():
-        return RedirectResponse(url=f"{origin}/dashboard/channels")
+        return RedirectResponse(url=f"{origin}{CHANNEL_LIST_PATH}")
     channel_id = int(channel)
 
     info = await _channel_session(request)
@@ -163,7 +163,7 @@ async def _handle_enable(request: Request, cookie: OAuthCookie) -> Response:
     origin = cookie.origin
     channel_id = cookie.channel_id
     if channel_id is None or not channel_id.isdecimal():
-        return RedirectResponse(url=f"{origin}/dashboard/channels")
+        return RedirectResponse(url=f"{origin}{CHANNEL_LIST_PATH}")
     channel_url = _channel_url(origin, channel_id)
 
     params = request.query_params

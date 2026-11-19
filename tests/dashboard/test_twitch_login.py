@@ -117,7 +117,7 @@ def _no_channel(repo):
 
 class TestLoginEntry:
     def test_redirects_to_twitch_without_scope(self, site, spy):
-        response = site.get("/to/dashboard-twitch-login", params={"next": "/dashboard/channels/5", "origin": FRONTEND})
+        response = site.get("/to/dashboard-twitch-login", params={"next": "/dashboard/twitch/5", "origin": FRONTEND})
 
         assert response.status_code == 307
         location = urlparse(response.headers["location"])
@@ -143,7 +143,7 @@ class TestLogin:
         response = _callback(site, code="c")
 
         assert response.status_code == 307
-        assert response.headers["location"] == f"{FRONTEND}/dashboard/channels/{TWITCH_ID}"
+        assert response.headers["location"] == f"{FRONTEND}/dashboard/twitch/{TWITCH_ID}"
         (row,) = _sessions(repo)
         assert (row.login_method, row.discord_user_id, row.twitch_user_id) == ("twitch", None, str(TWITCH_ID))
         assert (row.twitch_login, row.twitch_name, row.account_id) == ("streamer", "Streamer", None)
@@ -162,9 +162,9 @@ class TestLogin:
         assert spy.saved_tokens == []
 
     def test_keeps_requested_next(self, site, spy):
-        response = _callback(site, cookie=_cookie(next=f"/dashboard/channels/{TWITCH_ID}/commands"), code="c")
+        response = _callback(site, cookie=_cookie(next=f"/dashboard/twitch/{TWITCH_ID}/commands"), code="c")
 
-        assert response.headers["location"] == f"{FRONTEND}/dashboard/channels/{TWITCH_ID}/commands"
+        assert response.headers["location"] == f"{FRONTEND}/dashboard/twitch/{TWITCH_ID}/commands"
 
     def test_existing_channel_keeps_settings(self, site, spy, repo):
         repo.add(
