@@ -124,7 +124,7 @@ def record_channel(user: TwitchUser, state: str | None = None) -> None:
                 display_name=user.display_name,
                 avatar_url=user.profile_image_url,
                 first_seen_at=nowtz(),
-                **({"state": state} if state is not None else {}),
+                state=state or "inactive",
             )
         )
         return
