@@ -8,8 +8,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Literal
 
-from sqlalchemy import desc
-from sqlmodel import select
+from sqlmodel import col, select
 
 from starlib.database import TwitchChannelAudit, sqldb
 
@@ -75,7 +74,7 @@ def list_changes(twitch_id: int, offset: int = 0, limit: int = 50) -> list[Audit
     stmt = (
         select(TwitchChannelAudit)
         .where(TwitchChannelAudit.twitch_id == twitch_id)
-        .order_by(desc(TwitchChannelAudit.at), desc(TwitchChannelAudit.id))
+        .order_by(col(TwitchChannelAudit.at).desc(), col(TwitchChannelAudit.id).desc())
         .offset(offset)
         .limit(limit)
     )
