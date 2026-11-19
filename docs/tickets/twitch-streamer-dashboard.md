@@ -848,6 +848,7 @@
 - 審查後修正（第 1 輪，審查報告 review-b4-r1）：
   - Q2：`events.on_stream_online` 把 `timers.on_stream_online` 移到 Helix 重試迴圈之前，Helix 延遲查不到直播時計時訊息照常開始；開台回應與 Discord 通知仍要查得到直播資訊才發。後端：ff439c50。
   - Q1：恢復預設撞到衝突時，「以我的內容覆蓋」改成重做恢復預設（用最新版本當 original 送 DELETE），不再 PUT 草稿；衝突狀態記下操作種類。前端：e31edbc。
+  - 第 2 輪 N2：恢復預設撞到衝突時，面板「你的輸入」欄改成「你要做的操作：恢復成預設文字」，按鈕改成「仍要恢復預設」，與實際送出的 DELETE 一致；`conflict-notice.tsx` 只加可選的 `mineTitle`、`overwriteLabel`，既有行為不變。前端：6f55746。順手把 `test_timers_hooks.py` 的測試名稱改成符合現在行為。
 
 ### W-08 實況主能看到權限問題並一鍵修復
 

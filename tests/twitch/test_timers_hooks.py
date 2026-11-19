@@ -66,7 +66,7 @@ def live_stream():
     )
 
 
-def test_online_calls_timers_after_live_is_confirmed(calls, monkeypatch):
+def test_online_calls_timers_when_helix_finds_the_stream(calls, monkeypatch):
     monkeypatch.setattr(
         state,
         "twitch",
