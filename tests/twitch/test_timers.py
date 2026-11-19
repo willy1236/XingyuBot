@@ -408,6 +408,27 @@ def test_查開台狀態途中收到開台事件_保留事件的結果(clock):
     assert speech.say.await_count == 1
 
 
+def test_查開台狀態途中頻道被忘掉_不把設定寫成空清單(clock, repo):
+    add(repo, message="從資料庫來", interval_minutes=5)
+    timers._apply(TWITCH_ID, timers._load(TWITCH_ID))
+
+    async def prepare(template, ctx):
+        timers._forget(TWITCH_ID)  # 查詢途中頻道離開聊天室並收到失效通知
+        ctx.stream = speech.StreamInfo(datetime.now(UTC), "遊戲", "標題")
+        return ctx
+
+    speech.prepare.side_effect = prepare
+    run(timers.tick())
+    assert TWITCH_ID not in timers._configs and TWITCH_ID not in timers._online
+
+    speech.prepare.side_effect = None
+    _prepare_returns(speech.StreamInfo(datetime.now(UTC), "遊戲", "標題"))
+    run(timers.tick())  # 下一次 tick 重新載入設定並查開台
+    clock.now += 300
+    run(timers.tick())
+    assert speech.say.await_args.args[2] == "從資料庫來"
+
+
 # ── 啟動、重啟與收尾 ──
 
 
