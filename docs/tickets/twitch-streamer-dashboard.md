@@ -785,15 +785,15 @@
 - 不包含：轉發 Discord 的事件範圍（W-11）。
 
 **驗收條件**
-- [ ] 新啟用的頻道，所有事件回應預設開啟，並使用中性語氣的預設文字。
-- [ ] 有人追隨時，聊天室出現回應；改寫文字後，下一次事件改用新文字。
-- [ ] 訂閱、續訂、贈訂、Raid 各自出現對應的回應，`{months}`、`{amount}`、`{viewers}` 正確代入。
-- [ ] 一次贈 5 份訂閱時，聊天室只出現一則贈訂回應，不會每位收禮者各一則。
-- [ ] 匿名贈訂時照常回應，名稱顯示為「匿名」。
-- [ ] 關閉 Raid 回應後，被 Raid 時聊天室不發回應。
-- [ ] 改寫的文字會被頻道 AutoMod 擋下時無法儲存，並提示原因。
-- [ ] 沒有設定轉發 Discord 的頻道，事件回應照常出現。
-- [ ] 每次修改都寫進修改紀錄。
+- [x] 新啟用的頻道，所有事件回應預設開啟，並使用中性語氣的預設文字。
+- [x] 有人追隨時，聊天室出現回應；改寫文字後，下一次事件改用新文字。
+- [x] 訂閱、續訂、贈訂、Raid 各自出現對應的回應，`{months}`、`{amount}`、`{viewers}` 正確代入。
+- [x] 一次贈 5 份訂閱時，聊天室只出現一則贈訂回應，不會每位收禮者各一則。
+- [x] 匿名贈訂時照常回應，名稱顯示為「匿名」。
+- [x] 關閉 Raid 回應後，被 Raid 時聊天室不發回應。
+- [x] 改寫的文字會被頻道 AutoMod 擋下時無法儲存，並提示原因。
+- [x] 沒有設定轉發 Discord 的頻道，事件回應照常出現。
+- [x] 每次修改都寫進修改紀錄。
 
 **實作設計**
 - 資料：新增 `twitch_event_response`，schema 是 `stardb_basic`，由 W-04 建立。
@@ -819,14 +819,27 @@
 **風險 / 實作注意**
 - 追隨、訂閱類事件需要 bot 是 mod 才訂閱得到。mod 被拿掉時，這些回應會自然停止，W-08 會把它顯示成部分暫停。
 
-**進度**：進行中（2026-11-19）
+**進度**：實作完成（2026-11-19），待審查與人工驗證；驗收條件只勾自動測試驗證過的項目，全部以 mock 的 Twitch chat、Helix 與 AutoMod 驗證，真實 Twitch 與頁面畫面待人工驗證
 - 使用者決定（2026-11-19）：
-  - P-1：續訂回應維持只聽 `channel.subscription.message`（沒分享續訂訊息的續訂沒有事件），後台續訂那列加一行提示「觀眾發出續訂訊息時才會回應」。
+  - P-1：續訂回應維持只聽 `channel.subscription.message`（Twitch 只在觀眾發出續訂訊息時送這個事件，沒分享訊息的續訂沒有事件），後台續訂那列加一行提示「觀眾發出續訂訊息時才會回應」。
   - P-2：照 W-05 做編輯衝突比對：PUT、DELETE 帶 `original`，用 `conflict.check_conflict`，409 形狀同 W-05；衝突比對以有效值（含預設）為準。
-  - P-3：追隨回應每個頻道 10 秒內最多一則，期間內多的追隨不回應（丟棄、不排隊），bus 事件不受影響；狀態放 bot 記憶體，重啟歸零。
-- 續做：前端（`lib/dashboard-channel-events.ts`、`event-response-list.tsx`、events 頁、`conflict-notice.tsx` 欄位標籤），之後 merge 工作分支、跑檢查、勾驗收條件。
+  - P-3：追隨回應每個頻道 10 秒內最多一則，期間內多的追隨不回應（丟棄、不排隊），bus 事件不受影響；狀態放 bot 記憶體，重啟歸零。後台追隨那列提示「同一個頻道 10 秒內只感謝第一位追隨者」。
 - commit：
-  - 後端：ef78b889（`starlib/twitch_event_responses.py`）、aa7a94e1（後台端點）
+  - 後端：ef78b889（`starlib/twitch_event_responses.py`）、64ef9058（後台端點）、7ca950ce（bot 的 `events.py`、追隨限流、`test_activity.py` 改寫）、08033b60（衝突欄位名改用 `response`）、e6394e8d（merge 工作分支）
+  - 前端：23a55c4（`lib/dashboard-channel-events.ts`）、894653b（`event-response-list.tsx`、events 頁）
+- ALTER：無。`twitch_event_response` 表在 W-04 已建好。
+- 實作時的決定：
+  - 共用模組 `starlib/twitch_event_responses.py` 負責預設文字、可用變數、驗證、寫入、修改紀錄、commit、通知 bot 重讀；端點與 bot 都只呼叫它，端點不另外呼叫 `twitch_control.invalidate`。寫入前取 advisory lock（`hashtextextended('twitch_event_response:<id>')`，不重用指令的鎖）並 `FOR UPDATE` 鎖住該列。
+  - 設定開啟且文字與預設相同，等於恢復預設（刪列）；有效設定沒變時不寫入、不留紀錄、不通知。修改紀錄依資料列有無記 create／update，恢復預設記 delete，`before`、`after` 是 `{enabled, template}`。
+  - 衝突比對的欄位名：文字用 `response`，開關用 `enabled`，衝突提示沿用 `conflict-notice.tsx` 既有的欄位標籤，沒有改該檔。
+  - AutoMod：只在文字有變、且不是預設文字時檢查；只切換開關或用預設文字不花額度。
+  - 預設文字沿用現行寫死的字面（追隨與新訂閱是新增）；各事件專屬變數：追隨與訂閱 `{user}`，續訂 `{user}`、`{months}`，贈訂 `{user}`、`{amount}`，Raid `{user}`、`{viewers}`，開台 `{game}`、`{title}`、`{uptime}`，全部都能用 `{channel}`。`{months}` 在沒有累積月數時用這次的訂閱月數。
+  - bot：`events.py` 的 `_respond` 用到才讀某頻道的六種設定並快取，收到失效通知就丟掉該頻道，下次再讀；讀取途中收到通知時用版本號避免存回舊值；讀取失敗退回預設文字並視為開啟；任何錯誤只記 log，bus 事件一定發布。bot 端不寫入事件回應，所以沒有「寫入後本機更新」的問題。
+  - 新增卡上沒列的檔案：`starlib/twitch_event_responses.py`、`tests/twitch/test_event_responses_store.py`、`test_events_responses.py`、`tests/dashboard/test_channel_event_responses.py`、`lib/dashboard-channel-events.test.ts`、`event-response-list.test.tsx`；改寫 `tests/twitch/test_activity.py` 的聊天室斷言（行為被取代：原本要有 `action_channel_id` 才回應、寫死文字）。
+  - 前端路徑是 `app/dashboard/twitch/[id]/events/page.tsx`，不是卡上的 `channels/[id]`。
+- 未驗：真實 Twitch 的追隨、訂閱、贈訂（含匿名）、Raid、開台回應；實際 AutoMod 擋下；瀏覽器裡的事件回應頁畫面。
+- 完整 CI：待合併回 main 前跑。
+- pyright：`events.py` 兩處 `tag_ids`、`tags` 型別與 `msg.room` Optional 是既有程式碼；`twitch_event_responses.py` 一處 `TwitchEventResponse(...)` 的 `__table_args__`，與 W-04 所述 `models.py` 寫法同源。
 
 ### W-08 實況主能看到權限問題並一鍵修復
 
