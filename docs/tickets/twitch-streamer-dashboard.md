@@ -499,14 +499,14 @@
 - 不包含：營運入口的修改紀錄畫面（W-12）。
 
 **驗收條件**
-- [ ] 模板「感謝 {user}，已經 {count} 次」代入後，送出的文字正確。不認得的變數原樣保留，不會壞掉。
-- [ ] 沒開台時 `{uptime}` 代入「未開台」。
-- [ ] `check_template` 檢查會被頻道 AutoMod 擋下的模板，回傳 `blocked`；正常的模板回傳 `ok`；Twitch API 失敗或超出限制時回傳 `unavailable`。
-- [ ] 不含 `{touser}`、`{args}` 的訊息，發言時不呼叫 Check AutoMod Status。
-- [ ] 含 `{args}` 的訊息，代入後的文字會被 AutoMod 擋下時不送出，並寫進擋下紀錄。
-- [ ] 含 `{args}` 的訊息，AutoMod 檢查失敗或超出限制時不送出，寫進擋下紀錄並標原因。
-- [ ] 頻道後台的「最近被擋下的訊息」列出最近 20 筆，有時間、來源（指令名稱、計時訊息、事件種類）與文字。
-- [ ] 呼叫修改紀錄寫入後，查詢得到操作者、時間、來源（後台或聊天室）、修改前與修改後。
+- [x] 模板「感謝 {user}，已經 {count} 次」代入後，送出的文字正確。不認得的變數原樣保留，不會壞掉。
+- [x] 沒開台時 `{uptime}` 代入「未開台」。
+- [x] `check_template` 檢查會被頻道 AutoMod 擋下的模板，回傳 `blocked`；正常的模板回傳 `ok`；Twitch API 失敗或超出限制時回傳 `unavailable`。
+- [x] 不含 `{touser}`、`{args}` 的訊息，發言時不呼叫 Check AutoMod Status。
+- [x] 含 `{args}` 的訊息，代入後的文字會被 AutoMod 擋下時不送出，並寫進擋下紀錄。
+- [x] 含 `{args}` 的訊息，AutoMod 檢查失敗或超出限制時不送出，寫進擋下紀錄並標原因。
+- [x] 頻道後台的「最近被擋下的訊息」列出最近 20 筆，有時間、來源（指令名稱、計時訊息、事件種類）與文字。
+- [x] 呼叫修改紀錄寫入後，查詢得到操作者、時間、來源（後台或聊天室）、修改前與修改後。
 
 **實作設計**
 - 資料（給功能卡用的）：
@@ -553,7 +553,33 @@
 - `Check AutoMod Status` 的速率限制以頻道計：一般帳號每分鐘 5 次、每小時 50 次；Affiliate 10 次與 100 次；Partner 30 次與 300 次（Twitch API Reference〈Moderation〉）。所以主要在儲存模板時檢查，發言時只檢查帶觀眾輸入的訊息。
 - `{count}` 是指令的使用次數，由 W-05 存在指令列上。render 只負責代入，不負責遞增。
 
-**進度**：未完成
+**進度**：實作完成（2026-11-19），待審查；驗收條件只勾自動測試驗證過的項目，全部以 mock 的 Helix 與 chat 驗證，真實 Twitch 與頁面畫面待人工驗證
+- commit：
+  - 後端：2949af7f（資料表與 ALTER）、a2b6649d（`client.py` 存取函式與指令快取修復）、8591e99e（`twitch_audit`）、f8f9fab1（`twitch_speech_check`、`twitch_control.check_template`）、f2564604（`speech.py`、`events.py` 維護開台資訊）、fa438e7f（automod-blocks 端點）、802df3ed（`twitch_audit` 排序改用 col()）
+  - 前端：6ccdbd9（`automod-blocks.tsx`、`lib/dashboard-channel-automod.ts`、總覽頁）
+- 介面變更（使用者決定，2026-11-19）：`speech.say` 改收模板與 ctx，簽名是 `say(channel, twitch_id, template, ctx, *, source_kind, source_key, reply_to=None) -> bool`；內部 `render`，並依模板是否含 `{touser}`、`{args}` 決定發言前要不要檢查 AutoMod。`render` 維持回 `str`。
+- ALTER（部署前先手動執行；已套到本機 DB）。新表由啟動時的 `create_all` 建立：
+  ```sql
+  ALTER TABLE stardb_basic.twitch_chat_command
+      ADD COLUMN aliases text[] NOT NULL DEFAULT '{}',
+      ADD COLUMN enabled boolean NOT NULL DEFAULT true,
+      ADD COLUMN global_cooldown integer NOT NULL DEFAULT 30,
+      ADD COLUMN user_cooldown integer NOT NULL DEFAULT 0,
+      ADD COLUMN permission varchar NOT NULL DEFAULT 'everyone',
+      ADD COLUMN use_count integer NOT NULL DEFAULT 0,
+      ADD COLUMN updated_at timestamptz(0) NOT NULL DEFAULT now();
+  ALTER TABLE stardb_basic.twitch_bot_join_channel ADD COLUMN action_guild_id bigint;
+  ```
+- 實作時的決定（給 W-05～W-07、W-09 用）：
+  - `speech`：呼叫端組 `SpeechContext(twitch_id, channel, user=, args=, count=, event=)` 後呼叫 `say`；開台資訊與 `{game}`、`{title}` 由 `say` 依模板用到的變數自動查（`speech.prepare`），沒用到就不查 Helix。沒提供的欄位對應的變數原樣保留；`{touser}` 取參數第一個字（去掉 `@`），沒有參數用 `user`；查不到分類或標題時代入「未知」；超過 500 字截斷。
+  - 開台資訊：`events.py` 的開台與下播 handler 呼叫 `speech.set_live`、`speech.set_offline`；啟動時不補，bot 還不知道狀態時，第一次用到 `{uptime}` 才查 Helix `get_streams` 並記下（取代卡上「啟動時補一次」）。W-06 需要開台狀態時讀 `speech.current_stream(twitch_id)`，回 `None` 不代表沒開台（可能還沒查過），要確定的話呼叫 `await speech.prepare("{uptime}", ctx)` 後讀 `ctx.stream`。
+  - AutoMod 檢查：核心在 `starlib/twitch_speech_check.py`（`check_text`、`check_template`，`get_credentials` 可注入）；web 端儲存端點呼叫 `starServer/dashboard/twitch_control.check_template(twitch_id, template)`，token 與 client id 的 DB 查詢走後台的 `run_db`。bot 發言的檢查結果只快取確定的結果（ok、blocked）10 分鐘。
+  - 修改紀錄：`starlib/twitch_audit.py` 的 `AuditActor(platform, id, name)`、`record_change`（只加進 `sqldb.session`、不 commit）、`list_changes(twitch_id, offset, limit)` 回 `AuditEntry` 清單；`target_kind` 含 `forward`（W-11）。
+  - `client.py`：新增的寫入函式不 commit，由呼叫端與 `record_change` 同一個交易提交；`add_twitch_automod_block` 自己 commit 並刪掉超出 100 筆的舊紀錄。計時訊息與事件回應只提供資料存取，快取與失效 handler 留在 W-06、W-07 的 bot 模組；沒有動 `cache.py`、`enums.py`。`delete_twitch_channel_data(twitch_id)` 刪指令、計時訊息、事件回應、擋下紀錄與 `twitch_point`（`broadcaster_id`），不 commit，不碰修改紀錄、token 與 `TwitchBotJoinChannel`。
+  - 既有 bug：`get_raw_chat_command_channel` 原本回 `{名稱: 回應字串}`，`add_twitch_cmd`／`remove_twitch_cmd` 之後該頻道的指令快取變成字串，觸發指令會 AttributeError；改回整列並補回歸測試。`add_twitch_cmd` 覆寫既有指令時只改回應與 `updated_at`，保留其他欄位。
+  - 新增卡上沒列的檔案：`lib/dashboard-channel-automod.ts`（元件取資料用）；改了卡上沒列的 `starServer/dashboard/twitch_control.py`（`check_template`）與 `starServer/twitch_bot/events.py`（開台資訊）。
+- 未驗：真實 Twitch 的 Check AutoMod Status 回應格式與速率限制行為、實際聊天室發言；瀏覽器裡的頻道總覽畫面。
+- pyright：新檔只有 `twitch_audit.py` 一個 `__table_args__` 的 reportCallIssue，與既有 `models.py` 覆寫 `__table_args__` 的寫法同源；`models.py` 本身的既有錯誤未處理。
 
 ### W-05 實況主能在後台管理自訂指令
 

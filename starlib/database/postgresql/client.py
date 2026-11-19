@@ -2313,13 +2313,130 @@ class TwitchRepository(BaseRepository):
         return dct
 
     def get_raw_chat_command_channel(self, twitch_id: int):
+        """單一頻道的指令，形狀與 `get_raw_chat_command_all` 的單頻道部分相同：名稱對整列。"""
         stmt = select(TwitchChatCommand).where(TwitchChatCommand.twitch_id == twitch_id)
         result = self.session.exec(stmt).all()
-        return {i.name: i.response for i in result}
+        return {i.name: i for i in result}
 
     def get_chat_command_names(self):
         stmt = select(TwitchChatCommand.twitch_id, TwitchChatCommand.name)
         return self.session.exec(stmt).all()
+
+    # 以下新增的寫入函式都不 commit：由呼叫端提交，才能和 `twitch_audit.record_change` 在同一個交易。
+    def save_twitch_chat_command(self, command: TwitchChatCommand) -> TwitchChatCommand:
+        """新增或覆寫一個自訂指令（以 twitch_id 與 name 為準），並更新 updated_at。"""
+        command.updated_at = nowtz()
+        merged = self.session.merge(command)
+        self.session.flush()
+        return merged
+
+    def delete_twitch_chat_command(self, twitch_id: int, name: str) -> bool:
+        """刪除自訂指令，回傳是否真的刪到。"""
+        result = self.session.exec(
+            delete(TwitchChatCommand).where(TwitchChatCommand.twitch_id == twitch_id, TwitchChatCommand.name == name)
+        )
+        return result.rowcount > 0
+
+    def increment_twitch_cmd_use_count(self, twitch_id: int, name: str) -> int | None:
+        """指令的使用次數加一（不動 updated_at，免得觸發指令造成後台編輯衝突），回傳新的次數；指令不存在回 None。"""
+        stmt = (
+            update(TwitchChatCommand)
+            .where(TwitchChatCommand.twitch_id == twitch_id, TwitchChatCommand.name == name)
+            .values(use_count=TwitchChatCommand.use_count + 1)
+            .returning(TwitchChatCommand.use_count)
+        )
+        return self.session.exec(stmt).scalar_one_or_none()
+
+    def list_twitch_timers(self, twitch_id: int) -> list[TwitchTimer]:
+        stmt = select(TwitchTimer).where(TwitchTimer.twitch_id == twitch_id).order_by(TwitchTimer.id)
+        return list(self.session.exec(stmt).all())
+
+    def get_twitch_timer(self, twitch_id: int, timer_id: int) -> TwitchTimer | None:
+        stmt = select(TwitchTimer).where(TwitchTimer.twitch_id == twitch_id, TwitchTimer.id == timer_id)
+        return self.session.exec(stmt).one_or_none()
+
+    def save_twitch_timer(self, timer: TwitchTimer) -> TwitchTimer:
+        """新增（id 為 None）或更新一則計時訊息，並更新 updated_at；回傳的物件已有 id。"""
+        timer.updated_at = nowtz()
+        merged = self.session.merge(timer)
+        self.session.flush()
+        return merged
+
+    def delete_twitch_timer(self, twitch_id: int, timer_id: int) -> bool:
+        result = self.session.exec(
+            delete(TwitchTimer).where(TwitchTimer.twitch_id == twitch_id, TwitchTimer.id == timer_id)
+        )
+        return result.rowcount > 0
+
+    def list_twitch_event_responses(self, twitch_id: int) -> list[TwitchEventResponse]:
+        """該頻道有自訂過的事件回應；沒有資料列的種類視為開啟並使用預設文字。"""
+        stmt = select(TwitchEventResponse).where(TwitchEventResponse.twitch_id == twitch_id)
+        return list(self.session.exec(stmt).all())
+
+    def get_twitch_event_response(self, twitch_id: int, event_kind: str) -> TwitchEventResponse | None:
+        stmt = select(TwitchEventResponse).where(
+            TwitchEventResponse.twitch_id == twitch_id, TwitchEventResponse.event_kind == event_kind
+        )
+        return self.session.exec(stmt).one_or_none()
+
+    def save_twitch_event_response(self, response: TwitchEventResponse) -> TwitchEventResponse:
+        response.updated_at = nowtz()
+        merged = self.session.merge(response)
+        self.session.flush()
+        return merged
+
+    def delete_twitch_event_response(self, twitch_id: int, event_kind: str) -> bool:
+        """恢復預設就是刪除該列。"""
+        result = self.session.exec(
+            delete(TwitchEventResponse).where(
+                TwitchEventResponse.twitch_id == twitch_id, TwitchEventResponse.event_kind == event_kind
+            )
+        )
+        return result.rowcount > 0
+
+    #: 每個頻道保留的擋下紀錄筆數
+    AUTOMOD_BLOCK_KEEP = 100
+
+    def add_twitch_automod_block(
+        self, twitch_id: int, source_kind: str, source_key: str, text: str, reason: str
+    ) -> None:
+        """寫入一筆擋下紀錄並刪掉該頻道超出保留筆數的舊紀錄。自己 commit：發言被擋是獨立的一件事。"""
+        self.session.add(
+            TwitchAutomodBlock(
+                twitch_id=twitch_id, source_kind=source_kind, source_key=source_key, text=text, reason=reason
+            )
+        )
+        self.session.flush()
+        keep = (
+            select(TwitchAutomodBlock.id)
+            .where(TwitchAutomodBlock.twitch_id == twitch_id)
+            .order_by(desc(TwitchAutomodBlock.at), desc(TwitchAutomodBlock.id))
+            .limit(self.AUTOMOD_BLOCK_KEEP)
+        )
+        self.session.exec(
+            delete(TwitchAutomodBlock).where(
+                TwitchAutomodBlock.twitch_id == twitch_id, TwitchAutomodBlock.id.not_in(keep)
+            )
+        )
+        self.session.commit()
+
+    def list_twitch_automod_blocks(self, twitch_id: int, limit: int = 20) -> list[TwitchAutomodBlock]:
+        stmt = (
+            select(TwitchAutomodBlock)
+            .where(TwitchAutomodBlock.twitch_id == twitch_id)
+            .order_by(desc(TwitchAutomodBlock.at), desc(TwitchAutomodBlock.id))
+            .limit(limit)
+        )
+        return list(self.session.exec(stmt).all())
+
+    def delete_twitch_channel_data(self, twitch_id: int) -> None:
+        """刪除頻道在星羽的功能資料：指令、計時訊息、事件回應、擋下紀錄與點數。不 commit。
+
+        不碰修改紀錄（`twitch_channel_audit`）、實況主 token 與 `TwitchBotJoinChannel`，那些由 W-09 的端點處理。
+        """
+        for model in (TwitchChatCommand, TwitchTimer, TwitchEventResponse, TwitchAutomodBlock):
+            self.session.exec(delete(model).where(model.twitch_id == twitch_id))
+        self.session.exec(delete(TwitchPoint).where(TwitchPoint.broadcaster_id == twitch_id))
 
     def get_twitch_point(self, twitch_id: int, broadcaster_id: int):
         stmt = select(TwitchPoint).where(
@@ -3457,7 +3574,12 @@ class SQLRepository(
 
     def add_twitch_cmd(self, twitch_channel_id: int, command: str, response: str):
         """新增Twitch指令"""
-        self.session.merge(TwitchChatCommand(twitch_id=twitch_channel_id, name=command, response=response))
+        existing = self.get_chat_command(command, int(twitch_channel_id))
+        if existing is None:
+            self.session.add(TwitchChatCommand(twitch_id=int(twitch_channel_id), name=command, response=response))
+        else:
+            existing.response = response
+            existing.updated_at = nowtz()
         self.session.commit()
         self.cache.twitch_cmd.set(int(twitch_channel_id), self.get_raw_chat_command_channel(twitch_channel_id))
 
