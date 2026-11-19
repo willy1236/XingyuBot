@@ -620,6 +620,18 @@ def _can_reach(host: str, port: int) -> bool:
     return True
 
 
+async def _stop_eventsub(eventsub: EventSubWebhook) -> None:
+    """取消訂閱並讓 webhook 的 hook thread 結束。
+
+    不用 `EventSubWebhook.stop()`：它在呼叫端的 loop 上 shutdown aiohttp runner，但 runner 屬於 hook thread 自己的 loop，
+    還有連線時會拋 `attached to a different loop`。呼叫後 process 就結束，runner 的 socket 由 OS 收回。
+    """
+    if eventsub.unsubscribe_on_stop:
+        await eventsub.unsubscribe_all_known()
+    # hook thread 的 _keep_loop_alive 看到 _closing 就結束
+    eventsub._closing = True
+
+
 class TwitchBotThread(BaseThread):
     def __init__(self):
         super().__init__(name="TwitchBotThread")
@@ -630,6 +642,7 @@ class TwitchBotThread(BaseThread):
         self.ready = threading.Event()
         # 異常結束（放棄重連、未捕捉例外）時為 True；此時 thread 不做 cleanup，由呼叫端限時清理後以非 0 結束
         self.abnormal = False
+        self._cleanup_lock = threading.Lock()
 
     def run(self):
         try:
@@ -683,10 +696,15 @@ class TwitchBotThread(BaseThread):
             disconnected_checks = 0
 
     async def cleanup(self):
-        """安全地清理所有資源"""
+        """安全地清理所有資源。
+
+        thread 自己收尾超過 twitch_main 的等待上限時，twitch_main 會再呼叫一次；只執行第一次，避免兩邊同時取消訂閱、重複停止 chat。
+        """
+        if not self._cleanup_lock.acquire(blocking=False):
+            return
         try:
             if self.eventsub:
-                await self.eventsub.stop()
+                await _stop_eventsub(self.eventsub)
         except Exception as e:
             capture_exception_safe(e, tags={"service": "twitch", "source": "cleanup_eventsub"})
             log.warning("Error stopping eventsub: %s", e)
