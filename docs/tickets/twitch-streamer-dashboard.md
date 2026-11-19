@@ -88,9 +88,9 @@
 
 | # | 卡號 | 進度 | 標題 | 依賴 | 並行組 | 備註 |
 |---|---|---|---|---|---|---|
-| 1 | W-00 | 未完成 | [共用] session 支援 Twitch 身分 | 無 | — | W-01、W-10 依賴 |
-| 2 | W-01 | 未完成 | 實況主能用 Twitch 登入並進到自己的頻道後台 | W-00 | — | 骨架切片 |
-| 3 | W-02 | 未完成 | [共用] Twitch bot 頻道控制：狀態、即時加入離開、模組拆分 | W-01 | — | W-03 之後都依賴 |
+| 1 | W-00 | 實作完成 | [共用] session 支援 Twitch 身分 | 無 | — | W-01、W-10 依賴 |
+| 2 | W-01 | 實作完成 | 實況主能用 Twitch 登入並進到自己的頻道後台 | W-00 | — | 骨架切片 |
+| 3 | W-02 | 實作完成 | [共用] Twitch bot 頻道控制：狀態、即時加入離開、模組拆分 | W-01 | — | W-03 之後都依賴 |
 | 4 | W-03 | 未完成 | 實況主能啟用與停用 bot | W-02 | — | 含舊頻道、關閉舊入口 |
 | 5 | W-04 | 未完成 | [共用] bot 發言管線與修改紀錄 | W-03 | — | W-05～W-07、W-12 依賴 |
 | 6 | W-05 | 未完成 | 實況主能在後台管理自訂指令 | W-04 | A | |
@@ -136,10 +136,10 @@
   - 析域登入帶入 Twitch 頻道（W-10）。
 
 **驗收條件**
-- [ ] 既有的 Discord 登入、析域登入，以及伺服器管理後台所有自動測試照常通過，行為不變。
-- [ ] 只有 Twitch 身分的 session 呼叫伺服器或個人區端點，得到 403 `discord_required`，不是 500。
-- [ ] 只有 Twitch 身分的 session 呼叫 `/dashboard/me`，得到 Twitch 的名稱與頭像，`discord` 為 null。
-- [ ] 登出時，與這個 session 同一個登入身分的所有 session 一起失效：Twitch 登入以 Twitch 帳號為單位，Discord 與析域登入以 Discord 帳號為單位。
+- [x] 既有的 Discord 登入、析域登入，以及伺服器管理後台所有自動測試照常通過，行為不變。
+- [x] 只有 Twitch 身分的 session 呼叫伺服器或個人區端點，得到 403 `discord_required`，不是 500。
+- [x] 只有 Twitch 身分的 session 呼叫 `/dashboard/me`，得到 Twitch 的名稱與頭像，`discord` 為 null。
+- [x] 登出時，與這個 session 同一個登入身分的所有 session 一起失效：Twitch 登入以 Twitch 帳號為單位，Discord 與析域登入以 Discord 帳號為單位。
 
 **實作設計**
 - 資料：`dashboard_session` 有以下異動，ALTER 附在 commit 說明裡：
@@ -185,7 +185,7 @@
 - `domalyze_login._start_session`、`auth._handle_login` 呼叫 `create_session` 的地方要補 `login_method`。
 - `_check` 與 `_fallback` 假設 `discord_user_id` 不為 None，要在 Twitch-only 的分支前先返回。
 
-**進度**：實作完成（2026-11-19），待審查
+**進度**：實作完成（2026-11-19），審查完成，待人工驗證；驗收條件 4 條都有自動測試，已全部打勾
 - commit：後端 41777f3；前端（domalyze_frontend）bf3adbb
 - 實作時的決定：
   - 型別：新增 `DiscordSessionInfo(SessionInfo)`，`require_session` 回傳它；14 個模組的 `info: SessionInfo` 標註改成 `DiscordSessionInfo`（只改型別標註與 import，邏輯不變），pyright 才不會對 `int(info.discord_user_id)` 報錯。`follow_account` 改成泛型，保留傳入的型別。
@@ -214,6 +214,7 @@
   COMMIT;
   ```
 - 前端：`DashboardUser` 移到 `lib/dashboard-user.tsx`（`dashboard-header.tsx` 再匯出同名型別）；導覽由 `dashboardNav(user)` 決定；`discord_required` 導向由 `discordRequiredTarget(pathname)` 判斷，已在 `/dashboard` 時不導，呼叫端收到一般錯誤。
+- 審查：兩輪放行，沒有 blocking，對 W-00 沒有發現。
 - 未驗：待人工驗證——Discord 登入、析域登入後後台照常；Twitch session 要等 W-01 的登入入口才建得出來，目前只有自動測試覆蓋。
 
 ### W-01 實況主能用 Twitch 登入並進到自己的頻道後台
@@ -236,10 +237,10 @@
 **驗收條件**
 - [ ] 未登入時打開 `/dashboard/channels/<id>`，被導到登入頁；按「用 Twitch 登入」完成授權後，回到該頁。
 - [ ] 從登入頁直接用 Twitch 登入，落在自己的頻道後台；頁首顯示頻道名稱、頭像，以及「bot 未啟用」。
-- [ ] 在 Twitch 授權頁按取消，回到登入頁，沒有登入。
+- [x] 在 Twitch 授權頁按取消，回到登入頁，沒有登入。
 - [ ] 只用 Twitch 登入時，頁首沒有「伺服器」；打開 `/dashboard/guilds`，被導回 `/dashboard`。
-- [ ] 打開別人頻道的 `/dashboard/channels/<id>`，看到「沒有這個頻道的權限」；API 回 403 `channel_forbidden`。
-- [ ] 轉發 Discord 區塊顯示「需要析域帳號」，並附上 auth server 帳號頁的連結。
+- [x] 打開別人頻道的 `/dashboard/channels/<id>`，看到「沒有這個頻道的權限」；API 回 403 `channel_forbidden`。
+- [x] 轉發 Discord 區塊顯示「需要析域帳號」，並附上 auth server 帳號頁的連結。
 - [ ] 360px 寬的畫面能完整操作。
 
 **實作設計**
@@ -290,7 +291,7 @@
 - client #3 在 DB 的 `callback_uri` 就是 `/oauth/twitch`。沿用同一個 callback、靠 cookie 分派，不必到 Twitch 後台新增 redirect URI。
 - 空 scope 的 user token 也能呼叫 Helix `/users` 取得自己的資料。
 
-**進度**：實作完成（2026-11-19），待審查；驗收條件未打勾，待人工驗證與審查後再勾
+**進度**：實作完成（2026-11-19），審查完成，待人工驗證；驗收條件只勾自動測試驗證過的 3 條（取消授權回登入頁、別人頻道 403、轉發 Discord 區塊說明），其餘 4 條待人工驗證
 - commit：後端 482e9e3、395ac7c、ced5464、4653ef7、759cf5a、fc441ea；前端（domalyze_frontend）ea18333、a262f40
 - 實作時的決定：
   - 登入 handler 只做 `exchange_code` 與 `get_me`，**不存 token**：沒有 scope 的 token 會蓋掉同一筆 `OAuthToken` 裡已啟用頻道的完整 token，有測試鎖住。
@@ -303,6 +304,12 @@
   - `lib/dashboard-api.ts` 不需改：`channel_forbidden` 本來就落在 `default` 分支，交給呼叫端處理。
   - 側欄多一項「總覽」（頻道頁本身），卡上的 `CHANNEL_NAV` 沒列。
   - 已登入的人從「還沒有頻道」頁按 Twitch 登入，session 會被取代（不疊加帳號），頁面文案有提醒。
+- 審查：兩輪放行，沒有 blocking。未修：
+  - S-1 non-blocking：空 scope 的授權網址不帶 `scope`，Twitch 是否接受待真實授權驗證（同〈未驗〉）。
+  - S-3 nitpick：只用 Twitch 登入時導覽列仍有「我的」，按下去會被導到頻道清單。
+  - S-5 note：W-03 之前舊 `/oauth/twitch` 流程的完成頁仍寫「重啟後生效」；W-03 要與 W-01、W-02 同批上線。
+  - Q-5 nitpick：同一頻道首次同時登入兩次，後到的撞 PK 而回登入頁。
+  - Q-8 nitpick：非數字的頻道 id 得到 422，前端顯示「無法載入」而不是無權限。
 - ALTER（已套到本機 DB；正式機先手動執行，再部署 code）：
   ```sql
   ALTER TABLE stardb_basic.twitch_bot_join_channel
@@ -337,7 +344,7 @@
 - [ ] 把某頻道的 state 改成 enabled，web 呼叫同步後，不必重啟 Twitch bot，bot 就加入該聊天室並訂閱該頻道的事件。
 - [ ] 改成 disabled 再同步，bot 離開聊天室，該頻道的 EventSub 訂閱被取消。
 - [ ] Twitch bot 沒在跑時，web 呼叫同步得到明確的「bot 離線」結果，不會卡住；bot 下次啟動時照 DB 的 state 加入。
-- [ ] 搬模組後，既有 `tests/twitch` 全部通過，聊天室指令與事件行為不變。測試裡替換模組全域（`chat`、`twitch`、bus）的目標可以跟著改成新模組，斷言不改。
+- [x] 搬模組後，既有 `tests/twitch` 全部通過，聊天室指令與事件行為不變。測試裡替換模組全域（`chat`、`twitch`、bus）的目標可以跟著改成新模組，斷言不改。
 
 **實作設計**
 - 資料：無新表。`TwitchBotJoinChannel.state` 由 W-01 新增。
@@ -377,7 +384,7 @@
 - Helix Get Moderators 要用實況主 token（`moderation:read`），一律經這張卡新增的 `starlib/twitch_tokens.py` 取得。
 - twitchAPI 的 `chat.join_room` 與 `leave_room` 必須在 Chat 的 event loop 上呼叫。
 
-**進度**：實作完成（2026-11-19），待審查；驗收條件未打勾，待人工驗證與審查後再勾
+**進度**：實作完成（2026-11-19），審查完成，待人工驗證；驗收條件只勾自動測試驗證過的 1 條（搬模組後 `tests/twitch` 全過），其餘 3 條需要真實 Twitch 或真 Redis，待人工驗證
 - commit：後端 1647f6d、29ccb23、2947951、22b28d9、bbe4774、9d2b727、d159df5、0df3991；審查後修正 0241fb2、1035331、762f5ff、c597dfc。沒有 ALTER（無 schema 變更）。
 - 實作時的決定：
   - 模組：Twitch bot 各模組共用的 `chat`、`twitch`、`join_channels`、`eventsub`、`bot_user_id`、`loop` 放 `starServer/twitch_bot/state.py`（避免 `channels` 與 `events` 循環 import）；聊天室 IRC 事件（`on_sub`、`on_whisper` 等）併入 `events.py`，`on_message` 在 `commands.py`；既有測試只改 patch 目標，`load_join_channels` 測試的資料補 `state`。
@@ -389,6 +396,17 @@
   - chat 自動重啟：`_watch_chat` 重啟前把 `chat._callback_loop` 清成 None（twitchAPI 只在它為 None 時才換成新的 socket loop），READY 在新 loop 時 `on_ready` 把 RPC 與快取失效改綁到新 loop。
   - `twitch_tokens`：續期用 `SELECT … FOR UPDATE` 鎖那筆 `OAuthToken`、拿到鎖後重查 `expires_at`；`TokenInvalid` 帶 `reason`（`missing`、`revoked`、`unavailable`）；Twitch 暫時連不上且舊 token 尚未過期時繼續用舊 token。同步版 `broadcaster_token_blocking` 給 web 端經 `run_db` 用（`twitch_control.broadcaster_token`），bot 端用 `broadcaster_token`（`asyncio.to_thread`）。
   - `twitch_control`：bot 內部出錯（`RpcHandlerError`）不吞，不當成 `BotOffline`，讓端點轉成 `DashboardError`。
+- 審查：兩輪放行，沒有 blocking；第 1 輪的 S-2、Q-1、Q-2（含範圍外 1）、Q-3 與第 2 輪的 R2-1 已修。未修：
+  - S-4 note：契約文件寫 bot 會重讀四個快取，目前只處理 `twitch_channel`，其餘由 W-05～W-07 接上。
+  - S-5 note：W-03 之前舊 `/oauth/twitch` 流程新增的頻道是 `inactive`，完成頁仍寫「重啟後生效」；W-03 要與 W-01、W-02 同批上線。
+  - Q-4 nitpick：離開聊天室逾時時 `joined` 會誤報 false。
+  - Q-6 nitpick：新增兩個 pyright 錯誤（`twitch_tokens.py` 的 `token_url`、`commands.py` 的 `room_id`）。
+  - Q-7 nitpick：`state.TARGET_CHANNEL` 只剩下用來算 ID 清單。
+  - Q-9 note：同一頻道連續 sync 排隊可能超過 5 秒而得到 `BotOffline`；W-03、W-08 的文案不要寫成「bot 已離線」。
+  - R2-2 nitpick：重啟修正依賴 twitchAPI 私有的 `_callback_loop`，套件升版時測試抓不到。
+  - R2-3 note：web 端續期 token 會佔住後台 DB worker 最多 5 秒（W-03 起留意）。
+  - R2-4 note：W-06 的計時任務要能感知 `state.loop` 更換（chat 重啟後重新綁定）。
+  - 範圍外：`test_notify.py::test_follow_event_travels_between_two_buses` 需要真的 Redis。
 - 未驗：真實 Twitch 的加入離開與 EventSub 訂閱取消、拿掉 mod 後下一次 sync 退訂、chat 自動重啟後 bot 恢復回應與 RPC；真 Redis 的 `channel.sync`／`channel.status` 端到端與 bot 離線 5 秒內回 `BotOffline`（本機沒有 Redis）。
 
 ### W-03 實況主能啟用與停用 bot
