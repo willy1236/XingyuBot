@@ -2,7 +2,7 @@
 
 可見範圍只讀 session 帶的析域帳號（session.py 的帳號跟隨結果），不另外向 auth server 查詢：
 有析域帳號時涵蓋該域民連結的所有 Discord，沒有時只有 session 的 Discord。
-overview 是個人區的落地頁，沒有 Discord 身分的析域 session 也能開（discords 為空，只有帳號與頻道）；Twitch 登入沒有個人區，仍是 403 discord_required。
+overview 是個人區的落地頁，沒有 Discord 身分的析域 session 也能開（discords 為空，只有帳號與頻道）；Twitch 登入也能開（discords 為空、帳號為 None，只有自己的頻道）。其他個人區端點仍要求 Discord。
 """
 
 import asyncio
@@ -85,17 +85,6 @@ def require_personal(write: bool = False):
     return dependency
 
 
-async def require_personal_any(info: SessionInfo = Depends(require_any_session)) -> SessionInfo:
-    """個人區落地頁用的 dependency：有 Discord 身分的 session，或沒有 Discord 的析域 session；Twitch 登入沒有個人區。
-
-    Raises:
-        DashboardError: 401 session_expired；403 discord_required（Twitch 登入）。
-    """
-    if not isinstance(info, DiscordSessionInfo) and info.login_method != "domalyze":
-        raise DashboardError(403, "discord_required")
-    return info
-
-
 # ====== GET /dashboard/personal/overview ======
 def _assets(discord_ids: list[int]) -> list[tuple[dict, dict | None]]:
     """積分與寵物，欄位同 /user 與 /pet。"""
@@ -114,7 +103,7 @@ def _assets(discord_ids: list[int]) -> list[tuple[dict, dict | None]]:
 
 
 @router.get("/personal/overview")
-async def personal_overview(info: SessionInfo = Depends(require_personal_any)):
+async def personal_overview(info: SessionInfo = Depends(require_any_session)):
     channels = await channel_list(info)
     if not isinstance(info, DiscordSessionInfo):
         account = None if info.account_id is None else {"username": info.account_username}

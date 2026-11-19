@@ -44,11 +44,20 @@ class TestTwitchOnlySession:
             "has_channels": True,
         }
 
-    @pytest.mark.parametrize("path", ["/dashboard/personal/overview", "/dashboard/guilds"])
+    @pytest.mark.parametrize(
+        "path", ["/dashboard/guilds", "/dashboard/personal/drive", "/dashboard/personal/playlists"]
+    )
     def test_discord_endpoints_return_403(self, repo, path):
         c = client_for(make_twitch_session(repo))
         r = c.get(path)
         assert r.status_code == 403 and r.json() == {"error": "discord_required"}
+
+    def test_personal_overview_has_own_channel_only(self, repo):
+        r = client_for(make_twitch_session(repo)).get("/dashboard/personal/overview")
+        assert r.status_code == 200
+        body = r.json()
+        assert (body["account"], body["partial"], body["discords"]) == (None, False, [])
+        assert [(c["id"], c["name"]) for c in body["channels"]] == [("777", "Streamer")]
 
     def test_no_account_follow(self, repo, dashboard_env):
         c = client_for(make_twitch_session(repo))
