@@ -20,9 +20,9 @@ from typing import Any, Literal, cast
 import httpx
 
 from starlib import sqldb, twitch_speech_check
-from starlib.database import APIType, TwitchBotJoinChannel
+from starlib.database import TwitchBotJoinChannel
 from starlib.messaging.rpc import RpcHandlerError
-from starlib.twitch_tokens import TokenInvalid
+from starlib.twitch_tokens import MODERATORS_URL, TokenInvalid, bot_user_id_blocking
 
 from . import twitch_control
 from .db import run_db
@@ -43,14 +43,13 @@ ISSUE_ORDER: tuple[Issue, ...] = (
 )
 
 REQUEST_TIMEOUT = 5.0
+#: 整個 Twitch 判定（token 續期、validate、三項查詢）的總時限，逾時視同查不到；比單次請求的 5 秒長，容得下一次續期加後續查詢
+ACCESS_TIMEOUT = 8.0
 VALIDATE_URL = "https://id.twitch.tv/oauth2/validate"
-MODERATORS_URL = "https://api.twitch.tv/helix/moderation/moderators"
 BANNED_URL = "https://api.twitch.tv/helix/moderation/banned"
 BLOCKS_URL = "https://api.twitch.tv/helix/users/blocks"
 #: Get User Block List 沒有 user 篩選，要翻頁找 bot；每頁 100 筆，超過這個頁數就當查不到
 BLOCK_LIST_MAX_PAGES = 5
-#: Twitch bot 帳號所屬的 OAuth client seq（同 channel_activation.BOT_OAUTH_SEQ）
-BOT_OAUTH_SEQ = 2
 
 #: 需要 bot 是頻道 mod 才能訂閱的 EventSub 事件；與 twitch_bot.channels.MOD_EVENTS 的名稱一致（有測試比對）
 EVENTS_NEED_MOD = frozenset(
@@ -121,20 +120,17 @@ class _Access:
     bot_banned: bool = False
 
 
-_bot_user_id_cache: str | None = None
-
-
-def _bot_user_id() -> str:
-    global _bot_user_id_cache
-    if _bot_user_id_cache is None:
-        user_id = sqldb.get_bot_oauth_token(APIType.Twitch, BOT_OAUTH_SEQ).user_id
-        if user_id is None:
-            raise RuntimeError("bot 帳號的 OAuthToken 沒有 user_id")
-        _bot_user_id_cache = user_id
-    return _bot_user_id_cache
+def _json(response: httpx.Response) -> dict | None:
+    """回應內容是 JSON 物件才回傳，解析失敗或不是物件回 None。"""
+    try:
+        body = response.json()
+    except ValueError:
+        return None
+    return body if isinstance(body, dict) else None
 
 
 async def _get(client: httpx.AsyncClient, url: str, headers: dict[str, str], **params: str | int) -> dict | None:
+    """Helix 查詢；失敗、回應不是 JSON 物件、或沒有 `data` 清單都回 None（各項判定各自略過）。"""
     try:
         response = await client.get(url, params=params, headers=headers)
     except httpx.HTTPError as exc:
@@ -143,7 +139,11 @@ async def _get(client: httpx.AsyncClient, url: str, headers: dict[str, str], **p
     if response.status_code != 200:
         log.warning("查詢 %s 失敗：%s %s", url, response.status_code, response.text)
         return None
-    return response.json()
+    body = _json(response)
+    if body is None or not isinstance(body.get("data"), list):
+        log.warning("查詢 %s 的回應格式不符：%s", url, response.text)
+        return None
+    return body
 
 
 async def _token_rejected(client: httpx.AsyncClient, token: str) -> bool:
@@ -160,7 +160,12 @@ async def _token_rejected(client: httpx.AsyncClient, token: str) -> bool:
     if response.status_code != 200:
         log.warning("validate 失敗：%s %s", response.status_code, response.text)
         return False
-    return not set(ENABLE_SCOPES) <= set(response.json().get("scopes", []))
+    body = _json(response)
+    scopes = None if body is None else body.get("scopes")
+    if not isinstance(scopes, list):
+        log.warning("validate 的回應格式不符：%s", response.text)
+        return False
+    return not set(ENABLE_SCOPES) <= set(scopes)
 
 
 async def _is_mod(client: httpx.AsyncClient, headers: dict[str, str], twitch_id: int, bot_id: str) -> bool | None:
@@ -182,35 +187,43 @@ async def _is_blocked(client: httpx.AsyncClient, headers: dict[str, str], twitch
         data = await _get(client, BLOCKS_URL, headers, **params)
         if data is None:
             return None
-        if any(entry["user_id"] == bot_id for entry in data["data"]):
+        if any(isinstance(entry, dict) and entry.get("user_id") == bot_id for entry in data["data"]):
             return True
-        cursor = data.get("pagination", {}).get("cursor")
+        pagination = data.get("pagination")
+        cursor = pagination.get("cursor") if isinstance(pagination, dict) else None
         if not cursor:
             return False
     return None
 
 
 async def _check_access(twitch_id: int) -> _Access:
+    """整個 Twitch 判定受 `ACCESS_TIMEOUT` 限制：逾時、出錯都回「全部查不到」，不擋頁面載入。"""
     try:
-        token = await twitch_control.broadcaster_token(twitch_id)
-        if isinstance(token, TokenInvalid):
-            # unavailable 是 Twitch 暫時無法回應，授權不一定失效：不判定
-            return _Access(token_invalid=token.reason != "unavailable")
-        client_id = await run_db(twitch_speech_check.broadcaster_client_id_blocking)
-        async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
-            if await _token_rejected(client, token):
-                return _Access(token_invalid=True)
-            bot_id = await run_db(_bot_user_id)
-            headers = {"Authorization": f"Bearer {token}", "Client-Id": client_id}
-            is_mod, banned, blocked = await asyncio.gather(
-                _is_mod(client, headers, twitch_id, bot_id),
-                _is_banned(client, headers, twitch_id, bot_id),
-                _is_blocked(client, headers, twitch_id, bot_id),
-            )
-        return _Access(is_mod=is_mod, bot_banned=bool(banned or blocked))
+        return await asyncio.wait_for(_query_access(twitch_id), ACCESS_TIMEOUT)
+    except TimeoutError:
+        log.warning("判定頻道 %s 的 Twitch 權限逾時", twitch_id)
     except Exception:
         log.exception("判定頻道 %s 的 Twitch 權限失敗", twitch_id)
-        return _Access()
+    return _Access()
+
+
+async def _query_access(twitch_id: int) -> _Access:
+    token = await twitch_control.broadcaster_token(twitch_id)
+    if isinstance(token, TokenInvalid):
+        # unavailable 是 Twitch 暫時無法回應，授權不一定失效：不判定
+        return _Access(token_invalid=token.reason != "unavailable")
+    client_id = await run_db(twitch_speech_check.broadcaster_client_id_blocking)
+    async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
+        if await _token_rejected(client, token):
+            return _Access(token_invalid=True)
+        bot_id = await run_db(bot_user_id_blocking)
+        headers = {"Authorization": f"Bearer {token}", "Client-Id": client_id}
+        is_mod, banned, blocked = await asyncio.gather(
+            _is_mod(client, headers, twitch_id, bot_id),
+            _is_banned(client, headers, twitch_id, bot_id),
+            _is_blocked(client, headers, twitch_id, bot_id),
+        )
+    return _Access(is_mod=is_mod, bot_banned=bool(banned or blocked))
 
 
 async def _bot_status(twitch_id: int) -> twitch_control.ChannelStatus | twitch_control.BotOffline:

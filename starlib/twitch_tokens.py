@@ -20,6 +20,8 @@ log = logging.getLogger(__name__)
 
 # 實況主授權用的 OAuth client（bot 自己用的是 #2）
 BROADCASTER_CLIENT_SEQ = 3
+BOT_CLIENT_SEQ = 2
+MODERATORS_URL = "https://api.twitch.tv/helix/moderation/moderators"
 # access token 剩不到這段時間就續期
 REFRESH_MARGIN = timedelta(minutes=10)
 REQUEST_TIMEOUT = 5.0
@@ -49,6 +51,24 @@ def broadcaster_token_blocking(twitch_id: int) -> str | TokenInvalid:
     except Exception:
         log.exception("取得實況主 %s 的 token 失敗", twitch_id)
         return TokenInvalid("unavailable")
+
+
+_bot_user_id: str | None = None
+
+
+def bot_user_id_blocking() -> str:
+    """bot 帳號的 Twitch user id（OAuth client #2 的 token 所屬使用者），查到後快取。會讀 DB，要在 worker thread 上呼叫。
+
+    Raises:
+        RuntimeError: bot 帳號的 token 沒有 user_id；這時不快取，下次呼叫會重查。
+    """
+    global _bot_user_id
+    if _bot_user_id is None:
+        user_id = sqldb.get_bot_oauth_token(APIType.Twitch, BOT_CLIENT_SEQ).user_id
+        if user_id is None:
+            raise RuntimeError("bot 帳號的 OAuthToken 沒有 user_id")
+        _bot_user_id = user_id
+    return _bot_user_id
 
 
 def _fresh(token: OAuthToken, now: datetime) -> bool:
