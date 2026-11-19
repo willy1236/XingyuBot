@@ -80,11 +80,26 @@ def test_online_calls_timers_after_live_is_confirmed(calls, monkeypatch):
     assert calls == [("on_stream_online", TWITCH_ID)]
 
 
-def test_online_without_live_stream_does_not_call_timers(calls, monkeypatch):
+def test_online_calls_timers_even_if_helix_cannot_find_the_stream(calls, monkeypatch):
+    """stream.online 事件本身就確認開台；Helix 延遲查不到直播時，計時訊息照常開始，只是不發開台回應與通知。"""
     monkeypatch.setattr(state, "twitch", MagicMock(get_streams=lambda user_id: agen()), raising=False)
     monkeypatch.setattr(events.asyncio, "sleep", AsyncMock())
     run(events.on_stream_online(stream_event()))
-    assert calls == []
+    assert calls == [("on_stream_online", TWITCH_ID)]
+    state.chat.send_message.assert_not_awaited()
+
+
+def test_online_tells_timers_before_waiting_for_helix(calls, monkeypatch):
+    order: list[str] = []
+
+    async def slow_sleep(_):
+        order.append("sleep")
+
+    monkeypatch.setattr(state, "twitch", MagicMock(get_streams=lambda user_id: agen()), raising=False)
+    monkeypatch.setattr(events.asyncio, "sleep", slow_sleep)
+    monkeypatch.setattr(events.timers, "on_stream_online", AsyncMock(side_effect=lambda *_: order.append("timers")))
+    run(events.on_stream_online(stream_event()))
+    assert order[0] == "timers"
 
 
 def test_offline_calls_timers(calls):

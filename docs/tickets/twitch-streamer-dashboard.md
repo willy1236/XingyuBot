@@ -840,6 +840,9 @@
 - 未驗：真實 Twitch 的追隨、訂閱、贈訂（含匿名）、Raid、開台回應；實際 AutoMod 擋下；瀏覽器裡的事件回應頁畫面。
 - 完整 CI：待合併回 main 前跑。
 - pyright：`events.py` 兩處 `tag_ids`、`tags` 型別與 `msg.room` Optional 是既有程式碼；`twitch_event_responses.py` 一處 `TwitchEventResponse(...)` 的 `__table_args__`，與 W-04 所述 `models.py` 寫法同源。
+- 審查後修正（第 1 輪，審查報告 review-b4-r1）：
+  - Q2：`events.on_stream_online` 把 `timers.on_stream_online` 移到 Helix 重試迴圈之前，Helix 延遲查不到直播時計時訊息照常開始；開台回應與 Discord 通知仍要查得到直播資訊才發。後端：（待填）
+  - Q1：待修（前端）。
 
 ### W-08 實況主能看到權限問題並一鍵修復
 
