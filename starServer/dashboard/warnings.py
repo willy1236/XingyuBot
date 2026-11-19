@@ -23,7 +23,7 @@ from starlib.moderation import MAX_TIMEOUT, AutoTimeoutResult, PunishResult, ann
 from .access import Section, on_guild, on_guild_async, require_section
 from .db import run_db
 from .errors import DashboardError
-from .session import SessionInfo, require_session
+from .session import DiscordSessionInfo, require_session
 from .validity import channel_invalid_reason
 
 router = APIRouter(prefix="/dashboard")
@@ -336,7 +336,7 @@ async def _announce(guild: discord.Guild, channel_id: int, result: PunishResult,
 
 
 @router.post("/guilds/{guild_id}/warnings")
-async def create_punishment(guild_id: int, body: PunishBody, info: SessionInfo = Depends(require_session)):
+async def create_punishment(guild_id: int, body: PunishBody, info: DiscordSessionInfo = Depends(require_session)):
     if body.kind not in _KIND_ACTIONS:
         raise DashboardError(400, "invalid_request", fields=[_field("kind", "不是有效的種類")])
     await _KIND_PERMISSION[body.kind](guild_id, info)

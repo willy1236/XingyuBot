@@ -180,6 +180,23 @@ def make_session(repo, user_id=USER_ID, last_used_ago=timedelta(0), session_id="
     return session_id
 
 
+def make_twitch_session(repo, twitch_id="777", session_id="tsid", login="streamer", name="Streamer") -> str:
+    repo.add(
+        DashboardSession(
+            session_id=session_id,
+            discord_user_id=None,
+            name=name,
+            avatar=f"https://static-cdn.jtvnw.net/{twitch_id}.png",
+            login_method="twitch",
+            twitch_user_id=twitch_id,
+            twitch_login=login,
+            twitch_name=name,
+            twitch_avatar=f"https://static-cdn.jtvnw.net/{twitch_id}.png",
+        )
+    )
+    return session_id
+
+
 def set_cookies(response) -> list[str]:
     return response.headers.get_list("set-cookie")
 

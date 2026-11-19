@@ -18,7 +18,7 @@ from .auth import avatar_url
 from .db import run_db
 from .discord_users import fetch_discord_user
 from .errors import DashboardError
-from .session import SessionInfo, require_session
+from .session import DiscordSessionInfo, require_session
 
 router = APIRouter(prefix="/dashboard")
 
@@ -39,7 +39,7 @@ class PersonalScope:
     tool_unavailable: bool
 
 
-async def personal_scope(info: SessionInfo) -> PersonalScope:
+async def personal_scope(info: DiscordSessionInfo) -> PersonalScope:
     own = int(info.discord_user_id)
     if info.account_id is not None:
         discord_ids = list(info.discord_ids) if info.discord_ids else [own]
@@ -74,7 +74,7 @@ async def personal_scope(info: SessionInfo) -> PersonalScope:
 def require_personal(write: bool = False):
     """個人區端點的 dependency：回傳可見範圍；write=True 時沒有析域帳號回 403 domalyze_required。"""
 
-    async def dependency(info: SessionInfo = Depends(require_session)) -> PersonalScope:
+    async def dependency(info: DiscordSessionInfo = Depends(require_session)) -> PersonalScope:
         scope = await personal_scope(info)
         if write and not scope.tools_writable:
             raise DashboardError(403, "domalyze_required")
@@ -102,7 +102,7 @@ def _assets(discord_ids: list[int]) -> list[tuple[dict, dict | None]]:
 
 @router.get("/personal/overview")
 async def personal_overview(
-    info: SessionInfo = Depends(require_session), scope: PersonalScope = Depends(require_personal())
+    info: DiscordSessionInfo = Depends(require_session), scope: PersonalScope = Depends(require_personal())
 ):
     profiles = await asyncio.gather(*(fetch_discord_user(i) for i in scope.discord_ids))
     assets = await run_db(lambda: _assets(scope.discord_ids))

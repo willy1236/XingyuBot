@@ -185,7 +185,36 @@
 - `domalyze_login._start_session`、`auth._handle_login` 呼叫 `create_session` 的地方要補 `login_method`。
 - `_check` 與 `_fallback` 假設 `discord_user_id` 不為 None，要在 Twitch-only 的分支前先返回。
 
-**進度**：未完成
+**進度**：實作完成（2026-11-19），待審查
+- commit：後端 41777f3；前端（domalyze_frontend）bf3adbb
+- 實作時的決定：
+  - 型別：新增 `DiscordSessionInfo(SessionInfo)`，`require_session` 回傳它；14 個模組的 `info: SessionInfo` 標註改成 `DiscordSessionInfo`（只改型別標註與 import，邏輯不變），pyright 才不會對 `int(info.discord_user_id)` 報錯。`follow_account` 改成泛型，保留傳入的型別。
+  - `create_session` 自己推導 `login_method`（帶 `twitch` 是 `twitch`、`via_domalyze` 是 `domalyze`、其餘 `discord`），呼叫端不傳；`domalyze_login._start_session`、`auth._handle_login` 因此不必補。身分組合不合法時 `ValueError`。
+  - `SessionInfo.identity_key` 實作三種主身分 key；`/dashboard/me` 的 `id` 用它。
+  - 登出：`login_method == "twitch"` 刪同一 Twitch 帳號的 session，其餘刪同一 Discord 帳號的 session；沒有 Discord 的析域 session 尚未處理（W-10）。
+  - `invite.py`：沒有 Discord 身分時導回 `/dashboard`。
+- ALTER（已套到本機 DB；正式機先手動執行，再部署 code）：
+  ```sql
+  BEGIN;
+  ALTER TABLE credentials.dashboard_session
+      ALTER COLUMN discord_user_id DROP NOT NULL,
+      ADD COLUMN twitch_user_id varchar,
+      ADD COLUMN twitch_login   varchar,
+      ADD COLUMN twitch_name    varchar,
+      ADD COLUMN twitch_avatar  varchar,
+      ADD COLUMN login_method   varchar NOT NULL DEFAULT 'discord';
+  UPDATE credentials.dashboard_session SET login_method = 'domalyze' WHERE via_domalyze;
+  ALTER TABLE credentials.dashboard_session
+      ADD CONSTRAINT ck_dashboard_session_identity CHECK (
+          discord_user_id IS NOT NULL
+          OR twitch_user_id IS NOT NULL
+          OR (login_method = 'domalyze' AND account_id IS NOT NULL)
+      );
+  CREATE INDEX ix_dashboard_session_twitch_user_id ON credentials.dashboard_session (twitch_user_id);
+  COMMIT;
+  ```
+- 前端：`DashboardUser` 移到 `lib/dashboard-user.tsx`（`dashboard-header.tsx` 再匯出同名型別）；導覽由 `dashboardNav(user)` 決定；`discord_required` 導向由 `discordRequiredTarget(pathname)` 判斷，已在 `/dashboard` 時不導，呼叫端收到一般錯誤。
+- 未驗：待人工驗證——Discord 登入、析域登入後後台照常；Twitch session 要等 W-01 的登入入口才建得出來，目前只有自動測試覆蓋。
 
 ### W-01 實況主能用 Twitch 登入並進到自己的頻道後台
 
@@ -261,7 +290,33 @@
 - client #3 在 DB 的 `callback_uri` 就是 `/oauth/twitch`。沿用同一個 callback、靠 cookie 分派，不必到 Twitch 後台新增 redirect URI。
 - 空 scope 的 user token 也能呼叫 Helix `/users` 取得自己的資料。
 
-**進度**：未完成
+**進度**：實作完成（2026-11-19），待審查；驗收條件未打勾，待人工驗證與審查後再勾
+- commit：後端 482e9e3、395ac7c、ced5464、4653ef7、759cf5a、fc441ea；前端（domalyze_frontend）ea18333、a262f40
+- 實作時的決定：
+  - 登入 handler 只做 `exchange_code` 與 `get_me`，**不存 token**：沒有 scope 的 token 會蓋掉同一筆 `OAuthToken` 裡已啟用頻道的完整 token，有測試鎖住。
+  - Twitch 登入的 session 用 W-00 的 `create_session(None, name, avatar, replace_session_id, twitch=TwitchIdentity(...))`，`login_method` 由它推導；`TwitchIdentity.id` 是 str，`require_channel` 以 `str(twitch_id)` 比對。
+  - `starServer/dashboard/config.py` 新增 `TWITCH_OAUTH_SEQ = 3`；`twitch_login.py` 自己懶載入 client #3，不能 import `bot_website`（循環）。
+  - `auth.encode_cookie`／`decode_cookie` 改公開名稱（純改名，`invite.py` 同步）。
+  - `/oauth/twitch` 開頭先 `handle_dashboard_twitch_oauth`，沒有 cookie 或 state 不符才走原流程（搬到 `_oauth_twitch_fallback`，內容不變）；有 cookie 但 state 不符時一併清掉。
+  - `/dashboard/me` 補 `has_channels`（`len(info.twitch_channels) > 0`），前端 `DashboardUser` 與 `dashboardNav` 同步。
+  - 頻道頁的名稱與頭像取自 session 的 Twitch 身分；DB 沒有頻道列時 `state` 視為 `inactive`，GET 不建列。頻道資料由 `ChannelAccessGuard` 載入並放進 context（`useChannel()`）。
+  - `lib/dashboard-api.ts` 不需改：`channel_forbidden` 本來就落在 `default` 分支，交給呼叫端處理。
+  - 側欄多一項「總覽」（頻道頁本身），卡上的 `CHANNEL_NAV` 沒列。
+  - 已登入的人從「還沒有頻道」頁按 Twitch 登入，session 會被取代（不疊加帳號），頁面文案有提醒。
+- ALTER（已套到本機 DB；正式機先手動執行，再部署 code）：
+  ```sql
+  ALTER TABLE stardb_basic.twitch_bot_join_channel
+      ADD COLUMN state varchar NOT NULL DEFAULT 'inactive',
+      ADD COLUMN login varchar,
+      ADD COLUMN display_name varchar,
+      ADD COLUMN avatar_url varchar,
+      ADD COLUMN first_seen_at timestamptz(0);
+  ```
+  既有列因 `DEFAULT` 成為 `inactive`；`first_seen_at` 可為 null，既有列不補值，只在新增頻道列時填入。
+- 未驗：
+  - 真實 Twitch 授權：空 scope 時授權網址不帶 `scope` 參數，Twitch 文件把 `scope` 列為必填，是否接受要用 client #3 真的授權一次。失敗時改用最小實際 scope 或明確帶空 `scope=`，由使用者決定。
+  - 360px 與桌面寬度的畫面操作、頻道清單頁多筆情形（W-10 之後才會出現）。
+  - 部署：W-01 與 W-02 同一次上線；W-02 之前 Twitch bot 啟動仍載入全部頻道列。
 
 ### W-02 [共用] Twitch bot 頻道控制：狀態、即時加入離開、模組拆分
 

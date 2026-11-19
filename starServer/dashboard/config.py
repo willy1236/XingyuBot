@@ -3,6 +3,8 @@
 from starlib.settings import get_settings
 
 DISCORD_OAUTH_SEQ = 4
+#: Twitch 登入與啟用用的 OAuth client（與 Twitch bot 用的是同一個 Twitch 應用程式，另一筆設定）
+TWITCH_OAUTH_SEQ = 3
 
 
 def frontend_url() -> str:

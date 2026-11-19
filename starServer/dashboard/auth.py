@@ -24,12 +24,14 @@ from . import config
 from .db import run_db
 from .session import (
     SESSION_COOKIE,
+    DiscordSessionInfo,
     SessionInfo,
     create_session,
     delete_session_cookie,
+    delete_twitch_user_sessions,
     delete_user_sessions,
     follow_account,
-    require_session,
+    require_any_session,
     set_session_cookie,
 )
 
@@ -80,11 +82,11 @@ def sanitize_origin(value: str | None) -> str:
     return config.frontend_url()
 
 
-def _encode_cookie(cookie: OAuthCookie) -> str:
+def encode_cookie(cookie: OAuthCookie) -> str:
     return base64.urlsafe_b64encode(cookie.model_dump_json().encode()).decode()
 
 
-def _decode_cookie(raw: str) -> OAuthCookie | None:
+def decode_cookie(raw: str) -> OAuthCookie | None:
     try:
         return OAuthCookie(**json.loads(base64.urlsafe_b64decode(raw.encode())))
     except Exception:
@@ -118,7 +120,7 @@ async def to_dashboard_login(next: str | None = None, origin: str | None = None)
     cookie = OAuthCookie(state=state, purpose="login", next=sanitize_next(next), origin=sanitize_origin(origin))
     response = RedirectResponse(url=url)
     response.set_cookie(
-        OAUTH_COOKIE, _encode_cookie(cookie), max_age=OAUTH_COOKIE_MAX_AGE, httponly=True, secure=True, samesite="lax"
+        OAUTH_COOKIE, encode_cookie(cookie), max_age=OAUTH_COOKIE_MAX_AGE, httponly=True, secure=True, samesite="lax"
     )
     return response
 
@@ -129,7 +131,7 @@ async def handle_dashboard_oauth(request: Request) -> Response | None:
     raw = request.cookies.get(OAUTH_COOKIE)
     if raw is None:
         return None
-    cookie = _decode_cookie(raw)
+    cookie = decode_cookie(raw)
     state = request.query_params.get("state")
     if cookie is None or state is None or not hmac.compare_digest(cookie.state.encode(), state.encode()):
         return None
@@ -166,7 +168,7 @@ async def _handle_login(request: Request, cookie: OAuthCookie) -> Response:
     old_session_id = request.cookies.get(SESSION_COOKIE)
     session_id = await run_db(lambda: create_session(user.id, name, user.avatar, old_session_id))
     # 立即確認一次析域帳號，登入後的第一個請求就帶得到
-    await follow_account(SessionInfo(session_id, user.id, name, user.avatar), force=True)
+    await follow_account(DiscordSessionInfo(session_id, user.id, name, user.avatar), force=True)
     log.info("Dashboard login: user %s (%s)", user.username, user.id)
 
     response = RedirectResponse(url=f"{cookie.origin}{cookie.next}")
@@ -187,20 +189,33 @@ def avatar_url(user_id: str, avatar: str | None) -> str:
 
 
 @router.get("/me")
-async def me(info: SessionInfo = Depends(require_session)):
+async def me(info: SessionInfo = Depends(require_any_session)):
     account = None if info.account_id is None else {"username": info.account_username}
+    if info.discord_user_id is not None:
+        avatar = avatar_url(info.discord_user_id, info.avatar)
+    else:
+        avatar = info.avatar
     return {
-        "id": info.discord_user_id,
+        "id": info.identity_key,
         "name": info.name,
-        "avatar_url": avatar_url(info.discord_user_id, info.avatar),
+        "avatar_url": avatar,
+        "discord": None if info.discord_user_id is None else {"id": info.discord_user_id},
+        "twitch": None if info.twitch is None else {"id": info.twitch.id, "login": info.twitch.login},
         "account": account,
+        "login_method": info.login_method,
+        "has_channels": len(info.twitch_channels) > 0,
     }
 
 
 @router.post("/logout")
-async def logout(request: Request, info: SessionInfo = Depends(require_session)):
-    """刪除該使用者所有裝置的 session 並清 cookie。網站不保存 Discord 授權，Discord 端的授權不受影響。"""
-    await run_db(lambda: delete_user_sessions(info.discord_user_id))
+async def logout(request: Request, info: SessionInfo = Depends(require_any_session)):
+    """刪除這個登入身分所有裝置的 session 並清 cookie：Twitch 登入以 Twitch 帳號為單位，其餘以 Discord 帳號為單位。
+    網站不保存 Discord 授權，Discord 端的授權不受影響。"""
+    twitch, discord_id = info.twitch, info.discord_user_id
+    if info.login_method == "twitch" and twitch is not None:
+        await run_db(lambda: delete_twitch_user_sessions(twitch.id))
+    elif discord_id is not None:
+        await run_db(lambda: delete_user_sessions(discord_id))
 
     request.state.dashboard_renew_session = None
     response = JSONResponse({"ok": True})

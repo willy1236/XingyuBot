@@ -32,7 +32,7 @@ def invite_redirect(url: str, state: str, origin: str | None) -> RedirectRespons
     response = RedirectResponse(url=url)
     response.set_cookie(
         auth.OAUTH_COOKIE,
-        auth._encode_cookie(cookie),
+        auth.encode_cookie(cookie),
         max_age=auth.OAUTH_COOKIE_MAX_AGE,
         httponly=True,
         secure=True,
@@ -71,6 +71,10 @@ async def _handle_invite(request: Request, cookie: auth.OAuthCookie) -> Response
     info = await run_db(lambda: lookup_session(session_id))
     if info is None:
         return _login_redirect(origin)
+
+    # 沒有 Discord 身分（Twitch 登入）的 session 沒有伺服器清單可回，導回 /dashboard
+    if info.discord_user_id is None:
+        return RedirectResponse(url=f"{origin}/dashboard")
 
     guild_id = params.get("guild_id")
     log.info("Dashboard invite: user %s guild %s", info.discord_user_id, guild_id)

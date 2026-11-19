@@ -22,7 +22,7 @@ from .guilds import (
     GuildPerms,
     guild_perms,
 )
-from .session import SessionInfo, require_session
+from .session import DiscordSessionInfo, require_session
 
 
 async def on_guild_async[T](guild_id: int, fn: Callable[[discord.Guild], Awaitable[T]]) -> T:
@@ -130,7 +130,7 @@ def require_section(section: Section, action: str | None = None):
     """
     bits = SECTION_RULES[section][action or "view"]  # 寫錯動作名稱在 import 時就失敗
 
-    async def dependency(guild_id: int, info: SessionInfo = Depends(require_session)) -> int:
+    async def dependency(guild_id: int, info: DiscordSessionInfo = Depends(require_session)) -> int:
         if not (await guild_perms(info.discord_user_id, guild_id)).has_any(bits):
             raise DashboardError(403, "no_permission")
         return guild_id

@@ -47,7 +47,7 @@ from .conflict import Conflict, check_conflict
 from .db import run_db
 from .errors import DashboardError
 from .message_input import ensure_valid_message
-from .session import SessionInfo, require_session
+from .session import DiscordSessionInfo, require_session
 
 router = APIRouter(prefix="/dashboard")
 
@@ -271,7 +271,7 @@ def _blank_to_none(value: str | None) -> str | None:
     return (value or "").strip() or None
 
 
-def _actor(guild: discord.Guild, info: SessionInfo) -> discord.Member:
+def _actor(guild: discord.Guild, info: DiscordSessionInfo) -> discord.Member:
     member = guild.get_member(int(info.discord_user_id))
     if member is None:
         raise DashboardError(403, "no_permission")
@@ -545,7 +545,7 @@ async def get_lobby(channel_id: int, guild_id: int = Depends(require_section(Sec
 async def create_lobby(
     body: LobbyBody,
     guild_id: int = Depends(require_section(Section.TICKETS)),
-    info: SessionInfo = Depends(require_session),
+    info: DiscordSessionInfo = Depends(require_session),
 ):
     ensure_valid_message(body.message)
 
@@ -566,7 +566,7 @@ async def update_lobby(
     channel_id: int,
     body: UpdateBody,
     guild_id: int = Depends(require_section(Section.TICKETS)),
-    info: SessionInfo = Depends(require_session),
+    info: DiscordSessionInfo = Depends(require_session),
 ):
     ensure_valid_message(body.message)
     original = _original(body.original)
@@ -633,7 +633,7 @@ def _state(s: TicketState) -> dict:
     return {"channel_id": str(s.channel_id), "status": s.status, "changed": s.changed}
 
 
-async def _ticket_action(guild_id: int, info: SessionInfo, run) -> dict:
+async def _ticket_action(guild_id: int, info: DiscordSessionInfo, run) -> dict:
     """權限已由 `require_section` 檢查（Manage Channels）；目標已是要求狀態時回 `changed: false`。"""
 
     async def _do(guild: discord.Guild) -> dict:
@@ -651,7 +651,7 @@ async def _ticket_action(guild_id: int, info: SessionInfo, run) -> dict:
 async def lock_channel(
     channel_id: int,
     guild_id: int = Depends(require_section(Section.TICKETS)),
-    info: SessionInfo = Depends(require_session),
+    info: DiscordSessionInfo = Depends(require_session),
 ):
     return await _ticket_action(
         guild_id,
@@ -664,7 +664,7 @@ async def lock_channel(
 async def reopen_channel(
     channel_id: int,
     guild_id: int = Depends(require_section(Section.TICKETS)),
-    info: SessionInfo = Depends(require_session),
+    info: DiscordSessionInfo = Depends(require_session),
 ):
     return await _ticket_action(
         guild_id,
@@ -677,7 +677,7 @@ async def reopen_channel(
 async def delete_channel(
     channel_id: int,
     guild_id: int = Depends(require_section(Section.TICKETS)),
-    info: SessionInfo = Depends(require_session),
+    info: DiscordSessionInfo = Depends(require_session),
 ):
     return await _ticket_action(
         guild_id,

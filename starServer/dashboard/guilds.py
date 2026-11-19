@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends
 from starlib import sclient
 
 from .errors import DashboardError
-from .session import SessionInfo, require_session
+from .session import DiscordSessionInfo, require_session
 
 router = APIRouter(prefix="/dashboard")
 
@@ -116,7 +116,7 @@ def _icon_url(guild: discord.Guild) -> str | None:
 
 
 @router.get("/guilds")
-async def list_guilds(info: SessionInfo = Depends(require_session)):
+async def list_guilds(info: DiscordSessionInfo = Depends(require_session)):
     """bot 所在、且使用者符合進入條件的伺服器，依名稱排序。"""
     bot = _ready_bot()
     user_id = int(info.discord_user_id)

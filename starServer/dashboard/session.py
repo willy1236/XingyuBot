@@ -1,8 +1,11 @@
 """後台 session：30 天滑動，存在 DashboardSession；session 帶的析域帳號每 60 秒向 auth server 重新確認一次。
 
-session 的身分一律是一個 Discord 帳號，析域帳號是附帶欄位。帳號跟隨的確認結果存在記憶體（以 session ID 為 key），
+session 的身分是一個 Discord 帳號或一個 Twitch 帳號（login_method 區分），析域帳號是附帶欄位。帳號跟隨的確認結果存在記憶體（以 session ID 為 key），
 auth server 暫時不可用時沿用上次結果，重啟後則以資料庫的 account_id 為準。
-Discord 登入的 session 只跟著帳號升級或降級；析域登入的 session 在域民停權、查無或不再連結這個 Discord 時失效。
+Discord 登入的 session 只跟著帳號升級或降級；析域登入的 session 在域民停權、查無或不再連結這個 Discord 時失效；
+Twitch 登入的 session 不附帶析域帳號，不做帳號跟隨。
+
+require_session 只放行有 Discord 身分的 session（伺服器與個人區端點），require_any_session 只要求已登入。
 """
 
 import asyncio
@@ -35,9 +38,18 @@ FOLLOW_INTERVAL = 60.0
 
 
 @dataclass(frozen=True)
+class TwitchIdentity:
+    id: str
+    login: str
+    name: str
+    avatar: str | None
+
+
+@dataclass(frozen=True)
 class SessionInfo:
     session_id: str
-    discord_user_id: str
+    #: 沒有 Discord 身分（Twitch 登入）時為 None
+    discord_user_id: str | None
     name: str
     avatar: str | None
     #: 這個 session 帶的析域帳號；沒有連結時為 None
@@ -50,6 +62,27 @@ class SessionInfo:
     discord_ids: tuple[int, ...] = ()
     #: 析域帳號資訊是否沿用舊結果（auth server 暫時不可用）
     stale: bool = False
+    #: discord、domalyze 或 twitch
+    login_method: str = "discord"
+    twitch: TwitchIdentity | None = None
+    #: 這個 session 可以管理的 Twitch 頻道；頻道端點只用這個判斷，不自己查
+    twitch_channels: tuple[TwitchIdentity, ...] = ()
+
+    @property
+    def identity_key(self) -> str:
+        """主身分 key：有 Discord 時是 Discord ID，Twitch 登入是 twitch:<id>，沒有 Discord 的析域登入是 domalyze:<account_id>。"""
+        if self.discord_user_id is not None:
+            return self.discord_user_id
+        if self.twitch is not None:
+            return f"twitch:{self.twitch.id}"
+        return f"domalyze:{self.account_id}"
+
+
+@dataclass(frozen=True)
+class DiscordSessionInfo(SessionInfo):
+    """保證有 Discord 身分的 session；require_session 回傳這個型別。"""
+
+    discord_user_id: str
 
 
 def _now() -> datetime:
@@ -67,14 +100,21 @@ def delete_session_cookie(response) -> None:
 
 
 def _info(row: DashboardSession) -> SessionInfo:
-    return SessionInfo(
-        row.session_id,
-        row.discord_user_id,
-        row.name,
-        row.avatar,
-        account_id=row.account_id,
-        via_domalyze=row.via_domalyze,
+    twitch = (
+        None
+        if row.twitch_user_id is None
+        else TwitchIdentity(row.twitch_user_id, row.twitch_login or "", row.twitch_name or "", row.twitch_avatar)
     )
+    extra = {
+        "account_id": row.account_id,
+        "via_domalyze": row.via_domalyze,
+        "login_method": row.login_method,
+        "twitch": twitch,
+        "twitch_channels": (twitch,) if twitch is not None and row.login_method == "twitch" else (),
+    }
+    if row.discord_user_id is None:
+        return SessionInfo(row.session_id, None, row.name, row.avatar, **extra)
+    return DiscordSessionInfo(row.session_id, row.discord_user_id, row.name, row.avatar, **extra)
 
 
 def _touch(session_id: str) -> SessionInfo | None:
@@ -105,15 +145,24 @@ def lookup_session(session_id: str | None) -> SessionInfo | None:
 
 
 def create_session(
-    discord_user_id: str,
+    discord_user_id: str | None,
     name: str,
     avatar: str | None,
     replace_session_id: str | None = None,
     *,
     account_id: UUID | None = None,
     via_domalyze: bool = False,
+    twitch: TwitchIdentity | None = None,
 ) -> str:
-    """建立新 session。cookie 帶著的舊 session（不論是不是同一個帳號）一併刪掉，換帳號時就不會留著舊帳號的 session。"""
+    """建立新 session，登入方式由參數決定：帶 twitch 是 Twitch 登入，via_domalyze 是析域登入，其餘是 Discord 登入。
+
+    cookie 帶著的舊 session（不論是不是同一個帳號）一併刪掉，換帳號時就不會留著舊帳號的 session。
+    """
+    if twitch is not None and (via_domalyze or discord_user_id is not None):
+        raise ValueError("Twitch 登入的 session 不帶 Discord 身分，也不是析域登入")
+    if twitch is None and discord_user_id is None and not (via_domalyze and account_id is not None):
+        raise ValueError("session 需要 Discord 身分、Twitch 身分，或析域登入的析域帳號")
+    login_method = "twitch" if twitch is not None else "domalyze" if via_domalyze else "discord"
     s = sqldb.session
     # 順手清掉已過期的 session，沒有人再用到的列才不會一直留在表裡
     s.execute(delete(DashboardSession).where(DashboardSession.last_used_at < _now() - SESSION_TTL))  # pyright: ignore[reportArgumentType]
@@ -123,31 +172,42 @@ def create_session(
     _prune_followed()
     session_id = secrets.token_urlsafe(32)
     s.add(
-        DashboardSession(
+        DashboardSession(  # pyright: ignore[reportCallIssue] 自訂 __table_args__ 的 model，pyright 誤判為必填欄位
             session_id=session_id,
             discord_user_id=discord_user_id,
             name=name,
             avatar=avatar,
             account_id=account_id,
             via_domalyze=via_domalyze,
+            login_method=login_method,
+            twitch_user_id=None if twitch is None else twitch.id,
+            twitch_login=None if twitch is None else twitch.login,
+            twitch_name=None if twitch is None else twitch.name,
+            twitch_avatar=None if twitch is None else twitch.avatar,
         )
     )
     s.commit()
     return session_id
 
 
-def delete_user_sessions(discord_user_id: str) -> None:
+def _delete_sessions_where(condition) -> None:
     s = sqldb.session
     deleted = s.execute(
-        delete(DashboardSession)
-        .where(DashboardSession.discord_user_id == discord_user_id)  # pyright: ignore[reportArgumentType]
-        .returning(DashboardSession.session_id)  # pyright: ignore[reportArgumentType]
+        delete(DashboardSession).where(condition).returning(DashboardSession.session_id)  # pyright: ignore[reportArgumentType, reportCallIssue]
     ).scalars()
     for session_id in deleted:
         _followed.pop(session_id, None)
         # 進行中的確認跑完時看到自己已不在 _inflight，就不會把結果寫回 _followed
         _inflight.pop(session_id, None)
     s.commit()
+
+
+def delete_user_sessions(discord_user_id: str) -> None:
+    _delete_sessions_where(DashboardSession.discord_user_id == discord_user_id)
+
+
+def delete_twitch_user_sessions(twitch_user_id: str) -> None:
+    _delete_sessions_where(DashboardSession.twitch_user_id == twitch_user_id)
 
 
 # ====== 帳號跟隨 ======
@@ -203,7 +263,8 @@ def _fallback(info: SessionInfo, previous: _Followed | None, now: float) -> _Fol
     """auth server 不可用：有舊結果就沿用，沒有就以資料庫的 account_id 為準，代號未知、只帶 session 的 Discord。"""
     if previous is not None:
         return dataclasses.replace(previous, checked_at=now, stale=True)
-    discord_ids = (int(info.discord_user_id),) if info.account_id is not None else ()
+    has_discord = info.account_id is not None and info.discord_user_id is not None
+    discord_ids = (int(info.discord_user_id),) if has_discord else ()  # pyright: ignore[reportArgumentType]
     return _Followed(now, info.account_id, None, discord_ids, True)
 
 
@@ -214,14 +275,17 @@ async def _check(info: SessionInfo, now: float) -> _Followed:
     Raises:
         DirectoryUnavailable: auth server 沒給出明確答案。
     """
+    discord_id = None if info.discord_user_id is None else int(info.discord_user_id)
     if info.via_domalyze:
         resolved = None if info.account_id is None else await get_directory().find_by_account_id(info.account_id)
         account = None if resolved is None else resolved.account
-        if account is None or account.suspended or int(info.discord_user_id) not in account.discord_ids:
+        if account is None or account.suspended or (discord_id is not None and discord_id not in account.discord_ids):
             return _Followed(now, None, None, (), False, revoked=True)
         return _Followed(now, account.account_id, account.username, account.discord_ids, False)
 
-    account = await get_directory().find_by_discord(int(info.discord_user_id))
+    if discord_id is None:
+        return _Followed(now, None, None, (), False)
+    account = await get_directory().find_by_discord(discord_id)
     if account is None or account.suspended:
         return _Followed(now, None, None, (), False)
     return _Followed(now, account.account_id, account.username, account.discord_ids, False)
@@ -257,12 +321,14 @@ async def _refresh_once(info: SessionInfo, previous: _Followed | None, now: floa
     return await asyncio.shield(task)
 
 
-async def follow_account(info: SessionInfo, *, force: bool = False) -> SessionInfo:
-    """補上 session 的析域帳號；距上次確認超過 60 秒（或 force）才向 auth server 重新確認。
+async def follow_account[S: SessionInfo](info: S, *, force: bool = False) -> S:
+    """補上 session 的析域帳號；距上次確認超過 60 秒（或 force）才向 auth server 重新確認。Twitch 登入的 session 不跟隨，原樣回傳。
 
     Raises:
         DashboardError: 401 session_expired，析域登入的 session 已失效（已刪除）。
     """
+    if info.login_method == "twitch":
+        return info
     now = time.monotonic()
     previous = _followed.get(info.session_id)
     if previous is not None and not force and now - previous.checked_at < FOLLOW_INTERVAL:
@@ -283,11 +349,14 @@ async def follow_account(info: SessionInfo, *, force: bool = False) -> SessionIn
     )
 
 
-async def require_session(request: Request) -> SessionInfo:
-    """驗證 session 的 dependency，並補上帳號跟隨的結果。
+async def require_any_session(request: Request) -> SessionInfo:
+    """驗證 session 的 dependency（Discord 或 Twitch 身分皆可），並補上帳號跟隨的結果。
 
     續期用的 Set-Cookie 不在這裡設：端點拋例外時 exception handler 會產生新的 response，這裡設的 cookie 會遺失。
     只在 request.state 記下，由 session_cookie_middleware 在回應出去時統一補。
+
+    Raises:
+        DashboardError: 401 session_expired。
     """
     session_id = request.cookies.get(SESSION_COOKIE)
     info = await run_db(lambda: _touch(session_id)) if session_id else None
@@ -302,7 +371,20 @@ async def require_session(request: Request) -> SessionInfo:
     except DashboardError:
         request.state.dashboard_clear_cookie = True
         raise
-    await _record_activity(int(info.discord_user_id))
+    if info.discord_user_id is not None:
+        await _record_activity(int(info.discord_user_id))
+    return info
+
+
+async def require_session(request: Request) -> DiscordSessionInfo:
+    """伺服器與個人區端點用的 dependency：只放行有 Discord 身分的 session。
+
+    Raises:
+        DashboardError: 401 session_expired；403 discord_required（沒有 Discord 身分）。
+    """
+    info = await require_any_session(request)
+    if not isinstance(info, DiscordSessionInfo):
+        raise DashboardError(403, "discord_required")
     return info
 
 

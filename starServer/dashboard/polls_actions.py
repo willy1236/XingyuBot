@@ -17,7 +17,7 @@ from starlib.polls import can_manage, viewer_role
 from .access import Section, on_guild_async, require_section
 from .db import run_db
 from .errors import DashboardError
-from .session import SessionInfo, require_session
+from .session import DiscordSessionInfo, require_session
 
 router = APIRouter(prefix="/dashboard")
 
@@ -41,7 +41,7 @@ async def _require_manager(guild: discord.Guild, poll, user_id: int) -> None:
 async def end_poll(
     poll_id: int,
     guild_id: int = Depends(require_section(Section.POLLS, "end")),
-    info: SessionInfo = Depends(require_session),
+    info: DiscordSessionInfo = Depends(require_session),
 ):
     """結算。投票已結算（剛好被按鈕或其他來源結算）視為成功，status 為 already_ended。"""
     user_id = int(info.discord_user_id)
@@ -89,7 +89,7 @@ async def _delete_message(guild: discord.Guild, channel_id: int | None, message_
 async def delete_poll(
     poll_id: int,
     guild_id: int = Depends(require_section(Section.POLLS, "delete")),
-    info: SessionInfo = Depends(require_session),
+    info: DiscordSessionInfo = Depends(require_session),
 ):
     """刪除。先刪訊息再刪資料：資料刪除失敗回 500，重試時訊息 NotFound 視為成功。
 

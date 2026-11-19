@@ -37,6 +37,11 @@ from starServer import dashboard
 from starServer.dashboard import config as dashboard_config
 from starServer.dashboard.auth import handle_dashboard_oauth
 from starServer.dashboard.invite import invite_redirect as dashboard_invite_redirect
+from starServer.dashboard.twitch_login import (
+    TWITCH_OAUTH_COOKIE,
+    delete_twitch_oauth_cookie,
+    handle_dashboard_twitch_oauth,
+)
 
 discord_oauth_client = sqldb.get_oauth_client(APIType.Discord, 4)
 twitch_oauth_client = sqldb.get_oauth_client(APIType.Twitch, 3)
@@ -247,6 +252,17 @@ def _twitch_oauth_page(message: str, status_code: int) -> HTMLResponse:
 
 @app.get("/oauth/twitch")
 async def oauth_twitch(request: Request):
+    # 後台的 Twitch 登入流程（dashboard_twitch_oauth cookie 且 state 相符）；回 None 才走下面原本的處理
+    response = await handle_dashboard_twitch_oauth(request)
+    if response is None:
+        response = await _oauth_twitch_fallback(request)
+        # 有 dashboard_twitch_oauth 但 state 不符時，也一併清掉
+        if TWITCH_OAUTH_COOKIE in request.cookies:
+            delete_twitch_oauth_cookie(response)
+    return response
+
+
+async def _oauth_twitch_fallback(request: Request) -> Response:
     params = dict(request.query_params)
     code = params.get("code")
     if not code:
