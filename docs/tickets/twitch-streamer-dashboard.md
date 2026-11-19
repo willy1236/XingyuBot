@@ -91,8 +91,8 @@
 | 1 | W-00 | 實作完成 | [共用] session 支援 Twitch 身分 | 無 | — | W-01、W-10 依賴 |
 | 2 | W-01 | 實作完成 | 實況主能用 Twitch 登入並進到自己的頻道後台 | W-00 | — | 骨架切片 |
 | 3 | W-02 | 實作完成 | [共用] Twitch bot 頻道控制：狀態、即時加入離開、模組拆分 | W-01 | — | W-03 之後都依賴 |
-| 4 | W-03 | 未完成 | 實況主能啟用與停用 bot | W-02 | — | 含舊頻道、關閉舊入口 |
-| 5 | W-04 | 未完成 | [共用] bot 發言管線與修改紀錄 | W-03 | — | W-05～W-07、W-12 依賴 |
+| 4 | W-03 | 實作完成 | 實況主能啟用與停用 bot | W-02 | — | 含舊頻道、關閉舊入口 |
+| 5 | W-04 | 實作完成 | [共用] bot 發言管線與修改紀錄 | W-03 | — | W-05～W-07、W-12 依賴 |
 | 6 | W-05 | 未完成 | 實況主能在後台管理自訂指令 | W-04 | A | |
 | 7 | W-06 | 未完成 | 實況主能設定計時訊息 | W-04 | A | |
 | 8 | W-07 | 未完成 | 實況主能設定事件回應 | W-04 | A | |
@@ -426,13 +426,13 @@
 
 **驗收條件**
 - [ ] 按「啟用 bot」完成授權後，不必重啟任何服務，bot 就出現在聊天室並具有 mod 身分；後台顯示「已啟用」。
-- [ ] 授權途中取消，回到頻道後台，仍是「未啟用」。
-- [ ] 用另一個 Twitch 帳號完成授權，回到頻道後台並顯示「請用頻道本人的帳號授權」，仍是「未啟用」，不保存該 token。
+- [x] 授權途中取消，回到頻道後台，仍是「未啟用」。
+- [x] 用另一個 Twitch 帳號完成授權，回到頻道後台並顯示「請用頻道本人的帳號授權」，仍是「未啟用」，不保存該 token。
 - [ ] 按「停用 bot」後，bot 離開聊天室，觸發指令與發生事件都沒有回應；後台顯示「已停用」。
-- [ ] 停用後重新啟用，原本的指令與轉發設定都還在。
+- [x] 停用後重新啟用，原本的指令與轉發設定都還在。
 - [ ] 舊流程登記的頻道上線後顯示「未啟用」；啟用後原本的自訂指令可用，冷卻為全體 30 秒。
-- [ ] 直接打開舊的 Twitch 授權連結，完成授權後看到「請到後台啟用」，並附連結，不會登記頻道。
-- [ ] 自動設 mod 失敗時，啟用仍完成，後台提示手動輸入 `/mod xingyu1016`。
+- [x] 直接打開舊的 Twitch 授權連結，完成授權後看到「請到後台啟用」，並附連結，不會登記頻道。
+- [x] 自動設 mod 失敗時，啟用仍完成，後台提示手動輸入 `/mod xingyu1016`。
 - [ ] Twitch bot 離線時按啟用，授權仍會保存；後台顯示「bot 暫時離線，上線後自動生效」；bot 上線後加入頻道。
 
 **實作設計**
@@ -470,8 +470,8 @@
 - Add Channel Moderator 的 API 有速率限制，且帳號要已在聊天室出現過才能被設為 mod。失敗時不擋啟用：啟用照常完成，記 Sentry，後台提示「請在聊天室輸入 `/mod xingyu1016`」，W-08 會持續標示「bot 不是 mod」直到修好。
 - `twitch_chatbot.USER_SCOPE` 是 bot 帳號自己的 scope，不要拿來要求實況主；實況主的 scope 以上面列的清單為準。
 
-**進度**：實作完成（2026-11-19），審查第 1 輪修正完成（S1、S2），待複審；驗收條件尚未勾（自動測試覆蓋後端各分支與前端標籤、操作元件的靜態輸出，真 Twitch 與真 Redis 的端到端、360px 版面待人工驗證）
-- commit：後端 84eebc1a、e4ec1f61、cb3f9407、2aeabae1；前端（domalyze_frontend）8dddb47、629a39f
+**進度**：實作完成（2026-11-19），審查兩輪放行，待人工驗證；驗收條件只勾自動測試驗證過的 5 條，其餘 4 條需要真實 Twitch 或真 Redis 的 bot，待人工驗證
+- commit：後端 84eebc1a、e4ec1f61、cb3f9407、2aeabae1；前端（domalyze_frontend）8dddb47、629a39f；審查後修正見下
 - 審查第 1 輪修正：後端 276d9f2e（S2：Add Moderator 回 400 時改 GET moderators 確認 bot 是否在名單，不比對訊息字串）；前端 649349d（S1：停用成功且 `bot_offline` 時顯示 `disable_bot_offline` 提示）；真實 Twitch 的 400 行為仍待人工驗證
 - 實作時的決定：
   - 啟用入口是整頁導覽：session 無效導向 `{origin}/dashboard-login?next=/dashboard/channels/<id>`；不是自己的頻道導向頻道頁，由 `ChannelAccessGuard` 顯示「沒有這個頻道的權限」；`channel` 不是數字導向 `/dashboard/channels`。所以前端 notice 不含 `session_expired`、`channel_forbidden`。
@@ -483,6 +483,10 @@
   - 前端狀態標籤分未啟用、已啟用、已停用；按鈕與 notice 在新檔 `channel-activation.tsx`，由 `channel-status.tsx` 在帶 `channelId` 時引入，留在頁首；不改 `app/dashboard/channels/[id]/page.tsx`。`ChannelAccessGuard` 加 `useReloadChannel()`，停用成功後重新載入頻道資料。停用用行內二段式確認。
   - `OAuthCookie` 加 `channel_id`（None 不編碼，既有 cookie 內容不變）；`find_channel` 抽出給 `/to/*` 用；`_record_channel` 改公開 `record_channel(user, state=None)`。
   - 舊 `/oauth/twitch` 沒有後台 cookie 時回 200 的「請到星羽後台啟用」頁；`/to/twitchauth` 導向 `{frontend}/dashboard-login`；`bot_website.py` 同時移除不再使用的 Twitch client 與域民查詢；`tests/twitch/test_auth.py` 改寫為新行為。
+- 審查：兩輪放行，沒有 blocking。第 1 輪（W-03、W-04 一起審）的 S1、S2 已修（後端 276d9f2e、前端 649349d），第 2 輪確認修正沒有帶出新問題。未修：
+  - Q5 nitpick：網址帶重複的 notice 代碼（如 `?notice=mod_failed,mod_failed`）時會有重複的 React key；後端不會產生這種網址。
+  - S4 note：實作的 notice 代碼與卡上清單不同（見上方「實作時的決定」），已核對符合規格〈接入流程〉。
+- 完整 CI：待合併回 main 前跑。
 - 未驗：真實 Twitch 授權（含 `force_verify`、Add Channel Moderator 含 VIP 情形）、真 Redis 的 bot 離線到上線、360px 版面；頁首在桌面寬度的側欄（13rem）裡 notice 較擠，待人工看。
 - 沒有 ALTER。
 
@@ -554,7 +558,7 @@
 - `Check AutoMod Status` 的速率限制以頻道計：一般帳號每分鐘 5 次、每小時 50 次；Affiliate 10 次與 100 次；Partner 30 次與 300 次（Twitch API Reference〈Moderation〉）。所以主要在儲存模板時檢查，發言時只檢查帶觀眾輸入的訊息。
 - `{count}` 是指令的使用次數，由 W-05 存在指令列上。render 只負責代入，不負責遞增。
 
-**進度**：實作完成（2026-11-19），待審查；驗收條件只勾自動測試驗證過的項目，全部以 mock 的 Helix 與 chat 驗證，真實 Twitch 與頁面畫面待人工驗證
+**進度**：實作完成（2026-11-19），審查兩輪放行，待人工驗證；驗收條件只勾自動測試驗證過的項目，全部以 mock 的 Helix 與 chat 驗證，真實 Twitch 與頁面畫面待人工驗證
 - commit：
   - 後端：2949af7f（資料表與 ALTER）、a2b6649d（`client.py` 存取函式與指令快取修復）、8591e99e（`twitch_audit`）、f8f9fab1（`twitch_speech_check`、`twitch_control.check_template`）、f2564604（`speech.py`、`events.py` 維護開台資訊）、fa438e7f（automod-blocks 端點）、802df3ed（`twitch_audit` 排序改用 col()）
   - 前端：6ccdbd9（`automod-blocks.tsx`、`lib/dashboard-channel-automod.ts`、總覽頁）
@@ -589,6 +593,11 @@
   ALTER TABLE stardb_basic.twitch_automod_block ALTER COLUMN twitch_id TYPE bigint;
   ```
   上方正式機要執行的 ALTER 不變（只有既有的兩張表）。
+- 審查：兩輪放行，沒有 blocking。第 1 輪的 Q1、Q2、Q3 已修（後端 9851495c、579f6373、705d3dc5，見上方「審查後修正」），第 2 輪確認修正沒有帶出新問題。未修：
+  - Q4 nitpick：要不要檢查 AutoMod 只看模板；計時訊息的 `{args}` 沒有值時仍會花一次檢查額度（結果有快取）。
+  - Q6 note：`say` 的 `twitch_id` 與 `ctx.twitch_id` 重複；簽名是使用者決定的，不改。
+  - S3 note：W-06 實作設計還寫「啟動時用 `get_streams` 補一次」，W-04 改成第一次用到 `{uptime}` 才惰性查（見「實作時的決定」），`speech.current_stream()` 回 `None` 不代表沒開台。W-06 派工時要在說明裡補這點。
+- 完整 CI：待合併回 main 前跑。
 - 未驗：真實 Twitch 的 Check AutoMod Status 回應格式與速率限制行為、實際聊天室發言；瀏覽器裡的頻道總覽畫面。
 - pyright：新檔只有 `twitch_audit.py` 一個 `__table_args__` 的 reportCallIssue，與既有 `models.py` 覆寫 `__table_args__` 的寫法同源；`models.py` 本身的既有錯誤未處理。
 
