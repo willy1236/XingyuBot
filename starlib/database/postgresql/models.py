@@ -565,7 +565,7 @@ class TwitchChannelAudit(BasicSchema, table=True):
     id: int | None = Field(default=None, sa_column=Column(Integer, Identity(), primary_key=True))
     twitch_id: int = Field(sa_column=Column(BigInteger, nullable=False))
     at: datetime = Field(default_factory=nowtz, sa_column=Column(TIMESTAMP(True, 0), nullable=False))
-    #: twitch、discord
+    #: twitch、discord、domalyze
     actor_platform: str = Field(nullable=False)
     actor_id: str = Field(nullable=False)
     actor_name: str = Field(nullable=False)

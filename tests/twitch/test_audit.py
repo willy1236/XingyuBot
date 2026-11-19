@@ -32,6 +32,13 @@ def test_新增沒有_before_刪除沒有_after():
     assert entries[0].after is None and entries[1].before is None
 
 
+def test_析域帳號操作者寫入後原樣查回():
+    actor = AuditActor("domalyze", "6f1c2a9e-0000-4000-8000-000000000001", "willy")
+    record_change(TWITCH_ID, actor, "dashboard", "command", "hi", "create", None, {"response": "a"})
+    [entry] = list_changes(TWITCH_ID)
+    assert entry.actor == actor
+
+
 def test_不_commit_所以_rollback_後不見(session):
     record_change(TWITCH_ID, ACTOR, "dashboard", "timer", "1", "create", None, {"message": "m"})
     assert len(list_changes(TWITCH_ID)) == 1  # 同一個 session 看得到

@@ -27,6 +27,7 @@ from starlib import sqldb, website_stats
 from starlib.database import DashboardSession, TwitchBotJoinChannel
 from starlib.identity import Account, DirectoryUnavailable
 from starlib.identity.resolver import get_directory
+from starlib.twitch_audit import AuditActor
 from starlib.utils import nowtz
 
 from .db import run_db
@@ -86,6 +87,17 @@ class DiscordSessionInfo(SessionInfo):
     """保證有 Discord 身分的 session；require_session 回傳這個型別。"""
 
     discord_user_id: str
+
+
+def audit_actor(info: SessionInfo) -> AuditActor:
+    """session 的操作者，供修改紀錄使用：Twitch 登入記 Twitch 帳號，有 Discord 身分的記 Discord 帳號，沒有 Discord 的析域登入記析域帳號。"""
+    if info.login_method == "twitch" and info.twitch is not None:
+        return AuditActor("twitch", info.twitch.id, info.twitch.name)
+    if info.discord_user_id is not None:
+        return AuditActor("discord", info.discord_user_id, info.name)
+    if info.account_id is not None:
+        return AuditActor("domalyze", str(info.account_id), info.account_username or info.name)
+    raise ValueError("session 沒有可記錄的操作者身分")
 
 
 def _now() -> datetime:

@@ -19,9 +19,9 @@ type AuditAction = Literal["create", "update", "delete"]
 
 @dataclass(frozen=True, slots=True)
 class AuditActor:
-    """操作者：Twitch 或 Discord 帳號。"""
+    """操作者：Twitch、Discord 或析域帳號（沒有 Discord 身分的析域登入，id 是 account_id）。"""
 
-    platform: Literal["twitch", "discord"]
+    platform: Literal["twitch", "discord", "domalyze"]
     id: str
     name: str
 
