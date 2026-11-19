@@ -38,8 +38,8 @@ CHANNEL = str(TWITCH_ID)
 BOT_ID = "999"
 DISCORD_ID = "111111111111111111"
 COOKIE = "dashboard_twitch_oauth"
-CHANNEL_URL = f"{FRONTEND}/dashboard/channels/{CHANNEL}"
-LOGIN_URL = f"{FRONTEND}/dashboard-login?next=%2Fdashboard%2Fchannels%2F{CHANNEL}"
+CHANNEL_URL = f"{FRONTEND}/dashboard/twitch/{CHANNEL}"
+LOGIN_URL = f"{FRONTEND}/dashboard-login?next=%2Fdashboard%2Ftwitch%2F{CHANNEL}"
 
 
 class Spy:
@@ -229,7 +229,7 @@ class TestEntry:
             params["channel"] = channel
         response = site.get("/to/dashboard-twitch-enable", params=params)
 
-        assert response.headers["location"] == f"{FRONTEND}/dashboard/channels"
+        assert response.headers["location"] == f"{FRONTEND}/dashboard/twitch"
 
     def test_unknown_origin_falls_back_to_frontend(self, site, spy):
         response = self._enter(site, origin="https://evil.example")
@@ -413,7 +413,7 @@ class TestEnable:
 
         response = _callback(site, cookie=_cookie(channel_id=None), code="c")
 
-        assert response.headers["location"] == f"{FRONTEND}/dashboard/channels"
+        assert response.headers["location"] == f"{FRONTEND}/dashboard/twitch"
         assert spy.saved_tokens == []
 
 
