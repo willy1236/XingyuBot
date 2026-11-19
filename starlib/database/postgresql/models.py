@@ -488,6 +488,13 @@ class TwitchBotJoinChannel(BasicSchema, table=True):
     twitch_id: int = Field(primary_key=True)
     action_channel_id: int | None = Field(sa_column=Column(BigInteger))
     point_name: str | None = Field(sa_column=Column(String(255)))
+    #: inactive（登入過還沒啟用）、enabled、disabled
+    state: str = Field(default="inactive", sa_column=Column(String, nullable=False, server_default=text("'inactive'")))
+    #: 登入與啟用時更新，給營運入口顯示用
+    login: str | None = Field(default=None, sa_column=Column(String))
+    display_name: str | None = Field(default=None, sa_column=Column(String))
+    avatar_url: str | None = Field(default=None, sa_column=Column(String))
+    first_seen_at: datetime | None = Field(default=None, sa_column=Column(TIMESTAMP(True, 0)))
 
 
 class TwitchChatCommand(BasicSchema, table=True):
