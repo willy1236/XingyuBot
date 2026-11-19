@@ -24,7 +24,8 @@ from . import twitch_control
 from .auth import OAuthCookie, sanitize_origin
 from .channels import DEFAULT_STATE, find_channel, require_channel
 from .db import run_db
-from .session import SESSION_COOKIE, TwitchIdentity, lookup_session
+from .errors import DashboardError
+from .session import SESSION_COOKIE, SessionInfo, TwitchIdentity, follow_account, lookup_session
 from .twitch_login import (
     get_oauth_client,
     new_twitch_oauth,
@@ -69,6 +70,21 @@ def _login_url(origin: str, channel_id: int | str) -> str:
     return f"{origin}/dashboard-login?{urlencode({'next': f'/dashboard/channels/{channel_id}'})}"
 
 
+async def _channel_session(request: Request) -> SessionInfo | None:
+    """整頁導覽用的 session：有效的 session，並補上帳號跟隨的結果（析域登入的頻道清單在這裡才有）。
+
+    沒有 session、已過期，或析域帳號已停權或查無（session 失效）時回 None。
+    """
+    session_id = request.cookies.get(SESSION_COOKIE)
+    info = await run_db(lambda: lookup_session(session_id))
+    if info is None:
+        return None
+    try:
+        return await follow_account(info)
+    except DashboardError:
+        return None
+
+
 # ====== 啟用入口 ======
 @to_router.get("/to/dashboard-twitch-enable")
 async def to_dashboard_twitch_enable(request: Request, channel: str | None = None, origin: str | None = None):
@@ -77,7 +93,7 @@ async def to_dashboard_twitch_enable(request: Request, channel: str | None = Non
         return RedirectResponse(url=f"{origin}/dashboard/channels")
     channel_id = int(channel)
 
-    info = await run_db(lambda: lookup_session(request.cookies.get(SESSION_COOKIE)))
+    info = await _channel_session(request)
     if info is None:
         return RedirectResponse(url=_login_url(origin, channel_id))
     # 不是自己的頻道：導回頻道頁，由 ChannelAccessGuard 顯示「沒有這個頻道的權限」
@@ -155,7 +171,7 @@ async def _handle_enable(request: Request, cookie: OAuthCookie) -> Response:
     if params.get("error") or not code:
         return RedirectResponse(url=channel_url)
 
-    info = await run_db(lambda: lookup_session(request.cookies.get(SESSION_COOKIE)))
+    info = await _channel_session(request)
     if info is None:
         return RedirectResponse(url=_login_url(origin, channel_id))
     if find_channel(info, int(channel_id)) is None:

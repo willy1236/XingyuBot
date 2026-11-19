@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import json
+from dataclasses import replace
 from datetime import UTC, datetime
 from types import SimpleNamespace
 from urllib.parse import parse_qs, urlparse
@@ -14,17 +15,28 @@ from fastapi.testclient import TestClient
 from sqlmodel import func, select
 
 from starlib.database import OAuthToken, TwitchBotJoinChannel, TwitchChatCommand
+from starlib.identity.client import LinkedPassport, ResolvedAccount
 from starlib.messaging.rpc import RpcHandlerError
 from starlib.oauth import TwitchOAuth
 from starlib.providers.social.models import TwitchUser
 from starServer.dashboard import channel_activation, twitch_control, twitch_login
-from tests.helpers.dashboard_auth import FRONTEND, STATE, make_session, make_twitch_session, set_cookies, site  # noqa: F401  (fixture)
+from tests.helpers.dashboard_auth import (
+    FRONTEND,
+    STATE,
+    make_domalyze_session,
+    make_session,
+    make_twitch_session,
+    set_cookies,
+    site,  # noqa: F401  (fixture)
+)
+from tests.helpers.identity import _account
 
 pytestmark = pytest.mark.usefixtures("dashboard_env")
 
 TWITCH_ID = 2000000001
 CHANNEL = str(TWITCH_ID)
 BOT_ID = "999"
+DISCORD_ID = "111111111111111111"
 COOKIE = "dashboard_twitch_oauth"
 CHANNEL_URL = f"{FRONTEND}/dashboard/channels/{CHANNEL}"
 LOGIN_URL = f"{FRONTEND}/dashboard-login?next=%2Fdashboard%2Fchannels%2F{CHANNEL}"
@@ -403,6 +415,57 @@ class TestEnable:
 
         assert response.headers["location"] == f"{FRONTEND}/dashboard/channels"
         assert spy.saved_tokens == []
+
+
+class TestDomalyzeSession:
+    """析域登入的 session：頻道來自帳號連結的 Twitch，要經過帳號跟隨才有（lookup_session 只讀 session 列，沒有）。"""
+
+    @pytest.fixture
+    def linked(self, repo, dashboard_env):
+        def make(passports=((CHANNEL, "Streamer"),), discord=True):
+            account = replace(
+                _account(twitch_passports=[LinkedPassport(subject, name) for subject, name in passports]),
+                discord_passports=(LinkedPassport(DISCORD_ID, "willy"),),
+            )
+            dashboard_env.directory.by_account_id[account.account_id] = ResolvedAccount(account)
+            return make_domalyze_session(repo, account.account_id, user_id=DISCORD_ID if discord else None)
+
+        return make
+
+    @pytest.mark.parametrize("discord", [True, False], ids=["with_discord", "without_discord"])
+    def test_entry_redirects_to_twitch(self, site, spy, linked, discord):
+        site.cookies.set("dashboard_session", linked(discord=discord))
+
+        response = site.get("/to/dashboard-twitch-enable", params={"channel": CHANNEL, "origin": FRONTEND})
+
+        assert response.headers["location"].startswith("https://id.twitch.tv/oauth2/authorize")
+        assert any(h.startswith(f"{COOKIE}=") for h in set_cookies(response))
+
+    def test_entry_for_unlinked_channel_goes_back_to_channel_page(self, site, spy, linked):
+        site.cookies.set("dashboard_session", linked(passports=(("777", "Other"),)))
+
+        response = site.get("/to/dashboard-twitch-enable", params={"channel": CHANNEL, "origin": FRONTEND})
+
+        assert response.headers["location"] == CHANNEL_URL
+
+    @pytest.mark.parametrize("discord", [True, False], ids=["with_discord", "without_discord"])
+    def test_callback_enables(self, site, spy, repo, linked, discord):
+        site.cookies.set("dashboard_session", linked(discord=discord))
+
+        response = _callback(site, code="c")
+
+        assert response.headers["location"] == CHANNEL_URL
+        assert spy.saved_tokens == [CHANNEL]
+        assert _channel(repo).state == "enabled"
+
+    def test_revoked_account_goes_to_login_page(self, site, spy, linked, dashboard_env):
+        # 帳號停權或查無：session 失效，導向登入頁而不是靜默回頻道頁
+        site.cookies.set("dashboard_session", linked())
+        dashboard_env.directory.by_account_id.clear()
+
+        response = site.get("/to/dashboard-twitch-enable", params={"channel": CHANNEL, "origin": FRONTEND})
+
+        assert response.headers["location"] == LOGIN_URL
 
 
 class TestDisable:
