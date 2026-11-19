@@ -7,8 +7,9 @@ import asyncio
 from dataclasses import dataclass
 from typing import Literal
 
-from starlib import twitch_tokens
+from starlib import twitch_speech_check, twitch_tokens
 from starlib.messaging import cache_invalidation, rpc
+from starlib.twitch_speech_check import TemplateCheck
 from starlib.twitch_tokens import TokenInvalid
 from starServer.dashboard.db import run_db
 
@@ -87,6 +88,22 @@ async def channel_status(twitch_id: int) -> ChannelStatus | BotOffline:
 async def broadcaster_token(twitch_id: int) -> str | TokenInvalid:
     """實況主的 Twitch token，快過期時先續期。DB 工作走後台專屬的 executor（`run_db`），不佔 asyncio 預設 executor。不 raise。"""
     return await run_db(lambda: twitch_tokens.broadcaster_token_blocking(twitch_id))
+
+
+async def _credentials(twitch_id: int) -> tuple[str, str] | TokenInvalid:
+    token = await broadcaster_token(twitch_id)
+    if isinstance(token, TokenInvalid):
+        return token
+    return token, await run_db(twitch_speech_check.broadcaster_client_id_blocking)
+
+
+async def check_template(twitch_id: int, template: str) -> TemplateCheck:
+    """檢查實況主寫的模板會不會被頻道 AutoMod 擋下（ok、blocked、unavailable），不 raise。
+
+    W-05～W-07 的儲存端點先呼叫它：blocked 回 422 automod_blocked，unavailable 回 503 automod_unavailable。
+    token 與 client id 的 DB 查詢走後台專屬的 executor。
+    """
+    return await twitch_speech_check.check_template(twitch_id, template, get_credentials=_credentials)
 
 
 def invalidate(cache: CacheName, twitch_id: int) -> None:
