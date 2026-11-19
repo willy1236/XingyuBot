@@ -290,9 +290,19 @@
 - client #3 在 DB 的 `callback_uri` 就是 `/oauth/twitch`。沿用同一個 callback、靠 cookie 分派，不必到 Twitch 後台新增 redirect URI。
 - 空 scope 的 user token 也能呼叫 Helix `/users` 取得自己的資料。
 
-**進度**：進行中
-- 已完成：`create_from_db` 的 scopes 判斷（空 list 不退回預設）；`auth.encode_cookie`／`decode_cookie` 改公開名稱；`TwitchBotJoinChannel` 新欄位；Twitch 登入入口與 `/oauth/twitch` 分派（`twitch_login.py`）；頻道端點（`channels.py`）與 `/dashboard/me` 的 `has_channels`。
-- 續做：前端（登入頁、頻道頁框與導覽、`/dashboard` 落地、header NAV）。
+**進度**：實作完成（2026-11-19），待審查；驗收條件未打勾，待人工驗證與審查後再勾
+- commit：後端 482e9e3、395ac7c、ced5464、4653ef7、759cf5a、fc441ea；前端（domalyze_frontend）ea18333、a262f40
+- 實作時的決定：
+  - 登入 handler 只做 `exchange_code` 與 `get_me`，**不存 token**：沒有 scope 的 token 會蓋掉同一筆 `OAuthToken` 裡已啟用頻道的完整 token，有測試鎖住。
+  - Twitch 登入的 session 用 W-00 的 `create_session(None, name, avatar, replace_session_id, twitch=TwitchIdentity(...))`，`login_method` 由它推導；`TwitchIdentity.id` 是 str，`require_channel` 以 `str(twitch_id)` 比對。
+  - `starServer/dashboard/config.py` 新增 `TWITCH_OAUTH_SEQ = 3`；`twitch_login.py` 自己懶載入 client #3，不能 import `bot_website`（循環）。
+  - `auth.encode_cookie`／`decode_cookie` 改公開名稱（純改名，`invite.py` 同步）。
+  - `/oauth/twitch` 開頭先 `handle_dashboard_twitch_oauth`，沒有 cookie 或 state 不符才走原流程（搬到 `_oauth_twitch_fallback`，內容不變）；有 cookie 但 state 不符時一併清掉。
+  - `/dashboard/me` 補 `has_channels`（`len(info.twitch_channels) > 0`），前端 `DashboardUser` 與 `dashboardNav` 同步。
+  - 頻道頁的名稱與頭像取自 session 的 Twitch 身分；DB 沒有頻道列時 `state` 視為 `inactive`，GET 不建列。頻道資料由 `ChannelAccessGuard` 載入並放進 context（`useChannel()`）。
+  - `lib/dashboard-api.ts` 不需改：`channel_forbidden` 本來就落在 `default` 分支，交給呼叫端處理。
+  - 側欄多一項「總覽」（頻道頁本身），卡上的 `CHANNEL_NAV` 沒列。
+  - 已登入的人從「還沒有頻道」頁按 Twitch 登入，session 會被取代（不疊加帳號），頁面文案有提醒。
 - ALTER（已套到本機 DB；正式機先手動執行，再部署 code）：
   ```sql
   ALTER TABLE stardb_basic.twitch_bot_join_channel
@@ -303,6 +313,10 @@
       ADD COLUMN first_seen_at timestamptz(0);
   ```
   既有列因 `DEFAULT` 成為 `inactive`；`first_seen_at` 可為 null，既有列不補值，只在新增頻道列時填入。
+- 未驗：
+  - 真實 Twitch 授權：空 scope 時授權網址不帶 `scope` 參數，Twitch 文件把 `scope` 列為必填，是否接受要用 client #3 真的授權一次。失敗時改用最小實際 scope 或明確帶空 `scope=`，由使用者決定。
+  - 360px 與桌面寬度的畫面操作、頻道清單頁多筆情形（W-10 之後才會出現）。
+  - 部署：W-01 與 W-02 同一次上線；W-02 之前 Twitch bot 啟動仍載入全部頻道列。
 
 ### W-02 [共用] Twitch bot 頻道控制：狀態、即時加入離開、模組拆分
 
