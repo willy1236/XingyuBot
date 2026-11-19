@@ -110,7 +110,7 @@ def _record_channel(user: TwitchUser) -> None:
     row = sqldb.get(TwitchBotJoinChannel, (twitch_id,))
     if row is None:
         sqldb.add(
-            TwitchBotJoinChannel(
+            TwitchBotJoinChannel(  # pyright: ignore[reportCallIssue] 自訂 __table_args__ 的 model，pyright 誤判為必填欄位
                 twitch_id=twitch_id,
                 login=user.login,
                 display_name=user.display_name,
