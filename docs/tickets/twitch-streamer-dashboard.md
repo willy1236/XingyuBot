@@ -751,7 +751,13 @@
 - `commands.py` 與 `events.py` 呼叫 `timers` 的那一行，由 W-02 先放好，W-06 不改這兩個檔案，避免和 W-05、W-07 衝突。
 - 開台狀態在 Twitch bot 重啟時會遺失，用 `get_streams` 補。
 
-**進度**：未完成
+**進度**：實作中
+- 使用者決定（2026-11-19）：
+  - P1：每個頻道計時訊息上限 20 則，第 21 則回 400 `invalid_field`（field 為 `limit`），前端提示已達上限並停用新增；檢查在 `starlib/twitch_timers.py` 的寫入交易內（同頻道並行新增也不超過）。
+  - P2：同一次檢查有多則到期時各自獨立照發，不做速率保護。
+- commit：
+  - 後端：`starlib/twitch_timers.py` 與測試（本 commit）
+- 續做：`starServer/dashboard/channel_timers.py` 與 `tests/dashboard/test_channel_timers.py`；再來 `starServer/twitch_bot/timers.py`；最後前端。
 
 ### W-07 實況主能設定事件回應
 
