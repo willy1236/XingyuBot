@@ -473,6 +473,7 @@
 **進度**：實作完成（2026-11-19），審查兩輪放行，待人工驗證；驗收條件只勾自動測試驗證過的 5 條，其餘 4 條需要真實 Twitch 或真 Redis 的 bot，待人工驗證
 - commit：後端 84eebc1a、e4ec1f61、cb3f9407、2aeabae1；前端（domalyze_frontend）8dddb47、629a39f；審查後修正見下
 - 審查第 1 輪修正：後端 276d9f2e（S2：Add Moderator 回 400 時改 GET moderators 確認 bot 是否在名單，不比對訊息字串）；前端 649349d（S1：停用成功且 `bot_offline` 時顯示 `disable_bot_offline` 提示）；真實 Twitch 的 400 行為仍待人工驗證
+- 上線後修正（析域登入按「啟用 bot」閃一下回原頁、沒有授權畫面）：啟用入口與 callback 用 `lookup_session` 取 session，它是只讀的，不做帳號跟隨，析域登入的 `twitch_channels` 是空的，`find_channel` 判成不是自己的頻道而靜默導回。改為 `channel_activation._channel_session`：`lookup_session` 後接 `follow_account`，帳號停權或查無時導向登入頁。
 - 實作時的決定：
   - 啟用入口是整頁導覽：session 無效導向 `{origin}/dashboard-login?next=/dashboard/channels/<id>`；不是自己的頻道導向頻道頁，由 `ChannelAccessGuard` 顯示「沒有這個頻道的權限」；`channel` 不是數字導向 `/dashboard/channels`。所以前端 notice 不含 `session_expired`、`channel_forbidden`。
   - 授權網址帶 `force_verify=true`，瀏覽器已登入另一個 Twitch 帳號時才能換帳號。
