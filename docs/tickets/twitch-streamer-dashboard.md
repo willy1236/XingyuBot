@@ -96,8 +96,8 @@
 | 6 | W-05 | 實作完成 | 實況主能在後台管理自訂指令 | W-04 | A | |
 | 7 | W-06 | 實作完成 | 實況主能設定計時訊息 | W-04 | A | |
 | 8 | W-07 | 實作完成 | 實況主能設定事件回應 | W-04 | A | |
-| 9 | W-08 | 未完成 | 實況主能看到權限問題並一鍵修復 | W-03 | B | |
-| 10 | W-09 | 未完成 | 實況主能刪除頻道的所有資料 | W-04 | B | 要保留修改紀錄；表由 W-04 建好 |
+| 9 | W-08 | 實作完成 | 實況主能看到權限問題並一鍵修復 | W-03 | B | |
+| 10 | W-09 | 實作完成 | 實況主能刪除頻道的所有資料 | W-04 | B | 要保留修改紀錄；表由 W-04 建好 |
 | 11 | W-10 | 實作完成 | 用析域登入能同時管理伺服器與頻道 | W-01 | B | |
 | 12 | W-13 | 未完成 | 官網有 Twitch bot 介紹與接入入口 | W-05、W-06、W-07、W-11 | — | 純前端；只介紹已上線的功能 |
 | 13 | W-11 | 未完成 | 實況主能把事件轉發到 Discord | W-10、W-07 | — | 與 W-07 都改事件模組 |
@@ -893,7 +893,7 @@
 **風險 / 實作注意**
 - token 失效時，W-04 的 AutoMod 檢查必然失敗，bot 實際上會完全不發言。所以 `token_invalid` 的 paused_features 要列出所有發言功能。這是規格「需要該授權的功能暫停」的實際範圍，實作時照此顯示。
 
-**進度**：實作完成（2026-11-19），待審查與人工驗證；驗收條件只勾自動測試驗證過的項目（1、2、3、5），全部以 mock 的 Twitch Helix、validate、bot RPC 與 token 驗證；第 4 條需要真實 Twitch 授權往返，待人工驗證
+**進度**：實作完成（2026-11-19），審查兩輪放行，待人工驗證；驗收條件只勾自動測試驗證過的項目（1、2、3、5），全部以 mock 的 Twitch Helix、validate、bot RPC 與 token 驗證；第 4 條需要真實 Twitch 授權往返，待人工驗證
 - 使用者決定（2026-11-19）：
   - 1：token 暫時取不到（`TokenInvalid("unavailable")`，Twitch 暫時無法回應）時略過 token 與 scope 判定，不顯示 `token_invalid`，也不打其他 Helix（沒有 token 可用）；只有 `missing`、`revoked`、validate 回 401 或缺 scope 才是 `token_invalid`。
   - 2：bot 被 ban 或封鎖時（`bot_banned`），文案請實況主先在 Twitch 解除，同時保留「修復」按鈕（解除後補設 mod、補訂事件）；paused 列全部功能（所有發言與 mod 事件）。
@@ -917,11 +917,14 @@
   - 新增卡上沒列的檔案：`tests/twitch/test_channel_health.py`、`lib/dashboard-channel-health.test.ts`；改寫 `tests/dashboard/test_channels.py` 的詳情測試（加驗 `health`，並以 autouse fixture 隔離 Twitch 與 bot 呼叫）、`channel-status.test.tsx`（新增權限問題案例）。
   - 前端路徑是 `app/dashboard/twitch/[id]/`，不是卡上的 `channels/[id]`。
 - 未驗：真實 Twitch 的撤銷授權、拿掉 mod、封鎖或 ban bot 後的頁首顯示；按「修復」完成授權後問題消失與補訂事件；Helix 的 Get Banned Users、Get User Block List 實際回應形狀；Twitch bot 離線時的頁面載入時間；瀏覽器裡的頁首畫面。
-- 審查後修正（第 1 輪，審查報告 tsd-b-review-r1）：
+- 審查後修正（第 1 輪，審查報告 tsd-b-review-r1）：後端 fb9aadd5（卡片回寫）
   - 判定總時限：整個 Twitch 判定（token 續期、validate、三項查詢）加 `ACCESS_TIMEOUT = 8.0` 秒的總時限，逾時視同查不到、略過；8 秒比單次請求的 5 秒長，容得下一次續期加後續查詢，bot 離線的 RPC 與它並行，頁面載入最慢約 8 秒。後端：2face261。
   - 回應格式不符：validate 與三個 Helix 查詢各自把非 JSON、非物件、缺 `data` 清單、scopes 不是清單當成查不到，只略過那一項；封鎖名單的項目與 `pagination` 格式不符也容忍。後端：2face261。
   - bot user id 兩份實作：收成 `starlib/twitch_tokens.py` 的 `BOT_CLIENT_SEQ`、`MODERATORS_URL`、`bot_user_id_blocking()`，`channel_activation.py` 與 `channel_health.py` 共用；`user_id` 為 None 時 raise、不快取。後端：a2982a37（共用函式與 `channel_activation`）、2face261（`channel_health`）。
   - 不修：換頁重跑完整判定（卡上已定不加快取）。
+- 審查：兩輪放行，blocking 0 條（審查報告 tsd-b-review-r1、tsd-b-review-r2，與 W-09 一起審）。第 1 輪的判定總時限、回應格式容錯、bot user id 兩份實作已修，第 2 輪確認修正沒有帶出新問題；總覽表那條已改。未修：
+  - note：頻道內每換一頁都重跑完整判定（卡上已定不加快取，詳情端點在 bot 離線時最慢約 5 秒）；之後 W-12 要批次呼叫 `channel_health` 時，要一併考慮 Twitch 的速率限制。
+  - note：`ACCESS_TIMEOUT` 是 8 秒，但 token 續期與 validate 各自最多 5 秒；需要續期、Twitch 又偏慢時，整項判定可能逾時而略過 mod、ban 的判定，頁首就不會顯示權限問題。符合「查不到就略過」，人工驗證時若看到偶發漏報，可能是這個原因。
 - 完整 CI：待合併回 main 前跑。
 - 型別檢查：專案沒有 pyright 設定；本機 `npx pyright` 無法解析 venv 套件，只剩 `httpx`、`sqldb` 解析不到的環境雜訊，已修掉可處理的標註錯誤。ruff check 與 format 通過。
 
@@ -958,7 +961,10 @@
 
 **依賴**：W-04（`twitch_automod_block` 表）
 
-**進度**：實作完成（2026-11-19），待審查與人工驗證；驗收條件只勾自動測試驗證過的 2 條（刪除後的資料與狀態、修改紀錄保留），其餘 1 條（名稱不符時按鈕不能按）的按鈕 disabled 是畫面行為，後端 400 與比對函式有測試，畫面待人工驗證
+**進度**：實作完成（2026-11-19），審查兩輪放行，待人工驗證；驗收條件只勾自動測試驗證過的 2 條（刪除後的資料與狀態、修改紀錄保留），其餘 1 條（名稱不符時按鈕不能按）的按鈕 disabled 是畫面行為，後端 400 與比對函式有測試，畫面待人工驗證
+- commit：
+  - 後端：89830fee（`channel_settings.py` 與 `tests/dashboard/test_channel_settings.py`）、de0dfdaa（卡片回寫）；審查後修正 269ac979（聊天室管理指令檢查 state）、ebd3fc83（卡片回寫）；使用者決定的刪除紀錄 7dc160a9、a02f364c（卡片回寫）
+  - 前端（domalyze_frontend）：e97944c（設定頁與 `delete-data.tsx`）；審查後修正 97ff9d1（提示文案）
 - ALTER：無，沒有新增欄位。
 - 實作時的決定：
   - 端點：`starServer/dashboard/channel_settings.py` 的 `POST /dashboard/channels/{id}/delete-data`，用 `require_channel`，不要求頻道已啟用，inactive、disabled 的頻道也能刪。
@@ -982,7 +988,10 @@
   - 紀錄：`target_kind=channel`、`target_key=all_data`、`action=delete`、`source=dashboard`，操作者用 `session.audit_actor`；`before` 是刪除前的 `action_channel_id`、`action_guild_id`、`point_name`（沒有頻道列時為空），`after` 為空。與刪除在同一個交易內，commit 失敗時一併 rollback，有測試。
   - 前端沒有顯示修改紀錄 target 類別的頁面或文案對照，所以沒有前端改動；之後做修改紀錄頁（W-12 之類）時要認得 `channel`。
   - 順手修掉 `commands.py` 新增處的 `room` Optional 型別錯誤，`commands.py` 的 pyright 回到修改前的 12 個。
-
+- 審查：兩輪放行，blocking 0 條、non-blocking 0 條（審查報告 tsd-b-review-r1、tsd-b-review-r2，與 W-08 一起審）。第 1 輪的刪除未寫修改紀錄（依使用者決定補上）、提交後到 bot 離開前管理指令仍可寫回、提示文案不準都已修，總覽表那條已改，第 2 輪確認修正沒有帶出新問題。未修：
+  - nitpick：刪除說明的「授權給星羽的 Twitch 授權」用字重複。
+  - nitpick：刪除範圍列表沒提到點數（第一階段沒有資料）。
+  - 已知窗口：管理指令的 state 檢查與寫入不在同一個交易，檢查通過後、寫入前剛好被刪除時仍會寫回，毫秒級，見上方「審查後修正」。
 
 ### W-10 用析域登入能同時管理伺服器與頻道
 
