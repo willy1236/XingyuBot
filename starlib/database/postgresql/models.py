@@ -20,7 +20,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
 )
-from sqlalchemy.dialects.postgresql import ARRAY, CIDR, MACADDR, TIMESTAMP
+from sqlalchemy.dialects.postgresql import ARRAY, CIDR, JSONB, MACADDR, TIMESTAMP
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import mapped_column, relationship
 from sqlmodel import Field, Relationship, text
@@ -495,6 +495,8 @@ class TwitchBotJoinChannel(BasicSchema, table=True):
     display_name: str | None = Field(default=None, sa_column=Column(String))
     avatar_url: str | None = Field(default=None, sa_column=Column(String))
     first_seen_at: datetime | None = Field(default=None, sa_column=Column(TIMESTAMP(True, 0)))
+    #: 事件轉發的 Discord 伺服器，供顯示與權限檢查（W-11）
+    action_guild_id: int | None = Field(default=None, sa_column=Column(BigInteger))
 
 
 class TwitchChatCommand(BasicSchema, table=True):
@@ -503,6 +505,99 @@ class TwitchChatCommand(BasicSchema, table=True):
     twitch_id: int = Field(primary_key=True)
     name: str = Field(primary_key=True)
     response: str = Field(nullable=False)
+    aliases: list[str] = Field(
+        default_factory=list, sa_column=Column(ARRAY(String), nullable=False, server_default=text("'{}'"))
+    )
+    enabled: bool = Field(default=True, sa_column=Column(Boolean, nullable=False, server_default=text("true")))
+    #: 全體冷卻秒數；既有指令的預設 30 等同舊行為
+    global_cooldown: int = Field(default=30, sa_column=Column(Integer, nullable=False, server_default=text("30")))
+    user_cooldown: int = Field(default=0, sa_column=Column(Integer, nullable=False, server_default=text("0")))
+    #: everyone < subscriber < vip < mod < broadcaster
+    permission: str = Field(
+        default="everyone", sa_column=Column(String, nullable=False, server_default=text("'everyone'"))
+    )
+    use_count: int = Field(default=0, sa_column=Column(Integer, nullable=False, server_default=text("0")))
+    updated_at: datetime = Field(
+        default_factory=nowtz, sa_column=Column(TIMESTAMP(True, 0), nullable=False, server_default=text("now()"))
+    )
+
+
+class TwitchTimer(BasicSchema, table=True):
+    """計時訊息（W-06）"""
+
+    __tablename__ = "twitch_timer"
+
+    id: int | None = Field(default=None, sa_column=Column(Integer, Identity(), primary_key=True))
+    twitch_id: int = Field(sa_column=Column(Integer, index=True, nullable=False))
+    message: str = Field(nullable=False)
+    interval_minutes: int = Field(sa_column=Column(Integer, nullable=False))
+    min_chat_lines: int = Field(default=0, sa_column=Column(Integer, nullable=False, server_default=text("0")))
+    enabled: bool = Field(default=True, sa_column=Column(Boolean, nullable=False, server_default=text("true")))
+    updated_at: datetime = Field(
+        default_factory=nowtz, sa_column=Column(TIMESTAMP(True, 0), nullable=False, server_default=text("now()"))
+    )
+
+
+class TwitchEventResponse(BasicSchema, table=True):
+    """事件回應（W-07）；沒有資料列時視為開啟並使用程式碼裡的預設文字"""
+
+    __tablename__ = "twitch_event_response"
+
+    twitch_id: int = Field(primary_key=True)
+    #: stream_online、follow、subscribe、resubscribe、gift、raid
+    event_kind: str = Field(primary_key=True)
+    enabled: bool = Field(default=True, sa_column=Column(Boolean, nullable=False, server_default=text("true")))
+    template: str = Field(nullable=False)
+    updated_at: datetime = Field(
+        default_factory=nowtz, sa_column=Column(TIMESTAMP(True, 0), nullable=False, server_default=text("now()"))
+    )
+
+
+class TwitchChannelAudit(BasicSchema, table=True):
+    """頻道設定的修改紀錄；刪除頻道資料時保留"""
+
+    __tablename__ = "twitch_channel_audit"
+    __table_args__ = (
+        Index("ix_twitch_channel_audit_twitch_id_at", "twitch_id", "at"),
+        {**BasicSchema.__table_args__},
+    )
+
+    id: int | None = Field(default=None, sa_column=Column(Integer, Identity(), primary_key=True))
+    twitch_id: int = Field(sa_column=Column(Integer, nullable=False))
+    at: datetime = Field(default_factory=nowtz, sa_column=Column(TIMESTAMP(True, 0), nullable=False))
+    #: twitch、discord
+    actor_platform: str = Field(nullable=False)
+    actor_id: str = Field(nullable=False)
+    actor_name: str = Field(nullable=False)
+    #: dashboard、chat
+    source: str = Field(nullable=False)
+    #: command、timer、event_response、forward
+    target_kind: str = Field(nullable=False)
+    target_key: str = Field(nullable=False)
+    #: create、update、delete
+    action: str = Field(nullable=False)
+    before: dict[str, Any] | None = Field(default=None, sa_column=Column(JSONB))
+    after: dict[str, Any] | None = Field(default=None, sa_column=Column(JSONB))
+
+
+class TwitchAutomodBlock(BasicSchema, table=True):
+    """bot 發言前被 AutoMod 擋下（或檢查失敗）的訊息；每個頻道只留最新 100 筆"""
+
+    __tablename__ = "twitch_automod_block"
+    __table_args__ = (
+        Index("ix_twitch_automod_block_twitch_id_at", "twitch_id", "at"),
+        {**BasicSchema.__table_args__},
+    )
+
+    id: int | None = Field(default=None, sa_column=Column(Integer, Identity(), primary_key=True))
+    twitch_id: int = Field(sa_column=Column(Integer, nullable=False))
+    at: datetime = Field(default_factory=nowtz, sa_column=Column(TIMESTAMP(True, 0), nullable=False))
+    #: command、timer、event_response
+    source_kind: str = Field(nullable=False)
+    source_key: str = Field(nullable=False)
+    text: str = Field(nullable=False)
+    #: automod、check_failed
+    reason: str = Field(nullable=False)
 
 
 class InviteRecord(AlchemyBasicSchema):

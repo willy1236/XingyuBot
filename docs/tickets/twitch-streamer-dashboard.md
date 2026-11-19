@@ -540,7 +540,23 @@
 - `Check AutoMod Status` 的速率限制以頻道計：一般帳號每分鐘 5 次、每小時 50 次；Affiliate 10 次與 100 次；Partner 30 次與 300 次（Twitch API Reference〈Moderation〉）。所以主要在儲存模板時檢查，發言時只檢查帶觀眾輸入的訊息。
 - `{count}` 是指令的使用次數，由 W-05 存在指令列上。render 只負責代入，不負責遞增。
 
-**進度**：未完成
+**進度**：實作中（2026-11-19）
+- commit：
+  - 後端：（待填）
+- 介面變更（使用者決定，2026-11-19）：`speech.say` 改收模板與 ctx，簽名是 `say(channel, twitch_id, template, ctx, *, source_kind, source_key, reply_to=None) -> bool`；內部 `render`，並依模板是否含 `{touser}`、`{args}` 決定發言前要不要檢查 AutoMod。`render` 維持回 `str`。
+- ALTER（部署前先手動執行；已套到本機 DB）。新表由啟動時的 `create_all` 建立：
+  ```sql
+  ALTER TABLE stardb_basic.twitch_chat_command
+      ADD COLUMN aliases text[] NOT NULL DEFAULT '{}',
+      ADD COLUMN enabled boolean NOT NULL DEFAULT true,
+      ADD COLUMN global_cooldown integer NOT NULL DEFAULT 30,
+      ADD COLUMN user_cooldown integer NOT NULL DEFAULT 0,
+      ADD COLUMN permission varchar NOT NULL DEFAULT 'everyone',
+      ADD COLUMN use_count integer NOT NULL DEFAULT 0,
+      ADD COLUMN updated_at timestamptz(0) NOT NULL DEFAULT now();
+  ALTER TABLE stardb_basic.twitch_bot_join_channel ADD COLUMN action_guild_id bigint;
+  ```
+- 續做：`client.py` 的存取函式與指令快取修復（`get_raw_chat_command_channel` 回整列），之後依序是 `twitch_audit`、`twitch_speech_check`、`speech.py`、端點、前端。
 
 ### W-05 實況主能在後台管理自訂指令
 
