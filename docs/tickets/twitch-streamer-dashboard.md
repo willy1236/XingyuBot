@@ -929,6 +929,9 @@
   - 修改紀錄的操作者（使用者決定，2026-11-19，D-1 選 b）：`AuditActor.platform` 加 `domalyze`（id 是 account_id、name 是域民代號）；`session.audit_actor(info)` 同步、不查 DB：Twitch 登入記 twitch，有 Discord 身分記 discord，沒有 Discord 的析域登入記 domalyze。W-05～W-07 的端點直接用；`actor_platform` 是字串欄位，不需 ALTER。
   - 前端：`DashboardUser.avatar_url` 可為 null，新增共用的 `UserAvatar`（後台與官網頁首）；「我的頻道」是 `components/dashboard/personal/channels.tsx`；頻道清單頁讀 `?notice=channel_unlinked`、帶提示時只有一個頻道也列出，沒有頻道時析域登入顯示連結析域帳號的說明；`ChannelAccessGuard` 對析域登入收到 `channel_forbidden` 時導到 `/dashboard/channels?notice=channel_unlinked`（Twitch 登入維持顯示「沒有這個頻道的權限」），並在頻道內換頁（pathname 變動）時重新載入頻道資料。
 - 已知限制：頻道頁內的操作（POST、PUT）若在解除連結後收到 `channel_forbidden`，由各頁自己的錯誤處理顯示，沒有全域導回（`dashboard-api.ts` 不加全域 handler，W-05～W-07 的頁面各自處理）；解除連結後只有換頁或重新整理才會被導走。
+- 已知限制：沒有 Discord 的析域 session 之後帳號連上 Discord，session 不會自動升級，維持沒有 Discord 身分，要重新登入才看得到伺服器（轉發頁已提示重新登入）。
+- 審查第 1 輪修正：`_channels_of` 先 SELECT 已有的頻道列，缺列才 INSERT，列都在時不寫入。
+- 審查第 1 輪修正：個人區 overview 的「Discord 或沒有 Discord 的析域 session」判斷收成 `personal.require_personal_any`，overview 改用它。
 - 沒有 ALTER。
 - 未驗：真實 auth server 的連結增減（60 秒）、析域登入後個人區與頻道清單的畫面（桌面與 360px）、頻道被解除連結時的導回與提示、沒有 Discord 的析域帳號登入後各頁。
 - 完整 CI：待合併回 main 前跑。
