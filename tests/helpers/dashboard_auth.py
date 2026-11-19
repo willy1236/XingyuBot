@@ -180,6 +180,22 @@ def make_session(repo, user_id=USER_ID, last_used_ago=timedelta(0), session_id="
     return session_id
 
 
+def make_domalyze_session(repo, account_id, user_id: str | None = USER_ID, session_id="dsid") -> str:
+    """析域登入的 session；user_id 為 None 時是沒有 Discord 身分的析域 session。"""
+    repo.add(
+        DashboardSession(
+            session_id=session_id,
+            discord_user_id=user_id,
+            name="willy",
+            avatar=None,
+            account_id=account_id,
+            via_domalyze=True,
+            login_method="domalyze",
+        )
+    )
+    return session_id
+
+
 def make_twitch_session(repo, twitch_id="777", session_id="tsid", login="streamer", name="Streamer") -> str:
     repo.add(
         DashboardSession(

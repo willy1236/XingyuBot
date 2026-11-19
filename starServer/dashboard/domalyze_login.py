@@ -205,7 +205,7 @@ async def _start_session(account: Account, candidate: Candidate, old_session_id:
             via_domalyze=True,
         )
     )
-    remember_account(session_id, account)
+    await remember_account(session_id, account)
     log.info("Dashboard domalyze login: account %s discord %s", account.account_id, candidate.discord_id)
     return session_id
 

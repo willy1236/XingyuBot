@@ -98,7 +98,7 @@
 | 8 | W-07 | 未完成 | 實況主能設定事件回應 | W-04 | A | |
 | 9 | W-08 | 未完成 | 實況主能看到權限問題並一鍵修復 | W-03 | B | |
 | 10 | W-09 | 未完成 | 實況主能刪除頻道的所有資料 | W-04 | B | 要保留修改紀錄；表由 W-04 建好 |
-| 11 | W-10 | 未完成 | 用析域登入能同時管理伺服器與頻道 | W-01 | B | |
+| 11 | W-10 | 進行中 | 用析域登入能同時管理伺服器與頻道 | W-01 | B | |
 | 12 | W-13 | 未完成 | 官網有 Twitch bot 介紹與接入入口 | W-05、W-06、W-07、W-11 | — | 純前端；只介紹已上線的功能 |
 | 13 | W-11 | 未完成 | 實況主能把事件轉發到 Discord | W-10、W-07 | — | 與 W-07 都改事件模組 |
 | 14 | W-12 | 未完成 | bot owner 能在營運入口管理頻道 | W-04、W-08 | — | 用 W-08 的狀態判定 |
@@ -890,7 +890,10 @@
 **風險 / 實作注意**
 - 個人區既有區塊大多以 Discord ID 查資料。沒有 Discord 的析域 session 進個人區時，逐一確認每個區塊在 discord 為 null 時不會出錯。
 
-**進度**：未完成
+**進度**：進行中（2026-11-19）
+- 已完成：後端 session 帶入析域帳號的 Twitch 頻道（`session.py` 的 `_channels_of`、`_Followed.twitch_channels`、`remember_account` 改 async）與測試 `tests/accounts/test_domalyze_channels.py`。
+- 續做：`domalyze_login.py` 無 Discord 的 session 與 `delete_account_sessions`、`auth.py` logout；`personal.py` overview 加 `channels`；前端。
+- 沒有 ALTER。
 
 ### W-11 實況主能把事件轉發到 Discord
 

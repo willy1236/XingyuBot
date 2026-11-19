@@ -2,8 +2,9 @@
 
 session 的身分是一個 Discord 帳號或一個 Twitch 帳號（login_method 區分），析域帳號是附帶欄位。帳號跟隨的確認結果存在記憶體（以 session ID 為 key），
 auth server 暫時不可用時沿用上次結果，重啟後則以資料庫的 account_id 為準。
-Discord 登入的 session 只跟著帳號升級或降級；析域登入的 session 在域民停權、查無或不再連結這個 Discord 時失效；
-Twitch 登入的 session 不附帶析域帳號，不做帳號跟隨。
+Discord 登入的 session 只跟著帳號升級或降級；析域登入的 session 在域民停權、查無或不再連結這個 Discord 時失效
+（沒有 Discord 身分的析域 session 只在域民停權或查無時失效），並帶入域民連結的所有 Twitch 頻道（twitch_channels），
+連結增減最慢 60 秒生效；Twitch 登入的 session 不附帶析域帳號，不做帳號跟隨。
 
 require_session 只放行有 Discord 身分的 session（伺服器與個人區端點），require_any_session 只要求已登入。
 """
@@ -18,10 +19,11 @@ from datetime import datetime, timedelta
 from uuid import UUID
 
 from fastapi.requests import Request
-from sqlalchemy import delete, update
+from sqlalchemy import delete, select, update
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from starlib import sqldb, website_stats
-from starlib.database import DashboardSession
+from starlib.database import DashboardSession, TwitchBotJoinChannel
 from starlib.identity import Account, DirectoryUnavailable
 from starlib.identity.resolver import get_directory
 from starlib.utils import nowtz
@@ -218,6 +220,8 @@ class _Followed:
     account_username: str | None
     discord_ids: tuple[int, ...]
     stale: bool
+    #: 析域登入的 session 可以管理的 Twitch 頻道；其他登入方式為空
+    twitch_channels: tuple[TwitchIdentity, ...] = ()
     #: 析域登入的 session 已失效（只在確認當下使用，不存進 _followed）
     revoked: bool = False
 
@@ -237,11 +241,53 @@ def _prune_followed() -> None:
         del _followed[session_id]
 
 
-def remember_account(session_id: str, account: Account) -> None:
-    """記下剛登入時已查到的析域帳號，登入後的第一個請求不必再向 auth server 確認。"""
-    _followed[session_id] = _Followed(
-        time.monotonic(), account.account_id, account.username, account.discord_ids, False
+def _channels_of(account: Account) -> tuple[TwitchIdentity, ...]:
+    """析域帳號連結的 Twitch 頻道：名稱與頭像取自 TwitchBotJoinChannel，沒有列的用 passport 的顯示名稱。
+
+    TwitchBotJoinChannel 沒有的頻道順手新增一列 inactive（與 Twitch 登入相同）；已有的列不動。
+    """
+    names: dict[int, str | None] = {}
+    for passport in account.twitch_passports:
+        if passport.subject.isdecimal():
+            names.setdefault(int(passport.subject), passport.username)
+    if not names:
+        return ()
+    s = sqldb.session
+    s.execute(
+        pg_insert(TwitchBotJoinChannel)
+        .values([{"twitch_id": i, "display_name": name, "first_seen_at": _now()} for i, name in names.items()])
+        .on_conflict_do_nothing(index_elements=["twitch_id"])
     )
+    rows = {
+        row.twitch_id: row
+        for row in s.execute(select(TwitchBotJoinChannel).where(TwitchBotJoinChannel.twitch_id.in_(names)))  # pyright: ignore[reportAttributeAccessIssue]
+        .scalars()
+        .all()
+    }
+    s.commit()
+    channels = []
+    for twitch_id, passport_name in names.items():
+        row = rows.get(twitch_id)
+        name = (None if row is None else row.display_name) or passport_name or str(twitch_id)
+        channels.append(
+            TwitchIdentity(
+                str(twitch_id),
+                (row.login if row is not None else None) or "",
+                name,
+                None if row is None else row.avatar_url,
+            )
+        )
+    return tuple(sorted(channels, key=lambda c: (c.name.casefold(), c.id)))
+
+
+async def _followed_from_account(account: Account, now: float) -> _Followed:
+    channels = await run_db(lambda: _channels_of(account))
+    return _Followed(now, account.account_id, account.username, account.discord_ids, False, channels)
+
+
+async def remember_account(session_id: str, account: Account) -> None:
+    """記下剛登入時已查到的析域帳號，登入後的第一個請求不必再向 auth server 確認。"""
+    _followed[session_id] = await _followed_from_account(account, time.monotonic())
 
 
 def _delete_session(session_id: str) -> None:
@@ -281,7 +327,7 @@ async def _check(info: SessionInfo, now: float) -> _Followed:
         account = None if resolved is None else resolved.account
         if account is None or account.suspended or (discord_id is not None and discord_id not in account.discord_ids):
             return _Followed(now, None, None, (), False, revoked=True)
-        return _Followed(now, account.account_id, account.username, account.discord_ids, False)
+        return await _followed_from_account(account, now)
 
     if discord_id is None:
         return _Followed(now, None, None, (), False)
@@ -346,6 +392,7 @@ async def follow_account[S: SessionInfo](info: S, *, force: bool = False) -> S:
         account_username=result.account_username,
         discord_ids=result.discord_ids,
         stale=result.stale,
+        twitch_channels=result.twitch_channels,
     )
 
 
