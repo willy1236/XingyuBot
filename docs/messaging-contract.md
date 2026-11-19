@@ -296,3 +296,30 @@ sequenceDiagram
 - 接收端對沒註冊的快取名稱略過。
 - 斷線期間可能漏收，所以接收端每次斷線重連（重新訂閱）後，對自己註冊的所有快取做一次「整個快取失效」；第一次連上不做。
 - Redis 連不上時發送端不拋例外，記 warning 後丟棄。
+
+## twitch 服務的請求與快取
+
+Twitch bot 以服務名稱 `twitch` 處理請求。後台（web）經它即時控制頻道，不必重啟 Twitch bot。web 端的呼叫入口是 `starServer/dashboard/twitch_control.py`。
+
+### 請求
+
+| method | payload | 成功的 result | 說明 |
+|---|---|---|---|
+| `channel.sync` | `{"twitch_id": int}` | `{"accepted": true, "joined": bool}` | 依資料庫的 `state` 讓 bot 加入（`enabled`）或離開（其他）頻道的聊天室，並在背景訂閱或取消該頻道的 EventSub。`joined` 是聊天室處理完成後 bot 是否在該頻道。 |
+| `channel.status` | `{"twitch_id": int}` | `{"joined": bool, "subscriptions": {"ok": [string], "failed": [string], "pending": bool}}` | 回報已加入的房間與背景訂閱的結果，不打 Twitch API。`ok`、`failed` 是 EventSub 事件名稱，`pending` 為 true 表示背景還有訂閱或取消在進行。 |
+
+- `channel.sync` 在 5 秒內回應：聊天室的加入或離開有自己的逾時，逾時或被 Twitch 拒絕時 `joined` 為 false；EventSub 的訂閱與取消排進背景，不計入這 5 秒。
+- `channel.sync` 可重複呼叫：對已加入的頻道再呼叫一次，會依實況主 token 查到的 bot 當下的 mod 狀態補訂或退訂需要 mod 的事件；拿不到實況主 token 時視為非 mod。
+- 同一頻道的 `channel.sync` 依序執行，不並行。
+- bot 沒在跑時，發送端得到 `RpcUnavailable`；`twitch_control` 把它轉成 `BotOffline`，bot 下次啟動時照資料庫的 `state` 加入頻道。
+
+### 快取失效
+
+快取名稱與 key：key 一律是 twitch_id 的十進位字串；Twitch bot 收到後重讀該頻道的資料。
+
+| 快取名稱 | 內容 |
+|---|---|
+| `twitch_channel` | 頻道設定（`TwitchBotJoinChannel`） |
+| `twitch_cmd` | 自訂指令 |
+| `twitch_timer` | 計時訊息 |
+| `twitch_event_response` | 事件回應 |
