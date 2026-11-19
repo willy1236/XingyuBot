@@ -100,7 +100,7 @@ XingyuBot/
 │   └── tunnel_threads.py        # Ngrok 隧道管理
 ├── database/                    # 設定檔與靜態資料
 ├── scripts/                     # 啟動與更新腳本
-└── test/                        # 測試
+└── tests/                       # 測試（依功能分子目錄，見 docs/testing-strategy.md）
 ```
 
 ## 技術堆疊
