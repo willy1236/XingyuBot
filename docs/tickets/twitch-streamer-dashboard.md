@@ -677,7 +677,7 @@
   - D3：名稱或別名重複回 400 `invalid_field`，標在欄位旁。
 - commit：
   - 後端：75db49aa（`starlib/twitch_commands.py`、快取別名索引）、39b0b13c（觸發、權限、冷卻與聊天室指令）、88a3b154（後台端點與 `require_enabled_channel`）
-  - 前端：2d981d8（`lib/dashboard-channel-commands.ts`）、4ce0ef3（清單、表單、頁面、`conflict-notice.tsx` 欄位標籤）
+  - 前端：2d981d8（`lib/dashboard-channel-commands.ts`）、4ce0ef3（清單、表單、頁面、`conflict-notice.tsx` 欄位標籤）、b5913a4（審查修正：解除連結後導回頻道清單）
 - ALTER：無。欄位與預設值在 W-04 已建立。
 - 實作時的決定：
   - 共用模組 `starlib/twitch_commands.py` 負責驗證與寫入（名稱規則、重複、內建同名、修改紀錄、commit、通知 bot 重讀）；後台端點與聊天室指令都經它，通知 bot 重讀由它直接呼叫 `cache_invalidation.invalidate`，端點不另外呼叫 `twitch_control.invalidate`。寫入前取 `pg_advisory_xact_lock(twitch_id)` 並鎖住頻道的指令列（`client.py` 新增 `lock_twitch_commands`）。別名上限 10 個，名稱不得含空白，後台別名輸入框以空白或逗號分隔。
@@ -692,6 +692,13 @@
 - 未驗：真實 Twitch 聊天室的觸發與 `!add_cmd`、`!edit_cmd`、`!remove_cmd`、`!list_cmd`、Check AutoMod Status 實際回應；瀏覽器裡的指令頁畫面。
 - 完整 CI：待合併回 main 前跑。`tests/twitch/test_notify.py::test_follow_event_travels_between_two_buses` 需要本機 Redis，這台沒有而失敗，與 W-05 無關。
 - pyright：`commands.py` 的 `msg.room` 為 Optional（twitchAPI 型別，既有寫法同源）與 `twitch_commands.py` 兩處 `TwitchChatCommand(...)` 的 `__table_args__`（同 W-04 所述 `models.py` 寫法同源）。
+- 審查後修正（第 1 輪，審查報告 review-b3-r1）：
+  - blocking：指令頁在析域頻道被解除連結（`channel_forbidden`）後，存檔、開關、刪除只顯示「儲存失敗」。前端 `channel-access-guard.tsx`（W-10 的檔案，使用者授權改）新增共用 hook `useChannelError()`，回傳 `(error: unknown) => boolean`：析域登入收到 `channel_forbidden` 時 `router.replace(CHANNEL_UNLINKED_URL)` 並回 true，呼叫端的 catch 先呼叫它，回 true 就直接結束（W-06、W-07 的寫入操作沿用）；判斷邏輯在 `lib/dashboard-channel.ts` 的 `leaveIfUnlinked(error, loginMethod, replace)`，有單元測試。`command-form.tsx`、`command-list.tsx` 已接上。
+  - 聊天室 `!add_cmd`、`!edit_cmd`、`!remove_cmd` 寫入後，bot 本機先重讀該頻道的指令快取，再由 `twitch_commands` 照常發 invalidate，Redis 連不上時剛改的指令也立刻生效。
+  - 聊天室管理指令的 DB 讀寫改走 `asyncio.to_thread`（`commands._db`），並在該 thread 內 `release_session`；回覆文字不再讀 worker thread 回傳的 ORM 物件（commit 後已過期、session 已釋放）。
+  - 總覽表 W-05 進度改為實作完成。
+  - 未修：nitpick 與 note。
+
 
 ### W-06 實況主能設定計時訊息
 

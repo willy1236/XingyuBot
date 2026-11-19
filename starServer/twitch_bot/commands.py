@@ -4,10 +4,9 @@
 """
 
 import asyncio
-import functools
 import logging
 import time
-from collections.abc import Callable, Coroutine
+from collections.abc import Callable
 from typing import Any
 
 from twitchAPI.chat import ChatCommand, ChatEvent, ChatMessage, EventData
@@ -166,17 +165,23 @@ def _actor(cmd: ChatCommand) -> AuditActor:
     return AuditActor("twitch", str(cmd.user.id), cmd.user.display_name or cmd.user.name)
 
 
-def _releases_session[**P](func: Callable[P, Coroutine[Any, Any, None]]) -> Callable[P, Coroutine[Any, Any, None]]:
-    """指令跑完釋放 session，讀取開的交易才不會一直握著表的鎖。"""
+async def _db[T](func: Callable[..., T], *args: Any, reload_channel: int | None = None) -> T:
+    """DB 工作放到 worker thread（寫入會取 advisory lock 與列鎖，不能卡住 event loop），並在該 thread 釋放 session。
 
-    @functools.wraps(func)
-    async def wrapper(*args: P.args, **kwargs: P.kwargs) -> None:
+    reload_channel 有值表示這是寫入：成功後先在本機重讀該頻道的指令快取，不等 Pub/Sub 回送，
+    Redis 連不上時 bot 也能立刻用到剛改的指令；`twitch_commands` 仍會照常通知其他實例與後台。
+    """
+
+    def run() -> T:
         try:
-            await func(*args, **kwargs)
+            result = func(*args)
+            if reload_channel is not None:
+                _reload(str(reload_channel))
+            return result
         finally:
             sqldb.release_session()
 
-    return wrapper
+    return await asyncio.to_thread(run)
 
 
 async def _automod_problem(twitch_id: int, response: str) -> str | None:
@@ -189,7 +194,6 @@ async def _automod_problem(twitch_id: int, response: str) -> str | None:
     return None
 
 
-@_releases_session
 async def add_chat_command(cmd: ChatCommand):
     if not _can_manage_commands(cmd):
         return
@@ -201,18 +205,18 @@ async def add_chat_command(cmd: ChatCommand):
     twitch_id = int(cmd.room.room_id)
     fields = CommandFields(response)
     try:
-        twitch_commands.validate(twitch_id, name, fields)
+        await _db(twitch_commands.validate, twitch_id, name, fields)
         if problem := await _automod_problem(twitch_id, response):
             await cmd.reply(problem)
             return
-        row = twitch_commands.create(twitch_id, _actor(cmd), "chat", name, fields)
+        await _db(twitch_commands.create, twitch_id, _actor(cmd), "chat", name, fields, reload_channel=twitch_id)
     except CommandInvalid as e:
         await cmd.reply(e.reason)
         return
-    await cmd.reply(f"已新增指令：{row.name}")
+    # 不讀回傳的 ORM 物件：它屬於已釋放的 worker thread session，commit 後已過期
+    await cmd.reply(f"已新增指令：{twitch_commands.normalize_name(name)}")
 
 
-@_releases_session
 async def edit_chat_command(cmd: ChatCommand):
     """!edit_cmd <名稱或別名> <新回應>：只改回應，別名、冷卻、權限、開關與使用次數不動。"""
     if not _can_manage_commands(cmd):
@@ -227,7 +231,7 @@ async def edit_chat_command(cmd: ChatCommand):
     if target in BUILTIN_COMMANDS:
         await cmd.reply(f"{target} 是內建指令，無法修改")
         return
-    row = twitch_commands.find(twitch_id, target)
+    row = await _db(twitch_commands.find, twitch_id, target)
     if row is None:
         await cmd.reply(f"{target} 不存在")
         return
@@ -242,11 +246,14 @@ async def edit_chat_command(cmd: ChatCommand):
             raise CommandInvalid("response", "指令剛被修改過，請再試一次")
 
     try:
-        twitch_commands.validate(twitch_id, row.name, fields, current_name=row.name)
+        await _db(lambda: twitch_commands.validate(twitch_id, row.name, fields, current_name=row.name))
         if problem := await _automod_problem(twitch_id, response):
             await cmd.reply(problem)
             return
-        twitch_commands.update(twitch_id, _actor(cmd), "chat", row.name, row.name, fields, verify)
+        await _db(
+            lambda: twitch_commands.update(twitch_id, _actor(cmd), "chat", row.name, row.name, fields, verify),
+            reload_channel=twitch_id,
+        )
     except CommandInvalid as e:
         await cmd.reply(e.reason)
         return
@@ -256,7 +263,6 @@ async def edit_chat_command(cmd: ChatCommand):
     await cmd.reply(f"已修改指令：{row.name}")
 
 
-@_releases_session
 async def remove_chat_command(cmd: ChatCommand):
     if not _can_manage_commands(cmd):
         return
@@ -265,7 +271,8 @@ async def remove_chat_command(cmd: ChatCommand):
         await cmd.reply("用法：!remove_cmd <指令或別名>")
         return
     try:
-        removed = twitch_commands.remove(int(cmd.room.room_id), _actor(cmd), "chat", name)
+        twitch_id = int(cmd.room.room_id)
+        removed = await _db(twitch_commands.remove, twitch_id, _actor(cmd), "chat", name, reload_channel=twitch_id)
     except CommandMissing:
         await cmd.reply(f"{name} 不存在")
         return
@@ -275,18 +282,17 @@ async def remove_chat_command(cmd: ChatCommand):
         await cmd.reply(f"已移除指令：{name}")
 
 
-@_releases_session
 async def list_chat_command(cmd: ChatCommand):
     twitch_id = int(cmd.room.room_id)
     parameters = twitch_commands.normalize_name(cmd.parameter)
     if not parameters:
-        names = [c.name for c in twitch_commands.list_commands(twitch_id) if c.enabled]
+        names = [c.name for c in await _db(twitch_commands.list_commands, twitch_id) if c.enabled]
         if names:
             await cmd.reply(f"指令列表：\n{', '.join(names)}")
         else:
             await cmd.reply("目前沒有設定指令")
     else:
-        command = twitch_commands.find(twitch_id, parameters)
+        command = await _db(twitch_commands.find, twitch_id, parameters)
         if command is not None and command.enabled:
             await cmd.reply(f"{command.name}：{command.response}")
         else:

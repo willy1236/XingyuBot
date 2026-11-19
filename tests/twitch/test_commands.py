@@ -1,6 +1,7 @@
 """twitch_bot.commands：自訂指令的觸發（開關、權限、冷卻、別名、使用次數）與聊天室管理指令（真實 PostgreSQL，測完 rollback）。"""
 
 import asyncio
+import threading
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -385,3 +386,54 @@ def test_list_cmd_沒有指令時提示(repo):
     cmd = command("")
     run(commands.list_chat_command(cmd))
     assert "沒有" in replied(cmd)
+
+
+# ── 寫入後 bot 本機先更新快取 ──
+
+
+def test_聊天室新增後不靠_Redis_通知本機快取就更新(repo):
+    # _env 已把 invalidate 換成什麼都不做，等同 Redis 連不上
+    repo.cache.twitch_cmd.load({})
+    run(commands.add_chat_command(command("hi 哈囉")))
+    assert repo.get_twitch_cmd_response_cache(TWITCH_ID, "hi").response == "哈囉"
+
+
+def test_聊天室修改與移除後本機快取也立即更新(repo):
+    add(repo, aliases=["h"])
+    run(commands.edit_chat_command(command("hi 新的")))
+    assert repo.get_twitch_cmd_response_cache(TWITCH_ID, "h").response == "新的"
+    run(commands.remove_chat_command(command("h")))
+    assert repo.get_twitch_cmd_response_cache(TWITCH_ID, "h") is None
+    assert repo.get_twitch_cmd_response_cache(TWITCH_ID, "hi") is not None
+    run(commands.remove_chat_command(command("hi")))
+    assert repo.get_twitch_cmd_response_cache(TWITCH_ID, "hi") is None
+
+
+# ── DB 工作不在 event loop thread 上做 ──
+
+
+def test_管理指令的資料庫讀寫在別的_thread_並在該_thread_釋放_session(repo, monkeypatch):
+    loop_thread = threading.get_ident()
+    db_threads: set[int] = set()
+    released: list[int] = []
+    for name in ("validate", "create", "find", "update", "remove", "list_commands"):
+        original = getattr(twitch_commands, name)
+
+        def spy(*args, _original=original, **kwargs):
+            db_threads.add(threading.get_ident())
+            return _original(*args, **kwargs)
+
+        monkeypatch.setattr(twitch_commands, name, spy)
+    original_release = repo.release_session
+    monkeypatch.setattr(
+        repo, "release_session", lambda: (released.append(threading.get_ident()), original_release())[1]
+    )
+
+    run(commands.add_chat_command(command("hi 哈囉")))
+    run(commands.edit_chat_command(command("hi 新的")))
+    run(commands.list_chat_command(command("")))
+    run(commands.list_chat_command(command("hi")))
+    run(commands.remove_chat_command(command("hi")))
+
+    assert db_threads and loop_thread not in db_threads
+    assert set(released) >= db_threads
