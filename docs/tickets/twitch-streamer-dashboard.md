@@ -542,7 +542,7 @@
 
 **進度**：實作中（2026-11-19）
 - commit：
-  - 後端：（待填）
+  - 後端：2949af7f（資料表與 ALTER）、`client.py` 存取函式與指令快取修復（見 git log）
 - 介面變更（使用者決定，2026-11-19）：`speech.say` 改收模板與 ctx，簽名是 `say(channel, twitch_id, template, ctx, *, source_kind, source_key, reply_to=None) -> bool`；內部 `render`，並依模板是否含 `{touser}`、`{args}` 決定發言前要不要檢查 AutoMod。`render` 維持回 `str`。
 - ALTER（部署前先手動執行；已套到本機 DB）。新表由啟動時的 `create_all` 建立：
   ```sql
@@ -556,7 +556,7 @@
       ADD COLUMN updated_at timestamptz(0) NOT NULL DEFAULT now();
   ALTER TABLE stardb_basic.twitch_bot_join_channel ADD COLUMN action_guild_id bigint;
   ```
-- 續做：`client.py` 的存取函式與指令快取修復（`get_raw_chat_command_channel` 回整列），之後依序是 `twitch_audit`、`twitch_speech_check`、`speech.py`、端點、前端。
+- 續做：`starlib/twitch_audit.py`，之後依序是 `twitch_speech_check`、`speech.py`、端點、前端。
 
 ### W-05 實況主能在後台管理自訂指令
 
