@@ -175,7 +175,9 @@ async def on_stream_online(twitch_id: int) -> None:
     _online[twitch_id] = True
     for key in [k for k in _runtime if k[0] == twitch_id]:
         del _runtime[key]
-    _apply(twitch_id, _configs.get(twitch_id, []))
+    # 設定還沒載入過就不動：下一次 tick 會載入，並因為已開台而從那時起算
+    if twitch_id in _configs:
+        _apply(twitch_id, _configs[twitch_id])
 
 
 async def on_stream_offline(twitch_id: int) -> None:
@@ -241,8 +243,11 @@ async def _check_channel(twitch_id: int, login: str) -> None:
     if not any(c.enabled for c in _configs[twitch_id]):
         return
     if twitch_id not in _online:
-        _online[twitch_id] = await _resolve_online(twitch_id, login)
-        _apply(twitch_id, _configs[twitch_id])
+        online = await _resolve_online(twitch_id, login)
+        # 查詢途中若已收到開台或下播事件，以事件為準，不被可能已過時的查詢結果蓋掉
+        if twitch_id not in _online:
+            _online[twitch_id] = online
+            _apply(twitch_id, _configs.get(twitch_id, []))
     if not _online[twitch_id]:
         return
     now = _now()

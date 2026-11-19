@@ -365,6 +365,49 @@ def test_沒有啟用的計時訊息就不查_Helix(clock):
     speech.prepare.assert_not_awaited()
 
 
+def test_第一次_tick_前就開台_之後照常載入設定並發送(clock, repo):
+    add(repo, message="從資料庫來", interval_minutes=5)
+    run(timers.on_stream_online(TWITCH_ID))  # 設定還沒載入過
+    assert TWITCH_ID not in timers._configs
+    run(timers.tick())  # 載入，並從現在起算
+    clock.now += 300
+    run(timers.tick())
+    assert speech.say.await_args.args[2] == "從資料庫來"
+
+
+def test_查開台狀態途中收到下播事件_不被舊的查詢結果蓋掉(clock):
+    timers._apply(TWITCH_ID, [config(interval=5)])
+
+    async def prepare(template, ctx):
+        await timers.on_stream_offline(TWITCH_ID)  # 查詢途中收到下播
+        ctx.stream = speech.StreamInfo(datetime.now(UTC), "遊戲", "標題")  # 查詢回來還是舊的「開台」
+        return ctx
+
+    speech.prepare.side_effect = prepare
+    run(timers.tick())
+    assert timers._online[TWITCH_ID] is False
+    clock.now += 3000
+    run(timers.tick())
+    speech.say.assert_not_awaited()
+
+
+def test_查開台狀態途中收到開台事件_保留事件的結果(clock):
+    timers._apply(TWITCH_ID, [config(interval=5)])
+
+    async def prepare(template, ctx):
+        await timers.on_stream_online(TWITCH_ID)  # 查詢途中收到開台
+        clock.now += 100
+        ctx.stream = None  # 查詢回來是舊的「沒開台」
+        return ctx
+
+    speech.prepare.side_effect = prepare
+    run(timers.tick())
+    assert timers._online[TWITCH_ID] is True
+    clock.now += 200  # 從開台事件起算 300 秒
+    run(timers.tick())
+    assert speech.say.await_count == 1
+
+
 # ── 啟動、重啟與收尾 ──
 
 
