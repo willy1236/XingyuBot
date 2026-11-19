@@ -67,6 +67,19 @@ async def _wait_for_chat_loop(timeout: float = 30) -> None:
             await asyncio.sleep(0.1)
 
 
+async def _subscribe_then_serve(users) -> None:
+    """先替啟動時載入的頻道訂閱 EventSub，全部完成後才開始處理 web 的 RPC。
+
+    啟動訂閱跑在 run() 的 loop、sync 的背景訂閱跑在 Chat 的 loop，兩邊不共用鎖；RPC 太早開放會讓同一個事件被訂閱兩次。
+    """
+    for user in users:
+        log.debug("eventsub:%s", user.login)
+        # bot 是不是 mod 一律查 Helix（實況主 token），Chat 的 is_mod 拿掉 mod 後不會更新；查不到就先當非 mod
+        await channels.subscribe_channel(user, is_mod=bool(await channels.bot_is_mod(int(user.id))))
+        log.debug("eventsub:%s done.", user.login)
+    channels.register()
+
+
 async def run():
     state.load_join_channels()
     app_config = sqldb.get_oauth_client(APIType.Twitch, 2)
@@ -132,7 +145,6 @@ async def run():
     chat.start()
     await asyncio.sleep(5)
     await _wait_for_chat_loop()
-    channels.register()
     timers.start(chat)
     commands.start()
     events.start()
@@ -146,11 +158,7 @@ async def run():
     await asyncio.sleep(3)
     state.eventsub = eventsub
     state.bot_user_id = me.id
-    for user in users:
-        log.debug("eventsub:%s", user.login)
-        # bot 是不是 mod 一律查 Helix（實況主 token），Chat 的 is_mod 拿掉 mod 後不會更新；查不到就先當非 mod
-        await channels.subscribe_channel(user, is_mod=bool(await channels.bot_is_mod(int(user.id))))
-        log.debug("eventsub:%s done.", user.login)
+    await _subscribe_then_serve(users)
 
     return chat, twitch, eventsub
 

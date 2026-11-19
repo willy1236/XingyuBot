@@ -363,3 +363,23 @@ def test_chat_restart_resets_callback_loop_before_start(monkeypatch, sentry):
     thread._watch_chat()
 
     assert seen == [None]
+
+
+def test_rpc_opens_only_after_startup_subscriptions(monkeypatch):
+    """啟動訂閱與 sync 的背景訂閱不共用鎖，RPC 太早開放會讓同一個事件被訂閱兩次。"""
+    order = []
+
+    async def subscribe(user, *, is_mod):
+        order.append(f"subscribe {user.login}")
+
+    async def bot_is_mod(twitch_id):
+        return True
+
+    monkeypatch.setattr(chatbot.channels, "subscribe_channel", subscribe)
+    monkeypatch.setattr(chatbot.channels, "bot_is_mod", bot_is_mod)
+    monkeypatch.setattr(chatbot.channels, "register", lambda: order.append("register"))
+    users = [MagicMock(id="1", login="a"), MagicMock(id="2", login="b")]
+
+    asyncio.run(chatbot._subscribe_then_serve(users))
+
+    assert order == ["subscribe a", "subscribe b", "register"]
