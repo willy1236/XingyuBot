@@ -185,8 +185,8 @@
 - `domalyze_login._start_session`、`auth._handle_login` 呼叫 `create_session` 的地方要補 `login_method`。
 - `_check` 與 `_fallback` 假設 `discord_user_id` 不為 None，要在 Twitch-only 的分支前先返回。
 
-**進度**：進行中（後端完成，前端續做）
-- commit：後端 `feat(dashboard): session 支援 Twitch 身分`
+**進度**：實作完成（2026-11-19），待審查
+- commit：後端 41777f3；前端（domalyze_frontend）bf3adbb
 - 實作時的決定：
   - 型別：新增 `DiscordSessionInfo(SessionInfo)`，`require_session` 回傳它；14 個模組的 `info: SessionInfo` 標註改成 `DiscordSessionInfo`（只改型別標註與 import，邏輯不變），pyright 才不會對 `int(info.discord_user_id)` 報錯。`follow_account` 改成泛型，保留傳入的型別。
   - `create_session` 自己推導 `login_method`（帶 `twitch` 是 `twitch`、`via_domalyze` 是 `domalyze`、其餘 `discord`），呼叫端不傳；`domalyze_login._start_session`、`auth._handle_login` 因此不必補。身分組合不合法時 `ValueError`。
@@ -213,7 +213,8 @@
   CREATE INDEX ix_dashboard_session_twitch_user_id ON credentials.dashboard_session (twitch_user_id);
   COMMIT;
   ```
-- 續做：前端（`DashboardUser`、NAV、`discord_required` 導向、`DashboardUserContext`）。
+- 前端：`DashboardUser` 移到 `lib/dashboard-user.tsx`（`dashboard-header.tsx` 再匯出同名型別）；導覽由 `dashboardNav(user)` 決定；`discord_required` 導向由 `discordRequiredTarget(pathname)` 判斷，已在 `/dashboard` 時不導，呼叫端收到一般錯誤。
+- 未驗：待人工驗證——Discord 登入、析域登入後後台照常；Twitch session 要等 W-01 的登入入口才建得出來，目前只有自動測試覆蓋。
 
 ### W-01 實況主能用 Twitch 登入並進到自己的頻道後台
 
