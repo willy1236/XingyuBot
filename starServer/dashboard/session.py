@@ -150,7 +150,10 @@ def _touch(session_id: str) -> SessionInfo | None:
 
 
 def lookup_session(session_id: str | None) -> SessionInfo | None:
-    """只讀地查 session：不續期、不刪除、不做帳號跟隨；沒帶、不存在或已過期回 None。"""
+    """只讀地查 session：不續期、不刪除、不做帳號跟隨；沒帶、不存在或已過期回 None。
+
+    析域登入的頻道清單（twitch_channels）與帳號資訊要跟隨後才有；需要它們時改用 `lookup_followed_session`。
+    """
     if not session_id:
         return None
     row = sqldb.session.get(DashboardSession, session_id, populate_existing=True)
@@ -420,6 +423,21 @@ async def follow_account[S: SessionInfo](info: S, *, force: bool = False) -> S:
         stale=result.stale,
         twitch_channels=result.twitch_channels,
     )
+
+
+async def lookup_followed_session(session_id: str | None) -> SessionInfo | None:
+    """只讀地查 session 並補上帳號跟隨的結果，給整頁導覽的端點（/to/*）用，這些端點不能回 JSON 錯誤。
+
+    析域登入的頻道清單（twitch_channels）與帳號資訊要跟隨後才有，`lookup_session` 沒有。
+    沒帶、不存在、已過期，或析域帳號已停權或查無（session 失效）時回 None；不續期、不刪除 session。
+    """
+    info = await run_db(lambda: lookup_session(session_id))
+    if info is None:
+        return None
+    try:
+        return await follow_account(info)
+    except DashboardError:
+        return None
 
 
 async def require_any_session(request: Request) -> SessionInfo:
