@@ -247,11 +247,8 @@ async def _leave(twitch_id: int, row: TwitchBotJoinChannel | None) -> bool:
     return state.chat.is_in_room(login)
 
 
-async def sync_channel(twitch_id: int) -> bool:
-    """依資料庫的 state 讓 bot 加入（enabled）或離開聊天室，回傳之後是否在聊天室；EventSub 排進背景。
-
-    可重複呼叫：已在聊天室就不再加入，訂閱則依當下的 mod 狀態補訂或退訂。同一頻道依序執行。
-    """
+async def _sync_room(twitch_id: int) -> bool:
+    """依資料庫的 state 加入或離開聊天室，回傳之後是否在聊天室。同一頻道依序執行。"""
     async with _lock(_room_locks, twitch_id):
         row = await reload_channel(twitch_id)
         enabled = row is not None and row.state == "enabled"
@@ -263,9 +260,37 @@ async def sync_channel(twitch_id: int) -> bool:
         except Exception:
             log.exception("頻道 %s 的聊天室同步失敗", twitch_id)
             joined = False
+    return joined
+
+
+async def sync_channel(twitch_id: int) -> bool:
+    """依資料庫的 state 讓 bot 加入（enabled）或離開聊天室，回傳之後是否在聊天室；EventSub 排進背景。
+
+    可重複呼叫：已在聊天室就不再加入，訂閱則依當下的 mod 狀態補訂或退訂。同一頻道依序執行。
+    """
+    joined = await _sync_room(twitch_id)
     _pending[twitch_id] = _pending.get(twitch_id, 0) + 1
     asyncio.create_task(_reconcile_in_background(twitch_id))
     return joined
+
+
+async def sync_all() -> None:
+    """依資料庫現況同步所有頻道：重讀全部設定，再對 enabled 的頻道與目前在聊天室的頻道各做一次同步。
+
+    啟動時在 RPC 註冊之後呼叫：補上載入設定到註冊之間才被啟用、停用或修改的頻道，也負責啟動時的 EventSub 訂閱，
+    走與 sync_channel 同一套鎖。頻道一個接一個做（含訂閱），維持 EventSub 逐一訂閱的節奏。
+    """
+    state.join_channels = await asyncio.to_thread(_load_all)
+    twitch_ids = [twitch_id for twitch_id, row in state.join_channels.items() if row.state == "enabled"]
+    twitch_ids += [twitch_id for twitch_id in rooms if twitch_id not in twitch_ids]
+    for twitch_id in twitch_ids:
+        try:
+            await _sync_room(twitch_id)
+            _pending[twitch_id] = _pending.get(twitch_id, 0) + 1
+            await _reconcile_in_background(twitch_id)
+        except Exception as exc:
+            capture_exception_safe(exc, tags={"service": "twitch", "source": "sync_all"})
+            log.exception("頻道 %s 的啟動同步失敗", twitch_id)
 
 
 async def _reconcile_in_background(twitch_id: int) -> None:

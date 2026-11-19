@@ -378,12 +378,13 @@
 - twitchAPI 的 `chat.join_room` 與 `leave_room` 必須在 Chat 的 event loop 上呼叫。
 
 **進度**：實作完成（2026-11-19），待審查；驗收條件未打勾，待人工驗證與審查後再勾
-- commit：後端 1647f6d、29ccb23、2947951、22b28d9、bbe4774、9d2b727、d159df5、0df3991；審查後修正 0241fb2、1035331、762f5ff。沒有 ALTER（無 schema 變更）。
+- commit：後端 1647f6d、29ccb23、2947951、22b28d9、bbe4774、9d2b727、d159df5、0df3991；審查後修正 0241fb2、1035331、762f5ff、6697fb08。沒有 ALTER（無 schema 變更）。
 - 實作時的決定：
   - 模組：Twitch bot 各模組共用的 `chat`、`twitch`、`join_channels`、`eventsub`、`bot_user_id`、`loop` 放 `starServer/twitch_bot/state.py`（避免 `channels` 與 `events` 循環 import）；聊天室 IRC 事件（`on_sub`、`on_whisper` 等）併入 `events.py`，`on_message` 在 `commands.py`；既有測試只改 patch 目標，`load_join_channels` 測試的資料補 `state`。
   - timers 介面：`timers`、`commands`、`events` 各有同步的 `start()`／`stop()`（`timers.start(chat)`），由 `run()` 在 chat 啟動後、`cleanup` 時呼叫；`timers.on_stream_online`、`on_stream_offline`、`on_chat_message` 是 async。開台在確認有直播後才呼叫 timers，下播一進來就呼叫；`is_bot` 以 `msg.user.name` 對 `chat.username`（不分大小寫）判斷。
   - 載入與同步：`join_channels` 載入全部頻道的設定，只有 `state = enabled` 的頻道進 `TARGET_CHANNEL_IDS` 並加入聊天室。bot 是不是 mod 一律查 Helix（`channels.bot_is_mod`，實況主 token，包含啟動時）；拿不到有效 token 或缺權限視為非 mod，Twitch 暫時無法回應時維持現有訂閱。`on_ready` 加入 `channels.rooms`（目前應在的房間），不再用啟動時的舊清單。
-  - RPC 與快取失效由 `run()` 在啟動訂閱全部完成後呼叫 `channels.register()` 註冊，不在 `twitch_main.py`；只有 `twitch_channel` 在 W-02 註冊 handler，其餘三個名稱由 W-05～W-07 在各自模組的 `start()` 註冊。
+  - RPC 與快取失效由 `run()` 在 EventSub 就緒（`state.eventsub`、`state.bot_user_id` 設好）後呼叫 `channels.register()` 註冊，不在 `twitch_main.py`；只有 `twitch_channel` 在 W-02 註冊 handler，其餘三個名稱由 W-05～W-07 在各自模組的 `start()` 註冊。
+  - 啟動時的 EventSub 訂閱不再在 `run()` 裡逐頻道跑，改成註冊之後在 Chat 的 loop 上跑 `channels.sync_all()`：重讀資料庫，對 enabled 與目前在聊天室的頻道各做一次 sync，一個接一個（含訂閱）。這樣啟動訂閱與 web 的 sync 共用每頻道的鎖，不會重複訂閱，也不會漏掉載入設定到註冊之間才啟用、停用或修改的頻道；同步在背景進行，不擋啟動。
   - 聊天室加入離開上限 `ROOM_TIMEOUT = 4` 秒（RPC 期限 5 秒）；聊天室動作與背景訂閱各用一把每頻道的鎖。
   - chat 自動重啟：`_watch_chat` 重啟前把 `chat._callback_loop` 清成 None（twitchAPI 只在它為 None 時才換成新的 socket loop），READY 在新 loop 時 `on_ready` 把 RPC 與快取失效改綁到新 loop。
   - `twitch_tokens`：續期用 `SELECT … FOR UPDATE` 鎖那筆 `OAuthToken`、拿到鎖後重查 `expires_at`；`TokenInvalid` 帶 `reason`（`missing`、`revoked`、`unavailable`）；Twitch 暫時連不上且舊 token 尚未過期時繼續用舊 token。同步版 `broadcaster_token_blocking` 給 web 端經 `run_db` 用（`twitch_control.broadcaster_token`），bot 端用 `broadcaster_token`（`asyncio.to_thread`）。

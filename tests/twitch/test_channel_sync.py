@@ -391,3 +391,69 @@ def test_ready_on_the_same_loop_keeps_registrations(bot, registrations):
 
     assert registrations[0].call_count == 2
     assert channels._pending == {TWITCH_ID: 1}
+
+
+# ---- 啟動時的同步 ----
+
+
+def test_sync_all_picks_up_channel_enabled_before_rpc_was_registered(bot, monkeypatch):
+    """載入設定之後、RPC 註冊之前才被啟用的頻道，註冊後的 sync_all 會補上。"""
+    other = SimpleNamespace(twitch_id=TWITCH_ID, state="enabled", login="host")
+    monkeypatch.setattr(channels, "_load_all", lambda: {TWITCH_ID: other})
+    state.join_channels = {}
+
+    run(channels.sync_all())
+
+    assert bot.chat.joined_calls == ["host"]
+    assert state.join_channels == {TWITCH_ID: other}
+    assert set(channels.subscriptions[TWITCH_ID].ids) == BASE
+
+
+def test_sync_all_leaves_channel_disabled_since_startup(bot, monkeypatch, eventsub):
+    async def scenario():
+        await sync_and_settle()
+        bot.row.state = "disabled"
+        monkeypatch.setattr(channels, "_load_all", lambda: {TWITCH_ID: bot.row})
+        await channels.sync_all()
+
+    run(scenario())
+
+    assert bot.chat.left_calls == ["host"]
+    assert TWITCH_ID not in channels.subscriptions
+    assert channels.channel_status(TWITCH_ID)["subscriptions"]["pending"] is False
+
+
+def test_sync_all_reloads_settings_missed_by_invalidation(bot, monkeypatch):
+    stale = SimpleNamespace(twitch_id=TWITCH_ID, state="inactive", login="host", action_channel_id=None)
+    fresh = SimpleNamespace(twitch_id=TWITCH_ID, state="inactive", login="host", action_channel_id=123)
+    state.join_channels = {TWITCH_ID: stale}
+    monkeypatch.setattr(channels, "_load_all", lambda: {TWITCH_ID: fresh})
+
+    run(channels.sync_all())
+
+    assert state.join_channels[TWITCH_ID].action_channel_id == 123
+
+
+def test_sync_all_continues_after_one_channel_fails(bot, monkeypatch):
+    second = TWITCH_ID + 1
+    rows = {
+        TWITCH_ID: SimpleNamespace(twitch_id=TWITCH_ID, state="enabled", login="host"),
+        second: SimpleNamespace(twitch_id=second, state="enabled", login="other"),
+    }
+    monkeypatch.setattr(channels, "_load_all", lambda: rows)
+    monkeypatch.setattr(channels, "capture_exception_safe", MagicMock())
+    handled = []
+
+    async def sync_room(twitch_id):
+        handled.append(twitch_id)
+        if twitch_id == TWITCH_ID:
+            raise RuntimeError("boom")
+        return True
+
+    monkeypatch.setattr(channels, "_sync_room", sync_room)
+    monkeypatch.setattr(channels, "reconcile_subscriptions", AsyncMock())
+
+    run(channels.sync_all())
+
+    assert handled == [TWITCH_ID, second]
+    assert channels._pending.get(TWITCH_ID, 0) == 0

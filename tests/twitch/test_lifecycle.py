@@ -365,21 +365,26 @@ def test_chat_restart_resets_callback_loop_before_start(monkeypatch, sentry):
     assert seen == [None]
 
 
-def test_rpc_opens_only_after_startup_subscriptions(monkeypatch):
-    """啟動訂閱與 sync 的背景訂閱不共用鎖，RPC 太早開放會讓同一個事件被訂閱兩次。"""
+def test_startup_registers_rpc_then_syncs_all_channels_on_chat_loop(monkeypatch):
+    """啟動訂閱走 sync，與 web 的 sync 共用鎖；註冊 RPC 之後才同步，之前被改的頻道不會漏掉。"""
     order = []
+    loop = asyncio.new_event_loop()
+    thread = threading.Thread(target=loop.run_forever, daemon=True)
+    thread.start()
+    done = threading.Event()
 
-    async def subscribe(user, *, is_mod):
-        order.append(f"subscribe {user.login}")
+    async def sync_all():
+        order.append(("sync_all", threading.get_ident() == thread.ident))
+        done.set()
 
-    async def bot_is_mod(twitch_id):
-        return True
-
-    monkeypatch.setattr(chatbot.channels, "subscribe_channel", subscribe)
-    monkeypatch.setattr(chatbot.channels, "bot_is_mod", bot_is_mod)
+    monkeypatch.setattr(chatbot.state, "loop", loop, raising=False)
     monkeypatch.setattr(chatbot.channels, "register", lambda: order.append("register"))
-    users = [MagicMock(id="1", login="a"), MagicMock(id="2", login="b")]
+    monkeypatch.setattr(chatbot.channels, "sync_all", sync_all)
+    try:
+        chatbot._serve_and_sync()
+        assert done.wait(2)
+    finally:
+        loop.call_soon_threadsafe(loop.stop)
+        thread.join(2)
 
-    asyncio.run(chatbot._subscribe_then_serve(users))
-
-    assert order == ["subscribe a", "subscribe b", "register"]
+    assert order == ["register", ("sync_all", True)]
