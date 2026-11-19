@@ -9,15 +9,16 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlmodel import col, delete
 
-from starlib import sqldb, twitch_tokens
+from starlib import sqldb, twitch_audit, twitch_tokens
 from starlib.database import APIType, OAuthToken, TwitchBotJoinChannel
+from starlib.twitch_audit import AuditActor
 
 from . import twitch_control
 from .channel_activation import _sync_bot
 from .channels import DEFAULT_STATE, require_channel
 from .db import run_db
 from .errors import DashboardError
-from .session import TwitchIdentity
+from .session import SessionInfo, TwitchIdentity, audit_actor, require_any_session
 
 log = logging.getLogger(__name__)
 
@@ -28,11 +29,12 @@ class DeleteDataBody(BaseModel):
     confirm_login: str
 
 
-def _delete_data(twitch_id: int) -> None:
+def _delete_data(twitch_id: int, actor: AuditActor) -> None:
     """同一個交易內清掉頻道的功能資料、實況主 token 與頻道列上的設定，最後才 commit；任何一步失敗都整筆 rollback。
 
     頻道列本身保留（營運入口與停權需要它），只清 action_channel_id、action_guild_id、point_name 並把 state 設回 inactive，
-    banned_at 等其他欄位不碰。修改紀錄（twitch_channel_audit）不刪。
+    banned_at 等其他欄位不碰。修改紀錄（twitch_channel_audit）不刪，並在同一個交易內加一筆頻道層級的「刪除所有資料」紀錄
+    （target_kind=channel、target_key=all_data），before 是刪除前的轉發設定；刪除失敗時紀錄一併 rollback。
     """
     try:
         sqldb.delete_twitch_channel_data(twitch_id)
@@ -43,6 +45,16 @@ def _delete_data(twitch_id: int) -> None:
             )
         )
         row = sqldb.get(TwitchBotJoinChannel, (twitch_id,))
+        before = (
+            None
+            if row is None
+            else {
+                "action_channel_id": row.action_channel_id,
+                "action_guild_id": row.action_guild_id,
+                "point_name": row.point_name,
+            }
+        )
+        twitch_audit.record_change(twitch_id, actor, "dashboard", "channel", "all_data", "delete", before, None)
         if row is not None:
             row.action_channel_id = None
             row.action_guild_id = None
@@ -56,11 +68,17 @@ def _delete_data(twitch_id: int) -> None:
 
 
 @router.post("/channels/{twitch_id}/delete-data")
-async def delete_channel_data(twitch_id: int, body: DeleteDataBody, channel: TwitchIdentity = Depends(require_channel)):
+async def delete_channel_data(
+    twitch_id: int,
+    body: DeleteDataBody,
+    channel: TwitchIdentity = Depends(require_channel),
+    info: SessionInfo = Depends(require_any_session),
+):
     """`confirm_login` 要等於頻道 login（大小寫不敏感），不符回 400 confirm_mismatch。不要求頻道已啟用。"""
     if body.confirm_login.strip().casefold() != channel.login.casefold():
         raise DashboardError(400, "confirm_mismatch")
-    await run_db(lambda: _delete_data(twitch_id))
+    actor = audit_actor(info)
+    await run_db(lambda: _delete_data(twitch_id, actor))
     log.info("Dashboard Twitch delete data: %s (%s)", channel.login, twitch_id)
     # 交易提交後 state 已是 inactive：bot 離開聊天室並退訂；離線時下次啟動依資料庫為準
     bot_offline = await _sync_bot(twitch_id)

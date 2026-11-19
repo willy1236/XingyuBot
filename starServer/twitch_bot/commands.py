@@ -194,8 +194,24 @@ async def _automod_problem(twitch_id: int, response: str) -> str | None:
     return None
 
 
+async def _channel_enabled(cmd: ChatCommand) -> bool:
+    """資料庫裡頻道的 state 是 enabled 才放行；否則在聊天室說明並回 False。
+
+    後台「刪除所有資料」與停用會先改 state，bot 稍後才收到同步通知而離開聊天室；這段期間不能讓管理指令把資料寫回去。
+    每次都讀資料庫而不是 `state.join_channels`，後者要等通知才會更新。管理指令很少用，多一次查詢可以接受。
+    """
+    room = cmd.room
+    if room is None:
+        return False
+    row = await _db(lambda: sqldb.get_twitch_join_channel(int(room.room_id)))
+    if row is not None and row.state == "enabled":
+        return True
+    await cmd.reply("星羽目前未啟用，無法修改指令")
+    return False
+
+
 async def add_chat_command(cmd: ChatCommand):
-    if not _can_manage_commands(cmd):
+    if not _can_manage_commands(cmd) or not await _channel_enabled(cmd):
         return
     parameters = cmd.parameter.split(maxsplit=1)
     if len(parameters) < 2:
@@ -219,7 +235,7 @@ async def add_chat_command(cmd: ChatCommand):
 
 async def edit_chat_command(cmd: ChatCommand):
     """!edit_cmd <名稱或別名> <新回應>：只改回應，別名、冷卻、權限、開關與使用次數不動。"""
-    if not _can_manage_commands(cmd):
+    if not _can_manage_commands(cmd) or not await _channel_enabled(cmd):
         return
     parameters = cmd.parameter.split(maxsplit=1)
     if len(parameters) < 2:
@@ -264,7 +280,7 @@ async def edit_chat_command(cmd: ChatCommand):
 
 
 async def remove_chat_command(cmd: ChatCommand):
-    if not _can_manage_commands(cmd):
+    if not _can_manage_commands(cmd) or not await _channel_enabled(cmd):
         return
     name = twitch_commands.normalize_name(cmd.parameter)
     if not name:

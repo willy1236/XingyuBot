@@ -966,13 +966,23 @@
   - 交易：`delete_twitch_channel_data`（W-04）、client #3 的 `OAuthToken`、頻道列的欄位清空，最後一次 `commit`，任何一步失敗整筆 rollback。`client.py` 沒有刪 token 的函式，W-04 的 docstring 註明 token 由這個端點處理，所以直接在端點內刪，沒有改 `client.py`。
   - 頻道列只清 `action_channel_id`、`action_guild_id`、`point_name` 並設 `state=inactive`，其他欄位原樣保留，W-12 加 `banned_at` 後不需回頭改。沒有頻道列時只刪資料。
   - 提交後呼叫 `channel_activation._sync_bot`（bot 離線或內部出錯回 `bot_offline`），再通知 `twitch_channel`、`twitch_cmd`、`twitch_timer`、`twitch_event_response` 四個快取。回傳 `{state: "inactive", bot_offline}`。
-  - 這次刪除本身不寫修改紀錄：`AuditTarget` 沒有適合的類別，卡上也沒要求。
+  - 原本決定這次刪除不寫修改紀錄；審查後使用者決定改成補一筆，見下方「使用者決定」。
   - 前端：`lib/dashboard-channel-settings.ts`（呼叫、比對、提示文案）、`components/dashboard/channel/delete-data.tsx`、`app/dashboard/twitch/[id]/settings/page.tsx`；前端路徑是 `twitch/[id]`，不是卡上的 `channels/[id]`。
   - 後端測試放 `tests/dashboard/test_channel_settings.py`，與既有頻道端點測試放一起。
   - 新增卡上沒列的檔案：`lib/dashboard-channel-settings.ts`、`lib/dashboard-channel-settings.test.ts`。
 - 未驗：真實 Twitch 與 bot 的離開聊天室；瀏覽器裡設定頁的畫面與按鈕狀態。
 - 完整 CI：待合併回 main 前跑。
 - pyright：新檔 `channel_settings.py` 沒有錯誤；測試檔的 8 個 `reportCallIssue` 都是 model 建構子的 `__table_args__`，與既有測試同源。
+- 審查後修正（第 1 輪，審查報告 tsd-b-review-r1）：
+  - 時間窗：後台刪除（或停用）提交後、bot 收到同步通知離開聊天室之前，聊天室的 `!add_cmd`、`!edit_cmd`、`!remove_cmd` 仍可能寫回資料。`twitch_bot/commands.py` 新增 `_channel_enabled`，三個管理指令在權限檢查之後先讀資料庫的頻道 state，不是 `enabled`（含沒有頻道列）就回「星羽目前未啟用，無法修改指令」且不寫入；不用 `state.join_channels`，那份要等通知才更新。檢查與寫入不在同一個交易，檢查通過後、寫入前剛好被刪除的窗口仍在（毫秒級），不處理；要完全消除得把 state 檢查放進 `twitch_commands` 的寫入交易，牽動 W-05 的共用模組，這次不做。
+  - 文案：`bot_offline` 涵蓋 bot 離線與內部出錯（`RpcHandlerError`）。離線時 bot 重啟只會加入 `enabled` 的頻道；內部出錯時 bot 還在聊天室。兩種情況都是等 bot 重新啟動（`sync_all` 會離開不是 `enabled` 的頻道）或下次對該頻道同步才離開，所以提示改成「資料已刪除，但星羽還沒收到離開通知，會在重新啟動或下次同步時離開聊天室。」
+  - 沒修：修改紀錄不記整批刪除（coordinator 另外處理）、刪除說明的兩個 nitpick。
+- 使用者決定（審查第 1 輪後）：刪除所有資料時補一筆頻道層級的修改紀錄，記操作者與時間。
+  - `starlib/twitch_audit.py` 的 `AuditTarget` 新增 `channel`（整個頻道的操作）；`models.py` 只改 `target_kind` 欄位的註解。`target_kind` 是沒有約束的 `String`，所以沒有 ALTER。
+  - 紀錄：`target_kind=channel`、`target_key=all_data`、`action=delete`、`source=dashboard`，操作者用 `session.audit_actor`；`before` 是刪除前的 `action_channel_id`、`action_guild_id`、`point_name`（沒有頻道列時為空），`after` 為空。與刪除在同一個交易內，commit 失敗時一併 rollback，有測試。
+  - 前端沒有顯示修改紀錄 target 類別的頁面或文案對照，所以沒有前端改動；之後做修改紀錄頁（W-12 之類）時要認得 `channel`。
+  - 順手修掉 `commands.py` 新增處的 `room` Optional 型別錯誤，`commands.py` 的 pyright 回到修改前的 12 個。
+
 
 ### W-10 用析域登入能同時管理伺服器與頻道
 

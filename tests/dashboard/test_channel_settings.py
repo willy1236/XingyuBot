@@ -166,6 +166,7 @@ def test_名稱不符回_400_且資料不變(client, spy, repo, credential_id, c
     assert response.json() == {"error": "confirm_mismatch"}
     assert _data_counts(repo, CHANNEL_ID) == SEEDED
     assert _state(repo) == "enabled"
+    assert list_changes(CHANNEL_ID) == []
     assert spy.sync_calls == []
     assert spy.invalidated == []
 
@@ -213,8 +214,53 @@ def test_修改紀錄保留(client, spy, repo, credential_id):
 
     delete(client)
 
-    assert [e.target_key for e in list_changes(CHANNEL_ID)] == ["hi"]
-    assert _count(repo, TwitchChannelAudit, TwitchChannelAudit.twitch_id, CHANNEL_ID) == 1
+    entries = list_changes(CHANNEL_ID)
+    assert [(e.target_kind, e.target_key) for e in entries] == [("channel", "all_data"), ("command", "hi")]
+    assert _count(repo, TwitchChannelAudit, TwitchChannelAudit.twitch_id, CHANNEL_ID) == 2
+
+
+def test_刪除本身記一筆頻道層級的紀錄(client, spy, repo, credential_id):
+    _seed(repo, credential_id, CHANNEL_ID)
+
+    delete(client)
+
+    [entry] = list_changes(CHANNEL_ID)
+    assert (entry.source, entry.target_kind, entry.target_key, entry.action) == (
+        "dashboard",
+        "channel",
+        "all_data",
+        "delete",
+    )
+    assert (entry.actor.platform, entry.actor.id, entry.actor.name) == ("twitch", str(CHANNEL_ID), "Host")
+    assert entry.before == {"action_channel_id": 99, "action_guild_id": 88, "point_name": "pt"}
+    assert entry.after is None
+    assert entry.at is not None
+
+
+def test_沒有頻道列時紀錄的_before_是空(client, spy, repo, credential_id):
+    _token(repo, credential_id, CHANNEL_ID)
+
+    delete(client)
+
+    [entry] = list_changes(CHANNEL_ID)
+    assert entry.before is None
+
+
+def test_紀錄寫入後提交失敗時紀錄與刪除一併_rollback(client, spy, repo, credential_id, monkeypatch):
+    """紀錄與刪除在同一個交易：到 commit 才失敗，紀錄不能單獨留下。"""
+    _seed(repo, credential_id, CHANNEL_ID)
+
+    def broken_commit():
+        raise RuntimeError("commit failed")
+
+    monkeypatch.setattr(repo, "commit", broken_commit)
+
+    response = delete(client)
+
+    assert response.status_code == 500
+    assert list_changes(CHANNEL_ID) == []
+    assert _data_counts(repo, CHANNEL_ID) == SEEDED
+    assert _state(repo) == "enabled"
 
 
 def test_讓_bot_離開並通知所有快取(client, spy, repo, credential_id):
@@ -287,6 +333,7 @@ def test_途中失敗整筆_rollback(client, spy, repo, credential_id, monkeypat
     assert response.status_code == 500
     assert _data_counts(repo, CHANNEL_ID) == SEEDED
     assert _state(repo) == "enabled"
+    assert list_changes(CHANNEL_ID) == []
     assert spy.sync_calls == []
 
 
