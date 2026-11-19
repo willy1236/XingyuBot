@@ -9,13 +9,23 @@ from typing import Any
 from twitchAPI.chat import ChatCommand, ChatMessage
 
 from starlib.database import sqldb
+from starServer.twitch_bot import state, timers
 
 log = logging.getLogger(__name__)
+
+
+def start() -> None:
+    """Twitch bot 初始化完成後呼叫一次；需要註冊快取失效 handler 等啟動工作的功能在這裡做。"""
+
+
+def stop() -> None:
+    """Twitch bot 收尾時呼叫。"""
 
 
 # this will be called whenever a message in a channel was send by either the bot OR another user
 async def on_message(msg: ChatMessage):
     log.info("in %s, %s said: %s", msg.room.name, msg.user.name, msg.text)
+    await timers.on_chat_message(int(msg.room.room_id), msg.user.name.lower() == state.chat.username.lower())
     await respond_to_chat_command(msg)
 
 

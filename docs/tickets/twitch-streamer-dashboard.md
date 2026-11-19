@@ -324,8 +324,9 @@
 
 **進度**：進行中（2026-11-19）
 - 已定案：Twitch bot 各模組共用的 `chat`、`twitch`、`join_channels`、`eventsub`、`bot_user_id` 放 `starServer/twitch_bot/state.py`（避免 `channels` 與 `events` 循環 import）；聊天室 IRC 事件（`on_sub`、`on_whisper` 等）併入 `events.py`；`on_message` 在 `commands.py`；既有測試只改 patch 目標。訂閱記在 `channels.subscriptions`，`subscribe_channel` 是「讓訂閱符合目前 mod 狀態」的可重複呼叫函式，啟動與 sync 共用。
-- commit：（1）純搬移 `twitch_bot/{state,events,commands}.py`；（2）`channels.subscribe_channel` 與訂閱 id 記錄
-- 續做：`timers.py` 與 `start()`／`stop()` 接線；`twitch_tokens.py`；`twitch_control.py`；契約文件；等 W-01 合入後做 enabled 載入與 `sync_channel`／`channel_status`、RPC 註冊
+- 已定案（timers 介面）：`timers`、`commands`、`events` 各有同步的 `start()`／`stop()`（`timers.start(chat)`），由 `run()` 在 chat 啟動後、`cleanup` 時呼叫；`timers.on_stream_online`、`on_stream_offline`、`on_chat_message` 是 async。`on_stream_online` 在確認有直播後才呼叫，`on_stream_offline` 一進來就呼叫；`is_bot` 以 `msg.user.name` 對 `chat.username`（不分大小寫）判斷。
+- commit：（1）純搬移 `twitch_bot/{state,events,commands}.py`；（2）`channels.subscribe_channel` 與訂閱 id 記錄；（3）`timers.py` 空介面與 `start()`／`stop()` 接線
+- 續做：`twitch_tokens.py`；`twitch_control.py`；契約文件；等 W-01 合入後做 enabled 載入、`on_ready` 改用目前清單、`sync_channel`／`channel_status`、RPC 註冊
 
 ### W-03 實況主能啟用與停用 bot
 

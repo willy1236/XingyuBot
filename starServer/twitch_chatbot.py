@@ -19,7 +19,7 @@ from twitchAPI.type import (
 from sentry_bootstrap import capture_exception_safe, capture_message_safe
 from starlib import BaseThread
 from starlib.database import APIType, OAuthToken, sqldb
-from starServer.twitch_bot import channels, commands, events, state
+from starServer.twitch_bot import channels, commands, events, state, timers
 
 log = logging.getLogger(__name__)
 
@@ -134,6 +134,9 @@ async def run():
 
     chat.start()
     await asyncio.sleep(5)
+    timers.start(chat)
+    commands.start()
+    events.start()
 
     eventsub = EventSubWebhook(app_config.callback_uri, 14001, twitch)
     # unsubscribe from all old events that might still be there
@@ -245,6 +248,13 @@ class TwitchBotThread(BaseThread):
         """
         if not self._cleanup_lock.acquire(blocking=False):
             return
+        for module in (timers, commands, events):
+            try:
+                module.stop()
+            except Exception as e:
+                capture_exception_safe(e, tags={"service": "twitch", "source": f"cleanup_{module.__name__}"})
+                log.warning("Error stopping %s: %s", module.__name__, e)
+
         try:
             if self.eventsub:
                 await _stop_eventsub(self.eventsub)
