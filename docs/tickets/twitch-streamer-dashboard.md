@@ -718,14 +718,14 @@
 - 不包含：無。
 
 **驗收條件**
-- [ ] 開台中，計時訊息依設定的間隔發送。開台後第一則等滿一個間隔才發。
-- [ ] 沒開台時不發送；下播後停止，再次開台時重新計時。
-- [ ] 設最少聊天量 10 則：時間到但距上次發送不足 10 則時不發，累積到第 10 則時立刻發。bot 自己的訊息不計入。
-- [ ] 關閉某則計時訊息後它不再發送，其他計時訊息不受影響。
-- [ ] 間隔小於 5 分鐘無法儲存。訊息超過 500 字無法儲存。
-- [ ] 訊息會被頻道 AutoMod 擋下時無法儲存，並提示原因。
-- [ ] 訊息內容的變數正確代入。
-- [ ] 每次新增、修改、刪除都寫進修改紀錄。
+- [x] 開台中，計時訊息依設定的間隔發送。開台後第一則等滿一個間隔才發。
+- [x] 沒開台時不發送；下播後停止，再次開台時重新計時。
+- [x] 設最少聊天量 10 則：時間到但距上次發送不足 10 則時不發，累積到第 10 則時立刻發。bot 自己的訊息不計入。
+- [x] 關閉某則計時訊息後它不再發送，其他計時訊息不受影響。
+- [x] 間隔小於 5 分鐘無法儲存。訊息超過 500 字無法儲存。
+- [x] 訊息會被頻道 AutoMod 擋下時無法儲存，並提示原因。
+- [x] 訊息內容的變數正確代入。
+- [x] 每次新增、修改、刪除都寫進修改紀錄。
 
 **實作設計**
 - 資料：新增 `twitch_timer`，schema 是 `stardb_basic`，由 W-04 建立。
@@ -751,7 +751,26 @@
 - `commands.py` 與 `events.py` 呼叫 `timers` 的那一行，由 W-02 先放好，W-06 不改這兩個檔案，避免和 W-05、W-07 衝突。
 - 開台狀態在 Twitch bot 重啟時會遺失，用 `get_streams` 補。
 
-**進度**：未完成
+**進度**：實作完成（2026-11-19），待審查與人工驗證；驗收條件只勾自動測試驗證過的項目（8 條都有自動測試，全部以假時鐘、mock 的 Twitch chat 與 AutoMod 驗證），真實 Twitch 與頁面畫面待人工驗證
+- 使用者決定（2026-11-19）：
+  - P1：每個頻道計時訊息上限 20 則，第 21 則回 400 `invalid_field`（field 為 `limit`），前端提示已達上限並停用新增；檢查在 `starlib/twitch_timers.py` 的寫入交易內（以頻道的 advisory lock 序列化，同頻道並行新增也不超過；本機 DB 用兩條連線同時新增第 20 則，一成功一回 `limit`）。
+  - P2：同一次檢查有多則到期時各自獨立照發，不做速率保護。
+- commit：
+  - 後端：4a44db26（`starlib/twitch_timers.py` 與測試）、781ef939（後台端點與測試）、3e7688f7（`timers.py` 排程與發送與測試）
+  - 前端：b08c8e5（`lib/dashboard-channel-timers.ts`）、b021052（清單、表單、頁面、`conflict-notice.tsx` 欄位標籤）
+- ALTER：無。`twitch_timer` 在 W-04 已建立。
+- 實作時的決定：
+  - 共用模組 `starlib/twitch_timers.py` 負責驗證與寫入（範圍、上限、鎖、衝突比對用的 `verify`、修改紀錄、commit、通知 bot 重讀）；端點只翻譯錯誤，不另外呼叫 `twitch_control.invalidate`。計時訊息只有後台寫入，沒有 `source` 參數。invalidate 的 key 是 twitch_id（契約），不是計時訊息 id。
+  - AutoMod：新增一律檢查，編輯只在訊息有變時檢查（只改開關、間隔、最少聊天量不花檢查額度）；先過格式與範圍驗證再檢查。
+  - bot 端：`timers.py` 以 `channels.rooms` 為掃描範圍，每 30 秒 tick 一次（`run_coroutine_threadsafe` 排在 Chat 的 loop）；設定存純資料複本，由 `twitch_timer` 失效 handler 重讀（key 為 None 重讀全部）；刪除或關閉的計時訊息丟狀態，開台中新出現或剛開啟的從現在起算。Chat 重啟後 READY 把失效 handler 與排程改綁到新的 loop。
+  - 「累積到第 N 則立刻發」在 `on_chat_message` 內達標即發送，不等下一次 tick；發送前先重新計時（`say` 回 False 也一樣），被 AutoMod 擋下時不會每 30 秒重試並重寫擋下紀錄。
+  - 開台狀態：`on_stream_online`、`on_stream_offline` 維護；bot 剛啟動不知道狀態時，tick 對有啟用計時訊息的頻道呼叫一次 `speech.prepare("{uptime}")` 讀 `ctx.stream`，取代卡上「啟動時 `get_streams` 補一次」（W-04 S3 note）。Helix 查詢失敗與確實沒開台無法區分，視為未開台，下一次 stream.online 才會恢復。
+  - `timers` 在函式內才 import `channels`（`channels` import `events`，`events` import `timers`，頂層 import 會循環）。
+  - 前端路徑照現況是 `app/dashboard/twitch/[id]/timers/page.tsx`；`conflict-notice.tsx` 的 `FIELD_LABELS` 末尾加 `interval_minutes`、`min_chat_lines`，`message` 沿用既有「自訂文字」。
+  - 新增卡上沒列的檔案：`starlib/twitch_timers.py`、`tests/twitch/test_timers.py`、`test_timers_store.py`、`tests/dashboard/test_channel_timers.py`、前端 `lib/dashboard-channel-timers.test.ts`、`components/dashboard/channel/timer-list.test.tsx`；改了卡上沒列的 `conflict-notice.tsx`。
+- 完整 CI：待合併回 main 前跑。
+- pyright：`starlib/twitch_timers.py` 一處 `TwitchTimer(...)` 的 `__table_args__`（同 W-04 所述 `models.py` 寫法同源）。
+- 未驗：真實 Twitch 聊天室的定時發送、開台與下播時機、bot 重啟時直播中的頻道；瀏覽器裡的計時訊息頁畫面。
 
 ### W-07 實況主能設定事件回應
 
