@@ -471,8 +471,8 @@
 - `twitch_chatbot.USER_SCOPE` 是 bot 帳號自己的 scope，不要拿來要求實況主；實況主的 scope 以上面列的清單為準。
 
 **進度**：實作中（2026-11-19）
-- commit：後端 PLACEHOLDER
-- 續做：關閉舊 `/oauth/twitch` 與 `/to/twitchauth`（`bot_website.py`，改寫 `tests/twitch/test_auth.py`），再做 `channel_activation.py`（啟用入口、`enable` handler、停用端點）；之後前端 `channel-activation.tsx`、三態標籤、notice。
+- commit：後端 84eebc1a、（本 commit：關閉舊流程）
+- 續做：`channel_activation.py`（啟用入口、`enable` handler、停用端點）；之後前端 `channel-activation.tsx`、三態標籤、notice。
 
 ### W-04 [共用] bot 發言管線與修改紀錄
 

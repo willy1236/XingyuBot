@@ -248,12 +248,14 @@ class TestDispatch:
     def test_state_mismatch_falls_back_and_clears_cookie(self, site, spy, repo):
         response = _callback(site, state="other", code="c")
 
-        assert response.status_code == 400
+        assert response.status_code == 200
+        assert "請到星羽後台啟用" in response.text
         assert _sessions(repo) == []
         assert _cookie_deleted(response)
 
-    def test_without_cookie_uses_old_flow(self, site, spy):
+    def test_without_cookie_asks_to_enable_in_dashboard(self, site, spy):
         response = site.get("/oauth/twitch", params={"code": "c", "state": STATE})
 
-        assert response.status_code == 400
+        assert response.status_code == 200
+        assert "請到星羽後台啟用" in response.text
         assert not _cookie_deleted(response)

@@ -26,12 +26,10 @@ from linebot.v3.webhooks import MessageEvent, TextMessageContent
 
 from sentry_bootstrap import capture_exception_safe
 from starlib import BaseThread, sclient, sqldb, utils
-from starlib.database import APIType, NotifyCommunityType, TwitchBotJoinChannel
-from starlib.identity import MemberUnknown, TwitchMember, lookup_twitch_member
+from starlib.database import APIType, NotifyCommunityType
 from starlib.instance import google_api
-from starlib.oauth import DiscordOAuth, TwitchOAuth
+from starlib.oauth import DiscordOAuth
 from starlib.providers.social.push_models import YoutubePushEntry
-from starlib.settings import get_settings
 from starlib.starAgent_line import line_agent
 from starServer import dashboard
 from starServer.dashboard import config as dashboard_config
@@ -44,7 +42,6 @@ from starServer.dashboard.twitch_login import (
 )
 
 discord_oauth_client = sqldb.get_oauth_client(APIType.Discord, 4)
-twitch_oauth_client = sqldb.get_oauth_client(APIType.Twitch, 3)
 docs_account = sqldb.get_identifier_secret(APIType.DocAccount)
 websub_config = sqldb.get_websub_config(APIType.Google, 4)
 
@@ -244,72 +241,22 @@ async def oauth_discordbot(request: Request):
     return HTMLResponse("授權已完成，您現在可以關閉此頁面<br>感謝您使用星羽機器人！", 200)
 
 
-def _twitch_oauth_page(message: str, status_code: int) -> HTMLResponse:
-    response = HTMLResponse(message, status_code)
-    response.delete_cookie("oauth_state")
-    return response
-
-
 @app.get("/oauth/twitch")
 async def oauth_twitch(request: Request):
-    # 後台的 Twitch 登入流程（dashboard_twitch_oauth cookie 且 state 相符）；回 None 才走下面原本的處理
+    # 後台的 Twitch 登入與啟用流程（dashboard_twitch_oauth cookie 且 state 相符）；回 None 表示不是從後台來的
     response = await handle_dashboard_twitch_oauth(request)
     if response is None:
-        response = await _oauth_twitch_fallback(request)
+        response = _oauth_twitch_fallback()
         # 有 dashboard_twitch_oauth 但 state 不符時，也一併清掉
         if TWITCH_OAUTH_COOKIE in request.cookies:
             delete_twitch_oauth_cookie(response)
     return response
 
 
-async def _oauth_twitch_fallback(request: Request) -> Response:
-    params = dict(request.query_params)
-    code = params.get("code")
-    if not code:
-        return _twitch_oauth_page(f"授權失敗：{html.escape(params.get('error', '缺少授權碼'))}", 400)
-
-    if not TwitchOAuth.verify_state(request.cookies.get("oauth_state"), params.get("state")):
-        return _twitch_oauth_page("授權失敗：驗證碼不符或已過期，請重新開始授權", 400)
-
-    auth = TwitchOAuth.create_from_db(twitch_oauth_client)
-    try:
-        await auth.exchange_code(code)
-        user = await auth.get_me()
-    except Exception as exc:
-        capture_exception_safe(exc, tags={"service": "website", "source": "oauth_twitch"})
-        log.exception("Twitch OAuth failed: %s", exc)
-        return _twitch_oauth_page("授權失敗，請重新開始授權", 400)
-
-    # 只有析域域民才能授權；結果沒有明確答案時不存 token、不登記頻道
-    lookup = await lookup_twitch_member(user.id)
-    if isinstance(lookup, MemberUnknown):
-        log.warning("Twitch OAuth: member lookup unknown for twitch_id=%s", user.id)
-        return _twitch_oauth_page("這次授權失敗，請稍後再試", 503)
-    if not isinstance(lookup, TwitchMember):
-        log.info("Twitch OAuth: twitch_id=%s is not a member, refused", user.id)
-        auth_url = html.escape(get_settings().AUTH_PUBLIC_URL)
-        return _twitch_oauth_page(
-            f'請先註冊析域帳號並在帳號頁連結這個 Twitch：<a href="{auth_url}">{auth_url}</a>', 403
-        )
-
-    twitch_id = int(user.id)  # 在 try 外：Twitch ID 本來就是數字，格式錯誤不是資料庫寫入失敗
-    try:
-        auth.save_token_to_db(user.id)
-        # 已登記的頻道保留 action_channel_id、point_name，所以沒有才新增，不用 merge
-        if sqldb.get(TwitchBotJoinChannel, (twitch_id,)) is None:
-            sqldb.add(TwitchBotJoinChannel(twitch_id=twitch_id))
-    except Exception as exc:
-        capture_exception_safe(exc, tags={"service": "website", "source": "oauth_twitch"})
-        log.exception("Twitch OAuth: saving token or channel failed for twitch_id=%s: %s", user.id, exc)
-        return _twitch_oauth_page("這次授權失敗，請稍後再試", 503)
-    log.info("Twitch OAuth: twitch_id=%s authorized as account %s", user.id, lookup.account_id)
-
-    return _twitch_oauth_page(
-        "授權已完成，您現在可以關閉此頁面<br>"
-        "請在您的 Twitch 聊天室輸入 <code>/mod xingyu1016</code> 將機器人設為管理員<br>"
-        "頻道會在 Twitch 機器人重啟後生效<br>感謝您使用星羽機器人！",
-        200,
-    )
+def _oauth_twitch_fallback() -> Response:
+    """舊的獨立授權流程已關閉：授權一律從後台的「啟用 bot」進來，不登記頻道、不存 token。"""
+    login_url = html.escape(f"{dashboard_config.frontend_url()}/dashboard-login")
+    return HTMLResponse(f'請到星羽後台啟用：<a href="{login_url}">{login_url}</a>', 200)
 
 
 @app.post("/callback/linebot")
@@ -368,25 +315,9 @@ def reply_line_message(reply_token: str, text: str):
 
 
 @app.get("/to/twitchauth")
-async def to_twitchauth(request: Request):
-    twitch_scopes = [
-        "chat:read",
-        "channel:read:subscriptions",
-        "moderation:read",
-        "channel:read:redemptions",
-        "channel:manage:redemptions",
-        "channel:manage:raids",
-        "channel:read:vips",
-        "channel:bot",
-        "moderator:read:suspicious_users",
-        "channel:manage:polls",
-        "channel:manage:predictions",
-    ]
-    auth = TwitchOAuth.create_from_db(twitch_oauth_client, scopes=twitch_scopes)
-    url, state = auth.get_authorization_url(force_verify="true")
-    response = RedirectResponse(url=url)
-    response.set_cookie(key="oauth_state", value=state, httponly=True, secure=True, samesite="lax", max_age=600)
-    return response
+async def to_twitchauth():
+    """舊的授權入口，改導向後台登入頁。"""
+    return RedirectResponse(url=f"{dashboard_config.frontend_url()}/dashboard-login")
 
 
 @app.get("/to/discordbot")
