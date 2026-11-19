@@ -908,8 +908,8 @@
 
 **驗收條件**
 - [ ] 輸入的頻道名稱不符時，無法按刪除。
-- [ ] 刪除後：bot 離開聊天室；指令、計時訊息、事件回應、轉發設定、實況主 token 全部清除；頻道狀態變成「未啟用」。再次啟用時從空白開始。
-- [ ] 刪除後，`twitch_channel_audit` 裡該頻道的修改紀錄仍在（用 DB 或 W-04 的 `list_changes` 確認）。
+- [x] 刪除後：bot 離開聊天室；指令、計時訊息、事件回應、轉發設定、實況主 token 全部清除；頻道狀態變成「未啟用」。再次啟用時從空白開始。
+- [x] 刪除後，`twitch_channel_audit` 裡該頻道的修改紀錄仍在（用 DB 或 W-04 的 `list_changes` 確認）。
 
 **實作設計**
 - 資料：不新增欄位。
@@ -928,7 +928,21 @@
 
 **依賴**：W-04（`twitch_automod_block` 表）
 
-**進度**：未完成
+**進度**：實作完成（2026-11-19），待審查與人工驗證；驗收條件只勾自動測試驗證過的 2 條（刪除後的資料與狀態、修改紀錄保留），其餘 1 條（名稱不符時按鈕不能按）的按鈕 disabled 是畫面行為，後端 400 與比對函式有測試，畫面待人工驗證
+- ALTER：無，沒有新增欄位。
+- 實作時的決定：
+  - 端點：`starServer/dashboard/channel_settings.py` 的 `POST /dashboard/channels/{id}/delete-data`，用 `require_channel`，不要求頻道已啟用，inactive、disabled 的頻道也能刪。
+  - 名稱比對：`confirm_login` 去掉前後空白後與 session 裡的頻道 login 比較，大小寫不敏感；不符回 400 `confirm_mismatch`（卡上沒定義錯誤碼）。
+  - 交易：`delete_twitch_channel_data`（W-04）、client #3 的 `OAuthToken`、頻道列的欄位清空，最後一次 `commit`，任何一步失敗整筆 rollback。`client.py` 沒有刪 token 的函式，W-04 的 docstring 註明 token 由這個端點處理，所以直接在端點內刪，沒有改 `client.py`。
+  - 頻道列只清 `action_channel_id`、`action_guild_id`、`point_name` 並設 `state=inactive`，其他欄位原樣保留，W-12 加 `banned_at` 後不需回頭改。沒有頻道列時只刪資料。
+  - 提交後呼叫 `channel_activation._sync_bot`（bot 離線或內部出錯回 `bot_offline`），再通知 `twitch_channel`、`twitch_cmd`、`twitch_timer`、`twitch_event_response` 四個快取。回傳 `{state: "inactive", bot_offline}`。
+  - 這次刪除本身不寫修改紀錄：`AuditTarget` 沒有適合的類別，卡上也沒要求。
+  - 前端：`lib/dashboard-channel-settings.ts`（呼叫、比對、提示文案）、`components/dashboard/channel/delete-data.tsx`、`app/dashboard/twitch/[id]/settings/page.tsx`；前端路徑是 `twitch/[id]`，不是卡上的 `channels/[id]`。
+  - 後端測試放 `tests/dashboard/test_channel_settings.py`，與既有頻道端點測試放一起。
+  - 新增卡上沒列的檔案：`lib/dashboard-channel-settings.ts`、`lib/dashboard-channel-settings.test.ts`。
+- 未驗：真實 Twitch 與 bot 的離開聊天室；瀏覽器裡設定頁的畫面與按鈕狀態。
+- 完整 CI：待合併回 main 前跑。
+- pyright：新檔 `channel_settings.py` 沒有錯誤；測試檔的 8 個 `reportCallIssue` 都是 model 建構子的 `__table_args__`，與既有測試同源。
 
 ### W-10 用析域登入能同時管理伺服器與頻道
 
