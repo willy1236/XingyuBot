@@ -862,11 +862,11 @@
 - 不包含：營運入口的狀態清單（W-12 使用這張卡的判定函式）。
 
 **驗收條件**
-- [ ] 在聊天室拿掉 bot 的 mod 後，下一次載入頻道後台時，頁首顯示「bot 不是 mod」，並列出暫停的功能（追隨、訂閱、續訂、贈訂的事件回應與轉發）。自訂指令仍能回應。
-- [ ] 在 Twitch 撤銷星羽的授權後，下一次載入時顯示「授權已失效」，並列出需要授權的功能已暫停。
-- [ ] 在 Twitch 封鎖 bot 帳號後，下一次載入時顯示問題，處理方式視同撤銷授權。
+- [x] 在聊天室拿掉 bot 的 mod 後，下一次載入頻道後台時，頁首顯示「bot 不是 mod」，並列出暫停的功能（追隨、訂閱、續訂、贈訂的事件回應與轉發）。自訂指令仍能回應。
+- [x] 在 Twitch 撤銷星羽的授權後，下一次載入時顯示「授權已失效」，並列出需要授權的功能已暫停。
+- [x] 在 Twitch 封鎖 bot 帳號後，下一次載入時顯示問題，處理方式視同撤銷授權。
 - [ ] 按「修復」並完成授權後，問題消失，暫停的功能恢復。bot 已在聊天室時，修復後會補訂需要 mod 的事件（W-02 的 sync 是 idempotent）。
-- [ ] Twitch bot 離線時，頁首顯示「bot 暫時離線」，不誤判成權限問題。
+- [x] Twitch bot 離線時，頁首顯示「bot 暫時離線」，不誤判成權限問題。
 
 **實作設計**
 - 資料：無。狀態在載入時即時判定，不存 DB。
@@ -893,7 +893,32 @@
 **風險 / 實作注意**
 - token 失效時，W-04 的 AutoMod 檢查必然失敗，bot 實際上會完全不發言。所以 `token_invalid` 的 paused_features 要列出所有發言功能。這是規格「需要該授權的功能暫停」的實際範圍，實作時照此顯示。
 
-**進度**：未完成
+**進度**：實作完成（2026-11-19），待審查與人工驗證；驗收條件只勾自動測試驗證過的項目（1、2、3、5），全部以 mock 的 Twitch Helix、validate、bot RPC 與 token 驗證；第 4 條需要真實 Twitch 授權往返，待人工驗證
+- 使用者決定（2026-11-19）：
+  - 1：token 暫時取不到（`TokenInvalid("unavailable")`，Twitch 暫時無法回應）時略過 token 與 scope 判定，不顯示 `token_invalid`，也不打其他 Helix（沒有 token 可用）；只有 `missing`、`revoked`、validate 回 401 或缺 scope 才是 `token_invalid`。
+  - 2：bot 被 ban 或封鎖時（`bot_banned`），文案請實況主先在 Twitch 解除，同時保留「修復」按鈕（解除後補設 mod、補訂事件）；paused 列全部功能（所有發言與 mod 事件）。
+  - 3：`channel_status` 的 `joined`、`subscriptions` 新增問題代碼 `not_joined`、`subscription_failed`，頁首顯示；只在 enabled 頻道且 bot 在線時判定，pending 的訂閱不算失敗。
+  - 4：只有 `bot_offline` 時 state 仍是 `enabled`，issues=[bot_offline]、paused=[]，頁首不顯示「修復」。
+- commit：
+  - 後端：ec2b133b（`starServer/dashboard/channel_health.py` 與 `tests/twitch/test_channel_health.py`）、31987c20（詳情端點回 `health`、`test_channels.py`）、c085195f（型別標註）、31af2759（merge 工作分支）
+  - 前端：2b817d1（`lib/dashboard-channel-health.ts`）、0a62542（`channel-status.tsx`、`channel-header.tsx`、型別與 fixture）、2f90ccd（merge 工作分支）
+- ALTER：無。
+- 實作時的決定：
+  - issues 的代碼與順序：`token_invalid`、`not_mod`、`bot_banned`、`not_joined`、`subscription_failed`、`bot_offline`。
+  - 功能代碼（上線後前端與 W-12 都用，不宜改名）：`speech`（自訂指令與計時訊息）、`stream_online_response`、`raid_response`、`follow_response`、`follow_forward`、`subscribe_response`、`subscribe_forward`、`resubscribe_response`、`resubscribe_forward`、`gift_response`、`gift_forward`、`redemption_forward`、`prediction_forward`。每個功能記是否靠 bot 在聊天室發言（`chat`）與依賴的 EventSub 事件（`events`）；需要 mod 由事件是否在 `EVENTS_NEED_MOD` 推得，該集合與 `twitch_bot.channels.MOD_EVENTS` 的比對有測試。
+  - 各問題暫停的功能：`token_invalid`、`bot_banned` 全部；`not_mod` 依賴 mod 事件的 10 項（追隨、訂閱、續訂、贈訂的回應與轉發，兌換與預測的轉發），`speech` 不受影響；`not_joined` 所有 `chat` 為真的功能（`speech` 與全部回應），轉發照常；`subscription_failed` 只暫停依賴失敗事件的功能，沒有對應功能的事件（如 stream offline）只列問題。
+  - state：有任何功能暫停是 `partial`，否則 `enabled`；`inactive`、`disabled` 不打任何 Twitch 或 bot。
+  - 不重複列問題：被 ban 時不再列 `not_joined`；token 失效或被 ban 時不列 `subscription_failed`；not_mod 時，已被 bot 退訂的 mod 事件不算訂閱失敗。
+  - 查不到就略過：validate、Get Moderators、Get Banned Users、Get User Block List 各自失敗只略過那一項；Get User Block List 沒有 user 篩選，翻頁找 bot，最多 5 頁，超過視為查不到；Get Banned Users 與封鎖名單任一成立就是 `bot_banned`。
+  - `channel_status` RPC 出 `RpcHandlerError` 視為 `bot_offline`，不讓詳情端點 500。
+  - 離線時 RPC 要等滿 5 秒，所以 token 判定與 `channel_status` 並行，頁面載入最慢約 5 秒；不加快取。
+  - 必要的 scope 取 `channel_activation.ENABLE_SCOPES`，在函式內延遲 import（`channel_activation` 會 import `channels`，頂層 import 會循環）；bot 的 user id 在 `channel_health` 內自己讀 OAuthToken（#2），不 import `channel_activation` 的私有函式。
+  - 前端：修復按鈕用 `enableUrl`，與「啟用星羽」同一個入口；`bot_banned` 也有修復按鈕；只有 `bot_offline` 不顯示修復。標籤在 `partial` 時顯示「星羽部分暫停」。`ChannelDetail.health` 必填，補了 `channel-access-guard.test.tsx` 與 `app/dashboard/twitch/[id]/page.test.tsx` 的 fixture；`channel-header.tsx` 只加傳 `health`。
+  - 新增卡上沒列的檔案：`tests/twitch/test_channel_health.py`、`lib/dashboard-channel-health.test.ts`；改寫 `tests/dashboard/test_channels.py` 的詳情測試（加驗 `health`，並以 autouse fixture 隔離 Twitch 與 bot 呼叫）、`channel-status.test.tsx`（新增權限問題案例）。
+  - 前端路徑是 `app/dashboard/twitch/[id]/`，不是卡上的 `channels/[id]`。
+- 未驗：真實 Twitch 的撤銷授權、拿掉 mod、封鎖或 ban bot 後的頁首顯示；按「修復」完成授權後問題消失與補訂事件；Helix 的 Get Banned Users、Get User Block List 實際回應形狀；Twitch bot 離線時的頁面載入時間；瀏覽器裡的頁首畫面。
+- 完整 CI：待合併回 main 前跑。
+- 型別檢查：專案沒有 pyright 設定；本機 `npx pyright` 無法解析 venv 套件，只剩 `httpx`、`sqldb` 解析不到的環境雜訊，已修掉可處理的標註錯誤。ruff check 與 format 通過。
 
 ### W-09 實況主能刪除頻道的所有資料
 
