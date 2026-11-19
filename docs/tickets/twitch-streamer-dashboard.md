@@ -756,8 +756,8 @@
   - P1：每個頻道計時訊息上限 20 則，第 21 則回 400 `invalid_field`（field 為 `limit`），前端提示已達上限並停用新增；檢查在 `starlib/twitch_timers.py` 的寫入交易內（同頻道並行新增也不超過）。
   - P2：同一次檢查有多則到期時各自獨立照發，不做速率保護。
 - commit：
-  - 後端：`starlib/twitch_timers.py` 與測試（本 commit）
-- 續做：`starServer/dashboard/channel_timers.py` 與 `tests/dashboard/test_channel_timers.py`；再來 `starServer/twitch_bot/timers.py`；最後前端。
+  - 後端：4a44db26（`starlib/twitch_timers.py` 與測試）、後台端點與測試（本 commit）
+- 續做：`starServer/twitch_bot/timers.py` 與 `tests/twitch/test_timers.py`；最後前端。
 
 ### W-07 實況主能設定事件回應
 
