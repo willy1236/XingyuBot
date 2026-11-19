@@ -4,7 +4,7 @@ import socket
 import threading
 
 from sqlalchemy.exc import NoResultFound
-from twitchAPI.chat import Chat, EventData
+from twitchAPI.chat import Chat
 from twitchAPI.eventsub.webhook import EventSubWebhook
 from twitchAPI.helper import first
 from twitchAPI.oauth import UserAuthenticator
@@ -60,13 +60,11 @@ USER_SCOPE = [
 ]
 
 
-# bot
-async def on_ready(ready_event: EventData):
-    log.info("Bot is ready as %s, joining channels", ready_event.chat.username)
-    # join our target channel, if you want to join multiple, either call join for each individually
-    # or even better pass a list of channels as the argument
-    if users_login:
-        await ready_event.chat.join_room(users_login)
+async def _wait_for_chat_loop(timeout: float = 30) -> None:
+    """等 Chat 的 READY handler 記下它的 event loop；之後的 RPC 與 join_room、leave_room 都要在那個 loop 上執行。"""
+    async with asyncio.timeout(timeout):
+        while not hasattr(state, "loop"):
+            await asyncio.sleep(0.1)
 
 
 async def run():
@@ -110,14 +108,13 @@ async def run():
 
     me = await first(twitch.get_users())
     users = [user async for user in twitch.get_users(user_ids=state.TARGET_CHANNEL_IDS)]
-    global users_login
-    users_login = [user.login for user in users]
+    channels.rooms.update({int(user.id): user.login for user in users})
 
     # create chat instance
     chat = state.chat = await Chat(twitch)
 
     # register the handlers for the events you want
-    chat.register_event(ChatEvent.READY, on_ready)
+    chat.register_event(ChatEvent.READY, channels.on_ready)
     chat.register_event(ChatEvent.MESSAGE, commands.on_message)
     chat.register_event(ChatEvent.SUB, events.on_sub)
     chat.register_event(ChatEvent.JOINED, events.on_bot_joined)
@@ -134,6 +131,8 @@ async def run():
 
     chat.start()
     await asyncio.sleep(5)
+    await _wait_for_chat_loop()
+    channels.register()
     timers.start(chat)
     commands.start()
     events.start()
@@ -149,7 +148,8 @@ async def run():
     state.bot_user_id = me.id
     for user in users:
         log.debug("eventsub:%s", user.login)
-        await channels.subscribe_channel(user, is_mod=chat.is_mod(user.login))
+        # bot 是不是 mod 一律查 Helix（實況主 token），Chat 的 is_mod 拿掉 mod 後不會更新；查不到就先當非 mod
+        await channels.subscribe_channel(user, is_mod=bool(await channels.bot_is_mod(int(user.id))))
         log.debug("eventsub:%s done.", user.login)
 
     return chat, twitch, eventsub

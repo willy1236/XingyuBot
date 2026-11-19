@@ -43,7 +43,13 @@ def eventsub(monkeypatch):
     monkeypatch.setattr(state, "eventsub", fake, raising=False)
     monkeypatch.setattr(state, "bot_user_id", "42", raising=False)
     monkeypatch.setattr(channels, "subscriptions", {})
-    monkeypatch.setattr(channels.asyncio, "sleep", AsyncMock())
+    real_sleep = asyncio.sleep
+
+    async def fast_sleep(delay, *args):
+        # 訂閱之間的 1 秒間隔不用等；仍要讓出 loop，背景任務才跑得動
+        await real_sleep(0)
+
+    monkeypatch.setattr(channels.asyncio, "sleep", fast_sleep)
     return fake
 
 
