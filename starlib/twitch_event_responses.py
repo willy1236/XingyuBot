@@ -95,8 +95,11 @@ def _effective(kind: str, row: TwitchEventResponse | None) -> EventResponse:
 
 
 def comparable(values: dict[str, Any]) -> dict[str, str | None]:
-    """比對編輯衝突用的字串形式（`conflict.check_conflict` 比的是字串）；values 含 enabled 與 template。"""
-    return {"enabled": "true" if values["enabled"] else "false", "template": values["template"]}
+    """比對編輯衝突用的字串形式（`conflict.check_conflict` 比的是字串）；values 含 enabled 與 template。
+
+    文字的欄位名用 response，衝突提示才能沿用後台既有的欄位標籤（template 在那邊是別的意思）。
+    """
+    return {"enabled": "true" if values["enabled"] else "false", "response": values["template"]}
 
 
 def _snapshot(enabled: bool, template: str) -> dict[str, Any]:

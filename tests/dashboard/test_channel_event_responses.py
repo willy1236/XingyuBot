@@ -151,7 +151,7 @@ def test_後台編輯時別處改了同一種事件_回_409_不覆蓋(client):
     r = put(client, new=values(template="我的版本"), original=DEFAULT)
     assert r.status_code == 409
     assert r.json()["deleted"] is False
-    assert r.json()["current"] == {"enabled": "true", "template": "歡迎 {user}"}
+    assert r.json()["current"] == {"enabled": "true", "response": "歡迎 {user}"}
     assert rows(client)["follow"]["template"] == "歡迎 {user}"
     assert delete(client).status_code == 409
 

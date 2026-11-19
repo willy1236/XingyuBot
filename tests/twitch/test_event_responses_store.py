@@ -132,7 +132,7 @@ def test_verify_以有效值為準_有衝突就不寫入():
 
     with pytest.raises(RuntimeError):
         save(verify=verify)
-    assert seen == [{"enabled": "true", "template": responses.DEFAULTS["follow"]}]
+    assert seen == [{"enabled": "true", "response": responses.DEFAULTS["follow"]}]
     assert by_kind()["follow"].is_default and list_changes(TWITCH_ID) == []
 
 
