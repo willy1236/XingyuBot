@@ -88,7 +88,9 @@ class PublicProfile(UsersSchema, table=True):
 
     user_id: UUID = Field(sa_column=Column(PG_UUID(as_uuid=True), primary_key=True))
     enabled: bool = Field(sa_column=Column(Boolean, nullable=False, server_default=text("false")), default=False)
-    sections: list[str] = Field(sa_column=Column(ARRAY(String), nullable=False, server_default=text("'{}'")), default_factory=list)
+    sections: list[str] = Field(
+        sa_column=Column(ARRAY(String), nullable=False, server_default=text("'{}'")), default_factory=list
+    )
 
 
 class NetBirdBinding(UsersSchema, table=True):
@@ -114,7 +116,9 @@ class MusicPlaylist(UsersSchema, table=True):
     id: int = Field(sa_column=Column(Integer, Identity(), primary_key=True))
     user_id: UUID = Field(sa_column=Column(PG_UUID(as_uuid=True), index=True, nullable=False))
     name: str = Field(sa_column=Column(String, nullable=False))
-    created_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0), server_default=text("now()")), default_factory=lambda: nowtz())
+    created_at: datetime = Field(
+        sa_column=Column(TIMESTAMP(True, 0), server_default=text("now()")), default_factory=lambda: nowtz()
+    )
     #: 歌單、歌曲或來源每次寫入時加一，網頁以它偵測衝突
     version: int = Field(sa_column=Column(Integer, nullable=False, server_default=text("0")), default=0)
 
@@ -130,10 +134,14 @@ class MusicPlaylistSource(UsersSchema, table=True):
     __tablename__ = "music_playlist_source"
 
     id: int = Field(sa_column=Column(Integer, Identity(), primary_key=True))
-    playlist_id: int = Field(sa_column=Column(Integer, ForeignKey("users.music_playlist.id", ondelete="CASCADE"), index=True, nullable=False))
+    playlist_id: int = Field(
+        sa_column=Column(Integer, ForeignKey("users.music_playlist.id", ondelete="CASCADE"), index=True, nullable=False)
+    )
     url: str = Field(sa_column=Column(String, nullable=False))
     title: str | None = Field(sa_column=Column(String))
-    synced_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0), server_default=text("now()")), default_factory=lambda: nowtz())
+    synced_at: datetime = Field(
+        sa_column=Column(TIMESTAMP(True, 0), server_default=text("now()")), default_factory=lambda: nowtz()
+    )
 
     __table_args__ = (
         UniqueConstraint("playlist_id", "url", name="unique_playlist_source_url"),
@@ -145,9 +153,13 @@ class MusicPlaylistSong(UsersSchema, table=True):
     __tablename__ = "music_playlist_song"
 
     id: int = Field(sa_column=Column(Integer, Identity(), primary_key=True))
-    playlist_id: int = Field(sa_column=Column(Integer, ForeignKey("users.music_playlist.id", ondelete="CASCADE"), index=True, nullable=False))
+    playlist_id: int = Field(
+        sa_column=Column(Integer, ForeignKey("users.music_playlist.id", ondelete="CASCADE"), index=True, nullable=False)
+    )
     # 來自外部歌單的歌曲；手動加入的單曲為 None
-    source_id: int | None = Field(sa_column=Column(Integer, ForeignKey("users.music_playlist_source.id", ondelete="SET NULL"), index=True))
+    source_id: int | None = Field(
+        sa_column=Column(Integer, ForeignKey("users.music_playlist_source.id", ondelete="SET NULL"), index=True)
+    )
     position: int = Field(sa_column=Column(Integer, nullable=False))
     url: str = Field(sa_column=Column(String, nullable=False))
     title: str = Field(sa_column=Column(String, nullable=False))
@@ -161,7 +173,9 @@ class DiscordUser(DiscordUsersSchema, table=True):
     max_sign_consecutive_days: int | None = Field(sa_column=Column(Integer))
     meatball_times: int | None = Field(sa_column=Column(Integer))
     guaranteed: int | None = Field(sa_column=Column(Integer))
-    registrations_id: int | None = Field(sa_column=Column(Integer, ForeignKey("stardb_idbase.discord_registrations.registrations_id"), default=None))
+    registrations_id: int | None = Field(
+        sa_column=Column(Integer, ForeignKey("stardb_idbase.discord_registrations.registrations_id"), default=None)
+    )
 
     registration: DiscordRegistration = Relationship(back_populates="members")
 
@@ -341,7 +355,9 @@ class HappycampApplicationForm(HappycampSchema, table=True):
             icon_url=None,
         )
         embed.add_field(name="申請內容", value=self.content or "無")
-        embed.add_field(name="變更 VIP 等級", value=str(self.change_vip_level) if self.change_vip_level is not None else "無")
+        embed.add_field(
+            name="變更 VIP 等級", value=str(self.change_vip_level) if self.change_vip_level is not None else "無"
+        )
         return embed
 
 
@@ -602,7 +618,9 @@ class GuildSetting(GuildsSchema, table=True):
     #: 警告累計幾次自動禁言（自動禁言的 N）；NULL 視為預設
     timeout_after_warning_times: int | None
     voice_time_counter: bool | None
-    auto_timeout_enabled: bool = Field(default=False, sa_column=Column(Boolean, nullable=False, server_default=text("false")))
+    auto_timeout_enabled: bool = Field(
+        default=False, sa_column=Column(Boolean, nullable=False, server_default=text("false"))
+    )
     #: 自動禁言時長（秒）；NULL 視為預設
     auto_timeout_seconds: int | None = Field(default=None, sa_column=Column(Integer))
 
@@ -652,8 +670,12 @@ class TicketChannelLobby(BasicSchema, table=True):
     message_id: int = Field(sa_column=Column(BigInteger))
     #: 私人頻道所在的分類；`category_id` 是大廳頻道自己的分類，兩者語意不同。舊資料由 ALTER 回填為 category_id
     ticket_category_id: int | None = Field(default=None, sa_column=Column(BigInteger, nullable=True))
-    name_prefix: str = Field(default="ticket", sa_column=Column(String(20), nullable=False, default="ticket", server_default="ticket"))
-    one_per_user: bool = Field(default=True, sa_column=Column(Boolean, nullable=False, default=True, server_default=text("true")))
+    name_prefix: str = Field(
+        default="ticket", sa_column=Column(String(20), nullable=False, default="ticket", server_default="ticket")
+    )
+    one_per_user: bool = Field(
+        default=True, sa_column=Column(Boolean, nullable=False, default=True, server_default=text("true"))
+    )
     max_open: int | None = Field(default=None, sa_column=Column(Integer, nullable=True))
     next_number: int = Field(default=1, sa_column=Column(Integer, nullable=False, default=1, server_default=text("1")))
     #: 大廳訊息內容的 JSON（P-02 起寫入）；None 沿用預設內容
@@ -754,8 +776,12 @@ class TRPGCharacter(IdbaseSchema, table=True):
 class TRPGCharacterAbility(IdbaseSchema, table=True):
     __tablename__ = "trpg_character_abilities"
 
-    discord_id: int = Field(sa_column=Column(BigInteger, ForeignKey("stardb_idbase.trpg_characters.discord_id"), primary_key=True))
-    ability_id: int = Field(sa_column=Column(Integer, ForeignKey("stardb_idbase.trpg_abilities.ability_id"), primary_key=True))
+    discord_id: int = Field(
+        sa_column=Column(BigInteger, ForeignKey("stardb_idbase.trpg_characters.discord_id"), primary_key=True)
+    )
+    ability_id: int = Field(
+        sa_column=Column(Integer, ForeignKey("stardb_idbase.trpg_abilities.ability_id"), primary_key=True)
+    )
     san_lower_limit: int = Field(sa_column=Column(Integer))
     value: int = Field(sa_column=Column(Integer))
 
@@ -770,6 +796,7 @@ class TRPGAbility(IdbaseSchema, table=True):
     ability_name: str = Field(sa_column=Column(String))
 
     characters: list[TRPGCharacterAbility] = Relationship(back_populates="ability")
+
 
 class WarningTypeRow(IdbaseSchema, table=True):
     __tablename__ = "warning_type"
@@ -810,7 +837,9 @@ class BackupRole(BackupSchema, table=True):
 class BackupRoleUser(BackupSchema, table=True):
     __tablename__ = "role_user_backup"
 
-    role_id: int = Field(sa_column=Column(BigInteger, ForeignKey("stardb_backup.roles_backup.role_id"), primary_key=True))
+    role_id: int = Field(
+        sa_column=Column(BigInteger, ForeignKey("stardb_backup.roles_backup.role_id"), primary_key=True)
+    )
     discord_id: int = Field(sa_column=Column(BigInteger, primary_key=True))
     role: BackupRole = Relationship(back_populates="members")
 
@@ -935,7 +964,9 @@ class OAuthToken(TokensSchema, table=True):
     __tablename__ = "oauth_token"
 
     user_id: str = Field(sa_column=Column(String, primary_key=True))
-    client_credential_id: int = Field(sa_column=Column(Integer, ForeignKey("credentials.oauth_client.credential_id"), primary_key=True))
+    client_credential_id: int = Field(
+        sa_column=Column(Integer, ForeignKey("credentials.oauth_client.credential_id"), primary_key=True)
+    )
     access_token: str = Field(sa_column=Column(String))
     refresh_token: str = Field(sa_column=Column(String))
     scope: list[str] = Field(sa_column=Column(ARRAY(String)))
@@ -956,7 +987,9 @@ class DashboardSession(TokensSchema, table=True):
     name: str = Field(sa_column=Column(String, nullable=False))
     avatar: str | None = Field(default=None, sa_column=Column(String))
     created_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0), nullable=False), default_factory=lambda: nowtz())
-    last_used_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0), nullable=False), default_factory=lambda: nowtz())
+    last_used_at: datetime = Field(
+        sa_column=Column(TIMESTAMP(True, 0), nullable=False), default_factory=lambda: nowtz()
+    )
     # 這個 session 帶的析域帳號（auth server 暫時不可用時以此為準）；via_domalyze 表示是析域登入建立的
     account_id: UUID | None = Field(default=None, sa_column=Column(PG_UUID(as_uuid=True)))
     via_domalyze: bool = Field(default=False, sa_column=Column(Boolean, nullable=False, server_default=text("false")))
@@ -1016,6 +1049,7 @@ class LOLGameCache(CacheSchema, table=True):
 
     puuid: str = Field(sa_column=Column(String, primary_key=True))
     newest_game_time: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
+
 
 class LOLChampionLookup(LookupsSchema, table=True):
     """LOL英雄名稱對照表"""

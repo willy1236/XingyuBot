@@ -45,6 +45,7 @@ if TYPE_CHECKING:
     from ..ticket_channel import TicketActionError
     from ..ticket_lobby import TicketOpenError
 
+
 class DeletePetView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=30)
@@ -55,6 +56,7 @@ class DeletePetView(discord.ui.View):
         sqldb.remove_user_pet(user.id)
         button.disabled = True
         await interaction.response.edit_message(content="寵物已放生", view=self)
+
 
 class DeleteAddRoleView(discord.ui.View):
     def __init__(self, role: discord.Role, creater: discord.Member):
@@ -81,6 +83,7 @@ class DeleteAddRoleView(discord.ui.View):
         else:
             await interaction.response.send_message(content="只有使用此指令的用戶可以刪除", ephemeral=True)
 
+
 POLL_GONE_TEXT = "此投票已不存在"
 
 
@@ -91,7 +94,7 @@ async def reply_poll_gone(interaction: discord.Interaction) -> None:
     """
     try:
         await interaction.response.send_message(POLL_GONE_TEXT, ephemeral=True)
-    except (discord.InteractionResponded, discord.HTTPException):
+    except discord.InteractionResponded, discord.HTTPException:
         pass
     if interaction.message is not None:
         try:
@@ -132,13 +135,26 @@ class PollOptionButton(discord.ui.Button):
                     vote_magnification = view.role_dict[roleid][1]
 
         if not view.role_dict or (have_only_role and can_vote):
-            r = view.sqldb.set_user_poll(self.option.poll_id, interaction.user.id, self.option.option_id, nowtz(), vote_magnification, view.poll.number_of_user_votes)
+            r = view.sqldb.set_user_poll(
+                self.option.poll_id,
+                interaction.user.id,
+                self.option.option_id,
+                nowtz(),
+                vote_magnification,
+                view.poll.number_of_user_votes,
+            )
             if r == 2:
-                await interaction.response.send_message(f"{interaction.user.mention} 已投了 {view.poll.number_of_user_votes} 票而無法投票", ephemeral=True)
+                await interaction.response.send_message(
+                    f"{interaction.user.mention} 已投了 {view.poll.number_of_user_votes} 票而無法投票", ephemeral=True
+                )
             elif r == 1:
-                await interaction.response.send_message(f"{interaction.user.mention} 已投票給 {self.label} {vote_magnification} 票", ephemeral=True)
+                await interaction.response.send_message(
+                    f"{interaction.user.mention} 已投票給 {self.label} {vote_magnification} 票", ephemeral=True
+                )
             else:
-                await interaction.response.send_message(f"{interaction.user.mention} 已取消投票給 {self.label}", ephemeral=True)
+                await interaction.response.send_message(
+                    f"{interaction.user.mention} 已取消投票給 {self.label}", ephemeral=True
+                )
         else:
             await interaction.response.send_message(f"{interaction.user.mention}：你沒有投票資格", ephemeral=True)
 
@@ -206,7 +222,9 @@ class PollNowButton(discord.ui.Button):
         if dbdata:
             vote_mag = dbdata[0][0].vote_magnification
             options_name = ",".join([data[1] for data in dbdata])
-            await interaction.response.send_message(f"{interaction.user.mention} 投給 {options_name} {vote_mag}票", ephemeral=True)
+            await interaction.response.send_message(
+                f"{interaction.user.mention} 投給 {options_name} {vote_mag}票", ephemeral=True
+            )
         else:
             await interaction.response.send_message(f"{interaction.user.mention} 沒有投給任何選項", ephemeral=True)
 
@@ -326,7 +344,14 @@ class PollView(discord.ui.View):
         try:
             sqldb.add_poll_option(poll.poll_id, options)
             for role_id in set(only_roles) | set(role_weights):
-                sqldb.merge(PollRole(poll_id=poll.poll_id, role_id=role_id, is_only_role=role_id in only_roles, role_magnification=role_weights.get(role_id, 1)))
+                sqldb.merge(
+                    PollRole(
+                        poll_id=poll.poll_id,
+                        role_id=role_id,
+                        is_only_role=role_id in only_roles,
+                        role_magnification=role_weights.get(role_id, 1),
+                    )
+                )
 
             view = cls(poll, sqldb, bot)
             message = await send(view.embed(bot.get_guild(guild_id)), view)
@@ -340,14 +365,18 @@ class PollView(discord.ui.View):
                 try:
                     await message.delete()
                 except discord.HTTPException:
-                    log.warning("poll create: delete orphan message failed", extra={"poll_id": poll.poll_id}, exc_info=True)
+                    log.warning(
+                        "poll create: delete orphan message failed", extra={"poll_id": poll.poll_id}, exc_info=True
+                    )
             sqldb.delete_poll(poll.poll_id)
             if isinstance(e, discord.NotFound):
                 raise PollSendError("channel_missing") from e
             if isinstance(e, discord.Forbidden):
                 raise PollSendError("no_permission") from e
             if isinstance(e, discord.HTTPException):
-                log.warning("poll create: send failed", extra={"guild_id": guild_id, "channel_id": channel_id}, exc_info=True)
+                log.warning(
+                    "poll create: send failed", extra={"guild_id": guild_id, "channel_id": channel_id}, exc_info=True
+                )
                 raise PollSendError("failed") from e
             raise
         return poll
@@ -362,7 +391,9 @@ class PollView(discord.ui.View):
             return
         run_at = max(self.poll.deadline, nowtz() + timedelta(seconds=10))
         # misfire_grace_time=None：event loop 被阻塞（如繪製圓餅圖）而晚執行時照樣執行，預設 1 秒會讓 job 被跳過、投票停在進行中；finish 在鎖內重讀，晚執行沒有副作用
-        self.bot.scheduler.add_job(self.auto_end, DateTrigger(run_at), id=self._job_id, replace_existing=True, misfire_grace_time=None)
+        self.bot.scheduler.add_job(
+            self.auto_end, DateTrigger(run_at), id=self._job_id, replace_existing=True, misfire_grace_time=None
+        )
 
     async def auto_end(self):
         """排程到期的結算；沒有人看回傳值，結算沒完成要留紀錄"""
@@ -374,7 +405,11 @@ class PollView(discord.ui.View):
         if outcome.status not in ("ok", "already_ended") or outcome.message_failure:
             log.error(
                 "poll auto end did not publish",
-                extra={"poll_id": self.poll.poll_id, "status": outcome.status, "message_failure": outcome.message_failure},
+                extra={
+                    "poll_id": self.poll.poll_id,
+                    "status": outcome.status,
+                    "message_failure": outcome.message_failure,
+                },
             )
 
     def reload(self) -> bool:
@@ -388,7 +423,11 @@ class PollView(discord.ui.View):
     @staticmethod
     def missing_permissions(channel: discord.abc.Messageable, perms: discord.Permissions) -> list[str]:
         """結算時 bot 要讀取並編輯投票訊息；回傳 perms 在 channel 缺少的權限名稱（中文），齊全時為空 list"""
-        send = ("send_messages_in_threads", "在討論串發送訊息") if isinstance(channel, discord.Thread) else ("send_messages", "發送訊息")
+        send = (
+            ("send_messages_in_threads", "在討論串發送訊息")
+            if isinstance(channel, discord.Thread)
+            else ("send_messages", "發送訊息")
+        )
         required = [("view_channel", "檢視頻道"), ("read_message_history", "讀取訊息歷史"), send]
         return [label for attr, label in required if not getattr(perms, attr)]
 
@@ -452,7 +491,9 @@ class PollView(discord.ui.View):
         if channel_id is None or message_id is None:
             return "message_unknown"
         try:
-            channel = (guild.get_channel_or_thread(channel_id) if guild else None) or await self.bot.fetch_channel(channel_id)
+            channel = (guild.get_channel_or_thread(channel_id) if guild else None) or await self.bot.fetch_channel(
+                channel_id
+            )
         except discord.NotFound:
             return "channel_missing"
         except discord.Forbidden:
@@ -523,7 +564,9 @@ class PollView(discord.ui.View):
             embed.set_author(name=author.name, icon_url=author.display_avatar.url)
         return embed
 
-    def results_embed(self, guild: discord.Guild | None, with_chart=False, show_name: bool | None = None) -> tuple[discord.Embed, io.BytesIO | None] | discord.Embed:
+    def results_embed(
+        self, guild: discord.Guild | None, with_chart=False, show_name: bool | None = None
+    ) -> tuple[discord.Embed, io.BytesIO | None] | discord.Embed:
         """產生結果 embed（各選項票數，實名投票另列投票人與權重）。
 
         guild: 用來查成員，查不到的成員以 <@id> 顯示
@@ -592,7 +635,9 @@ class PollView(discord.ui.View):
         # explode = (0.1, 0, 0, 0)  # 將第一塊突出顯示
 
         # 繪製圓餅圖
-        ax.pie(sizes, labels=labels, colors=colors, autopct=lambda i: data_string(i, sizes), shadow=False, startangle=140)
+        ax.pie(
+            sizes, labels=labels, colors=colors, autopct=lambda i: data_string(i, sizes), shadow=False, startangle=140
+        )
         # plt.pie()
 
         # 添加標題
@@ -643,7 +688,9 @@ class ReactionRoleView(discord.ui.View):
 
     async def on_error(self, error: Exception, item: discord.ui.Item, interaction: discord.Interaction):
         if isinstance(error, discord.Forbidden):
-            await interaction.response.send_message("錯誤：我沒有權限給予或移除身分組，可能為我的身分組位階較低或缺少必要權限", ephemeral=True)
+            await interaction.response.send_message(
+                "錯誤：我沒有權限給予或移除身分組，可能為我的身分組位階較低或缺少必要權限", ephemeral=True
+            )
         else:
             await interaction.response.send_message(f"發生錯誤：{error}", ephemeral=True)
             log.error("ReactionRoleView error", extra={"item": str(item)}, exc_info=error)
@@ -651,7 +698,11 @@ class ReactionRoleView(discord.ui.View):
 
 class TRPGPlotButton(discord.ui.Button):
     def __init__(self, option: TRPGStoryOption):
-        super().__init__(label=option.option_title, style=discord.ButtonStyle.primary, custom_id=f"plot_{option.plot.id}_{option.option_id}")
+        super().__init__(
+            label=option.option_title,
+            style=discord.ButtonStyle.primary,
+            custom_id=f"plot_{option.plot.id}_{option.option_id}",
+        )
         self.option = option
 
     async def callback(self, interaction):
@@ -676,7 +727,9 @@ class TRPGPlotButton(discord.ui.Button):
                         san_reduce += random.randint(1, int(dice))
 
                     ability.value -= san_reduce
-                    text_list.append(f"\n{self.option.san_check_fall_dice}：{san_reduce}\nSAN值-{san_reduce}，剩餘{ability.value}")
+                    text_list.append(
+                        f"\n{self.option.san_check_fall_dice}：{san_reduce}\nSAN值-{san_reduce}，剩餘{ability.value}"
+                    )
                     view.sqldb.merge(ability)
                     if ability.value < ability.san_lower_limit:
                         text_list.append(f"\nSAN值低於{ability.san_lower_limit}，進入瘋狂狀態")
@@ -690,7 +743,8 @@ class TRPGPlotButton(discord.ui.Button):
         else:
             cheracter = view.sqldb.get_trpg_cheracter(interaction.user.id)
             await interaction.response.send_message(
-                f"{cheracter.character_name if cheracter else interaction.user.mention} 已選擇 {self.label}", ephemeral=False
+                f"{cheracter.character_name if cheracter else interaction.user.mention} 已選擇 {self.label}",
+                ephemeral=False,
             )
             await view.next_plot(self.option.lead_to_plot)
 
@@ -704,7 +758,9 @@ class TRPGPlotView(discord.ui.View):
             self.add_item(TRPGPlotButton(option))
 
     def embed(self):
-        embed = BotEmbed.general("TRPG故事線", Jsondb.get_picture("dice_001"), title=self.plot.title, description=self.plot.content)
+        embed = BotEmbed.general(
+            "TRPG故事線", Jsondb.get_picture("dice_001"), title=self.plot.title, description=self.plot.content
+        )
         return embed
 
     async def next_plot(self, plot_id):
@@ -767,7 +823,9 @@ class GiveawayJoinButton(discord.ui.Button):
             view.sqldb.delete(giveaway_user)
             await interaction.response.send_message(f"{interaction.user.mention} 離開了抽獎", ephemeral=True)
         else:
-            giveaway_user = GiveawayUser(giveaway_id=view.giveaway.id, user_id=interaction.user.id, user_weight=1, join_at=nowtz())
+            giveaway_user = GiveawayUser(
+                giveaway_id=view.giveaway.id, user_id=interaction.user.id, user_weight=1, join_at=nowtz()
+            )
             view.sqldb.add(giveaway_user)
             await interaction.response.send_message(f"{interaction.user.mention} 參加了抽獎！", ephemeral=True)
 
@@ -843,7 +901,11 @@ class GiveawayView(discord.ui.View):
     @staticmethod
     def missing_permissions(channel: discord.abc.Messageable, perms: discord.Permissions) -> list[str]:
         """開獎時 bot 要讀原訊息、編輯並公告；回傳 perms 在 channel 缺少的權限名稱（中文），齊全時為空 list"""
-        send = ("send_messages_in_threads", "在討論串發送訊息") if isinstance(channel, discord.Thread) else ("send_messages", "發送訊息")
+        send = (
+            ("send_messages_in_threads", "在討論串發送訊息")
+            if isinstance(channel, discord.Thread)
+            else ("send_messages", "發送訊息")
+        )
         required = [("view_channel", "檢視頻道"), ("read_message_history", "讀取訊息歷史"), send]
         return [label for attr, label in required if not getattr(perms, attr)]
 
@@ -853,7 +915,11 @@ class GiveawayView(discord.ui.View):
         if outcome.status not in ("ok", "already_ended") or outcome.announce_failure:
             log.error(
                 "giveaway auto end did not publish",
-                extra={"giveaway_id": self.giveaway.id, "status": outcome.status, "announce_failure": outcome.announce_failure},
+                extra={
+                    "giveaway_id": self.giveaway.id,
+                    "status": outcome.status,
+                    "announce_failure": outcome.announce_failure,
+                },
             )
 
     async def finish(self) -> GiveawayOutcome:
@@ -897,7 +963,9 @@ class GiveawayView(discord.ui.View):
         except discord.Forbidden:
             return "no_permission"
         except discord.HTTPException:
-            log.warning("giveaway publish: fetch channel failed", extra={"giveaway_id": self.giveaway.id}, exc_info=True)
+            log.warning(
+                "giveaway publish: fetch channel failed", extra={"giveaway_id": self.giveaway.id}, exc_info=True
+            )
             return "failed"
 
         message = None
@@ -910,7 +978,9 @@ class GiveawayView(discord.ui.View):
             except discord.Forbidden:
                 return "no_permission"
             except discord.HTTPException:
-                log.warning("giveaway publish: fetch message failed", extra={"giveaway_id": self.giveaway.id}, exc_info=True)
+                log.warning(
+                    "giveaway publish: fetch message failed", extra={"giveaway_id": self.giveaway.id}, exc_info=True
+                )
                 return "failed"
 
         if message is None:
@@ -947,7 +1017,9 @@ class GiveawayView(discord.ui.View):
         if len(candidates) <= count:
             return [i.user_id for i in candidates]
         weights = np.array([i.user_weight for i in candidates], dtype=float)
-        return np.random.choice([i.user_id for i in candidates], size=count, replace=False, p=weights / weights.sum()).tolist()
+        return np.random.choice(
+            [i.user_id for i in candidates], size=count, replace=False, p=weights / weights.sum()
+        ).tolist()
 
     def end_giveaway(self) -> discord.Embed | None:
         """開獎並回傳結果 embed；抽獎已結束時回傳 None"""
@@ -1005,7 +1077,11 @@ class GiveawayView(discord.ui.View):
         """開獎或重抽後要公告的文字，會 mention 新抽出的中獎者"""
         prize = discord.utils.escape_mentions(self.giveaway.prize_name)
         if not self.new_winners_id:
-            return f"抽獎「{prize}」已結束，沒有人參加" if not self.giveaway.redraw_count else f"抽獎「{prize}」重新抽獎：沒有可替補的參加者"
+            return (
+                f"抽獎「{prize}」已結束，沒有人參加"
+                if not self.giveaway.redraw_count
+                else f"抽獎「{prize}」重新抽獎：沒有可替補的參加者"
+            )
         mentions = "、".join(f"<@{i}>" for i in self.new_winners_id)
         prefix = "🎉 重新抽獎：" if self.giveaway.redraw_count else "🎉 "
         return f"{prefix}恭喜 {mentions} 抽中「{prize}」！"
@@ -1029,7 +1105,9 @@ class GiveawayView(discord.ui.View):
 class McServerSelect(discord.ui.Select):
     def __init__(self, servers: list[McsmServerSummary]):
         options = [
-            discord.SelectOption(label=server.name if server.name else f"伺服器 {server.server_id}", value=server.server_id)
+            discord.SelectOption(
+                label=server.name if server.name else f"伺服器 {server.server_id}", value=server.server_id
+            )
             for server in servers
         ]
         super().__init__(placeholder="選擇伺服器", min_values=1, max_values=1, options=options, row=2)
@@ -1048,7 +1126,9 @@ class McServerPanel(discord.ui.View):
         super().__init__(timeout=600)
         self.server_id: str | None = None
         self.add_item(McServerSelect(mcsm_api.get_servers()))
-        self.update_button = discord.ui.Button(label="更新伺服器", style=discord.ButtonStyle.success, disabled=True, row=1)
+        self.update_button = discord.ui.Button(
+            label="更新伺服器", style=discord.ButtonStyle.success, disabled=True, row=1
+        )
         self.update_button.callback = self.update_button_callback
 
     def _sync_update_button(self, server: McsmInstance | None):
@@ -1204,6 +1284,7 @@ class McServerPanel(discord.ui.View):
         else:
             await interaction.followup.send("伺服器未找到", ephemeral=True)
 
+
 class TicketChannelView(discord.ui.View):
     """私人頻道置頂操作訊息的按鈕：開啟中是鎖定；鎖定後換成重開與刪除。custom_id 帶頻道 ID，重啟後由 bot_event 重新載入。
 
@@ -1259,7 +1340,9 @@ async def _ticket_allowed(interaction: discord.Interaction, action: str, channel
     from ..ticket_channel import member_ticket_actions
 
     member = interaction.user
-    if not isinstance(member, discord.Member) or action not in member_ticket_actions(interaction.guild, channel_id, member):
+    if not isinstance(member, discord.Member) or action not in member_ticket_actions(
+        interaction.guild, channel_id, member
+    ):
         await _ticket_reply(interaction, _TICKET_DENIED[action])
         return False
     return True
@@ -1388,17 +1471,23 @@ def ticket_open_refusal_text(e: TicketOpenError) -> str:
         case _:
             return "建立私人頻道失敗，請稍後再試"
 
+
 class VIPApplicationForm(discord.ui.Modal):
     def __init__(self):
         super().__init__(title="VIP申請表單")
-        self.add_item(discord.ui.InputText(label="請輸入你希望的VIP等級", style=discord.InputTextStyle.short, required=False))
+        self.add_item(
+            discord.ui.InputText(label="請輸入你希望的VIP等級", style=discord.InputTextStyle.short, required=False)
+        )
         self.add_item(discord.ui.InputText(label="請輸入你的備註", style=discord.InputTextStyle.long, required=False))
 
     async def callback(self, interaction: discord.Interaction):
         vip_level = self.children[0].value
         remarks = self.children[1].value
         form = HappycampApplicationForm(
-            discord_id=interaction.user.id, content=f"申請VIP等級：{vip_level}\n備註：{remarks}", submitted_at=nowtz(), change_vip_level=vip_level
+            discord_id=interaction.user.id,
+            content=f"申請VIP等級：{vip_level}\n備註：{remarks}",
+            submitted_at=nowtz(),
+            change_vip_level=vip_level,
         )
         sqldb.add(form)
 
@@ -1468,7 +1557,10 @@ class VIPAuditView(discord.ui.View):
                 vip = sqldb.get_vip(self.form.discord_id)
                 if not vip:
                     vip = HappycampVIP(
-                        discord_id=self.form.discord_id, vip_level=self.form.change_vip_level, created_at=nowtz(), updated_at=nowtz()
+                        discord_id=self.form.discord_id,
+                        vip_level=self.form.change_vip_level,
+                        created_at=nowtz(),
+                        updated_at=nowtz(),
                     )
                 else:
                     vip.vip_level = self.form.change_vip_level
@@ -1487,7 +1579,9 @@ class VIPAuditView(discord.ui.View):
 
                     overwrite = channel.overwrites_for(member)
                     if vip.vip_level >= vip_c.vip_level and overwrite.view_channel is not True:
-                        await channel.set_permissions(member, overwrite=discord.PermissionOverwrite(view_channel=True, send_messages=True))
+                        await channel.set_permissions(
+                            member, overwrite=discord.PermissionOverwrite(view_channel=True, send_messages=True)
+                        )
                     elif overwrite.view_channel is True:
                         await channel.set_permissions(member, overwrite=None)
                 # user = interaction.client.get_user(self.form.discord_id)
@@ -1518,10 +1612,13 @@ class VIPAuditView(discord.ui.View):
     class FormRemark(discord.ui.Modal):
         def __init__(self):
             super().__init__(title="審核意見")
-            self.add_item(discord.ui.InputText(label="請輸入審核意見", style=discord.InputTextStyle.long, required=False))
+            self.add_item(
+                discord.ui.InputText(label="請輸入審核意見", style=discord.InputTextStyle.long, required=False)
+            )
 
         async def callback(self, interaction: discord.Interaction):
             await interaction.response.send_message("已填入審核意見", ephemeral=True)
+
 
 class OwnerOnlyView(discord.ui.View):
     """只允許發起者操作的 View，逾時後停用所有元件"""
@@ -1556,10 +1653,18 @@ class MusicPlaylistSelectView(OwnerOnlyView):
     :param on_select: 選擇後呼叫的 coroutine，參數為 (interaction, 歌單 id)
     """
 
-    def __init__(self, owner_id: int, playlists: list[tuple[int, str, int]], on_select: Callable[[discord.Interaction, int], Awaitable[None]]):
+    def __init__(
+        self,
+        owner_id: int,
+        playlists: list[tuple[int, str, int]],
+        on_select: Callable[[discord.Interaction, int], Awaitable[None]],
+    ):
         super().__init__(owner_id)
         self.on_select = on_select
-        options = [discord.SelectOption(label=name[:100], value=str(playlist_id), description=f"{count} 首") for playlist_id, name, count in playlists]
+        options = [
+            discord.SelectOption(label=name[:100], value=str(playlist_id), description=f"{count} 首")
+            for playlist_id, name, count in playlists
+        ]
         self.add_item(MusicPlaylistSelect(options))
 
 

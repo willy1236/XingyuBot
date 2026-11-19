@@ -246,7 +246,9 @@ def init_sentry(service: str = "xingyubot") -> bool:
     return True
 
 
-def capture_exception_safe(exc: Exception, *, tags: dict[str, str] | None = None, extras: dict[str, Any] | None = None) -> None:
+def capture_exception_safe(
+    exc: Exception, *, tags: dict[str, str] | None = None, extras: dict[str, Any] | None = None
+) -> None:
     """帶 tags/extras 回報例外到 Sentry，每個例外只會回報一次。
 
     專案慣例：
@@ -298,5 +300,5 @@ def flush_safe(timeout: float = 2) -> None:
 def _mark_captured(exc: BaseException) -> None:
     try:
         setattr(exc, _CAPTURED_ATTR, True)
-    except (AttributeError, TypeError):
+    except AttributeError, TypeError:
         pass

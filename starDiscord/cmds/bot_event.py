@@ -124,7 +124,10 @@ async def load_reaction_role_views(bot, sqldb) -> None:
             if content is not None:
                 sqldb.set_reaction_role_content(react_message.message_id, to_json(content))
             else:
-                log.debug("Reaction role content not backfilled", extra={"message_id": react_message.message_id, "reason": reason})
+                log.debug(
+                    "Reaction role content not backfilled",
+                    extra={"message_id": react_message.message_id, "reason": reason},
+                )
 
         react_roles = sqldb.get_reaction_roles_by_message(react_message.message_id)
         bot.add_view(ReactionRoleView(react_message.message_id, react_roles), message_id=react_message.message_id)
@@ -145,7 +148,13 @@ class event(Cog_Extension):
             invites = await bot.get_guild(happycamp_guild[0]).invites()
             days_7 = timedelta(days=7)
             for invite in invites:
-                if not invite.expires_at and not invite.scheduled_event and invite.uses == 0 and invite.created_at and now - invite.created_at > days_7:
+                if (
+                    not invite.expires_at
+                    and not invite.scheduled_event
+                    and invite.uses == 0
+                    and invite.created_at
+                    and now - invite.created_at > days_7
+                ):
                     await invite.delete()
                     await asyncio.sleep(1)
 
@@ -192,7 +201,9 @@ class event(Cog_Extension):
                 message = None
 
             if message:
-                bot.add_view(TicketLobbyView(channel.id, lobby.button_label, lobby.button_emoji), message_id=lobby.message_id)
+                bot.add_view(
+                    TicketLobbyView(channel.id, lobby.button_label, lobby.button_emoji), message_id=lobby.message_id
+                )
                 log.debug("Loaded ticket lobby", extra={"channel_id": lobby.channel_id})
             else:
                 # 大廳頻道不在了：保留紀錄，後台會標示失效，由管理員重新選頻道或移除大廳
@@ -224,7 +235,11 @@ class event(Cog_Extension):
         py-cord 先把 component interaction 交給已註冊的 view（並設定 interaction.view）才派送這個事件，
         所以 view 接得到的一律跳過，正常投票不會多查資料庫。
         """
-        if interaction.type != discord.InteractionType.component or interaction.view is not None or interaction.response.is_done():
+        if (
+            interaction.type != discord.InteractionType.component
+            or interaction.view is not None
+            or interaction.response.is_done()
+        ):
             return
         poll_id = poll_id_of_button((interaction.data or {}).get("custom_id"))
         if poll_id is None or sclient.sqldb.get_poll_fresh(poll_id) is not None:
@@ -256,10 +271,17 @@ class event(Cog_Extension):
         if message.guild and message.guild.id == happycamp_guild[0] and not message.author.bot:
             # 貢丸防制
             if not is_owner:
-                if message.author.get_role(1160460037114822758) or message.author.get_role(1161644357410107483) or message.author.get_role(1178151415403790478):
+                if (
+                    message.author.get_role(1160460037114822758)
+                    or message.author.get_role(1161644357410107483)
+                    or message.author.get_role(1178151415403790478)
+                ):
                     result = None
                 elif message.author.get_role(1162721481520852993):
-                    p = re.compile(r"(?:貢(\S*|\s*)*丸|贡(\S*|\s*)*丸|Meat(\S*|\s*)*ball|貢(\S*|\s*)*ㄨ(\S*|\s*)*ㄢ)(?!殲滅黨)", re.IGNORECASE)
+                    p = re.compile(
+                        r"(?:貢(\S*|\s*)*丸|贡(\S*|\s*)*丸|Meat(\S*|\s*)*ball|貢(\S*|\s*)*ㄨ(\S*|\s*)*ㄢ)(?!殲滅黨)",
+                        re.IGNORECASE,
+                    )
                     result = p.search(message.content)
                 else:
                     p = re.compile(r"(?:貢(\S*|\s*)*丸|贡(\S*|\s*)*丸|Meat(\S*|\s*)*ball)(?!殲滅黨)", re.IGNORECASE)
@@ -335,7 +357,7 @@ class event(Cog_Extension):
 
     @commands.Cog.listener("on_message")
     async def keyword_trigger(self, message: discord.Message):
-        #關鍵字觸發
+        # 關鍵字觸發
         if message.content.startswith("!") and message.author != self.bot.user:
             word = message.content.lstrip("!")
             if word == "azusa":
@@ -381,7 +403,8 @@ class event(Cog_Extension):
             overwrites = {
                 target: perms
                 for target, perms in after.channel.overwrites.items()
-                if (isinstance(target, discord.Member) and me.top_role > target.top_role) or (isinstance(target, discord.Role) and me.top_role > target)
+                if (isinstance(target, discord.Member) and me.top_role > target.top_role)
+                or (isinstance(target, discord.Role) and me.top_role > target)
             }
             if me.top_role > member.top_role:
                 if member in overwrites:
@@ -390,7 +413,9 @@ class event(Cog_Extension):
                     overwrites[member].manage_roles = True
                     overwrites[member].view_channel = True
                 else:
-                    overwrites[member] = discord.PermissionOverwrite(manage_channels=True, manage_roles=True, view_channel=True)
+                    overwrites[member] = discord.PermissionOverwrite(
+                        manage_channels=True, manage_roles=True, view_channel=True
+                    )
 
             if me in overwrites:
                 overwrites[me].manage_channels = True
@@ -398,20 +423,36 @@ class event(Cog_Extension):
                 overwrites[me].view_channel = True
                 overwrites[me].send_messages = True
             else:
-                overwrites[me] = discord.PermissionOverwrite(manage_channels=True, manage_roles=True, view_channel=True, send_messages=True)
+                overwrites[me] = discord.PermissionOverwrite(
+                    manage_channels=True, manage_roles=True, view_channel=True, send_messages=True
+                )
 
-            channel_name = lobby_data.default_room_name.replace("{member}", member.name) if lobby_data.default_room_name is not None else f"{member.name}的頻道"
+            channel_name = (
+                lobby_data.default_room_name.replace("{member}", member.name)
+                if lobby_data.default_room_name is not None
+                else f"{member.name}的頻道"
+            )
             try:
-                new_channel = await guild.create_voice_channel(name=channel_name, reason="動態語音：新增", category=category, overwrites=overwrites)
+                new_channel = await guild.create_voice_channel(
+                    name=channel_name, reason="動態語音：新增", category=category, overwrites=overwrites
+                )
             except discord.errors.Forbidden:
                 try:
                     for overwrite in overwrites.values():
                         overwrite.manage_roles = None
 
-                    new_channel = await guild.create_voice_channel(name=channel_name, reason="動態語音：新增", category=category, overwrites=overwrites)
-                    log.debug("Created dynamic voice channel %s without manage_roles permission in %s", new_channel.id, guild.id)
+                    new_channel = await guild.create_voice_channel(
+                        name=channel_name, reason="動態語音：新增", category=category, overwrites=overwrites
+                    )
+                    log.debug(
+                        "Created dynamic voice channel %s without manage_roles permission in %s",
+                        new_channel.id,
+                        guild.id,
+                    )
                 except discord.errors.Forbidden:
-                    await after.channel.send(f"{member.mention} 我無法創建動態語音頻道，請檢查我的權限", delete_after=10)
+                    await after.channel.send(
+                        f"{member.mention} 我無法創建動態語音頻道，請檢查我的權限", delete_after=10
+                    )
                     log.debug("Failed to create dynamic voice channel from lobby %s in %s", after.channel.id, guild.id)
                     return
             sclient.sqldb.add_dynamic_voice(new_channel.id, member.id, guild.id)
@@ -419,7 +460,9 @@ class event(Cog_Extension):
                 await member.move_to(new_channel)
             except discord.errors.HTTPException:
                 await after.channel.send(f"{member.mention} 我無法把你移動至 {new_channel.mention}", delete_after=10)
-                log.debug("Failed to move member %s to dynamic voice channel %s in %s", member.id, new_channel.id, guild.id)
+                log.debug(
+                    "Failed to move member %s to dynamic voice channel %s in %s", member.id, new_channel.id, guild.id
+                )
 
             await asyncio.sleep(2)
             # 檢查使用者是否進入
@@ -434,7 +477,9 @@ class event(Cog_Extension):
             return
 
         # 移除
-        elif before.channel and not before.channel.members and sclient.sqldb.getif_dynamic_voice_room(before.channel.id):
+        elif (
+            before.channel and not before.channel.members and sclient.sqldb.getif_dynamic_voice_room(before.channel.id)
+        ):
             try:
                 await before.channel.delete(reason="動態語音：移除")
                 sclient.sqldb.remove_dynamic_voice(before.channel.id)
@@ -443,7 +488,9 @@ class event(Cog_Extension):
                 return
 
     @commands.Cog.listener()
-    async def on_voice_state_update(self, member: discord.Member, before: discord.VoiceState, after: discord.VoiceState):
+    async def on_voice_state_update(
+        self, member: discord.Member, before: discord.VoiceState, after: discord.VoiceState
+    ):
         if debug_mode:
             return
 
@@ -455,11 +502,19 @@ class event(Cog_Extension):
             NowTime = datetime.now()
 
             if before.channel:
-                before_text = before.channel.mention if not sclient.sqldb.getif_dynamic_voice_room(before.channel.id) else before.channel.name + " (動態語音)"
+                before_text = (
+                    before.channel.mention
+                    if not sclient.sqldb.getif_dynamic_voice_room(before.channel.id)
+                    else before.channel.name + " (動態語音)"
+                )
             else:
                 before_text = ""
             if after.channel:
-                after_text = after.channel.mention if not sclient.sqldb.getif_dynamic_voice_room(after.channel.id) else after.channel.name + " (動態語音)"
+                after_text = (
+                    after.channel.mention
+                    if not sclient.sqldb.getif_dynamic_voice_room(after.channel.id)
+                    else after.channel.name + " (動態語音)"
+                )
             else:
                 after_text = ""
 
@@ -511,7 +566,7 @@ class event(Cog_Extension):
         if debug_mode:
             return
 
-        #離開通知
+        # 離開通知
         guildid = member.guild.id
         dbdata = sclient.sqldb.get_notify_channel(guildid, NotifyChannelType.MemberLeave)
 
@@ -535,13 +590,15 @@ class event(Cog_Extension):
                 description += f"\n身分組：{', '.join(roles_mention)}"
             if member.joined_at:
                 description += f"\n加入時長：{timedelta(seconds=int((nowtz() - member.joined_at).total_seconds()))}"
-            embed = BotEmbed.general(name=member.name, title="成員離開", description=description, icon_url=member.display_avatar.url)
+            embed = BotEmbed.general(
+                name=member.name, title="成員離開", description=description, icon_url=member.display_avatar.url
+            )
             embed.timestamp = nowtz()
             embed.set_footer(text=f"ID: {member.id}")
             await channel.send(embed=embed)
 
     @commands.Cog.listener()
-    async def on_member_join(self, member:discord.Member):
+    async def on_member_join(self, member: discord.Member):
         if debug_mode:
             return
 
@@ -568,11 +625,17 @@ class event(Cog_Extension):
         if notify_data:
             log_channel_id = notify_data.channel_id
             dbdata = sclient.sqldb.get_warnings_count(member.id)
-            description = f"{member.mention} ({member.id})\n共有 {dbdata} 筆跨群紀錄" if dbdata else f"{member.mention} 加入了伺服器"
+            description = (
+                f"{member.mention} ({member.id})\n共有 {dbdata} 筆跨群紀錄"
+                if dbdata
+                else f"{member.mention} 加入了伺服器"
+            )
             description += f"\n第 {member.guild.member_count} 位成員"
 
             channel = self.bot.get_channel(log_channel_id)
-            embed = BotEmbed.general(name=member.name, title="成員加入", description=description, icon_url=member.display_avatar.url)
+            embed = BotEmbed.general(
+                name=member.name, title="成員加入", description=description, icon_url=member.display_avatar.url
+            )
             embed.timestamp = nowtz()
             embed.set_footer(text=f"ID: {member.id}")
             if channel:
@@ -591,19 +654,18 @@ class event(Cog_Extension):
                 sclient.sqldb.merge(user)
                 await member.add_roles(member.guild.get_role(dbdata.role_id), reason="加入的最早伺服器")
 
-
     @commands.Cog.listener()
-    async def on_guild_join(self, guild:discord.Guild):
+    async def on_guild_join(self, guild: discord.Guild):
         report_channel_obj = self.bot.get_channel(report_channel)
         await report_channel_obj.send(f"公會異動：我加入了 {guild.name} ({guild.id})")
 
     @commands.Cog.listener()
-    async def on_guild_remove(self, guild:discord.Guild):
+    async def on_guild_remove(self, guild: discord.Guild):
         report_channel_obj = self.bot.get_channel(report_channel)
         await report_channel_obj.send(f"公會異動：我離開了 {guild.name} ({guild.id})")
 
     @commands.Cog.listener()
-    async def on_member_update(self,before:discord.Member, after:discord.Member):
+    async def on_member_update(self, before: discord.Member, after: discord.Member):
         guildid = after.guild.id
         member = after
         if guildid in happycamp_guild and before.nick != after.nick:
@@ -635,7 +697,11 @@ class event(Cog_Extension):
 
     @commands.Cog.listener()
     async def on_audit_log_entry(self, entry: discord.AuditLogEntry):
-        if entry.guild.id == happycamp_guild[0] and entry.action == discord.AuditLogAction.member_update and entry.user != self.bot.user:
+        if (
+            entry.guild.id == happycamp_guild[0]
+            and entry.action == discord.AuditLogAction.member_update
+            and entry.user != self.bot.user
+        ):
             member: discord.Member = entry.target
             if member.timed_out and entry.user != member:
                 await asyncio.sleep(10)

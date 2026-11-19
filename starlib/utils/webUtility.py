@@ -40,7 +40,7 @@ def is_public_host(host: str | None) -> bool:
         return False
     try:
         infos = socket.getaddrinfo(host, None)
-    except (socket.gaierror, UnicodeError, OSError):
+    except socket.gaierror, UnicodeError, OSError:
         return False
     if not infos:
         return False

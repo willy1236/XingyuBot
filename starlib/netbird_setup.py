@@ -65,7 +65,15 @@ def request_setup_key(plan: SetupPlan) -> SetupKey:
 
 def save_setup(user_id: UUID, key: SetupKey) -> NetBirdSetup:
     """DB 段：HTTP 全部成功後才寫入綁定，失敗不留下綁定。"""
-    sqldb.merge(NetBirdBinding(user_id=user_id, group_id=key.group_id, group_name=key.group_name, last_setup_key_id=key.key_id, updated_at=nowtz()))
+    sqldb.merge(
+        NetBirdBinding(
+            user_id=user_id,
+            group_id=key.group_id,
+            group_name=key.group_name,
+            last_setup_key_id=key.key_id,
+            updated_at=nowtz(),
+        )
+    )
     command = f"netbird up --setup-key {key.key}"
     bat = f"@echo off\r\nwhere netbird >nul 2>nul\r\nif errorlevel 1 (\r\n    echo 尚未安裝NetBird，請先至 {DOWNLOAD_URL} 下載安裝\r\n    pause\r\n    exit /b 1\r\n)\r\n{command}\r\npause\r\n"
     return NetBirdSetup(command, bat)

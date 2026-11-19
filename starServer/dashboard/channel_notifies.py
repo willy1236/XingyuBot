@@ -59,14 +59,20 @@ def _conflict(guild_id: int, spec: NotifySpec) -> DashboardError:
 async def put_channel_notify(notify_type: str, body: PutBody, guild_id: int = Depends(require_guild_access)):
     spec = _spec(notify_type)
     values = parse_fields(spec, body.values, strict=False, blank_message_is_none=True)
-    original = None if body.original is None else parse_fields(spec, body.original, strict=True, blank_message_is_none=False)
+    original = (
+        None if body.original is None else parse_fields(spec, body.original, strict=True, blank_message_is_none=False)
+    )
     await validate_fields(guild_id, spec, values)
 
     def _write() -> None:
         if original is None:
             try:
                 sqldb.insert_notify_channel(
-                    guild_id, spec.channel_type, values["channel_id"], values.get("role_id"), values.get("message")  # pyright: ignore[reportArgumentType]
+                    guild_id,
+                    spec.channel_type,
+                    values["channel_id"],
+                    values.get("role_id"),
+                    values.get("message"),  # pyright: ignore[reportArgumentType]
                 )
             except DataExistError:
                 raise DashboardError(409, "already_exists", current=_current(guild_id, spec)) from None

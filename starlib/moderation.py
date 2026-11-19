@@ -75,9 +75,11 @@ async def delete_recent_messages(guild: discord.Guild, user_id: int, seconds: in
             skipped_channels += 1
             continue
         try:
-            deleted = await channel.purge(limit=PURGE_LIMIT_PER_CHANNEL, after=after_time, check=lambda m: m.author.id == user_id)
+            deleted = await channel.purge(
+                limit=PURGE_LIMIT_PER_CHANNEL, after=after_time, check=lambda m: m.author.id == user_id
+            )
             deleted_total += len(deleted)
-        except (discord.Forbidden, discord.HTTPException):
+        except discord.Forbidden, discord.HTTPException:
             skipped_channels += 1
 
     summary = f"最近 {seconds} 秒內全伺服器共刪除 {deleted_total} 則"
@@ -161,7 +163,14 @@ async def punish(
 
     try:
         result.warning_id = sclient.sqldb.add_warning(
-            target.id, kind, actor.id, guild.id, nowtz(), reason, duration if kind == WarningType.Timeout else None, guild_only=not cross_guild
+            target.id,
+            kind,
+            actor.id,
+            guild.id,
+            nowtz(),
+            reason,
+            duration if kind == WarningType.Timeout else None,
+            guild_only=not cross_guild,
         )
     except Exception:
         log.exception("punish: action done but add_warning failed")
@@ -185,7 +194,9 @@ def auto_timeout_text(auto: AutoTimeoutResult) -> str:
     return f"{text}\n注意：{auto.error}" if auto.error else text
 
 
-def announcement(result: PunishResult, target: discord.User | discord.Member, actor: discord.Member | discord.User) -> dict:
+def announcement(
+    result: PunishResult, target: discord.User | discord.Member, actor: discord.Member | discord.User
+) -> dict:
     """產生公告訊息的 send 參數：@ 對象加上含紀錄編號的警告單 embed。"""
     embed = None
     if result.warning_id is not None:
@@ -204,5 +215,7 @@ def announcement(result: PunishResult, target: discord.User | discord.Member, ac
     return {
         "content": target.mention,
         "embed": embed,
-        "allowed_mentions": discord.AllowedMentions(everyone=False, roles=False, replied_user=False, users=[discord.Object(id=target.id)]),
+        "allowed_mentions": discord.AllowedMentions(
+            everyone=False, roles=False, replied_user=False, users=[discord.Object(id=target.id)]
+        ),
     }

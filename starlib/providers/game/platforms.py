@@ -66,7 +66,9 @@ class RiotAPI(APICaller):
 
     def get_summoner_masteries(self, puuid: str, count=5) -> list[LOLChampionMastery | None]:
         params = {"count": count}
-        r = self.get(f"lol/champion-mastery/v4/champion-masteries/by-puuid/{puuid}/top", params=params, base_url=self.url_tw2)
+        r = self.get(
+            f"lol/champion-mastery/v4/champion-masteries/by-puuid/{puuid}/top", params=params, base_url=self.url_tw2
+        )
         if r is None:
             return []
         return [LOLChampionMastery(**data) for data in r.json()]
@@ -122,7 +124,12 @@ class OsuAPI(APICaller):
 
     def _get_headers(self):
         ous_token = sqldb.get_identifier_secret(APIType.Osu)
-        data = {"client_id": ous_token.client_id, "client_secret": ous_token.client_secret, "grant_type": "client_credentials", "scope": "public"}
+        data = {
+            "client_id": ous_token.client_id,
+            "client_secret": ous_token.client_secret,
+            "grant_type": "client_credentials",
+            "scope": "public",
+        }
         r = self._request("POST", "https://osu.ppy.sh/oauth/token", data=data)
         token = r.json().get("access_token")
         headers = {"Content-Type": "application/json", "Accept": "application/json", "Authorization": f"Bearer {token}"}
@@ -238,7 +245,12 @@ class LOLMediaWikiAPI:
             tables="ScoreboardGames=SG, Tournaments=T",
             join_on="SG.OverviewPage=T.OverviewPage",
             fields="T.Name=Tournament, T.TournamentLevel, SG.Gamename, SG.DateTime_UTC, SG.Team1, SG.Team2, SG.Winner, SG.Patch, SG.Gamelength, SG.Team1Players, SG.Team2Players, SG.Team1Kills, SG.Team2Kills, SG.Team1Picks, SG.Team2Picks",
-            where="SG.DateTime_UTC >= '" + str(date) + " 00:00:00' AND SG.DateTime_UTC <= '" + str(date + timedelta(1)) + " 00:00:00'" + " AND T.TournamentLevel = 'Primary'",
+            where="SG.DateTime_UTC >= '"
+            + str(date)
+            + " 00:00:00' AND SG.DateTime_UTC <= '"
+            + str(date + timedelta(1))
+            + " 00:00:00'"
+            + " AND T.TournamentLevel = 'Primary'",
             order_by="SG.DateTime_UTC",
         )
 
@@ -280,7 +292,9 @@ class ZeroTierAPI(APICaller):
             return None
         return r.json()
 
-    def authorize_member(self, network_id: str, member_id: str, name: str | None = None, description: str | None = None):
+    def authorize_member(
+        self, network_id: str, member_id: str, name: str | None = None, description: str | None = None
+    ):
         member = self.get_member(network_id, member_id)
         if not member:
             return None
@@ -318,11 +332,19 @@ class NetBirdAPI(APICaller):
                 return group
         return None
 
-    def create_setup_key(self, name: str, auto_groups: list[str], expires_in: int = 86400, usage_limit: int = 1) -> dict:
+    def create_setup_key(
+        self, name: str, auto_groups: list[str], expires_in: int = 86400, usage_limit: int = 1
+    ) -> dict:
         """建立setup key，回傳的 "key" 欄位為明文金鑰，僅在建立當下可取得"""
         r = self.post(
             "setup-keys",
-            data={"name": name, "type": "reusable", "expires_in": expires_in, "auto_groups": auto_groups, "usage_limit": usage_limit},
+            data={
+                "name": name,
+                "type": "reusable",
+                "expires_in": expires_in,
+                "auto_groups": auto_groups,
+                "usage_limit": usage_limit,
+            },
         )
         return r.json()
 

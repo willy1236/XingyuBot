@@ -20,12 +20,17 @@ PLATFORM_DISPLAY_NAME = {
     PlatformType.Minecraft: "Minecraft",
 }
 
+
 class system_user(Cog_Extension):
     pet = SlashCommandGroup("pet", "寵物相關指令")
 
     @commands.slash_command(description="查看使用者的基本資訊")
     @with_identity()
-    async def user_info(self, ctx: discord.ApplicationContext, member: discord.Option(discord.Member, name="用戶", description="留空以查詢自己", default=None)):
+    async def user_info(
+        self,
+        ctx: discord.ApplicationContext,
+        member: discord.Option(discord.Member, name="用戶", description="留空以查詢自己", default=None),
+    ):
         # 身分查詢加上即時查外部帳號可能超過 Discord 的 3 秒回應期限
         await ctx.defer()
         user_dc: discord.Member = member or ctx.author
@@ -49,7 +54,9 @@ class system_user(Cog_Extension):
             account_embed.add_field(name="析域帳號", value=identity.username or "已註冊")
 
         if identity is not None:
-            account_embed.add_field(name="雲端共用資料夾", value="已共用" if sclient.sqldb.get_drive_share(identity.user_id) else "未共用")
+            account_embed.add_field(
+                name="雲端共用資料夾", value="已共用" if sclient.sqldb.get_drive_share(identity.user_id) else "未共用"
+            )
             account_lines = []
             for discord_id in sclient.sqldb.get_discord_ids_by_user(identity.user_id):
                 if discord_id != user_dc.id:
@@ -60,15 +67,22 @@ class system_user(Cog_Extension):
                 passports = identity.passports
                 if passports is None:
                     passports = await fetch_linked_passports(user_dc.id)
-                for platform, linked in ((PlatformType.Twitch, passports.twitch), (PlatformType.Minecraft, passports.minecraft)):
+                for platform, linked in (
+                    (PlatformType.Twitch, passports.twitch),
+                    (PlatformType.Minecraft, passports.minecraft),
+                ):
                     for passport in linked:
-                        account_lines.append(f"{PLATFORM_DISPLAY_NAME[platform]}：{passport.username or passport.subject}")
+                        account_lines.append(
+                            f"{PLATFORM_DISPLAY_NAME[platform]}：{passport.username or passport.subject}"
+                        )
             if account_lines:
                 account_embed.add_field(name="綁定的帳號", value="\n".join(account_lines), inline=False)
 
         # discord
         user = sclient.sqldb.get_dcuser(user_dc.id) or DiscordUser(discord_id=user_dc.id)
-        discord_user_embed = BotEmbed.general(name="Discord資料", icon_url=user_dc.avatar.url if user_dc.avatar else None)
+        discord_user_embed = BotEmbed.general(
+            name="Discord資料", icon_url=user_dc.avatar.url if user_dc.avatar else None
+        )
         coins = sclient.sqldb.get_coin(user_dc.id)
         discord_user_embed.add_field(name="⭐星塵", value=coins.stardust)
         discord_user_embed.add_field(name="PT點數", value=coins.point)
@@ -86,14 +100,20 @@ class system_user(Cog_Extension):
 
         # HappyCamp
         if ctx.guild_id in happycamp_guild:
-            happycamp_embed = BotEmbed.general("快樂營使用者資料", icon_url=user_dc.avatar.url if user_dc.avatar else None)
-            happycamp_embed.add_field(name="累計語音時間", value=sclient.sqldb.get_voice_time(user_dc.id, ctx.guild_id).total_minute)
+            happycamp_embed = BotEmbed.general(
+                "快樂營使用者資料", icon_url=user_dc.avatar.url if user_dc.avatar else None
+            )
+            happycamp_embed.add_field(
+                name="累計語音時間", value=sclient.sqldb.get_voice_time(user_dc.id, ctx.guild_id).total_minute
+            )
             embeds.append(happycamp_embed)
 
         await ctx.respond(embeds=embeds)
 
     @pet.command(description="查看寵物資訊")
-    async def check(self, ctx, user_dc: discord.Option(discord.Member, name="用戶", description="可不輸入以查詢自己", default=None)):
+    async def check(
+        self, ctx, user_dc: discord.Option(discord.Member, name="用戶", description="可不輸入以查詢自己", default=None)
+    ):
         user_dc = user_dc or ctx.author
         pet = sclient.sqldb.get_pet(user_dc.id)
         embed = pet.desplay(user_dc) if pet else BotEmbed.simple(f"{user_dc.name} 的寵物", "用戶沒有認養寵物")
@@ -113,7 +133,7 @@ class system_user(Cog_Extension):
             await ctx.respond(f"你收養了一隻名叫 {name} 的{Jsondb.get_tw(species, 'pet_option')}!")
 
     @pet.command(description="放生寵物")
-    async def remove(self,ctx):
+    async def remove(self, ctx):
         pet = sclient.sqldb.get_pet(ctx.author.id)
         if not pet:
             await ctx.respond("你沒有寵物")

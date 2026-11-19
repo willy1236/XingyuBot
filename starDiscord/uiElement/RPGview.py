@@ -12,21 +12,22 @@ class RPGAdvanceButton(discord.ui.Button):
         super().__init__(label="進行冒險", style=discord.ButtonStyle.primary)
 
     async def callback(self, interaction: discord.Interaction):
-        self.view:RPGAdvanceView
+        self.view: RPGAdvanceView
         if interaction.user.id == self.view.player.discord_id:
             if not self.view.wait_attack:
                 await self.view.advance(interaction)
             else:
-                await interaction.edit_original_response(content="你正在戰鬥的回合中",view=self.view)
+                await interaction.edit_original_response(content="你正在戰鬥的回合中", view=self.view)
         else:
-            await interaction.edit_original_response(content="請不要點選其他人的按鈕",view=self.view)
+            await interaction.edit_original_response(content="請不要點選其他人的按鈕", view=self.view)
+
 
 class RPGBattleNormalButton(discord.ui.Button):
     def __init__(self):
         super().__init__(label="普通攻擊", style=discord.ButtonStyle.green)
 
     async def callback(self, interaction: discord.Interaction):
-        self.view:RPGAdvanceView
+        self.view: RPGAdvanceView
         if interaction.user.id == self.view.player.discord_id and self.view.wait_attack:
             self.view.wait_attack = False
 
@@ -67,8 +68,8 @@ class RPGAdvanceView(discord.ui.View):
 
         self.wait_attack = False
         self.battle_round = 1
-        self.meet_monster:Monster = None
-        self.battle_monster:MonsterInBattle = None
+        self.meet_monster: Monster = None
+        self.battle_monster: MonsterInBattle = None
         self.battle_is_end = False
 
         self.advance_button = RPGAdvanceButton()
@@ -134,7 +135,9 @@ class RPGAdvanceView(discord.ui.View):
                 if self.dungeon.treasures:
                     treasures_weights = [t.weight for t in self.dungeon.treasures]
                     treasure = random.choices(self.dungeon.treasures, treasures_weights)[0]
-                    item = sqldb.get_player_item(player.discord_id, treasure.item_id) or RPGPlayerItem(item_id=treasure.item_id, discord_id=player.discord_id)
+                    item = sqldb.get_player_item(player.discord_id, treasure.item_id) or RPGPlayerItem(
+                        item_id=treasure.item_id, discord_id=player.discord_id
+                    )
                     get_amount = random.randint(treasure.min_drop, treasure.max_drop)
                     item.amount += get_amount
                     sqldb.merge(item)
@@ -175,7 +178,7 @@ class RPGAdvanceView(discord.ui.View):
         self.battle_is_end = False
         self.wait_attack = True
 
-    async def calculate_battle(self, interaction:discord.Interaction, attack_type):
+    async def calculate_battle(self, interaction: discord.Interaction, attack_type):
         player = self.player
         monster = self.battle_monster
         player_hp_reduce = 0
@@ -293,7 +296,9 @@ class RPGEquipmentSelect(discord.ui.Select):
     async def callback(self, interaction: discord.Interaction):
         self.view: RPGEquipmentSelectView
         uid = int(self.values[0])
-        await interaction.response.edit_message(embed=next((item for item in self.bag if item.equipment_uid == uid), None).embed())
+        await interaction.response.edit_message(
+            embed=next((item for item in self.bag if item.equipment_uid == uid), None).embed()
+        )
 
 
 class RPGEquipmentSelectView(discord.ui.View):
@@ -304,9 +309,9 @@ class RPGEquipmentSelectView(discord.ui.View):
         self.user_dc = user_dc
         self.bag = sqldb.get_player_equipments(user_dc.id)
 
-        self.embeds:list[discord.Embed] = None
+        self.embeds: list[discord.Embed] = None
         self.now_page = 1
-        self.selects:list[RPGEquipmentSelect] = None
+        self.selects: list[RPGEquipmentSelect] = None
         self.set_embeds_selects()
 
         self.select = self.selects[0]
@@ -322,7 +327,7 @@ class RPGEquipmentSelectView(discord.ui.View):
                 text_list.append(f"[{item.equipment_uid}] {name}")
 
             embed = BotEmbed.rpg(f"{self.user_dc.name}的包包", "\n".join(text_list))
-            select = RPGEquipmentSelect(self.bag[i: i + self.item_per_page])
+            select = RPGEquipmentSelect(self.bag[i : i + self.item_per_page])
             item_embeds.append(embed)
             selects.append(select)
 
@@ -345,7 +350,7 @@ class RPGEquipmentSelectView(discord.ui.View):
                 num_back = len(self.embeds)
                 await self.change_page(interaction)
 
-    @discord.ui.button(label="當前頁面",style=discord.ButtonStyle.gray, row=1, custom_id="rpgequipment_now_page")
+    @discord.ui.button(label="當前頁面", style=discord.ButtonStyle.gray, row=1, custom_id="rpgequipment_now_page")
     async def button5_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
         if interaction.user.id == self.user_dc.id:
             await self.change_page(interaction)

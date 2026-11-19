@@ -404,7 +404,11 @@ async def _open_ticket(guild: discord.Guild, lobby_channel_id: int, creator: dis
         raise TicketOpenError("lobby_invalid")
 
     def check_limits() -> tuple[int | None, int]:
-        gone = [t.channel_id for t in sqldb.list_lobby_ticket_channels(lobby_channel_id) if guild.get_channel(t.channel_id) is None]
+        gone = [
+            t.channel_id
+            for t in sqldb.list_lobby_ticket_channels(lobby_channel_id)
+            if guild.get_channel(t.channel_id) is None
+        ]
         sqldb.delete_ticket_channels(gone)
         existing = sqldb.find_user_ticket(lobby_channel_id, creator.id) if snap["one_per_user"] else None
         return existing, sqldb.count_open_lobby_tickets(lobby_channel_id)
@@ -432,7 +436,8 @@ async def _open_ticket(guild: discord.Guild, lobby_channel_id: int, creator: dis
 
     try:
         msg = await channel.send(
-            f"{creator.mention}，你好！請在此頻道描述你的問題，我們會盡快協助你。", view=TicketChannelView(channel.id, locked=False)
+            f"{creator.mention}，你好！請在此頻道描述你的問題，我們會盡快協助你。",
+            view=TicketChannelView(channel.id, locked=False),
         )
     except discord.HTTPException as e:
         await _delete_quietly(channel, "ticket channel", reason)

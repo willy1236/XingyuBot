@@ -160,7 +160,12 @@ class OAuth2Base(ABC):
     # ====== Token DB Integration ======
     @classmethod
     def create_from_db(cls, oauth_client: OAuthClient, scopes: list[str] | None = None):
-        instance = cls(client_id=oauth_client.client_id, client_secret=oauth_client.client_secret, redirect_uri=oauth_client.redirect_uri, scopes=scopes or oauth_client.default_scopes)
+        instance = cls(
+            client_id=oauth_client.client_id,
+            client_secret=oauth_client.client_secret,
+            redirect_uri=oauth_client.redirect_uri,
+            scopes=scopes or oauth_client.default_scopes,
+        )
         instance._credential_id = oauth_client.credential_id
         return instance
 

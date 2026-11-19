@@ -81,7 +81,10 @@ class McsManagerAPI(APICaller):
 
     def excute_action(self, server_id: str, action: McsmServerAction):
         endpoint = self._action_endpoint[McsmServerAction(action)]
-        self.get(f"protected_instance/{endpoint}", params={"apikey": self.apikey, "uuid": server_id, "daemonId": self.daemon_id})
+        self.get(
+            f"protected_instance/{endpoint}",
+            params={"apikey": self.apikey, "uuid": server_id, "daemonId": self.daemon_id},
+        )
         return True
 
     def update_server(self, server_id: str):

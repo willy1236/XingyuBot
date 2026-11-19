@@ -102,7 +102,9 @@ class TwitchNotify(Cog_Extension):
         channel = self._action_channel(event.to_broadcaster_id)
         if channel is None:
             return
-        await channel.send(f"{event.from_broadcaster_name} 帶了 {event.viewers} 位觀眾降落在 {event.to_broadcaster_name} 的頻道!")
+        await channel.send(
+            f"{event.from_broadcaster_name} 帶了 {event.viewers} 位觀眾降落在 {event.to_broadcaster_name} 的頻道!"
+        )
 
     async def on_subscribe(self, event: TwitchSubscribeEvent, delivery: Delivery) -> None:
         channel = self._action_channel(event.broadcaster_id)
@@ -139,14 +141,18 @@ class TwitchNotify(Cog_Extension):
         channel = self._default_channel()
         if channel is None:
             return
-        embed = BotEmbed.general(event.broadcaster_name, description=f"{event.title}\n{event.outcome_title} 獲勝！{event.users}個人成功預測")
+        embed = BotEmbed.general(
+            event.broadcaster_name, description=f"{event.title}\n{event.outcome_title} 獲勝！{event.users}個人成功預測"
+        )
         await channel.send(embed=embed)
 
     async def on_whisper(self, event: TwitchWhisperEvent, delivery: Delivery) -> None:
         channel = self._default_channel()
         if channel is None:
             return
-        await channel.send(embed=BotEmbed.general(event.user_name, Jsondb.get_picture("twitch_001"), description=event.message))
+        await channel.send(
+            embed=BotEmbed.general(event.user_name, Jsondb.get_picture("twitch_001"), description=event.message)
+        )
 
 
 def setup(bot):

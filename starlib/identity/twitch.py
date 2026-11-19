@@ -35,4 +35,3 @@ async def lookup_twitch_member(twitch_id: str | int) -> TwitchLookup:
     if account is None or account.suspended:
         return NotMember()
     return TwitchMember(account_id=account.account_id, username=account.username)
-

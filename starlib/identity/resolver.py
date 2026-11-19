@@ -108,7 +108,10 @@ class IdentityResolver:
                 return _to_identity(self._repo.create_temporary_discord_identity(discord_id, uuid4(), now))
             if record.is_formal:
                 # 域民被刪除或通行證被移除：資料留在原 ID，交給管理員處理
-                log.warning("identity: formal account no longer found", extra={"discord_id": discord_id, "user_id": str(record.user_id)})
+                log.warning(
+                    "identity: formal account no longer found",
+                    extra={"discord_id": discord_id, "user_id": str(record.user_id)},
+                )
             record.checked_at = now
             return replace(_to_identity(self._repo.save_discord_identity(record)), passports=LinkedPassports())
 
@@ -143,7 +146,12 @@ class IdentityResolver:
             # 搬資料失敗時已整筆 rollback，紀錄與資料都還是舊 ID：這次照舊 ID 做完，下次使用再試，不讓指令跟著失敗
             log.exception(
                 "identity: saving identity with merge failed, keeping the previous ID",
-                extra={"discord_id": discord_id, "old_id": str(merge_from), "new_id": str(account.account_id), "error_type": type(e).__name__},
+                extra={
+                    "discord_id": discord_id,
+                    "old_id": str(merge_from),
+                    "new_id": str(account.account_id),
+                    "error_type": type(e).__name__,
+                },
             )
             self._merge_retry_after[discord_id] = nowtz() + self._merge_backoff
             return previous
@@ -176,7 +184,10 @@ class IdentityResolver:
             return None
         if resolved.account.account_id != new_id:
             # 舊 ID 併入的是另一位域民，資料不屬於現在這位
-            log.warning("identity: previous account merged into a different account, repointing without moving data", extra={**extra, "merged_into": str(resolved.account.account_id)})
+            log.warning(
+                "identity: previous account merged into a different account, repointing without moving data",
+                extra={**extra, "merged_into": str(resolved.account.account_id)},
+            )
             return None
         return old_id
 

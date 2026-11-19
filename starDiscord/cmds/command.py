@@ -47,8 +47,10 @@ party_option = ChoiceList.set("party_option")
 
 trpg_plot_start = [OptionChoice(name="劇情開始：米爾（威立）", value=1)]
 
+
 async def trpg_plot_autocomplete(ctx: discord.AutocompleteContext):
     return trpg_plot_start if not ctx.options["故事id"] else []
+
 
 class command(Cog_Extension):
     bet = SlashCommandGroup("bet", "賭盤相關指令")
@@ -63,13 +65,24 @@ class command(Cog_Extension):
 
     @role.command(description="查詢加身分組的數量")
     async def count(
-        self, ctx, user_list: discord.Option(str, required=False, name="要查詢的用戶", description="多個用戶請用空格隔開，或可輸入default查詢常用人選")
+        self,
+        ctx,
+        user_list: discord.Option(
+            str, required=False, name="要查詢的用戶", description="多個用戶請用空格隔開，或可輸入default查詢常用人選"
+        ),
     ):
         await ctx.defer()
         if not user_list:
             user_list = [ctx.author.id]
         elif "default" in user_list:
-            user_list = [419131103836635136, 528935362199027716, 465831362168094730, 539405949681795073, 723435216244572160, 490136735557222402]
+            user_list = [
+                419131103836635136,
+                528935362199027716,
+                465831362168094730,
+                539405949681795073,
+                723435216244572160,
+                490136735557222402,
+            ]
         else:
             user_list = user_list.split()
 
@@ -174,7 +187,9 @@ class command(Cog_Extension):
 
     @role.command(description="查詢加身分組紀錄")
     async def record(
-        self, ctx: discord.ApplicationContext, user: discord.Option(discord.Member, name="欲查詢的成員", description="留空以查詢自己", default=None)
+        self,
+        ctx: discord.ApplicationContext,
+        user: discord.Option(discord.Member, name="欲查詢的成員", description="留空以查詢自己", default=None),
     ):
         await ctx.defer()
         user = user or ctx.author
@@ -192,7 +207,9 @@ class command(Cog_Extension):
         await paginator.respond(ctx.interaction, ephemeral=False)
 
     @role.command(description="加身分組排行榜")
-    async def ranking(self, ctx, ranking_count: discord.Option(int, name="排行榜人數", default=5, min_value=1, max_value=30)):
+    async def ranking(
+        self, ctx, ranking_count: discord.Option(int, name="排行榜人數", default=5, min_value=1, max_value=30)
+    ):
         await ctx.defer()
         dbdata = sclient.sqldb.get_role_save_count_list()
         embed = BotEmbed.simple("加身分組排行榜")
@@ -227,7 +244,13 @@ class command(Cog_Extension):
 
     @commands.slash_command(description="抽抽試手氣")
     @commands.cooldown(rate=1, per=2)
-    async def draw(self, ctx, times: discord.Option(int, name="抽卡次數", description="可輸入1~1000的整數", default=1, min_value=1, max_value=1000)):
+    async def draw(
+        self,
+        ctx,
+        times: discord.Option(
+            int, name="抽卡次數", description="可輸入1~1000的整數", default=1, min_value=1, max_value=1000
+        ),
+    ):
         result = {"six": 0, "five": 0, "four": 0, "three": 0}
         user_id = str(ctx.author.id)
         six_list = []
@@ -261,7 +284,11 @@ class command(Cog_Extension):
 
         sclient.sqldb.merge(dbuser)
         embed = BotEmbed.lottery()
-        embed.add_field(name="抽卡結果", value=f"六星x{result['six']} 五星x{result['five']} 四星x{result['four']} 三星x{result['three']}", inline=False)
+        embed.add_field(
+            name="抽卡結果",
+            value=f"六星x{result['six']} 五星x{result['five']} 四星x{result['four']} 三星x{result['three']}",
+            inline=False,
+        )
         embed.add_field(name="保底累積", value=dbuser.guaranteed, inline=False)
         if six_list:
             embed.add_field(name="六星出現", value=",".join(six_list), inline=False)
@@ -337,7 +364,9 @@ class command(Cog_Extension):
         await member.add_roles(role, reason="指令：懲戒集中營 開始")
 
         last_time = timedelta(seconds=20)
-        embed = BotEmbed.simple_warn_sheet(member, ctx.author, datetime.now(), last=last_time, reason="懲戒集中營", title="已被懲戒")
+        embed = BotEmbed.simple_warn_sheet(
+            member, ctx.author, datetime.now(), last=last_time, reason="懲戒集中營", title="已被懲戒"
+        )
         await self.bot.get_channel(1195406858056368189).send(embed=embed)
 
         channel = self.bot.get_channel(613760923668185121)
@@ -349,7 +378,11 @@ class command(Cog_Extension):
 
     @commands.slash_command(description="傳送訊息給機器人擁有者")
     @commands.cooldown(rate=1, per=10)
-    async def feedback(self, ctx: discord.ApplicationContext, text: discord.Option(str, name="訊息", description="要傳送的訊息內容，歡迎提供各項建議")):
+    async def feedback(
+        self,
+        ctx: discord.ApplicationContext,
+        text: discord.Option(str, name="訊息", description="要傳送的訊息內容，歡迎提供各項建議"),
+    ):
         await ctx.defer()
         await self.bot.feedback(ctx, text)
         await ctx.respond("訊息已發送!", ephemeral=True, delete_after=3)
@@ -363,7 +396,9 @@ class command(Cog_Extension):
         self,
         ctx,
         args_str: discord.Option(str, name="選項", description="多個選項請用空格隔開"),
-        times: discord.Option(int, name="次數", description="預設為1，可輸入1~10", default=1, min_value=1, max_value=10),
+        times: discord.Option(
+            int, name="次數", description="預設為1，可輸入1~10", default=1, min_value=1, max_value=10
+        ),
     ):
         args: list[str] = args_str.split()
         result = random.choices(args, k=times)
@@ -373,8 +408,16 @@ class command(Cog_Extension):
     async def channel(
         self,
         ctx: discord.ApplicationContext,
-        channel: discord.Option(discord.VoiceChannel, name="頻道", description="要抽取的頻道，預設為目前頻道", default=None),
-        times: discord.Option(int, name="要抽取的人數", description="預設為頻道人數（不含機器人），可輸入1以上的數字", default=0, min_value=1),
+        channel: discord.Option(
+            discord.VoiceChannel, name="頻道", description="要抽取的頻道，預設為目前頻道", default=None
+        ),
+        times: discord.Option(
+            int,
+            name="要抽取的人數",
+            description="預設為頻道人數（不含機器人），可輸入1以上的數字",
+            default=0,
+            min_value=1,
+        ),
         duplicate: discord.Option(bool, name="是否允許抽到重複的人", description="預設為false", default=False),
     ):
         if not channel:
@@ -412,14 +455,25 @@ class command(Cog_Extension):
         ctx: discord.ApplicationContext,
         title: discord.Option(str, name="標題", description="投票標題，限45字內"),
         options: discord.Option(str, name="選項", description="投票選項，最多輸入20項，每個選項請用英文,隔開"),
-        show_name: discord.Option(bool, name="顯示投票人", description="預設為false，若投票人數多建議關閉", default=False),
+        show_name: discord.Option(
+            bool, name="顯示投票人", description="預設為false，若投票人數多建議關閉", default=False
+        ),
         check_results_in_advance: discord.Option(bool, name="預先查看結果", description="預設為true", default=True),
-        results_only_initiator: discord.Option(bool, name="僅限發起人能查看結果", description="預設為false", default=False),
-        ban_alternate_account_voting: discord.Option(bool, name="是否禁止小帳投票", description="僅供特定群組使用，預設為false", default=False),
-        number_of_user_votes: discord.Option(int, name="一人最多可投票數", description="預設為1", default=1, min_value=1, max_value=20),
+        results_only_initiator: discord.Option(
+            bool, name="僅限發起人能查看結果", description="預設為false", default=False
+        ),
+        ban_alternate_account_voting: discord.Option(
+            bool, name="是否禁止小帳投票", description="僅供特定群組使用，預設為false", default=False
+        ),
+        number_of_user_votes: discord.Option(
+            int, name="一人最多可投票數", description="預設為1", default=1, min_value=1, max_value=20
+        ),
         # can_change_vote: discord.Option(bool, name="是否允許變更投票", description="預設為true", default=True),
         only_role: discord.Option(
-            str, name="限制身分組", description="若提供。則只有擁有身分組才能投票，多個身分組以英文,隔開，身分組可輸入id、提及、名稱等", default=None
+            str,
+            name="限制身分組",
+            description="若提供。則只有擁有身分組才能投票，多個身分組以英文,隔開，身分組可輸入id、提及、名稱等",
+            default=None,
         ),
         role_magnification: discord.Option(
             str,
@@ -427,19 +481,30 @@ class command(Cog_Extension):
             description="若提供，擁有身分組的用戶票數將乘指定倍數，取最高，格式為：身分組1,權重,身分組2,權重...，身分組可輸入id、提及、名稱等",
             default=None,
         ),
-        end_time: discord.Option(str, name="截止時間", description="例：2026-11-07 20:00、11/7 晚上8點、明天 20:00、3d、2小時，最長 30 天", required=False, default=None),
+        end_time: discord.Option(
+            str,
+            name="截止時間",
+            description="例：2026-11-07 20:00、11/7 晚上8點、明天 20:00、3d、2小時，最長 30 天",
+            required=False,
+            default=None,
+        ),
     ):
         title = title.strip()
         option_list = [o.strip() for o in options.split(",")]
         only_role_list = await create_only_role_list(only_role, ctx) if only_role else []
-        role_magnification_dict = await create_role_magification_dict(role_magnification, ctx) if role_magnification else {}
+        role_magnification_dict = (
+            await create_role_magification_dict(role_magnification, ctx) if role_magnification else {}
+        )
 
         now = nowtz()
         deadline = None
         if end_time:
             deadline = parse_datetime(end_time, now)
             if deadline is None:
-                await ctx.respond("錯誤：無法辨認截止時間，可輸入如 2026-11-07 20:00、11/7 晚上8點、明天 20:00、3d、2小時", ephemeral=True)
+                await ctx.respond(
+                    "錯誤：無法辨認截止時間，可輸入如 2026-11-07 20:00、11/7 晚上8點、明天 20:00、3d、2小時",
+                    ephemeral=True,
+                )
                 return
             if deadline - now < POLL_MIN_DEADLINE:
                 await ctx.respond("錯誤：截止時間至少要在 1 分鐘後", ephemeral=True)
@@ -513,7 +578,11 @@ class command(Cog_Extension):
 
     @commands.slash_command(description="共用「94共用啦」雲端資料夾", guild_ids=drive_share_guilds)
     @with_identity()
-    async def drive(self, ctx: IdentityContext, email: discord.Option(str, name="gmail帳戶", description="要使用的Gmail帳戶，留空以移除資料", required=False)):
+    async def drive(
+        self,
+        ctx: IdentityContext,
+        email: discord.Option(str, name="gmail帳戶", description="要使用的Gmail帳戶，留空以移除資料", required=False),
+    ):
         await ctx.defer()
         user_id = ctx.identity.user_id
         if not email:
@@ -537,7 +606,11 @@ class command(Cog_Extension):
             await self.bot.report(f"{ctx.author.mention} 已使用 {email} 共用雲端資料夾", msg)
 
     @party.command(description="加入政黨")
-    async def join(self, ctx: discord.ApplicationContext, party_id: discord.Option(int, name="政黨", description="要參加的政黨", choices=party_option)):
+    async def join(
+        self,
+        ctx: discord.ApplicationContext,
+        party_id: discord.Option(int, name="政黨", description="要參加的政黨", choices=party_option),
+    ):
         sclient.sqldb.join_party(ctx.author.id, party_id)
         dbdata = sclient.sqldb.get_party(party_id)
         role_id = dbdata.role_id
@@ -551,7 +624,11 @@ class command(Cog_Extension):
         await ctx.respond(f"{ctx.author.mention} 已加入政黨 {dbdata.party_name}")
 
     @party.command(description="離開政黨")
-    async def leave(self, ctx: discord.ApplicationContext, party_id: discord.Option(int, name="政黨", description="要離開的政黨", choices=party_option)):
+    async def leave(
+        self,
+        ctx: discord.ApplicationContext,
+        party_id: discord.Option(int, name="政黨", description="要離開的政黨", choices=party_option),
+    ):
         sclient.sqldb.leave_party(ctx.author.id, party_id)
         dbdata = sclient.sqldb.get_party(party_id)
         role_id = dbdata.role_id
@@ -607,7 +684,12 @@ class command(Cog_Extension):
     @registration_cmd.command(description="設定戶籍")
     @commands.is_owner()
     @commands.cooldown(rate=1, per=10)
-    async def set(self, ctx, user_dc: discord.Option(discord.Member, name="用戶"), registrations_id: discord.Option(int, name="戶籍id")):
+    async def set(
+        self,
+        ctx,
+        user_dc: discord.Option(discord.Member, name="用戶"),
+        registrations_id: discord.Option(int, name="戶籍id"),
+    ):
         assert isinstance(user_dc, discord.Member)
         user = sclient.sqldb.get_dcuser(user_dc.id)
         registration = sclient.sqldb.get_registration(registrations_id)
@@ -620,7 +702,9 @@ class command(Cog_Extension):
         if user and user.registrations_id:
             user_registration = user.registration
             if user.registrations_id == registrations_id:
-                await ctx.respond(f"{user_dc.mention} 已經註冊戶籍至 {registration_guild.name if registration_guild else registration.guild_id} 了")
+                await ctx.respond(
+                    f"{user_dc.mention} 已經註冊戶籍至 {registration_guild.name if registration_guild else registration.guild_id} 了"
+                )
                 return
             else:
                 try:
@@ -652,7 +736,9 @@ class command(Cog_Extension):
             user = sclient.sqldb.get_dcuser(member.id)
             if user and user.registrations_id:
                 guild = self.bot.get_guild(user.registration.guild_id)
-                results_text.append(f"{member.display_name}：已經註冊戶籍至 {guild.name if guild else user.registration.guild_id}")
+                results_text.append(
+                    f"{member.display_name}：已經註冊戶籍至 {guild.name if guild else user.registration.guild_id}"
+                )
                 continue
 
             guild_id = check_registration(member)
@@ -675,7 +761,9 @@ class command(Cog_Extension):
 
     @commands.is_owner()
     @registration_cmd.command(description="確認戶籍")
-    async def check(self, ctx: discord.ApplicationContext, member: discord.Option(discord.Member, required=True, name="成員")):
+    async def check(
+        self, ctx: discord.ApplicationContext, member: discord.Option(discord.Member, required=True, name="成員")
+    ):
         await ctx.defer()
         from .bot_event import check_registration
 
@@ -690,7 +778,11 @@ class command(Cog_Extension):
         dcuser = sclient.sqldb.get_dcuser(member.id)
         if dcuser.registrations_id:
             guild = self.bot.get_guild(dcuser.registration.guild_id)
-            embed.add_field(name="已註冊戶籍", value=f"{guild.name}（{guild.id}）" if guild else dcuser.registration.guild_id, inline=False)
+            embed.add_field(
+                name="已註冊戶籍",
+                value=f"{guild.name}（{guild.id}）" if guild else dcuser.registration.guild_id,
+                inline=False,
+            )
         else:
             embed.add_field(name="已註冊戶籍", value="沒有註冊戶籍", inline=False)
         await ctx.respond(embed=embed, ephemeral=True)
@@ -810,7 +902,11 @@ class command(Cog_Extension):
         await ctx.respond(embed=embed)
 
     @commands.slash_command(description="TRPG故事", guild_ids=happycamp_guild)
-    async def trpgstory(self, ctx, plot_id: discord.Option(int, name="故事id", description="故事id", autocomplete=trpg_plot_autocomplete)):
+    async def trpgstory(
+        self,
+        ctx,
+        plot_id: discord.Option(int, name="故事id", description="故事id", autocomplete=trpg_plot_autocomplete),
+    ):
         plot = sclient.sqldb.get_trpg_plot(plot_id)
         view = TRPGPlotView(plot, sclient.sqldb)
         await ctx.respond(embed=view.embed(), view=view)
@@ -820,13 +916,22 @@ class command(Cog_Extension):
         self,
         ctx: discord.ApplicationContext,
         prize_name: discord.Option(str, name="獎品", description="抽獎獎品"),
-        winner_count: discord.Option(int, name="中獎人數", description="預設為1", default=1, min_value=1, max_value=100),
-        end_time: discord.Option(str, name="結束時間", description="例：2026-11-07 20:00、11/7 晚上8點、明天 20:00、3d、2小時", required=False),
+        winner_count: discord.Option(
+            int, name="中獎人數", description="預設為1", default=1, min_value=1, max_value=100
+        ),
+        end_time: discord.Option(
+            str,
+            name="結束時間",
+            description="例：2026-11-07 20:00、11/7 晚上8點、明天 20:00、3d、2小時",
+            required=False,
+        ),
         description: discord.Option(str, name="描述", description="關於抽獎的描述", required=False, default=None),
     ):
         # 建立抽獎走 interaction 不需要頻道權限，但開獎時要讀原訊息並公告，缺權限會開獎後訊息停在進行中
         if missing := GiveawayView.missing_permissions(ctx.channel, ctx.app_permissions):
-            await ctx.respond(f"錯誤：我在這個頻道缺少權限：{'、'.join(missing)}，開獎時會無法更新抽獎訊息與公告", ephemeral=True)
+            await ctx.respond(
+                f"錯誤：我在這個頻道缺少權限：{'、'.join(missing)}，開獎時會無法更新抽獎訊息與公告", ephemeral=True
+            )
             return
 
         await ctx.defer()
@@ -834,7 +939,9 @@ class command(Cog_Extension):
         if end_time:
             end_at = parse_datetime(end_time, now)
             if end_at is None:
-                await ctx.respond("錯誤：無法辨認結束時間，可輸入如 2026-11-07 20:00、11/7 晚上8點、明天 20:00、3d、2小時")
+                await ctx.respond(
+                    "錯誤：無法辨認結束時間，可輸入如 2026-11-07 20:00、11/7 晚上8點、明天 20:00、3d、2小時"
+                )
                 return
             end_at = end_at.replace(microsecond=0)
             if end_at < now:
@@ -869,7 +976,9 @@ class command(Cog_Extension):
         self,
         ctx,
         giveaway_id: discord.Option(int, name="抽獎id", description="抽獎id"),
-        winner: discord.Option(discord.Member, name="中獎者", description="此中獎者的中獎資格將被取消並另行抽出替補者", required=False),
+        winner: discord.Option(
+            discord.Member, name="中獎者", description="此中獎者的中獎資格將被取消並另行抽出替補者", required=False
+        ),
     ):
         await ctx.defer(ephemeral=True)
         giveaway = sclient.sqldb.get_giveaway(giveaway_id)
@@ -915,6 +1024,7 @@ class command(Cog_Extension):
         target_date = date.fromisoformat(date_str)
         sclient.sqldb.add_date(ctx.author.id, target_date, name)
         await ctx.respond(f"新增紀念日：{target_date} - {name}")
+
 
 def setup(bot):
     bot.add_cog(command(bot))

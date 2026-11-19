@@ -61,7 +61,9 @@ def _failure(reason: str) -> DashboardError:
 
 
 @router.post("/guilds/{guild_id}/notifies/test")
-async def send_test_notify(body: SendTestBody, guild_id: int = Depends(require_guild_access), info: SessionInfo = Depends(require_session)):
+async def send_test_notify(
+    body: SendTestBody, guild_id: int = Depends(require_guild_access), info: SessionInfo = Depends(require_session)
+):
     try:
         spec = parse_key(body.notify_type)
     except KeyError:

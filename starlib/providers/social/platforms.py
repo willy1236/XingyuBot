@@ -52,7 +52,11 @@ class TwitchAPI(APICaller):
 
     def __get_headers(self):
         tokens = sqldb.get_identifier_secret(APIType.Twitch)
-        params = {"client_id": tokens.client_id, "client_secret": tokens.client_secret, "grant_type": "client_credentials"}
+        params = {
+            "client_id": tokens.client_id,
+            "client_secret": tokens.client_secret,
+            "grant_type": "client_credentials",
+        }
 
         r = self._request("POST", self._TOKEN_URL, params=params)
         apidata = r.json()
@@ -142,7 +146,13 @@ class TwitchAPI(APICaller):
         else:
             return None
 
-    def get_videos(self, user_ids: str | list[str] = None, video_ids: str | list[str] = None, types: str | list[str] = "highlight", after: datetime = None) -> list[TwitchVideo] | None:
+    def get_videos(
+        self,
+        user_ids: str | list[str] = None,
+        video_ids: str | list[str] = None,
+        types: str | list[str] = "highlight",
+        after: datetime = None,
+    ) -> list[TwitchVideo] | None:
         """
         取得twitch用戶的影片資訊
         :param user_ids: list of users id
@@ -237,7 +247,13 @@ class GoogleAPI(APICaller):
 
     def get_streams(self, channel_ids: list):
         print(",".join(channel_ids))
-        params = {"key": self.__token, "part": "snippet", "channelId": ",".join(channel_ids), "eventType": "live", "type": "video"}
+        params = {
+            "key": self.__token,
+            "part": "snippet",
+            "channelId": ",".join(channel_ids),
+            "eventType": "live",
+            "type": "video",
+        }
         r = self.get("search", params=params)
         print(r)
         print(r.json())
@@ -303,14 +319,23 @@ class YoutubePush(APICaller):
                 if not retryable or attempt == self.push_retries - 1:
                     log.warning(
                         "Push subscription error",
-                        extra={"channel_id": channel_id, "callback_url": callback_url, "status_code": e.status_code, "attempts": attempt + 1},
+                        extra={
+                            "channel_id": channel_id,
+                            "callback_url": callback_url,
+                            "status_code": e.status_code,
+                            "attempts": attempt + 1,
+                        },
                     )
                     return False
                 time.sleep(2 ** (attempt + 1))
         return False
 
     def get_push(self, channel_id: str, callback_url: str, secret: str = None):
-        params = {"hub.callback": callback_url, "hub.topic": f"https://www.youtube.com/xml/feeds/videos.xml?channel_id={channel_id}", "hub.secret": secret}
+        params = {
+            "hub.callback": callback_url,
+            "hub.topic": f"https://www.youtube.com/xml/feeds/videos.xml?channel_id={channel_id}",
+            "hub.secret": secret,
+        }
         r = self.get("subscription-details", params=params)
         return self._parse_subscription_details(r.text)
 
@@ -519,12 +544,24 @@ class NotionAPI(APICaller):
         """新增Notion資料庫項目，僅設定標題與內容"""
         data = {
             "parent": {"database_id": database_id},
-            "properties": {"名稱": NotionPropertyValue(id="title", type="title", title=[NotionRichText(type="text", text=NotionRichTextContent(content=title), plain_text=title)]).model_dump(exclude_none=True)},
+            "properties": {
+                "名稱": NotionPropertyValue(
+                    id="title",
+                    type="title",
+                    title=[NotionRichText(type="text", text=NotionRichTextContent(content=title), plain_text=title)],
+                ).model_dump(exclude_none=True)
+            },
             "children": [
                 {
                     "object": "block",
                     "type": "paragraph",
-                    "paragraph": {"rich_text": [NotionRichText(type="text", text=NotionRichTextContent(content=content)).model_dump(exclude_none=True)]},
+                    "paragraph": {
+                        "rich_text": [
+                            NotionRichText(type="text", text=NotionRichTextContent(content=content)).model_dump(
+                                exclude_none=True
+                            )
+                        ]
+                    },
                 }
             ],
         }
@@ -536,7 +573,13 @@ class NotionAPI(APICaller):
     def update_page_content(self, page_id: str, content: str):
         """更新Notion頁面內容"""
         data = {
-            "paragraph": {"rich_text": [NotionRichText(type="text", text=NotionRichTextContent(content=content)).model_dump(exclude_none=True)]},
+            "paragraph": {
+                "rich_text": [
+                    NotionRichText(type="text", text=NotionRichTextContent(content=content)).model_dump(
+                        exclude_none=True
+                    )
+                ]
+            },
         }
         blocks = self.get_block_children(page_id)
         return self.update_block(blocks.results[0].id, data)
@@ -591,7 +634,11 @@ class CLIInterface:
         timed_out = False
         try:
             r = subprocess.run(
-                [self.rettiwt_path, "-k", self.rettiwt_api_key, *args], capture_output=True, encoding="utf-8", check=False, timeout=30
+                [self.rettiwt_path, "-k", self.rettiwt_api_key, *args],
+                capture_output=True,
+                encoding="utf-8",
+                check=False,
+                timeout=30,
             )
         except subprocess.TimeoutExpired:
             timed_out = True

@@ -3,7 +3,6 @@
 負責本地資料之操作與管理
 """
 
-
 from .json import JsonDatabase
 
 Jsondb = JsonDatabase()

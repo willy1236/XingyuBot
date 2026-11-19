@@ -55,9 +55,7 @@ def lobby_view(guild: discord.Guild, channel_id: int, template: str | None) -> d
         },
         "template": template,
         "template_invalid": "超過 100 個字元的上限" if room_template_too_long(template) else None,
-        "permission_issues": []
-        if invalid
-        else _permission_issues(channel),
+        "permission_issues": [] if invalid else _permission_issues(channel),
     }
 
 
@@ -136,7 +134,9 @@ def _options(guild: discord.Guild, user_id: int) -> dict:
 
 
 @router.get("/guilds/{guild_id}/dynamic-voice/options")
-async def get_dynamic_voice_options(guild_id: int = Depends(require_guild_access), info: SessionInfo = Depends(require_session)):
+async def get_dynamic_voice_options(
+    guild_id: int = Depends(require_guild_access), info: SessionInfo = Depends(require_session)
+):
     return await on_guild(guild_id, lambda guild: _options(guild, int(info.discord_user_id)))
 
 

@@ -63,6 +63,7 @@ def is_vip_admin():
 
     return commands.check(predicate)
 
+
 class IdentityContext(discord.ApplicationContext):
     """
     經過 with_identity() 的指令會多一個屬性 identity，代表該 Discord 帳號對應的使用者 ID

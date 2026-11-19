@@ -121,7 +121,9 @@ class music(Cog_Extension):
         await ctx.respond("再見啦~👋")
 
     @commands.Cog.listener("on_voice_state_update")
-    async def cleanup_on_voice_disconnect(self, member: discord.Member, before: discord.VoiceState, after: discord.VoiceState):
+    async def cleanup_on_voice_disconnect(
+        self, member: discord.Member, before: discord.VoiceState, after: discord.VoiceState
+    ):
         # 機器人被移出語音或連線中斷時收掉播放器，避免殘留綁著舊連線的 player
         if member.id != self.bot.user.id or not before.channel or after.channel:
             return
@@ -202,7 +204,9 @@ class music(Cog_Extension):
     async def ensure_voice(self, ctx: discord.ApplicationContext):
         await ctx.defer()
         try:
-            await ensure_author_voice(ctx.voice_client, ctx.author, auto_join=ctx.command.qualified_name in _AUTO_JOIN_COMMANDS)
+            await ensure_author_voice(
+                ctx.voice_client, ctx.author, auto_join=ctx.command.qualified_name in _AUTO_JOIN_COMMANDS
+            )
         except MusicCommandError as e:
             raise discord.ApplicationCommandInvokeError(e) from e
 
@@ -232,7 +236,9 @@ class music(Cog_Extension):
 
     @playlist.command(name="create", description="建立個人歌單")
     @with_identity()
-    async def playlist_create(self, ctx: IdentityContext, name: discord.Option(str, name="歌單", description="歌單名稱")):
+    async def playlist_create(
+        self, ctx: IdentityContext, name: discord.Option(str, name="歌單", description="歌單名稱")
+    ):
         name = playlists.create_playlist(ctx.identity.user_id, name).name
         await ctx.respond(f"已建立歌單「{name}」", ephemeral=True)
 
@@ -328,10 +334,14 @@ class music(Cog_Extension):
         page = [BotEmbed.simple(title=title, description="") for _ in range(math.ceil(len(songs) / 10))]
         sources = sqldb.get_music_playlist_sources(playlist.id)
         if sources:
-            source_lines = [f"[{playlists.source_name(s)}]({s.url})（上次同步 {format_dt(s.synced_at, 'R')}）" for s in sources]
+            source_lines = [
+                f"[{playlists.source_name(s)}]({s.url})（上次同步 {format_dt(s.synced_at, 'R')}）" for s in sources
+            ]
             page[0].description = "來源：\n" + "\n".join(source_lines) + "\n\n"
         for i, song in enumerate(songs):
-            page[i // 10].description += f"**{i + 1}.** [{song.title}]({song.url}) [{format_seconds(song.duration)}]\n\n"
+            page[
+                i // 10
+            ].description += f"**{i + 1}.** [{song.title}]({song.url}) [{format_seconds(song.duration)}]\n\n"
         paginator = pages.Paginator(pages=page, use_default_buttons=True, loop_pages=True)
         await paginator.respond(ctx.interaction, ephemeral=True)
 
@@ -361,7 +371,9 @@ class music(Cog_Extension):
             await interaction.edit_original_response(content="已開始播放", view=None)
             await interaction.followup.send(text)
 
-        view = MusicPlaylistSelectView(ctx.author.id, [(p.id, p.name, counts.get(p.id, 0)) for p in playlists], on_select)
+        view = MusicPlaylistSelectView(
+            ctx.author.id, [(p.id, p.name, counts.get(p.id, 0)) for p in playlists], on_select
+        )
         await ctx.respond("選擇要播放的歌單", view=view, ephemeral=True)
 
 

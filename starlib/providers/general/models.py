@@ -267,12 +267,21 @@ class WeatherWarningReport(BaseModel):
 
     def embed(self):
         emoji = weather_warning_emojis.get(self.datasetInfo.datasetDescription, "🚨")
-        embed = BotEmbed.general("天氣警特報", title=f"{emoji}{self.datasetInfo.datasetDescription}", description=f"**{self.contents.content.contentText[1:]}**")
+        embed = BotEmbed.general(
+            "天氣警特報",
+            title=f"{emoji}{self.datasetInfo.datasetDescription}",
+            description=f"**{self.contents.content.contentText[1:]}**",
+        )
         embed.add_field(name="發布時間", value=self.datasetInfo.issueTime.strftime("%Y/%m/%d %H:%M"))
         embed.add_field(name="開始時間", value=self.datasetInfo.validTime.startTime.strftime("%Y/%m/%d %H:%M"))
         embed.add_field(name="結束時間", value=self.datasetInfo.validTime.endTime.strftime("%Y/%m/%d %H:%M"))
         if self.hazardConditions:
-            embed.add_field(name="涵蓋區域市", value=", ".join([i.locationName for i in self.hazardConditions.hazards.hazard[0].info.affectedAreas.location]))
+            embed.add_field(
+                name="涵蓋區域市",
+                value=", ".join(
+                    [i.locationName for i in self.hazardConditions.hazards.hazard[0].info.affectedAreas.location]
+                ),
+            )
 
         embed.timestamp = nowtz()
         embed.set_footer(text="中央氣象暑")
@@ -486,7 +495,12 @@ class McsmInstance(BaseModel):
     由 McsManagerAPI 在建立此物件前手動塞入。
     """
 
-    type_dict: ClassVar[dict[str, str]] = {"minecraft/java": "原版（vanilla）", "minecraft/java/forge": "Forge", "minecraft/java/fabric": "Fabric", "minecraft/java/paper": "Paper"}
+    type_dict: ClassVar[dict[str, str]] = {
+        "minecraft/java": "原版（vanilla）",
+        "minecraft/java/forge": "Forge",
+        "minecraft/java/fabric": "Fabric",
+        "minecraft/java/paper": "Paper",
+    }
 
     server_id: str = Field(alias="instanceUuid")
     daemon_id: str = Field(alias="daemonId")
@@ -529,6 +543,11 @@ class McsmInstance(BaseModel):
         if self.info.mcPingOnline:
             embed.add_field(name="Minecraft版本", value=self.info.version or "未知")
         embed.add_field(name="類型", value=self.type_dict.get(self.config.type, self.config.type))
-        embed.add_field(name="上次啟動時間", value=datetime.fromtimestamp(self.config.lastDatetime / 1000.0).astimezone().strftime("%Y-%m-%d %H:%M:%S"))
-        embed.set_footer(text=f"建立於 {datetime.fromtimestamp(self.config.createDatetime / 1000.0).astimezone().strftime('%Y-%m-%d %H:%M:%S')}")
+        embed.add_field(
+            name="上次啟動時間",
+            value=datetime.fromtimestamp(self.config.lastDatetime / 1000.0).astimezone().strftime("%Y-%m-%d %H:%M:%S"),
+        )
+        embed.set_footer(
+            text=f"建立於 {datetime.fromtimestamp(self.config.createDatetime / 1000.0).astimezone().strftime('%Y-%m-%d %H:%M:%S')}"
+        )
         return embed

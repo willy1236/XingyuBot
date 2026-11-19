@@ -107,7 +107,11 @@ class BotEmbed:
     @staticmethod
     def deprecated():
         """棄用:展示棄用訊息"""
-        embed = discord.Embed(title="此功能目前為棄用狀態", description="此功能目前不開放使用，請洽機器人管理員或支援伺服器", color=0xC4E9FF)
+        embed = discord.Embed(
+            title="此功能目前為棄用狀態",
+            description="此功能目前不開放使用，請洽機器人管理員或支援伺服器",
+            color=0xC4E9FF,
+        )
         return embed
 
     @staticmethod
@@ -167,7 +171,9 @@ class BotEmbed:
         embed = discord.Embed(description=f"{warn_user.mention}：{reason}", color=0xC4E9FF)
         embed.set_author(name=f"{warn_user.name} {title}", icon_url=warn_user.display_avatar.url)
         embed.add_field(name="執行人員", value=moderate_user.mention)
-        embed.add_field(name="結束時間", value=f"{discord.utils.format_dt(timestamp, style='t')}（{last.total_seconds():.0f}s）")
+        embed.add_field(
+            name="結束時間", value=f"{discord.utils.format_dt(timestamp, style='t')}（{last.total_seconds():.0f}s）"
+        )
         embed.timestamp = create_at
         return embed
 
@@ -175,7 +181,12 @@ class BotEmbed:
 class ChoiceList:  # TODO: 移動到starDiscord
     @staticmethod
     def set(option_name: str):
-        return [discord.OptionChoice(name=name_loc.get("en-US", name_loc.get("zh-TW")), value=value, name_localizations=name_loc) for value, name_loc in Jsondb.options[option_name].items()]
+        return [
+            discord.OptionChoice(
+                name=name_loc.get("en-US", name_loc.get("zh-TW")), value=value, name_localizations=name_loc
+            )
+            for value, name_loc in Jsondb.options[option_name].items()
+        ]
 
     @staticmethod
     def name(cmd_name: str):

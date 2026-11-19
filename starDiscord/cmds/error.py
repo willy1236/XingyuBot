@@ -13,6 +13,7 @@ from ..extension import Cog_Extension
 log = logging.getLogger(__name__)
 permissions_tl = Jsondb.jdict.get("permissions")
 
+
 class error(Cog_Extension):
     @commands.Cog.listener()
     async def on_application_command_error(self, ctx: discord.ApplicationContext, error: discord.DiscordException):
@@ -32,7 +33,9 @@ class error(Cog_Extension):
         elif isinstance(error, commands.errors.CheckAnyFailure):
             # check_any 全部沒過：目前 check_any 只用來組權限類檢查
             await ctx.respond("權限錯誤：你沒有權限使用此指令", ephemeral=True)
-            log.warning("CheckAnyFailure", extra={"command": str(ctx.command), "errors": [str(e) for e in error.errors]})
+            log.warning(
+                "CheckAnyFailure", extra={"command": str(ctx.command), "errors": [str(e) for e in error.errors]}
+            )
 
         elif isinstance(error, commands.errors.NoPrivateMessage):
             await ctx.respond("頻道錯誤：此指令不可在私訊中使用", ephemeral=True)
@@ -40,7 +43,11 @@ class error(Cog_Extension):
         # 指令執行時發生錯誤
         elif isinstance(error, discord.ApplicationCommandInvokeError):
             if isinstance(error.original, StarException):
-                log.warning("StarException", extra={"command": str(ctx.command), "error": str(error.original)}, exc_info=error.original)
+                log.warning(
+                    "StarException",
+                    extra={"command": str(ctx.command), "error": str(error.original)},
+                    exc_info=error.original,
+                )
                 await ctx.respond(str(error.original.message), ephemeral=True)
                 if error.original.original_message and not debug_mode:
                     await self.bot.error(ctx, f"{error.original} ({error.original.original_message})")
@@ -58,10 +65,18 @@ class error(Cog_Extension):
             elif isinstance(error.original, ValueError):
                 # 指令內以 int()、fromisoformat 等解析使用者輸入，格式錯誤時視為使用者錯誤，不回報 Sentry
                 await ctx.respond("參數格式錯誤：請確認輸入的數字、日期或時間格式", ephemeral=True)
-                log.warning("參數格式錯誤", extra={"command": str(ctx.command), "error": str(error.original)}, exc_info=error.original)
+                log.warning(
+                    "參數格式錯誤",
+                    extra={"command": str(ctx.command), "error": str(error.original)},
+                    exc_info=error.original,
+                )
 
             elif isinstance(error.original, (AttributeError, KeyError)):
-                log.error("內部錯誤", extra={"type": type(error.original).__name__, "error": str(error.original)}, exc_info=error.original)
+                log.error(
+                    "內部錯誤",
+                    extra={"type": type(error.original).__name__, "error": str(error.original)},
+                    exc_info=error.original,
+                )
                 capture_exception_safe(
                     error.original,
                     tags={"service": "discord", "source": "on_application_command_error"},
@@ -72,13 +87,19 @@ class error(Cog_Extension):
                     await ctx.respond("錯誤：機器人內部錯誤（若發生此項錯誤請靜待修復）", ephemeral=True)
                     await self.bot.error(ctx, error)
                 else:
-                    await ctx.respond(f"錯誤（debug）：```py\n{type(error.original)}：{error.original}```", ephemeral=True)
+                    await ctx.respond(
+                        f"錯誤（debug）：```py\n{type(error.original)}：{error.original}```", ephemeral=True
+                    )
 
             elif isinstance(error.original, NotImplementedError):
                 await ctx.respond("錯誤：此功能尚未實裝", ephemeral=True)
                 log.warning("功能未實裝", extra={"error": str(error.original)})
             else:
-                log.error("未知錯誤", extra={"type": type(error.original).__name__, "error": str(error.original)}, exc_info=error.original)
+                log.error(
+                    "未知錯誤",
+                    extra={"type": type(error.original).__name__, "error": str(error.original)},
+                    exc_info=error.original,
+                )
                 capture_exception_safe(
                     error.original,
                     tags={"service": "discord", "source": "on_application_command_error"},
@@ -107,7 +128,9 @@ class error(Cog_Extension):
             )
             if not ctx.guild or ctx.guild.id not in debug_guilds:
                 await self.bot.error(ctx, error)
-            await ctx.respond(f"發生未知錯誤\n```{error.original if hasattr(error, 'original') else error}```", ephemeral=True)
+            await ctx.respond(
+                f"發生未知錯誤\n```{error.original if hasattr(error, 'original') else error}```", ephemeral=True
+            )
             log.error("未分類的錯誤", extra={"type": type(error).__name__, "error": str(error)}, exc_info=error)
 
     @commands.Cog.listener()
@@ -123,6 +146,7 @@ class error(Cog_Extension):
     #     if isinstance(error,commands.errors.MissingRequiredArgument):
     #         await ctx.send(f'遺失參數:遺失 {error.param} 參數')
     #         print("遺失參數:",error.param)
+
 
 def setup(bot):
     bot.add_cog(error(bot))

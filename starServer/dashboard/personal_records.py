@@ -65,7 +65,9 @@ def _iso(value: datetime | None) -> str | None:
 @router.get("/personal/records/voice")
 async def voice_records(discord_id: int, scope: PersonalScope = Depends(require_personal())):
     _check_scope(discord_id, scope)
-    rows = await run_db(lambda: [(v.guild_id, int(v.total_minute.total_seconds() // 60)) for v in sqldb.list_voice_times(discord_id)])
+    rows = await run_db(
+        lambda: [(v.guild_id, int(v.total_minute.total_seconds() // 60)) for v in sqldb.list_voice_times(discord_id)]
+    )
     names = await _guild_names({gid for gid, _ in rows})
     return {"items": [{"guild_name": names[gid], "minutes": minutes} for gid, minutes in rows]}
 
@@ -125,7 +127,11 @@ def _giveaways(discord_id: int, offset: int, limit: int) -> _Page:
             "id": entry.giveaway_id,
             "guild_id": None if giveaway is None else giveaway.guild_id,
             "prize": None if giveaway is None else giveaway.prize_name,
-            "result": "deleted" if giveaway is None else "pending" if giveaway.is_on else ("won" if entry.is_winner else "lost"),
+            "result": "deleted"
+            if giveaway is None
+            else "pending"
+            if giveaway.is_on
+            else ("won" if entry.is_winner else "lost"),
             "at": _iso(entry.join_at),
         }
         for entry, giveaway in rows

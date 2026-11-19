@@ -59,7 +59,20 @@ _HOSTS: dict[PlatformType, tuple[str, ...]] = {
 }
 _PREFIXES = ("www.", "m.", "mobile.")
 #: Twitter 網址第一段不是帳號的保留路徑
-_TWITTER_RESERVED = {"i", "home", "explore", "search", "settings", "notifications", "messages", "intent", "share", "hashtag", "login", "compose"}
+_TWITTER_RESERVED = {
+    "i",
+    "home",
+    "explore",
+    "search",
+    "settings",
+    "notifications",
+    "messages",
+    "intent",
+    "share",
+    "hashtag",
+    "login",
+    "compose",
+}
 
 
 @dataclass(frozen=True)
@@ -73,7 +86,11 @@ def _url_segments(platform: PlatformType, text: str) -> list[str] | None:
     """輸入是該平台的網址時回傳路徑各段；不是網址回 None；是網址但不是該平台或沒有路徑拋 unsupported_format。"""
     looks_like_url = "/" in text or ":" in text or "?" in text
     lowered = text.lower()
-    host_hint = any(lowered.lstrip("/").startswith(h) or f".{h}" in lowered or f"//{h}" in lowered for hosts in _HOSTS.values() for h in hosts)
+    host_hint = any(
+        lowered.lstrip("/").startswith(h) or f".{h}" in lowered or f"//{h}" in lowered
+        for hosts in _HOSTS.values()
+        for h in hosts
+    )
     if not looks_like_url and not host_hint:
         return None
     parts = urlsplit(text if "//" in text else f"//{text}")
@@ -146,7 +163,11 @@ def _lookup_twitch(parsed: ParsedInput) -> AccountInfo:
 
 def _lookup_youtube(parsed: ParsedInput) -> AccountInfo:
     try:
-        channel = google_api.get_channel(channel_id=parsed.value) if parsed.kind == "id" else google_api.get_channel(handle=parsed.value)
+        channel = (
+            google_api.get_channel(channel_id=parsed.value)
+            if parsed.kind == "id"
+            else google_api.get_channel(handle=parsed.value)
+        )
     except APINetworkError as e:
         raise LookupFailure("platform_unavailable") from e
     if channel is None:
@@ -165,7 +186,11 @@ def _lookup_twitter(parsed: ParsedInput) -> AccountInfo:
     return AccountInfo(PlatformType.Twitter, str(user.id), user.fullName, user.userName)
 
 
-_LOOKUPS = {PlatformType.Twitch: _lookup_twitch, PlatformType.Google: _lookup_youtube, PlatformType.Twitter: _lookup_twitter}
+_LOOKUPS = {
+    PlatformType.Twitch: _lookup_twitch,
+    PlatformType.Google: _lookup_youtube,
+    PlatformType.Twitter: _lookup_twitter,
+}
 
 
 def resolve_account(platform: PlatformType, text: str) -> AccountInfo:
@@ -184,17 +209,31 @@ def fetch_account(platform: PlatformType, account_id: str) -> AccountInfo:
 
 # ====== 推播設定（DB） ======
 def add_notifies(
-    account: AccountInfo, notify_types: list[NotifyCommunityType], guild_id: int, channel_id: int, role_id: int | None, message: str | None
+    account: AccountInfo,
+    notify_types: list[NotifyCommunityType],
+    guild_id: int,
+    channel_id: int,
+    role_id: int | None,
+    message: str | None,
 ) -> None:
     """新增同一個帳號的一或多種推播。
 
     Raises:
         NotifyCommunityExistsError: 任一種類已存在，一筆都不寫入。
     """
-    sqldb.insert_notify_communities(account.to_community(), notify_types, guild_id, channel_id, role_id, message, cache_time=nowtz())
+    sqldb.insert_notify_communities(
+        account.to_community(), notify_types, guild_id, channel_id, role_id, message, cache_time=nowtz()
+    )
 
 
-def set_notify(account: AccountInfo, notify_type: NotifyCommunityType, guild_id: int, channel_id: int, role_id: int | None, message: str | None) -> None:
+def set_notify(
+    account: AccountInfo,
+    notify_type: NotifyCommunityType,
+    guild_id: int,
+    channel_id: int,
+    role_id: int | None,
+    message: str | None,
+) -> None:
     """指令用：該筆已存在就修改頻道、身分組、自訂文字，否則新增。"""
     if sqldb.get_notify_community_fresh(notify_type, account.id, guild_id) is None:
         try:

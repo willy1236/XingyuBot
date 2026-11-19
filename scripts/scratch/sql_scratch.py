@@ -1,5 +1,3 @@
-
-
 from starlib import sqldb
 from starlib.database.postgresql.models import User
 

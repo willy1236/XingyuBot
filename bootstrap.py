@@ -35,7 +35,9 @@ def _setup_logging() -> None:
 
 def setup_runtime(service: str) -> None:
     """套用 asyncio 修正與 warning 壓制、設定 logging、初始化 Sentry。"""
-    asyncio.iscoroutinefunction = inspect.iscoroutinefunction  # 修正 asyncio.iscoroutinefunction 在 Python 3.11 之後的行為，避免第三方套件出現警告
+    asyncio.iscoroutinefunction = (
+        inspect.iscoroutinefunction
+    )  # 修正 asyncio.iscoroutinefunction 在 Python 3.11 之後的行為，避免第三方套件出現警告
 
     # 壓制所有第三方套件（虛擬環境 .venv 中）的棄用警告
     warnings.filterwarnings("ignore", category=DeprecationWarning)

@@ -92,11 +92,15 @@ async def _punish_command(
         return result
     result.ok = True
     if not user.bot:
-        result.warning_id = sclient.sqldb.add_warning(user.id, kind, ctx.author.id, ctx.guild.id, nowtz(), reason, duration, guild_only=not add_record)
+        result.warning_id = sclient.sqldb.add_warning(
+            user.id, kind, ctx.author.id, ctx.guild.id, nowtz(), reason, duration, guild_only=not add_record
+        )
     return result
 
 
-async def _respond_kick_ban(ctx: discord.ApplicationContext, result: PunishResult, user: discord.Member, title_suffix: str, reason: str | None):
+async def _respond_kick_ban(
+    ctx: discord.ApplicationContext, result: PunishResult, user: discord.Member, title_suffix: str, reason: str | None
+):
     """/kick、/ban 的回覆：有紀錄時用統一公告格式，沒有紀錄（對象是機器人）時用簡單 embed。"""
     if not result.ok:
         await ctx.respond(f"錯誤：{result.error}")
@@ -106,7 +110,9 @@ async def _respond_kick_ban(ctx: discord.ApplicationContext, result: PunishResul
             payload["embed"].add_field(name="注意", value=result.error, inline=False)
         await ctx.respond(**payload)
     else:
-        embed = BotEmbed.general(f"{user.name} {title_suffix}", user.display_avatar.url, description=f"{user.mention}：{reason}")
+        embed = BotEmbed.general(
+            f"{user.name} {title_suffix}", user.display_avatar.url, description=f"{user.mention}：{reason}"
+        )
         embed.add_field(name="執行人員", value=ctx.author.mention)
         embed.timestamp = nowtz()
         await ctx.respond(embed=embed)
@@ -289,7 +295,9 @@ def _lobby_error_text(e: LobbyError) -> str:
 
 def _ticket_setup_embed(guild: discord.Guild, v: LobbyValues, result: SaveResult, action: str) -> discord.Embed:
     """設定結果：目前設定、套用管理身分組失敗的頻道、bot 缺少的權限。"""
-    embed = BotEmbed.general(f"已{action}私人頻道大廳", guild.icon.url if guild.icon else None, description=result.jump_url)
+    embed = BotEmbed.general(
+        f"已{action}私人頻道大廳", guild.icon.url if guild.icon else None, description=result.jump_url
+    )
     embed.add_field(name="大廳頻道", value=f"<#{result.channel_id}>")
     embed.add_field(name="私人頻道分類", value=f"<#{v.ticket_category_id}>")
     embed.add_field(name="管理身分組", value=" ".join(f"<@&{r}>" for r in v.manager_role_ids) or "無", inline=False)
@@ -299,18 +307,24 @@ def _ticket_setup_embed(guild: discord.Guild, v: LobbyValues, result: SaveResult
     embed.add_field(name="開單按鈕", value=f"{v.button_emoji or ''} {v.button_label or DEFAULT_BUTTON_LABEL}".strip())
     if result.failures:
         lines = [f"<#{f.channel_id}>：{f.reason}" for f in result.failures]
-        embed.add_field(name="以下私人頻道套用管理身分組失敗，補上權限後重新設定", value="\n".join(lines)[:1024], inline=False)
+        embed.add_field(
+            name="以下私人頻道套用管理身分組失敗，補上權限後重新設定", value="\n".join(lines)[:1024], inline=False
+        )
     lobby = SimpleNamespace(channel_id=result.channel_id, ticket_category_id=v.ticket_category_id)
     issues = bot_permission_issues(guild, lobby)  # pyright: ignore[reportArgumentType]
     if issues:
-        embed.add_field(name="注意", value="\n".join(f"機器人缺少 {i.permission}：{i.consequence}" for i in issues), inline=False)
+        embed.add_field(
+            name="注意", value="\n".join(f"機器人缺少 {i.permission}：{i.consequence}" for i in issues), inline=False
+        )
     return embed
 
 
 class moderation(Cog_Extension):
     warning_cmd = SlashCommandGroup("warning", "警告相關指令", name_localizations=ChoiceList.name("warning"))
     channel_cmd = SlashCommandGroup("channel", "自動通知相關指令", name_localizations=ChoiceList.name("channel"))
-    reactrole_cmd = SlashCommandGroup("reactrole", "反應身分組相關指令", name_localizations=ChoiceList.name("reactrole"))
+    reactrole_cmd = SlashCommandGroup(
+        "reactrole", "反應身分組相關指令", name_localizations=ChoiceList.name("reactrole")
+    )
     ticket_cmd = SlashCommandGroup("ticket", "私人頻道相關指令", name_localizations=ChoiceList.name("ticket"))
     server_cmd = SlashCommandGroup("server", "伺服器設定相關指令", name_localizations=ChoiceList.name("server"))
 
@@ -345,14 +359,20 @@ class moderation(Cog_Extension):
         else:
             await ctx.respond(content="沒有提供任何資訊，所以沒有清除任何內容", delete_after=5)
 
-    @channel_cmd.command(description="設定通知頻道，讓機器人發送通知", name_localizations=ChoiceList.name("channel_set"))
+    @channel_cmd.command(
+        description="設定通知頻道，讓機器人發送通知", name_localizations=ChoiceList.name("channel_set")
+    )
     @commands.has_permissions(manage_channels=True)
     @commands.guild_only()
     async def set(
         self,
         ctx: discord.ApplicationContext,
-        notify_type: discord.Option(int, name="通知類型", description="要接收的通知類型", required=True, choices=set_option),
-        channel: discord.Option(discord.abc.GuildChannel, name="頻道", description="要接收通知的頻道，留空以移除通知", default=None),
+        notify_type: discord.Option(
+            int, name="通知類型", description="要接收的通知類型", required=True, choices=set_option
+        ),
+        channel: discord.Option(
+            discord.abc.GuildChannel, name="頻道", description="要接收通知的頻道，留空以移除通知", default=None
+        ),
         role: discord.Option(
             discord.Role,
             required=False,
@@ -360,7 +380,9 @@ class moderation(Cog_Extension):
             description="發送通知時tag的身分組，定時通知與部分通知不會tag故不一定需要設定",
             default=None,
         ),
-        msg: discord.Option(str, name="通知文字", description="發送通知時的自訂文字，目前僅部分通知會使用到", default=None),
+        msg: discord.Option(
+            str, name="通知文字", description="發送通知時的自訂文字，目前僅部分通知會使用到", default=None
+        ),
     ):
         guildid = ctx.guild.id
         notify_type = NotifyChannelType(notify_type)
@@ -368,13 +390,19 @@ class moderation(Cog_Extension):
         if channel:
             roleid = role.id if role else None
             sclient.sqldb.add_notify_channel(guildid, notify_type, channel.id, roleid, msg)
-            await ctx.respond(f"設定完成，已將 {Jsondb.get_tw(notify_type, 'channel_set_option')} 頻道設定在 {channel.mention}")
+            await ctx.respond(
+                f"設定完成，已將 {Jsondb.get_tw(notify_type, 'channel_set_option')} 頻道設定在 {channel.mention}"
+            )
             await ctx.send(
-                embed=BotEmbed.simple("溫馨提醒", "若為定時通知，請將機器人的訊息保持在此頻道的最新訊息，以免機器人找不到訊息而重複發送"),
+                embed=BotEmbed.simple(
+                    "溫馨提醒", "若為定時通知，請將機器人的訊息保持在此頻道的最新訊息，以免機器人找不到訊息而重複發送"
+                ),
                 delete_after=10,
             )
             if not channel.can_send():
-                await ctx.send(embed=BotEmbed.simple("溫馨提醒", f"我無法在{channel.mention}中發送訊息，請確認我有足夠的權限"))
+                await ctx.send(
+                    embed=BotEmbed.simple("溫馨提醒", f"我無法在{channel.mention}中發送訊息，請確認我有足夠的權限")
+                )
         else:
             sclient.sqldb.remove_notify_channel(guildid, notify_type)
             await ctx.respond(f"設定完成，已移除 {Jsondb.get_tw(notify_type, 'channel_set_option')} 頻道")
@@ -389,7 +417,9 @@ class moderation(Cog_Extension):
     async def voice(
         self,
         ctx: discord.ApplicationContext,
-        channel: discord.Option(discord.VoiceChannel, name="動態語音大廳頻道", description="留空以移除設定", default=None),
+        channel: discord.Option(
+            discord.VoiceChannel, name="動態語音大廳頻道", description="留空以移除設定", default=None
+        ),
         default_room_name: discord.Option(
             str,
             name="預設房間名稱",
@@ -411,7 +441,9 @@ class moderation(Cog_Extension):
             sclient.sqldb.remove_dynamic_voice_lobby(ctx.guild.id)
             await ctx.respond("設定完成，已移除 動態語音大廳 頻道")
 
-    @channel_cmd.command(name="list", description="查看所有通知設定的頻道", name_localizations=ChoiceList.name("channel_list"))
+    @channel_cmd.command(
+        name="list", description="查看所有通知設定的頻道", name_localizations=ChoiceList.name("channel_list")
+    )
     @commands.has_permissions(manage_channels=True)
     @commands.guild_only()
     async def channel_list(self, ctx: discord.ApplicationContext):
@@ -445,7 +477,9 @@ class moderation(Cog_Extension):
         ctx: discord.ApplicationContext,
         user: discord.Option(discord.User, name="用戶", description="要給予警告的用戶", required=True),
         reason: discord.Option(str, name="原因", description="限100字內"),
-        add_record: discord.Option(bool, name="是否要將此紀錄存入警告系統", description="將紀錄存入警告系統供其他群組檢視", default=False),
+        add_record: discord.Option(
+            bool, name="是否要將此紀錄存入警告系統", description="將紀錄存入警告系統供其他群組檢視", default=False
+        ),
     ):
         is_owner = await self.bot.is_owner(ctx.author)
         if (ctx.author == user or user not in ctx.guild.members) and not is_owner:
@@ -460,16 +494,22 @@ class moderation(Cog_Extension):
         auto = None
         if user.id == ctx.author.id:
             # 只有 owner 能走到這裡；punish 不允許對自己執行，沿用現行寫法
-            warning_id = sclient.sqldb.add_warning(user.id, WarningType.Warning, ctx.author.id, ctx.guild.id, time, reason, None, not add_record)
+            warning_id = sclient.sqldb.add_warning(
+                user.id, WarningType.Warning, ctx.author.id, ctx.guild.id, time, reason, None, not add_record
+            )
         else:
-            result = await punish(ctx.guild, WarningType.Warning, user, ctx.author, reason, cross_guild=add_record, via_dashboard=False)
+            result = await punish(
+                ctx.guild, WarningType.Warning, user, ctx.author, reason, cross_guild=add_record, via_dashboard=False
+            )
             if not result.ok:
                 await ctx.respond(result.error)
                 return
             warning_id = result.warning_id
             record_error = result.error
             auto = result.auto_timeout
-        embed = BotEmbed.general(f"{user.name} 已被警告", user.display_avatar.url, description=f"{user.mention}：{reason}")
+        embed = BotEmbed.general(
+            f"{user.name} 已被警告", user.display_avatar.url, description=f"{user.mention}：{reason}"
+        )
         embed.add_field(name="執行人員", value=ctx.author.mention)
         embed.add_field(name="存入跨群警告系統", value=add_record)
         embed.timestamp = time
@@ -482,7 +522,9 @@ class moderation(Cog_Extension):
 
         await ctx.respond(user.mention, embed=embed, allowed_mentions=discord.AllowedMentions(users=True))
 
-    @warning_cmd.command(name="list", description="獲取使用者的所有警告", name_localizations=ChoiceList.name("warning_list"))
+    @warning_cmd.command(
+        name="list", description="獲取使用者的所有警告", name_localizations=ChoiceList.name("warning_list")
+    )
     @commands.guild_only()
     async def list(
         self,
@@ -498,7 +540,9 @@ class moderation(Cog_Extension):
         dbdata = sclient.sqldb.get_warnings(user.id, ctx.guild.id if guild_only else None)
         await ctx.respond(embed=dbdata.display(self.bot, user))
 
-    @warning_cmd.command(name="get", description="查詢指定警告的資訊", name_localizations=ChoiceList.name("warning_get"))
+    @warning_cmd.command(
+        name="get", description="查詢指定警告的資訊", name_localizations=ChoiceList.name("warning_get")
+    )
     @commands.guild_only()
     async def get(
         self,
@@ -506,12 +550,16 @@ class moderation(Cog_Extension):
         warning_id: discord.Option(str, name="警告編號", description="要查詢的警告", required=True),
     ):
         sheet = sclient.sqldb.get_warning(int(warning_id))
-        if sheet and (ctx.guild.id == sheet.create_guild or ctx.guild.id in debug_guilds or ctx.guild.get_member(sheet.discord_id)):
+        if sheet and (
+            ctx.guild.id == sheet.create_guild or ctx.guild.id in debug_guilds or ctx.guild.get_member(sheet.discord_id)
+        ):
             await ctx.respond(embed=sheet.embed(self.bot))
         else:
             await ctx.respond("查無此警告單")
 
-    @warning_cmd.command(name="remove", description="移除使用的指定警告", name_localizations=ChoiceList.name("warning_remove"))
+    @warning_cmd.command(
+        name="remove", description="移除使用的指定警告", name_localizations=ChoiceList.name("warning_remove")
+    )
     @commands.check_any(
         commands.has_guild_permissions(kick_members=True),
         commands.has_guild_permissions(ban_members=True),
@@ -543,9 +591,13 @@ class moderation(Cog_Extension):
         self,
         ctx: discord.ApplicationContext,
         user: discord.Option(discord.Member, name="用戶", description="要禁言的使用者", required=True),
-        time_last_str: discord.Option(str, name="時長", description="格式為30s、1h20m等，支援天(d)、小時(h)、分鐘(m)、秒(s)", required=True),
+        time_last_str: discord.Option(
+            str, name="時長", description="格式為30s、1h20m等，支援天(d)、小時(h)、分鐘(m)、秒(s)", required=True
+        ),
         reason: discord.Option(str, name="原因", description="限100字內", default="已禁言"),
-        add_record: discord.Option(bool, name="是否要將此紀錄存入警告系統", description="將紀錄存入警告系統供其他群組檢視", default=False),
+        add_record: discord.Option(
+            bool, name="是否要將此紀錄存入警告系統", description="將紀錄存入警告系統供其他群組檢視", default=False
+        ),
         delete_message_seconds: discord.Option(
             int,
             name="刪除最近的訊息",
@@ -575,7 +627,9 @@ class moderation(Cog_Extension):
             return
 
         create_time = nowtz()
-        embed = BotEmbed.general(f"{user.name} 已被禁言", user.display_avatar.url, description=f"{user.mention}：{reason}")
+        embed = BotEmbed.general(
+            f"{user.name} 已被禁言", user.display_avatar.url, description=f"{user.mention}：{reason}"
+        )
         embed.add_field(name="執行人員", value=ctx.author.mention)
         embed.add_field(name="結束時間", value=f"{format_dt(create_time + time_last, style='T')}（{time_last}）")
         if result.deleted_summary:
@@ -596,7 +650,9 @@ class moderation(Cog_Extension):
         ctx: discord.ApplicationContext,
         user: discord.Option(discord.Member, name="用戶", description="要踢出的用戶", required=True),
         reason: discord.Option(str, name="原因", description="限100字內", required=False),
-        add_record: discord.Option(bool, name="是否要將此紀錄存入警告系統", description="將紀錄存入警告系統供其他群組檢視", default=False),
+        add_record: discord.Option(
+            bool, name="是否要將此紀錄存入警告系統", description="將紀錄存入警告系統供其他群組檢視", default=False
+        ),
     ):
         await ctx.defer()
         result = await _punish_command(ctx, WarningType.Kick, user, reason, add_record)
@@ -611,7 +667,9 @@ class moderation(Cog_Extension):
         ctx: discord.ApplicationContext,
         user: discord.Option(discord.Member, name="用戶", description="要停權的用戶", required=True),
         reason: discord.Option(str, name="原因", description="限100字內", required=True),
-        add_record: discord.Option(bool, name="是否要將此紀錄存入警告系統", description="將紀錄存入警告系統供其他群組檢視", default=False),
+        add_record: discord.Option(
+            bool, name="是否要將此紀錄存入警告系統", description="將紀錄存入警告系統供其他群組檢視", default=False
+        ),
         delete_message_seconds: discord.Option(
             int,
             name="刪除最近的訊息",
@@ -624,7 +682,9 @@ class moderation(Cog_Extension):
     ):
         await ctx.defer()
         assert isinstance(user, discord.Member), "user must be a discord.Member instance"
-        result = await _punish_command(ctx, WarningType.Ban, user, reason, add_record, delete_message_seconds=delete_message_seconds)
+        result = await _punish_command(
+            ctx, WarningType.Ban, user, reason, add_record, delete_message_seconds=delete_message_seconds
+        )
         await _respond_kick_ban(ctx, result, user, "已被停權", reason)
 
     @staticmethod
@@ -643,11 +703,16 @@ class moderation(Cog_Extension):
         if stored is not None:
             sclient.sqldb.merge(
                 ReactionRoleMessage(
-                    guild_id=react_msg.guild_id, channel_id=react_msg.channel_id, message_id=react_msg.message_id, content_json=to_json(stored)
+                    guild_id=react_msg.guild_id,
+                    channel_id=react_msg.channel_id,
+                    message_id=react_msg.message_id,
+                    content_json=to_json(stored),
                 )
             )
 
-    @reactrole_cmd.command(description="編輯反應身分組訊息的文字", name_localizations=ChoiceList.name("reactrole_editmessage"))
+    @reactrole_cmd.command(
+        description="編輯反應身分組訊息的文字", name_localizations=ChoiceList.name("reactrole_editmessage")
+    )
     @commands.has_permissions(manage_roles=True)
     @commands.guild_only()
     async def editmessage(
@@ -682,8 +747,12 @@ class moderation(Cog_Extension):
         title: discord.Option(str, name="標題", description="要設定的標題，只能展示出純文字的效果", required=True),
         emoji: discord.Option(str, name="表情符號", description="要設定的表情符號", required=False),
         style: discord.Option(discord.ButtonStyle, name="樣式", description="要設定的樣式", required=False),
-        message_id: discord.Option(str, name="訊息id", description="要設定的訊息id，若無則由機器人創建", required=False),
-        text: discord.Option(str, name="訊息文字", description="機器人發送新訊息時的文字", default="請依自身喜好點選身分組"),
+        message_id: discord.Option(
+            str, name="訊息id", description="要設定的訊息id，若無則由機器人創建", required=False
+        ),
+        text: discord.Option(
+            str, name="訊息文字", description="機器人發送新訊息時的文字", default="請依自身喜好點選身分組"
+        ),
     ):
         # TODO: 設定不同頻道訊息
         if role.is_default() or role.managed:
@@ -698,7 +767,9 @@ class moderation(Cog_Extension):
 
         await ctx.defer()
         if message_id:
-            message: discord.Message | None = self.bot.get_message(int(message_id)) or await ctx.channel.fetch_message(int(message_id))
+            message: discord.Message | None = self.bot.get_message(int(message_id)) or await ctx.channel.fetch_message(
+                int(message_id)
+            )
             if not message:
                 await ctx.respond("找不到此訊息，請在該訊息的頻道進行設定", ephemeral=True)
                 return
@@ -726,7 +797,15 @@ class moderation(Cog_Extension):
         else:
             position = max((r.position for r in existing.values()), default=-1) + 1
         sclient.sqldb.merge(
-            ReactionRoleOption(message_id=message.id, role_id=role.id, title=title, description=None, emoji=emoji, style=style, position=position)
+            ReactionRoleOption(
+                message_id=message.id,
+                role_id=role.id,
+                title=title,
+                description=None,
+                emoji=emoji,
+                style=style,
+                position=position,
+            )
         )
         react_roles = sclient.sqldb.get_reaction_roles_by_message(message.id)
         await message.edit(view=ReactionRoleView(message.id, react_roles))
@@ -794,21 +873,67 @@ class moderation(Cog_Extension):
     async def ticket_setup(
         self,
         ctx: discord.ApplicationContext,
-        channel: discord.Option(discord.TextChannel, name="頻道", description="大廳頻道：已是大廳就修改它，不是就設成新的大廳", required=False),
-        new_channel_name: discord.Option(str, name="新頻道名稱", description="讓我新建大廳頻道（與「頻道」擇一）", required=False, max_length=100),
-        new_channel_category: discord.Option(discord.CategoryChannel, name="新頻道分類", description="新建的大廳頻道放在哪個分類，不填則用私人頻道分類", required=False),
-        ticket_category: discord.Option(discord.CategoryChannel, name="私人頻道分類", description="私人頻道開在哪個分類；新增時不填則用大廳頻道所在的分類", required=False),
-        role1: discord.Option(discord.Role, name="管理身分組1", description="有填任一個管理身分組時取代全部管理身分組，更多的請到後台設定", required=False),
+        channel: discord.Option(
+            discord.TextChannel,
+            name="頻道",
+            description="大廳頻道：已是大廳就修改它，不是就設成新的大廳",
+            required=False,
+        ),
+        new_channel_name: discord.Option(
+            str, name="新頻道名稱", description="讓我新建大廳頻道（與「頻道」擇一）", required=False, max_length=100
+        ),
+        new_channel_category: discord.Option(
+            discord.CategoryChannel,
+            name="新頻道分類",
+            description="新建的大廳頻道放在哪個分類，不填則用私人頻道分類",
+            required=False,
+        ),
+        ticket_category: discord.Option(
+            discord.CategoryChannel,
+            name="私人頻道分類",
+            description="私人頻道開在哪個分類；新增時不填則用大廳頻道所在的分類",
+            required=False,
+        ),
+        role1: discord.Option(
+            discord.Role,
+            name="管理身分組1",
+            description="有填任一個管理身分組時取代全部管理身分組，更多的請到後台設定",
+            required=False,
+        ),
         role2: discord.Option(discord.Role, name="管理身分組2", description="同上", required=False),
         role3: discord.Option(discord.Role, name="管理身分組3", description="同上", required=False),
-        clear_roles: discord.Option(bool, name="清空管理身分組", description="移除所有管理身分組", required=False, default=False),
-        prefix: discord.Option(str, name="前綴", description="私人頻道名稱的前綴，後面接四位流水號，例如 report-0001", required=False),
-        one_per_user: discord.Option(bool, name="每人一張", description="每人在這個大廳同時只能有一個私人頻道", required=False),
-        max_open: discord.Option(int, name="上限", description="這個大廳同時存在的私人頻道上限（含已鎖定）", required=False, min_value=1, max_value=MAX_OPEN_LIMIT),
-        clear_max_open: discord.Option(bool, name="清空上限", description="改成不限數量", required=False, default=False),
-        message_text: discord.Option(str, name="訊息文字", description="大廳訊息的文字；embed 只能在後台編輯", required=False, max_length=2000),
-        button_label: discord.Option(str, name="按鈕文字", description="開單按鈕的文字", required=False, max_length=MAX_BUTTON_LABEL),
-        button_emoji: discord.Option(str, name="按鈕emoji", description="開單按鈕的 emoji：Unicode emoji 或這個伺服器的自訂 emoji", required=False),
+        clear_roles: discord.Option(
+            bool, name="清空管理身分組", description="移除所有管理身分組", required=False, default=False
+        ),
+        prefix: discord.Option(
+            str, name="前綴", description="私人頻道名稱的前綴，後面接四位流水號，例如 report-0001", required=False
+        ),
+        one_per_user: discord.Option(
+            bool, name="每人一張", description="每人在這個大廳同時只能有一個私人頻道", required=False
+        ),
+        max_open: discord.Option(
+            int,
+            name="上限",
+            description="這個大廳同時存在的私人頻道上限（含已鎖定）",
+            required=False,
+            min_value=1,
+            max_value=MAX_OPEN_LIMIT,
+        ),
+        clear_max_open: discord.Option(
+            bool, name="清空上限", description="改成不限數量", required=False, default=False
+        ),
+        message_text: discord.Option(
+            str, name="訊息文字", description="大廳訊息的文字；embed 只能在後台編輯", required=False, max_length=2000
+        ),
+        button_label: discord.Option(
+            str, name="按鈕文字", description="開單按鈕的文字", required=False, max_length=MAX_BUTTON_LABEL
+        ),
+        button_emoji: discord.Option(
+            str,
+            name="按鈕emoji",
+            description="開單按鈕的 emoji：Unicode emoji 或這個伺服器的自訂 emoji",
+            required=False,
+        ),
     ):
         await ctx.defer(ephemeral=True)
         guild: discord.Guild = ctx.guild
@@ -843,16 +968,31 @@ class moderation(Cog_Extension):
             return
         await ctx.respond(embed=_ticket_setup_embed(guild, plan, result, action), ephemeral=True)
 
-    @server_cmd.command(name="setting", description="查看或修改伺服器設定，只填要改的項目；不填任何項目則顯示目前設定", name_localizations=ChoiceList.name("server_setting"))
+    @server_cmd.command(
+        name="setting",
+        description="查看或修改伺服器設定，只填要改的項目；不填任何項目則顯示目前設定",
+        name_localizations=ChoiceList.name("server_setting"),
+    )
     @commands.has_guild_permissions(manage_guild=True)
     @commands.guild_only()
     async def server_setting(
         self,
         ctx: discord.ApplicationContext,
-        voice_time_counter: discord.Option(bool, name="語音時數統計", description="是否統計成員的語音時數", required=False),
-        auto_timeout: discord.Option(bool, name="自動禁言", description="警告累計到指定次數時是否自動禁言", required=False),
-        times: discord.Option(int, name="警告次數", description="累計幾次警告自動禁言（1～20）", required=False, min_value=1, max_value=20),
-        duration: discord.Option(str, name="禁言時長", description="格式為30s、1h20m等，支援天(d)、小時(h)、分鐘(m)、秒(s)，1分鐘到7天", required=False),
+        voice_time_counter: discord.Option(
+            bool, name="語音時數統計", description="是否統計成員的語音時數", required=False
+        ),
+        auto_timeout: discord.Option(
+            bool, name="自動禁言", description="警告累計到指定次數時是否自動禁言", required=False
+        ),
+        times: discord.Option(
+            int, name="警告次數", description="累計幾次警告自動禁言（1～20）", required=False, min_value=1, max_value=20
+        ),
+        duration: discord.Option(
+            str,
+            name="禁言時長",
+            description="格式為30s、1h20m等，支援天(d)、小時(h)、分鐘(m)、秒(s)，1分鐘到7天",
+            required=False,
+        ),
     ):
         db = sclient.sqldb
         values: dict[str, bool | int] = {}
@@ -882,11 +1022,15 @@ class moderation(Cog_Extension):
 
         row = db.get_guild_setting_fresh(ctx.guild.id)
         auto = auto_timeout_module.effective_setting(row)
-        embed = BotEmbed.general("伺服器設定" if not values else "伺服器設定已更新", ctx.guild.icon.url if ctx.guild.icon else None)
+        embed = BotEmbed.general(
+            "伺服器設定" if not values else "伺服器設定已更新", ctx.guild.icon.url if ctx.guild.icon else None
+        )
         embed.add_field(name="語音時數統計", value="開啟" if row is not None and row.voice_time_counter else "關閉")
         embed.add_field(
             name="自動禁言",
-            value=f"警告累計 {auto.times} 次禁言 {format_seconds(auto.seconds)}" if auto.enabled else f"關閉（啟用時為累計 {auto.times} 次禁言 {format_seconds(auto.seconds)}）",
+            value=f"警告累計 {auto.times} 次禁言 {format_seconds(auto.seconds)}"
+            if auto.enabled
+            else f"關閉（啟用時為累計 {auto.times} 次禁言 {format_seconds(auto.seconds)}）",
             inline=False,
         )
         issue = auto_timeout_module.moderate_members_issue(ctx.guild)

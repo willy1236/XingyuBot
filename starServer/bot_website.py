@@ -70,6 +70,8 @@ async def sentry_exception_middleware(request: Request, call_next):
 dashboard.install(app)
 
 security = HTTPBasic()
+
+
 def get_current_username(credentials: HTTPBasicCredentials = Depends(security)):
     correct_username = secrets.compare_digest(credentials.username, docs_account.client_id)
     correct_password = secrets.compare_digest(credentials.password, docs_account.client_secret)
@@ -81,27 +83,33 @@ def get_current_username(credentials: HTTPBasicCredentials = Depends(security)):
         )
     return credentials.username
 
+
 @app.get("/docs", include_in_schema=False)
 async def get_documentation(username: str = Depends(get_current_username)):
     return get_swagger_ui_html(openapi_url="/openapi.json", title="docs")
+
 
 @app.get("/openapi.json", include_in_schema=False)
 async def openapi(username: str = Depends(get_current_username)):
     return get_openapi(title="FastAPI", version="0.1.0", routes=app.routes)
 
+
 @app.get("/")
 @app.head("/")
-def main(request:Request):
+def main(request: Request):
     log.debug(f"{request.client.host} - {request.method} - {request.url.path}")
     return HTMLResponse("這是一個目前沒有內容的主頁")
 
+
 @app.get("/keep_alive")
 @app.head("/keep_alive")
-def keep_alive(request:Request):
+def keep_alive(request: Request):
     return HTMLResponse(content="Bot is aLive!")
+
 
 # print("[Warning] Server Received & Refused!")
 # print("[Warning] Error:", e)
+
 
 async def prase_yt_push(content: str):
     feed = feedparser.parse(content)
@@ -132,8 +140,12 @@ async def prase_yt_push(content: str):
 
             elif video.is_live_upcoming_with_time:
                 # 如果是即將開始的直播，則添加ytcache
-                assert video.liveStreamingDetails.scheduledStartTime is not None, "Scheduled start time should not be None for upcoming live videos"
-                log.info("Upcoming live video detected: %s at %s", video.id, video.liveStreamingDetails.scheduledStartTime)
+                assert video.liveStreamingDetails.scheduledStartTime is not None, (
+                    "Scheduled start time should not be None for upcoming live videos"
+                )
+                log.info(
+                    "Upcoming live video detected: %s at %s", video.id, video.liveStreamingDetails.scheduledStartTime
+                )
                 sqldb.add_yt_cache(video.id, video.liveStreamingDetails.scheduledStartTime)
                 no_mention = True
             elif video.liveStreamingDetails and video.liveStreamingDetails.actualEndTime:
@@ -143,7 +155,9 @@ async def prase_yt_push(content: str):
 
             if sclient.bot:
                 sclient.bot.submit(
-                    sclient.bot.send_notify_communities(video.embed(), NotifyCommunityType.Youtube, channel_id, no_mention=no_mention)
+                    sclient.bot.send_notify_communities(
+                        video.embed(), NotifyCommunityType.Youtube, channel_id, no_mention=no_mention
+                    )
                 )
             else:
                 log.warning("Bot not found.")
@@ -258,7 +272,9 @@ async def oauth_twitch(request: Request):
     if not isinstance(lookup, TwitchMember):
         log.info("Twitch OAuth: twitch_id=%s is not a member, refused", user.id)
         auth_url = html.escape(get_settings().AUTH_PUBLIC_URL)
-        return _twitch_oauth_page(f'請先註冊析域帳號並在帳號頁連結這個 Twitch：<a href="{auth_url}">{auth_url}</a>', 403)
+        return _twitch_oauth_page(
+            f'請先註冊析域帳號並在帳號頁連結這個 Twitch：<a href="{auth_url}">{auth_url}</a>', 403
+        )
 
     twitch_id = int(user.id)  # 在 try 外：Twitch ID 本來就是數字，格式錯誤不是資料庫寫入失敗
     try:
@@ -303,6 +319,7 @@ async def process_linebot_webhook(body: str, signature: str):
     except Exception as e:
         capture_exception_safe(e, tags={"service": "website", "source": "linebot_webhook"})
         log.error("處理 LINE Bot 訊息時發生錯誤", exc_info=e)
+
 
 async def handle_message(event: MessageEvent):
     url = utils.check_url_format(event.message.text)
@@ -359,7 +376,9 @@ async def to_twitchauth(request: Request):
 @app.get("/to/discordbot")
 async def to_discordbot(request: Request, origin: str | None = None):
     """統一的邀請入口。帶 origin 表示從後台發起，完成後回到該 origin 的後台；不帶時完成後顯示授權完成頁。"""
-    auth = DiscordOAuth.create_from_db(discord_oauth_client, scopes=["identify", "applications.commands.permissions.update", "bot"])
+    auth = DiscordOAuth.create_from_db(
+        discord_oauth_client, scopes=["identify", "applications.commands.permissions.update", "bot"]
+    )
     url, state = auth.get_authorization_url(permissions="8")
     if origin is not None:
         return dashboard_invite_redirect(url, state, origin)

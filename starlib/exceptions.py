@@ -22,7 +22,9 @@ class StarException(Exception):
 
     code = 1000
 
-    def __init__(self, message: str = "發生例外錯誤", original: Exception | None = None, original_message: str | None = None):
+    def __init__(
+        self, message: str = "發生例外錯誤", original: Exception | None = None, original_message: str | None = None
+    ):
         super().__init__(message)
         self.message: str = message
         self.original: Exception | None = original
@@ -44,7 +46,9 @@ class ApiError(StarException):
 
     code = 1100
 
-    def __init__(self, message: str = "發生 API 例外錯誤", original: Exception | None = None, original_message: str | None = None):
+    def __init__(
+        self, message: str = "發生 API 例外錯誤", original: Exception | None = None, original_message: str | None = None
+    ):
         super().__init__(message, original, original_message)
 
 
@@ -53,7 +57,9 @@ class APINetworkError(ApiError):
 
     code = 1101
 
-    def __init__(self, message: str | None = None, original: Exception | None = None, original_message: str | None = None):
+    def __init__(
+        self, message: str | None = None, original: Exception | None = None, original_message: str | None = None
+    ):
         full_message = f"調用 API 時發生Http請求錯誤{f'：{message}' if message else ''}"
         super().__init__(full_message, original, original_message)
 
@@ -69,7 +75,9 @@ class CommandError(StarException):
 
     code = 1102
 
-    def __init__(self, message: str | None = None, original: Exception | None = None, original_message: str | None = None):
+    def __init__(
+        self, message: str | None = None, original: Exception | None = None, original_message: str | None = None
+    ):
         full_message = f"調用指令時發生錯誤{f'：{message}' if message else ''}"
         super().__init__(full_message, original, original_message)
 
@@ -79,7 +87,9 @@ class GenerateError(StarException):
 
     code = 1103
 
-    def __init__(self, message: str | None = None, original: Exception | None = None, original_message: str | None = None):
+    def __init__(
+        self, message: str | None = None, original: Exception | None = None, original_message: str | None = None
+    ):
         full_message = f"生成時發生錯誤{f'：{message}' if message else ''}"
         super().__init__(full_message, original, original_message)
 
@@ -89,7 +99,9 @@ class DatabaseError(StarException):
 
     code = 1200
 
-    def __init__(self, message: str = "發生資料庫錯誤", original: Exception | None = None, original_message: str | None = None):
+    def __init__(
+        self, message: str = "發生資料庫錯誤", original: Exception | None = None, original_message: str | None = None
+    ):
         super().__init__(message, original, original_message)
 
 
@@ -98,7 +110,9 @@ class DataExistError(DatabaseError):
 
     code = 1201
 
-    def __init__(self, message: str = "新增的資料已存在", original: Exception | None = None, original_message: str | None = None):
+    def __init__(
+        self, message: str = "新增的資料已存在", original: Exception | None = None, original_message: str | None = None
+    ):
         super().__init__(message, original, original_message)
 
 
@@ -115,7 +129,9 @@ class SQLNotFoundError(DatabaseError):
 
     code = 1202
 
-    def __init__(self, message: str = "找不到資料", original: Exception | None = None, original_message: str | None = None):
+    def __init__(
+        self, message: str = "找不到資料", original: Exception | None = None, original_message: str | None = None
+    ):
         super().__init__(message, original, original_message)
 
 
@@ -124,7 +140,9 @@ class DataExpiredError(DatabaseError):
 
     code = 1203
 
-    def __init__(self, message: str = "資料已經過期", original: Exception | None = None, original_message: str | None = None):
+    def __init__(
+        self, message: str = "資料已經過期", original: Exception | None = None, original_message: str | None = None
+    ):
         super().__init__(message, original, original_message)
 
 
@@ -133,23 +151,34 @@ class VoiceError(StarException):
 
     code = 1300
 
-    def __init__(self, message: str = "發生語音錯誤", original: Exception | None = None, original_message: str | None = None):
+    def __init__(
+        self, message: str = "發生語音錯誤", original: Exception | None = None, original_message: str | None = None
+    ):
         super().__init__(message, original, original_message)
 
 
 class MusicCommandError(VoiceError):
     """使用音樂指令時發生錯誤 (錯誤代碼: 1301)"""
+
     code = 1301
 
-    def __init__(self, message: str = "在使用音樂指令時發生錯誤", original: Exception | None = None, original_message: str | None = None):
+    def __init__(
+        self,
+        message: str = "在使用音樂指令時發生錯誤",
+        original: Exception | None = None,
+        original_message: str | None = None,
+    ):
         super().__init__(message, original, original_message)
 
 
 class MusicPlayingError(VoiceError):
     """播放歌曲時發生錯誤 (錯誤代碼: 1302)"""
+
     code = 1302
 
-    def __init__(self, message: str | None = None, original: Exception | None = None, original_message: str | None = None):
+    def __init__(
+        self, message: str | None = None, original: Exception | None = None, original_message: str | None = None
+    ):
         full_message = f"在播放歌曲時發生錯誤{f'：{message}' if message else ''}"
         super().__init__(full_message, original, original_message)
 
@@ -166,15 +195,24 @@ class MusicPlaylistConflict(StarException):
 
 class RequestError(StarException):
     """請求相關錯誤基類 (錯誤代碼: 1400)"""
+
     code = 1400
 
-    def __init__(self, message: str = "發生請求錯誤", original: Exception | None = None, original_message: str | None = None):
+    def __init__(
+        self, message: str = "發生請求錯誤", original: Exception | None = None, original_message: str | None = None
+    ):
         super().__init__(message, original, original_message)
 
 
 class Forbidden(RequestError):
     """請求被拒絕 (錯誤代碼: 1401)"""
+
     code = 1401
 
-    def __init__(self, message: str = "在調用資料時被拒絕", original: Exception | None = None, original_message: str | None = None):
+    def __init__(
+        self,
+        message: str = "在調用資料時被拒絕",
+        original: Exception | None = None,
+        original_message: str | None = None,
+    ):
         super().__init__(message, original, original_message)

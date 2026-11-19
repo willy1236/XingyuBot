@@ -51,7 +51,7 @@ def _install_signal_handlers() -> None:
             continue
         try:
             signal.signal(sig, _on_signal)
-        except (ValueError, OSError):
+        except ValueError, OSError:
             pass
 
 

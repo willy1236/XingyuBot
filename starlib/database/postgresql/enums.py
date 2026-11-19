@@ -68,6 +68,7 @@ notify_to_platform_map = {
     NotifyCommunityType.TwitterTweet: PlatformType.Twitter,
 }
 
+
 class McssServerAction(IntEnum):
     Unknown = 0
     Stop = 1
@@ -155,7 +156,10 @@ class YoutubeVideoStatue(IntEnum):
     Upcoming = 2
 
 
-pet_tl = {"en": {"1": "shark", "2": "dog", "3": "cat", "4": "fox", "5": "wolf"}, "zh-tw": {"1": "鯊魚", "2": "狗", "3": "貓", "4": "狐狸", "5": "狼"}}
+pet_tl = {
+    "en": {"1": "shark", "2": "dog", "3": "cat", "4": "fox", "5": "wolf"},
+    "zh-tw": {"1": "鯊魚", "2": "狗", "3": "貓", "4": "狐狸", "5": "狼"},
+}
 
 
 class PetType(IntEnum):
