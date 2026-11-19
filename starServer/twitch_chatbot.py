@@ -135,6 +135,7 @@ async def run():
 
     # chat.register_command_middleware(ChannelRestriction(allowed_channel=[]))
     chat.register_command("add_cmd", commands.add_chat_command)
+    chat.register_command("edit_cmd", commands.edit_chat_command)
     chat.register_command("remove_cmd", commands.remove_chat_command)
     chat.register_command("list_cmd", commands.list_chat_command)
     # TODO: modify_channel_information

@@ -682,8 +682,8 @@
   - 冷卻以主名稱為 key，別名共用；實況主與 mod 不受限，也不寫入冷卻。
   - 刪除 `client.py` 的 `add_twitch_cmd`、`remove_twitch_cmd`，`get_raw_chat_command_*` 加別名 key，新增 `lock_twitch_commands`。
 - commit：
-  - 後端：（待補）
-- 續做：後端 `commands.py` 觸發邏輯與聊天室指令、`channel_commands.py` 端點與 `require_enabled_channel`、前端。
+  - 後端：75db49aa（`starlib/twitch_commands.py`、快取別名索引）、（觸發與聊天室指令，待補）
+- 續做：後端 `channel_commands.py` 端點與 `require_enabled_channel`（`channels.py`），再做前端。
 
 ### W-06 實況主能設定計時訊息
 
