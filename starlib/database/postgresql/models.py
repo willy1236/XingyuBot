@@ -571,7 +571,7 @@ class TwitchChannelAudit(BasicSchema, table=True):
     actor_name: str = Field(nullable=False)
     #: dashboard、chat
     source: str = Field(nullable=False)
-    #: command、timer、event_response、forward
+    #: command、timer、event_response、forward、channel（整個頻道的操作，例如刪除所有資料）
     target_kind: str = Field(nullable=False)
     target_key: str = Field(nullable=False)
     #: create、update、delete

@@ -200,7 +200,10 @@ async def _channel_enabled(cmd: ChatCommand) -> bool:
     後台「刪除所有資料」與停用會先改 state，bot 稍後才收到同步通知而離開聊天室；這段期間不能讓管理指令把資料寫回去。
     每次都讀資料庫而不是 `state.join_channels`，後者要等通知才會更新。管理指令很少用，多一次查詢可以接受。
     """
-    row = await _db(lambda: sqldb.get_twitch_join_channel(int(cmd.room.room_id)))
+    room = cmd.room
+    if room is None:
+        return False
+    row = await _db(lambda: sqldb.get_twitch_join_channel(int(room.room_id)))
     if row is not None and row.state == "enabled":
         return True
     await cmd.reply("星羽目前未啟用，無法修改指令")
