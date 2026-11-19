@@ -43,7 +43,7 @@ async def get_netbird(scope: PersonalScope = Depends(require_personal())):
         peers = await asyncio.to_thread(fetch_peers, query)
     except APINetworkError:
         log.exception("NetBird query failed")
-        raise DashboardError(502, "netbird_unavailable")
+        raise DashboardError(502, "netbird_unavailable") from None
     result["bound"] = True
     result["peers"] = [_peer(p) for p in peers]
     return result
@@ -60,7 +60,7 @@ async def setup_netbird(scope: PersonalScope = Depends(require_personal(write=Tr
         key = await asyncio.to_thread(request_setup_key, plan)
     except APINetworkError:
         log.exception("NetBird setup failed")
-        raise DashboardError(502, "netbird_unavailable")
+        raise DashboardError(502, "netbird_unavailable") from None
     # NetBird 全部成功後才寫入綁定
     setup = await run_db(lambda: save_setup(user_id, key))
     return {"command": setup.command, "bat": setup.bat}

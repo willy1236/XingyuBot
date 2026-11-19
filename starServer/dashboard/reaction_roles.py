@@ -16,11 +16,10 @@ import json
 import logging
 import re
 from dataclasses import asdict, dataclass
+from typing import Literal
 
 import discord
 from fastapi import APIRouter, Depends
-from typing import Literal
-
 from pydantic import BaseModel, ValidationError
 
 from starDiscord.uiElement.view import ReactionRoleView
