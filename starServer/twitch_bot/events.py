@@ -155,6 +155,8 @@ async def on_stream_online(event: eventsub.StreamOnlineEvent):
 
     # 先用事件帶的開台時間記為開台（分類與標題留空），查不到直播時 {uptime} 才不會沿用上一場下播的狀態
     speech.set_live(int(event.event.broadcaster_user_id), speech.StreamInfo(event.event.started_at, "", ""))
+    # 事件本身就確認開台，計時訊息不等 Helix：Helix 延遲查不到直播時，計時訊息也要照常開始
+    await timers.on_stream_online(int(event.event.broadcaster_user_id))
     # stream.online 會在開台後數秒內送達，此時 Helix streams API 可能還查不到直播，稍等重試
     live = None
     for _ in range(3):
@@ -168,7 +170,6 @@ async def on_stream_online(event: eventsub.StreamOnlineEvent):
     speech.set_live(
         int(event.event.broadcaster_user_id), speech.StreamInfo(live.started_at, live.game_name, live.title)
     )
-    await timers.on_stream_online(int(event.event.broadcaster_user_id))
 
     # 聊天室訊息只看事件回應的開關；Discord 端的通知頻道與開台通知由 Discord bot 處理事件時決定
     await _respond(
