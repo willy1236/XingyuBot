@@ -154,7 +154,10 @@ def test_import_does_not_touch_db(module):
 
 
 def test_load_join_channels_populates_module_globals(monkeypatch):
-    data = {123: MagicMock(action_channel_id=456), 789: MagicMock(action_channel_id=None)}
+    data = {
+        123: MagicMock(action_channel_id=456, state="enabled"),
+        789: MagicMock(action_channel_id=None, state="enabled"),
+    }
     monkeypatch.setattr(state.sqldb, "get_bot_join_channel_all", lambda: data)
     for name in ("join_channels", "TARGET_CHANNEL", "TARGET_CHANNEL_IDS"):
         monkeypatch.setattr(state, name, getattr(state, name))  # 登記，測試結束還原
@@ -164,6 +167,22 @@ def test_load_join_channels_populates_module_globals(monkeypatch):
     assert state.join_channels is data
     assert state.TARGET_CHANNEL == {123: 456, 789: None}
     assert state.TARGET_CHANNEL_IDS == ["123", "789"]
+
+
+def test_load_join_channels_joins_only_enabled_but_keeps_all_settings(monkeypatch):
+    data = {
+        1: MagicMock(action_channel_id=10, state="enabled"),
+        2: MagicMock(action_channel_id=20, state="inactive"),
+        3: MagicMock(action_channel_id=30, state="disabled"),
+    }
+    monkeypatch.setattr(state.sqldb, "get_bot_join_channel_all", lambda: data)
+    for name in ("join_channels", "TARGET_CHANNEL", "TARGET_CHANNEL_IDS"):
+        monkeypatch.setattr(state, name, getattr(state, name))
+
+    state.load_join_channels()
+
+    assert state.TARGET_CHANNEL_IDS == ["1"]
+    assert state.join_channels is data
 
 
 # ---- twitch_main ----
