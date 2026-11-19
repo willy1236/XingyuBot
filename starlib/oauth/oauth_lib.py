@@ -164,7 +164,7 @@ class OAuth2Base(ABC):
             client_id=oauth_client.client_id,
             client_secret=oauth_client.client_secret,
             redirect_uri=oauth_client.redirect_uri,
-            scopes=scopes or oauth_client.default_scopes,
+            scopes=scopes if scopes is not None else oauth_client.default_scopes,
         )
         instance._credential_id = oauth_client.credential_id
         return instance
