@@ -268,7 +268,7 @@ def _prune_followed() -> None:
 def _channels_of(account: Account) -> tuple[TwitchIdentity, ...]:
     """析域帳號連結的 Twitch 頻道：名稱與頭像取自 TwitchBotJoinChannel，沒有列的用 passport 的顯示名稱。
 
-    TwitchBotJoinChannel 沒有的頻道順手新增一列 inactive（與 Twitch 登入相同）；已有的列不動。
+    TwitchBotJoinChannel 沒有的頻道順手新增一列 inactive（與 Twitch 登入相同）；已有的列不動，列都在時不寫入。
     """
     names: dict[int, str | None] = {}
     for passport in account.twitch_passports:
@@ -277,17 +277,19 @@ def _channels_of(account: Account) -> tuple[TwitchIdentity, ...]:
     if not names:
         return ()
     s = sqldb.session
-    s.execute(
-        pg_insert(TwitchBotJoinChannel)
-        .values([{"twitch_id": i, "display_name": name, "first_seen_at": _now()} for i, name in names.items()])
-        .on_conflict_do_nothing(index_elements=["twitch_id"])
-    )
     rows = {
         row.twitch_id: row
         for row in s.execute(select(TwitchBotJoinChannel).where(TwitchBotJoinChannel.twitch_id.in_(names)))  # pyright: ignore[reportAttributeAccessIssue]
         .scalars()
         .all()
     }
+    missing = [i for i in names if i not in rows]
+    if missing:
+        s.execute(
+            pg_insert(TwitchBotJoinChannel)
+            .values([{"twitch_id": i, "display_name": names[i], "first_seen_at": _now()} for i in missing])
+            .on_conflict_do_nothing(index_elements=["twitch_id"])
+        )
     s.commit()
     channels = []
     for twitch_id, passport_name in names.items():

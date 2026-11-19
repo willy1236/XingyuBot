@@ -113,6 +113,15 @@ class TestChannelsFollowed:
         assert (row_b.state, row_b.display_name) == ("inactive", "Bravo") and row_b.first_seen_at is not None
         assert repo.session.get(TwitchBotJoinChannel, CHANNEL_A).state == "enabled"
 
+    def test_existing_rows_are_not_written_again(self, repo, directory, clock, monkeypatch):
+        repo.add(TwitchBotJoinChannel(twitch_id=CHANNEL_A, state="inactive", display_name="Alpha"))
+        acc = linked(uuid4(), twitch=[(CHANNEL_A, "Alpha")])
+        link(directory, acc)
+        c = client_for(make_domalyze_session(repo, acc.account_id))
+        monkeypatch.setattr(session, "pg_insert", lambda *_: pytest.fail("列都在時不該 INSERT"))
+
+        assert channel_ids(c) == [str(CHANNEL_A)]
+
     def test_non_numeric_passport_is_skipped(self, repo, directory, clock):
         acc = linked(uuid4(), twitch=[(CHANNEL_A, "Alpha")])
         acc = replace(acc, twitch_passports=(*acc.twitch_passports, LinkedPassport("abc", "bad")))
