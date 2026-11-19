@@ -924,6 +924,7 @@
 - 已知限制：頻道頁內的操作（POST、PUT）若在解除連結後收到 `channel_forbidden`，由各頁自己的錯誤處理顯示，沒有全域導回（`dashboard-api.ts` 不加全域 handler，W-05～W-07 的頁面各自處理）；解除連結後只有換頁或重新整理才會被導走。
 - 已知限制：沒有 Discord 的析域 session 之後帳號連上 Discord，session 不會自動升級，維持沒有 Discord 身分，要重新登入才看得到伺服器（轉發頁已提示重新登入）。
 - 審查第 1 輪修正：`_channels_of` 先 SELECT 已有的頻道列，缺列才 INSERT，列都在時不寫入。
+- 審查第 1 輪修正：個人區 overview 的「Discord 或沒有 Discord 的析域 session」判斷收成 `personal.require_personal_any`，overview 改用它。
 - 沒有 ALTER。
 - 未驗：真實 auth server 的連結增減（60 秒）、析域登入後個人區與頻道清單的畫面（桌面與 360px）、頻道被解除連結時的導回與提示、沒有 Discord 的析域帳號登入後各頁。
 - 完整 CI：待合併回 main 前跑。
