@@ -32,7 +32,7 @@ def invite_redirect(url: str, state: str, origin: str | None) -> RedirectRespons
     response = RedirectResponse(url=url)
     response.set_cookie(
         auth.OAUTH_COOKIE,
-        auth._encode_cookie(cookie),
+        auth.encode_cookie(cookie),
         max_age=auth.OAUTH_COOKIE_MAX_AGE,
         httponly=True,
         secure=True,

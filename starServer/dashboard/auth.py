@@ -82,11 +82,11 @@ def sanitize_origin(value: str | None) -> str:
     return config.frontend_url()
 
 
-def _encode_cookie(cookie: OAuthCookie) -> str:
+def encode_cookie(cookie: OAuthCookie) -> str:
     return base64.urlsafe_b64encode(cookie.model_dump_json().encode()).decode()
 
 
-def _decode_cookie(raw: str) -> OAuthCookie | None:
+def decode_cookie(raw: str) -> OAuthCookie | None:
     try:
         return OAuthCookie(**json.loads(base64.urlsafe_b64decode(raw.encode())))
     except Exception:
@@ -120,7 +120,7 @@ async def to_dashboard_login(next: str | None = None, origin: str | None = None)
     cookie = OAuthCookie(state=state, purpose="login", next=sanitize_next(next), origin=sanitize_origin(origin))
     response = RedirectResponse(url=url)
     response.set_cookie(
-        OAUTH_COOKIE, _encode_cookie(cookie), max_age=OAUTH_COOKIE_MAX_AGE, httponly=True, secure=True, samesite="lax"
+        OAUTH_COOKIE, encode_cookie(cookie), max_age=OAUTH_COOKIE_MAX_AGE, httponly=True, secure=True, samesite="lax"
     )
     return response
 
@@ -131,7 +131,7 @@ async def handle_dashboard_oauth(request: Request) -> Response | None:
     raw = request.cookies.get(OAUTH_COOKIE)
     if raw is None:
         return None
-    cookie = _decode_cookie(raw)
+    cookie = decode_cookie(raw)
     state = request.query_params.get("state")
     if cookie is None or state is None or not hmac.compare_digest(cookie.state.encode(), state.encode()):
         return None

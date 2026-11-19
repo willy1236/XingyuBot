@@ -291,8 +291,8 @@
 - 空 scope 的 user token 也能呼叫 Helix `/users` 取得自己的資料。
 
 **進度**：進行中
-- 已完成：`create_from_db` 的 scopes 判斷（空 list 不退回預設）。
-- 續做：`auth.py` cookie 編碼函式改公開 → `TwitchBotJoinChannel` 新欄位與 ALTER → `twitch_login.py` 與 `/oauth/twitch` 分派 → `channels.py` 與 `/dashboard/me` 的 `has_channels` → 前端。
+- 已完成：`create_from_db` 的 scopes 判斷（空 list 不退回預設）；`auth.encode_cookie`／`decode_cookie` 改公開名稱。
+- 續做：`TwitchBotJoinChannel` 新欄位與 ALTER → `twitch_login.py` 與 `/oauth/twitch` 分派 → `channels.py` 與 `/dashboard/me` 的 `has_channels` → 前端。
 
 ### W-02 [共用] Twitch bot 頻道控制：狀態、即時加入離開、模組拆分
 
