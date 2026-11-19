@@ -67,10 +67,15 @@ def _channel_json(channel: TwitchIdentity, state: str) -> dict:
     }
 
 
+async def channel_list(info: SessionInfo) -> list[dict]:
+    """這個 session 可以管理的頻道與 bot 狀態（個人區 overview 也用它）。"""
+    states = await run_db(lambda: _states([int(c.id) for c in info.twitch_channels]))
+    return [_channel_json(c, states[int(c.id)]) for c in info.twitch_channels]
+
+
 @router.get("/channels")
 async def list_channels(info: SessionInfo = Depends(require_any_session)):
-    states = await run_db(lambda: _states([int(c.id) for c in info.twitch_channels]))
-    return {"channels": [_channel_json(c, states[int(c.id)]) for c in info.twitch_channels]}
+    return {"channels": await channel_list(info)}
 
 
 @router.get("/channels/{twitch_id}")

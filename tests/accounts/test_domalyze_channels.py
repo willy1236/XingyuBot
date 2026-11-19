@@ -9,10 +9,11 @@ from uuid import uuid4
 import pytest
 from fastapi.testclient import TestClient
 
+from starlib import sclient
 from starlib.database import DashboardSession, TwitchBotJoinChannel
 from starlib.identity import Account, LinkedPassport, ResolvedAccount
 from starServer.dashboard import channels, session
-from tests.helpers.accounts import account
+from tests.helpers.accounts import FakeBot, account
 from tests.helpers.dashboard_auth import FRONTEND, USER_ID, make_app, make_domalyze_session, make_session
 
 pytestmark = pytest.mark.usefixtures("dashboard_env")
@@ -232,3 +233,42 @@ class TestLogoutWithoutDiscord:
             "other-account",
             "with-discord",
         }
+
+
+class TestPersonalOverview:
+    def test_without_discord_has_channels_and_no_discords(self, repo, directory, clock):
+        acc = linked(uuid4(), twitch=[(CHANNEL_A, "Alpha")], discord_ids=())
+        link(directory, acc)
+        c = client_for(make_domalyze_session(repo, acc.account_id, user_id=None))
+
+        r = c.get("/dashboard/personal/overview")
+
+        assert r.status_code == 200
+        body = r.json()
+        assert (body["account"], body["partial"], body["discords"]) == ({"username": "willy"}, False, [])
+        assert [(ch["id"], ch["name"], ch["state"]) for ch in body["channels"]] == [
+            (str(CHANNEL_A), "Alpha", "inactive")
+        ]
+
+    def test_with_discord_has_discords_and_channels(self, repo, directory, clock, monkeypatch):
+        monkeypatch.setattr(sclient, "bot", FakeBot({int(USER_ID): ("Some One", None)}))
+        acc = linked(uuid4(), twitch=[(CHANNEL_A, "Alpha"), (CHANNEL_B, "Bravo")])
+        link(directory, acc)
+        c = client_for(make_domalyze_session(repo, acc.account_id))
+
+        body = c.get("/dashboard/personal/overview").json()
+
+        assert [d["id"] for d in body["discords"]] == [USER_ID]
+        assert [ch["id"] for ch in body["channels"]] == [str(CHANNEL_A), str(CHANNEL_B)]
+
+    @pytest.mark.parametrize(
+        "path", ["/dashboard/personal/drive", "/dashboard/personal/playlists", "/dashboard/guilds"]
+    )
+    def test_other_endpoints_still_need_discord(self, repo, directory, clock, path):
+        acc = linked(uuid4(), twitch=[(CHANNEL_A, "Alpha")], discord_ids=())
+        link(directory, acc)
+        c = client_for(make_domalyze_session(repo, acc.account_id, user_id=None))
+
+        r = c.get(path)
+
+        assert (r.status_code, r.json()) == (403, {"error": "discord_required"})

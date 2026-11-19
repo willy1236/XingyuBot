@@ -2,6 +2,7 @@
 
 可見範圍只讀 session 帶的析域帳號（session.py 的帳號跟隨結果），不另外向 auth server 查詢：
 有析域帳號時涵蓋該域民連結的所有 Discord，沒有時只有 session 的 Discord。
+overview 是個人區的落地頁，沒有 Discord 身分的析域 session 也能開（discords 為空，只有帳號與頻道）；Twitch 登入沒有個人區，仍是 403 discord_required。
 """
 
 import asyncio
@@ -15,10 +16,11 @@ from starlib.fileDatabase import Jsondb
 from starlib.identity import IdentityUnavailable, resolve_identity
 
 from .auth import avatar_url
+from .channels import channel_list
 from .db import run_db
 from .discord_users import fetch_discord_user
 from .errors import DashboardError
-from .session import DiscordSessionInfo, require_session
+from .session import DiscordSessionInfo, SessionInfo, require_any_session, require_session
 
 router = APIRouter(prefix="/dashboard")
 
@@ -101,9 +103,15 @@ def _assets(discord_ids: list[int]) -> list[tuple[dict, dict | None]]:
 
 
 @router.get("/personal/overview")
-async def personal_overview(
-    info: DiscordSessionInfo = Depends(require_session), scope: PersonalScope = Depends(require_personal())
-):
+async def personal_overview(info: SessionInfo = Depends(require_any_session)):
+    if not isinstance(info, DiscordSessionInfo) and info.login_method != "domalyze":
+        raise DashboardError(403, "discord_required")
+    channels = await channel_list(info)
+    if not isinstance(info, DiscordSessionInfo):
+        account = None if info.account_id is None else {"username": info.account_username}
+        return {"account": account, "partial": False, "discords": [], "channels": channels}
+
+    scope = await personal_scope(info)
     profiles = await asyncio.gather(*(fetch_discord_user(i) for i in scope.discord_ids))
     assets = await run_db(lambda: _assets(scope.discord_ids))
 
@@ -129,4 +137,5 @@ async def personal_overview(
         "account": None if scope.account_id is None else {"username": scope.account_username},
         "partial": scope.partial,
         "discords": discords,
+        "channels": channels,
     }

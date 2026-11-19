@@ -111,6 +111,7 @@ class TestOverview:
                     "pet": None,
                 }
             ],
+            "channels": [],
         }
 
     def test_with_two_discords(self, client, directory, repo):

@@ -891,8 +891,8 @@
 - 個人區既有區塊大多以 Discord ID 查資料。沒有 Discord 的析域 session 進個人區時，逐一確認每個區塊在 discord 為 null 時不會出錯。
 
 **進度**：進行中（2026-11-19）
-- 已完成：後端 session 帶入析域帳號的 Twitch 頻道（`session.py` 的 `_channels_of`、`_Followed.twitch_channels`、`remember_account` 改 async）；沒有 Discord 的析域 session（`domalyze_login.py`）與登出（`delete_account_sessions`）；測試 `tests/accounts/test_domalyze_channels.py`、`test_domalyze_login.py`。
-- 續做：`personal.py` overview 加 `channels`（改 `require_any_session`）；前端（domalyze_frontend 的 tsd-w10 分支）。
+- 已完成：後端 session 帶入析域帳號的 Twitch 頻道（`session.py` 的 `_channels_of`、`_Followed.twitch_channels`、`remember_account` 改 async）；沒有 Discord 的析域 session（`domalyze_login.py`）與登出（`delete_account_sessions`）；個人區 overview 加 `channels`（`personal.py`，沒有 Discord 的析域 session 也能開，`discords` 為空；Twitch 登入維持 403 `discord_required`）；測試 `tests/accounts/test_domalyze_channels.py`、`test_domalyze_login.py`、`test_personal.py`。
+- 續做：D-1 的 `AuditActor` 加 `domalyze` 與 session 取得 actor 的函式（使用者決定，2026-11-19）；前端（domalyze_frontend 的 tsd-w10 分支）。
 - 沒有 ALTER。
 
 ### W-11 實況主能把事件轉發到 Discord
