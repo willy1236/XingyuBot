@@ -38,6 +38,9 @@ class Spy:
         self.scopes: list[list[str] | None] = []
         self.mod_status = 204
         self.mod_text = ""
+        #: 400 時的後續查詢（GET moderators）：狀態碼與 data
+        self.mod_list_status = 200
+        self.mod_list_data: list[dict] = []
         self.mod_error: Exception | None = None
         self.mod_requests: list[httpx.Request] = []
         self.sync_result: object = twitch_control.SyncResult(joined=True)
@@ -96,6 +99,8 @@ def spy(monkeypatch, repo) -> Spy:
         spy.mod_requests.append(request)
         if spy.mod_error:
             raise spy.mod_error
+        if request.method == "GET":
+            return httpx.Response(spy.mod_list_status, json={"data": spy.mod_list_data})
         return httpx.Response(spy.mod_status, text=spy.mod_text)
 
     real_client = httpx.AsyncClient
@@ -266,14 +271,35 @@ class TestEnable:
         )
         assert repo.session.get(TwitchChatCommand, (TWITCH_ID, "hi")) is not None
 
-    def test_already_moderator_counts_as_success(self, site, spy, repo):
+    def test_bad_request_with_bot_already_mod_counts_as_success(self, site, spy, repo):
+        # 不依賴 Twitch 400 的訊息內容：400 時查名單，bot 在名單裡就是已經是 mod
         spy.mod_status = 400
-        spy.mod_text = '{"message":"The user specified in the user_id query parameter is already a moderator"}'
+        spy.mod_text = "any text Twitch decides to send"
+        spy.mod_list_data = [{"user_id": BOT_ID}]
         _own_channel_session(site, repo)
 
         response = _callback(site, code="c")
 
         assert response.headers["location"] == CHANNEL_URL
+        post, get = spy.mod_requests
+        assert get.method == "GET"
+        assert get.url.path == "/helix/moderation/moderators"
+        assert dict(get.url.params) == {"broadcaster_id": CHANNEL, "user_id": BOT_ID}
+        assert get.headers["authorization"] == "Bearer broadcaster-token"
+
+    @pytest.mark.parametrize(
+        ("list_status", "list_data"), [(200, []), (401, []), (500, [])], ids=["not_in_list", "unauthorized", "error"]
+    )
+    def test_bad_request_without_bot_in_list_is_mod_failed(self, site, spy, repo, list_status, list_data):
+        spy.mod_status = 400
+        spy.mod_text = "The user specified in the user_id query parameter is already a moderator"
+        spy.mod_list_status = list_status
+        spy.mod_list_data = list_data
+        _own_channel_session(site, repo)
+
+        response = _callback(site, code="c")
+
+        assert _notices(response) == ["mod_failed"]
 
     @pytest.mark.parametrize("status", [401, 403, 422, 429, 500])
     def test_mod_failure_still_enables(self, site, spy, repo, status):

@@ -103,24 +103,26 @@ def _bot_user_id() -> str:
 async def _add_bot_as_mod(broadcaster_id: str, access_token: str) -> bool:
     """用實況主的 token 把 bot 帳號設為頻道 mod；已經是 mod 視為成功。失敗回 False，不 raise。
 
+    Twitch 對「已經是 mod」回 400，但訊息內容沒有保證；所以 400 時改查 mod 名單，bot 在名單裡才算成功。
+
     常見失敗：401／403 缺權限、422 bot 目前是頻道 VIP（要先移除）、429 速率限制。
     """
     try:
         bot_id = await run_db(_bot_user_id)
         client_id = (await get_oauth_client()).client_id
+        params = {"broadcaster_id": broadcaster_id, "user_id": bot_id}
+        headers = {"Authorization": f"Bearer {access_token}", "Client-Id": client_id}
         async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
-            response = await client.post(
-                MODERATORS_URL,
-                params={"broadcaster_id": broadcaster_id, "user_id": bot_id},
-                headers={"Authorization": f"Bearer {access_token}", "Client-Id": client_id},
-            )
+            response = await client.post(MODERATORS_URL, params=params, headers=headers)
+            if response.status_code == 400:
+                listing = await client.get(MODERATORS_URL, params=params, headers=headers)
+                if listing.status_code == 200 and listing.json()["data"]:
+                    return True
     except Exception as exc:
         capture_exception_safe(exc, tags={"service": "website", "source": "dashboard_twitch_add_mod"})
         log.exception("Twitch Add Channel Moderator failed for %s: %s", broadcaster_id, exc)
         return False
     if response.status_code == 204:
-        return True
-    if response.status_code == 400 and "already a moderator" in response.text:
         return True
     log.warning("Twitch Add Channel Moderator for %s: %s %s", broadcaster_id, response.status_code, response.text)
     capture_exception_safe(
