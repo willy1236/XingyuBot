@@ -1,4 +1,3 @@
-
 import discord
 from pydantic import BaseModel, HttpUrl, model_validator
 
@@ -52,9 +51,9 @@ class YoutubePushEntry(BaseModel):
             title=self.title,
             url=self.link,
             description=self.author_detail.name,
-            color=0xff0000,
-            timestamp = self.published
-            )
+            color=0xFF0000,
+            timestamp=self.published,
+        )
         embed.add_field(name="上傳時間", value=self.published.strftime("%Y/%m/%d %H:%M:%S"), inline=False)
         embed.set_image(url=self.thumbnail_url)
         return embed
@@ -76,4 +75,3 @@ class YoutubePushPost(BaseModel):
     encoding: str
     version: str
     namespaces: dict[str, str]
-

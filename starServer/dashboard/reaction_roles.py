@@ -16,11 +16,10 @@ import json
 import logging
 import re
 from dataclasses import asdict, dataclass
+from typing import Literal
 
 import discord
 from fastapi import APIRouter, Depends
-from typing import Literal
-
 from pydantic import BaseModel, ValidationError
 
 from starDiscord.uiElement.view import ReactionRoleView
@@ -438,9 +437,7 @@ async def get_options(
 
 CANDIDATE_HISTORY = 100
 MAX_CANDIDATES = 25
-_LINK = re.compile(
-    r"^\s*<?https?://(?:(?:ptb|canary)\.)?discord(?:app)?\.com/channels/(\d+)/(\d+)/(\d+)/?>?\s*$"
-)
+_LINK = re.compile(r"^\s*<?https?://(?:(?:ptb|canary)\.)?discord(?:app)?\.com/channels/(\d+)/(\d+)/(\d+)/?>?\s*$")
 
 _TARGET_REASONS = {
     "wrong_guild": "這則訊息不屬於這個伺服器",
@@ -609,7 +606,9 @@ async def create_reaction_role(
         _check_buttons(guild, actor, buttons, {})
 
         try:
-            sent = await channel.send(**to_send_kwargs(message_content), allowed_mentions=discord.AllowedMentions.none())
+            sent = await channel.send(
+                **to_send_kwargs(message_content), allowed_mentions=discord.AllowedMentions.none()
+            )
         except discord.HTTPException as e:
             raise _discord_error(e) from None
         view = ReactionRoleView(sent.id, _db_options(sent.id, buttons))
@@ -808,7 +807,9 @@ async def delete_reaction_role(
         if snap is None or snap["guild_id"] != guild_id:
             raise Conflict(None).to_error()
         if check_conflict(_snapshot_current(snap), original) is not None:
-            raise DashboardError(409, "conflict", deleted=False, current=await _conflict_current(guild, snap, message_id))
+            raise DashboardError(
+                409, "conflict", deleted=False, current=await _conflict_current(guild, snap, message_id)
+            )
 
         channel = guild.get_channel(snap["channel_id"])
         if channel is not None:
@@ -881,7 +882,9 @@ async def resend_reaction_role(
                 pass
             except discord.Forbidden:
                 reason = "我讀不到原本頻道的訊息，無法確認它是否還在，請確認我有 View Channel 與 Read Message History"
-                raise DashboardError(400, "bot_missing_permission", message=reason, fields=[_field("channel_id", reason)]) from None
+                raise DashboardError(
+                    400, "bot_missing_permission", message=reason, fields=[_field("channel_id", reason)]
+                ) from None
             except discord.HTTPException as e:
                 raise _discord_error(e) from None
             else:
@@ -899,8 +902,12 @@ async def resend_reaction_role(
         channel_id = new_channel_id if new_channel_id is not None else snap["channel_id"]
         channel = guild.get_channel(channel_id)
         if channel is None or channel not in guild.text_channels:
-            raise DashboardError(400, "invalid_request", fields=[_field("channel_id", "找不到這個文字頻道，請重新選擇")])
-        missing = [i for i in bot_permission_issues(guild, channel) if i.permission in ("View Channel", "Send Messages")]
+            raise DashboardError(
+                400, "invalid_request", fields=[_field("channel_id", "找不到這個文字頻道，請重新選擇")]
+            )
+        missing = [
+            i for i in bot_permission_issues(guild, channel) if i.permission in ("View Channel", "Send Messages")
+        ]
         if missing:
             raise DashboardError(
                 400,

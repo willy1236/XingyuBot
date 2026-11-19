@@ -44,6 +44,7 @@ def run_discord_bot():
         sclient.stop_threads()
         get_bus().close()  # 正常情況 DiscordBot.close() 已關過（冪等）；這裡兜底啟動失敗等沒走到 close 的路徑
 
+
 def run_website():
     from starServer.bot_website import WebsiteThread
 

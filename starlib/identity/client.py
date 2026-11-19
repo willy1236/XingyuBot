@@ -71,7 +71,14 @@ class AccountDirectory(Protocol):
 class DomalyzeIdentityClient:
     """以 `Authorization: Bearer <金鑰>` 呼叫 auth server 內部 API"""
 
-    def __init__(self, base_url: str, service_key: str, timeout: float = 1.5, twitch_provider: str = "twitch", minecraft_provider: str = "minecraft"):
+    def __init__(
+        self,
+        base_url: str,
+        service_key: str,
+        timeout: float = 1.5,
+        twitch_provider: str = "twitch",
+        minecraft_provider: str = "minecraft",
+    ):
         # 逾時要短於 Discord 互動的 3 秒回應期限，連不上時才來得及回「稍後再試」；網站的 Twitch 授權也沿用
         self._base_url = base_url.rstrip("/")
         self._twitch_provider = twitch_provider
@@ -142,8 +149,12 @@ class DomalyzeIdentityClient:
                 roles=tuple(data.get("roles") or ()),
                 suspended=bool(data.get("suspended", False)),
                 twitch_passports=tuple(_parse_passport(p) for p in passports if p["provider"] == self._twitch_provider),
-                minecraft_passports=tuple(_parse_passport(p) for p in passports if p["provider"] == self._minecraft_provider),
-                discord_passports=tuple(_parse_discord_passport(p) for p in passports if p["provider"] == DISCORD_PROVIDER),
+                minecraft_passports=tuple(
+                    _parse_passport(p) for p in passports if p["provider"] == self._minecraft_provider
+                ),
+                discord_passports=tuple(
+                    _parse_discord_passport(p) for p in passports if p["provider"] == DISCORD_PROVIDER
+                ),
             )
         except (KeyError, TypeError, ValueError) as e:
             log.error("auth server: malformed response", extra=extra)

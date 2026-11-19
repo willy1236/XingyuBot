@@ -40,10 +40,14 @@ class LOLPlayer(BaseModel):
     def embed(self, name=None):
         embed = BotEmbed.general(name)
         embed.add_field(name="召喚師等級", value=self.summonerLevel, inline=False)
-        embed.add_field(name="最後遊玩/修改資料時間", value=self.revisionDate.strftime("%Y/%m/%d %H:%M:%S"), inline=False)
+        embed.add_field(
+            name="最後遊玩/修改資料時間", value=self.revisionDate.strftime("%Y/%m/%d %H:%M:%S"), inline=False
+        )
         embed.add_field(name="puuid", value=self.puuid, inline=False)
         try:
-            embed.set_thumbnail(url=f"https://ddragon.leagueoflegends.com/cdn/15.10.1/img/profileicon/{self.profileIconId}.png")
+            embed.set_thumbnail(
+                url=f"https://ddragon.leagueoflegends.com/cdn/15.10.1/img/profileicon/{self.profileIconId}.png"
+            )
         except Exception:
             embed.set_thumbnail(url="https://i.imgur.com/B0TMreW.png")
         embed.set_footer(text="puuid是全球唯一的ID，不隨帳號移動地區而改變")
@@ -521,7 +525,9 @@ class LOLPlayerRank(BaseModel):
         embed = BotEmbed.simple(self.queueType)
         embed.add_field(name="牌位", value=f"{self.tier} {self.rank}")
         embed.add_field(name="聯盟分數", value=self.leaguePoints)
-        embed.add_field(name="勝敗", value=f"{self.wins}/{self.losses} {(round(self.wins / (self.wins + self.losses), 3)) * 100}%")
+        embed.add_field(
+            name="勝敗", value=f"{self.wins}/{self.losses} {(round(self.wins / (self.wins + self.losses), 3)) * 100}%"
+        )
         return embed
 
 
@@ -743,6 +749,7 @@ class ApexPlayer:
         embed.set_image(url=self.legends_selected_banner)
         return embed
 
+
 class MapData(BaseModel):
     start: datetime
     end: datetime
@@ -805,13 +812,19 @@ class ApexMapRotation(BaseModel):
 
         if self.battle_royale is not None:
             embed_battle_royale = BotEmbed.simple("Apex地圖：大逃殺")
-            embed_battle_royale.add_field(name="目前地圖", value=tl.get(self.battle_royale.current.map, self.battle_royale.current.map))
+            embed_battle_royale.add_field(
+                name="目前地圖", value=tl.get(self.battle_royale.current.map, self.battle_royale.current.map)
+            )
             embed_battle_royale.add_field(name="開始時間", value=dc_time(self.battle_royale.current.start))
             embed_battle_royale.add_field(name="結束時間", value=dc_time(self.battle_royale.current.end))
-            embed_battle_royale.add_field(name="下張地圖", value=tl.get(self.battle_royale.next.map, self.battle_royale.next.map))
+            embed_battle_royale.add_field(
+                name="下張地圖", value=tl.get(self.battle_royale.next.map, self.battle_royale.next.map)
+            )
             embed_battle_royale.add_field(name="開始時間", value=dc_time(self.battle_royale.next.start))
             embed_battle_royale.add_field(name="結束時間", value=dc_time(self.battle_royale.next.end))
-            embed_battle_royale.add_field(name="目前地圖剩餘時間", value=f"<t:{int(self.battle_royale.current.end.timestamp())}:R>")
+            embed_battle_royale.add_field(
+                name="目前地圖剩餘時間", value=f"<t:{int(self.battle_royale.current.end.timestamp())}:R>"
+            )
             embed_battle_royale.set_image(url=self.battle_royale.current.asset)
             embed_battle_royale.timestamp = now
             embed_battle_royale.set_footer(text="更新時間")
@@ -826,7 +839,8 @@ class ApexMapRotation(BaseModel):
             embed_ltm.add_field(name="開始時間", value=dc_time(self.ltm.current.start))
             embed_ltm.add_field(name="結束時間", value=dc_time(self.ltm.current.end))
             embed_ltm.add_field(
-                name="下張地圖", value=f"{event_tl.get(self.ltm.next.eventName, self.ltm.next.eventName)}：{tl.get(self.ltm.next.map, self.ltm.next.map)}"
+                name="下張地圖",
+                value=f"{event_tl.get(self.ltm.next.eventName, self.ltm.next.eventName)}：{tl.get(self.ltm.next.map, self.ltm.next.map)}",
             )
             embed_ltm.add_field(name="開始時間", value=dc_time(self.ltm.next.start))
             embed_ltm.add_field(name="結束時間", value=dc_time(self.ltm.next.end))
@@ -851,7 +865,15 @@ class ApexStatus:
 
 
 class SteamUser(BaseModel):
-    _PERSONA_STATES: ClassVar[dict] = {0: "離線", 1: "線上", 2: "忙碌", 3: "離開", 4: "打瞌睡", 5: "尋求交易", 6: "尋求遊玩"}
+    _PERSONA_STATES: ClassVar[dict] = {
+        0: "離線",
+        1: "線上",
+        2: "忙碌",
+        3: "離開",
+        4: "打瞌睡",
+        5: "尋求交易",
+        6: "尋求遊玩",
+    }
     _VISIBILITY_STATES: ClassVar[dict] = {1: "私密", 2: "好友可見", 3: "公開"}
 
     steamid: str

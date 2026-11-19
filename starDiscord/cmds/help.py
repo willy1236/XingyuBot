@@ -32,12 +32,16 @@ class help(Cog_Extension):
         await ctx.respond(embed=BotEmbed.bot(self.bot, title=title, description=text))
 
     @commands.slash_command(name="help", description="幫助指令", name_localizations=ChoiceList.name("help"))
-    @commands.cooldown(rate=1,per=3)
+    @commands.cooldown(rate=1, per=3)
     async def help_overview(
-        self, ctx, arg: discord.Option(str, name="選項", description="指令類別（非必填）", default="help", choices=help_option, required=False)
+        self,
+        ctx,
+        arg: discord.Option(
+            str, name="選項", description="指令類別（非必填）", default="help", choices=help_option, required=False
+        ),
     ):
         if arg == "help":
-            embed = BotEmbed.bot(self.bot,"目前可使用的指令如下:")
+            embed = BotEmbed.bot(self.bot, "目前可使用的指令如下:")
             embed.add_field(name="/help <系列指令>", value="查詢指令", inline=False)
             embed.add_field(name="/info <內容/help>", value="獲得相關資訊", inline=False)
             embed.add_field(name="/feedback <內容>", value="傳送訊息給機器人擁有者", inline=False)
@@ -45,14 +49,26 @@ class help(Cog_Extension):
             embed.set_footer(text="輸入/help user查詢指令用法")
             await ctx.respond(embed=embed)
         elif arg == "use":
-            embed = BotEmbed.bot(self.bot,"帶你了解基本的概念","使用指令")
-            embed.add_field(name="指令使用：斜槓指令", value="打上/後，會有dc的提示幫助你`\n如果有參數，在輸入過程中都有提示", inline=False)
-            embed.add_field(name="指令使用：前輟指令", value="前輟+指令就可以使用了，例如`/help`\n如果有參數，則需要把每個參數用空格隔開\n（此為舊版Discord使用指令的方式，本機器人目前全面採用斜槓指令）", inline=False)
-            embed.add_field(name="參數", value="`<參數>`表示這個參數必填 `[參數]`表示不一定要填\n`<參數1/參數2>`為選擇一個參數填寫即可", inline=False)
+            embed = BotEmbed.bot(self.bot, "帶你了解基本的概念", "使用指令")
+            embed.add_field(
+                name="指令使用：斜槓指令",
+                value="打上/後，會有dc的提示幫助你`\n如果有參數，在輸入過程中都有提示",
+                inline=False,
+            )
+            embed.add_field(
+                name="指令使用：前輟指令",
+                value="前輟+指令就可以使用了，例如`/help`\n如果有參數，則需要把每個參數用空格隔開\n（此為舊版Discord使用指令的方式，本機器人目前全面採用斜槓指令）",
+                inline=False,
+            )
+            embed.add_field(
+                name="參數",
+                value="`<參數>`表示這個參數必填 `[參數]`表示不一定要填\n`<參數1/參數2>`為選擇一個參數填寫即可",
+                inline=False,
+            )
             embed.set_footer(text="輸入/help use查詢指令用法")
             await ctx.respond(embed=embed)
         elif arg == "pt":
-            embed = BotEmbed.simple("點數系統（PT）指令","系統尚在開發中，目前暫時停用")
+            embed = BotEmbed.simple("點數系統（PT）指令", "系統尚在開發中，目前暫時停用")
             embed.add_field(name="/point", value="PT點數相關指令", inline=False)
             # embed.add_field(name="/sign", value="每日簽到並領取點數", inline=False)
             # embed.add_field(name="/shop", value="商城(敬請期待)", inline=False)
@@ -60,22 +76,41 @@ class help(Cog_Extension):
             await ctx.respond(embed=embed)
         elif arg == "game":
             embed = BotEmbed.simple("遊戲（Game）指令", "可查詢遊戲資料")
-            embed.add_field(name="/game set <遊戲> [資料]", value="設定遊戲名稱到資料庫中，設定後可在使用部分指令時讓機器人自動幫你輸入", inline=False)
-            embed.add_field(name="/game find [用戶] [遊戲]", value="查詢用戶在資料庫內的遊戲名稱(目前僅能查詢自己的資料)", inline=False)
+            embed.add_field(
+                name="/game set <遊戲> [資料]",
+                value="設定遊戲名稱到資料庫中，設定後可在使用部分指令時讓機器人自動幫你輸入",
+                inline=False,
+            )
+            embed.add_field(
+                name="/game find [用戶] [遊戲]",
+                value="查詢用戶在資料庫內的遊戲名稱(目前僅能查詢自己的資料)",
+                inline=False,
+            )
             embed.add_field(name="/lol", value="LOL相關指令", inline=False)
             embed.add_field(name="/osu", value="查詢osu資訊", inline=False)
             embed.add_field(name="/apex", value="查詢apex資訊", inline=False)
             embed.add_field(name="/steam", value="查詢steam資訊", inline=False)
             embed.add_field(name="/dbd player <steamid>", value="查詢DBD玩家", inline=False)
-            #embed.add_field(name="/hoyo", value="查詢原神相關指令", inline=False)
+            # embed.add_field(name="/hoyo", value="查詢原神相關指令", inline=False)
             embed.set_footer(text="輸入/help use查詢指令用法")
             await ctx.respond(embed=embed)
         elif arg == "channel":
-            embed = BotEmbed.simple("通知設定（Channel）指令","設定機器人自動通知\n若為定時通知，記得將機器人的訊息保持在頻道的最新訊息，以免機器人找不到訊息而重複發送")
+            embed = BotEmbed.simple(
+                "通知設定（Channel）指令",
+                "設定機器人自動通知\n若為定時通知，記得將機器人的訊息保持在頻道的最新訊息，以免機器人找不到訊息而重複發送",
+            )
             embed.add_field(name="/channel set", value="設定自動通知", inline=False)
             embed.add_field(name="/channel list", value="確認通知設定的頻道", inline=False)
-            embed.add_field(name="/channel voice", value="設定動態語音，動態語音可讓使用者創建臨時的語音房，並在沒人時自動刪除", inline=False)
-            embed.add_field(name="通知選項", value="- 全群公告：來自機器人的綜合通知\n- 機器人更新通知：告訴你機器人更新了什麼\n- Apex合成器與地圖輪替：(定時通知)\n- 地震通知/天氣預報(定時通知)：中央氣象局發布的地震報告與天氣預報\n- 管理員專用：新成員若有警告紀錄則會發訊息通知\n- 成員加入/離開：讓機器人告訴大家成員進出\n- 語音進出紀錄：紀錄伺服器內的語音進出", inline=False)
+            embed.add_field(
+                name="/channel voice",
+                value="設定動態語音，動態語音可讓使用者創建臨時的語音房，並在沒人時自動刪除",
+                inline=False,
+            )
+            embed.add_field(
+                name="通知選項",
+                value="- 全群公告：來自機器人的綜合通知\n- 機器人更新通知：告訴你機器人更新了什麼\n- Apex合成器與地圖輪替：(定時通知)\n- 地震通知/天氣預報(定時通知)：中央氣象局發布的地震報告與天氣預報\n- 管理員專用：新成員若有警告紀錄則會發訊息通知\n- 成員加入/離開：讓機器人告訴大家成員進出\n- 語音進出紀錄：紀錄伺服器內的語音進出",
+                inline=False,
+            )
             embed.set_footer(text="輸入/help use查詢指令用法")
             await ctx.respond(embed=embed)
         elif arg == "manage":
@@ -88,14 +123,24 @@ class help(Cog_Extension):
             embed.add_field(name="/timeout", value="禁言用戶", inline=False)
             embed.add_field(name="/kick", value="踢除用戶", inline=False)
             embed.add_field(name="/ban", value="停權用戶", inline=False)
-            embed.add_field(name="跨群警告系統", value="蒐集各伺服器的警告紀錄，使得在一個伺服器的違規能被分享到其他伺服器\n可在警告時選擇是否使用，不使用則讓相關管理行為回歸伺服器內處理", inline=False)
+            embed.add_field(
+                name="跨群警告系統",
+                value="蒐集各伺服器的警告紀錄，使得在一個伺服器的違規能被分享到其他伺服器\n可在警告時選擇是否使用，不使用則讓相關管理行為回歸伺服器內處理",
+                inline=False,
+            )
             embed.set_footer(text="輸入/help use查詢指令用法")
             await ctx.respond(embed=embed)
         elif arg == "bet":
-            embed = BotEmbed.simple("賭盤（Bet）指令","系統尚在開發中，目前暫時停用\n可自由開類似Twitch的賭盤並使用PT點數下注")
+            embed = BotEmbed.simple(
+                "賭盤（Bet）指令", "系統尚在開發中，目前暫時停用\n可自由開類似Twitch的賭盤並使用PT點數下注"
+            )
             embed.add_field(name="/bet <賭盤ID> <blue/pink> <下注金額>", value="賭盤下注", inline=False)
-            embed.add_field(name="/bet create <賭盤標題> <粉紅幫標題> <藍藍幫標題> <下注時間>", value="創建賭盤(時間格式為'10s''1m20s'等，不可超過600s)", inline=False)
-            embed.add_field(name="/bet end <blue/pink>",value="結算賭盤",inline=False)
+            embed.add_field(
+                name="/bet create <賭盤標題> <粉紅幫標題> <藍藍幫標題> <下注時間>",
+                value="創建賭盤(時間格式為'10s''1m20s'等，不可超過600s)",
+                inline=False,
+            )
+            embed.add_field(name="/bet end <blue/pink>", value="結算賭盤", inline=False)
             embed.set_footer(text="輸入/help use查詢指令用法")
             await ctx.respond(embed=embed)
         elif arg == "music":
@@ -103,36 +148,46 @@ class help(Cog_Extension):
             page[0].add_field(name="/play <歌曲>", value="播放歌曲", inline=False)
             page[0].add_field(name="/queue", value="歌曲列表", inline=False)
             page[0].add_field(name="/nowplaying", value="現在播放的歌曲", inline=False)
-            #page[0].add_field(name="/skip", value="投票跳過歌曲，需三個人才可跳過，點歌者可強制跳過", inline=False)
+            # page[0].add_field(name="/skip", value="投票跳過歌曲，需三個人才可跳過，點歌者可強制跳過", inline=False)
             page[0].add_field(name="/skip", value="跳過歌曲", inline=False)
             page[0].add_field(name="/pause", value="暫停/繼續播放", inline=False)
-            #page[0].add_field(name="/resume", value="繼續播放", inline=False)
+            # page[0].add_field(name="/resume", value="繼續播放", inline=False)
             page[0].add_field(name="/join", value="讓機器人加入你的語音", inline=False)
-            #page[0].add_field(name="/summon [頻道]", value="讓機器人加入指定語音", inline=False)
-            #page[0].add_field(name="/leave", value="讓機器人離開你的語音\n別名:disconnect,dc", inline=False)
-            #page[0].add_field(name="/volume <音量>", value="設定音量", inline=False)
+            # page[0].add_field(name="/summon [頻道]", value="讓機器人加入指定語音", inline=False)
+            # page[0].add_field(name="/leave", value="讓機器人離開你的語音\n別名:disconnect,dc", inline=False)
+            # page[0].add_field(name="/volume <音量>", value="設定音量", inline=False)
             page[0].add_field(name="/stop", value="停止播放歌曲並讓機器人離開頻道", inline=False)
             page[0].add_field(name="/shuffle", value="隨機撥放", inline=False)
             page[0].add_field(name="/loop", value="循環歌曲", inline=False)
-            page[0].add_field(name="/music", value="開啟音樂控制面板，可點歌、播放個人歌單並用按鈕操作播放", inline=False)
+            page[0].add_field(
+                name="/music", value="開啟音樂控制面板，可點歌、播放個人歌單並用按鈕操作播放", inline=False
+            )
             page.append(BotEmbed.simple("個人歌單（playlist）指令:", "歌單綁定帳號，同一帳號綁定的 Discord 帳號共用"))
             page[1].add_field(name="/playlist play [隨機]", value="從選單選擇歌單並播放", inline=False)
             page[1].add_field(name="/playlist create <歌單>", value="建立歌單", inline=False)
-            page[1].add_field(name="/playlist add <歌單> <網址>", value="加入單曲或整份歌單網址（歌單不存在時自動建立）", inline=False)
+            page[1].add_field(
+                name="/playlist add <歌單> <網址>", value="加入單曲或整份歌單網址（歌單不存在時自動建立）", inline=False
+            )
             page[1].add_field(name="/playlist save_current <歌單>", value="把目前播放的歌存進歌單", inline=False)
-            page[1].add_field(name="/playlist save_queue <歌單>", value="把目前播放與待播歌單全部存進歌單", inline=False)
-            page[1].add_field(name="/playlist sync <歌單>", value="重新擷取匯入過的外部歌單，讓來源的歌跟外部一致（手動加入的歌不受影響）", inline=False)
+            page[1].add_field(
+                name="/playlist save_queue <歌單>", value="把目前播放與待播歌單全部存進歌單", inline=False
+            )
+            page[1].add_field(
+                name="/playlist sync <歌單>",
+                value="重新擷取匯入過的外部歌單，讓來源的歌跟外部一致（手動加入的歌不受影響）",
+                inline=False,
+            )
             page[1].add_field(name="/playlist show <歌單>", value="查看歌單內容", inline=False)
             page[1].add_field(name="/playlist remove <歌單> <編號>", value="刪除歌單中的一首歌", inline=False)
             page[1].add_field(name="/playlist delete <歌單>", value="刪除歌單", inline=False)
-            #page[1].add_field(name="/remove <歌曲位置>", value="移除歌曲\n別名:rm", inline=False)
+            # page[1].add_field(name="/remove <歌曲位置>", value="移除歌曲\n別名:rm", inline=False)
             paginator = pages.Paginator(pages=page, use_default_buttons=True)
-            #await paginator.send(ctx, target=ctx.channel)
+            # await paginator.send(ctx, target=ctx.channel)
             await paginator.respond(ctx.interaction, ephemeral=False)
         elif arg == "tool":
             embed = BotEmbed.simple("綜合/實用工具（tool）指令")
             embed.add_field(name="/earthquake", value="查詢最新的顯著有感地震報告", inline=False)
-            #embed.add_field(name="/covid", value="查詢最新的台灣疫情", inline=False)
+            # embed.add_field(name="/covid", value="查詢最新的台灣疫情", inline=False)
             embed.add_field(name="/forecast ", value="查詢天氣預報", inline=False)
             embed.add_field(name="/draw", value="抽獎試手氣", inline=False)
             embed.add_field(name="/dice", value="擲骰", inline=False)
@@ -155,7 +210,11 @@ class help(Cog_Extension):
             embed.add_field(name="/twitch", value="設定twitch通知/查詢資訊", inline=False)
             embed.add_field(name="/youtube", value="設定youtube通知/查詢資訊", inline=False)
             embed.add_field(name="/twitter", value="設定twitter/x通知（測試中）", inline=False)
-            embed.add_field(name="twitch機器人", value=f"可前往支援伺服器或私訊 {self.bot.mention_owner} 取得授權連結後完成授權，機器人會出現在觀眾名單中\n給予機器人mod後，可以使用各項管理功能\n此功能目前仍在開發，可私訊獲取進階功能設定", inline=False)
+            embed.add_field(
+                name="twitch機器人",
+                value=f"可前往支援伺服器或私訊 {self.bot.mention_owner} 取得授權連結後完成授權，機器人會出現在觀眾名單中\n給予機器人mod後，可以使用各項管理功能\n此功能目前仍在開發，可私訊獲取進階功能設定",
+                inline=False,
+            )
 
             embed.set_footer(text="輸入/help use查詢指令用法")
             await ctx.respond(embed=embed)

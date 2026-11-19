@@ -157,7 +157,9 @@ class Monster(RPGSchema):
     item_drops: list[MonsterItemDrop] = relationship(back_populates="monster", init=False)
 
     def create_monster(self):
-        return MonsterInBattle(id=self.id, name=self.name, hp=self.hp, atk=self.atk, pdef=self.pdef, hrt=self.hrt, dex=self.dex)
+        return MonsterInBattle(
+            id=self.id, name=self.name, hp=self.hp, atk=self.atk, pdef=self.pdef, hrt=self.hrt, dex=self.dex
+        )
 
 
 class MonsterEquipmentDrop(RPGSchema):
@@ -297,11 +299,17 @@ class RPGPlayerWearingEquipment:
 
     def desplay(self, user_dc: discord.User = None):
         embed = BotEmbed.simple(f"{user_dc.name} 角色裝備" if user_dc else "角色裝備")
-        embed.add_field(name="主手", value=f"[{self.mainhand.equipment_uid}]{self.mainhand.name}" if self.mainhand else "無")
-        embed.add_field(name="副手", value=f"[{self.seconhand.equipment_uid}]{self.seconhand.name}" if self.seconhand else "無")
+        embed.add_field(
+            name="主手", value=f"[{self.mainhand.equipment_uid}]{self.mainhand.name}" if self.mainhand else "無"
+        )
+        embed.add_field(
+            name="副手", value=f"[{self.seconhand.equipment_uid}]{self.seconhand.name}" if self.seconhand else "無"
+        )
         embed.add_field(name="頭部", value=f"[{self.head.equipment_uid}]{self.head.name}" if self.head else "無")
         embed.add_field(name="身體", value=f"[{self.body.equipment_uid}]{self.body.name}" if self.body else "無")
-        embed.add_field(name="腿部", value=f"[{self.legging.equipment_uid}]{self.legging.name}" if self.legging else "無")
+        embed.add_field(
+            name="腿部", value=f"[{self.legging.equipment_uid}]{self.legging.name}" if self.legging else "無"
+        )
         embed.add_field(name="鞋子", value=f"[{self.foot.equipment_uid}]{self.foot.name}" if self.foot else "無")
         return embed
 

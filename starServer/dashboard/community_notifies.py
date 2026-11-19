@@ -28,7 +28,11 @@ from .notify_input import field_names, parse_fields, validate_fields
 
 router = APIRouter(prefix="/dashboard")
 
-PLATFORMS: dict[str, PlatformType] = {"twitch": PlatformType.Twitch, "youtube": PlatformType.Google, "twitter": PlatformType.Twitter}
+PLATFORMS: dict[str, PlatformType] = {
+    "twitch": PlatformType.Twitch,
+    "youtube": PlatformType.Google,
+    "twitter": PlatformType.Twitter,
+}
 
 #: resolve 的結果在伺服器記憶體保留的秒數，新增時不信任前端傳來的名稱
 RESOLVE_TTL = 600
@@ -100,7 +104,9 @@ def _conflict(spec: NotifySpec, account_id: str, guild_id: int) -> DashboardErro
     row = sqldb.get_notify_community_fresh(spec.community_type, account_id, guild_id)
     if row is None:
         return Conflict(None).to_error()
-    return Conflict({name: None if (v := getattr(row, name)) is None else str(v) for name in field_names(spec)}).to_error()
+    return Conflict(
+        {name: None if (v := getattr(row, name)) is None else str(v) for name in field_names(spec)}
+    ).to_error()
 
 
 class ResolveBody(BaseModel):
@@ -116,7 +122,12 @@ async def resolve(body: ResolveBody, guild_id: int = Depends(require_guild_acces
     except LookupFailure as e:
         raise _lookup_error(e) from None
     _remember(account)
-    return {"platform": body.platform, "account_id": account.id, "display_name": account.display_name, "username": account.username}
+    return {
+        "platform": body.platform,
+        "account_id": account.id,
+        "display_name": account.display_name,
+        "username": account.username,
+    }
 
 
 class CreateBody(BaseModel):
@@ -161,7 +172,9 @@ async def create(body: CreateBody, guild_id: int = Depends(require_guild_access)
                 spec = parse_key(key)
                 row = sqldb.get_notify_community_fresh(spec.community_type, account.id, guild_id)
                 if row is not None:
-                    result[key] = {name: None if (v := getattr(row, name)) is None else str(v) for name in field_names(spec)}
+                    result[key] = {
+                        name: None if (v := getattr(row, name)) is None else str(v) for name in field_names(spec)
+                    }
             return result
 
         raise DashboardError(409, "already_exists", existing=keys, current=await run_db(_current)) from None
@@ -179,7 +192,9 @@ class DeleteBody(BaseModel):
 
 
 @router.put("/guilds/{guild_id}/community-notifies/{notify_type}/{account_id}")
-async def put_community_notify(notify_type: str, account_id: str, body: PutBody, guild_id: int = Depends(require_guild_access)):
+async def put_community_notify(
+    notify_type: str, account_id: str, body: PutBody, guild_id: int = Depends(require_guild_access)
+):
     spec = _spec(notify_type)
     values = parse_fields(spec, body.values, strict=False, blank_message_is_none=True)
     original = parse_fields(spec, body.original, strict=True, blank_message_is_none=False)
@@ -195,7 +210,9 @@ async def put_community_notify(notify_type: str, account_id: str, body: PutBody,
 
 
 @router.delete("/guilds/{guild_id}/community-notifies/{notify_type}/{account_id}")
-async def delete_community_notify(notify_type: str, account_id: str, body: DeleteBody, guild_id: int = Depends(require_guild_access)):
+async def delete_community_notify(
+    notify_type: str, account_id: str, body: DeleteBody, guild_id: int = Depends(require_guild_access)
+):
     spec = _spec(notify_type)
     original = parse_fields(spec, body.original, strict=True, blank_message_is_none=False)
 

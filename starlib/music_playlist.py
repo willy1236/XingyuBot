@@ -105,7 +105,11 @@ def _overflow_text(dropped: int) -> str:
 
 
 def _saved_text(playlist: MusicPlaylist, saved: list[SongRow], dropped: int) -> str:
-    text = f"已將 {saved[0][1]} 加入歌單「{playlist.name}」" if len(saved) == 1 else f"已將 **{len(saved)}** 首歌加入歌單「{playlist.name}」"
+    text = (
+        f"已將 {saved[0][1]} 加入歌單「{playlist.name}」"
+        if len(saved) == 1
+        else f"已將 **{len(saved)}** 首歌加入歌單「{playlist.name}」"
+    )
     return text + _overflow_text(dropped)
 
 
@@ -122,9 +126,14 @@ def _sync_text(source: MusicPlaylistSource, result: tuple[int, int, int]) -> str
     return f"「{source_name(source)}」新增 {added} 首、移除 {removed} 首" + _overflow_text(dropped)
 
 
-def _sync(playlist: MusicPlaylist, updates: list[tuple[MusicPlaylistSource, Extracted]], expected_version: int | None) -> list[tuple[int, int, int]]:
+def _sync(
+    playlist: MusicPlaylist, updates: list[tuple[MusicPlaylistSource, Extracted]], expected_version: int | None
+) -> list[tuple[int, int, int]]:
     return sqldb.sync_music_playlist_sources(
-        playlist.id, [(source, extracted.songs, extracted.playlist_title) for source, extracted in updates], MAX_PLAYLIST_SONGS, expected_version
+        playlist.id,
+        [(source, extracted.songs, extracted.playlist_title) for source, extracted in updates],
+        MAX_PLAYLIST_SONGS,
+        expected_version,
     )
 
 
@@ -139,14 +148,19 @@ def add_extracted(playlist: MusicPlaylist, extracted: Extracted, expected_versio
         else:
             to_save = extracted.songs[: playlist_room(playlist)]  # 歌單已滿時先擋下，不留下沒有歌曲的來源
             sqldb.import_music_playlist_source(playlist.id, extracted.playlist_url, extracted.playlist_title, to_save)
-            text = _saved_text(playlist, to_save, len(extracted.songs) - len(to_save)) + "，之後可用 /playlist sync 同步外部歌單的更新"
+            text = (
+                _saved_text(playlist, to_save, len(extracted.songs) - len(to_save))
+                + "，之後可用 /playlist sync 同步外部歌單的更新"
+            )
 
         if extracted.skipped:
             text += f"（已略過 {extracted.skipped} 首無法播放的歌曲）"
         return text
 
 
-async def fetch_sources(sources: list[MusicPlaylistSource], extract: Callable[[str], Awaitable[Extracted]]) -> list[SourceFetch]:
+async def fetch_sources(
+    sources: list[MusicPlaylistSource], extract: Callable[[str], Awaitable[Extracted]]
+) -> list[SourceFetch]:
     """重新擷取每個來源；外部歌單被刪除或改為私人時只記錄錯誤，保留舊的歌曲。"""
     fetched = []
     for source in sources:

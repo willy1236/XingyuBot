@@ -47,11 +47,7 @@ class DiscordBot(discord.Bot):
     _COG_PATH = Path("./starDiscord/cmds")
 
     def __init__(self, bot_code):
-        super().__init__(
-            owner_id=419131103836635136,
-            intents=discord.Intents.all(),
-            help_command=None
-        )
+        super().__init__(owner_id=419131103836635136, intents=discord.Intents.all(), help_command=None)
 
         self.debug_mode = debug_mode
         self.bot_code = bot_code
@@ -104,8 +100,7 @@ class DiscordBot(discord.Bot):
         error_report_channel = self._report_channel(error_report_id, "錯誤回報")
         if error_report_channel is None:
             return
-        embed = BotEmbed.general(
-            name=str(ctx.author), icon_url=ctx.author.display_avatar.url, title="❌錯誤回報")
+        embed = BotEmbed.general(name=str(ctx.author), icon_url=ctx.author.display_avatar.url, title="❌錯誤回報")
         embed.add_field(name="錯誤訊息", value=f"```py\n{_truncate(str(error))}```", inline=True)
         if ctx.command:
             embed.add_field(name="使用指令", value=f"```{ctx.command}```", inline=False)
@@ -124,10 +119,16 @@ class DiscordBot(discord.Bot):
         embed = BotEmbed.general(name="回報訊息")
         embed.add_field(name="訊息", value=_truncate(msg), inline=True)
         if refer_msg:
-            embed.add_field(name="參考訊息", value=f"[{_truncate(refer_msg.content, 900)}]({refer_msg.jump_url})", inline=False)
+            embed.add_field(
+                name="參考訊息", value=f"[{_truncate(refer_msg.content, 900)}]({refer_msg.jump_url})", inline=False
+            )
             embed.add_field(name="訊息ID", value=refer_msg.id, inline=True)
             embed.add_field(name="來源頻道", value=f"{refer_msg.channel}\n{refer_msg.channel.id}", inline=True)
-            embed.add_field(name="來源群組", value=f"{refer_msg.guild}\n{refer_msg.guild.id if refer_msg.guild else '無'}", inline=True)
+            embed.add_field(
+                name="來源群組",
+                value=f"{refer_msg.guild}\n{refer_msg.guild.id if refer_msg.guild else '無'}",
+                inline=True,
+            )
         else:
             embed.add_field(name="訊息ID", value="無", inline=True)
 
@@ -137,7 +138,9 @@ class DiscordBot(discord.Bot):
         feedback_channel = self._report_channel(feedback_channel_id, "回饋")
         if feedback_channel is None:
             return
-        embed = BotEmbed.general(name=str(ctx.author), icon_url=ctx.author.display_avatar.url, title="💬回饋訊息", description=text)
+        embed = BotEmbed.general(
+            name=str(ctx.author), icon_url=ctx.author.display_avatar.url, title="💬回饋訊息", description=text
+        )
         embed.add_field(name="發送者", value=f"{ctx.author}\n{ctx.author.id}", inline=False)
         embed.add_field(name="來源頻道", value=f"{ctx.channel}\n{ctx.channel.id}", inline=True)
         if ctx.guild:
@@ -149,13 +152,18 @@ class DiscordBot(discord.Bot):
         dm_channel = self._report_channel(dm_channel_id, "私訊紀錄")
         if dm_channel is None:
             return
-        embed = BotEmbed.general(name=msg.author.name, icon_url=msg.author.display_avatar.url, title="💭私訊", description=msg.content)  # pyright: ignore[reportCallIssue]
+        embed = BotEmbed.general(
+            name=msg.author.name, icon_url=msg.author.display_avatar.url, title="💭私訊", description=msg.content
+        )  # pyright: ignore[reportCallIssue]
         if msg.channel.recipient:
-            embed.add_field(name="發送者", value=f"{msg.author}->{msg.channel.recipient}\n{msg.author.id}->{msg.channel.recipient.id}", inline=False)
+            embed.add_field(
+                name="發送者",
+                value=f"{msg.author}->{msg.channel.recipient}\n{msg.author.id}->{msg.channel.recipient.id}",
+                inline=False,
+            )
         else:
             embed.add_field(name="發送者", value=f"{msg.author}\n{msg.author.id}", inline=False)
-        embed.set_footer(text=self.user.display_name,
-                         icon_url=self.user.display_avatar.url)
+        embed.set_footer(text=self.user.display_name, icon_url=self.user.display_avatar.url)
         embed.timestamp = msg.created_at
         await dm_channel.send(embed=embed)
 
@@ -163,7 +171,12 @@ class DiscordBot(discord.Bot):
         dm_channel = self._report_channel(mentioned_channel_id, "提及紀錄")
         if dm_channel is None:
             return
-        embed = BotEmbed.general(name=msg.author, icon_url=msg.author.display_avatar.url, title="提及訊息", description=f"{msg.content}\n{msg.jump_url}")
+        embed = BotEmbed.general(
+            name=msg.author,
+            icon_url=msg.author.display_avatar.url,
+            title="提及訊息",
+            description=f"{msg.content}\n{msg.jump_url}",
+        )
         embed.add_field(name="發送者", value=f"{msg.author}\n{msg.author.id}", inline=False)
         embed.add_field(name="來源頻道", value=f"{msg.channel}\n{msg.channel.id}", inline=True)
         embed.add_field(name="來源群組", value=f"{msg.guild}\n{msg.guild.id}" if msg.guild else "私訊", inline=True)
@@ -172,8 +185,12 @@ class DiscordBot(discord.Bot):
 
     async def mention_everyone(self, msg: discord.Message):
         dm_channel = self.get_channel(mention_everyone_channel_id)
-        embed = BotEmbed.general(name=msg.author, icon_url=msg.author.display_avatar.url,
-                                 title="提及所有人訊息", description=f"{msg.content}\n{msg.jump_url}")
+        embed = BotEmbed.general(
+            name=msg.author,
+            icon_url=msg.author.display_avatar.url,
+            title="提及所有人訊息",
+            description=f"{msg.content}\n{msg.jump_url}",
+        )
         embed.add_field(name="發送者", value=f"{msg.author}\n{msg.author.id}", inline=False)
         embed.add_field(name="來源頻道", value=f"{msg.channel}\n{msg.channel.id}", inline=True)
         embed.add_field(name="來源群組", value=f"{msg.guild}\n{msg.guild.id}", inline=True)
@@ -221,18 +238,33 @@ class DiscordBot(discord.Bot):
                 if additional_content:
                     text = additional_content if text is None else f"{text}\n{additional_content}"
 
-                log.debug("send_notify_communities started", extra={"guild_id": guild_id, "channel_id": channel_id, "text": text})
+                log.debug(
+                    "send_notify_communities started",
+                    extra={"guild_id": guild_id, "channel_id": channel_id, "text": text},
+                )
                 try:
                     await channel.send(text, embed=embed)
                 except discord.Forbidden:
-                    log.warning("NotifyCommunity: channel missing access", extra={"notify_type": notify_type, "guild_id": guild_id, "channel_id": channel_id})
+                    log.warning(
+                        "NotifyCommunity: channel missing access",
+                        extra={"notify_type": notify_type, "guild_id": guild_id, "channel_id": channel_id},
+                    )
                 except discord.HTTPException as e:
-                    log.warning("NotifyCommunity: send failed: %s", e, extra={"notify_type": notify_type, "guild_id": guild_id, "channel_id": channel_id})
+                    log.warning(
+                        "NotifyCommunity: send failed: %s",
+                        e,
+                        extra={"notify_type": notify_type, "guild_id": guild_id, "channel_id": channel_id},
+                    )
                 await asyncio.sleep(0.5)
             else:
-                log.warning("NotifyCommunity: channel not found", extra={"notify_type": notify_type, "guild_id": guild_id, "channel_id": channel_id})
+                log.warning(
+                    "NotifyCommunity: channel not found",
+                    extra={"notify_type": notify_type, "guild_id": guild_id, "channel_id": channel_id},
+                )
 
-    async def send_notify_channel(self, embed: discord.Embed, notify_type: NotifyChannelType, default_content: str | None = None):
+    async def send_notify_channel(
+        self, embed: discord.Embed, notify_type: NotifyChannelType, default_content: str | None = None
+    ):
         notify_channels = sqldb.get_notify_channel_by_type(notify_type)
         for no_channel in notify_channels:
             channel = self.get_channel(no_channel.channel_id)
@@ -246,14 +278,38 @@ class DiscordBot(discord.Bot):
                 try:
                     await channel.send(text, embed=embed)
                 except discord.Forbidden:
-                    log.warning("channel missing access", extra={"notify_type": notify_type, "guild_id": no_channel.guild_id, "channel_id": no_channel.channel_id})
+                    log.warning(
+                        "channel missing access",
+                        extra={
+                            "notify_type": notify_type,
+                            "guild_id": no_channel.guild_id,
+                            "channel_id": no_channel.channel_id,
+                        },
+                    )
                 except discord.HTTPException as e:
-                    log.warning("NotifyChannel: send failed: %s", e, extra={"notify_type": notify_type, "guild_id": no_channel.guild_id, "channel_id": no_channel.channel_id})
+                    log.warning(
+                        "NotifyChannel: send failed: %s",
+                        e,
+                        extra={
+                            "notify_type": notify_type,
+                            "guild_id": no_channel.guild_id,
+                            "channel_id": no_channel.channel_id,
+                        },
+                    )
                 await asyncio.sleep(0.5)
             else:
-                log.warning("channel not found", extra={"notify_type": notify_type, "guild_id": no_channel.guild_id, "channel_id": no_channel.channel_id})
+                log.warning(
+                    "channel not found",
+                    extra={
+                        "notify_type": notify_type,
+                        "guild_id": no_channel.guild_id,
+                        "channel_id": no_channel.channel_id,
+                    },
+                )
 
-    async def edit_notify_channel(self, embed: discord.Embed | list[discord.Embed], notify_type: NotifyChannelType, default_content: str = None):
+    async def edit_notify_channel(
+        self, embed: discord.Embed | list[discord.Embed], notify_type: NotifyChannelType, default_content: str = None
+    ):
         records = sqldb.get_notify_channel_by_type(notify_type)
         for i in records:
             channel = self.get_channel(i.channel_id)
@@ -278,17 +334,27 @@ class DiscordBot(discord.Bot):
                         )
                         await channel.send(default_content, embeds=embeds)
                 except discord.HTTPException as e:
-                    log.warning("NotifyChannel: edit failed: %s", e, extra={"notify_type": notify_type, "guild_id": i.guild_id, "channel_id": i.channel_id})
+                    log.warning(
+                        "NotifyChannel: edit failed: %s",
+                        e,
+                        extra={"notify_type": notify_type, "guild_id": i.guild_id, "channel_id": i.channel_id},
+                    )
                 await asyncio.sleep(0.5)
 
             else:
-                log.warning("NotifyChannel: channel not found", extra={"notify_type": notify_type, "guild_id": i.guild_id, "channel_id": i.channel_id})
+                log.warning(
+                    "NotifyChannel: channel not found",
+                    extra={"notify_type": notify_type, "guild_id": i.guild_id, "channel_id": i.channel_id},
+                )
 
     def about_embed(self):
         embed = BotEmbed.bot(
-            self, description="你好~我是星羽，你可以輸入 </help:1067700245015834638> 來查看所有指令的用法\n\n希望我能在discord上幫助到你喔~\n有任何建議、需求、協助與合作可以使用 </feedback:1067700244848058386> 指令\n\n支援伺服器：https://discord.gg/P4jqdcMxkH")
+            self,
+            description="你好~我是星羽，你可以輸入 </help:1067700245015834638> 來查看所有指令的用法\n\n希望我能在discord上幫助到你喔~\n有任何建議、需求、協助與合作可以使用 </feedback:1067700244848058386> 指令\n\n支援伺服器：https://discord.gg/P4jqdcMxkH",
+        )
         embed.set_footer(text="此機器人由 威立 負責維護")
         return embed
+
 
 # commands.Bot
 # shard_count=1,

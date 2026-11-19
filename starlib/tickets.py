@@ -282,7 +282,9 @@ def allowed_ticket_actions(*, is_creator: bool, is_manager: bool, manage_channel
     return set()
 
 
-def raw_overwrites(channel: discord.abc.GuildChannel) -> list[tuple[str, discord.abc.Snowflake, discord.PermissionOverwrite]]:
+def raw_overwrites(
+    channel: discord.abc.GuildChannel,
+) -> list[tuple[str, discord.abc.Snowflake, discord.PermissionOverwrite]]:
     """頻道的全部覆寫：(鍵, 套用時的對象, 覆寫)。鍵見 `overwrite_key`。
 
     讀 Discord 原始的覆寫清單，不用 `channel.overwrites`：後者會略過不在成員快取的成員，整批 `edit` 時那些覆寫會被刪掉。
@@ -309,7 +311,9 @@ def _with_send(overwrite: discord.PermissionOverwrite, value: bool | None) -> di
     return copied
 
 
-def locked_overwrites(channel: discord.abc.GuildChannel, me: discord.abc.Snowflake) -> tuple[dict, dict[str, bool | None]]:
+def locked_overwrites(
+    channel: discord.abc.GuildChannel, me: discord.abc.Snowflake
+) -> tuple[dict, dict[str, bool | None]]:
     """鎖定後的覆寫：bot 以外所有覆寫對象都不能發言，其他權限不變；bot 的成員覆寫確保能發言（沒有就加上）。
 
     Returns:

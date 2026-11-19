@@ -131,7 +131,13 @@ class BaseRepository:
         if not isinstance(factory, ScopedSession) or not factory.registry.has():
             return
         session = factory()
-        if not session.in_transaction() or session.info.get(_KEEP_TRANSACTION) or session.new or session.dirty or session.deleted:
+        if (
+            not session.in_transaction()
+            or session.info.get(_KEEP_TRANSACTION)
+            or session.new
+            or session.dirty
+            or session.deleted
+        ):
             return
         expire_on_commit = session.expire_on_commit
         # 唯讀交易沒有東西要寫，commit 只是結束交易；不 expire，呼叫端拿到的物件之後讀屬性不必再查一次
@@ -175,7 +181,9 @@ class BaseRepository:
     @overload
     def __getitem__(self, key: Literal[DBCacheType.DynamicVoiceRoom]) -> list[int] | None: ...
     @overload
-    def __getitem__(self, key: Literal[DBCacheType.VoiceLog, NotifyChannelType.VoiceLog]) -> dict[int, tuple[int, int | None]] | None: ...
+    def __getitem__(
+        self, key: Literal[DBCacheType.VoiceLog, NotifyChannelType.VoiceLog]
+    ) -> dict[int, tuple[int, int | None]] | None: ...
     @overload
     def __getitem__(self, key: Literal[DBCacheType.TwitchCmd]) -> dict[int, dict[str, TwitchChatCommand]] | None: ...
     @overload
@@ -290,14 +298,28 @@ class UserRepository(BaseRepository):
 
     def get_discord_ids_by_user(self, user_id: UUID) -> list[int]:
         """取得 bot 記錄中屬於同一個使用者 ID 的所有 Discord ID，由小到大排序。"""
-        stmt = select(DiscordIdentity.discord_id).where(DiscordIdentity.user_id == user_id).order_by(DiscordIdentity.discord_id)
+        stmt = (
+            select(DiscordIdentity.discord_id)
+            .where(DiscordIdentity.user_id == user_id)
+            .order_by(DiscordIdentity.discord_id)
+        )
         return list(self.session.exec(stmt).all())
 
-    def create_temporary_discord_identity(self, discord_id: int, user_id: UUID, checked_at: datetime) -> DiscordIdentity:
+    def create_temporary_discord_identity(
+        self, discord_id: int, user_id: UUID, checked_at: datetime
+    ) -> DiscordIdentity:
         """寫入臨時 ID 的紀錄；同時有其他請求先寫入時以先寫入的為準，回傳實際存下的紀錄。"""
         stmt = (
             pg_insert(DiscordIdentity)
-            .values(discord_id=discord_id, user_id=user_id, is_formal=False, username=None, roles=[], suspended=False, checked_at=checked_at)
+            .values(
+                discord_id=discord_id,
+                user_id=user_id,
+                is_formal=False,
+                username=None,
+                roles=[],
+                suspended=False,
+                checked_at=checked_at,
+            )
             .on_conflict_do_nothing(index_elements=["discord_id"])
         )
         self.session.exec(stmt)
@@ -347,7 +369,11 @@ class UserRepository(BaseRepository):
         extra = {"old_id": str(old_id), "new_id": str(new_id)}
 
         # 歌單：全部搬過去，跟 new_id 同名的改名；歌曲與來源靠 playlist_id，不用動
-        playlists = self.session.exec(select(MusicPlaylist.id, MusicPlaylist.name).where(MusicPlaylist.user_id == old_id).order_by(MusicPlaylist.id)).all()
+        playlists = self.session.exec(
+            select(MusicPlaylist.id, MusicPlaylist.name)
+            .where(MusicPlaylist.user_id == old_id)
+            .order_by(MusicPlaylist.id)
+        ).all()
         new_names = set(self.session.exec(select(MusicPlaylist.name).where(MusicPlaylist.user_id == new_id)).all())
         taken = new_names | {name for _, name in playlists}
         renamed = 0
@@ -364,16 +390,28 @@ class UserRepository(BaseRepository):
                     n += 1
                 taken.add(target)
                 renamed += 1
-            self.session.exec(update(MusicPlaylist).where(MusicPlaylist.id == playlist_id).values(user_id=new_id, name=target, version=MusicPlaylist.version + 1))
+            self.session.exec(
+                update(MusicPlaylist)
+                .where(MusicPlaylist.id == playlist_id)
+                .values(user_id=new_id, name=target, version=MusicPlaylist.version + 1)
+            )
 
         # 一人一筆的資料：new_id 已經有就保留它那筆，old_id 的捨棄
-        binding = self.session.exec(select(NetBirdBinding.group_id, NetBirdBinding.group_name).where(NetBirdBinding.user_id == old_id)).first()
+        binding = self.session.exec(
+            select(NetBirdBinding.group_id, NetBirdBinding.group_name).where(NetBirdBinding.user_id == old_id)
+        ).first()
         if binding is not None:
-            if self.session.exec(select(NetBirdBinding.user_id).where(NetBirdBinding.user_id == new_id)).first() is None:
+            if (
+                self.session.exec(select(NetBirdBinding.user_id).where(NetBirdBinding.user_id == new_id)).first()
+                is None
+            ):
                 self.session.exec(update(NetBirdBinding).where(NetBirdBinding.user_id == old_id).values(user_id=new_id))
             else:
                 # NetBird 上的群組不動，留 log 讓管理員自行整理
-                log.warning("merge_user_data: discarded netbird binding", extra={**extra, "group_id": binding[0], "group_name": binding[1]})
+                log.warning(
+                    "merge_user_data: discarded netbird binding",
+                    extra={**extra, "group_id": binding[0], "group_name": binding[1]},
+                )
                 self.session.exec(delete(NetBirdBinding).where(NetBirdBinding.user_id == old_id))
 
         if self.session.exec(select(DriveShare.user_id).where(DriveShare.user_id == old_id)).first() is not None:
@@ -386,14 +424,22 @@ class UserRepository(BaseRepository):
         self.session.exec(delete(PublicProfile).where(PublicProfile.user_id == old_id))
 
         # 外部帳號綁定：一個平台一人一筆
-        new_platforms = set(self.session.exec(select(LinkedAccount.platform).where(LinkedAccount.user_id == new_id)).all())
+        new_platforms = set(
+            self.session.exec(select(LinkedAccount.platform).where(LinkedAccount.user_id == new_id)).all()
+        )
         if new_platforms:
-            self.session.exec(delete(LinkedAccount).where(LinkedAccount.user_id == old_id, LinkedAccount.platform.in_(new_platforms)))
+            self.session.exec(
+                delete(LinkedAccount).where(LinkedAccount.user_id == old_id, LinkedAccount.platform.in_(new_platforms))
+            )
         self.session.exec(update(LinkedAccount).where(LinkedAccount.user_id == old_id).values(user_id=new_id))
 
         # 合併時其他指向 old_id 的 Discord 紀錄一起改指新 ID
         # roles、suspended、username 還是舊域民的值，checked_at 設得很早讓它們下次使用時就重查
-        self.session.exec(update(DiscordIdentity).where(DiscordIdentity.user_id == old_id).values(user_id=new_id, checked_at=datetime.fromtimestamp(0, UTC)))
+        self.session.exec(
+            update(DiscordIdentity)
+            .where(DiscordIdentity.user_id == old_id)
+            .values(user_id=new_id, checked_at=datetime.fromtimestamp(0, UTC))
+        )
 
         log.info("merge_user_data: merged", extra={**extra, "playlists": len(playlists), "renamed": renamed})
 
@@ -470,7 +516,9 @@ class CurrencyRepository(BaseRepository):
             stmt = (
                 pg_insert(UserPoint)
                 .values(discord_id=given_id, stardust=amount)
-                .on_conflict_do_update(index_elements=[UserPoint.discord_id], set_={"stardust": UserPoint.stardust + amount})
+                .on_conflict_do_update(
+                    index_elements=[UserPoint.discord_id], set_={"stardust": UserPoint.stardust + amount}
+                )
             )
             session.exec(stmt)
             session.commit()
@@ -493,14 +541,18 @@ class BetRepository(BaseRepository):
         return result
 
     def place_bet(self, bet_id: int, discord_id: int, bet_option: int, bet_amount: int):
-        user_bet = UserBet(discord_id=discord_id, bet_id=bet_id, bet_option=bet_option, bet_amount=bet_amount, bet_at=nowtz())
+        user_bet = UserBet(
+            discord_id=discord_id, bet_id=bet_id, bet_option=bet_option, bet_amount=bet_amount, bet_at=nowtz()
+        )
         self.session.add(user_bet)
         self.session.commit()
         return user_bet
 
     def list_user_bets(self, discord_id: int, offset: int, limit: int) -> tuple[list[tuple[UserBet, Bet | None]], int]:
         """個人區用：該 Discord 的下注，依下注時間由新到舊；回傳 (該頁 (下注, 賭盤)，賭盤已不存在時為 None；總數)。"""
-        total = self.session.exec(select(func.count()).select_from(UserBet).where(UserBet.discord_id == discord_id)).one()
+        total = self.session.exec(
+            select(func.count()).select_from(UserBet).where(UserBet.discord_id == discord_id)
+        ).one()
         stmt = (
             select(UserBet, Bet)
             .select_from(UserBet)
@@ -542,6 +594,7 @@ class BetRepository(BaseRepository):
 #         self.cursor.execute(f'DELETE FROM `database`.`bet_data` WHERE `bet_id` = %s;',(bet_id,))
 #         self.connection.commit()
 
+
 class PetRepository(BaseRepository):
     def get_pet(self, discord_id: int):
         """取得寵物"""
@@ -565,9 +618,13 @@ class PetRepository(BaseRepository):
 
 class NotifyRepository(BaseRepository):
     # * notify channel
-    def add_notify_channel(self, guild_id: int, notify_type: NotifyChannelType, channel_id: int, role_id: int = None, message: str = None):
+    def add_notify_channel(
+        self, guild_id: int, notify_type: NotifyChannelType, channel_id: int, role_id: int = None, message: str = None
+    ):
         """設定自動通知頻道"""
-        channel = NotifyChannel(guild_id=guild_id, notify_type=notify_type, channel_id=channel_id, role_id=role_id, message=message)
+        channel = NotifyChannel(
+            guild_id=guild_id, notify_type=notify_type, channel_id=channel_id, role_id=role_id, message=message
+        )
         self.session.merge(channel)
         self.session.commit()
 
@@ -583,13 +640,24 @@ class NotifyRepository(BaseRepository):
         if DBCacheType.from_notify_channel(notify_type) == DBCacheType.VoiceLog:
             self.cache.voice_log.delete(guild_id)
 
-    def insert_notify_channel(self, guild_id: int, notify_type: NotifyChannelType, channel_id: int, role_id: int | None = None, message: str | None = None):
+    def insert_notify_channel(
+        self,
+        guild_id: int,
+        notify_type: NotifyChannelType,
+        channel_id: int,
+        role_id: int | None = None,
+        message: str | None = None,
+    ):
         """後台用：只新增不覆蓋的 add_notify_channel。
 
         Raises:
             DataExistError: 這個伺服器已設定過這個種類。
         """
-        self.session.add(NotifyChannel(guild_id=guild_id, notify_type=notify_type, channel_id=channel_id, role_id=role_id, message=message))
+        self.session.add(
+            NotifyChannel(
+                guild_id=guild_id, notify_type=notify_type, channel_id=channel_id, role_id=role_id, message=message
+            )
+        )
         try:
             self.session.commit()
         except IntegrityError as e:
@@ -610,12 +678,20 @@ class NotifyRepository(BaseRepository):
             conditions.append(getattr(NotifyChannel, field).is_not_distinct_from(value))
         return conditions
 
-    def update_notify_channel_if(self, guild_id: int, notify_type: NotifyChannelType, original: dict[str, int | str | None], values: dict[str, int | str | None]) -> int:
+    def update_notify_channel_if(
+        self,
+        guild_id: int,
+        notify_type: NotifyChannelType,
+        original: dict[str, int | str | None],
+        values: dict[str, int | str | None],
+    ) -> int:
         """後台用：資料庫目前的值等於 original 才更新 values 裡的欄位（比對與寫入在同一條 SQL），回傳影響的列數，0 表示已被改過或刪除。
 
         original、values 的鍵是 channel_id、role_id、message 中該種類用得到的欄位，沒列出的欄位不比對也不動。
         """
-        stmt = update(NotifyChannel).where(*self._notify_channel_match(guild_id, notify_type, original)).values(**values)
+        stmt = (
+            update(NotifyChannel).where(*self._notify_channel_match(guild_id, notify_type, original)).values(**values)
+        )
         count = self.session.exec(stmt).rowcount
         self.session.commit()
 
@@ -625,7 +701,9 @@ class NotifyRepository(BaseRepository):
                 self.cache.voice_log.set(guild_id, (row.channel_id, row.role_id))
         return count
 
-    def delete_notify_channel_if(self, guild_id: int, notify_type: NotifyChannelType, original: dict[str, int | str | None]) -> int:
+    def delete_notify_channel_if(
+        self, guild_id: int, notify_type: NotifyChannelType, original: dict[str, int | str | None]
+    ) -> int:
         """後台用：資料庫目前的值等於 original（要含 channel_id，cache 的舊 key 取自它）才刪除，回傳影響的列數，0 表示已被改過或刪除。"""
         stmt = delete(NotifyChannel).where(*self._notify_channel_match(guild_id, notify_type, original))
         count = self.session.exec(stmt).rowcount
@@ -646,7 +724,9 @@ class NotifyRepository(BaseRepository):
 
     def get_notify_channel(self, guild_id: int, notify_type: NotifyChannelType):
         """取得自動通知頻道"""
-        statement = select(NotifyChannel).where(NotifyChannel.guild_id == guild_id, NotifyChannel.notify_type == notify_type)
+        statement = select(NotifyChannel).where(
+            NotifyChannel.guild_id == guild_id, NotifyChannel.notify_type == notify_type
+        )
         result = self.session.exec(statement).one_or_none()
         return result
 
@@ -757,26 +837,38 @@ class NotifyRepository(BaseRepository):
             for notify_type in notify_types:
                 # 帳號已被其他伺服器訂閱時快取已存在，不算衝突
                 self.session.exec(
-                    pg_insert(CommunityCache).values(community_id=community.id, notify_type=notify_type, value=cache_time).on_conflict_do_nothing()
+                    pg_insert(CommunityCache)
+                    .values(community_id=community.id, notify_type=notify_type, value=cache_time)
+                    .on_conflict_do_nothing()
                 )
         try:
             self.session.commit()
         except IntegrityError as e:
             # 只當作 SELECT 之後被別人搶先寫入的後備
             self.session.rollback()
-            raise NotifyCommunityExistsError(self._existing_notify_communities(community, notify_types, guild_id)) from e
+            raise NotifyCommunityExistsError(
+                self._existing_notify_communities(community, notify_types, guild_id)
+            ) from e
 
-    def _existing_notify_communities(self, community: Community, notify_types: list[NotifyCommunityType], guild_id: int) -> list[NotifyCommunityType]:
-        stmt = select(NotifyCommunity.notify_type).where(
-            NotifyCommunity.community_id == community.id,
-            NotifyCommunity.community_type == community.type,
-            NotifyCommunity.guild_id == guild_id,
-            NotifyCommunity.notify_type.in_(notify_types),  # pyright: ignore[reportAttributeAccessIssue]
-        ).execution_options(populate_existing=True)
+    def _existing_notify_communities(
+        self, community: Community, notify_types: list[NotifyCommunityType], guild_id: int
+    ) -> list[NotifyCommunityType]:
+        stmt = (
+            select(NotifyCommunity.notify_type)
+            .where(
+                NotifyCommunity.community_id == community.id,
+                NotifyCommunity.community_type == community.type,
+                NotifyCommunity.guild_id == guild_id,
+                NotifyCommunity.notify_type.in_(notify_types),  # pyright: ignore[reportAttributeAccessIssue]
+            )
+            .execution_options(populate_existing=True)
+        )
         return sorted(self.session.exec(stmt).all())
 
     @staticmethod
-    def _notify_community_match(notify_type: NotifyCommunityType, community_id: str, guild_id: int, original: dict[str, int | str | None]):
+    def _notify_community_match(
+        notify_type: NotifyCommunityType, community_id: str, guild_id: int, original: dict[str, int | str | None]
+    ):
         """條件式寫入的 WHERE：主鍵加上 original 有的欄位，NULL 也能比對。"""
         conditions = [
             NotifyCommunity.notify_type == notify_type,
@@ -789,17 +881,30 @@ class NotifyRepository(BaseRepository):
         return conditions
 
     def update_notify_community_if(
-        self, notify_type: NotifyCommunityType, community_id: str, guild_id: int, original: dict[str, int | str | None], values: dict[str, int | str | None]
+        self,
+        notify_type: NotifyCommunityType,
+        community_id: str,
+        guild_id: int,
+        original: dict[str, int | str | None],
+        values: dict[str, int | str | None],
     ) -> int:
         """後台用：目前的值等於 original 才更新 values 的欄位（頻道、身分組、自訂文字），回傳影響的列數，0 表示已被改過或刪除。"""
-        stmt = update(NotifyCommunity).where(*self._notify_community_match(notify_type, community_id, guild_id, original)).values(**values)
+        stmt = (
+            update(NotifyCommunity)
+            .where(*self._notify_community_match(notify_type, community_id, guild_id, original))
+            .values(**values)
+        )
         count = self.session.exec(stmt).rowcount
         self.session.commit()
         return count
 
-    def delete_notify_community_if(self, notify_type: NotifyCommunityType, community_id: str, guild_id: int, original: dict[str, int | str | None]) -> int:
+    def delete_notify_community_if(
+        self, notify_type: NotifyCommunityType, community_id: str, guild_id: int, original: dict[str, int | str | None]
+    ) -> int:
         """後台用：目前的值等於 original 才刪除，成功後做跟 remove_notify_community 相同的清理，回傳影響的列數。"""
-        stmt = delete(NotifyCommunity).where(*self._notify_community_match(notify_type, community_id, guild_id, original))
+        stmt = delete(NotifyCommunity).where(
+            *self._notify_community_match(notify_type, community_id, guild_id, original)
+        )
         count = self.session.exec(stmt).rowcount
         self.session.commit()
         if count:
@@ -823,9 +928,15 @@ class NotifyRepository(BaseRepository):
     def remove_notify_community(self, notify_type: NotifyCommunityType, community_id: str, guild_id: int | None = None):
         """移除社群通知，同時判斷移除相關資料"""
         if guild_id is None:
-            statement = delete(NotifyCommunity).where(NotifyCommunity.notify_type == notify_type, NotifyCommunity.community_id == community_id)
+            statement = delete(NotifyCommunity).where(
+                NotifyCommunity.notify_type == notify_type, NotifyCommunity.community_id == community_id
+            )
         else:
-            statement = delete(NotifyCommunity).where(NotifyCommunity.notify_type == notify_type, NotifyCommunity.community_id == community_id, NotifyCommunity.guild_id == guild_id)
+            statement = delete(NotifyCommunity).where(
+                NotifyCommunity.notify_type == notify_type,
+                NotifyCommunity.community_id == community_id,
+                NotifyCommunity.guild_id == guild_id,
+            )
         self.session.exec(statement)
         self.session.commit()
         self._cleanup_community(notify_type, community_id)
@@ -839,13 +950,21 @@ class NotifyRepository(BaseRepository):
         if platform is None:
             return
 
-        type_subscribed = exists().where(NotifyCommunity.notify_type == notify_type, NotifyCommunity.community_id == community_id)
+        type_subscribed = exists().where(
+            NotifyCommunity.notify_type == notify_type, NotifyCommunity.community_id == community_id
+        )
         self.session.exec(
-            delete(CommunityCache).where(CommunityCache.community_id == community_id, CommunityCache.notify_type == notify_type, ~type_subscribed)
+            delete(CommunityCache).where(
+                CommunityCache.community_id == community_id, CommunityCache.notify_type == notify_type, ~type_subscribed
+            )
         )
 
-        platform_subscribed = exists().where(NotifyCommunity.community_type == platform, NotifyCommunity.community_id == community_id)
-        self.session.exec(delete(Community).where(Community.id == community_id, Community.type == platform, ~platform_subscribed))
+        platform_subscribed = exists().where(
+            NotifyCommunity.community_type == platform, NotifyCommunity.community_id == community_id
+        )
+        self.session.exec(
+            delete(Community).where(Community.id == community_id, Community.type == platform, ~platform_subscribed)
+        )
         if platform == PlatformType.Google:
             self.session.exec(delete(PushRecord).where(PushRecord.channel_id == community_id, ~platform_subscribed))
 
@@ -866,27 +985,43 @@ class NotifyRepository(BaseRepository):
     def get_notify_community_guild(self, notify_type: NotifyCommunityType, community_id: str):
         """取得指定社群的所有通知"""
         notify_type = NotifyCommunityType(notify_type)
-        statement = select(NotifyCommunity.guild_id, NotifyCommunity.channel_id, NotifyCommunity.role_id, NotifyCommunity.message).where(
-            NotifyCommunity.notify_type == notify_type.value, NotifyCommunity.community_id == community_id
-        )
+        statement = select(
+            NotifyCommunity.guild_id, NotifyCommunity.channel_id, NotifyCommunity.role_id, NotifyCommunity.message
+        ).where(NotifyCommunity.notify_type == notify_type.value, NotifyCommunity.community_id == community_id)
         return self.session.exec(statement).all()
 
     def get_notify_community_user_byid(self, notify_type: NotifyCommunityType, community_id: str, guild_id: int):
         """取得伺服器內的指定社群通知"""
         statement = (
             select(NotifyCommunity)
-            .join(Community, and_(NotifyCommunity.community_id == Community.id, NotifyCommunity.community_type == Community.type))
-            .where(NotifyCommunity.notify_type == notify_type, Community.id == community_id, NotifyCommunity.guild_id == guild_id)
+            .join(
+                Community,
+                and_(NotifyCommunity.community_id == Community.id, NotifyCommunity.community_type == Community.type),
+            )
+            .where(
+                NotifyCommunity.notify_type == notify_type,
+                Community.id == community_id,
+                NotifyCommunity.guild_id == guild_id,
+            )
         )
         result = self.session.exec(statement).one_or_none()
         return result
 
-    def get_notify_community_user_byname(self, notify_type: NotifyCommunityType, community_username: str, guild_id: int):
+    def get_notify_community_user_byname(
+        self, notify_type: NotifyCommunityType, community_username: str, guild_id: int
+    ):
         """取得伺服器內的指定社群通知"""
         statement = (
             select(NotifyCommunity)
-            .join(Community, and_(NotifyCommunity.community_id == Community.id, NotifyCommunity.community_type == Community.type))
-            .where(NotifyCommunity.notify_type == notify_type, Community.username == community_username, NotifyCommunity.guild_id == guild_id)
+            .join(
+                Community,
+                and_(NotifyCommunity.community_id == Community.id, NotifyCommunity.community_type == Community.type),
+            )
+            .where(
+                NotifyCommunity.notify_type == notify_type,
+                Community.username == community_username,
+                NotifyCommunity.guild_id == guild_id,
+            )
         )
         result = self.session.exec(statement).one_or_none()
         return result
@@ -901,7 +1036,10 @@ class NotifyRepository(BaseRepository):
         """取得伺服器內指定種類的所有通知"""
         statement = (
             select(NotifyCommunity, Community)
-            .join(Community, and_(NotifyCommunity.community_id == Community.id, NotifyCommunity.community_type == Community.type))
+            .join(
+                Community,
+                and_(NotifyCommunity.community_id == Community.id, NotifyCommunity.community_type == Community.type),
+            )
             .where(NotifyCommunity.notify_type == notify_type, NotifyCommunity.guild_id == guild_id)
         )
         result = self.session.exec(statement).all()
@@ -909,13 +1047,17 @@ class NotifyRepository(BaseRepository):
 
     def get_notify_community_count(self, notify_type: NotifyCommunityType, community_id: str):
         """取得指定通知的數量"""
-        statement = select(func.count()).where(NotifyCommunity.notify_type == notify_type, NotifyCommunity.community_id == community_id)
+        statement = select(func.count()).where(
+            NotifyCommunity.notify_type == notify_type, NotifyCommunity.community_id == community_id
+        )
         result = self.session.exec(statement).one()
         return result
 
     def get_community_by_notify(self, notify: NotifyCommunity):
         """取得指定通知的社群資料"""
-        statement = select(Community).where(Community.id == notify.community_id, Community.type == notify.community_type)
+        statement = select(Community).where(
+            Community.id == notify.community_id, Community.type == notify.community_type
+        )
         result = self.session.exec(statement).one()
         return result
 
@@ -959,16 +1101,24 @@ class DynamicVoiceRepository(BaseRepository):
         if lobby is not None:
             self.cache.dynamic_voice_lobby.set(
                 lobby.channel_id,
-                DynamicVoiceLobby(guild_id=guild_id, channel_id=lobby.channel_id, default_room_name=lobby.default_room_name),
+                DynamicVoiceLobby(
+                    guild_id=guild_id, channel_id=lobby.channel_id, default_room_name=lobby.default_room_name
+                ),
             )
 
     def add_dynamic_voice_lobby(self, guild_id: int, channel_id: int, default_room_name: str | None = None):
         """新增或覆蓋動態語音大廳，換大廳時舊頻道立即停止開房"""
         old = self.get_dynamic_voice_lobby_fresh(guild_id)
         old_channel_id = old.channel_id if old is not None else None
-        self.session.merge(DynamicVoiceLobby(guild_id=guild_id, channel_id=channel_id, default_room_name=default_room_name))
+        self.session.merge(
+            DynamicVoiceLobby(guild_id=guild_id, channel_id=channel_id, default_room_name=default_room_name)
+        )
         self.session.commit()
-        self._sync_lobby_cache(guild_id, old_channel_id, DynamicVoiceLobby(guild_id=guild_id, channel_id=channel_id, default_room_name=default_room_name))
+        self._sync_lobby_cache(
+            guild_id,
+            old_channel_id,
+            DynamicVoiceLobby(guild_id=guild_id, channel_id=channel_id, default_room_name=default_room_name),
+        )
 
     def insert_dynamic_voice_lobby(self, guild_id: int, channel_id: int, default_room_name: str | None = None):
         """後台用：只新增不覆蓋的 add_dynamic_voice_lobby。
@@ -976,7 +1126,9 @@ class DynamicVoiceRepository(BaseRepository):
         Raises:
             DataExistError: 這個伺服器已設定過大廳。
         """
-        self.session.add(DynamicVoiceLobby(guild_id=guild_id, channel_id=channel_id, default_room_name=default_room_name))
+        self.session.add(
+            DynamicVoiceLobby(guild_id=guild_id, channel_id=channel_id, default_room_name=default_room_name)
+        )
         try:
             self.session.commit()
         except IntegrityError as e:
@@ -985,7 +1137,11 @@ class DynamicVoiceRepository(BaseRepository):
             if getattr(e.orig, "sqlstate", None) != "23505":
                 raise
             raise DataExistError(original=e) from e
-        self._sync_lobby_cache(guild_id, None, DynamicVoiceLobby(guild_id=guild_id, channel_id=channel_id, default_room_name=default_room_name))
+        self._sync_lobby_cache(
+            guild_id,
+            None,
+            DynamicVoiceLobby(guild_id=guild_id, channel_id=channel_id, default_room_name=default_room_name),
+        )
 
     @staticmethod
     def _dynamic_voice_lobby_match(guild_id: int, original: dict[str, int | str | None]):
@@ -995,7 +1151,9 @@ class DynamicVoiceRepository(BaseRepository):
             conditions.append(getattr(DynamicVoiceLobby, field).is_not_distinct_from(value))
         return conditions
 
-    def update_dynamic_voice_lobby_if(self, guild_id: int, original: dict[str, int | str | None], values: dict[str, int | str | None]) -> int:
+    def update_dynamic_voice_lobby_if(
+        self, guild_id: int, original: dict[str, int | str | None], values: dict[str, int | str | None]
+    ) -> int:
         """後台用：資料庫目前的值等於 original 才更新 values 裡的欄位（比對與寫入在同一條 SQL），回傳影響的列數，0 表示已被改過或刪除。
 
         original、values 的鍵是資料表欄位 channel_id、default_room_name；original 要含 channel_id。
@@ -1023,12 +1181,18 @@ class DynamicVoiceRepository(BaseRepository):
 
     def get_dynamic_voice_lobby_fresh(self, guild_id: int):
         """後台用：get_dynamic_voice_lobby 加 populate_existing，讀得到其他 thread 剛寫入的值。"""
-        statement = select(DynamicVoiceLobby).where(DynamicVoiceLobby.guild_id == guild_id).execution_options(populate_existing=True)
+        statement = (
+            select(DynamicVoiceLobby)
+            .where(DynamicVoiceLobby.guild_id == guild_id)
+            .execution_options(populate_existing=True)
+        )
         return self.session.exec(statement).one_or_none()
 
     def get_dynamic_voice_rooms_fresh(self, guild_id: int):
         """後台用：該伺服器的動態房間紀錄（populate_existing）。"""
-        statement = select(DynamicVoice).where(DynamicVoice.guild_id == guild_id).execution_options(populate_existing=True)
+        statement = (
+            select(DynamicVoice).where(DynamicVoice.guild_id == guild_id).execution_options(populate_existing=True)
+        )
         return list(self.session.exec(statement).all())
 
     def get_all_dynamic_voice_lobby(self):
@@ -1148,20 +1312,27 @@ class TicketRepository(BaseRepository):
 
     def set_ticket_channel_lobby(self, channel_id: int, lobby_channel_id: int) -> None:
         """回填腳本用：寫入私人頻道所屬的大廳。"""
-        self.session.exec(update(TicketChannel).where(TicketChannel.channel_id == channel_id).values(lobby_channel_id=lobby_channel_id))
+        self.session.exec(
+            update(TicketChannel)
+            .where(TicketChannel.channel_id == channel_id)
+            .values(lobby_channel_id=lobby_channel_id)
+        )
         self.session.commit()
-
 
     # ====== 後台：大廳寫入（P-02） ======
     def get_ticket_lobby_snapshot(self, channel_id: int) -> dict | None:
         """大廳目前的設定（含已移除的），不綁 session；不存在回 None。`manager_role_ids` 依 role_id 排序。"""
         lobby = self.session.exec(
-            select(TicketChannelLobby).where(TicketChannelLobby.channel_id == channel_id).execution_options(populate_existing=True)
+            select(TicketChannelLobby)
+            .where(TicketChannelLobby.channel_id == channel_id)
+            .execution_options(populate_existing=True)
         ).one_or_none()
         if lobby is None:
             return None
         roles = self.session.exec(
-            select(TicketLobbyManagerRole.role_id).where(TicketLobbyManagerRole.lobby_channel_id == channel_id).order_by(TicketLobbyManagerRole.role_id)
+            select(TicketLobbyManagerRole.role_id)
+            .where(TicketLobbyManagerRole.lobby_channel_id == channel_id)
+            .order_by(TicketLobbyManagerRole.role_id)
         ).all()
         return {
             "channel_id": lobby.channel_id,
@@ -1181,7 +1352,9 @@ class TicketRepository(BaseRepository):
         }
 
     def _replace_lobby_manager_roles(self, lobby_channel_id: int, role_ids: list[int]) -> None:
-        self.session.exec(delete(TicketLobbyManagerRole).where(TicketLobbyManagerRole.lobby_channel_id == lobby_channel_id))
+        self.session.exec(
+            delete(TicketLobbyManagerRole).where(TicketLobbyManagerRole.lobby_channel_id == lobby_channel_id)
+        )
         for role_id in sorted(set(role_ids)):
             self.session.add(TicketLobbyManagerRole(lobby_channel_id=lobby_channel_id, role_id=role_id))
 
@@ -1208,7 +1381,9 @@ class TicketRepository(BaseRepository):
             return False
         return True
 
-    def update_ticket_lobby_if(self, channel_id: int, original: dict, values: dict, manager_role_ids: list[int] | None = None) -> bool:
+    def update_ticket_lobby_if(
+        self, channel_id: int, original: dict, values: dict, manager_role_ids: list[int] | None = None
+    ) -> bool:
         """大廳目前的欄位都等於 `original` 才更新（一個 UPDATE 判斷，不會覆蓋同時的修改）；`manager_role_ids` 不為 None 時同一交易換掉管理身分組。
 
         已移除、不存在或有欄位不同回 False，什麼都不寫。
@@ -1240,32 +1415,52 @@ class TicketRepository(BaseRepository):
         if result.rowcount != 1:
             self.session.rollback()
             return False
-        self.session.exec(update(TicketChannel).where(TicketChannel.lobby_channel_id == channel_id).values(lobby_channel_id=None))
+        self.session.exec(
+            update(TicketChannel).where(TicketChannel.lobby_channel_id == channel_id).values(lobby_channel_id=None)
+        )
         self.session.commit()
         return True
 
-    def move_ticket_lobby(self, old_channel_id: int, new_channel_id: int, values: dict, manager_role_ids: list[int]) -> bool:
+    def move_ticket_lobby(
+        self, old_channel_id: int, new_channel_id: int, values: dict, manager_role_ids: list[int]
+    ) -> bool:
         """大廳換到另一個頻道（原頻道被刪除時重新選頻道）：同一交易搬主鍵、管理身分組與底下私人頻道的歸屬，保留 `next_number`。
 
         `values` 是要寫入的欄位（不含 `channel_id`、`guild_id`、`next_number`）。新頻道已有還在使用的大廳、或原大廳不在使用中回 False；
         新頻道上有已移除的舊列則刪掉它。
         """
-        old = self.session.exec(select(TicketChannelLobby).where(TicketChannelLobby.channel_id == old_channel_id)).one_or_none()
+        old = self.session.exec(
+            select(TicketChannelLobby).where(TicketChannelLobby.channel_id == old_channel_id)
+        ).one_or_none()
         if old is None or old.removed_at is not None:
             self.session.rollback()
             return False
-        target = self.session.exec(select(TicketChannelLobby).where(TicketChannelLobby.channel_id == new_channel_id)).one_or_none()
+        target = self.session.exec(
+            select(TicketChannelLobby).where(TicketChannelLobby.channel_id == new_channel_id)
+        ).one_or_none()
         if target is not None and target.removed_at is None:
             self.session.rollback()
             return False
         try:
             if target is not None:
                 self.session.exec(delete(TicketChannelLobby).where(TicketChannelLobby.channel_id == new_channel_id))
-            self.session.exec(update(TicketChannelLobby).where(TicketChannelLobby.channel_id == old_channel_id).values(channel_id=new_channel_id, **values))
-            self.session.exec(delete(TicketLobbyManagerRole).where(TicketLobbyManagerRole.lobby_channel_id.in_([old_channel_id, new_channel_id])))
+            self.session.exec(
+                update(TicketChannelLobby)
+                .where(TicketChannelLobby.channel_id == old_channel_id)
+                .values(channel_id=new_channel_id, **values)
+            )
+            self.session.exec(
+                delete(TicketLobbyManagerRole).where(
+                    TicketLobbyManagerRole.lobby_channel_id.in_([old_channel_id, new_channel_id])
+                )
+            )
             for role_id in sorted(set(manager_role_ids)):
                 self.session.add(TicketLobbyManagerRole(lobby_channel_id=new_channel_id, role_id=role_id))
-            self.session.exec(update(TicketChannel).where(TicketChannel.lobby_channel_id == old_channel_id).values(lobby_channel_id=new_channel_id))
+            self.session.exec(
+                update(TicketChannel)
+                .where(TicketChannel.lobby_channel_id == old_channel_id)
+                .values(lobby_channel_id=new_channel_id)
+            )
             self.session.commit()
         except IntegrityError:
             self.session.rollback()
@@ -1274,13 +1469,20 @@ class TicketRepository(BaseRepository):
 
     def list_lobby_ticket_channels(self, lobby_channel_id: int) -> list[TicketChannel]:
         """大廳底下還有紀錄的私人頻道（含已鎖定）。"""
-        stmt = select(TicketChannel).where(TicketChannel.lobby_channel_id == lobby_channel_id).order_by(TicketChannel.channel_id).execution_options(populate_existing=True)
+        stmt = (
+            select(TicketChannel)
+            .where(TicketChannel.lobby_channel_id == lobby_channel_id)
+            .order_by(TicketChannel.channel_id)
+            .execution_options(populate_existing=True)
+        )
         return list(self.session.exec(stmt).all())
 
     def set_ticket_locked_overwrites(self, updates: dict[int, str]) -> None:
         """寫入私人頻道鎖定前的覆寫（JSON）。"""
         for channel_id, value in updates.items():
-            self.session.exec(update(TicketChannel).where(TicketChannel.channel_id == channel_id).values(locked_overwrites_json=value))
+            self.session.exec(
+                update(TicketChannel).where(TicketChannel.channel_id == channel_id).values(locked_overwrites_json=value)
+            )
         self.session.commit()
 
     # ====== 開單（P-03） ======
@@ -1315,7 +1517,9 @@ class TicketRepository(BaseRepository):
     def get_ticket_snapshot(self, channel_id: int) -> dict | None:
         """私人頻道目前的紀錄，不綁 session；不存在回 None。"""
         t = self.session.exec(
-            select(TicketChannel).where(TicketChannel.channel_id == channel_id).execution_options(populate_existing=True)
+            select(TicketChannel)
+            .where(TicketChannel.channel_id == channel_id)
+            .execution_options(populate_existing=True)
         ).one_or_none()
         if t is None:
             return None
@@ -1330,7 +1534,9 @@ class TicketRepository(BaseRepository):
             "locked_overwrites_json": t.locked_overwrites_json,
         }
 
-    def lock_ticket_record(self, channel_id: int, closer_id: int, closed_at: datetime, locked_overwrites_json: str) -> bool:
+    def lock_ticket_record(
+        self, channel_id: int, closer_id: int, closed_at: datetime, locked_overwrites_json: str
+    ) -> bool:
         """記錄鎖定（鎖定者、時間、鎖定前的覆寫）；紀錄不存在或已鎖定回 False，什麼都不寫。"""
         result = self.session.exec(
             update(TicketChannel)
@@ -1360,7 +1566,12 @@ class TicketRepository(BaseRepository):
 class RoleSaveRepository(BaseRepository):
     # * role_save
     def get_role_save(self, discord_id: int):
-        stmt = select(RoleSave).join(RoleSaveMember, RoleSaveMember.role_id == RoleSave.role_id).where(RoleSaveMember.discord_id == discord_id).order_by(RoleSave.created_at, desc(RoleSaveMember.role_id))
+        stmt = (
+            select(RoleSave)
+            .join(RoleSaveMember, RoleSaveMember.role_id == RoleSave.role_id)
+            .where(RoleSaveMember.discord_id == discord_id)
+            .order_by(RoleSave.created_at, desc(RoleSaveMember.role_id))
+        )
         result = self.session.exec(stmt).all()
         return result
 
@@ -1370,7 +1581,13 @@ class RoleSaveRepository(BaseRepository):
         return result
 
     def get_role_save_count_list(self):
-        stmt = select(RoleSaveMember.discord_id, func.count()).select_from(RoleSaveMember).join(RoleSave, RoleSaveMember.role_id == RoleSave.role_id).group_by(RoleSaveMember.discord_id).order_by(desc(func.count()))
+        stmt = (
+            select(RoleSaveMember.discord_id, func.count())
+            .select_from(RoleSaveMember)
+            .join(RoleSave, RoleSaveMember.role_id == RoleSave.role_id)
+            .group_by(RoleSaveMember.discord_id)
+            .order_by(desc(func.count()))
+        )
         result = self.session.exec(stmt).all()
         return {i[0]: i[1] for i in result}
 
@@ -1393,13 +1610,21 @@ class RoleSaveRepository(BaseRepository):
         return dct
 
     def get_reaction_roles_by_message(self, message_id: int):
-        stmt = select(ReactionRoleOption).where(ReactionRoleOption.message_id == message_id).order_by(ReactionRoleOption.position, ReactionRoleOption.role_id)
+        stmt = (
+            select(ReactionRoleOption)
+            .where(ReactionRoleOption.message_id == message_id)
+            .order_by(ReactionRoleOption.position, ReactionRoleOption.role_id)
+        )
         result = self.session.exec(stmt).all()
         return result
 
     def list_guild_reaction_roles(self, guild_id: int) -> list[tuple[ReactionRoleMessage, list[ReactionRoleOption]]]:
         """這個伺服器所有反應身分組訊息與其按鈕（按鈕依 position 排序）；順序為訊息 ID 由小到大。"""
-        messages = self.session.exec(select(ReactionRoleMessage).where(ReactionRoleMessage.guild_id == guild_id).order_by(ReactionRoleMessage.message_id)).all()
+        messages = self.session.exec(
+            select(ReactionRoleMessage)
+            .where(ReactionRoleMessage.guild_id == guild_id)
+            .order_by(ReactionRoleMessage.message_id)
+        ).all()
         if not messages:
             return []
         options = self.session.exec(
@@ -1428,7 +1653,12 @@ class RoleSaveRepository(BaseRepository):
         }
 
     def replace_reaction_role_message(
-        self, guild_id: int, channel_id: int, message_id: int, content_json: str | None, options: list[ReactionRoleOption]
+        self,
+        guild_id: int,
+        channel_id: int,
+        message_id: int,
+        content_json: str | None,
+        options: list[ReactionRoleOption],
     ) -> None:
         """同一個交易內寫入訊息紀錄並以 options 取代全部按鈕；position 依 options 的順序重編。
 
@@ -1436,7 +1666,11 @@ class RoleSaveRepository(BaseRepository):
         """
         existing = self.session.get(ReactionRoleMessage, (guild_id, channel_id, message_id))
         if existing is None:
-            self.session.add(ReactionRoleMessage(guild_id=guild_id, channel_id=channel_id, message_id=message_id, content_json=content_json))
+            self.session.add(
+                ReactionRoleMessage(
+                    guild_id=guild_id, channel_id=channel_id, message_id=message_id, content_json=content_json
+                )
+            )
         elif content_json is not None:
             existing.content_json = content_json
         self.session.exec(delete(ReactionRoleOption).where(ReactionRoleOption.message_id == message_id))
@@ -1458,7 +1692,9 @@ class RoleSaveRepository(BaseRepository):
         keep_role_ids 不為 None 時，只保留這些身分組的按鈕（略過的失效按鈕刪除），position 依清單順序重編；
         content_json 為 None 時保留原本存的內容。紀錄不存在時什麼都不做；回傳是否有移動。
         """
-        row = self.session.exec(select(ReactionRoleMessage).where(ReactionRoleMessage.message_id == old_id)).one_or_none()
+        row = self.session.exec(
+            select(ReactionRoleMessage).where(ReactionRoleMessage.message_id == old_id)
+        ).one_or_none()
         if row is None:
             return False
         content = content_json if content_json is not None else row.content_json
@@ -1469,7 +1705,9 @@ class RoleSaveRepository(BaseRepository):
         )
         if keep_role_ids is not None:
             self.session.exec(
-                delete(ReactionRoleOption).where(ReactionRoleOption.message_id == old_id, ReactionRoleOption.role_id.not_in(keep_role_ids))
+                delete(ReactionRoleOption).where(
+                    ReactionRoleOption.message_id == old_id, ReactionRoleOption.role_id.not_in(keep_role_ids)
+                )
             )
             for position, role_id in enumerate(keep_role_ids):
                 self.session.exec(
@@ -1477,7 +1715,9 @@ class RoleSaveRepository(BaseRepository):
                     .where(ReactionRoleOption.message_id == old_id, ReactionRoleOption.role_id == role_id)
                     .values(position=position)
                 )
-        self.session.exec(update(ReactionRoleOption).where(ReactionRoleOption.message_id == old_id).values(message_id=new_id))
+        self.session.exec(
+            update(ReactionRoleOption).where(ReactionRoleOption.message_id == old_id).values(message_id=new_id)
+        )
         self.commit()
         return True
 
@@ -1510,7 +1750,9 @@ class RoleSaveRepository(BaseRepository):
         self.session.commit()
 
     def delete_reaction_role(self, message_id: int, role_id: int):
-        stmt = delete(ReactionRoleOption).where(ReactionRoleOption.message_id == message_id, ReactionRoleOption.role_id == role_id)
+        stmt = delete(ReactionRoleOption).where(
+            ReactionRoleOption.message_id == message_id, ReactionRoleOption.role_id == role_id
+        )
         self.session.exec(stmt)
         self.session.commit()
 
@@ -1557,13 +1799,18 @@ class WarningRepository(BaseRepository):
         :param guild_id: 若給予，則額外查詢該伺服器內的紀錄
         """
         if guild_id:
-            stmt = select(UserModerate).where(UserModerate.discord_id == discord_id, or_(not_(UserModerate.guild_only), UserModerate.create_guild == guild_id))
+            stmt = select(UserModerate).where(
+                UserModerate.discord_id == discord_id,
+                or_(not_(UserModerate.guild_only), UserModerate.create_guild == guild_id),
+            )
         else:
             stmt = select(UserModerate).where(UserModerate.discord_id == discord_id, not_(UserModerate.guild_only))
         result = self.session.exec(stmt).all()
         return WarningList(result, discord_id)
 
-    def list_guild_warnings(self, guild_id: int, member_id: int | None, kind: WarningType | None, offset: int, limit: int) -> tuple[list[UserModerate], int]:
+    def list_guild_warnings(
+        self, guild_id: int, member_id: int | None, kind: WarningType | None, offset: int, limit: int
+    ) -> tuple[list[UserModerate], int]:
         """後台用：該伺服器發出的紀錄（不論是否跨群），依 create_time 由新到舊；回傳 (該頁紀錄, 符合條件的總數)。"""
         conditions = [UserModerate.create_guild == guild_id]
         if member_id is not None:
@@ -1571,12 +1818,20 @@ class WarningRepository(BaseRepository):
         if kind is not None:
             conditions.append(UserModerate.moderate_type == kind)
         total = self.session.exec(select(func.count()).select_from(UserModerate).where(*conditions)).one()
-        stmt = select(UserModerate).where(*conditions).order_by(UserModerate.create_time.desc(), UserModerate.warning_id.desc()).offset(offset).limit(limit)
+        stmt = (
+            select(UserModerate)
+            .where(*conditions)
+            .order_by(UserModerate.create_time.desc(), UserModerate.warning_id.desc())
+            .offset(offset)
+            .limit(limit)
+        )
         return list(self.session.exec(stmt.execution_options(populate_existing=True)).all()), total
 
     def list_user_warnings(self, discord_id: int, offset: int, limit: int) -> tuple[list[UserModerate], int]:
         """個人區用：該 Discord 收到的所有紀錄，依 create_time 由新到舊；回傳 (該頁紀錄, 總數)。"""
-        total = self.session.exec(select(func.count()).select_from(UserModerate).where(UserModerate.discord_id == discord_id)).one()
+        total = self.session.exec(
+            select(func.count()).select_from(UserModerate).where(UserModerate.discord_id == discord_id)
+        ).one()
         stmt = (
             select(UserModerate)
             .where(UserModerate.discord_id == discord_id)
@@ -1588,7 +1843,9 @@ class WarningRepository(BaseRepository):
 
     def get_warnings_count(self, discord_id: int, guild_id: int = None):
         if guild_id:
-            stmt = select(func.count()).where(UserModerate.discord_id == discord_id, UserModerate.create_guild == guild_id)
+            stmt = select(func.count()).where(
+                UserModerate.discord_id == discord_id, UserModerate.create_guild == guild_id
+            )
         else:
             stmt = select(func.count()).where(UserModerate.discord_id == discord_id, not_(UserModerate.guild_only))
         result = self.session.exec(stmt).one()
@@ -1607,7 +1864,9 @@ class WarningRepository(BaseRepository):
         """
         last_timeout_id = self.session.exec(
             select(func.max(UserModerate.warning_id)).where(
-                UserModerate.discord_id == discord_id, UserModerate.create_guild == guild_id, UserModerate.moderate_type == WarningType.Timeout
+                UserModerate.discord_id == discord_id,
+                UserModerate.create_guild == guild_id,
+                UserModerate.moderate_type == WarningType.Timeout,
             )
         ).one()
 
@@ -1643,7 +1902,10 @@ class PollRepository(BaseRepository):
     def poll_vote_rows(self, poll_id: int, include_alt: bool) -> list[tuple[int, int, int, datetime]]:
         """逐票：(成員 ID, 選項 ID, 權重, 投票時間)，依投票時間排序；include_alt 為 False 時排除小帳。"""
         votes = self.get_users_poll(poll_id, include_alt)
-        return [(v.discord_id, v.vote_option, v.vote_magnification or 1, v.vote_at) for v in sorted(votes, key=lambda v: (v.vote_at, v.discord_id, v.vote_option))]
+        return [
+            (v.discord_id, v.vote_option, v.vote_magnification or 1, v.vote_at)
+            for v in sorted(votes, key=lambda v: (v.vote_at, v.discord_id, v.vote_option))
+        ]
 
     def count_poll_voters(self, polls: list[Poll]) -> dict[int, int]:
         """後台用：各投票不重複的成員數，依各投票自己的 ban_alternate_account_voting 排除小帳；沒人投票的不在結果裡。"""
@@ -1654,14 +1916,21 @@ class PollRepository(BaseRepository):
                 continue
             stmt = select(UserPoll.poll_id, func.count(func.distinct(UserPoll.discord_id))).select_from(UserPoll)
             if ban_alt:
-                stmt = stmt.join(UserAccount, UserPoll.discord_id == UserAccount.alternate_account, isouter=True).where(UserAccount.alternate_account.is_(None))
+                stmt = stmt.join(UserAccount, UserPoll.discord_id == UserAccount.alternate_account, isouter=True).where(
+                    UserAccount.alternate_account.is_(None)
+                )
             stmt = stmt.where(UserPoll.poll_id.in_(ids)).group_by(UserPoll.poll_id)
             result.update({poll_id: count for poll_id, count in self.session.exec(stmt).all()})
         return result
 
     def list_active_guild_polls(self, guild_id: int):
         """後台用：該伺服器進行中的投票，依建立時間由新到舊。"""
-        stmt = select(Poll).where(Poll.guild_id == guild_id, Poll.end_at.is_(None)).order_by(Poll.created_at.desc(), Poll.poll_id.desc()).execution_options(populate_existing=True)
+        stmt = (
+            select(Poll)
+            .where(Poll.guild_id == guild_id, Poll.end_at.is_(None))
+            .order_by(Poll.created_at.desc(), Poll.poll_id.desc())
+            .execution_options(populate_existing=True)
+        )
         return list(self.session.exec(stmt).all())
 
     def list_guild_polls(self, guild_id: int, since: datetime | None, offset: int, limit: int):
@@ -1692,7 +1961,15 @@ class PollRepository(BaseRepository):
         self.session.add_all(lst)
         self.session.commit()
 
-    def set_user_poll(self, poll_id: int, discord_id: int, vote_option: int = None, vote_at: datetime = None, vote_magnification: int = 1, max_can_vote: int = None):
+    def set_user_poll(
+        self,
+        poll_id: int,
+        discord_id: int,
+        vote_option: int = None,
+        vote_at: datetime = None,
+        vote_magnification: int = 1,
+        max_can_vote: int = None,
+    ):
         """
         Sets the user's poll vote in the database.
 
@@ -1719,8 +1996,16 @@ class PollRepository(BaseRepository):
             if count > max_can_vote:
                 return 2
 
-        vote = UserPoll(poll_id=poll_id, discord_id=discord_id, vote_option=vote_option, vote_at=vote_at, vote_magnification=vote_magnification)
-        stmt = select(UserPoll).where(UserPoll.poll_id == poll_id, UserPoll.discord_id == discord_id, UserPoll.vote_option == vote_option)
+        vote = UserPoll(
+            poll_id=poll_id,
+            discord_id=discord_id,
+            vote_option=vote_option,
+            vote_at=vote_at,
+            vote_magnification=vote_magnification,
+        )
+        stmt = select(UserPoll).where(
+            UserPoll.poll_id == poll_id, UserPoll.discord_id == discord_id, UserPoll.vote_option == vote_option
+        )
         result = self.session.exec(stmt).one_or_none()
         if result:
             self.session.delete(result)
@@ -1741,8 +2026,18 @@ class PollRepository(BaseRepository):
         result = self.session.exec(stmt).one_or_none()
         return result or 0
 
-    def add_user_poll(self, poll_id: int, discord_id: int, vote_option: int, vote_at: datetime, vote_magnification: int = 1):
-        self.session.merge(UserPoll(poll_id=poll_id, discord_id=discord_id, vote_option=vote_option, vote_at=vote_at, vote_magnification=vote_magnification))
+    def add_user_poll(
+        self, poll_id: int, discord_id: int, vote_option: int, vote_at: datetime, vote_magnification: int = 1
+    ):
+        self.session.merge(
+            UserPoll(
+                poll_id=poll_id,
+                discord_id=discord_id,
+                vote_option=vote_option,
+                vote_at=vote_at,
+                vote_magnification=vote_magnification,
+            )
+        )
         self.session.commit()
 
     def remove_user_poll(self, poll_id: int, discord_id: int):
@@ -1754,7 +2049,11 @@ class PollRepository(BaseRepository):
         stmt = (
             select(UserPoll, PollOption.option_name)
             .select_from(UserPoll)
-            .join(PollOption, and_(UserPoll.vote_option == PollOption.option_id, UserPoll.poll_id == PollOption.poll_id), isouter=True)
+            .join(
+                PollOption,
+                and_(UserPoll.vote_option == PollOption.option_id, UserPoll.poll_id == PollOption.poll_id),
+                isouter=True,
+            )
             .where(UserPoll.poll_id == poll_id, UserPoll.discord_id == discord_id)
         )
         result = self.session.exec(stmt).all()
@@ -1764,13 +2063,22 @@ class PollRepository(BaseRepository):
         if include_alternatives_accounts:
             stmt = select(UserPoll).where(UserPoll.poll_id == poll_id)
         else:
-            stmt = select(UserPoll).select_from(UserPoll).join(UserAccount, UserPoll.discord_id == UserAccount.alternate_account, isouter=True).where(UserPoll.poll_id == poll_id, UserAccount.alternate_account.is_(None))
+            stmt = (
+                select(UserPoll)
+                .select_from(UserPoll)
+                .join(UserAccount, UserPoll.discord_id == UserAccount.alternate_account, isouter=True)
+                .where(UserPoll.poll_id == poll_id, UserAccount.alternate_account.is_(None))
+            )
         result = self.session.exec(stmt).all()
         return result
 
     def get_poll_vote_count(self, poll_id: int, include_alternatives_accounts=True):
         if include_alternatives_accounts:
-            stmt = select(UserPoll.vote_option, func.sum(UserPoll.vote_magnification)).where(UserPoll.poll_id == poll_id).group_by(UserPoll.vote_option)
+            stmt = (
+                select(UserPoll.vote_option, func.sum(UserPoll.vote_magnification))
+                .where(UserPoll.poll_id == poll_id)
+                .group_by(UserPoll.vote_option)
+            )
         else:
             stmt = (
                 select(UserPoll.vote_option, func.sum(UserPoll.vote_magnification))
@@ -1790,7 +2098,9 @@ class PollRepository(BaseRepository):
         result = self.session.exec(stmt).all()
         return result
 
-    def list_user_polls(self, discord_id: int, offset: int, limit: int) -> tuple[list[tuple[Poll | None, int, datetime, list[str]]], int]:
+    def list_user_polls(
+        self, discord_id: int, offset: int, limit: int
+    ) -> tuple[list[tuple[Poll | None, int, datetime, list[str]]], int]:
         """個人區用：該 Discord 參與過的投票，以投票為單位（複選合併成一筆）依最早投票時間由新到舊分頁。
 
         回傳 (該頁 [(投票（已刪除時為 None）, poll_id, 最早一筆的 vote_at, 選項文字依 option_id 排序]，投票總數)。
@@ -1799,28 +2109,48 @@ class PollRepository(BaseRepository):
         total = self.session.exec(select(func.count(func.distinct(UserPoll.poll_id))).where(mine)).one()
         first_at = func.min(UserPoll.vote_at)
         page = self.session.exec(
-            select(UserPoll.poll_id, first_at).where(mine).group_by(UserPoll.poll_id).order_by(first_at.desc(), UserPoll.poll_id.desc()).offset(offset).limit(limit)
+            select(UserPoll.poll_id, first_at)
+            .where(mine)
+            .group_by(UserPoll.poll_id)
+            .order_by(first_at.desc(), UserPoll.poll_id.desc())
+            .offset(offset)
+            .limit(limit)
         ).all()
         if not page:
             return [], total
         ids = [poll_id for poll_id, _ in page]
-        polls = {p.poll_id: p for p in self.session.exec(select(Poll).where(Poll.poll_id.in_(ids)).execution_options(populate_existing=True)).all()}
+        polls = {
+            p.poll_id: p
+            for p in self.session.exec(
+                select(Poll).where(Poll.poll_id.in_(ids)).execution_options(populate_existing=True)
+            ).all()
+        }
         options: dict[int, list[tuple[int, str]]] = {}
         rows = self.session.exec(
             select(UserPoll.poll_id, UserPoll.vote_option, PollOption.option_name)
             .select_from(UserPoll)
-            .join(PollOption, and_(UserPoll.vote_option == PollOption.option_id, UserPoll.poll_id == PollOption.poll_id), isouter=True)
+            .join(
+                PollOption,
+                and_(UserPoll.vote_option == PollOption.option_id, UserPoll.poll_id == PollOption.poll_id),
+                isouter=True,
+            )
             .where(mine, UserPoll.poll_id.in_(ids))
             .order_by(UserPoll.vote_option)
         ).all()
         for poll_id, option_id, name in rows:
             options.setdefault(poll_id, []).append((option_id, name if name is not None else str(option_id)))
-        return [(polls.get(poll_id), poll_id, at, [n for _, n in options.get(poll_id, [])]) for poll_id, at in page], total
+        return [
+            (polls.get(poll_id), poll_id, at, [n for _, n in options.get(poll_id, [])]) for poll_id, at in page
+        ], total
 
     # * Giveaway
-    def list_user_giveaways(self, discord_id: int, offset: int, limit: int) -> tuple[list[tuple[GiveawayUser, Giveaway | None]], int]:
+    def list_user_giveaways(
+        self, discord_id: int, offset: int, limit: int
+    ) -> tuple[list[tuple[GiveawayUser, Giveaway | None]], int]:
         """個人區用：該 Discord 參加過的抽獎，依參加時間由新到舊；回傳 (該頁 (參加紀錄, 抽獎，已刪除時為 None)，總數)。"""
-        total = self.session.exec(select(func.count()).select_from(GiveawayUser).where(GiveawayUser.user_id == discord_id)).one()
+        total = self.session.exec(
+            select(func.count()).select_from(GiveawayUser).where(GiveawayUser.user_id == discord_id)
+        ).one()
         stmt = (
             select(GiveawayUser, Giveaway)
             .select_from(GiveawayUser)
@@ -1874,7 +2204,11 @@ class PollRepository(BaseRepository):
         """後台用：各抽獎的參加人數，沒有人參加的抽獎不在結果裡。"""
         if not giveaway_ids:
             return {}
-        stmt = select(GiveawayUser.giveaway_id, func.count()).where(GiveawayUser.giveaway_id.in_(giveaway_ids)).group_by(GiveawayUser.giveaway_id)
+        stmt = (
+            select(GiveawayUser.giveaway_id, func.count())
+            .where(GiveawayUser.giveaway_id.in_(giveaway_ids))
+            .group_by(GiveawayUser.giveaway_id)
+        )
         return {gid: count for gid, count in self.session.exec(stmt).all()}
 
     def get_active_giveaways(self):
@@ -1884,13 +2218,22 @@ class PollRepository(BaseRepository):
 
     def set_giveaway_winner(self, giveaway_id: int, winners_id: list[int]):
         for winner in winners_id:
-            stmt = update(GiveawayUser).where(GiveawayUser.giveaway_id == giveaway_id, GiveawayUser.user_id == winner).values(is_winner=True)
+            stmt = (
+                update(GiveawayUser)
+                .where(GiveawayUser.giveaway_id == giveaway_id, GiveawayUser.user_id == winner)
+                .values(is_winner=True)
+            )
             self.session.exec(stmt)
 
         self.session.commit()
 
     def reset_giveaway_winner(self, giveaway_id: int):
-        stmt = update(GiveawayUser).where(GiveawayUser.giveaway_id == giveaway_id).values(is_winner=False).where(GiveawayUser.is_winner)
+        stmt = (
+            update(GiveawayUser)
+            .where(GiveawayUser.giveaway_id == giveaway_id)
+            .values(is_winner=False)
+            .where(GiveawayUser.is_winner)
+        )
         self.session.exec(stmt)
         self.session.commit()
 
@@ -1908,12 +2251,22 @@ class ElectionRepository(BaseRepository):
         self.session.commit()
 
     def get_all_party_data(self):
-        stmt = select(Party, func.count(UserParty.party_id).label("member_count")).join(UserParty, Party.party_id == UserParty.party_id, isouter=True).group_by(Party.party_id).order_by(Party.party_id)
+        stmt = (
+            select(Party, func.count(UserParty.party_id).label("member_count"))
+            .join(UserParty, Party.party_id == UserParty.party_id, isouter=True)
+            .group_by(Party.party_id)
+            .order_by(Party.party_id)
+        )
         result = self.session.exec(stmt).all()
         return result
 
     def get_user_party(self, discord_id: int):
-        stmt = select(Party).select_from(UserParty).join(Party, UserParty.party_id == Party.party_id, isouter=True).where(UserParty.discord_id == discord_id)
+        stmt = (
+            select(Party)
+            .select_from(UserParty)
+            .join(Party, UserParty.party_id == Party.party_id, isouter=True)
+            .where(UserParty.discord_id == discord_id)
+        )
         result = self.session.exec(stmt).all()
         return result
 
@@ -1932,7 +2285,11 @@ class TwitchRepository(BaseRepository):
 
     def get_twitch_join_channel(self, twitch_id: int | str) -> TwitchBotJoinChannel | None:
         """查單一 Twitch 頻道的設定。每次都重讀資料庫，避開 scoped session 的 identity map 拿到舊設定。"""
-        stmt = select(TwitchBotJoinChannel).where(TwitchBotJoinChannel.twitch_id == int(twitch_id)).execution_options(populate_existing=True)
+        stmt = (
+            select(TwitchBotJoinChannel)
+            .where(TwitchBotJoinChannel.twitch_id == int(twitch_id))
+            .execution_options(populate_existing=True)
+        )
         return self.session.exec(stmt).one_or_none()
 
     def list_chat_command_by_channel(self, channel_id: int):
@@ -1941,7 +2298,9 @@ class TwitchRepository(BaseRepository):
         return result
 
     def get_chat_command(self, command: str, channel_id: int):
-        stmt = select(TwitchChatCommand).where(TwitchChatCommand.twitch_id == channel_id, TwitchChatCommand.name == command)
+        stmt = select(TwitchChatCommand).where(
+            TwitchChatCommand.twitch_id == channel_id, TwitchChatCommand.name == command
+        )
         result = self.session.exec(stmt).one_or_none()
         return result
 
@@ -1963,12 +2322,16 @@ class TwitchRepository(BaseRepository):
         return self.session.exec(stmt).all()
 
     def get_twitch_point(self, twitch_id: int, broadcaster_id: int):
-        stmt = select(TwitchPoint).where(TwitchPoint.twitch_id == twitch_id, TwitchPoint.broadcaster_id == broadcaster_id)
+        stmt = select(TwitchPoint).where(
+            TwitchPoint.twitch_id == twitch_id, TwitchPoint.broadcaster_id == broadcaster_id
+        )
         result = self.session.exec(stmt).one_or_none()
         return result or TwitchPoint(twitch_id=twitch_id, broadcaster_id=broadcaster_id)
 
     def update_twitch_point(self, twitch_id: int, broadcaster_id: int, point: int):
-        stmt = select(TwitchPoint).where(TwitchPoint.twitch_id == twitch_id, TwitchPoint.broadcaster_id == broadcaster_id)
+        stmt = select(TwitchPoint).where(
+            TwitchPoint.twitch_id == twitch_id, TwitchPoint.broadcaster_id == broadcaster_id
+        )
         result = self.session.exec(stmt).one_or_none()
         if result:
             result.point += point
@@ -2022,7 +2385,9 @@ class TRPGRepository(BaseRepository):
         return result
 
     def get_trpg_cheracter_ability(self, discord_id, ability_id):
-        stmt = select(TRPGCharacterAbility).where(TRPGCharacterAbility.discord_id == discord_id, TRPGCharacterAbility.ability_id == ability_id)
+        stmt = select(TRPGCharacterAbility).where(
+            TRPGCharacterAbility.discord_id == discord_id, TRPGCharacterAbility.ability_id == ability_id
+        )
         result = self.session.exec(stmt).one()
         return result
 
@@ -2172,17 +2537,29 @@ class TokensRepository(BaseRepository):
         return result
 
     def get_identifier_secret(self, source: APIType, source_seq: int = 1):
-        stmt = select(IdentifierSecret).join(Credential, IdentifierSecret.credential_id == Credential.id).where(Credential.source == source, Credential.source_seq == source_seq)
+        stmt = (
+            select(IdentifierSecret)
+            .join(Credential, IdentifierSecret.credential_id == Credential.id)
+            .where(Credential.source == source, Credential.source_seq == source_seq)
+        )
         result = self.session.exec(stmt).one()
         return result
 
     def get_access_token(self, source: APIType, source_seq: int = 1):
-        stmt = select(AccessToken).join(Credential, AccessToken.credential_id == Credential.id).where(Credential.source == source, Credential.source_seq == source_seq)
+        stmt = (
+            select(AccessToken)
+            .join(Credential, AccessToken.credential_id == Credential.id)
+            .where(Credential.source == source, Credential.source_seq == source_seq)
+        )
         result = self.session.exec(stmt).one()
         return result
 
     def get_oauth_client(self, source: APIType, source_seq: int = 1):
-        stmt = select(OAuthClient).join(Credential, OAuthClient.credential_id == Credential.id).where(Credential.source == source, Credential.source_seq == source_seq)
+        stmt = (
+            select(OAuthClient)
+            .join(Credential, OAuthClient.credential_id == Credential.id)
+            .where(Credential.source == source, Credential.source_seq == source_seq)
+        )
         result = self.session.exec(stmt).one()
         return result
 
@@ -2192,12 +2569,20 @@ class TokensRepository(BaseRepository):
         return result
 
     def get_bot_oauth_token(self, source: APIType, source_seq: int = 1):
-        stmt = select(OAuthToken).join(Credential, OAuthToken.client_credential_id == Credential.id).where(Credential.source == source, Credential.source_seq == source_seq)
+        stmt = (
+            select(OAuthToken)
+            .join(Credential, OAuthToken.client_credential_id == Credential.id)
+            .where(Credential.source == source, Credential.source_seq == source_seq)
+        )
         result = self.session.exec(stmt).one()
         return result
 
     def get_websub_config(self, source: APIType, source_seq: int = 1):
-        stmt = select(WebSubConfig).join(Credential, WebSubConfig.credential_id == Credential.id).where(Credential.source == source, Credential.source_seq == source_seq)
+        stmt = (
+            select(WebSubConfig)
+            .join(Credential, WebSubConfig.credential_id == Credential.id)
+            .where(Credential.source == source, Credential.source_seq == source_seq)
+        )
         result = self.session.exec(stmt).one()
         return result
 
@@ -2208,7 +2593,11 @@ class CacheRepository(BaseRepository):
         for community_id, value in data.items():
             cache = CommunityCache(community_id=community_id, notify_type=type, value=value)
             if value is None:
-                self.session.exec(delete(CommunityCache).where(CommunityCache.community_id == community_id, CommunityCache.notify_type == type))
+                self.session.exec(
+                    delete(CommunityCache).where(
+                        CommunityCache.community_id == community_id, CommunityCache.notify_type == type
+                    )
+                )
             else:
                 self.session.merge(cache)
         self.session.commit()
@@ -2216,7 +2605,11 @@ class CacheRepository(BaseRepository):
     def set_community_cache(self, type: NotifyCommunityType, community_id: str, value: datetime | None):
         """設定社群快取"""
         if value is None:
-            self.session.exec(delete(CommunityCache).where(CommunityCache.community_id == community_id, CommunityCache.notify_type == type))
+            self.session.exec(
+                delete(CommunityCache).where(
+                    CommunityCache.community_id == community_id, CommunityCache.notify_type == type
+                )
+            )
         else:
             cache = CommunityCache(community_id=community_id, notify_type=type, value=value)
             self.session.merge(cache)
@@ -2238,7 +2631,9 @@ class CacheRepository(BaseRepository):
     def claim_twitch_live(self, community_id: str, started_at: datetime) -> bool:
         """原子地搶佔 Twitch 開台通知：沒有紀錄、紀錄為空值、或紀錄的開台時間比 started_at 舊時才算搶到。
         與 claim_community_cache 不同，空值算搶到（YouTube 的搶佔維持不變）。"""
-        stmt = pg_insert(CommunityCache).values(notify_type=NotifyCommunityType.TwitchLive, community_id=community_id, value=started_at)
+        stmt = pg_insert(CommunityCache).values(
+            notify_type=NotifyCommunityType.TwitchLive, community_id=community_id, value=started_at
+        )
         stmt = stmt.on_conflict_do_update(
             index_elements=[CommunityCache.notify_type, CommunityCache.community_id],
             set_={"value": stmt.excluded.value},
@@ -2270,7 +2665,9 @@ class CacheRepository(BaseRepository):
 
     def get_community_cache(self, type: NotifyCommunityType, community_id: str):
         """取得社群快取"""
-        stmt = select(CommunityCache).where(CommunityCache.notify_type == type, CommunityCache.community_id == community_id)
+        stmt = select(CommunityCache).where(
+            CommunityCache.notify_type == type, CommunityCache.community_id == community_id
+        )
         result = self.session.exec(stmt).one_or_none()
         return result
 
@@ -2280,7 +2677,10 @@ class CacheRepository(BaseRepository):
             .select_from(NotifyCommunity)
             .join(
                 CommunityCache,
-                and_(NotifyCommunity.community_id == CommunityCache.community_id, NotifyCommunity.notify_type == CommunityCache.notify_type),
+                and_(
+                    NotifyCommunity.community_id == CommunityCache.community_id,
+                    NotifyCommunity.notify_type == CommunityCache.notify_type,
+                ),
                 isouter=True,
             )
             .where(NotifyCommunity.notify_type == type)
@@ -2291,9 +2691,13 @@ class CacheRepository(BaseRepository):
 
     def get_community_cache_with_default(self, type: NotifyCommunityType, community_id: str):
         """取得指定社群的快取"""
-        stmt = select(CommunityCache).where(CommunityCache.notify_type == type, CommunityCache.community_id == community_id)
+        stmt = select(CommunityCache).where(
+            CommunityCache.notify_type == type, CommunityCache.community_id == community_id
+        )
         result = self.session.exec(stmt).one_or_none()
-        return result or CommunityCache(community_id=community_id, notify_type=type, value=datetime.min.replace(tzinfo=UTC))
+        return result or CommunityCache(
+            community_id=community_id, notify_type=type, value=datetime.min.replace(tzinfo=UTC)
+        )
 
     def set_notify_cache(self, type: NotifyChannelType, value: datetime | None):
         """設定通知快取"""
@@ -2406,7 +2810,9 @@ class GuildSettingRepository(BaseRepository):
         "auto_timeout_seconds": AUTO_TIMEOUT_DEFAULT_SECONDS,
     }
 
-    def update_guild_setting_if(self, guild_id: int, original: dict[str, int | bool | None], values: dict[str, int | bool | None]) -> int:
+    def update_guild_setting_if(
+        self, guild_id: int, original: dict[str, int | bool | None], values: dict[str, int | bool | None]
+    ) -> int:
         """後台用：資料庫目前的值等於 original 才更新 values 裡的欄位（比對與寫入在同一條 SQL），回傳影響的列數，0 表示已被改過或沒有設定列。
 
         original、values 的鍵是 GuildSetting 的欄位；NULL 也能比對，`_NULL_DEFAULTS` 裡的欄位 NULL 視為預設值。
@@ -2424,7 +2830,11 @@ class GuildSettingRepository(BaseRepository):
     def upsert_guild_setting(self, guild_id: int, values: dict[str, int | bool | None]) -> None:
         """指令用：沒有設定列就新增，有就只更新 values 裡的欄位（無衝突比對）。"""
         stmt = pg_insert(GuildSetting).values(guild_id=guild_id, **values)
-        stmt = stmt.on_conflict_do_update(index_elements=[GuildSetting.guild_id], set_=values) if values else stmt.on_conflict_do_nothing()
+        stmt = (
+            stmt.on_conflict_do_update(index_elements=[GuildSetting.guild_id], set_=values)
+            if values
+            else stmt.on_conflict_do_nothing()
+        )
         self.session.exec(stmt)
         self.session.commit()
 
@@ -2440,7 +2850,11 @@ class GuildSettingRepository(BaseRepository):
 
     def list_voice_times(self, discord_id: int) -> list[VoiceTime]:
         """該 Discord 在所有伺服器的語音時數，由多到少。"""
-        stmt = select(VoiceTime).where(VoiceTime.discord_id == discord_id).order_by(desc(VoiceTime.total_minute), VoiceTime.guild_id)
+        stmt = (
+            select(VoiceTime)
+            .where(VoiceTime.discord_id == discord_id)
+            .order_by(desc(VoiceTime.total_minute), VoiceTime.guild_id)
+        )
         return list(self.session.exec(stmt.execution_options(populate_existing=True)).all())
 
     def get_voice_times(self, discord_ids: list[int], guild_id: int):
@@ -2449,7 +2863,9 @@ class GuildSettingRepository(BaseRepository):
         return {i.discord_id: i for i in result}
 
     def get_voice_time_leaderboard(self, guild_id: int, limit: int = 10):
-        stmt = select(VoiceTime).where(VoiceTime.guild_id == guild_id).order_by(desc(VoiceTime.total_minute)).limit(limit)
+        stmt = (
+            select(VoiceTime).where(VoiceTime.guild_id == guild_id).order_by(desc(VoiceTime.total_minute)).limit(limit)
+        )
         result = self.session.exec(stmt).all()
         return result
 
@@ -2495,7 +2911,9 @@ class MusicPlaylistRepository(BaseRepository):
 
     def _bump_music_playlist(self, playlist_id: int) -> None:
         """歌單、歌曲或來源有寫入時加一版；不 commit，和那次寫入在同一個交易裡。"""
-        self.session.exec(update(MusicPlaylist).where(MusicPlaylist.id == playlist_id).values(version=MusicPlaylist.version + 1))
+        self.session.exec(
+            update(MusicPlaylist).where(MusicPlaylist.id == playlist_id).values(version=MusicPlaylist.version + 1)
+        )
 
     def _lock_music_playlist(self, playlist_id: int, expected_version: int | None) -> None:
         """鎖住歌單那一列；`expected_version` 不為 None 時另外要求版本相符，否則拋 MusicPlaylistConflict。
@@ -2539,7 +2957,11 @@ class MusicPlaylistRepository(BaseRepository):
 
     def rename_music_playlist(self, playlist_id: int, name: str, expected_version: int | None = None) -> None:
         self._lock_music_playlist(playlist_id, expected_version)
-        self.session.exec(update(MusicPlaylist).where(MusicPlaylist.id == playlist_id).values(name=name, version=MusicPlaylist.version + 1))
+        self.session.exec(
+            update(MusicPlaylist)
+            .where(MusicPlaylist.id == playlist_id)
+            .values(name=name, version=MusicPlaylist.version + 1)
+        )
         self.commit()
 
     def delete_music_playlist(self, playlist_id: int, expected_version: int | None = None):
@@ -2550,15 +2972,26 @@ class MusicPlaylistRepository(BaseRepository):
         self.commit()
 
     def get_music_playlist_sources(self, playlist_id: int) -> list[MusicPlaylistSource]:
-        stmt = select(MusicPlaylistSource).where(MusicPlaylistSource.playlist_id == playlist_id).order_by(MusicPlaylistSource.id)
+        stmt = (
+            select(MusicPlaylistSource)
+            .where(MusicPlaylistSource.playlist_id == playlist_id)
+            .order_by(MusicPlaylistSource.id)
+        )
         return list(self.session.exec(stmt).all())
 
     def get_music_playlist_source(self, playlist_id: int, url: str) -> MusicPlaylistSource | None:
-        stmt = select(MusicPlaylistSource).where(MusicPlaylistSource.playlist_id == playlist_id, MusicPlaylistSource.url == url)
+        stmt = select(MusicPlaylistSource).where(
+            MusicPlaylistSource.playlist_id == playlist_id, MusicPlaylistSource.url == url
+        )
         return self.session.exec(stmt).one_or_none()
 
     def import_music_playlist_source(
-        self, playlist_id: int, url: str, title: str | None, songs: list[tuple[str, str, int | None]], expected_version: int | None = None
+        self,
+        playlist_id: int,
+        url: str,
+        title: str | None,
+        songs: list[tuple[str, str, int | None]],
+        expected_version: int | None = None,
     ) -> MusicPlaylistSource:
         """建立來源並把它的歌曲接在歌單尾端，整件事在同一個交易裡完成。"""
         self._lock_music_playlist(playlist_id, expected_version)
@@ -2570,7 +3003,9 @@ class MusicPlaylistRepository(BaseRepository):
         self.commit()
         return source
 
-    def _replace_source_songs(self, source: MusicPlaylistSource, songs: list[tuple[str, str, int | None]], title: str | None) -> tuple[int, int]:
+    def _replace_source_songs(
+        self, source: MusicPlaylistSource, songs: list[tuple[str, str, int | None]], title: str | None
+    ) -> tuple[int, int]:
         """替換單一來源的歌曲但不 commit，也不遞增版本；呼叫端負責。"""
         current = self.get_music_playlist_songs(source.playlist_id)
         remaining: dict[str, deque[MusicPlaylistSong]] = defaultdict(deque)
@@ -2586,7 +3021,14 @@ class MusicPlaylistRepository(BaseRepository):
                 song.title = song_title
                 song.duration = duration
             else:
-                song = MusicPlaylistSong(playlist_id=source.playlist_id, source_id=source.id, position=0, url=url, title=song_title, duration=duration)
+                song = MusicPlaylistSong(
+                    playlist_id=source.playlist_id,
+                    source_id=source.id,
+                    position=0,
+                    url=url,
+                    title=song_title,
+                    duration=duration,
+                )
                 added += 1
             new.append(song)
         stale = [song for rows in remaining.values() for song in rows]
@@ -2642,22 +3084,41 @@ class MusicPlaylistRepository(BaseRepository):
         return results
 
     def get_music_playlist_songs(self, playlist_id: int) -> list[MusicPlaylistSong]:
-        stmt = select(MusicPlaylistSong).where(MusicPlaylistSong.playlist_id == playlist_id).order_by(MusicPlaylistSong.position)
+        stmt = (
+            select(MusicPlaylistSong)
+            .where(MusicPlaylistSong.playlist_id == playlist_id)
+            .order_by(MusicPlaylistSong.position)
+        )
         return list(self.session.exec(stmt).all())
 
     def count_music_playlist_songs(self, playlist_id: int) -> int:
         stmt = select(func.count()).select_from(MusicPlaylistSong).where(MusicPlaylistSong.playlist_id == playlist_id)
         return self.session.exec(stmt).one()
 
-    def _append_music_playlist_songs(self, playlist_id: int, songs: list[tuple[str, str, int | None]], source_id: int | None) -> None:
+    def _append_music_playlist_songs(
+        self, playlist_id: int, songs: list[tuple[str, str, int | None]], source_id: int | None
+    ) -> None:
         stmt = select(func.max(MusicPlaylistSong.position)).where(MusicPlaylistSong.playlist_id == playlist_id)
         last_position = self.session.exec(stmt).one()
         start = 0 if last_position is None else last_position + 1
         for i, (url, title, duration) in enumerate(songs):
-            self.session.add(MusicPlaylistSong(playlist_id=playlist_id, source_id=source_id, position=start + i, url=url, title=title, duration=duration))
+            self.session.add(
+                MusicPlaylistSong(
+                    playlist_id=playlist_id,
+                    source_id=source_id,
+                    position=start + i,
+                    url=url,
+                    title=title,
+                    duration=duration,
+                )
+            )
 
     def add_music_playlist_songs(
-        self, playlist_id: int, songs: list[tuple[str, str, int | None]], source_id: int | None = None, expected_version: int | None = None
+        self,
+        playlist_id: int,
+        songs: list[tuple[str, str, int | None]],
+        source_id: int | None = None,
+        expected_version: int | None = None,
     ):
         """將歌曲 (url, title, duration) 依序接在歌單尾端；source_id 為歌曲來自的外部歌單"""
         if not songs:
@@ -2681,7 +3142,9 @@ class MusicPlaylistRepository(BaseRepository):
             self.commit()
             return removed
 
-    def remove_music_playlist_songs(self, playlist_id: int, song_ids: list[int], expected_version: int | None = None) -> int:
+    def remove_music_playlist_songs(
+        self, playlist_id: int, song_ids: list[int], expected_version: int | None = None
+    ) -> int:
         """刪除指定的歌曲並重新編排順序，回傳實際刪除的數量；不在這份歌單裡的 id 忽略。"""
         self._lock_music_playlist(playlist_id, expected_version)
         targets = set(song_ids)
@@ -2700,7 +3163,9 @@ class MusicPlaylistRepository(BaseRepository):
         self.commit()
         return removed
 
-    def reorder_music_playlist_songs(self, playlist_id: int, song_ids: list[int], expected_version: int | None = None) -> None:
+    def reorder_music_playlist_songs(
+        self, playlist_id: int, song_ids: list[int], expected_version: int | None = None
+    ) -> None:
         """依 song_ids 的順序重排；必須剛好是歌單目前所有歌曲的 id，否則拋 ValueError。"""
         with self.lock_music_playlist(playlist_id, expected_version):
             songs = {song.id: song for song in self.get_music_playlist_songs(playlist_id)}
@@ -2720,7 +3185,9 @@ class PublicProfileRepository(BaseRepository):
 
     def save_public_profile(self, user_id: UUID, enabled: bool, sections: list[str]) -> PublicProfile:
         stmt = pg_insert(PublicProfile).values(user_id=user_id, enabled=enabled, sections=sections)
-        stmt = stmt.on_conflict_do_update(index_elements=[PublicProfile.user_id], set_={"enabled": enabled, "sections": sections})
+        stmt = stmt.on_conflict_do_update(
+            index_elements=[PublicProfile.user_id], set_={"enabled": enabled, "sections": sections}
+        )
         self.session.exec(stmt)
         self.commit()
         return self.session.get(PublicProfile, user_id, populate_existing=True)
@@ -2732,9 +3199,15 @@ class PublicProfileRepository(BaseRepository):
     def count_user_participation(self, discord_id: int) -> dict[str, int]:
         """該 Discord 參與過的投票（複選算一次）、賭盤、抽獎次數，與個人區紀錄的 total 一致。"""
         return {
-            "polls": self.session.exec(select(func.count(func.distinct(UserPoll.poll_id))).where(UserPoll.discord_id == discord_id)).one(),
-            "bets": self.session.exec(select(func.count()).select_from(UserBet).where(UserBet.discord_id == discord_id)).one(),
-            "giveaways": self.session.exec(select(func.count()).select_from(GiveawayUser).where(GiveawayUser.user_id == discord_id)).one(),
+            "polls": self.session.exec(
+                select(func.count(func.distinct(UserPoll.poll_id))).where(UserPoll.discord_id == discord_id)
+            ).one(),
+            "bets": self.session.exec(
+                select(func.count()).select_from(UserBet).where(UserBet.discord_id == discord_id)
+            ).one(),
+            "giveaways": self.session.exec(
+                select(func.count()).select_from(GiveawayUser).where(GiveawayUser.user_id == discord_id)
+            ).one(),
         }
 
 
@@ -2743,13 +3216,19 @@ class WebsiteStatsRepository(BaseRepository):
 
     def record_website_activity(self, week_start: date, discord_id: int) -> None:
         """記下這個 Discord 本週有使用網站；已記錄過則不動（linked 維持原值）。"""
-        stmt = pg_insert(WebsiteWeeklyActivity).values(week_start=week_start, discord_id=discord_id).on_conflict_do_nothing()
+        stmt = (
+            pg_insert(WebsiteWeeklyActivity)
+            .values(week_start=week_start, discord_id=discord_id)
+            .on_conflict_do_nothing()
+        )
         self.session.exec(stmt)
         self.commit()
 
     def add_website_link_click(self, week_start: date) -> None:
         stmt = pg_insert(WebsiteLinkClick).values(week_start=week_start, count=1)
-        stmt = stmt.on_conflict_do_update(index_elements=[WebsiteLinkClick.week_start], set_={"count": WebsiteLinkClick.count + 1})
+        stmt = stmt.on_conflict_do_update(
+            index_elements=[WebsiteLinkClick.week_start], set_={"count": WebsiteLinkClick.count + 1}
+        )
         self.session.exec(stmt)
         self.commit()
 
@@ -2783,8 +3262,12 @@ class WebsiteStatsRepository(BaseRepository):
             .where(WebsiteWeeklyActivity.week_start >= since)
             .group_by(WebsiteWeeklyActivity.week_start)
         )
-        weeks: dict[date, list[int]] = {row[0]: [row[1], row[2], row[3], 0] for row in self.session.exec(activity).all()}
-        for row in self.session.exec(select(WebsiteLinkClick.week_start, WebsiteLinkClick.count).where(WebsiteLinkClick.week_start >= since)).all():
+        weeks: dict[date, list[int]] = {
+            row[0]: [row[1], row[2], row[3], 0] for row in self.session.exec(activity).all()
+        }
+        for row in self.session.exec(
+            select(WebsiteLinkClick.week_start, WebsiteLinkClick.count).where(WebsiteLinkClick.week_start >= since)
+        ).all():
             weeks.setdefault(row[0], [0, 0, 0, 0])[3] = row[1]
         return [(week, *values) for week, values in sorted(weeks.items(), reverse=True)]  # pyright: ignore[reportReturnType]
 
@@ -2945,11 +3428,17 @@ class SQLRepository(
         """重新載入指定快取（不傳參數時全量重載）"""
         targets = keys or tuple(DBCacheType)
         loaders: dict[DBCacheType, Callable] = {
-            DBCacheType.VoiceLog: lambda: self.cache.voice_log.load(self.get_notify_channel_rawdict(NotifyChannelType.VoiceLog)),
-            DBCacheType.DynamicVoiceLobby: lambda: self.cache.dynamic_voice_lobby.load(self.get_all_dynamic_voice_lobby()),
+            DBCacheType.VoiceLog: lambda: self.cache.voice_log.load(
+                self.get_notify_channel_rawdict(NotifyChannelType.VoiceLog)
+            ),
+            DBCacheType.DynamicVoiceLobby: lambda: self.cache.dynamic_voice_lobby.load(
+                self.get_all_dynamic_voice_lobby()
+            ),
             DBCacheType.DynamicVoiceRoom: lambda: self.cache.dynamic_voice_room.load(self.get_all_dynamic_voice()),
             DBCacheType.TwitchCmd: lambda: self.cache.twitch_cmd.load(self.get_raw_chat_command_all()),
-            DBCacheType.VoiceTimeCounter: lambda: self.cache.voice_time_counter.load(self.get_voice_time_counter_guilds()),
+            DBCacheType.VoiceTimeCounter: lambda: self.cache.voice_time_counter.load(
+                self.get_voice_time_counter_guilds()
+            ),
         }
         for key in targets:
             if key in loaders:
@@ -2974,7 +3463,11 @@ class SQLRepository(
 
     def remove_twitch_cmd(self, twitch_channel_id: int, command: str):
         """移除Twitch指令"""
-        self.session.exec(delete(TwitchChatCommand).where(TwitchChatCommand.twitch_id == twitch_channel_id, TwitchChatCommand.name == command))
+        self.session.exec(
+            delete(TwitchChatCommand).where(
+                TwitchChatCommand.twitch_id == twitch_channel_id, TwitchChatCommand.name == command
+            )
+        )
         self.session.commit()
         self.cache.twitch_cmd.set(int(twitch_channel_id), self.get_raw_chat_command_channel(twitch_channel_id))
 
@@ -2987,6 +3480,7 @@ class SQLRepository(
     def refresh_voice_time_counter_cache(self):
         """刷新語音時間計數器快取"""
         self.cache.voice_time_counter.load(self.get_voice_time_counter_guilds())
+
 
 def create_sqldb() -> SQLRepository:
     try:
@@ -3011,7 +3505,9 @@ def create_sqldb() -> SQLRepository:
             conn.commit()
 
         SQLModel.metadata.create_all(engine)
-        session_factory = scoped_session(sessionmaker(bind=engine, class_=Session, autoflush=True, expire_on_commit=True))
+        session_factory = scoped_session(
+            sessionmaker(bind=engine, class_=Session, autoflush=True, expire_on_commit=True)
+        )
         sqlrepository = SQLRepository(engine, session_factory)
 
         name = sqlrepository.engine.dialect.name

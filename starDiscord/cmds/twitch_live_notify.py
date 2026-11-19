@@ -60,7 +60,9 @@ class TwitchLiveNotify(Cog_Extension):
                 tags=event.tags,
                 is_mature=event.is_mature,
             )
-            await self.bot.send_notify_communities(live.embed(event.profile_image_url), NotifyCommunityType.TwitchLive, event.broadcaster_id)
+            await self.bot.send_notify_communities(
+                live.embed(event.profile_image_url), NotifyCommunityType.TwitchLive, event.broadcaster_id
+            )
 
     async def on_stream_offline(self, event: TwitchStreamOfflineEvent, delivery: Delivery) -> None:
         channel = self.bot.get_channel(DEFAULT_TWITCH_CHANNEL)

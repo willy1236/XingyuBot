@@ -58,7 +58,9 @@ def _leaderboard(guild: discord.Guild) -> list[dict]:
     讀 DB 與取快照之間不會被插入存檔，不會重複計算或漏算。刻意直接讀 DB（不經 run_db），與 giveaways.py 同一個例外。
     """
     pending = dict(voice_task.voice_times.get(guild.id, {}))
-    totals: dict[int, timedelta] = {r.discord_id: r.total_minute for r in sqldb.get_voice_time_leaderboard(guild.id, LEADERBOARD_SIZE)}
+    totals: dict[int, timedelta] = {
+        r.discord_id: r.total_minute for r in sqldb.get_voice_time_leaderboard(guild.id, LEADERBOARD_SIZE)
+    }
     # 有未存檔分鐘的成員可能不在資料庫前 N 名，補讀他們的資料庫時數再合併
     outside = [uid for uid in pending if uid not in totals]
     if outside:

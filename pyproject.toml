@@ -51,6 +51,7 @@ dev = [
 override-dependencies = ["oauthlib>=4.0.1"]
 
 [tool.pytest.ini_options]
+testpaths = ["tests"]
 pythonpath = ["."]
 markers = [
     "integration: tests that call external services or require live credentials",
@@ -72,4 +73,4 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 # pytest fixture 以參數注入，會被誤判為重複定義
-"test/**" = ["F811"]
+"tests/**" = ["F811"]

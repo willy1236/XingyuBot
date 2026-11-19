@@ -111,7 +111,9 @@ class MySelectMenus(discord.ui.Select):
         for role_id in role_ids:
             role = self.guild.get_role(role_id)
             assert role is not None, f"Role not found: {role_id}"
-            self.append_option(discord.SelectOption(label=role.name, value=str(role.id), description=f"Role ID: {role.id}"))
+            self.append_option(
+                discord.SelectOption(label=role.name, value=str(role.id), description=f"Role ID: {role.id}")
+            )
 
     async def callback(self, interaction: discord.Interaction):
         lst = []
@@ -131,9 +133,14 @@ class MySelectMenusView(discord.ui.View):
         self.add_item(select)
         self.add_item(MySelect())
 
+
 class MySelect(discord.ui.Section):
     def __init__(self):
-        super().__init__(discord.ui.TextDisplay(content="Choose a role"), accessory=discord.ui.Thumbnail(url="https://i.imgur.com/4M34hi2.png"))
+        super().__init__(
+            discord.ui.TextDisplay(content="Choose a role"),
+            accessory=discord.ui.Thumbnail(url="https://i.imgur.com/4M34hi2.png"),
+        )
+
 
 class debug(Cog_Extension):
     pass
@@ -144,7 +151,11 @@ class debug(Cog_Extension):
         # await ctx.defer()
         # command = self.bot.get_cog('command')
         # await command.dice(ctx,1,100)
-        await ctx.respond(view=MySelectMenusView(self.bot, ctx.guild.id, [865582049238843422, 870929961417068565, 1424682854318735420]))
+        await ctx.respond(
+            view=MySelectMenusView(
+                self.bot, ctx.guild.id, [865582049238843422, 870929961417068565, 1424682854318735420]
+            )
+        )
         # await ctx.respond(view=MySelect())
 
     @commands.is_owner()
@@ -163,7 +174,9 @@ class debug(Cog_Extension):
             else:
                 assert isinstance(cmd, discord.SlashCommand)
                 option_str = "\n> ".join([f"{option.name}：{option.description}" for option in cmd.options])
-                await ctx.respond(f"指令：{cmd.full_parent_name} {cmd.name}\n描述：{cmd.description}\n參數：\n> {option_str}")
+                await ctx.respond(
+                    f"指令：{cmd.full_parent_name} {cmd.name}\n描述：{cmd.description}\n參數：\n> {option_str}"
+                )
 
     @commands.slash_command(description="地圖生成測試")
     async def maptest(self, ctx: discord.ApplicationContext):
@@ -197,12 +210,14 @@ class debug(Cog_Extension):
 
     @commands.is_owner()
     @commands.slash_command(description="測試指令", guild_ids=debug_guilds)
-    async def attachmenttest(self, ctx: discord.ApplicationContext, att: discord.Option(discord.Attachment, required=True, name="附件")):
+    async def attachmenttest(
+        self, ctx: discord.ApplicationContext, att: discord.Option(discord.Attachment, required=True, name="附件")
+    ):
         await ctx.respond(file=discord.File(io.BytesIO(await att.read()), filename=att.filename), ephemeral=True)
 
     @commands.is_owner()
     @commands.slash_command(description="伺服器偵測測試", guild_ids=debug_guilds)
-    async def serverchecktest(self,ctx:discord.ApplicationContext):
+    async def serverchecktest(self, ctx: discord.ApplicationContext):
         await ctx.defer()
 
         lst = get_arp_list()

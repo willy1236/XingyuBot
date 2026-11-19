@@ -186,6 +186,7 @@ class CacheStore:
         e = self._map.get(key)
         return e.raw() if e is not None else None
 
+
 @dataclass
 class CacheSlot[T]:
     # not in use.

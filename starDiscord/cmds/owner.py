@@ -31,7 +31,11 @@ def server_status(ip, port):
     server = JavaServer.lookup(f"{ip}:{port}")
     status = server.status()
     latency = server.ping()
-    embed = BotEmbed.general(f"{server.address.host}:{server.address.port}", title="伺服器已開啟", description=status.description.encode("iso-8859-1").decode("utf-8"))
+    embed = BotEmbed.general(
+        f"{server.address.host}:{server.address.port}",
+        title="伺服器已開啟",
+        description=status.description.encode("iso-8859-1").decode("utf-8"),
+    )
     embed.add_field(name="伺服器版本", value=status.version.name, inline=True)
     embed.add_field(name="在線玩家數", value=f"{status.players.online}/{status.players.max}", inline=True)
     embed.add_field(name="延遲", value=f"{latency:.2f} ms", inline=True)
@@ -80,7 +84,9 @@ class AnnoModal(discord.ui.Modal):
                     await channel.send(embed=embed)
                 send_success += 1
             except Exception:
-                log.exception("anno: error sending to channel", extra={"guild_id": i.guild_id, "channel_id": i.channel_id})
+                log.exception(
+                    "anno: error sending to channel", extra={"guild_id": i.guild_id, "channel_id": i.channel_id}
+                )
 
         await msg.edit_original_response(content=f"已向{send_success}/{len(channels)}個頻道發送公告")
 
@@ -112,7 +118,9 @@ class BotUpdateModal(discord.ui.Modal):
                     await channel.send(embed=embed)
                 send_success += 1
             except Exception:
-                log.exception("botupdate: error sending to channel", extra={"guild_id": i.guild_id, "channel_id": i.channel_id})
+                log.exception(
+                    "botupdate: error sending to channel", extra={"guild_id": i.guild_id, "channel_id": i.channel_id}
+                )
 
         await msg.edit_original_response(content=f"已向{send_success}/{len(channels)}個頻道發送公告")
 
@@ -131,7 +139,9 @@ class BotPanel(discord.ui.View):
 
 class owner(Cog_Extension):
     twitch_chatbot = SlashCommandGroup("twitch_chatbot", "twitch機器人相關指令", guild_ids=debug_guilds)
-    mcserver_cmd = SlashCommandGroup("mcserver", "Minecraft伺服器相關指令", guild_ids=mcserver_guilds, name_localizations=ChoiceList.name("mcserver"))
+    mcserver_cmd = SlashCommandGroup(
+        "mcserver", "Minecraft伺服器相關指令", guild_ids=mcserver_guilds, name_localizations=ChoiceList.name("mcserver")
+    )
     permission_cmd = SlashCommandGroup("permission", "權限相關指令", guild_ids=debug_guilds)
     vip_cmd = SlashCommandGroup("vip", "VIP相關指令", guild_ids=happycamp_guild + debug_guilds)
 
@@ -168,7 +178,9 @@ class owner(Cog_Extension):
     async def statue(self, ctx, statue):
         sclient.sqldb.set_bot_activity(self.bot.bot_code, statue)
         activity_name = sclient.sqldb.get_bot_activity(self.bot.bot_code)
-        await self.bot.change_presence(activity=discord.CustomActivity(name=activity_name), status=discord.Status.online)
+        await self.bot.change_presence(
+            activity=discord.CustomActivity(name=activity_name), status=discord.Status.online
+        )
         await ctx.respond("狀態更改完成", delete_after=5)
 
     # shutdown
@@ -182,7 +194,9 @@ class owner(Cog_Extension):
     # send
     @commands.slash_command(description="發送訊息", guild_ids=debug_guilds)
     @commands.is_owner()
-    async def sendmesssage(self, ctx: discord.ApplicationContext, id_str: discord.Option(str, required=True, name="頻道id", description="")):
+    async def sendmesssage(
+        self, ctx: discord.ApplicationContext, id_str: discord.Option(str, required=True, name="頻道id", description="")
+    ):
         # modal = SendMessageModal(title="發送訊息")
         # await ctx.send_modal(modal)
         # msg = modal.children[0].value
@@ -229,7 +243,9 @@ class owner(Cog_Extension):
 
     @commands.is_owner()
     @permission_cmd.command(name="view", description="查看權限", guild_ids=debug_guilds)
-    async def permission_view(self, ctx: discord.ApplicationContext, guild_id_str: str | None = None, channel_id_str: str | None = None):
+    async def permission_view(
+        self, ctx: discord.ApplicationContext, guild_id_str: str | None = None, channel_id_str: str | None = None
+    ):
         if guild_id_str:
             guild_id = int(guild_id_str)
             guild = self.bot.get_guild(guild_id)
@@ -259,9 +275,15 @@ class owner(Cog_Extension):
             assert isinstance(channel, discord.abc.GuildChannel)
 
             embed = discord.Embed(title=channel.name, color=0xC4E9FF)
-            embed.add_field(name="頻道", value=str(channel.permissions_for(channel.guild.me).manage_channels), inline=True)
+            embed.add_field(
+                name="頻道", value=str(channel.permissions_for(channel.guild.me).manage_channels), inline=True
+            )
             if channel.category:
-                embed.add_field(name="分類", value=str(channel.category.permissions_for(channel.guild.me).manage_channels), inline=True)
+                embed.add_field(
+                    name="分類",
+                    value=str(channel.category.permissions_for(channel.guild.me).manage_channels),
+                    inline=True,
+                )
             embed.add_field(name="伺服器", value=str(channel.guild.me.guild_permissions.manage_channels), inline=True)
         await ctx.respond(embed=embed)
 
@@ -300,7 +322,9 @@ class owner(Cog_Extension):
 
     @mcserver_cmd.command(description="查詢mc伺服器")
     @commands.cooldown(rate=1, per=3)
-    async def quary(self, ctx: discord.ApplicationContext, ip: discord.Option(str, description="伺服器ip", default=None)):
+    async def quary(
+        self, ctx: discord.ApplicationContext, ip: discord.Option(str, description="伺服器ip", default=None)
+    ):
         await ctx.defer()
         if not ip:
             radmin_ip = find_radmin_vpn_network()
@@ -323,22 +347,34 @@ class owner(Cog_Extension):
             latency = server.ping()
         except Exception:
             latency = None
-        full_ip = f"{server.address.host}:{server.address.port}" if server.address.port != 25565 else server.address.host
+        full_ip = (
+            f"{server.address.host}:{server.address.port}" if server.address.port != 25565 else server.address.host
+        )
 
-        embed = BotEmbed.general(full_ip, title="伺服器狀態", description=status.description.encode("iso-8859-1").decode("utf-8"))
+        embed = BotEmbed.general(
+            full_ip, title="伺服器狀態", description=status.description.encode("iso-8859-1").decode("utf-8")
+        )
         embed.add_field(name="伺服器版本", value=status.version.name, inline=True)
         embed.add_field(name="在線玩家數", value=f"{status.players.online}/{status.players.max}", inline=True)
         if latency is not None:
             embed.add_field(name="延遲", value=f"{latency:.2f} ms", inline=True)
 
-        file = discord.File(fp=base64_to_buffer(status.icon), filename="server_icon.png") if status.icon is not None else None
+        file = (
+            discord.File(fp=base64_to_buffer(status.icon), filename="server_icon.png")
+            if status.icon is not None
+            else None
+        )
         try:
             await ctx.respond(embed=embed, file=file)
         except AttributeError:
             await ctx.respond(embed=embed)
 
-    @mcserver_cmd.command(description="開啟mc伺服器面板", name="panel", name_localizations=ChoiceList.name("mcserver_panel"))
-    @commands.check_any(has_privilege_level(PrivilegeLevel.Level2), commands.has_guild_permissions(manage_channels=True))
+    @mcserver_cmd.command(
+        description="開啟mc伺服器面板", name="panel", name_localizations=ChoiceList.name("mcserver_panel")
+    )
+    @commands.check_any(
+        has_privilege_level(PrivilegeLevel.Level2), commands.has_guild_permissions(manage_channels=True)
+    )
     async def mcserver_panel(self, ctx: discord.ApplicationContext):
         await ctx.defer()
         view = McServerPanel()
@@ -367,7 +403,11 @@ class owner(Cog_Extension):
 
     @commands.slash_command(description="網站每週的析域帳號連結率與連結入口點擊次數", guild_ids=debug_guilds)
     @commands.is_owner()
-    async def link_rate(self, ctx: discord.ApplicationContext, weeks: discord.Option(int, name="週數", min_value=1, max_value=52, default=8)):
+    async def link_rate(
+        self,
+        ctx: discord.ApplicationContext,
+        weeks: discord.Option(int, name="週數", min_value=1, max_value=52, default=8),
+    ):
         await ctx.defer(ephemeral=True)
         stats = website_stats.weekly_report(weeks)
         if not stats:
@@ -411,7 +451,9 @@ class owner(Cog_Extension):
             await ctx.respond("伺服器重複")
             return
 
-        common_member_display = [f"{member.mention} ({member.id})" for member in guild.members if member in guild_main.members]
+        common_member_display = [
+            f"{member.mention} ({member.id})" for member in guild.members if member in guild_main.members
+        ]
         if common_member_display:
             embed = BotEmbed.simple(f"{guild.name} 的共通成員", "\n".join(common_member_display))
             await ctx.respond(embed=embed)
@@ -441,7 +483,9 @@ class owner(Cog_Extension):
                 embeds[0].add_field(name="內容", value=message.content, inline=False)
                 embeds[0].add_field(name="發送者", value=message.author.mention, inline=True)
                 embeds[0].add_field(name="頻道", value=channel_arg.mention, inline=True)
-                embeds[0].add_field(name="發送時間", value=message.created_at.isoformat(sep=" ", timespec="seconds"), inline=True)
+                embeds[0].add_field(
+                    name="發送時間", value=message.created_at.isoformat(sep=" ", timespec="seconds"), inline=True
+                )
                 embeds[0].set_footer(text=f"{message.id}")
                 if message.embeds:
                     embeds += message.embeds
@@ -451,7 +495,9 @@ class owner(Cog_Extension):
         user = await self.bot.get_or_fetch(discord.User, id)
         member = now_guild.get_member(id)
         if member:
-            embed = BotEmbed.simple(title=f"{member.name}#{member.discriminator}", description=f"ID：用戶（伺服器成員）\n{member.mention}")
+            embed = BotEmbed.simple(
+                title=f"{member.name}#{member.discriminator}", description=f"ID：用戶（伺服器成員）\n{member.mention}"
+            )
             embed.add_field(name="暱稱", value=str(member.nick), inline=False)
             embed.add_field(name="最高身分組", value=member.top_role.mention, inline=True)
             embed.add_field(name="目前狀態", value=str(member.raw_status), inline=True)
@@ -460,8 +506,18 @@ class owner(Cog_Extension):
             embed.add_field(name="是否為機器人", value=str(member.bot), inline=False)
             embed.add_field(name="是否為Discord官方", value=str(member.system), inline=True)
             embed.add_field(name="是否被禁言", value=str(member.timed_out), inline=True)
-            embed.add_field(name="加入群組日期", value=member.joined_at.astimezone().isoformat(sep=" ", timespec="seconds") if member.joined_at else "未知", inline=False)
-            embed.add_field(name="帳號創建日期", value=member.created_at.astimezone().isoformat(sep=" ", timespec="seconds"), inline=False)
+            embed.add_field(
+                name="加入群組日期",
+                value=member.joined_at.astimezone().isoformat(sep=" ", timespec="seconds")
+                if member.joined_at
+                else "未知",
+                inline=False,
+            )
+            embed.add_field(
+                name="帳號創建日期",
+                value=member.created_at.astimezone().isoformat(sep=" ", timespec="seconds"),
+                inline=False,
+            )
             embed.set_thumbnail(url=member.display_avatar.url)
             embed.set_footer(text=f"id:{member.id}")
             success += 1
@@ -469,8 +525,14 @@ class owner(Cog_Extension):
             embed = BotEmbed.simple(title=f"{user.name}#{user.discriminator}", description=f"ID：用戶\n{user.mention}")
             embed.add_field(name="是否為機器人", value=str(user.bot), inline=False)
             embed.add_field(name="是否為Discord官方", value=str(user.system), inline=False)
-            embed.add_field(name="帳號創建日期", value=user.created_at.astimezone().isoformat(sep=" ", timespec="seconds"), inline=False)
-            embed.add_field(name="共同伺服器", value="\n".join([guild.name for guild in user.mutual_guilds]), inline=False)
+            embed.add_field(
+                name="帳號創建日期",
+                value=user.created_at.astimezone().isoformat(sep=" ", timespec="seconds"),
+                inline=False,
+            )
+            embed.add_field(
+                name="共同伺服器", value="\n".join([guild.name for guild in user.mutual_guilds]), inline=False
+            )
             embed.set_thumbnail(url=user.display_avatar.url)
             success += 1
 
@@ -479,14 +541,20 @@ class owner(Cog_Extension):
             embed = BotEmbed.simple(title=channel.name, description="ID：頻道")
             embed.add_field(name="所屬類別", value=str(channel.category), inline=False)
             embed.add_field(name="所屬公會", value=str(channel.guild), inline=False)
-            embed.add_field(name="創建時間", value=channel.created_at.isoformat(sep=" ", timespec="seconds") if channel.created_at else "未知", inline=False)
+            embed.add_field(
+                name="創建時間",
+                value=channel.created_at.isoformat(sep=" ", timespec="seconds") if channel.created_at else "未知",
+                inline=False,
+            )
             success += 1
 
         guild = self.bot.get_guild(id)
         if guild:
             embed = BotEmbed.simple(title=guild.name, description="ID：伺服器")
             embed.add_field(name="伺服器擁有者", value=str(guild.owner), inline=False)
-            embed.add_field(name="創建時間", value=guild.created_at.isoformat(sep=" ", timespec="seconds"), inline=False)
+            embed.add_field(
+                name="創建時間", value=guild.created_at.isoformat(sep=" ", timespec="seconds"), inline=False
+            )
             embed.add_field(name="驗證等級", value=str(guild.verification_level), inline=False)
             embed.add_field(name="成員數", value=str(guild.member_count), inline=False)
             embed.add_field(name="文字頻道數", value=str(len(guild.text_channels)), inline=False)
@@ -504,7 +572,9 @@ class owner(Cog_Extension):
             if role:
                 embed = BotEmbed.simple(title=role.name, description="ID：身分組")
                 embed.add_field(name="所屬伺服器", value=str(role.guild), inline=False)
-                embed.add_field(name="創建時間", value=role.created_at.isoformat(sep=" ", timespec="seconds"), inline=False)
+                embed.add_field(
+                    name="創建時間", value=role.created_at.isoformat(sep=" ", timespec="seconds"), inline=False
+                )
                 embed.add_field(name="所屬層級位置", value=str(role.position), inline=False)
                 embed.add_field(name="顏色", value=str(role.color), inline=False)
                 embed.add_field(name="權限值", value=str(role.permissions.value), inline=False)
@@ -527,7 +597,9 @@ class owner(Cog_Extension):
         ctx: discord.ApplicationContext,
         channelid: discord.Option(str, name="頻道", description="要發送警告單的頻道", required=True),
         userid: discord.Option(str, name="用戶", description="要禁言的用戶", required=True),
-        time_last: discord.Option(str, name="時長", description="格式為30s、1h20m等，支援天(d)、小時(h)、分鐘(m)、秒(s)", required=True),
+        time_last: discord.Option(
+            str, name="時長", description="格式為30s、1h20m等，支援天(d)、小時(h)、分鐘(m)、秒(s)", required=True
+        ),
         reason: discord.Option(str, name="原因", description="限100字內", required=False),
     ):
         await ctx.defer()
@@ -548,7 +620,9 @@ class owner(Cog_Extension):
         create_time = datetime.now()
 
         timestamp = int((create_time + time).timestamp())
-        embed = BotEmbed.general(f"{user.name} 已被禁言", user.display_avatar.url, description=f"{user.mention}：{reason}")
+        embed = BotEmbed.general(
+            f"{user.name} 已被禁言", user.display_avatar.url, description=f"{user.mention}：{reason}"
+        )
         embed.add_field(name="執行人員", value=moderate_user.mention)
         embed.add_field(name="結束時間", value=f"<t:{timestamp}>（{time_last}）")
         embed.timestamp = create_time
@@ -630,7 +704,9 @@ class owner(Cog_Extension):
 
     @vip_cmd.command(name="review", description="審核申請")
     @is_vip_admin()
-    async def vip_review(self, ctx: discord.ApplicationContext, form_id: discord.Option(str, name="申請表單id", required=True)):
+    async def vip_review(
+        self, ctx: discord.ApplicationContext, form_id: discord.Option(str, name="申請表單id", required=True)
+    ):
         await ctx.defer()
         form = sclient.sqldb.get_form(form_id)
         if form:

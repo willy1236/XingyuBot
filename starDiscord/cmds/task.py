@@ -66,18 +66,34 @@ class task(Cog_Extension):
 
             # 背景刷新 - 保留 jitter
             scheduler.add_job(refresh_yt_push, "cron", hour="2/12", minute=0, second=0, jitter=300)
-            scheduler.add_job(refresh_ip_last_seen_arp, "cron", minute="0/20", second=0, jitter=60, misfire_grace_time=90)
-            scheduler.add_job(refresh_ip_last_seen_nmap, "cron", minute="0/15", second=0, jitter=60, misfire_grace_time=90)
-            scheduler.add_job(self.save_voice_time, "cron", hour="0/1", minute="0/30", second=0, jitter=60, misfire_grace_time=90)
-            scheduler.add_job(refresh_db_cache, "cron", hour="0/2", minute=0, second=0, jitter=60, misfire_grace_time=90)
-            scheduler.add_job(settle_website_link_rate, "cron", minute=5, second=0, jitter=60, misfire_grace_time=300, max_instances=1)
+            scheduler.add_job(
+                refresh_ip_last_seen_arp, "cron", minute="0/20", second=0, jitter=60, misfire_grace_time=90
+            )
+            scheduler.add_job(
+                refresh_ip_last_seen_nmap, "cron", minute="0/15", second=0, jitter=60, misfire_grace_time=90
+            )
+            scheduler.add_job(
+                self.save_voice_time, "cron", hour="0/1", minute="0/30", second=0, jitter=60, misfire_grace_time=90
+            )
+            scheduler.add_job(
+                refresh_db_cache, "cron", hour="0/2", minute=0, second=0, jitter=60, misfire_grace_time=90
+            )
+            scheduler.add_job(
+                settle_website_link_rate, "cron", minute=5, second=0, jitter=60, misfire_grace_time=300, max_instances=1
+            )
 
             # 統計任務 - 保留 misfire_grace_time + max_instances
-            scheduler.add_job(self.add_voice_time, "cron", minute="*/1", second=30, misfire_grace_time=20, max_instances=1)
+            scheduler.add_job(
+                self.add_voice_time, "cron", minute="*/1", second=30, misfire_grace_time=20, max_instances=1
+            )
 
             if self.bot.user and self.bot.user.id == 589744540240314368:
-                scheduler.add_job(self.birthday_task, "cron", month=10, day=16, hour=8, minute=0, second=0, misfire_grace_time=60)
-                scheduler.add_job(record_users_count, "cron", args=[self.bot], hour=0, minute=0, second=0, jitter=240, max_instances=1)
+                scheduler.add_job(
+                    self.birthday_task, "cron", month=10, day=16, hour=8, minute=0, second=0, misfire_grace_time=60
+                )
+                scheduler.add_job(
+                    record_users_count, "cron", args=[self.bot], hour=0, minute=0, second=0, jitter=240, max_instances=1
+                )
                 # scheduler.add_job(self.new_years_eve_task, CronTrigger(month=1, day=1, hour=0, minute=0, second=0), misfire_grace_time=60)
 
         # 抽獎
@@ -108,9 +124,13 @@ class task(Cog_Extension):
 
         for data in earthquake_records:
             if data.is_significant:
-                await self.bot.send_notify_channel(data.embed(), NotifyChannelType.MajorQuakeNotifications, "顯著有感地震報告")
+                await self.bot.send_notify_channel(
+                    data.embed(), NotifyChannelType.MajorQuakeNotifications, "顯著有感地震報告"
+                )
             else:
-                await self.bot.send_notify_channel(data.embed(), NotifyChannelType.SlightQuakeNotifications, "小區域地震報告")
+                await self.bot.send_notify_channel(
+                    data.embed(), NotifyChannelType.SlightQuakeNotifications, "小區域地震報告"
+                )
 
         timefrom = earthquake_records[-1].originTime + timedelta(seconds=1)
         sclient.sqldb.set_notify_cache(NotifyChannelType.MajorQuakeNotifications, timefrom)
@@ -275,18 +295,26 @@ class task(Cog_Extension):
                 if not video:
                     continue
                 # 原子地搶佔快取，web 推播已通知過的影片會在這裡被略過
-                if not sclient.sqldb.claim_community_cache(NotifyCommunityType.Youtube, ytchannel_id, rss_video.uplood_at):
+                if not sclient.sqldb.claim_community_cache(
+                    NotifyCommunityType.Youtube, ytchannel_id, rss_video.uplood_at
+                ):
                     continue
                 log.info("youtube_video: RSS 補抓到新影片 %s", video.id)
 
                 if not _is_older_than_one_day(video.snippet.publishedAt):
                     embed = video.embed()
-                    await self.bot.send_notify_communities(embed, NotifyCommunityType.Youtube, ytchannel_id, no_mention=video.is_live_end)
+                    await self.bot.send_notify_communities(
+                        embed, NotifyCommunityType.Youtube, ytchannel_id, no_mention=video.is_live_end
+                    )
 
                 if video.is_live_upcoming_with_time:
-                    assert video.liveStreamingDetails.scheduledStartTime is not None, "Scheduled start time should not be None for upcoming live videos"
+                    assert video.liveStreamingDetails.scheduledStartTime is not None, (
+                        "Scheduled start time should not be None for upcoming live videos"
+                    )
                     self.bot.scheduler.add_job(
-                        youtube_start_live_notify, DateTrigger(video.liveStreamingDetails.scheduledStartTime + timedelta(seconds=30)), args=[self.bot, video]
+                        youtube_start_live_notify,
+                        DateTrigger(video.liveStreamingDetails.scheduledStartTime + timedelta(seconds=30)),
+                        args=[self.bot, video],
                     )
 
     async def notify_twitter_tweet_updates(self):
@@ -305,7 +333,9 @@ class task(Cog_Extension):
                 log.debug("notify_twitter_tweet_updates data", extra={"results": results})
 
                 if results is None:
-                    log.warning("notify_twitter_tweet_updates error / not found", extra={"twitter_user_id": twitter_user_id})
+                    log.warning(
+                        "notify_twitter_tweet_updates error / not found", extra={"twitter_user_id": twitter_user_id}
+                    )
                     # sclient.sqldb.remove_notify_community(NotifyCommunityType.TwitterTweet, twitter_user_id)
                 elif results.list:
                     tweets = results.list
@@ -319,7 +349,9 @@ class task(Cog_Extension):
                                 None,
                                 NotifyCommunityType.TwitterTweet,
                                 twitter_user_id,
-                                default_content=f"{tweet.tweetBy.fullName} 轉推了推文↩️" if tweet.is_retweet else f"{tweet.tweetBy.fullName} 發布新推文",
+                                default_content=f"{tweet.tweetBy.fullName} 轉推了推文↩️"
+                                if tweet.is_retweet
+                                else f"{tweet.tweetBy.fullName} 發布新推文",
                                 additional_content=tweet.url,
                             )
 
@@ -329,7 +361,11 @@ class task(Cog_Extension):
                 log.error(e.stderr)
                 continue
             except Exception as e:
-                log.error("notify_twitter_tweet_updates error", extra={"twitter_user_id": twitter_user_id, "error": str(e)}, exc_info=e)
+                log.error(
+                    "notify_twitter_tweet_updates error",
+                    extra={"twitter_user_id": twitter_user_id, "error": str(e)},
+                    exc_info=e,
+                )
                 continue
 
         sclient.sqldb.set_community_caches(NotifyCommunityType.TwitterTweet, update_data)
@@ -387,8 +423,12 @@ class task(Cog_Extension):
     async def new_years_eve_task(self):
         channel = self.bot.get_channel(643764975663448064)
         assert channel, "Channel not found"
-        msg = await channel.send("新的一年 祝大家新年快樂~🎉\n來自快樂營的2025新年轟炸 @everyone ", allowed_mentions=discord.AllowedMentions(everyone=True))
+        msg = await channel.send(
+            "新的一年 祝大家新年快樂~🎉\n來自快樂營的2025新年轟炸 @everyone ",
+            allowed_mentions=discord.AllowedMentions(everyone=True),
+        )
         await msg.add_reaction("🎉")
+
 
 async def refresh_yt_push():
     config = sqldb.get_websub_config(APIType.Google, 4)
@@ -456,7 +496,9 @@ async def refresh_ip_last_seen_nmap():
     """定時更新IP最後出現時間 (使用Nmap)"""
     log.debug("refresh_ip_last_seen_nmap start")
     now = utils.nowtz()
-    ips = sqldb.get_active_ips(utils.nowtz().replace(year=2025, month=8, day=11, hour=0, minute=0, second=0))  # 現在設定指定時間，之後再改成動態計算過去30天
+    ips = sqldb.get_active_ips(
+        utils.nowtz().replace(year=2025, month=8, day=11, hour=0, minute=0, second=0)
+    )  # 現在設定指定時間，之後再改成動態計算過去30天
     ips_string = " ".join([str(target.ip) for target in ips])
 
     try:
@@ -480,11 +522,15 @@ async def record_users_count(bot: DiscordBot):
         servers_count = max(servers_count, len(bot.guilds))
         await asyncio.sleep(120)
     shard_id = bot.shard_id
-    record = UsersCountRecord(record_date=utils.nowtz().date(), users_count=users_count, servers_count=servers_count, shard_id=shard_id)
+    record = UsersCountRecord(
+        record_date=utils.nowtz().date(), users_count=users_count, servers_count=servers_count, shard_id=shard_id
+    )
     sqldb.add(record)
+
 
 async def refresh_db_cache():
     sqldb.refresh_voice_time_counter_cache()
+
 
 def setup(bot):
     bot.add_cog(task(bot))

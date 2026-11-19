@@ -73,7 +73,9 @@ async def get_rooms(guild_id: int = Depends(require_guild_access)):
                 channel = await _resolve_channel(guild, record.channel_id)
             except discord.HTTPException:
                 # 無法確認就不動它：既不顯示也不刪紀錄，下次載入再試
-                log.warning("Cannot resolve dynamic voice channel", extra={"channel_id": record.channel_id}, exc_info=True)
+                log.warning(
+                    "Cannot resolve dynamic voice channel", extra={"channel_id": record.channel_id}, exc_info=True
+                )
                 continue
             if channel is None:
                 gone.append(record.channel_id)
@@ -144,7 +146,9 @@ async def clear_rooms(body: ClearBody, guild_id: int = Depends(require_guild_acc
 
     # 有人的房間一律逐筆回 skipped_occupied，整個請求仍是 200
     results = [
-        cleared_by_id[cid] if cid in cleared_by_id else {"id": str(cid), "name": None, "status": "failed", "reason": "不是動態房間"}
+        cleared_by_id[cid]
+        if cid in cleared_by_id
+        else {"id": str(cid), "name": None, "status": "failed", "reason": "不是動態房間"}
         for cid in requested
     ]
     return {"results": results}

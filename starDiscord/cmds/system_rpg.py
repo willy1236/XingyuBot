@@ -12,8 +12,12 @@ from ..uiElement.RPGview import RPGAdvanceView, RPGEquipmentSelectView
 
 class system_rpg(Cog_Extension):
     @commands.slash_command(description="查看用戶資訊", guild_ids=happycamp_guild)
-    async def rpgui(self, ctx: discord.ApplicationContext, member: discord.Option(discord.Member, name="用戶", description="留空以查詢自己", default=None)):
-        user_dc:discord.Member = member or ctx.author
+    async def rpgui(
+        self,
+        ctx: discord.ApplicationContext,
+        member: discord.Option(discord.Member, name="用戶", description="留空以查詢自己", default=None),
+    ):
+        user_dc: discord.Member = member or ctx.author
 
         player = sclient.sqldb.get_rpg_player(user_dc.id)
 

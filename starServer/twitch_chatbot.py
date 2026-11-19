@@ -85,7 +85,7 @@ USER_SCOPE = [
     AuthScope.USER_WRITE_CHAT,
     AuthScope.WHISPERS_READ,
     AuthScope.WHISPERS_EDIT,
-    ]
+]
 
 # import 時不查 DB，由 run() 開頭的 load_join_channels() 填入；handler 繼續以模組全域讀取
 join_channels: dict = {}
@@ -99,12 +99,15 @@ def load_join_channels() -> None:
     TARGET_CHANNEL = {twitch_id: data.action_channel_id for twitch_id, data in join_channels.items()}
     TARGET_CHANNEL_IDS = [str(i) for i in TARGET_CHANNEL.keys()]
 
-chat:Chat
+
+chat: Chat
 # run() 建立的 Twitch API 物件，handler 用它查 Helix
 twitch: Twitch
+
+
 # eventsub
 async def on_follow(event: eventsub.ChannelFollowEvent):
-    #await chat.send_message(data.event.broadcaster_user_name,text = f'{data.event.user_name} now follows {data.event.broadcaster_user_name}!')
+    # await chat.send_message(data.event.broadcaster_user_name,text = f'{data.event.user_name} now follows {data.event.broadcaster_user_name}!')
     log.info("%s(%s) now follows %s!", event.event.user_name, event.event.user_login, event.event.broadcaster_user_name)
 
     get_bus().publish(
@@ -135,7 +138,10 @@ async def on_stream_online(event: eventsub.StreamOnlineEvent):
     # 聊天室訊息只看有沒有設定通知頻道；Discord 端的通知頻道與開台通知由 Discord bot 處理事件時決定
     channel_config = join_channels.get(int(event.event.broadcaster_user_id))
     if channel_config and channel_config.action_channel_id:
-        await chat.send_message(event.event.broadcaster_user_login, f"{event.event.broadcaster_user_name} 正在直播 {live.game_name}! {live.title}")
+        await chat.send_message(
+            event.event.broadcaster_user_login,
+            f"{event.event.broadcaster_user_name} 正在直播 {live.game_name}! {live.title}",
+        )
 
     try:
         user = await first(twitch.get_users(user_ids=[event.event.broadcaster_user_id]))
@@ -195,12 +201,24 @@ async def on_channel_points_custom_reward_redemption_add(event: eventsub.Channel
     )
 
 
-async def on_channel_points_custom_reward_redemption_update(event: eventsub.ChannelPointsCustomRewardRedemptionUpdateEvent):
-    log.info("%s's redemption of %s has been updated to %s!", event.event.user_name, event.event.reward.title, event.event.status)
+async def on_channel_points_custom_reward_redemption_update(
+    event: eventsub.ChannelPointsCustomRewardRedemptionUpdateEvent,
+):
+    log.info(
+        "%s's redemption of %s has been updated to %s!",
+        event.event.user_name,
+        event.event.reward.title,
+        event.event.status,
+    )
 
 
-async def on_channel_raid(event:eventsub.ChannelRaidEvent):
-    log.info("%s 帶了 %s 位觀眾來 %s 的頻道！", event.event.from_broadcaster_user_name, event.event.viewers, event.event.to_broadcaster_user_name)
+async def on_channel_raid(event: eventsub.ChannelRaidEvent):
+    log.info(
+        "%s 帶了 %s 位觀眾來 %s 的頻道！",
+        event.event.from_broadcaster_user_name,
+        event.event.viewers,
+        event.event.to_broadcaster_user_name,
+    )
 
     channel_config = join_channels.get(int(event.event.to_broadcaster_user_id))
     if channel_config and channel_config.action_channel_id:
@@ -267,10 +285,18 @@ async def on_channel_subscription_message(event: eventsub.ChannelSubscriptionMes
 
 
 async def on_channel_subscription_gift(event: eventsub.ChannelSubscriptionGiftEvent):
-    log.info("%s 在 %s 的層級%s送出的%s份訂閱", event.event.user_name, event.event.broadcaster_user_name, event.event.tier[0], event.event.total)
+    log.info(
+        "%s 在 %s 的層級%s送出的%s份訂閱",
+        event.event.user_name,
+        event.event.broadcaster_user_name,
+        event.event.tier[0],
+        event.event.total,
+    )
     channel_config = join_channels.get(int(event.event.broadcaster_user_id))
     if channel_config and channel_config.action_channel_id and not event.event.is_anonymous:
-        await chat.send_message(event.event.broadcaster_user_login, f"感謝 {event.event.user_name} 送出的{event.event.total}份訂閱！")
+        await chat.send_message(
+            event.event.broadcaster_user_login, f"感謝 {event.event.user_name} 送出的{event.event.total}份訂閱！"
+        )
 
 
 async def on_channel_poll_begin(event: eventsub.ChannelPollBeginEvent):
@@ -350,7 +376,9 @@ async def on_server_notice(event: NoticeEvent):
 async def on_whisper(event: WhisperEvent):
     log.info("Whisper from %s: %s", event.user.name, event.message)
     # WhisperEvent 沒有 EventSub 的 message_timestamp，以收到時間為事件時間
-    get_bus().publish(TwitchWhisperEvent(occurred_at=datetime.now(UTC), user_name=event.user.name, message=event.message))
+    get_bus().publish(
+        TwitchWhisperEvent(occurred_at=datetime.now(UTC), user_name=event.user.name, message=event.message)
+    )
 
 
 async def on_raid(event: dict):
@@ -464,7 +492,6 @@ async def _listen(name: str, subscribe: Coroutine[Any, Any, str]) -> None:
         log.warning("Error subscribing to %s: timeout.", name)
 
 
-
 async def run():
     load_join_channels()
     app_config = sqldb.get_oauth_client(APIType.Twitch, 2)
@@ -483,7 +510,7 @@ async def run():
     try:
         app_token = sqldb.get_bot_oauth_token(APIType.Twitch, 2)
         await twitch.set_user_authentication(app_token.access_token, USER_SCOPE, app_token.refresh_token)
-    except (InvalidTokenException, MissingScopeException, NoResultFound):
+    except InvalidTokenException, MissingScopeException, NoResultFound:
         log.exception("Twitch token invalid or missing, re-authenticating")
         auth = UserAuthenticator(twitch, USER_SCOPE)
         token, refresh_token = await auth.authenticate()  # type: ignore
@@ -554,17 +581,29 @@ async def run():
         await _listen("channel follow", eventsub.listen_channel_follow_v2(user.id, me.id, on_follow))
         await _listen(
             "channel points custom reward redemption add",
-            eventsub.listen_channel_points_custom_reward_redemption_add(user.id, on_channel_points_custom_reward_redemption_add),
+            eventsub.listen_channel_points_custom_reward_redemption_add(
+                user.id, on_channel_points_custom_reward_redemption_add
+            ),
         )
         await _listen(
             "channel points custom reward redemption update",
-            eventsub.listen_channel_points_custom_reward_redemption_update(user.id, on_channel_points_custom_reward_redemption_update),
+            eventsub.listen_channel_points_custom_reward_redemption_update(
+                user.id, on_channel_points_custom_reward_redemption_update
+            ),
         )
         await _listen("channel subscribe", eventsub.listen_channel_subscribe(user.id, on_channel_subscribe))
-        await _listen("channel subscription message", eventsub.listen_channel_subscription_message(user.id, on_channel_subscription_message))
-        await _listen("channel subscription gift", eventsub.listen_channel_subscription_gift(user.id, on_channel_subscription_gift))
+        await _listen(
+            "channel subscription message",
+            eventsub.listen_channel_subscription_message(user.id, on_channel_subscription_message),
+        )
+        await _listen(
+            "channel subscription gift",
+            eventsub.listen_channel_subscription_gift(user.id, on_channel_subscription_gift),
+        )
         # channel poll begin、channel prediction begin 目前不訂閱，需要時比照加上 _listen
-        await _listen("channel prediction end", eventsub.listen_channel_prediction_end(user.id, on_channel_prediction_end))
+        await _listen(
+            "channel prediction end", eventsub.listen_channel_prediction_end(user.id, on_channel_prediction_end)
+        )
         log.debug("eventsub for %s(mod) done.", user.login)
 
     return chat, twitch, eventsub

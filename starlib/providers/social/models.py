@@ -41,7 +41,13 @@ class TwitchUser(BaseModel):
         return self
 
     def embed(self):
-        embed = discord.Embed(title=self.display_name, url=self.url, description=self.description, color=0x6441A5, timestamp=self.created_at)
+        embed = discord.Embed(
+            title=self.display_name,
+            url=self.url,
+            description=self.description,
+            color=0x6441A5,
+            timestamp=self.created_at,
+        )
         embed.set_image(url=self.offline_image_url)
         embed.set_author(name=self.login, icon_url=self.profile_image_url)
         embed.add_field(name="觀看數", value=self.view_count)
@@ -85,7 +91,9 @@ class TwitchStream(BaseModel):
             color=0x6441A5,
             timestamp=self.started_at,
         )
-        embed.set_author(name=f"{self.user_name} 開台啦！", icon_url=profile_image_url or Jsondb.get_picture("twitch_001"))
+        embed.set_author(
+            name=f"{self.user_name} 開台啦！", icon_url=profile_image_url or Jsondb.get_picture("twitch_001")
+        )
         embed.set_image(url=self.live_thumbnail_url)
         embed.add_field(name="標籤", value=", ".join(self.tags))
         embed.set_footer(text="開始於")
@@ -117,7 +125,9 @@ class TwitchVideo(BaseModel):
         return self
 
     def embed(self):
-        embed = discord.Embed(title=self.title, url=self.url, description=self.description, color=0x6441A5, timestamp=self.created_at)
+        embed = discord.Embed(
+            title=self.title, url=self.url, description=self.description, color=0x6441A5, timestamp=self.created_at
+        )
         embed.set_author(name=f"{self.user_name}", icon_url=Jsondb.get_picture("twitch_001"))
         embed.set_image(url=self.thumbnail_url)
         embed.set_footer(text="上傳時間")
@@ -240,7 +250,13 @@ class YoutubeChannel(BaseModel):
     statistics: ChannelStatistics
 
     def embed(self):
-        embed = discord.Embed(title=self.snippet.title, url=f"https://www.youtube.com/channel/{self.id}", description=self.snippet.description, color=0xFF0000, timestamp=self.snippet.publishedAt)
+        embed = discord.Embed(
+            title=self.snippet.title,
+            url=f"https://www.youtube.com/channel/{self.id}",
+            description=self.snippet.description,
+            color=0xFF0000,
+            timestamp=self.snippet.publishedAt,
+        )
         embed.set_image(url=self.snippet.thumbnails.default.url)
         embed.add_field(name="頻道創建時間", value=self.snippet.publishedAt.strftime("%Y/%m/%d %H:%M:%S"))
         embed.add_field(name="訂閱數", value=f"{self.statistics.subscriberCount:,}")
@@ -281,11 +297,18 @@ class YoutubeVideo(BaseModel):
                 embed.add_field(name="現況", value=ytvideo_lives.get(self.snippet.liveBroadcastContent, "未知"))
 
             if self.liveStreamingDetails.scheduledStartTime and self.snippet.liveBroadcastContent == "upcoming":
-                embed.add_field(name="預定直播時間", value=self.liveStreamingDetails.scheduledStartTime.strftime("%Y/%m/%d %H:%M:%S"))
+                embed.add_field(
+                    name="預定直播時間",
+                    value=self.liveStreamingDetails.scheduledStartTime.strftime("%Y/%m/%d %H:%M:%S"),
+                )
             elif self.liveStreamingDetails.actualStartTime:
-                embed.add_field(name="直播開始時間", value=self.liveStreamingDetails.actualStartTime.strftime("%Y/%m/%d %H:%M:%S"))
+                embed.add_field(
+                    name="直播開始時間", value=self.liveStreamingDetails.actualStartTime.strftime("%Y/%m/%d %H:%M:%S")
+                )
             if self.liveStreamingDetails.actualEndTime:
-                embed.add_field(name="直播結束時間", value=self.liveStreamingDetails.actualEndTime.strftime("%Y/%m/%d %H:%M:%S"))
+                embed.add_field(
+                    name="直播結束時間", value=self.liveStreamingDetails.actualEndTime.strftime("%Y/%m/%d %H:%M:%S")
+                )
         else:
             embed.add_field(name="現況", value=ytvideo_lives.get(self.snippet.liveBroadcastContent, "未知"))
             embed.add_field(name="上傳時間", value=self.snippet.publishedAt.strftime("%Y/%m/%d %H:%M:%S"))
@@ -303,12 +326,21 @@ class YoutubeVideo(BaseModel):
 
     @property
     def is_live_upcoming_with_time(self) -> bool:
-        return bool(self.liveStreamingDetails is not None and self.liveStreamingDetails.scheduledStartTime and not self.liveStreamingDetails.actualEndTime)
+        return bool(
+            self.liveStreamingDetails is not None
+            and self.liveStreamingDetails.scheduledStartTime
+            and not self.liveStreamingDetails.actualEndTime
+        )
 
     @property
     def is_live_getting_startrd(self) -> bool:
         now = datetime.now(UTC)
-        return bool(self.liveStreamingDetails and self.liveStreamingDetails.actualStartTime and not self.liveStreamingDetails.actualEndTime and (now - self.liveStreamingDetails.actualStartTime) < timedelta(minutes=1))
+        return bool(
+            self.liveStreamingDetails
+            and self.liveStreamingDetails.actualStartTime
+            and not self.liveStreamingDetails.actualEndTime
+            and (now - self.liveStreamingDetails.actualStartTime) < timedelta(minutes=1)
+        )
 
 
 class YoutubeRSSVideo(BaseModel):
@@ -325,7 +357,9 @@ class YoutubeRSSVideo(BaseModel):
     media_thumbnail: list[YoutubeThumbnail]
 
     def embed(self):
-        embed = discord.Embed(title=self.title, url=self.link, description=self.author_name, color=0xFF0000, timestamp=self.uplood_at)
+        embed = discord.Embed(
+            title=self.title, url=self.link, description=self.author_name, color=0xFF0000, timestamp=self.uplood_at
+        )
         embed.add_field(name="上傳時間", value=self.uplood_at.strftime("%Y/%m/%d %H:%M:%S"), inline=False)
         # embed.add_field(name="更新時間",value=self.updated_at.strftime('%Y/%m/%d %H:%M:%S'),inline=True)
         embed.set_image(url=self.media_thumbnail[0].url)
@@ -487,7 +521,9 @@ class RettiwtTweetItem(BaseModel):
         if self.entities.hashtags:
             embed.add_field(name="Hashtags", value=", ".join(f"#{tag}" for tag in self.entities.hashtags), inline=False)
         if self.entities.mentionedUsers:
-            embed.add_field(name="提及用戶", value=", ".join(f"@{user}" for user in self.entities.mentionedUsers), inline=False)
+            embed.add_field(
+                name="提及用戶", value=", ".join(f"@{user}" for user in self.entities.mentionedUsers), inline=False
+            )
         if self.entities.urls:
             embed.add_field(name="連結", value=", ".join(self.entities.urls), inline=False)
         if self.media:
@@ -721,7 +757,9 @@ class NotionDatabase(BaseModel):
         if self.description:
             description = self.description[0].plain_text if self.description else "無描述"
 
-        embed = discord.Embed(title=title, url=self.url, description=description, color=0x2F3437, timestamp=self.last_edited_time)
+        embed = discord.Embed(
+            title=title, url=self.url, description=description, color=0x2F3437, timestamp=self.last_edited_time
+        )
         embed.set_author(name="Notion 資料庫", icon_url="https://www.notion.so/images/favicon.ico")
         embed.add_field(name="建立時間", value=self.created_time.strftime("%Y/%m/%d %H:%M:%S"))
         embed.add_field(name="最後編輯", value=self.last_edited_time.strftime("%Y/%m/%d %H:%M:%S"))

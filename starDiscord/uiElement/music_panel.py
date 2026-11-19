@@ -87,7 +87,13 @@ class MusicPanelView(discord.ui.DesignerView):
         )
         if not player:
             add_row.add_item(self._refresh_button())
-            self.add_item(discord.ui.Container(discord.ui.TextDisplay("### 音樂播放器\n目前沒有播放中的歌曲，按「點歌」開始播放"), add_row, color=PANEL_COLOR))
+            self.add_item(
+                discord.ui.Container(
+                    discord.ui.TextDisplay("### 音樂播放器\n目前沒有播放中的歌曲，按「點歌」開始播放"),
+                    add_row,
+                    color=PANEL_COLOR,
+                )
+            )
             return
 
         self.add_item(
@@ -96,7 +102,9 @@ class MusicPanelView(discord.ui.DesignerView):
                 discord.ui.Separator(),
                 discord.ui.TextDisplay(self._queue_text(player)),
                 discord.ui.ActionRow(
-                    self._button("▶️", "繼續", self._pause) if player.vc.is_paused() else self._button("⏸️", "暫停", self._pause),
+                    self._button("▶️", "繼續", self._pause)
+                    if player.vc.is_paused()
+                    else self._button("⏸️", "暫停", self._pause),
                     self._button("⏭️", "跳過", self._skip),
                     self._button("⏹️", "停止", self._stop, style=discord.ButtonStyle.danger),
                     self._refresh_button(),
@@ -122,24 +130,34 @@ class MusicPanelView(discord.ui.DesignerView):
         progress = f"{progress_bar} {progress_text}" + (f"\n{' · '.join(status)}" if status else "")
         if not song.thumbnail:
             return discord.ui.TextDisplay(f"{title}\n{progress}")
-        return discord.ui.Section(discord.ui.TextDisplay(title), discord.ui.TextDisplay(progress), accessory=discord.ui.Thumbnail(song.thumbnail))
+        return discord.ui.Section(
+            discord.ui.TextDisplay(title),
+            discord.ui.TextDisplay(progress),
+            accessory=discord.ui.Thumbnail(song.thumbnail),
+        )
 
     @staticmethod
     def _queue_text(player: MusicPlayer) -> str:
         queue = player.get_full_playlist()
         if not queue:
             return "**接下來**\n沒有待播歌曲"
-        lines = [f"{i + 1}. {song.title} [{format_seconds(song.duration)}]" for i, song in enumerate(queue[:QUEUE_PREVIEW])]
+        lines = [
+            f"{i + 1}. {song.title} [{format_seconds(song.duration)}]" for i, song in enumerate(queue[:QUEUE_PREVIEW])
+        ]
         return "**接下來**\n" + "\n".join(lines) + f"\n-# 共 {len(queue)} 首待播"
 
-    def _button(self, emoji: str, label: str, action: PanelAction, style=discord.ButtonStyle.secondary) -> discord.ui.Button:
+    def _button(
+        self, emoji: str, label: str, action: PanelAction, style=discord.ButtonStyle.secondary
+    ) -> discord.ui.Button:
         async def handler(interaction: discord.Interaction):
             if await _check_voice(interaction, can_join=False):
                 await self._run(interaction, action)
 
         return self._make_button(emoji, label, handler, style)
 
-    def _handler_button(self, emoji: str, label: str, handler: PanelHandler, style=discord.ButtonStyle.secondary) -> discord.ui.Button:
+    def _handler_button(
+        self, emoji: str, label: str, handler: PanelHandler, style=discord.ButtonStyle.secondary
+    ) -> discord.ui.Button:
         async def checked(interaction: discord.Interaction):
             if await _check_voice(interaction, can_join=True):
                 await handler(interaction)
@@ -209,7 +227,9 @@ class MusicPanelView(discord.ui.DesignerView):
         async def on_select(select_interaction: discord.Interaction, playlist_id: int):
             await select_interaction.response.edit_message(content="載入歌單中…", view=view)
             try:
-                text = await play_saved_playlist(select_interaction, select_interaction.user, playlist_id, shuffle=False)
+                text = await play_saved_playlist(
+                    select_interaction, select_interaction.user, playlist_id, shuffle=False
+                )
             except (MusicCommandError, MusicPlayingError) as e:
                 await select_interaction.edit_original_response(content=str(e.message), view=None)
                 return
@@ -217,7 +237,9 @@ class MusicPanelView(discord.ui.DesignerView):
             await select_interaction.followup.send(text)
             await self.refresh_message(panel_message)
 
-        view = MusicPlaylistSelectView(interaction.user.id, [(p.id, p.name, counts.get(p.id, 0)) for p in playlists], on_select)
+        view = MusicPlaylistSelectView(
+            interaction.user.id, [(p.id, p.name, counts.get(p.id, 0)) for p in playlists], on_select
+        )
         await interaction.response.send_message("選擇要播放的歌單", view=view, ephemeral=True)
 
     @staticmethod

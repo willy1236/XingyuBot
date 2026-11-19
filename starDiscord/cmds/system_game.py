@@ -50,7 +50,9 @@ class system_game(Cog_Extension):
         else:
             await ctx.respond("查詢失敗：查無此ID", ephemeral=True)
 
-    @lol.command(name="user", description="查詢League of Legends用戶資料", name_localizations=ChoiceList.name("lol_user"))
+    @lol.command(
+        name="user", description="查詢League of Legends用戶資料", name_localizations=ChoiceList.name("lol_user")
+    )
     async def lol_user(self, ctx, riot_id: discord.Option(str, name="riot_id", description="名稱#tag")):
         account = riot_api.get_riot_account_byname(riot_id)
         if not account:
@@ -71,7 +73,9 @@ class system_game(Cog_Extension):
         else:
             await ctx.respond("查詢失敗:查無此ID", ephemeral=True)
 
-    @lol.command(description="查詢最近一次的League of Legends對戰", name_localizations=ChoiceList.name("lol_playermatch"))
+    @lol.command(
+        description="查詢最近一次的League of Legends對戰", name_localizations=ChoiceList.name("lol_playermatch")
+    )
     async def playermatch(self, ctx, riot_id: discord.Option(str, name="riot_id", description="名稱#tag")):
         puuid = get_riot_account_puuid(riot_id)
         if not puuid:
@@ -145,7 +149,10 @@ class system_game(Cog_Extension):
         embed = BotEmbed.simple(f"{player.fullname} 的近期對戰", "此排序由新到舊\n" + "\n".join(match_list))
         await ctx.respond("查詢成功", embed=embed)
 
-    @lol.command(description="查詢正在進行的League of Legends對戰（無法查詢聯盟戰棋）", name_localizations=ChoiceList.name("lol_activematches"))
+    @lol.command(
+        description="查詢正在進行的League of Legends對戰（無法查詢聯盟戰棋）",
+        name_localizations=ChoiceList.name("lol_activematches"),
+    )
     async def activematches(self, ctx, riot_id: discord.Option(str, name="riot_id", description="名稱#tag")):
         puuid = get_riot_account_puuid(riot_id)
         if not puuid:
@@ -160,7 +167,10 @@ class system_game(Cog_Extension):
 
         await ctx.respond("查詢成功", embed=active_match.desplay())
 
-    @lol.command(description="統計近20場League of Legends對戰的所有玩家牌位", name_localizations=ChoiceList.name("lol_recentplayer"))
+    @lol.command(
+        description="統計近20場League of Legends對戰的所有玩家牌位",
+        name_localizations=ChoiceList.name("lol_recentplayer"),
+    )
     @commands.cooldown(rate=60, per=1)
     async def recentplayer(self, ctx, riot_id: discord.Option(str, name="riot_id", description="名稱#tag")):
         await ctx.defer()
@@ -173,8 +183,14 @@ class system_game(Cog_Extension):
         counts = df["tier"].value_counts()
         await ctx.channel.send(embed=BotEmbed.simple(title="查詢結果", description=str(counts)))
 
-    @lol.command(description="取得指定日期的League of Legends職業聯賽比賽結果", name_localizations=ChoiceList.name("lol_progame"))
-    async def progame(self, ctx, match_date: discord.Option(str, name="日期", description="要查詢的日期，格式為YYYY-MM-DD", required=False)):
+    @lol.command(
+        description="取得指定日期的League of Legends職業聯賽比賽結果", name_localizations=ChoiceList.name("lol_progame")
+    )
+    async def progame(
+        self,
+        ctx,
+        match_date: discord.Option(str, name="日期", description="要查詢的日期，格式為YYYY-MM-DD", required=False),
+    ):
         await ctx.defer()
         match_date = datetime.strptime(match_date, "%Y-%m-%d").date() if match_date else date.today()
         results = LOLMediaWikiAPI().get_date_games(match_date)
@@ -186,10 +202,17 @@ class system_game(Cog_Extension):
         for r in results:
             if r["Tournament"] not in tournament_dict:
                 tournament_name = r["Tournament"]
-                tournament_dict[tournament_name] = BotEmbed.simple(title=tournament_name, description=f"{match_date.strftime('%Y/%m/%d')} 比賽戰果\nPatch：{r['Patch']}")
+                tournament_dict[tournament_name] = BotEmbed.simple(
+                    title=tournament_name,
+                    description=f"{match_date.strftime('%Y/%m/%d')} 比賽戰果\nPatch：{r['Patch']}",
+                )
 
             embed = tournament_dict[r["Tournament"]]
-            name = f"👑{r['Team1']} vs {r['Team2']} {r['Gamename']}" if r["Winner"] == "1" else f"{r['Team1']} vs 👑{r['Team2']} {r['Gamename']}"
+            name = (
+                f"👑{r['Team1']} vs {r['Team2']} {r['Gamename']}"
+                if r["Winner"] == "1"
+                else f"{r['Team1']} vs 👑{r['Team2']} {r['Gamename']}"
+            )
             value = f"\n⏱️{r['Gamelength']} ⚔️{r['Team1Kills']} : {r['Team2Kills']}"
             value += f"\n`{r['Team1Players']}` vs `{r['Team2Players']}`"
             team1_picks = []
@@ -213,7 +236,9 @@ class system_game(Cog_Extension):
 
     @osu.command(name="user", description="查詢Osu用戶資料", name_localizations=ChoiceList.name("osu_user"))
     @commands.cooldown(rate=1, per=1)
-    async def osu_user(self, ctx, username: discord.Option(str, name="玩家名稱", description="要查詢的玩家", default=None)):
+    async def osu_user(
+        self, ctx, username: discord.Option(str, name="玩家名稱", description="要查詢的玩家", default=None)
+    ):
         player = OsuAPI().get_player(username)
         if player:
             await ctx.respond("查詢成功", embed=player.desplay())
@@ -231,7 +256,11 @@ class system_game(Cog_Extension):
 
     @apex.command(name="user", description="查詢Apex玩家資料", name_localizations=ChoiceList.name("apex_user"))
     @commands.cooldown(rate=1, per=3)
-    async def apex_user(self, ctx: discord.ApplicationContext, username: discord.Option(str, name="玩家名稱", description="要查詢的玩家")):
+    async def apex_user(
+        self,
+        ctx: discord.ApplicationContext,
+        username: discord.Option(str, name="玩家名稱", description="要查詢的玩家"),
+    ):
         player = ApexAPI().get_player(username)
         if player:
             await ctx.respond(content="查詢成功", embed=player.desplay())
@@ -251,9 +280,13 @@ class system_game(Cog_Extension):
     #     embed = ApexInterface().get_server_status().desplay()
     #     await ctx.respond(content='查詢成功',embed=embed)
 
-    @dbd.command(name="user", description="查詢Dead by daylight玩家資料", name_localizations=ChoiceList.name("dbd_user"))
+    @dbd.command(
+        name="user", description="查詢Dead by daylight玩家資料", name_localizations=ChoiceList.name("dbd_user")
+    )
     @commands.cooldown(rate=1, per=1)
-    async def dbd_user(self, ctx, userid: discord.Option(str, name="steamid", description="要查詢的玩家id", default=None)):
+    async def dbd_user(
+        self, ctx, userid: discord.Option(str, name="steamid", description="要查詢的玩家id", default=None)
+    ):
         player = DBDInterface().get_player(userid)
         if player:
             await ctx.respond(content="查詢成功", embed=player.embed())
@@ -307,7 +340,10 @@ class system_game(Cog_Extension):
         if name:
             account.name = name
         sclient.sqldb.merge(account)
-        await ctx.respond(f"{ctx.author.mention} 註冊成功，IP：`{ip.network_address}`，使用者名稱：`{name if name else '未登記'}`", ephemeral=True)
+        await ctx.respond(
+            f"{ctx.author.mention} 註冊成功，IP：`{ip.network_address}`，使用者名稱：`{name if name else '未登記'}`",
+            ephemeral=True,
+        )
 
     @game.command(description="註冊ZeroTier帳號", name_localizations=ChoiceList.name("game_zerotier"))
     async def zerotier(
@@ -330,7 +366,12 @@ class system_game(Cog_Extension):
 
         now = nowtz()
         account = UserIPDetails(
-            ip=str(member["config"]["ipAssignments"][0]), last_seen=now, discord_id=ctx.author.id, address=member["nodeId"], name=name, registration_at=now
+            ip=str(member["config"]["ipAssignments"][0]),
+            last_seen=now,
+            discord_id=ctx.author.id,
+            address=member["nodeId"],
+            name=name,
+            registration_at=now,
         )
         sclient.sqldb.merge(account)
 
@@ -395,7 +436,9 @@ class system_game(Cog_Extension):
             value = f"最後上線時間：{r.last_seen.strftime('%Y-%m-%d %H:%M:%S')}\n註冊時間：{r.registration_at.strftime('%Y-%m-%d %H:%M:%S') if r.registration_at else '未知'}"
             if r.address:
                 value += f"\nZeroTier位址：`{r.address}`"
-            embed.add_field(name=f"IP位址：`{r.ip}` 使用者名稱：`{r.name if r.name else '未登記'}`", value=value, inline=False)
+            embed.add_field(
+                name=f"IP位址：`{r.ip}` 使用者名稱：`{r.name if r.name else '未登記'}`", value=value, inline=False
+            )
         embed.set_footer(text="資料可能不完整，請以實際VPN的紀錄為準")
 
         await ctx.respond("查詢成功", embed=embed, ephemeral=True)

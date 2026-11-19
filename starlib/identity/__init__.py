@@ -12,7 +12,14 @@ from .client import (
     ResolvedAccount,
 )
 from .privilege import privilege_of
-from .resolver import BotIdentity, IdentityResolver, IdentityUnavailable, LinkedPassports, fetch_linked_passports, resolve_identity
+from .resolver import (
+    BotIdentity,
+    IdentityResolver,
+    IdentityUnavailable,
+    LinkedPassports,
+    fetch_linked_passports,
+    resolve_identity,
+)
 from .twitch import MemberUnknown, NotMember, TwitchLookup, TwitchMember, lookup_twitch_member
 
 __all__ = [

@@ -80,7 +80,9 @@ def moderate_members_issue(guild: discord.Guild) -> LobbyPermIssue | None:
     return LobbyPermIssue("Moderate Members", "guild", "無法自動禁言，警告累計到次數時只會寫入警告")
 
 
-async def after_warning(guild: discord.Guild, target: discord.User | discord.Member, warning_id: int) -> AutoTimeoutResult | None:
+async def after_warning(
+    guild: discord.Guild, target: discord.User | discord.Member, warning_id: int
+) -> AutoTimeoutResult | None:
     """警告寫入後判斷是否觸發自動禁言；沒有觸發回 None。
 
     對象不在伺服器不算觸發。計數照目前剩下的紀錄算（`get_warning_count`：本伺服器最後一次禁言之後的警告，含剛寫入的這筆）。
@@ -95,7 +97,9 @@ async def after_warning(guild: discord.Guild, target: discord.User | discord.Mem
         return await _trigger(guild, member, setting)
 
 
-async def _trigger(guild: discord.Guild, member: discord.Member, setting: AutoTimeoutSetting) -> AutoTimeoutResult | None:
+async def _trigger(
+    guild: discord.Guild, member: discord.Member, setting: AutoTimeoutSetting
+) -> AutoTimeoutResult | None:
     """持有該成員的鎖時呼叫：計數、禁言、寫紀錄一氣呵成，下一筆警告的計數會看到這次的禁言紀錄。"""
     if sclient.sqldb.get_warning_count(member.id, guild.id) < setting.times:
         return None

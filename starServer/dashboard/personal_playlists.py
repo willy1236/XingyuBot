@@ -74,7 +74,9 @@ def _write(scope: PersonalScope, playlist_id: int, action):
         try:
             extra = action(playlist)
         except MusicPlaylistConflict as e:
-            raise DashboardError(409, "conflict", deleted=e.deleted, current=None if e.deleted else _playlist_json(playlist_id)) from e
+            raise DashboardError(
+                409, "conflict", deleted=e.deleted, current=None if e.deleted else _playlist_json(playlist_id)
+            ) from e
         except MusicCommandError as e:
             raise _invalid(e) from e
         return {**(extra or {}), "playlist": _playlist_json(playlist_id)}
@@ -90,12 +92,19 @@ async def list_playlists(scope: PersonalScope = Depends(require_personal())):
         if user_id is None:
             return []
         counts = sqldb.get_music_playlist_song_counts(user_id)
-        return [{"id": p.id, "name": p.name, "version": p.version, "song_count": counts.get(p.id, 0)} for p in sqldb.get_music_playlists(user_id)]
+        return [
+            {"id": p.id, "name": p.name, "version": p.version, "song_count": counts.get(p.id, 0)}
+            for p in sqldb.get_music_playlists(user_id)
+        ]
 
     return {
         "writable": scope.tools_writable,
         "unavailable": scope.tool_unavailable,
-        "limits": {"playlists": playlists.MAX_PLAYLISTS, "songs": playlists.MAX_PLAYLIST_SONGS, "name": MAX_PLAYLIST_NAME_LENGTH},
+        "limits": {
+            "playlists": playlists.MAX_PLAYLISTS,
+            "songs": playlists.MAX_PLAYLIST_SONGS,
+            "name": MAX_PLAYLIST_NAME_LENGTH,
+        },
         "playlists": await run_db(run),
     }
 
@@ -132,8 +141,12 @@ class RenameBody(BaseModel):
 
 
 @router.patch("/personal/playlists/{playlist_id}")
-async def rename_playlist(playlist_id: int, body: RenameBody, scope: PersonalScope = Depends(require_personal(write=True))):
-    return await _write(scope, playlist_id, lambda playlist: playlists.rename_playlist(playlist, body.name, body.version))
+async def rename_playlist(
+    playlist_id: int, body: RenameBody, scope: PersonalScope = Depends(require_personal(write=True))
+):
+    return await _write(
+        scope, playlist_id, lambda playlist: playlists.rename_playlist(playlist, body.name, body.version)
+    )
 
 
 @router.delete("/personal/playlists/{playlist_id}")
@@ -143,7 +156,9 @@ async def delete_playlist(playlist_id: int, version: int, scope: PersonalScope =
         try:
             sqldb.delete_music_playlist(playlist.id, version)
         except MusicPlaylistConflict as e:
-            raise DashboardError(409, "conflict", deleted=e.deleted, current=None if e.deleted else _playlist_json(playlist_id)) from e
+            raise DashboardError(
+                409, "conflict", deleted=e.deleted, current=None if e.deleted else _playlist_json(playlist_id)
+            ) from e
         return {"ok": True}
 
     return await run_db(run)
@@ -161,7 +176,9 @@ async def add_songs(playlist_id: int, body: AddBody, scope: PersonalScope = Depe
         extracted = playlists.Extracted.of(await extract_songs(body.url.strip(), None))
     except MusicCommandError as e:
         raise _invalid(e) from e
-    return await _write(scope, playlist_id, lambda playlist: {"message": playlists.add_extracted(playlist, extracted, body.version)})
+    return await _write(
+        scope, playlist_id, lambda playlist: {"message": playlists.add_extracted(playlist, extracted, body.version)}
+    )
 
 
 class SongIdsBody(BaseModel):
@@ -170,7 +187,9 @@ class SongIdsBody(BaseModel):
 
 
 @router.post("/personal/playlists/{playlist_id}/songs/remove")
-async def remove_songs(playlist_id: int, body: SongIdsBody, scope: PersonalScope = Depends(require_personal(write=True))):
+async def remove_songs(
+    playlist_id: int, body: SongIdsBody, scope: PersonalScope = Depends(require_personal(write=True))
+):
     def action(playlist):
         sqldb.remove_music_playlist_songs(playlist.id, body.song_ids, body.version)
 
@@ -178,7 +197,9 @@ async def remove_songs(playlist_id: int, body: SongIdsBody, scope: PersonalScope
 
 
 @router.put("/personal/playlists/{playlist_id}/songs/order")
-async def reorder_songs(playlist_id: int, body: SongIdsBody, scope: PersonalScope = Depends(require_personal(write=True))):
+async def reorder_songs(
+    playlist_id: int, body: SongIdsBody, scope: PersonalScope = Depends(require_personal(write=True))
+):
     def action(playlist):
         try:
             sqldb.reorder_music_playlist_songs(playlist.id, body.song_ids, body.version)
@@ -193,7 +214,9 @@ class VersionBody(BaseModel):
 
 
 @router.post("/personal/playlists/{playlist_id}/sync")
-async def sync_playlist(playlist_id: int, body: VersionBody, scope: PersonalScope = Depends(require_personal(write=True))):
+async def sync_playlist(
+    playlist_id: int, body: VersionBody, scope: PersonalScope = Depends(require_personal(write=True))
+):
     def load_sources():
         playlist = _owned(scope, playlist_id)
         sources = sqldb.get_music_playlist_sources(playlist.id)
@@ -218,4 +241,3 @@ async def sync_playlist(playlist_id: int, body: VersionBody, scope: PersonalScop
             return {"messages": playlists.apply_sync(playlist, rebuilt)}
 
     return await _write(scope, playlist_id, action)
-

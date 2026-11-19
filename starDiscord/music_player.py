@@ -36,7 +36,9 @@ def _patched_remove_ssrc(self: VoiceClient, *, user_id: int) -> None:
 
 VoiceClient._remove_ssrc = _patched_remove_ssrc
 
-_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
+_USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
+)
 
 _BASE_YTDL_OPTIONS = {
     "format": "bestaudio/best",
@@ -568,7 +570,13 @@ async def extract_songs(url: str, requester: discord.Member) -> ExtractResult:
     return result
 
 
-async def enqueue_and_play(vc: discord.VoiceClient, ctx: discord.ApplicationContext | discord.Interaction, loop, songs: list[Song], skipped: int = 0) -> str:
+async def enqueue_and_play(
+    vc: discord.VoiceClient,
+    ctx: discord.ApplicationContext | discord.Interaction,
+    loop,
+    songs: list[Song],
+    skipped: int = 0,
+) -> str:
     """把歌曲加入伺服器佇列，沒在播放就開始播放，回傳給使用者的訊息。ctx 只用到 channel 與 guild，也可傳 Interaction。"""
     player = get_or_create_player(vc, ctx, loop)
 
@@ -587,7 +595,9 @@ async def enqueue_and_play(vc: discord.VoiceClient, ctx: discord.ApplicationCont
     return text
 
 
-async def play_saved_playlist(ctx: discord.ApplicationContext | discord.Interaction, member: discord.Member, playlist_id: int, shuffle: bool) -> str:
+async def play_saved_playlist(
+    ctx: discord.ApplicationContext | discord.Interaction, member: discord.Member, playlist_id: int, shuffle: bool
+) -> str:
     """把個人歌單整份加入佇列並播放，機器人不在語音頻道時自動加入。"""
     rows = sqldb.get_music_playlist_songs(playlist_id)
     if not rows:
@@ -603,7 +613,9 @@ async def play_saved_playlist(ctx: discord.ApplicationContext | discord.Interact
     return await enqueue_and_play(vc, ctx, asyncio.get_running_loop(), songs)
 
 
-async def ensure_author_voice(voice_client: discord.VoiceClient | None, author: discord.Member, *, auto_join: bool) -> discord.VoiceClient:
+async def ensure_author_voice(
+    voice_client: discord.VoiceClient | None, author: discord.Member, *, auto_join: bool
+) -> discord.VoiceClient:
     """確認使用者跟機器人在同一語音頻道，機器人不在頻道且 auto_join 時自動加入。"""
     if not voice_client:
         if not auto_join:

@@ -13,8 +13,12 @@ class system_economy(Cog_Extension):
     shop = SlashCommandGroup("shop", "商店相關指令")
 
     @point.command(description="查詢擁有的星塵數")
-    async def check(self, ctx: discord.ApplicationContext, user: discord.Option(discord.Member, name="成員", description="留空以查詢自己", default=None)):
-        user_dc:discord.Member = user or ctx.author
+    async def check(
+        self,
+        ctx: discord.ApplicationContext,
+        user: discord.Option(discord.Member, name="成員", description="留空以查詢自己", default=None),
+    ):
+        user_dc: discord.Member = user or ctx.author
         coins = sclient.sqldb.get_coin(user_dc.id)
         embed = BotEmbed.simple(f"{user_dc.name} 的點數")
         embed.add_field(name="⭐星塵", value=coins.stardust)
@@ -31,13 +35,13 @@ class system_economy(Cog_Extension):
         given: discord.Option(discord.Member, name="成員", description="欲轉給的成員", required=True),
         amount: discord.Option(int, name="點數", description="", min_value=1, required=True),
     ):
-        giver:discord.Member = ctx.author
+        giver: discord.Member = ctx.author
         if given == giver:
             await ctx.respond("轉帳失敗：無法轉帳給自己", ephemeral=True)
         elif given.bot is True:
             await ctx.respond("轉帳失敗：無法轉帳給機器人", ephemeral=True)
         else:
-            code = sclient.sqldb.transfer_scoin(giver.id,given.id,amount)
+            code = sclient.sqldb.transfer_scoin(giver.id, given.id, amount)
             if not code:
                 await ctx.respond(f"轉帳成功：{ctx.author.mention} 已將 {amount} 星塵⭐轉給 {given.mention}")
             else:

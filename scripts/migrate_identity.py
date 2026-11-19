@@ -216,7 +216,11 @@ def _load_legacy_users(session) -> list[UserResult]:
         if r["partial_drive"]:
             raise MigrationAborted(f"cloud_user {r['id']} 的雲端資料夾只填了 gmail 或 share_id 其中一個")
         discord_id = int(r["discord_id"]) if r["discord_id"] is not None else None
-        users.append(UserResult(cloud_user_id=r["id"], privilege_level=r["privilege_level"], discord_id=discord_id, counts=counts))
+        users.append(
+            UserResult(
+                cloud_user_id=r["id"], privilege_level=r["privilege_level"], discord_id=discord_id, counts=counts
+            )
+        )
     return users
 
 
@@ -285,7 +289,9 @@ def _verify_after_merge(session, before: dict[str, int], after: dict[str, int], 
         if after[key] != before[key]:
             raise MigrationAborted(f"合併後 {key} 筆數不符：{before[key]} → {after[key]}")
     for table in ("music_playlist", "netbird_binding", "linked_account", "drive_share"):
-        left = session.execute(text(f"SELECT count(*) FROM users.{table} WHERE user_id = ANY(:ids)"), {"ids": staging_ids}).scalar()
+        left = session.execute(
+            text(f"SELECT count(*) FROM users.{table} WHERE user_id = ANY(:ids)"), {"ids": staging_ids}
+        ).scalar()
         if left:
             raise MigrationAborted(f"合併後 users.{table} 仍有 {left} 筆掛在暫用 ID")
 
@@ -297,7 +303,9 @@ def _counts(session, queries: dict[str, str]) -> dict[str, int]:
 
 def format_report(report: Report) -> str:
     lines = [f"== 身分轉換{'（dry-run，已 rollback）' if report.dry_run else ''} =="]
-    lines.append(f"{'cloud_user':>10}  {'discord_id':<20}  {'結果':<4}  {'user_id':<36}  {'域民代號':<16}  歌單 NetBird 綁定 雲端")
+    lines.append(
+        f"{'cloud_user':>10}  {'discord_id':<20}  {'結果':<4}  {'user_id':<36}  {'域民代號':<16}  歌單 NetBird 綁定 雲端"
+    )
     for u in report.users:
         if u.user_id is None:
             result = "略過"
@@ -316,7 +324,9 @@ def format_report(report: Report) -> str:
     lines.append("== 管理員（privilege_level > 0）==")
     for u in report.admins:
         account = u.username or ("已註冊" if u.is_formal else "未註冊")
-        lines.append(f"cloud_user {u.cloud_user_id}  Level {u.privilege_level}  discord {u.discord_id}  析域帳號 {account}  roles {list(u.roles)}")
+        lines.append(
+            f"cloud_user {u.cloud_user_id}  Level {u.privilege_level}  discord {u.discord_id}  析域帳號 {account}  roles {list(u.roles)}"
+        )
     lines.append("")
     lines.append("== 歌單最多的使用者（抽查用）==")
     for u in report.top_playlist_users:
