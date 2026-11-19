@@ -98,7 +98,7 @@
 | 8 | W-07 | 未完成 | 實況主能設定事件回應 | W-04 | A | |
 | 9 | W-08 | 未完成 | 實況主能看到權限問題並一鍵修復 | W-03 | B | |
 | 10 | W-09 | 未完成 | 實況主能刪除頻道的所有資料 | W-04 | B | 要保留修改紀錄；表由 W-04 建好 |
-| 11 | W-10 | 進行中 | 用析域登入能同時管理伺服器與頻道 | W-01 | B | |
+| 11 | W-10 | 實作完成 | 用析域登入能同時管理伺服器與頻道 | W-01 | B | |
 | 12 | W-13 | 未完成 | 官網有 Twitch bot 介紹與接入入口 | W-05、W-06、W-07、W-11 | — | 純前端；只介紹已上線的功能 |
 | 13 | W-11 | 未完成 | 實況主能把事件轉發到 Discord | W-10、W-07 | — | 與 W-07 都改事件模組 |
 | 14 | W-12 | 未完成 | bot owner 能在營運入口管理頻道 | W-04、W-08 | — | 用 W-08 的狀態判定 |
@@ -872,11 +872,11 @@
 
 **驗收條件**
 - [ ] 析域帳號連了兩個 Twitch 和一個 Discord，用析域登入後，個人區同時有伺服器入口和兩個頻道；兩個頻道後台都能進入。
-- [ ] 析域帳號只連 Twitch、沒連 Discord，能用析域登入，看得到頻道，看不到伺服器。
-- [ ] 析域帳號都沒有連結，用析域登入時回到登入頁，提示先連結 Discord 或 Twitch。
+- [x] 析域帳號只連 Twitch、沒連 Discord，能用析域登入，看得到頻道，看不到伺服器。
+- [x] 析域帳號都沒有連結，用析域登入時回到登入頁，提示先連結 Discord 或 Twitch。
 - [ ] 登入中在 auth server 解除某個 Twitch 的連結，60 秒後該頻道從清單消失；正在看它的頁面，下一次操作被導回頻道清單並提示。
-- [ ] 登入中在 auth server 新增一個 Twitch 連結，60 秒後出現在頻道清單。
-- [ ] 析域登入、而且有 Discord 時，頻道後台的轉發 Discord 區塊不再顯示「需要析域帳號」。析域登入但沒有 Discord 時，改顯示「需要連結 Discord」。
+- [x] 登入中在 auth server 新增一個 Twitch 連結，60 秒後出現在頻道清單。
+- [x] 析域登入、而且有 Discord 時，頻道後台的轉發 Discord 區塊不再顯示「需要析域帳號」。析域登入但沒有 Discord 時，改顯示「需要連結 Discord」。
 
 **實作設計**
 - 資料：不新增欄位。析域登入 session 的 Twitch 頻道清單來自帳號跟隨，不存 DB。
@@ -903,10 +903,20 @@
 **風險 / 實作注意**
 - 個人區既有區塊大多以 Discord ID 查資料。沒有 Discord 的析域 session 進個人區時，逐一確認每個區塊在 discord 為 null 時不會出錯。
 
-**進度**：進行中（2026-11-19）
-- 已完成：後端 session 帶入析域帳號的 Twitch 頻道（`session.py` 的 `_channels_of`、`_Followed.twitch_channels`、`remember_account` 改 async）；沒有 Discord 的析域 session（`domalyze_login.py`）與登出（`delete_account_sessions`）；個人區 overview 加 `channels`（`personal.py`，沒有 Discord 的析域 session 也能開，`discords` 為空；Twitch 登入維持 403 `discord_required`）；修改紀錄的操作者（使用者決定，2026-11-19）：`AuditActor.platform` 加 `domalyze`（id 是 account_id、name 是域民代號），`session.audit_actor(info)` 依 session 回傳操作者（Twitch 登入記 twitch，有 Discord 記 discord，沒有 Discord 的析域登入記 domalyze），W-05～W-07 的端點直接用；測試 `tests/accounts/test_domalyze_channels.py`、`test_domalyze_login.py`、`test_personal.py`、`tests/dashboard/test_audit_actor.py`、`tests/twitch/test_audit.py`。
-- 續做：前端（domalyze_frontend 的 tsd-w10 分支）。
-- 沒有 ALTER（`actor_platform` 是字串欄位）。
+**進度**：實作完成（2026-11-19），待審查與人工驗證；驗收條件只勾自動測試驗證過的 4 條（只連 Twitch 能登入、都沒連結的提示、60 秒內新增連結、轉發區塊的文案），A1、A4 含畫面操作，待人工驗證
+- commit：後端 d5dd1fae、a94d5f37、0aac43b4、76868b15，加上本卡回寫；前端（domalyze_frontend 的 tsd-w10 分支）90199a2、53fc470、0bbf99f、10c188a
+- 實作時的決定：
+  - 帶入頻道：`session._channels_of(account)` 把 `twitch_passports` 轉成 `TwitchIdentity`，名稱與頭像取自 `TwitchBotJoinChannel`（沒有就用 passport 的顯示名稱），`login` 沒有列時為空字串，依名稱排序；缺的頻道列用 `INSERT ... ON CONFLICT DO NOTHING` 新增為 `inactive`，不改既有列。`record_channel` 吃 `TwitchUser`、先查再寫，不適用，沒有重用。`remember_account` 因此改成 async（唯一呼叫端是 `domalyze_login`）。
+  - 只有析域登入的 session 帶頻道（`login_method == "domalyze"`）；Discord 登入即使帳號連結了 Twitch 也不帶。
+  - 失效條件不用改：`_check` 本來就只在有 Discord 時才比對 Discord 清單；只補測試。`forward_access` 的 `need_discord` 是 W-01 已有，只補測試。
+  - 無 Discord 的析域 session：`name` 用域民代號（沒有用「析域帳號」），頭像 null，登出走 `delete_account_sessions`（同一 `account_id`、沒有 Discord 的析域 session）。
+  - 個人區 overview 改 `require_any_session`：有 Discord 的 session 結果不變（只多 `channels`），沒有 Discord 的析域 session 回 `discords: []`；Twitch 登入維持 403 `discord_required`（W-00 的驗收條件）。overview 沒有「Discord 欄位」，以 `discords` 為空代表。其他個人區端點仍要求 Discord，沒有 Discord 的 session 得到 403，前端對應區塊（資產、紀錄、歌單、雲端資料夾、NetBird、公開頁）一律不顯示。
+  - 修改紀錄的操作者（使用者決定，2026-11-19，D-1 選 b）：`AuditActor.platform` 加 `domalyze`（id 是 account_id、name 是域民代號）；`session.audit_actor(info)` 同步、不查 DB：Twitch 登入記 twitch，有 Discord 身分記 discord，沒有 Discord 的析域登入記 domalyze。W-05～W-07 的端點直接用；`actor_platform` 是字串欄位，不需 ALTER。
+  - 前端：`DashboardUser.avatar_url` 可為 null，新增共用的 `UserAvatar`（後台與官網頁首）；「我的頻道」是 `components/dashboard/personal/channels.tsx`；頻道清單頁讀 `?notice=channel_unlinked`、帶提示時只有一個頻道也列出，沒有頻道時析域登入顯示連結析域帳號的說明；`ChannelAccessGuard` 對析域登入收到 `channel_forbidden` 時導到 `/dashboard/channels?notice=channel_unlinked`（Twitch 登入維持顯示「沒有這個頻道的權限」），並在頻道內換頁（pathname 變動）時重新載入頻道資料。
+- 已知限制：頻道頁內的操作（POST、PUT）若在解除連結後收到 `channel_forbidden`，由各頁自己的錯誤處理顯示，沒有全域導回（`dashboard-api.ts` 不加全域 handler，W-05～W-07 的頁面各自處理）；解除連結後只有換頁或重新整理才會被導走。
+- 沒有 ALTER。
+- 未驗：真實 auth server 的連結增減（60 秒）、析域登入後個人區與頻道清單的畫面（桌面與 360px）、頻道被解除連結時的導回與提示、沒有 Discord 的析域帳號登入後各頁。
+- 完整 CI：待合併回 main 前跑。
 
 ### W-11 實況主能把事件轉發到 Discord
 

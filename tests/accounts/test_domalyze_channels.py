@@ -272,3 +272,19 @@ class TestPersonalOverview:
         r = c.get(path)
 
         assert (r.status_code, r.json()) == (403, {"error": "discord_required"})
+
+
+class TestForwardAccess:
+    def test_domalyze_login_with_discord_can_forward(self, repo, directory, clock):
+        acc = linked(uuid4(), twitch=[(CHANNEL_A, "Alpha")])
+        link(directory, acc)
+        c = client_for(make_domalyze_session(repo, acc.account_id))
+
+        assert c.get(f"/dashboard/channels/{CHANNEL_A}").json()["forward_access"] == "ok"
+
+    def test_domalyze_login_without_discord_needs_discord(self, repo, directory, clock):
+        acc = linked(uuid4(), twitch=[(CHANNEL_A, "Alpha")], discord_ids=())
+        link(directory, acc)
+        c = client_for(make_domalyze_session(repo, acc.account_id, user_id=None))
+
+        assert c.get(f"/dashboard/channels/{CHANNEL_A}").json()["forward_access"] == "need_discord"
