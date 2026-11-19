@@ -346,3 +346,20 @@ def test_shutdown_grace_expires_as_abnormal(tm, monkeypatch):
     tm.main()
 
     assert tm.exits == [1]
+
+
+def test_chat_restart_resets_callback_loop_before_start(monkeypatch, sentry):
+    """twitchAPI 只在 _callback_loop 為 None 時才換成新的 socket loop；不清掉，重啟後 handler 都排在已停止的舊 loop。"""
+    thread = make_thread(monkeypatch)
+    thread.chat._callback_loop = "stale-loop"
+    seen = []
+
+    def start():
+        seen.append(thread.chat._callback_loop)
+        thread.stop()
+
+    thread.chat.start.side_effect = start
+
+    thread._watch_chat()
+
+    assert seen == [None]

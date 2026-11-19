@@ -327,3 +327,67 @@ def test_helix_server_error_is_unknown(helix):
 def test_helix_unreachable_is_unknown(helix):
     helix.error = channels.httpx.ConnectError("down")
     assert run(channels.bot_is_mod(TWITCH_ID)) is None
+
+
+# ---- chat 重啟：Chat 換了新的 loop ----
+
+
+@pytest.fixture
+def registrations(monkeypatch):
+    handle, on_invalidate = MagicMock(), MagicMock()
+    monkeypatch.setattr(channels.rpc, "handle", handle)
+    monkeypatch.setattr(channels.cache_invalidation, "on_invalidate", on_invalidate)
+    monkeypatch.setattr(channels, "_registered", False)
+    return handle, on_invalidate
+
+
+def ready(chat=None):
+    return SimpleNamespace(chat=chat or MagicMock(username="star_bot", join_room=AsyncMock()))
+
+
+def test_on_ready_does_not_register_before_register_is_called(bot, registrations):
+    run(channels.on_ready(ready()))
+    registrations[0].assert_not_called()
+
+
+def test_restart_rebinds_handlers_and_drops_state_of_the_old_loop(bot, registrations, monkeypatch):
+    handle, on_invalidate = registrations
+    loops = []
+
+    async def first_ready():
+        loops.append(asyncio.get_running_loop())
+        await channels.on_ready(ready())
+        channels.register()
+        channels._room_locks[TWITCH_ID] = asyncio.Lock()
+        channels._pending[TWITCH_ID] = 1
+
+    async def second_ready():
+        loops.append(asyncio.get_running_loop())
+        await channels.on_ready(ready())
+
+    run(first_ready())
+    assert handle.call_args_list[0].args[2] is loops[0]
+
+    run(second_ready())
+
+    assert state.loop is loops[1]
+    assert {call.args[0]: call.args[2] for call in handle.call_args_list[2:]} == {
+        "channel.sync": loops[1],
+        "channel.status": loops[1],
+    }
+    assert on_invalidate.call_args_list[-1].args[2] is loops[1]
+    assert channels._room_locks == {}
+    assert channels._pending == {}
+
+
+def test_ready_on_the_same_loop_keeps_registrations(bot, registrations):
+    async def scenario():
+        await channels.on_ready(ready())
+        channels.register()
+        channels._pending[TWITCH_ID] = 1
+        await channels.on_ready(ready())
+
+    run(scenario())
+
+    assert registrations[0].call_count == 2
+    assert channels._pending == {TWITCH_ID: 1}

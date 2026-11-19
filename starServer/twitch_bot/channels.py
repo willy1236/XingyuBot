@@ -137,9 +137,24 @@ def _lock(locks: dict[int, asyncio.Lock], twitch_id: int) -> asyncio.Lock:
     return locks.setdefault(twitch_id, asyncio.Lock())
 
 
+_registered = False
+
+
 async def on_ready(ready_event: EventData) -> None:
-    """Chat 連上時：記下它的 loop，並加入目前應該在的聊天室（chat 重啟後也是用這份，不是啟動時的舊清單）。"""
-    state.loop = asyncio.get_running_loop()
+    """Chat 連上時：記下它的 loop，並加入目前應該在的聊天室（chat 重啟後也是用這份，不是啟動時的舊清單）。
+
+    `_watch_chat` 重啟 chat 後 READY 會在新的 loop 上再來一次：RPC 與快取失效的 handler 要改綁到新的 loop，
+    綁在舊 loop 上的鎖與計數也一併作廢（舊 loop 上還沒跑完的背景任務不會再執行）。
+    """
+    loop = asyncio.get_running_loop()
+    restarted = getattr(state, "loop", loop) is not loop
+    if restarted:
+        _room_locks.clear()
+        _subscription_locks.clear()
+        _pending.clear()
+    state.loop = loop
+    if restarted and _registered:
+        register()
     log.info("Bot is ready as %s, joining channels", ready_event.chat.username)
     if rooms:
         await ready_event.chat.join_room(list(rooms.values()))
@@ -314,7 +329,12 @@ async def _on_channel_invalidated(key: str | None) -> None:
 
 
 def register() -> None:
-    """註冊 twitch 服務的 RPC 方法與 twitch_channel 的快取失效；handler 都跑在 Chat 的 loop 上（要先有 state.loop）。"""
+    """註冊 twitch 服務的 RPC 方法與 twitch_channel 的快取失效；handler 都跑在 Chat 的 loop 上（要先有 state.loop）。
+
+    呼叫過一次之後，每次 Chat 換 loop（重啟）時 `on_ready` 會再呼叫，把 handler 改綁到新的 loop。
+    """
+    global _registered
+    _registered = True
     rpc.handle("channel.sync", _rpc_sync, state.loop)
     rpc.handle("channel.status", _rpc_status, state.loop)
     cache_invalidation.on_invalidate("twitch_channel", _on_channel_invalidated, state.loop)

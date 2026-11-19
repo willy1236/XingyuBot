@@ -229,6 +229,9 @@ class TwitchBotThread(BaseThread):
                 log.error("Twitch chat 停止失敗，放棄自動重啟", exc_info=exc)
                 self.abnormal = True
                 return
+            # twitchAPI 只在 _callback_loop 為 None 時才設成新的 socket loop；不清掉的話，重啟後所有 handler
+            # （READY、訊息、指令）都排在已停止的舊 loop 上，bot 連得上卻完全不回應
+            self.chat._callback_loop = None
             # chat.start() 在連線失敗時會無限等待 startup，放到另一條 thread 並設上限
             starter = threading.Thread(target=self.chat.start, name="TwitchChatRestart", daemon=True)
             starter.start()
