@@ -50,9 +50,14 @@ def substitute(template: str, values: Mapping[str, str]) -> str:
     return _VARIABLE.sub(lambda m: values.get(m.group(1), m.group(0)), template)
 
 
+def variables_used(template: str) -> set[str]:
+    """模板裡用到的變數名稱（含不認得的）。"""
+    return set(_VARIABLE.findall(template))
+
+
 def uses_viewer_input(template: str) -> bool:
     """模板含 `{touser}` 或 `{args}`，內容會帶入觀眾輸入。"""
-    return any(name in VIEWER_INPUT_VARIABLES for name in _VARIABLE.findall(template))
+    return not VIEWER_INPUT_VARIABLES.isdisjoint(variables_used(template))
 
 
 _client_id: str | None = None

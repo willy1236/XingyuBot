@@ -19,7 +19,7 @@ from starlib.messaging.events.twitch_activity import (
 )
 from starlib.messaging.events.twitch_follow import TwitchFollowEvent
 from starlib.messaging.events.twitch_stream import TwitchStreamOfflineEvent, TwitchStreamOnlineEvent
-from starServer.twitch_bot import state, timers
+from starServer.twitch_bot import speech, state, timers
 
 log = logging.getLogger(__name__)
 
@@ -61,6 +61,9 @@ async def on_stream_online(event: eventsub.StreamOnlineEvent):
     if live is None:
         log.warning("%s 開台但查不到直播資訊，略過開台通知", event.event.broadcaster_user_name)
         return
+    speech.set_live(
+        int(event.event.broadcaster_user_id), speech.StreamInfo(live.started_at, live.game_name, live.title)
+    )
     await timers.on_stream_online(int(event.event.broadcaster_user_id))
 
     # 聊天室訊息只看有沒有設定通知頻道；Discord 端的通知頻道與開台通知由 Discord bot 處理事件時決定
@@ -101,6 +104,7 @@ async def on_stream_online(event: eventsub.StreamOnlineEvent):
 
 async def on_stream_offline(event: eventsub.StreamOfflineEvent):
     log.info("%s ending stream.", event.event.broadcaster_user_name)
+    speech.set_offline(int(event.event.broadcaster_user_id))
     await timers.on_stream_offline(int(event.event.broadcaster_user_id))
     get_bus().publish(
         TwitchStreamOfflineEvent(
