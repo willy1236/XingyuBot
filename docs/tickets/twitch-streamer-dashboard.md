@@ -670,7 +670,7 @@
 - `use_count` 每次觸發都寫 DB，量大時可以改成批次寫回。這屬於實作細節。
 - Twitch IRC tags 的 badges 可以判斷 vip 與 subscriber，twitchAPI 的 `ChatUser` 有對應屬性。
 
-**進度**：實作完成（2026-11-19），待審查；驗收條件只勾自動測試驗證過的項目，全部以 mock 的 Twitch chat 與 AutoMod 驗證，真實 Twitch 與頁面畫面待人工驗證
+**進度**：實作完成（2026-11-19），審查兩輪放行，待人工驗證；驗收條件只勾自動測試驗證過的項目（13 條都有自動測試，全部以 mock 的 Twitch chat 與 AutoMod 驗證），真實 Twitch 與頁面畫面待人工驗證
 - 使用者決定（2026-11-19）：
   - D1：頻道 state 不是 enabled 時，後台指令唯讀。`channels.py` 新增可重用的 dependency `require_enabled_channel`（先走 `require_channel`，state 不是 enabled 回 409 `channel_not_enabled`），POST／PUT／DELETE 用它，GET 仍用 `require_channel`；W-06、W-07 也用同一個。前端非 enabled 時清單照常顯示、停用新增／編輯／開關並提示「啟用後才能修改指令」，收到 409 `channel_not_enabled` 時重新載入頻道資料。聊天室指令不受影響。
   - D2（推翻規劃時的建議）：聊天室新增 `!edit_cmd <名稱或別名> <新回應>`，只改回應；權限同 `!add_cmd`，回應 1～500 字並跑 AutoMod 檢查；指令不存在或為內建指令時拒絕；紀錄 action=update、source=chat；走 `starlib/twitch_commands.update`。
@@ -697,7 +697,15 @@
   - 聊天室 `!add_cmd`、`!edit_cmd`、`!remove_cmd` 寫入後，bot 本機先重讀該頻道的指令快取，再由 `twitch_commands` 照常發 invalidate，Redis 連不上時剛改的指令也立刻生效。
   - 聊天室管理指令的 DB 讀寫改走 `asyncio.to_thread`（`commands._db`），並在該 thread 內 `release_session`；回覆文字不再讀 worker thread 回傳的 ORM 物件（commit 後已過期、session 已釋放）。
   - 總覽表 W-05 進度改為實作完成。
-  - 未修：nitpick 與 note。
+  - 未修：見下方「審查」。
+- 審查：兩輪放行，沒有未處理的 blocking 與 non-blocking。第 1 輪的 blocking 與 non-blocking（W-05 的快取 reload、DB 工作移到 thread、總覽表；W-10 的兩條）都已修，第 2 輪確認修正沒有帶出新問題。未修：
+  - nitpick：回應欄的變數清單預設收在 `<details>` 裡，卡上寫「回應欄下方列出可用的變數」，收合後要多點一下，屬呈現偏好。
+  - nitpick：W-10 的 docs commit 夾帶測試變更、`channel-access-guard.tsx` 的 hook 呼叫寫在參數裡（見 W-10 卡）。
+  - note：開關的 catch 提早 return 後，`finally` 仍會 reload 清單，導頁時多送一次請求，結果是 403 且不會顯示。
+  - note：寫入成功後若本機 `_reload` 失敗，例外會讓聊天室收不到「已新增、已修改」的回覆；資料已 commit，Pub/Sub 之後仍會重讀。
+  - note：寫入後本機重讀一次，Pub/Sub 回送又重讀一次，重複的讀取無害。
+  - note：pyright 沒有重跑，既有的 `__table_args__` 與 `msg.room` Optional 報錯沒有重新驗證。
+  - 範圍外觀察（交 dev-audit 或之後的卡，不是這張卡的問題）：`!list_cmd` 用換行字元串接回覆，Twitch IRC 會吃掉換行，這是既有寫法；共享聊天室（shared chat）的 `source-badges`、`source-room-id` 沒處理，別台觀眾的訊息若帶 mod 旗標，可能被當成本頻道 mod，`mod` tag 在 shared chat 下的語意未查證。
 
 
 ### W-06 實況主能設定計時訊息
@@ -918,8 +926,8 @@
 **風險 / 實作注意**
 - 個人區既有區塊大多以 Discord ID 查資料。沒有 Discord 的析域 session 進個人區時，逐一確認每個區塊在 discord 為 null 時不會出錯。
 
-**進度**：實作完成（2026-11-19），待審查與人工驗證；驗收條件只勾自動測試驗證過的 4 條（只連 Twitch 能登入、都沒連結的提示、60 秒內新增連結、轉發區塊的文案），A1、A4 含畫面操作，待人工驗證
-- commit：後端 d5dd1fae、a94d5f37、0aac43b4、76868b15，加上本卡回寫；前端（domalyze_frontend 的 tsd-w10 分支）90199a2、53fc470、0bbf99f、10c188a
+**進度**：實作完成（2026-11-19），審查兩輪放行，待人工驗證；驗收條件只勾自動測試驗證過的 4 條（只連 Twitch 能登入、都沒連結的提示、60 秒內新增連結、轉發區塊的文案），第 1、4 條含畫面操作，待人工驗證
+- commit：後端 d5dd1fae、a94d5f37、0aac43b4、76868b15、ca251dd7（本卡回寫）、484c9204、dc4dd39f（審查修正）；前端（domalyze_frontend 的 tsd-w10 分支）90199a2、53fc470、0bbf99f、10c188a
 - 實作時的決定：
   - 帶入頻道：`session._channels_of(account)` 把 `twitch_passports` 轉成 `TwitchIdentity`，名稱與頭像取自 `TwitchBotJoinChannel`（沒有就用 passport 的顯示名稱），`login` 沒有列時為空字串，依名稱排序；缺的頻道列用 `INSERT ... ON CONFLICT DO NOTHING` 新增為 `inactive`，不改既有列。`record_channel` 吃 `TwitchUser`、先查再寫，不適用，沒有重用。`remember_account` 因此改成 async（唯一呼叫端是 `domalyze_login`）。
   - 只有析域登入的 session 帶頻道（`login_method == "domalyze"`）；Discord 登入即使帳號連結了 Twitch 也不帶。
@@ -928,13 +936,18 @@
   - 個人區 overview 改 `require_any_session`：有 Discord 的 session 結果不變（只多 `channels`），沒有 Discord 的析域 session 回 `discords: []`；Twitch 登入維持 403 `discord_required`（W-00 的驗收條件）。overview 沒有「Discord 欄位」，以 `discords` 為空代表。其他個人區端點仍要求 Discord，沒有 Discord 的 session 得到 403，前端對應區塊（資產、紀錄、歌單、雲端資料夾、NetBird、公開頁）一律不顯示。
   - 修改紀錄的操作者（使用者決定，2026-11-19，D-1 選 b）：`AuditActor.platform` 加 `domalyze`（id 是 account_id、name 是域民代號）；`session.audit_actor(info)` 同步、不查 DB：Twitch 登入記 twitch，有 Discord 身分記 discord，沒有 Discord 的析域登入記 domalyze。W-05～W-07 的端點直接用；`actor_platform` 是字串欄位，不需 ALTER。
   - 前端：`DashboardUser.avatar_url` 可為 null，新增共用的 `UserAvatar`（後台與官網頁首）；「我的頻道」是 `components/dashboard/personal/channels.tsx`；頻道清單頁讀 `?notice=channel_unlinked`、帶提示時只有一個頻道也列出，沒有頻道時析域登入顯示連結析域帳號的說明；`ChannelAccessGuard` 對析域登入收到 `channel_forbidden` 時導到 `/dashboard/channels?notice=channel_unlinked`（Twitch 登入維持顯示「沒有這個頻道的權限」），並在頻道內換頁（pathname 變動）時重新載入頻道資料。
-- 已知限制：頻道頁內的操作（POST、PUT）若在解除連結後收到 `channel_forbidden`，由各頁自己的錯誤處理顯示，沒有全域導回（`dashboard-api.ts` 不加全域 handler，W-05～W-07 的頁面各自處理）；解除連結後只有換頁或重新整理才會被導走。
+- 已知限制：頻道頁內的操作（POST、PUT）若在解除連結後收到 `channel_forbidden`，由各頁自己的錯誤處理顯示，沒有全域導回（`dashboard-api.ts` 不加全域 handler）。審查第 1 輪後，W-05 在 `channel-access-guard.tsx` 提供共用 hook `useChannelError()`，W-05 的指令頁已接上，W-06、W-07 的寫入操作沿用；沒有接上的頁面，解除連結後只有換頁或重新整理才會被導走。
 - 已知限制：沒有 Discord 的析域 session 之後帳號連上 Discord，session 不會自動升級，維持沒有 Discord 身分，要重新登入才看得到伺服器（轉發頁已提示重新登入）。
 - 審查第 1 輪修正：`_channels_of` 先 SELECT 已有的頻道列，缺列才 INSERT，列都在時不寫入。
 - 審查第 1 輪修正：個人區 overview 的「Discord 或沒有 Discord 的析域 session」判斷收成 `personal.require_personal_any`，overview 改用它。
 - 沒有 ALTER。
+- 審查：兩輪放行，沒有未處理的 blocking。第 1 輪 blocking 是 W-05 指令頁沒有接上本卡「解除連結後下一次操作導回頻道清單」，已由 W-05 的修正補上（見 W-05 卡）；本卡的 non-blocking 兩條已修（`_channels_of`、`require_personal_any`，見上方「審查第 1 輪修正」），第 2 輪確認沒有帶出新問題。未修：
+  - nitpick：`docs: 回寫 W-10 的實作進度與驗收`（ca251dd7）同時改了 `tests/accounts/test_domalyze_channels.py`，commit type 與內容不符。
+  - nitpick：`channel-access-guard.tsx` 把 `useDashboardUser()` 的呼叫寫在 `channelLeaveTarget(...)` 的參數裡，抽成區域變數較好讀。
+  - note：pyright 沒跑，W-04 卡記載的既有 `__table_args__` 與 `msg.room` Optional 報錯沒有重新驗證。
 - 未驗：真實 auth server 的連結增減（60 秒）、析域登入後個人區與頻道清單的畫面（桌面與 360px）、頻道被解除連結時的導回與提示、沒有 Discord 的析域帳號登入後各頁。
 - 完整 CI：待合併回 main 前跑。
+- 未勾的驗收條件：第 1 條（個人區並列伺服器與兩個頻道的畫面）與第 4 條（解除連結後的頁面導回與提示）要瀏覽器與真實 auth server 才驗得到；資料層的部分（兩個頻道出現在 overview、60 秒內消失、`require_channel` 回 403）已有自動測試。
 
 ### W-11 實況主能把事件轉發到 Discord
 
