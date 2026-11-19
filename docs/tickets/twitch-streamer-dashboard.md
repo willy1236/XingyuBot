@@ -968,6 +968,11 @@
 - 未驗：真實 Twitch 與 bot 的離開聊天室；瀏覽器裡設定頁的畫面與按鈕狀態。
 - 完整 CI：待合併回 main 前跑。
 - pyright：新檔 `channel_settings.py` 沒有錯誤；測試檔的 8 個 `reportCallIssue` 都是 model 建構子的 `__table_args__`，與既有測試同源。
+- 審查後修正（第 1 輪，審查報告 tsd-b-review-r1）：
+  - 時間窗：後台刪除（或停用）提交後、bot 收到同步通知離開聊天室之前，聊天室的 `!add_cmd`、`!edit_cmd`、`!remove_cmd` 仍可能寫回資料。`twitch_bot/commands.py` 新增 `_channel_enabled`，三個管理指令在權限檢查之後先讀資料庫的頻道 state，不是 `enabled`（含沒有頻道列）就回「星羽目前未啟用，無法修改指令」且不寫入；不用 `state.join_channels`，那份要等通知才更新。檢查與寫入不在同一個交易，檢查通過後、寫入前剛好被刪除的窗口仍在（毫秒級），不處理；要完全消除得把 state 檢查放進 `twitch_commands` 的寫入交易，牽動 W-05 的共用模組，這次不做。
+  - 文案：`bot_offline` 涵蓋 bot 離線與內部出錯（`RpcHandlerError`）。離線時 bot 重啟只會加入 `enabled` 的頻道；內部出錯時 bot 還在聊天室。兩種情況都是等 bot 重新啟動（`sync_all` 會離開不是 `enabled` 的頻道）或下次對該頻道同步才離開，所以提示改成「資料已刪除，但星羽還沒收到離開通知，會在重新啟動或下次同步時離開聊天室。」
+  - 沒修：修改紀錄不記整批刪除（coordinator 另外處理）、刪除說明的兩個 nitpick。
+
 
 ### W-10 用析域登入能同時管理伺服器與頻道
 
