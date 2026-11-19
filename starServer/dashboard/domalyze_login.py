@@ -1,8 +1,9 @@
-"""析域登入：以 auth server（Hydra）的 OIDC 登入，進入域民連結的其中一個 Discord。
+"""析域登入：以 auth server（Hydra）的 OIDC 登入，進入域民連結的其中一個 Discord；只連結 Twitch 的域民建立沒有 Discord 身分的 session。
 
 流程：/to/dashboard-domalyze-login 寫 dashboard_oidc cookie（state、PKCE verifier、next、origin）並導向 auth server，
 完成後回到 /oauth/domalyze。域民只連結一個 Discord 時直接建立 session；連結多個時把候選存在記憶體、設 dashboard_pick cookie，
 導向前端的選擇畫面，由 /dashboard/login/candidates 與 /dashboard/login/select 完成。
+域民沒有連結 Discord、但連結了 Twitch 時，直接建立沒有 Discord 身分的 session；兩者都沒有時回登入頁。
 失敗一律導回前端的登入頁，以 notice 說明原因。
 """
 
@@ -210,6 +211,26 @@ async def _start_session(account: Account, candidate: Candidate, old_session_id:
     return session_id
 
 
+#: 域民查不到代號時，沒有 Discord 身分的 session 顯示的名稱
+FALLBACK_NAME = "析域帳號"
+
+
+async def _start_discordless_session(account: Account, old_session_id: str | None) -> str:
+    session_id = await run_db(
+        lambda: create_session(
+            None,
+            account.username or FALLBACK_NAME,
+            None,
+            old_session_id,
+            account_id=account.account_id,
+            via_domalyze=True,
+        )
+    )
+    await remember_account(session_id, account)
+    log.info("Dashboard domalyze login: account %s without discord", account.account_id)
+    return session_id
+
+
 # ====== 登入入口 ======
 @to_router.get("/to/dashboard-domalyze-login")
 async def to_dashboard_domalyze_login(next: str | None = None, origin: str | None = None):
@@ -266,10 +287,15 @@ async def _handle_callback(request: Request, cookie: OidcCookie | None) -> Respo
     account = None if resolved is None else resolved.account
     if account is None or account.suspended:
         return _login_page(origin, "domalyze_denied", next)
-    if not account.discord_ids:
-        return _login_page(origin, "domalyze_no_discord", next)
-
     old_session_id = request.cookies.get(SESSION_COOKIE)
+    if not account.discord_ids:
+        if not account.twitch_passports:
+            return _login_page(origin, "domalyze_no_discord", next)
+        session_id = await _start_discordless_session(account, old_session_id)
+        response = RedirectResponse(url=f"{origin}{next}")
+        set_session_cookie(response, session_id)
+        return response
+
     candidates = tuple(await asyncio.gather(*(_candidate(i) for i in account.discord_ids)))
     if len(candidates) == 1:
         session_id = await _start_session(account, candidates[0], old_session_id)

@@ -19,8 +19,9 @@ from datetime import datetime, timedelta
 from uuid import UUID
 
 from fastapi.requests import Request
-from sqlalchemy import delete, select, update
+from sqlalchemy import and_, delete, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlmodel import col
 
 from starlib import sqldb, website_stats
 from starlib.database import DashboardSession, TwitchBotJoinChannel
@@ -206,6 +207,17 @@ def _delete_sessions_where(condition) -> None:
 
 def delete_user_sessions(discord_user_id: str) -> None:
     _delete_sessions_where(DashboardSession.discord_user_id == discord_user_id)
+
+
+def delete_account_sessions(account_id: UUID) -> None:
+    """刪除同一個析域帳號、而且沒有 Discord 身分的析域 session（有 Discord 的 session 以 Discord 帳號為單位）。"""
+    _delete_sessions_where(
+        and_(
+            col(DashboardSession.account_id) == account_id,
+            col(DashboardSession.discord_user_id).is_(None),
+            col(DashboardSession.login_method) == "domalyze",
+        )
+    )
 
 
 def delete_twitch_user_sessions(twitch_user_id: str) -> None:

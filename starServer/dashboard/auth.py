@@ -27,6 +27,7 @@ from .session import (
     DiscordSessionInfo,
     SessionInfo,
     create_session,
+    delete_account_sessions,
     delete_session_cookie,
     delete_twitch_user_sessions,
     delete_user_sessions,
@@ -211,13 +212,16 @@ async def me(info: SessionInfo = Depends(require_any_session)):
 
 @router.post("/logout")
 async def logout(request: Request, info: SessionInfo = Depends(require_any_session)):
-    """刪除這個登入身分所有裝置的 session 並清 cookie：Twitch 登入以 Twitch 帳號為單位，其餘以 Discord 帳號為單位。
+    """刪除這個登入身分所有裝置的 session 並清 cookie：Twitch 登入以 Twitch 帳號為單位，沒有 Discord 的析域登入以析域帳號為單位，其餘以 Discord 帳號為單位。
     網站不保存 Discord 授權，Discord 端的授權不受影響。"""
     twitch, discord_id = info.twitch, info.discord_user_id
     if info.login_method == "twitch" and twitch is not None:
         await run_db(lambda: delete_twitch_user_sessions(twitch.id))
     elif discord_id is not None:
         await run_db(lambda: delete_user_sessions(discord_id))
+    elif info.account_id is not None:
+        account_id = info.account_id
+        await run_db(lambda: delete_account_sessions(account_id))
 
     request.state.dashboard_renew_session = None
     response = JSONResponse({"ok": True})

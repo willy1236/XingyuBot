@@ -13,7 +13,7 @@ from starlib.database import DashboardSession, TwitchBotJoinChannel
 from starlib.identity import Account, LinkedPassport, ResolvedAccount
 from starServer.dashboard import channels, session
 from tests.helpers.accounts import account
-from tests.helpers.dashboard_auth import USER_ID, make_app, make_domalyze_session, make_session
+from tests.helpers.dashboard_auth import FRONTEND, USER_ID, make_app, make_domalyze_session, make_session
 
 pytestmark = pytest.mark.usefixtures("dashboard_env")
 
@@ -212,3 +212,23 @@ class TestRevocationWithoutDiscord:
         clock.now += 61
 
         assert c.get("/dashboard/channels").status_code == 401
+
+
+class TestLogoutWithoutDiscord:
+    def test_removes_discordless_domalyze_sessions_of_that_account_only(self, repo, directory):
+        mine, other = uuid4(), uuid4()
+        link(directory, linked(mine, twitch=[(CHANNEL_A, "Alpha")], discord_ids=()))
+        make_domalyze_session(repo, mine, user_id=None, session_id="d1")
+        make_domalyze_session(repo, mine, user_id=None, session_id="d2")
+        make_domalyze_session(repo, other, user_id=None, session_id="other-account")
+        make_domalyze_session(repo, mine, user_id=USER_ID, session_id="with-discord")
+
+        r = client_for("d1").post("/dashboard/logout", headers={"Origin": FRONTEND})
+
+        assert r.status_code == 200
+        repo.session.expire_all()
+        ids = {"d1", "d2", "other-account", "with-discord"}
+        assert {sid for sid in ids if repo.session.get(DashboardSession, sid) is not None} == {
+            "other-account",
+            "with-discord",
+        }

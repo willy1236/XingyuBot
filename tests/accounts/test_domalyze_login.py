@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import json
+from dataclasses import replace
 from types import SimpleNamespace
 from urllib.parse import parse_qs, urlparse
 from uuid import uuid4
@@ -15,7 +16,7 @@ from sqlmodel import select
 
 from starlib import sclient
 from starlib.database import DashboardSession
-from starlib.identity import Account, ResolvedAccount
+from starlib.identity import Account, LinkedPassport, ResolvedAccount
 from starServer.dashboard import auth, config, domalyze_login, session
 from tests.helpers.accounts import OTHER_ID, FakeBot, account
 from tests.helpers.dashboard_auth import FRONTEND, ORIGINS, USER_ID, make_app, make_session, set_cookies
@@ -218,6 +219,38 @@ class TestCallback:
         res = callback(new_client())
         assert login_page(res)[1] == {"notice": ["domalyze_no_discord"], "next": ["/dashboard/guilds/1"]}
         assert sessions(repo) == []
+
+    @pytest.mark.parametrize(("username", "expected_name"), [("willy", "willy"), (None, "析域帳號")])
+    def test_twitch_only_account_logs_in_without_discord(self, hydra, directory, repo, username, expected_name):
+        acc = replace(
+            account(hydra.account_id, discord_ids=(), username=username),
+            twitch_passports=(LinkedPassport("7001", "Alpha"),),
+        )
+        directory.by_account_id[hydra.account_id] = ResolvedAccount(acc)
+        c = new_client()
+
+        res = callback(c)
+
+        assert res.headers["location"] == "https://www.domalyze.net/dashboard/guilds/1"
+        repo.session.expire_all()
+        [row] = repo.session.exec(select(DashboardSession).where(DashboardSession.account_id == hydra.account_id)).all()
+        assert (row.discord_user_id, row.twitch_user_id, row.login_method, row.via_domalyze) == (
+            None,
+            None,
+            "domalyze",
+            True,
+        )
+        assert (row.name, row.avatar) == (expected_name, None)
+        me = c.get("/dashboard/me").json()
+        assert (me["id"], me["discord"], me["twitch"], me["name"], me["avatar_url"], me["has_channels"]) == (
+            f"domalyze:{hydra.account_id}",
+            None,
+            None,
+            expected_name,
+            None,
+            True,
+        )
+        assert c.get("/dashboard/guilds").json() == {"error": "discord_required"}
 
     @pytest.mark.parametrize("case", ["suspended", "not_found"])
     def test_denied(self, hydra, directory, repo, case):
