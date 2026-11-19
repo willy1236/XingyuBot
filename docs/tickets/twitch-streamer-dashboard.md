@@ -917,6 +917,11 @@
   - 新增卡上沒列的檔案：`tests/twitch/test_channel_health.py`、`lib/dashboard-channel-health.test.ts`；改寫 `tests/dashboard/test_channels.py` 的詳情測試（加驗 `health`，並以 autouse fixture 隔離 Twitch 與 bot 呼叫）、`channel-status.test.tsx`（新增權限問題案例）。
   - 前端路徑是 `app/dashboard/twitch/[id]/`，不是卡上的 `channels/[id]`。
 - 未驗：真實 Twitch 的撤銷授權、拿掉 mod、封鎖或 ban bot 後的頁首顯示；按「修復」完成授權後問題消失與補訂事件；Helix 的 Get Banned Users、Get User Block List 實際回應形狀；Twitch bot 離線時的頁面載入時間；瀏覽器裡的頁首畫面。
+- 審查後修正（第 1 輪，審查報告 tsd-b-review-r1）：
+  - 判定總時限：整個 Twitch 判定（token 續期、validate、三項查詢）加 `ACCESS_TIMEOUT = 8.0` 秒的總時限，逾時視同查不到、略過；8 秒比單次請求的 5 秒長，容得下一次續期加後續查詢，bot 離線的 RPC 與它並行，頁面載入最慢約 8 秒。後端：2face261。
+  - 回應格式不符：validate 與三個 Helix 查詢各自把非 JSON、非物件、缺 `data` 清單、scopes 不是清單當成查不到，只略過那一項；封鎖名單的項目與 `pagination` 格式不符也容忍。後端：2face261。
+  - bot user id 兩份實作：收成 `starlib/twitch_tokens.py` 的 `BOT_CLIENT_SEQ`、`MODERATORS_URL`、`bot_user_id_blocking()`，`channel_activation.py` 與 `channel_health.py` 共用；`user_id` 為 None 時 raise、不快取。後端：a2982a37（共用函式與 `channel_activation`）、2face261（`channel_health`）。
+  - 不修：換頁重跑完整判定（卡上已定不加快取）。
 - 完整 CI：待合併回 main 前跑。
 - 型別檢查：專案沒有 pyright 設定；本機 `npx pyright` 無法解析 venv 套件，只剩 `httpx`、`sqldb` 解析不到的環境雜訊，已修掉可處理的標註錯誤。ruff check 與 format 通過。
 
