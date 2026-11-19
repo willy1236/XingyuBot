@@ -614,19 +614,19 @@
 - 不包含：無。
 
 **驗收條件**
-- [ ] 在後台新增指令後立即能在聊天室觸發；回應內容的變數正確代入。
-- [ ] 在聊天室 `!add_cmd` 新增的指令，重新整理後台後看得到，修改紀錄的來源是「聊天室」。
-- [ ] 設定全體冷卻 30 秒：30 秒內一般觀眾第二次觸發不回應。實況主與 mod 觸發不受冷卻限制。
-- [ ] 設定個人冷卻：同一位觀眾在冷卻內再觸發不回應，其他觀眾可以觸發。
-- [ ] 權限設為「mod」：一般觀眾與 VIP 觸發不回應，mod 與實況主觸發會回應。權限層級是單選、有層級：所有人 < 訂閱者 < VIP < mod < 實況主。
-- [ ] 觸發別名與觸發主名稱得到相同回應，`{count}` 一起累加。
-- [ ] 關閉指令後觸發不回應，`!list_cmd` 不列出；重新打開後恢復。
-- [ ] 在後台新增與既有名稱或別名重複的名稱，無法儲存並標出衝突。
-- [ ] 回應內容會被頻道 AutoMod 擋下時無法儲存，並提示原因；AutoMod 暫時無法檢查時也無法儲存，提示稍後再試。`!add_cmd` 同樣檢查。
-- [ ] `!add_cmd` 的名稱和既有指令或別名相同時，拒絕並提示，不覆蓋；和內建指令同名時拒絕。
-- [ ] `!remove_cmd` 指定別名時，只移除這個別名，指令本身保留。
-- [ ] 後台編輯中，有人在聊天室改了同一個指令，後台儲存時顯示衝突，不直接覆蓋。
-- [ ] 舊頻道的既有指令在啟用後是全體冷卻 30 秒、權限所有人、開啟。
+- [x] 在後台新增指令後立即能在聊天室觸發；回應內容的變數正確代入。
+- [x] 在聊天室 `!add_cmd` 新增的指令，重新整理後台後看得到，修改紀錄的來源是「聊天室」。
+- [x] 設定全體冷卻 30 秒：30 秒內一般觀眾第二次觸發不回應。實況主與 mod 觸發不受冷卻限制。
+- [x] 設定個人冷卻：同一位觀眾在冷卻內再觸發不回應，其他觀眾可以觸發。
+- [x] 權限設為「mod」：一般觀眾與 VIP 觸發不回應，mod 與實況主觸發會回應。權限層級是單選、有層級：所有人 < 訂閱者 < VIP < mod < 實況主。
+- [x] 觸發別名與觸發主名稱得到相同回應，`{count}` 一起累加。
+- [x] 關閉指令後觸發不回應，`!list_cmd` 不列出；重新打開後恢復。
+- [x] 在後台新增與既有名稱或別名重複的名稱，無法儲存並標出衝突。
+- [x] 回應內容會被頻道 AutoMod 擋下時無法儲存，並提示原因；AutoMod 暫時無法檢查時也無法儲存，提示稍後再試。`!add_cmd` 同樣檢查。
+- [x] `!add_cmd` 的名稱和既有指令或別名相同時，拒絕並提示，不覆蓋；和內建指令同名時拒絕。
+- [x] `!remove_cmd` 指定別名時，只移除這個別名，指令本身保留。
+- [x] 後台編輯中，有人在聊天室改了同一個指令，後台儲存時顯示衝突，不直接覆蓋。
+- [x] 舊頻道的既有指令在啟用後是全體冷卻 30 秒、權限所有人、開啟。
 
 **實作設計**
 - 資料：`twitch_chat_command` 新增以下欄位，由 W-04 建立。ALTER 的預設值讓既有指令等同舊行為：
@@ -670,20 +670,28 @@
 - `use_count` 每次觸發都寫 DB，量大時可以改成批次寫回。這屬於實作細節。
 - Twitch IRC tags 的 badges 可以判斷 vip 與 subscriber，twitchAPI 的 `ChatUser` 有對應屬性。
 
-**進度**：實作中（尚未完成）
+**進度**：實作完成（2026-11-19），待審查；驗收條件只勾自動測試驗證過的項目，全部以 mock 的 Twitch chat 與 AutoMod 驗證，真實 Twitch 與頁面畫面待人工驗證
 - 使用者決定（2026-11-19）：
-  - D1：頻道 state 不是 enabled 時，後台指令唯讀。`channels.py` 新增可重用的 dependency `require_enabled_channel`（先走 `require_channel`，state 不是 enabled 回 409 `channel_not_enabled`），POST／PUT／DELETE 用它，GET 仍用 `require_channel`；W-06、W-07 也用同一個。前端非 enabled 時清單照常顯示、停用新增／編輯／刪除／開關並提示「啟用 bot 後才能修改」，收到 409 `channel_not_enabled` 時重新載入頻道資料。聊天室指令不受影響。
+  - D1：頻道 state 不是 enabled 時，後台指令唯讀。`channels.py` 新增可重用的 dependency `require_enabled_channel`（先走 `require_channel`，state 不是 enabled 回 409 `channel_not_enabled`），POST／PUT／DELETE 用它，GET 仍用 `require_channel`；W-06、W-07 也用同一個。前端非 enabled 時清單照常顯示、停用新增／編輯／開關並提示「啟用後才能修改指令」，收到 409 `channel_not_enabled` 時重新載入頻道資料。聊天室指令不受影響。
   - D2（推翻規劃時的建議）：聊天室新增 `!edit_cmd <名稱或別名> <新回應>`，只改回應；權限同 `!add_cmd`，回應 1～500 字並跑 AutoMod 檢查；指令不存在或為內建指令時拒絕；紀錄 action=update、source=chat；走 `starlib/twitch_commands.update`。
   - D3：名稱或別名重複回 400 `invalid_field`，標在欄位旁。
-- 實作時的決定：
-  - 共用模組 `starlib/twitch_commands.py` 負責驗證與寫入（名稱規則、重複、內建同名、紀錄、commit、通知 bot 重讀）；後台端點與聊天室指令都經它。寫入前取 `pg_advisory_xact_lock(twitch_id)` 並鎖住頻道的指令列。別名上限 10 個、名稱不得含空白。
-  - 後台編輯衝突：端點把 `original` 轉成字串形式（別名排序後換行連接、布林 true／false）用 `conflict.check_conflict` 比對，409 的 `current` 也是這個形式。
-  - AutoMod：新增一律檢查，編輯只在回應有變時檢查；bot 端用 `starlib.twitch_speech_check.check_template`，後台用 `twitch_control.check_template`。
-  - 冷卻以主名稱為 key，別名共用；實況主與 mod 不受限，也不寫入冷卻。
-  - 刪除 `client.py` 的 `add_twitch_cmd`、`remove_twitch_cmd`，`get_raw_chat_command_*` 加別名 key，新增 `lock_twitch_commands`。
 - commit：
-  - 後端：75db49aa（`starlib/twitch_commands.py`、快取別名索引）、39b0b13c（觸發、權限、冷卻與聊天室指令）、（後台端點，待補）
-- 續做：前端（`lib/dashboard-channel-commands.ts`、`command-list.tsx`、`command-form.tsx`、頁面、`conflict-notice.tsx` 欄位標籤），再收尾檢查。
+  - 後端：75db49aa（`starlib/twitch_commands.py`、快取別名索引）、39b0b13c（觸發、權限、冷卻與聊天室指令）、88a3b154（後台端點與 `require_enabled_channel`）
+  - 前端：2d981d8（`lib/dashboard-channel-commands.ts`）、4ce0ef3（清單、表單、頁面、`conflict-notice.tsx` 欄位標籤）
+- ALTER：無。欄位與預設值在 W-04 已建立。
+- 實作時的決定：
+  - 共用模組 `starlib/twitch_commands.py` 負責驗證與寫入（名稱規則、重複、內建同名、修改紀錄、commit、通知 bot 重讀）；後台端點與聊天室指令都經它，通知 bot 重讀由它直接呼叫 `cache_invalidation.invalidate`，端點不另外呼叫 `twitch_control.invalidate`。寫入前取 `pg_advisory_xact_lock(twitch_id)` 並鎖住頻道的指令列（`client.py` 新增 `lock_twitch_commands`）。別名上限 10 個，名稱不得含空白，後台別名輸入框以空白或逗號分隔。
+  - 後台編輯衝突：`original` 與 `values` 同形（型別化欄位，不含 `use_count`、`updated_at`），端點轉成字串形式（別名排序後換行連接、布林 true／false）用 `conflict.check_conflict` 比對，409 的 `current` 也是這個形式。
+  - AutoMod：新增一律檢查，編輯只在回應有變時檢查（只改開關、冷卻不花檢查額度）；bot 端用 `starlib.twitch_speech_check.check_template`，後台用 `twitch_control.check_template`。
+  - 冷卻以主名稱為 key，別名共用；實況主與 mod 不受限，也不寫入冷卻；冷卻在通過檢查後、發言前記下。`{args}` 沒有參數時是空字串。
+  - 實況主判斷改用 `user.id == room_id`（原本比名稱）。
+  - Chat 重啟後的快取失效 handler：`commands.start()` 另外註冊一個 READY handler 改綁新的 loop，不需要改 `channels.on_ready`。
+  - `!edit_cmd` 在讀到寫入之間若後台改過同一個指令，不蓋掉，回覆「指令剛被修改過，請再試一次」。
+  - 刪除 `client.py` 的 `add_twitch_cmd`、`remove_twitch_cmd` 與對應的舊測試；`get_raw_chat_command_*` 的快取多以別名為 key 指到同一個複本。內建指令清單加入 `edit_cmd`（`twitch_chatbot.py` 註冊一行）。
+  - 新增卡上沒列的檔案：`starlib/twitch_commands.py`、`tests/twitch/test_commands.py`、`test_commands_store.py`、`tests/dashboard/test_channel_commands.py`；改了卡上沒列的 `channels.py`、`client.py`、`twitch_chatbot.py`、`conflict-notice.tsx`。
+- 未驗：真實 Twitch 聊天室的觸發與 `!add_cmd`、`!edit_cmd`、`!remove_cmd`、`!list_cmd`、Check AutoMod Status 實際回應；瀏覽器裡的指令頁畫面。
+- 完整 CI：待合併回 main 前跑。`tests/twitch/test_notify.py::test_follow_event_travels_between_two_buses` 需要本機 Redis，這台沒有而失敗，與 W-05 無關。
+- pyright：`commands.py` 的 `msg.room` 為 Optional（twitchAPI 型別，既有寫法同源）與 `twitch_commands.py` 兩處 `TwitchChatCommand(...)` 的 `__table_args__`（同 W-04 所述 `models.py` 寫法同源）。
 
 ### W-06 實況主能設定計時訊息
 
