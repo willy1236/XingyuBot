@@ -14,6 +14,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import func, select
 
+from starlib import twitch_tokens
 from starlib.database import OAuthToken, TwitchBotJoinChannel, TwitchChatCommand
 from starlib.identity.client import LinkedPassport, ResolvedAccount
 from starlib.messaging.rpc import RpcHandlerError
@@ -89,7 +90,7 @@ def spy(monkeypatch, repo) -> Spy:
             credential_id=1,
         ),
     )
-    monkeypatch.setattr(channel_activation, "_bot_user_id_cache", BOT_ID)
+    monkeypatch.setattr(twitch_tokens, "_bot_user_id", BOT_ID)
 
     async def exchange_code(self, code):
         spy.scopes.append(self.scopes)

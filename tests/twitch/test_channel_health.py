@@ -84,7 +84,7 @@ class FakeTwitch:
             return self.bot_status
 
         monkeypatch.setattr(health, "run_db", run_db)
-        monkeypatch.setattr(health, "_bot_user_id", lambda: BOT_ID)
+        monkeypatch.setattr(health, "bot_user_id_blocking", lambda: BOT_ID)
         monkeypatch.setattr(health, "sqldb", SimpleNamespace(get=lambda model, key: SimpleNamespace(state=row_state)))
         monkeypatch.setattr(twitch_speech_check, "broadcaster_client_id_blocking", lambda: "client-1")
         monkeypatch.setattr(twitch_control, "broadcaster_token", broadcaster_token)
@@ -217,6 +217,77 @@ class TestBotBanned:
         )
         assert run(health.channel_health(TWITCH_ID)) == ChannelHealth("enabled")
         assert twitch.paths().count(health.BLOCKS_URL) == health.BLOCK_LIST_MAX_PAGES
+
+
+class TestMalformedResponses:
+    """Twitch 的某個回應格式不符時，只略過那一項，其他項目照常判定。"""
+
+    BAD = [
+        httpx.Response(200, text="<html>not json</html>"),
+        httpx.Response(200, json=["list"]),
+        httpx.Response(200, json={"no": "data"}),
+        httpx.Response(200, json={"data": {"not": "a list"}}),
+        httpx.Response(200, json={"data": ["not an object"], "pagination": "x"}),
+    ]
+
+    @pytest.mark.parametrize("bad", BAD)
+    def test_封鎖名單格式不符_仍判出_not_mod(self, twitch, bad):
+        twitch.blocks = lambda page: bad
+        twitch.moderators = lambda: httpx.Response(200, json={"data": []})
+        assert run(health.channel_health(TWITCH_ID)).issues == ("not_mod",)
+
+    @pytest.mark.parametrize("bad", BAD)
+    def test_mod_名單格式不符_仍判出_ban(self, twitch, bad):
+        twitch.moderators = lambda: bad
+        twitch.banned = lambda: httpx.Response(200, json={"data": [{"user_id": BOT_ID}]})
+        assert run(health.channel_health(TWITCH_ID)).issues == ("bot_banned",)
+
+    @pytest.mark.parametrize("bad", BAD)
+    def test_ban_名單格式不符_仍判出_封鎖(self, twitch, bad):
+        twitch.banned = lambda: bad
+        twitch.blocks = lambda page: httpx.Response(200, json={"data": [{"user_id": BOT_ID}], "pagination": {}})
+        assert run(health.channel_health(TWITCH_ID)).issues == ("bot_banned",)
+
+    @pytest.mark.parametrize(
+        "bad",
+        [
+            httpx.Response(200, text="not json"),
+            httpx.Response(200, json=["list"]),
+            httpx.Response(200, json={"scopes": "not a list"}),
+            httpx.Response(200, json={}),
+        ],
+    )
+    def test_validate_格式不符就略過_不判授權失效_其他項照常(self, twitch, bad):
+        twitch.validate = lambda: bad
+        twitch.moderators = lambda: httpx.Response(200, json={"data": []})
+        assert run(health.channel_health(TWITCH_ID)).issues == ("not_mod",)
+
+    def test_三項都格式不符就全部略過(self, twitch):
+        bad = httpx.Response(200, text="oops")
+        twitch.moderators = twitch.banned = lambda: bad
+        twitch.blocks = lambda page: bad
+        assert run(health.channel_health(TWITCH_ID)) == ChannelHealth("enabled")
+
+
+class TestTimeout:
+    def test_Twitch_判定逾時就略過_bot_狀態照常(self, twitch, monkeypatch):
+        async def slow(twitch_id):
+            await asyncio.sleep(5)
+            return "token-1"
+
+        monkeypatch.setattr(twitch_control, "broadcaster_token", slow)
+        monkeypatch.setattr(health, "ACCESS_TIMEOUT", 0.05)
+        twitch.bot_status = BotOffline()
+        assert run(health.channel_health(TWITCH_ID)) == ChannelHealth("enabled", ("bot_offline",))
+
+    def test_後續查詢逾時也略過(self, twitch, monkeypatch):
+        async def slow_blocks(*args, **kwargs):
+            await asyncio.sleep(5)
+
+        monkeypatch.setattr(health, "_is_blocked", slow_blocks)
+        monkeypatch.setattr(health, "ACCESS_TIMEOUT", 0.05)
+        twitch.moderators = lambda: httpx.Response(200, json={"data": []})
+        assert run(health.channel_health(TWITCH_ID)) == ChannelHealth("enabled")
 
 
 class TestBotStatus:

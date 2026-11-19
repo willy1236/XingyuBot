@@ -17,8 +17,9 @@ from fastapi.responses import RedirectResponse, Response
 
 from sentry_bootstrap import capture_exception_safe
 from starlib import sqldb
-from starlib.database import APIType, TwitchBotJoinChannel
+from starlib.database import TwitchBotJoinChannel
 from starlib.messaging.rpc import RpcHandlerError
+from starlib.twitch_tokens import MODERATORS_URL, bot_user_id_blocking
 
 from . import twitch_control
 from .auth import OAuthCookie, sanitize_origin
@@ -49,12 +50,7 @@ ENABLE_SCOPES = [
     "user:read:blocked_users",
 ]
 
-#: Twitch bot 帳號所屬的 OAuth client seq（twitch_chatbot 啟動時把它的 token 寫進 OAuthToken）
-BOT_OAUTH_SEQ = 2
-MODERATORS_URL = "https://api.twitch.tv/helix/moderation/moderators"
 REQUEST_TIMEOUT = 5.0
-
-_bot_user_id_cache: str | None = None
 
 
 def _channel_url(origin: str, channel_id: int | str) -> str:
@@ -93,13 +89,6 @@ async def to_dashboard_twitch_enable(request: Request, channel: str | None = Non
 
 
 # ====== Twitch API ======
-def _bot_user_id() -> str:
-    global _bot_user_id_cache
-    if _bot_user_id_cache is None:
-        _bot_user_id_cache = sqldb.get_bot_oauth_token(APIType.Twitch, BOT_OAUTH_SEQ).user_id
-    return _bot_user_id_cache
-
-
 async def _add_bot_as_mod(broadcaster_id: str, access_token: str) -> bool:
     """用實況主的 token 把 bot 帳號設為頻道 mod；已經是 mod 視為成功。失敗回 False，不 raise。
 
@@ -108,7 +97,7 @@ async def _add_bot_as_mod(broadcaster_id: str, access_token: str) -> bool:
     常見失敗：401／403 缺權限、422 bot 目前是頻道 VIP（要先移除）、429 速率限制。
     """
     try:
-        bot_id = await run_db(_bot_user_id)
+        bot_id = await run_db(bot_user_id_blocking)
         client_id = (await get_oauth_client()).client_id
         params = {"broadcaster_id": broadcaster_id, "user_id": bot_id}
         headers = {"Authorization": f"Bearer {access_token}", "Client-Id": client_id}

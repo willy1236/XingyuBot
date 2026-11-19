@@ -4,6 +4,7 @@ import asyncio
 import threading
 import time
 from datetime import UTC, datetime, timedelta
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import httpx
@@ -165,3 +166,25 @@ def test_unexpected_error_is_reported_as_unavailable_not_raised(monkeypatch):
 
     assert twitch_tokens.broadcaster_token_blocking(TWITCH_ID) == TokenInvalid("unavailable")
     assert run(broadcaster_token(TWITCH_ID)) == TokenInvalid("unavailable")
+
+
+class TestBotUserId:
+    @pytest.fixture(autouse=True)
+    def _reset(self, monkeypatch):
+        monkeypatch.setattr(twitch_tokens, "_bot_user_id", None)
+
+    def test_查到後快取(self, monkeypatch):
+        get = MagicMock(return_value=SimpleNamespace(user_id="42"))
+        monkeypatch.setattr(twitch_tokens, "sqldb", SimpleNamespace(get_bot_oauth_token=get))
+
+        assert twitch_tokens.bot_user_id_blocking() == "42"
+        assert twitch_tokens.bot_user_id_blocking() == "42"
+        get.assert_called_once_with(APIType.Twitch, twitch_tokens.BOT_CLIENT_SEQ)
+
+    def test_沒有_user_id_時_raise_且不快取(self, monkeypatch):
+        get = MagicMock(side_effect=[SimpleNamespace(user_id=None), SimpleNamespace(user_id="42")])
+        monkeypatch.setattr(twitch_tokens, "sqldb", SimpleNamespace(get_bot_oauth_token=get))
+
+        with pytest.raises(RuntimeError):
+            twitch_tokens.bot_user_id_blocking()
+        assert twitch_tokens.bot_user_id_blocking() == "42"
