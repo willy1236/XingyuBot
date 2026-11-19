@@ -377,12 +377,18 @@
 - Helix Get Moderators 要用實況主 token（`moderation:read`），一律經這張卡新增的 `starlib/twitch_tokens.py` 取得。
 - twitchAPI 的 `chat.join_room` 與 `leave_room` 必須在 Chat 的 event loop 上呼叫。
 
-**進度**：進行中（2026-11-19）
-- 已定案：Twitch bot 各模組共用的 `chat`、`twitch`、`join_channels`、`eventsub`、`bot_user_id` 放 `starServer/twitch_bot/state.py`（避免 `channels` 與 `events` 循環 import）；聊天室 IRC 事件（`on_sub`、`on_whisper` 等）併入 `events.py`；`on_message` 在 `commands.py`；既有測試只改 patch 目標。訂閱記在 `channels.subscriptions`，`subscribe_channel` 是「讓訂閱符合目前 mod 狀態」的可重複呼叫函式，啟動與 sync 共用。
-- 已定案（timers 介面）：`timers`、`commands`、`events` 各有同步的 `start()`／`stop()`（`timers.start(chat)`），由 `run()` 在 chat 啟動後、`cleanup` 時呼叫；`timers.on_stream_online`、`on_stream_offline`、`on_chat_message` 是 async。`on_stream_online` 在確認有直播後才呼叫，`on_stream_offline` 一進來就呼叫；`is_bot` 以 `msg.user.name` 對 `chat.username`（不分大小寫）判斷。
-- commit：（1）純搬移 `twitch_bot/{state,events,commands}.py`；（2）`channels.subscribe_channel` 與訂閱 id 記錄；（3）`timers.py` 空介面與 `start()`／`stop()` 接線；（4）`starlib/twitch_tokens.py`
-- 已定案（twitch_tokens）：續期用 `SELECT … FOR UPDATE` 鎖那筆 `OAuthToken`、拿到鎖後重查 `expires_at`（使用者決定 Q1）；`TokenInvalid` 帶 `reason`（`missing`、`revoked`、`unavailable`）；Twitch 暫時連不上且舊 token 尚未過期時繼續用舊 token，只有過期才回 `unavailable`。
-- 續做：`twitch_control.py`；契約文件；等 W-01 合入後做 enabled 載入、`on_ready` 改用目前清單、`sync_channel`／`channel_status`、RPC 註冊
+**進度**：實作完成（2026-11-19），待審查；驗收條件未打勾，待人工驗證與審查後再勾
+- commit：後端 1647f6d、29ccb23、2947951、22b28d9、bbe4774、9d2b727、d159df5、0df3991；審查後修正 0241fb2、1035331、762f5ff。沒有 ALTER（無 schema 變更）。
+- 實作時的決定：
+  - 模組：Twitch bot 各模組共用的 `chat`、`twitch`、`join_channels`、`eventsub`、`bot_user_id`、`loop` 放 `starServer/twitch_bot/state.py`（避免 `channels` 與 `events` 循環 import）；聊天室 IRC 事件（`on_sub`、`on_whisper` 等）併入 `events.py`，`on_message` 在 `commands.py`；既有測試只改 patch 目標，`load_join_channels` 測試的資料補 `state`。
+  - timers 介面：`timers`、`commands`、`events` 各有同步的 `start()`／`stop()`（`timers.start(chat)`），由 `run()` 在 chat 啟動後、`cleanup` 時呼叫；`timers.on_stream_online`、`on_stream_offline`、`on_chat_message` 是 async。開台在確認有直播後才呼叫 timers，下播一進來就呼叫；`is_bot` 以 `msg.user.name` 對 `chat.username`（不分大小寫）判斷。
+  - 載入與同步：`join_channels` 載入全部頻道的設定，只有 `state = enabled` 的頻道進 `TARGET_CHANNEL_IDS` 並加入聊天室。bot 是不是 mod 一律查 Helix（`channels.bot_is_mod`，實況主 token，包含啟動時）；拿不到有效 token 或缺權限視為非 mod，Twitch 暫時無法回應時維持現有訂閱。`on_ready` 加入 `channels.rooms`（目前應在的房間），不再用啟動時的舊清單。
+  - RPC 與快取失效由 `run()` 在啟動訂閱全部完成後呼叫 `channels.register()` 註冊，不在 `twitch_main.py`；只有 `twitch_channel` 在 W-02 註冊 handler，其餘三個名稱由 W-05～W-07 在各自模組的 `start()` 註冊。
+  - 聊天室加入離開上限 `ROOM_TIMEOUT = 4` 秒（RPC 期限 5 秒）；聊天室動作與背景訂閱各用一把每頻道的鎖。
+  - chat 自動重啟：`_watch_chat` 重啟前把 `chat._callback_loop` 清成 None（twitchAPI 只在它為 None 時才換成新的 socket loop），READY 在新 loop 時 `on_ready` 把 RPC 與快取失效改綁到新 loop。
+  - `twitch_tokens`：續期用 `SELECT … FOR UPDATE` 鎖那筆 `OAuthToken`、拿到鎖後重查 `expires_at`；`TokenInvalid` 帶 `reason`（`missing`、`revoked`、`unavailable`）；Twitch 暫時連不上且舊 token 尚未過期時繼續用舊 token。同步版 `broadcaster_token_blocking` 給 web 端經 `run_db` 用（`twitch_control.broadcaster_token`），bot 端用 `broadcaster_token`（`asyncio.to_thread`）。
+  - `twitch_control`：bot 內部出錯（`RpcHandlerError`）不吞，不當成 `BotOffline`，讓端點轉成 `DashboardError`。
+- 未驗：真實 Twitch 的加入離開與 EventSub 訂閱取消、拿掉 mod 後下一次 sync 退訂、chat 自動重啟後 bot 恢復回應與 RPC；真 Redis 的 `channel.sync`／`channel.status` 端到端與 bot 離線 5 秒內回 `BotOffline`（本機沒有 Redis）。
 
 ### W-03 實況主能啟用與停用 bot
 
