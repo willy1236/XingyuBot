@@ -2309,20 +2309,34 @@ class TwitchRepository(BaseRepository):
         """與 session 無關的複本。快取存 session 內的 instance 會在 commit 後過期、session 釋放後拋 DetachedInstanceError。"""
         return TwitchChatCommand(**row.model_dump())
 
+    @staticmethod
+    def _command_index(rows) -> dict[str, TwitchChatCommand]:
+        """一個頻道的指令索引：名稱與每個別名都指到同一個複本。"""
+        index: dict[str, TwitchChatCommand] = {}
+        for row in rows:
+            command = SQLRepository._transient_command(row)
+            index[row.name] = command
+            for alias in row.aliases:
+                index.setdefault(alias, command)
+        return index
+
     def get_raw_chat_command_all(self):
-        """全部頻道的指令，供快取載入：{twitch_id: {名稱: 指令}}，指令是與 session 無關的複本。"""
+        """全部頻道的指令，供快取載入：{twitch_id: {名稱或別名: 指令}}，指令是與 session 無關的複本。"""
         stmt = select(TwitchChatCommand)
-        result = self.session.exec(stmt).all()
-        dct = {i.twitch_id: dict() for i in result}
-        for i in result:
-            dct[i.twitch_id][i.name] = self._transient_command(i)
-        return dct
+        by_channel: dict[int, list[TwitchChatCommand]] = {}
+        for row in self.session.exec(stmt).all():
+            by_channel.setdefault(row.twitch_id, []).append(row)
+        return {twitch_id: self._command_index(rows) for twitch_id, rows in by_channel.items()}
 
     def get_raw_chat_command_channel(self, twitch_id: int):
-        """單一頻道的指令，形狀與 `get_raw_chat_command_all` 的單頻道部分相同：名稱對指令複本。"""
+        """單一頻道的指令，形狀與 `get_raw_chat_command_all` 的單頻道部分相同：名稱或別名對指令複本。"""
         stmt = select(TwitchChatCommand).where(TwitchChatCommand.twitch_id == twitch_id)
-        result = self.session.exec(stmt).all()
-        return {i.name: self._transient_command(i) for i in result}
+        return self._command_index(self.session.exec(stmt).all())
+
+    def lock_twitch_commands(self, twitch_id: int) -> None:
+        """頻道自訂指令的寫入鎖（交易層級的 advisory lock），commit 或 rollback 時釋放。名稱與別名的重複檢查靠它。"""
+        self._keep_transaction_open()
+        self.session.connection().execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": twitch_id})
 
     def get_chat_command_names(self):
         stmt = select(TwitchChatCommand.twitch_id, TwitchChatCommand.name)
@@ -3577,27 +3591,6 @@ class SQLRepository(
     def getif_dynamic_voice_room(self, channel_id: int):
         """取得動態語音房間"""
         return channel_id if channel_id in self.cache.dynamic_voice_room else None
-
-    def add_twitch_cmd(self, twitch_channel_id: int, command: str, response: str):
-        """新增Twitch指令"""
-        existing = self.get_chat_command(command, int(twitch_channel_id))
-        if existing is None:
-            self.session.add(TwitchChatCommand(twitch_id=int(twitch_channel_id), name=command, response=response))
-        else:
-            existing.response = response
-            existing.updated_at = nowtz()
-        self.session.commit()
-        self.cache.twitch_cmd.set(int(twitch_channel_id), self.get_raw_chat_command_channel(twitch_channel_id))
-
-    def remove_twitch_cmd(self, twitch_channel_id: int, command: str):
-        """移除Twitch指令"""
-        self.session.exec(
-            delete(TwitchChatCommand).where(
-                TwitchChatCommand.twitch_id == twitch_channel_id, TwitchChatCommand.name == command
-            )
-        )
-        self.session.commit()
-        self.cache.twitch_cmd.set(int(twitch_channel_id), self.get_raw_chat_command_channel(twitch_channel_id))
 
     def get_twitch_cmd_response_cache(self, twitch_channel_id_input: int, command: str):
         """取得Twitch指令回應"""

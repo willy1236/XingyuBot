@@ -4,7 +4,6 @@ from sqlalchemy import text
 from sqlmodel import select
 
 from starlib.database import (
-    DBCacheType,
     TwitchAutomodBlock,
     TwitchChannelAudit,
     TwitchChatCommand,
@@ -29,24 +28,21 @@ def test_舊指令列取得新欄位的預設值(repo):
     assert row.updated_at is not None
 
 
-def test_add_twitch_cmd_之後快取仍是整列(repo):
+def test_指令快取存整列_名稱與別名指向同一個複本(repo):
     """回歸：單頻道重載曾經把快取換成 {名稱: 回應字串}，之後讀 .response 會 AttributeError。"""
-    repo.reload_cache(DBCacheType.TwitchCmd)
-    repo.add_twitch_cmd(TWITCH_ID, "hi", "hello")
+    repo.save_twitch_chat_command(
+        TwitchChatCommand(twitch_id=TWITCH_ID, name="hi", response="hello", aliases=["h", "yo"])
+    )
+    repo.save_twitch_chat_command(TwitchChatCommand(twitch_id=OTHER_ID, name="hi", response="other"))
+    repo.cache.twitch_cmd.load(repo.get_raw_chat_command_all())
     cached = repo.get_twitch_cmd_response_cache(TWITCH_ID, "hi")
     assert isinstance(cached, TwitchChatCommand)
     assert cached.response == "hello"
-    repo.remove_twitch_cmd(TWITCH_ID, "hi")
-    assert repo.get_twitch_cmd_response_cache(TWITCH_ID, "hi") is None
-
-
-def test_add_twitch_cmd_覆寫回應時保留其他欄位(repo):
-    repo.save_twitch_chat_command(
-        TwitchChatCommand(twitch_id=TWITCH_ID, name="hi", response="a", aliases=["h"], global_cooldown=5, use_count=7)
-    )
-    repo.add_twitch_cmd(TWITCH_ID, "hi", "b")
-    row = repo.get_chat_command("hi", TWITCH_ID)
-    assert (row.response, row.aliases, row.global_cooldown, row.use_count) == ("b", ["h"], 5, 7)
+    assert repo.get_twitch_cmd_response_cache(TWITCH_ID, "h") is cached
+    assert repo.get_twitch_cmd_response_cache(TWITCH_ID, "yo") is cached
+    assert repo.get_twitch_cmd_response_cache(OTHER_ID, "hi").response == "other"
+    assert repo.get_twitch_cmd_response_cache(OTHER_ID, "h") is None
+    assert list(repo.get_raw_chat_command_channel(TWITCH_ID)) == ["hi", "h", "yo"]
 
 
 def test_指令的儲存_刪除與使用次數(repo):

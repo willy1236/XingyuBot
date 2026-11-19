@@ -670,7 +670,20 @@
 - `use_count` 每次觸發都寫 DB，量大時可以改成批次寫回。這屬於實作細節。
 - Twitch IRC tags 的 badges 可以判斷 vip 與 subscriber，twitchAPI 的 `ChatUser` 有對應屬性。
 
-**進度**：未完成
+**進度**：實作中（尚未完成）
+- 使用者決定（2026-11-19）：
+  - D1：頻道 state 不是 enabled 時，後台指令唯讀。`channels.py` 新增可重用的 dependency `require_enabled_channel`（先走 `require_channel`，state 不是 enabled 回 409 `channel_not_enabled`），POST／PUT／DELETE 用它，GET 仍用 `require_channel`；W-06、W-07 也用同一個。前端非 enabled 時清單照常顯示、停用新增／編輯／刪除／開關並提示「啟用 bot 後才能修改」，收到 409 `channel_not_enabled` 時重新載入頻道資料。聊天室指令不受影響。
+  - D2（推翻規劃時的建議）：聊天室新增 `!edit_cmd <名稱或別名> <新回應>`，只改回應；權限同 `!add_cmd`，回應 1～500 字並跑 AutoMod 檢查；指令不存在或為內建指令時拒絕；紀錄 action=update、source=chat；走 `starlib/twitch_commands.update`。
+  - D3：名稱或別名重複回 400 `invalid_field`，標在欄位旁。
+- 實作時的決定：
+  - 共用模組 `starlib/twitch_commands.py` 負責驗證與寫入（名稱規則、重複、內建同名、紀錄、commit、通知 bot 重讀）；後台端點與聊天室指令都經它。寫入前取 `pg_advisory_xact_lock(twitch_id)` 並鎖住頻道的指令列。別名上限 10 個、名稱不得含空白。
+  - 後台編輯衝突：端點把 `original` 轉成字串形式（別名排序後換行連接、布林 true／false）用 `conflict.check_conflict` 比對，409 的 `current` 也是這個形式。
+  - AutoMod：新增一律檢查，編輯只在回應有變時檢查；bot 端用 `starlib.twitch_speech_check.check_template`，後台用 `twitch_control.check_template`。
+  - 冷卻以主名稱為 key，別名共用；實況主與 mod 不受限，也不寫入冷卻。
+  - 刪除 `client.py` 的 `add_twitch_cmd`、`remove_twitch_cmd`，`get_raw_chat_command_*` 加別名 key，新增 `lock_twitch_commands`。
+- commit：
+  - 後端：（待補）
+- 續做：後端 `commands.py` 觸發邏輯與聊天室指令、`channel_commands.py` 端點與 `require_enabled_channel`、前端。
 
 ### W-06 實況主能設定計時訊息
 
