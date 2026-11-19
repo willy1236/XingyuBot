@@ -203,6 +203,7 @@ async def me(info: SessionInfo = Depends(require_any_session)):
         "twitch": None if info.twitch is None else {"id": info.twitch.id, "login": info.twitch.login},
         "account": account,
         "login_method": info.login_method,
+        "has_channels": len(info.twitch_channels) > 0,
     }
 
 

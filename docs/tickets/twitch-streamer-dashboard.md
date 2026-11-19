@@ -291,8 +291,8 @@
 - 空 scope 的 user token 也能呼叫 Helix `/users` 取得自己的資料。
 
 **進度**：進行中
-- 已完成：`create_from_db` 的 scopes 判斷（空 list 不退回預設）；`auth.encode_cookie`／`decode_cookie` 改公開名稱；`TwitchBotJoinChannel` 新欄位；Twitch 登入入口與 `/oauth/twitch` 分派（`twitch_login.py`）。
-- 續做：`channels.py` 與 `/dashboard/me` 的 `has_channels` → 前端。
+- 已完成：`create_from_db` 的 scopes 判斷（空 list 不退回預設）；`auth.encode_cookie`／`decode_cookie` 改公開名稱；`TwitchBotJoinChannel` 新欄位；Twitch 登入入口與 `/oauth/twitch` 分派（`twitch_login.py`）；頻道端點（`channels.py`）與 `/dashboard/me` 的 `has_channels`。
+- 續做：前端（登入頁、頻道頁框與導覽、`/dashboard` 落地、header NAV）。
 - ALTER（已套到本機 DB；正式機先手動執行，再部署 code）：
   ```sql
   ALTER TABLE stardb_basic.twitch_bot_join_channel

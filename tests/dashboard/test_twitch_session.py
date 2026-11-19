@@ -41,6 +41,7 @@ class TestTwitchOnlySession:
             "twitch": {"id": "777", "login": "streamer"},
             "account": None,
             "login_method": "twitch",
+            "has_channels": True,
         }
 
     @pytest.mark.parametrize("path", ["/dashboard/personal/overview", "/dashboard/guilds"])
@@ -70,7 +71,7 @@ class TestDiscordSessionUnchanged:
         body = client_for(make_session(repo)).get("/dashboard/me").json()
         assert body["id"] == USER_ID
         assert body["discord"] == {"id": USER_ID} and body["twitch"] is None
-        assert body["login_method"] == "discord"
+        assert body["login_method"] == "discord" and body["has_channels"] is False
 
 
 class TestLogout:
