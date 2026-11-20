@@ -27,7 +27,7 @@
 |---|---|---|---|---|---|---|
 | 1 | O-01 | 未完成 | bot owner 能在網頁上用 ID 查使用者、頻道、伺服器、身分組與訊息 | 無 | A | 骨架切片，取代 `/find` |
 | 2 | O-03 | 未完成 | bot owner 能在系統分頁看到 Discord bot、Twitch bot、匯流排與 DB 的運行狀態 | 無 | A | 新增「系統」分頁 |
-| 3 | O-05 | 進行中 | bot owner 能跨頁統計並篩出 token 有問題的 Twitch 頻道 | 無 | A | 做不做見待決 3 |
+| 3 | O-05 | 完成 | bot owner 能跨頁統計並篩出 token 有問題的 Twitch 頻道 | 無 | A | 做不做見待決 3 |
 | 4 | O-02 | 未完成 | bot owner 能查任兩個伺服器的共通成員 | O-01 | B | 取代 `/findmember` |
 | 5 | O-04 | 未完成 | bot owner 能看到每個排程任務的下次執行時間與最近一次結果 | O-03 | B | |
 
@@ -185,11 +185,11 @@
 - 不包含：改動現有的逐列 `/health` 補查，兩者並存。
 
 **驗收條件**
-- [ ] 清單上方顯示 token 有問題的頻道數，依問題分類：沒有授權、缺少權限，以及待決 3 選 A 時的「授權已失效」。
-- [ ] 勾選「只看 token 有問題」時，只列出有問題的頻道，分頁照常運作，勾選狀態存在網址。
-- [ ] 只統計 `enabled` 的頻道；其他狀態的列不顯示 token 狀態。
-- [ ] 缺少權限的列顯示缺了哪些 scope。
-- [ ] 統計與篩選本身不對 Twitch 發請求；逐列的 `/health` 補查照舊。
+- [x] 清單上方顯示 token 有問題的頻道數，依問題分類：沒有授權、缺少權限，以及待決 3 選 A 時的「授權已失效」。
+- [x] 勾選「只看 token 有問題」時，只列出有問題的頻道，分頁照常運作，勾選狀態存在網址。
+- [x] 只統計 `enabled` 的頻道；其他狀態的列不顯示 token 狀態。
+- [x] 缺少權限的列顯示缺了哪些 scope。
+- [x] 統計與篩選本身不對 Twitch 發請求；逐列的 `/health` 補查照舊。
 
 **實作設計**
 - 資料：待決 3 選 A 時，`OAuthToken` 加 `refresh_failed_at`（nullable timestamptz，精度 0 同其他時間欄位）。`OAuthToken` 在 `credentials` schema，正式機上線前手動執行 `ALTER TABLE credentials.oauth_token ADD COLUMN refresh_failed_at timestamptz(0);`，再部署程式；本機 DB 也要先加，否則讀 `OAuthToken` 的測試與功能都會 `UndefinedColumn`。
@@ -208,10 +208,10 @@
 - 全部撈出再篩選的做法在已啟用頻道數千筆以下沒問題；超過時再改成 SQL 篩選。
 - access token 過期是正常狀態（用到才續期），不能當成問題。
 
-**進度**：進行中
-- 已完成：`ENABLE_SCOPES` 搬到 `starlib/twitch_tokens.py`（35fe7e02）；`OAuthToken.refresh_failed_at` 與續期、重新授權時的標記與清除（afb1989b）；後端 `token_state`、`list_enabled_channel_tokens`、`GET /dashboard/ops/channels` 的 `token_problems` 與 `?token_problem=1`
-- 已完成：前端統計列、篩選勾選與列上的 token 狀態（domalyze_frontend a1b8980）
-- 續做：本機 DB 執行上面的 `ALTER TABLE` 後重跑 `tests/twitch/test_twitch_tokens.py`、`tests/dashboard/test_ops.py`，再勾驗收條件
+**進度**：完成
+- commit：XingyuBot 35fe7e02、afb1989b、8a6ef57b；domalyze_frontend a1b8980
+- 驗證：`tests/dashboard/test_ops.py::TestTokenStats`（統計、只算 enabled 且沒停權、列上的 token 與缺少的 scope、篩選與分頁、不呼叫 Twitch）、`tests/twitch/test_twitch_tokens.py`（`refresh_failed_at` 的標記與清除、`TestTokenState`）、`tests/oauth/test_save_token.py`、前端 `lib/dashboard-ops.test.ts`（網址參數）；勾選狀態存在網址、統計列與列上顯示未在瀏覽器手動驗
+- 上線前：正式機先執行上面的 `ALTER TABLE`
 - 實作決定：
   - 續期再次被拒時不覆寫 `refresh_failed_at`，保留第一次失敗的時間，也省去每次 `/health` 都寫一次 DB；Twitch 暫時無法回應不算失敗。
   - `oauth_lib.py` 除了 `save_token_to_db` 帶 token_data 的 `OAuthToken(...)`，`to_db_token` 與合併 `self.db_token` 的分支也清為 null：實況主啟用流程走的是 `exchange_code` → `save_token_to_db(user_id)` 這條。
