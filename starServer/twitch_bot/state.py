@@ -1,12 +1,16 @@
 """Twitch bot 各模組共用的執行期狀態；import 時不查 DB，由 run() 開頭的 load_join_channels() 填入。"""
 
 import asyncio
+from datetime import datetime
 
 from twitchAPI.chat import Chat
 from twitchAPI.eventsub.webhook import EventSubWebhook
 from twitchAPI.twitch import Twitch
 
 from starlib.database import sqldb
+
+# Twitch bot process 的啟動時間，twitch_main 啟動時設定
+started_at: datetime | None = None
 
 join_channels: dict = {}
 TARGET_CHANNEL: dict = {}

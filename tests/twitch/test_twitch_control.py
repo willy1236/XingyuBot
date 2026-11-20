@@ -8,7 +8,7 @@ import pytest
 
 from starlib.messaging import rpc
 from starServer.dashboard import twitch_control as control
-from starServer.dashboard.twitch_control import BotOffline, ChannelStatus, SubscriptionStatus, SyncResult
+from starServer.dashboard.twitch_control import BotOffline, BotStatus, ChannelStatus, SubscriptionStatus, SyncResult
 
 TWITCH_ID = 900000000000000001
 
@@ -90,3 +90,18 @@ def test_broadcaster_token_runs_on_dashboard_db_executor(monkeypatch):
 
     assert run(control.broadcaster_token(TWITCH_ID)) == f"token-{TWITCH_ID}"
     assert seen == ["run_db"]
+
+
+def test_bot_status_sends_empty_payload(request_mock):
+    request_mock.return_value = future(result={"started_at": "2026-11-20T00:00:00+08:00", "rooms": 3})
+
+    assert run(control.bot_status()) == BotStatus(started_at="2026-11-20T00:00:00+08:00", rooms=3)
+    request_mock.assert_called_once_with("twitch", "bot.status", {})
+
+
+def test_bot_status_offline_and_handler_error(request_mock):
+    request_mock.return_value = future(exception=rpc.RpcUnavailable("沒有回應"))
+    assert run(control.bot_status()) == BotOffline()
+    request_mock.return_value = future(exception=rpc.RpcHandlerError("boom"))
+    with pytest.raises(rpc.RpcHandlerError):
+        run(control.bot_status())

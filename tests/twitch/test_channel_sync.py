@@ -1,6 +1,7 @@
 """twitch_bot.channels：web 即時同步（RPC）用的聊天室加入離開、背景訂閱、mod 判定與快取失效。"""
 
 import asyncio
+from datetime import UTC, datetime
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
@@ -371,9 +372,10 @@ def test_restart_rebinds_handlers_and_drops_state_of_the_old_loop(bot, registrat
     run(second_ready())
 
     assert state.loop is loops[1]
-    assert {call.args[0]: call.args[2] for call in handle.call_args_list[2:]} == {
+    assert {call.args[0]: call.args[2] for call in handle.call_args_list[3:]} == {
         "channel.sync": loops[1],
         "channel.status": loops[1],
+        "bot.status": loops[1],
     }
     assert on_invalidate.call_args_list[-1].args[2] is loops[1]
     assert channels._room_locks == {}
@@ -389,7 +391,7 @@ def test_ready_on_the_same_loop_keeps_registrations(bot, registrations):
 
     run(scenario())
 
-    assert registrations[0].call_count == 2
+    assert registrations[0].call_count == 3
     assert channels._pending == {TWITCH_ID: 1}
 
 
@@ -457,3 +459,12 @@ def test_sync_all_continues_after_one_channel_fails(bot, monkeypatch):
 
     assert handled == [TWITCH_ID, second]
     assert channels._pending.get(TWITCH_ID, 0) == 0
+
+
+def test_bot_status_counts_only_rooms_actually_joined(bot, monkeypatch):
+    started = datetime(2026, 11, 20, tzinfo=UTC)
+    monkeypatch.setattr(state, "started_at", started)
+    channels.rooms.update({1: "a", 2: "b", 3: "c"})
+    bot.chat.in_rooms.update({"a", "c"})
+
+    assert channels.bot_status() == {"started_at": started.isoformat(), "rooms": 2}

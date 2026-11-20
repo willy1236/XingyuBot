@@ -38,6 +38,12 @@ class ChannelStatus:
     subscriptions: SubscriptionStatus
 
 
+@dataclass(frozen=True, slots=True)
+class BotStatus:
+    started_at: str | None
+    rooms: int
+
+
 class BotOffline:
     """Twitch bot 沒在跑、Redis 連不上或沒在期限內回應。"""
 
@@ -53,9 +59,10 @@ class BotOffline:
         return hash(BotOffline)
 
 
-async def _call(method: str, twitch_id: int) -> dict | BotOffline:
+async def _call(method: str, twitch_id: int | None = None) -> dict | BotOffline:
+    payload = {} if twitch_id is None else {"twitch_id": twitch_id}
     try:
-        return await asyncio.wrap_future(rpc.request(SERVICE, method, {"twitch_id": twitch_id}))
+        return await asyncio.wrap_future(rpc.request(SERVICE, method, payload))
     except rpc.RpcUnavailable:
         return BotOffline()
 
@@ -83,6 +90,14 @@ async def channel_status(twitch_id: int) -> ChannelStatus | BotOffline:
             ok=list(subscriptions["ok"]), failed=list(subscriptions["failed"]), pending=bool(subscriptions["pending"])
         ),
     )
+
+
+async def bot_status() -> BotStatus | BotOffline:
+    """Twitch bot process 的啟動時間（ISO）與已加入的聊天室數。bot 離線時回 BotOffline；bot 內部出錯時拋 `rpc.RpcHandlerError`。"""
+    result = await _call("bot.status")
+    if isinstance(result, BotOffline):
+        return result
+    return BotStatus(started_at=result["started_at"], rooms=int(result["rooms"]))
 
 
 async def broadcaster_token(twitch_id: int) -> str | TokenInvalid:

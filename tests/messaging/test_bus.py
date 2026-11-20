@@ -674,6 +674,18 @@ def test_redis_url_unset(make_bus, caplog):
     assert sum("REDIS_URL" in r.getMessage() for r in caplog.records) == 1
 
 
+def test_state_reports_unconfigured_down_and_up(make_bus, proxy):
+    assert make_bus(url=None).state == "unconfigured"
+    p, url = proxy
+    p.set_down(True)
+    bus = make_bus(url)
+    assert wait_until(lambda: bus.state == "down", timeout=5)
+    p.set_down(False)
+    assert wait_until(lambda: bus.state == "up", timeout=5)
+    bus.close()
+    assert bus.state == "down"
+
+
 def test_redis_down_then_recovers(make_bus, handler_loop, proxy, sentry):
     p, url = proxy
     p.set_down(True)
