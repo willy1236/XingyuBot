@@ -15,6 +15,7 @@ from starlib import sqldb
 from starlib.database import DriveShare, LinkedAccount, NetBirdBinding, PlatformType
 from starlib.database.postgresql.client import SQLRepository
 from starlib.database.postgresql.models import DiscordIdentity
+from tests.helpers import temp_db
 from tests.helpers.identity import FakeDirectory, _account
 
 # 正式機 users schema 的舊表，取自 pg_dump
@@ -84,7 +85,8 @@ LATER_ALTERS = "ALTER TABLE users.music_playlist ADD COLUMN version integer NOT 
 @pytest.fixture
 def repo():
     """舊 schema 的暫時資料庫：先建舊表並補上之後部署加的欄位，再照 bot 啟動時一樣 create_all 補新表"""
-    name = f"migtest_{uuid4().hex[:12]}"
+    # 掛在本次暫時資料庫名稱底下：符合 _test 防線，母資料庫使用中不會被別的 pytest 清掉，被中斷留下時由下次清理刪除
+    name = f"{sqldb.engine.url.database}{temp_db.CHILD_INFIX}{uuid4().hex[:12]}"
     admin = sqldb.engine.execution_options(isolation_level="AUTOCOMMIT")
     with admin.connect() as conn:
         conn.execute(text(f'CREATE DATABASE "{name}"'))

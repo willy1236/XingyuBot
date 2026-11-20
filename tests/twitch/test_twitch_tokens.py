@@ -1,4 +1,4 @@
-"""starlib.twitch_tokens：實況主 token 的續期。用本機 DB 的 Twitch OAuth client #3，測試資料用獨有的 user_id，結束後刪除。"""
+"""starlib.twitch_tokens：實況主 token 的續期。用 seed 的 Twitch OAuth client #3（tests/helpers/seed.py），測試資料用獨有的 user_id，結束後刪除。"""
 
 import asyncio
 import threading
