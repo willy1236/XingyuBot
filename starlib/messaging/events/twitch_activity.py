@@ -44,6 +44,19 @@ class TwitchSubscriptionMessageEvent(BusEvent):
     message: str | None = None  # 訂閱者附的訊息；沒有時為 None
 
 
+class TwitchSubscriptionGiftEvent(BusEvent):
+    """贈送訂閱；一次贈送多份只發送一次。"""
+
+    event_type: ClassVar[str] = "twitch.subscription_gift"
+    ttl: ClassVar[timedelta] = timedelta(hours=1)
+    receivers: ClassVar[tuple[str, ...]] = ("discord",)
+
+    broadcaster_id: str  # 被訂閱頻道的 Twitch ID
+    user_name: str | None = None  # 贈送者的顯示名稱；匿名贈送時為 None
+    total: int  # 這次贈送的份數
+    tier: str  # Twitch 原始層級值："1000"、"2000"、"3000"
+
+
 class TwitchRedemptionEvent(BusEvent):
     """頻道點數兌換。"""
 
@@ -65,6 +78,7 @@ class TwitchPredictionResultEvent(BusEvent):
     ttl: ClassVar[timedelta] = timedelta(hours=1)
     receivers: ClassVar[tuple[str, ...]] = ("discord",)
 
+    broadcaster_id: str  # 頻道的 Twitch ID
     broadcaster_name: str  # 頻道的顯示名稱
     title: str  # 預測標題
     outcome_title: str  # 獲勝選項名稱
