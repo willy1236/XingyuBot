@@ -2634,6 +2634,25 @@ class BackupRepository(BaseRepository):
         self.session.add_all(events)
         self.session.commit()
 
+    def list_guild_membership_events(self, offset: int, limit: int) -> list[GuildMembershipEvent]:
+        """伺服器加入、離開紀錄，新的在前。"""
+        stmt = (
+            select(GuildMembershipEvent)
+            .order_by(col(GuildMembershipEvent.at).desc(), col(GuildMembershipEvent.id).desc())
+            .offset(offset)
+            .limit(limit)
+        )
+        return list(self.session.exec(stmt).all())
+
+    def list_users_count_records(self, since: date) -> list[UsersCountRecord]:
+        """每日使用者與伺服器數，舊的在前。"""
+        stmt = (
+            select(UsersCountRecord)
+            .where(col(UsersCountRecord.record_date) >= since)
+            .order_by(col(UsersCountRecord.record_date))
+        )
+        return list(self.session.exec(stmt).all())
+
 
 class TokensRepository(BaseRepository):
     def get_google_credentials(self, scopes: list[str] = None, token_seq: int = 2):
