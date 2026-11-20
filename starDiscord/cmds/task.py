@@ -45,10 +45,14 @@ async def settle_website_link_rate():
 class task(Cog_Extension):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # await self.bot.wait_until_ready()
+        self._started = False
 
     @commands.Cog.listener()
     async def on_ready(self):
+        # gateway 重新 identify 時 on_ready 會再觸發，排程與抽獎只註冊一次
+        if self._started:
+            return
+        self._started = True
         scheduler = self.bot.scheduler
         if not debug_mode:
             # 即時通知 - 保留misfire_grace_time
@@ -516,14 +520,19 @@ async def refresh_ip_last_seen_nmap():
 
 
 async def record_users_count(bot: DiscordBot):
-    """定時記錄用戶數量"""
+    """定時記錄用戶數量；只採用成員快取完整載入時的取樣，全部不完整就不寫入"""
     log.debug("record_users_count start")
     users_count = 0
     servers_count = 0
-    for _ in range(5):
-        users_count = max(users_count, len(bot.users))
-        servers_count = max(servers_count, len(bot.guilds))
-        await asyncio.sleep(120)
+    for i in range(5):
+        if i:
+            await asyncio.sleep(120)
+        if bot.is_ready() and all(g.chunked for g in bot.guilds):
+            users_count = max(users_count, len(bot.users))
+            servers_count = max(servers_count, len(bot.guilds))
+    if not users_count:
+        log.warning("record_users_count skipped: member cache not fully loaded")
+        return
     shard_id = bot.shard_id
     record = UsersCountRecord(
         record_date=utils.nowtz().date(), users_count=users_count, servers_count=servers_count, shard_id=shard_id
