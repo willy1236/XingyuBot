@@ -37,12 +37,12 @@ class PutBody(BaseModel):
 
 
 def _require_editable(info: SessionInfo) -> DiscordSessionInfo:
-    """析域登入且有 Discord 才能修改轉發；回傳的 session 一定帶 discord_user_id。
+    """析域登入且有 Discord 才能修改轉發；回傳的 session 一定帶 discord_user_id。只在 owner 限定的端點呼叫。
 
     Raises:
         DashboardError: 403 forward_not_allowed。
     """
-    if forward_access(info) != "ok":
+    if forward_access(info, "owner") != "ok":
         raise DashboardError(403, "forward_not_allowed")
     return info  # type: ignore[return-value]
 

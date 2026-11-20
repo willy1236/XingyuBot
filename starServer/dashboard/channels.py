@@ -117,7 +117,7 @@ def channel_page_path(twitch_id: int | str) -> str:
     return f"{CHANNEL_LIST_PATH}/{twitch_id}"
 
 
-def forward_access(info: SessionInfo, role: ChannelRole = "owner") -> str:
+def forward_access(info: SessionInfo, role: ChannelRole) -> str:
     """轉發 Discord 的可用情形：ok（析域登入且有 Discord）、need_domalyze（不是析域登入）、need_discord（析域登入但沒有 Discord）；
     mod 不論登入方式都是 mod（只看狀態）。"""
     if role == "mod":
