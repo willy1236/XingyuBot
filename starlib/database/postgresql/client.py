@@ -2292,6 +2292,18 @@ class TwitchRepository(BaseRepository):
         )
         return self.session.exec(stmt).one_or_none()
 
+    def list_twitch_join_channels(self, offset: int, limit: int) -> tuple[list[TwitchBotJoinChannel], int]:
+        """營運入口的頻道清單：第一次出現的時間新到舊（沒有時間的排最後），同時間依 twitch_id；回傳該頁與總筆數。"""
+        total = self.session.exec(select(func.count()).select_from(TwitchBotJoinChannel)).one()
+        stmt = (
+            select(TwitchBotJoinChannel)
+            .order_by(desc(TwitchBotJoinChannel.first_seen_at).nulls_last(), TwitchBotJoinChannel.twitch_id)  # pyright: ignore[reportArgumentType]
+            .offset(offset)
+            .limit(limit)
+            .execution_options(populate_existing=True)
+        )
+        return list(self.session.exec(stmt).all()), total
+
     def list_chat_command_by_channel(self, channel_id: int):
         stmt = select(TwitchChatCommand).where(TwitchChatCommand.twitch_id == channel_id)
         result = self.session.exec(stmt).all()

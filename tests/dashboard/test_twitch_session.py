@@ -42,6 +42,7 @@ class TestTwitchOnlySession:
             "account": None,
             "login_method": "twitch",
             "has_channels": True,
+            "is_bot_owner": False,
         }
 
     @pytest.mark.parametrize(

@@ -10,13 +10,14 @@ import json
 import logging
 from collections.abc import Awaitable, Callable
 
+import discord
 from fastapi import APIRouter, Depends
 from fastapi.requests import Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from pydantic import BaseModel
 
 from sentry_bootstrap import capture_exception_safe
-from starlib import sqldb
+from starlib import sclient, sqldb
 from starlib.database import APIType
 from starlib.oauth import DiscordOAuth
 
@@ -191,6 +192,13 @@ def avatar_url(user_id: str, avatar: str | None) -> str:
     return f"https://cdn.discordapp.com/embed/avatars/{(int(user_id) >> 22) % 6}.png"
 
 
+async def is_bot_owner(info: SessionInfo) -> bool:
+    """session 是否是 bot owner；沒有 Discord 身分或 bot 還沒就緒時為 False。"""
+    if info.discord_user_id is None or sclient.bot is None:
+        return False
+    return await sclient.bot.is_owner(discord.Object(int(info.discord_user_id)))  # type: ignore[arg-type]
+
+
 @router.get("/me")
 async def me(info: SessionInfo = Depends(require_any_session)):
     account = None if info.account_id is None else {"username": info.account_username}
@@ -207,6 +215,7 @@ async def me(info: SessionInfo = Depends(require_any_session)):
         "account": account,
         "login_method": info.login_method,
         "has_channels": len(info.twitch_channels) > 0,
+        "is_bot_owner": await is_bot_owner(info),
     }
 
 

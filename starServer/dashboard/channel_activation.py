@@ -19,6 +19,7 @@ from sentry_bootstrap import capture_exception_safe
 from starlib import sqldb
 from starlib.database import TwitchBotJoinChannel
 from starlib.messaging.rpc import RpcHandlerError
+from starlib.providers.social.models import TwitchUser
 from starlib.twitch_tokens import MODERATORS_URL, bot_user_id_blocking
 
 from . import twitch_control
@@ -65,6 +66,11 @@ def _login_url(origin: str, channel_id: int | str) -> str:
     return f"{origin}/dashboard-login?{urlencode({'next': channel_page_path(channel_id)})}"
 
 
+def _is_banned(twitch_id: int) -> bool:
+    row = sqldb.get(TwitchBotJoinChannel, (twitch_id,))
+    return row is not None and row.banned_at is not None
+
+
 # ====== 啟用入口 ======
 @to_router.get("/to/dashboard-twitch-enable")
 async def to_dashboard_twitch_enable(request: Request, channel: str | None = None, origin: str | None = None):
@@ -79,7 +85,8 @@ async def to_dashboard_twitch_enable(request: Request, channel: str | None = Non
     # 不是自己的頻道：導回頻道頁，由 ChannelAccessGuard 顯示「沒有這個頻道的權限」
     if find_channel(info, channel_id) is None:
         return RedirectResponse(url=_channel_url(origin, channel_id))
-    # W-12：頻道被停權時在這裡導回並帶 notice=channel_banned
+    if await run_db(lambda: _is_banned(channel_id)):
+        return RedirectResponse(url=_with_notice(_channel_url(origin, channel_id), "channel_banned"))
 
     async with await new_twitch_oauth(ENABLE_SCOPES) as auth:
         # force_verify：瀏覽器已登入另一個 Twitch 帳號時，使用者才有機會換帳號
@@ -132,6 +139,14 @@ async def _sync_bot(twitch_id: int) -> bool:
         return True
 
 
+def _enable_unless_banned(user: TwitchUser) -> bool:
+    """頻道沒有被停權才登記並設為 enabled，回傳是否已啟用；讀取停權與寫入在同一次 DB 呼叫內。"""
+    if _is_banned(int(user.id)):
+        return False
+    record_channel(user, state="enabled")
+    return True
+
+
 async def _handle_enable(request: Request, cookie: OAuthCookie) -> Response:
     origin = cookie.origin
     channel_id = cookie.channel_id
@@ -149,6 +164,9 @@ async def _handle_enable(request: Request, cookie: OAuthCookie) -> Response:
         return RedirectResponse(url=_login_url(origin, channel_id))
     if find_channel(info, int(channel_id)) is None:
         return RedirectResponse(url=channel_url)
+    # 停權的頻道不保存 token；授權途中才被停權的，在寫入 enabled 前再擋一次
+    if await run_db(lambda: _is_banned(int(channel_id))):
+        return RedirectResponse(url=_with_notice(channel_url, "channel_banned"))
 
     try:
         async with await new_twitch_oauth(ENABLE_SCOPES) as auth:
@@ -169,7 +187,8 @@ async def _handle_enable(request: Request, cookie: OAuthCookie) -> Response:
         notices.append("mod_failed")
 
     try:
-        await run_db(lambda: record_channel(user, state="enabled"))
+        if not await run_db(lambda: _enable_unless_banned(user)):
+            return RedirectResponse(url=_with_notice(channel_url, "channel_banned"))
     except Exception as exc:
         capture_exception_safe(exc, tags={"service": "website", "source": "dashboard_twitch_enable"})
         log.exception("Dashboard Twitch enable: saving channel %s failed: %s", channel_id, exc)

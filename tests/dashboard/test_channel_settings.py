@@ -171,6 +171,21 @@ def test_名稱不符回_400_且資料不變(client, spy, repo, credential_id, c
     assert spy.invalidated == []
 
 
+def test_已停權的頻道刪除資料後仍是已停權_停權欄位與紀錄保留(client, spy, repo, credential_id):
+    _seed(repo, credential_id, CHANNEL_ID)
+    banned_at = datetime(2026, 2, 1, tzinfo=UTC)
+    row = _row(repo)
+    row.banned_at = banned_at
+    row.banned_reason = "濫用"
+    repo.merge(row)
+
+    assert delete(client).status_code == 200
+
+    after = _row(repo)
+    assert (after.banned_at, after.banned_reason, after.state) == (banned_at, "濫用", "inactive")
+    assert [e.target_key for e in list_changes(CHANNEL_ID)] == ["all_data"]
+
+
 @pytest.mark.parametrize("confirm", ["host", "HOST", " Host "])
 def test_大小寫與前後空白不影響比對(client, spy, repo, credential_id, confirm):
     _seed(repo, credential_id, CHANNEL_ID)

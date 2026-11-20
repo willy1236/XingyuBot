@@ -1143,13 +1143,13 @@
 
 **驗收條件**
 - [ ] bot owner 用 Discord 或析域登入後，頁首出現「營運」，清單列出所有曾經在後台出現過的頻道，每個都有狀態：未啟用、已啟用、部分暫停（附原因）、已停用、已停權。
-- [ ] 非 bot owner 看不到「營運」；直接打開網址或呼叫 API，得到 403。
+- [x] 非 bot owner 看不到「營運」；直接打開網址或呼叫 API，得到 403。
 - [ ] 停權一個已啟用的頻道後，bot 離開該頻道；實況主後台顯示「此頻道已被停權」與支援 Discord 伺服器的邀請連結，「啟用 bot」不能按，直接呼叫啟用也被擋下。
-- [ ] 停權任何狀態的頻道都會成功，包含未啟用與已停用。
-- [ ] 解除停權後，頻道回到「已停用」（不會自動啟用），實況主可以自己重新啟用。
+- [x] 停權任何狀態的頻道都會成功，包含未啟用與已停用。
+- [x] 解除停權後，頻道回到「已停用」（不會自動啟用），實況主可以自己重新啟用。
 - [ ] 在營運入口打開某頻道的修改紀錄，看得到每筆修改的操作者、時間、來源、修改前與修改後。
-- [ ] 實況主刪除所有資料後，營運入口仍列出這個頻道，修改紀錄仍查得到。
-- [ ] 已停權的頻道刪除資料後，仍是已停權。
+- [x] 實況主刪除所有資料後，營運入口仍列出這個頻道，修改紀錄仍查得到。
+- [x] 已停權的頻道刪除資料後，仍是已停權。
 
 **實作設計**
 - 資料：`twitch_bot_join_channel` 新增 `banned_at`（timestamp，可為 null）、`banned_reason`（String，可為 null）。
@@ -1171,7 +1171,38 @@
 - W-04：修改紀錄。
 - W-08：`channel_health`。
 
-**進度**：未完成
+**進度**：實作完成（2026-11-20），待審查與人工驗證；驗收條件只勾自動測試驗證過的 5 條（第 2、4、5、7、8 條），第 1、3、6 條含畫面與真實 bot 離開聊天室，待人工驗證
+- commit：
+  - 後端：f93ea4a8（欄位與分頁查詢）、cdfd442a（`channel_health` 與 `channels._states` 的 banned）、3256ef79（啟用入口與 callback 的停權檢查）、18589df5（`ops.py`、`/dashboard/me`）、f20b6bef（測試 FakeBot）
+  - 前端（domalyze_frontend）：85e8322（banned 畫面與 notice）、fbbad4b（營運頁、修改紀錄頁、頁首「營運」）
+- ALTER（部署時先手動執行，再部署 code）：
+  ```sql
+  ALTER TABLE stardb_basic.twitch_bot_join_channel
+      ADD COLUMN banned_at TIMESTAMP(0) WITH TIME ZONE NULL,
+      ADD COLUMN banned_reason VARCHAR NULL;
+  ```
+  - 已對本機 dev DB（`.env.development`，localhost:5432／stardb）執行 `ADD COLUMN IF NOT EXISTS` 的同一段，讓後端測試跑得起來；正式機沒有動。
+- 使用者與 coordinator 的決定：
+  - 清單端點只回 DB 狀態（含 `banned`），不跑 `channel_health`；新增 `GET /dashboard/ops/channels/<built-in function id>/health`，前端對已啟用的列逐列補查，同時最多 3 個，離開頁面或翻頁就中止。與卡上「每筆有 `channel_health`」不同。
+  - ban、unban 寫修改紀錄（`target_kind=channel`，`target_key=ban`／`unban`，`action=update`，before／after 記 `banned_at`、`banned_reason`、`state`），與狀態改動同一個交易。卡上沒有這項。
+  - 允許最小修改 `channels.py`：`_states` 對有 `banned_at` 的頻道回 `banned`，實況主的頻道清單、個人區 overview、詳情都一致顯示已停權。
+  - 支援 Discord 伺服器邀請連結是 `https://discord.gg/P4jqdcMxkH`，放前端常數 `SUPPORT_DISCORD_URL`。
+- 偏離卡片之處：
+  - `require_bot_owner` 用 `require_any_session`，不是 `require_session`：沒有 Discord 身分的 session 用 `require_session` 會得到 `discord_required`，前端全域處理會整頁導走。沒有 Discord 身分或不是 owner 一律回 403 `not_bot_owner`。
+  - `/to/dashboard-twitch-enable` 與啟用 callback 遇到停權不回 403，而是導回頻道頁並帶 `notice=channel_banned`（W-03 已定這兩個是整頁導覽）。callback 在換 token 前檢查一次，寫入 `enabled` 前在同一次 DB 呼叫內再檢查一次。
+  - 修改紀錄用 `starlib.twitch_audit.list_changes`，不是 `channel_audit.list_changes`（`channel_audit.py` 是 AutoMod 擋下紀錄）。
+  - 頁首「營運」加在 `lib/dashboard-user.tsx` 的 NAV，不是 `dashboard-header.tsx`（後者只渲染）。
+- 實作時的決定：
+  - 端點：`GET /dashboard/ops/channels?page=`（每頁 50 筆，`first_seen_at` 新到舊、沒有時間的排最後）、`GET …/<built-in function id>/health`、`POST …/<built-in function id>/ban {reason}`、`POST …/<built-in function id>/unban`、`GET …/<built-in function id>/audit?page=`（多讀 1 筆判斷 `has_next`）。頻道列不存在回 404 `channel_not_found`。
+  - ban：`reason` 去前後空白、最長 500、空字串存 null；已停權時 `banned_at` 不變、理由有變才更新並記紀錄；`state` 一律設 `disabled`，之後 `_sync_bot` 並通知 `twitch_channel` 快取。
+  - unban：`state` 一律設回 `disabled`（刪除資料後 `state` 是 `inactive`，仍要回「已停用」）；沒被停權回 409 `channel_not_banned`，避免誤把已啟用的頻道停用。
+  - `channel_health` 先判 `banned_at`，停權不打 Twitch 與 bot；`HealthState` 加 `banned`。
+  - `is_bot_owner` 放在 `auth.py`（`/dashboard/me` 與 `ops.py` 共用）；沒有 Discord 身分或 `sclient.bot` 為 None 時為 False。
+  - 前端：`ChannelState`、`ChannelHealthState` 加 `banned`；`channelAction("banned")` 回 `{kind: "none"}`；`DashboardUser` 加 `is_bot_owner`；`lib/dashboard-ops.ts` 含 `createLimiter`（並行上限）與修改紀錄的可讀文案。
+  - `tests/helpers/accounts.py` 的 `FakeBot` 補 `is_owner`，因為 `/dashboard/me` 現在會查。
+- 已知限制：授權途中才被停權時，callback 的兩次檢查之間仍有毫秒級的窗口；bot 只看 `state == "enabled"`，無法在 bot 端補擋。
+- 未驗：真實 Twitch 與 bot 的離開聊天室；瀏覽器裡營運頁、修改紀錄頁、停權說明的畫面；限流補查在 50 筆頁面的實際速度。
+- 完整 CI：待合併回 main 前跑。
 
 ### W-13 官網有 Twitch bot 介紹與接入入口
 

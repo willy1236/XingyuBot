@@ -238,6 +238,46 @@ class TestEntry:
         assert response.headers["location"].startswith(f"{FRONTEND}/dashboard-login")
 
 
+class TestBanned:
+    """停權的頻道不能啟用：入口與 callback 都導回頻道頁並帶 notice=channel_banned，不保存 token、不改 state。"""
+
+    @pytest.fixture(autouse=True)
+    def _banned(self, repo):
+        repo.add(
+            TwitchBotJoinChannel(twitch_id=TWITCH_ID, state="disabled", banned_at=datetime(2026, 1, 1, tzinfo=UTC))
+        )
+
+    def test_entry_redirects_with_notice(self, site, spy, repo):
+        _own_channel_session(site, repo)
+
+        response = site.get("/to/dashboard-twitch-enable", params={"channel": CHANNEL, "origin": FRONTEND})
+
+        assert response.headers["location"] == f"{CHANNEL_URL}?notice=channel_banned"
+
+    def test_callback_saves_nothing_and_keeps_state(self, site, spy, repo):
+        _own_channel_session(site, repo)
+
+        response = _callback(site, code="c")
+
+        assert response.headers["location"] == f"{CHANNEL_URL}?notice=channel_banned"
+        assert spy.saved_tokens == [] and spy.mod_requests == [] and spy.sync_calls == []
+        assert _channel(repo).state == "disabled"
+
+    def test_ban_during_authorization_does_not_enable(self, site, spy, repo, monkeypatch):
+        """授權途中才被停權：換 token 時還沒停權，寫入 enabled 前再擋一次。"""
+        _own_channel_session(site, repo)
+        row = _channel(repo)
+        row.banned_at = None
+        repo.merge(row)
+        calls = iter([False, True])
+        monkeypatch.setattr(channel_activation, "_is_banned", lambda twitch_id: next(calls))
+
+        response = _callback(site, code="c")
+
+        assert response.headers["location"] == f"{CHANNEL_URL}?notice=channel_banned"
+        assert _channel(repo).state == "disabled" and spy.sync_calls == []
+
+
 class TestEnable:
     def test_enables_and_syncs(self, site, spy, repo):
         _own_channel_session(site, repo)

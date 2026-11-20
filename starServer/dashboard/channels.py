@@ -28,6 +28,9 @@ CHANNEL_LIST_PATH = "/dashboard/twitch"
 #: 還沒有頻道列（例如析域帳號連結但從沒登入過）也視為未啟用
 DEFAULT_STATE = "inactive"
 
+#: 營運入口停權（`banned_at` 不為 null）的頻道，不論 DB 的 state 是什麼都回這個
+BANNED_STATE = "banned"
+
 
 def find_channel(info: SessionInfo, twitch_id: int) -> TwitchIdentity | None:
     """這個 session 可管理的頻道；不在清單裡回 None。不 raise，給整頁導覽的端點（/to/*）用。"""
@@ -77,7 +80,10 @@ def _states(twitch_ids: list[int]) -> dict[int, str]:
     states: dict[int, str] = {}
     for twitch_id in twitch_ids:
         row = sqldb.get(TwitchBotJoinChannel, (twitch_id,))
-        states[twitch_id] = DEFAULT_STATE if row is None else row.state
+        if row is None:
+            states[twitch_id] = DEFAULT_STATE
+        else:
+            states[twitch_id] = BANNED_STATE if row.banned_at is not None else row.state
     return states
 
 
