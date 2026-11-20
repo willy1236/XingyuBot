@@ -128,22 +128,25 @@ flowchart LR
 **進度**：實作完成，待審查
 - 後端：399b80d8（欄位）、9f354dbe（`channel_mods`）、04e96965（`ChannelAccess` 與各端點）。
 - 前端（domalyze_frontend 分支 `twitch-mod-collab`）：1d10873。
+- 審查第 1 輪：沒有 blocking；non-blocking 的角色預設值已修（後端 c4f33547、前端 bfd16c4），冷啟動延遲寫進已知限制。
 - 實作決定：
   - mod 名單的 token 讀取與續期走 `channel_mods` 自己的 executor（3 個 worker），不排在後台共用的 `run_db` 後面；候選頻道的查詢仍走 `run_db`。
   - 快取存「最後一次查詢的時間」：無法確認時存空名單、暫時無法回應時沿用上次名單，兩者都 60 秒後才重查，Twitch 異常時不會每個請求都打一次。
   - Helix 名單超過 20 頁（2000 位 mod）時視為暫時無法回應，不拿不完整的名單擋人。
   - `/dashboard/me` 的 `has_channels` 不改：要有 Twitch 帳號才可能是 mod，而有 Twitch 帳號（Twitch 登入或析域連結）就一定有自己的頻道，計入 mod 頻道不會改變結果，只會多打 Helix。
   - mod 頻道清單的 mod 名稱取自 Helix 名單的 `user_name`，修改紀錄記的就是這個名稱。
+  - `GET .../forward` 的 `editable` 改由 `forward_access(info, role)` 決定，mod 一律不是 `ok`，所以 `forward-form.tsx` 不必改：`editable` 為 false 時本來就只顯示目前設定。
+  - mod 看得到權限問題但沒有「修復」按鈕，問題區塊多一行「這些問題要由實況主按「修復」處理。」，因為 issue 說明文字本身提到「修復」。
+  - 個人區的區塊標題改為「Twitch 頻道」，每個頻道標示「我的頻道」或「mod」；頻道清單頁同樣在名稱下方標示。
+  - mod 被擋下的清單提示代碼是 `mod_removed`。
+  - `forward_access` 的角色必填；前端 `ChannelStatus` 沒傳 `role` 時視為 mod，漏傳不會露出實況主的按鈕。
+- 已知限制：頻道清單與個人區每次都要所有候選頻道的 mod 名單，快取過期時同步等待最多 5 秒；重啟後第一次查詢若有頻道超過 5 秒沒回應，又沒有上次的結果，那些 mod 頻道會暫時不出現，下一次過期重查才補上。頻道數多時會更明顯。
 - ALTER（已套到本機 DB；正式機先手動執行，再部署 code）：
   ```sql
   ALTER TABLE stardb_basic.twitch_bot_join_channel
       ADD COLUMN mod_collab_enabled boolean NOT NULL DEFAULT true;
   ```
-  - `GET .../forward` 的 `editable` 改由 `forward_access(info, role)` 決定，mod 一律不是 `ok`，所以 `forward-form.tsx` 不必改：`editable` 為 false 時本來就只顯示目前設定。
-  - mod 看得到權限問題但沒有「修復」按鈕，問題區塊多一行「這些問題要由實況主按「修復」處理。」，因為 issue 說明文字本身提到「修復」。
-  - 個人區的區塊標題改為「Twitch 頻道」，每個頻道標示「我的頻道」或「mod」；頻道清單頁同樣在名稱下方標示。
-  - mod 被擋下的清單提示代碼是 `mod_removed`。
-- 續做：送審。
+- 續做：第 2 輪審查。
 
 ### M-02 實況主與 mod 能在頻道後台看修改紀錄
 
@@ -176,7 +179,7 @@ flowchart LR
 - 後端：180e56aa（`twitch_audit.list_page`、`AuditEntry.to_json`，營運入口改用，行為不變）、249fe6f0（`GET .../audit`）。
 - 前端：281a848（`lib/dashboard-audit.ts`、`components/dashboard/audit-list.tsx` 抽共用，營運入口改用）、c5fc48c（修改紀錄頁與導覽）。
 - 實作決定：導覽的「修改紀錄」放在「轉發 Discord」與「設定」之間；分頁頁碼以回應的 `page` 為準。
-- 續做：送審。
+- 續做：第 2 輪審查。
 
 ### M-03 實況主能開關 mod 協作
 
@@ -213,7 +216,7 @@ flowchart LR
 - 實作決定：
   - 聊天室的 `_can_manage_commands` 與 `_channel_enabled` 合併成 `_may_manage_commands`：先判斷實況主或 mod（一般觀眾不回應），再讀頻道列，state 不是 enabled 回「星羽目前未啟用」，mod 在開關關閉時回「權限不足：實況主已關閉 mod 協作，只有實況主能修改指令」。
   - 還沒有頻道列時開關照樣能存：新增一列 inactive 再寫入。
-- 續做：送審。
+- 續做：第 2 輪審查。
 
 ## 開工前待決
 
