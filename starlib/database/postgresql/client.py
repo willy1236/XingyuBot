@@ -3068,7 +3068,8 @@ class GuildSettingRepository(BaseRepository):
         result = self.session.exec(stmt).all()
         return {i.discord_id: i for i in result}
 
-    def get_voice_time_leaderboard(self, guild_id: int, limit: int = 10):
+    def get_voice_time_leaderboard(self, guild_id: int, limit: int | None = 10):
+        """伺服器的語音時數由多到少；limit 為 None 時列出全部。"""
         stmt = (
             select(VoiceTime).where(VoiceTime.guild_id == guild_id).order_by(desc(VoiceTime.total_minute)).limit(limit)
         )

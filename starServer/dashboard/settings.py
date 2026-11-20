@@ -9,13 +9,11 @@ values 裡的欄位 original 也要帶。修改用條件式寫入（WHERE 帶原
 """
 
 from dataclasses import asdict
-from datetime import timedelta
 
 import discord
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
-from starDiscord.cmds import task as voice_task
 from starlib import sqldb
 from starlib.auto_timeout import effective_setting, moderate_members_issue, valid_seconds, valid_times
 from starlib.exceptions import DataExistError
@@ -24,6 +22,7 @@ from .access import Section, on_guild, require_section
 from .conflict import Conflict
 from .db import run_db
 from .errors import DashboardError
+from .voice_ranking import member_json, minutes, ranking
 
 router = APIRouter(prefix="/dashboard")
 
@@ -52,38 +51,11 @@ def _current_values(guild_id: int) -> dict[str, bool | int]:
 
 
 def _leaderboard(guild: discord.Guild) -> list[dict]:
-    """排行榜前 N 名：資料庫的時數加上尚未存檔的分鐘（`task.voice_times`）。
-
-    在 bot 的事件迴圈上呼叫，而且整段沒有 await：`add_voice_time`、`save_voice_time` 與它跑在同一個 loop，
-    讀 DB 與取快照之間不會被插入存檔，不會重複計算或漏算。刻意直接讀 DB（不經 run_db），與 giveaways.py 同一個例外。
-    """
-    pending = dict(voice_task.voice_times.get(guild.id, {}))
-    totals: dict[int, timedelta] = {
-        r.discord_id: r.total_minute for r in sqldb.get_voice_time_leaderboard(guild.id, LEADERBOARD_SIZE)
-    }
-    # 有未存檔分鐘的成員可能不在資料庫前 N 名，補讀他們的資料庫時數再合併
-    outside = [uid for uid in pending if uid not in totals]
-    if outside:
-        totals.update({uid: r.total_minute for uid, r in sqldb.get_voice_times(outside, guild.id).items()})
-    for uid, delta in pending.items():
-        totals[uid] = totals.get(uid, timedelta()) + delta
-
-    ranked = sorted(totals.items(), key=lambda kv: (-kv[1], kv[0]))[:LEADERBOARD_SIZE]
-    rows = []
-    for uid, total in ranked:
-        member = guild.get_member(uid)
-        rows.append(
-            {
-                "member": {
-                    "id": str(uid),
-                    "name": member.display_name if member is not None else None,
-                    "avatar_url": member.display_avatar.url if member is not None else None,
-                    "left": member is None,
-                },
-                "minutes": int(total.total_seconds() // 60),
-            }
-        )
-    return rows
+    """排行榜前 N 名，在 bot 的事件迴圈上呼叫（見 voice_ranking）。"""
+    return [
+        {"member": member_json(guild, uid), "minutes": minutes(total)}
+        for uid, total in ranking(guild.id)[:LEADERBOARD_SIZE]
+    ]
 
 
 async def _response(guild_id: int) -> dict:
