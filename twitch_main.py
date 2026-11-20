@@ -18,6 +18,8 @@ setup_runtime("twitch")
 from sentry_bootstrap import capture_exception_safe, flush_safe
 from starlib.database import sqldb
 from starlib.messaging import get_bus
+from starlib.utils import nowtz
+from starServer.twitch_bot import state
 
 # ruff: enable[E402]
 
@@ -111,6 +113,7 @@ def _abnormal_exit(thread) -> None:
 
 
 def main() -> None:
+    state.started_at = nowtz()
     _install_signal_handlers()
     try:
         abnormal = _run()

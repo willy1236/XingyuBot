@@ -35,6 +35,8 @@ from starlib.instance import (
 from starlib.messaging import get_bus
 from starlib.utils import nowtz
 
+from . import scheduler_status
+
 log = logging.getLogger(__name__)
 
 
@@ -52,9 +54,17 @@ class DiscordBot(discord.Bot):
         self.debug_mode = debug_mode
         self.bot_code = bot_code
         self.scheduler = AsyncIOScheduler()
+        scheduler_status.install(self.scheduler)
+        # 第一次 on_ready 的時間；gateway 重新 identify 時不覆寫
+        self.started_at: datetime.datetime | None = None
+        self.add_listener(self._record_started, "on_ready")
 
         if bot_code != "1":
             self.debug_guilds = debug_guilds
+
+    async def _record_started(self) -> None:
+        if self.started_at is None:
+            self.started_at = nowtz()
 
     def run(self):
         token = sqldb.get_access_token(APIType.Discord, int(self.bot_code)).access_token

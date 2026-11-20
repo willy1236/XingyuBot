@@ -346,6 +346,18 @@ async def _rpc_status(payload: dict[str, Any]) -> dict[str, Any]:
     return channel_status(int(payload["twitch_id"]))
 
 
+def bot_status() -> dict[str, Any]:
+    """process 的啟動時間與目前實際在裡面的聊天室數；不打 Twitch API。"""
+    return {
+        "started_at": None if state.started_at is None else state.started_at.isoformat(),
+        "rooms": sum(1 for login in rooms.values() if state.chat.is_in_room(login)),
+    }
+
+
+async def _rpc_bot_status(payload: dict[str, Any]) -> dict[str, Any]:
+    return bot_status()
+
+
 async def _on_channel_invalidated(key: str | None) -> None:
     if key is not None:
         await reload_channel(int(key))
@@ -362,4 +374,5 @@ def register() -> None:
     _registered = True
     rpc.handle("channel.sync", _rpc_sync, state.loop)
     rpc.handle("channel.status", _rpc_status, state.loop)
+    rpc.handle("bot.status", _rpc_bot_status, state.loop)
     cache_invalidation.on_invalidate("twitch_channel", _on_channel_invalidated, state.loop)

@@ -322,6 +322,7 @@ Twitch bot 以服務名稱 `twitch` 處理請求。後台（web）經它即時�
 |---|---|---|---|
 | `channel.sync` | `{"twitch_id": int}` | `{"accepted": true, "joined": bool}` | 依資料庫的 `state` 讓 bot 加入（`enabled`）或離開（其他）頻道的聊天室，並在背景訂閱或取消該頻道的 EventSub。`joined` 是聊天室處理完成後 bot 是否在該頻道。 |
 | `channel.status` | `{"twitch_id": int}` | `{"joined": bool, "subscriptions": {"ok": [string], "failed": [string], "pending": bool}}` | 回報已加入的房間與背景訂閱的結果，不打 Twitch API。`ok`、`failed` 是 EventSub 事件名稱，`pending` 為 true 表示背景還有訂閱或取消在進行。 |
+| `bot.status` | `{}` | `{"started_at": string \| null, "rooms": int}` | Twitch bot process 的啟動時間（ISO 8601）與目前實際在裡面的聊天室數，不打 Twitch API。營運入口的系統狀態用。 |
 
 - `channel.sync` 在 5 秒內回應：聊天室的加入或離開有自己的逾時，逾時或被 Twitch 拒絕時 `joined` 為 false；EventSub 的訂閱與取消排進背景，不計入這 5 秒。
 - `channel.sync` 可重複呼叫：對已加入的頻道再呼叫一次，會依實況主 token 查到的 bot 當下的 mod 狀態補訂或退訂需要 mod 的事件；拿不到實況主 token 時視為非 mod。

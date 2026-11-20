@@ -14,7 +14,7 @@ from collections import deque
 from collections.abc import Awaitable, Callable, Coroutine
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Literal
 
 import redis.asyncio as aioredis
 from pydantic import ValidationError
@@ -91,6 +91,13 @@ class MessageBus:
     @property
     def key_prefix(self) -> str:
         return self._key_prefix
+
+    @property
+    def state(self) -> Literal["up", "down", "unconfigured"]:
+        """Redis 連線狀態：沒設定 REDIS_URL（或格式不正確）是 unconfigured，連不上或 bus 已關閉是 down。執行緒安全。"""
+        if not self._conn.configured:
+            return "unconfigured"
+        return "up" if self._conn.is_up else "down"
 
     # ── 對外介面：執行緒安全 ──────────────────────────────
 
