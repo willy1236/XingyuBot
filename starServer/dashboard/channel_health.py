@@ -65,6 +65,11 @@ EVENTS_NEED_MOD = frozenset(
 )
 
 
+def is_banned(row: TwitchBotJoinChannel | None) -> bool:
+    """頻道是否被營運入口停權（`banned_at` 不為 null）；停權規則只在這裡判斷，頻道列不存在視為沒有。"""
+    return row is not None and row.banned_at is not None
+
+
 @dataclass(frozen=True, slots=True)
 class Feature:
     """code：功能代碼（前端用它對應名稱）；chat：靠 bot 在聊天室發言；events：依賴的 EventSub 事件。"""
@@ -277,7 +282,7 @@ async def channel_health(twitch_id: int) -> ChannelHealth:
     只有 bot 離線時仍是 enabled，不暫停任何功能。
     """
     row = await run_db(lambda: sqldb.get(TwitchBotJoinChannel, (twitch_id,)))
-    if row is not None and row.banned_at is not None:
+    if is_banned(row):
         return ChannelHealth("banned")
     state = "inactive" if row is None else row.state
     if state != "enabled":

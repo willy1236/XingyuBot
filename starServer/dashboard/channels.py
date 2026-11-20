@@ -15,7 +15,7 @@ from fastapi import APIRouter, Depends
 from starlib import sqldb
 from starlib.database import TwitchBotJoinChannel
 
-from .channel_health import channel_health
+from .channel_health import channel_health, is_banned
 from .db import run_db
 from .errors import DashboardError
 from .session import SessionInfo, TwitchIdentity, require_any_session
@@ -83,7 +83,7 @@ def _states(twitch_ids: list[int]) -> dict[int, str]:
         if row is None:
             states[twitch_id] = DEFAULT_STATE
         else:
-            states[twitch_id] = BANNED_STATE if row.banned_at is not None else row.state
+            states[twitch_id] = BANNED_STATE if is_banned(row) else row.state
     return states
 
 
