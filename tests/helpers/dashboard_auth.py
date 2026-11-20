@@ -23,7 +23,7 @@ from starlib.oauth import DiscordOAuth
 from starlib.oauth.models import DiscordUser
 from starlib.utils import nowtz
 from starServer import bot_website, dashboard
-from starServer.dashboard import auth, config, db, discord_users, session
+from starServer.dashboard import auth, channel_mods, config, db, discord_users, session
 from tests.helpers.identity import FakeDirectory
 
 FRONTEND = "https://domalyze.net"
@@ -61,7 +61,39 @@ def dashboard_env(monkeypatch, repo):
     monkeypatch.setattr(session, "_inflight", {})
     monkeypatch.setattr(session, "_unavailable_until", 0.0)
     monkeypatch.setattr(discord_users, "_fetched", {})
+    # mod 名單不打真的 Helix：預設每個頻道都沒有 mod，各測試用 `twitch_mods` fixture 設定
+    mods = FakeModerators()
+    monkeypatch.setattr(channel_mods, "sqldb", repo)
+    monkeypatch.setattr(channel_mods, "_cache", {})
+    monkeypatch.setattr(channel_mods, "_inflight", {})
+    monkeypatch.setattr(channel_mods, "_fetch", mods.fetch)
+    monkeypatch.setattr(channel_mods.twitch_tokens, "bot_user_id_blocking", lambda: BOT_TWITCH_ID)
+    fake_client.moderators = mods
     return fake_client
+
+
+#: 測試用的 bot 帳號 Twitch ID
+BOT_TWITCH_ID = "9000"
+
+
+class FakeModerators:
+    """假的 Helix mod 名單：`lists[頻道 ID]` 是 {user_id: 名稱}，或 channel_mods 的 _Unconfirmable／_Unavailable。"""
+
+    def __init__(self):
+        self.lists: dict[int, object] = {}
+        self.calls: list[int] = []
+
+    def set(self, channel_id: int | str, *mods: tuple[str, str]) -> None:
+        self.lists[int(channel_id)] = dict(mods)
+
+    async def fetch(self, twitch_id: int):
+        self.calls.append(twitch_id)
+        return self.lists.get(twitch_id, {})
+
+
+@pytest.fixture
+def twitch_mods(dashboard_env) -> FakeModerators:
+    return dashboard_env.moderators
 
 
 class Spy:
