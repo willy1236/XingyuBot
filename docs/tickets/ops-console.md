@@ -175,10 +175,10 @@
 **風險 / 實作注意**
 - 只有拋出 job 的例外才會觸發 `EVENT_JOB_ERROR`；自己 `except Exception` 的 job 會顯示成功，見待決 2。
 - 本機 `debug_mode` 不註冊週期任務，驗收要在非 debug 環境或暫時註冊一個測試 job。
-- 實作時的決定：觸發規則文字不含 `jitter`；認不得的 cron 寫法顯示 APScheduler 的原始表示（如 `cron[day_of_week='mon', hour='1']`）。最近一次的時間：成功與失敗是實際開始執行的時間，錯過與略過是預定執行時間。錯誤訊息是例外類型、訊息加 traceback，截到 4000 字。排序在後端做：最近一次不是成功的在前，其餘依下次執行時間。`bot.submit` 取快照最多等 5 秒，逾時算 `error`。
+- 實作時的決定：觸發規則文字不含 `jitter`；認不得的 cron 寫法顯示 APScheduler 的原始表示（如 `cron[day_of_week='mon', hour='1']`）。最近一次的時間：成功與失敗是實際開始執行的時間，錯過與略過是預定執行時間。錯誤訊息是例外類型、訊息加 traceback，最多 4000 字；超過時保留類型與訊息（最多 1000 字）和 traceback 的尾段，截掉中段。排序在後端做：最近一次不是成功的在前，其餘依下次執行時間。`bot.submit` 取快照最多等 5 秒，逾時算 `error`。
 
 **進度**：實作完成（2026-11-20）
-- commit：XingyuBot `1643aa92`、`ccc47ff8`；domalyze_frontend `ab59bff`
+- commit：XingyuBot `1643aa92`、`ccc47ff8`、`2c7ce347`；domalyze_frontend `ab59bff`、`bdac279`
 - 未驗：非 debug 環境實際開後台看排程任務區與 30 秒自動更新（自動測試用真的 `AsyncIOScheduler` 驗了成功、失敗、錯過、略過、尚未執行與排序，前端驗了各種提示與列的 render）
 
 ### O-05 bot owner 能跨頁統計並篩出 token 有問題的 Twitch 頻道
