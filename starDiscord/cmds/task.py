@@ -56,47 +56,184 @@ class task(Cog_Extension):
         scheduler = self.bot.scheduler
         if not debug_mode:
             # 即時通知 - 保留misfire_grace_time
-            scheduler.add_job(self.forecast_update, "cron", hour="0/3", minute=0, second=1, misfire_grace_time=60)
-            scheduler.add_job(self.weather_check, "cron", minute="20,35", second=30, misfire_grace_time=60)
-            scheduler.add_job(self.apex_map_rotation, "cron", minute="0/15", second=10, misfire_grace_time=60)
-            scheduler.add_job(self.earthquake_check, "interval", minutes=3, misfire_grace_time=60)
-            scheduler.add_job(self.weather_warning_check, "interval", minutes=15, misfire_grace_time=120)
+            scheduler.add_job(
+                self.forecast_update,
+                "cron",
+                id="forecast_update",
+                name="天氣預報",
+                hour="0/3",
+                minute=0,
+                second=1,
+                misfire_grace_time=60,
+            )
+            scheduler.add_job(
+                self.weather_check,
+                "cron",
+                id="weather_check",
+                name="天氣觀測",
+                minute="20,35",
+                second=30,
+                misfire_grace_time=60,
+            )
+            scheduler.add_job(
+                self.apex_map_rotation,
+                "cron",
+                id="apex_map_rotation",
+                name="Apex 地圖輪替",
+                minute="0/15",
+                second=10,
+                misfire_grace_time=60,
+            )
+            scheduler.add_job(
+                self.earthquake_check,
+                "interval",
+                id="earthquake_check",
+                name="地震報告",
+                minutes=3,
+                misfire_grace_time=60,
+            )
+            scheduler.add_job(
+                self.weather_warning_check,
+                "interval",
+                id="weather_warning_check",
+                name="天氣特報",
+                minutes=15,
+                misfire_grace_time=120,
+            )
             # scheduler.add_job(self.typhoon_warning_check, "cron", minute="0/15", second=30, jitter=30, misfire_grace_time=40)
-            scheduler.add_job(self.youtube_video, "interval", minutes=5, jitter=30, misfire_grace_time=40)
-            scheduler.add_job(self.twitch_live, "interval", minutes=4, misfire_grace_time=20)
-            scheduler.add_job(self.twitch_video, "interval", minutes=10, misfire_grace_time=40)
-            scheduler.add_job(self.twitch_clip, "interval", minutes=5, misfire_grace_time=40)
-            scheduler.add_job(self.notify_twitter_tweet_updates, "interval", minutes=10, misfire_grace_time=40)
+            scheduler.add_job(
+                self.youtube_video,
+                "interval",
+                id="youtube_video",
+                name="YouTube 影片通知",
+                minutes=5,
+                jitter=30,
+                misfire_grace_time=40,
+            )
+            scheduler.add_job(
+                self.twitch_live, "interval", id="twitch_live", name="Twitch 開台通知", minutes=4, misfire_grace_time=20
+            )
+            scheduler.add_job(
+                self.twitch_video,
+                "interval",
+                id="twitch_video",
+                name="Twitch 影片通知",
+                minutes=10,
+                misfire_grace_time=40,
+            )
+            scheduler.add_job(
+                self.twitch_clip, "interval", id="twitch_clip", name="Twitch 剪輯通知", minutes=5, misfire_grace_time=40
+            )
+            scheduler.add_job(
+                self.notify_twitter_tweet_updates,
+                "interval",
+                id="twitter_tweets",
+                name="X 推文通知",
+                minutes=10,
+                misfire_grace_time=40,
+            )
 
             # 背景刷新 - 保留 jitter
-            scheduler.add_job(refresh_yt_push, "cron", hour="2/12", minute=0, second=0, jitter=300)
             scheduler.add_job(
-                refresh_ip_last_seen_arp, "cron", minute="0/20", second=0, jitter=60, misfire_grace_time=90
+                refresh_yt_push,
+                "cron",
+                id="refresh_yt_push",
+                name="YouTube 推播訂閱續約",
+                hour="2/12",
+                minute=0,
+                second=0,
+                jitter=300,
             )
             scheduler.add_job(
-                refresh_ip_last_seen_nmap, "cron", minute="0/15", second=0, jitter=60, misfire_grace_time=90
+                refresh_ip_last_seen_arp,
+                "cron",
+                id="refresh_ip_last_seen_arp",
+                name="IP 最後出現時間（ARP）",
+                minute="0/20",
+                second=0,
+                jitter=60,
+                misfire_grace_time=90,
             )
             scheduler.add_job(
-                self.save_voice_time, "cron", hour="0/1", minute="0/30", second=0, jitter=60, misfire_grace_time=90
+                refresh_ip_last_seen_nmap,
+                "cron",
+                id="refresh_ip_last_seen_nmap",
+                name="IP 最後出現時間（nmap）",
+                minute="0/15",
+                second=0,
+                jitter=60,
+                misfire_grace_time=90,
             )
             scheduler.add_job(
-                refresh_db_cache, "cron", hour="0/2", minute=0, second=0, jitter=60, misfire_grace_time=90
+                self.save_voice_time,
+                "cron",
+                id="save_voice_time",
+                name="語音時數存檔",
+                hour="0/1",
+                minute="0/30",
+                second=0,
+                jitter=60,
+                misfire_grace_time=90,
             )
             scheduler.add_job(
-                settle_website_link_rate, "cron", minute=5, second=0, jitter=60, misfire_grace_time=300, max_instances=1
+                refresh_db_cache,
+                "cron",
+                id="refresh_db_cache",
+                name="語音時數快取重建",
+                hour="0/2",
+                minute=0,
+                second=0,
+                jitter=60,
+                misfire_grace_time=90,
+            )
+            scheduler.add_job(
+                settle_website_link_rate,
+                "cron",
+                id="settle_website_link_rate",
+                name="析域帳號連結率結算",
+                minute=5,
+                second=0,
+                jitter=60,
+                misfire_grace_time=300,
+                max_instances=1,
             )
 
             # 統計任務 - 保留 misfire_grace_time + max_instances
             scheduler.add_job(
-                self.add_voice_time, "cron", minute="*/1", second=30, misfire_grace_time=20, max_instances=1
+                self.add_voice_time,
+                "cron",
+                id="add_voice_time",
+                name="語音時數累計",
+                minute="*/1",
+                second=30,
+                misfire_grace_time=20,
+                max_instances=1,
             )
 
             if self.bot.user and self.bot.user.id == 589744540240314368:
                 scheduler.add_job(
-                    self.birthday_task, "cron", month=10, day=16, hour=8, minute=0, second=0, misfire_grace_time=60
+                    self.birthday_task,
+                    "cron",
+                    id="birthday_task",
+                    name="生日訊息",
+                    month=10,
+                    day=16,
+                    hour=8,
+                    minute=0,
+                    second=0,
+                    misfire_grace_time=60,
                 )
                 scheduler.add_job(
-                    record_users_count, "cron", args=[self.bot], hour=0, minute=0, second=0, jitter=240, max_instances=1
+                    record_users_count,
+                    "cron",
+                    id="record_users_count",
+                    name="每日人數紀錄",
+                    args=[self.bot],
+                    hour=0,
+                    minute=0,
+                    second=0,
+                    jitter=240,
+                    max_instances=1,
                 )
                 # scheduler.add_job(self.new_years_eve_task, CronTrigger(month=1, day=1, hour=0, minute=0, second=0), misfire_grace_time=60)
 
