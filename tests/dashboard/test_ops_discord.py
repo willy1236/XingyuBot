@@ -30,7 +30,13 @@ def client_for(session_id: str) -> TestClient:
 def fake_guild(guild_id: int, joined_days_ago: int | None):
     joined_at = None if joined_days_ago is None else NOW - timedelta(days=joined_days_ago)
     return SimpleNamespace(
-        id=guild_id, name=f"g{guild_id}", icon=None, member_count=7, me=SimpleNamespace(joined_at=joined_at)
+        id=guild_id,
+        name=f"g{guild_id}",
+        icon=None,
+        member_count=7,
+        me=SimpleNamespace(joined_at=joined_at),
+        owner_id=500 + guild_id,
+        owner=None,
     )
 
 
@@ -68,6 +74,17 @@ def test_overview_lists_live_guilds_newest_join_first(owner, bot):
     assert (live["guild_count"], live["user_count"]) == (3, 3)
     assert [g["id"] for g in live["guilds"]] == ["3", "2", "1"]
     assert live["guilds"][1]["joined_at"] == (NOW - timedelta(days=1)).isoformat()
+
+
+def test_owner_with_and_without_member_cache(owner, bot):
+    cached = fake_guild(1, 1)
+    cached.owner = SimpleNamespace(display_name="群主", display_avatar=SimpleNamespace(url="https://cdn/a.png"))
+    bot.guilds.extend([cached, fake_guild(2, 2)])
+    owners = [g["owner"] for g in owner.get(BASE).json()["live"]["guilds"]]
+    assert owners == [
+        {"id": "501", "name": "群主", "avatar_url": "https://cdn/a.png"},
+        {"id": "502", "name": None, "avatar_url": None},
+    ]
 
 
 def test_overview_live_is_null_when_bot_not_ready(owner, bot):

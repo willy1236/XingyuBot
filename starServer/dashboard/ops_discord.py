@@ -34,6 +34,19 @@ def _guild_json(guild: discord.Guild) -> dict[str, Any]:
         "icon_url": guild.icon.url if guild.icon else None,
         "member_count": guild.member_count,
         "joined_at": None if joined_at is None else joined_at.isoformat(),
+        "owner": _owner_json(guild),
+    }
+
+
+def _owner_json(guild: discord.Guild) -> dict[str, Any] | None:
+    """群主；成員快取還沒有群主時只有 id，名稱與頭像為 null。伺服器資料不完整時整個是 null。"""
+    if guild.owner_id is None:
+        return None
+    owner = guild.owner
+    return {
+        "id": str(guild.owner_id),
+        "name": None if owner is None else owner.display_name,
+        "avatar_url": None if owner is None else owner.display_avatar.url,
     }
 
 
