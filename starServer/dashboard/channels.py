@@ -1,7 +1,7 @@
 """實況主後台的頻道端點。
 
 GET /dashboard/channels              這個 session 可以管理的頻道與 bot 狀態：自己的頻道在前，mod 頻道在後
-GET /dashboard/channels/{twitch_id}  單一頻道的基本資料、角色、bot 狀態、轉發 Discord 的可用情形與 health（權限問題與暫停的功能）
+GET /dashboard/channels/{twitch_id}  單一頻道的基本資料、角色、bot 狀態、轉發 Discord 的可用情形、mod 協作開關與 health（權限問題與暫停的功能）
 
 頻道端點只用 require_channel 判斷可不可以管理某頻道，回傳 `ChannelAccess`（頻道、角色、修改紀錄的操作者）：
 SessionInfo.twitch_channels 裡的頻道是 owner，不在裡面時才經 `channel_mods` 向 Twitch 確認是不是 mod。
@@ -138,6 +138,12 @@ def _states(twitch_ids: list[int]) -> dict[int, str]:
     return states
 
 
+def _mod_collab_enabled(twitch_id: int) -> bool:
+    """沒有頻道列視為開啟（與欄位的 server default 一致）。"""
+    row = sqldb.get(TwitchBotJoinChannel, (twitch_id,))
+    return True if row is None else row.mod_collab_enabled
+
+
 def _channel_json(channel: TwitchIdentity, role: ChannelRole, state: str) -> dict:
     return {
         "id": channel.id,
@@ -169,9 +175,13 @@ async def get_channel(
     access: ChannelAccess = Depends(require_channel),
     info: SessionInfo = Depends(require_any_session),
 ):
-    states, health = await asyncio.gather(run_db(lambda: _states([twitch_id])), channel_health(twitch_id))
+    def load() -> tuple[str, bool]:
+        return _states([twitch_id])[twitch_id], _mod_collab_enabled(twitch_id)
+
+    (state, mod_collab_enabled), health = await asyncio.gather(run_db(load), channel_health(twitch_id))
     return {
-        **_channel_json(access.channel, access.role, states[twitch_id]),
+        **_channel_json(access.channel, access.role, state),
         "forward_access": forward_access(info, access.role),
+        "mod_collab_enabled": mod_collab_enabled,
         "health": health.to_json(),
     }

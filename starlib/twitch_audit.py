@@ -13,7 +13,7 @@ from sqlmodel import col, select
 from starlib.database import TwitchChannelAudit, sqldb
 
 type AuditSource = Literal["dashboard", "chat"]
-type AuditTarget = Literal["command", "timer", "event_response", "forward", "channel"]
+type AuditTarget = Literal["command", "timer", "event_response", "forward", "channel", "mod_collab"]
 type AuditAction = Literal["create", "update", "delete"]
 
 
