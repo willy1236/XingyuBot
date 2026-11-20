@@ -90,6 +90,7 @@ sequenceDiagram
 | `twitch.raid` | discord | 10 分鐘 | 突襲 |
 | `twitch.subscribe` | discord | 1 小時 | 訂閱 |
 | `twitch.subscription_message` | discord | 1 小時 | 續訂訊息 |
+| `twitch.subscription_gift` | discord | 1 小時 | 贈送訂閱 |
 | `twitch.redemption` | discord | 1 小時 | 點數兌換 |
 | `twitch.prediction_result` | discord | 1 小時 | 預測結果 |
 | `twitch.whisper` | discord | 1 小時 | 私訊 |
@@ -151,6 +152,19 @@ Twitch 頻道被追隨。Discord 端依該頻道的通知頻道設定發送，�
 
 `occurred_at` 是 EventSub 的 `message_timestamp`。
 
+#### twitch.subscription_gift
+
+贈送訂閱。一次贈送多份只發送一次，收禮者的 `twitch.subscribe` 不發送。Discord 端依通知頻道設定發送，沒設定就不發；`user_name` 為 null（匿名贈送）時顯示為「匿名」。
+
+| 欄位 | 型別 | 說明 |
+|---|---|---|
+| `broadcaster_id` | string | 被訂閱頻道的 Twitch ID |
+| `user_name` | string \| null | 贈送者的顯示名稱；匿名贈送時為 null |
+| `total` | integer | 這次贈送的份數 |
+| `tier` | string | Twitch 原始層級值：`"1000"`、`"2000"`、`"3000"`；接收端顯示時取第一個字元 |
+
+`occurred_at` 是 EventSub 的 `message_timestamp`。
+
 #### twitch.redemption
 
 頻道點數兌換。Discord 端依通知頻道設定發送，沒設定就不發。
@@ -167,10 +181,11 @@ Twitch 頻道被追隨。Discord 端依該頻道的通知頻道設定發送，�
 
 #### twitch.prediction_result
 
-預測結束且有獲勝選項（`resolved`）。取消的預測不發送。Discord 端固定發到預設頻道，不依通知頻道設定。
+預測結束且有獲勝選項（`resolved`）。取消的預測不發送。Discord 端依通知頻道設定發送，沒設定就不發。
 
 | 欄位 | 型別 | 說明 |
 |---|---|---|
+| `broadcaster_id` | string | 頻道的 Twitch ID |
 | `broadcaster_name` | string | 頻道的顯示名稱 |
 | `title` | string | 預測標題 |
 | `outcome_title` | string | 獲勝選項名稱 |
@@ -216,7 +231,7 @@ Twitch 頻道開台。Twitch bot 在聊天室發完訊息後送出。Discord 端
 
 #### twitch.stream_offline
 
-Twitch 頻道下播。Discord 端發一則文字到預設頻道，再清除該頻道的開台紀錄；只在紀錄的開台時間早於 `occurred_at`（或為空值）時才清，晚於它的新開台紀錄不動。
+Twitch 頻道下播。Discord 端依通知頻道設定發一則文字（沒設定就不發），再清除該頻道的開台紀錄；只在紀錄的開台時間早於 `occurred_at`（或為空值）時才清，晚於它的新開台紀錄不動。
 
 | 欄位 | 型別 | 說明 |
 |---|---|---|

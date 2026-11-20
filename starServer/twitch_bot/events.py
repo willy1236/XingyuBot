@@ -18,6 +18,7 @@ from starlib.messaging.events.twitch_activity import (
     TwitchRaidEvent,
     TwitchRedemptionEvent,
     TwitchSubscribeEvent,
+    TwitchSubscriptionGiftEvent,
     TwitchSubscriptionMessageEvent,
     TwitchWhisperEvent,
 )
@@ -350,6 +351,16 @@ async def on_channel_subscription_gift(event: eventsub.ChannelSubscriptionGiftEv
         amount=str(event.event.total),
     )
 
+    get_bus().publish(
+        TwitchSubscriptionGiftEvent(
+            occurred_at=event.metadata.message_timestamp,
+            broadcaster_id=event.event.broadcaster_user_id,
+            user_name=None if event.event.is_anonymous else event.event.user_name,
+            total=event.event.total,
+            tier=event.event.tier,
+        )
+    )
+
 
 async def on_channel_poll_begin(event: eventsub.ChannelPollBeginEvent):
     log.info("%s 開始了投票：%s", event.event.broadcaster_user_name, event.event.title)
@@ -374,6 +385,7 @@ async def on_channel_prediction_end(event: eventsub.ChannelPredictionEndEvent):
                 get_bus().publish(
                     TwitchPredictionResultEvent(
                         occurred_at=event.metadata.message_timestamp,
+                        broadcaster_id=event.event.broadcaster_user_id,
                         broadcaster_name=event.event.broadcaster_user_name,
                         title=event.event.title,
                         outcome_title=outcome.title,

@@ -13,6 +13,7 @@ from starlib.messaging.events.twitch_activity import (
     TwitchRaidEvent,
     TwitchRedemptionEvent,
     TwitchSubscribeEvent,
+    TwitchSubscriptionGiftEvent,
     TwitchSubscriptionMessageEvent,
     TwitchWhisperEvent,
 )
@@ -69,6 +70,7 @@ class TwitchNotify(Cog_Extension):
             (TwitchRaidEvent, self.on_raid),
             (TwitchSubscribeEvent, self.on_subscribe),
             (TwitchSubscriptionMessageEvent, self.on_subscription_message),
+            (TwitchSubscriptionGiftEvent, self.on_gift),
             (TwitchRedemptionEvent, self.on_redemption),
             (TwitchPredictionResultEvent, self.on_prediction_result),
             (TwitchWhisperEvent, self.on_whisper),
@@ -128,6 +130,13 @@ class TwitchNotify(Cog_Extension):
         await channel.send(thanks)
         await channel.send("\n".join(texts))
 
+    async def on_gift(self, event: TwitchSubscriptionGiftEvent, delivery: Delivery) -> None:
+        channel = self._action_channel(event.broadcaster_id)
+        if channel is None:
+            return
+        giver = event.user_name or "匿名"
+        await channel.send(f"感謝 {giver} 贈送了 {event.total} 份層級{event.tier[0]}訂閱！")
+
     async def on_redemption(self, event: TwitchRedemptionEvent, delivery: Delivery) -> None:
         channel = self._action_channel(event.broadcaster_id)
         if channel is None:
@@ -138,7 +147,7 @@ class TwitchNotify(Cog_Extension):
         await channel.send(text)
 
     async def on_prediction_result(self, event: TwitchPredictionResultEvent, delivery: Delivery) -> None:
-        channel = self._default_channel()
+        channel = self._action_channel(event.broadcaster_id)
         if channel is None:
             return
         embed = BotEmbed.general(
