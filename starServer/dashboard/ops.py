@@ -23,7 +23,7 @@ from starlib.utils import nowtz
 from . import twitch_control
 from .auth import is_bot_owner
 from .channel_activation import _sync_bot
-from .channel_health import channel_health
+from .channel_health import channel_health, is_banned
 from .channels import BANNED_STATE
 from .db import run_db
 from .errors import DashboardError
@@ -53,7 +53,7 @@ def _offset(page: int) -> int:
 
 
 def _state(row: TwitchBotJoinChannel) -> str:
-    return BANNED_STATE if row.banned_at is not None else row.state
+    return BANNED_STATE if is_banned(row) else row.state
 
 
 def _channel_json(row: TwitchBotJoinChannel) -> dict[str, Any]:
@@ -112,10 +112,10 @@ def _ban(twitch_id: int, reason: str | None, actor: twitch_audit.AuditActor) -> 
     """同一個交易內改停權欄位並記修改紀錄；已經停權且理由相同時什麼都不寫。"""
     row = _get_row(twitch_id)
     before = _ban_snapshot(row)
-    if row.banned_at is not None and row.banned_reason == reason and row.state == "disabled":
+    if is_banned(row) and row.banned_reason == reason and row.state == "disabled":
         return _channel_json(row)
     try:
-        if row.banned_at is None:
+        if not is_banned(row):
             row.banned_at = nowtz()
         row.banned_reason = reason
         row.state = "disabled"
@@ -133,7 +133,7 @@ def _ban(twitch_id: int, reason: str | None, actor: twitch_audit.AuditActor) -> 
 def _unban(twitch_id: int, actor: twitch_audit.AuditActor) -> dict[str, Any]:
     """清除停權並回到 disabled（刪除資料後的 inactive 也一律回 disabled）；沒有被停權回 409。"""
     row = _get_row(twitch_id)
-    if row.banned_at is None:
+    if not is_banned(row):
         raise DashboardError(409, "channel_not_banned")
     before = _ban_snapshot(row)
     try:

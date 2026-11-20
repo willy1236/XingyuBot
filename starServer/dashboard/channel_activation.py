@@ -24,6 +24,7 @@ from starlib.twitch_tokens import MODERATORS_URL, bot_user_id_blocking
 
 from . import twitch_control
 from .auth import OAuthCookie, sanitize_origin
+from .channel_health import is_banned
 from .channels import CHANNEL_LIST_PATH, DEFAULT_STATE, channel_page_path, find_channel, require_channel
 from .db import run_db
 from .session import SESSION_COOKIE, TwitchIdentity, lookup_followed_session
@@ -67,8 +68,7 @@ def _login_url(origin: str, channel_id: int | str) -> str:
 
 
 def _is_banned(twitch_id: int) -> bool:
-    row = sqldb.get(TwitchBotJoinChannel, (twitch_id,))
-    return row is not None and row.banned_at is not None
+    return is_banned(sqldb.get(TwitchBotJoinChannel, (twitch_id,)))
 
 
 # ====== 啟用入口 ======
