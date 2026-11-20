@@ -497,6 +497,9 @@ class TwitchBotJoinChannel(BasicSchema, table=True):
     first_seen_at: datetime | None = Field(default=None, sa_column=Column(TIMESTAMP(True, 0)))
     #: 事件轉發的 Discord 伺服器，供顯示與權限檢查（W-11）
     action_guild_id: int | None = Field(default=None, sa_column=Column(BigInteger))
+    #: 營運入口停權的時間；不為 null 就是已停權（W-12）。刪除資料時不清除
+    banned_at: datetime | None = Field(default=None, sa_column=Column(TIMESTAMP(True, 0)))
+    banned_reason: str | None = Field(default=None, sa_column=Column(String))
 
 
 class TwitchChatCommand(BasicSchema, table=True):
