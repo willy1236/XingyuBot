@@ -1076,13 +1076,13 @@
 
 **驗收條件**
 - [ ] 用析域登入，在轉發頁選一個自己有 Manage Channels 的伺服器頻道並儲存後，有人訂閱時該頻道收到通知。
-- [ ] 選擇清單只列出 bot 在、且自己有 Manage Channels 的伺服器；直接呼叫 API 設定沒有權限的頻道，回 403。
-- [ ] 外部頻道的預測結果發到該實況主設定的頻道，不再發到 bot owner 的預設頻道；沒設定就不發。
-- [ ] 私訊仍然只發到 bot owner 的預設頻道。
-- [ ] 贈訂時，轉發頻道收到一則贈訂通知，有贈送者與份數。
+- [x] 選擇清單只列出 bot 在、且自己有 Manage Channels 的伺服器；直接呼叫 API 設定沒有權限的頻道，回 403。
+- [x] 外部頻道的預測結果發到該實況主設定的頻道，不再發到 bot owner 的預設頻道；沒設定就不發。
+- [x] 私訊仍然只發到 bot owner 的預設頻道。
+- [x] 贈訂時，轉發頻道收到一則贈訂通知，有贈送者與份數。
 - [ ] 實況主解除析域連結後，已設定的轉發照常運作；只用 Twitch 登入時，轉發頁顯示目前設定但不能修改，並提示要用析域登入。
-- [ ] 下播時，轉發頻道收到下播通知。
-- [ ] 每次修改轉發設定都寫進修改紀錄。
+- [x] 下播時，轉發頻道收到下播通知。
+- [x] 每次修改轉發設定都寫進修改紀錄。
 
 **實作設計**
 - 資料：沿用 `TwitchBotJoinChannel.action_channel_id`，另外使用 W-04 建好的 `action_guild_id`（BigInteger），供顯示與權限檢查。
@@ -1114,7 +1114,21 @@
 **風險 / 實作注意**
 - bus 事件新增欄位時，舊的 Discord 端會略過不認得的欄位（契約已規定），部署順序不受影響。但新事件類型要等兩邊都部署完才會開始處理。
 
-**進度**：未完成
+**進度**：實作完成（2026-11-20），待審查與人工驗證；驗收條件只勾自動測試驗證過的 6 條（2、3、4、5、7、8），Discord 與 Twitch 都以 mock 驗證；第 1 條（存檔後真的收到通知）與第 6 條（解除連結後轉發頁的顯示）要真實 Discord、Twitch 與畫面，待人工驗證
+- commit：後端 45263adb、fb26cb8e；前端（domalyze_frontend 的 tsd-w11 分支）44973e8
+- 部署順序：先部署 Twitch bot，再部署 Discord 端。`TwitchPredictionResultEvent.broadcaster_id` 是必填的新欄位（使用者決定 Q1：選 A），Discord 端先部署時，Redis 內還沒消費、沒有該欄位的舊預測結果事件會驗證失敗而遺失（最多 1 小時內的幾則）；新的 `twitch.subscription_gift` 要兩邊都部署完才會開始處理，先部署哪邊都沒有副作用。
+- 沒有 ALTER：`action_guild_id` 已由 W-04 建好，`twitch_audit.AuditTarget` 已含 `forward`，不需動 `models.py`、`client.py`、`twitch_audit.py`。
+- 實作時的決定：
+  - 前端實際路徑是 `app/dashboard/twitch/[id]/forward/page.tsx`（不是卡上的 `channels/`），沿用原本的 `forwardAccessNotice` 提示並在下方顯示目前設定；新增 `components/dashboard/channel/forward-form.tsx`、`lib/dashboard-channel-forward.ts`。
+  - 錯誤碼：沒有 Manage Channels 回 403 `forward_forbidden`；`forward_access` 不是 `ok` 回 403 `forward_not_allowed`；頻道不屬於該伺服器、不是文字或公告頻道、bot 不能在其中發言回 400 `invalid_channel`（與通知設定共用 `validity.channel_invalid_reason`）；bot 不在該伺服器 404 `bot_not_in_guild`；bot 未 ready 503 `bot_unavailable`。不用 `no_permission`，因為前端在全域把它當成伺服器權限，會導走整頁。
+  - 修改轉發只要求 `require_channel`，不要求頻道已啟用；頻道列不存在時建立一列 `inactive`。設定沒變就不寫、不記紀錄；`channel_id` 為 null 是清除（`action_channel_id` 與 `action_guild_id` 一起清），清除不重新檢查權限，之後失去權限或 bot 離開伺服器仍能清掉。沒有樂觀鎖，最後寫入者勝出。
+  - 修改紀錄：`target_kind=forward`、`target_key=discord`，`action` 為 `create`（原本沒設定）、`update`、`delete`（清除），`before`／`after` 是 `{guild_id, channel_id}`（字串）。
+  - `GET /forward` 的名稱讀 bot 快取，bot 沒 ready 或查不到時名稱為 null、不回錯誤；舊頻道列只有 `action_channel_id` 時，伺服器由頻道取得。`GET /forward/options` 一次回所有符合的伺服器與頻道，用公開的 `bot_guild_ids` 加每個伺服器一次 `guild_perms` 判斷，沒有動 `guilds.py`。
+  - 贈訂事件 `twitch.subscription_gift`（`broadcaster_id`、`user_name`（匿名為 null）、`total`、`tier`）在 `on_channel_subscription_gift` 於聊天室回應後發布；Discord 端文字「感謝 {贈送者} 贈送了 {份數} 份層級{N}訂閱！」，匿名顯示「匿名」。
+  - 下播與預測結果改走 `resolve_action_channel`：沒設定或頻道不存在就不發，下播仍會清開台紀錄。`docs/messaging-contract.md` 同步改了 `twitch.stream_offline`、`twitch.prediction_result` 的說明並新增 `twitch.subscription_gift`。
+- 行為變更：預測結果與下播通知不再發到預設頻道；bot owner 自己的頻道沒設定轉發就收不到（使用者另行決定中，目前不特別處理），私訊維持發到預設頻道。
+- 未驗：真實 Discord 的 Manage Channels 判斷與實際送訊息、真實 EventSub 贈訂事件、轉發頁畫面（桌面與 360px）、`tests/twitch/test_notify.py::test_follow_event_travels_between_two_buses` 需要 Redis，本機沒有 Redis 所以沒跑（與本卡無關）。
+- 完整 CI：待合併回 main 前跑。
 
 ### W-12 bot owner 能在營運入口管理頻道
 
