@@ -75,9 +75,10 @@
 - 目前狀態與活動需要 presence intent，沒有資料時顯示「不明」，不要顯示成離線。
 - `fetch_user` 打的是 Discord REST，有 rate limit。
 
-**進度**：已完成（待審查；畫面未在瀏覽器實測，驗收條件待實測後打勾）
-- 後端：4b66f114（`GET /dashboard/ops/discord/lookup`）。
-- 前端（domalyze_frontend 分支 `ops-discord-lookup`）：c72be75。
+**進度**：實作完成（2026-11-20）
+- 後端：bb4b195a、c722d8e0（`GET /dashboard/ops/discord/lookup`）。
+- 前端：c72be75。
+- 未驗：身分組查詢只有自動測試（本機找不到身分組 ID）；其餘情境已在本機瀏覽器驗過。
 - 驗證：`tests/dashboard/test_ops_discord_lookup.py` 涵蓋各 kind 的回應欄位、多種同時命中、查無結果的 snowflake 時間、`invalid_id`、`bot_unavailable`、使用者 400／429、訊息 `channel_not_found`／`forbidden`／`NotFound`、`content_hidden`；`lib/dashboard-ops-discord.test.ts` 涵蓋 ID 格式檢查與各顯示文字。
 - 實作決定：
   - `id` 省略或空字串也回 400 `invalid_id`；前端送出前用同樣的範圍檢查，網址參數不合法時直接顯示格式錯誤、不送請求。
@@ -118,9 +119,10 @@
 
 **依賴**：O-01（成員列連到 ID 查詢頁）
 
-**進度**：已完成（待審查；畫面未在瀏覽器實測，驗收條件待實測後打勾）
-- 後端：a306b0e3（`GET /dashboard/ops/discord/common-members`、總覽 `live.main_guild_id`）。
-- 前端（domalyze_frontend 分支 `ops-discord-lookup`）：5cbc5a8。
+**進度**：實作完成（2026-11-20）
+- 後端：bd0e0a51（`GET /dashboard/ops/discord/common-members`、總覽 `live.main_guild_id`）。
+- 前端：5cbc5a8、8d3aa2a。
+- 未驗：兩個伺服器真正的成員交集（開發用 bot 只在一個伺服器）；選單與各種提示已在本機瀏覽器驗過。
 - 驗證：`tests/dashboard/test_ops_discord_lookup.py` 的共通成員測試涵蓋預設主伺服器、任選兩個、排序與欄位、`same_guild`、`invalid_id`、`guild_not_found`、`member_cache_loading`、`bot_unavailable`、沒設定主伺服器；`test_ops_discord.py::test_overview_live_has_main_guild_id`。
 - 實作決定：
   - 主伺服器由 `config.main_guild_id()` 讀 `HAPPYCAMP_GUILD[0]`，不 import `starlib.instance`（import 時會查 DB）；沒有設定且 `b` 省略時回 404 `guild_not_found`。
@@ -234,8 +236,9 @@
 - 全部撈出再篩選的做法在已啟用頻道數千筆以下沒問題；超過時再改成 SQL 篩選。
 - access token 過期是正常狀態（用到才續期），不能當成問題。
 
-**進度**：完成
-- commit：XingyuBot 35fe7e02、afb1989b、8a6ef57b；domalyze_frontend a1b8980
+**進度**：實作完成（2026-11-20）
+- 未驗：已啟用頻道的 token 問題統計（本機沒有已啟用頻道）；篩選與網址參數已在本機瀏覽器驗過。
+- commit：XingyuBot 19b5d313、0f722bbe、5bc38b39、23ba56cb；domalyze_frontend a1b8980、029560a
 - 驗證：`tests/dashboard/test_ops.py::TestTokenStats`（統計、只算 enabled 且沒停權、列上的 token 與缺少的 scope、篩選與分頁、不呼叫 Twitch）、`tests/twitch/test_twitch_tokens.py`（`refresh_failed_at` 的標記與清除、`TestTokenState`）、`tests/oauth/test_save_token.py`、前端 `lib/dashboard-ops.test.ts`（網址參數）；勾選狀態存在網址、統計列與列上顯示未在瀏覽器手動驗
 - 上線前：正式機先執行上面的 `ALTER TABLE`
 - 實作決定：
