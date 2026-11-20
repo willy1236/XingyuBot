@@ -120,7 +120,7 @@ from unittest.mock import AsyncMock, MagicMock  # noqa: E402
 
 from starDiscord.cmds import twitch_live_notify  # noqa: E402
 from starDiscord.cmds.twitch_live_notify import TwitchLiveNotify  # noqa: E402
-from starDiscord.cmds.twitch_notify import DEFAULT_TWITCH_CHANNEL, ChannelMissing, NotConfigured  # noqa: E402
+from starDiscord.cmds.twitch_notify import ChannelMissing, NotConfigured  # noqa: E402
 from starlib.messaging import Delivery  # noqa: E402
 from starlib.messaging.events.twitch_stream import TwitchStreamOfflineEvent, TwitchStreamOnlineEvent  # noqa: E402
 
@@ -244,20 +244,21 @@ def test_online_redelivered_notifies_even_when_claim_lost(cog, db, monkeypatch):
     cog.bot.send_notify_communities.assert_awaited_once()
 
 
-def test_offline_sends_to_default_channel_then_clears_with_event_time(cog, db):
+def test_offline_sends_to_action_channel_then_clears_with_event_time(cog, db, monkeypatch):
     channel = make_channel()
-    cog.bot.get_channel.return_value = channel
+    set_channel(monkeypatch, channel)
     event = TwitchStreamOfflineEvent(
         occurred_at=T0 + timedelta(hours=1), broadcaster_id="900000000000000004", broadcaster_name="主播"
     )
     run(cog.on_stream_offline(event, NEW))
-    cog.bot.get_channel.assert_called_once_with(DEFAULT_TWITCH_CHANNEL)
     channel.send.assert_awaited_once_with("主播 ending stream.")
     db.clear_twitch_live.assert_called_once_with("900000000000000004", T0 + timedelta(hours=1))
 
 
-def test_offline_clears_even_when_default_channel_missing(cog, db):
-    cog.bot.get_channel.return_value = None
+@pytest.mark.parametrize("result", [NotConfigured(), ChannelMissing()])
+def test_offline_clears_even_when_no_action_channel(cog, db, monkeypatch, result):
+    set_channel(monkeypatch, result)
+    cog.bot.get_channel.side_effect = AssertionError("沒有通知頻道時不該碰預設頻道")
     event = TwitchStreamOfflineEvent(occurred_at=T0, broadcaster_id="1", broadcaster_name="主播")
     run(cog.on_stream_offline(event, NEW))
     db.clear_twitch_live.assert_called_once_with("1", T0)

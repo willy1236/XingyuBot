@@ -23,6 +23,7 @@ from starlib.messaging.events.twitch_activity import (
     TwitchRaidEvent,
     TwitchRedemptionEvent,
     TwitchSubscribeEvent,
+    TwitchSubscriptionGiftEvent,
     TwitchSubscriptionMessageEvent,
     TwitchWhisperEvent,
 )
@@ -71,6 +72,17 @@ def raid():
         from_broadcaster_name="突襲者",
         viewers=42,
     )
+
+
+def prediction_result():
+    return TwitchPredictionResultEvent(
+        occurred_at=NOW, broadcaster_id=TWITCH_ID, broadcaster_name="主播", title="會贏嗎", outcome_title="會", users=5
+    )
+
+
+def gift(**overrides):
+    data = dict(occurred_at=NOW, broadcaster_id=TWITCH_ID, user_name="贈送者", total=5, tier="2000")
+    return TwitchSubscriptionGiftEvent(**{**data, **overrides})
 
 
 def subscribe():
@@ -158,6 +170,8 @@ def test_redemption_text(cog, action_channel, user_input, expected):
         ("on_subscribe", subscribe),
         ("on_subscription_message", sub_message),
         ("on_redemption", redemption),
+        ("on_gift", gift),
+        ("on_prediction_result", prediction_result),
     ],
 )
 def test_no_action_channel_sends_nothing(cog, monkeypatch, result, handler, make_event):
@@ -177,24 +191,32 @@ def test_resolve_uses_broadcaster_id_of_each_event(cog, monkeypatch):
         (cog.on_subscribe, subscribe()),
         (cog.on_subscription_message, sub_message()),
         (cog.on_redemption, redemption()),
+        (cog.on_gift, gift()),
+        (cog.on_prediction_result, prediction_result()),
     ]:
         run(handler(event, DELIVERY))
-    assert seen == [TWITCH_ID] * 4
+    assert seen == [TWITCH_ID] * 6
 
 
-# ---- 預設頻道的兩種事件：embed 相同 ----
-
-
-def test_prediction_result_embed_to_default_channel(cog, default_channel):
-    event = TwitchPredictionResultEvent(
-        occurred_at=NOW, broadcaster_name="主播", title="會贏嗎", outcome_title="會", users=5
-    )
-    run(cog.on_prediction_result(event, DELIVERY))
-    cog.bot.get_channel.assert_called_once_with(566533708371329026)
-    embed = default_channel.send.await_args.kwargs["embed"]
+def test_prediction_result_embed_to_action_channel(cog, action_channel):
+    run(cog.on_prediction_result(prediction_result(), DELIVERY))
+    embed = action_channel.send.await_args.kwargs["embed"]
     assert embed.author.name == "主播"
     assert embed.description == "會贏嗎\n會 獲勝！5個人成功預測"
-    assert "content" not in default_channel.send.await_args.kwargs
+    assert "content" not in action_channel.send.await_args.kwargs
+
+
+def test_gift_text(cog, action_channel):
+    run(cog.on_gift(gift(), DELIVERY))
+    action_channel.send.assert_awaited_once_with("感謝 贈送者 贈送了 5 份層級2訂閱！")
+
+
+def test_anonymous_gift_text(cog, action_channel):
+    run(cog.on_gift(gift(user_name=None), DELIVERY))
+    action_channel.send.assert_awaited_once_with("感謝 匿名 贈送了 5 份層級2訂閱！")
+
+
+# ---- 預設頻道：只剩私訊 ----
 
 
 def test_whisper_embed_to_default_channel(cog, default_channel):
@@ -220,6 +242,7 @@ def test_default_channel_missing_is_silent(cog):
         (TwitchRaidEvent, "twitch.raid", timedelta(minutes=10)),
         (TwitchSubscribeEvent, "twitch.subscribe", timedelta(hours=1)),
         (TwitchSubscriptionMessageEvent, "twitch.subscription_message", timedelta(hours=1)),
+        (TwitchSubscriptionGiftEvent, "twitch.subscription_gift", timedelta(hours=1)),
         (TwitchRedemptionEvent, "twitch.redemption", timedelta(hours=1)),
         (TwitchPredictionResultEvent, "twitch.prediction_result", timedelta(hours=1)),
         (TwitchWhisperEvent, "twitch.whisper", timedelta(hours=1)),
@@ -232,7 +255,7 @@ def test_event_contract(cls, event_type, ttl):
     assert registry[event_type] is cls
 
 
-def test_cog_subscribes_and_unsubscribes_all_six_events(monkeypatch):
+def test_cog_subscribes_and_unsubscribes_all_events(monkeypatch):
     bus = MagicMock()
     monkeypatch.setattr(twitch_notify, "get_bus", lambda: bus)
     cog = TwitchNotify(MagicMock())
@@ -241,6 +264,7 @@ def test_cog_subscribes_and_unsubscribes_all_six_events(monkeypatch):
         TwitchRaidEvent,
         TwitchSubscribeEvent,
         TwitchSubscriptionMessageEvent,
+        TwitchSubscriptionGiftEvent,
         TwitchRedemptionEvent,
         TwitchPredictionResultEvent,
         TwitchWhisperEvent,
@@ -382,7 +406,7 @@ def test_subscription_message_without_cumulative_or_message(chatbot):
     chatbot.test_chat.send_message.assert_awaited_once_with("host", "感謝 訂閱者 的訂閱！累積訂閱 3 個月！")
 
 
-def test_gift_subscription_chat_only(chatbot):
+def test_gift_subscription_answered_then_published(chatbot):
     payload = eventsub_event(
         broadcaster_user_id=TWITCH_ID,
         broadcaster_user_login="host",
@@ -394,7 +418,7 @@ def test_gift_subscription_chat_only(chatbot):
     )
     run(chatbot.on_channel_subscription_gift(payload))
     chatbot.test_chat.send_message.assert_awaited_once_with("host", "感謝 贈送者 送出 5 份訂閱！")
-    chatbot.test_bus.publish.assert_not_called()
+    assert published(chatbot) == [gift(user_name="贈送者", total=5, tier="1000")]
 
 
 def test_anonymous_gift_subscription_is_answered_as_anonymous(chatbot):
@@ -409,6 +433,7 @@ def test_anonymous_gift_subscription_is_answered_as_anonymous(chatbot):
     )
     run(chatbot.on_channel_subscription_gift(payload))
     chatbot.test_chat.send_message.assert_awaited_once_with("host", "感謝 匿名 送出 5 份訂閱！")
+    assert published(chatbot) == [gift(user_name=None, total=5, tier="1000")]
 
 
 def test_redemption_published_regardless_of_action_channel(chatbot, monkeypatch):
@@ -430,17 +455,18 @@ def prediction_payload(status="resolved"):
         SimpleNamespace(id="b", title="會", color="BLUE", users=5),
     ]
     return eventsub_event(
-        broadcaster_user_name="主播", title="會贏嗎", status=status, winning_outcome_id="b", outcomes=outcomes
+        broadcaster_user_id=TWITCH_ID,
+        broadcaster_user_name="主播",
+        title="會贏嗎",
+        status=status,
+        winning_outcome_id="b",
+        outcomes=outcomes,
     )
 
 
 def test_prediction_resolved_publishes_winner(chatbot):
     run(chatbot.on_channel_prediction_end(prediction_payload()))
-    assert published(chatbot) == [
-        TwitchPredictionResultEvent(
-            occurred_at=NOW, broadcaster_name="主播", title="會贏嗎", outcome_title="會", users=5
-        )
-    ]
+    assert published(chatbot) == [prediction_result()]
 
 
 def test_prediction_canceled_publishes_nothing(chatbot):

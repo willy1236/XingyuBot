@@ -10,7 +10,7 @@ from starlib.messaging.events.twitch_stream import TwitchStreamOfflineEvent, Twi
 from starlib.providers.social.models import TwitchStream
 
 from ..extension import Cog_Extension
-from .twitch_notify import DEFAULT_TWITCH_CHANNEL, ChannelMissing, NotConfigured, resolve_action_channel
+from .twitch_notify import ChannelMissing, NotConfigured, resolve_action_channel
 
 log = logging.getLogger(__name__)
 
@@ -65,9 +65,9 @@ class TwitchLiveNotify(Cog_Extension):
             )
 
     async def on_stream_offline(self, event: TwitchStreamOfflineEvent, delivery: Delivery) -> None:
-        channel = self.bot.get_channel(DEFAULT_TWITCH_CHANNEL)
+        channel = resolve_action_channel(self.bot, event.broadcaster_id)
         try:
-            if channel:
+            if not isinstance(channel, NotConfigured | ChannelMissing):
                 await channel.send(f"{event.broadcaster_name} ending stream.")
         finally:
             # 發送失敗也要清紀錄，否則下一次開台的通知要等紀錄被較新的開台時間覆蓋
