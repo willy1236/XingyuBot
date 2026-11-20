@@ -25,9 +25,16 @@ from starlib.twitch_tokens import MODERATORS_URL, bot_user_id_blocking
 from . import twitch_control
 from .auth import OAuthCookie, sanitize_origin
 from .channel_health import is_banned
-from .channels import CHANNEL_LIST_PATH, DEFAULT_STATE, channel_page_path, find_channel, require_channel
+from .channels import (
+    CHANNEL_LIST_PATH,
+    DEFAULT_STATE,
+    ChannelAccess,
+    channel_page_path,
+    find_channel,
+    require_owner_channel,
+)
 from .db import run_db
-from .session import SESSION_COOKIE, TwitchIdentity, lookup_followed_session
+from .session import SESSION_COOKIE, SessionInfo, lookup_followed_session
 from .twitch_login import (
     get_oauth_client,
     new_twitch_oauth,
@@ -71,6 +78,16 @@ def _is_banned(twitch_id: int) -> bool:
     return is_banned(sqldb.get(TwitchBotJoinChannel, (twitch_id,)))
 
 
+async def _owner_redirect(info: SessionInfo, channel_id: int, channel_url: str) -> RedirectResponse | None:
+    """整頁導覽的權限檢查：不能管理時導回頻道頁，mod 時導回頻道頁並帶 owner_only；實況主回 None。"""
+    access = await find_channel(info, channel_id)
+    if access is None:
+        return RedirectResponse(url=channel_url)
+    if access.role != "owner":
+        return RedirectResponse(url=_with_notice(channel_url, "owner_only"))
+    return None
+
+
 # ====== 啟用入口 ======
 @to_router.get("/to/dashboard-twitch-enable")
 async def to_dashboard_twitch_enable(request: Request, channel: str | None = None, origin: str | None = None):
@@ -82,9 +99,9 @@ async def to_dashboard_twitch_enable(request: Request, channel: str | None = Non
     info = await lookup_followed_session(request.cookies.get(SESSION_COOKIE))
     if info is None:
         return RedirectResponse(url=_login_url(origin, channel_id))
-    # 不是自己的頻道：導回頻道頁，由 ChannelAccessGuard 顯示「沒有這個頻道的權限」
-    if find_channel(info, channel_id) is None:
-        return RedirectResponse(url=_channel_url(origin, channel_id))
+    # 不能管理的頻道：導回頻道頁，由 ChannelAccessGuard 顯示「沒有這個頻道的權限」；mod 不能啟用或修復
+    if (redirect := await _owner_redirect(info, channel_id, _channel_url(origin, channel_id))) is not None:
+        return redirect
     if await run_db(lambda: _is_banned(channel_id)):
         return RedirectResponse(url=_with_notice(_channel_url(origin, channel_id), "channel_banned"))
 
@@ -162,8 +179,8 @@ async def _handle_enable(request: Request, cookie: OAuthCookie) -> Response:
     info = await lookup_followed_session(request.cookies.get(SESSION_COOKIE))
     if info is None:
         return RedirectResponse(url=_login_url(origin, channel_id))
-    if find_channel(info, int(channel_id)) is None:
-        return RedirectResponse(url=channel_url)
+    if (redirect := await _owner_redirect(info, int(channel_id), channel_url)) is not None:
+        return redirect
     # 停權的頻道不保存 token；授權途中才被停權的，在寫入 enabled 前再擋一次
     if await run_db(lambda: _is_banned(int(channel_id))):
         return RedirectResponse(url=_with_notice(channel_url, "channel_banned"))
@@ -216,7 +233,7 @@ def _disable(twitch_id: int) -> str:
 
 
 @router.post("/channels/{twitch_id}/disable")
-async def disable_channel(twitch_id: int, _: TwitchIdentity = Depends(require_channel)):
+async def disable_channel(twitch_id: int, _: ChannelAccess = Depends(require_owner_channel)):
     state = await run_db(lambda: _disable(twitch_id))
     # disabled 時才通知 bot；已經是 disabled 再按一次也照樣通知，讓上次沒完成的離開有機會補上
     bot_offline = await _sync_bot(twitch_id) if state == "disabled" else False

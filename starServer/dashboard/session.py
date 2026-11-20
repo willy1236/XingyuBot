@@ -69,7 +69,8 @@ class SessionInfo:
     #: discord、domalyze 或 twitch
     login_method: str = "discord"
     twitch: TwitchIdentity | None = None
-    #: 這個 session 可以管理的 Twitch 頻道；頻道端點只用這個判斷，不自己查
+    #: 這個 session 自己的 Twitch 頻道（Twitch 登入是自己，析域登入是連結的所有 Twitch）；
+    #: 擔任 mod 的頻道不在這裡，由 `channels.find_channel` 經 `channel_mods` 另外確認
     twitch_channels: tuple[TwitchIdentity, ...] = ()
 
     @property
@@ -90,7 +91,8 @@ class DiscordSessionInfo(SessionInfo):
 
 
 def audit_actor(info: SessionInfo) -> AuditActor:
-    """session 的操作者，供修改紀錄使用：Twitch 登入記 Twitch 帳號，有 Discord 身分的記 Discord 帳號，沒有 Discord 的析域登入記析域帳號。"""
+    """session 的操作者，供營運入口（停權、解除停權）的修改紀錄使用：Twitch 登入記 Twitch 帳號，有 Discord 身分的記 Discord 帳號，
+    沒有 Discord 的析域登入記析域帳號。頻道後台的修改改用 `channels.ChannelAccess.actor`，一律記 Twitch 帳號。"""
     if info.login_method == "twitch" and info.twitch is not None:
         return AuditActor("twitch", info.twitch.id, info.twitch.name)
     if info.discord_user_id is not None:

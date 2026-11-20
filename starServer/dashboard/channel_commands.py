@@ -22,11 +22,10 @@ from starlib.database import TwitchChatCommand
 from starlib.twitch_commands import CommandFields, CommandInvalid, CommandMissing, Verify
 
 from . import twitch_control
-from .channels import require_channel, require_enabled_channel
+from .channels import ChannelAccess, require_channel, require_enabled_channel
 from .conflict import check_conflict
 from .db import run_db
 from .errors import DashboardError
-from .session import SessionInfo, TwitchIdentity, audit_actor, require_any_session
 
 router = APIRouter(prefix="/dashboard")
 
@@ -98,7 +97,7 @@ async def _check_automod(twitch_id: int, response: str) -> None:
 
 
 @router.get("/channels/{twitch_id}/commands")
-async def list_commands(twitch_id: int, _channel: TwitchIdentity = Depends(require_channel)):
+async def list_commands(twitch_id: int, _access: ChannelAccess = Depends(require_channel)):
     rows = await run_db(lambda: [_json(row) for row in twitch_commands.list_commands(twitch_id)])
     return {"commands": rows}
 
@@ -107,13 +106,12 @@ async def list_commands(twitch_id: int, _channel: TwitchIdentity = Depends(requi
 async def create_command(
     twitch_id: int,
     body: Values,
-    info: SessionInfo = Depends(require_any_session),
-    _channel: TwitchIdentity = Depends(require_enabled_channel),
+    access: ChannelAccess = Depends(require_enabled_channel),
 ):
     fields = body.fields()
     await run_db(_translate(lambda: twitch_commands.validate(twitch_id, body.name, fields)))
     await _check_automod(twitch_id, body.response)
-    actor = audit_actor(info)
+    actor = access.actor
     row = await run_db(
         _translate(lambda: _json(twitch_commands.create(twitch_id, actor, "dashboard", body.name, fields)))
     )
@@ -125,15 +123,14 @@ async def update_command(
     twitch_id: int,
     name: str,
     body: PutBody,
-    info: SessionInfo = Depends(require_any_session),
-    _channel: TwitchIdentity = Depends(require_enabled_channel),
+    access: ChannelAccess = Depends(require_enabled_channel),
 ):
     fields = body.values.fields()
     await run_db(_translate(lambda: twitch_commands.validate(twitch_id, body.values.name, fields, current_name=name)))
     # 只改開關、冷卻等設定時不花 AutoMod 檢查的額度，AutoMod 暫時無法檢查時也能開關指令
     if body.values.response != body.original.response:
         await _check_automod(twitch_id, body.values.response)
-    actor = audit_actor(info)
+    actor = access.actor
     verify = _verifier(body.original)
     row = await run_db(
         _translate(
@@ -148,10 +145,9 @@ async def delete_command(
     twitch_id: int,
     name: str,
     body: DeleteBody,
-    info: SessionInfo = Depends(require_any_session),
-    _channel: TwitchIdentity = Depends(require_enabled_channel),
+    access: ChannelAccess = Depends(require_enabled_channel),
 ):
-    actor = audit_actor(info)
+    actor = access.actor
     verify = _verifier(body.original)
     await run_db(_translate(lambda: twitch_commands.delete(twitch_id, actor, "dashboard", name, verify)))
     return {"ok": True}

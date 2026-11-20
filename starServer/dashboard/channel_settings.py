@@ -15,10 +15,9 @@ from starlib.twitch_audit import AuditActor
 
 from . import twitch_control
 from .channel_activation import _sync_bot
-from .channels import DEFAULT_STATE, require_channel
+from .channels import DEFAULT_STATE, ChannelAccess, require_owner_channel
 from .db import run_db
 from .errors import DashboardError
-from .session import SessionInfo, TwitchIdentity, audit_actor, require_any_session
 
 log = logging.getLogger(__name__)
 
@@ -71,13 +70,13 @@ def _delete_data(twitch_id: int, actor: AuditActor) -> None:
 async def delete_channel_data(
     twitch_id: int,
     body: DeleteDataBody,
-    channel: TwitchIdentity = Depends(require_channel),
-    info: SessionInfo = Depends(require_any_session),
+    access: ChannelAccess = Depends(require_owner_channel),
 ):
-    """`confirm_login` 要等於頻道 login（大小寫不敏感），不符回 400 confirm_mismatch。不要求頻道已啟用。"""
+    """`confirm_login` 要等於頻道 login（大小寫不敏感），不符回 400 confirm_mismatch。不要求頻道已啟用，只限實況主。"""
+    channel = access.channel
     if body.confirm_login.strip().casefold() != channel.login.casefold():
         raise DashboardError(400, "confirm_mismatch")
-    actor = audit_actor(info)
+    actor = access.actor
     await run_db(lambda: _delete_data(twitch_id, actor))
     log.info("Dashboard Twitch delete data: %s (%s)", channel.login, twitch_id)
     # 交易提交後 state 已是 inactive：bot 離開聊天室並退訂；離線時下次啟動依資料庫為準

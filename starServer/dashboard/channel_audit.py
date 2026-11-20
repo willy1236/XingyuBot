@@ -7,9 +7,8 @@ from fastapi import APIRouter, Depends
 
 from starlib import sqldb
 
-from .channels import require_channel
+from .channels import ChannelAccess, require_channel
 from .db import run_db
-from .session import TwitchIdentity
 
 router = APIRouter(prefix="/dashboard")
 
@@ -18,7 +17,7 @@ BLOCKS_LIMIT = 20
 
 
 @router.get("/channels/{twitch_id}/automod-blocks")
-async def list_automod_blocks(twitch_id: int, _channel: TwitchIdentity = Depends(require_channel)):
+async def list_automod_blocks(twitch_id: int, _access: ChannelAccess = Depends(require_channel)):
     def load() -> list[dict]:
         return [
             {

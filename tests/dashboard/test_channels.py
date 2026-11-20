@@ -58,6 +58,7 @@ class TestListChannels:
                     "login": "streamer",
                     "name": "Streamer",
                     "avatar_url": f"https://static-cdn.jtvnw.net/{CHANNEL_ID}.png",
+                    "role": "owner",
                     "state": "enabled",
                 }
             ]

@@ -44,7 +44,7 @@ flowchart LR
 
 | # | 卡號 | 進度 | 標題 | 依賴 | 並行組 | 備註 |
 |---|---|---|---|---|---|---|
-| 1 | M-01 | 未完成 | mod 能進入頻道後台，修改指令、計時訊息與事件回應 | 無 | — | 骨架切片；含 mod 名單確認、角色與 owner 限定的擋下 |
+| 1 | M-01 | 進行中 | mod 能進入頻道後台，修改指令、計時訊息與事件回應 | 無 | — | 骨架切片；含 mod 名單確認、角色與 owner 限定的擋下 |
 | 2 | M-02 | 未完成 | 實況主與 mod 能在頻道後台看修改紀錄 | M-01 | A | |
 | 3 | M-03 | 未完成 | 實況主能開關 mod 協作 | M-01 | A | 含聊天室管理指令 |
 
@@ -125,7 +125,20 @@ flowchart LR
 - `twitch_control.broadcaster_token` 續期時會佔用後台 DB executor（3 個 worker）最多約 5 秒；快取過期時並行查多個頻道可能讓其他後台 DB 呼叫排隊，必要時 mod 名單的 token 讀取改用另一個 executor。
 - `require_channel` 回傳型別改變會碰到所有頻道端點，這張卡一次改完，M-02、M-03 不再改它。
 
-**進度**：未完成
+**進度**：進行中
+- 後端：`mod_collab_enabled` 欄位、`channel_mods`、`ChannelAccess` 與各端點已完成（commit 399b80d8、9f354dbe 與本卡後端存取的 commit）。
+- 實作決定：
+  - mod 名單的 token 讀取與續期走 `channel_mods` 自己的 executor（3 個 worker），不排在後台共用的 `run_db` 後面；候選頻道的查詢仍走 `run_db`。
+  - 快取存「最後一次查詢的時間」：無法確認時存空名單、暫時無法回應時沿用上次名單，兩者都 60 秒後才重查，Twitch 異常時不會每個請求都打一次。
+  - Helix 名單超過 20 頁（2000 位 mod）時視為暫時無法回應，不拿不完整的名單擋人。
+  - `/dashboard/me` 的 `has_channels` 不改：要有 Twitch 帳號才可能是 mod，而有 Twitch 帳號（Twitch 登入或析域連結）就一定有自己的頻道，計入 mod 頻道不會改變結果，只會多打 Helix。
+  - mod 頻道清單的 mod 名稱取自 Helix 名單的 `user_name`，修改紀錄記的就是這個名稱。
+- ALTER（已套到本機 DB；正式機先手動執行，再部署 code）：
+  ```sql
+  ALTER TABLE stardb_basic.twitch_bot_join_channel
+      ADD COLUMN mod_collab_enabled boolean NOT NULL DEFAULT true;
+  ```
+- 續做：前端（domalyze_frontend 分支 `twitch-mod-collab`）：`lib/dashboard-channel.ts` 的 `role`、`ForwardAccess.mod`、`owner_only`、mod 被擋下的清單提示，再改頻道清單頁、`ChannelsSection`、狀態與轉發、設定頁與 `channel-access-guard.tsx`。
 
 ### M-02 實況主與 mod 能在頻道後台看修改紀錄
 
