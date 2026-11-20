@@ -192,7 +192,7 @@
 - [ ] 統計與篩選本身不對 Twitch 發請求；逐列的 `/health` 補查照舊。
 
 **實作設計**
-- 資料：待決 3 選 A 時，`OAuthToken` 加 `refresh_failed_at`（nullable timestamptz）。正式機上線前手動執行 `ALTER TABLE tokens.oauth_token ADD COLUMN refresh_failed_at timestamptz;`，再部署程式。
+- 資料：待決 3 選 A 時，`OAuthToken` 加 `refresh_failed_at`（nullable timestamptz，精度 0 同其他時間欄位）。`OAuthToken` 在 `credentials` schema，正式機上線前手動執行 `ALTER TABLE credentials.oauth_token ADD COLUMN refresh_failed_at timestamptz(0);`，再部署程式；本機 DB 也要先加，否則讀 `OAuthToken` 的測試與功能都會 `UndefinedColumn`。
 - 後端：
   - `ENABLE_SCOPES` 從 `starServer/dashboard/channel_activation.py` 搬到 `starlib/twitch_tokens.py`，`channel_activation.py` 與 `channel_health.py` 改從那裡 import。
   - `starlib/twitch_tokens.py` 新增 `token_state(token: OAuthToken | None) -> Literal["ok", "missing", "scope_missing", "revoked"]`：沒有 token 或 `refresh_token` 為空是 `missing`，`refresh_failed_at` 不為 null 是 `revoked`，scope 不含全部 `ENABLE_SCOPES` 是 `scope_missing`。判定只在這裡做。
@@ -210,7 +210,14 @@
 
 **進度**：進行中
 - 已完成：`ENABLE_SCOPES` 搬到 `starlib/twitch_tokens.py`（35fe7e02）；`OAuthToken.refresh_failed_at` 與續期、重新授權時的標記與清除（afb1989b）；後端 `token_state`、`list_enabled_channel_tokens`、`GET /dashboard/ops/channels` 的 `token_problems` 與 `?token_problem=1`
-- 續做：前端 `lib/dashboard-ops.ts`、`ops-channel-list.tsx`、`ops-channel-row.tsx`；本機 DB 加欄位後重跑 `tests/twitch/test_twitch_tokens.py`、`tests/dashboard/test_ops.py`
+- 已完成：前端統計列、篩選勾選與列上的 token 狀態（domalyze_frontend a1b8980）
+- 續做：本機 DB 執行上面的 `ALTER TABLE` 後重跑 `tests/twitch/test_twitch_tokens.py`、`tests/dashboard/test_ops.py`，再勾驗收條件
+- 實作決定：
+  - 續期再次被拒時不覆寫 `refresh_failed_at`，保留第一次失敗的時間，也省去每次 `/health` 都寫一次 DB；Twitch 暫時無法回應不算失敗。
+  - `oauth_lib.py` 除了 `save_token_to_db` 帶 token_data 的 `OAuthToken(...)`，`to_db_token` 與合併 `self.db_token` 的分支也清為 null：實況主啟用流程走的是 `exchange_code` → `save_token_to_db(user_id)` 這條。
+  - `token_state` 的判定順序是 missing → revoked → scope_missing；另外匯出 `missing_scopes(token)`，依 `ENABLE_SCOPES` 的順序回缺少的 scope。回應的 `missing_scopes` 只在 `scope_missing` 時有值。
+  - `list_enabled_channel_tokens` 在函式內 import `BROADCASTER_CLIENT_SEQ`，`twitch_tokens` 會 import `sqldb`，放頂層會循環。
+  - 前端列上只在 token 有問題時顯示一行，正常時不顯示；切換篩選回到第一頁，網址用 `history.replaceState` 更新（頁碼維持不進網址）。
 
 ## 開工前待決
 
