@@ -1104,6 +1104,8 @@ class OAuthToken(TokensSchema, table=True):
     refresh_token: str = Field(sa_column=Column(String))
     scope: list[str] = Field(sa_column=Column(ARRAY(String)))
     expires_at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0)))
+    #: 最近一次續期被 Twitch 拒絕（refresh token 已失效）的時間；續期成功或重新授權時清為 null（O-05）
+    refresh_failed_at: datetime | None = Field(default=None, sa_column=Column(TIMESTAMP(True, 0)))
 
     @property
     def valid(self):

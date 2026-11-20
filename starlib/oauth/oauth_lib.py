@@ -203,10 +203,13 @@ class OAuth2Base(ABC):
                 refresh_token=token_data.get("refresh_token"),
                 scope=token_data.get("scope"),
                 expires_at=expires_at,
+                refresh_failed_at=None,
             )
             sqldb.merge(token)
         elif self.db_token is not None:
+            # 重新授權拿到的新 token：清掉之前續期失敗的標記（O-05）
             self.db_token.user_id = user_id
+            self.db_token.refresh_failed_at = None
             sqldb.merge(self.db_token)
         else:
             raise Exception("No token data to save.")
@@ -242,4 +245,5 @@ class OAuth2Base(ABC):
             refresh_token=token_data.get("refresh_token"),
             scope=scope,
             expires_at=expires_at,
+            refresh_failed_at=None,
         )

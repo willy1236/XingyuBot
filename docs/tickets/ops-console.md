@@ -209,8 +209,8 @@
 - access token 過期是正常狀態（用到才續期），不能當成問題。
 
 **進度**：進行中
-- 已完成：`ENABLE_SCOPES` 搬到 `starlib/twitch_tokens.py`
-- 續做：`OAuthToken.refresh_failed_at` 與 `_refresh_locked` 標記（`starlib/database/postgresql/models.py`、`starlib/twitch_tokens.py`、`starlib/oauth/oauth_lib.py`）
+- 已完成：`ENABLE_SCOPES` 搬到 `starlib/twitch_tokens.py`（35fe7e02）；`OAuthToken.refresh_failed_at` 與續期、重新授權時的標記與清除
+- 續做：`token_state`（`starlib/twitch_tokens.py`）、`list_enabled_channel_tokens`（`starlib/database/postgresql/client.py`）、`ops.py` 的 `token_problems` 與 `?token_problem=1`
 
 ## 開工前待決
 

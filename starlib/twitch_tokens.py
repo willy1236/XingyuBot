@@ -137,7 +137,13 @@ def _refresh_locked(credential_id: int, user_id: str, client_id: str, client_sec
             return _unavailable(session, token, now)
         if response.status_code in (400, 401):
             log.warning("%s 的 refresh token 已失效：%s", user_id, response.text)
-            session.rollback()
+            # 留在 DB 給營運入口統計；已標記過就不重寫，保留第一次失敗的時間
+            if token.refresh_failed_at is None:
+                token.refresh_failed_at = now
+                session.add(token)
+                session.commit()
+            else:
+                session.rollback()
             return TokenInvalid("revoked")
         if response.status_code != 200:
             log.warning("續期 %s 的 token 失敗：%s %s", user_id, response.status_code, response.text)
@@ -149,6 +155,7 @@ def _refresh_locked(credential_id: int, user_id: str, client_id: str, client_sec
         token.expires_at = now + timedelta(seconds=data.get("expires_in", 0))
         if scope := data.get("scope"):
             token.scope = scope if isinstance(scope, list) else scope.split(" ")
+        token.refresh_failed_at = None
         session.add(token)
         session.commit()
         return token.access_token
