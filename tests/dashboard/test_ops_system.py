@@ -158,3 +158,82 @@ def test_discord_started_at_is_kept_on_reidentify():
     assert first is not None
     asyncio.run(DiscordBot._record_started(bot))  # type: ignore[arg-type]
     assert bot.started_at is first
+
+
+# ---- 排程任務 ----
+
+JOBS = "/dashboard/ops/system/jobs"
+
+
+@pytest.fixture
+def bot_loop(env, monkeypatch):
+    """讓假 bot 有自己的 loop 與 scheduler，submit 比照 DiscordBot 交給那個 loop。"""
+    loop = asyncio.new_event_loop()
+    thread = threading.Thread(target=loop.run_forever, daemon=True)
+    thread.start()
+    bot = sclient.bot
+    bot.scheduler = SimpleNamespace(running=True)
+    bot.submit = lambda coro: asyncio.run_coroutine_threadsafe(coro, loop)
+    on_loop = []
+
+    def snapshot():
+        on_loop.append(asyncio.get_running_loop() is loop)
+        return env.jobs
+
+    env.jobs = []
+    env.on_loop = on_loop
+    monkeypatch.setattr(ops_system.scheduler_status, "snapshot", snapshot)
+    yield loop
+    loop.call_soon_threadsafe(loop.stop)
+    thread.join(5)
+    loop.close()
+
+
+def test_jobs_snapshot_is_taken_on_bot_loop(owner, env, bot_loop):
+    from starDiscord.scheduler_status import JobStatus, LastRun
+
+    env.jobs = [
+        JobStatus(
+            id="earthquake_check",
+            name="地震報告",
+            trigger="每 3 分鐘",
+            next_run_at=STARTED,
+            last=LastRun(at=STARTED, result="error", duration_ms=12, error="ValueError: x"),
+        )
+    ]
+    body = owner.get(JOBS).json()
+    assert body["state"] == "up"
+    assert body["running"] is True
+    assert body["jobs"] == [
+        {
+            "id": "earthquake_check",
+            "name": "地震報告",
+            "trigger": "每 3 分鐘",
+            "next_run_at": STARTED.isoformat(),
+            "last": {"at": STARTED.isoformat(), "result": "error", "duration_ms": 12, "error": "ValueError: x"},
+        }
+    ]
+    assert env.on_loop == [True]
+
+
+def test_jobs_not_running_and_empty(owner, env, bot_loop):
+    sclient.bot.scheduler.running = False
+    assert owner.get(JOBS).json() == {"state": "up", "running": False, "jobs": []}
+
+
+def test_jobs_offline_and_error(env, monkeypatch):
+    monkeypatch.setattr(sclient, "bot", None)
+    assert asyncio.run(ops_system.jobs(None)) == {"state": "down"}  # type: ignore[arg-type]
+
+    def broken_submit(coro):
+        coro.close()
+        raise RuntimeError("loop closed")
+
+    monkeypatch.setattr(sclient, "bot", SimpleNamespace(submit=broken_submit))
+    assert asyncio.run(ops_system.jobs(None)) == {"state": "error"}  # type: ignore[arg-type]
+
+
+def test_jobs_owner_only(repo, env):
+    env.owners.clear()
+    r = client_for(make_session(repo)).get(JOBS)
+    assert (r.status_code, r.json()["error"]) == (403, "not_bot_owner")
