@@ -3,9 +3,10 @@
 ## 執行
 
 ```bash
-uv run pytest -m "not integration"          # 日常：不連外部服務，約 2.5 分鐘
+uv run pytest                               # 日常：預設排除 integration，不連外部服務，約 2.5 分鐘
 uv run pytest tests/polls                    # 只跑一個功能
-uv run pytest -m integration                 # 連真實外部服務（Rettiwt、yt-dlp、Twitch 等），需要對應憑證
+uv run pytest -m integration                 # 連真實外部服務（Rettiwt、yt-dlp、Twitch、Redis 等），需要對應憑證
+uv run pytest -m ""                          # 全部，含 integration
 ```
 
 前置條件：

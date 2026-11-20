@@ -53,6 +53,8 @@ override-dependencies = ["oauthlib>=4.0.1"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+# 預設不跑整合測試；要跑時用 `pytest -m integration`（命令列的 -m 會覆寫這裡）
+addopts = "-m 'not integration'"
 markers = [
     "integration: tests that call external services or require live credentials",
 ]
