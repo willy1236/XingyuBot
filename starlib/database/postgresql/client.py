@@ -20,7 +20,7 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 # from sqlalchemy.orm import Session as ALSession
 from sqlalchemy.orm import joinedload, scoped_session, sessionmaker
 from sqlalchemy.orm.scoping import ScopedSession
-from sqlmodel import Session, SQLModel, create_engine, delete, select, update
+from sqlmodel import Session, SQLModel, col, create_engine, delete, select, update
 
 from starlib.exceptions import *
 from starlib.settings import get_settings
@@ -2616,6 +2616,42 @@ class BackupRepository(BaseRepository):
             )
             self.session.add(backup_message)
         self.session.commit()
+
+    def get_latest_guild_membership_events(self) -> list[GuildMembershipEvent]:
+        """每個伺服器最後一筆加入或離開紀錄。"""
+        stmt = (
+            select(GuildMembershipEvent)
+            .distinct(col(GuildMembershipEvent.guild_id))
+            .order_by(
+                col(GuildMembershipEvent.guild_id),
+                col(GuildMembershipEvent.at).desc(),
+                col(GuildMembershipEvent.id).desc(),
+            )
+        )
+        return list(self.session.exec(stmt).all())
+
+    def add_guild_membership_events(self, events: list[GuildMembershipEvent]) -> None:
+        self.session.add_all(events)
+        self.session.commit()
+
+    def list_guild_membership_events(self, offset: int, limit: int) -> list[GuildMembershipEvent]:
+        """伺服器加入、離開紀錄，新的在前。"""
+        stmt = (
+            select(GuildMembershipEvent)
+            .order_by(col(GuildMembershipEvent.at).desc(), col(GuildMembershipEvent.id).desc())
+            .offset(offset)
+            .limit(limit)
+        )
+        return list(self.session.exec(stmt).all())
+
+    def list_users_count_records(self, since: date) -> list[UsersCountRecord]:
+        """每日使用者與伺服器數，舊的在前。"""
+        stmt = (
+            select(UsersCountRecord)
+            .where(col(UsersCountRecord.record_date) >= since)
+            .order_by(col(UsersCountRecord.record_date))
+        )
+        return list(self.session.exec(stmt).all())
 
 
 class TokensRepository(BaseRepository):

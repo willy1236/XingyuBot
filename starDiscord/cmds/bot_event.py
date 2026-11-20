@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 import discord
 from discord.ext import commands
 
-from starlib import BotEmbed, sclient
+from starlib import BotEmbed, guild_membership, sclient
 from starlib.database import NotifyChannelType
 from starlib.instance import *
 from starlib.message_content import from_message, to_json
@@ -18,6 +18,12 @@ from ..ticket_channel import restore_ticket_views
 from ..uiElement.view import PollView, ReactionRoleView, TicketLobbyView, reply_poll_gone
 
 log = logging.getLogger(__name__)
+
+
+def _tracks_membership(bot) -> bool:
+    """只有正式的主 bot 記伺服器加入、離開；測試用的 bot 共用資料庫時不混進紀錄。"""
+    return bot.bot_code == "1" and not bot.debug_mode
+
 
 #: 保留背景 task 的參照，避免執行中被回收
 _background_tasks: set[asyncio.Task] = set()
@@ -141,6 +147,13 @@ class event(Cog_Extension):
 
         # 開始消費其他 process 送來的事件；on_ready 可能觸發多次，start 冪等
         get_bus().start("discord")
+
+        # 補記離線期間錯過的加入、離開；第一次啟動時把目前的伺服器補成加入紀錄
+        if _tracks_membership(bot):
+            try:
+                guild_membership.sync(bot.guilds)
+            except Exception:
+                log.exception("guild membership sync failed")
 
         now = nowtz()
         if bot.bot_code == "1" and not bot.debug_mode:
@@ -656,13 +669,13 @@ class event(Cog_Extension):
 
     @commands.Cog.listener()
     async def on_guild_join(self, guild: discord.Guild):
-        report_channel_obj = self.bot.get_channel(report_channel)
-        await report_channel_obj.send(f"公會異動：我加入了 {guild.name} ({guild.id})")
+        if _tracks_membership(self.bot):
+            guild_membership.record(guild, "join")
 
     @commands.Cog.listener()
     async def on_guild_remove(self, guild: discord.Guild):
-        report_channel_obj = self.bot.get_channel(report_channel)
-        await report_channel_obj.send(f"公會異動：我離開了 {guild.name} ({guild.id})")
+        if _tracks_membership(self.bot):
+            guild_membership.record(guild, "leave")
 
     @commands.Cog.listener()
     async def on_member_update(self, before: discord.Member, after: discord.Member):

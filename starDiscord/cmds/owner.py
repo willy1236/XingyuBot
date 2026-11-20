@@ -10,7 +10,7 @@ from discord.commands import SlashCommandGroup
 from discord.ext import commands
 from mcstatus import JavaServer
 
-from starlib import BotEmbed, Jsondb, sclient, website_stats
+from starlib import BotEmbed, Jsondb, sclient
 from starlib.database import NotifyChannelType
 from starlib.instance import *
 from starlib.utils import ChoiceList, base64_to_buffer, find_radmin_vpn_network, get_arp_list, time_to_datetime
@@ -400,25 +400,6 @@ class owner(Cog_Extension):
             text = "沒有找到任何開啟的伺服器"
 
         await ctx.respond(text)
-
-    @commands.slash_command(description="網站每週的析域帳號連結率與連結入口點擊次數", guild_ids=debug_guilds)
-    @commands.is_owner()
-    async def link_rate(
-        self,
-        ctx: discord.ApplicationContext,
-        weeks: discord.Option(int, name="週數", min_value=1, max_value=52, default=8),
-    ):
-        await ctx.defer(ephemeral=True)
-        stats = website_stats.weekly_report(weeks)
-        if not stats:
-            await ctx.respond("這段期間沒有紀錄", ephemeral=True)
-            return
-        lines = ["週（週一起）　使用帳號　已連結　連結率　點擊"]
-        for week in stats:
-            rate = f"{week.rate:.0%}" if week.rate is not None else "-"
-            note = f"（尚未計算，{week.pending} 個待查）" if week.pending else ""
-            lines.append(f"{week.week_start:%Y-%m-%d}　{week.accounts}　{week.linked}　{rate}　{week.clicks}{note}")
-        await ctx.respond("\n".join(lines), ephemeral=True)
 
     @commands.slash_command(description="機器人面板", guild_ids=debug_guilds)
     @commands.is_owner()
