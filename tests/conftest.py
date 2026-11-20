@@ -1,4 +1,4 @@
-from tests.helpers.dashboard_auth import dashboard_env, site, spy  # noqa: F401  (fixture)
+from tests.helpers.dashboard_auth import dashboard_env, site, spy, twitch_mods  # noqa: F401  (fixture)
 from tests.helpers.dashboard_guilds import discord as discord_env  # noqa: F401  (fixture)
 from tests.helpers.identity import repo  # noqa: F401  (fixture)
 

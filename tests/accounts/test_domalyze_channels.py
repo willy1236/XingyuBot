@@ -106,6 +106,7 @@ class TestChannelsFollowed:
             "login": "alpha",
             "name": "Alpha Real",
             "avatar_url": "https://a/1.png",
+            "role": "owner",
             "state": "enabled",
         }
         repo.session.expire_all()

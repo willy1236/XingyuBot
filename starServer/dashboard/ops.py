@@ -177,26 +177,12 @@ async def unban_channel(twitch_id: int, info: SessionInfo = Depends(require_bot_
 async def list_audit(twitch_id: int, page: int = 1, _: SessionInfo = Depends(require_bot_owner)):
     def load() -> dict[str, Any]:
         channel = _channel_json(_get_row(twitch_id))
-        # 多讀一筆判斷有沒有下一頁
-        entries = twitch_audit.list_changes(twitch_id, _offset(page), PAGE_SIZE + 1)
+        entries, current, has_next = twitch_audit.list_page(twitch_id, page)
         return {
             "channel": channel,
-            "entries": [
-                {
-                    "id": e.id,
-                    "at": e.at.isoformat(),
-                    "actor": {"platform": e.actor.platform, "id": e.actor.id, "name": e.actor.name},
-                    "source": e.source,
-                    "target_kind": e.target_kind,
-                    "target_key": e.target_key,
-                    "action": e.action,
-                    "before": e.before,
-                    "after": e.after,
-                }
-                for e in entries[:PAGE_SIZE]
-            ],
-            "page": max(page, 1),
-            "has_next": len(entries) > PAGE_SIZE,
+            "entries": [e.to_json() for e in entries],
+            "page": current,
+            "has_next": has_next,
         }
 
     return await run_db(load)

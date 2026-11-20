@@ -500,6 +500,10 @@ class TwitchBotJoinChannel(BasicSchema, table=True):
     #: 營運入口停權的時間；不為 null 就是已停權（W-12）。刪除資料時不清除
     banned_at: datetime | None = Field(default=None, sa_column=Column(TIMESTAMP(True, 0)))
     banned_reason: str | None = Field(default=None, sa_column=Column(String))
+    #: 實況主是否開放頻道的 mod 協作（進入頻道後台、聊天室管理指令）；既有頻道靠 server default 視為開啟
+    mod_collab_enabled: bool = Field(
+        default=True, sa_column=Column(Boolean, nullable=False, server_default=text("true"))
+    )
 
 
 class TwitchChatCommand(BasicSchema, table=True):

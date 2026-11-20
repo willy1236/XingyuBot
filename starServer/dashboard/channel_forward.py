@@ -4,8 +4,8 @@ GET /dashboard/channels/{twitch_id}/forward          目前的轉發設定與 `e
 GET /dashboard/channels/{twitch_id}/forward/options  bot 在、且 session 的 Discord 有 Manage Channels 的伺服器與文字頻道
 PUT /dashboard/channels/{twitch_id}/forward          body `{guild_id, channel_id | null}`；`channel_id` 為 null 時清除設定
 
-只有析域登入且有 Discord 的 session 可以修改或取得選項（`channels.forward_access == "ok"`）；
-只用 Twitch 登入時 GET 仍回目前設定，`editable` 為 false。
+只有實況主、而且析域登入且有 Discord 的 session 可以修改或取得選項（`channels.forward_access == "ok"`），
+mod 呼叫修改或選項回 403 channel_owner_only；只用 Twitch 登入的實況主與 mod 的 GET 仍回目前設定，`editable` 為 false。
 權限不用 `no_permission`：前端在全域把它當成伺服器權限處理，會導走整個頁面。
 修改不要求頻道已啟用；設定寫進 `TwitchBotJoinChannel.action_channel_id` 與 `action_guild_id`，
 Discord 端每次發送都讀 DB，不必通知 Twitch bot。
@@ -21,11 +21,11 @@ from starlib import sclient, sqldb, twitch_audit
 from starlib.database import TwitchBotJoinChannel
 
 from .access import ensure_guild_available, on_guild
-from .channels import DEFAULT_STATE, forward_access, require_channel
+from .channels import DEFAULT_STATE, ChannelAccess, forward_access, require_channel, require_owner_channel
 from .db import run_db
 from .errors import DashboardError
 from .guilds import bot_guild_ids, guild_perms
-from .session import DiscordSessionInfo, SessionInfo, TwitchIdentity, audit_actor, require_any_session
+from .session import DiscordSessionInfo, SessionInfo, require_any_session
 from .validity import channel_invalid_reason
 
 router = APIRouter(prefix="/dashboard")
@@ -37,12 +37,12 @@ class PutBody(BaseModel):
 
 
 def _require_editable(info: SessionInfo) -> DiscordSessionInfo:
-    """析域登入且有 Discord 才能修改轉發；回傳的 session 一定帶 discord_user_id。
+    """析域登入且有 Discord 才能修改轉發；回傳的 session 一定帶 discord_user_id。只在 owner 限定的端點呼叫。
 
     Raises:
         DashboardError: 403 forward_not_allowed。
     """
-    if forward_access(info) != "ok":
+    if forward_access(info, "owner") != "ok":
         raise DashboardError(403, "forward_not_allowed")
     return info  # type: ignore[return-value]
 
@@ -102,17 +102,17 @@ def _config(twitch_id: int) -> TwitchBotJoinChannel | None:
 async def get_forward(
     twitch_id: int,
     info: SessionInfo = Depends(require_any_session),
-    _channel: TwitchIdentity = Depends(require_channel),
+    access: ChannelAccess = Depends(require_channel),
 ):
     config = await run_db(lambda: _config(twitch_id))
-    return {"editable": forward_access(info) == "ok", **await _current(config)}
+    return {"editable": forward_access(info, access.role) == "ok", **await _current(config)}
 
 
 @router.get("/channels/{twitch_id}/forward/options")
 async def get_forward_options(
     twitch_id: int,
     info: SessionInfo = Depends(require_any_session),
-    _channel: TwitchIdentity = Depends(require_channel),
+    _access: ChannelAccess = Depends(require_owner_channel),
 ):
     session_info = _require_editable(info)
     user_id = session_info.discord_user_id
@@ -191,14 +191,14 @@ async def put_forward(
     twitch_id: int,
     body: PutBody,
     info: SessionInfo = Depends(require_any_session),
-    _channel: TwitchIdentity = Depends(require_channel),
+    access: ChannelAccess = Depends(require_owner_channel),
 ):
     session_info = _require_editable(info)
     if body.channel_id is not None:
         if body.guild_id is None:
             raise DashboardError(400, "invalid_request")
         await _verify(session_info.discord_user_id, body.guild_id, body.channel_id)
-    actor = audit_actor(info)
+    actor = access.actor
     await run_db(lambda: _save(twitch_id, actor, body.guild_id, body.channel_id))
     config = await run_db(lambda: _config(twitch_id))
     return {"editable": True, **await _current(config)}

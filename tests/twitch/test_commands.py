@@ -292,6 +292,48 @@ def test_頻道不是_enabled_時管理指令拒絕寫入(repo, state):
     assert list_changes(TWITCH_ID) == []
 
 
+def test_關閉_mod_協作後_mod_的管理指令回覆權限不足_實況主照常(repo):
+    add(repo, response="原本")
+    row = repo.session.get(TwitchBotJoinChannel, TWITCH_ID)
+    row.mod_collab_enabled = False
+    repo.merge(row)
+    for handler, text in (
+        (commands.add_chat_command, "new 新的"),
+        (commands.edit_chat_command, "hi 新的"),
+        (commands.remove_chat_command, "hi"),
+    ):
+        cmd = command(text)
+        run(handler(cmd))
+        assert replied(cmd).startswith("權限不足")
+    assert [(c.name, c.response) for c in twitch_commands.list_commands(TWITCH_ID)] == [("hi", "原本")]
+    assert list_changes(TWITCH_ID) == []
+
+    viewer = command("new 新的", chatter())
+    run(commands.add_chat_command(viewer))
+    viewer.reply.assert_not_awaited()
+
+    run(commands.add_chat_command(command("new 新的", BROADCASTER)))
+    assert twitch_commands.find(TWITCH_ID, "new") is not None
+
+    listing = command("")
+    run(commands.list_chat_command(listing))
+    assert "hi" in replied(listing)
+
+
+def test_重新開啟_mod_協作後_mod_又能管理指令(repo):
+    row = repo.session.get(TwitchBotJoinChannel, TWITCH_ID)
+    row.mod_collab_enabled = False
+    repo.merge(row)
+    run(commands.add_chat_command(command("new 新的")))
+    row.mod_collab_enabled = True
+    repo.merge(row)
+
+    cmd = command("new 新的")
+    run(commands.add_chat_command(cmd))
+
+    assert replied(cmd) == "已新增指令：new"
+
+
 def test_add_cmd_同名或同別名拒絕不覆蓋_與內建同名拒絕(repo):
     add(repo, aliases=["h"], response="原本")
     for name in ("hi", "h", "add_cmd", "edit_cmd"):

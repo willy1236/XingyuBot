@@ -13,7 +13,7 @@ from sqlmodel import col, select
 from starlib.database import TwitchChannelAudit, sqldb
 
 type AuditSource = Literal["dashboard", "chat"]
-type AuditTarget = Literal["command", "timer", "event_response", "forward", "channel"]
+type AuditTarget = Literal["command", "timer", "event_response", "forward", "channel", "mod_collab"]
 type AuditAction = Literal["create", "update", "delete"]
 
 
@@ -37,6 +37,27 @@ class AuditEntry:
     action: AuditAction
     before: dict[str, Any] | None
     after: dict[str, Any] | None
+
+    def to_json(self, *, with_actor_id: bool = True) -> dict[str, Any]:
+        """後台回應用的形狀；頻道後台不回操作者的 ID（with_actor_id=False），營運入口回。"""
+        actor: dict[str, Any] = {"platform": self.actor.platform, "name": self.actor.name}
+        if with_actor_id:
+            actor["id"] = self.actor.id
+        return {
+            "id": self.id,
+            "at": self.at.isoformat(),
+            "actor": actor,
+            "source": self.source,
+            "target_kind": self.target_kind,
+            "target_key": self.target_key,
+            "action": self.action,
+            "before": self.before,
+            "after": self.after,
+        }
+
+
+#: 後台修改紀錄每頁的筆數
+PAGE_SIZE = 50
 
 
 def record_change(
@@ -92,3 +113,11 @@ def list_changes(twitch_id: int, offset: int = 0, limit: int = 50) -> list[Audit
         )
         for row in sqldb.session.exec(stmt).all()
     ]
+
+
+def list_page(twitch_id: int, page: int) -> tuple[list[AuditEntry], int, bool]:
+    """後台分頁用：第 page 頁（小於 1 視為 1）的紀錄、實際的頁碼與有沒有下一頁。同步函式，要在 DB worker thread 上呼叫。"""
+    page = max(page, 1)
+    # 多讀一筆判斷有沒有下一頁
+    entries = list_changes(twitch_id, (page - 1) * PAGE_SIZE, PAGE_SIZE + 1)
+    return entries[:PAGE_SIZE], page, len(entries) > PAGE_SIZE

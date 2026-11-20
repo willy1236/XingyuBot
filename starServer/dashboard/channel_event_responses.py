@@ -19,11 +19,10 @@ from starlib import twitch_event_responses
 from starlib.twitch_event_responses import EventResponse, EventResponseInvalid, UnknownEventKind, Verify
 
 from . import twitch_control
-from .channels import require_channel, require_enabled_channel
+from .channels import ChannelAccess, require_channel, require_enabled_channel
 from .conflict import check_conflict
 from .db import run_db
 from .errors import DashboardError
-from .session import SessionInfo, TwitchIdentity, audit_actor, require_any_session
 
 router = APIRouter(prefix="/dashboard")
 
@@ -87,7 +86,7 @@ async def _check_automod(twitch_id: int, template: str) -> None:
 
 
 @router.get("/channels/{twitch_id}/event-responses")
-async def list_event_responses(twitch_id: int, _channel: TwitchIdentity = Depends(require_channel)):
+async def list_event_responses(twitch_id: int, _access: ChannelAccess = Depends(require_channel)):
     rows = await run_db(lambda: [_json(r) for r in twitch_event_responses.list_responses(twitch_id)])
     return {"event_responses": rows}
 
@@ -97,15 +96,14 @@ async def save_event_response(
     twitch_id: int,
     kind: str,
     body: PutBody,
-    info: SessionInfo = Depends(require_any_session),
-    _channel: TwitchIdentity = Depends(require_enabled_channel),
+    access: ChannelAccess = Depends(require_enabled_channel),
 ):
     template = body.values.template
     await run_db(_translate(lambda: twitch_event_responses.validate(kind, template)))
     # 文字沒變（只切換開關）或就是預設文字時不花 AutoMod 檢查的額度，AutoMod 暫時無法檢查時也能開關
     if template != body.original.template and template != twitch_event_responses.DEFAULTS[kind]:
         await _check_automod(twitch_id, template)
-    actor = audit_actor(info)
+    actor = access.actor
     verify = _verifier(body.original)
     response = await run_db(
         _translate(
@@ -122,10 +120,9 @@ async def reset_event_response(
     twitch_id: int,
     kind: str,
     body: DeleteBody,
-    info: SessionInfo = Depends(require_any_session),
-    _channel: TwitchIdentity = Depends(require_enabled_channel),
+    access: ChannelAccess = Depends(require_enabled_channel),
 ):
-    actor = audit_actor(info)
+    actor = access.actor
     verify = _verifier(body.original)
     response = await run_db(
         _translate(lambda: _json(twitch_event_responses.reset(twitch_id, actor, "dashboard", kind, verify)))

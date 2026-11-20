@@ -22,11 +22,10 @@ from starlib.database import TwitchTimer
 from starlib.twitch_timers import TimerFields, TimerInvalid, TimerMissing, Verify
 
 from . import twitch_control
-from .channels import require_channel, require_enabled_channel
+from .channels import ChannelAccess, require_channel, require_enabled_channel
 from .conflict import check_conflict
 from .db import run_db
 from .errors import DashboardError
-from .session import SessionInfo, TwitchIdentity, audit_actor, require_any_session
 
 router = APIRouter(prefix="/dashboard")
 
@@ -97,7 +96,7 @@ def _validate(fields: TimerFields) -> None:
 
 
 @router.get("/channels/{twitch_id}/timers")
-async def list_timers(twitch_id: int, _channel: TwitchIdentity = Depends(require_channel)):
+async def list_timers(twitch_id: int, _access: ChannelAccess = Depends(require_channel)):
     rows = await run_db(lambda: [_json(row) for row in twitch_timers.list_timers(twitch_id)])
     return {"timers": rows}
 
@@ -106,13 +105,12 @@ async def list_timers(twitch_id: int, _channel: TwitchIdentity = Depends(require
 async def create_timer(
     twitch_id: int,
     body: Values,
-    info: SessionInfo = Depends(require_any_session),
-    _channel: TwitchIdentity = Depends(require_enabled_channel),
+    access: ChannelAccess = Depends(require_enabled_channel),
 ):
     fields = body.fields()
     _validate(fields)
     await _check_automod(twitch_id, body.message)
-    actor = audit_actor(info)
+    actor = access.actor
     row = await run_db(_translate(lambda: _json(twitch_timers.create(twitch_id, actor, fields))))
     return {"timer": row}
 
@@ -122,15 +120,14 @@ async def update_timer(
     twitch_id: int,
     timer_id: int,
     body: PutBody,
-    info: SessionInfo = Depends(require_any_session),
-    _channel: TwitchIdentity = Depends(require_enabled_channel),
+    access: ChannelAccess = Depends(require_enabled_channel),
 ):
     fields = body.values.fields()
     _validate(fields)
     # 只改開關、間隔等設定時不花 AutoMod 檢查的額度，AutoMod 暫時無法檢查時也能開關計時訊息
     if body.values.message != body.original.message:
         await _check_automod(twitch_id, body.values.message)
-    actor = audit_actor(info)
+    actor = access.actor
     verify = _verifier(body.original)
     row = await run_db(_translate(lambda: _json(twitch_timers.update(twitch_id, actor, timer_id, fields, verify))))
     return {"timer": row}
@@ -141,10 +138,9 @@ async def delete_timer(
     twitch_id: int,
     timer_id: int,
     body: DeleteBody,
-    info: SessionInfo = Depends(require_any_session),
-    _channel: TwitchIdentity = Depends(require_enabled_channel),
+    access: ChannelAccess = Depends(require_enabled_channel),
 ):
-    actor = audit_actor(info)
+    actor = access.actor
     verify = _verifier(body.original)
     await run_db(_translate(lambda: twitch_timers.delete(twitch_id, actor, timer_id, verify)))
     return {"ok": True}

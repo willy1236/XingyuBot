@@ -213,7 +213,8 @@ class TestPut:
             "create",
             "dashboard",
         )
-        assert (entry.actor.platform, entry.actor.id) == ("discord", USER_ID)
+        # 實況主用析域登入：記頻道本身的 Twitch 帳號，不記 Discord
+        assert (entry.actor.platform, entry.actor.id, entry.actor.name) == ("twitch", str(CHANNEL), "Host")
         assert entry.before is None
         assert entry.after == {"guild_id": str(GUILD_ID), "channel_id": str(OK_CHANNEL)}
 

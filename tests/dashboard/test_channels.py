@@ -58,6 +58,7 @@ class TestListChannels:
                     "login": "streamer",
                     "name": "Streamer",
                     "avatar_url": f"https://static-cdn.jtvnw.net/{CHANNEL_ID}.png",
+                    "role": "owner",
                     "state": "enabled",
                 }
             ]
@@ -135,7 +136,8 @@ def _info(login_method: str, discord_user_id: str | None) -> SessionInfo:
     ],
 )
 def test_forward_access(login_method, discord_user_id, expected):
-    assert channels.forward_access(_info(login_method, discord_user_id)) == expected
+    assert channels.forward_access(_info(login_method, discord_user_id), "owner") == expected
+    assert channels.forward_access(_info(login_method, discord_user_id), "mod") == "mod"
 
 
 class TestBanned:
