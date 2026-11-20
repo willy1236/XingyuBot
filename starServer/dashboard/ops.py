@@ -1,6 +1,8 @@
 """bot owner 的營運入口：頻道清單、停權與解除停權、修改紀錄。
 
-GET  /dashboard/ops/channels?page=            所有曾經出現過的頻道（每頁 50 筆），只回 DB 狀態，停權的 state 是 banned
+GET  /dashboard/ops/channels?page=&token_problem=
+                                              所有曾經出現過的頻道（每頁 50 筆），只回 DB 狀態，停權的 state 是 banned；
+                                              附已啟用頻道的 token 問題統計，token_problem=1 時只列 token 有問題的已啟用頻道
 GET  /dashboard/ops/channels/{id}/health      單一頻道的完整判定（channel_health），前端逐列補查 partial 與原因
 POST /dashboard/ops/channels/{id}/ban         停權：設 banned_at、state=disabled，bot 離開，並記修改紀錄
 POST /dashboard/ops/channels/{id}/unban       解除停權：回到 disabled，不自動啟用，並記修改紀錄
@@ -17,7 +19,8 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
 from starlib import sqldb, twitch_audit
-from starlib.database import TwitchBotJoinChannel
+from starlib.database import OAuthToken, TwitchBotJoinChannel
+from starlib.twitch_tokens import missing_scopes, token_state
 from starlib.utils import nowtz
 
 from . import twitch_control
@@ -76,15 +79,42 @@ def _get_row(twitch_id: int) -> TwitchBotJoinChannel:
     return row
 
 
+def _token_json(token: OAuthToken | None) -> dict[str, Any]:
+    state = token_state(token)
+    return {"state": state, "missing_scopes": missing_scopes(token) if state == "scope_missing" else []}
+
+
 @router.get("/channels")
-async def list_channels(page: int = 1, _: SessionInfo = Depends(require_bot_owner)):
+async def list_channels(page: int = 1, token_problem: bool = False, _: SessionInfo = Depends(require_bot_owner)):
+    """統計與篩選只看 DB（`token_state`），不對 Twitch 發請求；統計本來就要全量撈，帶上每列 token 也用同一份結果。"""
+
     def load() -> dict[str, Any]:
-        rows, total = sqldb.list_twitch_join_channels(_offset(page), PAGE_SIZE)
+        enabled = sqldb.list_enabled_channel_tokens()
+        tokens = {channel.twitch_id: token for channel, token in enabled}
+        states = {twitch_id: token_state(token) for twitch_id, token in tokens.items()}
+        problems = {
+            key: sum(state == key for state in states.values()) for key in ("missing", "scope_missing", "revoked")
+        }
+        if token_problem:
+            # list_enabled_channel_tokens 已依清單的排序；篩完在 Python 分頁
+            matched = [channel for channel, _ in enabled if states[channel.twitch_id] != "ok"]
+            rows, total = matched[_offset(page) : _offset(page) + PAGE_SIZE], len(matched)
+        else:
+            rows, total = sqldb.list_twitch_join_channels(_offset(page), PAGE_SIZE)
+
+        def row_json(row: TwitchBotJoinChannel) -> dict[str, Any]:
+            data = _channel_json(row)
+            if data["state"] == "enabled" and row.twitch_id in tokens:
+                data["token"] = _token_json(tokens[row.twitch_id])
+            return data
+
         return {
-            "channels": [_channel_json(row) for row in rows],
+            "channels": [row_json(row) for row in rows],
             "page": max(page, 1),
             "page_size": PAGE_SIZE,
             "total": total,
+            "token_problems": problems,
+            "enabled_count": len(enabled),
         }
 
     return await run_db(load)

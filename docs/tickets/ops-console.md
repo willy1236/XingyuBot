@@ -211,14 +211,14 @@
 - 不包含：改動現有的逐列 `/health` 補查，兩者並存。
 
 **驗收條件**
-- [ ] 清單上方顯示 token 有問題的頻道數，依問題分類：沒有授權、缺少權限，以及待決 3 選 A 時的「授權已失效」。
-- [ ] 勾選「只看 token 有問題」時，只列出有問題的頻道，分頁照常運作，勾選狀態存在網址。
-- [ ] 只統計 `enabled` 的頻道；其他狀態的列不顯示 token 狀態。
-- [ ] 缺少權限的列顯示缺了哪些 scope。
-- [ ] 統計與篩選本身不對 Twitch 發請求；逐列的 `/health` 補查照舊。
+- [x] 清單上方顯示 token 有問題的頻道數，依問題分類：沒有授權、缺少權限，以及待決 3 選 A 時的「授權已失效」。
+- [x] 勾選「只看 token 有問題」時，只列出有問題的頻道，分頁照常運作，勾選狀態存在網址。
+- [x] 只統計 `enabled` 的頻道；其他狀態的列不顯示 token 狀態。
+- [x] 缺少權限的列顯示缺了哪些 scope。
+- [x] 統計與篩選本身不對 Twitch 發請求；逐列的 `/health` 補查照舊。
 
 **實作設計**
-- 資料：待決 3 選 A 時，`OAuthToken` 加 `refresh_failed_at`（nullable timestamptz）。正式機上線前手動執行 `ALTER TABLE tokens.oauth_token ADD COLUMN refresh_failed_at timestamptz;`，再部署程式。
+- 資料：待決 3 選 A 時，`OAuthToken` 加 `refresh_failed_at`（nullable timestamptz，精度 0 同其他時間欄位）。`OAuthToken` 在 `credentials` schema，正式機上線前手動執行 `ALTER TABLE credentials.oauth_token ADD COLUMN refresh_failed_at timestamptz(0);`，再部署程式；本機 DB 也要先加，否則讀 `OAuthToken` 的測試與功能都會 `UndefinedColumn`。
 - 後端：
   - `ENABLE_SCOPES` 從 `starServer/dashboard/channel_activation.py` 搬到 `starlib/twitch_tokens.py`，`channel_activation.py` 與 `channel_health.py` 改從那裡 import。
   - `starlib/twitch_tokens.py` 新增 `token_state(token: OAuthToken | None) -> Literal["ok", "missing", "scope_missing", "revoked"]`：沒有 token 或 `refresh_token` 為空是 `missing`，`refresh_failed_at` 不為 null 是 `revoked`，scope 不含全部 `ENABLE_SCOPES` 是 `scope_missing`。判定只在這裡做。
@@ -234,7 +234,16 @@
 - 全部撈出再篩選的做法在已啟用頻道數千筆以下沒問題；超過時再改成 SQL 篩選。
 - access token 過期是正常狀態（用到才續期），不能當成問題。
 
-**進度**：未完成
+**進度**：完成
+- commit：XingyuBot 35fe7e02、afb1989b、8a6ef57b；domalyze_frontend a1b8980
+- 驗證：`tests/dashboard/test_ops.py::TestTokenStats`（統計、只算 enabled 且沒停權、列上的 token 與缺少的 scope、篩選與分頁、不呼叫 Twitch）、`tests/twitch/test_twitch_tokens.py`（`refresh_failed_at` 的標記與清除、`TestTokenState`）、`tests/oauth/test_save_token.py`、前端 `lib/dashboard-ops.test.ts`（網址參數）；勾選狀態存在網址、統計列與列上顯示未在瀏覽器手動驗
+- 上線前：正式機先執行上面的 `ALTER TABLE`
+- 實作決定：
+  - 續期再次被拒時不覆寫 `refresh_failed_at`，保留第一次失敗的時間，也省去每次 `/health` 都寫一次 DB；Twitch 暫時無法回應不算失敗。
+  - `oauth_lib.py` 除了 `save_token_to_db` 帶 token_data 的 `OAuthToken(...)`，`to_db_token` 與合併 `self.db_token` 的分支也清為 null：實況主啟用流程走的是 `exchange_code` → `save_token_to_db(user_id)` 這條。
+  - `token_state` 的判定順序是 missing → revoked → scope_missing；另外匯出 `missing_scopes(token)`，依 `ENABLE_SCOPES` 的順序回缺少的 scope。回應的 `missing_scopes` 只在 `scope_missing` 時有值。
+  - `list_enabled_channel_tokens` 在函式內 import `BROADCASTER_CLIENT_SEQ`，`twitch_tokens` 會 import `sqldb`，放頂層會循環。
+  - 前端列上只在 token 有問題時顯示一行，正常時不顯示；切換篩選回到第一頁，網址用 `history.replaceState` 更新（頁碼維持不進網址）。
 
 ## 開工前待決
 

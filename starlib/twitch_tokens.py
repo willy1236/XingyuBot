@@ -26,6 +26,17 @@ MODERATORS_URL = "https://api.twitch.tv/helix/moderation/moderators"
 REFRESH_MARGIN = timedelta(minutes=10)
 REQUEST_TIMEOUT = 5.0
 
+#: 實況主授權給 bot 的權限；twitch_chatbot.USER_SCOPE 是 bot 帳號自己的，不要混用
+ENABLE_SCOPES = [
+    "channel:manage:moderators",
+    "moderation:read",
+    "moderator:read:followers",
+    "channel:read:subscriptions",
+    "channel:read:redemptions",
+    "channel:read:predictions",
+    "user:read:blocked_users",
+]
+
 
 @dataclass(frozen=True, slots=True)
 class TokenInvalid:
@@ -33,6 +44,29 @@ class TokenInvalid:
     unavailable：Twitch 暫時無法回應，授權本身可能仍然有效。"""
 
     reason: Literal["missing", "revoked", "unavailable"]
+
+
+TokenState = Literal["ok", "missing", "scope_missing", "revoked"]
+
+
+def missing_scopes(token: OAuthToken | None) -> list[str]:
+    """token 缺少的 `ENABLE_SCOPES`，依 `ENABLE_SCOPES` 的順序；沒有 token 時是全部。"""
+    granted = set(token.scope or ()) if token is not None else set()
+    return [scope for scope in ENABLE_SCOPES if scope not in granted]
+
+
+def token_state(token: OAuthToken | None) -> TokenState:
+    """只看 DB 判定實況主 token 的狀態，不對 Twitch 發請求；access token 過期是正常狀態（用到才續期），不算問題。
+
+    沒有 token 或 `refresh_token` 為空是 missing，續期曾被拒（`refresh_failed_at`）是 revoked，scope 不足是 scope_missing。
+    """
+    if token is None or not token.refresh_token:
+        return "missing"
+    if token.refresh_failed_at is not None:
+        return "revoked"
+    if missing_scopes(token):
+        return "scope_missing"
+    return "ok"
 
 
 async def broadcaster_token(twitch_id: int) -> str | TokenInvalid:
@@ -126,7 +160,13 @@ def _refresh_locked(credential_id: int, user_id: str, client_id: str, client_sec
             return _unavailable(session, token, now)
         if response.status_code in (400, 401):
             log.warning("%s 的 refresh token 已失效：%s", user_id, response.text)
-            session.rollback()
+            # 留在 DB 給營運入口統計；已標記過就不重寫，保留第一次失敗的時間
+            if token.refresh_failed_at is None:
+                token.refresh_failed_at = now
+                session.add(token)
+                session.commit()
+            else:
+                session.rollback()
             return TokenInvalid("revoked")
         if response.status_code != 200:
             log.warning("續期 %s 的 token 失敗：%s %s", user_id, response.status_code, response.text)
@@ -138,6 +178,7 @@ def _refresh_locked(credential_id: int, user_id: str, client_id: str, client_sec
         token.expires_at = now + timedelta(seconds=data.get("expires_in", 0))
         if scope := data.get("scope"):
             token.scope = scope if isinstance(scope, list) else scope.split(" ")
+        token.refresh_failed_at = None
         session.add(token)
         session.commit()
         return token.access_token

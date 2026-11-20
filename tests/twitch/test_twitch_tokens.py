@@ -30,7 +30,13 @@ def credential_id():
 def store(credential_id):
     """寫入／讀取測試用的 token，結束後刪除。"""
 
-    def put(*, expires_in: timedelta | None, refresh: str | None = "refresh-0", access: str = "access-0"):
+    def put(
+        *,
+        expires_in: timedelta | None,
+        refresh: str | None = "refresh-0",
+        access: str = "access-0",
+        refresh_failed_at: datetime | None = None,
+    ):
         sqldb.merge(
             OAuthToken(
                 user_id=str(TWITCH_ID),
@@ -39,6 +45,7 @@ def store(credential_id):
                 refresh_token=refresh,
                 scope=["moderation:read"],
                 expires_at=None if expires_in is None else datetime.now(UTC) + expires_in,
+                refresh_failed_at=refresh_failed_at,
             )
         )
         sqldb.release_session()
@@ -123,7 +130,33 @@ def test_rejected_refresh_token_is_revoked_and_keeps_stored_token(store, post, s
     post.side_effect = lambda *a, **k: twitch_response(status, message="Invalid refresh token")
 
     assert run(broadcaster_token(TWITCH_ID)) == TokenInvalid("revoked")
-    assert store.get().access_token == "access-0"
+    saved = store.get()
+    assert saved.access_token == "access-0"
+    assert saved.refresh_failed_at is not None
+
+
+def test_repeated_revoked_keeps_first_failure_time(store, post):
+    first = datetime(2026, 1, 1, tzinfo=UTC)
+    store.put(expires_in=timedelta(minutes=1), refresh_failed_at=first)
+    post.side_effect = lambda *a, **k: twitch_response(400, message="Invalid refresh token")
+
+    assert run(broadcaster_token(TWITCH_ID)) == TokenInvalid("revoked")
+    assert store.get().refresh_failed_at == first
+
+
+def test_successful_refresh_clears_failure_mark(store, post):
+    store.put(expires_in=timedelta(minutes=1), refresh_failed_at=datetime(2026, 1, 1, tzinfo=UTC))
+
+    assert run(broadcaster_token(TWITCH_ID)) == "access-1"
+    assert store.get().refresh_failed_at is None
+
+
+def test_twitch_down_does_not_mark_failure(store, post):
+    store.put(expires_in=timedelta(minutes=-1))
+    post.side_effect = lambda *a, **k: twitch_response(503)
+
+    assert run(broadcaster_token(TWITCH_ID)) == TokenInvalid("unavailable")
+    assert store.get().refresh_failed_at is None
 
 
 def test_twitch_down_keeps_using_unexpired_token(store, post):
@@ -188,3 +221,38 @@ class TestBotUserId:
         with pytest.raises(RuntimeError):
             twitch_tokens.bot_user_id_blocking()
         assert twitch_tokens.bot_user_id_blocking() == "42"
+
+
+class TestTokenState:
+    @staticmethod
+    def token(**kwargs) -> OAuthToken:
+        fields = {
+            "user_id": "1",
+            "client_credential_id": 1,
+            "access_token": "a",
+            "refresh_token": "r",
+            "scope": list(twitch_tokens.ENABLE_SCOPES),
+            "expires_at": datetime.now(UTC) - timedelta(hours=1),
+        }
+        return OAuthToken(**{**fields, **kwargs})
+
+    def test_expired_access_token_is_ok(self):
+        assert twitch_tokens.token_state(self.token()) == "ok"
+
+    @pytest.mark.parametrize("refresh", [None, ""])
+    def test_no_token_or_refresh_token_is_missing(self, refresh):
+        assert twitch_tokens.token_state(None) == "missing"
+        assert twitch_tokens.token_state(self.token(refresh_token=refresh)) == "missing"
+
+    def test_refresh_failed_is_revoked_even_with_missing_scopes(self):
+        token = self.token(refresh_failed_at=datetime.now(UTC), scope=[])
+        assert twitch_tokens.token_state(token) == "revoked"
+
+    def test_missing_scopes_keep_enable_scopes_order(self):
+        token = self.token(scope=["moderation:read", "user:read:blocked_users", "extra"])
+
+        assert twitch_tokens.token_state(token) == "scope_missing"
+        assert twitch_tokens.missing_scopes(token) == [
+            s for s in twitch_tokens.ENABLE_SCOPES if s not in ("moderation:read", "user:read:blocked_users")
+        ]
+        assert twitch_tokens.missing_scopes(None) == twitch_tokens.ENABLE_SCOPES
