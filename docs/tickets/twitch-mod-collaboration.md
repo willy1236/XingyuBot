@@ -44,9 +44,9 @@ flowchart LR
 
 | # | 卡號 | 進度 | 標題 | 依賴 | 並行組 | 備註 |
 |---|---|---|---|---|---|---|
-| 1 | M-01 | 進行中 | mod 能進入頻道後台，修改指令、計時訊息與事件回應 | 無 | — | 骨架切片；含 mod 名單確認、角色與 owner 限定的擋下 |
-| 2 | M-02 | 未完成 | 實況主與 mod 能在頻道後台看修改紀錄 | M-01 | A | |
-| 3 | M-03 | 未完成 | 實況主能開關 mod 協作 | M-01 | A | 含聊天室管理指令 |
+| 1 | M-01 | 待審查 | mod 能進入頻道後台，修改指令、計時訊息與事件回應 | 無 | — | 骨架切片；含 mod 名單確認、角色與 owner 限定的擋下 |
+| 2 | M-02 | 待審查 | 實況主與 mod 能在頻道後台看修改紀錄 | M-01 | A | |
+| 3 | M-03 | 待審查 | 實況主能開關 mod 協作 | M-01 | A | 含聊天室管理指令 |
 
 ## 任務卡
 
@@ -125,8 +125,9 @@ flowchart LR
 - `twitch_control.broadcaster_token` 續期時會佔用後台 DB executor（3 個 worker）最多約 5 秒；快取過期時並行查多個頻道可能讓其他後台 DB 呼叫排隊，必要時 mod 名單的 token 讀取改用另一個 executor。
 - `require_channel` 回傳型別改變會碰到所有頻道端點，這張卡一次改完，M-02、M-03 不再改它。
 
-**進度**：進行中
-- 後端：`mod_collab_enabled` 欄位、`channel_mods`、`ChannelAccess` 與各端點已完成（commit 399b80d8、9f354dbe 與本卡後端存取的 commit）。
+**進度**：實作完成，待審查
+- 後端：399b80d8（欄位）、9f354dbe（`channel_mods`）、04e96965（`ChannelAccess` 與各端點）。
+- 前端（domalyze_frontend 分支 `twitch-mod-collab`）：1d10873。
 - 實作決定：
   - mod 名單的 token 讀取與續期走 `channel_mods` 自己的 executor（3 個 worker），不排在後台共用的 `run_db` 後面；候選頻道的查詢仍走 `run_db`。
   - 快取存「最後一次查詢的時間」：無法確認時存空名單、暫時無法回應時沿用上次名單，兩者都 60 秒後才重查，Twitch 異常時不會每個請求都打一次。
@@ -138,7 +139,11 @@ flowchart LR
   ALTER TABLE stardb_basic.twitch_bot_join_channel
       ADD COLUMN mod_collab_enabled boolean NOT NULL DEFAULT true;
   ```
-- 續做：前端（domalyze_frontend 分支 `twitch-mod-collab`）：`lib/dashboard-channel.ts` 的 `role`、`ForwardAccess.mod`、`owner_only`、mod 被擋下的清單提示，再改頻道清單頁、`ChannelsSection`、狀態與轉發、設定頁與 `channel-access-guard.tsx`。
+  - `GET .../forward` 的 `editable` 改由 `forward_access(info, role)` 決定，mod 一律不是 `ok`，所以 `forward-form.tsx` 不必改：`editable` 為 false 時本來就只顯示目前設定。
+  - mod 看得到權限問題但沒有「修復」按鈕，問題區塊多一行「這些問題要由實況主按「修復」處理。」，因為 issue 說明文字本身提到「修復」。
+  - 個人區的區塊標題改為「Twitch 頻道」，每個頻道標示「我的頻道」或「mod」；頻道清單頁同樣在名稱下方標示。
+  - mod 被擋下的清單提示代碼是 `mod_removed`。
+- 續做：送審。
 
 ### M-02 實況主與 mod 能在頻道後台看修改紀錄
 
@@ -167,7 +172,11 @@ flowchart LR
 
 **依賴**：M-01（mod 要能進頻道後台，才驗得到 mod 看紀錄與 mod 作為操作者）
 
-**進度**：未完成
+**進度**：實作完成，待審查
+- 後端：180e56aa（`twitch_audit.list_page`、`AuditEntry.to_json`，營運入口改用，行為不變）、249fe6f0（`GET .../audit`）。
+- 前端：281a848（`lib/dashboard-audit.ts`、`components/dashboard/audit-list.tsx` 抽共用，營運入口改用）、c5fc48c（修改紀錄頁與導覽）。
+- 實作決定：導覽的「修改紀錄」放在「轉發 Discord」與「設定」之間；分頁頁碼以回應的 `page` 為準。
+- 續做：送審。
 
 ### M-03 實況主能開關 mod 協作
 
@@ -198,7 +207,13 @@ flowchart LR
 
 **依賴**：M-01（欄位、owner 限定的 dependency、`settings/page.tsx` 的角色判斷都在 M-01）
 
-**進度**：未完成
+**進度**：實作完成，待審查
+- 後端：74ffe17b（`PUT .../mod-collab`、詳情的 `mod_collab_enabled`、`AuditTarget` 加 `mod_collab`）、0697b84c（聊天室管理指令）。
+- 前端：e943268（設定頁的開關）。
+- 實作決定：
+  - 聊天室的 `_can_manage_commands` 與 `_channel_enabled` 合併成 `_may_manage_commands`：先判斷實況主或 mod（一般觀眾不回應），再讀頻道列，state 不是 enabled 回「星羽目前未啟用」，mod 在開關關閉時回「權限不足：實況主已關閉 mod 協作，只有實況主能修改指令」。
+  - 還沒有頻道列時開關照樣能存：新增一列 inactive 再寫入。
+- 續做：送審。
 
 ## 開工前待決
 
