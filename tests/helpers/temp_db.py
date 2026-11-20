@@ -39,17 +39,27 @@ def assert_test_database(name: str | None) -> None:
         raise RuntimeError(f"測試只能連名稱含 _test 的資料庫，目前是 {name!r}")
 
 
+#: 測試在本次暫時資料庫底下另建的資料庫（如 test_migrate_identity）以 `<暫時資料庫>_mig_<隨機碼>` 命名
+CHILD_INFIX = "_mig_"
+
+
 def _drop_stale(conn: Connection, prefix: str) -> None:
-    """刪掉中途被中斷而留下的暫時資料庫。不加 FORCE：有連線中的（別的 pytest 正在用）DROP 會失敗，跳過即可。"""
+    """刪掉中途被中斷而留下的暫時資料庫。不加 FORCE：有連線中的（別的 pytest 正在用）DROP 會失敗，跳過即可。
+
+    子資料庫從 CREATE 到第一次連線之間沒有連線，所以母資料庫還有連線時一併視為使用中。
+    """
     pattern = prefix.replace("\\", "\\\\").replace("_", "\\_").replace("%", "\\%") + "%"
-    stale = conn.execute(
+    rows = conn.execute(
         text(
-            "SELECT datname FROM pg_database d WHERE datname LIKE :pattern "
-            "AND NOT EXISTS (SELECT 1 FROM pg_stat_activity a WHERE a.datname = d.datname)"
+            "SELECT datname, EXISTS (SELECT 1 FROM pg_stat_activity a WHERE a.datname = d.datname) "
+            "FROM pg_database d WHERE datname LIKE :pattern"
         ),
         {"pattern": pattern},
-    ).scalars()
-    for name in stale:
+    ).all()
+    in_use = {name for name, connected in rows if connected}
+    for name, connected in rows:
+        if connected or name.split(CHILD_INFIX)[0] in in_use:
+            continue
         try:
             conn.execute(text(f'DROP DATABASE "{name}"'))
         except Exception:  # noqa: BLE001 別的 session 剛好連上，留給它自己刪
@@ -75,8 +85,8 @@ def redirect() -> str:
         port=settings.DB_PORT,
         database=settings.DB_NAME,
     )
-    # 連原 DB 只為了下 CREATE／DROP DATABASE，不在裡面做任何 DDL 或寫入
-    _admin = create_engine(url, isolation_level="AUTOCOMMIT", poolclass=NullPool)
+    # 建立、清理與鎖都在 maintenance DB `postgres` 上做，測試完全不連原 DB
+    _admin = create_engine(url.set(database="postgres"), isolation_level="AUTOCOMMIT", poolclass=NullPool)
     with _admin.connect() as conn:
         # 建立到 keeper 連上之間，別的 process 的清理看不到連線；用 advisory lock 讓清理與建立互斥
         conn.execute(text("SELECT pg_advisory_lock(:key)"), {"key": _LOCK_KEY})
