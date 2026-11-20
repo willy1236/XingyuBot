@@ -26,7 +26,7 @@
 | # | 卡號 | 進度 | 標題 | 依賴 | 並行組 | 備註 |
 |---|---|---|---|---|---|---|
 | 1 | O-01 | 未完成 | bot owner 能在網頁上用 ID 查使用者、頻道、伺服器、身分組與訊息 | 無 | A | 骨架切片，取代 `/find` |
-| 2 | O-03 | 未完成 | bot owner 能在系統分頁看到 Discord bot、Twitch bot、匯流排與 DB 的運行狀態 | 無 | A | 新增「系統」分頁 |
+| 2 | O-03 | 實作完成 | bot owner 能在系統分頁看到 Discord bot、Twitch bot、匯流排與 DB 的運行狀態 | 無 | A | 新增「系統」分頁 |
 | 3 | O-05 | 未完成 | bot owner 能跨頁統計並篩出 token 有問題的 Twitch 頻道 | 無 | A | 做不做見待決 3 |
 | 4 | O-02 | 未完成 | bot owner 能查任兩個伺服器的共通成員 | O-01 | B | 取代 `/findmember` |
 | 5 | O-04 | 未完成 | bot owner 能看到每個排程任務的下次執行時間與最近一次結果 | O-03 | B | |
@@ -140,9 +140,11 @@
 
 **依賴**：無
 
-**風險 / 實作注意**：狀態端點本身不要經 `run_db`，DB executor 塞住時它還要能回應。
+**風險 / 實作注意**：狀態端點本身不要經 `run_db`，DB executor 塞住時它還要能回應。權限檢查 `require_bot_owner` 本身會走 `run_db`，所以 executor 全部塞住時整個請求仍會排隊；「不經 `run_db`」保證的是狀態取值本身不會再多佔 executor。
 
-**進度**：未完成
+**進度**：實作完成（2026-11-20）
+- commit：XingyuBot `555b5c2e`、（ops_system 端點見本 commit）；domalyze_frontend `f488a74`
+- 未驗：實際開後台看系統分頁（Discord、Twitch 兩個 process 與 Redis 都在跑時的顯示）
 
 ### O-04 bot owner 能看到每個排程任務的下次執行時間與最近一次結果
 
