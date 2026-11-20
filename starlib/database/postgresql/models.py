@@ -1008,6 +1008,28 @@ class UsersCountRecord(BackupSchema, table=True):
     servers_count: int = Field(sa_column=Column(Integer))
 
 
+class GuildMembershipEvent(BackupSchema, table=True):
+    """bot 加入、離開伺服器的歷史紀錄。
+
+    `source` 是 `gateway` 時 `at` 是事件發生的時間；`startup` 是啟動時比對補記的：
+    加入用 bot 在該伺服器的 `joined_at`，時間準確；離開只知道是在離線期間，`at` 是發現的時間。
+    """
+
+    __tablename__ = "guild_membership_events"
+    __table_args__ = (
+        Index("ix_guild_membership_events_guild_at", "guild_id", "at"),
+        {**BackupSchema.__table_args__},
+    )
+
+    id: int | None = Field(default=None, sa_column=Column(Integer, Identity(), primary_key=True))
+    guild_id: int = Field(sa_column=Column(BigInteger, nullable=False))
+    guild_name: str | None = Field(default=None, sa_column=Column(String))
+    event: str = Field(sa_column=Column(String, nullable=False))
+    member_count: int | None = Field(default=None, sa_column=Column(Integer))
+    at: datetime = Field(sa_column=Column(TIMESTAMP(True, 0), nullable=False))
+    source: str = Field(sa_column=Column(String, nullable=False))
+
+
 class BotToken(TokensSchema, table=False):
     __tablename__ = "bot_token2"
 
