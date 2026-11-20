@@ -187,7 +187,17 @@ def test_non_owner_is_forbidden(repo, world, monkeypatch):
 
 
 @pytest.mark.parametrize(
-    "params", [{"id": ""}, {"id": "abc"}, {"id": "0"}, {"id": "-1"}, {"id": str(2**64)}, {"id": "1", "channel_id": "x"}]
+    "params",
+    [
+        {"id": ""},
+        {"id": "abc"},
+        {"id": "0"},
+        {"id": "-1"},
+        {"id": str(2**64)},
+        {"id": "1", "channel_id": "x"},
+        {"id": "9" * 5000},
+        {"id": "1", "channel_id": "0" * 21 + "1"},
+    ],
 )
 def test_invalid_id(owner, params):
     r = owner.get(URL, params=params)

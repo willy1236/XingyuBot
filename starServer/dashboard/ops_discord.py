@@ -107,11 +107,13 @@ async def list_events(page: int = 1, _: SessionInfo = Depends(require_bot_owner)
 # ====== ID 查詢 ======
 
 SNOWFLAKE_MAX = 2**64 - 1
+SNOWFLAKE_MAX_DIGITS = len(str(SNOWFLAKE_MAX))
 
 
 def _parse_id(raw: str) -> int:
     """1 到 2^64-1 的整數 ID；否則 400 invalid_id。"""
-    if not raw.isascii() or not raw.isdigit() or not 1 <= int(raw) <= SNOWFLAKE_MAX:
+    # 先擋長度：超長的數字字串 int() 會超過 Python 的位數上限丟 ValueError
+    if len(raw) > SNOWFLAKE_MAX_DIGITS or not raw.isascii() or not raw.isdigit() or not 1 <= int(raw) <= SNOWFLAKE_MAX:
         raise DashboardError(400, "invalid_id")
     return int(raw)
 
