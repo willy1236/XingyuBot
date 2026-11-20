@@ -24,3 +24,9 @@ def oidc_settings():
         s.DASHBOARD_OIDC_CLIENT_SECRET,
         s.DASHBOARD_OIDC_REDIRECT_URI,
     )
+
+
+def main_guild_id() -> int | None:
+    """主伺服器（`HAPPYCAMP_GUILD` 的第一個）；沒有設定時為 None。"""
+    guilds = get_settings().HAPPYCAMP_GUILD
+    return guilds[0] if guilds else None
