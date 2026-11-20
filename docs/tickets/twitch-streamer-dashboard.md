@@ -1183,7 +1183,7 @@
   ```
   - 已對本機 dev DB（`.env.development`，localhost:5432／stardb）執行 `ADD COLUMN IF NOT EXISTS` 的同一段，讓後端測試跑得起來；正式機沒有動。
 - 使用者與 coordinator 的決定：
-  - 清單端點只回 DB 狀態（含 `banned`），不跑 `channel_health`；新增 `GET /dashboard/ops/channels/<built-in function id>/health`，前端對已啟用的列逐列補查，同時最多 3 個，離開頁面或翻頁就中止。與卡上「每筆有 `channel_health`」不同。
+  - 清單端點只回 DB 狀態（含 `banned`），不跑 `channel_health`；新增 `GET /dashboard/ops/channels/{id}/health`，前端對已啟用的列逐列補查，同時最多 3 個，離開頁面或翻頁就中止。與卡上「每筆有 `channel_health`」不同。
   - ban、unban 寫修改紀錄（`target_kind=channel`，`target_key=ban`／`unban`，`action=update`，before／after 記 `banned_at`、`banned_reason`、`state`），與狀態改動同一個交易。卡上沒有這項。
   - 允許最小修改 `channels.py`：`_states` 對有 `banned_at` 的頻道回 `banned`，實況主的頻道清單、個人區 overview、詳情都一致顯示已停權。
   - 支援 Discord 伺服器邀請連結是 `https://discord.gg/P4jqdcMxkH`，放前端常數 `SUPPORT_DISCORD_URL`。
@@ -1193,7 +1193,7 @@
   - 修改紀錄用 `starlib.twitch_audit.list_changes`，不是 `channel_audit.list_changes`（`channel_audit.py` 是 AutoMod 擋下紀錄）。
   - 頁首「營運」加在 `lib/dashboard-user.tsx` 的 NAV，不是 `dashboard-header.tsx`（後者只渲染）。
 - 實作時的決定：
-  - 端點：`GET /dashboard/ops/channels?page=`（每頁 50 筆，`first_seen_at` 新到舊、沒有時間的排最後）、`GET …/<built-in function id>/health`、`POST …/<built-in function id>/ban {reason}`、`POST …/<built-in function id>/unban`、`GET …/<built-in function id>/audit?page=`（多讀 1 筆判斷 `has_next`）。頻道列不存在回 404 `channel_not_found`。
+  - 端點：`GET /dashboard/ops/channels?page=`（每頁 50 筆，`first_seen_at` 新到舊、沒有時間的排最後）、`GET …/{id}/health`、`POST …/{id}/ban {reason}`、`POST …/{id}/unban`、`GET …/{id}/audit?page=`（多讀 1 筆判斷 `has_next`）。頻道列不存在回 404 `channel_not_found`。
   - ban：`reason` 去前後空白、最長 500、空字串存 null；已停權時 `banned_at` 不變、理由有變才更新並記紀錄；`state` 一律設 `disabled`，之後 `_sync_bot` 並通知 `twitch_channel` 快取。
   - unban：`state` 一律設回 `disabled`（刪除資料後 `state` 是 `inactive`，仍要回「已停用」）；沒被停權回 409 `channel_not_banned`，避免誤把已啟用的頻道停用。
   - `channel_health` 先判 `banned_at`，停權不打 Twitch 與 bot；`HealthState` 加 `banned`。
@@ -1203,6 +1203,7 @@
 - 已知限制：授權途中才被停權時，callback 的兩次檢查之間仍有毫秒級的窗口；bot 只看 `state == "enabled"`，無法在 bot 端補擋。
 - 未驗：真實 Twitch 與 bot 的離開聊天室；瀏覽器裡營運頁、修改紀錄頁、停權說明的畫面；限流補查在 50 筆頁面的實際速度。
 - 完整 CI：待合併回 main 前跑。
+- 審查後修正（第 1 輪，審查報告 tsd-c-review-r1）：停權判斷收成 `channel_health.is_banned(row)`，`channels._states`、`ops`、`channel_activation`、`channel_health` 共用，之後改停權規則只改這一處；進度段誤被代入的端點路徑已改回 `{id}`。
 
 ### W-13 官網有 Twitch bot 介紹與接入入口
 
