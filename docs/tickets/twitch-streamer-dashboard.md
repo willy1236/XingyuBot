@@ -1191,7 +1191,21 @@
 
 **風險 / 實作注意**：文案照規格〈已定案的前提〉的中性語氣，用直白的寫法，不寫空洞形容詞。
 
-**進度**：未完成
+**進度**：實作完成（2026-11-20），待審查與人工驗證；驗收條件只勾 360px 版面一條（瀏覽器實測 360 寬無橫向捲動），其餘待人工驗證：第 1 條要等 W-11 合併後確認轉發 Discord 已上線，第 2、3 條要真登入，第 4 條由審查核對文案
+- commit（前端 domalyze_frontend，分支 tsd-w13）：e786008（登入頁排序）、ad0365e（既有文案移除頻道點數兌換）、0c8d1a9（介紹頁與首頁連結）、e825fc1（改為 client 頁）
+- ALTER：無。後端零改動。
+- 實作時的決定：
+  - 頻道後台的前端網址是 `/dashboard/twitch`，不是卡上的 `/dashboard/channels`（舊網址只剩 308 轉址）。「開始使用」與登入頁的判斷都用 `/dashboard/twitch`。
+  - 新增 `app/twitch/page.tsx`，不放進 `/features`：該頁沒有 CTA 的位置。頁面用 `"use client"`，因為功能圖示是元件，server 頁不能傳給 client 的 `FeaturesGrid`。
+  - 首頁功能區實際在 `components/home/features-section.tsx`，在「查看完整功能」旁加「Twitch bot 介紹」。
+  - 登入頁：`lib/dashboard-login.ts` 的 `loginProviderOrder(next)` 決定順序與第一顆的主要樣式，按鈕列拆成 `app/dashboard-login/login-providers.tsx`。`next` 是 `/dashboard/twitch` 或其子路徑時為 Twitch、析域、Discord，否則維持析域、Discord、Twitch。`dashboard-login.ts` 自帶 `/dashboard/twitch` 常數，因為匯入 `dashboard-channel` 會與 `dashboard-api` 循環，測試鎖住兩者相同。
+  - 事件回應的介紹寫了開台，與後台的事件清單一致，卡上的列表沒有開台。
+  - 介紹的轉發 Discord 依 W-11 卡片寫（事件清單、需要析域帳號與管理頻道權限），本分支尚未含 W-11 code。
+- 使用者決定：
+  - 既有三處「頻道點數兌換」文案都改（`features-data.ts` 兩處、`components/home/performance-section.tsx` 一行，核可越界這一行），因為頻道點數兌換只有事件轉發，沒有聊天室回應。
+  - 頁首導覽不加 Twitch 連結。
+- 測試：`app/twitch/page.test.tsx` 排除的是還沒做的點數系統（「點數名稱」「點數系統」「觀眾點數」「聊天室管理」），不含「點數」整個詞，因為轉發 Discord 的說明有「頻道點數兌換」。
+- 續做：第 5 步審查；W-11 合併後確認介紹的轉發事件與實際一致。
 
 ## 開工前待決
 
