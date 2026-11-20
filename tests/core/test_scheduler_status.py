@@ -160,3 +160,23 @@ def test_describe_interval(kwargs, text):
 def test_unrecognized_cron_falls_back_to_raw():
     trigger = CronTrigger(day_of_week="mon", hour=1)
     assert scheduler_status.describe_trigger(trigger) == str(trigger)
+
+
+def test_short_error_keeps_everything():
+    assert scheduler_status.error_text(ValueError("壞掉了"), "  File a\n") == "ValueError: 壞掉了\n  File a"
+
+
+def test_long_error_keeps_message_and_traceback_tail():
+    tb = "".join(f'  File "frame{i}.py", line {i}\n' for i in range(500)) + '  File "innermost.py", line 1\n'
+    text = scheduler_status.error_text(ValueError("壞掉了"), tb)
+    assert len(text) <= scheduler_status.ERROR_MAX
+    assert text.startswith("ValueError: 壞掉了")
+    assert text.endswith('File "innermost.py", line 1')
+    assert "frame0.py" not in text
+    assert "中間省略" in text
+
+
+def test_huge_message_is_capped_so_traceback_tail_still_fits():
+    text = scheduler_status.error_text(ValueError("x" * 10000), '  File "innermost.py", line 1\n')
+    assert len(text) <= scheduler_status.ERROR_MAX
+    assert text.endswith('File "innermost.py", line 1')

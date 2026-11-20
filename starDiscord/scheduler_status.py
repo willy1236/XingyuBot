@@ -35,6 +35,9 @@ type RunResult = Literal["success", "error", "missed", "skipped"]
 
 # 錯誤訊息（含 traceback）的長度上限
 ERROR_MAX = 4000
+# 超過上限時，類型與訊息最多保留的長度；其餘留給 traceback 的尾段
+ERROR_HEAD_MAX = 1000
+ERROR_CUT = "\n…（中間省略）…\n"
 
 
 @dataclass(frozen=True, slots=True)
@@ -105,12 +108,29 @@ def _on_event(event: JobEvent) -> None:
         started_at, started = _submitted.pop(event.job_id, (event.scheduled_run_time, None))
         duration_ms = None if started is None else round((time.monotonic() - started) * 1000)
         if event.code == EVENT_JOB_ERROR:
-            message = f"{type(event.exception).__name__}: {event.exception}\n{event.traceback or ''}".strip()
             _last[event.job_id] = LastRun(
-                at=started_at, result="error", duration_ms=duration_ms, error=message[:ERROR_MAX]
+                at=started_at,
+                result="error",
+                duration_ms=duration_ms,
+                error=error_text(event.exception, event.traceback),
             )
         else:
             _last[event.job_id] = LastRun(at=started_at, result="success", duration_ms=duration_ms)
+
+
+def error_text(exception: BaseException | None, traceback: str | None) -> str:
+    """「類型: 訊息」加 traceback，總長不超過 ERROR_MAX。
+
+    超過時保留開頭的類型與訊息（最多 ERROR_HEAD_MAX 字）與 traceback 的尾段：最接近出錯點的 frame 在最後。
+    """
+    head = f"{type(exception).__name__}: {exception}"
+    tb = (traceback or "").rstrip()
+    full = f"{head}\n{tb}" if tb else head
+    if len(full) <= ERROR_MAX:
+        return full
+    head = head[:ERROR_HEAD_MAX]
+    room = ERROR_MAX - len(head) - len(ERROR_CUT)
+    return f"{head}{ERROR_CUT}{tb[-room:]}"
 
 
 def snapshot() -> list[JobStatus]:
