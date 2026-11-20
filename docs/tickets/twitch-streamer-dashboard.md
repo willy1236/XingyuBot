@@ -1126,7 +1126,8 @@
   - `GET /forward` 的名稱讀 bot 快取，bot 沒 ready 或查不到時名稱為 null、不回錯誤；舊頻道列只有 `action_channel_id` 時，伺服器由頻道取得。`GET /forward/options` 一次回所有符合的伺服器與頻道，用公開的 `bot_guild_ids` 加每個伺服器一次 `guild_perms` 判斷，沒有動 `guilds.py`。
   - 贈訂事件 `twitch.subscription_gift`（`broadcaster_id`、`user_name`（匿名為 null）、`total`、`tier`）在 `on_channel_subscription_gift` 於聊天室回應後發布；Discord 端文字「感謝 {贈送者} 贈送了 {份數} 份層級{N}訂閱！」，匿名顯示「匿名」。
   - 下播與預測結果改走 `resolve_action_channel`：沒設定或頻道不存在就不發，下播仍會清開台紀錄。`docs/messaging-contract.md` 同步改了 `twitch.stream_offline`、`twitch.prediction_result` 的說明並新增 `twitch.subscription_gift`。
-- 行為變更：預測結果與下播通知不再發到預設頻道；bot owner 自己的頻道沒設定轉發就收不到（使用者另行決定中，目前不特別處理），私訊維持發到預設頻道。
+- 行為變更：預測結果與下播通知不再發到預設頻道；bot owner 自己的頻道沒設定轉發就收不到（使用者決定 Q2：選 A，不特別處理，owner 自己在轉發頁設定），私訊維持發到預設頻道。
+- 審查後修正（第 1 輪）：B-1 前端轉發設定改以字串送出 `guild_id`、`channel_id`（Discord ID 超過 2^53，轉成 Number 會被捨入，存檔實際會失敗），測試改用超過 2^53 的 ID，後端補一條大 ID 測試；S-2 `GET /forward/options` 的權限查詢遇到 `bot_not_in_guild`（查詢途中 bot 被踢出）改為略過該伺服器，與後段一致。N-2（`ForwardForm` 的 draft 只在掛載時初始化）不修。
 - 未驗：真實 Discord 的 Manage Channels 判斷與實際送訊息、真實 EventSub 贈訂事件、轉發頁畫面（桌面與 360px）、`tests/twitch/test_notify.py::test_follow_event_travels_between_two_buses` 需要 Redis，本機沒有 Redis 所以沒跑（與本卡無關）。
 - 完整 CI：待合併回 main 前跑。
 
