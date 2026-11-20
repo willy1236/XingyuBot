@@ -25,7 +25,7 @@
 
 | # | 卡號 | 進度 | 標題 | 依賴 | 並行組 | 備註 |
 |---|---|---|---|---|---|---|
-| 1 | O-01 | 未完成 | bot owner 能在網頁上用 ID 查使用者、頻道、伺服器、身分組與訊息 | 無 | A | 骨架切片，取代 `/find` |
+| 1 | O-01 | 進行中 | bot owner 能在網頁上用 ID 查使用者、頻道、伺服器、身分組與訊息 | 無 | A | 骨架切片，取代 `/find` |
 | 2 | O-03 | 未完成 | bot owner 能在系統分頁看到 Discord bot、Twitch bot、匯流排與 DB 的運行狀態 | 無 | A | 新增「系統」分頁 |
 | 3 | O-05 | 未完成 | bot owner 能跨頁統計並篩出 token 有問題的 Twitch 頻道 | 無 | A | 做不做見待決 3 |
 | 4 | O-02 | 未完成 | bot owner 能查任兩個伺服器的共通成員 | O-01 | B | 取代 `/findmember` |
@@ -75,7 +75,17 @@
 - 目前狀態與活動需要 presence intent，沒有資料時顯示「不明」，不要顯示成離線。
 - `fetch_user` 打的是 Discord REST，有 rate limit。
 
-**進度**：未完成
+**進度**：進行中
+- 後端：`GET /dashboard/ops/discord/lookup`（本 commit）。
+- 前端（domalyze_frontend 分支 `ops-discord-lookup`）：c72be75。
+- 實作決定：
+  - `id` 省略或空字串也回 400 `invalid_id`；前端送出前用同樣的範圍檢查，網址參數不合法時直接顯示格式錯誤、不送請求。
+  - 訊息 `fetch_message` 遇到 `Forbidden`、`NotFound` 以外的 `HTTPException` 回 `{"kind": "message", "error": "unavailable"}`，畫面同使用者的「暫時查不到」。
+  - 訊息回應帶 `content_hidden`：沒開 message content intent、伺服器訊息、內容為空、不是星羽自己發的也沒提及星羽時為 true，畫面顯示「讀不到內容」；false 且內容為空才是空訊息。
+  - 共同伺服器的狀態與活動在 `bot.intents.presences` 為 false 時回 null，畫面顯示「不明」；成員不在快取時該列 `member` 為 null。
+  - 身分組顏色為 0（未設定）時回 null；權限值以字串回傳，避免超過 JS 精確整數範圍。
+  - 頁面用 `useSearchParams` 讀參數，包在 `Suspense` 內；Discord 分頁的「所在伺服器」標題旁另加「ID 查詢」入口。
+- 續做：O-02。
 
 ### O-02 bot owner 能查任兩個伺服器的共通成員
 
