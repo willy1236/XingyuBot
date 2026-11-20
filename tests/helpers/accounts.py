@@ -27,6 +27,9 @@ class FakeBot:
     def get_user(self, uid: int):
         return None
 
+    async def is_owner(self, user) -> bool:
+        return False
+
     async def fetch_user(self, uid: int):
         if uid not in self.users:
             raise RuntimeError("Unknown User")
