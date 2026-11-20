@@ -118,7 +118,12 @@ async def get_forward_options(
     user_id = session_info.discord_user_id
 
     async def allowed(guild_id: str) -> bool:
-        return (await guild_perms(user_id, guild_id)).manage_channels
+        try:
+            return (await guild_perms(user_id, guild_id)).manage_channels
+        except DashboardError as e:
+            if e.code == "bot_not_in_guild":  # 查詢途中 bot 被踢出，略過該伺服器
+                return False
+            raise
 
     ids = sorted(await bot_guild_ids())
     flags = await asyncio.gather(*(allowed(i) for i in ids))

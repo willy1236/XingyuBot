@@ -19,7 +19,7 @@ from starServer.dashboard import channel_forward, channels
 from tests.helpers.accounts import account
 from tests.helpers.dashboard_auth import FRONTEND, USER_ID, make_app, make_domalyze_session, make_twitch_session
 from tests.helpers.dashboard_guilds import MANAGE_CHANNELS, g
-from tests.helpers.dashboard_notifies import GUILD_ID, NO_SEND_CHANNEL, OK_CHANNEL, VOICE_CHANNEL, fake_guild
+from tests.helpers.dashboard_notifies import GUILD_ID, NO_SEND_CHANNEL, OK_CHANNEL, VOICE_CHANNEL, channel, fake_guild
 
 pytestmark = pytest.mark.usefixtures("dashboard_env")
 
@@ -175,6 +175,17 @@ class TestOptions:
         body = domalyze_client(repo, dashboard_env).get(f"{URL}/options").json()
         assert [x["id"] for x in body["guilds"]] == [str(GUILD_ID)]
 
+    def test_guild_bot_left_during_query_is_skipped(self, repo, dashboard_env, modules, monkeypatch, perms):
+        # bot_guild_ids 與 guild_perms 之間 bot 被踢出：get_guild 查不到，只略過該伺服器
+        perms.guilds.append(g("3003", "剛被踢出", MANAGE_CHANNELS))
+        left = guild(3003, "剛被踢出")
+        b = fake_bot(guild(GUILD_ID, "星羽之家"), left)
+        b.get_guild = {GUILD_ID: b.guilds[0]}.get
+        monkeypatch.setattr(sclient, "bot", b)
+        r = domalyze_client(repo, dashboard_env).get(f"{URL}/options")
+        assert r.status_code == 200
+        assert [x["id"] for x in r.json()["guilds"]] == [str(GUILD_ID)]
+
     def test_twitch_login_is_forbidden(self, repo, modules, bot, perms):
         r = twitch_client(repo).get(f"{URL}/options")
         assert (r.status_code, r.json()) == (403, {"error": "forward_not_allowed"})
@@ -205,6 +216,24 @@ class TestPut:
         assert (entry.actor.platform, entry.actor.id) == ("discord", USER_ID)
         assert entry.before is None
         assert entry.after == {"guild_id": str(GUILD_ID), "channel_id": str(OK_CHANNEL)}
+
+    def test_snowflake_ids_above_2_53_survive(self, repo, dashboard_env, modules, monkeypatch, discord_env):
+        big_guild, big_channel = 566533708371329026, 566533708371329027
+        big = guild(big_guild, "大 ID", channel_ids=(OK_CHANNEL,))
+        big.channels = [channel(big_channel, "general")]
+        big.get_channel = {big_channel: big.channels[0]}.get
+        big.channels[0].position = 0
+        monkeypatch.setattr(sclient, "bot", fake_bot(big))
+        discord_env.guilds = [g(str(big_guild), "大 ID", MANAGE_CHANNELS)]
+        c = domalyze_client(repo, dashboard_env)
+        # 前端以字串送出，JSON 不經過 Number
+        r = c.put(URL, json={"guild_id": str(big_guild), "channel_id": str(big_channel)})
+        assert r.status_code == 200
+        saved = row(repo)
+        assert (saved.action_guild_id, saved.action_channel_id) == (big_guild, big_channel)
+        assert r.json()["guild"]["id"] == str(big_guild)
+        (entry,) = list_changes(CHANNEL)
+        assert entry.after == {"guild_id": str(big_guild), "channel_id": str(big_channel)}
 
     def test_update_records_before_and_after(self, repo, dashboard_env, modules, bot, perms):
         configured(repo, channel_id=99)
