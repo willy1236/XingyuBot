@@ -154,6 +154,10 @@ class TestVoice:
         item = get(client, "voice").json()["items"][0]
         assert (item["rank"], item["ranking_visible"]) == (2, False)
 
+    def test_unsaved_only_guild_skipped_after_bot_left(self, client):
+        voice_task.voice_times[GONE] = {OWN: timedelta(minutes=3)}
+        assert get(client, "voice").json() == {"items": []}
+
     def test_empty(self, client):
         assert get(client, "voice").json() == {"items": []}
 

@@ -78,6 +78,9 @@ def _voice_items(discord_id: int, saved: list[tuple[int, timedelta]], scope: Per
         guild = bot.get_guild(gid)
         item = {"guild_id": str(gid), "guild_name": None, "rank": None, "ranked": None, "ranking_visible": False}
         if guild is None:
+            if gid not in saved_totals:
+                # bot 剛離開、只有尚未存檔分鐘的伺服器：沒有可顯示的資料庫時數
+                continue
             item["minutes"] = minutes(saved_totals[gid])
         else:
             ranked = ranking(gid)
