@@ -1,4 +1,4 @@
-"""營運入口的 Discord ID 查詢（假 bot；權限檢查走真實 PostgreSQL，測完 rollback）。"""
+"""營運入口的 Discord ID 查詢與共通成員（假 bot；權限檢查走真實 PostgreSQL，測完 rollback）。"""
 
 from __future__ import annotations
 
@@ -12,6 +12,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from starlib import sclient
+from starServer.dashboard import config
 from tests.helpers.dashboard_auth import FRONTEND, USER_ID, make_app, make_session
 
 pytestmark = pytest.mark.usefixtures("dashboard_env")
@@ -52,6 +53,7 @@ def fake_guild(guild_id: int, *, members=None, roles=(), chunked: bool = True):
         verification_level=discord.VerificationLevel.medium,
         created_at=AT,
         chunked=chunked,
+        members=list(members.values()),
         get_member=members.get,
         get_role=roles.get,
     )
@@ -356,3 +358,84 @@ def test_message_errors(owner, world, channel, expected):
         world.channels[20] = channel
     body = owner.get(URL, params={"id": "40", "channel_id": "20"}).json()
     assert [m for m in body["matches"] if m["kind"] == "message"] == expected
+
+
+# ====== 共通成員 ======
+
+COMMON = "/dashboard/ops/discord/common-members"
+
+
+def plain_member(member_id: int, joined_days: int | None):
+    return SimpleNamespace(
+        id=member_id,
+        name=f"u{member_id}",
+        global_name=None,
+        display_avatar=SimpleNamespace(url=f"https://cdn/{member_id}.png"),
+        joined_at=None if joined_days is None else AT.replace(day=joined_days),
+    )
+
+
+@pytest.fixture
+def main_guild(monkeypatch):
+    monkeypatch.setattr(config, "main_guild_id", lambda: 100)
+
+
+def test_common_members_default_to_main_guild(owner, world, main_guild):
+    world.guilds.extend(
+        [
+            fake_guild(
+                10,
+                members={1: plain_member(1, 5), 2: plain_member(2, 3), 3: plain_member(3, None), 4: plain_member(4, 1)},
+            ),
+            fake_guild(
+                100,
+                members={1: plain_member(1, 9), 2: plain_member(2, 8), 3: plain_member(3, 7), 5: plain_member(5, 1)},
+            ),
+        ]
+    )
+    body = owner.get(COMMON, params={"a": "10"}).json()
+    assert (body["a"]["id"], body["b"]["id"]) == ("10", "100")
+    assert [m["id"] for m in body["members"]] == ["2", "1", "3"]
+    assert body["members"][0] == {
+        "id": "2",
+        "name": "u2",
+        "avatar_url": "https://cdn/2.png",
+        "joined_a": AT.replace(day=3).isoformat(),
+        "joined_b": AT.replace(day=8).isoformat(),
+    }
+
+
+def test_common_members_any_two_guilds(owner, world, main_guild):
+    world.guilds.extend(
+        [fake_guild(10, members={1: plain_member(1, 5)}), fake_guild(11, members={2: plain_member(2, 5)})]
+    )
+    body = owner.get(COMMON, params={"a": "10", "b": "11"}).json()
+    assert (body["b"]["id"], body["members"]) == ("11", [])
+
+
+@pytest.mark.parametrize(
+    ("params", "status", "code"),
+    [
+        ({"a": "100"}, 400, "same_guild"),
+        ({"a": "10", "b": "10"}, 400, "same_guild"),
+        ({"a": "x"}, 400, "invalid_id"),
+        ({"a": "10", "b": "12"}, 404, "guild_not_found"),
+        ({"a": "11"}, 409, "member_cache_loading"),
+    ],
+)
+def test_common_members_errors(owner, world, main_guild, params, status, code):
+    world.guilds.extend([fake_guild(10), fake_guild(11, chunked=False), fake_guild(100)])
+    r = owner.get(COMMON, params=params)
+    assert (r.status_code, r.json()["error"]) == (status, code)
+
+
+def test_common_members_bot_not_ready(owner, world, main_guild):
+    world.ready = False
+    r = owner.get(COMMON, params={"a": "10"})
+    assert (r.status_code, r.json()["error"]) == (503, "bot_unavailable")
+
+
+def test_common_members_without_main_guild_setting(owner, world, monkeypatch):
+    monkeypatch.setattr(config, "main_guild_id", lambda: None)
+    r = owner.get(COMMON, params={"a": "10"})
+    assert (r.status_code, r.json()["error"]) == (404, "guild_not_found")

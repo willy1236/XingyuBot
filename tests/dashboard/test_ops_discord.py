@@ -117,3 +117,10 @@ def test_events_newest_first_with_paging(owner, repo, monkeypatch):
     second = owner.get(f"{BASE}/events", params={"page": 2}).json()
     assert [e["event"] for e in second["events"]] == ["join"]
     assert second["has_next"] is False
+
+
+def test_overview_live_has_main_guild_id(owner, monkeypatch):
+    monkeypatch.setattr(ops_discord.config, "main_guild_id", lambda: 100)
+    assert owner.get(BASE).json()["live"]["main_guild_id"] == "100"
+    monkeypatch.setattr(ops_discord.config, "main_guild_id", lambda: None)
+    assert owner.get(BASE).json()["live"]["main_guild_id"] is None

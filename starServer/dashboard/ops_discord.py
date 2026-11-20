@@ -3,6 +3,7 @@
 GET /dashboard/ops/discord?days=        目前所在的伺服器與總數（bot 沒就緒時 live 是 null），以及最近 days 天的每日人數
 GET /dashboard/ops/discord/events?page= 伺服器加入、離開紀錄（新的在前，每頁 50 筆）
 GET /dashboard/ops/discord/lookup?id=&channel_id=  用 ID 查使用者、頻道、伺服器、身分組，給頻道 ID 時一併查訊息
+GET /dashboard/ops/discord/common-members?a=&b=    兩個伺服器的共通成員（b 省略時是主伺服器）
 
 權限同 `ops.py`：只放行 bot owner，不是回 403 not_bot_owner。
 """
@@ -17,6 +18,7 @@ from fastapi import APIRouter, Depends
 from starlib import sclient, sqldb
 from starlib.utils import nowtz
 
+from . import config
 from .db import run_db
 from .errors import DashboardError
 from .ops import PAGE_SIZE, require_bot_owner
@@ -58,7 +60,9 @@ def _live() -> dict[str, Any] | None:
     if bot is None or not bot.is_ready():
         return None
     guilds = sorted(bot.guilds, key=lambda g: g.me.joined_at if g.me and g.me.joined_at else nowtz(), reverse=True)
+    main = config.main_guild_id()
     return {
+        "main_guild_id": None if main is None else str(main),
         "guild_count": len(guilds),
         "user_count": len(bot.users),
         "guilds": [_guild_json(g) for g in guilds],
@@ -280,3 +284,58 @@ async def lookup(id: str = "", channel_id: str = "", _: SessionInfo = Depends(re
     if bot is None or not bot.is_ready():
         raise DashboardError(503, "bot_unavailable")
     return await asyncio.wrap_future(bot.submit(_lookup(bot, target, channel)))
+
+
+# ====== 共通成員 ======
+
+
+async def _common_members(bot: discord.Client, a: int, b: int) -> dict[str, Any]:
+    """在 bot 的事件迴圈上算交集，避免後台 thread 迭代成員 dict 時 bot 同時修改。"""
+    guild_a, guild_b = bot.get_guild(a), bot.get_guild(b)
+    if guild_a is None or guild_b is None:
+        raise DashboardError(404, "guild_not_found")
+    if not guild_a.chunked or not guild_b.chunked:
+        raise DashboardError(409, "member_cache_loading")
+    common = {m.id for m in guild_a.members} & {m.id for m in guild_b.members}
+    rows = []
+    for member_id in common:
+        member_a, member_b = guild_a.get_member(member_id), guild_b.get_member(member_id)
+        if member_a is None or member_b is None:
+            continue
+        rows.append((member_a, member_b))
+    # 依 a 邊加入時間排序，不明的排最後
+    rows.sort(key=lambda r: (r[0].joined_at is None, r[0].joined_at or nowtz()))
+    return {
+        "a": _guild_ref(guild_a),
+        "b": _guild_ref(guild_b),
+        "members": [
+            {
+                "id": str(ma.id),
+                "name": ma.global_name or ma.name,
+                "avatar_url": ma.display_avatar.url,
+                "joined_a": _iso(ma.joined_at),
+                "joined_b": _iso(mb.joined_at),
+            }
+            for ma, mb in rows
+        ],
+    }
+
+
+@router.get("/common-members")
+async def common_members(a: str = "", b: str = "", _: SessionInfo = Depends(require_bot_owner)):
+    """錯誤：400 invalid_id、same_guild；503 bot_unavailable；404 guild_not_found（含沒有設定主伺服器）；
+    409 member_cache_loading（任一邊成員快取還沒載完）。"""
+    guild_a = _parse_id(a)
+    main = config.main_guild_id()
+    if b:
+        guild_b = _parse_id(b)
+    elif main is None:
+        raise DashboardError(404, "guild_not_found")
+    else:
+        guild_b = main
+    if guild_a == guild_b:
+        raise DashboardError(400, "same_guild")
+    bot = sclient.bot
+    if bot is None or not bot.is_ready():
+        raise DashboardError(503, "bot_unavailable")
+    return await asyncio.wrap_future(bot.submit(_common_members(bot, guild_a, guild_b)))
