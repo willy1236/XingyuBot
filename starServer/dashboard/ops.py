@@ -114,6 +114,7 @@ async def list_channels(page: int = 1, token_problem: bool = False, _: SessionIn
             "page_size": PAGE_SIZE,
             "total": total,
             "token_problems": problems,
+            "enabled_count": len(enabled),
         }
 
     return await run_db(load)

@@ -236,6 +236,7 @@ class TestTokenStats:
         body = owner.get(BASE).json()
 
         assert body["token_problems"] == {"missing": 2, "scope_missing": 1, "revoked": 1}
+        assert body["enabled_count"] == 5
         assert body["total"] == 7
 
     def test_enabled_rows_carry_token_state_and_others_do_not(self, owner, channels):
